@@ -36,6 +36,22 @@ func TestUnknownCommandFails(t *testing.T) {
 	}
 }
 
+func TestUnknownMigrateSubcommandFails(t *testing.T) {
+	code, _, stderr := execute(context.Background(), nil, "migrate", "upp")
+
+	if code != 1 || !strings.Contains(stderr, `nerve: unknown command "upp" for "nerve migrate"`) {
+		t.Errorf("nerve migrate upp = %d %q, want 1 and an unknown command error", code, stderr)
+	}
+}
+
+func TestBareMigratePrintsHelp(t *testing.T) {
+	code, stdout, stderr := execute(context.Background(), nil, "migrate")
+
+	if code != 0 || !strings.Contains(stdout, "Available Commands:") || stderr != "" {
+		t.Errorf("nerve migrate = %d, stdout %q, stderr %q; want 0 and the help", code, stdout, stderr)
+	}
+}
+
 func TestInvalidConfigurationIsReported(t *testing.T) {
 	code, _, stderr := execute(context.Background(), []string{"NERVE_ENV=test"}, "migrate", "status")
 

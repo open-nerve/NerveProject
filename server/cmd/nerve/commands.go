@@ -54,6 +54,10 @@ func newMigrateCommand(load configLoader) *cobra.Command {
 	migrate := &cobra.Command{
 		Use:   "migrate",
 		Short: "Manage the database schema",
+		// A runnable parent makes cobra validate its args, so a mistyped
+		// subcommand fails instead of printing help and exiting 0.
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
 	sub := func(use, short string, action func(context.Context, config.Config, io.Writer) error) *cobra.Command {
 		return &cobra.Command{
