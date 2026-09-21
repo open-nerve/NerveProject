@@ -1,0 +1,4 @@
+# 生产环境（NERVE_ENV=prod）。数据库地址通过 NERVE_DATABASE__URL 提供。
+database:
+  # 生产环境先执行 nerve migrate up，再启动 nerve serve
+  auto_migrate: false
