@@ -27,10 +27,11 @@ dev-db-reset: ## 停止开发数据库并删除数据卷
 
 .PHONY: tools
 tools: ## 安装锁定版本的 golangci-lint 到 ./bin
-	@if $(GOLANGCI_LINT) --version 2>/dev/null | grep -q "version $(GOLANGCI_LINT_VERSION) "; then \
+	@set -o pipefail; \
+	if $(GOLANGCI_LINT) --version 2>/dev/null | grep -q "version $(GOLANGCI_LINT_VERSION) "; then \
 		echo "golangci-lint $(GOLANGCI_LINT_VERSION) 已安装"; \
 	else \
-		curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(BIN_DIR) v$(GOLANGCI_LINT_VERSION); \
+		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v$(GOLANGCI_LINT_VERSION)/install.sh | sh -s -- -b $(BIN_DIR) v$(GOLANGCI_LINT_VERSION); \
 	fi
 
 .PHONY: lint
