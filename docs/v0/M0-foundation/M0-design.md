@@ -64,7 +64,7 @@ M0 结束时，一个开发者克隆仓库后，用几条命令就能：
 
 **工具怎么安装**：
 - Go 的开发工具写在单独的 `server/tools/go.mod` 里，通过 `go tool -modfile=tools/go.mod <工具>` 调用，不污染主模块的依赖。M0 只需要 oapi-codegen；sqlc 在 M2 加入。goose 以库的形式在代码中调用，不需要命令行工具。
-- golangci-lint 按官方建议使用预编译的二进制（持续集成里用官方 Action；本地用 Makefile 下载到 `./bin`）。
+- golangci-lint 按官方建议使用预编译的二进制，由 `make tools` 下载到 `./bin`。本地和持续集成都执行同一个 `make lint`。
 - 除了 Docker、Go、Node 以外，**不需要全局安装任何东西**。
 
 ---
@@ -306,7 +306,7 @@ api/common.yaml + api/modules/*.yaml
 ### 6.3 持续集成（`.github/workflows/ci.yml`）
 | 任务 | 内容 |
 |---|---|
-| `server` | 安装 Go 1.27.1 → `make gen-check` → golangci-lint（官方 Action，v2.13.2）→ `go test ./...`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
+| `server` | 安装 Go 1.27.1 → `make gen-check` → `make lint`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
 | `web` | `corepack enable` → `pnpm install --frozen-lockfile` → 类型检查 → oxlint（按警告基线）→ 构建 |
 | `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图 |
 
@@ -365,6 +365,7 @@ api/common.yaml + api/modules/*.yaml
   - `deploy/compose.dev.yaml`（Postgres 18）。
   - `.github/workflows/ci.yml` 的骨架：几个任务都能跑通，此时还没有实际内容。
   - `.gitignore` 的补充项。
+  - `platform/buildinfo`（从 P2 提前：没有任何 Go 代码时 `go test` 和 golangci-lint 都会失败，详见 P1 spec）。
 - **验收**：
   - 在一台干净的机器上，只装了 Docker、Go 和 Node，执行 `make dev-db` 能启动数据库。
   - `go tool -modfile=tools/go.mod oapi-codegen -version` 能运行。
@@ -375,7 +376,6 @@ api/common.yaml + api/modules/*.yaml
 - **交付物**：
   - `platform/config`：分环境加载配置、环境变量覆盖、配置文件内嵌进程序、启动时校验。
   - `platform/logging`。
-  - `platform/buildinfo`。
   - `platform/postgres`：连接池、goose 迁移执行器、测试工具 `pgtest`。
   - `platform/httpserver`：`ServeMux`、三个中间件、problem+json、`/healthz` 和 `/readyz`、优雅停机。
   - `bootstrap`。
