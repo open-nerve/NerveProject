@@ -3,6 +3,7 @@ package migrations
 import (
 	"io/fs"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -14,7 +15,7 @@ func TestMigrationFilesFollowNamingConvention(t *testing.T) {
 		t.Fatalf("read migrations: %v", err)
 	}
 	for _, e := range entries {
-		if e.Name() == ".gitkeep" {
+		if strings.HasPrefix(e.Name(), ".") { // .gitkeep, .DS_Store: not migrations
 			continue
 		}
 		if e.IsDir() || !migrationName.MatchString(e.Name()) {

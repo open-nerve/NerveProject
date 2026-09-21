@@ -75,17 +75,18 @@ func TestMigrateCommandsWithoutMigrations(t *testing.T) {
 	cfg := testConfig(t, pgtest.NewDatabase(t), false)
 	tests := []struct {
 		name string
-		run  func(context.Context, *bytes.Buffer) error
+		cmd  migrationCommand
 		want string
 	}{
-		{"status", func(ctx context.Context, out *bytes.Buffer) error { return MigrateStatus(ctx, cfg, out) }, "no migrations\n"},
-		{"up", func(ctx context.Context, out *bytes.Buffer) error { return MigrateUp(ctx, cfg, out) }, "no pending migrations\n"},
-		{"down", func(ctx context.Context, out *bytes.Buffer) error { return MigrateDown(ctx, cfg, out) }, "no applied migrations to roll back\n"},
+		{"status", migrateStatus, "no migrations\n"},
+		{"up", migrateUp, "no pending migrations\n"},
+		{"down", migrateDown, "no applied migrations to roll back\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var out bytes.Buffer
-			if err := tt.run(context.Background(), &out); err != nil {
+			// An empty set of its own: the production set is not empty from M2 on.
+			if err := runMigration(context.Background(), cfg, fstest.MapFS{}, &out, tt.cmd); err != nil {
 				t.Fatalf("error = %v", err)
 			}
 			if out.String() != tt.want {

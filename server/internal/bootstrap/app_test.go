@@ -129,8 +129,11 @@ func TestRunFailsWhenAutoMigrateFails(t *testing.T) {
 		t.Fatalf("newApp() error = %v", err)
 	}
 	defer a.close()
+	// Bounded: should run succeed instead, it would serve until ctx is done.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	if err := a.run(context.Background()); err == nil {
+	if err := a.run(ctx); err == nil {
 		t.Error("run() = nil, want the migration error")
 	}
 }

@@ -65,8 +65,9 @@ func TestMigrateStatus(t *testing.T) {
 
 	code, stdout, stderr := execute(context.Background(), environ, "migrate", "status")
 
-	if code != 0 || stdout != "no migrations\n" {
-		t.Errorf("nerve migrate status = %d %q (stderr %q), want 0 and \"no migrations\"", code, stdout, stderr)
+	// The production set is empty in M0 and grows from M2 on: accept both outputs.
+	if code != 0 || (stdout != "no migrations\n" && !strings.HasPrefix(stdout, "VERSION ")) {
+		t.Errorf("nerve migrate status = %d %q (stderr %q), want 0 and \"no migrations\" or the status table", code, stdout, stderr)
 	}
 }
 

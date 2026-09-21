@@ -55,18 +55,30 @@ func TestEmptyDatabaseHasNoTables(t *testing.T) {
 }
 
 func TestDatabaseIsDroppedAfterTheTest(t *testing.T) {
+	ctx := context.Background()
 	var url string
+	var open *pgx.Conn
 	t.Run("uses a database", func(t *testing.T) {
 		url = pgtest.NewDatabase(t)
-		connect(t, url) // an open connection must not block the drop
+		// No cleanup closes this connection, so it is still open when
+		// NewDatabase's cleanup drops the database: the drop must force it.
+		conn, err := pgx.Connect(ctx, url)
+		if err != nil {
+			t.Fatalf("connect: %v", err)
+		}
+		open = conn
 	})
 	if url == "" {
 		t.Skip("the subtest was skipped")
 	}
+	if open == nil {
+		t.FailNow() // the subtest could not connect and has reported why
+	}
 
-	_, err := pgx.Connect(context.Background(), url)
+	_, err := pgx.Connect(ctx, url)
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != "3D000" { // invalid_catalog_name
 		t.Errorf("connect after the test = %v, want database does not exist (3D000)", err)
 	}
+	_ = open.Close(ctx) // only now, after the drop has been asserted
 }
