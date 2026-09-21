@@ -28,7 +28,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | 表 | 替代方式 |
 |---|---|
 | `sessions` | 改用 JWT 和 `auth_sessions` |
-| `instances`、`instance_admins`、`instance_configurations` | 改用环境变量；服务器管理员通过命令行管理 |
+| `instances`、`instance_admins`、`instance_configurations` | 改用分环境的配置文件（可用环境变量覆盖）；服务器管理员通过命令行管理 |
 | `issue_sequences` | 改为 `projects` 上的计数列 |
 | `project_identifiers` | 和 `projects.identifier` 重复 |
 | `descriptions` | 只是评论内容的镜像副本 |
@@ -70,15 +70,16 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `auth_sessions` | **新增**：刷新令牌的哈希、令牌轮换链（用于重复使用检测）、UA、IP、过期和撤销时间 | JWT 认证 |
 | `workspaces` | 删除旧的 `logo` URL 列 | 遗留列 |
 | `workspace_members` | 删除 `view_props`、`default_props` | 遗留列 |
-| `projects` | 删除 `emoji`、`icon_prop`、旧的 `cover_image`、`description_text`、`description_html`（旧的 json 列）、`page_view`、`is_time_tracking_enabled`、`is_issue_type_enabled`、`estimate_id`、`archive_in`、`close_in`、`archived_at` | 遗留列或对应功能已砍掉 |
+| `projects` | 删除 `emoji`、`icon_prop`、旧的 `cover_image`、`description_text`、`description_html`（旧的 json 列）、`page_view`、`is_time_tracking_enabled`、`is_issue_type_enabled`、`estimate_id`、`close_in` | 遗留列或对应功能已砍掉（归档保留，`archive_in` 和 `archived_at` 保留） |
 | `projects` | **新增**工作项编号计数列（列名在 M0 确定） | 替代 `issue_sequences` |
 | `project_members` | 删除 `view_props`、`default_props`、`preferences` | 和 `project_user_properties` 重复 |
-| `issues` | 删除 `point`、`is_draft`、`estimate_point_id`、`type_id`、`description_binary`、`archived_at` | 遗留列或对应功能已砍掉 |
+| `issues` | 删除 `point`、`is_draft`、`estimate_point_id`、`type_id`、`description_binary` | 遗留列或对应功能已砍掉 |
+| `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | `issues` | **新增**唯一约束 `(project_id, sequence_id)` | Plane 只靠咨询锁保证编号不重复 |
 | `issue_labels` | **新增**部分唯一约束 `(issue_id, label_id)` | Plane 在数据库层没有这个约束 |
 | `labels` | 工作区级标签的名称唯一范围改为 `(workspace_id, name)` | Plane 的约束没有限定在工作区内，是个缺陷 |
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
-| `cycles`、`modules` | 删除 `archived_at`；`modules` 还删除旧的 `description_text`、`description_html` | 归档功能已砍掉；遗留列 |
+| `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
 | `file_assets` | 删除 `page_id`；`draft_issue_id` 改为引用新的 `draft_issues`；`entity_type` 去掉 `PAGE_DESCRIPTION` | 文档页已砍掉；草稿重新设计 |
 | `draft_issues` | **重新设计**：`payload jsonb` 存"创建工作项"的请求体，替代 Plane 中复制工作项结构的字段和 4 张关联表 | 详见 v0-design 5.4 |
@@ -87,10 +88,11 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 
 ## 三、接口差异
 
-Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/api/instances/`，而是重新设计了一套 `/api/v1`，规范见 [v0-design 第 3 节](v0-design.md#3-接口设计规范)。和 Plane 相比，主要区别如下：
+Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/api/instances/`，而是重新设计了一套 `/api/v0`（接口版本号与产品主版本号一致），规范见 [v0-design 第 3 节](v0-design.md#3-接口设计规范)。和 Plane 相比，主要区别如下：
 
 | 方面 | Plane | Nerve |
 |---|---|---|
+| 版本 | 页面用的内部接口 `/api/` 不带版本；公开接口是 `/api/v1/` | 只有一套接口 `/api/v0`，版本号跟随产品主版本号 |
 | 路径 | `/api/workspaces/{slug}/projects/{pid}/issues/{id}/` 这样的多层嵌套，结尾必须带 `/` | 列表挂在父资源下，单个资源用短路径；结尾不带 `/` |
 | 认证 | 页面用会话 Cookie 加表单登录，程序用另一套 `/api/v1` 加 `X-Api-Key` | 所有调用方都使用同一套接口和 `Authorization: Bearer` |
 | PATCH 的响应 | 204，没有响应体 | 返回完整资源 |
@@ -114,4 +116,6 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 接口调用日志 | 只记录 `/api/v1` 中用 API Key 发起的请求，请求头原样存储 | 记录所有写请求，不区分令牌类型；存储前去掉敏感请求头 |
 | 工作项编号 | 咨询锁加 `issue_sequences` 表 | 在项目行上用计数列原子自增 |
 | 草稿发布 | 专门的转换逻辑 | 与"创建工作项"走同一代码路径 |
+| 归档 | 工作项、迭代、模块、项目的归档与恢复，以及项目级自动归档 | 规则一致（见 v0-design 5.5）；归档和恢复改为 `POST .../archive` 和 `POST .../unarchive` 两个动作接口；列表通过 `?archived=true` 查询已归档的对象 |
+| 自动关闭 | 项目设置 `close_in` 后，长期未更新的未完成工作项会被自动关闭 | v0 不做 |
 | 忘记密码 | 发邮件重置 | 服务器管理员用命令行重置 |

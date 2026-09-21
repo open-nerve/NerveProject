@@ -11,3 +11,6 @@ plane/
 .env
 .env.*
 !.env.example
+
+# 个人本地配置覆盖（见 docs/v0/v0-design.md 6.8）
+config.local.yaml
