@@ -14,6 +14,7 @@ func TestRedactURL(t *testing.T) {
 		{"empty stays empty", "", ""},
 		{"password in user info", "postgres://nerve:secret@localhost:5432/nerve", "postgres://nerve:xxxxx@localhost:5432/nerve"},
 		{"password query parameter", "postgres://localhost/nerve?password=secret&sslmode=disable", "postgres://localhost/nerve?password=xxxxx&sslmode=disable"},
+		{"password query parameter in any case", "postgres://localhost/nerve?PassWord=secret&sslmode=disable", "postgres://localhost/nerve?PassWord=xxxxx&sslmode=disable"},
 		{"no password is unchanged", "postgres://nerve@localhost/nerve?sslmode=disable", "postgres://nerve@localhost/nerve?sslmode=disable"},
 		{"key/value string is masked entirely", "host=localhost user=nerve password=secret", "xxxxx"},
 	}
