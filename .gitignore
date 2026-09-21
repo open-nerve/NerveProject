@@ -14,3 +14,6 @@ plane/
 
 # 个人本地配置覆盖（见 docs/v0/v0-design.md 6.8）
 config.local.yaml
+
+# Claude Code 的隔离工作区
+.claude/worktrees/
