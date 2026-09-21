@@ -43,6 +43,7 @@
 | 企业版残留：Epic、团队、工作项类型、"活跃迭代"推广页、计费和升级提示、`extended` 空壳文件和空函数 | 计划中 | |
 | Plane 自身的死代码：IndexedDB 和同步代码、从未被创建过的集成服务、调用不存在接口的 service 方法 | 计划中 | |
 | 多语言：只保留 `zh-CN` 和 `en` | 计划中 | |
+| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的约 330 处引用全部改为 React Router 原生写法（`Link`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`）；去掉强制结尾 `/` 和延迟跳转，修复因此暴露出的"渲染时跳转"问题；删除垫片和两个未使用的文件（`script.tsx`、`image.tsx`） | 计划中 | |
 
 **验收标准**：
 - TypeScript 类型检查、oxlint、knip 全部为零。
@@ -91,4 +92,5 @@
 |---|---|---|
 | 替换 Logo 和网站图标 | 计划中 | |
 | 替换页面标题和文案中的"Plane"，改为 Nerve | 计划中 | |
+| 内部包名 `@plane/*` 改为 `@nerve/*` | 计划中 | |
 | `web/` 中来自 Plane 的文件保留原有的版权声明 | 计划中 | |

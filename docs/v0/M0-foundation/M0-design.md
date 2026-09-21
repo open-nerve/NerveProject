@@ -1,0 +1,482 @@
+# M0 基础骨架：架构设计与实施规划
+
+| 项 | 内容 |
+|---|---|
+| 里程碑 | M0 基础骨架（`docs/v0/M0-foundation`） |
+| 日期 | 2026-09-22 |
+| 状态 | 待审阅 |
+| 上级文档 | [v0 总体设计](../v0-design.md) |
+| 前置交接 | 无（`handoffs/` 为空） |
+
+---
+
+## 0. 目标与范围
+
+### 0.1 目标
+搭好后续所有里程碑都要用到的工程基础，并用一条最小的"试点链路"证明整条流水线是通的：
+
+**OpenAPI 描述 → 生成 Go 接口层 → 模块（领域 / 用例 / 适配器）→ 组合根接线 → HTTP 服务 → 生成 TS 客户端 → 端到端测试**
+
+M0 结束时，一个开发者克隆仓库后，用几条命令就能：
+1. 启动开发数据库。
+2. 运行后端和前端。
+3. 跑完所有检查和测试。
+4. 打出一个内嵌前端的 `nerve` 单个可执行文件。
+
+### 0.2 范围
+| 包含 | 不包含（留给后续 M） |
+|---|---|
+| 仓库布局、工具链与版本锁定、开发环境、Makefile | 任何业务表（见 7.1 的调整建议） |
+| Go 服务端骨架：配置、日志、数据库连接、迁移机制、HTTP 服务与中间件、统一错误格式、健康检查、命令行 | River 任务队列、sqlc（第一次真正用到时，在 M2 接入，见 7.2） |
+| 接口契约流水线，加上试点模块 `instance`（`GET /api/v0/instance`） | 认证、限流（M2） |
+| 架构守护：架构测试和禁用依赖检查 | 前端删减、品牌替换、改用原生写法（M1） |
+| Plane 表结构快照工具及快照文件 | 前端对接新接口（M2 起） |
+| 前端代码原样迁入、能构建、内嵌进 Go 程序 | |
+| 端到端测试骨架和冒烟故事；持续集成流水线 | |
+
+---
+
+## 1. 版本基线
+
+以下版本均为 2026-09-22 的最新稳定版，在 P1 中锁定。
+
+| 类别 | 选择 | 说明 |
+|---|---|---|
+| Go | **1.27.1** | `go.mod` 中写 `go 1.27` 和 `toolchain go1.27.1`。本机的 Go 1.26 会自动下载对应版本的工具链。goose、sqlc、River 都要求 Go 1.26 以上 |
+| UUID | Go 1.27 **标准库 `uuid`**（`uuid.NewV7()`） | 不引入第三方 uuid 库。ID 由应用生成，数据库不设 `DEFAULT uuidv7()`，这样也绕开了 sqlc 解析器（基于 PG 17）不认识 `uuidv7()` 的问题 |
+| PostgreSQL | **18.6**（镜像 `postgres:18`） | |
+| 数据库驱动 | pgx v5（`pgxpool`） | |
+| 迁移 | goose **v3.28.0** | 迁移文件通过 `embed.FS` 编进程序，用 Provider API 在代码中执行 |
+| 接口代码生成 | oapi-codegen **v2.8.0** | `strict-server` + `std-http-server`（基于 Go 标准库的 `ServeMux`）；支持按 tag 生成，支持跨文件引用 |
+| 接口校验（测试用） | kin-openapi **v0.149.0** | 支持 OpenAPI 3.1 |
+| 配置 | koanf **v2.3.6** | 解析器用 yaml；数据来源用 rawbytes（读取内嵌的文件）、file、env/v2。没有用 koanf 的 fs provider，因为它还标着"实验性" |
+| 命令行 | cobra | `nerve serve`、`nerve migrate`、`nerve version` |
+| 静态检查 | golangci-lint **v2.13.2** | 包含 depguard |
+| 集成测试 | testcontainers-go **v0.44.0**（Postgres 模块） | |
+| Node | **24 LTS** | Plane 要求 ≥22.22 |
+| pnpm | **11.10.0** | 通过 corepack，按 `packageManager` 字段锁定版本 |
+| TypeScript | **5.8.3**（沿用 Plane 的版本） | TypeScript 7 已发布，但 openapi-typescript 仍声明只支持 `^5`。v0 期间不升级 |
+| 前端框架 | React 19.2、React Router 8.3、Vite 8、turbo 2.10、oxlint 1.51、oxfmt 0.35 | 沿用 Plane 的版本 |
+| TS 客户端生成 | openapi-typescript **7.13.0**、openapi-fetch **0.17.0** | |
+| OpenAPI 打包 | Redocly CLI | 版本在 P3 锁定 |
+| 端到端测试 | Playwright **1.63.0**；Node 端用 testcontainers 启动 Postgres | |
+| 未使用代码检查 | knip **6.37.0** | M0 只配置，M1 开始作为门禁 |
+
+**工具怎么安装**：
+- Go 的开发工具写在单独的 `server/tools/go.mod` 里，通过 `go tool -modfile=tools/go.mod <工具>` 调用，不污染主模块的依赖。M0 只需要 oapi-codegen；sqlc 在 M2 加入。goose 以库的形式在代码中调用，不需要命令行工具。
+- golangci-lint 按官方建议使用预编译的二进制（持续集成里用官方 Action；本地用 Makefile 下载到 `./bin`）。
+- 除了 Docker、Go、Node 以外，**不需要全局安装任何东西**。
+
+---
+
+## 2. 仓库布局（M0 完成时）
+
+```
+NerveProject/
+  Makefile                      所有常用命令的统一入口（见 6.1）
+  package.json                  pnpm 工作区的根（packageManager 字段锁定 pnpm 版本）
+  pnpm-workspace.yaml           工作区：web/apps/*、web/packages/*、e2e；依赖版本表（catalog）
+  turbo.json                    前端任务编排
+  .node-version                 24
+  .editorconfig
+  .github/workflows/ci.yml      持续集成
+  api/
+    common.yaml                 公共组件：Problem、分页游标等
+    modules/instance.yaml       各模块的接口描述，一个模块一个文件
+    redocly.yaml                打包配置
+    dist/openapi.yaml           打包后的完整描述（生成物，提交到仓库）
+  server/                       Go 模块 github.com/open-nerve/NerveProject/server
+    cmd/nerve/                  命令行入口（serve、migrate、version）
+    configs/                    config.yaml、config.dev.yaml、config.test.yaml、config.prod.yaml
+    migrations/                 embed.go（内嵌 sql/ 目录）；sql/ 中存放迁移文件，M0 只有一个 .gitkeep
+    internal/
+      bootstrap/                组合根
+      platform/
+        buildinfo/              版本号、提交号、构建时间（构建时注入）
+        config/                 配置加载与校验
+        logging/                slog 初始化
+        postgres/               连接池、迁移执行器；pgtest（测试工具，只在测试中使用）
+        httpserver/             服务生命周期、中间件、problem+json、健康检查
+        webui/                  内嵌的前端静态文件与单页应用的路由回退
+      modules/
+        instance/               试点模块
+      archtest/                 架构测试（只有测试文件）
+    tools/go.mod                开发工具的版本锁定
+    .golangci.yml
+  web/
+    apps/web/                   来自 Plane 的前端应用（原样迁入）
+    packages/                   types、constants、ui、propel、editor、i18n、hooks、utils、
+                                shared-state、services、tailwind-config、typescript-config、
+                                api-client（新增：由 OpenAPI 生成）
+  e2e/                          Playwright 端到端测试
+  deploy/compose.dev.yaml       开发环境（Postgres 18）
+  tools/plane-schema/           Plane 表结构快照工具和快照文件
+  docs/
+```
+
+和总体设计 2.2 相比，多了两样东西：根目录的 pnpm 工作区文件，以及 `tools/`。
+- **pnpm 工作区放在仓库根目录**：这样端到端测试可以直接用生成的 TS 客户端（`web/packages/api-client`）准备测试数据。
+- **`tools/` 目录**：放不属于任何运行时组件的一次性工具。
+
+---
+
+## 3. 服务端骨架设计
+
+### 3.1 包的职责
+| 包 | 职责 | 可以依赖 |
+|---|---|---|
+| `cmd/nerve` | 解析命令行参数，调用 `bootstrap` | `bootstrap`、`platform/config`、`platform/buildinfo` |
+| `internal/bootstrap` | **唯一的组合根**：创建各个适配器，接到各模块上，把各模块的 HTTP handler 挂到路由上，启动服务 | 所有 `platform` 包和 `modules` 包 |
+| `internal/platform/*` | 与业务无关的技术基础件，各包之间互不依赖（`config` 除外，它可以被任何包使用） | 标准库和第三方库；**不能依赖 `modules`** |
+| `internal/modules/<m>/domain` | 领域模型与规则 | 只能依赖标准库（以后可以依赖 `shared`） |
+| `internal/modules/<m>/app` | 用例；声明本模块需要的端口 | 本模块的 `domain` |
+| `internal/modules/<m>/adapter/*` | 端口的实现（http、postgres 等） | 本模块的 `app` 和 `domain`、`platform`、生成的代码 |
+| `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖) *Module` | 本模块内部的各个包 |
+
+`internal/shared`（共享内核）在第一次真正需要跨模块共享类型时才建立（预计在 M2），M0 不建空包。
+
+### 3.2 试点模块 `instance`
+- **接口**：`GET /api/v0/instance`，不需要登录。返回 `{ "product": "Nerve", "version": "0.1.0-dev", "commit": "…", "api_version": "v0" }`。
+- **后续扩展**：M2 加入 `signup_enabled`，M5 加入文件大小上限等。前端启动时用它读取公开配置，Agent 可以用它确认服务端的版本。
+- **目录结构**（这就是以后所有模块的模板）：
+  ```
+  modules/instance/
+    domain/info.go            Info 值对象
+    app/get_info.go           GetInfo 用例，依赖端口 InfoSource
+    app/ports.go              InfoSource 接口（由使用方声明）
+    adapter/buildinfo/        InfoSource 的实现：从 buildinfo 和配置中读取
+    adapter/http/handler.go   实现 oapi-codegen 生成的强类型接口
+    adapter/http/gen/         生成的代码（不要手改）
+    module.go                 New(deps) → *Module{Handler}
+  ```
+- **为什么简单也要分层**：这个接口很简单，分层看起来有点"仪式感"。但它的作用是**模块模板**，用来把"生成接口 → 用例 → 端口 → 适配器 → 组合根接线"这条路走通，并让架构测试有东西可查。每一层都只有一个很小的文件。
+
+### 3.3 HTTP 服务
+- **路由**：Go 标准库的 `ServeMux`（Go 1.22 以后支持按方法和路径匹配）。挂载规则如下：
+  - `/api/v0/…`：各模块生成的路由，由 `bootstrap` 逐个挂载。
+  - `/healthz`：存活检查，不访问数据库。
+  - `/readyz`：就绪检查，检查数据库能否连通、迁移是否已完成。
+  - `/api/` 下没有匹配到的路径：返回 **404 problem+json**，不会回退到前端页面。
+  - 其余路径：交给 `webui`（前端静态文件和单页应用回退）。
+- **中间件**（顺序固定）：
+  1. 请求 ID：读取 `X-Request-Id`，没有就生成一个，并写回响应头。
+  2. 异常恢复：捕获 panic，返回 500 problem+json，并记录日志。
+  3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。
+- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致）。领域错误码的体系在 M2 建立。
+- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。
+
+### 3.4 内嵌前端（`platform/webui`）
+- **打包方式**：`make build` 先构建前端，把 `web/apps/web/build/client/` 复制到 `server/internal/platform/webui/dist/`，再编译 Go 程序。`dist/` 只提交一个 `.gitkeep`，其余内容已加入 `.gitignore`。
+- **没有构建前端时**：`dist/` 中没有 `index.html`，访问页面会得到一句明确的提示"前端未构建，请运行 make build"。开发时用 Vite 开发服务器访问前端，不受影响。
+- **单页应用回退**：路径能对应到静态文件就返回文件；否则返回 `index.html`。
+- **缓存策略**：带哈希的资源文件设为 `Cache-Control: immutable`，`index.html` 设为 `no-cache`。
+- **配置开关**：`web.enabled`，默认开启。
+
+### 3.5 数据库与迁移
+- **连接**：`pgxpool`，参数来自配置（`database.url`、`database.max_conns`）。
+- **迁移执行器**（`platform/postgres`）：用 goose Provider 执行 `server/migrations/sql/` 中的 SQL 文件。
+- **迁移文件如何内嵌**：`server/migrations/embed.go` 用 `//go:embed all:sql` 内嵌整个目录。之所以不写 `//go:embed *.sql`，是因为它在一个 `.sql` 文件都没有时会编译失败。
+- **没有迁移文件时**：goose 会返回 `ErrNoMigrations`，迁移执行器把它当作"无事可做"，正常继续。
+- **何时执行迁移**：
+  - `nerve serve`：`database.auto_migrate=true` 时，启动前自动执行。dev 和 test 环境默认开启，prod 环境默认关闭。
+  - `nerve migrate up | down | status`：手动执行。生产环境按"先迁移、再启动"的顺序操作。
+- **迁移文件的命名**：`NNNNN_<模块>_<说明>.sql`（goose 按序号排序），文件名能看出归属哪个模块。
+- **外键方向约定**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键。指向更晚建立的模块的外键（比如 `users.avatar_asset_id → file_assets`），由后建的那个模块的迁移用 `ALTER TABLE` 补上。
+- **M0 不包含任何迁移文件**：迁移机制（执行、回滚、查看状态、没有迁移文件时的处理）由集成测试验证，测试使用专门的测试迁移集，只存在于测试中。
+
+### 3.6 配置（落实总体设计 6.8）
+- **M0 的配置项**：
+  ```yaml
+  app:
+    name: Nerve
+  server:
+    addr: ":8080"
+    read_header_timeout: 5s
+    shutdown_timeout: 20s
+  database:
+    url: ""              # 必须提供
+    max_conns: 10
+    auto_migrate: true   # prod 中为 false
+  log:
+    level: info          # dev 中为 debug，test 中为 warn
+    format: json         # dev 和 test 中为 text
+  web:
+    enabled: true
+  ```
+- **dev 环境的数据库地址**：`config.dev.yaml` 里写的是本地开发库的地址（`postgres://nerve:nerve@localhost:5432/nerve`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
+- **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，`database.url` 中的密码会被打码。
+
+### 3.7 架构守护
+- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，检查以下规则：
+  1. 模块内的依赖只能向内：`adapter → app → domain`。`domain` 不能导入 `app`、`adapter`、`platform`，也不能导入数据库驱动、HTTP 等技术库。
+  2. 模块之间不能互相导入。
+  3. `platform` 不能导入 `modules` 和 `bootstrap`。
+  4. 只有 `bootstrap` 能导入各个模块。
+  5. 生成的代码只能被本模块的 http 适配器导入。
+- **depguard**：只管"整个项目都禁止使用的库"，例如：
+  - 第三方 uuid 库：用标准库。
+  - viper：用 koanf。
+  - 标准库 `log`：用 slog。
+  - `github.com/pkg/errors`：用标准库的 errors。
+- 以上两项都是持续集成的门禁。架构测试随 `go test ./...` 一起运行，不需要额外安装工具。
+
+### 3.8 测试工具
+- **`platform/postgres/pgtest`**：
+  1. 用 testcontainers 启动一个 Postgres 18 容器，同一次测试运行中所有测试共用。
+  2. 执行迁移，得到一个模板库。
+  3. 每个测试用 `CREATE DATABASE … TEMPLATE` 复制出自己独立的数据库，测试结束后删除。
+- **接口契约校验**：试点模块的 handler 测试用 kin-openapi，校验响应是否符合 `api/dist/openapi.yaml` 中的描述。
+
+---
+
+## 4. 接口契约流水线
+
+```
+api/common.yaml + api/modules/*.yaml
+      │
+      ├─(oapi-codegen，每个模块单独生成)─→ server/internal/modules/<m>/adapter/http/gen/
+      │     common.yaml 中的公共组件通过 import-mapping 生成到一个共享包里，
+      │     放在 platform/httpserver/apigen，避免每个模块各生成一份
+      │
+      └─(redocly 打包)─→ api/dist/openapi.yaml ─(openapi-typescript)─→ web/packages/api-client
+                               └→ 服务端测试中的契约校验；M8 的对外接口文档
+```
+- **按模块拆分描述文件**：每个模块的接口描述由该模块自己负责，生成的 Go 代码也放在该模块内部，符合"模块自己的东西自己管"的原则。
+- **OpenAPI 版本**：目标是 3.1。oapi-codegen 从 v2.8.0 开始支持 3.1，但官方称之为"初步支持"；kin-openapi 对 3.1 的支持也比较新。所以 **P3 先做一次验证**：用一组有代表性的写法把整条链路跑通，包括可为空的字段（`type: [string, "null"]`）、枚举、`oneOf`、日期和时间格式、problem+json 错误响应、游标分页。
+  - 全部通过：使用 3.1。
+  - 有任何一项不通过：改用 3.0.3。两者的差别主要在"可为空"的写法上，以后升级到 3.1 只需要机械替换。
+  - 验证结论写进 P3 的 review。
+- **生成物的管理**：生成的代码提交到仓库，这样不装生成工具也能直接编译。持续集成中会重新生成一遍，再用 `git diff --exit-code` 检查生成物和描述文件是否一致。
+- **TS 客户端**：`web/packages/api-client` 导出生成的类型，以及一个用 openapi-fetch 创建客户端的函数。M0 里只有端到端测试使用它，前端应用从 M2 开始使用。
+
+---
+
+## 5. 前端迁入与 Plane 表结构快照
+
+### 5.1 前端迁入（原样迁入，不做功能改动）
+- **复制的内容**：`plane/apps/web` 复制到 `web/apps/web`；web 用到的 packages（见总体设计 7.1）复制到 `web/packages/`；`.oxlintrc.json`、`.oxfmtrc.json`、`.npmrc` 复制到仓库根目录。
+- **`turbo.json` 和依赖版本表（catalog）的处理**：只删掉明显只属于 admin、space、live 这几个应用的条目。其余多余的依赖留到 M1，由 knip 统一清理。
+- **M0 只做让前端能跑起来的最小改动**：
+  - 工作区的路径。
+  - 开发服务器的代理：Vite 把 `/api` 转发到 `http://127.0.0.1:8080`。
+  - 构建产物的位置。
+- 功能删减、品牌替换、改用 React Router 原生写法、包名改为 `@nerve/*`，**全部留到 M1**。这样 M0 引入的改动和 M1 的删减可以分开审查。
+- **验收**：`pnpm install` 成功，类型检查通过，lint 检查通过（按下面的警告基线），前端能构建。
+- **版权**：所有来自 Plane 的文件保留原有的版权声明。
+
+### 5.2 lint 警告基线：只降不升
+- **现状**：Plane 本身就给每个包设了"最多允许多少条警告"的上限。比如 web 是 11957 条，propel 是 3605 条，editor 是 416 条。
+- **做法**：M0 沿用这些上限，并定下一条规则：**上限只能往下调，不能往上调**。
+  - 任何提交如果让警告数超过上限，持续集成就失败。
+  - 警告数下降后，要在同一个提交里把上限调低到新的数值。
+- **后续**：M1 删掉大量代码后，重新测出一组更低的基线，并在 M1 设计文档里制定逐步清零的计划。
+- 这一条是对总体设计 7.6"oxlint 警告即报错"的修正，见 7.3。
+
+### 5.3 Plane 表结构快照（`tools/plane-schema/`）
+- **`extract.sh` 做什么**：
+  1. 用 docker compose 启动一个 Postgres 15（Plane 使用的版本），以及 Plane v1.4.2 的后端镜像。
+  2. 在后端镜像里执行 Django 迁移。
+  3. 用 `pg_dump --schema-only --no-owner --no-privileges` 导出表结构，生成 `plane-v1.4.2-schema.sql`。
+- **快照文件提交到仓库**：这是之后每个 M 建表时"照搬 Plane"的依据。建表的 M 以快照为起点，再按[差异清单](../plane-diff.md)中的规则修改。
+- **如果官方镜像拿不到**：改为用 Python 在 Plane 源码目录里直接执行迁移。P4 中核实。
+- **README 写明**：Plane 的版本、提交号、生成时间，以及如何重新生成。
+
+---
+
+## 6. 开发体验与持续集成
+
+### 6.1 Makefile 命令
+| 命令 | 作用 |
+|---|---|
+| `make dev-db` / `make dev-db-down` | 启动或停止开发数据库（`deploy/compose.dev.yaml`） |
+| `make run` | 以 dev 配置运行后端（`go run ./cmd/nerve serve`） |
+| `make web-dev` | 启动前端开发服务器（Vite，把 `/api` 转发给后端） |
+| `make gen` | 重新生成所有代码：Go 接口层、打包后的 OpenAPI 描述、TS 客户端 |
+| `make gen-check` | 重新生成，并检查生成物是否已提交且没有差异 |
+| `make lint` | golangci-lint、前端类型检查、oxlint |
+| `make test` | Go 单元测试、集成测试、架构测试 |
+| `make build` | 构建前端，嵌入 Go 程序，编译出 `bin/nerve` |
+| `make e2e` | 构建产物并运行端到端测试（等同于 `pnpm e2e`） |
+
+### 6.2 开发流程
+1. 执行 `make dev-db`，启动本地的 Postgres 18。
+2. 执行 `make run`，后端监听 `:8080`；dev 环境下会自动执行迁移。
+3. 执行 `make web-dev`，前端运行在 `:3000`，接口请求会被转发到后端。
+
+### 6.3 持续集成（`.github/workflows/ci.yml`）
+| 任务 | 内容 |
+|---|---|
+| `server` | 安装 Go 1.27.1 → `make gen-check` → golangci-lint（官方 Action，v2.13.2）→ `go test ./...`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
+| `web` | `corepack enable` → `pnpm install --frozen-lockfile` → 类型检查 → oxlint（按警告基线）→ 构建 |
+| `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图 |
+
+触发条件：每次推送代码和每个 PR。
+
+---
+
+## 7. 对总体设计的调整建议（请确认）
+
+写 M0 设计时，发现总体设计中有几处需要修正。确认后，我会同步更新 `v0-design.md` 和 `plane-diff.md`。
+
+### 7.1 业务表由各个 M 自己建，M0 不一次性建全部表
+- **原来的写法**：M0 生成包含全部 45 张表的 `0001_init.sql`。
+- **建议改为**：
+  - M0 只提供 Plane 表结构快照（5.3）和迁移机制（3.5）。
+  - 每个 M 在实现自己的功能时，以快照为起点，为自己的模块写迁移文件。
+- **理由**：
+  1. 很多列级别的决定，要到对应的 M 才有足够的信息做出，比如 `auth_sessions` 的结构、筛选条件怎么存、草稿的 `payload`。一次性建全部表会把这些决定提前，之后还得再写迁移来改。
+  2. 符合"不写用不上的代码"的原则：M0 建的表在 M2 到 M8 之前都没有代码使用。
+  3. 迁移文件的归属更清楚：谁建的表谁负责。
+- **影响**：差异清单里"列级别的细节在 M0 补全"改为"由建表的 M 补全"。
+
+### 7.2 River 和 sqlc 推迟到第一次真正使用时（M2）再接入
+- **理由**：M0 没有任何后台任务，也没有任何 SQL 查询。现在接入 River，只会得到一个"启动了但什么都不做"的任务客户端；现在接入 sqlc，也没有查询可以生成代码。两者都属于用不上的代码。
+- **M2 的情况**：M2 会有第一个定时任务（清理过期会话），也会有第一批查询（账户和会话），届时和真实的用法一起接入并测试。
+- **对 M0 的影响**：M0 的依赖列表里不再包含 River 和 sqlc；它们的版本已经在第 1 节核实过了。
+
+### 7.3 前端 lint 采用"警告基线只降不升"
+- **原来的写法**：总体设计 7.6 写的是"oxlint 警告即报错"。
+- **问题**：Plane 现有的代码带着上万条警告，这个要求在迁入时做不到。
+- **建议改为**："警告数不得超过基线，基线只能调低"，并在 M1 制定逐步清零的计划（见 5.2）。
+
+### 7.4 架构规则主要由架构测试来检查
+- **原来的写法**：总体设计 6.3 写的是"用 depguard（必要时加 go-arch-lint）检查依赖方向和模块边界"。
+- **建议改为**：
+  - 模块边界和分层方向，用仓库内的架构测试来检查（3.7）。规则写成代码，没有额外的工具依赖，也容易扩展。
+  - depguard 只负责"禁止使用的库"。
+  - 不引入 go-arch-lint。它虽然还在维护，但主要靠社区贡献，而我们的规则用架构测试更容易准确表达。
+
+### 7.5 版本相关的补充
+- **UUIDv7 由 Go 1.27 的标准库生成**，数据库不设默认值。
+- **v0 期间 TypeScript 保持 5.8**。
+- **OpenAPI 的版本**：按第 4 节的方法验证后确定。
+
+---
+
+## 8. Phase 划分与实施规划
+
+所有 Phase 按顺序依次推进。每个 Phase 都要依次产出 spec、plan、实现和 review，文件放在对应的子目录中。
+
+### P1 `repo-toolchain`：仓库与工具链
+- **交付物**：
+  - 根目录的 `package.json`、`pnpm-workspace.yaml`（先只包含工作区的骨架）、`.node-version`、`.editorconfig`。
+  - `server/go.mod`（锁定 `toolchain go1.27.1`）和 `server/tools/go.mod`。
+  - Makefile 的骨架。
+  - `deploy/compose.dev.yaml`（Postgres 18）。
+  - `.github/workflows/ci.yml` 的骨架：几个任务都能跑通，此时还没有实际内容。
+  - `.gitignore` 的补充项。
+- **验收**：
+  - 在一台干净的机器上，只装了 Docker、Go 和 Node，执行 `make dev-db` 能启动数据库。
+  - `go tool -modfile=tools/go.mod oapi-codegen -version` 能运行。
+  - 持续集成通过。
+- **风险**：sqlc 需要 cgo（它依赖 pg_query 的 C 代码）。M0 不使用 sqlc，但这个风险要在 P1 记录下来，M2 接入时再验证。
+
+### P2 `server-platform`：服务端平台层
+- **交付物**：
+  - `platform/config`：分环境加载配置、环境变量覆盖、配置文件内嵌进程序、启动时校验。
+  - `platform/logging`。
+  - `platform/buildinfo`。
+  - `platform/postgres`：连接池、goose 迁移执行器、测试工具 `pgtest`。
+  - `platform/httpserver`：`ServeMux`、三个中间件、problem+json、`/healthz` 和 `/readyz`、优雅停机。
+  - `bootstrap`。
+  - `cmd/nerve`：`serve`、`migrate up|down|status`、`version` 三个命令。
+  - `archtest` 和 `.golangci.yml`（包含 depguard 规则）。
+- **验收**：
+  - 单元测试：配置的加载顺序和覆盖规则、配置校验、中间件、problem+json。
+  - 集成测试：迁移执行器（up、down、status）、`/readyz` 在数据库不可用时返回 503。
+  - 架构测试通过。故意写一个违规的导入，架构测试必须报错（验证后删除这个违规）。
+  - 持续集成通过。
+
+### P3 `api-contract`：接口契约流水线与试点模块
+- **交付物**：
+  - OpenAPI 3.1 的链路验证，结论写进 P3 的 review。
+  - `api/` 目录结构和 Redocly 打包配置。
+  - 为每个模块单独运行 oapi-codegen 的生成配置，以及公共组件的共享生成包。
+  - `modules/instance` 的完整实现，并在 `bootstrap` 中接线。
+  - `web/packages/api-client`。
+  - `make gen` 和 `make gen-check`。
+- **验收**：
+  - `GET /api/v0/instance` 的 handler 测试通过，响应通过契约校验。
+  - `GET /api/v0/不存在的路径` 返回 404 problem+json。
+  - `make gen-check` 在持续集成中生效：故意修改描述文件但不重新生成，持续集成必须失败。
+
+### P4 `plane-schema`：Plane 表结构快照
+- **交付物**：`tools/plane-schema/` 下的提取脚本、说明文档、快照文件 `plane-v1.4.2-schema.sql`。
+- **验收**：
+  - 重新运行脚本，得到的快照与提交的版本一致。
+  - 快照中能找到总体设计 5.2 列出的全部 44 张 Plane 表。
+  - 差异清单中的相关说明已更新。
+
+### P5 `web-import`：前端迁入与内嵌
+- **交付物**：
+  - `web/`（原样迁入）。
+  - 根目录的工作区和 turbo 配置。
+  - Vite 开发服务器的代理配置。
+  - `platform/webui`。
+  - `make build` 能构建出内嵌前端的 `bin/nerve`。
+  - 在前端改动清单中登记迁入时做的最小改动。
+- **验收**：
+  - `pnpm install`、类型检查、按基线的 lint 检查、构建全部通过。
+  - `bin/nerve serve` 能打开前端首页；访问任意的前端深层路径都能返回 `index.html`。
+  - 持续集成通过。
+
+### P6 `e2e-ci`：端到端测试骨架与冒烟故事
+- **交付物**：
+  - `e2e/` 下的 Playwright 项目。
+  - fixtures：`server.ts`（每个 worker 启动一个 `nerve`）、`db.ts`（Node 端用 testcontainers 启动 Postgres，从模板库复制出每个 worker 的数据库）、`api.ts`（生成的 TS 客户端）。
+  - 第 9 节中的冒烟故事。
+  - 持续集成中的 `e2e` 任务。
+  - knip 的配置：M0 只出报告，M1 开始作为门禁。
+- **验收**：本地执行 `make e2e` 和持续集成中的 `e2e` 任务，全部通过。
+
+---
+
+## 9. 用户故事（M0 冒烟）
+
+M0 没有业务功能，所以这里的故事只验证"系统能启动、能访问、行为正确"。每个故事都按总体设计 8.2 的要求编写。
+
+| 编号 | 故事 | 页面 / 接口断言 | 数据库断言 |
+|---|---|---|---|
+| S1 | 运维人员用 test 配置启动 nerve，服务就绪 | `/healthz` 返回 200；`/readyz` 返回 200；`nerve migrate status` 能正常执行 | 服务确实连上了为本 worker 准备的数据库（`pg_stat_activity` 中能看到 nerve 的连接）。M0 没有迁移文件，从 M2 起加上"迁移版本正确"的断言 |
+| S2 | 用户在浏览器中打开首页 | 返回的是前端页面，所有静态资源都加载成功（没有 404）；直接打开一个深层路径，同样返回前端页面 | — |
+| S3 | 调用方查询实例信息 | `GET /api/v0/instance` 返回 200，`api_version` 为 `v0`，`version` 与构建时注入的版本号一致；用生成的 TS 客户端调用，类型检查通过 | — |
+| S4 | 调用方访问不存在的接口 | 返回 404，`Content-Type` 为 `application/problem+json`，而不是前端页面 | — |
+
+M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个故事都要有 PAT 版本。
+
+---
+
+## 10. 完成标准
+
+- [ ] P1 到 P6 全部完成，每个 Phase 都有 spec、plan 和 review。
+- [ ] 持续集成中的全部门禁通过：生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含架构测试和集成测试）、前端类型检查、oxlint（按基线）、前端构建、端到端冒烟故事。
+- [ ] `make build` 能构建出单个可执行文件 `bin/nerve`；它加上一个 Postgres，就能完成 S1 到 S4。
+- [ ] 第 7 节的调整建议已确认，并已同步更新到总体设计和差异清单。
+- [ ] 前端改动清单中已登记迁入时的改动。
+- [ ] `handoffs/` 中没有 `open` 状态的事项；需要移交给 M1 或 M2 的事项，已放进对应 M 的 `handoffs/` 目录。
+- [ ] 总体设计中 M0 的状态改为"已完成"。
+
+---
+
+## 11. Phase 进度表
+
+| Phase | 名称 | 状态 | spec | plan | review |
+|---|---|---|---|---|---|
+| P1 | repo-toolchain | 未开始 | — | — | — |
+| P2 | server-platform | 未开始 | — | — | — |
+| P3 | api-contract | 未开始 | — | — | — |
+| P4 | plane-schema | 未开始 | — | — | — |
+| P5 | web-import | 未开始 | — | — | — |
+| P6 | e2e-ci | 未开始 | — | — | — |
+
+---
+
+## 12. 风险
+
+| 风险 | 应对 |
+|---|---|
+| oapi-codegen 和 kin-openapi 对 OpenAPI 3.1 的支持还比较新 | P3 先验证；不通过就改用 3.0.3 |
+| 按模块拆分描述文件后，oapi-codegen 的跨文件引用（`import-mapping`）表现不符合预期 | P3 验证；备选方案是只用一个描述文件，再按 tag 分模块生成（oapi-codegen 支持 `include-tags`） |
+| Plane 后端镜像无法获取，或者在当前环境中跑不起来 | 改为从源码执行迁移（P4） |
+| Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | 使用 pnpm 缓存和 turbo 的本地缓存；如果还不够，在 P5 评估其他办法 |
+| River 仍是 0.x 版本，小版本之间可能有行为变化 | M2 接入时锁定具体的版本号 |

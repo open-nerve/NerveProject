@@ -531,6 +531,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
   - 1.2 中列出的所有功能。
   - Plane 企业版的残留，包括写着 `extended` 的空壳扩展文件和空函数。
   - Plane 自身的死代码，包括没有被使用的 IndexedDB 和同步代码、从未被创建过的集成服务，以及调用后端并不存在的接口的方法。
+  - **Next.js 兼容垫片**：Plane 从 Next.js 迁到 React Router 时留下的过渡层（`app/compat/next/*`）。约 330 处引用全部改为 React Router 原生写法，然后删除垫片。
 - **每个功能都要删到的层面**：路由、导航和菜单入口 → 组件、store、services、hooks → `packages/types` 中的类型和字段 → 常量和枚举 → 多语言文案 → 不再使用的依赖（如 yjs、hocuspocus、y-prosemirror、y-indexeddb、comlink，删除后逐个核实）。
 - **"自动化"设置页**：只保留自动归档，删除自动关闭。
 - **怎么保证删干净**：反复运行 TypeScript 类型检查和 knip，直到结果为零。
