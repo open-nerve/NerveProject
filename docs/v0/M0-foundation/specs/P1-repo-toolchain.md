@@ -43,7 +43,7 @@
 ### 2.3 开发数据库：`deploy/compose.dev.yaml`
 - **镜像**：`postgres:18.6`（写死小版本，保证每个人的环境一致）。
 - **账号和库名**：`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB` 都是 `nerve`。这是只在本机使用的开发账号。
-- **端口**：`${NERVE_DEV_DB_PORT:-5432}:5432`。如果本机的 5432 端口已经被占用，可以通过环境变量换一个。
+- **端口**：`${NERVE_DEV_DB_PORT:-55432}:5432`。默认不用 5432，是为了避开本机已有的其他 Postgres（包括其他项目的容器），避免连错数据库；如果 55432 也被占用，可以通过 `NERVE_DEV_DB_PORT` 环境变量换一个。
 - **数据卷**：挂载到 `/var/lib/postgresql`。**注意**：从 18 版开始，Postgres 官方镜像的数据目录改成了 `/var/lib/postgresql/18/docker`（已核实），挂载到旧路径 `/var/lib/postgresql/data` 的话，数据不会写进卷里。
 - **健康检查**：`pg_isready -U nerve -d nerve`。
 - **Compose 项目名**：固定为 `nerve-dev`，避免和其他项目冲突。
