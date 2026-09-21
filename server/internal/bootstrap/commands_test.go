@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
@@ -50,6 +51,23 @@ func TestMigrateCommandsOutput(t *testing.T) {
 	runCommand(t, db, migrateDown)
 	if got, want := runCommand(t, db, migrateDown), "no applied migrations to roll back\n"; got != want {
 		t.Errorf("down with nothing applied = %q, want %q", got, want)
+	}
+}
+
+func TestMigrateUpReportsMigrationsAppliedBeforeAFailure(t *testing.T) {
+	files := fstest.MapFS{
+		"00001_probe_create_widgets.sql": sampleMigrations["00001_probe_create_widgets.sql"],
+		"00002_probe_broken.sql":         {Data: []byte("-- +goose Up\nCREATE TABLE broken (;\n")},
+	}
+	var out bytes.Buffer
+
+	err := runMigration(context.Background(), testConfig(t, pgtest.NewEmptyDatabase(t), false), files, &out, migrateUp)
+
+	if err == nil {
+		t.Error("migrate up error = nil, want the failing migration's error")
+	}
+	if got, want := out.String(), "applied 00001_probe_create_widgets.sql\n"; got != want {
+		t.Errorf("migrate up output = %q, want %q", got, want)
 	}
 }
 

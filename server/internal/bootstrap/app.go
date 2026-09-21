@@ -48,11 +48,12 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 func (a *app) run(ctx context.Context) error {
 	if a.cfg.Database.AutoMigrate {
 		applied, err := a.migrator.Up(ctx)
-		if err != nil {
-			return err
-		}
+		// Log what was applied even when a later migration failed.
 		for _, m := range applied {
 			a.logger.InfoContext(ctx, "migration applied", slog.Int64("version", m.Version), slog.String("source", m.Source))
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return httpserver.NewServer(a.cfg.Server, a.handler, a.logger).ListenAndServe(ctx)

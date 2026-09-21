@@ -139,11 +139,20 @@ func TestMigratorUpStatusDown(t *testing.T) {
 func TestMigratorReportsFailingMigration(t *testing.T) {
 	pool := newPool(t, pgtest.NewEmptyDatabase(t))
 	m := newMigrator(t, pool, fstest.MapFS{
-		"00001_probe_broken.sql": {Data: []byte("-- +goose Up\nCREATE TABLE broken (;\n")},
+		"00001_probe_create_widgets.sql": sampleMigrations["00001_probe_create_widgets.sql"],
+		"00002_probe_broken.sql":         {Data: []byte("-- +goose Up\nCREATE TABLE broken (;\n")},
 	})
 
-	if _, err := m.Up(context.Background()); err == nil {
+	ran, err := m.Up(context.Background())
+	if err == nil {
 		t.Error("Up() error = nil, want the SQL error")
+	}
+	want := postgres.Migration{Version: 1, Source: "00001_probe_create_widgets.sql"}
+	if len(ran) != 1 || ran[0] != want {
+		t.Errorf("Up() applied %+v, want only %+v, the migration before the failure", ran, want)
+	}
+	if !hasColumn(t, pool, "widgets", "id") {
+		t.Error("widgets table missing: the migration before the failure must stay applied")
 	}
 }
 

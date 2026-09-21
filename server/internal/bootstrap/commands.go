@@ -69,16 +69,17 @@ func runMigration(ctx context.Context, cfg config.Config, files fs.FS, out io.Wr
 
 func migrateUp(ctx context.Context, m *postgres.Migrator, out io.Writer) error {
 	applied, err := m.Up(ctx)
+	// Print what was applied even when a later migration failed.
+	for _, mig := range applied {
+		if writeErr := writeLine(out, "applied "+mig.Source); writeErr != nil {
+			return errors.Join(err, writeErr)
+		}
+	}
 	if err != nil {
 		return err
 	}
 	if len(applied) == 0 {
 		return writeLine(out, "no pending migrations")
-	}
-	for _, mig := range applied {
-		if err := writeLine(out, "applied "+mig.Source); err != nil {
-			return err
-		}
 	}
 	return nil
 }

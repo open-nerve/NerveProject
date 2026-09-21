@@ -52,20 +52,22 @@ func NewMigrator(pool *pgxpool.Pool, fsys fs.FS) (*Migrator, error) {
 	return &Migrator{provider: provider}, nil
 }
 
-// Up applies every pending migration in version order and returns them.
+// Up applies every pending migration in version order and returns them. When
+// a migration fails, the ones applied before it stay applied: Up returns them
+// together with the error.
 func (m *Migrator) Up(ctx context.Context) ([]Migration, error) {
 	if m.provider == nil {
 		return nil, nil
 	}
 	results, err := m.provider.Up(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("migrate up: %w", err)
+		var partial *goose.PartialError
+		if !errors.As(err, &partial) {
+			return nil, fmt.Errorf("migrate up: %w", err)
+		}
+		return migrationsOf(partial.Applied), fmt.Errorf("migrate up: %w", err)
 	}
-	applied := make([]Migration, 0, len(results))
-	for _, r := range results {
-		applied = append(applied, migrationOf(r.Source))
-	}
-	return applied, nil
+	return migrationsOf(results), nil
 }
 
 // Down rolls back the most recently applied migration and returns it, or nil
@@ -131,4 +133,12 @@ func (m *Migrator) Close() error {
 
 func migrationOf(s *goose.Source) Migration {
 	return Migration{Version: s.Version, Source: path.Base(s.Path)}
+}
+
+func migrationsOf(results []*goose.MigrationResult) []Migration {
+	out := make([]Migration, 0, len(results))
+	for _, r := range results {
+		out = append(out, migrationOf(r.Source))
+	}
+	return out
 }
