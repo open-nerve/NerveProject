@@ -7,3 +7,9 @@
 - 协议：[AGPL-3.0](LICENSE)
 
 项目目前处于设计阶段，从 [docs/](docs/README.md) 开始阅读。
+
+## 版权
+
+Copyright © 2026 OpenNerve。以 [GNU AGPL-3.0](LICENSE) 协议发布。
+
+前端的部分代码来自 [Plane](https://github.com/makeplane/plane)（Copyright © Plane Software, Inc. and contributors，AGPL-3.0），相关文件保留了原有的版权声明。
