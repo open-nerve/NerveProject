@@ -53,14 +53,20 @@ func (c Config) LogValue() slog.Value {
 			slog.Duration("read_header_timeout", c.Server.ReadHeaderTimeout),
 			slog.Duration("shutdown_timeout", c.Server.ShutdownTimeout),
 		),
-		slog.Group("database",
-			slog.String("url", redactURL(c.Database.URL)),
-			slog.Int("max_conns", int(c.Database.MaxConns)),
-			slog.Bool("auto_migrate", c.Database.AutoMigrate),
-		),
+		slog.Any("database", c.Database),
 		slog.Group("log",
 			slog.String("level", c.Log.Level),
 			slog.String("format", c.Log.Format),
 		),
+	)
+}
+
+// LogValue renders the database settings with the password in the URL masked,
+// so they are safe to log on their own too.
+func (d DatabaseConfig) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("url", redactURL(d.URL)),
+		slog.Int("max_conns", int(d.MaxConns)),
+		slog.Bool("auto_migrate", d.AutoMigrate),
 	)
 }

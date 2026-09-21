@@ -14,7 +14,6 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env/v2"
-	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/v2"
 )
@@ -114,12 +113,18 @@ func lookupEnv(environ []string, name string) string {
 	return value
 }
 
+// loadFileIfExists merges the YAML file at path into k and skips a missing
+// file. It reads the file itself rather than through koanf's file provider,
+// which would link fsnotify into the binary for a watch nerve never uses.
 func loadFileIfExists(k *koanf.Koanf, path string) error {
-	err := k.Load(file.Provider(path), yaml.Parser())
+	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
+		return fmt.Errorf("load %s: %w", path, err)
+	}
+	if err := k.Load(rawbytes.Provider(data), yaml.Parser()); err != nil {
 		return fmt.Errorf("load %s: %w", path, err)
 	}
 	return nil
