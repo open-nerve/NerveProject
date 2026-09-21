@@ -20,7 +20,7 @@
 ```bash
 make dev-db   # 启动本地 Postgres 18（端口 55432，可用 NERVE_DEV_DB_PORT 修改）
 make test     # 运行测试（需要 Docker：集成测试用 testcontainers 启动 Postgres）
-make run      # 以 dev 配置运行后端，监听 :8080；Ctrl-C 停止
+make run      # 以 dev 配置运行后端，监听 127.0.0.1:8080；Ctrl-C 停止
 make          # 查看所有命令
 ```
 

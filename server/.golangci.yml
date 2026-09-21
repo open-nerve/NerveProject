@@ -5,6 +5,8 @@ linters:
   default: standard
   enable:
     - depguard
+    # 禁止 init()，对应总体设计 6.3 第 4 条
+    - gochecknoinits
   settings:
     depguard:
       rules:

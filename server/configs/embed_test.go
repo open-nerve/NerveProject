@@ -12,14 +12,15 @@ func TestBuiltInProfiles(t *testing.T) {
 	const devURL = "postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable"
 	tests := []struct {
 		env         string
+		addr        string // expected server.addr
 		url         string // expected database.url
 		autoMigrate bool
 		level       string
 		format      string
 	}{
-		{env: "dev", url: devURL, autoMigrate: true, level: "debug", format: "text"},
-		{env: "test", url: "postgres://from-env", autoMigrate: true, level: "warn", format: "text"},
-		{env: "prod", url: "postgres://from-env", autoMigrate: false, level: "info", format: "json"},
+		{env: "dev", addr: "127.0.0.1:8080", url: devURL, autoMigrate: true, level: "debug", format: "text"},
+		{env: "test", addr: ":8080", url: "postgres://from-env", autoMigrate: true, level: "warn", format: "text"},
+		{env: "prod", addr: ":8080", url: "postgres://from-env", autoMigrate: false, level: "info", format: "json"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.env, func(t *testing.T) {
@@ -34,7 +35,7 @@ func TestBuiltInProfiles(t *testing.T) {
 			want := config.Config{
 				Env: tt.env,
 				Server: config.ServerConfig{
-					Addr:              ":8080",
+					Addr:              tt.addr,
 					ReadHeaderTimeout: 5 * time.Second,
 					ShutdownTimeout:   20 * time.Second,
 				},
