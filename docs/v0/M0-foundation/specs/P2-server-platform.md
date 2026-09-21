@@ -27,7 +27,7 @@ M0 没有任何迁移文件，迁移机制由只存在于测试中的迁移集�
 
 | 路径 | 内容 |
 |---|---|
-| `.golangci.yml` | golangci-lint v2 配置：standard 规则集 + depguard；格式检查 gofmt、goimports（2.10） |
+| `.golangci.yml` | golangci-lint v2 配置：standard 规则集 + depguard + gochecknoinits；格式检查 gofmt、goimports（2.10） |
 | `configs/embed.go`，`configs/config{,.dev,.test,.prod}.yaml` | 内嵌的配置文件（2.3） |
 | `migrations/embed.go`，`migrations/sql/.gitkeep` | 内嵌的迁移目录（2.5） |
 | `internal/platform/config/` | 配置类型、加载、校验、打码 |
@@ -57,8 +57,7 @@ platform/postgres/pgtest ──→ platform/postgres, platform/config, migration
 | `github.com/pressly/goose/v3` | v3.28.0 | 迁移（Provider API） |
 | `github.com/knadh/koanf/v2` | v2.3.6 | 配置分层 |
 | `github.com/knadh/koanf/parsers/yaml` | v1.1.1 | YAML 解析 |
-| `github.com/knadh/koanf/providers/rawbytes` | v1.0.1 | 读取内嵌文件 |
-| `github.com/knadh/koanf/providers/file` | v1.2.1 | 读取 `NERVE_CONFIG_DIR` 和 `config.local.yaml` |
+| `github.com/knadh/koanf/providers/rawbytes` | v1.0.1 | 加载内嵌文件，以及 `os.ReadFile` 读到的 `NERVE_CONFIG_DIR` 和 `config.local.yaml`（2.3） |
 | `github.com/knadh/koanf/providers/env/v2` | v2.0.1 | 环境变量 |
 | `github.com/go-viper/mapstructure/v2` | v2.5.0 | koanf 解码用的库；直接导入以配置严格解码（2.3） |
 | `github.com/spf13/cobra` | v1.10.2 | 命令行 |
@@ -67,6 +66,7 @@ platform/postgres/pgtest ──→ platform/postgres, platform/config, migration
 
 - 以上都没有抬高 `go 1.27` 这一行（每次 `go mod tidy` 之后检查，见 2.11）。
 - 生产二进制只链接 pgx、goose、koanf、mapstructure、cobra 及其依赖；testcontainers 只出现在测试二进制中：只有 `pgtest` 导入它，而 archtest 规则 8 保证 `pgtest` 只被测试代码导入（已用 `go version -m` 核实）。
+- 不用 koanf 的 `providers/file`：它为监听文件变化引入 `fsnotify`，nerve 用不到。生产二进制不链接 `fsnotify`（已用 `go version -m` 核实）。
 
 ### 2.3 配置：`platform/config` 与 `server/configs`
 
@@ -74,7 +74,7 @@ platform/postgres/pgtest ──→ platform/postgres, platform/config, migration
 
 | 键 | 类型 | 默认值 | dev | test | prod |
 |---|---|---|---|---|---|
-| `server.addr` | host:port | `":8080"` | | | |
+| `server.addr` | host:port | `":8080"` | `127.0.0.1:8080`（只监听本机，与开发库一致） | | |
 | `server.read_header_timeout` | 时长 | `5s` | | | |
 | `server.shutdown_timeout` | 时长 | `20s` | | | |
 | `database.url` | 字符串，必填 | `""` | `postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable` | 由环境变量提供 | 由环境变量提供 |
@@ -93,6 +93,8 @@ M0 设计 3.6 中的 `app.name` 和 `web.enabled` 不在 P2 加入，见第 3 �
 3. 设置了 `NERVE_CONFIG_DIR` 时：该目录下的 `config.yaml`，然后是 `config.<env>.yaml`。文件不存在就跳过；目录本身不存在则报错。
 4. 仅 dev 环境：`Sources.LocalFile`（`cmd/nerve` 传入 `configs/config.local.yaml`，相对当前工作目录；`make run` 在 `server/` 下运行，所以就是 `server/configs/config.local.yaml`）。不存在就跳过。
 5. 环境变量 `NERVE_<SECTION>__<KEY>`。
+
+第 3、4 步的外部文件用 `os.ReadFile` 读取，再交给 `rawbytes` provider 和 YAML 解析器；`fs.ErrNotExist` 即"不存在，跳过"。
 
 `<env>` 来自 `NERVE_ENV`，取值 `dev`（默认）、`test`、`prod`，其他值直接报错。
 
@@ -119,7 +121,7 @@ M0 设计 3.6 中的 `app.name` 和 `web.enabled` 不在 P2 加入，见第 3 �
 
   `database.url` 的格式不在这里校验，由 pgx 在创建连接池时解析（pgx 的解析错误会把密码打码）。
 
-**打码**：`Config` 实现 `slog.LogValuer`。启动日志 `logger.Info("configuration loaded", "config", cfg)` 输出所有配置项，`database.url` 中的密码（用户信息中的密码和 `password` 查询参数）替换为 `xxxxx`；不是 URL 形式的连接串（`host=… password=…`）整体替换为 `xxxxx`。日志中只出现 `LogValue` 明确列出的字段，以后新增的密钥类配置项不会被意外打印出来。
+**打码**：`Config` 和 `DatabaseConfig` 都实现 `slog.LogValuer`，`Config` 的 `database` 分组交给 `DatabaseConfig.LogValue`，所以单独记录 `cfg.Database` 也不会泄露密码。启动日志 `logger.Info("configuration loaded", "config", cfg)` 输出所有配置项。`database.url` 只有以 `postgres://` 或 `postgresql://` 开头（不区分大小写）时才按 URL 处理：用户信息中的密码、名称中含 `password` 的查询参数（不区分大小写，例如 `password`、`sslpassword`）替换为 `xxxxx`；其他值整体替换为 `xxxxx`，包括 `host=… password=…` 形式的连接串、`postgres:user:pass@host/db` 这样没有 `//` 的值和其他协议的 URL。日志中只出现 `LogValue` 明确列出的字段，以后新增的密钥类配置项不会被意外打印出来。
 
 **接口**：
 ```go
@@ -153,6 +155,7 @@ type LogConfig struct {
 }
 
 func (c Config) LogValue() slog.Value
+func (d DatabaseConfig) LogValue() slog.Value
 
 type Sources struct {
 	Embedded  fs.FS    // 内置的配置文件（configs.FS()）
@@ -206,7 +209,7 @@ type MigrationStatus struct {
 type Migrator struct{ /* 未导出字段 */ }
 
 func NewMigrator(pool *pgxpool.Pool, fsys fs.FS) (*Migrator, error)
-func (m *Migrator) Up(ctx context.Context) ([]Migration, error)     // 按版本顺序执行所有待执行的迁移
+func (m *Migrator) Up(ctx context.Context) ([]Migration, error)     // 按版本顺序执行所有待执行的迁移；失败时同时返回已执行的迁移和错误
 func (m *Migrator) Down(ctx context.Context) (*Migration, error)    // 回滚最近一个；没有可回滚的返回 nil, nil
 func (m *Migrator) Status(ctx context.Context) ([]MigrationStatus, error)
 func (m *Migrator) CheckUpToDate(ctx context.Context) error         // 有待执行的迁移时返回 ErrPendingMigrations
@@ -214,6 +217,7 @@ func (m *Migrator) Close() error                                    // 在关闭
 ```
 - 内部用 `goose.NewProvider(goose.DialectPostgres, stdlib.OpenDBFromPool(pool), fsys, goose.WithDisableGlobalRegistry(true))`。关闭 goose 的全局 Go 迁移注册表，不依赖包级状态。
 - **没有迁移文件**：goose 返回 `ErrNoMigrations`，`NewMigrator` 把它当作"无事可做"，返回一个所有操作都是空操作的 `Migrator`：`Up` 返回空、`Down` 返回 nil、`Status` 返回空、`CheckUpToDate` 返回 nil，并且**完全不访问数据库**。
+- **部分失败**：goose 每个迁移单独一个事务，某个迁移失败时，之前的迁移已经提交。`Up` 用 `errors.As` 取出 goose 的 `*PartialError`，把其中已执行的迁移转换成 `[]Migration`，和错误一起返回（错误仍然包装 goose 的错误）。`migrate up` 先逐行打印这些 `applied <文件名>` 再报错；`nerve serve` 的自动迁移先逐条记录日志再退出。
 - 对外只暴露自己的类型，不把 goose 的类型泄露给调用方。
 - `CheckUpToDate` 的签名正好符合就绪检查（2.7）。注意 goose 的 `HasPending` 在版本表不存在时会先建表（`goose_db_version`），所以 `/readyz` 第一次检查一个从未迁移过的库时，会建出这张表并写入版本 0 的记录（goose 的初始状态）。它不影响之后的 `migrate up`，接受这个副作用。
 - 不启用 goose 的会话锁：v0 是单实例部署，生产环境"先迁移、再启动"；以后需要多实例同时启动时再加。
@@ -257,7 +261,7 @@ type Check struct {
 
 **中间件**（顺序固定，由 `NewServer` 统一套上，调用方无法漏掉或调换）：
 1. **请求 ID**：读取 `X-Request-Id`（常量 `HeaderRequestID`）；只有 1–128 个 `[A-Za-z0-9._:-]` 字符时才采用调用方的值（防止日志注入），否则用标准库 `uuid.NewV7()` 生成。写回响应头，并放进请求的 context（包内的 `requestID(ctx)` 读取，供后两个中间件和 `/readyz` 的日志使用）。
-2. **异常恢复**：捕获 panic，记录 error 日志（请求 ID、方法、路径、panic 值、调用栈），返回 `500 {"status":500,"code":"internal_error","title":"Internal Server Error"}`。如果响应已经开始写出，就改为 `panic(http.ErrAbortHandler)` 中断连接，避免客户端把截断的响应当作完整响应。handler 自己抛出的 `http.ErrAbortHandler` 原样继续抛出，不记为异常。
+2. **异常恢复**：捕获 panic，记录 error 日志（请求 ID、方法、路径、panic 值、调用栈），删除 handler 在 panic 前设置的所有响应头（`X-Request-Id` 除外：`Set-Cookie` 不能泄露，残留的 `Content-Length`、`Content-Encoding` 会破坏响应体），返回 `500 {"status":500,"code":"internal_error","title":"Internal Server Error"}`。如果响应已经开始写出，就改为 `panic(http.ErrAbortHandler)` 中断连接，避免客户端把截断的响应当作完整响应。handler 自己抛出的 `http.ErrAbortHandler` 原样继续抛出，不记为异常。
 3. **访问日志**：每个请求一条 info 日志 `http request`，字段 `request_id`、`method`、`path`、`status`、`duration`。handler panic 时记为 500（与异常恢复返回的状态一致）；handler 什么都没写时记为 200。
 
 **problem+json**（与总体设计 3.5 一致，P3 的 `api/common.yaml` 照此定义 `Problem` 组件）：
@@ -298,7 +302,7 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error
 ```
 - `Serve` 一直服务到 `ctx` 结束，然后停止接收新连接，最多等待 `server.shutdown_timeout` 让进行中的请求完成：按时完成返回 nil；超时则强制关闭剩余连接，返回包含 `context.DeadlineExceeded` 的错误。
 - **可测试的接缝**：停机由 `ctx` 触发，不直接处理信号；测试传入自己的 listener 和可取消的 context。信号只在 `main` 中转换为 context（2.9）。
-- `http.Server` 设置 `ReadHeaderTimeout`；`ErrorLog` 用 `slog.NewLogLogger` 接到同一个 logger（不导入标准库 `log`）。
+- `http.Server` 设置 `ReadHeaderTimeout`，以及 2 分钟的 `IdleTimeout`（包内常量，不是配置项）；`ErrorLog` 用 `slog.NewLogLogger` 接到同一个 logger（不导入标准库 `log`）。
 
 ### 2.8 组合根：`bootstrap`
 对 `cmd/nerve` 只暴露四个函数，每个对应一个命令：
@@ -333,7 +337,7 @@ func MigrateStatus(ctx context.Context, cfg config.Config, out io.Writer) error
   - 需要配置的命令用 `config.Load(config.Sources{Embedded: configs.FS(), Environ: environ, LocalFile: "configs/config.local.yaml"})` 加载配置，再调用 `bootstrap` 中对应的函数。每个命令的实现只有"加载配置 + 转交"两步。
   - `version` 不加载配置，输出一行：`nerve <版本> commit=<提交号> commit_time=<提交时间> modified=<true|false>`（来自 `buildinfo.Get()`）。
   - 关闭 cobra 默认的 `completion` 命令；错误和用法提示不重复打印（`SilenceErrors`、`SilenceUsage`，错误由 `run` 统一打印）。
-  - 所有命令都不接受位置参数。
+  - 所有命令都不接受位置参数。`migrate` 父命令也设置 `Args: cobra.NoArgs` 和打印帮助的 `RunE`：cobra 不校验不可运行的命令的参数，否则 `nerve migrate upp` 会打印帮助并以 0 退出。现在不带子命令时打印帮助、退出码 0；子命令拼错时报 `unknown command "upp" for "nerve migrate"`、退出码 1。
 
 ### 2.10 架构守护
 
@@ -344,7 +348,7 @@ func MigrateStatus(ctx context.Context, cfg config.Config, out io.Writer) error
   | # | 规则 | 来源 |
   |---|---|---|
   | 1 | 模块内的依赖只能向内：`adapter → app → domain`（模块根包 `module.go` 在最外层） | M0 3.7 第 1 条 |
-  | 2 | `domain` 只能导入标准库（不含 `net/http`、`database/sql` 及其子包）、本模块的包和 `internal/shared`；不能导入 `platform`、第三方库 | M0 3.7 第 1 条 |
+  | 2 | `domain` 和 `app` 只能导入标准库（不含 `net/http`、`database/sql` 及其子包）、本模块的内层包（`app` → 本模块的 `domain`）和 `internal/shared`；不能导入 `platform`、第三方库（如 pgx） | M0 3.1 / 总体设计 6.1 |
   | 3 | 模块之间不能互相导入 | M0 3.7 第 2 条 |
   | 4 | `platform` 不能导入 `modules` 和 `bootstrap` | M0 3.7 第 3 条 |
   | 5 | 只有 `bootstrap` 能导入 `modules`（模块内部的导入由规则 1–3 管） | M0 3.7 第 4 条 |
@@ -354,17 +358,18 @@ func MigrateStatus(ctx context.Context, cfg config.Config, out io.Writer) error
 
 - **规则测试**：一张"导入边 → 应违反的规则"表格，每条规则至少有一个违规的例子和一个合法的例子；测试还检查每条规则在表格中至少触发过一次，防止以后新增的规则没有测试。M0 还没有任何模块，规则 1、2、3、5、6 只能这样证明有效。
 - **仓库测试**：用 `golang.org/x/tools/go/packages` 加载模块中所有非测试包（`NeedName | NeedImports`），对每条导入边应用全部规则，每个违规报一条错误，例如：
-  `internal/modules/probe/domain imports net/http: domain imports only the standard library (not net/http or database/sql), its own module and internal/shared`。
+  `internal/modules/probe/domain imports net/http: domain and app import only the standard library (not net/http or database/sql), their own module's inner layers and internal/shared`。
   加载结果必须包含 `cmd/nerve`、`internal/bootstrap`、`internal/platform/config`，否则报错，防止"加载失败"被当成"没有违规"。
 - **测试缓存问题（已核实并处理）**：`go/packages` 通过子进程 `go list` 读取源码，`go test` 的结果缓存看不到这些文件读取。已复现：先跑一次通过，再加一个违规导入，`go test` 直接返回缓存的通过结果。持续集成的 `setup-go` 会恢复构建缓存，同样会受影响。处理：测试在进程内先遍历一遍模块目录（`filepath.WalkDir`），把每个目录的文件列表（含文件大小和修改时间）登记为这个测试的输入；任何源码的增改都会让缓存失效。已验证修复后违规能被发现。
 - **验收演示**：计划中故意新建 `internal/modules/probe/domain/probe.go` 导入 `net/http`，架构测试必须失败并报出上面的错误，然后删除这个目录。
 
 **`.golangci.yml`**（golangci-lint v2 格式，`server/.golangci.yml`）：
-- `linters.default: standard`（errcheck、govet、ineffassign、staticcheck、unused）+ `depguard`。
+- `linters.default: standard`（errcheck、govet、ineffassign、staticcheck、unused）+ `depguard` + `gochecknoinits`。
 - **depguard 禁用列表**：`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`（用标准库 `uuid`）；`github.com/spf13/viper`（用 koanf）；`github.com/pkg/errors`（用标准库 `errors`）；`log$`（用 `log/slog`）。
 - **已核实**：depguard 的 `pkg` 是前缀匹配，写 `log` 会同时禁掉 `log/slog` 和 `log/syslog`；末尾加 `$` 表示精确匹配，`log$` 只禁标准库 `log`。
 - **格式检查**：`gofmt` 和 `goimports`（`local-prefixes: github.com/open-nerve/NerveProject`，导入分三组：标准库、第三方、本仓库）。代价很低，能避免格式差异进入评审。
-- 不再启用其他 linter（如 `gochecknoinits`、`gochecknoglobals`）：standard 已覆盖常见错误；"禁止 `init()`、禁止全局可变状态"由评审把关，`gochecknoglobals` 对 `embed.FS`、`sync.OnceValues` 等合理用法会误报。
+- **`gochecknoinits`**：禁止 `init()`（总体设计 6.3 第 4 条），没有误报。
+- 不启用 `gochecknoglobals`：它对 `embed.FS`、`sync.OnceValues` 等合理用法会误报，"禁止全局可变状态"由评审把关。其他 linter 也不再启用：standard 已覆盖常见错误。
 - **验收演示**：计划中临时加入一个导入 `log` 的文件，`make lint` 必须报 `import 'log' is not allowed from list 'banned': 用 log/slog (depguard)`，然后删除。
 
 ### 2.11 Makefile、持续集成、文档与交接
@@ -398,18 +403,18 @@ func MigrateStatus(ctx context.Context, cfg config.Config, out io.Writer) error
 1. **单元测试**（`go test ./...` 中）：
    - 配置：五层加载顺序和覆盖规则；环境变量映射（`__` 分级、单个 `_` 保留、控制变量和 `NERVE_DEV_DB_PORT` 被忽略）；dev 以外的环境不读 `config.local.yaml`；缺失的可选文件被跳过；`NERVE_ENV` 非法、`NERVE_CONFIG_DIR` 不存在、必填项缺失、未知的键、非法时长、数字时长、非法数字、非法 YAML 都报错并指明键名；七条取值校验一次全部列出；打码；三个内置环境都能加载并得到预期的值。
    - 日志：JSON 和文本格式、级别过滤、非法配置报错。
-   - 中间件：请求 ID 的生成、采用、拒绝；panic 返回 500 problem+json 并记录日志；响应开始后 panic 会中断连接；`http.ErrAbortHandler` 不被当作异常；访问日志的字段和状态码。
+   - 中间件：请求 ID 的生成、采用、拒绝；panic 返回 500 problem+json 并记录日志，handler 在 panic 前设置的响应头（`X-Request-Id` 除外）被清除；响应开始后 panic 会中断连接；`http.ErrAbortHandler` 不被当作异常；访问日志的字段和状态码。
    - problem+json：字段、`Content-Type`、可选成员省略。
    - 路由：`/healthz` 不执行检查；`/readyz` 全部通过为 200、第一个失败为 503 且记录日志、检查带超时；`/api/` 兜底 404 problem+json；其余路径不被接管。
    - 生命周期：取消 ctx 后正常停机返回 nil；停机开始后不再接受新连接，进行中的请求能完成；超过 `shutdown_timeout` 返回超时错误；监听失败报错。
    - 连接池：`max_conns` 生效；URL 解析失败时错误中不含密码。
    - 迁移执行器：没有迁移文件时所有操作都是空操作且不访问数据库；数据库不可用时 `CheckUpToDate` 返回连接错误。
-   - 命令行：`version` 输出；未知命令、非法配置以退出码 1 结束并打印错误。
+   - 命令行：`version` 输出；未知命令（包括 `migrate` 的未知子命令）、非法配置以退出码 1 结束并打印错误；`nerve migrate` 不带子命令时打印帮助、退出码 0。
 2. **集成测试**（testcontainers，随 `go test ./...` 运行）：
-   - 迁移执行器：用测试迁移集依次验证 status（全部待执行）→ up → status（全部已执行）→ 再次 up 无事可做 → down 两次 → 第三次 down 无事可做；表结构随之变化；失败的迁移报错。
-   - `pgtest`：库之间相互隔离；空库没有表；测试结束后库被删除。
-   - `bootstrap`：自动迁移后 `/readyz` 为 200；有待执行的迁移时 503（`migrations is not ready`）；**数据库不可用时 503（`database is not ready`）**；自动迁移失败时启动失败；三个迁移命令的输出（有迁移和没有迁移两种情况）。
-   - `cmd/nerve`：`nerve serve` 在 `/readyz` 就绪后，取消 ctx 以退出码 0 结束，日志中的密码已打码；`nerve migrate status` 输出 `no migrations`。
+   - 迁移执行器：用测试迁移集依次验证 status（全部待执行）→ up → status（全部已执行）→ 再次 up 无事可做 → down 两次 → 第三次 down 无事可做；表结构随之变化；失败的迁移报错，并返回它之前已执行的迁移。
+   - `pgtest`：库之间相互隔离；空库没有表；测试结束后库被删除（删除时仍有打开的连接）。
+   - `bootstrap`：自动迁移后 `/readyz` 为 200；有待执行的迁移时 503（`migrations is not ready`）；**数据库不可用时 503（`database is not ready`）**；自动迁移失败时启动失败；三个迁移命令的输出（有迁移和没有迁移两种情况，后者用空的迁移集）；部分失败时 `migrate up` 先打印已执行的迁移再报错。
+   - `cmd/nerve`：`nerve serve` 在 `/readyz` 就绪后，取消 ctx 以退出码 0 结束，日志中的密码已打码；`nerve migrate status` 以退出码 0 输出 `no migrations` 或状态表（M2 起有生产迁移）。
 3. **架构测试通过**；故意加入一个违规导入后架构测试失败并指出违规，删除后恢复通过。
 4. **`make lint` 输出 `0 issues.`**；故意导入标准库 `log` 后 depguard 报错，删除后恢复。
 5. **手工验证**（开发库已由 `make dev-db` 启动）：
