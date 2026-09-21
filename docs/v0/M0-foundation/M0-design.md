@@ -125,11 +125,11 @@ NerveProject/
 ### 3.1 包的职责
 | 包 | 职责 | 可以依赖 |
 |---|---|---|
-| `cmd/nerve` | 解析命令行参数，调用 `bootstrap` | `bootstrap`、`platform/config`、`platform/buildinfo` |
+| `cmd/nerve` | 解析命令行参数，调用 `bootstrap` | `bootstrap`、`platform/config`、`platform/buildinfo`、`server/configs`（内嵌的配置数据） |
 | `internal/bootstrap` | **唯一的组合根**：创建各个适配器，接到各模块上，把各模块的 HTTP handler 挂到路由上，启动服务 | 所有 `platform` 包和 `modules` 包 |
 | `internal/platform/*` | 与业务无关的技术基础件，各包之间互不依赖（`config` 除外，它可以被任何包使用） | 标准库和第三方库；**不能依赖 `modules`** |
 | `internal/modules/<m>/domain` | 领域模型与规则 | 只能依赖标准库（以后可以依赖 `shared`） |
-| `internal/modules/<m>/app` | 用例；声明本模块需要的端口 | 本模块的 `domain` |
+| `internal/modules/<m>/app` | 用例；声明本模块需要的端口 | 只能依赖本模块的 `domain` 和 `internal/shared`；不能依赖 `platform` 或第三方技术库。archtest 检查这条规则 |
 | `internal/modules/<m>/adapter/*` | 端口的实现（http、postgres 等） | 本模块的 `app` 和 `domain`、`platform`、生成的代码 |
 | `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖) *Module` | 本模块内部的各个包 |
 
@@ -156,21 +156,24 @@ NerveProject/
   - `/api/v0/…`：各模块生成的路由，由 `bootstrap` 逐个挂载。
   - `/healthz`：存活检查，不访问数据库。
   - `/readyz`：就绪检查，检查数据库能否连通、迁移是否已完成。
-  - `/api/` 下没有匹配到的路径：返回 **404 problem+json**，不会回退到前端页面。
+  - `/api/` 下没有匹配到的路径：返回 **404 problem+json**，不会回退到前端页面。`/api/` 兜底不区分方法（不带方法注册），所以 `/api/` 下"路径存在但方法不对"也得到 404，而不是 405。
   - 其余路径：交给 `webui`（前端静态文件和单页应用回退）。
 - **中间件**（顺序固定）：
-  1. 请求 ID：读取 `X-Request-Id`，没有就生成一个，并写回响应头。
+  1. 请求 ID：读取 `X-Request-Id`，只有是 1–128 个 `[A-Za-z0-9._:-]` 字符时才采用，否则生成 UUIDv7，并写回响应头。
   2. 异常恢复：捕获 panic，返回 500 problem+json，并记录日志。
   3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。
-- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致）。领域错误码的体系在 M2 建立。
-- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。
+- **`/readyz`**：按顺序执行各项检查，全部共用一个 2 秒的超时预算，遇到第一个失败就停止，返回通用的 `detail`（`<检查名> is not ready`）；具体错误只写进日志，不返回给客户端。
+- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`internal_error`、`not_ready`）；领域错误码的体系在 M2 建立。
+- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。`http.Server` 另设 2 分钟的空闲连接超时。
+- 详见 [P2 spec](specs/P2-server-platform.md) 2.7 节。
 
 ### 3.4 内嵌前端（`platform/webui`）
 - **打包方式**：`make build` 先构建前端，把 `web/apps/web/build/client/` 复制到 `server/internal/platform/webui/dist/`，再编译 Go 程序。`dist/` 只提交一个 `.gitkeep`，其余内容已加入 `.gitignore`。
 - **没有构建前端时**：`dist/` 中没有 `index.html`，访问页面会得到一句明确的提示"前端未构建，请运行 make build"。开发时用 Vite 开发服务器访问前端，不受影响。
 - **单页应用回退**：路径能对应到静态文件就返回文件；否则返回 `index.html`。
 - **缓存策略**：带哈希的资源文件设为 `Cache-Control: immutable`，`index.html` 设为 `no-cache`。
-- **配置开关**：`web.enabled`，默认开启。
+- **路由注册**：必须注册成不带方法的 `/` 模式。`GET /` 会和 `/api/` 冲突，ServeMux 在注册时就会 panic。
+- **配置开关**：`web.enabled`，由 P5 加入。
 
 ### 3.5 数据库与迁移
 - **连接**：`pgxpool`，参数来自配置（`database.url`、`database.max_conns`）。
@@ -183,12 +186,14 @@ NerveProject/
 - **迁移文件的命名**：`NNNNN_<模块>_<说明>.sql`（goose 按序号排序），文件名能看出归属哪个模块。
 - **外键方向约定**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键。指向更晚建立的模块的外键（比如 `users.avatar_asset_id → file_assets`），由后建的那个模块的迁移用 `ALTER TABLE` 补上。
 - **M0 不包含任何迁移文件**：迁移机制（执行、回滚、查看状态、没有迁移文件时的处理）由集成测试验证，测试使用专门的测试迁移集，只存在于测试中。
+- **`goose_db_version` 的产生**：第一次对一个从未迁移过的库执行 `/readyz`，会顺带建出 goose 的 `goose_db_version` 表，这是 goose 自身的行为，无害。
+- **不启用 goose 的会话锁**：v0 是单实例部署，暂不需要。
+- **部分失败时**：某次迁移失败，`migrate up` 仍会先报出这之前已经执行成功的迁移，再报错。
+- 详见 [P2 spec](specs/P2-server-platform.md) 2.5 节。
 
 ### 3.6 配置（落实总体设计 6.8）
 - **M0 的配置项**：
   ```yaml
-  app:
-    name: Nerve
   server:
     addr: ":8080"
     read_header_timeout: 5s
@@ -200,31 +205,43 @@ NerveProject/
   log:
     level: info          # dev 中为 debug，test 中为 warn
     format: json         # dev 和 test 中为 text
-  web:
-    enabled: true
   ```
-- **dev 环境的数据库地址**：`config.dev.yaml` 里写的是本地开发库的地址（`postgres://nerve:nerve@localhost:55432/nerve`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
+  `web.enabled` 由 P5 加入，P2 阶段还没有这一项。
+- **dev 环境**：`server.addr` 是 `127.0.0.1:8080`（只监听本机）；数据库地址是本地开发库（`postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
 - **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，`database.url` 中的密码会被打码。
+- 未知的配置键直接报错，不会悄悄回落到默认值。
+- 时长类配置项只接受字符串（例如 `5s`），不接受纯数字。
+- 只有包含 `__` 的 `NERVE_*` 变量才是配置键；`NERVE_ENV`、`NERVE_CONFIG_DIR` 和换开发库端口用的 `NERVE_DEV_DB_PORT` 都不含 `__`，不当作配置键。
+- `NERVE_CONFIG_DIR` 是内置配置文件之上的一层，按键覆盖，不是整体替换。
+- `config.local.yaml` 相对当前工作目录解析；`make run` 在 `server/` 目录下运行。
+- 详见 [P2 spec](specs/P2-server-platform.md) 2.3 节。
 
 ### 3.7 架构守护
-- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，检查以下规则：
-  1. 模块内的依赖只能向内：`adapter → app → domain`。`domain` 不能导入 `app`、`adapter`、`platform`，也不能导入数据库驱动、HTTP 等技术库。
-  2. 模块之间不能互相导入。
-  3. `platform` 不能导入 `modules` 和 `bootstrap`。
-  4. 只有 `bootstrap` 能导入各个模块。
-  5. 生成的代码只能被本模块的 http 适配器导入。
+- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，一共 8 条规则，包括：
+  1. 模块内的依赖只能向内：`adapter → app → domain`。
+  2. `domain` 和 `app` 都只能依赖标准库、本模块的内层包和 `internal/shared`，不能依赖 `platform`、数据库驱动、HTTP 等技术库。
+  3. 模块之间不能互相导入。
+  4. `platform` 不能导入 `modules` 和 `bootstrap`。
+  5. 只有 `bootstrap` 能导入各个模块。
+  6. 生成的代码只能被本模块的 http 适配器导入。
+  7. `platform` 的各个包之间互不导入（`config` 除外）。
+  8. `pgtest` 只能被测试代码导入。
 - **depguard**：只管"整个项目都禁止使用的库"，例如：
-  - 第三方 uuid 库：用标准库。
+  - 第三方 uuid 库（`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`）：用标准库。
   - viper：用 koanf。
-  - 标准库 `log`：用 slog。
+  - 标准库 `log`（精确匹配 `log$`，因为前缀匹配的 `log` 会连 `log/slog` 一起禁掉）：用 slog。
   - `github.com/pkg/errors`：用标准库的 errors。
-- 以上两项都是持续集成的门禁。架构测试随 `go test ./...` 一起运行，不需要额外安装工具。
+- golangci-lint 还启用 `gochecknoinits`，禁止 `init()`。
+- 以上都是持续集成的门禁。架构测试随 `go test ./...` 一起运行，不需要额外安装工具。
+- 详见 [P2 spec](specs/P2-server-platform.md) 2.10 节。
 
 ### 3.8 测试工具
 - **`platform/postgres/pgtest`**：
-  1. 用 testcontainers 启动一个 Postgres 18 容器，同一次测试运行中所有测试共用。
+  1. 用 testcontainers 启动一个 Postgres 18 容器，每个包的测试进程共用一个（Go 为每个包单独启动一个测试进程，容器不跨进程共用）。
   2. 执行迁移，得到一个模板库。
-  3. 每个测试用 `CREATE DATABASE … TEMPLATE` 复制出自己独立的数据库，测试结束后删除。
+  3. 每个测试用 `CREATE DATABASE … TEMPLATE` 复制出自己独立的数据库，测试结束后删除；`NewEmptyDatabase` 给出一个没有执行过任何迁移的库。
+  4. 容器由 testcontainers 的回收容器（Ryuk）清理，所以不能设置 `TESTCONTAINERS_RYUK_DISABLED`。
+- `go test -short` 跳过集成测试，没有 Docker 时也能跑单元测试。
 - **接口契约校验**：试点模块的 handler 测试用 kin-openapi，校验响应是否符合 `api/dist/openapi.yaml` 中的描述。
 
 ---
@@ -294,7 +311,7 @@ api/common.yaml + api/modules/*.yaml
 | `make gen` | 重新生成所有代码：Go 接口层、打包后的 OpenAPI 描述、TS 客户端 |
 | `make gen-check` | 重新生成，并检查生成物是否已提交且没有差异 |
 | `make lint` | golangci-lint、前端类型检查、oxlint |
-| `make test` | Go 单元测试、集成测试、架构测试 |
+| `make test` | Go 单元测试、集成测试、架构测试。需要 Docker（集成测试用 testcontainers） |
 | `make build` | 构建前端，嵌入 Go 程序，编译出 `bin/nerve` |
 | `make e2e` | 构建产物并运行端到端测试（等同于 `pnpm e2e`） |
 
@@ -397,7 +414,7 @@ api/common.yaml + api/modules/*.yaml
   - `make gen` 和 `make gen-check`。
 - **验收**：
   - `GET /api/v0/instance` 的 handler 测试通过，响应通过契约校验。
-  - `GET /api/v0/不存在的路径` 返回 404 problem+json。
+  - `GET /api/v0/不存在的路径` 返回 404 problem+json（P2 已在平台层实现并测试，P3 挂上模块后再验证一次）。
   - `make gen-check` 在持续集成中生效：故意修改描述文件但不重新生成，持续集成必须失败。
 
 ### P4 `plane-schema`：Plane 表结构快照
@@ -480,3 +497,5 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | Plane 后端镜像无法获取，或者在当前环境中跑不起来 | 改为从源码执行迁移（P4） |
 | Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | 使用 pnpm 缓存和 turbo 的本地缓存；如果还不够，在 P5 评估其他办法 |
 | River 仍是 0.x 版本，小版本之间可能有行为变化 | M2 接入时锁定具体的版本号 |
+| 持续集成拉取 Postgres 镜像受 Docker Hub 匿名拉取频率限制 | 出现限流时，在持续集成中登录 Docker Hub 或改用镜像缓存 |
+| 每个包一个测试容器，模块增多后持续集成变慢 | M2 之后评估 testcontainers 的跨进程复用，或限制 `go test -p` |
