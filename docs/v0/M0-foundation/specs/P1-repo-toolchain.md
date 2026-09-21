@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M0/P1 `repo-toolchain` |
 | 日期 | 2026-09-22 |
-| 状态 | 待审阅 |
+| 状态 | 已批准 |
 | 上级文档 | [M0 设计文档](../M0-design.md) 第 1、2、6 节 |
 
 ## 1. 目标
@@ -15,7 +15,7 @@
 ### 2.1 根目录
 | 文件 | 内容 |
 |---|---|
-| `package.json` | `"private": true`；`"packageManager": "pnpm@11.10.0"`；`engines.node: ">=24"`。P1 中没有依赖和脚本（前端在 P5 迁入） |
+| `package.json` | `"private": true`；`"packageManager": "pnpm@11.10.0"`；`engines.node: "^24"`（Node 25 起不再自带 corepack）。P1 中没有依赖和脚本（前端在 P5 迁入） |
 | `pnpm-workspace.yaml` | `packages: [web/apps/*, web/packages/*, e2e]`。这些目录在 P5 和 P6 才会出现，目前匹配不到任何包，pnpm 允许这种情况 |
 | `pnpm-lock.yaml` | 由 `pnpm install` 生成 |
 | `.node-version` | `24` |
@@ -43,9 +43,9 @@
 ### 2.3 开发数据库：`deploy/compose.dev.yaml`
 - **镜像**：`postgres:18.6`（写死小版本，保证每个人的环境一致）。
 - **账号和库名**：`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB` 都是 `nerve`。这是只在本机使用的开发账号。
-- **端口**：`${NERVE_DEV_DB_PORT:-55432}:5432`。默认不用 5432，是为了避开本机已有的其他 Postgres（包括其他项目的容器），避免连错数据库；如果 55432 也被占用，可以通过 `NERVE_DEV_DB_PORT` 环境变量换一个。
+- **端口**：`127.0.0.1:${NERVE_DEV_DB_PORT:-55432}:5432`，只监听本机地址。默认不用 5432，是为了避开本机已有的其他 Postgres（包括其他项目的容器），避免连错数据库；如果 55432 也被占用，可以通过 `NERVE_DEV_DB_PORT` 环境变量换一个。
 - **数据卷**：挂载到 `/var/lib/postgresql`。**注意**：从 18 版开始，Postgres 官方镜像的数据目录改成了 `/var/lib/postgresql/18/docker`（已核实），挂载到旧路径 `/var/lib/postgresql/data` 的话，数据不会写进卷里。
-- **健康检查**：`pg_isready -U nerve -d nerve`。
+- **健康检查**：`pg_isready -h 127.0.0.1 -U nerve -d nerve`（显式指定 `-h`，检查 TCP 连接是否就绪，而不是只检查 Unix socket）。
 - **Compose 项目名**：固定为 `nerve-dev`，避免和其他项目冲突。
 
 ### 2.4 Makefile
@@ -65,7 +65,8 @@
 
 ### 2.5 持续集成：`.github/workflows/ci.yml`
 - **触发条件**：推送到任意分支、任意 PR。
-- **并发控制**：同一个分支有新的运行时，取消旧的运行。
+- **并发控制**：同一个分支有新的运行时，取消旧的运行；但 `main` 分支例外，每次提交的结果都保留，不被取消。
+- **运行环境**：两个任务都固定在 `ubuntu-24.04`，并设置 15 分钟的任务超时。
 
 | 任务 | 步骤 |
 |---|---|
