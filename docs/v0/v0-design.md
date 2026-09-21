@@ -118,15 +118,16 @@ Nerve 是一个轻量的多人协作项目管理系统，面向企业和互联�
 ### 2.2 仓库结构
 ```
 NerveProject/
-  api/          openapi.yaml：接口契约，是唯一的依据
+  api/          接口契约，是唯一的依据：按模块拆分的描述文件，打包为 api/dist/openapi.yaml
   server/       Go 后端
   web/          前端（pnpm monorepo：apps/web + 所需的 packages）
   e2e/          Playwright 端到端测试
   deploy/       docker compose 等部署配置
+  tools/        不属于运行时的工具（如 Plane 表结构快照）
   docs/         设计与过程文档
   LICENSE       AGPL-3.0
 ```
-`plane/` 和 `refer/` 只是本地的参考代码，已加入 `.gitignore`。
+仓库根目录同时是 pnpm 工作区的根（包含 `web/` 下的应用和包，以及 `e2e/`），这样端到端测试可以直接使用生成的 TS 客户端。`plane/` 和 `refer/` 只是本地的参考代码，已加入 `.gitignore`。完整布局见 [M0 设计文档](M0-foundation/M0-design.md#2-仓库布局m0-完成时)。
 
 ### 2.3 版权与品牌
 - 仓库使用 AGPL-3.0。`web/` 中来自 Plane 的文件保留原有的版权声明。
@@ -146,7 +147,8 @@ NerveProject/
   - GET 查询，POST 创建，DELETE 删除（软删除）。
   - PATCH 部分更新：只改传入的字段，传 `null` 表示清空。
   - **POST 和 PATCH 都返回改完之后的完整资源。**
-- **接口描述**：`api/openapi.yaml`（OpenAPI 3.1）。先改接口描述，再写实现。
+- **接口描述**：放在 `api/`，按模块拆分（`api/modules/<模块>.yaml`，公共组件放在 `api/common.yaml`），打包为 `api/dist/openapi.yaml`。先改接口描述，再写实现。
+- **OpenAPI 版本**：目标是 3.1。Go 端工具对 3.1 的支持还比较新，所以由 M0/P3 先验证整条工具链：通过就用 3.1，不通过就用 3.0.3。
 
 ### 3.2 路由：列表挂在父资源下，单个资源用短路径
 ```
@@ -304,13 +306,15 @@ draft_issues(id, workspace_id, project_id NULL, payload jsonb,
   - 迭代归档时，同时移除指向它的收藏（照搬 Plane）。
 - **审计字段**：`created_by` / `updated_by` 在业务代码中显式赋值为当前账户。
 - **排序**：`sort_order` 是浮点数，拖拽时由前端计算新值；初始值的算法和 Plane 一致。
-- **ID**：UUID 类型，由 Go 生成 UUIDv7。
+- **ID**：UUID 类型，由 Go 1.27 标准库的 `uuid.NewV7()` 生成；数据库不设默认值。
 - **默认状态**：新建项目时自动生成 6 个状态：Backlog（默认）、Todo、In Progress、Done、Cancelled、Triage（待分诊，供收集箱使用）。
 - **完成时间**：状态进入"已完成"组时填上 `completed_at`，离开时清空。
 
 ### 5.6 工具
 - **数据库**：PostgreSQL 18。
-- **迁移**：goose（纯 SQL）。初始表结构 `0001_init.sql` 的生成方式：在临时库上跑完 Plane 自带的 Django 迁移，用 `pg_dump --schema-only` 导出保留的表，再应用 5.3 的改动。**不手抄。**
+- **迁移**：goose（纯 SQL），迁移文件内嵌进程序。
+- **建表方式**：**每个 M 为自己模块的表编写迁移**，不在 M0 一次性建全部表。起点是 M0 生成的 Plane 表结构快照（`tools/plane-schema/`：在临时库上跑完 Plane 自带的 Django 迁移，再用 `pg_dump --schema-only` 导出），然后按 5.3 和[差异清单](plane-diff.md)修改。**不手抄。**
+- **外键方向**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键；指向更晚建立的模块的外键，由后建的模块用 `ALTER TABLE` 补上。
 - **数据访问**：pgx + sqlc，手写 SQL，生成类型安全的 Go 代码。
 
 ---
@@ -383,7 +387,8 @@ modules/issue/
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
 6. **强制手段**：
    - Go 编译器本身禁止包之间的循环依赖。
-   - golangci-lint 的 depguard 规则（必要时再加 go-arch-lint）检查第 1、2 条。
+   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查第 1、2 条，以及"`platform` 不能依赖业务模块""只有组合根能导入各个模块"等规则。
+   - golangci-lint 的 depguard 只负责禁止使用某些库（比如第三方 uuid 库、viper、标准库 `log`）。
    - 以上都作为持续集成的门禁。
 
 **明确不做的事（避免过度设计）**：
@@ -509,11 +514,11 @@ server/configs/
 页面组件（components）  → 按需调整，跟随新的数据类型
 状态管理（stores）      → 直接使用新接口的数据结构（分页、分组、错误等）
 接口调用（services）    → 薄封装：只调用生成的客户端，不做任何数据转换
-packages/api-client    ← 由 openapi.yaml 生成（openapi-typescript + openapi-fetch）
+packages/api-client    ← 由 api/dist/openapi.yaml 生成（openapi-typescript + openapi-fetch）
 packages/types         ← 实体类型（Issue、Project、State……）直接使用生成的类型；
                           只有纯界面用的类型（显示设置、布局参数等）才手写
 ```
-- **唯一的依据是 `openapi.yaml`**：接口一改，重新生成类型，TypeScript 编译器会指出所有受影响的 store 和组件。
+- **唯一的依据是 `api/` 中的接口描述**：接口一改，重新生成类型，TypeScript 编译器会指出所有受影响的 store 和组件。
 - **不写转换层**：不把新接口的数据翻译成 Plane 的旧结构，也不保留任何为兼容 Plane 旧接口、旧字段而存在的代码。
 - **改动量**：因为表结构和字段名基本照搬 Plane，大部分实体类型的字段本来就一致。改动主要集中在几层外壳上：分页和分组的响应结构、错误格式、认证、文件上传、迭代和模块的归属方式。
 - **职责划分**：
@@ -546,7 +551,8 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 
 ### 7.6 前端代码质量要求（长期有效）
 - **不保留**死代码、兼容代码、没有用处的开关，也不保留"以后可能会用"的代码。
-- **TypeScript 类型检查、oxlint（警告即报错）、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。
+- **TypeScript 类型检查、oxlint、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。
+- **oxlint 的警告采用"只降不升"的基线**：Plane 现有代码带着上万条警告（它自己也是按每个包的警告上限来管理的）。警告数超过基线，持续集成就失败；警告减少后，同一个提交里就把基线调低。M1 会重新测出基线，并制定逐步清零的计划。
 - 新写的代码遵循 7.2 的职责划分，和 Plane 现有的写法保持一致（MobX store、`observer` 组件）。
 
 ---
@@ -561,10 +567,10 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 | 权限矩阵测试 | "角色 × 操作"的每一格 | 表格驱动 |
 | 端口契约测试 | 同一个端口的每种实现（如 `local` 和 `s3` 存储）都跑同一套测试 | Go testing |
 | 后端集成测试 | 用例和 SQL，**连接真实的 Postgres** | testcontainers；每个测试从模板库复制一个独立的数据库 |
-| 接口契约测试 | 请求和响应是否与 `openapi.yaml` 一致 | 测试环境中加一层 kin-openapi 校验 |
-| 架构检查 | 依赖方向、模块边界 | golangci-lint（depguard） |
+| 接口契约测试 | 请求和响应是否与 `api/dist/openapi.yaml` 一致 | 测试环境中加一层 kin-openapi 校验 |
+| 架构测试 | 依赖方向、模块边界 | 仓库内的架构测试（随 `go test` 运行）；depguard 检查禁用的库 |
 | 前端单元测试 | store 的状态逻辑、令牌管理器、工具函数 | vitest |
-| 前端静态检查 | 类型错误、未使用的代码 | TypeScript 类型检查 + oxlint + knip，必须为零 |
+| 前端静态检查 | 类型错误、lint 警告、未使用的代码 | TypeScript 类型检查和 knip 必须为零；oxlint 警告不得超过基线（只降不升） |
 | **端到端测试** | 每个领域的主线用户故事 | 见 8.2 |
 
 ### 8.2 端到端测试（Playwright + 真实数据库断言）
@@ -605,7 +611,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
   - 完成一个 M，要求本 M 的所有故事通过，**并且之前所有 M 的故事也都通过**。
 
 ### 8.3 持续集成
-golangci-lint（含 depguard 架构规则）、Go 测试（含 Postgres）、TypeScript 类型检查、oxlint、knip、vitest、Playwright 端到端测试。
+生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、knip（M1 起）、vitest、Playwright 端到端测试。
 
 ---
 
@@ -625,9 +631,9 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 
 | M | 目录 | 内容 | 完成标志 |
 |---|---|---|---|
-| M0 | `M0-foundation` | 按第 6 节搭好 Go 项目骨架（bootstrap、platform、shared、模块模板、分环境配置、goose、sqlc、River、problem+json、oapi-codegen 生成流程、depguard 架构规则）；生成 `0001_init.sql`；前端代码迁入 `web/` 并能构建；docker compose 开发环境；持续集成；端到端测试骨架 | 启动 `nerve` 能完成迁移，健康检查正常，内嵌的前端页面能打开（冒烟测试）；各项门禁在持续集成中生效 |
-| M1 | `M1-frontend-trim` | 按第 7.4 节彻底删除不要的功能；替换品牌；只保留中英文 | 类型检查、oxlint、knip 都为零；关键词搜索没有结果；能正常构建（不依赖后端，只做静态验收） |
-| M2 | `M2-auth` | 注册、登录、续期、退出、修改密码、PAT、个人资料与偏好、实例配置、管理命令；前端令牌管理器和登录页 | 本领域的用户故事全部通过端到端测试（含 PAT 对等验收） |
+| M0 | `M0-foundation` | 按第 6 节搭好 Go 项目骨架（bootstrap、platform、模块模板、分环境配置、goose 迁移机制、problem+json、oapi-codegen 生成流程、架构测试）；试点模块 `instance`；Plane 表结构快照；前端代码原样迁入 `web/`、能构建并内嵌进程序；docker compose 开发环境；持续集成；端到端测试骨架。**不建业务表，不接入 River 和 sqlc** | 启动 `nerve` 后健康检查正常，内嵌的前端页面能打开，`GET /api/v0/instance` 可用（冒烟测试）；各项门禁在持续集成中生效。详见 [M0 设计文档](M0-foundation/M0-design.md) |
+| M1 | `M1-frontend-trim` | 按第 7.4 节彻底删除不要的功能；Next.js 兼容垫片改为 React Router 原生写法；替换品牌（包括包名改为 `@nerve/*`）；只保留中英文；重新测出 oxlint 警告基线并制定清零计划 | 类型检查和 knip 为零，oxlint 不超过新基线；关键词搜索没有结果；能正常构建（不依赖后端，只做静态验收） |
+| M2 | `M2-auth` | 注册、登录、续期、退出、修改密码、PAT、个人资料与偏好、实例配置（在 M0 的 `instance` 上扩展）、管理命令；前端令牌管理器和登录页；**首次接入 River（第一个定时任务：清理过期会话）和 sqlc（第一批查询）** | 本领域的用户故事全部通过端到端测试（含 PAT 对等验收） |
 | M3 | `M3-workspace-project` | 工作区、成员、邀请；项目、项目成员、**项目归档**；状态、标签、个人显示设置；**权限框架和权限矩阵** | 同上 |
 | M4 | `M4-issue-core` | 工作项增删改查；**列表引擎**（筛选、分组、子分组、排序、游标）；子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿；**工作项归档、恢复和自动归档** | 同上（工作量最大，实施时可能再拆分） |
 | M5 | `M5-files` | 存储端口（local 和 s3）；附件、编辑器图片、头像、图标、封面 | 同上。**到此 Demo 可用** |
@@ -638,8 +644,9 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 ### 9.3 所有 M 通用的完成标准
 - 本 M 的后端测试、前端单元测试和端到端用户故事全部通过；之前所有 M 的端到端测试也都通过。
 - 本 M 范围内的所有功能都能用 PAT 通过接口完整操作。
-- `openapi.yaml` 随本 M 一起扩展，先写接口描述，再写代码。
-- 架构检查（depguard）和前端静态检查（类型检查、oxlint、knip）全部通过。
+- 本 M 涉及的表由本 M 的迁移创建，以 Plane 表结构快照为起点；与 Plane 的差异已登记。
+- `api/` 中的接口描述随本 M 一起扩展，先写接口描述，再写代码。
+- 架构测试、depguard 和前端静态检查（类型检查、knip 为零，oxlint 不超过基线）全部通过。
 - 本 M 不再留有 `open` 的 handoff。
 - [差异清单](plane-diff.md)和[前端改动清单](frontend-changes.md)已同步更新。
 
@@ -647,7 +654,7 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 
 | M | 名称 | 状态 | 设计文档 |
 |---|---|---|---|
-| M0 | 基础骨架 | 未开始 | — |
+| M0 | 基础骨架 | 进行中 | [M0-design.md](M0-foundation/M0-design.md) |
 | M1 | 前端瘦身 | 未开始 | — |
 | M2 | 账户认证 | 未开始 | — |
 | M3 | 工作区与项目 | 未开始 | — |
@@ -667,6 +674,6 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 | 操作动态的事件类型和格式：Plane 有 27 种，前端的渲染依赖这些格式 | M4 设计文档，逐一对照 Plane 的实现 |
 | 前端对接新接口时，store 和组件的实际改动量 | 各 M 的设计文档中评估；M2 是第一个对接的领域，用它来校准后续的估算 |
 | 通知的生成规则：谁在什么情况下会收到通知 | M7 设计文档，对照 Plane 的 `notification_task` |
-| River、oapi-codegen、koanf 等依赖的版本和成熟度；depguard 规则的具体写法 | M0 |
+| 依赖的版本和成熟度（2026-09-22 已核实，见 M0 设计文档第 1 节）；OpenAPI 3.1 工具链是否可用 | M0/P3 验证；River 在 M2 接入时锁定版本 |
 | 各接口的限流数值、各类数据的保留期 | 相关 M 的设计文档 |
 | 没有邮件服务时账户如何找回（目前只能由管理员用命令行重置） | 以后接入邮件服务时再议（v0 之后） |

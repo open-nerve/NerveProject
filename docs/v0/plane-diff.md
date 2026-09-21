@@ -3,7 +3,7 @@
 基线：Plane v1.4.2，提交 `02c19e1`。本清单记录 Nerve 在表结构、接口和行为上与 Plane 的每一处差异，在整个 v0 期间持续更新。
 
 - 设计阶段已确定的差异在下文中列出。
-- 列级别的细节（每张表逐列核对）在 **M0** 生成 `0001_init.sql` 时补全；之后各个 M 的变更，由该 M 负责登记。
+- 列级别的细节（每张表逐列核对），由**建这张表的 M** 在编写迁移时补全，起点是 M0 生成的 Plane 表结构快照（`tools/plane-schema/`）。之后的变更，也由改动它的 M 负责登记。
 
 ---
 
@@ -71,7 +71,7 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `workspaces` | 删除旧的 `logo` URL 列 | 遗留列 |
 | `workspace_members` | 删除 `view_props`、`default_props` | 遗留列 |
 | `projects` | 删除 `emoji`、`icon_prop`、旧的 `cover_image`、`description_text`、`description_html`（旧的 json 列）、`page_view`、`is_time_tracking_enabled`、`is_issue_type_enabled`、`estimate_id`、`close_in` | 遗留列或对应功能已砍掉（归档保留，`archive_in` 和 `archived_at` 保留） |
-| `projects` | **新增**工作项编号计数列（列名在 M0 确定） | 替代 `issue_sequences` |
+| `projects` | **新增**工作项编号计数列（列名在 M3 建表时确定） | 替代 `issue_sequences` |
 | `project_members` | 删除 `view_props`、`default_props`、`preferences` | 和 `project_user_properties` 重复 |
 | `issues` | 删除 `point`、`is_draft`、`estimate_point_id`、`type_id`、`description_binary` | 遗留列或对应功能已砍掉 |
 | `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
