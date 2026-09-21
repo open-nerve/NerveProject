@@ -1,0 +1,4 @@
+packages:
+  - web/apps/*
+  - web/packages/*
+  - e2e

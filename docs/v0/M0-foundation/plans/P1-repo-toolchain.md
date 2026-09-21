@@ -330,7 +330,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 **Interfaces:**
 - Consumes: 无
-- Produces: `make help`、`make dev-db`、`make dev-db-down`、`make dev-db-reset`；Compose 项目名 `nerve-dev`，服务名 `db`；开发库连接串 `postgres://nerve:nerve@localhost:5432/nerve?sslmode=disable`（P2 的 `config.dev.yaml` 会用到）
+- Produces: `make help`、`make dev-db`、`make dev-db-down`、`make dev-db-reset`；Compose 项目名 `nerve-dev`，服务名 `db`；开发库连接串 `postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable`（P2 的 `config.dev.yaml` 会用到）
 
 - [ ] **Step 1: 写 `deploy/compose.dev.yaml`**
 
@@ -346,7 +346,7 @@ services:
       POSTGRES_PASSWORD: nerve
       POSTGRES_DB: nerve
     ports:
-      - "${NERVE_DEV_DB_PORT:-5432}:5432"
+      - "${NERVE_DEV_DB_PORT:-55432}:5432"
     volumes:
       # Postgres 18 起数据目录为 /var/lib/postgresql/18/docker，
       # 数据卷必须挂在 /var/lib/postgresql，挂在旧路径 /var/lib/postgresql/data 数据不会进卷。

@@ -17,3 +17,11 @@ config.local.yaml
 
 # Claude Code 的隔离工作区
 .claude/worktrees/
+
+# 构建与依赖产物
+bin/
+node_modules/
+.turbo/
+coverage/
+*.test
+*.out

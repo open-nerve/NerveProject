@@ -55,6 +55,7 @@ created: 2026-09-22
 - **移交给其他 M 的事项，直接放进目标 M 的 `handoffs/` 目录**，并在来源 Phase 的 review 中链接过去。这样开始那个 M 时，就能看到它要接手的事项。
 - 开始一个 M 之前，先处理它 `handoffs/` 中所有 `open` 的事项。
 - 一个 M 完成前，不能留有 `open` 的 handoff。每一项要么处理完（改为 `done`），要么明确移交给后续 M。
+- 放进其他 M 的 handoff，文件名以来源开头，例如 `docs/v0/M2-auth/handoffs/M0-P1-sqlc-cgo.md`（来自 M0/P1）。
 
 ## 其他
 

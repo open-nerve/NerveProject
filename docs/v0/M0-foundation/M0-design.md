@@ -44,7 +44,7 @@ M0 结束时，一个开发者克隆仓库后，用几条命令就能：
 |---|---|---|
 | Go | **1.27.1** | `go.mod` 中写 `go 1.27` 和 `toolchain go1.27.1`。本机的 Go 1.26 会自动下载对应版本的工具链。goose、sqlc、River 都要求 Go 1.26 以上 |
 | UUID | Go 1.27 **标准库 `uuid`**（`uuid.NewV7()`） | 不引入第三方 uuid 库。ID 由应用生成，数据库不设 `DEFAULT uuidv7()`，这样也绕开了 sqlc 解析器（基于 PG 17）不认识 `uuidv7()` 的问题 |
-| PostgreSQL | **18.6**（镜像 `postgres:18`） | |
+| PostgreSQL | **18.6**（镜像 `postgres:18.6`） | |
 | 数据库驱动 | pgx v5（`pgxpool`） | |
 | 迁移 | goose **v3.28.0** | 迁移文件通过 `embed.FS` 编进程序，用 Provider API 在代码中执行 |
 | 接口代码生成 | oapi-codegen **v2.8.0** | `strict-server` + `std-http-server`（基于 Go 标准库的 `ServeMux`）；支持按 tag 生成，支持跨文件引用 |
@@ -92,7 +92,7 @@ NerveProject/
     internal/
       bootstrap/                组合根
       platform/
-        buildinfo/              版本号、提交号、构建时间（构建时注入）
+        buildinfo/              版本号、提交号、提交时间（版本号构建时注入，提交信息来自 Go 工具链嵌入的 VCS 信息）
         config/                 配置加载与校验
         logging/                slog 初始化
         postgres/               连接池、迁移执行器；pgtest（测试工具，只在测试中使用）
@@ -203,7 +203,7 @@ NerveProject/
   web:
     enabled: true
   ```
-- **dev 环境的数据库地址**：`config.dev.yaml` 里写的是本地开发库的地址（`postgres://nerve:nerve@localhost:5432/nerve`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
+- **dev 环境的数据库地址**：`config.dev.yaml` 里写的是本地开发库的地址（`postgres://nerve:nerve@localhost:55432/nerve`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
 - **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，`database.url` 中的密码会被打码。
 
 ### 3.7 架构守护
@@ -462,7 +462,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
-| P1 | repo-toolchain | 进行中 | — | — | — |
+| P1 | repo-toolchain | 已完成 | [spec](specs/P1-repo-toolchain.md) | [plan](plans/P1-repo-toolchain.md) | [review](reviews/P1-repo-toolchain-review.md) |
 | P2 | server-platform | 未开始 | — | — | — |
 | P3 | api-contract | 未开始 | — | — | — |
 | P4 | plane-schema | 未开始 | — | — | — |
