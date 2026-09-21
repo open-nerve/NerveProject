@@ -8,6 +8,21 @@
 
 项目目前处于设计阶段，从 [docs/](docs/README.md) 开始阅读。
 
+## 开发环境
+
+需要安装：
+- Docker（含 Compose v2）
+- Go 1.26 或更高。第一次在 `server/` 下执行 Go 命令时，会自动下载 `server/go.mod` 指定的 Go 1.27.1
+- Node.js 24，并执行一次 `corepack enable`（pnpm 的版本由 `package.json` 锁定）
+
+第一次启动：
+
+```bash
+make dev-db   # 启动本地 Postgres 18（端口 55432，可用 NERVE_DEV_DB_PORT 修改）
+make test     # 运行测试
+make          # 查看所有命令
+```
+
 ## 版权
 
 Copyright © 2026 OpenNerve。以 [GNU AGPL-3.0](LICENSE) 协议发布。

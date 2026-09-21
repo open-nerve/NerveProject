@@ -203,7 +203,7 @@ NerveProject/
   web:
     enabled: true
   ```
-- **dev 环境的数据库地址**：`config.dev.yaml` 里写的是本地开发库的地址（`postgres://nerve:nerve@localhost:5432/nerve`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
+- **dev 环境的数据库地址**：`config.dev.yaml` 里写的是本地开发库的地址（`postgres://nerve:nerve@localhost:55432/nerve`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
 - **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，`database.url` 中的密码会被打码。
 
 ### 3.7 架构守护
@@ -462,7 +462,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
-| P1 | repo-toolchain | 进行中 | — | — | — |
+| P1 | repo-toolchain | 进行中 | [spec](specs/P1-repo-toolchain.md) | [plan](plans/P1-repo-toolchain.md) | — |
 | P2 | server-platform | 未开始 | — | — | — |
 | P3 | api-contract | 未开始 | — | — | — |
 | P4 | plane-schema | 未开始 | — | — | — |
