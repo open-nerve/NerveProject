@@ -12,6 +12,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 )
 
+// idleTimeout closes keep-alive connections that stay idle this long, so idle
+// clients cannot hold connections open indefinitely.
+const idleTimeout = 2 * time.Minute
+
 // Server is the HTTP server of a nerve process.
 type Server struct {
 	srv             *http.Server
@@ -27,6 +31,7 @@ func NewServer(cfg config.ServerConfig, h http.Handler, logger *slog.Logger) *Se
 			Addr:              cfg.Addr,
 			Handler:           middleware(h, logger),
 			ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+			IdleTimeout:       idleTimeout,
 			ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 		},
 		logger:          logger,

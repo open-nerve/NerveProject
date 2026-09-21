@@ -58,9 +58,11 @@ func validRequestID(id string) bool {
 	return true
 }
 
-// withRecover turns a panic into a logged 500 problem. If the response has
-// already started, the connection is aborted instead so the client cannot
-// mistake a truncated body for a complete one.
+// withRecover turns a panic into a logged 500 problem. Headers the handler set
+// are dropped, except the request ID: a Set-Cookie must not leak, and a stale
+// Content-Length or Content-Encoding would corrupt the problem body. If the
+// response has already started, the connection is aborted instead so the
+// client cannot mistake a truncated body for a complete one.
 func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rec := &statusRecorder{ResponseWriter: w}
@@ -81,6 +83,12 @@ func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 			)
 			if rec.status != 0 {
 				panic(http.ErrAbortHandler)
+			}
+			header := rec.Header()
+			for name := range header {
+				if name != HeaderRequestID {
+					delete(header, name)
+				}
 			}
 			WriteProblem(rec, Problem{
 				Status: http.StatusInternalServerError,

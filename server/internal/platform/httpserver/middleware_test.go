@@ -119,6 +119,41 @@ func TestPanicBecomes500Problem(t *testing.T) {
 	}
 }
 
+func TestPanicDiscardsHeadersSetBeforeIt(t *testing.T) {
+	// A real server: a stale Content-Length would truncate the problem body.
+	srv := httptest.NewServer(middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Set-Cookie", "a=b")
+		w.Header().Set("Content-Length", "5")
+		panic("boom")
+	}), slog.New(slog.DiscardHandler)))
+	defer srv.Close()
+	req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set(HeaderRequestID, "req-3")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusInternalServerError || resp.Header.Get("Content-Type") != ContentTypeProblem {
+		t.Errorf("response = %d %q, want 500 %s", resp.StatusCode, resp.Header.Get("Content-Type"), ContentTypeProblem)
+	}
+	if cookies := resp.Header.Values("Set-Cookie"); len(cookies) != 0 {
+		t.Errorf("Set-Cookie = %q, want none: the handler's headers must not leak", cookies)
+	}
+	if id := resp.Header.Get(HeaderRequestID); id != "req-3" {
+		t.Errorf("X-Request-Id = %q, want req-3", id)
+	}
+	var p Problem
+	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil || p.Code != CodeInternal {
+		t.Errorf("body = %+v, %v; want the complete internal_error problem", p, err)
+	}
+}
+
 func TestPanicAfterResponseStartedAbortsConnection(t *testing.T) {
 	h := middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("partial"))
