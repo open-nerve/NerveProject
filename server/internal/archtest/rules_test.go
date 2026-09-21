@@ -33,7 +33,7 @@ func (v violation) String() string {
 func rules() []rule {
 	return []rule{
 		{"module layers point inward: adapter -> app -> domain", layersPointInward},
-		{"domain imports only the standard library (not net/http or database/sql), its own module and internal/shared", domainIsPure},
+		{"domain and app import only the standard library (not net/http or database/sql), their own module's inner layers and internal/shared", innerLayersArePure},
 		{"modules do not import each other", modulesAreIsolated},
 		{"platform does not import modules or bootstrap", platformIsBusinessFree},
 		{"only bootstrap imports modules", onlyBootstrapImportsModules},
@@ -145,12 +145,16 @@ func layersPointInward(from, to string) bool {
 	return fromKnown && toKnown && toRank > fromRank
 }
 
-func domainIsPure(from, to string) bool {
-	if _, layer, ok := moduleOf(from); !ok || layer != "domain" {
+// innerLayersArePure keeps domain and app free of infrastructure: no
+// third-party module, no platform package, no net/http or database/sql.
+// Imports of modules are judged by the layer and isolation rules, which
+// already restrict them to the own module's same or inner layers.
+func innerLayersArePure(from, to string) bool {
+	if _, layer, ok := moduleOf(from); !ok || (layer != "domain" && layer != "app") {
 		return false
 	}
 	if r, ok := local(to); ok {
-		_, _, inModule := moduleOf(to) // module imports are covered by the layer and isolation rules
+		_, _, inModule := moduleOf(to)
 		return !inModule && !within(r, "internal/shared")
 	}
 	if !isStdlib(to) {

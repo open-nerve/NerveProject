@@ -13,7 +13,7 @@ func m(rel string) string { return modulePath + "/" + rel }
 func TestRules(t *testing.T) {
 	const (
 		inward   = "module layers point inward: adapter -> app -> domain"
-		pure     = "domain imports only the standard library (not net/http or database/sql), its own module and internal/shared"
+		pure     = "domain and app import only the standard library (not net/http or database/sql), their own module's inner layers and internal/shared"
 		isolated = "modules do not import each other"
 		business = "platform does not import modules or bootstrap"
 		entry    = "only bootstrap imports modules"
@@ -33,14 +33,18 @@ func TestRules(t *testing.T) {
 		{m("internal/modules/issue/app"), m("internal/modules/issue/adapter/http"), []string{inward}},
 		{m("internal/modules/issue/adapter/http"), m("internal/modules/issue"), []string{inward}},
 
-		// Domain purity.
+		// Purity of domain and app (app -> own domain is allowed, see above).
 		{m("internal/modules/issue/domain"), "time", nil},
 		{m("internal/modules/issue/domain"), m("internal/shared/id"), nil},
 		{m("internal/modules/issue/domain"), "net/http", []string{pure}},
 		{m("internal/modules/issue/domain"), "database/sql/driver", []string{pure}},
 		{m("internal/modules/issue/domain"), "github.com/jackc/pgx/v5", []string{pure}},
 		{m("internal/modules/issue/domain"), m("internal/platform/config"), []string{pure}},
-		{m("internal/modules/issue/app"), "github.com/jackc/pgx/v5", nil},
+		{m("internal/modules/issue/app"), "context", nil},
+		{m("internal/modules/issue/app"), m("internal/shared/id"), nil},
+		{m("internal/modules/issue/app"), "net/http", []string{pure}},
+		{m("internal/modules/issue/app"), "github.com/jackc/pgx/v5", []string{pure}},
+		{m("internal/modules/issue/app"), m("internal/platform/postgres"), []string{pure}},
 
 		// Module isolation and the composition root.
 		{m("internal/modules/issue/app"), m("internal/modules/project/domain"), []string{isolated}},
@@ -53,6 +57,7 @@ func TestRules(t *testing.T) {
 		{m("internal/modules/issue/adapter/http"), m("internal/modules/issue/adapter/http/gen"), nil},
 		{m("internal/modules/issue/app"), m("internal/modules/issue/adapter/http/gen"), []string{inward, gen}},
 		{m("internal/modules/issue/adapter/postgres"), m("internal/modules/issue/adapter/http/gen"), []string{gen}},
+		{m("internal/modules/project/adapter/http"), m("internal/modules/issue/adapter/http/gen"), []string{isolated, gen}},
 
 		// Platform packages.
 		{m("internal/platform/logging"), m("internal/platform/config"), nil},
