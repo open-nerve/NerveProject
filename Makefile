@@ -25,6 +25,10 @@ dev-db-down: ## 停止开发数据库，保留数据
 dev-db-reset: ## 停止开发数据库并删除数据卷
 	$(DEV_COMPOSE) down -v
 
+.PHONY: run
+run: ## 以 dev 配置运行后端（需先 make dev-db），Ctrl-C 停止
+	cd server && NERVE_ENV=dev go run ./cmd/nerve serve
+
 .PHONY: tools
 tools: ## 安装锁定版本的 golangci-lint 到 ./bin
 	@set -o pipefail; \
