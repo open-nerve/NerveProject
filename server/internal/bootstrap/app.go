@@ -1,0 +1,67 @@
+// Package bootstrap is nerve's only composition root: it builds every adapter
+// from the configuration, wires them together and runs the commands.
+package bootstrap
+
+import (
+	"context"
+	"io/fs"
+	"log/slog"
+	"net/http"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+)
+
+// app is a fully wired nerve server.
+type app struct {
+	cfg      config.Config
+	logger   *slog.Logger
+	pool     *pgxpool.Pool
+	migrator *postgres.Migrator
+	handler  http.Handler
+}
+
+// newApp wires the server described by cfg around the given migrations.
+// close releases it.
+func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles fs.FS) (*app, error) {
+	pool, err := postgres.NewPool(ctx, cfg.Database)
+	if err != nil {
+		return nil, err
+	}
+	migrator, err := postgres.NewMigrator(pool, migrationFiles)
+	if err != nil {
+		pool.Close()
+		return nil, err
+	}
+	mux := httpserver.NewMux(logger,
+		httpserver.Check{Name: "database", Run: pool.Ping},
+		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
+	)
+	return &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, handler: mux}, nil
+}
+
+// run applies pending migrations when database.auto_migrate is on, then
+// serves HTTP on server.addr until ctx is done (see httpserver.Server.Serve).
+func (a *app) run(ctx context.Context) error {
+	if a.cfg.Database.AutoMigrate {
+		applied, err := a.migrator.Up(ctx)
+		if err != nil {
+			return err
+		}
+		for _, m := range applied {
+			a.logger.InfoContext(ctx, "migration applied", slog.Int64("version", m.Version), slog.String("source", m.Source))
+		}
+	}
+	return httpserver.NewServer(a.cfg.Server, a.handler, a.logger).ListenAndServe(ctx)
+}
+
+// close releases the database resources. Call it after run has returned.
+func (a *app) close() {
+	if err := a.migrator.Close(); err != nil {
+		a.logger.Warn("close migrator", slog.Any("error", err))
+	}
+	a.pool.Close()
+}
