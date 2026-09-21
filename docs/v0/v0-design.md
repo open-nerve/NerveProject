@@ -191,10 +191,14 @@ GET   /api/v0/issues/{issue_id}/comments
 ### 3.5 错误
 - 统一使用 RFC 9457（`application/problem+json`），`code` 是给程序判断用的固定字符串：
   ```json
-  { "status": 422, "code": "issue.state_not_in_project", "title": "状态不属于该项目",
+  { "status": 422, "code": "issue.state_not_in_project", "title": "Unprocessable Content",
+    "detail": "状态不属于该项目",
     "errors": [{ "field": "state_id", "message": "..." }] }
   ```
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
+- `title` 固定为 HTTP 状态短语（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
+- 平台自己的错误码不带模块前缀（`not_found`、`internal_error`、`not_ready`）；模块的错误码带模块前缀。
+- 请求 ID 只出现在 `X-Request-Id` 响应头中，不放进响应体。
 
 ### 3.6 其他
 - **限流**：按令牌计数，在进程内实现。登录接口单独按"IP + 邮箱"限流。具体数值在 M2 确定，默认参考 Plane。
@@ -387,7 +391,7 @@ modules/issue/
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
 6. **强制手段**：
    - Go 编译器本身禁止包之间的循环依赖。
-   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查第 1、2 条，以及"`platform` 不能依赖业务模块""只有组合根能导入各个模块"等规则。
+   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块之间不能互相导入；`platform` 不依赖模块，`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；生成的代码只能被本模块的适配器导入；测试工具只能被测试代码导入。
    - golangci-lint 的 depguard 只负责禁止使用某些库（比如第三方 uuid 库、viper、标准库 `log`）。
    - 以上都作为持续集成的门禁。
 
@@ -404,8 +408,10 @@ modules/issue/
      → 用例：TxManager.WithinTx { 权限 → 业务规则 → 写数据 → 发布领域事件 } 提交
      → 响应 / problem+json
 ```
+- **请求 ID → 异常恢复 → 访问日志**这三个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。
+- **认证、限流、接口调用日志**挂在访问日志之后，按路由分别接到各个 API 路由上，不作用于健康检查和前端页面。
 - **每个写操作对应一个事务。** 业务数据、操作动态、历史版本、投递给 River 的任务，要么一起成功，要么一起回滚。
-- **事务的传递**：由 `platform/postgres` 提供 `TxManager` 端口，仓储从 `ctx` 中取出当前事务。用例代码不接触任何数据库类型。
+- **事务的传递**：`TxManager` 端口声明在 `internal/shared`（由使用方定义接口），`platform/postgres` 提供实现，`bootstrap` 负责接线；仓储从 `ctx` 中取出当前事务。用例代码不接触任何数据库类型。
 
 ### 6.5 权限
 - **规则照搬 Plane**：
@@ -481,23 +487,23 @@ server/configs/
 ```
 - **选择环境**：用环境变量 `NERVE_ENV=dev|test|prod`，默认是 `dev`。
 - **加载顺序**（后加载的覆盖先加载的）：
-  1. 代码中的默认值
-  2. `config.yaml`
-  3. `config.{env}.yaml`
-  4. `config.local.yaml`（只在 dev 环境加载）
-  5. 环境变量 `NERVE_*`
-- **环境变量命名**：`NERVE_` 加上配置路径，层级之间用双下划线分隔。例如 `database.url` 对应 `NERVE_DATABASE__URL`，`auth.jwt.private_key_file` 对应 `NERVE_AUTH__JWT__PRIVATE_KEY_FILE`。
+  1. 内置的 `config.yaml`（列出全部配置项及默认值，已编进程序；不在 Go 代码中重复写默认值）
+  2. `config.{env}.yaml`
+  3. `config.local.yaml`（只在 dev 环境加载）
+  4. 环境变量 `NERVE_*`
+- **环境变量命名**：`NERVE_` 加上配置路径，层级之间用双下划线分隔。例如 `database.url` 对应 `NERVE_DATABASE__URL`，`auth.jwt.private_key_file` 对应 `NERVE_AUTH__JWT__PRIVATE_KEY_FILE`；单个 `_` 保留在键名内（`NERVE_DATABASE__MAX_CONNS` → `database.max_conns`）。不含 `__` 的 `NERVE_*` 变量不是配置键。
 - **密钥不进仓库**：数据库密码、JWT 私钥、S3 密钥等，只通过环境变量或 `*_file` 形式的配置项（指向挂载进来的密钥文件）提供。仓库里的配置文件只放非敏感的值。
-- **强类型、启动即校验**：配置被加载到一个强类型的结构体中，启动时逐项校验；有错误就立即退出，并明确指出是哪个配置项出了问题。启动日志会打印生效的配置，密钥打码。
-- **单文件部署**：配置文件通过 `go:embed` 编进程序，所以只带一个可执行文件也能运行；也可以用 `NERVE_CONFIG_DIR` 指向外部目录，覆盖内置的配置文件。
+- **强类型、启动即校验**：配置被加载到一个强类型的结构体中，启动时逐项校验；有错误就立即退出，并明确指出是哪个配置项出了问题。启动日志会打印生效的配置，密钥打码。未知的配置键直接报错；时长类配置项只接受字符串。
+- **单文件部署**：配置文件通过 `go:embed` 编进程序，所以只带一个可执行文件也能运行；也可以用 `NERVE_CONFIG_DIR` 指向外部目录，作为内置文件之上的一层，按键覆盖，目录里缺失的文件会被跳过。
 - **实现**：用 koanf 分层加载（它比 viper 轻，而且没有全局状态），放在 `platform/config`。
 - **test 环境的典型设置**：降低 argon2 的计算强度、缩短定时任务的间隔、文件存到临时目录、日志输出为便于阅读的文本格式。
 - **前端**：使用 Vite 自带的模式文件（`.env.development`、`.env.test`、`.env.production`）。前端和后端同源部署，所以几乎不需要配置。
+- 详见 [M0/P2 spec](M0-foundation/specs/P2-server-platform.md) 2.3 节。
 
 ### 6.9 其他
 - **富文本安全**：描述和评论的 HTML 用 bluemonday 清洗，只放行 Plane 编辑器用到的标签；同时提取纯文本存入 `description_stripped`，供搜索使用。
 - **搜索**：工作项标题建 pg_trgm 索引，支持模糊匹配；支持按编号搜索。已归档的工作项默认不出现在搜索结果中。
-- **运维**：日志用 slog 输出 JSON；提供 `/healthz` 和 `/readyz`；停机时先处理完正在进行的请求和任务。
+- **运维**：日志用 slog；prod 输出 JSON，dev 和 test 输出便于阅读的文本；提供 `/healthz` 和 `/readyz`；停机时先处理完正在进行的请求和任务。
 
 ---
 

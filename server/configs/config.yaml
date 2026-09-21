@@ -1,0 +1,18 @@
+# 基础配置：列出所有配置项及其默认值。各环境的覆盖项在 config.<env>.yaml 中。
+# 任何一项都可以用环境变量覆盖：NERVE_ 加上配置路径，层级之间用双下划线，
+# 例如 database.url 对应 NERVE_DATABASE__URL。
+server:
+  addr: ":8080"
+  read_header_timeout: 5s
+  shutdown_timeout: 20s
+
+database:
+  # 必须提供。dev 环境写在 config.dev.yaml 中；test 和 prod 通过 NERVE_DATABASE__URL 提供。
+  url: ""
+  max_conns: 10
+  # nerve serve 启动前是否自动执行迁移
+  auto_migrate: true
+
+log:
+  level: info    # debug | info | warn | error
+  format: json   # text | json
