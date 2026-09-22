@@ -293,6 +293,7 @@ M1 设计 7.6 要求 P1 和收尾用同一条命令测量。命令是计划 Glob
 **控制者裁定（2026-09-23）**：
 - 第 1–12 项全部采纳。M1 设计的第 6、7.4、8、9 节已在提交本 spec 时同步。
 - 另补第 13 项：`tools/` 下的两个脚本本身就是门禁，却不受 `make lint-web` 的 lint 和格式检查，第 6 节风险表中"每次改动手工检查"只能管住 P1 自己。计划新增 Task 9A：根目录 `package.json` 加 `check:lint`、`check:format`，覆盖 `tools/`；`turbo.json` 注册根任务 `//#check:lint`、`//#check:format`。`make lint-web` 的任务数由 50 变为 52，此后手工检查不再需要（计划"控制者评审补充"第 2 条）。
+- 第 13 项的范围（执行 Task 9A 时定）：`check:lint` 是 `oxlint --max-warnings=0 tools`，`check:format` 是 `oxfmt --check tools`，两者都递归覆盖 `tools/`；唯一的豁免 `tools/plane-schema/**` 写在 `.oxfmtrc.json` 的 `ignorePatterns` 里（它是 M0 的快照工具，不是门禁代码，其中的 `README.md` 不符合 oxfmt 的格式，不改它）。不用通配符 `tools/*.mjs tools/*.json`：那样以后放在子目录里的脚本，oxlint 看得见，格式检查看不见（`672f103`）。
 
 ## 4. 验收标准
 1. **检查**：每个 Task 结束时 `make lint-web` 通过（Task 1–8 为 49 个任务，Task 9 为 50 个，Task 9A 起 52 个，包括覆盖 `tools/` 的两个根任务；Task 2 起前面都有关键词守卫的一行），`make build-web` 通过（11 个任务），Task 3 起 `make test-web` 通过（Task 3–7 为 11 个任务，Task 8 起 12 个），`make knip` 的报告与计划给出的数值一致。

@@ -317,7 +317,7 @@
    - **做法**：
      - 正文中所有 `pnpm exec oxfmt --check tools/` 一律换成 `pnpm exec oxfmt --check tools/*.mjs tools/*.json`。Task 1 还没有 `tools/*.json`，只写 `tools/*.mjs`。
      - `oxlint tools/` 不变：oxlint 只检查 JS。
-     - Task 9A 的根脚本用同样的范围：`"check:format": "oxfmt --check tools/*.mjs tools/*.json"`，`"check:lint": "oxlint --max-warnings=0 tools"`。
+     - Task 9A 的根脚本：`"check:lint": "oxlint --max-warnings=0 tools"`；`"check:format": "oxfmt --check tools"`，豁免写在 `.oxfmtrc.json` 的 `ignorePatterns` 里（`tools/plane-schema/**`，`672f103`）。手工命令用通配符是因为它一次性，常设门禁必须递归覆盖：否则以后放在 `tools/` 子目录里的脚本，oxlint 看得见，格式检查看不见。
 4. **例外必须覆盖确定的处数（Task 2 代码评审后的裁定）**：
    - **问题**：正文 Task 2 Step 1 给出的 `tools/keywords.mjs` 按 `(rule, path, match)` 三元组匹配例外。同一个文件里同一段原文出现多处时（锁文件里 `serve@14.2.5:` 就是两处），一条例外会把它们全盖住，与 7.4"一条例外只覆盖一处"不符，后来新增的同样一处也会被顺带盖住。
    - **裁定**：例外加一个可选的 `count`（不小于 1 的整数，默认 1），实际处数必须正好等于它，多了少了都失败，与 lint 上限"必须相等"的做法一致。不引入行号：行号随改动漂移，会逼着人频繁改例外。
