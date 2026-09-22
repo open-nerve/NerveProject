@@ -21,6 +21,10 @@ GEN_WEB_OUT := api/dist web/packages/api-client/src/schema.gen.ts
 # 生成物必须已提交且没有差异；$(1) 是生成物的路径
 check-committed = test -z "$$(git status --porcelain -- $(1))" || { git status --short -- $(1); git --no-pager diff -- $(1); echo "生成物与接口描述不一致：执行 make gen，并提交生成的文件"; exit 1; }
 
+# 前端任务由 turbo 按 turbo.json 编排；关闭匿名使用数据上报，只打印失败任务的输出
+TURBO := TURBO_TELEMETRY_DISABLED=1 pnpm exec turbo
+TURBO_QUIET := --output-logs=errors-only
+
 .PHONY: help
 help: ## 列出所有命令
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -86,8 +90,8 @@ lint-go: tools ## 运行 golangci-lint（server）
 	cd server && $(GOLANGCI_LINT) run ./...
 
 .PHONY: lint-web
-lint-web: ## 前端类型检查（需要 Node）
-	pnpm -r run check:types
+lint-web: ## 前端类型检查、oxlint（按警告基线）、格式检查（需要 Node）
+	$(TURBO) run check:types check:lint check:format $(TURBO_QUIET)
 
 # go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test
