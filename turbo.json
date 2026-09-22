@@ -37,6 +37,7 @@
       "cache": false
     },
     "check:lint": {
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
       "outputs": []
     },
@@ -61,6 +62,7 @@
       "cache": false
     },
     "fix:lint": {
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
       "outputs": []
     },
