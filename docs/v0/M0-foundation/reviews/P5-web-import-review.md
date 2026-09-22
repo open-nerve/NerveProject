@@ -27,7 +27,7 @@ spec §4 的 8 项验收标准全部满足：迁入的 13 个目录和 `patches/
 - **迁入的内容**：`apps/web` 加 12 个包（constants、editor、hooks、i18n、propel、services、shared-state、types、ui、utils、tailwind-config、typescript-config）；13 个目录和 `patches/` 的 git 树对象与 `02c19e1` 中对应的树完全相同。
 - **锁文件**：以 Plane 的 `pnpm-lock.yaml` 为起点生成，13 个 importers 与 Plane 逐行相同；三次独立生成结果都是 13835 行，SHA-256 `d677458d…18ca`。
 - **构建产物**：`web/apps/web/build/client/` 1239 个文件、34 MB；内嵌后的 `bin/nerve` 50.5 MB（不含前端时 18.0 MB）。
-- **lint 警告基线**：合计 1005 条（web 779、editor 75、propel 59、utils 34、ui 32、services 6、hooks 4、i18n 3、constants 2、types 1、shared-state 0、api-client 0），远低于 Plane 原有的上限。
+- **lint 警告基线**：合计 995 条（原来误写为 1005，M1 设计时更正；web 779、editor 75、propel 59、utils 34、ui 32、services 6、hooks 4、i18n 3、constants 2、types 1、shared-state 0、api-client 0），远低于 Plane 原有的上限。
 
 ## 3. 各 Task 的评审
 

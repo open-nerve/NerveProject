@@ -300,7 +300,7 @@ api/common.yaml + api/modules/*.yaml
 
 ### 5.2 lint 警告基线：只降不升
 - **现状**：Plane 本身就给每个包设了"最多允许多少条警告"的上限，但这些上限远高于实际警告数（比如 web 的上限是 11957 条，实测只有 779 条）。
-- **做法**：上限改为实测的警告数，并定下一条规则：**上限只能往下调，不能往上调**。M0/P5 实测的上限（在根目录的 `.oxlintrc.json` 下测量）：web 779、editor 75、propel 59、utils 34、ui 32、services 6、hooks 4、i18n 3、constants 2、types 1、shared-state 0、api-client 0（新增脚本），合计 1005 条。
+- **做法**：上限改为实测的警告数，并定下一条规则：**上限只能往下调，不能往上调**。M0/P5 实测的上限（在根目录的 `.oxlintrc.json` 下测量）：web 779、editor 75、propel 59、utils 34、ui 32、services 6、hooks 4、i18n 3、constants 2、types 1、shared-state 0、api-client 0（新增脚本），合计 995 条（原来误写为 1005，M1 设计时更正）。
   - 任何提交如果让警告数超过上限，持续集成就失败。
   - 警告数下降后，要在同一个提交里把上限调低到新的数值。
 - **后续**：M1 删掉大量代码后，重新测出一组更低的基线，并在 M1 设计文档里制定逐步清零的计划，同时决定是否加"警告减少后必须调低上限"的自动检查。

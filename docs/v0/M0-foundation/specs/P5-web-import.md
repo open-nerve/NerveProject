@@ -143,7 +143,7 @@ platform/webui ──→ 只有标准库（embed、io/fs、net/http、path、str
 | shared-state | 0 | 0 | 0（不变） |
 | api-client | — | 0 | 0（新增脚本） |
 
-合计 1005 条。沿用 Plane 的上限等于允许 web 的警告再增加十几倍而不报错，"不升"就失去了意义。实测在根目录的 `.oxlintrc.json` 下进行（oxlint 从包目录运行时使用它，见 2.2），`.gitignore` 挡掉的构建产物不计入。
+合计 995 条（原来误写为 1005，M1 设计时更正）。沿用 Plane 的上限等于允许 web 的警告再增加十几倍而不报错，"不升"就失去了意义。实测在根目录的 `.oxlintrc.json` 下进行（oxlint 从包目录运行时使用它，见 2.2），`.gitignore` 挡掉的构建产物不计入。
 
 **规则**：警告数超过上限，`make lint-web` 失败；警告数下降后，在同一个提交里把上限调低到新的数值（README 写明）。"调低"靠评审把关，不做自动检查；M1 删减之后重新测出基线，并在 M1 的设计文档中决定是否加自动检查（第 7 节）。
 
@@ -154,7 +154,7 @@ platform/webui ──→ 只有标准库（embed、io/fs、net/http、path、str
 **`make lint-web`** 改为 `turbo run check:types check:lint check:format --output-logs=errors-only`（P3 交接第 2 条）：
 - `check:types` 依赖上游包的 `build`（`turbo.json`），turbo 按依赖顺序先构建各包；共 46 个任务。
 - `--dry=json` 列出的 12 个 `check:types` 任务中有 `@nerve/api-client#check:types`。
-- `--output-logs=errors-only`：只打印失败任务的输出。oxlint 会打印全部 1005 条警告的详情，在持续集成的日志里没有用处。
+- `--output-logs=errors-only`：只打印失败任务的输出。oxlint 会打印全部 995 条警告的详情，在持续集成的日志里没有用处。
 - api-client 新增 `check:lint`（上限 0）和 `check:format`，与 Plane 的包一致；`package.json` 的键顺序按 oxfmt 调整（`license` 放在 `description` 之后）。
 - **格式检查也是门禁**：Plane 的持续集成检查格式（`check:format`），迁入的代码全部符合；不纳入门禁的话，这些脚本和配置就是没人用的代码（第 3 节第 4 项）。
 
