@@ -511,3 +511,58 @@ P1 修复结论为“main 分支的每次运行都保留”。当 A 运行、B �
 本报告是唯一允许的持久改动。提交前核对 main、被审基线与工作区文件清单；只暂存本文件，提交到本地 main，不 push。报告中的 Critical / Important 仍是待修发现，本次没有实施修复。
 
 最终运行 `git status --porcelain` 仅显示本报告新增。Docker 中原有 20 个容器的 ID 与名称保持一致，包括 `nerve-dev-db-1`；进程核查没有本次遗留的 nerve 或挂起探针子进程。未停止、重建或修改任何原有容器。
+
+## 11. 处理结果（控制者核实与修复）
+
+**做法**：
+- 每条发现都先核实，能复现的都复现了，再找根因、修复，并补上回归验证。
+- 每条 Codex 发现各用一个提交修复，全部放在分支 `worktree-m0-hardening`（基于 `e340c72`）上，最后以 `--no-ff` 合并进 `main`。
+- 修完之后先做一次整分支评审（opus），再对它的修复做一次限定范围的复审；两轮评审提出的问题也在这个分支上修复，写在下表的"评审补充"里。
+- 第 9 节的勾选框保留 Codex 原稿的样子，处理状态以本节为准。
+
+### 11.1 逐条处理
+
+| 发现 | 核实 | 根因 | 修复 | 提交 |
+|---|---|---|---|---|
+| Critical 1 | 成立。`?password=FAKE;still` 原样出现在启动日志里；`pgconn.ParseConfig` 从同一地址解析出的正是这个密码。配置在校验之前就写进日志，所以非法地址（如 `%ZZ`）也会原样打印 | 用另一种解析器（`net/url`）判断哪一段是密码，而 pgx 用的是自己的 libpq 兼容解析器，两者的结论不一致；认不出的部分原样放行 | 采用第 4 节 Critical 1 的方案 2：删除 `redactURL`，`database.url` 整体打码；创建连接池之后，按 pgx 自己的解析结果另记一条连接目标日志（主机、端口、库名、用户），其中没有密码。**评审补充**：pgx 的解析错误会引用连接串，里面的打码同样只是尽量而为，合法写法 `password = secret` 会原样出现在 stderr 上；它的内部错误也可能引用连接串的片段。`NewPool` 不再转述其中任何一段，只返回一条固定信息，指出要检查的地方（语法、它引用的文件、`PG*` 环境变量），不显示任何细节 | `6cd4105`、`dfe3c02`、`12cd9cc` |
+| Critical 2 | 成立。请求头读取超时设为 200 毫秒时，一个声明了请求体却不发的请求，2 秒后仍没有响应，连接也没有释放 | 连接的读写阶段里，只有"读请求头"和"空闲"有上限，读请求体和写响应都没有 | 新增 `server.read_timeout`（30 秒）和 `server.write_timeout`（60 秒）并校验：两者都要为正数，且 `read_header_timeout` 不超过 `read_timeout`。回归测试覆盖"请求体不到"和"响应迟到"。上传、下载接口如何单独放宽期限，交给 M5。**评审补充**：<br>- 校验理由写错了机制（Go 会单独使用请求头的上限），`validate.go` 和测试中的说明已改正，规则本身不变；<br>- `write_timeout` 只让写出失败，既不停止 handler，也不取消它的 context，测试注释和文档中"连接的每个阶段都有上限"已改成"连接上的读写都有上限"，并要求 handler 里的阻塞调用自带期限；<br>- 读超时测试加上"handler 已回复 200"的断言，排除请求头超时造成的误判；<br>- bootstrap 的测试配置补上了这两个超时 | `b86bb72`、`fa16c97`、`12cd9cc` |
+| Important 1 | 成立。临时加入 `instance/transport` 之后，`domain → transport → net/http` 能通过架构测试 | 模块内的目录不设限：未知目录既排不进依赖方向，也不受纯净性约束。`internal/shared` 也一样：它是允许导入的目标，它自己导入什么却没人检查（K6） | 新增规则 9：模块内的包只能放在 `domain`、`app`、`adapter` 或模块根目录。新增规则 10：`internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己。两条都放在末尾，已有编号不变。评审中的注入复现现在会失败，K6 也随之关闭。**评审补充**：<br>- 边规则只看直接导入，而标准库里的 `expvar`、`net/rpc` 自己就导入 `net/http`。新增 `TestPureLayersReachNoInfrastructure`，沿全部传递依赖检查 `domain`、`app`、`internal/shared`。<br>- 复审发现，依赖图的边用的是源码里写的导入路径，节点用的是解析后的包路径，标准库 vendor 的 `golang.org/x/...` 因此被误判成第三方。现在边改用解析后的包路径，并用真实加载器验证 `net/mail`、`crypto/x509` 算作纯净 | `3a8ebc2`、`81ca2d2`、`413641e` |
+| Important 2 | 成立：读代码确认，又用一个接受连接但不响应的替身进程复现 | 就绪期限只在两次请求之间检查，`fetch` 本身没有上限 | 每次请求用剩余时间做 `AbortSignal.timeout`。nerve 没有就绪时，先 SIGKILL 并等它退出，再报错；进程没启动成功时没有进程可等，直接报错。替身验证：30.1 秒时报出带日志路径的错误，子进程已经退出；可执行文件不存在时，约 100 毫秒报错。**评审补充**：`runNerve` 超过 60 秒用 SIGKILL 结束；`db.ts` 连接数据库最多等 10 秒，每条查询最多 30 秒 | `1ac2822`、`4f64f05` |
+| Minor 1 | 成立。在真实仓库复现：样式表加一个 `@utility` 后，`@plane/ui#check:format` 的哈希不变，直接命中缓存"通过"，而直接运行 oxfmt 失败 | 格式检查要读的样式表放在另一个工作区包（`tailwind-config`）里，又经 `@import` 引入 npm 包的样式，这些文件都不在任务哈希里 | `check:format` 和 `fix:format` 不再缓存，全部包的格式检查约 2.5 秒。这和第 9 节"不建议关闭缓存、改为声明输入"不同，原因是：只关掉了格式检查这两个任务的缓存；经 `@import` 引入的 npm 样式列不进任务输入，声明出来的输入永远不完整。**评审补充**：原提交说明中"`check:lint` 不读其他包"的说法不对，oxlint 的 import 规则会读依赖包的 `dist/`。现在 `check:lint`、`fix:lint` 依赖 `^build`；`check:types` 本来就依赖它，所以 `lint-web` 不会因此变慢 | `86ac47b`、`bedb00f` |
+| Minor 2 | 成立 | 总体设计写在 P2 做出决定之前，P2 的决定只写进了 M2 handoff | 总体设计 5.2 统一为一条 goose 迁移链：River 的 SQL 取自锁定版本的 `river migrate-get`。M2 handoff 补上首次导出和升级时用的参数 | `2da4281`、`573e3e2` |
+| Minor 3 | 成立（依据 GitHub 并发组的语义判断） | main 的所有运行共用一个并发组，而一个组里只保留一个排队的运行 | main 的每次运行各占一个组（`ci-main-<run_id>`）；其他分支照旧，按分支取消较早的运行 | `6a58936` |
+
+### 11.2 其他裁定
+
+- **K16（同仓库的 PR 不跑 CI）**：维持原裁定。
+  - 本项目在本地以 `--no-ff` 合并后推送 main，不经过 PR；main 的 CI 验证的就是合并提交本身。PR 门禁留到 M8 开放协作、设置必须通过的检查时一起处理。
+  - 评审指出，`if: always()` 的汇总任务只能避免"被跳过的任务算作通过"，保证不了检查的是合并后的结果。M0 设计 6.3 和 M8 的 [M0-P6-release-notes](../../M8-open-release/handoffs/M0-P6-release-notes.md) 已补充：如果保留跳过条件，还要在分支保护里打开"合并前分支必须与 main 同步"。
+- **建议 1（接口路径归属的守护）**：要等出现第二个 API 模块时才有意义，留给 M2。
+
+### 11.3 同步的文档与交接
+
+- M0 设计：3.3、3.6、3.7、6.3。
+- 总体设计：5.2、6.3。
+- 前端改动清单：`turbo.json` 一行。
+- P2 spec：2.3、2.7、2.10 中已经变化的地方，都加了"M0 加固后的变化"注记。
+- M2 的 [M0-P2-platform-notes](../../M2-auth/handoffs/M0-P2-platform-notes.md)：shared 规则已完成；补充 River 迁移 SQL 的来源和导出参数；handler 里的阻塞调用要自带期限。
+- M2 的 [M0-P6-e2e-notes](../../M2-auth/handoffs/M0-P6-e2e-notes.md)：fixture 里每一次等待的上限。
+- M8 的 [M0-P6-release-notes](../../M8-open-release/handoffs/M0-P6-release-notes.md)：汇总任务的局限。
+- 新建 M5 的 [M0-hardening-http-timeouts](../../M5-files/handoffs/M0-hardening-http-timeouts.md)。
+
+### 11.4 验证
+
+- **本地（分支最终提交）**：以下检查全部通过——
+  - `make gen-check`；
+  - `make lint`：Go 0 issues，前端 49/49，不走缓存重跑时各包警告数仍等于基线；
+  - `make test`；
+  - `go test -race ./...`；
+  - `make build`；
+  - `make e2e`：5 个测试通过。
+- **对构建出的 `bin/nerve` 做黑盒复查**：
+  - 含 `;` 的查询密码不会出现在日志里，日志中是 `database.url=xxxxx` 加上单独一条连接目标；
+  - 格式错误的键值形式连接串只得到固定信息，不含密码；
+  - 8 个缺请求体的连接都在 `read_timeout`（测试中设为 2 秒）到期时释放，正常请求照常返回 200。
+- **评审**：
+  - 整分支评审（opus）：With fixes，1 条 Important、8 条 Minor，已全部处理；
+  - 修复轮复审（opus）：9 条全部处理到位，并新提出 1 条 Important、2 条 Minor、1 个小问题，也已全部处理（`413641e`、`12cd9cc`）。
