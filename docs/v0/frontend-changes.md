@@ -61,6 +61,10 @@
 | Plane 自身的死代码：IndexedDB 和同步代码、从未被创建过的集成服务、调用不存在接口的 service 方法 | 计划中 | |
 | 多语言：只保留 `zh-CN` 和 `en` | 计划中 | |
 | Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的约 330 处引用全部改为 React Router 原生写法（`Link`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`）；去掉强制结尾 `/` 和延迟跳转，修复因此暴露出的"渲染时跳转"问题；删除垫片和两个未使用的文件（`script.tsx`、`image.tsx`） | 计划中 | |
+| web 中的部署遗留：`Dockerfile.web`、`Dockerfile.dev`、`caddy/`、`.dockerignore` | 计划中 | |
+| `serve` 依赖及其 `start`、`preview` 脚本（当前运行即崩溃） | 计划中 | |
+| `public/` 中从未注册的 `sw.js` 及 workbox 相关文件 | 计划中 | |
+| `.env.example`（整个文件） | 计划中 | |
 
 **验收标准**：
 - TypeScript 类型检查、oxlint、knip 全部为零。

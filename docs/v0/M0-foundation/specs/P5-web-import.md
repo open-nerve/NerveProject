@@ -98,7 +98,7 @@ platform/webui ──→ 只有标准库（embed、io/fs、net/http、path、str
 - `packages` 不变：`web/apps/*`、`web/packages/*`、`e2e`。
 - catalog、overrides、allowBuilds、minimumReleaseAgeExclude、patchedDependencies、peerDependencyRules 来自 Plane，**只保留作用于迁入的包的条目**：
   - catalog：183 → 144 条。删掉的 39 条都没有被迁入的 `package.json` 引用：apps/live 的 26 条（其中 2 条 logger、decorators 也用）、apps/space 的 1 条（`@react-router/serve`）、codemods 的 4 条、只有 logger 或 decorators 使用的 3 条、没有任何包引用的 3 条，以及根目录不再使用的 husky、lint-staged。
-  - overrides：61 → 47 条。删掉 `express: "catalog:"`（引用的 catalog 条目已删除），以及目标包不在依赖图中的 13 条（`@types/express`、`rollup`、`serialize-javascript`、`undici@7`、`yaml@1`、两条 `postcss-selector-parser`、`tmp`、`ws@7`、三条 `@opentelemetry/*`、`toml`）。
+  - overrides：61 → 47 条。删掉 `express: "catalog:"`（引用的 catalog 条目已删除）；目标包不在依赖图中的 11 条（`@types/express`、`rollup`、`serialize-javascript`、`undici@7`、`yaml@1`、`tmp`、`ws@7`、三条 `@opentelemetry/*`、`toml`）；以及两条 `postcss-selector-parser`——包本身在依赖图中（6.0.10、6.1.3、7.1.3），但这两条的版本区间选择器（`>=6.1.0 <6.1.3`、`>=7.1.0 <7.1.3`）不落在图中任何一个版本上，等于不作用于任何包。
   - allowBuilds：删掉依赖图中不存在的 `@parcel/watcher`、`msgpackr-extract`、`sharp`。
   - 其余三节原样保留（其中的包都在依赖图中）。
   - 判断"作用于迁入的包"的依据是锁文件：修剪前后 13 个包的解析结果不变（2.2）。
