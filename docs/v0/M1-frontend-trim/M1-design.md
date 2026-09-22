@@ -365,7 +365,7 @@
   - 保留跨命名空间冲突的检查。
 
   它接进 `make lint-web`，作为门禁，脚本和语言文件都进入任务的输入。它只能保证中英文同步；两边一起删错的情况要靠"整键 + 模板前缀"的引用核对（2.3）。
-- **企业版的整个命名空间**：`automation`、`workflow`、`template`、`work-item-type`、`tour`、`update`、`wiki` 这几个命名空间，以及 `workspace_settings.settings.applications.*`（161 个叶子键），代码中一处引用都没有，是死文案，连同命名空间的登记在 P1 删除。已核对以下几点：
+- **企业版的整个命名空间**：`automation`、`editor`、`workflow`、`template`、`work-item-type`、`tour`、`update`、`wiki` 这几个命名空间（`editor` 由 P1 的核对补上），以及 `workspace_settings.settings.applications.*`（161 个叶子键），代码中一处引用都没有，是死文案，连同命名空间的登记在 P1 删除。已核对以下几点：
   - `applications.*` 与保留的个人访问令牌（`api_tokens.*`）、Webhook（`webhooks.*`）文案互不相干，删除范围不扩大到开发者设置分类或整个 `workspace-settings.json`；
   - `tour` 命名空间是企业版产品导览的文案，与保留的新手导览组件 `TourRoot` 不是同一条链路。
 
@@ -409,8 +409,8 @@
 - git 的 PCRE 是可选的编译功能，不同机器不一定一样；
 - 按文件豁免太粗：根 store、共享类型、翻译 JSON 同时属于好几个 Phase。
 
-**工具**（P1 实现，放在 `tools/` 下，只用 Node，不加依赖；持续集成的 `web` 任务从 P1 起运行它）：
-- **文件范围**：来自 `git ls-files`，跳过二进制文件。除了 `web/`，还包括根目录的 `pnpm-lock.yaml`、`pnpm-workspace.yaml`、`turbo.json`，用来检查旧依赖和旧环境变量。
+**工具**（P1 实现，即 `tools/keywords.mjs` 和规则文件 `tools/keywords.json`；只用 Node，不加依赖。`make lint-web` 的第一步运行它，所以本地和持续集成的 `web` 任务从 P1 起都经过它）：
+- **文件范围**：来自 `git ls-files`，包括跟踪的文件，以及未跟踪、未忽略的文件：本地新加的文件提交之前就受检查。跳过二进制文件。除了 `web/`，还包括根目录的 `pnpm-lock.yaml`、`pnpm-workspace.yaml`、`turbo.json`，用来检查旧依赖和旧环境变量。
 - **规则**：内容规则和文件名规则分开定义。
   - 正则用 JavaScript 的 `RegExp`，显式写 flags，在 macOS 和 Linux 上行为一致；
   - 规则文件本身带正例和反例样本，工具先用样本自检；
@@ -493,23 +493,24 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
   - `serve` 依赖及 `start`、`preview` 脚本。崩溃的根因是全局覆盖 `path-to-regexp: 0.1.13` 强加给了 `serve-handler`；删掉 `serve` 之后，这条覆盖也不再作用于任何包；
   - `public/` 中从未注册的 `sw.js`、`workbox-*.js` 及 source map；
   - 没有被引用的 `manifest.json`、`public/favicon/site.webmanifest`；
-  - 13 个 `.prettierignore`（格式化工具是 oxfmt）；
+  - 13 个 `.prettierignore`：oxfmt 会读取它们，其中真正起作用的三条忽略规则改写进 `.oxfmtrc.json`（P1 spec 2.5）；
   - `web/apps/web/.gitignore`（只有 Sentry 的条目）。
 - **pnpm 工作区**：删掉提到没有迁入内容的注释；删掉已不作用于任何包的覆盖项。Express 系列的覆盖项仍然作用于 `@react-router/dev` 的可选对等依赖 `@react-router/serve`，保留。
 - **锁文件核对**（P1、P2、P3 每次删依赖之后都做，收尾再做一次）：
-  - 比较删除前后 importers 和存活包的版本、完整性哈希、依赖边。只允许由删除直接引起的差异（对等依赖后缀、孤立的包），并逐条解释；
+  - 比较删除前后 importers 和存活包的版本、完整性哈希、依赖边。只允许由删除直接引起的差异（对等依赖后缀、孤立的包），以及 pnpm 重新解析时向锁文件中已有版本的去重（不能出现新的包或新的版本），并逐条解释；
   - 同时检查 catalog、overrides、allowBuilds、minimumReleaseAgeExclude、peerDependencyRules 和 patches 中只作用于被删依赖的条目，它们也一并删除（pnpm 不会报告失效的条目）；
   - 方法沿用 M0/P5 spec 2.4 和 P6 计划 Task 2 Step 3。
-- **没有调用方的任务和脚本**：`turbo.json` 中的 `start`、`build-storybook`、`clean`、`check`、`fix*`；各包里同样没有调用方的脚本；Storybook（ui 和 propel 各一套，没有 Makefile 或持续集成入口）连同其配置、stories 和依赖。
+- **没有调用方的任务和脚本**：`turbo.json` 中的 `start`、`build-storybook`、`clean`、`check`、`fix`、`fix:lint`；`fix:format` 保留，因为 README 写明它是修格式的入口；各包里同样没有调用方的脚本；Storybook（ui 和 propel 各一套，没有 Makefile 或持续集成入口）连同其配置、stories 和依赖。
   - 原则：任务或脚本只有被 Makefile、持续集成、另一个任务调用，或者是 README 写明的开发入口，才保留。
   - `test` 任务和 `@plane/services` 的 `test` 脚本保留：它们由新接入的前端单元测试调用（7.5）。
 - **前端单元测试**：新增 `make` 入口（经 turbo 的 `test` 任务运行各包的 vitest），持续集成的 `web` 任务运行它。
 - **关键词守卫**：7.4 的工具、P1 负责的规则、持续集成中的运行。
+- **门禁覆盖 `tools/`**：`tools/` 下的检查脚本本身就是门禁，但不属于任何工作区包。根目录的 `package.json` 加 `check:lint`、`check:format`，`turbo.json` 注册为根任务，由 `make lint-web` 一起运行（P1 spec 第 3 节第 13 项）。
 - **未使用的依赖**：knip 报出的 19 个依赖、4 个开发依赖、2 个未列出的依赖。其中只被未使用文件引用的依赖，连同这些文件一起删除。例外：
   - editor 的 `buffer`：knip 把它当成了 Node 的内置模块，实际上 Yjs 的工具代码还在导入它，随 Yjs 在 P2 删除。
   - `isbot`、`@react-router/node` 保留：应用没有自己的 `entry.server.tsx`，React Router 默认的服务端入口会导入它们。SPA 模式构建时也要用这个入口预渲染 `index.html`；删掉之后，React Router 的类型生成会自己把 `isbot` 加回来。
 - **死代码**：Next.js 垫片中没人用的 `image.tsx`、`script.tsx`，`next/script` 的别名和 `next-script.d.ts`（4.1）；`packages/services` 中没人用的 49 个文件（3.5）。
-- **构建警告**：`tailwind-config` 的 `package.json` 加 `"type": "module"`，入口按真实的 `index.css` 写（7.2）；`vite-tsconfig-paths` 插件换成 Vite 8 的 `resolve.tsconfigPaths`。
+- **构建警告**：`tailwind-config` 的 `package.json` 加 `"type": "module"`；删掉指向不存在文件的 `main`，入口只由 `exports` 声明（`./index.css`、`./postcss.config.js`，7.2）；`vite-tsconfig-paths` 插件换成 Vite 8 的 `resolve.tsconfigPaths`。
 - **TypeScript 增量编译文件**：`typescript-config/base.json` 把 `tsBuildInfoFile` 写成了相对它自己的路径，13 个包写同一个文件、互相覆盖。改为每个包写自己的。
 - **React #418**：`root.tsx` 的 `HydrateFallback` 在预渲染时输出空的 `<div>`；浏览器首次渲染时已经知道主题，输出加载动画，两者不一致。改为预渲染和首次渲染输出同样的结构。
 - **`make web-dev`**：改为同时监视各个包（`turbo run dev --filter=web...`），并发数按持久任务数设置（10 个包的监视加 web，共 11 个持久任务，至少 12）。验证时要确认改了 `web/packages/*` 的源码真的出现在运行中的页面里，而不只是 Vite 能启动。M0 设计 6.2 和 README 中"改了 packages 要重新执行"的说明随之修改。
@@ -546,7 +547,7 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
   - 7.1 的 lint 上限自动核对。
 
   Plane 的旧地址重定向不在 P1（3.12）。
-- **顺序**：工具和构建遗留、两种语言和键一致性 → `packages/services` 的 49 个文件 → lint 上限核对、关键词守卫（先做原型）→ 开发监视和 #418 修复。
+- **顺序**：lint 上限核对 → 关键词守卫（先于所有删除，每个删除任务才能先加规则、看它命中，再删到零）→ 部署遗留 → 没有调用方的任务、Storybook、前端单元测试的入口 → 未使用的依赖 → `packages/services` → 构建警告 → #418 → 两种语言 → 键一致性和死文案 → 门禁覆盖 `tools/` → 开发监视和文档（P1 plan 的 Task 1–10 和 9A）。
 - **验收**：
   - `make lint-web`（含上限核对和中英文键一致性检查）、前端单元测试、关键词守卫、`make build-web`、`make e2e` 通过；
   - knip 报告中未使用的依赖、开发依赖、未列出的依赖三类为零（editor 的 `buffer` 除外，见第 8 节）；配置提示只剩 web 的 `+types/` 一条（是否出现取决于本地是否生成过类型，P3 处理，见 7.2）；
@@ -667,7 +668,7 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
 
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
-| P1 | web-hygiene | 未开始 | — | — | — |
+| P1 | web-hygiene | 进行中 | [spec](specs/P1-web-hygiene.md) | [plan](plans/P1-web-hygiene.md) | — |
 | P2 | trim-content | 未开始 | — | — | — |
 | P3 | trim-platform | 未开始 | — | — | — |
 | P4 | router-native | 未开始 | — | — | — |
