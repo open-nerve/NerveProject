@@ -1,0 +1,18 @@
+# Nerve 接口描述的入口：列出所有路径，指向各模块的描述文件。
+# make gen-web 用 Redocly 把它打包成 dist/openapi.yaml。
+openapi: 3.1.0
+info:
+  title: Nerve API
+  version: v0
+  description: >-
+    The HTTP API of Nerve. The web app is one client of it; every account can
+    use every endpoint the same way.
+  license:
+    name: AGPL-3.0-only
+    identifier: AGPL-3.0-only
+tags:
+  - name: instance
+    description: What this instance runs.
+paths:
+  /api/v0/instance:
+    $ref: 'modules/instance.yaml#/paths/~1api~1v0~1instance'
