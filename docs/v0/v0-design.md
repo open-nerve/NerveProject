@@ -497,7 +497,7 @@ server/configs/
 - **单文件部署**：配置文件通过 `go:embed` 编进程序，所以只带一个可执行文件也能运行；也可以用 `NERVE_CONFIG_DIR` 指向外部目录，作为内置文件之上的一层，按键覆盖，目录里缺失的文件会被跳过。
 - **实现**：用 koanf 分层加载（它比 viper 轻，而且没有全局状态），放在 `platform/config`。
 - **test 环境的典型设置**：降低 argon2 的计算强度、缩短定时任务的间隔、文件存到临时目录、日志输出为便于阅读的文本格式。
-- **前端**：使用 Vite 自带的模式文件（`.env.development`、`.env.test`、`.env.production`）。前端和后端同源部署，所以几乎不需要配置。
+- **前端**：不使用 Vite 的模式文件（`.env.development` 等）。前端和后端同源部署，接口地址为空即相对路径，不设置任何前端环境变量（M0/P5 已验证，见 [P5 spec](M0-foundation/specs/P5-web-import.md) 2.6）。
 - 详见 [M0/P2 spec](M0-foundation/specs/P2-server-platform.md) 2.3 节。
 
 ### 6.9 其他
@@ -510,6 +510,7 @@ server/configs/
 ## 7. 前端
 
 ### 7.1 代码来源
+- **来源提交**：Plane `02c19e1341d93141e8ad7b3278298adce208bafc`（`preview` 分支）。M0/P5 已从这个提交原样迁入，之后的每一处改动登记在[前端改动清单](frontend-changes.md)。
 - **使用**：Plane 的 `apps/web`，以及 packages 中的 types、constants、ui、propel、editor、i18n、hooks、utils、shared-state、tailwind-config、typescript-config。
 - **暂时使用**：packages/services。web 中的令牌设置页和文件工具函数依赖它；M2（PAT）和 M5（文件）对接新接口时，将它删除。
 - **不使用**：apps/admin、apps/space、apps/live、apps/api、apps/proxy、packages/logger、packages/decorators、packages/codemods（已核实 web 及其依赖的包都不引用它们）。
@@ -557,7 +558,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 
 ### 7.6 前端代码质量要求（长期有效）
 - **不保留**死代码、兼容代码、没有用处的开关，也不保留"以后可能会用"的代码。
-- **TypeScript 类型检查、oxlint、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。
+- **TypeScript 类型检查、oxlint、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。oxfmt 的格式检查和前端构建也是持续集成的门禁（M0/P5 加入）。
 - **oxlint 的警告采用"只降不升"的基线**：Plane 现有代码带着上万条警告（它自己也是按每个包的警告上限来管理的）。警告数超过基线，持续集成就失败；警告减少后，同一个提交里就把基线调低。M1 会重新测出基线，并制定逐步清零的计划。
 - 新写的代码遵循 7.2 的职责划分，和 Plane 现有的写法保持一致（MobX store、`observer` 组件）。
 
@@ -617,7 +618,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
   - 完成一个 M，要求本 M 的所有故事通过，**并且之前所有 M 的故事也都通过**。
 
 ### 8.3 持续集成
-生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、knip（M1 起）、vitest、Playwright 端到端测试。
+生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、oxfmt 的格式检查、前端构建（M0/P5 加入）、knip（M1 起）、vitest、Playwright 端到端测试。
 
 ---
 
