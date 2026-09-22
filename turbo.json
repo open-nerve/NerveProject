@@ -38,7 +38,7 @@
     },
     "check:lint": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "$TURBO_ROOT$/tools/lint-cap.mjs"],
       "outputs": []
     },
     "check:types": {

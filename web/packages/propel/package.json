@@ -53,7 +53,7 @@
   "scripts": {
     "dev": "tsdown --watch --no-clean",
     "build": "tsdown",
-    "check:lint": "oxlint --max-warnings=59 .",
+    "check:lint": "node ../../../tools/lint-cap.mjs 59",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:lint": "oxlint --fix .",

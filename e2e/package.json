@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "check:types": "tsc --noEmit",
-    "check:lint": "oxlint --max-warnings=0 .",
+    "check:lint": "node ../tools/lint-cap.mjs 0",
     "check:format": "oxfmt --check ."
   },
   "devDependencies": {
