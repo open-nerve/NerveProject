@@ -76,7 +76,11 @@ NerveProject/
   Makefile                      所有常用命令的统一入口（见 6.1）
   package.json                  pnpm 工作区的根（packageManager 字段锁定 pnpm 版本）
   pnpm-workspace.yaml           工作区：web/apps/*、web/packages/*、e2e；依赖版本表（catalog）
+  pnpm-lock.yaml                锁文件，以 Plane 的锁文件为起点生成（见 5.1）
   turbo.json                    前端任务编排
+  patches/                      react-color 的补丁，pnpm-workspace.yaml 的 patchedDependencies 引用它
+  .oxlintrc.json                oxlint 配置，来自 Plane（见 5.1、5.2）
+  .oxfmtrc.json                 oxfmt 配置，来自 Plane（见 5.1、5.2）
   .node-version                 24
   .editorconfig
   .github/workflows/ci.yml      持续集成
@@ -98,7 +102,7 @@ NerveProject/
         logging/                slog 初始化
         postgres/               连接池、迁移执行器；pgtest（测试工具，只在测试中使用）
         httpserver/             服务生命周期、中间件、problem+json、健康检查；apigen/ 是 common.yaml 生成的公共类型；apitest/ 是契约校验工具，只被测试导入
-        webui/                  内嵌的前端静态文件与单页应用的路由回退
+        webui/                  内嵌的前端静态文件与单页应用的路由回退；dist/.gitkeep（构建产物由 .gitignore 挡掉）
       modules/
         instance/               试点模块
       archtest/                 架构测试（只有测试文件）
@@ -115,7 +119,7 @@ NerveProject/
   docs/
 ```
 
-和总体设计 2.2 相比，多了两样东西：根目录的 pnpm 工作区文件，以及 `tools/`。
+和总体设计 2.2 相比，根目录另有 pnpm 工作区文件（`package.json`、`pnpm-workspace.yaml`、`pnpm-lock.yaml`、`turbo.json`）、`patches/`、oxlint 和 oxfmt 的配置文件，以及 `tools/` 目录；没有 `.npmrc`（pnpm 11 只从中读取认证和仓库地址，其余设置都不起作用，M0/P5 已实测核实，见 5.1）。
 - **pnpm 工作区放在仓库根目录**：这样端到端测试可以直接用生成的 TS 客户端（`web/packages/api-client`）准备测试数据。
 - **`tools/` 目录**：放不属于任何运行时组件的一次性工具。
 
@@ -172,11 +176,12 @@ NerveProject/
 
 ### 3.4 内嵌前端（`platform/webui`）
 - **打包方式**：`make build` 先构建前端，把 `web/apps/web/build/client/` 复制到 `server/internal/platform/webui/dist/`，再编译 Go 程序。`dist/` 只提交一个 `.gitkeep`，其余内容已加入 `.gitignore`。
-- **没有构建前端时**：`dist/` 中没有 `index.html`，访问页面会得到一句明确的提示"前端未构建，请运行 make build"。开发时用 Vite 开发服务器访问前端，不受影响。
-- **单页应用回退**：路径能对应到静态文件就返回文件；否则返回 `index.html`。
-- **缓存策略**：带哈希的资源文件设为 `Cache-Control: immutable`，`index.html` 设为 `no-cache`。
+- **没有构建前端时**：`dist/` 中没有 `index.html`，访问页面得到一句英文提示（程序输出的文字都用英文），建议执行 `make build`，开发时用 `make web-dev`；状态码 404，`Cache-Control: no-cache`。
+- **只处理 GET、HEAD**：其他方法返回 405，带 `Allow: GET, HEAD`。
+- **单页应用回退**（依次判断）：路径对应一个普通文件、且路径中没有以 `.` 开头的部分，就返回这个文件；`assets/` 或 `assets/` 下不存在的路径返回 404（避免脚本加载器把 HTML 当成 JS）；隐藏文件（如 `.gitkeep`）不提供；其余路径（包括 `/`、深层路径、目录）返回 `index.html`。
+- **`/index.html`**：标准库 `http.ServeFileFS` 会把它 301 跳转到 `./`。
+- **缓存策略**：`assets/` 下带哈希的资源文件设为 `Cache-Control: public, max-age=31536000, immutable`；`index.html` 和从 `public/` 复制来的文件（文件名不带哈希）都设为 `no-cache`。
 - **路由注册**：必须注册成不带方法的 `/` 模式。`GET /` 会和 `/api/` 冲突，ServeMux 在注册时就会 panic。
-- **配置开关**：`web.enabled`，由 P5 加入。
 
 ### 3.5 数据库与迁移
 - **连接**：`pgxpool`，参数来自配置（`database.url`、`database.max_conns`）。
@@ -209,7 +214,6 @@ NerveProject/
     level: info          # dev 中为 debug，test 中为 warn
     format: json         # dev 和 test 中为 text
   ```
-  `web.enabled` 由 P5 加入，P2 阶段还没有这一项。
 - **dev 环境**：`server.addr` 是 `127.0.0.1:8080`（只监听本机）；数据库地址是本地开发库（`postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
 - **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，`database.url` 中的密码会被打码。
 - 未知的配置键直接报错，不会悄悄回落到默认值。
@@ -273,22 +277,22 @@ api/common.yaml + api/modules/*.yaml
 ## 5. 前端迁入与 Plane 表结构快照
 
 ### 5.1 前端迁入（原样迁入，不做功能改动）
-- **复制的内容**：`plane/apps/web` 复制到 `web/apps/web`；web 用到的 packages（见总体设计 7.1）复制到 `web/packages/`；`.oxlintrc.json`、`.oxfmtrc.json`、`.npmrc` 复制到仓库根目录。
-- **`turbo.json` 和依赖版本表（catalog）的处理**：只删掉明显只属于 admin、space、live 这几个应用的条目。其余多余的依赖留到 M1，由 knip 统一清理。
+- **复制的内容**：`plane/apps/web` 复制到 `web/apps/web`；web 用到的 packages（见总体设计 7.1）复制到 `web/packages/`；`.oxlintrc.json`、`.oxfmtrc.json` 复制到仓库根目录；`patches/react-color@2.19.3.patch` 复制到根目录的 `patches/`（web 依赖 react-color，锁文件记录这个补丁的哈希）。**不复制 `.npmrc`**：pnpm 11 只从 `.npmrc` 读取认证、仓库地址和网络设置，Plane 写在里面的其他设置都不起作用（M0/P5 实测核实）。
+- **锁文件**：以 Plane 的 `pnpm-lock.yaml` 为起点生成——把 importers 的路径移到 `web/` 下，再执行一次 `pnpm install`，保证迁入的包的依赖版本与 Plane 完全相同。
+- **`turbo.json` 和依赖版本表（catalog、overrides、allowBuilds 等）的处理**：只保留作用于迁入的包的条目，以锁文件为证据——修剪前后，13 个迁入的包的解析结果不变。
 - **M0 只做让前端能跑起来的最小改动**：
   - 工作区的路径。
   - 开发服务器的代理：Vite 把 `/api` 转发到 `http://127.0.0.1:8080`。
-  - 构建产物的位置。
 - 功能删减、品牌替换、改用 React Router 原生写法、包名改为 `@nerve/*`，**全部留到 M1**。这样 M0 引入的改动和 M1 的删减可以分开审查。
 - **验收**：`pnpm install` 成功，类型检查通过，lint 检查通过（按下面的警告基线），前端能构建。
 - **版权**：所有来自 Plane 的文件保留原有的版权声明。
 
 ### 5.2 lint 警告基线：只降不升
-- **现状**：Plane 本身就给每个包设了"最多允许多少条警告"的上限。比如 web 是 11957 条，propel 是 3605 条，editor 是 416 条。
-- **做法**：M0 沿用这些上限，并定下一条规则：**上限只能往下调，不能往上调**。
+- **现状**：Plane 本身就给每个包设了"最多允许多少条警告"的上限，但这些上限远高于实际警告数（比如 web 的上限是 11957 条，实测只有 779 条）。
+- **做法**：上限改为实测的警告数，并定下一条规则：**上限只能往下调，不能往上调**。M0/P5 实测的上限（在根目录的 `.oxlintrc.json` 下测量）：web 779、editor 75、propel 59、utils 34、ui 32、services 6、hooks 4、i18n 3、constants 2、types 1、shared-state 0、api-client 0（新增脚本），合计 1005 条。
   - 任何提交如果让警告数超过上限，持续集成就失败。
   - 警告数下降后，要在同一个提交里把上限调低到新的数值。
-- **后续**：M1 删掉大量代码后，重新测出一组更低的基线，并在 M1 设计文档里制定逐步清零的计划。
+- **后续**：M1 删掉大量代码后，重新测出一组更低的基线，并在 M1 设计文档里制定逐步清零的计划，同时决定是否加"警告减少后必须调低上限"的自动检查。
 - 这一条是对总体设计 7.6"oxlint 警告即报错"的修正，见 7.3。
 
 ### 5.3 Plane 表结构快照（`tools/plane-schema/`）
@@ -314,9 +318,10 @@ api/common.yaml + api/modules/*.yaml
 | `make web-dev` | 启动前端开发服务器（Vite，把 `/api` 转发给后端） |
 | `make gen` | 重新生成所有代码：Go 接口层、打包后的 OpenAPI 描述、TS 客户端 |
 | `make gen-check` | 重新生成，并检查生成物是否已提交且没有差异 |
-| `make lint` | golangci-lint、前端类型检查、oxlint |
+| `make lint` | golangci-lint；前端的类型检查、oxlint（按警告基线）、格式检查 |
 | `make test` | Go 单元测试、集成测试、架构测试。需要 Docker（集成测试用 testcontainers） |
-| `make build` | 构建前端，嵌入 Go 程序，编译出 `bin/nerve` |
+| `make build-web` | 构建前端，产物在 `web/apps/web/build/client/`（只需要 Node） |
+| `make build` | 依赖 `build-web`；把构建产物嵌入 Go 程序，编译出 `bin/nerve` |
 | `make e2e` | 构建产物并运行端到端测试（等同于 `pnpm e2e`） |
 | `make plane-schema` | 重新生成 Plane 表结构快照（需要 Docker，Compose 2.22 或更高，见 [P4 spec](specs/P4-plane-schema.md)） |
 
@@ -325,13 +330,13 @@ api/common.yaml + api/modules/*.yaml
 ### 6.2 开发流程
 1. 执行 `make dev-db`，启动本地的 Postgres 18。
 2. 执行 `make run`，后端监听 `:8080`；dev 环境下会自动执行迁移。
-3. 执行 `make web-dev`，前端运行在 `:3000`，接口请求会被转发到后端。
+3. 执行 `make web-dev`，前端运行在 http://127.0.0.1:3000 ，接口请求会被转发到后端。只运行 web 自己的开发服务器；改了 `web/packages/*` 下的代码，要重新执行 `make web-dev`。
 
 ### 6.3 持续集成（`.github/workflows/ci.yml`）
 | 任务 | 内容 |
 |---|---|
 | `server` | 安装 Go 1.27.1 → `make gen-check-go` → `make lint-go`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
-| `web` | `corepack enable` → `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查；oxlint 按警告基线，P5 加入） |
+| `web` | `corepack enable` → 缓存 pnpm 存储（按锁文件的哈希）→ `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查、oxlint 按警告基线、格式检查）→ `make build-web`（M0/P5 加入） |
 | `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图（P6 加入） |
 
 持续集成不运行 Plane 表结构快照的提取（`make plane-schema`）：两个输入都按摘要写死，快照不会自己变化，见 [P4 spec](specs/P4-plane-schema.md) 2.8。
@@ -445,7 +450,7 @@ api/common.yaml + api/modules/*.yaml
   - 在前端改动清单中登记迁入时做的最小改动。
 - **验收**：
   - `pnpm install`、类型检查、按基线的 lint 检查、构建全部通过。
-  - `bin/nerve serve` 能打开前端首页；访问任意的前端深层路径都能返回 `index.html`。
+  - `bin/nerve serve` 能打开前端首页和任意深层路径，静态资源全部加载成功；页面内容是 Plane 的"didn't start up correctly"（前端调用的 `/api/instances/` 在 Nerve 中还不存在），这是预期的，直到 M2 对接新接口才会改变。
   - 持续集成通过。
 
 ### P6 `e2e-ci`：端到端测试骨架与冒烟故事
@@ -480,7 +485,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 - [ ] 持续集成中的全部门禁通过：生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含架构测试和集成测试）、前端类型检查、oxlint（按基线）、前端构建、端到端冒烟故事。
 - [ ] `make build` 能构建出单个可执行文件 `bin/nerve`；它加上一个 Postgres，就能完成 S1 到 S4。
 - [x] 第 7 节的调整建议已确认，并已同步更新到总体设计和差异清单。
-- [ ] 前端改动清单中已登记迁入时的改动。
+- [x] 前端改动清单中已登记迁入时的改动。
 - [ ] `handoffs/` 中没有 `open` 状态的事项；需要移交给后续 M 的事项，已放进对应 M 的 `handoffs/` 目录。
 - [ ] 总体设计中 M0 的状态改为"已完成"。
 
@@ -494,7 +499,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | P2 | server-platform | 已完成 | [spec](specs/P2-server-platform.md) | [plan](plans/P2-server-platform.md) | [review](reviews/P2-server-platform-review.md) |
 | P3 | api-contract | 已完成 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | [review](reviews/P3-api-contract-review.md) |
 | P4 | plane-schema | 已完成 | [spec](specs/P4-plane-schema.md) | [plan](plans/P4-plane-schema.md) | [review](reviews/P4-plane-schema-review.md) |
-| P5 | web-import | 未开始 | — | — | — |
+| P5 | web-import | 已完成 | [spec](specs/P5-web-import.md) | [plan](plans/P5-web-import.md) | [review](reviews/P5-web-import-review.md) |
 | P6 | e2e-ci | 未开始 | — | — | — |
 
 ---
@@ -506,7 +511,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | oapi-codegen 和 kin-openapi 对 OpenAPI 3.1 的支持还比较新 | **已由 M0/P3 验证并解除**：3.1 在整条链路上可用（[P3 spec](specs/P3-api-contract.md) 2.2），不需要改用 3.0.3 |
 | 按模块拆分描述文件后，oapi-codegen 的跨文件引用（`import-mapping`）表现不符合预期 | **已由 M0/P3 验证并解除**：表现符合预期，公共组件通过 import-mapping 生成到共享包 `apigen`，不需要退回"单个描述文件 + `include-tags`"的备选方案 |
 | Plane 后端镜像无法获取，或者在当前环境中跑不起来 | **已由 M0/P4 验证并解除**：官方镜像可用；恢复办法：在对应标签上用 `apps/api/Dockerfile.api` 构建（未验证） |
-| Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | 使用 pnpm 缓存和 turbo 的本地缓存；如果还不够，在 P5 评估其他办法 |
+| Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | **已由 M0/P5 验证并解除**：冷缓存的 `web` 任务耗时 142 秒，远低于 15 分钟的超时；pnpm 存储按锁文件的哈希缓存；turbo 缓存只在任务内部使用（`lint-web` 构建的包被 `build-web` 复用），不跨运行保存 |
 | River 仍是 0.x 版本，小版本之间可能有行为变化 | M2 接入时锁定具体的版本号 |
 | 持续集成拉取 Postgres 镜像受 Docker Hub 匿名拉取频率限制 | 出现限流时，在持续集成中登录 Docker Hub 或改用镜像缓存 |
 | 每个包一个测试容器，模块增多后持续集成变慢 | M2 之后评估 testcontainers 的跨进程复用，或限制 `go test -p` |

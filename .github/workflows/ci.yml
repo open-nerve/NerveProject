@@ -46,9 +46,20 @@ jobs:
           node-version-file: .node-version
       - name: Enable corepack
         run: corepack enable
+      # pnpm 的包存储按锁文件缓存：锁文件变了就换一个缓存，旧的包不会越积越多
+      - name: Locate the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache the pnpm store
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Generated code
         run: make gen-check-web
       - name: Lint
         run: make lint-web
+      - name: Build
+        run: make build-web

@@ -22,6 +22,11 @@ var sampleMigrations = fstest.MapFS{
 	"00002_probe_create_gadgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE gadgets (id bigint);\n-- +goose Down\nDROP TABLE gadgets;\n")},
 }
 
+// testWebUI stands in for the built frontend, so tests do not depend on make build.
+const testIndexHTML = "<!doctype html><title>Nerve test</title>"
+
+var testWebUI = fstest.MapFS{"index.html": {Data: []byte(testIndexHTML)}}
+
 const unreachableDB = "postgres://nobody@127.0.0.1:1/nowhere"
 
 var client = &http.Client{Timeout: 5 * time.Second}
@@ -44,11 +49,12 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 	}
 }
 
-// startApp runs the app until the test ends and returns its base URL once it
-// answers /healthz. The cleanup checks that run shut down cleanly.
+// startApp runs the app, serving testWebUI, until the test ends and returns
+// its base URL once it answers /healthz. The cleanup checks that run shut
+// down cleanly.
 func startApp(t *testing.T, cfg config.Config, migrations fs.FS) string {
 	t.Helper()
-	a, err := newApp(context.Background(), cfg, slog.New(slog.DiscardHandler), migrations)
+	a, err := newApp(context.Background(), cfg, slog.New(slog.DiscardHandler), migrations, testWebUI)
 	if err != nil {
 		t.Fatalf("newApp() error = %v", err)
 	}
@@ -124,7 +130,7 @@ func TestNotReadyWhenDatabaseIsUnavailable(t *testing.T) {
 }
 
 func TestRunFailsWhenAutoMigrateFails(t *testing.T) {
-	a, err := newApp(context.Background(), testConfig(t, unreachableDB, true), slog.New(slog.DiscardHandler), sampleMigrations)
+	a, err := newApp(context.Background(), testConfig(t, unreachableDB, true), slog.New(slog.DiscardHandler), sampleMigrations, testWebUI)
 	if err != nil {
 		t.Fatalf("newApp() error = %v", err)
 	}

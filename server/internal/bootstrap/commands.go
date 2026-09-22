@@ -13,19 +13,20 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/logging"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
 // Serve implements `nerve serve`: it logs the effective configuration (secrets
 // masked) to logOut, applies pending migrations when database.auto_migrate is
-// on, and serves HTTP until ctx is done.
+// on, and serves the API and the embedded web frontend until ctx is done.
 func Serve(ctx context.Context, cfg config.Config, logOut io.Writer) error {
 	logger, err := logging.New(logOut, cfg.Log)
 	if err != nil {
 		return err
 	}
 	logger.InfoContext(ctx, "configuration loaded", slog.Any("config", cfg))
-	a, err := newApp(ctx, cfg, logger, migrations.FS())
+	a, err := newApp(ctx, cfg, logger, migrations.FS(), webui.FS())
 	if err != nil {
 		return err
 	}

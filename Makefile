@@ -21,6 +21,12 @@ GEN_WEB_OUT := api/dist web/packages/api-client/src/schema.gen.ts
 # 生成物必须已提交且没有差异；$(1) 是生成物的路径
 check-committed = test -z "$$(git status --porcelain -- $(1))" || { git status --short -- $(1); git --no-pager diff -- $(1); echo "生成物与接口描述不一致：执行 make gen，并提交生成的文件"; exit 1; }
 
+# 前端任务由 turbo 按 turbo.json 编排；关闭匿名使用数据上报，只打印失败任务的输出
+TURBO := TURBO_TELEMETRY_DISABLED=1 pnpm exec turbo
+TURBO_QUIET := --output-logs=errors-only
+# make build 把前端的构建产物复制到这里，由 go:embed 编进 nerve
+WEBUI_DIST := server/internal/platform/webui/dist
+
 .PHONY: help
 help: ## 列出所有命令
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -40,6 +46,10 @@ dev-db-reset: ## 停止开发数据库并删除数据卷
 .PHONY: run
 run: ## 以 dev 配置运行后端（需先 make dev-db），Ctrl-C 停止
 	cd server && NERVE_ENV=dev go run ./cmd/nerve serve
+
+.PHONY: web-dev
+web-dev: ## 启动前端开发服务器 http://127.0.0.1:3000，/api 转发给 make run 的后端；Ctrl-C 停止
+	$(TURBO) run dev --filter=web
 
 .PHONY: tools
 tools: ## 安装锁定版本的 golangci-lint 到 ./bin
@@ -86,13 +96,23 @@ lint-go: tools ## 运行 golangci-lint（server）
 	cd server && $(GOLANGCI_LINT) run ./...
 
 .PHONY: lint-web
-lint-web: ## 前端类型检查（需要 Node）
-	pnpm -r run check:types
+lint-web: ## 前端类型检查、oxlint（按警告基线）、格式检查（需要 Node）
+	$(TURBO) run check:types check:lint check:format $(TURBO_QUIET)
 
 # go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test
 test: ## 运行 Go 测试（server，不用测试缓存）
 	cd server && go test -count=1 ./...
+
+.PHONY: build
+build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需要 Node 和 Go）
+	find $(WEBUI_DIST) -mindepth 1 ! -name .gitkeep -delete
+	cp -R web/apps/web/build/client/. $(WEBUI_DIST)/
+	cd server && go build -o ../bin/nerve ./cmd/nerve
+
+.PHONY: build-web
+build-web: ## 构建前端，产物在 web/apps/web/build/client（需要 Node；持续集成 web 任务）
+	$(TURBO) run build --filter=web $(TURBO_QUIET)
 
 .PHONY: plane-schema
 plane-schema: ## 重新生成 Plane 表结构快照（需要 Docker，见 tools/plane-schema/README.md）

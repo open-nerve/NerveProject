@@ -14,6 +14,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
 )
 
 // app is a fully wired nerve server.
@@ -25,9 +26,9 @@ type app struct {
 	handler  http.Handler
 }
 
-// newApp wires the server described by cfg around the given migrations.
-// close releases it.
-func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles fs.FS) (*app, error) {
+// newApp wires the server described by cfg around the given migrations and
+// built web frontend. close releases it.
+func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrationFiles, webFiles fs.FS) (*app, error) {
 	pool, err := postgres.NewPool(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
@@ -44,6 +45,9 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// Modules mount their generated routes on this root mux, next to the
 	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.
 	instance.New().Register(mux, httpserver.NewAPIErrors(logger))
+	// The web UI takes every path no other pattern claims. It must be the
+	// method-less "/": "GET /" and the method-less "/api/" would conflict.
+	mux.Handle("/", webui.Handler(webFiles))
 	return &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, handler: mux}, nil
 }
 
