@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -40,6 +41,9 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		httpserver.Check{Name: "database", Run: pool.Ping},
 		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
 	)
+	// Modules mount their generated routes on this root mux, next to the
+	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.
+	instance.New().Register(mux, httpserver.NewAPIErrors(logger))
 	return &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, handler: mux}, nil
 }
 
