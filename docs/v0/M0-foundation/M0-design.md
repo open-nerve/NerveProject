@@ -59,8 +59,8 @@ M0 结束时，一个开发者克隆仓库后，用几条命令就能：
 | 前端框架 | React 19.2、React Router 8.3、Vite 8、turbo 2.10、oxlint 1.51、oxfmt 0.35 | 沿用 Plane 的版本 |
 | TS 客户端生成 | openapi-typescript **7.13.0**、openapi-fetch **0.17.0** | |
 | OpenAPI 打包 | Redocly CLI **2.53.3** | 版本已在 P3 锁定 |
-| 端到端测试 | Playwright **1.63.0**；Node 端用 testcontainers 启动 Postgres | |
-| 未使用代码检查 | knip **6.37.0** | M0 只配置，M1 开始作为门禁 |
+| 端到端测试 | Playwright **1.63.0**；Node 端用 testcontainers-node **12.1.0**（`@testcontainers/postgresql`）启动 Postgres，`pg` **8.23.0** 建库和做数据库断言 | |
+| 未使用代码检查 | knip **6.37.0** | M0 只出报告（`make knip --no-exit-code`，`web` 任务），M1 开始作为门禁 |
 
 **工具怎么安装**：
 - Go 的开发工具写在单独的 `server/tools/go.mod` 里，通过 `go tool -modfile=tools/go.mod <工具>` 调用，不污染主模块的依赖。M0 只需要 oapi-codegen；sqlc 在 M2 加入。goose 以库的形式在代码中调用，不需要命令行工具。
@@ -81,6 +81,7 @@ NerveProject/
   patches/                      react-color 的补丁，pnpm-workspace.yaml 的 patchedDependencies 引用它
   .oxlintrc.json                oxlint 配置，来自 Plane（见 5.1、5.2）
   .oxfmtrc.json                 oxfmt 配置，来自 Plane（见 5.1、5.2）
+  knip.jsonc                    knip 的配置，带中文注释（M0 只出报告，见 6.1、8）
   .node-version                 24
   .editorconfig
   .github/workflows/ci.yml      持续集成
@@ -113,7 +114,11 @@ NerveProject/
     packages/                   types、constants、ui、propel、editor、i18n、hooks、utils、
                                 shared-state、services、tailwind-config、typescript-config、
                                 api-client（新增：由 OpenAPI 生成）
-  e2e/                          Playwright 端到端测试
+  e2e/                          Playwright 端到端测试（工作区包 @nerve/e2e）
+    fixtures/                   db.ts、server.ts、api.ts（普通函数，全局准备也用它们）；test.ts（接成 Playwright 的 fixture）
+    global-setup.ts             每次运行启动一次 Postgres 容器，迁移出模板库
+    playwright.config.ts
+    stories/smoke/              冒烟故事 S1–S4（见第 9 节；M0 没有业务领域，故事都放在 smoke 下）
   deploy/compose.dev.yaml       开发环境（Postgres 18）
   tools/plane-schema/           Plane 表结构快照工具和快照文件
   docs/
@@ -322,7 +327,8 @@ api/common.yaml + api/modules/*.yaml
 | `make test` | Go 单元测试、集成测试、架构测试。需要 Docker（集成测试用 testcontainers） |
 | `make build-web` | 构建前端，产物在 `web/apps/web/build/client/`（只需要 Node） |
 | `make build` | 依赖 `build-web`；把构建产物嵌入 Go 程序，编译出 `bin/nerve` |
-| `make e2e` | 构建产物并运行端到端测试（等同于 `pnpm e2e`） |
+| `make e2e` | 构建产物并运行端到端测试；需要 Docker，浏览器要先单独安装一次（README）；`VERSION` 写进构建产物，`NERVE_VERSION` 把同一个值交给测试核对 |
+| `make knip` | 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1 起作为门禁） |
 | `make plane-schema` | 重新生成 Plane 表结构快照（需要 Docker，Compose 2.22 或更高，见 [P4 spec](specs/P4-plane-schema.md)） |
 
 `gen`、`gen-check`、`lint` 按区域拆分出 `-go`（只需要 Go）和 `-web`（需要 Node，先执行 `pnpm install`）两个后缀（`gen-go`/`gen-web`、`gen-check-go`/`gen-check-web`、`lint-go`/`lint-web`）；不带后缀的命令依次执行两个区域，供本地使用（M0/P3，见 [P3 spec](specs/P3-api-contract.md) 2.10）。
@@ -336,8 +342,8 @@ api/common.yaml + api/modules/*.yaml
 | 任务 | 内容 |
 |---|---|
 | `server` | 安装 Go 1.27.1 → `make gen-check-go` → `make lint-go`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
-| `web` | `corepack enable` → 缓存 pnpm 存储（按锁文件的哈希）→ `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查、oxlint 按警告基线、格式检查）→ `make build-web`（M0/P5 加入） |
-| `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图（P6 加入） |
+| `web` | `corepack enable` → 缓存 pnpm 存储（按锁文件的哈希）→ `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查、oxlint 按警告基线、格式检查）→ `make knip`（未使用代码报告，M0/P6 加入）→ `make build-web`（M0/P5 加入） |
+| `e2e` | 在 `server` 和 `web` 通过后运行：安装 Playwright 的 Chromium Headless Shell（`--with-deps`）→ `make build` → `make e2e`；`VERSION=0.0.0-ci.<运行编号>`；超时 20 分钟；失败或被取消时上传 `playwright-report`、`test-results`（P6 加入） |
 
 持续集成不运行 Plane 表结构快照的提取（`make plane-schema`）：两个输入都按摘要写死，快照不会自己变化，见 [P4 spec](specs/P4-plane-schema.md) 2.8。
 
@@ -456,7 +462,7 @@ api/common.yaml + api/modules/*.yaml
 ### P6 `e2e-ci`：端到端测试骨架与冒烟故事
 - **交付物**：
   - `e2e/` 下的 Playwright 项目。
-  - fixtures：`server.ts`（每个 worker 启动一个 `nerve`）、`db.ts`（Node 端用 testcontainers 启动 Postgres，从模板库复制出每个 worker 的数据库）、`api.ts`（生成的 TS 客户端）。
+  - fixtures：`server.ts`（每个 worker 启动一个 `nerve`）、`db.ts`（Node 端用 testcontainers 启动 Postgres，从模板库复制出每个 worker 的数据库）、`api.ts`（生成的 TS 客户端）、`test.ts`（把以上三个接成 Playwright 的 fixture，故事从这里导入 `test`、`expect`）；`global-setup.ts`（每次运行启动一次 Postgres 容器、迁移出模板库）。
   - 第 9 节中的冒烟故事。
   - 持续集成中的 `e2e` 任务。
   - knip 的配置：M0 只出报告，M1 开始作为门禁。
@@ -470,9 +476,9 @@ M0 没有业务功能，所以这里的故事只验证"系统能启动、能访�
 
 | 编号 | 故事 | 页面 / 接口断言 | 数据库断言 |
 |---|---|---|---|
-| S1 | 运维人员用 test 配置启动 nerve，服务就绪 | `/healthz` 返回 200；`/readyz` 返回 200；`nerve migrate status` 能正常执行 | 服务确实连上了为本 worker 准备的数据库（`pg_stat_activity` 中能看到 nerve 的连接）。M0 没有迁移文件，从 M2 起加上"迁移版本正确"的断言 |
-| S2 | 用户在浏览器中打开首页 | 返回的是前端页面，所有静态资源都加载成功（没有 404）；直接打开一个深层路径，同样返回前端页面 | — |
-| S3 | 调用方查询实例信息 | `GET /api/v0/instance` 返回 200，`api_version` 为 `v0`，`version` 与构建时注入的版本号一致；用生成的 TS 客户端调用，类型检查通过 | — |
+| S1 | 运维人员用 test 配置启动 nerve，服务就绪 | `/healthz` 返回 200；`/readyz` 返回 200；`nerve migrate status` 能正常执行，M0 没有迁移文件时输出 `no migrations` | `pg_stat_activity` 中能看到 `application_name = 'nerve'` 的连接，确认服务连上了为本 worker 准备的数据库（fixture 把 `application_name=nerve` 写进交给 nerve 的数据库地址）。从 M2 起加上"迁移版本正确"的断言 |
+| S2 | 用户在浏览器中打开首页 | 返回的是前端页面；按路径把请求分类为静态资源（`/api/` 以外）和接口，静态资源全部加载成功；页面的所有请求都发往 nerve 自身（同源）；直接打开一个深层路径，同样返回前端页面，内容与首页逐字节相同 | — |
+| S3 | 调用方查询实例信息 | `GET /api/v0/instance` 返回 200，`api_version` 为 `v0`，`version` 与构建时注入的版本号一致，`commit` 是 40 位十六进制；用生成的 TS 客户端调用，类型检查通过 | — |
 | S4 | 调用方访问不存在的接口 | 返回 404，`Content-Type` 为 `application/problem+json`，而不是前端页面 | — |
 
 M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个故事都要有 PAT 版本。
@@ -481,12 +487,12 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 
 ## 10. 完成标准
 
-- [ ] P1 到 P6 全部完成，每个 Phase 都有 spec、plan 和 review。
+- [x] P1 到 P6 全部完成，每个 Phase 都有 spec、plan 和 review。
 - [ ] 持续集成中的全部门禁通过：生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含架构测试和集成测试）、前端类型检查、oxlint（按基线）、前端构建、端到端冒烟故事。
-- [ ] `make build` 能构建出单个可执行文件 `bin/nerve`；它加上一个 Postgres，就能完成 S1 到 S4。
+- [x] `make build` 能构建出单个可执行文件 `bin/nerve`；它加上一个 Postgres，就能完成 S1 到 S4。
 - [x] 第 7 节的调整建议已确认，并已同步更新到总体设计和差异清单。
 - [x] 前端改动清单中已登记迁入时的改动。
-- [ ] `handoffs/` 中没有 `open` 状态的事项；需要移交给后续 M 的事项，已放进对应 M 的 `handoffs/` 目录。
+- [x] `handoffs/` 中没有 `open` 状态的事项；需要移交给后续 M 的事项，已放进对应 M 的 `handoffs/` 目录。
 - [ ] 总体设计中 M0 的状态改为"已完成"。
 
 ---
@@ -500,7 +506,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | P3 | api-contract | 已完成 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | [review](reviews/P3-api-contract-review.md) |
 | P4 | plane-schema | 已完成 | [spec](specs/P4-plane-schema.md) | [plan](plans/P4-plane-schema.md) | [review](reviews/P4-plane-schema-review.md) |
 | P5 | web-import | 已完成 | [spec](specs/P5-web-import.md) | [plan](plans/P5-web-import.md) | [review](reviews/P5-web-import-review.md) |
-| P6 | e2e-ci | 未开始 | — | — | — |
+| P6 | e2e-ci | 已完成 | [spec](specs/P6-e2e-ci.md) | [plan](plans/P6-e2e-ci.md) | [review](reviews/P6-e2e-ci-review.md) |
 
 ---
 
@@ -513,5 +519,6 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | Plane 后端镜像无法获取，或者在当前环境中跑不起来 | **已由 M0/P4 验证并解除**：官方镜像可用；恢复办法：在对应标签上用 `apps/api/Dockerfile.api` 构建（未验证） |
 | Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | **已由 M0/P5 验证并解除**：冷缓存的 `web` 任务耗时 142 秒，远低于 15 分钟的超时；pnpm 存储按锁文件的哈希缓存；turbo 缓存只在任务内部使用（`lint-web` 构建的包被 `build-web` 复用），不跨运行保存 |
 | River 仍是 0.x 版本，小版本之间可能有行为变化 | M2 接入时锁定具体的版本号 |
-| 持续集成拉取 Postgres 镜像受 Docker Hub 匿名拉取频率限制 | 出现限流时，在持续集成中登录 Docker Hub 或改用镜像缓存 |
+| 持续集成拉取 Postgres 镜像（`postgres:18.6`）和 testcontainers 的回收镜像（`testcontainers/ryuk:0.14.0`）受 Docker Hub 匿名拉取频率限制 | 出现限流时，在持续集成中登录 Docker Hub 或改用镜像缓存；M8 之前没有负责人跟进（M0/P6 交给 M8 的 handoff） |
 | 每个包一个测试容器，模块增多后持续集成变慢 | M2 之后评估 testcontainers 的跨进程复用，或限制 `go test -p` |
+| 持续集成的 `e2e` 任务比估计的慢（前端在这个任务里再构建一次、安装系统库、拉取镜像） | **已由 M0/P6 验证并解除**：分支冷运行（`35702932216`）`e2e` 任务 120 秒，分支热运行（`35703813772`）122 秒，都远低于 20 分钟的超时；整条流水线（`e2e` 在 `web` 完成后才开始）冷运行约 270 秒、热运行约 233 秒（P6 spec 2.9） |

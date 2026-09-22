@@ -604,21 +604,23 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
       server.ts    每个 Playwright 并行进程启动一个 nerve（NERVE_ENV=test，随机端口）
       db.ts        每个并行进程一个独立数据库（从模板库复制），以及数据库断言函数
       api.ts       用生成的 TS 客户端通过接口准备数据
+      test.ts      把以上几个接成 Playwright 的 fixture；故事从这里导入 test、expect
       webhook.ts   本地 Webhook 接收端，记录投递并验证签名
       storage.ts   检查文件是否真的写入了本地存储
-    stories/<领域>/*.spec.ts
+    global-setup.ts  每次运行启动一次数据库容器，迁移出模板库（M0/P6 加入）
+    stories/<领域>/*.spec.ts   一个故事一个测试文件，个别故事可以有多个测试；M0 没有业务领域，故事都放在 stories/smoke/ 下（M0/P6）
   ```
   - 被测对象是**真正要发布的产物**：打包好的 `nerve` 程序（内嵌前端）、Postgres 18、本地文件存储。
   - 前置数据通过接口准备，只有被测的那一步走页面。
   - 需要"时间流逝"的故事（比如自动归档），在测试环境中通过可注入的时钟来推进，不真的等待。
-  - 失败时保存操作记录、截图、录像和数据库快照。
+  - 失败时保存操作记录（trace）和截图；M0 另外保存 nerve 的日志。录像和数据库快照从有业务表的 M 起再加入（M0/P6：trace 已含每一步的截屏，录像还要多下载 ffmpeg；M0 没有业务表）。
 - **运行时机**：
-  - 本地：`pnpm e2e` 一条命令完成编译、启动数据库和运行全部故事。
+  - 本地：`make e2e` 一条命令完成编译、启动数据库和运行全部故事（M0/P6 裁定：命令入口是 Makefile，不是根 `package.json` 的脚本）。
   - **每次提交 PR 都运行完整的端到端测试。**
   - 完成一个 M，要求本 M 的所有故事通过，**并且之前所有 M 的故事也都通过**。
 
 ### 8.3 持续集成
-生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、oxfmt 的格式检查、前端构建（M0/P5 加入）、knip（M1 起）、vitest、Playwright 端到端测试。
+生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、oxfmt 的格式检查、前端构建（M0/P5 加入）、knip（M0 只出报告，M1 起作为门禁）、vitest、Playwright 端到端测试（M0/P6 加入骨架和冒烟故事）。
 
 ---
 

@@ -26,6 +26,10 @@ TURBO := TURBO_TELEMETRY_DISABLED=1 pnpm exec turbo
 TURBO_QUIET := --output-logs=errors-only
 # make build 把前端的构建产物复制到这里，由 go:embed 编进 nerve
 WEBUI_DIST := server/internal/platform/webui/dist
+# nerve 的版本号：make build 把它写进 bin/nerve，端到端测试 S3 核对它。
+# 默认值与 server/internal/platform/buildinfo 中的相同；发布时指定，例如 make build VERSION=0.1.0
+VERSION ?= 0.1.0-dev
+GO_LDFLAGS := -X github.com/open-nerve/NerveProject/server/internal/platform/buildinfo.version=$(VERSION)
 
 .PHONY: help
 help: ## 列出所有命令
@@ -99,6 +103,11 @@ lint-go: tools ## 运行 golangci-lint（server）
 lint-web: ## 前端类型检查、oxlint（按警告基线）、格式检查（需要 Node）
 	$(TURBO) run check:types check:lint check:format $(TURBO_QUIET)
 
+# M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1 去掉 --no-exit-code，作为门禁
+.PHONY: knip
+knip: ## 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1 起作为门禁）
+	pnpm exec knip --no-exit-code
+
 # go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test
 test: ## 运行 Go 测试（server，不用测试缓存）
@@ -108,11 +117,15 @@ test: ## 运行 Go 测试（server，不用测试缓存）
 build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需要 Node 和 Go）
 	find $(WEBUI_DIST) -mindepth 1 ! -name .gitkeep -delete
 	cp -R web/apps/web/build/client/. $(WEBUI_DIST)/
-	cd server && go build -o ../bin/nerve ./cmd/nerve
+	cd server && go build -ldflags "$(GO_LDFLAGS)" -o ../bin/nerve ./cmd/nerve
 
 .PHONY: build-web
 build-web: ## 构建前端，产物在 web/apps/web/build/client（需要 Node；持续集成 web 任务）
 	$(TURBO) run build --filter=web $(TURBO_QUIET)
+
+.PHONY: e2e
+e2e: build ## 构建 bin/nerve 并运行端到端测试（需要 Node、Go、Docker 和 Playwright 的浏览器，见 README）
+	cd e2e && NERVE_VERSION=$(VERSION) pnpm exec playwright test
 
 .PHONY: plane-schema
 plane-schema: ## 重新生成 Plane 表结构快照（需要 Docker，见 tools/plane-schema/README.md）

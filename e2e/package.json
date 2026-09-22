@@ -1,0 +1,21 @@
+{
+  "name": "@nerve/e2e",
+  "private": true,
+  "description": "End-to-end user stories: Playwright against the built bin/nerve and PostgreSQL",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "check:lint": "oxlint --max-warnings=0 .",
+    "check:format": "oxfmt --check ."
+  },
+  "devDependencies": {
+    "@nerve/api-client": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@testcontainers/postgresql": "12.1.0",
+    "@types/node": "catalog:",
+    "@types/pg": "8.23.1",
+    "pg": "8.23.0",
+    "typescript": "catalog:"
+  }
+}
