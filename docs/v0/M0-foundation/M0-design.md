@@ -244,6 +244,7 @@ NerveProject/
   9. 模块内的包只能放在 `domain`、`app`、`adapter`（含子目录）或模块根目录（`module.go`）。放在别处的包，第 1 条排不出它的层次，第 2 条又把模块内的导入交给第 1 条判断，`domain → 模块内其他目录 → net/http` 就能两条都绕过（M0 对抗性评审 Important 1）。
   10. `internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己：`domain`、`app` 可以导入它，它不干净，技术依赖就会经它带进这两层。M0 还没有 `internal/shared`，这条规则先用合成的导入关系测试。
 - **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述、未映射的 `format: uuid`），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并打印导入链。
+- **纯净性的传递检查**（`TestPureLayersReachNoInfrastructure`，M0 加固）：第 2、10 条只看直接导入，而标准库里的 `expvar`、`net/rpc` 自己就导入 `net/http`，`domain → expvar` 能过这两条，却把 `net/http` 链接了进来。这个测试沿全部传递依赖检查每个 `domain`、`app`、`internal/shared` 包：不能碰到 `net/http`、`database/sql` 或本模块以外的库。发现时打印完整的导入链。
 - **depguard**：只管"整个项目都禁止使用的库"，例如：
   - 第三方 uuid 库（`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`）：用标准库。
   - viper：用 koanf。
