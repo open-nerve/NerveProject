@@ -558,7 +558,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 
 ### 7.6 前端代码质量要求（长期有效）
 - **不保留**死代码、兼容代码、没有用处的开关，也不保留"以后可能会用"的代码。
-- **TypeScript 类型检查、oxlint、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。oxfmt 的格式检查和前端构建也是持续集成的门禁（M0/P5 加入）。
+- **TypeScript 类型检查、oxlint、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。oxfmt 的格式检查和前端构建也是持续集成的门禁（M0/P5 加入）。删掉的功能由关键词守卫看住，防止重新长回来（M1 加入，见 [M1 设计](M1-frontend-trim/M1-design.md) 7.4）。
 - **oxlint 的警告采用"只降不升"的基线**：Plane 现有代码带着上万条警告（它自己也是按每个包的警告上限来管理的）。警告数超过基线，持续集成就失败；警告减少后，同一个提交里就把基线调低。M1 会重新测出基线，并制定逐步清零的计划。
 - 新写的代码遵循 7.2 的职责划分，和 Plane 现有的写法保持一致（MobX store、`observer` 组件）。
 
@@ -620,7 +620,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
   - 完成一个 M，要求本 M 的所有故事通过，**并且之前所有 M 的故事也都通过**。
 
 ### 8.3 持续集成
-生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、oxfmt 的格式检查、前端构建（M0/P5 加入）、knip（M0 只出报告，M1 起作为门禁）、vitest、Playwright 端到端测试（M0/P6 加入骨架和冒烟故事）。
+生成物一致性检查、golangci-lint（含 depguard）、Go 测试（含 Postgres 和架构测试）、TypeScript 类型检查、oxlint（按基线）、oxfmt 的格式检查、前端构建（M0/P5 加入）、knip（M0 只出报告，M1 起作为门禁）、vitest（M1/P1 接入）、关键词守卫（M1 加入）、Playwright 端到端测试（M0/P6 加入骨架和冒烟故事）。
 
 ---
 
