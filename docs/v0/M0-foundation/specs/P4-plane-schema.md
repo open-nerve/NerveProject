@@ -46,7 +46,7 @@ P4 不改动 Go 代码、前端代码和持续集成。
 | `\restrict` 随机行 | 不会出现 | pg_dump 15.7 的 `--help` 中没有 `--restrict-key`，输出中也没有 `\restrict`（它由 15.14 引入）。头部随版本变化的只有两行（`Dumped from database version 15.7`、`Dumped by pg_dump version 15.7`），版本随镜像写死 |
 | 44 张表是否都在 | 都在，名字全部正确 | 2.7 |
 | 镜像由哪个提交构建 | `v1.4.2` 标签 `5f7d927` | 2.3 |
-| 脚本能否在 macOS 上运行 | 能 | `#!/usr/bin/env bash` 在本机解析到 `/bin/bash` 3.2.57；除了 docker，只用到 `mv`、`rm`、`wc`、`tr` |
+| 脚本能否在 macOS 上运行 | 能 | `#!/usr/bin/env bash` 在本机解析到 `/bin/bash` 3.2.57；除了 docker，只用到 `dirname`、`mv`、`rm`、`wc`、`tr` |
 | 出错和中断时是否清理 | 是 | Docker 不可用、拉取失败（不存在的标签）、迁移失败（去掉 `REDIS_URL`）三种情况以退出码 1 结束，并给出一行说明；Ctrl-C、SIGTERM 分别以 130、143 结束。五种情况都不留下容器、网络、数据卷和临时文件，也不写出快照 |
 | `-p` 是否必要 | 是 | 设置 `COMPOSE_PROJECT_NAME=plane-app` 时，不带 `-p` 的 `docker compose -f compose.yaml config` 得到 `name: plane-app`（环境变量覆盖了文件中的 `name:`），这时清理用的 `down --volumes --remove-orphans` 会删掉另一个项目的容器；带上 `-p nerve-plane-schema` 后不受影响 |
 
@@ -58,7 +58,7 @@ P4 不改动 Go 代码、前端代码和持续集成。
 - **参考源码**：总体设计和差异清单写的"Plane v1.4.2，提交 `02c19e1`"，是仓库外参考源码 `plane/` 的提交，即 `preview` 分支的 `02c19e1341d93141e8ad7b3278298adce208bafc`（2026-09-21）。它的 `package.json` 版本也是 1.4.2，但比 `v1.4.2` 标签多 63 个提交（两者的共同祖先是 `v1.4.2-rc1`），其中包括前端升级到 React 19 和 React Router 8、pnpm 升级到 11.10。
   - M0 设计第 1 节锁定的前端版本来自 `02c19e1`，而不是标签：`02c19e1` 中是 React Router 8.3.0、pnpm 11.10.0，`v1.4.2` 标签中是 React Router 7.17/7.18、pnpm 11.3.0。所以项目实际的代码基线就是 `02c19e1`，只是"v1.4.2"这个说法不够准确。
 - **两者的表结构相同**：
-  - 镜像中的 130 个迁移文件与 `plane/` 中的逐字节相同：按路径排序后拼接，SHA-256 都是 `85e5c6124354fb193411934680b475e976992ae4a191155ad38bc01ea621105a`；
+  - 镜像中的迁移目录（128 个迁移文件和 2 个 `__init__.py`，共 130 个文件）与 `plane/` 中的逐字节相同：按路径排序后拼接，SHA-256 都是 `85e5c6124354fb193411934680b475e976992ae4a191155ad38bc01ea621105a`；
   - 在 GitHub 上对比两个提交的 `apps/api` 目录：迁移文件和模型文件没有任何差异；有差异的依赖只是 DRF 的补丁版本和删除 `posthog`，都不带迁移。
 - 所以快照同时是 `5f7d927` 和 `02c19e1` 的表结构。README 写明两个提交；差异清单的基线一行补充这层关系（2.9）。总体设计的表头是否同样补充，请控制者裁定（第 3 节第 8 项）。
 
@@ -87,7 +87,7 @@ P4 不改动 Go 代码、前端代码和持续集成。
 3. 先清理一次，防止上次被中断后留下的容器被重用。
 4. `pull --quiet --policy missing`：只拉取本机没有的镜像；失败时说明 `pulling the images failed`。
 5. `up --detach --wait db`：启动 Postgres，等到健康检查通过。
-6. `run --rm --no-deps migrator`：执行迁移，输出原样打印（164 行 `Applying …`）。
+6. `run --rm --no-deps -T migrator`：执行迁移，输出原样打印（164 行 `Applying …`）。`-T` 不分配终端：否则在终端中运行时，compose 把终端切到原始模式，Ctrl-C 被转发进容器，脚本会以"迁移失败"（退出码 1）结束，而不是 130。
 7. `exec -T db pg_dump --schema-only --no-owner --no-privileges --username plane --dbname plane`，写入临时文件 `plane-v1.4.2-schema.sql.tmp`，成功后再改名为快照。任何一步失败都不会留下写了一半的快照。
 8. 打印快照的路径和行数。
 
@@ -98,7 +98,7 @@ P4 不改动 Go 代码、前端代码和持续集成。
 - 需要 Compose 2.22 或更高：`pull --policy` 从 v2.22.0 开始提供（已对照 docker/compose 各版本的源码）。本机是 Docker 29.7.2、Compose 5.4.0。
 - 缩进 2 个空格（`.editorconfig`）；注释和提示用英文，与 Go 代码一致。
 - **中断的两种情况**（都已验证）：
-  - Ctrl-C：整个前台进程组都收到 SIGINT，正在运行的 compose 命令随之结束，脚本立即以 130 退出并清理（原型中在第 57 个迁移时中断）。
+  - Ctrl-C：整个前台进程组都收到 SIGINT，正在运行的 compose 命令随之结束，脚本立即以 130 退出并清理（原型中在第 57 个迁移时中断；评审修复加上 `-T` 后，又用 `script` 分配的伪终端在迁移中途按 Ctrl-C 核实）。
   - 只给脚本进程发 SIGTERM：bash 要等当前的前台命令结束才执行 trap，所以会等迁移跑完（约 40 秒）再以 143 退出并清理，不写出快照。
 
 ### 2.6 快照：`tools/plane-schema/plane-v1.4.2-schema.sql`

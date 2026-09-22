@@ -11,7 +11,7 @@
 ## 开发环境
 
 需要安装：
-- Docker（含 Compose v2）
+- Docker（含 Compose v2；`make plane-schema` 需要 Compose 2.22 或更高）
 - Go 1.26 或更高。第一次在 `server/` 下执行 Go 命令时，会自动下载 `server/go.mod` 指定的 Go 1.27.1（前提是 `GOTOOLCHAIN=auto`，这是 Go 官方安装包的默认值；部分 Linux 发行版自带的 Go 默认是 `local`，需要先执行 `go env -w GOTOOLCHAIN=auto`）
 - Node.js 24，并执行一次 `corepack enable`（pnpm 的版本由 `package.json` 锁定）。代码生成和前端检查需要它
 

@@ -11,7 +11,7 @@
 | Plane 版本 | v1.4.2，标签提交 `5f7d92784c403f76284f0f16718f320221dc7fec` |
 | 后端镜像 | `makeplane/plane-backend:v1.4.2@sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef`，由标签提交构建 |
 | Postgres | `postgres:15.7-alpine@sha256:468d34fefd6338031787c7b8e94078975b3aaf4d66c7ead25c39cd3ba46a15c6`（与 Plane 自带的 `docker-compose.yml` 相同），`pg_dump` 15.7 |
-| 与参考源码的关系 | 仓库外的参考源码 `plane/` 是 `preview` 分支的 `02c19e1341d93141e8ad7b3278298adce208bafc`，比 v1.4.2 标签多 63 个提交。两者的 130 个迁移文件逐字节相同，所以快照同样是 `02c19e1` 的表结构 |
+| 与参考源码的关系 | 仓库外的参考源码 `plane/` 是 `preview` 分支的 `02c19e1341d93141e8ad7b3278298adce208bafc`，比 v1.4.2 标签多 63 个提交。两者的迁移目录（128 个迁移文件和 2 个 `__init__.py`）逐字节相同，所以快照同样是 `02c19e1` 的表结构 |
 | 生成时间 | 2026-09-22。这是快照内容最后一次变化的日期；快照中不含时间戳，重新生成不会改变它 |
 | 大小 | 11707 行，SHA-256 `4080c81e8b137c19a64acb1599c66b384b32c21162fda6d77f745cb374c54e70` |
 
@@ -31,7 +31,7 @@ git status --short -- tools/plane-schema # 没有输出：与提交的版本逐�
 
 - 只需要 Docker（含 Compose 2.22 或更高：脚本用到的 `pull --policy` 从这个版本开始提供）。第一次运行要拉取约 205 MB 的镜像，之后每次约 1 分钟。
 - `extract.sh` 的步骤：拉取本机没有的镜像 → 启动 Postgres 并等到它就绪 → 在后端镜像中执行 `python manage.py migrate` → 在 Postgres 容器中执行 `pg_dump --schema-only --no-owner --no-privileges` → 写入快照。
-- 结果是确定的：输入的两个镜像都按摘要写死，同样的输入得到逐字节相同的快照。已在 arm64 和 amd64 上核实。
+- 结果是确定的：输入的两个镜像都按摘要写死，同样的输入得到逐字节相同的快照。已在 arm64 上核实，并在 arm64 主机上模拟 amd64 核实。
 - 持续集成不运行它：要从 Docker Hub 拉取约 205 MB 的镜像，而输入都已写死，快照不会自己变化。
 
 ## 实现要点
@@ -43,6 +43,7 @@ git status --short -- tools/plane-schema # 没有输出：与提交的版本逐�
 ## 升级 Plane 版本时
 1. 修改 `compose.yaml` 中两个镜像的标签和摘要（摘要取 `docker buildx imagetools inspect <镜像>:<标签>` 输出的 `Digest`）；Postgres 跟随新版本 Plane 自带的 `docker-compose.yml`。
 2. 修改 `extract.sh` 中的输出文件名，删除旧快照，重新生成。
-3. 更新本文件的快照信息，并按新快照核对差异清单。
+3. 用 `grep -rn 'plane-v1.4.2-schema' --exclude-dir=node_modules .` 找出引用旧文件名的地方（根目录 README、差异清单等），一并改为新文件名。
+4. 更新本文件的快照信息，按新快照核对差异清单；差异清单、总体设计和前端改动清单中的基线说明一起更新。
 
 官方镜像拿不到时，可以用 Plane 源码中的 `apps/api/Dockerfile.api` 在对应的标签上自己构建镜像，替换 `compose.yaml` 中的 `migrator` 镜像（未验证）。
