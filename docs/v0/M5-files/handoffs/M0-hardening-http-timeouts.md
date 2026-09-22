@@ -7,7 +7,7 @@ created: 2026-09-22
 
 # M5 文件上传、下载与 HTTP 超时
 
-M0 加固之后，HTTP 服务的每个连接阶段都有全局上限：
+M0 加固之后，HTTP 服务在连接上的读写都有全局上限：
 
 - `server.read_header_timeout`：读请求头，默认 5 秒；
 - `server.read_timeout`：读整个请求（含请求体），默认 30 秒；

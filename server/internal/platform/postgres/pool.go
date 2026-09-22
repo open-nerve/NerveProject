@@ -12,10 +12,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 )
 
-// errMalformedURL replaces pgx's parse error, which quotes the connection
+// errUnusableURL replaces pgx's parse error, which quotes the connection
 // string and masks the password only on a best-effort basis (it misses the
-// legal key/value form "password = secret").
-var errMalformedURL = errors.New("database.url: not a valid PostgreSQL connection string (not shown, as it may contain a password)")
+// legal key/value form "password = secret"); even its inner causes can quote
+// pieces of the string. pgx also rejects well-formed strings, e.g. when a
+// file they name cannot be read, so the message points at every source.
+var errUnusableURL = errors.New("database.url: pgx cannot use it; check its syntax, the files it names " +
+	"(sslrootcert, sslcert, sslkey) and any PG* environment variables (details not shown, as they may contain the password)")
 
 // NewPool creates a connection pool for database.url with at most
 // database.max_conns connections. It connects lazily: an unreachable database
@@ -23,7 +26,7 @@ var errMalformedURL = errors.New("database.url: not a valid PostgreSQL connectio
 func NewPool(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
 	pc, err := pgxpool.ParseConfig(cfg.URL)
 	if err != nil {
-		return nil, errMalformedURL
+		return nil, errUnusableURL
 	}
 	pc.MaxConns = cfg.MaxConns
 	pool, err := pgxpool.NewWithConfig(ctx, pc)

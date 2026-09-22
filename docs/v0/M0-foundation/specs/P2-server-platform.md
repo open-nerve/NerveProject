@@ -128,7 +128,7 @@ M0 设计 3.6 中的 `app.name` 和 `web.enabled` 不在 P2 加入，见第 3 �
 > **M0 加固后的变化**：上面按 URL 局部打码的做法已经删除。pgx 用自己的 libpq 兼容语法解析连接串，`net/url` 认不出的写法（例如查询参数里带 `;` 的密码）会原样漏进日志。现在的做法：
 > - `database.url` 在日志里整体显示为 `xxxxx`；
 > - 连接目标（主机、端口、库名、用户）在创建连接池之后，按 pgx 的解析结果单独记一条日志；
-> - pgx 的解析错误也只是尽量打码，`NewPool` 不再转述它，只返回固定的 `database.url: not a valid PostgreSQL connection string (not shown, as it may contain a password)`。
+> - pgx 的解析错误也只是尽量打码，`NewPool` 不再转述它，只返回固定的信息：`database.url: pgx cannot use it; check its syntax, the files it names (sslrootcert, sslcert, sslkey) and any PG* environment variables (details not shown, as they may contain the password)`。
 >
 > 见 M0 设计 3.6，以及 [M0 对抗性评审](../reviews/M0-codex-adversarial-review.md)的处理结果。
 
@@ -313,7 +313,7 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error
 - **可测试的接缝**：停机由 `ctx` 触发，不直接处理信号；测试传入自己的 listener 和可取消的 context。信号只在 `main` 中转换为 context（2.9）。
 - `http.Server` 设置 `ReadHeaderTimeout`，以及 2 分钟的 `IdleTimeout`（包内常量，不是配置项）；`ErrorLog` 用 `slog.NewLogLogger` 接到同一个 logger（不导入标准库 `log`）。
 
-  > **M0 加固后的变化**：另外设置 `ReadTimeout` 和 `WriteTimeout`（配置项 `server.read_timeout`、`server.write_timeout`），连接的每个阶段都有上限。见 M0 设计 3.3。
+  > **M0 加固后的变化**：另外设置 `ReadTimeout` 和 `WriteTimeout`（配置项 `server.read_timeout`、`server.write_timeout`），读请求和写响应也都有了上限；handler 自身的执行时间不受这些上限约束。见 M0 设计 3.3。
 
 ### 2.8 组合根：`bootstrap`
 对 `cmd/nerve` 只暴露四个函数，每个对应一个命令：

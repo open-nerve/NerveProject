@@ -23,10 +23,10 @@ type Config struct {
 	Log      LogConfig      `koanf:"log"`
 }
 
-// ServerConfig configures the HTTP server. The timeouts bound every phase of
-// a connection: reading the request headers, reading the whole request
-// (headers and body), and writing the response; idle keep-alive connections
-// have a fixed timeout in httpserver.
+// ServerConfig configures the HTTP server. The timeouts bound the reads and
+// writes on a connection: reading the request headers, reading the whole
+// request (headers and body), and writing the response; idle keep-alive
+// connections have a fixed timeout in httpserver.
 type ServerConfig struct {
 	Addr              string        `koanf:"addr"`
 	ReadHeaderTimeout time.Duration `koanf:"read_header_timeout"`
