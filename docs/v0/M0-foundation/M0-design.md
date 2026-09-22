@@ -355,7 +355,7 @@ api/common.yaml + api/modules/*.yaml
 
 触发条件：每次推送代码和每个 PR；**同仓库分支的 PR 跳过 `server` 和 `web`**（M0/P3）：两个任务都加了 `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository`。同仓库分支的每个提交已经由 push 事件跑过，PR 页面显示的就是这次的结果；来自 fork 的 PR 没有对应的 push 事件，仍然由 `pull_request` 事件运行。P6 的 `e2e` 任务用 `needs: [server, web]` 依赖这两个任务，这个跳过条件也会经 `needs` 传导过去。
 
-**必须通过检查（required checks）前的注意事项**：GitHub 把被 `if` 跳过的任务也标记为 Success，且用的是同一个检查名字。把 `server`/`web`/`e2e` 设为分支保护的必须检查之前，要先去掉上面的跳过条件，或者另加一个 `if: always()` 的汇总任务，把这个汇总任务设为必须检查，否则一次被跳过的运行就能满足必须检查的要求。
+**必须通过检查（required checks）前的注意事项**：GitHub 把被 `if` 跳过的任务也标记为 Success，且用的是同一个检查名字。把 `server`/`web`/`e2e` 设为分支保护的必须检查之前，要先去掉上面的跳过条件，或者另加一个 `if: always()` 的汇总任务，把这个汇总任务设为必须检查，否则一次被跳过的运行就能满足必须检查的要求。汇总任务只解决"跳过算通过"的问题：push 事件测的是分支头，不是 PR 合并进 `main` 之后的结果。保留跳过条件时，还要在分支保护里打开"合并前分支必须与 `main` 同步"（require branches to be up to date），否则 `main` 前进之后，分支头通过不代表合并结果能通过（M0 对抗性评审 K16）。
 
 ---
 
