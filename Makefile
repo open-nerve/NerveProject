@@ -89,6 +89,7 @@ lint-go: tools ## 运行 golangci-lint（server）
 lint-web: ## 前端类型检查（需要 Node）
 	pnpm -r run check:types
 
+# go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test
-test: ## 运行 Go 测试（server）
-	cd server && go test ./...
+test: ## 运行 Go 测试（server，不用测试缓存）
+	cd server && go test -count=1 ./...

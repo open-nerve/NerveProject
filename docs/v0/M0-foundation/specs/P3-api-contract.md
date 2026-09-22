@@ -262,7 +262,7 @@ func Load(t testing.TB) *Contract                                           // �
 func (c *Contract) CheckResponse(t testing.TB, req *http.Request, res *http.Response) // 按 req 找到操作，校验状态码、Content-Type、响应体
 func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // 按 components.schemas[name] 校验 JSON
 ```
-- 文件位置由 `runtime.Caller` 得到（本包在仓库根目录下五层；测试不使用 `-trimpath`）。`go test` 的缓存会记录这次文件读取，`dist` 改了测试就会重跑。
+- 文件位置由 `runtime.Caller` 得到（本包在仓库根目录下五层；测试不使用 `-trimpath`）。`go test` 的缓存不跟踪模块根目录（`server/`）之外的文件：只改了 `api/` 时，带缓存的 `go test` 会重放旧的结果。所以 `make test`（持续集成也调用它）使用 `-count=1`；在 `server/` 下直接执行 `go test` 时，改了接口描述要加 `-count=1`。
 - 用 kin-openapi 的 `routers/legacy` 找操作（不引入 gorilla/mux）；`openapi3filter.ValidateResponse` 设 `IncludeResponseStatus` 和 `MultiError`。
 - **只按路径和方法找操作**：`Load` 在建路由之前清空文档、路径和操作上的 `servers`。文档有 `servers` 时，legacy 路由还要匹配请求的 scheme 和主机，测试用的主机都对不上，每个 `CheckResponse` 都会失败。测试：给 `dist` 的副本加上 `servers` 后，正确的 instance 响应仍然通过。
 - `CheckResponse` 读完响应体后放回一个新的 reader，调用方还能再读。
