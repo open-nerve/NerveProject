@@ -27,7 +27,7 @@
 | `pnpm-workspace.yaml`（仓库根目录） | 工作区的路径改为 `web/apps/*`、`web/packages/*`、`e2e`；catalog、overrides、allowBuilds 只保留作用于迁入的包的条目（删掉 39 个 catalog 条目、14 个 overrides、3 个 allowBuilds） | 工作区的路径；删掉的条目只属于没有迁入的应用和包，或者不作用于迁入的包的依赖 |
 | `pnpm-lock.yaml`（仓库根目录） | 以 Plane 的锁文件为起点，把 importers 的路径移到 `web/` 下，再由 pnpm 加入 Nerve 自己的依赖 | 迁入的 13 个包的依赖版本与 Plane 完全相同 |
 | `package.json`（仓库根目录） | 只加入开发依赖 `oxfmt`、`oxlint`、`turbo`（`catalog:`）；不加 husky、lint-staged、react-doctor，不加脚本 | 命令的入口是 Makefile |
-| `turbo.json`（仓库根目录） | `globalDependencies` 去掉 `.npmrc`；`globalEnv` 去掉没有代码读取的 `APP_VERSION`、`LOG_LEVEL`、`VITE_APP_VERSION` 和 10 个 Sentry 变量 | 没有迁入 `.npmrc`；这些变量只属于没有迁入的应用 |
+| `turbo.json`（仓库根目录） | `globalDependencies` 去掉 `.npmrc`；`globalEnv` 去掉没有代码读取的 `APP_VERSION`、`LOG_LEVEL`、`VITE_APP_VERSION` 和 10 个 Sentry 变量；`check:format`、`fix:format` 不缓存（`cache: false`，M0 加固） | 没有迁入 `.npmrc`；这些变量只属于没有迁入的应用；oxfmt 按 `.oxfmtrc.json` 指定的样式表排序 Tailwind 类名，样式表经 `@import` 延伸到其他工作区包和 npm 包，这些文件不在各个包格式检查任务的哈希里，改了样式表会重放旧的通过结果（M0 对抗性评审 Minor 1）；不缓存时全部包的格式检查约 2.5 秒 |
 | `.oxlintrc.json`（仓库根目录） | `ignorePatterns` 加入 `web/packages/api-client/src/schema.gen.ts` | 生成的文件不做 lint |
 | `.oxfmtrc.json`（仓库根目录） | `sortTailwindcss.stylesheet` 改为 `web/packages/tailwind-config/index.css`；删掉 `packages/codemods` 的覆盖项；加入 `ignorePatterns`：`api/dist/**`、`web/packages/api-client/src/schema.gen.ts`、`web/packages/i18n/src/types/keys.generated.ts` | 工作区的路径（路径不对时，oxfmt 检查 web 会崩溃）；codemods 没有迁入；生成的文件不检查格式 |
 | `web/apps/web/package.json`，editor、i18n、propel、ui、utils 的 `package.json` | `check:lint` 的 `--max-warnings` 调低到实测的警告数：web 11957→779，editor 416→75，i18n 9→3，propel 3605→59，ui 66→32，utils 38→34 | lint 警告基线只降不升（M0 设计 5.2） |
