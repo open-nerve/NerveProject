@@ -4,10 +4,10 @@
   "private": true,
   "description": "common tailwind configuration across monorepo",
   "license": "AGPL-3.0",
+  "type": "module",
   "sideEffects": [
     "**/*.css"
   ],
-  "main": "tailwind.config.js",
   "exports": {
     "./index.css": "./index.css",
     "./postcss.config.js": "./postcss.config.js"
