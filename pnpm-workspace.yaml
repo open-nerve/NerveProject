@@ -228,6 +228,11 @@ allowBuilds:
   "@swc/core": true
   esbuild: true
   turbo: true
+  # 以下三项不来自 Plane，是端到端测试的 testcontainers 经 dockerode 间接依赖的包。它们的安装脚本
+  # 编译通过 SSH 连接 Docker 时用的可选扩展（cpu-features、ssh2），或只检查版本号（protobufjs）；用不到，不运行
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
 
 minimumReleaseAgeExclude:
   - "@storybook/addon-docs@10.4.6"
