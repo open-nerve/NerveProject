@@ -26,13 +26,6 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", "build/**", ".react-router/**"]
     },
-    "build-storybook": {
-      "dependsOn": ["^build"],
-      "outputs": ["storybook-static/**"]
-    },
-    "check": {
-      "dependsOn": ["check:format", "check:lint", "check:types"]
-    },
     "check:format": {
       "cache": false
     },
@@ -46,29 +39,13 @@
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
       "outputs": []
     },
-    "clean": {
-      "cache": false
-    },
     "dev": {
       "cache": false,
       "dependsOn": ["^build"],
       "persistent": true
     },
-    "fix": {
-      "cache": false,
-      "dependsOn": ["fix:format", "fix:lint"]
-    },
     "fix:format": {
       "cache": false
-    },
-    "fix:lint": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
-      "outputs": []
-    },
-    "start": {
-      "cache": false,
-      "persistent": true
     },
     "test": {
       "dependsOn": ["^build"],

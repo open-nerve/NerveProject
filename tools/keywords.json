@@ -44,6 +44,34 @@
           "observe(value)"
         ]
       }
+    },
+    {
+      "id": "storybook-files",
+      "phase": "M1/P1",
+      "why": "Storybook 没有 Makefile 或持续集成入口，连同配置、stories 和依赖删除",
+      "path": { "source": "(?:^|/)(?:\\.storybook|storybook-static)/|\\.stories\\.[cm]?[jt]sx?$", "flags": "" },
+      "samples": {
+        "hit": ["web/packages/ui/.storybook/main.ts", "web/packages/propel/src/button/button.stories.tsx"],
+        "miss": ["web/packages/propel/src/button/button.tsx", "web/packages/ui/src/stories.ts"]
+      }
+    },
+    {
+      "id": "storybook",
+      "phase": "M1/P1",
+      "why": "Storybook 的依赖、脚本、任务、忽略规则，以及只为它存在的代码",
+      "files": {
+        "source": "^(?:web/|e2e/|package\\.json$|pnpm-(?:workspace|lock)\\.yaml$|turbo\\.json$|\\.oxlintrc\\.json$|knip\\.jsonc$)",
+        "flags": ""
+      },
+      "content": { "source": "storybook|chromatic", "flags": "i" },
+      "samples": {
+        "hit": [
+          "\"storybook\": \"catalog:\"",
+          "\"@chromatic-com/storybook\": \"5.2.1\"",
+          "// Static toast for Storybook"
+        ],
+        "miss": ["\"@tanstack/react-table\": \"catalog:\"", "user story"]
+      }
     }
   ],
   "exceptions": []

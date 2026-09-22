@@ -17,9 +17,7 @@
     "check:lint": "node ../../../tools/lint-cap.mjs 2",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
-    "fix:lint": "oxlint --fix .",
-    "fix:format": "oxfmt .",
-    "clean": "rm -rf .turbo && rm -rf .next && rm -rf node_modules && rm -rf dist"
+    "fix:format": "oxfmt ."
   },
   "dependencies": {
     "@plane/types": "workspace:*"

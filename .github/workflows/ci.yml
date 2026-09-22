@@ -63,6 +63,8 @@ jobs:
         run: make gen-check-web
       - name: Lint
         run: make lint-web
+      - name: Unit tests
+        run: make test-web
       # M0 只出报告：发现未使用的代码不会失败，knip 自身出错（例如配置有误）才失败；M1 起作为门禁
       - name: Unused code (report only)
         run: make knip
