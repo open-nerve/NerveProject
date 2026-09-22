@@ -53,6 +53,10 @@ make          # 查看所有命令
 - 生成的文件不要手改。`make gen-check` 会重新生成一遍，检查生成物已经提交、没有差异；持续集成也执行这项检查。
 - `make lint` 依次执行 `make lint-go`（golangci-lint）和 `make lint-web`（TS 类型检查）。
 
+## Plane 表结构快照
+
+`tools/plane-schema/plane-v1.4.2-schema.sql` 是 Plane v1.4.2 的完整表结构，各个 M 为自己的模块建表时以它为起点，再按[差异清单](docs/v0/plane-diff.md)修改。它是生成物，不要手改；只有升级 Plane 基线时才需要用 `make plane-schema` 重新生成（需要 Docker），说明见 [tools/plane-schema/README.md](tools/plane-schema/README.md)。
+
 ## 版权
 
 Copyright © 2026 OpenNerve。以 [GNU AGPL-3.0](LICENSE) 协议发布。
