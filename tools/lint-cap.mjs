@@ -19,6 +19,7 @@ if (oxlint.error) throw oxlint.error;
 let diagnostics;
 try {
   ({ diagnostics } = JSON.parse(oxlint.stdout));
+  if (!Array.isArray(diagnostics)) throw new Error('no "diagnostics" array');
 } catch {
   process.stderr.write(oxlint.stdout + oxlint.stderr);
   console.error(`${name}: oxlint did not print a JSON report (exit code ${oxlint.status}).`);
