@@ -61,11 +61,21 @@ func (c Config) LogValue() slog.Value {
 	)
 }
 
-// LogValue renders the database settings with the password in the URL masked,
-// so they are safe to log on their own too.
+// redacted stands in for a secret in log output.
+const redacted = "xxxxx"
+
+// LogValue renders the database settings with the URL masked as a whole, so
+// they are safe to log on their own too. pgx parses the URL with its own
+// libpq-compatible grammar, which accepts forms that other parsers read
+// differently, so masking only the password another parser finds could leak
+// the rest; log the target from the parsed pool configuration instead.
 func (d DatabaseConfig) LogValue() slog.Value {
+	url := ""
+	if d.URL != "" {
+		url = redacted
+	}
 	return slog.GroupValue(
-		slog.String("url", redactURL(d.URL)),
+		slog.String("url", url),
 		slog.Int("max_conns", int(d.MaxConns)),
 		slog.Bool("auto_migrate", d.AutoMigrate),
 	)

@@ -113,7 +113,7 @@ func TestServeUntilCancelled(t *testing.T) {
 	if r.code != 0 {
 		t.Errorf("nerve serve exit code = %d, want 0; stderr:\n%s", r.code, r.stderr)
 	}
-	for _, want := range []string{"configuration loaded", "postgres://postgres:xxxxx@", "http server stopped"} {
+	for _, want := range []string{"configuration loaded", "config.database.url=xxxxx", "database pool created", "http server stopped"} {
 		if !strings.Contains(r.stderr, want) {
 			t.Errorf("stderr lacks %q:\n%s", want, r.stderr)
 		}
