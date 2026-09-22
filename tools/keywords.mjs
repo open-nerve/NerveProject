@@ -69,6 +69,7 @@ function loadRules() {
     }
     return compiled;
   });
+  const seenExceptions = new Set();
   for (const e of config.exceptions) {
     if (!ids.has(e.rule) || typeof e.path !== "string" || typeof e.match !== "string") {
       fail(`exception ${JSON.stringify(e)} needs an existing "rule", a "path" and a "match"`);
@@ -79,6 +80,11 @@ function loadRules() {
     if (e.count !== undefined && (!Number.isInteger(e.count) || e.count < 1)) {
       fail(`exception ${JSON.stringify(e)} needs "count" to be an integer of at least 1`);
     }
+    const exceptionKey = `${e.rule}\u0000${e.path}\u0000${e.match}`;
+    if (seenExceptions.has(exceptionKey)) {
+      fail(`exception ${JSON.stringify(e)} has the same "rule", "path" and "match" as an earlier exception`);
+    }
+    seenExceptions.add(exceptionKey);
   }
   return { rules, exceptions: config.exceptions };
 }
