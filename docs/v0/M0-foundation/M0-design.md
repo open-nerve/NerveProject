@@ -481,7 +481,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 |---|---|---|---|---|---|
 | P1 | repo-toolchain | 已完成 | [spec](specs/P1-repo-toolchain.md) | [plan](plans/P1-repo-toolchain.md) | [review](reviews/P1-repo-toolchain-review.md) |
 | P2 | server-platform | 已完成 | [spec](specs/P2-server-platform.md) | [plan](plans/P2-server-platform.md) | [review](reviews/P2-server-platform-review.md) |
-| P3 | api-contract | 未开始 | — | — | — |
+| P3 | api-contract | 进行中 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | — |
 | P4 | plane-schema | 未开始 | — | — | — |
 | P5 | web-import | 未开始 | — | — | — |
 | P6 | e2e-ci | 未开始 | — | — | — |
