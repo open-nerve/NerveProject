@@ -23,15 +23,19 @@ func TestNewPoolAppliesMaxConns(t *testing.T) {
 	}
 }
 
+// pgx quotes the connection string in its parse error and masks the password
+// only on a best-effort basis, e.g. not in the legal key/value form
+// "password = secret"; NewPool shows none of that text.
 func TestNewPoolRejectsMalformedURLWithoutLeakingPassword(t *testing.T) {
-	_, err := postgres.NewPool(context.Background(), config.DatabaseConfig{
-		URL:      "postgres://nerve:secret@localhost:notaport/nerve",
-		MaxConns: 1,
-	})
-	if err == nil {
-		t.Fatal("NewPool() error = nil, want a parse error")
-	}
-	if !strings.HasPrefix(err.Error(), "database.url: ") || strings.Contains(err.Error(), "secret") {
-		t.Errorf("NewPool() error = %q, want a database.url error without the password", err)
+	const want = "database.url: not a valid PostgreSQL connection string (not shown, as it may contain a password)"
+	for _, url := range []string{
+		"postgres://nerve:secret@localhost:notaport/nerve",
+		"host=localhost port=1 password = secret sslmode=bogus",
+		`host=localhost password=sec\ secret sslmode=bogus`,
+	} {
+		_, err := postgres.NewPool(context.Background(), config.DatabaseConfig{URL: url, MaxConns: 1})
+		if err == nil || err.Error() != want || strings.Contains(err.Error(), "secret") {
+			t.Errorf("NewPool(%q) error = %v, want %q", url, err, want)
+		}
 	}
 }
