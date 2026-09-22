@@ -39,7 +39,7 @@ func rules() []rule {
 		{"only bootstrap imports modules", onlyBootstrapImportsModules},
 		{"generated code is imported only by its module's http adapter", generatedCodeStaysInAdapter},
 		{"platform packages do not import each other, except config", platformPackagesAreIndependent},
-		{"pgtest is imported only by tests", pgtestOnlyInTests},
+		{"test helpers (pgtest, apitest) are imported only by tests", testHelpersOnlyInTests},
 	}
 }
 
@@ -205,7 +205,8 @@ func platformPackagesAreIndependent(from, to string) bool {
 	return ok && tp != fp && tp != "config"
 }
 
-func pgtestOnlyInTests(_, to string) bool {
+func testHelpersOnlyInTests(_, to string) bool {
 	// The graph holds no test files, so any importer is production code.
-	return inModuleDir(to, "internal/platform/postgres/pgtest")
+	return inModuleDir(to, "internal/platform/postgres/pgtest") ||
+		inModuleDir(to, "internal/platform/httpserver/apitest")
 }
