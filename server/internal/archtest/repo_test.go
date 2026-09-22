@@ -13,16 +13,21 @@ import (
 // package directory.
 const moduleRoot = "../.."
 
-// loadGraph reads the import graph of every non-test package of the module.
-func loadGraph(t *testing.T) graph {
+// registerSources makes the module's source tree an input of the calling
+// test. go list runs in a subprocess, so the go test result cache would not
+// see edited or new source files and could replay a stale pass. Walking the
+// tree makes every directory listing (with file sizes and times) an input.
+func registerSources(t *testing.T) {
 	t.Helper()
-	// go list runs in a subprocess, so the go test result cache would not see
-	// edited or new source files and could replay a stale pass. Walking the
-	// tree here makes every directory listing (with file sizes and times) an
-	// input of this test.
 	if err := filepath.WalkDir(moduleRoot, func(_ string, _ fs.DirEntry, err error) error { return err }); err != nil {
 		t.Fatalf("walk %s: %v", moduleRoot, err)
 	}
+}
+
+// loadGraph reads the import graph of every non-test package of the module.
+func loadGraph(t *testing.T) graph {
+	t.Helper()
+	registerSources(t)
 	cfg := &packages.Config{Mode: packages.NeedName | packages.NeedImports, Dir: moduleRoot}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {

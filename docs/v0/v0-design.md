@@ -148,7 +148,7 @@ NerveProject/
   - PATCH 部分更新：只改传入的字段，传 `null` 表示清空。
   - **POST 和 PATCH 都返回改完之后的完整资源。**
 - **接口描述**：放在 `api/`，按模块拆分（`api/modules/<模块>.yaml`，公共组件放在 `api/common.yaml`），打包为 `api/dist/openapi.yaml`。先改接口描述，再写实现。
-- **OpenAPI 版本**：目标是 3.1。Go 端工具对 3.1 的支持还比较新，所以由 M0/P3 先验证整条工具链：通过就用 3.1，不通过就用 3.0.3。
+- **OpenAPI 版本：已定为 3.1**（`openapi: 3.1.0`）。M0/P3 验证了整条工具链，结论和写法约定见 [P3 spec](M0-foundation/specs/P3-api-contract.md) 2.2、2.4。
 
 ### 3.2 路由：列表挂在父资源下，单个资源用短路径
 ```
@@ -191,13 +191,13 @@ GET   /api/v0/issues/{issue_id}/comments
 ### 3.5 错误
 - 统一使用 RFC 9457（`application/problem+json`），`code` 是给程序判断用的固定字符串：
   ```json
-  { "status": 422, "code": "issue.state_not_in_project", "title": "Unprocessable Content",
+  { "status": 422, "code": "issue.state_not_in_project", "title": "Unprocessable Entity",
     "detail": "状态不属于该项目",
     "errors": [{ "field": "state_id", "message": "..." }] }
   ```
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
-- `title` 固定为 HTTP 状态短语（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
-- 平台自己的错误码不带模块前缀（`not_found`、`internal_error`、`not_ready`）；模块的错误码带模块前缀。
+- `title` 固定为 HTTP 状态短语，即 Go 的 `http.StatusText(status)`（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
+- 平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；模块的错误码带模块前缀。
 - 请求 ID 只出现在 `X-Request-Id` 响应头中，不放进响应体。
 
 ### 3.6 其他
@@ -373,7 +373,7 @@ modules/issue/
   adapter/
     postgres/        仓储实现（基于 sqlc）；列表引擎这类复杂读取写成专门的查询
     http/            handler：把 oapi-codegen 生成的请求类型转成用例的输入，再把结果转成响应
-  module.go          模块入口：New(依赖) 返回用例集合和 HTTP handler，供 bootstrap 接线
+  module.go          模块入口：New(依赖) *Module；(*Module).Register(mux, apiErrors) 把模块生成的路由挂到 bootstrap 的根路由上（M0/P3）
 ```
 
 ### 6.3 依赖规则（在持续集成中强制检查）
@@ -404,7 +404,7 @@ modules/issue/
 ```
 请求 → 请求 ID → 异常恢复 → 访问日志 → 认证（识别 JWT 或 PAT，得到 Actor）
      → 限流 → 接口调用日志（只记写操作，异步批量写入）
-     → handler（参数已由生成的代码解析并校验）
+     → handler（生成的代码只做参数绑定和 JSON 解码，不校验取值；校验放在哪一层由 M2 决定，见 [P3 spec](M0-foundation/specs/P3-api-contract.md) 7）
      → 用例：TxManager.WithinTx { 权限 → 业务规则 → 写数据 → 发布领域事件 } 提交
      → 响应 / problem+json
 ```
@@ -573,7 +573,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 | 权限矩阵测试 | "角色 × 操作"的每一格 | 表格驱动 |
 | 端口契约测试 | 同一个端口的每种实现（如 `local` 和 `s3` 存储）都跑同一套测试 | Go testing |
 | 后端集成测试 | 用例和 SQL，**连接真实的 Postgres** | testcontainers；每个测试从模板库复制一个独立的数据库 |
-| 接口契约测试 | 请求和响应是否与 `api/dist/openapi.yaml` 一致 | 测试环境中加一层 kin-openapi 校验 |
+| 接口契约测试 | 请求和响应是否与 `api/dist/openapi.yaml` 一致 | `platform/httpserver/apitest`（只被测试导入）用 kin-openapi 校验；每个测试对自己的响应调用 `CheckResponse`（M0/P3） |
 | 架构测试 | 依赖方向、模块边界 | 仓库内的架构测试（随 `go test` 运行）；depguard 检查禁用的库 |
 | 前端单元测试 | store 的状态逻辑、令牌管理器、工具函数 | vitest |
 | 前端静态检查 | 类型错误、lint 警告、未使用的代码 | TypeScript 类型检查和 knip 必须为零；oxlint 警告不得超过基线（只降不升） |

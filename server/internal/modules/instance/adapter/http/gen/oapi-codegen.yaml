@@ -1,0 +1,16 @@
+# oapi-codegen 配置：api/modules/instance.yaml → server.gen.go。
+# 由 make gen-go 在 server/ 下执行，路径相对于 server/。
+package: gen
+output: internal/modules/instance/adapter/http/gen/server.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+compatibility:
+  # 枚举常量总是带类型名前缀：以后别的枚举出现同名的值，也不会改掉已有常量的名字
+  always-prefix-enum-values: true
+output-options:
+  name-normalizer: ToCamelCaseWithInitialisms
+import-mapping:
+  # common.yaml 的组件生成在共享包 apigen 里，这里只引用
+  ../common.yaml: github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen

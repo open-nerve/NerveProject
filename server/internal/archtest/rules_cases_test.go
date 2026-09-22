@@ -19,7 +19,7 @@ func TestRules(t *testing.T) {
 		entry    = "only bootstrap imports modules"
 		gen      = "generated code is imported only by its module's http adapter"
 		platform = "platform packages do not import each other, except config"
-		pgtest   = "pgtest is imported only by tests"
+		testOnly = "test helpers (pgtest, apitest) are imported only by tests"
 	)
 	tests := []struct {
 		from, to string
@@ -55,6 +55,7 @@ func TestRules(t *testing.T) {
 
 		// Generated code.
 		{m("internal/modules/issue/adapter/http"), m("internal/modules/issue/adapter/http/gen"), nil},
+		{m("internal/modules/issue/adapter/http/gen"), m("internal/platform/httpserver/apigen"), nil},
 		{m("internal/modules/issue/app"), m("internal/modules/issue/adapter/http/gen"), []string{inward, gen}},
 		{m("internal/modules/issue/adapter/postgres"), m("internal/modules/issue/adapter/http/gen"), []string{gen}},
 		{m("internal/modules/project/adapter/http"), m("internal/modules/issue/adapter/http/gen"), []string{isolated, gen}},
@@ -64,8 +65,10 @@ func TestRules(t *testing.T) {
 		{m("internal/platform/postgres/pgtest"), m("internal/platform/postgres"), nil},
 		{m("internal/platform/httpserver"), m("internal/platform/postgres"), []string{platform}},
 
-		// pgtest.
-		{m("internal/bootstrap"), m("internal/platform/postgres/pgtest"), []string{pgtest}},
+		// Test helpers.
+		{m("internal/bootstrap"), m("internal/platform/postgres/pgtest"), []string{testOnly}},
+		{m("internal/modules/instance/adapter/http"), m("internal/platform/httpserver/apitest"), []string{testOnly}},
+		{m("internal/platform/httpserver"), m("internal/platform/httpserver/apitest"), []string{testOnly}},
 	}
 	fired := map[string]bool{}
 	for _, tt := range tests {

@@ -13,9 +13,10 @@ const ContentTypeProblem = "application/problem+json"
 // Codes of the problems the platform itself reports. Module codes are
 // namespaced by module, e.g. "issue.state_not_in_project".
 const (
-	CodeNotFound = "not_found"
-	CodeInternal = "internal_error"
-	CodeNotReady = "not_ready"
+	CodeNotFound   = "not_found"
+	CodeBadRequest = "bad_request"
+	CodeInternal   = "internal_error"
+	CodeNotReady   = "not_ready"
 )
 
 // Problem is an RFC 9457 problem details body (v0 design, section 3.5).

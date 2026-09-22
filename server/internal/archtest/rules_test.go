@@ -1,7 +1,8 @@
 // Package archtest enforces the architecture rules of M0 design 3.7 (and the
 // platform rules of 3.1) as tests. Each rule is a pure predicate over one
 // import edge, so rules are unit-tested on synthetic edges and then applied
-// to the real import graph of the module.
+// to the real import graph of the module. A separate test walks the nerve
+// binary's transitive dependencies for modules it must not link.
 package archtest
 
 import (
@@ -39,7 +40,7 @@ func rules() []rule {
 		{"only bootstrap imports modules", onlyBootstrapImportsModules},
 		{"generated code is imported only by its module's http adapter", generatedCodeStaysInAdapter},
 		{"platform packages do not import each other, except config", platformPackagesAreIndependent},
-		{"pgtest is imported only by tests", pgtestOnlyInTests},
+		{"test helpers (pgtest, apitest) are imported only by tests", testHelpersOnlyInTests},
 	}
 }
 
@@ -205,7 +206,8 @@ func platformPackagesAreIndependent(from, to string) bool {
 	return ok && tp != fp && tp != "config"
 }
 
-func pgtestOnlyInTests(_, to string) bool {
+func testHelpersOnlyInTests(_, to string) bool {
 	// The graph holds no test files, so any importer is production code.
-	return inModuleDir(to, "internal/platform/postgres/pgtest")
+	return inModuleDir(to, "internal/platform/postgres/pgtest") ||
+		inModuleDir(to, "internal/platform/httpserver/apitest")
 }

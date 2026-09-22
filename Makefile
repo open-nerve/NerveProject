@@ -1,5 +1,7 @@
 # Nerve 开发命令入口。运行 `make` 或 `make help` 查看所有命令。
 # 需兼容 macOS 自带的 GNU Make 3.81。
+# 命令按区域分组：*-go 只需要 Go，*-web 需要 Node（先执行 pnpm install）；
+# 不带后缀的 gen、gen-check、lint 依次执行两个区域，供本地使用。
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
@@ -8,6 +10,16 @@ DEV_COMPOSE := docker compose -f deploy/compose.dev.yaml
 GOLANGCI_LINT_VERSION := 2.13.2
 BIN_DIR := $(CURDIR)/bin
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
+
+# 代码生成（见 docs/v0/M0-foundation/specs/P3-api-contract.md）
+OAPI_CODEGEN := go tool -modfile=tools/go.mod oapi-codegen
+REDOCLY := REDOCLY_SUPPRESS_UPDATE_NOTICE=true pnpm exec redocly
+# 每个模块一个描述文件 api/modules/<模块>.yaml，生成到该模块的 adapter/http/gen
+API_MODULES := $(basename $(notdir $(wildcard api/modules/*.yaml)))
+GEN_GO_OUT := server/internal/platform/httpserver/apigen server/internal/modules/*/adapter/http/gen
+GEN_WEB_OUT := api/dist web/packages/api-client/src/schema.gen.ts
+# 生成物必须已提交且没有差异；$(1) 是生成物的路径
+check-committed = test -z "$$(git status --porcelain -- $(1))" || { git status --short -- $(1); git --no-pager diff -- $(1); echo "生成物与接口描述不一致：执行 make gen，并提交生成的文件"; exit 1; }
 
 .PHONY: help
 help: ## 列出所有命令
@@ -38,10 +50,46 @@ tools: ## 安装锁定版本的 golangci-lint 到 ./bin
 		curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v$(GOLANGCI_LINT_VERSION)/install.sh | sh -s -- -b $(BIN_DIR) v$(GOLANGCI_LINT_VERSION); \
 	fi
 
+.PHONY: gen
+gen: gen-go gen-web ## 重新生成全部代码：Go 接口层、api/dist、TS 客户端
+
+.PHONY: gen-go
+gen-go: ## 由 api/ 生成 Go 接口层（只需要 Go）
+	rm -f server/internal/platform/httpserver/apigen/*.gen.go server/internal/modules/*/adapter/http/gen/*.gen.go
+	cd server && $(OAPI_CODEGEN) -config internal/platform/httpserver/apigen/oapi-codegen.yaml ../api/common.yaml
+	@set -e; for m in $(API_MODULES); do \
+		echo "cd server && $(OAPI_CODEGEN) -config internal/modules/$$m/adapter/http/gen/oapi-codegen.yaml ../api/modules/$$m.yaml"; \
+		(cd server && $(OAPI_CODEGEN) -config internal/modules/$$m/adapter/http/gen/oapi-codegen.yaml ../api/modules/$$m.yaml); \
+	done
+
+.PHONY: gen-web
+gen-web: ## 打包 api/dist/openapi.yaml，生成 TS 客户端的类型（需要 Node）
+	$(REDOCLY) bundle --config api/redocly.yaml
+	pnpm --filter @nerve/api-client gen
+
+.PHONY: gen-check
+gen-check: gen-check-go gen-check-web ## 重新生成全部代码，检查生成物已提交且没有差异
+
+.PHONY: gen-check-go
+gen-check-go: gen-go ## 重新生成 Go 接口层并检查（持续集成 server 任务）
+	@$(call check-committed,$(GEN_GO_OUT))
+
+.PHONY: gen-check-web
+gen-check-web: gen-web ## 重新生成 api/dist 和 TS 类型并检查（持续集成 web 任务）
+	@$(call check-committed,$(GEN_WEB_OUT))
+
 .PHONY: lint
-lint: tools ## 运行 golangci-lint（server）
+lint: lint-go lint-web ## 运行全部静态检查
+
+.PHONY: lint-go
+lint-go: tools ## 运行 golangci-lint（server）
 	cd server && $(GOLANGCI_LINT) run ./...
 
+.PHONY: lint-web
+lint-web: ## 前端类型检查（需要 Node）
+	pnpm -r run check:types
+
+# go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test
-test: ## 运行 Go 测试（server）
-	cd server && go test ./...
+test: ## 运行 Go 测试（server，不用测试缓存）
+	cd server && go test -count=1 ./...
