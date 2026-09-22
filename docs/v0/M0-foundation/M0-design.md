@@ -500,7 +500,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | P3 | api-contract | 已完成 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | [review](reviews/P3-api-contract-review.md) |
 | P4 | plane-schema | 已完成 | [spec](specs/P4-plane-schema.md) | [plan](plans/P4-plane-schema.md) | [review](reviews/P4-plane-schema-review.md) |
 | P5 | web-import | 已完成 | [spec](specs/P5-web-import.md) | [plan](plans/P5-web-import.md) | [review](reviews/P5-web-import-review.md) |
-| P6 | e2e-ci | 未开始 | — | — | — |
+| P6 | e2e-ci | 进行中 | [spec](specs/P6-e2e-ci.md) | [plan](plans/P6-e2e-ci.md) | — |
 
 ---
 
