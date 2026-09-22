@@ -14,16 +14,13 @@
   },
   "scripts": {
     "dev": "tsdown --watch --no-clean",
-    "build": "pnpm run generate:types && tsdown",
-    "generate:types": "tsx scripts/generate-types.ts",
-    "sync:check": "tsx scripts/sync-check.ts",
-    "check:sync": "tsx scripts/sync-check.ts --ci",
-    "check:lint": "oxlint --max-warnings=3 .",
-    "check:types": "pnpm run generate:types && tsc --noEmit",
+    "build": "tsdown",
+    "check:sync": "tsx scripts/sync-check.ts",
+    "check:lint": "node ../../../tools/lint-cap.mjs 1",
+    "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
-    "fix:lint": "oxlint --fix .",
     "fix:format": "oxfmt .",
-    "clean": "rm -rf .turbo && rm -rf .next && rm -rf node_modules && rm -rf dist"
+    "test": "vitest run"
   },
   "dependencies": {
     "i18next": "catalog:",
@@ -38,6 +35,7 @@
     "@types/react": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

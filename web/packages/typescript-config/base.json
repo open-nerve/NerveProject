@@ -24,7 +24,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "esnext",
-    "tsBuildInfoFile": ".turbo/tsconfig.tsbuildinfo",
+    "tsBuildInfoFile": "${configDir}/.turbo/tsconfig.tsbuildinfo",
     "verbatimModuleSyntax": true
   }
 }

@@ -8,7 +8,10 @@
   },
   "ignorePatterns": [
     "api/dist/**",
-    "web/packages/api-client/src/schema.gen.ts",
-    "web/packages/i18n/src/types/keys.generated.ts"
+    "tools/plane-schema/**",
+    "web/apps/web/.react-router/**",
+    "web/apps/web/build/**",
+    "web/packages/*/dist/**",
+    "web/packages/api-client/src/schema.gen.ts"
   ]
 }

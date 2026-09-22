@@ -25,12 +25,10 @@
   "scripts": {
     "build": "tsc && tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "oxlint --max-warnings=75 .",
+    "check:lint": "node ../../../tools/lint-cap.mjs 75",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
-    "fix:lint": "oxlint --fix .",
-    "fix:format": "oxfmt .",
-    "clean": "rm -rf .turbo && rm -rf .next && rm -rf node_modules && rm -rf dist"
+    "fix:format": "oxfmt ."
   },
   "dependencies": {
     "@floating-ui/dom": "catalog:",
@@ -52,7 +50,6 @@
     "@tiptap/extension-emoji": "catalog:",
     "@tiptap/extension-heading": "catalog:",
     "@tiptap/extension-image": "catalog:",
-    "@tiptap/extension-list-item": "catalog:",
     "@tiptap/extension-mention": "catalog:",
     "@tiptap/extension-placeholder": "catalog:",
     "@tiptap/extension-task-item": "catalog:",
@@ -85,13 +82,11 @@
     "yjs": "catalog:"
   },
   "devDependencies": {
-    "@plane/tailwind-config": "workspace:*",
     "@plane/typescript-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "postcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:"
   },

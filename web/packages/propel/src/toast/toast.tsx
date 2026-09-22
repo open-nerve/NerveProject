@@ -193,60 +193,6 @@ function ToastRender({ id, toast }: { id: React.Key; toast: BaseToast.Root.Toast
   );
 }
 
-// Static toast component for Storybook and documentation
-export type ToastStaticProps = {
-  type: TOAST_TYPE;
-  title: string;
-  message?: string;
-  actionItems?: React.ReactNode;
-  theme?: "light" | "dark";
-};
-
-export function ToastStatic({ type, title, message, actionItems, theme = "light" }: ToastStaticProps) {
-  const data = TOAST_DATA[type];
-
-  return (
-    <div data-theme={theme} className="inline-block">
-      <div
-        className={cn(
-          // Base layout and positioning
-          "group flex w-[350px] items-start rounded-lg border border-subtle-1 shadow-overlay-100",
-          "relative",
-          data.backgroundColorClassName,
-          data.borderColorClassName
-        )}
-      >
-        <div className="absolute top-1 right-1 cursor-default text-icon-tertiary">
-          <CloseOutline width={14} height={14} />
-        </div>
-        <div className="flex w-full items-start gap-3 p-4">
-          <div className="py-1">
-            {data.icon && (
-              <div
-                className={cn(
-                  "flex size-4 flex-shrink-0 items-center justify-center rounded-full",
-                  data.iconBgClassName
-                )}
-              >
-                {data.icon}
-              </div>
-            )}
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <div className="text-h6-medium text-primary">
-              {type === TOAST_TYPE.LOADING ? (title ?? "Loading...") : title}
-            </div>
-            {type !== TOAST_TYPE.LOADING && message && (
-              <div className="text-body-xs-regular text-tertiary">{message}</div>
-            )}
-            {type !== TOAST_TYPE.LOADING && actionItems && <div className="flex items-center gap-2">{actionItems}</div>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export const setToast = (props: SetToastProps) => {
   let toastId: string | undefined;
   if (props.type !== TOAST_TYPE.LOADING) {

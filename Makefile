@@ -51,9 +51,10 @@ dev-db-reset: ## 停止开发数据库并删除数据卷
 run: ## 以 dev 配置运行后端（需先 make dev-db），Ctrl-C 停止
 	cd server && NERVE_ENV=dev go run ./cmd/nerve serve
 
+# web 和它依赖的 10 个包各有一个常驻的 dev 任务（共 11 个）；turbo 要求并发数大于常驻任务数，否则拒绝启动
 .PHONY: web-dev
-web-dev: ## 启动前端开发服务器 http://127.0.0.1:3000，/api 转发给 make run 的后端；Ctrl-C 停止
-	$(TURBO) run dev --filter=web
+web-dev: ## 启动前端开发服务器 http://127.0.0.1:3000，同时监视 web/packages/*；/api 转发给 make run 的后端；Ctrl-C 停止
+	$(TURBO) run dev --filter=web... --concurrency=12
 
 .PHONY: tools
 tools: ## 安装锁定版本的 golangci-lint 到 ./bin
@@ -99,19 +100,25 @@ lint: lint-go lint-web ## 运行全部静态检查
 lint-go: tools ## 运行 golangci-lint（server）
 	cd server && $(GOLANGCI_LINT) run ./...
 
+# 关键词守卫（tools/keywords.mjs，规则在 tools/keywords.json）检查整个仓库，不属于任何工作区包，所以不经过 turbo
 .PHONY: lint-web
-lint-web: ## 前端类型检查、oxlint（按警告基线）、格式检查（需要 Node）
-	$(TURBO) run check:types check:lint check:format $(TURBO_QUIET)
+lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致（需要 Node）
+	node tools/keywords.mjs
+	$(TURBO) run check:types check:lint check:format check:sync $(TURBO_QUIET) --continue
 
-# M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1 去掉 --no-exit-code，作为门禁
+# M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1/P3 去掉 --no-exit-code，作为门禁
 .PHONY: knip
-knip: ## 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1 起作为门禁）
+knip: ## 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1/P3 起作为门禁）
 	pnpm exec knip --no-exit-code
 
 # go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test
 test: ## 运行 Go 测试（server，不用测试缓存）
 	cd server && go test -count=1 ./...
+
+.PHONY: test-web
+test-web: ## 运行前端单元测试（各包 test 脚本中的 vitest，经 turbo；需要 Node；持续集成 web 任务）
+	$(TURBO) run test $(TURBO_QUIET)
 
 .PHONY: build
 build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需要 Node 和 Go）

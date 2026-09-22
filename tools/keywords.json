@@ -1,0 +1,205 @@
+{
+  "phase": "M1/P1",
+  "rules": [
+    {
+      "id": "deploy-files",
+      "phase": "M1/P1",
+      "why": "Plane 的 Docker、Caddy 部署文件和从未注册的 service worker；Nerve 把前端编进 nerve，由 nerve 提供",
+      "path": {
+        "source": "^web/(?:[^/]+/)*(?:Dockerfile\\.(?:web|dev)$|\\.dockerignore$|caddy/|(?:sw|workbox-[^/]*)\\.js(?:\\.map)?$)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/Dockerfile.web",
+          "web/apps/web/.dockerignore",
+          "web/apps/web/caddy/Caddyfile",
+          "web/apps/web/public/sw.js.map",
+          "web/apps/web/public/workbox-9f2f79cf.js"
+        ],
+        "miss": ["web/apps/web/public/manifest.json", "web/apps/web/public/swagger.js", "deploy/compose.dev.yaml"]
+      }
+    },
+    {
+      "id": "prettierignore",
+      "phase": "M1/P1",
+      "why": "格式化工具是 oxfmt，它也会读取当前目录下的 .prettierignore；忽略规则只写在 .oxfmtrc.json 一处",
+      "path": { "source": "(?:^|/)\\.prettierignore$", "flags": "" },
+      "samples": {
+        "hit": [".prettierignore", "web/packages/ui/.prettierignore"],
+        "miss": ["web/packages/ui/.gitignore"]
+      }
+    },
+    {
+      "id": "serve",
+      "phase": "M1/P1",
+      "why": "Plane 用 serve 提供构建产物（start、preview 脚本）；Nerve 由 nerve 提供",
+      "files": { "source": "(?:^|/)package\\.json$|^pnpm-(?:workspace|lock)\\.yaml$", "flags": "" },
+      "content": { "source": "(?<![\\w@/.-])serve(?:@\\d|[\"']?:|\\s+-s\\b)", "flags": "" },
+      "samples": {
+        "hit": ["\"serve\": \"catalog:\"", "  serve@14.2.5:", "serve -s build/client -l 3000", "      serve:"],
+        "miss": [
+          "\"@react-router/serve>express\": \"^5.2.1\"",
+          "  serve-static@1.16.2:",
+          "preserve: true",
+          "observe(value)"
+        ],
+        "files": {
+          "hit": ["web/apps/web/package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"],
+          "miss": ["turbo.json", "web/apps/web/app/root.tsx"]
+        }
+      }
+    },
+    {
+      "id": "storybook-files",
+      "phase": "M1/P1",
+      "why": "Storybook 没有 Makefile 或持续集成入口，连同配置、stories 和依赖删除",
+      "path": { "source": "(?:^|/)(?:\\.storybook|storybook-static)/|\\.stories\\.[cm]?[jt]sx?$", "flags": "" },
+      "samples": {
+        "hit": ["web/packages/ui/.storybook/main.ts", "web/packages/propel/src/button/button.stories.tsx"],
+        "miss": ["web/packages/propel/src/button/button.tsx", "web/packages/ui/src/stories.ts"]
+      }
+    },
+    {
+      "id": "storybook",
+      "phase": "M1/P1",
+      "why": "Storybook 的依赖、脚本、任务、忽略规则，以及只为它存在的代码",
+      "files": {
+        "source": "^(?:web/|e2e/|package\\.json$|pnpm-(?:workspace|lock)\\.yaml$|turbo\\.json$|\\.oxlintrc\\.json$|knip\\.jsonc$)",
+        "flags": ""
+      },
+      "content": { "source": "storybook|chromatic", "flags": "i" },
+      "samples": {
+        "hit": [
+          "\"storybook\": \"catalog:\"",
+          "\"@chromatic-com/storybook\": \"5.2.1\"",
+          "// Static toast for Storybook"
+        ],
+        "miss": ["\"@tanstack/react-table\": \"catalog:\"", "user story"],
+        "files": {
+          "hit": [
+            "web/packages/ui/package.json",
+            "e2e/playwright.config.ts",
+            "package.json",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+            "turbo.json",
+            ".oxlintrc.json",
+            "knip.jsonc"
+          ],
+          "miss": ["server/internal/main.go", ".oxfmtrc.json", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "next-shim-dead-files",
+      "phase": "M1/P1",
+      "why": "Next.js 垫片中没人用的 image、script 及 next/script 的类型声明；其余垫片在 M1/P4 删除",
+      "path": {
+        "source": "^web/apps/web/app/(?:compat/next/(?:image|script)\\.tsx?|types/next-(?:image|script)\\.d\\.ts)$",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["web/apps/web/app/compat/next/image.tsx", "web/apps/web/app/types/next-script.d.ts"],
+        "miss": ["web/apps/web/app/compat/next/link.tsx", "web/apps/web/app/types/next-link.d.ts"]
+      }
+    },
+    {
+      "id": "next-script-image",
+      "phase": "M1/P1",
+      "why": "next/script、next/image 的导入、别名和模块声明；next/link、next/navigation 在 M1/P4 删除",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "[\"'`]next/(?:script|image)[\"'`]", "flags": "" },
+      "samples": {
+        "hit": [
+          "import Script from \"next/script\";",
+          "      \"next/script\": path.resolve(__dirname, \"app/compat/next/script.tsx\"),"
+        ],
+        "miss": ["import Link from \"next/link\";", "// Minimal shim so code using next/image compiles"],
+        "files": {
+          "hit": ["web/apps/web/app/root.tsx", "web/packages/ui/package.json"],
+          "miss": ["web/apps/web/README.md", "server/internal/main.go"]
+        }
+      }
+    },
+    {
+      "id": "services-files",
+      "phase": "M1/P1",
+      "why": "packages/services 只留 web 用到的令牌服务、地址工具和上传元数据工具，整包在 M5 删除；新的接口调用用生成的客户端",
+      "path": {
+        "source": "^web/packages/services/(?!(?:package\\.json|tsconfig\\.json|tsdown\\.config\\.ts|src/(?:index|api\\.service)\\.ts|src/helpers/(?:index|url|url\\.test)\\.ts|src/developer/(?:index|api-token\\.service)\\.ts|src/file/(?:index|helper)\\.ts)$)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["web/packages/services/src/issue/sites-issue.service.ts", "web/packages/services/src/live.service.ts"],
+        "miss": [
+          "web/packages/services/src/helpers/url.test.ts",
+          "web/packages/services/src/developer/api-token.service.ts"
+        ]
+      }
+    },
+    {
+      "id": "locales",
+      "phase": "M1/P1",
+      "why": "多语言只留 en 和 zh-CN（M1 设计第 6 节）",
+      "path": { "source": "^web/packages/i18n/src/locales/(?!(?:en|zh-CN)/)", "flags": "" },
+      "samples": {
+        "hit": ["web/packages/i18n/src/locales/fr/common.json", "web/packages/i18n/src/locales/zh-TW/common.json"],
+        "miss": ["web/packages/i18n/src/locales/en/common.json", "web/packages/i18n/src/locales/zh-CN/common.json"]
+      }
+    },
+    {
+      "id": "i18n-key-generator",
+      "phase": "M1/P1",
+      "why": "生成的翻译键类型 keys.generated.ts 没有任何地方使用，生成脚本已删除",
+      "files": { "source": "^(?:web/|\\.gitignore$|\\.oxfmtrc\\.json$|knip\\.jsonc$|turbo\\.json$)", "flags": "" },
+      "content": { "source": "keys\\.generated|TTranslationKeys|generate:types", "flags": "" },
+      "samples": {
+        "hit": [
+          "export type { TTranslationKeys } from \"./keys.generated\";",
+          "\"build\": \"pnpm run generate:types && tsdown\""
+        ],
+        "miss": ["export type { TLanguage } from \"./types\";", "\"generate\": \"tsx scripts/generate.ts\""],
+        "files": {
+          "hit": ["web/packages/i18n/src/index.ts", ".gitignore", ".oxfmtrc.json", "knip.jsonc", "turbo.json"],
+          "miss": ["server/internal/main.go", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "i18n-dead-namespaces",
+      "phase": "M1/P1",
+      "why": "企业版的命名空间（自动化、模板、工作项类型、工作流、Wiki、产品导览、更新、编辑器），代码中没有任何引用",
+      "path": {
+        "source": "^web/packages/i18n/src/locales/[^/]+/(?:automation|editor|template|tour|update|wiki|work-item-type|workflow)\\.json$",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "web/packages/i18n/src/locales/en/tour.json",
+          "web/packages/i18n/src/locales/zh-CN/work-item-type.json"
+        ],
+        "miss": ["web/packages/i18n/src/locales/en/work-item.json", "web/packages/i18n/src/locales/en/workspace.json"]
+      }
+    },
+    {
+      "id": "i18n-applications",
+      "phase": "M1/P1",
+      "why": "工作区设置中企业版\"应用\"一节的文案（workspace_settings.settings.applications），代码中没有任何引用",
+      "files": { "source": "^web/packages/i18n/src/locales/[^/]+/workspace-settings\\.json$", "flags": "" },
+      "content": { "source": "\"applications\"\\s*:", "flags": "" },
+      "samples": {
+        "hit": ["    \"applications\": {"],
+        "miss": ["    \"api_tokens\": {", "\"title\": \"Applications\""],
+        "files": {
+          "hit": [
+            "web/packages/i18n/src/locales/en/workspace-settings.json",
+            "web/packages/i18n/src/locales/zh-CN/workspace-settings.json"
+          ],
+          "miss": ["web/packages/i18n/src/locales/en/workspace.json", "web/packages/i18n/src/locales/en/settings.json"]
+        }
+      }
+    }
+  ],
+  "exceptions": []
+}

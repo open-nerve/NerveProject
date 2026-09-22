@@ -23,7 +23,6 @@
     ".cache/**",
     ".next/**",
     ".react-router/**",
-    ".storybook/**",
     ".turbo/**",
     ".vite/**",
     "*.config.{js,mjs,cjs,ts}",
@@ -31,7 +30,6 @@
     "coverage/**",
     "dist/**",
     "**/public/**",
-    "storybook-static/**",
     "web/packages/api-client/src/schema.gen.ts"
   ],
   "rules": {

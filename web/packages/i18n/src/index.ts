@@ -13,7 +13,6 @@ export type { TTranslationStore } from "./hooks/use-translation";
 
 // Types
 export type { TLanguage, ILanguageOption } from "./types";
-export type { TTranslationKeys } from "./types";
 export type { TNamespace } from "./constants/namespaces";
 
 // Utilities
@@ -21,4 +20,9 @@ export { setLanguage } from "./core/set-language";
 export { initPromise } from "./core";
 
 // Constants
-export { FALLBACK_LANGUAGE, SUPPORTED_LANGUAGES, LANGUAGE_STORAGE_KEY } from "./constants/language";
+export {
+  FALLBACK_LANGUAGE,
+  SUPPORTED_LANGUAGES,
+  LANGUAGE_STORAGE_KEY,
+  toSupportedLanguage,
+} from "./constants/language";
