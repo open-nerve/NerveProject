@@ -8,10 +8,12 @@
 // Fails unless src/locales has both en and zh-CN, they have the same namespace files with the same keys,
 // and in each of them no key is defined in two namespace files or is also the prefix of another key. All
 // namespaces share one key space (src/core/instance.ts makes every namespace a fallback), so such a key
-// would be ambiguous.
+// would be ambiguous. Also fails unless each locale's namespace files match NAMESPACES exactly, and
+// unless each locale has at least one namespace file (two empty locales would otherwise agree trivially).
 
 import fs from "node:fs";
 import path from "node:path";
+import { NAMESPACES } from "../src/constants/namespaces";
 
 const LOCALES_DIR = path.resolve(import.meta.dirname, "../src/locales");
 const SOURCE = "en";
@@ -57,11 +59,32 @@ function findConflicts(locale: string, namespaces: Map<string, Set<string>>): st
   return [...conflicts];
 }
 
+/** Namespace files present that NAMESPACES does not list, and namespaces NAMESPACES lists with no file. */
+function findNamespaceMismatches(locale: string, namespaces: Map<string, Set<string>>): string[] {
+  const onDisk = new Set(namespaces.keys());
+  const registered = new Set<string>(NAMESPACES);
+  const problems: string[] = [];
+  for (const namespace of onDisk) {
+    if (!registered.has(namespace))
+      problems.push(`${locale}: ${namespace}.json exists but is not registered in NAMESPACES`);
+  }
+  for (const namespace of registered) {
+    if (!onDisk.has(namespace))
+      problems.push(`${locale}: ${namespace} is registered in NAMESPACES but ${namespace}.json is missing`);
+  }
+  return problems;
+}
+
 const problems: string[] = [];
 const [source, target] = [SOURCE, TARGET].map((locale) => {
   const namespaces = loadLocale(locale);
-  if (namespaces) problems.push(...findConflicts(locale, namespaces));
-  else problems.push(`src/locales/${locale} is missing`);
+  if (namespaces) {
+    if (namespaces.size === 0) problems.push(`src/locales/${locale} has no namespace files`);
+    problems.push(...findConflicts(locale, namespaces));
+    problems.push(...findNamespaceMismatches(locale, namespaces));
+  } else {
+    problems.push(`src/locales/${locale} is missing`);
+  }
   return namespaces;
 });
 if (source && target) {
