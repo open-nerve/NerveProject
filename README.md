@@ -64,6 +64,7 @@ make          # 查看所有命令
 - **M0 中看到的页面**：前端还在调用 Plane 的接口（例如 `/api/instances/`），Nerve 返回 404，页面显示 Plane 的"didn't start up correctly"。这是预期的，前端从 M2 起对接 Nerve 的接口。
 - **lint 警告只降不升**：每个包的 `check:lint` 脚本用 `--max-warnings` 记着当前的警告数，警告多了 `make lint-web` 就失败；修掉警告后，在同一个提交里把这个数调低到新的警告数。`make lint-web` 用 `--output-logs=errors-only`，看不到具体的警告数；要看某个包当前的警告数，执行 `pnpm --filter <包名> run check:lint`，输出末尾的 `Found N warnings` 就是这个数。
 - **修格式**：`pnpm exec turbo run fix:format` 用 oxfmt 就地格式化所有包。
+- **未使用的代码**：`make knip` 用 knip 报告未使用的文件、导出和依赖，配置在 `knip.jsonc`。M0 只出报告：迁入的 Plane 代码有 379 处，退出码仍为 0，只有 knip 自身出错时才失败；M1 删减之后清零，改为门禁。持续集成的 `web` 任务执行它。
 
 ## 端到端测试
 
@@ -85,7 +86,7 @@ make          # 查看所有命令
   cd e2e && NERVE_VERSION=0.1.0-dev pnpm exec playwright test s2 --headed
   ```
 
-- **失败时**：报告在 `e2e/playwright-report/`（`cd e2e && pnpm exec playwright show-report` 打开），失败用例的操作记录（trace）和截图在 `e2e/test-results/`，每个 worker 的 nerve 日志是 `e2e/test-results/nerve-w<编号>.log`。
+- **失败时**：报告在 `e2e/playwright-report/`（`cd e2e && pnpm exec playwright show-report` 打开），失败用例的操作记录（trace）和截图在 `e2e/test-results/`，每个 worker 的 nerve 日志是 `e2e/test-results/nerve-w<编号>.log`。持续集成的 `e2e` 任务失败时，把这两个目录上传为 `playwright-report`。
 
 ## Plane 表结构快照
 
