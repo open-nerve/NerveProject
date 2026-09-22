@@ -1,6 +1,6 @@
 # 前端改动清单
 
-本清单以 Plane v1.4.2（提交 `02c19e1`）的前端为基线，记录 Nerve 前端（`web/`）的每一类改动。有两个用途：
+本清单以 Plane v1.4.2（提交 `02c19e1`，`preview` 分支；`v1.4.2` 标签指向 `5f7d927`，两者的迁移文件逐字节相同，见 [`tools/plane-schema/README.md`](../../tools/plane-schema/README.md)）的前端为基线，记录 Nerve 前端（`web/`）的每一类改动。前端从 `02c19e1` 迁入，而不是 `v1.4.2` 标签：锁定的 React Router 8.3.0、pnpm 11.10.0 只在 `02c19e1` 中存在，标签中是 React Router 7.17/7.18、pnpm 11.3.0。有两个用途：
 - 方便后续维护时查阅。
 - 以后对照 Plane 的新版本挑选改进时，知道哪些地方已经和上游不一样了。
 
