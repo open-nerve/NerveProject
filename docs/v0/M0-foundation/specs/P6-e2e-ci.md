@@ -143,13 +143,14 @@ export { expect } from "@playwright/test";
 ```
 
 **设计要点**：
-- **职责划分**：`db.ts`、`server.ts`、`api.ts` 是普通函数，不依赖 Playwright，全局准备也用它们；`test.ts` 只负责把它们接成 Playwright 的 fixture。故事只从 `test.ts` 导入 `test` 和 `expect`。
+- **职责划分**：`db.ts`、`server.ts`、`api.ts` 是普通函数，不依赖 Playwright，全局准备也用它们；`test.ts` 只负责把它们接成 Playwright 的 fixture。故事从 `test.ts` 导入 `test` 和 `expect`；运行 nerve 命令行的故事（S1 的 `migrate status`）另外从 `server.ts` 导入 `runNerve` 等普通函数，与 2.1 的导入关系一致。
 - **每次运行一个容器**：全局准备启动容器、迁移模板库，只做一次；worker 从模板复制，迁移不在每个 worker 中重复（M2 起迁移文件变多时仍然只执行一次）。容器由全局收尾停止；运行中途崩溃时由 Ryuk 删除（实测：全局准备在容器启动后失败，容器在约 10 秒内消失）。
-- **模板库用 `bin/nerve migrate up` 迁移**：执行被测程序自己的命令，迁移文件内嵌在程序中，M2 加入迁移文件后不需要改 fixture；复制出的库带着 goose 的版本表。M0 没有迁移文件，输出 `no pending migrations`。服务器上的维护库 `postgres` 只用来建库，不被复制。
+- **模板库用 `bin/nerve migrate up` 迁移**：执行被测程序自己的命令，迁移文件内嵌在程序中，M2 加入迁移文件后不需要改 fixture。M0 没有迁移文件：`postgres.NewMigrator` 在没有迁移文件时返回 `provider` 为 `nil` 的 `Migrator`（`goose.ErrNoMigrations`），`Up`/`Status` 直接返回、不连接数据库；连接池本身也是惰性连接的（`postgres.NewPool` 的文档注释：不可达的数据库要到第一次真正使用时才会发现）。复制出的库不带 goose 的 `goose_db_version` 表；`migrate up` 输出 `no pending migrations`，S1 的 `migrate status` 即使连错数据库也能通过。M2 加入迁移文件后 `migrate up`/`status` 才会真正连接数据库（见 M2 交接）。服务器上的维护库 `postgres` 只用来建库，不被复制。
 - **nerve 的环境**：`NERVE_ENV=test`、`NERVE_DATABASE__URL`（本 worker 的库，加 `sslmode=disable` 和 `application_name=nerve`）、`NERVE_SERVER__ADDR`（`127.0.0.1:<空闲端口>`）。调用方自己的 `NERVE_*` 变量都不传给 nerve：被测的是 test 配置本身，开发者 shell 中的 `NERVE_CONFIG_DIR` 之类不应改变结果。test 配置的 `auto_migrate` 是开启的，对已迁移的副本是空操作。
 - **`application_name=nerve`**：nerve 自己不设置 application_name（pgx 不发送它）。fixture 把它写进交给 nerve 的地址，pgx 在连接时发送；只有 nerve 拿到这个地址，所以 S1 能在 `pg_stat_activity` 中确认"nerve 连上了本 worker 的库"。
 - **端口**：在 `127.0.0.1` 上监听端口 0 取得一个空闲端口，关闭后交给 nerve（P2 交接第 1 条：不从日志中解析端口）。
-- **就绪**：每 100 毫秒请求一次 `/readyz`，返回 200 即就绪；nerve 提前退出时立即失败，30 秒后仍未就绪也失败，这两种情况都先杀掉进程，错误信息给出日志文件的位置。
+- **fixture 超时预算**：`nerve` 这个 worker fixture 的 Playwright 超时设为 `readyTimeoutMs + stopTimeoutMs + 10` 秒（70 秒，`nerveFixtureTimeoutMs`，从 `server.ts` 导出），而不是 Playwright 默认的 30 秒（建立和收尾共用同一预算）；这样下面就绪超时的 30 秒错误（带日志路径）和停机 30 秒后的 SIGKILL，才会先于 Playwright 的通用超时触发。
+- **就绪**：每 100 毫秒请求一次 `/readyz`，返回 200 即就绪；nerve 提前退出时立即失败，30 秒后仍未就绪也失败，这两种情况都先杀掉进程，错误信息给出日志文件的位置；生成进程失败（`ENOENT`、`EACCES`）走同一条路径。`/readyz` 第一次返回 200 之后，fixture 再等一个轮询间隔，确认子进程仍在运行——避免另一个 worker 的 nerve 短暂占用同一端口、在这个子进程自己的监听器绑定之前先答复 200。
 - **停机**：worker 结束时发送 SIGTERM，等待退出；退出码不是 0 就报错；30 秒内没有退出（`shutdown_timeout` 是 20 秒）就发送 SIGKILL 并报错。运行结束后没有遗留的 nerve 进程。
 - **日志**：nerve 的标准输出和标准错误写进 `e2e/test-results/nerve-w<workerIndex>.log`，失败时和报告一起上传（2.9）。
 - **库名**：`e2e_w<workerIndex>`。`workerIndex` 在一次运行中不重复，测试失败后新起的 worker 得到新的库。worker 的库不删除，容器在运行结束时整个删除。
@@ -204,7 +205,7 @@ e2e: build
 | 工作区 | 设置 | 原因 |
 |---|---|---|
 | 根目录 | `ignoreDependencies: ["@redocly/cli", "turbo"]` | 它们由 Makefile 调用（`make gen-web`、`make lint-web` 等），knip 不读 Makefile，会误报为未使用 |
-| `web/apps/web` | `ignoreUnresolved: ["\\+types/"]` | 路由文件导入 `./+types/…`：`react-router typegen` 把它们生成在 `.react-router/types/`（不进仓库），经 tsconfig 的 `rootDirs` 导入。knip 不按 `rootDirs` 解析，无论是否生成过都报 61 条"Unresolved imports" |
+| `web/apps/web` | `ignoreUnresolved: ["\\+types/"]` | 路由文件导入 `./+types/…`（61 处）：`react-router typegen` 把它们生成在 `.react-router/types/`（不进仓库），经 tsconfig 的 `rootDirs` 导入。没有生成过时 knip 解析不到，报 61 条"Unresolved imports"；生成过之后 knip 能通过 `rootDirs` 解析到，这一项就不再需要（见下文"另有配置提示"），但仍要保留，否则干净克隆上会报错 |
 | `web/packages/i18n` | `ignoreUnresolved: ["^\\./keys\\.generated$"]` | `src/types/keys.generated.ts` 由 i18n 的构建生成（不进仓库）；没有构建过时 knip 报 1 条"Unresolved imports"，构建过之后能找到 |
 | `web/packages/api-client` | `entry: ["test/*.typecheck.ts"]` | 类型测试只由 tsc 检查（P3 交接第 3 条）；作为入口文件，它和它用到的导出都不再被报告 |
 | `web/packages/api-client` | `ignoreIssues: {"src/schema.gen.ts": ["types"]}` | 生成的类型 `webhooks`、`$defs`、`operations` 没有被使用（P3 交接第 3 条） |
@@ -225,7 +226,7 @@ e2e: build
   | 重复的导出 | 1 |
   | 合计 | 379 |
 
-  全部在迁入的 Plane 代码中，Nerve 自己的代码（api-client、e2e、根目录）没有。另有配置提示：构建过的克隆上 2 条（i18n 的 `ignoreUnresolved` 暂时用不上；`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`），没有构建过时只有后一条。
+  全部在迁入的 Plane 代码中，Nerve 自己的代码（api-client、e2e、根目录）没有。另有配置提示，数量随仓库状态变化：干净克隆上 1 条（`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`）；`web/packages/i18n` 的翻译键生成过之后再加 1 条（`ignoreUnresolved` 暂时用不上），共 2 条；`react-router typegen` 也跑过之后（例如 `make lint-web` 之后）再加 1 条（`web/apps/web` 的 `ignoreUnresolved` 暂时用不上），共 3 条。持续集成的 `make knip` 在 `make lint-web`（已经跑过 typegen 和 i18n 构建）之后执行，日志里总是 3 条。
 - **`make knip`** = `pnpm exec knip --no-exit-code`：发现问题时退出码仍为 0；knip 自身出错（例如配置中有未知的键）时退出码 2，make 失败。M1 去掉 `--no-exit-code`，就成为门禁。本机 2–4 秒。
 - **持续集成执行它**：`web` 任务在 `make lint-web` 之后执行 `make knip`，作为普通的一步（不是 `continue-on-error`）：报告出现在日志中，配置出错会让任务失败，M1 之前配置不会悄悄失效。`continue-on-error` 会把配置错误也变成一个黄色警告。
 
@@ -238,27 +239,23 @@ checkout → setup-go（与 server 任务相同的缓存键）→ setup-node →
 → 缓存 pnpm 存储（与 web 任务相同的键）→ pnpm install --frozen-lockfile
 → playwright install --with-deps --only-shell chromium
 → make build → make e2e
-→ 失败时上传 e2e/playwright-report/ 和 e2e/test-results/（名为 playwright-report）
+→ 失败或被取消时上传 e2e/playwright-report/ 和 e2e/test-results/（名为 playwright-report）
 ```
 - **`needs` 和 `if`**（P3 交接第 4 条）：`server`、`web` 通过后才运行；`if` 条件与两者相同。同仓 PR 上两者被跳过，`e2e` 也被跳过；设为必须通过的检查之前的注意事项不变（M0 设计 6.3）。
 - **版本号**：任务级的环境变量 `VERSION` 同时作用于 `make build` 和 `make e2e`。`0.0.0-ci.<运行编号>` 是合法的语义化版本，明显不是正式版本，并且与默认值不同，S3 由此确认注入生效。
 - **浏览器**：只装 Chromium 的 Headless Shell（`--only-shell`，测试以无界面方式运行）和它需要的系统库（`--with-deps`）。不缓存 `~/.cache/ms-playwright`：Playwright 的文档不建议缓存浏览器——Linux 上的系统库缓存不了，每次仍要安装；下载与恢复缓存的耗时相当。
 - **先 `make build` 再 `make e2e`**：分成两步，失败时一眼能看出是构建还是测试；`make e2e` 中的 `make build` 命中上一步留下的 turbo 和 Go 缓存，约 1 秒。
-- **上传**：`if: failure()`。HTML 报告中带着失败测试的 trace 和截图；`test-results/` 中另有每个 worker 的 nerve 日志。
+- **上传**：`if: failure() || cancelled()`——任务被 `timeout-minutes` 取消时也要拿到报告。HTML 报告中带着失败测试的 trace 和截图；`test-results/` 中另有每个 worker 的 nerve 日志。
 - **`web` 任务**：`make lint-web` 之后加一步 `Unused code (report only)`：`make knip`（2.8）。
 
-**耗时估计**：依据 P5 分支在持续集成上的实测（M0 设计第 12 节），`web` 任务冷运行 142 秒，其中 `pnpm install` 12 秒、`make gen-check-web` 2 秒、`make lint-web` 87 秒、`make build-web` 24 秒；`server` 任务 45 秒。同样的 `make lint-web` 本机 34–41 秒，runner 约是本机的 2.3 倍。推送后由控制者记录实际耗时，写进 P6 的 review。
+**持续集成的实测耗时**（分支 `worktree-m0-p6-e2e-ci` 上的两次运行；合并后 `main` 上的第一次运行仍是冷缓存——GitHub 的缓存按分支隔离——由控制者记录在 review 中）：
 
-| 步骤 | 本机 | `ubuntu-24.04` 估计 |
-|---|---|---|
-| 准备（checkout、Go、Node、corepack） | — | 15–25 秒 |
-| 恢复 pnpm 缓存 + `pnpm install` | 7–8 秒（本机存储已有） | 10–20 秒（P5：12 秒） |
-| 安装浏览器和系统库 | Headless Shell 下载 13 秒 | 30–60 秒（apt 安装系统库占大半） |
-| `make build`（没有 turbo 缓存，11 个前端构建任务全部执行） | 前端 25 秒；Go 冷编译 5 秒 | 75–90 秒（前端 55–60 秒） |
-| `make e2e` | 6 秒（镜像已在本机） | 20–40 秒（拉取 `postgres:18.6` 和 Ryuk 10–20 秒） |
-| 合计 | — | 约 3–4 分钟 |
+| 运行 | `server` | `web` | `e2e` | 整体（wall clock） |
+|---|---|---|---|---|
+| 分支冷（`35702932216`） | 40 秒 | 149 秒（install 14、lint-web 90、knip 4、build-web 24、缓存保存 6） | 120 秒（浏览器 18、`make build` 52、`make e2e` 17） | 约 270 秒 |
+| 分支热（`35703813772`） | 38 秒 | 111 秒（缓存恢复 3、install 12、lint-web 61、knip 3、build-web 16、保存 0——命中） | 122 秒（缓存 5、install 9、浏览器 17、`make build` 53、`make e2e` 16） | 约 233 秒 |
 
-整个工作流约 6 分钟：`web` 任务约 2.5 分钟（P5 的 142 秒加上 `make knip`），`e2e` 任务在它之后。
+`e2e` 任务在 `server`、`web` 都通过后才开始（`needs`），整体耗时约等于 `web` 加 `e2e`；三个任务都在各自的超时（`server`/`web` 15 分钟，`e2e` 20 分钟）之内。
 
 - **`e2e` 任务自己执行 `make build`**：turbo 的缓存不跨任务保存（P5 spec 2.12），`web` 任务构建过的前端在这里要再构建一次，约多花 1 分钟。P5 交接请 P6 评估的替代办法是由 `web` 任务把 `web/apps/web/build/client`（34 MB、1239 个文件）作为产物上传，`e2e` 任务下载后只编译 Go。没有采用：Makefile 要拆出一个跳过前端构建的目标，`e2e` 任务不再执行完整的 `make build`；而持续集成中只有这里完整执行 `make build`，它是 M0 完成标准"`make build` 能构建出单个可执行文件"在持续集成中的证据；上传、下载这么多小文件本身也要十几秒，省下的不到 1 分钟。
 - **超过 5 分钟时的备选办法**：在同一次运行中，由 `web` 任务把 turbo 的本地缓存 `.turbo/cache` 作为产物上传（`include-hidden-files: true`），`e2e` 任务在 `make build` 之前下载到原处。`make build` 仍然完整执行，只是前端命中缓存。
@@ -343,7 +340,7 @@ checkout → setup-go（与 server 任务相同的缓存键）→ setup-node →
 | `VERSION` 的默认值写在 Makefile 和 `buildinfo` 两处，改版本号时可能只改了一处 | Makefile 的注释写明两者相同；持续集成注入不同的值，S3 能发现注入失效；M8 定下发布时版本号的来源 |
 | 环境中恰好有一个无关的 `VERSION` 变量，`make build` 会用它 | `?=` 是控制者裁定的写法，也是持续集成传入版本号的方式；`bin/nerve version` 能看出实际写入的值 |
 | 任何依赖的增减都会让 pnpm 重新解析可选的对等依赖，Plane 包的锁文件条目随之出现后缀的变化（2.4） | 计划中的核对命令确认没有包被删掉、版本不变；M1 删减依赖时沿用这组命令（第 7 节） |
-| knip 在构建过的克隆上提示 i18n 的 `ignoreUnresolved` 可以删掉（"Remove from ignoreUnresolved"） | knip.jsonc 的注释写明不要删：没有构建过时它才起作用，删掉之后报告随本地是否构建过而变化 |
+| knip 在构建过的克隆上提示 `ignoreUnresolved` 的两项都可以删掉（i18n 的、`web/apps/web` 的，各自提示"Remove from ignoreUnresolved"；配置提示的数量随 i18n 构建、`react-router typegen` 是否跑过而变化，1/2/3 条，见 2.8） | `knip.jsonc` 的注释写明不要删：没有构建过时它们才起作用，删掉之后报告随本地是否构建过而变化 |
 | M2 起前端改调 `/api/v0/`，S2 不再有接口的 404，但控制台和页面的断言仍未加入 | 交给 M2（第 7 节） |
 | Playwright 升级后浏览器版本变化，本地要重新安装 | Playwright 的报错给出安装命令；README 写明升级后重新执行 |
 
@@ -351,7 +348,7 @@ checkout → setup-go（与 server 任务相同的缓存键）→ setup-node →
 
 | 交给 | 事项 |
 |---|---|
-| M1 | knip 改为门禁：`make knip` 去掉 `--no-exit-code`，报告清零；决定是否把配置提示也作为错误（`--treat-config-hints-as-errors`）；`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`（knip 的配置提示）。M1 删掉 react-router 的 typegen 或 i18n 的生成步骤时，同步删掉 `knip.jsonc` 中对应的 `ignoreUnresolved` |
+| M1 | knip 改为门禁：`make knip` 去掉 `--no-exit-code`，报告清零；决定是否把配置提示也作为错误（`--treat-config-hints-as-errors`——配置提示的数量随仓库状态变化（1/2/3 条，见 2.8），直接加这个参数会在构建过的克隆或持续集成（总是 3 条）上失败，除非重新组织 `ignoreUnresolved` 或让 knip 在 `lint-web` 之前跑）；`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`（knip 的配置提示）。M1 删掉 react-router 的 typegen 或 i18n 的生成步骤时，同步删掉 `knip.jsonc` 中对应的 `ignoreUnresolved` |
 | M1 | 重新测出 lint 基线时，`@nerve/api-client`、`@nerve/e2e` 的上限保持 0（它们是 Nerve 的新代码） |
 | M1 | 删减依赖后锁文件的核对：沿用 P6 计划 Task 2 Step 3 的命令（没有意外删掉的包、web 下 importers 只有对等后缀的变化） |
 | M1 | 品牌替换之后，S2 仍然不应断言页面文字（页面在 M2 前仍是错误页）；前端的包名改为 `@nerve/*` 时，`knip.jsonc` 中的工作区路径不变 |
