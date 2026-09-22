@@ -4,7 +4,7 @@ import { test as base } from "@playwright/test";
 
 import { createApi, type Api } from "./api";
 import { createDatabase, templateDatabase, type Database } from "./db";
-import { startNerve, type Nerve } from "./server";
+import { nerveFixtureTimeoutMs, startNerve, type Nerve } from "./server";
 
 export { expect } from "@playwright/test";
 
@@ -36,7 +36,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await use(nerve);
       await nerve.stop();
     },
-    { scope: "worker" },
+    // Playwright's default worker-fixture budget (30 s, shared by setup and
+    // teardown) is shorter than the fixture's own timeouts; give it room to
+    // let those fire and report first.
+    { scope: "worker", timeout: nerveFixtureTimeoutMs },
   ],
   // page and request resolve relative URLs against the worker's nerve.
   baseURL: async ({ nerve }, use) => {

@@ -109,7 +109,7 @@ jobs:
         run: make e2e
       # 报告中带着失败用例的操作记录（trace）和截图；test-results/ 中另有每个 worker 的 nerve 日志
       - name: Upload the Playwright report
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report

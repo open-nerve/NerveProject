@@ -14,6 +14,15 @@ export const applicationName = "nerve";
 
 const readyTimeoutMs = 30_000;
 const stopTimeoutMs = 30_000;
+const pollIntervalMs = 100;
+
+/**
+ * The worker-fixture timeout for `nerve` in test.ts: Playwright's default
+ * (30 s, shared by setup and teardown) can be shorter than readyTimeoutMs
+ * alone, so the fixture's own timeouts — and the "(log: …)" errors they
+ * produce — could never fire first.
+ */
+export const nerveFixtureTimeoutMs = readyTimeoutMs + stopTimeoutMs + 10_000;
 
 /** A nerve serve process of this run. */
 export interface Nerve {
@@ -43,9 +52,15 @@ export async function startNerve(databaseUrl: string, logFile: string): Promise<
     stdio: ["ignore", log, log],
   });
   closeSync(log); // the child has its own copy
+  // A spawn failure (ENOENT/EACCES) emits "error" instead of "exit"; capture it
+  // so waitUntilReady can surface it through the same log-path error below.
+  let spawnError: Error | undefined;
+  child.once("error", (err) => {
+    spawnError = err;
+  });
   const baseURL = `http://${addr}`;
   try {
-    await waitUntilReady(child, `${baseURL}/readyz`, Date.now() + readyTimeoutMs);
+    await waitUntilReady(child, `${baseURL}/readyz`, Date.now() + readyTimeoutMs, () => spawnError);
   } catch (err) {
     child.kill("SIGKILL");
     throw new Error(`nerve did not become ready (log: ${logFile})`, { cause: err });
@@ -70,8 +85,17 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-/** Polls /readyz until it answers 200; fails when nerve exits or the deadline passes. */
-async function waitUntilReady(child: ChildProcess, readyzUrl: string, deadline: number): Promise<void> {
+/** Polls /readyz until it answers 200; fails when nerve exits, fails to spawn, or the deadline passes. */
+async function waitUntilReady(
+  child: ChildProcess,
+  readyzUrl: string,
+  deadline: number,
+  spawnError: () => Error | undefined
+): Promise<void> {
+  const failure = spawnError();
+  if (failure) {
+    throw failure;
+  }
   if (child.exitCode !== null) {
     throw new Error(`nerve exited with code ${child.exitCode}`);
   }
@@ -80,13 +104,26 @@ async function waitUntilReady(child: ChildProcess, readyzUrl: string, deadline: 
     () => false // not listening yet
   );
   if (ready) {
+    // Another worker's nerve can briefly answer on this port before this
+    // child's own listener binds it; recheck after one more poll interval
+    // that this child is still the process actually running.
+    await sleep(pollIntervalMs);
+    const lateFailure = spawnError();
+    if (lateFailure) {
+      throw lateFailure;
+    }
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(
+        `nerve exited with code ${child.exitCode}, signal ${child.signalCode} right after answering ready`
+      );
+    }
     return;
   }
   if (Date.now() >= deadline) {
     throw new Error(`${readyzUrl} did not answer 200 within ${readyTimeoutMs} ms`);
   }
-  await sleep(100);
-  return waitUntilReady(child, readyzUrl, deadline);
+  await sleep(pollIntervalMs);
+  return waitUntilReady(child, readyzUrl, deadline, spawnError);
 }
 
 async function stop(child: ChildProcess, logFile: string): Promise<void> {
