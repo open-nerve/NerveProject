@@ -35,7 +35,7 @@ created: 2026-09-22
 ## 端口与停机
 
 - 端口竞争的临时缓解（P6 最终评审 Minor 3，`a7d466d`）：`/readyz` 返回 200 之后再等一个轮询间隔，确认子进程仍在运行。根本解决办法留给 M2：nerve 在 `:0` 上监听并报告自己实际绑定的地址（比如写一个地址文件），fixture 直接读取，不用先猜端口再等待。
-- fixture 里的每一次等待都要受 fixture 自己的期限约束，不能只在两次等待之间检查期限（M0 对抗性评审 Important 2，M0 加固已修）：`waitUntilReady` 的每个 `/readyz` 请求都用剩余时间做 `AbortSignal.timeout`；nerve 没有就绪时，先 SIGKILL 并等它退出，再报出带日志路径的错误。M2 新增的等待（认证、快照、地址文件等）照此办理。
+- fixture 里的每一次等待都要受 fixture 自己的期限约束，不能只在两次等待之间检查期限（M0 对抗性评审 Important 2，M0 加固已修）：`waitUntilReady` 的每个 `/readyz` 请求都用剩余时间做 `AbortSignal.timeout`；nerve 没有就绪时，先 SIGKILL 并等它退出，再报出带日志路径的错误。全局准备在任何 Playwright 超时生效之前运行，所以 `runNerve` 超过 60 秒就用 SIGKILL 结束命令；`db.ts` 连接数据库最多等 10 秒，每条查询最多 30 秒（pg 默认一直等）。M2 新增的等待（认证、快照、地址文件等）照此办理。
 - River 的后台任务接入后，重新核对 nerve 的停机时间是否还在 fixture 的超时预算（`readyTimeoutMs + stopTimeoutMs + 10` 秒）之内；River 的 graceful shutdown 可能比 M0 单纯的 HTTP 优雅停机慢。
 
 ## 失败时的录像

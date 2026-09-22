@@ -14,6 +14,7 @@ export const applicationName = "nerve";
 
 const readyTimeoutMs = 30_000;
 const stopTimeoutMs = 30_000;
+const commandTimeoutMs = 60_000;
 const pollIntervalMs = 100;
 
 /**
@@ -33,10 +34,16 @@ export interface Nerve {
 
 /**
  * Runs a nerve command, such as migrate up, with the test configuration on
- * the database at databaseUrl. It rejects when the command exits non-zero.
+ * the database at databaseUrl. It rejects when the command exits non-zero,
+ * and kills it after commandTimeoutMs: global setup runs it before any
+ * Playwright timeout applies.
  */
 export async function runNerve(args: string[], databaseUrl: string): Promise<{ stdout: string; stderr: string }> {
-  return promisify(execFile)(binary, args, { env: nerveEnv(databaseUrl) });
+  return promisify(execFile)(binary, args, {
+    env: nerveEnv(databaseUrl),
+    timeout: commandTimeoutMs,
+    killSignal: "SIGKILL",
+  });
 }
 
 /**
