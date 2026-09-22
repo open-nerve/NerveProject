@@ -1,0 +1,78 @@
+{
+  "$schema": "https://v2-8-12.turborepo.dev/schema.json",
+  "globalDependencies": [".oxfmtrc.json", ".oxlintrc.json"],
+  "globalEnv": [
+    "DEV",
+    "NODE_ENV",
+    "VITE_ADMIN_BASE_PATH",
+    "VITE_ADMIN_BASE_URL",
+    "VITE_API_BASE_PATH",
+    "VITE_API_BASE_URL",
+    "VITE_LIVE_BASE_PATH",
+    "VITE_LIVE_BASE_URL",
+    "VITE_SPACE_BASE_PATH",
+    "VITE_SPACE_BASE_URL",
+    "VITE_SUPPORT_EMAIL",
+    "VITE_WEB_BASE_PATH",
+    "VITE_WEB_BASE_URL",
+    "VITE_WEBSITE_URL"
+  ],
+  "remoteCache": {
+    "enabled": false
+  },
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["dist/**", "build/**", ".react-router/**"]
+    },
+    "build-storybook": {
+      "dependsOn": ["^build"],
+      "outputs": ["storybook-static/**"]
+    },
+    "check": {
+      "dependsOn": ["check:format", "check:lint", "check:types"]
+    },
+    "check:format": {
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": []
+    },
+    "check:lint": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "outputs": []
+    },
+    "check:types": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "outputs": []
+    },
+    "clean": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "persistent": true
+    },
+    "fix": {
+      "cache": false,
+      "dependsOn": ["fix:format", "fix:lint"]
+    },
+    "fix:format": {
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": []
+    },
+    "fix:lint": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
+      "outputs": []
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    }
+  }
+}

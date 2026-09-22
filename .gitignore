@@ -25,3 +25,9 @@ node_modules/
 coverage/
 *.test
 *.out
+
+# 前端的生成物和构建产物
+web/apps/web/.react-router/
+web/apps/web/build/
+web/packages/*/dist/
+web/packages/i18n/src/types/keys.generated.ts
