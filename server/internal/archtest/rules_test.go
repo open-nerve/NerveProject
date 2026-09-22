@@ -1,8 +1,9 @@
 // Package archtest enforces the architecture rules of M0 design 3.7 (and the
 // platform rules of 3.1) as tests. Each rule is a pure predicate over one
 // import edge, so rules are unit-tested on synthetic edges and then applied
-// to the real import graph of the module. A separate test walks the nerve
-// binary's transitive dependencies for modules it must not link.
+// to the real import graph of the module. Two more tests walk transitive
+// dependencies: the nerve binary's, for modules it must not link, and those
+// of domain, app and internal/shared, for infrastructure.
 package archtest
 
 import (

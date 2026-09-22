@@ -41,6 +41,22 @@ func TestPureLayersReachNoInfrastructure(t *testing.T) {
 	}
 }
 
+// The standard library is pure as a whole, including the golang.org/x code it
+// vendors (net, net/mail, crypto/x509, ...): the pure layers may use it, so
+// the walk must not report it. A synthetic graph cannot show this; it takes
+// the real loader.
+func TestStandardLibraryReachesNoInfrastructure(t *testing.T) {
+	for _, pkg := range []string{"net/mail", "crypto/x509"} {
+		g := loadDeps(t, pkg)
+		if _, ok := g[pkg]; !ok {
+			t.Fatalf("dependency graph lacks %s; loaded %d packages", pkg, len(g))
+		}
+		for _, b := range bannedImports(g, pkg, reachesInfrastructure) {
+			t.Errorf("%s reaches %s via %s, want the standard library to count as pure", pkg, b.banned(), b.via())
+		}
+	}
+}
+
 // Infrastructure counts however it is reached: through the standard library
 // or through this module's own packages, which are not infrastructure
 // themselves.

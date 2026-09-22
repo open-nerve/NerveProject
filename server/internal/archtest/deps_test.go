@@ -1,7 +1,6 @@
 package archtest
 
 import (
-	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -10,7 +9,10 @@ import (
 )
 
 // loadDeps reads the import graph of the packages matching pattern and every
-// package they depend on, test files excluded.
+// package they depend on, test files excluded. Edges point at the resolved
+// package paths, the same keys as the nodes: an import as written can differ,
+// e.g. the standard library's golang.org/x/net/... is the package
+// vendor/golang.org/x/net/..., which belongs to the standard library.
 func loadDeps(t *testing.T, pattern string) graph {
 	t.Helper()
 	registerSources(t)
@@ -24,7 +26,12 @@ func loadDeps(t *testing.T, pattern string) graph {
 		for _, e := range p.Errors {
 			t.Errorf("load %s: %v", p.PkgPath, e)
 		}
-		g[p.PkgPath] = slices.Sorted(maps.Keys(p.Imports))
+		deps := make([]string, 0, len(p.Imports))
+		for _, imp := range p.Imports {
+			deps = append(deps, imp.PkgPath)
+		}
+		slices.Sort(deps)
+		g[p.PkgPath] = deps
 	})
 	return g
 }
