@@ -93,3 +93,7 @@ lint-web: ## 前端类型检查（需要 Node）
 .PHONY: test
 test: ## 运行 Go 测试（server，不用测试缓存）
 	cd server && go test -count=1 ./...
+
+.PHONY: plane-schema
+plane-schema: ## 重新生成 Plane 表结构快照（需要 Docker，见 tools/plane-schema/README.md）
+	tools/plane-schema/extract.sh

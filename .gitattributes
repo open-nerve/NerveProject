@@ -1,0 +1,2 @@
+# 生成的 Plane 表结构快照：不做换行符转换（README 按 SHA-256 核对），在 GitHub 上按生成物折叠
+tools/plane-schema/*.sql -text linguist-generated=true

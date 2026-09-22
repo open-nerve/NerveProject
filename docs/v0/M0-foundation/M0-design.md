@@ -293,12 +293,14 @@ api/common.yaml + api/modules/*.yaml
 
 ### 5.3 Plane 表结构快照（`tools/plane-schema/`）
 - **`extract.sh` 做什么**：
-  1. 用 docker compose 启动一个 Postgres 15（Plane 使用的版本），以及 Plane v1.4.2 的后端镜像。
-  2. 在后端镜像里执行 Django 迁移。
-  3. 用 `pg_dump --schema-only --no-owner --no-privileges` 导出表结构，生成 `plane-v1.4.2-schema.sql`。
+  1. 用 docker compose 启动 Postgres 15.7 和 Plane v1.4.2 的后端镜像，两个镜像都写成"标签@摘要"（`tag@digest`），保证重新运行拿到同样的输入。
+  2. `up --detach --wait db` 启动 Postgres 并等到健康检查通过；`run -T migrator` 在后端镜像里执行 `python manage.py migrate --no-input`，`REDIS_URL` 设为一个不存在的主机（一个非空的虚拟值：迁移过程只需要数据库，从未真正连接 Redis）。
+  3. 在 `db` 容器内部执行 `pg_dump --schema-only --no-owner --no-privileges`，导出表结构，生成 `plane-v1.4.2-schema.sql`。
 - **快照文件提交到仓库**：这是之后每个 M 建表时"照搬 Plane"的依据。建表的 M 以快照为起点，再按[差异清单](../plane-diff.md)中的规则修改。
-- **如果官方镜像拿不到**：改为用 Python 在 Plane 源码目录里直接执行迁移。P4 中核实。
-- **README 写明**：Plane 的版本、提交号、生成时间，以及如何重新生成。
+- **不过滤**：快照是 `pg_dump` 的原样输出，未保留的表和 Django、Celery Beat 的系统表都留在里面；保留哪些表属于差异清单会随设计调整，工具只负责如实导出。
+- **README 写明**：Plane 的版本、提交号、两个镜像的"标签@摘要"、生成时间、内容概要，以及如何重新生成。**生成时间**指快照内容最后一次变化的日期：快照本身不含时间戳，重新生成不会改变它。
+- **官方镜像已验证可用**；恢复办法：在对应标签上用 `apps/api/Dockerfile.api` 构建（未验证）。
+- 详见 [P4 spec](specs/P4-plane-schema.md)。
 
 ---
 
@@ -316,6 +318,7 @@ api/common.yaml + api/modules/*.yaml
 | `make test` | Go 单元测试、集成测试、架构测试。需要 Docker（集成测试用 testcontainers） |
 | `make build` | 构建前端，嵌入 Go 程序，编译出 `bin/nerve` |
 | `make e2e` | 构建产物并运行端到端测试（等同于 `pnpm e2e`） |
+| `make plane-schema` | 重新生成 Plane 表结构快照（需要 Docker，Compose 2.22 或更高，见 [P4 spec](specs/P4-plane-schema.md)） |
 
 `gen`、`gen-check`、`lint` 按区域拆分出 `-go`（只需要 Go）和 `-web`（需要 Node，先执行 `pnpm install`）两个后缀（`gen-go`/`gen-web`、`gen-check-go`/`gen-check-web`、`lint-go`/`lint-web`）；不带后缀的命令依次执行两个区域，供本地使用（M0/P3，见 [P3 spec](specs/P3-api-contract.md) 2.10）。
 
@@ -330,6 +333,8 @@ api/common.yaml + api/modules/*.yaml
 | `server` | 安装 Go 1.27.1 → `make gen-check-go` → `make lint-go`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
 | `web` | `corepack enable` → `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查；oxlint 按警告基线，P5 加入） |
 | `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图（P6 加入） |
+
+持续集成不运行 Plane 表结构快照的提取（`make plane-schema`）：两个输入都按摘要写死，快照不会自己变化，见 [P4 spec](specs/P4-plane-schema.md) 2.8。
 
 触发条件：每次推送代码和每个 PR；**同仓库分支的 PR 跳过 `server` 和 `web`**（M0/P3）：两个任务都加了 `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository`。同仓库分支的每个提交已经由 push 事件跑过，PR 页面显示的就是这次的结果；来自 fork 的 PR 没有对应的 push 事件，仍然由 `pull_request` 事件运行。P6 的 `e2e` 任务用 `needs: [server, web]` 依赖这两个任务，这个跳过条件也会经 `needs` 传导过去。
 
@@ -424,7 +429,7 @@ api/common.yaml + api/modules/*.yaml
   - `make gen-check` 在持续集成中生效：故意修改描述文件但不重新生成，持续集成必须失败。
 
 ### P4 `plane-schema`：Plane 表结构快照
-- **交付物**：`tools/plane-schema/` 下的提取脚本、说明文档、快照文件 `plane-v1.4.2-schema.sql`。
+- **交付物**：`tools/plane-schema/` 下的 `compose.yaml`、提取脚本、说明文档、快照文件 `plane-v1.4.2-schema.sql`；`make plane-schema`。
 - **验收**：
   - 重新运行脚本，得到的快照与提交的版本一致。
   - 快照中能找到总体设计 5.2 列出的全部 44 张 Plane 表。
@@ -476,7 +481,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 - [ ] `make build` 能构建出单个可执行文件 `bin/nerve`；它加上一个 Postgres，就能完成 S1 到 S4。
 - [x] 第 7 节的调整建议已确认，并已同步更新到总体设计和差异清单。
 - [ ] 前端改动清单中已登记迁入时的改动。
-- [ ] `handoffs/` 中没有 `open` 状态的事项；需要移交给 M1 或 M2 的事项，已放进对应 M 的 `handoffs/` 目录。
+- [ ] `handoffs/` 中没有 `open` 状态的事项；需要移交给后续 M 的事项，已放进对应 M 的 `handoffs/` 目录。
 - [ ] 总体设计中 M0 的状态改为"已完成"。
 
 ---
@@ -488,7 +493,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 | P1 | repo-toolchain | 已完成 | [spec](specs/P1-repo-toolchain.md) | [plan](plans/P1-repo-toolchain.md) | [review](reviews/P1-repo-toolchain-review.md) |
 | P2 | server-platform | 已完成 | [spec](specs/P2-server-platform.md) | [plan](plans/P2-server-platform.md) | [review](reviews/P2-server-platform-review.md) |
 | P3 | api-contract | 已完成 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | [review](reviews/P3-api-contract-review.md) |
-| P4 | plane-schema | 未开始 | — | — | — |
+| P4 | plane-schema | 已完成 | [spec](specs/P4-plane-schema.md) | [plan](plans/P4-plane-schema.md) | [review](reviews/P4-plane-schema-review.md) |
 | P5 | web-import | 未开始 | — | — | — |
 | P6 | e2e-ci | 未开始 | — | — | — |
 
@@ -500,7 +505,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 |---|---|
 | oapi-codegen 和 kin-openapi 对 OpenAPI 3.1 的支持还比较新 | **已由 M0/P3 验证并解除**：3.1 在整条链路上可用（[P3 spec](specs/P3-api-contract.md) 2.2），不需要改用 3.0.3 |
 | 按模块拆分描述文件后，oapi-codegen 的跨文件引用（`import-mapping`）表现不符合预期 | **已由 M0/P3 验证并解除**：表现符合预期，公共组件通过 import-mapping 生成到共享包 `apigen`，不需要退回"单个描述文件 + `include-tags`"的备选方案 |
-| Plane 后端镜像无法获取，或者在当前环境中跑不起来 | 改为从源码执行迁移（P4） |
+| Plane 后端镜像无法获取，或者在当前环境中跑不起来 | **已由 M0/P4 验证并解除**：官方镜像可用；恢复办法：在对应标签上用 `apps/api/Dockerfile.api` 构建（未验证） |
 | Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | 使用 pnpm 缓存和 turbo 的本地缓存；如果还不够，在 P5 评估其他办法 |
 | River 仍是 0.x 版本，小版本之间可能有行为变化 | M2 接入时锁定具体的版本号 |
 | 持续集成拉取 Postgres 镜像受 Docker Hub 匿名拉取频率限制 | 出现限流时，在持续集成中登录 Docker Hub 或改用镜像缓存 |

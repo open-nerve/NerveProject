@@ -5,7 +5,7 @@
 | 版本 | v0（启动首版，覆盖 M0–M8） |
 | 日期 | 2026-09-22 |
 | 状态 | 已批准 |
-| 代码基线 | Plane v1.4.2，提交 `02c19e1`（仅作参考，放在仓库外的 `plane/`） |
+| 代码基线 | Plane v1.4.2，提交 `02c19e1`（仅作参考，放在仓库外的 `plane/`；`02c19e1` 是 `preview` 分支，`v1.4.2` 标签指向 `5f7d927`，两者的迁移文件逐字节相同，见 [`tools/plane-schema/README.md`](../../tools/plane-schema/README.md)） |
 | 协议 | AGPL-3.0 |
 | 仓库 | https://github.com/open-nerve/NerveProject |
 
@@ -317,7 +317,7 @@ draft_issues(id, workspace_id, project_id NULL, payload jsonb,
 ### 5.6 工具
 - **数据库**：PostgreSQL 18。
 - **迁移**：goose（纯 SQL），迁移文件内嵌进程序。
-- **建表方式**：**每个 M 为自己模块的表编写迁移**，不在 M0 一次性建全部表。起点是 M0 生成的 Plane 表结构快照（`tools/plane-schema/`：在临时库上跑完 Plane 自带的 Django 迁移，再用 `pg_dump --schema-only` 导出），然后按 5.3 和[差异清单](plane-diff.md)修改。**不手抄。**
+- **建表方式**：**每个 M 为自己模块的表编写迁移**，不在 M0 一次性建全部表。起点是 M0 生成的 Plane 表结构快照 [`tools/plane-schema/plane-v1.4.2-schema.sql`](../../tools/plane-schema/plane-v1.4.2-schema.sql)（在临时库上跑完 Plane 自带的 Django 迁移，再用 `pg_dump --schema-only` 导出），然后按 5.3 和[差异清单](plane-diff.md)修改。**不手抄。**
 - **外键方向**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键；指向更晚建立的模块的外键，由后建的模块用 `ALTER TABLE` 补上。
 - **数据访问**：pgx + sqlc，手写 SQL，生成类型安全的 Go 代码。
 
