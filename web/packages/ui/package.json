@@ -32,14 +32,9 @@
     "@plane/types": "workspace:*",
     "@plane/utils": "workspace:*",
     "@popperjs/core": "catalog:",
-    "clsx": "catalog:",
     "lodash-es": "catalog:",
-    "lucide-react": "catalog:",
     "react-color": "catalog:",
-    "react-day-picker": "catalog:",
-    "react-popper": "catalog:",
-    "tailwind-merge": "catalog:",
-    "use-font-face-observer": "catalog:"
+    "react-popper": "catalog:"
   },
   "devDependencies": {
     "@plane/typescript-config": "workspace:*",

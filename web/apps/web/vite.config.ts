@@ -27,7 +27,6 @@ export default defineConfig(() => ({
       // Next.js compatibility shims used within web
       "next/link": path.resolve(__dirname, "app/compat/next/link.tsx"),
       "next/navigation": path.resolve(__dirname, "app/compat/next/navigation.ts"),
-      "next/script": path.resolve(__dirname, "app/compat/next/script.tsx"),
     },
     dedupe: ["react", "react-dom", "@headlessui/react"],
   },

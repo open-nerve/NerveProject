@@ -72,6 +72,33 @@
         ],
         "miss": ["\"@tanstack/react-table\": \"catalog:\"", "user story"]
       }
+    },
+    {
+      "id": "next-shim-dead-files",
+      "phase": "M1/P1",
+      "why": "Next.js 垫片中没人用的 image、script 及 next/script 的类型声明；其余垫片在 M1/P4 删除",
+      "path": {
+        "source": "^web/apps/web/app/(?:compat/next/(?:image|script)\\.tsx?|types/next-(?:image|script)\\.d\\.ts)$",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["web/apps/web/app/compat/next/image.tsx", "web/apps/web/app/types/next-script.d.ts"],
+        "miss": ["web/apps/web/app/compat/next/link.tsx", "web/apps/web/app/types/next-link.d.ts"]
+      }
+    },
+    {
+      "id": "next-script-image",
+      "phase": "M1/P1",
+      "why": "next/script、next/image 的导入、别名和模块声明；next/link、next/navigation 在 M1/P4 删除",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "[\"'`]next/(?:script|image)[\"'`]", "flags": "" },
+      "samples": {
+        "hit": [
+          "import Script from \"next/script\";",
+          "      \"next/script\": path.resolve(__dirname, \"app/compat/next/script.tsx\"),"
+        ],
+        "miss": ["import Link from \"next/link\";", "// Minimal shim so code using next/image compiles"]
+      }
     }
   ],
   "exceptions": []

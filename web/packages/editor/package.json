@@ -50,7 +50,6 @@
     "@tiptap/extension-emoji": "catalog:",
     "@tiptap/extension-heading": "catalog:",
     "@tiptap/extension-image": "catalog:",
-    "@tiptap/extension-list-item": "catalog:",
     "@tiptap/extension-mention": "catalog:",
     "@tiptap/extension-placeholder": "catalog:",
     "@tiptap/extension-task-item": "catalog:",
@@ -83,13 +82,11 @@
     "yjs": "catalog:"
   },
   "devDependencies": {
-    "@plane/tailwind-config": "workspace:*",
     "@plane/typescript-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "postcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:"
   },
