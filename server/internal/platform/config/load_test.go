@@ -13,6 +13,8 @@ const testBase = `
 server:
   addr: ":8080"
   read_header_timeout: 5s
+  read_timeout: 30s
+  write_timeout: 60s
   shutdown_timeout: 20s
 database:
   url: ""
@@ -64,6 +66,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 		Server: ServerConfig{
 			Addr:              ":8080",         // built-in config.yaml
 			ReadHeaderTimeout: 9 * time.Second, // environment beats config.local.yaml
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      60 * time.Second,
 			ShutdownTimeout:   40 * time.Second,
 		},
 		Database: DatabaseConfig{

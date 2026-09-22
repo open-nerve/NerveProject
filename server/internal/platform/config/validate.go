@@ -17,8 +17,18 @@ func (c Config) validate() error {
 	if _, _, err := net.SplitHostPort(c.Server.Addr); err != nil {
 		fail("server.addr", "must be host:port, e.g. \":8080\", got %q", c.Server.Addr)
 	}
-	if c.Server.ReadHeaderTimeout <= 0 {
+	switch {
+	case c.Server.ReadHeaderTimeout <= 0:
 		fail("server.read_header_timeout", "must be positive, got %s", c.Server.ReadHeaderTimeout)
+	case c.Server.ReadTimeout > 0 && c.Server.ReadHeaderTimeout > c.Server.ReadTimeout:
+		// read_timeout covers the headers too, so the longer limit would never apply.
+		fail("server.read_header_timeout", "must not exceed server.read_timeout (%s), got %s", c.Server.ReadTimeout, c.Server.ReadHeaderTimeout)
+	}
+	if c.Server.ReadTimeout <= 0 {
+		fail("server.read_timeout", "must be positive, got %s", c.Server.ReadTimeout)
+	}
+	if c.Server.WriteTimeout <= 0 {
+		fail("server.write_timeout", "must be positive, got %s", c.Server.WriteTimeout)
 	}
 	if c.Server.ShutdownTimeout <= 0 {
 		fail("server.shutdown_timeout", "must be positive, got %s", c.Server.ShutdownTimeout)

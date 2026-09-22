@@ -19,6 +19,8 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 		"config.env=test",
 		"config.server.addr=:8080",
 		"config.server.read_header_timeout=5s",
+		"config.server.read_timeout=30s",
+		"config.server.write_timeout=1m0s",
 		"config.server.shutdown_timeout=20s",
 		"config.database.url=xxxxx",
 		"config.database.max_conns=10",

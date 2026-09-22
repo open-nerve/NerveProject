@@ -24,13 +24,20 @@ type Server struct {
 }
 
 // NewServer serves h behind the platform middleware chain
-// (request ID -> recover -> access log).
+// (request ID -> recover -> access log). Every phase of a connection is
+// bounded: request headers (server.read_header_timeout), the whole request
+// with its body (server.read_timeout), the response (server.write_timeout)
+// and idle keep-alive (idleTimeout). A handler that legitimately needs longer,
+// such as a file upload, extends its own deadlines with
+// http.ResponseController instead of raising them for every request.
 func NewServer(cfg config.ServerConfig, h http.Handler, logger *slog.Logger) *Server {
 	return &Server{
 		srv: &http.Server{
 			Addr:              cfg.Addr,
 			Handler:           middleware(h, logger),
 			ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+			ReadTimeout:       cfg.ReadTimeout,
+			WriteTimeout:      cfg.WriteTimeout,
 			IdleTimeout:       idleTimeout,
 			ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelWarn),
 		},

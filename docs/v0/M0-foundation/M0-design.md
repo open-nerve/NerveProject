@@ -176,7 +176,8 @@ NerveProject/
 - **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；领域错误码的体系在 M2 建立。
 - **生成代码的错误出口**（M0/P3）：oapi-codegen 生成的代码在参数绑定、请求体解码、handler 返回错误三处默认输出纯文本；`httpserver.APIErrors` 把三处都接成 problem+json：绑定或解码失败 → `BadRequest`（400 `bad_request`，`detail` 是失败原因）；handler 出错或响应写出失败 → `InternalError`（500 `internal_error`，不带 `detail`；响应已经开始时改为记录日志并中断连接，不追加 problem）。
 - **非规范的 `/api/` 路径**：例如 `/api/v0//instance`、`/api/v0/./instance`、`/api`，Go 的 `ServeMux` 会先返回 307 跳转到规范路径，而不是直接落进平台的 404 兜底。M0/P3 评审后接受这个行为，不作特殊处理。
-- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。`http.Server` 另设 2 分钟的空闲连接超时。
+- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。
+- **连接的每个阶段都有上限**：读请求头（`server.read_header_timeout`）、读整个请求含请求体（`server.read_timeout`）、写响应（`server.write_timeout`），以及 2 分钟的空闲连接超时（包内常量）。只限制请求头不够：客户端发完请求头、声明了请求体却不发，服务端会一直等（M0 对抗性评审 Critical 2）。确实要更久的接口（M5 的文件上传、下载）在自己的 handler 里用 `http.ResponseController` 单独放宽，不调大全局值。
 - 详见 [P2 spec](specs/P2-server-platform.md) 2.7 节。
 
 ### 3.4 内嵌前端（`platform/webui`）
@@ -210,6 +211,8 @@ NerveProject/
   server:
     addr: ":8080"
     read_header_timeout: 5s
+    read_timeout: 30s     # 不小于 read_header_timeout
+    write_timeout: 60s
     shutdown_timeout: 20s
   database:
     url: ""              # 必须提供

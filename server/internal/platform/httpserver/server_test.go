@@ -20,11 +20,23 @@ var client = &http.Client{Timeout: 5 * time.Second}
 // context starts the shutdown; done yields the result of Serve.
 func startServer(t *testing.T, shutdownTimeout time.Duration, h http.Handler) (string, context.CancelFunc, <-chan error) {
 	t.Helper()
+	cfg := config.ServerConfig{
+		ReadHeaderTimeout: time.Second,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      5 * time.Second,
+		ShutdownTimeout:   shutdownTimeout,
+	}
+	return startServerWith(t, cfg, h)
+}
+
+// startServerWith is startServer with the given timeouts; cfg.Addr is ignored.
+func startServerWith(t *testing.T, cfg config.ServerConfig, h http.Handler) (string, context.CancelFunc, <-chan error) {
+	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg := config.ServerConfig{Addr: ln.Addr().String(), ReadHeaderTimeout: time.Second, ShutdownTimeout: shutdownTimeout}
+	cfg.Addr = ln.Addr().String()
 	srv := NewServer(cfg, h, slog.New(slog.DiscardHandler))
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -131,6 +143,56 @@ func TestShutdownGivesUpAfterTimeout(t *testing.T) {
 	}
 	if elapsed := time.Since(begin); elapsed > 2*time.Second {
 		t.Errorf("shutdown took %s, want about the 100ms timeout", elapsed)
+	}
+}
+
+// read_header_timeout stops at the headers. A client that sends complete
+// headers but never the body it announced must still let go of the
+// connection: read_timeout bounds the whole request.
+func TestReadTimeoutReleasesARequestWhoseBodyNeverArrives(t *testing.T) {
+	cfg := config.ServerConfig{
+		ReadHeaderTimeout: 100 * time.Millisecond,
+		ReadTimeout:       300 * time.Millisecond,
+		WriteTimeout:      5 * time.Second,
+		ShutdownTimeout:   time.Second,
+	}
+	url, _, _ := startServerWith(t, cfg, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "ok")
+	}))
+	conn, err := net.Dial("tcp", strings.TrimPrefix(url, "http://"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	if _, err := io.WriteString(conn, "GET / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 1\r\n\r\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	_, err = io.ReadAll(conn) // returns once the server closes the connection
+	if ne, ok := errors.AsType[net.Error](err); ok && ne.Timeout() {
+		t.Fatal("the server still holds the connection after 3s, want it closed after the 300ms read_timeout")
+	}
+}
+
+// write_timeout bounds producing and writing the response, so neither a
+// stalled handler nor a client that stops reading holds a connection forever.
+func TestWriteTimeoutCutsOffAStalledResponse(t *testing.T) {
+	cfg := config.ServerConfig{
+		ReadHeaderTimeout: time.Second,
+		ReadTimeout:       time.Second,
+		WriteTimeout:      200 * time.Millisecond,
+		ShutdownTimeout:   time.Second,
+	}
+	url, _, _ := startServerWith(t, cfg, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(500 * time.Millisecond)
+		_, _ = io.WriteString(w, "late")
+	}))
+
+	resp, err := client.Get(url + "/late")
+	if err == nil {
+		_ = resp.Body.Close()
+		t.Fatalf("GET /late = %d, want the connection cut off after the 200ms write_timeout", resp.StatusCode)
 	}
 }
 
