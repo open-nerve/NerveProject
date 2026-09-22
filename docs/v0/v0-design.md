@@ -269,7 +269,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | 接口日志 | `api_activity_logs` |
 | 文件 | `file_assets` |
 
-归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表，由 River 自己的迁移管理。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
+归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表：用 River 为锁定版本导出的迁移 SQL（`river migrate-get`）写成 goose 迁移，和业务表在同一条迁移链上——一个版本表、一次 `migrate up`、一个就绪检查，e2e 的模板库也只迁移一次；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
 
 ### 5.3 主要改动
 
