@@ -87,7 +87,7 @@ lint-go: tools ## 运行 golangci-lint（server）
 
 .PHONY: lint-web
 lint-web: ## 前端类型检查（需要 Node）
-	pnpm -r run typecheck
+	pnpm -r run check:types
 
 .PHONY: test
 test: ## 运行 Go 测试（server）

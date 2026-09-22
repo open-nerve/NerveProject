@@ -1,4 +1,4 @@
-// Compile-time checks, run by `pnpm typecheck`: tsc fails when the generated
+// Compile-time checks, run by `pnpm check:types`: tsc fails when the generated
 // types stop matching how clients call the API. Nothing here is executed.
 import { createClient, type components } from "../src/index";
 

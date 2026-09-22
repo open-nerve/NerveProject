@@ -9,7 +9,7 @@
   },
   "scripts": {
     "gen": "openapi-typescript ../../../api/dist/openapi.yaml --output src/schema.gen.ts",
-    "typecheck": "tsc --noEmit"
+    "check:types": "tsc --noEmit"
   },
   "dependencies": {
     "openapi-fetch": "0.17.0"
