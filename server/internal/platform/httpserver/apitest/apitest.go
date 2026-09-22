@@ -1,6 +1,9 @@
 // Package apitest checks HTTP responses against nerve's OpenAPI contract,
-// api/dist/openapi.yaml, with kin-openapi. Only tests import it (architecture
-// rule 8), so kin-openapi never reaches the nerve binary.
+// api/dist/openapi.yaml, with kin-openapi. Architecture rule 8 lets only
+// tests import this package, which keeps it out of the nerve binary. That
+// kin-openapi stays out of the binary by any other route too (generated code
+// with an embedded spec, a validator middleware) is guarded separately, by
+// archtest's check of the binary's transitive dependencies.
 package apitest
 
 import (
