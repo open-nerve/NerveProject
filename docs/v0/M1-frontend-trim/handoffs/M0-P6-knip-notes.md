@@ -32,4 +32,13 @@ created: 2026-09-22
 - `.env.example` 整体删除、`vite.config.ts` 的 dotenv 加载复查，已经在 P5 交给 M1 的 [M0-P5-frontend-trim-notes](M0-P5-frontend-trim-notes.md) 里，P6 不另建。
 - P6 只补充：S2 的同源断言保留，作为回归检查，继续防止 `web/apps/web/.env` 悄悄混进构建；去掉 dotenv 加载之后，README"前端"一节"不要建立 `web/apps/web/.env`"一条和"端到端测试"一节"同源"一条里对它的引用要随之修改。
 
+## 处理结果（M1/P1）
+
+状态仍为 `open`：knip 改为门禁和配置提示在 M1/P3，S2 与包名在 M1/P5，`.env` 在 M1/P4。M1/P1 处理了以下几项（[P1 spec](../specs/P1-web-hygiene.md)）：
+
+1. 配置提示的来源：`tailwind-config` 的 `main` 已删除；i18n 的翻译键生成和 `knip.jsonc` 中它的 `ignoreUnresolved` 已删除。现在最多剩 web 的 `+types/` 一条，是否出现取决于本地是否运行过 react-router 的类型生成（spec 2.10、2.12）。
+2. lint 上限：`@nerve/api-client`、`@nerve/e2e` 保持 0，由 `tools/lint-cap.mjs` 核对（spec 2.3）。
+3. 锁文件核对改用一次性脚本逐项比较 importers 和存活包（spec 2.6）；importers 的变化只有删除、两处对等后缀和 i18n 新增的 `vitest`。
+4. 新增的 `tools/keywords.mjs` 由 `make lint-web` 调用，`knip.jsonc` 的根工作区把它列为 `entry`（spec 2.4）。
+
 来源：[M0/P6 评审记录](../../M0-foundation/reviews/P6-e2e-ci-review.md)。

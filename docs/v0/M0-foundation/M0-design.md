@@ -121,6 +121,8 @@ NerveProject/
     stories/smoke/              冒烟故事 S1–S4（见第 9 节；M0 没有业务领域，故事都放在 smoke 下）
   deploy/compose.dev.yaml       开发环境（Postgres 18）
   tools/plane-schema/           Plane 表结构快照工具和快照文件
+  tools/lint-cap.mjs            前端各包的 oxlint 警告数与上限的核对（M1/P1 加入，见 5.2）
+  tools/keywords.mjs            关键词守卫，规则在 tools/keywords.json（M1/P1 加入，见 M1 设计 7.4）
   docs/
 ```
 
@@ -303,7 +305,7 @@ api/common.yaml + api/modules/*.yaml
 - **做法**：上限改为实测的警告数，并定下一条规则：**上限只能往下调，不能往上调**。M0/P5 实测的上限（在根目录的 `.oxlintrc.json` 下测量）：web 779、editor 75、propel 59、utils 34、ui 32、services 6、hooks 4、i18n 3、constants 2、types 1、shared-state 0、api-client 0（新增脚本），合计 995 条（原来误写为 1005，M1 设计时更正）。
   - 任何提交如果让警告数超过上限，持续集成就失败。
   - 警告数下降后，要在同一个提交里把上限调低到新的数值。
-- **后续**：M1 删掉大量代码后，重新测出一组更低的基线，并在 M1 设计文档里制定逐步清零的计划，同时决定是否加"警告减少后必须调低上限"的自动检查。
+- **自动核对（M1/P1 起）**：每个包的 `check:lint` 是 `node <到仓库根目录的相对路径>/tools/lint-cap.mjs <上限>`，警告数必须**等于**上限，多了或少了 `make lint-web` 都失败；少了时提示应调低到的数值，所以上限总是实测值，不需要单独重新测量。M1/P1 之后的上限：web 777、editor 75、utils 34、ui 31、propel 29、hooks 4、constants 2、types 1、i18n 1，其余为 0，合计 954 条（[M1/P1 spec](../M1-frontend-trim/specs/P1-web-hygiene.md) 2.3）。逐步清零的计划见 [M1 设计](../M1-frontend-trim/M1-design.md) 7.3。
 - 这一条是对总体设计 7.6"oxlint 警告即报错"的修正，见 7.3。
 
 ### 5.3 Plane 表结构快照（`tools/plane-schema/`）
@@ -326,29 +328,30 @@ api/common.yaml + api/modules/*.yaml
 |---|---|
 | `make dev-db` / `make dev-db-down` | 启动或停止开发数据库（`deploy/compose.dev.yaml`） |
 | `make run` | 以 dev 配置运行后端（`go run ./cmd/nerve serve`） |
-| `make web-dev` | 启动前端开发服务器（Vite，把 `/api` 转发给后端） |
+| `make web-dev` | 启动前端开发服务器（Vite，把 `/api` 转发给后端），同时监视 `web/packages/*`（M1/P1） |
 | `make gen` | 重新生成所有代码：Go 接口层、打包后的 OpenAPI 描述、TS 客户端 |
 | `make gen-check` | 重新生成，并检查生成物是否已提交且没有差异 |
-| `make lint` | golangci-lint；前端的类型检查、oxlint（按警告基线）、格式检查 |
+| `make lint` | golangci-lint；关键词守卫，前端的类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致性，`tools/` 下脚本的 lint 和格式检查（守卫和后三项的改动来自 M1/P1） |
 | `make test` | Go 单元测试、集成测试、架构测试。需要 Docker（集成测试用 testcontainers） |
+| `make test-web` | 前端单元测试（各包的 vitest，经 turbo；需要 Node；M1/P1 加入） |
 | `make build-web` | 构建前端，产物在 `web/apps/web/build/client/`（只需要 Node） |
 | `make build` | 依赖 `build-web`；把构建产物嵌入 Go 程序，编译出 `bin/nerve` |
 | `make e2e` | 构建产物并运行端到端测试；需要 Docker，浏览器要先单独安装一次（README）；`VERSION` 写进构建产物，`NERVE_VERSION` 把同一个值交给测试核对 |
 | `make knip` | 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1 起作为门禁） |
 | `make plane-schema` | 重新生成 Plane 表结构快照（需要 Docker，Compose 2.22 或更高，见 [P4 spec](specs/P4-plane-schema.md)） |
 
-`gen`、`gen-check`、`lint` 按区域拆分出 `-go`（只需要 Go）和 `-web`（需要 Node，先执行 `pnpm install`）两个后缀（`gen-go`/`gen-web`、`gen-check-go`/`gen-check-web`、`lint-go`/`lint-web`）；不带后缀的命令依次执行两个区域，供本地使用（M0/P3，见 [P3 spec](specs/P3-api-contract.md) 2.10）。
+`gen`、`gen-check`、`lint` 按区域拆分出 `-go`（只需要 Go）和 `-web`（需要 Node，先执行 `pnpm install`）两个后缀（`gen-go`/`gen-web`、`gen-check-go`/`gen-check-web`、`lint-go`/`lint-web`）；不带后缀的命令依次执行两个区域，供本地使用（M0/P3，见 [P3 spec](specs/P3-api-contract.md) 2.10）。`test-web` 是前端单独的入口；`make test` 仍只运行 Go 测试，持续集成的 `server` 任务调用它，不需要 Node（M1/P1）。
 
 ### 6.2 开发流程
 1. 执行 `make dev-db`，启动本地的 Postgres 18。
 2. 执行 `make run`，后端监听 `:8080`；dev 环境下会自动执行迁移。
-3. 执行 `make web-dev`，前端运行在 http://127.0.0.1:3000 ，接口请求会被转发到后端。只运行 web 自己的开发服务器；改了 `web/packages/*` 下的代码，要重新执行 `make web-dev`。
+3. 执行 `make web-dev`，前端运行在 http://127.0.0.1:3000 ，接口请求会被转发到后端。它同时监视 `web/packages/*`：改了某个包的代码，这个包的 `dev` 任务（tsdown）重新构建，页面随之更新（M1/P1；M0 中只运行 web 自己的开发服务器）。
 
 ### 6.3 持续集成（`.github/workflows/ci.yml`）
 | 任务 | 内容 |
 |---|---|
 | `server` | 安装 Go 1.27.1 → `make gen-check-go` → `make lint-go`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
-| `web` | `corepack enable` → 缓存 pnpm 存储（按锁文件的哈希）→ `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查、oxlint 按警告基线、格式检查）→ `make knip`（未使用代码报告，M0/P6 加入）→ `make build-web`（M0/P5 加入） |
+| `web` | `corepack enable` → 缓存 pnpm 存储（按锁文件的哈希）→ `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（关键词守卫、类型检查、oxlint 警告数等于上限、格式检查、中英文翻译键一致性；守卫和后两项的改动来自 M1/P1）→ `make test-web`（前端单元测试，M1/P1 加入）→ `make knip`（未使用代码报告，M0/P6 加入）→ `make build-web`（M0/P5 加入） |
 | `e2e` | 在 `server` 和 `web` 通过后运行：安装 Playwright 的 Chromium Headless Shell（`--with-deps`）→ `make build` → `make e2e`；`VERSION=0.0.0-ci.<运行编号>`；超时 20 分钟；失败或被取消时上传 `playwright-report`、`test-results`（P6 加入） |
 
 持续集成不运行 Plane 表结构快照的提取（`make plane-schema`）：两个输入都按摘要写死，快照不会自己变化，见 [P4 spec](specs/P4-plane-schema.md) 2.8。

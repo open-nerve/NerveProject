@@ -27,4 +27,18 @@ created: 2026-09-22
 - 构建时的两条警告：`tailwind-config` 的 `package.json` 缺少 `"type": "module"`（Node 的 `MODULE_TYPELESS_PACKAGE_JSON`）；Vite 8 已支持 `resolve.tsconfigPaths`，`vite-tsconfig-paths` 插件可以去掉。
 - `make web-dev` 只运行 web 自己的开发服务器，改了 `web/packages/*` 下的代码要重新执行；需要同时监视各包时改为 `turbo run dev --filter=web...`，并把并发数设为 11 以上。
 
+## 处理结果（M1/P1）
+
+状态仍为 `open`：`.env.example`、dotenv 加载和 `define: { "process.env": … }`，以及深层路径的结尾 `/`，按 M1 设计第 4 节在 M1/P4 处理。其余事项已在 M1/P1 处理（[P1 spec](../specs/P1-web-hygiene.md)）：
+
+1. 部署遗留：`Dockerfile.web`、`Dockerfile.dev`、`caddy/`、`.dockerignore`，`serve` 依赖和 `start`、`preview` 脚本，`sw.js`、`workbox-*.js` 及其 source map 已删除；另外删了 `web/apps/web/.gitignore`、`manifest.json` 和 `public/favicon/`（spec 2.5）。关键词守卫的规则看住它们（spec 2.4）。
+2. Express 相关的覆盖项：`path-to-regexp: 0.1.13` 删除（删掉 `serve` 之后只剩 Express 5 的 `router` 依赖 path-to-regexp，由 `router>path-to-regexp` 决定）；`@react-router/serve>express`、`router>path-to-regexp`、`body-parser`、`morgan`、`qs` 仍作用于锁文件中的包，保留。`turbo.json` 中 admin、space、live 的环境变量随 `process.env` 注入在 M1/P4 删除（M1 设计 4.1）。
+3. `pnpm-workspace.yaml` 中讲 apps/live、Express 4、部署镜像、`.npmrc` 的英文句子已删除（spec 2.6）。
+4. 锁文件核对：P1 每次改依赖之后都用一次性脚本比较了 importers 和存活包的版本、完整性哈希、依赖边，一共删掉 369 个包，没有新增；catalog、overrides、allowBuilds、minimumReleaseAgeExclude、patchedDependencies、peerDependencyRules 中没有失效的条目（spec 2.6）。P2、P3 和收尾各再核对一次（M1 设计 9.7）。
+5. `turbo.json` 删掉 `start`、`build-storybook`、`clean`、`check`、`fix`、`fix:lint`；`fix:format` 是 README 写明的入口，保留；`test` 由新的 `make test-web` 调用，保留（spec 2.7）。
+6. 警告基线改为自动核对：警告数必须等于上限（`tools/lint-cap.mjs`，spec 2.3）。
+7. React #418 已修复（spec 2.11）。
+8. 两条构建警告已消除（spec 2.10）。
+9. `make web-dev` 改为 `turbo run dev --filter=web... --concurrency=12`，同时监视各包，已在运行中的页面上核对（spec 2.13）。
+
 来源：[M0/P5 评审记录](../../M0-foundation/reviews/P5-web-import-review.md)。
