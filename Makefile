@@ -24,6 +24,8 @@ check-committed = test -z "$$(git status --porcelain -- $(1))" || { git status -
 # 前端任务由 turbo 按 turbo.json 编排；关闭匿名使用数据上报，只打印失败任务的输出
 TURBO := TURBO_TELEMETRY_DISABLED=1 pnpm exec turbo
 TURBO_QUIET := --output-logs=errors-only
+# make build 把前端的构建产物复制到这里，由 go:embed 编进 nerve
+WEBUI_DIST := server/internal/platform/webui/dist
 
 .PHONY: help
 help: ## 列出所有命令
@@ -101,6 +103,16 @@ lint-web: ## 前端类型检查、oxlint（按警告基线）、格式检查（�
 .PHONY: test
 test: ## 运行 Go 测试（server，不用测试缓存）
 	cd server && go test -count=1 ./...
+
+.PHONY: build
+build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需要 Node 和 Go）
+	find $(WEBUI_DIST) -mindepth 1 ! -name .gitkeep -delete
+	cp -R web/apps/web/build/client/. $(WEBUI_DIST)/
+	cd server && go build -o ../bin/nerve ./cmd/nerve
+
+.PHONY: build-web
+build-web: ## 构建前端，产物在 web/apps/web/build/client（需要 Node；持续集成 web 任务）
+	$(TURBO) run build --filter=web $(TURBO_QUIET)
 
 .PHONY: plane-schema
 plane-schema: ## 重新生成 Plane 表结构快照（需要 Docker，见 tools/plane-schema/README.md）
