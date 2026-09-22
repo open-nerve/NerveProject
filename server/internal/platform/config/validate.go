@@ -21,7 +21,8 @@ func (c Config) validate() error {
 	case c.Server.ReadHeaderTimeout <= 0:
 		fail("server.read_header_timeout", "must be positive, got %s", c.Server.ReadHeaderTimeout)
 	case c.Server.ReadTimeout > 0 && c.Server.ReadHeaderTimeout > c.Server.ReadTimeout:
-		// read_timeout covers the headers too, so the longer limit would never apply.
+		// read_timeout is the budget for the whole request: a longer header limit
+		// would let the headers alone outlast it and leave the body no time.
 		fail("server.read_header_timeout", "must not exceed server.read_timeout (%s), got %s", c.Server.ReadTimeout, c.Server.ReadHeaderTimeout)
 	}
 	if c.Server.ReadTimeout <= 0 {

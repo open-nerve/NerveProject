@@ -169,15 +169,22 @@ func TestReadTimeoutReleasesARequestWhoseBodyNeverArrives(t *testing.T) {
 	}
 
 	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
-	_, err = io.ReadAll(conn) // returns once the server closes the connection
+	reply, err := io.ReadAll(conn) // returns once the server closes the connection
 	if ne, ok := errors.AsType[net.Error](err); ok && ne.Timeout() {
 		t.Fatal("the server still holds the connection after 3s, want it closed after the 300ms read_timeout")
 	}
+	// The handler answered, so the headers were read in time: it was the
+	// missing body, not the header timeout, that ended the connection.
+	if !strings.HasPrefix(string(reply), "HTTP/1.1 200 ") {
+		t.Errorf("reply = %q, want the handler's 200 before the connection closed", reply)
+	}
 }
 
-// write_timeout bounds producing and writing the response, so neither a
-// stalled handler nor a client that stops reading holds a connection forever.
-func TestWriteTimeoutCutsOffAStalledResponse(t *testing.T) {
+// write_timeout bounds how long the response may take to produce and send: a
+// handler that answers late, or a client that stops reading, cannot hold the
+// response past it. It fails the writes; it neither stops the handler nor
+// cancels its context.
+func TestWriteTimeoutCutsOffALateResponse(t *testing.T) {
 	cfg := config.ServerConfig{
 		ReadHeaderTimeout: time.Second,
 		ReadTimeout:       time.Second,

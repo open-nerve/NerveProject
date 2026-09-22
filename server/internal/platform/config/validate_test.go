@@ -53,8 +53,8 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 	}
 }
 
-// read_timeout covers the headers too, so a longer read_header_timeout
-// would never take effect.
+// read_timeout is the budget for the whole request, so the headers alone may
+// not be allowed longer.
 func TestValidateRejectsHeaderTimeoutAboveReadTimeout(t *testing.T) {
 	cfg := validConfig()
 	cfg.Server.ReadHeaderTimeout = 40 * time.Second

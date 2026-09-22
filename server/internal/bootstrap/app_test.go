@@ -44,8 +44,14 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		t.Fatal(err)
 	}
 	return config.Config{
-		Env:      config.EnvTest,
-		Server:   config.ServerConfig{Addr: addr, ReadHeaderTimeout: time.Second, ShutdownTimeout: 5 * time.Second},
+		Env: config.EnvTest,
+		Server: config.ServerConfig{
+			Addr:              addr,
+			ReadHeaderTimeout: time.Second,
+			ReadTimeout:       5 * time.Second,
+			WriteTimeout:      5 * time.Second,
+			ShutdownTimeout:   5 * time.Second,
+		},
 		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate},
 		Log:      config.LogConfig{Level: "error", Format: "text"},
 	}
