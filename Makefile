@@ -104,11 +104,11 @@ lint-go: tools ## 运行 golangci-lint（server）
 .PHONY: lint-web
 lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致（需要 Node）
 	node tools/keywords.mjs
-	$(TURBO) run check:types check:lint check:format check:sync $(TURBO_QUIET)
+	$(TURBO) run check:types check:lint check:format check:sync $(TURBO_QUIET) --continue
 
-# M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1 去掉 --no-exit-code，作为门禁
+# M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1/P3 去掉 --no-exit-code，作为门禁
 .PHONY: knip
-knip: ## 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1 起作为门禁）
+knip: ## 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1/P3 起作为门禁）
 	pnpm exec knip --no-exit-code
 
 # go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存

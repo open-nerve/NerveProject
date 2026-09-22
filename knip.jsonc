@@ -1,4 +1,4 @@
-// knip：找出未使用的文件、导出和依赖（M0 只出报告，M1 起作为门禁，见 docs/v0/M0-foundation/specs/P6-e2e-ci.md）。
+// knip：找出未使用的文件、导出和依赖（M0 只出报告，M1/P3 起作为门禁，见 docs/v0/M0-foundation/specs/P6-e2e-ci.md）。
 // 构建产物都在 .gitignore 中，knip 读取 .gitignore，不需要另外忽略。
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
