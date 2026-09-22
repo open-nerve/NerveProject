@@ -62,7 +62,7 @@ export async function startNerve(databaseUrl: string, logFile: string): Promise<
   try {
     await waitUntilReady(child, `${baseURL}/readyz`, Date.now() + readyTimeoutMs, () => spawnError);
   } catch (err) {
-    child.kill("SIGKILL");
+    await kill(child);
     throw new Error(`nerve did not become ready (log: ${logFile})`, { cause: err });
   }
   return { baseURL, stop: () => stop(child, logFile) };
@@ -85,7 +85,12 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-/** Polls /readyz until it answers 200; fails when nerve exits, fails to spawn, or the deadline passes. */
+/**
+ * Polls /readyz until it answers 200; fails when nerve exits, fails to spawn,
+ * or the deadline passes. Each request may only use the time left, so a
+ * server that accepts the connection but never answers cannot hold the wait
+ * past the deadline.
+ */
 async function waitUntilReady(
   child: ChildProcess,
   readyzUrl: string,
@@ -99,9 +104,13 @@ async function waitUntilReady(
   if (child.exitCode !== null) {
     throw new Error(`nerve exited with code ${child.exitCode}`);
   }
-  const ready = await fetch(readyzUrl).then(
+  const timeLeft = deadline - Date.now();
+  if (timeLeft <= 0) {
+    throw new Error(`${readyzUrl} did not answer 200 within ${readyTimeoutMs} ms`);
+  }
+  const ready = await fetch(readyzUrl, { signal: AbortSignal.timeout(timeLeft) }).then(
     (res) => res.ok,
-    () => false // not listening yet
+    () => false // not listening yet, or no answer before the deadline
   );
   if (ready) {
     // Another worker's nerve can briefly answer on this port before this
@@ -119,11 +128,19 @@ async function waitUntilReady(
     }
     return;
   }
-  if (Date.now() >= deadline) {
-    throw new Error(`${readyzUrl} did not answer 200 within ${readyTimeoutMs} ms`);
-  }
   await sleep(pollIntervalMs);
   return waitUntilReady(child, readyzUrl, deadline, spawnError);
+}
+
+/** Kills a nerve that never became ready and waits until it is gone. */
+async function kill(child: ChildProcess): Promise<void> {
+  // No pid: the spawn failed, so there is no process and no "exit" to wait for.
+  if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+  const exited = once(child, "exit");
+  child.kill("SIGKILL");
+  await exited;
 }
 
 async function stop(child: ChildProcess, logFile: string): Promise<void> {
