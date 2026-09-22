@@ -61,21 +61,45 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte) {
 	}
 }
 
-// contractPath locates api/dist/openapi.yaml from this file, five directories
-// below the repository root (tests run without -trimpath).
-func contractPath() string {
+// apiDir locates the repository's api/ from this file, five directories below
+// the repository root (tests run without -trimpath).
+func apiDir() string {
 	_, file, _, _ := runtime.Caller(0)
-	return filepath.Join(filepath.Dir(file), "..", "..", "..", "..", "..", "api", "dist", "openapi.yaml")
+	return filepath.Join(filepath.Dir(file), "..", "..", "..", "..", "..", "api")
+}
+
+// contractPath is api/dist/openapi.yaml, the bundled contract.
+func contractPath() string {
+	return filepath.Join(apiDir(), "dist", "openapi.yaml")
+}
+
+// newLoader returns the loader for contract documents. IncludeOrigin records
+// the keywords each schema spells out: the authoring-rules test needs them to
+// see `const: null` and `nullable: false`, which the decoded fields cannot
+// tell from an absent keyword.
+func newLoader() *openapi3.Loader {
+	loader := openapi3.NewLoader()
+	loader.IncludeOrigin = true
+	return loader
 }
 
 func load(path string) (*Contract, error) {
-	loader := openapi3.NewLoader()
+	loader := newLoader()
 	doc, err := loader.LoadFromFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("load %s: %w", path, err)
 	}
 	if err := doc.Validate(loader.Context); err != nil {
 		return nil, fmt.Errorf("validate %s: %w", path, err)
+	}
+	// Route by path and method only: with servers, the router would also
+	// match each request's scheme and host, which no test host satisfies.
+	doc.Servers = nil
+	for _, item := range doc.Paths.Map() {
+		item.Servers = nil
+		for _, op := range item.Operations() {
+			op.Servers = nil
+		}
 	}
 	router, err := legacy.NewRouter(doc)
 	if err != nil {
