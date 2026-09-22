@@ -21,6 +21,13 @@
     "enabled": false
   },
   "tasks": {
+    "//#check:format": {
+      "cache": false
+    },
+    "//#check:lint": {
+      "inputs": ["tools/**"],
+      "outputs": []
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
