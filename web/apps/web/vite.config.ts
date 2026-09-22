@@ -33,6 +33,10 @@ export default defineConfig(() => ({
   },
   server: {
     host: "127.0.0.1",
+    // Nerve: during development the Go server (`make run`) answers the API.
+    proxy: {
+      "/api": "http://127.0.0.1:8080",
+    },
   },
   // No SSR-specific overrides needed; alias resolves to ESM build
 }));

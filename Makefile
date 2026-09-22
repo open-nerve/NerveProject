@@ -45,6 +45,10 @@ dev-db-reset: ## 停止开发数据库并删除数据卷
 run: ## 以 dev 配置运行后端（需先 make dev-db），Ctrl-C 停止
 	cd server && NERVE_ENV=dev go run ./cmd/nerve serve
 
+.PHONY: web-dev
+web-dev: ## 启动前端开发服务器 http://127.0.0.1:3000，/api 转发给 make run 的后端；Ctrl-C 停止
+	$(TURBO) run dev --filter=web
+
 .PHONY: tools
 tools: ## 安装锁定版本的 golangci-lint 到 ./bin
 	@set -o pipefail; \
