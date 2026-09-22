@@ -1,6 +1,7 @@
 // Keyword guard (docs/v0/M1-frontend-trim/M1-design.md 7.4): fails when a file hits a rule in
-// tools/keywords.json that no exception covers, when an exception no longer matches anything, or when
-// an exception's hits do not number exactly its "count" (default 1).
+// tools/keywords.json that no exception covers, when an exception no longer matches anything, when
+// an exception's hits do not number exactly its "count" (default 1), or when an exception has expired
+// (its "until" is at or before the file's top-level "phase").
 // The files are those git lists (tracked, plus untracked ones that are not ignored) as they are in the
 // working tree. A path rule tests each path; a content rule tests the text of the files its `files`
 // pattern selects (binary files are skipped). Patterns are JavaScript regular expressions with explicit
@@ -15,6 +16,19 @@ const RULES_FILE = "tools/keywords.json";
 function fail(message) {
   console.error(`keywords: ${message}`);
   process.exit(2);
+}
+
+const PHASE_RE = /^M(\d+)(?:\/P(\d+))?$/;
+
+// Parses "M3" or "M1/P4" into a [milestone, phase] pair, the phase number 0 when absent, so two phase
+// strings compare lexicographically on that pair.
+function parsePhase(spec) {
+  const match = PHASE_RE.exec(spec);
+  return [Number(match[1]), match[2] ? Number(match[2]) : 0];
+}
+
+function comparePhase(a, b) {
+  return a[0] - b[0] || a[1] - b[1];
 }
 
 function compile(rule, key) {
@@ -40,6 +54,9 @@ function loadRules() {
   if (!Array.isArray(config.rules) || !Array.isArray(config.exceptions)) {
     fail(`${RULES_FILE} needs "rules" and "exceptions" arrays`);
   }
+  if (typeof config.phase !== "string" || !PHASE_RE.test(config.phase)) {
+    fail(`${RULES_FILE} needs a top-level "phase" such as "M3" or "M1/P4"`);
+  }
   const ids = new Set();
   const rules = config.rules.map((rule) => {
     if (typeof rule.id !== "string" || !/^[a-z0-9-]+$/.test(rule.id) || ids.has(rule.id)) {
@@ -57,7 +74,7 @@ function loadRules() {
       ? { id: rule.id, path: compile(rule, "path") }
       : { id: rule.id, files: compile(rule, "files"), content: compile(rule, "content") };
     const test = isPath ? compiled.path : compiled.content;
-    const { hit, miss } = rule.samples ?? {};
+    const { hit, miss, files } = rule.samples ?? {};
     if (!Array.isArray(hit) || hit.length === 0 || !Array.isArray(miss) || miss.length === 0) {
       fail(`rule ${rule.id} needs "samples" with at least one "hit" and one "miss"`);
     }
@@ -67,6 +84,24 @@ function loadRules() {
     for (const sample of miss) {
       if (test.test(sample)) fail(`rule ${rule.id} matches its miss sample ${JSON.stringify(sample)}`);
     }
+    // A content rule's "files" selects what it even reads, so it needs its own hit/miss samples too;
+    // otherwise a "files" narrowed down to nothing would still pass every content sample.
+    if (!isPath) {
+      const { hit: filesHit, miss: filesMiss } = files ?? {};
+      if (!Array.isArray(filesHit) || filesHit.length === 0 || !Array.isArray(filesMiss) || filesMiss.length === 0) {
+        fail(`rule ${rule.id} needs "samples.files" with at least one "hit" and one "miss"`);
+      }
+      for (const sample of filesHit) {
+        if (!compiled.files.test(sample)) {
+          fail(`rule ${rule.id} does not match its files.hit sample ${JSON.stringify(sample)}`);
+        }
+      }
+      for (const sample of filesMiss) {
+        if (compiled.files.test(sample)) {
+          fail(`rule ${rule.id} matches its files.miss sample ${JSON.stringify(sample)}`);
+        }
+      }
+    }
     return compiled;
   });
   const seenExceptions = new Set();
@@ -74,7 +109,7 @@ function loadRules() {
     if (!ids.has(e.rule) || typeof e.path !== "string" || typeof e.match !== "string") {
       fail(`exception ${JSON.stringify(e)} needs an existing "rule", a "path" and a "match"`);
     }
-    if (typeof e.reason !== "string" || e.reason === "" || !/^M\d+(?:\/P\d+)?$/.test(e.until ?? "")) {
+    if (typeof e.reason !== "string" || e.reason === "" || !PHASE_RE.test(e.until ?? "")) {
       fail(`exception ${JSON.stringify(e)} needs a "reason" and an "until" such as "M3" or "M1/P4"`);
     }
     if (e.count !== undefined && (!Number.isInteger(e.count) || e.count < 1)) {
@@ -86,7 +121,7 @@ function loadRules() {
     }
     seenExceptions.add(exceptionKey);
   }
-  return { rules, exceptions: config.exceptions };
+  return { rules, exceptions: config.exceptions, phase: config.phase };
 }
 
 // The text of a file; undefined for a binary file (a NUL byte in the first 8000 bytes, as git decides)
@@ -104,7 +139,7 @@ function read(path, needText) {
   }
 }
 
-const { rules, exceptions } = loadRules();
+const { rules, exceptions, phase } = loadRules();
 const git = spawnSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
   encoding: "utf8",
   maxBuffer: 256 * 1024 * 1024,
@@ -127,8 +162,9 @@ for (const path of new Set(git.stdout.split("\0").filter(Boolean))) {
 }
 
 const count = (n, noun) => `${n} ${noun}${n === 1 ? "" : "s"}`;
-// An exception's key is its (rule, path, match) triple; several exceptions, or several hits, can share
-// one key, so hits are grouped by key first and each exception then looks up its own group's size.
+// An exception's key is its (rule, path, match) triple; several hits can share one key (the same match
+// found more than once), so hits are grouped by key first and each exception then looks up its own
+// group's size. Exceptions themselves cannot share a key: loadRules() rejects duplicates.
 const keyOf = (o) => `${o.rule}\u0000${o.path}\u0000${o.match}`;
 const hitsByKey = new Map();
 for (const hit of hits) {
@@ -137,35 +173,47 @@ for (const hit of hits) {
   else hitsByKey.set(keyOf(hit), [hit]);
 }
 
+const phasePair = parsePhase(phase);
 const covered = new Set();
 const stale = [];
 const mismatched = [];
+const expired = [];
 for (const e of exceptions) {
-  const n = hitsByKey.get(keyOf(e))?.length ?? 0;
+  const hitsForKey = hitsByKey.get(keyOf(e));
+  const n = hitsForKey?.length ?? 0;
   if (n === 0) {
     stale.push(e);
     continue;
   }
   covered.add(keyOf(e));
   const m = e.count ?? 1;
-  if (n !== m) mismatched.push({ exception: e, n, m });
+  if (n !== m) mismatched.push({ exception: e, n, m, hits: hitsForKey });
+  if (comparePhase(parsePhase(e.until), phasePair) <= 0) expired.push(e);
 }
 const open = hits.filter((hit) => !covered.has(keyOf(hit)));
 
 for (const hit of open) {
   console.error(`${hit.rule}  ${hit.path}${hit.line ? `:${hit.line}` : ""}  ${JSON.stringify(hit.match)}`);
 }
-for (const { exception: e, n, m } of mismatched) {
+for (const { exception: e, n, m, hits: hs } of mismatched) {
   console.error(
     `exception count: ${e.rule}  ${e.path}  ${JSON.stringify(e.match)} covers ${n} hits, "count" says ${m}`
   );
+  for (const hit of hs) {
+    console.error(`  ${hit.path}${hit.line ? `:${hit.line}` : ""}  ${JSON.stringify(hit.match)}`);
+  }
 }
 for (const e of stale) {
   console.error(`stale exception: ${e.rule}  ${e.path}  ${JSON.stringify(e.match)} matches nothing now; delete it`);
 }
-if (open.length > 0 || stale.length > 0 || mismatched.length > 0) {
+for (const e of expired) {
   console.error(
-    `keywords: ${count(open.length, "hit")} without an exception, ${count(stale.length, "stale exception")}, ${count(mismatched.length, "mismatched exception")} (${RULES_FILE}).`
+    `expired exception: ${e.rule}  ${e.path}  ${JSON.stringify(e.match)} is until ${JSON.stringify(e.until)}, at or before phase ${JSON.stringify(phase)}; delete it`
+  );
+}
+if (open.length > 0 || stale.length > 0 || mismatched.length > 0 || expired.length > 0) {
+  console.error(
+    `keywords: ${count(open.length, "hit")} without an exception, ${count(stale.length, "stale exception")}, ${count(mismatched.length, "mismatched exception")}, ${count(expired.length, "expired exception")} (${RULES_FILE}).`
   );
   process.exit(1);
 }
