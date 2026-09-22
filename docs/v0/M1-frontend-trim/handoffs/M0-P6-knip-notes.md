@@ -10,9 +10,9 @@ created: 2026-09-22
 ## knip 改为门禁
 
 - `make knip` 去掉 `--no-exit-code`，报告清零，改为持续集成的门禁。
-- 决定是否把配置提示也作为错误（`--treat-config-hints-as-errors`）。配置提示的数量随仓库状态变化：干净克隆上 1 条（`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`）；i18n 的翻译键生成过之后再加 1 条，共 2 条；`react-router typegen` 也跑过之后（例如 `make lint-web` 之后）再加 1 条，共 3 条——持续集成的 `make knip` 在 `make lint-web` 之后执行，日志里总是 3 条。直接加这个参数会在构建过的克隆或持续集成上失败，除非重新组织 `ignoreUnresolved`，或者让 `make knip` 在 `make lint-web` 之前跑（这样两个提示 typegen 相关的条目还没有生成，不会出现）。
+- 决定是否把配置提示也作为错误（`--treat-config-hints-as-errors`）。配置提示的条数随本地生成过哪些文件而变化，实测 1–3 条：干净克隆上 1 条（`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`）；i18n 的翻译键生成过之后多一条"`ignoreUnresolved` 可以删掉"；`web/apps/web` 的同类提示只在部分状态下出现。持续集成的 `make knip` 在 `make lint-web` 之后执行，至少 2 条。直接加这个参数会在构建过的克隆或持续集成上失败，除非重新组织 `ignoreUnresolved`，或者让 `make knip` 在 `make lint-web` 之前跑。
 - M1 删掉 react-router 的 typegen 或 i18n 的生成步骤时，同步删掉 `knip.jsonc` 中对应的 `ignoreUnresolved`（`web/apps/web`、`web/packages/i18n` 两项）。
-- `knip.jsonc:13` 的注释（P6 最终评审 Minor 1 修复，`a7d466d`）已经写清楚这一条不要删：干净克隆上这些导入解析不到，需要它；构建过之后 knip 能解析到，会提示可以删掉，仍然不要删。
+- `knip.jsonc:13` 的注释（P6 最终评审 Minor 1 修复，`a7d466d`）已经写清楚这一条不要删：干净克隆上这些导入解析不到，需要它；生成过之后 knip 可能提示可以删掉，仍然不要删。
 
 ## lint 上限
 

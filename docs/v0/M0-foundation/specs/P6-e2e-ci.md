@@ -205,7 +205,7 @@ e2e: build
 | 工作区 | 设置 | 原因 |
 |---|---|---|
 | 根目录 | `ignoreDependencies: ["@redocly/cli", "turbo"]` | 它们由 Makefile 调用（`make gen-web`、`make lint-web` 等），knip 不读 Makefile，会误报为未使用 |
-| `web/apps/web` | `ignoreUnresolved: ["\\+types/"]` | 路由文件导入 `./+types/…`（61 处）：`react-router typegen` 把它们生成在 `.react-router/types/`（不进仓库），经 tsconfig 的 `rootDirs` 导入。没有生成过时 knip 解析不到，报 61 条"Unresolved imports"；生成过之后 knip 能通过 `rootDirs` 解析到，这一项就不再需要（见下文"另有配置提示"），但仍要保留，否则干净克隆上会报错 |
+| `web/apps/web` | `ignoreUnresolved: ["\\+types/"]` | 路由文件导入 `./+types/…`（61 处）：`react-router typegen` 把它们生成在 `.react-router/types/`（不进仓库），经 tsconfig 的 `rootDirs` 导入。没有生成过时 knip 解析不到，报 61 条"Unresolved imports"；生成过之后，knip 在有些本地状态下能解析到并提示这一项可以删掉（见下文"另有配置提示"），但仍要保留，否则干净克隆上会报错 |
 | `web/packages/i18n` | `ignoreUnresolved: ["^\\./keys\\.generated$"]` | `src/types/keys.generated.ts` 由 i18n 的构建生成（不进仓库）；没有构建过时 knip 报 1 条"Unresolved imports"，构建过之后能找到 |
 | `web/packages/api-client` | `entry: ["test/*.typecheck.ts"]` | 类型测试只由 tsc 检查（P3 交接第 3 条）；作为入口文件，它和它用到的导出都不再被报告 |
 | `web/packages/api-client` | `ignoreIssues: {"src/schema.gen.ts": ["types"]}` | 生成的类型 `webhooks`、`$defs`、`operations` 没有被使用（P3 交接第 3 条） |
@@ -226,7 +226,7 @@ e2e: build
   | 重复的导出 | 1 |
   | 合计 | 379 |
 
-  全部在迁入的 Plane 代码中，Nerve 自己的代码（api-client、e2e、根目录）没有。另有配置提示，数量随仓库状态变化：干净克隆上 1 条（`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`）；`web/packages/i18n` 的翻译键生成过之后再加 1 条（`ignoreUnresolved` 暂时用不上），共 2 条；`react-router typegen` 也跑过之后（例如 `make lint-web` 之后）再加 1 条（`web/apps/web` 的 `ignoreUnresolved` 暂时用不上），共 3 条。持续集成的 `make knip` 在 `make lint-web`（已经跑过 typegen 和 i18n 构建）之后执行，日志里总是 3 条。
+  全部在迁入的 Plane 代码中，Nerve 自己的代码（api-client、e2e、根目录）没有。另有配置提示，条数随本地生成过哪些文件而变化，实测 1–3 条：干净克隆上 1 条（`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`）；i18n 的翻译键生成过之后，多一条"`ignoreUnresolved` 可以删掉"的提示；`web/apps/web` 的同类提示只在部分状态下出现（`make lint-web` 之后接着 `make knip` 实测是 2 条）。提示不影响 379 处报告和退出码。
 - **`make knip`** = `pnpm exec knip --no-exit-code`：发现问题时退出码仍为 0；knip 自身出错（例如配置中有未知的键）时退出码 2，make 失败。M1 去掉 `--no-exit-code`，就成为门禁。本机 2–4 秒。
 - **持续集成执行它**：`web` 任务在 `make lint-web` 之后执行 `make knip`，作为普通的一步（不是 `continue-on-error`）：报告出现在日志中，配置出错会让任务失败，M1 之前配置不会悄悄失效。`continue-on-error` 会把配置错误也变成一个黄色警告。
 
@@ -340,7 +340,7 @@ checkout → setup-go（与 server 任务相同的缓存键）→ setup-node →
 | `VERSION` 的默认值写在 Makefile 和 `buildinfo` 两处，改版本号时可能只改了一处 | Makefile 的注释写明两者相同；持续集成注入不同的值，S3 能发现注入失效；M8 定下发布时版本号的来源 |
 | 环境中恰好有一个无关的 `VERSION` 变量，`make build` 会用它 | `?=` 是控制者裁定的写法，也是持续集成传入版本号的方式；`bin/nerve version` 能看出实际写入的值 |
 | 任何依赖的增减都会让 pnpm 重新解析可选的对等依赖，Plane 包的锁文件条目随之出现后缀的变化（2.4） | 计划中的核对命令确认没有包被删掉、版本不变；M1 删减依赖时沿用这组命令（第 7 节） |
-| knip 在构建过的克隆上提示 `ignoreUnresolved` 的两项都可以删掉（i18n 的、`web/apps/web` 的，各自提示"Remove from ignoreUnresolved"；配置提示的数量随 i18n 构建、`react-router typegen` 是否跑过而变化，1/2/3 条，见 2.8） | `knip.jsonc` 的注释写明不要删：没有构建过时它们才起作用，删掉之后报告随本地是否构建过而变化 |
+| knip 在构建过的克隆上提示 `ignoreUnresolved` 的两项都可以删掉（i18n 的、`web/apps/web` 的，各自提示"Remove from ignoreUnresolved"；配置提示的条数随本地生成过哪些文件而变化，1–3 条，见 2.8） | `knip.jsonc` 的注释写明不要删：没有构建过时它们才起作用，删掉之后报告随本地是否构建过而变化 |
 | M2 起前端改调 `/api/v0/`，S2 不再有接口的 404，但控制台和页面的断言仍未加入 | 交给 M2（第 7 节） |
 | Playwright 升级后浏览器版本变化，本地要重新安装 | Playwright 的报错给出安装命令；README 写明升级后重新执行 |
 
@@ -348,7 +348,7 @@ checkout → setup-go（与 server 任务相同的缓存键）→ setup-node →
 
 | 交给 | 事项 |
 |---|---|
-| M1 | knip 改为门禁：`make knip` 去掉 `--no-exit-code`，报告清零；决定是否把配置提示也作为错误（`--treat-config-hints-as-errors`——配置提示的数量随仓库状态变化（1/2/3 条，见 2.8），直接加这个参数会在构建过的克隆或持续集成（总是 3 条）上失败，除非重新组织 `ignoreUnresolved` 或让 knip 在 `lint-web` 之前跑）；`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`（knip 的配置提示）。M1 删掉 react-router 的 typegen 或 i18n 的生成步骤时，同步删掉 `knip.jsonc` 中对应的 `ignoreUnresolved` |
+| M1 | knip 改为门禁：`make knip` 去掉 `--no-exit-code`，报告清零；决定是否把配置提示也作为错误（`--treat-config-hints-as-errors`——配置提示的条数随本地生成过哪些文件而变化（1–3 条，见 2.8），持续集成中 knip 在 `lint-web` 之后运行，至少有 2 条，直接加这个参数会失败，除非重新组织 `ignoreUnresolved` 或让 knip 在 `lint-web` 之前跑）；`tailwind-config` 的 `main` 指向不存在的 `tailwind.config.js`（knip 的配置提示）。M1 删掉 react-router 的 typegen 或 i18n 的生成步骤时，同步删掉 `knip.jsonc` 中对应的 `ignoreUnresolved` |
 | M1 | 重新测出 lint 基线时，`@nerve/api-client`、`@nerve/e2e` 的上限保持 0（它们是 Nerve 的新代码） |
 | M1 | 删减依赖后锁文件的核对：沿用 P6 计划 Task 2 Step 3 的命令（没有意外删掉的包、web 下 importers 只有对等后缀的变化） |
 | M1 | 品牌替换之后，S2 仍然不应断言页面文字（页面在 M2 前仍是错误页）；前端的包名改为 `@nerve/*` 时，`knip.jsonc` 中的工作区路径不变 |
