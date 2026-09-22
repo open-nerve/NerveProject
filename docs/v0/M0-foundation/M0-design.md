@@ -176,7 +176,8 @@ NerveProject/
 - **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；领域错误码的体系在 M2 建立。
 - **生成代码的错误出口**（M0/P3）：oapi-codegen 生成的代码在参数绑定、请求体解码、handler 返回错误三处默认输出纯文本；`httpserver.APIErrors` 把三处都接成 problem+json：绑定或解码失败 → `BadRequest`（400 `bad_request`，`detail` 是失败原因）；handler 出错或响应写出失败 → `InternalError`（500 `internal_error`，不带 `detail`；响应已经开始时改为记录日志并中断连接，不追加 problem）。
 - **非规范的 `/api/` 路径**：例如 `/api/v0//instance`、`/api/v0/./instance`、`/api`，Go 的 `ServeMux` 会先返回 307 跳转到规范路径，而不是直接落进平台的 404 兜底。M0/P3 评审后接受这个行为，不作特殊处理。
-- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。`http.Server` 另设 2 分钟的空闲连接超时。
+- **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。
+- **连接上的读写都有上限**：读请求头（`server.read_header_timeout`）、读整个请求含请求体（`server.read_timeout`）、写响应（`server.write_timeout`），以及 2 分钟的空闲连接超时（包内常量）。只限制请求头不够：客户端发完请求头、声明了请求体却不发，服务端会一直等（M0 对抗性评审 Critical 2）。确实要更久的接口（M5 的文件上传、下载）在自己的 handler 里用 `http.ResponseController` 单独放宽，不调大全局值。这些上限管的是连接上的读写，不管 handler 自身的执行时间：`write_timeout` 到期只会让写出失败，既不停止 handler，也不取消它的 context；handler 里的数据库等阻塞调用要自带期限。
 - 详见 [P2 spec](specs/P2-server-platform.md) 2.7 节。
 
 ### 3.4 内嵌前端（`platform/webui`）
@@ -210,6 +211,8 @@ NerveProject/
   server:
     addr: ":8080"
     read_header_timeout: 5s
+    read_timeout: 30s     # 不小于 read_header_timeout
+    write_timeout: 60s
     shutdown_timeout: 20s
   database:
     url: ""              # 必须提供
@@ -220,7 +223,7 @@ NerveProject/
     format: json         # dev 和 test 中为 text
   ```
 - **dev 环境**：`server.addr` 是 `127.0.0.1:8080`（只监听本机）；数据库地址是本地开发库（`postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable`）。这是只在本机使用的开发账号，可以提交。test 和 prod 的数据库地址都通过环境变量提供。
-- **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，`database.url` 中的密码会被打码。
+- **校验**：启动时逐项校验，有错误就退出，并指出是哪个配置项出了问题。启动日志打印生效的配置，其中 `database.url` 整体打码：pgx 用自己的 libpq 兼容语法解析这个地址，别的解析器只能认出其中一部分密码写法，只遮认出的部分会漏掉其余写法。连接目标（主机、端口、库名、用户）在创建连接池后按 pgx 的解析结果单独记一条日志，其中没有密码。
 - 未知的配置键直接报错，不会悄悄回落到默认值。
 - 时长类配置项只接受字符串（例如 `5s`），不接受纯数字。
 - 只有包含 `__` 的 `NERVE_*` 变量才是配置键；`NERVE_ENV`、`NERVE_CONFIG_DIR` 和换开发库端口用的 `NERVE_DEV_DB_PORT` 都不含 `__`，不当作配置键。
@@ -229,7 +232,7 @@ NerveProject/
 - 详见 [P2 spec](specs/P2-server-platform.md) 2.3 节。
 
 ### 3.7 架构守护
-- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，一共 8 条规则，包括：
+- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，一共 10 条规则，包括：
   1. 模块内的依赖只能向内：`adapter → app → domain`。
   2. `domain` 和 `app` 都只能依赖标准库、本模块的内层包和 `internal/shared`，不能依赖 `platform`、数据库驱动、HTTP 等技术库。
   3. 模块之间不能互相导入。
@@ -238,7 +241,10 @@ NerveProject/
   6. 生成的代码只能被本模块的 http 适配器导入。
   7. `platform` 的各个包之间互不导入（`config` 除外）。
   8. 测试工具（`pgtest`、`apitest`）只能被测试代码导入。
+  9. 模块内的包只能放在 `domain`、`app`、`adapter`（含子目录）或模块根目录（`module.go`）。放在别处的包，第 1 条排不出它的层次，第 2 条又把模块内的导入交给第 1 条判断，`domain → 模块内其他目录 → net/http` 就能两条都绕过（M0 对抗性评审 Important 1）。
+  10. `internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己：`domain`、`app` 可以导入它，它不干净，技术依赖就会经它带进这两层。M0 还没有 `internal/shared`，这条规则先用合成的导入关系测试。
 - **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述、未映射的 `format: uuid`），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并打印导入链。
+- **纯净性的传递检查**（`TestPureLayersReachNoInfrastructure`，M0 加固）：第 2、10 条只看直接导入，而标准库里的 `expvar`、`net/rpc` 自己就导入 `net/http`，`domain → expvar` 能过这两条，却把 `net/http` 链接了进来。这个测试沿全部传递依赖检查每个 `domain`、`app`、`internal/shared` 包：不能碰到 `net/http`、`database/sql` 或本模块以外的库。发现时打印完整的导入链。
 - **depguard**：只管"整个项目都禁止使用的库"，例如：
   - 第三方 uuid 库（`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`）：用标准库。
   - viper：用 koanf。
@@ -349,7 +355,7 @@ api/common.yaml + api/modules/*.yaml
 
 触发条件：每次推送代码和每个 PR；**同仓库分支的 PR 跳过 `server` 和 `web`**（M0/P3）：两个任务都加了 `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository`。同仓库分支的每个提交已经由 push 事件跑过，PR 页面显示的就是这次的结果；来自 fork 的 PR 没有对应的 push 事件，仍然由 `pull_request` 事件运行。P6 的 `e2e` 任务用 `needs: [server, web]` 依赖这两个任务，这个跳过条件也会经 `needs` 传导过去。
 
-**必须通过检查（required checks）前的注意事项**：GitHub 把被 `if` 跳过的任务也标记为 Success，且用的是同一个检查名字。把 `server`/`web`/`e2e` 设为分支保护的必须检查之前，要先去掉上面的跳过条件，或者另加一个 `if: always()` 的汇总任务，把这个汇总任务设为必须检查，否则一次被跳过的运行就能满足必须检查的要求。
+**必须通过检查（required checks）前的注意事项**：GitHub 把被 `if` 跳过的任务也标记为 Success，且用的是同一个检查名字。把 `server`/`web`/`e2e` 设为分支保护的必须检查之前，要先去掉上面的跳过条件，或者另加一个 `if: always()` 的汇总任务，把这个汇总任务设为必须检查，否则一次被跳过的运行就能满足必须检查的要求。汇总任务只解决"跳过算通过"的问题：push 事件测的是分支头，不是 PR 合并进 `main` 之后的结果。保留跳过条件时，还要在分支保护里打开"合并前分支必须与 `main` 同步"（require branches to be up to date），否则 `main` 前进之后，分支头通过不代表合并结果能通过（M0 对抗性评审 K16）。
 
 ---
 

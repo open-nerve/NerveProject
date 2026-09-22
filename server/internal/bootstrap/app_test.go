@@ -1,12 +1,14 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -42,8 +44,14 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		t.Fatal(err)
 	}
 	return config.Config{
-		Env:      config.EnvTest,
-		Server:   config.ServerConfig{Addr: addr, ReadHeaderTimeout: time.Second, ShutdownTimeout: 5 * time.Second},
+		Env: config.EnvTest,
+		Server: config.ServerConfig{
+			Addr:              addr,
+			ReadHeaderTimeout: time.Second,
+			ReadTimeout:       5 * time.Second,
+			WriteTimeout:      5 * time.Second,
+			ShutdownTimeout:   5 * time.Second,
+		},
 		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate},
 		Log:      config.LogConfig{Level: "error", Format: "text"},
 	}
@@ -141,5 +149,25 @@ func TestRunFailsWhenAutoMigrateFails(t *testing.T) {
 
 	if err := a.run(ctx); err == nil {
 		t.Error("run() = nil, want the migration error")
+	}
+}
+
+// database.url is masked as a whole in the configuration log, so newApp logs
+// where the pool connects, as pgx parsed it, and never the password.
+func TestNewAppLogsTheDatabaseTarget(t *testing.T) {
+	var logs bytes.Buffer
+	cfg := testConfig(t, "postgres://nobody:secret@127.0.0.1:1/nowhere?password=secret;more", false)
+	a, err := newApp(context.Background(), cfg, slog.New(slog.NewTextHandler(&logs, nil)), sampleMigrations, testWebUI)
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	defer a.close()
+
+	out := logs.String()
+	if strings.Contains(out, "secret") {
+		t.Errorf("log output leaks the password: %s", out)
+	}
+	if !strings.Contains(out, `msg="database pool created" host=127.0.0.1 port=1 database=nowhere user=nobody`) {
+		t.Errorf("log output lacks the database target: %s", out)
 	}
 }

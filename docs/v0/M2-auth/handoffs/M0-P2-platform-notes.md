@@ -23,10 +23,11 @@ M2 第一次加入认证、事务、后台任务和真正的迁移文件，届�
    - `bootstrap` 的 `app.run` 需要调整，让 River 和 HTTP 服务一起运行。
    - 停机顺序：HTTP 停机 → River 停止（有自己的超时）→ 迁移执行器 → 连接池。
    - `pool.Close()` 要设置时间上限：强制关闭 HTTP 连接后，不理会 ctx 的 handler 可能仍然占着数据库连接。
-   - River 自己的表结构用 goose 的 SQL 迁移建立（而不是 River 的迁移命令），并纳入迁移命名规则。
+   - handler 里的数据库等阻塞调用要自带期限（M0 加固）：`server.write_timeout` 到期只让写出失败，既不停止 handler，也不取消请求的 context。
+   - River 自己的表结构用 goose 的 SQL 迁移建立（而不是 River 的迁移命令），并纳入迁移命名规则。SQL 取自锁定版本的 `river migrate-get`，`--up` 的输出写进 goose 的 Up 段，`--down` 的输出写进 Down 段。第一次导出用 `--line main --all --exclude-version 1`：版本 1 只建 `river_migration` 表，那是 River 自己的迁移命令用的，改用 goose 后不需要。以后升级 River，用 `--version N` 导出新增的版本，另写一份新迁移，不改已经发布的迁移文件。总体设计 5.2 已统一为这个做法（M0 对抗性评审 Minor 2）。
 6. **archtest 的补充。**
    - 规则 6 从 `adapter/http/gen` 推广到所有 `adapter/*/gen`，覆盖 sqlc 的生成代码。
-   - 建立 `internal/shared` 时，为它加一条"只能依赖标准库"的规则。现在 `domain → shared → net/http` 这样的间接依赖还检查不到。
+   - ~~建立 `internal/shared` 时，为它加一条"只能依赖标准库"的规则。~~ M0 加固已完成：archtest 第 10 条要求 `internal/shared` 只依赖标准库（不含 `net/http`、`database/sql`）和它自己，`domain → shared → net/http` 会被拦下，建立 `internal/shared` 时不用再加。
 7. **迁移与就绪检查。**
    - 第一个迁移文件出现后，`/readyz` 的迁移检查才真正生效。
    - 如果生产环境用单独的数据库角色执行迁移，运行服务的角色需要有 `goose_db_version` 表的 SELECT 权限。

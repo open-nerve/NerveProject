@@ -33,6 +33,12 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
+	// The configuration log masks database.url as a whole; say where the pool
+	// connects from pgx's own parse of it, which holds no password.
+	target := pool.Config().ConnConfig
+	logger.InfoContext(ctx, "database pool created",
+		slog.String("host", target.Host), slog.Int("port", int(target.Port)),
+		slog.String("database", target.Database), slog.String("user", target.User))
 	migrator, err := postgres.NewMigrator(pool, migrationFiles)
 	if err != nil {
 		pool.Close()

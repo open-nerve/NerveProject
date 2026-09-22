@@ -13,7 +13,9 @@ func m(rel string) string { return modulePath + "/" + rel }
 func TestRules(t *testing.T) {
 	const (
 		inward   = "module layers point inward: adapter -> app -> domain"
+		layout   = "module packages live in domain, app or adapter, or at the module root"
 		pure     = "domain and app import only the standard library (not net/http or database/sql), their own module's inner layers and internal/shared"
+		kernel   = "internal/shared imports only the standard library (not net/http or database/sql) and internal/shared"
 		isolated = "modules do not import each other"
 		business = "platform does not import modules or bootstrap"
 		entry    = "only bootstrap imports modules"
@@ -32,6 +34,13 @@ func TestRules(t *testing.T) {
 		{m("internal/modules/issue/domain"), m("internal/modules/issue/app"), []string{inward}},
 		{m("internal/modules/issue/app"), m("internal/modules/issue/adapter/http"), []string{inward}},
 		{m("internal/modules/issue/adapter/http"), m("internal/modules/issue"), []string{inward}},
+		{m("internal/modules/issue/domain/state"), m("internal/modules/issue/domain"), nil},
+
+		// A package outside the known layers would escape the layer and purity
+		// rules, e.g. domain -> issue/transport -> net/http.
+		{m("internal/modules/issue/domain"), m("internal/modules/issue/transport"), []string{layout}},
+		{m("internal/modules/issue/transport"), "net/http", []string{layout}},
+		{m("internal/modules/issue/adapter/http"), m("internal/modules/issue/helper"), []string{layout}},
 
 		// Purity of domain and app (app -> own domain is allowed, see above).
 		{m("internal/modules/issue/domain"), "time", nil},
@@ -45,6 +54,16 @@ func TestRules(t *testing.T) {
 		{m("internal/modules/issue/app"), "net/http", []string{pure}},
 		{m("internal/modules/issue/app"), "github.com/jackc/pgx/v5", []string{pure}},
 		{m("internal/modules/issue/app"), m("internal/platform/postgres"), []string{pure}},
+
+		// The shared kernel is as pure as the layers that import it, or it would
+		// carry infrastructure into them: domain -> shared/x -> net/http.
+		{m("internal/shared/id"), "time", nil},
+		{m("internal/shared/tx"), m("internal/shared/id"), nil},
+		{m("internal/shared/id"), "net/http", []string{kernel}},
+		{m("internal/shared/id"), "github.com/jackc/pgx/v5", []string{kernel}},
+		{m("internal/shared/id"), m("internal/platform/config"), []string{kernel}},
+		{m("internal/shared/id"), m("internal/modules/issue/domain"), []string{entry, kernel}},
+		{m("internal/platform/postgres"), m("internal/shared/tx"), nil},
 
 		// Module isolation and the composition root.
 		{m("internal/modules/issue/app"), m("internal/modules/project/domain"), []string{isolated}},

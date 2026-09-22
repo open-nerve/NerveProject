@@ -37,6 +37,8 @@ func TestBuiltInProfiles(t *testing.T) {
 				Server: config.ServerConfig{
 					Addr:              tt.addr,
 					ReadHeaderTimeout: 5 * time.Second,
+					ReadTimeout:       30 * time.Second,
+					WriteTimeout:      60 * time.Second,
 					ShutdownTimeout:   20 * time.Second,
 				},
 				Database: config.DatabaseConfig{URL: tt.url, MaxConns: 10, AutoMigrate: tt.autoMigrate},

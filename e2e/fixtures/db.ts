@@ -45,8 +45,17 @@ export async function createDatabase(name: string, template?: string): Promise<D
   return { name, url, query: (sql, params) => query(url, sql, params) };
 }
 
+// pg waits forever by default; a server that accepts connections but never
+// answers must fail the query instead of hanging the run.
+const connectTimeoutMs = 10_000;
+const queryTimeoutMs = 30_000;
+
 async function query<Row extends QueryResultRow>(url: string, sql: string, params?: unknown[]): Promise<Row[]> {
-  const client = new Client({ connectionString: url });
+  const client = new Client({
+    connectionString: url,
+    connectionTimeoutMillis: connectTimeoutMs,
+    query_timeout: queryTimeoutMs,
+  });
   await client.connect();
   try {
     return (await client.query<Row>(sql, params)).rows;

@@ -85,6 +85,8 @@ platform/postgres/pgtest ──→ platform/postgres, platform/config, migration
 
 M0 设计 3.6 中的 `app.name` 和 `web.enabled` 不在 P2 加入，见第 3 节。
 
+> **M0 加固后的变化**：新增 `server.read_timeout`（`30s`，读取整个请求，含请求体）和 `server.write_timeout`（`60s`），校验时两者都要为正数，且 `read_header_timeout` 不能超过 `read_timeout`。见 M0 设计 3.3、3.6。
+
 **内嵌**：`configs/embed.go`（包 `configs`）用 `//go:embed config.yaml config.dev.yaml config.test.yaml config.prod.yaml` 列出文件名，所以 `config.local.yaml` 永远不会被编进程序。对外只有 `func FS() fs.FS`，内嵌变量不导出，避免被其他包改写。
 
 **加载顺序**（后加载的覆盖先加载的，逐个键覆盖）：
@@ -122,6 +124,13 @@ M0 设计 3.6 中的 `app.name` 和 `web.enabled` 不在 P2 加入，见第 3 �
   `database.url` 的格式不在这里校验，由 pgx 在创建连接池时解析（pgx 的解析错误会把密码打码）。
 
 **打码**：`Config` 和 `DatabaseConfig` 都实现 `slog.LogValuer`，`Config` 的 `database` 分组交给 `DatabaseConfig.LogValue`，所以单独记录 `cfg.Database` 也不会泄露密码。启动日志 `logger.Info("configuration loaded", "config", cfg)` 输出所有配置项。`database.url` 只有以 `postgres://` 或 `postgresql://` 开头（不区分大小写）时才按 URL 处理：用户信息中的密码、名称中含 `password` 的查询参数（不区分大小写，例如 `password`、`sslpassword`）替换为 `xxxxx`；其他值整体替换为 `xxxxx`，包括 `host=… password=…` 形式的连接串、`postgres:user:pass@host/db` 这样没有 `//` 的值和其他协议的 URL。日志中只出现 `LogValue` 明确列出的字段，以后新增的密钥类配置项不会被意外打印出来。
+
+> **M0 加固后的变化**：上面按 URL 局部打码的做法已经删除。pgx 用自己的 libpq 兼容语法解析连接串，`net/url` 认不出的写法（例如查询参数里带 `;` 的密码）会原样漏进日志。现在的做法：
+> - `database.url` 在日志里整体显示为 `xxxxx`；
+> - 连接目标（主机、端口、库名、用户）在创建连接池之后，按 pgx 的解析结果单独记一条日志；
+> - pgx 的解析错误也只是尽量打码，`NewPool` 不再转述它，只返回固定的信息：`database.url: pgx cannot use it; check its syntax, the files it names (sslrootcert, sslcert, sslkey) and any PG* environment variables (details not shown, as they may contain the password)`。
+>
+> 见 M0 设计 3.6，以及 [M0 对抗性评审](../reviews/M0-codex-adversarial-review.md)的处理结果。
 
 **接口**：
 ```go
@@ -304,6 +313,8 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error
 - **可测试的接缝**：停机由 `ctx` 触发，不直接处理信号；测试传入自己的 listener 和可取消的 context。信号只在 `main` 中转换为 context（2.9）。
 - `http.Server` 设置 `ReadHeaderTimeout`，以及 2 分钟的 `IdleTimeout`（包内常量，不是配置项）；`ErrorLog` 用 `slog.NewLogLogger` 接到同一个 logger（不导入标准库 `log`）。
 
+  > **M0 加固后的变化**：另外设置 `ReadTimeout` 和 `WriteTimeout`（配置项 `server.read_timeout`、`server.write_timeout`），读请求和写响应也都有了上限；handler 自身的执行时间不受这些上限约束。见 M0 设计 3.3。
+
 ### 2.8 组合根：`bootstrap`
 对 `cmd/nerve` 只暴露四个函数，每个对应一个命令：
 ```go
@@ -355,6 +366,13 @@ func MigrateStatus(ctx context.Context, cfg config.Config, out io.Writer) error
   | 6 | `modules/<m>/adapter/http/gen` 只能被 `modules/<m>/adapter/http` 导入 | M0 3.7 第 5 条 |
   | 7 | `platform` 的各个包之间互不导入，`config` 除外（同一个包的子包不算，例如 `postgres/pgtest` → `postgres`） | M0 3.1 |
   | 8 | `pgtest` 只能被测试代码导入 | 新增，见第 3 节 |
+
+  > **M0 加固后的变化**：
+  > - 新增规则 9：模块内的包只能放在 `domain`、`app`、`adapter` 或模块根目录。
+  > - 新增规则 10：`internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己。
+  > - 新增 `TestPureLayersReachNoInfrastructure`，沿传递依赖检查 `domain`、`app`、`internal/shared` 是否干净。
+  >
+  > 见 M0 设计 3.7。
 
 - **规则测试**：一张"导入边 → 应违反的规则"表格，每条规则至少有一个违规的例子和一个合法的例子；测试还检查每条规则在表格中至少触发过一次，防止以后新增的规则没有测试。M0 还没有任何模块，规则 1、2、3、5、6 只能这样证明有效。
 - **仓库测试**：用 `golang.org/x/tools/go/packages` 加载模块中所有非测试包（`NeedName | NeedImports`），对每条导入边应用全部规则，每个违规报一条错误，例如：

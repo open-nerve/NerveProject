@@ -23,10 +23,15 @@ type Config struct {
 	Log      LogConfig      `koanf:"log"`
 }
 
-// ServerConfig configures the HTTP server.
+// ServerConfig configures the HTTP server. The timeouts bound the reads and
+// writes on a connection: reading the request headers, reading the whole
+// request (headers and body), and writing the response; idle keep-alive
+// connections have a fixed timeout in httpserver.
 type ServerConfig struct {
 	Addr              string        `koanf:"addr"`
 	ReadHeaderTimeout time.Duration `koanf:"read_header_timeout"`
+	ReadTimeout       time.Duration `koanf:"read_timeout"`
+	WriteTimeout      time.Duration `koanf:"write_timeout"`
 	ShutdownTimeout   time.Duration `koanf:"shutdown_timeout"`
 }
 
@@ -51,6 +56,8 @@ func (c Config) LogValue() slog.Value {
 		slog.Group("server",
 			slog.String("addr", c.Server.Addr),
 			slog.Duration("read_header_timeout", c.Server.ReadHeaderTimeout),
+			slog.Duration("read_timeout", c.Server.ReadTimeout),
+			slog.Duration("write_timeout", c.Server.WriteTimeout),
 			slog.Duration("shutdown_timeout", c.Server.ShutdownTimeout),
 		),
 		slog.Any("database", c.Database),
@@ -61,11 +68,21 @@ func (c Config) LogValue() slog.Value {
 	)
 }
 
-// LogValue renders the database settings with the password in the URL masked,
-// so they are safe to log on their own too.
+// redacted stands in for a secret in log output.
+const redacted = "xxxxx"
+
+// LogValue renders the database settings with the URL masked as a whole, so
+// they are safe to log on their own too. pgx parses the URL with its own
+// libpq-compatible grammar, which accepts forms that other parsers read
+// differently, so masking only the password another parser finds could leak
+// the rest; log the target from the parsed pool configuration instead.
 func (d DatabaseConfig) LogValue() slog.Value {
+	url := ""
+	if d.URL != "" {
+		url = redacted
+	}
 	return slog.GroupValue(
-		slog.String("url", redactURL(d.URL)),
+		slog.String("url", url),
 		slog.Int("max_conns", int(d.MaxConns)),
 		slog.Bool("auto_migrate", d.AutoMigrate),
 	)

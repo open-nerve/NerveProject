@@ -34,10 +34,10 @@
       "dependsOn": ["check:format", "check:lint", "check:types"]
     },
     "check:format": {
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": []
+      "cache": false
     },
     "check:lint": {
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
       "outputs": []
     },
@@ -59,10 +59,10 @@
       "dependsOn": ["fix:format", "fix:lint"]
     },
     "fix:format": {
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": []
+      "cache": false
     },
     "fix:lint": {
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
       "outputs": []
     },

@@ -269,7 +269,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | 接口日志 | `api_activity_logs` |
 | 文件 | `file_assets` |
 
-归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表，由 River 自己的迁移管理。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
+归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表：用 River 为锁定版本导出的迁移 SQL（`river migrate-get`）写成 goose 迁移，和业务表在同一条迁移链上——一个版本表、一次 `migrate up`、一个就绪检查，e2e 的模板库也只迁移一次；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
 
 ### 5.3 主要改动
 
@@ -391,7 +391,7 @@ modules/issue/
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
 6. **强制手段**：
    - Go 编译器本身禁止包之间的循环依赖。
-   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块之间不能互相导入；`platform` 不依赖模块，`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；生成的代码只能被本模块的适配器导入；测试工具只能被测试代码导入。
+   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块内的包只能放在 `domain`、`app`、`adapter` 和模块根；`shared` 本身也只能依赖标准库（不含 `net/http`、`database/sql`）；这几层连间接依赖也不能碰到 `net/http`、`database/sql` 和第三方库；模块之间不能互相导入；`platform` 不依赖模块，`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；生成的代码只能被本模块的适配器导入；测试工具只能被测试代码导入。
    - golangci-lint 的 depguard 只负责禁止使用某些库（比如第三方 uuid 库、viper、标准库 `log`）。
    - 以上都作为持续集成的门禁。
 
