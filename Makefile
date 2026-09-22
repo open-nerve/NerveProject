@@ -118,6 +118,10 @@ build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需�
 build-web: ## 构建前端，产物在 web/apps/web/build/client（需要 Node；持续集成 web 任务）
 	$(TURBO) run build --filter=web $(TURBO_QUIET)
 
+.PHONY: e2e
+e2e: build ## 构建 bin/nerve 并运行端到端测试（需要 Node、Go、Docker 和 Playwright 的浏览器，见 README）
+	cd e2e && NERVE_VERSION=$(VERSION) pnpm exec playwright test
+
 .PHONY: plane-schema
 plane-schema: ## 重新生成 Plane 表结构快照（需要 Docker，见 tools/plane-schema/README.md）
 	tools/plane-schema/extract.sh

@@ -65,6 +65,28 @@ make          # 查看所有命令
 - **lint 警告只降不升**：每个包的 `check:lint` 脚本用 `--max-warnings` 记着当前的警告数，警告多了 `make lint-web` 就失败；修掉警告后，在同一个提交里把这个数调低到新的警告数。`make lint-web` 用 `--output-logs=errors-only`，看不到具体的警告数；要看某个包当前的警告数，执行 `pnpm --filter <包名> run check:lint`，输出末尾的 `Found N warnings` 就是这个数。
 - **修格式**：`pnpm exec turbo run fix:format` 用 oxfmt 就地格式化所有包。
 
+## 端到端测试
+
+`e2e/` 是 Playwright 项目（工作区包 `@nerve/e2e`），一个用户故事一个测试文件，放在 `e2e/stories/` 下。被测对象是 `make build` 编译出的 `bin/nerve`（内嵌前端）加上 Postgres 18。
+
+- **第一次运行之前**，安装 Playwright 用的 Chromium（下载到本机的缓存目录；升级 Playwright 之后再执行一次）：
+
+  ```bash
+  cd e2e && pnpm exec playwright install chromium
+  ```
+
+- **运行**：`make e2e`。它先执行 `make build`（没有改动时约 1 秒），再运行全部故事。需要 Docker：测试用 testcontainers 启动一个 Postgres 容器，运行结束后自动删除。
+- **测试环境**：`e2e/global-setup.ts` 启动 Postgres，用 `bin/nerve migrate up` 迁移模板库 `nerve_template`。每个 Playwright worker 从模板复制出自己的库，在一个空闲的本机端口上用 test 配置启动自己的 `nerve serve`，`/readyz` 返回 200 之后才运行故事。故事从 `e2e/fixtures/test.ts` 导入 `test`：用 `api`（生成的 TS 客户端）、`request`、`page` 访问本 worker 的 nerve，用 `db` 查询它的数据库。
+- **版本号**：`make build` 把 `VERSION`（默认 `0.1.0-dev`）写进 `bin/nerve`，例如 `make build VERSION=0.1.0`。`make e2e` 把同一个值放进环境变量 `NERVE_VERSION` 交给测试，S3 核对 `/api/v0/instance` 返回的版本号。
+- **同源**：S2 断言页面的所有请求都发往 nerve 自身。构建时有 `web/apps/web/.env`（见"前端"一节的"不要建立"一条），S2 失败，失败信息列出发往别处的请求。
+- **只运行部分故事、打开浏览器调试**：先 `make build`，再直接运行 Playwright，`NERVE_VERSION` 要与构建时的 `VERSION` 相同：
+
+  ```bash
+  cd e2e && NERVE_VERSION=0.1.0-dev pnpm exec playwright test s2 --headed
+  ```
+
+- **失败时**：报告在 `e2e/playwright-report/`（`cd e2e && pnpm exec playwright show-report` 打开），失败用例的操作记录（trace）和截图在 `e2e/test-results/`，每个 worker 的 nerve 日志是 `e2e/test-results/nerve-w<编号>.log`。
+
 ## Plane 表结构快照
 
 `tools/plane-schema/plane-v1.4.2-schema.sql` 是 Plane v1.4.2 的完整表结构，各个 M 为自己的模块建表时以它为起点，再按[差异清单](docs/v0/plane-diff.md)修改。它是生成物，不要手改；只有升级 Plane 基线时才需要用 `make plane-schema` 重新生成（需要 Docker），说明见 [tools/plane-schema/README.md](tools/plane-schema/README.md)。
