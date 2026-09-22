@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 6",
+    "check:lint": "node ../../../tools/lint-cap.mjs 0",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",

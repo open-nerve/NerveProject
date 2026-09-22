@@ -99,6 +99,22 @@
         ],
         "miss": ["import Link from \"next/link\";", "// Minimal shim so code using next/image compiles"]
       }
+    },
+    {
+      "id": "services-files",
+      "phase": "M1/P1",
+      "why": "packages/services 只留 web 用到的令牌服务、地址工具和上传元数据工具，整包在 M5 删除；新的接口调用用生成的客户端",
+      "path": {
+        "source": "^web/packages/services/(?!(?:package\\.json|tsconfig\\.json|tsdown\\.config\\.ts|src/(?:index|api\\.service)\\.ts|src/helpers/(?:index|url|url\\.test)\\.ts|src/developer/(?:index|api-token\\.service)\\.ts|src/file/(?:index|helper)\\.ts)$)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["web/packages/services/src/issue/issue.service.ts", "web/packages/services/src/live.service.ts"],
+        "miss": [
+          "web/packages/services/src/helpers/url.test.ts",
+          "web/packages/services/src/developer/api-token.service.ts"
+        ]
+      }
     }
   ],
   "exceptions": []
