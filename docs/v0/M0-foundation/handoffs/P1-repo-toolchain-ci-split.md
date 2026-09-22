@@ -34,5 +34,6 @@ P1 只有 Go 代码，这个矛盾还没有暴露。P3 加入 `make gen-check`�
 1. **命令按区域拆分**（[P3 spec](../specs/P3-api-contract.md) 2.10）：`lint-go` / `lint-web`、`gen-go` / `gen-web`、`gen-check-go` / `gen-check-web`。`*-go` 只需要 Go，`*-web` 只需要 Node；不带后缀的 `lint`、`gen`、`gen-check` 依次执行两个区域，供本地使用。
 2. **持续集成的每个任务只调用自己区域的命令**：`server` 任务执行 `make gen-check-go` → `make lint-go` → `make test`；`web` 任务执行 `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`。本地和持续集成仍然使用同一套 Makefile 命令。
 3. **同仓 PR 的重复运行**：两个任务都加了条件 `github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository`。同仓库分支的 PR 已经由 push 事件在同一个提交上跑过，PR 页面显示的就是这次的结果；`pull_request` 事件只为来自 fork 的 PR 运行（fork 的推送不会在本仓库触发 push 事件）。
+   - **必须通过检查的注意事项**：被 `if` 跳过的任务也会以同一个检查名字报告 Success。把 `server`/`web`（以及 P6 的 `e2e`）设为分支保护的必须检查之前，要先去掉这个跳过条件，或者另加一个 `if: always()` 的汇总任务并把它设为必须检查（详见 [M0 设计](../M0-design.md) 6.3）。
 
 来源：[M0/P1 评审记录](../reviews/P1-repo-toolchain-review.md)。

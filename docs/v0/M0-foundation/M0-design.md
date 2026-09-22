@@ -58,13 +58,13 @@ M0 结束时，一个开发者克隆仓库后，用几条命令就能：
 | TypeScript | **5.8.3**（沿用 Plane 的版本） | TypeScript 7 已发布，但 openapi-typescript 仍声明只支持 `^5`。v0 期间不升级 |
 | 前端框架 | React 19.2、React Router 8.3、Vite 8、turbo 2.10、oxlint 1.51、oxfmt 0.35 | 沿用 Plane 的版本 |
 | TS 客户端生成 | openapi-typescript **7.13.0**、openapi-fetch **0.17.0** | |
-| OpenAPI 打包 | Redocly CLI | 版本在 P3 锁定 |
+| OpenAPI 打包 | Redocly CLI **2.53.3** | 版本已在 P3 锁定 |
 | 端到端测试 | Playwright **1.63.0**；Node 端用 testcontainers 启动 Postgres | |
 | 未使用代码检查 | knip **6.37.0** | M0 只配置，M1 开始作为门禁 |
 
 **工具怎么安装**：
 - Go 的开发工具写在单独的 `server/tools/go.mod` 里，通过 `go tool -modfile=tools/go.mod <工具>` 调用，不污染主模块的依赖。M0 只需要 oapi-codegen；sqlc 在 M2 加入。goose 以库的形式在代码中调用，不需要命令行工具。
-- golangci-lint 按官方建议使用预编译的二进制，由 `make tools` 下载到 `./bin`。本地和持续集成都执行同一个 `make lint`。
+- golangci-lint 按官方建议使用预编译的二进制，由 `make tools` 下载到 `./bin`。lint 按区域拆分为 `lint-go`、`lint-web`（M0/P3，见 6.1、6.3）；本地和持续集成都执行同一套 `lint-go`、`lint-web`。
 - 除了 Docker、Go、Node 以外，**不需要全局安装任何东西**。
 
 ---
@@ -81,7 +81,8 @@ NerveProject/
   .editorconfig
   .github/workflows/ci.yml      持续集成
   api/
-    common.yaml                 公共组件：Problem、分页游标等
+    openapi.yaml                打包入口：info、tags，每个路径用 $ref 指向模块文件
+    common.yaml                 公共组件：Problem、FieldError
     modules/instance.yaml       各模块的接口描述，一个模块一个文件
     redocly.yaml                打包配置
     dist/openapi.yaml           打包后的完整描述（生成物，提交到仓库）
@@ -96,7 +97,7 @@ NerveProject/
         config/                 配置加载与校验
         logging/                slog 初始化
         postgres/               连接池、迁移执行器；pgtest（测试工具，只在测试中使用）
-        httpserver/             服务生命周期、中间件、problem+json、健康检查
+        httpserver/             服务生命周期、中间件、problem+json、健康检查；apigen/ 是 common.yaml 生成的公共类型；apitest/ 是契约校验工具，只被测试导入
         webui/                  内嵌的前端静态文件与单页应用的路由回退
       modules/
         instance/               试点模块
@@ -126,12 +127,12 @@ NerveProject/
 | 包 | 职责 | 可以依赖 |
 |---|---|---|
 | `cmd/nerve` | 解析命令行参数，调用 `bootstrap` | `bootstrap`、`platform/config`、`platform/buildinfo`、`server/configs`（内嵌的配置数据） |
-| `internal/bootstrap` | **唯一的组合根**：创建各个适配器，接到各模块上，把各模块的 HTTP handler 挂到路由上，启动服务 | 所有 `platform` 包和 `modules` 包 |
+| `internal/bootstrap` | **唯一的组合根**：创建各个适配器，接到各模块上，调用各模块的 `Register` 把生成的路由挂到根路由上，启动服务 | 所有 `platform` 包和 `modules` 包 |
 | `internal/platform/*` | 与业务无关的技术基础件，各包之间互不依赖（`config` 除外，它可以被任何包使用） | 标准库和第三方库；**不能依赖 `modules`** |
 | `internal/modules/<m>/domain` | 领域模型与规则 | 只能依赖标准库（以后可以依赖 `shared`） |
 | `internal/modules/<m>/app` | 用例；声明本模块需要的端口 | 只能依赖本模块的 `domain` 和 `internal/shared`；不能依赖 `platform` 或第三方技术库。archtest 检查这条规则 |
-| `internal/modules/<m>/adapter/*` | 端口的实现（http、postgres 等） | 本模块的 `app` 和 `domain`、`platform`、生成的代码 |
-| `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖) *Module` | 本模块内部的各个包 |
+| `internal/modules/<m>/adapter/*` | 端口的实现（http、postgres 等）；http 适配器的包名为 `httpadapter`，避免遮住标准库 `net/http` | 本模块的 `app` 和 `domain`、`platform`、生成的代码 |
+| `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖) *Module`；`(*Module).Register(mux, apiErrors)` 把模块生成的路由挂到根路由上 | 本模块内部的各个包 |
 
 `internal/shared`（共享内核）在第一次真正需要跨模块共享类型时才建立（预计在 M2），M0 不建空包。
 
@@ -163,7 +164,9 @@ NerveProject/
   2. 异常恢复：捕获 panic，返回 500 problem+json，并记录日志。
   3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。
 - **`/readyz`**：按顺序执行各项检查，全部共用一个 2 秒的超时预算，遇到第一个失败就停止，返回通用的 `detail`（`<检查名> is not ready`）；具体错误只写进日志，不返回给客户端。
-- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`internal_error`、`not_ready`）；领域错误码的体系在 M2 建立。
+- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；领域错误码的体系在 M2 建立。
+- **生成代码的错误出口**（M0/P3）：oapi-codegen 生成的代码在参数绑定、请求体解码、handler 返回错误三处默认输出纯文本；`httpserver.APIErrors` 把三处都接成 problem+json：绑定或解码失败 → `BadRequest`（400 `bad_request`，`detail` 是失败原因）；handler 出错或响应写出失败 → `InternalError`（500 `internal_error`，不带 `detail`；响应已经开始时改为记录日志并中断连接，不追加 problem）。
+- **非规范的 `/api/` 路径**：例如 `/api/v0//instance`、`/api/v0/./instance`、`/api`，Go 的 `ServeMux` 会先返回 307 跳转到规范路径，而不是直接落进平台的 404 兜底。M0/P3 评审后接受这个行为，不作特殊处理。
 - **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。`http.Server` 另设 2 分钟的空闲连接超时。
 - 详见 [P2 spec](specs/P2-server-platform.md) 2.7 节。
 
@@ -225,7 +228,8 @@ NerveProject/
   5. 只有 `bootstrap` 能导入各个模块。
   6. 生成的代码只能被本模块的 http 适配器导入。
   7. `platform` 的各个包之间互不导入（`config` 除外）。
-  8. `pgtest` 只能被测试代码导入。
+  8. 测试工具（`pgtest`、`apitest`）只能被测试代码导入。
+- **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述、未映射的 `format: uuid`），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并打印导入链。
 - **depguard**：只管"整个项目都禁止使用的库"，例如：
   - 第三方 uuid 库（`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`）：用标准库。
   - viper：用 koanf。
@@ -242,7 +246,8 @@ NerveProject/
   3. 每个测试用 `CREATE DATABASE … TEMPLATE` 复制出自己独立的数据库，测试结束后删除；`NewEmptyDatabase` 给出一个没有执行过任何迁移的库。
   4. 容器由 testcontainers 的回收容器（Ryuk）清理，所以不能设置 `TESTCONTAINERS_RYUK_DISABLED`。
 - `go test -short` 跳过集成测试，没有 Docker 时也能跑单元测试。
-- **接口契约校验**：试点模块的 handler 测试用 kin-openapi，校验响应是否符合 `api/dist/openapi.yaml` 中的描述。
+- **接口契约校验**（`platform/httpserver/apitest`，M0/P3）：只被测试导入，读取并校验 `api/dist/openapi.yaml`，提供 `CheckResponse`、`CheckSchema` 给各处的契约测试使用：平台写出的每一种 problem、试点模块 `instance` 的 handler、`bootstrap` 接线后的整个程序，都用它校验响应是否符合契约。
+- **`make test` 不用测试缓存**（`-count=1`）：Go 的测试缓存不跟踪 `server/` 模块根目录之外的文件，只改了 `api/` 时缓存的 `go test` 会重放旧结果，所以 `make test`（持续集成也调用它）总是加 `-count=1`。
 
 ---
 
@@ -259,11 +264,8 @@ api/common.yaml + api/modules/*.yaml
                                └→ 服务端测试中的契约校验；M8 的对外接口文档
 ```
 - **按模块拆分描述文件**：每个模块的接口描述由该模块自己负责，生成的 Go 代码也放在该模块内部，符合"模块自己的东西自己管"的原则。
-- **OpenAPI 版本**：目标是 3.1。oapi-codegen 从 v2.8.0 开始支持 3.1，但官方称之为"初步支持"；kin-openapi 对 3.1 的支持也比较新。所以 **P3 先做一次验证**：用一组有代表性的写法把整条链路跑通，包括可为空的字段（`type: [string, "null"]`）、枚举、`oneOf`、日期和时间格式、problem+json 错误响应、游标分页。
-  - 全部通过：使用 3.1。
-  - 有任何一项不通过：改用 3.0.3。两者的差别主要在"可为空"的写法上，以后升级到 3.1 只需要机械替换。
-  - 验证结论写进 P3 的 review。
-- **生成物的管理**：生成的代码提交到仓库，这样不装生成工具也能直接编译。持续集成中会重新生成一遍，再用 `git diff --exit-code` 检查生成物和描述文件是否一致。
+- **OpenAPI 版本：已定为 3.1**（`openapi: 3.1.0`，M0/P3 验证通过）。验证方法、结论和证据见 [P3 spec](specs/P3-api-contract.md) 2.2；接口描述的写法约定（绕开验证中发现的 oapi-codegen 不足）见同一份 spec 2.4。
+- **生成物的管理**：生成的代码提交到仓库，这样不装生成工具也能直接编译。持续集成中会重新生成一遍，用 `git status --porcelain` 检查生成物和描述文件是否一致（不用 `git diff --exit-code`：新模块尚未提交的生成文件是未跟踪状态，`git diff` 看不到）。
 - **TS 客户端**：`web/packages/api-client` 导出生成的类型，以及一个用 openapi-fetch 创建客户端的函数。M0 里只有端到端测试使用它，前端应用从 M2 开始使用。
 
 ---
@@ -315,6 +317,8 @@ api/common.yaml + api/modules/*.yaml
 | `make build` | 构建前端，嵌入 Go 程序，编译出 `bin/nerve` |
 | `make e2e` | 构建产物并运行端到端测试（等同于 `pnpm e2e`） |
 
+`gen`、`gen-check`、`lint` 按区域拆分出 `-go`（只需要 Go）和 `-web`（需要 Node，先执行 `pnpm install`）两个后缀（`gen-go`/`gen-web`、`gen-check-go`/`gen-check-web`、`lint-go`/`lint-web`）；不带后缀的命令依次执行两个区域，供本地使用（M0/P3，见 [P3 spec](specs/P3-api-contract.md) 2.10）。
+
 ### 6.2 开发流程
 1. 执行 `make dev-db`，启动本地的 Postgres 18。
 2. 执行 `make run`，后端监听 `:8080`；dev 环境下会自动执行迁移。
@@ -323,11 +327,13 @@ api/common.yaml + api/modules/*.yaml
 ### 6.3 持续集成（`.github/workflows/ci.yml`）
 | 任务 | 内容 |
 |---|---|
-| `server` | 安装 Go 1.27.1 → `make gen-check` → `make lint`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
-| `web` | `corepack enable` → `pnpm install --frozen-lockfile` → 类型检查 → oxlint（按警告基线）→ 构建 |
-| `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图 |
+| `server` | 安装 Go 1.27.1 → `make gen-check-go` → `make lint-go`（锁定版本的 golangci-lint）→ `make test`（包含集成测试和架构测试；GitHub 提供的 Linux 运行环境自带 Docker） |
+| `web` | `corepack enable` → `pnpm install --frozen-lockfile` → `make gen-check-web` → `make lint-web`（类型检查；oxlint 按警告基线，P5 加入） |
+| `e2e` | 在 `server` 和 `web` 通过后运行：`make build` → 安装 Playwright 浏览器 → 运行端到端测试；失败时上传操作记录和截图（P6 加入） |
 
-触发条件：每次推送代码和每个 PR。
+触发条件：每次推送代码和每个 PR；**同仓库分支的 PR 跳过 `server` 和 `web`**（M0/P3）：两个任务都加了 `if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository`。同仓库分支的每个提交已经由 push 事件跑过，PR 页面显示的就是这次的结果；来自 fork 的 PR 没有对应的 push 事件，仍然由 `pull_request` 事件运行。P6 的 `e2e` 任务用 `needs: [server, web]` 依赖这两个任务，这个跳过条件也会经 `needs` 传导过去。
+
+**必须通过检查（required checks）前的注意事项**：GitHub 把被 `if` 跳过的任务也标记为 Success，且用的是同一个检查名字。把 `server`/`web`/`e2e` 设为分支保护的必须检查之前，要先去掉上面的跳过条件，或者另加一个 `if: always()` 的汇总任务，把这个汇总任务设为必须检查，否则一次被跳过的运行就能满足必须检查的要求。
 
 ---
 
@@ -366,7 +372,7 @@ api/common.yaml + api/modules/*.yaml
 ### 7.5 版本相关的补充
 - **UUIDv7 由 Go 1.27 的标准库生成**，数据库不设默认值。
 - **v0 期间 TypeScript 保持 5.8**。
-- **OpenAPI 的版本**：按第 4 节的方法验证后确定。
+- **OpenAPI 的版本**：按第 4 节的方法验证，已定为 3.1（M0/P3）。
 
 ---
 
@@ -481,7 +487,7 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 |---|---|---|---|---|---|
 | P1 | repo-toolchain | 已完成 | [spec](specs/P1-repo-toolchain.md) | [plan](plans/P1-repo-toolchain.md) | [review](reviews/P1-repo-toolchain-review.md) |
 | P2 | server-platform | 已完成 | [spec](specs/P2-server-platform.md) | [plan](plans/P2-server-platform.md) | [review](reviews/P2-server-platform-review.md) |
-| P3 | api-contract | 进行中 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | — |
+| P3 | api-contract | 已完成 | [spec](specs/P3-api-contract.md) | [plan](plans/P3-api-contract.md) | [review](reviews/P3-api-contract-review.md) |
 | P4 | plane-schema | 未开始 | — | — | — |
 | P5 | web-import | 未开始 | — | — | — |
 | P6 | e2e-ci | 未开始 | — | — | — |
@@ -492,8 +498,8 @@ M0 还没有认证，所以不涉及 PAT 对等验收。从 M2 开始，每个�
 
 | 风险 | 应对 |
 |---|---|
-| oapi-codegen 和 kin-openapi 对 OpenAPI 3.1 的支持还比较新 | P3 先验证；不通过就改用 3.0.3 |
-| 按模块拆分描述文件后，oapi-codegen 的跨文件引用（`import-mapping`）表现不符合预期 | P3 验证；备选方案是只用一个描述文件，再按 tag 分模块生成（oapi-codegen 支持 `include-tags`） |
+| oapi-codegen 和 kin-openapi 对 OpenAPI 3.1 的支持还比较新 | **已由 M0/P3 验证并解除**：3.1 在整条链路上可用（[P3 spec](specs/P3-api-contract.md) 2.2），不需要改用 3.0.3 |
+| 按模块拆分描述文件后，oapi-codegen 的跨文件引用（`import-mapping`）表现不符合预期 | **已由 M0/P3 验证并解除**：表现符合预期，公共组件通过 import-mapping 生成到共享包 `apigen`，不需要退回"单个描述文件 + `include-tags`"的备选方案 |
 | Plane 后端镜像无法获取，或者在当前环境中跑不起来 | 改为从源码执行迁移（P4） |
 | Plane 前端的依赖很多，构建比较慢，会拖慢持续集成 | 使用 pnpm 缓存和 turbo 的本地缓存；如果还不够，在 P5 评估其他办法 |
 | River 仍是 0.x 版本，小版本之间可能有行为变化 | M2 接入时锁定具体的版本号 |
