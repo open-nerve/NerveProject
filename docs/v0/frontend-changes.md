@@ -33,6 +33,16 @@
 | `web/apps/web/package.json`，editor、i18n、propel、ui、utils 的 `package.json` | `check:lint` 的 `--max-warnings` 调低到实测的警告数：web 11957→779，editor 416→75，i18n 9→3，propel 3605→59，ui 66→32，utils 38→34 | lint 警告基线只降不升（M0 设计 5.2） |
 | `web/apps/web/vite.config.ts` | 开发服务器加上代理：`/api` 转发到 `http://127.0.0.1:8080` | 开发时由 Go 后端（`make run`）回答接口请求 |
 
+### 1.2 端到端测试加入时的改动（M0/P6）
+
+只涉及 pnpm 工作区和依赖锁定，不改动迁入的 Plane 代码。
+
+| 位置 | 改动 | 原因 |
+|---|---|---|
+| `pnpm-workspace.yaml`（仓库根目录） | `allowBuilds` 新增三项，都是 `false`：`cpu-features`、`protobufjs`、`ssh2` | testcontainers 经 dockerode 间接依赖它们，带安装脚本；pnpm 11 遇到没有登记的安装脚本会报错退出。这三项编译通过 SSH 连接 Docker 时用的可选扩展，或只检查版本号，用不到，不运行（[P6 spec](M0-foundation/specs/P6-e2e-ci.md) 2.4） |
+| `pnpm-lock.yaml`（仓库根目录） | 在 P5 的锁文件上先加入 e2e 的依赖（新增 109 个包，14777 行），再加入 knip（新增 56 个包，15393 行）；原有的包一个都没有少，迁入的 Plane 包本身的版本号都不变。依赖 `debug` 的包（含 web 下 13 个包的部分依赖）解析出对等依赖 `supports-color@10.2.2` 后缀；`tsdown` 的可选对等依赖 `oxc-resolver` 从 11.20.0 改为解析到 11.24.2，`@emnapi/core` 随之从 1.10.0 变为 1.11.2 | 加入 e2e、knip 后 pnpm 重新解析可选的对等依赖（[P6 spec](M0-foundation/specs/P6-e2e-ci.md) 2.4） |
+| `package.json`（仓库根目录） | 开发依赖新增 `knip` 6.37.0 | 未使用代码检查（M0 只出报告，M1 起作为门禁；[P6 spec](M0-foundation/specs/P6-e2e-ci.md) 2.8） |
+
 ---
 
 ## 二、删除的功能（M1）
