@@ -1,0 +1,30 @@
+# 生成 Plane 表结构快照用的临时环境，只由 extract.sh 使用（见 README.md）。
+# 镜像按"标签@摘要"写死：标签便于阅读，摘要保证每次拿到的是同一个镜像。
+# 不映射任何主机端口；数据目录放在 tmpfs 中，不产生数据卷。
+name: nerve-plane-schema
+
+services:
+  db:
+    # 与 Plane v1.4.2 自带的 docker-compose.yml 相同的 Postgres 版本
+    image: postgres:15.7-alpine@sha256:468d34fefd6338031787c7b8e94078975b3aaf4d66c7ead25c39cd3ba46a15c6
+    environment:
+      POSTGRES_USER: plane
+      POSTGRES_PASSWORD: plane
+      POSTGRES_DB: plane
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      # 走 TCP：初始化阶段的临时服务只监听 Unix 套接字，这时不算就绪
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U plane -d plane"]
+      interval: 1s
+      timeout: 5s
+      retries: 60
+
+  migrator:
+    image: makeplane/plane-backend:v1.4.2@sha256:90032ce088708889b60c00d491897916f4deb882facda27db59fd10fb68729ef
+    command: ["python", "manage.py", "migrate", "--no-input"]
+    environment:
+      DATABASE_URL: postgresql://plane:plane@db:5432/plane
+      # plane/celery.py 在导入时用 REDIS_URL 创建 Redis 客户端，值不能为空；
+      # 客户端只在第一次执行命令时才连接，迁移过程中从不连接，所以指向一个不存在的主机
+      REDIS_URL: redis://unused.invalid:6379/0
