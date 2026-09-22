@@ -1,0 +1,50 @@
+{
+  "rules": [
+    {
+      "id": "deploy-files",
+      "phase": "M1/P1",
+      "why": "Plane 的 Docker、Caddy 部署文件和从未注册的 service worker；Nerve 把前端编进 nerve，由 nerve 提供",
+      "path": {
+        "source": "^web/(?:[^/]+/)*(?:Dockerfile\\.(?:web|dev)$|\\.dockerignore$|caddy/|(?:sw|workbox-[^/]*)\\.js(?:\\.map)?$)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/Dockerfile.web",
+          "web/apps/web/.dockerignore",
+          "web/apps/web/caddy/Caddyfile",
+          "web/apps/web/public/sw.js.map",
+          "web/apps/web/public/workbox-9f2f79cf.js"
+        ],
+        "miss": ["web/apps/web/public/manifest.json", "web/apps/web/public/swagger.js", "deploy/compose.dev.yaml"]
+      }
+    },
+    {
+      "id": "prettierignore",
+      "phase": "M1/P1",
+      "why": "格式化工具是 oxfmt，它也会读取当前目录下的 .prettierignore；忽略规则只写在 .oxfmtrc.json 一处",
+      "path": { "source": "(?:^|/)\\.prettierignore$", "flags": "" },
+      "samples": {
+        "hit": [".prettierignore", "web/packages/ui/.prettierignore"],
+        "miss": ["web/packages/ui/.gitignore"]
+      }
+    },
+    {
+      "id": "serve",
+      "phase": "M1/P1",
+      "why": "Plane 用 serve 提供构建产物（start、preview 脚本）；Nerve 由 nerve 提供",
+      "files": { "source": "(?:^|/)package\\.json$|^pnpm-(?:workspace|lock)\\.yaml$", "flags": "" },
+      "content": { "source": "(?<![\\w@/.-])serve(?:@\\d|[\"']?:|\\s+-s\\b)", "flags": "" },
+      "samples": {
+        "hit": ["\"serve\": \"catalog:\"", "  serve@14.2.5:", "serve -s build/client -l 3000", "      serve:"],
+        "miss": [
+          "\"@react-router/serve>express\": \"^5.2.1\"",
+          "  serve-static@1.16.2:",
+          "preserve: true",
+          "observe(value)"
+        ]
+      }
+    }
+  ],
+  "exceptions": []
+}

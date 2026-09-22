@@ -5,7 +5,9 @@
   "workspaces": {
     ".": {
       // 由 Makefile 调用（make gen-web、make lint-web 等），package.json 的脚本中看不到
-      "ignoreDependencies": ["@redocly/cli", "turbo"]
+      "ignoreDependencies": ["@redocly/cli", "turbo"],
+      // 关键词守卫由 make lint-web 调用，package.json 的脚本中看不到
+      "entry": ["tools/keywords.mjs"]
     },
     // 下面两处导入的是生成的、不进仓库的文件，knip 找不到它们；它们由 tsc 检查
     "web/apps/web": {

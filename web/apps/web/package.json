@@ -7,8 +7,6 @@
   "scripts": {
     "dev": "react-router dev --port 3000",
     "build": "react-router build",
-    "preview": "react-router build && serve -s build/client -l 3000",
-    "start": "serve -s build/client -l 3000",
     "clean": "rm -rf .turbo && rm -rf .next && rm -rf .react-router && rm -rf node_modules && rm -rf dist && rm -rf build",
     "check:lint": "node ../../../tools/lint-cap.mjs 779",
     "check:types": "react-router typegen && tsc --noEmit",
@@ -67,7 +65,6 @@
     "react-popper": "catalog:",
     "react-router": "catalog:",
     "recharts": "catalog:",
-    "serve": "catalog:",
     "smooth-scroll-into-view-if-needed": "catalog:",
     "swr": "catalog:",
     "use-font-face-observer": "catalog:",

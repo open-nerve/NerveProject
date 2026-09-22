@@ -1,6 +1,7 @@
 # pnpm 工作区的根（见 docs/v0/M0-foundation/M0-design.md 第 2 节）。
 # catalog 及以下各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml，只保留作用于迁入的包的条目；
-# 英文注释是 Plane 的原文（见 docs/v0/M0-foundation/specs/P5-web-import.md 2.4）。
+# 英文注释是 Plane 的原文（见 docs/v0/M0-foundation/specs/P5-web-import.md 2.4），
+# M1/P1 删掉了其中讲没有迁入的内容的句子（见 docs/v0/M1-frontend-trim/specs/P1-web-hygiene.md 2.6）。
 packages:
   - web/apps/*
   - web/packages/*
@@ -128,7 +129,6 @@ catalog:
   "remark-gfm": "^4.0.1"
   "remark-stringify": "^11.0.0"
   "sanitize-html": "2.17.7"
-  "serve": "14.2.5"
   "smooth-scroll-into-view-if-needed": "^2.0.2"
   "storybook": "10.4.6"
   "swr": "2.4.2"
@@ -156,9 +156,7 @@ overrides:
   # Force a single React across the whole graph. With node-linker=isolated,
   # auto-install-peers and resolution-mode=highest, a dependency still declaring a
   # React 18 peer can otherwise pull in a second copy, which surfaces as an invalid
-  # hook call rather than as an install error. The vite `resolve.dedupe` entries only
-  # cover the three app client bundles, not the SSR build, the tsdown package builds
-  # or Storybook.
+  # hook call rather than as an install error.
   react: "catalog:"
   react-dom: "catalog:"
   react-is: "catalog:"
@@ -166,13 +164,12 @@ overrides:
   "@types/react-dom": "catalog:"
   # @react-router/serve v8 needs Express 5 — it mounts with the Express 5 path syntax
   # `app.all("/{*splat}")`, which Express 4 silently fails to match, 404ing every route.
-  # The catalog stays on Express 4 for apps/live, which depends on express-ws (Express 4 only).
   "@react-router/serve>express": "^5.2.1"
   mdast-util-to-hast: 13.2.1
   valibot: 1.4.2
   glob: 11.1.0
   # brace-expansion <5.0.9 has two DoS advisories (GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895,
-  # the second bypasses the first's mitigation) reachable via serve>serve-handler>minimatch.
+  # the second bypasses the first's mitigation).
   brace-expansion: 5.0.9
   nanoid: 3.3.18
   esbuild: 0.28.1
@@ -196,10 +193,6 @@ overrides:
   flatted: 3.4.2
   picomatch: 2.3.2
   "yaml@2": 2.8.3
-  # Pinned for Express 4 (apps/live), which needs path-to-regexp ~0.1.12.
-  path-to-regexp: 0.1.13
-  # Express 5's router needs path-to-regexp 8; the pin above would otherwise reach it
-  # and break route matching at startup with `pathRegexp.match is not a function`.
   "router>path-to-regexp": "^8.4.2"
   defu: 6.1.5
   postcss: 8.5.25
@@ -219,9 +212,7 @@ overrides:
   "ws@8": 8.21.0
   morgan: 1.12.0
   # Prototype pollution and unbounded query-cache growth, both reachable as DoS
-  # (CVE-2026-73088 / CVE-2026-73089). browserslist is build tooling only
-  # (babel/postcss/vite), but the runtime images copy node_modules wholesale, so
-  # it lands in the scanned surface.
+  # (CVE-2026-73088 / CVE-2026-73089).
   browserslist: ">=4.28.7"
 
 allowBuilds:
@@ -252,8 +243,7 @@ peerDependencyRules:
     # react-popper 2.3.0 is unmaintained and its peer range stops at React 18, but it
     # only uses hooks — no findDOMNode, no string refs, no element.ref reads and no
     # defaultProps on function components — so it runs unchanged on React 19. All 32
-    # call sites import usePopper only. Recorded here so the acceptance is explicit
-    # rather than hidden behind the global strict-peer-dependencies=false.
+    # call sites import usePopper only.
     "react-popper>react": "19"
     # Same situation: peer range predates React 19, uses nothing React 19 removed.
     "react-masonry-component>react": "19"
