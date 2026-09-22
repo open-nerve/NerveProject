@@ -115,6 +115,16 @@
           "web/packages/services/src/developer/api-token.service.ts"
         ]
       }
+    },
+    {
+      "id": "locales",
+      "phase": "M1/P1",
+      "why": "多语言只留 en 和 zh-CN（M1 设计第 6 节）",
+      "path": { "source": "^web/packages/i18n/src/locales/(?!(?:en|zh-CN)/)", "flags": "" },
+      "samples": {
+        "hit": ["web/packages/i18n/src/locales/fr/common.json", "web/packages/i18n/src/locales/zh-TW/common.json"],
+        "miss": ["web/packages/i18n/src/locales/en/common.json", "web/packages/i18n/src/locales/zh-CN/common.json"]
+      }
     }
   ],
   "exceptions": []

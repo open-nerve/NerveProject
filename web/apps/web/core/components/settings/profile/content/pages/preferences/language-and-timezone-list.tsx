@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { SUPPORTED_LANGUAGES, useTranslation } from "@plane/i18n";
+import { SUPPORTED_LANGUAGES, toSupportedLanguage, useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { CustomSelect } from "@plane/ui";
 // components
@@ -62,11 +62,9 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
       }
     };
 
-    const getLanguageLabel = (value: string) => {
-      const selectedLanguage = SUPPORTED_LANGUAGES.find((l) => l.value === value);
-      if (!selectedLanguage) return value;
-      return selectedLanguage.label;
-    };
+    // a language that is no longer supported shows as the fallback language, which is what the app uses
+    const language = toSupportedLanguage(profile?.language);
+    const languageLabel = SUPPORTED_LANGUAGES.find((l) => l.value === language)?.label;
 
     return (
       <div className="flex flex-col gap-y-1">
@@ -80,8 +78,8 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
           description={t("language_setting")}
           control={
             <CustomSelect
-              value={profile?.language}
-              label={profile?.language ? getLanguageLabel(profile?.language) : "Select a language"}
+              value={language}
+              label={languageLabel}
               onChange={handleLanguageChange}
               buttonClassName="border border-subtle-1"
               className="rounded-md"

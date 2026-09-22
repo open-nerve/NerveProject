@@ -10,26 +10,15 @@ export const FALLBACK_LANGUAGE: TLanguage = "en";
 
 export const SUPPORTED_LANGUAGES: ILanguageOption[] = [
   { label: "English", value: "en" },
-  { label: "Français", value: "fr" },
-  { label: "Español", value: "es" },
-  { label: "日本語", value: "ja" },
   { label: "简体中文", value: "zh-CN" },
-  { label: "繁體中文", value: "zh-TW" },
-  { label: "Русский", value: "ru" },
-  { label: "Italian", value: "it" },
-  { label: "Čeština", value: "cs" },
-  { label: "Slovenčina", value: "sk" },
-  { label: "Deutsch", value: "de" },
-  { label: "Українська", value: "ua" },
-  { label: "Polski", value: "pl" },
-  { label: "한국어", value: "ko" },
-  { label: "Português Brasil", value: "pt-BR" },
-  { label: "Indonesian", value: "id" },
-  { label: "Română", value: "ro" },
-  { label: "Tiếng việt", value: "vi-VN" },
-  { label: "Türkçe", value: "tr-TR" },
-  { label: "ქართული", value: "ka-ge" },
-  { label: "Nederlands", value: "nl" },
 ];
 
 export const LANGUAGE_STORAGE_KEY = "userLanguage";
+
+/**
+ * Returns the language if it is supported, otherwise the fallback language. A language kept in
+ * local storage or in the user's profile can be one that is no longer shipped, such as "fr".
+ */
+export function toSupportedLanguage(language: string | null | undefined): TLanguage {
+  return SUPPORTED_LANGUAGES.find((option) => option.value === language)?.value ?? FALLBACK_LANGUAGE;
+}
