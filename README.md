@@ -13,11 +13,12 @@
 需要安装：
 - Docker（含 Compose v2）
 - Go 1.26 或更高。第一次在 `server/` 下执行 Go 命令时，会自动下载 `server/go.mod` 指定的 Go 1.27.1（前提是 `GOTOOLCHAIN=auto`，这是 Go 官方安装包的默认值；部分 Linux 发行版自带的 Go 默认是 `local`，需要先执行 `go env -w GOTOOLCHAIN=auto`）
-- Node.js 24，并执行一次 `corepack enable`（pnpm 的版本由 `package.json` 锁定）
+- Node.js 24，并执行一次 `corepack enable`（pnpm 的版本由 `package.json` 锁定）。代码生成和前端检查需要它
 
 第一次启动：
 
 ```bash
+pnpm install  # 安装 Node 依赖（代码生成和前端检查要用）
 make dev-db   # 启动本地 Postgres 18（端口 55432，可用 NERVE_DEV_DB_PORT 修改）
 make test     # 运行测试（需要 Docker：集成测试用 testcontainers 启动 Postgres）
 make run      # 以 dev 配置运行后端，监听 127.0.0.1:8080；Ctrl-C 停止
@@ -39,6 +40,17 @@ make          # 查看所有命令
   database:
     url: postgres://nerve:nerve@localhost:55433/nerve?sslmode=disable
   ```
+
+## 接口与代码生成
+
+接口先写描述（OpenAPI 3.1），再写实现：
+
+- `api/openapi.yaml` 是入口，列出所有路径；各模块的描述在 `api/modules/<模块>.yaml`，公共组件在 `api/common.yaml`。
+- 改完描述后执行 `make gen`，把生成的文件和描述一起提交：
+  - `make gen-go`：Go 接口层（`server/internal/modules/<模块>/adapter/http/gen/`、`server/internal/platform/httpserver/apigen/`），只需要 Go。
+  - `make gen-web`：打包好的 `api/dist/openapi.yaml`，以及 TS 客户端 `web/packages/api-client` 的类型，需要 Node（先执行 `pnpm install`）。
+- 生成的文件不要手改。`make gen-check` 会重新生成一遍，检查生成物已经提交、没有差异；持续集成也执行这项检查。
+- `make lint` 依次执行 `make lint-go`（golangci-lint）和 `make lint-web`（TS 类型检查）。
 
 ## 版权
 
