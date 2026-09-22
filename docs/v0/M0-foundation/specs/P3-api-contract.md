@@ -39,7 +39,7 @@
 | `server/internal/platform/httpserver/contract_test.go` | 平台写出的 problem 的契约测试 |
 | `server/internal/modules/instance/` | 试点模块（2.7）；`adapter/http/gen/` 下是 `oapi-codegen.yaml` 和 `server.gen.go`（生成） |
 | `server/internal/bootstrap/app.go`、`api_test.go` | 挂上 instance 模块；接线测试 |
-| `server/internal/archtest/` | 规则 8 扩展到 `apitest` |
+| `server/internal/archtest/` | 规则 8 扩展到 `apitest`；`nerve` 程序的传递依赖测试（2.8） |
 | `server/go.mod`、`server/go.sum` | 加入 kin-openapi |
 | `web/packages/api-client/` | TS 客户端：`package.json`、`tsconfig.json`、`src/index.ts`、`src/schema.gen.ts`（生成）、`test/client.typecheck.ts` |
 | `Makefile` | `gen`、`gen-check`、`lint` 及按区域拆分的命令（2.10） |
@@ -122,23 +122,24 @@ api/
   dist/openapi.yaml      打包结果（make gen-web 生成，提交）
 ```
 
-**入口文件 `api/openapi.yaml`**：`info`（`title: Nerve API`、`version: v0`、AGPL-3.0-only 许可证，用 3.1 的 `license.identifier`）、`tags`（每个模块一个，带说明），`paths` 中每个路径写成 `$ref: 'modules/<模块>.yaml#/paths/~1api~1v0~1…'`。新增路径时在这里加一行，它也是整个接口的目录。
+**入口文件 `api/openapi.yaml`**：`info`（`title: Nerve API`、`version: v0`、AGPL-3.0-only 许可证，用 3.1 的 `license.identifier`）、`tags`（每个模块一个，带说明），`paths` 中每个路径写成 `$ref: 'modules/<模块>.yaml#/paths/~1api~1v0~1…'`。新增路径时在这里加一行，它也是整个接口的目录；漏加时 `TestRootListsEveryModulePath` 失败（2.8）。
 
 **模块文件**（`api/modules/<模块>.yaml`）：
 - 本身是完整的 OpenAPI 3.1 文档（`openapi`、`info`、`paths`、`components`），oapi-codegen 直接从它生成本模块的代码。
-- 路径写全：`/api/v0/…`。`operationId` 用 camelCase，`tags: [<模块>]`。
+- 路径写全：`/api/v0/…`。`operationId` 用首字母小写的 camelCase（`^[a-z][A-Za-z0-9]*$`），`tags: [<模块>]`，tag 在入口文件的 `tags` 中声明。
 - 每个操作都声明 `default` 响应：`$ref: '#/components/responses/Problem'`；这个 response 在本模块文件里定义，schema 引用 `../common.yaml#/components/schemas/Problem`。
+- 以上几条由 `apitest` 的 `TestContractFollowsAuthoringRules` 在 `dist` 上检查（2.8）。
 
 **写法约定**（来自 2.2 的验证）：
 
-| 场景 | 这样写 | 不要这样写 | 原因 |
-|---|---|---|---|
-| 可为空的标量 | `type: [string, 'null']` | `nullable: true`（3.0 写法） | — |
-| 可为空的枚举或对象 | `oneOf: [{$ref: '#/components/schemas/X'}, {type: 'null'}]` | `enum: [a, b, null]` | 后者让 Go 多出一个 `"<nil>"` 常量 |
-| 固定值、`discriminator` 的属性 | `type: string` + 单值 `enum` | `const` | `const` 在 Go 中生成 `interface{}` |
-| 引用公共组件 | `../common.yaml#/components/schemas/…`、`…/parameters/…` | `../common.yaml#/components/responses/…` | 跨文件引用 response 会编译失败，除非共享包也生成 strict server |
-| 组件名 | PascalCase，在所有模块文件中唯一 | 两个模块用同一个名字表示不同的东西 | 打包时会被改名为 `Name-2`，`apitest` 的测试会失败（2.8） |
-| 响应对象 | `additionalProperties: false` | — | 契约测试能发现多出来的字段 |
+| 场景 | 这样写 | 不要这样写 | 原因 | 由谁检查 |
+|---|---|---|---|---|
+| 可为空的标量 | `type: [string, 'null']` | `nullable: true`（3.0 写法） | — | `TestContractFollowsAuthoringRules` |
+| 可为空的枚举或对象 | `oneOf: [{$ref: '#/components/schemas/X'}, {type: 'null'}]` | `enum: [a, b, null]` | 后者让 Go 多出一个 `"<nil>"` 常量 | `TestContractFollowsAuthoringRules` |
+| 固定值、`discriminator` 的属性 | `type: string` + 单值 `enum` | `const` | `const` 在 Go 中生成 `interface{}` | `TestContractFollowsAuthoringRules` |
+| 引用公共组件 | `../common.yaml#/components/schemas/…`、`…/parameters/…` | `../common.yaml#/components/responses/…` | 跨文件引用 response 会编译失败，除非共享包也生成 strict server | 生成的 Go 代码编译失败 |
+| 组件名 | PascalCase，在所有模块文件中唯一 | 两个模块用同一个名字表示不同的东西 | 打包时会被改名为 `Name-2`，`apitest` 的测试会失败（2.8） | `TestComponentNamesAreTypeNames` |
+| 响应对象 | `additionalProperties: false` | — | 契约测试能发现多出来的字段 | `TestContractFollowsAuthoringRules`：所有 object 类型的组件 schema（请求 schema 同样适用），只由 `allOf`/`oneOf`/`anyOf` 组合、没有自己 `properties` 的除外 |
 
 **`api/common.yaml`**：`Problem`（`status`、`code`、`title` 必填，`detail`、`errors` 可选，`additionalProperties: false`，与 `httpserver.Problem` 一致）和 `FieldError`（`field`、`message`）。分页的公共组件在第一个列表接口出现时加入（第 3 节差异 2）。
 
@@ -159,7 +160,7 @@ api/
 
 - **一个模块一份配置，放在生成目录里**：配置是生成器的输入，和输出放在一起，模块自己的东西自己管。Makefile 遍历 `api/modules/*.yaml`，按文件名找到对应模块的配置；新模块忘了写配置时，生成直接失败。配置中的路径相对于 `server/`。
 - **模块的配置**：`generate: models + std-http-server + strict-server`；`import-mapping: {../common.yaml: …/platform/httpserver/apigen}`（键必须和 `$ref` 中的写法完全一致）；`compatibility.always-prefix-enum-values: true`；`output-options.name-normalizer: ToCamelCaseWithInitialisms`。
-- **`apigen` 的配置**：只生成 `models`，并设 `skip-prune: true`（`common.yaml` 没有 `paths`，默认的裁剪会删掉全部组件）；`name-normalizer` 同上。
+- **`apigen` 的配置**：只生成 `models`，并设 `skip-prune: true`（`common.yaml` 没有 `paths`，默认的裁剪会删掉全部组件）；`always-prefix-enum-values`、`name-normalizer` 同上（`common.yaml` 目前没有枚举，加上这个选项生成结果不变）。
 - **两个一开始就定下的选项**（以后再改会改掉已生成的名字，调用方的代码都要跟着改）：
   - `always-prefix-enum-values`：枚举常量总是带类型名前缀（`InstanceInfoAPIVersionV0`）。不开时，只有值冲突才加前缀，以后别的枚举出现同名的值，已有常量会被悄悄改名。
   - `ToCamelCaseWithInitialisms`：`APIVersion`、`ID`，符合 Go 的命名习惯。
@@ -184,7 +185,8 @@ func NewAPIErrors(logger *slog.Logger) APIErrors
 // 400 bad_request；detail 是 err.Error()（绑定或解码失败的原因）
 func (APIErrors) BadRequest(w http.ResponseWriter, r *http.Request, err error)
 
-// 记录 error 日志（request_id、method、path、error），返回不带 detail 的 500 internal_error
+// 记录 error 日志（request_id、method、path、error），返回不带 detail 的 500 internal_error；
+// 响应已经开始时改为记录 warn 日志并中断连接（见下文）
 func (e APIErrors) InternalError(w http.ResponseWriter, r *http.Request, err error)
 ```
 
@@ -196,6 +198,7 @@ func (e APIErrors) InternalError(w http.ResponseWriter, r *http.Request, err err
 
 - `BadRequest` 的 `detail` 直接用生成代码给出的错误信息，例如 `Invalid format for parameter limit: …`，说明的是调用方自己传入的内容，不含服务端内部信息。
 - `InternalError` 与异常恢复一致：错误只写进日志，响应中不带 `detail`，避免泄露内部主机名等信息。
+- **响应已经开始时中断，不追加 problem**：strict server 先 `WriteHeader(200)` 再写出缓冲区，写出失败时同样调用 `ResponseErrorHandlerFunc`。这时 `InternalError` 按异常恢复的规则处理：平台的 `statusRecorder`（沿 `Unwrap` 找到，模块的中间件可能包了一层）显示状态码已经写出，就记录 warn 日志 `response failed after it started`（request_id、method、path、error），然后 `panic(http.ErrAbortHandler)` 中断连接。客户端看到的是不完整的响应，而不是 200 的响应体后面接着一个 problem。用 warn 而不是 error：最常见的原因是客户端已经断开，不是服务端的故障。
 - **只新增 `bad_request`**：生成的代码只做类型绑定和 JSON 解码，不按 schema 校验取值，P3 中没有"参数校验错误（带 `errors`）"的来源。校验放在哪一层、错误码叫什么，随 M2 的错误码体系一起定（第 3 节差异 7、第 7 节）。
 
 **`/api/` 下方法不对：仍然返回 404，P3 不改**（P2 交接第 4 条）：
@@ -261,9 +264,19 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 ```
 - 文件位置由 `runtime.Caller` 得到（本包在仓库根目录下五层；测试不使用 `-trimpath`）。`go test` 的缓存会记录这次文件读取，`dist` 改了测试就会重跑。
 - 用 kin-openapi 的 `routers/legacy` 找操作（不引入 gorilla/mux）；`openapi3filter.ValidateResponse` 设 `IncludeResponseStatus` 和 `MultiError`。
+- **只按路径和方法找操作**：`Load` 在建路由之前清空文档、路径和操作上的 `servers`。文档有 `servers` 时，legacy 路由还要匹配请求的 scheme 和主机，测试用的主机都对不上，每个 `CheckResponse` 都会失败。测试：给 `dist` 的副本加上 `servers` 后，正确的 instance 响应仍然通过。
 - `CheckResponse` 读完响应体后放回一个新的 reader，调用方还能再读。
 - 它自己的测试：对真实的 `dist` 校验正确的响应通过，缺字段、枚举外的值、多出的字段、错误的 Content-Type、缺 `code` 的 problem、未声明的路径和方法都失败；`CheckSchema` 同理。
-- **组件名检查**：`dist` 中所有组件名必须是 PascalCase 的类型名。它拦住 Redocly 在名字冲突时悄悄改出的 `Name-2`（2.2）。
+- **组件名检查**：`dist` 中所有组件名（`schemas`、`responses`、`parameters`、`requestBodies`、`headers`、`securitySchemes`、`examples`、`links`、`callbacks`）必须是 PascalCase 的类型名。它拦住 Redocly 在名字冲突时悄悄改出的 `Name-2`（2.2）；另有一个测试在手写的文档上确认九类组件都被列出。
+- **写法约定检查**（`rules_test.go`）：`TestContractFollowsAuthoringRules` 用 2.4 的约定检查 `dist`：
+  - 每个路径以 `/api/v0/` 开头；
+  - 每个操作有首字母小写的 camelCase `operationId`、至少一个 tag，用到的 tag 都在顶层 `tags` 中声明；
+  - 每个操作都有 `default` 响应，其 `application/problem+json` 的 schema 就是 `Problem` 组件（按 schema 的同一性比较：打包后是本地 `$ref`，加载器把它解析成组件本身）；
+  - 所有 schema（组件和操作中内联的参数、请求体、响应、响应头，递归到 `properties`、`items`、`additionalProperties`、`not`、`allOf`/`oneOf`/`anyOf`）都不用 `nullable`、`const`，`enum` 中没有 `null`。`nullable: false`、`const: null` 解码后与没写一样，所以 `Load` 开启 kin-openapi 的 `IncludeOrigin`，同时检查每个 schema 在源文件中写出的键；
+  - 所有 object 类型的组件 schema 都设 `additionalProperties: false`，只由 `allOf`/`oneOf`/`anyOf` 组合、没有自己 `properties` 的除外（`additionalProperties` 看不到子 schema 的属性，关上会拒绝所有实例）。
+
+  检查函数接收文档作为参数：`rules_cases_test.go` 在一份手写的小文档上逐项改坏，证明每项检查都会报错，不在仓库里复制一份 `dist`。
+- **入口文件列出所有模块路径**：`TestRootListsEveryModulePath` 读取 `api/modules/*.yaml`（位置的求法与 `dist` 相同），其中每个路径都必须出现在 `dist` 中。入口文件漏写的路径 Go 照样提供，TS 客户端和契约测试却没有。
 
 **使用它的测试**：
 
@@ -273,12 +286,12 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | `modules/instance/adapter/http/handler_test.go` | `GET /api/v0/instance` 的响应符合契约，内容正确（M0 设计 3.8） |
 | `bootstrap/api_test.go` | 整个程序（含三个中间件）：instance 返回 200、`version` 等于 `buildinfo.Get().Version`、带 `X-Request-Id`；`GET /api/v0/nope`、`POST /api/v0/instance` 返回 404 problem+json。不需要数据库 |
 
-**archtest 规则 8** 改为"测试工具（`pgtest`、`apitest`）只能被测试导入"，保证 kin-openapi 不进生产程序；规则表格补上相应的违规例子，以及 `gen` → `apigen` 这条合法的边。
+**archtest 规则 8** 改为"测试工具（`pgtest`、`apitest`）只能被测试导入"；规则表格补上相应的违规例子，以及 `gen` → `apigen` 这条合法的边。规则 8 只保证测试工具包本身不进生产程序，管不到别的途径：生成的代码（`embedded-spec: true`，或没有映射的 `format: uuid` 经 `oapi-codegen/runtime/types` 引入 `github.com/google/uuid`）或其他导入，而 depguard 不检查生成的文件。所以 archtest 另有 **`TestNerveBinaryLinksNoBannedModule`**：用 `packages.Load`（`NeedName | NeedImports | NeedDeps`，不含测试）读取 `./cmd/nerve` 的全部传递依赖，出现以 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并给出一条导入链，例如 `cmd/nerve → internal/bootstrap → internal/platform/httpserver → github.com/getkin/kin-openapi/openapi3`。它与规则测试共用遍历源码目录的函数，新的导入会让缓存的结果失效。两者合起来保证：测试工具只在测试中使用，测试专用和禁用的模块不进 `nerve` 程序。
 
 ### 2.9 TS 客户端：`web/packages/api-client`
 
 - **包名 `@nerve/api-client`**：它是新写的包，不来自 Plane。M1 会把 Plane 的包改名为 `@nerve/*`（总体设计 9.2），新包直接用最终的名字，免得 M1 再改一次，也不把 Plane 的名字用在我们自己的代码上。
-- `package.json`：`private`，`type: module`，`exports: {".": "./src/index.ts"}`（M0 没有前端构建步骤，使用方直接引用 TS 源码：P6 的端到端测试、M2 起的前端）；脚本 `gen`、`typecheck`（`tsc --noEmit`）。
+- `package.json`：`private`，`type: module`，`exports: {".": "./src/index.ts"}`（M0 没有前端构建步骤，使用方直接引用 TS 源码：P6 的端到端测试、M2 起的前端）；脚本 `gen`、`check:types`（`tsc --noEmit`；与 Plane 的包和 turbo 的脚本名一致）。
 - `tsconfig.json`：`strict`、`noUncheckedIndexedAccess`、`moduleResolution: bundler`、`verbatimModuleSyntax`、`noEmit`，`lib` 含 `DOM`（openapi-fetch 用到 `fetch`、`Request`、`Response` 的类型）。
 - `src/index.ts`：导出 `createClient(options?: ClientOptions)`（`openapi-fetch` 的 `createClient<paths>`），以及类型 `paths`、`components`。不写转换层（总体设计 7.2）。
 - `test/client.typecheck.ts`：只参与类型检查、不执行。用 `createClient` 调用 `GET /api/v0/instance`，断言 `data.api_version` 的类型是 `"v0"`、`error.code` 可用；用 `@ts-expect-error` 断言不存在的路径和 `POST /api/v0/instance` 无法编译。
@@ -297,7 +310,7 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | `make gen-check-go` / `gen-check-web` | 先重新生成，再检查本区域的生成物已提交且没有差异：`git status --porcelain -- <生成物路径>` 必须为空，否则打印差异和提示"执行 make gen，并提交生成的文件"，退出码非 0 |
 | `make lint` | `lint-go` + `lint-web` |
 | `make lint-go` | golangci-lint（原来的 `make lint`） |
-| `make lint-web` | `pnpm -r run typecheck`（P5 加入 oxlint） |
+| `make lint-web` | `pnpm -r run check:types`（P5 加入 oxlint） |
 
 - 生成物路径：Go 为 `server/internal/platform/httpserver/apigen`、`server/internal/modules/*/adapter/http/gen`；web 为 `api/dist`、`web/packages/api-client/src/schema.gen.ts`。用 `git status` 而不是 `git diff`，新模块没有提交的生成文件（未跟踪）也能发现。
 - 本地执行 `make gen-check` 时，生成物有未提交的修改也算失败（M0 设计 6.1 的"检查生成物是否已提交"）。
@@ -334,7 +347,7 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | 3 | M0 3.2：`module.go` 提供 `New(deps) → *Module{Handler}` | `New() *Module` 加 `(*Module).Register(mux, apiErrors)` | 生成的路由必须注册在根路由上（P2 交接第 1 条），模块交出一个 Handler 就只能挂成子路由。instance 没有需要从外面传入的依赖；HTTP 相关的 `APIErrors` 在注册时传入 |
 | 4 | M0 3.2：`adapter/http/handler.go` | 目录不变，包名为 `httpadapter` | 包名 `http` 会遮住标准库 `net/http`，handler 两者都要用 |
 | 5 | M0 3.2：`adapter/buildinfo` "从 buildinfo 和配置中读取" | 只读 `platform/buildinfo`；`product`、`api_version` 是 `domain` 中的常量 | P3 返回的字段都不来自配置（P2 已决定不加 `app.name`）。M2 加入 `signup_enabled` 时再读配置 |
-| 6 | M0 3.7：架构规则第 8 条只管 `pgtest` | 规则 8 改为"测试工具（`pgtest`、`apitest`）只能被测试导入"；新增 `platform/httpserver/apitest` | 契约校验被 httpserver、instance、bootstrap 三处测试共用；这条规则保证 kin-openapi 不进生产程序 |
+| 6 | M0 3.7：架构规则第 8 条只管 `pgtest` | 规则 8 改为"测试工具（`pgtest`、`apitest`）只能被测试导入"；新增 `platform/httpserver/apitest` | 契约校验被 httpserver、instance、bootstrap 三处测试共用；这条规则保证测试工具不进生产程序，kin-openapi 等模块另由 archtest 的传递依赖测试把关（2.8） |
 | 7 | P2 交接第 2 条：至少新增 400 和"参数校验错误（带 `errors`）"两个平台错误码 | 只新增 `bad_request` | 生成的代码不按 schema 校验取值，P3 中没有校验错误的来源。校验放在哪一层、错误码叫什么，随 M2 的错误码体系一起定 |
 | 8 | M0 6.1：`make gen`、`make gen-check`、`make lint` | 另有按区域拆分的 `gen-go` / `gen-web`、`gen-check-go` / `gen-check-web`、`lint-go` / `lint-web`；原来的三个命令保留，依次执行两个区域 | P1 交接：持续集成的 `server` 任务没有 Node |
 | 9 | M0 6.3：`server` 任务 `make gen-check` → `make lint` → `make test` | `server`：`gen-check-go` → `lint-go` → `test`；`web`：`pnpm install` → `gen-check-web` → `lint-web` | 同上 |
@@ -393,13 +406,22 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | 交给 | 事项 |
 |---|---|
 | M2 | 请求取值的校验放在哪一层（生成的代码不校验枚举、长度等），以及"参数校验错误"的错误码和 `errors` 字段；领域错误在 `ResponseErrorHandlerFunc` 中映射为 problem |
-| M2 | `format: uuid`：用 `output-options.type-mapping` 映射到标准库 `uuid.UUID`，否则生成代码会用 `github.com/google/uuid`（2.2 已验证可行） |
+| M2 | 错误出口的细节：请求体 JSON 解码失败时，`BadRequest` 的 `detail` 会带出 Go 的类型名（`json: cannot unmarshal … Go struct field IssueCreate.name …`），改为 `errors[]` 或通用的说明；`http.MaxBytesError` → 413；`context.Canceled` 不产生 500，也不记 ERROR 日志 |
+| M2 | problem 只走一条路：用 `apigen.Problem` 的 typed `default` 响应，或者 handler 返回错误再统一映射，二选一 |
+| M2 | `format: uuid`：用 `output-options.type-mapping` 映射到标准库 `uuid.UUID`，否则生成代码会用 `github.com/google/uuid`（2.2 已验证可行；漏掉时 archtest 的传递依赖测试失败） |
 | M2 | PATCH 的"传 `null` 清空"：`output-options.nullable-type: true`，生成 `nullable.Nullable[T]`（引入 `github.com/oapi-codegen/nullable`） |
+| M2 | 模块配置的模板选项一次定下、每个模块照抄：`nullable-type`、`prefer-skip-optional-pointer`、uuid 的 `type-mapping`（与上两行一起决定） |
 | M2 | 第一个带参数的接口会让生成代码导入 `github.com/oapi-codegen/runtime`（最新版 v1.7.0），写死版本 |
+| M2 | 认证的写法（已试过）：模块文件顶层的 `security`、`securitySchemes` 打包后被丢掉；操作上的 `security` 保留下来，但没有对应的 scheme，`doc.Validate` 也接受这个悬空的名字。约定：每个操作单独声明 `security`；`securitySchemes` 写在入口文件和每个模块文件里；在 `apitest` 中加一项检查 |
+| M2 | 模块入口的扩展：第二个模块出现前，把平台的 HTTP 依赖合成一个值传入；`httpadapter.Register` 接收一个用例结构体；生成的 `Middlewares` 按相反的顺序包装（最后一个在最外层）；其他模块要用的能力由模块导出访问方法 |
+| M2 | 接口描述的布局：多个模块共用的接口类型放在 `common.yaml`（模块文件之间互相 `$ref` 会违反 archtest 规则 3 和 6）；一个路径只属于一个模块文件；模块文件名与 Go 的模块目录名相同 |
+| M2 | 第一个带参数或请求体的模块，为每个错误出口写测试；可选：`apitest` 增加 `CheckRequest` |
 | M3 | 第一个列表接口把 `Limit`、`Cursor`（parameters）和 `NextCursor`（schema，`type: [string, 'null']`）加入 `api/common.yaml` |
-| P5 | oxfmt、oxlint 排除 `web/packages/api-client/src/schema.gen.ts` 和 `api/dist/`；`make lint-web` 改为 turbo 驱动，保留 api-client 的类型检查 |
+| P5 | oxfmt、oxlint 排除 `web/packages/api-client/src/schema.gen.ts` 和 `api/dist/`；`make lint-web` 改为 turbo 驱动，保留 api-client 的类型检查（脚本已按 Plane 的习惯叫 `check:types`）；`typescript` 改用 `catalog:`；合并 Plane 根目录的 `package.json` 时保留 `@redocly/cli` |
 | P6 | 端到端测试通过 `@nerve/api-client` 的 `createClient({ baseUrl })` 调用接口 |
-| M8 | 对外接口文档以 `api/dist/openapi.yaml` 为准；届时评估 `redocly lint` 和 405 |
+| P6 | `e2e` 任务的 `if` 和 `needs`：同仓 PR 跳过的任务也报告为成功，`e2e` 经 `needs` 继承这一点；将来把检查设为必需之前，去掉跳过条件或加一个 `if: always()` 的汇总任务 |
+| P6 | knip 忽略 `schema.gen.ts` 和 `test/**`；确认 Playwright 能转译真实路径在 `node_modules` 之外的工作区 TS 源码 |
+| M8 | 对外接口文档以 `api/dist/openapi.yaml` 为准；届时评估 `redocly lint` 和 405；加入 `servers` 不影响契约测试（`apitest` 已忽略 `servers`，2.8） |
 
 ## 附录 A：3.1 验证样例的关键写法
 
