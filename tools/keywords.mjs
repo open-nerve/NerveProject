@@ -1,5 +1,6 @@
 // Keyword guard (docs/v0/M1-frontend-trim/M1-design.md 7.4): fails when a file hits a rule in
-// tools/keywords.json that no exception covers, or when an exception no longer matches anything.
+// tools/keywords.json that no exception covers, when an exception no longer matches anything, or when
+// an exception's hits do not number exactly its "count" (default 1).
 // The files are those git lists (tracked, plus untracked ones that are not ignored) as they are in the
 // working tree. A path rule tests each path; a content rule tests the text of the files its `files`
 // pattern selects (binary files are skipped). Patterns are JavaScript regular expressions with explicit
@@ -75,6 +76,9 @@ function loadRules() {
     if (typeof e.reason !== "string" || e.reason === "" || !/^M\d+(?:\/P\d+)?$/.test(e.until ?? "")) {
       fail(`exception ${JSON.stringify(e)} needs a "reason" and an "until" such as "M3" or "M1/P4"`);
     }
+    if (e.count !== undefined && (!Number.isInteger(e.count) || e.count < 1)) {
+      fail(`exception ${JSON.stringify(e)} needs "count" to be an integer of at least 1`);
+    }
   }
   return { rules, exceptions: config.exceptions };
 }
@@ -117,22 +121,45 @@ for (const path of new Set(git.stdout.split("\0").filter(Boolean))) {
 }
 
 const count = (n, noun) => `${n} ${noun}${n === 1 ? "" : "s"}`;
-const used = new Set();
-const open = hits.filter((hit) => {
-  const index = exceptions.findIndex((e) => e.rule === hit.rule && e.path === hit.path && e.match === hit.match);
-  if (index >= 0) used.add(index);
-  return index < 0;
-});
-const stale = exceptions.filter((_, index) => !used.has(index));
+// An exception's key is its (rule, path, match) triple; several exceptions, or several hits, can share
+// one key, so hits are grouped by key first and each exception then looks up its own group's size.
+const keyOf = (o) => `${o.rule}\u0000${o.path}\u0000${o.match}`;
+const hitsByKey = new Map();
+for (const hit of hits) {
+  const group = hitsByKey.get(keyOf(hit));
+  if (group) group.push(hit);
+  else hitsByKey.set(keyOf(hit), [hit]);
+}
+
+const covered = new Set();
+const stale = [];
+const mismatched = [];
+for (const e of exceptions) {
+  const n = hitsByKey.get(keyOf(e))?.length ?? 0;
+  if (n === 0) {
+    stale.push(e);
+    continue;
+  }
+  covered.add(keyOf(e));
+  const m = e.count ?? 1;
+  if (n !== m) mismatched.push({ exception: e, n, m });
+}
+const open = hits.filter((hit) => !covered.has(keyOf(hit)));
+
 for (const hit of open) {
   console.error(`${hit.rule}  ${hit.path}${hit.line ? `:${hit.line}` : ""}  ${JSON.stringify(hit.match)}`);
+}
+for (const { exception: e, n, m } of mismatched) {
+  console.error(
+    `exception count: ${e.rule}  ${e.path}  ${JSON.stringify(e.match)} covers ${n} hits, "count" says ${m}`
+  );
 }
 for (const e of stale) {
   console.error(`stale exception: ${e.rule}  ${e.path}  ${JSON.stringify(e.match)} matches nothing now; delete it`);
 }
-if (open.length > 0 || stale.length > 0) {
+if (open.length > 0 || stale.length > 0 || mismatched.length > 0) {
   console.error(
-    `keywords: ${count(open.length, "hit")} without an exception, ${count(stale.length, "stale exception")} (${RULES_FILE}).`
+    `keywords: ${count(open.length, "hit")} without an exception, ${count(stale.length, "stale exception")}, ${count(mismatched.length, "mismatched exception")} (${RULES_FILE}).`
   );
   process.exit(1);
 }
