@@ -289,7 +289,7 @@
 
 ## 控制者评审补充（执行前必读）
 
-评审本计划时做了两处补充，与正文冲突时以本节为准。
+评审本计划时做了两处补充，执行 Task 1 时又做了一处裁定（第 3 项），与正文冲突时以本节为准。
 
 1. **一次性脚本的目录**：本会话的沙箱不允许随意使用 `/tmp`。正文中所有的 `/tmp/nerve-p1/` 一律换成 `/private/tmp/claude-501/-Users-xiaoruan-project-nerve-project/99d2bc1d-fdaf-4b92-a590-29b89514572b/scratchpad/nerve-p1/`，下文写作 `$P1TMP`。它是会话的临时目录，不在仓库里。
 2. **新增 Task 9A：门禁覆盖 `tools/`**。
@@ -311,6 +311,13 @@
      - README、M0 设计 6.1 中 `lint-web` 的说明加上"也检查 `tools/` 下的脚本"；
      - 前端改动清单"1.3"一节登记根目录的这两个脚本和 turbo 根任务。
    - **提交信息**：`build(tools): lint and format-check the repository tools in make lint-web`。
+3. **`tools/` 格式检查的范围（Task 1 执行时的裁定）**：
+   - **问题**：`oxfmt --check tools/` 会连带检查 `tools/plane-schema/README.md`。这个文件不符合 oxfmt 的格式，检查因此失败，与新加的脚本无关。
+   - **裁定**：这道检查看住的是门禁脚本本身。仓库里的 Markdown 文档（`docs/`、`README.md`）一直不做格式检查；`plane-schema` 是 M0 的快照工具，不单独开例外，也不改它的文件。
+   - **做法**：
+     - 正文中所有 `pnpm exec oxfmt --check tools/` 一律换成 `pnpm exec oxfmt --check tools/*.mjs tools/*.json`。Task 1 还没有 `tools/*.json`，只写 `tools/*.mjs`。
+     - `oxlint tools/` 不变：oxlint 只检查 JS。
+     - Task 9A 的根脚本用同样的范围：`"check:format": "oxfmt --check tools/*.mjs tools/*.json"`，`"check:lint": "oxlint --max-warnings=0 tools"`。
 
 ## 文件结构
 
