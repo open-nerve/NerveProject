@@ -81,7 +81,8 @@ spec §4 的 9 项验收标准全部满足：本地 `make e2e` 通过（5 个测
 - **`35703813772`**（提交 `3804f42`，分支热，最终评审前的最后一次推送）：成功。`server` 38 秒；`web` 111 秒（缓存恢复 3、install 12、lint-web 61、knip 3、build-web 16、保存 0——主键命中不再保存）；`e2e` 122 秒（缓存 5、install 9、浏览器 17、`make build` 53、`make e2e` 16）；整条流水线约 233 秒。
 - **spec §4.8 的失败演示**：临时分支 `tmp-p6-e2e-fail-demo`（`d17eb38`，S4 的路径改成 `/v0/nope`）上的运行 `35703833783`：`server`、`web` 都通过，`e2e` 任务在 "E2E" 步骤失败；"Upload the Playwright report" 步骤执行，产物 `playwright-report`（640271 字节）已生成；临时分支之后在本地和远程都已删除。
 - **`35705775920`**（提交 `a7d466d`，修复轮）：成功。`server` 37 秒；`web` 139 秒（缓存恢复 5、install 9、lint-web 90、knip 4、build-web 23）；`e2e` 112 秒（缓存 5、install 10、浏览器 17、`make build` 38、`make e2e` 19）；整条流水线约 250 秒。修复轮之后的提交只改文档。
-- 合并到 `main` 之后的门禁运行（`main` 看不到分支的缓存，是冷运行）记在 M0 收尾时对本节的补充里。
+- **`35709182359`**（提交 `b684ac4`，分支最终提交，只改文档）：成功。`server` 49 秒；`web` 142 秒；`e2e` 127 秒。
+- **`35709820046`**（`main` 上的合并提交 `bee2bdf`，`main` 看不到分支的缓存，是冷运行）：成功。`server` 46 秒（setup-go 17、lint 8、test 14）；`web` 148 秒（缓存恢复 1——未命中、install 14、lint-web 92、knip 4、build-web 23、缓存保存 5）；`e2e` 121 秒（setup-go 13、缓存 5、install 10、浏览器 18、`make build` 45、`make e2e` 19）；整条流水线约 270 秒。`e2e` 任务远低于 spec 2.9 的 5 分钟阈值，不需要把 `web` 任务的 turbo 缓存交给它。
 
 ## 7. 移交事项
 
@@ -104,9 +105,9 @@ spec §4 的 9 项验收标准全部满足：本地 `make e2e` 通过（5 个测
 | 完成标准 | 证据 | 状态 |
 |---|---|---|
 | P1 到 P6 全部完成，每个 Phase 都有 spec、plan 和 review | P1–P5 均已完成，各有 review；本记录是 P6 的 review | 已勾选 |
-| 持续集成中的全部门禁通过 | 分支上 `server`/`web`/`e2e` 三个任务都通过（第 6 节）；main 合并后的门禁运行留给控制者核对 | 待控制者在合并后勾选 |
+| 持续集成中的全部门禁通过 | `main` 上合并提交 `bee2bdf` 的运行 `35709820046`：`server`（生成物一致性、golangci-lint 含 depguard、Go 测试含架构测试和集成测试）、`web`（生成物一致性、类型检查、oxlint 按基线、格式检查、knip 报告、前端构建）、`e2e`（`make build` + S1–S4）全部通过（第 6 节） | 已勾选（M0 收尾） |
 | `make build` 能构建出单个可执行文件 `bin/nerve`；它加上一个 Postgres，就能完成 S1 到 S4 | `make e2e` 正是这样运行的：CI 的 `e2e` 任务里 `make build` 之后紧跟 `make e2e`，5 个测试全部通过（第 6 节） | 已勾选 |
 | 第 7 节的调整建议已确认，并已同步更新到总体设计和差异清单 | P6 未涉及新的调整建议，沿用此前 Phase 已勾选的状态 | 已勾选 |
 | 前端改动清单中已登记迁入时的改动 | `frontend-changes.md` §1.2 记录了 P6 对 `pnpm-workspace.yaml`、`pnpm-lock.yaml`、根 `package.json` 的改动 | 已勾选 |
 | `handoffs/` 中没有 `open` 状态的事项；需要移交给后续 M 的事项，已放进对应 M 的 `handoffs/` 目录 | `grep -l '^status: open' docs/v0/M0-foundation/handoffs/*.md` 无输出；交给 M1、M2、M8 的 3 个 handoff 已建（第 7 节） | 已勾选 |
-| 总体设计中 M0 的状态改为"已完成" | 留给控制者在 main 合并、CI 门禁转绿后一并修改（`v0-design.md` §9.4） | 待控制者勾选 |
+| 总体设计中 M0 的状态改为"已完成" | `v0-design.md` 9.4 的 M0 行已改为"已完成"（M0 收尾） | 已勾选（M0 收尾） |
