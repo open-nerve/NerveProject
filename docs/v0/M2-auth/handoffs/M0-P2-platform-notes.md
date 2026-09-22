@@ -26,7 +26,7 @@ M2 第一次加入认证、事务、后台任务和真正的迁移文件，届�
    - River 自己的表结构用 goose 的 SQL 迁移建立（而不是 River 的迁移命令），并纳入迁移命名规则。
 6. **archtest 的补充。**
    - 规则 6 从 `adapter/http/gen` 推广到所有 `adapter/*/gen`，覆盖 sqlc 的生成代码。
-   - 建立 `internal/shared` 时，为它加一条"只能依赖标准库"的规则。现在 `domain → shared → net/http` 这样的间接依赖还检查不到。
+   - ~~建立 `internal/shared` 时，为它加一条"只能依赖标准库"的规则。~~ M0 加固已完成：archtest 第 10 条要求 `internal/shared` 只依赖标准库（不含 `net/http`、`database/sql`）和它自己，`domain → shared → net/http` 会被拦下，建立 `internal/shared` 时不用再加。
 7. **迁移与就绪检查。**
    - 第一个迁移文件出现后，`/readyz` 的迁移检查才真正生效。
    - 如果生产环境用单独的数据库角色执行迁移，运行服务的角色需要有 `goose_db_version` 表的 SELECT 权限。

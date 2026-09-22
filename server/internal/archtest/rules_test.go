@@ -41,6 +41,8 @@ func rules() []rule {
 		{"generated code is imported only by its module's http adapter", generatedCodeStaysInAdapter},
 		{"platform packages do not import each other, except config", platformPackagesAreIndependent},
 		{"test helpers (pgtest, apitest) are imported only by tests", testHelpersOnlyInTests},
+		{"module packages live in domain, app or adapter, or at the module root", moduleLayoutIsKnown},
+		{"internal/shared imports only the standard library (not net/http or database/sql) and internal/shared", sharedKernelIsPure},
 	}
 }
 
@@ -111,6 +113,13 @@ func isStdlib(path string) bool {
 	return !strings.Contains(first, ".")
 }
 
+// isInfrastructure reports whether an import outside this module is
+// technology the pure layers must not see: any third-party module, net/http
+// or database/sql.
+func isInfrastructure(path string) bool {
+	return !isStdlib(path) || within(path, "net/http") || within(path, "database/sql")
+}
+
 func inModuleDir(path, dir string) bool {
 	r, ok := local(path)
 	return ok && within(r, dir)
@@ -146,10 +155,26 @@ func layersPointInward(from, to string) bool {
 	return fromKnown && toKnown && toRank > fromRank
 }
 
+// moduleLayoutIsKnown keeps every module package in a layer the other rules
+// know. A package elsewhere in a module would escape them: the layer rule
+// cannot rank it and the purity rule leaves in-module imports to the layer
+// rule, so domain -> issue/transport -> net/http would pass.
+func moduleLayoutIsKnown(from, to string) bool {
+	return inUnknownLayer(from) || inUnknownLayer(to)
+}
+
+func inUnknownLayer(path string) bool {
+	if _, layer, ok := moduleOf(path); ok {
+		_, known := layerRank(layer)
+		return !known
+	}
+	return false
+}
+
 // innerLayersArePure keeps domain and app free of infrastructure: no
 // third-party module, no platform package, no net/http or database/sql.
-// Imports of modules are judged by the layer and isolation rules, which
-// already restrict them to the own module's same or inner layers.
+// Imports of modules are judged by the layer, layout and isolation rules,
+// which together restrict them to the own module's same or inner layers.
 func innerLayersArePure(from, to string) bool {
 	if _, layer, ok := moduleOf(from); !ok || (layer != "domain" && layer != "app") {
 		return false
@@ -158,10 +183,20 @@ func innerLayersArePure(from, to string) bool {
 		_, _, inModule := moduleOf(to)
 		return !inModule && !within(r, "internal/shared")
 	}
-	if !isStdlib(to) {
-		return true
+	return isInfrastructure(to)
+}
+
+// sharedKernelIsPure holds internal/shared to the purity of the domain and
+// app layers that may import it; otherwise it would carry infrastructure
+// into them, as in domain -> shared/x -> net/http.
+func sharedKernelIsPure(from, to string) bool {
+	if !inModuleDir(from, "internal/shared") {
+		return false
 	}
-	return within(to, "net/http") || within(to, "database/sql")
+	if r, ok := local(to); ok {
+		return !within(r, "internal/shared")
+	}
+	return isInfrastructure(to)
 }
 
 func modulesAreIsolated(from, to string) bool {

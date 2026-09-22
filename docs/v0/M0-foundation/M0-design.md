@@ -232,7 +232,7 @@ NerveProject/
 - 详见 [P2 spec](specs/P2-server-platform.md) 2.3 节。
 
 ### 3.7 架构守护
-- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，一共 8 条规则，包括：
+- **架构测试**（`internal/archtest`，写法类似 Java 的 ArchUnit）：用 `golang.org/x/tools/go/packages` 读取所有包的导入关系，一共 10 条规则，包括：
   1. 模块内的依赖只能向内：`adapter → app → domain`。
   2. `domain` 和 `app` 都只能依赖标准库、本模块的内层包和 `internal/shared`，不能依赖 `platform`、数据库驱动、HTTP 等技术库。
   3. 模块之间不能互相导入。
@@ -241,6 +241,8 @@ NerveProject/
   6. 生成的代码只能被本模块的 http 适配器导入。
   7. `platform` 的各个包之间互不导入（`config` 除外）。
   8. 测试工具（`pgtest`、`apitest`）只能被测试代码导入。
+  9. 模块内的包只能放在 `domain`、`app`、`adapter`（含子目录）或模块根目录（`module.go`）。放在别处的包，第 1 条排不出它的层次，第 2 条又把模块内的导入交给第 1 条判断，`domain → 模块内其他目录 → net/http` 就能两条都绕过（M0 对抗性评审 Important 1）。
+  10. `internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己：`domain`、`app` 可以导入它，它不干净，技术依赖就会经它带进这两层。M0 还没有 `internal/shared`，这条规则先用合成的导入关系测试。
 - **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述、未映射的 `format: uuid`），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并打印导入链。
 - **depguard**：只管"整个项目都禁止使用的库"，例如：
   - 第三方 uuid 库（`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`）：用标准库。

@@ -391,7 +391,7 @@ modules/issue/
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
 6. **强制手段**：
    - Go 编译器本身禁止包之间的循环依赖。
-   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块之间不能互相导入；`platform` 不依赖模块，`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；生成的代码只能被本模块的适配器导入；测试工具只能被测试代码导入。
+   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块内的包只能放在 `domain`、`app`、`adapter` 和模块根；`shared` 本身也只能依赖标准库（不含 `net/http`、`database/sql`）；模块之间不能互相导入；`platform` 不依赖模块，`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；生成的代码只能被本模块的适配器导入；测试工具只能被测试代码导入。
    - golangci-lint 的 depguard 只负责禁止使用某些库（比如第三方 uuid 库、viper、标准库 `log`）。
    - 以上都作为持续集成的门禁。
 
