@@ -11,7 +11,6 @@
     "web/apps/web/.react-router/**",
     "web/apps/web/build/**",
     "web/packages/*/dist/**",
-    "web/packages/api-client/src/schema.gen.ts",
-    "web/packages/i18n/src/types/keys.generated.ts"
+    "web/packages/api-client/src/schema.gen.ts"
   ]
 }

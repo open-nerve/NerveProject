@@ -13,7 +13,6 @@ export type { TTranslationStore } from "./hooks/use-translation";
 
 // Types
 export type { TLanguage, ILanguageOption } from "./types";
-export type { TTranslationKeys } from "./types";
 export type { TNamespace } from "./constants/namespaces";
 
 // Utilities

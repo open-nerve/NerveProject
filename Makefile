@@ -101,9 +101,9 @@ lint-go: tools ## 运行 golangci-lint（server）
 
 # 关键词守卫（tools/keywords.mjs，规则在 tools/keywords.json）检查整个仓库，不属于任何工作区包，所以不经过 turbo
 .PHONY: lint-web
-lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上限）、格式检查（需要 Node）
+lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上限）、格式检查、中英文翻译键一致（需要 Node）
 	node tools/keywords.mjs
-	$(TURBO) run check:types check:lint check:format $(TURBO_QUIET)
+	$(TURBO) run check:types check:lint check:format check:sync $(TURBO_QUIET)
 
 # M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1 去掉 --no-exit-code，作为门禁
 .PHONY: knip

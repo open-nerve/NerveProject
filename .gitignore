@@ -30,7 +30,6 @@ coverage/
 web/apps/web/.react-router/
 web/apps/web/build/
 web/packages/*/dist/
-web/packages/i18n/src/types/keys.generated.ts
 
 # 内嵌的前端：只提交 .gitkeep，其余由 make build 复制进来
 server/internal/platform/webui/dist/*

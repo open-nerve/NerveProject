@@ -14,11 +14,10 @@
   },
   "scripts": {
     "dev": "tsdown --watch --no-clean",
-    "build": "pnpm run generate:types && tsdown",
-    "generate:types": "tsx scripts/generate-types.ts",
-    "check:sync": "tsx scripts/sync-check.ts --ci",
-    "check:lint": "node ../../../tools/lint-cap.mjs 3",
-    "check:types": "pnpm run generate:types && tsc --noEmit",
+    "build": "tsdown",
+    "check:sync": "tsx scripts/sync-check.ts",
+    "check:lint": "node ../../../tools/lint-cap.mjs 1",
+    "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
     "test": "vitest run"

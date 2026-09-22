@@ -9,15 +9,11 @@
       // 关键词守卫由 make lint-web 调用，package.json 的脚本中看不到
       "entry": ["tools/keywords.mjs"]
     },
-    // 下面两处导入的是生成的、不进仓库的文件，knip 找不到它们；它们由 tsc 检查
+    // 下面这处导入的是生成的、不进仓库的文件，knip 找不到它们；它们由 tsc 检查
     "web/apps/web": {
       // react-router typegen 为每个路由生成的类型，在 .react-router/types/ 中，经 tsconfig 的 rootDirs 以 ./+types/… 导入；
       // typegen 跑之前（干净克隆）这些导入解析不到；生成过之后 knip 可能提示可以删掉这一项，不要删
       "ignoreUnresolved": ["\\+types/"]
-    },
-    "web/packages/i18n": {
-      // 翻译键 src/types/keys.generated.ts 由 i18n 的构建生成；构建过之后 knip 能找到，会提示可以删掉这一项，不要删
-      "ignoreUnresolved": ["^\\./keys\\.generated$"]
     },
     "web/packages/api-client": {
       // 类型测试只由 tsc 检查，其中的函数不会被调用

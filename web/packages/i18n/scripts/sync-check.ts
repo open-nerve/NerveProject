@@ -4,242 +4,88 @@
  * See the LICENSE file for details.
  */
 
-// Usage:
-//   tsx packages/i18n/scripts/sync-check.ts          # Report only
-//   tsx packages/i18n/scripts/sync-check.ts --ci     # Exit 1 if issues found
+// Usage: tsx scripts/sync-check.ts
+// Fails unless src/locales has both en and zh-CN, they have the same namespace files with the same keys,
+// and in each of them no key is defined in two namespace files or is also the prefix of another key. All
+// namespaces share one key space (src/core/instance.ts makes every namespace a fallback), so such a key
+// would be ambiguous.
 
-import type { LocaleData } from "./lib/locale-io.js";
-import { LOCALES_DIR, listLocales, loadLocale } from "./lib/locale-io.js";
+import fs from "node:fs";
+import path from "node:path";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const LOCALES_DIR = path.resolve(import.meta.dirname, "../src/locales");
+const SOURCE = "en";
+const TARGET = "zh-CN";
 
-/** Format a number with commas (e.g. 7712 -> "7,712"). */
-function fmt(n: number): string {
-  return n.toLocaleString("en-US");
+/** Recursively flatten an object into dot-notation keys. */
+function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const full = prefix ? `${prefix}.${key}` : key;
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      ? flattenKeys(value as Record<string, unknown>, full)
+      : [full];
+  });
 }
 
-// ---------------------------------------------------------------------------
-// Checks
-// ---------------------------------------------------------------------------
-
-interface CollisionEntry {
-  key: string;
-  files: string[];
-}
-
-/** Cross-namespace collision check: same flattened key in multiple namespace files. */
-function findCollisions(localeData: LocaleData): CollisionEntry[] {
-  const keyToFiles = new Map<string, string[]>();
-  for (const ns of localeData.namespaces) {
-    for (const key of ns.keys) {
-      const existing = keyToFiles.get(key);
-      if (existing) {
-        existing.push(`${ns.name}.json`);
-      } else {
-        keyToFiles.set(key, [`${ns.name}.json`]);
-      }
-    }
+/** Every namespace file of a locale (namespace -> its keys), or undefined when the locale directory is missing. */
+function loadLocale(locale: string): Map<string, Set<string>> | undefined {
+  const dir = path.join(LOCALES_DIR, locale);
+  if (!fs.existsSync(dir)) return undefined;
+  const namespaces = new Map<string, Set<string>>();
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+    const data = JSON.parse(fs.readFileSync(path.join(dir, file), "utf-8")) as Record<string, unknown>;
+    namespaces.set(path.basename(file, ".json"), new Set(flattenKeys(data)));
   }
+  return namespaces;
+}
 
-  const collisions: CollisionEntry[] = [];
-  for (const [key, files] of keyToFiles) {
-    if (files.length > 1) {
-      collisions.push({ key, files });
-    }
+/** Keys of one locale that are defined in two namespace files, or that are also the prefix of another key. */
+function findConflicts(locale: string, namespaces: Map<string, Set<string>>): string[] {
+  const files = new Map<string, string[]>();
+  for (const [namespace, keys] of namespaces) {
+    for (const key of keys) files.set(key, [...(files.get(key) ?? []), `${namespace}.json`]);
   }
-  return collisions.toSorted((a, b) => a.key.localeCompare(b.key));
-}
-
-interface PathConflict {
-  leaf: string;
-  branch: string;
-}
-
-/** Path conflict check: a key is both a leaf AND a prefix of another key. */
-function findPathConflicts(localeData: LocaleData): PathConflict[] {
-  const allKeysArray = [...localeData.allKeys].toSorted();
-  const conflicts: PathConflict[] = [];
-
-  // Build a set of all prefixes used in the keys
-  const prefixes = new Set<string>();
-  for (const key of allKeysArray) {
+  const conflicts = new Set<string>();
+  for (const [key, where] of files) {
+    if (where.length > 1) conflicts.add(`${locale}: ${key} is defined in ${where.join(" and ")}`);
     const parts = key.split(".");
     for (let i = 1; i < parts.length; i++) {
-      prefixes.add(parts.slice(0, i).join("."));
+      const prefix = parts.slice(0, i).join(".");
+      if (files.has(prefix)) conflicts.add(`${locale}: ${prefix} is a key and also the prefix of other keys`);
     }
   }
-
-  // A conflict exists when a leaf key is also a prefix
-  for (const key of allKeysArray) {
-    if (prefixes.has(key)) {
-      // Find one example of a key that extends this prefix
-      const extending = allKeysArray.find((k) => k.startsWith(key + "."));
-      if (extending) {
-        conflicts.push({ leaf: key, branch: extending });
-      }
-    }
-  }
-
-  return conflicts;
+  return [...conflicts];
 }
 
-interface LocaleComparison {
-  locale: string;
-  totalKeys: number;
-  missingKeys: string[];
-  staleKeys: string[];
-  coverage: number; // 0-100
-}
-
-function compareToEnglish(enKeys: Set<string>, other: LocaleData): LocaleComparison {
-  const missingKeys: string[] = [];
-  const staleKeys: string[] = [];
-
-  for (const key of enKeys) {
-    if (!other.allKeys.has(key)) {
-      missingKeys.push(key);
+const problems: string[] = [];
+const [source, target] = [SOURCE, TARGET].map((locale) => {
+  const namespaces = loadLocale(locale);
+  if (namespaces) problems.push(...findConflicts(locale, namespaces));
+  else problems.push(`src/locales/${locale} is missing`);
+  return namespaces;
+});
+if (source && target) {
+  for (const namespace of new Set([...source.keys(), ...target.keys()])) {
+    const sourceKeys = source.get(namespace);
+    const targetKeys = target.get(namespace);
+    if (!sourceKeys || !targetKeys) {
+      problems.push(`${namespace}.json exists only in ${sourceKeys ? SOURCE : TARGET}`);
+      continue;
     }
-  }
-
-  for (const key of other.allKeys) {
-    if (!enKeys.has(key)) {
-      staleKeys.push(key);
+    for (const key of sourceKeys) {
+      if (!targetKeys.has(key)) problems.push(`${namespace}: ${key} is missing in ${TARGET}`);
     }
-  }
-
-  const coverage = enKeys.size > 0 ? ((enKeys.size - missingKeys.length) / enKeys.size) * 100 : 100;
-
-  return {
-    locale: other.locale,
-    totalKeys: other.allKeys.size,
-    missingKeys: missingKeys.toSorted(),
-    staleKeys: staleKeys.toSorted(),
-    coverage,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
-
-function main() {
-  const ciMode = process.argv.includes("--ci");
-
-  // Discover all locale directories
-  const localeDirs = listLocales();
-
-  if (!localeDirs.includes("en")) {
-    console.error("ERROR: English locale (en) not found in", LOCALES_DIR);
-    process.exit(1);
-  }
-
-  // Load all locales
-  const localeDataMap = new Map<string, LocaleData>();
-  for (const locale of localeDirs) {
-    localeDataMap.set(locale, loadLocale(locale));
-  }
-
-  const enData = localeDataMap.get("en")!;
-
-  // Run checks
-  const collisions = findCollisions(enData);
-  const pathConflicts = findPathConflicts(enData);
-
-  const comparisons: LocaleComparison[] = [];
-  for (const locale of localeDirs) {
-    if (locale === "en") continue;
-    comparisons.push(compareToEnglish(enData.allKeys, localeDataMap.get(locale)!));
-  }
-
-  // -------------------------------------------------------------------------
-  // Print report
-  // -------------------------------------------------------------------------
-
-  let hasFailure = false;
-
-  console.log("\n=== Sync Check Results ===\n");
-  console.log(`  en:    ${fmt(enData.allKeys.size)} keys (source)\n`);
-
-  for (const comp of comparisons) {
-    const status = comp.missingKeys.length === 0 ? "✓" : "✗";
-    const missingStr = comp.missingKeys.length > 0 ? ` — ${fmt(comp.missingKeys.length)} missing` : "";
-    const staleStr = comp.staleKeys.length > 0 ? `, ${fmt(comp.staleKeys.length)} stale` : "";
-    console.log(
-      `  ${status} ${comp.locale.padEnd(10)} ${fmt(comp.totalKeys)} keys (${comp.coverage.toFixed(1)}%)${missingStr}${staleStr}`
-    );
-    if (comp.missingKeys.length > 0) {
-      hasFailure = true;
+    for (const key of targetKeys) {
+      if (!sourceKeys.has(key)) problems.push(`${namespace}: ${key} is missing in ${SOURCE}`);
     }
-  }
-
-  // Cross-namespace collisions
-  if (collisions.length > 0) {
-    hasFailure = true;
-    console.log("\nCROSS-NAMESPACE COLLISIONS:");
-    for (const c of collisions) {
-      console.log(`  ✗ "${c.key}" exists in: ${c.files.join(", ")}`);
-    }
-  }
-
-  // Path conflicts
-  if (pathConflicts.length > 0) {
-    hasFailure = true;
-    console.log("\nPATH CONFLICTS:");
-    for (const pc of pathConflicts) {
-      console.log(`  ✗ "${pc.leaf}" is a leaf but "${pc.branch}" extends it`);
-    }
-  }
-
-  // Missing keys detail
-  const withMissing = comparisons.filter((c) => c.missingKeys.length > 0);
-  if (withMissing.length > 0) {
-    console.log("\n--- Missing Keys Detail ---\n");
-    for (const comp of withMissing) {
-      console.log(`${comp.locale} (${fmt(comp.missingKeys.length)} missing):`);
-      const show = comp.missingKeys.slice(0, 20);
-      for (const key of show) {
-        console.log(`  - ${key}`);
-      }
-      if (comp.missingKeys.length > 20) {
-        console.log(`  ... and ${fmt(comp.missingKeys.length - 20)} more`);
-      }
-      console.log();
-    }
-  }
-
-  // Stale keys detail
-  const withStale = comparisons.filter((c) => c.staleKeys.length > 0);
-  if (withStale.length > 0) {
-    console.log("--- Stale Keys Detail ---\n");
-    for (const comp of withStale) {
-      console.log(`${comp.locale} (${fmt(comp.staleKeys.length)} stale):`);
-      const show = comp.staleKeys.slice(0, 20);
-      for (const key of show) {
-        console.log(`  - ${key}`);
-      }
-      if (comp.staleKeys.length > 20) {
-        console.log(`  ... and ${fmt(comp.staleKeys.length - 20)} more`);
-      }
-      console.log();
-    }
-  }
-
-  // CI exit code
-  if (ciMode && hasFailure) {
-    console.log("CI mode: exiting with code 1 due to missing keys, collisions, or path conflicts.");
-    process.exit(1);
-  }
-
-  if (!hasFailure) {
-    console.log("\nAll locales are in sync with English. No issues found.");
   }
 }
 
-try {
-  main();
-} catch (err) {
-  console.error("Sync check failed:", err);
+if (problems.length > 0) {
+  console.error(problems.toSorted().join("\n"));
+  console.error(
+    `${SOURCE} and ${TARGET} must have the same namespaces and keys, each key defined once: fix the above.`
+  );
   process.exit(1);
 }
+console.log(`${SOURCE} and ${TARGET} have the same namespaces and keys, each key defined once.`);

@@ -34,6 +34,7 @@
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "$TURBO_ROOT$/tools/lint-cap.mjs"],
       "outputs": []
     },
+    "check:sync": {},
     "check:types": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "!**/*.md"],
