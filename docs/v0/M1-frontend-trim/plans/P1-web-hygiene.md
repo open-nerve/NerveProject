@@ -289,7 +289,7 @@
 
 ## 控制者评审补充（执行前必读）
 
-评审本计划时做了两处补充，执行 Task 1 时又做了一处裁定（第 3 项），与正文冲突时以本节为准。
+评审本计划时做了两处补充，执行 Task 1、Task 2 时又各做了一处裁定（第 3、4 项），与正文冲突时以本节为准。
 
 1. **一次性脚本的目录**：本会话的沙箱不允许随意使用 `/tmp`。正文中所有的 `/tmp/nerve-p1/` 一律换成 `/private/tmp/claude-501/-Users-xiaoruan-project-nerve-project/99d2bc1d-fdaf-4b92-a590-29b89514572b/scratchpad/nerve-p1/`，下文写作 `$P1TMP`。它是会话的临时目录，不在仓库里。
 2. **新增 Task 9A：门禁覆盖 `tools/`**。
@@ -318,6 +318,15 @@
      - 正文中所有 `pnpm exec oxfmt --check tools/` 一律换成 `pnpm exec oxfmt --check tools/*.mjs tools/*.json`。Task 1 还没有 `tools/*.json`，只写 `tools/*.mjs`。
      - `oxlint tools/` 不变：oxlint 只检查 JS。
      - Task 9A 的根脚本用同样的范围：`"check:format": "oxfmt --check tools/*.mjs tools/*.json"`，`"check:lint": "oxlint --max-warnings=0 tools"`。
+4. **例外必须覆盖确定的处数（Task 2 代码评审后的裁定）**：
+   - **问题**：正文 Task 2 Step 1 给出的 `tools/keywords.mjs` 按 `(rule, path, match)` 三元组匹配例外。同一个文件里同一段原文出现多处时（锁文件里 `serve@14.2.5:` 就是两处），一条例外会把它们全盖住，与 7.4"一条例外只覆盖一处"不符，后来新增的同样一处也会被顺带盖住。
+   - **裁定**：例外加一个可选的 `count`（不小于 1 的整数，默认 1），实际处数必须正好等于它，多了少了都失败，与 lint 上限"必须相等"的做法一致。不引入行号：行号随改动漂移，会逼着人频繁改例外。
+   - **做法**（已在 `19663bf` 实现，正文 Step 1 的代码是改动之前的版本）：
+     - 加载时校验 `count`；
+     - 命中按三元组分组，每条例外查自己那一组的处数 `n`：`n` 为 0 报过期；`n` 与 `count` 不符时逐条报 `exception count: <rule>  <path>  "<match>" covers <n> hits, "count" says <m>`，这些命中不再重复列进未登记的命中；
+     - 退出码不变：未登记的命中、过期的例外、处数不符都以 1 退出，其余错误以 2 退出；
+     - 成功那行仍是 `keywords: N rules, M exceptions, no hits.`，失败那行多一段处数不符的计数。
+   - **同步**：M1 设计 7.4、spec 2.4、spec 2.2 的原型结论表和 spec 第 4 节验收已相应改写。
 
 ## 文件结构
 
