@@ -741,12 +741,12 @@ export const calculateIdentifierWidth = (projectIdentifierLength: number, maxSeq
   return projectIdentifierLength * 7 + 7 + sequenceDigits * 7; // project identifier chars + dash + sequence digits
 };
 
-export type TGetScopeMemberIdsResult = {
+type TGetScopeMemberIdsResult = {
   memberIds: string[];
   includeNone: boolean;
 };
 
-export const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetScopeMemberIdsResult => {
+const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetScopeMemberIdsResult => {
   // store values
   const { workspaceMemberIds } = store.memberRoot.workspace;
   const { projectMemberIds } = store.memberRoot.project;
@@ -769,7 +769,7 @@ export const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns):
   return { memberIds: [], includeNone: true };
 };
 
-export const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
+const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
   MembersOutline: MembersOutline,
   CalenderDays: CalendarOutline,
   DueDateOutline: DueDateOutline,

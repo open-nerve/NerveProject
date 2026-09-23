@@ -8,18 +8,12 @@ import { FAVORITE_ITEM_LINKS } from "@plane/constants";
 import type { IFavorite } from "@plane/types";
 
 export const generateFavoriteItemLink = (workspaceSlug: string, favorite: IFavorite) => {
-  const entityLinkDetails = FAVORITE_ITEM_LINKS[favorite.entity_type];
+  const getLink = FAVORITE_ITEM_LINKS[favorite.entity_type];
 
-  if (!entityLinkDetails) {
+  if (!getLink) {
     console.error(`Unrecognized favorite entity type: ${favorite.entity_type}`);
     return `/${workspaceSlug}`;
   }
 
-  if (entityLinkDetails.itemLevel === "workspace") {
-    return `/${workspaceSlug}/${entityLinkDetails.getLink(favorite)}`;
-  } else if (entityLinkDetails.itemLevel === "project") {
-    return `/${workspaceSlug}/projects/${favorite.project_id}/${entityLinkDetails.getLink(favorite)}`;
-  } else {
-    return `/${workspaceSlug}`;
-  }
+  return `/${workspaceSlug}/projects/${favorite.project_id}/${getLink(favorite)}`;
 };

@@ -86,7 +86,7 @@ const STATIC_COVER_IMAGES_SET = new Set<string>(Object.values(STATIC_COVER_IMAGE
 
 export type TCoverImageType = "local_static" | "uploaded_asset";
 
-export type TCoverImageResult = {
+type TCoverImageResult = {
   needsUpload: boolean;
   imageType: TCoverImageType;
   shouldUpdate: boolean;
@@ -101,7 +101,7 @@ export type TCoverImagePayload = {
 /**
  * Checks if a given URL is a valid static cover image
  */
-export const isStaticCoverImage = (imageUrl: string | null | undefined): boolean => {
+const isStaticCoverImage = (imageUrl: string | null | undefined): boolean => {
   if (!imageUrl) return false;
   return STATIC_COVER_IMAGES_SET.has(imageUrl);
 };
@@ -144,7 +144,7 @@ export function getCoverImageDisplayURL(
 /**
  * Analyzes cover image change and determines what action to take
  */
-export const analyzeCoverImageChange = (
+const analyzeCoverImageChange = (
   currentImage: string | null | undefined,
   newImage: string | null | undefined
 ): TCoverImageResult => {

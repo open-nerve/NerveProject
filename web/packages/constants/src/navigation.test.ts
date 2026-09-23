@@ -8,7 +8,11 @@ import { describe, expect, it } from "vitest";
 import { PROFILE_TABS } from "./profile";
 import { GROUPED_PROFILE_SETTINGS, PROFILE_SETTINGS_TABS } from "./settings/profile";
 import { GROUPED_WORKSPACE_SETTINGS, WORKSPACE_SETTINGS } from "./settings/workspace";
-import { WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS, WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS } from "./workspace";
+import {
+  RESTRICTED_URLS,
+  WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,
+  WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS,
+} from "./workspace";
 
 // The sidebar is a fixed list (M1 design 3.3) and the profile page keeps only its three work-item tabs
 // (M1 design 3.2). Both lists are the only navigation entry of the features they name, so a deletion
@@ -78,5 +82,19 @@ describe("the workspace settings", () => {
   it("show every tab in exactly one sidebar group", () => {
     const grouped = Object.values(GROUPED_WORKSPACE_SETTINGS).flatMap((items) => items.map((item) => item.key));
     expect(grouped.toSorted()).toEqual(Object.keys(WORKSPACE_SETTINGS).toSorted());
+  });
+
+  // an empty group was hidden by the sidebar and kept only as a constant (the P2 review's empty FEATURES group)
+  it("have no empty sidebar group", () => {
+    for (const [category, items] of Object.entries(GROUPED_WORKSPACE_SETTINGS)) {
+      expect(items.length, category).toBeGreaterThan(0);
+    }
+  });
+});
+
+// Workspace addresses a workspace cannot take; the list had config, mobile and monitor twice.
+describe("the reserved workspace addresses", () => {
+  it("list each address once", () => {
+    expect(new Set(RESTRICTED_URLS).size).toBe(RESTRICTED_URLS.length);
   });
 });

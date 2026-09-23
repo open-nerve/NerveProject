@@ -17,7 +17,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types
 import type { TAttachmentOperations } from "../issue-detail-widgets/attachments/helper";
 
-export type TAttachmentOperationsRemoveModal = Pick<TAttachmentOperations, "remove">;
+type TAttachmentOperationsRemoveModal = Pick<TAttachmentOperations, "remove">;
 
 type Props = {
   isOpen: boolean;

@@ -19,7 +19,7 @@ import { getFileURL } from "@plane/utils";
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 
-export interface RowData extends Pick<TProjectMembership, "original_role"> {
+interface RowData extends Pick<TProjectMembership, "original_role"> {
   member: IWorkspaceMember;
 }
 

@@ -31,7 +31,7 @@ import { KanBan } from "./default";
 import { KanbanDeleteDropZone } from "./kanban-delete-drop-zone";
 import { KanBanSwimLanes } from "./swimlanes";
 
-export type KanbanStoreType =
+type KanbanStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.MODULE
   | EIssuesStoreType.CYCLE

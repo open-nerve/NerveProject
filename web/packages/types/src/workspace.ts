@@ -143,14 +143,6 @@ export interface IWorkspaceSearchResults {
     issue_view: IWorkspaceDefaultSearchResult[];
   };
 }
-
-export interface IWorkspaceProgressResponse {
-  completed_issues: number;
-  total_issues: number;
-  started_issues: number;
-  cancelled_issues: number;
-  unstarted_issues: number;
-}
 export type TWorkspacePaginationInfo = TPaginationInfo & {
   results: IWorkspace[];
 };

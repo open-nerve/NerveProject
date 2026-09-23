@@ -5,17 +5,10 @@
  */
 
 import { observable, action, makeObservable } from "mobx";
-// plane imports
-import type { EIssuesStoreType } from "@plane/types";
 // components
 import type { IPowerKCommandRegistry } from "@/components/power-k/core/registry";
 import { PowerKCommandRegistry } from "@/components/power-k/core/registry";
 import type { TPowerKContextType, TPowerKPageType } from "@/components/power-k/core/types";
-
-export interface ModalData {
-  store: EIssuesStoreType;
-  viewId: string;
-}
 
 export interface IPowerKStore {
   // observables

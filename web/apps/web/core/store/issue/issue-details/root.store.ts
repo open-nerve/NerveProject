@@ -52,7 +52,7 @@ export type TIssueRelationModal = {
   relationType: TIssueRelationTypes | null;
 };
 
-export type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
+type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
 
 export type TIssueCrudOperationState = {
   create: TIssueCrudState;

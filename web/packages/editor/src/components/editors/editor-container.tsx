@@ -14,8 +14,6 @@ import { DEFAULT_DISPLAY_CONFIG } from "@/constants/config";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // components
 import { LinkContainer } from "@/components/link-container";
-// plugins
-import { nodeHighlightPluginKey } from "@/plugins/highlight";
 // types
 import type { TDisplayConfig } from "@/types";
 
@@ -52,19 +50,11 @@ export function EditorContainer(props: Props) {
       }
 
       const nodePosition = pos;
-      const tr = editor.state.tr.setMeta(nodeHighlightPluginKey, { nodeId });
-      editor.view.dispatch(tr);
-
       requestAnimationFrame(() => {
         const domNode = editor.view.nodeDOM(nodePosition);
         if (domNode instanceof HTMLElement) {
           domNode.scrollIntoView({ behavior: "instant", block: "center" });
         }
-      });
-
-      editor.once("focus", () => {
-        const clearTr = editor.state.tr.setMeta(nodeHighlightPluginKey, { nodeId: null });
-        editor.view.dispatch(clearTr);
       });
 
       hasScrolledOnce.current = true;
@@ -134,24 +124,22 @@ export function EditorContainer(props: Props) {
   };
 
   return (
-    <>
-      <div
-        ref={containerRef}
-        id={`editor-container-${id}`}
-        onClick={handleContainerClick}
-        onMouseLeave={handleContainerMouseLeave}
-        className={cn(
-          `editor-container relative cursor-text line-spacing-${displayConfig.lineSpacing ?? DEFAULT_DISPLAY_CONFIG.lineSpacing}`,
-          {
-            "active-editor": editor?.isFocused && editor?.isEditable,
-          },
-          displayConfig.fontSize ?? DEFAULT_DISPLAY_CONFIG.fontSize,
-          editorContainerClassName
-        )}
-      >
-        {children}
-        {!isTouchDevice && <LinkContainer editor={editor} containerRef={containerRef} />}
-      </div>
-    </>
+    <div
+      ref={containerRef}
+      id={`editor-container-${id}`}
+      onClick={handleContainerClick}
+      onMouseLeave={handleContainerMouseLeave}
+      className={cn(
+        `editor-container relative cursor-text line-spacing-${displayConfig.lineSpacing ?? DEFAULT_DISPLAY_CONFIG.lineSpacing}`,
+        {
+          "active-editor": editor?.isFocused && editor?.isEditable,
+        },
+        displayConfig.fontSize ?? DEFAULT_DISPLAY_CONFIG.fontSize,
+        editorContainerClassName
+      )}
+    >
+      {children}
+      {!isTouchDevice && <LinkContainer editor={editor} containerRef={containerRef} />}
+    </div>
   );
 }

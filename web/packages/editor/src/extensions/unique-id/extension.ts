@@ -16,12 +16,10 @@ import { createIdsForView } from "./utils";
 // plane imports
 
 const COMBINED_BLOCK_NODE_TYPES = [...BLOCK_NODE_TYPES, ...ADDITIONAL_BLOCK_NODE_TYPES];
-export type UniqueIDGenerationContext = {
+type UniqueIDGenerationContext = {
   node: ProseMirrorNode;
   pos: number;
 };
-export const UniqueIDAttribute = "id";
-export const generateUniqueID = () => uuidv4();
 
 export interface UniqueIDOptions {
   /**

@@ -27,7 +27,7 @@ type TNotificationFieldData = {
 type TNotificationContentDetails = {
   action?: ReactNode;
   value?: ReactNode;
-  showConnector?: boolean;
+  showConnector: boolean;
 };
 
 type TNotificationContentHandler = (data: TNotificationFieldData) => TNotificationContentDetails | null;
@@ -103,12 +103,6 @@ const NOTIFICATION_CONTENT_MAP: TNotificationContentMap = {
   }),
 };
 
-// Fields without their own connector setting show "to" before the value, except these
-const shouldShowConnector = (notificationField: string | undefined) =>
-  !["comment", "archived_at", "None", "assignees", "labels", "start_date", "target_date", "parent"].includes(
-    notificationField || ""
-  );
-
 // Helper to get content details from the map
 const getNotificationContentDetails = (
   fieldData: TNotificationFieldData,
@@ -174,8 +168,7 @@ export function NotificationContent({
     // Check if action is explicitly defined in map (including null)
     if (contentDetails && "action" in contentDetails) return contentDetails.action;
     // Fallback to default action handler for fields not in map or without action defined
-    const baseAction = !["comment", "archived_at"].includes(notificationField) ? verb : "";
-    return `${baseAction} ${replaceUnderscoreIfSnakeCase(notificationField)}`;
+    return `${verb} ${replaceUnderscoreIfSnakeCase(notificationField)}`;
   };
 
   // Render value - use map value if defined, otherwise fall through to default handler
@@ -186,9 +179,8 @@ export function NotificationContent({
     return newValue;
   };
 
-  // Determine if connector should be shown - prefer map value, fallback to function
-  const showConnector =
-    contentDetails?.showConnector !== undefined ? contentDetails.showConnector : shouldShowConnector(notificationField);
+  // Every field in the map says whether "to" goes before the value; any other field shows it
+  const showConnector = contentDetails?.showConnector ?? true;
 
   return (
     <>

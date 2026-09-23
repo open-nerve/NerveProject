@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { ReactElement } from "react";
 import type { ICycle } from "./cycle";
 import type { TIssue } from "./issues/issue";
 import type { IModule } from "./module";
@@ -97,7 +98,7 @@ export type TGetColumns = {
 export interface IGroupByColumn {
   id: string;
   name: string;
-  icon?: React.ReactElement | undefined;
+  icon?: ReactElement | undefined;
   payload: Partial<TIssue>;
   isDropDisabled?: boolean;
   dropErrorMessage?: string;

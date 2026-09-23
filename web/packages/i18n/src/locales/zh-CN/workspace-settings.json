@@ -137,18 +137,6 @@
           }
         }
       },
-      "integrations": {
-        "title": "集成",
-        "heading": "集成",
-        "description": "与流行的工具和服务连接，在整个工作流生态系统中同步您的工作。",
-        "page_title": "在可用的应用或您自己的应用中使用您的 Plane 数据。",
-        "page_description": "查看此工作区或您正在使用的所有集成。"
-      },
-      "imports": {
-        "title": "导入",
-        "heading": "导入",
-        "description": "连接并从现有的项目管理工具导入数据，以简化您的工作流集成。"
-      },
       "group_syncing": {
         "title": "组同步",
         "heading": "组同步",
@@ -249,10 +237,6 @@
       "webhooks": {
         "title": "尚未添加 webhook",
         "description": "创建 webhook 以接收实时更新并自动执行操作。"
-      },
-      "imports": {
-        "title": "尚无导入",
-        "description": "在这里查找所有以前的导入并下载它们。"
       }
     }
   }

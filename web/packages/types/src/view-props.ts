@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { FC } from "react";
 import type { IProjectMemberNavigationPreferences } from "./project";
 import type { TIssue } from "./issues/issue";
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
@@ -253,7 +254,7 @@ export interface IssuePaginationOptions {
   orderBy?: TIssueOrderByOptions;
 }
 
-export type TSpreadsheetColumn = React.FC<{
+export type TSpreadsheetColumn = FC<{
   issue: TIssue;
   onClose: () => void;
   onChange: (issue: TIssue, data: Partial<TIssue>, updates: any) => void;

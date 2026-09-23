@@ -6,15 +6,7 @@
 
 // plane imports
 import { API_BASE_URL } from "@plane/constants";
-import type {
-  TIssueParams,
-  IIssueDisplayProperties,
-  TIssue,
-  TIssueActivity,
-  TIssueLink,
-  TIssuesResponse,
-  TIssueSubIssues,
-} from "@plane/types";
+import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 
@@ -172,38 +164,6 @@ export class IssueService extends APIService {
       });
   }
 
-  async deleteIssueRelation(workspaceSlug: string, projectId: string, issueId: string, relationId: string) {
-    return this.delete(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-relation/${relationId}/`
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async getIssueDisplayProperties(workspaceSlug: string, projectId: string): Promise<any> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-display-properties/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async updateIssueDisplayProperties(
-    workspaceSlug: string,
-    projectId: string,
-    data: IIssueDisplayProperties
-  ): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-display-properties/`, {
-      properties: data,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async patchIssue(workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>): Promise<any> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/`, data)
       .then((response) => response?.data)
@@ -351,20 +311,6 @@ export class IssueService extends APIService {
 
   async subscribeToIssueNotifications(workspaceSlug: string, projectId: string, issueId: string): Promise<any> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/subscribe/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async bulkSubscribeIssues(
-    workspaceSlug: string,
-    projectId: string,
-    data: {
-      issue_ids: string[];
-    }
-  ): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/bulk-subscribe-issues/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

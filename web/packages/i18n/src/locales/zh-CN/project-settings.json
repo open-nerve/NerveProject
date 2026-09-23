@@ -62,21 +62,12 @@
         "title": "自动归档已关闭的工作项",
         "description": "Plane 将自动归档已完成或已取消的工作项。",
         "duration": "自动归档已关闭"
-      },
-      "auto-remind": {
-        "title": "自动提醒",
-        "description": "Plane 将自动通过电子邮件和应用程序通知来提醒您的团队保持进度。",
-        "duration": "提前提醒"
       }
     },
     "empty_state": {
       "labels": {
         "title": "尚无标签",
         "description": "创建标签以帮助组织和筛选项目中的工作项。"
-      },
-      "integrations": {
-        "title": "未配置集成",
-        "description": "配置 GitHub 和其他集成以同步您的项目工作项。"
       }
     },
     "features": {

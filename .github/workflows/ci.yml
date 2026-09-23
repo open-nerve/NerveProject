@@ -65,8 +65,8 @@ jobs:
         run: make lint-web
       - name: Unit tests
         run: make test-web
-      # M0 只出报告：发现未使用的代码不会失败，knip 自身出错（例如配置有误）才失败；M1/P3 起作为门禁
-      - name: Unused code (report only)
+      # 门禁（M1/P3 起）：未使用的文件、导出、依赖和过时的配置都会失败
+      - name: Unused code
         run: make knip
       - name: Build
         run: make build-web

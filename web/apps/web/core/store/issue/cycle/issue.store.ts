@@ -19,8 +19,6 @@ import { BaseIssuesStore } from "../helpers/base-issues.store";
 import type { IIssueRootStore } from "../root.store";
 import type { ICycleIssuesFilter } from "./filter.store";
 
-export const ACTIVE_CYCLE_ISSUES = "ACTIVE_CYCLE_ISSUES";
-
 export interface ActiveCycleIssueDetails {
   issueIds: string[];
   issueCount: number;

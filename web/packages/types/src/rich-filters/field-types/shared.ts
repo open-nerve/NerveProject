@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { ReactNode } from "react";
 import type { TFilterValue } from "../expression";
 
 /**
@@ -37,7 +38,7 @@ export interface IFilterOption<V extends TFilterValue> {
   id: string;
   label: string;
   value: V;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   iconClassName?: string;
   disabled?: boolean;
   description?: string;

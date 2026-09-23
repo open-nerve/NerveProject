@@ -123,7 +123,6 @@ export const insertFilesSafely = async (args: InsertFilesSafelyArgs) => {
           pos,
           event,
         });
-      } else if (fileType === "attachment") {
       }
     } catch (error) {
       console.error(`Error while ${event}ing file:`, error);

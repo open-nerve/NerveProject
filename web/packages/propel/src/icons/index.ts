@@ -57,6 +57,5 @@ export * from "./teams";
 export * from "./transfer-icon";
 export * from "./tree-map-icon";
 export * from "./updates-icon";
-export * from "./user-activity-icon";
 export * from "./workspace-icon";
 export * from "./workspace";

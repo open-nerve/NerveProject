@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
 import { IssueLinkItem } from "./link-item";
-import type { TLinkOperations } from "./root";
+import type { TLinkOperations } from "./types";
 
 type TLinkOperationsModal = Exclude<TLinkOperations, "create">;
 

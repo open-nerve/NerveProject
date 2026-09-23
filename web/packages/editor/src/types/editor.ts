@@ -131,7 +131,6 @@ export type IEditorProps = {
   showPlaceholderOnEmpty?: boolean;
   tabIndex?: number;
   value?: string | null;
-  workItemIdentifier?: string | null;
 };
 
 export type ILiteTextEditorProps = IEditorProps;

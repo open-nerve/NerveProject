@@ -18,7 +18,7 @@ import { ModalCore } from "@plane/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types
-import type { TLinkOperations } from "./root";
+import type { TLinkOperations } from "./types";
 
 export type TLinkOperationsModal = Exclude<TLinkOperations, "remove">;
 

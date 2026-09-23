@@ -181,7 +181,7 @@ export const CodeItem = (editor: Editor): EditorMenuItem<"code"> => ({
   icon: CodeOutline,
 });
 
-export const TableItem = (editor: Editor): EditorMenuItem<"table"> => ({
+const TableItem = (editor: Editor): EditorMenuItem<"table"> => ({
   key: "table",
   name: "Table",
   isActive: () => editor?.isActive(CORE_EXTENSIONS.TABLE),
@@ -189,7 +189,7 @@ export const TableItem = (editor: Editor): EditorMenuItem<"table"> => ({
   icon: TableOutline,
 });
 
-export const ImageItem = (editor: Editor): EditorMenuItem<"image"> => ({
+const ImageItem = (editor: Editor): EditorMenuItem<"image"> => ({
   key: "image",
   name: "Image",
   isActive: () => editor?.isActive(CORE_EXTENSIONS.IMAGE) || editor?.isActive(CORE_EXTENSIONS.CUSTOM_IMAGE),
@@ -197,7 +197,7 @@ export const ImageItem = (editor: Editor): EditorMenuItem<"image"> => ({
   icon: ImageOutline,
 });
 
-export const HorizontalRuleItem = (editor: Editor): EditorMenuItem<"divider"> =>
+const HorizontalRuleItem = (editor: Editor): EditorMenuItem<"divider"> =>
   ({
     key: "divider",
     name: "Divider",
@@ -206,7 +206,7 @@ export const HorizontalRuleItem = (editor: Editor): EditorMenuItem<"divider"> =>
     icon: MinusSquareOutline,
   }) as const;
 
-export const LinkItem = (editor: Editor): EditorMenuItem<"link"> =>
+const LinkItem = (editor: Editor): EditorMenuItem<"link"> =>
   ({
     key: "link",
     name: "Link",

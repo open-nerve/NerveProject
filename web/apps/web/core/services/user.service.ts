@@ -6,7 +6,7 @@
 
 // services
 import { API_BASE_URL } from "@plane/constants";
-import type { TIssue, IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@plane/types";
+import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // helpers
@@ -20,24 +20,6 @@ export class UserService extends APIService {
     return {
       url: `${this.baseURL}/api/users/me/`,
     };
-  }
-
-  async userIssues(
-    workspaceSlug: string,
-    params: any
-  ): Promise<
-    | {
-        [key: string]: TIssue[];
-      }
-    | TIssue[]
-  > {
-    return this.get(`/api/workspaces/${workspaceSlug}/my-issues/`, {
-      params,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
   }
 
   async currentUser(): Promise<IUser> {

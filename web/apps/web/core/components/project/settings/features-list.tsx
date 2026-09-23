@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@plane/i18n";
 import { setPromiseToast } from "@plane/propel/toast";
 import type { IProject } from "@plane/types";
-import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline } from "@makeplane/propel/icons";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
@@ -28,34 +27,18 @@ const PROJECT_FEATURES_LIST = {
   cycles: {
     key: "cycles",
     property: "cycle_view",
-    title: "Cycles",
-    description: "Timebox work as you see fit per project and change frequency from one period to the next.",
-    icon: <CyclesOutline className="h-5 w-5 flex-shrink-0 rotate-180 text-tertiary" />,
-    isEnabled: true,
   },
   modules: {
     key: "modules",
     property: "module_view",
-    title: "Modules",
-    description: "Group work into sub-project-like set-ups with their own leads and assignees.",
-    icon: <ModuleOutline width={20} height={20} className="flex-shrink-0 text-tertiary" />,
-    isEnabled: true,
   },
   views: {
     key: "views",
     property: "issue_views_view",
-    title: "Views",
-    description: "Save sorts, filters, and display options for later or share them.",
-    icon: <ViewsOutline className="h-5 w-5 flex-shrink-0 text-tertiary" />,
-    isEnabled: true,
   },
   inbox: {
     key: "intake",
     property: "inbox_view",
-    title: "Intake",
-    description: "Consider and discuss work items before you add them to your project.",
-    icon: <IntakeOutline className="h-5 w-5 flex-shrink-0 text-tertiary" />,
-    isEnabled: true,
   },
 };
 
@@ -103,8 +86,6 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
               description={t(`${featureItem.key}_description`)}
               control={
                 <ProjectFeatureToggle
-                  workspaceSlug={workspaceSlug}
-                  projectId={projectId}
                   featureItem={featureItem}
                   value={Boolean(currentProjectDetails?.[featureItem.property as keyof IProject])}
                   handleSubmit={handleSubmit}
@@ -112,9 +93,6 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
                 />
               }
             />
-            {/* {currentProjectDetails?.[featureItem.property as keyof IProject] && (
-              <div className="pl-14">{featureItem.renderChildren?.(currentProjectDetails, workspaceSlug)}</div>
-            )} */}
           </div>
         ))}
       </div>

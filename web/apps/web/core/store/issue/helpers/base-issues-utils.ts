@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { uniq, orderBy, isEmpty, indexOf, groupBy, cloneDeep, set } from "lodash-es";
+import { uniq, orderBy, isEmpty, indexOf, groupBy, set } from "lodash-es";
 import { ALL_ISSUES, EIssueFilterType, FILTER_TO_ISSUE_MAP, ISSUE_PRIORITIES } from "@plane/constants";
 import type {
   IIssueDisplayFilterOptions,
@@ -16,7 +16,6 @@ import type {
   TIssueOrderByOptions,
 } from "@plane/types";
 import { checkDateCriteria, convertToISODateString, parseDateFilter } from "@plane/utils";
-import { store } from "@/lib/store-context";
 import { EIssueGroupedAction, ISSUE_GROUP_BY_KEY } from "./base-issues.store";
 
 /**
@@ -196,7 +195,7 @@ export const getIssueIds = (issues: TIssue[]) => issues.map((issue) => issue?.id
  * @param dateFilters Array of date filter strings
  * @returns boolean indicating if the issue meets the date criteria
  */
-export const checkIssueDateFilter = (
+const checkIssueDateFilter = (
   issue: TIssue,
   filterKey: "start_date" | "target_date",
   dateFilters: string[]
@@ -216,22 +215,6 @@ export const checkIssueDateFilter = (
     }
     return checkDateCriteria(new Date(issueDate), parsed.date, parsed.type);
   });
-};
-
-/**
- * Helper method to get previous issues state
- * @param issues - The array of issues to get the previous state for.
- * @returns The previous state of the issues.
- */
-export const getPreviousIssuesState = (issues: TIssue[]) => {
-  const issueIds = issues.map((issue) => issue.id);
-  const issuesPreviousState: Record<string, TIssue> = {};
-  issueIds.forEach((issueId) => {
-    if (store.issue.issues.issuesMap[issueId]) {
-      issuesPreviousState[issueId] = cloneDeep(store.issue.issues.issuesMap[issueId]);
-    }
-  });
-  return issuesPreviousState;
 };
 
 /**
@@ -277,7 +260,7 @@ export const getFilteredWorkItems = (workItems: TIssue[], filters: IIssueFilterO
  * @param orderByKey - The key to order the issues by.
  * @returns The ordered array of work items.
  */
-export const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptions): string[] => {
+const getOrderedWorkItems = (workItems: TIssue[], orderByKey: TIssueOrderByOptions): string[] => {
   switch (orderByKey) {
     case "-updated_at":
       return getIssueIds(orderBy(workItems, (item) => convertToISODateString(item["updated_at"]), ["desc"]));

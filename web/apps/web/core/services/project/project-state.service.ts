@@ -56,14 +56,6 @@ export class ProjectStateService extends APIService {
       });
   }
 
-  async updateState(workspaceSlug: string, projectId: string, stateId: string, data: IState): Promise<any> {
-    return this.put(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
   async patchState(workspaceSlug: string, projectId: string, stateId: string, data: Partial<IState>): Promise<any> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/${stateId}/`, data)
       .then((response) => response?.data)
