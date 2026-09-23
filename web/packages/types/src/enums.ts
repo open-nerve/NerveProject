@@ -18,12 +18,6 @@ export enum EProjectNetwork {
   PUBLIC = 2,
 }
 
-// project pages
-export enum EPageAccess {
-  PUBLIC = 0,
-  PRIVATE = 1,
-}
-
 export enum EDurationFilters {
   NONE = "none",
   TODAY = "today",
@@ -50,7 +44,6 @@ export enum EFileAssetType {
   ISSUE_ATTACHMENT = "ISSUE_ATTACHMENT",
   ISSUE_DESCRIPTION = "ISSUE_DESCRIPTION",
   DRAFT_ISSUE_DESCRIPTION = "DRAFT_ISSUE_DESCRIPTION",
-  PAGE_DESCRIPTION = "PAGE_DESCRIPTION",
   PROJECT_COVER = "PROJECT_COVER",
   USER_AVATAR = "USER_AVATAR",
   USER_COVER = "USER_COVER",
@@ -60,16 +53,6 @@ export enum EFileAssetType {
   PROJECT_DESCRIPTION = "PROJECT_DESCRIPTION",
   TEAM_SPACE_COMMENT_DESCRIPTION = "TEAM_SPACE_COMMENT_DESCRIPTION",
 }
-
-export type TEditorAssetType =
-  | EFileAssetType.COMMENT_DESCRIPTION
-  | EFileAssetType.ISSUE_DESCRIPTION
-  | EFileAssetType.DRAFT_ISSUE_DESCRIPTION
-  | EFileAssetType.PAGE_DESCRIPTION
-  | EFileAssetType.TEAM_SPACE_DESCRIPTION
-  | EFileAssetType.INITIATIVE_DESCRIPTION
-  | EFileAssetType.PROJECT_DESCRIPTION
-  | EFileAssetType.TEAM_SPACE_COMMENT_DESCRIPTION;
 
 export enum EUpdateStatus {
   OFF_TRACK = "OFF-TRACK",

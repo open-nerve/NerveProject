@@ -13,7 +13,6 @@ import type { ISvgIcons } from "@plane/propel/icons";
 import { Logo } from "@plane/propel/emoji-icon-picker";
 
 const ICON_MAP: Record<string, React.FC<ISvgIcons> | LucideIcon> = {
-  page: PagesOutline,
   project: ProjectsOutline,
   view: ViewsOutline,
   module: ModuleOutline,

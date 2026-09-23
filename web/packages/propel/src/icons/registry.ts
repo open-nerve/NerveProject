@@ -41,7 +41,7 @@ import {
 // Misc icons
 import { InfoIcon } from "./misc";
 // Project icons
-import { CycleIcon, EpicIcon, IntakeIcon, ModuleIcon, PageIcon, ViewsIcon, WorkItemsIcon } from "./project";
+import { CycleIcon, EpicIcon, IntakeIcon, ModuleIcon, ViewsIcon, WorkItemsIcon } from "./project";
 // Property icons
 import {
   BooleanPropertyIcon,
@@ -67,7 +67,7 @@ import {
 // Sub-brand icons
 import { CopyLinkIcon } from "./actions/copy-link";
 import { LabelFilledIcon } from "./properties/label-filled-icon";
-import { PiChatLogo, PlaneNewIcon, WikiIcon } from "./sub-brand";
+import { PiChatLogo, PlaneNewIcon } from "./sub-brand";
 // Workspace icons
 import {
   ArchiveIcon,
@@ -83,7 +83,6 @@ import {
 export const ICON_REGISTRY = {
   // Sub-brand icons
   "sub-brand.plane": PlaneNewIcon,
-  "sub-brand.wiki": WikiIcon,
   "sub-brand.pi-chat": PiChatLogo,
 
   // Workspace icons
@@ -94,7 +93,6 @@ export const ICON_REGISTRY = {
   "workspace.home": HomeIcon,
   "workspace.inbox": InboxIcon,
   "workspace.multiple-sticky": MultipleStickyIcon,
-  "workspace.page": PageIcon,
   "workspace.project": ProjectIcon,
   "workspace.views": ViewsIcon,
   "workspace.your-work": YourWorkIcon,
@@ -104,7 +102,6 @@ export const ICON_REGISTRY = {
   "project.epic": EpicIcon,
   "project.intake": IntakeIcon,
   "project.module": ModuleIcon,
-  "project.page": PageIcon,
   "project.view": ViewsIcon,
   "project.work-items": WorkItemsIcon,
 

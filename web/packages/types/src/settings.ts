@@ -25,7 +25,6 @@ export type TProjectSettingsTabs =
   | "features_cycles"
   | "features_modules"
   | "features_views"
-  | "features_pages"
   | "features_intake"
   | "states"
   | "labels"

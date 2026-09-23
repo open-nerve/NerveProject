@@ -28,8 +28,4 @@ export const FAVORITE_ITEM_LINKS: {
     itemLevel: "project",
     getLink: (favorite) => `views/${favorite.entity_identifier}`,
   },
-  page: {
-    itemLevel: "project",
-    getLink: (favorite) => `pages/${favorite.entity_identifier}`,
-  },
 };

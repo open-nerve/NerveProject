@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { HocuspocusProvider } from "@hocuspocus/provider";
 import { Extension } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { Transaction } from "@tiptap/pm/state";
@@ -55,11 +54,6 @@ export interface UniqueIDOptions {
    * @default true
    */
   updateDocument: boolean;
-  /**
-   * The provider to use for the unique ID generation.
-   * @default null
-   */
-  provider: HocuspocusProvider | undefined;
 }
 
 export const UniqueID = Extension.create<UniqueIDOptions>({
@@ -76,7 +70,6 @@ export const UniqueID = Extension.create<UniqueIDOptions>({
       generateUniqueID: () => uuidv4(),
       filterTransaction: null,
       updateDocument: true,
-      provider: undefined,
     };
   },
 
@@ -113,23 +106,7 @@ export const UniqueID = Extension.create<UniqueIDOptions>({
       return;
     }
 
-    const provider = this.options.provider;
-
-    /**
-     * We need to handle collaboration a bit different here
-     * because we can't automatically add IDs when the provider is not yet synced
-     * otherwise we end up with empty paragraphs
-     */
-    if (provider) {
-      // Check if provider is already synced
-      if (provider.isSynced) {
-        createIdsForView(this.editor.view, this.options);
-      }
-      // If not synced, the listener will be registered in the plugin
-      // and handled there with proper cleanup
-    } else {
-      createIdsForView(this.editor.view, this.options);
-    }
+    createIdsForView(this.editor.view, this.options);
   },
 
   addProseMirrorPlugins() {

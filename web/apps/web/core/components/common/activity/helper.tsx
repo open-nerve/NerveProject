@@ -11,7 +11,6 @@ import {
   AttachOutline,
   ClockOutline,
   CyclesOutline,
-  DocumentationOutline,
   DueDateOutline,
   GitBranchOutline,
   GlobeOutline,
@@ -58,7 +57,6 @@ export const iconsMap: ActivityIconMap = {
   state: StateOutline,
   cycle: CyclesOutline,
   module: ModuleOutline,
-  page: DocumentationOutline,
   network: GlobeOutline,
   identifier: HashOutline,
   timezone: ClockOutline,
@@ -71,7 +69,6 @@ export const iconsMap: ActivityIconMap = {
   module_view: ModuleOutline,
   cycle_view: CyclesOutline,
   issue_views_view: WorkItemsOutline,
-  page_view: DocumentationOutline,
   intake_view: IntakeOutline,
 };
 
@@ -198,15 +195,6 @@ export const messages = (activity: TProjectActivity): { message: string | ReactN
       return {
         message: <>{newValue ? "enabled" : "disabled"} inbox</>,
       };
-    case "page":
-      return {
-        message: (
-          <>
-            {newValue ? "created" : "removed"} the project page{" "}
-            <span className="font-medium text-primary">{newValue || oldValue || "Untitled page"}</span>
-          </>
-        ),
-      };
     case "network":
       return {
         message: <>{newValue ? "enabled" : "disabled"} network access</>,
@@ -230,7 +218,6 @@ export const messages = (activity: TProjectActivity): { message: string | ReactN
     case "module_view":
     case "cycle_view":
     case "issue_views_view":
-    case "page_view":
     case "intake_view":
       return {
         message: (

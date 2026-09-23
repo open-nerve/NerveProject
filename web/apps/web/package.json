@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "react-router dev --port 3000",
     "build": "react-router build",
-    "check:lint": "node ../../../tools/lint-cap.mjs 699",
+    "check:lint": "node ../../../tools/lint-cap.mjs 682",
     "check:types": "react-router typegen && tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."
@@ -33,7 +33,6 @@
     "@plane/ui": "workspace:*",
     "@plane/utils": "workspace:*",
     "@popperjs/core": "catalog:",
-    "@react-pdf/renderer": "catalog:",
     "@react-router/node": "catalog:",
     "axios": "catalog:",
     "cmdk": "catalog:",
@@ -51,7 +50,6 @@
     "react-dropzone": "catalog:",
     "react-hook-form": "catalog:",
     "react-masonry-component": "catalog:",
-    "react-pdf-html": "catalog:",
     "react-popper": "catalog:",
     "react-router": "catalog:",
     "smooth-scroll-into-view-if-needed": "catalog:",

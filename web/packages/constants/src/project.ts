@@ -103,6 +103,5 @@ export enum EProjectFeatureKey {
   CYCLES = "cycles",
   MODULES = "modules",
   VIEWS = "views",
-  PAGES = "pages",
   INTAKE = "intake",
 }

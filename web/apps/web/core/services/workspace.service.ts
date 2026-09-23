@@ -12,7 +12,6 @@ import type {
   IWorkspaceMemberInvitation,
   ILastActiveWorkspaceDetails,
   IWorkspaceSearchResults,
-  IProductUpdateResponse,
   IWorkspaceBulkInviteFormData,
   IWorkspaceViewProps,
   IUserProjectsRole,
@@ -219,14 +218,6 @@ export class WorkspaceService extends APIService {
         throw error?.response?.data;
       });
   }
-  async getProductUpdates(): Promise<IProductUpdateResponse[]> {
-    return this.get("/api/release-notes/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async createView(workspaceSlug: string, data: Partial<IWorkspaceView>): Promise<IWorkspaceView> {
     return this.post(`/api/workspaces/${workspaceSlug}/views/`, data)
       .then((response) => response?.data)

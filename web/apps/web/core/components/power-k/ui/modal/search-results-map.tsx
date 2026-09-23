@@ -4,19 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import {
-  CyclesOutline,
-  DocumentationOutline,
-  GridOutline,
-  ModuleOutline,
-  ProjectsOutline,
-  WorkItemsOutline,
-} from "@makeplane/propel/icons";
+import { CyclesOutline, GridOutline, ModuleOutline, ProjectsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // plane imports
 import type {
   IWorkspaceDefaultSearchResult,
   IWorkspaceIssueSearchResult,
-  IWorkspacePageSearchResult,
   IWorkspaceProjectSearchResult,
   IWorkspaceSearchResult,
 } from "@plane/types";
@@ -88,22 +80,6 @@ export const POWER_K_SEARCH_RESULTS_GROUPS_MAP: Record<TPowerKSearchResultsKeys,
     path: (module: IWorkspaceDefaultSearchResult) =>
       `/${module?.workspace__slug}/projects/${module?.project_id}/modules/${module?.id}`,
     title: "Modules",
-  },
-  page: {
-    icon: DocumentationOutline,
-    itemName: (page: IWorkspacePageSearchResult) => (
-      <p>
-        <span className="text-11 text-tertiary">{page.project__identifiers?.[0]}</span> {page.name}
-      </p>
-    ),
-    path: (page: IWorkspacePageSearchResult, projectId: string | undefined) => {
-      let redirectProjectId = page?.project_ids?.[0];
-      if (!!projectId && page?.project_ids?.includes(projectId)) redirectProjectId = projectId;
-      return redirectProjectId
-        ? `/${page?.workspace__slug}/projects/${redirectProjectId}/pages/${page?.id}`
-        : `/${page?.workspace__slug}/wiki/${page?.id}`;
-    },
-    title: "Pages",
   },
   project: {
     icon: ProjectsOutline,

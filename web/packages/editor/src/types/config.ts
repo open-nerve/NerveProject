@@ -37,21 +37,3 @@ export type TDisplayConfig = {
   lineSpacing?: TEditorLineSpacing;
   wideLayout?: boolean;
 };
-
-export type TUserDetails = {
-  color: string;
-  id: string;
-  name: string;
-  cookie?: string;
-};
-
-export type TRealtimeConfig = {
-  url: string;
-};
-
-export type IMarking = {
-  type: "heading";
-  level: number;
-  text: string;
-  sequence: number;
-};

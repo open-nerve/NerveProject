@@ -19,18 +19,14 @@ catalog:
   "@fontsource/ibm-plex-mono": "5.2.7"
   "@fontsource/material-symbols-rounded": "5.2.30"
   "@headlessui/react": "^2.2.10"
-  "@hocuspocus/provider": "2.15.2"
   "@makeplane/propel": "0.3.0"
   "@popperjs/core": "^2.11.8"
-  "@react-pdf/renderer": "^4.8.1"
   "@react-router/dev": "8.3.0"
   "@react-router/node": "8.3.0"
   "@tailwindcss/postcss": "4.1.17"
   "@tailwindcss/typography": "0.5.19"
   "@tiptap/core": "^2.22.3"
   "@tiptap/extension-blockquote": "^2.22.3"
-  "@tiptap/extension-character-count": "^2.22.3"
-  "@tiptap/extension-collaboration": "^2.22.3"
   "@tiptap/extension-document": "^2.22.3"
   "@tiptap/extension-emoji": "^2.22.3"
   "@tiptap/extension-heading": "^2.22.3"
@@ -43,7 +39,6 @@ catalog:
   "@tiptap/extension-text-align": "^2.22.3"
   "@tiptap/extension-text-style": "^2.22.3"
   "@tiptap/extension-underline": "^2.22.3"
-  "@tiptap/html": "^2.22.3"
   "@tiptap/pm": "^2.22.3"
   "@tiptap/react": "^2.22.3"
   "@tiptap/starter-kit": "^2.22.3"
@@ -58,7 +53,6 @@ catalog:
   "@types/react-dom": "19.2.3"
   "@types/sanitize-html": "2.16.0"
   "axios": "1.18.1"
-  "buffer": "^6.0.3"
   "chroma-js": "^3.2.0"
   "class-variance-authority": "0.7.1"
   "clsx": "^2.1.1"
@@ -100,7 +94,6 @@ catalog:
   "react-i18next": "16.6.6"
   "react-is": "^19.2.8"
   "react-masonry-component": "^6.3.0"
-  "react-pdf-html": "^2.1.2"
   "react-popper": "^2.3.0"
   "react-router": "8.3.0"
   "recharts": "^2.15.4"
@@ -124,10 +117,6 @@ catalog:
   "uuid": "14.0.0"
   "vite": "8.0.16"
   "vitest": "^4.1.11"
-  "y-indexeddb": "^9.0.12"
-  "y-prosemirror": "^1.3.7"
-  "y-protocols": "^1.0.6"
-  "yjs": "^13.6.20"
 
 overrides:
   # Force a single React across the whole graph. With node-linker=isolated,
@@ -175,7 +164,6 @@ overrides:
   linkify-it: 5.0.2
   body-parser: 1.20.6
   form-data: 4.0.6
-  "ws@8": 8.21.0
   morgan: 1.12.0
   # Prototype pollution and unbounded query-cache growth, both reachable as DoS
   # (CVE-2026-73088 / CVE-2026-73089).

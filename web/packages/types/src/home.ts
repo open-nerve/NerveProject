@@ -7,20 +7,11 @@
 import type { TLogoProps } from "./common";
 import type { TIssuePriorities } from "./issues";
 
-export type TRecentActivityFilterKeys = "all item" | "issue" | "page" | "project" | "workspace_page";
+export type TRecentActivityFilterKeys = "all item" | "issue" | "project";
 export type THomeWidgetKeys = "quick_links" | "recents" | "my_stickies" | "quick_tutorial" | "new_at_plane";
 
 export type THomeWidgetProps = {
   workspaceSlug: string;
-};
-
-export type TPageEntityData = {
-  id: string;
-  name: string;
-  logo_props: TLogoProps;
-  project_id?: string;
-  owned_by: string;
-  project_identifier?: string;
 };
 
 export type TProjectEntityData = {
@@ -46,10 +37,10 @@ export type TIssueEntityData = {
 
 export type TActivityEntityData = {
   id: string;
-  entity_name: "page" | "project" | "issue" | "workspace_page";
+  entity_name: "project" | "issue";
   entity_identifier: string;
   visited_at: string;
-  entity_data: TPageEntityData | TProjectEntityData | TIssueEntityData;
+  entity_data: TProjectEntityData | TIssueEntityData;
 };
 
 export type TLinkEditableFields = {

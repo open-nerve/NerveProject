@@ -320,13 +320,6 @@
           "text": "Manage features"
         }
       },
-      "page": {
-        "title": "Pages are not enabled for the project.",
-        "description": "Pages are the building blocks of your project. Enable pages from project settings to start using them.",
-        "primary_button": {
-          "text": "Manage features"
-        }
-      },
       "view": {
         "title": "Views are not enabled for the project.",
         "description": "Views are the building blocks of your project. Enable views from project settings to start using them.",

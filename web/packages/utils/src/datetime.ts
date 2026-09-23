@@ -160,43 +160,6 @@ export const calculateTimeAgo = (time: string | number | Date | null): string =>
   return distance;
 };
 
-export function calculateTimeAgoShort(date: string | number | Date | null): string {
-  if (!date) {
-    return "";
-  }
-
-  const parsedDate = typeof date === "string" ? parseISO(date) : new Date(date);
-  const now = new Date();
-  const diffInSeconds = (now.getTime() - parsedDate.getTime()) / 1000;
-
-  if (diffInSeconds < 60) {
-    return `${Math.floor(diffInSeconds)}s`;
-  }
-
-  const diffInMinutes = diffInSeconds / 60;
-  if (diffInMinutes < 60) {
-    return `${Math.floor(diffInMinutes)}m`;
-  }
-
-  const diffInHours = diffInMinutes / 60;
-  if (diffInHours < 24) {
-    return `${Math.floor(diffInHours)}h`;
-  }
-
-  const diffInDays = diffInHours / 24;
-  if (diffInDays < 30) {
-    return `${Math.floor(diffInDays)}d`;
-  }
-
-  const diffInMonths = diffInDays / 30;
-  if (diffInMonths < 12) {
-    return `${Math.floor(diffInMonths)}mo`;
-  }
-
-  const diffInYears = diffInMonths / 12;
-  return `${Math.floor(diffInYears)}y`;
-}
-
 // Date Validation Helpers
 /**
  * @returns {string} boolean value depending on whether the date is greater than today
@@ -349,19 +312,6 @@ export const convertMinutesToHoursMinutesString = (totalMinutes: number): string
   const { hours, minutes } = convertMinutesToHoursAndMinutes(totalMinutes);
 
   return `${hours ? `${hours}h ` : ``}${minutes ? `${minutes}m ` : ``}`;
-};
-
-/**
- * @description calculates the read time for a document using the words count
- * @param {number} wordsCount
- * @returns {number} total number of seconds
- * @example getReadTimeFromWordsCount(400) // Output: 120
- * @example getReadTimeFromWordsCount(100) // Output: 30s
- */
-export const getReadTimeFromWordsCount = (wordsCount: number): number => {
-  const wordsPerMinute = 200;
-  const minutes = wordsCount / wordsPerMinute;
-  return minutes * 60;
 };
 
 /**

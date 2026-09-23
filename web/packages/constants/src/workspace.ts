@@ -65,7 +65,6 @@ export const RESTRICTED_URLS: string[] = [
   "onload",
   "real-time",
   "one",
-  "pages",
   "mobile",
   "business",
   "pro",
@@ -262,7 +261,6 @@ export const WORKSPACE_DEFAULT_SEARCH_RESULT: IWorkspaceSearchResults = {
     cycle: [],
     module: [],
     issue_view: [],
-    page: [],
   },
 };
 

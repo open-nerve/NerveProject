@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export * from "./ai";
 export * from "./auth";
 export * from "./calendar";
 export * from "./chart";
@@ -24,7 +23,6 @@ export * from "./label";
 export * from "./metadata";
 export * from "./module";
 export * from "./notification";
-export * from "./page";
 export * from "./payment";
 export * from "./profile";
 export * from "./project";

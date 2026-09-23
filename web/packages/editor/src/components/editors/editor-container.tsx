@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { Editor } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
@@ -14,7 +13,6 @@ import { cn } from "@plane/utils";
 import { DEFAULT_DISPLAY_CONFIG } from "@/constants/config";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // components
-import type { TCollabValue } from "@/contexts";
 import { LinkContainer } from "@/components/link-container";
 // plugins
 import { nodeHighlightPluginKey } from "@/plugins/highlight";
@@ -28,12 +26,10 @@ type Props = {
   editorContainerClassName: string;
   id: string;
   isTouchDevice: boolean;
-  provider?: HocuspocusProvider | undefined;
-  state?: TCollabValue["state"];
 };
 
 export function EditorContainer(props: Props) {
-  const { children, displayConfig, editor, editorContainerClassName, id, isTouchDevice, provider, state } = props;
+  const { children, displayConfig, editor, editorContainerClassName, id, isTouchDevice } = props;
   // refs
   const containerRef = useRef<HTMLDivElement>(null);
   const hasScrolledOnce = useRef(false);
@@ -80,33 +76,10 @@ export function EditorContainer(props: Props) {
 
   useEffect(() => {
     const nodeId = window.location.href.split("#")[1];
-
-    const handleSynced = () => scrollToNode(nodeId);
-
     if (nodeId && !hasScrolledOnce.current) {
-      if (provider && state) {
-        const { hasCachedContent } = state;
-        // If the provider is synced or the cached content is available and the server is disconnected, scroll to the node
-        if (hasCachedContent) {
-          const hasScrolled = handleSynced();
-          if (!hasScrolled) {
-            provider.on("synced", handleSynced);
-          }
-        } else if (provider.isSynced) {
-          handleSynced();
-        } else {
-          provider.on("synced", handleSynced);
-        }
-      } else {
-        handleSynced();
-      }
-      return () => {
-        if (provider) {
-          provider.off("synced", handleSynced);
-        }
-      };
+      scrollToNode(nodeId);
     }
-  }, [scrollToNode, provider, state]);
+  }, [scrollToNode]);
 
   const handleContainerClick = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (event.target !== event.currentTarget) return;

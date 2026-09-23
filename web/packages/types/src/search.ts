@@ -7,12 +7,11 @@
 import type { ICycle } from "./cycle";
 import type { TIssue } from "./issues/issue";
 import type { IModule } from "./module";
-import type { TPage } from "./page";
 import type { IProject } from "./project";
 import type { IUser } from "./users";
 import type { IWorkspace } from "./workspace";
 
-export type TSearchEntities = "user_mention" | "issue" | "project" | "cycle" | "module" | "page";
+export type TSearchEntities = "user_mention" | "issue" | "project" | "cycle" | "module";
 
 export type TUserSearchResponse = {
   member__avatar_url: IUser["avatar_url"];
@@ -57,19 +56,10 @@ export type TModuleSearchResponse = {
   workspace__slug: IWorkspace["slug"];
 };
 
-export type TPageSearchResponse = {
-  name: TPage["name"];
-  id: TPage["id"];
-  logo_props: TPage["logo_props"];
-  projects__id: TPage["project_ids"];
-  workspace__slug: IWorkspace["slug"];
-};
-
 export type TSearchResponse = {
   cycle?: TCycleSearchResponse[];
   issue?: TIssueSearchResponse[];
   module?: TModuleSearchResponse[];
-  page?: TPageSearchResponse[];
   project?: TProjectSearchResponse[];
   user_mention?: TUserSearchResponse[];
 };

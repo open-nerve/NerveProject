@@ -14,7 +14,6 @@ import { CloseOutline } from "@makeplane/propel/icons";
 import CyclesTour from "@/app/assets/onboarding/cycles.webp?url";
 import IssuesTour from "@/app/assets/onboarding/issues.webp?url";
 import ModulesTour from "@/app/assets/onboarding/modules.webp?url";
-import PagesTour from "@/app/assets/onboarding/pages.webp?url";
 import ViewsTour from "@/app/assets/onboarding/views.webp?url";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
@@ -26,7 +25,7 @@ export type TOnboardingTourProps = {
   onComplete: () => void;
 };
 
-export type TTourSteps = "welcome" | "work-items" | "cycles" | "modules" | "views" | "pages";
+export type TTourSteps = "welcome" | "work-items" | "cycles" | "modules" | "views";
 
 const TOUR_STEPS: {
   key: TTourSteps;
@@ -68,14 +67,6 @@ const TOUR_STEPS: {
       "Create custom filters to display only the work items that matter to you. Save and share your filters in just a few clicks.",
     image: ViewsTour,
     prevStep: "modules",
-    nextStep: "pages",
-  },
-  {
-    key: "pages",
-    title: "Document with pages",
-    description: "Use Pages to quickly jot down work items when you're in a meeting or starting a day.",
-    image: PagesTour,
-    prevStep: "views",
   },
 ];
 

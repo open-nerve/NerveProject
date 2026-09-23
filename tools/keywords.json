@@ -434,6 +434,86 @@
           ]
         }
       }
+    },
+    {
+      "id": "pages-collaboration",
+      "phase": "M1/P2",
+      "why": "文档页和协作编辑（Yjs、Hocuspocus、live 服务、PDF 导出、工作项嵌入）；按 M1 设计 7.4 的确切符号搜，不搜单独的 page / pages（路由文件本身就叫 page.tsx）。pnpm-lock.yaml 不在范围内：recharts 的弃用说明里有一个 GitHub wiki 链接，删掉的依赖由 lock-diff 核对",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json|css|ya?ml)|web/apps/web/\\.env\\.example|turbo\\.json|pnpm-workspace\\.yaml)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "page_view|description_binary|\\byjs\\b|y-prosemirror|y-indexeddb|y-protocols|hocuspocus|Collaborative|extension-collaboration|\\bpageId\\b|\\bpage_id\\b|WorkItemEmbed|issue-embed|LIVE_BASE|VITE_LIVE|comlink|react-pdf|@tiptap/html|wiki",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "  page_view: boolean;",
+          "  description_binary: string | null;",
+          "  \"yjs\": \"catalog:\"",
+          "import { prosemirrorJSONToYDoc, yXmlFragmentToProseMirrorRootNode } from \"y-prosemirror\";",
+          "import { IndexeddbPersistence } from \"y-indexeddb\";",
+          "    \"y-protocols\": \"catalog:\",",
+          "import type { HocuspocusProvider } from \"@hocuspocus/provider\";",
+          "  CollaborativeDocumentEditorWithRef,",
+          "import Collaboration from \"@tiptap/extension-collaboration\";",
+          "      const pageInstance = pageId ? getPageById(pageId.toString()) : null;",
+          "  page_id?: string;",
+          "export const DocumentEditorExtensionsWithoutProps = [WorkItemEmbedExtensionConfig];",
+          "  WORK_ITEM_EMBED = \"issue-embed-component\",",
+          "      const LIVE_SERVER_BASE_URL = LIVE_BASE_URL?.trim() || window.location.origin;",
+          "VITE_LIVE_URL=\"http://localhost:3100\"",
+          "import * as Comlink from \"comlink\";",
+          "import type { PageProps } from \"@react-pdf/renderer\";",
+          "import { generateHTML, generateJSON } from \"@tiptap/html\";",
+          "        : `/${page?.workspace__slug}/wiki/${page?.id}`;"
+        ],
+        "miss": [
+          "import { RecentProject } from \"./project\";",
+          "import { find } from \"linkifyjs\";",
+          "export default function ProjectIssuesPage() {",
+          "  const pathname = usePathname();",
+          "  description_html: string | null;",
+          "import { HelpOutline, PagesOutline, UserOutline } from \"@makeplane/propel/icons\";",
+          "export const UniqueID = Extension.create<UniqueIDOptions>({"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/editor/package.json",
+            "web/packages/types/src/project/projects.ts",
+            "web/packages/editor/src/styles/drag-drop.css",
+            "web/apps/web/.env.example",
+            "turbo.json",
+            "pnpm-workspace.yaml"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md", "pnpm-lock.yaml"]
+        }
+      }
+    },
+    {
+      "id": "changelog",
+      "phase": "M1/P2",
+      "why": "更新日志（帮助菜单里的「新功能」弹窗、它调用的 /api/release-notes/、实例配置的 instance_changelog_url），随文档页一起删除（M1 设计 2.1）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "changelog|product-updates|ProductUpdates|what.s new", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { ProductUpdatesModal } from \"@/components/global\";",
+          "export * from \"./product-updates\";",
+          "  instance_changelog_url?: string;",
+          "  \"full_changelog\": \"Full changelog\",",
+          "  \"whats_new\": \"What's new?\","
+        ],
+        "miss": [
+          "import { PlaneVersionNumber } from \"@/components/global/version-number\";",
+          "  \"keyboard_shortcuts\": \"Keyboard shortcuts\","
+        ],
+        "files": {
+          "hit": ["web/packages/i18n/src/locales/en/common.json", "web/packages/types/src/instance/base.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -513,12 +593,32 @@
       "until": "M1/P3"
     },
     {
-      "rule": "gantt-timeline",
-      "path": "web/apps/web/core/components/pages/navigation-pane/tab-panels/info/version-history.tsx",
-      "match": "timeline",
-      "count": 6,
-      "reason": "文档页版本历史列表里那条装饰竖线的注释，与甘特时间线无关；P2 Task 7 删除整个文件，同时删除这条例外",
+      "rule": "pages-collaboration",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Wiki",
+      "reason": "计费对比表的文案，随计费在 P3 删除",
       "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "wiki",
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "Wiki",
+      "reason": "订阅套餐的功能名，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/packages/utils/src/tlds.ts",
+      "match": "wiki",
+      "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.wiki 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
+      "until": "M9"
     }
   ]
 }

@@ -72,8 +72,6 @@ export const PROJECT_MODULE_TAB_INDICES = [
 
 export const PROJECT_VIEW_TAB_INDICES = ["name", "description", "filters", "cancel", "submit"];
 
-export const PROJECT_PAGE_TAB_INDICES = ["name", "public", "private", "cancel", "submit"];
-
 export enum ETabIndices {
   ISSUE_FORM = "issue-form",
   INTAKE_ISSUE_FORM = "intake-issue-form",
@@ -82,7 +80,6 @@ export enum ETabIndices {
   PROJECT_CYCLE = "project-cycle",
   PROJECT_MODULE = "project-module",
   PROJECT_VIEW = "project-view",
-  PROJECT_PAGE = "project-page",
 }
 
 export const TAB_INDEX_MAP: Record<ETabIndices, string[]> = {
@@ -93,5 +90,4 @@ export const TAB_INDEX_MAP: Record<ETabIndices, string[]> = {
   [ETabIndices.PROJECT_CYCLE]: PROJECT_CYCLE_TAB_INDICES,
   [ETabIndices.PROJECT_MODULE]: PROJECT_MODULE_TAB_INDICES,
   [ETabIndices.PROJECT_VIEW]: PROJECT_VIEW_TAB_INDICES,
-  [ETabIndices.PROJECT_PAGE]: PROJECT_PAGE_TAB_INDICES,
 };

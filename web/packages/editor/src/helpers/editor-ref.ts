@@ -4,10 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { HocuspocusProvider } from "@hocuspocus/provider";
 import type { Editor } from "@tiptap/core";
 import { DOMSerializer } from "@tiptap/pm/model";
-import * as Y from "yjs";
 // plane imports
 import { convertHTMLToMarkdown } from "@plane/utils";
 // components
@@ -18,17 +16,15 @@ import { CORE_EDITOR_META } from "@/constants/meta";
 // types
 import type { EditorRefApi, IEditorProps, TEditorCommands } from "@/types";
 // local imports
-import { getParagraphCount } from "./common";
 import { insertContentAtSavedSelection } from "./insert-content-at-cursor-position";
-import { scrollSummary, scrollToNodeViaDOMCoordinates } from "./scroll-to-node";
+import { scrollToNodeViaDOMCoordinates } from "./scroll-to-node";
 
 type TArgs = Pick<IEditorProps, "getEditorMetaData"> & {
   editor: Editor | null;
-  provider: HocuspocusProvider | undefined;
 };
 
 export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
-  const { editor, getEditorMetaData, provider } = args;
+  const { editor, getEditorMetaData } = args;
 
   return {
     blur: () => editor?.commands.blur(),
@@ -67,23 +63,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         }
       }
     },
-    getDocument: () => {
-      const documentBinary = provider?.document ? Y.encodeStateAsUpdate(provider?.document) : null;
-      const documentHTML = editor?.getHTML() ?? "<p></p>";
-      const documentJSON = editor?.getJSON() ?? null;
-
-      return {
-        binary: documentBinary,
-        html: documentHTML,
-        json: documentJSON,
-      };
-    },
-    getDocumentInfo: () => ({
-      characters: editor?.storage.characterCount?.characters?.() ?? 0,
-      paragraphs: getParagraphCount(editor?.state),
-      words: editor?.storage.characterCount?.words?.() ?? 0,
-    }),
-    getHeadings: () => (editor ? editor.storage.headingsList?.headings : []),
     getMarkDown: () => {
       if (!editor) return "";
       const editorHTML = editor.getHTML();
@@ -121,10 +100,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       const utilityStorage = editor.storage.utility;
       return utilityStorage.activeDropbarExtensions.length > 0;
     },
-    scrollSummary: (marking) => {
-      if (!editor) return;
-      scrollSummary(editor, marking);
-    },
     setEditorValue: (content, emitUpdate = false) => {
       editor
         ?.chain()
@@ -135,7 +110,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         })
         .run();
     },
-    emitRealTimeUpdate: (message) => provider?.sendStateless(message),
     executeMenuItemCommand: (props) => {
       const { itemKey } = props;
       const editorItems = getEditorMenuItems(editor);
@@ -201,44 +175,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
 
       return item.isActive(props);
     },
-    listenToRealTimeUpdate: () => provider && { on: provider.on.bind(provider), off: provider.off.bind(provider) },
-    onDocumentInfoChange: (callback) => {
-      const handleDocumentInfoChange = () => {
-        if (!editor?.storage) return;
-        callback({
-          characters: editor.storage.characterCount?.characters?.() ?? 0,
-          paragraphs: getParagraphCount(editor?.state),
-          words: editor.storage.characterCount?.words?.() ?? 0,
-        });
-      };
-
-      // Subscribe to update event emitted from character count extension
-      editor?.on("update", handleDocumentInfoChange);
-      // Return a function to unsubscribe to the continuous transactions of
-      // the editor on unmounting the component that has subscribed to this
-      // method
-      return () => {
-        editor?.off("update", handleDocumentInfoChange);
-      };
-    },
-    onHeadingChange: (callback) => {
-      const handleHeadingChange = () => {
-        if (!editor) return;
-        const headings = editor.storage.headingsList?.headings;
-        if (headings) {
-          callback(headings);
-        }
-      };
-
-      // Subscribe to update event emitted from headers extension
-      editor?.on("update", handleHeadingChange);
-      // Return a function to unsubscribe to the continuous transactions of
-      // the editor on unmounting the component that has subscribed to this
-      // method
-      return () => {
-        editor?.off("update", handleHeadingChange);
-      };
-    },
     onStateChange: (callback) => {
       // Subscribe to editor state changes
       editor?.on("transaction", callback);
@@ -277,11 +213,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       } catch (error) {
         console.error("An error occurred while setting focus at position:", error);
       }
-    },
-    setProviderDocument: (value) => {
-      const document = provider?.document;
-      if (!document) return;
-      Y.applyUpdate(document, value);
     },
     undo: () => editor?.commands.undo(),
   };

@@ -77,15 +77,6 @@
       "description": "您当前的过滤器未返回任何结果。请尝试更改过滤器。",
       "cta_primary": "添加工作项"
     },
-    "pages": {
-      "title": "记录一切 — 从笔记到 PRD",
-      "description": "页面让您在一个地方捕获和组织信息。编写会议笔记、项目文档和 PRD,嵌入工作项,并使用现成的组件进行结构化。",
-      "cta_primary": "创建您的第一个页面"
-    },
-    "archive_pages": {
-      "title": "暂无已归档页面",
-      "description": "归档不在您关注范围内的页面。需要时在此处访问它们。"
-    },
     "intake_sidebar": {
       "title": "记录接收请求",
       "description": "提交新请求以在项目工作流程中进行审查、优先排序和跟踪。",
@@ -160,11 +151,6 @@
       "title": "使用仪表板可视化您的进度",
       "description": "构建可自定义的仪表板以跟踪指标、衡量成果并有效呈现见解。",
       "cta_primary": "创建新仪表板"
-    },
-    "wiki": {
-      "title": "编写笔记、文档或完整的知识库。",
-      "description": "页面是 Plane 中的思想捕捉空间。记录会议笔记,轻松格式化,嵌入工作项,使用组件库进行布局,并将它们全部保留在项目上下文中。",
-      "cta_primary": "创建您的页面"
     },
     "project_overview_state_sidebar": {
       "title": "启用项目状态",

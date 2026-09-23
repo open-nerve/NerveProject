@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useTheme } from "next-themes";
 // plane imports
 import { useTranslation } from "@plane/i18n";
@@ -61,8 +61,6 @@ export const HOME_WIDGETS_LIST: {
 export const DashboardWidgets = observer(function DashboardWidgets() {
   // router
   const { workspaceSlug } = useParams();
-  // navigation
-  const pathname = usePathname();
   // theme hook
   const { resolvedTheme } = useTheme();
   // store hooks
@@ -74,8 +72,6 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
   // derived values
   const noWidgetsResolvedPath = resolvedTheme === "light" ? lightWidgetsAsset : darkWidgetsAsset;
 
-  // derived values
-  const isWikiApp = pathname.includes(`/${workspaceSlug.toString()}/pages`);
   if (!workspaceSlug) return null;
   if (loading || loader !== "loaded") return <HomeLoader />;
 
@@ -86,7 +82,7 @@ export const DashboardWidgets = observer(function DashboardWidgets() {
         isModalOpen={showWidgetSettings}
         handleOnClose={() => toggleWidgetSettings(false)}
       />
-      {!isWikiApp && <NoProjectsEmptyState />}
+      <NoProjectsEmptyState />
 
       {isAnyWidgetEnabled ? (
         <div className="flex flex-col">

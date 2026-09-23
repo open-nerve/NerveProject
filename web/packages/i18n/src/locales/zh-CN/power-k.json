@@ -47,26 +47,10 @@
         "copy_url": "复制 URL",
         "copy_url_toast_success": "模块 URL 已复制到剪贴板。",
         "copy_url_toast_error": "复制模块 URL 到剪贴板时出错。"
-      },
-      "page": {
-        "title": "页面操作",
-        "indicator": "页面",
-        "lock": "锁定",
-        "unlock": "解锁",
-        "make_private": "设为私有",
-        "make_public": "设为公开",
-        "archive": "归档",
-        "restore": "恢复",
-        "add_to_favorites": "添加到收藏",
-        "remove_from_favorites": "从收藏中移除",
-        "copy_url": "复制 URL",
-        "copy_url_toast_success": "页面 URL 已复制到剪贴板。",
-        "copy_url_toast_error": "复制页面 URL 到剪贴板时出错。"
       }
     },
     "creation_actions": {
       "create_work_item": "新建工作项",
-      "create_page": "新建页面",
       "create_view": "新建视图",
       "create_cycle": "新建周期",
       "create_module": "新建模块",
@@ -97,7 +81,6 @@
       "nav_project_modules": "转到模块",
       "open_project_view": "打开项目视图",
       "nav_project_views": "转到项目视图",
-      "nav_project_pages": "转到页面",
       "nav_project_intake": "转到收集",
       "nav_project_archives": "转到项目归档",
       "open_project_setting": "打开项目设置",

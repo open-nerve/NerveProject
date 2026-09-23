@@ -10,7 +10,6 @@ import type { TPowerKCommandConfig, TPowerKContextType, TPowerKPageType } from "
 import { usePowerKCycleContextBasedActions } from "./cycle/commands";
 import { PowerKModuleContextBasedPages } from "./module";
 import { usePowerKModuleContextBasedActions } from "./module/commands";
-import { usePowerKPageContextBasedActions } from "./page/commands";
 import { PowerKWorkItemContextBasedPages } from "./work-item";
 import { usePowerKWorkItemContextBasedCommands } from "./work-item/commands";
 
@@ -39,7 +38,6 @@ export const usePowerKContextBasedActions = (): TPowerKCommandConfig[] => {
   const workItemCommands = usePowerKWorkItemContextBasedCommands();
   const cycleCommands = usePowerKCycleContextBasedActions();
   const moduleCommands = usePowerKModuleContextBasedActions();
-  const pageCommands = usePowerKPageContextBasedActions();
 
-  return [...workItemCommands, ...cycleCommands, ...moduleCommands, ...pageCommands];
+  return [...workItemCommands, ...cycleCommands, ...moduleCommands];
 };

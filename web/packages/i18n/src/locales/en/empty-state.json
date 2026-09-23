@@ -77,15 +77,6 @@
       "description": "Your current filter didn't return any results. Try changing the filters.",
       "cta_primary": "Add work item"
     },
-    "pages": {
-      "title": "Document everything — from notes to PRDs",
-      "description": "Pages let you capture and organize information in one place. Write meeting notes, project documentation, and PRDs, embed work items, and structure them with ready-to-use components.",
-      "cta_primary": "Create your first Page"
-    },
-    "archive_pages": {
-      "title": "No archived pages yet",
-      "description": "Archive pages not on your radar. Access them here when needed."
-    },
     "intake_sidebar": {
       "title": "Log Intake requests",
       "description": "Submit new requests to be reviewed, prioritized, and tracked within your project's workflow.",
@@ -160,11 +151,6 @@
       "title": "Visualize your progress with dashboards",
       "description": "Build customizable dashboards to track metrics, measure outcomes, and present insights effectively.",
       "cta_primary": "Create new dashboard"
-    },
-    "wiki": {
-      "title": "Write a note, a doc, or a full knowledge base.",
-      "description": "Pages are thought spotting space in Plane. Take down meeting notes, format them easily, embed work items, lay them out using a library of components, and keep them all in your project's context.",
-      "cta_primary": "Create your page"
     },
     "project_overview_state_sidebar": {
       "title": "Enable project states",

@@ -65,13 +65,6 @@ export const PROJECT_SETTINGS: Record<TProjectSettingsTabs, TProjectSettingsItem
     access: [EUserProjectRoles.ADMIN],
     highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/features/views/`,
   },
-  features_pages: {
-    key: "features_pages",
-    i18n_label: "project_settings.features.pages.short_title",
-    href: `/features/pages`,
-    access: [EUserProjectRoles.ADMIN],
-    highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/features/pages/`,
-  },
   features_intake: {
     key: "features_intake",
     i18n_label: "project_settings.features.intake.short_title",
@@ -110,7 +103,6 @@ export const GROUPED_PROJECT_SETTINGS: Record<PROJECT_SETTINGS_CATEGORY, TProjec
     PROJECT_SETTINGS["features_cycles"],
     PROJECT_SETTINGS["features_modules"],
     PROJECT_SETTINGS["features_views"],
-    PROJECT_SETTINGS["features_pages"],
     PROJECT_SETTINGS["features_intake"],
   ],
   [PROJECT_SETTINGS_CATEGORY.WORK_STRUCTURE]: [PROJECT_SETTINGS["states"], PROJECT_SETTINGS["labels"]],

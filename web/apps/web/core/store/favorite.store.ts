@@ -56,7 +56,6 @@ export class FavoriteStore implements IFavoriteStore {
   rootStore;
   viewStore;
   projectStore;
-  pageStore;
   cycleStore;
   moduleStore;
 
@@ -87,7 +86,6 @@ export class FavoriteStore implements IFavoriteStore {
     this.projectStore = _rootStore.projectRoot.project;
     this.moduleStore = _rootStore.module;
     this.cycleStore = _rootStore.cycle;
-    this.pageStore = _rootStore.projectPages;
   }
 
   get currentWorkspaceFavorites() {
@@ -277,8 +275,6 @@ export class FavoriteStore implements IFavoriteStore {
           this.moduleStore.moduleMap[entity_identifier] &&
           (this.moduleStore.moduleMap[entity_identifier].is_favorite = false)
         );
-      case "page":
-        return this.pageStore.data[entity_identifier] && (this.pageStore.data[entity_identifier].is_favorite = false);
       case "cycle":
         return (
           this.cycleStore.cycleMap[entity_identifier] &&

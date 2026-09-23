@@ -5,10 +5,7 @@
  */
 
 import { useParams } from "next/navigation";
-// plane imports
-import { getPageName } from "@plane/utils";
 // hooks
-import { EPageStoreType, usePageStore } from "@/hooks/store";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useModule } from "@/hooks/store/use-module";
 // local imports
@@ -21,11 +18,10 @@ type TArgs = {
 export const useContextIndicator = (args: TArgs): string | null => {
   const { activeContext } = args;
   // navigation
-  const { workItem: workItemIdentifier, cycleId, moduleId, pageId } = useParams();
+  const { workItem: workItemIdentifier, cycleId, moduleId } = useParams();
   // store hooks
   const { getCycleById } = useCycle();
   const { getModuleById } = useModule();
-  const { getPageById } = usePageStore(EPageStoreType.PROJECT);
   let indicator: string | undefined | null = null;
 
   switch (activeContext) {
@@ -41,11 +37,6 @@ export const useContextIndicator = (args: TArgs): string | null => {
     case "module": {
       const moduleDetails = moduleId ? getModuleById(moduleId.toString()) : null;
       indicator = moduleDetails?.name;
-      break;
-    }
-    case "page": {
-      const pageInstance = pageId ? getPageById(pageId.toString()) : null;
-      indicator = getPageName(pageInstance?.name);
       break;
     }
     default: {

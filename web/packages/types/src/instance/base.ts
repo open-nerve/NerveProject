@@ -63,7 +63,6 @@ export interface IInstanceConfig {
   space_base_url: string | undefined;
   admin_base_url: string | undefined;
   is_self_managed: boolean;
-  instance_changelog_url?: string;
 }
 
 export interface IInstanceAdmin {

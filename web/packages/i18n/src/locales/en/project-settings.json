@@ -212,13 +212,6 @@
         "toggle_title": "Enable views",
         "toggle_description": "Project members will be able to create and edit views."
       },
-      "pages": {
-        "title": "Pages",
-        "short_title": "Pages",
-        "description": "Create and edit free-form content; notes, docs, anything.",
-        "toggle_title": "Enable pages",
-        "toggle_description": "Project members will be able to create and edit pages."
-      },
       "intake": {
         "intake_responsibility": "Intake responsibility",
         "intake_sources": "Intake sources",

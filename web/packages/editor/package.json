@@ -17,7 +17,6 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./lib": "./dist/lib.js",
     "./package.json": "./package.json",
     "./styles.css": "./dist/styles/index.css",
     "./styles": "./dist/styles/index.css"
@@ -25,7 +24,7 @@
   "scripts": {
     "build": "tsc && tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 75",
+    "check:lint": "node ../../../tools/lint-cap.mjs 68",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."
@@ -34,7 +33,6 @@
     "@floating-ui/dom": "catalog:",
     "@floating-ui/react": "catalog:",
     "@headlessui/react": "catalog:",
-    "@hocuspocus/provider": "catalog:",
     "@makeplane/propel": "catalog:",
     "@plane/constants": "workspace:*",
     "@plane/hooks": "workspace:*",
@@ -44,8 +42,6 @@
     "@plane/utils": "workspace:*",
     "@tiptap/core": "catalog:",
     "@tiptap/extension-blockquote": "catalog:",
-    "@tiptap/extension-character-count": "catalog:",
-    "@tiptap/extension-collaboration": "catalog:",
     "@tiptap/extension-document": "catalog:",
     "@tiptap/extension-emoji": "catalog:",
     "@tiptap/extension-heading": "catalog:",
@@ -58,12 +54,10 @@
     "@tiptap/extension-text-align": "catalog:",
     "@tiptap/extension-text-style": "catalog:",
     "@tiptap/extension-underline": "catalog:",
-    "@tiptap/html": "catalog:",
     "@tiptap/pm": "catalog:",
     "@tiptap/react": "catalog:",
     "@tiptap/starter-kit": "catalog:",
     "@tiptap/suggestion": "catalog:",
-    "buffer": "catalog:",
     "emoji-regex": "catalog:",
     "highlight.js": "catalog:",
     "is-emoji-supported": "catalog:",
@@ -75,11 +69,7 @@
     "prosemirror-codemark": "catalog:",
     "tippy.js": "catalog:",
     "tiptap-markdown": "catalog:",
-    "uuid": "catalog:",
-    "y-indexeddb": "catalog:",
-    "y-prosemirror": "catalog:",
-    "y-protocols": "catalog:",
-    "yjs": "catalog:"
+    "uuid": "catalog:"
   },
   "devDependencies": {
     "@plane/typescript-config": "workspace:*",

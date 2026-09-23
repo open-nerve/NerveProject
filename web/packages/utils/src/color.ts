@@ -13,8 +13,6 @@
  */
 export type TRgb = { r: number; g: number; b: number };
 
-export type THsl = { h: number; s: number; l: number };
-
 /**
  * @description Validates and clamps color values to RGB range (0-255)
  * @param {number} value - The color value to validate
@@ -70,37 +68,6 @@ export const hexToRgb = (hex: string): TRgb => {
  * rgbToHex({ r: 0, g: 0, b: 255 }) // returns "#0000ff"
  */
 export const rgbToHex = ({ r, g, b }: TRgb): string => `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-
-/**
- * Converts HSL values to a hexadecimal color code
- * @param {HSL} hsl - An object containing HSL values
- * @param {number} hsl.h - Hue component (0-360)
- * @param {number} hsl.s - Saturation component (0-100)
- * @param {number} hsl.l - Lightness component (0-100)
- * @returns {string} The hexadecimal color code (e.g., "#ff0000" for red)
- * @example
- * hslToHex({ h: 0, s: 100, l: 50 }) // returns "#ff0000"
- * hslToHex({ h: 120, s: 100, l: 50 }) // returns "#00ff00"
- * hslToHex({ h: 240, s: 100, l: 50 }) // returns "#0000ff"
- */
-export const hslToHex = ({ h, s, l }: THsl): string => {
-  if (h < 0 || h > 360) return "#000000";
-  if (s < 0 || s > 100) return "#000000";
-  if (l < 0 || l > 100) return "#000000";
-
-  l /= 100;
-  const a = (s * Math.min(l, 1 - l)) / 100;
-
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color)
-      .toString(16)
-      .padStart(2, "0");
-  };
-
-  return `#${f(0)}${f(8)}${f(4)}`;
-};
 
 /**
  * Calculate relative luminance of a color according to WCAG
@@ -226,33 +193,3 @@ export function generateIconColors(color: string) {
     background: `rgba(${foregroundColor.r}, ${foregroundColor.g}, ${foregroundColor.b}, 0.25)`,
   };
 }
-
-/**
- * @description Generates a deterministic HSL color based on input string
- * @param {string} input - Input string to generate color from
- * @returns {THsl} An object containing the HSL values
- * @example
- * generateRandomColor("hello") // returns consistent HSL color for "hello"
- * generateRandomColor("") // returns { h: 0, s: 0, l: 0 }
- */
-export const generateRandomColor = (input: string): THsl => {
-  // If input is falsy, generate a random seed string.
-  // The random seed is created by converting a random number to base-36 and taking a substring.
-  const seed = input || Math.random().toString(36).substring(2, 8);
-
-  const uniqueId = seed.length.toString() + seed; // Unique identifier based on string length
-  const combinedString = uniqueId + seed;
-
-  // Create a hash value from the combined string.
-  const hash = Array.from(combinedString).reduce((acc, char) => {
-    const charCode = char.charCodeAt(0);
-    return (acc << 5) - acc + charCode;
-  }, 0);
-
-  // Derive the HSL values from the hash.
-  const hue = Math.abs(hash % 360);
-  const saturation = 70; // Maintains a good amount of color
-  const lightness = 70; // Increased lightness for a pastel look
-
-  return { h: hue, s: saturation, l: lightness };
-};
