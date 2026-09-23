@@ -9,10 +9,7 @@ import { API_BASE_URL } from "@plane/constants";
 import type {
   TIssue,
   IUser,
-  IUserActivityResponse,
   IInstanceAdminStatus,
-  IUserProfileData,
-  IUserProfileProjectSegregation,
   IUserSettings,
   IUserEmailNotificationSettings,
   TIssuesResponse,
@@ -151,56 +148,6 @@ export class UserService extends APIService {
         "X-CSRFTOKEN": token,
       },
     })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getUserProfileData(workspaceSlug: string, userId: string): Promise<IUserProfileData> {
-    return this.get(`/api/workspaces/${workspaceSlug}/user-stats/${userId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getUserProfileProjectsSegregation(
-    workspaceSlug: string,
-    userId: string
-  ): Promise<IUserProfileProjectSegregation> {
-    return this.get(`/api/workspaces/${workspaceSlug}/user-profile/${userId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getUserProfileActivity(
-    workspaceSlug: string,
-    userId: string,
-    params: {
-      per_page: number;
-      cursor?: string;
-    }
-  ): Promise<IUserActivityResponse> {
-    return this.get(`/api/workspaces/${workspaceSlug}/user-activity/${userId}/`, {
-      params,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async downloadProfileActivity(
-    workspaceSlug: string,
-    userId: string,
-    data: {
-      date: string;
-    }
-  ): Promise<any> {
-    return this.post(`/api/workspaces/${workspaceSlug}/user-activity/${userId}/export/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

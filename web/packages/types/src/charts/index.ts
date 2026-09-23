@@ -63,29 +63,6 @@ export type TAxisChartProps<K extends string, T extends string> = TBaseChartProp
 };
 
 // ============================================================
-// Bar Chart
-// ============================================================
-
-export type TBarChartShapeVariant = "bar" | "lollipop" | "lollipop-dotted";
-
-export type TBarItem<T extends string> = {
-  key: T;
-  label: string;
-  fill: string | ((payload: any) => string);
-  textClassName: string;
-  showPercentage?: boolean;
-  stackId: string;
-  showTopBorderRadius?: (barKey: string, payload: any) => boolean;
-  showBottomBorderRadius?: (barKey: string, payload: any) => boolean;
-  shapeVariant?: TBarChartShapeVariant;
-};
-
-export type TBarChartProps<K extends string, T extends string> = TAxisChartProps<K, T> & {
-  bars: TBarItem<T>[];
-  barSize?: number;
-};
-
-// ============================================================
 // Area Chart
 // ============================================================
 
@@ -108,35 +85,4 @@ export type TAreaChartProps<K extends string, T extends string> = TAxisChartProp
     dashedLine: boolean;
     strokeColor: string;
   };
-};
-
-// ============================================================
-// Pie Chart
-// ============================================================
-
-export type TCellItem<T extends string> = {
-  key: T;
-  fill: string;
-};
-
-export type TPieChartProps<K extends string, T extends string> = Pick<
-  TBaseChartProps<K, T>,
-  "className" | "data" | "showTooltip" | "legend" | "margin"
-> & {
-  dataKey: T;
-  cells: TCellItem<T>[];
-  innerRadius?: number | string;
-  outerRadius?: number | string;
-  cornerRadius?: number;
-  paddingAngle?: number;
-  showLabel: boolean;
-  customLabel?: (value: any) => string;
-  centerLabel?: {
-    className?: string;
-    fill: string;
-    style?: React.CSSProperties;
-    text?: string | number;
-  };
-  tooltipLabel?: string | ((payload: any) => string);
-  customLegend?: (props: any) => React.ReactNode;
 };

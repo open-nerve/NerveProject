@@ -133,12 +133,6 @@
     "inbox_sidebar_mentions": {
       "title": "Mentions for your work items will appear here"
     },
-    "your_work_by_priority": {
-      "title": "No work item assigned yet"
-    },
-    "your_work_by_state": {
-      "title": "No work item assigned yet"
-    },
     "views": {
       "title": "No Views yet",
       "description": "Add work items to your project and use views to filter, sort, and monitor progress effortlessly.",

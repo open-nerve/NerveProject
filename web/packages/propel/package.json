@@ -14,8 +14,6 @@
     "./calendar": "./dist/calendar/index.js",
     "./card": "./dist/card/index.js",
     "./charts/area-chart": "./dist/charts/area-chart/index.js",
-    "./charts/bar-chart": "./dist/charts/bar-chart/index.js",
-    "./charts/pie-chart": "./dist/charts/pie-chart/index.js",
     "./collapsible": "./dist/collapsible/index.js",
     "./combobox": "./dist/combobox/index.js",
     "./command": "./dist/command/index.js",
@@ -47,7 +45,7 @@
   "scripts": {
     "dev": "tsdown --watch --no-clean",
     "build": "tsdown",
-    "check:lint": "node ../../../tools/lint-cap.mjs 24",
+    "check:lint": "node ../../../tools/lint-cap.mjs 21",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."

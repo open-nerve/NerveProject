@@ -133,12 +133,6 @@
     "inbox_sidebar_mentions": {
       "title": "您的工作项的提及将显示在此处"
     },
-    "your_work_by_priority": {
-      "title": "尚未分配工作项"
-    },
-    "your_work_by_state": {
-      "title": "尚未分配工作项"
-    },
     "views": {
       "title": "暂无视图",
       "description": "将工作项添加到项目中并使用视图轻松过滤、排序和监控进度。",

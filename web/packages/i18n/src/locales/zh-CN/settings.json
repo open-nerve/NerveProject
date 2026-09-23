@@ -73,50 +73,22 @@
     "work": "工作",
     "details": {
       "joined_on": "加入时间",
-      "time_zone": "时区"
-    },
-    "stats": {
-      "workload": "工作量",
-      "overview": "概览",
-      "created": "已创建的工作项",
-      "assigned": "已分配的工作项",
-      "subscribed": "已订阅的工作项",
-      "state_distribution": {
-        "title": "按状态分类的工作项",
-        "empty": "创建工作项以在图表中查看按状态分类的工作项，以便更好地分析。"
-      },
-      "priority_distribution": {
-        "title": "按优先级分类的工作项",
-        "empty": "创建工作项以在图表中查看按优先级分类的工作项，以便更好地分析。"
-      },
-      "recent_activity": {
-        "title": "最近活动",
-        "empty": "我们找不到数据。请查看您的输入",
-        "button": "下载今天的活动",
-        "button_loading": "下载中"
-      }
+      "load_failed": "无法加载该工作区的成员。",
+      "not_a_member": "该用户不是这个工作区的成员。"
     },
     "actions": {
       "profile": "个人资料",
       "security": "安全",
-      "activity": "活动",
       "preferences": "偏好设置",
       "notifications": "通知",
-      "api-tokens": "个人访问令牌",
-      "connections": "连接"
+      "api-tokens": "个人访问令牌"
     },
     "tabs": {
-      "summary": "摘要",
       "assigned": "已分配",
       "created": "已创建",
-      "subscribed": "已订阅",
-      "activity": "活动"
+      "subscribed": "已订阅"
     },
     "empty_state": {
-      "activity": {
-        "title": "尚无活动",
-        "description": "通过创建新工作项开始！为其添加详细信息和属性。在 Plane 中探索更多内容以查看您的活动。"
-      },
       "assigned": {
         "title": "没有分配给您的工作项",
         "description": "可以从这里跟踪分配给您的工作项。"

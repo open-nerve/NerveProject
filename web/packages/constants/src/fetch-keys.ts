@@ -132,19 +132,6 @@ export const GITHUB_REPOSITORY_INFO = (workspaceSlug: string, repoName: string) 
 export const SLACK_CHANNEL_INFO = (workspaceSlug: string, projectId: string) =>
   `SLACK_CHANNEL_INFO_${workspaceSlug.toString().toUpperCase()}_${projectId.toUpperCase()}`;
 
-// profile
-export const USER_PROFILE_DATA = (workspaceSlug: string, userId: string) =>
-  `USER_PROFILE_ACTIVITY_${workspaceSlug.toUpperCase()}_${userId.toUpperCase()}`;
-export const USER_PROFILE_ACTIVITY = (
-  workspaceSlug: string,
-  userId: string,
-  params: {
-    cursor?: string;
-  }
-) => `USER_WORKSPACE_PROFILE_ACTIVITY_${workspaceSlug.toUpperCase()}_${userId.toUpperCase()}_${params?.cursor}`;
-export const USER_PROFILE_PROJECT_SEGREGATION = (workspaceSlug: string, userId: string) =>
-  `USER_PROFILE_PROJECT_SEGREGATION_${workspaceSlug.toUpperCase()}_${userId.toUpperCase()}`;
-
 // api-tokens
 export const API_TOKENS_LIST = `API_TOKENS_LIST`;
 

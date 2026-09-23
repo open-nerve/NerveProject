@@ -15,7 +15,6 @@ export type HorizontalStackAssetType =
   | "link"
   | "members"
   | "note"
-  | "priority"
   | "project"
   | "settings"
   | "state"

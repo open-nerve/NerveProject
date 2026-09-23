@@ -87,13 +87,6 @@
       "module_delete": "删除模块失败",
       "issue_delete": "删除工作项失败"
     },
-    "state": {
-      "backlog": "待办",
-      "unstarted": "未开始",
-      "started": "进行中",
-      "completed": "已完成",
-      "cancelled": "已取消"
-    },
     "sort": {
       "manual": "手动",
       "name": "名称",

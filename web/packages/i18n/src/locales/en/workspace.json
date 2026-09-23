@@ -87,13 +87,6 @@
       "module_delete": "Failed to delete module",
       "issue_delete": "Failed to delete work item"
     },
-    "state": {
-      "backlog": "Backlog",
-      "unstarted": "Unstarted",
-      "started": "Started",
-      "completed": "Completed",
-      "cancelled": "Cancelled"
-    },
     "sort": {
       "manual": "Manual",
       "name": "Name",

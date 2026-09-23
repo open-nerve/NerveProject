@@ -296,6 +296,48 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "profile-stats",
+      "phase": "M1/P2",
+      "why": "个人主页的统计页、动态页和每个项目的统计数字（Plane 的 /user-stats/、/user-profile/、/user-activity/）；个人主页只剩三个工作项标签和读工作区成员 store 的用户卡片（M1 设计 3.2）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": {
+        "source": "user-stats|user-profile/|user-activity/|IUserProfileData|IUserProfileProjectSegregation|IUserStateDistribution|IUserPriorityDistribution|\\bIUserActivity\\b|IUserActivityResponse|USER_PROFILE_(?:DATA|ACTIVITY|PROJECT_SEGREGATION)|profile\\.stats|profile\\.tabs\\.(?:summary|activity)|PROFILE_(?:VIEWER|ADMINS)_TAB|ProfileActivityListPage|WorkspaceActivityList|downloadProfileActivity|your_work_by_",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`/api/workspaces/${workspaceSlug}/user-stats/${userId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/user-profile/${userId}/`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/user-activity/${userId}/export/`, data)",
+          "  async getUserProfileData(workspaceSlug: string, userId: string): Promise<IUserProfileData> {",
+          "  userProjectsData: IUserProfileProjectSegregation | undefined;",
+          "import type { IUserStateDistribution, TStateGroups } from \"@plane/types\";",
+          "  priority_distribution: IUserPriorityDistribution[];",
+          "export interface IUserActivity {",
+          "  ): Promise<IUserActivityResponse> {",
+          "import { USER_PROFILE_DATA } from \"@plane/constants\";",
+          "      <h3 className=\"text-16 font-medium\">{t(\"profile.stats.workload\")}</h3>",
+          "    i18n_label: \"profile.tabs.summary\",",
+          "import { PROFILE_VIEWER_TAB, PROFILE_ADMINS_TAB } from \"@plane/constants\";",
+          "import { ProfileActivityListPage } from \"@/components/profile/activity/profile-activity-list\";",
+          "import { WorkspaceActivityListPage } from \"@/components/profile/activity/workspace-activity-list\";",
+          "  async downloadProfileActivity(",
+          "    \"your_work_by_priority\": {"
+        ],
+        "miss": [
+          "import { PROFILE_TABS } from \"@plane/constants\";",
+          "    i18n_label: \"profile.tabs.assigned\",",
+          "import UserActivityIcon from \"./user-activity-icon\";",
+          "      `/api/workspaces/${workspaceSlug}/user-issues/${userId}/`,",
+          "  const { data: members, isLoading } = useSWR("
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/empty-state.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [

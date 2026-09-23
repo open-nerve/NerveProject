@@ -5,7 +5,6 @@
  */
 
 import type { TUserPermissions } from "./enums";
-import type { IIssueActivity, TIssuePriorities, TStateGroups } from ".";
 import type { TLoginMediums } from "./instance";
 
 /**
@@ -113,33 +112,6 @@ export interface IUserMemberLite extends IUserLite {
   email?: string;
 }
 
-export interface IUserActivity {
-  created_date: string;
-  activity_count: number;
-}
-
-export interface IUserPriorityDistribution {
-  priority: TIssuePriorities;
-  priority_count: number;
-}
-
-export interface IUserStateDistribution {
-  state_group: TStateGroups;
-  state_count: number;
-}
-
-export interface IUserActivityResponse {
-  count: number;
-  extra_stats: null;
-  next_cursor: string;
-  next_page_results: boolean;
-  prev_cursor: string;
-  prev_page_results: boolean;
-  results: IIssueActivity[];
-  total_pages: number;
-  total_results: number;
-}
-
 export type UserAuth = {
   isMember: boolean;
   isOwner: boolean;
@@ -152,30 +124,6 @@ export type TOnboardingSteps = {
   workspace_invite: boolean;
   workspace_join: boolean;
 };
-
-export interface IUserProfileData {
-  assigned_issues: number;
-  completed_issues: number;
-  created_issues: number;
-  pending_issues: number;
-  priority_distribution: IUserPriorityDistribution[];
-  state_distribution: IUserStateDistribution[];
-  subscribed_issues: number;
-}
-
-export interface IUserProfileProjectSegregation {
-  project_data: {
-    assigned_issues: number;
-    completed_issues: number;
-    created_issues: number;
-    id: string;
-    pending_issues: number;
-  }[];
-  user_data: Pick<IUser, "avatar_url" | "cover_image_url" | "display_name" | "first_name" | "last_name"> & {
-    date_joined: Date;
-    user_timezone: string;
-  };
-}
 
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;
