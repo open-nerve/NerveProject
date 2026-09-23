@@ -10,7 +10,6 @@ import { EIssueLayoutTypes } from "@plane/types";
 // components
 import { LayoutErrorBoundary } from "@/components/common/layout-error-boundary";
 import { CalendarLayoutLoader } from "@/components/ui/loader/layouts/calendar-layout-loader";
-import { GanttLayoutLoader } from "@/components/ui/loader/layouts/gantt-layout-loader";
 import { KanbanLayoutLoader } from "@/components/ui/loader/layouts/kanban-layout-loader";
 import { ListLayoutLoader } from "@/components/ui/loader/layouts/list-layout-loader";
 import { SpreadsheetLayoutLoader } from "@/components/ui/loader/layouts/spreadsheet-layout-loader";
@@ -31,8 +30,6 @@ function ActiveLoader(props: { layout: EIssueLayoutTypes }) {
       return <SpreadsheetLayoutLoader />;
     case EIssueLayoutTypes.CALENDAR:
       return <CalendarLayoutLoader />;
-    case EIssueLayoutTypes.GANTT:
-      return <GanttLayoutLoader />;
     default:
       return null;
   }

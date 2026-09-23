@@ -62,16 +62,6 @@ export const coreRoutes: RouteConfigEntry[] = [
         // Workspace Home
         route(":workspaceSlug", "./(all)/[workspaceSlug]/(projects)/page.tsx"),
 
-        // Active Cycles
-        layout("./(all)/[workspaceSlug]/(projects)/active-cycles/layout.tsx", [
-          route(":workspaceSlug/active-cycles", "./(all)/[workspaceSlug]/(projects)/active-cycles/page.tsx"),
-        ]),
-
-        // Analytics
-        layout("./(all)/[workspaceSlug]/(projects)/analytics/[tabId]/layout.tsx", [
-          route(":workspaceSlug/analytics/:tabId", "./(all)/[workspaceSlug]/(projects)/analytics/[tabId]/page.tsx"),
-        ]),
-
         // Browse
         layout("./(all)/[workspaceSlug]/(projects)/browse/[workItem]/layout.tsx", [
           route(":workspaceSlug/browse/:workItem", "./(all)/[workspaceSlug]/(projects)/browse/[workItem]/page.tsx"),
@@ -89,20 +79,11 @@ export const coreRoutes: RouteConfigEntry[] = [
 
         // Profile
         layout("./(all)/[workspaceSlug]/(projects)/profile/[userId]/layout.tsx", [
-          route(":workspaceSlug/profile/:userId", "./(all)/[workspaceSlug]/(projects)/profile/[userId]/page.tsx"),
+          route(":workspaceSlug/profile/:userId", "./routes/redirects/core/profile-index.tsx"),
           route(
             ":workspaceSlug/profile/:userId/:profileViewId",
             "./(all)/[workspaceSlug]/(projects)/profile/[userId]/[profileViewId]/page.tsx"
           ),
-          route(
-            ":workspaceSlug/profile/:userId/activity",
-            "./(all)/[workspaceSlug]/(projects)/profile/[userId]/activity/page.tsx"
-          ),
-        ]),
-
-        // Stickies
-        layout("./(all)/[workspaceSlug]/(projects)/stickies/layout.tsx", [
-          route(":workspaceSlug/stickies", "./(all)/[workspaceSlug]/(projects)/stickies/page.tsx"),
         ]),
 
         // Workspace Views
@@ -194,21 +175,6 @@ export const coreRoutes: RouteConfigEntry[] = [
             ),
           ]),
 
-          // Page Detail
-          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(detail)/layout.tsx", [
-            route(
-              ":workspaceSlug/projects/:projectId/pages/:pageId",
-              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(detail)/[pageId]/page.tsx"
-            ),
-          ]),
-
-          // Pages List
-          layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(list)/layout.tsx", [
-            route(
-              ":workspaceSlug/projects/:projectId/pages",
-              "./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/pages/(list)/page.tsx"
-            ),
-          ]),
           // Intake list
           layout("./(all)/[workspaceSlug]/(projects)/projects/(detail)/[projectId]/intake/layout.tsx", [
             route(
@@ -271,10 +237,6 @@ export const coreRoutes: RouteConfigEntry[] = [
             "./(all)/[workspaceSlug]/(settings)/settings/(workspace)/billing/page.tsx"
           ),
           route(
-            ":workspaceSlug/settings/exports",
-            "./(all)/[workspaceSlug]/(settings)/settings/(workspace)/exports/page.tsx"
-          ),
-          route(
             ":workspaceSlug/settings/webhooks",
             "./(all)/[workspaceSlug]/(settings)/settings/(workspace)/webhooks/page.tsx"
           ),
@@ -316,10 +278,6 @@ export const coreRoutes: RouteConfigEntry[] = [
               "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/views/page.tsx"
             ),
             route(
-              ":workspaceSlug/settings/projects/:projectId/features/pages",
-              "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/pages/page.tsx"
-            ),
-            route(
               ":workspaceSlug/settings/projects/:projectId/features/intake",
               "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/features/intake/page.tsx"
             ),
@@ -332,11 +290,6 @@ export const coreRoutes: RouteConfigEntry[] = [
             route(
               ":workspaceSlug/settings/projects/:projectId/labels",
               "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/labels/page.tsx"
-            ),
-            // Project Estimates
-            route(
-              ":workspaceSlug/settings/projects/:projectId/estimates",
-              "./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/estimates/page.tsx"
             ),
             // Project Automations
             layout("./(all)/[workspaceSlug]/(settings)/settings/projects/[projectId]/automations/layout.tsx", [
@@ -374,9 +327,6 @@ export const coreRoutes: RouteConfigEntry[] = [
   // Project settings redirect: /:workspaceSlug/projects/:projectId/settings/:path*
   // → /:workspaceSlug/settings/projects/:projectId/:path*
   route(":workspaceSlug/projects/:projectId/settings/*", "routes/redirects/core/project-settings.tsx"),
-
-  // Analytics redirect: /:workspaceSlug/analytics → /:workspaceSlug/analytics/overview
-  route(":workspaceSlug/analytics", "routes/redirects/core/analytics.tsx"),
 
   // API tokens redirect: /:workspaceSlug/settings/api-tokens
   // → /settings/profile/api-tokens

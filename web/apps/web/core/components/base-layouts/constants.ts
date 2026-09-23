@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { BoardOutline, ListOutline, TimelineOutline } from "@makeplane/propel/icons";
+import { BoardOutline, ListOutline } from "@makeplane/propel/icons";
 import type { IBaseLayoutConfig } from "@plane/types";
 
 export const BASE_LAYOUTS: IBaseLayoutConfig[] = [
@@ -17,10 +17,5 @@ export const BASE_LAYOUTS: IBaseLayoutConfig[] = [
     key: "kanban",
     icon: BoardOutline,
     label: "Board Layout",
-  },
-  {
-    key: "gantt",
-    icon: TimelineOutline,
-    label: "Gantt Layout",
   },
 ];

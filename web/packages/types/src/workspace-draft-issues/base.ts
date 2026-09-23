@@ -15,7 +15,6 @@ export type TWorkspaceDraftIssue = {
   priority: TIssuePriorities | undefined;
   label_ids: string[];
   assignee_ids: string[];
-  estimate_point: string | undefined;
 
   project_id: string | undefined;
   parent_id: string | undefined;

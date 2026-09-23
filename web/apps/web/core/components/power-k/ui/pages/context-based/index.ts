@@ -19,10 +19,6 @@ export const CONTEXT_ENTITY_MAP: Record<TPowerKContextType, TContextEntityMap> =
     i18n_title: "power_k.contextual_actions.work_item.title",
     i18n_indicator: "power_k.contextual_actions.work_item.indicator",
   },
-  page: {
-    i18n_title: "power_k.contextual_actions.page.title",
-    i18n_indicator: "power_k.contextual_actions.page.indicator",
-  },
   cycle: {
     i18n_title: "power_k.contextual_actions.cycle.title",
     i18n_indicator: "power_k.contextual_actions.cycle.indicator",

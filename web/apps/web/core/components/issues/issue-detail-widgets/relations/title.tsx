@@ -12,7 +12,7 @@ import { EIssueServiceType } from "@plane/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
-import { useTimeLineRelationOptions } from "@/components/relations";
+import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 
 type Props = {
   issueId: string;
@@ -27,7 +27,6 @@ export const RelationsCollapsibleTitle = observer(function RelationsCollapsibleT
     relation: { getRelationCountByIssueId },
   } = useIssueDetail(issueServiceType);
 
-  const ISSUE_RELATION_OPTIONS = useTimeLineRelationOptions();
   // derived values
   const relationsCount = getRelationCountByIssueId(issueId, ISSUE_RELATION_OPTIONS);
 

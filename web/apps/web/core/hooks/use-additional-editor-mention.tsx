@@ -22,18 +22,6 @@ export type TAdditionalEditorMentionHandlerReturnType = {
   sections: TMentionSection[];
 };
 
-export type TAdditionalParseEditorContentArgs = {
-  id: string;
-  entityType: TSearchEntities;
-};
-
-export type TAdditionalParseEditorContentReturnType =
-  | {
-      redirectionPath: string;
-      textContent: string;
-    }
-  | undefined;
-
 export const useAdditionalEditorMention = (_args: TUseAdditionalEditorMentionArgs) => {
   const updateAdditionalSections = useCallback(
     (_args: TAdditionalEditorMentionHandlerArgs): TAdditionalEditorMentionHandlerReturnType => ({
@@ -42,16 +30,10 @@ export const useAdditionalEditorMention = (_args: TUseAdditionalEditorMentionArg
     []
   );
 
-  const parseAdditionalEditorContent = useCallback(
-    (_args: TAdditionalParseEditorContentArgs): TAdditionalParseEditorContentReturnType => undefined,
-    []
-  );
-
   const editorMentionTypes: TSearchEntities[] = useMemo(() => ["user_mention"], []);
 
   return {
     updateAdditionalSections,
-    parseAdditionalEditorContent,
     editorMentionTypes,
   };
 };

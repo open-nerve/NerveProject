@@ -13,7 +13,7 @@ import emptyCycle from "@/app/assets/empty-state/cycle.svg?url";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
 import useCyclesDetails from "@/components/cycles/active-cycle/use-cycles-details";
-import { CycleDetailsSidebar } from "@/components/cycles/analytics-sidebar";
+import { CycleDetailsSidebar } from "@/components/cycles/progress-sidebar";
 import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-layout-root";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";

@@ -42,9 +42,6 @@ export const POWER_K_MODAL_PAGE_DETAILS: Record<TPowerKPageType, TPowerKModalPag
   "update-work-item-assignee": {
     i18n_placeholder: "power_k.page_placeholders.update_work_item_assignee",
   },
-  "update-work-item-estimate": {
-    i18n_placeholder: "power_k.page_placeholders.update_work_item_estimate",
-  },
   "update-work-item-cycle": {
     i18n_placeholder: "power_k.page_placeholders.update_work_item_cycle",
   },

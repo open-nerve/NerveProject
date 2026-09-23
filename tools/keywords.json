@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P1",
+  "phase": "M1/P2",
   "rules": [
     {
       "id": "deploy-files",
@@ -199,7 +199,527 @@
           "miss": ["web/packages/i18n/src/locales/en/workspace.json", "web/packages/i18n/src/locales/en/settings.json"]
         }
       }
+    },
+    {
+      "id": "sidebar-customization",
+      "phase": "M1/P2",
+      "why": "侧边栏的自定义导航（固定、排序、隐藏菜单项）读写 Plane 的 /sidebar-preferences/，数据在已砍掉的 workspace_user_preferences 表；侧边栏改为固定列表（M1 设计 3.3）。不按 M1 设计 7.4 写的 SidebarNavigation 和 navigationPreferences 搜：前者是保留的 IWorkspaceSidebarNavigationItem、getSidebarNavigationItemIcon 的一部分，后者不分大小写时命中保留的 useProjectNavigationPreferences，所以规则只写自定义导航独有的符号",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "sidebar-preferences|SidebarPreference|customize-navigation|CustomizeNavigation|customize_navigation|navigationPreferencesMap|(?:Personal|Workspace)NavigationPreferences|WORKSPACE_SIDEBAR_(?:DYNAMIC|STATIC|PREFERENCES)|ExtendedSidebarItem|ExtendedAppSidebar|toggleExtendedSidebar\\b|extended_sidebar_collapsed",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`/api/workspaces/${workspaceSlug}/sidebar-preferences/`)",
+          "import { CustomizeNavigationDialog } from \"@/components/navigation/customize-navigation-dialog\";",
+          "  const { preferences } = useWorkspaceNavigationPreferences();",
+          "  WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS_LINKS,",
+          "  const { isExtendedSidebarOpened, toggleExtendedSidebar } = useAppTheme();",
+          "    localStorage.setItem(\"extended_sidebar_collapsed\", updatedState.toString());",
+          "  \"customize_navigation\": \"Customize navigation\",",
+          "  const { getNavigationPreferences, updateBulkSidebarPreferences } = useWorkspace();",
+          "  navigationPreferencesMap: Record<string, IWorkspaceSidebarNavigation>;",
+          "  } = usePersonalNavigationPreferences();",
+          "import { WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS, EUserPermissionsLevel } from \"@plane/constants\";",
+          "export const WORKSPACE_SIDEBAR_PREFERENCES = (workspaceSlug: string) =>",
+          "import { ExtendedSidebarItem } from \"@/components/workspace/sidebar/extended-sidebar-item\";",
+          "import { ExtendedAppSidebar } from \"./extended-sidebar\";"
+        ],
+        "miss": [
+          "  const { preferences: projectPreferences } = useProjectNavigationPreferences();",
+          "import { ProjectNavigationDialog } from \"@/components/navigation/project-navigation-dialog\";",
+          "  WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,",
+          "  const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/sidebar/sidebar-wrapper.tsx",
+            "web/packages/constants/src/workspace.ts"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "analytics",
+      "phase": "M1/P2",
+      "why": "工作区数据分析、工作项分析弹窗和只给它们用的图表：路由、store、service、常量、类型、propel 的 radar/line/scatter/tree-map/table。保留的迭代、模块进度已改名为 progress（M1 设计 3.4）",
+      "files": { "source": "^(?:web/.*|pnpm-(?:workspace|lock)\\.yaml|turbo\\.json)$", "flags": "" },
+      "content": { "source": "analytics", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { AnalyticsService } from \"@/services/analytics.service\";",
+          "  \"workspace_analytics\": {",
+          "        handlePowerKNavigate(ctx, [ctx.params.workspaceSlug?.toString(), \"analytics\", \"overview\"]),",
+          "  const [analyticsModal, setAnalyticsModal] = useState(false);",
+          "export const ANALYTICS_X_AXIS_VALUES = ["
+        ],
+        "miss": [
+          "import { CycleProgress } from \"./issue-progress\";",
+          "  fetchActiveCycleDistribution: action,",
+          "    `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/progress/`"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/services/cycle.service.ts",
+            "pnpm-workspace.yaml",
+            "web/packages/utils/src/tlds.ts"
+          ],
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "Makefile", "api/openapi.yaml"]
+        }
+      }
+    },
+    {
+      "id": "active-cycles-promo",
+      "phase": "M1/P2",
+      "why": "工作区级的「活跃迭代」升级推广页（Plane 的付费功能）；项目迭代列表中的当前迭代区块保留，所以不搜单数的 active_cycle / ActiveCycle",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": {
+        "source": "active-cycles|active_cycles|WorkspaceActiveCycles|WORKSPACE_ACTIVE_CYCLES|ProgressPro\\b|\\bworkspaceActiveCycles\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`/api/workspaces/${workspaceSlug}/active-cycles/`, {",
+          "  \"active_cycles\": \"Active cycles\",",
+          "import { WorkspaceActiveCyclesUpgrade } from \"@/components/active-cycles/workspace-active-cycles-upgrade\";",
+          "  ): Promise<IWorkspaceActiveCyclesResponse> {",
+          "export const WORKSPACE_ACTIVE_CYCLES_LIST = (workspaceSlug: string, cursor: string, per_page: string) =>",
+          "  fetchActiveCycleProgressPro: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<void>;",
+          "  async workspaceActiveCycles("
+        ],
+        "miss": [
+          "export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: Props) {",
+          "  \"active_cycle\": {",
+          "export type ActiveCycleProgressProps = {",
+          "  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/cycle.service.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "profile-stats",
+      "phase": "M1/P2",
+      "why": "个人主页的统计页、动态页和每个项目的统计数字（Plane 的 /user-stats/、/user-profile/、/user-activity/）；个人主页只剩三个工作项标签和读工作区成员 store 的用户卡片（M1 设计 3.2）。不按 M1 设计 7.4 写的 ProfileSidebar 搜：保留的用户卡片组件就叫 ProfileSidebar（toggleProfileSidebar、profileSidebarCollapsed 也随它保留）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": {
+        "source": "user-stats|user-profile/|user-activity/|IUserProfileData|IUserProfileProjectSegregation|IUserStateDistribution|IUserPriorityDistribution|\\bIUserActivity\\b|IUserActivityResponse|USER_PROFILE_(?:DATA|ACTIVITY|PROJECT_SEGREGATION)|profile\\.stats|profile\\.tabs\\.(?:summary|activity)|PROFILE_(?:VIEWER|ADMINS)_TAB|ProfileActivityListPage|WorkspaceActivityList|downloadProfileActivity|your_work_by_",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`/api/workspaces/${workspaceSlug}/user-stats/${userId}/`)",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/user-profile/${userId}/`)",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/user-activity/${userId}/export/`, data)",
+          "  async getUserProfileData(workspaceSlug: string, userId: string): Promise<IUserProfileData> {",
+          "  userProjectsData: IUserProfileProjectSegregation | undefined;",
+          "import type { IUserStateDistribution, TStateGroups } from \"@plane/types\";",
+          "  priority_distribution: IUserPriorityDistribution[];",
+          "export interface IUserActivity {",
+          "  ): Promise<IUserActivityResponse> {",
+          "import { USER_PROFILE_DATA } from \"@plane/constants\";",
+          "      <h3 className=\"text-16 font-medium\">{t(\"profile.stats.workload\")}</h3>",
+          "    i18n_label: \"profile.tabs.summary\",",
+          "import { PROFILE_VIEWER_TAB, PROFILE_ADMINS_TAB } from \"@plane/constants\";",
+          "import { ProfileActivityListPage } from \"@/components/profile/activity/profile-activity-list\";",
+          "import { WorkspaceActivityListPage } from \"@/components/profile/activity/workspace-activity-list\";",
+          "  async downloadProfileActivity(",
+          "    \"your_work_by_priority\": {",
+          "import { USER_PROFILE_ACTIVITY } from \"@plane/constants\";",
+          "export const USER_PROFILE_PROJECT_SEGREGATION = (workspaceSlug: string, userId: string) =>",
+          "    i18n_label: \"profile.tabs.activity\","
+        ],
+        "miss": [
+          "import { PROFILE_TABS } from \"@plane/constants\";",
+          "    i18n_label: \"profile.tabs.assigned\",",
+          "import UserActivityIcon from \"./user-activity-icon\";",
+          "      `/api/workspaces/${workspaceSlug}/user-issues/${userId}/`,",
+          "  const { data: members, isLoading } = useSWR("
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/empty-state.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "estimates",
+      "phase": "M1/P2",
+      "why": "估算体系（估算设置页、估算下拉框、estimate_point 字段、按点数的进度和燃尽）；迭代和模块的进度改为只按工作项数计算（M1 设计 3.4）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "estimat|估算", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { EstimateDropdown } from \"@/components/dropdowns/estimate\";",
+          "  estimate_point: string | null;",
+          "export enum EEstimateSystem {",
+          "  const { areEstimateEnabledByProjectId } = useProjectEstimates();",
+          "  \"estimate\": \"估算\",",
+          "      total: assignee.total_estimates,"
+        ],
+        "miss": [
+          "export const calculateCycleProgress = (cycle: ICycle | undefined, includeInProgress: boolean = false): number => {",
+          "  const totalIssues = cycleDetails?.total_issues || 0;",
+          "export type TCycleDistribution = {",
+          "  \"points\": \"Points\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/cycle.store.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "gantt-timeline",
+      "phase": "M1/P2",
+      "why": "甘特图与模块时间线（工作项的 gantt_chart 布局、模块列表的 gantt 布局、时间线 store 和只有拖动甘特条才调用的 POST /issue-dates/）；工作项关系保留，REVERSE_RELATIONS 已搬到 issue/relation.ts；view_timeline 是图标选择器里的 Material Symbols 名字，用后行断言排除",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "gantt|(?<!view_)time_?line|issue-dates", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { BaseGanttRoot } from \"../gantt\";",
+          "    case EIssueLayoutTypes.GANTT:",
+          "  GANTT = \"gantt_chart\",",
+          "import { TimeLineStore } from \"./timeline/timeline.store\";",
+          "  timelineStore: ITimelineStore;",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-dates/`, { updates })",
+          "      \"timeline\": \"Timeline layout\"",
+          "export const useTimeLineRelationOptions = () => ISSUE_RELATION_OPTIONS;"
+        ],
+        "miss": [
+          "      \"view_timeline\",",
+          "    name: \"view_timeline\",",
+          "import { ISSUE_RELATION_OPTIONS } from \"@/components/relations\";",
+          "export const REVERSE_RELATIONS: { [key in TIssueRelationTypes]: TIssueRelationTypes } = {",
+          "export type TIssueLayouts = \"list\" | \"kanban\" | \"calendar\" | \"spreadsheet\";",
+          "import { differenceInCalendarDays } from \"date-fns/differenceInCalendarDays\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/work-item.json"],
+          "miss": [
+            "web/apps/web/app/assets/empty-state/cycle-issues/gantt_chart-light.webp",
+            "docs/v0/M1-frontend-trim/M1-design.md"
+          ]
+        }
+      }
+    },
+    {
+      "id": "auto-close",
+      "phase": "M1/P2",
+      "why": "项目自动化里的自动关闭：close_in 个月没有动静的未完成工作项被移到项目指定的状态；自动归档（archive_in）保留。default_state 在 Plane 里只是自动关闭的目标状态，新建工作项的默认状态是 State.default，所以 defaultState 这类变量名不在规则里",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "close_in|auto[-_ ]?close|default_state", "flags": "i" },
+      "samples": {
+        "hit": [
+          "  close_in?: number;",
+          "  default_state?: string | null;",
+          "      \"auto-close\": {",
+          "        \"auto_close_status\": \"自动关闭状态\"",
+          "        \"title\": \"Auto close work items\",",
+          "import { AutoArchiveAutomation, AutoCloseAutomation } from \"@/components/automation\";"
+        ],
+        "miss": [
+          "  archive_in?: number;",
+          "  const defaultState = projectStates?.[0]?.id;",
+          "    const defaultState = projectState.projectStates?.find((state) => state.default);",
+          "import { AutoArchiveAutomation } from \"@/components/automation\";",
+          "                    <Field name=\"archive_in\" invalid={Boolean(errors.archive_in)}>"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/types/src/project/projects.ts",
+            "web/packages/i18n/src/locales/en/project-settings.json"
+          ],
+          "miss": [
+            "web/apps/web/app/assets/logo.svg",
+            "tools/plane-schema/plane-v1.4.2-schema.sql",
+            "docs/v0/M1-frontend-trim/M1-design.md"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pages-collaboration",
+      "phase": "M1/P2",
+      "why": "文档页和协作编辑（Yjs、Hocuspocus、live 服务、PDF 导出、工作项嵌入）；按 M1 设计 7.4 的确切符号搜，不搜单独的 page / pages（路由文件本身就叫 page.tsx）。pnpm-lock.yaml 不在范围内：recharts 的弃用说明里有一个 GitHub wiki 链接，删掉的依赖由 lock-diff 核对",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json|css|ya?ml)|web/apps/web/\\.env\\.example|turbo\\.json|pnpm-workspace\\.yaml)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "page_view|description_binary|\\byjs\\b|y-prosemirror|y-indexeddb|y-protocols|hocuspocus|Collaborative|extension-collaboration|\\bpageId\\b|\\bpage_id\\b|WorkItemEmbed|issue-embed|LIVE_BASE|VITE_LIVE|comlink|react-pdf|@tiptap/html|wiki",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "  page_view: boolean;",
+          "  description_binary: string | null;",
+          "  \"yjs\": \"catalog:\"",
+          "import { prosemirrorJSONToYDoc, yXmlFragmentToProseMirrorRootNode } from \"y-prosemirror\";",
+          "import { IndexeddbPersistence } from \"y-indexeddb\";",
+          "    \"y-protocols\": \"catalog:\",",
+          "import type { HocuspocusProvider } from \"@hocuspocus/provider\";",
+          "  CollaborativeDocumentEditorWithRef,",
+          "import Collaboration from \"@tiptap/extension-collaboration\";",
+          "      const pageInstance = pageId ? getPageById(pageId.toString()) : null;",
+          "  page_id?: string;",
+          "export const DocumentEditorExtensionsWithoutProps = [WorkItemEmbedExtensionConfig];",
+          "  WORK_ITEM_EMBED = \"issue-embed-component\",",
+          "      const LIVE_SERVER_BASE_URL = LIVE_BASE_URL?.trim() || window.location.origin;",
+          "VITE_LIVE_URL=\"http://localhost:3100\"",
+          "import * as Comlink from \"comlink\";",
+          "import type { PageProps } from \"@react-pdf/renderer\";",
+          "import { generateHTML, generateJSON } from \"@tiptap/html\";",
+          "        : `/${page?.workspace__slug}/wiki/${page?.id}`;"
+        ],
+        "miss": [
+          "import { RecentProject } from \"./project\";",
+          "import { find } from \"linkifyjs\";",
+          "export default function ProjectIssuesPage() {",
+          "  const pathname = usePathname();",
+          "  description_html: string | null;",
+          "import { HelpOutline, PagesOutline, UserOutline } from \"@makeplane/propel/icons\";",
+          "export const UniqueID = Extension.create<UniqueIDOptions>({"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/editor/package.json",
+            "web/packages/types/src/project/projects.ts",
+            "web/packages/editor/src/styles/drag-drop.css",
+            "web/apps/web/.env.example",
+            "turbo.json",
+            "pnpm-workspace.yaml"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md", "pnpm-lock.yaml"]
+        }
+      }
+    },
+    {
+      "id": "changelog",
+      "phase": "M1/P2",
+      "why": "更新日志（帮助菜单里的「新功能」弹窗、它调用的 /api/release-notes/、实例配置的 instance_changelog_url），随文档页一起删除（M1 设计 2.1）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "changelog|product-updates|ProductUpdates|what.s new", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { ProductUpdatesModal } from \"@/components/global\";",
+          "export * from \"./product-updates\";",
+          "  instance_changelog_url?: string;",
+          "  \"full_changelog\": \"Full changelog\",",
+          "  \"whats_new\": \"What's new?\","
+        ],
+        "miss": [
+          "import { PlaneVersionNumber } from \"@/components/global/version-number\";",
+          "  \"keyboard_shortcuts\": \"Keyboard shortcuts\","
+        ],
+        "files": {
+          "hit": ["web/packages/i18n/src/locales/en/common.json", "web/packages/types/src/instance/base.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "stickies",
+      "phase": "M1/P2",
+      "why": "便签（工作区便签页、首页便签组件、便签编辑器）；区分大小写，不搜 stick（不区分大小写时命中 AxisTick），也不搜单独的 sticky（Tailwind 的 position: sticky）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css|ya?ml)$", "flags": "" },
+      "content": { "source": "Sticky|STICKY|[Ss]tickies|STICKIES|sticky[-_.:]", "flags": "" },
+      "samples": {
+        "hit": [
+          "import { StickiesWidget } from \"../stickies/widget\";",
+          "  stickyStore: IStickyStore;",
+          "    key: \"stickies\",",
+          "  \"stickies\": \"Stickies\",",
+          "      allStickiesModal: observable,",
+          "export const STICKY_COLORS_LIST: {",
+          "import { STICKIES_PER_PAGE } from \"@plane/constants\";",
+          "  | \"sticky-toolbar\""
+        ],
+        "miss": [
+          "        <div className=\"sticky top-0 z-10\">",
+          "  position: sticky;",
+          "const CustomXAxisTick = (props: TAxisTickProps) => {",
+          "            {/* Single sticky column */}"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/navigation.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "home-theme",
+      "phase": "M1/P2",
+      "why": "首页快捷链接、首页个性化（组件开关）、自定义主题，以及已经没有入口的旧首页仪表盘；不搜单独的 widget、dashboard、custom（首页最近访问组件与四个固定主题保留）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css)$", "flags": "" },
+      "content": {
+        "source": "quick_links|quick-links|QuickLink|HomeWidget|manage_widgets|home-preferences|CustomTheme|customize_your_theme|palette-generator|DashboardStore|useDashboard",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { QuickLinksWidget } from \"./links\";",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/quick-links/`)",
+          "      key: EWidgetKeys.QUICK_LINKS,",
+          "  \"manage_widgets\": \"Manage widgets\",",
+          "import { DashboardStore } from \"./dashboard.store\";",
+          "import { useDashboard } from \"@/hooks/store/use-dashboard\";",
+          "export const CustomThemeSelector = observer(() => {",
+          "import type { THomeWidgetKeys, THomeWidgetProps } from \"@plane/types\";",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/home-preferences/`)",
+          "          title={t(\"customize_your_theme\")}",
+          "import { generateThemePalettes } from \"./palette-generator\";"
+        ],
+        "miss": [
+          "import { RecentActivityWidget } from \"./recents\";",
+          "  \"custom\": \"Custom\",",
+          "        <div className=\"h-full w-full\">",
+          "import { useProject } from \"@/hooks/store/use-project\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/home.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "export",
+      "phase": "M1/P2",
+      "why": "工作区的导出设置页及其导出记录列表；不搜单独的 export（保留代码里到处都是 export 语句）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "exporter|settings/exports|export-issues|IExportData", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { ExportGuide } from \"@/components/exporter/guide\";",
+          "          router.push(`/${workspaceSlug}/settings/exports`);",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/export-issues/`, data)",
+          "      provider: EXPORTERS_LIST[0],",
+          "type RowData = IExportData;",
+          "  \"exporter\": {"
+        ],
+        "miss": [
+          "export const RESTRICTED_URLS: string[] = [",
+          "export * from \"./project.service\";",
+          "import { exportAsCSV } from \"./csv\";",
+          "  \"webhooks\": \"Webhooks\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/routes/core.ts", "web/packages/constants/src/workspace.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
-  "exceptions": []
+  "exceptions": [
+    {
+      "rule": "analytics",
+      "path": "web/packages/utils/src/tlds.ts",
+      "match": "analytics",
+      "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.analytics 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
+      "until": "M9"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/apps/web/core/services/cycle.service.ts",
+      "match": "analytics",
+      "reason": "Plane 的迭代进度接口地址 /cycles/{id}/analytics?type= 本身带 analytics；M1 不改接口，M6 换成新接口时删除（M1 设计 3.4）",
+      "until": "M6"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "analytics",
+      "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Analytics",
+      "count": 3,
+      "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/packages/types/src/epics.ts",
+      "match": "Analytics",
+      "count": 2,
+      "reason": "TEpicAnalyticsGroup、TEpicAnalytics 是 Epic 的企业版类型，随 Epic 在 M1/P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "estimates",
+      "path": "web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx",
+      "match": "estimat",
+      "reason": "通知卡片里的 estimate_time 是工时，随工时空壳在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "estimates",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Estimat",
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Gantt",
+      "count": 3,
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "timeline",
+      "count": 2,
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/packages/types/src/publish.ts",
+      "match": "gantt",
+      "count": 2,
+      "reason": "公开发布的视图类型，随公开发布在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Wiki",
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "wiki",
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "Wiki",
+      "reason": "订阅套餐的功能名，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "pages-collaboration",
+      "path": "web/packages/utils/src/tlds.ts",
+      "match": "wiki",
+      "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.wiki 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
+      "until": "M9"
+    }
+  ]
 }

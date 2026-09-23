@@ -11,13 +11,10 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Transaction } from "@tiptap/pm/state";
 // types
 import type { UniqueIDOptions } from "./extension";
-// utils
-import { createIdsForView } from "./utils";
 
 export const createUniqueIDPlugin = (options: UniqueIDOptions) => {
   let dragSourceElement: Element | null = null;
   let transformPasted = false;
-  let syncHandler: (() => void) | null = null;
 
   return new Plugin({
     key: new PluginKey("uniqueID"),
@@ -26,12 +23,6 @@ export const createUniqueIDPlugin = (options: UniqueIDOptions) => {
         transactions.some((transaction) => transaction.docChanged) && !oldState.doc.eq(newState.doc);
       const filterTransactions =
         options.filterTransaction && transactions.some((tr) => !options.filterTransaction?.(tr));
-
-      const isCollabTransaction = transactions.find((tr) => tr.getMeta("y-sync$"));
-
-      if (isCollabTransaction) {
-        return;
-      }
 
       if (!hasDocChanges || filterTransactions) {
         return;
@@ -114,31 +105,9 @@ export const createUniqueIDPlugin = (options: UniqueIDOptions) => {
 
       window.addEventListener("dragstart", handleDragstart);
 
-      // Handle provider sync listener for creating IDs when collaboration provider syncs
-      const provider = options.provider;
-      if (provider && !provider.isSynced) {
-        syncHandler = () => {
-          createIdsForView(view, options);
-
-          // Clean up the listener after it runs
-          if (provider && syncHandler) {
-            provider.off("synced", syncHandler);
-            syncHandler = null;
-          }
-        };
-
-        provider.on("synced", syncHandler);
-      }
-
       return {
         destroy() {
           window.removeEventListener("dragstart", handleDragstart);
-
-          // Clean up provider sync listener if it exists
-          if (provider && syncHandler) {
-            provider.off("synced", syncHandler);
-            syncHandler = null;
-          }
         },
       };
     },

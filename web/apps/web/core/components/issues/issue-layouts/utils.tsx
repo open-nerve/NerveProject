@@ -5,7 +5,6 @@
  * See the LICENSE file for details.
  */
 
-import type { CSSProperties } from "react";
 import { extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { clone, isNil, pull, uniq, concat } from "lodash-es";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
@@ -15,7 +14,6 @@ import {
   CalendarOutline,
   CyclesOutline,
   DueDateOutline,
-  EstimateOutline,
   LabelsOutline,
   LinkOutline,
   MembersOutline,
@@ -49,7 +47,7 @@ import type {
 import { EIssuesStoreType } from "@plane/types";
 // plane ui
 
-import { renderFormattedDate, getFileURL } from "@plane/utils";
+import { getFileURL } from "@plane/utils";
 // store
 import { store } from "@/lib/store-context";
 import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.store";
@@ -62,7 +60,6 @@ import {
   SpreadsheetAttachmentColumn,
   SpreadsheetCreatedOnColumn,
   SpreadsheetDueDateColumn,
-  SpreadsheetEstimateColumn,
   SpreadsheetLabelColumn,
   SpreadsheetModuleColumn,
   SpreadsheetCycleColumn,
@@ -75,7 +72,6 @@ import {
 } from "@/components/issues/issue-layouts/spreadsheet/columns";
 
 export const HIGHLIGHT_CLASS = "highlight";
-export const HIGHLIGHT_WITH_LINE = "highlight-with-line";
 
 export type GroupDropLocation = {
   columnId: string;
@@ -379,15 +375,11 @@ export const getDisplayPropertiesCount = (
  * @param elementId
  * @param shouldScrollIntoView
  */
-export const highlightIssueOnDrop = (
-  elementId: string | undefined,
-  shouldScrollIntoView = true,
-  shouldHighLightWithLine = false
-) => {
+export const highlightIssueOnDrop = (elementId: string | undefined, shouldScrollIntoView = true) => {
   setTimeout(async () => {
     const sourceElementId = elementId ?? "";
     const sourceElement = document.getElementById(sourceElementId);
-    sourceElement?.classList?.add(shouldHighLightWithLine ? HIGHLIGHT_WITH_LINE : HIGHLIGHT_CLASS);
+    sourceElement?.classList?.add(HIGHLIGHT_CLASS);
     if (shouldScrollIntoView && sourceElement)
       await scrollIntoView(sourceElement, { behavior: "smooth", block: "center", duration: 1500 });
   }, 200);
@@ -720,42 +712,6 @@ export function getApproximateCardHeight(displayProperties: IIssueDisplayPropert
 }
 
 /**
- * This Method is used to get Block view details, that returns block style and tooltip message
- * @param block
- * @param backgroundColor
- * @returns
- */
-export const getBlockViewDetails = (
-  block: { start_date: string | undefined | null; target_date: string | undefined | null } | undefined | null,
-  backgroundColor: string
-) => {
-  const isBlockVisibleOnChart = block?.start_date || block?.target_date;
-  const isBlockComplete = block?.start_date && block?.target_date;
-
-  let message;
-  const blockStyle: CSSProperties = {
-    backgroundColor,
-  };
-
-  if (isBlockVisibleOnChart && !isBlockComplete) {
-    if (block?.start_date) {
-      message = `From ${renderFormattedDate(block.start_date)}`;
-      blockStyle.maskImage = `linear-gradient(to right, ${backgroundColor} 50%, transparent 95%)`;
-    } else if (block?.target_date) {
-      message = `Till ${renderFormattedDate(block.target_date)}`;
-      blockStyle.maskImage = `linear-gradient(to left, ${backgroundColor} 50%, transparent 95%)`;
-    }
-  } else if (isBlockComplete) {
-    message = `${renderFormattedDate(block?.start_date)} to ${renderFormattedDate(block?.target_date)}`;
-  }
-
-  return {
-    message,
-    blockStyle,
-  };
-};
-
-/**
  * This method returns the icon for Spreadsheet column headers
  * @param iconKey
  */
@@ -849,7 +805,6 @@ export const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
   MembersOutline: MembersOutline,
   CalenderDays: CalendarOutline,
   DueDateOutline: DueDateOutline,
-  EstimateOutline: EstimateOutline,
   LabelsOutline: LabelsOutline,
   ModuleOutline: ModuleOutline,
   ContrastIcon: CyclesOutline,
@@ -865,7 +820,6 @@ export const SPREADSHEET_COLUMNS: { [key in keyof IIssueDisplayProperties]: TSpr
   assignee: SpreadsheetAssigneeColumn,
   created_on: SpreadsheetCreatedOnColumn,
   due_date: SpreadsheetDueDateColumn,
-  estimate: SpreadsheetEstimateColumn,
   labels: SpreadsheetLabelColumn,
   modules: SpreadsheetModuleColumn,
   cycle: SpreadsheetCycleColumn,

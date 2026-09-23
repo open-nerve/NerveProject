@@ -12,19 +12,14 @@ import type {
   IWorkspaceMemberInvitation,
   ILastActiveWorkspaceDetails,
   IWorkspaceSearchResults,
-  IProductUpdateResponse,
   IWorkspaceBulkInviteFormData,
   IWorkspaceViewProps,
   IUserProjectsRole,
   IWorkspaceView,
   TIssuesResponse,
-  TLink,
   TSearchResponse,
   TSearchEntityRequestPayload,
-  TWidgetEntityData,
   TActivityEntityData,
-  IWorkspaceSidebarNavigationItem,
-  IWorkspaceSidebarNavigation,
   IWorkspaceUserPropertiesResponse,
 } from "@plane/types";
 // services
@@ -221,14 +216,6 @@ export class WorkspaceService extends APIService {
         throw error?.response?.data;
       });
   }
-  async getProductUpdates(): Promise<IProductUpdateResponse[]> {
-    return this.get("/api/release-notes/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async createView(workspaceSlug: string, data: Partial<IWorkspaceView>): Promise<IWorkspaceView> {
     return this.post(`/api/workspaces/${workspaceSlug}/views/`, data)
       .then((response) => response?.data)
@@ -294,39 +281,6 @@ export class WorkspaceService extends APIService {
       });
   }
 
-  // quicklinks
-  async fetchWorkspaceLinks(workspaceSlug: string): Promise<TLink[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/quick-links/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async createWorkspaceLink(workspaceSlug: string, data: Partial<TLink>): Promise<TLink> {
-    return this.post(`/api/workspaces/${workspaceSlug}/quick-links/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async updateWorkspaceLink(workspaceSlug: string, linkId: string, data: Partial<TLink>): Promise<TLink> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/quick-links/${linkId}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async deleteWorkspaceLink(workspaceSlug: string, linkId: string): Promise<void> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/quick-links/${linkId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async searchEntity(workspaceSlug: string, params: TSearchEntityRequestPayload): Promise<TSearchResponse> {
     return this.get(`/api/workspaces/${workspaceSlug}/entity-search/`, {
       params: {
@@ -347,58 +301,6 @@ export class WorkspaceService extends APIService {
         entity_name,
       },
     })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  // widgets
-  async fetchWorkspaceWidgets(workspaceSlug: string): Promise<TWidgetEntityData[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/home-preferences/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async updateWorkspaceWidget(
-    workspaceSlug: string,
-    widgetKey: string,
-    data: Partial<TWidgetEntityData>
-  ): Promise<TWidgetEntityData> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/home-preferences/${widgetKey}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async fetchSidebarNavigationPreferences(workspaceSlug: string): Promise<IWorkspaceSidebarNavigation> {
-    return this.get(`/api/workspaces/${workspaceSlug}/sidebar-preferences/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async updateSidebarPreference(
-    workspaceSlug: string,
-    key: string,
-    data: Partial<IWorkspaceSidebarNavigationItem>
-  ): Promise<IWorkspaceSidebarNavigationItem> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/sidebar-preferences/${key}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async updateBulkSidebarPreferences(
-    workspaceSlug: string,
-    data: Array<{ key: string; is_pinned: boolean; sort_order: number }>
-  ): Promise<IWorkspaceSidebarNavigation> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/sidebar-preferences/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;

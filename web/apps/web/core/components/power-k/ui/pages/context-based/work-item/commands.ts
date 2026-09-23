@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Signal, TicketCheck, Triangle } from "lucide-react";
+import { Signal, TicketCheck } from "lucide-react";
 import {
   CyclesOutline,
   DeleteOutline,
@@ -31,7 +31,6 @@ import { copyTextToClipboard } from "@plane/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
@@ -47,7 +46,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
   } = useUser();
   const { toggleDeleteIssueModal } = useCommandPalette();
   const { getProjectById } = useProject();
-  const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const {
     issue: { getIssueById, getIssueIdByIdentifier, addCycleToIssue, removeIssueFromCycle, changeModulesInIssue },
     subscription: { getSubscriptionByIssueId, createSubscription, removeSubscription },
@@ -68,9 +66,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
   const isEpic = !!entityDetails?.is_epic;
   const projectDetails = entityDetails?.project_id ? getProjectById(entityDetails?.project_id) : undefined;
   const isCurrentUserAssigned = !!entityDetails?.assignee_ids?.includes(currentUser?.id ?? "");
-  const isEstimateEnabled = entityDetails?.project_id
-    ? areEstimateEnabledByProjectId(entityDetails?.project_id)
-    : false;
   const isSubscribed = Boolean(entityId ? getSubscriptionByIssueId(entityId) : false);
   // translation
   const { t } = useTranslation();
@@ -271,26 +266,6 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
       shortcut: "i",
       isEnabled: () => isEditingAllowed,
       isVisible: () => isEditingAllowed,
-      closeOnSelect: true,
-    },
-    {
-      id: "change_work_item_estimate",
-      i18n_title: "power_k.contextual_actions.work_item.change_estimate",
-      icon: Triangle,
-      group: "contextual",
-      contextType: "work-item",
-      type: "change-page",
-      page: "update-work-item-estimate",
-      onSelect: (data) => {
-        const estimatePointId = data as string | null;
-        if (entityDetails?.estimate_point === estimatePointId) return;
-        handleUpdateEntity({
-          estimate_point: estimatePointId,
-        });
-      },
-      modifierShortcut: "shift+e",
-      isEnabled: () => isEstimateEnabled && isEditingAllowed,
-      isVisible: () => isEstimateEnabled && isEditingAllowed,
       closeOnSelect: true,
     },
     {

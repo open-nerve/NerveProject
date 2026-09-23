@@ -4,17 +4,15 @@
  * See the LICENSE file for details.
  */
 
-import { action, observable, makeObservable, runInAction } from "mobx";
+import { action, observable, makeObservable } from "mobx";
 
 export interface IThemeStore {
   // observables
   isAnySidebarDropdownOpen: boolean | undefined;
   sidebarCollapsed: boolean | undefined;
   sidebarPeek: boolean | undefined;
-  isExtendedSidebarOpened: boolean | undefined;
   isExtendedProjectSidebarOpened: boolean | undefined;
   profileSidebarCollapsed: boolean | undefined;
-  workspaceAnalyticsSidebarCollapsed: boolean | undefined;
   issueDetailSidebarCollapsed: boolean | undefined;
   epicDetailSidebarCollapsed: boolean | undefined;
   initiativesSidebarCollapsed: boolean | undefined;
@@ -23,10 +21,8 @@ export interface IThemeStore {
   toggleAnySidebarDropdown: (open?: boolean) => void;
   toggleSidebar: (collapsed?: boolean) => void;
   toggleSidebarPeek: (peek?: boolean) => void;
-  toggleExtendedSidebar: (collapsed?: boolean) => void;
   toggleExtendedProjectSidebar: (collapsed?: boolean) => void;
   toggleProfileSidebar: (collapsed?: boolean) => void;
-  toggleWorkspaceAnalyticsSidebar: (collapsed?: boolean) => void;
   toggleIssueDetailSidebar: (collapsed?: boolean) => void;
   toggleEpicDetailSidebar: (collapsed?: boolean) => void;
   toggleInitiativesSidebar: (collapsed?: boolean) => void;
@@ -38,10 +34,8 @@ export class ThemeStore implements IThemeStore {
   isAnySidebarDropdownOpen: boolean | undefined = undefined;
   sidebarCollapsed: boolean | undefined = undefined;
   sidebarPeek: boolean | undefined = undefined;
-  isExtendedSidebarOpened: boolean | undefined = undefined;
   isExtendedProjectSidebarOpened: boolean | undefined = undefined;
   profileSidebarCollapsed: boolean | undefined = undefined;
-  workspaceAnalyticsSidebarCollapsed: boolean | undefined = undefined;
   issueDetailSidebarCollapsed: boolean | undefined = undefined;
   epicDetailSidebarCollapsed: boolean | undefined = undefined;
   initiativesSidebarCollapsed: boolean | undefined = undefined;
@@ -53,10 +47,8 @@ export class ThemeStore implements IThemeStore {
       isAnySidebarDropdownOpen: observable.ref,
       sidebarCollapsed: observable.ref,
       sidebarPeek: observable.ref,
-      isExtendedSidebarOpened: observable.ref,
       isExtendedProjectSidebarOpened: observable.ref,
       profileSidebarCollapsed: observable.ref,
-      workspaceAnalyticsSidebarCollapsed: observable.ref,
       issueDetailSidebarCollapsed: observable.ref,
       epicDetailSidebarCollapsed: observable.ref,
       initiativesSidebarCollapsed: observable.ref,
@@ -65,10 +57,8 @@ export class ThemeStore implements IThemeStore {
       toggleAnySidebarDropdown: action,
       toggleSidebar: action,
       toggleSidebarPeek: action,
-      toggleExtendedSidebar: action,
       toggleExtendedProjectSidebar: action,
       toggleProfileSidebar: action,
-      toggleWorkspaceAnalyticsSidebar: action,
       toggleIssueDetailSidebar: action,
       toggleEpicDetailSidebar: action,
       toggleInitiativesSidebar: action,
@@ -110,18 +100,6 @@ export class ThemeStore implements IThemeStore {
   };
 
   /**
-   * Toggle the extended sidebar collapsed state
-   * @param collapsed
-   */
-  toggleExtendedSidebar = (collapsed?: boolean) => {
-    const updatedState = collapsed ?? !this.isExtendedSidebarOpened;
-    runInAction(() => {
-      this.isExtendedSidebarOpened = updatedState;
-    });
-    localStorage.setItem("extended_sidebar_collapsed", updatedState.toString());
-  };
-
-  /**
    * Toggle the extended project sidebar collapsed state
    * @param collapsed
    */
@@ -145,19 +123,6 @@ export class ThemeStore implements IThemeStore {
       this.profileSidebarCollapsed = collapsed;
     }
     localStorage.setItem("profile_sidebar_collapsed", this.profileSidebarCollapsed.toString());
-  };
-
-  /**
-   * Toggle the profile sidebar collapsed state
-   * @param collapsed
-   */
-  toggleWorkspaceAnalyticsSidebar = (collapsed?: boolean) => {
-    if (collapsed === undefined) {
-      this.workspaceAnalyticsSidebarCollapsed = !this.workspaceAnalyticsSidebarCollapsed;
-    } else {
-      this.workspaceAnalyticsSidebarCollapsed = collapsed;
-    }
-    localStorage.setItem("workspace_analytics_sidebar_collapsed", this.workspaceAnalyticsSidebarCollapsed.toString());
   };
 
   toggleIssueDetailSidebar = (collapsed?: boolean) => {

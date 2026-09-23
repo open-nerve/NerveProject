@@ -48,7 +48,6 @@ export const useEditor = (props: TEditorHookProps) => {
     placeholder,
     showPlaceholderOnEmpty,
     tabIndex,
-    provider,
     value,
   } = props;
 
@@ -79,7 +78,6 @@ export const useEditor = (props: TEditorHookProps) => {
           placeholder,
           showPlaceholderOnEmpty,
           tabIndex,
-          provider,
         }),
         ...extensions,
       ],
@@ -150,9 +148,8 @@ export const useEditor = (props: TEditorHookProps) => {
       getEditorRefHelpers({
         editor,
         getEditorMetaData,
-        provider,
       }),
-    [editor, getEditorMetaData, provider]
+    [editor, getEditorMetaData]
   );
 
   if (!editor) {

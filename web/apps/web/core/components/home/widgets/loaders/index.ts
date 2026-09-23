@@ -4,5 +4,5 @@
  * See the LICENSE file for details.
  */
 
-export * from "./loader";
 export * from "./home-loader";
+export * from "./recent-activity";

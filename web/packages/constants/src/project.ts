@@ -35,29 +35,6 @@ export const NETWORK_CHOICES: TNetworkChoice[] = [
   },
 ];
 
-export const GROUP_CHOICES = {
-  backlog: {
-    key: "backlog",
-    i18n_label: "workspace_projects.state.backlog",
-  },
-  unstarted: {
-    key: "unstarted",
-    i18n_label: "workspace_projects.state.unstarted",
-  },
-  started: {
-    key: "started",
-    i18n_label: "workspace_projects.state.started",
-  },
-  completed: {
-    key: "completed",
-    i18n_label: "workspace_projects.state.completed",
-  },
-  cancelled: {
-    key: "cancelled",
-    i18n_label: "workspace_projects.state.cancelled",
-  },
-};
-
 export const PROJECT_AUTOMATION_MONTHS = [
   { i18n_label: "workspace_projects.common.months_count", value: 1 },
   { i18n_label: "workspace_projects.common.months_count", value: 3 },
@@ -126,6 +103,5 @@ export enum EProjectFeatureKey {
   CYCLES = "cycles",
   MODULES = "modules",
   VIEWS = "views",
-  PAGES = "pages",
   INTAKE = "intake",
 }

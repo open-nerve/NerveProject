@@ -55,7 +55,7 @@ const COMMENT_ACCESS_SPECIFIERS: TCommentAccessType[] = [
   },
 ];
 
-const toolbarItems = TOOLBAR_ITEMS.lite;
+const toolbarItems = TOOLBAR_ITEMS;
 
 export function IssueCommentToolbar(props: Props) {
   const { t } = useTranslation();

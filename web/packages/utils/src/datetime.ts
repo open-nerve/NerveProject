@@ -127,25 +127,6 @@ export const findTotalDaysInRange = (
 };
 
 /**
- * Add number of days to the provided date and return a resulting new date
- * @param startDate
- * @param numberOfDays
- * @returns
- */
-export const addDaysToDate = (startDate: Date | string | undefined | null, numberOfDays: number) => {
-  // Parse the dates to check if they are valid
-  const parsedStartDate = getDate(startDate);
-
-  // return if undefined
-  if (!parsedStartDate) return;
-
-  const newDate = new Date(parsedStartDate);
-  newDate.setDate(newDate.getDate() + numberOfDays);
-
-  return newDate;
-};
-
-/**
  * @returns {number} number of days left from today
  * @description Returns number of days left from today
  * @param {string | Date} date
@@ -178,43 +159,6 @@ export const calculateTimeAgo = (time: string | number | Date | null): string =>
   const distance = formatDistanceToNow(parsedTime, { addSuffix: true });
   return distance;
 };
-
-export function calculateTimeAgoShort(date: string | number | Date | null): string {
-  if (!date) {
-    return "";
-  }
-
-  const parsedDate = typeof date === "string" ? parseISO(date) : new Date(date);
-  const now = new Date();
-  const diffInSeconds = (now.getTime() - parsedDate.getTime()) / 1000;
-
-  if (diffInSeconds < 60) {
-    return `${Math.floor(diffInSeconds)}s`;
-  }
-
-  const diffInMinutes = diffInSeconds / 60;
-  if (diffInMinutes < 60) {
-    return `${Math.floor(diffInMinutes)}m`;
-  }
-
-  const diffInHours = diffInMinutes / 60;
-  if (diffInHours < 24) {
-    return `${Math.floor(diffInHours)}h`;
-  }
-
-  const diffInDays = diffInHours / 24;
-  if (diffInDays < 30) {
-    return `${Math.floor(diffInDays)}d`;
-  }
-
-  const diffInMonths = diffInDays / 30;
-  if (diffInMonths < 12) {
-    return `${Math.floor(diffInMonths)}mo`;
-  }
-
-  const diffInYears = diffInMonths / 12;
-  return `${Math.floor(diffInYears)}y`;
-}
 
 // Date Validation Helpers
 /**
@@ -368,19 +312,6 @@ export const convertMinutesToHoursMinutesString = (totalMinutes: number): string
   const { hours, minutes } = convertMinutesToHoursAndMinutes(totalMinutes);
 
   return `${hours ? `${hours}h ` : ``}${minutes ? `${minutes}m ` : ``}`;
-};
-
-/**
- * @description calculates the read time for a document using the words count
- * @param {number} wordsCount
- * @returns {number} total number of seconds
- * @example getReadTimeFromWordsCount(400) // Output: 120
- * @example getReadTimeFromWordsCount(100) // Output: 30s
- */
-export const getReadTimeFromWordsCount = (wordsCount: number): number => {
-  const wordsPerMinute = 200;
-  const minutes = wordsCount / wordsPerMinute;
-  return minutes * 60;
 };
 
 /**

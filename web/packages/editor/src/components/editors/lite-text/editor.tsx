@@ -13,17 +13,12 @@ import { EnterKeyExtension } from "@/extensions";
 import type { EditorRefApi, ILiteTextEditorProps } from "@/types";
 
 function LiteTextEditor(props: ILiteTextEditorProps) {
-  const { onEnterKeyPress, disabledExtensions, extensions: externalExtensions = [] } = props;
+  const { onEnterKeyPress, extensions: externalExtensions = [] } = props;
 
-  const extensions = useMemo(() => {
-    const resolvedExtensions = [...externalExtensions];
-
-    if (!disabledExtensions?.includes("enter-key")) {
-      resolvedExtensions.push(EnterKeyExtension(onEnterKeyPress));
-    }
-
-    return resolvedExtensions;
-  }, [externalExtensions, disabledExtensions, onEnterKeyPress]);
+  const extensions = useMemo(
+    () => [...externalExtensions, EnterKeyExtension(onEnterKeyPress)],
+    [externalExtensions, onEnterKeyPress]
+  );
 
   return <EditorWrapper {...props} extensions={extensions} />;
 }

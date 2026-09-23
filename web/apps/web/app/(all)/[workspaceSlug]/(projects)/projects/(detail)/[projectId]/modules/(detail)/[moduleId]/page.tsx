@@ -14,7 +14,7 @@ import emptyModule from "@/app/assets/empty-state/module.svg?url";
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHead } from "@/components/core/page-title";
 import { ModuleLayoutRoot } from "@/components/issues/issue-layouts/roots/module-layout-root";
-import { ModuleAnalyticsSidebar } from "@/components/modules";
+import { ModuleProgressSidebar } from "@/components/modules";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
@@ -71,7 +71,7 @@ function ModuleIssuesPage({ params }: Route.ComponentProps) {
                 "vertical-scrollbar absolute right-0 z-13 scrollbar-sm flex h-full w-[24rem] flex-shrink-0 flex-col gap-3.5 overflow-y-auto border-l border-subtle bg-surface-1 px-6 shadow-raised-200 duration-300"
               )}
             >
-              <ModuleAnalyticsSidebar moduleId={moduleId} handleClose={toggleSidebar} />
+              <ModuleProgressSidebar moduleId={moduleId} handleClose={toggleSidebar} />
             </div>
           )}
         </div>

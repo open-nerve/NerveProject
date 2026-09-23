@@ -5,7 +5,7 @@
  */
 
 import * as React from "react";
-import { GridOutline, ListOutline, TimelineOutline } from "@makeplane/propel/icons";
+import { GridOutline, ListOutline } from "@makeplane/propel/icons";
 import type { TModuleLayoutOptions } from "@plane/types";
 import { cn } from "@plane/utils";
 
@@ -24,7 +24,6 @@ export function ModuleLayoutIcon(props: ILayoutIcon) {
   const icons = {
     list: ListOutline,
     board: GridOutline,
-    gantt: TimelineOutline,
   };
   const Icon = icons[layoutType ?? "list"];
 

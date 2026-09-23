@@ -5,7 +5,6 @@
  */
 
 import type { TPaginationInfo } from "./common";
-import type { ICycle } from "./cycle";
 import type { TUserPermissions } from "./enums";
 import type { TProjectMembership } from "./project";
 import type { IUser, IUserLite } from "./users";
@@ -74,7 +73,6 @@ export type Properties = {
   sub_issue_count: boolean;
   link: boolean;
   attachment_count: boolean;
-  estimate: boolean;
   created_on: boolean;
   updated_on: boolean;
 };
@@ -137,14 +135,6 @@ export interface IWorkspaceIssueSearchResult {
   type_id: string;
 }
 
-export interface IWorkspacePageSearchResult {
-  id: string;
-  name: string;
-  project_ids: string[];
-  project__identifiers: string[];
-  workspace__slug: string;
-}
-
 export interface IWorkspaceProjectSearchResult {
   id: string;
   identifier: string;
@@ -160,71 +150,7 @@ export interface IWorkspaceSearchResults {
     cycle: IWorkspaceDefaultSearchResult[];
     module: IWorkspaceDefaultSearchResult[];
     issue_view: IWorkspaceDefaultSearchResult[];
-    page: IWorkspacePageSearchResult[];
   };
-}
-
-export interface IProductUpdateResponse {
-  url: string;
-  assets_url: string;
-  upload_url: string;
-  html_url: string;
-  id: number;
-  author: {
-    login: string;
-    id: string;
-    node_id: string;
-    avatar_url: string;
-    gravatar_id: "";
-    url: string;
-    html_url: string;
-    followers_url: string;
-    following_url: string;
-    gists_url: string;
-    starred_url: string;
-    subscriptions_url: string;
-    organizations_url: string;
-    repos_url: string;
-    events_url: string;
-    received_events_url: string;
-    type: string;
-    site_admin: false;
-  };
-  node_id: string;
-  tag_name: string;
-  target_commitish: string;
-  name: string;
-  draft: boolean;
-  prerelease: true;
-  created_at: string;
-  published_at: string;
-  assets: [];
-  tarball_url: string;
-  zipball_url: string;
-  body: string;
-  reactions: {
-    url: string;
-    total_count: number;
-    "+1": number;
-    "-1": number;
-    laugh: number;
-    hooray: number;
-    confused: number;
-    heart: number;
-    rocket: number;
-    eyes: number;
-  };
-}
-
-export interface IWorkspaceActiveCyclesResponse {
-  count: number;
-  extra_stats: null;
-  next_cursor: string;
-  next_page_results: boolean;
-  prev_cursor: string;
-  prev_page_results: boolean;
-  results: ICycle[];
-  total_pages: number;
 }
 
 export interface IWorkspaceProgressResponse {
@@ -234,23 +160,9 @@ export interface IWorkspaceProgressResponse {
   cancelled_issues: number;
   unstarted_issues: number;
 }
-export interface IWorkspaceAnalyticsResponse {
-  completion_chart: Record<string, unknown>;
-}
-
 export type TWorkspacePaginationInfo = TPaginationInfo & {
   results: IWorkspace[];
 };
-
-export interface IWorkspaceSidebarNavigationItem {
-  key?: string;
-  is_pinned: boolean;
-  sort_order: number;
-}
-
-export interface IWorkspaceSidebarNavigation {
-  [key: string]: IWorkspaceSidebarNavigationItem;
-}
 
 export enum EOnboardingSteps {
   PROFILE_SETUP = "PROFILE_SETUP",

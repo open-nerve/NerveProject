@@ -20,7 +20,6 @@ import type {
 // helpers
 import { getDistributionPathsPostUpdate } from "@plane/utils";
 //local
-import { storage } from "@/lib/local-storage";
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
 import { BaseIssuesStore } from "../helpers/base-issues.store";
 //
@@ -143,17 +142,6 @@ export class CycleIssues extends BaseIssuesStore implements ICycleIssues {
     if (projectId && cycleId) {
       this.rootIssueStore.rootStore.cycle.fetchCycleDetails(workspaceSlug, projectId, cycleId);
     }
-    // fetch cycle progress
-    const isSidebarCollapsed = storage.get("cycle_sidebar_collapsed");
-    if (
-      projectId &&
-      cycleId &&
-      this.rootIssueStore.rootStore.cycle.getCycleById(cycleId)?.version === 2 &&
-      isSidebarCollapsed &&
-      JSON.parse(isSidebarCollapsed) === false
-    ) {
-      this.rootIssueStore.rootStore.cycle.fetchActiveCycleProgressPro(workspaceSlug, projectId, cycleId);
-    }
   };
 
   updateParentStats = (prevIssueState?: TIssue, nextIssueState?: TIssue, id?: string) => {
@@ -161,8 +149,7 @@ export class CycleIssues extends BaseIssuesStore implements ICycleIssues {
       const distributionUpdates = getDistributionPathsPostUpdate(
         prevIssueState,
         nextIssueState,
-        this.rootIssueStore.rootStore.state.stateMap,
-        this.rootIssueStore.rootStore.projectEstimate?.currentActiveEstimate?.estimatePointById
+        this.rootIssueStore.rootStore.state.stateMap
       );
 
       const cycleId = id ?? this.cycleId;

@@ -11,9 +11,7 @@ import {
   AttachOutline,
   ClockOutline,
   CyclesOutline,
-  DocumentationOutline,
   DueDateOutline,
-  EstimateOutline,
   GitBranchOutline,
   GlobeOutline,
   GridOutline,
@@ -57,10 +55,8 @@ export const iconsMap: ActivityIconMap = {
   attachment: AttachOutline,
   name: TextOutline,
   state: StateOutline,
-  estimate: EstimateOutline,
   cycle: CyclesOutline,
   module: ModuleOutline,
-  page: DocumentationOutline,
   network: GlobeOutline,
   identifier: HashOutline,
   timezone: ClockOutline,
@@ -73,7 +69,6 @@ export const iconsMap: ActivityIconMap = {
   module_view: ModuleOutline,
   cycle_view: CyclesOutline,
   issue_views_view: WorkItemsOutline,
-  page_view: DocumentationOutline,
   intake_view: IntakeOutline,
 };
 
@@ -152,28 +147,6 @@ export const messages = (activity: TProjectActivity): { message: string | ReactN
           </>
         ),
       };
-    case "estimate":
-      return {
-        message: (
-          <>
-            {newValue ? (
-              <>
-                set the estimate point to <span className="font-medium text-primary">{newValue}</span>
-              </>
-            ) : (
-              <>
-                removed the estimate point
-                {oldValue && (
-                  <>
-                    {" "}
-                    <span className="font-medium text-primary">{oldValue}</span>
-                  </>
-                )}
-              </>
-            )}
-          </>
-        ),
-      };
     case "cycles":
       return {
         message: (
@@ -222,15 +195,6 @@ export const messages = (activity: TProjectActivity): { message: string | ReactN
       return {
         message: <>{newValue ? "enabled" : "disabled"} inbox</>,
       };
-    case "page":
-      return {
-        message: (
-          <>
-            {newValue ? "created" : "removed"} the project page{" "}
-            <span className="font-medium text-primary">{newValue || oldValue || "Untitled page"}</span>
-          </>
-        ),
-      };
     case "network":
       return {
         message: <>{newValue ? "enabled" : "disabled"} network access</>,
@@ -254,7 +218,6 @@ export const messages = (activity: TProjectActivity): { message: string | ReactN
     case "module_view":
     case "cycle_view":
     case "issue_views_view":
-    case "page_view":
     case "intake_view":
       return {
         message: (

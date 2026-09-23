@@ -4,19 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export type TPersonalNavigationItemKey = "stickies" | "your_work" | "drafts";
-
-export interface TPersonalNavigationItem {
-  key: TPersonalNavigationItemKey;
-  labelTranslationKey: string;
-  enabled: boolean;
-}
-
-export interface TPersonalNavigationItemState {
-  enabled: boolean;
-  sort_order: number;
-}
-
 export type TProjectNavigationMode = "ACCORDION" | "TABBED";
 
 export interface TProjectDisplaySettings {
@@ -25,47 +12,16 @@ export interface TProjectDisplaySettings {
   limitedProjectsCount: number;
 }
 
-export interface TPersonalNavigationPreferences {
-  items: Record<TPersonalNavigationItemKey, TPersonalNavigationItemState>;
-}
-
 export interface TProjectNavigationPreferences {
   navigationMode: TProjectNavigationMode;
   showLimitedProjects: boolean;
   limitedProjectsCount: number;
 }
 
-export interface TWorkspaceNavigationItemState {
-  is_pinned: boolean;
-  sort_order: number;
-}
-
-export interface TWorkspaceNavigationPreferences {
-  items: Record<string, TWorkspaceNavigationItemState>;
-}
-
-export interface TNavigationPreferences {
-  personal: TPersonalNavigationPreferences;
-  workspace: TWorkspaceNavigationPreferences;
-  projects: TProjectNavigationPreferences;
-}
-
-export const DEFAULT_PERSONAL_PREFERENCES: TPersonalNavigationPreferences = {
-  items: {
-    stickies: { enabled: false, sort_order: 0 },
-    your_work: { enabled: true, sort_order: 1 },
-    drafts: { enabled: true, sort_order: 2 },
-  },
-};
-
 export const DEFAULT_PROJECT_PREFERENCES: TProjectNavigationPreferences = {
   navigationMode: "ACCORDION",
   showLimitedProjects: false,
   limitedProjectsCount: 10,
-};
-
-export const DEFAULT_WORKSPACE_PREFERENCES: TWorkspaceNavigationPreferences = {
-  items: {},
 };
 
 export type TAppRailDisplayMode = "icon_only" | "icon_with_label";

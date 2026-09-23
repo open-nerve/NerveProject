@@ -20,12 +20,11 @@ import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
 import { ModuleCalendarLayout } from "../calendar/roots/module-root";
-import { BaseGanttRoot } from "../gantt";
 import { ModuleKanBanLayout } from "../kanban/roots/module-root";
 import { ModuleListLayout } from "../list/roots/module-root";
 import { ModuleSpreadsheetLayout } from "../spreadsheet/roots/module-root";
 
-function ModuleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined; moduleId: string }) {
+function ModuleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined }) {
   switch (props.activeLayout) {
     case EIssueLayoutTypes.LIST:
       return <ModuleListLayout />;
@@ -33,8 +32,6 @@ function ModuleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined;
       return <ModuleKanBanLayout />;
     case EIssueLayoutTypes.CALENDAR:
       return <ModuleCalendarLayout />;
-    case EIssueLayoutTypes.GANTT:
-      return <BaseGanttRoot viewId={props.moduleId} />;
     case EIssueLayoutTypes.SPREADSHEET:
       return <ModuleSpreadsheetLayout />;
     default:
@@ -83,7 +80,7 @@ export const ModuleLayoutRoot = observer(function ModuleLayoutRoot() {
           <div className="relative flex h-full w-full flex-col overflow-hidden">
             {moduleWorkItemsFilter && <WorkItemFiltersRow filter={moduleWorkItemsFilter} />}
             <Row variant={ERowVariant.HUGGING} className="h-full w-full overflow-auto">
-              <ModuleIssueLayout activeLayout={activeLayout} moduleId={moduleId} />
+              <ModuleIssueLayout activeLayout={activeLayout} />
             </Row>
             {/* peek overview */}
             <IssuePeekOverview />

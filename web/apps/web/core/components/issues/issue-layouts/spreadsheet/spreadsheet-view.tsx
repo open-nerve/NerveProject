@@ -65,8 +65,6 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
   // plane web hooks
   const isBulkOperationsEnabled = useBulkOperationStatus();
 
-  const isEstimateEnabled: boolean = currentProjectDetails?.estimate !== null;
-
   const spreadsheetColumnsList = isWorkspaceLevel
     ? SPREADSHEET_PROPERTY_LIST
     : SPREADSHEET_PROPERTY_LIST.filter((property) => {
@@ -94,7 +92,6 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
                 displayFilters={displayFilters}
                 handleDisplayFilterUpdate={handleDisplayFilterUpdate}
                 issueIds={issueIds}
-                isEstimateEnabled={isEstimateEnabled}
                 portalElement={portalRef}
                 quickActions={quickActions}
                 updateIssue={updateIssue}

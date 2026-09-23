@@ -28,7 +28,6 @@ export interface IPartialProject {
   cycle_view: boolean;
   issue_views_view: boolean;
   module_view: boolean;
-  page_view: boolean;
   inbox_view: boolean;
   guest_view_all_features?: boolean;
   project_lead?: IUserLite | string | null;
@@ -44,35 +43,19 @@ export interface IPartialProject {
 
 export interface IProject extends IPartialProject {
   archive_in?: number;
-  close_in?: number;
   // only for uploading the cover image
   cover_image_asset?: null;
   cover_image?: string;
   // only for rendering the cover image
   readonly cover_image_url?: string;
   default_assignee?: IUser | string | null;
-  default_state?: string | null;
   description?: string;
-  estimate?: string | null;
   anchor?: string | null;
   is_favorite?: boolean;
   members?: string[];
   timezone?: string;
   next_work_item_sequence?: number;
 }
-
-export type TProjectAnalyticsCountParams = {
-  project_ids?: string;
-  fields?: string;
-};
-
-export type TProjectAnalyticsCount = Pick<IProject, "id"> & {
-  total_issues?: number;
-  completed_issues?: number;
-  total_cycles?: number;
-  total_members?: number;
-  total_modules?: number;
-};
 
 export interface IProjectLite {
   id: string;
@@ -132,18 +115,6 @@ export type IProjectMemberPreferencesFullResponse = IProjectMemberPreferencesRes
   member_id: string;
   workspace_id: string;
 };
-
-export interface IGithubRepository {
-  id: string;
-  full_name: string;
-  html_url: string;
-  url: string;
-}
-
-export interface GithubRepositoriesResponse {
-  repositories: IGithubRepository[];
-  total_count: number;
-}
 
 export type TProjectIssuesSearchParams = {
   search: string;

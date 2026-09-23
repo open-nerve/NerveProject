@@ -14,10 +14,9 @@ import { EUserProjectRoles } from "@plane/types";
 import { ContentWrapper, Row, ERowVariant } from "@plane/ui";
 // components
 import { ListLayout } from "@/components/core/list";
-import { ModuleCardItem, ModuleListItem, ModulePeekOverview, ModulesListGanttChartView } from "@/components/modules";
+import { ModuleCardItem, ModuleListItem, ModulePeekOverview } from "@/components/modules";
 import { CycleModuleBoardLayoutLoader } from "@/components/ui/loader/cycle-module-board-loader";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
-import { GanttLayoutLoader } from "@/components/ui/loader/layouts/gantt-layout-loader";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useModule } from "@/hooks/store/use-module";
@@ -49,7 +48,6 @@ export const ModulesListView = observer(function ModulesListView() {
       <>
         {displayFilters?.layout === "list" && <CycleModuleListLayoutLoader />}
         {displayFilters?.layout === "board" && <CycleModuleBoardLayoutLoader />}
-        {displayFilters?.layout === "gantt" && <GanttLayoutLoader />}
       </>
     );
 
@@ -101,11 +99,6 @@ export const ModulesListView = observer(function ModulesListView() {
               <ModuleCardItem key={moduleId} moduleId={moduleId} />
             ))}
           </Row>
-        )}
-        {displayFilters?.layout === "gantt" && (
-          <div className="size-full overflow-hidden">
-            <ModulesListGanttChartView />
-          </div>
         )}
         <div className="flex-shrink-0">
           <ModulePeekOverview projectId={projectId?.toString() ?? ""} workspaceSlug={workspaceSlug?.toString() ?? ""} />

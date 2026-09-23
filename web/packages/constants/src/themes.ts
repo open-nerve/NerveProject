@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export const THEMES = ["light", "dark", "light-contrast", "dark-contrast", "custom"];
+export const THEMES = ["light", "dark", "light-contrast", "dark-contrast"];
 
 export interface I_THEME_OPTION {
   key: string;
@@ -72,17 +72,6 @@ export const THEME_OPTIONS: I_THEME_OPTION[] = [
       border: "#FFFFFF",
       color1: "#030303",
       color2: "#3A8BE9",
-    },
-  },
-  {
-    key: "custom",
-    value: "custom",
-    i18n_label: "Custom theme",
-    type: "light",
-    icon: {
-      border: "#FFC9C9",
-      color1: "#FFF7F7",
-      color2: "#FF5151",
     },
   },
 ];

@@ -50,106 +50,6 @@
       }
     }
   },
-  "workspace_dashboard": {
-    "empty_state": {
-      "general": {
-        "title": "项目、活动和指标概览",
-        "description": "欢迎使用 Plane，我们很高兴您能来到这里。创建您的第一个项目并跟踪您的工作项，这个页面将转变为帮助您进展的空间。管理员还将看到帮助团队进展的项目。",
-        "primary_button": {
-          "text": "构建您的第一个项目",
-          "comic": {
-            "title": "在 Plane 中一切都从项目开始",
-            "description": "项目可以是产品路线图、营销活动或新车发布。"
-          }
-        }
-      }
-    }
-  },
-  "workspace_analytics": {
-    "label": "分析",
-    "page_label": "{workspace} - 分析",
-    "open_tasks": "总开放任务",
-    "error": "获取数据时出现错误。",
-    "work_items_closed_in": "已关闭的工作项",
-    "selected_projects": "已选择的项目",
-    "total_members": "总成员数",
-    "total_cycles": "总周期数",
-    "total_modules": "总模块数",
-    "pending_work_items": {
-      "title": "待处理工作项",
-      "empty_state": "同事的待处理工作项分析将显示在这里。"
-    },
-    "work_items_closed_in_a_year": {
-      "title": "一年内关闭的工作项",
-      "empty_state": "关闭工作项以查看以图表形式显示的分析。"
-    },
-    "most_work_items_created": {
-      "title": "创建最多工作项",
-      "empty_state": "同事及其创建的工作项数量将显示在这里。"
-    },
-    "most_work_items_closed": {
-      "title": "关闭最多工作项",
-      "empty_state": "同事及其关闭的工作项数量将显示在这里。"
-    },
-    "tabs": {
-      "scope_and_demand": "范围和需求",
-      "custom": "自定义分析"
-    },
-    "total": "{entity}总数",
-    "started_work_items": "已开始的{entity}",
-    "backlog_work_items": "待办的{entity}",
-    "un_started_work_items": "未开始的{entity}",
-    "completed_work_items": "已完成的{entity}",
-    "project_insights": "项目洞察",
-    "summary_of_projects": "项目概览",
-    "all_projects": "所有项目",
-    "trend_on_charts": "图表趋势",
-    "active_projects": "活跃项目",
-    "customized_insights": "自定义洞察",
-    "created_vs_resolved": "已创建 vs 已解决",
-    "empty_state": {
-      "project_insights": {
-        "title": "暂无数据",
-        "description": "分配给您的工作项将按状态分类显示在此处。"
-      },
-      "created_vs_resolved": {
-        "title": "暂无数据",
-        "description": "随着时间推移创建和解决的工作项将显示在此处。"
-      },
-      "customized_insights": {
-        "title": "暂无数据",
-        "description": "分配给您的工作项将按状态分类显示在此处。"
-      },
-      "general": {
-        "title": "跟踪进度、工作量和分配。发现趋势，消除障碍，加速工作进展",
-        "description": "查看范围与需求、估算和范围蔓延。获取团队成员和团队的性能，确保您的项目按时运行。",
-        "primary_button": {
-          "text": "开始您的第一个项目",
-          "comic": {
-            "title": "分析功能在周期 + 模块中效果最佳",
-            "description": "首先，将您的问题在周期中进行时间限制，如果可能的话，将跨越多个周期的问题分组到模块中。在左侧导航中查看这两个功能。"
-          }
-        }
-      },
-      "cycle_progress": {
-        "title": "尚无数据",
-        "description": "周期进度分析将显示在此处。将工作项添加到周期中以开始跟踪进度。"
-      },
-      "module_progress": {
-        "title": "尚无数据",
-        "description": "模块进度分析将显示在此处。将工作项添加到模块中以开始跟踪进度。"
-      },
-      "intake_trends": {
-        "title": "尚无数据",
-        "description": "引入趋势分析将显示在此处。将工作项添加到引入中以开始跟踪趋势。"
-      }
-    },
-    "upgrade_to_plan": "升级到 {plan} 以解锁 {tab}",
-    "workitem_resolved_vs_pending": "已解决 vs 待处理的工作项",
-    "projects_by_status": "按状态分类的项目",
-    "active_users": "活跃用户",
-    "intake_trends": "入学趋势"
-  },
   "workspace_projects": {
     "label": "{count, plural, one {项目} other {项目}}",
     "create": {
@@ -171,13 +71,6 @@
       "cycle_delete": "删除周期失败",
       "module_delete": "删除模块失败",
       "issue_delete": "删除工作项失败"
-    },
-    "state": {
-      "backlog": "待办",
-      "unstarted": "未开始",
-      "started": "进行中",
-      "completed": "已完成",
-      "cancelled": "已取消"
     },
     "sort": {
       "manual": "手动",
@@ -283,47 +176,6 @@
       },
       "deleted": {
         "success": "草稿已删除"
-      }
-    }
-  },
-  "workspace_pages": {
-    "empty_state": {
-      "general": {
-        "title": "写笔记、文档或完整的知识库。让 Galileo，Plane 的 AI 助手，帮助您开始",
-        "description": "页面是 Plane 中的思考空间。记录会议笔记，轻松格式化，嵌入工作项，使用组件库布局，并将它们全部保存在项目的上下文中。要快速完成任何文档，使用快捷键或点击按钮调用 Plane 的 AI Galileo。",
-        "primary_button": {
-          "text": "创建您的第一个页面"
-        }
-      },
-      "private": {
-        "title": "还没有私人页面",
-        "description": "在这里保存您的私人想法。当您准备好分享时，团队就在一键之遥。",
-        "primary_button": {
-          "text": "创建您的第一个页面"
-        }
-      },
-      "public": {
-        "title": "还没有工作空间页面",
-        "description": "在这里查看与工作空间中所有人共享的页面。",
-        "primary_button": {
-          "text": "创建您的第一个页面"
-        }
-      },
-      "archived": {
-        "title": "还没有已归档的页面",
-        "description": "归档不在您关注范围内的页面。需要时可以在这里访问它们。"
-      },
-      "shared": {
-        "title": "尚无共享页面",
-        "description": "其他人与您共享的页面将显示在此处。"
-      }
-    }
-  },
-  "workspace_cycles": {
-    "empty_state": {
-      "active": {
-        "title": "没有活动的周期",
-        "description": "您的项目中包含当前日期在其范围内的任何时期的周期。在这里查看所有活动周期的进度和详细信息。"
       }
     }
   },

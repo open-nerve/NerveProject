@@ -11,7 +11,6 @@ import type { IIssueDisplayProperties, TIssue } from "@plane/types";
 // constants
 import { SPREADSHEET_COLUMNS } from "../utils";
 // components
-import { shouldRenderColumn } from "@/helpers/issue-filter.helper";
 import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-HOC";
 
 type Props = {
@@ -20,15 +19,12 @@ type Props = {
   disableUserActions: boolean;
   property: keyof IIssueDisplayProperties;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
-  isEstimateEnabled: boolean;
 };
 
 export const IssueColumn = observer(function IssueColumn(props: Props) {
   const { displayProperties, issueDetail, disableUserActions, property, updateIssue } = props;
   // router
   const tableCellRef = useRef<HTMLTableCellElement | null>(null);
-
-  const shouldRenderProperty = shouldRenderColumn(property);
 
   const Column = SPREADSHEET_COLUMNS[property];
 
@@ -39,11 +35,7 @@ export const IssueColumn = observer(function IssueColumn(props: Props) {
   };
 
   return (
-    <WithDisplayPropertiesHOC
-      displayProperties={displayProperties}
-      displayPropertyKey={property}
-      shouldRenderProperty={() => shouldRenderProperty}
-    >
+    <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey={property}>
       <td
         tabIndex={0}
         className="h-11 min-w-36 border-r-[1px] border-subtle text-13 after:absolute after:bottom-[-1px] after:w-full after:border after:border-subtle"

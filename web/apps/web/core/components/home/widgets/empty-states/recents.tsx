@@ -15,11 +15,6 @@ const getDisplayContent = (type: string): { assetKey: CompactAssetType; text: st
         assetKey: "project",
         text: "home.recents.empty.project",
       };
-    case "page":
-      return {
-        assetKey: "note",
-        text: "home.recents.empty.page",
-      };
     case "issue":
       return {
         assetKey: "work-item",

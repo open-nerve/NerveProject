@@ -5,13 +5,7 @@
  */
 
 import { SquarePlus } from "lucide-react";
-import {
-  CreateFolderOutline,
-  CyclesOutline,
-  DocumentationOutline,
-  ModuleOutline,
-  WorkItemsOutline,
-} from "@makeplane/propel/icons";
+import { CreateFolderOutline, CyclesOutline, ModuleOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 // components
@@ -25,7 +19,6 @@ import { useInstance } from "@/hooks/store/use-instance";
 
 export type TPowerKCreationCommandKeys =
   | "create_work_item"
-  | "create_page"
   | "create_view"
   | "create_cycle"
   | "create_module"
@@ -49,7 +42,6 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
     toggleCreateCycleModal,
     toggleCreateModuleModal,
     toggleCreateViewModal,
-    toggleCreatePageModal,
   } = useCommandPalette();
   // derived values
   const canCreateWorkItem = canPerformAnyCreateAction && workspaceProjectIds && workspaceProjectIds.length > 0;
@@ -80,19 +72,6 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       action: () => toggleCreateIssueModal(true),
       isEnabled: () => Boolean(canCreateWorkItem),
       isVisible: () => Boolean(canCreateWorkItem),
-      closeOnSelect: true,
-    },
-    create_page: {
-      id: "create_page",
-      type: "action",
-      group: "create",
-      i18n_title: "power_k.creation_actions.create_page",
-      icon: DocumentationOutline,
-      keySequence: "nd",
-      action: () => toggleCreatePageModal({ isOpen: true }),
-      isEnabled: (ctx) => Boolean(getProjectDetails(ctx)?.page_view && hasProjectMemberLevelPermissions(ctx)),
-      isVisible: (ctx) =>
-        Boolean(ctx.params.projectId && getProjectDetails(ctx)?.page_view && hasProjectMemberLevelPermissions(ctx)),
       closeOnSelect: true,
     },
     create_view: {

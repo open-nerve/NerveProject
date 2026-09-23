@@ -7,11 +7,7 @@
 import { isEmpty } from "lodash-es";
 // plane constants
 import type { EIssueFilterType } from "@plane/constants";
-import {
-  EIssueGroupByToServerOptions,
-  EServerGroupByToFilterOptions,
-  ENABLE_ISSUE_DEPENDENCIES,
-} from "@plane/constants";
+import { EIssueGroupByToServerOptions, EServerGroupByToFilterOptions } from "@plane/constants";
 import type {
   EIssuesStoreType,
   IIssueDisplayFilterOptions,
@@ -25,7 +21,6 @@ import type {
   TStaticViewTypes,
   TWorkItemFilterExpression,
 } from "@plane/types";
-import { EIssueLayoutTypes } from "@plane/types";
 // helpers
 import { getComputedDisplayFilters, getComputedDisplayProperties } from "@plane/utils";
 // lib
@@ -118,9 +113,6 @@ export class IssueFilterHelperStore implements IIssueFilterHelperStore {
     if (richFilters) issueFiltersParams.filters = JSON.stringify(richFilters);
 
     if (displayFilters?.layout) issueFiltersParams.layout = displayFilters?.layout;
-
-    if (ENABLE_ISSUE_DEPENDENCIES && displayFilters?.layout === EIssueLayoutTypes.GANTT)
-      issueFiltersParams["expand"] = "issue_relation,issue_related";
 
     return issueFiltersParams;
   };

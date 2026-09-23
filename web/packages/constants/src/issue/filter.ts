@@ -58,9 +58,6 @@ export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
   spreadsheet: {
     filters: ["priority", "state", "labels"],
   },
-  gantt: {
-    filters: ["priority", "state", "labels"],
-  },
 };
 
 export const ISSUE_PRIORITY_FILTERS: TIssueFilterPriorityObject[] = [
@@ -264,17 +261,6 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
           values: ["sub_issue"],
         },
       },
-      gantt_chart: {
-        display_properties: ["key", "issue_type"],
-        display_filters: {
-          order_by: ["sort_order", "-created_at", "-updated_at", "start_date", "-priority"],
-          type: ["active", "backlog"],
-        },
-        extra_options: {
-          access: true,
-          values: ["sub_issue"],
-        },
-      },
     },
   },
   sub_work_items: {
@@ -357,8 +343,6 @@ export const filterActivityOnSelectedFilters = (
     if (activity.activity_type === EActivityFilterType.DEFAULT) return true;
     return filters.includes(activity.activity_type as TActivityFilters);
   });
-
-export const ENABLE_ISSUE_DEPENDENCIES = false;
 
 export const BASE_ACTIVITY_FILTER_TYPES = [
   EActivityFilterType.ACTIVITY,

@@ -20,12 +20,6 @@ export type TModuleDistributionBase = {
   completed_issues: number;
 };
 
-export type TModuleEstimateDistributionBase = {
-  total_estimates: number;
-  pending_estimates: number;
-  completed_estimates: number;
-};
-
 export type TModuleAssigneesDistribution = {
   assignee_id: string | null;
   avatar_url: string | null;
@@ -46,12 +40,6 @@ export type TModuleDistribution = {
   labels: (TModuleLabelsDistribution & TModuleDistributionBase)[];
 };
 
-export type TModuleEstimateDistribution = {
-  assignees: (TModuleAssigneesDistribution & TModuleEstimateDistributionBase)[];
-  completion_chart: TModuleCompletionChartDistribution;
-  labels: (TModuleLabelsDistribution & TModuleEstimateDistributionBase)[];
-};
-
 export interface IModule {
   total_issues: number;
   completed_issues: number;
@@ -59,14 +47,7 @@ export interface IModule {
   started_issues: number;
   unstarted_issues: number;
   cancelled_issues: number;
-  total_estimate_points?: number;
-  completed_estimate_points?: number;
-  backlog_estimate_points: number;
-  started_estimate_points: number;
-  unstarted_estimate_points: number;
-  cancelled_estimate_points: number;
   distribution?: TModuleDistribution;
-  estimate_distribution?: TModuleEstimateDistribution;
 
   id: string;
   name: string;
@@ -115,8 +96,6 @@ export type ModuleLink = {
 };
 
 export type SelectModuleType = (IModule & { actionType: "edit" | "delete" | "create-issue" }) | undefined;
-
-export type TModulePlotType = "burndown" | "points";
 
 export type TPublicModule = {
   id: string;

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // plane imports
@@ -14,7 +14,6 @@ import { ChevronDownOutline } from "@makeplane/propel/icons";
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
 import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
 // components
-import { WorkItemsModal } from "@/components/analytics/work-items/modal";
 import {
   DisplayFiltersSelection,
   FiltersDropdown,
@@ -27,7 +26,6 @@ import { useProject } from "@/hooks/store/use-project";
 export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHeader() {
   // i18n
   const { t } = useTranslation();
-  const [analyticsModal, setAnalyticsModal] = useState(false);
   const { workspaceSlug, projectId } = useParams();
   const { currentProjectDetails } = useProject();
 
@@ -62,49 +60,35 @@ export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHe
   );
 
   return (
-    <>
-      <WorkItemsModal
-        isOpen={analyticsModal}
-        onClose={() => setAnalyticsModal(false)}
-        projectDetails={currentProjectDetails ?? undefined}
+    <div className="z-[13] flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
+      <MobileLayoutSelection
+        layouts={[EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutTypes.CALENDAR]}
+        onChange={handleLayoutChange}
       />
-      <div className="z-[13] flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
-        <MobileLayoutSelection
-          layouts={[EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutTypes.CALENDAR]}
-          onChange={handleLayoutChange}
-        />
-        <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
-          <FiltersDropdown
-            title={t("common.display")}
-            placement="bottom-end"
-            menuButton={
-              <span className="flex items-center text-13 text-secondary">
-                {t("common.display")}
-                <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
-              </span>
-            }
-          >
-            <DisplayFiltersSelection
-              layoutDisplayFiltersOptions={
-                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-              }
-              displayFilters={issueFilters?.displayFilters ?? {}}
-              handleDisplayFiltersUpdate={handleDisplayFilters}
-              displayProperties={issueFilters?.displayProperties ?? {}}
-              handleDisplayPropertiesUpdate={handleDisplayProperties}
-              cycleViewDisabled={!currentProjectDetails?.cycle_view}
-              moduleViewDisabled={!currentProjectDetails?.module_view}
-            />
-          </FiltersDropdown>
-        </div>
-
-        <button
-          onClick={() => setAnalyticsModal(true)}
-          className="flex flex-grow justify-center border-l border-subtle text-13 text-secondary"
+      <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
+        <FiltersDropdown
+          title={t("common.display")}
+          placement="bottom-end"
+          menuButton={
+            <span className="flex items-center text-13 text-secondary">
+              {t("common.display")}
+              <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
+            </span>
+          }
         >
-          {t("common.analytics")}
-        </button>
+          <DisplayFiltersSelection
+            layoutDisplayFiltersOptions={
+              activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
+            }
+            displayFilters={issueFilters?.displayFilters ?? {}}
+            handleDisplayFiltersUpdate={handleDisplayFilters}
+            displayProperties={issueFilters?.displayProperties ?? {}}
+            handleDisplayPropertiesUpdate={handleDisplayProperties}
+            cycleViewDisabled={!currentProjectDetails?.cycle_view}
+            moduleViewDisabled={!currentProjectDetails?.module_view}
+          />
+        </FiltersDropdown>
       </div>
-    </>
+    </div>
   );
 });

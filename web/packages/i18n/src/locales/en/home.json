@@ -22,47 +22,21 @@
         "title": "Make Plane yours.",
         "description": "Choose your picture, colors, and more.",
         "cta": "Personalize now"
-      },
-      "widgets": {
-        "title": "It's Quiet Without Widgets, Turn Them On",
-        "description": "It looks like all your widgets are turned off. Enable them\nnow to enhance your experience!",
-        "primary_button": {
-          "text": "Manage widgets"
-        }
       }
-    },
-    "quick_links": {
-      "empty": "Save links to work things that you'd like handy.",
-      "add": "Add quick Link",
-      "title": "Quicklink",
-      "title_plural": "Quicklinks"
     },
     "recents": {
       "title": "Recents",
       "empty": {
         "project": "Your recent projects will appear here once you visit one.",
-        "page": "Your recent pages will appear here once you visit one.",
         "issue": "Your recent work items will appear here once you visit one.",
         "default": "You don't have any recents yet."
       },
       "filters": {
         "all": "All",
         "projects": "Projects",
-        "pages": "Pages",
         "issues": "Work items"
       }
     },
-    "new_at_plane": {
-      "title": "New at Plane"
-    },
-    "quick_tutorial": {
-      "title": "Quick tutorial"
-    },
-    "widget": {
-      "reordered_successfully": "Widget reordered successfully.",
-      "reordering_failed": "Error occurred while reordering widget."
-    },
-    "manage_widgets": "Manage widgets",
     "title": "Home",
     "star_us_on_github": "Star us on GitHub",
     "business_trial_banner": {

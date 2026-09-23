@@ -9,7 +9,7 @@ import type { TIssue } from "./issues/issue";
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
 import type { CompleteOrEmpty } from "./utils";
 
-export type TIssueLayouts = "list" | "kanban" | "calendar" | "spreadsheet" | "gantt_chart";
+export type TIssueLayouts = "list" | "kanban" | "calendar" | "spreadsheet";
 
 export type TIssueGroupByOptions =
   | "state"
@@ -45,8 +45,6 @@ export type TIssueOrderByOptions =
   | "-issue_cycle__cycle__name"
   | "target_date"
   | "-target_date"
-  | "estimate_point__key"
-  | "-estimate_point__key"
   | "start_date"
   | "-start_date"
   | "link_count"
@@ -169,7 +167,6 @@ export interface IIssueDisplayProperties {
   sub_issue_count?: boolean;
   link?: boolean;
   attachment_count?: boolean;
-  estimate?: boolean;
   created_on?: boolean;
   updated_on?: boolean;
   modules?: boolean;
@@ -204,9 +201,6 @@ export interface IIssueFiltersResponse {
 export interface IProjectUserPropertiesResponse extends IIssueFiltersResponse {
   sort_order: number;
   preferences: {
-    pages: {
-      block_display: boolean;
-    };
     navigation: IProjectMemberNavigationPreferences;
   };
 }

@@ -58,7 +58,7 @@ export interface IRenderProps<T extends IBaseLayoutsBaseItem> extends IItemRende
 
 // Layout Configuration
 
-export type TBaseLayoutType = "list" | "kanban" | "gantt";
+export type TBaseLayoutType = "list" | "kanban";
 
 export interface IBaseLayoutConfig {
   key: TBaseLayoutType;

@@ -6,7 +6,7 @@
 
 import type { useRouter } from "next/navigation";
 
-export type TPowerKContextType = "work-item" | "page" | "cycle" | "module";
+export type TPowerKContextType = "work-item" | "cycle" | "module";
 
 export type TPowerKContext = {
   // Route information
@@ -39,7 +39,6 @@ export type TPowerKPageType =
   | "update-work-item-state"
   | "update-work-item-priority"
   | "update-work-item-assignee"
-  | "update-work-item-estimate"
   | "update-work-item-cycle"
   | "update-work-item-module"
   | "update-work-item-labels"
@@ -126,4 +125,4 @@ export type TSelectionPageProps<T = any> = {
   onClose: () => void;
 };
 
-export type TPowerKSearchResultsKeys = "workspace" | "project" | "issue" | "cycle" | "module" | "issue_view" | "page";
+export type TPowerKSearchResultsKeys = "workspace" | "project" | "issue" | "cycle" | "module" | "issue_view";

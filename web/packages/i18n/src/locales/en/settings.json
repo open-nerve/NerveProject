@@ -73,50 +73,22 @@
     "work": "Work",
     "details": {
       "joined_on": "Joined on",
-      "time_zone": "Timezone"
-    },
-    "stats": {
-      "workload": "Workload",
-      "overview": "Overview",
-      "created": "Work items created",
-      "assigned": "Work items assigned",
-      "subscribed": "Work items subscribed",
-      "state_distribution": {
-        "title": "Work items by state",
-        "empty": "Create work items to view the them by states in the graph for better analysis."
-      },
-      "priority_distribution": {
-        "title": "Work items by Priority",
-        "empty": "Create work items to view the them by priority in the graph for better analysis."
-      },
-      "recent_activity": {
-        "title": "Recent activity",
-        "empty": "We couldn't find data. Kindly view your inputs",
-        "button": "Download today's activity",
-        "button_loading": "Downloading"
-      }
+      "load_failed": "Could not load this workspace's members.",
+      "not_a_member": "This user is not a member of this workspace."
     },
     "actions": {
       "profile": "Profile",
       "security": "Security",
-      "activity": "Activity",
       "preferences": "Preferences",
       "notifications": "Notifications",
-      "api-tokens": "Personal Access Tokens",
-      "connections": "Connections"
+      "api-tokens": "Personal Access Tokens"
     },
     "tabs": {
-      "summary": "Summary",
       "assigned": "Assigned",
       "created": "Created",
-      "subscribed": "Subscribed",
-      "activity": "Activity"
+      "subscribed": "Subscribed"
     },
     "empty_state": {
-      "activity": {
-        "title": "No activities yet",
-        "description": "Get started by creating a new work item! Add details and properties to it. Explore more in Plane to see your activity."
-      },
       "assigned": {
         "title": "No work items are assigned to you",
         "description": "Work items assigned to you can be tracked from here."
@@ -147,9 +119,6 @@
       },
       "dark_contrast": {
         "label": "Dark high contrast"
-      },
-      "custom": {
-        "label": "Custom theme"
       }
     }
   }

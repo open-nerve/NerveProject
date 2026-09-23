@@ -5,14 +5,7 @@
  */
 
 import { API_BASE_URL } from "@plane/constants";
-import type {
-  GithubRepositoriesResponse,
-  IProjectUserPropertiesResponse,
-  ISearchIssueResponse,
-  TProjectAnalyticsCount,
-  TProjectAnalyticsCountParams,
-  TProjectIssuesSearchParams,
-} from "@plane/types";
+import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@plane/types";
 // helpers
 // plane web types
 import type { TProject, TPartialProject } from "@plane/types";
@@ -68,19 +61,6 @@ export class ProjectService extends APIService {
       });
   }
 
-  async getProjectAnalyticsCount(
-    workspaceSlug: string,
-    params?: TProjectAnalyticsCountParams
-  ): Promise<TProjectAnalyticsCount[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/project-stats/`, {
-      params,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async updateProject(workspaceSlug: string, projectId: string, data: Partial<TProject>): Promise<TProject> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/`, data)
       .then((response) => response?.data)
@@ -112,48 +92,6 @@ export class ProjectService extends APIService {
     data: Partial<IProjectUserPropertiesResponse>
   ): Promise<IProjectUserPropertiesResponse> {
     return this.patch(`/api/workspaces/${workspaceSlug}/projects/${projectId}/user-properties/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getGithubRepositories(url: string): Promise<GithubRepositoriesResponse> {
-    return this.request({
-      method: "get",
-      url,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async syncGithubRepository(
-    workspaceSlug: string,
-    projectId: string,
-    workspaceIntegrationId: string,
-    data: {
-      name: string;
-      owner: string;
-      repository_id: string;
-      url: string;
-    }
-  ): Promise<any> {
-    return this.post(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/workspace-integrations/${workspaceIntegrationId}/github-repository-sync/`,
-      data
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async getProjectGithubRepository(workspaceSlug: string, projectId: string, integrationId: string): Promise<any> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/workspace-integrations/${integrationId}/github-repository-sync/`
-    )
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

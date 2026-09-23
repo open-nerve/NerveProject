@@ -7,12 +7,10 @@
 import type { LucideIcon } from "lucide-react";
 import {
   CyclesOutline,
-  EstimateOutline,
   IntakeOutline,
   LabelsOutline,
   MembersOutline,
   ModuleOutline,
-  PagesOutline,
   StateOutline,
   TriggerOutline,
   ViewsOutline,
@@ -29,10 +27,8 @@ export const PROJECT_SETTINGS_ICONS: Record<TProjectSettingsTabs, LucideIcon | R
   features_cycles: CyclesOutline,
   features_modules: ModuleOutline,
   features_views: ViewsOutline,
-  features_pages: PagesOutline,
   features_intake: IntakeOutline,
   states: StateOutline,
   labels: LabelsOutline,
-  estimates: EstimateOutline,
   automations: TriggerOutline,
 };

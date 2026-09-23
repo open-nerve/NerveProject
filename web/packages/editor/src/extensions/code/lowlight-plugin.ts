@@ -122,7 +122,7 @@ export function LowlightPlugin({
             newNodes.length !== oldNodes.length ||
             // OR transaction has changes that completely encapsulate a node
             // (for example, a transaction that affects the entire document).
-            // Such transactions can happen during collab syncing via y-prosemirror, for example.
+            // Such transactions happen when the whole document is replaced, for example by setContent.
             transaction.steps.some(
               (step) =>
                 // @ts-expect-error type error

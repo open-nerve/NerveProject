@@ -12,7 +12,6 @@
         "change_assignees": "分配给",
         "assign_to_me": "分配给我",
         "unassign_from_me": "从我处取消分配",
-        "change_estimate": "更改估算",
         "add_to_cycle": "添加到周期",
         "add_to_modules": "添加到模块",
         "add_labels": "添加标签",
@@ -48,26 +47,10 @@
         "copy_url": "复制 URL",
         "copy_url_toast_success": "模块 URL 已复制到剪贴板。",
         "copy_url_toast_error": "复制模块 URL 到剪贴板时出错。"
-      },
-      "page": {
-        "title": "页面操作",
-        "indicator": "页面",
-        "lock": "锁定",
-        "unlock": "解锁",
-        "make_private": "设为私有",
-        "make_public": "设为公开",
-        "archive": "归档",
-        "restore": "恢复",
-        "add_to_favorites": "添加到收藏",
-        "remove_from_favorites": "从收藏中移除",
-        "copy_url": "复制 URL",
-        "copy_url_toast_success": "页面 URL 已复制到剪贴板。",
-        "copy_url_toast_error": "复制页面 URL 到剪贴板时出错。"
       }
     },
     "creation_actions": {
       "create_work_item": "新建工作项",
-      "create_page": "新建页面",
       "create_view": "新建视图",
       "create_cycle": "新建周期",
       "create_module": "新建模块",
@@ -87,7 +70,6 @@
       "nav_assigned_workspace_work_items": "转到已分配工作项",
       "nav_created_workspace_work_items": "转到已创建工作项",
       "nav_subscribed_workspace_work_items": "转到已订阅工作项",
-      "nav_workspace_analytics": "转到工作区分析",
       "nav_workspace_drafts": "转到工作区草稿",
       "nav_workspace_archives": "转到工作区归档",
       "open_workspace_setting": "打开工作区设置",
@@ -99,12 +81,10 @@
       "nav_project_modules": "转到模块",
       "open_project_view": "打开项目视图",
       "nav_project_views": "转到项目视图",
-      "nav_project_pages": "转到页面",
       "nav_project_intake": "转到收集",
       "nav_project_archives": "转到项目归档",
       "open_project_setting": "打开项目设置",
       "nav_project_settings": "转到项目设置",
-      "nav_workspace_active_cycle": "转到所有活动周期",
       "nav_project_overview": "转到项目概览"
     },
     "account_actions": {
@@ -157,7 +137,6 @@
       "update_work_item_state": "更改状态",
       "update_work_item_priority": "更改优先级",
       "update_work_item_assignee": "分配给",
-      "update_work_item_estimate": "更改估算",
       "update_work_item_cycle": "添加到周期",
       "update_work_item_module": "添加到模块",
       "update_work_item_labels": "添加标签",

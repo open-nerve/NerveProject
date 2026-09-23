@@ -15,16 +15,16 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 34",
+    "check:lint": "node ../../../tools/lint-cap.mjs 27",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
-    "fix:format": "oxfmt ."
+    "fix:format": "oxfmt .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@makeplane/propel": "catalog:",
     "@plane/constants": "workspace:*",
     "@plane/types": "workspace:*",
-    "chroma-js": "catalog:",
     "clsx": "catalog:",
     "date-fns": "catalog:",
     "hast": "catalog:",
@@ -44,7 +44,6 @@
   },
   "devDependencies": {
     "@plane/typescript-config": "workspace:*",
-    "@types/chroma-js": "catalog:",
     "@types/hast": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/mdast": "catalog:",
@@ -52,6 +51,7 @@
     "@types/react": "catalog:",
     "@types/sanitize-html": "catalog:",
     "tsdown": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

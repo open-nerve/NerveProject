@@ -24,7 +24,6 @@ const generalSelectors = [
   "h1.editor-heading-block, h2.editor-heading-block, h3.editor-heading-block, h4.editor-heading-block, h5.editor-heading-block, h6.editor-heading-block",
   "[data-type=horizontalRule]",
   "table:not(.table-drag-preview)",
-  ".issue-embed",
   ".image-component",
   ".image-upload-component",
   ".editor-callout-component",

@@ -150,7 +150,6 @@ export const ISSUE_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = 
   "sub_issue_count",
   "link",
   "attachment_count",
-  "estimate",
   "created_on",
   "updated_on",
   "modules",
@@ -202,10 +201,6 @@ export const ISSUE_DISPLAY_PROPERTIES: {
     titleTranslationKey: "issue.display.properties.attachment_count",
   },
   { key: "link", titleTranslationKey: "common.link" },
-  {
-    key: "estimate",
-    titleTranslationKey: "common.estimate",
-  },
   { key: "modules", titleTranslationKey: "common.module" },
   { key: "cycle", titleTranslationKey: "common.cycle" },
 ];
@@ -219,7 +214,6 @@ export const SPREADSHEET_PROPERTY_LIST: (keyof IIssueDisplayProperties)[] = [
   "cycle",
   "start_date",
   "due_date",
-  "estimate",
   "created_on",
   "updated_on",
   "link",
@@ -260,14 +254,6 @@ export const SPREADSHEET_PROPERTY_DETAILS: {
     descendingOrderKey: "target_date",
     descendingOrderTitle: "Old",
     icon: "DueDatePropertyIcon",
-  },
-  estimate: {
-    i18n_title: "common.estimate",
-    ascendingOrderKey: "estimate_point__key",
-    ascendingOrderTitle: "Low",
-    descendingOrderKey: "-estimate_point__key",
-    descendingOrderTitle: "High",
-    icon: "EstimatePropertyIcon",
   },
   labels: {
     i18n_title: "common.labels",

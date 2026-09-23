@@ -9,13 +9,6 @@
   --editor-colors-dark-blue-text: #266df0;
   --editor-colors-purple-text: #9162f9;
   /* end text colors */
-
-  /* layout */
-  --normal-content-width: 720px;
-  --wide-content-width: 1152px;
-  --normal-content-margin: 20px;
-  --wide-content-margin: 96px;
-  /* end layout */
 }
 
 /* text background colors */
@@ -114,16 +107,6 @@
 
   /* font styles */
   --font-style: "Inter Variable", sans-serif;
-
-  &.sans-serif {
-    --font-style: "Inter Variable", sans-serif;
-  }
-  &.serif {
-    --font-style: serif;
-  }
-  &.monospace {
-    --font-style: monospace;
-  }
   /* end font styles */
 
   /* spacing */
@@ -192,114 +175,3 @@
   /* end spacing */
 }
 /* end font size and style */
-
-/* layout config */
-#page-toolbar-container {
-  container-name: page-toolbar-container;
-  container-type: inline-size;
-
-  .page-toolbar-content {
-    --header-width: var(--normal-content-width);
-
-    &.wide-layout {
-      --header-width: var(--wide-content-width);
-    }
-
-    padding-left: calc(((100% - var(--header-width)) / 2) - 10px);
-  }
-}
-
-#page-content-container {
-  container-name: page-content-container;
-  container-type: inline-size;
-
-  .frame-renderer {
-    --editor-content-width: var(--normal-content-width);
-
-    &.wide-layout {
-      --editor-content-width: var(--wide-content-width);
-    }
-
-    .editor-container.page-title-editor .ProseMirror,
-    .document-editor-loader {
-      max-width: var(--editor-content-width);
-      margin: 0 auto;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .editor-container.document-editor .ProseMirror {
-      & > *:not(.editor-full-width-block) {
-        max-width: var(--editor-content-width);
-        margin-left: auto !important;
-        margin-right: auto !important;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-
-      & > .editor-full-width-block {
-        max-width: 100%;
-        padding-inline-start: calc((100% - var(--editor-content-width)) / 2);
-        padding-inline-end: var(--wide-content-margin);
-      }
-    }
-  }
-}
-
-/* keep a static padding of 96px for wide layouts for container width >912px and <1344px */
-@container page-toolbar-container (min-width: 912px) and (max-width: 1344px) {
-  .page-toolbar-content.wide-layout {
-    padding-left: var(--wide-content-margin) !important;
-  }
-}
-
-/* keep a static padding of 96px for wide layouts for container width <912px */
-@container page-toolbar-container (max-width: 912) {
-  .page-toolbar-content.wide-layout {
-    padding-left: var(--wide-content-margin) !important;
-  }
-}
-/* end layout config */
-
-/* keep a static padding of 20px for wide layouts for container width <760px */
-@container page-toolbar-container (max-width: 760px) {
-  .page-toolbar-content {
-    padding-left: var(--normal-content-margin) !important;
-  }
-}
-/* end layout config */
-
-/* keep a static padding of 96px for wide layouts for container width >912px and <1344px */
-@container page-content-container (min-width: 912px) and (max-width: 1344px) {
-  #page-content-container .frame-renderer.wide-layout .editor-container,
-  #page-content-container .frame-renderer.wide-layout .document-editor-loader,
-  .page-header-container {
-    padding-left: var(--wide-content-margin);
-    padding-right: var(--wide-content-margin);
-  }
-}
-
-/* keep a static padding of 20px for wide layouts for container width <912px */
-@container page-content-container (max-width: 912px) {
-  #page-content-container .frame-renderer.wide-layout .editor-container,
-  #page-content-container .frame-renderer.wide-layout .document-editor-loader,
-  .page-header-container {
-    padding-left: var(--normal-content-margin);
-    padding-right: var(--normal-content-margin);
-  }
-}
-
-/* keep a static padding of 20px for normal layouts for container width <760px */
-@container page-content-container (max-width: 760px) {
-  #page-content-container .frame-renderer:not(.wide-layout) .editor-container,
-  #page-content-container .frame-renderer:not(.wide-layout) .document-editor-loader,
-  .page-header-container {
-    padding-left: var(--normal-content-margin);
-    padding-right: var(--normal-content-margin);
-  }
-}
-
-@container page-content-container (max-width: 930px) {
-  .page-summary-container {
-    display: none;
-  }
-}
-/* end layout config */

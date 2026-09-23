@@ -27,7 +27,6 @@ type Props = {
   displayFilters: IIssueDisplayFilterOptions;
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
   issueIds: string[];
-  isEstimateEnabled: boolean;
   quickActions: TRenderQuickActions;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
   canEditProperties: (projectId: string | undefined) => boolean;
@@ -46,7 +45,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
     displayFilters,
     handleDisplayFilterUpdate,
     issueIds,
-    isEstimateEnabled,
     portalElement,
     quickActions,
     updateIssue,
@@ -107,7 +105,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
   const handleKeyBoardNavigation = useTableKeyboardNavigation();
 
   const ignoreFieldsForCounting: (keyof IIssueDisplayProperties)[] = ["key"];
-  if (!isEstimateEnabled) ignoreFieldsForCounting.push("estimate");
   const displayPropertiesCount = getDisplayPropertiesCount(displayProperties, ignoreFieldsForCounting);
 
   return (
@@ -117,7 +114,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
         displayFilters={displayFilters}
         handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         canEditProperties={canEditProperties}
-        isEstimateEnabled={isEstimateEnabled}
         spreadsheetColumnsList={spreadsheetColumnsList}
         selectionHelpers={selectionHelpers}
         isEpic={isEpic}
@@ -131,7 +127,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
             quickActions={quickActions}
             canEditProperties={canEditProperties}
             nestingLevel={0}
-            isEstimateEnabled={isEstimateEnabled}
             updateIssue={updateIssue}
             portalElement={portalElement}
             containerRef={containerRef}

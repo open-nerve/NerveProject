@@ -75,27 +75,28 @@
 
 | 功能 | 状态 | 完成于 |
 |---|---|---|
-| 文档页（Pages）及协作编辑模式（Yjs、Hocuspocus） | 计划中 | |
-| 估算（Estimates） | 计划中 | |
-| 甘特图与时间线（包括模块的时间线视图） | 计划中 | |
-| "自动化"设置页中的自动关闭（自动归档保留） | 计划中 | |
-| 数据分析 | 计划中 | |
-| 导出 | 计划中 | |
-| 便签 | 计划中 | |
-| 首页快捷链接和首页个性化；自定义主题（首页固定显示问候、无项目空状态和最近访问，见 [M1 设计](M1-frontend-trim/M1-design.md) 3.14） | 计划中 | |
-| 侧边栏的自定义导航（固定、排序、隐藏菜单项；数据在已砍掉的 `workspace_user_preferences` 表），侧边栏改为固定列表 | 计划中 | |
+| 文档页（Pages）及协作编辑模式（Yjs、Hocuspocus）；随它一起删除的更新日志（"what's new"）、新手导览中的文档页一步、编辑器内核中只为协作和文档页存在的部分（`getDocument`、AI 处理器、AI 菜单、文档信息与标题回调、页面专用的排版变量） | 已完成 | M1/P2 |
+| 估算（Estimates）；迭代和模块的进度改为只按工作项数计算，`calculateCycleProgress` 和乐观更新有单元测试 | 已完成 | M1/P2 |
+| 甘特图与时间线（包括模块的时间线视图）；保留的 `REVERSE_RELATIONS` 从 `constants/gantt-chart.ts` 移到 `constants/issue/relation.ts` | 已完成 | M1/P2 |
+| "自动化"设置页中的自动关闭（自动归档保留） | 已完成 | M1/P2 |
+| 数据分析，连同 `:workspaceSlug/analytics` 旧地址重定向、侧边栏入口、power-k 命令和 propel 中只有它用到的图表和表格（`line-chart`、`radar-chart`、`scatter-chart`、`tree-map`、`table`）；保留的迭代、模块进度代码由 analytics 改名为 progress | 已完成 | M1/P2 |
+| 导出，连同导出插图和导出格式图标，以及它借用的、从未创建过的集成服务（集成与导入器的 service、类型和 `integration` 文案命名空间）；集成与导入器的其余残留见下面 Plane 死代码一行 | 已完成 | M1/P2 |
+| 便签，连同 `react-masonry-component`；工具栏随之只剩一组（去掉 `TEditorTypes` 和只属于文档页的排版、表格两项） | 已完成 | M1/P2 |
+| 首页快捷链接和首页个性化；自定义主题（首页固定显示问候、无项目空状态和最近访问，见 [M1 设计](M1-frontend-trim/M1-design.md) 3.14）；已经没有入口的旧首页仪表盘 | 已完成 | M1/P2 |
+| 侧边栏的自定义导航（固定、排序、隐藏菜单项；数据在已砍掉的 `workspace_user_preferences` 表），侧边栏改为固定列表；保留的项目导航偏好改由 `ProjectNavigationDialog` 配置 | 已完成 | M1/P2 |
 | AI 助手 | 计划中 | |
 | Unsplash 封面图 | 计划中 | |
 | 公开发布（发布弹窗、指向 space 的链接） | 计划中 | |
 | 管理后台（god-mode）入口 | 计划中 | |
-| 个人主页的统计和动态 | 计划中 | |
+| 个人主页的统计和动态，连同 propel 中最后只有它用到的 `bar-chart`、`pie-chart`；个人主页只剩用户卡片和工作项分页，`/profile/:userId` 重定向到"分配给他的" | 已完成 | M1/P2 |
 | 项目邀请 | 计划中 | |
 | 第三方登录、验证码登录、找回 / 重置 / 设置密码、登录前的"检查邮箱"步骤（CSRF 移到 M2，见第三节 3.2） | 计划中 | |
 | 修改登录邮箱（靠邮件验证码完成） | 计划中 | |
 | Plane 的旧地址重定向（`routes/core.ts` 末尾的 11 条；数据分析的一条随数据分析删除，其余随 Next.js 兼容层一起删除，先改掉仍依赖它们的入口） | 计划中 | |
 | 邮件通知偏好设置页 | 计划中 | |
-| 企业版残留：Epic、团队、工作项类型、"活跃迭代"推广页、计费和升级提示、批量操作及其工作项多选、工作项模板和工时记录的空壳、`extended` 空壳文件和空函数 | 计划中 | |
-| Plane 自身的死代码：IndexedDB 和同步代码、从未被创建过的集成服务、调用不存在接口的 service 方法 | 计划中 | |
+| 企业版残留中的"活跃迭代"推广页（工作区级；项目迭代列表中的"当前迭代"区块保留） | 已完成 | M1/P2 |
+| 企业版残留：Epic、团队、工作项类型、计费和升级提示、批量操作及其工作项多选、工作项模板和工时记录的空壳、`extended` 空壳文件和空函数 | 计划中 | |
+| Plane 自身的死代码：IndexedDB 和同步代码、调用不存在接口的 service 方法、集成与导入器的残留（Jira 图标、设置和计费页中的文案）、knip 报告的未使用文件和导出 | 计划中 | |
 | 多语言：只保留 `zh-CN` 和 `en` | 已完成 | M1/P1 |
 | Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的约 330 处引用全部改为 React Router 原生写法（`Link`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`）；去掉强制结尾 `/` 和延迟跳转，修复因此暴露出的"渲染时跳转"问题；删除垫片（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 计划中 | |
 | web 中的部署遗留：`Dockerfile.web`、`Dockerfile.dev`、`caddy/`、`.dockerignore` | 已完成 | M1/P1 |

@@ -12,7 +12,7 @@ import { generateQueryParams } from "@plane/utils";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useAppRouter } from "@/hooks/use-app-router";
 // components
-import { CycleDetailsSidebar } from "./analytics-sidebar";
+import { CycleDetailsSidebar } from "./progress-sidebar";
 
 type Props = {
   projectId?: string;

@@ -10,7 +10,7 @@ import { useTranslation } from "@plane/i18n";
 import { setPromiseToast } from "@plane/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IProject } from "@plane/types";
-import { CyclesOutline, IntakeOutline, ModuleOutline, PagesOutline, ViewsOutline } from "@makeplane/propel/icons";
+import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline } from "@makeplane/propel/icons";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
@@ -52,15 +52,6 @@ const PROJECT_FEATURES_LIST = {
     title: "Views",
     description: "Save sorts, filters, and display options for later or share them.",
     icon: <ViewsOutline className="h-5 w-5 flex-shrink-0 text-tertiary" />,
-    isPro: false,
-    isEnabled: true,
-  },
-  pages: {
-    key: "pages",
-    property: "page_view",
-    title: "Pages",
-    description: "Write anything like you write anything.",
-    icon: <PagesOutline className="h-5 w-5 flex-shrink-0 text-tertiary" />,
     isPro: false,
     isEnabled: true,
   },

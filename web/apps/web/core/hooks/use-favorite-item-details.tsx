@@ -7,7 +7,6 @@
 // plane imports
 import type { IFavorite } from "@plane/types";
 // components
-import { getPageName } from "@plane/utils";
 import {
   FavoriteItemIcon,
   generateFavoriteItemLink,
@@ -19,7 +18,6 @@ import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
 // plane web hooks
-import { EPageStoreType, usePage } from "@/hooks/store";
 import { useAdditionalFavoriteItemDetails } from "@/hooks/use-additional-favorite-item-details";
 
 export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorite) => {
@@ -37,10 +35,6 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
   // additional details
   const { getAdditionalFavoriteItemDetails } = useAdditionalFavoriteItemDetails();
   // derived values
-  const pageDetail = usePage({
-    pageId: favoriteItemId ?? "",
-    storeType: EPageStoreType.PROJECT,
-  });
   const viewDetails = getViewById(favoriteItemId ?? "");
   const cycleDetail = getCycleById(favoriteItemId ?? "");
   const moduleDetail = getModuleById(favoriteItemId ?? "");
@@ -54,10 +48,6 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
     case "project":
       itemTitle = currentProjectDetails?.name ?? favoriteItemName;
       itemIcon = <FavoriteItemIcon type="project" logo={currentProjectDetails?.logo_props || favoriteItemLogoProps} />;
-      break;
-    case "page":
-      itemTitle = getPageName(pageDetail?.name ?? favoriteItemName);
-      itemIcon = <FavoriteItemIcon type="page" logo={pageDetail?.logo_props ?? favoriteItemLogoProps} />;
       break;
     case "view":
       itemTitle = viewDetails?.name ?? favoriteItemName;

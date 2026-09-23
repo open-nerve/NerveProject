@@ -36,12 +36,3 @@ export type TFileSignedURLResponse = {
     };
   };
 };
-
-export type TDuplicateAssetData = {
-  entity_id: string;
-  entity_type: EFileAssetType;
-  project_id?: string;
-  asset_ids: string[];
-};
-
-export type TDuplicateAssetResponse = Record<string, string>; // asset_id -> new_asset_id

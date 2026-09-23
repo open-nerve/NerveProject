@@ -9,14 +9,12 @@ import { useRef } from "react";
 import { observer } from "mobx-react";
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
 //components
-import { shouldRenderColumn } from "@/helpers/issue-filter.helper";
 import { WithDisplayPropertiesHOC } from "../properties/with-display-properties-HOC";
 import { HeaderColumn } from "./columns/header-column";
 
 interface Props {
   displayProperties: IIssueDisplayProperties;
   property: keyof IIssueDisplayProperties;
-  isEstimateEnabled: boolean;
   displayFilters: IIssueDisplayFilterOptions;
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
   isEpic?: boolean;
@@ -27,14 +25,8 @@ export const SpreadsheetHeaderColumn = observer(function SpreadsheetHeaderColumn
   //hooks
   const tableHeaderCellRef = useRef<HTMLTableCellElement | null>(null);
 
-  const shouldRenderProperty = shouldRenderColumn(property);
-
   return (
-    <WithDisplayPropertiesHOC
-      displayProperties={displayProperties}
-      displayPropertyKey={property}
-      shouldRenderProperty={() => shouldRenderProperty}
-    >
+    <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey={property}>
       <th
         className="h-11 min-w-36 items-center border border-t-0 border-b-0 border-subtle bg-layer-1 py-1 text-13 font-medium"
         ref={tableHeaderCellRef}

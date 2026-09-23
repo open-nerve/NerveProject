@@ -12,7 +12,6 @@
         "change_assignees": "Assign to",
         "assign_to_me": "Assign to me",
         "unassign_from_me": "Un-assign from me",
-        "change_estimate": "Change estimate",
         "add_to_cycle": "Add to cycle",
         "add_to_modules": "Add to modules",
         "add_labels": "Add labels",
@@ -48,26 +47,10 @@
         "copy_url": "Copy URL",
         "copy_url_toast_success": "Module URL copied to clipboard.",
         "copy_url_toast_error": "Some error occurred while copying the module URL to clipboard."
-      },
-      "page": {
-        "title": "Page actions",
-        "indicator": "Page",
-        "lock": "Lock",
-        "unlock": "Unlock",
-        "make_private": "Make private",
-        "make_public": "Make public",
-        "archive": "Archive",
-        "restore": "Restore",
-        "add_to_favorites": "Add to favorites",
-        "remove_from_favorites": "Remove from favorites",
-        "copy_url": "Copy URL",
-        "copy_url_toast_success": "Page URL copied to clipboard.",
-        "copy_url_toast_error": "Some error occurred while copying the page URL to clipboard."
       }
     },
     "creation_actions": {
       "create_work_item": "New work item",
-      "create_page": "New page",
       "create_view": "New view",
       "create_cycle": "New cycle",
       "create_module": "New module",
@@ -87,7 +70,6 @@
       "nav_assigned_workspace_work_items": "Go to assigned work items",
       "nav_created_workspace_work_items": "Go to created work items",
       "nav_subscribed_workspace_work_items": "Go to subscribed work items",
-      "nav_workspace_analytics": "Go to workspace analytics",
       "nav_workspace_drafts": "Go to workspace drafts",
       "nav_workspace_archives": "Go to workspace archives",
       "open_workspace_setting": "Open a workspace setting",
@@ -99,12 +81,10 @@
       "nav_project_modules": "Go to modules",
       "open_project_view": "Open a project view",
       "nav_project_views": "Go to project views",
-      "nav_project_pages": "Go to pages",
       "nav_project_intake": "Go to intake",
       "nav_project_archives": "Go to project archives",
       "open_project_setting": "Open a project setting",
       "nav_project_settings": "Go to project settings",
-      "nav_workspace_active_cycle": "Go to all active cycles",
       "nav_project_overview": "Go to project overview"
     },
     "account_actions": {
@@ -157,7 +137,6 @@
       "update_work_item_state": "Change state",
       "update_work_item_priority": "Change priority",
       "update_work_item_assignee": "Assign to",
-      "update_work_item_estimate": "Change estimate",
       "update_work_item_cycle": "Add to cycle",
       "update_work_item_module": "Add to modules",
       "update_work_item_labels": "Add labels",

@@ -7,16 +7,7 @@
 // plane imports
 import { EStartOfTheWeek } from "@plane/types";
 
-export const PROFILE_VIEWER_TAB = [
-  {
-    key: "summary",
-    route: "",
-    i18n_label: "profile.tabs.summary",
-    selected: "/",
-  },
-];
-
-export const PROFILE_ADMINS_TAB = [
+export const PROFILE_TABS = [
   {
     key: "assigned",
     route: "assigned",
@@ -34,12 +25,6 @@ export const PROFILE_ADMINS_TAB = [
     route: "subscribed",
     i18n_label: "profile.tabs.subscribed",
     selected: "/subscribed/",
-  },
-  {
-    key: "activity",
-    route: "activity",
-    i18n_label: "profile.tabs.activity",
-    selected: "/activity/",
   },
 ];
 

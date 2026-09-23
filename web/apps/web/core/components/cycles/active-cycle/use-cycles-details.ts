@@ -35,7 +35,7 @@ const useCyclesDetails = (props: IActiveCycleDetails) => {
   } = useIssues(EIssuesStoreType.CYCLE);
   const { updateFilterExpressionFromConditions } = useWorkItemFilters();
 
-  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleAnalytics } = useCycle();
+  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();
   // derived values
   const cycle = cycleId ? getCycleById(cycleId) : null;
 
@@ -50,15 +50,7 @@ const useCyclesDetails = (props: IActiveCycleDetails) => {
       ? `PROJECT_ACTIVE_CYCLE_${projectId}_DURATION_${cycle.id}`
       : null,
     workspaceSlug && projectId && cycle?.id && !cycle?.distribution
-      ? () => fetchActiveCycleAnalytics(workspaceSlug, projectId, cycle.id, "issues")
-      : null
-  );
-  useSWR(
-    workspaceSlug && projectId && cycle?.id && !cycle?.estimate_distribution
-      ? `PROJECT_ACTIVE_CYCLE_${projectId}_ESTIMATE_DURATION_${cycle.id}`
-      : null,
-    workspaceSlug && projectId && cycle?.id && !cycle?.estimate_distribution
-      ? () => fetchActiveCycleAnalytics(workspaceSlug, projectId, cycle.id, "points")
+      ? () => fetchActiveCycleDistribution(workspaceSlug, projectId, cycle.id)
       : null
   );
   useSWR(

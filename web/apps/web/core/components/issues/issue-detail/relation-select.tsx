@@ -22,7 +22,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // Plane web imports
-import { useTimeLineRelationOptions } from "@/components/relations";
+import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 import type { TIssueRelationTypes } from "@plane/types";
 import type { TRelationObject } from "../issue-detail-widgets/relations";
 
@@ -49,7 +49,6 @@ export const IssueRelationSelect = observer(function IssueRelationSelect(props: 
   const { issueMap } = useIssues();
   const { isMobile } = usePlatformOS();
   const relationIssueIds = getRelationByIssueIdRelationType(issueId, relationKey);
-  const ISSUE_RELATION_OPTIONS = useTimeLineRelationOptions();
 
   const onSubmit = async (data: ISearchIssueResponse[]) => {
     if (data.length === 0) {

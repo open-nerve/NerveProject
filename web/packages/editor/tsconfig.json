@@ -9,6 +9,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "index.d.ts"],
+  "include": ["src/**/*", "index.d.ts", "vitest.setup.ts"],
   "exclude": ["dist", "build", "node_modules"]
 }

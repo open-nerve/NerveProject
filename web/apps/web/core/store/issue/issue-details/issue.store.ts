@@ -150,7 +150,6 @@ export class IssueStore implements IIssueStore {
       priority: issue?.priority,
       label_ids: issue?.label_ids,
       assignee_ids: issue?.assignee_ids,
-      estimate_point: issue?.estimate_point,
       sub_issues_count: issue?.sub_issues_count,
       attachment_count: issue?.attachment_count,
       link_count: issue?.link_count,

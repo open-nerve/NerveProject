@@ -37,7 +37,6 @@ import { IssueColumn } from "./issue-column";
 
 interface Props {
   displayProperties: IIssueDisplayProperties;
-  isEstimateEnabled: boolean;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
@@ -57,7 +56,6 @@ export const SpreadsheetIssueRow = observer(function SpreadsheetIssueRow(props: 
   const {
     displayProperties,
     issueId,
-    isEstimateEnabled,
     nestingLevel,
     portalElement,
     updateIssue,
@@ -113,7 +111,6 @@ export const SpreadsheetIssueRow = observer(function SpreadsheetIssueRow(props: 
           canEditProperties={canEditProperties}
           nestingLevel={nestingLevel}
           spacingLeft={spacingLeft}
-          isEstimateEnabled={isEstimateEnabled}
           updateIssue={updateIssue}
           portalElement={portalElement}
           isScrolled={isScrolled}
@@ -136,7 +133,6 @@ export const SpreadsheetIssueRow = observer(function SpreadsheetIssueRow(props: 
             canEditProperties={canEditProperties}
             nestingLevel={nestingLevel + 1}
             spacingLeft={spacingLeft + 12}
-            isEstimateEnabled={isEstimateEnabled}
             updateIssue={updateIssue}
             portalElement={portalElement}
             isScrolled={isScrolled}
@@ -152,7 +148,6 @@ export const SpreadsheetIssueRow = observer(function SpreadsheetIssueRow(props: 
 
 interface IssueRowDetailsProps {
   displayProperties: IIssueDisplayProperties;
-  isEstimateEnabled: boolean;
   quickActions: TRenderQuickActions;
   canEditProperties: (projectId: string | undefined) => boolean;
   updateIssue: ((projectId: string | null, issueId: string, data: Partial<TIssue>) => Promise<void>) | undefined;
@@ -172,7 +167,6 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const {
     displayProperties,
     issueId,
-    isEstimateEnabled,
     nestingLevel,
     portalElement,
     updateIssue,
@@ -386,7 +380,6 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
           disableUserActions={disableUserActions}
           property={property}
           updateIssue={updateIssue}
-          isEstimateEnabled={isEstimateEnabled}
         />
       ))}
     </>

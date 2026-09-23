@@ -8,12 +8,9 @@ import { observer } from "mobx-react";
 // components
 import { CycleCreateUpdateModal } from "@/components/cycles/modal";
 import { CreateUpdateModuleModal } from "@/components/modules";
-import { CreatePageModal } from "@/components/pages/modals/create-page-modal";
 import { CreateUpdateProjectViewModal } from "@/components/views/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
-// plane web hooks
-import { EPageStoreType } from "@/hooks/store";
 
 export type TProjectLevelModalsProps = {
   workspaceSlug: string;
@@ -30,8 +27,6 @@ export const ProjectLevelModals = observer(function ProjectLevelModals(props: TP
     toggleCreateModuleModal,
     isCreateViewModalOpen,
     toggleCreateViewModal,
-    createPageModal,
-    toggleCreatePageModal,
   } = useCommandPalette();
 
   return (
@@ -53,15 +48,6 @@ export const ProjectLevelModals = observer(function ProjectLevelModals(props: TP
         onClose={() => toggleCreateViewModal(false)}
         workspaceSlug={workspaceSlug.toString()}
         projectId={projectId.toString()}
-      />
-      <CreatePageModal
-        workspaceSlug={workspaceSlug.toString()}
-        projectId={projectId.toString()}
-        isModalOpen={createPageModal.isOpen}
-        pageAccess={createPageModal.pageAccess}
-        handleModalClose={() => toggleCreatePageModal({ isOpen: false })}
-        redirectionEnabled
-        storeType={EPageStoreType.PROJECT}
       />
     </>
   );

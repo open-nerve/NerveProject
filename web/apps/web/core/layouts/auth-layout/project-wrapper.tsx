@@ -5,12 +5,11 @@
  */
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { GANTT_TIMELINE_TYPE } from "@plane/types";
 // components
 import { ProjectAccessRestriction } from "@/components/auth-screens/project/project-access-restriction";
 import {
@@ -20,14 +19,12 @@ import {
   PROJECT_MEMBERS,
   PROJECT_MEMBER_PREFERENCES,
   PROJECT_STATES,
-  PROJECT_ESTIMATES,
   PROJECT_ALL_CYCLES,
   PROJECT_MODULES,
   PROJECT_VIEWS,
   PROJECT_INTAKE_STATE,
 } from "@plane/constants";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
@@ -36,7 +33,6 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-import { useTimeLineChart } from "@/hooks/use-timeline-chart";
 
 interface IProjectAuthWrapper {
   workspaceSlug: string;
@@ -55,7 +51,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { joinProject } = useUserPermissions();
   const { fetchAllCycles } = useCycle();
   const { fetchModulesSlim, fetchModules } = useModule();
-  const { initGantt } = useTimeLineChart(GANTT_TIMELINE_TYPE.MODULE);
   const { fetchViews } = useProjectView();
   const {
     project: { fetchProjectMembers, fetchProjectUserProperties },
@@ -63,7 +58,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { fetchProjectStates, fetchProjectIntakeState } = useProjectState();
   const { data: currentUserData } = useUser();
   const { fetchProjectLabels } = useLabel();
-  const { getProjectEstimates } = useProjectEstimates();
   // derived values
   const hasPermissionToCurrentProject = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
@@ -73,12 +67,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   );
   const currentProjectRole = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
   const isWorkspaceAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE, workspaceSlug);
-  // Initialize module timeline chart
-  useEffect(() => {
-    initGantt();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // fetching project details
   const { isLoading: isProjectDetailsLoading, error: projectDetailsError } = useSWR(
     PROJECT_DETAILS(workspaceSlug, projectId),
@@ -109,11 +97,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   });
   // fetching project intake state
   useSWR(PROJECT_INTAKE_STATE(projectId, currentProjectRole), () => fetchProjectIntakeState(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project estimates
-  useSWR(PROJECT_ESTIMATES(projectId, currentProjectRole), () => getProjectEstimates(workspaceSlug, projectId), {
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });

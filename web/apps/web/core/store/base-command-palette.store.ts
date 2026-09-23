@@ -7,8 +7,7 @@
 import { observable, action, computed, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // plane imports
-import type { TCreateModalStoreTypes, TCreatePageModal } from "@plane/constants";
-import { DEFAULT_CREATE_PAGE_MODAL_DATA, EPageAccess } from "@plane/constants";
+import type { TCreateModalStoreTypes } from "@plane/constants";
 import type { TProfileSettingsTabs } from "@plane/types";
 import { EIssuesStoreType } from "@plane/types";
 // lib
@@ -27,7 +26,6 @@ export interface IBaseCommandPaletteStore {
   isCreateCycleModalOpen: boolean;
   isCreateModuleModalOpen: boolean;
   isCreateViewModalOpen: boolean;
-  createPageModal: TCreatePageModal;
   isCreateIssueModalOpen: boolean;
   isDeleteIssueModalOpen: boolean;
   isBulkDeleteIssueModalOpen: boolean;
@@ -37,19 +35,16 @@ export interface IBaseCommandPaletteStore {
     activeTab: TProfileSettingsTabs | null;
     isOpen: boolean;
   };
-  allStickiesModal: boolean;
   projectListOpenMap: Record<string, boolean>;
   getIsProjectListOpen: (projectId: string) => boolean;
   // toggle actions
   toggleCreateProjectModal: (value?: boolean) => void;
   toggleCreateCycleModal: (value?: boolean) => void;
   toggleCreateViewModal: (value?: boolean) => void;
-  toggleCreatePageModal: (value?: TCreatePageModal) => void;
   toggleCreateIssueModal: (value?: boolean, storeType?: TCreateModalStoreTypes, allowedProjectIds?: string[]) => void;
   toggleCreateModuleModal: (value?: boolean) => void;
   toggleDeleteIssueModal: (value?: boolean) => void;
   toggleBulkDeleteIssueModal: (value?: boolean) => void;
-  toggleAllStickiesModal: (value?: boolean) => void;
   toggleProjectListOpen: (projectId: string, value?: boolean) => void;
   toggleProfileSettingsModal: (value: { activeTab?: TProfileSettingsTabs | null; isOpen?: boolean }) => void;
 }
@@ -63,14 +58,12 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
   isCreateIssueModalOpen: boolean = false;
   isDeleteIssueModalOpen: boolean = false;
   isBulkDeleteIssueModalOpen: boolean = false;
-  createPageModal: TCreatePageModal = DEFAULT_CREATE_PAGE_MODAL_DATA;
   createIssueStoreType: TCreateModalStoreTypes = EIssuesStoreType.PROJECT;
   createWorkItemAllowedProjectIds: IBaseCommandPaletteStore["createWorkItemAllowedProjectIds"] = undefined;
   profileSettingsModal: IBaseCommandPaletteStore["profileSettingsModal"] = {
     activeTab: "general",
     isOpen: false,
   };
-  allStickiesModal: boolean = false;
   projectListOpenMap: Record<string, boolean> = {};
 
   constructor() {
@@ -83,22 +76,18 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
       isCreateIssueModalOpen: observable.ref,
       isDeleteIssueModalOpen: observable.ref,
       isBulkDeleteIssueModalOpen: observable.ref,
-      createPageModal: observable,
       createIssueStoreType: observable,
       createWorkItemAllowedProjectIds: observable,
       profileSettingsModal: observable,
-      allStickiesModal: observable,
       projectListOpenMap: observable,
       // toggle actions
       toggleCreateProjectModal: action,
       toggleCreateCycleModal: action,
       toggleCreateViewModal: action,
-      toggleCreatePageModal: action,
       toggleCreateIssueModal: action,
       toggleCreateModuleModal: action,
       toggleDeleteIssueModal: action,
       toggleBulkDeleteIssueModal: action,
-      toggleAllStickiesModal: action,
       toggleProjectListOpen: action,
       toggleProfileSettingsModal: action,
       isAnyModalOpen: computed,
@@ -122,9 +111,7 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
       this.isCreateViewModalOpen ||
       store.powerK.isShortcutsListModalOpen ||
       this.isBulkDeleteIssueModalOpen ||
-      this.isDeleteIssueModalOpen ||
-      this.createPageModal.isOpen ||
-      this.allStickiesModal
+      this.isDeleteIssueModalOpen
     );
   }
   // computedFn
@@ -176,25 +163,6 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
       this.isCreateViewModalOpen = value;
     } else {
       this.isCreateViewModalOpen = !this.isCreateViewModalOpen;
-    }
-  };
-
-  /**
-   * Toggles the create page modal along with the page access
-   * @param value
-   * @returns
-   */
-  toggleCreatePageModal = (value?: TCreatePageModal) => {
-    if (value) {
-      this.createPageModal = {
-        isOpen: value.isOpen,
-        pageAccess: value.pageAccess || EPageAccess.PUBLIC,
-      };
-    } else {
-      this.createPageModal = {
-        isOpen: !this.createPageModal.isOpen,
-        pageAccess: EPageAccess.PUBLIC,
-      };
     }
   };
 
@@ -252,19 +220,6 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
       this.isBulkDeleteIssueModalOpen = value;
     } else {
       this.isBulkDeleteIssueModalOpen = !this.isBulkDeleteIssueModalOpen;
-    }
-  };
-
-  /**
-   * Toggles the all stickies modal
-   * @param value
-   * @returns
-   */
-  toggleAllStickiesModal = (value?: boolean) => {
-    if (value) {
-      this.allStickiesModal = value;
-    } else {
-      this.allStickiesModal = !this.allStickiesModal;
     }
   };
 

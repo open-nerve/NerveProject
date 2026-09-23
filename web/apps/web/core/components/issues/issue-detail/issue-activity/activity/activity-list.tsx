@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { getValidKeysFromObject } from "@plane/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useTimeLineRelationOptions } from "@/components/relations";
+import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // local components
 import {
   IssueDefaultActivity,
@@ -18,7 +18,6 @@ import {
   IssueStateActivity,
   IssueAssigneeActivity,
   IssuePriorityActivity,
-  IssueEstimateActivity,
   IssueParentActivity,
   IssueRelationActivity,
   IssueStartDateActivity,
@@ -45,7 +44,6 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
     // oxlint-disable-next-line no-empty-pattern
     comment: {},
   } = useIssueDetail();
-  const ISSUE_RELATION_OPTIONS = useTimeLineRelationOptions();
   const activityRelations = getValidKeysFromObject(ISSUE_RELATION_OPTIONS);
 
   const componentDefaultProps = { activityId, ends };
@@ -64,10 +62,6 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
       return <IssueAssigneeActivity {...componentDefaultProps} showIssue={false} />;
     case "priority":
       return <IssuePriorityActivity {...componentDefaultProps} showIssue={false} />;
-    case "estimate_points":
-    case "estimate_categories":
-    case "estimate_point" /* This case is to handle all the older recorded activities for estimates. Field changed from  "estimate_point" -> `estimate_${estimate_type}`*/:
-      return <IssueEstimateActivity {...componentDefaultProps} showIssue={false} />;
     case "parent":
       return <IssueParentActivity {...componentDefaultProps} showIssue={false} />;
     case activityRelations.find((field) => field === activityField):

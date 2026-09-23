@@ -350,11 +350,6 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
         this.rootIssueDetailStore.rootIssueStore.rootStore.cycle.fetchAllCycles(workspaceSlug, projectId);
         // fetching other project modules
         this.rootIssueDetailStore.rootIssueStore.rootStore.module.fetchModules(workspaceSlug, projectId);
-        // fetching other project estimates
-        this.rootIssueDetailStore.rootIssueStore.rootStore.projectEstimate.getProjectEstimates(
-          workspaceSlug,
-          projectId
-        );
       }
     }
   };

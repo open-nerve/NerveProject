@@ -9,7 +9,6 @@ export enum CORE_EXTENSIONS {
   BOLD = "bold",
   BULLET_LIST = "bulletList",
   CALLOUT = "calloutComponent",
-  CHARACTER_COUNT = "characterCount",
   CODE_BLOCK = "codeBlock",
   CODE_INLINE = "code",
   CUSTOM_COLOR = "customColor",
@@ -21,7 +20,6 @@ export enum CORE_EXTENSIONS {
   GAP_CURSOR = "gapCursor",
   HARD_BREAK = "hardBreak",
   HEADING = "heading",
-  HEADINGS_LIST = "headingsList",
   HISTORY = "history",
   HORIZONTAL_RULE = "horizontalRule",
   IMAGE = "image",
@@ -46,7 +44,6 @@ export enum CORE_EXTENSIONS {
   TYPOGRAPHY = "typography",
   UNDERLINE = "underline",
   UTILITY = "utility",
-  WORK_ITEM_EMBED = "issue-embed-component",
   EMOJI = "emoji",
   UNIQUE_ID = "uniqueID",
 }
@@ -73,5 +70,4 @@ export const BLOCK_NODE_TYPES = [
   CORE_EXTENSIONS.IMAGE,
   CORE_EXTENSIONS.CUSTOM_IMAGE,
   CORE_EXTENSIONS.CALLOUT,
-  CORE_EXTENSIONS.WORK_ITEM_EMBED,
 ];

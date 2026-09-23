@@ -74,13 +74,11 @@
       "kanban": "看板",
       "calendar": "日历",
       "spreadsheet": "表格",
-      "gantt": "时间线",
       "title": {
         "list": "列表布局",
         "kanban": "看板布局",
         "calendar": "日历布局",
-        "spreadsheet": "表格布局",
-        "gantt": "时间线布局"
+        "spreadsheet": "表格布局"
       }
     },
     "states": {
@@ -231,35 +229,6 @@
         },
         "error": {
           "message": "工作项复制失败"
-        }
-      }
-    },
-    "pages": {
-      "link_pages": "连接页面",
-      "show_wiki_pages": "显示 Wiki 页面",
-      "link_pages_to": "连接页面到",
-      "linked_pages": "连接的页面",
-      "no_description": "此页面为空。在此输入一些内容，并在此处查看此占位符",
-      "toasts": {
-        "link": {
-          "success": {
-            "title": "页面已更新",
-            "message": "页面已成功更新"
-          },
-          "error": {
-            "title": "页面更新失败",
-            "message": "页面更新失败"
-          }
-        },
-        "remove": {
-          "success": {
-            "title": "页面已删除",
-            "message": "页面已成功删除"
-          },
-          "error": {
-            "title": "页面删除失败",
-            "message": "页面删除失败"
-          }
         }
       }
     },
@@ -415,7 +384,6 @@
   },
   "epic": {
     "new": "新建史诗",
-    "label": "{count, plural, one {史诗} other {史诗}}",
     "adding": "正在添加史诗",
     "create": {
       "success": "史诗创建成功"

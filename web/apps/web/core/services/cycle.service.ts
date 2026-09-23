@@ -6,15 +6,7 @@
 
 // services
 import { API_BASE_URL } from "@plane/constants";
-import type {
-  CycleDateCheckData,
-  ICycle,
-  TIssuesResponse,
-  IWorkspaceActiveCyclesResponse,
-  TCycleDistribution,
-  TProgressSnapshot,
-  TCycleEstimateDistribution,
-} from "@plane/types";
+import type { CycleDateCheckData, ICycle, TIssuesResponse, TCycleDistribution, TProgressSnapshot } from "@plane/types";
 import { APIService } from "@/services/api.service";
 
 export class CycleService extends APIService {
@@ -22,56 +14,16 @@ export class CycleService extends APIService {
     super(API_BASE_URL);
   }
 
-  async workspaceActiveCyclesAnalytics(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    analytic_type: string = "points"
-  ): Promise<TCycleDistribution | TCycleEstimateDistribution> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/analytics?type=${analytic_type}`
-    )
+  async cycleDistribution(workspaceSlug: string, projectId: string, cycleId: string): Promise<TCycleDistribution> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/analytics?type=issues`)
       .then((res) => res?.data)
       .catch((err) => {
         throw err?.response?.data;
       });
   }
 
-  async workspaceActiveCyclesProgress(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string
-  ): Promise<TProgressSnapshot> {
+  async cycleProgress(workspaceSlug: string, projectId: string, cycleId: string): Promise<TProgressSnapshot> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/progress/`)
-      .then((res) => res?.data)
-      .catch((err) => {
-        throw err?.response?.data;
-      });
-  }
-
-  async workspaceActiveCyclesProgressPro(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string
-  ): Promise<TProgressSnapshot> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/cycle-progress/`)
-      .then((res) => res?.data)
-      .catch((err) => {
-        throw err?.response?.data;
-      });
-  }
-
-  async workspaceActiveCycles(
-    workspaceSlug: string,
-    cursor: string,
-    per_page: number
-  ): Promise<IWorkspaceActiveCyclesResponse> {
-    return this.get(`/api/workspaces/${workspaceSlug}/active-cycles/`, {
-      params: {
-        per_page,
-        cursor,
-      },
-    })
       .then((res) => res?.data)
       .catch((err) => {
         throw err?.response?.data;

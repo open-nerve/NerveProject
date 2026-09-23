@@ -24,7 +24,6 @@ import type {
   TGroupedIssueCount,
   TPaginationData,
   TBulkOperationsPayload,
-  IBlockUpdateDependencyData,
 } from "@plane/types";
 import { EIssueServiceType, EIssueLayoutTypes } from "@plane/types";
 // helpers
@@ -108,7 +107,6 @@ export interface IBaseIssuesStore {
     addModuleIds: string[],
     removeModuleIds: string[]
   ): Promise<void>;
-  updateIssueDates(workspaceSlug: string, updates: IBlockUpdateDependencyData[], projectId?: string): Promise<void>;
 }
 
 // This constant maps the group by keys to the respective issue property that the key relies on
@@ -161,8 +159,6 @@ const ISSUE_ORDERBY_KEY: Record<TIssueOrderByOptions, keyof TIssue> = {
   "-issue_cycle__cycle__name": "cycle_id",
   target_date: "target_date",
   "-target_date": "target_date",
-  estimate_point__key: "estimate_point",
-  "-estimate_point__key": "estimate_point",
   start_date: "start_date",
   "-start_date": "start_date",
   link_count: "link_count",
@@ -230,7 +226,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
       createIssue: action,
       issueUpdate: action,
-      updateIssueDates: action,
       issueQuickAdd: action.bound,
       removeIssue: action.bound,
       issueArchive: action.bound,
@@ -752,53 +747,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       });
     });
   };
-
-  async updateIssueDates(
-    workspaceSlug: string,
-    updates: { id: string; start_date?: string; target_date?: string }[],
-    projectId?: string
-  ) {
-    if (!projectId) return;
-    const issueDatesBeforeChange: { id: string; start_date?: string; target_date?: string }[] = [];
-    try {
-      const getIssueById = this.rootIssueStore.issues.getIssueById;
-      runInAction(() => {
-        // oxlint-disable-next-line no-shadow
-        for (const update of updates) {
-          const dates: Partial<TIssue> = {};
-          if (update.start_date) dates.start_date = update.start_date;
-          if (update.target_date) dates.target_date = update.target_date;
-
-          const currIssue = getIssueById(update.id);
-
-          if (currIssue) {
-            issueDatesBeforeChange.push({
-              id: update.id,
-              start_date: currIssue.start_date ?? undefined,
-              target_date: currIssue.target_date ?? undefined,
-            });
-          }
-
-          this.issueUpdate(workspaceSlug, projectId, update.id, dates, false);
-        }
-      });
-
-      await this.issueService.updateIssueDates(workspaceSlug, projectId, updates);
-    } catch (e) {
-      runInAction(() => {
-        // oxlint-disable-next-line no-shadow
-        for (const update of issueDatesBeforeChange) {
-          const dates: Partial<TIssue> = {};
-          if (update.start_date) dates.start_date = update.start_date;
-          if (update.target_date) dates.target_date = update.target_date;
-
-          this.issueUpdate(workspaceSlug, projectId, update.id, dates, false);
-        }
-      });
-      console.error("error while updating Timeline dependencies");
-      throw e;
-    }
-  }
 
   /**
    * This method is used to add issues to a particular Cycle
@@ -1681,9 +1629,8 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
    * @returns string | string[] of sortable fields to be used for sorting
    */
   populateIssueDataForSorting(
-    dataType: "state_id" | "label_ids" | "assignee_ids" | "module_ids" | "cycle_id" | "estimate_point",
+    dataType: "state_id" | "label_ids" | "assignee_ids" | "module_ids" | "cycle_id",
     dataIds: string | string[] | null | undefined,
-    projectId: string | undefined | null,
     order?: "asc" | "desc"
   ) {
     if (!dataIds) return;
@@ -1738,26 +1685,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         }
         break;
       }
-      case "estimate_point": {
-        // return if project Id does not exist
-        if (!projectId) break;
-        // get the estimate ID for the current Project
-        const currentProjectEstimateId =
-          this.rootIssueStore.rootStore.projectEstimate.currentActiveEstimateIdByProjectId(projectId);
-        // return if current Estimate Id for the project is not available
-        if (!currentProjectEstimateId) break;
-        // get Estimate based on Id
-        const estimate = this.rootIssueStore.rootStore.projectEstimate.estimateById(currentProjectEstimateId);
-        // If Estimate is not available, then return
-        if (!estimate) break;
-        // Get Estimate Value
-        const estimateKey = estimate?.estimatePointById(dataIds as string)?.key;
-
-        // If Value string i not available or empty then return
-        if (estimateKey === undefined) break;
-
-        dataValues.push(estimateKey);
-      }
     }
 
     return isDataIdsArray ? (order ? orderBy(dataValues, undefined, [order]) : dataValues) : dataValues;
@@ -1772,17 +1699,11 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         return getIssueIds(orderBy(array, "sort_order"));
       case "state__name":
         return getIssueIds(
-          orderBy(array, (issue) =>
-            this.populateIssueDataForSorting("state_id", issue?.["state_id"], issue?.["project_id"])
-          )
+          orderBy(array, (issue) => this.populateIssueDataForSorting("state_id", issue?.["state_id"]))
         );
       case "-state__name":
         return getIssueIds(
-          orderBy(
-            array,
-            (issue) => this.populateIssueDataForSorting("state_id", issue?.["state_id"], issue?.["project_id"]),
-            ["desc"]
-          )
+          orderBy(array, (issue) => this.populateIssueDataForSorting("state_id", issue?.["state_id"]), ["desc"])
         );
       // dates
       case "created_at":
@@ -1833,27 +1754,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       case "-attachment_count":
         return getIssueIds(orderBy(array, "attachment_count", ["desc"]));
 
-      case "estimate_point__key":
-        return getIssueIds(
-          orderBy(array, [
-            getSortOrderToFilterEmptyValues.bind(null, "estimate_point"),
-            (issue) =>
-              this.populateIssueDataForSorting("estimate_point", issue?.["estimate_point"], issue?.["project_id"]),
-          ])
-        ); //preferring sorting based on empty values to always keep the empty values below
-      case "-estimate_point__key":
-        return getIssueIds(
-          orderBy(
-            array,
-            [
-              getSortOrderToFilterEmptyValues.bind(null, "estimate_point"),
-              (issue) =>
-                this.populateIssueDataForSorting("estimate_point", issue?.["estimate_point"], issue?.["project_id"]),
-            ], //preferring sorting based on empty values to always keep the empty values below
-            ["asc", "desc"]
-          )
-        );
-
       case "link_count":
         return getIssueIds(orderBy(array, "link_count"));
       case "-link_count":
@@ -1869,8 +1769,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         return getIssueIds(
           orderBy(array, [
             getSortOrderToFilterEmptyValues.bind(null, "label_ids"), //preferring sorting based on empty values to always keep the empty values below
-            (issue) =>
-              this.populateIssueDataForSorting("label_ids", issue?.["label_ids"], issue?.["project_id"], "asc"),
+            (issue) => this.populateIssueDataForSorting("label_ids", issue?.["label_ids"], "asc"),
           ])
         );
       case "-labels__name":
@@ -1879,8 +1778,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
             array,
             [
               getSortOrderToFilterEmptyValues.bind(null, "label_ids"), //preferring sorting based on empty values to always keep the empty values below
-              (issue) =>
-                this.populateIssueDataForSorting("label_ids", issue?.["label_ids"], issue?.["project_id"], "asc"),
+              (issue) => this.populateIssueDataForSorting("label_ids", issue?.["label_ids"], "asc"),
             ],
             ["asc", "desc"]
           )
@@ -1890,8 +1788,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         return getIssueIds(
           orderBy(array, [
             getSortOrderToFilterEmptyValues.bind(null, "module_ids"), //preferring sorting based on empty values to always keep the empty values below
-            (issue) =>
-              this.populateIssueDataForSorting("module_ids", issue?.["module_ids"], issue?.["project_id"], "asc"),
+            (issue) => this.populateIssueDataForSorting("module_ids", issue?.["module_ids"], "asc"),
           ])
         );
       case "-issue_module__module__name":
@@ -1900,8 +1797,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
             array,
             [
               getSortOrderToFilterEmptyValues.bind(null, "module_ids"), //preferring sorting based on empty values to always keep the empty values below
-              (issue) =>
-                this.populateIssueDataForSorting("module_ids", issue?.["module_ids"], issue?.["project_id"], "asc"),
+              (issue) => this.populateIssueDataForSorting("module_ids", issue?.["module_ids"], "asc"),
             ],
             ["asc", "desc"]
           )
@@ -1911,7 +1807,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         return getIssueIds(
           orderBy(array, [
             getSortOrderToFilterEmptyValues.bind(null, "cycle_id"), //preferring sorting based on empty values to always keep the empty values below
-            (issue) => this.populateIssueDataForSorting("cycle_id", issue?.["cycle_id"], issue?.["project_id"], "asc"),
+            (issue) => this.populateIssueDataForSorting("cycle_id", issue?.["cycle_id"], "asc"),
           ])
         );
       case "-issue_cycle__cycle__name":
@@ -1920,8 +1816,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
             array,
             [
               getSortOrderToFilterEmptyValues.bind(null, "cycle_id"), //preferring sorting based on empty values to always keep the empty values below
-              (issue) =>
-                this.populateIssueDataForSorting("cycle_id", issue?.["cycle_id"], issue?.["project_id"], "asc"),
+              (issue) => this.populateIssueDataForSorting("cycle_id", issue?.["cycle_id"], "asc"),
             ],
             ["asc", "desc"]
           )
@@ -1931,8 +1826,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
         return getIssueIds(
           orderBy(array, [
             getSortOrderToFilterEmptyValues.bind(null, "assignee_ids"), //preferring sorting based on empty values to always keep the empty values below
-            (issue) =>
-              this.populateIssueDataForSorting("assignee_ids", issue?.["assignee_ids"], issue?.["project_id"], "asc"),
+            (issue) => this.populateIssueDataForSorting("assignee_ids", issue?.["assignee_ids"], "asc"),
           ])
         );
       case "-assignees__first_name":
@@ -1941,8 +1835,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
             array,
             [
               getSortOrderToFilterEmptyValues.bind(null, "assignee_ids"), //preferring sorting based on empty values to always keep the empty values below
-              (issue) =>
-                this.populateIssueDataForSorting("assignee_ids", issue?.["assignee_ids"], issue?.["project_id"], "asc"),
+              (issue) => this.populateIssueDataForSorting("assignee_ids", issue?.["assignee_ids"], "asc"),
             ],
             ["asc", "desc"]
           )

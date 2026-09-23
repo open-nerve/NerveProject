@@ -25,33 +25,11 @@ export type TFileHandler = {
   };
 } & TExtendedFileHandler;
 
-export type TEditorFontStyle = "sans-serif" | "serif" | "monospace";
-
 export type TEditorFontSize = "small-font" | "large-font" | "mobile-font";
 
 export type TEditorLineSpacing = "regular" | "small" | "mobile-regular";
 
 export type TDisplayConfig = {
-  fontStyle?: TEditorFontStyle;
   fontSize?: TEditorFontSize;
   lineSpacing?: TEditorLineSpacing;
-  wideLayout?: boolean;
-};
-
-export type TUserDetails = {
-  color: string;
-  id: string;
-  name: string;
-  cookie?: string;
-};
-
-export type TRealtimeConfig = {
-  url: string;
-};
-
-export type IMarking = {
-  type: "heading";
-  level: number;
-  text: string;
-  sequence: number;
 };

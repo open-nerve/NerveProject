@@ -31,7 +31,6 @@ function RichTextEditor(props: IRichTextEditorProps) {
     const extensions = [
       ...externalExtensions,
       SideMenuExtension({
-        aiEnabled: false,
         dragDropEnabled: !!dragDropEnabled,
       }),
       ...RichTextEditorAdditionalExtensions({

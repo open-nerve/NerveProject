@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from "uuid";
 import type { TIssueFilterPriorityObject, TIssuePriorities } from "@plane/constants";
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE, ISSUE_PRIORITY_FILTERS, STATE_GROUPS } from "@plane/constants";
 import type {
-  IGanttBlock,
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
   TGroupedIssues,
@@ -186,18 +185,6 @@ export const shouldHighlightIssueDueDate = (
   return targetDateDistance <= 0;
 };
 
-export const getIssueBlocksStructure = (block: TIssue): IGanttBlock => ({
-  data: block,
-  id: block?.id,
-  name: block?.name,
-  sort_order: block?.sort_order,
-  start_date: block?.start_date ?? undefined,
-  target_date: block?.target_date ?? undefined,
-  meta: {
-    project_id: block?.project_id ?? undefined,
-  },
-});
-
 export const formatTextList = (TextArray: string[]): string => {
   const count = TextArray.length;
   switch (count) {
@@ -231,7 +218,7 @@ export const issueCountBasedOnFilters = (
   let issuesCount = 0;
   if (!layout) return issuesCount;
 
-  if (["spreadsheet", "gantt_chart"].includes(layout)) {
+  if (layout === "spreadsheet") {
     issuesCount = (issueIds as TUnGroupedIssues)?.length;
   } else if (layout === "calendar") {
     Object.keys(issueIds || {}).map((groupId) => {
@@ -303,7 +290,6 @@ export const getComputedDisplayProperties = (
   sub_issue_count: displayProperties?.sub_issue_count ?? true,
   attachment_count: displayProperties?.attachment_count ?? true,
   link: displayProperties?.link ?? true,
-  estimate: displayProperties?.estimate ?? true,
   key: displayProperties?.key ?? true,
   created_on: displayProperties?.created_on ?? true,
   updated_on: displayProperties?.updated_on ?? true,

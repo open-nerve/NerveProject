@@ -5,11 +5,9 @@
  */
 
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import type { EditorState, Selection } from "@tiptap/pm/state";
+import type { Selection } from "@tiptap/pm/state";
 // plane imports
 import { cn } from "@plane/utils";
-// constants
-import { CORE_EXTENSIONS } from "@/constants/extension";
 
 type EditorClassNameArgs = {
   noBorder?: boolean;
@@ -105,13 +103,4 @@ export const isValidHttpUrl = (string: string): { isValid: boolean; url: string 
       url: string,
     };
   }
-};
-
-export const getParagraphCount = (editorState: EditorState | undefined) => {
-  if (!editorState) return 0;
-  let paragraphCount = 0;
-  editorState.doc.descendants((node) => {
-    if (node.type.name === CORE_EXTENSIONS.PARAGRAPH && node.content.size > 0) paragraphCount++;
-  });
-  return paragraphCount;
 };
