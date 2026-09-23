@@ -24,19 +24,23 @@ type Props = {
 
 const PROJECT_FEATURES_LIST = {
   cycles: {
-    key: "cycles",
+    i18n_label: "cycles",
+    i18n_description: "cycles_description",
     property: "cycle_view",
   },
   modules: {
-    key: "modules",
+    i18n_label: "modules",
+    i18n_description: "modules_description",
     property: "module_view",
   },
   views: {
-    key: "views",
+    i18n_label: "views",
+    i18n_description: "views_description",
     property: "issue_views_view",
   },
   inbox: {
-    key: "intake",
+    i18n_label: "intake",
+    i18n_description: "intake_description",
     property: "inbox_view",
   },
 };
@@ -81,8 +85,8 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
         {Object.entries(PROJECT_FEATURES_LIST).map(([featureItemKey, featureItem]) => (
           <div key={featureItemKey}>
             <SettingsBoxedControlItem
-              title={t(featureItem.key)}
-              description={t(`${featureItem.key}_description`)}
+              title={t(featureItem.i18n_label)}
+              description={t(featureItem.i18n_description)}
               control={
                 <ProjectFeatureToggle
                   featureItem={featureItem}
