@@ -26,7 +26,6 @@
       "existing": "Add existing work item"
     },
     "remove": {
-      "label": "Remove work item",
       "cycle": {
         "loading": "Removing work item from the cycle",
         "success": "Work item removed from the cycle successfully.",
@@ -56,12 +55,10 @@
       "properties": {
         "label": "Display Properties",
         "id": "ID",
-        "issue_type": "Work item Type",
         "sub_issue_count": "Sub-work item count",
         "attachment_count": "Attachment count",
         "created_on": "Created on",
-        "sub_issue": "Sub-work item",
-        "work_item_count": "Work item count"
+        "sub_issue": "Sub-work item"
       },
       "extra": {
         "show_sub_issues": "Show sub-work items",
@@ -87,10 +84,6 @@
     },
     "comments": {
       "placeholder": "Add comment",
-      "switch": {
-        "private": "Switch to private comment",
-        "public": "Switch to public comment"
-      },
       "create": {
         "success": "Comment created successfully",
         "error": "Comment creation failed. Please try again later."
@@ -231,12 +224,6 @@
           "message": "Failed to duplicate work item"
         }
       }
-    },
-    "vote": {
-      "click_to_upvote": "Click to upvote",
-      "click_to_downvote": "Click to downvote",
-      "click_to_view_upvotes": "Click to view upvotes",
-      "click_to_view_downvotes": "Click to view downvotes"
     }
   },
   "sub_work_item": {
@@ -255,8 +242,6 @@
         "action": "Clear filters"
       },
       "list_filters": {
-        "title": "You don't have work items that match the filters you've applied.",
-        "description": "To see all work items, clear all applied filters.",
         "action": "Clear filters"
       }
     }
@@ -277,124 +262,6 @@
         "title": "No comments yet",
         "description": "Comments can be used as a discussion and follow-up space for the work items"
       }
-    }
-  },
-  "bulk_operations": {
-    "error_details": {
-      "invalid_archive_state_group": {
-        "title": "Unable to archive work items",
-        "message": "Only work items belonging to Completed or Canceled state groups can be archived."
-      },
-      "invalid_issue_start_date": {
-        "title": "Unable to update work items",
-        "message": "Start date selected succeeds the due date for some work items. Ensure start date to be before the due date."
-      },
-      "invalid_issue_target_date": {
-        "title": "Unable to update work items",
-        "message": "Due date selected precedes the start date for some work items. Ensure due date to be after the start date."
-      },
-      "invalid_state_transition": {
-        "title": "Unable to update work items",
-        "message": "State change is not allowed for some work items. Ensure the state change is allowed."
-      }
-    },
-    "upgrade_banner": {
-      "message": "Change state, priority, and more for several work items at once. Save three minutes on an average per operation.",
-      "cta": "Upgrade to One"
-    }
-  },
-  "recurring_work_items": {
-    "settings": {
-      "heading": "Recurring work items",
-      "description": "Set your repeatable work once, and we’ll take care of the repeats. You’ll see everything right here when it’s time.",
-      "new_recurring_work_item": "New recurring work item",
-      "update_recurring_work_item": "Update recurring work item",
-      "form": {
-        "interval": {
-          "title": "Schedule",
-          "start_date": {
-            "validation": {
-              "required": "Start date is required"
-            }
-          },
-          "interval_type": {
-            "validation": {
-              "required": "Interval type is required"
-            }
-          }
-        },
-        "button": {
-          "create": "Create recurring work item",
-          "update": "Update recurring work item"
-        }
-      },
-      "create_button": {
-        "label": "Create recurring work item",
-        "no_permission": "Contact your project admin to create recurring work items"
-      }
-    },
-    "empty_state": {
-      "upgrade": {
-        "title": "Your work, on autopilot",
-        "description": "Set it once. We’ll bring it back when it’s due. Upgrade to Business to make recurring work feel effortless."
-      },
-      "no_templates": {
-        "button": "Create your first recurring work item"
-      }
-    },
-    "toasts": {
-      "create": {
-        "success": {
-          "title": "Recurring work item created",
-          "message": "{name}, the recurring work item, is now available for your workspace."
-        },
-        "error": {
-          "title": "We couldn't create that recurring work item this time.",
-          "message": "Try saving your details again or copy them over to a new recurring work item, preferably in another tab."
-        }
-      },
-      "update": {
-        "success": {
-          "title": "Recurring work item changed",
-          "message": "{name}, the recurring work item, was changed."
-        },
-        "error": {
-          "title": "We couldn't save changes to this recurring work item.",
-          "message": "Try saving your details again or come back to this recurring work item later. If there's trouble still, reach out to us."
-        }
-      },
-      "delete": {
-        "success": {
-          "title": "Recurring work item deleted",
-          "message": "{name}, the recurring work item, has now been deleted from your workspace."
-        },
-        "error": {
-          "title": "We couldn't delete that recurring work item this.",
-          "message": "Try deleting it again or come back to it later. If you can't delete it then, reach out to us."
-        }
-      }
-    },
-    "delete_confirmation": {
-      "title": "Delete recurring work item",
-      "description": {
-        "prefix": "Are you sure you want to delete recurring work item-",
-        "suffix": "? All of the data related to the recurring work item will be permanently removed. This action cannot be undone."
-      }
-    }
-  },
-  "epic": {
-    "new": "New Epic",
-    "adding": "Adding epic",
-    "create": {
-      "success": "Epic created successfully"
-    },
-    "add": {
-      "label": "Add Epic",
-      "press_enter": "Press 'Enter' to add another epic"
-    },
-    "title": {
-      "label": "Epic Title",
-      "required": "Epic title is required."
     }
   }
 }

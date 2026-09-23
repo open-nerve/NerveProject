@@ -39,7 +39,6 @@ import type {
   TIssueGroupByOptions,
   IIssueFilterOptions,
   IIssueFilters,
-  TGroupedIssues,
   IIssueDisplayFilterOptions,
   TGetColumns,
   TSpreadsheetColumn,
@@ -90,22 +89,12 @@ export type IssueUpdates = {
 
 export const isWorkspaceLevel = (type: EIssuesStoreType) =>
   // oxlint-disable-next-line no-unneeded-ternary
-  [
-    EIssuesStoreType.PROFILE,
-    EIssuesStoreType.GLOBAL,
-    EIssuesStoreType.TEAM,
-    EIssuesStoreType.TEAM_VIEW,
-    EIssuesStoreType.TEAM_PROJECT_WORK_ITEMS,
-    EIssuesStoreType.WORKSPACE_DRAFT,
-  ].includes(type)
-    ? true
-    : false;
+  [EIssuesStoreType.PROFILE, EIssuesStoreType.GLOBAL, EIssuesStoreType.WORKSPACE_DRAFT].includes(type) ? true : false;
 
 type TGetGroupByColumns = {
   groupBy: GroupByColumnTypes | null;
   includeNone: boolean;
   isWorkspaceLevel: boolean;
-  isEpic?: boolean;
   projectId?: string;
 };
 
@@ -116,7 +105,6 @@ export const getGroupByColumns = ({
   groupBy,
   includeNone,
   isWorkspaceLevel,
-  isEpic = false,
   projectId,
 }: TGetGroupByColumns): IGroupByColumn[] | undefined => {
   // If no groupBy is specified and includeNone is true, return "All Issues" group
@@ -124,7 +112,7 @@ export const getGroupByColumns = ({
     return [
       {
         id: "All Issues",
-        name: `All ${isEpic ? "Epics" : "work items"}`,
+        name: "All work items",
         payload: {},
         icon: undefined,
       },
@@ -148,7 +136,6 @@ export const getGroupByColumns = ({
     labels: getLabelsColumns,
     assignees: getAssigneeColumns,
     created_by: getCreatedByColumns,
-    team_project: getTeamProjectColumns,
   };
 
   // Get and return the columns for the specified group by option
@@ -632,23 +619,6 @@ export const removeNillKeys = <T,>(obj: T) =>
   Object.fromEntries(Object.entries(obj ?? {}).filter(([key, value]) => key && !isNil(value)));
 
 /**
- * This Method returns if the grouped values are subGrouped
- * @param groupedIssueIds
- * @returns
- */
-export const isSubGrouped = (groupedIssueIds: TGroupedIssues) => {
-  if (!groupedIssueIds || Array.isArray(groupedIssueIds)) {
-    return false;
-  }
-
-  if (Array.isArray(groupedIssueIds[Object.keys(groupedIssueIds)[0]])) {
-    return false;
-  }
-
-  return true;
-};
-
-/**
  * This Method returns if the issue is new or not
  * @param issue
  * @returns
@@ -771,12 +741,12 @@ export const calculateIdentifierWidth = (projectIdentifierLength: number, maxSeq
   return projectIdentifierLength * 7 + 7 + sequenceDigits * 7; // project identifier chars + dash + sequence digits
 };
 
-export type TGetScopeMemberIdsResult = {
+type TGetScopeMemberIdsResult = {
   memberIds: string[];
   includeNone: boolean;
 };
 
-export const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetScopeMemberIdsResult => {
+const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetScopeMemberIdsResult => {
   // store values
   const { workspaceMemberIds } = store.memberRoot.workspace;
   const { projectMemberIds } = store.memberRoot.project;
@@ -799,9 +769,7 @@ export const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns):
   return { memberIds: [], includeNone: true };
 };
 
-export const getTeamProjectColumns = (): IGroupByColumn[] | undefined => undefined;
-
-export const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
+const SpreadSheetPropertyIconMap: Record<string, FC<ISvgIcons>> = {
   MembersOutline: MembersOutline,
   CalenderDays: CalendarOutline,
   DueDateOutline: DueDateOutline,

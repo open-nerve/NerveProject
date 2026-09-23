@@ -25,20 +25,17 @@ import { createCopyMenuWithDuplication } from "./copy-menu-helper";
 
 // Generic helper function to handle optional function calls gracefully
 // Overload for functions without parameters
-export function handleOptionalAction(
-  optionalFn: (() => void) | (() => Promise<void>) | undefined,
-  actionName: string
-): void;
+function handleOptionalAction(optionalFn: (() => void) | (() => Promise<void>) | undefined, actionName: string): void;
 
 // Overload for functions with one parameter
-export function handleOptionalAction<T>(
+function handleOptionalAction<T>(
   optionalFn: ((param: T) => void) | ((param: T) => Promise<void>) | undefined,
   actionName: string,
   param: T
 ): void;
 
 // Implementation
-export function handleOptionalAction<T>(
+function handleOptionalAction<T>(
   optionalFn: (() => void) | (() => Promise<void>) | ((param: T) => void) | ((param: T) => Promise<void>) | undefined,
   actionName: string,
   param?: T
@@ -68,7 +65,6 @@ export interface MenuItemFactoryProps {
   isDeletingAllowed: boolean;
   isRestoringAllowed?: boolean;
   isInArchivableGroup?: boolean;
-  issueTypeDetail?: { is_active?: boolean };
   // Action handlers
   setIssueToEdit: (issue: TIssue | undefined) => void;
   setCreateUpdateIssueModal: (open: boolean) => void;
@@ -88,7 +84,7 @@ export interface MenuItemFactoryProps {
 }
 
 // Common action handlers hook
-export const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
+const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
   const { issue, workspaceSlug, projectIdentifier, handleRestore } = props;
 
   const workItemLink = useMemo(
@@ -145,7 +141,7 @@ export const useIssueActionHandlers = (props: MenuItemFactoryProps) => {
   };
 };
 
-export const useMenuItemFactory = (props: MenuItemFactoryProps) => {
+const useMenuItemFactory = (props: MenuItemFactoryProps) => {
   const { t } = useTranslation();
   const actionHandlers = useIssueActionHandlers(props);
 
@@ -157,7 +153,6 @@ export const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     isDeletingAllowed,
     isRestoringAllowed = false,
     isInArchivableGroup = false,
-    issueTypeDetail,
     setIssueToEdit,
     setCreateUpdateIssueModal,
     setDeleteIssueModal,
@@ -187,7 +182,7 @@ export const useMenuItemFactory = (props: MenuItemFactoryProps) => {
       action: () => {
         setCreateUpdateIssueModal(true);
       },
-      shouldRender: isEditingAllowed && (issueTypeDetail?.is_active ?? true),
+      shouldRender: isEditingAllowed,
     };
 
     return createCopyMenuWithDuplication({

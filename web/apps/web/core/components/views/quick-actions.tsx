@@ -13,14 +13,12 @@ import { IconButton } from "@plane/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { IProjectView } from "@plane/types";
 // ui
-import type { TContextMenuItem } from "@plane/ui";
 import { ContextMenu, CustomMenu } from "@plane/ui";
 import { copyUrlToClipboard, cn } from "@plane/utils";
 // helpers
 import { useViewMenuItems } from "@/components/common/quick-actions-helper";
 // hooks
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-import { useViewPublish } from "@/components/views/publish";
 // local imports
 import { DeleteProjectViewModal } from "./delete-view-modal";
 import { CreateUpdateProjectViewModal } from "./modal";
@@ -45,8 +43,6 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
   const isOwner = view?.owned_by === data?.id;
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
-  const { publishContextMenu } = useViewPublish(!!view.anchor, isAdmin || isOwner);
-
   const viewLink = `${workspaceSlug}/projects/${projectId}/views/${view.id}`;
   const handleCopyText = () =>
     // oxlint-disable-next-line promise/always-return
@@ -59,7 +55,7 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
     });
   const handleOpenInNewTab = () => window.open(`/${viewLink}`, "_blank");
 
-  const menuResult = useViewMenuItems({
+  const MENU_ITEMS = useViewMenuItems({
     isOwner,
     isAdmin,
     workspaceSlug,
@@ -70,12 +66,6 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
     handleCopyLink: handleCopyText,
     handleOpenInNewTab,
   });
-
-  // Handle both CE (array) and EE (object) return types
-  const MENU_ITEMS: TContextMenuItem[] = Array.isArray(menuResult) ? menuResult : menuResult.items;
-  const additionalModals = Array.isArray(menuResult) ? null : menuResult.modals;
-
-  if (publishContextMenu) MENU_ITEMS.splice(2, 0, publishContextMenu);
 
   const CONTEXT_MENU_ITEMS = MENU_ITEMS.map(function CONTEXT_MENU_ITEMS(item) {
     return {
@@ -96,7 +86,6 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
         data={view}
       />
       <DeleteProjectViewModal data={view} isOpen={deleteViewModal} onClose={() => setDeleteViewModal(false)} />
-      {additionalModals}
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
       <CustomMenu
         customButton={<IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} />}

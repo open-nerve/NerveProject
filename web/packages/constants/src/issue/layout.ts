@@ -6,7 +6,7 @@
 
 import { EIssueLayoutTypes } from "@plane/types";
 
-export type TIssueLayout = "list" | "kanban" | "calendar" | "spreadsheet";
+type TIssueLayout = "list" | "kanban" | "calendar" | "spreadsheet";
 
 export type TIssueLayoutMap = Record<
   EIssueLayoutTypes,

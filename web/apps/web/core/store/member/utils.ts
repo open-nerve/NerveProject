@@ -14,7 +14,7 @@ export interface IMemberFilters {
 }
 
 // Helper function to parse order key and direction
-export const parseOrderKey = (orderKey?: TMemberOrderByOptions): { field: string; direction: "asc" | "desc" } => {
+const parseOrderKey = (orderKey?: TMemberOrderByOptions): { field: string; direction: "asc" | "desc" } => {
   // Default to sorting by display_name in ascending order when no order key is provided
   if (!orderKey) {
     return {
@@ -32,7 +32,7 @@ export const parseOrderKey = (orderKey?: TMemberOrderByOptions): { field: string
 };
 
 // Unified function to get sort key for any member type
-export const getMemberSortKey = (memberDetails: IUserLite, field: string, memberRole?: string): string | Date => {
+const getMemberSortKey = (memberDetails: IUserLite, field: string, memberRole?: string): string | Date => {
   switch (field) {
     case "display_name":
       return memberDetails.display_name?.toLowerCase() || "";
@@ -60,10 +60,7 @@ export const getMemberSortKey = (memberDetails: IUserLite, field: string, member
 };
 
 // Filter functions
-export const filterProjectMembersByRole = (
-  members: TProjectMembership[],
-  roleFilters: string[]
-): TProjectMembership[] => {
+const filterProjectMembersByRole = (members: TProjectMembership[], roleFilters: string[]): TProjectMembership[] => {
   if (roleFilters.length === 0) return members;
 
   return members.filter((member) => {
@@ -72,7 +69,7 @@ export const filterProjectMembersByRole = (
   });
 };
 
-export const filterWorkspaceMembersByRole = <T extends { role: string | EUserPermissions; is_active?: boolean }>(
+const filterWorkspaceMembersByRole = <T extends { role: string | EUserPermissions; is_active?: boolean }>(
   members: T[],
   roleFilters: string[]
 ): T[] => {
@@ -98,7 +95,7 @@ export const filterWorkspaceMembersByRole = <T extends { role: string | EUserPer
 };
 
 // Unified sorting function
-export const sortMembers = <T>(
+const sortMembers = <T>(
   members: T[],
   memberDetailsMap: Record<string, IUserLite>,
   getMemberKey: (member: T) => string,

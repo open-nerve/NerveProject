@@ -110,7 +110,7 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
                 >
                   <UserPlusOutline className="my-auto h-4 w-4 flex-shrink-0" />
                   <span className="my-auto text-13 font-medium whitespace-nowrap">
-                    {t("project_settings.members.invite_members.title")}
+                    {t("workspace_settings.settings.members.invite_members")}
                   </span>
                 </Link>
               )}

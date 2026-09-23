@@ -28,13 +28,12 @@ type TCalendarQuickAddIssueActions = {
   quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
   addIssuesToView?: (issueIds: string[]) => Promise<any>;
   onOpen?: () => void;
-  isEpic?: boolean;
 };
 
 export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIssueActions(
   props: TCalendarQuickAddIssueActions
 ) {
-  const { prePopulatedData, quickAddCallback, addIssuesToView, onOpen, isEpic = false } = props;
+  const { prePopulatedData, quickAddCallback, addIssuesToView, onOpen } = props;
   const { t } = useTranslation();
   // router
   const { workspaceSlug, projectId, moduleId } = useParams();
@@ -126,22 +125,15 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
               customButton={
                 <div className="flex w-full items-center gap-x-[6px] rounded-md px-2 py-1.5 text-tertiary hover:text-tertiary">
                   <AddOutline className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="flex-shrink-0 text-13 font-medium">
-                    {isEpic ? t("epic.add.label") : t("issue.add.label")}
-                  </span>
+                  <span className="flex-shrink-0 text-13 font-medium">{t("issue.add.label")}</span>
                 </div>
               }
             >
-              <CustomMenu.MenuItem onClick={handleNewIssue}>
-                {isEpic ? t("epic.add.label") : t("issue.add.label")}
-              </CustomMenu.MenuItem>
-              {!isEpic && (
-                <CustomMenu.MenuItem onClick={handleExistingIssue}>{t("issue.add.existing")}</CustomMenu.MenuItem>
-              )}
+              <CustomMenu.MenuItem onClick={handleNewIssue}>{t("issue.add.label")}</CustomMenu.MenuItem>
+              <CustomMenu.MenuItem onClick={handleExistingIssue}>{t("issue.add.existing")}</CustomMenu.MenuItem>
             </CustomMenu>
           </div>
         }
-        isEpic={isEpic}
       />
     </>
   );

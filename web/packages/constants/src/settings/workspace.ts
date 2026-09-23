@@ -10,19 +10,16 @@ import { EUserWorkspaceRoles } from "@plane/types";
 
 export enum WORKSPACE_SETTINGS_CATEGORY {
   ADMINISTRATION = "administration",
-  FEATURES = "features",
   DEVELOPER = "developer",
 }
 
 export const WORKSPACE_SETTINGS_CATEGORIES: WORKSPACE_SETTINGS_CATEGORY[] = [
   WORKSPACE_SETTINGS_CATEGORY.ADMINISTRATION,
-  WORKSPACE_SETTINGS_CATEGORY.FEATURES,
   WORKSPACE_SETTINGS_CATEGORY.DEVELOPER,
 ];
 
 export const WORKSPACE_SETTINGS_CATEGORY_LABELS: Record<WORKSPACE_SETTINGS_CATEGORY, string> = {
   [WORKSPACE_SETTINGS_CATEGORY.ADMINISTRATION]: "common.administration",
-  [WORKSPACE_SETTINGS_CATEGORY.FEATURES]: "common.features",
   [WORKSPACE_SETTINGS_CATEGORY.DEVELOPER]: "common.developer",
 };
 
@@ -41,13 +38,6 @@ export const WORKSPACE_SETTINGS: Record<TWorkspaceSettingsTabs, TWorkspaceSettin
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
     highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/settings/members/`,
   },
-  "billing-and-plans": {
-    key: "billing-and-plans",
-    i18n_label: "workspace_settings.settings.billing_and_plans.title",
-    href: `/settings/billing`,
-    access: [EUserWorkspaceRoles.ADMIN],
-    highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/settings/billing/`,
-  },
   webhooks: {
     key: "webhooks",
     i18n_label: "workspace_settings.settings.webhooks.title",
@@ -62,11 +52,6 @@ export const WORKSPACE_SETTINGS_ACCESS = Object.fromEntries(
 );
 
 export const GROUPED_WORKSPACE_SETTINGS: Record<WORKSPACE_SETTINGS_CATEGORY, TWorkspaceSettingsItem[]> = {
-  [WORKSPACE_SETTINGS_CATEGORY.ADMINISTRATION]: [
-    WORKSPACE_SETTINGS["general"],
-    WORKSPACE_SETTINGS["members"],
-    WORKSPACE_SETTINGS["billing-and-plans"],
-  ],
-  [WORKSPACE_SETTINGS_CATEGORY.FEATURES]: [],
+  [WORKSPACE_SETTINGS_CATEGORY.ADMINISTRATION]: [WORKSPACE_SETTINGS["general"], WORKSPACE_SETTINGS["members"]],
   [WORKSPACE_SETTINGS_CATEGORY.DEVELOPER]: [WORKSPACE_SETTINGS["webhooks"]],
 };

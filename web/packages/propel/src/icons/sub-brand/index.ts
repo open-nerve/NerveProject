@@ -4,5 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export * from "./pi-chat";
 export * from "./plane-icon";

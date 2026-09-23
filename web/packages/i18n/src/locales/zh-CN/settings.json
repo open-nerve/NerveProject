@@ -1,51 +1,10 @@
 {
   "account_settings": {
-    "profile": {
-      "change_email_modal": {
-        "title": "更改邮箱",
-        "description": "请输入新的邮箱地址以接收验证链接。",
-        "toasts": {
-          "success_title": "成功！",
-          "success_message": "邮箱已更新，请重新登录。"
-        },
-        "form": {
-          "email": {
-            "label": "新邮箱",
-            "placeholder": "请输入邮箱",
-            "errors": {
-              "required": "邮箱为必填项",
-              "invalid": "邮箱格式无效",
-              "exists": "邮箱已存在，请使用其他邮箱。",
-              "validation_failed": "邮箱验证失败，请重试。"
-            }
-          },
-          "code": {
-            "label": "验证码",
-            "placeholder": "123456",
-            "helper_text": "验证码已发送至你的新邮箱。",
-            "errors": {
-              "required": "验证码为必填项",
-              "invalid": "验证码无效，请重试。"
-            }
-          }
-        },
-        "actions": {
-          "continue": "继续",
-          "confirm": "确认",
-          "cancel": "取消"
-        },
-        "states": {
-          "sending": "发送中…"
-        }
-      }
-    },
     "preferences": {
       "heading": "偏好设置",
       "description": "按照您的工作方式自定义您的应用体验"
     },
     "notifications": {
-      "heading": "邮件通知",
-      "description": "及时了解您订阅的工作项。启用此功能以接收通知。",
       "select_default_view": "选择默认视图",
       "compact": "紧凑",
       "full": "全屏"
@@ -80,7 +39,6 @@
       "profile": "个人资料",
       "security": "安全",
       "preferences": "偏好设置",
-      "notifications": "通知",
       "api-tokens": "个人访问令牌"
     },
     "tabs": {

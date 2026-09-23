@@ -80,7 +80,7 @@ const RoleFilterGroup = observer(function RoleFilterGroup({
   );
 });
 
-export const MemberListFilters = observer(function MemberListFilters(props: Props) {
+const MemberListFilters = observer(function MemberListFilters(props: Props) {
   const { appliedFilters, handleUpdate, memberType } = props;
 
   return (

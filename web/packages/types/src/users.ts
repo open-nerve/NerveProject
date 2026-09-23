@@ -5,7 +5,6 @@
  */
 
 import type { TUserPermissions } from "./enums";
-import type { TLoginMediums } from "./instance";
 
 /**
  * @description The start of the week for the user
@@ -41,21 +40,12 @@ export interface IUser extends IUserLite {
   email: string;
   is_active: boolean;
   is_email_verified: boolean;
-  is_password_autoset: boolean;
   is_tour_completed: boolean;
   mobile_number: string | null;
   last_workspace_id: string;
   user_timezone: string;
   username: string;
-  last_login_medium: TLoginMediums;
   theme: IUserTheme;
-}
-
-export interface IUserAccount {
-  provider_account_id: string;
-  provider: string;
-  created_at: Date;
-  updated_at: Date;
 }
 
 export type TUserProfile = {
@@ -68,19 +58,11 @@ export type TUserProfile = {
   is_onboarded: boolean;
   is_tour_completed: boolean;
   use_case: string | undefined;
-  billing_address_country: string | undefined;
-  billing_address: string | undefined;
-  has_billing_address: boolean;
-  has_marketing_email_consent: boolean;
   language: string;
   created_at: Date | string;
   updated_at: Date | string;
   start_of_the_week: EStartOfTheWeek;
 };
-
-export interface IInstanceAdminStatus {
-  is_instance_admin: boolean;
-}
 
 export interface IUserSettings {
   id: string | undefined;
@@ -119,14 +101,6 @@ export type TOnboardingSteps = {
 
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;
-}
-
-export interface IUserEmailNotificationSettings {
-  property_change: boolean;
-  state_change: boolean;
-  comment: boolean;
-  mention: boolean;
-  issue_completed: boolean;
 }
 
 export type TProfileViews = "assigned" | "created" | "subscribed";

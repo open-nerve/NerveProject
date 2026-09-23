@@ -22,18 +22,11 @@ import type { ISvgIcons } from "@plane/propel/icons";
 import { cn } from "@plane/utils";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
-// types
-import type { IEditorProps } from "@/types";
-// components
-import { getNodeOptions } from "./block-menu-options";
 
 type Props = {
-  disabledExtensions?: IEditorProps["disabledExtensions"];
   editor: Editor;
-  flaggedExtensions?: IEditorProps["flaggedExtensions"];
-  workItemIdentifier?: IEditorProps["workItemIdentifier"];
 };
-export type BlockMenuOption = {
+type BlockMenuOption = {
   icon: LucideIcon | React.FC<ISvgIcons>;
   key: string;
   label: string;
@@ -201,7 +194,6 @@ export function BlockMenu(props: Props) {
         }
       },
     },
-    ...getNodeOptions(editor),
   ];
 
   if (!isOpen) {

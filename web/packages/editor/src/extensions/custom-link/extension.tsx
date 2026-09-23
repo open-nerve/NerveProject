@@ -7,7 +7,7 @@
 import type { PasteRuleMatch } from "@tiptap/core";
 import { Mark, markPasteRule, mergeAttributes } from "@tiptap/core";
 import type { Plugin } from "@tiptap/pm/state";
-import { find, registerCustomProtocol, reset } from "linkifyjs";
+import { find } from "linkifyjs";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // helpers
@@ -17,20 +17,11 @@ import { autolink } from "./helpers/autolink";
 import { clickHandler } from "./helpers/clickHandler";
 import { pasteHandler } from "./helpers/pasteHandler";
 
-type LinkProtocolOptions = {
-  scheme: string;
-  optionalSlashes?: boolean;
-};
-
 type LinkOptions = {
   /**
    * If enabled, it adds links as you type.
    */
   autolink: boolean;
-  /**
-   * An array of custom protocols to be registered with linkifyjs.
-   */
-  protocols: Array<LinkProtocolOptions | string>;
   /**
    * If enabled, links will be opened on click.
    */
@@ -122,20 +113,6 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
 
   keepOnSplit: false,
 
-  onCreate() {
-    this.options.protocols.forEach((protocol) => {
-      if (typeof protocol === "string") {
-        registerCustomProtocol(protocol);
-        return;
-      }
-      registerCustomProtocol(protocol.scheme, protocol.optionalSlashes);
-    });
-  },
-
-  onDestroy() {
-    reset();
-  },
-
   inclusive() {
     return this.options.inclusive;
   },
@@ -146,7 +123,6 @@ export const CustomLinkExtension = Mark.create<LinkOptions, CustomLinkStorage>({
       linkOnPaste: true,
       autolink: true,
       inclusive: false,
-      protocols: ["http", "https"],
       HTMLAttributes: {
         target: "_blank",
         rel: "noopener noreferrer nofollow",

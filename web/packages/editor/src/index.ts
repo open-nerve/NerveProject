@@ -14,10 +14,8 @@ export * from "@/constants/common";
 export * from "@/helpers/common";
 
 export { CORE_EXTENSIONS } from "@/constants/extension";
-export { ADDITIONAL_EXTENSIONS } from "@/constants/extensions";
 
 // types
 export * from "@/types";
 
-// additional exports
 export { TrailingNode } from "@/extensions/trailing-node";

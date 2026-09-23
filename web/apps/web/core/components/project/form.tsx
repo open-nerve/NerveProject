@@ -263,7 +263,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
                 render={({ field: { value, onChange } }) => (
                   <ImagePickerPopover
                     label={t("change_cover")}
-                    control={control}
                     onChange={onChange}
                     value={value ?? null}
                     disabled={!isAdmin}

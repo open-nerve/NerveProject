@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { Row } from "@plane/ui";
 // components
 import { cn } from "@plane/utils";
-import { ExtendedAppHeader } from "@/components/common/extended-app-header";
+import { HeaderWithSidebarToggle } from "@/components/common/header-with-sidebar-toggle";
 
 export interface AppHeaderProps {
   header: ReactNode;
@@ -25,7 +25,7 @@ export const AppHeader = observer(function AppHeader(props: AppHeaderProps) {
   return (
     <div className={cn("z-[18]", className)}>
       <Row className={cn("flex h-11 w-full items-center gap-2 border-b border-subtle bg-surface-1", rowClassName)}>
-        <ExtendedAppHeader header={header} />
+        <HeaderWithSidebarToggle header={header} />
       </Row>
       {/* eslint-disable-next-line oxc/const-comparisons */}
       {mobileHeader && mobileHeader}

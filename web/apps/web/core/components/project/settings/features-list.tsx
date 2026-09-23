@@ -8,73 +8,52 @@ import { observer } from "mobx-react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import { setPromiseToast } from "@plane/propel/toast";
-import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IProject } from "@plane/types";
-import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline } from "@makeplane/propel/icons";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 import { SettingsHeading } from "@/components/settings/heading";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-// plane web imports
-import { UpgradeBadge } from "@/components/workspace/upgrade-badge";
 // local imports
 import { ProjectFeatureToggle } from "./helper";
 
 type Props = {
   workspaceSlug: string;
   projectId: string;
-  isAdmin: boolean;
 };
 
 const PROJECT_FEATURES_LIST = {
   cycles: {
-    key: "cycles",
+    i18n_label: "cycles",
+    i18n_description: "cycles_description",
     property: "cycle_view",
-    title: "Cycles",
-    description: "Timebox work as you see fit per project and change frequency from one period to the next.",
-    icon: <CyclesOutline className="h-5 w-5 flex-shrink-0 rotate-180 text-tertiary" />,
-    isPro: false,
-    isEnabled: true,
   },
   modules: {
-    key: "modules",
+    i18n_label: "modules",
+    i18n_description: "modules_description",
     property: "module_view",
-    title: "Modules",
-    description: "Group work into sub-project-like set-ups with their own leads and assignees.",
-    icon: <ModuleOutline width={20} height={20} className="flex-shrink-0 text-tertiary" />,
-    isPro: false,
-    isEnabled: true,
   },
   views: {
-    key: "views",
+    i18n_label: "views",
+    i18n_description: "views_description",
     property: "issue_views_view",
-    title: "Views",
-    description: "Save sorts, filters, and display options for later or share them.",
-    icon: <ViewsOutline className="h-5 w-5 flex-shrink-0 text-tertiary" />,
-    isPro: false,
-    isEnabled: true,
   },
   inbox: {
-    key: "intake",
+    i18n_label: "intake",
+    i18n_description: "intake_description",
     property: "inbox_view",
-    title: "Intake",
-    description: "Consider and discuss work items before you add them to your project.",
-    icon: <IntakeOutline className="h-5 w-5 flex-shrink-0 text-tertiary" />,
-    isPro: false,
-    isEnabled: true,
   },
 };
 
 export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: Props) {
-  const { workspaceSlug, projectId, isAdmin } = props;
+  const { workspaceSlug, projectId } = props;
   // store hooks
   const { t } = useTranslation();
   const { getProjectById, updateProject } = useProject();
   // derived values
   const currentProjectDetails = getProjectById(projectId);
 
-  const handleSubmit = (_featureKey: string, featureProperty: string) => {
+  const handleSubmit = (featureProperty: string) => {
     if (!workspaceSlug || !projectId || !currentProjectDetails) return;
 
     // making the request to update the project feature
@@ -100,42 +79,25 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
   };
 
   return (
-    <>
-      <div>
-        <SettingsHeading title={t("projects_and_issues")} description={t("projects_and_issues_description")} />
-        <div className="mt-6 flex flex-col gap-y-4">
-          {Object.entries(PROJECT_FEATURES_LIST).map(([featureItemKey, featureItem]) => (
-            <div key={featureItemKey}>
-              <SettingsBoxedControlItem
-                title={
-                  <span className="flex items-center gap-2">
-                    {t(featureItem.key)}
-                    {featureItem.isPro && (
-                      <Tooltip label="Pro feature">
-                        <UpgradeBadge className="rounded-sm" />
-                      </Tooltip>
-                    )}
-                  </span>
-                }
-                description={t(`${featureItem.key}_description`)}
-                control={
-                  <ProjectFeatureToggle
-                    workspaceSlug={workspaceSlug}
-                    projectId={projectId}
-                    featureItem={featureItem}
-                    value={Boolean(currentProjectDetails?.[featureItem.property as keyof IProject])}
-                    handleSubmit={handleSubmit}
-                    disabled={!isAdmin}
-                  />
-                }
-              />
-              {/* {currentProjectDetails?.[featureItem.property as keyof IProject] && (
-                <div className="pl-14">{featureItem.renderChildren?.(currentProjectDetails, workspaceSlug)}</div>
-              )} */}
-            </div>
-          ))}
-        </div>
+    <div>
+      <SettingsHeading title={t("projects_and_issues")} description={t("projects_and_issues_description")} />
+      <div className="mt-6 flex flex-col gap-y-4">
+        {Object.entries(PROJECT_FEATURES_LIST).map(([featureItemKey, featureItem]) => (
+          <div key={featureItemKey}>
+            <SettingsBoxedControlItem
+              title={t(featureItem.i18n_label)}
+              description={t(featureItem.i18n_description)}
+              control={
+                <ProjectFeatureToggle
+                  featureItem={featureItem}
+                  value={Boolean(currentProjectDetails?.[featureItem.property as keyof IProject])}
+                  handleSubmit={handleSubmit}
+                />
+              }
+            />
+          </div>
+        ))}
       </div>
-    </>
+    </div>
   );
 });

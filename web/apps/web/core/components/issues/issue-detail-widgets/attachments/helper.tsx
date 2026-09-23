@@ -6,8 +6,6 @@
 
 import { useMemo } from "react";
 import { setPromiseToast, TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types
@@ -18,7 +16,7 @@ export type TAttachmentOperations = {
   remove: (attachmentId: string) => Promise<void>;
 };
 
-export type TAttachmentSnapshot = {
+type TAttachmentSnapshot = {
   uploadStatus: TAttachmentUploadStatus[] | undefined;
 };
 
@@ -30,12 +28,11 @@ export type TAttachmentHelpers = {
 export const useAttachmentOperations = (
   workspaceSlug: string,
   projectId: string,
-  issueId: string,
-  issueServiceType: TIssueServiceType = EIssueServiceType.ISSUES
+  issueId: string
 ): TAttachmentHelpers => {
   const {
     attachment: { createAttachment, removeAttachment, getAttachmentsUploadStatusByIssueId },
-  } = useIssueDetail(issueServiceType);
+  } = useIssueDetail();
 
   const attachmentOperations: TAttachmentOperations = useMemo(
     () => ({

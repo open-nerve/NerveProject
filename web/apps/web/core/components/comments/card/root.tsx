@@ -20,7 +20,6 @@ type TCommentCard = {
   comment: TIssueComment | undefined;
   activityOperations: TCommentsOperations;
   ends: "top" | "bottom" | undefined;
-  showAccessSpecifier: boolean;
   showCopyLinkOption: boolean;
   enableReplies: boolean;
   disabled?: boolean;
@@ -34,7 +33,6 @@ export const CommentCard = observer(function CommentCard(props: TCommentCard) {
     comment,
     activityOperations,
     ends,
-    showAccessSpecifier,
     showCopyLinkOption,
     disabled = false,
     projectId,
@@ -57,7 +55,6 @@ export const CommentCard = observer(function CommentCard(props: TCommentCard) {
         disabled={disabled}
         projectId={projectId}
         readOnlyEditorRef={readOnlyEditorRef}
-        showAccessSpecifier={showAccessSpecifier}
         workspaceId={workspaceId}
         workspaceSlug={workspaceSlug}
         isEditing={isEditing}
@@ -67,7 +64,6 @@ export const CommentCard = observer(function CommentCard(props: TCommentCard) {
             activityOperations={activityOperations}
             comment={comment}
             setEditMode={() => setIsEditing(true)}
-            showAccessSpecifier={showAccessSpecifier}
             showCopyLinkOption={showCopyLinkOption}
           />
         )}

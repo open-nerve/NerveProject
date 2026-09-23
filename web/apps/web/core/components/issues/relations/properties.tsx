@@ -7,8 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // components
-import type { TIssuePriorities, TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
+import type { TIssuePriorities } from "@plane/types";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
@@ -22,15 +21,14 @@ type Props = {
   issueId: string;
   disabled: boolean;
   issueOperations: TRelationIssueOperations;
-  issueServiceType?: TIssueServiceType;
 };
 
 export const RelationIssueProperty = observer(function RelationIssueProperty(props: Props) {
-  const { workspaceSlug, issueId, disabled, issueOperations, issueServiceType = EIssueServiceType.ISSUES } = props;
+  const { workspaceSlug, issueId, disabled, issueOperations } = props;
   // hooks
   const {
     issue: { getIssueById },
-  } = useIssueDetail(issueServiceType);
+  } = useIssueDetail();
 
   // derived value
   const issue = getIssueById(issueId);

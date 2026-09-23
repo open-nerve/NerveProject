@@ -26,12 +26,11 @@ export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueCo
   // hooks
   const { workspaceSlug } = useParams();
   // derived values
-  const isEpic = issue?.is_epic;
   const subIssueCount = issue?.sub_issues_count ?? 0;
 
   const redirectToIssueDetail = () => {
     router.push(
-      `/${workspaceSlug?.toString()}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}${isEpic ? "epics" : "issues"}/${issue.id}#sub-issues`
+      `/${workspaceSlug?.toString()}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}issues/${issue.id}#sub-issues`
     );
   };
 
@@ -40,14 +39,11 @@ export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueCo
   return (
     <Row
       onClick={subIssueCount ? redirectToIssueDetail : () => {}}
-      className={cn(
-        "flex h-11 w-full items-center border-b-[0.5px] border-subtle py-1 text-11 group-[.selected-issue-row]:bg-accent-primary/5 hover:bg-surface-2 group-[.selected-issue-row]:hover:bg-accent-primary",
-        {
-          "cursor-pointer": subIssueCount,
-        }
-      )}
+      className={cn("flex h-11 w-full items-center border-b-[0.5px] border-subtle py-1 text-11 hover:bg-surface-2", {
+        "cursor-pointer": subIssueCount,
+      })}
     >
-      {isEpic ? null : label}
+      {label}
     </Row>
   );
 });

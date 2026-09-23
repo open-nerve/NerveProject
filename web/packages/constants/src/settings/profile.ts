@@ -41,10 +41,6 @@ export const PROFILE_SETTINGS: Record<
     key: "preferences",
     i18n_label: "profile.actions.preferences",
   },
-  notifications: {
-    key: "notifications",
-    i18n_label: "profile.actions.notifications",
-  },
   "api-tokens": {
     key: "api-tokens",
     i18n_label: "profile.actions.api-tokens",
@@ -60,7 +56,6 @@ export const GROUPED_PROFILE_SETTINGS: Record<
   [PROFILE_SETTINGS_CATEGORY.YOUR_PROFILE]: [
     PROFILE_SETTINGS["general"],
     PROFILE_SETTINGS["preferences"],
-    PROFILE_SETTINGS["notifications"],
     PROFILE_SETTINGS["security"],
   ],
   [PROFILE_SETTINGS_CATEGORY.DEVELOPER]: [PROFILE_SETTINGS["api-tokens"]],

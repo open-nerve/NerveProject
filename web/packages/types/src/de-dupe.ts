@@ -16,7 +16,6 @@ export type TDuplicateIssuePayload = {
 
 export type TDeDupeIssue = {
   id: string;
-  type_id: string | null;
   project_id: string;
   sequence_id: number;
   name: string;

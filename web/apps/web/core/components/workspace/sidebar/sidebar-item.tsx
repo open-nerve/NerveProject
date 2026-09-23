@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
@@ -23,10 +22,9 @@ import { getSidebarNavigationItemIcon } from "@/components/workspace/sidebar/hel
 
 type Props = {
   item: IWorkspaceSidebarNavigationItem;
-  additionalRender?: (itemKey: string, workspaceSlug: string) => ReactNode;
 };
 
-export const SidebarItemBase = observer(function SidebarItemBase({ item, additionalRender }: Props) {
+export const SidebarItemBase = observer(function SidebarItemBase({ item }: Props) {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { workspaceSlug } = useParams();
@@ -54,7 +52,6 @@ export const SidebarItemBase = observer(function SidebarItemBase({ item, additio
           {icon}
           <p className="text-13 leading-5 font-medium">{t(item.labelTranslationKey)}</p>
         </div>
-        {additionalRender?.(item.key, slug)}
       </SidebarNavItem>
     </Link>
   );

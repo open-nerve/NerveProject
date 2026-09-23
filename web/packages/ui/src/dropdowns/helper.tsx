@@ -21,7 +21,7 @@ type Placement =
   | "right-start"
   | "right-end";
 
-export interface IDropdownProps {
+interface IDropdownProps {
   customButtonClassName?: string;
   customButtonTabIndex?: number;
   buttonClassName?: string;
@@ -39,12 +39,6 @@ export interface IDropdownProps {
   tabIndex?: number;
   useCaptureForOutsideClick?: boolean;
   defaultOpen?: boolean;
-}
-
-export interface IPortalProps {
-  children: React.ReactNode;
-  container?: Element | null;
-  asChild?: boolean;
 }
 
 export interface ICustomMenuDropdownProps extends IDropdownProps {

@@ -10,7 +10,7 @@ import React from "react";
  * Formats a shortcut string for display
  * Converts "cmd+shift+," to proper keyboard symbols
  */
-export const formatShortcutForDisplay = (shortcut: string | undefined): string | null => {
+const formatShortcutForDisplay = (shortcut: string | undefined): string | null => {
   if (!shortcut) return null;
 
   const isMac = typeof window !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0;
@@ -84,16 +84,6 @@ export function ShortcutBadge({ shortcut }: { shortcut: string | undefined }) {
     </div>
   );
 }
-
-/**
- * Formats key sequence for display (e.g., "gm" -> "G then M")
- */
-export const formatKeySequenceForDisplay = (sequence: string | undefined): string => {
-  if (!sequence) return "";
-
-  const chars = sequence.split("");
-  return chars.map((c) => c.toUpperCase()).join(" then ");
-};
 
 export function KeySequenceBadge({ sequence }: { sequence: string | undefined }) {
   if (!sequence) return null;

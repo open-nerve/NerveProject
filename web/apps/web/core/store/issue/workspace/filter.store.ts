@@ -32,7 +32,7 @@ import type { IIssueRootStore } from "../root.store";
 
 type TWorkspaceFilters = TStaticViewTypes;
 
-export type TBaseFilterStore = IBaseIssueFilterStore & IIssueFilterHelperStore;
+type TBaseFilterStore = IBaseIssueFilterStore & IIssueFilterHelperStore;
 
 export interface IWorkspaceIssuesFilter extends TBaseFilterStore {
   // fetch action

@@ -18,11 +18,6 @@ export enum EProjectNetwork {
   PUBLIC = 2,
 }
 
-export enum EIssueCommentAccessSpecifier {
-  EXTERNAL = "EXTERNAL",
-  INTERNAL = "INTERNAL",
-}
-
 // workspace notifications
 export enum ENotificationFilterType {
   CREATED = "created",
@@ -39,14 +34,4 @@ export enum EFileAssetType {
   USER_AVATAR = "USER_AVATAR",
   USER_COVER = "USER_COVER",
   WORKSPACE_LOGO = "WORKSPACE_LOGO",
-  TEAM_SPACE_DESCRIPTION = "TEAM_SPACE_DESCRIPTION",
-  INITIATIVE_DESCRIPTION = "INITIATIVE_DESCRIPTION",
-  PROJECT_DESCRIPTION = "PROJECT_DESCRIPTION",
-  TEAM_SPACE_COMMENT_DESCRIPTION = "TEAM_SPACE_COMMENT_DESCRIPTION",
-}
-
-export enum EUpdateStatus {
-  OFF_TRACK = "OFF-TRACK",
-  ON_TRACK = "ON-TRACK",
-  AT_RISK = "AT-RISK",
 }

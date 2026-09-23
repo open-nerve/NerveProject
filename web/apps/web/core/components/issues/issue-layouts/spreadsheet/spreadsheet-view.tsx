@@ -7,16 +7,12 @@
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
 // plane constants
-import { SPREADSHEET_SELECT_GROUP, SPREADSHEET_PROPERTY_LIST } from "@plane/constants";
+import { SPREADSHEET_PROPERTY_LIST } from "@plane/constants";
 // types
 import type { TIssue, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
 import { EIssueLayoutTypes } from "@plane/types";
-// components
-import { MultipleSelectGroup } from "@/components/core/multiple-select";
-import { IssueBulkOperationsRoot } from "@/components/issues/bulk-operations";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useBulkOperationStatus } from "@/hooks/use-bulk-operation-status";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { QuickAddIssueRoot, SpreadsheetAddIssueButton } from "../quick-add";
@@ -37,7 +33,6 @@ type Props = {
   enableQuickCreateIssue?: boolean;
   disableIssueCreation?: boolean;
   isWorkspaceLevel?: boolean;
-  isEpic?: boolean;
 };
 
 export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
@@ -55,15 +50,12 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
     canLoadMoreIssues,
     loadMoreIssues,
     isWorkspaceLevel = false,
-    isEpic = false,
   } = props;
   // refs
   const containerRef = useRef<HTMLTableElement | null>(null);
   const portalRef = useRef<HTMLDivElement | null>(null);
   // store hooks
   const { currentProjectDetails } = useProject();
-  // plane web hooks
-  const isBulkOperationsEnabled = useBulkOperationStatus();
 
   const spreadsheetColumnsList = isWorkspaceLevel
     ? SPREADSHEET_PROPERTY_LIST
@@ -77,49 +69,33 @@ export const SpreadsheetView = observer(function SpreadsheetView(props: Props) {
   return (
     <div className="relative flex h-full w-full flex-col overflow-x-hidden bg-layer-1 whitespace-nowrap text-secondary">
       <div ref={portalRef} className="spreadsheet-menu-portal" />
-      <MultipleSelectGroup
-        containerRef={containerRef}
-        entities={{
-          [SPREADSHEET_SELECT_GROUP]: issueIds,
-        }}
-        disabled={!isBulkOperationsEnabled || isEpic}
-      >
-        {(helpers) => (
-          <>
-            <div ref={containerRef} className="vertical-scrollbar horizontal-scrollbar scrollbar-lg h-full w-full">
-              <SpreadsheetTable
-                displayProperties={displayProperties}
-                displayFilters={displayFilters}
-                handleDisplayFilterUpdate={handleDisplayFilterUpdate}
-                issueIds={issueIds}
-                portalElement={portalRef}
-                quickActions={quickActions}
-                updateIssue={updateIssue}
-                canEditProperties={canEditProperties}
-                containerRef={containerRef}
-                canLoadMoreIssues={canLoadMoreIssues}
-                loadMoreIssues={loadMoreIssues}
-                spreadsheetColumnsList={spreadsheetColumnsList}
-                selectionHelpers={helpers}
-                isEpic={isEpic}
-              />
-            </div>
-            <div className="border-t border-subtle">
-              <div className="sticky bottom-0 left-0 z-5">
-                {enableQuickCreateIssue && !disableIssueCreation && (
-                  <QuickAddIssueRoot
-                    layout={EIssueLayoutTypes.SPREADSHEET}
-                    QuickAddButton={SpreadsheetAddIssueButton}
-                    quickAddCallback={quickAddCallback}
-                    isEpic={isEpic}
-                  />
-                )}
-              </div>
-            </div>
-            <IssueBulkOperationsRoot selectionHelpers={helpers} />
-          </>
-        )}
-      </MultipleSelectGroup>
+      <div ref={containerRef} className="vertical-scrollbar horizontal-scrollbar scrollbar-lg h-full w-full">
+        <SpreadsheetTable
+          displayProperties={displayProperties}
+          displayFilters={displayFilters}
+          handleDisplayFilterUpdate={handleDisplayFilterUpdate}
+          issueIds={issueIds}
+          portalElement={portalRef}
+          quickActions={quickActions}
+          updateIssue={updateIssue}
+          canEditProperties={canEditProperties}
+          containerRef={containerRef}
+          canLoadMoreIssues={canLoadMoreIssues}
+          loadMoreIssues={loadMoreIssues}
+          spreadsheetColumnsList={spreadsheetColumnsList}
+        />
+      </div>
+      <div className="border-t border-subtle">
+        <div className="sticky bottom-0 left-0 z-5">
+          {enableQuickCreateIssue && !disableIssueCreation && (
+            <QuickAddIssueRoot
+              layout={EIssueLayoutTypes.SPREADSHEET}
+              QuickAddButton={SpreadsheetAddIssueButton}
+              quickAddCallback={quickAddCallback}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 });

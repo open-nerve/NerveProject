@@ -10,12 +10,12 @@ import { FALLBACK_LANGUAGE, setLanguage } from "@plane/i18n";
 import type { IWorkItemFilterStore } from "@plane/shared-state";
 import { WorkItemFilterStore } from "@plane/shared-state";
 // plane web store
-import type { IBasePowerKStore as IPowerKStore } from "@/store/base-power-k.store";
-import { BasePowerKStore as PowerKStore } from "@/store/base-power-k.store";
+import type { IPowerKStore } from "@/store/power-k.store";
+import { PowerKStore } from "@/store/power-k.store";
 import type { IStateStore } from "@/store/state.store";
 import { StateStore } from "@/store/state.store";
-import type { ICommandPaletteStore } from "@/store/base-command-palette.store";
-import { CommandPaletteStore } from "@/store/base-command-palette.store";
+import type { ICommandPaletteStore } from "@/store/command-palette.store";
+import { CommandPaletteStore } from "@/store/command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 // stores
 import type { ICycleStore } from "./cycle.store";
@@ -42,8 +42,6 @@ import type { IModuleStore } from "./module.store";
 import { ModulesStore } from "./module.store";
 import type { IModuleFilterStore } from "./module_filter.store";
 import { ModuleFilterStore } from "./module_filter.store";
-import type { IMultipleSelectStore } from "./multiple_select.store";
-import { MultipleSelectStore } from "./multiple_select.store";
 import type { IWorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import { WorkspaceNotificationStore } from "./notifications/workspace-notifications.store";
 import type { IProjectRootStore } from "./project";
@@ -60,7 +58,7 @@ import type { IWorkspaceRootStore } from "./workspace";
 
 enableStaticRendering(typeof window === "undefined");
 
-export class CoreRootStore {
+export class RootStore {
   workspaceRoot: IWorkspaceRootStore;
   projectRoot: IProjectRootStore;
   memberRoot: IMemberRootStore;
@@ -79,7 +77,6 @@ export class CoreRootStore {
   instance: IInstanceStore;
   user: IUserStore;
   projectInbox: IProjectInboxStore;
-  multipleSelect: IMultipleSelectStore;
   workspaceNotification: IWorkspaceNotificationStore;
   favorite: IFavoriteStore;
   editorAssetStore: IEditorAssetStore;
@@ -104,7 +101,6 @@ export class CoreRootStore {
     this.issue = new IssueRootStore(this);
     this.state = new StateStore(this);
     this.label = new LabelStore(this);
-    this.multipleSelect = new MultipleSelectStore();
     this.projectInbox = new ProjectInboxStore(this);
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);
@@ -134,7 +130,6 @@ export class CoreRootStore {
     this.state = new StateStore(this);
     this.label = new LabelStore(this);
     this.projectInbox = new ProjectInboxStore(this);
-    this.multipleSelect = new MultipleSelectStore();
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);
     this.editorAssetStore = new EditorAssetStore();
@@ -142,5 +137,3 @@ export class CoreRootStore {
     this.powerK = new PowerKStore();
   }
 }
-
-export { CoreRootStore as RootStore };

@@ -7,7 +7,7 @@
 import { pull, concat, update, uniq, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 // Plane Imports
-import type { TIssueComment, TIssueCommentMap, TIssueCommentIdMap, TIssueServiceType } from "@plane/types";
+import type { TIssueComment, TIssueCommentMap, TIssueCommentIdMap } from "@plane/types";
 // services
 import { IssueCommentService } from "@/services/issue";
 // types
@@ -53,13 +53,12 @@ export class IssueCommentStore implements IIssueCommentStore {
   loader: TCommentLoader = "fetch";
   comments: TIssueCommentIdMap = {};
   commentMap: TIssueCommentMap = {};
-  serviceType;
   // root store
   rootIssueDetail: IIssueDetail;
   // services
   issueCommentService;
 
-  constructor(rootStore: IIssueDetail, serviceType: TIssueServiceType) {
+  constructor(rootStore: IIssueDetail) {
     makeObservable(this, {
       // observables
       loader: observable.ref,
@@ -72,10 +71,9 @@ export class IssueCommentStore implements IIssueCommentStore {
       removeComment: action,
     });
     // root store
-    this.serviceType = serviceType;
     this.rootIssueDetail = rootStore;
     // services
-    this.issueCommentService = new IssueCommentService(serviceType);
+    this.issueCommentService = new IssueCommentService();
   }
 
   // helper methods

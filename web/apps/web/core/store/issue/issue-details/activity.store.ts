@@ -10,18 +10,11 @@ import { computedFn } from "mobx-utils";
 // plane package imports
 import type { E_SORT_ORDER } from "@plane/constants";
 import { EActivityFilterType } from "@plane/constants";
-import type {
-  TIssueActivityComment,
-  TIssueActivity,
-  TIssueActivityMap,
-  TIssueActivityIdMap,
-  TIssueServiceType,
-} from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
+import type { TIssueActivityComment, TIssueActivity, TIssueActivityMap, TIssueActivityIdMap } from "@plane/types";
 // services
 import { IssueActivityService } from "@/services/issue";
 // store
-import type { CoreRootStore } from "@/store/root.store";
+import type { RootStore } from "@/store/root.store";
 
 export type TActivityLoader = "fetch" | "mutate" | undefined;
 
@@ -52,13 +45,9 @@ export class IssueActivityStore implements IIssueActivityStore {
   activities: TIssueActivityIdMap = {};
   activityMap: TIssueActivityMap = {};
   // services
-  serviceType;
   issueActivityService;
 
-  constructor(
-    protected store: CoreRootStore,
-    serviceType: TIssueServiceType = EIssueServiceType.ISSUES
-  ) {
+  constructor(protected store: RootStore) {
     makeObservable(this, {
       // observables
       loader: observable.ref,
@@ -67,9 +56,8 @@ export class IssueActivityStore implements IIssueActivityStore {
       // actions
       fetchActivities: action,
     });
-    this.serviceType = serviceType;
     // services
-    this.issueActivityService = new IssueActivityService(this.serviceType);
+    this.issueActivityService = new IssueActivityService();
   }
 
   // helper methods
@@ -88,8 +76,7 @@ export class IssueActivityStore implements IIssueActivityStore {
 
     const activityComments: TIssueActivityComment[] = [];
 
-    const currentStore =
-      this.serviceType === EIssueServiceType.EPICS ? this.store.issue.epicDetail : this.store.issue.issueDetail;
+    const currentStore = this.store.issue.issueDetail;
 
     const activities = this.getActivitiesByIssueId(issueId);
     const comments = currentStore.comment.getCommentsByIssueId(issueId);

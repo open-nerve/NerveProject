@@ -1,15 +1,6 @@
 {
-  "command_k": {
-    "empty_state": {
-      "search": {
-        "title": "No results found"
-      }
-    }
-  },
   "sidebar": {
-    "your_work": "Your work",
     "new_work_item": "New work item",
-    "home": "Home",
     "inbox": "Inbox",
     "workspace": "Workspace",
     "views": "Views",
@@ -17,14 +8,6 @@
     "cycles": "Cycles",
     "modules": "Modules",
     "intake": "Intake",
-    "drafts": "Drafts",
-    "favorites": "Favorites",
-    "pro": "Pro",
-    "upgrade": "Upgrade",
-    "pi_chat": "Plane AI",
-    "epics": "Epics",
-    "upgrade_plan": "Upgrade plan",
-    "plane_pro": "Plane Pro",
-    "business": "Business"
+    "favorites": "Favorites"
   }
 }

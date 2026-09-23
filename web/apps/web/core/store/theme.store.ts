@@ -14,9 +14,6 @@ export interface IThemeStore {
   isExtendedProjectSidebarOpened: boolean | undefined;
   profileSidebarCollapsed: boolean | undefined;
   issueDetailSidebarCollapsed: boolean | undefined;
-  epicDetailSidebarCollapsed: boolean | undefined;
-  initiativesSidebarCollapsed: boolean | undefined;
-  projectOverviewSidebarCollapsed: boolean | undefined;
   // actions
   toggleAnySidebarDropdown: (open?: boolean) => void;
   toggleSidebar: (collapsed?: boolean) => void;
@@ -24,9 +21,6 @@ export interface IThemeStore {
   toggleExtendedProjectSidebar: (collapsed?: boolean) => void;
   toggleProfileSidebar: (collapsed?: boolean) => void;
   toggleIssueDetailSidebar: (collapsed?: boolean) => void;
-  toggleEpicDetailSidebar: (collapsed?: boolean) => void;
-  toggleInitiativesSidebar: (collapsed?: boolean) => void;
-  toggleProjectOverviewSidebar: (collapsed?: boolean) => void;
 }
 
 export class ThemeStore implements IThemeStore {
@@ -37,9 +31,6 @@ export class ThemeStore implements IThemeStore {
   isExtendedProjectSidebarOpened: boolean | undefined = undefined;
   profileSidebarCollapsed: boolean | undefined = undefined;
   issueDetailSidebarCollapsed: boolean | undefined = undefined;
-  epicDetailSidebarCollapsed: boolean | undefined = undefined;
-  initiativesSidebarCollapsed: boolean | undefined = undefined;
-  projectOverviewSidebarCollapsed: boolean | undefined = undefined;
 
   constructor() {
     makeObservable(this, {
@@ -50,9 +41,6 @@ export class ThemeStore implements IThemeStore {
       isExtendedProjectSidebarOpened: observable.ref,
       profileSidebarCollapsed: observable.ref,
       issueDetailSidebarCollapsed: observable.ref,
-      epicDetailSidebarCollapsed: observable.ref,
-      initiativesSidebarCollapsed: observable.ref,
-      projectOverviewSidebarCollapsed: observable.ref,
       // action
       toggleAnySidebarDropdown: action,
       toggleSidebar: action,
@@ -60,9 +48,6 @@ export class ThemeStore implements IThemeStore {
       toggleExtendedProjectSidebar: action,
       toggleProfileSidebar: action,
       toggleIssueDetailSidebar: action,
-      toggleEpicDetailSidebar: action,
-      toggleInitiativesSidebar: action,
-      toggleProjectOverviewSidebar: action,
     });
   }
 
@@ -132,32 +117,5 @@ export class ThemeStore implements IThemeStore {
       this.issueDetailSidebarCollapsed = collapsed;
     }
     localStorage.setItem("issue_detail_sidebar_collapsed", this.issueDetailSidebarCollapsed.toString());
-  };
-
-  toggleEpicDetailSidebar = (collapsed?: boolean) => {
-    if (collapsed === undefined) {
-      this.epicDetailSidebarCollapsed = !this.epicDetailSidebarCollapsed;
-    } else {
-      this.epicDetailSidebarCollapsed = collapsed;
-    }
-    localStorage.setItem("epic_detail_sidebar_collapsed", this.epicDetailSidebarCollapsed.toString());
-  };
-
-  toggleInitiativesSidebar = (collapsed?: boolean) => {
-    if (collapsed === undefined) {
-      this.initiativesSidebarCollapsed = !this.initiativesSidebarCollapsed;
-    } else {
-      this.initiativesSidebarCollapsed = collapsed;
-    }
-    localStorage.setItem("initiatives_sidebar_collapsed", this.initiativesSidebarCollapsed.toString());
-  };
-
-  toggleProjectOverviewSidebar = (collapsed?: boolean) => {
-    if (collapsed === undefined) {
-      this.projectOverviewSidebarCollapsed = !this.projectOverviewSidebarCollapsed;
-    } else {
-      this.projectOverviewSidebarCollapsed = collapsed;
-    }
-    localStorage.setItem("project_overview_sidebar_collapsed", this.projectOverviewSidebarCollapsed.toString());
   };
 }

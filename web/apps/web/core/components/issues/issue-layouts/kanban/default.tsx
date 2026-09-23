@@ -28,7 +28,6 @@ import { useKanbanView } from "@/hooks/store/use-kanban-view";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // types
 // parent components
-import { useWorkFlowFDragNDrop } from "@/components/workflow";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import type { GroupDropLocation } from "../utils";
 import { getGroupByColumns, isWorkspaceLevel, getApproximateCardHeight } from "../utils";
@@ -66,7 +65,6 @@ export interface IKanBan {
   handleOnDrop: (source: GroupDropLocation, destination: GroupDropLocation) => Promise<void>;
   showEmptyGroup?: boolean;
   subGroupIndex?: number;
-  isEpic?: boolean;
 }
 
 export const KanBan = observer(function KanBan(props: IKanBan) {
@@ -95,7 +93,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
     isDropDisabled,
     dropErrorMessage,
     subGroupIndex = 0,
-    isEpic = false,
   } = props;
   // i18n
   // store hooks
@@ -104,13 +101,10 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
   // derived values
   const isDragDisabled = !issueKanBanView?.getCanUserDragDrop(group_by, sub_group_by);
 
-  const { getIsWorkflowWorkItemCreationDisabled } = useWorkFlowFDragNDrop(group_by, sub_group_by);
-
   const list = getGroupByColumns({
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
-    isEpic: isEpic,
   });
 
   if (!list) return null;
@@ -175,15 +169,10 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     title={subList.name}
                     count={getGroupIssueCount(subList.id, undefined, false) ?? 0}
                     issuePayload={subList.payload}
-                    disableIssueCreation={
-                      disableIssueCreation ||
-                      isGroupByCreatedBy ||
-                      getIsWorkflowWorkItemCreationDisabled(subList.id, sub_group_id)
-                    }
+                    disableIssueCreation={disableIssueCreation || isGroupByCreatedBy}
                     addIssuesToView={addIssuesToView}
                     collapsedGroups={collapsedGroups}
                     handleCollapsedGroups={handleCollapsedGroups}
-                    isEpic={isEpic}
                   />
                 </div>
               )}
@@ -227,7 +216,6 @@ export const KanBan = observer(function KanBan(props: IKanBan) {
                     scrollableContainerRef={scrollableContainerRef}
                     loadMoreIssues={loadMoreIssues}
                     handleOnDrop={handleOnDrop}
-                    isEpic={isEpic}
                   />
                 </RenderIfVisible>
               )}

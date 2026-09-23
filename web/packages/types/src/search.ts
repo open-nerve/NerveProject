@@ -35,7 +35,6 @@ export type TIssueSearchResponse = {
   project_id: TIssue["project_id"];
   priority: TIssue["priority"];
   state_id: TIssue["state_id"];
-  type_id: TIssue["type_id"];
 };
 
 export type TCycleSearchResponse = {

@@ -6,40 +6,30 @@
 
 // Horizontal Stack Asset Types
 export type HorizontalStackAssetType =
-  | "customer"
-  | "epic"
   | "intake"
   | "label"
   | "members"
   | "project"
   | "settings"
   | "state"
-  | "template"
   | "token"
   | "unknown"
-  | "update"
   | "webhook"
-  | "work-item"
-  | "worklog";
+  | "work-item";
 
 // Vertical Stack Asset Types
 export type VerticalStackAssetType =
   | "archived-cycle"
   | "archived-module"
   | "archived-work-item"
-  | "customer"
   | "cycle"
-  | "dashboard"
   | "draft"
-  | "epic"
   | "error-404"
-  | "initiative"
   | "invalid-link"
   | "module"
   | "no-access"
   | "project"
   | "server-error"
-  | "teamspace"
   | "view"
   | "work-item";
 

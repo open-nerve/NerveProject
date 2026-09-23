@@ -6,10 +6,9 @@
 
 import type { TIssuePriorities } from "../issues";
 import type { TStateGroups } from "../state";
-import type { TIssuePublicComment } from "./activity/issue_comment";
 import type { TIssueAttachment } from "./issue_attachment";
 import type { TIssueLink } from "./issue_link";
-import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from "./issue_reaction";
+import type { TIssueReaction } from "./issue_reaction";
 import type { TIssueRelationTypes } from "./issue_relation";
 
 export enum EIssueLayoutTypes {
@@ -19,26 +18,16 @@ export enum EIssueLayoutTypes {
   SPREADSHEET = "spreadsheet",
 }
 
-export enum EIssueServiceType {
-  ISSUES = "issues",
-  EPICS = "epics",
-  WORK_ITEMS = "work-items",
-}
-
 export enum EIssuesStoreType {
   GLOBAL = "GLOBAL",
   PROFILE = "PROFILE",
-  TEAM = "TEAM",
   PROJECT = "PROJECT",
   CYCLE = "CYCLE",
   MODULE = "MODULE",
-  TEAM_VIEW = "TEAM_VIEW",
   PROJECT_VIEW = "PROJECT_VIEW",
   ARCHIVED = "ARCHIVED",
   DEFAULT = "DEFAULT",
   WORKSPACE_DRAFT = "WORKSPACE_DRAFT",
-  EPIC = "EPIC",
-  TEAM_PROJECT_WORK_ITEMS = "TEAM_PROJECT_WORK_ITEMS",
 }
 
 export type TBaseIssue = {
@@ -60,7 +49,6 @@ export type TBaseIssue = {
   parent_id: string | null;
   cycle_id: string | null;
   module_ids: string[] | null;
-  type_id: string | null;
 
   created_at: string;
   updated_at: string;
@@ -73,7 +61,6 @@ export type TBaseIssue = {
   updated_by: string;
 
   is_draft: boolean;
-  is_epic?: boolean;
   is_intake?: boolean;
 };
 
@@ -135,76 +122,7 @@ export type TIssuesResponse = {
   total_results: number;
 };
 
-export type TBulkIssueProperties = Pick<
-  TIssue,
-  "state_id" | "priority" | "label_ids" | "assignee_ids" | "start_date" | "target_date" | "module_ids" | "cycle_id"
->;
-
-export type TBulkOperationsPayload = {
-  issue_ids: string[];
-  properties: Partial<TBulkIssueProperties>;
-};
-
 export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attachments";
-
-export type TIssueServiceType = EIssueServiceType.ISSUES | EIssueServiceType.EPICS | EIssueServiceType.WORK_ITEMS;
-
-export interface IPublicIssue extends Pick<
-  TIssue,
-  | "description_html"
-  | "created_at"
-  | "updated_at"
-  | "created_by"
-  | "id"
-  | "name"
-  | "priority"
-  | "state_id"
-  | "project_id"
-  | "sequence_id"
-  | "sort_order"
-  | "start_date"
-  | "target_date"
-  | "cycle_id"
-  | "module_ids"
-  | "label_ids"
-  | "assignee_ids"
-  | "attachment_count"
-  | "sub_issues_count"
-  | "link_count"
-> {
-  comments: TIssuePublicComment[];
-  reaction_items: IIssuePublicReaction[];
-  vote_items: IPublicVote[];
-}
-
-type TPublicIssueResponseResults =
-  | IPublicIssue[]
-  | {
-      [key: string]: {
-        results:
-          | IPublicIssue[]
-          | {
-              [key: string]: {
-                results: IPublicIssue[];
-                total_results: number;
-              };
-            };
-        total_results: number;
-      };
-    };
-
-export type TPublicIssuesResponse = {
-  grouped_by: string;
-  next_cursor: string;
-  prev_cursor: string;
-  next_page_results: boolean;
-  prev_page_results: boolean;
-  total_count: number;
-  count: number;
-  total_pages: number;
-  extra_stats: null;
-  results: TPublicIssueResponseResults;
-};
 
 export interface IWorkItemPeekOverview {
   embedIssue?: boolean;

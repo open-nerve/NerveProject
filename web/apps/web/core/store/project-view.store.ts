@@ -15,7 +15,7 @@ import { getValidatedViewFilters, getViewName, orderViews, shouldFilterView } fr
 // services
 import { ViewService } from "@/services/view.service";
 // store
-import type { CoreRootStore } from "./root.store";
+import type { RootStore } from "./root.store";
 
 export interface IProjectViewStore {
   //Loaders
@@ -61,7 +61,7 @@ export class ProjectViewStore implements IProjectViewStore {
   // services
   viewService;
 
-  constructor(_rootStore: CoreRootStore) {
+  constructor(_rootStore: RootStore) {
     makeObservable(this, {
       // observables
       loader: observable.ref,

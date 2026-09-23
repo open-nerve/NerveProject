@@ -50,18 +50,10 @@ export interface IProject extends IPartialProject {
   readonly cover_image_url?: string;
   default_assignee?: IUser | string | null;
   description?: string;
-  anchor?: string | null;
   is_favorite?: boolean;
   members?: string[];
   timezone?: string;
   next_work_item_sequence?: number;
-}
-
-export interface IProjectLite {
-  id: string;
-  name: string;
-  identifier: string;
-  logo_props: TLogoProps;
 }
 
 export interface IProjectMap {
@@ -126,7 +118,6 @@ export type TProjectIssuesSearchParams = {
   issue_id?: string;
   workspace_search: boolean;
   target_date?: string;
-  epic?: boolean;
 };
 
 export interface ISearchIssueResponse {
@@ -141,7 +132,6 @@ export interface ISearchIssueResponse {
   state__group: TStateGroups;
   state__name: string;
   workspace__slug: string;
-  type_id: string;
 }
 
 export type TPartialProject = IPartialProject;

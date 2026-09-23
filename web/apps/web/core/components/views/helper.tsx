@@ -54,9 +54,3 @@ export function WorkspaceActiveLayout(props: TWorkspaceLayoutProps) {
       return <></>;
   }
 }
-
-export type TLayoutSelectionProps = {
-  onChange: (layout: EIssueLayoutTypes) => void;
-  selectedLayout: EIssueLayoutTypes;
-  workspaceSlug: string;
-};

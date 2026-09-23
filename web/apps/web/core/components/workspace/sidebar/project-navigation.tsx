@@ -35,11 +35,10 @@ export type TNavigationItem = {
 type TProjectItemsProps = {
   workspaceSlug: string;
   projectId: string;
-  additionalNavigationItems?: (workspaceSlug: string, projectId: string) => TNavigationItem[];
 };
 
 export const ProjectNavigation = observer(function ProjectNavigation(props: TProjectItemsProps) {
-  const { workspaceSlug, projectId, additionalNavigationItems } = props;
+  const { workspaceSlug, projectId } = props;
   const { workItem: workItemIdentifierFromRoute } = useParams();
   // store hooks
   const { t } = useTranslation();
@@ -124,39 +123,22 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
     [project]
   );
 
-  // memoized navigation items and adding additional navigation items
-  const navigationItemsMemo = useMemo(() => {
-    const navigationItems = (workspaceSlug: string, projectId: string): TNavigationItem[] => {
-      const navItems = baseNavigation(workspaceSlug, projectId);
-
-      if (additionalNavigationItems) {
-        navItems.push(...additionalNavigationItems(workspaceSlug, projectId));
-      }
-
-      return navItems;
-    };
-
-    // sort navigation items by sortOrder
-    const sortedNavigationItems = navigationItems(workspaceSlug, projectId).sort(
-      (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)
-    );
-
-    return sortedNavigationItems;
-  }, [workspaceSlug, projectId, baseNavigation, additionalNavigationItems]);
+  // memoized navigation items, sorted by sortOrder
+  const navigationItemsMemo = useMemo(
+    () => baseNavigation(workspaceSlug, projectId).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+    [workspaceSlug, projectId, baseNavigation]
+  );
 
   const isActive = useCallback(
     (item: TNavigationItem) => {
       // work item condition
-      const workItemCondition = workItemId && workItem && !workItem?.is_epic && workItem?.project_id === projectId;
-      // epic condition
-      const epicCondition = workItemId && workItem && workItem?.is_epic && workItem?.project_id === projectId;
+      const workItemCondition = workItemId && workItem && workItem?.project_id === projectId;
       // is active
       const isWorkItemActive = item.key === "work_items" && workItemCondition;
-      const isEpicActive = item.key === "epics" && epicCondition;
       // pathname condition
       const isPathnameActive = pathname.includes(item.href);
       // return
-      return isWorkItemActive || isEpicActive || isPathnameActive;
+      return isWorkItemActive || isPathnameActive;
     },
     [pathname, workItem, workItemId, projectId]
   );

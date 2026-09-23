@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { CSSProperties, ComponentType, ReactNode } from "react";
+
 // ============================================================
 // Chart Base
 // ============================================================
@@ -11,7 +13,7 @@ export type TChartLegend = {
   align: "left" | "center" | "right";
   verticalAlign: "top" | "middle" | "bottom";
   layout: "horizontal" | "vertical";
-  wrapperStyles?: React.CSSProperties;
+  wrapperStyles?: CSSProperties;
 };
 
 export type TChartMargin = {
@@ -32,7 +34,7 @@ export type TBaseChartProps<K extends string, T extends string> = {
   legend?: TChartLegend;
   margin?: TChartMargin;
   showTooltip?: boolean;
-  customTooltipContent?: (props: { active?: boolean; label: string; payload: any }) => React.ReactNode;
+  customTooltipContent?: (props: { active?: boolean; label: string; payload: any }) => ReactNode;
 };
 
 // Props specific to charts with X and Y axes
@@ -57,8 +59,8 @@ export type TAxisChartProps<K extends string, T extends string> = TBaseChartProp
     y?: number;
   };
   customTicks?: {
-    x?: React.ComponentType<unknown>;
-    y?: React.ComponentType<unknown>;
+    x?: ComponentType<unknown>;
+    y?: ComponentType<unknown>;
   };
 };
 

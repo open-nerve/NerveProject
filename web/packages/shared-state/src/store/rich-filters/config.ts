@@ -149,8 +149,7 @@ export class FilterConfig<P extends TFilterProperty> implements IFilterConfig<P>
 
   /**
    * Returns all supported operator options for display in the filter UI.
-   * This method filters out operators that are already applied (unless multiple filters are allowed)
-   * and includes both positive and negative variants when supported.
+   * This method filters out operators that are already applied (unless multiple filters are allowed).
    *
    * @param value - The current filter value used to determine the appropriate operator variant
    * @returns Array of operator options with their display labels and values
@@ -166,11 +165,6 @@ export class FilterConfig<P extends TFilterProperty> implements IFilterConfig<P>
         value: operator,
         label: displayOperatorLabel,
       });
-
-      const additionalOperatorOption = this._getAdditionalOperatorOptions(operator, value);
-      if (additionalOperatorOption) {
-        operatorOptions.push(additionalOperatorOption);
-      }
     }
 
     return operatorOptions;
@@ -192,11 +186,4 @@ export class FilterConfig<P extends TFilterProperty> implements IFilterConfig<P>
       }
     });
   });
-
-  // ------------ private helpers ------------
-
-  private _getAdditionalOperatorOptions = (
-    _operator: TSupportedOperators,
-    _value: TFilterValue
-  ): TOperatorOptionForDisplay | undefined => undefined;
 }

@@ -5,18 +5,14 @@
  */
 
 import { API_BASE_URL } from "@plane/constants";
-import type { TIssueActivity, TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
+import type { TIssueActivity } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // helper
 
 export class IssueActivityService extends APIService {
-  private serviceType: TIssueServiceType;
-
-  constructor(serviceType: TIssueServiceType = EIssueServiceType.ISSUES) {
+  constructor() {
     super(API_BASE_URL);
-    this.serviceType = serviceType;
   }
 
   async getIssueActivities(
@@ -29,9 +25,9 @@ export class IssueActivityService extends APIService {
         }
       | object = {}
   ): Promise<TIssueActivity[]> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/${issueId}/history/`, {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/history/`, {
       params: {
-        activity_type: `${this.serviceType === EIssueServiceType.EPICS ? "epic-property" : "issue-property"}`,
+        activity_type: "issue-property",
         ...params,
       },
     })

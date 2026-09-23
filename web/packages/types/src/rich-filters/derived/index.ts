@@ -6,44 +6,78 @@
 
 import type { TFilterValue } from "../expression";
 import type {
-  TCoreAllAvailableDateFilterOperatorsForDisplay,
-  TCoreAllAvailableSelectFilterOperatorsForDisplay,
-  TCoreSupportedDateFilterOperators,
-  TCoreSupportedSelectFilterOperators,
-} from "./core";
-import type {
-  TExtendedAllAvailableDateFilterOperatorsForDisplay,
-  TExtendedAllAvailableSelectFilterOperatorsForDisplay,
-  TExtendedSupportedDateFilterOperators,
-  TExtendedSupportedSelectFilterOperators,
-} from "./extended";
+  TDateFilterFieldConfig,
+  TDateRangeFilterFieldConfig,
+  TSingleSelectFilterFieldConfig,
+  TMultiSelectFilterFieldConfig,
+} from "../field-types";
+import type { TOperatorSpecificConfigs } from "../operator-configs";
+import type { TFilterOperatorHelper } from "./shared";
 
-// -------- COMPOSED SUPPORT TYPES --------
+// -------- DATE FILTER OPERATORS --------
 
 /**
- * All supported date filter operators.
+ * Union type representing all operators that support single date filter types.
+ */
+export type TSupportedSingleDateFilterOperators<V extends TFilterValue = TFilterValue> = {
+  [K in keyof TOperatorSpecificConfigs]: TFilterOperatorHelper<TOperatorSpecificConfigs, K, TDateFilterFieldConfig<V>>;
+}[keyof TOperatorSpecificConfigs];
+
+/**
+ * Union type representing all operators that support range date filter types.
+ */
+export type TSupportedRangeDateFilterOperators<V extends TFilterValue = TFilterValue> = {
+  [K in keyof TOperatorSpecificConfigs]: TFilterOperatorHelper<
+    TOperatorSpecificConfigs,
+    K,
+    TDateRangeFilterFieldConfig<V>
+  >;
+}[keyof TOperatorSpecificConfigs];
+
+/**
+ * Union type representing all operators that support date filter types.
  */
 export type TSupportedDateFilterOperators<V extends TFilterValue = TFilterValue> =
-  | TCoreSupportedDateFilterOperators<V>
-  | TExtendedSupportedDateFilterOperators<V>;
+  | TSupportedSingleDateFilterOperators<V>
+  | TSupportedRangeDateFilterOperators<V>;
 
 export type TAllAvailableDateFilterOperatorsForDisplay<V extends TFilterValue = TFilterValue> =
-  | TCoreAllAvailableDateFilterOperatorsForDisplay<V>
-  | TExtendedAllAvailableDateFilterOperatorsForDisplay<V>;
+  TSupportedDateFilterOperators<V>;
+
+// -------- SELECT FILTER OPERATORS --------
 
 /**
- * All supported select filter operators.
+ * Union type representing all operators that support single select filter types.
+ */
+export type TSupportedSingleSelectFilterOperators<V extends TFilterValue = TFilterValue> = {
+  [K in keyof TOperatorSpecificConfigs]: TFilterOperatorHelper<
+    TOperatorSpecificConfigs,
+    K,
+    TSingleSelectFilterFieldConfig<V>
+  >;
+}[keyof TOperatorSpecificConfigs];
+
+/**
+ * Union type representing all operators that support multi select filter types.
+ */
+export type TSupportedMultiSelectFilterOperators<V extends TFilterValue = TFilterValue> = {
+  [K in keyof TOperatorSpecificConfigs]: TFilterOperatorHelper<
+    TOperatorSpecificConfigs,
+    K,
+    TMultiSelectFilterFieldConfig<V>
+  >;
+}[keyof TOperatorSpecificConfigs];
+
+/**
+ * Union type representing all operators that support any select filter types.
  */
 export type TSupportedSelectFilterOperators<V extends TFilterValue = TFilterValue> =
-  | TCoreSupportedSelectFilterOperators<V>
-  | TExtendedSupportedSelectFilterOperators<V>;
+  | TSupportedSingleSelectFilterOperators<V>
+  | TSupportedMultiSelectFilterOperators<V>;
 
 export type TAllAvailableSelectFilterOperatorsForDisplay<V extends TFilterValue = TFilterValue> =
-  | TCoreAllAvailableSelectFilterOperatorsForDisplay<V>
-  | TExtendedAllAvailableSelectFilterOperatorsForDisplay<V>;
+  TSupportedSelectFilterOperators<V>;
 
 // -------- RE-EXPORTS --------
 
 export * from "./shared";
-export * from "./core";
-export * from "./extended";

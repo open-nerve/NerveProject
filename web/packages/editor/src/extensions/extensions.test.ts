@@ -37,9 +37,7 @@ const buildExtensions = (overrides: TOverrides = {}): Extensions =>
     disabledExtensions: overrides.disabledExtensions ?? [],
     editable: overrides.editable ?? true,
     enableHistory: overrides.enableHistory ?? true,
-    extendedEditorProps: {},
     fileHandler,
-    flaggedExtensions: [],
     getEditorMetaData: () => ({ file_assets: [], user_mentions: [] }),
     mentionHandler,
   });

@@ -84,24 +84,9 @@
     },
     "intake_main": {
       "title": "Select an Intake work item to view its details"
-    },
-    "epics": {
-      "title": "Turn complex projects into structured epics.",
-      "description": "An epic helps you organize big goals into smaller, trackable tasks.",
-      "cta_primary": "Create an Epic",
-      "cta_secondary": "Documentation"
-    },
-    "epic_work_items": {
-      "title": "You haven't added work items to this epic yet.",
-      "description": "Start by adding some work items to this epic and track them here.",
-      "cta_secondary": "Add work items"
     }
   },
   "workspace_empty_state": {
-    "archive_epics": {
-      "title": "No archived epics yet",
-      "description": "You can archive epics that are completed or cancelled. Find them here once archived."
-    },
     "archive_work_items": {
       "title": "No archived work items yet",
       "description": "Manually or through automation, you can archive work items that are completed or cancelled. Find them here once archived.",
@@ -134,10 +119,6 @@
     "projects_archived": {
       "title": "No projects archived",
       "description": "Looks like all your projects are still active—great job!"
-    },
-    "project_overview_state_sidebar": {
-      "title": "Enable project states",
-      "description": "Enable Project States to view and manage properties like state, priority, due dates and more."
     }
   },
   "settings_empty_state": {
@@ -160,46 +141,6 @@
       "title": "No Webhook added yet",
       "description": "Automate notifications to external services when project events occur.",
       "cta_primary": "Add webhook"
-    },
-    "work_item_types": {
-      "title": "Create and customize work item types",
-      "description": "Define unique work item types for your project. Each type can have its own properties, workflows, and fields - tailored to your project and team's needs.",
-      "cta_primary": "Enable"
-    },
-    "work_item_type_properties": {
-      "title": "Define the property and details you want to capture for this work item type. Customize it to match your project's workflow.",
-      "cta_secondary": "Add property"
-    },
-    "templates": {
-      "title": "No templates yet",
-      "description": "Reduce setup time by creating templates for work items, and pages — and start new work in seconds.",
-      "cta_primary": "Create your first template"
-    },
-    "recurring_work_items": {
-      "title": "No recurring work item yet",
-      "description": "Set up recurring work items to automate repeat tasks and stay on schedule effortlessly.",
-      "cta_primary": "Create recurring work item"
-    },
-    "worklogs": {
-      "title": "Track timesheets for all members",
-      "description": "Log time on work items to view detailed timesheets for any team member across projects."
-    },
-    "group_syncing": {
-      "title": "No group mappings yet"
-    },
-    "template_setting": {
-      "title": "No templates yet",
-      "description": "Reduce setup time by creating templates for projects, work items, and pages — and start new work in seconds.",
-      "cta_primary": "Create template"
-    },
-    "workflows": {
-      "title": "No workflows yet",
-      "description": "Create workflows to manage the progress of your work items.",
-      "cta_primary": "Add new workflow",
-      "states": {
-        "title": "Add states",
-        "description": "Select the states through which the work item progresses."
-      }
     }
   }
 }

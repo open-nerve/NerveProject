@@ -4,6 +4,8 @@
  * See the LICENSE file for details.
  */
 
+import type { ReactNode } from "react";
+
 export type TPaginationInfo = {
   count: number;
   extra_stats: string | null;
@@ -36,7 +38,7 @@ export type TFetchStatus = "partial" | "complete" | undefined;
 export type ICustomSearchSelectOption = {
   value: any;
   query: string;
-  content: React.ReactNode;
+  content: ReactNode;
   disabled?: boolean;
-  tooltip?: string | React.ReactNode;
+  tooltip?: string | ReactNode;
 };

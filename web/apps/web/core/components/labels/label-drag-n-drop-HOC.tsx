@@ -29,7 +29,7 @@ type LabelDragPreviewProps = {
   isGroup: boolean;
 };
 
-export function LabelDragPreview(props: LabelDragPreviewProps) {
+function LabelDragPreview(props: LabelDragPreviewProps) {
   const { label, isGroup } = props;
 
   return (

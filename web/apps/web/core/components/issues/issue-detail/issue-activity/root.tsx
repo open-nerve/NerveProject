@@ -13,8 +13,6 @@ import { E_SORT_ORDER, defaultActivityFilters } from "@plane/constants";
 import { useLocalStorage } from "@plane/hooks";
 // i18n
 import { useTranslation } from "@plane/i18n";
-//types
-import type { TFileSignedURLResponse, TIssueComment } from "@plane/types";
 // components
 import { CommentCreate } from "@/components/comments/comment-create";
 // hooks
@@ -31,13 +29,6 @@ type TIssueActivity = {
   issueId: string;
   disabled?: boolean;
   isIntakeIssue?: boolean;
-};
-
-export type TActivityOperations = {
-  createComment: (data: Partial<TIssueComment>) => Promise<TIssueComment>;
-  updateComment: (commentId: string, data: Partial<TIssueComment>) => Promise<void>;
-  removeComment: (commentId: string) => Promise<void>;
-  uploadCommentAsset: (blockId: string, file: File, commentId?: string) => Promise<TFileSignedURLResponse>;
 };
 
 export const IssueActivity = observer(function IssueActivity(props: TIssueActivity) {
@@ -117,7 +108,6 @@ export const IssueActivity = observer(function IssueActivity(props: TIssueActivi
               issueId={issueId}
               selectedFilters={selectedFilters || defaultActivityFilters}
               activityOperations={activityOperations}
-              showAccessSpecifier={!!project.anchor}
               disabled={disabled}
               sortOrder={sortOrder || E_SORT_ORDER.ASC}
             />

@@ -22,7 +22,7 @@ import { useFavorite } from "@/hooks/store/use-favorite";
 
 type TForm = {
   name: string;
-  entity_type: string;
+  entity_type: "folder";
   parent: string | null;
   project_id: string | null;
   is_folder: boolean;

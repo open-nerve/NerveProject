@@ -33,12 +33,11 @@ type Props = {
   issue: TIssue;
   quickActions: TRenderQuickActions;
   isDragging?: boolean;
-  isEpic?: boolean;
 };
 
 export const CalendarIssueBlock = observer(
   forwardRef(function CalendarIssueBlock(props: Props, ref: React.ForwardedRef<HTMLAnchorElement>) {
-    const { issue, quickActions, isDragging = false, isEpic = false } = props;
+    const { issue, quickActions, isDragging = false } = props;
     // states
     const [isMenuActive, setIsMenuActive] = useState(false);
     // refs
@@ -48,7 +47,7 @@ export const CalendarIssueBlock = observer(
     const { workspaceSlug } = useParams();
     const { getProjectStates } = useProjectState();
     const { getIsIssuePeeked } = useIssueDetail();
-    const { handleRedirection } = useIssuePeekOverviewRedirection(isEpic);
+    const { handleRedirection } = useIssuePeekOverviewRedirection();
     const { isMobile } = usePlatformOS();
     const storeType = useIssueStoreType() as CalendarStoreType;
     const { issuesFilter } = useIssues(storeType);
@@ -91,7 +90,6 @@ export const CalendarIssueBlock = observer(
       issueId: issue?.id,
       projectIdentifier,
       sequenceId: issue?.sequence_id,
-      isEpic,
       isArchived: !!issue?.archived_at,
     });
 

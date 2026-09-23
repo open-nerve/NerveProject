@@ -55,14 +55,6 @@ export class ViewService extends APIService {
       });
   }
 
-  async getViewIssues(workspaceSlug: string, projectId: string, viewId: string): Promise<any> {
-    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/views/${viewId}/issues/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async addViewToFavorites(
     workspaceSlug: string,
     projectId: string,

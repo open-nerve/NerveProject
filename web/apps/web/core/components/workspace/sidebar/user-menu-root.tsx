@@ -6,11 +6,9 @@
 
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useRouter } from "next/navigation";
 import { LogOutOutline, SettingsOutline } from "@makeplane/propel/icons";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { GOD_MODE_URL } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { CustomMenu } from "@plane/ui";
@@ -26,15 +24,11 @@ import { useUser } from "@/hooks/store/user";
 export const UserMenuRoot = observer(function UserMenuRoot() {
   // states
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  // router
-  const router = useRouter();
   // store hooks
   const { toggleAnySidebarDropdown } = useAppTheme();
   const { data: currentUser } = useUser();
   const { signOut } = useUser();
   const { toggleProfileSettingsModal } = useCommandPalette();
-  // derived values
-  const isUserInstanceAdmin = false;
   // translation
   const { t } = useTranslation();
 
@@ -137,14 +131,6 @@ export const UserMenuRoot = observer(function UserMenuRoot() {
         <LogOutOutline className="size-3.5 shrink-0" />
         {t("sign_out")}
       </CustomMenu.MenuItem>
-      {isUserInstanceAdmin && (
-        <CustomMenu.MenuItem
-          onClick={() => router.push(GOD_MODE_URL)}
-          className="bg-accent-primary/20 text-accent-primary hover:bg-accent-primary/30 hover:text-accent-secondary"
-        >
-          {t("enter_god_mode")}
-        </CustomMenu.MenuItem>
-      )}
     </CustomMenu>
   );
 });

@@ -31,8 +31,6 @@ import {
   TableRow,
   UtilityExtension,
 } from "@/extensions";
-// plane editor extensions
-import { CoreEditorAdditionalExtensions } from "@/extensions/core";
 // types
 import type { IEditorProps } from "@/types";
 // local imports
@@ -45,7 +43,6 @@ import { UniqueID } from "./unique-id/extension";
 type TArguments = Pick<
   IEditorProps,
   | "disabledExtensions"
-  | "flaggedExtensions"
   | "fileHandler"
   | "getEditorMetaData"
   | "isTouchDevice"
@@ -53,7 +50,6 @@ type TArguments = Pick<
   | "placeholder"
   | "showPlaceholderOnEmpty"
   | "tabIndex"
-  | "extendedEditorProps"
 > & {
   enableHistory: boolean;
   editable: boolean;
@@ -64,7 +60,6 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     disabledExtensions,
     enableHistory,
     fileHandler,
-    flaggedExtensions,
     getEditorMetaData,
     isTouchDevice = false,
     mentionHandler,
@@ -72,7 +67,6 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     showPlaceholderOnEmpty,
     tabIndex,
     editable,
-    extendedEditorProps,
   } = args;
 
   const extensions = [
@@ -118,17 +112,10 @@ export const CoreEditorExtensions = (args: TArguments): Extensions => {
     CustomCalloutExtension,
     UtilityExtension({
       disabledExtensions,
-      flaggedExtensions,
       fileHandler,
       getEditorMetaData,
       isEditable: editable,
       isTouchDevice,
-    }),
-    ...CoreEditorAdditionalExtensions({
-      disabledExtensions,
-      flaggedExtensions,
-      fileHandler,
-      extendedEditorProps,
     }),
     UniqueID,
   ];

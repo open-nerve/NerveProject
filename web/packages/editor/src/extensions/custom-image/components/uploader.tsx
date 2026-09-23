@@ -127,7 +127,6 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
   const { draggedInside, onDrop, onDragEnter, onDragLeave } = useDropZone({
     editor,
     getPos,
-    type: "image",
     uploader: uploadFile,
   });
 
@@ -167,7 +166,6 @@ export function CustomImageUploader(props: CustomImageUploaderProps) {
         editor,
         filesList,
         pos,
-        type: "image",
         uploader: uploadFile,
       });
     },

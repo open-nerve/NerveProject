@@ -41,7 +41,7 @@ type TInboxIssueCreateRoot = {
   handleDuplicateIssueModal: (value: boolean) => void;
 };
 
-export const defaultIssueData: Partial<TIssue> = {
+const defaultIssueData: Partial<TIssue> = {
   id: undefined,
   name: "",
   description_html: "",

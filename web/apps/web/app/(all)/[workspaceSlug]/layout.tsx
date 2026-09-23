@@ -10,17 +10,14 @@ import { WorkspaceContentWrapper } from "@/components/workspace/content-wrapper"
 import { AppRailVisibilityProvider } from "@/lib/app-rail";
 import { GlobalModals } from "@/components/common/modal/global";
 import { WorkspaceAuthWrapper } from "@/layouts/auth-layout/workspace-wrapper";
-import type { Route } from "./+types/layout";
 
-export default function WorkspaceLayout(props: Route.ComponentProps) {
-  const { workspaceSlug } = props.params;
-
+export default function WorkspaceLayout() {
   return (
     <AuthenticationWrapper>
       <WorkspaceAuthWrapper>
         <AppRailVisibilityProvider>
           <WorkspaceContentWrapper>
-            <GlobalModals workspaceSlug={workspaceSlug} />
+            <GlobalModals />
             <Outlet />
           </WorkspaceContentWrapper>
         </AppRailVisibilityProvider>

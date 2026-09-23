@@ -14,7 +14,6 @@ import type {
   TIssueSubIssuesStateDistributionMap,
   TIssueSubIssuesIdMap,
   TSubIssuesStateDistribution,
-  TIssueServiceType,
   TLoader,
 } from "@plane/types";
 // services
@@ -74,10 +73,9 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
   // root store
   rootIssueDetailStore: IIssueDetail;
   // services
-  serviceType;
   issueService;
 
-  constructor(rootStore: IIssueDetail, serviceType: TIssueServiceType) {
+  constructor(rootStore: IIssueDetail) {
     makeObservable(this, {
       // observables
       subIssuesStateDistribution: observable,
@@ -97,8 +95,7 @@ export class IssueSubIssuesStore implements IIssueSubIssuesStore {
     // root store
     this.rootIssueDetailStore = rootStore;
     // services
-    this.serviceType = serviceType;
-    this.issueService = new IssueService(serviceType);
+    this.issueService = new IssueService();
   }
 
   // helper methods

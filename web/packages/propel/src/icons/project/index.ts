@@ -5,7 +5,6 @@
  */
 
 export * from "./cycle-icon";
-export * from "./epic-icon";
 export * from "./intake-icon";
 export * from "./module-icon";
 export * from "./view-icon";

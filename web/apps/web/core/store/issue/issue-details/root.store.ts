@@ -14,7 +14,6 @@ import type {
   TIssueLink,
   TIssueReaction,
   TIssueRelationTypes,
-  TIssueServiceType,
   TWorkItemWidgets,
 } from "@plane/types";
 // plane web store
@@ -53,7 +52,7 @@ export type TIssueRelationModal = {
   relationType: TIssueRelationTypes | null;
 };
 
-export type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
+type TIssueCrudState = { toggle: boolean; parentIssueId: string | undefined; issue: TIssue | undefined };
 
 export type TIssueCrudOperationState = {
   create: TIssueCrudState;
@@ -149,8 +148,6 @@ export class IssueDetail implements IIssueDetail {
   isRelationModalOpen: TIssueRelationModal | null = null;
   isSubIssuesModalOpen: string | null = null;
   attachmentDeleteModalId: string | null = null;
-  // service type
-  serviceType: TIssueServiceType;
   // store
   rootIssueStore: IIssueRootStore;
   issue: IIssueStore;
@@ -164,7 +161,7 @@ export class IssueDetail implements IIssueDetail {
   comment: IIssueCommentStore;
   commentReaction: IIssueCommentReactionStore;
 
-  constructor(rootStore: IIssueRootStore, serviceType: TIssueServiceType) {
+  constructor(rootStore: IIssueRootStore) {
     makeObservable(this, {
       // observables
       peekIssue: observable,
@@ -203,17 +200,16 @@ export class IssueDetail implements IIssueDetail {
     });
 
     // store
-    this.serviceType = serviceType;
     this.rootIssueStore = rootStore;
-    this.issue = new IssueStore(this, serviceType);
-    this.reaction = new IssueReactionStore(this, serviceType);
-    this.attachment = new IssueAttachmentStore(rootStore, serviceType);
-    this.activity = new IssueActivityStore(rootStore.rootStore, serviceType);
-    this.comment = new IssueCommentStore(this, serviceType);
+    this.issue = new IssueStore(this);
+    this.reaction = new IssueReactionStore(this);
+    this.attachment = new IssueAttachmentStore(rootStore);
+    this.activity = new IssueActivityStore(rootStore.rootStore);
+    this.comment = new IssueCommentStore(this);
     this.commentReaction = new IssueCommentReactionStore(this);
-    this.subIssues = new IssueSubIssuesStore(this, serviceType);
-    this.link = new IssueLinkStore(this, serviceType);
-    this.subscription = new IssueSubscriptionStore(this, serviceType);
+    this.subIssues = new IssueSubIssuesStore(this);
+    this.link = new IssueLinkStore(this);
+    this.subscription = new IssueSubscriptionStore(this);
     this.relation = new IssueRelationStore(this);
   }
 

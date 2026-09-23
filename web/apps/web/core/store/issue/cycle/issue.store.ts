@@ -9,14 +9,7 @@ import { action, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // plane imports
 import { ALL_ISSUES } from "@plane/constants";
-import type {
-  TIssue,
-  TLoader,
-  IssuePaginationOptions,
-  TIssuesResponse,
-  ViewFlags,
-  TBulkOperationsPayload,
-} from "@plane/types";
+import type { TIssue, TLoader, IssuePaginationOptions, TIssuesResponse, ViewFlags } from "@plane/types";
 // helpers
 import { getDistributionPathsPostUpdate } from "@plane/utils";
 //local
@@ -25,8 +18,6 @@ import { BaseIssuesStore } from "../helpers/base-issues.store";
 //
 import type { IIssueRootStore } from "../root.store";
 import type { ICycleIssuesFilter } from "./filter.store";
-
-export const ACTIVE_CYCLE_ISSUES = "ACTIVE_CYCLE_ISSUES";
 
 export interface ActiveCycleIssueDetails {
   issueIds: string[];
@@ -85,9 +76,6 @@ export interface ICycleIssues extends IBaseIssuesStore {
     data: TIssue,
     cycleId: string
   ) => Promise<TIssue | undefined>;
-  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  bulkUpdateProperties: (workspaceSlug: string, projectId: string, data: TBulkOperationsPayload) => Promise<void>;
 
   transferIssuesFromCycle: (
     workspaceSlug: string,
@@ -416,7 +404,6 @@ export class CycleIssues extends BaseIssuesStore implements ICycleIssues {
   };
 
   // Using aliased names as they cannot be overridden in other stores
-  archiveBulkIssues = this.bulkArchiveIssues;
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;
 }

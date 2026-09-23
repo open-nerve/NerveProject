@@ -12,10 +12,9 @@ import { Button, getButtonStyling } from "@plane/propel/button";
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import { Row } from "@plane/ui";
 // components
+import { ProjectFeaturesList } from "@/components/project/settings/features-list";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-// plane web imports
-import { ProjectFeaturesList } from "@/components/project/settings/features-list";
 
 type Props = {
   workspaceSlug: string;
@@ -36,7 +35,7 @@ export const ProjectFeatureUpdate = observer(function ProjectFeatureUpdate(props
   return (
     <>
       <Row className="py-6">
-        <ProjectFeaturesList workspaceSlug={workspaceSlug} projectId={projectId} isAdmin />
+        <ProjectFeaturesList workspaceSlug={workspaceSlug} projectId={projectId} />
       </Row>
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-subtle px-6 py-4">
         <div className="flex gap-1 text-13 font-medium text-tertiary">

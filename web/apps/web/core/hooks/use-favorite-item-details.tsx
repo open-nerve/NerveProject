@@ -17,8 +17,6 @@ import { useCycle } from "@/hooks/store/use-cycle";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
-// plane web hooks
-import { useAdditionalFavoriteItemDetails } from "@/hooks/use-additional-favorite-item-details";
 
 export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorite) => {
   const {
@@ -32,8 +30,6 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
   const { getProjectById } = useProject();
   const { getCycleById } = useCycle();
   const { getModuleById } = useModule();
-  // additional details
-  const { getAdditionalFavoriteItemDetails } = useAdditionalFavoriteItemDetails();
   // derived values
   const viewDetails = getViewById(favoriteItemId ?? "");
   const cycleDetail = getCycleById(favoriteItemId ?? "");
@@ -61,12 +57,10 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
       itemTitle = moduleDetail?.name ?? favoriteItemName;
       itemIcon = <FavoriteItemIcon type="module" />;
       break;
-    default: {
-      const additionalDetails = getAdditionalFavoriteItemDetails(workspaceSlug, favorite);
-      itemTitle = additionalDetails.itemTitle;
-      itemIcon = additionalDetails.itemIcon;
+    case "folder":
+      itemTitle = favoriteItemName;
+      itemIcon = <FavoriteItemIcon type="folder" logo={favoriteItemLogoProps} />;
       break;
-    }
   }
 
   return { itemIcon, itemTitle, itemLink };

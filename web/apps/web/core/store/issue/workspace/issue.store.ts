@@ -6,14 +6,7 @@
 
 import { action, makeObservable, runInAction } from "mobx";
 // base class
-import type {
-  IssuePaginationOptions,
-  TBulkOperationsPayload,
-  TIssue,
-  TIssuesResponse,
-  TLoader,
-  ViewFlags,
-} from "@plane/types";
+import type { IssuePaginationOptions, TIssue, TIssuesResponse, TLoader, ViewFlags } from "@plane/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 // types
@@ -47,9 +40,6 @@ export interface IWorkspaceIssues extends IBaseIssuesStore {
   createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  bulkUpdateProperties: (workspaceSlug: string, projectId: string, data: TBulkOperationsPayload) => Promise<void>;
 
   quickAddIssue: undefined;
   clear(): void;
@@ -178,7 +168,6 @@ export class WorkspaceIssues extends BaseIssuesStore implements IWorkspaceIssues
   };
 
   // Using aliased names as they cannot be overridden in other stores
-  archiveBulkIssues = this.bulkArchiveIssues;
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;
 

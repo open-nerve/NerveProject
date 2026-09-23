@@ -114,19 +114,6 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
     }
   }
 
-  if (pageType === EPageTypes.SET_PASSWORD) {
-    if (!currentUser?.id) {
-      router.push(`/${pathname ? `?next_path=${pathname}` : ``}`);
-      return <></>;
-    } else {
-      if (currentUser && !currentUser?.is_password_autoset && currentUserProfile?.id && isUserOnboard) {
-        const currentRedirectRoute = getWorkspaceRedirectionUrl();
-        router.push(currentRedirectRoute);
-        return <></>;
-      } else return <>{children}</>;
-    }
-  }
-
   if (pageType === EPageTypes.AUTHENTICATED) {
     if (currentUser?.id) {
       if (currentUserProfile && currentUserProfile?.id && isUserOnboard) return <>{children}</>;

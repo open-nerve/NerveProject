@@ -106,10 +106,12 @@ lint-web: ## 关键词守卫；前端类型检查、oxlint（警告数等于上�
 	node tools/keywords.mjs
 	$(TURBO) run check:types check:lint check:format check:sync $(TURBO_QUIET) --continue
 
-# M0 只出报告：发现未使用的代码时退出码仍为 0，knip 自身出错时才失败；M1/P3 去掉 --no-exit-code，作为门禁
+# 门禁（M1/P3 起）：有未使用的文件、导出、依赖，或配置本身过时（例如不再需要的忽略项），都会失败。
+# web 的路由类型（./+types/…）由 react-router typegen 生成，先生成，knip 总是在同一种状态下运行
 .PHONY: knip
-knip: ## 报告未使用的文件、导出和依赖（需要 Node；M0 只出报告，M1/P3 起作为门禁）
-	pnpm exec knip --no-exit-code
+knip: ## 检查未使用的文件、导出和依赖（需要 Node；门禁）
+	pnpm --filter web exec react-router typegen
+	pnpm exec knip --treat-config-hints-as-errors
 
 # go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
 .PHONY: test

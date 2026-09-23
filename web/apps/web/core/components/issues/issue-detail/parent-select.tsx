@@ -96,7 +96,6 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
                 {parentIssue?.project_id && parentIssueProjectDetails && (
                   <IssueIdentifier
                     projectId={parentIssue.project_id}
-                    issueTypeId={parentIssue.type_id}
                     projectIdentifier={parentIssueProjectDetails?.identifier}
                     issueSequenceId={parentIssue.sequence_id}
                     size="xs"

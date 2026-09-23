@@ -7,7 +7,6 @@
 import useSWR from "swr";
 // plane web imports
 import { WORKSPACE_CYCLES, WORKSPACE_LABELS, WORKSPACE_MODULES } from "@plane/constants";
-import { useWorkspaceIssuePropertiesExtended } from "@/hooks/use-workspace-issue-properties-extended";
 // plane imports
 import { useCycle } from "./store/use-cycle";
 import { useLabel } from "./store/use-label";
@@ -40,7 +39,4 @@ export const useWorkspaceIssueProperties = (workspaceSlug: string | string[] | u
     workspaceSlug ? () => fetchWorkspaceLabels(workspaceSlug.toString()) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
-
-  // fetch extended issue properties
-  useWorkspaceIssuePropertiesExtended(workspaceSlug);
 };

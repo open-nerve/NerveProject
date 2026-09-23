@@ -16,12 +16,10 @@ import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
-// plane web hooks
-import { useEditorFlagging } from "@/hooks/use-editor-flagging";
 
 type RichTextEditorWrapperProps = MakeOptional<
-  Omit<IRichTextEditorProps, "fileHandler" | "mentionHandler" | "extendedEditorProps">,
-  "disabledExtensions" | "editable" | "flaggedExtensions" | "getEditorMetaData"
+  Omit<IRichTextEditorProps, "fileHandler" | "mentionHandler">,
+  "disabledExtensions" | "editable" | "getEditorMetaData"
 > & {
   workspaceSlug: string;
   workspaceId: string;
@@ -49,16 +47,11 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
     workspaceSlug,
     workspaceId,
     projectId,
-    disabledExtensions: additionalDisabledExtensions = [],
+    disabledExtensions = [],
     ...rest
   } = props;
   // store hooks
   const { getUserDetails } = useMember();
-  // editor flaggings
-  const { richText: richTextEditorExtensions } = useEditorFlagging({
-    workspaceSlug,
-    projectId,
-  });
   // use editor mention
   const { fetchMentions } = useEditorMention({
     searchEntity: editable ? async (payload) => await props.searchMentionCallback(payload) : async () => ({}),
@@ -74,9 +67,8 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
   return (
     <RichTextEditorWithRef
       ref={ref}
-      disabledExtensions={[...richTextEditorExtensions.disabled, ...(additionalDisabledExtensions ?? [])]}
+      disabledExtensions={disabledExtensions}
       editable={editable}
-      flaggedExtensions={richTextEditorExtensions.flagged}
       fileHandler={getEditorFileHandlers({
         projectId,
         uploadFile: editable ? props.uploadFile : async () => "",
@@ -96,7 +88,6 @@ export const RichTextEditor = forwardRef(function RichTextEditor(
           display_name: getUserDetails(id)?.display_name ?? "",
         }),
       }}
-      extendedEditorProps={{}}
       {...rest}
       containerClassName={cn("relative pb-3 pl-3", containerClassName)}
     />

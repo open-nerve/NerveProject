@@ -15,16 +15,16 @@ import { useInstance } from "@/hooks/store/use-instance";
 
 const authContentMap = {
   [EAuthModes.SIGN_IN]: {
-    pageTitle: "Sign up",
+    pageTitle: "Sign in",
     text: "auth.common.new_to_plane",
     linkText: "Sign up",
     linkHref: "/sign-up",
   },
   [EAuthModes.SIGN_UP]: {
-    pageTitle: "Sign in",
+    pageTitle: "Sign up",
     text: "auth.common.already_have_an_account",
     linkText: "Sign in",
-    linkHref: "/sign-in",
+    linkHref: "/",
   },
 };
 
@@ -64,7 +64,7 @@ type TAuthHeaderBase = {
   additionalAction?: React.ReactNode;
 };
 
-export function AuthHeaderBase(props: TAuthHeaderBase) {
+function AuthHeaderBase(props: TAuthHeaderBase) {
   const { pageTitle, additionalAction } = props;
   return (
     <>

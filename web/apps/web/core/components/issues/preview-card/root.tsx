@@ -23,7 +23,7 @@ type Props = {
     id?: string;
     name?: string;
   };
-  workItem: Pick<TIssue, "id" | "name" | "sequence_id" | "priority" | "start_date" | "target_date" | "type_id">;
+  workItem: Pick<TIssue, "id" | "name" | "sequence_id" | "priority" | "start_date" | "target_date">;
 };
 
 export const WorkItemPreviewCard = observer(function WorkItemPreviewCard(props: Props) {
@@ -46,7 +46,6 @@ export const WorkItemPreviewCard = observer(function WorkItemPreviewCard(props: 
           projectId={projectId}
           projectIdentifier={projectIdentifier}
           issueSequenceId={workItem.sequence_id}
-          issueTypeId={workItem.type_id}
         />
         <div className="flex shrink-0 items-center gap-1">
           <StateGroupIcon stateGroup={stateGroup} className="size-3 shrink-0" />

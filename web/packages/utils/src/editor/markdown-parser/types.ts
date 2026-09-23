@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export type TCoreCustomComponentsMetaData = {
+export type TCustomComponentsMetaData = {
   file_assets: {
     id: string;
     name: string;
@@ -16,7 +16,3 @@ export type TCoreCustomComponentsMetaData = {
     url: string;
   }[];
 };
-
-export type TExtendedCustomComponentsMetaData = unknown;
-
-export type TCustomComponentsMetaData = TCoreCustomComponentsMetaData & TExtendedCustomComponentsMetaData;

@@ -24,7 +24,6 @@ import { Switch } from "@makeplane/propel/components/switch";
 import {
   convertWorkItemDataToSearchResponse,
   getUpdateFormDataForReset,
-  cn,
   getChangedIssuefields,
   getTabIndex,
 } from "@plane/utils";
@@ -67,8 +66,6 @@ export interface IssueFormProps {
   handleDuplicateIssueModal: (isOpen: boolean) => void;
   handleDraftAndClose?: () => void;
   isProjectSelectionDisabled?: boolean;
-  showActionButtons?: boolean;
-  dataResetProperties?: any[];
 }
 
 export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormProps) {
@@ -91,12 +88,9 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       loading: `${data?.id ? t("updating") : t("saving")}`,
     },
     isProjectSelectionDisabled = false,
-    showActionButtons = true,
-    dataResetProperties = [],
   } = props;
 
   // states
-  const [gptAssistantModal, setGptAssistantModal] = useState(false);
   const [isMoving, setIsMoving] = useState<boolean>(false);
 
   // refs
@@ -110,18 +104,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
   // store hooks
   const { getProjectById } = useProject();
-  const {
-    workItemTemplateId,
-    isApplyingTemplate,
-    selectedParentIssue,
-    setWorkItemTemplateId,
-    setSelectedParentIssue,
-    getIssueTypeIdOnProjectChange,
-    getActiveAdditionalPropertiesLength,
-    handlePropertyValuesValidation,
-    handleCreateUpdatePropertyValues,
-    handleTemplateChange,
-  } = useIssueModal();
+  const { selectedParentIssue, setSelectedParentIssue } = useIssueModal();
   const { isMobile } = usePlatformOS();
   const { moveIssue } = useWorkspaceDraftIssues();
 
@@ -148,65 +131,24 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   } = methods;
 
   const projectId = watch("project_id");
-  const activeAdditionalPropertiesLength = getActiveAdditionalPropertiesLength({
-    projectId: projectId,
-    workspaceSlug: workspaceSlug?.toString(),
-    watch: watch,
-  });
-
-  const isDisabled = isSubmitting || isApplyingTemplate;
 
   const { getIndex } = getTabIndex(ETabIndices.ISSUE_FORM, isMobile);
 
   //reset few fields on projectId change
   useEffect(() => {
-    if (isDirty) {
-      if (workItemTemplateId) {
-        // reset work item template id
-        setWorkItemTemplateId(null);
-        reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: projectId });
-        editorRef.current?.clearEditor();
-      } else {
-        reset(getUpdateFormDataForReset(projectId, getValues()));
-      }
-    }
+    if (isDirty) reset(getUpdateFormDataForReset(projectId, getValues()));
     if (projectId && routeProjectId !== projectId) fetchCycles(workspaceSlug?.toString(), projectId);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  // Reset form when data prop changes
+  // Reset form with the given data once mounted
   useEffect(() => {
     if (data) {
       reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: projectId, ...data });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...dataResetProperties]);
-
-  // Update the issue type id when the project id changes
-  useEffect(() => {
-    const issueTypeId = watch("type_id");
-
-    // if issue type id is present or project not available, return
-    if (issueTypeId || !projectId) return;
-
-    // get issue type id on project change
-    const issueTypeIdOnProjectChange = getIssueTypeIdOnProjectChange(projectId);
-    if (issueTypeIdOnProjectChange) setValue("type_id", issueTypeIdOnProjectChange, { shouldValidate: true });
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, projectId]);
-
-  useEffect(() => {
-    if (workItemTemplateId && editorRef.current) {
-      handleTemplateChange({
-        workspaceSlug: workspaceSlug?.toString(),
-        reset,
-        editorRef,
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workItemTemplateId]);
+  }, []);
 
   const handleFormSubmit = async (formData: Partial<TIssue>, is_draft_issue = false) => {
     // Check if the editor is ready to discard
@@ -219,16 +161,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       return;
     }
 
-    // check for required properties validation
-    if (
-      !handlePropertyValuesValidation({
-        projectId: projectId,
-        workspaceSlug: workspaceSlug?.toString(),
-        watch: watch,
-      })
-    )
-      return;
-
     const submitData = !data?.id
       ? formData
       : {
@@ -236,7 +168,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
           project_id: getValues<"project_id">("project_id"),
           id: data.id,
           description_html: formData.description_html ?? "<p></p>",
-          type_id: getValues<"type_id">("type_id"),
         };
 
     // this condition helps to move the issues from draft to project issues
@@ -244,23 +175,13 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     await onSubmit(submitData, is_draft_issue)
       .then(() => {
-        setGptAssistantModal(false);
-        if (isCreateMoreToggleEnabled && workItemTemplateId) {
-          handleTemplateChange({
-            workspaceSlug: workspaceSlug?.toString(),
-            reset,
-            editorRef,
-          });
-        } else {
-          reset({
-            ...DEFAULT_WORK_ITEM_FORM_VALUES,
-            ...(isCreateMoreToggleEnabled ? { ...data } : {}),
-            project_id: getValues<"project_id">("project_id"),
-            type_id: getValues<"type_id">("type_id"),
-            description_html: data?.description_html ?? "<p></p>",
-          });
-          editorRef?.current?.clearEditor();
-        }
+        reset({
+          ...DEFAULT_WORK_ITEM_FORM_VALUES,
+          ...(isCreateMoreToggleEnabled ? { ...data } : {}),
+          project_id: getValues<"project_id">("project_id"),
+          description_html: data?.description_html ?? "<p></p>",
+        });
+        editorRef?.current?.clearEditor();
       })
       .catch((error) => {
         console.error(error);
@@ -271,14 +192,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     if (!data?.id || !data?.project_id || !data) return;
     setIsMoving(true);
     try {
-      await handleCreateUpdatePropertyValues({
-        issueId: data.id,
-        issueTypeId: data.type_id,
-        projectId: data.project_id,
-        workspaceSlug: workspaceSlug?.toString(),
-        isDraft: true,
-      });
-
       await moveIssue(workspaceSlug.toString(), data.id, {
         ...data,
         ...getValues(),
@@ -389,42 +302,27 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 />
               </div>
             </div>
-            <div
-              className={cn(
-                "space-y-3 bg-surface-1 pb-4",
-                activeAdditionalPropertiesLength > 4 &&
-                  "vertical-scrollbar scrollbar-sm max-h-[45vh] overflow-hidden overflow-y-auto"
-              )}
-            >
+            <div className="space-y-3 bg-surface-1 pb-4">
               <div className="px-5">
                 <IssueDescriptionEditor
                   control={control}
                   isDraft={isDraft}
-                  issueName={watch("name")}
                   issueId={data?.id}
                   descriptionHtmlData={data?.description_html}
                   editorRef={editorRef}
                   submitBtnRef={submitBtnRef}
-                  gptAssistantModal={gptAssistantModal}
                   workspaceSlug={workspaceSlug?.toString()}
                   projectId={projectId}
                   handleFormChange={handleFormChange}
                   handleDescriptionHTMLDataChange={(description_html) =>
                     setValue<"description_html">("description_html", description_html)
                   }
-                  setGptAssistantModal={setGptAssistantModal}
-                  handleGptAssistantClose={() => reset(getValues())}
                   onAssetUpload={onAssetUpload}
                   onClose={onClose}
                 />
               </div>
             </div>
-            <div
-              className={cn(
-                "rounded-b-lg border-t-[0.5px] border-subtle bg-surface-1 px-4 py-3",
-                activeAdditionalPropertiesLength > 0 && "shadow-raised-100"
-              )}
-            >
+            <div className="rounded-b-lg border-t-[0.5px] border-subtle bg-surface-1 px-4 py-3">
               <div className="pb-3">
                 <IssueDefaultProperties
                   control={control}
@@ -440,77 +338,75 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   setSelectedParentIssue={setSelectedParentIssue}
                 />
               </div>
-              {showActionButtons && (
-                <div
-                  className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3"
-                  tabIndex={getIndex("create_more")}
-                >
-                  {!data?.id && (
-                    <div
-                      className="inline-flex cursor-pointer items-center gap-1.5"
-                      onClick={() => onCreateMoreToggleChange(!isCreateMoreToggleEnabled)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
-                      }}
-                      role="button"
-                    >
-                      <Switch
-                        size="sm"
-                        checked={isCreateMoreToggleEnabled}
-                        onCheckedChange={() => {}}
-                        aria-label={t("create_more")}
-                      />
-                      <span className="text-caption-sm-regular">{t("create_more")}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <div tabIndex={getIndex("discard_button")}>
-                      <Button
-                        variant="secondary"
-                        size="lg"
-                        onClick={() => {
-                          if (editorRef.current?.isEditorReadyToDiscard()) {
-                            onClose();
-                          } else {
-                            setToast({
-                              type: TOAST_TYPE.ERROR,
-                              title: "Error!",
-                              message: "Editor is still processing changes. Please wait before proceeding.",
-                            });
-                          }
-                        }}
-                      >
-                        {t("discard")}
-                      </Button>
-                    </div>
-                    <div tabIndex={isDraft ? getIndex("submit_button") : getIndex("draft_button")}>
-                      <Button
-                        variant={moveToIssue ? "secondary" : "primary"}
-                        size="lg"
-                        type="submit"
-                        ref={submitBtnRef}
-                        loading={isSubmitting}
-                        disabled={isDisabled}
-                      >
-                        {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
-                      </Button>
-                    </div>
-
-                    {moveToIssue && (
-                      <Button
-                        variant="primary"
-                        type="button"
-                        loading={isMoving}
-                        onClick={handleMoveToProjects}
-                        disabled={isMoving}
-                        size="lg"
-                      >
-                        {t("add_to_project")}
-                      </Button>
-                    )}
+              <div
+                className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3"
+                tabIndex={getIndex("create_more")}
+              >
+                {!data?.id && (
+                  <div
+                    className="inline-flex cursor-pointer items-center gap-1.5"
+                    onClick={() => onCreateMoreToggleChange(!isCreateMoreToggleEnabled)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
+                    }}
+                    role="button"
+                  >
+                    <Switch
+                      size="sm"
+                      checked={isCreateMoreToggleEnabled}
+                      onCheckedChange={() => {}}
+                      aria-label={t("create_more")}
+                    />
+                    <span className="text-caption-sm-regular">{t("create_more")}</span>
                   </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <div tabIndex={getIndex("discard_button")}>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => {
+                        if (editorRef.current?.isEditorReadyToDiscard()) {
+                          onClose();
+                        } else {
+                          setToast({
+                            type: TOAST_TYPE.ERROR,
+                            title: "Error!",
+                            message: "Editor is still processing changes. Please wait before proceeding.",
+                          });
+                        }
+                      }}
+                    >
+                      {t("discard")}
+                    </Button>
+                  </div>
+                  <div tabIndex={isDraft ? getIndex("submit_button") : getIndex("draft_button")}>
+                    <Button
+                      variant={moveToIssue ? "secondary" : "primary"}
+                      size="lg"
+                      type="submit"
+                      ref={submitBtnRef}
+                      loading={isSubmitting}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
+                    </Button>
+                  </div>
+
+                  {moveToIssue && (
+                    <Button
+                      variant="primary"
+                      type="button"
+                      loading={isMoving}
+                      onClick={handleMoveToProjects}
+                      disabled={isMoving}
+                      size="lg"
+                    >
+                      {t("add_to_project")}
+                    </Button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </form>
         </div>

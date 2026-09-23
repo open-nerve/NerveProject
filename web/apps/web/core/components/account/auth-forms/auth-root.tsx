@@ -9,29 +9,20 @@ import { observer } from "mobx-react";
 import { useSearchParams } from "next/navigation";
 // plane imports
 import { Banner } from "@makeplane/propel/components/banner";
-import { OAuthOptions } from "@plane/ui";
 // helpers
-import type { TAuthErrorInfo } from "@/helpers/authentication.helper";
-import {
-  EAuthModes,
-  EAuthSteps,
-  EAuthenticationErrorCodes,
-  EErrorAlertType,
-  authErrorHandler,
-} from "@/helpers/authentication.helper";
-// hooks
-import { useOAuthConfig } from "@/hooks/oauth";
-import { useInstance } from "@/hooks/store/use-instance";
+import type { EAuthModes, EAuthenticationErrorCodes, TAuthErrorInfo } from "@/helpers/authentication.helper";
+import { authErrorHandler } from "@/helpers/authentication.helper";
 // local imports
 import { TermsAndConditions } from "../terms-and-conditions";
-import { AuthHeader, AuthHeaderBase } from "./auth-header";
-import { AuthFormRoot } from "./form-root";
+import { AuthHeader } from "./auth-header";
+import { AuthPasswordForm } from "./password";
 
 type TAuthRoot = {
   authMode: EAuthModes;
 };
 
 export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
+  const { authMode } = props;
   //router
   const searchParams = useSearchParams();
   // query params
@@ -39,126 +30,35 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
   const invitation_id = searchParams.get("invitation_id");
   const workspaceSlug = searchParams.get("slug");
   const error_code = searchParams.get("error_code");
-  // props
-  const { authMode: currentAuthMode } = props;
+  const nextPath = searchParams.get("next_path");
   // states
-  const [authMode, setAuthMode] = useState<EAuthModes | undefined>(undefined);
-  const [authStep, setAuthStep] = useState<EAuthSteps>(EAuthSteps.EMAIL);
-  const [email, setEmail] = useState(emailParam ? emailParam.toString() : "");
   const [errorInfo, setErrorInfo] = useState<TAuthErrorInfo | undefined>(undefined);
-  // store hooks
-  const { config } = useInstance();
-  // derived values
-  const oAuthActionText = authMode === EAuthModes.SIGN_UP ? "Sign up" : "Sign in";
-  const { isOAuthEnabled, oAuthOptions } = useOAuthConfig(oAuthActionText);
-  const isEmailBasedAuthEnabled = config?.is_email_password_enabled || config?.is_magic_login_enabled;
-  const noAuthMethodsAvailable = !isOAuthEnabled && !isEmailBasedAuthEnabled;
 
   useEffect(() => {
-    if (!authMode && currentAuthMode) setAuthMode(currentAuthMode);
-  }, [currentAuthMode, authMode]);
+    if (error_code) setErrorInfo(authErrorHandler(error_code as EAuthenticationErrorCodes, emailParam ?? undefined));
+  }, [error_code, emailParam]);
 
-  useEffect(() => {
-    if (error_code && authMode) {
-      const errorhandler = authErrorHandler(error_code?.toString() as EAuthenticationErrorCodes);
-      if (errorhandler) {
-        // password error handler
-        if ([EAuthenticationErrorCodes.AUTHENTICATION_FAILED_SIGN_UP].includes(errorhandler.code)) {
-          setAuthMode(EAuthModes.SIGN_UP);
-          setAuthStep(EAuthSteps.PASSWORD);
-        }
-        if ([EAuthenticationErrorCodes.AUTHENTICATION_FAILED_SIGN_IN].includes(errorhandler.code)) {
-          setAuthMode(EAuthModes.SIGN_IN);
-          setAuthStep(EAuthSteps.PASSWORD);
-        }
-        // magic_code error handler
-        if (
-          [
-            EAuthenticationErrorCodes.INVALID_MAGIC_CODE_SIGN_UP,
-            EAuthenticationErrorCodes.INVALID_EMAIL_MAGIC_SIGN_UP,
-            EAuthenticationErrorCodes.EXPIRED_MAGIC_CODE_SIGN_UP,
-            EAuthenticationErrorCodes.EMAIL_CODE_ATTEMPT_EXHAUSTED_SIGN_UP,
-          ].includes(errorhandler.code)
-        ) {
-          setAuthMode(EAuthModes.SIGN_UP);
-          setAuthStep(EAuthSteps.UNIQUE_CODE);
-        }
-        if (
-          [
-            EAuthenticationErrorCodes.INVALID_MAGIC_CODE_SIGN_IN,
-            EAuthenticationErrorCodes.INVALID_EMAIL_MAGIC_SIGN_IN,
-            EAuthenticationErrorCodes.EXPIRED_MAGIC_CODE_SIGN_IN,
-            EAuthenticationErrorCodes.EMAIL_CODE_ATTEMPT_EXHAUSTED_SIGN_IN,
-          ].includes(errorhandler.code)
-        ) {
-          setAuthMode(EAuthModes.SIGN_IN);
-          setAuthStep(EAuthSteps.UNIQUE_CODE);
-        }
-
-        setErrorInfo(errorhandler);
-      }
-    }
-  }, [error_code, authMode]);
-
-  if (!authMode) return <></>;
-
-  if (noAuthMethodsAvailable) {
-    return (
-      <AuthContainer>
-        <AuthHeaderBase
-          header="No authentication methods available"
-          subHeader="Please contact your administrator to enable authentication for your instance."
-        />
-      </AuthContainer>
-    );
-  }
-
-  return (
-    <AuthContainer>
-      {errorInfo && errorInfo?.type === EErrorAlertType.BANNER_ALERT && (
-        <Banner
-          placement="inline"
-          variant="accent"
-          role="alert"
-          description={errorInfo.message}
-          onDismiss={() => setErrorInfo(undefined)}
-        />
-      )}
-      <AuthHeader
-        workspaceSlug={workspaceSlug?.toString() || undefined}
-        invitationId={invitation_id?.toString() || undefined}
-        invitationEmail={email || undefined}
-        authMode={authMode}
-        currentAuthStep={authStep}
-      />
-      {isOAuthEnabled && (
-        <OAuthOptions
-          options={oAuthOptions}
-          compact={authStep === EAuthSteps.PASSWORD}
-          showDivider={isEmailBasedAuthEnabled}
-        />
-      )}
-      {isEmailBasedAuthEnabled && (
-        <AuthFormRoot
-          authStep={authStep}
-          authMode={authMode}
-          email={email}
-          setEmail={(email) => setEmail(email)}
-          setAuthMode={(authMode) => setAuthMode(authMode)}
-          setAuthStep={(authStep) => setAuthStep(authStep)}
-          setErrorInfo={(errorInfo) => setErrorInfo(errorInfo)}
-          currentAuthMode={currentAuthMode}
-        />
-      )}
-      <TermsAndConditions authType={authMode} />
-    </AuthContainer>
-  );
-});
-
-function AuthContainer({ children }: { children: React.ReactNode }) {
   return (
     <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
-      <div className="relative flex w-full max-w-[22.5rem] flex-col gap-6">{children}</div>
+      <div className="relative flex w-full max-w-[22.5rem] flex-col gap-6">
+        {errorInfo && (
+          <Banner
+            placement="inline"
+            variant="accent"
+            role="alert"
+            description={errorInfo.message}
+            onDismiss={() => setErrorInfo(undefined)}
+          />
+        )}
+        <AuthHeader
+          workspaceSlug={workspaceSlug || undefined}
+          invitationId={invitation_id || undefined}
+          invitationEmail={emailParam || undefined}
+          authMode={authMode}
+        />
+        <AuthPasswordForm mode={authMode} email={emailParam ?? ""} nextPath={nextPath || undefined} />
+        <TermsAndConditions authType={authMode} />
+      </div>
     </div>
   );
-}
+});

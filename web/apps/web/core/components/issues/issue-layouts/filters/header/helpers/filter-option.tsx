@@ -12,11 +12,10 @@ type Props = {
   title: React.ReactNode;
   onClick?: () => void;
   multiple?: boolean;
-  activePulse?: boolean;
 };
 
 export function FilterOption(props: Props) {
-  const { icon, isChecked, multiple = true, onClick, title, activePulse = false } = props;
+  const { icon, isChecked, multiple = true, onClick, title } = props;
 
   return (
     <button
@@ -35,9 +34,6 @@ export function FilterOption(props: Props) {
         {icon && <div className="grid w-5 flex-shrink-0 place-items-center">{icon}</div>}
         <div className="flex-grow truncate text-caption-sm-regular text-secondary">{title}</div>
       </div>
-      {activePulse && (
-        <div className="ml-auto h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-accent-primary text-caption-sm-regular" />
-      )}
     </button>
   );
 }

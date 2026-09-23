@@ -14,7 +14,7 @@ import { EStartOfTheWeek } from "@plane/types";
 // services
 import { UserService } from "@/services/user.service";
 // store
-import type { CoreRootStore } from "../root.store";
+import type { RootStore } from "../root.store";
 
 type TError = {
   status: string;
@@ -54,10 +54,6 @@ export class ProfileStore implements IUserProfileStore {
     is_onboarded: false,
     is_tour_completed: false,
     use_case: undefined,
-    billing_address_country: undefined,
-    billing_address: undefined,
-    has_billing_address: false,
-    has_marketing_email_consent: false,
     created_at: "",
     updated_at: "",
     language: "",
@@ -67,7 +63,7 @@ export class ProfileStore implements IUserProfileStore {
   // services
   userService: UserService;
 
-  constructor(public store: CoreRootStore) {
+  constructor(public store: RootStore) {
     makeObservable(this, {
       // observables
       isLoading: observable.ref,

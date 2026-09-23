@@ -39,19 +39,6 @@ export type TCycleDistribution = {
   labels: (TCycleLabelsDistribution & TCycleDistributionBase)[];
 };
 
-export type TCycleProgress = {
-  date: string;
-  started: number;
-  actual: number;
-  pending: number;
-  ideal: number | null;
-  scope: number;
-  completed: number;
-  unstarted: number;
-  backlog: number;
-  cancelled: number;
-};
-
 export type TProgressSnapshot = {
   total_issues: number;
   completed_issues: number;

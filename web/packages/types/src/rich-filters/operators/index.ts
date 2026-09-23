@@ -4,51 +4,52 @@
  * See the LICENSE file for details.
  */
 
-import type { TCoreSupportedOperators } from "./core";
-import {
-  CORE_LOGICAL_OPERATOR,
-  CORE_EQUALITY_OPERATOR,
-  CORE_COLLECTION_OPERATOR,
-  CORE_COMPARISON_OPERATOR,
-  CORE_MULTI_VALUE_OPERATORS,
-} from "./core";
-import type { TExtendedSupportedOperators } from "./extended";
-import {
-  EXTENDED_LOGICAL_OPERATOR,
-  EXTENDED_EQUALITY_OPERATOR,
-  EXTENDED_COLLECTION_OPERATOR,
-  EXTENDED_COMPARISON_OPERATOR,
-  EXTENDED_MULTI_VALUE_OPERATORS,
-} from "./extended";
-
-// -------- COMPOSED OPERATORS --------
-
+/**
+ * Logical operators
+ */
 export const LOGICAL_OPERATOR = {
-  ...CORE_LOGICAL_OPERATOR,
-  ...EXTENDED_LOGICAL_OPERATOR,
+  AND: "and",
 } as const;
 
+/**
+ * Equality operators
+ */
 export const EQUALITY_OPERATOR = {
-  ...CORE_EQUALITY_OPERATOR,
-  ...EXTENDED_EQUALITY_OPERATOR,
+  EXACT: "exact",
 } as const;
 
+/**
+ * Collection operators
+ */
 export const COLLECTION_OPERATOR = {
-  ...CORE_COLLECTION_OPERATOR,
-  ...EXTENDED_COLLECTION_OPERATOR,
+  IN: "in",
 } as const;
 
+/**
+ * Comparison operators
+ */
 export const COMPARISON_OPERATOR = {
-  ...CORE_COMPARISON_OPERATOR,
-  ...EXTENDED_COMPARISON_OPERATOR,
+  RANGE: "range",
 } as const;
 
+/**
+ * Operators that support multiple values
+ */
 export const MULTI_VALUE_OPERATORS: ReadonlyArray<TSupportedOperators> = [
-  ...CORE_MULTI_VALUE_OPERATORS,
-  ...EXTENDED_MULTI_VALUE_OPERATORS,
+  COLLECTION_OPERATOR.IN,
+  COMPARISON_OPERATOR.RANGE,
 ] as const;
 
-// -------- COMPOSED TYPES --------
+/**
+ * All operators that can be used in filter conditions
+ */
+export const OPERATORS = {
+  ...EQUALITY_OPERATOR,
+  ...COLLECTION_OPERATOR,
+  ...COMPARISON_OPERATOR,
+} as const;
+
+// -------- TYPES --------
 
 export type TLogicalOperator = (typeof LOGICAL_OPERATOR)[keyof typeof LOGICAL_OPERATOR];
 export type TEqualityOperator = (typeof EQUALITY_OPERATOR)[keyof typeof EQUALITY_OPERATOR];
@@ -57,16 +58,10 @@ export type TComparisonOperator = (typeof COMPARISON_OPERATOR)[keyof typeof COMP
 
 /**
  * Union type representing all operators that can be used in a filter condition.
- * Combines core and extended operators.
  */
-export type TSupportedOperators = TCoreSupportedOperators | TExtendedSupportedOperators;
+export type TSupportedOperators = (typeof OPERATORS)[keyof typeof OPERATORS];
 
 /**
  * All operators available for use in rich filters UI, including negated versions.
  */
 export type TAllAvailableOperatorsForDisplay = TSupportedOperators;
-
-// -------- RE-EXPORTS --------
-
-export * from "./core";
-export * from "./extended";

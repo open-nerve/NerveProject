@@ -20,9 +20,6 @@
         "delete_btn": "删除此工作区",
         "delete_modal": {
           "title": "确定要删除此工作区吗？",
-          "description": "您目前正在试用我们的付费方案。请先取消试用后再继续。",
-          "dismiss": "关闭",
-          "cancel": "取消试用",
           "success_title": "工作区已删除。",
           "success_message": "即将跳转到您的个人资料页面。",
           "error_title": "操作失败。",
@@ -42,6 +39,7 @@
       "members": {
         "title": "成员",
         "add_member": "添加成员",
+        "invite_members": "邀请成员",
         "pending_invites": "待处理邀请",
         "invitations_sent_successfully": "邀请发送成功",
         "leave_confirmation": "您确定要离开工作区吗？您将无法再访问此工作区。此操作无法撤消。",
@@ -50,7 +48,6 @@
           "display_name": "显示名称",
           "email_address": "电子邮件地址",
           "account_type": "账户类型",
-          "authentication": "身份验证",
           "joining_date": "加入日期"
         },
         "modal": {
@@ -64,14 +61,6 @@
             "invalid": "电子邮件无效"
           }
         }
-      },
-      "billing_and_plans": {
-        "heading": "账单与计划",
-        "description": "选择您的计划、管理订阅，并随着需求增长轻松升级。",
-        "title": "账单与计划",
-        "current_plan": "当前计划",
-        "free_plan": "您目前使用的是免费计划",
-        "view_plans": "查看计划"
       },
       "webhooks": {
         "heading": "Webhooks",
@@ -147,134 +136,6 @@
             "message": "无法删除 API 令牌"
           }
         }
-      },
-      "integrations": {
-        "title": "集成",
-        "heading": "集成",
-        "description": "与流行的工具和服务连接，在整个工作流生态系统中同步您的工作。",
-        "page_title": "在可用的应用或您自己的应用中使用您的 Plane 数据。",
-        "page_description": "查看此工作区或您正在使用的所有集成。"
-      },
-      "imports": {
-        "title": "导入",
-        "heading": "导入",
-        "description": "连接并从现有的项目管理工具导入数据，以简化您的工作流集成。"
-      },
-      "worklogs": {
-        "title": "工作日志",
-        "heading": "工作日志",
-        "description": "为任何项目中的任何人下载工作日志（即工时表）。"
-      },
-      "group_syncing": {
-        "title": "组同步",
-        "heading": "组同步",
-        "description": "将身份提供者组与项目和角色关联。当 IdP 中的组成员身份发生变化时，用户访问权限将自动更新，简化入职和离职流程。",
-        "enable": {
-          "title": "启用组同步",
-          "description": "根据身份提供者组自动将用户添加到项目。"
-        },
-        "config": {
-          "title": "配置组同步",
-          "description": "设置身份提供者组如何映射到项目和角色。",
-          "sync_on_login": {
-            "title": "登录时同步",
-            "description": "用户登录时更新组成员身份和项目访问权限。"
-          },
-          "sync_offline": {
-            "title": "离线同步",
-            "description": "每六小时自动运行同步，无需等待用户登录。"
-          },
-          "auto_remove": {
-            "title": "自动移除",
-            "description": "当用户不再匹配组时，自动将其从项目中移除。"
-          },
-          "group_attribute_key": {
-            "title": "组属性键",
-            "description": "用于识别和同步用户组的身份提供者属性。",
-            "placeholder": "组"
-          }
-        },
-        "group_mapping": {
-          "title": "组映射",
-          "description": "将身份提供者组与项目和角色关联。",
-          "button_text": "添加新组同步"
-        },
-        "toast": {
-          "updating": "正在更新组同步功能",
-          "success": "组同步功能已成功更新。",
-          "error": "更新组同步功能失败！"
-        },
-        "delete_modal": {
-          "title": "删除组同步",
-          "content": "此身份组的新用户将不再被添加到项目。已添加的用户将保留其当前角色。"
-        },
-        "modal": {
-          "idp_group_name": {
-            "text": "用户组",
-            "required": "用户组为必填项",
-            "placeholder": "输入 IdP 组名称"
-          },
-          "project": {
-            "text": "项目",
-            "required": "项目为必填项",
-            "placeholder": "选择项目"
-          },
-          "default_role": {
-            "text": "项目角色",
-            "required": "项目角色为必填项",
-            "placeholder": "选择项目角色"
-          }
-        }
-      },
-      "identity": {
-        "title": "身份",
-        "heading": "身份",
-        "description": "配置您的域名并启用单点登录"
-      },
-      "project_states": {
-        "title": "项目状态",
-        "heading": "查看所有项目的进度概览。",
-        "description": "项目状态是 Plane 独有的功能，用于按任何项目属性跟踪您所有项目的进度。",
-        "go_to_settings": "前往设置"
-      },
-      "projects": {
-        "title": "项目",
-        "description": "管理项目状态、启用项目标签及其他配置。",
-        "tabs": {
-          "states": "项目状态",
-          "labels": "项目标签"
-        }
-      },
-      "templates": {
-        "title": "模板",
-        "heading": "模板",
-        "description": "使用模板可节省 80% 创建项目、工作项和页面的时间。"
-      },
-      "relations": {
-        "title": "关系",
-        "heading": "关系",
-        "description": "创建和管理连接工作区中工作项的关系类型。"
-      },
-      "cancel_trial": {
-        "title": "请先取消试用期。",
-        "description": "您目前正在试用我们的付费计划。请先取消试用后再继续。",
-        "dismiss": "关闭",
-        "cancel": "取消试用",
-        "cancel_success_title": "试用已取消。",
-        "cancel_success_message": "现在您可以删除工作空间了。",
-        "cancel_error_title": "操作失败。",
-        "cancel_error_message": "请重试。"
-      },
-      "plane-intelligence": {
-        "title": "Plane AI",
-        "heading": "Plane AI",
-        "description": "使用与您的工作和知识库原生连接的 AI，让您的任务变得更智能、更快速。"
-      },
-      "runners": {
-        "title": "Plane Runner",
-        "heading": "脚本",
-        "new_script": "新建脚本",
-        "description": "使用自定义脚本和自动化规则自动化您的工作流程。"
       }
     },
     "empty_state": {
@@ -285,10 +146,6 @@
       "webhooks": {
         "title": "尚未添加 webhook",
         "description": "创建 webhook 以接收实时更新并自动执行操作。"
-      },
-      "imports": {
-        "title": "尚无导入",
-        "description": "在这里查找所有以前的导入并下载它们。"
       }
     }
   }

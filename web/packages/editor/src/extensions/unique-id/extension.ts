@@ -10,18 +10,13 @@ import type { Transaction } from "@tiptap/pm/state";
 import { v4 as uuidv4 } from "uuid";
 // constants
 import { CORE_EXTENSIONS, BLOCK_NODE_TYPES } from "@/constants/extension";
-import { ADDITIONAL_BLOCK_NODE_TYPES } from "@/constants/extensions";
 import { createUniqueIDPlugin } from "./plugin";
 import { createIdsForView } from "./utils";
-// plane imports
 
-const COMBINED_BLOCK_NODE_TYPES = [...BLOCK_NODE_TYPES, ...ADDITIONAL_BLOCK_NODE_TYPES];
-export type UniqueIDGenerationContext = {
+type UniqueIDGenerationContext = {
   node: ProseMirrorNode;
   pos: number;
 };
-export const UniqueIDAttribute = "id";
-export const generateUniqueID = () => uuidv4();
 
 export interface UniqueIDOptions {
   /**
@@ -66,7 +61,7 @@ export const UniqueID = Extension.create<UniqueIDOptions>({
   addOptions() {
     return {
       attributeName: "id",
-      types: COMBINED_BLOCK_NODE_TYPES,
+      types: BLOCK_NODE_TYPES,
       generateUniqueID: () => uuidv4(),
       filterTransaction: null,
       updateDocument: true,

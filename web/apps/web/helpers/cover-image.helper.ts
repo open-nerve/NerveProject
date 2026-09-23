@@ -84,9 +84,9 @@ export const DEFAULT_COVER_IMAGE_URL = STATIC_COVER_IMAGES.IMAGE_1;
  */
 const STATIC_COVER_IMAGES_SET = new Set<string>(Object.values(STATIC_COVER_IMAGES));
 
-export type TCoverImageType = "local_static" | "uploaded_asset" | "unsplash";
+export type TCoverImageType = "local_static" | "uploaded_asset";
 
-export type TCoverImageResult = {
+type TCoverImageResult = {
   needsUpload: boolean;
   imageType: TCoverImageType;
   shouldUpdate: boolean;
@@ -101,7 +101,7 @@ export type TCoverImagePayload = {
 /**
  * Checks if a given URL is a valid static cover image
  */
-export const isStaticCoverImage = (imageUrl: string | null | undefined): boolean => {
+const isStaticCoverImage = (imageUrl: string | null | undefined): boolean => {
   if (!imageUrl) return false;
   return STATIC_COVER_IMAGES_SET.has(imageUrl);
 };
@@ -113,19 +113,6 @@ export const isStaticCoverImage = (imageUrl: string | null | undefined): boolean
 export const getCoverImageType = (imageUrl: string): TCoverImageType => {
   // Check against the explicit set of static images
   if (isStaticCoverImage(imageUrl)) return "local_static";
-
-  // Check if it's an Unsplash image by validating the hostname
-  try {
-    const url = new URL(imageUrl);
-    const hostname = url.hostname.toLowerCase();
-    if (hostname === "unsplash.com" || hostname.endsWith(".unsplash.com")) {
-      return "unsplash";
-    }
-  } catch {
-    // If URL parsing fails (e.g., relative path), fall through to other checks
-  }
-
-  if (imageUrl.startsWith("http")) return "uploaded_asset";
 
   return "uploaded_asset";
 };
@@ -147,22 +134,17 @@ export function getCoverImageDisplayURL(
 
   const imageType = getCoverImageType(imageUrl);
 
-  if (imageType === "local_static" || imageType === "unsplash") {
+  if (imageType === "local_static") {
     return imageUrl;
   }
 
-  if (imageType === "uploaded_asset") {
-    return getFileURL(imageUrl) || imageUrl;
-  }
-
-  return imageUrl;
+  return getFileURL(imageUrl) || imageUrl;
 }
 
 /**
  * Analyzes cover image change and determines what action to take
- * Merged with isUnsplashImage logic - now detects unsplash images as a separate type
  */
-export const analyzeCoverImageChange = (
+const analyzeCoverImageChange = (
   currentImage: string | null | undefined,
   newImage: string | null | undefined
 ): TCoverImageResult => {
@@ -187,7 +169,7 @@ export const analyzeCoverImageChange = (
   const imageType = getCoverImageType(newImage);
 
   return {
-    needsUpload: imageType === "local_static" || imageType === "unsplash",
+    needsUpload: imageType === "local_static",
     imageType,
     shouldUpdate: hasChanged,
   };

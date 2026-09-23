@@ -17,13 +17,12 @@ type TCreateIssueToastActionItems = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  isEpic?: boolean;
 };
 
 export const CreateIssueToastActionItems = observer(function CreateIssueToastActionItems(
   props: TCreateIssueToastActionItems
 ) {
-  const { workspaceSlug, issueId, isEpic = false } = props;
+  const { workspaceSlug, issueId } = props;
   // state
   const [copied, setCopied] = useState(false);
   // store hooks
@@ -44,7 +43,6 @@ export const CreateIssueToastActionItems = observer(function CreateIssueToastAct
     issueId,
     projectIdentifier,
     sequenceId: issue?.sequence_id,
-    isEpic,
   });
 
   const copyToClipboard = async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
@@ -67,7 +65,7 @@ export const CreateIssueToastActionItems = observer(function CreateIssueToastAct
         rel="noopener noreferrer"
         className="rounded-sm px-2 py-1 font-medium text-accent-primary hover:bg-surface-2"
       >
-        {`View ${isEpic ? "epic" : "work item"}`}
+        View work item
       </a>
 
       {copied ? (

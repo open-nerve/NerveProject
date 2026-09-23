@@ -23,7 +23,6 @@ import {
   PreferencesIcon,
   SearchIcon,
   TrashIcon,
-  UpgradeIcon,
 } from "./actions";
 // Arrow icons
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ReplyIcon } from "./arrows";
@@ -41,7 +40,7 @@ import {
 // Misc icons
 import { InfoIcon } from "./misc";
 // Project icons
-import { CycleIcon, EpicIcon, IntakeIcon, ModuleIcon, ViewsIcon, WorkItemsIcon } from "./project";
+import { CycleIcon, IntakeIcon, ModuleIcon, ViewsIcon, WorkItemsIcon } from "./project";
 // Property icons
 import {
   BooleanPropertyIcon,
@@ -62,19 +61,17 @@ import {
   UserCirclePropertyIcon,
   UserPropertyIcon,
   UserSquarePropertyIcon,
-  WorkflowsPropertyIcon,
 } from "./properties";
 // Sub-brand icons
 import { CopyLinkIcon } from "./actions/copy-link";
 import { LabelFilledIcon } from "./properties/label-filled-icon";
-import { PiChatLogo, PlaneNewIcon } from "./sub-brand";
+import { PlaneNewIcon } from "./sub-brand";
 // Workspace icons
 import { ArchiveIcon, DashboardIcon, DraftIcon, HomeIcon, InboxIcon, ProjectIcon, YourWorkIcon } from "./workspace";
 
 export const ICON_REGISTRY = {
   // Sub-brand icons
   "sub-brand.plane": PlaneNewIcon,
-  "sub-brand.pi-chat": PiChatLogo,
 
   // Workspace icons
   "workspace.archive": ArchiveIcon,
@@ -89,7 +86,6 @@ export const ICON_REGISTRY = {
 
   // Project icons
   "project.cycle": CycleIcon,
-  "project.epic": EpicIcon,
   "project.intake": IntakeIcon,
   "project.module": ModuleIcon,
   "project.view": ViewsIcon,
@@ -122,7 +118,6 @@ export const ICON_REGISTRY = {
   "property.user-circle": UserCirclePropertyIcon,
   "property.user": UserPropertyIcon,
   "property.user-square": UserSquarePropertyIcon,
-  "property.workflows": WorkflowsPropertyIcon,
   "property.label-filled": LabelFilledIcon,
 
   // Action icons
@@ -144,7 +139,6 @@ export const ICON_REGISTRY = {
   "action.preferences": PreferencesIcon,
   "action.trash": TrashIcon,
   "action.copy-link": CopyLinkIcon,
-  "action.upgrade": UpgradeIcon,
 
   // Arrow icons
   "arrow.chevron-down": ChevronDownIcon,

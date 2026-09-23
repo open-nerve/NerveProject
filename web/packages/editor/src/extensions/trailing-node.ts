@@ -16,7 +16,7 @@ function nodeEqualsType({ types, node }: { types: NodeType[]; node: ProseMirrorN
   return (Array.isArray(types) && types.includes(node?.type)) || node?.type === types;
 }
 
-export interface TrailingNodeOptions {
+interface TrailingNodeOptions {
   node: string;
   notAfter: string[];
 }

@@ -95,6 +95,4 @@ function ProjectAttributes(props: Props) {
   );
 }
 
-export default ProjectAttributes;
-
 export { ProjectAttributes };

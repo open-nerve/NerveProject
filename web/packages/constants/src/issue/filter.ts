@@ -14,10 +14,6 @@ import { EIssuesStoreType } from "@plane/types";
 import type { TIssueFilterPriorityObject } from "./common";
 import { ISSUE_DISPLAY_PROPERTIES_KEYS, SUB_ISSUES_DISPLAY_PROPERTIES_KEYS } from "./common";
 
-import type { TIssueLayout } from "./layout";
-
-export type TIssueFilterKeys = "priority" | "state" | "labels";
-
 export enum EServerGroupByToFilterOptions {
   "state_id" = "state",
   "priority" = "priority",
@@ -42,23 +38,6 @@ export type TSupportedFilterTypeForUpdate =
   | EIssueFilterType.DISPLAY_FILTERS
   | EIssueFilterType.DISPLAY_PROPERTIES
   | EIssueFilterType.KANBAN_FILTERS;
-
-export const ISSUE_DISPLAY_FILTERS_BY_LAYOUT: {
-  [key in TIssueLayout]: Record<"filters", TIssueFilterKeys[]>;
-} = {
-  list: {
-    filters: ["priority", "state", "labels"],
-  },
-  kanban: {
-    filters: ["priority", "state", "labels"],
-  },
-  calendar: {
-    filters: ["priority", "state", "labels"],
-  },
-  spreadsheet: {
-    filters: ["priority", "state", "labels"],
-  },
-};
 
 export const ISSUE_PRIORITY_FILTERS: TIssueFilterPriorityObject[] = [
   {
@@ -241,7 +220,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
         },
       },
       calendar: {
-        display_properties: ["key", "issue_type"],
+        display_properties: ["key"],
         display_filters: {
           type: ["active", "backlog"],
         },
@@ -288,7 +267,6 @@ export const ISSUE_STORE_TO_FILTERS_MAP: Partial<Record<EIssuesStoreType, TFilte
 export const SUB_WORK_ITEM_AVAILABLE_FILTERS_FOR_WORK_ITEM_PAGE: (keyof IIssueFilterOptions)[] = [
   "priority",
   "state",
-  "issue_type",
   "assignees",
   "start_date",
   "target_date",

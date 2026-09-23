@@ -23,17 +23,14 @@ import type { TDropdownProps } from "@/components/dropdowns/types";
 // hooks
 import { useDropdown } from "@/hooks/use-dropdown";
 // plane web imports
-import { StateOption } from "@/components/workflow";
+import { StateOption } from "@/components/dropdowns/state/state-option";
 
 export type TWorkItemStateDropdownBaseProps = TDropdownProps & {
-  alwaysAllowStateChange?: boolean;
   button?: ReactNode;
   dropdownArrow?: boolean;
   dropdownArrowClassName?: string;
-  filterAvailableStateIds?: boolean;
   getStateById: (stateId: string | null | undefined) => IIntakeState | undefined;
   iconSize?: string;
-  isForWorkItemCreation?: boolean;
   isInitializing?: boolean;
   onChange: (val: string) => void;
   onClose?: () => void;
@@ -237,10 +234,8 @@ export const WorkItemStateDropdownBase = observer(function WorkItemStateDropdown
                 filteredOptions.length > 0 ? (
                   filteredOptions.map((option) => (
                     <StateOption
-                      {...props}
                       key={option.value}
                       option={option}
-                      selectedValue={value}
                       className="flex w-full cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 select-none"
                     />
                   ))

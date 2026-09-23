@@ -11,7 +11,6 @@ import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { IconButton } from "@plane/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TContextMenuItem } from "@plane/ui";
 import { ContextMenu, CustomMenu } from "@plane/ui";
 import { copyUrlToClipboard, cn } from "@plane/utils";
 // components
@@ -82,8 +81,7 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
     }
   };
 
-  // Use unified menu hook from plane-web (resolves to CE or EE)
-  const menuResult = useModuleMenuItems({
+  const MENU_ITEMS = useModuleMenuItems({
     moduleDetails: moduleDetails ?? undefined,
     workspaceSlug,
     projectId,
@@ -96,10 +94,6 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
     handleCopyLink: handleCopyText,
     handleOpenInNewTab,
   });
-
-  // Handle both CE (array) and EE (object) return types
-  const MENU_ITEMS: TContextMenuItem[] = Array.isArray(menuResult) ? menuResult : menuResult.items;
-  const additionalModals = Array.isArray(menuResult) ? null : menuResult.modals;
 
   const CONTEXT_MENU_ITEMS = MENU_ITEMS.map(function CONTEXT_MENU_ITEMS(item) {
     return {
@@ -130,7 +124,6 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
             handleClose={() => setArchiveModuleModal(false)}
           />
           <DeleteModuleModal data={moduleDetails} isOpen={deleteModal} onClose={() => setDeleteModal(false)} />
-          {additionalModals}
         </div>
       )}
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />

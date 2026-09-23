@@ -6,14 +6,7 @@
 
 import { action, makeObservable, runInAction } from "mobx";
 // base class
-import type {
-  TIssue,
-  TLoader,
-  ViewFlags,
-  IssuePaginationOptions,
-  TIssuesResponse,
-  TBulkOperationsPayload,
-} from "@plane/types";
+import type { TIssue, TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@plane/types";
 // services
 // types
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
@@ -49,9 +42,6 @@ export interface IProjectViewIssues extends IBaseIssuesStore {
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   quickAddIssue: (workspaceSlug: string, projectId: string, data: TIssue) => Promise<TIssue | undefined>;
-  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  bulkUpdateProperties: (workspaceSlug: string, projectId: string, data: TBulkOperationsPayload) => Promise<void>;
 }
 
 export class ProjectViewIssues extends BaseIssuesStore implements IProjectViewIssues {
@@ -184,7 +174,6 @@ export class ProjectViewIssues extends BaseIssuesStore implements IProjectViewIs
   };
 
   // Using aliased names as they cannot be overridden in other stores
-  archiveBulkIssues = this.bulkArchiveIssues;
   quickAddIssue = this.issueQuickAdd;
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;

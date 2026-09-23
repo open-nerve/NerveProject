@@ -8,7 +8,6 @@ import type { TPaginationInfo } from "./common";
 import type { TUserPermissions } from "./enums";
 import type { TProjectMembership } from "./project";
 import type { IUser, IUserLite } from "./users";
-import type { TLoginMediums } from "./instance";
 import type { IWorkspaceViewProps } from "./view-props";
 
 export enum EUserWorkspaceRoles {
@@ -33,12 +32,6 @@ export interface IWorkspace {
   total_projects?: number;
   role: number;
   timezone: string;
-}
-
-export interface IWorkspaceLite {
-  readonly id: string;
-  name: string;
-  slug: string;
 }
 
 export interface IWorkspaceMemberInvitation {
@@ -88,7 +81,6 @@ export interface IWorkspaceMember {
   last_name?: string;
   joining_date?: string;
   display_name?: string;
-  last_login_medium?: TLoginMediums;
   is_active?: boolean;
 }
 
@@ -132,7 +124,6 @@ export interface IWorkspaceIssueSearchResult {
   project_id: string;
   sequence_id: number;
   workspace__slug: string;
-  type_id: string;
 }
 
 export interface IWorkspaceProjectSearchResult {
@@ -151,14 +142,6 @@ export interface IWorkspaceSearchResults {
     module: IWorkspaceDefaultSearchResult[];
     issue_view: IWorkspaceDefaultSearchResult[];
   };
-}
-
-export interface IWorkspaceProgressResponse {
-  completed_issues: number;
-  total_issues: number;
-  started_issues: number;
-  cancelled_issues: number;
-  unstarted_issues: number;
 }
 export type TWorkspacePaginationInfo = TPaginationInfo & {
   results: IWorkspace[];

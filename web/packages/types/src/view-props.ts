@@ -4,6 +4,7 @@
  * See the LICENSE file for details.
  */
 
+import type { FC } from "react";
 import type { IProjectMemberNavigationPreferences } from "./project";
 import type { TIssue } from "./issues/issue";
 import type { LOGICAL_OPERATOR, TSupportedOperators } from "./rich-filters";
@@ -22,7 +23,6 @@ export type TIssueGroupByOptions =
   | "cycle"
   | "module"
   | "target_date"
-  | "team_project"
   | null;
 
 export type TIssueOrderByOptions =
@@ -72,7 +72,6 @@ export type TIssueParams =
   | "start_date"
   | "target_date"
   | "project"
-  | "team_project"
   | "group_by"
   | "sub_group_by"
   | "order_by"
@@ -81,7 +80,6 @@ export type TIssueParams =
   | "show_empty_groups"
   | "cursor"
   | "per_page"
-  | "issue_type"
   | "layout"
   | "expand"
   | "filters";
@@ -135,13 +133,11 @@ export interface IIssueFilterOptions {
   cycle?: string[] | null;
   module?: string[] | null;
   project?: string[] | null;
-  team_project?: string[] | null;
   start_date?: string[] | null;
   state?: string[] | null;
   state_group?: string[] | null;
   subscriber?: string[] | null;
   target_date?: string[] | null;
-  issue_type?: string[] | null;
 }
 
 export interface IIssueDisplayFilterOptions {
@@ -171,7 +167,6 @@ export interface IIssueDisplayProperties {
   updated_on?: boolean;
   modules?: boolean;
   cycle?: boolean;
-  issue_type?: boolean;
 }
 
 export type TIssueKanbanFilters = {
@@ -259,7 +254,7 @@ export interface IssuePaginationOptions {
   orderBy?: TIssueOrderByOptions;
 }
 
-export type TSpreadsheetColumn = React.FC<{
+export type TSpreadsheetColumn = FC<{
   issue: TIssue;
   onClose: () => void;
   onChange: (issue: TIssue, data: Partial<TIssue>, updates: any) => void;

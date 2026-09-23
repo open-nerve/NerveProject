@@ -5,4 +5,3 @@
  */
 
 export * from "./indicator";
-export * from "./password-input";
