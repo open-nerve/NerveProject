@@ -12,7 +12,7 @@ import { generateQueryParams } from "@plane/utils";
 import { useModule } from "@/hooks/store/use-module";
 import { useAppRouter } from "@/hooks/use-app-router";
 // components
-import { ModuleAnalyticsSidebar } from "./";
+import { ModuleProgressSidebar } from "./";
 
 type Props = {
   projectId: string;
@@ -57,7 +57,7 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
               "0px 1px 4px 0px rgba(0, 0, 0, 0.06), 0px 2px 4px 0px rgba(16, 24, 40, 0.06), 0px 1px 8px -1px rgba(16, 24, 40, 0.06)",
           }}
         >
-          <ModuleAnalyticsSidebar
+          <ModuleProgressSidebar
             moduleId={peekModule?.toString() ?? ""}
             handleClose={handleClose}
             isArchived={isArchived}

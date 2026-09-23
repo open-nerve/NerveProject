@@ -28,6 +28,5 @@ export const WEBSITE_URL = process.env.VITE_WEBSITE_URL || "https://plane.so";
 // support email
 export const SUPPORT_EMAIL = process.env.VITE_SUPPORT_EMAIL || "support@plane.so";
 // marketing links
-export const MARKETING_PRICING_PAGE_LINK = "https://plane.so/pricing";
 export const MARKETING_CONTACT_US_PAGE_LINK = "https://plane.so/contact";
 export const MARKETING_PLANE_ONE_PAGE_LINK = "https://plane.so/one";

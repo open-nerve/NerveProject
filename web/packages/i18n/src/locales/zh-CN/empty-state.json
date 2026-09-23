@@ -53,7 +53,7 @@
     },
     "modules": {
       "title": "将项目目标映射到模块并轻松跟踪。",
-      "description": "模块由相互关联的工作项组成。它们有助于监控项目阶段的进度,每个阶段都有特定的截止日期和分析,以指示您离实现这些阶段有多近。",
+      "description": "模块由相互关联的工作项组成。它们有助于监控项目阶段的进度,每个阶段都有特定的截止日期和进度,以指示您离实现这些阶段有多近。",
       "cta_primary": "设置您的第一个模块"
     },
     "module_work_items": {
@@ -153,21 +153,6 @@
       "title": "没有已归档项目",
       "description": "看起来您的所有项目仍然活跃 — 做得好!"
     },
-    "analytics_projects": {
-      "title": "创建项目以在此处可视化项目指标。"
-    },
-    "analytics_work_items": {
-      "title": "创建包含工作项和受理人的项目,以开始在此处跟踪绩效、进度和团队影响。"
-    },
-    "analytics_no_cycle": {
-      "title": "创建周期以将工作组织成有时限的阶段并跟踪冲刺进度。"
-    },
-    "analytics_no_module": {
-      "title": "创建模块以组织工作并跟踪不同阶段的进度。"
-    },
-    "analytics_no_intake": {
-      "title": "设置接收以管理传入请求并跟踪它们的接受和拒绝情况"
-    },
     "home_widget_stickies": {
       "title": "记下想法、捕捉灵光一现或记录思维火花。添加便签开始。"
     },
@@ -176,10 +161,6 @@
       "description": "创建便签记录快速笔记和待办事项,并随身携带它们无论您走到哪里。",
       "cta_primary": "创建第一个便签",
       "cta_secondary": "文档"
-    },
-    "active_cycles": {
-      "title": "无活跃周期",
-      "description": "您目前没有任何正在进行的周期。包含今天日期的活跃周期将显示在此处。"
     },
     "dashboard": {
       "title": "使用仪表板可视化您的进度",

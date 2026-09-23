@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "react-router dev --port 3000",
     "build": "react-router build",
-    "check:lint": "node ../../../tools/lint-cap.mjs 775",
+    "check:lint": "node ../../../tools/lint-cap.mjs 764",
     "check:types": "react-router typegen && tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."
@@ -35,11 +35,9 @@
     "@popperjs/core": "catalog:",
     "@react-pdf/renderer": "catalog:",
     "@react-router/node": "catalog:",
-    "@tanstack/react-table": "catalog:",
     "axios": "catalog:",
     "cmdk": "catalog:",
     "date-fns": "catalog:",
-    "export-to-csv": "catalog:",
     "isbot": "catalog:",
     "lodash-es": "catalog:",
     "lucide-react": "catalog:",

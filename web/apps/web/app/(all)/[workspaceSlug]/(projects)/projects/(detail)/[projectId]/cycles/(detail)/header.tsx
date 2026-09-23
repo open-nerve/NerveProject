@@ -4,11 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // icons
-import { BarOutline, CyclesOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
+import { CyclesOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
 import {
   EIssueFilterType,
@@ -26,7 +26,6 @@ import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
 import { Breadcrumbs, BreadcrumbNavigationSearchDropdown, Header } from "@plane/ui";
 import { cn } from "@plane/utils";
 // components
-import { WorkItemsModal } from "@/components/analytics/work-items/modal";
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherLabel } from "@/components/common/switcher-label";
 import { CycleQuickActions } from "@/components/cycles/quick-actions";
@@ -51,8 +50,6 @@ import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
-  // states
-  const [analyticsModal, setAnalyticsModal] = useState(false);
   // router
   const router = useAppRouter();
   const { workspaceSlug, projectId, cycleId } = useParams();
@@ -126,12 +123,6 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
 
   return (
     <>
-      <WorkItemsModal
-        projectDetails={currentProjectDetails}
-        isOpen={analyticsModal}
-        onClose={() => setAnalyticsModal(false)}
-        cycleDetails={cycleDetails ?? undefined}
-      />
       <Header>
         <Header.LeftItem>
           <div className="flex items-center gap-2">
@@ -228,26 +219,16 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
               />
             </FiltersDropdown>
 
-            {canUserCreateIssue && (
-              <>
-                <Button onClick={() => setAnalyticsModal(true)} variant="secondary" size="lg">
-                  <span className="hidden @4xl:flex">Analytics</span>
-                  <span className="@4xl:hidden">
-                    <BarOutline className="size-3.5" />
-                  </span>
-                </Button>
-                {!isCompletedCycle && (
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={() => {
-                      toggleCreateIssueModal(true, EIssuesStoreType.CYCLE);
-                    }}
-                  >
-                    {t("issue.add.label")}
-                  </Button>
-                )}
-              </>
+            {canUserCreateIssue && !isCompletedCycle && (
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => {
+                  toggleCreateIssueModal(true, EIssuesStoreType.CYCLE);
+                }}
+              >
+                {t("issue.add.label")}
+              </Button>
             )}
             <IconButton
               variant="tertiary"

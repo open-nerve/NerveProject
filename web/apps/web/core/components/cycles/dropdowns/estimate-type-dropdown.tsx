@@ -12,7 +12,7 @@ import { CustomSelect } from "@plane/ui";
 import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useCycle } from "@/hooks/store/use-cycle";
 // local imports
-import { cycleEstimateOptions } from "../analytics-sidebar/issue-progress";
+import { cycleEstimateOptions } from "../progress-sidebar/issue-progress";
 
 type TProps = {
   value: TCycleEstimateType;

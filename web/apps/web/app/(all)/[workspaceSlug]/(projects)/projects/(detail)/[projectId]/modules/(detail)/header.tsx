@@ -4,11 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 // icons
-import { BarOutline, ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
+import { ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
 import {
   EIssueFilterType,
@@ -23,7 +23,6 @@ import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
 import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@plane/ui";
 import { cn } from "@plane/utils";
 // components
-import { WorkItemsModal } from "@/components/analytics/work-items/modal";
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherLabel } from "@/components/common/switcher-label";
 import {
@@ -51,8 +50,6 @@ import { IconButton } from "@plane/propel/icon-button";
 export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
-  // states
-  const [analyticsModal, setAnalyticsModal] = useState(false);
   // router
   const router = useAppRouter();
   const { workspaceSlug, projectId, moduleId: routerModuleId } = useParams();
@@ -123,12 +120,6 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
 
   return (
     <>
-      <WorkItemsModal
-        isOpen={analyticsModal}
-        onClose={() => setAnalyticsModal(false)}
-        moduleDetails={moduleDetails ?? undefined}
-        projectDetails={currentProjectDetails}
-      />
       <Header>
         <Header.LeftItem>
           <div className="flex items-center gap-2">
@@ -223,27 +214,17 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
             </FiltersDropdown>
           </div>
 
-          {canUserCreateIssue ? (
-            <>
-              <Button className="hidden md:block" onClick={() => setAnalyticsModal(true)} variant="secondary" size="lg">
-                <span className="hidden @4xl:flex">Analytics</span>
-                <span className="@4xl:hidden">
-                  <BarOutline className="size-3.5" />
-                </span>
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                className="hidden sm:flex"
-                onClick={() => {
-                  toggleCreateIssueModal(true, EIssuesStoreType.MODULE);
-                }}
-              >
-                Add work item
-              </Button>
-            </>
-          ) : (
-            <></>
+          {canUserCreateIssue && (
+            <Button
+              variant="primary"
+              size="lg"
+              className="hidden sm:flex"
+              onClick={() => {
+                toggleCreateIssueModal(true, EIssuesStoreType.MODULE);
+              }}
+            >
+              Add work item
+            </Button>
           )}
           <IconButton
             variant="tertiary"

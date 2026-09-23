@@ -7,7 +7,6 @@
 // ============================================================
 // Chart Base
 // ============================================================
-export * from "./common";
 export type TChartLegend = {
   align: "left" | "center" | "right";
   verticalAlign: "top" | "middle" | "bottom";
@@ -87,40 +86,6 @@ export type TBarChartProps<K extends string, T extends string> = TAxisChartProps
 };
 
 // ============================================================
-// Line Chart
-// ============================================================
-
-export type TLineItem<T extends string> = {
-  key: T;
-  label: string;
-  dashedLine: boolean;
-  fill: string;
-  showDot: boolean;
-  smoothCurves: boolean;
-  stroke: string;
-  style?: Record<string, string | number>;
-};
-
-export type TLineChartProps<K extends string, T extends string> = TAxisChartProps<K, T> & {
-  lines: TLineItem<T>[];
-};
-
-// ============================================================
-// Scatter Chart
-// ============================================================
-
-export type TScatterPointItem<T extends string> = {
-  key: T;
-  label: string;
-  fill: string;
-  stroke: string;
-};
-
-export type TScatterChartProps<K extends string, T extends string> = TAxisChartProps<K, T> & {
-  scatterPoints: TScatterPointItem<T>[];
-};
-
-// ============================================================
 // Area Chart
 // ============================================================
 
@@ -174,77 +139,4 @@ export type TPieChartProps<K extends string, T extends string> = Pick<
   };
   tooltipLabel?: string | ((payload: any) => string);
   customLegend?: (props: any) => React.ReactNode;
-};
-
-// ============================================================
-// Tree Map
-// ============================================================
-
-export type TreeMapItem = {
-  name: string;
-  value: number;
-  label?: string;
-  textClassName?: string;
-  icon?: React.ReactElement;
-} & (
-  | {
-      fillColor: string;
-    }
-  | {
-      fillClassName: string;
-    }
-);
-
-export type TreeMapChartProps = {
-  data: TreeMapItem[];
-  className?: string;
-  isAnimationActive?: boolean;
-  showTooltip?: boolean;
-};
-
-export type TTopSectionConfig = {
-  showIcon: boolean;
-  showName: boolean;
-  nameTruncated: boolean;
-};
-
-export type TBottomSectionConfig = {
-  show: boolean;
-  showValue: boolean;
-  showLabel: boolean;
-  labelTruncated: boolean;
-};
-
-export type TContentVisibility = {
-  top: TTopSectionConfig;
-  bottom: TBottomSectionConfig;
-};
-
-// ============================================================
-// Radar Chart
-// ============================================================
-
-export type TRadarItem<T extends string> = {
-  key: T;
-  name: string;
-  fill?: string;
-  stroke?: string;
-  fillOpacity?: number;
-  dot?: {
-    r: number;
-    fillOpacity: number;
-  };
-};
-
-export type TRadarChartProps<K extends string, T extends string> = Pick<
-  TBaseChartProps<K, T>,
-  "className" | "showTooltip" | "margin" | "data" | "legend"
-> & {
-  dataKey: T;
-  radars: TRadarItem<T>[];
-  angleAxis: {
-    key: keyof TChartData<K, T>;
-    label?: string;
-    strokeColor?: string;
-  };
 };

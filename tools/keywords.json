@@ -236,7 +236,105 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "analytics",
+      "phase": "M1/P2",
+      "why": "工作区数据分析、工作项分析弹窗和只给它们用的图表：路由、store、service、常量、类型、propel 的 radar/line/scatter/tree-map/table。保留的迭代、模块进度已改名为 progress（M1 设计 3.4）",
+      "files": { "source": "^(?:web/.*|pnpm-(?:workspace|lock)\\.yaml|turbo\\.json)$", "flags": "" },
+      "content": { "source": "analytics", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { AnalyticsService } from \"@/services/analytics.service\";",
+          "  \"workspace_analytics\": {",
+          "        handlePowerKNavigate(ctx, [ctx.params.workspaceSlug?.toString(), \"analytics\", \"overview\"]),",
+          "  const [analyticsModal, setAnalyticsModal] = useState(false);",
+          "export const ANALYTICS_X_AXIS_VALUES = ["
+        ],
+        "miss": [
+          "import { CycleProgress } from \"./issue-progress\";",
+          "  fetchActiveCycleDistribution: action,",
+          "    `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/progress/`"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/services/cycle.service.ts",
+            "pnpm-workspace.yaml",
+            "web/packages/utils/src/tlds.ts"
+          ],
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "Makefile", "api/openapi.yaml"]
+        }
+      }
+    },
+    {
+      "id": "active-cycles-promo",
+      "phase": "M1/P2",
+      "why": "工作区级的「活跃迭代」升级推广页（Plane 的付费功能）；项目迭代列表中的当前迭代区块保留，所以不搜单数的 active_cycle / ActiveCycle",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": {
+        "source": "active-cycles|active_cycles|WorkspaceActiveCycles|WORKSPACE_ACTIVE_CYCLES|ProgressPro\\b|\\bworkspaceActiveCycles\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`/api/workspaces/${workspaceSlug}/active-cycles/`, {",
+          "  \"active_cycles\": \"Active cycles\",",
+          "import { WorkspaceActiveCyclesUpgrade } from \"@/components/active-cycles/workspace-active-cycles-upgrade\";",
+          "  ): Promise<IWorkspaceActiveCyclesResponse> {",
+          "export const WORKSPACE_ACTIVE_CYCLES_LIST = (workspaceSlug: string, cursor: string, per_page: string) =>",
+          "  fetchActiveCycleProgressPro: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<void>;",
+          "  async workspaceActiveCycles("
+        ],
+        "miss": [
+          "export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: Props) {",
+          "  \"active_cycle\": {",
+          "export type ActiveCycleProgressProps = {",
+          "  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/cycle.service.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
-  "exceptions": []
+  "exceptions": [
+    {
+      "rule": "analytics",
+      "path": "web/packages/utils/src/tlds.ts",
+      "match": "analytics",
+      "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.analytics 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
+      "until": "M9"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/apps/web/core/services/cycle.service.ts",
+      "match": "analytics",
+      "reason": "Plane 的迭代进度接口地址 /cycles/{id}/analytics?type= 本身带 analytics；M1 不改接口，M6 换成新接口时删除（M1 设计 3.4）",
+      "until": "M6"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "analytics",
+      "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Analytics",
+      "count": 3,
+      "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "analytics",
+      "path": "web/packages/types/src/epics.ts",
+      "match": "Analytics",
+      "count": 2,
+      "reason": "TEpicAnalyticsGroup、TEpicAnalytics 是 Epic 的企业版类型，随 Epic 在 M1/P3 删除",
+      "until": "M1/P3"
+    }
+  ]
 }

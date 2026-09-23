@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export * from "./analytics-icon";
 export * from "./archive-icon";
 export * from "./dashboard-icon";
 export * from "./draft-icon";

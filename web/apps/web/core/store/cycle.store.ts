@@ -71,8 +71,7 @@ export interface ICycleStore {
   fetchArchivedCycleDetails: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<ICycle>;
   fetchCycleDetails: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<ICycle>;
   fetchActiveCycleProgress: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<TProgressSnapshot>;
-  fetchActiveCycleProgressPro: (workspaceSlug: string, projectId: string, cycleId: string) => Promise<void>;
-  fetchActiveCycleAnalytics: (
+  fetchActiveCycleDistribution: (
     workspaceSlug: string,
     projectId: string,
     cycleId: string,
@@ -139,7 +138,7 @@ export class CycleStore implements ICycleStore {
       fetchArchivedCycles: action,
       fetchArchivedCycleDetails: action,
       fetchActiveCycleProgress: action,
-      fetchActiveCycleAnalytics: action,
+      fetchActiveCycleDistribution: action,
       fetchCycleDetails: action,
       updateCycleDetails: action,
       deleteCycle: action,
@@ -484,7 +483,7 @@ export class CycleStore implements ICycleStore {
    */
   fetchActiveCycleProgress = async (workspaceSlug: string, projectId: string, cycleId: string) => {
     this.progressLoader = true;
-    return await this.cycleService.workspaceActiveCyclesProgress(workspaceSlug, projectId, cycleId).then((progress) => {
+    return await this.cycleService.cycleProgress(workspaceSlug, projectId, cycleId).then((progress) => {
       runInAction(() => {
         set(this.cycleMap, [cycleId], { ...this.cycleMap[cycleId], ...progress });
         this.progressLoader = false;
@@ -494,36 +493,24 @@ export class CycleStore implements ICycleStore {
   };
 
   /**
-   * @description fetches active cycle progress for pro users
+   * @description fetches the cycle's work-item distribution
    * @param workspaceSlug
    * @param projectId
    * @param cycleId
    *  @returns
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  fetchActiveCycleProgressPro = action(async (workspaceSlug: string, projectId: string, cycleId: string) => {});
-
-  /**
-   * @description fetches active cycle analytics
-   * @param workspaceSlug
-   * @param projectId
-   * @param cycleId
-   *  @returns
-   */
-  fetchActiveCycleAnalytics = async (
+  fetchActiveCycleDistribution = async (
     workspaceSlug: string,
     projectId: string,
     cycleId: string,
     analytic_type: string
   ) =>
-    await this.cycleService
-      .workspaceActiveCyclesAnalytics(workspaceSlug, projectId, cycleId, analytic_type)
-      .then((cycle) => {
-        runInAction(() => {
-          set(this.cycleMap, [cycleId, analytic_type === "points" ? "estimate_distribution" : "distribution"], cycle);
-        });
-        return cycle;
+    await this.cycleService.cycleDistribution(workspaceSlug, projectId, cycleId, analytic_type).then((cycle) => {
+      runInAction(() => {
+        set(this.cycleMap, [cycleId, analytic_type === "points" ? "estimate_distribution" : "distribution"], cycle);
       });
+      return cycle;
+    });
 
   /**
    * @description fetches cycle details

@@ -61,19 +61,6 @@ export interface IProject extends IPartialProject {
   next_work_item_sequence?: number;
 }
 
-export type TProjectAnalyticsCountParams = {
-  project_ids?: string;
-  fields?: string;
-};
-
-export type TProjectAnalyticsCount = Pick<IProject, "id"> & {
-  total_issues?: number;
-  completed_issues?: number;
-  total_cycles?: number;
-  total_members?: number;
-  total_modules?: number;
-};
-
 export interface IProjectLite {
   id: string;
   name: string;

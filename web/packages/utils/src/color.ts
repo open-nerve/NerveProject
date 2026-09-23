@@ -72,53 +72,6 @@ export const hexToRgb = (hex: string): TRgb => {
 export const rgbToHex = ({ r, g, b }: TRgb): string => `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 
 /**
- * Converts Hex values to HSL values
- * @param {string} hex - The hexadecimal color code (e.g., "#ff0000" for red)
- * @returns {HSL} An object containing the HSL values
- * @example
- * hexToHsl("#ff0000") // returns { h: 0, s: 100, l: 50 }
- * hexToHsl("#00ff00") // returns { h: 120, s: 100, l: 50 }
- * hexToHsl("#0000ff") // returns { h: 240, s: 100, l: 50 }
- */
-export const hexToHsl = (hex: string): THsl => {
-  // return default value for invalid hex
-  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return { h: 0, s: 0, l: 0 };
-
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r:
-        h = (g - b) / d + (g < b ? 6 : 0);
-        break;
-      case g:
-        h = (b - r) / d + 2;
-        break;
-      case b:
-        h = (r - g) / d + 4;
-        break;
-    }
-    h /= 6;
-  }
-
-  return {
-    h: h * 360,
-    s: s * 100,
-    l: l * 100,
-  };
-};
-
-/**
  * Converts HSL values to a hexadecimal color code
  * @param {HSL} hsl - An object containing HSL values
  * @param {number} hsl.h - Hue component (0-360)

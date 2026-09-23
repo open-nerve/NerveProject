@@ -72,7 +72,6 @@ import { LabelFilledIcon } from "./properties/label-filled-icon";
 import { PiChatLogo, PlaneNewIcon, WikiIcon } from "./sub-brand";
 // Workspace icons
 import {
-  AnalyticsIcon,
   ArchiveIcon,
   DashboardIcon,
   DraftIcon,
@@ -90,7 +89,6 @@ export const ICON_REGISTRY = {
   "sub-brand.pi-chat": PiChatLogo,
 
   // Workspace icons
-  "workspace.analytics": AnalyticsIcon,
   "workspace.archive": ArchiveIcon,
   "workspace.cycle": CycleIcon,
   "workspace.dashboard": DashboardIcon,

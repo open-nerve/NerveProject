@@ -245,13 +245,6 @@ export const WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS: IWorkspaceSidebarNavi
     highlight: (pathname: string, url: string) => pathname.includes(url),
   },
   {
-    key: "analytics",
-    labelTranslationKey: "analytics",
-    href: `/analytics/`,
-    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    highlight: (pathname: string, url: string) => pathname.includes(url),
-  },
-  {
     key: "archives",
     labelTranslationKey: "archives",
     href: `/projects/archives/`,
