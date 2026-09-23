@@ -24,17 +24,6 @@
 }
 /* end drag handle */
 
-/* ai handle */
-#ai-handle {
-  opacity: 1;
-
-  &.handle-hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-/* end ai handle */
-
 .ProseMirror:not(.dragging) .ProseMirror-selectednode:not(.node-imageComponent):not(.node-image):not(.table-wrapper) {
   position: relative;
   cursor: grab;

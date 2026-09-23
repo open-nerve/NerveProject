@@ -10,18 +10,15 @@ import type { EditorView } from "@tiptap/pm/view";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // plugins
-import { AIHandlePlugin } from "@/plugins/ai-handle";
 import { DragHandlePlugin, nodeDOMAtCoords } from "@/plugins/drag-handle";
 
 type Props = {
-  aiEnabled: boolean;
   dragDropEnabled: boolean;
 };
 
 export type SideMenuPluginProps = {
   dragHandleWidth: number;
   handlesConfig: {
-    ai: boolean;
     dragDrop: boolean;
   };
   scrollThreshold: {
@@ -38,7 +35,7 @@ export type SideMenuHandleOptions = {
 };
 
 export const SideMenuExtension = (props: Props) => {
-  const { aiEnabled, dragDropEnabled } = props;
+  const { dragDropEnabled } = props;
 
   return Extension.create({
     name: CORE_EXTENSIONS.SIDE_MENU,
@@ -47,7 +44,6 @@ export const SideMenuExtension = (props: Props) => {
         SideMenu({
           dragHandleWidth: 24,
           handlesConfig: {
-            ai: aiEnabled,
             dragDrop: dragDropEnabled,
           },
           scrollThreshold: { up: 200, down: 150 },
@@ -78,7 +74,6 @@ const SideMenu = (options: SideMenuPluginProps) => {
   const showSideMenu = () => editorSideMenu?.classList.remove("side-menu-hidden");
   // side menu elements
   const { view: dragHandleView, domEvents: dragHandleDOMEvents } = DragHandlePlugin(options);
-  const { view: aiHandleView, domEvents: aiHandleDOMEvents } = AIHandlePlugin(options);
 
   return new Plugin({
     key: new PluginKey("sideMenu"),
@@ -86,10 +81,6 @@ const SideMenu = (options: SideMenuPluginProps) => {
       hideSideMenu();
       view?.dom.parentElement?.appendChild(editorSideMenu);
       // side menu elements' initialization
-      if (handlesConfig.ai && !editorSideMenu.querySelector("#ai-handle")) {
-        aiHandleView(view, editorSideMenu);
-      }
-
       if (handlesConfig.dragDrop && !editorSideMenu.querySelector("#drag-handle")) {
         dragHandleView(view, editorSideMenu);
       }
@@ -122,10 +113,6 @@ const SideMenu = (options: SideMenuPluginProps) => {
           rect.top += (lineHeight - 20) / 2;
           rect.top += paddingTop;
 
-          if (handlesConfig.ai) {
-            rect.left -= 20;
-          }
-
           if (node.parentElement?.parentElement?.matches("td") || node.parentElement?.parentElement?.matches("th")) {
             if (node.matches("ul:not([data-type=taskList]) li, ol li")) {
               rect.left -= 5;
@@ -151,9 +138,6 @@ const SideMenu = (options: SideMenuPluginProps) => {
           showSideMenu();
           if (handlesConfig.dragDrop) {
             dragHandleDOMEvents?.mousemove();
-          }
-          if (handlesConfig.ai) {
-            aiHandleDOMEvents?.mousemove?.();
           }
         },
         // keydown: () => hideSideMenu(),
