@@ -669,7 +669,7 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
 | P1 | web-hygiene | 已完成 | [spec](specs/P1-web-hygiene.md) | [plan](plans/P1-web-hygiene.md) | [review](reviews/P1-web-hygiene-review.md) |
-| P2 | trim-content | 未开始 | — | — | — |
+| P2 | trim-content | 进行中 | [spec](specs/P2-trim-content.md) | [plan](plans/P2-trim-content.md) | — |
 | P3 | trim-platform | 未开始 | — | — | — |
 | P4 | router-native | 未开始 | — | — | — |
 | P5 | brand | 未开始 | — | — | — |
