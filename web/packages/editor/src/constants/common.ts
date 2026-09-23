@@ -11,27 +11,17 @@ import {
   AlignRightOutline,
   BoldOutline,
   CodeOutline,
-  H1Outline,
-  H2Outline,
-  H3Outline,
-  H4Outline,
-  H5Outline,
-  H6Outline,
   ImageOutline,
   ItalicOutline,
   ListOutline,
   NumberedListOutline,
   QuoteOutline,
   StrikethroughOutline,
-  TableEditorOutline,
-  TextOutline,
   ToDoOutline,
   UnderlineOutline,
 } from "@makeplane/propel/icons";
 import { MonospaceIcon, SansSerifIcon, SerifIcon } from "@plane/propel/icons";
 import type { TCommandExtraProps, TEditorCommands, TEditorFontStyle } from "@/types";
-
-export type TEditorTypes = "lite" | "document" | "sticky";
 
 // Utility type to enforce the necessary extra props or make extraProps optional
 export type ExtraPropsForCommand<T extends TEditorCommands> = T extends keyof TCommandExtraProps
@@ -44,19 +34,8 @@ export type ToolbarMenuItem<T extends TEditorCommands = TEditorCommands> = {
   name: string;
   icon: ComponentType<SVGProps<SVGSVGElement>>;
   shortcut?: string[];
-  editors: TEditorTypes[];
   extraProps?: ExtraPropsForCommand<T>;
 };
-
-export const TYPOGRAPHY_ITEMS: ToolbarMenuItem<"text" | "h1" | "h2" | "h3" | "h4" | "h5" | "h6">[] = [
-  { itemKey: "text", renderKey: "text", name: "Text", icon: TextOutline, editors: ["document"] },
-  { itemKey: "h1", renderKey: "h1", name: "Heading 1", icon: H1Outline, editors: ["document"] },
-  { itemKey: "h2", renderKey: "h2", name: "Heading 2", icon: H2Outline, editors: ["document"] },
-  { itemKey: "h3", renderKey: "h3", name: "Heading 3", icon: H3Outline, editors: ["document"] },
-  { itemKey: "h4", renderKey: "h4", name: "Heading 4", icon: H4Outline, editors: ["document"] },
-  { itemKey: "h5", renderKey: "h5", name: "Heading 5", icon: H5Outline, editors: ["document"] },
-  { itemKey: "h6", renderKey: "h6", name: "Heading 6", icon: H6Outline, editors: ["document"] },
-];
 
 export const TEXT_ALIGNMENT_ITEMS: ToolbarMenuItem<"text-align">[] = [
   {
@@ -65,7 +44,6 @@ export const TEXT_ALIGNMENT_ITEMS: ToolbarMenuItem<"text-align">[] = [
     name: "Left align",
     icon: AlignLeftOutline,
     shortcut: ["Cmd", "Shift", "L"],
-    editors: ["lite", "document"],
     extraProps: {
       alignment: "left",
     },
@@ -76,7 +54,6 @@ export const TEXT_ALIGNMENT_ITEMS: ToolbarMenuItem<"text-align">[] = [
     name: "Center align",
     icon: AlignCenterOutline,
     shortcut: ["Cmd", "Shift", "E"],
-    editors: ["lite", "document"],
     extraProps: {
       alignment: "center",
     },
@@ -87,7 +64,6 @@ export const TEXT_ALIGNMENT_ITEMS: ToolbarMenuItem<"text-align">[] = [
     name: "Right align",
     icon: AlignRightOutline,
     shortcut: ["Cmd", "Shift", "R"],
-    editors: ["lite", "document"],
     extraProps: {
       alignment: "right",
     },
@@ -101,7 +77,6 @@ const BASIC_MARK_ITEMS: ToolbarMenuItem<"bold" | "italic" | "underline" | "strik
     name: "Bold",
     icon: BoldOutline,
     shortcut: ["Cmd", "B"],
-    editors: ["lite", "document"],
   },
   {
     itemKey: "italic",
@@ -109,7 +84,6 @@ const BASIC_MARK_ITEMS: ToolbarMenuItem<"bold" | "italic" | "underline" | "strik
     name: "Italic",
     icon: ItalicOutline,
     shortcut: ["Cmd", "I"],
-    editors: ["lite", "document"],
   },
   {
     itemKey: "underline",
@@ -117,7 +91,6 @@ const BASIC_MARK_ITEMS: ToolbarMenuItem<"bold" | "italic" | "underline" | "strik
     name: "Underline",
     icon: UnderlineOutline,
     shortcut: ["Cmd", "U"],
-    editors: ["lite", "document"],
   },
   {
     itemKey: "strikethrough",
@@ -125,7 +98,6 @@ const BASIC_MARK_ITEMS: ToolbarMenuItem<"bold" | "italic" | "underline" | "strik
     name: "Strikethrough",
     icon: StrikethroughOutline,
     shortcut: ["Cmd", "Shift", "S"],
-    editors: ["lite", "document"],
   },
 ];
 
@@ -136,7 +108,6 @@ const LIST_ITEMS: ToolbarMenuItem<"bulleted-list" | "numbered-list" | "to-do-lis
     name: "Bulleted list",
     icon: ListOutline,
     shortcut: ["Cmd", "Shift", "7"],
-    editors: ["lite", "document"],
   },
   {
     itemKey: "numbered-list",
@@ -144,7 +115,6 @@ const LIST_ITEMS: ToolbarMenuItem<"bulleted-list" | "numbered-list" | "to-do-lis
     name: "Numbered list",
     icon: NumberedListOutline,
     shortcut: ["Cmd", "Shift", "8"],
-    editors: ["lite", "document"],
   },
   {
     itemKey: "to-do-list",
@@ -152,45 +122,28 @@ const LIST_ITEMS: ToolbarMenuItem<"bulleted-list" | "numbered-list" | "to-do-lis
     name: "To-do list",
     icon: ToDoOutline,
     shortcut: ["Cmd", "Shift", "9"],
-    editors: ["lite", "document"],
   },
 ];
 
 export const USER_ACTION_ITEMS: ToolbarMenuItem<"quote" | "code">[] = [
-  { itemKey: "quote", renderKey: "quote", name: "Quote", icon: QuoteOutline, editors: ["lite", "document"] },
-  { itemKey: "code", renderKey: "code", name: "Code", icon: CodeOutline, editors: ["lite", "document"] },
+  { itemKey: "quote", renderKey: "quote", name: "Quote", icon: QuoteOutline },
+  { itemKey: "code", renderKey: "code", name: "Code", icon: CodeOutline },
 ];
 
-export const COMPLEX_ITEMS: ToolbarMenuItem<"table" | "image">[] = [
-  { itemKey: "table", renderKey: "table", name: "Table", icon: TableEditorOutline, editors: ["document"] },
-  { itemKey: "image", renderKey: "image", name: "Image", icon: ImageOutline, editors: ["lite", "document"] },
+export const COMPLEX_ITEMS: ToolbarMenuItem<"image">[] = [
+  { itemKey: "image", renderKey: "image", name: "Image", icon: ImageOutline },
 ];
 
 export const IMAGE_ITEM = COMPLEX_ITEMS.find((item): item is ToolbarMenuItem<"image"> => item.itemKey === "image")!;
 
 export const TOOLBAR_ITEMS: {
-  [editorType in TEditorTypes]: {
-    [key: string]: ToolbarMenuItem[];
-  };
+  [key: string]: ToolbarMenuItem[];
 } = {
-  lite: {
-    basic: BASIC_MARK_ITEMS.filter((item) => item.editors.includes("lite")),
-    alignment: TEXT_ALIGNMENT_ITEMS.filter((item) => item.editors.includes("lite")),
-    list: LIST_ITEMS.filter((item) => item.editors.includes("lite")),
-    userAction: USER_ACTION_ITEMS.filter((item) => item.editors.includes("lite")),
-    complex: COMPLEX_ITEMS.filter((item) => item.editors.includes("lite")),
-  },
-  document: {
-    basic: BASIC_MARK_ITEMS.filter((item) => item.editors.includes("document")),
-    alignment: TEXT_ALIGNMENT_ITEMS.filter((item) => item.editors.includes("document")),
-    list: LIST_ITEMS.filter((item) => item.editors.includes("document")),
-    userAction: USER_ACTION_ITEMS.filter((item) => item.editors.includes("document")),
-    complex: COMPLEX_ITEMS.filter((item) => item.editors.includes("document")),
-  },
-  sticky: {
-    basic: BASIC_MARK_ITEMS.filter((item) => ["bold", "italic"].includes(item.itemKey)),
-    list: LIST_ITEMS.filter((item) => ["to-do-list"].includes(item.itemKey)),
-  },
+  basic: BASIC_MARK_ITEMS,
+  alignment: TEXT_ALIGNMENT_ITEMS,
+  list: LIST_ITEMS,
+  userAction: USER_ACTION_ITEMS,
+  complex: COMPLEX_ITEMS,
 };
 
 export const COLORS_LIST: {

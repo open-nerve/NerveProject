@@ -93,7 +93,6 @@ catalog:
   "react-hook-form": "^7.84.0"
   "react-i18next": "16.6.6"
   "react-is": "^19.2.8"
-  "react-masonry-component": "^6.3.0"
   "react-popper": "^2.3.0"
   "react-router": "8.3.0"
   "recharts": "^2.15.4"
@@ -192,5 +191,4 @@ peerDependencyRules:
     # call sites import usePopper only.
     "react-popper>react": "19"
     # Same situation: peer range predates React 19, uses nothing React 19 removed.
-    "react-masonry-component>react": "19"
     "use-font-face-observer>react": "19"

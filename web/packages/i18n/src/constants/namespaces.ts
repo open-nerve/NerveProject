@@ -20,7 +20,6 @@ export const NAMESPACES = [
   "project",
   "project-settings",
   "settings",
-  "stickies",
   "work-item",
   "workspace",
   "workspace-settings",

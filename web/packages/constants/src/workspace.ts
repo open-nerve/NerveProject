@@ -206,13 +206,6 @@ export const WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS: IWorkspaceSidebarNavig
     highlight: (pathname: string, url: string) => pathname === url,
   },
   {
-    key: "stickies",
-    labelTranslationKey: "sidebar.stickies",
-    href: `/stickies/`,
-    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
-    highlight: (pathname: string, url: string) => pathname.includes(url),
-  },
-  {
     key: "your_work",
     labelTranslationKey: "your_work",
     href: `/profile/`,

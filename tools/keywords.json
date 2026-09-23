@@ -514,6 +514,32 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "stickies",
+      "phase": "M1/P2",
+      "why": "便签（工作区便签页、首页便签组件、便签编辑器）；区分大小写，不搜 stick（不区分大小写时命中 AxisTick），也不搜单独的 sticky（Tailwind 的 position: sticky）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css|ya?ml)$", "flags": "" },
+      "content": { "source": "Sticky|STICKY|[Ss]tickies|STICKIES|sticky[-_.:]", "flags": "" },
+      "samples": {
+        "hit": [
+          "import { StickiesWidget } from \"../stickies/widget\";",
+          "  stickyStore: IStickyStore;",
+          "    key: \"stickies\",",
+          "  \"stickies\": \"Stickies\",",
+          "      allStickiesModal: observable,"
+        ],
+        "miss": [
+          "        <div className=\"sticky top-0 z-10\">",
+          "  position: sticky;",
+          "const CustomXAxisTick = (props: TAxisTickProps) => {",
+          "            {/* Single sticky column */}"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/navigation.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [

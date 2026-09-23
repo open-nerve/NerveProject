@@ -54,8 +54,6 @@ import type { IProjectViewStore } from "./project-view.store";
 import { ProjectViewStore } from "./project-view.store";
 import type { IRouterStore } from "./router.store";
 import { RouterStore } from "./router.store";
-import type { IStickyStore } from "./sticky/sticky.store";
-import { StickyStore } from "./sticky/sticky.store";
 import type { IThemeStore } from "./theme.store";
 import { ThemeStore } from "./theme.store";
 import type { IUserStore } from "./user";
@@ -87,7 +85,6 @@ export class CoreRootStore {
   multipleSelect: IMultipleSelectStore;
   workspaceNotification: IWorkspaceNotificationStore;
   favorite: IFavoriteStore;
-  stickyStore: IStickyStore;
   editorAssetStore: IEditorAssetStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
@@ -115,7 +112,6 @@ export class CoreRootStore {
     this.projectInbox = new ProjectInboxStore(this);
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);
-    this.stickyStore = new StickyStore();
     this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
@@ -146,7 +142,6 @@ export class CoreRootStore {
     this.multipleSelect = new MultipleSelectStore();
     this.workspaceNotification = new WorkspaceNotificationStore(this);
     this.favorite = new FavoriteStore(this);
-    this.stickyStore = new StickyStore();
     this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();

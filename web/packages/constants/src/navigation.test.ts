@@ -15,7 +15,6 @@ describe("the workspace sidebar is a fixed list", () => {
   it("shows these items above the workspace group, in this order", () => {
     expect(WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS.map((item) => item.key)).toEqual([
       "home",
-      "stickies",
       "your_work",
       "drafts",
     ]);

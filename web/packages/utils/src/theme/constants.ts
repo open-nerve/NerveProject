@@ -128,7 +128,7 @@ export const DEFAULT_SATURATION_CURVE: SaturationCurve = "ease-in-out";
 
 /**
  * Editor color backgrounds for light mode
- * Used for stickies and editor elements
+ * Used for editor elements
  */
 export const EDITOR_COLORS_LIGHT = {
   gray: "#d6d6d8",
@@ -143,7 +143,7 @@ export const EDITOR_COLORS_LIGHT = {
 
 /**
  * Editor color backgrounds for dark mode
- * Used for stickies and editor elements
+ * Used for editor elements
  */
 export const EDITOR_COLORS_DARK = {
   gray: "#404144",

@@ -9,7 +9,6 @@ import {
   DraftsOutline,
   HomeOutline,
   InboxOutline,
-  MultipleStickyOutline,
   ProjectsOutline,
   ViewsOutline,
   YourWorkOutline,
@@ -32,7 +31,5 @@ export const getSidebarNavigationItemIcon = (key: string, className: string = ""
       return <DraftsOutline className={cn("size-4 flex-shrink-0", className)} />;
     case "archives":
       return <ArchiveOutline className={cn("size-4 flex-shrink-0", className)} />;
-    case "stickies":
-      return <MultipleStickyOutline className={cn("size-4 flex-shrink-0", className)} />;
   }
 };

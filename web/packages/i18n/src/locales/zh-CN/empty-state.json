@@ -138,15 +138,6 @@
       "title": "没有已归档项目",
       "description": "看起来您的所有项目仍然活跃 — 做得好!"
     },
-    "home_widget_stickies": {
-      "title": "记下想法、捕捉灵光一现或记录思维火花。添加便签开始。"
-    },
-    "stickies": {
-      "title": "即时捕捉想法",
-      "description": "创建便签记录快速笔记和待办事项,并随身携带它们无论您走到哪里。",
-      "cta_primary": "创建第一个便签",
-      "cta_secondary": "文档"
-    },
     "dashboard": {
       "title": "使用仪表板可视化您的进度",
       "description": "构建可自定义的仪表板以跟踪指标、衡量成果并有效呈现见解。",

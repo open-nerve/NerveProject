@@ -19,7 +19,6 @@ import { SimpleEmptyState } from "@/components/empty-state/simple-empty-state-ro
 import { useHome } from "@/hooks/store/use-home";
 import { useProject } from "@/hooks/store/use-project";
 // local imports
-import { StickiesWidget } from "../stickies/widget";
 import { HomeLoader, NoProjectsEmptyState, RecentActivityWidget } from "./widgets";
 import { DashboardQuickLinks } from "./widgets/links";
 import { ManageWidgetsModal } from "./widgets/manage";
@@ -40,11 +39,6 @@ export const HOME_WIDGETS_LIST: {
     component: RecentActivityWidget,
     fullWidth: false,
     title: "home.recents.title",
-  },
-  my_stickies: {
-    component: StickiesWidget,
-    fullWidth: false,
-    title: "stickies.title",
   },
   new_at_plane: {
     component: null,

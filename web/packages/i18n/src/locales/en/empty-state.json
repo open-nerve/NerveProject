@@ -138,15 +138,6 @@
       "title": "No projects archived",
       "description": "Looks like all your projects are still active—great job!"
     },
-    "home_widget_stickies": {
-      "title": "Jot down an idea, capture an aha, or record a brainwave. Add a sticky to get started."
-    },
-    "stickies": {
-      "title": "Capture ideas instantly",
-      "description": "Create stickies for quick notes and to-dos, and keep them with you wherever you go.",
-      "cta_primary": "Create first sticky",
-      "cta_secondary": "Documentation"
-    },
     "dashboard": {
       "title": "Visualize your progress with dashboards",
       "description": "Build customizable dashboards to track metrics, measure outcomes, and present insights effectively.",

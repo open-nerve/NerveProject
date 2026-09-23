@@ -5,7 +5,7 @@
 @import "./emoji.css";
 @plugin "@tailwindcss/typography";
 
-/* stickies and editor colors
+/* editor colors
  * Text colors and the themed light/dark background ramps come from
  * @plane/editor/styles (imported above), which is their single source of truth.
  * Only the un-themed :root fallback below is kept: the editor package declares

@@ -42,7 +42,6 @@ export * from "./rich-filters";
 export * from "./search";
 export * from "./settings";
 export * from "./state";
-export * from "./stickies";
 export * from "./timezone";
 export * from "./users";
 export * from "./utils";

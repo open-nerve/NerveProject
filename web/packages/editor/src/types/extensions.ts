@@ -4,4 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export type TExtensions = "ai" | "slash-commands" | "enter-key" | "image";
+export type TExtensions = "ai" | "slash-commands" | "image";
