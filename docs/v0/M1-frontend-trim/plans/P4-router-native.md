@@ -17,6 +17,8 @@ T1 `479609f`、T2 `6fad945`、T3 `2292eea`、T4 `e168fdc`、T5 `a3a957b`、T6 `2
 
 ## Global Constraints
 
+> 执行前先读本计划"## Tasks"之前的"控制者评审补充"：它新增了 Task 7，修改了 Task 1、3 的几处做法和浏览器核对的时机，与本节冲突时以它为准。
+
 P3 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有效，下面是它们在 P4 的写法；与 P3 冲突时以本节为准。
 
 ### 命令与环境
@@ -171,6 +173,53 @@ P3 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 | `web/apps/web/app/layout.tsx` | 删强制结尾 `/` 的中间件 | 6 |
 | `web/packages/constants/src/{workspace,profile}.ts`、`settings/*.ts`、`types/src/settings.ts` | 侧边栏 `end`，删 `highlight`、`selected` | 6 |
 | `docs/v0/frontend-changes.md`、`docs/v0/M1-frontend-trim/handoffs/M0-P{5,6}-*.md` | 记录本 Phase | 6 |
+
+---
+
+## 控制者评审补充（执行前必读）
+
+控制者在执行前复核了 spec 和本计划（原型 `479609f..270f8e6` 的数字、每个 Task 的步骤、浏览器核对的分组）。本节与上文冲突时以本节为准。
+
+### spec 第 3 节的裁定
+
+- 第 1–14 条全部采纳。需要确认的几条：
+  - 第 2 条（守卫跳转一律 `replace`）：采纳，设计 4.2 本来就是 `<Navigate replace />`；
+  - 第 4 条（个人设置页不再打开工作项弹窗）：采纳。基线在那里提交会抛错，改成"没有入口"不损失功能；命令面板在那里是否还提供"创建工作项"交 M4；
+  - 第 5 条（停用功能页的按钮改到各自的功能设置页）：采纳；
+  - 第 6、7 条：采纳；
+  - 第 8 条（路由匹配测试的宽松）：P4 采纳。两条反向断言和"改坏再恢复"的步骤是它的下限；是否收紧交收尾（spec 7.3）；
+  - 第 9 条（`frontend-env` 按文件范围）：采纳。`e2e/`、`tools/` 全是 Node 端代码，按目录排除就是设计 7.4 "按执行环境"的精确写法，`web/` 下的 Node 端文件仍在规则范围内。
+- 旧地址的书签和外部链接在 P4 之后落到"页面不存在"：这是设计 3.12 的裁定，确认。
+
+### 对计划的修正
+
+1. **对路由参数的空转换 `.toString()` 在 P4 删，新增 Task 7。** 这推翻 spec 第 5 节和 7.3 的第一条，不交收尾。
+   - 理由：`x.toString()` 是 Next.js 的 `useParams` 返回 `string | string[]` 时留下的写法，属于 P4 要去掉的兼容层习惯。Task 4 之后参数有了真实的类型，才能用类型判断哪些调用是空操作。
+   - 位置：Task 6 之后单独一个提交，放在最后，这样 Task 1–6 仍能与原型逐个对比。
+   - 做法：一次性脚本 `$P4TMP/t7/tostring.mjs`（ts-morph 带类型检查器，不进仓库）只删两种调用：
+     - 接收者的类型是 `string`、没有实参的 `.toString()`；
+     - 接收者是 `string | undefined` 的 `?.toString()`。
+
+     `any`、`unknown`、数字、对象和其他联合类型一律不动，列出来。改完 `pnpm exec oxfmt web/apps/web`。
+   - 核对：
+     - 用一个脚本确认 `git diff` 里只有"删掉 `.toString()`"这一种变化（oxfmt 因此重排的行除外）；
+     - 门禁同其他 Task；
+     - 报告删掉的行数和文件数（spec 按路由参数数的是 520 行、181 个文件，本 Task 按类型数，以实测为准），留下的每一处 `.toString()` 按接收者类型分组。
+   - 风险点：第 1、4、5 条照答；第 3 条改为"没有改变任何表达式的值"。
+   - 浏览器核对的 C 组改在 Task 7 之后跑，因为它改了一百多个文件里读参数的代码。
+2. **`next_path` 用 `@plane/utils` 的 `isValidNextPath`（Task 3）。**
+   - 问题：`AuthenticationWrapper` 自己的 `isValidURL` 只拒绝 `http`、`https`、`ftp` 开头的地址，`//host`（协议相对地址）、`javascript:`、反斜杠开头的地址都能通过。`@plane/utils` 的 `url.ts` 早就有严格的 `isValidNextPath`（只接受以单个 `/` 开头的站内路径），导出了但没有人用。
+   - 做法：Task 3 让 `getWorkspaceRedirectionUrl` 改用它，删掉本地的 `isValidURL`；给 `isValidNextPath` 加单元测试，覆盖它文档注释里的 9 个例子（放在 `web/packages/utils` 现有的测试旁边）。
+   - 这是开放重定向的根因修法，不留给 M2。spec 7.1 给 M2 的那一条随之改为"`next_path` 只带 `pathname`，不带查询参数和片段"。
+   - 浏览器核对 A 组第 3 项加两种：`next_path=//example.com/x`、`next_path=javascript:alert(1)` 都被忽略，落在 `/probe-ws`。
+3. **没有插值的模板字面量**（P3 修复轮的规则）：
+   - Task 1：停用账户的提示写成普通字符串 `"User account deactivated. Please contact your administrator."`。这一行原来插入 `SUPPORT_EMAIL`，去掉插值后留下的外壳正是 P3 定下要收掉的形式；同一张表里其余项是基点代码，不动。
+   - Task 3：codemod 把 `authentication.helper.tsx` 两个错误链接的 `href=` 换成 `to=` 时，同一行三元式里的 `` `` `` 写成 `""`。这是 P3 留下、本 Phase 改到的行。
+   - 固定节奏第 4 条的检查照旧，原型记下的 3 处因此都不再存在。
+4. **执行方式沿用 P3。**
+   - 实现者不指定模型（继承 Opus 5.5），各 Task 评审用 sonnet，整分支评审用 opus。
+   - Task 3、4 各改一百多个文件，评审包按"机械替换 / 逐处判断"拆成两份。
+   - 数字以实测为准：utils 的测试数随第 2 条增加；Task 7 之后 spec 2.2 的数字由整分支评审前的核对重测。
 
 ---
 
@@ -702,7 +751,46 @@ Run: `git grep -n -E "process\.env|(^|[^A-Za-z0-9_])VITE_[A-Z]|dotenv" -- web tu
 
 `git diff --cached --stat 270f8e6` 为空；提交信息见 `$P4TMP/t6/msg.txt`。
 
-**控制者在本 Task 之后跑浏览器核对的 C 组，并重跑 A、B 两组。**
+**控制者在 Task 7 之后跑浏览器核对的 C 组，并重跑 A、B 两组（控制者评审补充第 1 条）。**
+
+---
+
+### Task 7: 删掉对字符串的空转换 `.toString()`（控制者评审补充第 1 条）
+
+没有原型提交。基点是 Task 6 的提交。
+
+**Steps**
+
+- [ ] **Step 1: 记下现状**
+
+Run: `git grep -c -E "\.toString\(\)" -- web/apps/web ':!*.test.ts'`，把每个文件的数目存到 `$P4TMP/logs/t7-before.txt`；报告合计。
+
+- [ ] **Step 2: 写并运行脚本**
+
+写 `$P4TMP/t7/tostring.mjs`（ts-morph，用 `web/apps/web/tsconfig.json` 建项目，先跑过 `react-router typegen`）：遍历 `web/apps/web` 的
+`.ts`、`.tsx`（测试和声明文件除外），找所有没有实参的 `<表达式>.toString()` 和 `<表达式>?.toString()`；用类型检查器取接收者的类型：
+
+- 类型是 `string`（或字符串字面量类型）→ 整个调用换成接收者的原文；
+- `?.toString()` 且类型是 `string | undefined` → 同上；
+- 其他一律不动，打印 `KEEP <文件>:<行> <类型文本>`。
+
+脚本只按文本范围替换，最后打印 `removed <n> in <m> files`。然后 `pnpm exec oxfmt web/apps/web`。
+
+- [ ] **Step 3: 核对只有这一种变化**
+
+写并运行 `$P4TMP/t7/verify.mjs`：对 `git diff -U0` 的每一对删除行、新增行，把删除行里的 `.toString()` 和 `?.toString()` 去掉之后，
+与新增行去掉空白后相同；oxfmt 合并或拆开的行按整段比较。输出 `pairs <n>, mismatches 0`，有不相同的就列出来逐个说明。
+
+- [ ] **Step 4: 核对与门禁**
+
+固定节奏第 2–6 步（孤儿核对的 `<基点>` 是 Task 6 的提交）；`node $P4TMP/tools/render.mjs .` → `render-time navigations: 0`；
+`pnpm --dir web/apps/web exec vitest run` → 5 个测试通过。报告：删掉的行数和文件数、Step 2 的 `KEEP` 清单按类型分组、
+lint 上限（如有变化说明原因）。
+
+- [ ] **Step 5: 提交**
+
+提交信息示例：`refactor(web): drop the no-op toString calls on strings`，正文说明它们来自 Next.js 的 `useParams`
+返回 `string | string[]` 的时代，以及删除的范围由类型决定。
 
 ---
 
@@ -755,7 +843,7 @@ Run: `git grep -n -E "process\.env|(^|[^A-Za-z0-9_])VITE_[A-Z]|dotenv" -- web tu
     （中间件用 `request.url` 重定向，丢掉 `#`）、第 12 项（旧地址被重定向而不是"页面不存在"，停用页的按钮落到"页面不存在"）应当失败，
     证明脚本能发现 P4 改变的行为；第 9 项在基线上预计也通过（中间件把地址统一成带 `/` 的形式，`highlight` 按那个形式写），它核对的是
     P4 没有改坏当前项，基线上不通过的项要查明是不是基线本身的问题。
-    C 组只在 Task 6 之后跑：之前中间件还在，地址总会被补上 `/`。
+    C 组在 Task 7 之后跑（Task 6 之前中间件还在，地址总会被补上 `/`；Task 7 又改了读参数的代码）。
 
 ---
 
