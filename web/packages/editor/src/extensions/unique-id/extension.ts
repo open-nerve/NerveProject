@@ -98,11 +98,9 @@ export const UniqueID = Extension.create<UniqueIDOptions>({
 
   // check initial content for missing ids
   onCreate() {
-    if (!this.editor.isEditable) {
-      this.options.updateDocument = false;
-    }
-
-    if (!this.options.updateDocument) {
+    // a read-only editor leaves its content as it is; the options are shared by every editor that
+    // installs this extension, so they are only read here, never written
+    if (!this.editor.isEditable || !this.options.updateDocument) {
       return;
     }
 
