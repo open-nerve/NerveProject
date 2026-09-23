@@ -254,11 +254,6 @@
         "cancel_error_title": "操作失败。",
         "cancel_error_message": "请重试。"
       },
-      "plane-intelligence": {
-        "title": "Plane AI",
-        "heading": "Plane AI",
-        "description": "使用与您的工作和知识库原生连接的 AI，让您的任务变得更智能、更快速。"
-      },
       "runners": {
         "title": "Plane Runner",
         "heading": "脚本",

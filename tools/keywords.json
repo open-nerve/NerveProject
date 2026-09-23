@@ -1123,6 +1123,74 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "ai-assistant",
+      "phase": "M1/P3",
+      "why": "AI 助手：工作项表单描述编辑器里的 GPT 弹窗和\"I'm feeling lucky\"、AI 服务、实例开关 has_llm_configured、AI 图标（M1 设计 2.2、7.4）；以及\"Plane AI\"（pi-chat）：没有使用的侧边栏用户菜单里的入口、它的图标、路径判断和文案。编辑器包里的 AI 部分已在 P2 随文档页删除。区分大小写：llm 不区分大小写时会命中 scrollMode、allMembers；设计中列出的 PlaneAi、aiHandler、AI_ 常量、rephrase 在本 Phase 开始时已没有命中，不设规则",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[gG]pt|GPT|llm|feeling[ _]lucky|AIService|ai\\.service|AiIcon|ai-icon|AiStar1Outline|pi[-_]chat|PiChat|plane-intelligence|isAiPath",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "import { GptAssistantPopover } from \"@/components/core/modals/gpt-assistant-popover\";",
+          "// TODO: have to implement GPT Assistance",
+          "            {issueName && issueName.trim() !== \"\" && config?.has_llm_configured && (",
+          "  \"feeling_lucky\",",
+          "                    <AiStar1Outline className=\"h-3.5 w-3.5\" />I{\"'\"}m feeling lucky",
+          "import { AIService } from \"@/services/ai.service\";",
+          "export function AiIcon({ width = \"16\", height = \"16\", className, color = \"currentColor\" }: ISvgIcons) {",
+          "export * from \"./ai-icon\";",
+          "import { PiChatLogo } from \"@plane/propel/icons\";",
+          "      key: \"pi-chat\",",
+          "  \"pi_chat\": \"Plane AI\",",
+          "      \"plane-intelligence\": {",
+          "  const isAiPath = pathname.includes(`/${workspaceSlug}/pi-chat`);"
+        ],
+        "miss": ["      scrollMode: \"if-needed\",", "    const allMembers = this.getProjectMemberships(projectId);"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx",
+            "web/packages/types/src/instance/base.ts"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "unsplash-telemetry",
+      "phase": "M1/P3",
+      "why": "Unsplash 封面（封面选择只留静态图和上传；原来每次打开选择器都会请求 /api/unsplash/）、实例开关 has_unsplash_configured；遥测：应用里已没有遥测 SDK，这条规则防止 PostHog、Sentry、Intercom 和实例的 is_telemetry_enabled 回来（M1 设计 2.2、7.4）。posthog、intercom 两条命中样本取自 Plane 接入这两个 SDK 的写法",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "unsplash|posthog|telemetry|sentry|intercom",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "    () => fileService.getUnsplashImages(searchParams),",
+          "import posthog from \"posthog-js\";",
+          "  is_telemetry_enabled: boolean;",
+          "    \"VITE_SENTRY_DSN\",",
+          "import { IntercomProvider } from \"react-use-intercom\";"
+        ],
+        "miss": [
+          "              <Tabs variant=\"contained\" defaultValue=\"images\">",
+          "export const DEFAULT_COVER_IMAGE_URL = STATIC_COVER_IMAGES.IMAGE_1;"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/components/core/image-picker-popover.tsx", "turbo.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [

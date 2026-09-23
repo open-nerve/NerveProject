@@ -1,8 +1,6 @@
 {
   "sidebar": {
-    "your_work": "我的工作",
     "new_work_item": "新工作项",
-    "home": "主页",
     "inbox": "收件箱",
     "workspace": "工作区",
     "views": "视图",
@@ -10,11 +8,9 @@
     "cycles": "周期",
     "modules": "模块",
     "intake": "收集",
-    "drafts": "草稿",
     "favorites": "收藏",
     "pro": "专业版",
     "upgrade": "升级",
-    "pi_chat": "AI 聊天",
     "upgrade_plan": "升级计划",
     "plane_pro": "Plane Pro",
     "business": "商业版"

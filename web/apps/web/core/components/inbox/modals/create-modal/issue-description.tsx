@@ -37,7 +37,6 @@ type TInboxIssueDescription = {
   onAssetUpload?: (assetId: string) => void;
 };
 
-// TODO: have to implement GPT Assistance
 export const InboxIssueDescription = observer(function InboxIssueDescription(props: TInboxIssueDescription) {
   const {
     containerClassName,

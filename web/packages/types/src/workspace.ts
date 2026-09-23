@@ -34,12 +34,6 @@ export interface IWorkspace {
   timezone: string;
 }
 
-export interface IWorkspaceLite {
-  readonly id: string;
-  name: string;
-  slug: string;
-}
-
 export interface IWorkspaceMemberInvitation {
   accepted: boolean;
   email: string;

@@ -56,13 +56,6 @@ export interface IProject extends IPartialProject {
   next_work_item_sequence?: number;
 }
 
-export interface IProjectLite {
-  id: string;
-  name: string;
-  identifier: string;
-  logo_props: TLogoProps;
-}
-
 export interface IProjectMap {
   [id: string]: IProject;
 }

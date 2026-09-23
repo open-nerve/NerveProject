@@ -16,7 +16,6 @@ import { CORE_EDITOR_META } from "@/constants/meta";
 // types
 import type { EditorRefApi, IEditorProps, TEditorCommands } from "@/types";
 // local imports
-import { insertContentAtSavedSelection } from "./insert-content-at-cursor-position";
 import { scrollToNodeViaDOMCoordinates } from "./scroll-to-node";
 
 type TArgs = Pick<IEditorProps, "getEditorMetaData"> & {
@@ -191,11 +190,6 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
       const resolvedPos = pos ?? editor?.state.selection.from;
       if (!editor || !resolvedPos) return;
       scrollToNodeViaDOMCoordinates(editor, resolvedPos, behavior);
-    },
-    setEditorValueAtCursorPosition: (content) => {
-      if (editor?.state.selection) {
-        insertContentAtSavedSelection(editor, content);
-      }
     },
     setFocusAtPosition: (position) => {
       if (!editor || editor.isDestroyed) {

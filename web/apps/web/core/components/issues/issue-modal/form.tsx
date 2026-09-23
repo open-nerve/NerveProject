@@ -95,7 +95,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   } = props;
 
   // states
-  const [gptAssistantModal, setGptAssistantModal] = useState(false);
   const [isMoving, setIsMoving] = useState<boolean>(false);
 
   // refs
@@ -180,7 +179,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     await onSubmit(submitData, is_draft_issue)
       .then(() => {
-        setGptAssistantModal(false);
         reset({
           ...DEFAULT_WORK_ITEM_FORM_VALUES,
           ...(isCreateMoreToggleEnabled ? { ...data } : {}),
@@ -313,20 +311,16 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                 <IssueDescriptionEditor
                   control={control}
                   isDraft={isDraft}
-                  issueName={watch("name")}
                   issueId={data?.id}
                   descriptionHtmlData={data?.description_html}
                   editorRef={editorRef}
                   submitBtnRef={submitBtnRef}
-                  gptAssistantModal={gptAssistantModal}
                   workspaceSlug={workspaceSlug?.toString()}
                   projectId={projectId}
                   handleFormChange={handleFormChange}
                   handleDescriptionHTMLDataChange={(description_html) =>
                     setValue<"description_html">("description_html", description_html)
                   }
-                  setGptAssistantModal={setGptAssistantModal}
-                  handleGptAssistantClose={() => reset(getValues())}
                   onAssetUpload={onAssetUpload}
                   onClose={onClose}
                 />

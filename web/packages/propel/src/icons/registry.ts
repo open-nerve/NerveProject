@@ -67,14 +67,13 @@ import {
 // Sub-brand icons
 import { CopyLinkIcon } from "./actions/copy-link";
 import { LabelFilledIcon } from "./properties/label-filled-icon";
-import { PiChatLogo, PlaneNewIcon } from "./sub-brand";
+import { PlaneNewIcon } from "./sub-brand";
 // Workspace icons
 import { ArchiveIcon, DashboardIcon, DraftIcon, HomeIcon, InboxIcon, ProjectIcon, YourWorkIcon } from "./workspace";
 
 export const ICON_REGISTRY = {
   // Sub-brand icons
   "sub-brand.plane": PlaneNewIcon,
-  "sub-brand.pi-chat": PiChatLogo,
 
   // Workspace icons
   "workspace.archive": ArchiveIcon,

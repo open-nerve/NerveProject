@@ -254,11 +254,6 @@
         "cancel_error_title": "That didn't work.",
         "cancel_error_message": "Try again, please."
       },
-      "plane-intelligence": {
-        "title": "Plane AI",
-        "heading": "Plane AI",
-        "description": "See your work get smarter and faster with AI that is natively connected to your work and knowledge base. "
-      },
       "runners": {
         "title": "Plane Runner",
         "heading": "Scripts",

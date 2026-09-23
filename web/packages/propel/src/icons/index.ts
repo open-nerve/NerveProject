@@ -9,7 +9,6 @@ export type { IconName } from "./registry";
 export { ICON_REGISTRY } from "./registry";
 export * from "./actions";
 export * from "./activity-icon";
-export * from "./ai-icon";
 export * from "./arrows";
 export * from "./at-risk-icon";
 export * from "./attachments";
