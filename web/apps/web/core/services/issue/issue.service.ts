@@ -256,36 +256,6 @@ export class IssueService extends APIService {
       });
   }
 
-  async bulkDeleteIssues(
-    workspaceSlug: string,
-    projectId: string,
-    data: {
-      issue_ids: string[];
-    }
-  ): Promise<any> {
-    return this.delete(`/api/workspaces/${workspaceSlug}/projects/${projectId}/bulk-delete-issues/`, data)
-      .then(async (response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async bulkArchiveIssues(
-    workspaceSlug: string,
-    projectId: string,
-    data: {
-      issue_ids: string[];
-    }
-  ): Promise<{
-    archived_at: string;
-  }> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/bulk-archive-issues/`, data)
-      .then(async (response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   // issue subscriptions
   async getIssueNotificationSubscriptionStatus(
     workspaceSlug: string,

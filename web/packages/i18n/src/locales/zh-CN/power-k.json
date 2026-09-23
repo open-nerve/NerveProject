@@ -1,8 +1,5 @@
 {
   "power_k": {
-    "actions_commands": {
-      "bulk_delete_work_items": "批量删除工作项"
-    },
     "contextual_actions": {
       "work_item": {
         "title": "工作项操作",

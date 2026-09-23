@@ -1023,26 +1023,33 @@
     {
       "id": "bulk-operations",
       "phase": "M1/P3",
-      "why": "批量操作与工作项多选（M1 设计 3.9）：批量接口、升级提示条、多选 store 和 hooks、组头和行上的选择框、逐层透传的 selectionHelpers、只在选中时生效的 selected-issue-row 样式。不在其中：命令面板的批量删除（BulkDeleteIssuesModal，Plane 社区版接口）、表单的多选下拉框（multiple）",
+      "why": "批量操作与工作项多选（M1 设计 3.9）：批量接口（含批量归档，以及命令面板里没有入口、Plane 社区版也打不开的批量删除弹窗）、升级提示条、多选 store 和 hooks、组头和行上的选择框、逐层透传的 selectionHelpers、只在选中时生效的 selected-issue-row 样式。不在其中：表单的多选下拉框（multiple）",
       "files": {
         "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
         "flags": ""
       },
       "content": {
-        "source": "bulk[-_]?operation|multipleselect|selectionhelper|selected-issue-row|spreadsheet_select_group",
+        "source": "bulk[-_]?(?:operation|delete|archive)|(?:archive|remove)bulkissues|multipleselect|selectionhelper|selected-issue-row|spreadsheet_select_group",
         "flags": "i"
       },
       "samples": {
         "hit": [
           "export const IssueBulkOperationsRoot = observer(function IssueBulkOperationsRoot(props: Props) {",
+          "import { BulkDeleteIssuesModalItem } from \"./bulk-delete-issues-modal-item\";",
+          "      \"bulk_delete_work_items\": \"Bulk delete work items\"",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/bulk-archive-issues/`, data)",
+          "  archiveBulkIssues: undefined;",
+          "  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;",
           "export const MultipleSelectEntityAction = observer(function MultipleSelectEntityAction(props: Props) {",
           "import type { TSelectionHelper } from \"@/hooks/use-multiple-select\";",
           "          \"rounded-none px-page-x text-left group-[.selected-issue-row]:bg-accent-primary/5 group-[.selected-issue-row]:hover:bg-accent-primary/10\",",
           "import { SPREADSHEET_SELECT_GROUP } from \"@plane/constants\";"
         ],
         "miss": [
-          "import { BulkDeleteIssuesModalItem } from \"./bulk-delete-issues-modal-item\";",
-          "                    multiple"
+          "                    multiple",
+          "    await bulkAddMembersToProject(workspaceSlug.toString(), projectId.toString(), payload)",
+          "  updateBulkFilters: (filters: Partial<TNotificationFilter>) => void;",
+          "  markAllNotificationsAsRead: (workspaceId: string) => Promise<void>;"
         ],
         "files": {
           "hit": [

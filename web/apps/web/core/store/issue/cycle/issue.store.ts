@@ -76,8 +76,6 @@ export interface ICycleIssues extends IBaseIssuesStore {
     data: TIssue,
     cycleId: string
   ) => Promise<TIssue | undefined>;
-  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
 
   transferIssuesFromCycle: (
     workspaceSlug: string,
@@ -406,7 +404,6 @@ export class CycleIssues extends BaseIssuesStore implements ICycleIssues {
   };
 
   // Using aliased names as they cannot be overridden in other stores
-  archiveBulkIssues = this.bulkArchiveIssues;
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;
 }

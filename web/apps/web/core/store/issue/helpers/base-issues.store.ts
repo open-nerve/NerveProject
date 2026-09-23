@@ -221,8 +221,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       issueQuickAdd: action.bound,
       removeIssue: action.bound,
       issueArchive: action.bound,
-      removeBulkIssues: action.bound,
-      bulkArchiveIssues: action.bound,
 
       addIssueToCycle: action.bound,
       removeIssueFromCycle: action.bound,
@@ -653,53 +651,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
     }
     return response;
   }
-
-  /**
-   * This is a method to delete issues in bulk
-   * @param workspaceSlug
-   * @param projectId
-   * @param issueIds
-   * @returns
-   */
-  async removeBulkIssues(workspaceSlug: string, projectId: string, issueIds: string[]) {
-    // Make API call to bulk delete issues
-    const response = await this.issueService.bulkDeleteIssues(workspaceSlug, projectId, { issue_ids: issueIds });
-    // call fetch parent stats
-    this.fetchParentStats(workspaceSlug, projectId);
-    // Remove issues from the store
-    runInAction(() => {
-      issueIds.forEach((issueId) => {
-        this.removeIssueFromList(issueId);
-        this.rootIssueStore.issues.removeIssue(issueId);
-      });
-    });
-    return response;
-  }
-
-  /**
-   * Bulk Archive issues
-   * @param workspaceSlug
-   * @param projectId
-   * @param issueIds
-   */
-  bulkArchiveIssues = async (workspaceSlug: string, projectId: string, issueIds: string[]) => {
-    const response = await this.issueService.bulkArchiveIssues(workspaceSlug, projectId, { issue_ids: issueIds });
-
-    runInAction(() => {
-      issueIds.forEach((issueId) => {
-        this.issueUpdate(
-          workspaceSlug,
-          projectId,
-          issueId,
-          {
-            archived_at: response.archived_at,
-          },
-          false
-        );
-        this.removeIssueFromList(issueId);
-      });
-    });
-  };
 
   /**
    * This method is used to add issues to a particular Cycle

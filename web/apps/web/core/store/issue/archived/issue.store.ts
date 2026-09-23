@@ -37,11 +37,9 @@ export interface IArchivedIssues extends IBaseIssuesStore {
   ) => Promise<TIssuesResponse | undefined>;
 
   restoreIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
 
   updateIssue: undefined;
   archiveIssue: undefined;
-  archiveBulkIssues: undefined;
   quickAddIssue: undefined;
 }
 
@@ -202,6 +200,5 @@ export class ArchivedIssues extends BaseIssuesStore implements IArchivedIssues {
   // Setting them as undefined as they can not performed on Archived issues
   updateIssue = undefined;
   archiveIssue = undefined;
-  archiveBulkIssues = undefined;
   quickAddIssue = undefined;
 }

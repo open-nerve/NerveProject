@@ -40,8 +40,6 @@ export interface IProjectIssues extends IBaseIssuesStore {
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   quickAddIssue: (workspaceSlug: string, projectId: string, data: TIssue) => Promise<TIssue | undefined>;
-  removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
 }
 
 export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
@@ -189,7 +187,6 @@ export class ProjectIssues extends BaseIssuesStore implements IProjectIssues {
   };
 
   // Using aliased names as they cannot be overridden in other stores
-  archiveBulkIssues = this.bulkArchiveIssues;
   quickAddIssue = this.issueQuickAdd;
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;
