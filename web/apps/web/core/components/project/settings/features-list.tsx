@@ -20,7 +20,6 @@ import { ProjectFeatureToggle } from "./helper";
 type Props = {
   workspaceSlug: string;
   projectId: string;
-  isAdmin: boolean;
 };
 
 const PROJECT_FEATURES_LIST = {
@@ -43,14 +42,14 @@ const PROJECT_FEATURES_LIST = {
 };
 
 export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: Props) {
-  const { workspaceSlug, projectId, isAdmin } = props;
+  const { workspaceSlug, projectId } = props;
   // store hooks
   const { t } = useTranslation();
   const { getProjectById, updateProject } = useProject();
   // derived values
   const currentProjectDetails = getProjectById(projectId);
 
-  const handleSubmit = (_featureKey: string, featureProperty: string) => {
+  const handleSubmit = (featureProperty: string) => {
     if (!workspaceSlug || !projectId || !currentProjectDetails) return;
 
     // making the request to update the project feature
@@ -89,7 +88,6 @@ export const ProjectFeaturesList = observer(function ProjectFeaturesList(props: 
                   featureItem={featureItem}
                   value={Boolean(currentProjectDetails?.[featureItem.property as keyof IProject])}
                   handleSubmit={handleSubmit}
-                  disabled={!isAdmin}
                 />
               }
             />

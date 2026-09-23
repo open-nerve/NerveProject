@@ -47,7 +47,6 @@ export interface IIssueRelationStore extends IIssueRelationStoreActions {
     issueId: string,
     ISSUE_RELATION_OPTIONS: { [key in TIssueRelationTypes]?: TRelationObject }
   ) => number;
-  getRelationByIssueIdRelationType: (issueId: string, relationType: TIssueRelationTypes) => string[] | undefined;
   extractRelationsFromIssues: (issues: TIssue[]) => void;
   createCurrentRelation: (issueId: string, relationType: TIssueRelationTypes, relatedIssueId: string) => Promise<void>;
 }
@@ -103,11 +102,6 @@ export class IssueRelationStore implements IIssueRelationStore {
       return issueRelationKeys.reduce((acc, curr) => acc + (issueRelations?.[curr]?.length ?? 0), 0);
     }
   );
-
-  getRelationByIssueIdRelationType = (issueId: string, relationType: TIssueRelationTypes) => {
-    if (!issueId || !relationType) return undefined;
-    return this.relationMap?.[issueId]?.[relationType] ?? undefined;
-  };
 
   // actions
   fetchRelations = async (workspaceSlug: string, projectId: string, issueId: string) => {

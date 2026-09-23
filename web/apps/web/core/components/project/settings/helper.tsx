@@ -7,20 +7,18 @@
 import { Switch } from "@makeplane/propel/components/switch";
 
 type Props = {
-  featureItem: { key: string; property: string };
+  featureItem: { property: string };
   value: boolean;
-  handleSubmit: (featureKey: string, featureProperty: string) => void;
-  disabled?: boolean;
+  handleSubmit: (featureProperty: string) => void;
 };
 
 export function ProjectFeatureToggle(props: Props) {
-  const { featureItem, value, handleSubmit, disabled } = props;
+  const { featureItem, value, handleSubmit } = props;
   return (
     <Switch
       size="sm"
       checked={value}
-      onCheckedChange={() => handleSubmit(featureItem.key, featureItem.property)}
-      disabled={disabled}
+      onCheckedChange={() => handleSubmit(featureItem.property)}
       aria-label="Toggle project feature"
     />
   );

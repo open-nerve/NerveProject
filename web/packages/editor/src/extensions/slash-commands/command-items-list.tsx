@@ -60,7 +60,6 @@ export const getSlashCommandFilteredSections =
         key: "general",
         items: [
           {
-            commandKey: "text",
             key: "text",
             title: "Text",
             description: "Just start typing with plain text.",
@@ -69,7 +68,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => setText(editor, range),
           },
           {
-            commandKey: "h1",
             key: "h1",
             title: "Heading 1",
             description: "Big section heading.",
@@ -78,7 +76,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleHeading(editor, 1, range),
           },
           {
-            commandKey: "h2",
             key: "h2",
             title: "Heading 2",
             description: "Medium section heading.",
@@ -87,7 +84,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleHeading(editor, 2, range),
           },
           {
-            commandKey: "h3",
             key: "h3",
             title: "Heading 3",
             description: "Small section heading.",
@@ -96,7 +92,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleHeading(editor, 3, range),
           },
           {
-            commandKey: "h4",
             key: "h4",
             title: "Heading 4",
             description: "Small section heading.",
@@ -105,7 +100,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleHeading(editor, 4, range),
           },
           {
-            commandKey: "h5",
             key: "h5",
             title: "Heading 5",
             description: "Small section heading.",
@@ -114,7 +108,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleHeading(editor, 5, range),
           },
           {
-            commandKey: "h6",
             key: "h6",
             title: "Heading 6",
             description: "Small section heading.",
@@ -124,7 +117,6 @@ export const getSlashCommandFilteredSections =
           },
 
           {
-            commandKey: "numbered-list",
             key: "numbered-list",
             title: "Numbered list",
             description: "Create a numbered list.",
@@ -133,7 +125,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleOrderedList(editor, range),
           },
           {
-            commandKey: "bulleted-list",
             key: "bulleted-list",
             title: "Bulleted list",
             description: "Create a bulleted list.",
@@ -142,7 +133,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleBulletList(editor, range),
           },
           {
-            commandKey: "to-do-list",
             key: "to-do-list",
             title: "To-do list",
             description: "Create a to-do list.",
@@ -151,7 +141,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleTaskList(editor, range),
           },
           {
-            commandKey: "table",
             key: "table",
             title: "Table",
             description: "Create a table",
@@ -160,7 +149,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => insertTableCommand(editor, range),
           },
           {
-            commandKey: "quote",
             key: "quote",
             title: "Quote",
             description: "Capture a quote.",
@@ -169,7 +157,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => toggleBlockquote(editor, range),
           },
           {
-            commandKey: "code",
             key: "code",
             title: "Code",
             description: "Capture a code snippet.",
@@ -181,7 +168,6 @@ export const getSlashCommandFilteredSections =
             ? []
             : [
                 {
-                  commandKey: "image",
                   key: "image",
                   title: "Image",
                   icon: <ImageOutline className="size-3.5" />,
@@ -191,7 +177,6 @@ export const getSlashCommandFilteredSections =
                 } satisfies ISlashCommandItem,
               ]),
           {
-            commandKey: "callout",
             key: "callout",
             title: "Callout",
             icon: <ChatOutline className="size-3.5" />,
@@ -200,7 +185,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }: CommandProps) => insertCallout(editor, range),
           },
           {
-            commandKey: "divider",
             key: "divider",
             title: "Divider",
             description: "Visually divide blocks.",
@@ -209,7 +193,6 @@ export const getSlashCommandFilteredSections =
             command: ({ editor, range }) => editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
           },
           {
-            commandKey: "emoji",
             key: "emoji",
             title: "Emoji",
             description: "Insert an emoji",
@@ -226,7 +209,6 @@ export const getSlashCommandFilteredSections =
         title: "Colors",
         items: [
           {
-            commandKey: "text-color",
             key: "text-color-default",
             title: "Default",
             description: "Change text color",
@@ -237,7 +219,6 @@ export const getSlashCommandFilteredSections =
           ...COLORS_LIST.map(
             (color) =>
               ({
-                commandKey: "text-color",
                 key: `text-color-${color.key}`,
                 title: color.label,
                 description: "Change text color",
@@ -262,7 +243,6 @@ export const getSlashCommandFilteredSections =
         title: "Background colors",
         items: [
           {
-            commandKey: "background-color",
             key: "background-color-default",
             title: "Default background",
             description: "Change background color",
@@ -278,7 +258,6 @@ export const getSlashCommandFilteredSections =
           ...COLORS_LIST.map(
             (color) =>
               ({
-                commandKey: "background-color",
                 key: `background-color-${color.key}`,
                 title: color.label,
                 description: "Change background color",

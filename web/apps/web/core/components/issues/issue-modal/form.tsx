@@ -66,8 +66,6 @@ export interface IssueFormProps {
   handleDuplicateIssueModal: (isOpen: boolean) => void;
   handleDraftAndClose?: () => void;
   isProjectSelectionDisabled?: boolean;
-  showActionButtons?: boolean;
-  dataResetProperties?: any[];
 }
 
 export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormProps) {
@@ -90,8 +88,6 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
       loading: `${data?.id ? t("updating") : t("saving")}`,
     },
     isProjectSelectionDisabled = false,
-    showActionButtons = true,
-    dataResetProperties = [],
   } = props;
 
   // states
@@ -146,13 +142,13 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  // Reset form when data prop changes
+  // Reset form with the given data once mounted
   useEffect(() => {
     if (data) {
       reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: projectId, ...data });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...dataResetProperties]);
+  }, []);
 
   const handleFormSubmit = async (formData: Partial<TIssue>, is_draft_issue = false) => {
     // Check if the editor is ready to discard
@@ -342,77 +338,75 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   setSelectedParentIssue={setSelectedParentIssue}
                 />
               </div>
-              {showActionButtons && (
-                <div
-                  className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3"
-                  tabIndex={getIndex("create_more")}
-                >
-                  {!data?.id && (
-                    <div
-                      className="inline-flex cursor-pointer items-center gap-1.5"
-                      onClick={() => onCreateMoreToggleChange(!isCreateMoreToggleEnabled)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
-                      }}
-                      role="button"
-                    >
-                      <Switch
-                        size="sm"
-                        checked={isCreateMoreToggleEnabled}
-                        onCheckedChange={() => {}}
-                        aria-label={t("create_more")}
-                      />
-                      <span className="text-caption-sm-regular">{t("create_more")}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <div tabIndex={getIndex("discard_button")}>
-                      <Button
-                        variant="secondary"
-                        size="lg"
-                        onClick={() => {
-                          if (editorRef.current?.isEditorReadyToDiscard()) {
-                            onClose();
-                          } else {
-                            setToast({
-                              type: TOAST_TYPE.ERROR,
-                              title: "Error!",
-                              message: "Editor is still processing changes. Please wait before proceeding.",
-                            });
-                          }
-                        }}
-                      >
-                        {t("discard")}
-                      </Button>
-                    </div>
-                    <div tabIndex={isDraft ? getIndex("submit_button") : getIndex("draft_button")}>
-                      <Button
-                        variant={moveToIssue ? "secondary" : "primary"}
-                        size="lg"
-                        type="submit"
-                        ref={submitBtnRef}
-                        loading={isSubmitting}
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
-                      </Button>
-                    </div>
-
-                    {moveToIssue && (
-                      <Button
-                        variant="primary"
-                        type="button"
-                        loading={isMoving}
-                        onClick={handleMoveToProjects}
-                        disabled={isMoving}
-                        size="lg"
-                      >
-                        {t("add_to_project")}
-                      </Button>
-                    )}
+              <div
+                className="flex items-center justify-end gap-4 border-t-[0.5px] border-subtle pt-6 pb-3"
+                tabIndex={getIndex("create_more")}
+              >
+                {!data?.id && (
+                  <div
+                    className="inline-flex cursor-pointer items-center gap-1.5"
+                    onClick={() => onCreateMoreToggleChange(!isCreateMoreToggleEnabled)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onCreateMoreToggleChange(!isCreateMoreToggleEnabled);
+                    }}
+                    role="button"
+                  >
+                    <Switch
+                      size="sm"
+                      checked={isCreateMoreToggleEnabled}
+                      onCheckedChange={() => {}}
+                      aria-label={t("create_more")}
+                    />
+                    <span className="text-caption-sm-regular">{t("create_more")}</span>
                   </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <div tabIndex={getIndex("discard_button")}>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => {
+                        if (editorRef.current?.isEditorReadyToDiscard()) {
+                          onClose();
+                        } else {
+                          setToast({
+                            type: TOAST_TYPE.ERROR,
+                            title: "Error!",
+                            message: "Editor is still processing changes. Please wait before proceeding.",
+                          });
+                        }
+                      }}
+                    >
+                      {t("discard")}
+                    </Button>
+                  </div>
+                  <div tabIndex={isDraft ? getIndex("submit_button") : getIndex("draft_button")}>
+                    <Button
+                      variant={moveToIssue ? "secondary" : "primary"}
+                      size="lg"
+                      type="submit"
+                      ref={submitBtnRef}
+                      loading={isSubmitting}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? primaryButtonText.loading : primaryButtonText.default}
+                    </Button>
+                  </div>
+
+                  {moveToIssue && (
+                    <Button
+                      variant="primary"
+                      type="button"
+                      loading={isMoving}
+                      onClick={handleMoveToProjects}
+                      disabled={isMoving}
+                      size="lg"
+                    >
+                      {t("add_to_project")}
+                    </Button>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </form>
         </div>

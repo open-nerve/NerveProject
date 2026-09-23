@@ -36,7 +36,7 @@ export const ProjectFeatureUpdate = observer(function ProjectFeatureUpdate(props
   return (
     <>
       <Row className="py-6">
-        <ProjectFeaturesList workspaceSlug={workspaceSlug} projectId={projectId} isAdmin />
+        <ProjectFeaturesList workspaceSlug={workspaceSlug} projectId={projectId} />
       </Row>
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-subtle px-6 py-4">
         <div className="flex gap-1 text-13 font-medium text-tertiary">
