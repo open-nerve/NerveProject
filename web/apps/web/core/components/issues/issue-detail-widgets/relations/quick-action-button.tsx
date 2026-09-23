@@ -15,7 +15,7 @@ import { CustomMenu } from "@plane/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
-import { useTimeLineRelationOptions } from "@/components/relations";
+import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // types
 import type { TIssueRelationTypes } from "@plane/types";
 
@@ -31,8 +31,6 @@ export const RelationActionButton = observer(function RelationActionButton(props
   const { t } = useTranslation();
   // store hooks
   const { toggleRelationModal, setRelationKey } = useIssueDetail(issueServiceType);
-
-  const ISSUE_RELATION_OPTIONS = useTimeLineRelationOptions();
 
   // handlers
   const handleOnClick = (relationKey: TIssueRelationTypes) => {

@@ -24,7 +24,6 @@ import type {
   TGroupedIssueCount,
   TPaginationData,
   TBulkOperationsPayload,
-  IBlockUpdateDependencyData,
 } from "@plane/types";
 import { EIssueServiceType, EIssueLayoutTypes } from "@plane/types";
 // helpers
@@ -108,7 +107,6 @@ export interface IBaseIssuesStore {
     addModuleIds: string[],
     removeModuleIds: string[]
   ): Promise<void>;
-  updateIssueDates(workspaceSlug: string, updates: IBlockUpdateDependencyData[], projectId?: string): Promise<void>;
 }
 
 // This constant maps the group by keys to the respective issue property that the key relies on
@@ -228,7 +226,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
       createIssue: action,
       issueUpdate: action,
-      updateIssueDates: action,
       issueQuickAdd: action.bound,
       removeIssue: action.bound,
       issueArchive: action.bound,
@@ -750,53 +747,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       });
     });
   };
-
-  async updateIssueDates(
-    workspaceSlug: string,
-    updates: { id: string; start_date?: string; target_date?: string }[],
-    projectId?: string
-  ) {
-    if (!projectId) return;
-    const issueDatesBeforeChange: { id: string; start_date?: string; target_date?: string }[] = [];
-    try {
-      const getIssueById = this.rootIssueStore.issues.getIssueById;
-      runInAction(() => {
-        // oxlint-disable-next-line no-shadow
-        for (const update of updates) {
-          const dates: Partial<TIssue> = {};
-          if (update.start_date) dates.start_date = update.start_date;
-          if (update.target_date) dates.target_date = update.target_date;
-
-          const currIssue = getIssueById(update.id);
-
-          if (currIssue) {
-            issueDatesBeforeChange.push({
-              id: update.id,
-              start_date: currIssue.start_date ?? undefined,
-              target_date: currIssue.target_date ?? undefined,
-            });
-          }
-
-          this.issueUpdate(workspaceSlug, projectId, update.id, dates, false);
-        }
-      });
-
-      await this.issueService.updateIssueDates(workspaceSlug, projectId, updates);
-    } catch (e) {
-      runInAction(() => {
-        // oxlint-disable-next-line no-shadow
-        for (const update of issueDatesBeforeChange) {
-          const dates: Partial<TIssue> = {};
-          if (update.start_date) dates.start_date = update.start_date;
-          if (update.target_date) dates.target_date = update.target_date;
-
-          this.issueUpdate(workspaceSlug, projectId, update.id, dates, false);
-        }
-      });
-      console.error("error while updating Timeline dependencies");
-      throw e;
-    }
-  }
 
   /**
    * This method is used to add issues to a particular Cycle

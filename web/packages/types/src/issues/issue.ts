@@ -16,7 +16,6 @@ export enum EIssueLayoutTypes {
   LIST = "list",
   KANBAN = "kanban",
   CALENDAR = "calendar",
-  GANTT = "gantt_chart",
   SPREADSHEET = "spreadsheet",
 }
 

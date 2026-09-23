@@ -213,11 +213,6 @@ body {
   border: 1px solid var(--border-color-accent-strong) !important;
 }
 
-@utility highlight-with-line {
-  border-left: 5px solid var(--border-color-accent-strong) !important;
-  background: var(--background-color-layer-2);
-}
-
 /* By applying below class, the autofilled text in form fields will not have the default autofill background color and styles applied by WebKit browsers  */
 @utility disable-autofill-style {
   &:-webkit-autofill,

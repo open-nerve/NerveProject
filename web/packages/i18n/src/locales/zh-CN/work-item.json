@@ -74,13 +74,11 @@
       "kanban": "看板",
       "calendar": "日历",
       "spreadsheet": "表格",
-      "gantt": "时间线",
       "title": {
         "list": "列表布局",
         "kanban": "看板布局",
         "calendar": "日历布局",
-        "spreadsheet": "表格布局",
-        "gantt": "时间线布局"
+        "spreadsheet": "表格布局"
       }
     },
     "states": {
@@ -415,7 +413,6 @@
   },
   "epic": {
     "new": "新建史诗",
-    "label": "{count, plural, one {史诗} other {史诗}}",
     "adding": "正在添加史诗",
     "create": {
       "success": "史诗创建成功"

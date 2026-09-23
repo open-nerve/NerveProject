@@ -18,7 +18,6 @@ import { EIssueLayoutTypes } from "@plane/types";
 import type { TQuickAddIssueForm } from "@/components/issues/issue-layouts/quick-add";
 import {
   CalendarQuickAddIssueForm,
-  GanttQuickAddIssueForm,
   KanbanQuickAddIssueForm,
   ListQuickAddIssueForm,
   SpreadsheetQuickAddIssueForm,
@@ -62,7 +61,6 @@ export const QuickAddIssueFormRoot = observer(function QuickAddIssueFormRoot(pro
     [EIssueLayoutTypes.LIST]: ListQuickAddIssueForm,
     [EIssueLayoutTypes.KANBAN]: KanbanQuickAddIssueForm,
     [EIssueLayoutTypes.CALENDAR]: CalendarQuickAddIssueForm,
-    [EIssueLayoutTypes.GANTT]: GanttQuickAddIssueForm,
     [EIssueLayoutTypes.SPREADSHEET]: SpreadsheetQuickAddIssueForm,
   };
 

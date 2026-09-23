@@ -33,7 +33,7 @@ function LayoutErrorFallback({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-// Catches render crashes from a single issue layout (list/kanban/spreadsheet/calendar/gantt)
+// Catches render crashes from a single issue layout (list/kanban/spreadsheet/calendar)
 // so a bad group/column shape degrades to a local fallback instead of taking down the whole page.
 export class LayoutErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, retryKey: 0 };

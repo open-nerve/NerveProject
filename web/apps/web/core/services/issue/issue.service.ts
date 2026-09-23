@@ -239,18 +239,6 @@ export class IssueService extends APIService {
       });
   }
 
-  async updateIssueDates(
-    workspaceSlug: string,
-    projectId: string,
-    updates: { id: string; start_date?: string; target_date?: string }[]
-  ): Promise<void> {
-    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-dates/`, { updates })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async subIssues(
     workspaceSlug: string,
     projectId: string,

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { BoardOutline, CalendarOutline, ListOutline, TableOutline, TimelineOutline } from "@makeplane/propel/icons";
+import { BoardOutline, CalendarOutline, ListOutline, TableOutline } from "@makeplane/propel/icons";
 import type { ISvgIcons } from "@plane/propel/icons";
 import { EIssueLayoutTypes } from "@plane/types";
 
@@ -27,8 +27,6 @@ export function IssueLayoutIcon({
       return <CalendarOutline {...iconProps} />;
     case EIssueLayoutTypes.SPREADSHEET:
       return <TableOutline {...iconProps} />;
-    case EIssueLayoutTypes.GANTT:
-      return <TimelineOutline {...iconProps} />;
     default:
       return null;
   }

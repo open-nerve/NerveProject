@@ -37,7 +37,6 @@ import {
   GridLayoutIcon,
   ListLayoutIcon,
   SheetLayoutIcon,
-  TimelineLayoutIcon,
 } from "./layouts";
 // Misc icons
 import { InfoIcon } from "./misc";
@@ -112,7 +111,6 @@ export const ICON_REGISTRY = {
   // Layout icons
   "layout.calendar": CalendarLayoutIcon,
   "layout.card": CardLayoutIcon,
-  "layout.timeline": TimelineLayoutIcon,
   "layout.grid": GridLayoutIcon,
   "layout.board": BoardLayoutIcon,
   "layout.list": ListLayoutIcon,

@@ -347,8 +347,7 @@
     },
     "layout": {
       "list": "列表布局",
-      "board": "画廊布局",
-      "timeline": "时间线布局"
+      "board": "画廊布局"
     },
     "order_by": {
       "name": "名称",

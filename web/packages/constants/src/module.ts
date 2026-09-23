@@ -81,10 +81,6 @@ export const MODULE_VIEW_LAYOUTS: {
     key: "board",
     i18n_title: "project_modules.layout.board",
   },
-  {
-    key: "gantt",
-    i18n_title: "project_modules.layout.timeline",
-  },
 ];
 
 export const MODULE_ORDER_BY_OPTIONS: {

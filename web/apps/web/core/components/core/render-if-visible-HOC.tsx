@@ -22,7 +22,6 @@ type Props = {
   defaultValue?: boolean;
   shouldRecordHeights?: boolean;
   useIdleTime?: boolean;
-  forceRender?: boolean;
 };
 
 function RenderIfVisible(props: Props) {
@@ -39,15 +38,12 @@ function RenderIfVisible(props: Props) {
     placeholderChildren = null, //placeholder children
     defaultValue = false,
     useIdleTime = false,
-    forceRender = false,
   } = props;
   const [shouldVisible, setShouldVisible] = useState<boolean>(defaultValue);
   const placeholderHeight = useRef<string>(defaultHeight);
   const intersectionRef = useRef<HTMLElement | null>(null);
   const visibilityIdleTaskRef = useRef<ReturnType<typeof runIdleTask> | null>(null);
   const heightIdleTaskRef = useRef<ReturnType<typeof runIdleTask> | null>(null);
-
-  const isVisible = shouldVisible || forceRender;
 
   // Set visibility with intersection observer
   useEffect(() => {
@@ -81,7 +77,7 @@ function RenderIfVisible(props: Props) {
 
   //Set height after render
   useEffect(() => {
-    if (intersectionRef.current && isVisible && shouldRecordHeights) {
+    if (intersectionRef.current && shouldVisible && shouldRecordHeights) {
       heightIdleTaskRef.current?.cancel();
       heightIdleTaskRef.current = runIdleTask(() => {
         if (intersectionRef.current) placeholderHeight.current = `${intersectionRef.current.offsetHeight}px`;
@@ -91,11 +87,11 @@ function RenderIfVisible(props: Props) {
       heightIdleTaskRef.current?.cancel();
       heightIdleTaskRef.current = null;
     };
-  }, [isVisible, intersectionRef, shouldRecordHeights]);
+  }, [shouldVisible, intersectionRef, shouldRecordHeights]);
 
-  const child = isVisible ? <>{children}</> : placeholderChildren;
-  const style = isVisible || !shouldRecordHeights ? {} : { height: placeholderHeight.current, width: "100%" };
-  const className = isVisible || placeholderChildren ? classNames : cn(classNames, "bg-layer-1");
+  const child = shouldVisible ? <>{children}</> : placeholderChildren;
+  const style = shouldVisible || !shouldRecordHeights ? {} : { height: placeholderHeight.current, width: "100%" };
+  const className = shouldVisible || placeholderChildren ? classNames : cn(classNames, "bg-layer-1");
 
   return React.createElement(as, { ref: intersectionRef, style, className }, child);
 }

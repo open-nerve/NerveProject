@@ -17,8 +17,6 @@ import { StateStore } from "@/store/state.store";
 import type { ICommandPaletteStore } from "@/store/base-command-palette.store";
 import { CommandPaletteStore } from "@/store/base-command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
-import type { ITimelineStore } from "./timeline/timeline.store";
-import { TimeLineStore } from "./timeline/timeline.store";
 // stores
 import type { ICycleStore } from "./cycle.store";
 import { CycleStore } from "./cycle.store";
@@ -96,7 +94,6 @@ export class CoreRootStore {
   editorAssetStore: IEditorAssetStore;
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
-  timelineStore: ITimelineStore;
 
   constructor() {
     this.router = new RouterStore();
@@ -126,7 +123,6 @@ export class CoreRootStore {
     this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
-    this.timelineStore = new TimeLineStore(this);
   }
 
   resetOnSignOut() {
@@ -159,7 +155,6 @@ export class CoreRootStore {
     this.editorAssetStore = new EditorAssetStore();
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
-    this.timelineStore = new TimeLineStore(this);
   }
 }
 

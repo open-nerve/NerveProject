@@ -347,8 +347,7 @@
     },
     "layout": {
       "list": "List layout",
-      "board": "Gallery layout",
-      "timeline": "Timeline layout"
+      "board": "Gallery layout"
     },
     "order_by": {
       "name": "Name",

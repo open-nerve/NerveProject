@@ -36,7 +36,6 @@ const LAYOUTS = [
   EIssueLayoutTypes.KANBAN,
   EIssueLayoutTypes.CALENDAR,
   EIssueLayoutTypes.SPREADSHEET,
-  EIssueLayoutTypes.GANTT,
 ];
 
 export const HeaderFilters = observer(function HeaderFilters(props: Props) {

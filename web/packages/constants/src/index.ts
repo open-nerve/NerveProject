@@ -15,7 +15,6 @@ export * from "./endpoints";
 export * from "./file";
 export * from "./fetch-keys";
 export * from "./filter";
-export * from "./gantt-chart";
 export * from "./icon";
 export * from "./instance";
 export * from "./intake";

@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { getValidKeysFromObject } from "@plane/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useTimeLineRelationOptions } from "@/components/relations";
+import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // local components
 import {
   IssueDefaultActivity,
@@ -44,7 +44,6 @@ export const IssueActivityItem = observer(function IssueActivityItem(props: TIss
     // oxlint-disable-next-line no-empty-pattern
     comment: {},
   } = useIssueDetail();
-  const ISSUE_RELATION_OPTIONS = useTimeLineRelationOptions();
   const activityRelations = getValidKeysFromObject(ISSUE_RELATION_OPTIONS);
 
   const componentDefaultProps = { activityId, ends };

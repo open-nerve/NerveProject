@@ -24,16 +24,11 @@ import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 // local imports
 import { IssuePeekOverview } from "../../peek-overview";
 import { CycleCalendarLayout } from "../calendar/roots/cycle-root";
-import { BaseGanttRoot } from "../gantt";
 import { CycleKanBanLayout } from "../kanban/roots/cycle-root";
 import { CycleListLayout } from "../list/roots/cycle-root";
 import { CycleSpreadsheetLayout } from "../spreadsheet/roots/cycle-root";
 
-function CycleIssueLayout(props: {
-  activeLayout: EIssueLayoutTypes | undefined;
-  cycleId: string;
-  isCompletedCycle: boolean;
-}) {
+function CycleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined }) {
   switch (props.activeLayout) {
     case EIssueLayoutTypes.LIST:
       return <CycleListLayout />;
@@ -41,8 +36,6 @@ function CycleIssueLayout(props: {
       return <CycleKanBanLayout />;
     case EIssueLayoutTypes.CALENDAR:
       return <CycleCalendarLayout />;
-    case EIssueLayoutTypes.GANTT:
-      return <BaseGanttRoot viewId={props.cycleId} isCompletedCycle={props.isCompletedCycle} />;
     case EIssueLayoutTypes.SPREADSHEET:
       return <CycleSpreadsheetLayout />;
     default:
@@ -76,7 +69,6 @@ export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
 
   const cycleDetails = cycleId ? getCycleById(cycleId) : undefined;
   const cycleStatus = cycleDetails?.status?.toLocaleLowerCase() ?? "draft";
-  const isCompletedCycle = cycleStatus === "completed";
   const isProgressSnapshotEmpty = isEmpty(cycleDetails?.progress_snapshot);
   const transferableIssuesCount = cycleDetails
     ? cycleDetails.backlog_issues + cycleDetails.unstarted_issues + cycleDetails.started_issues
@@ -113,7 +105,7 @@ export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
               )}
               {cycleWorkItemsFilter && <WorkItemFiltersRow filter={cycleWorkItemsFilter} />}
               <div className="h-full w-full overflow-auto">
-                <CycleIssueLayout activeLayout={activeLayout} cycleId={cycleId} isCompletedCycle={isCompletedCycle} />
+                <CycleIssueLayout activeLayout={activeLayout} />
               </div>
               {/* peek overview */}
               <IssuePeekOverview />

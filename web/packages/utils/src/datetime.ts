@@ -127,25 +127,6 @@ export const findTotalDaysInRange = (
 };
 
 /**
- * Add number of days to the provided date and return a resulting new date
- * @param startDate
- * @param numberOfDays
- * @returns
- */
-export const addDaysToDate = (startDate: Date | string | undefined | null, numberOfDays: number) => {
-  // Parse the dates to check if they are valid
-  const parsedStartDate = getDate(startDate);
-
-  // return if undefined
-  if (!parsedStartDate) return;
-
-  const newDate = new Date(parsedStartDate);
-  newDate.setDate(newDate.getDate() + numberOfDays);
-
-  return newDate;
-};
-
-/**
  * @returns {number} number of days left from today
  * @description Returns number of days left from today
  * @param {string | Date} date

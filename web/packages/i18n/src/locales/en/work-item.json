@@ -74,13 +74,11 @@
       "kanban": "Board",
       "calendar": "Calendar",
       "spreadsheet": "Table",
-      "gantt": "Timeline",
       "title": {
         "list": "List Layout",
         "kanban": "Board Layout",
         "calendar": "Calendar Layout",
-        "spreadsheet": "Table Layout",
-        "gantt": "Timeline Layout"
+        "spreadsheet": "Table Layout"
       }
     },
     "states": {
@@ -415,7 +413,6 @@
   },
   "epic": {
     "new": "New Epic",
-    "label": "{count, plural, one {Epic} other {Epics}}",
     "adding": "Adding epic",
     "create": {
       "success": "Epic created successfully"

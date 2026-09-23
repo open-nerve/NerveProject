@@ -365,6 +365,40 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "gantt-timeline",
+      "phase": "M1/P2",
+      "why": "甘特图与模块时间线（工作项的 gantt_chart 布局、模块列表的 gantt 布局、时间线 store 和只有拖动甘特条才调用的 POST /issue-dates/）；工作项关系保留，REVERSE_RELATIONS 已搬到 issue/relation.ts；view_timeline 是图标选择器里的 Material Symbols 名字，用后行断言排除",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "gantt|(?<!view_)time_?line|issue-dates", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { BaseGanttRoot } from \"../gantt\";",
+          "    case EIssueLayoutTypes.GANTT:",
+          "  GANTT = \"gantt_chart\",",
+          "import { TimeLineStore } from \"./timeline/timeline.store\";",
+          "  timelineStore: ITimelineStore;",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issue-dates/`, { updates })",
+          "      \"timeline\": \"Timeline layout\"",
+          "export const useTimeLineRelationOptions = () => ISSUE_RELATION_OPTIONS;"
+        ],
+        "miss": [
+          "      \"view_timeline\",",
+          "    name: \"view_timeline\",",
+          "import { ISSUE_RELATION_OPTIONS } from \"@/components/relations\";",
+          "export const REVERSE_RELATIONS: { [key in TIssueRelationTypes]: TIssueRelationTypes } = {",
+          "export type TIssueLayouts = \"list\" | \"kanban\" | \"calendar\" | \"spreadsheet\";",
+          "import { differenceInCalendarDays } from \"date-fns/differenceInCalendarDays\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/work-item.json"],
+          "miss": [
+            "web/apps/web/app/assets/empty-state/cycle-issues/gantt_chart-light.webp",
+            "docs/v0/M1-frontend-trim/M1-design.md"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -417,6 +451,38 @@
       "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
       "match": "Estimat",
       "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Gantt",
+      "count": 3,
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "timeline",
+      "count": 2,
+      "reason": "计费对比表的文案，随计费在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/packages/types/src/publish.ts",
+      "match": "gantt",
+      "count": 2,
+      "reason": "公开发布的视图类型，随公开发布在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "gantt-timeline",
+      "path": "web/apps/web/core/components/pages/navigation-pane/tab-panels/info/version-history.tsx",
+      "match": "timeline",
+      "count": 6,
+      "reason": "文档页版本历史列表里那条装饰竖线的注释，与甘特时间线无关；P2 Task 7 删除整个文件，同时删除这条例外",
       "until": "M1/P3"
     }
   ]

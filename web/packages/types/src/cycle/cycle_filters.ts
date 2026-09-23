@@ -6,7 +6,7 @@
 
 export type TCycleTabOptions = "active" | "all";
 
-export type TCycleLayoutOptions = "list" | "board" | "gantt";
+export type TCycleLayoutOptions = "list" | "board";
 
 export type TCycleDisplayFilters = {
   active_tab?: TCycleTabOptions;

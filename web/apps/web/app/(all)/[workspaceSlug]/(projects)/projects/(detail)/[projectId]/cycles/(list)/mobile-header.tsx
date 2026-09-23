@@ -8,7 +8,7 @@ import type React from "react";
 import { observer } from "mobx-react";
 // ui
 import type { ISvgIcons } from "@plane/propel/icons";
-import { GridOutline, ListOutline, TimelineOutline } from "@makeplane/propel/icons";
+import { GridOutline, ListOutline } from "@makeplane/propel/icons";
 // plane package imports
 import type { TCycleLayoutOptions } from "@plane/types";
 import { CustomMenu } from "@plane/ui";
@@ -30,11 +30,6 @@ const CYCLE_VIEW_LAYOUTS: {
     key: "board",
     icon: GridOutline,
     title: "Gallery layout",
-  },
-  {
-    key: "gantt",
-    icon: TimelineOutline,
-    title: "Timeline layout",
   },
 ];
 
@@ -58,7 +53,6 @@ export const CyclesListMobileHeader = observer(function CyclesListMobileHeader()
         closeOnSelect
       >
         {CYCLE_VIEW_LAYOUTS.map((layout) => {
-          if (layout.key == "gantt") return;
           return (
             <CustomMenu.MenuItem
               key={layout.key}

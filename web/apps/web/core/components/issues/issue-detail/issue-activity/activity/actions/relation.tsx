@@ -10,7 +10,7 @@ import type { TIssueRelationTypes } from "@plane/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
-import { useTimeLineRelationOptions } from "@/components/relations";
+import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // local helpers
 import { IssueActivityBlockComponent } from "./";
 import { getRelationActivityContent } from "./helpers/activity";
@@ -25,7 +25,6 @@ export const IssueRelationActivity = observer(function IssueRelationActivity(pro
   } = useIssueDetail();
 
   const activity = getActivityById(activityId);
-  const ISSUE_RELATION_OPTIONS = useTimeLineRelationOptions();
   const activityContent = getRelationActivityContent(activity);
 
   if (!activity) return <></>;
