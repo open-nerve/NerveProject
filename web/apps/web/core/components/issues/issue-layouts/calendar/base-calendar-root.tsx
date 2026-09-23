@@ -28,36 +28,25 @@ export type CalendarStoreType =
   | EIssuesStoreType.PROJECT
   | EIssuesStoreType.MODULE
   | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.PROJECT_VIEW
-  | EIssuesStoreType.TEAM
-  | EIssuesStoreType.TEAM_VIEW
-  | EIssuesStoreType.EPIC;
+  | EIssuesStoreType.PROJECT_VIEW;
 
 interface IBaseCalendarRoot {
   QuickActions: FC<IQuickActionProps>;
   addIssuesToView?: (issueIds: string[]) => Promise<any>;
   isCompletedCycle?: boolean;
   viewId?: string | undefined;
-  isEpic?: boolean;
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
 }
 
 export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseCalendarRoot) {
-  const {
-    QuickActions,
-    addIssuesToView,
-    isCompletedCycle = false,
-    viewId,
-    isEpic = false,
-    canEditPropertiesBasedOnProject,
-  } = props;
+  const { QuickActions, addIssuesToView, isCompletedCycle = false, viewId, canEditPropertiesBasedOnProject } = props;
 
   // router
   const { workspaceSlug } = useParams();
 
   // hooks
   const fallbackStoreType = useIssueStoreType() as CalendarStoreType;
-  const storeType = isEpic ? EIssuesStoreType.EPIC : fallbackStoreType;
+  const storeType = fallbackStoreType;
   const { allowPermissions } = useUserPermissions();
   const { issues, issuesFilter, issueMap } = useIssues(storeType);
   const {
@@ -188,7 +177,6 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
           updateFilters={updateFilters}
           handleDragAndDrop={handleDragAndDrop}
           canEditProperties={canEditProperties}
-          isEpic={isEpic}
         />
       </div>
     </>

@@ -125,7 +125,6 @@ export type TProjectIssuesSearchParams = {
   issue_id?: string;
   workspace_search: boolean;
   target_date?: string;
-  epic?: boolean;
 };
 
 export interface ISearchIssueResponse {
@@ -140,7 +139,6 @@ export interface ISearchIssueResponse {
   state__group: TStateGroups;
   state__name: string;
   workspace__slug: string;
-  type_id: string;
 }
 
 export type TPartialProject = IPartialProject;

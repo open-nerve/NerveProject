@@ -53,14 +53,6 @@ interface UseViewMenuItemsProps {
   handleOpenInNewTab: () => void;
 }
 
-interface UseLayoutMenuItemsProps {
-  workspaceSlug: string;
-  projectId: string;
-  storeType: "PROJECT" | "EPIC";
-  handleCopyLink: () => void;
-  handleOpenInNewTab: () => void;
-}
-
 type MenuResult = {
   items: TContextMenuItem[];
   modals: JSX.Element | null;
@@ -127,19 +119,6 @@ export const useViewMenuItems = (props: UseViewMenuItemsProps): MenuResult => {
     factory.createOpenInNewTabMenuItem(handlers.handleOpenInNewTab),
     factory.createCopyLinkMenuItem(handlers.handleCopyLink),
     factory.createDeleteMenuItem(handlers.handleDelete, isOwner || isAdmin),
-  ].filter((item) => item.shouldRender !== false);
-
-  return { items, modals: null };
-};
-
-export const useLayoutMenuItems = (props: UseLayoutMenuItemsProps): MenuResult => {
-  const factory = useQuickActionsFactory();
-  const { ...handlers } = props;
-
-  // Assemble final menu items - order defined here
-  const items = [
-    factory.createOpenInNewTab(handlers.handleOpenInNewTab),
-    factory.createCopyLayoutLinkMenuItem(handlers.handleCopyLink),
   ].filter((item) => item.shouldRender !== false);
 
   return { items, modals: null };

@@ -23,17 +23,11 @@ export type TIssueIdentifierFromStore = TIssueIdentifierBaseProps & {
 };
 
 export type TIssueIdentifierWithDetails = TIssueIdentifierBaseProps & {
-  issueTypeId?: string | null;
   projectIdentifier: string;
   issueSequenceId: string | number;
 };
 
 export type TIssueIdentifierProps = TIssueIdentifierFromStore | TIssueIdentifierWithDetails;
-
-export type TIssueTypeIdentifier = {
-  issueTypeId: string;
-  size?: TIssueIdentifierSize;
-};
 
 export type TIdentifierTextProps = {
   identifier: string;

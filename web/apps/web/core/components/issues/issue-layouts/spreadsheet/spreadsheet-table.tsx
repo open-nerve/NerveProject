@@ -14,7 +14,6 @@ import { SpreadsheetIssueRowLoader } from "@/components/ui/loader/layouts/spread
 // hooks
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 import { useIssuesStore } from "@/hooks/use-issue-layout-store";
-import type { TSelectionHelper } from "@/hooks/use-multiple-select";
 import { useTableKeyboardNavigation } from "@/hooks/use-table-keyboard-navigation";
 // local imports
 import type { TRenderQuickActions } from "../list/list-view-types";
@@ -35,8 +34,6 @@ type Props = {
   canLoadMoreIssues: boolean;
   loadMoreIssues: () => void;
   spreadsheetColumnsList: (keyof IIssueDisplayProperties)[];
-  selectionHelpers: TSelectionHelper;
-  isEpic?: boolean;
 };
 
 export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props) {
@@ -53,8 +50,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
     containerRef,
     loadMoreIssues,
     spreadsheetColumnsList,
-    selectionHelpers,
-    isEpic = false,
   } = props;
 
   // states
@@ -113,10 +108,7 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
         displayProperties={displayProperties}
         displayFilters={displayFilters}
         handleDisplayFilterUpdate={handleDisplayFilterUpdate}
-        canEditProperties={canEditProperties}
         spreadsheetColumnsList={spreadsheetColumnsList}
-        selectionHelpers={selectionHelpers}
-        isEpic={isEpic}
       />
       <tbody>
         {issueIds.map((id) => (
@@ -132,8 +124,6 @@ export const SpreadsheetTable = observer(function SpreadsheetTable(props: Props)
             containerRef={containerRef}
             isScrolled={isScrolled}
             spreadsheetColumnsList={spreadsheetColumnsList}
-            selectionHelpers={selectionHelpers}
-            isEpic={isEpic}
           />
         ))}
       </tbody>

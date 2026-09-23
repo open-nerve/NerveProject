@@ -18,26 +18,16 @@ export enum EIssueLayoutTypes {
   SPREADSHEET = "spreadsheet",
 }
 
-export enum EIssueServiceType {
-  ISSUES = "issues",
-  EPICS = "epics",
-  WORK_ITEMS = "work-items",
-}
-
 export enum EIssuesStoreType {
   GLOBAL = "GLOBAL",
   PROFILE = "PROFILE",
-  TEAM = "TEAM",
   PROJECT = "PROJECT",
   CYCLE = "CYCLE",
   MODULE = "MODULE",
-  TEAM_VIEW = "TEAM_VIEW",
   PROJECT_VIEW = "PROJECT_VIEW",
   ARCHIVED = "ARCHIVED",
   DEFAULT = "DEFAULT",
   WORKSPACE_DRAFT = "WORKSPACE_DRAFT",
-  EPIC = "EPIC",
-  TEAM_PROJECT_WORK_ITEMS = "TEAM_PROJECT_WORK_ITEMS",
 }
 
 export type TBaseIssue = {
@@ -59,7 +49,6 @@ export type TBaseIssue = {
   parent_id: string | null;
   cycle_id: string | null;
   module_ids: string[] | null;
-  type_id: string | null;
 
   created_at: string;
   updated_at: string;
@@ -72,7 +61,6 @@ export type TBaseIssue = {
   updated_by: string;
 
   is_draft: boolean;
-  is_epic?: boolean;
   is_intake?: boolean;
 };
 
@@ -134,19 +122,7 @@ export type TIssuesResponse = {
   total_results: number;
 };
 
-export type TBulkIssueProperties = Pick<
-  TIssue,
-  "state_id" | "priority" | "label_ids" | "assignee_ids" | "start_date" | "target_date" | "module_ids" | "cycle_id"
->;
-
-export type TBulkOperationsPayload = {
-  issue_ids: string[];
-  properties: Partial<TBulkIssueProperties>;
-};
-
 export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attachments";
-
-export type TIssueServiceType = EIssueServiceType.ISSUES | EIssueServiceType.EPICS | EIssueServiceType.WORK_ITEMS;
 
 export interface IWorkItemPeekOverview {
   embedIssue?: boolean;

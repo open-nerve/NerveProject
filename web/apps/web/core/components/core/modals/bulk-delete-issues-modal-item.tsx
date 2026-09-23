@@ -42,7 +42,6 @@ export const BulkDeleteIssuesModalItem = observer(function BulkDeleteIssuesModal
         />
         <IssueIdentifier
           projectId={issue.project_id}
-          issueTypeId={issue.type_id}
           projectIdentifier={issue.project__identifier}
           issueSequenceId={issue.sequence_id}
           size="xs"

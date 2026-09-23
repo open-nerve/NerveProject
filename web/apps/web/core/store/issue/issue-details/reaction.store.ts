@@ -7,7 +7,7 @@
 import { pull, find, concat, set, update } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 // Plane Imports
-import type { TIssueReaction, TIssueReactionMap, TIssueReactionIdMap, TIssueServiceType } from "@plane/types";
+import type { TIssueReaction, TIssueReactionMap, TIssueReactionIdMap } from "@plane/types";
 import { groupReactions } from "@plane/utils";
 // services
 import { IssueReactionService } from "@/services/issue";
@@ -46,9 +46,8 @@ export class IssueReactionStore implements IIssueReactionStore {
   rootIssueDetailStore: IIssueDetail;
   // services
   issueReactionService;
-  serviceType;
 
-  constructor(rootStore: IIssueDetail, serviceType: TIssueServiceType) {
+  constructor(rootStore: IIssueDetail) {
     makeObservable(this, {
       // observables
       reactions: observable,
@@ -59,11 +58,10 @@ export class IssueReactionStore implements IIssueReactionStore {
       createReaction: action,
       removeReaction: action,
     });
-    this.serviceType = serviceType;
     // root store
     this.rootIssueDetailStore = rootStore;
     // services
-    this.issueReactionService = new IssueReactionService(serviceType);
+    this.issueReactionService = new IssueReactionService();
   }
 
   // helper methods

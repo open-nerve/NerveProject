@@ -27,11 +27,9 @@ export type TQuickAddIssueForm = {
   hasError: boolean;
   register: UseFormRegister<TIssue>;
   onSubmit: () => void;
-  isEpic: boolean;
 };
 
 export type TQuickAddIssueButton = {
-  isEpic?: boolean;
   onClick: () => void;
 };
 
@@ -44,7 +42,6 @@ type TQuickAddIssueRoot = {
   containerClassName?: string;
   setIsQuickAddOpen?: (isOpen: boolean) => void;
   quickAddCallback?: (projectId: string | null | undefined, data: TIssue) => Promise<TIssue | undefined>;
-  isEpic?: boolean;
 };
 
 const defaultValues: Partial<TIssue> = {
@@ -61,7 +58,6 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
     containerClassName = "",
     setIsQuickAddOpen,
     quickAddCallback,
-    isEpic = false,
   } = props;
   // i18n
   const { t } = useTranslation();
@@ -111,17 +107,16 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
     if (quickAddCallback) {
       const quickAddPromise = quickAddCallback(projectId.toString(), { ...payload });
       setPromiseToast<any>(quickAddPromise, {
-        loading: isEpic ? t("epic.adding") : t("issue.adding"),
+        loading: t("issue.adding"),
         success: {
           title: t("common.success"),
-          message: () => `${isEpic ? t("epic.create.success") : t("issue.create.success")}`,
+          message: () => t("issue.create.success"),
           actionItems: (data) => (
             // TODO: Translate here
             <CreateIssueToastActionItems
               workspaceSlug={workspaceSlug.toString()}
               projectId={projectId.toString()}
               issueId={data.id}
-              isEpic={isEpic}
             />
           ),
         },
@@ -156,11 +151,10 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
           register={register}
           onSubmit={handleSubmit(onSubmitHandler)}
           onClose={() => handleIsOpen(false)}
-          isEpic={isEpic}
         />
       ) : (
         <>
-          {QuickAddButton && <QuickAddButton isEpic={isEpic} onClick={() => handleIsOpen(true)} />}
+          {QuickAddButton && <QuickAddButton onClick={() => handleIsOpen(true)} />}
           {customQuickAddButton && <>{customQuickAddButton}</>}
           {!QuickAddButton && !customQuickAddButton && (
             <button
@@ -168,7 +162,7 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
               onClick={() => handleIsOpen(true)}
             >
               <AddOutline className="h-3.5 w-3.5" />
-              <span className="text-13 font-medium">{t(`${isEpic ? "epic.new" : "issue.new"}`)}</span>
+              <span className="text-13 font-medium">{t("issue.new")}</span>
             </button>
           )}
         </>

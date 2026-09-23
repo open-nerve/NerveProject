@@ -20,7 +20,6 @@ import type {
   TSubGroupedIssues,
   ViewFlags,
   TIssue,
-  TBulkOperationsPayload,
 } from "@plane/types";
 import { getCurrentDateTimeInISO, convertToISODateString } from "@plane/utils";
 // services
@@ -109,7 +108,6 @@ export interface IWorkspaceDraftIssues {
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
   archiveBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
   removeBulkIssues: (workspaceSlug: string, projectId: string, issueIds: string[]) => Promise<void>;
-  bulkUpdateProperties: (workspaceSlug: string, projectId: string, data: TBulkOperationsPayload) => Promise<void>;
 }
 
 export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
@@ -425,5 +423,4 @@ export class WorkspaceDraftIssues implements IWorkspaceDraftIssues {
   archiveIssue = async (_workspaceSlug: string, _projectId: string, _issueId: string) => {};
   archiveBulkIssues = async (_workspaceSlug: string, _projectId: string, _issueIds: string[]) => {};
   removeBulkIssues = async (_workspaceSlug: string, _projectId: string, _issueIds: string[]) => {};
-  bulkUpdateProperties = async (_workspaceSlug: string, _projectId: string, _data: TBulkOperationsPayload) => {};
 }

@@ -26,7 +26,6 @@
       "existing": "添加现有工作项"
     },
     "remove": {
-      "label": "移除工作项",
       "cycle": {
         "loading": "正在从周期中移除工作项",
         "success": "已成功从周期中移除工作项。",
@@ -56,12 +55,10 @@
       "properties": {
         "label": "显示属性",
         "id": "ID",
-        "issue_type": "工作项类型",
         "sub_issue_count": "子工作项数量",
         "attachment_count": "附件数量",
         "created_on": "创建于",
-        "sub_issue": "子工作项",
-        "work_item_count": "工作项数量"
+        "sub_issue": "子工作项"
       },
       "extra": {
         "show_sub_issues": "显示子工作项",
@@ -245,8 +242,6 @@
         "action": "清除过滤器"
       },
       "list_filters": {
-        "title": "您没有符合您应用的过滤器的工作项。",
-        "description": "要查看所有工作项，请清除所有应用的过滤器。",
         "action": "清除过滤器"
       }
     }
@@ -267,124 +262,6 @@
         "title": "尚无评论",
         "description": "评论可用作工作项的讨论和跟进空间"
       }
-    }
-  },
-  "bulk_operations": {
-    "error_details": {
-      "invalid_archive_state_group": {
-        "title": "无法归档工作项",
-        "message": "只有属于已完成或已取消状态组的工作项才能被归档。"
-      },
-      "invalid_issue_start_date": {
-        "title": "无法更新工作项",
-        "message": "所选开始日期晚于某些工作项的截止日期。请确保开始日期在截止日期之前。"
-      },
-      "invalid_issue_target_date": {
-        "title": "无法更新工作项",
-        "message": "所选截止日期早于某些工作项的开始日期。请确保截止日期在开始日期之后。"
-      },
-      "invalid_state_transition": {
-        "title": "无法更新工作项",
-        "message": "某些工作项的状态更改不被允许。请确保状态更改是被允许的。"
-      }
-    },
-    "upgrade_banner": {
-      "message": "一次性更改多个工作项的状态、优先级等。平均每次操作可节省三分钟。",
-      "cta": "升级到 One"
-    }
-  },
-  "recurring_work_items": {
-    "settings": {
-      "heading": "重复工作项",
-      "description": "设置一次重复工作，我们将处理重复。当需要时，您将在这里看到所有内容。",
-      "new_recurring_work_item": "创建新的重复工作项",
-      "update_recurring_work_item": "更新重复工作项",
-      "form": {
-        "interval": {
-          "title": "计划",
-          "start_date": {
-            "validation": {
-              "required": "开始日期为必填项"
-            }
-          },
-          "interval_type": {
-            "validation": {
-              "required": "间隔类型为必填项"
-            }
-          }
-        },
-        "button": {
-          "create": "创建重复工作项",
-          "update": "更新重复工作项"
-        }
-      },
-      "create_button": {
-        "label": "创建重复工作项",
-        "no_permission": "请联系您的项目管理员以创建重复工作项"
-      }
-    },
-    "empty_state": {
-      "upgrade": {
-        "title": "让您的工作自动化",
-        "description": "只需设置一次，到期时我们会自动为您生成。升级到商业版，让重复工作变得轻松无忧。"
-      },
-      "no_templates": {
-        "button": "创建您的第一个重复工作项"
-      }
-    },
-    "toasts": {
-      "create": {
-        "success": {
-          "title": "重复工作项已创建",
-          "message": "{name}，该重复工作项，现已在您的工作区中可用。"
-        },
-        "error": {
-          "title": "本次无法创建该重复工作项。",
-          "message": "请重试保存您的信息，或将其复制到新的重复工作项中，建议在其他标签页操作。"
-        }
-      },
-      "update": {
-        "success": {
-          "title": "重复工作项已更改",
-          "message": "{name}，该重复工作项，已被更改。"
-        },
-        "error": {
-          "title": "无法保存该重复工作项的更改。",
-          "message": "请重试保存您的信息，或稍后再回来更改该重复工作项。如果仍有问题，请联系我们。"
-        }
-      },
-      "delete": {
-        "success": {
-          "title": "重复工作项已删除",
-          "message": "{name}，该重复工作项，已从您的工作区中删除。"
-        },
-        "error": {
-          "title": "无法删除该重复工作项。",
-          "message": "请重试删除，或稍后再试。如果仍无法删除，请联系我们。"
-        }
-      }
-    },
-    "delete_confirmation": {
-      "title": "删除重复工作项",
-      "description": {
-        "prefix": "您确定要删除重复工作项-",
-        "suffix": "吗？与该重复工作项相关的所有数据将被永久删除。此操作无法撤销。"
-      }
-    }
-  },
-  "epic": {
-    "new": "新建史诗",
-    "adding": "正在添加史诗",
-    "create": {
-      "success": "史诗创建成功"
-    },
-    "add": {
-      "label": "添加史诗",
-      "press_enter": "按'Enter'添加另一个史诗"
-    },
-    "title": {
-      "label": "史诗标题",
-      "required": "史诗标题为必填项"
     }
   }
 }

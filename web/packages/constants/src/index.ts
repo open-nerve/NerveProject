@@ -29,7 +29,6 @@ export * from "./rich-filters";
 export * from "./settings";
 export * from "./sidebar-favorites";
 export * from "./sidebar";
-export * from "./spreadsheet";
 export * from "./state";
 export * from "./subscription";
 export * from "./swr";

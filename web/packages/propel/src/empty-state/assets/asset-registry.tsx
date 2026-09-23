@@ -14,7 +14,6 @@ import type {
 } from "./asset-types";
 import {
   CustomerHorizontalStackIllustration,
-  EpicHorizontalStackIllustration,
   IntakeHorizontalStackIllustration,
   LabelHorizontalStackIllustration,
   MembersHorizontalStackIllustration,
@@ -27,7 +26,6 @@ import {
   UpdateHorizontalStackIllustration,
   WebhookHorizontalStackIllustration,
   WorkItemHorizontalStackIllustration,
-  WorklogHorizontalStackIllustration,
 } from "./horizontal-stack";
 import { InboxIllustration, SearchIllustration } from "./illustration";
 import {
@@ -38,7 +36,6 @@ import {
   CycleVerticalStackIllustration,
   DashboardVerticalStackIllustration,
   DraftVerticalStackIllustration,
-  EpicVerticalStackIllustration,
   Error404VerticalStackIllustration,
   InitiativeVerticalStackIllustration,
   InvalidLinkVerticalStackIllustration,
@@ -46,7 +43,6 @@ import {
   NoAccessVerticalStackIllustration,
   ProjectVerticalStackIllustration,
   ServerErrorVerticalStackIllustration,
-  TeamspaceVerticalStackIllustration,
   ViewVerticalStackIllustration,
   WorkItemVerticalStackIllustration,
 } from "./vertical-stack";
@@ -54,7 +50,6 @@ import {
 // Horizontal Stack Asset Registry
 export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.ComponentType<{ className?: string }>> = {
   customer: CustomerHorizontalStackIllustration,
-  epic: EpicHorizontalStackIllustration,
   intake: IntakeHorizontalStackIllustration,
   label: LabelHorizontalStackIllustration,
   members: MembersHorizontalStackIllustration,
@@ -67,7 +62,6 @@ export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.Com
   update: UpdateHorizontalStackIllustration,
   webhook: WebhookHorizontalStackIllustration,
   "work-item": WorkItemHorizontalStackIllustration,
-  worklog: WorklogHorizontalStackIllustration,
 };
 
 // Vertical Stack Asset Registry
@@ -79,7 +73,6 @@ export const VERTICAL_STACK_ASSETS: Record<VerticalStackAssetType, React.Compone
   cycle: CycleVerticalStackIllustration,
   dashboard: DashboardVerticalStackIllustration,
   draft: DraftVerticalStackIllustration,
-  epic: EpicVerticalStackIllustration,
   "error-404": Error404VerticalStackIllustration,
   initiative: InitiativeVerticalStackIllustration,
   "invalid-link": InvalidLinkVerticalStackIllustration,
@@ -87,7 +80,6 @@ export const VERTICAL_STACK_ASSETS: Record<VerticalStackAssetType, React.Compone
   "no-access": NoAccessVerticalStackIllustration,
   project: ProjectVerticalStackIllustration,
   "server-error": ServerErrorVerticalStackIllustration,
-  teamspace: TeamspaceVerticalStackIllustration,
   view: ViewVerticalStackIllustration,
   "work-item": WorkItemVerticalStackIllustration,
 };

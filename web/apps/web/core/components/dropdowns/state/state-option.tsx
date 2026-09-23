@@ -10,17 +10,12 @@ import { TickOutline } from "@makeplane/propel/icons";
 import { cn } from "@plane/utils";
 
 export type TStateOptionProps = {
-  projectId: string | null | undefined;
   option: {
     value: string | undefined;
     query: string;
     content: React.ReactNode;
   };
-  selectedValue: string | null | undefined;
   className?: string;
-  filterAvailableStateIds?: boolean;
-  isForWorkItemCreation?: boolean;
-  alwaysAllowStateChange?: boolean;
 };
 
 export const StateOption = observer(function StateOption(props: TStateOptionProps) {

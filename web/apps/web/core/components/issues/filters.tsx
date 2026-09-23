@@ -29,7 +29,6 @@ type Props = {
   currentProjectDetails: TProject | undefined;
   projectId: string;
   workspaceSlug: string;
-  storeType?: EIssuesStoreType.PROJECT | EIssuesStoreType.EPIC;
 };
 const LAYOUTS = [
   EIssueLayoutTypes.LIST,
@@ -39,16 +38,16 @@ const LAYOUTS = [
 ];
 
 export const HeaderFilters = observer(function HeaderFilters(props: Props) {
-  const { currentProjectDetails, projectId, workspaceSlug, storeType = EIssuesStoreType.PROJECT } = props;
+  const { currentProjectDetails, projectId, workspaceSlug } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks
   const {
     issuesFilter: { issueFilters, updateFilters },
-  } = useIssues(storeType);
+  } = useIssues(EIssuesStoreType.PROJECT);
   // derived values
   const activeLayout = issueFilters?.displayFilters?.layout;
-  const layoutDisplayFiltersOptions = ISSUE_STORE_TO_FILTERS_MAP[storeType]?.layoutOptions[activeLayout];
+  const layoutDisplayFiltersOptions = ISSUE_STORE_TO_FILTERS_MAP[EIssuesStoreType.PROJECT]?.layoutOptions[activeLayout];
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
@@ -90,7 +89,7 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
           activeLayout={activeLayout}
         />
       </div>
-      <WorkItemFiltersToggle entityType={storeType} entityId={projectId} />
+      <WorkItemFiltersToggle entityType={EIssuesStoreType.PROJECT} entityId={projectId} />
       <FiltersDropdown
         miniIcon={<PreferencesOutline className="size-3.5" />}
         title={t("common.display")}
@@ -104,7 +103,6 @@ export const HeaderFilters = observer(function HeaderFilters(props: Props) {
           handleDisplayPropertiesUpdate={handleDisplayProperties}
           cycleViewDisabled={!currentProjectDetails?.cycle_view}
           moduleViewDisabled={!currentProjectDetails?.module_view}
-          isEpic={storeType === EIssuesStoreType.EPIC}
         />
       </FiltersDropdown>
     </>

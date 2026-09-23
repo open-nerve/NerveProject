@@ -130,7 +130,6 @@ export interface IWorkspaceIssueSearchResult {
   project_id: string;
   sequence_id: number;
   workspace__slug: string;
-  type_id: string;
 }
 
 export interface IWorkspaceProjectSearchResult {

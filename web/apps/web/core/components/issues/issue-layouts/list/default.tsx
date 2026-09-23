@@ -8,8 +8,6 @@ import { useEffect, useRef } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-// plane constants
-import { ALL_ISSUES } from "@plane/constants";
 // types
 import type {
   GroupByColumnTypes,
@@ -22,17 +20,11 @@ import type {
   IGroupByColumn,
   TIssueKanbanFilters,
 } from "@plane/types";
-// components
-import { MultipleSelectGroup } from "@/components/core/multiple-select";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
-// plane web components
-import { IssueBulkOperationsRoot } from "@/components/issues/bulk-operations";
-// plane web hooks
-import { useBulkOperationStatus } from "@/hooks/use-bulk-operation-status";
 // utils
 import type { GroupDropLocation } from "../utils";
-import { getGroupByColumns, isWorkspaceLevel, isSubGrouped } from "../utils";
+import { getGroupByColumns, isWorkspaceLevel } from "../utils";
 import { ListGroup } from "./list-group";
 import type { TRenderQuickActions } from "./list-view-types";
 
@@ -55,7 +47,6 @@ export interface IList {
   loadMoreIssues: (groupId?: string) => void;
   handleCollapsedGroups: (value: string) => void;
   collapsedGroups: TIssueKanbanFilters;
-  isEpic?: boolean;
 }
 
 export const List = observer(function List(props: IList) {
@@ -78,12 +69,9 @@ export const List = observer(function List(props: IList) {
     loadMoreIssues,
     handleCollapsedGroups,
     collapsedGroups,
-    isEpic = false,
   } = props;
 
   const storeType = useIssueStoreType();
-  // plane web hooks
-  const isBulkOperationsEnabled = useBulkOperationStatus();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -91,7 +79,6 @@ export const List = observer(function List(props: IList) {
     groupBy: group_by as GroupByColumnTypes,
     includeNone: true,
     isWorkspaceLevel: isWorkspaceLevel(storeType),
-    isEpic: isEpic,
   });
 
   // Enable Auto Scroll for Main Kanban
@@ -111,71 +98,40 @@ export const List = observer(function List(props: IList) {
 
   const getGroupIndex = (groupId: string | undefined) => groups.findIndex(({ id }) => id === groupId);
 
-  const is_list = group_by === null ? true : false;
-
-  // create groupIds array and entities object for bulk ops
-  const groupIds = groups.map((g) => g.id);
-  const orderedGroups: Record<string, string[]> = {};
-  groupIds.forEach((gID) => {
-    orderedGroups[gID] = [];
-  });
-  let entities: Record<string, string[]> = {};
-
-  if (is_list) {
-    entities = Object.assign(orderedGroups, { [groupIds[0]]: groupedIssueIds[ALL_ISSUES] ?? [] });
-  } else if (!isSubGrouped(groupedIssueIds)) {
-    entities = Object.assign(orderedGroups, { ...groupedIssueIds });
-  } else {
-    entities = orderedGroups;
-  }
   return (
     <div className="relative flex size-full flex-col">
       {groups && (
-        <MultipleSelectGroup
-          containerRef={containerRef}
-          entities={entities}
-          disabled={!isBulkOperationsEnabled || isEpic}
+        <div
+          ref={containerRef}
+          className="vertical-scrollbar relative scrollbar-lg size-full overflow-auto bg-surface-1"
         >
-          {(helpers) => (
-            <>
-              <div
-                ref={containerRef}
-                className="vertical-scrollbar relative scrollbar-lg size-full overflow-auto bg-surface-1"
-              >
-                {groups.map((group: IGroupByColumn) => (
-                  <ListGroup
-                    key={group.id}
-                    groupIssueIds={groupedIssueIds?.[group.id]}
-                    issuesMap={issuesMap}
-                    group_by={group_by}
-                    group={group}
-                    updateIssue={updateIssue}
-                    quickActions={quickActions}
-                    orderBy={orderBy}
-                    getGroupIndex={getGroupIndex}
-                    handleOnDrop={handleOnDrop}
-                    displayProperties={displayProperties}
-                    enableIssueQuickAdd={enableIssueQuickAdd}
-                    showEmptyGroup={showEmptyGroup}
-                    canEditProperties={canEditProperties}
-                    quickAddCallback={quickAddCallback}
-                    disableIssueCreation={disableIssueCreation}
-                    addIssuesToView={addIssuesToView}
-                    isCompletedCycle={isCompletedCycle}
-                    loadMoreIssues={loadMoreIssues}
-                    containerRef={containerRef}
-                    selectionHelpers={helpers}
-                    handleCollapsedGroups={handleCollapsedGroups}
-                    collapsedGroups={collapsedGroups}
-                    isEpic={isEpic}
-                  />
-                ))}
-              </div>
-
-              <IssueBulkOperationsRoot selectionHelpers={helpers} />
-            </>
-          )}
-        </MultipleSelectGroup>
+          {groups.map((group: IGroupByColumn) => (
+            <ListGroup
+              key={group.id}
+              groupIssueIds={groupedIssueIds?.[group.id]}
+              issuesMap={issuesMap}
+              group_by={group_by}
+              group={group}
+              updateIssue={updateIssue}
+              quickActions={quickActions}
+              orderBy={orderBy}
+              getGroupIndex={getGroupIndex}
+              handleOnDrop={handleOnDrop}
+              displayProperties={displayProperties}
+              enableIssueQuickAdd={enableIssueQuickAdd}
+              showEmptyGroup={showEmptyGroup}
+              canEditProperties={canEditProperties}
+              quickAddCallback={quickAddCallback}
+              disableIssueCreation={disableIssueCreation}
+              addIssuesToView={addIssuesToView}
+              isCompletedCycle={isCompletedCycle}
+              loadMoreIssues={loadMoreIssues}
+              containerRef={containerRef}
+              handleCollapsedGroups={handleCollapsedGroups}
+              collapsedGroups={collapsedGroups}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

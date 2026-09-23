@@ -8,21 +8,18 @@ import type { AxiosRequestConfig } from "axios";
 import { API_BASE_URL } from "@plane/constants";
 // plane types
 import { getFileMetaDataForUpload, generateFileUploadPayload } from "@plane/services";
-import type { TIssueAttachment, TIssueAttachmentUploadResponse, TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
+import type { TIssueAttachment, TIssueAttachmentUploadResponse } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";
 
 export class IssueAttachmentService extends APIService {
   private fileUploadService: FileUploadService;
-  private serviceType: TIssueServiceType;
 
-  constructor(serviceType: TIssueServiceType = EIssueServiceType.ISSUES) {
+  constructor() {
     super(API_BASE_URL);
     // upload service
     this.fileUploadService = new FileUploadService();
-    this.serviceType = serviceType;
   }
 
   private async updateIssueAttachmentUploadStatus(
@@ -32,7 +29,7 @@ export class IssueAttachmentService extends APIService {
     attachmentId: string
   ): Promise<void> {
     return this.patch(
-      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/${issueId}/attachments/${attachmentId}/`
+      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/attachments/${attachmentId}/`
     )
       .then((response) => response?.data)
       .catch((error) => {
@@ -49,7 +46,7 @@ export class IssueAttachmentService extends APIService {
   ): Promise<TIssueAttachment> {
     const fileMetaData = await getFileMetaDataForUpload(file);
     return this.post(
-      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/${issueId}/attachments/`,
+      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/attachments/`,
       fileMetaData
     )
       .then(async (response) => {
@@ -69,9 +66,7 @@ export class IssueAttachmentService extends APIService {
   }
 
   async getIssueAttachments(workspaceSlug: string, projectId: string, issueId: string): Promise<TIssueAttachment[]> {
-    return this.get(
-      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/${issueId}/attachments/`
-    )
+    return this.get(`/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/attachments/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
@@ -85,7 +80,7 @@ export class IssueAttachmentService extends APIService {
     assetId: string
   ): Promise<TIssueAttachment> {
     return this.delete(
-      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/${this.serviceType}/${issueId}/attachments/${assetId}/`
+      `/api/assets/v2/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/attachments/${assetId}/`
     )
       .then((response) => response?.data)
       .catch((error) => {

@@ -28,7 +28,7 @@ type TGetOrCreateFilterParams = {
 };
 
 export interface IWorkItemFilterStore {
-  filters: Map<TWorkItemFilterKey, IWorkItemFilterInstance>; // key is the entity id (project, cycle, workspace, teamspace, etc)
+  filters: Map<TWorkItemFilterKey, IWorkItemFilterInstance>; // key is the entity id (project, cycle, workspace, etc)
   getFilter: (entityType: EIssuesStoreType, entityId: string) => IWorkItemFilterInstance | undefined;
   getOrCreateFilter: (params: TGetOrCreateFilterParams) => IWorkItemFilterInstance;
   resetExpression: (entityType: EIssuesStoreType, entityId: string, expression: TWorkItemFilterExpression) => void;

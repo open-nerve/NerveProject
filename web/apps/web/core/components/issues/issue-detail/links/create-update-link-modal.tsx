@@ -12,7 +12,7 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { useTranslation } from "@plane/i18n";
 // plane types
 import { Button } from "@plane/propel/button";
-import type { TIssueLinkEditableFields, TIssueServiceType } from "@plane/types";
+import type { TIssueLinkEditableFields } from "@plane/types";
 // plane ui
 import { ModalCore } from "@plane/ui";
 // hooks
@@ -30,7 +30,6 @@ export type TIssueLinkCreateEditModal = {
   isModalOpen: boolean;
   handleOnClose?: () => void;
   linkOperations: TLinkOperationsModal;
-  issueServiceType: TIssueServiceType;
 };
 
 const defaultValues: TIssueLinkCreateFormFieldOptions = {
@@ -41,7 +40,7 @@ const defaultValues: TIssueLinkCreateFormFieldOptions = {
 export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdateModal(
   props: TIssueLinkCreateEditModal
 ) {
-  const { isModalOpen, handleOnClose, linkOperations, issueServiceType } = props;
+  const { isModalOpen, handleOnClose, linkOperations } = props;
   // i18n
   const { t } = useTranslation();
   // react hook form
@@ -54,7 +53,7 @@ export const IssueLinkCreateUpdateModal = observer(function IssueLinkCreateUpdat
     defaultValues,
   });
   // store hooks
-  const { issueLinkData: preloadedData, setIssueLinkData } = useIssueDetail(issueServiceType);
+  const { issueLinkData: preloadedData, setIssueLinkData } = useIssueDetail();
 
   const onClose = () => {
     setIssueLinkData(null);

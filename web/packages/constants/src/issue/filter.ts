@@ -241,7 +241,7 @@ export const ISSUE_DISPLAY_FILTERS_BY_PAGE: TIssueFiltersToDisplayByPageType = {
         },
       },
       calendar: {
-        display_properties: ["key", "issue_type"],
+        display_properties: ["key"],
         display_filters: {
           type: ["active", "backlog"],
         },
@@ -288,7 +288,6 @@ export const ISSUE_STORE_TO_FILTERS_MAP: Partial<Record<EIssuesStoreType, TFilte
 export const SUB_WORK_ITEM_AVAILABLE_FILTERS_FOR_WORK_ITEM_PAGE: (keyof IIssueFilterOptions)[] = [
   "priority",
   "state",
-  "issue_type",
   "assignees",
   "start_date",
   "target_date",

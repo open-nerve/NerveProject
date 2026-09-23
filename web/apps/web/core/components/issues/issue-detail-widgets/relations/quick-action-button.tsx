@@ -10,7 +10,6 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@plane/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 // plane imports
-import type { TIssueServiceType } from "@plane/types";
 import { CustomMenu } from "@plane/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -23,14 +22,13 @@ type Props = {
   issueId: string;
   customButton?: React.ReactNode;
   disabled?: boolean;
-  issueServiceType: TIssueServiceType;
 };
 
 export const RelationActionButton = observer(function RelationActionButton(props: Props) {
-  const { customButton, issueId, disabled = false, issueServiceType } = props;
+  const { customButton, issueId, disabled = false } = props;
   const { t } = useTranslation();
   // store hooks
-  const { toggleRelationModal, setRelationKey } = useIssueDetail(issueServiceType);
+  const { toggleRelationModal, setRelationKey } = useIssueDetail();
 
   // handlers
   const handleOnClick = (relationKey: TIssueRelationTypes) => {

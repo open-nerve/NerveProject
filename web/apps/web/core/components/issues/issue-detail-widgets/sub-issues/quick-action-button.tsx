@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import { AddOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { TIssue, TIssueServiceType } from "@plane/types";
+import type { TIssue } from "@plane/types";
 import { CustomMenu } from "@plane/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -18,11 +18,10 @@ type Props = {
   issueId: string;
   customButton?: React.ReactNode;
   disabled?: boolean;
-  issueServiceType: TIssueServiceType;
 };
 
 export const SubIssuesActionButton = observer(function SubIssuesActionButton(props: Props) {
-  const { issueId, customButton, disabled = false, issueServiceType } = props;
+  const { issueId, customButton, disabled = false } = props;
   // translation
   const { t } = useTranslation();
   // store hooks
@@ -32,7 +31,7 @@ export const SubIssuesActionButton = observer(function SubIssuesActionButton(pro
     toggleSubIssuesModal,
     setIssueCrudOperationState,
     issueCrudOperationState,
-  } = useIssueDetail(issueServiceType);
+  } = useIssueDetail();
 
   // derived values
   const issue = getIssueById(issueId);

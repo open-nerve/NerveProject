@@ -87,8 +87,7 @@ export type GroupByColumnTypes =
   | "priority"
   | "labels"
   | "assignees"
-  | "created_by"
-  | "team_project";
+  | "created_by";
 
 export type TGetColumns = {
   isWorkspaceLevel?: boolean;

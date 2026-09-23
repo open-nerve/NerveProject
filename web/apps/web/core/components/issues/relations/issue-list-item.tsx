@@ -11,8 +11,7 @@ import { CloseOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplan
 // plane imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TIssueRelationTypes } from "@plane/types";
-import type { TIssue, TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
+import type { TIssue } from "@plane/types";
 import { ControlLink, CustomMenu } from "@plane/ui";
 import { generateWorkItemLink } from "@plane/utils";
 // hooks
@@ -39,19 +38,10 @@ type Props = {
     relationKey?: TIssueRelationTypes | null,
     relationIssueId?: string | null
   ) => void;
-  issueServiceType?: TIssueServiceType;
 };
 
 export const RelationIssueListItem = observer(function RelationIssueListItem(props: Props) {
-  const {
-    workspaceSlug,
-    issueId,
-    relationKey,
-    relationIssueId,
-    disabled = false,
-    handleIssueCrudState,
-    issueServiceType = EIssueServiceType.ISSUES,
-  } = props;
+  const { workspaceSlug, issueId, relationKey, relationIssueId, disabled = false, handleIssueCrudState } = props;
 
   const { t } = useTranslation();
 
@@ -61,13 +51,13 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
     removeRelation,
     toggleCreateIssueModal,
     toggleDeleteIssueModal,
-  } = useIssueDetail(issueServiceType);
+  } = useIssueDetail();
   const project = useProject();
   const { isMobile } = usePlatformOS();
   // derived values
   const issue = getIssueById(relationIssueId);
-  const { handleRedirection } = useIssuePeekOverviewRedirection(!!issue?.is_epic);
-  const issueOperations = useRelationOperations(issue?.is_epic ? EIssueServiceType.EPICS : EIssueServiceType.ISSUES);
+  const { handleRedirection } = useIssuePeekOverviewRedirection();
+  const issueOperations = useRelationOperations();
   const projectDetail = (issue && issue.project_id && project.getProjectById(issue.project_id)) || undefined;
   const projectId = issue?.project_id;
 
@@ -79,16 +69,10 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
     issueId: issue?.id,
     projectIdentifier: projectDetail?.identifier,
     sequenceId: issue?.sequence_id,
-    isEpic: issue?.is_epic,
   });
 
   // handlers
   const handleIssuePeekOverview = (issue: TIssue) => {
-    if (issue.is_epic) {
-      // open epics in new tab
-      window.open(workItemLink, "_blank");
-      return;
-    }
     handleRedirection(workspaceSlug, issue, isMobile);
   };
 
@@ -135,7 +119,6 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
                 {projectDetail && (
                   <IssueIdentifier
                     projectId={projectDetail.id}
-                    issueTypeId={issue.type_id}
                     projectIdentifier={projectDetail.identifier}
                     issueSequenceId={issue.sequence_id}
                     size="xs"
@@ -160,7 +143,6 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
                 issueId={relationIssueId}
                 disabled={disabled}
                 issueOperations={issueOperations}
-                issueServiceType={issueServiceType}
               />
             </div>
             <div className="flex-shrink-0 pl-2 text-13">

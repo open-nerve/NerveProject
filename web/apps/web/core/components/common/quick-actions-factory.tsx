@@ -16,7 +16,7 @@ import { useTranslation } from "@plane/i18n";
 import type { TContextMenuItem } from "@plane/ui";
 
 /**
- * Unified factory for creating menu items across all entities (cycles, modules, views, epics)
+ * Unified factory for creating menu items across all entities (cycles, modules, views)
  */
 export const useQuickActionsFactory = () => {
   const { t } = useTranslation();
@@ -74,21 +74,6 @@ export const useQuickActionsFactory = () => {
       icon: DeleteOutline,
       action: handler,
       shouldRender,
-    }),
-
-    // Layout-level actions (for work item list views)
-    createOpenInNewTab: (handler: () => void): TContextMenuItem => ({
-      key: "open-in-new-tab",
-      title: "Open in new tab",
-      icon: NewTabOutline,
-      action: handler,
-    }),
-
-    createCopyLayoutLinkMenuItem: (handler: () => void): TContextMenuItem => ({
-      key: "copy-link",
-      title: "Copy link",
-      icon: LinkOutline,
-      action: handler,
     }),
   };
 };

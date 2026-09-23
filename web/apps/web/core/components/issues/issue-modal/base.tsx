@@ -52,11 +52,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   } = props;
   const issueStoreType = useIssueStoreType();
 
-  let storeType = issueStoreFromProps ?? issueStoreType;
-  // Fallback to project store if epic store is used in issue modal.
-  if (storeType === EIssuesStoreType.EPIC) {
-    storeType = EIssuesStoreType.PROJECT;
-  }
+  const storeType = issueStoreFromProps ?? issueStoreType;
   // ref
   const issueTitleRef = useRef<HTMLInputElement>(null);
   // states
@@ -75,7 +71,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);
   const { issues: draftIssues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
   const { fetchIssue } = useIssueDetail();
-  const { allowedProjectIds, handleCreateUpdatePropertyValues, handleCreateSubWorkItem } = useIssueModal();
+  const { allowedProjectIds } = useIssueModal();
   const { getProjectByIdentifier } = useProject();
   // current store details
   const { createIssue, updateIssue } = useIssuesActions(storeType);
@@ -215,24 +211,6 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
         }
       }
 
-      // add other property values
-      if (response.id && response.project_id) {
-        await handleCreateUpdatePropertyValues({
-          issueId: response.id,
-          issueTypeId: response.type_id,
-          projectId: response.project_id,
-          workspaceSlug: workspaceSlug?.toString(),
-          isDraft: is_draft_issue,
-        });
-
-        // create sub work item
-        await handleCreateSubWorkItem({
-          workspaceSlug: workspaceSlug?.toString(),
-          projectId: response.project_id,
-          parentId: response.id,
-        });
-      }
-
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("success"),
@@ -328,17 +306,10 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       if (isDraft) await draftIssues.updateIssue(workspaceSlug.toString(), data.id, payload);
       else if (updateIssue) await updateIssue(payload.project_id, data.id, payload);
 
-      // Run cycle, module, and property changes sequentially to avoid
+      // Run cycle and module changes sequentially to avoid
       // optimistic store writes from racing against each other.
       await handleCycleChange(data, payload);
       await handleModuleChange(data, payload);
-      await handleCreateUpdatePropertyValues({
-        issueId: data.id,
-        issueTypeId: payload.type_id,
-        projectId: payload.project_id,
-        workspaceSlug: workspaceSlug?.toString(),
-        isDraft: isDraft,
-      });
 
       setToast({
         type: TOAST_TYPE.SUCCESS,

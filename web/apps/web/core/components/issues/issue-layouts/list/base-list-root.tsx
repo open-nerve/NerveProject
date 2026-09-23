@@ -34,10 +34,7 @@ type ListStoreType =
   | EIssuesStoreType.PROJECT_VIEW
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.ARCHIVED
-  | EIssuesStoreType.WORKSPACE_DRAFT
-  | EIssuesStoreType.TEAM
-  | EIssuesStoreType.TEAM_VIEW
-  | EIssuesStoreType.EPIC;
+  | EIssuesStoreType.WORKSPACE_DRAFT;
 
 interface IBaseListRoot {
   QuickActions: FC<IQuickActionProps>;
@@ -45,17 +42,9 @@ interface IBaseListRoot {
   canEditPropertiesBasedOnProject?: (projectId: string) => boolean;
   viewId?: string | undefined;
   isCompletedCycle?: boolean;
-  isEpic?: boolean;
 }
 export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot) {
-  const {
-    QuickActions,
-    viewId,
-    addIssuesToView,
-    canEditPropertiesBasedOnProject,
-    isCompletedCycle = false,
-    isEpic = false,
-  } = props;
+  const { QuickActions, viewId, addIssuesToView, canEditPropertiesBasedOnProject, isCompletedCycle = false } = props;
   // router
   const storeType = useIssueStoreType() as ListStoreType;
   //stores
@@ -174,7 +163,6 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
           handleOnDrop={handleOnDrop}
           handleCollapsedGroups={handleCollapsedGroups}
           collapsedGroups={collapsedGroups}
-          isEpic={isEpic}
         />
       </div>
     </IssueLayoutHOC>

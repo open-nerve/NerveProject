@@ -60,7 +60,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
           projectId={projectId}
           buttonVariant="border-with-text"
           tabIndex={getIndex("state_id")}
-          isForWorkItemCreation={!data?.id}
         />
       </div>
 

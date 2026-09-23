@@ -68,7 +68,6 @@ export interface MenuItemFactoryProps {
   isDeletingAllowed: boolean;
   isRestoringAllowed?: boolean;
   isInArchivableGroup?: boolean;
-  issueTypeDetail?: { is_active?: boolean };
   // Action handlers
   setIssueToEdit: (issue: TIssue | undefined) => void;
   setCreateUpdateIssueModal: (open: boolean) => void;
@@ -157,7 +156,6 @@ export const useMenuItemFactory = (props: MenuItemFactoryProps) => {
     isDeletingAllowed,
     isRestoringAllowed = false,
     isInArchivableGroup = false,
-    issueTypeDetail,
     setIssueToEdit,
     setCreateUpdateIssueModal,
     setDeleteIssueModal,
@@ -187,7 +185,7 @@ export const useMenuItemFactory = (props: MenuItemFactoryProps) => {
       action: () => {
         setCreateUpdateIssueModal(true);
       },
-      shouldRender: isEditingAllowed && (issueTypeDetail?.is_active ?? true),
+      shouldRender: isEditingAllowed,
     };
 
     return createCopyMenuWithDuplication({

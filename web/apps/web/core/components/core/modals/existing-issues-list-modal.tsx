@@ -170,7 +170,6 @@ export function ExistingIssuesListModal(props: Props) {
                 >
                   <IssueIdentifier
                     projectId={issue.project_id}
-                    issueTypeId={issue.type_id}
                     projectIdentifier={issue.project__identifier}
                     issueSequenceId={issue.sequence_id}
                     size="xs"
@@ -278,7 +277,6 @@ export function ExistingIssuesListModal(props: Props) {
                           <span className="flex-shrink-0">
                             <IssueIdentifier
                               projectId={issue.project_id}
-                              issueTypeId={issue.type_id}
                               projectIdentifier={issue.project__identifier}
                               issueSequenceId={issue.sequence_id}
                               size="xs"

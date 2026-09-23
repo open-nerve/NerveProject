@@ -15,7 +15,6 @@ export interface IRouterStore {
   setQuery: (query: ParsedUrlQuery) => void;
   // computed
   workspaceSlug: string | undefined;
-  teamspaceId: string | undefined;
   projectId: string | undefined;
   cycleId: string | undefined;
   moduleId: string | undefined;
@@ -27,7 +26,6 @@ export interface IRouterStore {
   issueId: string | undefined;
   inboxId: string | undefined;
   webhookId: string | undefined;
-  epicId: string | undefined;
 }
 
 export class RouterStore implements IRouterStore {
@@ -42,7 +40,6 @@ export class RouterStore implements IRouterStore {
       setQuery: action.bound,
       //computed
       workspaceSlug: computed,
-      teamspaceId: computed,
       projectId: computed,
       cycleId: computed,
       moduleId: computed,
@@ -54,7 +51,6 @@ export class RouterStore implements IRouterStore {
       issueId: computed,
       inboxId: computed,
       webhookId: computed,
-      epicId: computed,
     });
   }
 
@@ -74,14 +70,6 @@ export class RouterStore implements IRouterStore {
    */
   get workspaceSlug() {
     return this.query?.workspaceSlug?.toString();
-  }
-
-  /**
-   * Returns the teamspace id from the query
-   * @returns string|undefined
-   */
-  get teamspaceId() {
-    return this.query?.teamspaceId?.toString();
   }
 
   /**
@@ -170,13 +158,5 @@ export class RouterStore implements IRouterStore {
    */
   get webhookId() {
     return this.query?.webhookId?.toString();
-  }
-
-  /**
-   * Returns the epic id from the query
-   * @returns string|undefined
-   */
-  get epicId() {
-    return this.query?.epicId?.toString();
   }
 }

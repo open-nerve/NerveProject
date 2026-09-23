@@ -925,6 +925,204 @@
           "miss": ["web/packages/editor/src/helpers/common.ts", "web/packages/i18n/src/locales/en/common.json"]
         }
       }
+    },
+    {
+      "id": "epics",
+      "phase": "M1/P3",
+      "why": "Epic（企业版）：Epic 的 store 类型、服务类型、详情 store、弹窗、空状态、导航项、插图和图标，以及贯穿工作项布局的 isEpic 参数和 is_epic 字段（M1 设计 2.2、7.4）。区分大小写：propel 的 ImagePicker 等名字里有 ePic",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "(?<![dD])epic|Epic|EPIC",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    issue?.is_epic ? EIssueServiceType.EPICS : EIssueServiceType.ISSUES",
+          "export interface EpicModalProps {"
+        ],
+        "miss": [
+          "  const imagePickerRef = useRef<HTMLDivElement>(null);",
+          "  const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/hooks/store/use-issues.ts", "web/packages/i18n/src/locales/en/work-item.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "teamspaces",
+      "phase": "M1/P3",
+      "why": "团队（企业版）：团队、团队视图、团队下项目的工作项 store 类型和实例、路由参数 teamspaceId、分组方式 team_project、团队的文件资源类型（M1 设计 7.4）。不搜普通英文单词 team（登录页、邀请页的文案）",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "teamspace|team_view|team_project|team_space|EIssuesStoreType\\.TEAM\\b",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "  entityType: EIssuesStoreType; // entity type (project, cycle, workspace, teamspace, etc)",
+          "  | EIssuesStoreType.TEAM_VIEW",
+          "    EIssuesStoreType.TEAM_PROJECT_WORK_ITEMS,",
+          "  TEAM_SPACE_DESCRIPTION = \"TEAM_SPACE_DESCRIPTION\",",
+          "  | EIssuesStoreType.TEAM"
+        ],
+        "miss": [
+          "            ? \"Create an account to start managing work with your team.\"",
+          "      id: \"invite-team\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/issue/root.store.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "work-item-types",
+      "phase": "M1/P3",
+      "why": "工作项类型（企业版）：type_id 字段、IssueIdentifier 的 issueTypeId、类型切换器、显示属性和筛选项 issue_type、自定义属性的值和动态、CE 中为空的 useWorkItemProperties（M1 设计 7.4）",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "type_id\\b|issueTypeId|IssueTypeSwitcher|IssueTypeIdentifier|work_item_type|issue_type\\b|ISSUE_ADDITIONAL_PROPERTIES|useWorkItemProperties|IssuePropertyValue|is_issue_type_enabled",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "          issueTypeId={issue.type_id}",
+          "import { IssueTypeSwitcher } from \"@/components/issues/issue-type-switcher\";",
+          "export type TIssueTypeIdentifier = {",
+          "    \"work_item_types\": {",
+          "              {displayProperties && (displayProperties.key || displayProperties.issue_type) && (",
+          "      activity_type: \"ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY\";",
+          "import { useWorkItemProperties } from \"@/hooks/use-issue-properties\";",
+          "import type { ISearchIssueResponse, TIssue, TIssuePropertyValues, TIssuePropertyValueErrors } from \"@plane/types\";",
+          "  is_issue_type_enabled: ToDoOutline,"
+        ],
+        "miss": [
+          "      activity_type: \"DEFAULT\";",
+          "import type { TIssue, TIssuePriorities } from \"@plane/types\";"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/issues/issue-modal/form.tsx",
+            "web/packages/i18n/src/locales/en/empty-state.json"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "bulk-operations",
+      "phase": "M1/P3",
+      "why": "批量操作与工作项多选（M1 设计 3.9）：批量接口、升级提示条、多选 store 和 hooks、组头和行上的选择框、逐层透传的 selectionHelpers、只在选中时生效的 selected-issue-row 样式。不在其中：命令面板的批量删除（BulkDeleteIssuesModal，Plane 社区版接口）、表单的多选下拉框（multiple）",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "bulk[-_]?operation|multipleselect|selectionhelper|selected-issue-row|spreadsheet_select_group",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "export const IssueBulkOperationsRoot = observer(function IssueBulkOperationsRoot(props: Props) {",
+          "export const MultipleSelectEntityAction = observer(function MultipleSelectEntityAction(props: Props) {",
+          "import type { TSelectionHelper } from \"@/hooks/use-multiple-select\";",
+          "          \"rounded-none px-page-x text-left group-[.selected-issue-row]:bg-accent-primary/5 group-[.selected-issue-row]:hover:bg-accent-primary/10\",",
+          "import { SPREADSHEET_SELECT_GROUP } from \"@plane/constants\";"
+        ],
+        "miss": [
+          "import { BulkDeleteIssuesModalItem } from \"./bulk-delete-issues-modal-item\";",
+          "                    multiple"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/issues/issue-layouts/list/block.tsx",
+            "web/packages/i18n/src/locales/en/work-item.json"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "templates-worklogs",
+      "phase": "M1/P3",
+      "why": "工作项模板、项目模板、工时记录、定时（重复）工作项（企业版，M1 设计 2.2）：弹窗上下文中 CE 固定为空的模板字段、操作动态的 WORKLOG 和 is_time_tracking_enabled 分支、worklog 插图、recurring_work_items 文案。不搜单独的 template：gridTemplateColumns 是样式",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "workItemTemplateId|isApplyingTemplate|handleTemplateChange|templateId|WORKLOG|[wW]orklog|is_time_tracking_enabled|time_tracking|TimeTracking|recurring_work_items|[rR]ecurring[ _]?[wW]ork",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  workItemTemplateId: string | null;",
+          "  isApplyingTemplate: boolean;",
+          "  handleTemplateChange: (props: THandleTemplateChangeProps) => Promise<void>;",
+          "  templateId?: string;",
+          "      activity_type: \"WORKLOG\";",
+          "        title: \"Time Tracking + Worklogs\",",
+          "  is_time_tracking_enabled: TimeTrackingOutline,",
+          "  TimeTrackingOutline,",
+          "    \"recurring_work_items\": \"Recurring work items\","
+        ],
+        "miss": [
+          "            gridTemplateColumns: `repeat(3, 1fr)`,",
+          "  const { issues: draftIssues } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/issues/issue-modal/provider.tsx",
+            "web/packages/i18n/src/locales/en/work-item.json"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "workflows-project-updates",
+      "phase": "M1/P3",
+      "why": "自定义工作流和项目动态（企业版）：列表和看板中 CE 为空操作的 useWorkFlowFDragNDrop、状态选项只为工作流声明的参数、项目操作动态的开关分支、SWR 键和文案。不搜单独的 workflow：工作区保留地址名单里的 workflow、workflows 留给 M3 与后端对齐",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "WorkFlow|isWorkflow|workflowDisabledSource|components/workflow|is_workflow_enabled|_WORKFLOWS?\\b|WORKFLOW_|project_updates|EUpdateStatus",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "import { useWorkFlowFDragNDrop } from \"@/components/workflow\";",
+          "  const { workflowDisabledSource, isWorkflowDropDisabled, handleWorkFlowState, getIsWorkflowWorkItemCreationDisabled } =",
+          "  workflowDisabledSource?: string;",
+          "import { StateOption } from \"@/components/workflow\";",
+          "  is_workflow_enabled: GitBranchOutline,",
+          "export const PROJECT_WORKFLOWS = (projectId: string, projectRole: EUserPermissions | undefined) =>",
+          "export const WORKSPACE_WORKFLOW_STATES = (workspaceSlug: string) =>",
+          "  is_project_updates_enabled: SubscribeOutline,",
+          "export enum EUpdateStatus {"
+        ],
+        "miss": ["  \"workflow\",", "import { StateOption } from \"./state-option\";"],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/issues/issue-layouts/list/list-group.tsx",
+            "web/packages/constants/src/fetch-keys.ts"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -955,21 +1153,6 @@
       "match": "Analytics",
       "count": 3,
       "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "analytics",
-      "path": "web/packages/types/src/epics.ts",
-      "match": "Analytics",
-      "count": 2,
-      "reason": "TEpicAnalyticsGroup、TEpicAnalytics 是 Epic 的企业版类型，随 Epic 在 M1/P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "estimates",
-      "path": "web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx",
-      "match": "estimat",
-      "reason": "通知卡片里的 estimate_time 是工时，随工时空壳在 P3 删除",
       "until": "M1/P3"
     },
     {
@@ -1083,6 +1266,43 @@
       "match": "SSO",
       "count": 2,
       "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "epics",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Epic",
+      "count": 2,
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "epics",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "epic",
+      "count": 2,
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "teamspaces",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Teamspace",
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "teamspaces",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "Teamspace",
+      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "templates-worklogs",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Worklog",
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
       "until": "M1/P4"
     }
   ]

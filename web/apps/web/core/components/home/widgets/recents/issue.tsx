@@ -10,7 +10,6 @@ import { PriorityIcon, StateGroupIcon } from "@plane/propel/icons";
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TActivityEntityData, TIssueEntityData } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
 // plane ui
 import { calculateTimeAgo, generateWorkItemLink } from "@plane/utils";
 // components
@@ -32,7 +31,6 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
   // hooks
   const { getStateById } = useProjectState();
   const { setPeekIssue } = useIssueDetail();
-  const { setPeekIssue: setPeekEpic } = useIssueDetail(EIssueServiceType.EPICS);
   const { getProjectIdentifierById } = useProject();
   // derived values
   const issueDetails: TIssueEntityData = activity.entity_data as TIssueEntityData;
@@ -48,7 +46,6 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
     issueId: issueDetails?.id,
     projectIdentifier,
     sequenceId: issueDetails?.sequence_id,
-    isEpic: issueDetails?.is_epic,
   });
 
   const handlePeekOverview = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -59,8 +56,7 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
       projectId: issueDetails?.project_id,
       issueId: activity.entity_data.id,
     };
-    if (issueDetails?.is_epic) setPeekEpic(peekDetails);
-    else setPeekIssue(peekDetails);
+    setPeekIssue(peekDetails);
   };
 
   return (
@@ -74,7 +70,6 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
           {issueDetails.type ? (
             <IssueIdentifier
               size="lg"
-              issueTypeId={issueDetails?.type}
               projectId={issueDetails?.project_id || ""}
               projectIdentifier={issueDetails?.project_identifier || ""}
               issueSequenceId={issueDetails?.sequence_id || ""}

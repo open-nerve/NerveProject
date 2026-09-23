@@ -23,9 +23,8 @@ import type {
   TIssuePaginationData,
   TGroupedIssueCount,
   TPaginationData,
-  TBulkOperationsPayload,
 } from "@plane/types";
-import { EIssueServiceType, EIssueLayoutTypes } from "@plane/types";
+import { EIssueLayoutTypes } from "@plane/types";
 // helpers
 import { convertToISODateString } from "@plane/utils";
 // plane web imports
@@ -121,7 +120,6 @@ export const ISSUE_GROUP_BY_KEY: Record<TIssueDisplayFilterOptions, keyof TIssue
   target_date: "target_date",
   cycle: "cycle_id",
   module: "module_ids",
-  team_project: "project_id",
 };
 
 export const ISSUE_FILTER_DEFAULT_DATA: Record<TIssueDisplayFilterOptions, keyof TIssue> = {
@@ -135,7 +133,6 @@ export const ISSUE_FILTER_DEFAULT_DATA: Record<TIssueDisplayFilterOptions, keyof
   created_by: "created_by",
   assignees: "assignee_ids",
   target_date: "target_date",
-  team_project: "project_id",
 };
 
 // This constant maps the order by keys to the respective issue property that the key relies on
@@ -191,12 +188,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
   // API Abort controller
   controller: AbortController;
 
-  constructor(
-    _rootStore: IIssueRootStore,
-    issueFilterStore: IBaseIssueFilterStore,
-    isArchived = false,
-    serviceType = EIssueServiceType.ISSUES
-  ) {
+  constructor(_rootStore: IIssueRootStore, issueFilterStore: IBaseIssueFilterStore, isArchived = false) {
     makeObservable(this, {
       // observable
       loader: observable,
@@ -231,7 +223,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
       issueArchive: action.bound,
       removeBulkIssues: action.bound,
       bulkArchiveIssues: action.bound,
-      bulkUpdateProperties: action.bound,
 
       addIssueToCycle: action.bound,
       removeIssueFromCycle: action.bound,
@@ -247,7 +238,7 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
 
     this.isArchived = isArchived;
 
-    this.issueService = new IssueService(serviceType);
+    this.issueService = new IssueService();
     this.issueArchiveService = new IssueArchiveService();
     this.moduleService = new ModuleService();
     this.cycleService = new CycleService();
@@ -706,44 +697,6 @@ export abstract class BaseIssuesStore implements IBaseIssuesStore {
           false
         );
         this.removeIssueFromList(issueId);
-      });
-    });
-  };
-
-  /**
-   * @description bulk update properties of selected issues
-   * @param {TBulkOperationsPayload} data
-   */
-  bulkUpdateProperties = async (workspaceSlug: string, projectId: string, data: TBulkOperationsPayload) => {
-    const issueIds = data.issue_ids;
-    // make request to update issue properties
-    await this.issueService.bulkOperations(workspaceSlug, projectId, data);
-    // update issues in the store
-    runInAction(() => {
-      issueIds.forEach((issueId) => {
-        const issueBeforeUpdate = clone(this.rootIssueStore.issues.getIssueById(issueId));
-        if (!issueBeforeUpdate) throw new Error("Work item not found");
-        Object.keys(data.properties).forEach((key) => {
-          const property = key as keyof TBulkOperationsPayload["properties"];
-          const propertyValue = data.properties[property];
-          // update root issue map properties
-          if (Array.isArray(propertyValue)) {
-            // if property value is array, append it to the existing values
-            const existingValue = issueBeforeUpdate[property];
-            // convert existing value to an array
-            const newExistingValue = Array.isArray(existingValue) ? existingValue : [];
-            this.rootIssueStore.issues.updateIssue(issueId, {
-              [property]: uniq([...newExistingValue, ...propertyValue]),
-            });
-          } else {
-            // if property value is not an array, simply update the value
-            this.rootIssueStore.issues.updateIssue(issueId, {
-              [property]: propertyValue,
-            });
-          }
-        });
-        const issueDetails = this.rootIssueStore.issues.getIssueById(issueId);
-        this.updateIssueList(issueDetails, issueBeforeUpdate);
       });
     });
   };

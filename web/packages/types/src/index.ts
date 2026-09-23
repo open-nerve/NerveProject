@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export * from "./activity";
 export * from "./ai";
 export * from "./api_token";
 export * from "./auth";
@@ -17,7 +16,6 @@ export * from "./de-dupe";
 export * from "./description_version";
 export * from "./editor";
 export * from "./enums";
-export * from "./epics";
 export * from "./favorite";
 export * from "./file";
 export * from "./home";
@@ -26,7 +24,6 @@ export * from "./instance";
 export * from "./issues";
 export * from "./issues/base"; // TODO: Remove this after development and the refactor/mobx-store-issue branch is stable
 export * from "./issues/issue-identifier";
-export * from "./issues/issue-property-values";
 export * from "./module";
 export * from "./navigation-preferences";
 export * from "./payment";

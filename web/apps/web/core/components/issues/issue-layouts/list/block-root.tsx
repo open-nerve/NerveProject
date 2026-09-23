@@ -14,14 +14,12 @@ import { observer } from "mobx-react";
 import { useOutsideClickDetector } from "@plane/hooks";
 // types
 import type { IIssueDisplayProperties, TIssue, TIssueMap } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
 // components
 import { DropIndicator } from "@plane/ui";
 import RenderIfVisible from "@/components/core/render-if-visible-HOC";
 import { ListLoaderItemRow } from "@/components/ui/loader/layouts/list-layout-loader";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import type { TSelectionHelper } from "@/hooks/use-multiple-select";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // types
 import { HIGHLIGHT_CLASS, getIssueBlockId, isIssueNew } from "../utils";
@@ -38,14 +36,12 @@ type Props = {
   nestingLevel: number;
   spacingLeft?: number;
   containerRef: MutableRefObject<HTMLDivElement | null>;
-  selectionHelpers: TSelectionHelper;
   groupId: string;
   isDragAllowed: boolean;
   canDropOverIssue: boolean;
   isParentIssueBeingDragged?: boolean;
   isLastChild?: boolean;
   shouldRenderByDefault?: boolean;
-  isEpic?: boolean;
 };
 
 export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
@@ -64,9 +60,7 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
     canDropOverIssue,
     isParentIssueBeingDragged = false,
     isLastChild = false,
-    selectionHelpers,
     shouldRenderByDefault,
-    isEpic = false,
   } = props;
   // states
   const [isExpanded, setExpanded] = useState<boolean>(false);
@@ -77,7 +71,7 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
   // hooks
   const { isMobile } = usePlatformOS();
   // store hooks
-  const { subIssues: subIssuesStore } = useIssueDetail(isEpic ? EIssueServiceType.EPICS : EIssueServiceType.ISSUES);
+  const { subIssues: subIssuesStore } = useIssueDetail();
 
   const isSubIssue = nestingLevel !== 0;
 
@@ -154,16 +148,13 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
           setExpanded={setExpanded}
           nestingLevel={nestingLevel}
           spacingLeft={spacingLeft}
-          selectionHelpers={selectionHelpers}
           canDrag={!isSubIssue && isDragAllowed}
           isCurrentBlockDragging={isParentIssueBeingDragged || isCurrentBlockDragging}
           setIsCurrentBlockDragging={setIsCurrentBlockDragging}
-          isEpic={isEpic}
         />
       </RenderIfVisible>
 
       {isExpanded &&
-        !isEpic &&
         subIssues?.map((subIssueId) => (
           <IssueBlockRoot
             key={`${subIssueId}`}
@@ -176,7 +167,6 @@ export const IssueBlockRoot = observer(function IssueBlockRoot(props: Props) {
             nestingLevel={nestingLevel + 1}
             spacingLeft={spacingLeft + 12}
             containerRef={containerRef}
-            selectionHelpers={selectionHelpers}
             groupId={groupId}
             isDragAllowed={isDragAllowed}
             canDropOverIssue={canDropOverIssue}

@@ -7,8 +7,6 @@
 import type { MutableRefObject } from "react";
 // components
 import type { TIssue, IIssueDisplayProperties, TIssueMap, TGroupedIssues } from "@plane/types";
-// hooks
-import type { TSelectionHelper } from "@/hooks/use-multiple-select";
 // types
 import { IssueBlockRoot } from "./block-root";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -24,8 +22,6 @@ interface Props {
   containerRef: MutableRefObject<HTMLDivElement | null>;
   isDragAllowed: boolean;
   canDropOverIssue: boolean;
-  selectionHelpers: TSelectionHelper;
-  isEpic?: boolean;
 }
 
 export function IssueBlocksList(props: Props) {
@@ -38,10 +34,8 @@ export function IssueBlocksList(props: Props) {
     displayProperties,
     canEditProperties,
     containerRef,
-    selectionHelpers,
     isDragAllowed,
     canDropOverIssue,
-    isEpic = false,
   } = props;
 
   return (
@@ -60,12 +54,10 @@ export function IssueBlocksList(props: Props) {
             nestingLevel={0}
             spacingLeft={0}
             containerRef={containerRef}
-            selectionHelpers={selectionHelpers}
             groupId={groupId}
             isLastChild={index === issueIds.length - 1}
             isDragAllowed={isDragAllowed}
             canDropOverIssue={canDropOverIssue}
-            isEpic={isEpic}
           />
         ))}
     </div>

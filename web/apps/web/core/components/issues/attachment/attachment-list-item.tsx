@@ -9,8 +9,6 @@ import { observer } from "mobx-react";
 import { useTranslation } from "@plane/i18n";
 import { DeleteOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
 // ui
 import { CustomMenu } from "@plane/ui";
 import { convertBytesToSize, getFileExtension, getFileName, getFileURL, renderFormattedDate } from "@plane/utils";
@@ -27,19 +25,18 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 type TIssueAttachmentsListItem = {
   attachmentId: string;
   disabled?: boolean;
-  issueServiceType?: TIssueServiceType;
 };
 
 export const IssueAttachmentsListItem = observer(function IssueAttachmentsListItem(props: TIssueAttachmentsListItem) {
   const { t } = useTranslation();
   // props
-  const { attachmentId, disabled, issueServiceType = EIssueServiceType.ISSUES } = props;
+  const { attachmentId, disabled } = props;
   // store hooks
   const { getUserDetails } = useMember();
   const {
     attachment: { getAttachmentById },
     toggleDeleteAttachmentModal,
-  } = useIssueDetail(issueServiceType);
+  } = useIssueDetail();
   // derived values
   const attachment = attachmentId ? getAttachmentById(attachmentId) : undefined;
   const fileName = getFileName(attachment?.attributes.name ?? "");

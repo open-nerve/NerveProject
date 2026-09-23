@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useRouter } from "next/navigation";
 import { MinusCircle } from "lucide-react";
 import { useTranslation } from "@plane/i18n";
 import type { TIssue } from "@plane/types";
@@ -35,8 +34,6 @@ export type TIssueParentDetail = {
 
 export const IssueParentDetail = observer(function IssueParentDetail(props: TIssueParentDetail) {
   const { workspaceSlug, projectId, issueId, issue, issueOperations } = props;
-  // router
-  const router = useRouter();
   const { t } = useTranslation();
   // hooks
   const { issueMap } = useIssues();
@@ -47,7 +44,6 @@ export const IssueParentDetail = observer(function IssueParentDetail(props: TIss
 
   // derived values
   const parentIssue = issueMap?.[issue.parent_id || ""] || undefined;
-  const isParentEpic = parentIssue?.is_epic;
   const projectIdentifier = getProjectIdentifierById(parentIssue?.project_id);
 
   const issueParentState = getProjectStates(parentIssue?.project_id)?.find(
@@ -63,12 +59,10 @@ export const IssueParentDetail = observer(function IssueParentDetail(props: TIss
     issueId: parentIssue.id,
     projectIdentifier,
     sequenceId: parentIssue.sequence_id,
-    isEpic: isParentEpic,
   });
 
   const handleParentIssueClick = () => {
-    if (isParentEpic) router.push(workItemLink);
-    else handleRedirection(workspaceSlug, parentIssue, isMobile);
+    handleRedirection(workspaceSlug, parentIssue, isMobile);
   };
 
   return (

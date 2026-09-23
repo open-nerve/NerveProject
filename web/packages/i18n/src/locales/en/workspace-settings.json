@@ -159,11 +159,6 @@
         "heading": "Imports",
         "description": "Connect and import data from your existing project management tools to streamline your workflow integration."
       },
-      "worklogs": {
-        "title": "Worklogs",
-        "heading": "Worklogs",
-        "description": "Download worklogs AKA timesheets for anyone in any project."
-      },
       "group_syncing": {
         "title": "Group syncing",
         "heading": "Group syncing",
@@ -243,11 +238,6 @@
           "states": "Project states",
           "labels": "Project labels"
         }
-      },
-      "templates": {
-        "title": "Templates",
-        "heading": "Templates",
-        "description": "Save 80% time spent on creating projects, work items, and pages when you use templates."
       },
       "relations": {
         "title": "Relations",

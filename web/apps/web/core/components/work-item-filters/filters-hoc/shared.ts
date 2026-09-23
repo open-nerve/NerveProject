@@ -10,7 +10,7 @@ import type { IWorkItemFilterInstance } from "@plane/shared-state";
 import type { EIssuesStoreType, IIssueFilters, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@plane/types";
 
 export type TSharedWorkItemFiltersProps = {
-  entityType: EIssuesStoreType; // entity type (project, cycle, workspace, teamspace, etc)
+  entityType: EIssuesStoreType; // entity type (project, cycle, workspace, etc)
   filtersToShowByLayout: TWorkItemFilterProperty[];
   updateFilters: (updatedFilters: TWorkItemFilterExpression) => void;
   isTemporary?: boolean;

@@ -52,7 +52,6 @@ export const IssueParentSiblingItem = observer(function IssueParentSiblingItem(p
           {issueDetail.project_id && projectDetails?.identifier && (
             <IssueIdentifier
               projectId={issueDetail.project_id}
-              issueTypeId={issueDetail.type_id}
               projectIdentifier={projectDetails?.identifier}
               issueSequenceId={issueDetail.sequence_id}
               size="xs"

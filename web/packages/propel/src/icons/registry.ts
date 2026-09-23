@@ -41,7 +41,7 @@ import {
 // Misc icons
 import { InfoIcon } from "./misc";
 // Project icons
-import { CycleIcon, EpicIcon, IntakeIcon, ModuleIcon, ViewsIcon, WorkItemsIcon } from "./project";
+import { CycleIcon, IntakeIcon, ModuleIcon, ViewsIcon, WorkItemsIcon } from "./project";
 // Property icons
 import {
   BooleanPropertyIcon,
@@ -89,7 +89,6 @@ export const ICON_REGISTRY = {
 
   // Project icons
   "project.cycle": CycleIcon,
-  "project.epic": EpicIcon,
   "project.intake": IntakeIcon,
   "project.module": ModuleIcon,
   "project.view": ViewsIcon,

@@ -7,8 +7,7 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
-import type { ICycle, IIssueLabel, IModule, IProject, IState, IUserLite, TIssueServiceType } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
+import type { ICycle, IIssueLabel, IModule, IProject, IState, IUserLite } from "@plane/types";
 // plane web store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
@@ -43,7 +42,6 @@ import { WorkspaceDraftIssues, WorkspaceDraftIssuesFilter } from "./workspace-dr
 export interface IIssueRootStore {
   currentUserId: string | undefined;
   workspaceSlug: string | undefined;
-  teamspaceId: string | undefined;
   projectId: string | undefined;
   cycleId: string | undefined;
   moduleId: string | undefined;
@@ -61,12 +59,10 @@ export interface IIssueRootStore {
   cycleMap: Record<string, ICycle> | undefined;
 
   rootStore: RootStore;
-  serviceType: TIssueServiceType;
 
   issues: IIssueStore;
 
   issueDetail: IIssueDetail;
-  epicDetail: IIssueDetail;
 
   workspaceIssuesFilter: IWorkspaceIssuesFilter;
   workspaceIssues: IWorkspaceIssues;
@@ -77,9 +73,6 @@ export interface IIssueRootStore {
   profileIssuesFilter: IProfileIssuesFilter;
   profileIssues: IProfileIssues;
 
-  teamIssuesFilter: IProjectIssuesFilter;
-  teamIssues: IProjectIssues;
-
   projectIssuesFilter: IProjectIssuesFilter;
   projectIssues: IProjectIssues;
 
@@ -89,12 +82,6 @@ export interface IIssueRootStore {
   moduleIssuesFilter: IModuleIssuesFilter;
   moduleIssues: IModuleIssues;
 
-  teamViewIssuesFilter: IProjectViewIssuesFilter;
-  teamViewIssues: IProjectViewIssues;
-
-  teamProjectWorkItemsFilter: IProjectIssuesFilter;
-  teamProjectWorkItems: IProjectIssues;
-
   projectViewIssuesFilter: IProjectViewIssuesFilter;
   projectViewIssues: IProjectViewIssues;
 
@@ -103,15 +90,11 @@ export interface IIssueRootStore {
 
   issueKanBanView: IIssueKanBanViewStore;
   issueCalendarView: ICalendarStore;
-
-  projectEpicsFilter: IProjectIssuesFilter;
-  projectEpics: IProjectIssues;
 }
 
 export class IssueRootStore implements IIssueRootStore {
   currentUserId: string | undefined = undefined;
   workspaceSlug: string | undefined = undefined;
-  teamspaceId: string | undefined = undefined;
   projectId: string | undefined = undefined;
   cycleId: string | undefined = undefined;
   moduleId: string | undefined = undefined;
@@ -129,12 +112,10 @@ export class IssueRootStore implements IIssueRootStore {
   cycleMap: Record<string, ICycle> | undefined = undefined;
 
   rootStore: RootStore;
-  serviceType: TIssueServiceType;
 
   issues: IIssueStore;
 
   issueDetail: IIssueDetail;
-  epicDetail: IIssueDetail;
 
   workspaceIssuesFilter: IWorkspaceIssuesFilter;
   workspaceIssues: IWorkspaceIssues;
@@ -145,9 +126,6 @@ export class IssueRootStore implements IIssueRootStore {
   profileIssuesFilter: IProfileIssuesFilter;
   profileIssues: IProfileIssues;
 
-  teamIssuesFilter: IProjectIssuesFilter;
-  teamIssues: IProjectIssues;
-
   projectIssuesFilter: IProjectIssuesFilter;
   projectIssues: IProjectIssues;
 
@@ -157,14 +135,8 @@ export class IssueRootStore implements IIssueRootStore {
   moduleIssuesFilter: IModuleIssuesFilter;
   moduleIssues: IModuleIssues;
 
-  teamViewIssuesFilter: IProjectViewIssuesFilter;
-  teamViewIssues: IProjectViewIssues;
-
   projectViewIssuesFilter: IProjectViewIssuesFilter;
   projectViewIssues: IProjectViewIssues;
-
-  teamProjectWorkItemsFilter: IProjectIssuesFilter;
-  teamProjectWorkItems: IProjectIssues;
 
   archivedIssuesFilter: IArchivedIssuesFilter;
   archivedIssues: IArchivedIssues;
@@ -172,13 +144,9 @@ export class IssueRootStore implements IIssueRootStore {
   issueKanBanView: IIssueKanBanViewStore;
   issueCalendarView: ICalendarStore;
 
-  projectEpicsFilter: IProjectIssuesFilter;
-  projectEpics: IProjectIssues;
-
-  constructor(rootStore: RootStore, serviceType: TIssueServiceType = EIssueServiceType.ISSUES) {
+  constructor(rootStore: RootStore) {
     makeObservable(this, {
       workspaceSlug: observable.ref,
-      teamspaceId: observable.ref,
       projectId: observable.ref,
       cycleId: observable.ref,
       moduleId: observable.ref,
@@ -196,13 +164,11 @@ export class IssueRootStore implements IIssueRootStore {
       cycleMap: observable,
     });
 
-    this.serviceType = serviceType;
     this.rootStore = rootStore;
 
     autorun(() => {
       if (rootStore?.user?.data?.id) this.currentUserId = rootStore?.user?.data?.id;
       if (this.workspaceSlug !== rootStore.router.workspaceSlug) this.workspaceSlug = rootStore.router.workspaceSlug;
-      if (this.teamspaceId !== rootStore.router.teamspaceId) this.teamspaceId = rootStore.router.teamspaceId;
       if (this.projectId !== rootStore.router.projectId) this.projectId = rootStore.router.projectId;
       if (this.cycleId !== rootStore.router.cycleId) this.cycleId = rootStore.router.cycleId;
       if (this.moduleId !== rootStore.router.moduleId) this.moduleId = rootStore.router.moduleId;
@@ -224,8 +190,7 @@ export class IssueRootStore implements IIssueRootStore {
 
     this.issues = new IssueStore();
 
-    this.issueDetail = new IssueDetail(this, EIssueServiceType.ISSUES);
-    this.epicDetail = new IssueDetail(this, EIssueServiceType.EPICS);
+    this.issueDetail = new IssueDetail(this);
 
     this.workspaceIssuesFilter = new WorkspaceIssuesFilter(this);
     this.workspaceIssues = new WorkspaceIssues(this, this.workspaceIssuesFilter);
@@ -239,31 +204,19 @@ export class IssueRootStore implements IIssueRootStore {
     this.projectIssuesFilter = new ProjectIssuesFilter(this);
     this.projectIssues = new ProjectIssues(this, this.projectIssuesFilter);
 
-    this.teamIssuesFilter = new ProjectIssuesFilter(this);
-    this.teamIssues = new ProjectIssues(this, this.teamIssuesFilter);
-
     this.cycleIssuesFilter = new CycleIssuesFilter(this);
     this.cycleIssues = new CycleIssues(this, this.cycleIssuesFilter);
 
     this.moduleIssuesFilter = new ModuleIssuesFilter(this);
     this.moduleIssues = new ModuleIssues(this, this.moduleIssuesFilter);
 
-    this.teamViewIssuesFilter = new ProjectViewIssuesFilter(this);
-    this.teamViewIssues = new ProjectViewIssues(this, this.teamViewIssuesFilter);
-
     this.projectViewIssuesFilter = new ProjectViewIssuesFilter(this);
     this.projectViewIssues = new ProjectViewIssues(this, this.projectViewIssuesFilter);
-
-    this.teamProjectWorkItemsFilter = new ProjectIssuesFilter(this);
-    this.teamProjectWorkItems = new ProjectIssues(this, this.teamProjectWorkItemsFilter);
 
     this.archivedIssuesFilter = new ArchivedIssuesFilter(this);
     this.archivedIssues = new ArchivedIssues(this, this.archivedIssuesFilter);
 
     this.issueKanBanView = new IssueKanBanViewStore(this);
     this.issueCalendarView = new CalendarStore(this);
-
-    this.projectEpicsFilter = new ProjectIssuesFilter(this);
-    this.projectEpics = new ProjectIssues(this, this.projectEpicsFilter);
   }
 }

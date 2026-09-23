@@ -159,11 +159,6 @@
         "heading": "导入",
         "description": "连接并从现有的项目管理工具导入数据，以简化您的工作流集成。"
       },
-      "worklogs": {
-        "title": "工作日志",
-        "heading": "工作日志",
-        "description": "为任何项目中的任何人下载工作日志（即工时表）。"
-      },
       "group_syncing": {
         "title": "组同步",
         "heading": "组同步",
@@ -243,11 +238,6 @@
           "states": "项目状态",
           "labels": "项目标签"
         }
-      },
-      "templates": {
-        "title": "模板",
-        "heading": "模板",
-        "description": "使用模板可节省 80% 创建项目、工作项和页面的时间。"
       },
       "relations": {
         "title": "关系",

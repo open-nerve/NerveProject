@@ -51,7 +51,6 @@ export const IssueParentTag = observer(function IssueParentTag(props: TIssuePare
               {selectedParentIssue?.project_id && (
                 <IssueIdentifier
                   projectId={selectedParentIssue.project_id}
-                  issueTypeId={selectedParentIssue.type_id}
                   projectIdentifier={selectedParentIssue?.project__identifier}
                   issueSequenceId={selectedParentIssue.sequence_id}
                   size="xs"

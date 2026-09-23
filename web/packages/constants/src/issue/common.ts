@@ -35,8 +35,6 @@ export enum EIssueGroupByToServerOptions {
   "target_date" = "target_date",
   "project" = "project_id",
   "created_by" = "created_by",
-  // eslint-disable-next-line @typescript-eslint/no-duplicate-enum-values
-  "team_project" = "project_id",
 }
 
 export enum EIssueGroupBYServerToProperty {
@@ -95,15 +93,11 @@ export const DRAG_ALLOWED_GROUPS: TIssueGroupByOptions[] = [
 ];
 
 export type TCreateModalStoreTypes =
-  | EIssuesStoreType.TEAM
   | EIssuesStoreType.PROJECT
-  | EIssuesStoreType.TEAM_VIEW
   | EIssuesStoreType.PROJECT_VIEW
   | EIssuesStoreType.PROFILE
   | EIssuesStoreType.CYCLE
-  | EIssuesStoreType.MODULE
-  | EIssuesStoreType.EPIC
-  | EIssuesStoreType.TEAM_PROJECT_WORK_ITEMS;
+  | EIssuesStoreType.MODULE;
 
 export const ISSUE_GROUP_BY_OPTIONS: {
   key: TIssueGroupByOptions;
@@ -112,7 +106,6 @@ export const ISSUE_GROUP_BY_OPTIONS: {
   { key: "state", titleTranslationKey: "common.states" },
   { key: "state_detail.group", titleTranslationKey: "common.state_groups" },
   { key: "priority", titleTranslationKey: "common.priority" },
-  { key: "team_project", titleTranslationKey: "common.team_project" }, // required this on team issues
   { key: "project", titleTranslationKey: "common.project" }, // required this on my issues
   { key: "cycle", titleTranslationKey: "common.cycle" }, // required this on my issues
   { key: "module", titleTranslationKey: "common.module" }, // required this on my issues
@@ -149,7 +142,6 @@ export const ISSUE_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = 
   "updated_on",
   "modules",
   "cycle",
-  "issue_type",
 ];
 
 export const SUB_ISSUES_DISPLAY_PROPERTIES_KEYS: (keyof IIssueDisplayProperties)[] = [
@@ -342,6 +334,5 @@ export const FILTER_TO_ISSUE_MAP: Partial<Record<keyof IIssueFilterOptions, keyo
   module: "module_ids",
   project: "project_id",
   state: "state_id",
-  issue_type: "type_id",
   state_group: "state__group",
 } as const;

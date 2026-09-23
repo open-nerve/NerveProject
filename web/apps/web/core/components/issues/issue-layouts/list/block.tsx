@@ -15,19 +15,16 @@ import { ChevronRightOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TIssue, IIssueDisplayProperties, TIssueMap } from "@plane/types";
-import { EIssueServiceType } from "@plane/types";
 // ui
 import { Spinner, ControlLink, Row } from "@plane/ui";
 import { cn, generateWorkItemLink } from "@plane/utils";
 // components
-import { MultipleSelectEntityAction } from "@/components/core/multiple-select";
 import { IssueProperties } from "@/components/issues/issue-layouts/properties";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
-import type { TSelectionHelper } from "@/hooks/use-multiple-select";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { calculateIdentifierWidth } from "../utils";
 import type { TRenderQuickActions } from "./list-view-types";
@@ -44,11 +41,9 @@ interface IssueBlockProps {
   spacingLeft?: number;
   isExpanded: boolean;
   setExpanded: Dispatch<SetStateAction<boolean>>;
-  selectionHelpers: TSelectionHelper;
   isCurrentBlockDragging: boolean;
   setIsCurrentBlockDragging: React.Dispatch<React.SetStateAction<boolean>>;
   canDrag: boolean;
-  isEpic?: boolean;
 }
 
 export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
@@ -64,27 +59,19 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     spacingLeft = 14,
     isExpanded,
     setExpanded,
-    selectionHelpers,
     isCurrentBlockDragging,
     setIsCurrentBlockDragging,
     canDrag,
-    isEpic = false,
   } = props;
   // ref
   const issueRef = useRef<HTMLDivElement | null>(null);
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
+  const { workspaceSlug: routerWorkspaceSlug } = useParams();
   const workspaceSlug = routerWorkspaceSlug?.toString();
-  const projectId = routerProjectId?.toString();
   // hooks
   const { sidebarCollapsed: isSidebarCollapsed } = useAppTheme();
   const { getProjectIdentifierById, currentProjectNextSequenceId } = useProject();
-  const {
-    getIsIssuePeeked,
-    peekIssue,
-    setPeekIssue,
-    subIssues: subIssuesStore,
-  } = useIssueDetail(isEpic ? EIssueServiceType.EPICS : EIssueServiceType.ISSUES);
+  const { getIsIssuePeeked, peekIssue, setPeekIssue, subIssues: subIssuesStore } = useIssueDetail();
 
   const handleIssuePeekOverview = (issue: TIssue) =>
     workspaceSlug &&
@@ -131,10 +118,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   if (!issue) return null;
 
   const projectIdentifier = getProjectIdentifierById(issue.project_id);
-  const isIssueSelected = selectionHelpers.getIsEntitySelected(issue.id);
-  const isIssueActive = selectionHelpers.getIsEntityActive(issue.id);
   const isSubIssue = nestingLevel !== 0;
-  const canSelectIssues = canEditIssueProperties && !selectionHelpers.isSelectionDisabled;
 
   const marginLeft = `${spacingLeft}px`;
 
@@ -165,7 +149,6 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     issueId,
     projectIdentifier,
     sequenceId: issue?.sequence_id,
-    isEpic,
     isArchived: !!issue?.archived_at,
   });
   return (
@@ -182,9 +165,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
           "group/list-block relative flex min-h-11 flex-col gap-3 bg-layer-transparent py-3 text-13 transition-colors hover:bg-layer-transparent-hover",
           {
             "border-accent-strong": getIsIssuePeeked(issue.id) && peekIssue?.nestingLevel === nestingLevel,
-            "border-strong-1": isIssueActive,
-            "last:border-b-transparent": !getIsIssuePeeked(issue.id) && !isIssueActive,
-            "bg-accent-primary/5 hover:bg-accent-primary/10": isIssueSelected,
+            "last:border-b-transparent": !getIsIssuePeeked(issue.id),
             "bg-layer-1": isCurrentBlockDragging,
             "md:flex-row md:items-center": isSidebarCollapsed,
             "lg:flex-row lg:items-center": !isSidebarCollapsed,
@@ -205,30 +186,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
         <div className="flex w-full gap-2 truncate">
           <div className="flex flex-grow items-center gap-0.5 truncate">
             <div className="flex items-center gap-1" style={isSubIssue ? { marginLeft } : {}}>
-              {/* select checkbox */}
-              {projectId && canSelectIssues && !isEpic && (
-                <Tooltip
-                  label="Only work items within the current project can be selected."
-                  layout="stacked"
-                  disabled={issue.project_id === projectId}
-                >
-                  <div className="absolute left-1 grid w-3.5 flex-shrink-0 place-items-center">
-                    <MultipleSelectEntityAction
-                      className={cn(
-                        "pointer-events-none opacity-0 transition-opacity group-hover/list-block:pointer-events-auto group-hover/list-block:opacity-100",
-                        {
-                          "pointer-events-auto opacity-100": isIssueSelected,
-                        }
-                      )}
-                      groupId={groupId}
-                      id={issue.id}
-                      selectionHelpers={selectionHelpers}
-                      disabled={issue.project_id !== projectId}
-                    />
-                  </div>
-                </Tooltip>
-              )}
-              {displayProperties && (displayProperties.key || displayProperties.issue_type) && (
+              {displayProperties && (
                 <div className="flex-shrink-0" style={{ minWidth: `${keyMinWidth}px` }}>
                   {issue.project_id && (
                     <IssueIdentifier
@@ -244,7 +202,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
 
               {/* sub-issues chevron */}
               <div className="grid size-4 flex-shrink-0 place-items-center">
-                {subIssuesCount > 0 && !isEpic && (
+                {subIssuesCount > 0 && (
                   <button
                     type="button"
                     className="grid size-4 place-items-center rounded-xs text-placeholder hover:text-tertiary"
@@ -292,7 +250,6 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
                 updateIssue={updateIssue}
                 displayProperties={displayProperties}
                 activeLayout="List"
-                isEpic={isEpic}
               />
               {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
               <div

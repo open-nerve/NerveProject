@@ -96,7 +96,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
               projectId={projectId ?? undefined}
               buttonVariant="border-with-text"
               tabIndex={getIndex("state_id")}
-              isForWorkItemCreation={!id}
             />
           </div>
         )}
@@ -250,7 +249,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
                 {selectedParentIssue?.project_id && (
                   <IssueIdentifier
                     projectId={selectedParentIssue.project_id}
-                    issueTypeId={selectedParentIssue.type_id}
                     projectIdentifier={selectedParentIssue?.project__identifier}
                     issueSequenceId={selectedParentIssue.sequence_id}
                     size="xs"

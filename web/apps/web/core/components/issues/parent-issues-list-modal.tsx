@@ -33,21 +33,12 @@ type Props = {
   onChange: (issue: ISearchIssueResponse) => void;
   projectId: string | undefined;
   issueId?: string;
-  searchEpic?: boolean;
 };
 
 // services
 const projectService = new ProjectService();
 
-export function ParentIssuesListModal({
-  isOpen,
-  handleClose: onClose,
-  value,
-  onChange,
-  projectId,
-  issueId,
-  searchEpic = false,
-}: Props) {
+export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onChange, projectId, issueId }: Props) {
   // i18n
   const { t } = useTranslation();
 
@@ -76,10 +67,9 @@ export function ParentIssuesListModal({
     projectService
       .projectIssuesSearch(workspaceSlug, projectId, {
         search: debouncedSearchTerm,
-        parent: searchEpic ? undefined : true,
+        parent: true,
         issue_id: issueId,
         workspace_search: false,
-        epic: searchEpic ? true : undefined,
       })
       .then((res) => setIssues(res))
       .finally(() => {
@@ -167,7 +157,6 @@ export function ParentIssuesListModal({
                         <span className="flex-shrink-0">
                           <IssueIdentifier
                             projectId={issue.project_id}
-                            issueTypeId={issue.type_id}
                             projectIdentifier={issue.project__identifier}
                             issueSequenceId={issue.sequence_id}
                             size="xs"

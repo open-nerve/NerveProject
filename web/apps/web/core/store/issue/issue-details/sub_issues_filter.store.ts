@@ -21,7 +21,6 @@ import type { IssueSubIssuesStore } from "./sub_issues.store";
 
 export const DEFAULT_DISPLAY_PROPERTIES = {
   key: true,
-  issue_type: true,
   assignee: true,
   start_date: true,
   due_date: true,

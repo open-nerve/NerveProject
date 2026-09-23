@@ -102,14 +102,7 @@ export const handleIssuesMutation: THandleIssuesMutation = (
 
 export const handleIssueQueryParamsByLayout = (
   layout: EIssueLayoutTypes | undefined,
-  viewType:
-    | "my_issues"
-    | "issues"
-    | "profile_issues"
-    | "archived_issues"
-    | "draft_issues"
-    | "team_issues"
-    | "team_project_work_items"
+  viewType: "my_issues" | "issues" | "profile_issues" | "archived_issues" | "draft_issues"
 ): TIssueParams[] | null => {
   const queryParams: TIssueParams[] = ["filters"];
 
@@ -295,7 +288,6 @@ export const getComputedDisplayProperties = (
   updated_on: displayProperties?.updated_on ?? true,
   modules: displayProperties?.modules ?? true,
   cycle: displayProperties?.cycle ?? true,
-  issue_type: displayProperties?.issue_type ?? true,
 });
 
 export const generateWorkItemLink = ({
@@ -305,7 +297,6 @@ export const generateWorkItemLink = ({
   projectIdentifier,
   sequenceId,
   isArchived = false,
-  isEpic = false,
 }: {
   workspaceSlug: string | undefined | null;
   projectId: string | undefined | null;
@@ -313,13 +304,11 @@ export const generateWorkItemLink = ({
   projectIdentifier: string | undefined | null;
   sequenceId: string | number | undefined | null;
   isArchived?: boolean;
-  isEpic?: boolean;
 }): string => {
   const archiveIssueLink = `/${workspaceSlug}/projects/${projectId}/archives/issues/${issueId}`;
   const workItemLink = `/${workspaceSlug}/browse/${projectIdentifier}-${sequenceId}/`;
-  const epicLink = workItemLink;
 
-  return isArchived ? archiveIssueLink : isEpic ? epicLink : workItemLink;
+  return isArchived ? archiveIssueLink : workItemLink;
 };
 
 export const getIssuePriorityFilters = (priorityKey: TIssuePriorities): TIssueFilterPriorityObject | undefined => {

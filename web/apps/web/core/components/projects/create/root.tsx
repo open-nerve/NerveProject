@@ -30,7 +30,6 @@ export type TCreateProjectFormProps = {
   onClose: () => void;
   handleNextStep: (projectId: string) => void;
   data?: Partial<TProject>;
-  templateId?: string;
   updateCoverImageStatus: (projectId: string, coverImage: string) => Promise<void>;
 };
 

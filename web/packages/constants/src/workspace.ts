@@ -49,8 +49,6 @@ export const RESTRICTED_URLS: string[] = [
   "config",
   "workflow",
   "workflows",
-  "epics",
-  "epic",
   "story",
   "mobile",
   "dashboard",
