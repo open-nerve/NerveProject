@@ -119,10 +119,6 @@
     "projects_archived": {
       "title": "没有已归档项目",
       "description": "看起来您的所有项目仍然活跃 — 做得好!"
-    },
-    "project_overview_state_sidebar": {
-      "title": "启用项目状态",
-      "description": "启用项目状态以查看和管理状态、优先级、截止日期等属性。"
     }
   },
   "settings_empty_state": {
@@ -145,9 +141,6 @@
       "title": "尚未添加 Webhook",
       "description": "在项目事件发生时自动向外部服务发送通知。",
       "cta_primary": "添加 webhook"
-    },
-    "group_syncing": {
-      "title": "暂无组映射"
     }
   }
 }

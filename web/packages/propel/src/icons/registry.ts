@@ -61,7 +61,6 @@ import {
   UserCirclePropertyIcon,
   UserPropertyIcon,
   UserSquarePropertyIcon,
-  WorkflowsPropertyIcon,
 } from "./properties";
 // Sub-brand icons
 import { CopyLinkIcon } from "./actions/copy-link";
@@ -119,7 +118,6 @@ export const ICON_REGISTRY = {
   "property.user-circle": UserCirclePropertyIcon,
   "property.user": UserPropertyIcon,
   "property.user-square": UserSquarePropertyIcon,
-  "property.workflows": WorkflowsPropertyIcon,
   "property.label-filled": LabelFilledIcon,
 
   // Action icons

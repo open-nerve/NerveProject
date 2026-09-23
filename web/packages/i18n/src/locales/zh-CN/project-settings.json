@@ -129,13 +129,6 @@
           }
         }
       },
-      "milestones": {
-        "title": "里程碑",
-        "short_title": "里程碑",
-        "description": "里程碑提供了一个层，用于将工作项对齐到共享的完成日期。",
-        "toggle_title": "启用里程碑",
-        "toggle_description": "按里程碑截止日期组织工作项。"
-      },
       "toasts": {
         "loading": "正在更新项目功能...",
         "success": "项目功能更新成功。",

@@ -84,8 +84,7 @@
       "nav_project_intake": "转到收集",
       "nav_project_archives": "转到项目归档",
       "open_project_setting": "打开项目设置",
-      "nav_project_settings": "转到项目设置",
-      "nav_project_overview": "转到项目概览"
+      "nav_project_settings": "转到项目设置"
     },
     "account_actions": {
       "sign_out": "退出登录",

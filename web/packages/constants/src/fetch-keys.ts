@@ -137,6 +137,3 @@ export const PROJECT_VIEWS = (projectId: string, projectRole: EUserPermissions |
 
 export const PROJECT_MEMBER_PREFERENCES = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_MEMBER_PREFERENCES_${projectId.toString().toUpperCase()}_${projectRole}`;
-
-export const PROJECT_MILESTONES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MILESTONES_${projectId.toString().toUpperCase()}_${projectRole}`;

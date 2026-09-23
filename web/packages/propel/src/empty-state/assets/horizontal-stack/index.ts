@@ -11,7 +11,6 @@ export * from "./members";
 export * from "./project";
 export * from "./settings";
 export * from "./state";
-export * from "./template";
 export * from "./token";
 export * from "./unknown";
 export * from "./update";

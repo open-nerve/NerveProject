@@ -18,8 +18,6 @@ import { ProjectService, ProjectStateService, ProjectArchiveService } from "@/se
 // store
 import type { RootStore } from "../root.store";
 
-type ProjectOverviewCollapsible = "links" | "attachments" | "milestones";
-
 export interface IProjectStore {
   // observables
   isUpdatingProject: boolean;
@@ -41,14 +39,6 @@ export interface IProjectStore {
   getPartialProjectById: (projectId: string | undefined | null) => TPartialProject | undefined;
   getProjectIdentifierById: (projectId: string | undefined | null) => string;
   getProjectByIdentifier: (projectIdentifier: string) => TProject | undefined;
-  // collapsible
-  openCollapsibleSection: ProjectOverviewCollapsible[];
-  lastCollapsibleAction: ProjectOverviewCollapsible | null;
-
-  setOpenCollapsibleSection: (section: ProjectOverviewCollapsible[]) => void;
-  setLastCollapsibleAction: (section: ProjectOverviewCollapsible) => void;
-  toggleOpenCollapsibleSection: (section: ProjectOverviewCollapsible) => void;
-
   // helper actions
   processProjectAfterCreation: (workspaceSlug: string, data: TProject) => void;
 
@@ -76,8 +66,6 @@ export class ProjectStore implements IProjectStore {
   loader: TLoader = "init-loader";
   fetchStatus: TFetchStatus = undefined;
   projectMap: Record<string, TProject> = {};
-  openCollapsibleSection: ProjectOverviewCollapsible[] = ["milestones"];
-  lastCollapsibleAction: ProjectOverviewCollapsible | null = null;
 
   // root store
   rootStore: RootStore;
@@ -95,8 +83,6 @@ export class ProjectStore implements IProjectStore {
       loader: observable.ref,
       fetchStatus: observable.ref,
       projectMap: observable,
-      openCollapsibleSection: observable.ref,
-      lastCollapsibleAction: observable.ref,
       // computed
       isInitializingProjects: computed,
       filteredProjectIds: computed,
@@ -121,10 +107,6 @@ export class ProjectStore implements IProjectStore {
       // CRUD actions
       createProject: action,
       updateProject: action,
-      // collapsible actions
-      setOpenCollapsibleSection: action,
-      setLastCollapsibleAction: action,
-      toggleOpenCollapsibleSection: action,
     });
     // root store
     this.rootStore = _rootStore;
@@ -261,23 +243,6 @@ export class ProjectStore implements IProjectStore {
       .map((project) => project.id);
     return projectIds;
   }
-
-  setOpenCollapsibleSection = (section: ProjectOverviewCollapsible[]) => {
-    this.openCollapsibleSection = section;
-    if (this.lastCollapsibleAction) this.lastCollapsibleAction = null;
-  };
-
-  setLastCollapsibleAction = (section: ProjectOverviewCollapsible) => {
-    this.openCollapsibleSection = [...this.openCollapsibleSection, section];
-  };
-
-  toggleOpenCollapsibleSection = (section: ProjectOverviewCollapsible) => {
-    if (this.openCollapsibleSection && this.openCollapsibleSection.includes(section)) {
-      this.openCollapsibleSection = this.openCollapsibleSection.filter((s) => s !== section);
-    } else {
-      this.openCollapsibleSection = [...this.openCollapsibleSection, section];
-    }
-  };
 
   /**
    * @description process project after creation

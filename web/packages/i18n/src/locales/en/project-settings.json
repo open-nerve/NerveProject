@@ -129,13 +129,6 @@
           }
         }
       },
-      "milestones": {
-        "title": "Milestones",
-        "short_title": "Milestones",
-        "description": "Milestones provide a layer to align work items toward shared completion dates.",
-        "toggle_title": "Enable milestones",
-        "toggle_description": "Organize work items by milestone deadlines."
-      },
       "toasts": {
         "loading": "Updating project feature...",
         "success": "Project feature updated successfully.",

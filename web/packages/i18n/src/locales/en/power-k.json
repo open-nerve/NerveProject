@@ -84,8 +84,7 @@
       "nav_project_intake": "Go to intake",
       "nav_project_archives": "Go to project archives",
       "open_project_setting": "Open a project setting",
-      "nav_project_settings": "Go to project settings",
-      "nav_project_overview": "Go to project overview"
+      "nav_project_settings": "Go to project settings"
     },
     "account_actions": {
       "sign_out": "Sign out",

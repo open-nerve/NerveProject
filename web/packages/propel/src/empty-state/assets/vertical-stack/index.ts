@@ -12,7 +12,6 @@ export * from "./customer";
 export * from "./cycle";
 export * from "./dashboard";
 export * from "./draft";
-export * from "./initiative";
 export * from "./invalid-link";
 export * from "./module";
 export * from "./no-access";
