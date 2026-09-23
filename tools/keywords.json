@@ -399,6 +399,41 @@
           ]
         }
       }
+    },
+    {
+      "id": "auto-close",
+      "phase": "M1/P2",
+      "why": "项目自动化里的自动关闭：close_in 个月没有动静的未完成工作项被移到项目指定的状态；自动归档（archive_in）保留。default_state 在 Plane 里只是自动关闭的目标状态，新建工作项的默认状态是 State.default，所以 defaultState 这类变量名不在规则里",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "close_in|auto[-_ ]?close|default_state", "flags": "i" },
+      "samples": {
+        "hit": [
+          "  close_in?: number;",
+          "  default_state?: string | null;",
+          "      \"auto-close\": {",
+          "        \"auto_close_status\": \"自动关闭状态\"",
+          "        \"title\": \"Auto close work items\",",
+          "import { AutoArchiveAutomation, AutoCloseAutomation } from \"@/components/automation\";"
+        ],
+        "miss": [
+          "  archive_in?: number;",
+          "  const defaultState = projectStates?.[0]?.id;",
+          "    const defaultState = projectState.projectStates?.find((state) => state.default);",
+          "import { AutoArchiveAutomation } from \"@/components/automation\";",
+          "                    <Field name=\"archive_in\" invalid={Boolean(errors.archive_in)}>"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/types/src/project/projects.ts",
+            "web/packages/i18n/src/locales/en/project-settings.json"
+          ],
+          "miss": [
+            "web/apps/web/app/assets/logo.svg",
+            "tools/plane-schema/plane-v1.4.2-schema.sql",
+            "docs/v0/M1-frontend-trim/M1-design.md"
+          ]
+        }
+      }
     }
   ],
   "exceptions": [

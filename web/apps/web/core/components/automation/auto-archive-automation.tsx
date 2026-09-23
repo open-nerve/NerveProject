@@ -62,7 +62,6 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(pro
   return (
     <>
       <SelectMonthModal
-        type="auto-archive"
         initialValues={initialValues}
         isOpen={monthModal}
         handleClose={() => setmonthModal(false)}

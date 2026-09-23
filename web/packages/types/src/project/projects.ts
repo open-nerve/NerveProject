@@ -44,14 +44,12 @@ export interface IPartialProject {
 
 export interface IProject extends IPartialProject {
   archive_in?: number;
-  close_in?: number;
   // only for uploading the cover image
   cover_image_asset?: null;
   cover_image?: string;
   // only for rendering the cover image
   readonly cover_image_url?: string;
   default_assignee?: IUser | string | null;
-  default_state?: string | null;
   description?: string;
   anchor?: string | null;
   is_favorite?: boolean;
