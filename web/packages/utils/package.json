@@ -25,7 +25,6 @@
     "@makeplane/propel": "catalog:",
     "@plane/constants": "workspace:*",
     "@plane/types": "workspace:*",
-    "chroma-js": "catalog:",
     "clsx": "catalog:",
     "date-fns": "catalog:",
     "hast": "catalog:",
@@ -45,7 +44,6 @@
   },
   "devDependencies": {
     "@plane/typescript-config": "workspace:*",
-    "@types/chroma-js": "catalog:",
     "@types/hast": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/mdast": "catalog:",
