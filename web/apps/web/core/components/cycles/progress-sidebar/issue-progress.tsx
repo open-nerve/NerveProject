@@ -12,7 +12,7 @@ import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
-import type { ICycle, TCyclePlotType, TProgressSnapshot } from "@plane/types";
+import type { ICycle, TProgressSnapshot } from "@plane/types";
 import { EIssuesStoreType } from "@plane/types";
 import { getDate } from "@plane/utils";
 // hooks
@@ -24,23 +24,8 @@ import { CycleProgressStats } from "./progress-stats";
 import { SidebarChart } from "./sidebar-chart";
 
 type TCycleProgressProps = {
-  workspaceSlug: string;
-  projectId: string;
   cycleId: string;
 };
-type Options = {
-  value: string;
-  label: string;
-};
-
-export const cycleEstimateOptions: Options[] = [
-  { value: "issues", label: "Work items" },
-  { value: "points", label: "Estimates" },
-];
-export const cycleChartOptions: Options[] = [
-  { value: "burndown", label: "Burn-down" },
-  { value: "burnup", label: "Burn-up" },
-];
 
 export const validateCycleSnapshot = (cycleDetails: ICycle | null): ICycle | null => {
   if (!cycleDetails || cycleDetails === null) return cycleDetails;
@@ -59,14 +44,14 @@ export const validateCycleSnapshot = (cycleDetails: ICycle | null): ICycle | nul
 
 export const CycleProgress = observer(function CycleProgress(props: TCycleProgressProps) {
   // props
-  const { workspaceSlug, projectId, cycleId } = props;
+  const { cycleId } = props;
   // router
   const searchParams = useSearchParams();
   const peekCycle = searchParams.get("peekCycle") || undefined;
   // plane hooks
   const { t } = useTranslation();
   // store hooks
-  const { getPlotTypeByCycleId, getEstimateTypeByCycleId, getCycleById } = useCycle();
+  const { getCycleById } = useCycle();
   const { getFilter, updateFilterValueFromSidebar } = useWorkItemFilters();
   // derived values
   const cycleFilter = getFilter(EIssuesStoreType.CYCLE, cycleId);
@@ -74,26 +59,17 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
   const selectedLabels = cycleFilter?.findFirstConditionByPropertyAndOperator("label_id", "in");
   const selectedStateGroups = cycleFilter?.findFirstConditionByPropertyAndOperator("state_group", "in");
   const cycleDetails = validateCycleSnapshot(getCycleById(cycleId));
-  const plotType: TCyclePlotType = getPlotTypeByCycleId(cycleId);
-  const estimateType = getEstimateTypeByCycleId(cycleId);
   const totalIssues = cycleDetails?.total_issues || 0;
-  const totalEstimatePoints = cycleDetails?.total_estimate_points || 0;
-  const chartDistributionData =
-    estimateType === "points" ? cycleDetails?.estimate_distribution : cycleDetails?.distribution || undefined;
+  const chartDistributionData = cycleDetails?.distribution || undefined;
   const groupedIssues = useMemo(
     () => ({
-      backlog:
-        estimateType === "points" ? cycleDetails?.backlog_estimate_points || 0 : cycleDetails?.backlog_issues || 0,
-      unstarted:
-        estimateType === "points" ? cycleDetails?.unstarted_estimate_points || 0 : cycleDetails?.unstarted_issues || 0,
-      started:
-        estimateType === "points" ? cycleDetails?.started_estimate_points || 0 : cycleDetails?.started_issues || 0,
-      completed:
-        estimateType === "points" ? cycleDetails?.completed_estimate_points || 0 : cycleDetails?.completed_issues || 0,
-      cancelled:
-        estimateType === "points" ? cycleDetails?.cancelled_estimate_points || 0 : cycleDetails?.cancelled_issues || 0,
+      backlog: cycleDetails?.backlog_issues || 0,
+      unstarted: cycleDetails?.unstarted_issues || 0,
+      started: cycleDetails?.started_issues || 0,
+      completed: cycleDetails?.completed_issues || 0,
+      cancelled: cycleDetails?.cancelled_issues || 0,
     }),
-    [estimateType, cycleDetails]
+    [cycleDetails]
   );
   const cycleStartDate = getDate(cycleDetails?.start_date);
   const cycleEndDate = getDate(cycleDetails?.end_date);
@@ -130,9 +106,7 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
               <Disclosure.Panel className="flex flex-col divide-y divide-subtle-1">
                 {cycleStartDate && cycleEndDate ? (
                   <>
-                    {isCycleDateValid && (
-                      <SidebarChart workspaceSlug={workspaceSlug} projectId={projectId} cycleId={cycleId} />
-                    )}
+                    {isCycleDateValid && <SidebarChart cycleId={cycleId} />}
                     {/* progress detailed view */}
                     {chartDistributionData && (
                       <div className="w-full py-4">
@@ -147,7 +121,6 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
                           )}
                           isEditable={Boolean(!peekCycle) && cycleFilter !== undefined}
                           noBackground={false}
-                          plotType={plotType}
                           roundedTab={false}
                           selectedFilters={{
                             assignees: selectedAssignees,
@@ -155,7 +128,7 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
                             stateGroups: selectedStateGroups,
                           }}
                           size="xs"
-                          totalIssuesCount={estimateType === "points" ? totalEstimatePoints || 0 : totalIssues || 0}
+                          totalIssuesCount={totalIssues}
                         />
                       </div>
                     )}

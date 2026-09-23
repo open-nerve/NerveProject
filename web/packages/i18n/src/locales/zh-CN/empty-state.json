@@ -172,11 +172,6 @@
     }
   },
   "settings_empty_state": {
-    "estimates": {
-      "title": "暂无估算",
-      "description": "定义团队如何衡量工作量,并在所有工作项中一致地跟踪它。",
-      "cta_primary": "添加估算系统"
-    },
     "labels": {
       "title": "暂无标签",
       "description": "创建个性化标签以有效分类和管理工作项。",

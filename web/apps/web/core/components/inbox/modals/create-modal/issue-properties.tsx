@@ -14,7 +14,6 @@ import { renderFormattedPayloadDate, getDate, getTabIndex } from "@plane/utils";
 // components
 import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
-import { EstimateDropdown } from "@/components/dropdowns/estimate";
 import { IntakeStateDropdown } from "@/components/dropdowns/intake-state/dropdown";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
@@ -23,7 +22,6 @@ import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-mo
 import { IssueLabelSelect } from "@/components/issues/select";
 // helpers
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type TInboxIssueProperties = {
@@ -36,7 +34,6 @@ type TInboxIssueProperties = {
 export const InboxIssueProperties = observer(function InboxIssueProperties(props: TInboxIssueProperties) {
   const { projectId, data, handleData, isVisible = false } = props;
   // hooks
-  const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const { isMobile } = usePlatformOS();
   // states
   const [parentIssueModalOpen, setParentIssueModalOpen] = useState(false);
@@ -153,20 +150,6 @@ export const InboxIssueProperties = observer(function InboxIssueProperties(props
             multiple
             showCount
             tabIndex={getIndex("module_ids")}
-          />
-        </div>
-      )}
-
-      {/* estimate */}
-      {isVisible && projectId && areEstimateEnabledByProjectId(projectId) && (
-        <div className="h-7">
-          <EstimateDropdown
-            value={data?.estimate_point || undefined}
-            onChange={(estimatePoint) => handleData("estimate_point", estimatePoint)}
-            projectId={projectId}
-            buttonVariant="border-with-text"
-            placeholder="Estimate"
-            tabIndex={getIndex("estimate_point")}
           />
         </div>
       )}

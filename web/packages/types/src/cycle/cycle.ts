@@ -19,12 +19,6 @@ export type TCycleDistributionBase = {
   completed_issues: number;
 };
 
-export type TCycleEstimateDistributionBase = {
-  total_estimates: number;
-  pending_estimates: number;
-  completed_estimates: number;
-};
-
 export type TCycleAssigneesDistribution = {
   assignee_id: string | null;
   avatar_url: string | null;
@@ -45,11 +39,6 @@ export type TCycleDistribution = {
   labels: (TCycleLabelsDistribution & TCycleDistributionBase)[];
 };
 
-export type TCycleEstimateDistribution = {
-  assignees: (TCycleAssigneesDistribution & TCycleEstimateDistributionBase)[];
-  completion_chart: TCycleCompletionChartDistribution;
-  labels: (TCycleLabelsDistribution & TCycleEstimateDistributionBase)[];
-};
 export type TCycleProgress = {
   date: string;
   started: number;
@@ -70,14 +59,7 @@ export type TProgressSnapshot = {
   started_issues: number;
   unstarted_issues: number;
   cancelled_issues: number;
-  total_estimate_points?: number;
-  completed_estimate_points?: number;
-  backlog_estimate_points: number;
-  started_estimate_points: number;
-  unstarted_estimate_points: number;
-  cancelled_estimate_points: number;
   distribution?: TCycleDistribution;
-  estimate_distribution?: TCycleEstimateDistribution;
 };
 
 export interface IProjectDetails {
@@ -109,8 +91,6 @@ export interface ICycle extends TProgressSnapshot {
   };
   workspace_id: string;
   project_detail: IProjectDetails;
-  progress: any[];
-  version: number;
 }
 
 export interface CycleIssueResponse {
@@ -134,9 +114,6 @@ export type CycleDateCheckData = {
   end_date: string;
   cycle_id?: string;
 };
-
-export type TCycleEstimateType = "issues" | "points";
-export type TCyclePlotType = "burndown" | "burnup";
 
 export type TPublicCycle = {
   id: string;

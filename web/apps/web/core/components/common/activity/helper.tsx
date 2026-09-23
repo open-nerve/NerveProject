@@ -13,7 +13,6 @@ import {
   CyclesOutline,
   DocumentationOutline,
   DueDateOutline,
-  EstimateOutline,
   GitBranchOutline,
   GlobeOutline,
   GridOutline,
@@ -57,7 +56,6 @@ export const iconsMap: ActivityIconMap = {
   attachment: AttachOutline,
   name: TextOutline,
   state: StateOutline,
-  estimate: EstimateOutline,
   cycle: CyclesOutline,
   module: ModuleOutline,
   page: DocumentationOutline,
@@ -149,28 +147,6 @@ export const messages = (activity: TProjectActivity): { message: string | ReactN
         message: (
           <>
             set the state to <span className="font-medium text-primary">{newValue || "none"}</span>
-          </>
-        ),
-      };
-    case "estimate":
-      return {
-        message: (
-          <>
-            {newValue ? (
-              <>
-                set the estimate point to <span className="font-medium text-primary">{newValue}</span>
-              </>
-            ) : (
-              <>
-                removed the estimate point
-                {oldValue && (
-                  <>
-                    {" "}
-                    <span className="font-medium text-primary">{oldValue}</span>
-                  </>
-                )}
-              </>
-            )}
           </>
         ),
       };

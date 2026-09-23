@@ -66,8 +66,6 @@ export const WORKSPACE_CYCLES = (workspaceSlug: string) => `WORKSPACE_CYCLES_${w
 
 export const WORKSPACE_LABELS = (workspaceSlug: string) => `WORKSPACE_LABELS_${workspaceSlug.toUpperCase()}`;
 
-export const WORKSPACE_ESTIMATES = (workspaceSlug: string) => `WORKSPACE_ESTIMATES_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_WORKFLOW_STATES = (workspaceSlug: string) =>
   `WORKSPACE_WORKFLOW_STATES_${workspaceSlug.toUpperCase()}`;
 
@@ -159,9 +157,6 @@ export const PROJECT_STATES = (projectId: string, projectRole: EUserPermissions 
 
 export const PROJECT_INTAKE_STATE = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_INTAKE_STATE_${projectId.toString().toUpperCase()}_${projectRole}`;
-
-export const PROJECT_ESTIMATES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_ESTIMATES_${projectId.toString().toUpperCase()}_${projectRole}`;
 
 export const PROJECT_ALL_CYCLES = (projectId: string, projectRole: EUserPermissions | undefined) =>
   `PROJECT_ALL_CYCLES_${projectId.toString().toUpperCase()}_${projectRole}`;

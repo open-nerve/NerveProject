@@ -16,7 +16,6 @@ import { useMember } from "@/hooks/store/use-member";
 // local imports
 import { PowerKMembersMenu } from "../../../../menus/members";
 import { PowerKWorkItemCyclesMenu } from "./cycles-menu";
-import { PowerKWorkItemEstimatesMenu } from "./estimates-menu";
 import { PowerKWorkItemLabelsMenu } from "./labels-menu";
 import { PowerKWorkItemModulesMenu } from "./modules-menu";
 import { PowerKWorkItemPrioritiesMenu } from "./priorities-menu";
@@ -62,10 +61,6 @@ export const PowerKWorkItemContextBasedPages = observer(function PowerKWorkItemC
           userIds={projectMemberIds ?? undefined}
           value={entityDetails.assignee_ids}
         />
-      )}
-      {/* estimates menu */}
-      {activePage === "update-work-item-estimate" && (
-        <PowerKWorkItemEstimatesMenu handleSelect={handleSelection} workItemDetails={entityDetails} />
       )}
       {/* cycles menu */}
       {activePage === "update-work-item-cycle" && (

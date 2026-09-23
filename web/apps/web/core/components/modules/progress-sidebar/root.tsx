@@ -19,7 +19,7 @@ import {
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, EEstimateSystem } from "@plane/constants";
+import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 // plane types
 import { useTranslation } from "@plane/i18n";
 import { ModuleStatusIcon } from "@plane/propel/icons";
@@ -35,7 +35,6 @@ import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { CreateUpdateModuleLinkModal, ModuleProgress, ModuleLinksList } from "@/components/modules";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useModule } from "@/hooks/store/use-module";
 import { useUserPermissions } from "@/hooks/store/user";
 // plane web constants
@@ -67,13 +66,9 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
   const { allowPermissions } = useUserPermissions();
 
   const { getModuleById, updateModuleDetails, createModuleLink, updateModuleLink, deleteModuleLink } = useModule();
-  const { areEstimateEnabledByProjectId, currentActiveEstimateId, estimateById } = useProjectEstimates();
 
   // derived values
   const moduleDetails = getModuleById(moduleId);
-  const areEstimateEnabled = projectId && areEstimateEnabledByProjectId(projectId.toString());
-  const estimateType = areEstimateEnabled && currentActiveEstimateId && estimateById(currentActiveEstimateId);
-  const isEstimatePointValid = estimateType && estimateType?.type == EEstimateSystem.POINTS ? true : false;
 
   const { reset, control } = useForm({
     defaultValues,
@@ -159,11 +154,6 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
     moduleDetails.total_issues === 0
       ? "0 work items"
       : `${moduleDetails.completed_issues}/${moduleDetails.total_issues}`;
-
-  const issueEstimatePointCount =
-    moduleDetails.total_estimate_points === 0
-      ? "0 work items"
-      : `${moduleDetails.completed_estimate_points}/${moduleDetails.total_estimate_points}`;
 
   const isEditingAllowed = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -343,30 +333,9 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
               <span className="px-1.5 text-13 text-tertiary">{issueCount}</span>
             </div>
           </div>
-
-          {/**
-           * NOTE: Render this section when estimate points of he projects is enabled and the estimate system is points
-           */}
-          {isEstimatePointValid && (
-            <div className="flex items-center justify-start gap-1">
-              <div className="flex w-2/5 items-center justify-start gap-2 text-tertiary">
-                <WorkItemsOutline className="h-4 w-4" />
-                <span className="text-14">{t("points")}</span>
-              </div>
-              <div className="flex h-7 w-3/5 items-center">
-                <span className="px-1.5 text-13 text-tertiary">{issueEstimatePointCount}</span>
-              </div>
-            </div>
-          )}
         </div>
 
-        {workspaceSlug && projectId && moduleDetails?.id && (
-          <ModuleProgress
-            workspaceSlug={workspaceSlug.toString()}
-            projectId={projectId.toString()}
-            moduleId={moduleDetails?.id}
-          />
-        )}
+        {workspaceSlug && projectId && moduleDetails?.id && <ModuleProgress moduleId={moduleDetails?.id} />}
 
         <div className="flex flex-col">
           <div className="flex w-full flex-col items-center justify-start gap-2 border-t border-subtle px-1.5 py-5">

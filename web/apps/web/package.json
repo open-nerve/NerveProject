@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "react-router dev --port 3000",
     "build": "react-router build",
-    "check:lint": "node ../../../tools/lint-cap.mjs 763",
+    "check:lint": "node ../../../tools/lint-cap.mjs 735",
     "check:types": "react-router typegen && tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."

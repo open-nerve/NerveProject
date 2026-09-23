@@ -15,14 +15,12 @@ import { getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from
 // components
 import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
-import { EstimateDropdown } from "@/components/dropdowns/estimate";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // helpers
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useLabel } from "@/hooks/store/use-label";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
@@ -45,7 +43,6 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
   const { getProjectById } = useProject();
   const { labelMap } = useLabel();
   const { addCycleToIssue, addModulesToIssue } = useWorkspaceDraftIssues();
-  const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const { getStateById } = useProjectState();
   const { isMobile } = usePlatformOS();
   const projectDetails = getProjectById(issue.project_id);
@@ -116,9 +113,6 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
     updateIssue(issue.project_id, issue.id, {
       target_date: date ? (renderFormattedPayloadDate(date) ?? undefined) : undefined,
     });
-
-  const handleEstimate = (value: string | undefined) =>
-    issue?.project_id && updateIssue && updateIssue(issue.project_id, issue.id, { estimate_point: value });
 
   if (!issue.project_id) return null;
 
@@ -254,20 +248,6 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
             projectId={issue?.project_id}
             value={issue?.cycle_id || null}
             onChange={handleCycle}
-            buttonVariant="border-with-text"
-            renderByDefault={isMobile}
-            showTooltip
-          />
-        </div>
-      )}
-
-      {/* estimates */}
-      {issue.project_id && areEstimateEnabledByProjectId(issue.project_id?.toString()) && (
-        <div className="h-5" onClick={handleEventPropagation}>
-          <EstimateDropdown
-            value={issue.estimate_point ?? undefined}
-            onChange={handleEstimate}
-            projectId={issue.project_id}
             buttonVariant="border-with-text"
             renderByDefault={isMobile}
             showTooltip

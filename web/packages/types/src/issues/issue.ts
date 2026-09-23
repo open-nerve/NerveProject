@@ -52,7 +52,6 @@ export type TBaseIssue = {
   priority: TIssuePriorities | null;
   label_ids: string[];
   assignee_ids: string[];
-  estimate_point: string | null;
 
   sub_issues_count: number;
   attachment_count: number;
@@ -139,15 +138,7 @@ export type TIssuesResponse = {
 
 export type TBulkIssueProperties = Pick<
   TIssue,
-  | "state_id"
-  | "priority"
-  | "label_ids"
-  | "assignee_ids"
-  | "start_date"
-  | "target_date"
-  | "module_ids"
-  | "cycle_id"
-  | "estimate_point"
+  "state_id" | "priority" | "label_ids" | "assignee_ids" | "start_date" | "target_date" | "module_ids" | "cycle_id"
 >;
 
 export type TBulkOperationsPayload = {
@@ -181,7 +172,6 @@ export interface IPublicIssue extends Pick<
   | "attachment_count"
   | "sub_issues_count"
   | "link_count"
-  | "estimate_point"
 > {
   comments: TIssuePublicComment[];
   reaction_items: IIssuePublicReaction[];

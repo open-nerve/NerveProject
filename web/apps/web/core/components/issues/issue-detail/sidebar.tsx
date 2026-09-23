@@ -11,7 +11,6 @@ import { useTranslation } from "@plane/i18n";
 import {
   CyclesOutline,
   DueDateOutline,
-  EstimateOutline,
   LabelsOutline,
   MembersOutline,
   ModuleOutline,
@@ -24,13 +23,11 @@ import {
 import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@plane/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
-import { EstimateDropdown } from "@/components/dropdowns/estimate";
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
@@ -56,7 +53,6 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
   const { workspaceSlug, projectId, issueId, issueOperations, isEditable } = props;
   // store hooks
   const { getProjectById } = useProject();
-  const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const {
     issue: { getIssueById },
   } = useIssueDetail();
@@ -181,27 +177,6 @@ export const IssueDetailsSidebar = observer(function IssueDetailsSidebar(props: 
                 />
               </div>
             </SidebarPropertyListItem>
-
-            {projectId && areEstimateEnabledByProjectId(projectId) && (
-              <SidebarPropertyListItem icon={EstimateOutline} label={t("common.estimate")}>
-                <EstimateDropdown
-                  value={issue?.estimate_point ?? undefined}
-                  onChange={(val: string | undefined) =>
-                    issueOperations.update(workspaceSlug, projectId, issueId, { estimate_point: val })
-                  }
-                  projectId={projectId}
-                  disabled={!isEditable}
-                  buttonVariant="transparent-with-text"
-                  className="group w-full grow"
-                  buttonContainerClassName="w-full text-left h-7.5"
-                  buttonClassName={`text-body-xs-regular ${issue?.estimate_point !== null ? "" : "text-placeholder"}`}
-                  placeholder={t("common.none")}
-                  hideIcon
-                  dropdownArrow
-                  dropdownArrowClassName="h-3.5 w-3.5 hidden group-hover:inline"
-                />
-              </SidebarPropertyListItem>
-            )}
 
             {projectDetails?.module_view && (
               <SidebarPropertyListItem icon={ModuleOutline} label={t("common.modules")}>

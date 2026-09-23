@@ -73,7 +73,6 @@ export type Properties = {
   sub_issue_count: boolean;
   link: boolean;
   attachment_count: boolean;
-  estimate: boolean;
   created_on: boolean;
   updated_on: boolean;
 };

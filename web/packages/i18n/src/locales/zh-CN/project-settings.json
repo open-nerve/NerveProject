@@ -55,127 +55,6 @@
         "error": "更新标签时出错"
       }
     },
-    "estimates": {
-      "heading": "估算",
-      "description": "设置估算系统以跟踪和传达每个工作项所需的工作量。",
-      "label": "估算",
-      "title": "为我的项目启用估算",
-      "enable_description": "它们有助于您传达团队的复杂性和工作量。",
-      "no_estimate": "无估算",
-      "new": "新估算系统",
-      "create": {
-        "custom": "自定义",
-        "start_from_scratch": "从头开始",
-        "choose_template": "选择模板",
-        "choose_estimate_system": "选择估算系统",
-        "enter_estimate_point": "输入估算点数",
-        "step": "步骤 {step} 共 {total}",
-        "label": "创建估算"
-      },
-      "toasts": {
-        "created": {
-          "success": {
-            "title": "已创建估算点数",
-            "message": "估算点数创建成功"
-          },
-          "error": {
-            "title": "无法创建估算点数",
-            "message": "无法创建新的估算点数，请重试"
-          }
-        },
-        "updated": {
-          "success": {
-            "title": "已更新估算",
-            "message": "您项目中的估算点数已更新"
-          },
-          "error": {
-            "title": "无法更新估算",
-            "message": "无法更新估算，请重试"
-          }
-        },
-        "enabled": {
-          "success": {
-            "title": "成功！",
-            "message": "已启用估算"
-          }
-        },
-        "disabled": {
-          "success": {
-            "title": "成功！",
-            "message": "已禁用估算"
-          },
-          "error": {
-            "title": "错误！",
-            "message": "无法禁用估算。请重试"
-          }
-        },
-        "reorder": {
-          "success": {
-            "title": "估算已重新排序",
-            "message": "估算已在您的项目中重新排序。"
-          },
-          "error": {
-            "title": "估算重新排序失败",
-            "message": "我们无法重新排序估算，请重试"
-          }
-        },
-        "switch": {
-          "success": {
-            "title": "估算系统已创建",
-            "message": "创建并启用成功"
-          },
-          "error": {
-            "title": "错误",
-            "message": "出现错误"
-          }
-        }
-      },
-      "validation": {
-        "min_length": "估算需要大于0。",
-        "unable_to_process": "我们无法处理您的请求，请重试。",
-        "numeric": "估算需要是数值。",
-        "character": "估算需要是字符值。",
-        "empty": "估算值不能为空。",
-        "already_exists": "估算值已存在。",
-        "unsaved_changes": "您有未保存的更改，请在点击完成前保存。",
-        "remove_empty": "估算不能为空。请在每个字段中输入值或删除没有值的字段。",
-        "fill": "请填写此估算字段",
-        "repeat": "估算值不能重复"
-      },
-      "systems": {
-        "points": {
-          "label": "点数",
-          "fibonacci": "斐波那契",
-          "linear": "线性",
-          "squares": "平方",
-          "custom": "自定义"
-        },
-        "categories": {
-          "label": "类别",
-          "t_shirt_sizes": "T恤尺码",
-          "easy_to_hard": "简单到困难",
-          "custom": "自定义"
-        },
-        "time": {
-          "label": "时间",
-          "hours": "小时"
-        }
-      },
-      "edit": {
-        "title": "编辑估算系统",
-        "add_or_update": {
-          "title": "添加、更新或删除估算",
-          "description": "通过添加、更新或删除点数或类别来管理当前系统。"
-        },
-        "switch": {
-          "title": "更改估算类型",
-          "description": "将点数系统转换为类别系统，反之亦然。"
-        }
-      },
-      "switch": "切换估算系统",
-      "current": "当前估算系统",
-      "select": "选择估算系统"
-    },
     "automations": {
       "label": "自动化",
       "heading": "自动化",
@@ -201,11 +80,6 @@
       "labels": {
         "title": "尚无标签",
         "description": "创建标签以帮助组织和筛选项目中的工作项。"
-      },
-      "estimates": {
-        "title": "尚无估算系统",
-        "description": "创建一组估算以传达每个工作项的工作量。",
-        "primary_button": "添加估算系统"
       },
       "integrations": {
         "title": "未配置集成",

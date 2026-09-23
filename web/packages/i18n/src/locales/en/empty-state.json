@@ -172,11 +172,6 @@
     }
   },
   "settings_empty_state": {
-    "estimates": {
-      "title": "No estimates yet",
-      "description": "Define how your team measures effort and track it consistently across all work items.",
-      "cta_primary": "Add estimate system"
-    },
     "labels": {
       "title": "No labels yet",
       "description": "Create personalized labels to effectively categorize and manage your work items.",

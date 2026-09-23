@@ -10,7 +10,7 @@ import { Tab } from "@headlessui/react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import type { TWorkItemFilterCondition } from "@plane/shared-state";
-import type { TCycleDistribution, TCycleEstimateDistribution, TCyclePlotType } from "@plane/types";
+import type { TCycleDistribution } from "@plane/types";
 import { cn, toFilterArray } from "@plane/utils";
 // components
 import type { TAssigneeData } from "@/components/core/sidebar/progress-stats/assignee";
@@ -27,12 +27,11 @@ import useLocalStorage from "@/hooks/use-local-storage";
 
 type TCycleProgressStats = {
   cycleId: string;
-  distribution: TCycleDistribution | TCycleEstimateDistribution | undefined;
+  distribution: TCycleDistribution | undefined;
   groupedIssues: Record<string, number>;
   handleFiltersUpdate: (condition: TWorkItemFilterCondition) => void;
   isEditable?: boolean;
   noBackground?: boolean;
-  plotType: TCyclePlotType;
   roundedTab?: boolean;
   selectedFilters: TSelectedFilterProgressStats;
   size?: "xs" | "sm";
@@ -47,7 +46,6 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: TC
     handleFiltersUpdate,
     isEditable = false,
     noBackground = false,
-    plotType,
     roundedTab = false,
     selectedFilters,
     size = "sm",
@@ -62,45 +60,25 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: TC
   );
   // derived values
   const currentTabIndex = (tab: string): number => PROGRESS_STATS.findIndex((stat) => stat.key === tab);
-  const currentDistribution = distribution as TCycleDistribution;
-  const currentEstimateDistribution = distribution as TCycleEstimateDistribution;
   const selectedAssigneeIds = toFilterArray(selectedFilters?.assignees?.value || []) as string[];
   const selectedLabelIds = toFilterArray(selectedFilters?.labels?.value || []) as string[];
   const selectedStateGroups = toFilterArray(selectedFilters?.stateGroups?.value || []) as string[];
 
-  const distributionAssigneeData: TAssigneeData =
-    plotType === "burndown"
-      ? (currentDistribution?.assignees || []).map((assignee) => ({
-          id: assignee?.assignee_id || undefined,
-          title: assignee?.display_name || undefined,
-          avatar_url: assignee?.avatar_url || undefined,
-          completed: assignee.completed_issues,
-          total: assignee.total_issues,
-        }))
-      : (currentEstimateDistribution?.assignees || []).map((assignee) => ({
-          id: assignee?.assignee_id || undefined,
-          title: assignee?.display_name || undefined,
-          avatar_url: assignee?.avatar_url || undefined,
-          completed: assignee.completed_estimates,
-          total: assignee.total_estimates,
-        }));
+  const distributionAssigneeData: TAssigneeData = (distribution?.assignees || []).map((assignee) => ({
+    id: assignee?.assignee_id || undefined,
+    title: assignee?.display_name || undefined,
+    avatar_url: assignee?.avatar_url || undefined,
+    completed: assignee.completed_issues,
+    total: assignee.total_issues,
+  }));
 
-  const distributionLabelData: TLabelData =
-    plotType === "burndown"
-      ? (currentDistribution?.labels || []).map((label) => ({
-          id: label?.label_id || undefined,
-          title: label?.label_name || undefined,
-          color: label?.color || undefined,
-          completed: label.completed_issues,
-          total: label.total_issues,
-        }))
-      : (currentEstimateDistribution?.labels || []).map((label) => ({
-          id: label?.label_id || undefined,
-          title: label?.label_name || undefined,
-          color: label?.color || undefined,
-          completed: label.completed_estimates,
-          total: label.total_estimates,
-        }));
+  const distributionLabelData: TLabelData = (distribution?.labels || []).map((label) => ({
+    id: label?.label_id || undefined,
+    title: label?.label_name || undefined,
+    color: label?.color || undefined,
+    completed: label.completed_issues,
+    total: label.total_issues,
+  }));
 
   const distributionStateData: TStateGroupData = Object.keys(groupedIssues || {}).map((state) => ({
     state: state,

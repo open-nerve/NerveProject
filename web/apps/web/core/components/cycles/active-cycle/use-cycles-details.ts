@@ -50,15 +50,7 @@ const useCyclesDetails = (props: IActiveCycleDetails) => {
       ? `PROJECT_ACTIVE_CYCLE_${projectId}_DURATION_${cycle.id}`
       : null,
     workspaceSlug && projectId && cycle?.id && !cycle?.distribution
-      ? () => fetchActiveCycleDistribution(workspaceSlug, projectId, cycle.id, "issues")
-      : null
-  );
-  useSWR(
-    workspaceSlug && projectId && cycle?.id && !cycle?.estimate_distribution
-      ? `PROJECT_ACTIVE_CYCLE_${projectId}_ESTIMATE_DURATION_${cycle.id}`
-      : null,
-    workspaceSlug && projectId && cycle?.id && !cycle?.estimate_distribution
-      ? () => fetchActiveCycleDistribution(workspaceSlug, projectId, cycle.id, "points")
+      ? () => fetchActiveCycleDistribution(workspaceSlug, projectId, cycle.id)
       : null
   );
   useSWR(

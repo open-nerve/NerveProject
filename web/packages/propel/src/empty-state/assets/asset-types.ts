@@ -8,7 +8,6 @@
 export type HorizontalStackAssetType =
   | "customer"
   | "epic"
-  | "estimate"
   | "export"
   | "intake"
   | "label"

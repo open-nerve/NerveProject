@@ -19,7 +19,6 @@ export * from "./description_version";
 export * from "./editor";
 export * from "./enums";
 export * from "./epics";
-export * from "./estimate";
 export * from "./favorite";
 export * from "./file";
 export * from "./home";

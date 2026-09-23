@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useProjectEstimates } from "./store/estimates";
 import { useCycle } from "./store/use-cycle";
 import { useLabel } from "./store/use-label";
 import { useMember } from "./store/use-member";
@@ -19,7 +18,6 @@ export const useProjectIssueProperties = () => {
   const { fetchProjectLabels } = useLabel();
   const { fetchAllCycles: fetchProjectAllCycles } = useCycle();
   const { fetchModules: fetchProjectAllModules } = useModule();
-  const { getProjectEstimates } = useProjectEstimates();
 
   // fetching project states
   const fetchStates = async (
@@ -67,15 +65,6 @@ export const useProjectIssueProperties = () => {
       await fetchProjectAllModules(workspaceSlug.toString(), projectId.toString());
     }
   };
-  // fetching project estimates
-  const fetchEstimates = async (
-    workspaceSlug: string | string[] | undefined,
-    projectId: string | string[] | undefined
-  ) => {
-    if (workspaceSlug && projectId) {
-      await getProjectEstimates(workspaceSlug.toString(), projectId.toString());
-    }
-  };
 
   const fetchAll = async (workspaceSlug: string | string[] | undefined, projectId: string | string[] | undefined) => {
     if (workspaceSlug && projectId) {
@@ -84,7 +73,6 @@ export const useProjectIssueProperties = () => {
       await fetchLabels(workspaceSlug, projectId);
       await fetchCycles(workspaceSlug, projectId);
       await fetchModules(workspaceSlug, projectId);
-      await fetchEstimates(workspaceSlug, projectId);
     }
   };
 
@@ -95,6 +83,5 @@ export const useProjectIssueProperties = () => {
     fetchLabels,
     fetchCycles,
     fetchModules,
-    fetchEstimates,
   };
 };

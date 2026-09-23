@@ -12,5 +12,4 @@ export { ReadonlyMember, type TReadonlyMemberProps } from "./member";
 export { ReadonlyLabels, type TReadonlyLabelsProps } from "./labels";
 export { ReadonlyCycle, type TReadonlyCycleProps } from "./cycle";
 export { ReadonlyDate, type TReadonlyDateProps } from "./date";
-export { ReadonlyEstimate, type TReadonlyEstimateProps } from "./estimate";
 export { ReadonlyModule, type TReadonlyModuleProps } from "./module";

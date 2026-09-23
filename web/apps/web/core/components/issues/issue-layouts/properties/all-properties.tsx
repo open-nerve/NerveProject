@@ -27,13 +27,11 @@ import {
 import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
-import { EstimateDropdown } from "@/components/dropdowns/estimate";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { StateDropdown } from "@/components/dropdowns/state/dropdown";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useLabel } from "@/hooks/store/use-label";
 import { useProject } from "@/hooks/store/use-project";
@@ -69,14 +67,13 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const {
     issues: { addCycleToIssue, removeCycleFromIssue },
   } = useIssues(storeType);
-  const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const { getStateById } = useProjectState();
   const { isMobile } = usePlatformOS();
   const projectDetails = getProjectById(issue.project_id);
 
   // router
   const router = useAppRouter();
-  const { workspaceSlug, projectId } = useParams();
+  const { workspaceSlug } = useParams();
 
   // derived values
   const stateDetails = getStateById(issue.state_id);
@@ -153,10 +150,6 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const handleTargetDate = async (date: Date | null) => {
     if (updateIssue)
       await updateIssue(issue.project_id, issue.id, { target_date: date ? renderFormattedPayloadDate(date) : null });
-  };
-
-  const handleEstimate = async (value: string | undefined) => {
-    if (updateIssue) await updateIssue(issue.project_id, issue.id, { estimate_point: value });
   };
 
   const workItemLink = generateWorkItemLink({
@@ -382,24 +375,6 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
           </>
         )}
       </>
-
-      {/* estimates */}
-      {projectId && areEstimateEnabledByProjectId(projectId?.toString()) && (
-        <WithDisplayPropertiesHOC displayProperties={displayProperties} displayPropertyKey="estimate">
-          {/* oxlint-disable-next-line jsx_a11y/click-events-have-key-events oxlint-disable-next-line jsx_a11y/no-static-element-interactions */}
-          <div className="h-5" onFocus={handleEventPropagation} onClick={handleEventPropagation}>
-            <EstimateDropdown
-              value={issue.estimate_point ?? undefined}
-              onChange={handleEstimate}
-              projectId={issue.project_id}
-              disabled={isReadOnly}
-              buttonVariant="border-with-text"
-              renderByDefault={isMobile}
-              showTooltip
-            />
-          </div>
-        </WithDisplayPropertiesHOC>
-      )}
 
       {/* extra render properties */}
       {/* sub-issues */}

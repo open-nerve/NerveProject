@@ -45,8 +45,6 @@ export type TIssueOrderByOptions =
   | "-issue_cycle__cycle__name"
   | "target_date"
   | "-target_date"
-  | "estimate_point__key"
-  | "-estimate_point__key"
   | "start_date"
   | "-start_date"
   | "link_count"
@@ -169,7 +167,6 @@ export interface IIssueDisplayProperties {
   sub_issue_count?: boolean;
   link?: boolean;
   attachment_count?: boolean;
-  estimate?: boolean;
   created_on?: boolean;
   updated_on?: boolean;
   modules?: boolean;

@@ -110,8 +110,7 @@ export class ModuleIssues extends BaseIssuesStore implements IModuleIssues {
       const distributionUpdates = getDistributionPathsPostUpdate(
         prevIssueState,
         nextIssueState,
-        this.rootIssueStore.rootStore.state.stateMap,
-        this.rootIssueStore.rootStore.projectEstimate?.currentActiveEstimate?.estimatePointById
+        this.rootIssueStore.rootStore.state.stateMap
       );
 
       const moduleId = id ?? this.moduleId;

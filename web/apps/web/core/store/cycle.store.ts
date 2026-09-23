@@ -5,18 +5,11 @@
  */
 
 import { isPast, isToday } from "date-fns";
-import { sortBy, set, isEmpty } from "lodash-es";
+import { sortBy, set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type {
-  ICycle,
-  TCyclePlotType,
-  TProgressSnapshot,
-  TCycleEstimateDistribution,
-  TCycleDistribution,
-  TCycleEstimateType,
-} from "@plane/types";
+import type { ICycle, TProgressSnapshot, TCycleDistribution } from "@plane/types";
 import type { DistributionUpdates } from "@plane/utils";
 import { orderCycles, shouldFilterCycle, getDate, updateDistribution } from "@plane/utils";
 // helpers
@@ -35,8 +28,6 @@ export interface ICycleStore {
   // observables
   fetchedMap: Record<string, boolean>;
   cycleMap: Record<string, ICycle>;
-  plotType: Record<string, TCyclePlotType>;
-  estimatedType: Record<string, TCycleEstimateType>;
   activeCycleIdMap: Record<string, boolean>;
 
   // computed
@@ -55,14 +46,9 @@ export interface ICycleStore {
   getCycleNameById: (cycleId: string) => string | undefined;
   getProjectCycleDetails: (projectId: string) => ICycle[] | null;
   getProjectCycleIds: (projectId: string) => string[] | null;
-  getPlotTypeByCycleId: (cycleId: string) => TCyclePlotType;
-  getEstimateTypeByCycleId: (cycleId: string) => TCycleEstimateType;
-  getIsPointsDataAvailable: (cycleId: string) => boolean;
 
   // actions
   updateCycleDistribution: (distributionUpdates: DistributionUpdates, cycleId: string) => void;
-  setPlotType: (cycleId: string, plotType: TCyclePlotType) => void;
-  setEstimateType: (cycleId: string, estimateType: TCycleEstimateType) => void;
   // fetch
   fetchWorkspaceCycles: (workspaceSlug: string) => Promise<ICycle[]>;
   fetchAllCycles: (workspaceSlug: string, projectId: string) => Promise<undefined | ICycle[]>;
@@ -74,9 +60,8 @@ export interface ICycleStore {
   fetchActiveCycleDistribution: (
     workspaceSlug: string,
     projectId: string,
-    cycleId: string,
-    analytic_type: string
-  ) => Promise<TCycleDistribution | TCycleEstimateDistribution>;
+    cycleId: string
+  ) => Promise<TCycleDistribution>;
   // crud
   createCycle: (workspaceSlug: string, projectId: string, data: Partial<ICycle>) => Promise<ICycle>;
   updateCycleDetails: (
@@ -99,8 +84,6 @@ export class CycleStore implements ICycleStore {
   loader: boolean = false;
   progressLoader: boolean = false;
   cycleMap: Record<string, ICycle> = {};
-  plotType: Record<string, TCyclePlotType> = {};
-  estimatedType: Record<string, TCycleEstimateType> = {};
   activeCycleIdMap: Record<string, boolean> = {};
   //loaders
   fetchedMap: Record<string, boolean> = {};
@@ -118,8 +101,6 @@ export class CycleStore implements ICycleStore {
       loader: observable.ref,
       progressLoader: observable,
       cycleMap: observable,
-      plotType: observable,
-      estimatedType: observable,
       activeCycleIdMap: observable,
       fetchedMap: observable,
       // computed
@@ -131,7 +112,6 @@ export class CycleStore implements ICycleStore {
       currentProjectActiveCycle: computed,
 
       // actions
-      setEstimateType: action,
       fetchWorkspaceCycles: action,
       fetchAllCycles: action,
       fetchActiveCycle: action,
@@ -241,16 +221,6 @@ export class CycleStore implements ICycleStore {
     return this.cycleMap?.[this.currentProjectActiveCycleId!] ?? null;
   }
 
-  getIsPointsDataAvailable = computedFn((cycleId: string) => {
-    const cycle = this.getCycleById(cycleId);
-    if (!cycle) return false;
-    if (cycle.version === 2) return cycle.progress?.some((p) => p.total_estimate_points > 0);
-    else if (cycle.version === 1) {
-      const completionChart = cycle.estimate_distribution?.completion_chart || {};
-      return !isEmpty(completionChart) && Object.keys(completionChart).some((p) => completionChart[p]! > 0);
-    } else return false;
-  });
-
   /**
    * @description returns filtered cycle ids based on display filters and filters
    * @param {TCycleDisplayFilters} displayFilters
@@ -353,40 +323,6 @@ export class CycleStore implements ICycleStore {
     const cycleIds = cycles.map((c) => c.id);
     return cycleIds || null;
   });
-
-  /**
-   * @description gets the plot type for the cycle store
-   * @param {TCyclePlotType} plotType
-   */
-  getPlotTypeByCycleId = computedFn((cycleId: string) => this.plotType[cycleId] || "burndown");
-
-  /**
-   * @description gets the estimate type for the cycle store
-   * @param {TCycleEstimateType} estimateType
-   */
-  getEstimateTypeByCycleId = computedFn((cycleId: string) => {
-    const { projectId } = this.rootStore.router;
-
-    return projectId && this.rootStore.projectEstimate.areEstimateEnabledByProjectId(projectId)
-      ? this.estimatedType[cycleId] || "issues"
-      : "issues";
-  });
-
-  /**
-   * @description updates the plot type for the cycle store
-   * @param {TCyclePlotType} plotType
-   */
-  setPlotType = (cycleId: string, plotType: TCyclePlotType) => {
-    set(this.plotType, [cycleId], plotType);
-  };
-
-  /**
-   * @description updates the estimate type for the cycle store
-   * @param {TCycleEstimateType} estimateType
-   */
-  setEstimateType = (cycleId: string, estimateType: TCycleEstimateType) => {
-    set(this.estimatedType, [cycleId], estimateType);
-  };
 
   /**
    * @description fetch all cycles
@@ -499,15 +435,10 @@ export class CycleStore implements ICycleStore {
    * @param cycleId
    *  @returns
    */
-  fetchActiveCycleDistribution = async (
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    analytic_type: string
-  ) =>
-    await this.cycleService.cycleDistribution(workspaceSlug, projectId, cycleId, analytic_type).then((cycle) => {
+  fetchActiveCycleDistribution = async (workspaceSlug: string, projectId: string, cycleId: string) =>
+    await this.cycleService.cycleDistribution(workspaceSlug, projectId, cycleId).then((cycle) => {
       runInAction(() => {
-        set(this.cycleMap, [cycleId, analytic_type === "points" ? "estimate_distribution" : "distribution"], cycle);
+        set(this.cycleMap, [cycleId, "distribution"], cycle);
       });
       return cycle;
     });

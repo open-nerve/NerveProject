@@ -8,7 +8,6 @@ export * from "./assignee-column";
 export * from "./attachment-column";
 export * from "./created-on-column";
 export * from "./due-date-column";
-export * from "./estimate-column";
 export * from "./label-column";
 export * from "./link-column";
 export * from "./priority-column";

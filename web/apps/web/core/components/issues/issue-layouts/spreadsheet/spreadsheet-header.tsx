@@ -22,7 +22,6 @@ interface Props {
   displayFilters: IIssueDisplayFilterOptions;
   handleDisplayFilterUpdate: (data: Partial<IIssueDisplayFilterOptions>) => void;
   canEditProperties: (projectId: string | undefined) => boolean;
-  isEstimateEnabled: boolean;
   spreadsheetColumnsList: (keyof IIssueDisplayProperties)[];
   selectionHelpers: TSelectionHelper;
   isEpic?: boolean;
@@ -34,7 +33,6 @@ export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Prop
     displayFilters,
     handleDisplayFilterUpdate,
     canEditProperties,
-    isEstimateEnabled,
     spreadsheetColumnsList,
     selectionHelpers,
     isEpic = false,
@@ -83,7 +81,6 @@ export const SpreadsheetHeader = observer(function SpreadsheetHeader(props: Prop
             displayProperties={displayProperties}
             displayFilters={displayFilters}
             handleDisplayFilterUpdate={handleDisplayFilterUpdate}
-            isEstimateEnabled={isEstimateEnabled}
             isEpic={isEpic}
           />
         ))}

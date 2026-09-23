@@ -338,6 +338,33 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "estimates",
+      "phase": "M1/P2",
+      "why": "估算体系（估算设置页、估算下拉框、estimate_point 字段、按点数的进度和燃尽）；迭代和模块的进度改为只按工作项数计算（M1 设计 3.4）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "estimat|估算", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { EstimateDropdown } from \"@/components/dropdowns/estimate\";",
+          "  estimate_point: string | null;",
+          "export enum EEstimateSystem {",
+          "  const { areEstimateEnabledByProjectId } = useProjectEstimates();",
+          "  \"estimate\": \"估算\",",
+          "      total: assignee.total_estimates,"
+        ],
+        "miss": [
+          "export const calculateCycleProgress = (cycle: ICycle | undefined, includeInProgress: boolean = false): number => {",
+          "  const totalIssues = cycleDetails?.total_issues || 0;",
+          "export type TCycleDistribution = {",
+          "  \"points\": \"Points\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/cycle.store.ts", "web/packages/i18n/src/locales/en/common.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -376,6 +403,20 @@
       "match": "Analytics",
       "count": 2,
       "reason": "TEpicAnalyticsGroup、TEpicAnalytics 是 Epic 的企业版类型，随 Epic 在 M1/P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "estimates",
+      "path": "web/apps/web/core/components/workspace-notifications/sidebar/notification-card/content.tsx",
+      "match": "estimat",
+      "reason": "通知卡片里的 estimate_time 是工时，随工时空壳在 P3 删除",
+      "until": "M1/P3"
+    },
+    {
+      "rule": "estimates",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "Estimat",
+      "reason": "计费对比表的文案，随计费在 P3 删除",
       "until": "M1/P3"
     }
   ]

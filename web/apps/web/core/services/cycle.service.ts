@@ -6,14 +6,7 @@
 
 // services
 import { API_BASE_URL } from "@plane/constants";
-import type {
-  CycleDateCheckData,
-  ICycle,
-  TIssuesResponse,
-  TCycleDistribution,
-  TProgressSnapshot,
-  TCycleEstimateDistribution,
-} from "@plane/types";
+import type { CycleDateCheckData, ICycle, TIssuesResponse, TCycleDistribution, TProgressSnapshot } from "@plane/types";
 import { APIService } from "@/services/api.service";
 
 export class CycleService extends APIService {
@@ -21,15 +14,8 @@ export class CycleService extends APIService {
     super(API_BASE_URL);
   }
 
-  async cycleDistribution(
-    workspaceSlug: string,
-    projectId: string,
-    cycleId: string,
-    analytic_type: string = "points"
-  ): Promise<TCycleDistribution | TCycleEstimateDistribution> {
-    return this.get(
-      `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/analytics?type=${analytic_type}`
-    )
+  async cycleDistribution(workspaceSlug: string, projectId: string, cycleId: string): Promise<TCycleDistribution> {
+    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/analytics?type=issues`)
       .then((res) => res?.data)
       .catch((err) => {
         throw err?.response?.data;

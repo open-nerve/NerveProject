@@ -149,8 +149,7 @@ export class CycleIssues extends BaseIssuesStore implements ICycleIssues {
       const distributionUpdates = getDistributionPathsPostUpdate(
         prevIssueState,
         nextIssueState,
-        this.rootIssueStore.rootStore.state.stateMap,
-        this.rootIssueStore.rootStore.projectEstimate?.currentActiveEstimate?.estimatePointById
+        this.rootIssueStore.rootStore.state.stateMap
       );
 
       const cycleId = id ?? this.cycleId;

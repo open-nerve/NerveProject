@@ -19,7 +19,6 @@ import { getDate, renderFormattedPayloadDate, getTabIndex } from "@plane/utils";
 // components
 import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";
-import { EstimateDropdown } from "@/components/dropdowns/estimate";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
@@ -28,7 +27,6 @@ import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-mo
 import { IssueLabelSelect } from "@/components/issues/select";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -65,7 +63,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
   const [parentIssueListModalOpen, setParentIssueListModalOpen] = useState(false);
   // store hooks
   const { t } = useTranslation();
-  const { areEstimateEnabledByProjectId } = useProjectEstimates();
   const { getProjectById } = useProject();
   const { isMobile } = usePlatformOS();
   const { allowPermissions } = useUserPermissions();
@@ -237,27 +234,6 @@ export const IssueDefaultProperties = observer(function IssueDefaultProperties(p
                 tabIndex={getIndex("module_ids")}
                 multiple
                 showCount
-              />
-            </div>
-          )}
-        />
-      )}
-      {projectId && areEstimateEnabledByProjectId(projectId) && (
-        <Controller
-          control={control}
-          name="estimate_point"
-          render={({ field: { value, onChange } }) => (
-            <div className="h-7">
-              <EstimateDropdown
-                value={value || undefined}
-                onChange={(estimatePoint) => {
-                  onChange(estimatePoint);
-                  handleFormChange();
-                }}
-                projectId={projectId}
-                buttonVariant="border-with-text"
-                tabIndex={getIndex("estimate_point")}
-                placeholder={t("estimate")}
               />
             </div>
           )}

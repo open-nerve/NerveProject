@@ -9,7 +9,6 @@ export * from "./comment-reply-icon";
 export * from "./dropdown-icon";
 export * from "./due-date-icon";
 export * from "./duplicate-icon";
-export * from "./estimate-icon";
 export * from "./hash-icon";
 export * from "./label-icon";
 export * from "./members-icon";

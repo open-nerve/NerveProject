@@ -20,14 +20,12 @@ import {
   PROJECT_MEMBERS,
   PROJECT_MEMBER_PREFERENCES,
   PROJECT_STATES,
-  PROJECT_ESTIMATES,
   PROJECT_ALL_CYCLES,
   PROJECT_MODULES,
   PROJECT_VIEWS,
   PROJECT_INTAKE_STATE,
 } from "@plane/constants";
 // hooks
-import { useProjectEstimates } from "@/hooks/store/estimates";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useLabel } from "@/hooks/store/use-label";
 import { useMember } from "@/hooks/store/use-member";
@@ -63,7 +61,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   const { fetchProjectStates, fetchProjectIntakeState } = useProjectState();
   const { data: currentUserData } = useUser();
   const { fetchProjectLabels } = useLabel();
-  const { getProjectEstimates } = useProjectEstimates();
   // derived values
   const hasPermissionToCurrentProject = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER, EUserPermissions.GUEST],
@@ -109,11 +106,6 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
   });
   // fetching project intake state
   useSWR(PROJECT_INTAKE_STATE(projectId, currentProjectRole), () => fetchProjectIntakeState(workspaceSlug, projectId), {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-  });
-  // fetching project estimates
-  useSWR(PROJECT_ESTIMATES(projectId, currentProjectRole), () => getProjectEstimates(workspaceSlug, projectId), {
     revalidateIfStale: false,
     revalidateOnFocus: false,
   });
