@@ -200,20 +200,18 @@ export const RelationsCollapsibleContent = observer(function RelationsCollapsibl
       )}
 
       {shouldRenderIssueUpdateModal && (
-        <>
-          <CreateUpdateIssueModal
-            isOpen={issueCrudState?.update?.toggle}
-            onClose={() => {
-              handleIssueCrudState("update", null, null);
-              toggleCreateIssueModal(false);
-            }}
-            data={issueCrudState?.update?.issue ?? undefined}
-            onSubmit={async (_issue: TIssue) => {
-              if (!_issue.id || !_issue.project_id) return;
-              await issueOperations.update(workspaceSlug, _issue.project_id, _issue.id, _issue);
-            }}
-          />
-        </>
+        <CreateUpdateIssueModal
+          isOpen={issueCrudState?.update?.toggle}
+          onClose={() => {
+            handleIssueCrudState("update", null, null);
+            toggleCreateIssueModal(false);
+          }}
+          data={issueCrudState?.update?.issue ?? undefined}
+          onSubmit={async (_issue: TIssue) => {
+            if (!_issue.id || !_issue.project_id) return;
+            await issueOperations.update(workspaceSlug, _issue.project_id, _issue.id, _issue);
+          }}
+        />
       )}
     </>
   );

@@ -41,15 +41,10 @@ export type TEditorCommands =
   | "background-color"
   | "text-align"
   | "callout"
-  | "attachment"
-  | "emoji"
-  | "external-embed";
+  | "emoji";
 
 export type TCommandExtraProps = {
   image: {
-    savedSelection: Selection | null;
-  };
-  attachment: {
     savedSelection: Selection | null;
   };
   "text-color": {

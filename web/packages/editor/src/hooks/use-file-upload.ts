@@ -12,8 +12,6 @@ import type { EFileError } from "@/helpers/file";
 import { isFileValid } from "@/helpers/file";
 // plugins
 import { insertFilesSafely } from "@/plugins/drop";
-// types
-import type { TEditorCommands } from "@/types";
 
 type TUploaderArgs = {
   acceptedMimeTypes: string[];
@@ -98,12 +96,11 @@ export const useUploader = (args: TUploaderArgs) => {
 type TDropzoneArgs = {
   editor: Editor;
   getPos: NodeViewProps["getPos"];
-  type: Extract<TEditorCommands, "attachment" | "image">;
   uploader: (file: File) => Promise<void>;
 };
 
 export const useDropZone = (args: TDropzoneArgs) => {
-  const { editor, getPos, type, uploader } = args;
+  const { editor, getPos, uploader } = args;
   // states
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [draggedInside, setDraggedInside] = useState<boolean>(false);
@@ -141,11 +138,10 @@ export const useDropZone = (args: TDropzoneArgs) => {
         editor,
         filesList,
         pos,
-        type,
         uploader,
       });
     },
-    [editor, type, uploader, getPos]
+    [editor, uploader, getPos]
   );
   const onDragEnter = useCallback(() => setDraggedInside(true), []);
   const onDragLeave = useCallback(() => setDraggedInside(false), []);
@@ -163,13 +159,12 @@ type TMultipleFileArgs = {
   editor: Editor;
   filesList: FileList;
   pos: number;
-  type: Extract<TEditorCommands, "attachment" | "image">;
   uploader: (file: File) => Promise<void>;
 };
 
 // Upload the first file and insert the remaining ones for uploading multiple files
 export const uploadFirstFileAndInsertRemaining = async (args: TMultipleFileArgs) => {
-  const { editor, filesList, pos, type, uploader } = args;
+  const { editor, filesList, pos, uploader } = args;
   const filesArray = Array.from(filesList);
   if (filesArray.length === 0) {
     console.error("No files found to upload.");
@@ -189,7 +184,7 @@ export const uploadFirstFileAndInsertRemaining = async (args: TMultipleFileArgs)
       files: remainingFiles,
       initialPos: posOfNextFileToBeInserted,
       event: "drop",
-      type,
+      type: "image",
     });
   }
 };
