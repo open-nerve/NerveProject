@@ -671,7 +671,7 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
 | P1 | web-hygiene | 已完成 | [spec](specs/P1-web-hygiene.md) | [plan](plans/P1-web-hygiene.md) | [review](reviews/P1-web-hygiene-review.md) |
 | P2 | trim-content | 已完成 | [spec](specs/P2-trim-content.md) | [plan](plans/P2-trim-content.md) | [review](reviews/P2-trim-content-review.md) |
 | P3 | trim-platform | 已完成 | [spec](specs/P3-trim-platform.md) | [plan](plans/P3-trim-platform.md) | [review](reviews/P3-trim-platform-review.md) |
-| P4 | router-native | 未开始 | — | — | — |
+| P4 | router-native | 进行中 | [spec](specs/P4-router-native.md) | [plan](plans/P4-router-native.md) | — |
 | P5 | brand | 未开始 | — | — | — |
 | 收尾 | closeout | 未开始 | — | — | — |
 
