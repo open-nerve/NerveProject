@@ -1318,7 +1318,7 @@
           "export { CoreRootStore as RootStore };"
         ],
         "miss": [
-          "import { ExtendedAppHeader } from \"@/components/common/extended-app-header\";",
+          "import { ExtendedSidebarWrapper } from \"./extended-sidebar-wrapper\";",
           "type TAdditionalWorkItemFiltersProps = {",
           "  const hasAdditionalChanges = useMemo(",
           "export interface ExtendedEmojiStorage extends EmojiStorage {",
