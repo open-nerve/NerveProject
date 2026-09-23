@@ -83,57 +83,55 @@ export const CycleIssuesMobileHeader = observer(function CycleIssuesMobileHeader
   );
 
   return (
-    <>
-      <div className="flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
-        <CustomMenu
-          maxHeight={"md"}
-          className="flex flex-grow justify-center text-13 text-secondary"
-          placement="bottom-start"
-          customButton={
-            <span className="flex flex-grow justify-center text-13 text-secondary">{t("common.layout")}</span>
-          }
-          customButtonClassName="flex flex-grow justify-center text-secondary text-13"
-          closeOnSelect
-        >
-          {SUPPORTED_LAYOUTS.map((layout, index) => (
-            <CustomMenu.MenuItem
-              key={ISSUE_LAYOUTS[index].key}
-              onClick={() => {
-                handleLayoutChange(ISSUE_LAYOUTS[index].key);
-              }}
-              className="flex items-center gap-2"
-            >
-              <IssueLayoutIcon layout={ISSUE_LAYOUTS[index].key} className="h-3 w-3" />
-              <div className="text-tertiary">{t(layout.titleTranslationKey)}</div>
-            </CustomMenu.MenuItem>
-          ))}
-        </CustomMenu>
-        <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
-          <FiltersDropdown
-            title={t("common.display")}
-            placement="bottom-end"
-            menuButton={
-              <span className="flex items-center text-13 text-secondary">
-                {t("common.display")}
-                <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
-              </span>
-            }
+    <div className="flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
+      <CustomMenu
+        maxHeight={"md"}
+        className="flex flex-grow justify-center text-13 text-secondary"
+        placement="bottom-start"
+        customButton={
+          <span className="flex flex-grow justify-center text-13 text-secondary">{t("common.layout")}</span>
+        }
+        customButtonClassName="flex flex-grow justify-center text-secondary text-13"
+        closeOnSelect
+      >
+        {SUPPORTED_LAYOUTS.map((layout, index) => (
+          <CustomMenu.MenuItem
+            key={ISSUE_LAYOUTS[index].key}
+            onClick={() => {
+              handleLayoutChange(ISSUE_LAYOUTS[index].key);
+            }}
+            className="flex items-center gap-2"
           >
-            <DisplayFiltersSelection
-              layoutDisplayFiltersOptions={
-                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-              }
-              displayFilters={issueFilters?.displayFilters ?? {}}
-              handleDisplayFiltersUpdate={handleDisplayFilters}
-              displayProperties={issueFilters?.displayProperties ?? {}}
-              handleDisplayPropertiesUpdate={handleDisplayProperties}
-              ignoreGroupedFilters={["cycle"]}
-              cycleViewDisabled={!currentProjectDetails?.cycle_view}
-              moduleViewDisabled={!currentProjectDetails?.module_view}
-            />
-          </FiltersDropdown>
-        </div>
+            <IssueLayoutIcon layout={ISSUE_LAYOUTS[index].key} className="h-3 w-3" />
+            <div className="text-tertiary">{t(layout.titleTranslationKey)}</div>
+          </CustomMenu.MenuItem>
+        ))}
+      </CustomMenu>
+      <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
+        <FiltersDropdown
+          title={t("common.display")}
+          placement="bottom-end"
+          menuButton={
+            <span className="flex items-center text-13 text-secondary">
+              {t("common.display")}
+              <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
+            </span>
+          }
+        >
+          <DisplayFiltersSelection
+            layoutDisplayFiltersOptions={
+              activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
+            }
+            displayFilters={issueFilters?.displayFilters ?? {}}
+            handleDisplayFiltersUpdate={handleDisplayFilters}
+            displayProperties={issueFilters?.displayProperties ?? {}}
+            handleDisplayPropertiesUpdate={handleDisplayProperties}
+            ignoreGroupedFilters={["cycle"]}
+            cycleViewDisabled={!currentProjectDetails?.cycle_view}
+            moduleViewDisabled={!currentProjectDetails?.module_view}
+          />
+        </FiltersDropdown>
       </div>
-    </>
+    </div>
   );
 });

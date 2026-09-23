@@ -119,131 +119,129 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
     .filter((option) => option !== undefined) as ICustomSearchSelectOption[];
 
   return (
-    <>
-      <Header>
-        <Header.LeftItem>
-          <div className="flex items-center gap-2">
-            <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-              <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
-              <Breadcrumbs.Item
-                component={
-                  <BreadcrumbLink
-                    label="Modules"
-                    href={`/${workspaceSlug}/projects/${projectId}/modules/`}
-                    icon={<ModuleOutline className="h-4 w-4 text-tertiary" />}
-                    isLast
-                  />
-                }
-                isLast
-              />
-              <Breadcrumbs.Item
-                component={
-                  <BreadcrumbNavigationSearchDropdown
-                    selectedItem={moduleId?.toString() ?? ""}
-                    navigationItems={switcherOptions}
-                    onChange={(value: string) => {
-                      router.push(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
-                    }}
-                    title={moduleDetails?.name}
-                    icon={<ModuleOutline className="size-3.5 flex-shrink-0 text-tertiary" />}
-                    isLast
-                  />
-                }
-              />
-            </Breadcrumbs>
-            {workItemsCount && workItemsCount > 0 ? (
-              <Tooltip
-                label={`There are ${workItemsCount} ${workItemsCount > 1 ? "work items" : "work item"} in this module`}
-                layout="stacked"
-                side="bottom"
-                disabled={isMobile}
-              >
-                <span className="flex flex-shrink-0 cursor-default items-center justify-center rounded-xl bg-accent-primary/20 px-2 text-center text-11 font-semibold text-accent-primary">
-                  {workItemsCount}
-                </span>
-              </Tooltip>
-            ) : null}
-          </div>
-        </Header.LeftItem>
-        <Header.RightItem className="items-center">
-          <div className="hidden gap-2 md:flex">
-            <div className="hidden @4xl:flex">
-              <LayoutSelection
-                layouts={[
-                  EIssueLayoutTypes.LIST,
-                  EIssueLayoutTypes.KANBAN,
-                  EIssueLayoutTypes.CALENDAR,
-                  EIssueLayoutTypes.SPREADSHEET,
-                ]}
-                onChange={(layout) => handleLayoutChange(layout)}
-                selectedLayout={activeLayout}
-              />
-            </div>
-            <div className="flex @4xl:hidden">
-              <MobileLayoutSelection
-                layouts={[
-                  EIssueLayoutTypes.LIST,
-                  EIssueLayoutTypes.KANBAN,
-                  EIssueLayoutTypes.CALENDAR,
-                  EIssueLayoutTypes.SPREADSHEET,
-                ]}
-                onChange={(layout) => handleLayoutChange(layout)}
-                activeLayout={activeLayout}
-              />
-            </div>
-            {moduleId && <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />}
-            <FiltersDropdown
-              title="Display"
-              placement="bottom-end"
-              miniIcon={<PreferencesOutline className="size-3.5" />}
-            >
-              <DisplayFiltersSelection
-                layoutDisplayFiltersOptions={
-                  activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-                }
-                displayFilters={issueFilters?.displayFilters ?? {}}
-                handleDisplayFiltersUpdate={handleDisplayFilters}
-                displayProperties={issueFilters?.displayProperties ?? {}}
-                handleDisplayPropertiesUpdate={handleDisplayProperties}
-                ignoreGroupedFilters={["module"]}
-                cycleViewDisabled={!currentProjectDetails?.cycle_view}
-                moduleViewDisabled={!currentProjectDetails?.module_view}
-              />
-            </FiltersDropdown>
-          </div>
-
-          {canUserCreateIssue && (
-            <Button
-              variant="primary"
-              size="lg"
-              className="hidden sm:flex"
-              onClick={() => {
-                toggleCreateIssueModal(true, EIssuesStoreType.MODULE);
-              }}
-            >
-              Add work item
-            </Button>
-          )}
-          <IconButton
-            variant="tertiary"
-            size="lg"
-            icon={RightSidePaneOutline}
-            onClick={toggleSidebar}
-            className={cn({
-              "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
-            })}
-          />
-          {moduleId && (
-            <ModuleQuickActions
-              parentRef={parentRef}
-              moduleId={moduleId}
-              projectId={projectId.toString()}
-              workspaceSlug={workspaceSlug.toString()}
-              customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
+    <Header>
+      <Header.LeftItem>
+        <div className="flex items-center gap-2">
+          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <Breadcrumbs.Item
+              component={
+                <BreadcrumbLink
+                  label="Modules"
+                  href={`/${workspaceSlug}/projects/${projectId}/modules/`}
+                  icon={<ModuleOutline className="h-4 w-4 text-tertiary" />}
+                  isLast
+                />
+              }
+              isLast
             />
-          )}
-        </Header.RightItem>
-      </Header>
-    </>
+            <Breadcrumbs.Item
+              component={
+                <BreadcrumbNavigationSearchDropdown
+                  selectedItem={moduleId?.toString() ?? ""}
+                  navigationItems={switcherOptions}
+                  onChange={(value: string) => {
+                    router.push(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
+                  }}
+                  title={moduleDetails?.name}
+                  icon={<ModuleOutline className="size-3.5 flex-shrink-0 text-tertiary" />}
+                  isLast
+                />
+              }
+            />
+          </Breadcrumbs>
+          {workItemsCount && workItemsCount > 0 ? (
+            <Tooltip
+              label={`There are ${workItemsCount} ${workItemsCount > 1 ? "work items" : "work item"} in this module`}
+              layout="stacked"
+              side="bottom"
+              disabled={isMobile}
+            >
+              <span className="flex flex-shrink-0 cursor-default items-center justify-center rounded-xl bg-accent-primary/20 px-2 text-center text-11 font-semibold text-accent-primary">
+                {workItemsCount}
+              </span>
+            </Tooltip>
+          ) : null}
+        </div>
+      </Header.LeftItem>
+      <Header.RightItem className="items-center">
+        <div className="hidden gap-2 md:flex">
+          <div className="hidden @4xl:flex">
+            <LayoutSelection
+              layouts={[
+                EIssueLayoutTypes.LIST,
+                EIssueLayoutTypes.KANBAN,
+                EIssueLayoutTypes.CALENDAR,
+                EIssueLayoutTypes.SPREADSHEET,
+              ]}
+              onChange={(layout) => handleLayoutChange(layout)}
+              selectedLayout={activeLayout}
+            />
+          </div>
+          <div className="flex @4xl:hidden">
+            <MobileLayoutSelection
+              layouts={[
+                EIssueLayoutTypes.LIST,
+                EIssueLayoutTypes.KANBAN,
+                EIssueLayoutTypes.CALENDAR,
+                EIssueLayoutTypes.SPREADSHEET,
+              ]}
+              onChange={(layout) => handleLayoutChange(layout)}
+              activeLayout={activeLayout}
+            />
+          </div>
+          {moduleId && <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />}
+          <FiltersDropdown
+            title="Display"
+            placement="bottom-end"
+            miniIcon={<PreferencesOutline className="size-3.5" />}
+          >
+            <DisplayFiltersSelection
+              layoutDisplayFiltersOptions={
+                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
+              }
+              displayFilters={issueFilters?.displayFilters ?? {}}
+              handleDisplayFiltersUpdate={handleDisplayFilters}
+              displayProperties={issueFilters?.displayProperties ?? {}}
+              handleDisplayPropertiesUpdate={handleDisplayProperties}
+              ignoreGroupedFilters={["module"]}
+              cycleViewDisabled={!currentProjectDetails?.cycle_view}
+              moduleViewDisabled={!currentProjectDetails?.module_view}
+            />
+          </FiltersDropdown>
+        </div>
+
+        {canUserCreateIssue && (
+          <Button
+            variant="primary"
+            size="lg"
+            className="hidden sm:flex"
+            onClick={() => {
+              toggleCreateIssueModal(true, EIssuesStoreType.MODULE);
+            }}
+          >
+            Add work item
+          </Button>
+        )}
+        <IconButton
+          variant="tertiary"
+          size="lg"
+          icon={RightSidePaneOutline}
+          onClick={toggleSidebar}
+          className={cn({
+            "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
+          })}
+        />
+        {moduleId && (
+          <ModuleQuickActions
+            parentRef={parentRef}
+            moduleId={moduleId}
+            projectId={projectId.toString()}
+            workspaceSlug={workspaceSlug.toString()}
+            customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
+          />
+        )}
+      </Header.RightItem>
+    </Header>
   );
 });

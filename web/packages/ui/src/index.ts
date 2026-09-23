@@ -21,7 +21,6 @@ export * from "./loader";
 export * from "./modals";
 export * from "./popovers";
 export * from "./row";
-export * from "./sortable";
 export * from "./spinners";
 export * from "./tables";
 export * from "./tag";

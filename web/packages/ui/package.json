@@ -16,14 +16,12 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 29",
+    "check:lint": "node ../../../tools/lint-cap.mjs 28",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."
   },
   "dependencies": {
-    "@atlaskit/pragmatic-drag-and-drop": "catalog:",
-    "@atlaskit/pragmatic-drag-and-drop-hitbox": "catalog:",
     "@headlessui/react": "catalog:",
     "@makeplane/propel": "catalog:",
     "@plane/constants": "workspace:*",

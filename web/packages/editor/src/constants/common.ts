@@ -20,8 +20,7 @@ import {
   ToDoOutline,
   UnderlineOutline,
 } from "@makeplane/propel/icons";
-import { MonospaceIcon, SansSerifIcon, SerifIcon } from "@plane/propel/icons";
-import type { TCommandExtraProps, TEditorCommands, TEditorFontStyle } from "@/types";
+import type { TCommandExtraProps, TEditorCommands } from "@/types";
 
 // Utility type to enforce the necessary extra props or make extraProps optional
 export type ExtraPropsForCommand<T extends TEditorCommands> = T extends keyof TCommandExtraProps
@@ -130,11 +129,12 @@ export const USER_ACTION_ITEMS: ToolbarMenuItem<"quote" | "code">[] = [
   { itemKey: "code", renderKey: "code", name: "Code", icon: CodeOutline },
 ];
 
-export const COMPLEX_ITEMS: ToolbarMenuItem<"image">[] = [
-  { itemKey: "image", renderKey: "image", name: "Image", icon: ImageOutline },
-];
-
-export const IMAGE_ITEM = COMPLEX_ITEMS.find((item): item is ToolbarMenuItem<"image"> => item.itemKey === "image")!;
+export const IMAGE_ITEM: ToolbarMenuItem<"image"> = {
+  itemKey: "image",
+  renderKey: "image",
+  name: "Image",
+  icon: ImageOutline,
+};
 
 export const TOOLBAR_ITEMS: {
   [key: string]: ToolbarMenuItem[];
@@ -143,7 +143,7 @@ export const TOOLBAR_ITEMS: {
   alignment: TEXT_ALIGNMENT_ITEMS,
   list: LIST_ITEMS,
   userAction: USER_ACTION_ITEMS,
-  complex: COMPLEX_ITEMS,
+  complex: [IMAGE_ITEM],
 };
 
 export const COLORS_LIST: {
@@ -206,14 +206,4 @@ export const COLORS_LIST: {
   //   textColor: "var(--editor-colors-pink-blue-gradient-text)",
   //   backgroundColor: "var(--editor-colors-pink-blue-gradient-background)",
   // },
-];
-
-export const EDITOR_FONT_STYLES: {
-  key: TEditorFontStyle;
-  label: string;
-  icon: React.FC;
-}[] = [
-  { key: "sans-serif", label: "Sans serif", icon: SansSerifIcon },
-  { key: "serif", label: "Serif", icon: SerifIcon },
-  { key: "monospace", label: "Mono", icon: MonospaceIcon },
 ];

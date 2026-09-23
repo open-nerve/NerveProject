@@ -28,11 +28,11 @@ export type TEditorFlaggingHookProps = {
  */
 export const useEditorFlagging = (_props: TEditorFlaggingHookProps): TEditorFlaggingHookReturnType => ({
   liteText: {
-    disabled: ["ai"],
+    disabled: [],
     flagged: [],
   },
   richText: {
-    disabled: ["ai"],
+    disabled: [],
     flagged: [],
   },
 });

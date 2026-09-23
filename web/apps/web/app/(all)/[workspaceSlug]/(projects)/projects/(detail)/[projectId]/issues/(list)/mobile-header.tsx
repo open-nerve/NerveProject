@@ -60,37 +60,35 @@ export const ProjectIssuesMobileHeader = observer(function ProjectIssuesMobileHe
   );
 
   return (
-    <>
-      <div className="z-[13] flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
-        <MobileLayoutSelection
-          layouts={[EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutTypes.CALENDAR]}
-          onChange={handleLayoutChange}
-        />
-        <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
-          <FiltersDropdown
-            title={t("common.display")}
-            placement="bottom-end"
-            menuButton={
-              <span className="flex items-center text-13 text-secondary">
-                {t("common.display")}
-                <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
-              </span>
+    <div className="z-[13] flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
+      <MobileLayoutSelection
+        layouts={[EIssueLayoutTypes.LIST, EIssueLayoutTypes.KANBAN, EIssueLayoutTypes.CALENDAR]}
+        onChange={handleLayoutChange}
+      />
+      <div className="flex flex-grow items-center justify-center border-l border-subtle text-13 text-secondary">
+        <FiltersDropdown
+          title={t("common.display")}
+          placement="bottom-end"
+          menuButton={
+            <span className="flex items-center text-13 text-secondary">
+              {t("common.display")}
+              <ChevronDownOutline className="ml-2 h-4 w-4 text-secondary" />
+            </span>
+          }
+        >
+          <DisplayFiltersSelection
+            layoutDisplayFiltersOptions={
+              activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
             }
-          >
-            <DisplayFiltersSelection
-              layoutDisplayFiltersOptions={
-                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-              }
-              displayFilters={issueFilters?.displayFilters ?? {}}
-              handleDisplayFiltersUpdate={handleDisplayFilters}
-              displayProperties={issueFilters?.displayProperties ?? {}}
-              handleDisplayPropertiesUpdate={handleDisplayProperties}
-              cycleViewDisabled={!currentProjectDetails?.cycle_view}
-              moduleViewDisabled={!currentProjectDetails?.module_view}
-            />
-          </FiltersDropdown>
-        </div>
+            displayFilters={issueFilters?.displayFilters ?? {}}
+            handleDisplayFiltersUpdate={handleDisplayFilters}
+            displayProperties={issueFilters?.displayProperties ?? {}}
+            handleDisplayPropertiesUpdate={handleDisplayProperties}
+            cycleViewDisabled={!currentProjectDetails?.cycle_view}
+            moduleViewDisabled={!currentProjectDetails?.module_view}
+          />
+        </FiltersDropdown>
       </div>
-    </>
+    </div>
   );
 });

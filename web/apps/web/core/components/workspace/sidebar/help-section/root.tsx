@@ -24,55 +24,53 @@ export const HelpMenuRoot = observer(function HelpMenuRoot() {
   const [isNeedHelpOpen, setIsNeedHelpOpen] = useState(false);
 
   return (
-    <>
-      <CustomMenu
-        customButton={
-          <AppSidebarItem
-            variant="button"
-            item={{
-              icon: <HelpOutline className="size-5" />,
-              isActive: isNeedHelpOpen,
-            }}
-          />
-        }
-        // customButtonClassName="relative grid place-items-center rounded-md p-1.5 outline-none"
-        menuButtonOnClick={() => !isNeedHelpOpen && setIsNeedHelpOpen(true)}
-        onMenuClose={() => setIsNeedHelpOpen(false)}
-        placement="bottom-end"
-        maxHeight="lg"
-        closeOnSelect
-      >
-        <CustomMenu.MenuItem onClick={() => window.open("https://go.plane.so/p-docs", "_blank")}>
-          <div className="flex items-center gap-x-2 rounded-sm text-11">
-            <PagesOutline className="h-3.5 w-3.5 text-secondary" height={14} width={14} />
-            <span className="text-11">{t("documentation")}</span>
-          </div>
-        </CustomMenu.MenuItem>
-        <CustomMenu.MenuItem onClick={() => window.open("mailto:sales@plane.so", "_blank")}>
-          <div className="flex items-center gap-x-2 rounded-sm text-11">
-            <UserOutline className="h-3.5 w-3.5 text-secondary" width={14} height={14} />
-            <span className="text-11">{t("contact_sales")}</span>
-          </div>
-        </CustomMenu.MenuItem>
-        <div className="my-1 border-t border-subtle" />
-        <CustomMenu.MenuItem>
-          <button
-            type="button"
-            onClick={() => toggleShortcutsListModal(true)}
-            className="justify-sbg-layer-211 flex w-full items-center hover:bg-layer-1"
-          >
-            <span className="text-11">{t("keyboard_shortcuts")}</span>
-          </button>
-        </CustomMenu.MenuItem>
-        <CustomMenu.MenuItem onClick={() => window.open("https://forum.plane.so", "_blank", "noopener,noreferrer")}>
-          <div className="flex items-center gap-x-2 rounded-sm text-11">
-            <span className="text-11">Forum</span>
-          </div>
-        </CustomMenu.MenuItem>
-        <div className="mt-1 border-t border-subtle px-1 pt-2 text-11 text-secondary">
-          <PlaneVersionNumber />
+    <CustomMenu
+      customButton={
+        <AppSidebarItem
+          variant="button"
+          item={{
+            icon: <HelpOutline className="size-5" />,
+            isActive: isNeedHelpOpen,
+          }}
+        />
+      }
+      // customButtonClassName="relative grid place-items-center rounded-md p-1.5 outline-none"
+      menuButtonOnClick={() => !isNeedHelpOpen && setIsNeedHelpOpen(true)}
+      onMenuClose={() => setIsNeedHelpOpen(false)}
+      placement="bottom-end"
+      maxHeight="lg"
+      closeOnSelect
+    >
+      <CustomMenu.MenuItem onClick={() => window.open("https://go.plane.so/p-docs", "_blank")}>
+        <div className="flex items-center gap-x-2 rounded-sm text-11">
+          <PagesOutline className="h-3.5 w-3.5 text-secondary" height={14} width={14} />
+          <span className="text-11">{t("documentation")}</span>
         </div>
-      </CustomMenu>
-    </>
+      </CustomMenu.MenuItem>
+      <CustomMenu.MenuItem onClick={() => window.open("mailto:sales@plane.so", "_blank")}>
+        <div className="flex items-center gap-x-2 rounded-sm text-11">
+          <UserOutline className="h-3.5 w-3.5 text-secondary" width={14} height={14} />
+          <span className="text-11">{t("contact_sales")}</span>
+        </div>
+      </CustomMenu.MenuItem>
+      <div className="my-1 border-t border-subtle" />
+      <CustomMenu.MenuItem>
+        <button
+          type="button"
+          onClick={() => toggleShortcutsListModal(true)}
+          className="justify-sbg-layer-211 flex w-full items-center hover:bg-layer-1"
+        >
+          <span className="text-11">{t("keyboard_shortcuts")}</span>
+        </button>
+      </CustomMenu.MenuItem>
+      <CustomMenu.MenuItem onClick={() => window.open("https://forum.plane.so", "_blank", "noopener,noreferrer")}>
+        <div className="flex items-center gap-x-2 rounded-sm text-11">
+          <span className="text-11">Forum</span>
+        </div>
+      </CustomMenu.MenuItem>
+      <div className="mt-1 border-t border-subtle px-1 pt-2 text-11 text-secondary">
+        <PlaneVersionNumber />
+      </div>
+    </CustomMenu>
   );
 });

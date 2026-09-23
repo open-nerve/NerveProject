@@ -956,12 +956,6 @@ importers:
 
   web/packages/ui:
     dependencies:
-      '@atlaskit/pragmatic-drag-and-drop':
-        specifier: 'catalog:'
-        version: 1.7.4
-      '@atlaskit/pragmatic-drag-and-drop-hitbox':
-        specifier: 'catalog:'
-        version: 1.1.0
       '@headlessui/react':
         specifier: 'catalog:'
         version: 2.2.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

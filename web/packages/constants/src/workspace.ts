@@ -43,7 +43,6 @@ export const RESTRICTED_URLS: string[] = [
   "signin",
   "signup",
   "config",
-  "live",
   "admin",
   "m",
   "configuration",

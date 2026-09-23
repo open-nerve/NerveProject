@@ -122,131 +122,129 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
   const workItemsCount = getGroupIssueCount(undefined, undefined, false);
 
   return (
-    <>
-      <Header>
-        <Header.LeftItem>
-          <div className="flex items-center gap-2">
-            <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-              <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
-              <Breadcrumbs.Item
-                component={
-                  <BreadcrumbLink
-                    label="Cycles"
-                    href={`/${workspaceSlug}/projects/${projectId}/cycles/`}
-                    icon={<CyclesOutline className="h-4 w-4 text-tertiary" />}
-                  />
-                }
-              />
-              <Breadcrumbs.Item
-                component={
-                  <BreadcrumbNavigationSearchDropdown
-                    selectedItem={cycleId}
-                    navigationItems={switcherOptions}
-                    onChange={(value: string) => {
-                      router.push(`/${workspaceSlug}/projects/${projectId}/cycles/${value}`);
-                    }}
-                    title={cycleDetails?.name}
-                    icon={
-                      <Breadcrumbs.Icon>
-                        <CyclesOutline className="size-4 flex-shrink-0 text-tertiary" />
-                      </Breadcrumbs.Icon>
-                    }
-                    isLast
-                  />
-                }
-                isLast
-              />
-            </Breadcrumbs>
-            {workItemsCount && workItemsCount > 0 ? (
-              <Tooltip
-                label={`There are ${workItemsCount} ${workItemsCount > 1 ? "work items" : "work item"} in this cycle`}
-                layout="stacked"
-                side="bottom"
-                disabled={isMobile}
-              >
-                <span className="flex flex-shrink-0 cursor-default items-center justify-center rounded-xl bg-accent-primary/20 px-2 text-center text-11 font-semibold text-accent-primary">
-                  {workItemsCount}
-                </span>
-              </Tooltip>
-            ) : null}
-          </div>
-        </Header.LeftItem>
-        <Header.RightItem className="items-center">
-          <div className="hidden items-center gap-2 md:flex">
-            <div className="hidden @4xl:flex">
-              <LayoutSelection
-                layouts={[
-                  EIssueLayoutTypes.LIST,
-                  EIssueLayoutTypes.KANBAN,
-                  EIssueLayoutTypes.CALENDAR,
-                  EIssueLayoutTypes.SPREADSHEET,
-                ]}
-                onChange={(layout) => handleLayoutChange(layout)}
-                selectedLayout={activeLayout}
-              />
-            </div>
-            <div className="flex @4xl:hidden">
-              <MobileLayoutSelection
-                layouts={[
-                  EIssueLayoutTypes.LIST,
-                  EIssueLayoutTypes.KANBAN,
-                  EIssueLayoutTypes.CALENDAR,
-                  EIssueLayoutTypes.SPREADSHEET,
-                ]}
-                onChange={(layout) => handleLayoutChange(layout)}
-                activeLayout={activeLayout}
-              />
-            </div>
-            <WorkItemFiltersToggle entityType={EIssuesStoreType.CYCLE} entityId={cycleId} />
-            <FiltersDropdown
-              title={t("common.display")}
-              placement="bottom-end"
-              miniIcon={<PreferencesOutline className="size-3.5" />}
+    <Header>
+      <Header.LeftItem>
+        <div className="flex items-center gap-2">
+          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <Breadcrumbs.Item
+              component={
+                <BreadcrumbLink
+                  label="Cycles"
+                  href={`/${workspaceSlug}/projects/${projectId}/cycles/`}
+                  icon={<CyclesOutline className="h-4 w-4 text-tertiary" />}
+                />
+              }
+            />
+            <Breadcrumbs.Item
+              component={
+                <BreadcrumbNavigationSearchDropdown
+                  selectedItem={cycleId}
+                  navigationItems={switcherOptions}
+                  onChange={(value: string) => {
+                    router.push(`/${workspaceSlug}/projects/${projectId}/cycles/${value}`);
+                  }}
+                  title={cycleDetails?.name}
+                  icon={
+                    <Breadcrumbs.Icon>
+                      <CyclesOutline className="size-4 flex-shrink-0 text-tertiary" />
+                    </Breadcrumbs.Icon>
+                  }
+                  isLast
+                />
+              }
+              isLast
+            />
+          </Breadcrumbs>
+          {workItemsCount && workItemsCount > 0 ? (
+            <Tooltip
+              label={`There are ${workItemsCount} ${workItemsCount > 1 ? "work items" : "work item"} in this cycle`}
+              layout="stacked"
+              side="bottom"
+              disabled={isMobile}
             >
-              <DisplayFiltersSelection
-                layoutDisplayFiltersOptions={
-                  activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
-                }
-                displayFilters={issueFilters?.displayFilters ?? {}}
-                handleDisplayFiltersUpdate={handleDisplayFilters}
-                displayProperties={issueFilters?.displayProperties ?? {}}
-                handleDisplayPropertiesUpdate={handleDisplayProperties}
-                ignoreGroupedFilters={["cycle"]}
-                cycleViewDisabled={!currentProjectDetails?.cycle_view}
-                moduleViewDisabled={!currentProjectDetails?.module_view}
-              />
-            </FiltersDropdown>
-
-            {canUserCreateIssue && !isCompletedCycle && (
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => {
-                  toggleCreateIssueModal(true, EIssuesStoreType.CYCLE);
-                }}
-              >
-                {t("issue.add.label")}
-              </Button>
-            )}
-            <IconButton
-              variant="tertiary"
-              size="lg"
-              icon={RightSidePaneOutline}
-              onClick={toggleSidebar}
-              className={cn({
-                "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
-              })}
-            />
-            <CycleQuickActions
-              parentRef={parentRef}
-              cycleId={cycleId}
-              projectId={projectId}
-              workspaceSlug={workspaceSlug}
-              customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
+              <span className="flex flex-shrink-0 cursor-default items-center justify-center rounded-xl bg-accent-primary/20 px-2 text-center text-11 font-semibold text-accent-primary">
+                {workItemsCount}
+              </span>
+            </Tooltip>
+          ) : null}
+        </div>
+      </Header.LeftItem>
+      <Header.RightItem className="items-center">
+        <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden @4xl:flex">
+            <LayoutSelection
+              layouts={[
+                EIssueLayoutTypes.LIST,
+                EIssueLayoutTypes.KANBAN,
+                EIssueLayoutTypes.CALENDAR,
+                EIssueLayoutTypes.SPREADSHEET,
+              ]}
+              onChange={(layout) => handleLayoutChange(layout)}
+              selectedLayout={activeLayout}
             />
           </div>
-        </Header.RightItem>
-      </Header>
-    </>
+          <div className="flex @4xl:hidden">
+            <MobileLayoutSelection
+              layouts={[
+                EIssueLayoutTypes.LIST,
+                EIssueLayoutTypes.KANBAN,
+                EIssueLayoutTypes.CALENDAR,
+                EIssueLayoutTypes.SPREADSHEET,
+              ]}
+              onChange={(layout) => handleLayoutChange(layout)}
+              activeLayout={activeLayout}
+            />
+          </div>
+          <WorkItemFiltersToggle entityType={EIssuesStoreType.CYCLE} entityId={cycleId} />
+          <FiltersDropdown
+            title={t("common.display")}
+            placement="bottom-end"
+            miniIcon={<PreferencesOutline className="size-3.5" />}
+          >
+            <DisplayFiltersSelection
+              layoutDisplayFiltersOptions={
+                activeLayout ? ISSUE_DISPLAY_FILTERS_BY_PAGE.issues.layoutOptions[activeLayout] : undefined
+              }
+              displayFilters={issueFilters?.displayFilters ?? {}}
+              handleDisplayFiltersUpdate={handleDisplayFilters}
+              displayProperties={issueFilters?.displayProperties ?? {}}
+              handleDisplayPropertiesUpdate={handleDisplayProperties}
+              ignoreGroupedFilters={["cycle"]}
+              cycleViewDisabled={!currentProjectDetails?.cycle_view}
+              moduleViewDisabled={!currentProjectDetails?.module_view}
+            />
+          </FiltersDropdown>
+
+          {canUserCreateIssue && !isCompletedCycle && (
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                toggleCreateIssueModal(true, EIssuesStoreType.CYCLE);
+              }}
+            >
+              {t("issue.add.label")}
+            </Button>
+          )}
+          <IconButton
+            variant="tertiary"
+            size="lg"
+            icon={RightSidePaneOutline}
+            onClick={toggleSidebar}
+            className={cn({
+              "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
+            })}
+          />
+          <CycleQuickActions
+            parentRef={parentRef}
+            cycleId={cycleId}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
+            customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
+          />
+        </div>
+      </Header.RightItem>
+    </Header>
   );
 });

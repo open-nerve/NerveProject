@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { Fragment } from "react";
 import { observer } from "mobx-react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
@@ -34,24 +33,18 @@ export const SidebarChart = observer(function SidebarChart(props: ProgressChartP
   const completionChartDistributionData = cycleDetails?.distribution?.completion_chart || undefined;
 
   return (
-    <div>
-      <div className="py-4">
-        <div>
-          {cycleStartDate && cycleEndDate && completionChartDistributionData ? (
-            <Fragment>
-              <ProgressChart
-                distribution={completionChartDistributionData}
-                totalIssues={totalIssues}
-                plotTitle={t("work_items")}
-              />
-            </Fragment>
-          ) : (
-            <Loader className="mt-4 h-[160px] w-full">
-              <Loader.Item width="100%" height="100%" />
-            </Loader>
-          )}
-        </div>
-      </div>
+    <div className="py-4">
+      {cycleStartDate && cycleEndDate && completionChartDistributionData ? (
+        <ProgressChart
+          distribution={completionChartDistributionData}
+          totalIssues={totalIssues}
+          plotTitle={t("work_items")}
+        />
+      ) : (
+        <Loader className="mt-4 h-[160px] w-full">
+          <Loader.Item width="100%" height="100%" />
+        </Loader>
+      )}
     </div>
   );
 });

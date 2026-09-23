@@ -146,7 +146,6 @@ export function EditorContainer(props: Props) {
             "active-editor": editor?.isFocused && editor?.isEditable,
           },
           displayConfig.fontSize ?? DEFAULT_DISPLAY_CONFIG.fontSize,
-          displayConfig.fontStyle ?? DEFAULT_DISPLAY_CONFIG.fontStyle,
           editorContainerClassName
         )}
       >

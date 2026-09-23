@@ -107,16 +107,6 @@
 
   /* font styles */
   --font-style: "Inter Variable", sans-serif;
-
-  &.sans-serif {
-    --font-style: "Inter Variable", sans-serif;
-  }
-  &.serif {
-    --font-style: serif;
-  }
-  &.monospace {
-    --font-style: monospace;
-  }
   /* end font styles */
 
   /* spacing */

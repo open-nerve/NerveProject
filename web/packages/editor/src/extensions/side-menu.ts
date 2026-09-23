@@ -18,9 +18,7 @@ type Props = {
 
 export type SideMenuPluginProps = {
   dragHandleWidth: number;
-  handlesConfig: {
-    dragDrop: boolean;
-  };
+  dragDropEnabled: boolean;
   scrollThreshold: {
     up: number;
     down: number;
@@ -43,9 +41,7 @@ export const SideMenuExtension = (props: Props) => {
       return [
         SideMenu({
           dragHandleWidth: 24,
-          handlesConfig: {
-            dragDrop: dragDropEnabled,
-          },
+          dragDropEnabled,
           scrollThreshold: { up: 200, down: 150 },
         }),
       ];
@@ -64,7 +60,7 @@ const absoluteRect = (node: Element) => {
 };
 
 const SideMenu = (options: SideMenuPluginProps) => {
-  const { handlesConfig } = options;
+  const { dragDropEnabled } = options;
   const editorSideMenu: HTMLDivElement | null = document.createElement("div");
   editorSideMenu.id = "editor-side-menu";
   // side menu view actions
@@ -81,7 +77,7 @@ const SideMenu = (options: SideMenuPluginProps) => {
       hideSideMenu();
       view?.dom.parentElement?.appendChild(editorSideMenu);
       // side menu elements' initialization
-      if (handlesConfig.dragDrop && !editorSideMenu.querySelector("#drag-handle")) {
+      if (dragDropEnabled && !editorSideMenu.querySelector("#drag-handle")) {
         dragHandleView(view, editorSideMenu);
       }
 
@@ -136,24 +132,24 @@ const SideMenu = (options: SideMenuPluginProps) => {
           editorSideMenu.style.left = `${rect.left - rect.width}px`;
           editorSideMenu.style.top = `${rect.top}px`;
           showSideMenu();
-          if (handlesConfig.dragDrop) {
+          if (dragDropEnabled) {
             dragHandleDOMEvents?.mousemove();
           }
         },
         // keydown: () => hideSideMenu(),
         mousewheel: () => hideSideMenu(),
         dragenter: (view) => {
-          if (handlesConfig.dragDrop) {
+          if (dragDropEnabled) {
             dragHandleDOMEvents?.dragenter?.(view);
           }
         },
         drop: (view, event) => {
-          if (handlesConfig.dragDrop) {
+          if (dragDropEnabled) {
             dragHandleDOMEvents?.drop?.(view, event);
           }
         },
         dragend: (view) => {
-          if (handlesConfig.dragDrop) {
+          if (dragDropEnabled) {
             dragHandleDOMEvents?.dragend?.(view);
           }
         },
