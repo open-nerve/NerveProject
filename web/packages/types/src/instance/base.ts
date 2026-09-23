@@ -53,8 +53,6 @@ export interface IInstanceConfig {
   is_gitea_enabled: boolean;
   is_magic_login_enabled: boolean;
   is_email_password_enabled: boolean;
-  github_app_name: string | undefined;
-  slack_client_id: string | undefined;
   has_unsplash_configured: boolean;
   has_llm_configured: boolean;
   file_size_limit: number | undefined;

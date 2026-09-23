@@ -571,6 +571,33 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "export",
+      "phase": "M1/P2",
+      "why": "工作区的导出设置页及其导出记录列表；不搜单独的 export（保留代码里到处都是 export 语句）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "content": { "source": "exporter|settings/exports|export-issues|IExportData", "flags": "i" },
+      "samples": {
+        "hit": [
+          "import { ExportGuide } from \"@/components/exporter/guide\";",
+          "          router.push(`/${workspaceSlug}/settings/exports`);",
+          "    return this.post(`/api/workspaces/${workspaceSlug}/export-issues/`, data)",
+          "      provider: EXPORTERS_LIST[0],",
+          "type RowData = IExportData;",
+          "  \"exporter\": {"
+        ],
+        "miss": [
+          "export const RESTRICTED_URLS: string[] = [",
+          "export * from \"./project.service\";",
+          "import { exportAsCSV } from \"./csv\";",
+          "  \"webhooks\": \"Webhooks\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/routes/core.ts", "web/packages/constants/src/workspace.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [

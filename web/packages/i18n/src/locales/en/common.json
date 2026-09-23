@@ -310,7 +310,6 @@
   "leave": "Leave",
   "refresh": "Refresh",
   "refreshing": "Refreshing",
-  "refresh_status": "Refresh status",
   "prev": "Prev",
   "next": "Next",
   "re_generating": "Re-generating",
@@ -769,26 +768,5 @@
     "missing_fields": "Missing fields",
     "success": "{fileName} Uploaded!"
   },
-  "date": "Date",
-  "exporter": {
-    "csv": {
-      "title": "CSV",
-      "description": "Export work items to a CSV file."
-    },
-    "excel": {
-      "title": "Excel",
-      "description": "Export work items to a Excel file.",
-      "short_description": "Export as excel"
-    },
-    "xlsx": {
-      "title": "Excel",
-      "description": "Export work items to a Excel file.",
-      "short_description": "Export as excel"
-    },
-    "json": {
-      "title": "JSON",
-      "description": "Export work items to a JSON file.",
-      "short_description": "Export as json"
-    }
-  }
+  "date": "Date"
 }

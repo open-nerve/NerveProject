@@ -116,18 +116,6 @@ export type IProjectMemberPreferencesFullResponse = IProjectMemberPreferencesRes
   workspace_id: string;
 };
 
-export interface IGithubRepository {
-  id: string;
-  full_name: string;
-  html_url: string;
-  url: string;
-}
-
-export interface GithubRepositoriesResponse {
-  repositories: IGithubRepository[];
-  total_count: number;
-}
-
 export type TProjectIssuesSearchParams = {
   search: string;
   parent?: boolean;

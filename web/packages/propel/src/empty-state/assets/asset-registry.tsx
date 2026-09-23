@@ -15,7 +15,6 @@ import type {
 import {
   CustomerHorizontalStackIllustration,
   EpicHorizontalStackIllustration,
-  ExportHorizontalStackIllustration,
   IntakeHorizontalStackIllustration,
   LabelHorizontalStackIllustration,
   MembersHorizontalStackIllustration,
@@ -56,7 +55,6 @@ import {
 export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.ComponentType<{ className?: string }>> = {
   customer: CustomerHorizontalStackIllustration,
   epic: EpicHorizontalStackIllustration,
-  export: ExportHorizontalStackIllustration,
   intake: IntakeHorizontalStackIllustration,
   label: LabelHorizontalStackIllustration,
   members: MembersHorizontalStackIllustration,

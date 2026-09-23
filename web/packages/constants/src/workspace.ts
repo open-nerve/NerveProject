@@ -46,10 +46,6 @@ export const RESTRICTED_URLS: string[] = [
   "live",
   "admin",
   "m",
-  "import",
-  "importers",
-  "integrations",
-  "integration",
   "configuration",
   "initiatives",
   "initiative",
@@ -129,42 +125,6 @@ export const USER_ROLES = [
   },
   { value: "Human Resources", i18n_label: "user_roles.human_resources" },
   { value: "Other", i18n_label: "user_roles.other" },
-];
-
-export const IMPORTERS_LIST = [
-  {
-    provider: "github",
-    type: "import",
-    i18n_title: "importer.github.title",
-    i18n_description: "importer.github.description",
-  },
-  {
-    provider: "jira",
-    type: "import",
-    i18n_title: "importer.jira.title",
-    i18n_description: "importer.jira.description",
-  },
-];
-
-export const EXPORTERS_LIST = [
-  {
-    provider: "csv",
-    type: "export",
-    i18n_title: "exporter.csv.title",
-    i18n_description: "exporter.csv.description",
-  },
-  {
-    provider: "xlsx",
-    type: "export",
-    i18n_title: "exporter.excel.title",
-    i18n_description: "exporter.csv.description",
-  },
-  {
-    provider: "json",
-    type: "export",
-    i18n_title: "exporter.json.title",
-    i18n_description: "exporter.csv.description",
-  },
 ];
 
 export const DEFAULT_GLOBAL_VIEWS_LIST: {

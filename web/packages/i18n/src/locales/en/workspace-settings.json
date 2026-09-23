@@ -73,30 +73,6 @@
         "free_plan": "You are currently using the free plan",
         "view_plans": "View plans"
       },
-      "exports": {
-        "heading": "Exports",
-        "description": "Export your project data in various formats and access your export history with download links.",
-        "title": "Exports",
-        "exporting": "Exporting",
-        "previous_exports": "Previous exports",
-        "export_separate_files": "Export the data into separate files",
-        "exporting_projects": "Exporting project",
-        "format": "Format",
-        "filters_info": "Apply filters to export specific work items based on your criteria.",
-        "modal": {
-          "title": "Export to",
-          "toasts": {
-            "success": {
-              "title": "Export successful",
-              "message": "You will be able to download the exported {entity} from the previous export."
-            },
-            "error": {
-              "title": "Export failed",
-              "message": "Export was unsuccessful. Please try again."
-            }
-          }
-        }
-      },
       "webhooks": {
         "heading": "Webhooks",
         "description": "Automate notifications to external services when project events occur.",
@@ -309,10 +285,6 @@
       "webhooks": {
         "title": "No webhooks added",
         "description": "Create webhooks to receive real-time updates and automate actions."
-      },
-      "exports": {
-        "title": "No exports yet",
-        "description": "Anytime you export, you will also have a copy here for reference."
       },
       "imports": {
         "title": "No imports yet",

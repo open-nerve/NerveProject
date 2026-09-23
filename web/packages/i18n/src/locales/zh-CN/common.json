@@ -310,7 +310,6 @@
   "leave": "离开",
   "refresh": "刷新",
   "refreshing": "刷新中",
-  "refresh_status": "刷新状态",
   "prev": "上一个",
   "next": "下一个",
   "re_generating": "重新生成中",
@@ -769,26 +768,5 @@
     "missing_fields": "缺少字段",
     "success": "{fileName} 已上传！"
   },
-  "date": "日期",
-  "exporter": {
-    "csv": {
-      "title": "CSV",
-      "description": "将工作项导出为 CSV 文件。"
-    },
-    "excel": {
-      "title": "Excel",
-      "description": "将工作项导出为 Excel 文件。",
-      "short_description": "导出为 Excel"
-    },
-    "xlsx": {
-      "title": "Excel",
-      "description": "将工作项导出为 Excel 文件。",
-      "short_description": "导出为 Excel"
-    },
-    "json": {
-      "title": "JSON",
-      "description": "将工作项导出为 JSON 文件。",
-      "short_description": "导出为 JSON"
-    }
-  }
+  "date": "日期"
 }
