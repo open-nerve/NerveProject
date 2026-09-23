@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { PROFILE_TABS } from "./profile";
 import { GROUPED_PROFILE_SETTINGS, PROFILE_SETTINGS_TABS } from "./settings/profile";
+import { GROUPED_WORKSPACE_SETTINGS, WORKSPACE_SETTINGS } from "./settings/workspace";
 import { WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS, WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS } from "./workspace";
 
 // The sidebar is a fixed list (M1 design 3.3) and the profile page keeps only its three work-item tabs
@@ -64,5 +65,18 @@ describe("the profile settings", () => {
   it("shows every tab in exactly one sidebar group", () => {
     const grouped = Object.values(GROUPED_PROFILE_SETTINGS).flatMap((items) => items.map((item) => item.key));
     expect(grouped.toSorted()).toEqual([...PROFILE_SETTINGS_TABS].toSorted());
+  });
+});
+
+// The workspace settings keep three tabs once the paid-plan pages are gone (M1 design 2.2); the members and webhooks
+// pages have no other entry.
+describe("the workspace settings", () => {
+  it("keep exactly these tabs", () => {
+    expect(Object.keys(WORKSPACE_SETTINGS)).toEqual(["general", "members", "webhooks"]);
+  });
+
+  it("show every tab in exactly one sidebar group", () => {
+    const grouped = Object.values(GROUPED_WORKSPACE_SETTINGS).flatMap((items) => items.map((item) => item.key));
+    expect(grouped.toSorted()).toEqual(Object.keys(WORKSPACE_SETTINGS).toSorted());
   });
 });

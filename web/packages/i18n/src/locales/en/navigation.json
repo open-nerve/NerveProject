@@ -8,11 +8,6 @@
     "cycles": "Cycles",
     "modules": "Modules",
     "intake": "Intake",
-    "favorites": "Favorites",
-    "pro": "Pro",
-    "upgrade": "Upgrade",
-    "upgrade_plan": "Upgrade plan",
-    "plane_pro": "Plane Pro",
-    "business": "Business"
+    "favorites": "Favorites"
   }
 }

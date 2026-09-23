@@ -23,7 +23,6 @@ import {
   PreferencesIcon,
   SearchIcon,
   TrashIcon,
-  UpgradeIcon,
 } from "./actions";
 // Arrow icons
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ReplyIcon } from "./arrows";
@@ -142,7 +141,6 @@ export const ICON_REGISTRY = {
   "action.preferences": PreferencesIcon,
   "action.trash": TrashIcon,
   "action.copy-link": CopyLinkIcon,
-  "action.upgrade": UpgradeIcon,
 
   // Arrow icons
   "arrow.chevron-down": ChevronDownIcon,

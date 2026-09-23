@@ -15,5 +15,3 @@ export const WEB_URL = encodeURI(`${WEB_BASE_URL}${WEB_BASE_PATH}`);
 export const WEBSITE_URL = process.env.VITE_WEBSITE_URL || "https://plane.so";
 // support email
 export const SUPPORT_EMAIL = process.env.VITE_SUPPORT_EMAIL || "support@plane.so";
-// marketing links
-export const MARKETING_CONTACT_US_PAGE_LINK = "https://plane.so/contact";

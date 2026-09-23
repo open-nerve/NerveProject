@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P2",
+  "phase": "M1/P3",
   "rules": [
     {
       "id": "deploy-files",
@@ -1191,6 +1191,50 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "billing",
+      "phase": "M1/P3",
+      "why": "计费和升级提示（M1 设计 2.2、7.4）：计费设置页、升级弹窗（license/）、套餐对比、版本和升级徽标、付费套餐的常量类型和工具、\"联系销售\"、试用和席位的文案、付费套餐的保留地址、营销链接（marketing_ 只搜 contact、plane 两种：保留的职业选项 marketing_or_growth 不算）。不搜单独的 subscription：工作项的订阅（关注）保留；设计中列出的 ProIcon 在本 Phase 开始时已没有命中，不设规则",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "upgrade|bill(?:ing|ed)|EProductSubscription|contact_sales|plane-(?:pro|ultimate|enterprise)|LockedComponent|edition[-_ ]?badge|payment|\\btrial|add_seats|talk_to_sales|marketing_(?:contact|plane)",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "        title={t(\"bulk_operations.upgrade_banner.message\")}",
+          "export const BillingWorkspaceSettingsHeader = observer(function BillingWorkspaceSettingsHeader() {",
+          "import type { EProductSubscriptionEnum, TBillingFrequency, TSubscriptionPrice } from \"@plane/types\";",
+          "          <span className=\"text-11\">{t(\"contact_sales\")}</span>",
+          "  \"plane-pro\",",
+          "  \"plane-ultimate\",",
+          "  \"plane-enterprise\",",
+          "export function LockedComponent(props: { toolTipContent?: string }) {",
+          "import { WorkspaceEditionBadge } from \"@/components/workspace/edition-badge\";",
+          "import type { EProductSubscriptionEnum, IPaymentProduct, TSubscriptionPrice } from \"@plane/types\";",
+          "      \"title\": \"Your 14-day Business plan trial is live!\",",
+          "    \"add_seats\": \"Add Seats\",",
+          "import { TALK_TO_SALES_URL } from \"@plane/constants\";",
+          "import { MARKETING_PLANE_ONE_PAGE_LINK } from \"@plane/constants\";",
+          "export const MARKETING_CONTACT_US_PAGE_LINK = \"https://plane.so/contact\";",
+          "  \"deactivate_your_account_description\": \"Once deactivated, you can't be assigned work items and be billed for your workspace. To reactivate your account, you will need an invite to a workspace at this email address.\","
+        ],
+        "miss": [
+          "export class IssueSubscriptionStore implements IIssueSubscriptionStore {",
+          "    \"planned\": \"Planned\","
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/sidebar/sidebar-wrapper.tsx",
+            "web/packages/i18n/src/locales/en/common.json"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -1209,169 +1253,11 @@
       "until": "M6"
     },
     {
-      "rule": "analytics",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "analytics",
-      "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "analytics",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Analytics",
-      "count": 3,
-      "reason": "计费对比表的营销文案，随计费在 M1/P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "estimates",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Estimat",
-      "reason": "计费对比表的文案，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "gantt-timeline",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Gantt",
-      "count": 3,
-      "reason": "计费对比表的文案，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "gantt-timeline",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "timeline",
-      "count": 2,
-      "reason": "计费对比表的文案，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "pages-collaboration",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Wiki",
-      "reason": "计费对比表的文案，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "pages-collaboration",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "wiki",
-      "reason": "计费对比表的文案，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "pages-collaboration",
-      "path": "web/packages/constants/src/subscription.ts",
-      "match": "Wiki",
-      "reason": "订阅套餐的功能名，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
       "rule": "pages-collaboration",
       "path": "web/packages/utils/src/tlds.ts",
       "match": "wiki",
       "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.wiki 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
       "until": "M9"
-    },
-    {
-      "rule": "admin",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "God Mode",
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "SAML",
-      "count": 3,
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "OIDC",
-      "count": 3,
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "LDAP",
-      "count": 4,
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/packages/constants/src/subscription.ts",
-      "match": "LDAP",
-      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/packages/constants/src/subscription.ts",
-      "match": "OIDC",
-      "count": 2,
-      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/packages/constants/src/subscription.ts",
-      "match": "SAML",
-      "count": 2,
-      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "third-party-login",
-      "path": "web/packages/constants/src/subscription.ts",
-      "match": "SSO",
-      "count": 2,
-      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "epics",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Epic",
-      "count": 2,
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "epics",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "epic",
-      "count": 2,
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "teamspaces",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Teamspace",
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "teamspaces",
-      "path": "web/packages/constants/src/subscription.ts",
-      "match": "Teamspace",
-      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
-    },
-    {
-      "rule": "templates-worklogs",
-      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
-      "match": "Worklog",
-      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
-      "until": "M1/P4"
     }
   ]
 }
