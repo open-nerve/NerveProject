@@ -1245,7 +1245,7 @@
         "flags": ""
       },
       "content": {
-        "source": "\\b(?:CE|EE)\\b|auth-ee|extendedRoutes|mergeRoutes|extendedRedirectRoutes|useEditorFlagging|flaggedExtensions|extendedEditorProps|IEditorPropsExtended|editor-extended|TExtendedEditor(?:Commands|RefApi)|TExtendedFileHandler|TExtendedCommandExtraProps|CoreEditorAdditionalExtensions|RichTextEditorAdditionalExtensions|AdditionalSlashCommand|TSlashCommandAdditionalOption|TAdditionalEditorAsset|TAdditionalActiveDropbarExtensions|TExtendedCustomComponentsMetaData|useExtendedEditorConfig|useAdditional(?:EditorMention|FavoriteItemDetails)|use-additional-|useWorkspaceIssuePropertiesExtended|ADDITIONAL_NOTIFICATION_CONTENT_MAP|renderAdditional(?:Action|Value)|AdditionalFilterValueInput|_getAdditionalOperatorOptions|additionalNavigationItems|additionalRender|additionalModals|mutateWorkspaceMembersActivity|useIntakeHeaderMenuItems|EXTENDED_(?:LOGICAL|EQUALITY|COLLECTION|COMPARISON|MULTI_VALUE|FILTER_FIELD|OPERATOR|DATE_OPERATOR)|TExtended(?:Supported|AllAvailable|FilterFieldConfigs|ExactOperator|InOperator|RangeOperator|OperatorSpecific)|NEGATED_(?:DATE_)?OPERATOR_LABELS_MAP|Base(?:CommandPalette|PowerK|ProjectMember|UserPermission)Store|BaseWorkspaceRootStore|CoreRootStore",
+        "source": "\\b(?:CE|EE)\\b|auth-ee|extendedRoutes|mergeRoutes|extendedRedirectRoutes|useEditorFlagging|flaggedExtensions|extendedEditorProps|IEditorPropsExtended|editor-extended|TExtendedEditor(?:Commands|RefApi)|TExtendedFileHandler|TExtendedCommandExtraProps|CoreEditorAdditionalExtensions|RichTextEditorAdditionalExtensions|AdditionalSlashCommand|TSlashCommandAdditionalOption|TAdditionalEditorAsset|TAdditionalActiveDropbarExtensions|TExtendedCustomComponentsMetaData|useExtendedEditorConfig|useAdditional(?:EditorMention|FavoriteItemDetails)|use-additional-|useWorkspaceIssuePropertiesExtended|ADDITIONAL_(?:NOTIFICATION_CONTENT_MAP|EXTENSIONS|BLOCK_NODE_TYPES|ASSETS_META_DATA_RECORD)|renderAdditional(?:Action|Value)|AdditionalFilterValueInput|_getAdditionalOperatorOptions|additionalNavigationItems|additionalRender|additionalModals|mutateWorkspaceMembersActivity|useIntakeHeaderMenuItems|EXTENDED_(?:LOGICAL|EQUALITY|COLLECTION|COMPARISON|MULTI_VALUE|FILTER_FIELD|OPERATOR|DATE_OPERATOR)|TExtended(?:Supported|AllAvailable|FilterFieldConfigs|ExactOperator|InOperator|RangeOperator|OperatorSpecific)|NEGATED_(?:DATE_)?OPERATOR_LABELS_MAP|Base(?:CommandPalette|PowerK|ProjectMember|UserPermission)Store|BaseWorkspaceRootStore|CoreRootStore",
         "flags": ""
       },
       "samples": {
@@ -1274,6 +1274,9 @@
           "import { useAdditionalFavoriteItemDetails } from \"@/hooks/use-additional-favorite-item-details\";",
           "export const useWorkspaceIssuePropertiesExtended = (workspaceSlug: string | string[] | undefined) => {};",
           "export const ADDITIONAL_NOTIFICATION_CONTENT_MAP: TNotificationContentMap = {};",
+          "export enum ADDITIONAL_EXTENSIONS {}",
+          "export const ADDITIONAL_BLOCK_NODE_TYPES = [];",
+          "  ...ADDITIONAL_ASSETS_META_DATA_RECORD,",
           "export const renderAdditionalAction = (notificationField: string, verb: string | undefined) => {",
           "    return renderAdditionalValue(notificationField, newValue, oldValue);",
           "  return <AdditionalFilterValueInput {...props} />;",

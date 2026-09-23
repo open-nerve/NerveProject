@@ -66,7 +66,6 @@ export function CommandMenuItem(props: Props) {
         {item.icon}
       </span>
       <p className="flex-grow truncate text-12">{query ? highlightMatch(item.title, query) : item.title}</p>
-      {item.badge}
     </button>
   );
 }

@@ -24,5 +24,4 @@ export type ISlashCommandItem = {
   icon: React.ReactNode;
   iconContainerStyle?: CSSProperties;
   command: ({ editor, range }: CommandProps) => void;
-  badge?: React.ReactNode;
 };

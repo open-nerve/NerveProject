@@ -99,5 +99,3 @@ export enum CORE_EXTENSIONS {
   UTILITY = "utility",
   EMOJI = "emoji",
 }
-
-export enum ADDITIONAL_EXTENSIONS {}
