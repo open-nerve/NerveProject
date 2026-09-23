@@ -235,28 +235,6 @@
           "description": "Collect new work items from anyone who sends an email to a Plane email address.",
           "fieldName": "Email ID"
         },
-        "form": {
-          "title": "Forms",
-          "description": "Let folks outside your workspace create potential new work items for you via a dedicated and secure form.",
-          "fieldName": "Default form URL",
-          "create_forms": "Create Forms using work item types",
-          "manage_forms": "Manage forms",
-          "manage_forms_tooltip": "Ask your Workspace Admin to manage this.",
-          "create_form": "Create form",
-          "edit_form": "Edit form details",
-          "form_title": "Form title",
-          "form_title_required": "Form title is required",
-          "work_item_type": "Work item type",
-          "remove_property": "Remove property",
-          "select_properties": "Select properties",
-          "search_placeholder": "Search for properties",
-          "toasts": {
-            "success_create": "Intake form created successfully",
-            "success_update": "Intake form updated successfully",
-            "error_create": "Failed to create intake form",
-            "error_update": "Failed to update intake form"
-          }
-        },
         "toasts": {
           "set": {
             "loading": "Setting assignees...",

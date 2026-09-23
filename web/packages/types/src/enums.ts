@@ -18,11 +18,6 @@ export enum EProjectNetwork {
   PUBLIC = 2,
 }
 
-export enum EIssueCommentAccessSpecifier {
-  EXTERNAL = "EXTERNAL",
-  INTERNAL = "INTERNAL",
-}
-
 // workspace notifications
 export enum ENotificationFilterType {
   CREATED = "created",

@@ -13,8 +13,6 @@ import { Avatar } from "@makeplane/propel/components/avatar";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { EditorRefApi } from "@plane/editor";
 import { useHashScroll } from "@plane/hooks";
-import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
-import { EIssueCommentAccessSpecifier } from "@plane/types";
 import type { TCommentsOperations, TIssueComment } from "@plane/types";
 import { calculateTimeAgo, cn, getFileURL, renderFormattedDate, renderFormattedTime } from "@plane/utils";
 // components
@@ -32,7 +30,6 @@ export type TCommentCardDisplayProps = {
   entityId: string;
   projectId?: string;
   readOnlyEditorRef: React.RefObject<EditorRefApi | null>;
-  showAccessSpecifier: boolean;
   workspaceId: string;
   workspaceSlug: string;
   isEditing?: boolean;
@@ -48,7 +45,6 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
     disabled,
     projectId,
     readOnlyEditorRef,
-    showAccessSpecifier,
     workspaceId,
     workspaceSlug,
     isEditing = false,
@@ -108,15 +104,6 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
 
   return (
     <div id={commentBlockId} className="relative flex flex-col gap-2">
-      {showAccessSpecifier && (
-        <div className="absolute top-2.5 right-2.5 z-[1] text-tertiary">
-          {comment.access === EIssueCommentAccessSpecifier.INTERNAL ? (
-            <LockOutline className="size-3" />
-          ) : (
-            <GlobeOutline className="size-3" />
-          )}
-        </div>
-      )}
       <div className="relative mb-3 flex w-full items-center gap-2">
         <Avatar alt={displayName} fallback={displayName?.[0]?.toUpperCase()} size="2xs" src={getFileURL(avatarUrl)} />
         <div className="flex flex-1 flex-wrap items-center gap-1">

@@ -50,7 +50,6 @@ export interface IProject extends IPartialProject {
   readonly cover_image_url?: string;
   default_assignee?: IUser | string | null;
   description?: string;
-  anchor?: string | null;
   is_favorite?: boolean;
   members?: string[];
   timezone?: string;

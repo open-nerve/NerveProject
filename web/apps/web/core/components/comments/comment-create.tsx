@@ -8,7 +8,6 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller } from "react-hook-form";
 // plane imports
-import { EIssueCommentAccessSpecifier } from "@plane/constants";
 import type { EditorRefApi } from "@plane/editor";
 import type { TIssueComment, TCommentsOperations } from "@plane/types";
 import { cn, isCommentEmpty } from "@plane/utils";
@@ -107,49 +106,41 @@ export const CommentCreate = observer(function CommentCreate(props: TCommentCrea
       }}
     >
       <Controller
-        name="access"
+        name="comment_html"
         control={control}
-        render={({ field: { onChange: onAccessChange, value: accessValue } }) => (
-          <Controller
-            name="comment_html"
-            control={control}
-            render={({ field: { value, onChange } }) => (
-              <LiteTextEditor
-                editable
-                workspaceId={workspaceId}
-                id={"add_comment_" + entityId}
-                value={"<p></p>"}
-                workspaceSlug={workspaceSlug}
-                projectId={projectId}
-                onEnterKeyPress={(e) => {
-                  if (!isEmpty && !isSubmitting) {
-                    handleSubmit(onSubmit)(e);
-                  }
-                }}
-                ref={editorRef}
-                initialValue={value ?? "<p></p>"}
-                containerClassName="min-h-min"
-                onChange={(comment_json, comment_html) => onChange(comment_html)}
-                accessSpecifier={accessValue ?? EIssueCommentAccessSpecifier.INTERNAL}
-                handleAccessChange={onAccessChange}
-                isSubmitting={isSubmitting}
-                uploadFile={async (blockId, file) => {
-                  const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);
-                  setUploadedAssetIds((prev) => [...prev, asset_id]);
-                  return asset_id;
-                }}
-                duplicateFile={async (assetId: string) => {
-                  const { asset_id } = await activityOperations.duplicateCommentAsset(assetId);
-                  setUploadedAssetIds((prev) => [...prev, asset_id]);
-                  return asset_id;
-                }}
-                showToolbarInitially={showToolbarInitially}
-                parentClassName="p-2"
-                displayConfig={{
-                  fontSize: "small-font",
-                }}
-              />
-            )}
+        render={({ field: { value, onChange } }) => (
+          <LiteTextEditor
+            editable
+            workspaceId={workspaceId}
+            id={"add_comment_" + entityId}
+            value={"<p></p>"}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            onEnterKeyPress={(e) => {
+              if (!isEmpty && !isSubmitting) {
+                handleSubmit(onSubmit)(e);
+              }
+            }}
+            ref={editorRef}
+            initialValue={value ?? "<p></p>"}
+            containerClassName="min-h-min"
+            onChange={(comment_json, comment_html) => onChange(comment_html)}
+            isSubmitting={isSubmitting}
+            uploadFile={async (blockId, file) => {
+              const { asset_id } = await activityOperations.uploadCommentAsset(blockId, file);
+              setUploadedAssetIds((prev) => [...prev, asset_id]);
+              return asset_id;
+            }}
+            duplicateFile={async (assetId: string) => {
+              const { asset_id } = await activityOperations.duplicateCommentAsset(assetId);
+              setUploadedAssetIds((prev) => [...prev, asset_id]);
+              return asset_id;
+            }}
+            showToolbarInitially={showToolbarInitially}
+            parentClassName="p-2"
+            displayConfig={{
+              fontSize: "small-font",
+            }}
           />
         )}
       />

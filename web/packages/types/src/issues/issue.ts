@@ -6,10 +6,9 @@
 
 import type { TIssuePriorities } from "../issues";
 import type { TStateGroups } from "../state";
-import type { TIssuePublicComment } from "./activity/issue_comment";
 import type { TIssueAttachment } from "./issue_attachment";
 import type { TIssueLink } from "./issue_link";
-import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from "./issue_reaction";
+import type { TIssueReaction } from "./issue_reaction";
 import type { TIssueRelationTypes } from "./issue_relation";
 
 export enum EIssueLayoutTypes {
@@ -148,63 +147,6 @@ export type TBulkOperationsPayload = {
 export type TWorkItemWidgets = "sub-work-items" | "relations" | "links" | "attachments";
 
 export type TIssueServiceType = EIssueServiceType.ISSUES | EIssueServiceType.EPICS | EIssueServiceType.WORK_ITEMS;
-
-export interface IPublicIssue extends Pick<
-  TIssue,
-  | "description_html"
-  | "created_at"
-  | "updated_at"
-  | "created_by"
-  | "id"
-  | "name"
-  | "priority"
-  | "state_id"
-  | "project_id"
-  | "sequence_id"
-  | "sort_order"
-  | "start_date"
-  | "target_date"
-  | "cycle_id"
-  | "module_ids"
-  | "label_ids"
-  | "assignee_ids"
-  | "attachment_count"
-  | "sub_issues_count"
-  | "link_count"
-> {
-  comments: TIssuePublicComment[];
-  reaction_items: IIssuePublicReaction[];
-  vote_items: IPublicVote[];
-}
-
-type TPublicIssueResponseResults =
-  | IPublicIssue[]
-  | {
-      [key: string]: {
-        results:
-          | IPublicIssue[]
-          | {
-              [key: string]: {
-                results: IPublicIssue[];
-                total_results: number;
-              };
-            };
-        total_results: number;
-      };
-    };
-
-export type TPublicIssuesResponse = {
-  grouped_by: string;
-  next_cursor: string;
-  prev_cursor: string;
-  next_page_results: boolean;
-  prev_page_results: boolean;
-  total_count: number;
-  count: number;
-  total_pages: number;
-  extra_stats: null;
-  results: TPublicIssueResponseResults;
-};
 
 export interface IWorkItemPeekOverview {
   embedIssue?: boolean;

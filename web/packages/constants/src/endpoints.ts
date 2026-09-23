@@ -7,10 +7,6 @@
 export const API_BASE_URL = process.env.VITE_API_BASE_URL || "";
 export const API_BASE_PATH = process.env.VITE_API_BASE_PATH || "";
 export const API_URL = encodeURI(`${API_BASE_URL}${API_BASE_PATH}`);
-// Publish App Base Url
-export const SPACE_BASE_URL = process.env.VITE_SPACE_BASE_URL || "";
-export const SPACE_BASE_PATH = process.env.VITE_SPACE_BASE_PATH || "";
-export const SITES_URL = encodeURI(`${SPACE_BASE_URL}${SPACE_BASE_PATH}`);
 // Web App Base Url
 export const WEB_BASE_URL = process.env.VITE_WEB_BASE_URL || "";
 export const WEB_BASE_PATH = process.env.VITE_WEB_BASE_PATH || "";

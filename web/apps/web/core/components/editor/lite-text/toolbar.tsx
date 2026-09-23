@@ -5,17 +5,13 @@
  */
 
 import React, { useEffect, useState, useCallback } from "react";
-import type { LucideIcon } from "lucide-react";
 
-import { EIssueCommentAccessSpecifier } from "@plane/constants";
 // editor
 import type { EditorRefApi } from "@plane/editor";
 // i18n
 import { useTranslation } from "@plane/i18n";
 // ui
 import { Button } from "@plane/propel/button";
-import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
-import type { ISvgIcons } from "@plane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // constants
 import { cn } from "@plane/utils";
@@ -24,49 +20,24 @@ import { TOOLBAR_ITEMS } from "@plane/editor";
 // helpers
 
 type Props = {
-  accessSpecifier?: EIssueCommentAccessSpecifier;
   executeCommand: (item: ToolbarMenuItem) => void;
-  handleAccessChange?: (accessKey: EIssueCommentAccessSpecifier) => void;
   handleSubmit: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   isCommentEmpty: boolean;
   isSubmitting: boolean;
-  showAccessSpecifier: boolean;
   showSubmitButton: boolean;
   editorRef: EditorRefApi | null;
   submitButtonText?: string;
 };
-
-type TCommentAccessType = {
-  icon: LucideIcon | React.FC<ISvgIcons>;
-  key: EIssueCommentAccessSpecifier;
-  label: "Private" | "Public";
-};
-
-const COMMENT_ACCESS_SPECIFIERS: TCommentAccessType[] = [
-  {
-    icon: LockOutline,
-    key: EIssueCommentAccessSpecifier.INTERNAL,
-    label: "Private",
-  },
-  {
-    icon: GlobeOutline,
-    key: EIssueCommentAccessSpecifier.EXTERNAL,
-    label: "Public",
-  },
-];
 
 const toolbarItems = TOOLBAR_ITEMS;
 
 export function IssueCommentToolbar(props: Props) {
   const { t } = useTranslation();
   const {
-    accessSpecifier,
     executeCommand,
-    handleAccessChange,
     handleSubmit,
     isCommentEmpty,
     isSubmitting,
-    showAccessSpecifier,
     showSubmitButton,
     editorRef,
     submitButtonText = "common.comment",
@@ -104,32 +75,6 @@ export function IssueCommentToolbar(props: Props) {
 
   return (
     <div className="flex h-9 w-full items-stretch gap-1.5 overflow-x-scroll bg-surface-2">
-      {showAccessSpecifier && (
-        <div className="flex flex-shrink-0 items-stretch gap-0.5 rounded-sm border-[0.5px] border-subtle p-1">
-          {COMMENT_ACCESS_SPECIFIERS.map((access) => {
-            const isAccessActive = accessSpecifier === access.key;
-
-            return (
-              <Tooltip key={access.key} label={access.label} layout="stacked">
-                <button
-                  type="button"
-                  onClick={() => handleAccessChange?.(access.key)}
-                  className={cn("grid aspect-square place-items-center rounded-xs p-1 hover:bg-layer-1", {
-                    "bg-layer-1": isAccessActive,
-                  })}
-                >
-                  <access.icon
-                    className={cn("h-3.5 w-3.5 text-placeholder", {
-                      "text-primary": isAccessActive,
-                    })}
-                    strokeWidth={2}
-                  />
-                </button>
-              </Tooltip>
-            );
-          })}
-        </div>
-      )}
       <div className="flex w-full items-stretch justify-between gap-2 rounded-sm border-[0.5px] border-subtle p-1">
         <div className="flex items-stretch">
           {Object.keys(toolbarItems).map((key, index) => (

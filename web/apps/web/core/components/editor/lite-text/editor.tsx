@@ -5,8 +5,6 @@
  */
 
 import React, { useState } from "react";
-// plane constants
-import type { EIssueCommentAccessSpecifier } from "@plane/constants";
 // plane imports
 import { LiteTextEditorWithRef } from "@plane/editor";
 import type { EditorRefApi, ILiteTextEditorProps, TFileHandler } from "@plane/editor";
@@ -34,9 +32,6 @@ type LiteTextEditorWrapperProps = MakeOptional<
   workspaceSlug: string;
   workspaceId: string;
   projectId?: string;
-  accessSpecifier?: EIssueCommentAccessSpecifier;
-  handleAccessChange?: (accessKey: EIssueCommentAccessSpecifier) => void;
-  showAccessSpecifier?: boolean;
   showSubmitButton?: boolean;
   isSubmitting?: boolean;
   showToolbarInitially?: boolean;
@@ -68,9 +63,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     workspaceId,
     projectId,
     issue_id,
-    accessSpecifier,
-    handleAccessChange,
-    showAccessSpecifier = false,
     showSubmitButton = true,
     isSubmitting = false,
     showToolbarInitially = true,
@@ -200,7 +192,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
           )}
         >
           <IssueCommentToolbar
-            accessSpecifier={accessSpecifier}
             executeCommand={(item) => {
               // TODO: update this while toolbar homogenization
               // @ts-expect-error type mismatch here
@@ -209,11 +200,9 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
                 ...item.extraProps,
               });
             }}
-            handleAccessChange={handleAccessChange}
             handleSubmit={(e) => rest.onEnterKeyPress?.(e)}
             isCommentEmpty={isEmpty}
             isSubmitting={isSubmitting}
-            showAccessSpecifier={showAccessSpecifier}
             editorRef={editorRef}
             showSubmitButton={showSubmitButton}
             submitButtonText={submitButtonText}

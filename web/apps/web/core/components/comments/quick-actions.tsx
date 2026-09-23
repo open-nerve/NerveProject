@@ -6,16 +6,8 @@
 
 import { useMemo } from "react";
 import { observer } from "mobx-react";
-import {
-  DeleteOutline,
-  EditOutline,
-  GlobeOutline,
-  LinkOutline,
-  LockOutline,
-  MoreHorizontalOutline,
-} from "@makeplane/propel/icons";
+import { DeleteOutline, EditOutline, LinkOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 // plane imports
-import { EIssueCommentAccessSpecifier } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { IconButton } from "@plane/propel/icon-button";
 import type { TIssueComment, TCommentsOperations } from "@plane/types";
@@ -29,12 +21,11 @@ type TCommentCard = {
   activityOperations: TCommentsOperations;
   comment: TIssueComment;
   setEditMode: () => void;
-  showAccessSpecifier: boolean;
   showCopyLinkOption: boolean;
 };
 
 export const CommentQuickActions = observer(function CommentQuickActions(props: TCommentCard) {
-  const { activityOperations, comment, setEditMode, showAccessSpecifier, showCopyLinkOption } = props;
+  const { activityOperations, comment, setEditMode, showCopyLinkOption } = props;
   // store hooks
   const { data: currentUser } = useUser();
   // derived values
@@ -62,22 +53,6 @@ export const CommentQuickActions = observer(function CommentQuickActions(props: 
           shouldRender: showCopyLinkOption,
         },
         {
-          key: "access_specifier",
-          action: () =>
-            activityOperations.updateComment(comment.id, {
-              access:
-                comment.access === EIssueCommentAccessSpecifier.INTERNAL
-                  ? EIssueCommentAccessSpecifier.EXTERNAL
-                  : EIssueCommentAccessSpecifier.INTERNAL,
-            }),
-          title:
-            comment.access === EIssueCommentAccessSpecifier.INTERNAL
-              ? t("issue.comments.switch.public")
-              : t("issue.comments.switch.private"),
-          icon: comment.access === EIssueCommentAccessSpecifier.INTERNAL ? GlobeOutline : LockOutline,
-          shouldRender: showAccessSpecifier,
-        },
-        {
           key: "delete",
           action: () => activityOperations.removeComment(comment.id),
           title: t("common.actions.delete"),
@@ -86,7 +61,7 @@ export const CommentQuickActions = observer(function CommentQuickActions(props: 
         },
       ].filter((item) => item.shouldRender !== false);
     },
-    [t, setEditMode, canEdit, showCopyLinkOption, activityOperations, comment, showAccessSpecifier, canDelete]
+    [t, setEditMode, canEdit, showCopyLinkOption, activityOperations, comment, canDelete]
   );
 
   if (MENU_ITEMS.length === 0) return null;

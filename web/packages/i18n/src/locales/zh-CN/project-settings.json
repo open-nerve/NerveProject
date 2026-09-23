@@ -235,28 +235,6 @@
           "description": "从任何向 Plane 邮箱地址发送邮件的人收集新的工作项。",
           "fieldName": "电子邮件 ID"
         },
-        "form": {
-          "title": "表单",
-          "description": "让工作区外的人通过专用安全表单为您创建潜在的新工作项。",
-          "fieldName": "默认表单 URL",
-          "create_forms": "使用工作项类型创建表单",
-          "manage_forms": "管理表单",
-          "manage_forms_tooltip": "请工作区管理员代为管理。",
-          "create_form": "创建表单",
-          "edit_form": "编辑表单详情",
-          "form_title": "表单标题",
-          "form_title_required": "表单标题为必填",
-          "work_item_type": "工作项类型",
-          "remove_property": "移除属性",
-          "select_properties": "选择属性",
-          "search_placeholder": "搜索属性",
-          "toasts": {
-            "success_create": "接收表单已成功创建",
-            "success_update": "接收表单已成功更新",
-            "error_create": "无法创建接收表单",
-            "error_update": "无法更新接收表单"
-          }
-        },
         "toasts": {
           "set": {
             "loading": "正在设置负责人...",

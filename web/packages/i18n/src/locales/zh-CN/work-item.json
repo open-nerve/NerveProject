@@ -87,10 +87,6 @@
     },
     "comments": {
       "placeholder": "添加评论",
-      "switch": {
-        "private": "切换为私密评论",
-        "public": "切换为公开评论"
-      },
       "create": {
         "success": "评论创建成功",
         "error": "评论创建失败。请稍后重试。"
@@ -231,12 +227,6 @@
           "message": "工作项复制失败"
         }
       }
-    },
-    "vote": {
-      "click_to_upvote": "点击赞成",
-      "click_to_downvote": "点击反对",
-      "click_to_view_upvotes": "点击查看赞成票",
-      "click_to_view_downvotes": "点击查看反对票"
     }
   },
   "sub_work_item": {

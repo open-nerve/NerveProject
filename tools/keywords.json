@@ -851,6 +851,80 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "publish",
+      "phase": "M1/P3",
+      "why": "公开发布（apps/space 没有迁入）：项目和视图的发布弹窗、\"已发布\"标记、发布设置的 store 和 service、space 应用的地址常量和环境变量、公开页的工作项 / 评论 / 表情 / 投票类型和收集箱表单，以及只为公开发布存在的评论可见范围（M1 设计 3.8）。不搜单独的 publish：草稿的\"发布为工作项\"保留",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "SPACE_(?:BASE|APP|SITE|TWITTER)|SITES_URL|space_base_url|deploy-boards|PublishProject|ProjectPublish|publish_project|PublishView|ViewPublish|PublishedProjectView|Public(?:Issue|Comment|Vote|Reaction)|IssuePublic|TInboxForm|TAnchors|AccessSpecifier|comments\\.switch",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    \"VITE_SPACE_BASE_PATH\",",
+          "  const SPACE_APP_URL =",
+          "export const SPACE_SITE_NAME = \"Plane Publish | Make your Plane boards and roadmaps pubic with just one-click. \";",
+          "export const SPACE_TWITTER_USER_NAME = \"planepowers\";",
+          "export const SITES_URL = encodeURI(`${SPACE_BASE_URL}${SPACE_BASE_PATH}`);",
+          "  space_base_url: string | undefined;",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectID}/project-deploy-boards/`)",
+          "import { PublishProjectModal } from \"../project/publish-project/modal\";",
+          "import type { TProjectPublishLayouts, TProjectPublishSettings } from \"@plane/types\";",
+          "            <div>{t(\"publish_project\")}</div>",
+          "import { getPublishViewLink } from \"@plane/utils\";",
+          "export const useViewPublish = (isPublished: boolean, isAuthorized: boolean) => ({",
+          "export interface IPublishedProjectView extends Omit<IProjectView, \"rich_filters\"> {",
+          "export interface IPublicIssue extends Pick<",
+          "export type TIssuePublicComment = {",
+          "import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from \"./issue_reaction\";",
+          "export type TInboxForm = {",
+          "export type TAnchors = { [key: string]: string };",
+          "import { EIssueCommentAccessSpecifier } from \"@plane/types\";",
+          "              ? t(\"issue.comments.switch.public\")"
+        ],
+        "miss": [
+          "  const [moveToIssue, setMoveToIssue] = useState(false);",
+          "        <Tooltip label={access === EViewAccess.PUBLIC ? \"Public\" : \"Private\"}>",
+          "export const WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS: IWorkspaceSidebarNavigationItem[] = ["
+        ],
+        "files": {
+          "hit": ["web/apps/web/.env.example", "turbo.json", "web/packages/types/src/views.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "publish-anchor",
+      "phase": "M1/P3",
+      "why": "项目和视图的 anchor 是公开发布页的地址标识，只作用于应用和类型包（M1 设计 7.4）。只搜属性的读取和声明（.anchor、anchor:）：编辑器里的 anchor（选区、链接）和 use-reload-confirmation 里的 HTML <a> 元素是保留代码",
+      "files": {
+        "source": "^web/(?:apps/web|packages/types)/.*\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\.anchor\\b|\\banchors?\\??:",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const publishedURL = `${SPACE_APP_URL}/issues/${currentProjectDetails?.anchor}`;",
+          "  anchors: TAnchors;",
+          "  anchor?: string | null;"
+        ],
+        "miss": [
+          "      const anchorElement = eventTarget.closest(\"a\") as HTMLAnchorElement;",
+          "      // check if the event target is an anchor or a child of an anchor tag"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/components/issues/header.tsx", "web/packages/types/src/project/projects.ts"],
+          "miss": ["web/packages/editor/src/helpers/common.ts", "web/packages/i18n/src/locales/en/common.json"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -919,14 +993,6 @@
       "match": "timeline",
       "count": 2,
       "reason": "计费对比表的文案，随计费在 P3 删除",
-      "until": "M1/P3"
-    },
-    {
-      "rule": "gantt-timeline",
-      "path": "web/packages/types/src/publish.ts",
-      "match": "gantt",
-      "count": 2,
-      "reason": "公开发布的视图类型，随公开发布在 P3 删除",
       "until": "M1/P3"
     },
     {

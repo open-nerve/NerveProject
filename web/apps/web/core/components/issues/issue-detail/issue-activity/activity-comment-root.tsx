@@ -24,23 +24,13 @@ type TIssueActivityCommentRoot = {
   issueId: string;
   selectedFilters: TActivityFilters[];
   activityOperations: TCommentsOperations;
-  showAccessSpecifier?: boolean;
   disabled?: boolean;
   sortOrder: E_SORT_ORDER;
 };
 
 export const IssueActivityCommentRoot = observer(function IssueActivityCommentRoot(props: TIssueActivityCommentRoot) {
-  const {
-    workspaceSlug,
-    isIntakeIssue,
-    issueId,
-    selectedFilters,
-    activityOperations,
-    showAccessSpecifier,
-    projectId,
-    disabled,
-    sortOrder,
-  } = props;
+  const { workspaceSlug, isIntakeIssue, issueId, selectedFilters, activityOperations, projectId, disabled, sortOrder } =
+    props;
   // store hooks
   const {
     activity: { getActivityAndCommentsByIssueId },
@@ -67,7 +57,6 @@ export const IssueActivityCommentRoot = observer(function IssueActivityCommentRo
             comment={comment}
             activityOperations={activityOperations}
             ends={index === 0 ? "top" : index === filteredActivityAndComments.length - 1 ? "bottom" : undefined}
-            showAccessSpecifier={!!showAccessSpecifier}
             showCopyLinkOption={!isIntakeIssue}
             disabled={disabled}
             projectId={projectId}

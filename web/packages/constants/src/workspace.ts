@@ -18,7 +18,6 @@ export const RESTRICTED_URLS: string[] = [
   "invitations",
   "onboarding",
   "profile",
-  "spaces",
   "workspace-invitations",
   "password",
   "flags",

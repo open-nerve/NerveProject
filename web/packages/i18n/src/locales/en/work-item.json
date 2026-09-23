@@ -87,10 +87,6 @@
     },
     "comments": {
       "placeholder": "Add comment",
-      "switch": {
-        "private": "Switch to private comment",
-        "public": "Switch to public comment"
-      },
       "create": {
         "success": "Comment created successfully",
         "error": "Comment creation failed. Please try again later."
@@ -231,12 +227,6 @@
           "message": "Failed to duplicate work item"
         }
       }
-    },
-    "vote": {
-      "click_to_upvote": "Click to upvote",
-      "click_to_downvote": "Click to downvote",
-      "click_to_view_upvotes": "Click to view upvotes",
-      "click_to_view_downvotes": "Click to view downvotes"
     }
   },
   "sub_work_item": {

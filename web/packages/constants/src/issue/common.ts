@@ -52,11 +52,6 @@ export enum EIssueGroupBYServerToProperty {
   "created_by" = "created_by",
 }
 
-export enum EIssueCommentAccessSpecifier {
-  EXTERNAL = "EXTERNAL",
-  INTERNAL = "INTERNAL",
-}
-
 export enum EIssueListRow {
   HEADER = "HEADER",
   ISSUE = "ISSUE",
