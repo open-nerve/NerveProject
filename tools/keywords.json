@@ -203,7 +203,7 @@
     {
       "id": "sidebar-customization",
       "phase": "M1/P2",
-      "why": "侧边栏的自定义导航（固定、排序、隐藏菜单项）读写 Plane 的 /sidebar-preferences/，数据在已砍掉的 workspace_user_preferences 表；侧边栏改为固定列表（M1 设计 3.3）",
+      "why": "侧边栏的自定义导航（固定、排序、隐藏菜单项）读写 Plane 的 /sidebar-preferences/，数据在已砍掉的 workspace_user_preferences 表；侧边栏改为固定列表（M1 设计 3.3）。不按 M1 设计 7.4 写的 SidebarNavigation 和 navigationPreferences 搜：前者是保留的 IWorkspaceSidebarNavigationItem、getSidebarNavigationItemIcon 的一部分，后者不分大小写时命中保留的 useProjectNavigationPreferences，所以规则只写自定义导航独有的符号",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
@@ -220,7 +220,14 @@
           "  WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS_LINKS,",
           "  const { isExtendedSidebarOpened, toggleExtendedSidebar } = useAppTheme();",
           "    localStorage.setItem(\"extended_sidebar_collapsed\", updatedState.toString());",
-          "  \"customize_navigation\": \"Customize navigation\","
+          "  \"customize_navigation\": \"Customize navigation\",",
+          "  const { getNavigationPreferences, updateBulkSidebarPreferences } = useWorkspace();",
+          "  navigationPreferencesMap: Record<string, IWorkspaceSidebarNavigation>;",
+          "  } = usePersonalNavigationPreferences();",
+          "import { WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS, EUserPermissionsLevel } from \"@plane/constants\";",
+          "export const WORKSPACE_SIDEBAR_PREFERENCES = (workspaceSlug: string) =>",
+          "import { ExtendedSidebarItem } from \"@/components/workspace/sidebar/extended-sidebar-item\";",
+          "import { ExtendedAppSidebar } from \"./extended-sidebar\";"
         ],
         "miss": [
           "  const { preferences: projectPreferences } = useProjectNavigationPreferences();",
@@ -300,7 +307,7 @@
     {
       "id": "profile-stats",
       "phase": "M1/P2",
-      "why": "个人主页的统计页、动态页和每个项目的统计数字（Plane 的 /user-stats/、/user-profile/、/user-activity/）；个人主页只剩三个工作项标签和读工作区成员 store 的用户卡片（M1 设计 3.2）",
+      "why": "个人主页的统计页、动态页和每个项目的统计数字（Plane 的 /user-stats/、/user-profile/、/user-activity/）；个人主页只剩三个工作项标签和读工作区成员 store 的用户卡片（M1 设计 3.2）。不按 M1 设计 7.4 写的 ProfileSidebar 搜：保留的用户卡片组件就叫 ProfileSidebar（toggleProfileSidebar、profileSidebarCollapsed 也随它保留）",
       "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
       "content": {
         "source": "user-stats|user-profile/|user-activity/|IUserProfileData|IUserProfileProjectSegregation|IUserStateDistribution|IUserPriorityDistribution|\\bIUserActivity\\b|IUserActivityResponse|USER_PROFILE_(?:DATA|ACTIVITY|PROJECT_SEGREGATION)|profile\\.stats|profile\\.tabs\\.(?:summary|activity)|PROFILE_(?:VIEWER|ADMINS)_TAB|ProfileActivityListPage|WorkspaceActivityList|downloadProfileActivity|your_work_by_",
@@ -324,7 +331,10 @@
           "import { ProfileActivityListPage } from \"@/components/profile/activity/profile-activity-list\";",
           "import { WorkspaceActivityListPage } from \"@/components/profile/activity/workspace-activity-list\";",
           "  async downloadProfileActivity(",
-          "    \"your_work_by_priority\": {"
+          "    \"your_work_by_priority\": {",
+          "import { USER_PROFILE_ACTIVITY } from \"@plane/constants\";",
+          "export const USER_PROFILE_PROJECT_SEGREGATION = (workspaceSlug: string, userId: string) =>",
+          "    i18n_label: \"profile.tabs.activity\","
         ],
         "miss": [
           "import { PROFILE_TABS } from \"@plane/constants\";",
@@ -527,7 +537,10 @@
           "  stickyStore: IStickyStore;",
           "    key: \"stickies\",",
           "  \"stickies\": \"Stickies\",",
-          "      allStickiesModal: observable,"
+          "      allStickiesModal: observable,",
+          "export const STICKY_COLORS_LIST: {",
+          "import { STICKIES_PER_PAGE } from \"@plane/constants\";",
+          "  | \"sticky-toolbar\""
         ],
         "miss": [
           "        <div className=\"sticky top-0 z-10\">",
@@ -558,7 +571,11 @@
           "  \"manage_widgets\": \"Manage widgets\",",
           "import { DashboardStore } from \"./dashboard.store\";",
           "import { useDashboard } from \"@/hooks/store/use-dashboard\";",
-          "export const CustomThemeSelector = observer(() => {"
+          "export const CustomThemeSelector = observer(() => {",
+          "import type { THomeWidgetKeys, THomeWidgetProps } from \"@plane/types\";",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/home-preferences/`)",
+          "          title={t(\"customize_your_theme\")}",
+          "import { generateThemePalettes } from \"./palette-generator\";"
         ],
         "miss": [
           "import { RecentActivityWidget } from \"./recents\";",
