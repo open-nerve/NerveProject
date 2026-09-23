@@ -27,8 +27,7 @@
       "clear_email": "清除邮箱",
       "show_password": "显示密码",
       "hide_password": "隐藏密码",
-      "close_alert": "关闭警告",
-      "close_popover": "关闭弹出框"
+      "close_alert": "关闭警告"
     }
   }
 }

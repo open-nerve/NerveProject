@@ -6,31 +6,25 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
 // icons
-import { CloseCircleOutline, HideOutline, ShowOutline } from "@makeplane/propel/icons";
+import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 // plane imports
 import { Banner } from "@makeplane/propel/components/banner";
+import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { API_BASE_URL, E_PASSWORD_STRENGTH } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { PasswordStrengthIndicator, Spinner } from "@plane/ui";
-import { getPasswordStrength } from "@plane/utils";
-// components
-import { ForgotPasswordPopover } from "@/components/account/auth-forms/forgot-password-popover";
-// constants
+import { checkEmailValidity, getPasswordStrength } from "@plane/utils";
 // helpers
-import { EAuthModes, EAuthSteps } from "@/helpers/authentication.helper";
+import { EAuthModes } from "@/helpers/authentication.helper";
 // services
 import { AuthService } from "@/services/auth.service";
 
 type Props = {
   email: string;
-  isSMTPConfigured: boolean;
   mode: EAuthModes;
-  handleEmailClear: () => void;
-  handleAuthStep: (step: EAuthSteps) => void;
   nextPath: string | undefined;
 };
 
@@ -48,11 +42,12 @@ const defaultValues: TPasswordFormValues = {
 const authService = new AuthService();
 
 export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props) {
-  const { email, isSMTPConfigured, handleAuthStep, handleEmailClear, mode, nextPath } = props;
+  const { email, mode, nextPath } = props;
   // plane imports
   const { t } = useTranslation();
   // ref
   const formRef = useRef<HTMLFormElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
   // states
   const [csrfPromise, setCsrfPromise] = useState<Promise<{ csrf_token: string }> | undefined>(undefined);
   const [passwordFormData, setPasswordFormData] = useState<TPasswordFormValues>({ ...defaultValues, email });
@@ -64,6 +59,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const [isPasswordInputFocused, setIsPasswordInputFocused] = useState(false);
   const [isRetryPasswordInputFocused, setIsRetryPasswordInputFocused] = useState(false);
   const [isBannerMessage, setBannerMessage] = useState(false);
+  const [isEmailInputFocused, setIsEmailInputFocused] = useState(false);
 
   const handleShowPassword = (key: keyof typeof showPassword) =>
     setShowPassword((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -78,39 +74,23 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
     }
   }, [csrfPromise]);
 
-  const redirectToUniqueCodeSignIn = async () => {
-    handleAuthStep(EAuthSteps.UNIQUE_CODE);
-  };
-
-  const passwordSupport =
-    mode === EAuthModes.SIGN_IN ? (
-      <div className="w-full">
-        {isSMTPConfigured ? (
-          <Link
-            href={`/accounts/forgot-password?email=${encodeURIComponent(email)}`}
-            className="text-11 font-medium text-accent-primary"
-          >
-            {t("auth.common.forgot_password")}
-          </Link>
-        ) : (
-          <ForgotPasswordPopover />
-        )}
-      </div>
-    ) : (
-      passwordFormData.password.length > 0 &&
-      getPasswordStrength(passwordFormData.password) != E_PASSWORD_STRENGTH.STRENGTH_VALID && (
-        <PasswordStrengthIndicator password={passwordFormData.password} isFocused={isPasswordInputFocused} />
-      )
-    );
+  const isEmailInvalid = passwordFormData.email.length > 0 && !checkEmailValidity(passwordFormData.email);
 
   const isButtonDisabled = useMemo(
     () =>
-      !isSubmitting &&
-      !!passwordFormData.password &&
-      (mode === EAuthModes.SIGN_UP ? passwordFormData.password === passwordFormData.confirm_password : true)
-        ? false
-        : true,
-    [isSubmitting, mode, passwordFormData.confirm_password, passwordFormData.password]
+      isSubmitting ||
+      passwordFormData.email.length === 0 ||
+      isEmailInvalid ||
+      !passwordFormData.password ||
+      (mode === EAuthModes.SIGN_UP && passwordFormData.password !== passwordFormData.confirm_password),
+    [
+      isSubmitting,
+      isEmailInvalid,
+      mode,
+      passwordFormData.confirm_password,
+      passwordFormData.email,
+      passwordFormData.password,
+    ]
   );
 
   const password = passwordFormData?.password ?? "";
@@ -159,34 +139,51 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
         }}
       >
         <input type="hidden" name="csrfmiddlewaretoken" />
-        <input type="hidden" value={passwordFormData.email} name="email" />
         {nextPath && <input type="hidden" value={nextPath} name="next_path" />}
         <div className="space-y-1">
           <label htmlFor="email" className="text-13 font-medium text-tertiary">
             {t("auth.common.email.label")}
           </label>
-          <InputGroup size="2xl">
-            <Input
+          <Field name="email" invalid={!isEmailInputFocused && isEmailInvalid}>
+            <InputGroup
               size="2xl"
-              id="email"
-              name="email"
-              type="email"
-              value={passwordFormData.email}
-              onChange={(e) => handleFormChange("email", e.target.value)}
-              placeholder={t("auth.common.email.placeholder")}
-              disabled
-            />
-            {passwordFormData.email.length > 0 && (
-              <button
-                type="button"
-                className="grid size-5 place-items-center"
-                onClick={handleEmailClear}
-                aria-label={t("aria_labels.auth_forms.clear_email")}
-              >
-                <CloseCircleOutline className="size-5 text-placeholder" />
-              </button>
-            )}
-          </InputGroup>
+              onFocus={() => setIsEmailInputFocused(true)}
+              onBlur={() => setIsEmailInputFocused(false)}
+            >
+              <Input
+                size="2xl"
+                id="email"
+                name="email"
+                type="email"
+                value={passwordFormData.email}
+                onChange={(e) => handleFormChange("email", e.target.value)}
+                placeholder={t("auth.common.email.placeholder")}
+                autoComplete="off"
+                autoFocus={email.length === 0}
+                ref={emailInputRef}
+              />
+              {passwordFormData.email.length > 0 && (
+                <button
+                  type="button"
+                  className="grid size-5 place-items-center"
+                  onClick={() => {
+                    handleFormChange("email", "");
+                    emailInputRef.current?.focus();
+                  }}
+                  aria-label={t("aria_labels.auth_forms.clear_email")}
+                  tabIndex={-1}
+                >
+                  <CloseCircleOutline className="size-5 text-placeholder" />
+                </button>
+              )}
+            </InputGroup>
+          </Field>
+          {isEmailInvalid && !isEmailInputFocused && (
+            <p className="flex items-center gap-1 px-0.5 text-11 text-danger-primary">
+              <WarningCircleOutline height={12} width={12} />
+              {t("auth.common.email.errors.invalid")}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
@@ -205,7 +202,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
               onFocus={() => setIsPasswordInputFocused(true)}
               onBlur={() => setIsPasswordInputFocused(false)}
               autoComplete="off"
-              autoFocus
+              autoFocus={email.length > 0}
             />
             <button
               type="button"
@@ -222,7 +219,11 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
               )}
             </button>
           </InputGroup>
-          {passwordSupport}
+          {mode === EAuthModes.SIGN_UP &&
+            passwordFormData.password.length > 0 &&
+            getPasswordStrength(passwordFormData.password) != E_PASSWORD_STRENGTH.STRENGTH_VALID && (
+              <PasswordStrengthIndicator password={passwordFormData.password} isFocused={isPasswordInputFocused} />
+            )}
         </div>
 
         {mode === EAuthModes.SIGN_UP && (
@@ -268,36 +269,15 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           </div>
         )}
 
-        <div className="space-y-2.5">
-          {mode === EAuthModes.SIGN_IN ? (
-            <>
-              <Button type="submit" variant="primary" className="w-full" size="xl" disabled={isButtonDisabled}>
-                {isSubmitting ? (
-                  <Spinner height="20px" width="20px" />
-                ) : isSMTPConfigured ? (
-                  t("common.continue")
-                ) : (
-                  t("common.go_to_workspace")
-                )}
-              </Button>
-              {isSMTPConfigured && (
-                <Button
-                  type="button"
-                  onClick={redirectToUniqueCodeSignIn}
-                  variant="secondary"
-                  className="w-full"
-                  size="xl"
-                >
-                  {t("auth.common.sign_in_with_unique_code")}
-                </Button>
-              )}
-            </>
+        <Button type="submit" variant="primary" className="w-full" size="xl" disabled={isButtonDisabled}>
+          {isSubmitting ? (
+            <Spinner height="20px" width="20px" />
+          ) : mode === EAuthModes.SIGN_IN ? (
+            t("common.go_to_workspace")
           ) : (
-            <Button type="submit" variant="primary" className="w-full" size="xl" disabled={isButtonDisabled}>
-              {isSubmitting ? <Spinner height="20px" width="20px" /> : "Create account"}
-            </Button>
+            "Create account"
           )}
-        </div>
+        </Button>
       </form>
     </>
   );

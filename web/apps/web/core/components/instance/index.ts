@@ -4,5 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export * from "./not-ready-view";
 export * from "./maintenance-view";

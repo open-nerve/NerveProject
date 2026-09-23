@@ -24,7 +24,10 @@
       "id": "prettierignore",
       "phase": "M1/P1",
       "why": "格式化工具是 oxfmt，它也会读取当前目录下的 .prettierignore；忽略规则只写在 .oxfmtrc.json 一处",
-      "path": { "source": "(?:^|/)\\.prettierignore$", "flags": "" },
+      "path": {
+        "source": "(?:^|/)\\.prettierignore$",
+        "flags": ""
+      },
       "samples": {
         "hit": [".prettierignore", "web/packages/ui/.prettierignore"],
         "miss": ["web/packages/ui/.gitignore"]
@@ -34,8 +37,14 @@
       "id": "serve",
       "phase": "M1/P1",
       "why": "Plane 用 serve 提供构建产物（start、preview 脚本）；Nerve 由 nerve 提供",
-      "files": { "source": "(?:^|/)package\\.json$|^pnpm-(?:workspace|lock)\\.yaml$", "flags": "" },
-      "content": { "source": "(?<![\\w@/.-])serve(?:@\\d|[\"']?:|\\s+-s\\b)", "flags": "" },
+      "files": {
+        "source": "(?:^|/)package\\.json$|^pnpm-(?:workspace|lock)\\.yaml$",
+        "flags": ""
+      },
+      "content": {
+        "source": "(?<![\\w@/.-])serve(?:@\\d|[\"']?:|\\s+-s\\b)",
+        "flags": ""
+      },
       "samples": {
         "hit": ["\"serve\": \"catalog:\"", "  serve@14.2.5:", "serve -s build/client -l 3000", "      serve:"],
         "miss": [
@@ -54,7 +63,10 @@
       "id": "storybook-files",
       "phase": "M1/P1",
       "why": "Storybook 没有 Makefile 或持续集成入口，连同配置、stories 和依赖删除",
-      "path": { "source": "(?:^|/)(?:\\.storybook|storybook-static)/|\\.stories\\.[cm]?[jt]sx?$", "flags": "" },
+      "path": {
+        "source": "(?:^|/)(?:\\.storybook|storybook-static)/|\\.stories\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
       "samples": {
         "hit": ["web/packages/ui/.storybook/main.ts", "web/packages/propel/src/button/button.stories.tsx"],
         "miss": ["web/packages/propel/src/button/button.tsx", "web/packages/ui/src/stories.ts"]
@@ -68,7 +80,10 @@
         "source": "^(?:web/|e2e/|package\\.json$|pnpm-(?:workspace|lock)\\.yaml$|turbo\\.json$|\\.oxlintrc\\.json$|knip\\.jsonc$)",
         "flags": ""
       },
-      "content": { "source": "storybook|chromatic", "flags": "i" },
+      "content": {
+        "source": "storybook|chromatic",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "\"storybook\": \"catalog:\"",
@@ -108,8 +123,14 @@
       "id": "next-script-image",
       "phase": "M1/P1",
       "why": "next/script、next/image 的导入、别名和模块声明；next/link、next/navigation 在 M1/P4 删除",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
-      "content": { "source": "[\"'`]next/(?:script|image)[\"'`]", "flags": "" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]next/(?:script|image)[\"'`]",
+        "flags": ""
+      },
       "samples": {
         "hit": [
           "import Script from \"next/script\";",
@@ -142,7 +163,10 @@
       "id": "locales",
       "phase": "M1/P1",
       "why": "多语言只留 en 和 zh-CN（M1 设计第 6 节）",
-      "path": { "source": "^web/packages/i18n/src/locales/(?!(?:en|zh-CN)/)", "flags": "" },
+      "path": {
+        "source": "^web/packages/i18n/src/locales/(?!(?:en|zh-CN)/)",
+        "flags": ""
+      },
       "samples": {
         "hit": ["web/packages/i18n/src/locales/fr/common.json", "web/packages/i18n/src/locales/zh-TW/common.json"],
         "miss": ["web/packages/i18n/src/locales/en/common.json", "web/packages/i18n/src/locales/zh-CN/common.json"]
@@ -152,8 +176,14 @@
       "id": "i18n-key-generator",
       "phase": "M1/P1",
       "why": "生成的翻译键类型 keys.generated.ts 没有任何地方使用，生成脚本已删除",
-      "files": { "source": "^(?:web/|\\.gitignore$|\\.oxfmtrc\\.json$|knip\\.jsonc$|turbo\\.json$)", "flags": "" },
-      "content": { "source": "keys\\.generated|TTranslationKeys|generate:types", "flags": "" },
+      "files": {
+        "source": "^(?:web/|\\.gitignore$|\\.oxfmtrc\\.json$|knip\\.jsonc$|turbo\\.json$)",
+        "flags": ""
+      },
+      "content": {
+        "source": "keys\\.generated|TTranslationKeys|generate:types",
+        "flags": ""
+      },
       "samples": {
         "hit": [
           "export type { TTranslationKeys } from \"./keys.generated\";",
@@ -186,8 +216,14 @@
       "id": "i18n-applications",
       "phase": "M1/P1",
       "why": "工作区设置中企业版\"应用\"一节的文案（workspace_settings.settings.applications），代码中没有任何引用",
-      "files": { "source": "^web/packages/i18n/src/locales/[^/]+/workspace-settings\\.json$", "flags": "" },
-      "content": { "source": "\"applications\"\\s*:", "flags": "" },
+      "files": {
+        "source": "^web/packages/i18n/src/locales/[^/]+/workspace-settings\\.json$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\"applications\"\\s*:",
+        "flags": ""
+      },
       "samples": {
         "hit": ["    \"applications\": {"],
         "miss": ["    \"api_tokens\": {", "\"title\": \"Applications\""],
@@ -248,8 +284,14 @@
       "id": "analytics",
       "phase": "M1/P2",
       "why": "工作区数据分析、工作项分析弹窗和只给它们用的图表：路由、store、service、常量、类型、propel 的 radar/line/scatter/tree-map/table。保留的迭代、模块进度已改名为 progress（M1 设计 3.4）",
-      "files": { "source": "^(?:web/.*|pnpm-(?:workspace|lock)\\.yaml|turbo\\.json)$", "flags": "" },
-      "content": { "source": "analytics", "flags": "i" },
+      "files": {
+        "source": "^(?:web/.*|pnpm-(?:workspace|lock)\\.yaml|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "analytics",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "import { AnalyticsService } from \"@/services/analytics.service\";",
@@ -277,7 +319,10 @@
       "id": "active-cycles-promo",
       "phase": "M1/P2",
       "why": "工作区级的「活跃迭代」升级推广页（Plane 的付费功能）；项目迭代列表中的当前迭代区块保留，所以不搜单数的 active_cycle / ActiveCycle",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
       "content": {
         "source": "active-cycles|active_cycles|WorkspaceActiveCycles|WORKSPACE_ACTIVE_CYCLES|ProgressPro\\b|\\bworkspaceActiveCycles\\b",
         "flags": ""
@@ -308,7 +353,10 @@
       "id": "profile-stats",
       "phase": "M1/P2",
       "why": "个人主页的统计页、动态页和每个项目的统计数字（Plane 的 /user-stats/、/user-profile/、/user-activity/）；个人主页只剩三个工作项标签和读工作区成员 store 的用户卡片（M1 设计 3.2）。不按 M1 设计 7.4 写的 ProfileSidebar 搜：保留的用户卡片组件就叫 ProfileSidebar（toggleProfileSidebar、profileSidebarCollapsed 也随它保留）",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
       "content": {
         "source": "user-stats|user-profile/|user-activity/|IUserProfileData|IUserProfileProjectSegregation|IUserStateDistribution|IUserPriorityDistribution|\\bIUserActivity\\b|IUserActivityResponse|USER_PROFILE_(?:DATA|ACTIVITY|PROJECT_SEGREGATION)|profile\\.stats|profile\\.tabs\\.(?:summary|activity)|PROFILE_(?:VIEWER|ADMINS)_TAB|ProfileActivityListPage|WorkspaceActivityList|downloadProfileActivity|your_work_by_",
         "flags": ""
@@ -353,8 +401,14 @@
       "id": "estimates",
       "phase": "M1/P2",
       "why": "估算体系（估算设置页、估算下拉框、estimate_point 字段、按点数的进度和燃尽）；迭代和模块的进度改为只按工作项数计算（M1 设计 3.4）",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
-      "content": { "source": "estimat|估算", "flags": "i" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "estimat|估算",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "import { EstimateDropdown } from \"@/components/dropdowns/estimate\";",
@@ -380,8 +434,14 @@
       "id": "gantt-timeline",
       "phase": "M1/P2",
       "why": "甘特图与模块时间线（工作项的 gantt_chart 布局、模块列表的 gantt 布局、时间线 store 和只有拖动甘特条才调用的 POST /issue-dates/）；工作项关系保留，REVERSE_RELATIONS 已搬到 issue/relation.ts；view_timeline 是图标选择器里的 Material Symbols 名字，用后行断言排除",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
-      "content": { "source": "gantt|(?<!view_)time_?line|issue-dates", "flags": "i" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "gantt|(?<!view_)time_?line|issue-dates",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "import { BaseGanttRoot } from \"../gantt\";",
@@ -414,8 +474,14 @@
       "id": "auto-close",
       "phase": "M1/P2",
       "why": "项目自动化里的自动关闭：close_in 个月没有动静的未完成工作项被移到项目指定的状态；自动归档（archive_in）保留。default_state 在 Plane 里只是自动关闭的目标状态，新建工作项的默认状态是 State.default，所以 defaultState 这类变量名不在规则里",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
-      "content": { "source": "close_in|auto[-_ ]?close|default_state", "flags": "i" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "close_in|auto[-_ ]?close|default_state",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "  close_in?: number;",
@@ -505,8 +571,14 @@
       "id": "changelog",
       "phase": "M1/P2",
       "why": "更新日志（帮助菜单里的「新功能」弹窗、它调用的 /api/release-notes/、实例配置的 instance_changelog_url），随文档页一起删除（M1 设计 2.1）",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
-      "content": { "source": "changelog|product-updates|ProductUpdates|what.s new", "flags": "i" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "changelog|product-updates|ProductUpdates|what.s new",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "import { ProductUpdatesModal } from \"@/components/global\";",
@@ -529,8 +601,14 @@
       "id": "stickies",
       "phase": "M1/P2",
       "why": "便签（工作区便签页、首页便签组件、便签编辑器）；区分大小写，不搜 stick（不区分大小写时命中 AxisTick），也不搜单独的 sticky（Tailwind 的 position: sticky）",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css|ya?ml)$", "flags": "" },
-      "content": { "source": "Sticky|STICKY|[Ss]tickies|STICKIES|sticky[-_.:]", "flags": "" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css|ya?ml)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "Sticky|STICKY|[Ss]tickies|STICKIES|sticky[-_.:]",
+        "flags": ""
+      },
       "samples": {
         "hit": [
           "import { StickiesWidget } from \"../stickies/widget\";",
@@ -558,7 +636,10 @@
       "id": "home-theme",
       "phase": "M1/P2",
       "why": "首页快捷链接、首页个性化（组件开关）、自定义主题，以及已经没有入口的旧首页仪表盘；不搜单独的 widget、dashboard、custom（首页最近访问组件与四个固定主题保留）",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css)$", "flags": "" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css)$",
+        "flags": ""
+      },
       "content": {
         "source": "quick_links|quick-links|QuickLink|HomeWidget|manage_widgets|home-preferences|CustomTheme|customize_your_theme|palette-generator|DashboardStore|useDashboard",
         "flags": "i"
@@ -593,8 +674,14 @@
       "id": "export",
       "phase": "M1/P2",
       "why": "工作区的导出设置页及其导出记录列表；不搜单独的 export（保留代码里到处都是 export 语句）",
-      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$", "flags": "" },
-      "content": { "source": "exporter|settings/exports|export-issues|IExportData", "flags": "i" },
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "exporter|settings/exports|export-issues|IExportData",
+        "flags": "i"
+      },
       "samples": {
         "hit": [
           "import { ExportGuide } from \"@/components/exporter/guide\";",
@@ -612,6 +699,155 @@
         ],
         "files": {
           "hit": ["web/apps/web/app/routes/core.ts", "web/packages/constants/src/workspace.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "admin",
+      "phase": "M1/P3",
+      "why": "实例管理后台（god-mode，apps/admin 没有迁入）的入口、地址常量和环境变量，以及只在后台完成设置之前出现的\"实例未完成设置\"页；实例配置改由配置文件和命令行管理（M1 设计 3.7）。实例请求失败时的维护页 MaintenanceView 是另一个分支，保留；\"请联系实例管理员\"之类的文案说的是管理员这个角色，不命中",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "god[-_ ]?mode|admin[-_]base|instance-admin|InstanceNotReady|is_setup_done",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "VITE_ADMIN_BASE_PATH=\"/god-mode\"",
+          "import { GOD_MODE_URL } from \"@plane/constants\";",
+          "          {t(\"enter_god_mode\")}",
+          "    \"VITE_ADMIN_BASE_PATH\",",
+          "    return this.get(\"/api/users/me/instance-admin/\")",
+          "export function InstanceNotReady() {",
+          "  if (instance?.is_setup_done === false) return <InstanceNotReady />;"
+        ],
+        "miss": [
+          "    \"title\": \"Only your instance admin can create workspaces\",",
+          "  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;",
+          "import { MaintenanceView } from \"@/components/instance\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/.env.example", "turbo.json", "web/packages/constants/src/endpoints.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "third-party-login",
+      "phase": "M1/P3",
+      "why": "第三方登录：OAuth（Google、GitHub、GitLab、Gitea）的按钮、配置和提供方账户，以及从未接入的企业版 SSO、LDAP、SAML、OIDC 文案（M1 设计 2.2、3.6）；v0 只有邮箱加密码",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "oauth|\\bsso\\b|\\bldap\\b|\\bsaml\\b|\\boidc\\b",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { OAuthOptions } from \"@plane/ui\";",
+          "import { useOAuthConfig } from \"@/hooks/oauth\";",
+          "  \"sso\": {",
+          "        title: \"LDAP\",",
+          "        title: \"SAML\",",
+          "      \"oidc\": {"
+        ],
+        "miss": [
+          "import { AuthService } from \"@/services/auth.service\";",
+          "        header: \"Work in all dimensions.\",",
+          "const authService = new AuthService();"
+        ],
+        "files": {
+          "hit": ["web/packages/i18n/src/locales/en/auth.json", "web/packages/ui/src/index.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "auth-methods",
+      "phase": "M1/P3",
+      "why": "验证码登录、找回 / 重置 / 设置密码、登录前的\"检查邮箱\"步骤、登录方式的实例开关与 SMTP 开关、登录方式标签（M1 设计 2.2、3.6、3.7）；登录页和注册页各剩一个\"邮箱 + 密码\"表单。不搜 set_password：注册表单密码框的标签 auth.common.password.set_password（\"设置密码\"）是保留的文案。CSRF 留到 M2，不在本规则",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "unique[-_]code|UniqueCode|magic[-_](?:generate|code|login)|MAGIC_|forgot[-_]password|reset[-_]password|set-password|SET_PASSWORD|\\bsetPassword\\b|email-check|[eE]mailCheck|gitea|gitlab|is_(?:google|github|magic_login|email_password)_enabled|is_smtp_configured|SMTP|is_password_autoset|EAuthSteps|last_login_medium|LOGIN_MEDIUM",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "import { AuthUniqueCodeForm } from \"./unique-code\";",
+          "                  {t(\"auth.common.sign_in_with_unique_code\")}",
+          "    return this.post(\"/auth/magic-generate/\", data, { headers: {} })",
+          "        // magic_code error handler",
+          "  const isEmailBasedAuthEnabled = config?.is_email_password_enabled || config?.is_magic_login_enabled;",
+          "            EAuthenticationErrorCodes.INVALID_MAGIC_CODE_SIGN_UP,",
+          "import { ForgotPasswordForm } from \"@/components/account/auth-forms/forgot-password\";",
+          "          {t(\"auth.common.forgot_password\")}",
+          "import { ResetPasswordForm } from \"@/components/account/auth-forms/reset-password\";",
+          "    \"reset_password\": {",
+          "  layout(\"./(all)/accounts/set-password/layout.tsx\", [",
+          "      <AuthenticationWrapper pageType={EPageTypes.SET_PASSWORD}>",
+          "    await authService.setPassword(token, { password });",
+          "    this.post(\"/auth/email-check/\", data, { headers: {} })",
+          "      .emailCheck(data)",
+          "import type { IEmailCheckData } from \"@plane/types\";",
+          "import giteaLogo from \"@/app/assets/logos/gitea-logo.svg?url\";",
+          "import gitlabLogo from \"@/app/assets/logos/gitlab-logo.svg?url\";",
+          "      (config?.is_google_enabled ||",
+          "        config?.is_github_enabled ||",
+          "  const isSMTPConfigured = config?.is_smtp_configured || false;",
+          "    user?.is_password_autoset ? EProfileSetupSteps.USER_DETAILS : EProfileSetupSteps.ALL",
+          "import { EAuthModes, EAuthSteps } from \"@/helpers/authentication.helper\";",
+          "        const loginMedium = rowData.member.last_login_medium;",
+          "import { EUserPermissions, EUserPermissionsLevel, LOGIN_MEDIUM_LABELS } from \"@plane/constants\";"
+        ],
+        "miss": [
+          "            {mode === EAuthModes.SIGN_IN ? t(\"auth.common.password.label\") : t(\"auth.common.password.set_password\")}",
+          "  const [passwordFormData, setPasswordFormData] = useState<TPasswordFormValues>({ ...defaultValues, email });",
+          "  async requestCSRFToken(): Promise<ICsrfTokenData> {",
+          "  { name: \"Gitlab\", element: Gitlab },"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/auth.service.ts", "web/packages/i18n/src/locales/zh-CN/auth.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "email-sending",
+      "phase": "M1/P3",
+      "why": "所有邮件发送（总体设计 1.2）：邮件通知偏好页、营销邮件同意、靠邮件验证码完成的修改登录邮箱（M1 设计 3.13）；站内通知保留",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "email_notification|marketing_email|EmailNotification|change_email|ChangeEmail|notification-preferences|email/generate-code",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "        message: t(\"email_notification_setting_updated_successfully\"),",
+          "  has_marketing_email_consent?: boolean;",
+          "import type { IUserEmailNotificationSettings } from \"@plane/types\";",
+          "  const changeEmailT = (path: string) => t(`account_settings.profile.change_email_modal.${path}`);",
+          "export const ChangeEmailModal = observer(function ChangeEmailModal(props: Props) {",
+          "    return this.get(\"/api/users/me/notification-preferences/\")",
+          "    return this.post(\"/api/users/me/email/generate-code/\", data)"
+        ],
+        "miss": [
+          "  const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();",
+          "                  {t(\"auth.common.email.label\")}&nbsp;"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/common.json"],
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
@@ -720,6 +956,68 @@
       "match": "wiki",
       "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.wiki 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
       "until": "M9"
+    },
+    {
+      "rule": "admin",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "God Mode",
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "SAML",
+      "count": 3,
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "OIDC",
+      "count": 3,
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/apps/web/core/components/workspace/billing/comparison/plans.tsx",
+      "match": "LDAP",
+      "count": 4,
+      "reason": "计费对比表的营销文案，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "LDAP",
+      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "OIDC",
+      "count": 2,
+      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "SAML",
+      "count": 2,
+      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
+    },
+    {
+      "rule": "third-party-login",
+      "path": "web/packages/constants/src/subscription.ts",
+      "match": "SSO",
+      "count": 2,
+      "reason": "订阅套餐的功能名，随计费在本 Phase 删除（P3 plan 的计费 Task）",
+      "until": "M1/P4"
     }
   ]
 }

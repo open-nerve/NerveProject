@@ -21,14 +21,12 @@ import { getFileURL } from "@plane/utils";
 // components
 import { DeactivateAccountModal } from "@/components/account/deactivate-account-modal";
 import { ImagePickerPopover } from "@/components/core/image-picker-popover";
-import { ChangeEmailModal } from "@/components/core/modals/change-email-modal";
 import { UserImageUploadModal } from "@/components/core/modals/user-image-upload-modal";
 import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // helpers
 import { handleCoverImageChange } from "@/helpers/cover-image.helper";
 // hooks
-import { useInstance } from "@/hooks/store/use-instance";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 // utils
 import { validatePersonName, validateDisplayName } from "@plane/utils";
@@ -58,7 +56,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   const [isLoading, setIsLoading] = useState(false);
   const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [deactivateAccountModal, setDeactivateAccountModal] = useState(false);
-  const [isChangeEmailModalOpen, setIsChangeEmailModalOpen] = useState(false);
   // language support
   const { t } = useTranslation();
   // form info
@@ -88,9 +85,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   // store hooks
   const { data: currentUser, updateCurrentUser } = useUser();
   const { updateUserProfile } = useUserProfile();
-  const { config } = useInstance();
-
-  const isSMTPConfigured = config?.is_smtp_configured || false;
 
   const handleProfilePictureDelete = async (url: string | null | undefined) => {
     if (!url) return;
@@ -193,7 +187,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   return (
     <>
       <DeactivateAccountModal isOpen={deactivateAccountModal} onClose={() => setDeactivateAccountModal(false)} />
-      <ChangeEmailModal isOpen={isChangeEmailModalOpen} onClose={() => setIsChangeEmailModalOpen(false)} />
       <Controller
         control={control}
         name="avatar_url"
@@ -393,15 +386,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                     </Field>
                   )}
                 />
-                {isSMTPConfigured && (
-                  <button
-                    type="button"
-                    className="btn w-fit text-11 text-secondary underline"
-                    onClick={() => setIsChangeEmailModalOpen(true)}
-                  >
-                    {t("account_settings.profile.change_email_modal.title")}
-                  </button>
-                )}
               </div>
             </div>
           </div>

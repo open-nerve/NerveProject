@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import { PROFILE_TABS } from "./profile";
+import { GROUPED_PROFILE_SETTINGS, PROFILE_SETTINGS_TABS } from "./settings/profile";
 import { WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS, WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS } from "./workspace";
 
 // The sidebar is a fixed list (M1 design 3.3) and the profile page keeps only its three work-item tabs
@@ -50,5 +51,18 @@ describe("the profile page", () => {
       expect(tab.route).toBe(tab.key);
       expect(tab.selected).toBe(`/${tab.key}/`);
     }
+  });
+});
+
+// The profile settings are the only way to the password change (security) and to the personal access
+// tokens (api-tokens); the email notification preferences left with all email sending (M1 design 2.2).
+describe("the profile settings", () => {
+  it("keeps exactly these tabs", () => {
+    expect(PROFILE_SETTINGS_TABS).toEqual(["general", "security", "preferences", "api-tokens"]);
+  });
+
+  it("shows every tab in exactly one sidebar group", () => {
+    const grouped = Object.values(GROUPED_PROFILE_SETTINGS).flatMap((items) => items.map((item) => item.key));
+    expect(grouped.toSorted()).toEqual([...PROFILE_SETTINGS_TABS].toSorted());
   });
 });

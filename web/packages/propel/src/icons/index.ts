@@ -28,8 +28,6 @@ export * from "./done-icon";
 export * from "./dropdown-icon";
 export * from "./favorite-folder-icon";
 export * from "./full-screen-panel-icon";
-export * from "./github-icon";
-export * from "./gitlab-icon";
 export * from "./helpers";
 export * from "./icon-wrapper";
 export * from "./icon";

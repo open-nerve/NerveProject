@@ -6,16 +6,7 @@
 
 // services
 import { API_BASE_URL } from "@plane/constants";
-import type {
-  TIssue,
-  IUser,
-  IInstanceAdminStatus,
-  IUserSettings,
-  IUserEmailNotificationSettings,
-  TIssuesResponse,
-  TUserProfile,
-  IEmailCheckResponse,
-} from "@plane/types";
+import type { TIssue, IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // helpers
@@ -73,33 +64,9 @@ export class UserService extends APIService {
       });
   }
 
-  async getCurrentUserAccounts(): Promise<any> {
-    return this.get("/api/users/me/accounts/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async currentUserInstanceAdminStatus(): Promise<IInstanceAdminStatus> {
-    return this.get("/api/users/me/instance-admin/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
   async currentUserSettings(bustCache: boolean = false): Promise<IUserSettings> {
     const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : "/api/users/me/settings/";
     return this.get(url)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async currentUserEmailNotificationSettings(): Promise<IUserEmailNotificationSettings> {
-    return this.get("/api/users/me/notification-preferences/")
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;
@@ -134,15 +101,7 @@ export class UserService extends APIService {
       });
   }
 
-  async updateCurrentUserEmailNotificationSettings(data: Partial<IUserEmailNotificationSettings>): Promise<any> {
-    return this.patch("/api/users/me/notification-preferences/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async changePassword(token: string, data: { old_password?: string; new_password: string }): Promise<any> {
+  async changePassword(token: string, data: { old_password: string; new_password: string }): Promise<any> {
     return this.post(`/auth/change-password/`, data, {
       headers: {
         "X-CSRFTOKEN": token,
@@ -199,38 +158,6 @@ export class UserService extends APIService {
 
   async leaveProject(workspaceSlug: string, projectId: string) {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/members/leave/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async checkEmail(token: string, email: string): Promise<IEmailCheckResponse> {
-    return this.post(
-      "/auth/email-check/",
-      { email },
-      {
-        headers: {
-          "X-CSRFTOKEN": token,
-        },
-      }
-    )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async generateEmailCode(data: { email: string }): Promise<any> {
-    return this.post("/api/users/me/email/generate-code/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async verifyEmailCode(data: { email: string; code: string }): Promise<any> {
-    return this.patch("/api/users/me/email/", data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;

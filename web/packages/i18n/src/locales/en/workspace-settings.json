@@ -50,7 +50,6 @@
           "display_name": "Display name",
           "email_address": "Email address",
           "account_type": "Account type",
-          "authentication": "Authentication",
           "joining_date": "Joining date"
         },
         "modal": {

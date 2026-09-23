@@ -50,7 +50,6 @@
           "display_name": "显示名称",
           "email_address": "电子邮件地址",
           "account_type": "账户类型",
-          "authentication": "身份验证",
           "joining_date": "加入日期"
         },
         "modal": {

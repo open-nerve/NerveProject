@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { EUserPermissions, EUserPermissionsLevel, LOGIN_MEDIUM_LABELS } from "@plane/constants";
+import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { renderFormattedDate } from "@plane/utils";
 import { MemberHeaderColumn } from "@/components/project/member-header-column";
@@ -106,17 +106,6 @@ export const useMemberColumns = () => {
         />
       ),
       tdRender: (rowData: RowData) => <AccountTypeColumn rowData={rowData} workspaceSlug={workspaceSlug} />,
-    },
-
-    {
-      key: "Authentication",
-      content: t("workspace_settings.settings.members.details.authentication"),
-      tdRender: (rowData: RowData) => {
-        if (isSuspended(rowData)) return null;
-        const loginMedium = rowData.member.last_login_medium;
-        if (!loginMedium) return null;
-        return <div>{LOGIN_MEDIUM_LABELS[loginMedium]}</div>;
-      },
     },
 
     {

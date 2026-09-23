@@ -48,7 +48,7 @@ const defaultShowPassword = {
 
 export const SecurityProfileSettings = observer(function SecurityProfileSettings() {
   // store
-  const { data: currentUser, changePassword } = useUser();
+  const { changePassword } = useUser();
   // states
   const [showPassword, setShowPassword] = useState(defaultShowPassword);
   const [isPasswordInputFocused, setIsPasswordInputFocused] = useState(false);
@@ -67,7 +67,6 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   const oldPassword = watch("old_password");
   const password = watch("new_password");
   const confirmPassword = watch("confirm_password");
-  const oldPasswordRequired = !currentUser?.is_password_autoset;
   // i18n
   const { t } = useTranslation();
 
@@ -82,10 +81,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
       const csrfToken = await authService.requestCSRFToken().then((data) => data?.csrf_token);
       if (!csrfToken) throw new Error("csrf token not found");
 
-      await changePassword(csrfToken, {
-        ...(oldPasswordRequired && { old_password }),
-        new_password,
-      });
+      await changePassword(csrfToken, { old_password, new_password });
 
       reset(defaultValues);
       setShowPassword(defaultShowPassword);
@@ -119,7 +115,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
 
   const isButtonDisabled =
     getPasswordStrength(password) != E_PASSWORD_STRENGTH.STRENGTH_VALID ||
-    (oldPasswordRequired && oldPassword.trim() === "") ||
+    oldPassword.trim() === "" ||
     password.trim() === "" ||
     confirmPassword.trim() === "" ||
     password !== confirmPassword ||
@@ -137,48 +133,44 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
       <ProfileSettingsHeading title={t("auth.common.password.change_password.label.default")} />
       <form onSubmit={handleSubmit(handleChangePassword)} className="mt-7 flex flex-col gap-8">
         <div className="flex flex-col gap-y-7">
-          {oldPasswordRequired && (
-            <div className="flex flex-col gap-y-2">
-              <h4 className="text-13">{t("auth.common.password.current_password.label")}</h4>
-              <Controller
-                control={control}
-                name="old_password"
-                rules={{
-                  required: t("common.errors.required"),
-                }}
-                render={({ field: { value, onChange } }) => (
-                  <Field name="old_password" invalid={Boolean(errors.old_password)}>
-                    <InputGroup size="2xl">
-                      <Input
-                        size="2xl"
-                        id="old_password"
-                        type={showPassword?.oldPassword ? "text" : "password"}
-                        value={value}
-                        onChange={onChange}
-                        placeholder={t("old_password")}
-                        autoComplete="current-password"
-                      />
-                      <button
-                        type="button"
-                        className="grid size-5 place-items-center"
-                        onClick={() => handleShowPassword("oldPassword")}
-                        aria-label={showPassword?.oldPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword?.oldPassword ? (
-                          <HideOutline className="size-5 text-placeholder" />
-                        ) : (
-                          <ShowOutline className="size-5 text-placeholder" />
-                        )}
-                      </button>
-                    </InputGroup>
-                  </Field>
-                )}
-              />
-              {errors.old_password && (
-                <span className="text-11 text-danger-primary">{errors.old_password.message}</span>
+          <div className="flex flex-col gap-y-2">
+            <h4 className="text-13">{t("auth.common.password.current_password.label")}</h4>
+            <Controller
+              control={control}
+              name="old_password"
+              rules={{
+                required: t("common.errors.required"),
+              }}
+              render={({ field: { value, onChange } }) => (
+                <Field name="old_password" invalid={Boolean(errors.old_password)}>
+                  <InputGroup size="2xl">
+                    <Input
+                      size="2xl"
+                      id="old_password"
+                      type={showPassword?.oldPassword ? "text" : "password"}
+                      value={value}
+                      onChange={onChange}
+                      placeholder={t("old_password")}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="grid size-5 place-items-center"
+                      onClick={() => handleShowPassword("oldPassword")}
+                      aria-label={showPassword?.oldPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword?.oldPassword ? (
+                        <HideOutline className="size-5 text-placeholder" />
+                      ) : (
+                        <ShowOutline className="size-5 text-placeholder" />
+                      )}
+                    </button>
+                  </InputGroup>
+                </Field>
               )}
-            </div>
-          )}
+            />
+            {errors.old_password && <span className="text-11 text-danger-primary">{errors.old_password.message}</span>}
+          </div>
           <div className="grid gap-x-4 gap-y-7 sm:grid-cols-2">
             <div className="flex flex-col gap-y-2">
               <h4 className="text-13">{t("auth.common.password.new_password.label")}</h4>

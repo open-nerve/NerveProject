@@ -25,4 +25,3 @@ export * from "./spinners";
 export * from "./tables";
 export * from "./tag";
 export * from "./utils";
-export * from "./oauth";

@@ -14,7 +14,6 @@ export const RESTRICTED_URLS: string[] = [
   "accounts",
   "api",
   "create-workspace",
-  "god-mode",
   "installations",
   "invitations",
   "onboarding",

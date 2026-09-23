@@ -17,7 +17,6 @@ import { UserPermissionStore } from "@/store/user/base-permissions.store";
 import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";
 // stores
-import type { IAccountStore } from "@/store/user/account.store";
 import type { IUserProfileStore } from "@/store/user/profile.store";
 import { ProfileStore } from "@/store/user/profile.store";
 // local imports
@@ -38,16 +37,14 @@ export interface IUserStore {
   // store observables
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
-  accounts: Record<string, IAccountStore>;
   permission: IUserPermissionStore;
   // actions
   fetchCurrentUser: () => Promise<IUser | undefined>;
   updateCurrentUser: (data: Partial<IUser>) => Promise<IUser | undefined>;
-  handleSetPassword: (csrfToken: string, data: { password: string }) => Promise<IUser | undefined>;
   deactivateAccount: () => Promise<void>;
   changePassword: (
     csrfToken: string,
-    payload: { old_password?: string; new_password: string }
+    payload: { old_password: string; new_password: string }
   ) => Promise<IUser | undefined>;
   reset: () => void;
   signOut: () => Promise<void>;
@@ -65,7 +62,6 @@ export class UserStore implements IUserStore {
   // store observables
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
-  accounts: Record<string, IAccountStore> = {};
   permission: IUserPermissionStore;
   // service
   userService: UserService;
@@ -89,12 +85,10 @@ export class UserStore implements IUserStore {
       data: observable,
       userProfile: observable,
       userSettings: observable,
-      accounts: observable,
       permission: observable,
       // actions
       fetchCurrentUser: action,
       updateCurrentUser: action,
-      handleSetPassword: action,
       deactivateAccount: action,
       changePassword: action,
       reset: action,
@@ -188,42 +182,15 @@ export class UserStore implements IUserStore {
     }
   };
 
-  /**
-   * @description update the user password
-   * @param data
-   * @returns {Promise<IUser>}
-   */
-  handleSetPassword = async (csrfToken: string, data: { password: string }): Promise<IUser | undefined> => {
-    const currentUserData = cloneDeep(this.data);
-    try {
-      if (currentUserData && currentUserData.is_password_autoset && this.data) {
-        const user = await this.authService.setPassword(csrfToken, { password: data.password });
-        set(this.data, ["is_password_autoset"], false);
-        return user;
-      }
-      return undefined;
-    } catch (error) {
-      if (this.data) set(this.data, ["is_password_autoset"], true);
-      runInAction(() => {
-        this.error = {
-          status: "user-update-error",
-          message: "Failed to update current user",
-        };
-      });
-      throw error;
-    }
-  };
-
   changePassword = async (
     csrfToken: string,
     payload: {
-      old_password?: string;
+      old_password: string;
       new_password: string;
     }
   ): Promise<IUser | undefined> => {
     try {
       const user = await this.userService.changePassword(csrfToken, payload);
-      if (this.data) set(this.data, ["is_password_autoset"], false);
       return user;
     } catch (error) {
       console.log(error);

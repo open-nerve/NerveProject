@@ -18,17 +18,6 @@ export const coreRoutes: RouteConfigEntry[] = [
   // Sign Up
   layout("./(all)/sign-up/layout.tsx", [route("sign-up", "./(all)/sign-up/page.tsx")]),
 
-  // Account Routes - Password Management
-  layout("./(all)/accounts/forgot-password/layout.tsx", [
-    route("accounts/forgot-password", "./(all)/accounts/forgot-password/page.tsx"),
-  ]),
-  layout("./(all)/accounts/reset-password/layout.tsx", [
-    route("accounts/reset-password", "./(all)/accounts/reset-password/page.tsx"),
-  ]),
-  layout("./(all)/accounts/set-password/layout.tsx", [
-    route("accounts/set-password", "./(all)/accounts/set-password/page.tsx"),
-  ]),
-
   // Create Workspace
   layout("./(all)/create-workspace/layout.tsx", [route("create-workspace", "./(all)/create-workspace/page.tsx")]),
 

@@ -12,7 +12,7 @@ import type { IWorkspaceMemberInvitation } from "@plane/types";
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { WorkspaceLogo } from "@/components/workspace/logo";
 // helpers
-import { EAuthModes, EAuthSteps } from "@/helpers/authentication.helper";
+import { EAuthModes } from "@/helpers/authentication.helper";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 
@@ -21,44 +21,23 @@ type TAuthHeader = {
   invitationId: string | undefined;
   invitationEmail: string | undefined;
   authMode: EAuthModes;
-  currentAuthStep: EAuthSteps;
 };
 
 const Titles = {
   [EAuthModes.SIGN_IN]: {
-    [EAuthSteps.EMAIL]: {
-      header: "Work in all dimensions.",
-      subHeader: "Welcome back to Plane.",
-    },
-    [EAuthSteps.PASSWORD]: {
-      header: "Work in all dimensions.",
-      subHeader: "Welcome back to Plane.",
-    },
-    [EAuthSteps.UNIQUE_CODE]: {
-      header: "Work in all dimensions.",
-      subHeader: "Welcome back to Plane.",
-    },
+    header: "Work in all dimensions.",
+    subHeader: "Welcome back to Plane.",
   },
   [EAuthModes.SIGN_UP]: {
-    [EAuthSteps.EMAIL]: {
-      header: "Work in all dimensions.",
-      subHeader: "Create your Plane account.",
-    },
-    [EAuthSteps.PASSWORD]: {
-      header: "Work in all dimensions.",
-      subHeader: "Create your Plane account.",
-    },
-    [EAuthSteps.UNIQUE_CODE]: {
-      header: "Work in all dimensions.",
-      subHeader: "Create your Plane account.",
-    },
+    header: "Work in all dimensions.",
+    subHeader: "Create your Plane account.",
   },
 };
 
 const workSpaceService = new WorkspaceService();
 
 export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
-  const { workspaceSlug, invitationId, invitationEmail, authMode, currentAuthStep } = props;
+  const { workspaceSlug, invitationId, invitationEmail, authMode } = props;
   // plane imports
   const { t } = useTranslation();
 
@@ -72,7 +51,6 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
   );
 
   const getHeaderSubHeader = (
-    step: EAuthSteps,
     mode: EAuthModes,
     invitation: IWorkspaceMemberInvitation | undefined,
     email: string | undefined
@@ -94,10 +72,10 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
       };
     }
 
-    return Titles[mode][step];
+    return Titles[mode];
   };
 
-  const { header, subHeader } = getHeaderSubHeader(currentAuthStep, authMode, invitation || undefined, invitationEmail);
+  const { header, subHeader } = getHeaderSubHeader(authMode, invitation || undefined, invitationEmail);
 
   if (isLoading)
     return (
@@ -114,7 +92,7 @@ type TAuthHeaderBase = {
   subHeader: string;
 };
 
-export function AuthHeaderBase(props: TAuthHeaderBase) {
+function AuthHeaderBase(props: TAuthHeaderBase) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-h4-semibold text-primary">{props.header}</span>
