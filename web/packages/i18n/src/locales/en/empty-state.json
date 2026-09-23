@@ -135,11 +135,6 @@
       "title": "No projects archived",
       "description": "Looks like all your projects are still active—great job!"
     },
-    "dashboard": {
-      "title": "Visualize your progress with dashboards",
-      "description": "Build customizable dashboards to track metrics, measure outcomes, and present insights effectively.",
-      "cta_primary": "Create new dashboard"
-    },
     "project_overview_state_sidebar": {
       "title": "Enable project states",
       "description": "Enable Project States to view and manage properties like state, priority, due dates and more."

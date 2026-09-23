@@ -268,35 +268,6 @@
       }
     }
   },
-  "project_page": {
-    "empty_state": {
-      "general": {
-        "title": "写笔记、文档或完整的知识库。让 Plane 的 AI 助手 Galileo 帮助您开始",
-        "description": "页面是 Plane 中的思维记录空间。记录会议笔记，轻松格式化，嵌入工作项，使用组件库进行布局，并将它们全部保存在项目上下文中。要快速完成任何文档，可以通过快捷键或点击按钮调用 Plane 的 AI Galileo。",
-        "primary_button": {
-          "text": "创建您的第一个页面"
-        }
-      },
-      "private": {
-        "title": "尚无私人页面",
-        "description": "在这里保存您的私人想法。准备好分享时，团队就在一键之遥。",
-        "primary_button": {
-          "text": "创建您的第一个页面"
-        }
-      },
-      "public": {
-        "title": "尚无公共页面",
-        "description": "在这里查看与项目中所有人共享的页面。",
-        "primary_button": {
-          "text": "创建您的第一个页面"
-        }
-      },
-      "archived": {
-        "title": "尚无已归档的页面",
-        "description": "归档不在您关注范围内的页面。需要时可以在这里访问它们。"
-      }
-    }
-  },
   "disabled_project": {
     "empty_state": {
       "inbox": {

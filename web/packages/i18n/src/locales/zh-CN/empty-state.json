@@ -135,11 +135,6 @@
       "title": "没有已归档项目",
       "description": "看起来您的所有项目仍然活跃 — 做得好!"
     },
-    "dashboard": {
-      "title": "使用仪表板可视化您的进度",
-      "description": "构建可自定义的仪表板以跟踪指标、衡量成果并有效呈现见解。",
-      "cta_primary": "创建新仪表板"
-    },
     "project_overview_state_sidebar": {
       "title": "启用项目状态",
       "description": "启用项目状态以查看和管理状态、优先级、截止日期等属性。"
