@@ -12,7 +12,7 @@ import type { TModuleDisplayFilters, TModuleFilters, TModuleFiltersByState } fro
 // helpers
 import { storage } from "@/lib/local-storage";
 // store
-import type { CoreRootStore } from "./root.store";
+import type { RootStore } from "./root.store";
 
 // localStorage keys
 const MODULE_DISPLAY_FILTERS_KEY = "module_display_filters";
@@ -47,9 +47,9 @@ export class ModuleFilterStore implements IModuleFilterStore {
   searchQuery: string = "";
   archivedModulesSearchQuery: string = "";
   // root store
-  rootStore: CoreRootStore;
+  rootStore: RootStore;
 
-  constructor(_rootStore: CoreRootStore) {
+  constructor(_rootStore: RootStore) {
     makeObservable(this, {
       // observables
       displayFilters: observable,

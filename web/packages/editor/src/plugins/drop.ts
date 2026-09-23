@@ -13,12 +13,11 @@ import type { TEditorCommands, TExtensions } from "@/types";
 
 type Props = {
   disabledExtensions?: TExtensions[];
-  flaggedExtensions?: TExtensions[];
   editor: Editor;
 };
 
 export const DropHandlerPlugin = (props: Props): Plugin => {
-  const { disabledExtensions, flaggedExtensions, editor } = props;
+  const { disabledExtensions, editor } = props;
 
   return new Plugin({
     key: new PluginKey("drop-handler-plugin"),
@@ -40,7 +39,6 @@ export const DropHandlerPlugin = (props: Props): Plugin => {
             const pos = view.state.selection.from;
             insertFilesSafely({
               disabledExtensions,
-              flaggedExtensions,
               editor,
               files: acceptedFiles,
               initialPos: pos,
@@ -92,7 +90,6 @@ export const DropHandlerPlugin = (props: Props): Plugin => {
 
 type InsertFilesSafelyArgs = {
   disabledExtensions?: TExtensions[];
-  flaggedExtensions?: TExtensions[];
   editor: Editor;
   event: "insert" | "drop";
   files: File[];

@@ -10,12 +10,12 @@ import { FALLBACK_LANGUAGE, setLanguage } from "@plane/i18n";
 import type { IWorkItemFilterStore } from "@plane/shared-state";
 import { WorkItemFilterStore } from "@plane/shared-state";
 // plane web store
-import type { IBasePowerKStore as IPowerKStore } from "@/store/base-power-k.store";
-import { BasePowerKStore as PowerKStore } from "@/store/base-power-k.store";
+import type { IPowerKStore } from "@/store/power-k.store";
+import { PowerKStore } from "@/store/power-k.store";
 import type { IStateStore } from "@/store/state.store";
 import { StateStore } from "@/store/state.store";
-import type { ICommandPaletteStore } from "@/store/base-command-palette.store";
-import { CommandPaletteStore } from "@/store/base-command-palette.store";
+import type { ICommandPaletteStore } from "@/store/command-palette.store";
+import { CommandPaletteStore } from "@/store/command-palette.store";
 import { WorkspaceRootStore } from "@/store/workspace";
 // stores
 import type { ICycleStore } from "./cycle.store";
@@ -58,7 +58,7 @@ import type { IWorkspaceRootStore } from "./workspace";
 
 enableStaticRendering(typeof window === "undefined");
 
-export class CoreRootStore {
+export class RootStore {
   workspaceRoot: IWorkspaceRootStore;
   projectRoot: IProjectRootStore;
   memberRoot: IMemberRootStore;
@@ -137,5 +137,3 @@ export class CoreRootStore {
     this.powerK = new PowerKStore();
   }
 }
-
-export { CoreRootStore as RootStore };

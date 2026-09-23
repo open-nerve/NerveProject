@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-// @types/react 19 removed the global JSX namespace; it is imported from react now.
-import type { JSX } from "react";
 // types
 import type { ICycle, IModule, IProjectView, IWorkspaceView } from "@plane/types";
 import type { TContextMenuItem } from "@plane/ui";
@@ -53,12 +51,7 @@ interface UseViewMenuItemsProps {
   handleOpenInNewTab: () => void;
 }
 
-type MenuResult = {
-  items: TContextMenuItem[];
-  modals: JSX.Element | null;
-};
-
-export const useCycleMenuItems = (props: UseCycleMenuItemsProps): MenuResult => {
+export const useCycleMenuItems = (props: UseCycleMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
   const { cycleDetails, isEditingAllowed, ...handlers } = props;
 
@@ -79,10 +72,10 @@ export const useCycleMenuItems = (props: UseCycleMenuItemsProps): MenuResult => 
     factory.createDeleteMenuItem(handlers.handleDelete, isEditingAllowed && !isCompleted && !isArchived),
   ].filter((item) => item.shouldRender !== false);
 
-  return { items, modals: null };
+  return items;
 };
 
-export const useModuleMenuItems = (props: UseModuleMenuItemsProps): MenuResult => {
+export const useModuleMenuItems = (props: UseModuleMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
   const { moduleDetails, isEditingAllowed, ...handlers } = props;
 
@@ -104,14 +97,14 @@ export const useModuleMenuItems = (props: UseModuleMenuItemsProps): MenuResult =
     factory.createDeleteMenuItem(handlers.handleDelete, isEditingAllowed && !isArchived),
   ].filter((item) => item.shouldRender !== false);
 
-  return { items, modals: null };
+  return items;
 };
 
-export const useViewMenuItems = (props: UseViewMenuItemsProps): MenuResult => {
+export const useViewMenuItems = (props: UseViewMenuItemsProps): TContextMenuItem[] => {
   const factory = useQuickActionsFactory();
   const { workspaceSlug, isOwner, isAdmin, projectId, view, ...handlers } = props;
 
-  if (!view) return { items: [], modals: null };
+  if (!view) return [];
 
   // Assemble final menu items - order defined here
   const items = [
@@ -121,12 +114,5 @@ export const useViewMenuItems = (props: UseViewMenuItemsProps): MenuResult => {
     factory.createDeleteMenuItem(handlers.handleDelete, isOwner || isAdmin),
   ].filter((item) => item.shouldRender !== false);
 
-  return { items, modals: null };
+  return items;
 };
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const useIntakeHeaderMenuItems = (props: {
-  workspaceSlug: string;
-  projectId: string;
-  handleCopyLink: () => void;
-}): MenuResult => ({ items: [], modals: null });

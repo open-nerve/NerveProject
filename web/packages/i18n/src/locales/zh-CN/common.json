@@ -143,7 +143,6 @@
   "date_range": "日期范围",
   "private": "私有",
   "public": "公开",
-  "accessible_only_by_invite": "仅受邀者可访问",
   "anyone_in_the_workspace_except_guests_can_join": "除访客外的工作区所有成员都可以加入",
   "creating": "创建中",
   "creating_project": "正在创建项目",

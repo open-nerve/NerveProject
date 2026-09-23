@@ -30,10 +30,9 @@
         "title": "Grant view access to all work items for guest users:",
         "sub_heading": "This will allow guests to have view access to all the project work items."
       },
-      "invite_members": {
-        "title": "Invite members",
-        "sub_heading": "Invite members to work on your project.",
-        "select_co_worker": "Select co-worker"
+      "add_members": {
+        "title": "Add members",
+        "sub_heading": "Add workspace members to work on your project."
       }
     },
     "states": {

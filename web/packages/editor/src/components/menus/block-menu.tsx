@@ -30,7 +30,6 @@ import { getNodeOptions } from "./block-menu-options";
 type Props = {
   disabledExtensions?: IEditorProps["disabledExtensions"];
   editor: Editor;
-  flaggedExtensions?: IEditorProps["flaggedExtensions"];
   workItemIdentifier?: IEditorProps["workItemIdentifier"];
 };
 export type BlockMenuOption = {

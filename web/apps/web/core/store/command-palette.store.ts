@@ -18,7 +18,7 @@ export interface ModalData {
   viewId: string;
 }
 
-export interface IBaseCommandPaletteStore {
+export interface ICommandPaletteStore {
   // computed
   isAnyModalOpen: boolean;
   // observables
@@ -49,7 +49,7 @@ export interface IBaseCommandPaletteStore {
   toggleProfileSettingsModal: (value: { activeTab?: TProfileSettingsTabs | null; isOpen?: boolean }) => void;
 }
 
-export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
+export class CommandPaletteStore implements ICommandPaletteStore {
   // observables
   isCreateProjectModalOpen: boolean = false;
   isCreateCycleModalOpen: boolean = false;
@@ -59,8 +59,8 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
   isDeleteIssueModalOpen: boolean = false;
   isBulkDeleteIssueModalOpen: boolean = false;
   createIssueStoreType: TCreateModalStoreTypes = EIssuesStoreType.PROJECT;
-  createWorkItemAllowedProjectIds: IBaseCommandPaletteStore["createWorkItemAllowedProjectIds"] = undefined;
-  profileSettingsModal: IBaseCommandPaletteStore["profileSettingsModal"] = {
+  createWorkItemAllowedProjectIds: ICommandPaletteStore["createWorkItemAllowedProjectIds"] = undefined;
+  profileSettingsModal: ICommandPaletteStore["profileSettingsModal"] = {
     activeTab: "general",
     isOpen: false,
   };
@@ -228,8 +228,8 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
    * @param value
    * @returns
    */
-  toggleProfileSettingsModal: IBaseCommandPaletteStore["toggleProfileSettingsModal"] = (payload) => {
-    const updatedSettings: IBaseCommandPaletteStore["profileSettingsModal"] = {
+  toggleProfileSettingsModal: ICommandPaletteStore["toggleProfileSettingsModal"] = (payload) => {
+    const updatedSettings: ICommandPaletteStore["profileSettingsModal"] = {
       ...this.profileSettingsModal,
       ...payload,
     };
@@ -239,7 +239,3 @@ export class BaseCommandPaletteStore implements IBaseCommandPaletteStore {
     });
   };
 }
-
-// Aliases so consumers can keep using CommandPaletteStore / ICommandPaletteStore
-export type ICommandPaletteStore = IBaseCommandPaletteStore;
-export { BaseCommandPaletteStore as CommandPaletteStore };

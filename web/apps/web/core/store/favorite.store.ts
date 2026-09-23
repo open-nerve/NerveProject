@@ -7,9 +7,9 @@
 import { orderBy, uniqBy, set } from "lodash-es";
 import { action, observable, makeObservable, runInAction, computed } from "mobx";
 import { v4 as uuidv4 } from "uuid";
-import type { IFavorite } from "@plane/types";
+import type { IFavorite, TFavoriteEntityType } from "@plane/types";
 import { FavoriteService } from "@/services/favorite";
-import type { CoreRootStore } from "./root.store";
+import type { RootStore } from "./root.store";
 
 export interface IFavoriteStore {
   // observables
@@ -59,7 +59,7 @@ export class FavoriteStore implements IFavoriteStore {
   cycleStore;
   moduleStore;
 
-  constructor(_rootStore: CoreRootStore) {
+  constructor(_rootStore: RootStore) {
     makeObservable(this, {
       // observable
       favoriteMap: observable,
@@ -264,7 +264,7 @@ export class FavoriteStore implements IFavoriteStore {
     }
   };
 
-  removeFavoriteEntityFromStore = (entity_identifier: string, entity_type: string) => {
+  removeFavoriteEntityFromStore = (entity_identifier: string, entity_type: TFavoriteEntityType) => {
     switch (entity_type) {
       case "view":
         return (

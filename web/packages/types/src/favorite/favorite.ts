@@ -6,10 +6,13 @@
 
 import type { TLogoProps } from "../common";
 
+// What a favourite can point at; a folder groups other favourites
+export type TFavoriteEntityType = "project" | "view" | "cycle" | "module" | "folder";
+
 export type IFavorite = {
   id: string;
   name: string;
-  entity_type: string;
+  entity_type: TFavoriteEntityType;
   entity_data: {
     id?: string;
     name: string;

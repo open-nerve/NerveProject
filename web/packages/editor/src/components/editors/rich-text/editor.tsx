@@ -9,9 +9,7 @@ import { forwardRef, useCallback } from "react";
 import { EditorWrapper } from "@/components/editors";
 import { BlockMenu, EditorBubbleMenu } from "@/components/menus";
 // extensions
-import { SideMenuExtension } from "@/extensions";
-// plane editor imports
-import { RichTextEditorAdditionalExtensions } from "@/extensions/rich-text-extensions";
+import { SideMenuExtension, SlashCommands } from "@/extensions";
 // types
 import type { EditorRefApi, IRichTextEditorProps } from "@/types";
 
@@ -21,9 +19,6 @@ function RichTextEditor(props: IRichTextEditorProps) {
     disabledExtensions,
     dragDropEnabled,
     extensions: externalExtensions = [],
-    fileHandler,
-    flaggedExtensions,
-    extendedEditorProps,
     workItemIdentifier,
   } = props;
 
@@ -33,35 +28,18 @@ function RichTextEditor(props: IRichTextEditorProps) {
       SideMenuExtension({
         dragDropEnabled: !!dragDropEnabled,
       }),
-      ...RichTextEditorAdditionalExtensions({
-        disabledExtensions,
-        fileHandler,
-        flaggedExtensions,
-        extendedEditorProps,
-      }),
+      ...(disabledExtensions.includes("slash-commands") ? [] : [SlashCommands({ disabledExtensions })]),
     ];
 
     return extensions;
-  }, [dragDropEnabled, disabledExtensions, externalExtensions, fileHandler, flaggedExtensions, extendedEditorProps]);
+  }, [dragDropEnabled, disabledExtensions, externalExtensions]);
 
   return (
     <EditorWrapper {...props} extensions={getExtensions()}>
       {(editor) => (
         <>
-          {editor && bubbleMenuEnabled && (
-            <EditorBubbleMenu
-              disabledExtensions={disabledExtensions}
-              editor={editor}
-              extendedEditorProps={extendedEditorProps}
-              flaggedExtensions={flaggedExtensions}
-            />
-          )}
-          <BlockMenu
-            editor={editor}
-            flaggedExtensions={flaggedExtensions}
-            disabledExtensions={disabledExtensions}
-            workItemIdentifier={workItemIdentifier}
-          />
+          {editor && bubbleMenuEnabled && <EditorBubbleMenu disabledExtensions={disabledExtensions} editor={editor} />}
+          <BlockMenu editor={editor} disabledExtensions={disabledExtensions} workItemIdentifier={workItemIdentifier} />
         </>
       )}
     </EditorWrapper>

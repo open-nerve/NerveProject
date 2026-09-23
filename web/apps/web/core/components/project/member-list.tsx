@@ -19,7 +19,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 // local imports
 import { MemberListFiltersDropdown } from "./dropdowns/filters/member-list";
 import { ProjectMemberListItem } from "./member-list-item";
-import { SendProjectInvitationModal } from "./send-project-invitation-modal";
+import { AddProjectMembersModal } from "./add-project-members-modal";
 
 type TProjectMemberListProps = {
   projectId: string;
@@ -29,7 +29,7 @@ type TProjectMemberListProps = {
 export const ProjectMemberList = observer(function ProjectMemberList(props: TProjectMemberListProps) {
   const { projectId, workspaceSlug } = props;
   // states
-  const [inviteModal, setInviteModal] = useState(false);
+  const [addMembersModal, setAddMembersModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const {
     project: { projectMemberIds, getFilteredProjectMemberDetails, filters },
@@ -75,9 +75,9 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
 
   return (
     <>
-      <SendProjectInvitationModal
-        isOpen={inviteModal}
-        onClose={() => setInviteModal(false)}
+      <AddProjectMembersModal
+        isOpen={addMembersModal}
+        onClose={() => setAddMembersModal(false)}
         projectId={projectId}
         workspaceSlug={workspaceSlug}
       />
@@ -103,7 +103,7 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
             <Button
               variant="primary"
               onClick={() => {
-                setInviteModal(true);
+                setAddMembersModal(true);
               }}
             >
               {t("add_member")}

@@ -10,7 +10,6 @@ import codemark from "prosemirror-codemark";
 import { CORE_EXTENSIONS } from "@/constants/extension";
 import { restorePublicImages } from "@/helpers/image-helpers";
 // plugins
-import type { TAdditionalActiveDropbarExtensions } from "@/types/utils";
 import { DropHandlerPlugin } from "@/plugins/drop";
 import { FilePlugins } from "@/plugins/file/root";
 import { MarkdownClipboardPlugin } from "@/plugins/markdown-clipboard";
@@ -22,8 +21,7 @@ type TActiveDropbarExtensions =
   | CORE_EXTENSIONS.SLASH_COMMANDS
   | CORE_EXTENSIONS.TABLE
   | "bubble-menu"
-  | CORE_EXTENSIONS.SIDE_MENU
-  | TAdditionalActiveDropbarExtensions;
+  | CORE_EXTENSIONS.SIDE_MENU;
 
 declare module "@tiptap/core" {
   interface Commands {
@@ -55,14 +53,14 @@ export type UtilityExtensionStorage = {
   isTouchDevice: boolean;
 };
 
-type Props = Pick<IEditorProps, "disabledExtensions" | "flaggedExtensions" | "getEditorMetaData"> & {
+type Props = Pick<IEditorProps, "disabledExtensions" | "getEditorMetaData"> & {
   fileHandler: TFileHandler;
   isEditable: boolean;
   isTouchDevice: boolean;
 };
 
 export const UtilityExtension = (props: Props) => {
-  const { disabledExtensions, flaggedExtensions, fileHandler, getEditorMetaData, isEditable, isTouchDevice } = props;
+  const { disabledExtensions, fileHandler, getEditorMetaData, isEditable, isTouchDevice } = props;
   const { restore } = fileHandler;
 
   return Extension.create<Record<string, unknown>, UtilityExtensionStorage>({
@@ -83,7 +81,6 @@ export const UtilityExtension = (props: Props) => {
         }),
         DropHandlerPlugin({
           disabledExtensions,
-          flaggedExtensions,
           editor: this.editor,
         }),
       ];

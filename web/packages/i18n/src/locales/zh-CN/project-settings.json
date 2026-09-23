@@ -30,10 +30,9 @@
         "title": "为访客用户授予查看所有工作项的权限：",
         "sub_heading": "这将允许访客查看所有项目工作项。"
       },
-      "invite_members": {
-        "title": "邀请成员",
-        "sub_heading": "邀请成员参与您的项目。",
-        "select_co_worker": "选择同事"
+      "add_members": {
+        "title": "添加成员",
+        "sub_heading": "添加工作区成员参与您的项目。"
       }
     },
     "states": {

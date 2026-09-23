@@ -34,7 +34,7 @@ export interface IProjectMemberDetails extends Omit<TProjectMembership, "member"
   member: IUserLite;
 }
 
-export interface IBaseProjectMemberStore {
+export interface IProjectMemberStore {
   // observables
   projectMemberFetchStatusMap: {
     [projectId: string]: boolean;
@@ -84,7 +84,7 @@ export interface IBaseProjectMemberStore {
   removeMemberFromProject: (workspaceSlug: string, projectId: string, userId: string) => Promise<void>;
 }
 
-export class BaseProjectMemberStore implements IBaseProjectMemberStore {
+export class ProjectMemberStore implements IProjectMemberStore {
   // observables
   projectMemberFetchStatusMap: {
     [projectId: string]: boolean;
@@ -495,7 +495,3 @@ export class BaseProjectMemberStore implements IBaseProjectMemberStore {
     }
   };
 }
-
-// Aliases so consumers can keep using ProjectMemberStore / IProjectMemberStore
-export type IProjectMemberStore = IBaseProjectMemberStore;
-export { BaseProjectMemberStore as ProjectMemberStore };

@@ -4,43 +4,34 @@
  * See the LICENSE file for details.
  */
 
-import type { EQUALITY_OPERATOR, COLLECTION_OPERATOR, COMPARISON_OPERATOR } from "../operators";
-import type { TCoreExactOperatorConfigs, TCoreInOperatorConfigs, TCoreRangeOperatorConfigs } from "./core";
+import type { TFilterValue } from "../expression";
 import type {
-  TExtendedExactOperatorConfigs,
-  TExtendedInOperatorConfigs,
-  TExtendedOperatorSpecificConfigs,
-  TExtendedRangeOperatorConfigs,
-} from "./extended";
+  TDateFilterFieldConfig,
+  TDateRangeFilterFieldConfig,
+  TSingleSelectFilterFieldConfig,
+  TMultiSelectFilterFieldConfig,
+} from "../field-types";
+import type { EQUALITY_OPERATOR, COLLECTION_OPERATOR, COMPARISON_OPERATOR } from "../operators";
 
-// ----------------------------- Composed Operator Configs -----------------------------
+// ----------------------------- EXACT Operator -----------------------------
+export type TExactOperatorConfigs = TSingleSelectFilterFieldConfig<TFilterValue> | TDateFilterFieldConfig<TFilterValue>;
 
-/**
- * EXACT operator - combines core and extended configurations
- */
-export type TExactOperatorConfigs = TCoreExactOperatorConfigs | TExtendedExactOperatorConfigs;
+// ----------------------------- IN Operator -----------------------------
+export type TInOperatorConfigs = TMultiSelectFilterFieldConfig<TFilterValue>;
 
-/**
- * IN operator - combines core and extended configurations
- */
-export type TInOperatorConfigs = TCoreInOperatorConfigs | TExtendedInOperatorConfigs;
+// ----------------------------- RANGE Operator -----------------------------
+export type TRangeOperatorConfigs = TDateRangeFilterFieldConfig<TFilterValue>;
 
-/**
- * RANGE operator - combines core and extended configurations
- */
-export type TRangeOperatorConfigs = TCoreRangeOperatorConfigs | TExtendedRangeOperatorConfigs;
-
-// ----------------------------- Final Operator Specific Configs -----------------------------
+// ----------------------------- Operator Specific Configs -----------------------------
 
 /**
  * Type-safe mapping of specific operators to their supported filter type configurations.
- * Each operator maps to its composed (core + extended) configurations.
  */
 export type TOperatorSpecificConfigs = {
   [EQUALITY_OPERATOR.EXACT]: TExactOperatorConfigs;
   [COLLECTION_OPERATOR.IN]: TInOperatorConfigs;
   [COMPARISON_OPERATOR.RANGE]: TRangeOperatorConfigs;
-} & TExtendedOperatorSpecificConfigs;
+};
 
 /**
  * Operator filter configuration mapping - for different operators.
@@ -50,8 +41,3 @@ export type TOperatorConfigMap = Map<
   keyof TOperatorSpecificConfigs,
   TOperatorSpecificConfigs[keyof TOperatorSpecificConfigs]
 >;
-
-// -------- RE-EXPORTS --------
-
-export * from "./core";
-export * from "./extended";

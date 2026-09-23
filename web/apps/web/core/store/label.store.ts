@@ -14,7 +14,7 @@ import { buildTree } from "@plane/utils";
 // services
 import { IssueLabelService } from "@/services/issue";
 // store
-import type { CoreRootStore } from "./root.store";
+import type { RootStore } from "./root.store";
 
 export interface ILabelStore {
   //Loaders
@@ -63,7 +63,7 @@ export class LabelStore implements ILabelStore {
   // services
   issueLabelService;
 
-  constructor(_rootStore: CoreRootStore) {
+  constructor(_rootStore: RootStore) {
     makeObservable(this, {
       labelMap: observable,
       fetchedMap: observable,

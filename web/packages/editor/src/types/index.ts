@@ -11,4 +11,3 @@ export * from "./extensions";
 export * from "./hook";
 export * from "./mention";
 export * from "./slash-commands-suggestion";
-export * from "./editor-extended";

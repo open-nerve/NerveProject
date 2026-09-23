@@ -5,13 +5,7 @@
  */
 
 import type { TAllAvailableOperatorsForDisplay, TAllAvailableDateFilterOperatorsForDisplay } from "@plane/types";
-import { CORE_OPERATOR_LABELS_MAP, CORE_DATE_OPERATOR_LABELS_MAP } from "./core";
-import {
-  EXTENDED_OPERATOR_LABELS_MAP,
-  EXTENDED_DATE_OPERATOR_LABELS_MAP,
-  NEGATED_OPERATOR_LABELS_MAP,
-  NEGATED_DATE_OPERATOR_LABELS_MAP,
-} from "./extended";
+import { EQUALITY_OPERATOR, COLLECTION_OPERATOR, COMPARISON_OPERATOR } from "@plane/types";
 
 /**
  * Empty operator label for unselected state
@@ -19,24 +13,18 @@ import {
 export const EMPTY_OPERATOR_LABEL = "--";
 
 /**
- * Complete operator labels mapping - combines core, extended, and negated labels
+ * Operator labels
  */
 export const OPERATOR_LABELS_MAP: Record<TAllAvailableOperatorsForDisplay, string> = {
-  ...CORE_OPERATOR_LABELS_MAP,
-  ...EXTENDED_OPERATOR_LABELS_MAP,
-  ...NEGATED_OPERATOR_LABELS_MAP,
+  [EQUALITY_OPERATOR.EXACT]: "is",
+  [COLLECTION_OPERATOR.IN]: "is any of",
+  [COMPARISON_OPERATOR.RANGE]: "between",
 } as const;
 
 /**
- * Complete date operator labels mapping - combines core, extended, and negated labels
+ * Date-specific operator labels
  */
 export const DATE_OPERATOR_LABELS_MAP: Record<TAllAvailableDateFilterOperatorsForDisplay, string> = {
-  ...CORE_DATE_OPERATOR_LABELS_MAP,
-  ...EXTENDED_DATE_OPERATOR_LABELS_MAP,
-  ...NEGATED_DATE_OPERATOR_LABELS_MAP,
+  [EQUALITY_OPERATOR.EXACT]: "is",
+  [COMPARISON_OPERATOR.RANGE]: "between",
 } as const;
-
-// -------- RE-EXPORTS --------
-
-export * from "./core";
-export * from "./extended";

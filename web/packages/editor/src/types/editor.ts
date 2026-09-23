@@ -13,17 +13,8 @@ import type { NodeViewProps as TNodeViewProps } from "@tiptap/react";
 import type { TCustomComponentsMetaData } from "@plane/utils";
 // extension types
 import type { TTextAlign } from "@/extensions";
-// plane editor imports
-import type { IEditorPropsExtended, TExtendedEditorCommands } from "@/types/editor-extended";
 // types
-import type {
-  TDisplayConfig,
-  TEditorAsset,
-  TExtensions,
-  TFileHandler,
-  TMentionHandler,
-  TExtendedEditorRefApi,
-} from "@/types";
+import type { TDisplayConfig, TEditorAsset, TExtensions, TFileHandler, TMentionHandler } from "@/types";
 
 export type TEditorCommands =
   | "text"
@@ -52,8 +43,7 @@ export type TEditorCommands =
   | "callout"
   | "attachment"
   | "emoji"
-  | "external-embed"
-  | TExtendedEditorCommands;
+  | "external-embed";
 
 export type TCommandExtraProps = {
   image: {
@@ -86,7 +76,7 @@ type TCommandWithPropsWithItemKey<T extends TEditorCommands> = T extends keyof T
   ? { itemKey: T } & TCommandExtraProps[T]
   : { itemKey: T };
 
-export type CoreEditorRefApi = {
+export type EditorRefApi = {
   blur: () => void;
   clearEditor: (emitUpdate?: boolean) => void;
   createSelectionAtCursorPosition: () => void;
@@ -113,8 +103,6 @@ export type CoreEditorRefApi = {
   undo: () => void;
 };
 
-export type EditorRefApi = CoreEditorRefApi & TExtendedEditorRefApi;
-
 // editor props
 export type IEditorProps = {
   autofocus?: boolean;
@@ -126,7 +114,6 @@ export type IEditorProps = {
   editorClassName?: string;
   editorProps?: EditorProps;
   extensions?: Extensions;
-  flaggedExtensions: TExtensions[];
   fileHandler: TFileHandler;
   forwardedRef?: React.MutableRefObject<EditorRefApi | null>;
   getEditorMetaData: (htmlContent: string) => TCustomComponentsMetaData;
@@ -144,7 +131,6 @@ export type IEditorProps = {
   showPlaceholderOnEmpty?: boolean;
   tabIndex?: number;
   value?: string | null;
-  extendedEditorProps: IEditorPropsExtended;
   workItemIdentifier?: string | null;
 };
 

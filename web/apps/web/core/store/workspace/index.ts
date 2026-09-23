@@ -12,7 +12,7 @@ import type { IWorkspace, IWorkspaceUserPropertiesResponse } from "@plane/types"
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 // store
-import type { CoreRootStore } from "@/store/root.store";
+import type { RootStore } from "@/store/root.store";
 // sub-stores
 import type { IApiTokenStore } from "./api-token.store";
 import { ApiTokenStore } from "./api-token.store";
@@ -44,13 +44,12 @@ export interface IWorkspaceRootStore {
     workspaceSlug: string,
     data: Partial<IWorkspaceUserPropertiesResponse>
   ) => Promise<void>;
-  mutateWorkspaceMembersActivity: (workspaceSlug: string) => Promise<void>;
   // sub-stores
   webhook: IWebhookStore;
   apiToken: IApiTokenStore;
 }
 
-export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
+export class WorkspaceRootStore implements IWorkspaceRootStore {
   loader: boolean = false;
   // observables
   workspaces: Record<string, IWorkspace> = {};
@@ -64,7 +63,7 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
   webhook: IWebhookStore;
   apiToken: IApiTokenStore;
 
-  constructor(_rootStore: CoreRootStore) {
+  constructor(_rootStore: RootStore) {
     makeObservable(this, {
       loader: observable.ref,
       // observables
@@ -273,15 +272,4 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
       throw error;
     }
   };
-
-  /**
-   * Mutate workspace members activity — no-op in CE
-   * @param workspaceSlug
-   */
-  mutateWorkspaceMembersActivity = async (_workspaceSlug: string): Promise<void> => {
-    // No-op in default/CE version
-  };
 }
-
-// Alias so consumers can keep using WorkspaceRootStore
-export { BaseWorkspaceRootStore as WorkspaceRootStore };

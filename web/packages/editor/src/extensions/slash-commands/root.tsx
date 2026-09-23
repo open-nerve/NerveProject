@@ -16,7 +16,7 @@ import { updateFloatingUIFloaterPosition } from "@/helpers/floating-ui";
 import type { CommandListInstance } from "@/helpers/tippy";
 import { DROPDOWN_NAVIGATION_KEYS } from "@/helpers/tippy";
 // types
-import type { IEditorProps, ISlashCommandItem, TEditorCommands, TSlashCommandSectionKeys } from "@/types";
+import type { IEditorProps } from "@/types";
 // components
 import { getSlashCommandFilteredSections } from "./command-items-list";
 import type { SlashCommandsMenuProps } from "./command-menu";
@@ -24,11 +24,6 @@ import { SlashCommandsMenu } from "./command-menu";
 
 export type SlashCommandOptions = {
   suggestion: Omit<SuggestionOptions, "editor">;
-};
-
-export type TSlashCommandAdditionalOption = ISlashCommandItem & {
-  section: TSlashCommandSectionKeys;
-  pushAfter: TEditorCommands;
 };
 
 const Command = Extension.create<SlashCommandOptions>({
@@ -123,9 +118,7 @@ const Command = Extension.create<SlashCommandOptions>({
   },
 });
 
-export type TExtensionProps = Pick<IEditorProps, "disabledExtensions" | "flaggedExtensions"> & {
-  additionalOptions?: TSlashCommandAdditionalOption[];
-};
+export type TExtensionProps = Pick<IEditorProps, "disabledExtensions">;
 
 export function SlashCommands(props: TExtensionProps) {
   return Command.configure({

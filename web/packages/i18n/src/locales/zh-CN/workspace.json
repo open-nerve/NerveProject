@@ -59,7 +59,7 @@
       "label": "网络",
       "private": {
         "title": "私有",
-        "description": "仅限邀请访问"
+        "description": "仅项目成员可以访问"
       },
       "public": {
         "title": "公开",

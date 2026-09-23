@@ -12,7 +12,7 @@ import type { IWorkspaceView } from "@plane/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 // store
-import type { CoreRootStore } from "./root.store";
+import type { RootStore } from "./root.store";
 
 export interface IGlobalViewStore {
   // observables
@@ -44,7 +44,7 @@ export class GlobalViewStore implements IGlobalViewStore {
   // services
   workspaceService;
 
-  constructor(_rootStore: CoreRootStore) {
+  constructor(_rootStore: RootStore) {
     makeObservable(this, {
       // observables
       globalViewMap: observable,

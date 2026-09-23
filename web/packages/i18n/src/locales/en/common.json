@@ -143,7 +143,6 @@
   "date_range": "Date range",
   "private": "Private",
   "public": "Public",
-  "accessible_only_by_invite": "Accessible only by invite",
   "anyone_in_the_workspace_except_guests_can_join": "Anyone in the workspace except Guests can join",
   "creating": "Creating",
   "creating_project": "Creating project",

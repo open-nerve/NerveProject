@@ -59,7 +59,7 @@
       "label": "Network",
       "private": {
         "title": "Private",
-        "description": "Accessible only by invite"
+        "description": "Accessible only to its members"
       },
       "public": {
         "title": "Public",

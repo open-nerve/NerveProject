@@ -47,7 +47,7 @@ const defaultValues: FormValues = {
   ],
 };
 
-export const SendProjectInvitationModal = observer(function SendProjectInvitationModal(props: Props) {
+export const AddProjectMembersModal = observer(function AddProjectMembersModal(props: Props) {
   const { isOpen, onClose, onSuccess, projectId, workspaceSlug } = props;
   // plane hooks
   const { t } = useTranslation();
@@ -72,10 +72,10 @@ export const SendProjectInvitationModal = observer(function SendProjectInvitatio
   });
   // derived values
   const currentProjectRole = getProjectRoleByWorkspaceSlugAndProjectId(workspaceSlug, projectId);
-  const uninvitedPeople = workspaceMemberIds?.filter((userId) => {
+  const nonProjectMemberIds = workspaceMemberIds?.filter((userId) => {
     const projectMemberDetails = getProjectMemberDetails(userId, projectId);
-    const isInvited = projectMemberDetails?.member.id && projectMemberDetails?.original_role;
-    return !isInvited;
+    const isProjectMember = projectMemberDetails?.member.id && projectMemberDetails?.original_role;
+    return !isProjectMember;
   });
 
   const onSubmit = async (formData: FormValues) => {
@@ -128,7 +128,7 @@ export const SendProjectInvitationModal = observer(function SendProjectInvitatio
     }
   }, [fields, append]);
 
-  const options = uninvitedPeople
+  const options = nonProjectMemberIds
     ?.map((userId) => {
       const memberDetails = getWorkspaceMemberDetails(userId);
 
@@ -182,10 +182,10 @@ export const SendProjectInvitationModal = observer(function SendProjectInvitatio
       <form onSubmit={handleSubmit(onSubmit)} className="p-5">
         <div className="space-y-5">
           <h3 className="text-16 leading-6 font-medium text-primary">
-            {t("project_settings.members.invite_members.title")}
+            {t("project_settings.members.add_members.title")}
           </h3>
           <div className="mt-2">
-            <p className="text-13 text-secondary">{t("project_settings.members.invite_members.sub_heading")}</p>
+            <p className="text-13 text-secondary">{t("project_settings.members.add_members.sub_heading")}</p>
           </div>
 
           <div className="mb-3 space-y-4">

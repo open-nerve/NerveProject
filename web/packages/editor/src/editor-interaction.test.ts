@@ -9,8 +9,8 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it } from "vitest";
 // local imports
 import { CoreEditorExtensions } from "@/extensions/extensions";
-import { RichTextEditorAdditionalExtensions } from "@/extensions/rich-text-extensions";
 import { SideMenuExtension } from "@/extensions/side-menu";
+import { SlashCommands } from "@/extensions/slash-commands";
 import { getEditorRefHelpers } from "@/helpers/editor-ref";
 import { CoreEditorProps } from "@/props";
 import type { EditorRefApi, TFileHandler, TMentionHandler } from "@/types";
@@ -67,19 +67,12 @@ const createEditor = async ({ editable = true, content = "" }: { editable?: bool
         disabledExtensions: [],
         editable,
         enableHistory: true,
-        extendedEditorProps: {},
         fileHandler,
-        flaggedExtensions: [],
         getEditorMetaData,
         mentionHandler,
       }),
       SideMenuExtension({ dragDropEnabled: true }),
-      ...RichTextEditorAdditionalExtensions({
-        disabledExtensions: [],
-        extendedEditorProps: {},
-        fileHandler,
-        flaggedExtensions: [],
-      }),
+      SlashCommands({ disabledExtensions: [] }),
     ],
     content,
   });

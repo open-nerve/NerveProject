@@ -24,7 +24,7 @@ const workspaceService = new WorkspaceService();
 
 type ETempUserRole = TUserPermissions | EUserWorkspaceRoles | EUserProjectRoles; // TODO: Remove this once we have migrated user permissions to enums to plane constants package
 
-export interface IBaseUserPermissionStore {
+export interface IUserPermissionStore {
   loader: boolean;
   // observables
   workspaceUserInfo: Record<string, IWorkspaceMemberMe>; // workspaceSlug -> IWorkspaceMemberMe
@@ -59,7 +59,7 @@ export interface IBaseUserPermissionStore {
  * @description This store is used to handle permission layer for the currently logged user.
  * It manages workspace and project level permissions, roles and access control.
  */
-export class BaseUserPermissionStore implements IBaseUserPermissionStore {
+export class UserPermissionStore implements IUserPermissionStore {
   loader: boolean = false;
   // constants
   workspaceUserInfo: Record<string, IWorkspaceMemberMe> = {};
@@ -336,7 +336,3 @@ export class BaseUserPermissionStore implements IBaseUserPermissionStore {
     }
   };
 }
-
-// Aliases so consumers can keep using UserPermissionStore / IUserPermissionStore
-export type IUserPermissionStore = IBaseUserPermissionStore;
-export { BaseUserPermissionStore as UserPermissionStore };

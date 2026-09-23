@@ -13,7 +13,6 @@ import { IconButton } from "@plane/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { IProjectView } from "@plane/types";
 // ui
-import type { TContextMenuItem } from "@plane/ui";
 import { ContextMenu, CustomMenu } from "@plane/ui";
 import { copyUrlToClipboard, cn } from "@plane/utils";
 // helpers
@@ -56,7 +55,7 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
     });
   const handleOpenInNewTab = () => window.open(`/${viewLink}`, "_blank");
 
-  const menuResult = useViewMenuItems({
+  const MENU_ITEMS = useViewMenuItems({
     isOwner,
     isAdmin,
     workspaceSlug,
@@ -67,10 +66,6 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
     handleCopyLink: handleCopyText,
     handleOpenInNewTab,
   });
-
-  // Handle both CE (array) and EE (object) return types
-  const MENU_ITEMS: TContextMenuItem[] = Array.isArray(menuResult) ? menuResult : menuResult.items;
-  const additionalModals = Array.isArray(menuResult) ? null : menuResult.modals;
 
   const CONTEXT_MENU_ITEMS = MENU_ITEMS.map(function CONTEXT_MENU_ITEMS(item) {
     return {
@@ -91,7 +86,6 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
         data={view}
       />
       <DeleteProjectViewModal data={view} isOpen={deleteViewModal} onClose={() => setDeleteViewModal(false)} />
-      {additionalModals}
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
       <CustomMenu
         customButton={<IconButton variant="tertiary" size="lg" icon={MoreHorizontalOutline} />}

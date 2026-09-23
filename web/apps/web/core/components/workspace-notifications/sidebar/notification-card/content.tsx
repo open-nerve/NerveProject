@@ -7,38 +7,37 @@
 import type { ReactNode } from "react";
 // plane imports
 import type { TNotification } from "@plane/types";
-import { renderFormattedDate, sanitizeCommentForNotification, stripAndTruncateHTML } from "@plane/utils";
+import {
+  renderFormattedDate,
+  replaceUnderscoreIfSnakeCase,
+  sanitizeCommentForNotification,
+  stripAndTruncateHTML,
+} from "@plane/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
-import {
-  ADDITIONAL_NOTIFICATION_CONTENT_MAP,
-  renderAdditionalAction,
-  renderAdditionalValue,
-  shouldShowConnector,
-} from "../../notification-card/content";
 
 // Types
-export type TNotificationFieldData = {
+type TNotificationFieldData = {
   field: string | undefined;
   newValue: string | undefined;
   oldValue: string | undefined;
   verb: string | undefined;
 };
 
-export type TNotificationContentDetails = {
+type TNotificationContentDetails = {
   action?: ReactNode;
   value?: ReactNode;
   showConnector?: boolean;
 };
 
-export type TNotificationContentHandler = (data: TNotificationFieldData) => TNotificationContentDetails | null;
+type TNotificationContentHandler = (data: TNotificationFieldData) => TNotificationContentDetails | null;
 
-export type TNotificationContentMap = {
+type TNotificationContentMap = {
   [key: string]: TNotificationContentHandler;
 };
 
-// Base notification content map for core fields
-export const BASE_NOTIFICATION_CONTENT_MAP: TNotificationContentMap = {
+// What each field's notification says
+const NOTIFICATION_CONTENT_MAP: TNotificationContentMap = {
   duplicate: ({ verb }) => ({
     action:
       verb === "created"
@@ -104,7 +103,13 @@ export const BASE_NOTIFICATION_CONTENT_MAP: TNotificationContentMap = {
   }),
 };
 
-// Helper to get content details from maps
+// Fields without their own connector setting show "to" before the value, except these
+const shouldShowConnector = (notificationField: string | undefined) =>
+  !["comment", "archived_at", "None", "assignees", "labels", "start_date", "target_date", "parent"].includes(
+    notificationField || ""
+  );
+
+// Helper to get content details from the map
 const getNotificationContentDetails = (
   fieldData: TNotificationFieldData,
   renderCommentBox?: boolean
@@ -112,23 +117,16 @@ const getNotificationContentDetails = (
   const { field } = fieldData;
   if (!field) return null;
 
-  // Check base map first
-  const baseHandler = BASE_NOTIFICATION_CONTENT_MAP[field];
-  if (baseHandler) {
+  const handler = NOTIFICATION_CONTENT_MAP[field];
+  if (handler) {
     // Special case for comment field that needs renderCommentBox
     if (field === "comment") {
-      return (baseHandler as (data: TNotificationFieldData, renderCommentBox?: boolean) => TNotificationContentDetails)(
+      return (handler as (data: TNotificationFieldData, renderCommentBox?: boolean) => TNotificationContentDetails)(
         fieldData,
         renderCommentBox
       );
     }
-    return baseHandler(fieldData);
-  }
-
-  // Check additional map from plane-web (EE extensions)
-  const additionalHandler = ADDITIONAL_NOTIFICATION_CONTENT_MAP[field];
-  if (additionalHandler) {
-    return additionalHandler(fieldData);
+    return handler(fieldData);
   }
 
   return null;
@@ -176,7 +174,8 @@ export function NotificationContent({
     // Check if action is explicitly defined in map (including null)
     if (contentDetails && "action" in contentDetails) return contentDetails.action;
     // Fallback to default action handler for fields not in map or without action defined
-    return renderAdditionalAction(notificationField, verb);
+    const baseAction = !["comment", "archived_at"].includes(notificationField) ? verb : "";
+    return `${baseAction} ${replaceUnderscoreIfSnakeCase(notificationField)}`;
   };
 
   // Render value - use map value if defined, otherwise fall through to default handler
@@ -184,7 +183,7 @@ export function NotificationContent({
     // Check if value is explicitly defined in map
     if (contentDetails && "value" in contentDetails) return contentDetails.value;
     // Fallback to default value handler for fields not in map or without value defined
-    return renderAdditionalValue(notificationField, newValue, oldValue);
+    return newValue;
   };
 
   // Determine if connector should be shown - prefer map value, fallback to function

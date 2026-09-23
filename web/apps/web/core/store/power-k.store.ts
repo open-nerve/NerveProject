@@ -17,7 +17,7 @@ export interface ModalData {
   viewId: string;
 }
 
-export interface IBasePowerKStore {
+export interface IPowerKStore {
   // observables
   isPowerKModalOpen: boolean;
   isShortcutsListModalOpen: boolean;
@@ -35,7 +35,7 @@ export interface IBasePowerKStore {
   toggleShortcutsListModal: (value?: boolean) => void;
 }
 
-export class BasePowerKStore implements IBasePowerKStore {
+export class PowerKStore implements IPowerKStore {
   // observables
   isPowerKModalOpen: boolean = false;
   isShortcutsListModalOpen: boolean = false;

@@ -14,7 +14,7 @@ import type { TIssueActivityComment, TIssueActivity, TIssueActivityMap, TIssueAc
 // services
 import { IssueActivityService } from "@/services/issue";
 // store
-import type { CoreRootStore } from "@/store/root.store";
+import type { RootStore } from "@/store/root.store";
 
 export type TActivityLoader = "fetch" | "mutate" | undefined;
 
@@ -47,7 +47,7 @@ export class IssueActivityStore implements IIssueActivityStore {
   // services
   issueActivityService;
 
-  constructor(protected store: CoreRootStore) {
+  constructor(protected store: RootStore) {
     makeObservable(this, {
       // observables
       loader: observable.ref,

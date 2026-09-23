@@ -23,7 +23,7 @@ export const NETWORK_CHOICES: TNetworkChoice[] = [
     key: 0,
     labelKey: "Private",
     i18n_label: "workspace_projects.network.private.title",
-    description: "workspace_projects.network.private.description", //"Accessible only by invite",
+    description: "workspace_projects.network.private.description",
     iconKey: "Lock",
   },
   {

@@ -70,7 +70,7 @@ export const WorkspaceViewQuickActions = observer(function WorkspaceViewQuickAct
         closeOnSelect
         buttonClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
       >
-        {MENU_ITEMS.items.map((item) => {
+        {MENU_ITEMS.map((item) => {
           if (item.shouldRender === false) return null;
           return (
             <CustomMenu.MenuItem

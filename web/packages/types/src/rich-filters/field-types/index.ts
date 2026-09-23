@@ -5,31 +5,87 @@
  */
 
 import type { TFilterValue } from "../expression";
-import type { TCoreFilterFieldConfigs } from "./core";
-import { CORE_FILTER_FIELD_TYPE } from "./core";
-import type { TExtendedFilterFieldConfigs } from "./extended";
-import { EXTENDED_FILTER_FIELD_TYPE } from "./extended";
-
-// -------- COMPOSED FILTER TYPES --------
-
-export const FILTER_FIELD_TYPE = {
-  ...CORE_FILTER_FIELD_TYPE,
-  ...EXTENDED_FILTER_FIELD_TYPE,
-} as const;
-
-export type TFilterFieldType = (typeof FILTER_FIELD_TYPE)[keyof typeof FILTER_FIELD_TYPE];
-
-// -------- COMPOSED CONFIGURATIONS --------
+import type { TSupportedOperators } from "../operators";
+import type { TBaseFilterFieldConfig, IFilterOption } from "./shared";
 
 /**
- * All supported filter configurations.
+ * Filter types
+ */
+export const FILTER_FIELD_TYPE = {
+  DATE: "date",
+  DATE_RANGE: "date_range",
+  SINGLE_SELECT: "single_select",
+  MULTI_SELECT: "multi_select",
+} as const;
+
+// -------- DATE FILTER CONFIGURATIONS --------
+
+type TBaseDateFilterFieldConfig = TBaseFilterFieldConfig & {
+  min?: Date;
+  max?: Date;
+};
+
+/**
+ * Date filter configuration - for temporal filtering.
+ * - defaultValue: Initial date/time value
+ * - min: Minimum allowed date
+ * - max: Maximum allowed date
+ */
+export type TDateFilterFieldConfig<V extends TFilterValue> = TBaseDateFilterFieldConfig & {
+  type: typeof FILTER_FIELD_TYPE.DATE;
+  defaultValue?: V;
+};
+
+/**
+ * Date range filter configuration - for temporal filtering.
+ * - defaultValue: Initial date/time range values
+ * - min: Minimum allowed date
+ * - max: Maximum allowed date
+ */
+export type TDateRangeFilterFieldConfig<V extends TFilterValue> = TBaseDateFilterFieldConfig & {
+  type: typeof FILTER_FIELD_TYPE.DATE_RANGE;
+  defaultValue?: V[];
+};
+
+// -------- SELECT FILTER CONFIGURATIONS --------
+
+/**
+ * Single-select filter configuration - dropdown with one selectable option.
+ * - defaultValue: Initial selected value
+ * - getOptions: Options as static array or async function
+ */
+export type TSingleSelectFilterFieldConfig<V extends TFilterValue> = TBaseFilterFieldConfig & {
+  type: typeof FILTER_FIELD_TYPE.SINGLE_SELECT;
+  defaultValue?: V;
+  getOptions: IFilterOption<V>[] | (() => IFilterOption<V>[] | Promise<IFilterOption<V>[]>);
+};
+
+/**
+ * Multi-select filter configuration - allows selecting multiple options.
+ * - defaultValue: Initial selected values array
+ * - getOptions: Options as static array or async function
+ * - singleValueOperator: Operator to show when single value is selected
+ */
+export type TMultiSelectFilterFieldConfig<V extends TFilterValue> = TBaseFilterFieldConfig & {
+  type: typeof FILTER_FIELD_TYPE.MULTI_SELECT;
+  defaultValue?: V[];
+  getOptions: IFilterOption<V>[] | (() => IFilterOption<V>[] | Promise<IFilterOption<V>[]>);
+  singleValueOperator: TSupportedOperators;
+};
+
+// -------- UNION TYPES --------
+
+/**
+ * All supported filter configurations
  */
 export type TSupportedFilterFieldConfigs<V extends TFilterValue = TFilterValue> =
-  | TCoreFilterFieldConfigs<V>
-  | TExtendedFilterFieldConfigs<V>;
+  | TDateFilterFieldConfig<V>
+  | TDateRangeFilterFieldConfig<V>
+  | TSingleSelectFilterFieldConfig<V>
+  | TMultiSelectFilterFieldConfig<V>;
+
+export type TFilterFieldType = (typeof FILTER_FIELD_TYPE)[keyof typeof FILTER_FIELD_TYPE];
 
 // -------- RE-EXPORTS --------
 
 export * from "./shared";
-export * from "./core";
-export * from "./extended";

@@ -1235,6 +1235,124 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "enterprise-shells",
+      "phase": "M1/P3",
+      "why": "企业版的扩展点（M1 设计 2.2、7.4）：CE 中为空、恒定或只做转发的钩子、类型和注册表，以及为企业版子类准备的 Base 类加别名。只列确切的符号：TExtended、TAdditional 这类前缀会命中保留的扩展侧边栏和筛选组件；CE、EE 只作为整词搜（注释里的\"CE 或 EE\"说明）。设计中列出的 ExtendedBasePage 在本 Phase 开始时已没有命中，不设规则",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "\\b(?:CE|EE)\\b|auth-ee|extendedRoutes|mergeRoutes|extendedRedirectRoutes|useEditorFlagging|flaggedExtensions|extendedEditorProps|IEditorPropsExtended|editor-extended|TExtendedEditor(?:Commands|RefApi)|TExtendedFileHandler|TExtendedCommandExtraProps|CoreEditorAdditionalExtensions|RichTextEditorAdditionalExtensions|AdditionalSlashCommand|TSlashCommandAdditionalOption|TAdditionalEditorAsset|TAdditionalActiveDropbarExtensions|TExtendedCustomComponentsMetaData|useExtendedEditorConfig|useAdditional(?:EditorMention|FavoriteItemDetails)|use-additional-|useWorkspaceIssuePropertiesExtended|ADDITIONAL_NOTIFICATION_CONTENT_MAP|renderAdditional(?:Action|Value)|AdditionalFilterValueInput|_getAdditionalOperatorOptions|additionalNavigationItems|additionalRender|additionalModals|mutateWorkspaceMembersActivity|useIntakeHeaderMenuItems|EXTENDED_(?:LOGICAL|EQUALITY|COLLECTION|COMPARISON|MULTI_VALUE|FILTER_FIELD|OPERATOR|DATE_OPERATOR)|TExtended(?:Supported|AllAvailable|FilterFieldConfigs|ExactOperator|InOperator|RangeOperator|OperatorSpecific)|NEGATED_(?:DATE_)?OPERATOR_LABELS_MAP|Base(?:CommandPalette|PowerK|ProjectMember|UserPermission)Store|BaseWorkspaceRootStore|CoreRootStore",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  // Use unified menu hook from plane-web (resolves to CE or EE)",
+          "import type { TExtendedLoginMediums } from \"./auth-ee\";",
+          "import { extendedRoutes } from \"./routes/extended\";",
+          "import { mergeRoutes } from \"./routes/helper\";",
+          "export const extendedRedirectRoutes: RouteConfigEntry[] = [];",
+          "import { useEditorFlagging } from \"@/hooks/use-editor-flagging\";",
+          "  \"disabledExtensions\" | \"flaggedExtensions\" | \"getEditorMetaData\"",
+          "  Omit<ILiteTextEditorProps, \"fileHandler\" | \"mentionHandler\" | \"extendedEditorProps\">,",
+          "import type { IEditorPropsExtended, TEditorCommands, TExtensions } from \"@/types\";",
+          "import type { IEditorPropsExtended, TExtendedEditorCommands } from \"@/types/editor-extended\";",
+          "export type TExtendedEditorRefApi = unknown;",
+          "import type { TExtendedFileHandler } from \"@plane/editor\";",
+          "export type TExtendedCommandExtraProps = unknown;",
+          "export const CoreEditorAdditionalExtensions = (props: TCoreAdditionalExtensionsProps): Extensions => {",
+          "import { RichTextEditorAdditionalExtensions } from \"@/extensions/rich-text-extensions\";",
+          "export const coreEditorAdditionalSlashCommandOptions = (props: Props): TSlashCommandAdditionalOption[] => {",
+          "export type TAdditionalEditorAsset = never;",
+          "import type { TAdditionalActiveDropbarExtensions } from \"@/types/utils\";",
+          "export type TExtendedCustomComponentsMetaData = unknown;",
+          "import { useExtendedEditorConfig } from \"@/hooks/editor/use-extended-editor-config\";",
+          "import { useAdditionalEditorMention } from \"@/hooks/use-additional-editor-mention\";",
+          "import { useAdditionalFavoriteItemDetails } from \"@/hooks/use-additional-favorite-item-details\";",
+          "export const useWorkspaceIssuePropertiesExtended = (workspaceSlug: string | string[] | undefined) => {};",
+          "export const ADDITIONAL_NOTIFICATION_CONTENT_MAP: TNotificationContentMap = {};",
+          "export const renderAdditionalAction = (notificationField: string, verb: string | undefined) => {",
+          "    return renderAdditionalValue(notificationField, newValue, oldValue);",
+          "  return <AdditionalFilterValueInput {...props} />;",
+          "      const additionalOperatorOption = this._getAdditionalOperatorOptions(operator, value);",
+          "  additionalNavigationItems?: (workspaceSlug: string, projectId: string) => TNavigationItem[];",
+          "  additionalRender?: (itemKey: string, workspaceSlug: string) => ReactNode;",
+          "  const additionalModals = Array.isArray(menuResult) ? null : menuResult.modals;",
+          "  mutateWorkspaceMembersActivity: (workspaceSlug: string) => Promise<void>;",
+          "export const useIntakeHeaderMenuItems = (props: {",
+          "  ...EXTENDED_LOGICAL_OPERATOR,",
+          "  ...EXTENDED_EQUALITY_OPERATOR,",
+          "  ...EXTENDED_COLLECTION_OPERATOR,",
+          "  ...EXTENDED_COMPARISON_OPERATOR,",
+          "  ...EXTENDED_MULTI_VALUE_OPERATORS,",
+          "  ...EXTENDED_FILTER_FIELD_TYPE,",
+          "  ...EXTENDED_OPERATOR_LABELS_MAP,",
+          "  ...EXTENDED_DATE_OPERATOR_LABELS_MAP,",
+          "export type TSupportedOperators = TCoreSupportedOperators | TExtendedSupportedOperators;",
+          "  | TExtendedAllAvailableDateFilterOperatorsForDisplay<V>;",
+          "  | TExtendedFilterFieldConfigs<V>;",
+          "export type TExactOperatorConfigs = TCoreExactOperatorConfigs | TExtendedExactOperatorConfigs;",
+          "export type TInOperatorConfigs = TCoreInOperatorConfigs | TExtendedInOperatorConfigs;",
+          "export type TRangeOperatorConfigs = TCoreRangeOperatorConfigs | TExtendedRangeOperatorConfigs;",
+          "} & TExtendedOperatorSpecificConfigs;",
+          "export const NEGATED_OPERATOR_LABELS_MAP: Record<never, string> = {} as const;",
+          "export const NEGATED_DATE_OPERATOR_LABELS_MAP: Record<never, string> = {} as const;",
+          "export { BaseCommandPaletteStore as CommandPaletteStore };",
+          "import type { IBasePowerKStore as IPowerKStore } from \"@/store/base-power-k.store\";",
+          "export { BaseProjectMemberStore as ProjectMemberStore };",
+          "export { BaseUserPermissionStore as UserPermissionStore };",
+          "export { BaseWorkspaceRootStore as WorkspaceRootStore };",
+          "export { CoreRootStore as RootStore };"
+        ],
+        "miss": [
+          "import { ExtendedAppHeader } from \"@/components/common/extended-app-header\";",
+          "type TAdditionalWorkItemFiltersProps = {",
+          "  const hasAdditionalChanges = useMemo(",
+          "export interface ExtendedEmojiStorage extends EmojiStorage {",
+          "  const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();",
+          "export abstract class BaseIssuesStore implements IBaseIssuesStore {",
+          "import { ACCEPTED_ATTACHMENT_MIME_TYPES, ACCEPTED_IMAGE_MIME_TYPES } from \"@/constants/config\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/routes.ts", "web/packages/editor/src/types/editor.ts"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "project-invitations",
+      "phase": "M1/P3",
+      "why": "项目邀请（M1 设计 2.2、3.15）：web 里没有按邮件邀请进项目的流程，\"邀请成员\"弹窗是从工作区成员中直接添加，改名为添加成员；离开项目、私有项目的文案不再说\"受邀\"。工作区邀请保留，不搜单独的 invite、invitation。精确例外：joinProject 调用的 Plane 地址 /projects/invitations/，到 M3",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "ProjectInvitation|project.*invit(?:e|ation)",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { SendProjectInvitationModal } from \"./send-project-invitation-modal\";",
+          "            {t(\"project_settings.members.invite_members.title\")}",
+          "                    project? You will be able to join the project if invited again or if it{\"'\"}s public.",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })"
+        ],
+        "miss": [
+          "    return this.get(\"/api/users/me/workspaces/invitations/\")",
+          "        \"title\": \"Invite people to collaborate\","
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/project/member-list.tsx",
+            "web/packages/i18n/src/locales/en/project-settings.json"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [
@@ -1258,6 +1376,14 @@
       "match": "wiki",
       "reason": "tlds.ts 是 url.ts 识别链接用的顶级域名列表，.wiki 是一个真实的顶级域名，不是功能代码；列表必须完整，这一项在 v0 内不可能消失",
       "until": "M9"
+    },
+    {
+      "rule": "project-invitations",
+      "path": "web/apps/web/core/services/user.service.ts",
+      "match": "projects/invitation",
+      "count": 1,
+      "reason": "joinProject 调用的 Plane 地址 /projects/invitations/（加入公开项目），M3 定义项目成员接口时替换",
+      "until": "M3"
     }
   ]
 }

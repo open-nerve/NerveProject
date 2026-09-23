@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export type TExtendedFileHandler = object;
-
 export type TFileHandler = {
   assetsUploadStatus: Record<string, number>; // blockId => progress percentage
   cancel: () => void;
@@ -23,7 +21,7 @@ export type TFileHandler = {
      */
     maxFileSize: number;
   };
-} & TExtendedFileHandler;
+};
 
 export type TEditorFontSize = "small-font" | "large-font" | "mobile-font";
 

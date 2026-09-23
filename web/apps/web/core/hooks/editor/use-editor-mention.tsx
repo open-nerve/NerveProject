@@ -12,27 +12,20 @@ import type { TMentionSection, TMentionSuggestion } from "@plane/editor";
 import type { TSearchEntities, TSearchEntityRequestPayload, TSearchResponse, TUserSearchResponse } from "@plane/types";
 // helpers
 import { getFileURL } from "@plane/utils";
-// plane web hooks
-import { useAdditionalEditorMention } from "@/hooks/use-additional-editor-mention";
 
 type TArgs = {
-  enableAdvancedMentions?: boolean;
   searchEntity: (payload: TSearchEntityRequestPayload) => Promise<TSearchResponse>;
 };
 
 export const useEditorMention = (args: TArgs) => {
-  const { enableAdvancedMentions = false, searchEntity } = args;
-  // additional mentions
-  const { editorMentionTypes, updateAdditionalSections } = useAdditionalEditorMention({
-    enableAdvancedMentions,
-  });
+  const { searchEntity } = args;
   // fetch mentions handler
   const fetchMentions = useCallback(
     async (query: string): Promise<TMentionSection[]> => {
       try {
         const res = await searchEntity({
           count: 5,
-          query_type: editorMentionTypes,
+          query_type: ["user_mention"],
           query,
         });
         const suggestionSections: TMentionSection[] = [];
@@ -64,16 +57,13 @@ export const useEditorMention = (args: TArgs) => {
             });
           }
         });
-        const { sections } = updateAdditionalSections({
-          response: res,
-        });
-        return [...suggestionSections, ...sections];
+        return suggestionSections;
       } catch (error) {
         console.error("Error in fetching mentions:", error);
         throw error;
       }
     },
-    [editorMentionTypes, searchEntity, updateAdditionalSections]
+    [searchEntity]
   );
 
   return {

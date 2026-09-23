@@ -11,8 +11,8 @@ import { EUserPermissions, API_BASE_URL } from "@plane/constants";
 import type { IUser, TUserPermissions } from "@plane/types";
 // plane web imports
 import type { RootStore } from "@/store/root.store";
-import type { IUserPermissionStore } from "@/store/user/base-permissions.store";
-import { UserPermissionStore } from "@/store/user/base-permissions.store";
+import type { IUserPermissionStore } from "@/store/user/permissions.store";
+import { UserPermissionStore } from "@/store/user/permissions.store";
 // services
 import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";

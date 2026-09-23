@@ -18,16 +18,14 @@ import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
-// plane web hooks
-import { useEditorFlagging } from "@/hooks/use-editor-flagging";
 // plane web service
 import { WorkspaceService } from "@/services/workspace.service";
 import { LiteToolbar } from "./lite-toolbar";
 const workspaceService = new WorkspaceService();
 
 type LiteTextEditorWrapperProps = MakeOptional<
-  Omit<ILiteTextEditorProps, "fileHandler" | "mentionHandler" | "extendedEditorProps">,
-  "disabledExtensions" | "flaggedExtensions" | "getEditorMetaData"
+  Omit<ILiteTextEditorProps, "fileHandler" | "mentionHandler">,
+  "disabledExtensions" | "getEditorMetaData"
 > & {
   workspaceSlug: string;
   workspaceId: string;
@@ -69,7 +67,7 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
     variant = "full",
     parentClassName = "",
     placeholder = t("issue.comments.placeholder"),
-    disabledExtensions: additionalDisabledExtensions = [],
+    disabledExtensions = [],
     editorClassName = "",
     showPlaceholderOnEmpty = true,
     submitButtonText = "common.comment",
@@ -80,11 +78,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
   const isFullVariant = variant === "full";
   const [isFocused, setIsFocused] = useState(isFullVariant ? showToolbarInitially : true);
   const [editorRef, setEditorRef] = useState<EditorRefApi | null>(null);
-  // editor flaggings
-  const { liteText: liteTextEditorExtensions } = useEditorFlagging({
-    workspaceSlug,
-    projectId,
-  });
   // store hooks
   const { getUserDetails } = useMember();
   // parse content
@@ -127,9 +120,8 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
         <div className={cn(isLiteVariant && editable ? "min-w-0 flex-1" : "")}>
           <LiteTextEditorWithRef
             ref={ref}
-            disabledExtensions={[...liteTextEditorExtensions.disabled, ...additionalDisabledExtensions]}
+            disabledExtensions={disabledExtensions}
             editable={editable}
-            flaggedExtensions={liteTextEditorExtensions.flagged}
             fileHandler={getEditorFileHandlers({
               projectId,
               uploadFile: editable ? props.uploadFile : async () => "",
@@ -159,7 +151,6 @@ export const LiteTextEditor = React.forwardRef(function LiteTextEditor(
             containerClassName={cn(containerClassName, "relative", {
               "p-2": !editable,
             })}
-            extendedEditorProps={{}}
             editorClassName={editorClassName}
             {...rest}
           />

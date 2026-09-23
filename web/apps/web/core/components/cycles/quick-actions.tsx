@@ -12,7 +12,6 @@ import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { IconButton } from "@plane/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TContextMenuItem } from "@plane/ui";
 import { ContextMenu, CustomMenu } from "@plane/ui";
 import { copyUrlToClipboard, cn } from "@plane/utils";
 // hooks
@@ -84,7 +83,7 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
         });
       });
 
-  const menuResult = useCycleMenuItems({
+  const MENU_ITEMS = useCycleMenuItems({
     cycleDetails: cycleDetails ?? undefined,
     workspaceSlug,
     projectId,
@@ -97,9 +96,6 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
     handleCopyLink: handleCopyText,
     handleOpenInNewTab,
   });
-
-  const MENU_ITEMS: TContextMenuItem[] = Array.isArray(menuResult) ? menuResult : menuResult.items;
-  const additionalModals = Array.isArray(menuResult) ? null : menuResult.modals;
 
   const CONTEXT_MENU_ITEMS = MENU_ITEMS.map(function CONTEXT_MENU_ITEMS(item) {
     return {
@@ -135,7 +131,6 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
             workspaceSlug={workspaceSlug}
             projectId={projectId}
           />
-          {additionalModals}
         </div>
       )}
       <ContextMenu parentRef={parentRef} items={CONTEXT_MENU_ITEMS} />
