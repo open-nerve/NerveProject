@@ -35,8 +35,8 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
   const [errorInfo, setErrorInfo] = useState<TAuthErrorInfo | undefined>(undefined);
 
   useEffect(() => {
-    if (error_code) setErrorInfo(authErrorHandler(error_code as EAuthenticationErrorCodes));
-  }, [error_code]);
+    if (error_code) setErrorInfo(authErrorHandler(error_code as EAuthenticationErrorCodes, emailParam ?? undefined));
+  }, [error_code, emailParam]);
 
   return (
     <div className="mt-10 flex w-full flex-grow flex-col items-center justify-center py-6">
