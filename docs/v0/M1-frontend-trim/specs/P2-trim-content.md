@@ -250,8 +250,9 @@ Task 的顺序就是 M1 设计 9 节 P2 的顺序（差异见第 3 节）。
 - 删掉被删功能遗留、knip 报告为"未使用依赖"的 8 个依赖项：`@plane/editor` 的 `@plane/constants`、
   `@plane/ui`、`@tiptap/extension-document`、`@tiptap/extension-heading`、`@tiptap/extension-text`、
   `tippy.js`；`@plane/utils` 的 `chroma-js`、`@types/chroma-js`。catalog 同步删 6 条。
-- **新增仓库内单元测试** `packages/editor/src/extensions/extensions.test.ts`（7 个）+
-  `packages/editor/vitest.config.ts`：断言不装协作扩展、撤销重做来自 starter kit 自己的 history、
+- **新增仓库内单元测试**（控制者裁定后，见第 3 节第 13 条）：`packages/editor/vitest.config.ts`
+  （`environment: "jsdom"`、`resolve.mainFields: ["module", "main"]`）、真实 TipTap `Editor` 的交互测试，
+  以及 `packages/editor/src/extensions/extensions.test.ts`（7 个）：断言不装协作扩展、撤销重做来自 starter kit 自己的 history、
   只读时 history 关闭、描述 / 评论 / 历史版本需要的节点仍在、禁用图片时图片节点不装、
   工具栏只有一组且没有只属于文档页的项。`make test-web` 14 → 15。
 - `docs/v0/frontend-changes.md` 第二节：11 行改为"已完成 / M1/P2"，
@@ -310,7 +311,7 @@ P1 的 12 条规则之上新增 12 条，全部 `"phase": "M1/P2"`，在删完�
 | 7.5 的行 | 手段 | 落点 |
 |---|---|---|
 | P2 进度 | **进仓库**的 `packages/utils/src/progress.test.ts`（13 个） | Task 4 |
-| P2 编辑器 | **进仓库**的 `packages/editor/src/extensions/extensions.test.ts`（7 个）+ review 附录的临时核对脚本 | Task 12 + review |
+| P2 编辑器 | **进仓库**的交互测试（真实 TipTap `Editor`：输入、Markdown、撤销重做、只读、@成员、图片、节点 id）+ 组成测试 `extensions.test.ts`（7 个）；描述历史的查看和还原（web 应用层）用 review 附录的临时核对脚本 | Task 12 + review |
 | P2 首页、个人主页、侧边栏 | **进仓库**的 `packages/constants/src/navigation.test.ts` + review 附录的临时核对脚本 | Task 3 + review |
 | P2、P3 动态、通知、工作项列表 | review 附录的临时核对脚本 | review |
 
@@ -361,23 +362,22 @@ P1 的 12 条规则之上新增 12 条，全部 `"phase": "M1/P2"`，在删完�
 12. **遗留依赖集中在收尾删（Task 12）。** 造成它们的是 Task 7、8、10。决定集中删：锁文件只动一次，
     `lock-diff.mjs` 的输出可复现；每个 Task 内分别删会产生三次互相叠加的锁文件差异，难以逐条解释。
 
-13. **编辑器的仓库内测试断言"组成"而不是"交互"（Task 12）。** 原型先用 jsdom + 真实 TipTap
-    `Editor` 写了 10 个交互测试，8 个通过，但每个测试进程里**第一个** `new Editor` 必定抛
-    `RangeError: Adding different instances of a keyed plugin (plugin$)`：我们的扩展经
-    `@tiptap/pm/state` 拿 prosemirror-state，部分依赖直接 `import "prosemirror-state"`，
-    Vite 在测试里给出两个模块实例，各自的"未命名插件"计数器都从 `plugin$` 开始。
-    试过 `server.deps.inline`（含 `true`）、`resolve.conditions`、把 `prosemirror-state` 别名到
-    `@tiptap/pm` 解析出的那份文件，都消不掉。**决定**：不为测试环境改产品代码、也不在测试里放
-    "先造一个再扔掉"的暖场编辑器；改为断言扩展组成与工具栏组成（不需要 DOM），
-    交互行为按 7.5 允许的方式用 review 附录里的临时核对脚本核对。这条留给 P4 重新评估
-    （P4 要写路由匹配的单元测试，同样会碰到测试环境的模块解析）。
+13. **编辑器的交互行为有仓库内测试（Task 12；控制者裁定，推翻原型时的决定）。** 原型用 jsdom + 真实 TipTap
+    `Editor` 写交互测试时，每个进程的第一个 `new Editor` 必定抛
+    `RangeError: Adding different instances of a keyed plugin (plugin$)`，原型因此改为只断言组成。
+    控制者另派调查查到根因：锁文件里 prosemirror-state 只有一份，问题是 CJS/ESM 双包——
+    `prosemirror-codemark` 没有 `exports`，vitest 按 CJS 解析它，它 `require` 到 prosemirror-state 的
+    `.cjs`，而 `@tiptap/pm/state` 经 ESM 拿到 `.js`，同一个包两个实例。编辑器包的 `vitest.config.ts` 写
+    `resolve.mainFields: ["module", "main"]` 即可，这与生产构建的解析方式一致，不是测试特例。
+    **决定**：Task 12 加 `jsdom`（P2 唯一的新增依赖），交互测试进仓库；原定的 7 个组成测试保留；
+    临时去掉那一行配置，证明它是必需的。描述历史的查看和还原属于 web 应用层，仍用 review 附录的临时脚本。
+    交给 P4 的"重新评估"一项取消。
 
 14. **基线就已经死掉的文案和图片不在 P2 删。** 见 2.16。
 
-15. **`.superpowers/` 没有被 `.gitignore` 忽略。** 本分支上 `git status --short` 会显示
-    `?? .superpowers/`。关键词守卫只扫 `web/`、`tools/`、`pnpm-*.yaml`、`turbo.json`，不受影响；
-    但每个 Task 结束时的"工作区干净"核对要把它算作预期内的未跟踪目录，或者由控制者决定加进
-    `.gitignore`。**这条请控制者裁定。**
+15. **`.superpowers/` 的忽略（控制者裁定）。** 不改仓库的 `.gitignore`：控制者的 SDD 工作区由它自己的脚本
+    写入 `.superpowers/sdd/.gitignore`（内容 `*`），`git status --short` 看不到它。原型时显示 `?? .superpowers/`，
+    是因为目录是手工建的。这一点要紧：关键词守卫扫描未跟踪、未忽略的文件，工作区里的任务说明会引用被删的关键词。
 
 ---
 
@@ -447,8 +447,6 @@ P1 的 12 条规则之上新增 12 条，全部 `"phase": "M1/P2"`，在删完�
 
 ### 7.3 交给 P4
 
-- 编辑器交互行为的仓库内测试（第 3 节第 13 条）：P4 写路由匹配测试时一并重新评估测试环境的
-  模块解析。
 - `routes/core.ts` 末尾剩下的 10 条旧地址重定向（数据分析那一条已在 P2 删除）。
 
 ### 7.4 交给 M1 收尾

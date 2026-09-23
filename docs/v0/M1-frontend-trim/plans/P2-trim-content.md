@@ -282,6 +282,50 @@ console.log(`locale chunks: ${localeChunks}`);
 
 ---
 
+## 控制者评审补充（执行前必读）
+
+评审本计划时做了五处补充，与正文冲突时以本节为准。
+
+1. **一次性脚本的目录**：本会话的沙箱不允许随意使用 `/tmp`。正文中所有的 `/tmp/nerve-p2/` 一律换成
+   `/private/tmp/claude-501/-Users-xiaoruan-project-nerve-project/99d2bc1d-fdaf-4b92-a590-29b89514572b/scratchpad/nerve-p2/`，下文写作 `$P2TMP`。原型留下的脚本已经在那里；每个 Task 开始时核对一次，缺了就按
+   Global Constraints 重新写入。
+2. **`.superpowers/` 不是"预期内的未跟踪目录"**：控制者的工作区（`.superpowers/sdd/`）由 SDD 的脚本写入一个
+   自忽略的 `.gitignore`，`git status --short` 看不到它。所以正文"`?? .superpowers/` 属于预期"那句作废：
+   **每次提交之前 `git status --short` 只能有本 Task 的改动**；如果出现 `?? .superpowers/`，停下来报告，
+   不要提交。这不只是整洁问题：关键词守卫会扫描未跟踪、未忽略的文件，任务说明里引用的旧关键词会让
+   `make lint-web` 失败。
+3. **提交信息的最后一行**改为 `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`
+   （正文中写的是 Opus 5，一律按这一行）。
+4. **编辑器的交互行为用仓库内测试覆盖（推翻 spec 第 3 节第 13 条）**：
+   - **根因**（控制者另派调查，已实测）：不是依赖图里有两份 prosemirror-state（锁文件里只有 1.4.3 一份），
+     而是 CJS/ESM 双包问题。`prosemirror-codemark`（`@plane/editor` 的直接依赖，`extensions/utility.ts` 在用，
+     P2 不删）没有 `exports`，只有 `main`（CJS）和 `module`（ESM）字段；vitest 默认按 CJS 解析它，它的
+     `require("prosemirror-state")` 加载 `dist/index.cjs`，而 `@tiptap/pm/state` 经 ESM 加载 `dist/index.js`，
+     于是同一个包有两个模块实例，第一个 `new Editor` 抛 `Adding different instances of a keyed plugin (plugin$)`。
+   - **修法**：`web/packages/editor/vitest.config.ts` 里写 `resolve: { mainFields: ["module", "main"] }`，
+     配上一段英文注释说明上面的原因。生产构建本来就优先取 `module`，这一行只是让测试的解析方式与生产一致，
+     不是给测试开的特例。**只写在编辑器包自己的配置里**，不放进共享配置。
+   - **Task 12 因此多做三件事**：
+     - 编辑器包加开发依赖 `jsdom`（经 `pnpm-workspace.yaml` 的 catalog，版本受 `minimumReleaseAge` 约束，
+       许可证 MIT）；`vitest.config.ts` 用 `environment: "jsdom"`。这是 P2 唯一的新增依赖，锁文件核对时
+       它和它的依赖是**预期内的新增**，在报告里逐个列出；其余差异仍只允许删除直接引起的。
+     - 新增交互测试（真实的 TipTap `Editor`，不模拟、不先造一个再扔掉），覆盖 M1 设计 7.5"P2 编辑器"一行中
+       编辑器包自己能证明的部分：输入与取出内容（HTML 和 Markdown）、撤销和重做、只读与恢复编辑、
+       @成员节点、图片节点、节点带 `UniqueID` 生成的 id、同一进程里连续创建两个编辑器。
+       spec 原定的 7 个"组成"测试保留（它们守住的是"协作扩展不再装进来""工具栏只剩一组"）。
+     - 证明那一行配置是必需的：临时去掉 `mainFields` 一行，交互测试以上面的 `RangeError` 失败；恢复后通过。
+       两次输出都写进报告。
+   - 调查笔记（含实测的两条模块路径、试过的五种配置和结果、一份 13 个测试的原型）：
+     `.superpowers/sdd/P2-trim-content/pm-probe-notes.md`。原型测试是按 P2 之前的编辑器写的，
+     Task 12 要按 Task 7–11 之后的编辑器重写，不要照抄。
+   - 描述历史的查看和还原属于 web 应用，不在编辑器包里，仍按 spec 用 review 附录里的临时核对脚本。
+     交给 P4 的"重新评估编辑器测试"一项取消。
+5. **`M9` 例外的理由**：`until: "M9"` 表示 v0 内不会到期。每条 `M9` 例外的 `reason` 必须写明它为什么
+   不可能在 v0 内消失（例如"`tlds.ts` 是顶级域名数据，`wiki` 是一个真实的顶级域名"），M1 收尾时重新核对
+   所有 `until` 超出 M8 的例外（M1 设计 7.4、11 节）。
+
+## Tasks
+
 ### Task 1: 侧边栏改为固定列表
 
 **Files**
