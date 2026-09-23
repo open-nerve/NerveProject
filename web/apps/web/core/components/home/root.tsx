@@ -5,36 +5,21 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import useSWR from "swr";
 // plane imports
 import { ContentWrapper } from "@plane/ui";
 // hooks
-import { useHome } from "@/hooks/store/use-home";
 import { useUserProfile, useUser } from "@/hooks/store/user";
 // plane web imports
 import { TourRoot } from "@/components/onboarding/tour/root";
 // local imports
-import { DashboardWidgets } from "./home-dashboard-widgets";
+import { HomeBody } from "./home-body";
 import { UserGreetingsView } from "./user-greetings";
 import { HomePeekOverviewsRoot } from "../issues/peek-overview/peek-overviews";
 
 export const WorkspaceHomeView = observer(function WorkspaceHomeView() {
   // store hooks
-  const { workspaceSlug } = useParams();
   const { data: currentUser } = useUser();
   const { data: currentUserProfile, updateTourCompleted } = useUserProfile();
-  const { fetchWidgets } = useHome();
-
-  useSWR(
-    workspaceSlug ? `HOME_DASHBOARD_WIDGETS_${workspaceSlug}` : null,
-    workspaceSlug ? () => fetchWidgets(workspaceSlug?.toString()) : null,
-    {
-      revalidateIfStale: true,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-    }
-  );
 
   const handleTourCompleted = async () => {
     try {
@@ -57,7 +42,7 @@ export const WorkspaceHomeView = observer(function WorkspaceHomeView() {
         <ContentWrapper className="mx-auto scrollbar-hide gap-6 bg-surface-1 px-page-x">
           <div className="mx-auto w-full max-w-[800px]">
             {currentUser && <UserGreetingsView user={currentUser} />}
-            <DashboardWidgets />
+            <HomeBody />
           </div>
         </ContentWrapper>
       </>

@@ -8,11 +8,6 @@ import type { TLogoProps } from "./common";
 import type { TIssuePriorities } from "./issues";
 
 export type TRecentActivityFilterKeys = "all item" | "issue" | "project";
-export type THomeWidgetKeys = "quick_links" | "recents" | "quick_tutorial" | "new_at_plane";
-
-export type THomeWidgetProps = {
-  workspaceSlug: string;
-};
 
 export type TProjectEntityData = {
   id: string;
@@ -41,34 +36,4 @@ export type TActivityEntityData = {
   entity_identifier: string;
   visited_at: string;
   entity_data: TProjectEntityData | TIssueEntityData;
-};
-
-export type TLinkEditableFields = {
-  title: string;
-  url: string;
-};
-
-export type TLink = TLinkEditableFields & {
-  created_by_id: string;
-  id: string;
-  metadata: any;
-  workspace_slug: string;
-
-  //need
-  created_at: Date;
-};
-
-export type TLinkMap = {
-  [workspace_slug: string]: TLink;
-};
-
-export type TLinkIdMap = {
-  [workspace_slug: string]: string[];
-};
-
-export type TWidgetEntityData = {
-  key: THomeWidgetKeys;
-  name: string;
-  is_enabled: boolean;
-  sort_order: number;
 };

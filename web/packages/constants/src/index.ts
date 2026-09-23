@@ -8,7 +8,6 @@ export * from "./auth";
 export * from "./calendar";
 export * from "./chart";
 export * from "./cycle";
-export * from "./dashboard";
 export * from "./emoji";
 export * from "./endpoints";
 export * from "./file";

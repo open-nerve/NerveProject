@@ -16,7 +16,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch --no-clean",
-    "check:lint": "node ../../../tools/lint-cap.mjs 31",
+    "check:lint": "node ../../../tools/lint-cap.mjs 29",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt ."
@@ -33,7 +33,6 @@
     "@plane/utils": "workspace:*",
     "@popperjs/core": "catalog:",
     "lodash-es": "catalog:",
-    "react-color": "catalog:",
     "react-popper": "catalog:"
   },
   "devDependencies": {
@@ -41,7 +40,6 @@
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-color": "catalog:",
     "@types/react-dom": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:"

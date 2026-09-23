@@ -44,9 +44,6 @@ export class ProfileStore implements IUserProfileStore {
     last_workspace_id: undefined,
     theme: {
       theme: undefined,
-      primary: undefined,
-      background: undefined,
-      darkPalette: false,
     },
     onboarding_step: {
       workspace_join: false,

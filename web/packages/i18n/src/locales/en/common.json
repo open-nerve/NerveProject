@@ -83,24 +83,7 @@
   "dark": "Dark",
   "light_contrast": "Light high contrast",
   "dark_contrast": "Dark high contrast",
-  "custom": "Custom theme",
   "select_your_theme": "Select your theme",
-  "customize_your_theme": "Customize your theme",
-  "background_color": "Background color",
-  "text_color": "Text color",
-  "primary_color": "Primary(Theme) color",
-  "sidebar_background_color": "Sidebar background color",
-  "sidebar_text_color": "Sidebar text color",
-  "set_theme": "Set theme",
-  "enter_a_valid_hex_code_of_6_characters": "Enter a valid hex code of 6 characters",
-  "background_color_is_required": "Background color is required",
-  "text_color_is_required": "Text color is required",
-  "primary_color_is_required": "Primary color is required",
-  "sidebar_background_color_is_required": "Sidebar background color is required",
-  "sidebar_text_color_is_required": "Sidebar text color is required",
-  "updating_theme": "Updating theme",
-  "theme_updated_successfully": "Theme updated successfully",
-  "failed_to_update_the_theme": "Failed to update the theme",
   "email_notifications": "Email notifications",
   "stay_in_the_loop_on_issues_you_are_subscribed_to_enable_this_to_get_notified": "Stay in the loop on Work items you are subscribed to. Enable this to get notified.",
   "email_notification_setting_updated_successfully": "Email notification setting updated successfully",
@@ -287,7 +270,6 @@
   "remove_parent_issue": "Remove parent work item",
   "add_parent": "Add parent",
   "loading_members": "Loading members",
-  "view_link_copied_to_clipboard": "View link copied to clipboard.",
   "required": "Required",
   "optional": "Optional",
   "Cancel": "Cancel",
@@ -373,19 +355,6 @@
       "not_removed": {
         "title": "Link not removed",
         "message": "The link could not be removed"
-      }
-    }
-  },
-  "link": {
-    "modal": {
-      "url": {
-        "text": "URL",
-        "required": "URL is invalid",
-        "placeholder": "Type or paste a URL"
-      },
-      "title": {
-        "text": "Display title",
-        "placeholder": "What you'd like to see this link as"
       }
     }
   },
@@ -648,7 +617,6 @@
     },
     "category": "Category",
     "categories": "Categories",
-    "saving": "Saving",
     "save_changes": "Save changes",
     "delete": "Delete",
     "deleting": "Deleting",

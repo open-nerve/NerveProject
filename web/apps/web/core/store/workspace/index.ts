@@ -16,8 +16,6 @@ import type { CoreRootStore } from "@/store/root.store";
 // sub-stores
 import type { IApiTokenStore } from "./api-token.store";
 import { ApiTokenStore } from "./api-token.store";
-import type { IHomeStore } from "./home";
-import { HomeStore } from "./home";
 import type { IWebhookStore } from "./webhook.store";
 import { WebhookStore } from "./webhook.store";
 
@@ -50,7 +48,6 @@ export interface IWorkspaceRootStore {
   // sub-stores
   webhook: IWebhookStore;
   apiToken: IApiTokenStore;
-  home: IHomeStore;
 }
 
 export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
@@ -63,7 +60,6 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
   // root store
   router;
   user;
-  home;
   // sub-stores
   webhook: IWebhookStore;
   apiToken: IApiTokenStore;
@@ -95,7 +91,6 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
     // root store
     this.router = _rootStore.router;
     this.user = _rootStore.user;
-    this.home = new HomeStore();
     // sub-stores
     this.webhook = new WebhookStore(_rootStore);
     this.apiToken = new ApiTokenStore(_rootStore);

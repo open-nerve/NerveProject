@@ -10,19 +10,18 @@ import useSWR from "swr";
 import { useTranslation } from "@plane/i18n";
 // plane types
 import { ProjectsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { TActivityEntityData, THomeWidgetProps, TRecentActivityFilterKeys } from "@plane/types";
+import type { TActivityEntityData, TRecentActivityFilterKeys } from "@plane/types";
 // plane ui
 // components
 import { ContentOverflowWrapper } from "@/components/core/content-overflow-HOC";
 // plane web services
 import { WorkspaceService } from "@/services/workspace.service";
 import { RecentsEmptyState } from "../empty-states";
-import { EWidgetKeys, WidgetLoader } from "../loaders";
+import { RecentActivityWidgetLoader } from "../loaders";
 import { FiltersDropdown } from "./filters";
 import { RecentIssue } from "./issue";
 import { RecentProject } from "./project";
 
-const WIDGET_KEY = EWidgetKeys.RECENT_ACTIVITY;
 const workspaceService = new WorkspaceService();
 const filters: { name: TRecentActivityFilterKeys; icon?: React.ReactNode; i18n_key: string }[] = [
   { name: "all item", i18n_key: "home.recents.filters.all" },
@@ -30,7 +29,8 @@ const filters: { name: TRecentActivityFilterKeys; icon?: React.ReactNode; i18n_k
   { name: "project", icon: <ProjectsOutline height={16} width={16} />, i18n_key: "home.recents.filters.projects" },
 ];
 
-type TRecentWidgetProps = THomeWidgetProps & {
+type TRecentWidgetProps = {
+  workspaceSlug: string;
   presetFilter?: TRecentActivityFilterKeys;
   showFilterSelect?: boolean;
 };
@@ -95,7 +95,7 @@ export const RecentActivityWidget = observer(function RecentActivityWidget(props
         {showFilterSelect && <FiltersDropdown filters={filters} activeFilter={filter} setActiveFilter={setFilter} />}
       </div>
       <div className="flex min-h-[250px] flex-col">
-        {isLoading && <WidgetLoader widgetKey={WIDGET_KEY} />}
+        {isLoading && <RecentActivityWidgetLoader />}
         {!isLoading &&
           recents
             ?.filter((recent) => recent.entity_data)

@@ -540,6 +540,37 @@
           "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
+    },
+    {
+      "id": "home-theme",
+      "phase": "M1/P2",
+      "why": "首页快捷链接、首页个性化（组件开关）、自定义主题，以及已经没有入口的旧首页仪表盘；不搜单独的 widget、dashboard、custom（首页最近访问组件与四个固定主题保留）",
+      "files": { "source": "^web/.*\\.(?:[cm]?[jt]sx?|json|css)$", "flags": "" },
+      "content": {
+        "source": "quick_links|quick-links|QuickLink|HomeWidget|manage_widgets|home-preferences|CustomTheme|customize_your_theme|palette-generator|DashboardStore|useDashboard",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { QuickLinksWidget } from \"./links\";",
+          "    return this.get(`/api/workspaces/${workspaceSlug}/quick-links/`)",
+          "      key: EWidgetKeys.QUICK_LINKS,",
+          "  \"manage_widgets\": \"Manage widgets\",",
+          "import { DashboardStore } from \"./dashboard.store\";",
+          "import { useDashboard } from \"@/hooks/store/use-dashboard\";",
+          "export const CustomThemeSelector = observer(() => {"
+        ],
+        "miss": [
+          "import { RecentActivityWidget } from \"./recents\";",
+          "  \"custom\": \"Custom\",",
+          "        <div className=\"h-full w-full\">",
+          "import { useProject } from \"@/hooks/store/use-project\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/home.json"],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [

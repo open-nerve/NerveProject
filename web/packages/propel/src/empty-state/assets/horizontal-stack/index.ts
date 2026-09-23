@@ -9,7 +9,6 @@ export * from "./epic";
 export * from "./export";
 export * from "./intake";
 export * from "./label";
-export * from "./link";
 export * from "./members";
 export * from "./project";
 export * from "./settings";

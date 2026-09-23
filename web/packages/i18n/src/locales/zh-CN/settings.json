@@ -119,9 +119,6 @@
       },
       "dark_contrast": {
         "label": "深色高对比度"
-      },
-      "custom": {
-        "label": "自定义主题"
       }
     }
   }
