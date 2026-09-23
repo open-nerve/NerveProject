@@ -242,16 +242,6 @@ export type TWorkspacePaginationInfo = TPaginationInfo & {
   results: IWorkspace[];
 };
 
-export interface IWorkspaceSidebarNavigationItem {
-  key?: string;
-  is_pinned: boolean;
-  sort_order: number;
-}
-
-export interface IWorkspaceSidebarNavigation {
-  [key: string]: IWorkspaceSidebarNavigationItem;
-}
-
 export enum EOnboardingSteps {
   PROFILE_SETUP = "PROFILE_SETUP",
   ROLE_SETUP = "ROLE_SETUP",

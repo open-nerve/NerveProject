@@ -23,8 +23,6 @@ import type {
   TSearchEntityRequestPayload,
   TWidgetEntityData,
   TActivityEntityData,
-  IWorkspaceSidebarNavigationItem,
-  IWorkspaceSidebarNavigation,
   IWorkspaceUserPropertiesResponse,
 } from "@plane/types";
 // services
@@ -368,37 +366,6 @@ export class WorkspaceService extends APIService {
     data: Partial<TWidgetEntityData>
   ): Promise<TWidgetEntityData> {
     return this.patch(`/api/workspaces/${workspaceSlug}/home-preferences/${widgetKey}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async fetchSidebarNavigationPreferences(workspaceSlug: string): Promise<IWorkspaceSidebarNavigation> {
-    return this.get(`/api/workspaces/${workspaceSlug}/sidebar-preferences/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async updateSidebarPreference(
-    workspaceSlug: string,
-    key: string,
-    data: Partial<IWorkspaceSidebarNavigationItem>
-  ): Promise<IWorkspaceSidebarNavigationItem> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/sidebar-preferences/${key}/`, data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
-  }
-
-  async updateBulkSidebarPreferences(
-    workspaceSlug: string,
-    data: Array<{ key: string; is_pinned: boolean; sort_order: number }>
-  ): Promise<IWorkspaceSidebarNavigation> {
-    return this.patch(`/api/workspaces/${workspaceSlug}/sidebar-preferences/`, data)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;

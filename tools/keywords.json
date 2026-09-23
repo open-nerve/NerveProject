@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P1",
+  "phase": "M1/P2",
   "rules": [
     {
       "id": "deploy-files",
@@ -197,6 +197,43 @@
             "web/packages/i18n/src/locales/zh-CN/workspace-settings.json"
           ],
           "miss": ["web/packages/i18n/src/locales/en/workspace.json", "web/packages/i18n/src/locales/en/settings.json"]
+        }
+      }
+    },
+    {
+      "id": "sidebar-customization",
+      "phase": "M1/P2",
+      "why": "侧边栏的自定义导航（固定、排序、隐藏菜单项）读写 Plane 的 /sidebar-preferences/，数据在已砍掉的 workspace_user_preferences 表；侧边栏改为固定列表（M1 设计 3.3）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "sidebar-preferences|SidebarPreference|customize-navigation|CustomizeNavigation|customize_navigation|navigationPreferencesMap|(?:Personal|Workspace)NavigationPreferences|WORKSPACE_SIDEBAR_(?:DYNAMIC|STATIC|PREFERENCES)|ExtendedSidebarItem|ExtendedAppSidebar|toggleExtendedSidebar\\b|extended_sidebar_collapsed",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`/api/workspaces/${workspaceSlug}/sidebar-preferences/`)",
+          "import { CustomizeNavigationDialog } from \"@/components/navigation/customize-navigation-dialog\";",
+          "  const { preferences } = useWorkspaceNavigationPreferences();",
+          "  WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS_LINKS,",
+          "  const { isExtendedSidebarOpened, toggleExtendedSidebar } = useAppTheme();",
+          "    localStorage.setItem(\"extended_sidebar_collapsed\", updatedState.toString());",
+          "  \"customize_navigation\": \"Customize navigation\","
+        ],
+        "miss": [
+          "  const { preferences: projectPreferences } = useProjectNavigationPreferences();",
+          "import { ProjectNavigationDialog } from \"@/components/navigation/project-navigation-dialog\";",
+          "  WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,",
+          "  const { isExtendedProjectSidebarOpened, toggleExtendedProjectSidebar } = useAppTheme();"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/sidebar/sidebar-wrapper.tsx",
+            "web/packages/constants/src/workspace.ts"
+          ],
+          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     }

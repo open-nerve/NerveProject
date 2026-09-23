@@ -11,7 +11,7 @@ import { useOutsideClickDetector } from "@plane/hooks";
 import { PreferencesOutline } from "@makeplane/propel/icons";
 import { ScrollArea } from "@plane/propel/scrollarea";
 // components
-import { CustomizeNavigationDialog } from "@/components/navigation/customize-navigation-dialog";
+import { ProjectNavigationDialog } from "@/components/navigation/project-navigation-dialog";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import useSize from "@/hooks/use-window-size";
@@ -29,7 +29,7 @@ type TSidebarWrapperProps = {
 export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWrapperProps) {
   const { title, children, quickActions } = props;
   // state
-  const [isCustomizeNavDialogOpen, setIsCustomizeNavDialogOpen] = useState(false);
+  const [isProjectNavDialogOpen, setIsProjectNavDialogOpen] = useState(false);
   // store hooks
   const { toggleSidebar, sidebarCollapsed } = useAppTheme();
   const windowSize = useSize();
@@ -49,7 +49,7 @@ export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWr
 
   return (
     <>
-      <CustomizeNavigationDialog isOpen={isCustomizeNavDialogOpen} onClose={() => setIsCustomizeNavDialogOpen(false)} />
+      <ProjectNavigationDialog isOpen={isProjectNavDialogOpen} onClose={() => setIsProjectNavDialogOpen(false)} />
       <div ref={ref} className="flex h-full w-full animate-fade-in flex-col">
         <div className="flex flex-col gap-3 px-3">
           {/* Workspace switcher and settings */}
@@ -62,7 +62,7 @@ export const SidebarWrapper = observer(function SidebarWrapper(props: TSidebarWr
                   size="base"
                   variant="ghost"
                   icon={PreferencesOutline}
-                  onClick={() => setIsCustomizeNavDialogOpen(true)}
+                  onClick={() => setIsProjectNavDialogOpen(true)}
                 />
               )}
               <AppSidebarToggleButton />

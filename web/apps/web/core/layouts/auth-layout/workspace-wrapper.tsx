@@ -29,7 +29,6 @@ import {
   WORKSPACE_PROJECTS_ROLES_INFORMATION,
   WORKSPACE_FAVORITE,
   WORKSPACE_STATES,
-  WORKSPACE_SIDEBAR_PREFERENCES,
   WORKSPACE_PROJECT_NAVIGATION_PREFERENCES,
 } from "@plane/constants";
 // hooks
@@ -57,7 +56,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const {
     workspace: { fetchWorkspaceMembers },
   } = useMember();
-  const { workspaces, fetchSidebarNavigationPreferences, fetchProjectNavigationPreferences } = useWorkspace();
+  const { workspaces, fetchProjectNavigationPreferences } = useWorkspace();
   const { isMobile } = usePlatformOS();
   const { loader, workspaceInfoBySlug, fetchUserWorkspaceInfo, fetchUserProjectPermissions, allowPermissions } =
     useUserPermissions();
@@ -110,13 +109,6 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   useSWR(
     workspaceSlug ? WORKSPACE_STATES(workspaceSlug.toString()) : null,
     workspaceSlug ? () => fetchWorkspaceStates(workspaceSlug.toString()) : null,
-    { revalidateIfStale: false, revalidateOnFocus: false }
-  );
-
-  // fetch workspace sidebar preferences
-  useSWR(
-    workspaceSlug ? WORKSPACE_SIDEBAR_PREFERENCES(workspaceSlug.toString()) : null,
-    workspaceSlug ? () => fetchSidebarNavigationPreferences(workspaceSlug.toString()) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 

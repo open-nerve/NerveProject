@@ -8,12 +8,7 @@ import { clone, set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 // types
 import { computedFn } from "mobx-utils";
-import type {
-  IWorkspaceSidebarNavigationItem,
-  IWorkspace,
-  IWorkspaceSidebarNavigation,
-  IWorkspaceUserPropertiesResponse,
-} from "@plane/types";
+import type { IWorkspace, IWorkspaceUserPropertiesResponse } from "@plane/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 // store
@@ -33,7 +28,6 @@ export interface IWorkspaceRootStore {
   // computed
   currentWorkspace: IWorkspace | null;
   workspacesCreatedByCurrentUser: IWorkspace[] | null;
-  navigationPreferencesMap: Record<string, IWorkspaceSidebarNavigation>;
   projectNavigationPreferencesMap: Record<string, IWorkspaceUserPropertiesResponse>;
   getWorkspaceRedirectionUrl: () => string;
   // computed actions
@@ -46,17 +40,6 @@ export interface IWorkspaceRootStore {
   updateWorkspace: (workspaceSlug: string, data: Partial<IWorkspace>) => Promise<IWorkspace>;
   updateWorkspaceLogo: (workspaceSlug: string, logoURL: string) => void;
   deleteWorkspace: (workspaceSlug: string) => Promise<void>;
-  fetchSidebarNavigationPreferences: (workspaceSlug: string) => Promise<void>;
-  updateSidebarPreference: (
-    workspaceSlug: string,
-    key: string,
-    data: Partial<IWorkspaceSidebarNavigationItem>
-  ) => Promise<IWorkspaceSidebarNavigationItem | undefined>;
-  updateBulkSidebarPreferences: (
-    workspaceSlug: string,
-    data: Array<{ key: string; is_pinned: boolean; sort_order: number }>
-  ) => Promise<void>;
-  getNavigationPreferences: (workspaceSlug: string) => IWorkspaceSidebarNavigation | undefined;
   getProjectNavigationPreferences: (workspaceSlug: string) => IWorkspaceUserPropertiesResponse | undefined;
   fetchProjectNavigationPreferences: (workspaceSlug: string) => Promise<void>;
   updateProjectNavigationPreferences: (
@@ -74,7 +57,6 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
   loader: boolean = false;
   // observables
   workspaces: Record<string, IWorkspace> = {};
-  navigationPreferencesMap: Record<string, IWorkspaceSidebarNavigation> = {};
   projectNavigationPreferencesMap: Record<string, IWorkspaceUserPropertiesResponse> = {};
   // services
   workspaceService;
@@ -91,7 +73,6 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
       loader: observable.ref,
       // observables
       workspaces: observable,
-      navigationPreferencesMap: observable,
       projectNavigationPreferencesMap: observable,
       // computed
       currentWorkspace: computed,
@@ -105,9 +86,6 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
       updateWorkspace: action,
       updateWorkspaceLogo: action,
       deleteWorkspace: action,
-      fetchSidebarNavigationPreferences: action,
-      updateSidebarPreference: action,
-      updateBulkSidebarPreferences: action,
       fetchProjectNavigationPreferences: action,
       updateProjectNavigationPreferences: action,
     });
@@ -253,87 +231,6 @@ export class BaseWorkspaceRootStore implements IWorkspaceRootStore {
       });
     } catch (error) {
       console.error("Failed to delete workspace:", error);
-    }
-  };
-
-  fetchSidebarNavigationPreferences = async (workspaceSlug: string) => {
-    try {
-      const response = await this.workspaceService.fetchSidebarNavigationPreferences(workspaceSlug);
-
-      runInAction(() => {
-        this.navigationPreferencesMap[workspaceSlug] = response;
-      });
-    } catch (error) {
-      console.error("Failed to fetch sidebar preferences:", error);
-    }
-  };
-
-  updateSidebarPreference = async (
-    workspaceSlug: string,
-    key: string,
-    data: Partial<IWorkspaceSidebarNavigationItem>
-  ) => {
-    // Store the data before update to use for reverting if needed
-    const beforeUpdateData = clone(this.navigationPreferencesMap[workspaceSlug]?.[key]);
-
-    try {
-      runInAction(() => {
-        this.navigationPreferencesMap[workspaceSlug] = {
-          ...this.navigationPreferencesMap[workspaceSlug],
-          [key]: {
-            ...beforeUpdateData,
-            ...data,
-          },
-        };
-      });
-
-      const response = await this.workspaceService.updateSidebarPreference(workspaceSlug, key, data);
-      return response;
-    } catch (error) {
-      // Revert to original data if API call fails
-      runInAction(() => {
-        this.navigationPreferencesMap[workspaceSlug] = {
-          ...this.navigationPreferencesMap[workspaceSlug],
-          [key]: beforeUpdateData,
-        };
-      });
-      console.error("Failed to update sidebar preference:", error);
-    }
-  };
-
-  getNavigationPreferences = computedFn(
-    (workspaceSlug: string): IWorkspaceSidebarNavigation | undefined => this.navigationPreferencesMap[workspaceSlug]
-  );
-
-  updateBulkSidebarPreferences = async (
-    workspaceSlug: string,
-    data: Array<{ key: string; is_pinned: boolean; sort_order: number }>
-  ) => {
-    const beforeUpdateData = clone(this.navigationPreferencesMap[workspaceSlug]);
-
-    try {
-      // Optimistically update store
-      const updatedPreferences: IWorkspaceSidebarNavigation = {};
-      data.forEach((item) => {
-        updatedPreferences[item.key] = item;
-      });
-
-      runInAction(() => {
-        this.navigationPreferencesMap[workspaceSlug] = {
-          ...this.navigationPreferencesMap[workspaceSlug],
-          ...updatedPreferences,
-        };
-      });
-
-      // Call API to persist changes
-      await this.workspaceService.updateBulkSidebarPreferences(workspaceSlug, data);
-    } catch (error) {
-      // Rollback on failure
-      runInAction(() => {
-        this.navigationPreferencesMap[workspaceSlug] = beforeUpdateData;
-      });
-      console.error("Failed to update bulk sidebar preferences:", error);
-      throw error;
     }
   };
 
