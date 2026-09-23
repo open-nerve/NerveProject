@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export * from "./customer";
 export * from "./intake";
 export * from "./label";
 export * from "./members";
@@ -13,6 +12,5 @@ export * from "./settings";
 export * from "./state";
 export * from "./token";
 export * from "./unknown";
-export * from "./update";
 export * from "./webhook";
 export * from "./work-item";

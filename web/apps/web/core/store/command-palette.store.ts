@@ -85,14 +85,6 @@ export class CommandPaletteStore implements ICommandPaletteStore {
   }
 
   get isAnyModalOpen(): boolean {
-    return Boolean(this.getCoreModalsState());
-  }
-
-  /**
-   * Returns whether any base modal is open
-   * @protected - allows access from child classes
-   */
-  protected getCoreModalsState(): boolean {
     return Boolean(
       this.isCreateIssueModalOpen ||
       this.isCreateCycleModalOpen ||

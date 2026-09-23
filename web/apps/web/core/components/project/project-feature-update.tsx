@@ -12,10 +12,9 @@ import { Button, getButtonStyling } from "@plane/propel/button";
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import { Row } from "@plane/ui";
 // components
+import { ProjectFeaturesList } from "@/components/project/settings/features-list";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-// plane web imports
-import { ProjectFeaturesList } from "@/components/project/settings/features-list";
 
 type Props = {
   workspaceSlug: string;

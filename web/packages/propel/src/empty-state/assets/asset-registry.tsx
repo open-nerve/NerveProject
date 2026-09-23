@@ -13,7 +13,6 @@ import type {
   VerticalStackAssetType,
 } from "./asset-types";
 import {
-  CustomerHorizontalStackIllustration,
   IntakeHorizontalStackIllustration,
   LabelHorizontalStackIllustration,
   MembersHorizontalStackIllustration,
@@ -22,7 +21,6 @@ import {
   StateHorizontalStackIllustration,
   TokenHorizontalStackIllustration,
   UnknownHorizontalStackIllustration,
-  UpdateHorizontalStackIllustration,
   WebhookHorizontalStackIllustration,
   WorkItemHorizontalStackIllustration,
 } from "./horizontal-stack";
@@ -31,9 +29,7 @@ import {
   ArchivedCycleVerticalStackIllustration,
   ArchivedModuleVerticalStackIllustration,
   ArchivedWorkItemVerticalStackIllustration,
-  CustomerVerticalStackIllustration,
   CycleVerticalStackIllustration,
-  DashboardVerticalStackIllustration,
   DraftVerticalStackIllustration,
   Error404VerticalStackIllustration,
   InvalidLinkVerticalStackIllustration,
@@ -47,7 +43,6 @@ import {
 
 // Horizontal Stack Asset Registry
 export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.ComponentType<{ className?: string }>> = {
-  customer: CustomerHorizontalStackIllustration,
   intake: IntakeHorizontalStackIllustration,
   label: LabelHorizontalStackIllustration,
   members: MembersHorizontalStackIllustration,
@@ -56,7 +51,6 @@ export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.Com
   state: StateHorizontalStackIllustration,
   token: TokenHorizontalStackIllustration,
   unknown: UnknownHorizontalStackIllustration,
-  update: UpdateHorizontalStackIllustration,
   webhook: WebhookHorizontalStackIllustration,
   "work-item": WorkItemHorizontalStackIllustration,
 };
@@ -66,9 +60,7 @@ export const VERTICAL_STACK_ASSETS: Record<VerticalStackAssetType, React.Compone
   "archived-cycle": ArchivedCycleVerticalStackIllustration,
   "archived-module": ArchivedModuleVerticalStackIllustration,
   "archived-work-item": ArchivedWorkItemVerticalStackIllustration,
-  customer: CustomerVerticalStackIllustration,
   cycle: CycleVerticalStackIllustration,
-  dashboard: DashboardVerticalStackIllustration,
   draft: DraftVerticalStackIllustration,
   "error-404": Error404VerticalStackIllustration,
   "invalid-link": InvalidLinkVerticalStackIllustration,

@@ -6,7 +6,6 @@
 
 // Horizontal Stack Asset Types
 export type HorizontalStackAssetType =
-  | "customer"
   | "intake"
   | "label"
   | "members"
@@ -15,7 +14,6 @@ export type HorizontalStackAssetType =
   | "state"
   | "token"
   | "unknown"
-  | "update"
   | "webhook"
   | "work-item";
 
@@ -24,9 +22,7 @@ export type VerticalStackAssetType =
   | "archived-cycle"
   | "archived-module"
   | "archived-work-item"
-  | "customer"
   | "cycle"
-  | "dashboard"
   | "draft"
   | "error-404"
   | "invalid-link"
