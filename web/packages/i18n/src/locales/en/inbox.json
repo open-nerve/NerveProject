@@ -24,12 +24,10 @@
     },
     "modals": {
       "decline": {
-        "title": "Decline work item",
-        "content": "Are you sure you want to decline work item {value}?"
+        "title": "Decline work item"
       },
       "delete": {
         "title": "Delete work item",
-        "content": "Are you sure you want to delete work item {value}?",
         "success": "Work item deleted successfully"
       }
     },
@@ -49,15 +47,11 @@
       "mark_as_duplicate": "Mark as duplicate",
       "move": "Move {value} to project work items"
     },
-    "source": {
-      "in-app": "in-app"
-    },
     "order_by": {
       "created_at": "Created at",
       "updated_at": "Updated at",
       "id": "ID"
     },
-    "label": "Intake",
     "page_label": "{workspace} - Intake",
     "modal": {
       "title": "Create intake work item"
@@ -65,23 +59,6 @@
     "tabs": {
       "open": "Open",
       "closed": "Closed"
-    },
-    "empty_state": {
-      "sidebar_open_tab": {
-        "title": "No open work items",
-        "description": "Find open work items here. Create new work item."
-      },
-      "sidebar_closed_tab": {
-        "title": "No closed work items",
-        "description": "All the work items whether accepted or declined can be found here."
-      },
-      "sidebar_filter": {
-        "title": "No matching work items",
-        "description": "No work item matches filter applied in intake. Create a new work item."
-      },
-      "detail": {
-        "title": "Select a work item to view its details."
-      }
     }
   }
 }

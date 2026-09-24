@@ -1,13 +1,10 @@
 {
   "sidebar": {
     "new_work_item": "新工作项",
-    "inbox": "收件箱",
-    "workspace": "工作区",
     "views": "视图",
     "work_items": "工作项",
     "cycles": "周期",
     "modules": "模块",
-    "intake": "收集",
-    "favorites": "收藏"
+    "intake": "收集"
   }
 }

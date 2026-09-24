@@ -24,19 +24,6 @@
       "snoozed": "Notification snoozed",
       "unsnoozed": "Notification un snoozed"
     },
-    "empty_state": {
-      "detail": {
-        "title": "Select to view details."
-      },
-      "all": {
-        "title": "No work items assigned",
-        "description": "Updates for work items assigned to you can be\n seen here"
-      },
-      "mentions": {
-        "title": "No work items assigned",
-        "description": "Updates for work items assigned to you can be\n seen here"
-      }
-    },
     "tabs": {
       "all": "All",
       "mentions": "Mentions"

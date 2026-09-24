@@ -1,6 +1,5 @@
 {
   "workspace_settings": {
-    "label": "工作区设置",
     "page_label": "{workspace} - 常规设置",
     "key_created": "密钥已创建",
     "copy_key": "复制并妥善保存此密钥。关闭后您将无法看到此密钥。包含密钥的 CSV 文件已下载。",
@@ -17,7 +16,6 @@
         "update_workspace": "更新工作区",
         "delete_workspace": "删除此工作区",
         "delete_workspace_description": "删除工作区时，该工作区内的所有数据和资源将被永久删除，且无法恢复。",
-        "delete_btn": "删除此工作区",
         "delete_modal": {
           "title": "确定要删除此工作区吗？",
           "success_title": "工作区已删除。",
@@ -26,12 +24,7 @@
           "error_message": "请重试。"
         },
         "errors": {
-          "name": {
-            "required": "名称为必填项",
-            "max_length": "工作区名称不应超过80个字符"
-          },
           "company_size": {
-            "required": "公司规模为必填项",
             "select_a_range": "选择组织规模"
           }
         }
@@ -63,7 +56,6 @@
         }
       },
       "webhooks": {
-        "heading": "Webhooks",
         "description": "在项目事件发生时自动向外部服务发送通知。",
         "title": "Webhooks",
         "add_webhook": "添加 webhook",
@@ -91,22 +83,6 @@
             "title": "Webhook 未创建",
             "message": "无法创建 webhook"
           },
-          "updated": {
-            "title": "Webhook 已更新",
-            "message": "Webhook 已成功更新"
-          },
-          "not_updated": {
-            "title": "Webhook 未更新",
-            "message": "无法更新 webhook"
-          },
-          "removed": {
-            "title": "Webhook 已移除",
-            "message": "Webhook 已成功移除"
-          },
-          "not_removed": {
-            "title": "Webhook 未移除",
-            "message": "无法移除 webhook"
-          },
           "secret_key_copied": {
             "message": "密钥已复制到剪贴板。"
           },
@@ -116,8 +92,6 @@
         }
       },
       "api_tokens": {
-        "heading": "API 令牌",
-        "description": "生成安全的 API 令牌，将您的数据与外部系统和应用程序集成。",
         "title": "API 令牌",
         "add_token": "添加访问令牌",
         "create_token": "创建令牌",
@@ -136,12 +110,6 @@
             "message": "无法删除 API 令牌"
           }
         }
-      }
-    },
-    "empty_state": {
-      "webhooks": {
-        "title": "尚未添加 webhook",
-        "description": "创建 webhook 以接收实时更新并自动执行操作。"
       }
     }
   }

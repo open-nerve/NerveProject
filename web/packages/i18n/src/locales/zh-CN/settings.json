@@ -4,26 +4,9 @@
       "heading": "偏好设置",
       "description": "按照您的工作方式自定义您的应用体验"
     },
-    "notifications": {
-      "select_default_view": "选择默认视图",
-      "compact": "紧凑",
-      "full": "全屏"
-    },
-    "security": {
-      "heading": "安全"
-    },
     "api_tokens": {
       "title": "个人访问令牌",
       "description": "生成安全的 API 令牌，将您的数据与外部系统和应用程序集成。"
-    },
-    "activity": {
-      "heading": "活动",
-      "description": "跟踪您在所有项目和工作项中的最近操作和更改。"
-    },
-    "connections": {
-      "title": "连接",
-      "heading": "连接",
-      "description": "管理您的工作区连接设置。"
     }
   },
   "profile": {
@@ -58,25 +41,6 @@
       "subscribed": {
         "title": "尚无工作项",
         "description": "订阅您感兴趣的工作项，在这里跟踪所有这些工作项。"
-      }
-    }
-  },
-  "themes": {
-    "theme_options": {
-      "system_preference": {
-        "label": "系统偏好"
-      },
-      "light": {
-        "label": "浅色"
-      },
-      "dark": {
-        "label": "深色"
-      },
-      "light_contrast": {
-        "label": "浅色高对比度"
-      },
-      "dark_contrast": {
-        "label": "深色高对比度"
       }
     }
   }

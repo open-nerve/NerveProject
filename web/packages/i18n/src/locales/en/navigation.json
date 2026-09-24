@@ -1,13 +1,10 @@
 {
   "sidebar": {
     "new_work_item": "New work item",
-    "inbox": "Inbox",
-    "workspace": "Workspace",
     "views": "Views",
     "work_items": "Work items",
     "cycles": "Cycles",
     "modules": "Modules",
-    "intake": "Intake",
-    "favorites": "Favorites"
+    "intake": "Intake"
   }
 }

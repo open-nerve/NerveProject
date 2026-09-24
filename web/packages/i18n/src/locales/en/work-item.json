@@ -1,7 +1,6 @@
 {
   "issue": {
     "label": "{count, plural, one {Work item} other {Work items}}",
-    "all": "All Work items",
     "edit": "Edit work item",
     "title": {
       "label": "Work item title",
@@ -11,16 +10,13 @@
       "press_enter": "Press 'Enter' to add another work item",
       "label": "Add work item",
       "cycle": {
-        "failed": "Work item could not be added to the cycle. Please try again.",
-        "success": "{count, plural, one {Work item} other {Work items}} added to the cycle successfully.",
-        "loading": "Adding {count, plural, one {work item} other {work items}} to the cycle"
+        "failed": "Work item could not be added to the cycle. Please try again."
       },
       "assignee": "Add assignees",
       "start_date": "Add start date",
       "due_date": "Add due date",
       "parent": "Add parent work item",
       "sub_issue": "Add sub-work item",
-      "dependency": "Add dependency",
       "relation": "Add relation",
       "link": "Add link",
       "existing": "Add existing work item"
@@ -51,7 +47,6 @@
         "id": "ID",
         "sub_issue_count": "Sub-work item count",
         "attachment_count": "Attachment count",
-        "created_on": "Created on",
         "sub_issue": "Sub-work item"
       },
       "extra": {
@@ -71,10 +66,6 @@
         "calendar": "Calendar Layout",
         "spreadsheet": "Table Layout"
       }
-    },
-    "states": {
-      "active": "Active",
-      "backlog": "Backlog"
     },
     "comments": {
       "placeholder": "Add comment",
@@ -96,43 +87,6 @@
       "copy_link": {
         "success": "Comment link copied to clipboard",
         "error": "Error copying comment link. Please try again later."
-      },
-      "replies": {
-        "create": {
-          "submit_button": "Add reply",
-          "placeholder": "Add reply"
-        },
-        "toast": {
-          "fetch": {
-            "error": {
-              "message": "Failed to fetch replies"
-            }
-          },
-          "create": {
-            "success": {
-              "message": "Reply created successfully"
-            },
-            "error": {
-              "message": "Failed to create reply"
-            }
-          },
-          "update": {
-            "success": {
-              "message": "Reply updated successfully"
-            },
-            "error": {
-              "message": "Failed to update reply"
-            }
-          },
-          "delete": {
-            "success": {
-              "message": "Reply deleted successfully"
-            },
-            "error": {
-              "message": "Failed to delete reply"
-            }
-          }
-        }
       }
     },
     "empty_state": {
@@ -174,18 +128,11 @@
       "relates_to": "Relates to",
       "duplicate": "Duplicate of",
       "blocked_by": "Blocked by",
-      "blocking": "Blocking",
-      "start_before": "Starts Before",
-      "start_after": "Starts After",
-      "finish_before": "Finishes Before",
-      "finish_after": "Finishes After",
-      "implements": "Implements",
-      "implemented_by": "Implemented By"
+      "blocking": "Blocking"
     },
     "copy_link": "Copy work item link",
     "delete": {
-      "label": "Delete work item",
-      "error": "Error deleting work item"
+      "label": "Delete work item"
     },
     "subscription": {
       "actions": {
@@ -200,40 +147,17 @@
       "select_all": "Select all",
       "deselect_all": "Deselect all"
     },
-    "open_in_full_screen": "Open work item in full screen",
-    "duplicate": {
-      "modal": {
-        "title": "Make a copy to another project",
-        "description1": "This creates a copy of the work item.",
-        "description2": "All property data will be removed while duplicating.",
-        "placeholder": "Select a project"
-      }
-    },
-    "toast": {
-      "duplicate": {
-        "success": {
-          "message": "Work item duplicated successfully"
-        },
-        "error": {
-          "message": "Failed to duplicate work item"
-        }
-      }
-    }
+    "open_in_full_screen": "Open work item in full screen"
   },
   "sub_work_item": {
     "update": {
       "success": "Sub-work item updated successfully",
       "error": "Error updating sub-work item"
     },
-    "remove": {
-      "success": "Sub-work item removed successfully",
-      "error": "Error removing sub-work item"
-    },
     "empty_state": {
       "sub_list_filters": {
         "title": "You don't have sub-work items that match the filters you've applied.",
-        "description": "To see all sub-work items, clear all applied filters.",
-        "action": "Clear filters"
+        "description": "To see all sub-work items, clear all applied filters."
       },
       "list_filters": {
         "action": "Clear filters"
@@ -247,14 +171,6 @@
       },
       "no_issues": {
         "title": "No work items found"
-      }
-    }
-  },
-  "issue_comment": {
-    "empty_state": {
-      "general": {
-        "title": "No comments yet",
-        "description": "Comments can be used as a discussion and follow-up space for the work items"
       }
     }
   }

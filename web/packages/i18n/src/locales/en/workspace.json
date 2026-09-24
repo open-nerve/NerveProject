@@ -23,7 +23,6 @@
         "request_button": "Request instance admin"
       },
       "validation": {
-        "name_alphanumeric": "Workspaces names can contain only (' '), ('-'), ('_') and alphanumeric characters.",
         "name_length": "Limit your name to 80 characters.",
         "url_alphanumeric": "URLs can contain only ('-') and alphanumeric characters.",
         "url_length": "Limit your URL to 48 characters.",
@@ -82,8 +81,7 @@
       "archived_projects": "Archived"
     },
     "common": {
-      "months_count": "{months, plural, one{# month} other{# months}}",
-      "days_count": "{days, plural, one{# day} other{# days}}"
+      "months_count": "{months, plural, one{# month} other{# months}}"
     },
     "empty_state": {
       "general": {
@@ -99,45 +97,11 @@
         "primary_button": {
           "text": "Start your first project"
         }
-      },
-      "search": {
-        "description": "No projects detected with the matching criteria.\nCreate a new project instead"
       }
     }
   },
   "workspace_views": {
     "add_view": "Add view",
-    "empty_state": {
-      "all-issues": {
-        "title": "No work items in the project",
-        "description": "First project done! Now, slice your work into trackable pieces with work items. Let's go!",
-        "primary_button": {
-          "text": "Create new work item"
-        }
-      },
-      "assigned": {
-        "title": "No work items yet",
-        "description": "Work items assigned to you can be tracked from here.",
-        "primary_button": {
-          "text": "Create new work item"
-        }
-      },
-      "created": {
-        "title": "No work items yet",
-        "description": "All work items created by you come here, track them here directly.",
-        "primary_button": {
-          "text": "Create new work item"
-        }
-      },
-      "subscribed": {
-        "title": "No work items yet",
-        "description": "Subscribe to work items you are interested in, track all of them here."
-      },
-      "custom-view": {
-        "title": "No work items yet",
-        "description": "Work items that applies to the filters, track all of them here."
-      }
-    },
     "delete_view": {
       "title": "Are you sure you want to delete this view?",
       "content": "If you confirm, all the sort, filter, and display options + the layout you have chosen for this view will be permanently deleted without any way to restore them."
@@ -145,13 +109,6 @@
   },
   "workspace_draft_issues": {
     "draft_an_issue": "Draft a work item",
-    "empty_state": {
-      "title": "Half-written work items, and soon, comments will show up here.",
-      "description": "To try this out, start adding a work item and leave it mid-way or create your first draft below. 😉",
-      "primary_button": {
-        "text": "Create your first draft"
-      }
-    },
     "delete_modal": {
       "title": "Delete draft",
       "description": "Are you sure you want to delete this draft? This can't be undone."

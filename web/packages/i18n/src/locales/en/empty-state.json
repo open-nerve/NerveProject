@@ -1,21 +1,8 @@
 {
   "common_empty_state": {
-    "progress": {
-      "title": "There're no progress metrics to show yet.",
-      "description": "Start setting property values in work items to see progress metrics here."
-    },
-    "updates": {
-      "title": "No updates yet.",
-      "description": "Once project members add updates it will appear here"
-    },
     "search": {
       "title": "No matching results.",
       "description": "No results found. Try adjusting your search terms."
-    },
-    "server_error": {
-      "title": "Server error",
-      "description": "We are unable to connect and fetch data from our server. Don't worry, we are working on it.",
-      "cta_primary": "Try reloading"
     }
   },
   "project_empty_state": {
@@ -61,16 +48,6 @@
       "title": "Save custom views for your project",
       "description": "Views are saved filters that help you quickly access the information you use most. Collaborate effortlessly as teammates share and tailor views to their specific needs.",
       "cta_primary": "Create view"
-    },
-    "no_work_items_in_project": {
-      "title": "No work items in the project yet",
-      "description": "Add work items to your project and slice your work into trackable pieces with views.",
-      "cta_primary": "Add work item"
-    },
-    "work_item_filter": {
-      "title": "No work items found",
-      "description": "Your current filter didn't return any results. Try changing the filters.",
-      "cta_primary": "Add work item"
     },
     "intake_sidebar": {
       "title": "Log Intake requests",
@@ -124,11 +101,6 @@
     },
     "tokens": {
       "title": "No Personal token yet",
-      "description": "Generate secure API tokens to connect your workspace with external systems and applications.",
-      "cta_primary": "Add access token"
-    },
-    "workspace_tokens": {
-      "title": "No Access tokens yet",
       "description": "Generate secure API tokens to connect your workspace with external systems and applications.",
       "cta_primary": "Add access token"
     },

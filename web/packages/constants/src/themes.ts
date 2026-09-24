@@ -5,7 +5,6 @@
  */
 
 export interface I_THEME_OPTION {
-  key: string;
   value: string;
   i18n_label: string;
   type: string;
@@ -18,9 +17,8 @@ export interface I_THEME_OPTION {
 
 export const THEME_OPTIONS: I_THEME_OPTION[] = [
   {
-    key: "system_preference",
     value: "system",
-    i18n_label: "System preference",
+    i18n_label: "system_preference",
     type: "light",
     icon: {
       border: "#DEE2E6",
@@ -29,9 +27,8 @@ export const THEME_OPTIONS: I_THEME_OPTION[] = [
     },
   },
   {
-    key: "light",
     value: "light",
-    i18n_label: "Light",
+    i18n_label: "light",
     type: "light",
     icon: {
       border: "#DEE2E6",
@@ -40,9 +37,8 @@ export const THEME_OPTIONS: I_THEME_OPTION[] = [
     },
   },
   {
-    key: "dark",
     value: "dark",
-    i18n_label: "Dark",
+    i18n_label: "dark",
     type: "dark",
     icon: {
       border: "#2E3234",
@@ -51,9 +47,8 @@ export const THEME_OPTIONS: I_THEME_OPTION[] = [
     },
   },
   {
-    key: "light_contrast",
     value: "light-contrast",
-    i18n_label: "Light high contrast",
+    i18n_label: "light_contrast",
     type: "light",
     icon: {
       border: "#000000",
@@ -62,9 +57,8 @@ export const THEME_OPTIONS: I_THEME_OPTION[] = [
     },
   },
   {
-    key: "dark_contrast",
     value: "dark-contrast",
-    i18n_label: "Dark high contrast",
+    i18n_label: "dark_contrast",
     type: "dark",
     icon: {
       border: "#FFFFFF",

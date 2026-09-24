@@ -1,21 +1,8 @@
 {
   "common_empty_state": {
-    "progress": {
-      "title": "暂无进度指标可显示。",
-      "description": "开始在工作项中设置属性值以在此查看进度指标。"
-    },
-    "updates": {
-      "title": "暂无更新。",
-      "description": "项目成员添加更新后将显示在此处"
-    },
     "search": {
       "title": "未找到匹配结果。",
       "description": "未找到结果。请尝试调整搜索条件。"
-    },
-    "server_error": {
-      "title": "服务器错误",
-      "description": "我们无法连接并从服务器获取数据。请放心,我们正在处理。",
-      "cta_primary": "尝试重新加载"
     }
   },
   "project_empty_state": {
@@ -61,16 +48,6 @@
       "title": "为项目保存自定义视图",
       "description": "视图是保存的过滤器,可帮助您快速访问最常用的信息。团队成员可以轻松协作,共享视图并根据特定需求进行调整。",
       "cta_primary": "创建视图"
-    },
-    "no_work_items_in_project": {
-      "title": "项目中暂无工作项",
-      "description": "将工作项添加到项目中,并使用视图将工作切分为可跟踪的部分。",
-      "cta_primary": "添加工作项"
-    },
-    "work_item_filter": {
-      "title": "未找到工作项",
-      "description": "您当前的过滤器未返回任何结果。请尝试更改过滤器。",
-      "cta_primary": "添加工作项"
     },
     "intake_sidebar": {
       "title": "记录接收请求",
@@ -126,11 +103,6 @@
       "title": "暂无个人令牌",
       "description": "生成安全的 API 令牌以将工作空间与外部系统和应用程序连接。",
       "cta_primary": "添加 API 令牌"
-    },
-    "workspace_tokens": {
-      "title": "暂无访问令牌",
-      "description": "生成安全的 API 令牌以将工作空间与外部系统和应用程序连接。",
-      "cta_primary": "添加访问令牌"
     },
     "webhooks": {
       "title": "尚未添加 Webhook",

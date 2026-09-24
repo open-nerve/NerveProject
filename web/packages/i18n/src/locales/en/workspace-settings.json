@@ -1,6 +1,5 @@
 {
   "workspace_settings": {
-    "label": "Workspace settings",
     "page_label": "{workspace} - General settings",
     "key_created": "Key created",
     "copy_key": "Copy and save this secret key somewhere safe. You can't see this key after you hit Close. A CSV file containing the key has been downloaded.",
@@ -17,7 +16,6 @@
         "update_workspace": "Update workspace",
         "delete_workspace": "Delete this workspace",
         "delete_workspace_description": "When deleting a workspace, all of the data and resources within that workspace will be permanently removed and cannot be recovered.",
-        "delete_btn": "Delete this workspace",
         "delete_modal": {
           "title": "Are you sure you want to delete this workspace?",
           "success_title": "Workspace deleted.",
@@ -26,12 +24,7 @@
           "error_message": "Try again, please."
         },
         "errors": {
-          "name": {
-            "required": "Name is required",
-            "max_length": "Workspace name should not exceed 80 characters"
-          },
           "company_size": {
-            "required": "Company size is required",
             "select_a_range": "Select organization size"
           }
         }
@@ -63,7 +56,6 @@
         }
       },
       "webhooks": {
-        "heading": "Webhooks",
         "description": "Automate notifications to external services when project events occur.",
         "title": "Webhooks",
         "add_webhook": "Add webhook",
@@ -91,22 +83,6 @@
             "title": "Webhook not created",
             "message": "The webhook could not be created"
           },
-          "updated": {
-            "title": "Webhook updated",
-            "message": "The webhook has been successfully updated"
-          },
-          "not_updated": {
-            "title": "Webhook not updated",
-            "message": "The webhook could not be updated"
-          },
-          "removed": {
-            "title": "Webhook removed",
-            "message": "The webhook has been successfully removed"
-          },
-          "not_removed": {
-            "title": "Webhook not removed",
-            "message": "The webhook could not be removed"
-          },
           "secret_key_copied": {
             "message": "Secret key copied to clipboard."
           },
@@ -116,8 +92,6 @@
         }
       },
       "api_tokens": {
-        "heading": "Access Tokens",
-        "description": "Generate secure API tokens to integrate your data with external systems and applications.",
         "title": "Access Tokens",
         "add_token": "Add access token",
         "create_token": "Create token",
@@ -136,12 +110,6 @@
             "message": "The token could not be deleted"
           }
         }
-      }
-    },
-    "empty_state": {
-      "webhooks": {
-        "title": "No webhooks added",
-        "description": "Create webhooks to receive real-time updates and automate actions."
       }
     }
   }

@@ -1,7 +1,6 @@
 {
   "issue": {
     "label": "{count, plural, one {工作项} other {工作项}}",
-    "all": "所有工作项",
     "edit": "编辑工作项",
     "title": {
       "label": "工作项标题",
@@ -11,16 +10,13 @@
       "press_enter": "按'Enter'添加另一个工作项",
       "label": "添加工作项",
       "cycle": {
-        "failed": "无法将工作项添加到周期。请重试。",
-        "success": "{count, plural, one {工作项} other {工作项}}已成功添加到周期。",
-        "loading": "正在将{count, plural, one {工作项} other {工作项}}添加到周期"
+        "failed": "无法将工作项添加到周期。请重试。"
       },
       "assignee": "添加负责人",
       "start_date": "添加开始日期",
       "due_date": "添加截止日期",
       "parent": "添加父工作项",
       "sub_issue": "添加子工作项",
-      "dependency": "添加依赖",
       "relation": "添加关系",
       "link": "添加链接",
       "existing": "添加现有工作项"
@@ -51,7 +47,6 @@
         "id": "ID",
         "sub_issue_count": "子工作项数量",
         "attachment_count": "附件数量",
-        "created_on": "创建于",
         "sub_issue": "子工作项"
       },
       "extra": {
@@ -71,10 +66,6 @@
         "calendar": "日历布局",
         "spreadsheet": "表格布局"
       }
-    },
-    "states": {
-      "active": "活动",
-      "backlog": "待办"
     },
     "comments": {
       "placeholder": "添加评论",
@@ -96,43 +87,6 @@
       "copy_link": {
         "success": "评论链接已复制到剪贴板",
         "error": "复制评论链接时出错。请稍后再试。"
-      },
-      "replies": {
-        "create": {
-          "submit_button": "添加回复",
-          "placeholder": "添加回复"
-        },
-        "toast": {
-          "fetch": {
-            "error": {
-              "message": "获取回复失败"
-            }
-          },
-          "create": {
-            "success": {
-              "message": "回复创建成功"
-            },
-            "error": {
-              "message": "创建回复失败"
-            }
-          },
-          "update": {
-            "success": {
-              "message": "回复更新成功"
-            },
-            "error": {
-              "message": "更新回复失败"
-            }
-          },
-          "delete": {
-            "success": {
-              "message": "回复删除成功"
-            },
-            "error": {
-              "message": "删除回复失败"
-            }
-          }
-        }
       }
     },
     "empty_state": {
@@ -174,18 +128,11 @@
       "relates_to": "关联到",
       "duplicate": "重复于",
       "blocked_by": "被阻止于",
-      "blocking": "阻止",
-      "start_before": "开始于之前",
-      "start_after": "开始于之后",
-      "finish_before": "结束于之前",
-      "finish_after": "结束于之后",
-      "implements": "实现",
-      "implemented_by": "实现者"
+      "blocking": "阻止"
     },
     "copy_link": "复制工作项链接",
     "delete": {
-      "label": "删除工作项",
-      "error": "删除工作项时出错"
+      "label": "删除工作项"
     },
     "subscription": {
       "actions": {
@@ -200,40 +147,17 @@
       "select_all": "全选",
       "deselect_all": "取消全选"
     },
-    "open_in_full_screen": "在全屏中打开工作项",
-    "duplicate": {
-      "modal": {
-        "title": "复制到另一个项目",
-        "description1": "这将创建工作项的副本。",
-        "description2": "复制时将移除所有属性数据。",
-        "placeholder": "选择一个项目"
-      }
-    },
-    "toast": {
-      "duplicate": {
-        "success": {
-          "message": "工作项复制成功"
-        },
-        "error": {
-          "message": "工作项复制失败"
-        }
-      }
-    }
+    "open_in_full_screen": "在全屏中打开工作项"
   },
   "sub_work_item": {
     "update": {
       "success": "子工作项更新成功",
       "error": "更新子工作项时出错"
     },
-    "remove": {
-      "success": "子工作项移除成功",
-      "error": "移除子工作项时出错"
-    },
     "empty_state": {
       "sub_list_filters": {
         "title": "您没有符合您应用的过滤器的子工作项。",
-        "description": "要查看所有子工作项，请清除所有应用的过滤器。",
-        "action": "清除过滤器"
+        "description": "要查看所有子工作项，请清除所有应用的过滤器。"
       },
       "list_filters": {
         "action": "清除过滤器"
@@ -247,14 +171,6 @@
       },
       "no_issues": {
         "title": "未找到工作项"
-      }
-    }
-  },
-  "issue_comment": {
-    "empty_state": {
-      "general": {
-        "title": "尚无评论",
-        "description": "评论可用作工作项的讨论和跟进空间"
       }
     }
   }
