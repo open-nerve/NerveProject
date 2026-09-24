@@ -102,7 +102,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
   );
 
   // derived values
-  const cycleDetails = getCycleById(cycleId.toString());
+  const cycleDetails = getCycleById(cycleId);
   const isCompletedCycle = cycleDetails?.status?.toLocaleLowerCase() === "completed";
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -128,7 +128,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
       <Header.LeftItem>
         <div className="flex items-center gap-2">
           <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink

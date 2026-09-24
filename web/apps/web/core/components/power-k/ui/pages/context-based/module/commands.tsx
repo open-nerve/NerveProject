@@ -31,7 +31,7 @@ export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => 
   } = useUser();
   const { getModuleById, addModuleToFavorites, removeModuleFromFavorites, updateModuleDetails } = useModule();
   // derived values
-  const moduleDetails = moduleId ? getModuleById(moduleId.toString()) : null;
+  const moduleDetails = moduleId ? getModuleById(moduleId) : null;
   const isFavorite = !!moduleDetails?.is_favorite;
   // permission
   const isEditingAllowed =
@@ -43,15 +43,13 @@ export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => 
   const handleUpdateModule = useCallback(
     async (formData: Partial<IModule>) => {
       if (!workspaceSlug || !projectId || !moduleDetails) return;
-      await updateModuleDetails(workspaceSlug.toString(), projectId.toString(), moduleDetails.id, formData).catch(
-        () => {
-          setToast({
-            type: TOAST_TYPE.ERROR,
-            title: "Error!",
-            message: "Module could not be updated. Please try again.",
-          });
-        }
-      );
+      await updateModuleDetails(workspaceSlug, projectId, moduleDetails.id, formData).catch(() => {
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "Error!",
+          message: "Module could not be updated. Please try again.",
+        });
+      });
     },
     [moduleDetails, projectId, updateModuleDetails, workspaceSlug]
   );
@@ -72,8 +70,8 @@ export const usePowerKModuleContextBasedActions = (): TPowerKCommandConfig[] => 
   const toggleFavorite = useCallback(() => {
     if (!workspaceSlug || !moduleDetails || !moduleDetails.project_id) return;
     try {
-      if (isFavorite) removeModuleFromFavorites(workspaceSlug.toString(), moduleDetails.project_id, moduleDetails.id);
-      else addModuleToFavorites(workspaceSlug.toString(), moduleDetails.project_id, moduleDetails.id);
+      if (isFavorite) removeModuleFromFavorites(workspaceSlug, moduleDetails.project_id, moduleDetails.id);
+      else addModuleToFavorites(workspaceSlug, moduleDetails.project_id, moduleDetails.id);
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,

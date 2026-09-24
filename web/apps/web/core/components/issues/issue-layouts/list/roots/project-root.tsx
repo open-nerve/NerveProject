@@ -26,7 +26,7 @@ export const ListLayout = observer(function ListLayout() {
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug.toString(),
+      workspaceSlug,
       projectId
     );
 

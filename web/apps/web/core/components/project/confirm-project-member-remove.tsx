@@ -50,7 +50,7 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
   if (!projectId) return <></>;
 
   const isCurrentUser = currentUser?.id === data?.id;
-  const currentProjectDetails = getProjectById(projectId.toString());
+  const currentProjectDetails = getProjectById(projectId);
 
   return (
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>

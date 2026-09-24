@@ -31,7 +31,7 @@ export const ProfileIssuesListLayout = observer(function ProfileIssuesListLayout
     <BaseListRoot
       QuickActions={ProjectIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
-      viewId={profileViewId?.toString()}
+      viewId={profileViewId}
     />
   );
 });

@@ -23,7 +23,7 @@ export const useProjectNavigationPreferences = () => {
   const { getProjectNavigationPreferences, updateProjectNavigationPreferences } = useWorkspace();
 
   // Get preferences from the store
-  const storePreferences = getProjectNavigationPreferences(workspaceSlug?.toString() || "");
+  const storePreferences = getProjectNavigationPreferences(workspaceSlug || "");
 
   // Computed preferences with fallback logic: API → defaults
   const preferences: TProjectNavigationPreferences = useMemo(() => {
@@ -50,7 +50,7 @@ export const useProjectNavigationPreferences = () => {
     async (mode: TProjectNavigationMode) => {
       if (!workspaceSlug) return;
 
-      await updateProjectNavigationPreferences(workspaceSlug.toString(), {
+      await updateProjectNavigationPreferences(workspaceSlug, {
         navigation_control_preference: mode,
       });
     },
@@ -65,7 +65,7 @@ export const useProjectNavigationPreferences = () => {
       // When toggling off, set to 0; when toggling on, use current count or default
       const newLimit = show ? preferences.limitedProjectsCount || DEFAULT_PROJECT_PREFERENCES.limitedProjectsCount : 0;
 
-      await updateProjectNavigationPreferences(workspaceSlug.toString(), {
+      await updateProjectNavigationPreferences(workspaceSlug, {
         navigation_project_limit: newLimit,
       });
     },
@@ -77,7 +77,7 @@ export const useProjectNavigationPreferences = () => {
     async (count: number) => {
       if (!workspaceSlug) return;
 
-      await updateProjectNavigationPreferences(workspaceSlug.toString(), {
+      await updateProjectNavigationPreferences(workspaceSlug, {
         navigation_project_limit: count,
       });
     },

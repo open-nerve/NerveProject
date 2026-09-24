@@ -24,7 +24,7 @@ export const PowerKOpenProjectViewsMenu = observer(function PowerKOpenProjectVie
   // store hooks
   const { fetchedMap, getProjectViews } = useProjectView();
   // derived values
-  const projectId = context.params.projectId?.toString();
+  const projectId = context.params.projectId;
   const isFetched = projectId ? fetchedMap[projectId] : false;
   const viewsList = projectId ? (getProjectViews(projectId)?.filter((view) => !!view) ?? []) : [];
 

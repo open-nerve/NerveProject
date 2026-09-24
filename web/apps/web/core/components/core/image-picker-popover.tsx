@@ -102,7 +102,7 @@ export const ImagePickerPopover = observer(function ImagePickerPopover(props: Pr
       if (!workspaceSlug) return;
       await fileService
         .uploadWorkspaceAsset(
-          workspaceSlug.toString(),
+          workspaceSlug,
           {
             entity_identifier: projectId?.toString() ?? "",
             entity_type: EFileAssetType.PROJECT_COVER,

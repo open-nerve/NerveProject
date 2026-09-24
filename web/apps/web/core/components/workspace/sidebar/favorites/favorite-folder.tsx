@@ -71,7 +71,7 @@ export function FavoriteFolder(props: Props) {
 
   useEffect(() => {
     if (favorite.children === undefined && workspaceSlug) {
-      fetchGroupedFavorites(workspaceSlug.toString(), favorite.id);
+      fetchGroupedFavorites(workspaceSlug, favorite.id);
     }
   }, [favorite.id, favorite.children, workspaceSlug, fetchGroupedFavorites]);
 

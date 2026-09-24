@@ -41,8 +41,8 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
 
   useEffect(() => {
     if (!peekModule) return;
-    if (isArchived) fetchArchivedModuleDetails(workspaceSlug, projectId, peekModule.toString());
-    else fetchModuleDetails(workspaceSlug, projectId, peekModule.toString());
+    if (isArchived) fetchArchivedModuleDetails(workspaceSlug, projectId, peekModule);
+    else fetchModuleDetails(workspaceSlug, projectId, peekModule);
   }, [fetchArchivedModuleDetails, fetchModuleDetails, isArchived, peekModule, projectId, workspaceSlug]);
 
   return (
@@ -56,11 +56,7 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
               "0px 1px 4px 0px rgba(0, 0, 0, 0.06), 0px 2px 4px 0px rgba(16, 24, 40, 0.06), 0px 1px 8px -1px rgba(16, 24, 40, 0.06)",
           }}
         >
-          <ModuleProgressSidebar
-            moduleId={peekModule?.toString() ?? ""}
-            handleClose={handleClose}
-            isArchived={isArchived}
-          />
+          <ModuleProgressSidebar moduleId={peekModule ?? ""} handleClose={handleClose} isArchived={isArchived} />
         </div>
       )}
     </>

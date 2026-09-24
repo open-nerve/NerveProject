@@ -24,7 +24,7 @@ export const PowerKOpenProjectCyclesMenu = observer(function PowerKOpenProjectCy
   // store hooks
   const { fetchedMap, getProjectCycleIds, getCycleById } = useCycle();
   // derived values
-  const projectId = context.params.projectId?.toString();
+  const projectId = context.params.projectId;
   const isFetched = projectId ? fetchedMap[projectId] : false;
   const projectCycleIds = projectId ? getProjectCycleIds(projectId) : undefined;
   const cyclesList = projectCycleIds

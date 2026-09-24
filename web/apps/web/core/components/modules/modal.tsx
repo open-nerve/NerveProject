@@ -56,8 +56,8 @@ export const CreateUpdateModuleModal = observer(function CreateUpdateModuleModal
   const handleCreateModule = async (payload: Partial<IModule>) => {
     if (!workspaceSlug || !projectId) return;
 
-    const selectedProjectId = payload.project_id ?? projectId.toString();
-    await createModule(workspaceSlug.toString(), selectedProjectId, payload)
+    const selectedProjectId = payload.project_id ?? projectId;
+    await createModule(workspaceSlug, selectedProjectId, payload)
       .then((_res) => {
         handleClose();
         setToast({
@@ -78,8 +78,8 @@ export const CreateUpdateModuleModal = observer(function CreateUpdateModuleModal
   const handleUpdateModule = async (payload: Partial<IModule>) => {
     if (!workspaceSlug || !projectId || !data) return;
 
-    const selectedProjectId = payload.project_id ?? projectId.toString();
-    await updateModuleDetails(workspaceSlug.toString(), selectedProjectId, data.id, payload)
+    const selectedProjectId = payload.project_id ?? projectId;
+    await updateModuleDetails(workspaceSlug, selectedProjectId, data.id, payload)
       .then((_res) => {
         handleClose();
 

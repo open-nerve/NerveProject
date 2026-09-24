@@ -530,7 +530,7 @@ export class ModulesStore implements IModuleStore {
       runInAction(() => {
         set(this.moduleMap, [moduleId, "is_favorite"], true);
       });
-      await this.rootStore.favorite.addFavorite(workspaceSlug.toString(), {
+      await this.rootStore.favorite.addFavorite(workspaceSlug, {
         entity_type: "module",
         entity_identifier: moduleId,
         project_id: projectId,

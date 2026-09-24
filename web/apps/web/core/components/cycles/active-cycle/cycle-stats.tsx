@@ -217,7 +217,7 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
                             <StateDropdown
                               value={issue.state_id}
                               onChange={() => {}}
-                              projectId={projectId?.toString() ?? ""}
+                              projectId={projectId ?? ""}
                               disabled
                               buttonVariant="background-with-text"
                               buttonContainerClassName="cursor-pointer max-w-24"

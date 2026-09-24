@@ -25,7 +25,7 @@ export const HomeBody = observer(function HomeBody() {
     <div className="relative flex h-full w-full flex-col gap-7">
       <NoProjectsEmptyState />
       <div className="py-4">
-        <RecentActivityWidget workspaceSlug={workspaceSlug.toString()} />
+        <RecentActivityWidget workspaceSlug={workspaceSlug} />
       </div>
     </div>
   );

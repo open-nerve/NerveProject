@@ -26,7 +26,7 @@ export const CycleListLayout = observer(function CycleListLayout() {
   const { allowPermissions } = useUserPermissions();
 
   const isCompletedCycle =
-    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId.toString()) : false;
+    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId) : false;
   const isEditingAllowed = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT
@@ -40,7 +40,7 @@ export const CycleListLayout = observer(function CycleListLayout() {
   const addIssuesToView = useCallback(
     (issueIds: string[]) => {
       if (!workspaceSlug || !projectId || !cycleId) throw new Error();
-      return issues.addIssueToCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), issueIds);
+      return issues.addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
     },
     [issues?.addIssueToCycle, workspaceSlug, projectId, cycleId]
   );
@@ -51,7 +51,7 @@ export const CycleListLayout = observer(function CycleListLayout() {
       addIssuesToView={addIssuesToView}
       canEditPropertiesBasedOnProject={canEditIssueProperties}
       isCompletedCycle={isCompletedCycle}
-      viewId={cycleId?.toString()}
+      viewId={cycleId}
     />
   );
 });

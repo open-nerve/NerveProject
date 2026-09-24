@@ -50,14 +50,14 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
   // fetching issue details
   const { data, isLoading, error } = useSWR<TIssue, Error>(
     `ISSUE_DETAIL_${workspaceSlug}_${projectIdentifier}_${sequence_id}`,
-    () => fetchIssueWithIdentifier(workspaceSlug.toString(), projectIdentifier, sequence_id)
+    () => fetchIssueWithIdentifier(workspaceSlug, projectIdentifier, sequence_id)
   );
 
   // derived values
   const projectDetails = getProjectByIdentifier(projectIdentifier);
   const issueId = data?.id;
   const projectId = data?.project_id ?? projectDetails?.id ?? "";
-  const issue = getIssueById(issueId?.toString() || "") || undefined;
+  const issue = getIssueById(issueId || "") || undefined;
   const project = (issue?.project_id && getProjectById(issue?.project_id)) || undefined;
   const issueLoader = !issue || isLoading;
   const pageTitle = project && issue ? `${project?.identifier}-${issue?.sequence_id} ${issue?.name}` : undefined;
@@ -120,12 +120,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
       <PageHead title={pageTitle} />
       {workspaceSlug && projectId && issueId && (
         <ProjectAuthWrapper workspaceSlug={workspaceSlug} projectId={projectId}>
-          <WorkItemDetailRoot
-            workspaceSlug={workspaceSlug.toString()}
-            projectId={projectId.toString()}
-            issueId={issueId.toString()}
-            issue={issue}
-          />
+          <WorkItemDetailRoot workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} issue={issue} />
         </ProjectAuthWrapper>
       )}
     </>

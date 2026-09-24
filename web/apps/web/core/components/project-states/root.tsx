@@ -45,7 +45,7 @@ export const ProjectStateRoot = observer(function ProjectStateRoot(props: TProje
   // Fetching all project states
   useSWR(
     workspaceSlug && projectId ? `PROJECT_STATES_${workspaceSlug}_${projectId}` : null,
-    workspaceSlug && projectId ? () => fetchProjectStates(workspaceSlug.toString(), projectId.toString()) : null,
+    workspaceSlug && projectId ? () => fetchProjectStates(workspaceSlug, projectId) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 

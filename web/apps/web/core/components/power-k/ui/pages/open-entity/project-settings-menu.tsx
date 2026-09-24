@@ -34,8 +34,8 @@ export const PowerKOpenProjectSettingsMenu = observer(function PowerKOpenProject
       allowPermissions(
         setting.access,
         EUserPermissionsLevel.PROJECT,
-        context.params.workspaceSlug?.toString(),
-        context.params.projectId?.toString()
+        context.params.workspaceSlug,
+        context.params.projectId
       )
   );
   const settingsListWithIcons = settingsList.map((setting) => ({

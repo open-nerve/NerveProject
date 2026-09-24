@@ -186,7 +186,7 @@ export const BaseKanBanRoot = observer(function BaseKanBanRoot(props: IBaseKanBa
         } else {
           collapsedGroups.push(value);
         }
-        updateFilters(projectId?.toString() ?? "", EIssueFilterType.KANBAN_FILTERS, {
+        updateFilters(projectId ?? "", EIssueFilterType.KANBAN_FILTERS, {
           [toggle]: collapsedGroups,
         });
       }

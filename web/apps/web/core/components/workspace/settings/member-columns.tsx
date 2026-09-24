@@ -155,7 +155,7 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
               onChange={async (value: EUserPermissions) => {
                 if (!workspaceSlug) return;
                 try {
-                  await updateMember(workspaceSlug.toString(), rowData.member.id, {
+                  await updateMember(workspaceSlug, rowData.member.id, {
                     role: value as unknown as EUserPermissions,
                   });
                 } catch (err: unknown) {

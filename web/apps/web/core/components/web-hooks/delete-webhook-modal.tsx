@@ -36,7 +36,7 @@ export function DeleteWebhookModal(props: IDeleteWebhook) {
     if (!workspaceSlug || !webhookId) return;
     setIsDeleting(true);
     try {
-      await removeWebhook(workspaceSlug.toString(), webhookId.toString());
+      await removeWebhook(workspaceSlug, webhookId);
       navigate(`/${workspaceSlug}/settings/webhooks`, { replace: true });
       setToast({
         type: TOAST_TYPE.SUCCESS,

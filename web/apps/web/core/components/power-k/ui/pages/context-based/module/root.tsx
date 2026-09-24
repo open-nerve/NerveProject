@@ -30,7 +30,7 @@ export const PowerKModuleContextBasedPages = observer(function PowerKModuleConte
     project: { getProjectMemberIds },
   } = useMember();
   // derived values
-  const moduleDetails = moduleId ? getModuleById(moduleId.toString()) : null;
+  const moduleDetails = moduleId ? getModuleById(moduleId) : null;
   const projectMemberIds = moduleDetails?.project_id ? getProjectMemberIds(moduleDetails.project_id, false) : [];
 
   if (!moduleDetails) return null;

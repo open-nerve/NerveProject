@@ -53,7 +53,7 @@ const getMemberSortKey = (memberDetails: IUserLite, field: string, memberRole?: 
       return isNaN(date.getTime()) ? new Date(0) : date;
     }
     case "role":
-      return (memberRole ?? "").toString().toLowerCase();
+      return (memberRole ?? "").toLowerCase();
     default:
       return "";
   }

@@ -153,19 +153,17 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
               value={rowData.original_role}
               onChange={async (value: EUserProjectRoles) => {
                 if (!workspaceSlug) return;
-                await updateMemberRole(workspaceSlug.toString(), projectId.toString(), rowData.member.id, value).catch(
-                  (err) => {
-                    console.log(err, "err");
-                    const error = err.error;
-                    const errorString = Array.isArray(error) ? error[0] : error;
+                await updateMemberRole(workspaceSlug, projectId, rowData.member.id, value).catch((err) => {
+                  console.log(err, "err");
+                  const error = err.error;
+                  const errorString = Array.isArray(error) ? error[0] : error;
 
-                    setToast({
-                      type: TOAST_TYPE.ERROR,
-                      title: "You can’t change this role yet.",
-                      message: errorString ?? "An error occurred while updating member role. Please try again.",
-                    });
-                  }
-                );
+                  setToast({
+                    type: TOAST_TYPE.ERROR,
+                    title: "You can’t change this role yet.",
+                    message: errorString ?? "An error occurred while updating member role. Please try again.",
+                  });
+                });
               }}
               label={
                 <div className="flex">

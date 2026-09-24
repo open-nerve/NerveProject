@@ -50,7 +50,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
   const handleAddToFavorites = (projectId: string) => {
     if (!workspaceSlug) return;
 
-    addProjectToFavorites(workspaceSlug.toString(), projectId).catch(() => {
+    addProjectToFavorites(workspaceSlug, projectId).catch(() => {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: t("toast.error"),
@@ -71,7 +71,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
       if (imageType === "local_static") {
         try {
           uploadedAssetUrl = await uploadCoverImage(coverImage, {
-            workspaceSlug: workspaceSlug.toString(),
+            workspaceSlug: workspaceSlug,
             entityIdentifier: "",
             entityType: EFileAssetType.PROJECT_COVER,
             isUserAsset: false,
@@ -91,14 +91,14 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
       }
     }
 
-    return createProject(workspaceSlug.toString(), formData)
+    return createProject(workspaceSlug, formData)
       .then(async (res) => {
         if (uploadedAssetUrl) {
           await updateCoverImageStatus(res.id, uploadedAssetUrl);
-          await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: uploadedAssetUrl });
+          await updateProject(workspaceSlug, res.id, { cover_image_url: uploadedAssetUrl });
         } else if (coverImage && coverImage.startsWith("http")) {
           await updateCoverImageStatus(res.id, coverImage);
-          await updateProject(workspaceSlug.toString(), res.id, { cover_image_url: coverImage });
+          await updateProject(workspaceSlug, res.id, { cover_image_url: coverImage });
         }
         setToast({
           type: TOAST_TYPE.SUCCESS,

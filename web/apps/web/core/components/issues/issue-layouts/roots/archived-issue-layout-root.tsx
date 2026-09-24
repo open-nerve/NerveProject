@@ -24,18 +24,18 @@ import { ArchivedIssueListLayout } from "../list/roots/archived-issue-root";
 export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot() {
   // router
   const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
+  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
+  const projectId = routerProjectId ? routerProjectId : undefined;
   // hooks
   const { issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
   // derived values
   const workItemFilters = projectId ? issuesFilter?.getIssueFilters(projectId) : undefined;
 
   useSWR(
-    workspaceSlug && projectId ? `ARCHIVED_ISSUES_${workspaceSlug.toString()}_${projectId.toString()}` : null,
+    workspaceSlug && projectId ? `ARCHIVED_ISSUES_${workspaceSlug}_${projectId}` : null,
     async () => {
       if (workspaceSlug && projectId) {
-        await issuesFilter?.fetchFilters(workspaceSlug.toString(), projectId.toString());
+        await issuesFilter?.fetchFilters(workspaceSlug, projectId);
       }
     },
     { revalidateIfStale: false, revalidateOnFocus: false }
@@ -46,7 +46,7 @@ export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot
     <IssuesStoreContext.Provider value={EIssuesStoreType.ARCHIVED}>
       <ProjectLevelWorkItemFiltersHOC
         entityType={EIssuesStoreType.ARCHIVED}
-        entityId={projectId?.toString()}
+        entityId={projectId}
         filtersToShowByLayout={ISSUE_DISPLAY_FILTERS_BY_PAGE.archived_issues.filters}
         initialWorkItemFilters={workItemFilters}
         updateFilters={issuesFilter?.updateFilterExpression.bind(issuesFilter, workspaceSlug, projectId)}

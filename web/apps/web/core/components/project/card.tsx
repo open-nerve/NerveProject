@@ -84,7 +84,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const handleAddToFavorites = () => {
     if (!workspaceSlug) return;
 
-    const addToFavoritePromise = addProjectToFavorites(workspaceSlug.toString(), project.id);
+    const addToFavoritePromise = addProjectToFavorites(workspaceSlug, project.id);
     setPromiseToast(addToFavoritePromise, {
       loading: "Adding project to favorites...",
       success: {
@@ -105,7 +105,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const handleRemoveFromFavorites = () => {
     if (!workspaceSlug) return;
 
-    const removeFromFavoritePromise = removeProjectFromFavorites(workspaceSlug.toString(), project.id);
+    const removeFromFavoritePromise = removeProjectFromFavorites(workspaceSlug, project.id);
     setPromiseToast(removeFromFavoritePromise, {
       loading: "Removing project from favorites...",
       success: {
@@ -186,7 +186,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
       {/* Join Project Modal */}
       {workspaceSlug && (
         <JoinProjectModal
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
           project={project}
           isOpen={joinProjectModalOpen}
           handleClose={() => setJoinProjectModal(false)}
@@ -195,7 +195,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
       {/* Restore project modal */}
       {workspaceSlug && project && (
         <ArchiveRestoreProjectModal
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
           projectId={project.id}
           isOpen={restoreProject}
           onClose={() => setRestoreProject(false)}

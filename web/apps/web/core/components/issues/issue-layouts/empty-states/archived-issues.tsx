@@ -19,8 +19,8 @@ export const ProjectArchivedEmptyState = observer(function ProjectArchivedEmptyS
   // router
   const navigate = useNavigate();
   const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
+  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
+  const projectId = routerProjectId ? routerProjectId : undefined;
   // plane hooks
   const { t } = useTranslation();
   // store hooks

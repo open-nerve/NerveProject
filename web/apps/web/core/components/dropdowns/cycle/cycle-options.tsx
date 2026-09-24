@@ -82,7 +82,7 @@ export const CycleOptions = observer(function CycleOptions(props: CycleOptionsPr
   });
 
   const onOpen = () => {
-    if (workspaceSlug && !cycleIds) fetchAllCycles(workspaceSlug.toString(), projectId);
+    if (workspaceSlug && !cycleIds) fetchAllCycles(workspaceSlug, projectId);
   };
 
   const searchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

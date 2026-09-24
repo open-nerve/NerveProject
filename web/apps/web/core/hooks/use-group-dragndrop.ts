@@ -70,18 +70,18 @@ export const useGroupIssuesDragNDrop = (
 
     if (isCycleChanged && workspaceSlug) {
       if (data[cycleKey]) {
-        addCycleToIssue(workspaceSlug.toString(), projectId, data[cycleKey]?.toString() ?? "", issueId).catch(() =>
+        addCycleToIssue(workspaceSlug, projectId, data[cycleKey]?.toString() ?? "", issueId).catch(() =>
           setToast(errorToastProps)
         );
       } else {
-        removeCycleFromIssue(workspaceSlug.toString(), projectId, issueId).catch(() => setToast(errorToastProps));
+        removeCycleFromIssue(workspaceSlug, projectId, issueId).catch(() => setToast(errorToastProps));
       }
       delete data[cycleKey];
     }
 
     if (isModuleChanged && workspaceSlug && issueUpdates[moduleKey]) {
       changeModulesInIssue(
-        workspaceSlug.toString(),
+        workspaceSlug,
         projectId,
         issueId,
         issueUpdates[moduleKey].ADD,

@@ -46,7 +46,7 @@ export const ModuleDropdown = observer(function ModuleDropdown(props: TModuleDro
   const moduleIds = projectId ? getProjectModuleIds(projectId) : [];
 
   const onDropdownOpen = () => {
-    if (!moduleIds && projectId && workspaceSlug) fetchModules(workspaceSlug.toString(), projectId);
+    if (!moduleIds && projectId && workspaceSlug) fetchModules(workspaceSlug, projectId);
   };
 
   return (

@@ -57,7 +57,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
   const { workspaceSlug, projectId, moduleId, cycleId } = useParams();
 
   const renderExistingIssueModal = moduleId || cycleId;
-  const ExistingIssuesListModalPayload = moduleId ? { module: moduleId.toString() } : { cycle: true };
+  const ExistingIssuesListModalPayload = moduleId ? { module: moduleId } : { cycle: true };
 
   const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
     if (!workspaceSlug || !projectId) return;
@@ -92,8 +92,8 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
 
       {renderExistingIssueModal && (
         <ExistingIssuesListModal
-          workspaceSlug={workspaceSlug?.toString()}
-          projectId={projectId?.toString()}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
           isOpen={openExistingIssueListModal}
           handleClose={() => setOpenExistingIssueListModal(false)}
           searchParams={ExistingIssuesListModalPayload}

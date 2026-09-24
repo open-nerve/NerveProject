@@ -35,7 +35,7 @@ export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSi
   const { data: currentUser } = useUser();
   const { profileSidebarCollapsed, toggleProfileSidebar } = useAppTheme();
   const { toggleProfileSettingsModal } = useCommandPalette();
-  const profileMember = useProfileMember(workspaceSlug?.toString() ?? "", userId?.toString() ?? "");
+  const profileMember = useProfileMember(workspaceSlug ?? "", userId ?? "");
   const { t } = useTranslation();
 
   useOutsideClickDetector(ref, () => {

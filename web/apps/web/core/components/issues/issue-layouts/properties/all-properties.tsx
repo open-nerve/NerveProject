@@ -81,19 +81,19 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
     () => ({
       addModulesToIssue: async (moduleIds: string[]) => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await changeModulesInIssue?.(workspaceSlug.toString(), issue.project_id, issue.id, moduleIds, []);
+        await changeModulesInIssue?.(workspaceSlug, issue.project_id, issue.id, moduleIds, []);
       },
       removeModulesFromIssue: async (moduleIds: string[]) => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await changeModulesInIssue?.(workspaceSlug.toString(), issue.project_id, issue.id, [], moduleIds);
+        await changeModulesInIssue?.(workspaceSlug, issue.project_id, issue.id, [], moduleIds);
       },
       addIssueToCycle: async (cycleId: string) => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await addCycleToIssue?.(workspaceSlug.toString(), issue.project_id, cycleId, issue.id);
+        await addCycleToIssue?.(workspaceSlug, issue.project_id, cycleId, issue.id);
       },
       removeIssueFromCycle: async () => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await removeCycleFromIssue?.(workspaceSlug.toString(), issue.project_id, issue.id);
+        await removeCycleFromIssue?.(workspaceSlug, issue.project_id, issue.id);
       },
     }),
     [workspaceSlug, issue, changeModulesInIssue, addCycleToIssue, removeCycleFromIssue]
@@ -151,7 +151,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   };
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug: workspaceSlug,
     projectId: issue?.project_id,
     issueId: issue?.id,
     projectIdentifier: projectDetails?.identifier,

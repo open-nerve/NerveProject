@@ -52,7 +52,7 @@ export const WorkspaceSpreadsheetRoot = observer(function WorkspaceSpreadsheetRo
   const { allowPermissions } = useUserPermissions();
 
   // Derived values
-  const issueFilters = globalViewId ? filters?.[globalViewId.toString()] : undefined;
+  const issueFilters = globalViewId ? filters?.[globalViewId] : undefined;
 
   // Permission checker
   const canEditProperties = useCallback(
@@ -61,7 +61,7 @@ export const WorkspaceSpreadsheetRoot = observer(function WorkspaceSpreadsheetRo
       return allowPermissions(
         [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
         EUserPermissionsLevel.PROJECT,
-        workspaceSlug.toString(),
+        workspaceSlug,
         projectId
       );
     },
@@ -74,11 +74,11 @@ export const WorkspaceSpreadsheetRoot = observer(function WorkspaceSpreadsheetRo
       if (!workspaceSlug || !globalViewId) return;
 
       updateFilters(
-        workspaceSlug.toString(),
+        workspaceSlug,
         undefined,
         EIssueFilterType.DISPLAY_FILTERS,
         { ...updatedDisplayFilter },
-        globalViewId.toString()
+        globalViewId
       );
     },
     [updateFilters, workspaceSlug, globalViewId]

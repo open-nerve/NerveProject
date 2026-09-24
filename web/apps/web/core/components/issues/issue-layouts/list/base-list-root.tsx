@@ -133,7 +133,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         } else {
           collapsedGroups.push(value);
         }
-        updateFilters(projectId?.toString() ?? "", EIssueFilterType.KANBAN_FILTERS, {
+        updateFilters(projectId ?? "", EIssueFilterType.KANBAN_FILTERS, {
           group_by: collapsedGroups,
         } as TIssueKanbanFilters);
       }

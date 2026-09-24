@@ -41,7 +41,7 @@ export const ArchiveTabsList = observer(function ArchiveTabsList() {
 
   // derived values
   if (!projectId) return null;
-  const projectDetails = getProjectById(projectId?.toString());
+  const projectDetails = getProjectById(projectId);
   if (!projectDetails) return null;
 
   return (

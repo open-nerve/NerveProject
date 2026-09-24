@@ -35,7 +35,7 @@ export const SidebarItemBase = observer(function SidebarItemBase({ item }: Props
     if (window.innerWidth < 768) toggleSidebar();
   };
 
-  const slug = workspaceSlug?.toString() || "";
+  const slug = workspaceSlug || "";
 
   const itemHref =
     item.key === "your_work" && data?.id ? joinUrlPath(slug, item.href, data?.id) : joinUrlPath(slug, item.href);

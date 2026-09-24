@@ -65,9 +65,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   );
 
   // Derived values
-  const workItemId = workItemIdentifierFromRoute
-    ? getIssueIdByIdentifier(workItemIdentifierFromRoute?.toString())
-    : undefined;
+  const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
   const project = getPartialProjectById(projectId);
 
@@ -125,7 +123,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   const isAuthorized = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT,
-    workspaceSlug.toString(),
+    workspaceSlug,
     project?.id
   );
 

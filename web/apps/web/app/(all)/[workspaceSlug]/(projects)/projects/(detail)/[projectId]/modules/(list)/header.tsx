@@ -51,7 +51,7 @@ export const ModulesListHeader = observer(function ModulesListHeader(props: TPro
       <Header.LeftItem>
         <div>
           <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink

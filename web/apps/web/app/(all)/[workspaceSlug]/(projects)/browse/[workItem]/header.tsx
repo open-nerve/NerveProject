@@ -33,8 +33,8 @@ export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDet
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
   // derived values
-  const issueId = getIssueIdByIdentifier(workItem?.toString());
-  const issueDetails = issueId ? getIssueById(issueId?.toString()) : undefined;
+  const issueId = getIssueIdByIdentifier(workItem);
+  const issueDetails = issueId ? getIssueById(issueId) : undefined;
   // preferences
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
 

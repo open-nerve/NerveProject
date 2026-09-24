@@ -29,7 +29,7 @@ export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWork
   // router
   const navigate = useNavigate();
   const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
+  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
   // store hooks
   const { createGlobalView, updateGlobalView } = useGlobalView();
   const { resetExpression } = useWorkItemFilters();

@@ -88,21 +88,21 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
+      updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
     },
     [projectId, updateFilters]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
+      updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
     },
     [projectId, updateFilters]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_PROPERTIES, property);
+      updateFilters(projectId, EIssueFilterType.DISPLAY_PROPERTIES, property);
     },
     [projectId, updateFilters]
   );
@@ -124,7 +124,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
       <Header.LeftItem>
         <div className="flex items-center gap-2">
           <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink
@@ -139,7 +139,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
             <Breadcrumbs.Item
               component={
                 <BreadcrumbNavigationSearchDropdown
-                  selectedItem={moduleId?.toString()}
+                  selectedItem={moduleId}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
                     navigate(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
@@ -236,8 +236,8 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
         <ModuleQuickActions
           parentRef={parentRef}
           moduleId={moduleId}
-          projectId={projectId.toString()}
-          workspaceSlug={workspaceSlug.toString()}
+          projectId={projectId}
+          workspaceSlug={workspaceSlug}
           customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
         />
       </Header.RightItem>

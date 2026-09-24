@@ -71,7 +71,7 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   return (
     <ListItem
       title={moduleDetails?.name ?? ""}
-      itemLink={`/${workspaceSlug?.toString()}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}
+      itemLink={`/${workspaceSlug}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}
       onItemClick={handleItemClick}
       prependTitleElement={
         <div className="relative size-[30px]">

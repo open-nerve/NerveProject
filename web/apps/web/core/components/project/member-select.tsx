@@ -34,7 +34,7 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
 
   const options = projectMemberIds
     ?.map((userId) => {
-      const memberDetails = projectId ? getProjectMemberDetails(userId, projectId.toString()) : null;
+      const memberDetails = projectId ? getProjectMemberDetails(userId, projectId) : null;
 
       if (!memberDetails?.member) return;
       const isGuest = memberDetails.role === EUserProjectRoles.GUEST;
@@ -63,7 +63,7 @@ export const MemberSelect = observer(function MemberSelect(props: Props) {
         content: React.ReactNode;
       }[]
     | undefined;
-  const selectedOption = projectId ? getProjectMemberDetails(value, projectId.toString()) : null;
+  const selectedOption = projectId ? getProjectMemberDetails(value, projectId) : null;
 
   return (
     <CustomSearchSelect

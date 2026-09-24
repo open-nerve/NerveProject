@@ -47,7 +47,7 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
     if (!workspaceSlug || !currentUser) return;
 
     try {
-      await leaveWorkspace(workspaceSlug.toString());
+      await leaveWorkspace(workspaceSlug);
       await fetchCurrentUserSettings();
       navigate(getWorkspaceRedirectionUrl());
     } catch (err: unknown) {
@@ -64,7 +64,7 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
     if (!workspaceSlug || !memberId) return;
 
     try {
-      await removeMemberFromWorkspace(workspaceSlug.toString(), memberId);
+      await removeMemberFromWorkspace(workspaceSlug, memberId);
     } catch (err: unknown) {
       const error = err as { error?: string };
       setToast({

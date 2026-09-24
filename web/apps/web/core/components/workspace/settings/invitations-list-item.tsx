@@ -57,7 +57,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
     try {
       if (!workspaceSlug || !invitationDetails) return;
 
-      await deleteMemberInvitation(workspaceSlug.toString(), invitationDetails.id);
+      await deleteMemberInvitation(workspaceSlug, invitationDetails.id);
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Success!",
@@ -155,7 +155,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
             onChange={(value: EUserPermissions) => {
               if (!workspaceSlug || !value) return;
 
-              updateMemberInvitation(workspaceSlug.toString(), invitationDetails.id, {
+              updateMemberInvitation(workspaceSlug, invitationDetails.id, {
                 role: value,
               }).catch((err: unknown) => {
                 const error = err as { error?: string };

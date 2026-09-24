@@ -45,7 +45,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
     if (!workspaceSlug || !projectId || !memberId) return;
 
     if (memberId === currentUser?.id) {
-      await leaveProject(workspaceSlug.toString(), projectId.toString())
+      await leaveProject(workspaceSlug, projectId)
         // oxlint-disable-next-line promise/always-return
         .then(async () => {
           navigate(`/${workspaceSlug}/projects`);
@@ -58,7 +58,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
           });
         });
     } else
-      await removeMemberFromProject(workspaceSlug.toString(), projectId.toString(), memberId).catch((err) =>
+      await removeMemberFromProject(workspaceSlug, projectId, memberId).catch((err) =>
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "You can't remove the member from this project yet.",

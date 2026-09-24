@@ -78,7 +78,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       issue.project_id ?? undefined
     ) && !readOnly;
 
@@ -126,7 +126,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug: workspaceSlug,
     projectIdentifier,
     activeLayout,
     isEditingAllowed,

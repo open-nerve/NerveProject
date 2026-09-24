@@ -55,7 +55,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
 
     // validating the nextPath from the router query
     if (nextPath && isValidNextPath(nextPath)) {
-      redirectionRoute = nextPath.toString();
+      redirectionRoute = nextPath;
       return redirectionRoute;
     }
 

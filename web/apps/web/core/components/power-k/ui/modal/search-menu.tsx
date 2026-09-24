@@ -48,8 +48,8 @@ export function PowerKModalSearchMenu(props: Props) {
 
     if (debouncedSearchTerm) {
       workspaceService
-        .searchWorkspace(workspaceSlug.toString(), {
-          ...(projectId ? { project_id: projectId.toString() } : {}),
+        .searchWorkspace(workspaceSlug, {
+          ...(projectId ? { project_id: projectId } : {}),
           search: debouncedSearchTerm,
           workspace_search: !projectId ? true : isWorkspaceLevel,
         })

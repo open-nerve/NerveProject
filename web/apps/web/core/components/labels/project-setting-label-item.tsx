@@ -58,7 +58,7 @@ export function ProjectSettingLabelItem(props: Props) {
   const removeFromGroup = (label: IIssueLabel) => {
     if (!workspaceSlug || !projectId) return;
 
-    updateLabel(workspaceSlug.toString(), projectId.toString(), label.id, {
+    updateLabel(workspaceSlug, projectId, label.id, {
       parent: null,
     });
   };

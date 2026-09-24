@@ -67,7 +67,7 @@ export const WebhookSecretKey = observer(function WebhookSecretKey(props: Props)
 
     setIsRegenerating(true);
 
-    regenerateSecretKey(workspaceSlug.toString(), data.id)
+    regenerateSecretKey(workspaceSlug, data.id)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

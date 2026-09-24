@@ -42,7 +42,7 @@ export const AutoArchiveAutomation = observer(function AutoArchiveAutomation(pro
   const isAdmin = allowPermissions(
     [EUserPermissions.ADMIN],
     EUserPermissionsLevel.PROJECT,
-    workspaceSlug?.toString(),
+    workspaceSlug,
     currentProjectDetails?.id
   );
 

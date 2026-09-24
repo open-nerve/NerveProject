@@ -41,7 +41,7 @@ export const DeleteProjectViewModal = observer(function DeleteProjectViewModal(p
     if (!workspaceSlug || !projectId) return;
     try {
       setIsDeleteLoading(true);
-      await deleteView(workspaceSlug.toString(), projectId.toString(), data.id);
+      await deleteView(workspaceSlug, projectId, data.id);
       handleClose();
       navigate(`/${workspaceSlug}/projects/${projectId}/views`);
       setToast({

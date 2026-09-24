@@ -49,7 +49,7 @@ export const ProjectsListMobileHeader = observer(function ProjectsListMobileHead
         if (filters?.[key]?.includes(value)) newValues.splice(newValues.indexOf(value), 1);
         else newValues.push(value);
       }
-      updateFilters(workspaceSlug.toString(), { [key]: newValues });
+      updateFilters(workspaceSlug, { [key]: newValues });
     },
     [filters, updateFilters, workspaceSlug]
   );
@@ -62,7 +62,7 @@ export const ProjectsListMobileHeader = observer(function ProjectsListMobileHead
         value={displayFilters?.order_by}
         onChange={(val) => {
           if (!workspaceSlug || val === displayFilters?.order_by) return;
-          updateDisplayFilters(workspaceSlug.toString(), {
+          updateDisplayFilters(workspaceSlug, {
             order_by: val,
           });
         }}
@@ -88,7 +88,7 @@ export const ProjectsListMobileHeader = observer(function ProjectsListMobileHead
             handleFiltersUpdate={handleFilters}
             handleDisplayFiltersUpdate={(val) => {
               if (!workspaceSlug) return;
-              updateDisplayFilters(workspaceSlug.toString(), val);
+              updateDisplayFilters(workspaceSlug, val);
             }}
             memberIds={workspaceMemberIds ?? undefined}
           />

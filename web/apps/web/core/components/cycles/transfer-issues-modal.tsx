@@ -42,7 +42,7 @@ export const TransferIssuesModal = observer(function TransferIssuesModal(props: 
   const transferIssue = async (payload: { new_cycle_id: string }) => {
     if (!workspaceSlug || !projectId || !cycleId) return;
 
-    await transferIssuesFromCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), payload)
+    await transferIssuesFromCycle(workspaceSlug, projectId, cycleId, payload)
       .then(async () => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

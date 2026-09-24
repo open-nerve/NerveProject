@@ -53,13 +53,13 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
     allowPermissions(
       [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      ctx.params.workspaceSlug?.toString(),
-      ctx.params.projectId?.toString()
+      ctx.params.workspaceSlug,
+      ctx.params.projectId
     );
   const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
 
   const getProjectDetails = (ctx: TPowerKContext) =>
-    ctx.params.projectId ? getPartialProjectById(ctx.params.projectId.toString()) : undefined;
+    ctx.params.projectId ? getPartialProjectById(ctx.params.projectId) : undefined;
 
   return {
     create_work_item: {

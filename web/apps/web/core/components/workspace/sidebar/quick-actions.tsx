@@ -31,7 +31,7 @@ export const SidebarQuickActions = observer(function SidebarQuickActions() {
   const timeoutRef = useRef<any>(undefined);
   // router
   const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
+  const workspaceSlug = routerWorkspaceSlug;
   // store hooks
   const { toggleCreateIssueModal } = useCommandPalette();
   const { joinedProjectIds } = useProject();

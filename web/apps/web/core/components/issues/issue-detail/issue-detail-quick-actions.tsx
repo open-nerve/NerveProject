@@ -123,7 +123,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   const handleRestore = async () => {
     if (!workspaceSlug || !projectId || !issueId) return;
     try {
-      await restoreIssue(workspaceSlug.toString(), projectId.toString(), issueId.toString());
+      await restoreIssue(workspaceSlug, projectId, issueId);
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("issue.restore.success.title"),

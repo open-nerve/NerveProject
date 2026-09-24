@@ -46,12 +46,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
     } else if (hasProjectChanged) {
       handleCurrentTab(workspaceSlug, projectId, EInboxIssueCurrentTab.OPEN);
     } else {
-      fetchInboxIssues(
-        workspaceSlug.toString(),
-        projectId.toString(),
-        undefined,
-        navigationTab || EInboxIssueCurrentTab.OPEN
-      );
+      fetchInboxIssues(workspaceSlug, projectId, undefined, navigationTab || EInboxIssueCurrentTab.OPEN);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inboxAccessible, workspaceSlug, projectId]);
@@ -92,8 +87,8 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
         >
           <InboxSidebar
             setIsMobileSidebar={setIsMobileSidebar}
-            workspaceSlug={workspaceSlug.toString()}
-            projectId={projectId.toString()}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
             inboxIssueId={inboxIssueId}
           />
         </div>
@@ -102,9 +97,9 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
           <InboxContentRoot
             setIsMobileSidebar={setIsMobileSidebar}
             isMobileSidebar={isMobileSidebar}
-            workspaceSlug={workspaceSlug.toString()}
-            projectId={projectId.toString()}
-            inboxIssueId={inboxIssueId.toString()}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
+            inboxIssueId={inboxIssueId}
           />
         ) : (
           <EmptyStateCompact

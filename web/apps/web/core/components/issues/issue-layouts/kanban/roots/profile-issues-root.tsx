@@ -31,7 +31,7 @@ export const ProfileIssuesKanBanLayout = observer(function ProfileIssuesKanBanLa
     <BaseKanBanRoot
       QuickActions={ProjectIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
-      viewId={profileViewId?.toString()}
+      viewId={profileViewId}
     />
   );
 });

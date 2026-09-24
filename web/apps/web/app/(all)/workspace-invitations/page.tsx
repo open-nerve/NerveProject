@@ -44,10 +44,8 @@ function WorkspaceInvitationPage() {
   const { data: currentUser } = useUser();
 
   const { data: invitationDetail, error } = useSWR(
-    invitation_id && slug && WORKSPACE_INVITATION(invitation_id.toString()),
-    invitation_id && slug
-      ? () => workspaceService.getWorkspaceInvitation(slug.toString(), invitation_id.toString())
-      : null
+    invitation_id && slug && WORKSPACE_INVITATION(invitation_id),
+    invitation_id && slug ? () => workspaceService.getWorkspaceInvitation(slug, invitation_id) : null
   );
 
   const handleAccept = () => {

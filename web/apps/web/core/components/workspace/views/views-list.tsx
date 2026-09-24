@@ -26,8 +26,8 @@ export const GlobalViewsList = observer(function GlobalViewsList(props: Props) {
   const { fetchAllGlobalViews, currentWorkspaceViews, getSearchedViews } = useGlobalView();
 
   useSWR(
-    workspaceSlug ? `GLOBAL_VIEWS_LIST_${workspaceSlug.toString()}` : null,
-    workspaceSlug ? () => fetchAllGlobalViews(workspaceSlug.toString()) : null
+    workspaceSlug ? `GLOBAL_VIEWS_LIST_${workspaceSlug}` : null,
+    workspaceSlug ? () => fetchAllGlobalViews(workspaceSlug) : null
   );
 
   if (!currentWorkspaceViews) return <ViewListLoader />;

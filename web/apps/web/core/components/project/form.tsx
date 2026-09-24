@@ -92,7 +92,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
 
   const handleUpdateChange = async (payload: Partial<IProject>) => {
     if (!workspaceSlug || !project) return;
-    return updateProject(workspaceSlug.toString(), project.id, payload)
+    return updateProject(workspaceSlug, project.id, payload)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -168,7 +168,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     // Handle cover image changes
     try {
       const coverImagePayload = await handleCoverImageChange(project.cover_image_url, formData.cover_image_url, {
-        workspaceSlug: workspaceSlug.toString(),
+        workspaceSlug: workspaceSlug,
         entityIdentifier: project.id,
         entityType: EFileAssetType.PROJECT_COVER,
         isUserAsset: false,

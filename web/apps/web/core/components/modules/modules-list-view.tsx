@@ -36,8 +36,8 @@ export const ModulesListView = observer(function ModulesListView() {
   const { currentProjectDisplayFilters: displayFilters } = useModuleFilter();
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const projectModuleIds = projectId ? getProjectModuleIds(projectId.toString()) : undefined;
-  const filteredModuleIds = projectId ? getFilteredModuleIds(projectId.toString()) : undefined;
+  const projectModuleIds = projectId ? getProjectModuleIds(projectId) : undefined;
+  const filteredModuleIds = projectId ? getFilteredModuleIds(projectId) : undefined;
   const canPerformEmptyStateActions = allowPermissions(
     [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
     EUserPermissionsLevel.PROJECT
@@ -101,7 +101,7 @@ export const ModulesListView = observer(function ModulesListView() {
           </Row>
         )}
         <div className="flex-shrink-0">
-          <ModulePeekOverview projectId={projectId?.toString() ?? ""} workspaceSlug={workspaceSlug?.toString() ?? ""} />
+          <ModulePeekOverview projectId={projectId ?? ""} workspaceSlug={workspaceSlug ?? ""} />
         </div>
       </div>
     </ContentWrapper>

@@ -72,7 +72,7 @@ export const ProjectArchivesHeader = observer(function ProjectArchivesHeader(pro
       <Header.LeftItem>
         <div className="flex items-center gap-2.5">
           <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink

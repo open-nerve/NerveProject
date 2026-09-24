@@ -66,7 +66,7 @@ export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarP
   // derived values
   const fetchNextPages = useCallback(() => {
     if (!workspaceSlug || !projectId) return;
-    fetchInboxPaginationIssues(workspaceSlug.toString(), projectId.toString());
+    fetchInboxPaginationIssues(workspaceSlug, projectId);
   }, [workspaceSlug, projectId, fetchInboxPaginationIssues]);
 
   // page observer

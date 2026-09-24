@@ -45,7 +45,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
   const { getViewDetailsById, currentWorkspaceViews } = useGlobalView();
   const { t } = useTranslation();
 
-  const issueFilters = globalViewId ? filters[globalViewId.toString()] : undefined;
+  const issueFilters = globalViewId ? filters[globalViewId] : undefined;
 
   const activeLayout = issueFilters?.displayFilters?.layout;
   const viewDetails = globalViewId ? getViewDetailsById(globalViewId) : undefined;
@@ -53,13 +53,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!globalViewId) return;
-      updateFilters(
-        workspaceSlug.toString(),
-        undefined,
-        EIssueFilterType.DISPLAY_FILTERS,
-        updatedDisplayFilter,
-        globalViewId
-      );
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, globalViewId);
     },
     [workspaceSlug, updateFilters, globalViewId]
   );
@@ -67,7 +61,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!globalViewId) return;
-      updateFilters(workspaceSlug.toString(), undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, globalViewId);
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, globalViewId);
     },
     [workspaceSlug, updateFilters, globalViewId]
   );
@@ -116,7 +110,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
             <Breadcrumbs.Item
               component={
                 <BreadcrumbNavigationSearchDropdown
-                  selectedItem={globalViewId?.toString() || ""}
+                  selectedItem={globalViewId || ""}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
                     navigate(`/${workspaceSlug}/workspace-views/${value}`);
@@ -152,9 +146,9 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
             {t("workspace_views.add_view")}
           </Button>
           <div className="hidden md:block">
-            {viewDetails && <WorkspaceViewQuickActions workspaceSlug={workspaceSlug?.toString()} view={viewDetails} />}
+            {viewDetails && <WorkspaceViewQuickActions workspaceSlug={workspaceSlug} view={viewDetails} />}
             {isDefaultView && defaultViewDetails && (
-              <DefaultWorkspaceViewQuickActions workspaceSlug={workspaceSlug?.toString()} view={defaultViewDetails} />
+              <DefaultWorkspaceViewQuickActions workspaceSlug={workspaceSlug} view={defaultViewDetails} />
             )}
           </div>
         </Header.RightItem>

@@ -45,7 +45,7 @@ export const DeleteModuleModal = observer(function DeleteModuleModal(props: Prop
 
     setIsDeleteLoading(true);
 
-    await deleteModule(workspaceSlug.toString(), projectId.toString(), data.id)
+    await deleteModule(workspaceSlug, projectId, data.id)
       .then(() => {
         if (moduleId || peekModule) navigate(`/${workspaceSlug}/projects/${data.project_id}/modules`);
         handleClose();

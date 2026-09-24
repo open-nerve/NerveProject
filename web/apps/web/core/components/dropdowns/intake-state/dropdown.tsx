@@ -35,7 +35,7 @@ export const IntakeStateDropdown = observer(function IntakeStateDropdown(props: 
   const onDropdownOpen = async () => {
     if ((stateIds === undefined || stateIds.length === 0) && workspaceSlug && projectId) {
       setStateLoader(true);
-      await fetchProjectIntakeState(workspaceSlug.toString(), projectId);
+      await fetchProjectIntakeState(workspaceSlug, projectId);
       setStateLoader(false);
     }
   };

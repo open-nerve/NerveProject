@@ -60,7 +60,7 @@ export const TopNavPowerK = observer(() => {
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
 
-  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier.toString()) : undefined;
+  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier) : undefined;
   const workItemDetails = workItemId ? getIssueById(workItemId) : undefined;
   const projectId = routerProjectId ?? workItemDetails?.project_id ?? undefined;
 
@@ -282,7 +282,7 @@ export const TopNavPowerK = observer(() => {
             </Command.List>
             <PowerKModalFooter
               isWorkspaceLevel={isWorkspaceLevel}
-              projectId={context.params.projectId?.toString()}
+              projectId={context.params.projectId}
               onWorkspaceLevelChange={setIsWorkspaceLevel}
             />
           </Command>

@@ -37,7 +37,7 @@ export const DeleteGlobalViewModal = observer(function DeleteGlobalViewModal(pro
     setIsDeleteLoading(true);
 
     try {
-      await deleteGlobalView(workspaceSlug.toString(), data.id);
+      await deleteGlobalView(workspaceSlug, data.id);
     } catch (_error) {
       setToast({
         type: TOAST_TYPE.ERROR,

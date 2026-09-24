@@ -35,7 +35,7 @@ export const StateDropdown = observer(function StateDropdown(props: TWorkItemSta
   const onDropdownOpen = async () => {
     if ((stateIds === undefined || stateIds.length === 0) && workspaceSlug && projectId) {
       setStateLoader(true);
-      await fetchProjectStates(workspaceSlug.toString(), projectId);
+      await fetchProjectStates(workspaceSlug, projectId);
       setStateLoader(false);
     }
   };

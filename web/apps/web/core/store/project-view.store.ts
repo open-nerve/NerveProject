@@ -268,7 +268,7 @@ export class ProjectViewStore implements IProjectViewStore {
       runInAction(() => {
         set(this.viewMap, [viewId, "is_favorite"], true);
       });
-      await this.rootStore.favorite.addFavorite(workspaceSlug.toString(), {
+      await this.rootStore.favorite.addFavorite(workspaceSlug, {
         entity_type: "view",
         entity_identifier: viewId,
         project_id: projectId,

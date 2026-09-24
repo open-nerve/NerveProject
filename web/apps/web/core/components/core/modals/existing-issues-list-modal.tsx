@@ -102,9 +102,7 @@ export function ExistingIssuesListModal(props: Props) {
     setIsLoading(true);
     const searchService =
       workItemSearchServiceCallback ??
-      (projectId
-        ? projectService.projectIssuesSearch.bind(projectService, workspaceSlug?.toString(), projectId?.toString())
-        : undefined);
+      (projectId ? projectService.projectIssuesSearch.bind(projectService, workspaceSlug, projectId) : undefined);
     if (!searchService) return;
     searchService({
       search: debouncedSearchTerm,

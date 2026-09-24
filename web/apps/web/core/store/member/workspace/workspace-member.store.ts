@@ -350,7 +350,7 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
    */
   deleteMemberInvitation = async (workspaceSlug: string, invitationId: string) =>
     // oxlint-disable-next-line promise/always-return
-    await this.workspaceService.deleteWorkspaceInvitations(workspaceSlug.toString(), invitationId).then(() => {
+    await this.workspaceService.deleteWorkspaceInvitations(workspaceSlug, invitationId).then(() => {
       runInAction(() => {
         this.workspaceMemberInvitations[workspaceSlug] = this.workspaceMemberInvitations[workspaceSlug].filter(
           (inv) => inv.id !== invitationId

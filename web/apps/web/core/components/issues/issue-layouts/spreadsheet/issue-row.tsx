@@ -173,8 +173,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const { isMobile } = usePlatformOS();
 
   // handlers
-  const handleIssuePeekOverview = (issue: TIssue) =>
-    handleRedirection(workspaceSlug?.toString(), issue, isMobile, nestingLevel);
+  const handleIssuePeekOverview = (issue: TIssue) => handleRedirection(workspaceSlug, issue, isMobile, nestingLevel);
 
   const { subIssues: subIssuesStore, issue } = useIssueDetail();
 
@@ -205,7 +204,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
     } else {
       setExpanded((prevState) => {
         if (!prevState && workspaceSlug && issueDetail && issueDetail.project_id)
-          subIssuesStore.fetchSubIssues(workspaceSlug.toString(), issueDetail.project_id, issueDetail.id);
+          subIssuesStore.fetchSubIssues(workspaceSlug, issueDetail.project_id, issueDetail.id);
         return !prevState;
       });
     }
@@ -216,7 +215,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const projectIdentifier = getProjectIdentifierById(issueDetail.project_id);
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug: workspaceSlug,
     projectId: issueDetail?.project_id,
     issueId,
     projectIdentifier,

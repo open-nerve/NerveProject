@@ -55,7 +55,7 @@ export const DeleteIssueModal = observer(function DeleteIssueModal(props: Props)
   const canPerformProjectAdminActions = allowPermissions(
     [EUserPermissions.ADMIN],
     EUserPermissionsLevel.PROJECT,
-    workspaceSlug?.toString(),
+    workspaceSlug,
     projectDetails?.id
   );
 

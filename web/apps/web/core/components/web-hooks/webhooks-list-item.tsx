@@ -24,7 +24,7 @@ export function WebhooksListItem(props: IWebhookListItem) {
 
   const handleToggle = async () => {
     if (!workspaceSlug || !webhook.id) return;
-    await updateWebhook(workspaceSlug.toString(), webhook.id, { is_active: !webhook.is_active });
+    await updateWebhook(workspaceSlug, webhook.id, { is_active: !webhook.is_active });
   };
 
   return (

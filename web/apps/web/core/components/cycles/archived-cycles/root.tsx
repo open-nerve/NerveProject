@@ -35,10 +35,10 @@ export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot
   const totalArchivedCycles = currentProjectArchivedCycleIds?.length ?? 0;
 
   useSWR(
-    workspaceSlug && projectId ? `ARCHIVED_CYCLES_${workspaceSlug.toString()}_${projectId.toString()}` : null,
+    workspaceSlug && projectId ? `ARCHIVED_CYCLES_${workspaceSlug}_${projectId}` : null,
     async () => {
       if (workspaceSlug && projectId) {
-        await fetchArchivedCycles(workspaceSlug.toString(), projectId.toString());
+        await fetchArchivedCycles(workspaceSlug, projectId);
       }
     },
     { revalidateIfStale: false, revalidateOnFocus: false }
@@ -51,7 +51,7 @@ export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot
     if (!value) newValues = [];
     else newValues = newValues.filter((val) => val !== value);
 
-    updateFilters(projectId.toString(), { [key]: newValues }, "archived");
+    updateFilters(projectId, { [key]: newValues }, "archived");
   };
 
   if (!workspaceSlug || !projectId) return <></>;
@@ -66,7 +66,7 @@ export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot
         <div className="border-b border-subtle px-5 py-3">
           <CycleAppliedFiltersList
             appliedFilters={currentProjectArchivedFilters ?? {}}
-            handleClearAllFilters={() => clearAllFilters(projectId.toString(), "archived")}
+            handleClearAllFilters={() => clearAllFilters(projectId, "archived")}
             handleRemoveFilter={handleRemoveFilter}
           />
         </div>
@@ -81,7 +81,7 @@ export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot
         </div>
       ) : (
         <div className="relative h-full w-full overflow-auto">
-          <ArchivedCyclesView workspaceSlug={workspaceSlug.toString()} projectId={projectId.toString()} />
+          <ArchivedCyclesView workspaceSlug={workspaceSlug} projectId={projectId} />
         </div>
       )}
     </>

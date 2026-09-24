@@ -62,44 +62,26 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      updateFilters(
-        workspaceSlug.toString(),
-        projectId.toString(),
-        EIssueFilterType.DISPLAY_FILTERS,
-        { layout: layout },
-        viewId.toString()
-      );
+      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, viewId);
     },
     [workspaceSlug, projectId, viewId, updateFilters]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(
-        workspaceSlug.toString(),
-        projectId.toString(),
-        EIssueFilterType.DISPLAY_FILTERS,
-        updatedDisplayFilter,
-        viewId.toString()
-      );
+      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, viewId);
     },
     [workspaceSlug, projectId, viewId, updateFilters]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      updateFilters(
-        workspaceSlug.toString(),
-        projectId.toString(),
-        EIssueFilterType.DISPLAY_PROPERTIES,
-        property,
-        viewId.toString()
-      );
+      updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property, viewId);
     },
     [workspaceSlug, projectId, viewId, updateFilters]
   );
 
-  const viewDetails = getViewById(viewId.toString());
+  const viewDetails = getViewById(viewId);
 
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -124,7 +106,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
     <Header>
       <Header.LeftItem>
         <Breadcrumbs isLoading={loader === "init-loader"}>
-          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
@@ -137,7 +119,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
           <Breadcrumbs.Item
             component={
               <BreadcrumbNavigationSearchDropdown
-                selectedItem={viewId?.toString()}
+                selectedItem={viewId}
                 navigationItems={switcherOptions}
                 onChange={(value: string) => {
                   navigate(`/${workspaceSlug}/projects/${projectId}/views/${value}`);
@@ -210,9 +192,9 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
           <ViewQuickActions
             parentRef={parentRef}
             customClassName="flex-shrink-0 flex items-center justify-center size-[26px] bg-layer-1/70 rounded-sm"
-            projectId={projectId.toString()}
+            projectId={projectId}
             view={viewDetails}
-            workspaceSlug={workspaceSlug.toString()}
+            workspaceSlug={workspaceSlug}
           />
         </div>
       </Header.RightItem>

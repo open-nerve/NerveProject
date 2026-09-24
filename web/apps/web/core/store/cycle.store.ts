@@ -558,7 +558,7 @@ export class CycleStore implements ICycleStore {
         if (currentCycle) set(this.cycleMap, [cycleId, "is_favorite"], true);
       });
       // updating through api.
-      const response = await this.rootStore.favorite.addFavorite(workspaceSlug.toString(), {
+      const response = await this.rootStore.favorite.addFavorite(workspaceSlug, {
         entity_type: "cycle",
         entity_identifier: cycleId,
         project_id: projectId,

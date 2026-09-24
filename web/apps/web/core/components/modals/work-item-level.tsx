@@ -59,12 +59,12 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   const handleCreateIssueSubmit = async (newIssue: TIssue) => {
     if (!workspaceSlug || !newIssue.project_id || !newIssue.id || newIssue.parent_id !== workItemDetails?.id) return;
 
-    await fetchSubWorkItems(workspaceSlug?.toString(), newIssue.project_id, workItemDetails.id);
+    await fetchSubWorkItems(workspaceSlug, newIssue.project_id, workItemDetails.id);
   };
 
   const getCreateIssueModalData = () => {
-    if (cycleId) return { cycle_id: cycleId.toString() };
-    if (moduleId) return { module_ids: [moduleId.toString()] };
+    if (cycleId) return { cycle_id: cycleId };
+    if (moduleId) return { module_ids: [moduleId] };
     return undefined;
   };
 
@@ -82,9 +82,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
           handleClose={() => toggleDeleteIssueModal(false)}
           isOpen={isDeleteIssueModalOpen}
           data={workItemDetails}
-          onSubmit={() =>
-            handleDeleteIssue(workspaceSlug.toString(), workItemDetails.project_id!, workItemId?.toString())
-          }
+          onSubmit={() => handleDeleteIssue(workspaceSlug, workItemDetails.project_id!, workItemId)}
         />
       )}
     </>

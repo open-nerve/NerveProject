@@ -37,7 +37,7 @@ export const ModulesListMobileHeader = observer(function ModulesListMobileHeader
             <CustomMenu.MenuItem
               key={layout.key}
               onClick={() => {
-                updateDisplayFilters(currentProjectDetails!.id.toString(), { layout: layout.key });
+                updateDisplayFilters(currentProjectDetails!.id, { layout: layout.key });
               }}
               className="flex items-center gap-2"
             >

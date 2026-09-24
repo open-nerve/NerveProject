@@ -62,12 +62,10 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const addToFavoritePromise = addModuleToFavorites(workspaceSlug.toString(), projectId.toString(), moduleId).then(
-      () => {
-        // open favorites menu if closed
-        if (!storedValue) toggleFavoriteMenu(true);
-      }
-    );
+    const addToFavoritePromise = addModuleToFavorites(workspaceSlug, projectId, moduleId).then(() => {
+      // open favorites menu if closed
+      if (!storedValue) toggleFavoriteMenu(true);
+    });
 
     setPromiseToast(addToFavoritePromise, {
       loading: "Adding module to favorites...",
@@ -87,11 +85,7 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const removeFromFavoritePromise = removeModuleFromFavorites(
-      workspaceSlug.toString(),
-      projectId.toString(),
-      moduleId
-    );
+    const removeFromFavoritePromise = removeModuleFromFavorites(workspaceSlug, projectId, moduleId);
 
     setPromiseToast(removeFromFavoritePromise, {
       loading: "Removing module from favorites...",
@@ -109,7 +103,7 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
   const handleModuleDetailsChange = async (payload: Partial<IModule>) => {
     if (!workspaceSlug || !projectId) return;
 
-    await updateModuleDetails(workspaceSlug.toString(), projectId.toString(), moduleId, payload)
+    await updateModuleDetails(workspaceSlug, projectId, moduleId, payload)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -185,8 +179,8 @@ export const ModuleListItemAction = observer(function ModuleListItemAction(props
           <ModuleQuickActions
             parentRef={parentRef}
             moduleId={moduleId}
-            projectId={projectId.toString()}
-            workspaceSlug={workspaceSlug.toString()}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
           />
         </div>
       )}

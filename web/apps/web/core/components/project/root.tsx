@@ -54,7 +54,7 @@ export const ProjectRoot = observer(function ProjectRoot() {
       if (!value) newValues = [];
       else newValues = newValues.filter((val) => val !== value);
 
-      updateFilters(workspaceSlug.toString(), { [key]: newValues });
+      updateFilters(workspaceSlug, { [key]: newValues });
     },
     [currentWorkspaceFilters, updateFilters, workspaceSlug]
   );
@@ -62,16 +62,16 @@ export const ProjectRoot = observer(function ProjectRoot() {
   const handleRemoveDisplayFilter = useCallback(
     (key: TProjectAppliedDisplayFilterKeys) => {
       if (!workspaceSlug) return;
-      updateDisplayFilters(workspaceSlug.toString(), { [key]: false });
+      updateDisplayFilters(workspaceSlug, { [key]: false });
     },
     [updateDisplayFilters, workspaceSlug]
   );
 
   const handleClearAllFilters = useCallback(() => {
     if (!workspaceSlug) return;
-    clearAllFilters(workspaceSlug.toString());
-    clearAllAppliedDisplayFilters(workspaceSlug.toString());
-    if (isArchived) updateDisplayFilters(workspaceSlug.toString(), { archived_projects: true });
+    clearAllFilters(workspaceSlug);
+    clearAllAppliedDisplayFilters(workspaceSlug);
+    if (isArchived) updateDisplayFilters(workspaceSlug, { archived_projects: true });
   }, [clearAllFilters, clearAllAppliedDisplayFilters, workspaceSlug]);
 
   useEffect(() => {

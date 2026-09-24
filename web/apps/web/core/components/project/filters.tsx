@@ -65,7 +65,7 @@ const HeaderFilters = observer(function HeaderFilters({
         }
       }
 
-      updateFilters(workspaceSlug.toString(), { [key]: newValues });
+      updateFilters(workspaceSlug, { [key]: newValues });
     },
     [filters, updateFilters, workspaceSlug]
   );
@@ -77,7 +77,7 @@ const HeaderFilters = observer(function HeaderFilters({
         value={displayFilters?.order_by}
         onChange={(val) => {
           if (!workspaceSlug || val === displayFilters?.order_by) return;
-          updateDisplayFilters(workspaceSlug.toString(), {
+          updateDisplayFilters(workspaceSlug, {
             order_by: val,
           });
         }}
@@ -97,7 +97,7 @@ const HeaderFilters = observer(function HeaderFilters({
             handleFiltersUpdate={handleFilters}
             handleDisplayFiltersUpdate={(val) => {
               if (!workspaceSlug) return;
-              updateDisplayFilters(workspaceSlug.toString(), val);
+              updateDisplayFilters(workspaceSlug, val);
             }}
             memberIds={workspaceMemberIds ?? undefined}
           />

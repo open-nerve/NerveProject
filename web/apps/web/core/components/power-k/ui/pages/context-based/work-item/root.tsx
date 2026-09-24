@@ -36,7 +36,7 @@ export const PowerKWorkItemContextBasedPages = observer(function PowerKWorkItemC
     project: { getProjectMemberIds },
   } = useMember();
   // derived values
-  const entityId = entityIdentifier ? getIssueIdByIdentifier(entityIdentifier.toString()) : null;
+  const entityId = entityIdentifier ? getIssueIdByIdentifier(entityIdentifier) : null;
   const entityDetails = entityId ? getIssueById(entityId) : null;
   const projectMemberIds = entityDetails?.project_id ? getProjectMemberIds(entityDetails.project_id, false) : [];
 

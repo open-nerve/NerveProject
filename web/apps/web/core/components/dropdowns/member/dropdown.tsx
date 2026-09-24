@@ -40,7 +40,7 @@ export const MemberDropdown = observer(function MemberDropdown(props: TMemberDro
       : workspaceMemberIds;
 
   const onDropdownOpen = () => {
-    if (!memberIds && projectId && workspaceSlug) fetchProjectMembers(workspaceSlug.toString(), projectId);
+    if (!memberIds && projectId && workspaceSlug) fetchProjectMembers(workspaceSlug, projectId);
   };
 
   return (

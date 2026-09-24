@@ -31,7 +31,7 @@ export const CyclePeekOverview = observer(function CyclePeekOverview(props: Prop
   // store hooks
   const { getCycleById, fetchCycleDetails, fetchArchivedCycleDetails } = useCycle();
   // derived values
-  const cycleDetails = peekCycle ? getCycleById(peekCycle.toString()) : undefined;
+  const cycleDetails = peekCycle ? getCycleById(peekCycle) : undefined;
   const projectId = propsProjectId || cycleDetails?.project_id;
 
   const handleClose = () => {
@@ -41,8 +41,8 @@ export const CyclePeekOverview = observer(function CyclePeekOverview(props: Prop
 
   useEffect(() => {
     if (!peekCycle || !projectId) return;
-    if (isArchived) fetchArchivedCycleDetails(workspaceSlug, projectId, peekCycle.toString());
-    else fetchCycleDetails(workspaceSlug, projectId, peekCycle.toString());
+    if (isArchived) fetchArchivedCycleDetails(workspaceSlug, projectId, peekCycle);
+    else fetchCycleDetails(workspaceSlug, projectId, peekCycle);
   }, [fetchArchivedCycleDetails, fetchCycleDetails, isArchived, peekCycle, projectId, workspaceSlug]);
 
   return (

@@ -52,7 +52,7 @@ export const ArchivedCyclesHeader = observer(function ArchivedCyclesHeader() {
         else newValues.push(value);
       }
 
-      updateFilters(projectId.toString(), { [key]: newValues }, "archived");
+      updateFilters(projectId, { [key]: newValues }, "archived");
     },
     [currentProjectArchivedFilters, projectId, updateFilters]
   );

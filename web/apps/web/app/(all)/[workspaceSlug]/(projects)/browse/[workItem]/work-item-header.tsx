@@ -34,17 +34,17 @@ export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader(pro
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
   // derived values
-  const issueId = getIssueIdByIdentifier(workItem?.toString());
-  const issueDetails = issueId ? getIssueById(issueId.toString()) : undefined;
+  const issueId = getIssueIdByIdentifier(workItem);
+  const issueDetails = issueId ? getIssueById(issueId) : undefined;
   const projectId = issueDetails ? issueDetails?.project_id : undefined;
-  const projectDetails = projectId ? getProjectById(projectId?.toString()) : undefined;
+  const projectDetails = projectId ? getProjectById(projectId) : undefined;
 
   if (!projectId || !issueId) return null;
   return (
     <Header>
       <Header.LeftItem>
         <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
-          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
@@ -65,11 +65,7 @@ export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader(pro
       </Header.LeftItem>
       <Header.RightItem>
         {projectId && issueId && (
-          <IssueDetailQuickActions
-            workspaceSlug={workspaceSlug?.toString()}
-            projectId={projectId?.toString()}
-            issueId={issueId?.toString()}
-          />
+          <IssueDetailQuickActions workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
         )}
       </Header.RightItem>
     </Header>

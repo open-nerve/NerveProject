@@ -39,7 +39,7 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
   const { t } = useTranslation();
 
   const searchedProjectMembers = (projectMemberIds ?? []).filter((userId) => {
-    const memberDetails = projectId ? getFilteredProjectMemberDetails(userId, projectId.toString()) : null;
+    const memberDetails = projectId ? getFilteredProjectMemberDetails(userId, projectId) : null;
 
     if (!memberDetails?.member || !memberDetails.original_role) return false;
 
@@ -50,7 +50,7 @@ export const ProjectMemberList = observer(function ProjectMemberList(props: TPro
   });
 
   const memberDetails = searchedProjectMembers?.map((memberId) =>
-    projectId ? getFilteredProjectMemberDetails(memberId, projectId.toString()) : null
+    projectId ? getFilteredProjectMemberDetails(memberId, projectId) : null
   );
 
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);

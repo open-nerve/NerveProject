@@ -70,7 +70,7 @@ export function CreateWebhookModal(props: ICreateWebhookModal) {
         issue_comment: formData.issue_comment ?? false,
       };
 
-    await createWebhook(workspaceSlug.toString(), payload)
+    await createWebhook(workspaceSlug, payload)
       .then(({ webHook, secretKey }) => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

@@ -52,7 +52,7 @@ export class FileService extends APIService {
           fileUploadPayload,
           uploadProgressHandler
         );
-        await this.updateWorkspaceAssetUploadStatus(workspaceSlug.toString(), signedURLResponse.asset_id);
+        await this.updateWorkspaceAssetUploadStatus(workspaceSlug, signedURLResponse.asset_id);
         return signedURLResponse;
       })
       .catch((error) => {

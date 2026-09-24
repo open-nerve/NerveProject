@@ -29,7 +29,7 @@ export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueCo
 
   const redirectToIssueDetail = () => {
     navigate(
-      `/${workspaceSlug?.toString()}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}issues/${issue.id}#sub-issues`
+      `/${workspaceSlug}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}issues/${issue.id}#sub-issues`
     );
   };
 

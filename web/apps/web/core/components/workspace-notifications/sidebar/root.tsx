@@ -40,7 +40,7 @@ export const NotificationsSidebarRoot = observer(function NotificationsSidebarRo
 
   const { t } = useTranslation();
   // derived values
-  const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug.toString()) : undefined;
+  const workspace = workspaceSlug ? getWorkspaceBySlug(workspaceSlug) : undefined;
   const notificationIds = workspace ? notificationIdsByWorkspaceId(workspace.id) : undefined;
 
   const handleTabClick = useCallback(
@@ -63,7 +63,7 @@ export const NotificationsSidebarRoot = observer(function NotificationsSidebarRo
     >
       <div className="relative flex h-full w-full flex-col">
         <Row className="flex h-header flex-shrink-0 border-b border-subtle">
-          <NotificationSidebarHeader workspaceSlug={workspaceSlug.toString()} />
+          <NotificationSidebarHeader workspaceSlug={workspaceSlug} />
         </Row>
 
         <Header variant={EHeaderVariant.SECONDARY} className="justify-start">
@@ -96,7 +96,7 @@ export const NotificationsSidebarRoot = observer(function NotificationsSidebarRo
         </Header>
 
         {/* applied filters */}
-        <AppliedFilters workspaceSlug={workspaceSlug.toString()} />
+        <AppliedFilters workspaceSlug={workspaceSlug} />
 
         {/* rendering notifications */}
         {loader === "init-loader" ? (
@@ -107,7 +107,7 @@ export const NotificationsSidebarRoot = observer(function NotificationsSidebarRo
           <>
             {notificationIds && notificationIds.length > 0 ? (
               <ContentWrapper variant={ERowVariant.HUGGING}>
-                <NotificationCardListRoot workspaceSlug={workspaceSlug.toString()} workspaceId={workspace?.id} />
+                <NotificationCardListRoot workspaceSlug={workspaceSlug} workspaceId={workspace?.id} />
               </ContentWrapper>
             ) : (
               <div className="relative flex h-full w-full items-center justify-center">

@@ -34,7 +34,7 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
   const { toggleProfileSidebar, profileSidebarCollapsed } = useAppTheme();
   const { data: currentUser } = useUser();
   const { workspaceUserInfo, allowPermissions } = useUserPermissions();
-  const { member } = useProfileMember(workspaceSlug?.toString() ?? "", userId?.toString() ?? "");
+  const { member } = useProfileMember(workspaceSlug ?? "", userId ?? "");
   const { t } = useTranslation();
   // derived values
   const isAuthorized = allowPermissions(

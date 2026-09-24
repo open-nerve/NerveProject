@@ -50,9 +50,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
   // pathname
   const { pathname } = useLocation();
   // derived values
-  const workItemId = workItemIdentifierFromRoute
-    ? getIssueIdByIdentifier(workItemIdentifierFromRoute?.toString())
-    : undefined;
+  const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
   const project = getPartialProjectById(projectId);
   // handlers

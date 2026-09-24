@@ -47,7 +47,7 @@ export const CyclesListHeader = observer(function CyclesListHeader(props: TProps
     <Header>
       <Header.LeftItem>
         <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
-          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink

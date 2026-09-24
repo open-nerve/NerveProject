@@ -24,7 +24,7 @@ export const KanBanLayout = observer(function KanBanLayout() {
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       projectId
     );
 

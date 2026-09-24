@@ -26,16 +26,16 @@ export const useContextIndicator = (args: TArgs): string | null => {
 
   switch (activeContext) {
     case "work-item": {
-      indicator = workItemIdentifier ? workItemIdentifier.toString() : null;
+      indicator = workItemIdentifier ? workItemIdentifier : null;
       break;
     }
     case "cycle": {
-      const cycleDetails = cycleId ? getCycleById(cycleId.toString()) : null;
+      const cycleDetails = cycleId ? getCycleById(cycleId) : null;
       indicator = cycleDetails?.name;
       break;
     }
     case "module": {
-      const moduleDetails = moduleId ? getModuleById(moduleId.toString()) : null;
+      const moduleDetails = moduleId ? getModuleById(moduleId) : null;
       indicator = moduleDetails?.name;
       break;
     }

@@ -25,7 +25,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const { t } = useTranslation();
   // router
   const { workspaceSlug, userId: routeUserId } = useParams();
-  const userId = routeUserId ? routeUserId.toString() : undefined;
+  const userId = routeUserId ? routeUserId : undefined;
   // store hook
   const {
     issuesFilter: { issueFilters, updateFilters },
@@ -36,7 +36,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug.toString(), undefined, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, userId);
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );
@@ -44,13 +44,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(
-        workspaceSlug.toString(),
-        undefined,
-        EIssueFilterType.DISPLAY_FILTERS,
-        updatedDisplayFilter,
-        userId
-      );
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );
@@ -58,7 +52,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug.toString(), undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );

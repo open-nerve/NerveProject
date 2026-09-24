@@ -67,7 +67,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   const issueRef = useRef<HTMLDivElement | null>(null);
   // router
   const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
+  const workspaceSlug = routerWorkspaceSlug;
   // hooks
   const { sidebarCollapsed: isSidebarCollapsed } = useAppTheme();
   const { getProjectIdentifierById, currentProjectNextSequenceId } = useProject();
@@ -130,7 +130,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
     } else {
       setExpanded((prevState) => {
         if (!prevState && workspaceSlug && issue && issue.project_id)
-          subIssuesStore.fetchSubIssues(workspaceSlug.toString(), issue.project_id, issue.id);
+          subIssuesStore.fetchSubIssues(workspaceSlug, issue.project_id, issue.id);
         return !prevState;
       });
     }

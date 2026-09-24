@@ -100,20 +100,15 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
   ) => {
     if (!issueId || !destinationDate || !sourceDate || !issueProjectId) return;
 
-    await handleDragDrop(
-      issueId,
-      sourceDate,
-      destinationDate,
-      workspaceSlug?.toString(),
-      issueProjectId,
-      updateIssue
-    ).catch((err) => {
-      setToast({
-        title: "Error!",
-        type: TOAST_TYPE.ERROR,
-        message: err?.detail ?? "Failed to perform this action",
-      });
-    });
+    await handleDragDrop(issueId, sourceDate, destinationDate, workspaceSlug, issueProjectId, updateIssue).catch(
+      (err) => {
+        setToast({
+          title: "Error!",
+          type: TOAST_TYPE.ERROR,
+          message: err?.detail ?? "Failed to perform this action",
+        });
+      }
+    );
   };
 
   const loadMoreIssues = useCallback(

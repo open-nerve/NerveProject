@@ -81,7 +81,7 @@ export const BaseSpreadsheetRoot = observer(function BaseSpreadsheetRoot(props: 
 
   const handleDisplayFiltersUpdate = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      updateFilters(projectId?.toString() ?? "", EIssueFilterType.DISPLAY_FILTERS, {
+      updateFilters(projectId ?? "", EIssueFilterType.DISPLAY_FILTERS, {
         ...updatedDisplayFilter,
       });
     },

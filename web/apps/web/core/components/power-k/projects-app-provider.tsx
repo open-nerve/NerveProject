@@ -41,7 +41,7 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
   // derived values
-  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier.toString()) : undefined;
+  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier) : undefined;
   const workItemDetails = workItemId ? getIssueById(workItemId) : undefined;
   const projectId = routerProjectId ?? workItemDetails?.project_id ?? undefined;
   const commands = useProjectsAppPowerKCommands();
@@ -78,11 +78,9 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
   return (
     <>
       <GlobalShortcutsProvider context={context} commands={commands} />
-      {workspaceSlug && <WorkspaceLevelModals workspaceSlug={workspaceSlug.toString()} />}
-      {workspaceSlug && projectId && (
-        <ProjectLevelModals workspaceSlug={workspaceSlug.toString()} projectId={projectId.toString()} />
-      )}
-      <WorkItemLevelModals workItemIdentifier={workItemIdentifier?.toString()} />
+      {workspaceSlug && <WorkspaceLevelModals workspaceSlug={workspaceSlug} />}
+      {workspaceSlug && projectId && <ProjectLevelModals workspaceSlug={workspaceSlug} projectId={projectId} />}
+      <WorkItemLevelModals workItemIdentifier={workItemIdentifier} />
       <ProjectsAppPowerKModalWrapper
         commandsListComponent={ProjectsAppPowerKCommandsList}
         context={context}

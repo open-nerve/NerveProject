@@ -35,15 +35,15 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
   // store hooks
   const { currentProjectDetails, loader } = useProject();
 
-  const { data: issueDetails } = useSWR(ISSUE_DETAILS(archivedIssueId.toString()), () =>
-    issueService.retrieve(workspaceSlug.toString(), projectId.toString(), archivedIssueId.toString())
+  const { data: issueDetails } = useSWR(ISSUE_DETAILS(archivedIssueId), () =>
+    issueService.retrieve(workspaceSlug, projectId, archivedIssueId)
   );
 
   return (
     <Header>
       <Header.LeftItem>
         <Breadcrumbs isLoading={loader === "init-loader"}>
-          <ProjectBreadcrumb workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <ProjectBreadcrumb workspaceSlug={workspaceSlug} projectId={projectId} />
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
@@ -76,11 +76,7 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
         </Breadcrumbs>
       </Header.LeftItem>
       <Header.RightItem>
-        <IssueDetailQuickActions
-          workspaceSlug={workspaceSlug.toString()}
-          projectId={projectId.toString()}
-          issueId={archivedIssueId.toString()}
-        />
+        <IssueDetailQuickActions workspaceSlug={workspaceSlug} projectId={projectId} issueId={archivedIssueId} />
       </Header.RightItem>
     </Header>
   );

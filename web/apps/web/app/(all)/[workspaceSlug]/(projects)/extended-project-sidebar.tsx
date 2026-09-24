@@ -60,7 +60,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
 
     const updatedSortOrder = orderJoinedProjects(sourceIndex, destinationIndex, sourceId, joinedProjectsList);
     if (updatedSortOrder != undefined)
-      updateProjectView(workspaceSlug.toString(), sourceId, { sort_order: updatedSortOrder }).catch(() => {
+      updateProjectView(workspaceSlug, sourceId, { sort_order: updatedSortOrder }).catch(() => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: t("error"),
@@ -100,7 +100,7 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
           setToFavorite={false}
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
         />
       )}
       <ExtendedSidebarWrapper

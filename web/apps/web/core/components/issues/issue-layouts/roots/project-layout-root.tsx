@@ -42,8 +42,8 @@ function ProjectIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined
 export const ProjectLayoutRoot = observer(function ProjectLayoutRoot() {
   // router
   const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
+  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
+  const projectId = routerProjectId ? routerProjectId : undefined;
   // hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
   // derived values

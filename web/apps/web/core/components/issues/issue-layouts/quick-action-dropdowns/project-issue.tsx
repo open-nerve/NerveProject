@@ -61,7 +61,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       issue.project_id ?? undefined
     ) && !readOnly;
   const isArchivingAllowed = handleArchive && isEditingAllowed;
@@ -80,7 +80,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug: workspaceSlug,
     projectIdentifier,
     activeLayout,
     isEditingAllowed,

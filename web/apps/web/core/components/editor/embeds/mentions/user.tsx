@@ -33,7 +33,7 @@ export const EditorUserMention = observer(function EditorUserMention(props: Prop
   } = useMember();
   // derived values
   const userDetails = getUserDetails(id);
-  const roleDetails = projectId ? getProjectMemberDetails(id, projectId.toString())?.role : null;
+  const roleDetails = projectId ? getProjectMemberDetails(id, projectId)?.role : null;
   const profileLink = `/${workspaceSlug}/profile/${id}`;
 
   if (!userDetails) {

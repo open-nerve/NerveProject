@@ -33,10 +33,10 @@ export const ArchivedModuleLayoutRoot = observer(function ArchivedModuleLayoutRo
   const totalArchivedModules = projectArchivedModuleIds?.length ?? 0;
 
   useSWR(
-    workspaceSlug && projectId ? `ARCHIVED_MODULES_${workspaceSlug.toString()}_${projectId.toString()}` : null,
+    workspaceSlug && projectId ? `ARCHIVED_MODULES_${workspaceSlug}_${projectId}` : null,
     async () => {
       if (workspaceSlug && projectId) {
-        await fetchArchivedModules(workspaceSlug.toString(), projectId.toString());
+        await fetchArchivedModules(workspaceSlug, projectId);
       }
     },
     { revalidateIfStale: false, revalidateOnFocus: false }
@@ -50,7 +50,7 @@ export const ArchivedModuleLayoutRoot = observer(function ArchivedModuleLayoutRo
       if (!value) newValues = [];
       else newValues = newValues.filter((val) => val !== value);
 
-      updateFilters(projectId.toString(), { [key]: newValues }, "archived");
+      updateFilters(projectId, { [key]: newValues }, "archived");
     },
     [currentProjectArchivedFilters, projectId, updateFilters]
   );
@@ -67,7 +67,7 @@ export const ArchivedModuleLayoutRoot = observer(function ArchivedModuleLayoutRo
         <div className="border-b border-subtle px-5 py-3">
           <ModuleAppliedFiltersList
             appliedFilters={currentProjectArchivedFilters ?? {}}
-            handleClearAllFilters={() => clearAllFilters(projectId.toString(), "archived")}
+            handleClearAllFilters={() => clearAllFilters(projectId, "archived")}
             handleRemoveFilter={handleRemoveFilter}
             alwaysAllowEditing
             isArchived
@@ -84,7 +84,7 @@ export const ArchivedModuleLayoutRoot = observer(function ArchivedModuleLayoutRo
         </div>
       ) : (
         <div className="relative h-full w-full overflow-auto">
-          <ArchivedModulesView workspaceSlug={workspaceSlug.toString()} projectId={projectId.toString()} />
+          <ArchivedModulesView workspaceSlug={workspaceSlug} projectId={projectId} />
         </div>
       )}
     </>

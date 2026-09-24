@@ -1047,7 +1047,7 @@
         ],
         "miss": [
           "                    multiple",
-          "    await bulkAddMembersToProject(workspaceSlug.toString(), projectId.toString(), payload)",
+          "    await bulkAddMembersToProject(workspaceSlug, projectId, payload)",
           "  updateBulkFilters: (filters: Partial<TNotificationFilter>) => void;",
           "  markAllNotificationsAsRead: (workspaceId: string) => Promise<void>;"
         ],

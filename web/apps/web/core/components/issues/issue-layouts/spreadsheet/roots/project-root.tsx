@@ -25,7 +25,7 @@ export const ProjectSpreadsheetLayout = observer(function ProjectSpreadsheetLayo
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       projectId
     );
 

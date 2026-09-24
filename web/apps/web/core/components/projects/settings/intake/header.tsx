@@ -74,8 +74,8 @@ export const ProjectInboxHeader = observer(function ProjectInboxHeader() {
         {currentProjectDetails?.inbox_view && isAuthorized ? (
           <div className="flex items-center gap-2">
             <InboxIssueCreateModalRoot
-              workspaceSlug={workspaceSlug.toString()}
-              projectId={projectId.toString()}
+              workspaceSlug={workspaceSlug}
+              projectId={projectId}
               modalState={createIssueModal}
               handleModalClose={() => setCreateIssueModal(false)}
             />
