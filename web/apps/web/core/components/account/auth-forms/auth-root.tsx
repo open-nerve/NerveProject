@@ -13,7 +13,6 @@ import { Banner } from "@makeplane/propel/components/banner";
 import type { EAuthModes, EAuthenticationErrorCodes, TAuthErrorInfo } from "@/helpers/authentication.helper";
 import { authErrorHandler } from "@/helpers/authentication.helper";
 // local imports
-import { TermsAndConditions } from "../terms-and-conditions";
 import { AuthHeader } from "./auth-header";
 import { AuthPasswordForm } from "./password";
 
@@ -57,7 +56,6 @@ export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
           authMode={authMode}
         />
         <AuthPasswordForm mode={authMode} email={emailParam ?? ""} nextPath={nextPath || undefined} />
-        <TermsAndConditions authType={authMode} />
       </div>
     </div>
   );

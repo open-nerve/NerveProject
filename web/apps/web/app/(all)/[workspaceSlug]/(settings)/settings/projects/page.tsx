@@ -5,11 +5,9 @@
  */
 
 import { observer } from "mobx-react";
-import { Link } from "react-router";
 import { useTheme } from "next-themes";
 // nerve imports
-import { Button, getButtonStyling } from "@nerve/propel/button";
-import { cn } from "@nerve/utils";
+import { Button } from "@nerve/propel/button";
 // assets
 import ProjectDarkEmptyState from "@/app/assets/empty-state/project-settings/no-projects-dark.png?url";
 import ProjectLightEmptyState from "@/app/assets/empty-state/project-settings/no-projects-light.png?url";
@@ -30,12 +28,7 @@ function ProjectSettingsPage() {
         Projects act as the foundation for goal-driven work. They let you manage your teams, tasks, and everything you
         need to get things done.
       </div>
-      <div className="flex gap-2">
-        <Link to="https://plane.so/" target="_blank" className={cn(getButtonStyling("secondary", "base"))}>
-          Learn more about projects
-        </Link>
-        <Button onClick={() => toggleCreateProjectModal(true)}>Start your first project</Button>
-      </div>
+      <Button onClick={() => toggleCreateProjectModal(true)}>Start your first project</Button>
     </div>
   );
 }

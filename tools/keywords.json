@@ -1371,7 +1371,7 @@
     {
       "id": "integrations",
       "phase": "M1/P3",
-      "why": "集成、导入器和本地缓存（M1 设计 2.2、7.4 的死代码一行，P2 评审裁定 10）：集成设置、GitHub 同步、Slack 和应用安装、Jira 等导入器、从 CSV 导入成员、注释掉的 IndexedDB 缓存，以及保留地址中的 silo（Plane 的导入服务）。设计中的 app-installation 写成 app[-_]?installation：Plane 的写法是 AppInstallationService 和 app_installation.service；github-repository、app 安装在本 Phase 开始时已没有命中，命中样本取自 P2 删除之前的代码。不搜单独的 github：保留的\"在 GitHub 上加星\"链接",
+      "why": "集成、导入器和本地缓存（M1 设计 2.2、7.4 的死代码一行，P2 评审裁定 10）：集成设置、GitHub 同步、Slack 和应用安装、Jira 等导入器、从 CSV 导入成员、注释掉的 IndexedDB 缓存，以及保留地址中的 silo（Plane 的导入服务）。设计中的 app-installation 写成 app[-_]?installation：Plane 的写法是 AppInstallationService 和 app_installation.service；github-repository、app 安装在本 Phase 开始时已没有命中，命中样本取自 P2 删除之前的代码。不搜单独的 github：保留的 REPOSITORY_URL（Nerve 在 GitHub 上的仓库，帮助菜单和命令面板的文档、问题反馈指向它）、链接的 GitHub 图标和编辑器的 GitHub 表情",
       "files": {
         "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
         "flags": ""
@@ -1393,8 +1393,8 @@
           "  \"silo\","
         ],
         "miss": [
-          "import githubBlackImage from \"@/app/assets/logos/github-black.png?url\";",
-          "    \"star_us_on_github\": \"Star us on GitHub\""
+          "import { DocumentationOutline, Github, RocketOutline } from \"@makeplane/propel/icons\";",
+          "export const REPOSITORY_URL = \"https://github.com/open-nerve/NerveProject\";"
         ],
         "files": {
           "hit": [

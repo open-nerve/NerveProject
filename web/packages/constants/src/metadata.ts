@@ -5,6 +5,8 @@
  */
 
 export const SITE_NAME = "Nerve";
+/** Nerve's source repository: its documentation and its issue tracker. */
+export const REPOSITORY_URL = "https://github.com/open-nerve/NerveProject";
 export const SITE_DESCRIPTION =
   "Open-source project management tool to manage work items, cycles, and product roadmaps easily";
 export const SITE_KEYWORDS =
