@@ -83,7 +83,7 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
       flag: "visited_workspace",
       cta: {
         text: "home.empty.configure_workspace.cta",
-        link: "settings",
+        link: `/${workspaceSlug}/settings`,
         disabled: !isWorkspaceAdmin,
       },
     },

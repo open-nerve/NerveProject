@@ -121,7 +121,7 @@ const targetsIn = (file: string): TTarget[] => {
 
 const sourceFiles = ["app", "core", "helpers"].flatMap((directory) =>
   readdirSync(join(appDirectory, directory), { recursive: true, encoding: "utf8" })
-    .filter((file) => /\.tsx?$/.test(file) && !/\.(test|d)\.ts$/.test(file))
+    .filter((file) => /\.tsx?$/.test(file) && !/\.(test|spec)\.tsx?$/.test(file) && !file.endsWith(".d.ts"))
     .map((file) => join(directory, file))
 );
 

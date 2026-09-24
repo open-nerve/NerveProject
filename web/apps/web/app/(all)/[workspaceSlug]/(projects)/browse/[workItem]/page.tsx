@@ -78,7 +78,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
 
   useEffect(() => {
     if (data?.is_intake) {
-      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake?currentTab=open&inboxIssueId=${data?.id}`, {
+      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake?currentTab=open&inboxIssueId=${data.id}`, {
         replace: true,
       });
     }
