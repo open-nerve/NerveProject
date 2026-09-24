@@ -28,4 +28,14 @@ created: 2026-09-24
 
 `app/root.tsx` 的 `og:image`、`twitter:image` 是相对地址（基线如此），抓取分享预览的一方不会解析相对地址。有了公开地址（或实例配置的站点地址）之后写成绝对地址。
 
+## 关闭条件
+
+M8 发布之前：
+
+- propel 的对应源码随 Nerve 的源码一起提供（取得那个提交的源码，或者从 source map 还原并补上缺的文件），前端改动清单第一节写明出处；
+- 版本号与 `Makefile` 的 `VERSION` 同源，`version-number.tsx` 只取 `version`；
+- `og:image`、`twitter:image` 是绝对地址。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P5 评审记录](../../M1-frontend-trim/reviews/P5-brand-review.md)第 7 节，[P5 spec](../../M1-frontend-trim/specs/P5-brand.md) 7.1。

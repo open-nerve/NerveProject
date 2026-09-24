@@ -51,7 +51,7 @@ make          # 查看所有命令
   - `make gen-go`：Go 接口层（`server/internal/modules/<模块>/adapter/http/gen/`、`server/internal/platform/httpserver/apigen/`），只需要 Go。
   - `make gen-web`：打包好的 `api/dist/openapi.yaml`，以及 TS 客户端 `web/packages/api-client` 的类型，需要 Node（先执行 `pnpm install`）。
 - 生成的文件不要手改。`make gen-check` 会重新生成一遍，检查生成物已经提交、没有差异；持续集成也执行这项检查。
-- `make lint` 依次执行 `make lint-go`（golangci-lint）和 `make lint-web`（关键词守卫，前端的类型检查、oxlint 警告数核对、格式检查、中英文翻译键一致性检查，以及 `tools/` 下脚本的 lint 和格式检查）。
+- `make lint` 依次执行 `make lint-go`（golangci-lint）和 `make lint-web`（关键词守卫，前端的类型检查、oxlint 警告数核对、格式检查、中英文翻译键一致性检查，以及 `tools/` 下脚本的 lint、`tools/` 和根目录配置文件的格式检查）。
 
 ## 前端
 
@@ -64,7 +64,7 @@ make          # 查看所有命令
 - **清掉旧的构建产物**：`make build` 之后，`make run` 和 `go test` 都会继续内嵌这份构建。要去掉它：`find server/internal/platform/webui/dist -mindepth 1 ! -name .gitkeep -delete`（与 Makefile 里 `make build` 自己的清理命令相同）。
 - **M0 中看到的页面**：前端还在调用 Plane 的接口（例如 `/api/instances/`），Nerve 返回 404，页面显示"Looks like Nerve didn't start up correctly!"。这是预期的，前端从 M2 起对接 Nerve 的接口。
 - **lint 警告数等于上限**：每个包的 `check:lint` 脚本是 `node <到仓库根目录的相对路径>/tools/lint-cap.mjs <上限>`，它运行 oxlint，要求警告数正好等于上限，有任何错误都失败。警告多了，`make lint-web` 失败并列出这个包的全部警告：修掉新增的那几条，上限只能调低。警告少了（修掉了警告，或者删掉了带警告的代码），同样失败，并给出应调低到的数值：在同一个提交里把上限改成这个数。`make lint-web` 只打印失败任务的输出；要看某个包的全部警告，执行 `pnpm --filter <包名> exec oxlint .`。
-- **关键词守卫**：`make lint-web` 的第一步是 `node tools/keywords.mjs`，规则在 `tools/keywords.json`（M1 设计 7.4）。它检查 git 列出的文件（包括还没 `git add` 的新文件），命中规则、又没有登记例外就失败，并列出规则、文件、行号和命中的原文；规则或文件读取有问题时以 2 退出。删掉一个功能时，在同一个提交里加上它的规则（每条规则带理由和命中、不命中的样本）。确实要保留的命中登记为例外：规则、文件、命中的原文、理由和到期的 M 或 Phase，一条例外只覆盖一处；例外不再命中任何内容时守卫会提醒删掉它。`tools/` 下的脚本本身也由 `make lint-web` 检查：oxlint 不允许警告，oxfmt 检查格式（根目录 `package.json` 的 `check:lint`、`check:format`）。
+- **关键词守卫**：`make lint-web` 的第一步是 `node tools/keywords.mjs`，规则在 `tools/keywords.json`（M1 设计 7.4）。它检查 git 列出的文件（包括还没 `git add` 的新文件），命中规则、又没有登记例外就失败，并列出规则、文件、行号和命中的原文；规则或文件读取有问题时以 2 退出。删掉一个功能时，在同一个提交里加上它的规则（每条规则带理由和命中、不命中的样本）。确实要保留的命中登记为例外：规则、文件、命中的原文、理由和到期的 M 或 Phase，一条例外只覆盖一处；例外不再命中任何内容时守卫会提醒删掉它。`tools/` 下的脚本本身也由 `make lint-web` 检查：oxlint 不允许警告，oxfmt 检查格式；根目录的工具链配置（`package.json`、`pnpm-workspace.yaml`、`turbo.json`、`knip.jsonc`、`.oxlintrc.json`、`.oxfmtrc.json`）也检查格式（根目录 `package.json` 的 `check:lint`、`check:format`）。
 - **修格式**：`pnpm exec turbo run fix:format` 用 oxfmt 就地格式化所有包。
 - **多语言**：只有 `en` 和 `zh-CN`（`web/packages/i18n/src/locales/`）。两种语言的命名空间文件和键必须完全一致，同一个键不能出现在两个命名空间里，`make lint-web` 检查（i18n 包的 `check:sync`）；加、删文案时两种语言一起改。本地存储或用户资料中的其他语言按英文处理。
 - **未使用的代码**：`make knip` 先生成 web 的路由类型，再用 knip 检查未使用的文件、导出和依赖，配置在 `knip.jsonc`。它是门禁（M1/P3 清零之后）：有任何未使用的代码，或配置本身过时，都会失败。持续集成的 `web` 任务执行它。

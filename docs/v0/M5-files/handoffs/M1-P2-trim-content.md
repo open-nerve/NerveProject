@@ -14,4 +14,10 @@ M1/P2 删掉了文档页（Task 7）。M5 设计文件资源的接口和表时�
 
 `EFileAssetType`（`web/packages/types/src/enums.ts`）里保留的类型仍按原样使用：工作项描述、草稿描述、评论描述、工作项附件、项目封面、用户头像与封面、工作区 logo 等。其中团队空间、Initiative 这类企业版类型由 M1/P3 删除。
 
+## 关闭条件
+
+M5 合并时：文件资源的接口没有 `PAGE_DESCRIPTION` 类型，表里没有 `page_id` 列（或在 review 里写明保留它的理由）。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。

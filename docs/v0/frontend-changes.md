@@ -101,6 +101,26 @@
 | Nerve 在迁入之后新写的 12 个文件（测试、测试配置、`use-profile-member.ts`） | 版权声明从 Plane 的改为 `Copyright (c) 2026-present OpenNerve` 和 `SPDX-License-Identifier: AGPL-3.0-only`；迁入后新增、但内容来自 Plane 代码的 6 个文件保留 Plane 的声明 | 按实际来源标注（M1 设计 5） |
 | `tools/keywords.json` | 新增规则 `plane-package`、`brand`、`brand-files`，例外 1 条（`pnpm-workspace.yaml` 里记录来源的 3 行注释，到 M9）；顶层 `phase` 改为 `M1/P5`；三条旧规则的不命中样本原来引用本 Phase 删除或改名的代码（`deploy-files` 的 `public/manifest.json`，`integrations` 的 GitHub 图片导入和 "Star us on GitHub" 文案，`changelog` 的 `PlaneVersionNumber` 导入），改为引用保留的代码，`integrations` 的说明随之改正 | 删掉的东西不再长回来（M1 设计 7.4）；不命中样本要引用保留的代码 |
 
+### 1.6 收尾（M1/closeout）
+
+没有删除产品功能；删掉的是从不渲染、没有读取方的代码和资源（第二节最后两行）。详见 [M1 收尾 spec](M1-frontend-trim/specs/closeout.md)。
+
+| 位置 | 改动 | 原因 |
+|---|---|---|
+| `tools/keywords.mjs`、`tools/keywords.json` | Phase 可以写成 `M<n>/closeout`，排在该 M 的所有编号 Phase 之后；顶层 `phase` 改为 `M1/closeout`，到期的例外由工具报出，只剩跨 M 的 3 条（`analytics` 到 M6、`project-invitations` 到 M3、`brand` 到 M9）。每条规则的每个分支（内容、路径、文件范围）都有命中样本，不命中样本都引用保留的代码（新增 41 条命中样本；不命中样本替换 60 条，其中 26 条是从未存在的 `app/assets/logo.svg`，另删除 5 条）。新增规则 `window-open`、`app-rail`、`app-rail-files`，共 51 条 | M1 设计 7.4；P5 评审 |
+| 12 处 `window.open`（共 16 处） | 都传 `"noopener,noreferrer"`：编辑器打开成员写的链接、附件列表和图片工具栏打开可能由别的源提供的文件，以及同源的"在新标签页打开" | 打开的页面拿不到 `window.opener`（P5 评审）；`target="_blank"` 的 18 个元素都带 `rel="noopener noreferrer"` |
+| 应用栏 | 删除 `core/lib/app-rail/`、`navigation/app-rail-*.tsx`、`items-root.tsx`、只有它用的 `use-workspace-paths.ts`、它的显示偏好和 `@nerve/types` 里的类型，以及只为它存在的 propel 右键菜单分隔线和两个 `className` 属性；顶部栏永远走不到的 `px-2` 分支删除 | `AppRailVisibilityProvider` 默认关闭，唯一的使用处不打开它：藏在开关后面的功能（P4 评审裁定 9） |
+| 工作区包的导出 | 没有其他文件读取的包导出，三轮删完（512 个）：274 个声明删除，283 个去掉 `export`；166 个文件删除（propel 的 accordion、avatar、badge、banner、collapsible、combobox、command、dialog、input、skeleton、switch、tabs、toolbar 组件，图标注册表连同只有它提到的图标（111 个文件），ui 的 avatar、collapsible、input、tag、textarea 等）；没有导入方的 16 个包入口；propel 的 `cmdk` 依赖；utils 的 `tlds.ts` 和守卫里它的 2 条例外（到 M9）；只有被删的 `EmptyState` 传入的 `asset` 属性；只被这些代码提到的 22 个文案键 | knip 把包的入口都当作已使用，看不到它们（P3、P4 评审） |
+| 点名的死代码 | `useProjectIssueProperties`（5 个 fetcher 只有一个有调用方）和工作项表单挂载时什么也不做的重置，表单直接用迭代 store 的 `fetchAllCycles`；propel `Menu` 和 `ContextMenu` 的子菜单、ui `CustomMenu` 的静态成员 `Portal`、`SubMenuTrigger`、`SubMenuContent`；`EmptySpace` 没人传的 `Icon`、`description` | P3、P4、P5 评审 |
+| propel 的 `MenuItem`；`.oxlintrc.json` | 点菜单项时不再调用全局的 `close()`：它就是 `window.close()`，由脚本打开的标签页会被关掉。oxlint 规则 `no-restricted-globals` 按 confusing-browser-globals 的列表禁用这类全局名，`use-reload-confirmation` 的 `confirm` 改为 `window.confirm` | 缺陷修复 |
+| `.oxlintrc.json` 和 58 个文件；四处别名、模板字面量、导入分组注释、插图的 `alt`、`list-view-types.d.ts` | `react/jsx-curly-brace-presence` 设为错误，基线的 80 处 `={"…"}` 等由 oxlint 修掉；只给导入常量起别名的 4 个 `const`、没有插值的模板字面量、`t(\`${…}\`)` 外面多余的模板删除；悬空的 204 行、重复的 4 行导入分组注释删除，还有 3 行只有 `//` 的注释和叠在另一个标签上的 `//hooks`（不重排导入）；三张装饰插图的 `alt="ProjectSettingImg"` 改为空；`TPlacement` 从 propel 不导出的子路径导入，在 `skipLibCheck` 下悄悄成了 `any`，改为 `CustomMenu` 的 `placement` 类型 | 退化结构（P4、P5 评审） |
+| 编辑器的标注块（callout） | 属性按 HTML 里的字符串读取（`parseHTML`），emoji 的码点不再被 TipTap 转成数字，`logo-selector.tsx` 的 `.toString()` 删除；带单元测试 | P4 评审 |
+| `@nerve/utils` 的 HTML 工具；编辑器的标注块；`pnpm-workspace.yaml` | 删除 `sanitize-html` 和 `@types/sanitize-html`：文本和"是否为空"改由浏览器的 `DOMParser` 读取（应用是纯客户端的构建），通知预览不再显示 `&amp;`，标注块不再转义本地存储里的 `&`；postcss 不再进入浏览器端的依赖，开发环境的 "externalized for browser compatibility" 警告消失（每加载一次页面，浏览器控制台和开发服务器各 22 条；P4 评审记下 66 条）；带单元测试（utils 的开发依赖加 `jsdom`） | P4 评审 |
+| `patches/prosemirror-codemark@0.4.2.patch`、`pnpm-workspace.yaml` | 删掉 12 个构建文件末尾的 `sourceMappingURL` 注释：它们指向的 source map 列出的源文件没有发布；编辑器测试的输出里不再有警告 | P3 评审裁定 6；0.4.2 是最新版本（2022 年） |
+| `tailwind-config`、`typescript-config` 的 `package.json`；仓库根目录的 `package.json` | 两个包加 `check:format`、`fix:format`（oxlint 在它们里面没有可读的文件）；根目录的格式检查加上 `package.json`、`pnpm-workspace.yaml`、`turbo.json`、`knip.jsonc`、`.oxlintrc.json`、`.oxfmtrc.json`；`typescript-config` 删掉只在打包发布时起作用、又只列了 4 个配置中 3 个的 `files` | P1 评审第 6 节 (b) |
+| en、zh-CN 的文案 | 删掉没有代码引用的 500 个键（严格方法下的 482 个，加上 18 个只因名字与无关的字面量相同而算作有引用的键），以及它们留下的 149 个空对象；每种语言 1577 → 1077 个键；主题选项的标签只剩一个来源（`i18n_label` 是键），Power K 的主题菜单在中文界面下不再显示英文 | M1 设计 6、9 节 |
+| `app/assets/` | 删掉 133 张没有被导入的图片（6.1 MiB）：126 张空状态插图（画的是 Plane 的界面）、认证页的三张、项目 emoji、命令键图形和两张图库人像 | M1 设计 9 节；P5 评审 |
+
 ---
 
 ## 二、删除的功能（M1）
@@ -137,6 +157,8 @@
 | `serve` 依赖及其 `start`、`preview` 脚本（当前运行即崩溃） | 已完成 | M1/P1 |
 | `public/` 中从未注册的 `sw.js` 及 workbox 相关文件 | 已完成 | M1/P1 |
 | 前端环境变量：`.env.example`、dotenv 和 `process.env` 的注入、各包对 `process.env` 和 `VITE_*` 的读取；停用账户的提示不再给出 Plane 的支持邮箱，改为联系管理员 | 已完成 | M1/P4 |
+| 从不渲染的应用栏（`AppRailVisibilityProvider` 默认关闭，唯一的使用处不打开它），连同它的显示偏好和只有它用的 `use-workspace-paths.ts` | 已完成 | M1/收尾 |
+| Plane 自身的死代码（续）：没有其他文件读取的工作区包导出、没有代码引用的文案键、没有被导入的图片 | 已完成 | M1/收尾 |
 
 **验收标准**（详见 [M1 设计](M1-frontend-trim/M1-design.md) 第 7、11 节）：
 - TypeScript 类型检查通过，knip 为零；oxlint 不超过新的警告基线（M8 发布前清零，见 M1 设计 7.3）。

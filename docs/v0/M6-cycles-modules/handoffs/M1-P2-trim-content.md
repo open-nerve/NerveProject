@@ -14,4 +14,10 @@ M1/P2 删掉了估算（Task 4），迭代和模块的进度改为只按工作�
 
 另外，关键词守卫对 `web/apps/web/core/services/cycle.service.ts` 登记了一条例外（规则 `analytics`，`until: "M6"`）。前端的迭代进度目前仍从 Plane 的 `…/cycles/<id>/analytics?type=issues` 地址读取；M6 用新的进度接口替换它之后，这条例外会变陈旧、守卫失败，届时把例外从 `tools/keywords.json` 删掉。
 
+## 关闭条件
+
+M6 合并时：进度接口只提供按状态组的计数，没有点数字段；前端的迭代进度不再读 `…/analytics?type=`，守卫的 `analytics` 例外已从 `tools/keywords.json` 删掉（与 M1/P3 的交接一起关闭）。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。
