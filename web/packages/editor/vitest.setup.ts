@@ -1,7 +1,6 @@
 /**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
  */
 
 // jsdom has no canvas: without the optional "canvas" package, getContext() reports "Not implemented" and

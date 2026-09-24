@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M0/P6
 to: M1
 created: 2026-09-22
@@ -44,5 +44,12 @@ created: 2026-09-22
 ## 处理结果（M1/P4）
 
 `.env` 一节已处理（[P4 spec](../specs/P4-router-native.md)）：`.env.example` 和 dotenv 加载已删除；README"前端"一节的"不要建立 `web/apps/web/.env`"一条改为"没有前端环境变量"，"端到端测试"一节的"同源"一条不再引用它；S2 的同源断言保留，作为回归检查。knip 改为门禁和配置提示已在 M1/P3 处理（`make knip` 先生成路由类型，再带 `--treat-config-hints-as-errors` 运行，见 [P3 spec](../specs/P3-trim-platform.md) 2.9）。状态仍为 `open`：S2 与包名在 M1/P5。
+
+## 处理结果（M1/P5）
+
+状态改为 `closed`：剩下的 S2 与包名一节在 M1/P5 处理（[P5 spec](../specs/P5-brand.md)）：
+
+1. 包名 `@plane/*` 已改为 `@nerve/*`；`knip.jsonc` 里的工作区路径是目录，没有改，`make knip` 照常为零。
+2. S2 仍然不断言页面文字：页面上的名称已是 Nerve，但 M2 之前显示的仍是启动错误页（维护页），不是正确的内容。
 
 来源：[M0/P6 评审记录](../../M0-foundation/reviews/P6-e2e-ci-review.md)。

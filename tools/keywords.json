@@ -1533,6 +1533,66 @@
           "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
         }
       }
+    },
+    {
+      "id": "brand",
+      "phase": "M1/P5",
+      "why": "界面、元数据、链接、代码标识符、会话存储键、剪贴板类型、组件名和注释里都不再出现 Plane（M1 设计第 5 节）：Logo、文案、页面标题换成 Nerve，Plane 服务的链接删除或指向 Nerve 的仓库。两处精确排除写在正则里：Plane 文件的版权声明行（保留，总体设计 2.3）和第三方包名 @makeplane/propel（保留，M1 设计 3.10）。图片里的 Logo 看不到，由目视核对",
+      "files": {
+        "source": "^(?:web/.*|pnpm-(?:workspace|lock)\\.yaml|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "(?!(?<=Copyright \\(c\\) 2023-present )Plane Software, Inc\\.)(?!(?<=@make)plane\\/propel\\b)plane",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { PlaneLogo } from \"@nerve/propel/icons\";",
+          "  { property: \"og:image:alt\", content: \"Plane - Modern project management\" },",
+          "        window.open(\"https://forum.plane.so\", \"_blank\", \"noopener,noreferrer\");",
+          "const STALE_ASSET_RELOAD_KEY = \"__plane_chunk_reload\";",
+          "Button.displayName = \"plane-ui-button\";",
+          " * GlobalModals component manages all workspace-level modals across Plane applications."
+        ],
+        "miss": [
+          " * Copyright (c) 2023-present Plane Software, Inc. and contributors",
+          "import { Tooltip } from \"@makeplane/propel/components/tooltip\";",
+          "  \"@makeplane/propel\": \"0.3.0\"",
+          "  '@makeplane/propel@0.3.0':",
+          "const STALE_ASSET_RELOAD_KEY = \"__nerve_chunk_reload\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/root.tsx", "pnpm-workspace.yaml", "pnpm-lock.yaml", "turbo.json"],
+          "miss": [
+            "README.md",
+            "e2e/stories/smoke/s2-web-app.spec.ts",
+            "docs/v0/frontend-changes.md",
+            "tools/keywords.json"
+          ]
+        }
+      }
+    },
+    {
+      "id": "brand-files",
+      "phase": "M1/P5",
+      "why": "web/ 里名字带 plane 的文件和目录：Plane 的 Logo 组件和图片已换成 Nerve 的（app/assets/brand/、core/components/common/nerve-logo.tsx），不再有以 Plane 命名的文件（M1 设计第 5 节）",
+      "path": {
+        "source": "^web/.*plane",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/app/assets/plane-takeoff.png",
+          "web/packages/propel/src/icons/brand/plane-lockup.tsx",
+          "web/packages/propel/src/icons/sub-brand/plane-icon.tsx"
+        ],
+        "miss": [
+          "web/apps/web/app/assets/brand/mark.svg",
+          "web/apps/web/core/components/common/nerve-logo.tsx",
+          "web/packages/propel/src/icons/index.ts"
+        ]
+      }
     }
   ],
   "exceptions": [
@@ -1564,6 +1624,14 @@
       "count": 1,
       "reason": "joinProject 调用的 Plane 地址 /projects/invitations/（加入公开项目），M3 定义项目成员接口时替换",
       "until": "M3"
+    },
+    {
+      "rule": "brand",
+      "path": "pnpm-workspace.yaml",
+      "match": "Plane",
+      "count": 3,
+      "reason": "三行中文注释记录这份配置的来源：文件开头说 catalog 等各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml、英文注释是 Plane 的原文（M0/P5 spec 2.4），allowBuilds 里说最后三项不来自 Plane（M0/P6）。来源说明随文件长期存在，在 v0 内不会消失",
+      "until": "M9"
     }
   ]
 }
