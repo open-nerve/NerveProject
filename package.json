@@ -2,12 +2,8 @@
   "name": "nerve",
   "private": true,
   "license": "AGPL-3.0-only",
-  "engines": {
-    "node": "^24"
-  },
-  "packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8",
   "scripts": {
-    "check:format": "oxfmt --check tools",
+    "check:format": "oxfmt --check tools package.json pnpm-workspace.yaml turbo.json knip.jsonc .oxlintrc.json .oxfmtrc.json",
     "check:lint": "oxlint --max-warnings=0 tools"
   },
   "devDependencies": {
@@ -16,5 +12,9 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "turbo": "catalog:"
-  }
+  },
+  "engines": {
+    "node": "^24"
+  },
+  "packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8"
 }

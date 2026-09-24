@@ -7,13 +7,13 @@
       // 由 Makefile 调用（make gen-web、make lint-web 等），package.json 的脚本中看不到
       "ignoreDependencies": ["@redocly/cli", "turbo"],
       // 关键词守卫由 make lint-web 调用，package.json 的脚本中看不到
-      "entry": ["tools/keywords.mjs"]
+      "entry": ["tools/keywords.mjs"],
     },
     "web/packages/api-client": {
       // 类型测试只由 tsc 检查，其中的函数不会被调用
       "entry": ["test/*.typecheck.ts"],
       // 生成的类型：webhooks、$defs、operations 等没有被使用
-      "ignoreIssues": { "src/schema.gen.ts": ["types"] }
-    }
-  }
+      "ignoreIssues": { "src/schema.gen.ts": ["types"] },
+    },
+  },
 }

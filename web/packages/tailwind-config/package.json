@@ -12,6 +12,10 @@
     "./index.css": "./index.css",
     "./postcss.config.js": "./postcss.config.js"
   },
+  "scripts": {
+    "check:format": "oxfmt --check .",
+    "fix:format": "oxfmt ."
+  },
   "dependencies": {
     "@makeplane/propel": "catalog:",
     "@tailwindcss/postcss": "catalog:",

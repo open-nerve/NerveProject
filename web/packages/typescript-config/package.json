@@ -3,9 +3,8 @@
   "version": "1.4.2",
   "private": true,
   "license": "AGPL-3.0",
-  "files": [
-    "base.json",
-    "react-library.json",
-    "node-library.json"
-  ]
+  "scripts": {
+    "check:format": "oxfmt --check .",
+    "fix:format": "oxfmt ."
+  }
 }
