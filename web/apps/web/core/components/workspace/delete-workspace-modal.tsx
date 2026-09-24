@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 import type { IWorkspace } from "@nerve/types";
 // ui
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
-// constants
 // hooks
 
 import { DeleteWorkspaceForm } from "@/components/workspace/delete-workspace-form";

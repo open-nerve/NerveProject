@@ -7,7 +7,6 @@
 // nerve imports
 import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@nerve/types";
 import { EInboxIssueSource } from "@nerve/types";
-// helpers
 // services
 import { APIService } from "@/services/api.service";
 

@@ -11,7 +11,6 @@ import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayFilterOptions, TIssueGroupByOptions } from "@nerve/types";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
-// constants
 
 type Props = {
   displayFilters: IIssueDisplayFilterOptions;

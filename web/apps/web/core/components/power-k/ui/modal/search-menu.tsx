@@ -89,13 +89,8 @@ export function PowerKModalSearchMenu(props: Props) {
               "animate-pulse": isSearching,
             })}
           >
-            Search results for{" "}
-            <span className="font-medium">
-              {'"'}
-              {searchTerm}
-              {'"'}
-            </span>{" "}
-            in {isWorkspaceLevel ? "workspace" : "project"}:
+            Search results for <span className="font-medium">"{searchTerm}"</span> in{" "}
+            {isWorkspaceLevel ? "workspace" : "project"}:
           </h5>
         </div>
       )}

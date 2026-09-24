@@ -11,7 +11,6 @@ import { useTranslation } from "@nerve/i18n";
 import { getButtonStyling } from "@nerve/propel/button";
 import type { TInboxIssueSortingOrderByKeys, TInboxIssueSortingSortByKeys } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
-// constants
 // helpers
 import { cn } from "@nerve/utils";
 // hooks

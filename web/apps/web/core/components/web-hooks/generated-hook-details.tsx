@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-// components
 // ui
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";

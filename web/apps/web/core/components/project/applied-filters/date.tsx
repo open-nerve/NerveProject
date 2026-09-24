@@ -9,7 +9,6 @@ import { PROJECT_CREATED_AT_FILTER_OPTIONS } from "@nerve/constants";
 import { CloseOutline } from "@makeplane/propel/icons";
 // helpers
 import { renderFormattedDate, capitalizeFirstLetter } from "@nerve/utils";
-// constants
 
 type Props = {
   editable: boolean | undefined;

@@ -10,7 +10,6 @@ import { MODULE_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";
-// constants
 
 type Props = {
   handleRemove: (val: string) => void;

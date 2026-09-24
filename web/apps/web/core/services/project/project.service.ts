@@ -5,7 +5,6 @@
  */
 
 import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@nerve/types";
-// helpers
 // nerve imports
 import type { TProject, TPartialProject } from "@nerve/types";
 // services

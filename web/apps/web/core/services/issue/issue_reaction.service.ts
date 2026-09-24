@@ -7,7 +7,6 @@
 import type { TIssueCommentReaction, TIssueReaction } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
-// types
 
 export class IssueReactionService extends APIService {
   async createIssueReaction(

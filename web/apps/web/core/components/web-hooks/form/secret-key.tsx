@@ -24,7 +24,6 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // utils
 import { getCurrentHookAsCSV } from "../utils";
-// hooks
 
 type Props = {
   data: Partial<IWebhook>;

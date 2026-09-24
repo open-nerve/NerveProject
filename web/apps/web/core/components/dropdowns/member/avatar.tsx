@@ -10,7 +10,6 @@ import { Avatar } from "@makeplane/propel/components/avatar";
 import type { AvatarGroupSize } from "@makeplane/propel/components/avatar-group";
 import { MembersOutline } from "@makeplane/propel/icons";
 import { cn, getFileURL } from "@nerve/utils";
-// helpers
 // hooks
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { useMember } from "@/hooks/store/use-member";

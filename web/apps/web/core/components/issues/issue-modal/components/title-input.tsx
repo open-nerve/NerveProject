@@ -15,7 +15,6 @@ import { ETabIndices } from "@nerve/constants";
 // types
 import { useTranslation } from "@nerve/i18n";
 import type { TIssue } from "@nerve/types";
-// ui
 
 // helpers
 import { getTabIndex } from "@nerve/utils";

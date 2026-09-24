@@ -7,7 +7,6 @@
 import { useContext } from "react";
 // mobx store
 import { StoreContext } from "@/lib/store-context";
-// mobx store
 import type { INotification } from "@/store/notifications/notification";
 
 export const useNotification = (notificationId: string | undefined): INotification => {

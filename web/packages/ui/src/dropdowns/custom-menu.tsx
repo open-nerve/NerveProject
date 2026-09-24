@@ -13,7 +13,6 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 // helpers
 import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";
 import { cn } from "../utils";
-// hooks
 // types
 import type { ICustomMenuDropdownProps, ICustomMenuItemProps, ICustomSubMenuProps } from "./helper";
 

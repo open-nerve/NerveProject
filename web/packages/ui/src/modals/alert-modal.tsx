@@ -12,8 +12,6 @@ import { Button } from "@nerve/propel/button";
 import { cn } from "../utils";
 import { EModalPosition, EModalWidth } from "./constants";
 import { ModalCore } from "./modal-core";
-// constants
-// helpers
 
 type TModalVariant = "danger" | "primary";
 

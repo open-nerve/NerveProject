@@ -17,7 +17,6 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 import type { ToolbarMenuItem } from "@nerve/editor";
 import { TOOLBAR_ITEMS } from "@nerve/editor";
-// helpers
 
 type Props = {
   executeCommand: (item: ToolbarMenuItem) => void;
@@ -28,8 +27,6 @@ type Props = {
   editorRef: EditorRefApi | null;
   submitButtonText?: string;
 };
-
-const toolbarItems = TOOLBAR_ITEMS;
 
 export function IssueCommentToolbar(props: Props) {
   const { t } = useTranslation();
@@ -49,7 +46,7 @@ export function IssueCommentToolbar(props: Props) {
   const updateActiveStates = useCallback(() => {
     if (!editorRef) return;
     const newActiveStates: Record<string, boolean> = {};
-    Object.values(toolbarItems)
+    Object.values(TOOLBAR_ITEMS)
       .flat()
       .forEach((item) => {
         // TODO: update this while toolbar homogenization
@@ -77,14 +74,14 @@ export function IssueCommentToolbar(props: Props) {
     <div className="flex h-9 w-full items-stretch gap-1.5 overflow-x-scroll bg-surface-2">
       <div className="flex w-full items-stretch justify-between gap-2 rounded-sm border-[0.5px] border-subtle p-1">
         <div className="flex items-stretch">
-          {Object.keys(toolbarItems).map((key, index) => (
+          {Object.keys(TOOLBAR_ITEMS).map((key, index) => (
             <div
               key={key}
               className={cn("flex items-stretch gap-0.5 border-r border-subtle px-2.5", {
                 "pl-0": index === 0,
               })}
             >
-              {toolbarItems[key].map((item) => {
+              {TOOLBAR_ITEMS[key].map((item) => {
                 const isItemActive = activeStates[item.renderKey];
 
                 return (

@@ -9,7 +9,6 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IIssueLabel } from "@nerve/types";
 // types
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// hooks
 
 type IssueLabelsListProps = {
   labels?: (IIssueLabel | undefined)[];

@@ -7,7 +7,6 @@
 import { action, makeObservable, runInAction } from "mobx";
 // base class
 import type { TIssue, TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@nerve/types";
-// services
 // types
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
 import { BaseIssuesStore } from "../helpers/base-issues.store";

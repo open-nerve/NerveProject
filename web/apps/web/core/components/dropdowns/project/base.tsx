@@ -15,7 +15,6 @@ import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ChevronDownOutline, ProjectsOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { ComboDropDown } from "@nerve/ui";
 import { cn, sortBySelectedFirst } from "@nerve/utils";
-// components
 // hooks
 import { useDropdown } from "@/hooks/use-dropdown";
 // nerve imports

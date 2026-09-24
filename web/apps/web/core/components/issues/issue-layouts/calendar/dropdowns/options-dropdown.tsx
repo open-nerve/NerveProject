@@ -10,15 +10,12 @@ import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 import { ChevronUpOutline, MoreVerticalOutline, TickOutline } from "@makeplane/propel/icons";
 import { Popover, Transition } from "@headlessui/react";
-// hooks
-// ui
 // icons
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { TCalendarLayouts, TSupportedFilterForUpdate } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
-// types
 // constants
 import { CALENDAR_LAYOUTS } from "@nerve/constants";
 import { useCalendarView } from "@/hooks/store/use-calendar-view";

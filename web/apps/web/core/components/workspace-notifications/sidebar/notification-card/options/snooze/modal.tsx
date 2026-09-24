@@ -33,8 +33,6 @@ const defaultValues: FormValues = {
   period: "AM",
 };
 
-const timeStamps = allTimeIn30MinutesInterval12HoursFormat;
-
 export function NotificationSnoozeModal(props: TNotificationSnoozeModal) {
   const { isOpen, onClose, onSubmit: handleSubmitSnooze } = props;
 
@@ -68,16 +66,16 @@ export function NotificationSnoozeModal(props: TNotificationSnoozeModal) {
     const today = new Date();
     const formDataDate = watch("date");
 
-    if (!formDataDate) return timeStamps;
+    if (!formDataDate) return allTimeIn30MinutesInterval12HoursFormat;
 
     const isToday = today.toDateString() === getDate(formDataDate)?.toDateString();
 
-    if (!isToday) return timeStamps;
+    if (!isToday) return allTimeIn30MinutesInterval12HoursFormat;
 
     const hours = today.getHours();
     const minutes = today.getMinutes();
 
-    return timeStamps.filter((optionTime) => {
+    return allTimeIn30MinutesInterval12HoursFormat.filter((optionTime) => {
       let optionHours = parseInt(optionTime.value.split(":")[0]);
       const optionMinutes = parseInt(optionTime.value.split(":")[1]);
 

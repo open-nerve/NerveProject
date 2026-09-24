@@ -6,8 +6,6 @@
 
 import type { TIssue } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// types
-// constants
 
 export class IssueArchiveService extends APIService {
   async getArchivedIssues(workspaceSlug: string, projectId: string, queries?: any, config = {}): Promise<any> {

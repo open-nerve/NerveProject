@@ -46,7 +46,7 @@ export const LayoutDropDown = observer(function LayoutDropDown(props: TLayoutDro
     const dropdownValue = ISSUE_LAYOUT_MAP[buttonValue as EIssueLayoutTypes];
     return (
       <div className="flex items-center gap-2 text-secondary">
-        <IssueLayoutIcon layout={dropdownValue.key} strokeWidth={2} className={`size-3.5 text-secondary`} />
+        <IssueLayoutIcon layout={dropdownValue.key} strokeWidth={2} className="size-3.5 text-secondary" />
         <span className="text-11 font-medium">{t(dropdownValue.i18n_label)}</span>
       </div>
     );
@@ -58,7 +58,7 @@ export const LayoutDropDown = observer(function LayoutDropDown(props: TLayoutDro
     return (
       <div className={cn("flex w-full items-center justify-between gap-2 text-secondary")}>
         <div className="flex items-center gap-2">
-          <IssueLayoutIcon layout={dropdownValue.key} strokeWidth={2} className={`size-3 text-secondary`} />
+          <IssueLayoutIcon layout={dropdownValue.key} strokeWidth={2} className="size-3 text-secondary" />
           <span className="text-11 font-medium">{t(dropdownValue.i18n_label)}</span>
         </div>
         {props.selected && <TickOutline className="h-3.5 w-3.5 flex-shrink-0" />}

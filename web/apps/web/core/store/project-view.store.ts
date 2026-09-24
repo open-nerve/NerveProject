@@ -9,7 +9,6 @@ import { observable, action, makeObservable, runInAction, computed } from "mobx"
 import { computedFn } from "mobx-utils";
 // types
 import type { IProjectView, TViewFilters } from "@nerve/types";
-// constants
 // helpers
 import { getValidatedViewFilters, getViewName, orderViews, shouldFilterView } from "@nerve/utils";
 // services

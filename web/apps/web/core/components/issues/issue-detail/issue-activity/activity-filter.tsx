@@ -13,7 +13,6 @@ import { IconButton } from "@nerve/propel/icon-button";
 import { PopoverMenu } from "@nerve/ui";
 // helper
 import { cn } from "@nerve/utils";
-// constants
 
 type TActivityFilter = {
   selectedFilters: TActivityFilters[];

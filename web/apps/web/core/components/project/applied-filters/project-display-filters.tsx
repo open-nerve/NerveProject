@@ -5,13 +5,11 @@
  */
 
 import { observer } from "mobx-react";
-// icons
 // types
 import { PROJECT_DISPLAY_FILTER_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
 import type { TProjectAppliedDisplayFilterKeys } from "@nerve/types";
-// constants
 
 type Props = {
   handleRemove: (key: TProjectAppliedDisplayFilterKeys) => void;

@@ -11,7 +11,6 @@ import {
   FavoriteItemIcon,
   generateFavoriteItemLink,
 } from "@/components/workspace/sidebar/favorites/favorite-items/common";
-// helpers
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useModule } from "@/hooks/store/use-module";

@@ -13,8 +13,6 @@ import type { IState } from "@nerve/types";
 // components
 import { Loader } from "@nerve/ui";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
-// ui
-// types
 
 type Props = {
   appliedFilters: string[] | null;

@@ -54,7 +54,7 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
               <div className="flex w-full flex-col md:h-full md:overflow-hidden">
                 <ProfileNavbar isAuthorized={!!isAuthorized} />
                 {isAuthorized ? (
-                  <div className={`h-full w-full overflow-hidden`}>
+                  <div className="h-full w-full overflow-hidden">
                     <Outlet />
                   </div>
                 ) : (

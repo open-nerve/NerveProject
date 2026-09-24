@@ -240,9 +240,7 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
                     {(cycleIssueDetails.nextPageResults === undefined || cycleIssueDetails.nextPageResults) && (
                       <div
                         ref={setIssueLoaderElement}
-                        className={
-                          "relative flex h-11 animate-pulse cursor-pointer items-center gap-3 bg-layer-1 p-3 text-13"
-                        }
+                        className="relative flex h-11 animate-pulse cursor-pointer items-center gap-3 bg-layer-1 p-3 text-13"
                       />
                     )}
                   </>

@@ -21,7 +21,6 @@ import type { TSelectedFilterProgressStats } from "@/components/core/sidebar/pro
 import { createFilterUpdateHandler, PROGRESS_STATS } from "@/components/core/sidebar/progress-stats/shared";
 import type { TStateGroupData } from "@/components/core/sidebar/progress-stats/state_group";
 import { StateGroupStatComponent } from "@/components/core/sidebar/progress-stats/state_group";
-// helpers
 // hooks
 import useLocalStorage from "@/hooks/use-local-storage";
 
@@ -127,7 +126,7 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: TC
           ))}
         </Tab.List>
         <Tab.Panels className="py-3 text-secondary">
-          <Tab.Panel key={"stat-states"}>
+          <Tab.Panel key="stat-states">
             <StateGroupStatComponent
               distribution={distributionStateData}
               handleStateGroupFiltersUpdate={handleStateGroupFiltersUpdate}
@@ -136,7 +135,7 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: TC
               totalIssuesCount={totalIssuesCount}
             />
           </Tab.Panel>
-          <Tab.Panel key={"stat-assignees"}>
+          <Tab.Panel key="stat-assignees">
             <AssigneeStatComponent
               distribution={distributionAssigneeData}
               handleAssigneeFiltersUpdate={handleAssigneeFiltersUpdate}
@@ -144,7 +143,7 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: TC
               selectedAssigneeIds={selectedAssigneeIds}
             />
           </Tab.Panel>
-          <Tab.Panel key={"stat-labels"}>
+          <Tab.Panel key="stat-labels">
             <LabelStatComponent
               distribution={distributionLabelData}
               handleLabelFiltersUpdate={handleLabelFiltersUpdate}

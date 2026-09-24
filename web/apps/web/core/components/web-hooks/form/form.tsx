@@ -19,9 +19,6 @@ import {
   WebhookToggle,
 } from "@/components/web-hooks";
 import { useWebhook } from "@/hooks/store/use-webhook";
-// components
-// ui
-// types
 
 type Props = {
   data?: Partial<IWebhook>;

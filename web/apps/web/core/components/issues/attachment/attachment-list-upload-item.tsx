@@ -11,7 +11,6 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 // components
 import { getFileExtension } from "@nerve/utils";
 import { getFileIcon } from "@/components/icons";
-// helpers
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // types

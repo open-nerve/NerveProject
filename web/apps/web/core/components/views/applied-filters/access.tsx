@@ -8,7 +8,6 @@ import { observer } from "mobx-react";
 // icons
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
-// constants
 // helpers
 import type { EViewAccess } from "@nerve/types";
 import { VIEW_ACCESS_SPECIFIERS } from "@/helpers/views.helper";

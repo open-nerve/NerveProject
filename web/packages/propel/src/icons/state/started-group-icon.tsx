@@ -51,7 +51,7 @@ export function StartedGroupIcon({
         strokeWidth={1.5}
         strokeLinecap="round"
         fill="none"
-        transform={`rotate(-90 8 6)`}
+        transform="rotate(-90 8 6)"
         strokeDasharray={circumference}
         strokeDashoffset={dashOffsetSmall}
         stroke={color}

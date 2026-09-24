@@ -108,13 +108,7 @@ export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onC
         >
           {searchTerm !== "" && (
             <h5 className="mx-2 text-13 text-secondary">
-              Search results for{" "}
-              <span className="text-primary">
-                {'"'}
-                {searchTerm}
-                {'"'}
-              </span>{" "}
-              in project:
+              Search results for <span className="text-primary">"{searchTerm}"</span> in project:
             </h5>
           )}
 

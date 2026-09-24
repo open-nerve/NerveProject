@@ -68,8 +68,7 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
                 {isCurrentUser ? (
                   <>
                     Are you sure you want to leave the <span className="font-bold">{currentProjectDetails?.name}</span>{" "}
-                    project? You will be able to join the project if a project admin adds you again or if it{"'"}s
-                    public.
+                    project? You will be able to join the project if a project admin adds you again or if it's public.
                   </>
                 ) : (
                   <>

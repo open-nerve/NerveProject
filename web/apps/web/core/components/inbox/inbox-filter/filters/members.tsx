@@ -15,7 +15,6 @@ import { Loader } from "@nerve/ui";
 // components
 import { getFileURL } from "@nerve/utils";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
-// helpers
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";

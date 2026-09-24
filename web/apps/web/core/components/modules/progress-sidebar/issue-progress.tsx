@@ -11,8 +11,6 @@ import { ChevronDownOutline, ChevronUpOutline, WarningCircleOutline } from "@mak
 import { Disclosure, Transition } from "@headlessui/react";
 import { useTranslation } from "@nerve/i18n";
 import { EIssuesStoreType } from "@nerve/types";
-// components
-// constants
 // helpers
 import { getDate } from "@nerve/utils";
 import ProgressChart from "@/components/core/sidebar/progress-chart";
@@ -109,7 +107,7 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
                       <ProgressChart
                         distribution={completionChartDistributionData}
                         totalIssues={totalIssues}
-                        plotTitle={"work items"}
+                        plotTitle="work items"
                       />
                     </Fragment>
                   )}

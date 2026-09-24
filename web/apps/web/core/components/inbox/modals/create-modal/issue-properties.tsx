@@ -20,7 +20,6 @@ import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
 import { PriorityDropdown } from "@/components/dropdowns/priority";
 import { ParentIssuesListModal } from "@/components/issues/parent-issues-list-modal";
 import { IssueLabelSelect } from "@/components/issues/select";
-// helpers
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 

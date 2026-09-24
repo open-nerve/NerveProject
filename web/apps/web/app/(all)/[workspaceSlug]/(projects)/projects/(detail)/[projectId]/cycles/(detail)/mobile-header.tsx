@@ -67,7 +67,7 @@ export const CycleIssuesMobileHeader = observer(function CycleIssuesMobileHeader
   return (
     <div className="flex justify-evenly border-b border-subtle bg-surface-1 py-2 md:hidden">
       <CustomMenu
-        maxHeight={"md"}
+        maxHeight="md"
         className="flex flex-grow justify-center text-13 text-secondary"
         placement="bottom-start"
         customButton={

@@ -13,8 +13,6 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { ILinkDetails } from "@nerve/types";
 // nerve ui
 import { getIconForLink, copyTextToClipboard, calculateTimeAgo } from "@nerve/utils";
-// helpers
-//
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { usePlatformOS } from "@/hooks/use-platform-os";

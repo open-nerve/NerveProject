@@ -20,7 +20,6 @@ import { useUser } from "@/hooks/store/user";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 import { WorkspaceService } from "@/services/workspace.service";
-// services
 
 // service initialization
 const workspaceService = new WorkspaceService();

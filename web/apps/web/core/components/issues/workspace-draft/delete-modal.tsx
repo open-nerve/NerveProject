@@ -12,7 +12,6 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TWorkspaceDraftIssue } from "@nerve/types";
 // ui
 import { AlertModalCore } from "@nerve/ui";
-// constants
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUser, useUserPermissions } from "@/hooks/store/user";

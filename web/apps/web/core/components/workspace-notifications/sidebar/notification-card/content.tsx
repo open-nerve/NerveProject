@@ -205,7 +205,7 @@ export function NotificationContent({
               />
             </div>
           )}
-          {"."}
+          .
         </>
       )}
     </>

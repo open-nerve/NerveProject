@@ -13,8 +13,6 @@ import { isInDateFormat } from "@nerve/utils";
 import { DateFilterModal } from "@/components/core/filters/date-filter-modal";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 
-// helpers
-
 type Props = {
   appliedFilters: string[] | null;
   handleUpdate: (val: string | string[]) => void;

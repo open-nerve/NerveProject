@@ -10,7 +10,6 @@ import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWebhook } from "@nerve/types";
-// ui
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { PageHead } from "@/components/core/page-title";

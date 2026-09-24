@@ -18,7 +18,6 @@ import type { ISearchIssueResponse, TProjectIssuesSearchParams } from "@nerve/ty
 import { Switch } from "@makeplane/propel/components/switch";
 import { Loader, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { generateWorkItemLink, getTabIndex } from "@nerve/utils";
-// helpers
 // hooks
 import useDebounce from "@/hooks/use-debounce";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -221,13 +220,7 @@ export function ExistingIssuesListModal(props: Props) {
           {/* TODO: Translate here */}
           {searchTerm !== "" && (
             <h5 className="mx-2 text-13 text-secondary">
-              Search results for{" "}
-              <span className="text-primary">
-                {'"'}
-                {searchTerm}
-                {'"'}
-              </span>{" "}
-              in project:
+              Search results for <span className="text-primary">"{searchTerm}"</span> in project:
             </h5>
           )}
 

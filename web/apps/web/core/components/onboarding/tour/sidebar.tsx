@@ -46,7 +46,7 @@ export function TourSidebar({ step, setStep }: Props) {
   return (
     <div className="col-span-3 hidden bg-surface-2 p-8 lg:block">
       <h3 className="text-16 font-medium">
-        Let{"'"}s get started!
+        Let's get started!
         <br />
         Get more out of Nerve.
       </h3>

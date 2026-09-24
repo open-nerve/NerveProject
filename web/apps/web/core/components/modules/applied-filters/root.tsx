@@ -12,8 +12,6 @@ import type { TModuleDisplayFilters, TModuleFilters } from "@nerve/types";
 import { Header, EHeaderVariant } from "@nerve/ui";
 import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 import { AppliedDateFilters, AppliedMembersFilters, AppliedStatusFilters } from "@/components/modules";
-// helpers
-// types
 
 type Props = {
   appliedFilters: TModuleFilters;

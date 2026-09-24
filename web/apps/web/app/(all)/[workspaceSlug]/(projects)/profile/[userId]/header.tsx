@@ -76,7 +76,7 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
         <div className="hidden md:flex md:items-center">{showProfileIssuesFilter && <ProfileIssuesFilter />}</div>
         <div className="flex gap-4 md:hidden">
           <CustomMenu
-            maxHeight={"md"}
+            maxHeight="md"
             className="flex flex-grow justify-center text-13 text-secondary"
             placement="bottom-start"
             customButton={

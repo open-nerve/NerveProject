@@ -5,10 +5,8 @@
  */
 
 import type { IFavorite } from "@nerve/types";
-// helpers
 // services
 import { APIService } from "@/services/api.service";
-// types
 
 export class FavoriteService extends APIService {
   async addFavorite(workspaceSlug: string, data: Partial<IFavorite>): Promise<IFavorite> {

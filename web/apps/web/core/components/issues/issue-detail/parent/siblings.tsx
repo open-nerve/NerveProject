@@ -7,7 +7,6 @@
 import { observer } from "mobx-react";
 import useSWR from "swr";
 import type { TIssue } from "@nerve/types";
-// components
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types

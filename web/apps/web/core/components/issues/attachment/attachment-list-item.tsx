@@ -13,10 +13,8 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { CustomMenu } from "@nerve/ui";
 import { convertBytesToSize, getFileExtension, getFileName, getFileURL, renderFormattedDate } from "@nerve/utils";
 // components
-//
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 import { getFileIcon } from "@/components/icons";
-// helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";

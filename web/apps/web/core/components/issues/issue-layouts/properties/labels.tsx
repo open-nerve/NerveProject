@@ -15,7 +15,6 @@ import { LabelsOutline } from "@makeplane/propel/icons";
 // types
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IIssueLabel } from "@nerve/types";
-// ui
 // hooks
 import { cn } from "@nerve/utils";
 import { useLabel } from "@/hooks/store/use-label";

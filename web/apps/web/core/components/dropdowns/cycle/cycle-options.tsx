@@ -17,11 +17,9 @@ import { useTranslation } from "@nerve/i18n";
 import { CycleGroupIcon } from "@nerve/propel/icons";
 import { CyclesOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import type { TCycleGroups } from "@nerve/types";
-// ui
 // store hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// types
 
 type DropdownOptions =
   | {

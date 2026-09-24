@@ -12,7 +12,6 @@ import type { TIssue } from "@nerve/types";
 import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
-// helpers
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 

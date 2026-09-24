@@ -7,8 +7,6 @@
 // services
 import type { IIntakeState, IState } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// helpers
-// types
 
 export class ProjectStateService extends APIService {
   async createState(workspaceSlug: string, projectId: string, data: any): Promise<IState> {

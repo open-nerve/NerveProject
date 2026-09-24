@@ -6,7 +6,6 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// constants
 // helpers
 import { INBOX_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -44,7 +43,7 @@ export const InboxIssueStatus = observer(function InboxIssueStatus(props: Props)
         )} ${statusIcon.bgColor(isSnoozedDatePassed)}`
       )}
     >
-      <div className={`flex items-center gap-1`}>
+      <div className="flex items-center gap-1">
         <InboxStatusIcon type={inboxIssue?.status} size={iconSize} className="flex-shrink-0" renderColor={false} />
         <div className="text-11 font-medium whitespace-nowrap">
           {inboxIssue?.status === 0 && inboxIssue?.snoozed_till ? description : t(inboxIssueStatusDetail.i18n_title)}

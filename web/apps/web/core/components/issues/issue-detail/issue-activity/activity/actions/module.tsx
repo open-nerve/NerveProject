@@ -10,7 +10,6 @@ import { ModuleOutline } from "@makeplane/propel/icons";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent } from "./";
-// icons
 
 type TIssueModuleActivity = { activityId: string; ends: "top" | "bottom" | undefined };
 

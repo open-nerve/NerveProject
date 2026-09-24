@@ -9,7 +9,6 @@ import { computedFn } from "mobx-utils";
 import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 // types
 import type { TIssueGroupByOptions } from "@nerve/types";
-// constants
 // store
 import type { IssueRootStore } from "./root.store";
 

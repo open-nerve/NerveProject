@@ -150,7 +150,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                 className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm hover:bg-layer-1"
                 onClick={handleSignOut}
               >
-                <Tooltip label={"Sign out"} alignOffset={8} disabled={isMobile}>
+                <Tooltip label="Sign out" alignOffset={8} disabled={isMobile}>
                   <LogOutOutline width={14} height={14} />
                 </Tooltip>
               </div>
@@ -192,14 +192,14 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   // while user does not have access to view that workspace
   if (currentWorkspaceInfo === undefined) {
     return (
-      <div className={`h-screen w-full overflow-hidden bg-surface-1`}>
+      <div className="h-screen w-full overflow-hidden bg-surface-1">
         <div className="grid h-full place-items-center p-4">
           <div className="space-y-8 text-center">
             <div className="space-y-2">
               <h3 className="text-16 font-semibold">Not Authorized!</h3>
               <p className="mx-auto w-1/2 text-13 text-secondary">
-                You{"'"}re not a member of this workspace. Please contact the workspace admin to get an invitation or
-                check your pending invitations.
+                You're not a member of this workspace. Please contact the workspace admin to get an invitation or check
+                your pending invitations.
               </p>
             </div>
             <div className="flex items-center justify-center gap-2">

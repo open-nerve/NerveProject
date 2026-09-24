@@ -10,7 +10,6 @@ import { IntakeOutline } from "@makeplane/propel/icons";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent } from "./";
-// icons
 
 type TIssueInboxActivity = { activityId: string; ends: "top" | "bottom" | undefined };
 

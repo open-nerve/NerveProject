@@ -6,7 +6,6 @@
 
 // nerve imports
 import type { TProjectAppliedDisplayFilterKeys, TProjectOrderByOptions } from "@nerve/types";
-// local imports
 
 export type TNetworkChoiceIconKey = "Lock" | "Globe2";
 

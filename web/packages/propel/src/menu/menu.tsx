@@ -127,7 +127,7 @@ function Menu(props: TMenuProps) {
       )}
       <BaseMenu.Portal>
         <BaseMenu.Positioner
-          align={"start"}
+          align="start"
           className={cn(
             "fixed z-30 translate-y-0",
             menuItemsClassName

@@ -15,8 +15,8 @@ export function SidebarAddButton(props: Props) {
   const { label, onClick, disabled, ...rest } = props;
   return (
     <Button
-      variant={"secondary"}
-      size={"xl"}
+      variant="secondary"
+      size="xl"
       className="w-full justify-start"
       onClick={onClick}
       disabled={disabled}

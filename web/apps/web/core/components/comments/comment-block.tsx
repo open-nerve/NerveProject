@@ -11,7 +11,6 @@ import { observer } from "mobx-react";
 import { ReplyOutline } from "@makeplane/propel/icons";
 import type { TIssueComment } from "@nerve/types";
 import { cn } from "@nerve/utils";
-// hooks
 
 type TCommentBlock = {
   comment: TIssueComment;

@@ -19,7 +19,6 @@ import { Loader } from "@nerve/ui";
 import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
-// helpers
 // hooks
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";

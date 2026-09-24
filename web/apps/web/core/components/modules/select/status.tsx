@@ -16,8 +16,6 @@ import { StateOutline } from "@makeplane/propel/icons";
 import type { IModule } from "@nerve/types";
 // ui
 import { CustomSelect } from "@nerve/ui";
-// types
-// constants
 
 type Props = {
   control: Control<IModule, any>;

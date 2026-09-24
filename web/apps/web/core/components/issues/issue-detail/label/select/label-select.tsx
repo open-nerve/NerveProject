@@ -140,7 +140,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
 
         <Combobox.Options as="ul" className="fixed z-10">
           <div
-            className={`z-10 my-1 w-48 rounded-sm border border-strong bg-surface-1 py-2.5 text-11 whitespace-nowrap shadow-raised-200 focus:outline-none`}
+            className="z-10 my-1 w-48 rounded-sm border border-strong bg-surface-1 py-2.5 text-11 whitespace-nowrap shadow-raised-200 focus:outline-none"
             ref={setPopperElement}
             style={styles.popper}
             {...attributes.popper}
@@ -159,7 +159,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
                 />
               </div>
             </div>
-            <div className={`vertical-scrollbar mt-2 scrollbar-sm max-h-48 overflow-y-scroll px-2 pr-0`}>
+            <div className="vertical-scrollbar mt-2 scrollbar-sm max-h-48 overflow-y-scroll px-2 pr-0">
               {isLoading ? (
                 <p className="text-center text-secondary">{t("common.loading")}</p>
               ) : filteredOptions.length > 0 ? (
@@ -180,7 +180,7 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: IIssue
                           {option.content}
                           {selected && (
                             <div className="flex-shrink-0">
-                              <TickOutline className={`h-3.5 w-3.5`} />
+                              <TickOutline className="h-3.5 w-3.5" />
                             </div>
                           )}
                         </>

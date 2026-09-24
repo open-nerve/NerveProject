@@ -25,7 +25,6 @@ import { Spinner } from "@nerve/ui";
 import { renderFormattedPayloadDate, cn } from "@nerve/utils";
 // constants
 import { MONTHS_LIST } from "@nerve/constants";
-// helpers
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import useSize from "@/hooks/use-window-size";

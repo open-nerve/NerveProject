@@ -14,7 +14,6 @@ import { CircularProgress } from "@makeplane/propel/components/circular-progress
 import { generateQueryParams } from "@nerve/utils";
 import { ListItem } from "@/components/core/list";
 import { ModuleListItemAction, ModuleQuickActions } from "@/components/modules";
-// helpers
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router";
@@ -88,7 +87,7 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
               progress === 100 ? (
                 <TickOutline className="h-3 w-3 stroke-[2] text-accent-primary" />
               ) : (
-                <span className="text-13 text-accent-primary">{`!`}</span>
+                <span className="text-13 text-accent-primary">!</span>
               )
             ) : progress === 100 ? (
               <TickOutline className="h-3 w-3 stroke-[2] text-accent-primary" />

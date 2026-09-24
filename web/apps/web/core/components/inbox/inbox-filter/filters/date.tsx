@@ -12,7 +12,6 @@ import type { TInboxIssueFilterDateKeys } from "@nerve/types";
 // components
 import { DateFilterModal } from "@/components/core/filters/date-filter-modal";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
-// constants
 // hooks
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 

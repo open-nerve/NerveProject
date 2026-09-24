@@ -8,10 +8,8 @@ import { observer } from "mobx-react";
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { getFileExtension, truncateText } from "@nerve/utils";
-// ui
 // icons
 import { getFileIcon } from "@/components/icons";
-// helpers
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // types

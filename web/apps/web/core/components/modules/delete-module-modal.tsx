@@ -13,7 +13,6 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IModule } from "@nerve/types";
 // ui
 import { AlertModalCore } from "@nerve/ui";
-// constants
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useParams, useNavigate } from "react-router";

@@ -28,7 +28,6 @@ import type { ILinkDetails, IModule, ModuleLink } from "@nerve/types";
 // nerve ui
 import { Loader, CustomSelect } from "@nerve/ui";
 import { TextArea } from "@makeplane/propel/components/text-area";
-// components
 // helpers
 import { getDate, renderFormattedPayloadDate } from "@nerve/utils";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
@@ -174,7 +173,7 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
         updateLink={handleUpdateLink}
       />
       <>
-        <div className={`sticky top-0 z-10 flex items-center justify-between bg-surface-1 pt-5 pb-5`}>
+        <div className="sticky top-0 z-10 flex items-center justify-between bg-surface-1 pt-5 pb-5">
           <div>
             <button
               className="flex h-5 w-5 items-center justify-center rounded-full bg-layer-3"

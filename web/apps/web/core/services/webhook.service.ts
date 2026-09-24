@@ -7,8 +7,6 @@
 // api services
 import type { IWebhook } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// helpers
-// types
 
 export class WebhookService extends APIService {
   async fetchWebhooksList(workspaceSlug: string): Promise<IWebhook[]> {

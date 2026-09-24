@@ -7,12 +7,9 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// mobx store
 // components
 import { ProjectIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseSpreadsheetRoot } from "../base-spreadsheet-root";
-// types
-// constants
 
 export const ProjectViewSpreadsheetLayout = observer(function ProjectViewSpreadsheetLayout() {
   const { viewId } = useParams();

@@ -7,7 +7,6 @@
 import { useEffect, useState } from "react";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { getAssetIdFromUrl, checkURLValidity } from "@nerve/utils";
-// helpers
 // hooks
 import useKeypress from "@/hooks/use-keypress";
 // components

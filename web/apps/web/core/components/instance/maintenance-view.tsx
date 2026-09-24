@@ -26,7 +26,7 @@ export function MaintenanceView() {
             src={maintenanceModeImage}
             height="176"
             width="288"
-            alt="ProjectSettingImg"
+            alt=""
             className="h-full w-full object-fill object-center"
           />
         </div>

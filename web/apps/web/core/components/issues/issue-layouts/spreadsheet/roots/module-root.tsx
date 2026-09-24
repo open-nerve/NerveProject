@@ -7,7 +7,6 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// mobx store
 // components
 import { ModuleIssueQuickActions } from "../../quick-action-dropdowns";
 import { BaseSpreadsheetRoot } from "../base-spreadsheet-root";

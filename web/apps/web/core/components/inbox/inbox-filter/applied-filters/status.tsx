@@ -41,7 +41,7 @@ export const InboxIssueAppliedFiltersStatus = observer(function InboxIssueApplie
                 className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
                 onClick={() => handleInboxIssueFilters("status", handleFilterValue(optionDetail?.status))}
               >
-                <CloseOutline className={`h-3 w-3`} />
+                <CloseOutline className="h-3 w-3" />
               </div>
             )}
           </div>

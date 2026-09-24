@@ -7,11 +7,9 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
-// hooks
 // components
 import { cn } from "@nerve/utils";
 import { CycleDropdown } from "@/components/dropdowns/cycle";
-// ui
 // helpers
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types

@@ -6,7 +6,6 @@
 
 // nerve imports
 import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@nerve/types";
-// helpers
 // services
 import { APIService } from "@/services/api.service";
 
