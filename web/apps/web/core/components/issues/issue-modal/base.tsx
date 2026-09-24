@@ -243,13 +243,11 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     // - cycle_id is the same as the current cycle id
     if (!("cycle_id" in payload) || isEqual(data?.cycle_id, payload.cycle_id)) return;
 
-    const slug = workspaceSlug;
-
     // Removing the cycle
     const currentCycleId = data?.cycle_id;
     if (currentCycleId && payload.cycle_id === null) {
-      await issues.removeIssueFromCycle(slug, data.project_id, currentCycleId, data.id);
-      fetchCycleDetails(slug, data.project_id, currentCycleId).catch((error) => {
+      await issues.removeIssueFromCycle(workspaceSlug, data.project_id, currentCycleId, data.id);
+      fetchCycleDetails(workspaceSlug, data.project_id, currentCycleId).catch((error) => {
         console.error(error);
       });
     }
@@ -357,8 +355,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     data: {
       ...data,
       description_html: description,
-      cycle_id: data?.cycle_id ? data?.cycle_id : (cycleId ?? null),
-      module_ids: data?.module_ids ? data?.module_ids : moduleId ? [moduleId] : null,
+      cycle_id: data?.cycle_id || (cycleId ?? null),
+      module_ids: data?.module_ids || (moduleId ? [moduleId] : null),
     },
     onAssetUpload: handleUpdateUploadedAssetIds,
     onClose: handleClose,

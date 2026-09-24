@@ -153,8 +153,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
 
   const cardRef = useRef<HTMLAnchorElement | null>(null);
   // router
-  const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug;
+  const { workspaceSlug } = useParams();
   // hooks
   const { getProjectIdentifierById } = useProject();
   const { getIsIssuePeeked } = useIssueDetail();

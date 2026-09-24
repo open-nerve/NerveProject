@@ -23,9 +23,7 @@ export const PowerKModalSearchResults = observer(function PowerKModalSearchResul
   const { closePalette, results } = props;
   // router
   const navigate = useNavigate();
-  const { projectId: routerProjectId } = useParams();
-  // derived values
-  const projectId = routerProjectId;
+  const { projectId } = useParams();
 
   return (
     <>

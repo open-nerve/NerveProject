@@ -69,7 +69,7 @@ export const ModuleEmptyState = observer(function ModuleEmptyState() {
         projectId={projectId}
         isOpen={moduleIssuesListModal}
         handleClose={() => setModuleIssuesListModal(false)}
-        searchParams={{ module: moduleId != undefined ? moduleId : "" }}
+        searchParams={{ module: moduleId ?? "" }}
         handleOnSubmit={handleAddIssuesToModule}
       />
       <div className="grid h-full w-full place-items-center">

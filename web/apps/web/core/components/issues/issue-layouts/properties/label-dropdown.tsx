@@ -67,8 +67,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   const { t } = useTranslation();
 
   //router
-  const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug;
+  const { workspaceSlug } = useParams();
 
   //states
   const [isOpen, setIsOpen] = useState(false);

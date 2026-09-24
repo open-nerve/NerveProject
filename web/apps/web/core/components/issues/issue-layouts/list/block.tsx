@@ -66,8 +66,7 @@ export const IssueBlock = observer(function IssueBlock(props: IssueBlockProps) {
   // ref
   const issueRef = useRef<HTMLDivElement | null>(null);
   // router
-  const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug;
+  const { workspaceSlug } = useParams();
   // hooks
   const { sidebarCollapsed: isSidebarCollapsed } = useAppTheme();
   const { getProjectIdentifierById, currentProjectNextSequenceId } = useProject();
