@@ -4,20 +4,13 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import { API_BASE_URL } from "@plane/constants";
-
 /**
- * @description combine the file path with the base URL
+ * @description the URL of a file: asset paths are relative to this origin and absolute URLs stay as they are;
+ * an empty path means there is no file
  * @param {string} path
- * @returns {string} final URL with the base URL
+ * @returns {string | undefined} the URL, or undefined when there is no file
  */
-export const getFileURL = (path: string): string | undefined => {
-  if (!path) return undefined;
-  const isValidURL = path.startsWith("http");
-  if (isValidURL) return path;
-  return `${API_BASE_URL}${path}`;
-};
+export const getFileURL = (path: string): string | undefined => path || undefined;
 
 /**
  * @description this function returns the assetId from the asset source

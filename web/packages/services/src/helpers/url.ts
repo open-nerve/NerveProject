@@ -29,25 +29,11 @@ export function ensureAPITrailingSlash(url: string): string {
 }
 
 /**
- * Same as `ensureAPITrailingSlash`, but skips absolute URLs whose origin is not this
- * instance's Django `baseURL`. Signed S3/GCS upload URLs go through `APIService` with
- * an empty `baseURL`; slashing them invalidates the signature and 403s the upload.
+ * Same as `ensureAPITrailingSlash`, but leaves absolute URLs unchanged. API requests go to
+ * relative paths on this origin, so an absolute URL is a signed S3/GCS upload URL; slashing
+ * it invalidates the signature and 403s the upload.
  */
-export function normalizeAPIRequestURL(url: string, baseURL: string): string {
-  if (isForeignAbsoluteURL(url, baseURL)) return url;
+export function normalizeAPIRequestURL(url: string): string {
+  if (/^[a-z][a-z\d+\-.]*:/i.test(url)) return url; // an absolute URL starts with its scheme
   return ensureAPITrailingSlash(url);
-}
-
-function isForeignAbsoluteURL(url: string, baseURL: string): boolean {
-  try {
-    const requestUrl = new URL(url);
-    if (!baseURL) return true;
-    try {
-      return requestUrl.origin !== new URL(baseURL).origin;
-    } catch {
-      return true;
-    }
-  } catch {
-    return false;
-  }
 }

@@ -4,16 +4,10 @@
  * See the LICENSE file for details.
  */
 
-// helpers
-import { API_BASE_URL } from "@plane/constants";
 // services
 import { APIService } from "@/services/api.service";
 
 export class ProjectArchiveService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async archiveProject(
     workspaceSlug: string,
     projectId: string

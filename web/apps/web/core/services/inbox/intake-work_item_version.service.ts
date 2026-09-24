@@ -5,17 +5,12 @@
  */
 
 // plane imports
-import { API_BASE_URL } from "@plane/constants";
 import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
 
 export class IntakeWorkItemVersionService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async listDescriptionVersions(
     workspaceSlug: string,
     projectId: string,

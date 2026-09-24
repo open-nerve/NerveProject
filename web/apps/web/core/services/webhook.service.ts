@@ -5,17 +5,12 @@
  */
 
 // api services
-import { API_BASE_URL } from "@plane/constants";
 import type { IWebhook } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // helpers
 // types
 
 export class WebhookService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async fetchWebhooksList(workspaceSlug: string): Promise<IWebhook[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/webhooks/`)
       .then((response) => response?.data)

@@ -13,24 +13,20 @@ import { normalizeAPIRequestURL } from "./helpers/url";
  * @abstract
  */
 export abstract class APIService {
-  protected baseURL: string;
   private axiosInstance: AxiosInstance;
 
   /**
-   * Creates an instance of APIService
-   * @param {string} baseURL - The base URL for all HTTP requests
+   * Creates an instance of APIService; requests go to relative paths on this origin
    */
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
+  constructor() {
     this.axiosInstance = create({
-      baseURL,
       withCredentials: true,
     });
 
     this.axiosInstance.interceptors.request.use((config) => {
       try {
         if (config.url) {
-          config.url = normalizeAPIRequestURL(config.url, this.baseURL);
+          config.url = normalizeAPIRequestURL(config.url);
         }
       } catch (error) {
         // Never block a request because of slash normalization — fall back to the

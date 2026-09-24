@@ -12,7 +12,7 @@ import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } fr
 import { Banner } from "@makeplane/propel/components/banner";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { API_BASE_URL, E_PASSWORD_STRENGTH } from "@plane/constants";
+import { E_PASSWORD_STRENGTH } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { Button } from "@plane/propel/button";
 import { PasswordStrengthIndicator, Spinner } from "@plane/ui";
@@ -119,7 +119,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
         ref={formRef}
         className="space-y-4"
         method="POST"
-        action={`${API_BASE_URL}/auth/${mode === EAuthModes.SIGN_IN ? "sign-in" : "sign-up"}/`}
+        action={`/auth/${mode === EAuthModes.SIGN_IN ? "sign-in" : "sign-up"}/`}
         onSubmit={async (event) => {
           event.preventDefault(); // Prevent form from submitting by default
           await handleCSRFToken();

@@ -4,17 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { TIssue } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // constants
 
 export class IssueArchiveService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getArchivedIssues(workspaceSlug: string, projectId: string, queries?: any, config = {}): Promise<any> {
     return this.get(
       `/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-issues/`,

@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@plane/types";
 // helpers
 // plane web types
@@ -13,10 +12,6 @@ import type { TProject, TPartialProject } from "@plane/types";
 import { APIService } from "@/services/api.service";
 
 export class ProjectService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async createProject(workspaceSlug: string, data: Partial<TProject>): Promise<TProject> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/`, data)
       .then((response) => response?.data)

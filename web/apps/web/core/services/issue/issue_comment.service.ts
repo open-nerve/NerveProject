@@ -5,7 +5,6 @@
  */
 
 // plane types
-import { API_BASE_URL } from "@plane/constants";
 import type { TIssueComment } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
@@ -15,7 +14,7 @@ export class IssueCommentService extends APIService {
   private fileUploadService: FileUploadService;
 
   constructor() {
-    super(API_BASE_URL);
+    super();
     // upload service
     this.fileUploadService = new FileUploadService();
   }

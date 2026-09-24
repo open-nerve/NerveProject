@@ -25,7 +25,7 @@ export type TTranslationStore = {
 function coerceToString(key: string, value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (process.env.NODE_ENV !== "production") {
+  if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
     console.warn(
       `[i18n] Translation for key "${key}" is not a string (got ${

@@ -5,7 +5,6 @@
  */
 
 // plane imports
-import { API_BASE_URL } from "@plane/constants";
 import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@plane/types";
 import { EInboxIssueSource } from "@plane/types";
 // helpers
@@ -13,10 +12,6 @@ import { EInboxIssueSource } from "@plane/types";
 import { APIService } from "@/services/api.service";
 
 export class InboxIssueService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async list(workspaceSlug: string, projectId: string, params = {}): Promise<TInboxIssueWithPagination> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/inbox-issues/`, {
       params,

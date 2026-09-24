@@ -6,7 +6,6 @@
 
 /* eslint-disable no-useless-catch */
 
-import { API_BASE_URL } from "@plane/constants";
 import type {
   TNotificationPaginatedInfo,
   TNotificationPaginatedInfoQueryParams,
@@ -18,10 +17,6 @@ import type {
 import { APIService } from "@/services/api.service";
 
 class WorkspaceNotificationService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async fetchUnreadNotificationsCount(workspaceSlug: string): Promise<TUnreadNotificationsCount | undefined> {
     try {
       const { data } = await this.get(`/api/workspaces/${workspaceSlug}/users/notifications/unread/`);

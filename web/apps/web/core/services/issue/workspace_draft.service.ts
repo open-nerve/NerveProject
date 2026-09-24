@@ -4,17 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { TIssue, TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
 
 export class WorkspaceDraftService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getIssues(
     workspaceSlug: string,
     query: object = {}

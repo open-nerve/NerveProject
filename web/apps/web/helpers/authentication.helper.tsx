@@ -6,8 +6,6 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-// plane imports
-import { SUPPORT_EMAIL } from "@plane/constants";
 
 export enum EPageTypes {
   PUBLIC = "PUBLIC",
@@ -73,7 +71,7 @@ const errorCodeMessages: {
   },
   [EAuthenticationErrorCodes.USER_ACCOUNT_DEACTIVATED]: {
     title: `User account deactivated`,
-    message: () => `User account deactivated. Please contact ${SUPPORT_EMAIL ? SUPPORT_EMAIL : "administrator"}.`,
+    message: () => "User account deactivated. Please contact your administrator.",
   },
   [EAuthenticationErrorCodes.INVALID_PASSWORD]: {
     title: `Invalid password`,

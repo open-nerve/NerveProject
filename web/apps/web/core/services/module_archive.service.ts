@@ -5,17 +5,12 @@
  */
 
 // type
-import { API_BASE_URL } from "@plane/constants";
 import type { IModule } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
 
 export class ModuleArchiveService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getArchivedModules(workspaceSlug: string, projectId: string): Promise<IModule[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-modules/`)
       .then((response) => response?.data)

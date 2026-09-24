@@ -9,7 +9,6 @@ export * from "./calendar";
 export * from "./chart";
 export * from "./cycle";
 export * from "./emoji";
-export * from "./endpoints";
 export * from "./file";
 export * from "./fetch-keys";
 export * from "./filter";

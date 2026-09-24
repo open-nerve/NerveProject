@@ -5,23 +5,12 @@
  */
 
 // services
-import { API_BASE_URL } from "@plane/constants";
 import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // helpers
 
 export class UserService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
-  currentUserConfig() {
-    return {
-      url: `${this.baseURL}/api/users/me/`,
-    };
-  }
-
   async currentUser(): Promise<IUser> {
     // Using validateStatus: null to bypass interceptors for unauthorized errors.
     return this.get("/api/users/me/", { validateStatus: null })
