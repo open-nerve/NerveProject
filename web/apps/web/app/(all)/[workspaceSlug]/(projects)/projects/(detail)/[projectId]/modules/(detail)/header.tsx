@@ -6,7 +6,6 @@
 
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // icons
 import { ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
@@ -39,7 +38,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import useLocalStorage from "@/hooks/use-local-storage";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -47,13 +46,18 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { IconButton } from "@plane/propel/icon-button";
 
-export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  moduleId: string;
+};
+
+export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TProps) {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
   // router
-  const router = useAppRouter();
-  const { workspaceSlug, projectId, moduleId: routerModuleId } = useParams();
-  const moduleId = routerModuleId ? routerModuleId.toString() : undefined;
+  const navigate = useNavigate();
+  const { workspaceSlug, projectId, moduleId } = props;
   // hooks
   const { isMobile } = usePlatformOS();
   // store hooks
@@ -71,7 +75,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
   // derived values
   const isSidebarCollapsed = storedValue ? storedValue === "true" : false;
   const activeLayout = issueFilters?.displayFilters?.layout;
-  const moduleDetails = moduleId ? getModuleById(moduleId) : undefined;
+  const moduleDetails = getModuleById(moduleId);
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT
@@ -84,24 +88,21 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      if (!projectId) return;
-      updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
+      updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
     },
     [projectId, updateFilters]
   );
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!projectId) return;
-      updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
+      updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
     },
     [projectId, updateFilters]
   );
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      if (!projectId) return;
-      updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_PROPERTIES, property);
+      updateFilters(projectId, EIssueFilterType.DISPLAY_PROPERTIES, property);
     },
     [projectId, updateFilters]
   );
@@ -122,13 +123,13 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
     <Header>
       <Header.LeftItem>
         <div className="flex items-center gap-2">
-          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink
                   label="Modules"
-                  href={`/${workspaceSlug}/projects/${projectId}/modules/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/modules`}
                   icon={<ModuleOutline className="h-4 w-4 text-tertiary" />}
                   isLast
                 />
@@ -138,10 +139,10 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
             <Breadcrumbs.Item
               component={
                 <BreadcrumbNavigationSearchDropdown
-                  selectedItem={moduleId?.toString() ?? ""}
+                  selectedItem={moduleId}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
-                    router.push(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
+                    navigate(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
                   }}
                   title={moduleDetails?.name}
                   icon={<ModuleOutline className="size-3.5 flex-shrink-0 text-tertiary" />}
@@ -190,7 +191,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
               activeLayout={activeLayout}
             />
           </div>
-          {moduleId && <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />}
+          <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />
           <FiltersDropdown
             title="Display"
             placement="bottom-end"
@@ -232,15 +233,13 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
             "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
           })}
         />
-        {moduleId && (
-          <ModuleQuickActions
-            parentRef={parentRef}
-            moduleId={moduleId}
-            projectId={projectId.toString()}
-            workspaceSlug={workspaceSlug.toString()}
-            customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
-          />
-        )}
+        <ModuleQuickActions
+          parentRef={parentRef}
+          moduleId={moduleId}
+          projectId={projectId}
+          workspaceSlug={workspaceSlug}
+          customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
+        />
       </Header.RightItem>
     </Header>
   );

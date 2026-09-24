@@ -13,7 +13,7 @@ import { Logo } from "@plane/propel/emoji-icon-picker";
 import { IconButton } from "@plane/propel/icon-button";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useProject } from "@/hooks/store/use-project";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 
@@ -24,7 +24,7 @@ type Props = {
 export const ProjectSettingsSidebarHeader = observer(function ProjectSettingsSidebarHeader(props: Props) {
   const { projectId } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
   const { currentWorkspace } = useWorkspace();
@@ -46,7 +46,7 @@ export const ProjectSettingsSidebarHeader = observer(function ProjectSettingsSid
           variant="ghost"
           size="base"
           icon={ArrowNarrowLeftOutline}
-          onClick={() => router.push(`/${currentWorkspace?.slug}/projects/${projectId}/issues/`)}
+          onClick={() => navigate(`/${currentWorkspace?.slug}/projects/${projectId}/issues`)}
         />
         <p>Project settings</p>
       </div>

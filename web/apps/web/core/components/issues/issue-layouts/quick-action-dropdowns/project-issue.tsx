@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { omit } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import type { TIssue } from "@plane/types";
@@ -61,7 +61,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       issue.project_id ?? undefined
     ) && !readOnly;
   const isArchivingAllowed = handleArchive && isEditingAllowed;
@@ -80,7 +80,7 @@ export const ProjectIssueQuickActions = observer(function ProjectIssueQuickActio
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug,
     projectIdentifier,
     activeLayout,
     isEditingAllowed,

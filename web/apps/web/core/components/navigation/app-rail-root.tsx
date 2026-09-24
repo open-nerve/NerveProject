@@ -6,7 +6,7 @@
 
 "use client";
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { useMatch, useParams } from "react-router";
 import { SettingsOutline, TickOutline } from "@makeplane/propel/icons";
 import { ContextMenu } from "@plane/propel/context-menu";
 import { cn } from "@plane/utils";
@@ -21,12 +21,11 @@ import { AppSidebarItemsRoot } from "./items-root";
 export const AppRailRoot = observer(() => {
   // router
   const { workspaceSlug, projectId } = useParams();
-  const pathname = usePathname();
   // preferences
   const { preferences, updateDisplayMode } = useAppRailPreferences();
   const { isCollapsed, toggleAppRail } = useAppRailVisibility();
   // derived values
-  const isWorkspaceSettingsPath = pathname.includes(`/${workspaceSlug}/settings`) && !projectId;
+  const isWorkspaceSettingsPath = useMatch({ path: "/:workspaceSlug/settings", end: false }) !== null && !projectId;
   const showLabel = preferences.displayMode === "icon_with_label";
   const railWidth = showLabel ? "3.75rem" : "3rem";
 

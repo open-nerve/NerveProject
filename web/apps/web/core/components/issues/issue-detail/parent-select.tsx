@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 
 import { useTranslation } from "@plane/i18n";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
@@ -92,7 +92,7 @@ export const IssueParentSelect = observer(function IssueParentSelect(props: TIss
         {issue.parent_id && parentIssue ? (
           <div className="flex items-center gap-1.5">
             <Tooltip label={`Title: ${parentIssue.name}`} layout="stacked" disabled={isMobile}>
-              <Link href={workItemLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+              <Link to={workItemLink} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                 {parentIssue?.project_id && parentIssueProjectDetails && (
                   <IssueIdentifier
                     projectId={parentIssue.project_id}

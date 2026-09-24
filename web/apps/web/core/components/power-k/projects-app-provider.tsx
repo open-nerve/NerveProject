@@ -6,12 +6,11 @@
 
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 // plane web imports
 import { ProjectLevelModals } from "@/components/modals/project-level";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
@@ -28,7 +27,7 @@ import { ProjectsAppPowerKModalWrapper } from "./ui/modal/wrapper";
  */
 export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProvider() {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const params = useParams();
   const { workspaceSlug, projectId: routerProjectId, workItem: workItemIdentifier } = params;
   // states
@@ -42,9 +41,9 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
   // derived values
-  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier.toString()) : undefined;
+  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier) : undefined;
   const workItemDetails = workItemId ? getIssueById(workItemId) : undefined;
-  const projectId: string | string[] | undefined | null = routerProjectId ?? workItemDetails?.project_id;
+  const projectId = routerProjectId ?? workItemDetails?.project_id ?? undefined;
   const commands = useProjectsAppPowerKCommands();
   // Build command context from props and store
   const context: TPowerKContext = useMemo(
@@ -58,7 +57,7 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
         ...params,
         projectId,
       },
-      router,
+      navigate,
       closePalette: () => togglePowerKModal(false),
       setActiveCommand,
       setActivePage,
@@ -70,7 +69,7 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
       shouldShowContextBasedActions,
       params,
       projectId,
-      router,
+      navigate,
       togglePowerKModal,
       setActivePage,
     ]
@@ -79,11 +78,9 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
   return (
     <>
       <GlobalShortcutsProvider context={context} commands={commands} />
-      {workspaceSlug && <WorkspaceLevelModals workspaceSlug={workspaceSlug.toString()} />}
-      {workspaceSlug && projectId && (
-        <ProjectLevelModals workspaceSlug={workspaceSlug.toString()} projectId={projectId.toString()} />
-      )}
-      <WorkItemLevelModals workItemIdentifier={workItemIdentifier?.toString()} />
+      {workspaceSlug && <WorkspaceLevelModals workspaceSlug={workspaceSlug} />}
+      {workspaceSlug && projectId && <ProjectLevelModals workspaceSlug={workspaceSlug} projectId={projectId} />}
+      <WorkItemLevelModals workItemIdentifier={workItemIdentifier} />
       <ProjectsAppPowerKModalWrapper
         commandsListComponent={ProjectsAppPowerKCommandsList}
         context={context}

@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EIssuesStoreType } from "@plane/types";
 // hooks
@@ -26,9 +26,9 @@ export const ModuleKanBanLayout = observer(function ModuleKanBanLayout() {
       QuickActions={ModuleIssueQuickActions}
       addIssuesToView={(issueIds: string[]) => {
         if (!workspaceSlug || !projectId || !moduleId) throw new Error();
-        return issues.addIssuesToModule(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), issueIds);
+        return issues.addIssuesToModule(workspaceSlug, projectId, moduleId, issueIds);
       }}
-      viewId={moduleId?.toString()}
+      viewId={moduleId}
     />
   );
 });

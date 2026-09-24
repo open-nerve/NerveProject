@@ -41,4 +41,8 @@ created: 2026-09-22
 3. 锁文件核对改用一次性脚本逐项比较 importers 和存活包（spec 2.6）；importers 的变化只有删除、两处对等后缀和 i18n 新增的 `vitest`。
 4. 新增的 `tools/keywords.mjs` 由 `make lint-web` 调用，`knip.jsonc` 的根工作区把它列为 `entry`（spec 2.4）。
 
+## 处理结果（M1/P4）
+
+`.env` 一节已处理（[P4 spec](../specs/P4-router-native.md)）：`.env.example` 和 dotenv 加载已删除；README"前端"一节的"不要建立 `web/apps/web/.env`"一条改为"没有前端环境变量"，"端到端测试"一节的"同源"一条不再引用它；S2 的同源断言保留，作为回归检查。knip 改为门禁和配置提示已在 M1/P3 处理（`make knip` 先生成路由类型，再带 `--treat-config-hints-as-errors` 运行，见 [P3 spec](../specs/P3-trim-platform.md) 2.9）。状态仍为 `open`：S2 与包名在 M1/P5。
+
 来源：[M0/P6 评审记录](../../M0-foundation/reviews/P6-e2e-ci-review.md)。

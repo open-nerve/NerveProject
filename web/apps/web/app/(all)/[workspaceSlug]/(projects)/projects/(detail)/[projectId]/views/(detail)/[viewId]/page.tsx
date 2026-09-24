@@ -15,12 +15,12 @@ import { ProjectViewLayoutRoot } from "@/components/issues/issue-layouts/roots/p
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/page";
 
 function ProjectViewIssuesPage({ params }: Route.ComponentProps) {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, viewId } = params;
   // store hooks
   const { fetchViewDetails, getViewById } = useProjectView();
@@ -40,7 +40,7 @@ function ProjectViewIssuesPage({ params }: Route.ComponentProps) {
         description="The view you are looking for does not exist or you don't have permission to view it."
         primaryButton={{
           text: "View other views",
-          onClick: () => router.push(`/${workspaceSlug}/projects/${projectId}/views`),
+          onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/views`),
         }}
       />
     );

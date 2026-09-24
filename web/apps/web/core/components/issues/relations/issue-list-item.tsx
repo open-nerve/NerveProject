@@ -64,7 +64,7 @@ export const RelationIssueListItem = observer(function RelationIssueListItem(pro
   if (!issue || !projectId) return <></>;
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug.toString(),
+    workspaceSlug,
     projectId: issue?.project_id,
     issueId: issue?.id,
     projectIdentifier: projectDetail?.identifier,

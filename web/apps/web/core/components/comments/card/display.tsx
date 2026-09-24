@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
-import { usePathname } from "next/navigation";
+import { useLocation } from "react-router";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
@@ -68,7 +68,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
   const userReactions = activityOperations.userReactions(comment.id);
 
   // navigation
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   // derived values
   const commentBlockId = `comment-${comment?.id}`;
   // Check if there are any reactions to determine if we should render the footer
@@ -158,7 +158,7 @@ export const CommentCardDisplay = observer(function CommentCardDisplay(props: TC
             workspaceId={workspaceId}
             workspaceSlug={workspaceSlug}
             containerClassName={cn("!py-1 transition-[border-color] duration-500", highlightClassName)}
-            projectId={projectId?.toString()}
+            projectId={projectId}
             displayConfig={{
               fontSize: "small-font",
             }}

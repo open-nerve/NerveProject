@@ -4,17 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { IIssueLabel } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 // types
 
 export class IssueLabelService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getWorkspaceIssueLabels(workspaceSlug: string): Promise<IIssueLabel[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/labels/`)
       .then((response) => response?.data)

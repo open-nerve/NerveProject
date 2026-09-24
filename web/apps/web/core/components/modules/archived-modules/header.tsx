@@ -6,7 +6,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // icons
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useOutsideClickDetector } from "@plane/hooks";
@@ -62,7 +62,7 @@ export const ArchivedModulesHeader = observer(function ArchivedModulesHeader() {
         else newValues.push(value);
       }
 
-      updateFilters(projectId.toString(), { [key]: newValues }, "archived");
+      updateFilters(projectId, { [key]: newValues }, "archived");
     },
     [currentProjectArchivedFilters, projectId, updateFilters]
   );
@@ -132,7 +132,7 @@ export const ArchivedModulesHeader = observer(function ArchivedModulesHeader() {
           value={currentProjectDisplayFilters?.order_by}
           onChange={(val) => {
             if (!projectId || val === currentProjectDisplayFilters?.order_by) return;
-            updateDisplayFilters(projectId.toString(), {
+            updateDisplayFilters(projectId, {
               order_by: val,
             });
           }}
@@ -148,7 +148,7 @@ export const ArchivedModulesHeader = observer(function ArchivedModulesHeader() {
             filters={currentProjectArchivedFilters ?? {}}
             handleDisplayFiltersUpdate={(val) => {
               if (!projectId) return;
-              updateDisplayFilters(projectId.toString(), val);
+              updateDisplayFilters(projectId, val);
             }}
             handleFiltersUpdate={handleFilters}
             memberIds={workspaceMemberIds ?? undefined}

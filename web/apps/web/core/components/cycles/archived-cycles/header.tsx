@@ -6,7 +6,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // icons
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useOutsideClickDetector } from "@plane/hooks";
@@ -52,7 +52,7 @@ export const ArchivedCyclesHeader = observer(function ArchivedCyclesHeader() {
         else newValues.push(value);
       }
 
-      updateFilters(projectId.toString(), { [key]: newValues }, "archived");
+      updateFilters(projectId, { [key]: newValues }, "archived");
     },
     [currentProjectArchivedFilters, projectId, updateFilters]
   );

@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { useOutsideClickDetector } from "@plane/hooks";
 import { useTranslation } from "@plane/i18n";
@@ -35,7 +35,7 @@ export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSi
   const { data: currentUser } = useUser();
   const { profileSidebarCollapsed, toggleProfileSidebar } = useAppTheme();
   const { toggleProfileSettingsModal } = useCommandPalette();
-  const profileMember = useProfileMember(workspaceSlug?.toString() ?? "", userId?.toString() ?? "");
+  const profileMember = useProfileMember(workspaceSlug ?? "", userId ?? "");
   const { t } = useTranslation();
 
   useOutsideClickDetector(ref, () => {

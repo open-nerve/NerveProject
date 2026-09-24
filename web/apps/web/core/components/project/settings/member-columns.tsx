@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import { CircleMinus } from "lucide-react";
 import { Disclosure } from "@headlessui/react";
@@ -50,7 +50,7 @@ export function NameColumn(props: NameProps) {
           <div className="flex w-72 items-center gap-2">
             <div className="flex flex-1 items-center gap-x-2 gap-y-2">
               {avatar_url && avatar_url.trim() !== "" ? (
-                <Link href={`/${workspaceSlug}/profile/${id}`}>
+                <Link to={`/${workspaceSlug}/profile/${id}`}>
                   <span className="relative flex size-6 items-center justify-center rounded-full text-on-color capitalize">
                     <img
                       src={getFileURL(avatar_url)}
@@ -60,7 +60,7 @@ export function NameColumn(props: NameProps) {
                   </span>
                 </Link>
               ) : (
-                <Link href={`/${workspaceSlug}/profile/${id}`}>
+                <Link to={`/${workspaceSlug}/profile/${id}`}>
                   <span className="relative flex size-6 items-center justify-center rounded-full bg-layer-3 text-11 text-on-color capitalize">
                     {(email ?? display_name ?? "?")[0]}
                   </span>
@@ -153,19 +153,17 @@ export const AccountTypeColumn = observer(function AccountTypeColumn(props: Acco
               value={rowData.original_role}
               onChange={async (value: EUserProjectRoles) => {
                 if (!workspaceSlug) return;
-                await updateMemberRole(workspaceSlug.toString(), projectId.toString(), rowData.member.id, value).catch(
-                  (err) => {
-                    console.log(err, "err");
-                    const error = err.error;
-                    const errorString = Array.isArray(error) ? error[0] : error;
+                await updateMemberRole(workspaceSlug, projectId, rowData.member.id, value).catch((err) => {
+                  console.log(err, "err");
+                  const error = err.error;
+                  const errorString = Array.isArray(error) ? error[0] : error;
 
-                    setToast({
-                      type: TOAST_TYPE.ERROR,
-                      title: "You can’t change this role yet.",
-                      message: errorString ?? "An error occurred while updating member role. Please try again.",
-                    });
-                  }
-                );
+                  setToast({
+                    type: TOAST_TYPE.ERROR,
+                    title: "You can’t change this role yet.",
+                    message: errorString ?? "An error occurred while updating member role. Please try again.",
+                  });
+                });
               }}
               label={
                 <div className="flex">

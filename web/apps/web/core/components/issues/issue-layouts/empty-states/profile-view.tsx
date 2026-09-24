@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // components
 import { useTranslation } from "@plane/i18n";
 import { EmptyStateDetailed } from "@plane/propel/empty-state";
@@ -22,8 +22,8 @@ export const ProfileViewEmptyState = observer(function ProfileViewEmptyState() {
   return (
     <EmptyStateDetailed
       assetKey="work-item"
-      title={t(`profile.empty_state.${profileViewId.toString()}.title`)}
-      description={t(`profile.empty_state.${profileViewId.toString()}.description`)}
+      title={t(`profile.empty_state.${profileViewId}.title`)}
+      description={t(`profile.empty_state.${profileViewId}.description`)}
     />
   );
 });

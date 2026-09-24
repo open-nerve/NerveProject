@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -25,14 +24,14 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 export const IssuesHeader = observer(function IssuesHeader() {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
   // store hooks
   const {
@@ -53,17 +52,19 @@ export const IssuesHeader = observer(function IssuesHeader() {
     EUserPermissionsLevel.PROJECT
   );
 
+  if (!workspaceSlug || !projectId) return null;
+
   return (
     <Header>
       <Header.LeftItem>
         <div className="flex items-center gap-2.5">
-          <Breadcrumbs onBack={() => router.back()} isLoading={loader === "init-loader"} className="flex-grow-0">
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"} className="flex-grow-0">
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink
                   label="Work Items"
-                  href={`/${workspaceSlug}/projects/${projectId}/issues/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/issues`}
                   icon={<WorkItemsOutline className="h-4 w-4 text-tertiary" />}
                   isLast
                 />

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -40,7 +40,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
   } = useMember();
   // derived values
   const invitationDetails = getWorkspaceInvitationDetails(invitationId);
-  const currentWorkspaceMemberInfo = workspaceInfoBySlug(workspaceSlug.toString());
+  const currentWorkspaceMemberInfo = workspaceInfoBySlug(workspaceSlug);
   const currentWorkspaceRole = currentWorkspaceMemberInfo?.role;
   // is the current logged in user admin
   const isAdmin = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.WORKSPACE);
@@ -57,7 +57,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
     try {
       if (!workspaceSlug || !invitationDetails) return;
 
-      await deleteMemberInvitation(workspaceSlug.toString(), invitationDetails.id);
+      await deleteMemberInvitation(workspaceSlug, invitationDetails.id);
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Success!",
@@ -155,7 +155,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
             onChange={(value: EUserPermissions) => {
               if (!workspaceSlug || !value) return;
 
-              updateMemberInvitation(workspaceSlug.toString(), invitationDetails.id, {
+              updateMemberInvitation(workspaceSlug, invitationDetails.id, {
                 role: value,
               }).catch((err: unknown) => {
                 const error = err as { error?: string };

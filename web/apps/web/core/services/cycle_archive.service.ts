@@ -5,17 +5,12 @@
  */
 
 // type
-import { API_BASE_URL } from "@plane/constants";
 import type { ICycle } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
 
 export class CycleArchiveService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getArchivedCycles(workspaceSlug: string, projectId: string): Promise<ICycle[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/archived-cycles/`)
       .then((response) => response?.data)

@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 // components
 import { Combobox } from "@headlessui/react";
@@ -82,7 +82,7 @@ export const CycleOptions = observer(function CycleOptions(props: CycleOptionsPr
   });
 
   const onOpen = () => {
-    if (workspaceSlug && !cycleIds) fetchAllCycles(workspaceSlug.toString(), projectId);
+    if (workspaceSlug && !cycleIds) fetchAllCycles(workspaceSlug, projectId);
   };
 
   const searchInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

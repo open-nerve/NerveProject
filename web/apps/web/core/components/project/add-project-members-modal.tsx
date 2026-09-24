@@ -83,7 +83,7 @@ export const AddProjectMembersModal = observer(function AddProjectMembersModal(p
 
     const payload = { ...formData };
 
-    await bulkAddMembersToProject(workspaceSlug.toString(), projectId.toString(), payload)
+    await bulkAddMembersToProject(workspaceSlug, projectId, payload)
       .then(() => {
         if (onSuccess) onSuccess();
         onClose();

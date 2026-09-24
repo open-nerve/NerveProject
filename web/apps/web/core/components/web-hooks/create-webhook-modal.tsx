@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // types
 import { useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -70,7 +70,7 @@ export function CreateWebhookModal(props: ICreateWebhookModal) {
         issue_comment: formData.issue_comment ?? false,
       };
 
-    await createWebhook(workspaceSlug.toString(), payload)
+    await createWebhook(workspaceSlug, payload)
       .then(({ webHook, secretKey }) => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

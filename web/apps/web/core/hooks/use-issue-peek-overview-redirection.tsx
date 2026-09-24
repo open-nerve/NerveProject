@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 // types
 import type { TIssue } from "@plane/types";
 // helpers
@@ -15,7 +15,7 @@ import { useProject } from "./store/use-project";
 
 const useIssuePeekOverviewRedirection = () => {
   // router
-  const router = useRouter();
+  const navigate = useNavigate();
   //   store hooks
   const { getIsIssuePeeked, setPeekIssue } = useIssueDetail();
   const { getProjectIdentifierById } = useProject();
@@ -40,7 +40,7 @@ const useIssuePeekOverviewRedirection = () => {
     });
     if (workspaceSlug && project_id && id && !getIsIssuePeeked(id) && !tempId) {
       if (isMobile) {
-        router.push(workItemLink);
+        navigate(workItemLink);
       } else {
         setPeekIssue({ workspaceSlug, projectId: project_id, issueId: id, nestingLevel, isArchived: !!archived_at });
       }

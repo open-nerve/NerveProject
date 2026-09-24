@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -24,10 +24,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 
 export const ModuleEmptyState = observer(function ModuleEmptyState() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, moduleId: routerModuleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
-  const moduleId = routerModuleId ? routerModuleId.toString() : undefined;
+  const { workspaceSlug, projectId, moduleId } = useParams();
   // states
   const [moduleIssuesListModal, setModuleIssuesListModal] = useState(false);
   // plane hooks
@@ -48,7 +45,7 @@ export const ModuleEmptyState = observer(function ModuleEmptyState() {
 
     const issueIds = data.map((i) => i.id);
     await issues
-      .addIssuesToModule(workspaceSlug.toString(), projectId?.toString(), moduleId.toString(), issueIds)
+      .addIssuesToModule(workspaceSlug, projectId, moduleId, issueIds)
       .then(() =>
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -68,11 +65,11 @@ export const ModuleEmptyState = observer(function ModuleEmptyState() {
   return (
     <div className="relative h-full w-full overflow-y-auto">
       <ExistingIssuesListModal
-        workspaceSlug={workspaceSlug?.toString()}
-        projectId={projectId?.toString()}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
         isOpen={moduleIssuesListModal}
         handleClose={() => setModuleIssuesListModal(false)}
-        searchParams={{ module: moduleId != undefined ? moduleId.toString() : "" }}
+        searchParams={{ module: moduleId ?? "" }}
         handleOnSubmit={handleAddIssuesToModule}
       />
       <div className="grid h-full w-full place-items-center">

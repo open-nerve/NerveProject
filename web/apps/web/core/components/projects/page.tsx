@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import useSWR from "swr";
 // components
 import { ProjectRoot } from "@/components/project/root";
@@ -22,7 +22,7 @@ export const ProjectPageRoot = observer(function ProjectPageRoot() {
   // fetching workspace projects
   useSWR(
     workspaceSlug && currentWorkspace ? `WORKSPACE_PROJECTS_${workspaceSlug}` : null,
-    workspaceSlug && currentWorkspace ? () => fetchProjects(workspaceSlug.toString()) : null,
+    workspaceSlug && currentWorkspace ? () => fetchProjects(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 

@@ -7,7 +7,6 @@
 import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // Plane imports
 import { useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -26,11 +25,9 @@ export interface DraftIssueProps extends IssueFormProps {
 }
 
 export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftIssueProps) {
-  const { changesMade, data, onChange, onClose, projectId } = props;
+  const { changesMade, data, onChange, onClose, workspaceSlug, projectId } = props;
   // states
   const [issueDiscardModal, setIssueDiscardModal] = useState(false);
-  // router params
-  const { workspaceSlug } = useParams();
   // store hooks
   const { createIssue } = useWorkspaceDraftIssues();
   const { t } = useTranslation();
@@ -74,7 +71,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
   };
 
   const handleCreateDraftIssue = async () => {
-    if (!changesMade || !workspaceSlug || !projectId) return;
+    if (!changesMade || !projectId) return;
 
     const payload = {
       ...changesMade,
@@ -82,7 +79,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
       project_id: projectId,
     };
 
-    await createIssue(workspaceSlug.toString(), payload)
+    await createIssue(workspaceSlug, payload)
       .then((res) => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

@@ -6,7 +6,7 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import useSWR from "swr";
 // plane constants
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
@@ -41,10 +41,7 @@ function ProjectViewIssueLayout(props: { activeLayout: EIssueLayoutTypes | undef
 
 export const ProjectViewLayoutRoot = observer(function ProjectViewLayoutRoot() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, viewId: routerViewId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug?.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId?.toString() : undefined;
-  const viewId = routerViewId ? routerViewId?.toString() : undefined;
+  const { workspaceSlug, projectId, viewId } = useParams();
   // hooks
   const { issuesFilter } = useIssues(EIssuesStoreType.PROJECT_VIEW);
   const { getViewById } = useProjectView();

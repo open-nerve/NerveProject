@@ -5,17 +5,12 @@
  */
 
 // types
-import { API_BASE_URL } from "@plane/constants";
 import type { ICsrfTokenData } from "@plane/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";
 
 export class AuthService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async requestCSRFToken(): Promise<ICsrfTokenData> {
     return this.get("/auth/get-csrf-token/")
       .then((response) => response.data)
@@ -24,7 +19,7 @@ export class AuthService extends APIService {
       });
   }
 
-  async signOut(baseUrl: string): Promise<any> {
+  async signOut(): Promise<any> {
     await this.requestCSRFToken().then((data) => {
       const csrfToken = data?.csrf_token;
 
@@ -34,7 +29,7 @@ export class AuthService extends APIService {
       const element1 = document.createElement("input");
 
       form.method = "POST";
-      form.action = `${baseUrl}/auth/sign-out/`;
+      form.action = "/auth/sign-out/";
 
       element1.value = csrfToken;
       element1.name = "csrfmiddlewaretoken";

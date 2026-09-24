@@ -6,7 +6,6 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane ui
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { Breadcrumbs, Header } from "@plane/ui";
@@ -16,36 +15,41 @@ import { IssueDetailQuickActions } from "@/components/issues/issue-detail/issue-
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader() {
+type TProps = {
+  workspaceSlug: string;
+  workItem: string;
+};
+
+export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader(props: TProps) {
   // router
-  const router = useAppRouter();
-  const { workspaceSlug, workItem } = useParams();
+  const navigate = useNavigate();
+  const { workspaceSlug, workItem } = props;
   // store hooks
   const { getProjectById, loader } = useProject();
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
   // derived values
-  const issueId = getIssueIdByIdentifier(workItem?.toString());
-  const issueDetails = issueId ? getIssueById(issueId.toString()) : undefined;
+  const issueId = getIssueIdByIdentifier(workItem);
+  const issueDetails = issueId ? getIssueById(issueId) : undefined;
   const projectId = issueDetails ? issueDetails?.project_id : undefined;
-  const projectDetails = projectId ? getProjectById(projectId?.toString()) : undefined;
+  const projectDetails = projectId ? getProjectById(projectId) : undefined;
 
-  if (!workspaceSlug || !projectId || !issueId) return null;
+  if (!projectId || !issueId) return null;
   return (
     <Header>
       <Header.LeftItem>
-        <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+        <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
+          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
                 label="Work Items"
-                href={`/${workspaceSlug}/projects/${projectId}/issues/`}
+                href={`/${workspaceSlug}/projects/${projectId}/issues`}
                 icon={<WorkItemsOutline className="h-4 w-4 text-tertiary" />}
               />
             }
@@ -61,11 +65,7 @@ export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader() {
       </Header.LeftItem>
       <Header.RightItem>
         {projectId && issueId && (
-          <IssueDetailQuickActions
-            workspaceSlug={workspaceSlug?.toString()}
-            projectId={projectId?.toString()}
-            issueId={issueId?.toString()}
-          />
+          <IssueDetailQuickActions workspaceSlug={workspaceSlug} projectId={projectId} issueId={issueId} />
         )}
       </Header.RightItem>
     </Header>

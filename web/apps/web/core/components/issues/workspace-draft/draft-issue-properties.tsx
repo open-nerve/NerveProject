@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // icons
 import { DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
 // types
@@ -56,16 +56,16 @@ export const DraftIssueProperties = observer(function DraftIssueProperties(props
     () => ({
       updateIssueModules: async (moduleIds: string[]) => {
         if (!workspaceSlug || !issue.id) return;
-        await addModulesToIssue(workspaceSlug.toString(), issue.id, moduleIds);
+        await addModulesToIssue(workspaceSlug, issue.id, moduleIds);
       },
       addIssueToCycle: async (cycleId: string) => {
         if (!workspaceSlug || !issue.id) return;
-        await addCycleToIssue(workspaceSlug.toString(), issue.id, cycleId);
+        await addCycleToIssue(workspaceSlug, issue.id, cycleId);
       },
       removeIssueFromCycle: async () => {
         if (!workspaceSlug || !issue.id) return;
         // TODO: To be checked
-        await addCycleToIssue(workspaceSlug.toString(), issue.id, "");
+        await addCycleToIssue(workspaceSlug, issue.id, "");
       },
     }),
     [workspaceSlug, issue, addCycleToIssue, addModulesToIssue]

@@ -5,16 +5,11 @@
  */
 
 // plane imports
-import { API_BASE_URL } from "@plane/constants";
 import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 
 export class IssueService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async createIssue(workspaceSlug: string, projectId: string, data: Partial<TIssue>): Promise<TIssue> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/`, data)
       .then((response) => response?.data)

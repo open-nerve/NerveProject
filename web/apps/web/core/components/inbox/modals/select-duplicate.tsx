@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { useTheme } from "next-themes";
 import { Combobox } from "@headlessui/react";
 // plane imports
@@ -59,7 +59,7 @@ export function SelectDuplicateInboxIssueModal(props: Props) {
 
     setIsSearching(true);
     projectService
-      .projectIssuesSearch(workspaceSlug.toString(), projectId.toString(), {
+      .projectIssuesSearch(workspaceSlug, projectId, {
         search: debouncedSearchTerm,
         workspace_search: false,
       })

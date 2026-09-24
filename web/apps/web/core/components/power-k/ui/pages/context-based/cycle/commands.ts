@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { StarOff } from "lucide-react";
 import { LinkOutline, StarOutline } from "@makeplane/propel/icons";
 // plane imports
@@ -28,7 +28,7 @@ export const usePowerKCycleContextBasedActions = (): TPowerKCommandConfig[] => {
   } = useUser();
   const { getCycleById, addCycleToFavorites, removeCycleFromFavorites } = useCycle();
   // derived values
-  const cycleDetails = cycleId ? getCycleById(cycleId.toString()) : null;
+  const cycleDetails = cycleId ? getCycleById(cycleId) : null;
   const isFavorite = !!cycleDetails?.is_favorite;
   // permission
   const isEditingAllowed =
@@ -40,8 +40,8 @@ export const usePowerKCycleContextBasedActions = (): TPowerKCommandConfig[] => {
   const toggleFavorite = useCallback(() => {
     if (!workspaceSlug || !cycleDetails || !cycleDetails.project_id) return;
     try {
-      if (isFavorite) removeCycleFromFavorites(workspaceSlug.toString(), cycleDetails.project_id, cycleDetails.id);
-      else addCycleToFavorites(workspaceSlug.toString(), cycleDetails.project_id, cycleDetails.id);
+      if (isFavorite) removeCycleFromFavorites(workspaceSlug, cycleDetails.project_id, cycleDetails.id);
+      else addCycleToFavorites(workspaceSlug, cycleDetails.project_id, cycleDetails.id);
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,

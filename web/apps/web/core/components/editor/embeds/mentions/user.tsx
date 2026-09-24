@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { Link } from "react-router";
+import { useParams, Link } from "react-router";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { ROLE } from "@plane/constants";
@@ -34,7 +33,7 @@ export const EditorUserMention = observer(function EditorUserMention(props: Prop
   } = useMember();
   // derived values
   const userDetails = getUserDetails(id);
-  const roleDetails = projectId ? getProjectMemberDetails(id, projectId.toString())?.role : null;
+  const roleDetails = projectId ? getProjectMemberDetails(id, projectId)?.role : null;
   const profileLink = `/${workspaceSlug}/profile/${id}`;
 
   if (!userDetails) {

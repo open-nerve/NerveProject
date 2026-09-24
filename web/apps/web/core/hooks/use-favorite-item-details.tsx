@@ -38,7 +38,7 @@ export const useFavoriteItemDetails = (workspaceSlug: string, favorite: IFavorit
 
   let itemIcon;
   let itemTitle;
-  const itemLink = generateFavoriteItemLink(workspaceSlug.toString(), favorite);
+  const itemLink = generateFavoriteItemLink(workspaceSlug, favorite);
 
   switch (favoriteItemEntityType) {
     case "project":

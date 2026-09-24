@@ -6,8 +6,7 @@
 
 import React, { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { matchPath, useParams, Link, useLocation } from "react-router";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
@@ -49,11 +48,9 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
     issue: { getIssueIdByIdentifier, getIssueById },
   } = useIssueDetail();
   // pathname
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   // derived values
-  const workItemId = workItemIdentifierFromRoute
-    ? getIssueIdByIdentifier(workItemIdentifierFromRoute?.toString())
-    : undefined;
+  const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
   const project = getPartialProjectById(projectId);
   // handlers
@@ -136,7 +133,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
       // is active
       const isWorkItemActive = item.key === "work_items" && workItemCondition;
       // pathname condition
-      const isPathnameActive = pathname.includes(item.href);
+      const isPathnameActive = matchPath({ path: item.href, end: false }, pathname) !== null;
       // return
       return isWorkItemActive || isPathnameActive;
     },
@@ -156,7 +153,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
         const shouldShowCount = item.key === "intake" && (project.intake_count ?? 0) > 0;
 
         return (
-          <Link key={item.key} href={item.href} onClick={handleProjectClick}>
+          <Link key={item.key} to={item.href} onClick={handleProjectClick}>
             <SidebarNavItem isActive={!!isActive(item)}>
               <div className="flex w-full items-center justify-between gap-1.5 py-[1px]">
                 <div className="flex items-center gap-1.5">

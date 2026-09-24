@@ -5,13 +5,12 @@
  */
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 // ui
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { AlertModalCore } from "@plane/ui";
 // hooks
 import { useWebhook } from "@/hooks/store/use-webhook";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 
 interface IDeleteWebhook {
   isOpen: boolean;
@@ -23,7 +22,7 @@ export function DeleteWebhookModal(props: IDeleteWebhook) {
   // states
   const [isDeleting, setIsDeleting] = useState(false);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { removeWebhook } = useWebhook();
 
@@ -37,8 +36,8 @@ export function DeleteWebhookModal(props: IDeleteWebhook) {
     if (!workspaceSlug || !webhookId) return;
     setIsDeleting(true);
     try {
-      await removeWebhook(workspaceSlug.toString(), webhookId.toString());
-      router.replace(`/${workspaceSlug}/settings/webhooks/`);
+      await removeWebhook(workspaceSlug, webhookId);
+      navigate(`/${workspaceSlug}/settings/webhooks`, { replace: true });
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Success!",

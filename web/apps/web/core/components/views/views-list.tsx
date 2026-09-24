@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -30,8 +30,8 @@ export const ProjectViewsList = observer(function ProjectViewsList() {
   const { getProjectViews, getFilteredProjectViews, loader } = useProjectView();
   const { allowPermissions } = useUserPermissions();
   // derived values
-  const projectViews = getProjectViews(projectId?.toString());
-  const filteredProjectViews = getFilteredProjectViews(projectId?.toString());
+  const projectViews = projectId ? getProjectViews(projectId) : undefined;
+  const filteredProjectViews = projectId ? getFilteredProjectViews(projectId) : undefined;
   const canPerformEmptyStateActions = allowPermissions(
     [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER, EUserProjectRoles.GUEST],
     EUserPermissionsLevel.PROJECT

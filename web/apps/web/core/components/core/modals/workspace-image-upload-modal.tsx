@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { useDropzone } from "react-dropzone";
 // plane imports
 import { ACCEPTED_AVATAR_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE, MAX_FILE_SIZE } from "@plane/constants";
@@ -66,14 +66,14 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
 
     try {
       const { asset_url } = await fileService.uploadWorkspaceAsset(
-        workspaceSlug.toString(),
+        workspaceSlug,
         {
           entity_identifier: currentWorkspace.id,
           entity_type: EFileAssetType.WORKSPACE_LOGO,
         },
         image
       );
-      updateWorkspaceLogo(workspaceSlug.toString(), asset_url);
+      updateWorkspaceLogo(workspaceSlug, asset_url);
       onSuccess(asset_url);
     } catch (error: any) {
       console.log("error", error);
@@ -95,7 +95,7 @@ export const WorkspaceImageUploadModal = observer(function WorkspaceImageUploadM
         await fileService.deleteOldWorkspaceAsset(currentWorkspace?.id ?? "", value);
       } else {
         const assetId = getAssetIdFromUrl(value);
-        await fileService.deleteWorkspaceAsset(workspaceSlug.toString(), assetId);
+        await fileService.deleteWorkspaceAsset(workspaceSlug, assetId);
       }
       await handleRemove();
       handleClose();

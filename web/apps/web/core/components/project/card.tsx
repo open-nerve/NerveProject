@@ -6,8 +6,7 @@
 
 import React, { useRef, useState } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, Link, useNavigate } from "react-router";
 import {
   DeleteOutline,
   LinkOutline,
@@ -35,7 +34,6 @@ import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@plane/
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
@@ -57,7 +55,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   // refs
   const projectCardRef = useRef(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
   // store hooks
   const { getUserDetails } = useMember();
@@ -86,7 +84,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const handleAddToFavorites = () => {
     if (!workspaceSlug) return;
 
-    const addToFavoritePromise = addProjectToFavorites(workspaceSlug.toString(), project.id);
+    const addToFavoritePromise = addProjectToFavorites(workspaceSlug, project.id);
     setPromiseToast(addToFavoritePromise, {
       loading: "Adding project to favorites...",
       success: {
@@ -107,7 +105,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const handleRemoveFromFavorites = () => {
     if (!workspaceSlug) return;
 
-    const removeFromFavoritePromise = removeProjectFromFavorites(workspaceSlug.toString(), project.id);
+    const removeFromFavoritePromise = removeProjectFromFavorites(workspaceSlug, project.id);
     setPromiseToast(removeFromFavoritePromise, {
       loading: "Removing project from favorites...",
       success: {
@@ -135,7 +133,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const MENU_ITEMS: TContextMenuItem[] = [
     {
       key: "settings",
-      action: () => router.push(`/${workspaceSlug}/settings/projects/${project.id}`),
+      action: () => navigate(`/${workspaceSlug}/settings/projects/${project.id}`),
       title: "Settings",
       icon: SettingsOutline,
       shouldRender: !isArchived && (hasAdminRole || hasMemberRole),
@@ -188,7 +186,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
       {/* Join Project Modal */}
       {workspaceSlug && (
         <JoinProjectModal
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
           project={project}
           isOpen={joinProjectModalOpen}
           handleClose={() => setJoinProjectModal(false)}
@@ -197,7 +195,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
       {/* Restore project modal */}
       {workspaceSlug && project && (
         <ArchiveRestoreProjectModal
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
           projectId={project.id}
           isOpen={restoreProject}
           onClose={() => setRestoreProject(false)}
@@ -206,7 +204,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
       )}
       <Link
         ref={projectCardRef}
-        href={`/${workspaceSlug}/projects/${project.id}/issues`}
+        to={`/${workspaceSlug}/projects/${project.id}/issues`}
         onClick={(e) => {
           if (!isMemberOfProject || isArchived) {
             e.preventDefault();
@@ -353,7 +351,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
-                      href={`/${workspaceSlug}/settings/projects/${project.id}`}
+                      to={`/${workspaceSlug}/settings/projects/${project.id}`}
                     >
                       <SettingsOutline className="h-3.5 w-3.5" />
                     </Link>

@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { usePathname } from "next/navigation";
 import { Outlet } from "react-router";
 // components
 import { PROFILE_TABS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
@@ -24,8 +23,7 @@ import { ProfileNavbar } from "./navbar";
 
 function UseProfileLayout({ params }: Route.ComponentProps) {
   // router
-  const { workspaceSlug, userId } = params;
-  const pathname = usePathname();
+  const { profileViewId } = params;
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { t } = useTranslation();
@@ -39,14 +37,12 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
   const isSmallerScreen = windowSize[0] >= 768;
 
   // derived values
-  const isIssuesTab = pathname.includes("assigned") || pathname.includes("created") || pathname.includes("subscribed");
-
-  const currentTab = PROFILE_TABS.find((tab) => pathname === `/${workspaceSlug}/profile/${userId}${tab.selected}`);
+  const currentTab = PROFILE_TABS.find((tab) => tab.route === profileViewId);
+  const isIssuesTab = currentTab !== undefined;
 
   return (
     <>
-      {/* Passing the type prop from the current route value as we need the header as top most component.
-            TODO: We are depending on the route path to handle the mobile header type. If the path changes, this logic will break. */}
+      {/* Passing the type prop from the current route value as we need the header as top most component. */}
       <div className="flex h-full w-full flex-col overflow-hidden md:flex-row">
         <div className="flex h-full w-full flex-col overflow-hidden">
           <AppHeader

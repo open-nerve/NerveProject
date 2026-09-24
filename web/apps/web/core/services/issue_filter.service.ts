@@ -5,16 +5,11 @@
  */
 
 // services
-import { API_BASE_URL } from "@plane/constants";
 import type { IIssueFiltersResponse } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 
 export class IssueFiltersService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   // // workspace issue filters
   // async fetchWorkspaceFilters(workspaceSlug: string): Promise<IIssueFiltersResponse> {
   //   return this.get(`/api/workspaces/${workspaceSlug}/user-properties/`)

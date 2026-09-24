@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 import { ArchiveOutline, CyclesOutline, ModuleOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { EIssuesStoreType } from "@plane/types";
@@ -16,12 +15,14 @@ import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {
+  workspaceSlug: string;
+  projectId: string;
   activeTab: "issues" | "cycles" | "modules";
 };
 
@@ -50,10 +51,9 @@ const PROJECT_ARCHIVES_BREADCRUMB_LIST: {
 };
 
 export const ProjectArchivesHeader = observer(function ProjectArchivesHeader(props: TProps) {
-  const { activeTab } = props;
+  const { activeTab, workspaceSlug, projectId } = props;
   // router
-  const router = useAppRouter();
-  const { workspaceSlug, projectId } = useParams();
+  const navigate = useNavigate();
   // store hooks
   const {
     issues: { getGroupIssueCount },
@@ -71,8 +71,8 @@ export const ProjectArchivesHeader = observer(function ProjectArchivesHeader(pro
     <Header>
       <Header.LeftItem>
         <div className="flex items-center gap-2.5">
-          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink

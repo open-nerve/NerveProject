@@ -11,7 +11,7 @@ import { Table } from "@plane/ui";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { useProjectColumns } from "@/components/projects/settings/useProjectColumns";
 // store
@@ -28,7 +28,7 @@ type Props = {
 export const ProjectMemberListItem = observer(function ProjectMemberListItem(props: Props) {
   const { memberDetails, projectId, workspaceSlug } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { leaveProject } = useUserPermissions();
   const { data: currentUser } = useUser();
@@ -45,10 +45,10 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
     if (!workspaceSlug || !projectId || !memberId) return;
 
     if (memberId === currentUser?.id) {
-      await leaveProject(workspaceSlug.toString(), projectId.toString())
+      await leaveProject(workspaceSlug, projectId)
         // oxlint-disable-next-line promise/always-return
         .then(async () => {
-          router.push(`/${workspaceSlug}/projects`);
+          navigate(`/${workspaceSlug}/projects`);
         })
         .catch((err) => {
           setToast({
@@ -58,7 +58,7 @@ export const ProjectMemberListItem = observer(function ProjectMemberListItem(pro
           });
         });
     } else
-      await removeMemberFromProject(workspaceSlug.toString(), projectId.toString(), memberId).catch((err) =>
+      await removeMemberFromProject(workspaceSlug, projectId, memberId).catch((err) =>
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "You can't remove the member from this project yet.",

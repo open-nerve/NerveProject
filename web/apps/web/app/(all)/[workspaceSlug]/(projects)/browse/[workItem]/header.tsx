@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import { Header, Row } from "@plane/ui";
 import { cn } from "@plane/utils";
@@ -20,17 +19,22 @@ import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferen
 // local components
 import { WorkItemDetailsHeader } from "./work-item-header";
 
-export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDetailsHeader() {
+type TProps = {
+  workspaceSlug: string;
+  workItem: string;
+};
+
+export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDetailsHeader(props: TProps) {
   // router
-  const { workspaceSlug, workItem } = useParams();
+  const { workspaceSlug, workItem } = props;
   // store hooks
   const { sidebarCollapsed } = useAppTheme();
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
   // derived values
-  const issueId = getIssueIdByIdentifier(workItem?.toString());
-  const issueDetails = issueId ? getIssueById(issueId?.toString()) : undefined;
+  const issueId = getIssueIdByIdentifier(workItem);
+  const issueDetails = issueId ? getIssueById(issueId) : undefined;
   // preferences
   const { preferences: projectPreferences } = useProjectNavigationPreferences();
 
@@ -59,7 +63,7 @@ export const ProjectWorkItemDetailsHeader = observer(function ProjectWorkItemDet
           </Row>
         </div>
       )}
-      <AppHeader header={<WorkItemDetailsHeader />} />
+      <AppHeader header={<WorkItemDetailsHeader workspaceSlug={workspaceSlug} workItem={workItem} />} />
     </>
   );
 });

@@ -7,7 +7,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // hooks
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 import { cn } from "@plane/utils";
@@ -18,12 +17,12 @@ import { PowerKModalFooter } from "@/components/power-k/ui/modal/footer";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 import { useExpandableSearch } from "@/hooks/use-expandable-search";
 
 export const TopNavPowerK = observer(() => {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const params = useParams();
   const { projectId: routerProjectId, workItem: workItemIdentifier } = params;
 
@@ -61,9 +60,9 @@ export const TopNavPowerK = observer(() => {
     issue: { getIssueById, getIssueIdByIdentifier },
   } = useIssueDetail();
 
-  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier.toString()) : undefined;
+  const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier) : undefined;
   const workItemDetails = workItemId ? getIssueById(workItemId) : undefined;
-  const projectId: string | string[] | undefined | null = routerProjectId ?? workItemDetails?.project_id;
+  const projectId = routerProjectId ?? workItemDetails?.project_id ?? undefined;
 
   // Build command context
   const context: TPowerKContext = useMemo(
@@ -77,7 +76,7 @@ export const TopNavPowerK = observer(() => {
         ...params,
         projectId,
       },
-      router,
+      navigate,
       closePalette: closePanel,
       setActiveCommand,
       setActivePage,
@@ -89,7 +88,7 @@ export const TopNavPowerK = observer(() => {
       shouldShowContextBasedActions,
       params,
       projectId,
-      router,
+      navigate,
       setActivePage,
       closePanel,
     ]
@@ -283,7 +282,7 @@ export const TopNavPowerK = observer(() => {
             </Command.List>
             <PowerKModalFooter
               isWorkspaceLevel={isWorkspaceLevel}
-              projectId={context.params.projectId?.toString()}
+              projectId={context.params.projectId}
               onWorkspaceLevelChange={setIsWorkspaceLevel}
             />
           </Command>

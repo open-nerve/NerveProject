@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // ui
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -19,14 +18,19 @@ import { CyclesViewHeader } from "@/components/cycles/cycles-view-header";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const CyclesListHeader = observer(function CyclesListHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+export const CyclesListHeader = observer(function CyclesListHeader(props: TProps) {
   // router
-  const router = useAppRouter();
-  const { workspaceSlug, projectId } = useParams();
+  const navigate = useNavigate();
+  const { workspaceSlug, projectId } = props;
 
   // store hooks
   const { toggleCreateCycleModal } = useCommandPalette();
@@ -42,13 +46,13 @@ export const CyclesListHeader = observer(function CyclesListHeader() {
   return (
     <Header>
       <Header.LeftItem>
-        <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+        <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
+          <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
           <Breadcrumbs.Item
             component={
               <BreadcrumbLink
                 label="Cycles"
-                href={`/${workspaceSlug}/projects/${currentProjectDetails?.id}/cycles/`}
+                href={`/${workspaceSlug}/projects/${currentProjectDetails?.id}/cycles`}
                 icon={<CyclesOutline className="h-4 w-4 text-tertiary" />}
                 isLast
               />

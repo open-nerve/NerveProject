@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 // local imports
@@ -35,7 +35,7 @@ export const StateDropdown = observer(function StateDropdown(props: TWorkItemSta
   const onDropdownOpen = async () => {
     if ((stateIds === undefined || stateIds.length === 0) && workspaceSlug && projectId) {
       setStateLoader(true);
-      await fetchProjectStates(workspaceSlug.toString(), projectId);
+      await fetchProjectStates(workspaceSlug, projectId);
       setStateLoader(false);
     }
   };

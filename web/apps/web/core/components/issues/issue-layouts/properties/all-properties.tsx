@@ -8,7 +8,6 @@ import type { SyntheticEvent } from "react";
 import { useCallback, useMemo } from "react";
 import { xor } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // icons
 import { AttachOutline, DueDateOutline, LinkOutline, StartDateOutline, ViewsOutline } from "@makeplane/propel/icons";
 // i18n
@@ -36,7 +35,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useLabel } from "@/hooks/store/use-label";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
@@ -71,7 +70,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const projectDetails = getProjectById(issue.project_id);
 
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
 
   // derived values
@@ -82,19 +81,19 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
     () => ({
       addModulesToIssue: async (moduleIds: string[]) => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await changeModulesInIssue?.(workspaceSlug.toString(), issue.project_id, issue.id, moduleIds, []);
+        await changeModulesInIssue?.(workspaceSlug, issue.project_id, issue.id, moduleIds, []);
       },
       removeModulesFromIssue: async (moduleIds: string[]) => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await changeModulesInIssue?.(workspaceSlug.toString(), issue.project_id, issue.id, [], moduleIds);
+        await changeModulesInIssue?.(workspaceSlug, issue.project_id, issue.id, [], moduleIds);
       },
       addIssueToCycle: async (cycleId: string) => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await addCycleToIssue?.(workspaceSlug.toString(), issue.project_id, cycleId, issue.id);
+        await addCycleToIssue?.(workspaceSlug, issue.project_id, cycleId, issue.id);
       },
       removeIssueFromCycle: async () => {
         if (!workspaceSlug || !issue.project_id || !issue.id) return;
-        await removeCycleFromIssue?.(workspaceSlug.toString(), issue.project_id, issue.id);
+        await removeCycleFromIssue?.(workspaceSlug, issue.project_id, issue.id);
       },
     }),
     [workspaceSlug, issue, changeModulesInIssue, addCycleToIssue, removeCycleFromIssue]
@@ -152,7 +151,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   };
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug,
     projectId: issue?.project_id,
     issueId: issue?.id,
     projectIdentifier: projectDetails?.identifier,
@@ -160,7 +159,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
     isArchived: !!issue?.archived_at,
   });
 
-  const redirectToIssueDetail = () => router.push(`${workItemLink}#sub-issues`);
+  const redirectToIssueDetail = () => navigate(`${workItemLink}#sub-issues`);
 
   if (!displayProperties || !issue.project_id) return null;
 

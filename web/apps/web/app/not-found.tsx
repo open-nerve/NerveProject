@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import Link from "next/link";
+import { Link } from "react-router";
 // ui
 import { Button } from "@plane/propel/button";
 // images
@@ -32,7 +32,7 @@ function PageNotFound() {
               temporarily unavailable.
             </p>
           </div>
-          <Link href="/">
+          <Link to="/">
             <span className="flex justify-center">
               <Button variant="secondary" size="lg">
                 Go to Home

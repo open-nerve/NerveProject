@@ -7,7 +7,7 @@
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import type { UseFormRegister } from "react-hook-form";
 import { useForm } from "react-hook-form";
 // plane imports
@@ -98,14 +98,14 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
 
     reset({ ...defaultValues });
 
-    const payload = createIssuePayload(projectId.toString(), {
+    const payload = createIssuePayload(projectId, {
       // oxlint-disable-next-line unicorn/no-useless-fallback-in-spread
       ...(prePopulatedData ?? {}),
       ...formData,
     });
 
     if (quickAddCallback) {
-      const quickAddPromise = quickAddCallback(projectId.toString(), { ...payload });
+      const quickAddPromise = quickAddCallback(projectId, { ...payload });
       setPromiseToast<any>(quickAddPromise, {
         loading: t("issue.adding"),
         success: {
@@ -113,11 +113,7 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
           message: () => t("issue.create.success"),
           actionItems: (data) => (
             // TODO: Translate here
-            <CreateIssueToastActionItems
-              workspaceSlug={workspaceSlug.toString()}
-              projectId={projectId.toString()}
-              issueId={data.id}
-            />
+            <CreateIssueToastActionItems workspaceSlug={workspaceSlug} projectId={projectId} issueId={data.id} />
           ),
         },
         error: {
@@ -144,7 +140,7 @@ export const QuickAddIssueRoot = observer(function QuickAddIssueRoot(props: TQui
           isOpen={isOpen}
           layout={layout}
           prePopulatedData={prePopulatedData}
-          projectId={projectId?.toString()}
+          projectId={projectId}
           // oxlint-disable-next-line no-unneeded-ternary
           hasError={errors && errors?.name && errors?.name?.message ? true : false}
           setFocus={setFocus}

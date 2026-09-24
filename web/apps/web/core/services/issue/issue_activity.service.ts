@@ -4,17 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { TIssueActivity } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // helper
 
 export class IssueActivityService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getIssueActivities(
     workspaceSlug: string,
     projectId: string,

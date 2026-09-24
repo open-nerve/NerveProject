@@ -6,7 +6,6 @@
 
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // icons
 import { CyclesOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
@@ -42,17 +41,23 @@ import { useCycle } from "@/hooks/store/use-cycle";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import useLocalStorage from "@/hooks/use-local-storage";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  cycleId: string;
+};
+
+export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
   // router
-  const router = useAppRouter();
-  const { workspaceSlug, projectId, cycleId } = useParams();
+  const navigate = useNavigate();
+  const { workspaceSlug, projectId, cycleId } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks
@@ -77,7 +82,6 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      if (!workspaceSlug || !projectId) return;
       updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, cycleId);
     },
     [workspaceSlug, projectId, cycleId, updateFilters]
@@ -85,7 +89,6 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!workspaceSlug || !projectId) return;
       updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, cycleId);
     },
     [workspaceSlug, projectId, cycleId, updateFilters]
@@ -93,14 +96,13 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      if (!workspaceSlug || !projectId) return;
       updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property, cycleId);
     },
     [workspaceSlug, projectId, cycleId, updateFilters]
   );
 
   // derived values
-  const cycleDetails = cycleId ? getCycleById(cycleId.toString()) : undefined;
+  const cycleDetails = getCycleById(cycleId);
   const isCompletedCycle = cycleDetails?.status?.toLocaleLowerCase() === "completed";
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -125,13 +127,13 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
     <Header>
       <Header.LeftItem>
         <div className="flex items-center gap-2">
-          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+          <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink
                   label="Cycles"
-                  href={`/${workspaceSlug}/projects/${projectId}/cycles/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/cycles`}
                   icon={<CyclesOutline className="h-4 w-4 text-tertiary" />}
                 />
               }
@@ -142,7 +144,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
                   selectedItem={cycleId}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
-                    router.push(`/${workspaceSlug}/projects/${projectId}/cycles/${value}`);
+                    navigate(`/${workspaceSlug}/projects/${projectId}/cycles/${value}`);
                   }}
                   title={cycleDetails?.name}
                   icon={

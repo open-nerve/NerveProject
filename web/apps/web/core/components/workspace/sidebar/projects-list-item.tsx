@@ -11,7 +11,7 @@ import { pointerOutsideOfPreview } from "@atlaskit/pragmatic-drag-and-drop/eleme
 import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview";
 import { attachInstruction, extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { observer } from "mobx-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useNavigate } from "react-router";
 import { createRoot } from "react-dom/client";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
 import {
@@ -49,6 +49,7 @@ import { ProjectNavigation } from "./project-navigation";
 import { useNavigationItems } from "@/components/navigation/use-navigation-items";
 
 type Props = {
+  workspaceSlug: string;
   projectId: string;
   handleCopyText: () => void;
   handleOnProjectDrop?: (
@@ -65,6 +66,7 @@ type Props = {
 
 export const SidebarProjectsListItem = observer(function SidebarProjectsListItem(props: Props) {
   const {
+    workspaceSlug,
     projectId,
     handleCopyText,
     disableDrag,
@@ -94,14 +96,14 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const projectRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLButtonElement | null>(null);
   // router
-  const { workspaceSlug, projectId: URLProjectId } = useParams();
-  const router = useRouter();
+  const { projectId: URLProjectId } = useParams();
+  const navigate = useNavigate();
   // derived values
   const project = getPartialProjectById(projectId);
 
   // Get available navigation items for this project
   const navigationItems = useNavigationItems({
-    workspaceSlug: workspaceSlug.toString(),
+    workspaceSlug,
     projectId,
     project,
     allowPermissions,
@@ -109,11 +111,11 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const availableTabKeys = navigationItems.map((item) => item.key);
 
   // Get preferences from hook
-  const { tabPreferences } = useTabPreferences(workspaceSlug.toString(), projectId);
+  const { tabPreferences } = useTabPreferences(workspaceSlug, projectId);
   const defaultTabKey = tabPreferences.defaultTab;
   // Validate that the default tab is available
   const validatedDefaultTabKey = availableTabKeys.includes(defaultTabKey) ? defaultTabKey : DEFAULT_TAB_KEY;
-  const defaultTabUrl = project ? getTabUrl(workspaceSlug.toString(), project.id, validatedDefaultTabKey) : "";
+  const defaultTabUrl = project ? getTabUrl(workspaceSlug, project.id, validatedDefaultTabKey) : "";
 
   // toggle project list open
   const setIsProjectListOpen = useCallback(
@@ -124,7 +126,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const isAuthorized = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT,
-    workspaceSlug.toString(),
+    workspaceSlug,
     project?.id
   );
 
@@ -265,7 +267,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
     if (projectPreferences.navigationMode === "ACCORDION") {
       setIsProjectListOpen(!isProjectListOpen);
     } else {
-      router.push(defaultTabUrl);
+      navigate(defaultTabUrl);
     }
     // close the extended sidebar if it is open
     if (isExtendedProjectSidebarOpened && !isAccordionMode) {
@@ -396,7 +398,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   {isAuthorized && (
                     <CustomMenu.MenuItem
                       onClick={() => {
-                        router.push(`/${workspaceSlug}/projects/${project?.id}/archives/issues`);
+                        navigate(`/${workspaceSlug}/projects/${project?.id}/archives/issues`);
                       }}
                     >
                       <div className="flex cursor-pointer items-center justify-start gap-2">
@@ -407,7 +409,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   )}
                   <CustomMenu.MenuItem
                     onClick={() => {
-                      router.push(`/${workspaceSlug}/settings/projects/${project?.id}`);
+                      navigate(`/${workspaceSlug}/settings/projects/${project?.id}`);
                     }}
                   >
                     <div className="flex cursor-pointer items-center justify-start gap-2">
@@ -461,7 +463,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
               {isProjectListOpen && (
                 <Disclosure.Panel as="div" className="relative mt-1 mb-1.5 flex flex-col gap-0.5 pl-6">
                   <div className="absolute top-0 bottom-1 left-[15px] w-[1px] bg-layer-3" />
-                  <ProjectNavigation workspaceSlug={workspaceSlug.toString()} projectId={projectId.toString()} />
+                  <ProjectNavigation workspaceSlug={workspaceSlug} projectId={projectId} />
                 </Disclosure.Panel>
               )}
             </Transition>

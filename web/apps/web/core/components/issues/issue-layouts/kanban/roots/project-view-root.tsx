@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // hooks
 // constant
 // types
@@ -17,5 +17,5 @@ import { BaseKanBanRoot } from "../base-kanban-root";
 export const ProjectViewKanBanLayout = observer(function ProjectViewKanBanLayout() {
   const { viewId } = useParams();
 
-  return <BaseKanBanRoot QuickActions={ProjectIssueQuickActions} viewId={viewId.toString()} />;
+  return <BaseKanBanRoot QuickActions={ProjectIssueQuickActions} viewId={viewId} />;
 });

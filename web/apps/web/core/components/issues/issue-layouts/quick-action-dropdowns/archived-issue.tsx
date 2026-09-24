@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // ui
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { EIssuesStoreType } from "@plane/types";
@@ -51,7 +51,7 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug,
     activeLayout,
     isEditingAllowed,
     isDeletingAllowed: isEditingAllowed,

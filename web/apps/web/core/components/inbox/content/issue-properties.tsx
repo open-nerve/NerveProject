@@ -27,7 +27,7 @@ import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueLabel } from "@/components/issues/issue-detail/label";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   workspaceSlug: string;
@@ -43,7 +43,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
   const { workspaceSlug, projectId, issue, issueOperations, isEditable, duplicateIssueDetails, isIntakeAccepted } =
     props;
 
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { currentProjectDetails } = useProject();
 
@@ -52,7 +52,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
   if (!issue || !issue?.id) return <></>;
 
   const duplicateWorkItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug,
     projectId,
     issueId: duplicateIssueDetails?.id,
     projectIdentifier: currentProjectDetails?.identifier,
@@ -76,7 +76,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
                 <DropdownComponent
                   value={issue?.state_id}
                   onChange={() => {}}
-                  projectId={projectId?.toString() ?? ""}
+                  projectId={projectId}
                   disabled
                   buttonVariant="transparent-with-text"
                   className="group w-3/5 flex-grow"
@@ -99,7 +99,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
                   issue?.id && issueOperations.update(workspaceSlug, projectId, issue?.id, { assignee_ids: val })
                 }
                 disabled={!isEditable}
-                projectId={projectId?.toString() ?? ""}
+                projectId={projectId}
                 placeholder="Add assignees"
                 multiple
                 buttonVariant={
@@ -195,7 +195,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
                 <ControlLink
                   href={duplicateWorkItemLink}
                   onClick={() => {
-                    router.push(duplicateWorkItemLink);
+                    navigate(duplicateWorkItemLink);
                   }}
                   target="_self"
                 >

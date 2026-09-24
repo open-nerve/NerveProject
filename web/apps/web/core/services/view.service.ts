@@ -4,17 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { IProjectView } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // types
 // helpers
 
 export class ViewService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async createView(workspaceSlug: string, projectId: string, data: Partial<IProjectView>): Promise<any> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/views/`, data)
       .then((response) => response?.data)

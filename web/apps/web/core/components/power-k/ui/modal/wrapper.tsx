@@ -175,7 +175,7 @@ export const ProjectsAppPowerKModalWrapper = observer(function ProjectsAppPowerK
                   {!hideFooter && (
                     <PowerKModalFooter
                       isWorkspaceLevel={isWorkspaceLevel}
-                      projectId={context.params.projectId?.toString()}
+                      projectId={context.params.projectId}
                       onWorkspaceLevelChange={setIsWorkspaceLevel}
                     />
                   )}

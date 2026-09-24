@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import type { TIssue } from "@plane/types";
 import { EIssuesStoreType } from "@plane/types";
@@ -15,7 +14,7 @@ import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 
 export type TWorkItemLevelModalsProps = {
@@ -26,7 +25,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   const { workItemIdentifier } = props;
   // router
   const { workspaceSlug, cycleId, moduleId } = useParams();
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
@@ -51,7 +50,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   const handleDeleteIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     try {
       await removeWorkItem(projectId, issueId);
-      router.push(`/${workspaceSlug}/projects/${projectId}/issues`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/issues`);
     } catch (error) {
       console.error("Failed to delete issue:", error);
     }
@@ -60,12 +59,12 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   const handleCreateIssueSubmit = async (newIssue: TIssue) => {
     if (!workspaceSlug || !newIssue.project_id || !newIssue.id || newIssue.parent_id !== workItemDetails?.id) return;
 
-    await fetchSubWorkItems(workspaceSlug?.toString(), newIssue.project_id, workItemDetails.id);
+    await fetchSubWorkItems(workspaceSlug, newIssue.project_id, workItemDetails.id);
   };
 
   const getCreateIssueModalData = () => {
-    if (cycleId) return { cycle_id: cycleId.toString() };
-    if (moduleId) return { module_ids: [moduleId.toString()] };
+    if (cycleId) return { cycle_id: cycleId };
+    if (moduleId) return { module_ids: [moduleId] };
     return undefined;
   };
 
@@ -83,9 +82,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
           handleClose={() => toggleDeleteIssueModal(false)}
           isOpen={isDeleteIssueModalOpen}
           data={workItemDetails}
-          onSubmit={() =>
-            handleDeleteIssue(workspaceSlug.toString(), workItemDetails.project_id!, workItemId?.toString())
-          }
+          onSubmit={() => handleDeleteIssue(workspaceSlug, workItemDetails.project_id!, workItemId)}
         />
       )}
     </>

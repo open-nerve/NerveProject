@@ -41,7 +41,7 @@ export const RecentIssue = observer(function RecentIssue(props: BlockProps) {
   const state = getStateById(issueDetails?.state);
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug,
     projectId: issueDetails?.project_id,
     issueId: issueDetails?.id,
     projectIdentifier,

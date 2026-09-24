@@ -24,7 +24,7 @@ export const WorkspaceLevelModals = observer(function WorkspaceLevelModals(props
       <CreateProjectModal
         isOpen={isCreateProjectModalOpen}
         onClose={() => toggleCreateProjectModal(false)}
-        workspaceSlug={workspaceSlug.toString()}
+        workspaceSlug={workspaceSlug}
       />
     </>
   );

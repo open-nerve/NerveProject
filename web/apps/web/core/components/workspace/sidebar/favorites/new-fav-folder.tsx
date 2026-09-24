@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import type { SubmitHandler } from "react-hook-form";
 import { Controller, useForm } from "react-hook-form";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
@@ -51,6 +51,7 @@ export const NewFavoriteFolder = observer(function NewFavoriteFolder(props: TPro
   });
 
   const handleAddNewFolder: SubmitHandler<TForm> = (formData) => {
+    if (!workspaceSlug) return;
     if (existingFolders.includes(formData.name))
       return setToast({
         type: TOAST_TYPE.ERROR,
@@ -72,7 +73,7 @@ export const NewFavoriteFolder = observer(function NewFavoriteFolder(props: TPro
         message: t("folder_name_cannot_be_empty"),
       });
 
-    addFavorite(workspaceSlug.toString(), formData)
+    addFavorite(workspaceSlug, formData)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -93,7 +94,7 @@ export const NewFavoriteFolder = observer(function NewFavoriteFolder(props: TPro
   };
 
   const handleRenameFolder: SubmitHandler<TForm> = (formData) => {
-    if (!favoriteId) return;
+    if (!workspaceSlug || !favoriteId) return;
     if (existingFolders.includes(formData.name))
       return setToast({
         type: TOAST_TYPE.ERROR,
@@ -111,7 +112,7 @@ export const NewFavoriteFolder = observer(function NewFavoriteFolder(props: TPro
         message: t("folder_name_cannot_be_empty"),
       });
 
-    updateFavorite(workspaceSlug.toString(), favoriteId, payload)
+    updateFavorite(workspaceSlug, favoriteId, payload)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

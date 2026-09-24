@@ -7,7 +7,6 @@
 import type { MouseEvent } from "react";
 import React, { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
   CalendarOutline,
@@ -35,7 +34,7 @@ import { MergedDateDisplay } from "@/components/dropdowns/merged-date";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useTimeZoneConverter } from "@/hooks/use-timezone-converter";
 // local imports
@@ -68,9 +67,9 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
   const { isProjectTimeZoneDifferent, getProjectUTCOffset, renderFormattedDateInUserTimezone } =
     useTimeZoneConverter(projectId);
   // router
-  const router = useAppRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   // store hooks
   const { addCycleToFavorites, removeCycleFromFavorites } = useCycle();
   const { allowPermissions } = useUserPermissions();
@@ -113,7 +112,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const addToFavoritePromise = addCycleToFavorites(workspaceSlug?.toString(), projectId.toString(), cycleId).then(
+    const addToFavoritePromise = addCycleToFavorites(workspaceSlug, projectId, cycleId).then(
       // oxlint-disable-next-line promise/always-return
       () => {
         if (!isFavoriteMenuOpen) toggleFavoriteMenu(true);
@@ -137,11 +136,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const removeFromFavoritePromise = removeCycleFromFavorites(
-      workspaceSlug?.toString(),
-      projectId.toString(),
-      cycleId
-    );
+    const removeFromFavoritePromise = removeCycleFromFavorites(workspaceSlug, projectId, cycleId);
 
     setPromiseToast(removeFromFavoritePromise, {
       loading: t("project_cycles.action.unfavorite.loading"),
@@ -172,9 +167,9 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
 
     const query = generateQueryParams(searchParams, ["peekCycle"]);
     if (searchParams.has("peekCycle") && searchParams.get("peekCycle") === cycleId) {
-      router.push(`${pathname}?${query}`);
+      navigate(`${pathname}?${query}`);
     } else {
-      router.push(`${pathname}?${query && `${query}&`}peekCycle=${cycleId}`);
+      navigate(`${pathname}?${query && `${query}&`}peekCycle=${cycleId}`);
     }
   };
 
@@ -183,7 +178,7 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
       <TransferIssuesModal
         handleClose={() => setTransferIssuesModal(false)}
         isOpen={transferIssuesModal}
-        cycleId={cycleId.toString()}
+        cycleId={cycleId}
       />
       <button
         onClick={openCycleOverview}

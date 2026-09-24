@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // store
 // constants
 // types
@@ -17,5 +17,5 @@ import { BaseListRoot } from "../base-list-root";
 export const ProjectViewListLayout = observer(function ProjectViewListLayout() {
   const { viewId } = useParams();
 
-  return <BaseListRoot QuickActions={ProjectIssueQuickActions} viewId={viewId.toString()} />;
+  return <BaseListRoot QuickActions={ProjectIssueQuickActions} viewId={viewId} />;
 });

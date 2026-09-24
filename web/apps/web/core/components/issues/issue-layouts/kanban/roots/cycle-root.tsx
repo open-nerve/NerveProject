@@ -6,7 +6,7 @@
 
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // components
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { EIssuesStoreType } from "@plane/types";
@@ -27,7 +27,7 @@ export const CycleKanBanLayout = observer(function CycleKanBanLayout() {
   const { allowPermissions } = useUserPermissions();
 
   const isCompletedCycle =
-    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId.toString()) : false;
+    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId) : false;
   const isEditingAllowed = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT
@@ -41,7 +41,7 @@ export const CycleKanBanLayout = observer(function CycleKanBanLayout() {
   const addIssuesToView = useCallback(
     (issueIds: string[]) => {
       if (!workspaceSlug || !projectId || !cycleId) throw new Error();
-      return issues.addIssueToCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), issueIds);
+      return issues.addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
     },
     [issues?.addIssueToCycle, workspaceSlug, projectId, cycleId]
   );
@@ -52,7 +52,7 @@ export const CycleKanBanLayout = observer(function CycleKanBanLayout() {
       addIssuesToView={addIssuesToView}
       canEditPropertiesBasedOnProject={canEditIssueProperties}
       isCompletedCycle={isCompletedCycle}
-      viewId={cycleId?.toString()}
+      viewId={cycleId}
     />
   );
 });

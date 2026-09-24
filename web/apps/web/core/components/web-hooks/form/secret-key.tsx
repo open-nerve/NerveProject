@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { range } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // icons
 import { CopyOutline, HideOutline, RefreshOutline, ShowOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@plane/i18n";
@@ -67,7 +67,7 @@ export const WebhookSecretKey = observer(function WebhookSecretKey(props: Props)
 
     setIsRegenerating(true);
 
-    regenerateSecretKey(workspaceSlug.toString(), data.id)
+    regenerateSecretKey(workspaceSlug, data.id)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,

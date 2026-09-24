@@ -63,7 +63,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
   const { t } = useTranslation();
   // store hooks
   const { getWorkspaceBySlug } = useWorkspace();
-  const workspaceId = getWorkspaceBySlug(workspaceSlug?.toString())?.id ?? "";
+  const workspaceId = getWorkspaceBySlug(workspaceSlug)?.id ?? "";
   const { uploadEditorAsset, duplicateEditorAsset } = useEditorAsset();
   // platform
   const { isMobile } = usePlatformOS();
@@ -118,7 +118,7 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               id="issue-modal-editor"
               initialValue={value ?? ""}
               value={descriptionHtmlData}
-              workspaceSlug={workspaceSlug?.toString()}
+              workspaceSlug={workspaceSlug}
               workspaceId={workspaceId}
               projectId={projectId}
               onChange={(_description: object, description_html: string) => {
@@ -130,9 +130,9 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               tabIndex={getIndex("description_html")}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
               searchMentionCallback={async (payload) =>
-                await workspaceService.searchEntity(workspaceSlug?.toString() ?? "", {
+                await workspaceService.searchEntity(workspaceSlug, {
                   ...payload,
-                  project_id: projectId?.toString() ?? "",
+                  project_id: projectId,
                 })
               }
               containerClassName="pt-3 min-h-[120px]"

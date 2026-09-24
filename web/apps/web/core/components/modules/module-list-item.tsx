@@ -6,7 +6,6 @@
 
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
 // icons
 import { InfoOutline, TickOutline } from "@makeplane/propel/icons";
 // ui
@@ -18,7 +17,7 @@ import { ModuleListItemAction, ModuleQuickActions } from "@/components/modules";
 // helpers
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
@@ -30,10 +29,10 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   // refs
   const parentRef = useRef(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   // store hooks
   const { getModuleById } = useModule();
   const { isMobile } = usePlatformOS();
@@ -41,7 +40,7 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   // derived values
   const moduleDetails = getModuleById(moduleId);
 
-  if (!moduleDetails) return null;
+  if (!workspaceSlug || !projectId || !moduleDetails) return null;
 
   const completionPercentage =
     ((moduleDetails.completed_issues + moduleDetails.cancelled_issues) / moduleDetails.total_issues) * 100;
@@ -57,9 +56,9 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
 
     const query = generateQueryParams(searchParams, ["peekModule"]);
     if (searchParams.has("peekModule") && searchParams.get("peekModule") === moduleId) {
-      router.push(`${pathname}?${query}`);
+      navigate(`${pathname}?${query}`);
     } else {
-      router.push(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
+      navigate(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
     }
   };
 
@@ -72,7 +71,7 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   return (
     <ListItem
       title={moduleDetails?.name ?? ""}
-      itemLink={`/${workspaceSlug?.toString()}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}
+      itemLink={`/${workspaceSlug}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}
       onItemClick={handleItemClick}
       prependTitleElement={
         <div className="relative size-[30px]">
@@ -113,8 +112,8 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
           <ModuleQuickActions
             parentRef={parentRef}
             moduleId={moduleId}
-            projectId={projectId.toString()}
-            workspaceSlug={workspaceSlug.toString()}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
           />
         </div>
       }

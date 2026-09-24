@@ -5,17 +5,12 @@
  */
 
 // services
-import { API_BASE_URL } from "@plane/constants";
 import type { IIntakeState, IState } from "@plane/types";
 import { APIService } from "@/services/api.service";
 // helpers
 // types
 
 export class ProjectStateService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async createState(workspaceSlug: string, projectId: string, data: any): Promise<IState> {
     return this.post(`/api/workspaces/${workspaceSlug}/projects/${projectId}/states/`, data)
       .then((response) => response?.data)

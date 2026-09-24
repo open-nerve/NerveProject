@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "react-router";
 // plane imports
 import { Banner } from "@makeplane/propel/components/banner";
 // helpers
@@ -24,7 +24,7 @@ type TAuthRoot = {
 export const AuthRoot = observer(function AuthRoot(props: TAuthRoot) {
   const { authMode } = props;
   //router
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   // query params
   const emailParam = searchParams.get("email");
   const invitation_id = searchParams.get("invitation_id");

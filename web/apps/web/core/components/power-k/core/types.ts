@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import type { useRouter } from "next/navigation";
+import type { NavigateFunction, Params } from "react-router";
 
 export type TPowerKContextType = "work-item" | "cycle" | "module";
 
 export type TPowerKContext = {
   // Route information
-  params: Record<string, string | string[] | undefined>;
+  params: Params;
   // Current user
   currentUserId?: string;
   activeCommand: TPowerKCommandConfig | null;
@@ -18,8 +18,8 @@ export type TPowerKContext = {
   activeContext: TPowerKContextType | null;
   shouldShowContextBasedActions: boolean;
   setShouldShowContextBasedActions: (shouldShowContextBasedActions: boolean) => void;
-  // Router for navigation
-  router: ReturnType<typeof useRouter>;
+  // Navigation
+  navigate: NavigateFunction;
   // UI control
   closePalette: () => void;
   setActiveCommand: (command: TPowerKCommandConfig | null) => void;

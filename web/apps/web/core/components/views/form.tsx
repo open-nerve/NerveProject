@@ -182,7 +182,7 @@ export const ProjectViewForm = observer(function ProjectViewForm(props: Props) {
                   </Field>
                 )}
               />
-              <span className="text-11 text-danger-primary">{errors?.name?.message?.toString()}</span>
+              <span className="text-11 text-danger-primary">{errors?.name?.message}</span>
             </div>
           </div>
           <div>

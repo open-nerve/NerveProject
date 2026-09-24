@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import Link from "next/link";
+import { Link } from "react-router";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 
@@ -30,7 +30,7 @@ export function IssueUser(props: TIssueUser) {
         <span className="font-medium text-primary">{customUserName}</span>
       ) : (
         <Link
-          href={`/${activity?.workspace_detail?.slug}/profile/${activity?.actor_detail?.id}`}
+          to={`/${activity?.workspace_detail?.slug}/profile/${activity?.actor_detail?.id}`}
           className="font-medium text-primary hover:underline"
         >
           {activity.actor_detail?.display_name}

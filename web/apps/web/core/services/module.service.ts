@@ -5,16 +5,11 @@
  */
 
 // types
-import { API_BASE_URL } from "@plane/constants";
 import type { IModule, ILinkDetails, ModuleLink, TIssuesResponse } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 
 export class ModuleService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async getWorkspaceModules(workspaceSlug: string): Promise<IModule[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/modules/`)
       .then((response) => response?.data)

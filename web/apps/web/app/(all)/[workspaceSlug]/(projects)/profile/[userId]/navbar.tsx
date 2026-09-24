@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { NavLink, useParams } from "react-router";
 // plane imports
 import { PROFILE_TABS } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -20,7 +19,6 @@ export function ProfileNavbar(props: Props) {
   const { isAuthorized } = props;
   const { t } = useTranslation();
   const { workspaceSlug, userId } = useParams();
-  const pathname = usePathname();
 
   const tabsList = isAuthorized ? PROFILE_TABS : [];
 
@@ -28,19 +26,21 @@ export function ProfileNavbar(props: Props) {
     <Header variant={EHeaderVariant.SECONDARY} showOnMobile={false}>
       <div className="flex items-center overflow-x-scroll">
         {tabsList.map((tab) => (
-          <Link key={tab.route} href={`/${workspaceSlug}/profile/${userId}/${tab.route}`}>
-            <span
-              className={cn(
-                `flex border-b-2 p-4 text-13 font-medium whitespace-nowrap text-tertiary outline-none hover:text-primary ${
-                  pathname === `/${workspaceSlug}/profile/${userId}${tab.selected}`
-                    ? "border-accent-strong text-accent-primary hover:text-accent-primary"
-                    : "border-transparent"
-                }`
-              )}
-            >
-              {t(tab.i18n_label)}
-            </span>
-          </Link>
+          <NavLink key={tab.route} to={`/${workspaceSlug}/profile/${userId}/${tab.route}`}>
+            {({ isActive }) => (
+              <span
+                className={cn(
+                  `flex border-b-2 p-4 text-13 font-medium whitespace-nowrap text-tertiary outline-none hover:text-primary ${
+                    isActive
+                      ? "border-accent-strong text-accent-primary hover:text-accent-primary"
+                      : "border-transparent"
+                  }`
+                )}
+              >
+                {t(tab.i18n_label)}
+              </span>
+            )}
+          </NavLink>
         ))}
       </div>
     </Header>

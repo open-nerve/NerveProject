@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { Link, useMatch, useParams } from "react-router";
 // plane imports
 import type { IWorkspaceSidebarNavigationItem } from "@plane/constants";
 import { EUserPermissionsLevel } from "@plane/constants";
@@ -26,7 +25,6 @@ type Props = {
 
 export const SidebarItemBase = observer(function SidebarItemBase({ item }: Props) {
   const { t } = useTranslation();
-  const pathname = usePathname();
   const { workspaceSlug } = useParams();
   const { allowPermissions } = useUserPermissions();
   const { data } = useUser();
@@ -37,17 +35,19 @@ export const SidebarItemBase = observer(function SidebarItemBase({ item }: Props
     if (window.innerWidth < 768) toggleSidebar();
   };
 
-  const slug = workspaceSlug?.toString() || "";
-
-  if (!allowPermissions(item.access, EUserPermissionsLevel.WORKSPACE, slug)) return null;
+  const slug = workspaceSlug || "";
 
   const itemHref =
     item.key === "your_work" && data?.id ? joinUrlPath(slug, item.href, data?.id) : joinUrlPath(slug, item.href);
+  const isActive = useMatch({ path: itemHref, end: item.end ?? false }) !== null;
+
+  if (!allowPermissions(item.access, EUserPermissionsLevel.WORKSPACE, slug)) return null;
+
   const icon = getSidebarNavigationItemIcon(item.key);
 
   return (
-    <Link href={itemHref} onClick={handleLinkClick}>
-      <SidebarNavItem isActive={item.highlight(pathname, itemHref)}>
+    <Link to={itemHref} onClick={handleLinkClick}>
+      <SidebarNavItem isActive={isActive}>
         <div className="flex items-center gap-1.5 py-[1px]">
           {icon}
           <p className="text-13 leading-5 font-medium">{t(item.labelTranslationKey)}</p>

@@ -6,7 +6,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
 // types
 import type { IIssueLabel } from "@plane/types";
@@ -58,7 +58,7 @@ export function ProjectSettingLabelItem(props: Props) {
   const removeFromGroup = (label: IIssueLabel) => {
     if (!workspaceSlug || !projectId) return;
 
-    updateLabel(workspaceSlug.toString(), projectId.toString(), label.id, {
+    updateLabel(workspaceSlug, projectId, label.id, {
       parent: null,
     });
   };

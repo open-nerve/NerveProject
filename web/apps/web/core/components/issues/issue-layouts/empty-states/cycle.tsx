@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -25,10 +25,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 
 export const CycleEmptyState = observer(function CycleEmptyState() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, cycleId: routerCycleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
-  const cycleId = routerCycleId ? routerCycleId.toString() : undefined;
+  const { workspaceSlug, projectId, cycleId } = useParams();
   // states
   const [cycleIssuesListModal, setCycleIssuesListModal] = useState(false);
   // plane hooks
@@ -54,7 +51,7 @@ export const CycleEmptyState = observer(function CycleEmptyState() {
     const issueIds = data.map((i) => i.id);
 
     await issues
-      .addIssueToCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), issueIds)
+      .addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds)
       .then(() =>
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -74,8 +71,8 @@ export const CycleEmptyState = observer(function CycleEmptyState() {
   return (
     <div className="relative h-full w-full overflow-y-auto">
       <ExistingIssuesListModal
-        workspaceSlug={workspaceSlug?.toString()}
-        projectId={projectId?.toString()}
+        workspaceSlug={workspaceSlug}
+        projectId={projectId}
         isOpen={cycleIssuesListModal}
         handleClose={() => setCycleIssuesListModal(false)}
         searchParams={{ cycle: true }}

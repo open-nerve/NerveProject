@@ -6,7 +6,7 @@
 
 import { useRef } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import {
   ArrowNarrowRightOutline,
   DragDropOutline,
@@ -172,7 +172,7 @@ export const IssuePeekOverviewHeader = observer(function IssuePeekOverviewHeader
         </Tooltip>
 
         <Tooltip label={t("issue.open_in_full_screen")} disabled={isMobile}>
-          <Link href={workItemLink} onClick={() => removeRoutePeekId()}>
+          <Link to={workItemLink} onClick={() => removeRoutePeekId()}>
             <DragDropOutline className="h-4 w-4 text-tertiary hover:text-secondary" />
           </Link>
         </Tooltip>

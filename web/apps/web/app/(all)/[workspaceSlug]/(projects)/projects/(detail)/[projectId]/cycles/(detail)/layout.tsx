@@ -10,11 +10,21 @@ import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
 import { CycleIssuesHeader } from "./header";
 import { CycleIssuesMobileHeader } from "./mobile-header";
+import type { Route } from "./+types/layout";
 
-export default function ProjectCycleIssuesLayout() {
+export default function ProjectCycleIssuesLayout({ params }: Route.ComponentProps) {
   return (
     <>
-      <AppHeader header={<CycleIssuesHeader />} mobileHeader={<CycleIssuesMobileHeader />} />
+      <AppHeader
+        header={
+          <CycleIssuesHeader
+            workspaceSlug={params.workspaceSlug}
+            projectId={params.projectId}
+            cycleId={params.cycleId}
+          />
+        }
+        mobileHeader={<CycleIssuesMobileHeader />}
+      />
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>

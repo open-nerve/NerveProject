@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // Plane imports
@@ -17,7 +16,7 @@ import type { IProject } from "@plane/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 
 type FormData = {
   projectName: string;
@@ -38,7 +37,7 @@ export interface ILeaveProjectModal {
 export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILeaveProjectModal) {
   const { project, isOpen, onClose } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
   // store hooks
   const { leaveProject } = useUserPermissions();
@@ -61,8 +60,8 @@ export const LeaveProjectModal = observer(function LeaveProjectModal(props: ILea
     if (data) {
       if (data.projectName === project?.name) {
         if (data.confirmLeave === "Leave Project") {
-          router.push(`/${workspaceSlug}/projects`);
-          return leaveProject(workspaceSlug.toString(), project.id)
+          navigate(`/${workspaceSlug}/projects`);
+          return leaveProject(workspaceSlug, project.id)
             .then(() => {
               handleClose();
             })

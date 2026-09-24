@@ -12,19 +12,16 @@ export const PROFILE_TABS = [
     key: "assigned",
     route: "assigned",
     i18n_label: "profile.tabs.assigned",
-    selected: "/assigned/",
   },
   {
     key: "created",
     route: "created",
     i18n_label: "profile.tabs.created",
-    selected: "/created/",
   },
   {
     key: "subscribed",
     route: "subscribed",
     i18n_label: "profile.tabs.subscribed",
-    selected: "/subscribed/",
   },
 ];
 

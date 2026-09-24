@@ -6,11 +6,10 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 // hooks
 import { generateQueryParams } from "@plane/utils";
 import { useModule } from "@/hooks/store/use-module";
-import { useAppRouter } from "@/hooks/use-app-router";
 // components
 import { ModuleProgressSidebar } from "./";
 
@@ -26,9 +25,9 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
   isArchived = false,
 }: Props) {
   // router
-  const router = useAppRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const peekModule = searchParams.get("peekModule");
   // refs
   const ref = React.useRef(null);
@@ -37,13 +36,13 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
 
   const handleClose = () => {
     const query = generateQueryParams(searchParams, ["peekModule"]);
-    router.push(`${pathname}?${query}`);
+    navigate(`${pathname}?${query}`);
   };
 
   useEffect(() => {
     if (!peekModule) return;
-    if (isArchived) fetchArchivedModuleDetails(workspaceSlug, projectId, peekModule.toString());
-    else fetchModuleDetails(workspaceSlug, projectId, peekModule.toString());
+    if (isArchived) fetchArchivedModuleDetails(workspaceSlug, projectId, peekModule);
+    else fetchModuleDetails(workspaceSlug, projectId, peekModule);
   }, [fetchArchivedModuleDetails, fetchModuleDetails, isArchived, peekModule, projectId, workspaceSlug]);
 
   return (
@@ -57,11 +56,7 @@ export const ModulePeekOverview = observer(function ModulePeekOverview({
               "0px 1px 4px 0px rgba(0, 0, 0, 0.06), 0px 2px 4px 0px rgba(16, 24, 40, 0.06), 0px 1px 8px -1px rgba(16, 24, 40, 0.06)",
           }}
         >
-          <ModuleProgressSidebar
-            moduleId={peekModule?.toString() ?? ""}
-            handleClose={handleClose}
-            isArchived={isArchived}
-          />
+          <ModuleProgressSidebar moduleId={peekModule} handleClose={handleClose} isArchived={isArchived} />
         </div>
       )}
     </>

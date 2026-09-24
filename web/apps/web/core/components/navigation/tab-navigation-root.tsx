@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import React, { useEffect } from "react";
+import React from "react";
 import { observer } from "mobx-react";
-import { useParams, useLocation, Link, useNavigate } from "react-router";
+import { useParams, useLocation, Link } from "react-router";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { TabNavigationList, TabNavigationItem } from "@plane/propel/tab-navigation";
@@ -20,7 +20,6 @@ import { LeaveProjectModal } from "../project/leave-project-modal";
 import { ProjectActionsMenu } from "./project-actions-menu";
 import { ProjectHeader } from "./project-header";
 import { TabNavigationOverflowMenu } from "./tab-navigation-overflow-menu";
-import { DEFAULT_TAB_KEY } from "./tab-navigation-utils";
 import { TabNavigationVisibleItem } from "./tab-navigation-visible-item";
 import { useActiveTab } from "./use-active-tab";
 import { useProjectActions } from "./use-project-actions";
@@ -50,7 +49,6 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   const { workItem: workItemIdentifierFromRoute } = useParams();
   const location = useLocation();
   const pathname = location.pathname;
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   // Store hooks
@@ -67,9 +65,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   );
 
   // Derived values
-  const workItemId = workItemIdentifierFromRoute
-    ? getIssueIdByIdentifier(workItemIdentifierFromRoute?.toString())
-    : undefined;
+  const workItemId = workItemIdentifierFromRoute ? getIssueIdByIdentifier(workItemIdentifierFromRoute) : undefined;
   const workItem = workItemId ? getIssueById(workItemId) : undefined;
   const project = getPartialProjectById(projectId);
 
@@ -120,25 +116,6 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
     isActive,
   });
 
-  // Redirect to default tab when navigating to project root
-  useEffect(() => {
-    const projectRootPath = `/${workspaceSlug}/projects/${projectId}`;
-    const isProjectRoot = pathname === projectRootPath || pathname === `${projectRootPath}/`;
-
-    if (isProjectRoot && allNavigationItems.length > 0) {
-      // Find the default tab in available items
-      const defaultTabItem = allNavigationItems.find((item: TNavigationItem) => item.key === tabPreferences.defaultTab);
-
-      // If default tab exists and is enabled, use it; otherwise fall back to work_items
-      const targetItem =
-        defaultTabItem || allNavigationItems.find((item: TNavigationItem) => item.key === DEFAULT_TAB_KEY);
-
-      if (targetItem) {
-        navigate(targetItem.href, { replace: true });
-      }
-    }
-  }, [pathname, workspaceSlug, projectId, tabPreferences.defaultTab, allNavigationItems, navigate]);
-
   if (allNavigationItems.length === 0) return null;
   if (!project) return null;
 
@@ -146,7 +123,7 @@ export const TabNavigationRoot = observer(function TabNavigationRoot(props: TTab
   const isAuthorized = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT,
-    workspaceSlug.toString(),
+    workspaceSlug,
     project?.id
   );
 

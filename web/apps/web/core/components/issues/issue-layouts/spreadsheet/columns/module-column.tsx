@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { xor } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // types
 import type { TIssue } from "@plane/types";
 // components
@@ -41,7 +41,7 @@ export const SpreadsheetModuleColumn = observer(function SpreadsheetModuleColumn
         if (issue.module_ids.includes(moduleId)) modulesToRemove.push(moduleId);
         else modulesToAdd.push(moduleId);
       }
-      changeModulesInIssue(workspaceSlug.toString(), issue.project_id, issue.id, modulesToAdd, modulesToRemove);
+      changeModulesInIssue(workspaceSlug, issue.project_id, issue.id, modulesToAdd, modulesToRemove);
     },
     [workspaceSlug, issue, changeModulesInIssue]
   );

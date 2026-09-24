@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { omit } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // plane imports
 import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
@@ -78,7 +78,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       issue.project_id ?? undefined
     ) && !readOnly;
 
@@ -126,7 +126,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug?.toString(),
+    workspaceSlug,
     projectIdentifier,
     activeLayout,
     isEditingAllowed,

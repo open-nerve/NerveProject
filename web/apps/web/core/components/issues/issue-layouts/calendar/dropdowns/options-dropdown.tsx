@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 import { ChevronUpOutline, MoreVerticalOutline, TickOutline } from "@makeplane/propel/icons";
 import { Popover, Transition } from "@headlessui/react";
@@ -66,9 +66,9 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
   const showWeekends = issuesFilterStore.issueFilters?.displayFilters?.calendar?.show_weekends ?? false;
 
   const handleLayoutChange = (layout: TCalendarLayouts, closePopover: any) => {
-    if (!updateFilters) return;
+    if (!updateFilters || !projectId) return;
 
-    updateFilters(projectId?.toString(), EIssueFilterType.DISPLAY_FILTERS, {
+    updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, {
       calendar: {
         ...issuesFilterStore.issueFilters?.displayFilters?.calendar,
         layout,
@@ -86,9 +86,9 @@ export const CalendarOptionsDropdown = observer(function CalendarOptionsDropdown
   const handleToggleWeekends = () => {
     const showWeekends = issuesFilterStore.issueFilters?.displayFilters?.calendar?.show_weekends ?? false;
 
-    if (!updateFilters) return;
+    if (!updateFilters || !projectId) return;
 
-    updateFilters(projectId?.toString(), EIssueFilterType.DISPLAY_FILTERS, {
+    updateFilters(projectId, EIssueFilterType.DISPLAY_FILTERS, {
       calendar: {
         ...issuesFilterStore.issueFilters?.displayFilters?.calendar,
         show_weekends: !showWeekends,

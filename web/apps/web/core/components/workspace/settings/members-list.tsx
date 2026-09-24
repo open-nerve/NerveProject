@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import useSWR from "swr";
 // plane imports
 import { Collapsible } from "@makeplane/propel/components/collapsible";
@@ -45,11 +45,11 @@ export const WorkspaceMembersList = observer(function WorkspaceMembersList(props
   const { t } = useTranslation();
   // fetching workspace invitations
   useSWR(
-    workspaceSlug ? `WORKSPACE_MEMBERS_AND_MEMBER_INVITATIONS_${workspaceSlug.toString()}` : null,
+    workspaceSlug ? `WORKSPACE_MEMBERS_AND_MEMBER_INVITATIONS_${workspaceSlug}` : null,
     workspaceSlug
       ? async () => {
-          await fetchWorkspaceMemberInvitations(workspaceSlug.toString());
-          await fetchWorkspaceMembers(workspaceSlug.toString());
+          await fetchWorkspaceMemberInvitations(workspaceSlug);
+          await fetchWorkspaceMembers(workspaceSlug);
         }
       : null
   );
@@ -57,7 +57,7 @@ export const WorkspaceMembersList = observer(function WorkspaceMembersList(props
   if (!workspaceMemberIds && !workspaceMemberInvitationIds) return <MembersSettingsLoader />;
 
   // derived values
-  const filteredMemberIds = workspaceSlug ? getFilteredWorkspaceMemberIds(workspaceSlug.toString()) : [];
+  const filteredMemberIds = workspaceSlug ? getFilteredWorkspaceMemberIds(workspaceSlug) : [];
   const searchedMemberIds = searchQuery ? getSearchedWorkspaceMemberIds(searchQuery) : filteredMemberIds;
   const searchedInvitationsIds = getSearchedWorkspaceInvitationIds(searchQuery);
   const memberDetails = searchedMemberIds

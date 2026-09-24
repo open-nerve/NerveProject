@@ -6,8 +6,7 @@
 
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, Link } from "react-router";
 import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makeplane/propel/icons";
@@ -69,53 +68,49 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   const allWorkspaces = workspaces ? Object.values(workspaces) : undefined;
   const currentWorkspace =
     (allWorkspaces && allWorkspaces.find((workspace) => workspace?.slug === workspaceSlug)) || undefined;
-  const currentWorkspaceInfo = workspaceSlug && workspaceInfoBySlug(workspaceSlug.toString());
+  const currentWorkspaceInfo = workspaceSlug && workspaceInfoBySlug(workspaceSlug);
 
   // fetching user workspace information
   useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_MEMBER_ME_INFORMATION(workspaceSlug.toString()) : null,
-    workspaceSlug && currentWorkspace ? () => fetchUserWorkspaceInfo(workspaceSlug.toString()) : null,
+    workspaceSlug && currentWorkspace ? WORKSPACE_MEMBER_ME_INFORMATION(workspaceSlug) : null,
+    workspaceSlug && currentWorkspace ? () => fetchUserWorkspaceInfo(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspaceSlug.toString()) : null,
-    workspaceSlug && currentWorkspace ? () => fetchUserProjectPermissions(workspaceSlug.toString()) : null,
+    workspaceSlug && currentWorkspace ? WORKSPACE_PROJECTS_ROLES_INFORMATION(workspaceSlug) : null,
+    workspaceSlug && currentWorkspace ? () => fetchUserProjectPermissions(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
   // fetching workspace projects
   useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_PARTIAL_PROJECTS(workspaceSlug.toString()) : null,
-    workspaceSlug && currentWorkspace ? () => fetchPartialProjects(workspaceSlug.toString()) : null,
+    workspaceSlug && currentWorkspace ? WORKSPACE_PARTIAL_PROJECTS(workspaceSlug) : null,
+    workspaceSlug && currentWorkspace ? () => fetchPartialProjects(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetch workspace members
   useSWR(
-    workspaceSlug && currentWorkspace ? WORKSPACE_MEMBERS(workspaceSlug.toString()) : null,
-    workspaceSlug && currentWorkspace ? () => fetchWorkspaceMembers(workspaceSlug.toString()) : null,
+    workspaceSlug && currentWorkspace ? WORKSPACE_MEMBERS(workspaceSlug) : null,
+    workspaceSlug && currentWorkspace ? () => fetchWorkspaceMembers(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetch workspace favorite
   useSWR(
-    workspaceSlug && currentWorkspace && canPerformWorkspaceMemberActions
-      ? WORKSPACE_FAVORITE(workspaceSlug.toString())
-      : null,
-    workspaceSlug && currentWorkspace && canPerformWorkspaceMemberActions
-      ? () => fetchFavorite(workspaceSlug.toString())
-      : null,
+    workspaceSlug && currentWorkspace && canPerformWorkspaceMemberActions ? WORKSPACE_FAVORITE(workspaceSlug) : null,
+    workspaceSlug && currentWorkspace && canPerformWorkspaceMemberActions ? () => fetchFavorite(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
   // fetch workspace states
   useSWR(
-    workspaceSlug ? WORKSPACE_STATES(workspaceSlug.toString()) : null,
-    workspaceSlug ? () => fetchWorkspaceStates(workspaceSlug.toString()) : null,
+    workspaceSlug ? WORKSPACE_STATES(workspaceSlug) : null,
+    workspaceSlug ? () => fetchWorkspaceStates(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
   // fetch workspace project navigation preferences
   useSWR(
-    workspaceSlug ? WORKSPACE_PROJECT_NAVIGATION_PREFERENCES(workspaceSlug.toString()) : null,
-    workspaceSlug ? () => fetchProjectNavigationPreferences(workspaceSlug.toString()) : null,
+    workspaceSlug ? WORKSPACE_PROJECT_NAVIGATION_PREFERENCES(workspaceSlug) : null,
+    workspaceSlug ? () => fetchProjectNavigationPreferences(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
@@ -171,17 +166,17 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
             </p>
             <div className="flex items-center justify-center gap-2 pt-4">
               {allWorkspaces && allWorkspaces.length > 0 && (
-                <Link href="/" className={cn(getButtonStyling("primary", "base"))}>
+                <Link to="/" className={cn(getButtonStyling("primary", "base"))}>
                   Go Home
                 </Link>
               )}
               {allWorkspaces?.length > 0 && (
-                <Link href="/settings/profile/general/" className={cn(getButtonStyling("secondary", "base"))}>
+                <Link to="/settings/profile/general" className={cn(getButtonStyling("secondary", "base"))}>
                   Visit Profile
                 </Link>
               )}
               {allWorkspaces && allWorkspaces.length === 0 && (
-                <Link href="/create-workspace/" className={cn(getButtonStyling("secondary", "base"))}>
+                <Link to="/create-workspace" className={cn(getButtonStyling("secondary", "base"))}>
                   Create new workspace
                 </Link>
               )}
@@ -208,12 +203,12 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
               </p>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <Link href="/invitations">
+              <Link to="/invitations">
                 <span>
                   <Button variant="secondary">Check pending invites</Button>
                 </span>
               </Link>
-              <Link href="/create-workspace">
+              <Link to="/create-workspace">
                 <span>
                   <Button variant="primary">Create new workspace</Button>
                 </span>

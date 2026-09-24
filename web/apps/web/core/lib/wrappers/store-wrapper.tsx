@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { useTheme } from "next-themes";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";

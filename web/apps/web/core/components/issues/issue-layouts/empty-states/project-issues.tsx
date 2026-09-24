@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -18,8 +18,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 
 export const ProjectEmptyState = observer(function ProjectEmptyState() {
   // router
-  const { projectId: routerProjectId } = useParams();
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
+  const { projectId } = useParams();
   // plane imports
   const { t } = useTranslation();
   // store hooks

@@ -24,7 +24,7 @@ export const PowerKOpenProjectModulesMenu = observer(function PowerKOpenProjectM
   // store hooks
   const { fetchedMap, getProjectModuleIds, getModuleById } = useModule();
   // derived values
-  const projectId = context.params.projectId?.toString();
+  const projectId = context.params.projectId;
   const isFetched = projectId ? fetchedMap[projectId] : false;
   const projectModuleIds = projectId ? getProjectModuleIds(projectId) : undefined;
   const modulesList = projectModuleIds

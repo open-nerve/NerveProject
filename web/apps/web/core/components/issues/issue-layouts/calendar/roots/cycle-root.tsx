@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { EIssuesStoreType } from "@plane/types";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
@@ -24,12 +24,12 @@ export const CycleCalendarLayout = observer(function CycleCalendarLayout() {
   } = useIssues(EIssuesStoreType.CYCLE);
 
   const isCompletedCycle =
-    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId.toString()) : false;
+    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId) : false;
 
   const addIssuesToView = useCallback(
     (issueIds: string[]) => {
       if (!workspaceSlug || !projectId || !cycleId) throw new Error();
-      return addIssueToCycle(workspaceSlug.toString(), projectId.toString(), cycleId.toString(), issueIds);
+      return addIssueToCycle(workspaceSlug, projectId, cycleId, issueIds);
     },
     [addIssueToCycle, workspaceSlug, projectId, cycleId]
   );
@@ -41,7 +41,7 @@ export const CycleCalendarLayout = observer(function CycleCalendarLayout() {
       QuickActions={CycleIssueQuickActions}
       addIssuesToView={addIssuesToView}
       isCompletedCycle={isCompletedCycle}
-      viewId={cycleId?.toString()}
+      viewId={cycleId}
     />
   );
 });

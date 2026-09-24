@@ -7,7 +7,7 @@
 import type { FC } from "react";
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EIssueGroupByToServerOptions, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -100,20 +100,15 @@ export const BaseCalendarRoot = observer(function BaseCalendarRoot(props: IBaseC
   ) => {
     if (!issueId || !destinationDate || !sourceDate || !issueProjectId) return;
 
-    await handleDragDrop(
-      issueId,
-      sourceDate,
-      destinationDate,
-      workspaceSlug?.toString(),
-      issueProjectId,
-      updateIssue
-    ).catch((err) => {
-      setToast({
-        title: "Error!",
-        type: TOAST_TYPE.ERROR,
-        message: err?.detail ?? "Failed to perform this action",
-      });
-    });
+    await handleDragDrop(issueId, sourceDate, destinationDate, workspaceSlug, issueProjectId, updateIssue).catch(
+      (err) => {
+        setToast({
+          title: "Error!",
+          type: TOAST_TYPE.ERROR,
+          message: err?.detail ?? "Failed to perform this action",
+        });
+      }
+    );
   };
 
   const loadMoreIssues = useCallback(

@@ -42,7 +42,7 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
   // store hooks
   const { workspaceInfoBySlug } = useUserPermissions();
   // derived values
-  const currentWorkspaceRole = workspaceInfoBySlug(workspaceSlug.toString())?.role;
+  const currentWorkspaceRole = workspaceInfoBySlug(workspaceSlug)?.role;
 
   return (
     <div className={cn("mb-3 space-y-4", className)}>

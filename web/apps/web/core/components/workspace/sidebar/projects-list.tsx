@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { matchPath, useParams, useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
@@ -50,7 +50,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { loader, getPartialProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
   // router params
   const { workspaceSlug } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   // auth
   const isAuthorizedUser = allowPermissions(
@@ -98,7 +98,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
 
     const updatedSortOrder = orderJoinedProjects(sourceIndex, destinationIndex, sourceId, joinedProjectsList);
     if (updatedSortOrder != undefined)
-      updateProjectView(workspaceSlug.toString(), sourceId, { sort_order: updatedSortOrder }).catch(() => {
+      updateProjectView(workspaceSlug, sourceId, { sort_order: updatedSortOrder }).catch(() => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: t("error"),
@@ -147,7 +147,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
     localStorage.setItem("isAllProjectsListOpen", isOpen.toString());
   };
   useEffect(() => {
-    if (pathname.includes("projects")) {
+    if (matchPath({ path: "/:workspaceSlug/projects", end: false }, pathname)) {
       setIsAllProjectsListOpen(true);
       localStorage.setItem("isAllProjectsListOpen", "true");
     }
@@ -159,7 +159,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
           setToFavorite={false}
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
         />
       )}
       <div
@@ -233,12 +233,13 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                   ))}
                 </Loader>
               )}
-              {isAllProjectsListOpen && (
+              {workspaceSlug && isAllProjectsListOpen && (
                 <Disclosure.Panel as="div" className="flex flex-col gap-0.5" static>
                   <>
                     {displayedProjects.map((projectId, index) => (
                       <SidebarProjectsListItem
                         key={projectId}
+                        workspaceSlug={workspaceSlug}
                         projectId={projectId}
                         handleCopyText={() => handleCopyText(projectId)}
                         projectListType={"JOINED"}

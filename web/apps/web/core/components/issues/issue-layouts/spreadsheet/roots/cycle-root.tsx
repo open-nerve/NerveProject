@@ -6,7 +6,7 @@
 
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // hooks
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useCycle } from "@/hooks/store/use-cycle";
@@ -23,7 +23,7 @@ export const CycleSpreadsheetLayout = observer(function CycleSpreadsheetLayout()
   const { allowPermissions } = useUserPermissions();
   // auth
   const isCompletedCycle =
-    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId.toString()) : false;
+    cycleId && currentProjectCompletedCycleIds ? currentProjectCompletedCycleIds.includes(cycleId) : false;
   const isEditingAllowed = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT
@@ -41,7 +41,7 @@ export const CycleSpreadsheetLayout = observer(function CycleSpreadsheetLayout()
       QuickActions={CycleIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditIssueProperties}
       isCompletedCycle={isCompletedCycle}
-      viewId={cycleId.toString()}
+      viewId={cycleId}
     />
   );
 });

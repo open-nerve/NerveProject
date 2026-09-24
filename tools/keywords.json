@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P3",
+  "phase": "M1/P4",
   "rules": [
     {
       "id": "deploy-files",
@@ -1047,7 +1047,7 @@
         ],
         "miss": [
           "                    multiple",
-          "    await bulkAddMembersToProject(workspaceSlug.toString(), projectId.toString(), payload)",
+          "    await bulkAddMembersToProject(workspaceSlug, projectId, payload)",
           "  updateBulkFilters: (filters: Partial<TNotificationFilter>) => void;",
           "  markAllNotificationsAsRead: (workspaceId: string) => Promise<void>;"
         ],
@@ -1398,6 +1398,100 @@
             "web/packages/i18n/src/locales/en/workspace-settings.json"
           ],
           "miss": ["web/apps/web/app/assets/services/jira.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "frontend-env",
+      "phase": "M1/P4",
+      "why": "前端没有环境变量（M1 设计 4.1）：前端与接口同源部署，接口一律用相对路径；Next.js 式的 process.env 注入（vite.config.ts 的 define）、dotenv 加载和 .env.example 已删除，Vite 的 VITE_ 变量也不用。import.meta.env.DEV、PROD 是 Vite 按构建模式给出的常量，不在其中。e2e/ 和 tools/ 是 Node 端的代码，读 process.env 是合法的，不在范围内",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/(?:.*/)?\\.env(?:\\.[^/]*)?|turbo\\.json|pnpm-workspace\\.yaml)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "process\\.env|\\bVITE_[A-Z]|\\bdotenv\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "export const API_BASE_URL = process.env.VITE_API_BASE_URL || \"\";",
+          "  if (process.env.NODE_ENV !== \"production\") {",
+          "    \"process.env\": JSON.stringify(viteEnv),",
+          "    \"VITE_SUPPORT_EMAIL\",",
+          "VITE_WEB_BASE_URL=\"http://localhost:3000\"",
+          "import * as dotenv from \"dotenv\";",
+          "  \"dotenv\": \"16.4.7\""
+        ],
+        "miss": [
+          "  if (import.meta.env.PROD && isStaleAssetError(error)) recoverFromStaleAsset();",
+          "  if (import.meta.env.DEV) {",
+          "  \"globalEnv\": [\"NODE_ENV\"],"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/vite.config.ts",
+            "web/apps/web/.env.example",
+            "web/packages/constants/src/endpoints.ts",
+            "turbo.json",
+            "pnpm-workspace.yaml"
+          ],
+          "miss": ["e2e/playwright.config.ts", "tools/keywords.mjs", "pnpm-lock.yaml"]
+        }
+      }
+    },
+    {
+      "id": "next-shim-files",
+      "phase": "M1/P4",
+      "why": "Next.js 兼容垫片的文件：app/compat/next/ 整个目录（next/link、next/navigation 的替身，强制结尾 / 的 helper.ts）、手写的 next-* 类型声明、包装层 use-app-router.tsx，以及 typescript-config 的 nextjs.json；导航一律用 React Router 的原生写法，地址不带结尾 /（M1 设计 4.1、4.2）",
+      "path": {
+        "source": "^web/(?:apps/web/(?:app/compat/next/|app/types/next-[^/]*\\.d\\.ts$|core/hooks/use-app-router\\.tsx$)|packages/typescript-config/nextjs\\.json$)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/app/compat/next/helper.ts",
+          "web/apps/web/app/types/next-navigation.d.ts",
+          "web/apps/web/core/hooks/use-app-router.tsx",
+          "web/packages/typescript-config/nextjs.json"
+        ],
+        "miss": [
+          "web/apps/web/app/types/react-router-virtual.d.ts",
+          "web/apps/web/core/hooks/use-navigation-preferences.ts",
+          "web/packages/typescript-config/react-router.json"
+        ]
+      }
+    },
+    {
+      "id": "next-shims",
+      "phase": "M1/P4",
+      "why": "Next.js 兼容垫片的引用：next/link、next/navigation 的导入和别名、包装层 useAppRouter、强制结尾 / 的 ensureTrailingSlash 和 compat/next 路径；导航一律用 React Router 的原生写法（Link、NavLink、useNavigate、useParams，M1 设计 4.2）。Plane 接口地址的 ensureAPITrailingSlash 不在其中",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]next/(?:link|navigation)[\"'`]|\\buseAppRouter\\b|\\bensureTrailingSlash\\b|compat/next\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "import Link from \"next/link\";",
+          "      \"next/link\": path.resolve(__dirname, \"app/compat/next/link.tsx\"),",
+          "import { useParams } from \"next/navigation\";",
+          "      \"next/navigation\": path.resolve(__dirname, \"app/compat/next/navigation.ts\"),",
+          "import { useAppRouter } from \"@/hooks/use-app-router\";",
+          "  const router = useAppRouter();",
+          "  const canonical = ensureTrailingSlash(request.url);",
+          "import { ensureTrailingSlash } from \"./compat/next/helper\";"
+        ],
+        "miss": [
+          "import { Link, useNavigate } from \"react-router\";",
+          "export function ensureAPITrailingSlash(url: string): string {"
+        ],
+        "files": {
+          "hit": ["web/apps/web/vite.config.ts", "web/apps/web/core/components/home/root.tsx"],
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
         }
       }
     }

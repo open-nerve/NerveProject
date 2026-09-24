@@ -6,7 +6,6 @@
 
 import React, { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useParams, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 // plane imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
@@ -22,7 +21,7 @@ import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
 import { useIssues } from "@/hooks/store/use-issues";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import { IssuesStoreContext } from "@/hooks/use-issue-layout-store";
 import { useWorkspaceIssueProperties } from "@/hooks/use-workspace-issue-properties";
 
@@ -35,12 +34,10 @@ type Props = {
 export const AllIssueLayoutRoot = observer(function AllIssueLayoutRoot(props: Props) {
   const { isDefaultView, isLoading = false, toggleLoading } = props;
   // router
-  const router = useAppRouter();
-  const { workspaceSlug: routerWorkspaceSlug, globalViewId: routerGlobalViewId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const globalViewId = routerGlobalViewId ? routerGlobalViewId.toString() : undefined;
+  const navigate = useNavigate();
+  const { workspaceSlug, globalViewId } = useParams();
   // search params
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   // store hooks
   const {
     issuesFilter: { filters, fetchFilters, updateFilterExpression },
@@ -121,7 +118,7 @@ export const AllIssueLayoutRoot = observer(function AllIssueLayoutRoot(props: Pr
         actions={[
           {
             label: "Go to All work items",
-            onClick: () => router.push(`/${workspaceSlug}/workspace-views/all-issues`),
+            onClick: () => navigate(`/${workspaceSlug}/workspace-views/all-issues`),
             variant: "primary",
           },
         ]}

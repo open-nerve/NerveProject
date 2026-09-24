@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
@@ -61,14 +61,14 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
   const handleAddToFavorites = async () => {
     if (!workspaceSlug || !projectId) return;
 
-    await addViewToFavorites(workspaceSlug.toString(), projectId.toString(), view.id);
+    await addViewToFavorites(workspaceSlug, projectId, view.id);
     if (!isFavoriteOpen) toggleFavoriteMenu(true);
   };
 
   const handleRemoveFromFavorites = () => {
     if (!workspaceSlug || !projectId) return;
 
-    removeViewFromFavorites(workspaceSlug.toString(), projectId.toString(), view.id);
+    removeViewFromFavorites(workspaceSlug, projectId, view.id);
   };
 
   const ownedByDetails = view.owned_by ? getUserDetails(view.owned_by) : undefined;
@@ -79,8 +79,8 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
         <CreateUpdateProjectViewModal
           isOpen={createUpdateViewModal}
           onClose={() => setCreateUpdateViewModal(false)}
-          workspaceSlug={workspaceSlug.toString()}
-          projectId={projectId.toString()}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
           data={view}
         />
       )}
@@ -107,12 +107,7 @@ export const ViewListItemAction = observer(function ViewListItemAction(props: Pr
       )}
       {projectId && workspaceSlug && (
         <div className="hidden md:block">
-          <ViewQuickActions
-            parentRef={parentRef}
-            projectId={projectId.toString()}
-            view={view}
-            workspaceSlug={workspaceSlug.toString()}
-          />
+          <ViewQuickActions parentRef={parentRef} projectId={projectId} view={view} workspaceSlug={workspaceSlug} />
         </div>
       )}
     </>

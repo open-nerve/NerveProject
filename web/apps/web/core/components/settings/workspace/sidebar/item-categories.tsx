@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { usePathname } from "next/navigation";
-import { useParams } from "react-router";
+import { matchPath, useParams, useLocation } from "react-router";
 // plane imports
 import {
   EUserPermissionsLevel,
@@ -26,7 +25,7 @@ import { WORKSPACE_SETTINGS_ICONS } from "./item-icon";
 export const WorkspaceSettingsSidebarItemCategories = observer(function WorkspaceSettingsSidebarItemCategories() {
   // params
   const { workspaceSlug } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   // store hooks
   const { allowPermissions } = useUserPermissions();
   // translation
@@ -50,9 +49,7 @@ export const WorkspaceSettingsSidebarItemCategories = observer(function Workspac
             <div className="flex flex-col">
               {accessibleItems.map((item) => {
                 const isItemActive =
-                  item.href === "/settings"
-                    ? pathname === `/${workspaceSlug}${item.href}/`
-                    : new RegExp(`^/${workspaceSlug}${item.href}/`).test(pathname);
+                  matchPath({ path: `/:workspaceSlug${item.href}`, end: item.href === "/settings" }, pathname) !== null;
 
                 return (
                   <SettingsSidebarItem

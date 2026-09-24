@@ -5,7 +5,6 @@
  */
 
 import type { AxiosRequestConfig } from "axios";
-import { API_BASE_URL } from "@plane/constants";
 // plane types
 import { getFileMetaDataForUpload, generateFileUploadPayload } from "@plane/services";
 import type { TIssueAttachment, TIssueAttachmentUploadResponse } from "@plane/types";
@@ -17,7 +16,7 @@ export class IssueAttachmentService extends APIService {
   private fileUploadService: FileUploadService;
 
   constructor() {
-    super(API_BASE_URL);
+    super();
     // upload service
     this.fileUploadService = new FileUploadService();
   }

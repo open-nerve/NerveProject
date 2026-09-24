@@ -19,7 +19,7 @@ import { cn } from "@plane/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserSettings } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   data: IWorkspace | null;
@@ -34,7 +34,7 @@ const defaultValues = {
 export const DeleteWorkspaceForm = observer(function DeleteWorkspaceForm(props: Props) {
   const { data, onClose } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { deleteWorkspace } = useWorkspace();
   const { t } = useTranslation();
@@ -67,7 +67,7 @@ export const DeleteWorkspaceForm = observer(function DeleteWorkspaceForm(props: 
       await deleteWorkspace(data.slug);
       await fetchCurrentUserSettings();
       handleClose();
-      router.push(getWorkspaceRedirectionUrl());
+      navigate(getWorkspaceRedirectionUrl());
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: t("workspace_settings.settings.general.delete_modal.success_title"),

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useSearchParams } from "next/navigation";
+import { useNavigate, useSearchParams } from "react-router";
 import useSWR from "swr";
 import {
   BoxesOutline,
@@ -24,7 +24,6 @@ import { WORKSPACE_INVITATION } from "@plane/constants";
 import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 import { WorkspaceService } from "@/services/workspace.service";
@@ -35,9 +34,9 @@ const workspaceService = new WorkspaceService();
 
 function WorkspaceInvitationPage() {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // query params
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const invitation_id = searchParams.get("invitation_id");
   const slug = searchParams.get("slug");
   const token = searchParams.get("token");
@@ -45,10 +44,8 @@ function WorkspaceInvitationPage() {
   const { data: currentUser } = useUser();
 
   const { data: invitationDetail, error } = useSWR(
-    invitation_id && slug && WORKSPACE_INVITATION(invitation_id.toString()),
-    invitation_id && slug
-      ? () => workspaceService.getWorkspaceInvitation(slug.toString(), invitation_id.toString())
-      : null
+    invitation_id && slug && WORKSPACE_INVITATION(invitation_id),
+    invitation_id && slug ? () => workspaceService.getWorkspaceInvitation(slug, invitation_id) : null
   );
 
   const handleAccept = () => {
@@ -60,9 +57,9 @@ function WorkspaceInvitationPage() {
       })
       .then(() => {
         if (invitationDetail.email === currentUser?.email) {
-          router.push(`/${invitationDetail.workspace.slug}`);
+          navigate(`/${invitationDetail.workspace.slug}`);
         } else {
-          router.push("/");
+          navigate("/");
         }
       })
       .catch((err: unknown) => console.error(err));
@@ -76,7 +73,7 @@ function WorkspaceInvitationPage() {
         token: token,
       })
       .then(() => {
-        router.push("/");
+        navigate("/");
       })
       .catch((err: unknown) => console.error(err));
   };

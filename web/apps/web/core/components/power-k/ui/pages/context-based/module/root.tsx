@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // components
 import type { TPowerKPageType } from "@/components/power-k/core/types";
 import { PowerKMembersMenu } from "@/components/power-k/menus/members";
@@ -30,7 +30,7 @@ export const PowerKModuleContextBasedPages = observer(function PowerKModuleConte
     project: { getProjectMemberIds },
   } = useMember();
   // derived values
-  const moduleDetails = moduleId ? getModuleById(moduleId.toString()) : null;
+  const moduleDetails = moduleId ? getModuleById(moduleId) : null;
   const projectMemberIds = moduleDetails?.project_id ? getProjectMemberIds(moduleDetails.project_id, false) : [];
 
   if (!moduleDetails) return null;

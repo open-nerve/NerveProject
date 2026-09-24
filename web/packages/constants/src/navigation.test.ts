@@ -34,13 +34,13 @@ describe("the workspace sidebar is a fixed list", () => {
     ]);
   });
 
-  it("gives every item a label, a link and at least one role", () => {
+  // that each item's link lands on a page is checked by the web app's navigation test
+  it("gives every item a label and at least one role", () => {
     for (const item of [
       ...WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,
       ...WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS,
     ]) {
       expect(item.labelTranslationKey).not.toBe("");
-      expect(item.href.startsWith("/")).toBe(true);
       expect(item.access.length).toBeGreaterThan(0);
     }
   });
@@ -54,7 +54,6 @@ describe("the profile page", () => {
   it("points each tab at its own route", () => {
     for (const tab of PROFILE_TABS) {
       expect(tab.route).toBe(tab.key);
-      expect(tab.selected).toBe(`/${tab.key}/`);
     }
   });
 });

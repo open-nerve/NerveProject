@@ -21,7 +21,7 @@ import { renderFormattedPayloadDate, getTabIndex } from "@plane/utils";
 // hooks
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // services
@@ -58,7 +58,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
   // states
   const [uploadedAssetIds, setUploadedAssetIds] = useState<string[]>([]);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // refs
   const descriptionEditorRef = useRef<EditorRefApi>(null);
   const submitBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -151,7 +151,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
           setUploadedAssetIds([]);
         }
         if (!createMore) {
-          router.push(`/${workspaceSlug}/projects/${projectId}/intake/?currentTab=open&inboxIssueId=${res?.issue?.id}`);
+          navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=open&inboxIssueId=${res?.issue?.id}`);
           handleModalClose();
         } else {
           descriptionEditorRef?.current?.clearEditor();

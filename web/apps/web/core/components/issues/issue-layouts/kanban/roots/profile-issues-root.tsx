@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 // hooks
@@ -23,7 +23,7 @@ export const ProfileIssuesKanBanLayout = observer(function ProfileIssuesKanBanLa
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug.toString(),
+      workspaceSlug,
       projectId
     );
 
@@ -31,7 +31,7 @@ export const ProfileIssuesKanBanLayout = observer(function ProfileIssuesKanBanLa
     <BaseKanBanRoot
       QuickActions={ProjectIssueQuickActions}
       canEditPropertiesBasedOnProject={canEditPropertiesBasedOnProject}
-      viewId={profileViewId?.toString()}
+      viewId={profileViewId}
     />
   );
 });

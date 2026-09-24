@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, Link } from "react-router";
 // Plane imports
 import type { IWebhook } from "@plane/types";
 import { Switch } from "@makeplane/propel/components/switch";
@@ -25,13 +24,13 @@ export function WebhooksListItem(props: IWebhookListItem) {
 
   const handleToggle = async () => {
     if (!workspaceSlug || !webhook.id) return;
-    await updateWebhook(workspaceSlug.toString(), webhook.id, { is_active: !webhook.is_active });
+    await updateWebhook(workspaceSlug, webhook.id, { is_active: !webhook.is_active });
   };
 
   return (
     <div className="rounded-lg border border-subtle bg-layer-2 px-4 py-3">
       <Link
-        href={`/${workspaceSlug}/settings/webhooks/${webhook?.id}`}
+        to={`/${workspaceSlug}/settings/webhooks/${webhook?.id}`}
         className="flex items-center justify-between gap-4"
       >
         <h5 className="truncate text-body-sm-medium">{webhook.url}</h5>

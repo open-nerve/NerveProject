@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // types
 import { PROJECT_ERROR_MESSAGES } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -17,7 +16,7 @@ import { AlertModalCore } from "@plane/ui";
 // constants
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 
 type Props = {
   data: IModule;
@@ -30,7 +29,7 @@ export const DeleteModuleModal = observer(function DeleteModuleModal(props: Prop
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, moduleId, peekModule } = useParams();
   // store hooks
   const { deleteModule } = useModule();
@@ -46,9 +45,9 @@ export const DeleteModuleModal = observer(function DeleteModuleModal(props: Prop
 
     setIsDeleteLoading(true);
 
-    await deleteModule(workspaceSlug.toString(), projectId.toString(), data.id)
+    await deleteModule(workspaceSlug, projectId, data.id)
       .then(() => {
-        if (moduleId || peekModule) router.push(`/${workspaceSlug}/projects/${data.project_id}/modules`);
+        if (moduleId || peekModule) navigate(`/${workspaceSlug}/projects/${data.project_id}/modules`);
         handleClose();
         setToast({
           type: TOAST_TYPE.SUCCESS,

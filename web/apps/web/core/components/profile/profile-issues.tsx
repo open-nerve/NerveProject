@@ -6,7 +6,7 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import useSWR from "swr";
 // plane imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
@@ -49,6 +49,8 @@ export const ProfileIssuesPage = observer(function ProfileIssuesPage(props: Prop
     },
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
+
+  if (!workspaceSlug || !userId) return null;
 
   return (
     <IssuesStoreContext.Provider value={EIssuesStoreType.PROFILE}>

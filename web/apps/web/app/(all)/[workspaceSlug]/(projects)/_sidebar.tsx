@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // plane imports
-import { useParams, usePathname } from "next/navigation";
+import { useMatch } from "react-router";
 import { SIDEBAR_WIDTH } from "@plane/constants";
 import { useLocalStorage } from "@plane/hooks";
 // components
@@ -24,10 +24,7 @@ export const ProjectAppSidebar = observer(function ProjectAppSidebar() {
   // states
   const [sidebarWidth, setSidebarWidth] = useState<number>(storedValue ?? SIDEBAR_WIDTH);
   // routes
-  const { workspaceSlug } = useParams();
-  const pathname = usePathname();
-  // derived values
-  const isNotificationsPath = pathname.includes(`/${workspaceSlug}/notifications`);
+  const isNotificationsPath = useMatch("/:workspaceSlug/notifications") !== null;
 
   // handlers
   const handleWidthChange = (width: number) => setValue(width);

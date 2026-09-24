@@ -13,7 +13,7 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   isOpen: boolean;
@@ -21,7 +21,7 @@ type Props = {
 };
 
 export function DeactivateAccountModal(props: Props) {
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { isOpen, onClose } = props;
   // hooks
   const { t } = useTranslation();
@@ -46,7 +46,7 @@ export function DeactivateAccountModal(props: Props) {
           message: "Account deactivated successfully.",
         });
         signOut();
-        router.push("/");
+        navigate("/");
         handleClose();
         return;
       })

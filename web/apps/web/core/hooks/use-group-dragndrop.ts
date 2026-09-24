@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import type { EIssuesStoreType, TIssue, TIssueGroupByOptions, TIssueOrderByOptions } from "@plane/types";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
@@ -70,18 +70,18 @@ export const useGroupIssuesDragNDrop = (
 
     if (isCycleChanged && workspaceSlug) {
       if (data[cycleKey]) {
-        addCycleToIssue(workspaceSlug.toString(), projectId, data[cycleKey]?.toString() ?? "", issueId).catch(() =>
+        addCycleToIssue(workspaceSlug, projectId, data[cycleKey]?.toString() ?? "", issueId).catch(() =>
           setToast(errorToastProps)
         );
       } else {
-        removeCycleFromIssue(workspaceSlug.toString(), projectId, issueId).catch(() => setToast(errorToastProps));
+        removeCycleFromIssue(workspaceSlug, projectId, issueId).catch(() => setToast(errorToastProps));
       }
       delete data[cycleKey];
     }
 
     if (isModuleChanged && workspaceSlug && issueUpdates[moduleKey]) {
       changeModulesInIssue(
-        workspaceSlug.toString(),
+        workspaceSlug,
         projectId,
         issueId,
         issueUpdates[moduleKey].ADD,

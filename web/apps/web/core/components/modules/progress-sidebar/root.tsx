@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import {
   AddOutline,
@@ -76,25 +76,25 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
 
   const submitChanges = async (data: Partial<IModule>) => {
     if (!workspaceSlug || !projectId || !moduleId) return;
-    await updateModuleDetails(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), data);
+    await updateModuleDetails(workspaceSlug, projectId, moduleId, data);
   };
 
   const handleCreateLink = async (formData: ModuleLink) => {
     if (!workspaceSlug || !projectId || !moduleId) return;
     const payload = { metadata: {}, ...formData };
-    await createModuleLink(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), payload);
+    await createModuleLink(workspaceSlug, projectId, moduleId, payload);
   };
 
   const handleUpdateLink = async (formData: ModuleLink, linkId: string) => {
     if (!workspaceSlug || !projectId) return;
     const payload = { metadata: {}, ...formData };
-    await updateModuleLink(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), linkId, payload);
+    await updateModuleLink(workspaceSlug, projectId, moduleId, linkId, payload);
   };
 
   const handleDeleteLink = async (linkId: string) => {
     if (!workspaceSlug || !projectId) return;
     try {
-      await deleteModuleLink(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), linkId);
+      await deleteModuleLink(workspaceSlug, projectId, moduleId, linkId);
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Success!",
@@ -288,7 +288,7 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
                     onChange={(val) => {
                       submitChanges({ lead_id: val });
                     }}
-                    projectId={projectId?.toString() ?? ""}
+                    projectId={projectId ?? ""}
                     multiple={false}
                     buttonVariant="background-with-text"
                     placeholder={t("lead")}
@@ -315,7 +315,7 @@ export const ModuleProgressSidebar = observer(function ModuleProgressSidebar(pro
                       submitChanges({ member_ids: val });
                     }}
                     multiple
-                    projectId={projectId?.toString() ?? ""}
+                    projectId={projectId ?? ""}
                     buttonVariant={value && value?.length > 0 ? "transparent-without-text" : "background-with-text"}
                     buttonClassName={value && value.length > 0 ? "hover:bg-transparent px-0" : ""}
                     disabled={!isEditingAllowed || isArchived}

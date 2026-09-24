@@ -6,7 +6,7 @@
 
 import { Fragment, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "react-router";
 import { ChevronDownOutline, ChevronUpOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 import { useTranslation } from "@plane/i18n";
@@ -29,7 +29,7 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
   // props
   const { moduleId } = props;
   // router
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const peekModule = searchParams.get("peekModule") || undefined;
   // plane hooks
   const { t } = useTranslation();

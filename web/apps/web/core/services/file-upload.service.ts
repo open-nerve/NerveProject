@@ -12,10 +12,6 @@ import { APIService } from "@/services/api.service";
 export class FileUploadService extends APIService {
   private cancelSource: any;
 
-  constructor() {
-    super("");
-  }
-
   async uploadFile(
     url: string,
     data: FormData,

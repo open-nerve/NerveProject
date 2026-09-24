@@ -6,11 +6,10 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 // hooks
 import { generateQueryParams } from "@plane/utils";
 import { useCycle } from "@/hooks/store/use-cycle";
-import { useAppRouter } from "@/hooks/use-app-router";
 // components
 import { CycleDetailsSidebar } from "./progress-sidebar";
 
@@ -23,27 +22,27 @@ type Props = {
 export const CyclePeekOverview = observer(function CyclePeekOverview(props: Props) {
   const { projectId: propsProjectId, workspaceSlug, isArchived } = props;
   // router
-  const router = useAppRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const peekCycle = searchParams.get("peekCycle");
   // refs
   const ref = React.useRef(null);
   // store hooks
   const { getCycleById, fetchCycleDetails, fetchArchivedCycleDetails } = useCycle();
   // derived values
-  const cycleDetails = peekCycle ? getCycleById(peekCycle.toString()) : undefined;
+  const cycleDetails = peekCycle ? getCycleById(peekCycle) : undefined;
   const projectId = propsProjectId || cycleDetails?.project_id;
 
   const handleClose = () => {
     const query = generateQueryParams(searchParams, ["peekCycle"]);
-    router.push(`${pathname}?${query}`);
+    navigate(`${pathname}?${query}`);
   };
 
   useEffect(() => {
     if (!peekCycle || !projectId) return;
-    if (isArchived) fetchArchivedCycleDetails(workspaceSlug, projectId, peekCycle.toString());
-    else fetchCycleDetails(workspaceSlug, projectId, peekCycle.toString());
+    if (isArchived) fetchArchivedCycleDetails(workspaceSlug, projectId, peekCycle);
+    else fetchCycleDetails(workspaceSlug, projectId, peekCycle);
   }, [fetchArchivedCycleDetails, fetchCycleDetails, isArchived, peekCycle, projectId, workspaceSlug]);
 
   return (

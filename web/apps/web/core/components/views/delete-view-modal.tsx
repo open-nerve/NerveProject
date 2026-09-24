@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useNavigate } from "react-router";
 // types
 import { useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -28,7 +28,7 @@ export const DeleteProjectViewModal = observer(function DeleteProjectViewModal(p
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   // router
   const { workspaceSlug, projectId } = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   // store hooks
   const { deleteView } = useProjectView();
   const { t } = useTranslation();
@@ -41,9 +41,9 @@ export const DeleteProjectViewModal = observer(function DeleteProjectViewModal(p
     if (!workspaceSlug || !projectId) return;
     try {
       setIsDeleteLoading(true);
-      await deleteView(workspaceSlug.toString(), projectId.toString(), data.id);
+      await deleteView(workspaceSlug, projectId, data.id);
       handleClose();
-      router.push(`/${workspaceSlug}/projects/${projectId}/views`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/views`);
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Success!",

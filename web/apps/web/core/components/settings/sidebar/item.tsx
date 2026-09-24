@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "react-router";
 // plane imports
 import { cn } from "@plane/utils";
 import type { LucideIcon } from "lucide-react";
@@ -53,7 +53,7 @@ export function SettingsSidebarItem(props: Props) {
   }
 
   return (
-    <Link className={className} href={props.href}>
+    <Link className={className} to={props.href}>
       {content}
     </Link>
   );

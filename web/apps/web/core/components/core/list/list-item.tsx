@@ -11,7 +11,7 @@ import { ControlLink, Row } from "@plane/ui";
 // helpers
 import { cn } from "@plane/utils";
 // hooks
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 interface IListItemProps {
   id?: string;
@@ -57,12 +57,12 @@ export function ListItem(props: IListItemProps) {
   } = props;
 
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
 
   // handlers
   const handleControlLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (onItemClick) onItemClick(e);
-    else router.push(itemLink);
+    else navigate(itemLink);
   };
 
   return (

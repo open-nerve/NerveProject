@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { EUserPermissionsLevel } from "@plane/constants";
 import type { IIssueLabel } from "@plane/types";
 import { EUserPermissions } from "@plane/types";
@@ -32,19 +32,17 @@ export const IssueLabelSelect = observer(function IssueLabelSelect(props: TWorkI
   const projectLabelIds = getProjectLabelIds(projectId);
 
   const canCreateLabel =
-    projectId &&
-    allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug?.toString(), projectId);
+    projectId && allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT, workspaceSlug, projectId);
 
   const onDropdownOpen = () => {
-    if (projectLabelIds === undefined && workspaceSlug && projectId)
-      fetchProjectLabels(workspaceSlug.toString(), projectId);
+    if (projectLabelIds === undefined && workspaceSlug && projectId) fetchProjectLabels(workspaceSlug, projectId);
   };
 
   const handleCreateLabel = (data: Partial<IIssueLabel>) => {
     if (!workspaceSlug || !projectId) {
       throw new Error("Workspace slug or project ID is missing");
     }
-    return createLabel(workspaceSlug.toString(), projectId, data);
+    return createLabel(workspaceSlug, projectId, data);
   };
 
   return (

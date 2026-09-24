@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { matchPath, useParams, useLocation } from "react-router";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@plane/types";
@@ -24,7 +24,7 @@ import { ProjectCardList } from "./card-list";
 export const ProjectRoot = observer(function ProjectRoot() {
   const { currentWorkspace } = useWorkspace();
   const { workspaceSlug } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const { t } = useTranslation();
   // store
   const { totalProjectIds, filteredProjectIds } = useProject();
@@ -41,7 +41,7 @@ export const ProjectRoot = observer(function ProjectRoot() {
     ? `${currentWorkspace?.name} - ${t("workspace_projects.label", { count: 2 })}`
     : undefined;
 
-  const isArchived = pathname.includes("/archives");
+  const isArchived = matchPath("/:workspaceSlug/projects/archives", pathname) !== null;
 
   const allowedDisplayFilters =
     currentWorkspaceAppliedDisplayFilters?.filter((filter) => filter !== "archived_projects") ?? [];
@@ -54,7 +54,7 @@ export const ProjectRoot = observer(function ProjectRoot() {
       if (!value) newValues = [];
       else newValues = newValues.filter((val) => val !== value);
 
-      updateFilters(workspaceSlug.toString(), { [key]: newValues });
+      updateFilters(workspaceSlug, { [key]: newValues });
     },
     [currentWorkspaceFilters, updateFilters, workspaceSlug]
   );
@@ -62,20 +62,21 @@ export const ProjectRoot = observer(function ProjectRoot() {
   const handleRemoveDisplayFilter = useCallback(
     (key: TProjectAppliedDisplayFilterKeys) => {
       if (!workspaceSlug) return;
-      updateDisplayFilters(workspaceSlug.toString(), { [key]: false });
+      updateDisplayFilters(workspaceSlug, { [key]: false });
     },
     [updateDisplayFilters, workspaceSlug]
   );
 
   const handleClearAllFilters = useCallback(() => {
     if (!workspaceSlug) return;
-    clearAllFilters(workspaceSlug.toString());
-    clearAllAppliedDisplayFilters(workspaceSlug.toString());
-    if (isArchived) updateDisplayFilters(workspaceSlug.toString(), { archived_projects: true });
+    clearAllFilters(workspaceSlug);
+    clearAllAppliedDisplayFilters(workspaceSlug);
+    if (isArchived) updateDisplayFilters(workspaceSlug, { archived_projects: true });
   }, [clearAllFilters, clearAllAppliedDisplayFilters, workspaceSlug]);
 
   useEffect(() => {
-    updateDisplayFilters(workspaceSlug.toString(), { archived_projects: isArchived });
+    if (!workspaceSlug) return;
+    updateDisplayFilters(workspaceSlug, { archived_projects: isArchived });
   }, [pathname]);
 
   return (

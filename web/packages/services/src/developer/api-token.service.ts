@@ -4,15 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { IApiToken } from "@plane/types";
 import { APIService } from "../api.service";
 
 export class APITokenService extends APIService {
-  constructor(BASE_URL?: string) {
-    super(BASE_URL || API_BASE_URL);
-  }
-
   /**
    * Retrieves all API tokens for a specific workspace
    * @returns {Promise<IApiToken[]>} Array of API tokens associated with the workspace

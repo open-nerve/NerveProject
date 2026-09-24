@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { CircleDashed } from "lucide-react";
 import { AddOutline } from "@makeplane/propel/icons";
 // types
@@ -43,7 +43,7 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
   const storeType = useIssueStoreType();
   // derived values
   const renderExistingIssueModal = moduleId || cycleId;
-  const existingIssuesListModalPayload = moduleId ? { module: moduleId.toString() } : { cycle: true };
+  const existingIssuesListModalPayload = moduleId ? { module: moduleId } : { cycle: true };
 
   const handleAddIssuesToView = async (data: ISearchIssueResponse[]) => {
     if (!workspaceSlug || !projectId) return;
@@ -129,8 +129,8 @@ export const HeaderGroupByCard = observer(function HeaderGroupByCard(props: IHea
 
         {renderExistingIssueModal && (
           <ExistingIssuesListModal
-            workspaceSlug={workspaceSlug?.toString()}
-            projectId={projectId?.toString()}
+            workspaceSlug={workspaceSlug}
+            projectId={projectId}
             isOpen={openExistingIssueListModal}
             handleClose={() => setOpenExistingIssueListModal(false)}
             searchParams={existingIssuesListModalPayload}

@@ -6,14 +6,13 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // types
 import type { TIssue } from "@plane/types";
 // helpers
 import { Row } from "@plane/ui";
 import { cn } from "@plane/utils";
 // hooks
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 
 type Props = {
   issue: TIssue;
@@ -22,15 +21,15 @@ type Props = {
 export const SpreadsheetSubIssueColumn = observer(function SpreadsheetSubIssueColumn(props: Props) {
   const { issue } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // hooks
   const { workspaceSlug } = useParams();
   // derived values
   const subIssueCount = issue?.sub_issues_count ?? 0;
 
   const redirectToIssueDetail = () => {
-    router.push(
-      `/${workspaceSlug?.toString()}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}issues/${issue.id}#sub-issues`
+    navigate(
+      `/${workspaceSlug}/projects/${issue.project_id}/${issue.archived_at ? "archives/" : ""}issues/${issue.id}#sub-issues`
     );
   };
 

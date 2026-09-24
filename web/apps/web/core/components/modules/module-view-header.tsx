@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 // plane helpers
 import { MODULE_VIEW_LAYOUTS } from "@plane/constants";
@@ -71,7 +71,7 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
         else newValues.push(value);
       }
 
-      updateFilters(projectId.toString(), { [key]: newValues });
+      updateFilters(projectId, { [key]: newValues });
     },
     [filters, projectId, updateFilters]
   );
@@ -147,7 +147,7 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
         value={displayFilters?.order_by}
         onChange={(val) => {
           if (!projectId || val === displayFilters?.order_by) return;
-          updateDisplayFilters(projectId.toString(), {
+          updateDisplayFilters(projectId, {
             order_by: val,
           });
         }}
@@ -163,7 +163,7 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
           filters={filters ?? {}}
           handleDisplayFiltersUpdate={(val) => {
             if (!projectId) return;
-            updateDisplayFilters(projectId.toString(), val);
+            updateDisplayFilters(projectId, val);
           }}
           handleFiltersUpdate={handleFilters}
           memberIds={workspaceMemberIds ?? undefined}
@@ -183,7 +183,7 @@ export const ModuleViewHeader = observer(function ModuleViewHeader() {
               )}
               onClick={() => {
                 if (!projectId) return;
-                updateDisplayFilters(projectId.toString(), { layout: layout.key });
+                updateDisplayFilters(projectId, { layout: layout.key });
               }}
             >
               <ModuleLayoutIcon layoutType={layout.key} />

@@ -53,13 +53,13 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
     allowPermissions(
       [EUserProjectRoles.ADMIN, EUserProjectRoles.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      ctx.params.workspaceSlug?.toString(),
-      ctx.params.projectId?.toString()
+      ctx.params.workspaceSlug,
+      ctx.params.projectId
     );
   const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
 
   const getProjectDetails = (ctx: TPowerKContext) =>
-    ctx.params.projectId ? getPartialProjectById(ctx.params.projectId.toString()) : undefined;
+    ctx.params.projectId ? getPartialProjectById(ctx.params.projectId) : undefined;
 
   return {
     create_work_item: {
@@ -133,7 +133,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       group: "create",
       i18n_title: "power_k.creation_actions.create_workspace",
       icon: SquarePlus,
-      action: (ctx) => ctx.router.push("/create-workspace"),
+      action: (ctx) => ctx.navigate("/create-workspace"),
       isEnabled: () => Boolean(!isWorkspaceCreationDisabled),
       isVisible: () => Boolean(!isWorkspaceCreationDisabled),
       closeOnSelect: true,

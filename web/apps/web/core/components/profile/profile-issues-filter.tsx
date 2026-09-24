@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane constants
 import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
 // i18n
@@ -24,8 +24,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   // i18n
   const { t } = useTranslation();
   // router
-  const { workspaceSlug, userId: routeUserId } = useParams();
-  const userId = routeUserId ? routeUserId.toString() : undefined;
+  const { workspaceSlug, userId } = useParams();
   // store hook
   const {
     issuesFilter: { issueFilters, updateFilters },
@@ -36,7 +35,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug.toString(), undefined, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, userId);
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );
@@ -44,13 +43,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(
-        workspaceSlug.toString(),
-        undefined,
-        EIssueFilterType.DISPLAY_FILTERS,
-        updatedDisplayFilter,
-        userId
-      );
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );
@@ -58,7 +51,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(workspaceSlug.toString(), undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );

@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { Signal, TicketCheck } from "lucide-react";
 import {
   CyclesOutline,
@@ -52,7 +52,7 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
     updateIssue,
   } = useIssueDetail();
   // derived values
-  const entityId = entityIdentifier ? getIssueIdByIdentifier(entityIdentifier.toString()) : null;
+  const entityId = entityIdentifier ? getIssueIdByIdentifier(entityIdentifier) : null;
   const entityDetails = entityId ? getIssueById(entityId) : null;
   const projectDetails = entityDetails?.project_id ? getProjectById(entityDetails?.project_id) : undefined;
   const isCurrentUserAssigned = !!entityDetails?.assignee_ids?.includes(currentUser?.id ?? "");
@@ -64,14 +64,14 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug?.toString(),
+      workspaceSlug,
       entityDetails?.project_id ?? undefined
     ) && !entityDetails?.archived_at;
 
   const handleUpdateEntity = useCallback(
     async (formData: Partial<TIssue>) => {
       if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
-      await updateIssue(workspaceSlug.toString(), entityDetails.project_id, entityDetails.id, formData).catch(() => {
+      await updateIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, formData).catch(() => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "Error!",
@@ -100,9 +100,9 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
 
     try {
       if (isSubscribed) {
-        await removeSubscription(workspaceSlug.toString(), entityDetails.project_id, entityDetails.id);
+        await removeSubscription(workspaceSlug, entityDetails.project_id, entityDetails.id);
       } else {
-        await createSubscription(workspaceSlug.toString(), entityDetails.project_id, entityDetails.id);
+        await createSubscription(workspaceSlug, entityDetails.project_id, entityDetails.id);
       }
       setToast({
         type: TOAST_TYPE.SUCCESS,
@@ -268,10 +268,10 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
         if (entityDetails.cycle_id === cycleId) return;
         try {
           if (cycleId) {
-            addCycleToIssue(workspaceSlug.toString(), entityDetails.project_id, cycleId, entityDetails.id);
+            addCycleToIssue(workspaceSlug, entityDetails.project_id, cycleId, entityDetails.id);
           } else {
             removeIssueFromCycle(
-              workspaceSlug.toString(),
+              workspaceSlug,
               entityDetails.project_id,
               entityDetails.cycle_id ?? "",
               entityDetails.id
@@ -303,9 +303,9 @@ export const usePowerKWorkItemContextBasedCommands = (): TPowerKCommandConfig[] 
         if (!workspaceSlug || !entityDetails || !entityDetails.project_id) return;
         try {
           if (entityDetails.module_ids?.includes(moduleId)) {
-            changeModulesInIssue(workspaceSlug.toString(), entityDetails.project_id, entityDetails.id, [], [moduleId]);
+            changeModulesInIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, [], [moduleId]);
           } else {
-            changeModulesInIssue(workspaceSlug.toString(), entityDetails.project_id, entityDetails.id, [moduleId], []);
+            changeModulesInIssue(workspaceSlug, entityDetails.project_id, entityDetails.id, [moduleId], []);
           }
         } catch {
           setToast({

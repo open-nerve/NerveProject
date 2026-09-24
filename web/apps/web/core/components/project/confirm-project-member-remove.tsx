@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // types
 import { Button } from "@plane/propel/button";
@@ -50,7 +50,7 @@ export const ConfirmProjectMemberRemove = observer(function ConfirmProjectMember
   if (!projectId) return <></>;
 
   const isCurrentUser = currentUser?.id === data?.id;
-  const currentProjectDetails = getProjectById(projectId.toString());
+  const currentProjectDetails = getProjectById(projectId);
 
   return (
     <ModalCore isOpen={isOpen} handleClose={handleClose} position={EModalPosition.CENTER} width={EModalWidth.XXL}>

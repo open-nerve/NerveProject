@@ -7,7 +7,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useCallback, useMemo } from "react";
 // types
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import type { TSupportedFilterTypeForUpdate } from "@plane/constants";
 import { EDraftIssuePaginationType } from "@plane/constants";
 import type {
@@ -78,23 +78,21 @@ export const useIssuesActions = (storeType: EIssuesStoreType): IssueActions => {
 
 const useProjectIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const projectId = routerProjectId?.toString();
+  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions) => {
       if (!workspaceSlug || !projectId) return;
-      return issues.fetchIssues(workspaceSlug.toString(), projectId.toString(), loadType, options);
+      return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !projectId) return;
-      return issues.fetchNextIssues(workspaceSlug.toString(), projectId.toString(), groupId, subGroupId);
+      return issues.fetchNextIssues(workspaceSlug, projectId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
@@ -160,30 +158,21 @@ const useProjectIssueActions = () => {
 
 const useCycleIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, cycleId: routerCycleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const projectId = routerProjectId?.toString();
-  const cycleId = routerCycleId?.toString();
+  const { workspaceSlug, projectId, cycleId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions, cycleId?: string) => {
       if (!workspaceSlug || !projectId || !cycleId) return;
-      return issues.fetchIssues(workspaceSlug.toString(), projectId.toString(), loadType, options, cycleId.toString());
+      return issues.fetchIssues(workspaceSlug, projectId, loadType, options, cycleId);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !projectId || !cycleId) return;
-      return issues.fetchNextIssues(
-        workspaceSlug.toString(),
-        projectId.toString(),
-        cycleId.toString(),
-        groupId,
-        subGroupId
-      );
+      return issues.fetchNextIssues(workspaceSlug, projectId, cycleId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, projectId, cycleId]
   );
@@ -267,30 +256,21 @@ const useCycleIssueActions = () => {
 
 const useModuleIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, moduleId: routerModuleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const projectId = routerProjectId?.toString();
-  const moduleId = routerModuleId?.toString();
+  const { workspaceSlug, projectId, moduleId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.MODULE);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions, moduleId?: string) => {
       if (!workspaceSlug || !projectId || !moduleId) return;
-      return issues.fetchIssues(workspaceSlug.toString(), projectId.toString(), loadType, options, moduleId.toString());
+      return issues.fetchIssues(workspaceSlug, projectId, loadType, options, moduleId);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !projectId || !moduleId) return;
-      return issues.fetchNextIssues(
-        workspaceSlug.toString(),
-        projectId.toString(),
-        moduleId.toString(),
-        groupId,
-        subGroupId
-      );
+      return issues.fetchNextIssues(workspaceSlug, projectId, moduleId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, projectId, moduleId]
   );
@@ -364,29 +344,21 @@ const useModuleIssueActions = () => {
 
 const useProfileIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, userId: routerUserId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const userId = routerUserId?.toString();
+  const { workspaceSlug, userId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROFILE);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions, viewId?: string) => {
       if (!workspaceSlug || !userId || !viewId) return;
-      return issues.fetchIssues(
-        workspaceSlug.toString(),
-        userId.toString(),
-        loadType,
-        options,
-        viewId as TProfileViews
-      );
+      return issues.fetchIssues(workspaceSlug, userId, loadType, options, viewId as TProfileViews);
     },
     [issues.fetchIssues, workspaceSlug, userId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !userId) return;
-      return issues.fetchNextIssues(workspaceSlug.toString(), userId.toString(), groupId, subGroupId);
+      return issues.fetchNextIssues(workspaceSlug, userId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, userId]
   );
@@ -444,24 +416,21 @@ const useProfileIssueActions = () => {
 
 const useProjectViewIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, viewId: routerViewId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const projectId = routerProjectId?.toString();
-  const viewId = routerViewId?.toString();
+  const { workspaceSlug, projectId, viewId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.PROJECT_VIEW);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions, viewId?: string) => {
       if (!workspaceSlug || !projectId || !viewId) return;
-      return issues.fetchIssues(workspaceSlug.toString(), projectId.toString(), viewId, loadType, options);
+      return issues.fetchIssues(workspaceSlug, projectId, viewId, loadType, options);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !projectId || !viewId) return;
-      return issues.fetchNextIssues(workspaceSlug.toString(), projectId.toString(), viewId, groupId, subGroupId);
+      return issues.fetchNextIssues(workspaceSlug, projectId, viewId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
@@ -527,23 +496,21 @@ const useProjectViewIssueActions = () => {
 
 const useArchivedIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const projectId = routerProjectId?.toString();
+  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions) => {
       if (!workspaceSlug || !projectId) return;
-      return issues.fetchIssues(workspaceSlug.toString(), projectId.toString(), loadType, options);
+      return issues.fetchIssues(workspaceSlug, projectId, loadType, options);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !projectId) return;
-      return issues.fetchNextIssues(workspaceSlug.toString(), projectId.toString(), groupId, subGroupId);
+      return issues.fetchNextIssues(workspaceSlug, projectId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, projectId]
   );
@@ -585,23 +552,21 @@ const useArchivedIssueActions = () => {
 
 const useGlobalIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, globalViewId: routerGlobalViewId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const globalViewId = routerGlobalViewId?.toString();
+  const { workspaceSlug, globalViewId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.GLOBAL);
 
   const fetchIssues = useCallback(
     async (loadType: TLoader, options: IssuePaginationOptions) => {
       if (!workspaceSlug || !globalViewId) return;
-      return issues.fetchIssues(workspaceSlug.toString(), globalViewId.toString(), loadType, options);
+      return issues.fetchIssues(workspaceSlug, globalViewId, loadType, options);
     },
     [issues.fetchIssues, workspaceSlug, globalViewId]
   );
   const fetchNextIssues = useCallback(
     async (groupId?: string, subGroupId?: string) => {
       if (!workspaceSlug || !globalViewId) return;
-      return issues.fetchNextIssues(workspaceSlug.toString(), globalViewId.toString(), groupId, subGroupId);
+      return issues.fetchNextIssues(workspaceSlug, globalViewId, groupId, subGroupId);
     },
     [issues.fetchIssues, workspaceSlug, globalViewId]
   );
@@ -651,22 +616,20 @@ const useGlobalIssueActions = () => {
 
 const useWorkspaceDraftIssueActions = () => {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, globalViewId: routerGlobalViewId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
-  const globalViewId = routerGlobalViewId?.toString();
+  const { workspaceSlug, globalViewId } = useParams();
   // store hooks
   const { issues, issuesFilter } = useIssues(EIssuesStoreType.WORKSPACE_DRAFT);
   const fetchIssues = useCallback(
     async (loadType: TLoader, _options: IssuePaginationOptions) => {
       if (!workspaceSlug) return;
-      return issues.fetchIssues(workspaceSlug.toString(), loadType, EDraftIssuePaginationType.INIT);
+      return issues.fetchIssues(workspaceSlug, loadType, EDraftIssuePaginationType.INIT);
     },
     [workspaceSlug, issues]
   );
 
   const fetchNextIssues = useCallback(async () => {
     if (!workspaceSlug) return;
-    return issues.fetchIssues(workspaceSlug.toString(), "pagination", EDraftIssuePaginationType.NEXT);
+    return issues.fetchIssues(workspaceSlug, "pagination", EDraftIssuePaginationType.NEXT);
   }, [workspaceSlug, issues]);
 
   const createIssue = useCallback(

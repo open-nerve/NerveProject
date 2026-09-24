@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import useSWR from "swr";
 // plane imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
@@ -41,10 +41,7 @@ function ModuleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined 
 
 export const ModuleLayoutRoot = observer(function ModuleLayoutRoot() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, moduleId: routerModuleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
-  const projectId = routerProjectId ? routerProjectId.toString() : undefined;
-  const moduleId = routerModuleId ? routerModuleId.toString() : undefined;
+  const { workspaceSlug, projectId, moduleId } = useParams();
   // hooks
   const { issuesFilter } = useIssues(EIssuesStoreType.MODULE);
   // derived values
@@ -52,12 +49,10 @@ export const ModuleLayoutRoot = observer(function ModuleLayoutRoot() {
   const activeLayout = workItemFilters?.displayFilters?.layout || undefined;
 
   useSWR(
-    workspaceSlug && projectId && moduleId
-      ? `MODULE_ISSUES_${workspaceSlug.toString()}_${projectId.toString()}_${moduleId.toString()}`
-      : null,
+    workspaceSlug && projectId && moduleId ? `MODULE_ISSUES_${workspaceSlug}_${projectId}_${moduleId}` : null,
     async () => {
       if (workspaceSlug && projectId && moduleId) {
-        await issuesFilter?.fetchFilters(workspaceSlug.toString(), projectId.toString(), moduleId.toString());
+        await issuesFilter?.fetchFilters(workspaceSlug, projectId, moduleId);
       }
     },
     { revalidateIfStale: false, revalidateOnFocus: false }

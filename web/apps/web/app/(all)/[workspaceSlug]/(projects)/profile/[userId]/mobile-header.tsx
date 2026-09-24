@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane constants
 import { EIssueFilterType, ISSUE_LAYOUTS, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
 // plane i18n
@@ -45,11 +45,11 @@ export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHe
     (layout: TIssueLayouts) => {
       if (!workspaceSlug || !userId) return;
       updateFilters(
-        workspaceSlug.toString(),
+        workspaceSlug,
         undefined,
         EIssueFilterType.DISPLAY_FILTERS,
         { layout: layout as EIssueLayoutTypes | undefined },
-        userId.toString()
+        userId
       );
     },
     [workspaceSlug, updateFilters, userId]
@@ -58,13 +58,7 @@ export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHe
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(
-        workspaceSlug.toString(),
-        undefined,
-        EIssueFilterType.DISPLAY_FILTERS,
-        updatedDisplayFilter,
-        userId.toString()
-      );
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );
@@ -72,13 +66,7 @@ export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHe
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
       if (!workspaceSlug || !userId) return;
-      updateFilters(
-        workspaceSlug.toString(),
-        undefined,
-        EIssueFilterType.DISPLAY_PROPERTIES,
-        property,
-        userId.toString()
-      );
+      updateFilters(workspaceSlug, undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, userId);
     },
     [workspaceSlug, updateFilters, userId]
   );

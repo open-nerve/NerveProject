@@ -11,7 +11,7 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   workspaceSlug: string;
@@ -25,7 +25,7 @@ type Props = {
 export function ArchiveRestoreProjectModal(props: Props) {
   const { workspaceSlug, projectId, isOpen, onClose, archive } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // states
   const [isLoading, setIsLoading] = useState(false);
   // store hooks
@@ -49,7 +49,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
           message: `${projectDetails.name} has been archived successfully`,
         });
         onClose();
-        router.push(`/${workspaceSlug}/projects/`);
+        navigate(`/${workspaceSlug}/projects`);
         return;
       })
       .catch(() =>
@@ -72,7 +72,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
           message: `You can find ${projectDetails.name} in your projects.`,
         });
         onClose();
-        router.push(`/${workspaceSlug}/projects/`);
+        navigate(`/${workspaceSlug}/projects`);
         return;
       })
       .catch(() =>

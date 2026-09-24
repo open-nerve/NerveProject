@@ -18,13 +18,13 @@ import { CycleLayoutRoot } from "@/components/issues/issue-layouts/roots/cycle-l
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import useLocalStorage from "@/hooks/use-local-storage";
 import type { Route } from "./+types/page";
 
 function CycleDetailPage({ params }: Route.ComponentProps) {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, cycleId } = params;
   // store hooks
   const { getCycleById, loader } = useCycle();
@@ -60,7 +60,7 @@ function CycleDetailPage({ params }: Route.ComponentProps) {
           description="The cycle you are looking for does not exist or has been deleted."
           primaryButton={{
             text: "View other cycles",
-            onClick: () => router.push(`/${workspaceSlug}/projects/${projectId}/cycles`),
+            onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/cycles`),
           }}
         />
       ) : (

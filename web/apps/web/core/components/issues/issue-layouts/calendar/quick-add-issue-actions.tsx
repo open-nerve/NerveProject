@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 
 import { useTranslation } from "@plane/i18n";
 // plane imports
@@ -45,7 +45,7 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
   // derived values
   const ExistingIssuesListModalPayload = addIssuesToView
     ? moduleId
-      ? { module: moduleId.toString(), target_date: "none" }
+      ? { module: moduleId, target_date: "none" }
       : { cycle: true, target_date: "none" }
     : { target_date: "none" };
 
@@ -54,7 +54,7 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
 
     const issueIds = data.map((i) => i.id);
     const addExistingIssuesPromise = Promise.all(
-      data.map((issue) => updateIssue(workspaceSlug.toString(), projectId.toString(), issue.id, prePopulatedData ?? {}))
+      data.map((issue) => updateIssue(workspaceSlug, projectId, issue.id, prePopulatedData ?? {}))
     ).then(() => addIssuesToView?.(issueIds));
 
     setPromiseToast(addExistingIssuesPromise, {
@@ -84,8 +84,8 @@ export const CalendarQuickAddIssueActions = observer(function CalendarQuickAddIs
     <>
       {workspaceSlug && projectId && (
         <ExistingIssuesListModal
-          workspaceSlug={workspaceSlug.toString()}
-          projectId={projectId.toString()}
+          workspaceSlug={workspaceSlug}
+          projectId={projectId}
           isOpen={isExistingIssueModalOpen}
           handleClose={() => setIsExistingIssueModalOpen(false)}
           searchParams={ExistingIssuesListModalPayload}

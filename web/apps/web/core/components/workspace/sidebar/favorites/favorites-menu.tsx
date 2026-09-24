@@ -14,7 +14,7 @@ import type {
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { orderBy } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { ChevronRightOutline, CreateFolderOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 import { IS_FAVORITE_MENU_OPEN } from "@plane/constants";
@@ -56,7 +56,8 @@ export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
   const elementRef = useRef<HTMLDivElement>(null);
 
   const handleMoveToFolder = (sourceId: string, destinationId: string) => {
-    moveFavoriteToFolder(workspaceSlug.toString(), sourceId, {
+    if (!workspaceSlug) return;
+    moveFavoriteToFolder(workspaceSlug, sourceId, {
       parent: destinationId,
     }).catch(() => {
       setToast({
@@ -108,7 +109,8 @@ export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
   };
 
   const handleRemoveFromFavorites = (favorite: IFavorite) => {
-    deleteFavorite(workspaceSlug.toString(), favorite.id)
+    if (!workspaceSlug) return;
+    deleteFavorite(workspaceSlug, favorite.id)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -127,7 +129,8 @@ export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
   };
 
   const handleRemoveFromFavoritesFolder = (favoriteId: string) => {
-    removeFromFavoriteFolder(workspaceSlug.toString(), favoriteId).catch(() => {
+    if (!workspaceSlug) return;
+    removeFromFavoriteFolder(workspaceSlug, favoriteId).catch(() => {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: t("error"),
@@ -138,7 +141,8 @@ export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
 
   const handleReorder = useCallback(
     (favoriteId: string, droppedFavId: string, edge: string | undefined) => {
-      reOrderFavorite(workspaceSlug.toString(), favoriteId, droppedFavId, edge).catch(() => {
+      if (!workspaceSlug) return;
+      reOrderFavorite(workspaceSlug, favoriteId, droppedFavId, edge).catch(() => {
         setToast({
           type: TOAST_TYPE.ERROR,
           title: t("error"),
@@ -176,6 +180,8 @@ export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elementRef.current, isDragging]);
+
+  if (!workspaceSlug) return null;
 
   return (
     <>
@@ -268,7 +274,7 @@ export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
                         />
                       ) : (
                         <FavoriteRoot
-                          workspaceSlug={workspaceSlug.toString()}
+                          workspaceSlug={workspaceSlug}
                           favorite={fav}
                           isLastChild={index === length - 1}
                           parentId={undefined}

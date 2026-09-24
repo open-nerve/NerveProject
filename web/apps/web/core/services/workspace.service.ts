@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type {
   IWorkspace,
   IWorkspaceMemberMe,
@@ -26,10 +25,6 @@ import type {
 import { APIService } from "@/services/api.service";
 
 export class WorkspaceService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async userWorkspaces(): Promise<IWorkspace[]> {
     return this.get("/api/users/me/workspaces/")
       .then((response) => response?.data)

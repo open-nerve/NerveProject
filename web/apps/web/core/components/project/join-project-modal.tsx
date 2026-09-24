@@ -12,7 +12,7 @@ import type { IProject } from "@plane/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 // type
 type TJoinProjectModalProps = {
@@ -29,14 +29,14 @@ export function JoinProjectModal(props: TJoinProjectModalProps) {
   // store hooks
   const { joinProject } = useUserPermissions();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
 
   const handleJoin = async () => {
     setIsJoiningLoading(true);
 
     await joinProject(workspaceSlug, project.id)
       .then(() => {
-        router.push(`/${workspaceSlug}/projects/${project.id}/issues`);
+        navigate(`/${workspaceSlug}/projects/${project.id}/issues`);
         handleClose();
         return;
       })

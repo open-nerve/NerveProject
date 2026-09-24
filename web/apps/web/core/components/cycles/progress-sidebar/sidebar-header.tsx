@@ -61,7 +61,7 @@ export const CycleSidebarHeader = observer(function CycleSidebarHeader(props: Pr
 
   const submitChanges = async (data: Partial<ICycle>) => {
     if (!workspaceSlug || !projectId || !cycleDetails.id) return;
-    await updateCycleDetails(workspaceSlug.toString(), projectId.toString(), cycleDetails.id.toString(), data);
+    await updateCycleDetails(workspaceSlug, projectId, cycleDetails.id, data);
   };
 
   useEffect(() => {

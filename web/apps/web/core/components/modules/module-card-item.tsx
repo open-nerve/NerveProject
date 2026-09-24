@@ -7,8 +7,7 @@
 import type { SyntheticEvent } from "react";
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from "react-router";
 import { InfoOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // plane package imports
 import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
@@ -28,7 +27,6 @@ import { ModuleStatusDropdown } from "@/components/modules/module-status-dropdow
 import { useMember } from "@/hooks/store/use-member";
 import { useModule } from "@/hooks/store/use-module";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
@@ -40,10 +38,10 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
   // refs
   const parentRef = useRef(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   // store hooks
   const { allowPermissions } = useUserPermissions();
   const { getModuleById, addModuleToFavorites, removeModuleFromFavorites, updateModuleDetails } = useModule();
@@ -65,11 +63,9 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const addToFavoritePromise = addModuleToFavorites(workspaceSlug.toString(), projectId.toString(), moduleId).then(
-      () => {
-        if (!storedValue) toggleFavoriteMenu(true);
-      }
-    );
+    const addToFavoritePromise = addModuleToFavorites(workspaceSlug, projectId, moduleId).then(() => {
+      if (!storedValue) toggleFavoriteMenu(true);
+    });
 
     setPromiseToast(addToFavoritePromise, {
       loading: "Adding module to favorites...",
@@ -89,11 +85,7 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
     e.preventDefault();
     if (!workspaceSlug || !projectId) return;
 
-    const removeFromFavoritePromise = removeModuleFromFavorites(
-      workspaceSlug.toString(),
-      projectId.toString(),
-      moduleId
-    );
+    const removeFromFavoritePromise = removeModuleFromFavorites(workspaceSlug, projectId, moduleId);
 
     setPromiseToast(removeFromFavoritePromise, {
       loading: "Removing module from favorites...",
@@ -116,7 +108,7 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
   const handleModuleDetailsChange = async (payload: Partial<IModule>) => {
     if (!workspaceSlug || !projectId) return;
 
-    await updateModuleDetails(workspaceSlug.toString(), projectId.toString(), moduleId, payload)
+    await updateModuleDetails(workspaceSlug, projectId, moduleId, payload)
       .then(() => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
@@ -139,9 +131,9 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
 
     const query = generateQueryParams(searchParams, ["peekModule"]);
     if (searchParams.has("peekModule") && searchParams.get("peekModule") === moduleId) {
-      router.push(`${pathname}?${query}`);
+      navigate(`${pathname}?${query}`);
     } else {
-      router.push(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
+      navigate(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
     }
   };
 
@@ -173,7 +165,7 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
 
   return (
     <div className="relative" data-prevent-progress>
-      <Link ref={parentRef} href={`/${workspaceSlug}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}>
+      <Link ref={parentRef} to={`/${workspaceSlug}/projects/${moduleDetails.project_id}/modules/${moduleDetails.id}`}>
         <Card>
           <div>
             <div className="flex items-center justify-between gap-2">
@@ -257,8 +249,8 @@ export const ModuleCardItem = observer(function ModuleCardItem(props: Props) {
           <ModuleQuickActions
             parentRef={parentRef}
             moduleId={moduleId}
-            projectId={projectId.toString()}
-            workspaceSlug={workspaceSlug.toString()}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
           />
         )}
       </div>

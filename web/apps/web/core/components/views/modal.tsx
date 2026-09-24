@@ -15,7 +15,7 @@ import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import useKeypress from "@/hooks/use-keypress";
 // local imports
 import { ProjectViewForm } from "./form";
@@ -32,7 +32,7 @@ type Props = {
 export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjectViewModal(props: Props) {
   const { data, isOpen, onClose, preLoadedData, workspaceSlug, projectId } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { createView, updateView } = useProjectView();
   const {
@@ -48,7 +48,7 @@ export const CreateUpdateProjectViewModal = observer(function CreateUpdateProjec
     try {
       const res = await createView(workspaceSlug, projectId, payload);
       handleClose();
-      router.push(`/${workspaceSlug}/projects/${projectId}/views/${res.id}`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/views/${res.id}`);
       setToast({
         type: TOAST_TYPE.SUCCESS,
         title: "Success!",

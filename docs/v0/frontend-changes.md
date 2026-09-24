@@ -67,6 +67,22 @@
 | `packages/i18n`；web 的 `profile.store.ts` 和语言选择框 | 只留 `en`、`zh-CN`；新增 `toSupportedLanguage`（带单元测试），不支持的语言按英文处理；删除翻译键的生成；`sync-check.ts` 改为双向核对 en 与 zh-CN，保留跨命名空间的冲突检查；删除 8 个企业版命名空间和 `workspace_settings.settings.applications` | 只留中英文（M1 设计 6） |
 | `Makefile` 的 `web-dev` | `turbo run dev --filter=web... --concurrency=12` | 改了 `web/packages/*` 的源码，运行中的页面随之更新 |
 
+### 1.4 去掉 Next.js 兼容层（M1/P4）
+
+路由、跳转和地址的改动见第二节"Next.js 兼容垫片"一行。详见 [M1/P4 spec](M1-frontend-trim/specs/P4-router-native.md)。
+
+| 位置 | 改动 | 原因 |
+|---|---|---|
+| `web/apps/web` 的 `vite.config.ts`、`package.json`；`turbo.json`、`pnpm-workspace.yaml`（仓库根目录） | 删掉 dotenv 的加载、`define: { "process.env": … }` 和 `next/*` 的别名；`globalEnv` 只留 `NODE_ENV`，删掉 6 个 `VITE_*` 和 `DEV`；`build` 任务删掉只为 `.env*` 存在的 `inputs`；web 的开发依赖和 catalog 删掉 `dotenv` | 前端没有环境变量：与接口同源部署，接口一律用相对路径（M1 设计 4.1） |
+| `packages/constants`、`packages/services`、web 的 services | 删掉 `endpoints.ts`（`API_BASE_URL` 等 8 个常量）；`APIService` 不再接收基础地址，`normalizeAPIRequestURL` 只给相对地址加结尾 `/`（带单元测试） | 同上 |
+| `packages/i18n` | 开发环境的判断改为 `import.meta.env.DEV`；开发依赖加 `vite`，`tsconfig.json` 加 Vite 的环境类型 | 同上 |
+| `web/apps/web/package.json`、新增 `vitest.config.ts` | 加 `test` 脚本和开发依赖 `vitest`；vitest 有自己的配置，不加载 React Router 的构建插件 | 路由匹配的单元测试 `app/routes/navigation.test.ts`（M1 设计 4.2、7.5） |
+| `packages/typescript-config`、`.oxlintrc.json`、editor 的 `package.json`、`app/(all)/layout.preload.tsx` | 删除 `nextjs.json` 和内容全被注释掉的 `layout.preload.tsx`；删掉 `.next/**` 的忽略规则和 `nextjs` 关键词 | Next.js 的遗留（M1 设计 4.1） |
+| `tools/keywords.json` | 新增规则 `frontend-env`、`next-shim-files`、`next-shims`；顶层 `phase` 改为 `M1/P4` | 删掉的东西不再长回来（M1 设计 7.4） |
+| `.gitignore`（仓库根目录） | 删掉 `!.env.example`；`.env`、`.env.*` 仍被忽略 | 唯一的 `.env.example` 已删除 |
+| web 的 `core/store/router.store.ts`、`use-project-issue-properties.ts`、`use-workspace-issue-properties.ts` | 路由参数的类型从 Node 的 `ParsedUrlQuery` 改为 React Router 给的 `Record<string, string \| undefined>`，两个 hook 的参数从 `string \| string[] \| undefined` 改为 `string \| undefined`；删掉没有读取方的 4 个 getter（`profileViewId`、`peekId`、`issueId`、`inboxId`） | Next.js 的 `useParams` 返回 `string \| string[]` 时留下的类型 |
+| web 应用、`packages/constants`、`packages/utils` | 删掉对字符串的空转换 `.toString()`：web 699 处（Task 7 的 671 处，加上类型改正之后露出的 28 处），`fetch-keys.ts` 10 处、`emoji.ts` 2 处；由类型检查器按接收者的类型判断，留下的每一处都不是字符串 | 同上；空转换不改变值，删掉后类型如实 |
+
 ---
 
 ## 二、删除的功能（M1）
@@ -92,17 +108,17 @@
 | 项目邀请：web 里没有按邮件邀请进项目的流程，"邀请成员"弹窗改名为添加成员，离开项目、私有项目的文案不再说邀请 | 已完成 | M1/P3 |
 | 第三方登录、验证码登录、找回 / 重置 / 设置密码、登录前的"检查邮箱"步骤；登录和注册各剩一个"邮箱 + 密码"表单，模式由路由决定（CSRF 移到 M2，见第三节 3.2） | 已完成 | M1/P3 |
 | 修改登录邮箱（靠邮件验证码完成） | 已完成 | M1/P3 |
-| Plane 的旧地址重定向（`routes/core.ts` 末尾的 11 条；数据分析的一条随数据分析删除，其余随 Next.js 兼容层一起删除，先改掉仍依赖它们的入口） | 计划中 | |
+| Plane 的旧地址重定向（`routes/core.ts` 末尾的 11 条；数据分析的一条随数据分析删除，其余 10 条随 Next.js 兼容层一起删除）。先改掉仍依赖它们的入口：命令面板的"转到账号设置"直接去 `/settings/profile/general`；同时修好停用的迭代、模块、视图、收集箱页面上的"管理功能"按钮，改为去各自的功能设置页（原来指向没有页面的 `/:workspaceSlug/settings/projects/:projectId/features`，Plane 也是如此）。路由匹配的单元测试 `app/routes/navigation.test.ts` 核对源码里写出的内部路径和导航常量都落在真实的页面上 | 已完成 | M1/P4 |
 | 邮件通知偏好设置页，连同营销邮件同意 | 已完成 | M1/P3 |
 | 企业版残留中的"活跃迭代"推广页（工作区级；项目迭代列表中的"当前迭代"区块保留） | 已完成 | M1/P2 |
 | 企业版残留：Epic、团队、工作项类型、计费和升级提示、批量操作及其工作项多选、工作项模板、工时记录、重复工作项、工作流和项目更新的空壳；企业版扩展点（`extended`、`additional` 空壳，只为企业版子类存在的 Base 类加别名，富文本筛选中空的扩展一半）；收藏的实体类型改为联合类型 | 已完成 | M1/P3 |
 | Plane 自身的死代码：IndexedDB 和同步代码、调用不存在接口的 service 方法、集成与导入器的残留（Jira 图标、集成和导入的空状态图、设置和计费页中的文案）、knip 报告的未使用文件和导出；knip 改为门禁 | 已完成 | M1/P3 |
 | 多语言：只保留 `zh-CN` 和 `en` | 已完成 | M1/P1 |
-| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的约 330 处引用全部改为 React Router 原生写法（`Link`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`）；去掉强制结尾 `/` 和延迟跳转，修复因此暴露出的"渲染时跳转"问题；删除垫片（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 计划中 | |
+| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的引用和包装层 `useAppRouter` 全部改为 React Router 原生写法（`Link`、`NavLink`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`、`useMatch`）；路由参数按真实的 `string \| undefined` 处理，路由组件用 `./+types/*` 的参数，共享组件用守卫；去掉延迟跳转，`AuthenticationWrapper` 的渲染时跳转改为 `<Navigate replace />`，登录后跳回的 `next_path` 改用 `@plane/utils` 的 `isValidNextPath` 校验（只接受以单个 `/` 开头的站内路径，不再放过 `//host`、`javascript:`；带单元测试），包装只读一次、修剪后校验，跳到校验过的那个值；页面到达时自动做的跳转（项目设置到第一个项目、收集箱到第一项、收集箱里的工作项到收集箱）改为替换当前地址，后退不再回到会再次跳走的地址；去掉强制结尾 `/`，应用内部的地址一律不带结尾 `/`，"当前是哪一项"的判断改用 React Router 的匹配；删除垫片和 `typescript-config/nextjs.json`（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 已完成 | M1/P4 |
 | web 中的部署遗留：`Dockerfile.web`、`Dockerfile.dev`、`caddy/`、`.dockerignore` | 已完成 | M1/P1 |
 | `serve` 依赖及其 `start`、`preview` 脚本（当前运行即崩溃） | 已完成 | M1/P1 |
 | `public/` 中从未注册的 `sw.js` 及 workbox 相关文件 | 已完成 | M1/P1 |
-| `.env.example`（整个文件） | 计划中 | |
+| 前端环境变量：`.env.example`、dotenv 和 `process.env` 的注入、各包对 `process.env` 和 `VITE_*` 的读取；停用账户的提示不再给出 Plane 的支持邮箱，改为联系管理员 | 已完成 | M1/P4 |
 
 **验收标准**（详见 [M1 设计](M1-frontend-trim/M1-design.md) 第 7、11 节）：
 - TypeScript 类型检查通过，knip 为零；oxlint 不超过新的警告基线（M8 发布前清零，见 M1 设计 7.3）。

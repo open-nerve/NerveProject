@@ -6,7 +6,7 @@
 
 import { useState, useRef, forwardRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // plane imports
 import { useOutsideClickDetector } from "@plane/hooks";
@@ -57,8 +57,7 @@ export const CalendarIssueBlock = observer(
     const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
     // handlers
-    const handleIssuePeekOverview = (peekIssue: TIssue) =>
-      handleRedirection(workspaceSlug?.toString(), peekIssue, isMobile);
+    const handleIssuePeekOverview = (peekIssue: TIssue) => handleRedirection(workspaceSlug, peekIssue, isMobile);
 
     useOutsideClickDetector(menuActionRef, () => setIsMenuActive(false));
 
@@ -85,7 +84,7 @@ export const CalendarIssueBlock = observer(
     const placement = isMenuActionRefAboveScreenBottom ? "bottom-end" : "top-end";
 
     const workItemLink = generateWorkItemLink({
-      workspaceSlug: workspaceSlug?.toString(),
+      workspaceSlug,
       projectId: issue?.project_id,
       issueId: issue?.id,
       projectIdentifier,

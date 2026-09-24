@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Placement } from "@popperjs/core";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 import { ChevronDownOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
@@ -67,8 +67,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   const { t } = useTranslation();
 
   //router
-  const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
+  const { workspaceSlug } = useParams();
 
   //states
   const [isOpen, setIsOpen] = useState(false);
@@ -160,7 +159,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
   };
 
   const handleAddLabel = async (labelName: string) => {
-    if (!projectId) return;
+    if (!workspaceSlug || !projectId) return;
     setSubmitting(true);
     const label = await createLabel(workspaceSlug, projectId, { name: labelName, color: getRandomLabelColor() });
     onChange([...value, label.id]);

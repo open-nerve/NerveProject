@@ -6,7 +6,6 @@
 
 import type { AxiosRequestConfig } from "axios";
 // plane types
-import { API_BASE_URL } from "@plane/constants";
 import { getFileMetaDataForUpload, generateFileUploadPayload } from "@plane/services";
 import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@plane/types";
 import { getAssetIdFromUrl } from "@plane/utils";
@@ -20,7 +19,7 @@ export class FileService extends APIService {
   private fileUploadService: FileUploadService;
 
   constructor() {
-    super(API_BASE_URL);
+    super();
     this.cancelUpload = this.cancelUpload.bind(this);
     // upload service
     this.fileUploadService = new FileUploadService();
@@ -53,7 +52,7 @@ export class FileService extends APIService {
           fileUploadPayload,
           uploadProgressHandler
         );
-        await this.updateWorkspaceAssetUploadStatus(workspaceSlug.toString(), signedURLResponse.asset_id);
+        await this.updateWorkspaceAssetUploadStatus(workspaceSlug, signedURLResponse.asset_id);
         return signedURLResponse;
       })
       .catch((error) => {

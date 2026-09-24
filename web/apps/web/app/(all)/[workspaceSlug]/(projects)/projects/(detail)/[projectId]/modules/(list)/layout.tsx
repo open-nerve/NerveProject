@@ -10,11 +10,15 @@ import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
 import { ModulesListHeader } from "./header";
 import { ModulesListMobileHeader } from "./mobile-header";
+import type { Route } from "./+types/layout";
 
-export default function ProjectModulesListLayout() {
+export default function ProjectModulesListLayout({ params }: Route.ComponentProps) {
   return (
     <>
-      <AppHeader header={<ModulesListHeader />} mobileHeader={<ModulesListMobileHeader />} />
+      <AppHeader
+        header={<ModulesListHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />}
+        mobileHeader={<ModulesListMobileHeader />}
+      />
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>

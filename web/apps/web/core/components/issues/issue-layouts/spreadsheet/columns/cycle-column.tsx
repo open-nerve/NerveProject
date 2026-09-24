@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // types
 import type { TIssue } from "@plane/types";
 // components
@@ -32,8 +32,8 @@ export const SpreadsheetCycleColumn = observer(function SpreadsheetCycleColumn(p
   const handleCycle = useCallback(
     async (cycleId: string | null) => {
       if (!workspaceSlug || !issue || !issue.project_id || issue.cycle_id === cycleId) return;
-      if (cycleId) await addCycleToIssue(workspaceSlug.toString(), issue.project_id, cycleId, issue.id);
-      else await removeCycleFromIssue(workspaceSlug.toString(), issue.project_id, issue.id);
+      if (cycleId) await addCycleToIssue(workspaceSlug, issue.project_id, cycleId, issue.id);
+      else await removeCycleFromIssue(workspaceSlug, issue.project_id, issue.id);
     },
     [workspaceSlug, issue, addCycleToIssue, removeCycleFromIssue]
   );

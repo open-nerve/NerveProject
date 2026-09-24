@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // icons
 import { RocketOutline, SearchOutline } from "@makeplane/propel/icons";
 // headless ui
@@ -167,7 +167,7 @@ export function ParentIssuesListModal({ isOpen, handleClose: onClose, value, onC
                       </div>
                       <a
                         href={generateWorkItemLink({
-                          workspaceSlug: workspaceSlug.toString(),
+                          workspaceSlug,
                           projectId: issue?.project_id,
                           issueId: issue?.id,
                           projectIdentifier: issue.project__identifier,

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import Link from "next/link";
+import { Link } from "react-router";
 import { cn } from "@plane/utils";
 
 // ============================================================================
@@ -101,7 +101,7 @@ function AppSidebarLinkItem({ href, children, className }: AppSidebarLinkItemPro
   if (!href) return null;
 
   return (
-    <Link href={href} className={cn(styles.base, className)}>
+    <Link to={href} className={cn(styles.base, className)}>
       {children}
     </Link>
   );

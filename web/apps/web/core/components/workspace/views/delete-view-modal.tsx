@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // Plane Imports
 import { useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -37,7 +37,7 @@ export const DeleteGlobalViewModal = observer(function DeleteGlobalViewModal(pro
     setIsDeleteLoading(true);
 
     try {
-      await deleteGlobalView(workspaceSlug.toString(), data.id);
+      await deleteGlobalView(workspaceSlug, data.id);
     } catch (_error) {
       setToast({
         type: TOAST_TYPE.ERROR,

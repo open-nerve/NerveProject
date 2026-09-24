@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EIssuesStoreType } from "@plane/types";
 // hooks
@@ -25,7 +25,7 @@ export const ModuleCalendarLayout = observer(function ModuleCalendarLayout() {
   const addIssuesToView = useCallback(
     (issueIds: string[]) => {
       if (!workspaceSlug || !projectId || !moduleId) throw new Error();
-      return addIssuesToModule(workspaceSlug.toString(), projectId.toString(), moduleId.toString(), issueIds);
+      return addIssuesToModule(workspaceSlug, projectId, moduleId, issueIds);
     },
     [addIssuesToModule, workspaceSlug, projectId, moduleId]
   );
@@ -33,10 +33,6 @@ export const ModuleCalendarLayout = observer(function ModuleCalendarLayout() {
   if (!moduleId) return null;
 
   return (
-    <BaseCalendarRoot
-      QuickActions={ModuleIssueQuickActions}
-      addIssuesToView={addIssuesToView}
-      viewId={moduleId?.toString()}
-    />
+    <BaseCalendarRoot QuickActions={ModuleIssueQuickActions} addIssuesToView={addIssuesToView} viewId={moduleId} />
   );
 });

@@ -7,7 +7,7 @@
 import type { FC } from "react";
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane constants
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 // types
@@ -133,7 +133,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
         } else {
           collapsedGroups.push(value);
         }
-        updateFilters(projectId?.toString() ?? "", EIssueFilterType.KANBAN_FILTERS, {
+        updateFilters(projectId ?? "", EIssueFilterType.KANBAN_FILTERS, {
           group_by: collapsedGroups,
         } as TIssueKanbanFilters);
       }

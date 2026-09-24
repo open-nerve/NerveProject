@@ -11,7 +11,7 @@ import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   workspaceSlug: string;
@@ -25,7 +25,7 @@ type Props = {
 export function ArchiveCycleModal(props: Props) {
   const { workspaceSlug, projectId, cycleId, isOpen, handleClose } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // states
   const [isArchiving, setIsArchiving] = useState(false);
   // store hooks
@@ -48,7 +48,7 @@ export function ArchiveCycleModal(props: Props) {
           message: "Your archives can be found in project archives.",
         });
         onClose();
-        router.push(`/${workspaceSlug}/projects/${projectId}/cycles`);
+        navigate(`/${workspaceSlug}/projects/${projectId}/cycles`);
         return;
       })
       .catch(() => {

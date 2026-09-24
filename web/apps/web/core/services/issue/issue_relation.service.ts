@@ -4,16 +4,11 @@
  * See the LICENSE file for details.
  */
 
-import { API_BASE_URL } from "@plane/constants";
 import type { TIssueRelation, TIssue, TIssueRelationTypes } from "@plane/types";
 // services
 import { APIService } from "@/services/api.service";
 
 export class IssueRelationService extends APIService {
-  constructor() {
-    super(API_BASE_URL);
-  }
-
   async listIssueRelations(workspaceSlug: string, projectId: string, issueId: string): Promise<TIssueRelation> {
     return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectId}/issues/${issueId}/issue-relation/`)
       .then((response) => response?.data)

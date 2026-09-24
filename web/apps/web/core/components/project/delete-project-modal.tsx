@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import { useParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // Plane imports
@@ -16,7 +15,7 @@ import type { IProject } from "@plane/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useParams, useNavigate } from "react-router";
 
 type DeleteProjectModal = {
   isOpen: boolean;
@@ -34,7 +33,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
   // store hooks
   const { deleteProject } = useProject();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
   // form info
   const {
@@ -60,8 +59,8 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
     if (!workspaceSlug || !canDelete) return;
 
     try {
-      await deleteProject(workspaceSlug.toString(), project.id);
-      if (projectId && projectId.toString() === project.id) router.push(`/${workspaceSlug}/projects`);
+      await deleteProject(workspaceSlug, project.id);
+      if (projectId && projectId === project.id) navigate(`/${workspaceSlug}/projects`);
       handleClose();
       setToast({
         type: TOAST_TYPE.SUCCESS,

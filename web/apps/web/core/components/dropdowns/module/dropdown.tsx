@@ -6,7 +6,7 @@
 
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 // types
@@ -46,7 +46,7 @@ export const ModuleDropdown = observer(function ModuleDropdown(props: TModuleDro
   const moduleIds = projectId ? getProjectModuleIds(projectId) : [];
 
   const onDropdownOpen = () => {
-    if (!moduleIds && projectId && workspaceSlug) fetchModules(workspaceSlug.toString(), projectId);
+    if (!moduleIds && projectId && workspaceSlug) fetchModules(workspaceSlug, projectId);
   };
 
   return (

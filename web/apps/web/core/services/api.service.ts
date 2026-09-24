@@ -10,13 +10,10 @@ import { create } from "axios";
 import { normalizeAPIRequestURL } from "@plane/services";
 
 export abstract class APIService {
-  protected baseURL: string;
   private axiosInstance: AxiosInstance;
 
-  constructor(baseURL: string) {
-    this.baseURL = baseURL;
+  constructor() {
     this.axiosInstance = create({
-      baseURL,
       withCredentials: true,
     });
 
@@ -27,7 +24,7 @@ export abstract class APIService {
     this.axiosInstance.interceptors.request.use((config) => {
       try {
         if (config.url) {
-          config.url = normalizeAPIRequestURL(config.url, this.baseURL);
+          config.url = normalizeAPIRequestURL(config.url);
         }
       } catch (error) {
         // Never block a request because of slash normalization — fall back to the

@@ -5,9 +5,7 @@
  */
 
 import type { ReactNode } from "react";
-import Link from "next/link";
-// plane imports
-import { SUPPORT_EMAIL } from "@plane/constants";
+import { Link } from "react-router";
 
 export enum EPageTypes {
   PUBLIC = "PUBLIC",
@@ -73,7 +71,7 @@ const errorCodeMessages: {
   },
   [EAuthenticationErrorCodes.USER_ACCOUNT_DEACTIVATED]: {
     title: `User account deactivated`,
-    message: () => `User account deactivated. Please contact ${SUPPORT_EMAIL ? SUPPORT_EMAIL : "administrator"}.`,
+    message: () => "User account deactivated. Please contact your administrator.",
   },
   [EAuthenticationErrorCodes.INVALID_PASSWORD]: {
     title: `Invalid password`,
@@ -92,7 +90,7 @@ const errorCodeMessages: {
         Your account is already registered.&nbsp;
         <Link
           className="font-medium underline underline-offset-4 transition-all hover:font-bold"
-          href={`/${email ? `?email=${encodeURIComponent(email)}` : ``}`}
+          to={`/${email ? `?email=${encodeURIComponent(email)}` : ""}`}
         >
           Sign In
         </Link>
@@ -120,7 +118,7 @@ const errorCodeMessages: {
         No account found.&nbsp;
         <Link
           className="font-medium underline underline-offset-4 transition-all hover:font-bold"
-          href={`/sign-up${email ? `?email=${encodeURIComponent(email)}` : ``}`}
+          to={`/sign-up${email ? `?email=${encodeURIComponent(email)}` : ""}`}
         >
           Create one
         </Link>

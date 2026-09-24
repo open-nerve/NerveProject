@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane helpers
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { useOutsideClickDetector } from "@plane/hooks";
@@ -153,8 +153,7 @@ export const KanbanIssueBlock = observer(function KanbanIssueBlock(props: IssueB
 
   const cardRef = useRef<HTMLAnchorElement | null>(null);
   // router
-  const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug?.toString();
+  const { workspaceSlug } = useParams();
   // hooks
   const { getProjectIdentifierById } = useProject();
   const { getIsIssuePeeked } = useIssueDetail();

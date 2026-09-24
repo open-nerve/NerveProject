@@ -18,7 +18,7 @@ import { InboxSidebarLoader } from "@/components/ui/loader/layouts/project-inbox
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useIntersectionObserver } from "@/hooks/use-intersection-observer";
 // local imports
 import { FiltersRoot } from "../inbox-filter";
@@ -46,7 +46,7 @@ const tabNavigationOptions: { key: TInboxIssueCurrentTab; i18n_label: string }[]
 export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarProps) {
   const { workspaceSlug, projectId, inboxIssueId, setIsMobileSidebar } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // ref
   const containerRef = useRef<HTMLDivElement>(null);
   const [elementRef, setElementRef] = useState<HTMLDivElement | null>(null);
@@ -66,7 +66,7 @@ export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarP
   // derived values
   const fetchNextPages = useCallback(() => {
     if (!workspaceSlug || !projectId) return;
-    fetchInboxPaginationIssues(workspaceSlug.toString(), projectId.toString());
+    fetchInboxPaginationIssues(workspaceSlug, projectId);
   }, [workspaceSlug, projectId, fetchInboxPaginationIssues]);
 
   // page observer
@@ -75,12 +75,13 @@ export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarP
   useEffect(() => {
     if (workspaceSlug && projectId && currentTab && filteredInboxIssueIds.length > 0) {
       if (inboxIssueId === undefined) {
-        router.push(
-          `/${workspaceSlug}/projects/${projectId}/intake?currentTab=${currentTab}&inboxIssueId=${filteredInboxIssueIds[0]}`
+        navigate(
+          `/${workspaceSlug}/projects/${projectId}/intake?currentTab=${currentTab}&inboxIssueId=${filteredInboxIssueIds[0]}`,
+          { replace: true }
         );
       }
     }
-  }, [currentTab, filteredInboxIssueIds, inboxIssueId, projectId, router, workspaceSlug]);
+  }, [currentTab, filteredInboxIssueIds, inboxIssueId, projectId, navigate, workspaceSlug]);
 
   return (
     <div className="h-full w-full flex-shrink-0 border-r border-strong bg-surface-1">
@@ -96,7 +97,7 @@ export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarP
               onClick={() => {
                 if (currentTab != option?.key) {
                   handleCurrentTab(workspaceSlug, projectId, option?.key);
-                  router.push(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=${option?.key}`);
+                  navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=${option?.key}`);
                 }
               }}
             >
@@ -154,7 +155,7 @@ export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarP
                     actions={[
                       {
                         label: t("project_empty_state.intake_sidebar.cta_primary"),
-                        onClick: () => router.push(`/${workspaceSlug}/projects/${projectId}/intake`),
+                        onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/intake`),
                         variant: "primary",
                       },
                     ]}
