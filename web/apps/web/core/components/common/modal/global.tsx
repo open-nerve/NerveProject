@@ -14,7 +14,7 @@ const ProfileSettingsModal = lazy(() =>
 );
 
 /**
- * GlobalModals component manages all workspace-level modals across Plane applications.
+ * GlobalModals component manages all workspace-level modals.
  *
  * This includes:
  * - Profile settings modal

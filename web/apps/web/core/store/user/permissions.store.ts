@@ -21,7 +21,7 @@ import userService from "@/services/user.service";
 // derived services
 const workspaceService = new WorkspaceService();
 
-type ETempUserRole = TUserPermissions | EUserWorkspaceRoles | EUserProjectRoles; // TODO: Remove this once we have migrated user permissions to enums to plane constants package
+type ETempUserRole = TUserPermissions | EUserWorkspaceRoles | EUserProjectRoles; // TODO: Remove this once user permissions are enums in @nerve/constants
 
 export interface IUserPermissionStore {
   loader: boolean;

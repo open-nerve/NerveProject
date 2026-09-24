@@ -8,7 +8,7 @@
 import { useTranslation } from "@nerve/i18n";
 import packageJson from "package.json";
 
-export function PlaneVersionNumber() {
+export function VersionNumber() {
   const { t } = useTranslation();
   return (
     <span>

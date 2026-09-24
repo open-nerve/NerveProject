@@ -33,6 +33,6 @@ function Item({ height = "auto", width = "auto", className = "" }: ItemProps) {
 
 Loader.Item = Item;
 
-Loader.displayName = "plane-ui-loader";
+Loader.displayName = "nerve-ui-loader";
 
 export { Loader };

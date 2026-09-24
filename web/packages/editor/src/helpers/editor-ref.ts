@@ -87,7 +87,7 @@ export const getEditorRefHelpers = (args: TArgs): EditorRefApi => {
         event.preventDefault();
         event.clipboardData?.setData("text/plain", markdown);
         event.clipboardData?.setData("text/html", html);
-        event.clipboardData?.setData("text/plane-editor-html", html);
+        event.clipboardData?.setData("text/nerve-editor-html", html);
         document.removeEventListener("copy", copyHandler);
       };
 

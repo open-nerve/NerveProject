@@ -22,7 +22,7 @@ import {
 import { generateWorkItemLink, joinUrlPath } from "@nerve/utils";
 import routes from "../routes";
 
-// Every internal navigation has to land on a page, not on "page not found" (M1 design 4.2): Plane's legacy
+// Every internal navigation has to land on a page, not on "page not found" (M1 design 4.2): the legacy
 // address redirects are gone (3.12), so nothing may lean on them. The check reads the real route table and
 // the web app's own source, so it follows both as they change.
 
@@ -170,7 +170,7 @@ describe("internal navigation", () => {
   });
 
   it("sends a path that no page serves to page not found", () => {
-    // Plane's old account settings address, whose redirect is gone
+    // the old account settings address, whose redirect is gone
     expect(lands("/acme/settings/account")).toBe(false);
     // what the disabled feature pages used to link to
     expect(reaches("/*/settings/projects/*/features")).toBe(false);

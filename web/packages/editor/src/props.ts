@@ -38,7 +38,7 @@ export const CoreEditorProps = (props: TArgs): EditorProps => {
     handlePaste: (view, event) => {
       if (!event.clipboardData) return false;
 
-      const htmlContent = event.clipboardData.getData("text/plane-editor-html");
+      const htmlContent = event.clipboardData.getData("text/nerve-editor-html");
       if (!htmlContent) return false;
 
       const { processedHtml } = processAssetDuplication(htmlContent);

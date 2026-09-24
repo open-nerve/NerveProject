@@ -13,7 +13,7 @@ import { useTranslation } from "@nerve/i18n";
 import { CustomMenu } from "@nerve/ui";
 // components
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
-import { PlaneVersionNumber } from "@/components/global/version-number";
+import { VersionNumber } from "@/components/global/version-number";
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";
 
@@ -59,7 +59,7 @@ export const HelpMenuRoot = observer(function HelpMenuRoot() {
         </button>
       </CustomMenu.MenuItem>
       <div className="mt-1 border-t border-subtle px-1 pt-2 text-11 text-secondary">
-        <PlaneVersionNumber />
+        <VersionNumber />
       </div>
     </CustomMenu>
   );

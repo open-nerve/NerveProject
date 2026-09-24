@@ -17,7 +17,7 @@ const getValueFromLocalStorage = (key: string, defaultValue: any) => {
   }
 };
 
-// TODO: Remove this once we migrate to the new hooks from plane/helpers
+// TODO: Remove this once its callers use useLocalStorage from @nerve/hooks
 const useLocalStorage = <T,>(key: string, initialValue: T) => {
   const [storedValue, setStoredValue] = useState<T | null>(() => getValueFromLocalStorage(key, initialValue));
 

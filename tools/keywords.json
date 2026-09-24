@@ -592,7 +592,7 @@
           "  \"whats_new\": \"What's new?\","
         ],
         "miss": [
-          "import { PlaneVersionNumber } from \"@/components/global/version-number\";",
+          "import { VersionNumber } from \"@/components/global/version-number\";",
           "  \"keyboard_shortcuts\": \"Keyboard shortcuts\","
         ],
         "files": {

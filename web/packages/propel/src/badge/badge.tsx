@@ -23,6 +23,6 @@ const Badge = React.forwardRef(function Badge(props: BadgeProps, ref: React.Forw
   );
 });
 
-Badge.displayName = "plane-ui-badge";
+Badge.displayName = "nerve-ui-badge";
 
 export { Badge };
