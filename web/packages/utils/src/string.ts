@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import sanitizeHtml from "sanitize-html";
 import type { Content, JSONContent } from "@nerve/types";
 
 /**
@@ -67,19 +66,8 @@ export const getNumberCount = (number: number): string => {
  */
 export const capitalizeFirstLetter = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
-/**
- * @description : This function will remove all the HTML tags from the string
- * @param {string} htmlString
- * @return {string}
- * @example :
- * const html = "<p>Some text</p>";
-const text = stripHTML(html);
-console.log(text); // Some text
- */
-export const sanitizeHTML = (htmlString: string) => {
-  const sanitizedText = sanitizeHtml(htmlString, { allowedTags: [] }); // sanitize the string to remove all HTML tags
-  return sanitizedText.trim(); // trim the string to remove leading and trailing whitespaces
-};
+// the body of an HTML fragment, as the browser parses it
+const parseHTML = (html: string) => new DOMParser().parseFromString(html, "text/html").body;
 
 /**
  * @description: This function will remove all the HTML tags from the string and truncate the string to the specified length
@@ -91,7 +79,8 @@ export const sanitizeHTML = (htmlString: string) => {
  * const text = stripAndTruncateHTML(html);
  * console.log(text); // Some text
  */
-export const stripAndTruncateHTML = (html: string, length: number = 55) => truncateText(sanitizeHTML(html), length);
+export const stripAndTruncateHTML = (html: string, length: number = 55) =>
+  truncateText((parseHTML(html).textContent ?? "").trim(), length);
 
 /**
  * @returns {boolean} true if email is valid, false otherwise
@@ -111,11 +100,12 @@ export const checkEmailValidity = (email: string): boolean => {
   return isEmailValid;
 };
 
+// true when the HTML has no text and none of the allowed tags
 export const isEmptyHtmlString = (htmlString: string, allowedHTMLTags: string[] = []) => {
-  // Remove HTML tags using sanitize-html
-  const cleanText = sanitizeHtml(htmlString, { allowedTags: allowedHTMLTags });
-  // Trim the string and check if it's empty
-  return cleanText.trim() === "";
+  const body = parseHTML(htmlString);
+  return (
+    (body.textContent ?? "").trim() === "" && !(allowedHTMLTags.length && body.querySelector(allowedHTMLTags.join(",")))
+  );
 };
 
 /**

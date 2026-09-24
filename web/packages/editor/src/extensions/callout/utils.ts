@@ -6,7 +6,6 @@
 
 // nerve imports
 import type { TLogoProps } from "@nerve/types";
-import { sanitizeHTML } from "@nerve/utils";
 // types
 import type { TCalloutBlockAttributes, TCalloutBlockEmojiAttributes, TCalloutBlockIconAttributes } from "./types";
 import { ECalloutAttributeNames } from "./types";
@@ -34,7 +33,7 @@ export const getStoredLogo = (): TStoredLogoValue => {
   };
 
   if (typeof window !== "undefined") {
-    const storedData = sanitizeHTML(localStorage.getItem("editor-calloutComponent-logo") ?? "");
+    const storedData = localStorage.getItem("editor-calloutComponent-logo");
     if (storedData) {
       let parsedData: TLogoProps;
       try {
@@ -75,7 +74,7 @@ export const updateStoredLogo = (value: TLogoProps): void => {
 // function to get the stored background color from local storage
 export const getStoredBackgroundColor = (): string | null => {
   if (typeof window !== "undefined") {
-    return sanitizeHTML(localStorage.getItem("editor-calloutComponent-background") ?? "");
+    return localStorage.getItem("editor-calloutComponent-background") ?? "";
   }
   return null;
 };
