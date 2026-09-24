@@ -15,7 +15,6 @@ import { EUserWorkspaceRoles } from "@nerve/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 import type { RootStore } from "@/store/root.store";
-// services
 import projectMemberService from "@/services/project/project-member.service";
 import userService from "@/services/user.service";
 
