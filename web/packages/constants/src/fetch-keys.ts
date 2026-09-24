@@ -109,31 +109,31 @@ export const APPLICATION_CATEGORIES_LIST = () => `APPLICATION_CATEGORIES_LIST`;
 
 // project level keys
 export const PROJECT_DETAILS = (_workspaceSlug: string, projectId: string) =>
-  `PROJECT_DETAILS_${projectId.toString().toUpperCase()}`;
+  `PROJECT_DETAILS_${projectId.toUpperCase()}`;
 
 export const PROJECT_ME_INFORMATION = (_workspaceSlug: string, projectId: string) =>
-  `PROJECT_ME_INFORMATION_${projectId.toString().toUpperCase()}`;
+  `PROJECT_ME_INFORMATION_${projectId.toUpperCase()}`;
 
 export const PROJECT_LABELS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_LABELS_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_LABELS_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_MEMBERS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MEMBERS_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_MEMBERS_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_STATES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_STATES_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_STATES_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_INTAKE_STATE = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_INTAKE_STATE_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_INTAKE_STATE_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_ALL_CYCLES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_ALL_CYCLES_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_ALL_CYCLES_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_MODULES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MODULES_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_MODULES_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_VIEWS = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_VIEWS_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_VIEWS_${projectId.toUpperCase()}_${projectRole}`;
 
 export const PROJECT_MEMBER_PREFERENCES = (projectId: string, projectRole: EUserPermissions | undefined) =>
-  `PROJECT_MEMBER_PREFERENCES_${projectId.toString().toUpperCase()}_${projectRole}`;
+  `PROJECT_MEMBER_PREFERENCES_${projectId.toUpperCase()}_${projectRole}`;

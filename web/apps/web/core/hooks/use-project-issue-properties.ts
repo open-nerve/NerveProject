@@ -22,32 +22,32 @@ export const useProjectIssueProperties = () => {
   // fetching project states
   const fetchStates = async (workspaceSlug: string | undefined, projectId: string | undefined) => {
     if (workspaceSlug && projectId) {
-      await fetchProjectStates(workspaceSlug.toString(), projectId.toString());
+      await fetchProjectStates(workspaceSlug, projectId);
     }
   };
   // fetching project members
   const fetchMembers = async (workspaceSlug: string | undefined, projectId: string | undefined) => {
     if (workspaceSlug && projectId) {
-      await fetchProjectMembers(workspaceSlug.toString(), projectId.toString());
+      await fetchProjectMembers(workspaceSlug, projectId);
     }
   };
 
   // fetching project labels
   const fetchLabels = async (workspaceSlug: string | undefined, projectId: string | undefined) => {
     if (workspaceSlug && projectId) {
-      await fetchProjectLabels(workspaceSlug.toString(), projectId.toString());
+      await fetchProjectLabels(workspaceSlug, projectId);
     }
   };
   // fetching project cycles
   const fetchCycles = async (workspaceSlug: string | undefined, projectId: string | undefined) => {
     if (workspaceSlug && projectId) {
-      await fetchProjectAllCycles(workspaceSlug.toString(), projectId.toString());
+      await fetchProjectAllCycles(workspaceSlug, projectId);
     }
   };
   // fetching project modules
   const fetchModules = async (workspaceSlug: string | undefined, projectId: string | undefined) => {
     if (workspaceSlug && projectId) {
-      await fetchProjectAllModules(workspaceSlug.toString(), projectId.toString());
+      await fetchProjectAllModules(workspaceSlug, projectId);
     }
   };
 

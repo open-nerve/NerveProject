@@ -72,7 +72,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get workspaceSlug() {
-    return this.query?.workspaceSlug?.toString();
+    return this.query?.workspaceSlug;
   }
 
   /**
@@ -80,7 +80,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get projectId() {
-    return this.query?.projectId?.toString();
+    return this.query?.projectId;
   }
 
   /**
@@ -88,7 +88,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get moduleId() {
-    return this.query?.moduleId?.toString();
+    return this.query?.moduleId;
   }
 
   /**
@@ -96,7 +96,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get cycleId() {
-    return this.query?.cycleId?.toString();
+    return this.query?.cycleId;
   }
 
   /**
@@ -104,7 +104,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get viewId() {
-    return this.query?.viewId?.toString();
+    return this.query?.viewId;
   }
 
   /**
@@ -112,7 +112,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get globalViewId() {
-    return this.query?.globalViewId?.toString();
+    return this.query?.globalViewId;
   }
 
   /**
@@ -120,7 +120,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get profileViewId() {
-    return this.query?.profileViewId?.toString() as TProfileViews;
+    return this.query?.profileViewId as TProfileViews;
   }
 
   /**
@@ -128,7 +128,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get userId() {
-    return this.query?.userId?.toString();
+    return this.query?.userId;
   }
 
   /**
@@ -136,7 +136,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get peekId() {
-    return this.query?.peekId?.toString();
+    return this.query?.peekId;
   }
 
   /**
@@ -144,7 +144,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get issueId() {
-    return this.query?.issueId?.toString();
+    return this.query?.issueId;
   }
 
   /**
@@ -152,7 +152,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get inboxId() {
-    return this.query?.inboxId?.toString();
+    return this.query?.inboxId;
   }
 
   /**
@@ -160,6 +160,6 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get webhookId() {
-    return this.query?.webhookId?.toString();
+    return this.query?.webhookId;
   }
 }

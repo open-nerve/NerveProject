@@ -21,22 +21,22 @@ export const useWorkspaceIssueProperties = (workspaceSlug: string | undefined) =
 
   // fetch workspace Modules
   useSWR(
-    workspaceSlug ? WORKSPACE_MODULES(workspaceSlug.toString()) : null,
-    workspaceSlug ? () => fetchWorkspaceModules(workspaceSlug.toString()) : null,
+    workspaceSlug ? WORKSPACE_MODULES(workspaceSlug) : null,
+    workspaceSlug ? () => fetchWorkspaceModules(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
   // fetch workspace Cycles
   useSWR(
-    workspaceSlug ? WORKSPACE_CYCLES(workspaceSlug.toString()) : null,
-    workspaceSlug ? () => fetchWorkspaceCycles(workspaceSlug.toString()) : null,
+    workspaceSlug ? WORKSPACE_CYCLES(workspaceSlug) : null,
+    workspaceSlug ? () => fetchWorkspaceCycles(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 
   // fetch workspace labels
   useSWR(
-    workspaceSlug ? WORKSPACE_LABELS(workspaceSlug.toString()) : null,
-    workspaceSlug ? () => fetchWorkspaceLabels(workspaceSlug.toString()) : null,
+    workspaceSlug ? WORKSPACE_LABELS(workspaceSlug) : null,
+    workspaceSlug ? () => fetchWorkspaceLabels(workspaceSlug) : null,
     { revalidateIfStale: false, revalidateOnFocus: false }
   );
 };
