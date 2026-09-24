@@ -19,7 +19,7 @@
         ],
         "miss": [
           "web/apps/web/public/site.webmanifest.json",
-          "web/packages/tailwind-config/postcss.config.js",
+          "web/packages/constants/src/swr.ts",
           "deploy/compose.dev.yaml"
         ]
       }
@@ -72,7 +72,7 @@
           "web/packages/propel/src/button/button.stories.tsx",
           "storybook-static/index.html"
         ],
-        "miss": ["web/packages/propel/src/button/button.tsx"]
+        "miss": ["web/packages/propel/src/button/button.tsx", "e2e/stories/smoke/s2-web-app.spec.ts"]
       }
     },
     {
@@ -140,7 +140,7 @@
           "      \"next/script\": path.resolve(__dirname, \"app/compat/next/script.tsx\"),",
           "import Image from \"next/image\";"
         ],
-        "miss": ["import { Outlet } from \"react-router\";"],
+        "miss": ["import { useTheme } from \"next-themes\";"],
         "files": {
           "hit": ["web/apps/web/app/root.tsx", "web/packages/ui/package.json"],
           "miss": ["web/packages/tailwind-config/AGENTS.md", "server/cmd/nerve/main.go"]
@@ -193,7 +193,7 @@
           "export type { TTranslationKeys } from \"./keys.generated\";",
           "\"build\": \"pnpm run generate:types && tsdown\""
         ],
-        "miss": ["export type TWorkItemDetailRoot = {", "    \"check:sync\": \"tsx scripts/sync-check.ts\","],
+        "miss": ["export type TWorkItemDetailRoot = {", "import { generateQueryParams } from \"@nerve/utils\";"],
         "files": {
           "hit": ["web/packages/i18n/src/index.ts", ".gitignore", ".oxfmtrc.json", "knip.jsonc", "turbo.json"],
           "miss": ["server/cmd/nerve/main.go", "docs/v0/M1-frontend-trim/M1-design.md"]
@@ -403,7 +403,8 @@
           "import { PROFILE_TABS } from \"@nerve/constants\";",
           "    i18n_label: \"profile.tabs.assigned\",",
           "      `/api/workspaces/${workspaceSlug}/user-issues/${userId}/`,",
-          "  const { data: members, isLoading } = useSWR("
+          "  const { data: members, isLoading } = useSWR(",
+          "export * from \"./user-user-profile\";"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/empty-state.json"],
