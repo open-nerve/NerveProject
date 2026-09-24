@@ -19,7 +19,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
@@ -39,7 +39,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   const parentRef = useRef<HTMLDivElement>(null);
 
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
 
   // hooks
   const { data: currentUser } = useUser();
@@ -97,7 +97,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
         : `/${workspaceSlug}/projects/${projectId}/issues`;
 
       await deleteIssue(workspaceSlug, projectId, issueId);
-      router.push(redirectionPath);
+      navigate(redirectionPath);
     } catch (_error) {
       setToast({
         title: t("toast.error"),
@@ -110,7 +110,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
   const handleArchiveIssue = async () => {
     try {
       await archiveIssue(workspaceSlug, projectId, issueId);
-      router.push(`/${workspaceSlug}/projects/${projectId}/issues`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/issues`);
     } catch (_error) {
       setToast({
         title: t("toast.error"),
@@ -129,7 +129,7 @@ export const IssueDetailQuickActions = observer(function IssueDetailQuickActions
         title: t("issue.restore.success.title"),
         message: t("issue.restore.success.message"),
       });
-      router.push(workItemLink);
+      navigate(workItemLink);
     } catch (_error) {
       setToast({
         title: t("toast.error"),

@@ -42,7 +42,7 @@ import { useCycle } from "@/hooks/store/use-cycle";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import useLocalStorage from "@/hooks/use-local-storage";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
@@ -51,7 +51,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, cycleId } = useParams();
   // i18n
   const { t } = useTranslation();
@@ -125,7 +125,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
     <Header>
       <Header.LeftItem>
         <div className="flex items-center gap-2">
-          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
+          <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
             <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
             <Breadcrumbs.Item
               component={
@@ -142,7 +142,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
                   selectedItem={cycleId}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
-                    router.push(`/${workspaceSlug}/projects/${projectId}/cycles/${value}`);
+                    navigate(`/${workspaceSlug}/projects/${projectId}/cycles/${value}`);
                   }}
                   title={cycleDetails?.name}
                   icon={

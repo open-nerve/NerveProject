@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router";
+import { useParams } from "next/navigation";
 // plane imports
 import { PROFILE_TABS } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -20,7 +20,7 @@ export function ProfileNavbar(props: Props) {
   const { isAuthorized } = props;
   const { t } = useTranslation();
   const { workspaceSlug, userId } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   const tabsList = isAuthorized ? PROFILE_TABS : [];
 
@@ -28,7 +28,7 @@ export function ProfileNavbar(props: Props) {
     <Header variant={EHeaderVariant.SECONDARY} showOnMobile={false}>
       <div className="flex items-center overflow-x-scroll">
         {tabsList.map((tab) => (
-          <Link key={tab.route} href={`/${workspaceSlug}/profile/${userId}/${tab.route}`}>
+          <Link key={tab.route} to={`/${workspaceSlug}/profile/${userId}/${tab.route}`}>
             <span
               className={cn(
                 `flex border-b-2 p-4 text-13 font-medium whitespace-nowrap text-tertiary outline-none hover:text-primary ${

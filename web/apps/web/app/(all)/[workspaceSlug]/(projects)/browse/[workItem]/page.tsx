@@ -22,7 +22,7 @@ import { PageHead } from "@/components/core/page-title";
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // layouts
 import { ProjectAuthWrapper } from "@/layouts/auth-layout/project-wrapper";
 // plane web imports
@@ -32,7 +32,7 @@ import type { Route } from "./+types/page";
 
 export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: Route.ComponentProps) {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, workItem } = params;
   // hooks
   const { resolvedTheme } = useTheme();
@@ -78,9 +78,9 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
 
   useEffect(() => {
     if (data?.is_intake) {
-      router.push(`/${workspaceSlug}/projects/${data.project_id}/intake/?currentTab=open&inboxIssueId=${data?.id}`);
+      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake/?currentTab=open&inboxIssueId=${data?.id}`);
     }
-  }, [workspaceSlug, data, router]);
+  }, [workspaceSlug, data, navigate]);
 
   if (error && !isLoading) {
     return (
@@ -90,7 +90,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
         description={t("issue.empty_state.issue_detail.description")}
         primaryButton={{
           text: t("issue.empty_state.issue_detail.primary_button.text"),
-          onClick: () => router.push(`/${workspaceSlug}/workspace-views/all-issues/`),
+          onClick: () => navigate(`/${workspaceSlug}/workspace-views/all-issues/`),
         }}
       />
     );

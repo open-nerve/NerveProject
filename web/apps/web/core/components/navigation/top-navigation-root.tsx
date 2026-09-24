@@ -6,7 +6,8 @@
 
 // components
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useLocation } from "react-router";
 import { cn } from "@plane/utils";
 import { TopNavPowerK } from "@/components/navigation";
 import { HelpMenuRoot } from "@/components/workspace/sidebar/help-section/root";
@@ -24,7 +25,7 @@ import { StarUsOnGitHubLink } from "@/app/(all)/[workspaceSlug]/(projects)/star-
 export const TopNavigationRoot = observer(function TopNavigationRoot() {
   // router
   const { workspaceSlug } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   // store hooks
   const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();

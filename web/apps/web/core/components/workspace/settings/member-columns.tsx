@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 
 import { Disclosure } from "@headlessui/react";
@@ -59,7 +59,7 @@ export function NameColumn(props: NameProps) {
                   <DeactivatedUserOutline className="size-6 text-placeholder" />
                 </div>
               ) : avatar_url && avatar_url.trim() !== "" ? (
-                <Link href={`/${workspaceSlug}/profile/${id}`}>
+                <Link to={`/${workspaceSlug}/profile/${id}`}>
                   <span className="relative flex size-6 items-center justify-center rounded-full text-on-color capitalize">
                     <img
                       src={getFileURL(avatar_url)}
@@ -69,7 +69,7 @@ export function NameColumn(props: NameProps) {
                   </span>
                 </Link>
               ) : (
-                <Link href={`/${workspaceSlug}/profile/${id}`}>
+                <Link to={`/${workspaceSlug}/profile/${id}`}>
                   <span className="relative flex size-6 items-center justify-center rounded-full bg-layer-3 text-11 text-tertiary capitalize">
                     {(email ?? display_name ?? "?")[0]}
                   </span>

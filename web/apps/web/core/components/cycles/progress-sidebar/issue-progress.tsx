@@ -7,7 +7,7 @@
 import { useMemo } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "react-router";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
 import { useTranslation } from "@plane/i18n";
@@ -46,7 +46,7 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
   // props
   const { cycleId } = props;
   // router
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const peekCycle = searchParams.get("peekCycle") || undefined;
   // plane hooks
   const { t } = useTranslation();

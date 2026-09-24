@@ -36,7 +36,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useLabel } from "@/hooks/store/use-label";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local components
@@ -71,7 +71,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
   const projectDetails = getProjectById(issue.project_id);
 
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
 
   // derived values
@@ -160,7 +160,7 @@ export const IssueProperties = observer(function IssueProperties(props: IIssuePr
     isArchived: !!issue?.archived_at,
   });
 
-  const redirectToIssueDetail = () => router.push(`${workItemLink}#sub-issues`);
+  const redirectToIssueDetail = () => navigate(`${workItemLink}#sub-issues`);
 
   if (!displayProperties || !issue.project_id) return null;
 

@@ -39,7 +39,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import useLocalStorage from "@/hooks/use-local-storage";
 import { usePlatformOS } from "@/hooks/use-platform-os";
@@ -51,7 +51,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, moduleId: routerModuleId } = useParams();
   const moduleId = routerModuleId ? routerModuleId.toString() : undefined;
   // hooks
@@ -122,7 +122,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
     <Header>
       <Header.LeftItem>
         <div className="flex items-center gap-2">
-          <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
+          <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
             <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
             <Breadcrumbs.Item
               component={
@@ -141,7 +141,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
                   selectedItem={moduleId?.toString() ?? ""}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
-                    router.push(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
+                    navigate(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
                   }}
                   title={moduleDetails?.name}
                   icon={<ModuleOutline className="size-3.5 flex-shrink-0 text-tertiary" />}

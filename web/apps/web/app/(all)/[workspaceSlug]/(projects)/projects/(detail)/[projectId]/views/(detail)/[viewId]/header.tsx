@@ -33,7 +33,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
@@ -41,7 +41,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
   // refs
   const parentRef = useRef(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, viewId: routerViewId } = useParams();
   const viewId = routerViewId ? routerViewId.toString() : undefined;
   // store hooks
@@ -139,7 +139,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
                 selectedItem={viewId?.toString() ?? ""}
                 navigationItems={switcherOptions}
                 onChange={(value: string) => {
-                  router.push(`/${workspaceSlug}/projects/${projectId}/views/${value}`);
+                  navigate(`/${workspaceSlug}/projects/${projectId}/views/${value}`);
                 }}
                 title={viewDetails?.name}
                 icon={

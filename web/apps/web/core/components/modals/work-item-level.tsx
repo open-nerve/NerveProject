@@ -15,7 +15,7 @@ import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 
 export type TWorkItemLevelModalsProps = {
@@ -26,7 +26,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   const { workItemIdentifier } = props;
   // router
   const { workspaceSlug, cycleId, moduleId } = useParams();
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const {
     issue: { getIssueById, getIssueIdByIdentifier },
@@ -51,7 +51,7 @@ export const WorkItemLevelModals = observer(function WorkItemLevelModals(props: 
   const handleDeleteIssue = async (workspaceSlug: string, projectId: string, issueId: string) => {
     try {
       await removeWorkItem(projectId, issueId);
-      router.push(`/${workspaceSlug}/projects/${projectId}/issues`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/issues`);
     } catch (error) {
       console.error("Failed to delete issue:", error);
     }

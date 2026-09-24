@@ -18,13 +18,13 @@ import { ModuleProgressSidebar } from "@/components/modules";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import useLocalStorage from "@/hooks/use-local-storage";
 import type { Route } from "./+types/page";
 
 function ModuleIssuesPage({ params }: Route.ComponentProps) {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, moduleId } = params;
   // store hooks
   const { fetchModuleDetails, getModuleById } = useModule();
@@ -57,7 +57,7 @@ function ModuleIssuesPage({ params }: Route.ComponentProps) {
           description="The module you are looking for does not exist or has been deleted."
           primaryButton={{
             text: "View other modules",
-            onClick: () => router.push(`/${workspaceSlug}/projects/${projectId}/modules`),
+            onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/modules`),
           }}
         />
       ) : (

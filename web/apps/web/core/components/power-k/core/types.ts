@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { useRouter } from "next/navigation";
+import type { NavigateFunction } from "react-router";
 
 export type TPowerKContextType = "work-item" | "cycle" | "module";
 
@@ -18,8 +18,8 @@ export type TPowerKContext = {
   activeContext: TPowerKContextType | null;
   shouldShowContextBasedActions: boolean;
   setShouldShowContextBasedActions: (shouldShowContextBasedActions: boolean) => void;
-  // Router for navigation
-  router: ReturnType<typeof useRouter>;
+  // Navigation
+  navigate: NavigateFunction;
   // UI control
   closePalette: () => void;
   setActiveCommand: (command: TPowerKCommandConfig | null) => void;

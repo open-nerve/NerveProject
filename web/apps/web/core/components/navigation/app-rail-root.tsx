@@ -6,7 +6,8 @@
 
 "use client";
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useLocation } from "react-router";
 import { SettingsOutline, TickOutline } from "@makeplane/propel/icons";
 import { ContextMenu } from "@plane/propel/context-menu";
 import { cn } from "@plane/utils";
@@ -21,7 +22,7 @@ import { AppSidebarItemsRoot } from "./items-root";
 export const AppRailRoot = observer(() => {
   // router
   const { workspaceSlug, projectId } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   // preferences
   const { preferences, updateDisplayMode } = useAppRailPreferences();
   const { isCollapsed, toggleAppRail } = useAppRailVisibility();

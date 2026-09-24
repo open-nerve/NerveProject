@@ -13,7 +13,7 @@ import { CustomSearchSelect } from "@plane/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // local imports
 import { SwitcherLabel } from "../common/switcher-label";
 import { ProjectHeaderButton } from "./project-header-button";
@@ -29,7 +29,7 @@ type TProjectHeaderProps = {
 export const ProjectHeader = observer(function ProjectHeader(props: TProjectHeaderProps) {
   const { workspaceSlug, projectId } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { joinedProjectIds, getPartialProjectById } = useProject();
   const { allowPermissions } = useUserPermissions();
@@ -89,10 +89,10 @@ export const ProjectHeader = observer(function ProjectHeader(props: TProjectHead
   const handleProjectChange = useCallback(
     (value: string) => {
       if (value !== currentProjectDetails?.id) {
-        router.push(getTabUrl(workspaceSlug, value, validatedDefaultTabKey));
+        navigate(getTabUrl(workspaceSlug, value, validatedDefaultTabKey));
       }
     },
-    [currentProjectDetails?.id, router, workspaceSlug, validatedDefaultTabKey]
+    [currentProjectDetails?.id, navigate, workspaceSlug, validatedDefaultTabKey]
   );
 
   // Early return if no project details

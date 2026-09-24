@@ -1439,6 +1439,56 @@
           "miss": ["e2e/playwright.config.ts", "tools/keywords.mjs", "pnpm-lock.yaml"]
         }
       }
+    },
+    {
+      "id": "next-shim-files",
+      "phase": "M1/P4",
+      "why": "Next.js 兼容垫片的文件：next/link 的替身和类型声明、包装层 use-app-router.tsx；导航一律用 React Router 的原生写法（M1 设计 4.2）",
+      "path": {
+        "source": "^web/apps/web/(?:app/compat/next/link\\.tsx|app/types/next-link\\.d\\.ts|core/hooks/use-app-router\\.tsx)$",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/app/compat/next/link.tsx",
+          "web/apps/web/app/types/next-link.d.ts",
+          "web/apps/web/core/hooks/use-app-router.tsx"
+        ],
+        "miss": [
+          "web/apps/web/app/compat/next/navigation.ts",
+          "web/apps/web/app/types/react-router-virtual.d.ts",
+          "web/apps/web/core/hooks/use-navigation-preferences.ts"
+        ]
+      }
+    },
+    {
+      "id": "next-shims",
+      "phase": "M1/P4",
+      "why": "Next.js 兼容垫片的引用：next/link 的导入和别名、包装层 useAppRouter；导航一律用 React Router 的原生写法（Link、useNavigate，M1 设计 4.2）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "[\"'`]next/link[\"'`]|\\buseAppRouter\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "import Link from \"next/link\";",
+          "      \"next/link\": path.resolve(__dirname, \"app/compat/next/link.tsx\"),",
+          "import { useAppRouter } from \"@/hooks/use-app-router\";",
+          "  const router = useAppRouter();"
+        ],
+        "miss": [
+          "import { Link, useNavigate } from \"react-router\";",
+          "import { useParams } from \"next/navigation\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/vite.config.ts", "web/apps/web/core/components/home/root.tsx"],
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
+        }
+      }
     }
   ],
   "exceptions": [

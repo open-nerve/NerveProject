@@ -16,14 +16,14 @@ import { ProfileSettingsContent } from "@/components/settings/profile/content";
 import { ProfileSettingsSidebarRoot } from "@/components/settings/profile/sidebar";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // local imports
 import type { Route } from "../+types/layout";
 
 function ProfileSettingsPage(props: Route.ComponentProps) {
   const { profileTabId } = props.params;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { data: currentUser } = useUser();
   // translation
@@ -46,7 +46,7 @@ function ProfileSettingsPage(props: Route.ComponentProps) {
           <ProfileSettingsSidebarRoot
             activeTab={profileTabId as TProfileSettingsTabs}
             className="w-[250px]"
-            updateActiveTab={(tab) => router.push(`/settings/profile/${tab}`)}
+            updateActiveTab={(tab) => navigate(`/settings/profile/${tab}`)}
           />
           <ProfileSettingsContent
             activeTab={profileTabId as TProfileSettingsTabs}

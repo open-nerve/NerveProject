@@ -6,8 +6,10 @@
 
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
-import { useSearchParams, usePathname } from "next/navigation";
+import { Navigate, useLocation, useSearchParams } from "react-router";
 import useSWR from "swr";
+// plane imports
+import { isValidNextPath } from "@plane/utils";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 // helpers
@@ -15,7 +17,6 @@ import { EPageTypes } from "@/helpers/authentication.helper";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile, useUserSettings } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
 
 type TPageType = EPageTypes;
 
@@ -24,15 +25,9 @@ type TAuthenticationWrapper = {
   pageType?: TPageType;
 };
 
-const isValidURL = (url: string): boolean => {
-  const disallowedSchemes = /^(https?|ftp):\/\//i;
-  return !disallowedSchemes.test(url);
-};
-
 export const AuthenticationWrapper = observer(function AuthenticationWrapper(props: TAuthenticationWrapper) {
-  const pathname = usePathname();
-  const router = useAppRouter();
-  const searchParams = useSearchParams();
+  const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const nextPath = searchParams.get("next_path");
   // props
   const { children, pageType = EPageTypes.AUTHENTICATED } = props;
@@ -59,7 +54,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
     let redirectionRoute = "/create-workspace";
 
     // validating the nextPath from the router query
-    if (nextPath && isValidURL(nextPath.toString())) {
+    if (nextPath && isValidNextPath(nextPath)) {
       redirectionRoute = nextPath.toString();
       return redirectionRoute;
     }
@@ -92,24 +87,20 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
     else {
       if (currentUserProfile?.id && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
-        router.push(currentRedirectRoute);
-        return <></>;
+        return <Navigate to={currentRedirectRoute} replace />;
       } else {
-        router.push("/onboarding");
-        return <></>;
+        return <Navigate to="/onboarding" replace />;
       }
     }
   }
 
   if (pageType === EPageTypes.ONBOARDING) {
     if (!currentUser?.id) {
-      router.push(`/${pathname ? `?next_path=${pathname}` : ``}`);
-      return <></>;
+      return <Navigate to={`/?next_path=${pathname}`} replace />;
     } else {
       if (currentUser && currentUserProfile?.id && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
-        router.replace(currentRedirectRoute);
-        return <></>;
+        return <Navigate to={currentRedirectRoute} replace />;
       } else return <>{children}</>;
     }
   }
@@ -118,12 +109,10 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
     if (currentUser?.id) {
       if (currentUserProfile && currentUserProfile?.id && isUserOnboard) return <>{children}</>;
       else {
-        router.push(`/onboarding`);
-        return <></>;
+        return <Navigate to="/onboarding" replace />;
       }
     } else {
-      router.push(`/${pathname ? `?next_path=${pathname}` : ``}`);
-      return <></>;
+      return <Navigate to={`/?next_path=${pathname}`} replace />;
     }
   }
 

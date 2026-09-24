@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { useTheme } from "next-themes";
 // plane imports
 import { Button, getButtonStyling } from "@plane/propel/button";
@@ -31,7 +31,7 @@ function ProjectSettingsPage() {
         need to get things done.
       </div>
       <div className="flex gap-2">
-        <Link href="https://plane.so/" target="_blank" className={cn(getButtonStyling("secondary", "base"))}>
+        <Link to="https://plane.so/" target="_blank" className={cn(getButtonStyling("secondary", "base"))}>
           Learn more about projects
         </Link>
         <Button onClick={() => toggleCreateProjectModal(true)}>Start your first project</Button>

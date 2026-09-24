@@ -7,7 +7,7 @@
 import React from "react";
 // mobx
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { useParams } from "next/navigation";
 import { CloseOutline, MembersOutline, ProjectsOutline, TickOutline } from "@makeplane/propel/icons";
 // plane ui
@@ -94,7 +94,7 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
       description: "home.empty.personalize_account.description",
       icon:
         currentUser?.avatar_url && currentUser?.avatar_url.trim() !== "" ? (
-          <Link href={`/${workspaceSlug}/profile/${currentUser?.id}`}>
+          <Link to={`/${workspaceSlug}/profile/${currentUser?.id}`}>
             <span className="relative flex size-4 items-center justify-center rounded-full p-4 text-on-color capitalize">
               <img
                 src={getFileURL(currentUser?.avatar_url)}
@@ -104,7 +104,7 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
             </span>
           </Link>
         ) : (
-          <Link href={`/${workspaceSlug}/profile/${currentUser?.id}`}>
+          <Link to={`/${workspaceSlug}/profile/${currentUser?.id}`}>
             <span className="relative flex size-4 items-center justify-center rounded-full bg-[#028375] p-4 text-13 text-on-color capitalize">
               {(currentUser?.email ?? currentUser?.display_name ?? "?")[0]}
             </span>
@@ -170,7 +170,7 @@ export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
                 !item.cta.disabled &&
                 (item.cta.link ? (
                   <Link
-                    href={item.cta.link}
+                    to={item.cta.link}
                     onClick={(e) => {
                       if (!storedValue) {
                         e.stopPropagation();

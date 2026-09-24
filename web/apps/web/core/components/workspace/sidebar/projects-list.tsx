@@ -8,7 +8,8 @@ import { useState, useRef, useEffect } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
@@ -50,7 +51,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
   const { loader, getPartialProjectById, joinedProjectIds: joinedProjects, updateProjectView } = useProject();
   // router params
   const { workspaceSlug } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
 
   // auth
   const isAuthorizedUser = allowPermissions(

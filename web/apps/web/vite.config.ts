@@ -11,7 +11,6 @@ export default defineConfig(() => ({
     tsconfigPaths: true,
     alias: {
       // Next.js compatibility shims used within web
-      "next/link": path.resolve(__dirname, "app/compat/next/link.tsx"),
       "next/navigation": path.resolve(__dirname, "app/compat/next/navigation.ts"),
     },
     dedupe: ["react", "react-dom", "@headlessui/react"],

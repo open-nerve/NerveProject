@@ -17,7 +17,7 @@ import { AlertModalCore } from "@plane/ui";
 // constants
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   data: IModule;
@@ -30,7 +30,7 @@ export const DeleteModuleModal = observer(function DeleteModuleModal(props: Prop
   // states
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId, moduleId, peekModule } = useParams();
   // store hooks
   const { deleteModule } = useModule();
@@ -48,7 +48,7 @@ export const DeleteModuleModal = observer(function DeleteModuleModal(props: Prop
 
     await deleteModule(workspaceSlug.toString(), projectId.toString(), data.id)
       .then(() => {
-        if (moduleId || peekModule) router.push(`/${workspaceSlug}/projects/${data.project_id}/modules`);
+        if (moduleId || peekModule) navigate(`/${workspaceSlug}/projects/${data.project_id}/modules`);
         handleClose();
         setToast({
           type: TOAST_TYPE.SUCCESS,

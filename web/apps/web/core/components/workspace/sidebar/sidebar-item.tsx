@@ -5,8 +5,8 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router";
+import { useParams } from "next/navigation";
 // plane imports
 import type { IWorkspaceSidebarNavigationItem } from "@plane/constants";
 import { EUserPermissionsLevel } from "@plane/constants";
@@ -26,7 +26,7 @@ type Props = {
 
 export const SidebarItemBase = observer(function SidebarItemBase({ item }: Props) {
   const { t } = useTranslation();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const { workspaceSlug } = useParams();
   const { allowPermissions } = useUserPermissions();
   const { data } = useUser();
@@ -46,7 +46,7 @@ export const SidebarItemBase = observer(function SidebarItemBase({ item }: Props
   const icon = getSidebarNavigationItemIcon(item.key);
 
   return (
-    <Link href={itemHref} onClick={handleLinkClick}>
+    <Link to={itemHref} onClick={handleLinkClick}>
       <SidebarNavItem isActive={item.highlight(pathname, itemHref)}>
         <div className="flex items-center gap-1.5 py-[1px]">
           {icon}

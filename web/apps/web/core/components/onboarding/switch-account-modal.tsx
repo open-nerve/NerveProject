@@ -14,7 +14,7 @@ import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export function SwitchAccountModal(props: Props) {
   // states
   const [switchingAccount, setSwitchingAccount] = useState(false);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { data: userData, signOut } = useUser();
 
@@ -43,7 +43,7 @@ export function SwitchAccountModal(props: Props) {
     await signOut()
       .then(() => {
         setTheme("system");
-        router.push("/");
+        navigate("/");
         handleClose();
       })
       .catch(() =>

@@ -16,13 +16,13 @@ import { IssueDetailQuickActions } from "@/components/issues/issue-detail/issue-
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader() {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, workItem } = useParams();
   // store hooks
   const { getProjectById, loader } = useProject();
@@ -39,7 +39,7 @@ export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader() {
   return (
     <Header>
       <Header.LeftItem>
-        <Breadcrumbs onBack={router.back} isLoading={loader === "init-loader"}>
+        <Breadcrumbs onBack={() => navigate(-1)} isLoading={loader === "init-loader"}>
           <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
           <Breadcrumbs.Item
             component={

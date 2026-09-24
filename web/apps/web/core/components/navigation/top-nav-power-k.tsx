@@ -18,12 +18,12 @@ import { PowerKModalFooter } from "@/components/power-k/ui/modal/footer";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import { useExpandableSearch } from "@/hooks/use-expandable-search";
 
 export const TopNavPowerK = observer(() => {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const params = useParams();
   const { projectId: routerProjectId, workItem: workItemIdentifier } = params;
 
@@ -77,7 +77,7 @@ export const TopNavPowerK = observer(() => {
         ...params,
         projectId,
       },
-      router,
+      navigate,
       closePalette: closePanel,
       setActiveCommand,
       setActivePage,
@@ -89,7 +89,7 @@ export const TopNavPowerK = observer(() => {
       shouldShowContextBasedActions,
       params,
       projectId,
-      router,
+      navigate,
       setActivePage,
       closePanel,
     ]

@@ -6,7 +6,8 @@
 
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useLocation } from "react-router";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@plane/types";
@@ -24,7 +25,7 @@ import { ProjectCardList } from "./card-list";
 export const ProjectRoot = observer(function ProjectRoot() {
   const { currentWorkspace } = useWorkspace();
   const { workspaceSlug } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const { t } = useTranslation();
   // store
   const { totalProjectIds, filteredProjectIds } = useProject();

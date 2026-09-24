@@ -31,7 +31,7 @@ import { useCycle } from "@/hooks/store/use-cycle";
 import { useCycleFilter } from "@/hooks/store/use-cycle-filter";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/page";
 
 function ProjectCyclesPage({ params }: Route.ComponentProps) {
@@ -41,7 +41,7 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
   const { currentProjectCycleIds, loader } = useCycle();
   const { getProjectById, currentProjectDetails } = useProject();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = params;
   // theme hook
   const { resolvedTheme } = useTheme();
@@ -81,7 +81,7 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
           primaryButton={{
             text: t("disabled_project.empty_state.cycle.primary_button.text"),
             onClick: () => {
-              router.push(`/${workspaceSlug}/settings/projects/${projectId}/features`);
+              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features`);
             },
             disabled: !hasAdminLevelPermission,
           }}

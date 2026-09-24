@@ -5,8 +5,8 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router";
+import { useParams } from "next/navigation";
 // types
 import type { IProject } from "@plane/types";
 // hooks
@@ -37,7 +37,7 @@ const ARCHIVES_TAB_LIST: {
 export const ArchiveTabsList = observer(function ArchiveTabsList() {
   // router
   const { workspaceSlug, projectId } = useParams();
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   // store hooks
   const { getProjectById } = useProject();
 
@@ -51,7 +51,7 @@ export const ArchiveTabsList = observer(function ArchiveTabsList() {
       {ARCHIVES_TAB_LIST.map(
         (tab) =>
           tab.shouldRender(projectDetails) && (
-            <Link key={tab.key} href={`/${workspaceSlug}/projects/${projectId}/archives/${tab.key}`}>
+            <Link key={tab.key} to={`/${workspaceSlug}/projects/${projectId}/archives/${tab.key}`}>
               <span
                 className={`flex min-w-min flex-shrink-0 border-b-2 px-4 py-4 text-13 font-medium whitespace-nowrap outline-none ${
                   pathname.includes(tab.key)

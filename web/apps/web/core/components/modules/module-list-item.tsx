@@ -6,7 +6,7 @@
 
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 // icons
 import { InfoOutline, TickOutline } from "@makeplane/propel/icons";
 // ui
@@ -18,7 +18,7 @@ import { ModuleListItemAction, ModuleQuickActions } from "@/components/modules";
 // helpers
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate, useSearchParams, useLocation } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
@@ -30,10 +30,10 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   // refs
   const parentRef = useRef(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   // store hooks
   const { getModuleById } = useModule();
   const { isMobile } = usePlatformOS();
@@ -57,9 +57,9 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
 
     const query = generateQueryParams(searchParams, ["peekModule"]);
     if (searchParams.has("peekModule") && searchParams.get("peekModule") === moduleId) {
-      router.push(`${pathname}?${query}`);
+      navigate(`${pathname}?${query}`);
     } else {
-      router.push(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
+      navigate(`${pathname}?${query && `${query}&`}peekModule=${moduleId}`);
     }
   };
 

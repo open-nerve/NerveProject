@@ -19,7 +19,7 @@ import { ArchiveModuleModal, CreateUpdateModuleModal, DeleteModuleModal } from "
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   parentRef: React.RefObject<HTMLDivElement | null>;
@@ -32,7 +32,7 @@ type Props = {
 export const ModuleQuickActions = observer(function ModuleQuickActions(props: Props) {
   const { parentRef, moduleId, projectId, workspaceSlug, customClassName } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // states
   const [editModal, setEditModal] = useState(false);
   const [archiveModuleModal, setArchiveModuleModal] = useState(false);
@@ -71,7 +71,7 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
         title: "Restore success",
         message: "Your module can be found in project modules.",
       });
-      router.push(`/${workspaceSlug}/projects/${projectId}/archives/modules`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/archives/modules`);
     } catch (_error) {
       setToast({
         type: TOAST_TYPE.ERROR,

@@ -24,12 +24,12 @@ import { ModuleAppliedFiltersList, ModulesListView } from "@/components/modules"
 import { useModuleFilter } from "@/hooks/store/use-module-filter";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import type { Route } from "./+types/page";
 
 function ProjectModulesPage({ params }: Route.ComponentProps) {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = params;
   // theme hook
   const { resolvedTheme } = useTheme();
@@ -74,7 +74,7 @@ function ProjectModulesPage({ params }: Route.ComponentProps) {
           primaryButton={{
             text: t("disabled_project.empty_state.module.primary_button.text"),
             onClick: () => {
-              router.push(`/${workspaceSlug}/settings/projects/${projectId}/features`);
+              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features`);
             },
             disabled: !canPerformEmptyStateActions,
           }}

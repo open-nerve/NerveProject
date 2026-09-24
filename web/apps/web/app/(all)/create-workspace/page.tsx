@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link, useNavigate } from "react-router";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import { Button, getButtonStyling } from "@plane/propel/button";
@@ -19,14 +19,13 @@ import { CreateWorkspaceForm } from "@/components/workspace/create-workspace-for
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
 import { useInstance } from "@/hooks/store/use-instance";
-import { useAppRouter } from "@/hooks/use-app-router";
 // wrappers
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
 
 const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   const { t } = useTranslation();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { config } = useInstance();
   const { data: currentUser } = useUser();
@@ -53,7 +52,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   };
 
   const onSubmit = async (workspace: IWorkspace) => {
-    await updateUserProfile({ last_workspace_id: workspace.id }).then(() => router.push(`/${workspace.slug}`));
+    await updateUserProfile({ last_workspace_id: workspace.id }).then(() => navigate(`/${workspace.slug}`));
   };
 
   return (
@@ -63,7 +62,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
           <div className="absolute top-1/2 left-0 h-[0.5px] w-full -translate-y-1/2 border-b-[0.5px] border-subtle sm:top-0 sm:left-1/2 sm:h-screen sm:w-[0.5px] sm:-translate-x-1/2 sm:translate-y-0 sm:border-r-[0.5px] md:left-1/3" />
           <Link
             className="absolute top-1/2 left-5 grid -translate-y-1/2 place-items-center px-3 sm:top-12 sm:left-1/2 sm:-translate-x-[15px] sm:translate-y-0 sm:px-0 sm:py-5 md:left-1/3"
-            href="/"
+            to="/"
           >
             <PlaneLogo className="h-9 w-auto text-primary" />
           </Link>
@@ -86,7 +85,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
                 {t("workspace_creation.errors.creation_disabled.description")}
               </p>
               <div className="mt-6 flex gap-4">
-                <Button variant="primary" onClick={() => router.back()}>
+                <Button variant="primary" onClick={() => navigate(-1)}>
                   {t("common.go_back")}
                 </Button>
                 <a href={getMailtoHref()} className={getButtonStyling("secondary", "base")}>

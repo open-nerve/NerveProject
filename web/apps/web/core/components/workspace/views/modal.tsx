@@ -14,7 +14,7 @@ import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // local imports
 import { WorkspaceViewForm } from "./form";
 
@@ -28,7 +28,7 @@ type Props = {
 export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWorkspaceViewModal(props: Props) {
   const { isOpen, onClose, data, preLoadedData } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug: routerWorkspaceSlug } = useParams();
   const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug.toString() : undefined;
   // store hooks
@@ -55,7 +55,7 @@ export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWork
         title: "Success!",
         message: "View created successfully.",
       });
-      router.push(`/${workspaceSlug}/workspace-views/${res.id}`);
+      navigate(`/${workspaceSlug}/workspace-views/${res.id}`);
       handleClose();
     } catch (_error) {
       setToast({

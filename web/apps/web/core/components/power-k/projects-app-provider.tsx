@@ -11,7 +11,7 @@ import { useParams } from "next/navigation";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
 import { useUser } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { ProjectLevelModals } from "@/components/modals/project-level";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
@@ -28,7 +28,7 @@ import { ProjectsAppPowerKModalWrapper } from "./ui/modal/wrapper";
  */
 export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProvider() {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const params = useParams();
   const { workspaceSlug, projectId: routerProjectId, workItem: workItemIdentifier } = params;
   // states
@@ -58,7 +58,7 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
         ...params,
         projectId,
       },
-      router,
+      navigate,
       closePalette: () => togglePowerKModal(false),
       setActiveCommand,
       setActivePage,
@@ -70,7 +70,7 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
       shouldShowContextBasedActions,
       params,
       projectId,
-      router,
+      navigate,
       togglePowerKModal,
       setActivePage,
     ]

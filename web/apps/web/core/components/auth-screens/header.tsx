@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { useTranslation } from "@plane/i18n";
 import { PlaneLockup } from "@plane/propel/icons";
 import { PageHead } from "@/components/core/page-title";
@@ -47,7 +47,7 @@ export const AuthHeader = observer(function AuthHeader({ type }: AuthHeaderProps
           <div className="flex flex-col items-end text-center text-13 font-medium text-tertiary sm:flex-row sm:items-center sm:gap-2">
             <span className="text-body-sm-regular text-tertiary">{t(authContentMap[type].text)}</span>
             <Link
-              href={authContentMap[type].linkHref}
+              to={authContentMap[type].linkHref}
               className="text-body-sm-semibold text-accent-primary hover:underline"
             >
               {t(authContentMap[type].linkText)}
@@ -70,7 +70,7 @@ function AuthHeaderBase(props: TAuthHeaderBase) {
     <>
       <PageHead title={pageTitle + " - Plane"} />
       <div className="sticky top-0 flex w-full flex-shrink-0 items-center justify-between gap-6">
-        <Link href="/">
+        <Link to="/">
           <PlaneLockup height={20} width={95} className="text-primary" />
         </Link>
         {additionalAction}

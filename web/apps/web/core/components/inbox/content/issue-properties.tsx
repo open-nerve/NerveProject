@@ -27,7 +27,7 @@ import type { TIssueOperations } from "@/components/issues/issue-detail";
 import { IssueLabel } from "@/components/issues/issue-detail/label";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type Props = {
   workspaceSlug: string;
@@ -43,7 +43,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
   const { workspaceSlug, projectId, issue, issueOperations, isEditable, duplicateIssueDetails, isIntakeAccepted } =
     props;
 
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { currentProjectDetails } = useProject();
 
@@ -195,7 +195,7 @@ export const InboxIssueContentProperties = observer(function InboxIssueContentPr
                 <ControlLink
                   href={duplicateWorkItemLink}
                   onClick={() => {
-                    router.push(duplicateWorkItemLink);
+                    navigate(duplicateWorkItemLink);
                   }}
                   target="_self"
                 >

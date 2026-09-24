@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 // types
 import { PROJECT_ERROR_MESSAGES } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -16,7 +16,7 @@ import type { ICycle } from "@plane/types";
 import { AlertModalCore } from "@plane/ui";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 interface ICycleDelete {
   cycle: ICycle;
@@ -34,9 +34,9 @@ export const CycleDeleteModal = observer(function CycleDeleteModal(props: ICycle
   const { deleteCycle } = useCycle();
   const { t } = useTranslation();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { cycleId } = useParams();
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const peekCycle = searchParams.get("peekCycle");
 
   const formSubmit = async () => {
@@ -46,7 +46,7 @@ export const CycleDeleteModal = observer(function CycleDeleteModal(props: ICycle
     try {
       await deleteCycle(workspaceSlug, projectId, cycle.id)
         .then(() => {
-          if (cycleId || peekCycle) router.push(`/${workspaceSlug}/projects/${projectId}/cycles`);
+          if (cycleId || peekCycle) navigate(`/${workspaceSlug}/projects/${projectId}/cycles`);
           setToast({
             type: TOAST_TYPE.SUCCESS,
             title: "Success!",

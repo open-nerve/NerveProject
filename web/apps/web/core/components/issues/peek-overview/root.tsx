@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { observer } from "mobx-react";
-import { usePathname } from "next/navigation";
+import { useLocation } from "react-router";
 // Plane imports
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
@@ -32,7 +32,7 @@ export const IssuePeekOverview = observer(function IssuePeekOverview(props: IWor
   } = props;
   const { t } = useTranslation();
   // router
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   // store hook
   const { allowPermissions } = useUserPermissions();
 

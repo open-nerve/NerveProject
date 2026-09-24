@@ -21,7 +21,7 @@ import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // local components
 import { IssuePeekOverview } from "../peek-overview";
 import { IssueMainContent } from "./main-content";
@@ -62,7 +62,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
   const { t } = useTranslation();
   const { workspaceSlug, projectId, issueId, is_archived = false } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // hooks
   const {
     issue: { getIssueById },
@@ -234,7 +234,7 @@ export const IssueDetailRoot = observer(function IssueDetailRoot(props: TIssueDe
           description={t("issue.empty_state.issue_detail.description")}
           primaryButton={{
             text: t("issue.empty_state.issue_detail.primary_button.text"),
-            onClick: () => router.push(`/${workspaceSlug}/projects/${projectId}/issues`),
+            onClick: () => navigate(`/${workspaceSlug}/projects/${projectId}/issues`),
           }}
         />
       ) : (

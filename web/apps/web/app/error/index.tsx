@@ -5,16 +5,16 @@
  */
 
 // hooks
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // layouts
 import { DevErrorComponent } from "./dev";
 import { ProdErrorComponent } from "./prod";
 
 export function CustomErrorComponent({ error }: { error: unknown }) {
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
 
-  const handleGoHome = () => router.push("/");
+  const handleGoHome = () => navigate("/");
   const handleReload = () => window.location.reload();
 
   if (import.meta.env.DEV) {

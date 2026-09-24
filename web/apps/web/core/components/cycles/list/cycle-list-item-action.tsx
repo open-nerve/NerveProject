@@ -7,7 +7,7 @@
 import type { MouseEvent } from "react";
 import React, { useEffect, useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
   CalendarOutline,
@@ -35,7 +35,7 @@ import { MergedDateDisplay } from "@/components/dropdowns/merged-date";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate, useSearchParams, useLocation } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { useTimeZoneConverter } from "@/hooks/use-timezone-converter";
 // local imports
@@ -68,9 +68,9 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
   const { isProjectTimeZoneDifferent, getProjectUTCOffset, renderFormattedDateInUserTimezone } =
     useTimeZoneConverter(projectId);
   // router
-  const router = useAppRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { pathname } = useLocation();
   // store hooks
   const { addCycleToFavorites, removeCycleFromFavorites } = useCycle();
   const { allowPermissions } = useUserPermissions();
@@ -172,9 +172,9 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
 
     const query = generateQueryParams(searchParams, ["peekCycle"]);
     if (searchParams.has("peekCycle") && searchParams.get("peekCycle") === cycleId) {
-      router.push(`${pathname}?${query}`);
+      navigate(`${pathname}?${query}`);
     } else {
-      router.push(`${pathname}?${query && `${query}&`}peekCycle=${cycleId}`);
+      navigate(`${pathname}?${query && `${query}&`}peekCycle=${cycleId}`);
     }
   };
 

@@ -6,7 +6,7 @@
 
 import React, { useRef, useState } from "react";
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link, useNavigate } from "react-router";
 import { useParams } from "next/navigation";
 import {
   DeleteOutline,
@@ -35,7 +35,6 @@ import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@plane/
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
@@ -57,7 +56,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   // refs
   const projectCardRef = useRef(null);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug } = useParams();
   // store hooks
   const { getUserDetails } = useMember();
@@ -135,7 +134,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
   const MENU_ITEMS: TContextMenuItem[] = [
     {
       key: "settings",
-      action: () => router.push(`/${workspaceSlug}/settings/projects/${project.id}`),
+      action: () => navigate(`/${workspaceSlug}/settings/projects/${project.id}`),
       title: "Settings",
       icon: SettingsOutline,
       shouldRender: !isArchived && (hasAdminRole || hasMemberRole),
@@ -206,7 +205,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
       )}
       <Link
         ref={projectCardRef}
-        href={`/${workspaceSlug}/projects/${project.id}/issues`}
+        to={`/${workspaceSlug}/projects/${project.id}/issues`}
         onClick={(e) => {
           if (!isMemberOfProject || isArchived) {
             e.preventDefault();
@@ -353,7 +352,7 @@ export const ProjectCard = observer(function ProjectCard(props: Props) {
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
-                      href={`/${workspaceSlug}/settings/projects/${project.id}`}
+                      to={`/${workspaceSlug}/settings/projects/${project.id}`}
                     >
                       <SettingsOutline className="h-3.5 w-3.5" />
                     </Link>

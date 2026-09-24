@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { useParams } from "next/navigation";
 import { useTranslation } from "@plane/i18n";
 // helpers
@@ -21,7 +21,7 @@ export const GlobalDefaultViewListItem = observer(function GlobalDefaultViewList
 
   return (
     <div className="group border-b border-subtle hover:bg-surface-2">
-      <Link href={`/${workspaceSlug}/workspace-views/${view.key}`}>
+      <Link to={`/${workspaceSlug}/workspace-views/${view.key}`}>
         <div className="relative flex h-[52px] w-full items-center justify-between rounded-sm px-5 py-4">
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-4">

@@ -13,7 +13,7 @@ import { BreadcrumbNavigationSearchDropdown, Breadcrumbs } from "@plane/ui";
 import { SwitcherLabel } from "@/components/common/switcher-label";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 import type { TProject } from "@plane/types";
 
 type TProjectBreadcrumbProps = {
@@ -25,7 +25,7 @@ type TProjectBreadcrumbProps = {
 export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TProjectBreadcrumbProps) {
   const { workspaceSlug, projectId, handleOnClick } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { joinedProjectIds, getPartialProjectById } = useProject();
   const currentProjectDetails = getPartialProjectById(projectId);
@@ -70,13 +70,13 @@ export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TPro
             selectedItem={currentProjectDetails.id}
             navigationItems={switcherOptions}
             onChange={(value: string) => {
-              router.push(`/${workspaceSlug}/projects/${value}/issues`);
+              navigate(`/${workspaceSlug}/projects/${value}/issues`);
             }}
             title={currentProjectDetails?.name}
             icon={renderIcon(currentProjectDetails)}
             handleOnClick={() => {
               if (handleOnClick) handleOnClick();
-              else router.push(`/${workspaceSlug}/projects/${currentProjectDetails.id}/issues/`);
+              else navigate(`/${workspaceSlug}/projects/${currentProjectDetails.id}/issues/`);
             }}
             shouldTruncate
           />

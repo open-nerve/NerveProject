@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import Link from "next/link";
+import { Link } from "react-router";
 import { useParams } from "next/navigation";
 import { SettingsOutline, TickOutline, UserPlusOutline } from "@makeplane/propel/icons";
 import { Menu } from "@headlessui/react";
@@ -32,7 +32,7 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
   return (
     <Link
       key={workspace.id}
-      href={`/${workspace.slug}`}
+      to={`/${workspace.slug}`}
       onClick={() => {
         handleWorkspaceNavigation(workspace);
         handleItemClick();
@@ -88,7 +88,7 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
             <div className="mt-2 mb-1 flex gap-2">
               {[EUserPermissions.ADMIN, EUserPermissions.MEMBER].includes(workspace?.role) && (
                 <Link
-                  href={`/${workspace.slug}/settings`}
+                  to={`/${workspace.slug}/settings`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClose();
@@ -101,7 +101,7 @@ const SidebarDropdownItem = observer(function SidebarDropdownItem(props: TProps)
               )}
               {[EUserPermissions.ADMIN].includes(workspace?.role) && (
                 <Link
-                  href={`/${workspace.slug}/settings/members`}
+                  to={`/${workspace.slug}/settings/members`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleClose();

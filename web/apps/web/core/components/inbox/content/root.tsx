@@ -14,7 +14,7 @@ import { ContentWrapper } from "@plane/ui";
 // hooks
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // local imports
 import { InboxIssueActionsHeader } from "./inbox-issue-header";
 import { InboxIssueMainContent } from "./issue-root";
@@ -40,7 +40,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
     embedRemoveCurrentNotification,
   } = props;
   /// router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // states
   const [isSubmitting, setIsSubmitting] = useState<TNameDescriptionLoader>("saved");
   // hooks
@@ -54,7 +54,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
 
   useEffect(() => {
     if (!isIssueAvailable && inboxIssueId && !isNotificationEmbed) {
-      router.replace(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=${currentTab}`);
+      navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=${currentTab}`, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isIssueAvailable, isNotificationEmbed]);

@@ -26,13 +26,13 @@ import { WorkspaceViewQuickActions } from "@/components/workspace/views/quick-ac
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
 import { useIssues } from "@/hooks/store/use-issues";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 export const GlobalIssuesHeader = observer(function GlobalIssuesHeader() {
   // states
   const [createViewModal, setCreateViewModal] = useState(false);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, globalViewId: routerGlobalViewId } = useParams();
   const globalViewId = routerGlobalViewId ? routerGlobalViewId.toString() : undefined;
   // store hooks
@@ -116,7 +116,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader() {
                   selectedItem={globalViewId?.toString() || ""}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
-                    router.push(`/${workspaceSlug}/workspace-views/${value}`);
+                    navigate(`/${workspaceSlug}/workspace-views/${value}`);
                   }}
                   title={viewDetails?.name ?? t(defaultViewDetails?.i18n_label ?? "")}
                   icon={

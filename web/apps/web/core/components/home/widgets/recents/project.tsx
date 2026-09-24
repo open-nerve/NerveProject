@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router";
 // plane types
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import type { TActivityEntityData, TProjectEntityData } from "@plane/types";
@@ -22,7 +22,7 @@ type BlockProps = {
 export function RecentProject(props: BlockProps) {
   const { activity, ref, workspaceSlug } = props;
   // router
-  const router = useRouter();
+  const navigate = useNavigate();
   // derived values
   const projectDetails: TProjectEntityData = activity.entity_data as TProjectEntityData;
 
@@ -78,7 +78,7 @@ export function RecentProject(props: BlockProps) {
       onItemClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        router.push(projectLink);
+        navigate(projectLink);
       }}
     />
   );

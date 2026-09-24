@@ -16,7 +16,7 @@ import type { IProject } from "@plane/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 
 type DeleteProjectModal = {
   isOpen: boolean;
@@ -34,7 +34,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
   // store hooks
   const { deleteProject } = useProject();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
   // form info
   const {
@@ -61,7 +61,7 @@ export function DeleteProjectModal(props: DeleteProjectModal) {
 
     try {
       await deleteProject(workspaceSlug.toString(), project.id);
-      if (projectId && projectId.toString() === project.id) router.push(`/${workspaceSlug}/projects`);
+      if (projectId && projectId.toString() === project.id) navigate(`/${workspaceSlug}/projects`);
       handleClose();
       setToast({
         type: TOAST_TYPE.SUCCESS,

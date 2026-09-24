@@ -18,7 +18,7 @@ import { copyUrlToClipboard, cn } from "@plane/utils";
 import { useCycleMenuItems } from "@/components/common/quick-actions-helper";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useUserPermissions } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // local imports
 import { ArchiveCycleModal } from "./archived-cycles/modal";
 import { CycleDeleteModal } from "./delete-modal";
@@ -35,7 +35,7 @@ type Props = {
 export const CycleQuickActions = observer(function CycleQuickActions(props: Props) {
   const { parentRef, cycleId, projectId, workspaceSlug, customClassName } = props;
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // states
   const [updateModal, setUpdateModal] = useState(false);
   const [archiveCycleModal, setArchiveCycleModal] = useState(false);
@@ -73,7 +73,7 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
           title: t("project_cycles.action.restore.success.title"),
           message: t("project_cycles.action.restore.success.description"),
         });
-        router.push(`/${workspaceSlug}/projects/${projectId}/archives/cycles`);
+        navigate(`/${workspaceSlug}/projects/${projectId}/archives/cycles`);
       })
       .catch(() => {
         setToast({

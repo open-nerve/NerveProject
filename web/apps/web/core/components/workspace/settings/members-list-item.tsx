@@ -19,7 +19,7 @@ import type { RowData } from "@/components/workspace/settings/member-columns";
 import { useMember } from "@/hooks/store/use-member";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions, useUserSettings } from "@/hooks/store/user";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // plane web imports
 import { useMemberColumns } from "@/components/workspace/settings/useMemberColumns";
 
@@ -31,7 +31,7 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
   const { memberDetails } = props;
   const { columns, workspaceSlug, removeMemberModal, setRemoveMemberModal } = useMemberColumns();
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { data: currentUser } = useUser();
   const {
@@ -49,7 +49,7 @@ export const WorkspaceMembersListItem = observer(function WorkspaceMembersListIt
     try {
       await leaveWorkspace(workspaceSlug.toString());
       await fetchCurrentUserSettings();
-      router.push(getWorkspaceRedirectionUrl());
+      navigate(getWorkspaceRedirectionUrl());
     } catch (err: unknown) {
       const error = err as { error?: string };
       setToast({

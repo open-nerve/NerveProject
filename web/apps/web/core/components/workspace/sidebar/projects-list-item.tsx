@@ -11,7 +11,8 @@ import { pointerOutsideOfPreview } from "@atlaskit/pragmatic-drag-and-drop/eleme
 import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview";
 import { attachInstruction, extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { observer } from "mobx-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useNavigate } from "react-router";
 import { createRoot } from "react-dom/client";
 import scrollIntoView from "smooth-scroll-into-view-if-needed";
 import {
@@ -95,7 +96,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
   const dragHandleRef = useRef<HTMLButtonElement | null>(null);
   // router
   const { workspaceSlug, projectId: URLProjectId } = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   // derived values
   const project = getPartialProjectById(projectId);
 
@@ -265,7 +266,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
     if (projectPreferences.navigationMode === "ACCORDION") {
       setIsProjectListOpen(!isProjectListOpen);
     } else {
-      router.push(defaultTabUrl);
+      navigate(defaultTabUrl);
     }
     // close the extended sidebar if it is open
     if (isExtendedProjectSidebarOpened && !isAccordionMode) {
@@ -396,7 +397,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   {isAuthorized && (
                     <CustomMenu.MenuItem
                       onClick={() => {
-                        router.push(`/${workspaceSlug}/projects/${project?.id}/archives/issues`);
+                        navigate(`/${workspaceSlug}/projects/${project?.id}/archives/issues`);
                       }}
                     >
                       <div className="flex cursor-pointer items-center justify-start gap-2">
@@ -407,7 +408,7 @@ export const SidebarProjectsListItem = observer(function SidebarProjectsListItem
                   )}
                   <CustomMenu.MenuItem
                     onClick={() => {
-                      router.push(`/${workspaceSlug}/settings/projects/${project?.id}`);
+                      navigate(`/${workspaceSlug}/settings/projects/${project?.id}`);
                     }}
                   >
                     <div className="flex cursor-pointer items-center justify-start gap-2">

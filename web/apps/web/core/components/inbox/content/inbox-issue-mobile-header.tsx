@@ -28,7 +28,7 @@ import { cn, findHowManyDaysLeft, generateWorkItemLink } from "@plane/utils";
 import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-status";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // store types
 import type { IInboxIssueStore } from "@/store/inbox/inbox-issue.store";
 
@@ -83,7 +83,7 @@ export const InboxIssueActionsMobileHeader = observer(function InboxIssueActions
     isProjectAdmin,
     handleActionWithPermission,
   } = props;
-  const router = useAppRouter();
+  const navigate = useNavigate();
   const { getProjectIdentifierById } = useProject();
 
   const issue = inboxIssue?.issue;
@@ -152,7 +152,7 @@ export const InboxIssueActionsMobileHeader = observer(function InboxIssueActions
               </CustomMenu.MenuItem>
             )}
             {isAcceptedOrDeclined && (
-              <CustomMenu.MenuItem onClick={() => router.push(workItemLink)}>
+              <CustomMenu.MenuItem onClick={() => navigate(workItemLink)}>
                 <div className="flex items-center gap-2">
                   <NewTabOutline width={14} height={14} />
                   Open work item

@@ -5,7 +5,8 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useSearchParams } from "react-router";
 // components
 import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -26,7 +27,7 @@ import { useUserPermissions } from "@/hooks/store/user";
 export const ModulesListView = observer(function ModulesListView() {
   // router
   const { workspaceSlug, projectId } = useParams();
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const peekModule = searchParams.get("peekModule");
   // plane hooks
   const { t } = useTranslation();

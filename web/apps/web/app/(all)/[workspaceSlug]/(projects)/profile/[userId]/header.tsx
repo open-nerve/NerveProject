@@ -6,7 +6,8 @@
 
 // ui
 import { observer } from "mobx-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useNavigate } from "react-router";
 import { ChevronDownOutline, RightSidePaneOutline, YourWorkOutline } from "@makeplane/propel/icons";
 import { PROFILE_TABS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -29,7 +30,7 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
   const { type = undefined, showProfileIssuesFilter } = props;
   // router
   const { workspaceSlug, userId } = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   // store hooks
   const { toggleProfileSidebar, profileSidebarCollapsed } = useAppTheme();
   const { data: currentUser } = useUser();
@@ -93,7 +94,7 @@ export const UserProfileHeader = observer(function UserProfileHeader(props: TUse
               <CustomMenu.MenuItem
                 className="flex items-center gap-2"
                 key={tab.route}
-                onClick={() => router.push(`/${workspaceSlug}/profile/${userId}/${tab.route}`)}
+                onClick={() => navigate(`/${workspaceSlug}/profile/${userId}/${tab.route}`)}
               >
                 <span className="w-full text-tertiary">{t(tab.i18n_label)}</span>
               </CustomMenu.MenuItem>

@@ -20,7 +20,7 @@ import { CustomSelect } from "@plane/ui";
 import { validateWorkspaceName, validateSlug } from "@plane/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
-import { useAppRouter } from "@/hooks/use-app-router";
+import { useNavigate } from "react-router";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 
@@ -57,7 +57,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
   const [slugError, setSlugError] = useState(false);
   const [invalidSlug, setInvalidSlug] = useState(false);
   // router
-  const router = useAppRouter();
+  const navigate = useNavigate();
   // store hooks
   const { createWorkspace } = useWorkspace();
   // form info
@@ -251,7 +251,7 @@ export const CreateWorkspaceForm = observer(function CreateWorkspaceForm(props: 
           {isSubmitting ? t(primaryButtonText.loading) : t(primaryButtonText.default)}
         </Button>
         {!secondaryButton && (
-          <Button variant="secondary" type="button" size="xl" onClick={() => router.back()}>
+          <Button variant="secondary" type="button" size="xl" onClick={() => navigate(-1)}>
             {t("common.go_back")}
           </Button>
         )}
