@@ -62,7 +62,6 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      if (!workspaceSlug || !projectId || !viewId) return;
       updateFilters(
         workspaceSlug.toString(),
         projectId.toString(),
@@ -76,7 +75,6 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!workspaceSlug || !projectId || !viewId) return;
       updateFilters(
         workspaceSlug.toString(),
         projectId.toString(),
@@ -90,7 +88,6 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      if (!workspaceSlug || !projectId || !viewId) return;
       updateFilters(
         workspaceSlug.toString(),
         projectId.toString(),
@@ -102,7 +99,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
     [workspaceSlug, projectId, viewId, updateFilters]
   );
 
-  const viewDetails = viewId ? getViewById(viewId.toString()) : null;
+  const viewDetails = getViewById(viewId.toString());
 
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
@@ -140,7 +137,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
           <Breadcrumbs.Item
             component={
               <BreadcrumbNavigationSearchDropdown
-                selectedItem={viewId?.toString() ?? ""}
+                selectedItem={viewId?.toString()}
                 navigationItems={switcherOptions}
                 onChange={(value: string) => {
                   navigate(`/${workspaceSlug}/projects/${projectId}/views/${value}`);
@@ -181,7 +178,7 @@ export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader
               selectedLayout={activeLayout}
             />
           )}
-          {viewId && <WorkItemFiltersToggle entityType={EIssuesStoreType.PROJECT_VIEW} entityId={viewId} />}
+          <WorkItemFiltersToggle entityType={EIssuesStoreType.PROJECT_VIEW} entityId={viewId} />
           {!viewDetails.is_locked && (
             <FiltersDropdown title="Display" placement="bottom-end">
               <DisplayFiltersSelection

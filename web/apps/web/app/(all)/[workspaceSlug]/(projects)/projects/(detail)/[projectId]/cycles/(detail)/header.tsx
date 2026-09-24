@@ -82,7 +82,6 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      if (!workspaceSlug || !projectId) return;
       updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, { layout: layout }, cycleId);
     },
     [workspaceSlug, projectId, cycleId, updateFilters]
@@ -90,7 +89,6 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!workspaceSlug || !projectId) return;
       updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter, cycleId);
     },
     [workspaceSlug, projectId, cycleId, updateFilters]
@@ -98,14 +96,13 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      if (!workspaceSlug || !projectId) return;
       updateFilters(workspaceSlug, projectId, EIssueFilterType.DISPLAY_PROPERTIES, property, cycleId);
     },
     [workspaceSlug, projectId, cycleId, updateFilters]
   );
 
   // derived values
-  const cycleDetails = cycleId ? getCycleById(cycleId.toString()) : undefined;
+  const cycleDetails = getCycleById(cycleId.toString());
   const isCompletedCycle = cycleDetails?.status?.toLocaleLowerCase() === "completed";
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],

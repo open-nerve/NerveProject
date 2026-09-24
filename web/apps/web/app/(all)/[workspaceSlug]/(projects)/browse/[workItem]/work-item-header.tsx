@@ -39,7 +39,7 @@ export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader(pro
   const projectId = issueDetails ? issueDetails?.project_id : undefined;
   const projectDetails = projectId ? getProjectById(projectId?.toString()) : undefined;
 
-  if (!workspaceSlug || !projectId || !issueId) return null;
+  if (!projectId || !issueId) return null;
   return (
     <Header>
       <Header.LeftItem>

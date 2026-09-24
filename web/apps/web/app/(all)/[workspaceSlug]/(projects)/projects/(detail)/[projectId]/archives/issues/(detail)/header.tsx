@@ -35,11 +35,8 @@ export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchiv
   // store hooks
   const { currentProjectDetails, loader } = useProject();
 
-  const { data: issueDetails } = useSWR(
-    workspaceSlug && projectId && archivedIssueId ? ISSUE_DETAILS(archivedIssueId.toString()) : null,
-    workspaceSlug && projectId && archivedIssueId
-      ? () => issueService.retrieve(workspaceSlug.toString(), projectId.toString(), archivedIssueId.toString())
-      : null
+  const { data: issueDetails } = useSWR(ISSUE_DETAILS(archivedIssueId.toString()), () =>
+    issueService.retrieve(workspaceSlug.toString(), projectId.toString(), archivedIssueId.toString())
   );
 
   return (

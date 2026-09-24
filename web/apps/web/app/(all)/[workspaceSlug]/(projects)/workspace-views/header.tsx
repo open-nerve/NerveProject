@@ -52,7 +52,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!workspaceSlug || !globalViewId) return;
+      if (!globalViewId) return;
       updateFilters(
         workspaceSlug.toString(),
         undefined,
@@ -66,7 +66,7 @@ export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TP
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      if (!workspaceSlug || !globalViewId) return;
+      if (!globalViewId) return;
       updateFilters(workspaceSlug.toString(), undefined, EIssueFilterType.DISPLAY_PROPERTIES, property, globalViewId);
     },
     [workspaceSlug, updateFilters, globalViewId]

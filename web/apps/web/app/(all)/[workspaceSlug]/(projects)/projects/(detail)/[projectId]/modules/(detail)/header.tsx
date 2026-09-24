@@ -75,7 +75,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
   // derived values
   const isSidebarCollapsed = storedValue ? storedValue === "true" : false;
   const activeLayout = issueFilters?.displayFilters?.layout;
-  const moduleDetails = moduleId ? getModuleById(moduleId) : undefined;
+  const moduleDetails = getModuleById(moduleId);
   const canUserCreateIssue = allowPermissions(
     [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
     EUserPermissionsLevel.PROJECT
@@ -88,7 +88,6 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
 
   const handleLayoutChange = useCallback(
     (layout: EIssueLayoutTypes) => {
-      if (!projectId) return;
       updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_FILTERS, { layout: layout });
     },
     [projectId, updateFilters]
@@ -96,7 +95,6 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
 
   const handleDisplayFilters = useCallback(
     (updatedDisplayFilter: Partial<IIssueDisplayFilterOptions>) => {
-      if (!projectId) return;
       updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_FILTERS, updatedDisplayFilter);
     },
     [projectId, updateFilters]
@@ -104,7 +102,6 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
 
   const handleDisplayProperties = useCallback(
     (property: Partial<IIssueDisplayProperties>) => {
-      if (!projectId) return;
       updateFilters(projectId.toString(), EIssueFilterType.DISPLAY_PROPERTIES, property);
     },
     [projectId, updateFilters]
@@ -142,7 +139,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
             <Breadcrumbs.Item
               component={
                 <BreadcrumbNavigationSearchDropdown
-                  selectedItem={moduleId?.toString() ?? ""}
+                  selectedItem={moduleId?.toString()}
                   navigationItems={switcherOptions}
                   onChange={(value: string) => {
                     navigate(`/${workspaceSlug}/projects/${projectId}/modules/${value}`);
@@ -194,7 +191,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
               activeLayout={activeLayout}
             />
           </div>
-          {moduleId && <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />}
+          <WorkItemFiltersToggle entityType={EIssuesStoreType.MODULE} entityId={moduleId} />
           <FiltersDropdown
             title="Display"
             placement="bottom-end"
@@ -236,15 +233,13 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
             "bg-accent-subtle text-accent-primary": !isSidebarCollapsed,
           })}
         />
-        {moduleId && (
-          <ModuleQuickActions
-            parentRef={parentRef}
-            moduleId={moduleId}
-            projectId={projectId.toString()}
-            workspaceSlug={workspaceSlug.toString()}
-            customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
-          />
-        )}
+        <ModuleQuickActions
+          parentRef={parentRef}
+          moduleId={moduleId}
+          projectId={projectId.toString()}
+          workspaceSlug={workspaceSlug.toString()}
+          customClassName="flex-shrink-0 flex items-center justify-center bg-layer-1/70 rounded-sm size-[26px]"
+        />
       </Header.RightItem>
     </Header>
   );
