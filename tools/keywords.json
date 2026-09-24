@@ -17,7 +17,11 @@
           "web/apps/web/public/sw.js.map",
           "web/apps/web/public/workbox-9f2f79cf.js"
         ],
-        "miss": ["web/apps/web/public/manifest.json", "web/apps/web/public/swagger.js", "deploy/compose.dev.yaml"]
+        "miss": [
+          "web/apps/web/public/site.webmanifest.json",
+          "web/apps/web/public/swagger.js",
+          "deploy/compose.dev.yaml"
+        ]
       }
     },
     {
