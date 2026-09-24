@@ -31,7 +31,7 @@ export function CalloutBlockLogoSelector(props: Props) {
       name: blockAttributes["data-icon-name"],
     },
     emoji: {
-      value: blockAttributes["data-emoji-unicode"]?.toString(),
+      value: blockAttributes["data-emoji-unicode"],
       url: blockAttributes["data-emoji-url"],
     },
   };
