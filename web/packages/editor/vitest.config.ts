@@ -26,7 +26,8 @@ export default defineConfig({
         // is-emoji-supported ships ESM under dist/esm/ without "type": "module", so vitest runs it through
         // Vite, which loads its source map and warns that the sources it names were not published. Node
         // loads the file itself. (prosemirror-codemark has the same maps, but its ESM build imports
-        // "./plugin" without an extension, which only Vite resolves, so it stays inlined.)
+        // "./plugin" without an extension, which only Vite resolves, so it stays inlined; its patch in
+        // patches/ drops the comments that point to the maps.)
         external: [/\/is-emoji-supported\//],
       },
     },

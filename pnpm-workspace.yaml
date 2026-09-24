@@ -173,6 +173,10 @@ minimumReleaseAgeExclude:
   - "@makeplane/propel@0.3.0"
 
 patchedDependencies:
+  # prosemirror-codemark 0.4.2 is the latest release (2022). Every JS file of its build ends with a sourceMappingURL
+  # comment whose map names ../../src/*.ts, which the package does not publish, so Vite warns that the sources are
+  # missing when the editor's tests load it. The patch drops the comments.
+  prosemirror-codemark@0.4.2: patches/prosemirror-codemark@0.4.2.patch
   react-color@2.19.3: patches/react-color@2.19.3.patch
 
 peerDependencyRules:

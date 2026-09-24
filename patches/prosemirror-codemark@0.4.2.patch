@@ -1,0 +1,116 @@
+diff --git a/dist/cjs/actions.js b/dist/cjs/actions.js
+index 6fd88b4e9ab47b8a295e5dfd13dc5256e38010c6..21038032ec5f98cc26195acea5ef733c33aca02f 100644
+--- a/dist/cjs/actions.js
++++ b/dist/cjs/actions.js
+@@ -221,4 +221,3 @@ function stepOutside(state, markType) {
+     return null;
+ }
+ exports.stepOutside = stepOutside;
+-//# sourceMappingURL=actions.js.map
+\ No newline at end of file
+diff --git a/dist/cjs/index.js b/dist/cjs/index.js
+index f5cddc6bc67588ab4ad5be1be706280fb940025a..c7bff6c13c979e766ba7e93eb0a9a755213bcc82 100644
+--- a/dist/cjs/index.js
++++ b/dist/cjs/index.js
+@@ -17,4 +17,3 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ const plugin_1 = require("./plugin");
+ __exportStar(require("./types"), exports);
+ exports.default = plugin_1.codemark;
+-//# sourceMappingURL=index.js.map
+\ No newline at end of file
+diff --git a/dist/cjs/inputRules.js b/dist/cjs/inputRules.js
+index 72859ad77cf7cb592ad5840ab89823f60d95522b..80622ef6e8d2df8b01ebce4b71d41dc0b05ef835 100644
+--- a/dist/cjs/inputRules.js
++++ b/dist/cjs/inputRules.js
+@@ -101,4 +101,3 @@ function createInputRule(cursorPlugin, opts) {
+     return plugin;
+ }
+ exports.createInputRule = createInputRule;
+-//# sourceMappingURL=inputRules.js.map
+\ No newline at end of file
+diff --git a/dist/cjs/plugin.js b/dist/cjs/plugin.js
+index 8cd0b87fe661b8e8e4da9bfc59b8d5ab1c0fcffd..d472219d664b7ff0f5bed8ed15782459425bfcdb 100644
+--- a/dist/cjs/plugin.js
++++ b/dist/cjs/plugin.js
+@@ -111,4 +111,3 @@ function codemark(opts) {
+     return rules;
+ }
+ exports.codemark = codemark;
+-//# sourceMappingURL=plugin.js.map
+\ No newline at end of file
+diff --git a/dist/cjs/types.js b/dist/cjs/types.js
+index 11e638d1ee44ae0dcb1feb5aef676ea74a7d4df3..c8ad2e549bdc6801e0d1c80b0308d4b9bd4985ce 100644
+--- a/dist/cjs/types.js
++++ b/dist/cjs/types.js
+@@ -1,3 +1,2 @@
+ "use strict";
+ Object.defineProperty(exports, "__esModule", { value: true });
+-//# sourceMappingURL=types.js.map
+\ No newline at end of file
+diff --git a/dist/cjs/utils.js b/dist/cjs/utils.js
+index 30df1c12cd645f6b5c1ac61e64219e1140ec1362..cb993fd88462684be4da72dbd925f7e354a9f2b3 100644
+--- a/dist/cjs/utils.js
++++ b/dist/cjs/utils.js
+@@ -16,4 +16,3 @@ function safeResolve(doc, pos) {
+     return doc.resolve(Math.min(Math.max(1, pos), doc.nodeSize - 2));
+ }
+ exports.safeResolve = safeResolve;
+-//# sourceMappingURL=utils.js.map
+\ No newline at end of file
+diff --git a/dist/esm/actions.js b/dist/esm/actions.js
+index 4a782e7698c8fe1b096d424085ca9073315b513d..c57d4b8fcf2215a77b6e94a3386749fd83f01221 100644
+--- a/dist/esm/actions.js
++++ b/dist/esm/actions.js
+@@ -211,4 +211,3 @@ export function stepOutside(state, markType) {
+         return state.tr.removeStoredMark(markType);
+     return null;
+ }
+-//# sourceMappingURL=actions.js.map
+\ No newline at end of file
+diff --git a/dist/esm/index.js b/dist/esm/index.js
+index a42a273cd5f845dc03a401e6df80667698dd37a8..2f2e72f1b6739a4c305d946207922fc105cdeb72 100644
+--- a/dist/esm/index.js
++++ b/dist/esm/index.js
+@@ -1,4 +1,3 @@
+ import { codemark } from './plugin';
+ export * from './types';
+ export default codemark;
+-//# sourceMappingURL=index.js.map
+\ No newline at end of file
+diff --git a/dist/esm/inputRules.js b/dist/esm/inputRules.js
+index d68c908464537568fd7e0fd43bf117c010a1a7ff..1825540c1a356fab3d95c1d8cb80328f4e79ed2e 100644
+--- a/dist/esm/inputRules.js
++++ b/dist/esm/inputRules.js
+@@ -97,4 +97,3 @@ export function createInputRule(cursorPlugin, opts) {
+     });
+     return plugin;
+ }
+-//# sourceMappingURL=inputRules.js.map
+\ No newline at end of file
+diff --git a/dist/esm/plugin.js b/dist/esm/plugin.js
+index c530022411403e560e55980f1d370f5c4862f0cb..ad671f460d15be6a75102c3e64e33fc965e649aa 100644
+--- a/dist/esm/plugin.js
++++ b/dist/esm/plugin.js
+@@ -106,4 +106,3 @@ export function codemark(opts) {
+     const rules = [cursorPlugin, inputRule];
+     return rules;
+ }
+-//# sourceMappingURL=plugin.js.map
+\ No newline at end of file
+diff --git a/dist/esm/types.js b/dist/esm/types.js
+index 718fd38ae40c67ea23b242517cf9919f602c5a3e..cb0ff5c3b541f646105198ee23ac0fc3d805023e 100644
+--- a/dist/esm/types.js
++++ b/dist/esm/types.js
+@@ -1,2 +1 @@
+ export {};
+-//# sourceMappingURL=types.js.map
+\ No newline at end of file
+diff --git a/dist/esm/utils.js b/dist/esm/utils.js
+index 8e699943b602b28607dfd3e123cdabd4f7d6585b..42b09dc28c74b29304266af203701e9206dbe8ea 100644
+--- a/dist/esm/utils.js
++++ b/dist/esm/utils.js
+@@ -11,4 +11,3 @@ export function getMarkType(view, opts) {
+ export function safeResolve(doc, pos) {
+     return doc.resolve(Math.min(Math.max(1, pos), doc.nodeSize - 2));
+ }
+-//# sourceMappingURL=utils.js.map

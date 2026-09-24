@@ -316,6 +316,7 @@ overrides:
   browserslist: '>=4.28.7'
 
 patchedDependencies:
+  prosemirror-codemark@0.4.2: 5ac87877c32930638653b1f89c162db590c3f2f4bb1e6fc20376a762d1353e64
   react-color@2.19.3: 311b81530f5338988f8b57718f24870a7550637159d8360d69f668cba2f2033f
 
 importers:
@@ -663,7 +664,7 @@ importers:
         version: 0.469.0(react@19.2.8)
       prosemirror-codemark:
         specifier: 'catalog:'
-        version: 0.4.2(prosemirror-inputrules@1.5.0)(prosemirror-model@1.25.3)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0)
+        version: 0.4.2(patch_hash=5ac87877c32930638653b1f89c162db590c3f2f4bb1e6fc20376a762d1353e64)(prosemirror-inputrules@1.5.0)(prosemirror-model@1.25.3)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0)
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -9641,7 +9642,7 @@ snapshots:
     dependencies:
       prosemirror-transform: 1.10.4
 
-  prosemirror-codemark@0.4.2(prosemirror-inputrules@1.5.0)(prosemirror-model@1.25.3)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0):
+  prosemirror-codemark@0.4.2(patch_hash=5ac87877c32930638653b1f89c162db590c3f2f4bb1e6fc20376a762d1353e64)(prosemirror-inputrules@1.5.0)(prosemirror-model@1.25.3)(prosemirror-state@1.4.3)(prosemirror-view@1.40.0):
     dependencies:
       prosemirror-inputrules: 1.5.0
       prosemirror-model: 1.25.3
