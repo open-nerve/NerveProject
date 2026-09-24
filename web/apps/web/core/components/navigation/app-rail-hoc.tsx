@@ -25,7 +25,7 @@ export function withDockItems<P extends WithDockItemsProps>(WrappedComponent: Re
       {
         label: "Projects",
         icon: <PlaneNewIcon className="size-5" />,
-        href: `/${workspaceSlug}/`,
+        href: `/${workspaceSlug}`,
         isActive: isProjectsPath && !isNotificationsPath,
         shouldRender: true,
       },

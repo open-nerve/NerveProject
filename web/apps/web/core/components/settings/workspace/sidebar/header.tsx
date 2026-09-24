@@ -39,7 +39,7 @@ export const WorkspaceSettingsSidebarHeader = observer(function WorkspaceSetting
           variant="ghost"
           size="base"
           icon={ArrowNarrowLeftOutline}
-          onClick={() => navigate(`/${currentWorkspace?.slug}/`)}
+          onClick={() => navigate(`/${currentWorkspace?.slug}`)}
         />
         <p>Workspace settings</p>
       </div>

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams, useLocation } from "react-router";
+import { matchPath, useParams, useLocation } from "react-router";
 // plane imports
 import {
   EUserPermissionsLevel,
@@ -55,15 +55,16 @@ export const ProjectSettingsSidebarItemCategories = observer(function ProjectSet
             <div className="flex flex-col">
               {accessibleItems.map((item) => {
                 const isItemActive =
-                  item.href === ""
-                    ? pathname === `/${workspaceSlug}/settings/projects/${projectId}${item.href}/`
-                    : new RegExp(`^/${workspaceSlug}/settings/projects/${projectId}${item.href}/`).test(pathname);
+                  matchPath(
+                    { path: `/:workspaceSlug/settings/projects/:projectId${item.href}`, end: item.href === "" },
+                    pathname
+                  ) !== null;
 
                 return (
                   <SettingsSidebarItem
                     key={item.key}
                     as="link"
-                    href={`/${workspaceSlug}/settings/projects/${projectId}${item.href}/`}
+                    href={`/${workspaceSlug}/settings/projects/${projectId}${item.href}`}
                     isActive={isItemActive}
                     icon={PROJECT_SETTINGS_ICONS[item.key]}
                     label={t(item.i18n_label)}

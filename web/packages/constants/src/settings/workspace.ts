@@ -29,21 +29,18 @@ export const WORKSPACE_SETTINGS: Record<TWorkspaceSettingsTabs, TWorkspaceSettin
     i18n_label: "workspace_settings.settings.general.title",
     href: `/settings`,
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/settings/`,
   },
   members: {
     key: "members",
     i18n_label: "workspace_settings.settings.members.title",
     href: `/settings/members`,
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/settings/members/`,
   },
   webhooks: {
     key: "webhooks",
     i18n_label: "workspace_settings.settings.webhooks.title",
     href: `/settings/webhooks`,
     access: [EUserWorkspaceRoles.ADMIN],
-    highlight: (pathname: string, baseUrl: string) => pathname === `${baseUrl}/settings/webhooks/`,
   },
 };
 

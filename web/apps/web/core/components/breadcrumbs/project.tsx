@@ -76,7 +76,7 @@ export const ProjectBreadcrumb = observer(function ProjectBreadcrumb(props: TPro
             icon={renderIcon(currentProjectDetails)}
             handleOnClick={() => {
               if (handleOnClick) handleOnClick();
-              else navigate(`/${workspaceSlug}/projects/${currentProjectDetails.id}/issues/`);
+              else navigate(`/${workspaceSlug}/projects/${currentProjectDetails.id}/issues`);
             }}
             shouldTruncate
           />

@@ -77,7 +77,7 @@ function ArchivedIssueDetailsPage({ params }: Route.ComponentProps) {
             actions={
               <Button
                 variant="secondary"
-                onClick={() => navigate(`/${workspaceSlug}/projects/${projectId}/archives/issues/`)}
+                onClick={() => navigate(`/${workspaceSlug}/projects/${projectId}/archives/issues`)}
               >
                 {t("issue.archive.go_to_archives")}
               </Button>

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useParams, useLocation } from "react-router";
+import { useMatch, useParams } from "react-router";
 
 /**
  * Custom hook to detect different workspace paths
@@ -12,11 +12,10 @@ import { useParams, useLocation } from "react-router";
  */
 export const useWorkspacePaths = () => {
   const { workspaceSlug } = useParams();
-  const { pathname } = useLocation();
 
-  const isSettingsPath = pathname.includes(`/${workspaceSlug}/settings`);
-  const isProjectsPath = pathname.includes(`/${workspaceSlug}/`) && !isSettingsPath;
-  const isNotificationsPath = pathname.includes(`/${workspaceSlug}/notifications`);
+  const isSettingsPath = useMatch({ path: "/:workspaceSlug/settings", end: false }) !== null;
+  const isProjectsPath = workspaceSlug !== undefined && !isSettingsPath;
+  const isNotificationsPath = useMatch("/:workspaceSlug/notifications") !== null;
 
   return {
     isSettingsPath,

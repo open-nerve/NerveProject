@@ -175,12 +175,12 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
                 </Link>
               )}
               {allWorkspaces?.length > 0 && (
-                <Link to="/settings/profile/general/" className={cn(getButtonStyling("secondary", "base"))}>
+                <Link to="/settings/profile/general" className={cn(getButtonStyling("secondary", "base"))}>
                   Visit Profile
                 </Link>
               )}
               {allWorkspaces && allWorkspaces.length === 0 && (
-                <Link to="/create-workspace/" className={cn(getButtonStyling("secondary", "base"))}>
+                <Link to="/create-workspace" className={cn(getButtonStyling("secondary", "base"))}>
                   Create new workspace
                 </Link>
               )}

@@ -133,7 +133,7 @@ export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TPro
               component={
                 <BreadcrumbLink
                   label="Cycles"
-                  href={`/${workspaceSlug}/projects/${projectId}/cycles/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/cycles`}
                   icon={<CyclesOutline className="h-4 w-4 text-tertiary" />}
                 />
               }

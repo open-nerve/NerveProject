@@ -56,7 +56,7 @@ export const ModulesListHeader = observer(function ModulesListHeader(props: TPro
               component={
                 <BreadcrumbLink
                   label="Modules"
-                  href={`/${workspaceSlug}/projects/${projectId}/modules/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/modules`}
                   icon={<ModuleOutline className="h-4 w-4 text-tertiary" />}
                   isLast
                 />

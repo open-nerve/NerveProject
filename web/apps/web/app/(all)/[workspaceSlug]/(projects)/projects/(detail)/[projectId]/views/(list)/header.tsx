@@ -39,7 +39,7 @@ export const ProjectViewsHeader = observer(function ProjectViewsHeader(props: TP
               component={
                 <BreadcrumbLink
                   label="Views"
-                  href={`/${workspaceSlug}/projects/${projectId}/views/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/views`}
                   icon={<ViewsOutline className="h-4 w-4 text-tertiary" />}
                   isLast
                 />

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams, useLocation } from "react-router";
+import { matchPath, useParams, useLocation } from "react-router";
 // plane imports
 import {
   EUserPermissionsLevel,
@@ -49,9 +49,7 @@ export const WorkspaceSettingsSidebarItemCategories = observer(function Workspac
             <div className="flex flex-col">
               {accessibleItems.map((item) => {
                 const isItemActive =
-                  item.href === "/settings"
-                    ? pathname === `/${workspaceSlug}${item.href}/`
-                    : new RegExp(`^/${workspaceSlug}${item.href}/`).test(pathname);
+                  matchPath({ path: `/:workspaceSlug${item.href}`, end: item.href === "/settings" }, pathname) !== null;
 
                 return (
                   <SettingsSidebarItem

@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-import { useParams, useLocation } from "react-router";
+import { matchPath, useParams, useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
@@ -147,7 +147,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
     localStorage.setItem("isAllProjectsListOpen", isOpen.toString());
   };
   useEffect(() => {
-    if (pathname.includes("projects")) {
+    if (matchPath({ path: "/:workspaceSlug/projects", end: false }, pathname)) {
       setIsAllProjectsListOpen(true);
       localStorage.setItem("isAllProjectsListOpen", "true");
     }

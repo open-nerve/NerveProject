@@ -139,30 +139,29 @@ export interface IWorkspaceSidebarNavigationItem {
   labelTranslationKey: string;
   href: string;
   access: EUserWorkspaceRoles[];
-  highlight: (pathname: string, url: string) => boolean;
+  /** Current only on this exact address, not below it. */
+  end?: boolean;
 }
 
 export const WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS: IWorkspaceSidebarNavigationItem[] = [
   {
     key: "home",
     labelTranslationKey: "home.title",
-    href: `/`,
+    href: "",
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
-    highlight: (pathname: string, url: string) => pathname === url,
+    end: true,
   },
   {
     key: "your_work",
     labelTranslationKey: "your_work",
-    href: `/profile/`,
+    href: "/profile",
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    highlight: (pathname: string, url: string) => pathname.includes(url),
   },
   {
     key: "drafts",
     labelTranslationKey: "drafts",
-    href: `/drafts/`,
+    href: "/drafts",
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    highlight: (pathname: string, url: string) => pathname.includes(url),
   },
 ];
 
@@ -170,23 +169,21 @@ export const WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS: IWorkspaceSidebarNavi
   {
     key: "projects",
     labelTranslationKey: "projects",
-    href: `/projects/`,
+    href: "/projects",
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
-    highlight: (pathname: string, url: string) => pathname === url,
+    end: true,
   },
   {
     key: "views",
     labelTranslationKey: "views",
-    href: `/workspace-views/all-issues/`,
+    href: "/workspace-views/all-issues",
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST],
-    highlight: (pathname: string, url: string) => pathname.includes(url),
   },
   {
     key: "archives",
     labelTranslationKey: "archives",
-    href: `/projects/archives/`,
+    href: "/projects/archives",
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
-    highlight: (pathname: string, url: string) => pathname.includes(url),
   },
 ];
 

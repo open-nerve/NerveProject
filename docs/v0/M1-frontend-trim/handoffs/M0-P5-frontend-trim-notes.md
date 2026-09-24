@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M0/P5
 to: M1
 created: 2026-09-22
@@ -40,5 +40,12 @@ created: 2026-09-22
 7. React #418 已修复（spec 2.11）。
 8. 两条构建警告已消除（spec 2.10）。
 9. `make web-dev` 改为 `turbo run dev --filter=web... --concurrency=12`，同时监视各包，已在运行中的页面上核对（spec 2.13）。
+
+## 处理结果（M1/P4）
+
+状态改为 `closed`：剩下的两项已在 M1/P4 处理（[P4 spec](../specs/P4-router-native.md)）：
+
+1. `.env.example` 已删除；`vite.config.ts` 不再用 dotenv 加载 `.env`，也不再 `define` `process.env`；dotenv 从 web 的开发依赖和 catalog 中删除；`turbo.json` 的 `globalEnv` 只留 `NODE_ENV`。各包不再读取 `process.env` 和 `VITE_*` 变量（i18n 只用 Vite 按构建模式给出的常量 `import.meta.env.DEV`），接口一律用相对路径。关键词守卫的 `frontend-env` 规则看住这一点。
+2. 深层路径的结尾 `/` 不再需要，已随垫片删除：`app/layout.tsx` 不再把地址 308 到带 `/` 的形式；应用内部生成的地址一律不带结尾 `/`，"当前是哪一项"的判断对带和不带 `/` 的地址给出相同的结果（M1 设计 4.1）。
 
 来源：[M0/P5 评审记录](../../M0-foundation/reviews/P5-web-import-review.md)。

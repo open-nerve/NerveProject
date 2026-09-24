@@ -78,7 +78,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
 
   useEffect(() => {
     if (data?.is_intake) {
-      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake/?currentTab=open&inboxIssueId=${data?.id}`);
+      navigate(`/${workspaceSlug}/projects/${data.project_id}/intake?currentTab=open&inboxIssueId=${data?.id}`);
     }
   }, [workspaceSlug, data, navigate]);
 
@@ -90,7 +90,7 @@ export const IssueDetailsPage = observer(function IssueDetailsPage({ params }: R
         description={t("issue.empty_state.issue_detail.description")}
         primaryButton={{
           text: t("issue.empty_state.issue_detail.primary_button.text"),
-          onClick: () => navigate(`/${workspaceSlug}/workspace-views/all-issues/`),
+          onClick: () => navigate(`/${workspaceSlug}/workspace-views/all-issues`),
         }}
       />
     );

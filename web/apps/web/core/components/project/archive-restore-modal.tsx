@@ -49,7 +49,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
           message: `${projectDetails.name} has been archived successfully`,
         });
         onClose();
-        navigate(`/${workspaceSlug}/projects/`);
+        navigate(`/${workspaceSlug}/projects`);
         return;
       })
       .catch(() =>
@@ -72,7 +72,7 @@ export function ArchiveRestoreProjectModal(props: Props) {
           message: `You can find ${projectDetails.name} in your projects.`,
         });
         onClose();
-        navigate(`/${workspaceSlug}/projects/`);
+        navigate(`/${workspaceSlug}/projects`);
         return;
       })
       .catch(() =>

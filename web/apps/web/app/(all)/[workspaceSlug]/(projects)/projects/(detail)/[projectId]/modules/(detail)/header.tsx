@@ -129,7 +129,7 @@ export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TP
               component={
                 <BreadcrumbLink
                   label="Modules"
-                  href={`/${workspaceSlug}/projects/${projectId}/modules/`}
+                  href={`/${workspaceSlug}/projects/${projectId}/modules`}
                   icon={<ModuleOutline className="h-4 w-4 text-tertiary" />}
                   isLast
                 />

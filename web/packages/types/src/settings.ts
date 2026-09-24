@@ -16,7 +16,6 @@ export type TWorkspaceSettingsItem = {
   i18n_label: string;
   href: string;
   access: EUserWorkspaceRoles[];
-  highlight: (pathname: string, baseUrl: string) => boolean;
 };
 
 export type TProjectSettingsTabs =
@@ -34,5 +33,4 @@ export type TProjectSettingsItem = {
   i18n_label: string;
   href: string;
   access: EUserProjectRoles[];
-  highlight: (pathname: string, baseUrl: string) => boolean;
 };

@@ -6,7 +6,7 @@
 
 import React, { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
-import { useParams, Link, useLocation } from "react-router";
+import { matchPath, useParams, Link, useLocation } from "react-router";
 import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
@@ -135,7 +135,7 @@ export const ProjectNavigation = observer(function ProjectNavigation(props: TPro
       // is active
       const isWorkItemActive = item.key === "work_items" && workItemCondition;
       // pathname condition
-      const isPathnameActive = pathname.includes(item.href);
+      const isPathnameActive = matchPath({ path: item.href, end: false }, pathname) !== null;
       // return
       return isWorkItemActive || isPathnameActive;
     },

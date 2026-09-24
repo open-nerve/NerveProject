@@ -306,7 +306,7 @@ export const generateWorkItemLink = ({
   isArchived?: boolean;
 }): string => {
   const archiveIssueLink = `/${workspaceSlug}/projects/${projectId}/archives/issues/${issueId}`;
-  const workItemLink = `/${workspaceSlug}/browse/${projectIdentifier}-${sequenceId}/`;
+  const workItemLink = `/${workspaceSlug}/browse/${projectIdentifier}-${sequenceId}`;
 
   return isArchived ? archiveIssueLink : workItemLink;
 };

@@ -151,7 +151,7 @@ export const InboxIssueCreateRoot = observer(function InboxIssueCreateRoot(props
           setUploadedAssetIds([]);
         }
         if (!createMore) {
-          navigate(`/${workspaceSlug}/projects/${projectId}/intake/?currentTab=open&inboxIssueId=${res?.issue?.id}`);
+          navigate(`/${workspaceSlug}/projects/${projectId}/intake?currentTab=open&inboxIssueId=${res?.issue?.id}`);
           handleModalClose();
         } else {
           descriptionEditorRef?.current?.clearEditor();

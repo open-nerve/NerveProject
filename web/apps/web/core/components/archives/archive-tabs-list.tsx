@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams, Link, useLocation } from "react-router";
+import { NavLink, useParams } from "react-router";
 // types
 import type { IProject } from "@plane/types";
 // hooks
@@ -36,7 +36,6 @@ const ARCHIVES_TAB_LIST: {
 export const ArchiveTabsList = observer(function ArchiveTabsList() {
   // router
   const { workspaceSlug, projectId } = useParams();
-  const { pathname } = useLocation();
   // store hooks
   const { getProjectById } = useProject();
 
@@ -50,17 +49,19 @@ export const ArchiveTabsList = observer(function ArchiveTabsList() {
       {ARCHIVES_TAB_LIST.map(
         (tab) =>
           tab.shouldRender(projectDetails) && (
-            <Link key={tab.key} to={`/${workspaceSlug}/projects/${projectId}/archives/${tab.key}`}>
-              <span
-                className={`flex min-w-min flex-shrink-0 border-b-2 px-4 py-4 text-13 font-medium whitespace-nowrap outline-none ${
-                  pathname.includes(tab.key)
-                    ? "border-accent-strong text-accent-primary"
-                    : "border-transparent text-tertiary hover:border-subtle hover:text-placeholder"
-                }`}
-              >
-                {tab.label}
-              </span>
-            </Link>
+            <NavLink key={tab.key} to={`/${workspaceSlug}/projects/${projectId}/archives/${tab.key}`}>
+              {({ isActive }) => (
+                <span
+                  className={`flex min-w-min flex-shrink-0 border-b-2 px-4 py-4 text-13 font-medium whitespace-nowrap outline-none ${
+                    isActive
+                      ? "border-accent-strong text-accent-primary"
+                      : "border-transparent text-tertiary hover:border-subtle hover:text-placeholder"
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              )}
+            </NavLink>
           )
       )}
     </>

@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useMemo } from "react";
+import { matchPath } from "react-router";
 import type { TIssue } from "@plane/types";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
 
@@ -24,8 +25,8 @@ export const useActiveTab = ({ navigationItems, pathname, workItemId, workItem, 
       const workItemCondition = workItemId && workItem && workItem?.project_id === projectId;
       // Is active
       const isWorkItemActive = item.key === "work_items" && workItemCondition;
-      // Pathname condition - use exact match or startsWith for better accuracy
-      const isPathnameActive = pathname === item.href || pathname.startsWith(item.href + "/");
+      // Pathname condition: the item's address or anything below it
+      const isPathnameActive = matchPath({ path: item.href, end: false }, pathname) !== null;
       // Return
       return isWorkItemActive || isPathnameActive;
     },

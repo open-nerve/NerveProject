@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams, useLocation } from "react-router";
+import { matchPath, useParams, useLocation } from "react-router";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@plane/types";
@@ -41,7 +41,7 @@ export const ProjectRoot = observer(function ProjectRoot() {
     ? `${currentWorkspace?.name} - ${t("workspace_projects.label", { count: 2 })}`
     : undefined;
 
-  const isArchived = pathname.includes("/archives");
+  const isArchived = matchPath("/:workspaceSlug/projects/archives", pathname) !== null;
 
   const allowedDisplayFilters =
     currentWorkspaceAppliedDisplayFilters?.filter((filter) => filter !== "archived_projects") ?? [];

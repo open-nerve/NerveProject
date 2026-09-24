@@ -6,7 +6,7 @@
 
 // components
 import { observer } from "mobx-react";
-import { useParams, useLocation } from "react-router";
+import { useMatch, useParams } from "react-router";
 import { cn } from "@plane/utils";
 import { TopNavPowerK } from "@/components/navigation";
 import { HelpMenuRoot } from "@/components/workspace/sidebar/help-section/root";
@@ -24,7 +24,7 @@ import { StarUsOnGitHubLink } from "@/app/(all)/[workspaceSlug]/(projects)/star-
 export const TopNavigationRoot = observer(function TopNavigationRoot() {
   // router
   const { workspaceSlug } = useParams();
-  const { pathname } = useLocation();
+  const isNotificationsPath = useMatch("/:workspaceSlug/notifications") !== null;
 
   // store hooks
   const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();
@@ -64,7 +64,7 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
           <AppSidebarItem
             variant="link"
             item={{
-              href: `/${workspaceSlug?.toString()}/notifications/`,
+              href: `/${workspaceSlug}/notifications`,
               icon: (
                 <div className="relative">
                   <InboxOutline className="size-5" />
@@ -73,7 +73,7 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
                   )}
                 </div>
               ),
-              isActive: pathname?.includes("/notifications/"),
+              isActive: isNotificationsPath,
             }}
           />
         </Tooltip>

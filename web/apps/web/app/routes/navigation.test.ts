@@ -137,7 +137,12 @@ describe("internal navigation", () => {
     expect(targets.filter((target) => !reaches(target.path))).toEqual([]);
   });
 
-  it("lands every entry of the navigation constants on a page", () => {
+  it("writes every in-app path without a trailing slash", () => {
+    // the web app's own addresses never end with "/" (M1 design 4.1)
+    expect(targets.filter((target) => target.path.length > 1 && target.path.endsWith("/"))).toEqual([]);
+  });
+
+  it("lands every entry of the navigation constants on a page, without a trailing slash", () => {
     const slug = "acme";
     const entries = [
       // the sidebar joins its items to the workspace, and "your work" to the user too (workspace/sidebar/sidebar-item.tsx)
@@ -161,6 +166,7 @@ describe("internal navigation", () => {
       ),
     ];
     expect(entries.filter((url) => !lands(url))).toEqual([]);
+    expect(entries.filter((url) => url.endsWith("/"))).toEqual([]);
   });
 
   it("sends a path that no page serves to page not found", () => {
