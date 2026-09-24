@@ -22,7 +22,7 @@ function ProjectSettingsLayout({ params }: Route.ComponentProps) {
   useEffect(() => {
     if (projectId) return;
     if (joinedProjectIds.length > 0) {
-      navigate(`/${workspaceSlug}/settings/projects/${joinedProjectIds[0]}`);
+      navigate(`/${workspaceSlug}/settings/projects/${joinedProjectIds[0]}`, { replace: true });
     }
   }, [joinedProjectIds, navigate, workspaceSlug, projectId]);
 
