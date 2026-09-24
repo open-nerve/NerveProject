@@ -11,7 +11,7 @@ M1/P4 去掉了 Next.js 兼容层：web 应用只用 React Router 的写法，�
 
 ## 必须由 M2 完成
 
-- **服务端校验 `next_path`。** 前端只在跳转前校验：`AuthenticationWrapper` 读一次 `next_path`、修剪首尾空白，用 `@plane/utils` 的 `isValidNextPath` 判断（只接受以单个 `/` 开头的站内路径，拒绝 `//`、`\` 和任何协议，带单元测试），然后跳到校验过的那个值。但登录、注册表单把地址里的原值作为隐藏字段提交（`web/apps/web/core/components/account/auth-forms/password.tsx` 的 `<input type="hidden" name="next_path">`），由服务端发出最后的跳转。M2 的 Go 处理器必须用同一条规则校验：修剪后以单个 `/` 开头，没有 `//`、`\`，没有控制字符；不合格时按没有 `next_path` 处理。
+- **服务端校验 `next_path`。** 前端只在跳转前校验：`AuthenticationWrapper` 读一次 `next_path`、修剪首尾空白，用 `@nerve/utils` 的 `isValidNextPath` 判断（只接受以单个 `/` 开头的站内路径，拒绝 `//`、`\` 和任何协议，带单元测试），然后跳到校验过的那个值。但登录、注册表单把地址里的原值作为隐藏字段提交（`web/apps/web/core/components/account/auth-forms/password.tsx` 的 `<input type="hidden" name="next_path">`），由服务端发出最后的跳转。M2 的 Go 处理器必须用同一条规则校验：修剪后以单个 `/` 开头，没有 `//`、`\`，没有控制字符；不合格时按没有 `next_path` 处理。
 - **重写 `AuthenticationWrapper`**（`web/apps/web/core/lib/wrappers/authentication-wrapper.tsx`）。P4 只把 6 处渲染时跳转改为 `<Navigate replace />`，被守卫挡住的地址不留在历史里。令牌管理器替换 Cookie 会话时一并重做。
 - **401 处理**（`web/apps/web/core/services/api.service.ts`）：`currentPath ? … : ""` 恒为真（`pathname` 不会为空）。令牌管理器替换这段时不要照搬。
 

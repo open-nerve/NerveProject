@@ -12,7 +12,7 @@
 界面上不再有 Plane 的名称和 Logo，工作区的包名全部是 `@nerve/*`，关键词守卫看住这两点：
 
 - 工作区的 12 个包 `@plane/*` 改名为 `@nerve/*`，一个纯机械的提交，锁文件只随改名变化；导入的分组注释 `// plane …` 随之改名；
-- Nerve 的矢量图标、横版标志、网站图标、应用图标和分享图替换 Plane 的；约 1 MB 的两张加载动画 GIF 换成图标加 CSS 动画；
+- Nerve 的矢量图标、横版标志、网站图标、应用图标和分享图替换 Plane 的；共约 1.4 MB 的两张加载动画 GIF 换成图标加 CSS 动画；
 - 文案、页面标题和元数据里的 Plane 改为 Nerve，讲 Plane 公司或 Plane 服务的句子按含义改写或随功能删除；
 - 指向 Plane 服务的链接删除，文档和问题反馈指向 Nerve 的仓库 `https://github.com/open-nerve/NerveProject`；
 - 代码标识符、会话存储键、编辑器的剪贴板类型、组件的 `displayName` 和注释不再带 plane；
@@ -85,7 +85,7 @@
 1. **改名不会弄坏已发布的包。** 改名的 12 个包都是 `private`，只在工作区里互相引用；`@makeplane/propel` 是 npm 上的第三方包，`@plane/` 的替换碰不到它（它的 `plane` 前面没有 `@`）。锁文件与"基线锁文件做同样替换"逐字节相同，没有依赖升级。`knip.jsonc` 里的工作区路径是目录，不用改。
 2. **导入分组注释要逐行判断，不能随 `sed` 一起改。** 788 行里 706 行是 `// plane imports` 这类讲包名的，改成 `// nerve …`；54 行是 Plane 的 CE/EE 目录留下的 `// plane web …`，那个目录已经不存在，按下一行的导入改名（`// components`、`// hooks`、`// nerve imports` 等），与上一组同名时合并（5 行）；28 行没有标注任何导入（悬空），删除。`verify.mjs` 核对这个提交只改了注释行。
 3. **图形都是文件，代码只按文件名读取。** `app/assets/brand/` 里是 `mark.svg`、`lockup.svg`、`lockup-on-dark.svg` 三个手画的矢量图（版权声明写在 XML 注释里），和由它们渲染出的 PNG、ICO（`rasterize.mjs`，同一台机器上重跑得到逐字节相同的文件）。换 Logo 只要替换 SVG、再跑一次脚本。
-4. **图片里的品牌逐张看过。** 基线 `web/` 下 251 张图片：222 张拼成联系表逐张看，另 29 张封面照片单独看；带 Plane 品牌的只有这些：网站图标、应用图标、分享图、加载动画（替换）；维护页插图屏幕上的 Plane Logo（删掉那一条路径）；导览图片里标题为 "Plane integration" 的卡片（改为 "API integration"，`retext.mjs`）；propel 里 Plane 客户的 Logo（只给登录页页脚用，随页脚删除）；3 张没有引用的 Plane 图片（删除）。
+4. **图片里的品牌逐张看过。** 基线 `web/` 下 251 张图片：原型把 222 张拼成联系表看，另 29 张封面照片单独看，找到的是：网站图标、应用图标、分享图、加载动画（替换）；维护页插图屏幕上的 Plane Logo（删掉那一条路径）；导览图片里标题为 "Plane integration" 的卡片（改为 "API integration"，`retext.mjs`）；propel 里 Plane 客户的 Logo（只给登录页页脚用，随页脚删除）；3 张没有引用的 Plane 图片（删除）。联系表的格子只有 170 px 高，30 px 左右的小 Logo 在里面看不出来：整分支评审在另外 8 张图里找到 Plane 的像素 Logo 和工作区名 "Plane Design"。修复轮按能看清 20 px 细节的尺寸（小图放大 2 倍，其余按原尺寸，宽于 1400 px 的截图和 512 px 的图标按一半）逐张看了代码引用的全部 113 张图片（91 张位图、22 个 SVG），并在深浅两种主题下渲染了 propel 的 25 个插图组件：带 Plane 的只有这 8 张，已修正（2.5）；没有引用的 133 张交收尾删除。
 5. **加载动画不再依赖主题。** 新的加载动画是图标加 Tailwind 的 `animate-pulse`：图标是深青色底的方块，在深浅两种背景上都看得清，所以只有一张图，预渲染的标记与主题无关，P1 的 #418 修复仍然成立（预渲染和首次渲染一致）。横版标志的字标颜色随主题变，用 CSS 的 `dark:` 在两张图之间切换（`dark` 变体按 `data-theme` 匹配，不读取主题）。
 6. **维护页之外还有两个错误页。** 页面报错时的 `app/error/prod.tsx`（根 `ErrorBoundary`）和 404 页。前者带 Plane 的支持邮箱、状态页和 X 账号，Task 5 删掉；后者没有品牌。路由模块加载失败时 React Router 直接刷新页面（生产构建的 `routeModules.js`，每次都刷新），不进 `ErrorBoundary`；组件里 `lazy()` 的分块加载失败才进，并先经陈旧资源的恢复刷新一次。所以浏览器核对用渲染错误和 `lazy()` 分块失败两种方式触发错误页（plan 最后一节）。
 7. **页面上已经没有 plane。** `probe/visual.mjs` 在终态的构建上打开登录页（浅色、深色）、两种加载动画、工作区首页和帮助菜单、维护页、错误页、陈旧资源的恢复、创建工作区、新手引导和 404 页，文字和属性里都没有 plane，52 项检查全过；在基线的构建上 16 项失败。陈旧资源的场景同时证明改名后的会话存储键读写一致：页面刷新一次、第二次失败时显示错误页，会话存储里只有 `__nerve_chunk_reload`。
@@ -117,13 +117,17 @@
 - **加载动画**：`logo-spinner.tsx` 渲染 `NerveLogo` 加 `animate-pulse`；两张 GIF 删除（2.2 结论 5）。
 - **清单和网站图标**：`app/root.tsx` 从 `app/assets/brand/` 读取；从未被读取的第二份清单 `public/manifest.json`（页面只用第一个 `<link rel="manifest">`，即 `site.webmanifest.json`）连同它独有的 348 px 图标删除；`site.webmanifest.json` 的名字和描述改为 Nerve。
 - **图片**：维护页的两张插图删掉屏幕上的 Plane Logo（每张一条 `<path>`）；`onboarding/issues.webp` 的 "Plane integration" 改为 "API integration"（202,198 → 228,386 字节）；没有引用的 `favicon/apple-touch-icon.png`、`plane-takeoff.png`、`users/user-profile-cover-default-img.png` 删除。
+- **修复轮的 8 张图**（整分支评审发现，2.2 结论 4；一次性脚本 `remark.mjs`、`retext2.mjs`，在 Chromium 的画布里改；PNG 里没有改到的像素逐字节不变，WebP 整张再有损编码一次）：
+  - `workspace/workspace-not-available.png`、`workspace-creation-disabled.png`（192,990 → 188,255、191,452 → 186,543 字节）：底部蓝色圆徽上的 Plane 像素 Logo 改为圆形的 Nerve 图标。圆盘重涂成 `mark.svg` 方块的 `#155E75`，半径比原来大约 1.5 px，盖住原来的蓝色和它的抗锯齿边；白色的 N 和两端 `#5EEAD4` 的圆点取 `mark.svg` 的几何，64 单位的方块对应圆盘的直径，居中；投影保留；
+  - `empty-state/project-settings/no-projects-light.png`、`-dark.png`（261,332 → 255,957、299,445 → 292,431 字节）：卡片网格上由 4 个着色方块拼成的 Plane Logo 去掉，每个着色的网格单元用同一行上一两格外、未着色的单元填回，网格线和渐隐连续；
+  - `empty-state/disabled-feature/modules-light.webp`、`modules-dark.webp`、`views-light.webp`、`views-dark.webp`（67,546 → 67,536、64,292 → 64,282、55,700 → 55,462、55,062 → 55,132 字节）：面包屑里的工作区名 "Plane Design" 改为 "Acme Design"。它是中性的演示名，不写成 Nerve，免得读成真实的 Nerve 工作区；字色、字号、字重和基线由拟合原来的字得到（Inter，约 23 px）；WebP 的质量按文件大小接近原来的选。
 
 ### 2.6 文案与元数据（Task 4，M1 设计 5）
 
 - **en、zh-CN 在用的文案**：`auth.common.new_to_plane` 改名为 `new_to_nerve`（"New to Nerve?" / "首次使用 Nerve？"）；首页引导的两条、自动归档的说明、令牌删除的说明改为 Nerve；复制令牌的提示去掉"存进 Plane Pages"（那是不在 Nerve 里的产品）。
 - **没有引用、又写着 Plane 的文案**（7 组，每种语言 16 个键）删除：`self_hosted_maintenance_message`、`common_empty_state.not_found`、`project_settings.features.intake.email`、三处 `primary_button.comic`、`workspace_settings.empty_state.api_tokens`。
 - **标题和元数据**：`SITE_NAME` 改为 "Nerve"，是页面标题、`og:title` 和 `application-name`；只装着 Plane 的名称、网址、账号的 `SITE_TITLE`、`SITE_URL`、`TWITTER_USER_NAME`（没有读取方）、`og:url`、`twitter:site` 删除；注册页和登录页的标题是 "… - Nerve"。
-- **写死的文案**：登录和注册的副标题、新手引导的 4 步、导览、邀请页的 3 处说明、收集箱的页面标题、归档动态的操作者都改为 Nerve；工作区不存在时图片的 `alt` 改为 "Workspace not found"。
+- **写死的文案**：登录和注册的副标题、新手引导的 4 步、导览、邀请页的 3 处说明、收集箱的页面标题、归档动态的操作者都改为 Nerve；工作区不存在时图片的 `alt`（原为 "Plane logo"）改为 "Workspace not found"，修复轮再改为空：图片是装饰，下面的标题说的是同一句话。
 - **退化结构**：`PageHead` 里 `if (title)` 内部永远不用的默认标题、动态的 `customUserName || "Plane"`（只在 `customUserName` 为真的分支里渲染）收掉。
 - **Plane 收集箱机器人**：收集箱列表和工作项详情对 `intake@plane.so`、名字带 `-intake` 的用户显示 Plane 的头像和名字，这是 Plane 后端的约定；删除，创建者按普通用户显示（第 7 节交 M4）。
 
@@ -186,7 +190,7 @@ P4 的 45 条规则之上新增 3 条，全部 `"phase": "M1/P5"`；每个顶层
 1. **导入分组注释单独一个 Task（Task 2）。** 设计说它们"随包名一起改为 `// nerve imports`"。决定：Task 1 只做 `sed` 式的替换，注释在紧接着的 Task 2 改。理由：`// plane web …` 的 54 行不能机械改名（2.2 结论 2），放进 Task 1 会让"纯机械的提交"不再纯；分开之后 Task 1 用锁文件和 `@plane/` 计数核对，Task 2 用 `verify.mjs` 证明只改了注释行。
 2. **Nerve 的图形组件放在 web 应用，不放在 propel（Task 3）。** 设计说"propel 中的 `PlaneLogo`、`PlaneLockup`、`PlaneWordmark` 等改为 Nerve 的对应组件"。决定：删掉 propel 的 `brand/`、`sub-brand/`，新组件是 `web/apps/web/core/components/common/nerve-logo.tsx`。理由：propel 的图标是写在代码里的 SVG 组件，放在那里换 Logo 就要改代码，违反设计"之后可以直接替换文件，不需要改代码"；按文件名读取的图片由 Vite 打包，属于应用的资源；只有 web 应用用它们（7 处），`PlaneWordmark` 没有使用者。
 3. **加载动画不用 `dark:`（Task 3）。** P1 的修复用 `dark:` 在浅色、深色两张 GIF 之间选择。新的加载动画在两种背景上是同一张图，写成 `dark:` 的一对就是两张相同的图片（退化结构）。P1 修复的实质——标记与主题无关、预渲染不读取主题——保留（2.2 结论 5）。横版标志的两张图不同，仍用 `dark:`。
-4. **版权声明行和 `@makeplane/propel` 写在正则里排除，不登记例外（Task 7）。** 设计 7.4 说对它们开"精确例外"。例外按（规则、路径、原文）登记，这两种文本分布在 2051 个和 454 个文件里，要登记约 2500 条。两个否定前瞻只排除这两段确切的文本（版权声明行的整个前缀、作为整词的 `@makeplane/propel`），精确程度相同；规则的不命中样本证明两者被排除，命中样本证明其他写法（`github.com/makeplane`、`@plane/propel`）照常命中。
+4. **版权声明行和 `@makeplane/propel` 写在正则里排除，不登记例外（Task 7）。** 设计 7.4 说对它们开"精确例外"。例外按（规则、路径、原文）登记，这两种文本分布在 2051 个和 454 个文件里，要登记约 2500 条。两个否定前瞻只排除这两段确切的文本（版权声明行的整个前缀；后面不接字母、数字、下划线或连字符的 `@makeplane/propel`，所以 `@makeplane/propel-extra` 这样的名字照常命中），精确程度相同；规则的不命中样本证明两者被排除，命中样本证明 `github.com/makeplane` 照常命中（基线邀请页的一行）。`@plane/propel` 照常命中没有写成样本：基线里这样写的 450 行都带 `@plane/`，放进 `tools/keywords.json` 会改变 `docs/` 以外 `@plane/` 的计数（只留 `plane-package` 的 6 行样本）；修复轮的一次性核对证明它和 `@makeplane/propel-extra` 命中，当前 607 行 `@makeplane/propel` 都不命中。
 5. **`plane-package` 的范围比 `brand` 宽（Task 1）。** 它检查 `docs/` 以外的全部文件（`e2e/`、`tools/`、README 等也不许出现旧包名），只排除 `docs/`（历史记录）和规则文件本身（样本必须写出旧包名）。`brand` 的范围与设计 7.4 的守卫范围一致；`e2e/`、`tools/`、README 里讲 Plane 来源的文字是合法的。
 6. **规则 `brand` 在最后一个 Task 加入。** P1 定下"删除的同一个提交加规则"。品牌的命中分散在 Task 1–6，在 Task 1 加规则要为约 960 处登记本 Phase 内到期的例外。决定：每个 Task 用同一正则的 `brandhits.mjs` 报告进度（2.2 的表），Task 7 在命中只剩 3 处时加入规则。`plane-package` 在 Task 1 随改名一起加入。
 7. **只留一份应用清单（Task 3）。** 基线有两个 `<link rel="manifest">`，页面只用第一个（`site.webmanifest.json`）；第二个 `manifest.json` 从未生效，删除，连同只有它引用的 348 px 图标。
@@ -235,7 +239,7 @@ P4 的 45 条规则之上新增 3 条，全部 `"phase": "M1/P5"`；每个顶层
 | 注释改名时移动或删错了导入 | `labels.mjs` 只改注释行；`verify.mjs` 证明差异里只有注释行（`other 0`） |
 | 图形替换后某处引用了不存在的文件，或留下没有引用的图片 | 构建失败会暴露缺失；`assets.mjs` 前后对比（136 → 133）；`infile-orphans` 列出随文件删除的符号 |
 | 加载动画重新依赖主题，#418 回归 | 加载动画只有一张图、标记与主题无关；浏览器核对预渲染的加载动画（禁用脚本时）和客户端的加载动画 |
-| 图片里的 Plane 品牌漏看 | 全部 251 张图片目视（2.2 结论 4）；控制者对实际页面截图目视 |
+| 图片里的 Plane 品牌漏看 | 原型的联系表格子太小，漏看了 8 张图里的小 Logo 和工作区名（整分支评审发现）；修复轮按原尺寸逐张核对代码引用的 113 张图片和 propel 的 25 个插图，修正这 8 张（2.2 结论 4、2.5）；控制者对实际页面截图目视 |
 | 会话存储键、剪贴板类型只改了一侧 | 读写方在同一个 Task 一起改；浏览器核对陈旧资源的恢复和编辑器的复制粘贴 |
 | 删链接时删掉了保留功能的入口 | 只删指向 Plane 服务的项；帮助菜单、命令面板的保留项和 PAT、Webhook 设置页由浏览器核对 |
 | 规则为了通过而放宽 | 排除写成两段确切文本的否定前瞻，有样本证明；唯一的例外带 `count: 3`，多一处就失败；基线上 3902 处命中证明规则有效 |

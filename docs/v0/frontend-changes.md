@@ -92,9 +92,9 @@
 |---|---|---|
 | `web/` 的源码、样式和各包的 `package.json`、`tsconfig.json`；`tools/keywords.json`；`pnpm-lock.yaml` | 包名 `@plane/*` 改为 `@nerve/*`：1100 个文件里的 2922 处（`docs/` 除外，那里是历史记录），`pnpm install` 重写锁文件；对基线锁文件做同样的替换之后与新锁文件逐字节相同，没有依赖变化 | M1 设计 5；`@makeplane/propel` 是第三方包，不改（设计 3.10） |
 | 导入的分组注释（671 个文件） | `// plane imports` 这类 706 行改为 `// nerve …`（其中一行标注的是本目录 `./` 的导入，改为 `// local imports`）；Plane 的 CE/EE 目录留下的 `// plane web …` 按下一行的导入改名（`// components`、`// hooks`、`// nerve imports` 等），与相邻一组同名的合并；没有标注任何导入的 28 行删除 | 随包名 |
-| 新增 `app/assets/brand/`、`core/components/common/nerve-logo.tsx`；`public/icons/`、`site.webmanifest.json`；`app/root.tsx`；propel 的 `icons/brand/`、`icons/sub-brand/` | Nerve 的图标、横版标志（浅色和深色背景各一）、网站图标、应用图标和分享图，版权声明写在 SVG 和同目录的 `SOURCES.md` 里；`NerveLogo`、`NerveLockup` 按文件名读取它们，换 Logo 只换文件。删除 propel 的 `PlaneLogo`、`PlaneLockup`、`PlaneWordmark`、`PlaneNewIcon` 和只给登录页页脚用的客户 Logo（页脚一起删除）、从未被读取的第二份应用清单 `manifest.json`、没有引用的三张 Plane 图片 | M1 设计 5 |
+| 新增 `app/assets/brand/`、`core/components/common/nerve-logo.tsx`；`public/icons/`、`site.webmanifest.json`；`app/root.tsx`；propel 的 `icons/brand/`、`icons/sub-brand/` | Nerve 的图标、横版标志（浅色和深色背景各一）、网站图标、应用图标和分享图，版权声明写在 SVG 和 `app/assets/brand/SOURCES.md` 里（`public/icons/` 的两个应用图标也登记在那里，因为 `public/` 的文件原样发布）；`NerveLogo`、`NerveLockup` 按文件名读取它们，换 Logo 只换文件。删除 propel 的 `PlaneLogo`、`PlaneLockup`、`PlaneWordmark`、`PlaneNewIcon` 和只给登录页页脚用的客户 Logo（页脚一起删除）、从未被读取的第二份应用清单 `manifest.json`、没有引用的三张 Plane 图片 | M1 设计 5 |
 | `core/components/common/logo-spinner.tsx` | 加载动画从两张共约 1.4 MB 的 GIF 改为 Nerve 的图标加 CSS 的 `animate-pulse`；图标在深浅两种背景上都看得清，标记与主题无关，预渲染和首次渲染仍然一致 | P1 评审的交接；保留 #418 的修复 |
-| `app/assets/instance/maintenance-mode-*.svg`、`app/assets/onboarding/issues.webp` | 维护页插图里屏幕上的 Plane Logo 删掉；导览图片里标题为 "Plane integration" 的卡片改为 "API integration" | 图片里的品牌关键词守卫看不到，逐张目视 |
+| `app/assets/instance/maintenance-mode-*.svg`、`app/assets/onboarding/issues.webp`；`app/assets/workspace/workspace-not-available.png`、`workspace-creation-disabled.png`；`app/assets/empty-state/project-settings/no-projects-light.png`、`-dark.png`；`app/assets/empty-state/disabled-feature/modules-light.webp`、`modules-dark.webp`、`views-light.webp`、`views-dark.webp`；`core/layouts/auth-layout/workspace-wrapper.tsx` | 维护页插图里屏幕上的 Plane Logo 删掉；导览图片里标题为 "Plane integration" 的卡片改为 "API integration"；"工作区不存在"和"不允许创建工作区"两张图底部蓝色圆徽上的 Plane 像素 Logo 改为圆形的 Nerve 图标（`#155E75` 的圆盘、白色的 N 和两端的圆点，取自 `mark.svg`，投影保留）；项目设置空状态两张图的卡片网格上由着色方块拼成的 Plane Logo 去掉，着色的格子用旁边未着色的格子填回；模块、视图关闭时的四张图面包屑里的工作区名 "Plane Design" 改为中性的演示名 "Acme Design"（字色、字号、基线不变）；"工作区不存在"那张图是装饰，`alt` 为空，下面的标题说的是同一句话 | 图片里的品牌关键词守卫看不到，逐张目视；后 8 张是整分支评审找到的，修复轮按原尺寸重看了代码引用的全部图片和 propel 的插图，没有别的 |
 | en、zh-CN 的文案；页面标题和元数据（`@nerve/constants` 的 `SITE_NAME`、`app/root.tsx`）；登录、注册、引导、导览、邀请页等写死的文案 | 讲产品的 "Plane" 改为 Nerve；讲 Plane 公司、Plane 服务的句子按含义改写（例如复制令牌的提示不再建议存进 "Plane Pages"）；没有引用、又写着 Plane 的 7 组文案删除（每种语言 16 个键）；`SITE_TITLE`、`SITE_URL`、`TWITTER_USER_NAME` 和 `og:url`、`twitter:site` 删除；页面的元数据读取这些常量，`og:description`、`keywords` 改为读取 `SITE_DESCRIPTION`、`SITE_KEYWORDS`，不再在 `app/root.tsx` 里重复它们的文字；Plane 收集箱机器人（`intake@plane.so`、名字带 `-intake`）的特殊显示删除，创建者按普通用户显示 | M1 设计 5 |
 | 帮助菜单、命令面板的帮助命令、错误页、维护页、登录表单、顶部栏、邀请页、空的项目设置页 | 文档和问题反馈指向 Nerve 的仓库（`@nerve/constants` 的 `REPOSITORY_URL`）；论坛、支持邮箱、状态页、X 账号、服务条款和隐私政策、"Star us on GitHub"、plane.so 的介绍链接连同显示它们的组件、图片和文案删除 | 同上 |
 | 代码标识符、存储键、剪贴板类型、组件名、注释 | `PlaneVersionNumber` → `VersionNumber`；会话存储键 `__plane_chunk_reload` → `__nerve_chunk_reload`（不迁移旧值：只在一个标签页的会话里有效）；编辑器的剪贴板类型 `text/plane-editor-html` → `text/nerve-editor-html`（两个写入方和读取方一起改）；13 个 `displayName` 从 `plane-ui-*` 改为 `nerve-ui-*`；注释、editor 包的描述和 Readme、`tailwind-config/AGENTS.md`（"plane" 在那里指层次，改为 "stacking context"）不再出现 plane | 同上 |
@@ -132,7 +132,7 @@
 | 企业版残留：Epic、团队、工作项类型、计费和升级提示、批量操作及其工作项多选、工作项模板、工时记录、重复工作项、工作流和项目更新的空壳；企业版扩展点（`extended`、`additional` 空壳，只为企业版子类存在的 Base 类加别名，富文本筛选中空的扩展一半）；收藏的实体类型改为联合类型 | 已完成 | M1/P3 |
 | Plane 自身的死代码：IndexedDB 和同步代码、调用不存在接口的 service 方法、集成与导入器的残留（Jira 图标、集成和导入的空状态图、设置和计费页中的文案）、knip 报告的未使用文件和导出；knip 改为门禁 | 已完成 | M1/P3 |
 | 多语言：只保留 `zh-CN` 和 `en` | 已完成 | M1/P1 |
-| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的引用和包装层 `useAppRouter` 全部改为 React Router 原生写法（`Link`、`NavLink`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`、`useMatch`）；路由参数按真实的 `string \| undefined` 处理，路由组件用 `./+types/*` 的参数，共享组件用守卫；去掉延迟跳转，`AuthenticationWrapper` 的渲染时跳转改为 `<Navigate replace />`，登录后跳回的 `next_path` 改用 `@plane/utils` 的 `isValidNextPath` 校验（只接受以单个 `/` 开头的站内路径，不再放过 `//host`、`javascript:`；带单元测试），包装只读一次、修剪后校验，跳到校验过的那个值；页面到达时自动做的跳转（项目设置到第一个项目、收集箱到第一项、收集箱里的工作项到收集箱）改为替换当前地址，后退不再回到会再次跳走的地址；去掉强制结尾 `/`，应用内部的地址一律不带结尾 `/`，"当前是哪一项"的判断改用 React Router 的匹配；删除垫片和 `typescript-config/nextjs.json`（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 已完成 | M1/P4 |
+| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的引用和包装层 `useAppRouter` 全部改为 React Router 原生写法（`Link`、`NavLink`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`、`useMatch`）；路由参数按真实的 `string \| undefined` 处理，路由组件用 `./+types/*` 的参数，共享组件用守卫；去掉延迟跳转，`AuthenticationWrapper` 的渲染时跳转改为 `<Navigate replace />`，登录后跳回的 `next_path` 改用 `@nerve/utils` 的 `isValidNextPath` 校验（只接受以单个 `/` 开头的站内路径，不再放过 `//host`、`javascript:`；带单元测试），包装只读一次、修剪后校验，跳到校验过的那个值；页面到达时自动做的跳转（项目设置到第一个项目、收集箱到第一项、收集箱里的工作项到收集箱）改为替换当前地址，后退不再回到会再次跳走的地址；去掉强制结尾 `/`，应用内部的地址一律不带结尾 `/`，"当前是哪一项"的判断改用 React Router 的匹配；删除垫片和 `typescript-config/nextjs.json`（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 已完成 | M1/P4 |
 | web 中的部署遗留：`Dockerfile.web`、`Dockerfile.dev`、`caddy/`、`.dockerignore` | 已完成 | M1/P1 |
 | `serve` 依赖及其 `start`、`preview` 脚本（当前运行即崩溃） | 已完成 | M1/P1 |
 | `public/` 中从未注册的 `sw.js` 及 workbox 相关文件 | 已完成 | M1/P1 |
@@ -166,7 +166,7 @@
 | 迭代、模块（归属改为工作项字段）、迭代和模块归档 | M6 | 计划中 |
 | 通知、收集箱、视图、收藏、最近访问 | M7 | 计划中 |
 | Webhook 设置、接口调用日志 | M8 | 计划中 |
-| 删除对 `@plane/services` 的依赖 | M5 | 计划中 |
+| 删除对 `@nerve/services` 的依赖 | M5 | 计划中 |
 
 ### 3.2 已知的结构性改动
 
@@ -191,4 +191,4 @@
 | 指向 Plane 服务的链接删除，文档和问题反馈指向 Nerve 的仓库 | 已完成 | M1/P5 |
 | 代码标识符、存储键、剪贴板类型、组件名和注释不再带 plane | 已完成 | M1/P5 |
 | `web/` 中来自 Plane 的文件保留原有的版权声明 | 已完成 | M0/P5 |
-| Nerve 新写的文件和图形标注 Nerve 的版权；放不下文件头的资源登记在同目录的 `SOURCES.md` | 已完成 | M1/P5 |
+| `web/apps`、`web/packages` 里与 Plane 的文件放在一起的 Nerve 文件和图形标注 Nerve 的版权；放不下文件头的资源登记在 `app/assets/brand/SOURCES.md`。`web/packages/api-client` 和 `web/` 以外 Nerve 自己的代码不加文件头，以仓库根目录的 `LICENSE` 为准（[M1/P5 spec](M1-frontend-trim/specs/P5-brand.md) 7.2） | 已完成 | M1/P5 |

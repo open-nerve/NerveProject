@@ -99,4 +99,4 @@ make          # 查看所有命令
 
 Copyright © 2026 OpenNerve。以 [GNU AGPL-3.0](LICENSE) 协议发布。
 
-前端的部分代码来自 [Plane](https://github.com/makeplane/plane)（Copyright © Plane Software, Inc. and contributors，AGPL-3.0），相关文件保留了原有的版权声明。前端里 Nerve 新写的文件带 `Copyright (c) 2026-present OpenNerve` 和 `SPDX-License-Identifier: AGPL-3.0-only`；放不下文件头的资源（例如 PNG）登记在同目录的 `SOURCES.md` 里。
+前端的部分代码来自 [Plane](https://github.com/makeplane/plane)（Copyright © Plane Software, Inc. and contributors，AGPL-3.0），相关文件保留了原有的版权声明。`web/apps` 和 `web/packages` 里与 Plane 的文件放在一起的 Nerve 文件带 `Copyright (c) 2026-present OpenNerve` 和 `SPDX-License-Identifier: AGPL-3.0-only`；放不下文件头的资源（例如 PNG）登记在 `web/apps/web/app/assets/brand/SOURCES.md` 里。`web/packages/api-client` 和 `web/` 以外 Nerve 自己的代码不加文件头，以本仓库的 [LICENSE](LICENSE) 为准。
