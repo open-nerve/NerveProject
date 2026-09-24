@@ -71,7 +71,7 @@ export const CreateProjectForm = observer(function CreateProjectForm(props: TCre
       if (imageType === "local_static") {
         try {
           uploadedAssetUrl = await uploadCoverImage(coverImage, {
-            workspaceSlug: workspaceSlug,
+            workspaceSlug,
             entityIdentifier: "",
             entityType: EFileAssetType.PROJECT_COVER,
             isUserAsset: false,

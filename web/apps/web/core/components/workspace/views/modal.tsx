@@ -28,8 +28,7 @@ export const CreateUpdateWorkspaceViewModal = observer(function CreateUpdateWork
   const { isOpen, onClose, data, preLoadedData } = props;
   // router
   const navigate = useNavigate();
-  const { workspaceSlug: routerWorkspaceSlug } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
+  const { workspaceSlug } = useParams();
   // store hooks
   const { createGlobalView, updateGlobalView } = useGlobalView();
   const { resetExpression } = useWorkItemFilters();

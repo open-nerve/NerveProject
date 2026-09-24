@@ -215,7 +215,7 @@ const IssueRowDetails = observer(function IssueRowDetails(props: IssueRowDetails
   const projectIdentifier = getProjectIdentifierById(issueDetail.project_id);
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     projectId: issueDetail?.project_id,
     issueId,
     projectIdentifier,

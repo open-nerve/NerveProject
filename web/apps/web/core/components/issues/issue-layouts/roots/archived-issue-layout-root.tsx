@@ -23,9 +23,7 @@ import { ArchivedIssueListLayout } from "../list/roots/archived-issue-root";
 
 export const ArchivedIssueLayoutRoot = observer(function ArchivedIssueLayoutRoot() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
-  const projectId = routerProjectId ? routerProjectId : undefined;
+  const { workspaceSlug, projectId } = useParams();
   // hooks
   const { issuesFilter } = useIssues(EIssuesStoreType.ARCHIVED);
   // derived values

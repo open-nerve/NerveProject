@@ -179,7 +179,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       // update uploaded assets' status
       if (uploadedAssetIds.length > 0) {
         await fileService.updateBulkProjectAssetsUploadStatus(
-          workspaceSlug ?? "",
+          workspaceSlug,
           response?.project_id ?? "",
           response?.id ?? "",
           {
@@ -357,7 +357,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     data: {
       ...data,
       description_html: description,
-      cycle_id: data?.cycle_id ? data?.cycle_id : cycleId ? cycleId : null,
+      cycle_id: data?.cycle_id ? data?.cycle_id : (cycleId ?? null),
       module_ids: data?.module_ids ? data?.module_ids : moduleId ? [moduleId] : null,
     },
     onAssetUpload: handleUpdateUploadedAssetIds,

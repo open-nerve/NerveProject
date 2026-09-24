@@ -237,7 +237,7 @@ export const InboxIssueActionsHeader = observer(function InboxIssueActionsHeader
   if (!inboxIssue) return null;
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     projectId: issue?.project_id,
     issueId: currentInboxIssueId,
     projectIdentifier: currentProjectDetails?.identifier,

@@ -50,7 +50,7 @@ export const InboxContentRoot = observer(function InboxContentRoot(props: TInbox
   const { allowPermissions, getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();
 
   // derived values
-  const isIssueAvailable = getIsIssueAvailable(inboxIssueId || "");
+  const isIssueAvailable = getIsIssueAvailable(inboxIssueId);
 
   useEffect(() => {
     if (!isIssueAvailable && inboxIssueId && !isNotificationEmbed) {

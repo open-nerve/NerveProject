@@ -18,9 +18,7 @@ import { useParams, useNavigate } from "react-router";
 export const ProjectArchivedEmptyState = observer(function ProjectArchivedEmptyState() {
   // router
   const navigate = useNavigate();
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
-  const projectId = routerProjectId ? routerProjectId : undefined;
+  const { workspaceSlug, projectId } = useParams();
   // plane hooks
   const { t } = useTranslation();
   // store hooks

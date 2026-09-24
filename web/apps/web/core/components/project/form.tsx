@@ -168,7 +168,7 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
     // Handle cover image changes
     try {
       const coverImagePayload = await handleCoverImageChange(project.cover_image_url, formData.cover_image_url, {
-        workspaceSlug: workspaceSlug,
+        workspaceSlug,
         entityIdentifier: project.id,
         entityType: EFileAssetType.PROJECT_COVER,
         isUserAsset: false,

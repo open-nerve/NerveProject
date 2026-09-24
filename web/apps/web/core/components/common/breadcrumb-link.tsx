@@ -64,7 +64,7 @@ export const BreadcrumbLink = observer(function BreadcrumbLink(props: Props) {
 
   const itemWrapperProps = useMemo(
     (): Omit<React.ComponentProps<typeof ItemWrapper>, "children"> => ({
-      label: label,
+      label,
       disableTooltip: isMobile || disableTooltip,
       type: href && href !== "" ? "link" : "text",
       isLast,

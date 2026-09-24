@@ -253,7 +253,7 @@ export const DescriptionInput = observer(function DescriptionInput(props: Props)
           }}
           placeholder={placeholder ?? ((isFocused, value) => t(getDescriptionPlaceholderI18n(isFocused, value)))}
           searchMentionCallback={async (payload) =>
-            await workspaceService.searchEntity(workspaceSlug ?? "", {
+            await workspaceService.searchEntity(workspaceSlug, {
               ...payload,
               project_id: projectId,
             })

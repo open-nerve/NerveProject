@@ -35,9 +35,7 @@ export const AllIssueLayoutRoot = observer(function AllIssueLayoutRoot(props: Pr
   const { isDefaultView, isLoading = false, toggleLoading } = props;
   // router
   const navigate = useNavigate();
-  const { workspaceSlug: routerWorkspaceSlug, globalViewId: routerGlobalViewId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
-  const globalViewId = routerGlobalViewId ? routerGlobalViewId : undefined;
+  const { workspaceSlug, globalViewId } = useParams();
   // search params
   const [searchParams] = useSearchParams();
   // store hooks

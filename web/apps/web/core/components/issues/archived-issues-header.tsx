@@ -22,9 +22,7 @@ import { useProject } from "@/hooks/store/use-project";
 
 export const ArchivedIssuesHeader = observer(function ArchivedIssuesHeader() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
-  const projectId = routerProjectId ? routerProjectId : undefined;
+  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const { currentProjectDetails } = useProject();
   const {

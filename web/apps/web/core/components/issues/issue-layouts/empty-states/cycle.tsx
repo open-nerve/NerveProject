@@ -25,10 +25,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 
 export const CycleEmptyState = observer(function CycleEmptyState() {
   // router
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, cycleId: routerCycleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
-  const projectId = routerProjectId ? routerProjectId : undefined;
-  const cycleId = routerCycleId ? routerCycleId : undefined;
+  const { workspaceSlug, projectId, cycleId } = useParams();
   // states
   const [cycleIssuesListModal, setCycleIssuesListModal] = useState(false);
   // plane hooks

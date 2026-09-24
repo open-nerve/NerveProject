@@ -130,9 +130,9 @@ export const IssueDescriptionEditor = observer(function IssueDescriptionEditor(p
               tabIndex={getIndex("description_html")}
               placeholder={(isFocused, description) => t(getDescriptionPlaceholderI18n(isFocused, description))}
               searchMentionCallback={async (payload) =>
-                await workspaceService.searchEntity(workspaceSlug ?? "", {
+                await workspaceService.searchEntity(workspaceSlug, {
                   ...payload,
-                  project_id: projectId ?? "",
+                  project_id: projectId,
                 })
               }
               containerClassName="pt-3 min-h-[120px]"

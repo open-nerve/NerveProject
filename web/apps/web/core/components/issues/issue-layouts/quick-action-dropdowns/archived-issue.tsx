@@ -51,7 +51,7 @@ export const ArchivedIssueQuickActions = observer(function ArchivedIssueQuickAct
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     activeLayout,
     isEditingAllowed,
     isDeletingAllowed: isEditingAllowed,

@@ -126,7 +126,7 @@ export const WorkItemDetailQuickActions = observer(function WorkItemDetailQuickA
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     projectIdentifier,
     activeLayout,
     isEditingAllowed,

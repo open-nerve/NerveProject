@@ -96,7 +96,7 @@ export const InboxIssueActionsMobileHeader = observer(function InboxIssueActions
   const projectIdentifier = getProjectIdentifierById(issue?.project_id);
 
   const workItemLink = generateWorkItemLink({
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     projectId: issue?.project_id,
     issueId: currentInboxIssueId,
     projectIdentifier,

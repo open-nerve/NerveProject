@@ -76,7 +76,7 @@ export const CycleIssueQuickActions = observer(function CycleIssueQuickActions(p
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     projectIdentifier,
     activeLayout,
     isEditingAllowed,
@@ -89,7 +89,7 @@ export const CycleIssueQuickActions = observer(function CycleIssueQuickActions(p
     setArchiveIssueModal,
     setDuplicateWorkItemModal,
     handleRemoveFromView,
-    cycleId: cycleId,
+    cycleId,
     handleDelete,
     handleUpdate,
     handleArchive,

@@ -24,8 +24,7 @@ export const ProfileIssuesFilter = observer(function ProfileIssuesFilter() {
   // i18n
   const { t } = useTranslation();
   // router
-  const { workspaceSlug, userId: routeUserId } = useParams();
-  const userId = routeUserId ? routeUserId : undefined;
+  const { workspaceSlug, userId } = useParams();
   // store hook
   const {
     issuesFilter: { issueFilters, updateFilters },

@@ -84,7 +84,7 @@ export const CalendarIssueBlock = observer(
     const placement = isMenuActionRefAboveScreenBottom ? "bottom-end" : "top-end";
 
     const workItemLink = generateWorkItemLink({
-      workspaceSlug: workspaceSlug,
+      workspaceSlug,
       projectId: issue?.project_id,
       issueId: issue?.id,
       projectIdentifier,

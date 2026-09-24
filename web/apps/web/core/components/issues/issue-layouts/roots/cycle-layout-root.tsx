@@ -44,10 +44,7 @@ function CycleIssueLayout(props: { activeLayout: EIssueLayoutTypes | undefined }
 }
 
 export const CycleLayoutRoot = observer(function CycleLayoutRoot() {
-  const { workspaceSlug: routerWorkspaceSlug, projectId: routerProjectId, cycleId: routerCycleId } = useParams();
-  const workspaceSlug = routerWorkspaceSlug ? routerWorkspaceSlug : undefined;
-  const projectId = routerProjectId ? routerProjectId : undefined;
-  const cycleId = routerCycleId ? routerCycleId : undefined;
+  const { workspaceSlug, projectId, cycleId } = useParams();
   // store hooks
   const { issuesFilter } = useIssues(EIssuesStoreType.CYCLE);
   const { getCycleById } = useCycle();

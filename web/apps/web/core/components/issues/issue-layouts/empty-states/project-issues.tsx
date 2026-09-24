@@ -18,8 +18,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 
 export const ProjectEmptyState = observer(function ProjectEmptyState() {
   // router
-  const { projectId: routerProjectId } = useParams();
-  const projectId = routerProjectId ? routerProjectId : undefined;
+  const { projectId } = useParams();
   // plane imports
   const { t } = useTranslation();
   // store hooks

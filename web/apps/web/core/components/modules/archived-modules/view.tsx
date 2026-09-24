@@ -58,7 +58,7 @@ export const ArchivedModulesView = observer(function ArchivedModulesView(props: 
             <ModuleListItem key={moduleId} moduleId={moduleId} />
           ))}
         </div>
-        <ModulePeekOverview projectId={projectId ?? ""} workspaceSlug={workspaceSlug ?? ""} isArchived />
+        <ModulePeekOverview projectId={projectId} workspaceSlug={workspaceSlug} isArchived />
       </div>
     </div>
   );

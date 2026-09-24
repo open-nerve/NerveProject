@@ -67,7 +67,7 @@ export const AllIssueQuickActions = observer(function AllIssueQuickActions(props
   // Menu items and modals using helper
   const menuItemProps: MenuItemFactoryProps = {
     issue,
-    workspaceSlug: workspaceSlug,
+    workspaceSlug,
     projectIdentifier,
     activeLayout: "Global issues",
     isEditingAllowed,
