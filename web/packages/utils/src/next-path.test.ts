@@ -24,6 +24,16 @@ describe("isValidNextPath", () => {
     expect(isValidNextPath("  /dashboard  ")).toBe(true);
   });
 
+  // Two more, beyond the documented examples: `%09` and `%0A` in the address arrive as a tab and a
+  // newline. The app navigates to the value it validated, trimmed, so the trim must remove these too.
+  it("accepts a path after a tab", () => {
+    expect(isValidNextPath("\t/dashboard")).toBe(true);
+  });
+
+  it("accepts a path after a newline", () => {
+    expect(isValidNextPath("\n/dashboard")).toBe(true);
+  });
+
   it("rejects an absolute address", () => {
     expect(isValidNextPath("https://malicious.com")).toBe(false);
   });

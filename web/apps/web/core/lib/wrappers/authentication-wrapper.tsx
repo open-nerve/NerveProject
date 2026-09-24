@@ -28,7 +28,7 @@ type TAuthenticationWrapper = {
 export const AuthenticationWrapper = observer(function AuthenticationWrapper(props: TAuthenticationWrapper) {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
-  const nextPath = searchParams.get("next_path");
+  const nextPath = searchParams.get("next_path")?.trim();
   // props
   const { children, pageType = EPageTypes.AUTHENTICATED } = props;
   // hooks
