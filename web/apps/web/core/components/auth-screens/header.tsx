@@ -7,6 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
+import { SITE_NAME } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { NerveLockup } from "@/components/common/nerve-logo";
 import { PageHead } from "@/components/core/page-title";
@@ -68,7 +69,7 @@ function AuthHeaderBase(props: TAuthHeaderBase) {
   const { pageTitle, additionalAction } = props;
   return (
     <>
-      <PageHead title={pageTitle + " - Nerve"} />
+      <PageHead title={`${pageTitle} - ${SITE_NAME}`} />
       <div className="sticky top-0 flex w-full flex-shrink-0 items-center justify-between gap-6">
         <Link to="/">
           <NerveLockup className="h-5 w-auto" />

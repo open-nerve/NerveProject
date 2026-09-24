@@ -87,13 +87,13 @@ export const meta: Route.MetaFunction = () => [
   { property: "og:image", content: ogImage },
   { property: "og:image:width", content: "1200" },
   { property: "og:image:height", content: "630" },
-  { property: "og:image:alt", content: "Nerve" },
+  { property: "og:image:alt", content: SITE_NAME },
   { name: "keywords", content: SITE_KEYWORDS },
   { name: "twitter:card", content: "summary_large_image" },
   { name: "twitter:image", content: ogImage },
   { name: "twitter:image:width", content: "1200" },
   { name: "twitter:image:height", content: "630" },
-  { name: "twitter:image:alt", content: "Nerve" },
+  { name: "twitter:image:alt", content: SITE_NAME },
 ];
 
 // Root stays shell-thin: in SPA mode React Router server-builds only the root route, so

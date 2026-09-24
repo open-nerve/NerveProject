@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTheme } from "next-themes";
 // nerve imports
-import { EUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissionsLevel, SITE_NAME } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EUserProjectRoles, EInboxIssueCurrentTab } from "@nerve/types";
 // assets
@@ -61,7 +61,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
     );
 
   // derived values
-  const pageTitle = t("inbox_issue.page_label", { workspace: currentProjectDetails?.name || "Nerve" });
+  const pageTitle = t("inbox_issue.page_label", { workspace: currentProjectDetails?.name || SITE_NAME });
 
   const currentNavigationTab = navigationTab
     ? navigationTab === "open"

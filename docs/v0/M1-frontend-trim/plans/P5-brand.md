@@ -226,7 +226,7 @@ M1 设计 5"Logo"、"新文件的版权"、"二进制品牌资源"，P1 评审�
 
 **Files**
 
-- 新增：`web/apps/web/app/assets/brand/{mark.svg,lockup.svg,lockup-on-dark.svg,SOURCES.md,favicon-16x16.png,favicon-32x32.png,favicon.ico,icon-180x180.png,icon-512x512.png,og-image.png}`、`web/apps/web/public/icons/SOURCES.md`、`web/apps/web/core/components/common/nerve-logo.tsx`
+- 新增：`web/apps/web/app/assets/brand/{mark.svg,lockup.svg,lockup-on-dark.svg,SOURCES.md,favicon-16x16.png,favicon-32x32.png,favicon.ico,icon-180x180.png,icon-512x512.png,og-image.png}`、`web/apps/web/public/icons/SOURCES.md`（修复轮并入 `app/assets/brand/SOURCES.md`、删除：`public/` 的文件原样发布）、`web/apps/web/core/components/common/nerve-logo.tsx`
 - 修改：`public/icons/icon-192x192.png`、`icon-512x512.png`、`public/site.webmanifest.json`、`app/root.tsx`、`core/components/common/logo-spinner.tsx`、7 处调用方（`app/(all)/create-workspace/page.tsx`、`app/(all)/invitations/page.tsx`、`core/layouts/auth-layout/workspace-wrapper.tsx`、`core/components/auth-screens/header.tsx`、`core/components/onboarding/header.tsx`、`core/components/onboarding/tour/root.tsx`、`core/components/navigation/app-rail-hoc.tsx`）、`core/components/auth-screens/auth-base.tsx`、`app/assets/instance/maintenance-mode-{light,dark}.svg`、`app/assets/onboarding/issues.webp`、`web/packages/propel/src/icons/{index,registry}.ts`
 - 删除：`app/assets/favicon/`（4 个）、`app/assets/icons/`（2 个）、`app/assets/og-image.png`、`app/assets/images/logo-spinner-{dark,light}.gif`、`app/assets/plane-takeoff.png`、`app/assets/users/user-profile-cover-default-img.png`、`public/manifest.json`、`public/icons/icon-348x348.png`、`core/components/auth-screens/footer.tsx`、propel 的 `src/icons/brand/`（8 个）和 `src/icons/sub-brand/`（2 个）
 
@@ -237,7 +237,7 @@ M1 设计 5"Logo"、"新文件的版权"、"二进制品牌资源"，P1 评审�
 Run: `mkdir -p web/apps/web/app/assets/brand`，
 `cp $P5TMP/t3/brand/mark.svg $P5TMP/t3/brand/lockup.svg $P5TMP/t3/brand/lockup-on-dark.svg $P5TMP/t3/brand/SOURCES.md web/apps/web/app/assets/brand/`，
 `cp $P5TMP/t3/brand/SOURCES-public-icons.md web/apps/web/public/icons/SOURCES.md`，
-`pnpm exec oxfmt web/apps/web/app/assets/brand/SOURCES.md web/apps/web/public/icons/SOURCES.md`（原型的教训 1）。
+`pnpm exec oxfmt web/apps/web/app/assets/brand/SOURCES.md web/apps/web/public/icons/SOURCES.md`（原型的教训 1）。修复轮：`public/icons/SOURCES.md` 随构建发布在 `/icons/SOURCES.md`，它的一行并入 `app/assets/brand/SOURCES.md`，文件删除。
 
 读这 5 个文件：三个 SVG 开头是带 Nerve 版权声明的 XML 注释；`mark.svg` 是 64×64 的深青色（`#155E75`）圆角方块，白线折成 N、两端各一个 `#5EEAD4` 的圆点；两个横版标志是 132×32，左边半尺寸的图标，右边描边写成的小写 "nerve"（`#1F2937` / `#F9FAFB`）。
 

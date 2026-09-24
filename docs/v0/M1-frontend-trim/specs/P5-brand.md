@@ -111,7 +111,7 @@
 | `app/assets/brand/icon-180x180.png`、`icon-512x512.png` | 苹果触屏图标 | 5095、14873 |
 | `app/assets/brand/og-image.png` | 1200×630 的分享图：横版标志和一行 "Open-source project management"（Inter） | 27992 |
 | `public/icons/icon-192x192.png`、`icon-512x512.png` | `site.webmanifest.json` 的图标（清单要固定地址，所以放在 `public/`） | 5055、14873 |
-| `app/assets/brand/SOURCES.md`、`public/icons/SOURCES.md` | 放不下文件头的 PNG、ICO 的来源和版权 | — |
+| `app/assets/brand/SOURCES.md` | 放不下文件头的 PNG、ICO 的来源和版权，`public/icons/` 的两个图标也登记在这里（`public/` 的文件原样发布，Task 3 放在那里的 `SOURCES.md` 会出现在 `/icons/SOURCES.md`，修复轮并入这里、删除） | — |
 
 - **代码**：新增 `core/components/common/nerve-logo.tsx`（`NerveLogo`：图标；`NerveLockup`：横版标志，浅色和深色两张图用 `dark:` 切换，`onColor` 用于彩色背景）。7 处调用方从 propel 的 `PlaneLogo`、`PlaneLockup`、`PlaneNewIcon` 改为它们；propel 的 `icons/brand/`（Plane 的 3 个图形组件和 4 个客户 Logo）、`icons/sub-brand/` 和注册表里的 `sub-brand.plane` 删除。登录页页脚 "Join 10,000+ teams building with Plane"（客户 Logo 的唯一使用者）删除。
 - **加载动画**：`logo-spinner.tsx` 渲染 `NerveLogo` 加 `animate-pulse`；两张 GIF 删除（2.2 结论 5）。

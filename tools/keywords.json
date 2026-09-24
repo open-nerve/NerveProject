@@ -1543,7 +1543,7 @@
         "flags": ""
       },
       "content": {
-        "source": "(?!(?<=Copyright \\(c\\) 2023-present )Plane Software, Inc\\.)(?!(?<=@make)plane\\/propel\\b)plane",
+        "source": "(?!(?<=Copyright \\(c\\) 2023-present )Plane Software, Inc\\.)(?!(?<=@make)plane\\/propel(?![\\w-]))plane",
         "flags": "i"
       },
       "samples": {
@@ -1553,7 +1553,8 @@
           "        window.open(\"https://forum.plane.so\", \"_blank\", \"noopener,noreferrer\");",
           "const STALE_ASSET_RELOAD_KEY = \"__plane_chunk_reload\";",
           "Button.displayName = \"plane-ui-button\";",
-          " * GlobalModals component manages all workspace-level modals across Plane applications."
+          " * GlobalModals component manages all workspace-level modals across Plane applications.",
+          "              <EmptySpaceItem Icon={StarOutline} title=\"Star us on GitHub\" href=\"https://github.com/makeplane\" />"
         ],
         "miss": [
           " * Copyright (c) 2023-present Plane Software, Inc. and contributors",
