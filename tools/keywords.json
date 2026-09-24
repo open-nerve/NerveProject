@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P3",
+  "phase": "M1/P4",
   "rules": [
     {
       "id": "deploy-files",
@@ -1398,6 +1398,45 @@
             "web/packages/i18n/src/locales/en/workspace-settings.json"
           ],
           "miss": ["web/apps/web/app/assets/services/jira.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+        }
+      }
+    },
+    {
+      "id": "frontend-env",
+      "phase": "M1/P4",
+      "why": "前端没有环境变量（M1 设计 4.1）：前端与接口同源部署，接口一律用相对路径；Next.js 式的 process.env 注入（vite.config.ts 的 define）、dotenv 加载和 .env.example 已删除，Vite 的 VITE_ 变量也不用。import.meta.env.DEV、PROD 是 Vite 按构建模式给出的常量，不在其中。e2e/ 和 tools/ 是 Node 端的代码，读 process.env 是合法的，不在范围内",
+      "files": {
+        "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/(?:.*/)?\\.env(?:\\.[^/]*)?|turbo\\.json|pnpm-workspace\\.yaml)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "process\\.env|\\bVITE_[A-Z]|\\bdotenv\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "export const API_BASE_URL = process.env.VITE_API_BASE_URL || \"\";",
+          "  if (process.env.NODE_ENV !== \"production\") {",
+          "    \"process.env\": JSON.stringify(viteEnv),",
+          "    \"VITE_SUPPORT_EMAIL\",",
+          "VITE_WEB_BASE_URL=\"http://localhost:3000\"",
+          "import * as dotenv from \"dotenv\";",
+          "  \"dotenv\": \"16.4.7\""
+        ],
+        "miss": [
+          "  if (import.meta.env.PROD && isStaleAssetError(error)) recoverFromStaleAsset();",
+          "  if (import.meta.env.DEV) {",
+          "  \"globalEnv\": [\"NODE_ENV\"],"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/vite.config.ts",
+            "web/apps/web/.env.example",
+            "web/packages/constants/src/endpoints.ts",
+            "turbo.json",
+            "pnpm-workspace.yaml"
+          ],
+          "miss": ["e2e/playwright.config.ts", "tools/keywords.mjs", "pnpm-lock.yaml"]
         }
       }
     }

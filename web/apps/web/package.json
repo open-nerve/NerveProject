@@ -66,7 +66,6 @@
     "@types/react": "catalog:",
     "@types/react-color": "catalog:",
     "@types/react-dom": "catalog:",
-    "dotenv": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"
   }
