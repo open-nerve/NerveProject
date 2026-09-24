@@ -79,6 +79,9 @@
 | `web/apps/web/package.json`、新增 `vitest.config.ts` | 加 `test` 脚本和开发依赖 `vitest`；vitest 有自己的配置，不加载 React Router 的构建插件 | 路由匹配的单元测试 `app/routes/navigation.test.ts`（M1 设计 4.2、7.5） |
 | `packages/typescript-config`、`.oxlintrc.json`、editor 的 `package.json`、`app/(all)/layout.preload.tsx` | 删除 `nextjs.json` 和内容全被注释掉的 `layout.preload.tsx`；删掉 `.next/**` 的忽略规则和 `nextjs` 关键词 | Next.js 的遗留（M1 设计 4.1） |
 | `tools/keywords.json` | 新增规则 `frontend-env`、`next-shim-files`、`next-shims`；顶层 `phase` 改为 `M1/P4` | 删掉的东西不再长回来（M1 设计 7.4） |
+| `.gitignore`（仓库根目录） | 删掉 `!.env.example`；`.env`、`.env.*` 仍被忽略 | 唯一的 `.env.example` 已删除 |
+| web 的 `core/store/router.store.ts`、`use-project-issue-properties.ts`、`use-workspace-issue-properties.ts` | 路由参数的类型从 Node 的 `ParsedUrlQuery` 改为 React Router 给的 `Record<string, string \| undefined>`，两个 hook 的参数从 `string \| string[] \| undefined` 改为 `string \| undefined`；删掉没有读取方的 4 个 getter（`profileViewId`、`peekId`、`issueId`、`inboxId`） | Next.js 的 `useParams` 返回 `string \| string[]` 时留下的类型 |
+| web 应用、`packages/constants`、`packages/utils` | 删掉对字符串的空转换 `.toString()`：web 699 处（Task 7 的 671 处，加上类型改正之后露出的 28 处），`fetch-keys.ts` 10 处、`emoji.ts` 2 处；由类型检查器按接收者的类型判断，留下的每一处都不是字符串 | 同上；空转换不改变值，删掉后类型如实 |
 
 ---
 
@@ -111,7 +114,7 @@
 | 企业版残留：Epic、团队、工作项类型、计费和升级提示、批量操作及其工作项多选、工作项模板、工时记录、重复工作项、工作流和项目更新的空壳；企业版扩展点（`extended`、`additional` 空壳，只为企业版子类存在的 Base 类加别名，富文本筛选中空的扩展一半）；收藏的实体类型改为联合类型 | 已完成 | M1/P3 |
 | Plane 自身的死代码：IndexedDB 和同步代码、调用不存在接口的 service 方法、集成与导入器的残留（Jira 图标、集成和导入的空状态图、设置和计费页中的文案）、knip 报告的未使用文件和导出；knip 改为门禁 | 已完成 | M1/P3 |
 | 多语言：只保留 `zh-CN` 和 `en` | 已完成 | M1/P1 |
-| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的引用和包装层 `useAppRouter` 全部改为 React Router 原生写法（`Link`、`NavLink`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`、`useMatch`）；路由参数按真实的 `string \| undefined` 处理，路由组件用 `./+types/*` 的参数，共享组件用守卫；去掉延迟跳转，`AuthenticationWrapper` 的渲染时跳转改为 `<Navigate replace />`，登录后跳回的 `next_path` 改用 `@plane/utils` 的 `isValidNextPath` 校验（只接受以单个 `/` 开头的站内路径，不再放过 `//host`、`javascript:`；带单元测试）；去掉强制结尾 `/`，应用内部的地址一律不带结尾 `/`，"当前是哪一项"的判断改用 React Router 的匹配；删除垫片和 `typescript-config/nextjs.json`（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 已完成 | M1/P4 |
+| Next.js 兼容垫片（`app/compat/next/*` 及 Vite 别名）：`next/link`、`next/navigation` 的引用和包装层 `useAppRouter` 全部改为 React Router 原生写法（`Link`、`NavLink`、`useParams`、`useLocation`、`useSearchParams`、`useNavigate`、`useMatch`）；路由参数按真实的 `string \| undefined` 处理，路由组件用 `./+types/*` 的参数，共享组件用守卫；去掉延迟跳转，`AuthenticationWrapper` 的渲染时跳转改为 `<Navigate replace />`，登录后跳回的 `next_path` 改用 `@plane/utils` 的 `isValidNextPath` 校验（只接受以单个 `/` 开头的站内路径，不再放过 `//host`、`javascript:`；带单元测试），包装只读一次、修剪后校验，跳到校验过的那个值；页面到达时自动做的跳转（项目设置到第一个项目、收集箱到第一项、收集箱里的工作项到收集箱）改为替换当前地址，后退不再回到会再次跳走的地址；去掉强制结尾 `/`，应用内部的地址一律不带结尾 `/`，"当前是哪一项"的判断改用 React Router 的匹配；删除垫片和 `typescript-config/nextjs.json`（两个未使用的文件 `script.tsx`、`image.tsx` 已在 M1/P1 删除） | 已完成 | M1/P4 |
 | web 中的部署遗留：`Dockerfile.web`、`Dockerfile.dev`、`caddy/`、`.dockerignore` | 已完成 | M1/P1 |
 | `serve` 依赖及其 `start`、`preview` 脚本（当前运行即崩溃） | 已完成 | M1/P1 |
 | `public/` 中从未注册的 `sw.js` 及 workbox 相关文件 | 已完成 | M1/P1 |

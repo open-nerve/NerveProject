@@ -24,7 +24,8 @@ web 应用只用 React Router 自己的写法，不再经过 Next.js 兼容层�
 重定向和 `/sign-in` 丢掉查询参数、`next/*` 垫片），以及 M0 的两份交接中 `.env`、dotenv、`define` 和深层路径结尾 `/` 的事项
 （M1 设计 9.7）。
 
-P4 不改认证和会话的方式（M2）、不改品牌（P5）、不处理基线就存在的 `.toString()` 空转换和死资源（收尾，第 7 节）。
+P4 不改认证和会话的方式（M2）、不改品牌（P5）、不处理基线就存在的死资源（收尾，第 7 节）。基线的 `.toString()` 空转换原计划
+交收尾，执行前的控制者评审改为在 P4 删（Task 7，plan 的"控制者评审补充"第 1 条）。
 
 ---
 
@@ -33,6 +34,8 @@ P4 不改认证和会话的方式（M2）、不改品牌（P5）、不处理基�
 ### 2.1 文件总览
 
 6 个 Task，每个一个提交，顺序就是 M1 设计 9 节 P4 的四步（第 3、4 步各拆成两个 Task，见第 3 节第 1 条）。
+执行前的控制者评审加了 Task 7（删掉对字符串的空转换 `.toString()`，没有原型）；执行中 Task 4、7 各有裁定的跟进提交，
+整分支评审之后有一轮修复（[P4 review](../reviews/P4-router-native-review.md)）。
 原型（`9437a6e..270f8e6`，在 `$P4TMP/proto`）实测总计 `373 files changed, 1299 insertions(+), 1650 deletions(-)`：
 删 20 个、新增 2 个、修改 351 个。下表是每个提交各自的数字（同一个文件会被几个 Task 修改）。
 
@@ -55,7 +58,7 @@ P4 不改认证和会话的方式（M2）、不改品牌（P5）、不处理基�
 |---|---|---|
 | `make lint-web` | `keywords: 42 rules, 4 exceptions, no hits.` + 52 个 turbo 任务 | `keywords: 45 rules, 4 exceptions, no hits.` + 52 |
 | `pnpm exec turbo run check:types` | 23 | 23 |
-| `make test-web` | 15 个任务；vitest 63 个测试（constants 11、editor 16、i18n 10、services 13、utils 13） | 16 个任务；66 个（web 5、constants 11、editor 16、i18n 10、services 11、utils 13） |
+| `make test-web` | 15 个任务；vitest 63 个测试（constants 11、editor 16、i18n 10、services 13、utils 13） | 16 个任务；66 个（web 5、constants 11、editor 16、i18n 10、services 11、utils 13）。本分支另有 `isValidNextPath` 的 11 个（控制者评审补充第 2 条 9 个、修复轮 2 个），合计 77，utils 24 |
 | `make build-web` | 11 | 11 |
 | `make knip` | 门禁，零 | 零 |
 | lint 上限合计 | 711（web 566） | 711，不变 |
@@ -175,8 +178,9 @@ P4 不改认证和会话的方式（M2）、不改品牌（P5）、不处理基�
 
 - **唯一真实的缺参**（2.2 结论 4）：个人设置页没有工作区。工作项弹窗在那里不再打开（`base.tsx` 在"没有项目"的判断里加上
   "没有工作区"），表单和草稿布局改从弹窗取 `workspaceSlug`，不再各自读地址；成员下拉的 `isUserSuspended` 在没有工作区时
-  本来就回答 `false`。基线在这里如果打开了弹窗（项目 store 里还留着上一个工作区的项目时），提交会在
-  `workspaceSlug.toString()` 上抛错。
+  本来就回答 `false`。弹窗在那里其实没有入口：命令面板的"新建工作项"要求有当前工作区，直接打开个人设置和从工作区进入都
+  不提供它，`n` `i` 也打不开（控制者的 B 组第 8 项）；基线的提交在没有工作区时也只是提前返回，不会抛错（Task 4 实现者的核对，
+  原型的说法不成立）。所以这个守卫只让类型成立，行为不变。
 - 守卫让后面的判断恒为真时，那个判断一起收掉（例如 `project-setting-label-list.tsx` 的 `onDrop`、收集箱页头第 72 行）。
 
 ### 2.6 内部跳转目标、旧地址重定向与路由匹配测试（Task 5，M1 设计 3.12、4.2）
@@ -196,7 +200,9 @@ P4 不改认证和会话的方式（M2）、不改品牌（P5）、不处理基�
   - 导航常量的每一项（侧边栏、工作区设置、项目设置、个人主页标签、`generateWorkItemLink`）都落在页面上、不以 `/` 结尾；
   - 没有页面的地址落到"页面不存在"：旧的账户设置地址、原来那几个按钮的 `/features`。
 - web 应用第一次有单元测试：`package.json` 加 `test` 脚本和开发依赖 `vitest`；新增 `vitest.config.ts`（`environment: "node"`），
-  否则 vitest 会加载 `vite.config.ts` 里 React Router 的构建插件；它带 `test` 键，knip 才把测试文件算作入口。
+  让测试不加载应用的构建配置（`vite.config.ts` 里 React Router 的插件），与编辑器包的做法相同。Task 5 在 vitest 4.1.11、
+  React Router 8.3.0、knip 6.37.0 上实测：没有它时 vitest 加载 `vite.config.ts`、运行那个插件，测试仍然通过，knip 也不报；
+  原型的说法（"否则失败""它带 `test` 键，knip 才把测试文件算作入口"）不成立。
 
 ### 2.7 强制结尾 `/`、当前项判断与垫片的最后部分（Task 6，M1 设计 4.1、4.2）
 
@@ -267,8 +273,9 @@ P3 的 42 条规则之上新增 3 条，全部 `"phase": "M1/P4"`；每个顶层
    否则后退又会触发同一个跳转。
 3. **路由自己的页头从布局取参数（Task 4）。** 设计说"路由组件用 `./+types/*` 的 `params`"。`app/` 下的页头不是路由模块，
    但只挂在各自的布局下，所以由布局取 `Route.ComponentProps` 的参数传入；`core/` 下的共享组件统一用守卫（2.5）。
-4. **工作项弹窗在没有工作区的页面不打开（Task 4，行为变化）。** 见 2.5。基线在那里打开的弹窗提交时抛错；让它不打开，
-   是把一个坏掉的入口变成没有入口。命令面板在个人设置页是否还应提供"创建工作项"，由 M4 决定（第 7 节）。
+4. **工作项弹窗在没有工作区的页面不渲染（Task 4）。** 见 2.5。原来写的理由（"基线在那里打开的弹窗提交时抛错"）不成立：
+   那里本来就没有打开它的入口，基线的提交也只是提前返回。守卫让类型成立，行为不变。弹窗是否还应挂在个人设置页上，
+   由 M4 决定（第 7 节）。
 5. **修好停用功能页的"去设置里开启"按钮（Task 5，行为变化）。** 它们指向没有路由的地址（Plane 的问题），路由匹配测试
    不允许这样的目标存在；改为各自的功能设置页，这是"落在页面上"的最小改法。
 6. **侧边栏用 `useMatch`，不用 `NavLink` 的 `end`（Task 6）。** 设计说"`NavLink` 的 `isActive`、`matchPath`"。实测
@@ -300,11 +307,11 @@ P3 的 42 条规则之上新增 3 条，全部 `"phase": "M1/P4"`；每个顶层
 
 ## 4. 验收标准
 
-- [ ] 6 个 Task 各一个提交，每个提交结束时 `pnpm exec turbo run check:types` 23 个任务、`make lint-web` 52 个、`make build-web`
+- [ ] 7 个 Task 各一个提交（Task 4、7 另有裁定的跟进提交，之后是修复轮），每个提交结束时 `pnpm exec turbo run check:types` 23 个任务、`make lint-web` 52 个、`make build-web`
       11 个通过，`make knip` 为零。
 - [ ] `make lint-web`：`keywords: 45 rules, 4 exceptions, no hits.`；每个包的 oxlint 警告数等于上限（合计 711，不变）；
       `node $P4TMP/alts.mjs M1/P4` 输出 `alternatives or variants without a hit sample: 0`。
-- [ ] `make test-web` 16 个任务通过；vitest 66 个测试；除 editor 的 5 行 `prosemirror-codemark` 之外没有 stderr。
+- [ ] `make test-web` 16 个任务通过；vitest 77 个测试（原型的 66 个加上 `isValidNextPath` 的 11 个）；除 editor 的 5 行 `prosemirror-codemark` 之外没有 stderr。
 - [ ] `web/`、`turbo.json`、`pnpm-workspace.yaml` 里没有 `process.env`、`VITE_*`、`dotenv`；`.env.example` 不存在；
       `make web-dev` 打开首页，控制台没有 "process is not defined"。
 - [ ] `app/compat/next/`、`next-*.d.ts`、`use-app-router.tsx`、`nextjs.json` 不存在；没有 `next/link`、`next/navigation`、
@@ -324,8 +331,8 @@ P3 的 42 条规则之上新增 3 条，全部 `"phase": "M1/P4"`；每个顶层
 
 - 认证和会话的传输方式、`AuthenticationWrapper` 的重写（M2，设计 4.2："M1 只做让它在原生路由下正确工作的最小改动"）。
 - 接口地址的结尾 `/`（`ensureAPITrailingSlash`、`normalizeAPIRequestURL`），随各领域对接新接口时退出（设计 4.1）。
-- 基线就存在的、对路由参数的无效 `.toString()`：`app/`、`core/` 里 181 个文件 520 行（基线 199 个文件 575 行，P4 改到的行顺手去掉了）。
-  它们对字符串是空操作，不影响类型和行为；统一去掉要再改 181 个文件（第 7 节，交收尾）。
+- （原有一条：基线就存在的、对路由参数的无效 `.toString()` 交收尾。执行前的控制者评审把它改为 P4 的 Task 7，按类型删除，
+  见 plan 的"控制者评审补充"第 1 条。）
 - 两处保留的加载器重定向不带 `#` 片段：工作项的项目内地址 `/projects/:projectId/issues/:issueId` 重定向到 `/browse/…`
   （Plane 的行为，查询参数也不带）；个人主页重定向到第一个标签页（P2，带查询参数）。React Router 给加载器的请求本来就不含片段。
   应用自己的工作项链接大多用 `generateWorkItemLink` 直接生成 `/browse/…`（评论链接的 `#comment-…` 因此保留），只有表格的
@@ -355,8 +362,9 @@ P3 的 42 条规则之上新增 3 条，全部 `"phase": "M1/P4"`；每个顶层
 
 | M | 事项 |
 |---|---|
-| M2 | - `AuthenticationWrapper` 只做了最小改动：6 处跳转改为 `<Navigate replace />`；令牌管理器重写时一并重做。<br>- `next_path` 只带 `pathname`，不带原地址的查询参数和片段（基线如此）；`isValidURL` 只拒绝 `http`、`https`、`ftp` 开头的地址，`//host` 这样的协议相对地址能通过。M2 应只接受以单个 `/` 开头的站内路径。<br>- 登录、注册表单和退出直接提交到 `/auth/…`（相对地址）。 |
-| M4 | - 工作项弹窗在没有工作区的页面（个人设置）不打开；命令面板在那里是否还提供"创建工作项"由 M4 定。<br>- 表格的"子工作项"列跳到 `/projects/:projectId/issues/:id#sub-issues`，经加载器重定向到 `/browse/…` 时片段丢失；没有元素读取 `#sub-issues`，这个片段本来就不起作用。M4 重做工作项地址时一并决定。 |
+| M2 | - `AuthenticationWrapper` 只做了最小改动：6 处跳转改为 `<Navigate replace />`；`next_path` 读一次、修剪后用 `@plane/utils` 的 `isValidNextPath` 校验（只接受以单个 `/` 开头的站内路径，拒绝 `//`、`\` 和协议），跳到校验过的那个值。令牌管理器重写时一并重做。<br>- **服务端必须校验 `next_path`**：登录、注册表单把地址里的原值作为隐藏字段提交给 `/auth/sign-in/`、`/auth/sign-up/`，由服务端发出跳转。M2 的处理器用同一条规则校验（修剪后以单个 `/` 开头，没有 `//`、`\`、控制字符），不合格时按没有 `next_path` 处理。<br>- `next_path` 只带 `pathname`，不带原地址的查询参数和片段（基线如此）。<br>- `api.service.ts` 的 401 处理里 `currentPath ? … : ""` 恒为真；令牌管理器替换它时不要照搬。<br>- 修改密码页把错误断言为 `error_code?: string`，Plane 返回的是数字（Task 7 因此保留那里的 `.toString()`）；认证错误的契约由 OpenAPI 生成时类型要与取值一致。<br>- 登录、注册表单和退出直接提交到 `/auth/…`（相对地址）。 |
+| M3 | - `RESTRICTED_URLS`（保留的工作区名）与应用的顶层路由段不一致：`login`、`register` 不在里面，它们现在匹配 `/:workspaceSlug`；列出的一些词已不是路由。保留名单应正好是应用的顶层路由段，与服务端的工作区名校验一起定。<br>- 离开项目的弹窗先跳转、再调用离开项目的接口（Plane 原有的顺序），接口失败时用户已经离开了页面。 |
+| M4 | - 工作项弹窗挂在个人设置页上，但那里没有打开它的入口（命令面板的"新建工作项"要求有当前工作区）；弹窗在没有工作区时不渲染。是否从个人设置页的挂载中去掉，由 M4 定。<br>- 表格的"子工作项"列跳到 `/projects/:projectId/issues/:id#sub-issues`，经加载器重定向到 `/browse/…` 时片段丢失；没有元素读取 `#sub-issues`，这个片段本来就不起作用。M4 重做工作项地址时一并决定。 |
 
 ### 7.2 交给 P5
 
@@ -364,9 +372,9 @@ P3 的 42 条规则之上新增 3 条，全部 `"phase": "M1/P4"`；每个顶层
 
 ### 7.3 交给 M1 收尾
 
-- 对路由参数的无效 `.toString()`：181 个文件 520 行（第 5 节）。
 - 路由匹配测试的宽松之处（第 3 节第 8 条）：如果收尾时要收紧，需要给跳转目标的表达式加上取值推断。
 - 构建体积对比（2.2 的表）写进收尾 review。
+- 其余交收尾的事项（执行中发现，都是基线就有的）见 [P4 review](../reviews/P4-router-native-review.md)第 7 节：从不渲染的应用栏、`={"…"}` 写法、开发服务器的 66 条外部化警告、编辑器标注块图标属性的类型、没有调用方的 fetcher 和 emoji 帮助函数、`use-issues-actions.tsx` 的 `viewId as TProfileViews`。
 
 ### 7.4 M0 交接的落点
 

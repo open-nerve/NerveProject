@@ -148,8 +148,9 @@ P3 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
    第 4 条裁定的 grep 守住。
 3. **`NavLink` 的 `end` 不容忍结尾 `/`**（Task 6）：React Router 8.3 `lib/dom/lib.js` 第 387–388 行按文本比较；原型第一版用了它，
    已改为 `useMatch`。
-4. **vitest 找到 `vite.config.ts` 就加载 React Router 的构建插件**，失败（Task 5）：web 应用要有自己的 `vitest.config.ts`；
-   它必须带 `test` 键，knip 的 vitest 插件才把测试文件算作入口（否则 knip 报 `navigation.test.ts` 未使用）。
+4. **vitest 找到 `vite.config.ts` 就加载 React Router 的构建插件**（Task 5）：web 应用有自己的 `vitest.config.ts`，测试不加载
+   应用的构建配置。（执行时更正：原型记的"否则失败""否则 knip 报 `navigation.test.ts` 未使用"在 vitest 4.1.11、React Router 8.3.0、
+   knip 6.37.0 上都不成立，没有它测试和 knip 也通过；文件为隔离构建插件而保留。）
 5. **路由表的初始值是 `satisfies` 表达式**：读 `routes/core.ts` 的脚本先解开它（`mounts.mjs`、`pathlits.mjs` 已处理）。
 6. **页面没有参数时 `return null`，它上面定义的处理函数仍要各自守卫**：闭包不会随后面的 `return` 收窄类型（Task 4 的收藏菜单）。
 7. **`lintdiff.sh` 按消息文本比较**：Task 6 改了 `project/root.tsx` 里 `isArchived` 的定义位置，两条 `exhaustive-deps` 的缺失依赖
