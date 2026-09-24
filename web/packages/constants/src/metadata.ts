@@ -8,4 +8,4 @@ export const SITE_NAME = "Nerve";
 export const SITE_DESCRIPTION =
   "Open-source project management tool to manage work items, cycles, and product roadmaps easily";
 export const SITE_KEYWORDS =
-  "software development, plan, ship, software, accelerate, code management, release management, project management, work items tracking, agile, scrum, kanban, collaboration";
+  "software development, plan, ship, software, accelerate, code management, release management, project management, work item tracking, agile, scrum, kanban, collaboration";

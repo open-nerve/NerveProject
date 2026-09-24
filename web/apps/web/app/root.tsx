@@ -9,7 +9,7 @@ import { Links, Meta, Outlet, Scripts } from "react-router";
 import type { LinksFunction } from "react-router";
 import { ThemeProvider } from "next-themes";
 // nerve imports
-import { SITE_DESCRIPTION, SITE_NAME } from "@nerve/constants";
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME } from "@nerve/constants";
 // types
 // assets
 import favicon16 from "@/app/assets/brand/favicon-16x16.png?url";
@@ -83,19 +83,12 @@ export const meta: Route.MetaFunction = () => [
   { title: SITE_NAME },
   { name: "description", content: SITE_DESCRIPTION },
   { property: "og:title", content: SITE_NAME },
-  {
-    property: "og:description",
-    content: "Open-source project management tool to manage work items, cycles, and product roadmaps easily",
-  },
+  { property: "og:description", content: SITE_DESCRIPTION },
   { property: "og:image", content: ogImage },
   { property: "og:image:width", content: "1200" },
   { property: "og:image:height", content: "630" },
   { property: "og:image:alt", content: "Nerve" },
-  {
-    name: "keywords",
-    content:
-      "software development, plan, ship, software, accelerate, code management, release management, project management, work item tracking, agile, scrum, kanban, collaboration",
-  },
+  { name: "keywords", content: SITE_KEYWORDS },
   { name: "twitter:card", content: "summary_large_image" },
   { name: "twitter:image", content: ogImage },
   { name: "twitter:image:width", content: "1200" },
