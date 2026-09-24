@@ -8,22 +8,22 @@ import * as React from "react";
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui-components/react/context-menu";
 import { cn } from "../utils";
 
-export interface ContextMenuProps extends React.ComponentProps<typeof ContextMenuPrimitive.Root> {
+interface ContextMenuProps extends React.ComponentProps<typeof ContextMenuPrimitive.Root> {
   children: React.ReactNode;
 }
 
-export interface ContextMenuTriggerProps extends React.ComponentProps<typeof ContextMenuPrimitive.Trigger> {
+interface ContextMenuTriggerProps extends React.ComponentProps<typeof ContextMenuPrimitive.Trigger> {
   children: React.ReactNode;
 }
 
-export interface ContextMenuContentProps extends React.ComponentProps<typeof ContextMenuPrimitive.Positioner> {
+interface ContextMenuContentProps extends React.ComponentProps<typeof ContextMenuPrimitive.Positioner> {
   children: React.ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   sideOffset?: number;
   positionerClassName?: string;
 }
 
-export interface ContextMenuItemProps extends React.ComponentProps<typeof ContextMenuPrimitive.Item> {
+interface ContextMenuItemProps extends React.ComponentProps<typeof ContextMenuPrimitive.Item> {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;

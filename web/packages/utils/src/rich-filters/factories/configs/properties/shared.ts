@@ -9,7 +9,7 @@ import type { IProject, IUserLite, TOperatorConfigMap, TSupportedOperators } fro
 import { COMPARISON_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import { getDatePickerConfig, getDateRangePickerConfig, getMultiSelectConfig } from "../core";
-import type { IFilterIconConfig, TCreateDateFilterParams, TCreateFilterConfigParams, TFilterIconType } from "../shared";
+import type { IFilterIconConfig, TCreateDateFilterParams, TCreateFilterConfigParams } from "../shared";
 import { createOperatorConfigEntry } from "../shared";
 
 // ------------ Base User Filter Types ------------
@@ -90,11 +90,3 @@ export const getProjectMultiSelectConfig = (
       ...params,
     }
   );
-
-/**
- * Custom property filter specific params
- */
-export type TCustomPropertyFilterParams<T extends TFilterIconType> = TCreateFilterConfigParams &
-  IFilterIconConfig<T> & {
-    propertyDisplayName: string;
-  };

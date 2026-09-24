@@ -5,7 +5,6 @@
  */
 
 import type { ILinkDetails } from "../issues";
-import type { TIssue } from "../issues/issue";
 import type { IIssueFilterOptions } from "../view-props";
 
 export type TModuleStatus = "backlog" | "planned" | "in-progress" | "paused" | "completed" | "cancelled";
@@ -14,13 +13,13 @@ export type TModuleCompletionChartDistribution = {
   [key: string]: number | null;
 };
 
-export type TModuleDistributionBase = {
+type TModuleDistributionBase = {
   total_issues: number;
   pending_issues: number;
   completed_issues: number;
 };
 
-export type TModuleAssigneesDistribution = {
+type TModuleAssigneesDistribution = {
   assignee_id: string | null;
   avatar_url: string | null;
   first_name: string | null;
@@ -28,7 +27,7 @@ export type TModuleAssigneesDistribution = {
   display_name: string | null;
 };
 
-export type TModuleLabelsDistribution = {
+type TModuleLabelsDistribution = {
   color: string | null;
   label_id: string | null;
   label_name: string | null;
@@ -75,29 +74,7 @@ export interface IModule {
   updated_by?: string;
 }
 
-export interface ModuleIssueResponse {
-  created_at: Date;
-  created_by: string;
-  id: string;
-  issue: string;
-  issue_detail: TIssue;
-  module: string;
-  module_detail: IModule;
-  project: string;
-  updated_at: Date;
-  updated_by: string;
-  workspace: string;
-  sub_issues_count: number;
-}
-
 export type ModuleLink = {
   title: string;
   url: string;
-};
-
-export type SelectModuleType = (IModule & { actionType: "edit" | "delete" | "create-issue" }) | undefined;
-
-export type TPublicModule = {
-  id: string;
-  name: string;
 };

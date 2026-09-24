@@ -17,5 +17,3 @@ export { CORE_EXTENSIONS } from "@/constants/extension";
 
 // types
 export * from "@/types";
-
-export { TrailingNode } from "@/extensions/trailing-node";

@@ -17,7 +17,6 @@ import { createAndGroupNode } from "../../factories/nodes/core";
 import { getGroupChildren } from "../../types";
 import { isAndGroupNode, isConditionNode, isGroupNode } from "../../types/core";
 import { shouldUnwrapGroup } from "../../validators/shared";
-import { transformExpressionTree } from "../transformation/core";
 
 /**
  * Adds an AND condition to the filter expression.
@@ -49,35 +48,6 @@ export const addAndCondition = <P extends TFilterProperty>(
   // Throw error for unexpected expression type
   console.error("Invalid expression type", expression);
   return expression;
-};
-
-/**
- * Replaces a node in the expression tree with another node.
- * Uses transformExpressionTree for consistent tree processing and better maintainability.
- * @param expression - The expression tree to search in
- * @param targetId - The ID of the node to replace
- * @param replacement - The node to replace with
- * @returns The updated expression tree
- */
-export const replaceNodeInExpression = <P extends TFilterProperty>(
-  expression: TFilterExpression<P>,
-  targetId: string,
-  replacement: TFilterExpression<P>
-): TFilterExpression<P> => {
-  const result = transformExpressionTree(expression, (node: TFilterExpression<P>) => {
-    // If this is the node we want to replace, return the replacement
-    if (node.id === targetId) {
-      return {
-        expression: replacement,
-        shouldNotify: false,
-      };
-    }
-    // For all other nodes, let the generic transformer handle the recursion
-    return { expression: node, shouldNotify: false };
-  });
-
-  // Since we're doing a replacement, the result should never be null
-  return result.expression || expression;
 };
 
 /**

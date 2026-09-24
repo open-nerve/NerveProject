@@ -23,7 +23,7 @@ import {
 import type { TCommandExtraProps, TEditorCommands } from "@/types";
 
 // Utility type to enforce the necessary extra props or make extraProps optional
-export type ExtraPropsForCommand<T extends TEditorCommands> = T extends keyof TCommandExtraProps
+type ExtraPropsForCommand<T extends TEditorCommands> = T extends keyof TCommandExtraProps
   ? TCommandExtraProps[T]
   : object; // Default to empty object for commands without extra props
 
@@ -36,7 +36,7 @@ export type ToolbarMenuItem<T extends TEditorCommands = TEditorCommands> = {
   extraProps?: ExtraPropsForCommand<T>;
 };
 
-export const TEXT_ALIGNMENT_ITEMS: ToolbarMenuItem<"text-align">[] = [
+const TEXT_ALIGNMENT_ITEMS: ToolbarMenuItem<"text-align">[] = [
   {
     itemKey: "text-align",
     renderKey: "text-align-left",
@@ -124,7 +124,7 @@ const LIST_ITEMS: ToolbarMenuItem<"bulleted-list" | "numbered-list" | "to-do-lis
   },
 ];
 
-export const USER_ACTION_ITEMS: ToolbarMenuItem<"quote" | "code">[] = [
+const USER_ACTION_ITEMS: ToolbarMenuItem<"quote" | "code">[] = [
   { itemKey: "quote", renderKey: "quote", name: "Quote", icon: QuoteOutline },
   { itemKey: "code", renderKey: "code", name: "Code", icon: CodeOutline },
 ];

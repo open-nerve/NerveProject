@@ -14,13 +14,13 @@ import type {
 import type { EQUALITY_OPERATOR, COLLECTION_OPERATOR, COMPARISON_OPERATOR } from "../operators";
 
 // ----------------------------- EXACT Operator -----------------------------
-export type TExactOperatorConfigs = TSingleSelectFilterFieldConfig<TFilterValue> | TDateFilterFieldConfig<TFilterValue>;
+type TExactOperatorConfigs = TSingleSelectFilterFieldConfig<TFilterValue> | TDateFilterFieldConfig<TFilterValue>;
 
 // ----------------------------- IN Operator -----------------------------
-export type TInOperatorConfigs = TMultiSelectFilterFieldConfig<TFilterValue>;
+type TInOperatorConfigs = TMultiSelectFilterFieldConfig<TFilterValue>;
 
 // ----------------------------- RANGE Operator -----------------------------
-export type TRangeOperatorConfigs = TDateRangeFilterFieldConfig<TFilterValue>;
+type TRangeOperatorConfigs = TDateRangeFilterFieldConfig<TFilterValue>;
 
 // ----------------------------- Operator Specific Configs -----------------------------
 

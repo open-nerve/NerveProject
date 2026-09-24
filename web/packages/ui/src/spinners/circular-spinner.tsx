@@ -8,7 +8,7 @@ import * as React from "react";
 // helpers
 import { cn } from "../utils";
 
-export interface ISpinner extends React.SVGAttributes<SVGElement> {
+interface ISpinner extends React.SVGAttributes<SVGElement> {
   height?: string;
   width?: string;
   className?: string | undefined;

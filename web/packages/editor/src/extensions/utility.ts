@@ -45,7 +45,7 @@ declare module "@tiptap/core" {
   }
 }
 
-export type UtilityExtensionStorage = {
+type UtilityExtensionStorage = {
   assetsList: TEditorAsset[];
   assetsUploadStatus: TFileHandler["assetsUploadStatus"];
   uploadInProgress: boolean;

@@ -21,6 +21,6 @@ export type JSONContent = {
   [key: string]: unknown;
 };
 
-export type HTMLContent = string;
+type HTMLContent = string;
 
 export type Content = HTMLContent | JSONContent | JSONContent[] | null;

@@ -59,8 +59,6 @@ export type TInboxIssueFilter = {
 };
 
 // sorting filters
-export type TInboxIssueSortingKeys = "order_by" | "sort_by";
-
 export type TInboxIssueSortingOrderByKeys = "issue__created_at" | "issue__updated_at" | "issue__sequence_id";
 
 export type TInboxIssueSortingSortByKeys = "asc" | "desc";
@@ -71,7 +69,7 @@ export type TInboxIssueSorting = {
 };
 
 // filtering and sorting types for query params
-export type TInboxIssueSortingOrderByQueryParamKeys =
+type TInboxIssueSortingOrderByQueryParamKeys =
   | "issue__created_at"
   | "-issue__created_at"
   | "issue__updated_at"
@@ -82,13 +80,6 @@ export type TInboxIssueSortingOrderByQueryParamKeys =
 export type TInboxIssueSortingOrderByQueryParam = {
   order_by: TInboxIssueSortingOrderByQueryParamKeys;
 };
-
-export type TInboxIssuesQueryParams = {
-  [key in keyof TInboxIssueFilter]: string;
-} & TInboxIssueSortingOrderByQueryParam & {
-    per_page: number;
-    cursor: string;
-  };
 
 // inbox issue types
 

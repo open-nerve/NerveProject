@@ -17,7 +17,7 @@ type AssetDuplicationResult = {
   shouldProcess: boolean;
 };
 
-export type AssetDuplicationHandler = (context: AssetDuplicationContext) => AssetDuplicationResult;
+type AssetDuplicationHandler = (context: AssetDuplicationContext) => AssetDuplicationResult;
 
 const imageComponentHandler: AssetDuplicationHandler = ({ element, originalHtml }) => {
   const src = element.getAttribute("src");

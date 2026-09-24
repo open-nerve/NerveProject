@@ -12,7 +12,6 @@ import type { DetailedAssetType } from "./assets/asset-types";
 import type { BaseEmptyStateCommonProps } from "./types";
 
 export function EmptyStateDetailed({
-  asset,
   assetKey,
   title,
   description,
@@ -23,8 +22,7 @@ export function EmptyStateDetailed({
   customButton,
   align = "start",
 }: BaseEmptyStateCommonProps) {
-  // Determine which asset to use: assetKey takes precedence, fallback to custom asset
-  const resolvedAsset = assetKey ? getDetailedAsset(assetKey as DetailedAssetType, assetClassName) : asset;
+  const resolvedAsset = getDetailedAsset(assetKey as DetailedAssetType, assetClassName);
 
   return (
     <div className={cn("flex size-full items-center justify-center", rootClassName)}>

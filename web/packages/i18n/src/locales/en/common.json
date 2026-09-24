@@ -14,7 +14,6 @@
   "info": "Info",
   "close": "Close",
   "yes": "Yes",
-  "no": "No",
   "ok": "OK",
   "name": "Name",
   "unknown_user": "Unknown user",
@@ -182,9 +181,6 @@
   "we_are_having_trouble_fetching_the_updates": "We are having trouble fetching the updates.",
   "for_the_latest_updates": "for the latest updates.",
   "please_visit": "Please visit",
-  "docs": "Docs",
-  "support": "Support",
-  "forum": "Forum",
   "please_select_at_least_one_invitation": "Please select at least one invitation.",
   "please_select_at_least_one_invitation_description": "Please select at least one invitation to join the workspace.",
   "we_see_that_someone_has_invited_you_to_join_a_workspace": "We see that someone has invited you to join a workspace",
@@ -295,7 +291,6 @@
   "member": "{count, plural, one{# member} other{# members}}",
   "new_password_must_be_different_from_old_password": "New password must be different from old password",
   "edited": "edited",
-  "bot": "Bot",
   "settings_description": "Manage your account, workspace, and project preferences all in one place. Switch between tabs to easily configure.",
   "back_to_workspace": "Back to workspace",
   "copied_to_clipboard": "Copied to clipboard",
@@ -480,8 +475,6 @@
     "off_track": "Off-Track",
     "at_risk": "At risk",
     "completion": "Completion",
-    "upcoming": "Upcoming",
-    "completed": "Completed",
     "in_progress": "In progress",
     "planned": "Planned",
     "paused": "Paused",
@@ -672,18 +665,6 @@
       "description": "All permissions set to true within the workspace."
     }
   },
-  "user_roles": {
-    "product_or_project_manager": "Product / Project Manager",
-    "development_or_engineering": "Development / Engineering",
-    "founder_or_executive": "Founder / Executive",
-    "freelancer_or_consultant": "Freelancer / Consultant",
-    "marketing_or_growth": "Marketing / Growth",
-    "sales_or_business_development": "Sales / Business Development",
-    "support_or_operations": "Support / Operations",
-    "student_or_professor": "Student / Professor",
-    "human_resources": "Human / Resources",
-    "other": "Other"
-  },
   "default_global_view": {
     "all_issues": "All work items",
     "assigned": "Assigned",
@@ -699,7 +680,6 @@
   "horizontal_navigation_bar": "Tabbed Navigation",
   "show_limited_projects_on_sidebar": "Show limited projects on sidebar",
   "enter_number_of_projects": "Enter number of projects",
-  "pin": "Pin",
   "in_app": "In-app",
   "forms": "Forms",
   "file_upload": {

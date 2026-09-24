@@ -52,9 +52,6 @@ export const OPERATORS = {
 // -------- TYPES --------
 
 export type TLogicalOperator = (typeof LOGICAL_OPERATOR)[keyof typeof LOGICAL_OPERATOR];
-export type TEqualityOperator = (typeof EQUALITY_OPERATOR)[keyof typeof EQUALITY_OPERATOR];
-export type TCollectionOperator = (typeof COLLECTION_OPERATOR)[keyof typeof COLLECTION_OPERATOR];
-export type TComparisonOperator = (typeof COMPARISON_OPERATOR)[keyof typeof COMPARISON_OPERATOR];
 
 /**
  * Union type representing all operators that can be used in a filter condition.

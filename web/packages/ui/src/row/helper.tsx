@@ -9,7 +9,7 @@ export enum ERowVariant {
   HUGGING = "hugging",
 }
 export type TRowVariant = ERowVariant.REGULAR | ERowVariant.HUGGING;
-export interface IRowProperties {
+interface IRowProperties {
   [key: string]: string;
 }
 export const rowStyle: IRowProperties = {

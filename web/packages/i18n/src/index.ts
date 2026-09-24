@@ -9,11 +9,9 @@ export { TranslationProvider } from "./provider";
 
 // Hooks
 export { useTranslation } from "./hooks/use-translation";
-export type { TTranslationStore } from "./hooks/use-translation";
 
 // Types
 export type { TLanguage, ILanguageOption } from "./types";
-export type { TNamespace } from "./constants/namespaces";
 
 // Utilities
 export { setLanguage } from "./core/set-language";

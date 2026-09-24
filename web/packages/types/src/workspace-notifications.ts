@@ -18,7 +18,7 @@ export type TNotificationFilter = {
 };
 
 // notification payload
-export type TNotificationIssueLite = {
+type TNotificationIssueLite = {
   id: string | undefined;
   sequence_id: number | undefined;
   identifier: string | undefined;

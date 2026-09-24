@@ -8,7 +8,7 @@
 import { EUserProjectRoles } from "@nerve/types";
 import type { TProjectSettingsItem, TProjectSettingsTabs } from "@nerve/types";
 
-export enum PROJECT_SETTINGS_CATEGORY {
+enum PROJECT_SETTINGS_CATEGORY {
   GENERAL = "general",
   FEATURES = "features",
   WORK_STRUCTURE = "work-structure",

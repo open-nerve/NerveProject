@@ -8,22 +8,6 @@ import sanitizeHtml from "sanitize-html";
 import type { Content, JSONContent } from "@nerve/types";
 
 /**
- * @description Adds space between camelCase words
- * @param {string} str - String to add spaces to
- * @returns {string} String with spaces between camelCase words
- * @example
- * addSpaceIfCamelCase("camelCase") // returns "camel Case"
- * addSpaceIfCamelCase("thisIsATest") // returns "this Is A Test"
- */
-export const addSpaceIfCamelCase = (str: string) => {
-  if (str === undefined || str === null) return "";
-
-  if (typeof str !== "string") str = `${str}`;
-
-  return str.replace(/([a-z])([A-Z])/g, "$1 $2");
-};
-
-/**
  * @description Replaces underscores with spaces in snake_case strings
  * @param {string} str - String to replace underscores in
  * @returns {string} String with underscores replaced by spaces
@@ -47,22 +31,6 @@ export const truncateText = (str: string, length: number) => {
 };
 
 /**
- * @description Creates a similar string by randomly shuffling characters
- * @param {string} str - String to shuffle
- * @returns {string} Shuffled string with same characters
- * @example
- * createSimilarString("hello") // might return "olleh" or "lehol"
- */
-export const createSimilarString = (str: string) => {
-  const shuffled = str
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
-
-  return shuffled;
-};
-
-/**
  * @description Copies full URL (origin + path) to clipboard
  * @param {string} path - URL path to copy
  * @returns {Promise<void>} Promise that resolves when copying is complete
@@ -75,23 +43,6 @@ export const copyUrlToClipboard = async (path: string) => {
   // create URL object and ensure proper path formatting
   const url = new URL(path, originUrl);
   await copyTextToClipboard(url.toString());
-};
-
-/**
- * @description Gets first character of first word or first characters of first two words
- * @param {string} str - Input string
- * @returns {string} First character(s)
- * @example
- * getFirstCharacters("John") // returns "J"
- * getFirstCharacters("John Doe") // returns "JD"
- */
-export const getFirstCharacters = (str: string) => {
-  const words = str.trim().split(" ");
-  if (words.length === 1) {
-    return words[0].charAt(0);
-  } else {
-    return words[0].charAt(0) + words[1].charAt(0);
-  }
 };
 
 /**
@@ -173,7 +124,7 @@ export const isEmptyHtmlString = (htmlString: string, allowedHTMLTags: string[] 
  * @param {JSONContent} content
  * @returns {boolean}
  */
-export const isJSONContentEmpty = (content: JSONContent | undefined): boolean => {
+const isJSONContentEmpty = (content: JSONContent | undefined): boolean => {
   // If it has text, check if text is meaningful
   if (!content) {
     return true;
@@ -245,23 +196,6 @@ export const isCommentEmpty = (comment: Content | undefined): boolean => {
 
 /**
  * @description
- * Legacy function for backward compatibility with string comments
- * @param {string | undefined} comment
- * @returns {boolean}
- * @deprecated Use isCommentEmpty with Content type instead
- */
-export const isStringCommentEmpty = (comment: string | undefined): boolean => {
-  // return true if comment is undefined
-  if (!comment) return true;
-  return (
-    comment?.trim() === "" ||
-    comment === "<p></p>" ||
-    isEmptyHtmlString(comment ?? "", ["img", "mention-component", "image-component", "embed-component"])
-  );
-};
-
-/**
- * @description
  * This function test whether a URL is valid or not.
  *
  * It accepts URLs with or without the protocol.
@@ -281,33 +215,6 @@ export const checkURLValidity = (url: string): boolean => {
 
   return urlPattern.test(url);
 };
-
-/**
- * Combines array elements with a separator and adds a conjunction before the last element
- * @param array Array of strings to combine
- * @param separator Separator to use between elements (default: ", ")
- * @param conjunction Conjunction to use before last element (default: "and")
- * @returns Combined string with conjunction before the last element
- */
-export const joinWithConjunction = (array: string[], separator: string = ", ", conjunction: string = "and"): string => {
-  if (!array || array.length === 0) return "";
-  if (array.length === 1) return array[0];
-  if (array.length === 2) return `${array[0]} ${conjunction} ${array[1]}`;
-
-  const lastElement = array[array.length - 1];
-  const elementsExceptLast = array.slice(0, -1);
-
-  return `${elementsExceptLast.join(separator)}${separator}${conjunction} ${lastElement}`;
-};
-
-/**
- * @description Ensures a URL has a protocol
- * @param {string} url
- * @returns {string}
- * @example
- * ensureUrlHasProtocol("example.com") => "http://example.com"
- */
-export const ensureUrlHasProtocol = (url: string): string => (url.startsWith("http") ? url : `http://${url}`);
 
 /**
  * @returns {boolean} true if searchQuery is substring of text in the same order, false otherwise

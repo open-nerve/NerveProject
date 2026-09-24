@@ -14,7 +14,7 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
 /**
  * Cycle filter specific params
  */
-export type TCreateCycleFilterParams = TCreateFilterConfigParams &
+type TCreateCycleFilterParams = TCreateFilterConfigParams &
   IFilterIconConfig<TCycleGroups> & {
     cycles: ICycle[];
   };
@@ -24,7 +24,7 @@ export type TCreateCycleFilterParams = TCreateFilterConfigParams &
  * @param params - The filter params
  * @returns The cycle multi select config
  */
-export const getCycleMultiSelectConfig = (params: TCreateCycleFilterParams, singleValueOperator: TSupportedOperators) =>
+const getCycleMultiSelectConfig = (params: TCreateCycleFilterParams, singleValueOperator: TSupportedOperators) =>
   getMultiSelectConfig<ICycle, string, TCycleGroups>(
     {
       items: params.cycles,

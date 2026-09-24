@@ -6,9 +6,7 @@
 
 import { EIssueLayoutTypes } from "@nerve/types";
 
-type TIssueLayout = "list" | "kanban" | "calendar" | "spreadsheet";
-
-export type TIssueLayoutMap = Record<
+type TIssueLayoutMap = Record<
   EIssueLayoutTypes,
   {
     key: EIssueLayoutTypes;
@@ -16,23 +14,6 @@ export type TIssueLayoutMap = Record<
     i18n_label: string;
   }
 >;
-
-export const SITES_ISSUE_LAYOUTS: {
-  key: TIssueLayout;
-  titleTranslationKey: string;
-  icon: string;
-}[] = [
-  {
-    key: "list",
-    icon: "List",
-    titleTranslationKey: "issue.layouts.list",
-  },
-  {
-    key: "kanban",
-    icon: "Kanban",
-    titleTranslationKey: "issue.layouts.kanban",
-  },
-];
 
 export const ISSUE_LAYOUT_MAP: TIssueLayoutMap = {
   [EIssueLayoutTypes.LIST]: {

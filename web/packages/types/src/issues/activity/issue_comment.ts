@@ -6,7 +6,6 @@
 
 import type { JSONContent } from "../../editor";
 import type { TFileSignedURLResponse } from "../../file";
-import type { IUserLite } from "../../users";
 import type {
   TIssueActivityWorkspaceDetail,
   TIssueActivityProjectDetail,
@@ -14,12 +13,6 @@ import type {
   TIssueActivityUserDetail,
 } from "./base";
 
-export type TCommentReaction = {
-  id: string;
-  reaction: string;
-  actor: string;
-  actor_detail: IUserLite;
-};
 export type TIssueComment = {
   id: string;
   workspace: string;

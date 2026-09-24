@@ -48,7 +48,7 @@ export interface IFilterConfigManager<P extends TFilterProperty> {
  * Parameters for initializing the FilterConfigManager.
  * - options: Optional configuration options to override defaults
  */
-export type TConfigManagerParams = {
+type TConfigManagerParams = {
   options?: Partial<TConfigOptions>;
 };
 

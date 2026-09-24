@@ -25,18 +25,6 @@ export const PROFILE_TABS = [
   },
 ];
 
-export const PREFERENCE_OPTIONS: {
-  id: string;
-  title: string;
-  description: string;
-}[] = [
-  {
-    id: "theme",
-    title: "theme",
-    description: "select_or_customize_your_interface_color_scheme",
-  },
-];
-
 /**
  * @description The options for the start of the week
  * @type {Array<{value: EStartOfTheWeek, label: string}>}

@@ -79,7 +79,7 @@ declare module "@tiptap/core" {
   }
 }
 
-export type CustomLinkStorage = {
+type CustomLinkStorage = {
   isPreviewOpen: boolean;
   posToInsert: { from: number; to: number };
   isBubbleMenuOpen: boolean;

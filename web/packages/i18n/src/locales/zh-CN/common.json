@@ -14,7 +14,6 @@
   "info": "信息",
   "close": "关闭",
   "yes": "是",
-  "no": "否",
   "ok": "确定",
   "name": "名称",
   "unknown_user": "未知用户",
@@ -182,9 +181,6 @@
   "we_are_having_trouble_fetching_the_updates": "我们在获取更新时遇到问题。",
   "for_the_latest_updates": "获取最新更新。",
   "please_visit": "请访问",
-  "docs": "文档",
-  "support": "支持",
-  "forum": "Forum",
   "please_select_at_least_one_invitation": "请至少选择一个邀请。",
   "please_select_at_least_one_invitation_description": "请至少选择一个加入工作区的邀请。",
   "we_see_that_someone_has_invited_you_to_join_a_workspace": "我们看到有人邀请您加入工作区",
@@ -295,7 +291,6 @@
   "member": "{count, plural, other{# 成员}}",
   "new_password_must_be_different_from_old_password": "新密码必须不同于旧密码",
   "edited": "已编辑",
-  "bot": "机器人",
   "settings_description": "一站式管理您的账户、工作区和项目偏好设置。在各个标签页之间切换，轻松进行配置。",
   "back_to_workspace": "返回工作区",
   "copied_to_clipboard": "已复制到剪贴板",
@@ -480,8 +475,6 @@
     "off_track": "偏离轨道",
     "at_risk": "有风险",
     "completion": "完成",
-    "upcoming": "即将发生",
-    "completed": "已完成",
     "in_progress": "进行中",
     "planned": "已计划",
     "paused": "暂停",
@@ -672,18 +665,6 @@
       "description": "在工作区内所有权限均设置为允许。"
     }
   },
-  "user_roles": {
-    "product_or_project_manager": "产品/项目经理",
-    "development_or_engineering": "开发/工程",
-    "founder_or_executive": "创始人/高管",
-    "freelancer_or_consultant": "自由职业者/顾问",
-    "marketing_or_growth": "市场/增长",
-    "sales_or_business_development": "销售/业务发展",
-    "support_or_operations": "支持/运营",
-    "student_or_professor": "学生/教授",
-    "human_resources": "人力资源",
-    "other": "其他"
-  },
   "default_global_view": {
     "all_issues": "所有工作项",
     "assigned": "已分配",
@@ -699,7 +680,6 @@
   "horizontal_navigation_bar": "标签式导航",
   "show_limited_projects_on_sidebar": "在侧边栏显示有限数量的项目",
   "enter_number_of_projects": "输入项目数量",
-  "pin": "置顶",
   "in_app": "应用内",
   "forms": "表单",
   "file_upload": {

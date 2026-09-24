@@ -16,7 +16,7 @@ type BreadcrumbsProps = {
   isLoading?: boolean;
 };
 
-export function BreadcrumbItemLoader() {
+function BreadcrumbItemLoader() {
   return (
     <div className="flex h-7 animate-pulse items-center gap-2">
       <div className="group flex h-full items-center gap-2 rounded-sm px-2 py-1 text-13 font-medium">
@@ -197,4 +197,4 @@ Breadcrumbs.Label = BreadcrumbLabel;
 Breadcrumbs.Separator = BreadcrumbSeparator;
 Breadcrumbs.ItemWrapper = BreadcrumbItemWrapper;
 
-export { Breadcrumbs, BreadcrumbItem, BreadcrumbIcon, BreadcrumbLabel, BreadcrumbSeparator, BreadcrumbItemWrapper };
+export { Breadcrumbs };

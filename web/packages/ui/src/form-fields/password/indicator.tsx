@@ -10,7 +10,7 @@ import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 import { cn, getPasswordStrength, getPasswordCriteria } from "@nerve/utils";
 import { getStrengthInfo, getFragmentColor } from "./helper";
 
-export interface PasswordStrengthIndicatorProps {
+interface PasswordStrengthIndicatorProps {
   password: string;
   showCriteria?: boolean;
   isFocused?: boolean;

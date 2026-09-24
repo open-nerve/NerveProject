@@ -22,7 +22,7 @@ import { getDisplayOperator } from "./shared";
 /**
  * Generic tree visitor function type
  */
-export type TreeVisitorFn<P extends TFilterProperty, T> = (
+type TreeVisitorFn<P extends TFilterProperty, T> = (
   expression: TFilterExpression<P>,
   parent?: TFilterGroupNode<P>,
   depth?: number
@@ -31,7 +31,7 @@ export type TreeVisitorFn<P extends TFilterProperty, T> = (
 /**
  * Tree traversal modes
  */
-export enum TreeTraversalMode {
+enum TreeTraversalMode {
   /** Visit all nodes depth-first */
   ALL = "ALL",
   /** Visit only condition nodes */
@@ -51,7 +51,7 @@ export enum TreeTraversalMode {
  * @param depth - Current depth (used internally for recursion)
  * @returns Array of results from the visitor function (nulls are filtered out)
  */
-export const traverseExpressionTree = <P extends TFilterProperty, T>(
+const traverseExpressionTree = <P extends TFilterProperty, T>(
   expression: TFilterExpression<P> | null,
   visitor: TreeVisitorFn<P, T>,
   mode: TreeTraversalMode = TreeTraversalMode.ALL,
@@ -106,61 +106,6 @@ export const findNodeById = <P extends TFilterProperty>(
 
   // Return the first match (there should only be one with unique IDs)
   return results.length > 0 ? results[0] : null;
-};
-
-/**
- * Finds the parent chain of a given node ID in the filter expression tree.
- * @param expression - The filter expression to search in
- * @param targetId - The ID of the node whose parent chain to find
- * @param currentPath - Current path of parent nodes (used internally for recursion)
- * @returns Array of parent nodes from immediate parent to root, or null if not found
- */
-export const findParentChain = <P extends TFilterProperty>(
-  expression: TFilterExpression<P>,
-  targetId: string,
-  currentPath: TFilterGroupNode<P>[] = []
-): TFilterGroupNode<P>[] | null => {
-  // if the expression is a group, search in the children
-  if (isGroupNode(expression)) {
-    const children = getGroupChildren(expression);
-
-    // check if any direct child has the target ID
-    for (const child of children) {
-      if (child.id === targetId) {
-        return [expression, ...currentPath];
-      }
-    }
-
-    // recursively search in child groups
-    for (const child of children) {
-      if (isGroupNode(child)) {
-        const chain = findParentChain(child, targetId, [expression, ...currentPath]);
-        if (chain) return chain;
-      }
-    }
-  }
-
-  return null;
-};
-
-/**
- * Finds the immediate parent node of a given node ID.
- * @param expression - The filter expression to find parent in
- * @param targetId - The ID of the node whose parent to find
- * @returns The immediate parent node or null if not found or if the target is the root
- */
-export const findImmediateParent = <P extends TFilterProperty>(
-  expression: TFilterExpression<P>,
-  targetId: string
-): TFilterGroupNode<P> | null => {
-  // if the expression is null, return null
-  if (!expression) return null;
-
-  // find the parent chain
-  const parentChain = findParentChain(expression, targetId);
-
-  // return the immediate parent if it exists
-  return parentChain && parentChain.length > 0 ? parentChain[0] : null;
 };
 
 /**

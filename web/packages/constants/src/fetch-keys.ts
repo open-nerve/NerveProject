@@ -71,9 +71,6 @@ export const WORKSPACE_INVITATION = (invitationId: string) => `WORKSPACE_INVITAT
 export const WORKSPACE_MEMBER_ME_INFORMATION = (workspaceSlug: string) =>
   `WORKSPACE_MEMBER_ME_INFORMATION_${workspaceSlug.toUpperCase()}`;
 
-export const WORKSPACE_MEMBER_ACTIVITY = (workspaceSlug: string) =>
-  `WORKSPACE_MEMBER_ACTIVITY_${workspaceSlug.toUpperCase()}`;
-
 export const WORKSPACE_PROJECTS_ROLES_INFORMATION = (workspaceSlug: string) =>
   `WORKSPACE_PROJECTS_ROLES_INFORMATION_${workspaceSlug.toUpperCase()}`;
 
@@ -93,19 +90,11 @@ export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
   return `CYCLE_ISSUES_WITH_PARAMS_${cycleId.toUpperCase()}_${paramsKey.toUpperCase()}`;
 };
 
-export const USER_ACTIVITY = (params: { cursor?: string }) => `USER_ACTIVITY_${params?.cursor}`;
-
 // Issues
 export const ISSUE_DETAILS = (issueId: string) => `ISSUE_DETAILS_${issueId.toUpperCase()}`;
 
 // api-tokens
 export const API_TOKENS_LIST = `API_TOKENS_LIST`;
-
-// marketplace
-export const APPLICATIONS_LIST = (workspaceSlug: string) => `APPLICATIONS_LIST_${workspaceSlug.toUpperCase()}`;
-export const APPLICATION_DETAILS = (applicationId: string) => `APPLICATION_DETAILS_${applicationId.toUpperCase()}`;
-export const APPLICATION_BY_CLIENT_ID = (clientId: string) => `APPLICATION_BY_CLIENT_ID_${clientId.toUpperCase()}`;
-export const APPLICATION_CATEGORIES_LIST = () => `APPLICATION_CATEGORIES_LIST`;
 
 // project level keys
 export const PROJECT_DETAILS = (_workspaceSlug: string, projectId: string) =>

@@ -56,17 +56,6 @@ export interface IProject extends IPartialProject {
   next_work_item_sequence?: number;
 }
 
-export interface IProjectMap {
-  [id: string]: IProject;
-}
-
-export interface IProjectMemberLite {
-  id: string;
-  member__avatar_url: string;
-  member__display_name: string;
-  member_id: string;
-}
-
 export type TProjectMembership = {
   member: string;
   role: TUserPermissions | EUserProjectRoles;
@@ -90,22 +79,6 @@ export interface IProjectBulkAddFormData {
 export type IProjectMemberNavigationPreferences = {
   default_tab: string;
   hide_in_more_menu: string[];
-};
-
-export type IProjectMemberPreferencesUpdate = {
-  navigation: IProjectMemberNavigationPreferences;
-};
-
-export type IProjectMemberPreferencesResponse = {
-  preferences: {
-    navigation: IProjectMemberNavigationPreferences;
-  };
-};
-
-export type IProjectMemberPreferencesFullResponse = IProjectMemberPreferencesResponse & {
-  project_id: string;
-  member_id: string;
-  workspace_id: string;
 };
 
 export type TProjectIssuesSearchParams = {

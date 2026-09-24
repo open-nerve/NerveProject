@@ -18,8 +18,6 @@ export type TFileEntityInfo = {
   entity_type: EFileAssetType;
 };
 
-export type TFileMetaData = TFileMetaDataLite & TFileEntityInfo;
-
 export type TFileSignedURLResponse = {
   asset_id: string;
   asset_url: string;

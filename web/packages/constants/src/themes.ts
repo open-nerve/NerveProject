@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export const THEMES = ["light", "dark", "light-contrast", "dark-contrast"];
-
 export interface I_THEME_OPTION {
   key: string;
   value: string;

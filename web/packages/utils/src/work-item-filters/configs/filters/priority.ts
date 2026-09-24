@@ -18,17 +18,14 @@ import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } f
 /**
  * Priority filter specific params
  */
-export type TCreatePriorityFilterParams = TCreateFilterConfigParams & IFilterIconConfig<TIssuePriorities>;
+type TCreatePriorityFilterParams = TCreateFilterConfigParams & IFilterIconConfig<TIssuePriorities>;
 
 /**
  * Helper to get the priority multi select config
  * @param params - The filter params
  * @returns The priority multi select config
  */
-export const getPriorityMultiSelectConfig = (
-  params: TCreatePriorityFilterParams,
-  singleValueOperator: TSupportedOperators
-) =>
+const getPriorityMultiSelectConfig = (params: TCreatePriorityFilterParams, singleValueOperator: TSupportedOperators) =>
   getMultiSelectConfig<{ key: TIssuePriorities; title: string }, TIssuePriorities, TIssuePriorities>(
     {
       items: ISSUE_PRIORITIES,

@@ -11,7 +11,7 @@ export const EmojiIconPickerTypes = {
   ICON: "icon",
 } as const;
 
-export type TChangeHandlerProps =
+type TChangeHandlerProps =
   | {
       type: typeof EmojiIconPickerTypes.EMOJI;
       value: string;
@@ -24,7 +24,7 @@ export type TChangeHandlerProps =
       };
     };
 
-export type TEmojiIconPickerTypes = typeof EmojiIconPickerTypes.EMOJI | typeof EmojiIconPickerTypes.ICON;
+type TEmojiIconPickerTypes = typeof EmojiIconPickerTypes.EMOJI | typeof EmojiIconPickerTypes.ICON;
 
 export type TCustomEmojiPicker = {
   isOpen: boolean;
@@ -45,12 +45,6 @@ export type TCustomEmojiPicker = {
   theme?: "light" | "dark";
   side?: TSide;
   align?: TAlign;
-};
-
-export type TIconsListProps = {
-  defaultColor: string;
-  onChange: (val: { name: string; color: string }) => void;
-  searchDisabled?: boolean;
 };
 
 /**
@@ -105,7 +99,7 @@ export const DEFAULT_COLORS = ["#95999f", "#6d7b8a", "#5e6ad2", "#02b5ed", "#02b
  * @param emoji - The emoji string to convert
  * @returns Array of decimal Unicode code points
  */
-export function emojiToDecimalEnhanced(emoji: string): number[] {
+function emojiToDecimalEnhanced(emoji: string): number[] {
   const codePoints: number[] = [];
 
   // Use Array.from to properly handle multi-byte Unicode characters
@@ -126,7 +120,7 @@ export function emojiToDecimalEnhanced(emoji: string): number[] {
  * @param decimals - Array of decimal Unicode code points
  * @returns The reconstructed emoji string
  */
-export function decimalToEmojiEnhanced(decimals: number[]): string {
+function decimalToEmojiEnhanced(decimals: number[]): string {
   return decimals.map((decimal) => String.fromCodePoint(decimal)).join("");
 }
 

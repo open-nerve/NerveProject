@@ -12,7 +12,7 @@ import type { ICycle, IModule, IState, TIssue } from "@nerve/types";
 // helper
 import { getDate } from "./datetime";
 
-export type DistributionObjectUpdate = {
+type DistributionObjectUpdate = {
   id: string;
   completed_issues?: number;
   pending_issues?: number;

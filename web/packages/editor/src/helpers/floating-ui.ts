@@ -9,7 +9,7 @@ import type { Placement, ReferenceElement, Strategy } from "@floating-ui/dom";
 import { posToDOMRect } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 
-export type UpdateFloatingUIFloaterPosition = (
+type UpdateFloatingUIFloaterPosition = (
   editor: Editor,
   element: HTMLElement,
   options?: {

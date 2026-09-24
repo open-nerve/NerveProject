@@ -8,7 +8,7 @@
 import type { TWorkspaceSettingsItem, TWorkspaceSettingsTabs } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
 
-export enum WORKSPACE_SETTINGS_CATEGORY {
+enum WORKSPACE_SETTINGS_CATEGORY {
   ADMINISTRATION = "administration",
   DEVELOPER = "developer",
 }

@@ -4,7 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { TPaginationInfo } from "./common";
 import type { TUserPermissions } from "./enums";
 import type { TProjectMembership } from "./project";
 import type { IUser, IUserLite } from "./users";
@@ -54,21 +53,6 @@ export interface IWorkspaceMemberInvitation {
 export interface IWorkspaceBulkInviteFormData {
   emails: { email: string; role: TUserPermissions }[];
 }
-
-export type Properties = {
-  assignee: boolean;
-  start_date: boolean;
-  due_date: boolean;
-  labels: boolean;
-  key: boolean;
-  priority: boolean;
-  state: boolean;
-  sub_issue_count: boolean;
-  link: boolean;
-  attachment_count: boolean;
-  created_on: boolean;
-  updated_on: boolean;
-};
 
 export interface IWorkspaceMember {
   id: string;
@@ -143,9 +127,6 @@ export interface IWorkspaceSearchResults {
     issue_view: IWorkspaceDefaultSearchResult[];
   };
 }
-export type TWorkspacePaginationInfo = TPaginationInfo & {
-  results: IWorkspace[];
-};
 
 export enum EOnboardingSteps {
   PROFILE_SETUP = "PROFILE_SETUP",

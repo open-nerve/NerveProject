@@ -41,7 +41,7 @@ export type TCreateFilterConfigParams = Omit<TBaseFilterFieldConfig, "isOperator
 /**
  * Type for filter icon type
  */
-export type TFilterIconType = string | number | boolean | object | undefined;
+type TFilterIconType = string | number | boolean | object | undefined;
 
 /**
  * Icon configuration for filters and their options.

@@ -4,5 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export const LABEL_CLASSNAME = "uppercase text-tertiary/60 text-13 tracking-wide";
 export const AXIS_LABEL_CLASSNAME = "uppercase text-tertiary/60 text-13 tracking-wide";

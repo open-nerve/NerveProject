@@ -104,4 +104,3 @@ const ScrollBar = React.memo(function ScrollBar({
 });
 
 export { ScrollArea };
-export type { ScrollAreaProps, ScrollAreaOrientation, ScrollAreaScrollType, ScrollAreaSize };

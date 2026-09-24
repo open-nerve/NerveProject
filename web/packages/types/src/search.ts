@@ -19,7 +19,7 @@ export type TUserSearchResponse = {
   member__id: IUser["id"];
 };
 
-export type TProjectSearchResponse = {
+type TProjectSearchResponse = {
   name: IProject["name"];
   id: IProject["id"];
   identifier: IProject["identifier"];
@@ -27,7 +27,7 @@ export type TProjectSearchResponse = {
   workspace__slug: IWorkspace["slug"];
 };
 
-export type TIssueSearchResponse = {
+type TIssueSearchResponse = {
   name: TIssue["name"];
   id: TIssue["id"];
   sequence_id: TIssue["sequence_id"];
@@ -37,7 +37,7 @@ export type TIssueSearchResponse = {
   state_id: TIssue["state_id"];
 };
 
-export type TCycleSearchResponse = {
+type TCycleSearchResponse = {
   name: ICycle["name"];
   id: ICycle["id"];
   project_id: ICycle["project_id"];
@@ -46,7 +46,7 @@ export type TCycleSearchResponse = {
   workspace__slug: IWorkspace["slug"];
 };
 
-export type TModuleSearchResponse = {
+type TModuleSearchResponse = {
   name: IModule["name"];
   id: IModule["id"];
   project_id: IModule["project_id"];

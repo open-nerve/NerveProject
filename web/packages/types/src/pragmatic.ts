@@ -9,7 +9,7 @@ export type TDropTarget = {
   data: Record<string | symbol, unknown>;
 };
 
-export type TDropTargetMiscellaneousData = {
+type TDropTargetMiscellaneousData = {
   dropEffect: string;
   isActiveDueToStickiness: boolean;
 };

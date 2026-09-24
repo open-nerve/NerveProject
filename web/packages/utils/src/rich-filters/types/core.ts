@@ -42,18 +42,6 @@ export const isAndGroupNode = <P extends TFilterProperty>(
 ): group is TFilterAndGroupNode<P> => group.logicalOperator === LOGICAL_OPERATOR.AND;
 
 /**
- * Type guard to check if a group node has children property
- * @param group - The group node to check
- * @returns True if the group has children property
- */
-export const hasChildrenProperty = <P extends TFilterProperty>(
-  group: TFilterGroupNode<P>
-): group is TFilterAndGroupNode<P> => {
-  const groupWithChildren = group as { children?: unknown };
-  return "children" in group && Array.isArray(groupWithChildren.children);
-};
-
-/**
  * Safely gets the children array from an AND group node.
  * @param group - The AND group node
  * @returns The children array

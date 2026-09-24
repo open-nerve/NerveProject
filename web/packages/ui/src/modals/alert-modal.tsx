@@ -15,7 +15,7 @@ import { ModalCore } from "./modal-core";
 // constants
 // helpers
 
-export type TModalVariant = "danger" | "primary";
+type TModalVariant = "danger" | "primary";
 
 type Props = {
   content: React.ReactNode | string;

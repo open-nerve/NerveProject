@@ -78,40 +78,6 @@ export const ROLE_DETAILS = {
   },
 };
 
-export const USER_ROLES = [
-  {
-    value: "Product / Project Manager",
-    i18n_label: "user_roles.product_or_project_manager",
-  },
-  {
-    value: "Development / Engineering",
-    i18n_label: "user_roles.development_or_engineering",
-  },
-  {
-    value: "Founder / Executive",
-    i18n_label: "user_roles.founder_or_executive",
-  },
-  {
-    value: "Freelancer / Consultant",
-    i18n_label: "user_roles.freelancer_or_consultant",
-  },
-  { value: "Marketing / Growth", i18n_label: "user_roles.marketing_or_growth" },
-  {
-    value: "Sales / Business Development",
-    i18n_label: "user_roles.sales_or_business_development",
-  },
-  {
-    value: "Support / Operations",
-    i18n_label: "user_roles.support_or_operations",
-  },
-  {
-    value: "Student / Professor",
-    i18n_label: "user_roles.student_or_professor",
-  },
-  { value: "Human Resources", i18n_label: "user_roles.human_resources" },
-  { value: "Other", i18n_label: "user_roles.other" },
-];
-
 export const DEFAULT_GLOBAL_VIEWS_LIST: {
   key: TStaticViewTypes;
   i18n_label: string;

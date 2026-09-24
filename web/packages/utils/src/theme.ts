@@ -4,6 +4,6 @@
  * See the LICENSE file for details.
  */
 
-/** Resolves the theme a name stands for: every theme of THEMES is either light or dark, anything else follows the system. */
+/** Resolves the theme a name stands for: every value of THEME_OPTIONS but "system" names light or dark, anything else follows the system. */
 export const resolveGeneralTheme = (resolvedTheme: string | undefined) =>
   resolvedTheme?.includes("light") ? "light" : resolvedTheme?.includes("dark") ? "dark" : "system";

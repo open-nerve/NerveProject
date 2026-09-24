@@ -9,7 +9,7 @@ import { Popover as BasePopover } from "@base-ui-components/react/popover";
 import type { TPlacement, TSide, TAlign } from "../utils/placement";
 import { convertPlacementToSideAndAlign } from "../utils/placement";
 
-export interface PopoverContentProps extends React.ComponentProps<typeof BasePopover.Popup> {
+interface PopoverContentProps extends React.ComponentProps<typeof BasePopover.Popup> {
   placement?: TPlacement;
   align?: TAlign;
   sideOffset?: BasePopover.Positioner.Props["sideOffset"];

@@ -17,7 +17,7 @@ export const FILTER_NODE_TYPE = {
   CONDITION: "condition",
   GROUP: "group",
 } as const;
-export type TFilterNodeType = (typeof FILTER_NODE_TYPE)[keyof typeof FILTER_NODE_TYPE];
+type TFilterNodeType = (typeof FILTER_NODE_TYPE)[keyof typeof FILTER_NODE_TYPE];
 
 /**
  * Field property key that can be filtered (e.g., "state", "assignee", "created_at").
@@ -102,15 +102,3 @@ export type TFilterConditionPayload<P extends TFilterProperty, V extends TFilter
   TFilterConditionNode<P, V>,
   keyof TBaseFilterNode
 >;
-
-/**
- * Payload for creating/updating AND group nodes - excludes base node properties.
- * @template P - Property key type
- */
-export type TFilterAndGroupPayload<P extends TFilterProperty> = Omit<TFilterAndGroupNode<P>, keyof TBaseFilterNode>;
-
-/**
- * Union payload type for creating/updating any group node - excludes base node properties.
- * @template P - Property key type
- */
-export type TFilterGroupPayload<P extends TFilterProperty> = TFilterAndGroupPayload<P>;

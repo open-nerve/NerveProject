@@ -6,7 +6,7 @@
 
 import * as React from "react";
 
-export type TControlLink = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+type TControlLink = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
   onClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
   children: React.ReactNode;

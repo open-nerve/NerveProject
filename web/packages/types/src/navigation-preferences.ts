@@ -6,12 +6,6 @@
 
 export type TProjectNavigationMode = "ACCORDION" | "TABBED";
 
-export interface TProjectDisplaySettings {
-  navigationMode: TProjectNavigationMode;
-  showLimitedProjects: boolean;
-  limitedProjectsCount: number;
-}
-
 export interface TProjectNavigationPreferences {
   navigationMode: TProjectNavigationMode;
   showLimitedProjects: boolean;

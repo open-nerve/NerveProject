@@ -4,10 +4,8 @@
  * See the LICENSE file for details.
  */
 
-export * from "./avatar";
 export * from "./breadcrumbs";
 export * from "./card";
-export * from "./collapsible";
 export * from "./content-wrapper";
 export * from "./control-link";
 export * from "./drag-handle";
@@ -23,5 +21,4 @@ export * from "./popovers";
 export * from "./row";
 export * from "./spinners";
 export * from "./tables";
-export * from "./tag";
 export * from "./utils";

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { differenceInDays, format, formatDistanceToNow, isAfter, isEqual, isValid, parseISO } from "date-fns";
+import { differenceInDays, format, formatDistanceToNow, isValid, parseISO } from "date-fns";
 import { isNumber } from "lodash-es";
 
 // Format Date Helpers
@@ -160,25 +160,6 @@ export const calculateTimeAgo = (time: string | number | Date | null): string =>
   return distance;
 };
 
-// Date Validation Helpers
-/**
- * @returns {string} boolean value depending on whether the date is greater than today
- * @description Returns boolean value depending on whether the date is greater than today
- * @param {string} dateStr
- * @example isDateGreaterThanToday("2024-01-01") // true
- */
-export const isDateGreaterThanToday = (dateStr: string): boolean => {
-  // Return false if dateStr is not present
-  if (!dateStr) return false;
-  // Parse the date to check if it is valid
-  const date = parseISO(dateStr);
-  const today = new Date();
-  // Check if the parsed date is valid
-  if (!isValid(date)) return false; // Return false for invalid dates
-  // Return true if the date is greater than today
-  return isAfter(date, today);
-};
-
 // Week Related Helpers
 /**
  * @returns {number} week number of date
@@ -195,27 +176,6 @@ export const getWeekNumberOfDate = (date: Date): number => {
   // Adjust the calculation for weekNumber
   const weekNumber = Math.ceil((days + 1) / 7);
   return weekNumber;
-};
-
-/**
- * @returns {boolean} boolean value depending on whether the dates are equal
- * @description Returns boolean value depending on whether the dates are equal
- * @param date1
- * @param date2
- * @example checkIfDatesAreEqual("2024-01-01", "2024-01-01") // true
- * @example checkIfDatesAreEqual("2024-01-01", "2024-01-02") // false
- */
-export const checkIfDatesAreEqual = (
-  date1: Date | string | null | undefined,
-  date2: Date | string | null | undefined
-): boolean => {
-  const parsedDate1 = getDate(date1);
-  const parsedDate2 = getDate(date2);
-  // return if undefined
-  if (!parsedDate1 && !parsedDate2) return true;
-  if (!parsedDate1 || !parsedDate2) return false;
-
-  return isEqual(parsedDate1, parsedDate2);
 };
 
 /**
@@ -285,7 +245,7 @@ export const getCurrentDateTimeInISO = () => {
  * @param value The relative date string (e.g., "1_weeks", "2_months")
  * @returns Date object representing the calculated date
  */
-export const processRelativeDate = (value: string): Date => {
+const processRelativeDate = (value: string): Date => {
   const [amountStr, unit] = value.split("_");
   const amount = parseInt(amountStr, 10);
   if (isNaN(amount)) {
@@ -404,54 +364,6 @@ export const formatDateRange = (
   }
 
   return "";
-};
-
-// Duration Helpers
-/**
- * @returns {string} formatted duration in human readable format
- * @description Converts seconds to human readable duration format (e.g., "1 hr 20 min 5 sec" or "122.30 ms")
- * @param {number} seconds - The duration in seconds
- * @example formatDuration(3665) // "1 hr 1 min 5 sec"
- * @example formatDuration(125) // "2 min 5 sec"
- * @example formatDuration(45) // "45 sec"
- * @example formatDuration(0.1223094) // "122.31 ms"
- */
-export const formatDuration = (seconds: number | undefined | null): string => {
-  // Return "N/A" if seconds is not a valid number
-  if (seconds == null || typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) {
-    return "N/A";
-  }
-
-  // If less than 1 second, show in ms (2 decimal places)
-  if (seconds > 0 && seconds < 1) {
-    const ms = seconds * 1000;
-    return `${ms.toFixed(2)} ms`;
-  }
-
-  // Round to nearest second
-  const totalSeconds = Math.round(seconds);
-
-  // Calculate hours, minutes, and seconds
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const remainingSeconds = totalSeconds % 60;
-
-  // Build the formatted string
-  const parts: string[] = [];
-
-  if (hours > 0) {
-    parts.push(`${hours} hr`);
-  }
-
-  if (minutes > 0) {
-    parts.push(`${minutes} min`);
-  }
-
-  if (remainingSeconds > 0 || parts.length === 0) {
-    parts.push(`${remainingSeconds} sec`);
-  }
-
-  return parts.join(" ");
 };
 
 /**

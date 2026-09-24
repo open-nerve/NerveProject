@@ -4,17 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export const ISSUE_REACTION_EMOJI_CODES = [
-  "128077",
-  "128078",
-  "128516",
-  "128165",
-  "128533",
-  "129505",
-  "9992",
-  "128064",
-];
-
 export const RANDOM_EMOJI_CODES = [
   "8986",
   "9200",

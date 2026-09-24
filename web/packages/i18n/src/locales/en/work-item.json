@@ -45,12 +45,6 @@
     "create": {
       "success": "Work item created successfully"
     },
-    "priority": {
-      "urgent": "Urgent",
-      "high": "High",
-      "medium": "Medium",
-      "low": "Low"
-    },
     "display": {
       "properties": {
         "label": "Display Properties",

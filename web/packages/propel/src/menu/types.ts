@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export type TPlacement = "top" | "bottom" | "left" | "right";
+type TPlacement = "top" | "bottom" | "left" | "right";
 
 export type TMenuProps = {
   customButtonClassName?: string;

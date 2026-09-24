@@ -7,7 +7,7 @@
 // nerve imports
 import type { TProfileSettingsTabs } from "@nerve/types";
 
-export enum PROFILE_SETTINGS_CATEGORY {
+enum PROFILE_SETTINGS_CATEGORY {
   YOUR_PROFILE = "your profile",
   DEVELOPER = "developer",
 }
@@ -22,7 +22,7 @@ export const PROFILE_SETTINGS_CATEGORY_LABELS: Record<PROFILE_SETTINGS_CATEGORY,
   [PROFILE_SETTINGS_CATEGORY.DEVELOPER]: "common.developer",
 };
 
-export const PROFILE_SETTINGS: Record<
+const PROFILE_SETTINGS: Record<
   TProfileSettingsTabs,
   {
     key: TProfileSettingsTabs;

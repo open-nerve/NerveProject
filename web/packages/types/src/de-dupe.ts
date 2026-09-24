@@ -6,14 +6,6 @@
 
 import type { TIssuePriorities } from "./issues";
 
-export type TDuplicateIssuePayload = {
-  title: string;
-  workspace_id: string;
-  issue_id?: string | null;
-  project_id?: string;
-  description_stripped?: string;
-};
-
 export type TDeDupeIssue = {
   id: string;
   project_id: string;
@@ -22,8 +14,4 @@ export type TDeDupeIssue = {
   priority: TIssuePriorities;
   state_id: string;
   created_by: string;
-};
-
-export type TDuplicateIssueResponse = {
-  dupes: TDeDupeIssue[];
 };

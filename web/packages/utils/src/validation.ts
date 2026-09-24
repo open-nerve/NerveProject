@@ -23,7 +23,7 @@
  * Use case: Accommodates international names like "José", "李明", "محمد", "Müller"
  * Blocks: Injection-risk characters and special symbols
  */
-export const PERSON_NAME_REGEX = /^[\p{L}\s'-]+$/u;
+const PERSON_NAME_REGEX = /^[\p{L}\s'-]+$/u;
 
 /**
  * Display Name Pattern (for display_name, usernames)
@@ -31,7 +31,7 @@ export const PERSON_NAME_REGEX = /^[\p{L}\s'-]+$/u;
  * Use case: International usernames like "josé_123", "李明.dev", "müller-2024"
  * Blocks: Spaces and injection-risk characters
  */
-export const DISPLAY_NAME_REGEX = /^[\p{L}\p{N}_.-]+$/u;
+const DISPLAY_NAME_REGEX = /^[\p{L}\p{N}_.-]+$/u;
 
 /**
  * Company/Organization Name Pattern (for company_name, workspace names)
@@ -39,13 +39,13 @@ export const DISPLAY_NAME_REGEX = /^[\p{L}\p{N}_.-]+$/u;
  * Use case: International business names like "Société Générale", "株式会社", "Müller GmbH"
  * Blocks: Special punctuation and injection-risk chars
  */
-export const COMPANY_NAME_REGEX = /^[\p{L}\p{N}\s_-]+$/u;
+const COMPANY_NAME_REGEX = /^[\p{L}\p{N}\s_-]+$/u;
 
 /**
  * Requires at least one Unicode letter or digit in a string.
  * Used to reject symbol-only inputs like "-_________-" in workspace/company names.
  */
-export const HAS_ALPHANUMERIC_REGEX = /[\p{L}\p{N}]/u;
+const HAS_ALPHANUMERIC_REGEX = /[\p{L}\p{N}]/u;
 
 /**
  * URL Slug Pattern (for workspace slugs, URL-safe identifiers)
@@ -53,7 +53,7 @@ export const HAS_ALPHANUMERIC_REGEX = /[\p{L}\p{N}]/u;
  * Use case: International URL-safe identifiers like "josé-workspace", "李明-project"
  * Blocks: Spaces and special characters (URL encoding will handle Unicode in actual URLs)
  */
-export const SLUG_REGEX = /^[\p{L}\p{N}_-]+$/u;
+const SLUG_REGEX = /^[\p{L}\p{N}_-]+$/u;
 
 // =============================================================================
 // VALIDATION FUNCTIONS
@@ -114,40 +114,6 @@ export const validateDisplayName = (displayName: string): boolean | string => {
 
   if (!DISPLAY_NAME_REGEX.test(displayName)) {
     return "Display name can only contain letters, numbers, periods, hyphens, and underscores";
-  }
-
-  return true;
-};
-
-/**
- * @description Validates company and organization names
- * @param {string} companyName - Company name to validate
- * @param {boolean} required - Whether the field is required
- * @returns {boolean | string} true if valid, error message if invalid
- * @example
- * validateCompanyName("Acme Corp") // returns true
- * validateCompanyName("Acme_Corp-123") // returns true
- * validateCompanyName("Acme{Corp}") // returns error message
- */
-export const validateCompanyName = (companyName: string, required: boolean = false): boolean | string => {
-  if (!companyName || companyName.trim() === "") {
-    return required ? "Company name is required" : true;
-  }
-
-  if (companyName.length > 80) {
-    return "Company name must be 80 characters or less";
-  }
-
-  if (hasInjectionRiskChars(companyName)) {
-    return "Company name cannot contain special characters like < > ' \" { } [ ] * ^ ! # %";
-  }
-
-  if (!COMPANY_NAME_REGEX.test(companyName)) {
-    return "Company name can only contain letters, numbers, spaces, hyphens, and underscores";
-  }
-
-  if (!HAS_ALPHANUMERIC_REGEX.test(companyName)) {
-    return "Company name must contain at least one letter or number";
   }
 
   return true;
@@ -224,7 +190,7 @@ export const validateSlug = (slug: string): boolean | string => {
  * hasInjectionRiskChars("Hello World") // returns false
  * hasInjectionRiskChars("Hello<script>") // returns true
  */
-export const hasInjectionRiskChars = (input: string): boolean => {
+const hasInjectionRiskChars = (input: string): boolean => {
   const injectionRiskPattern = /[<>'"{}[\]*^!#%]/;
   return injectionRiskPattern.test(input);
 };

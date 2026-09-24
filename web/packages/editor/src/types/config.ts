@@ -23,9 +23,9 @@ export type TFileHandler = {
   };
 };
 
-export type TEditorFontSize = "small-font" | "large-font" | "mobile-font";
+type TEditorFontSize = "small-font" | "large-font" | "mobile-font";
 
-export type TEditorLineSpacing = "regular" | "small" | "mobile-regular";
+type TEditorLineSpacing = "regular" | "small" | "mobile-regular";
 
 export type TDisplayConfig = {
   fontSize?: TEditorFontSize;

@@ -5,10 +5,7 @@
  */
 
 import type { ReactElement } from "react";
-import type { ICycle } from "./cycle";
 import type { TIssue } from "./issues/issue";
-import type { IModule } from "./module";
-import type { TStateGroups } from "./state";
 import type {
   IIssueDisplayProperties,
   TIssueExtraOptions,
@@ -17,32 +14,6 @@ import type {
   TIssueOrderByOptions,
 } from "./view-props";
 
-export interface IIssueCycle {
-  id: string;
-  cycle_detail: ICycle;
-  created_at: Date;
-  updated_at: Date;
-  created_by: string;
-  updated_by: string;
-  project: string;
-  workspace: string;
-  issue: string;
-  cycle: string;
-}
-
-export interface IIssueModule {
-  created_at: Date;
-  created_by: string;
-  id: string;
-  issue: string;
-  module: string;
-  module_detail: IModule;
-  project: string;
-  updated_at: Date;
-  updated_by: string;
-  workspace: string;
-}
-
 export interface ILinkDetails {
   created_at: Date;
   created_by: string;
@@ -50,11 +21,6 @@ export interface ILinkDetails {
   metadata: any;
   title: string;
   url: string;
-}
-
-export interface ISubIssueResponse {
-  state_distribution: Record<TStateGroups, number>;
-  sub_issues: TIssue[];
 }
 
 export interface IIssueLabel {

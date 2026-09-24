@@ -16,7 +16,7 @@ import { createFilterConfig, createOperatorConfigEntry, getMemberMultiSelectConf
 /**
  * Assignee filter specific params
  */
-export type TCreateAssigneeFilterParams = TCreateUserFilterParams;
+type TCreateAssigneeFilterParams = TCreateUserFilterParams;
 
 /**
  * Get the assignee filter config
@@ -44,7 +44,7 @@ export const getAssigneeFilterConfig =
 /**
  * Mention filter specific params
  */
-export type TCreateMentionFilterParams = TCreateUserFilterParams;
+type TCreateMentionFilterParams = TCreateUserFilterParams;
 
 /**
  * Get the mention filter config
@@ -72,7 +72,7 @@ export const getMentionFilterConfig =
 /**
  * Created by filter specific params
  */
-export type TCreateCreatedByFilterParams = TCreateUserFilterParams;
+type TCreateCreatedByFilterParams = TCreateUserFilterParams;
 
 /**
  * Get the created by filter config
@@ -100,7 +100,7 @@ export const getCreatedByFilterConfig =
 /**
  * Subscriber filter specific params
  */
-export type TCreateSubscriberFilterParams = TCreateUserFilterParams;
+type TCreateSubscriberFilterParams = TCreateUserFilterParams;
 
 /**
  * Get the subscriber filter config

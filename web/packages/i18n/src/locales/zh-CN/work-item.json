@@ -45,12 +45,6 @@
     "create": {
       "success": "工作项创建成功"
     },
-    "priority": {
-      "urgent": "紧急",
-      "high": "高",
-      "medium": "中",
-      "low": "低"
-    },
     "display": {
       "properties": {
         "label": "显示属性",
