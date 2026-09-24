@@ -5,7 +5,7 @@ to: M5
 created: 2026-09-25
 ---
 
-# M1 收尾留下的清理：死成员和死 prop、oxlint
+# M1 收尾留下的清理：死成员和死 prop、oxlint、附件图标的标志、新建项目的封面值
 
 M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 spec](../../M1-frontend-trim/specs/closeout.md)）。下面几项留给后续各 M，做法都是"谁改谁清"：本 M 重写或修改到的代码，在本 M 结束时不再带着它们。
 
@@ -29,4 +29,15 @@ M1 结束时 oxlint 警告共 696 个（web 566、editor 65、ui 25、utils 19�
 - 上限随之调低（`tools/lint-cap.mjs` 要求警告数等于上限）。
 - **关闭条件**：本 M 的 review 写明改到的文件的警告数（为 0）、清掉的规则和各包上限的变化。
 
-来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节。
+## 附件图标里的第三方标志
+
+`app/assets/attachment/` 的 17 个文件类型图标里，4 个用了第三方的标志：`figma-icon.png`（Figma 的标志）、`pdf-icon.png`（Adobe Acrobat 的标志）、`csv-icon.png`（Excel 的 X 标志）、`excel-icon.png`（Google Sheets 的图标）。M1 收尾复看保留的图片时发现（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 2.4 D4、第 9 节第 6 条），附件归本 M，交本 M 处理。
+- **怎样处理**：换成中性的文件类型图标（例如只写扩展名的图标，或图标库里的文件图标），新图标的来源登记在同目录的 `SOURCES.md`。
+- **关闭条件**：`app/assets/attachment/` 里没有第三方的标志。
+
+## 新建项目时的封面值
+
+新建项目时（`projects/create/root.tsx` 的 `onSubmit`），前端先上传预设封面的副本，再创建项目，但 `POST …/projects/` 的 `cover_image_url` 仍是构建里预设封面的地址（`/assets/image_<n>-<hash>.webp`，每次构建都会变）；项目建好之后才登记副本（`POST …/bulk/`）、用副本的地址覆盖（`PATCH …/projects/<id>/`）。这两步有一步失败时，项目保存的是一个下次构建就失效的地址（上传本身失败时不创建项目）。这是 Plane 原有的行为，M1 收尾 T14 的浏览器核对记下了这几个请求的顺序（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.15、第 8 节）。
+- **关闭条件**：本 M 的封面接口只保存上传后的资源（或预设的编号），不保存构建路径；新建项目只写一次封面值。
+
+来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节；2.4 D4、3.15、第 9 节第 6 条。
