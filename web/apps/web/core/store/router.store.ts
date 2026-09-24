@@ -6,8 +6,6 @@
 
 import { action, makeObservable, observable, computed, runInAction } from "mobx";
 
-import type { TProfileViews } from "@plane/types";
-
 // the current route's parameters, as React Router gives them
 type TRouteParams = Record<string, string | undefined>;
 
@@ -23,11 +21,7 @@ export interface IRouterStore {
   moduleId: string | undefined;
   viewId: string | undefined;
   globalViewId: string | undefined;
-  profileViewId: TProfileViews | undefined;
   userId: string | undefined;
-  peekId: string | undefined;
-  issueId: string | undefined;
-  inboxId: string | undefined;
   webhookId: string | undefined;
 }
 
@@ -48,11 +42,7 @@ export class RouterStore implements IRouterStore {
       moduleId: computed,
       viewId: computed,
       globalViewId: computed,
-      profileViewId: computed,
       userId: computed,
-      peekId: computed,
-      issueId: computed,
-      inboxId: computed,
       webhookId: computed,
     });
   }
@@ -72,7 +62,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get workspaceSlug() {
-    return this.query?.workspaceSlug;
+    return this.query.workspaceSlug;
   }
 
   /**
@@ -80,7 +70,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get projectId() {
-    return this.query?.projectId;
+    return this.query.projectId;
   }
 
   /**
@@ -88,7 +78,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get moduleId() {
-    return this.query?.moduleId;
+    return this.query.moduleId;
   }
 
   /**
@@ -96,7 +86,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get cycleId() {
-    return this.query?.cycleId;
+    return this.query.cycleId;
   }
 
   /**
@@ -104,7 +94,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get viewId() {
-    return this.query?.viewId;
+    return this.query.viewId;
   }
 
   /**
@@ -112,15 +102,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get globalViewId() {
-    return this.query?.globalViewId;
-  }
-
-  /**
-   * Returns the profile view id from the query
-   * @returns string|undefined
-   */
-  get profileViewId() {
-    return this.query?.profileViewId as TProfileViews;
+    return this.query.globalViewId;
   }
 
   /**
@@ -128,31 +110,7 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get userId() {
-    return this.query?.userId;
-  }
-
-  /**
-   * Returns the peek id from the query
-   * @returns string|undefined
-   */
-  get peekId() {
-    return this.query?.peekId;
-  }
-
-  /**
-   * Returns the issue id from the query
-   * @returns string|undefined
-   */
-  get issueId() {
-    return this.query?.issueId;
-  }
-
-  /**
-   * Returns the inbox id from the query
-   * @returns string|undefined
-   */
-  get inboxId() {
-    return this.query?.inboxId;
+    return this.query.userId;
   }
 
   /**
@@ -160,6 +118,6 @@ export class RouterStore implements IRouterStore {
    * @returns string|undefined
    */
   get webhookId() {
-    return this.query?.webhookId;
+    return this.query.webhookId;
   }
 }
