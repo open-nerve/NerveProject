@@ -12,7 +12,7 @@ import { useCycle } from "./store/use-cycle";
 import { useLabel } from "./store/use-label";
 import { useModule } from "./store/use-module";
 
-export const useWorkspaceIssueProperties = (workspaceSlug: string | string[] | undefined) => {
+export const useWorkspaceIssueProperties = (workspaceSlug: string | undefined) => {
   const { fetchWorkspaceLabels } = useLabel();
 
   const { fetchWorkspaceModules } = useModule();

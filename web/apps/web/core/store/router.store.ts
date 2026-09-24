@@ -4,15 +4,18 @@
  * See the LICENSE file for details.
  */
 
-import type { ParsedUrlQuery } from "node:querystring";
 import { action, makeObservable, observable, computed, runInAction } from "mobx";
 
 import type { TProfileViews } from "@plane/types";
+
+// the current route's parameters, as React Router gives them
+type TRouteParams = Record<string, string | undefined>;
+
 export interface IRouterStore {
   // observables
-  query: ParsedUrlQuery;
+  query: TRouteParams;
   // actions
-  setQuery: (query: ParsedUrlQuery) => void;
+  setQuery: (query: TRouteParams) => void;
   // computed
   workspaceSlug: string | undefined;
   projectId: string | undefined;
@@ -30,7 +33,7 @@ export interface IRouterStore {
 
 export class RouterStore implements IRouterStore {
   // observables
-  query: ParsedUrlQuery = {};
+  query: TRouteParams = {};
 
   constructor() {
     makeObservable(this, {
@@ -58,7 +61,7 @@ export class RouterStore implements IRouterStore {
    * Sets the query
    * @param query
    */
-  setQuery = (query: ParsedUrlQuery) => {
+  setQuery = (query: TRouteParams) => {
     runInAction(() => {
       this.query = query;
     });
