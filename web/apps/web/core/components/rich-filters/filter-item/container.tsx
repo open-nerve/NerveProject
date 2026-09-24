@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef } from "react";
-// plane imports
+// nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/propel/utils";
 import type { SingleOrArray, TFilterValue } from "@nerve/types";

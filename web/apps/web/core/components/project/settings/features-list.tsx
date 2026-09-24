@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { setPromiseToast } from "@nerve/propel/toast";
 import type { IProject } from "@nerve/types";

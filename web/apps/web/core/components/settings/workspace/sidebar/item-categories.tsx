@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { matchPath, useParams, useLocation } from "react-router";
-// plane imports
+// nerve imports
 import {
   EUserPermissionsLevel,
   GROUPED_WORKSPACE_SETTINGS,

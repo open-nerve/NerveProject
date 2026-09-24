@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { Link, useNavigate } from "react-router";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button, getButtonStyling } from "@nerve/propel/button";
 import { PlaneLogo } from "@nerve/propel/icons";

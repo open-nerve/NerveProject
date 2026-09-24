@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@nerve/propel/tooltip";

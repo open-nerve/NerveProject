@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { isRouteErrorResponse } from "react-router";
 import { Banner } from "@makeplane/propel/components/banner";
 import { InfoFilled } from "@makeplane/propel/icons";

@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { LogOutOutline, SettingsOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";

@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { IconButton } from "@nerve/propel/icon-button";
 import { useTranslation } from "@nerve/i18n";

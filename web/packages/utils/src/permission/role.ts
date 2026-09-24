@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { EUserPermissions } from "@nerve/constants";
 import type { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";
 

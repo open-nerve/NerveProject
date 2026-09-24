@@ -9,7 +9,7 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane helpers
+// nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import { Tooltip } from "@makeplane/propel/components/tooltip";

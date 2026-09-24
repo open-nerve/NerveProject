@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Header, EHeaderVariant } from "@nerve/ui";
 // hooks
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";

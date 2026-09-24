@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { TIssue } from "@nerve/types";
 import type { TIssueRelationTypes } from "@nerve/types";
 // local imports

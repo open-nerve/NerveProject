@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { useTheme } from "next-themes";
 import { Languages } from "lucide-react";
 import { CalendarOutline, GlobeOutline, PaletteOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { EStartOfTheWeek, TUserProfile } from "@nerve/types";

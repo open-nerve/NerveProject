@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { useForm } from "react-hook-form";
 import type { EditorRefApi } from "@nerve/editor";
 import { CloseOutline, TickOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TCommentsOperations, TIssueComment } from "@nerve/types";
 import { cn, isCommentEmpty } from "@nerve/utils";
 // components

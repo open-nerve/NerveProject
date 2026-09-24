@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-// Plane imports
+// Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TIssue } from "@nerve/types";

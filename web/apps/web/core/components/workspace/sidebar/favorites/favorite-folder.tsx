@@ -27,7 +27,7 @@ import {
   StarFilled,
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import { FavoriteFolderIcon } from "@nerve/propel/icons";

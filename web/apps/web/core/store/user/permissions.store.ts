@@ -7,12 +7,12 @@
 import { unset, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TUserPermissions, TUserPermissionsLevel } from "@nerve/constants";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { EUserProjectRoles, IUserProjectsRole, IWorkspaceMemberMe, TProjectMembership } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
-// plane web imports
+// services
 import { WorkspaceService } from "@/services/workspace.service";
 import type { RootStore } from "@/store/root.store";
 // services

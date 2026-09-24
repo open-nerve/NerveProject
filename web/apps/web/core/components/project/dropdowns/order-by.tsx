@@ -5,7 +5,7 @@
  */
 
 import { SortDescendingOutline, TickOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { PROJECT_ORDER_BY_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { getButtonStyling } from "@nerve/propel/button";

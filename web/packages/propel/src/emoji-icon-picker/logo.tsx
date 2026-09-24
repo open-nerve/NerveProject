@@ -8,7 +8,7 @@
 // should be after the imported here rather than some below helper functions as it is in the original file
 
 import useFontFaceObserver from "use-font-face-observer";
-// plane imports
+// nerve imports
 import type { TLogoProps } from "@nerve/types";
 // local imports
 import { getEmojiSize, stringToEmoji } from "./helper";

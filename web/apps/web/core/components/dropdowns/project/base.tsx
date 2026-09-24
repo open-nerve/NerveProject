@@ -9,7 +9,7 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ChevronDownOutline, ProjectsOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
@@ -18,7 +18,7 @@ import { cn, sortBySelectedFirst } from "@nerve/utils";
 // components
 // hooks
 import { useDropdown } from "@/hooks/use-dropdown";
-// plane web imports
+// nerve imports
 import type { TProject } from "@nerve/types";
 // local imports
 import { DropdownButton } from "../buttons";
@@ -82,7 +82,7 @@ export const ProjectDropdownBase = observer(function ProjectDropdownBase(props: 
   // states
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // popper-js init
   const { styles, attributes } = usePopper(referenceElement, popperElement, {

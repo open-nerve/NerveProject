@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { E_SORT_ORDER, TActivityFilters, EActivityFilterType } from "@nerve/constants";
 import { BASE_ACTIVITY_FILTER_TYPES, filterActivityOnSelectedFilters } from "@nerve/constants";
 import type { TCommentsOperations } from "@nerve/types";

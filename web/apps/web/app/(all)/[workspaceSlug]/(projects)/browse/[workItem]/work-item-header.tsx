@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane ui
+// nerve ui
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { Breadcrumbs, Header } from "@nerve/ui";
 // components
@@ -16,7 +16,7 @@ import { IssueDetailQuickActions } from "@/components/issues/issue-detail/issue-
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { IntakeOutline, LeftSidePaneOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { EInboxIssueCurrentTab } from "@nerve/types";
@@ -31,7 +31,7 @@ export const InboxIssueRoot = observer(function InboxIssueRoot(props: TInboxIssu
   const { workspaceSlug, projectId, inboxIssueId, inboxAccessible, navigationTab } = props;
   // states
   const [isMobileSidebar, setIsMobileSidebar] = useState(true);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { loader, error, currentTab, currentInboxProjectId, handleCurrentTab, fetchInboxIssues } = useProjectInbox();

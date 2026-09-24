@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // assets
 import emptyCycle from "@/app/assets/empty-state/cycle.svg?url";

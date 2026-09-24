@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { STATE_GROUPS } from "@nerve/constants";
 import { StateGroupIcon } from "@nerve/propel/icons";
 // components

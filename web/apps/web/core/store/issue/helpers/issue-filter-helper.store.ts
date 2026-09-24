@@ -5,7 +5,7 @@
  */
 
 import { isEmpty } from "lodash-es";
-// plane constants
+// nerve constants
 import type { EIssueFilterType } from "@nerve/constants";
 import { EIssueGroupByToServerOptions, EServerGroupByToFilterOptions } from "@nerve/constants";
 import type {

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { SUPPORTED_LANGUAGES, toSupportedLanguage, useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { CustomSelect } from "@nerve/ui";

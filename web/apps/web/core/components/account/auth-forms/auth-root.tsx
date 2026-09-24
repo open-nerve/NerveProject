@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
-// plane imports
+// nerve imports
 import { Banner } from "@makeplane/propel/components/banner";
 // helpers
 import type { EAuthModes, EAuthenticationErrorCodes, TAuthErrorInfo } from "@/helpers/authentication.helper";

@@ -6,7 +6,7 @@
 
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import { SPREADSHEET_PROPERTY_LIST } from "@nerve/constants";
 // types
 import type { TIssue, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";

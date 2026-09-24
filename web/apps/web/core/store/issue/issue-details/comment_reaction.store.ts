@@ -6,7 +6,7 @@
 
 import { pull, find, concat, update, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
-// Plane Imports
+// Nerve Imports
 import type { TIssueCommentReaction, TIssueCommentReactionIdMap, TIssueCommentReactionMap } from "@nerve/types";
 import { groupReactions } from "@nerve/utils";
 // services

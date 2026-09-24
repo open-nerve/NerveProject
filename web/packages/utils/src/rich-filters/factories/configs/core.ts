@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TFilterValue, TSupportedOperators, TBaseFilterFieldConfig } from "@nerve/types";
 import { FILTER_FIELD_TYPE } from "@nerve/types";
 // local imports

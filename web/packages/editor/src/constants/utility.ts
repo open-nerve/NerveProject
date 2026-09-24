@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { CORE_EXTENSIONS } from "@nerve/utils";
-// plane editor imports
+// nerve editor imports
 import type { ExtensionFileSetStorageKey } from "@/types/storage";
 
 export type NodeFileMapType = Partial<

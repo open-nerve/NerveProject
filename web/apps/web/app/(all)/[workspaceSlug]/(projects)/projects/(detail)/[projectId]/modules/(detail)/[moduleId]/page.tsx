@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // assets
 import emptyModule from "@/app/assets/empty-state/module.svg?url";

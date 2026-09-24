@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE, DEFAULT_GLOBAL_VIEWS_LIST } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";

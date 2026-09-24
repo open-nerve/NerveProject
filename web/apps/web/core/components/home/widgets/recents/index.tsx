@@ -8,13 +8,12 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 import { useTranslation } from "@nerve/i18n";
-// plane types
+// nerve types
 import { ProjectsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import type { TActivityEntityData, TRecentActivityFilterKeys } from "@nerve/types";
-// plane ui
 // components
 import { ContentOverflowWrapper } from "@/components/core/content-overflow-HOC";
-// plane web services
+// services
 import { WorkspaceService } from "@/services/workspace.service";
 import { RecentsEmptyState } from "../empty-states";
 import { RecentActivityWidgetLoader } from "../loaders";

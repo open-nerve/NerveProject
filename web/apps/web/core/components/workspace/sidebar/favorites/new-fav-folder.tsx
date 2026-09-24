@@ -12,8 +12,7 @@ import { Controller, useForm } from "react-hook-form";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
-// plane helpers
-// plane ui
+// nerve ui
 import { FavoriteFolderIcon } from "@nerve/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 

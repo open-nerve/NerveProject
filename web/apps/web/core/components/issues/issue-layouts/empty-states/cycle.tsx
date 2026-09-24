@@ -8,7 +8,7 @@ import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
@@ -28,7 +28,7 @@ export const CycleEmptyState = observer(function CycleEmptyState() {
   const { workspaceSlug, projectId, cycleId } = useParams();
   // states
   const [cycleIssuesListModal, setCycleIssuesListModal] = useState(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { getCycleById } = useCycle();

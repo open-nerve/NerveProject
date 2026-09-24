@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { IWorkspaceMember, TProjectMembership } from "@nerve/types";
 import { renderFormattedDate } from "@nerve/utils";

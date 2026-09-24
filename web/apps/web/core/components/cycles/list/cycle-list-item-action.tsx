@@ -15,7 +15,7 @@ import {
   TransferWorkItemOutline,
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";

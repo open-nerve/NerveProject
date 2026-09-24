@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import type { TIssue } from "@nerve/types";

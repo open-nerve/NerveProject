@@ -9,7 +9,7 @@ import { omit } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { TIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";

@@ -6,7 +6,7 @@
 
 import { Suspense } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ScrollArea } from "@nerve/propel/scrollarea";
 import type { TProfileSettingsTabs } from "@nerve/types";
 import { cn } from "@nerve/utils";

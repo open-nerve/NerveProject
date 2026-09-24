@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, LoadingOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IState, TStateOperationsCallbacks } from "@nerve/types";

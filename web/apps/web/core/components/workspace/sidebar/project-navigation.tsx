@@ -11,7 +11,6 @@ import { EUserPermissionsLevel, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import type { EUserProjectRoles } from "@nerve/types";
-// plane ui
 // components
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
 // hooks

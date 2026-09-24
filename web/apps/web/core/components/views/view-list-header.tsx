@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 // icons
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useOutsideClickDetector } from "@nerve/hooks";
-// plane helpers
 // helpers
 import { cn } from "@nerve/utils";
 // hooks

@@ -17,7 +17,7 @@ import {
   SettingsOutline,
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import type { ICycle, IModule, IPartialProject, IProjectView, IWorkspace } from "@nerve/types";
 import { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";

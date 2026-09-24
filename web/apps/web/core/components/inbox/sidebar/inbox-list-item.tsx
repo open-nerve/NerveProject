@@ -7,7 +7,7 @@
 import type { MouseEvent } from "react";
 import { observer } from "mobx-react";
 import { Link, useSearchParams } from "react-router";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { PriorityIcon } from "@nerve/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";

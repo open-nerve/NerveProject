@@ -11,7 +11,7 @@ import { useTheme } from "next-themes";
 import { CompletedAtOutline } from "@makeplane/propel/icons";
 // headless ui
 import { Tab } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
 import { PriorityIcon } from "@nerve/propel/icons";
@@ -62,7 +62,7 @@ export const ActiveCycleStats = observer(function ActiveCycleStats(props: Active
   const [issuesLoaderElement, setIssueLoaderElement] = useState<HTMLDivElement | null>(null);
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // derived values
   const priorityResolvedPath = resolvedTheme === "light" ? lightPriorityAsset : darkPriorityAsset;

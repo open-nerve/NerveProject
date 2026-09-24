@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TWorkspaceSettingsItem, TWorkspaceSettingsTabs } from "@nerve/types";
 import { EUserWorkspaceRoles } from "@nerve/types";
 

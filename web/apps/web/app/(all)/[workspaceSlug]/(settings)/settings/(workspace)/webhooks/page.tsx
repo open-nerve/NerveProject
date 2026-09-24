@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -32,7 +32,7 @@ function WebhooksListPage({ params }: Route.ComponentProps) {
   const [showCreateWebhookModal, setShowCreateWebhookModal] = useState(false);
   // router
   const { workspaceSlug } = params;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // mobx store
   const { workspaceUserInfo, allowPermissions } = useUserPermissions();

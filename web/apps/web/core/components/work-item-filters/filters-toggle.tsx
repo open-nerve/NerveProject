@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { EIssuesStoreType } from "@nerve/types";
 // components
 import { FiltersToggle } from "@/components/rich-filters/filters-toggle";

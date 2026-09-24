@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { IIssueLabel } from "@nerve/types";
 // local imports
 import { PowerKMenuBuilder } from "./builder";

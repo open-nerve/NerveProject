@@ -6,7 +6,7 @@
 
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane hooks
+// nerve hooks
 import { useOutsideClickDetector } from "@nerve/hooks";
 // i18n
 import { useTranslation } from "@nerve/i18n";

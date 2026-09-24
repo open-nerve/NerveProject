@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane types
+// nerve types
 import type { IPartialProject } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 // components

@@ -5,7 +5,7 @@
  */
 
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { WORKSPACE_MEMBERS } from "@nerve/constants";
 import type { IUserLite } from "@nerve/types";
 // hooks

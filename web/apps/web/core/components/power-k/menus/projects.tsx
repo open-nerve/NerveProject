@@ -7,7 +7,7 @@
 import React from "react";
 // components
 import { Logo } from "@nerve/propel/emoji-icon-picker";
-// plane imports
+// nerve imports
 import type { TPartialProject } from "@nerve/types";
 // local imports
 import { PowerKMenuBuilder } from "./builder";

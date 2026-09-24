@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
-// plane helpers
+// nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // i18n
 import { useTranslation } from "@nerve/i18n";

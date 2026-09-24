@@ -6,7 +6,7 @@
 
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import type { EditorRefApi } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";

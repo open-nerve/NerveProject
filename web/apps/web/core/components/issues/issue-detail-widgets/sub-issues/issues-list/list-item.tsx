@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronRightOutline, CloseOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TIssue, TSubIssueOperations } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";

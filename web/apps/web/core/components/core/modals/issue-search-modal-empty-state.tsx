@@ -6,7 +6,7 @@
 
 import React from "react";
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { ISearchIssueResponse } from "@nerve/types";
 // assets
@@ -27,7 +27,7 @@ interface EmptyStateProps {
 export function IssueSearchModalEmptyState({ issues, searchTerm, debouncedSearchTerm, isSearching }: EmptyStateProps) {
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // derived values
   const searchResolvedPath = resolvedTheme === "light" ? lightSearchAsset : darkSearchAsset;

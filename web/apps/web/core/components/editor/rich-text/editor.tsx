@@ -5,7 +5,7 @@
  */
 
 import { forwardRef } from "react";
-// plane imports
+// nerve imports
 import { RichTextEditorWithRef } from "@nerve/editor";
 import type { EditorRefApi, IRichTextEditorProps, TFileHandler } from "@nerve/editor";
 import type { MakeOptional, TSearchEntityRequestPayload, TSearchResponse } from "@nerve/types";

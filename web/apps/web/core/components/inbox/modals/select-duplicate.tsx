@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useTheme } from "next-themes";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { SearchOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";

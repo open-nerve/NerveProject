@@ -7,7 +7,7 @@
 import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { EViewAccess, TViewFilterProps } from "@nerve/types";
 import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 // components

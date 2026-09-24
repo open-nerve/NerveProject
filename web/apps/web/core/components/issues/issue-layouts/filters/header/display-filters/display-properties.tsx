@@ -6,9 +6,9 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import { ISSUE_DISPLAY_PROPERTIES } from "@nerve/constants";
-// plane i18n
+// nerve i18n
 import { useTranslation } from "@nerve/i18n";
 // types
 import type { IIssueDisplayProperties } from "@nerve/types";

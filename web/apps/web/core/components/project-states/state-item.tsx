@@ -9,7 +9,7 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { attachClosestEdge, extractClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { observer } from "mobx-react";
-// Plane
+// Nerve
 import type { TDraggableData } from "@nerve/constants";
 import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
 import { DropIndicator } from "@nerve/ui";

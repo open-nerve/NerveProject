@@ -10,7 +10,7 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";

@@ -13,7 +13,7 @@ import {
   MoreHorizontalOutline,
   SettingsOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { CustomMenu } from "@nerve/ui";
 

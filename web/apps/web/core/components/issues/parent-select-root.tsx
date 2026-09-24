@@ -7,7 +7,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // components

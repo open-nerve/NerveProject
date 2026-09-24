@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { IWorkspaceBulkInviteFormData } from "@nerve/types";
 import { EModalWidth, EModalPosition, ModalCore } from "@nerve/ui";

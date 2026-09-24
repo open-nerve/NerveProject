@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { CustomMenu } from "@nerve/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";

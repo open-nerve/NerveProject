@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane types
+// nerve types
 import type { TSearchEntities } from "@nerve/types";
 
 export type TMentionSuggestion = {

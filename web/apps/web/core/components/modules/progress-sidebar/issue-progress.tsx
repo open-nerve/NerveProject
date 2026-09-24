@@ -20,7 +20,6 @@ import { ModuleProgressStats } from "@/components/modules";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
-// plane web constants
 type TModuleProgressProps = {
   moduleId: string;
 };
@@ -31,7 +30,7 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
   // router
   const [searchParams] = useSearchParams();
   const peekModule = searchParams.get("peekModule") || undefined;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { getModuleById } = useModule();

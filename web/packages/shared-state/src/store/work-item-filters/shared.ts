@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { EIssuesStoreType, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";
 // local imports
 import type { IFilterInstance } from "../rich-filters";

@@ -6,9 +6,9 @@
 
 import { forwardRef } from "react";
 import { range } from "lodash-es";
-// plane ui
+// nerve ui
 import { ContentWrapper } from "@nerve/ui";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 
 export const KanbanIssueBlockLoader = forwardRef(function KanbanIssueBlockLoader(

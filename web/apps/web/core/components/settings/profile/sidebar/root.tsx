@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { ScrollArea } from "@nerve/propel/scrollarea";
 import type { TProfileSettingsTabs } from "@nerve/types";
 import { cn } from "@nerve/utils";

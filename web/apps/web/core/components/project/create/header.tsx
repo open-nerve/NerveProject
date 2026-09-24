@@ -6,14 +6,14 @@
 
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-// plane imports
+// nerve imports
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane types
+// nerve types
 import type { IProject } from "@nerve/types";
-// plane ui
+// nerve ui
 import { getTabIndex } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";

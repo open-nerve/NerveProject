@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { SingleOrArray, TFilterExpression, TFilterProperty, TFilterValue } from "@nerve/types";
 // local imports
 import { getGroupChildren } from "../types";

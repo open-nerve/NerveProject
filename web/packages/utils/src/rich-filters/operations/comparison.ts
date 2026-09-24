@@ -5,7 +5,7 @@
  */
 
 import { compact, isEqual, sortBy } from "lodash-es";
-// plane imports
+// nerve imports
 import type {
   TFilterConditionNode,
   TFilterExpression,

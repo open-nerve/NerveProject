@@ -7,7 +7,7 @@
 import { useCallback, useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import type { TDescriptionVersionDetails, TDescriptionVersionsListResponse } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // local imports

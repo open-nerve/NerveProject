@@ -10,7 +10,7 @@ import { Link } from "react-router";
 
 import { useTranslation } from "@nerve/i18n";
 import { CloseOutline, EditOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/utils";
 // hooks

@@ -8,7 +8,7 @@ import React from "react";
 import { Command } from "cmdk";
 
 import { TickOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // local imports
 import { KeySequenceBadge, ShortcutBadge } from "./command-item-shortcut-badge";

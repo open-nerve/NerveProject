@@ -7,7 +7,7 @@
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
-// plane imports
+// nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { cn } from "@nerve/utils";

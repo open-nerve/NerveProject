@@ -9,7 +9,7 @@ import type { LucideIcon } from "lucide-react";
 import { KeyOutline, LockOutline, SettingsOutline, UserOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import {
   GROUPED_PROFILE_SETTINGS,
   PROFILE_SETTINGS_CATEGORIES,

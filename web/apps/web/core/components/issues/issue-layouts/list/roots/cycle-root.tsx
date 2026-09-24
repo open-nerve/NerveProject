@@ -7,7 +7,7 @@
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
 // hooks

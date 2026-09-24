@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { WORKSPACE_SETTINGS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Breadcrumbs } from "@nerve/ui";

@@ -19,7 +19,7 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
 import type { TDescriptionVersion } from "@nerve/types";

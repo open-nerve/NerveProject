@@ -19,7 +19,7 @@ import {
 import type { Editor } from "@tiptap/core";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";

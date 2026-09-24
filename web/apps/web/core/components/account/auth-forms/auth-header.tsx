@@ -38,7 +38,7 @@ const workSpaceService = new WorkspaceService();
 
 export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
   const { workspaceSlug, invitationId, invitationEmail, authMode } = props;
-  // plane imports
+  // nerve imports
   const { t } = useTranslation();
 
   const { data: invitation, isLoading } = useSWR(

@@ -28,7 +28,7 @@ import { cn } from "@nerve/utils";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
 import useLocalStorage from "@/hooks/use-local-storage";
-// plane web components
+// local imports
 import { FavoriteFolder } from "./favorite-folder";
 import { FavoriteRoot } from "./favorite-items";
 import type { TargetData } from "./favorites.helpers";

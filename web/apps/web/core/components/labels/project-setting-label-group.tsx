@@ -8,7 +8,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { ChevronDownOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 import type { IIssueLabel } from "@nerve/types";
 // components

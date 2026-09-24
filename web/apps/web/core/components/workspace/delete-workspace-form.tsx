@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
-// Plane Imports
+// Nerve Imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { useTranslation } from "@nerve/i18n";

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspaceView } from "@nerve/types";

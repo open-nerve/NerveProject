@@ -8,7 +8,7 @@ import React from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 import { MembersOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-// plane types
+// nerve types
 import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { TextArea } from "@makeplane/propel/components/text-area";
@@ -18,7 +18,6 @@ import { getFileURL } from "@nerve/utils";
 // hooks
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { useMember } from "@/hooks/store/use-member";
-// plane web constants
 
 type Props = {
   cycleDetails: ICycle;

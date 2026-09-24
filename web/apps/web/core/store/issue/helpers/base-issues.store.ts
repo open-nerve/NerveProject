@@ -7,7 +7,7 @@
 import { isEqual, concat, get, indexOf, isEmpty, orderBy, pull, set, uniq, update, clone } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane constants
+// nerve constants
 import { ALL_ISSUES, ISSUE_PRIORITIES } from "@nerve/constants";
 // types
 import type {
@@ -27,7 +27,6 @@ import type {
 import { EIssueLayoutTypes } from "@nerve/types";
 // helpers
 import { convertToISODateString } from "@nerve/utils";
-// plane web imports
 // services
 import { CycleService } from "@/services/cycle.service";
 import { IssueArchiveService, IssueService } from "@/services/issue";

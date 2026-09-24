@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TFilterProperty } from "@nerve/types";
 import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@nerve/types";
 // local imports

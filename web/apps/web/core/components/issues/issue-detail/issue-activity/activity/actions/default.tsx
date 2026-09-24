@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { EInboxIssueSource } from "@nerve/types";
 // hooks

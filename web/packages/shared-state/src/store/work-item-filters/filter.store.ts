@@ -6,7 +6,7 @@
 
 import { action, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TExpressionOptions } from "@nerve/constants";
 import type { EIssuesStoreType, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";
 import { LOGICAL_OPERATOR } from "@nerve/types";

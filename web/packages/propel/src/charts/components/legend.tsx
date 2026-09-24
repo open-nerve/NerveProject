@@ -6,7 +6,7 @@
 
 import React from "react";
 import type { LegendProps } from "recharts";
-// plane imports
+// nerve imports
 import type { TChartLegend } from "@nerve/types";
 import { cn } from "../../utils/classname";
 

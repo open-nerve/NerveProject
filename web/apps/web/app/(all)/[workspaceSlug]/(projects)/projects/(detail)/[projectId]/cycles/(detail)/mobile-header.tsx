@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EIssueFilterType, ISSUE_LAYOUTS, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { BoardOutline, CalendarOutline, ChevronDownOutline, ListOutline } from "@makeplane/propel/icons";
@@ -30,7 +30,7 @@ const SUPPORTED_LAYOUTS = [
 export const CycleIssuesMobileHeader = observer(function CycleIssuesMobileHeader() {
   // router
   const { workspaceSlug, projectId, cycleId } = useParams();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { currentProjectDetails } = useProject();

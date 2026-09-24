@@ -7,7 +7,7 @@
 import React from "react";
 import { Link } from "react-router";
 import { DefaultTabOutline, MoreHorizontalOutline, PinOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Menu } from "@nerve/propel/menu";
 import { Tooltip } from "@makeplane/propel/components/tooltip";

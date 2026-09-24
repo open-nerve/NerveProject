@@ -7,7 +7,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TIssue, TNameDescriptionLoader } from "@nerve/types";

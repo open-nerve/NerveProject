@@ -14,7 +14,7 @@ import {
   TickOutline,
 } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-// plane imports
+// nerve imports
 import type { TNotificationFilter } from "@nerve/types";
 import { PopoverMenu } from "@nerve/ui";
 // hooks

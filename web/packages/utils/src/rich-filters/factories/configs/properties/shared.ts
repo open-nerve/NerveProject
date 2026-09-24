@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { IProject, IUserLite, TOperatorConfigMap, TSupportedOperators } from "@nerve/types";
 import { COMPARISON_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports

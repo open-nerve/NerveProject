@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { MoreHorizontalOutline, StarFilled } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { IFavorite } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";

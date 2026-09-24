@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { ChevronRightOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import {
   WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,
   WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS,

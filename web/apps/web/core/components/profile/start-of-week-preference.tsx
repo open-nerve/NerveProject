@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { START_OF_THE_WEEK_OPTIONS } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { EStartOfTheWeek } from "@nerve/types";

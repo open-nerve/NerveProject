@@ -9,7 +9,7 @@ import React, { useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams, Link, useNavigate, useSearchParams, useLocation } from "react-router";
 import { InfoOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-// plane package imports
+// nerve package imports
 import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { LinearProgress } from "@makeplane/propel/components/linear-progress";

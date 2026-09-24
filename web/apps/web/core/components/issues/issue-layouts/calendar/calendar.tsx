@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 // types
 import type {

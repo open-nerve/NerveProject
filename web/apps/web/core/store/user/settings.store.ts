@@ -5,7 +5,7 @@
  */
 
 import { action, makeObservable, observable, runInAction } from "mobx";
-// plane imports
+// nerve imports
 import type { IUserSettings } from "@nerve/types";
 // services
 import { UserService } from "@/services/user.service";

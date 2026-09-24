@@ -8,7 +8,7 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useDropzone } from "react-dropzone";
-// plane imports
+// nerve imports
 import { ACCEPTED_AVATAR_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE, MAX_FILE_SIZE } from "@nerve/constants";
 import { Button } from "@nerve/propel/button";
 import { UserOutline } from "@makeplane/propel/icons";

@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import type { ComponentType, SVGProps } from "react";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { IUserLite } from "@nerve/types";
 import { ComboDropDown } from "@nerve/ui";
 // helpers

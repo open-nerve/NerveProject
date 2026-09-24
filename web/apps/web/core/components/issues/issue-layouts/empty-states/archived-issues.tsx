@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
@@ -19,7 +19,7 @@ export const ProjectArchivedEmptyState = observer(function ProjectArchivedEmptyS
   // router
   const navigate = useNavigate();
   const { workspaceSlug, projectId } = useParams();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { allowPermissions } = useUserPermissions();

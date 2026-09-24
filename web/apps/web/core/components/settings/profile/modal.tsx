@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { IconButton } from "@nerve/propel/icon-button";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks

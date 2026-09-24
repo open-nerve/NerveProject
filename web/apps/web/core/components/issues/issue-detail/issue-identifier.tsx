@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { TIssueIdentifierProps } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";

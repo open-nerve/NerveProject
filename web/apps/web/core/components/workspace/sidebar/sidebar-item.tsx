@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { Link, useMatch, useParams } from "react-router";
-// plane imports
+// nerve imports
 import type { IWorkspaceSidebarNavigationItem } from "@nerve/constants";
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -16,7 +16,7 @@ import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-// plane web imports
+// components
 import { getSidebarNavigationItemIcon } from "@/components/workspace/sidebar/helper";
 
 type Props = {

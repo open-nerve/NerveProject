@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";

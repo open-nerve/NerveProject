@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { LogOutOutline, MailOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 // components

@@ -7,7 +7,7 @@
 import type { MutableRefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssue } from "@nerve/types";
 // components
 import { SpreadsheetIssueRowLoader } from "@/components/ui/loader/layouts/spreadsheet-layout-loader";

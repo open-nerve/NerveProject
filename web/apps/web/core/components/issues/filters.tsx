@@ -7,14 +7,14 @@
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { PreferencesOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
-// plane web imports
+// nerve imports
 import type { TProject } from "@nerve/types";
 // local imports
 import { WorkItemFiltersToggle } from "../work-item-filters/filters-toggle";

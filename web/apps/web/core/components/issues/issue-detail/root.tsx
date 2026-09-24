@@ -6,7 +6,7 @@
 
 import { useMemo } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";

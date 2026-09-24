@@ -7,7 +7,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { isEqual, cloneDeep } from "lodash-es";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import type { IProjectView, TWorkItemFilterExpression } from "@nerve/types";

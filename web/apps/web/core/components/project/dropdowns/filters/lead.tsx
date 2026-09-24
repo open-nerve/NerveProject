@@ -7,7 +7,7 @@
 import { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
-// plane ui
+// nerve ui
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Loader } from "@nerve/ui";
 // components

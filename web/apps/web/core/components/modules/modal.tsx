@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useForm } from "react-hook-form";
-// Plane imports
+// Nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IModule } from "@nerve/types";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";

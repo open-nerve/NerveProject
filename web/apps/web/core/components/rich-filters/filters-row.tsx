@@ -8,7 +8,7 @@ import React, { useCallback, useState } from "react";
 import { observer } from "mobx-react";
 import { AddFilterOutline } from "@makeplane/propel/icons";
 import { Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { Button } from "@nerve/propel/button";
 import type { IFilterInstance } from "@nerve/shared-state";
 import type { TExternalFilter, TFilterProperty } from "@nerve/types";

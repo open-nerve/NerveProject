@@ -5,7 +5,7 @@
  */
 
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import { Button } from "@nerve/propel/button";
 // assets
 import maintenanceModeDarkModeImage from "@/app/assets/instance/maintenance-mode-dark.svg?url";

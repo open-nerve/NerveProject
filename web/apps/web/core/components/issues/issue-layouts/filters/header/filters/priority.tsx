@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import { ISSUE_PRIORITIES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // ui

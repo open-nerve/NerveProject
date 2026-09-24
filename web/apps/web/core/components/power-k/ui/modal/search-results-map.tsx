@@ -5,7 +5,7 @@
  */
 
 import { CyclesOutline, GridOutline, ModuleOutline, ProjectsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type {
   IWorkspaceDefaultSearchResult,
   IWorkspaceIssueSearchResult,

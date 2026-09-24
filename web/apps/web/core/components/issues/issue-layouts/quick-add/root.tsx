@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import type { UseFormRegister } from "react-hook-form";
 import { useForm } from "react-hook-form";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";

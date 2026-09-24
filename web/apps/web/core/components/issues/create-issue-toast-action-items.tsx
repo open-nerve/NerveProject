@@ -7,7 +7,6 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
-// plane imports
 // helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";

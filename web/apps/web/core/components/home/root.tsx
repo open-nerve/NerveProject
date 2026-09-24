@@ -5,11 +5,11 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ContentWrapper } from "@nerve/ui";
 // hooks
 import { useUserProfile, useUser } from "@/hooks/store/user";
-// plane web imports
+// components
 import { TourRoot } from "@/components/onboarding/tour/root";
 // local imports
 import { HomeBody } from "./home-body";

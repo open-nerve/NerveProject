@@ -6,7 +6,7 @@
 
 import React from "react";
 import { Command } from "cmdk";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 // local imports
 import type { TPowerKCommandConfig, TPowerKCommandGroup, TPowerKContext } from "../../core/types";

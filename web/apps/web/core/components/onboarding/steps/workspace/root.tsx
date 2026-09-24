@@ -6,7 +6,7 @@
 
 import React, { useEffect, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { IWorkspaceMemberInvitation } from "@nerve/types";
 import { ECreateOrJoinWorkspaceViews, EOnboardingSteps } from "@nerve/types";
 // hooks

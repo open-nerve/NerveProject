@@ -6,7 +6,7 @@
 
 import React from "react";
 import { Command } from "cmdk";
-// plane imports
+// nerve imports
 import { START_OF_THE_WEEK_OPTIONS } from "@nerve/constants";
 import type { EStartOfTheWeek } from "@nerve/types";
 // local imports

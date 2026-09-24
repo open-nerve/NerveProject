@@ -11,7 +11,7 @@ import { useParams } from "react-router";
 import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { useTranslation } from "@nerve/i18n";
 import { DeactivatedUserOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
@@ -53,7 +53,7 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
   // states
   const [query, setQuery] = useState("");
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { data: currentUser } = useUser();

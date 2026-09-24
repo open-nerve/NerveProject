@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { UserAltOutline } from "@makeplane/propel/icons";
-// Plane imports
+// Nerve imports
 import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";

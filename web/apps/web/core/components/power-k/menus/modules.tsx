@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ModuleStatusIcon } from "@nerve/propel/icons";
 import type { IModule } from "@nerve/types";
 // local imports

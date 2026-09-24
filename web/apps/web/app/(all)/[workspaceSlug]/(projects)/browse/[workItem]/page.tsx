@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { TIssue } from "@nerve/types";
 import { Loader } from "@nerve/ui";
@@ -25,7 +25,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
 // layouts
 import { ProjectAuthWrapper } from "@/layouts/auth-layout/project-wrapper";
-// plane web imports
+// components
 import { WorkItemDetailRoot } from "@/components/browse/workItem-detail";
 
 import type { Route } from "./+types/page";

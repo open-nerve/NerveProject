@@ -5,7 +5,7 @@
  */
 
 import { isNil, orderBy } from "lodash-es";
-// plane imports
+// nerve imports
 import type { IProjectView, TViewFilterProps, TViewFiltersSortBy, TViewFiltersSortKey } from "@nerve/types";
 // local imports
 import { getDate } from "./datetime";

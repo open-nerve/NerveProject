@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TProjectDisplayFilters, TProjectFilters } from "@nerve/types";
 // components
 import { FilterOption } from "@/components/issues/issue-layouts/filters";

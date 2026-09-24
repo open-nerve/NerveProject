@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
@@ -27,7 +27,7 @@ export const ModuleEmptyState = observer(function ModuleEmptyState() {
   const { workspaceSlug, projectId, moduleId } = useParams();
   // states
   const [moduleIssuesListModal, setModuleIssuesListModal] = useState(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { issues } = useIssues(EIssuesStoreType.MODULE);

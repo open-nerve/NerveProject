@@ -9,7 +9,7 @@ import { Fragment } from "react";
 import { observer } from "mobx-react";
 import { ClockOutline } from "@makeplane/propel/icons";
 import { Popover, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { NOTIFICATION_SNOOZE_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";

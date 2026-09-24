@@ -5,7 +5,7 @@
  */
 
 import { Controller, useFormContext } from "react-hook-form";
-// plane imports
+// nerve imports
 import { NETWORK_CHOICES, ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { IProject } from "@nerve/types";

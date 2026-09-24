@@ -7,7 +7,7 @@
 import { useMemo } from "react";
 import uniq from "lodash-es/uniq";
 import { observer } from "mobx-react";
-// plane package imports
+// nerve package imports
 import type { TActivityFilters } from "@nerve/constants";
 import { E_SORT_ORDER, defaultActivityFilters } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";

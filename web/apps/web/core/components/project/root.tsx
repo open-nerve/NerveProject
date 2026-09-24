@@ -7,7 +7,7 @@
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import { matchPath, useParams, useLocation } from "react-router";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@nerve/types";
 import { calculateTotalFilters } from "@nerve/utils";

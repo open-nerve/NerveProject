@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { THEME_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // local imports

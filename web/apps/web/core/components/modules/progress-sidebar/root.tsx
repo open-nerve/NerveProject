@@ -20,12 +20,12 @@ import {
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
-// plane types
+// nerve types
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { ILinkDetails, IModule, ModuleLink } from "@nerve/types";
-// plane ui
+// nerve ui
 import { Loader, CustomSelect } from "@nerve/ui";
 import { TextArea } from "@makeplane/propel/components/text-area";
 // components
@@ -37,7 +37,6 @@ import { CreateUpdateModuleLinkModal, ModuleProgress, ModuleLinksList } from "@/
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useUserPermissions } from "@/hooks/store/user";
-// plane web constants
 const defaultValues: Partial<IModule> = {
   lead_id: "",
   member_ids: [],

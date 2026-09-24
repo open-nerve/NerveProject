@@ -7,7 +7,7 @@
 import { orderBy, isEmpty, update, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TNotificationTab } from "@nerve/constants";
 import { ENotificationTab, ENotificationLoader, ENotificationQueryParamType } from "@nerve/constants";
 import type {

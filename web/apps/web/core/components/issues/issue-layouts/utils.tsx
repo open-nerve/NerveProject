@@ -23,7 +23,7 @@ import {
   StateOutline,
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
-// plane types
+// nerve types
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { EIconSize, ISSUE_PRIORITIES, STATE_GROUPS } from "@nerve/constants";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
@@ -44,7 +44,6 @@ import type {
   TSpreadsheetColumn,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-// plane ui
 
 import { getFileURL } from "@nerve/utils";
 // store

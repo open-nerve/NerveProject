@@ -5,7 +5,7 @@
  */
 
 import type { ReactNode } from "react";
-// plane imports
+// nerve imports
 import type { TNotification } from "@nerve/types";
 import {
   renderFormattedDate,

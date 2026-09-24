@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { IconButton } from "@nerve/propel/icon-button";
 import { FilterOutline, SelectedFilterOutline } from "@makeplane/propel/icons";
 import { cn } from "@nerve/utils";

@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { CheckDoneOutline, RefreshOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { ENotificationLoader, ENotificationQueryParamType } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";

@@ -12,7 +12,7 @@ import { CopyOutline, TickOutline } from "@makeplane/propel/icons";
 import { useState } from "react";
 // ui
 import { Tooltip } from "@nerve/propel/tooltip";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 // types
 import type { TCodeBlockAttributes } from "./types";

@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import type { TModuleStatus } from "@nerve/propel/icons";
-// plane imports
+// nerve imports
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 import type { TModuleDisplayFilters, TModuleFilters } from "@nerve/types";
 // components

@@ -7,7 +7,7 @@
 import { Fragment } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel, EDraftIssuePaginationType } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
@@ -31,7 +31,7 @@ type TWorkspaceDraftIssuesRoot = {
 
 export const WorkspaceDraftIssuesRoot = observer(function WorkspaceDraftIssuesRoot(props: TWorkspaceDraftIssuesRoot) {
   const { workspaceSlug } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { loader, paginationInfo, fetchIssues, issueIds } = useWorkspaceDraftIssues();

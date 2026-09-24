@@ -8,7 +8,7 @@ import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
 import type { ICycle, IIssueLabel, IModule, IProject, IState, IUserLite } from "@nerve/types";
-// plane web store
+// store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
 import { IssueDetail } from "@/store/issue/issue-details/root.store";
 import type { RootStore } from "@/store/root.store";

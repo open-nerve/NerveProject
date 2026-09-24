@@ -5,7 +5,7 @@
  */
 
 import { useFormContext } from "react-hook-form";
-// plane imports
+// nerve imports
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";

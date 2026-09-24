@@ -20,7 +20,7 @@ import { InboxIssueCreateModalRoot } from "@/components/inbox/modals/create-moda
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectInbox } from "@/hooks/store/use-project-inbox";
 import { useUserPermissions } from "@/hooks/store/user";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 export const ProjectInboxHeader = observer(function ProjectInboxHeader() {

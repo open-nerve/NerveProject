@@ -5,7 +5,7 @@
  */
 
 import type { TPartialProject } from "@nerve/types";
-// plane propel imports
+// nerve propel imports
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";

@@ -6,7 +6,7 @@
 
 import { format } from "date-fns";
 import { get, set } from "lodash-es";
-// plane imports
+// nerve imports
 import { COMPLETED_STATE_GROUPS, STATE_DISTRIBUTION } from "@nerve/constants";
 import type { ICycle, IModule, IState, TIssue } from "@nerve/types";
 // helper

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 
@@ -18,7 +18,7 @@ type TProps = {
 
 export const ProjectAccessRestriction = observer(function ProjectAccessRestriction(props: TProps) {
   const { isWorkspaceAdmin, handleJoinProject, isJoinButtonDisabled, errorStatusCode } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
 
   // Show join project screen if:

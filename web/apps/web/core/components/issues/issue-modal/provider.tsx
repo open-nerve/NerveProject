@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { ISearchIssueResponse } from "@nerve/types";
 // components
 import { IssueModalContext } from "@/components/issues/issue-modal/context";

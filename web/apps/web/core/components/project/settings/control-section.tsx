@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 // components

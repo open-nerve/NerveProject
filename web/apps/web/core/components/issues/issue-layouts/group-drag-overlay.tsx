@@ -6,7 +6,7 @@
 
 import { useRef } from "react";
 import { WarningCircleOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { ISSUE_ORDER_BY_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { TIssueOrderByOptions } from "@nerve/types";

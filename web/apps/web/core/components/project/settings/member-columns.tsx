@@ -9,7 +9,7 @@ import { Link } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import { CircleMinus } from "lucide-react";
 import { Disclosure } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { EUserProjectRoles, IUser, IWorkspaceMember, TProjectMembership } from "@nerve/types";

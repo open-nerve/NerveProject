@@ -8,7 +8,7 @@ import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 // icons
 import { ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import {
   EIssueFilterType,
   ISSUE_DISPLAY_FILTERS_BY_PAGE,
@@ -42,7 +42,7 @@ import { useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import useLocalStorage from "@/hooks/use-local-storage";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { IconButton } from "@nerve/propel/icon-button";
 

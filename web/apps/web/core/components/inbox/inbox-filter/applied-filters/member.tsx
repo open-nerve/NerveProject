@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 
-// plane types
+// nerve types
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { CloseOutline } from "@makeplane/propel/icons";
 import type { TInboxIssueFilterMemberKeys } from "@nerve/types";

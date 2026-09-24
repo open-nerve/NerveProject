@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { useRef } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ReplyOutline } from "@makeplane/propel/icons";
 import type { TIssueComment } from "@nerve/types";
 import { cn } from "@nerve/utils";

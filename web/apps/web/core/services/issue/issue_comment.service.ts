@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane types
+// nerve types
 import type { TIssueComment } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";

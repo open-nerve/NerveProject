@@ -15,7 +15,7 @@ import { ViewListHeader } from "@/components/views/view-list-header";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

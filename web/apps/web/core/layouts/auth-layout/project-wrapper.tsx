@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // components
 import { ProjectAccessRestriction } from "@/components/auth-screens/project/project-access-restriction";

@@ -8,7 +8,7 @@ import { Fragment } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { ICycle } from "@nerve/types";
 import { Loader } from "@nerve/ui";
@@ -29,7 +29,7 @@ export const ActiveCycleProductivity = observer(function ActiveCycleProductivity
   const { workspaceSlug, projectId, cycle } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // derived values
   const resolvedPath = resolvedTheme === "light" ? lightChartAsset : darkChartAsset;

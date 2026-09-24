@@ -7,7 +7,7 @@
 import { uniq, unset, set, update, sortBy } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import { EUserPermissions } from "@nerve/constants";
 import type {
   EUserProjectRoles,
@@ -16,7 +16,7 @@ import type {
   IUserLite,
   TProjectMembership,
 } from "@nerve/types";
-// plane web imports
+// store
 import type { RootStore } from "@/store/root.store";
 // services
 import { ProjectMemberService, ProjectService } from "@/services/project";

@@ -6,7 +6,7 @@
 
 import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@nerve/types";
 // helpers
-// plane web types
+// nerve imports
 import type { TProject, TPartialProject } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";

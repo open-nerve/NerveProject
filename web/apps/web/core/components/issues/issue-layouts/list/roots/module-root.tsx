@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";

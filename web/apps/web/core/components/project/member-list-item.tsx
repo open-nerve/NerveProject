@@ -5,14 +5,14 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Table } from "@nerve/ui";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
-// plane web imports
+// components
 import { useProjectColumns } from "@/components/projects/settings/useProjectColumns";
 // store
 import type { IProjectMemberDetails } from "@/store/member/project/project-member.store";

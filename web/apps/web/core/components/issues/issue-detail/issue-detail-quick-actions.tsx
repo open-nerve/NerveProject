@@ -6,7 +6,7 @@
 
 import { useRef } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { LinkOutline } from "@makeplane/propel/icons";
 import { IconButton } from "@nerve/propel/icon-button";

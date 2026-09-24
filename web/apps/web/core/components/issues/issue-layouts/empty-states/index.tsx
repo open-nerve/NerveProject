@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane web components
+// nerve imports
 import { EIssuesStoreType } from "@nerve/types";
 // components
 import { ProjectArchivedEmptyState } from "./archived-issues";

@@ -20,7 +20,7 @@ import {
   NewTabOutline,
   TickCircleFilled,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";

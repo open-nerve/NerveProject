@@ -10,7 +10,7 @@ import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import type { TInboxIssueCurrentTab } from "@nerve/types";
 import { EInboxIssueCurrentTab } from "@nerve/types";
-// plane imports
+// nerve imports
 import { Header, Loader, EHeaderVariant } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components
@@ -50,7 +50,7 @@ export const InboxSidebar = observer(function InboxSidebar(props: IInboxSidebarP
   // ref
   const containerRef = useRef<HTMLDivElement>(null);
   const [elementRef, setElementRef] = useState<HTMLDivElement | null>(null);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store
   const { currentProjectDetails } = useProject();

@@ -7,7 +7,7 @@
 import { AddOutline, CloseOutline, DownloadOutline, MinusOutline, NewTabOutline } from "@makeplane/propel/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 
 const MIN_ZOOM = 0.5;

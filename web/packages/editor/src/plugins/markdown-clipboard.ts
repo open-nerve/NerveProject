@@ -6,7 +6,7 @@
 
 import type { Editor } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
-// plane imports
+// nerve imports
 import { convertHTMLToMarkdown } from "@nerve/utils";
 import type { TCustomComponentsMetaData } from "@nerve/utils";
 

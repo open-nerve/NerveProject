@@ -6,7 +6,7 @@
 
 import { memo } from "react";
 import { SortAscendingOutline, SortDescendingOutline } from "@makeplane/propel/icons";
-// plane package imports
+// nerve package imports
 import { E_SORT_ORDER } from "@nerve/constants";
 import { IconButton } from "@nerve/propel/icon-button";
 

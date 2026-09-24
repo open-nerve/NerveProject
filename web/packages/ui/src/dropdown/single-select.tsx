@@ -8,7 +8,7 @@ import { Combobox } from "@headlessui/react";
 import { sortBy } from "lodash-es";
 import React, { useMemo, useRef, useState } from "react";
 import { usePopper } from "react-popper";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 // local imports
 import { useDropdownKeyPressed } from "../hooks/use-dropdown-key-pressed";

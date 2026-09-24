@@ -15,7 +15,7 @@ import {
   NewTabOutline,
   RestoreOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { EIssuesStoreType, TIssue } from "@nerve/types";

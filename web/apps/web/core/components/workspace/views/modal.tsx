@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspaceView } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";

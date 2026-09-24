@@ -7,7 +7,7 @@
 import { set, cloneDeep, isEqual } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { IWorkspaceView } from "@nerve/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";

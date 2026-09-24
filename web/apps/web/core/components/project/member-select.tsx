@@ -10,7 +10,7 @@ import { useParams } from "react-router";
 import { Ban } from "lucide-react";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { EUserProjectRoles } from "@nerve/types";
-// plane ui
+// nerve ui
 import { CustomSearchSelect } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";

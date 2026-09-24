@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TLogoProps } from "@nerve/types";
 import { sanitizeHTML } from "@nerve/utils";
 // types

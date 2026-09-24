@@ -8,7 +8,7 @@ import { useState, useRef, forwardRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { Popover } from "@nerve/propel/popover";
 import type { TIssue } from "@nerve/types";

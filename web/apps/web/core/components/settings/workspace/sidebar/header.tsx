@@ -6,7 +6,7 @@
 
 import { ArrowNarrowLeftOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";

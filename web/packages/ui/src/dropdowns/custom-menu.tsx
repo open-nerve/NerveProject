@@ -10,7 +10,6 @@ import * as React from "react";
 import ReactDOM from "react-dom";
 import { usePopper } from "react-popper";
 import { useOutsideClickDetector } from "@nerve/hooks";
-// plane helpers
 // helpers
 import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";
 import { cn } from "../utils";

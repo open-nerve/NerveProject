@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 import { Navigate, useLocation, useSearchParams } from "react-router";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { isValidNextPath } from "@nerve/utils";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";

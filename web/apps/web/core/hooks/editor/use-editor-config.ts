@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-// plane imports
+// nerve imports
 import type { TFileHandler } from "@nerve/editor";
 import { getEditorAssetDownloadSrc, getEditorAssetSrc } from "@nerve/utils";
 // hooks

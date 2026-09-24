@@ -5,7 +5,7 @@
  */
 
 import type { TNetworkChoiceIconKey } from "@nerve/constants";
-// plane imports
+// nerve imports
 import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
 import { cn } from "@nerve/utils";
 

@@ -11,7 +11,7 @@ import { observer } from "mobx-react";
 import { matchPath, useParams, useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
@@ -28,7 +28,7 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
-// plane web imports
+// nerve imports
 import type { TProject } from "@nerve/types";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";

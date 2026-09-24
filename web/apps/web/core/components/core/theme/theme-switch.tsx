@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { I_THEME_OPTION } from "@nerve/constants";
 import { THEME_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";

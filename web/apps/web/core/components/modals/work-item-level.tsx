@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { TIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // components

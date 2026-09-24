@@ -7,7 +7,7 @@
 import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import type { I_THEME_OPTION } from "@nerve/constants";
 import { THEME_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";

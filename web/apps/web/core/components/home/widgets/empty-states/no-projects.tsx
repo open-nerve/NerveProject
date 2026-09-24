@@ -9,7 +9,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
 import { CloseOutline, MembersOutline, ProjectsOutline, TickOutline } from "@makeplane/propel/icons";
-// plane ui
+// nerve ui
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
@@ -19,7 +19,6 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-// plane web constants
 
 export const NoProjectsEmptyState = observer(function NoProjectsEmptyState() {
   // navigation

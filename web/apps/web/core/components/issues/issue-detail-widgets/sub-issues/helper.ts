@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from "react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TSubIssueOperations } from "@nerve/types";

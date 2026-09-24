@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { substringMatch } from "@nerve/utils";
 // components

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
 import { useTranslation } from "@nerve/i18n";
 // hooks

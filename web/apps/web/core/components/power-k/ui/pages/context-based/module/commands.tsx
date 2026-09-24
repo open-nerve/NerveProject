@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { useParams } from "react-router";
 import { StarOff } from "lucide-react";
 import { LinkOutline, MembersOutline, StarOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";

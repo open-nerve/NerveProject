@@ -7,7 +7,7 @@
 import { uniq, get, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TIssueRelationIdMap, TIssueRelationMap, TIssueRelation, TIssue, TIssueRelationTypes } from "@nerve/types";
 // components
 import type { TRelationObject } from "@/components/issues/issue-detail-widgets/relations";

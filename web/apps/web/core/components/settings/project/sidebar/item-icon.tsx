@@ -15,7 +15,7 @@ import {
   TriggerOutline,
   ViewsOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { ISvgIcons } from "@nerve/propel/icons";
 import type { TProjectSettingsTabs } from "@nerve/types";
 // components

@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -56,7 +56,7 @@ export const ProjectSettingsMemberDefaults = observer(function ProjectSettingsMe
   props: TProjectSettingsMemberDefaultsProps
 ) {
   const { workspaceSlug, projectId } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { allowPermissions } = useUserPermissions();

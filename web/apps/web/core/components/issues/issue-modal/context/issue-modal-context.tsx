@@ -5,7 +5,7 @@
  */
 
 import { createContext } from "react";
-// plane imports
+// nerve imports
 import type { ISearchIssueResponse } from "@nerve/types";
 
 export type TIssueModalContext = {

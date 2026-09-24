@@ -9,7 +9,7 @@ import type { Editor } from "@tiptap/core";
 import { BubbleMenu, useEditorState } from "@tiptap/react";
 import type { BubbleMenuProps } from "@tiptap/react";
 import { useEffect, useState, useRef } from "react";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 // components
 import type { EditorMenuItem } from "@/components/menus";

@@ -8,8 +8,7 @@ import type { FC } from "react";
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import type { UseFormRegister, UseFormSetFocus } from "react-hook-form";
-// plane constants
-// plane helpers
+// nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import type { TIssue } from "@nerve/types";

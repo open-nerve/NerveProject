@@ -17,7 +17,7 @@ import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

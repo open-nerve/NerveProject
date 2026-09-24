@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { IModule } from "@nerve/types";
 import { ComboDropDown } from "@nerve/ui";

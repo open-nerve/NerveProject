@@ -10,7 +10,6 @@ import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import { useOutsideClickDetector } from "@nerve/hooks";
-// plane imports
 // local imports
 import { Tooltip } from "@nerve/propel/tooltip";
 import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";

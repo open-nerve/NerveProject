@@ -6,7 +6,7 @@
 
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { Selection } from "@tiptap/pm/state";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 
 type EditorClassNameArgs = {

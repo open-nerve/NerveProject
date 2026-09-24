@@ -6,7 +6,7 @@
 
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { MODULE_STATUS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ModuleStatusIcon } from "@nerve/propel/icons";

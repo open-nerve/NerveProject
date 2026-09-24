@@ -11,7 +11,7 @@ import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import { ArrowNarrowRightOutline, CalendarOutline, CloseOutline, DueDateOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 // ui
 import type { DateRange, Matcher } from "@nerve/propel/calendar";

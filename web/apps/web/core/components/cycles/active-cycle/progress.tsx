@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import { PROGRESS_STATE_GROUPS_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { TWorkItemFilterCondition } from "@nerve/shared-state";
@@ -30,7 +30,7 @@ export const ActiveCycleProgress = observer(function ActiveCycleProgress(props: 
   const { handleFiltersUpdate, cycle } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // derived values
   const closedIssues = cycle ? cycle.completed_issues + cycle.cancelled_issues : 0;

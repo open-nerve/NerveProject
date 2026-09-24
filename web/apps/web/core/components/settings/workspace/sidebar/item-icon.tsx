@@ -6,7 +6,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { BuildingOutline, MembersOutline, WebhooksOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { ISvgIcons } from "@nerve/propel/icons";
 import type { TWorkspaceSettingsTabs } from "@nerve/types";
 

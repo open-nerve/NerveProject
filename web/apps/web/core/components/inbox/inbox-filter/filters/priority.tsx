@@ -10,7 +10,6 @@ import { ISSUE_PRIORITIES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { PriorityIcon } from "@nerve/propel/icons";
 import type { TIssuePriorities } from "@nerve/types";
-// plane constants
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks

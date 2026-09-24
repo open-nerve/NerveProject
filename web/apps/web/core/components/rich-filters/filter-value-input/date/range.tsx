@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { TDateRangeFilterFieldConfig, TFilterConditionNodeForDisplay, TFilterProperty } from "@nerve/types";
 import { cn, isValidDate, renderFormattedPayloadDate, toFilterArray } from "@nerve/utils";
 // components

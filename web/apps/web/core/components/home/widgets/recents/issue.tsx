@@ -5,12 +5,12 @@
  */
 
 import { observer } from "mobx-react";
-// plane types
+// nerve types
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TActivityEntityData, TIssueEntityData } from "@nerve/types";
-// plane ui
+// nerve ui
 import { calculateTimeAgo, generateWorkItemLink } from "@nerve/utils";
 // components
 import { ListItem } from "@/components/core/list";

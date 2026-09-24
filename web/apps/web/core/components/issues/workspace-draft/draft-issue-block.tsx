@@ -9,7 +9,7 @@ import { omit } from "lodash-es";
 import { observer } from "mobx-react";
 import { SquareStackIcon } from "lucide-react";
 import { CopyOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
-// plane utils
+// nerve utils
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TWorkspaceDraftIssue } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";

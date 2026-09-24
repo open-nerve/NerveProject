@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { Outlet } from "react-router";
-// plane imports
+// nerve imports
 import { Header, Row } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // components

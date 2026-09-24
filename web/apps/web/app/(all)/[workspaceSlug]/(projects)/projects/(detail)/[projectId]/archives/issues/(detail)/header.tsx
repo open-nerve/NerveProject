@@ -16,7 +16,7 @@ import { IssueDetailQuickActions } from "@/components/issues/issue-detail/issue-
 import { ISSUE_DETAILS } from "@nerve/constants";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
-// plane web
+// components
 import { ProjectBreadcrumb } from "@/components/breadcrumbs/project";
 // services
 import { IssueService } from "@/services/issue";

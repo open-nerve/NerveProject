@@ -7,9 +7,9 @@
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane constants
+// nerve constants
 import { EIssueFilterType, ISSUE_LAYOUTS, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
-// plane i18n
+// nerve i18n
 import { useTranslation } from "@nerve/i18n";
 // icons
 import { ChevronDownOutline } from "@makeplane/propel/icons";
@@ -30,7 +30,7 @@ import { IssueLayoutIcon } from "@/components/issues/issue-layouts/layout-icon";
 import { useIssues } from "@/hooks/store/use-issues";
 
 export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHeader() {
-  // plane i18n
+  // nerve i18n
   const { t } = useTranslation();
   // router
   const { workspaceSlug, userId } = useParams();

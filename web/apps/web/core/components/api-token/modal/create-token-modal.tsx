@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { mutate } from "swr";
-// plane imports
+// nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { APITokenService } from "@nerve/services";
 import type { IApiToken } from "@nerve/types";

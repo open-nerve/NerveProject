@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { FilterOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";

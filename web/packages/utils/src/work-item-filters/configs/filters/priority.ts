@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TIssuePriorities } from "@nerve/constants";
 import { ISSUE_PRIORITIES } from "@nerve/constants";
 import type { TFilterProperty, TSupportedOperators } from "@nerve/types";

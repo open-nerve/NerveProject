@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TActivityFilters, TActivityFilterOption } from "@nerve/constants";
 import { ACTIVITY_FILTER_TYPE_OPTIONS } from "@nerve/constants";
 // components

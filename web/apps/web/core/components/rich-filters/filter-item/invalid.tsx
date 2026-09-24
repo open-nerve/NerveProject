@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { WarningCircleOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TExternalFilter, TFilterProperty } from "@nerve/types";
 // local imports
 import { FilterItemCloseButton } from "./close-button";

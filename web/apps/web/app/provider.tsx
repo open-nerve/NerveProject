@@ -7,7 +7,7 @@
 import { lazy, Suspense } from "react";
 import { useTheme } from "next-themes";
 import { SWRConfig } from "swr";
-// Plane Imports
+// Nerve Imports
 import { WEB_SWR_CONFIG } from "@nerve/constants";
 import { TranslationProvider } from "@nerve/i18n";
 import { Toast } from "@nerve/propel/toast";

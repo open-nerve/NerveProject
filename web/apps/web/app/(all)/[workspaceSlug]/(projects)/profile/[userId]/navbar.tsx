@@ -5,7 +5,7 @@
  */
 
 import { NavLink, useParams } from "react-router";
-// plane imports
+// nerve imports
 import { PROFILE_TABS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Header, EHeaderVariant } from "@nerve/ui";

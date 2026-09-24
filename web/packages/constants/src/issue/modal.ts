@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TIssue } from "@nerve/types";
 
 export const DEFAULT_WORK_ITEM_FORM_VALUES: Partial<TIssue> = {

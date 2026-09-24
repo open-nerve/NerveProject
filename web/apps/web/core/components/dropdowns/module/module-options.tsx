@@ -9,7 +9,7 @@ import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { ModuleOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import type { IModule } from "@nerve/types";
@@ -43,7 +43,7 @@ export const ModuleOptions = observer(function ModuleOptions(props: Props) {
   // states
   const [query, setQuery] = useState("");
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { isMobile } = usePlatformOS();

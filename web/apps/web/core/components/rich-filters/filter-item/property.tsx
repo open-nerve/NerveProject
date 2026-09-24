@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { cn } from "@nerve/propel/utils";
 import type { IFilterInstance } from "@nerve/shared-state";

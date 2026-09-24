@@ -7,7 +7,7 @@
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 
-// plane imports
+// nerve imports
 import {
   EIssueFilterType,
   ISSUE_DISPLAY_FILTERS_BY_PAGE,
@@ -33,7 +33,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

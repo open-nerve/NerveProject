@@ -6,7 +6,7 @@
 
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
-// plane types
+// nerve types
 import type { TIssue } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 // hooks

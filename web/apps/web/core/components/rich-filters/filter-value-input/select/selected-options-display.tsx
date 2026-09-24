@@ -6,7 +6,7 @@
 
 import React from "react";
 import { Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import type { SingleOrArray, IFilterOption, TFilterValue } from "@nerve/types";
 import { cn, toFilterArray } from "@nerve/utils";
 import { EMPTY_FILTER_PLACEHOLDER_TEXT } from "../../shared";

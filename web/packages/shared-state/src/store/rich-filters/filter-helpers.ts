@@ -6,7 +6,7 @@
 
 import { cloneDeep } from "lodash-es";
 import { action, makeObservable, observable, toJS } from "mobx";
-// plane imports
+// nerve imports
 import type { TAutoVisibilityOptions, TExpressionOptions } from "@nerve/constants";
 import { DEFAULT_FILTER_EXPRESSION_OPTIONS } from "@nerve/constants";
 import type {

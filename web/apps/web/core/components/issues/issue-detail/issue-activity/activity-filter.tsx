@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { FilterOutline, TickOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TActivityFilters, TActivityFilterOption } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";

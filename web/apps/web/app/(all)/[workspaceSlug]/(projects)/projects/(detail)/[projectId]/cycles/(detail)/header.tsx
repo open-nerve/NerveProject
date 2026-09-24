@@ -8,7 +8,7 @@ import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 // icons
 import { CyclesOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import {
   EIssueFilterType,
   EUserPermissions,
@@ -43,7 +43,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
 import useLocalStorage from "@/hooks/use-local-storage";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

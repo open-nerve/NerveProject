@@ -5,7 +5,7 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-// plane imports
+// nerve imports
 import type { TFavoriteEntityType, TLogoProps } from "@nerve/types";
 import { FavoriteFolderIcon } from "@nerve/propel/icons";
 import { CyclesOutline, ModuleOutline, ProjectsOutline, ViewsOutline } from "@makeplane/propel/icons";

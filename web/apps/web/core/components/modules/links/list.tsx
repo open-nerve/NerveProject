@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-// plane types
+// nerve types
 import type { ILinkDetails } from "@nerve/types";
 // components
 import { ModulesLinksListItem } from "@/components/modules";

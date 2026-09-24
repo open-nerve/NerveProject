@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useDropzone } from "react-dropzone";
 import { Popover } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { Tab, Tabs, TabsList, TabsPanel } from "@makeplane/propel/components/tabs";
 import { ACCEPTED_COVER_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE, MAX_FILE_SIZE } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";

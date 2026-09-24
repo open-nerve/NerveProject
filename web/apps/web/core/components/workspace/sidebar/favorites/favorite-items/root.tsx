@@ -17,7 +17,7 @@ import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/el
 import { attachInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { observer } from "mobx-react";
 import { createRoot } from "react-dom/client";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import type { IFavorite, InstructionType } from "@nerve/types";
 import { DropIndicator } from "@nerve/ui";

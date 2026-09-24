@@ -6,7 +6,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // hooks
 import { useNotification } from "@/hooks/store/notifications/use-notification";

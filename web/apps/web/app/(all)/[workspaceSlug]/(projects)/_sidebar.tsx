@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useMatch } from "react-router";
 import { SIDEBAR_WIDTH } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";

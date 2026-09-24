@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 
 import { useTranslation } from "@nerve/i18n";
-// plane imports
+// nerve imports
 import { LinkOutline, NewTabOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // ui

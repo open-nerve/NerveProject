@@ -5,7 +5,7 @@
  */
 
 import { subDays } from "date-fns";
-// plane imports
+// nerve imports
 import { EPastDurationFilters } from "@nerve/constants";
 // local imports
 import { renderFormattedPayloadDate } from "./datetime";

@@ -7,7 +7,7 @@
 import { useState, useRef } from "react";
 import { observer } from "mobx-react";
 
-// plane imports
+// nerve imports
 import { EIconSize } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { StateGroupIcon } from "@nerve/propel/icons";
@@ -45,7 +45,7 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
   } = props;
   // refs
   const dropElementRef = useRef<HTMLDivElement | null>(null);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // state
   const [createState, setCreateState] = useState(false);

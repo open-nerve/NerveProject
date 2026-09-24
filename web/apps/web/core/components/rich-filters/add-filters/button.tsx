@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { FilterOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TButtonSize, TButtonVariant } from "@nerve/propel/button";
 import { getButtonStyling } from "@nerve/propel/button";
 import type { IFilterInstance } from "@nerve/shared-state";

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { CustomSearchSelect } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { EUserProjectRoles } from "@nerve/types";
 import type { TProjectSettingsItem, TProjectSettingsTabs } from "@nerve/types";
 

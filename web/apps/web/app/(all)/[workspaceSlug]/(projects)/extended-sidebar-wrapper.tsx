@@ -6,7 +6,7 @@
 
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EXTENDED_SIDEBAR_WIDTH, SIDEBAR_WIDTH } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { cn } from "@nerve/utils";

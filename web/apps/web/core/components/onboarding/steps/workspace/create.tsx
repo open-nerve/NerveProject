@@ -8,7 +8,7 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -43,7 +43,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
   // states
   const [slugError, setSlugError] = useState(false);
   const [invalidSlug, setInvalidSlug] = useState(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { config } = useInstance();

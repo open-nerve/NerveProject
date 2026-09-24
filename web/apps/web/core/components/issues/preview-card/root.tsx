@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type { TIssue, TStateGroups } from "@nerve/types";
 // hooks

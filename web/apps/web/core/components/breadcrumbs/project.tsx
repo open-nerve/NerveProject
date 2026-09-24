@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ProjectsOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { ICustomSearchSelectOption } from "@nerve/types";
 import { BreadcrumbNavigationSearchDropdown, Breadcrumbs } from "@nerve/ui";
 import { SwitcherLabel } from "@/components/common/switcher-label";

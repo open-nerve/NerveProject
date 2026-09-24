@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { IconButton } from "@nerve/propel/icon-button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";

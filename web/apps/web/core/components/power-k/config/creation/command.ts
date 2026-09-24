@@ -6,7 +6,7 @@
 
 import { SquarePlus } from "lucide-react";
 import { CreateFolderOutline, CyclesOutline, ModuleOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // components
 import { EUserProjectRoles } from "@nerve/types";

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TSaveViewOptions, TUpdateViewOptions } from "@nerve/constants";
 import type { IWorkItemFilterInstance } from "@nerve/shared-state";
 import type { EIssuesStoreType, IIssueFilters, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";

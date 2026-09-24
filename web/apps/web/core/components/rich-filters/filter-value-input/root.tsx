@@ -7,7 +7,7 @@
 import React from "react";
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type {
   TFilterConditionNode,
   TFilterValue,

@@ -7,7 +7,7 @@
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
@@ -49,7 +49,7 @@ const defaultValues: FormValues = {
 
 export const AddProjectMembersModal = observer(function AddProjectMembersModal(props: Props) {
   const { isOpen, onClose, onSuccess, projectId, workspaceSlug } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();

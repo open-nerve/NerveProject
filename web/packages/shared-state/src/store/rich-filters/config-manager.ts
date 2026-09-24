@@ -6,7 +6,7 @@
 
 import { action, computed, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TConfigOptions } from "@nerve/constants";
 import { DEFAULT_FILTER_CONFIG_OPTIONS } from "@nerve/constants";
 import type { TExternalFilter, TFilterConfig, TFilterProperty } from "@nerve/types";

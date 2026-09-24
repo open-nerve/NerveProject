@@ -8,7 +8,7 @@ import type { FC } from "react";
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EIssueGroupByToServerOptions, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TGroupedIssues } from "@nerve/types";

@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import type { TCycleFilters } from "@nerve/types";
@@ -25,7 +25,7 @@ import { ArchivedCyclesView } from "./view";
 export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot() {
   // router
   const { workspaceSlug, projectId } = useParams();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { fetchArchivedCycles, currentProjectArchivedCycleIds, loader } = useCycle();

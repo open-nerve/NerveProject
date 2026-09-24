@@ -7,7 +7,7 @@
 import type { MutableRefObject } from "react";
 import { useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-// plane helpers
+// nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 import type { ISvgIcons } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";

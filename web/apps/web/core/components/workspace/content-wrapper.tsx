@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 import { AppRailRoot } from "@/components/navigation";
 import { useAppRailVisibility } from "@/lib/app-rail";

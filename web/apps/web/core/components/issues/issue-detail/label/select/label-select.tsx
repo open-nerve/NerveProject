@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { AddOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";

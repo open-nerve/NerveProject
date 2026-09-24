@@ -8,7 +8,7 @@ import { useState } from "react";
 import { isNil } from "lodash-es";
 import { observer } from "mobx-react";
 import { SubscribeOutline, UnsubscribeOutline } from "@makeplane/propel/icons";
-// plane-i18n
+// nerve-i18n
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // UI

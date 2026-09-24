@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { ISSUE_LAYOUTS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";

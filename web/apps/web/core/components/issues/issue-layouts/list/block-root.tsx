@@ -10,7 +10,7 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { attachInstruction, extractInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 import { observer } from "mobx-react";
-// plane helpers
+// nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import type { IIssueDisplayProperties, TIssue, TIssueMap } from "@nerve/types";

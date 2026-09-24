@@ -8,7 +8,7 @@ import type { SetStateAction } from "react";
 import { observer } from "mobx-react";
 import { DragDropOutline, EditOutline } from "@makeplane/propel/icons";
 import { EIconSize } from "@nerve/constants";
-// plane imports
+// nerve imports
 import { StateGroupIcon } from "@nerve/propel/icons";
 import type { IState, TStateOperationsCallbacks } from "@nerve/types";
 // local imports

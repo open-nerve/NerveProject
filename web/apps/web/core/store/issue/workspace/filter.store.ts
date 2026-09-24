@@ -7,7 +7,7 @@
 import { isEmpty, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
 import { EIssueFilterType } from "@nerve/constants";
 import type {

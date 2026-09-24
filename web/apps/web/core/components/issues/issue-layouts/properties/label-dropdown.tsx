@@ -10,7 +10,7 @@ import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 import { ChevronDownOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";

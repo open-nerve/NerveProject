@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import type { Control, FormState } from "react-hook-form";
 import { Controller } from "react-hook-form";
-// plane imports
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ETabIndices } from "@nerve/constants";

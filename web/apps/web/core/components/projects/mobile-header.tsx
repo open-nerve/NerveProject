@@ -8,7 +8,7 @@ import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronDownOutline, FilterOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { TProjectFilters } from "@nerve/types";
 import { calculateTotalFilters } from "@nerve/utils";

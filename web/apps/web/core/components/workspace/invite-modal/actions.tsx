@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { AddOutline } from "@makeplane/propel/icons";

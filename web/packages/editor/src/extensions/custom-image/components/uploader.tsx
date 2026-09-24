@@ -7,7 +7,7 @@
 import { ImageOutline, RefreshOutline } from "@makeplane/propel/icons";
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // constants
 import { ACCEPTED_IMAGE_MIME_TYPES } from "@/constants/config";

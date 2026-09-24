@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import { Button, getButtonStyling } from "@nerve/propel/button";
 import { cn } from "@nerve/utils";
 // assets

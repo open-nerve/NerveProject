@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { isEqual, xor } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// Plane imports
+// Nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TBaseIssue, TIssue } from "@nerve/types";

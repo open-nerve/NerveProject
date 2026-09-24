@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-// plane imports
+// nerve imports
 import type { TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueDetailWidgetActionButtons } from "./action-buttons";

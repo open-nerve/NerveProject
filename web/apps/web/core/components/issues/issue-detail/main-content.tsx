@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import type { TNameDescriptionLoader } from "@nerve/types";
 import { EFileAssetType } from "@nerve/types";

@@ -7,7 +7,7 @@
 import { useEffect } from "react";
 import type { Control, FieldArrayWithId, FormState, UseFormWatch } from "react-hook-form";
 import { useFieldArray, useForm } from "react-hook-form";
-// plane imports
+// nerve imports
 import { EUserPermissions } from "@nerve/constants";
 
 type EmailRole = {

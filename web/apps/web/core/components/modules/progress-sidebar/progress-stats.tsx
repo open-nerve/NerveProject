@@ -49,7 +49,7 @@ export const ModuleProgressStats = observer(function ModuleProgressStats(props: 
     size = "sm",
     totalIssuesCount,
   } = props;
-  // plane imports
+  // nerve imports
   const { t } = useTranslation();
   // hooks
   const { storedValue: currentTab, setValue: setModuleTab } = useLocalStorage(

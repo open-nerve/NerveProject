@@ -5,7 +5,7 @@
  */
 
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 // local imports
 import type { TPowerKContextType } from "../../core/types";

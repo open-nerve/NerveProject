@@ -7,7 +7,7 @@
 import { useState, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
@@ -36,7 +36,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
   const [showLabelForm, setLabelForm] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectDeleteLabel, setSelectDeleteLabel] = useState<IIssueLabel | null>(null);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { projectLabels, updateLabelPosition, projectLabelsTree, createLabel, updateLabel } = useLabel();

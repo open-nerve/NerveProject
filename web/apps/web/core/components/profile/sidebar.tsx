@@ -7,7 +7,7 @@
 import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";

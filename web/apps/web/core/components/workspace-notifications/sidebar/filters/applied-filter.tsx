@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ENotificationFilterType, FILTER_TYPE_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";

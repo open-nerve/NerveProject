@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { IWorkItemFilterInstance } from "@nerve/shared-state";
 import type { TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";
 // components

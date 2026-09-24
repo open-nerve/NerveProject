@@ -6,7 +6,7 @@
 
 import { cloneDeep, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
-// plane imports
+// nerve imports
 import { setLanguage, toSupportedLanguage } from "@nerve/i18n";
 // types
 import type { IUserTheme, TUserProfile } from "@nerve/types";

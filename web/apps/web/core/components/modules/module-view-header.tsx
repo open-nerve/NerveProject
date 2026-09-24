@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
-// plane helpers
+// nerve helpers
 import { MODULE_VIEW_LAYOUTS } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 // types
@@ -17,7 +17,6 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TModuleFilters } from "@nerve/types";
 // ui
 import { cn, calculateTotalFilters } from "@nerve/utils";
-// plane utils
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 import { ModuleFiltersSelection, ModuleOrderByDropdown } from "@/components/modules/dropdowns";

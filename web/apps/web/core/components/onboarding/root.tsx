@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspaceMemberInvitation, TOnboardingStep, TOnboardingSteps, TUserProfile } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";

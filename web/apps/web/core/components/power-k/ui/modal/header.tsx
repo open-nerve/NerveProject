@@ -8,7 +8,6 @@ import React from "react";
 import { Command } from "cmdk";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-// plane imports
 // local imports
 import type { TPowerKContext, TPowerKPageType } from "../../core/types";
 import { POWER_K_MODAL_PAGE_DETAILS } from "./constants";

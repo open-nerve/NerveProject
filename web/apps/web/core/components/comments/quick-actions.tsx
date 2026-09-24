@@ -7,7 +7,7 @@
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { DeleteOutline, EditOutline, LinkOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
 import type { TIssueComment, TCommentsOperations } from "@nerve/types";

@@ -19,7 +19,7 @@ import {
   StateOutline,
   UserOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
@@ -60,7 +60,7 @@ import { useMember } from "@/hooks/store/use-member";
 import { useModule } from "@/hooks/store/use-module";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-// plane web imports
+// hooks
 import { useFiltersOperatorConfigs } from "@/hooks/rich-filters/use-filters-operator-configs";
 
 export type TWorkItemFiltersEntityProps = {

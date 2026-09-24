@@ -6,7 +6,7 @@
 
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { EditorRefApi } from "@nerve/editor";
 import type { TIssueComment, TCommentsOperations } from "@nerve/types";
 // local imports

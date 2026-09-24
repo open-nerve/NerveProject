@@ -7,7 +7,7 @@
 import React, { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import type { EIssueLayoutTypes } from "@nerve/types";

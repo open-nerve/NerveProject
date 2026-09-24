@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@nerve/types";
 import { EInboxIssueSource } from "@nerve/types";
 // helpers

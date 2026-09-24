@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useRef } from "react";
-// plane imports
+// nerve imports
 import type { IWorkspaceMemberInvitation } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 // local components

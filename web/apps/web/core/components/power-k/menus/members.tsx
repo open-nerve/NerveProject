@@ -6,7 +6,6 @@
 
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
-// plane imports
 
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { getFileURL } from "@nerve/utils";

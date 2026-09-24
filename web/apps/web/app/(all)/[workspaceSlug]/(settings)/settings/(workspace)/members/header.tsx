@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { WORKSPACE_SETTINGS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Breadcrumbs } from "@nerve/ui";
@@ -15,7 +15,7 @@ import { SettingsPageHeader } from "@/components/settings/page-header";
 import { WORKSPACE_SETTINGS_ICONS } from "@/components/settings/workspace/sidebar/item-icon";
 
 export const MembersWorkspaceSettingsHeader = observer(function MembersWorkspaceSettingsHeader() {
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // derived values
   const settingsDetails = WORKSPACE_SETTINGS.members;

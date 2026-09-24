@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
-// plane imports
+// nerve imports
 import { DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 import { CustomMenu } from "@nerve/ui";
 import { truncateText } from "@nerve/utils";

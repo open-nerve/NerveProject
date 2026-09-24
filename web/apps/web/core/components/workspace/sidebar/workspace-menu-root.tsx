@@ -11,7 +11,7 @@ import { Link } from "react-router";
 import { ChevronDownOutline, LogOutOutline, MailOutline, PlusCircleOutline } from "@makeplane/propel/icons";
 // ui
 import { Menu, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspace } from "@nerve/types";

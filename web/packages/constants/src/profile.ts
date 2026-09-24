@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { EStartOfTheWeek } from "@nerve/types";
 
 export const PROFILE_TABS = [

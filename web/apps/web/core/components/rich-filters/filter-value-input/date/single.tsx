@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { TDateFilterFieldConfig, TFilterConditionNodeForDisplay, TFilterProperty } from "@nerve/types";
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
 import { DateDropdown } from "@/components/dropdowns/date";

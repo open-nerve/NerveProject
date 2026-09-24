@@ -5,10 +5,10 @@
  */
 
 import { useCallback } from "react";
-// plane editor
+// nerve editor
 import { Avatar } from "@makeplane/propel/components/avatar";
 import type { TMentionSection, TMentionSuggestion } from "@nerve/editor";
-// plane types
+// nerve types
 import type { TSearchEntities, TSearchEntityRequestPayload, TSearchResponse, TUserSearchResponse } from "@nerve/types";
 // helpers
 import { getFileURL } from "@nerve/utils";

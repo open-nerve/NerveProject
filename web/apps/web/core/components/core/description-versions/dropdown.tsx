@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { HistoryOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { TDescriptionVersion } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";

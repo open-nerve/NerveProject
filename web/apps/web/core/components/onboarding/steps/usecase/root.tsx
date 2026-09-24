@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
-// plane imports
+// nerve imports
 import { USE_CASES } from "@nerve/constants";
 import { Button } from "@nerve/propel/button";
 import { TickOutline } from "@makeplane/propel/icons";

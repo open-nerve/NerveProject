@@ -7,7 +7,7 @@
 import { clone, update, unset, orderBy, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import { EDraftIssuePaginationType } from "@nerve/constants";
 import type {
   TWorkspaceDraftIssue,

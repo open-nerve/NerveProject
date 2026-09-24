@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { Links, Meta, Outlet, Scripts } from "react-router";
 import type { LinksFunction } from "react-router";
 import { ThemeProvider } from "next-themes";
-// plane imports
+// nerve imports
 import { SITE_DESCRIPTION, SITE_NAME } from "@nerve/constants";
 // types
 // assets

@@ -7,7 +7,7 @@
 import type { Editor } from "@tiptap/react";
 
 import { ChevronDownOutline, TickOutline } from "@makeplane/propel/icons";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 // components
 import type { EditorMenuItem } from "@/components/menus";

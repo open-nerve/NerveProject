@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TBuildFilterExpressionParams, TExternalFilter, TFilterProperty, TFilterValue } from "@nerve/types";
 import { LOGICAL_OPERATOR } from "@nerve/types";
 import { getOperatorForPayload } from "@nerve/utils";

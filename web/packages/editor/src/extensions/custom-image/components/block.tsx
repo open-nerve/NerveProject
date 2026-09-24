@@ -6,7 +6,7 @@
 
 import { NodeSelection } from "@tiptap/pm/state";
 import React, { useRef, useState, useCallback, useLayoutEffect, useEffect } from "react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // local imports
 import { ECustomImageAttributeNames } from "../types";

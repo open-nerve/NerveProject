@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { IFilterAdapter, TExternalFilter, TFilterExpression, TFilterProperty } from "@nerve/types";
 
 /**

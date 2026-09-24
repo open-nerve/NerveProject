@@ -9,13 +9,13 @@ import { Link } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 
 import { Disclosure } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IUser, IWorkspaceMember } from "@nerve/types";
-// plane ui
+// nerve ui
 import { CustomSelect, PopoverMenu } from "@nerve/ui";
 // helpers
 import { getFileURL } from "@nerve/utils";

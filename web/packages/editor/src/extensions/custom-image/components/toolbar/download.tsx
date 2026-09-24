@@ -5,7 +5,7 @@
  */
 
 import { DownloadOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Tooltip } from "@nerve/propel/tooltip";
 
 type Props = {

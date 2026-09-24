@@ -7,7 +7,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { observer } from "mobx-react";
 import { useLocation } from "react-router";
-// Plane imports
+// Nerve imports
 import useSWR from "swr";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";

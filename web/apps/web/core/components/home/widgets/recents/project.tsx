@@ -5,7 +5,7 @@
  */
 
 import { useNavigate } from "react-router";
-// plane types
+// nerve types
 import { Logo } from "@nerve/propel/emoji-icon-picker";
 import type { TActivityEntityData, TProjectEntityData } from "@nerve/types";
 import { calculateTimeAgo } from "@nerve/utils";

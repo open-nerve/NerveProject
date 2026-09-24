@@ -5,7 +5,7 @@
  */
 
 import { set } from "lodash-es";
-// plane imports
+// nerve imports
 import { DEFAULT_WORK_ITEM_FORM_VALUES } from "@nerve/constants";
 import type { IPartialProject, ISearchIssueResponse, IState, TIssue } from "@nerve/types";
 

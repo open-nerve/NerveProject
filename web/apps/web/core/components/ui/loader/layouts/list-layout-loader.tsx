@@ -6,9 +6,9 @@
 
 import { Fragment, forwardRef } from "react";
 import { range } from "lodash-es";
-// plane ui
+// nerve ui
 import { Row } from "@nerve/ui";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 import { getRandomInt, getRandomLength } from "../utils";
 

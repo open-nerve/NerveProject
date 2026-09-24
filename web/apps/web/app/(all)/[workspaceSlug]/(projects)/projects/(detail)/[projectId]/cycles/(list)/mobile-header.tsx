@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 // ui
 import type { ISvgIcons } from "@nerve/propel/icons";
 import { GridOutline, ListOutline } from "@makeplane/propel/icons";
-// plane package imports
+// nerve package imports
 import type { TCycleLayoutOptions } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 // hooks

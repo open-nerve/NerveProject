@@ -6,7 +6,7 @@
 
 import { observable, action, computed, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TCreateModalStoreTypes } from "@nerve/constants";
 import type { TProfileSettingsTabs } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";

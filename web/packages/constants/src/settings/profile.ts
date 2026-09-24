@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TProfileSettingsTabs } from "@nerve/types";
 
 export enum PROFILE_SETTINGS_CATEGORY {

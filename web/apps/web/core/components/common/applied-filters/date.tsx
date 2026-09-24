@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 // icons
 import { DATE_BEFORE_FILTER_OPTIONS } from "@nerve/constants";
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane constants
+// nerve constants
 import { renderFormattedDate, capitalizeFirstLetter } from "@nerve/utils";
 // helpers
 type Props = {

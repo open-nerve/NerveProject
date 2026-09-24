@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { TGroupedIssues, TIssue, TIssueMap, TPaginationData, ICalendarDate, ICalendarWeek } from "@nerve/types";
 import { cn, getOrderedDays, renderFormattedPayloadDate } from "@nerve/utils";
 // hooks

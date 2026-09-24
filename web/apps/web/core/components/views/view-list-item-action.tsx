@@ -8,7 +8,7 @@ import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { Tooltip } from "@makeplane/propel/components/tooltip";

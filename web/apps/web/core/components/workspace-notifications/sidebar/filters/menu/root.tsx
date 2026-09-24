@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { FilterOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { ENotificationFilterType } from "@nerve/constants";
 import { FILTER_TYPE_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";

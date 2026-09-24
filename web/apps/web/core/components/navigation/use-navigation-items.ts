@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useCallback } from "react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { CyclesOutline, IntakeOutline, ModuleOutline, ViewsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import type { EUserProjectRoles, IPartialProject } from "@nerve/types";

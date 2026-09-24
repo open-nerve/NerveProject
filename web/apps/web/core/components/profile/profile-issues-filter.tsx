@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane constants
+// nerve constants
 import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 // i18n
 import { useTranslation } from "@nerve/i18n";

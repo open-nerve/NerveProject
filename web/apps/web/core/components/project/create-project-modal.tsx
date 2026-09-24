@@ -7,13 +7,12 @@
 import { useEffect, useState } from "react";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { getAssetIdFromUrl, checkURLValidity } from "@nerve/utils";
-// plane ui
 // helpers
 // hooks
 import useKeypress from "@/hooks/use-keypress";
-// plane web components
+// components
 import { CreateProjectForm } from "@/components/projects/create/root";
-// plane web types
+// nerve imports
 import type { TProject } from "@nerve/types";
 // services
 import { FileService } from "@/services/file.service";

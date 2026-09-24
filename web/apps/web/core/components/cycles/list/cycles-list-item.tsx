@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { useNavigate, useSearchParams, useLocation } from "react-router";
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
 import { TickOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TCycleGroups } from "@nerve/types";
 // components
 import { generateQueryParams, calculateCycleProgress } from "@nerve/utils";

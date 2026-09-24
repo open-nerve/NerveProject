@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Button } from "@nerve/propel/button";
 import { PlaneLockup } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";

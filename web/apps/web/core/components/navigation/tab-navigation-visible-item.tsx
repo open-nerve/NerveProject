@@ -6,7 +6,7 @@
 
 import { Link } from "react-router";
 import { DefaultTabOutline, UnpinOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { ContextMenu } from "@nerve/propel/context-menu";
 import { TabNavigationItem } from "@nerve/propel/tab-navigation";

@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane helpers
+// nerve helpers
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { PreferencesOutline } from "@makeplane/propel/icons";
 import { ScrollArea } from "@nerve/propel/scrollarea";

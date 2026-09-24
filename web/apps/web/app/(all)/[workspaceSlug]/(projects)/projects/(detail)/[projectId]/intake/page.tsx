@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTheme } from "next-themes";
-// plane imports
+// nerve imports
 import { EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EUserProjectRoles, EInboxIssueCurrentTab } from "@nerve/types";
@@ -32,7 +32,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
   const inboxIssueId = searchParams.get("inboxIssueId");
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { currentProjectDetails } = useProject();

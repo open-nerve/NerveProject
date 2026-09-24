@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { LeftSidePaneOutline, LinkOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useTranslation } from "@nerve/i18n";
-// plane imports
+// nerve imports
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { copyTextToClipboard } from "@nerve/utils";
 // components

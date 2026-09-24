@@ -6,7 +6,7 @@
 
 import { useState, Fragment } from "react";
 import { Dialog, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 import { ScrollArea } from "@nerve/propel/scrollarea";

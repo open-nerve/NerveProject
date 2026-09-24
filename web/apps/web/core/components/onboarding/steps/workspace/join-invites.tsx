@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-// plane imports
+// nerve imports
 import { ROLE } from "@nerve/constants";
 import { Button } from "@nerve/propel/button";
 import type { IWorkspaceMemberInvitation } from "@nerve/types";

@@ -6,7 +6,7 @@
 
 import type { Editor } from "@tiptap/core";
 import { useState } from "react";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // local imports
 import type { TCustomImageAlignment } from "../../types";

@@ -31,7 +31,7 @@ type TSubIssueFiltersProps = {
 
 export const SubIssueFilters = observer(function SubIssueFilters(props: TSubIssueFiltersProps) {
   const { handleFiltersUpdate, filters, memberIds, states, availableFilters } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // states
   const [filtersSearchQuery, setFiltersSearchQuery] = useState("");

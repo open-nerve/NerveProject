@@ -8,7 +8,7 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EIssuesStoreType } from "@nerve/types";
 // components

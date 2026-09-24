@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { ROLE } from "@nerve/constants";
 import { Popover } from "@nerve/propel/popover";

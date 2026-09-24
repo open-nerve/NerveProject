@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { ETabIndices } from "@nerve/constants";
 import { TAB_INDEX_MAP } from "@nerve/constants";
 

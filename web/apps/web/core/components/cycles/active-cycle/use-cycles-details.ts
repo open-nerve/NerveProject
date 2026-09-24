@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import type { TWorkItemFilterCondition } from "@nerve/shared-state";
 import { EIssuesStoreType } from "@nerve/types";
 // constants

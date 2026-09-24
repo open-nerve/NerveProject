@@ -6,7 +6,7 @@
 
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type {
   GroupByColumnTypes,
   IGroupByColumn,

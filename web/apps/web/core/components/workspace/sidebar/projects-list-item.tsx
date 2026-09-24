@@ -23,7 +23,7 @@ import {
   SettingsOutline,
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";

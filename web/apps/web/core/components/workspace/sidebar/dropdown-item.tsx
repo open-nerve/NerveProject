@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
 import { SettingsOutline, TickOutline, UserPlusOutline } from "@makeplane/propel/icons";
 import { Menu } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { EUserPermissions } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import type { IWorkspace } from "@nerve/types";

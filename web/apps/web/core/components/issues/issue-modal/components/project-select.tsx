@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
-// plane imports
+// nerve imports
 import { ETabIndices } from "@nerve/constants";
 // types
 import type { TIssue } from "@nerve/types";

@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-// plane imports
+// nerve imports
 import { AreaChart } from "@nerve/propel/charts/area-chart";
 import type { TChartData, TModuleCompletionChartDistribution } from "@nerve/types";
 import { renderFormattedDateWithoutYear } from "@nerve/utils";

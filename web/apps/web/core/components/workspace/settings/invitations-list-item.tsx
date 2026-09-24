@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, DeleteOutline, LinkOutline } from "@makeplane/propel/icons";
@@ -31,7 +31,7 @@ export const WorkspaceInvitationsListItem = observer(function WorkspaceInvitatio
   const { workspaceSlug } = useParams();
   // states
   const [removeMemberModal, setRemoveMemberModal] = useState(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { allowPermissions, workspaceInfoBySlug } = useUserPermissions();

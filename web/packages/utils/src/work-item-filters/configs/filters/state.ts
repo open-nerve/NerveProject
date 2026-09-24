@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { STATE_GROUPS } from "@nerve/constants";
 import type { IState, TFilterProperty, TStateGroups, TSupportedOperators } from "@nerve/types";
 import { COLLECTION_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";

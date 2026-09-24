@@ -8,7 +8,6 @@ import { observer } from "mobx-react";
 
 import type { ENotificationFilterType } from "@nerve/constants";
 import { TickOutline } from "@makeplane/propel/icons";
-// plane imports
 // helpers
 import { cn } from "@nerve/utils";
 // hooks

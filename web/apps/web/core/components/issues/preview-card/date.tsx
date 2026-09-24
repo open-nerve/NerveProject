@@ -5,7 +5,7 @@
  */
 
 import { CalendarOutline, DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type { TStateGroups } from "@nerve/types";
 import { cn, renderFormattedDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 

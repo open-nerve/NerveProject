@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
-// plane imports
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
@@ -19,7 +19,6 @@ import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/
 // components
 import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 import { WorkspaceLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/workspace-level";
-// plane web imports
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";
 
 type Props = {

@@ -7,7 +7,7 @@
 import { sortBy, cloneDeep, update, set } from "lodash-es";
 import { observable, action, computed, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
+// nerve imports
 import type { TFetchStatus, TLoader } from "@nerve/types";
 // helpers
 import { orderProjects, shouldFilterProject } from "@nerve/utils";

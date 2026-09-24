@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
 import { cn } from "@nerve/utils";
 // components

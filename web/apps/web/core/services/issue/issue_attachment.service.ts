@@ -5,7 +5,7 @@
  */
 
 import type { AxiosRequestConfig } from "axios";
-// plane types
+// nerve types
 import { getFileMetaDataForUpload, generateFileUploadPayload } from "@nerve/services";
 import type { TIssueAttachment, TIssueAttachmentUploadResponse } from "@nerve/types";
 // services

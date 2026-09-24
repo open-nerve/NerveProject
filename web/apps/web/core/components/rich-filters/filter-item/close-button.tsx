@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { CloseOutline } from "@makeplane/propel/icons";
 import type { IFilterInstance } from "@nerve/shared-state";
 import type { TExternalFilter, TFilterProperty } from "@nerve/types";

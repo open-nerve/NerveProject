@@ -7,10 +7,10 @@
 import { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
-// plane types
+// nerve types
 import { Avatar } from "@makeplane/propel/components/avatar";
 import type { TInboxIssueFilterMemberKeys } from "@nerve/types";
-// plane ui
+// nerve ui
 import { Loader } from "@nerve/ui";
 // components
 import { getFileURL } from "@nerve/utils";

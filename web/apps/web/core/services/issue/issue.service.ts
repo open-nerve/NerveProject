@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";

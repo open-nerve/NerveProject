@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ENotificationTab } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
@@ -17,7 +17,7 @@ type TNotificationEmptyStateProps = {
 export const NotificationEmptyState = observer(function NotificationEmptyState({
   currentNotificationTab,
 }: TNotificationEmptyStateProps) {
-  // plane imports
+  // nerve imports
   const { t } = useTranslation();
 
   return (

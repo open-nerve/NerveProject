@@ -6,7 +6,7 @@
 
 import React, { useState } from "react";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import { PROJECT_CREATED_AT_FILTER_OPTIONS } from "@nerve/constants";
 // components
 import { isInDateFormat } from "@nerve/utils";

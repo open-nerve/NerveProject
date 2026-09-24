@@ -8,7 +8,7 @@ import type { FC } from "react";
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane constants
+// nerve constants
 import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // types
 import type { EIssuesStoreType, GroupByColumnTypes, TGroupedIssues, TIssueKanbanFilters } from "@nerve/types";

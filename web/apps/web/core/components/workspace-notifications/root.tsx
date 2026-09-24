@@ -7,7 +7,7 @@
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-// plane imports
+// nerve imports
 import { ENotificationLoader, ENotificationQueryParamType } from "@nerve/constants";
 import { EmptyStateCompact } from "@nerve/propel/empty-state";
 import { cn } from "@nerve/utils";

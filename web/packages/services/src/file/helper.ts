@@ -6,7 +6,7 @@
 
 // external imports
 import { fileTypeFromBuffer } from "file-type";
-// plane imports
+// nerve imports
 import type { TFileMetaDataLite, TFileSignedURLResponse } from "@nerve/types";
 import { DANGEROUS_EXTENSIONS } from "@nerve/constants";
 

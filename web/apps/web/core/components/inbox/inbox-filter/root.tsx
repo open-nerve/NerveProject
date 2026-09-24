@@ -6,7 +6,7 @@
 
 import { ChevronDownOutline, FilterOutline } from "@makeplane/propel/icons";
 import { getButtonStyling } from "@nerve/propel/button";
-// plane imports
+// nerve imports
 import { cn } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";

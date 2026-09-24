@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";

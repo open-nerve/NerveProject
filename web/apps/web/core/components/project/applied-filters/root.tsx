@@ -7,7 +7,7 @@
 import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@nerve/types";
 import { EHeaderVariant, Header } from "@nerve/ui";

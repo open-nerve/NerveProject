@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-// plane imports
+// nerve imports
 import type { IWorkspace } from "@nerve/types";
 // components
 import { WorkspaceLogo } from "@/components/workspace/logo";

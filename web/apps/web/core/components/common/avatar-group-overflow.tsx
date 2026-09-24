@@ -5,7 +5,7 @@
  */
 
 import React from "react";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { AvatarGroup, type AvatarGroupSize } from "@makeplane/propel/components/avatar-group";
 

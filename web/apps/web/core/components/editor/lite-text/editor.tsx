@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from "react";
-// plane imports
+// nerve imports
 import { LiteTextEditorWithRef } from "@nerve/editor";
 import type { EditorRefApi, ILiteTextEditorProps, TFileHandler } from "@nerve/editor";
 import { useTranslation } from "@nerve/i18n";
@@ -18,7 +18,7 @@ import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";
 import { useEditorConfig, useEditorMention } from "@/hooks/editor";
 import { useMember } from "@/hooks/store/use-member";
 import { useParseEditorContent } from "@/hooks/use-parse-editor-content";
-// plane web service
+// services
 import { WorkspaceService } from "@/services/workspace.service";
 import { LiteToolbar } from "./lite-toolbar";
 const workspaceService = new WorkspaceService();

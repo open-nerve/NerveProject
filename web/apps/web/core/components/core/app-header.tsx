@@ -6,7 +6,7 @@
 
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Row } from "@nerve/ui";
 // components
 import { cn } from "@nerve/utils";

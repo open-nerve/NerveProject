@@ -8,7 +8,7 @@ import { debounce, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 import { v4 as uuidv4 } from "uuid";
-// plane types
+// nerve types
 import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@nerve/types";
 // services
 import { FileService } from "@/services/file.service";

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TFilterProperty } from "@nerve/types";
 // local imports
 import type { TCreateDateFilterParams, TCreateFilterConfig } from "../shared";

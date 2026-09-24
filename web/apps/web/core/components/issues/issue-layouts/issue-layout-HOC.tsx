@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EIssueLayoutTypes } from "@nerve/types";
 // components
 import { LayoutErrorBoundary } from "@/components/common/layout-error-boundary";

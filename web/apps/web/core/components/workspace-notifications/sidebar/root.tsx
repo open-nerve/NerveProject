@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
+// nerve imports
 import type { TNotificationTab } from "@nerve/constants";
 import { NOTIFICATION_TABS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";

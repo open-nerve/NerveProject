@@ -10,7 +10,7 @@ import { Link, useNavigate } from "react-router";
 
 import useSWR, { mutate } from "swr";
 import { TickCircleOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { ROLE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // types
@@ -30,7 +30,6 @@ import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 // services
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
-// plane web services
 import { WorkspaceService } from "@/services/workspace.service";
 
 const workspaceService = new WorkspaceService();

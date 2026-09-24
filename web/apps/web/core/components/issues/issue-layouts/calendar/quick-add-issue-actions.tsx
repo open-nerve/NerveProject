@@ -10,7 +10,7 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 
 import { useTranslation } from "@nerve/i18n";
-// plane imports
+// nerve imports
 import { AddOutline } from "@makeplane/propel/icons";
 import { setPromiseToast } from "@nerve/propel/toast";
 import type { ISearchIssueResponse, TIssue } from "@nerve/types";

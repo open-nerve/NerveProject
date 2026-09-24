@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type { IFilterInstance } from "@nerve/shared-state";
 import type {
   SingleOrArray,

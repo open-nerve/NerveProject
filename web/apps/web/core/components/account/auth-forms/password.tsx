@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // icons
 import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Banner } from "@makeplane/propel/components/banner";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
@@ -43,7 +43,7 @@ const authService = new AuthService();
 
 export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props) {
   const { email, mode, nextPath } = props;
-  // plane imports
+  // nerve imports
   const { t } = useTranslation();
   // ref
   const formRef = useRef<HTMLFormElement>(null);

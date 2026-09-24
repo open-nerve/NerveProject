@@ -8,7 +8,7 @@ import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 import { Disclosure } from "@headlessui/react";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import type { ICycle } from "@nerve/types";
 import { Row } from "@nerve/ui";
@@ -101,7 +101,7 @@ export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: IActiveC
   const { workspaceSlug, projectId, cycleId: propsCycleId, showHeader = true } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { currentProjectActiveCycleId } = useCycle();

@@ -5,7 +5,7 @@
  */
 
 import { sortBy } from "lodash-es";
-// plane imports
+// nerve imports
 import type { IModule, TModuleDisplayFilters, TModuleFilters, TModuleOrderByOptions } from "@nerve/types";
 // local imports
 import { getDate } from "./datetime";

@@ -7,7 +7,7 @@
 import type { Editor } from "@tiptap/core";
 import type { ComponentType, SVGProps } from "react";
 import { AlignCenterOutline, AlignLeftOutline, AlignRightOutline } from "@makeplane/propel/icons";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 // components
 import { TextAlignItem } from "@/components/menus";

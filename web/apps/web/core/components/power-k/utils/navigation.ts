@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import { joinUrlPath } from "@nerve/utils";
 // local imports
 import type { TPowerKContext } from "../core/types";

@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // components
@@ -25,7 +25,7 @@ import { MembersProjectSettingsHeader } from "./header";
 function MembersSettingsPage({ params }: Route.ComponentProps) {
   // router
   const { workspaceSlug, projectId } = params;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { currentProjectDetails } = useProject();

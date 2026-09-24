@@ -10,7 +10,6 @@ import { useParams } from "react-router";
 // icons
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 import { useOutsideClickDetector } from "@nerve/hooks";
-// plane helpers
 // types
 import type { TModuleFilters } from "@nerve/types";
 import { cn, calculateTotalFilters } from "@nerve/utils";

@@ -6,7 +6,7 @@
 
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-// plane constants
+// nerve constants
 import { ALL_ISSUES, EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { IIssueDisplayFilterOptions } from "@nerve/types";
 import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";

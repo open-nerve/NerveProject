@@ -6,7 +6,7 @@
 
 import { useParams } from "react-router";
 import { useForm, Controller } from "react-hook-form";
-// plane imports
+// nerve imports
 import { allTimeIn30MinutesInterval12HoursFormat } from "@nerve/constants";
 import { Button } from "@nerve/propel/button";
 import { CloseOutline } from "@makeplane/propel/icons";

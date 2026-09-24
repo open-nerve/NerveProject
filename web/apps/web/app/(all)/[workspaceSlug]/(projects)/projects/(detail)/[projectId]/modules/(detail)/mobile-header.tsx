@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { EIssueFilterType, ISSUE_LAYOUTS, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { BoardOutline, CalendarOutline, ChevronDownOutline, ListOutline } from "@makeplane/propel/icons";
@@ -35,7 +35,7 @@ type TProps = {
 export const ModuleIssuesMobileHeader = observer(function ModuleIssuesMobileHeader(props: TProps) {
   // router
   const { workspaceSlug, projectId, moduleId } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { currentProjectDetails } = useProject();

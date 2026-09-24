@@ -5,7 +5,7 @@
  */
 
 import type { EditorProps } from "@tiptap/pm/view";
-// plane utils
+// nerve utils
 import { cn } from "@nerve/utils";
 // helpers
 import { processAssetDuplication } from "@/helpers/paste-asset";

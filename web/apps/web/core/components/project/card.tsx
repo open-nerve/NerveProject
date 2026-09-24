@@ -17,7 +17,7 @@ import {
   TickOutline,
   UserPlusOutline,
 } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
 import { useLocalStorage } from "@nerve/hooks";
 import { Avatar } from "@makeplane/propel/components/avatar";

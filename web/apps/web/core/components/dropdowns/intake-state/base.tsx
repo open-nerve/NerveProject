@@ -9,7 +9,7 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { Combobox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { IntakeStateGroupIcon } from "@nerve/propel/icons";
 import { ChevronDownOutline, SearchOutline } from "@makeplane/propel/icons";
@@ -22,7 +22,7 @@ import { BUTTON_VARIANTS_WITH_TEXT } from "@/components/dropdowns/constants";
 import type { TDropdownProps } from "@/components/dropdowns/types";
 // hooks
 import { useDropdown } from "@/hooks/use-dropdown";
-// plane web imports
+// components
 import { StateOption } from "@/components/dropdowns/state/state-option";
 
 export type TWorkItemStateDropdownBaseProps = TDropdownProps & {

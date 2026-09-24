@@ -12,7 +12,7 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { NETWORK_CHOICES } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
-// plane imports
+// nerve imports
 import { Button } from "@nerve/propel/button";
 import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";

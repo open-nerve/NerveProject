@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type { TFilterAndGroupNode, TFilterExpression, TFilterGroupNode, TFilterProperty } from "@nerve/types";
 // local imports
 import { getAndGroupChildren, isAndGroupNode } from "./core";

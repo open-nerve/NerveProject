@@ -11,7 +11,7 @@ import { usePopper } from "react-popper";
 import { GroupOutline, LabelsOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
 import { getRandomLabelColor } from "@nerve/constants";
-// plane imports
+// nerve imports
 import { useOutsideClickDetector } from "@nerve/hooks";
 import { useTranslation } from "@nerve/i18n";
 import type { IIssueLabel } from "@nerve/types";
@@ -63,7 +63,7 @@ export const WorkItemLabelSelectBase = observer(function WorkItemLabelSelectBase
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { isMobile } = usePlatformOS();
