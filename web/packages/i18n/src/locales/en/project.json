@@ -193,11 +193,7 @@
         "title": "Create a work item and assign it to someone, even yourself",
         "description": "Think of work items as jobs, tasks, work, or JTBD. Which we like. A work item and its sub-work items are usually time-based actionables assigned to members of your team. Your team creates, assigns, and completes work items to move your project towards its goal.",
         "primary_button": {
-          "text": "Create your first work item",
-          "comic": {
-            "title": "Work items are building blocks in Plane.",
-            "description": "Redesign the Plane UI, Rebrand the company, or Launch the new fuel injection system are examples of work items that likely have sub-work items."
-          }
+          "text": "Create your first work item"
         }
       },
       "no_archived_issues": {

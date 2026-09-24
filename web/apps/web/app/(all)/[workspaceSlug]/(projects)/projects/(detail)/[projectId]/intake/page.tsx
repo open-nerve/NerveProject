@@ -61,13 +61,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
     );
 
   // derived values
-  const pageTitle = currentProjectDetails?.name
-    ? t("inbox_issue.page_label", {
-        workspace: currentProjectDetails?.name,
-      })
-    : t("inbox_issue.page_label", {
-        workspace: "Plane",
-      });
+  const pageTitle = t("inbox_issue.page_label", { workspace: currentProjectDetails?.name || "Nerve" });
 
   const currentNavigationTab = navigationTab
     ? navigationTab === "open"

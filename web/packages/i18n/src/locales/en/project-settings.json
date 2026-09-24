@@ -60,7 +60,7 @@
       "description": "Configure automated actions to streamline your project management workflow and reduce manual tasks.",
       "auto-archive": {
         "title": "Auto-archive closed work items",
-        "description": "Plane will auto archive work items that have been completed or canceled.",
+        "description": "Nerve will auto archive work items that have been completed or canceled.",
         "duration": "Auto-archive work items that are closed for"
       }
     },
@@ -109,11 +109,6 @@
         "in_app": {
           "title": "In-app",
           "description": "Get new work items from Members and Guests in your workspace without disruption to your existing work items."
-        },
-        "email": {
-          "title": "Email",
-          "description": "Collect new work items from anyone who sends an email to a Plane email address.",
-          "fieldName": "Email ID"
         },
         "toasts": {
           "set": {

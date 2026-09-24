@@ -16,7 +16,7 @@ import { useInstance } from "@/hooks/store/use-instance";
 const authContentMap = {
   [EAuthModes.SIGN_IN]: {
     pageTitle: "Sign in",
-    text: "auth.common.new_to_plane",
+    text: "auth.common.new_to_nerve",
     linkText: "Sign up",
     linkHref: "/sign-up",
   },
@@ -68,7 +68,7 @@ function AuthHeaderBase(props: TAuthHeaderBase) {
   const { pageTitle, additionalAction } = props;
   return (
     <>
-      <PageHead title={pageTitle + " - Plane"} />
+      <PageHead title={pageTitle + " - Nerve"} />
       <div className="sticky top-0 flex w-full flex-shrink-0 items-center justify-between gap-6">
         <Link to="/">
           <NerveLockup className="h-5 w-auto" />

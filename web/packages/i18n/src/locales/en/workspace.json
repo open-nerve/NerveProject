@@ -90,22 +90,14 @@
         "title": "No active projects",
         "description": "Think of each project as the parent for goal-oriented work. Projects are where Jobs, Cycles, and Modules live and, along with your colleagues, help you achieve that goal. Create a new project or filter for archived projects.",
         "primary_button": {
-          "text": "Start your first project",
-          "comic": {
-            "title": "Everything starts with a project in Plane",
-            "description": "A project could be a product's roadmap, a marketing campaign, or launching a new car."
-          }
+          "text": "Start your first project"
         }
       },
       "no_projects": {
         "title": "No project",
         "description": "To create work items or manage your work, you need to create a project or be a part of one.",
         "primary_button": {
-          "text": "Start your first project",
-          "comic": {
-            "title": "Everything starts with a project in Plane",
-            "description": "A project could be a product's roadmap, a marketing campaign, or launching a new car."
-          }
+          "text": "Start your first project"
         }
       },
       "search": {

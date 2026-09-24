@@ -26,11 +26,11 @@ type TAuthHeader = {
 const Titles = {
   [EAuthModes.SIGN_IN]: {
     header: "Work in all dimensions.",
-    subHeader: "Welcome back to Plane.",
+    subHeader: "Welcome back to Nerve.",
   },
   [EAuthModes.SIGN_UP]: {
     header: "Work in all dimensions.",
-    subHeader: "Create your Plane account.",
+    subHeader: "Create your Nerve account.",
   },
 };
 

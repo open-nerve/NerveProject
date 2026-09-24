@@ -8,7 +8,6 @@ import type { MouseEvent } from "react";
 import { observer } from "mobx-react";
 import { Link, useSearchParams } from "react-router";
 // nerve imports
-import { Avatar } from "@makeplane/propel/components/avatar";
 import { PriorityIcon } from "@nerve/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { Row } from "@nerve/ui";
@@ -122,11 +121,7 @@ export const InboxIssueListItem = observer(function InboxIssueListItem(props: In
               )}
             </div>
             {/* created by */}
-            {createdByDetails && createdByDetails.email?.includes("intake@plane.so") ? (
-              <Avatar alt="Plane" fallback="P" size="xs" />
-            ) : createdByDetails ? (
-              <ButtonAvatars showTooltip={false} userIds={createdByDetails?.id} />
-            ) : null}
+            {createdByDetails && <ButtonAvatars showTooltip={false} userIds={createdByDetails.id} />}
           </div>
         </Row>
       </Link>
