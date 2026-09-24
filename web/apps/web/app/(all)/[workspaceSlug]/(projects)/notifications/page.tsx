@@ -5,8 +5,8 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // components
 import { PageHead } from "@/components/core/page-title";
 import { NotificationsRoot } from "@/components/workspace-notifications";
@@ -16,7 +16,7 @@ import type { Route } from "./+types/page";
 
 function WorkspaceDashboardPage({ params }: Route.ComponentProps) {
   const { workspaceSlug } = params;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { currentWorkspace } = useWorkspace();

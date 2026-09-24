@@ -1,11 +1,10 @@
 /**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
  */
 
 import { describe, expect, it } from "vitest";
-import type { ICycle, IModule, IState, TIssue } from "@plane/types";
+import type { ICycle, IModule, IState, TIssue } from "@nerve/types";
 import { calculateCycleProgress } from "./cycle";
 import { getDistributionPathsPostUpdate, updateDistribution } from "./distribution-update";
 

@@ -5,11 +5,11 @@
  */
 
 import { NavLink, useParams } from "react-router";
-// plane imports
-import { PROFILE_TABS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Header, EHeaderVariant } from "@plane/ui";
-import { cn } from "@plane/utils";
+// nerve imports
+import { PROFILE_TABS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Header, EHeaderVariant } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 
 type Props = {
   isAuthorized: boolean;

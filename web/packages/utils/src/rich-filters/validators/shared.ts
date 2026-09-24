@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { TFilterGroupNode, TFilterProperty } from "@plane/types";
+// nerve imports
+import type { TFilterGroupNode, TFilterProperty } from "@nerve/types";
 // local imports
 import { getGroupChildren } from "../types/shared";
 

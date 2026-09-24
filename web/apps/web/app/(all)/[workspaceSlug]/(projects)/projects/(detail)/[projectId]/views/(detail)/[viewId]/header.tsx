@@ -7,19 +7,19 @@
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 
-// plane imports
+// nerve imports
 import {
   EIssueFilterType,
   ISSUE_DISPLAY_FILTERS_BY_PAGE,
   EUserPermissions,
   EUserPermissionsLevel,
-} from "@plane/constants";
-import { Button } from "@plane/propel/button";
+} from "@nerve/constants";
+import { Button } from "@nerve/propel/button";
 import { LockOutline, ViewsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
-import { EIssuesStoreType, EViewAccess, EIssueLayoutTypes } from "@plane/types";
-import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@plane/ui";
+import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssuesStoreType, EViewAccess, EIssueLayoutTypes } from "@nerve/types";
+import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherIcon, SwitcherLabel } from "@/components/common/switcher-label";
@@ -33,7 +33,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectView } from "@/hooks/store/use-project-view";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {

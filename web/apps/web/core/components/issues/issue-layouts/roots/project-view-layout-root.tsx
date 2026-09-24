@@ -8,9 +8,9 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
-// plane constants
-import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
+// nerve constants
+import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
+import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // hooks
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";

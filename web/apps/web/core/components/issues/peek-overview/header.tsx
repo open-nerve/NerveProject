@@ -15,14 +15,14 @@ import {
   ModalPeekOutline,
   SidePeekOutline,
 } from "@makeplane/propel/icons";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TNameDescriptionLoader } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { CustomSelect } from "@plane/ui";
-import { copyUrlToClipboard, generateWorkItemLink } from "@plane/utils";
+import type { TNameDescriptionLoader } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { CustomSelect } from "@nerve/ui";
+import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";
@@ -33,7 +33,7 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { IssueSubscription } from "../issue-detail/subscription";
 import { WorkItemDetailQuickActions } from "../issue-layouts/quick-action-dropdowns";
 import { NameDescriptionUpdateStatus } from "../issue-update-status";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 export type TPeekModes = "side-peek" | "modal" | "full-screen";
 

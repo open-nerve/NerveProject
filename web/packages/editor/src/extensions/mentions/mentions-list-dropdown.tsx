@@ -9,9 +9,9 @@ import type { SuggestionProps } from "@tiptap/suggestion";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash-es";
-// plane utils
-import { useOutsideClickDetector } from "@plane/hooks";
-import { cn } from "@plane/utils";
+// nerve utils
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { cn } from "@nerve/utils";
 // helpers
 import { DROPDOWN_NAVIGATION_KEYS, getNextValidIndex } from "@/helpers/tippy";
 // types

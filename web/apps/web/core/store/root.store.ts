@@ -5,11 +5,11 @@
  */
 
 import { enableStaticRendering } from "mobx-react";
-// plane imports
-import { FALLBACK_LANGUAGE, setLanguage } from "@plane/i18n";
-import type { IWorkItemFilterStore } from "@plane/shared-state";
-import { WorkItemFilterStore } from "@plane/shared-state";
-// plane web store
+// nerve imports
+import { FALLBACK_LANGUAGE, setLanguage } from "@nerve/i18n";
+import type { IWorkItemFilterStore } from "@nerve/shared-state";
+import { WorkItemFilterStore } from "@nerve/shared-state";
+// store
 import type { IPowerKStore } from "@/store/power-k.store";
 import { PowerKStore } from "@/store/power-k.store";
 import type { IStateStore } from "@/store/state.store";

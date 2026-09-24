@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import { cn } from "@plane/utils";
+// nerve imports
+import { cn } from "@nerve/utils";
 
 type Props = {
   className?: string;

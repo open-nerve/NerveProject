@@ -6,9 +6,9 @@
 
 import type { LucideIcon } from "lucide-react";
 import { BuildingOutline, MembersOutline, WebhooksOutline } from "@makeplane/propel/icons";
-// plane imports
-import type { ISvgIcons } from "@plane/propel/icons";
-import type { TWorkspaceSettingsTabs } from "@plane/types";
+// nerve imports
+import type { ISvgIcons } from "@nerve/propel/icons";
+import type { TWorkspaceSettingsTabs } from "@nerve/types";
 
 export const WORKSPACE_SETTINGS_ICONS: Record<TWorkspaceSettingsTabs, LucideIcon | React.FC<ISvgIcons>> = {
   general: BuildingOutline,

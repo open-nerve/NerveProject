@@ -5,14 +5,14 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { EIssuesStoreType } from "@plane/types";
-import { Breadcrumbs, Header } from "@plane/ui";
+import { EIssuesStoreType } from "@nerve/types";
+import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { CountChip } from "@/components/common/count-chip";
@@ -26,7 +26,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useParams, useNavigate } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 export const IssuesHeader = observer(function IssuesHeader() {

@@ -7,12 +7,12 @@
 import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
-import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // components
 import {
   DisplayFiltersSelection,

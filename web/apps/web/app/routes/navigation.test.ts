@@ -1,7 +1,6 @@
 /**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
  */
 
 import { readdirSync, readFileSync } from "node:fs";
@@ -18,11 +17,11 @@ import {
   WORKSPACE_SETTINGS,
   WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,
   WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS,
-} from "@plane/constants";
-import { generateWorkItemLink, joinUrlPath } from "@plane/utils";
+} from "@nerve/constants";
+import { generateWorkItemLink, joinUrlPath } from "@nerve/utils";
 import routes from "../routes";
 
-// Every internal navigation has to land on a page, not on "page not found" (M1 design 4.2): Plane's legacy
+// Every internal navigation has to land on a page, not on "page not found" (M1 design 4.2): the legacy
 // address redirects are gone (3.12), so nothing may lean on them. The check reads the real route table and
 // the web app's own source, so it follows both as they change.
 
@@ -170,7 +169,7 @@ describe("internal navigation", () => {
   });
 
   it("sends a path that no page serves to page not found", () => {
-    // Plane's old account settings address, whose redirect is gone
+    // the old account settings address, whose redirect is gone
     expect(lands("/acme/settings/account")).toBe(false);
     // what the disabled feature pages used to link to
     expect(reaches("/*/settings/projects/*/features")).toBe(false);

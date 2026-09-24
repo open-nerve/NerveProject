@@ -1,5 +1,5 @@
 {
-  "name": "@plane/ui",
+  "name": "@nerve/ui",
   "version": "1.4.2",
   "private": true,
   "description": "UI components shared across multiple apps internally",
@@ -24,17 +24,17 @@
   "dependencies": {
     "@headlessui/react": "catalog:",
     "@makeplane/propel": "catalog:",
-    "@plane/constants": "workspace:*",
-    "@plane/hooks": "workspace:*",
-    "@plane/propel": "workspace:*",
-    "@plane/types": "workspace:*",
-    "@plane/utils": "workspace:*",
+    "@nerve/constants": "workspace:*",
+    "@nerve/hooks": "workspace:*",
+    "@nerve/propel": "workspace:*",
+    "@nerve/types": "workspace:*",
+    "@nerve/utils": "workspace:*",
     "@popperjs/core": "catalog:",
     "lodash-es": "catalog:",
     "react-popper": "catalog:"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

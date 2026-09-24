@@ -6,11 +6,11 @@
 
 import { cloneDeep, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
-// plane imports
-import { setLanguage, toSupportedLanguage } from "@plane/i18n";
+// nerve imports
+import { setLanguage, toSupportedLanguage } from "@nerve/i18n";
 // types
-import type { IUserTheme, TUserProfile } from "@plane/types";
-import { EStartOfTheWeek } from "@plane/types";
+import type { IUserTheme, TUserProfile } from "@nerve/types";
+import { EStartOfTheWeek } from "@nerve/types";
 // services
 import { UserService } from "@/services/user.service";
 // store

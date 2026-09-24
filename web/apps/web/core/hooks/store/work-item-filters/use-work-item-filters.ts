@@ -5,8 +5,8 @@
  */
 
 import { useContext } from "react";
-// plane imports
-import type { IWorkItemFilterStore } from "@plane/shared-state";
+// nerve imports
+import type { IWorkItemFilterStore } from "@nerve/shared-state";
 // context
 import { StoreContext } from "@/lib/store-context";
 

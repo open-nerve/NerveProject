@@ -6,17 +6,17 @@
 
 import { observer } from "mobx-react";
 import { Link, useMatch, useParams } from "react-router";
-// plane imports
-import type { IWorkspaceSidebarNavigationItem } from "@plane/constants";
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { joinUrlPath } from "@plane/utils";
+// nerve imports
+import type { IWorkspaceSidebarNavigationItem } from "@nerve/constants";
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { joinUrlPath } from "@nerve/utils";
 // components
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-// plane web imports
+// components
 import { getSidebarNavigationItemIcon } from "@/components/workspace/sidebar/helper";
 
 type Props = {

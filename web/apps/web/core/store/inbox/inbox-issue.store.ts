@@ -12,8 +12,8 @@ import type {
   EInboxIssueSource,
   TIssue,
   TInboxDuplicateIssueDetails,
-} from "@plane/types";
-import { EInboxIssueStatus } from "@plane/types";
+} from "@nerve/types";
+import { EInboxIssueStatus } from "@nerve/types";
 // helpers
 // services
 import { InboxIssueService } from "@/services/inbox";

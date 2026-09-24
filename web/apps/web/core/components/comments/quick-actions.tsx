@@ -7,13 +7,13 @@
 import { useMemo } from "react";
 import { observer } from "mobx-react";
 import { DeleteOutline, EditOutline, LinkOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import { IconButton } from "@plane/propel/icon-button";
-import type { TIssueComment, TCommentsOperations } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
-import { CustomMenu } from "@plane/ui";
-import { cn } from "@plane/utils";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { IconButton } from "@nerve/propel/icon-button";
+import type { TIssueComment, TCommentsOperations } from "@nerve/types";
+import type { TContextMenuItem } from "@nerve/ui";
+import { CustomMenu } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useUser } from "@/hooks/store/user";
 

@@ -6,9 +6,9 @@
 
 import { makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
-import type { IUserLite } from "@plane/types";
-// plane web imports
+// nerve imports
+import type { IUserLite } from "@nerve/types";
+// store
 import type { IProjectMemberStore } from "@/store/member/project/project-member.store";
 import { ProjectMemberStore } from "@/store/member/project/project-member.store";
 import type { RootStore } from "@/store/root.store";

@@ -15,12 +15,12 @@ import {
   NewTabOutline,
   RestoreOutline,
 } from "@makeplane/propel/icons";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { EIssuesStoreType, TIssue } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
-import { copyUrlToClipboard, generateWorkItemLink } from "@plane/utils";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { EIssuesStoreType, TIssue } from "@nerve/types";
+import type { TContextMenuItem } from "@nerve/ui";
+import { copyUrlToClipboard, generateWorkItemLink } from "@nerve/utils";
 import { createCopyMenuWithDuplication } from "./copy-menu-helper";
 
 // Generic helper function to handle optional function calls gracefully

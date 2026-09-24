@@ -5,9 +5,9 @@
  */
 
 import { useCallback } from "react";
-// plane imports
-import type { TFileHandler } from "@plane/editor";
-import { getEditorAssetDownloadSrc, getEditorAssetSrc } from "@plane/utils";
+// nerve imports
+import type { TFileHandler } from "@nerve/editor";
+import { getEditorAssetDownloadSrc, getEditorAssetSrc } from "@nerve/utils";
 // hooks
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useFileSize } from "@/hooks/use-file-size";

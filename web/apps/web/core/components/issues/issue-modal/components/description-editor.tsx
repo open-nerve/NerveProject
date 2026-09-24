@@ -8,15 +8,15 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
-// plane imports
-import { ETabIndices } from "@plane/constants";
-import type { EditorRefApi } from "@plane/editor";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TIssue } from "@plane/types";
-import { EFileAssetType } from "@plane/types";
-import { Loader } from "@plane/ui";
-import { getDescriptionPlaceholderI18n, getTabIndex } from "@plane/utils";
+// nerve imports
+import { ETabIndices } from "@nerve/constants";
+import type { EditorRefApi } from "@nerve/editor";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TIssue } from "@nerve/types";
+import { EFileAssetType } from "@nerve/types";
+import { Loader } from "@nerve/ui";
+import { getDescriptionPlaceholderI18n, getTabIndex } from "@nerve/utils";
 // components
 import { RichTextEditor } from "@/components/editor/rich-text";
 // helpers
@@ -25,7 +25,7 @@ import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import useKeypress from "@/hooks/use-keypress";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// plane web services
+// services
 import { WorkspaceService } from "@/services/workspace.service";
 const workspaceService = new WorkspaceService();
 

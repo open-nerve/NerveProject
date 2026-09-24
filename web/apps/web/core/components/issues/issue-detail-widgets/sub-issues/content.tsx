@@ -6,8 +6,8 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { observer } from "mobx-react";
-import type { TIssue } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+import type { TIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
 // hooks

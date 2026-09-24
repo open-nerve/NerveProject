@@ -6,10 +6,10 @@
 
 import React from "react";
 import { Link } from "react-router";
-// plane imports
-import { cn } from "@plane/utils";
+// nerve imports
+import { cn } from "@nerve/utils";
 import type { LucideIcon } from "lucide-react";
-import type { ISvgIcons } from "@plane/propel/icons";
+import type { ISvgIcons } from "@nerve/propel/icons";
 
 type Props = {
   isActive: boolean;

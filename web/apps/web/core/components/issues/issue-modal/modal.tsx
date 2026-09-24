@@ -6,8 +6,8 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
-import type { EIssuesStoreType, TIssue } from "@plane/types";
+// nerve imports
+import type { EIssuesStoreType, TIssue } from "@nerve/types";
 // local imports
 import { CreateUpdateIssueModalBase } from "./base";
 import { IssueModalProvider } from "./provider";

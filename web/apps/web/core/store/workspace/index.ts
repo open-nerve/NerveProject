@@ -8,7 +8,7 @@ import { clone, set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 // types
 import { computedFn } from "mobx-utils";
-import type { IWorkspace, IWorkspaceUserPropertiesResponse } from "@plane/types";
+import type { IWorkspace, IWorkspaceUserPropertiesResponse } from "@nerve/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 // store

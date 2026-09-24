@@ -7,9 +7,9 @@
 import { FloatingOverlay } from "@floating-ui/react";
 import type { SuggestionKeyDownProps, SuggestionProps } from "@tiptap/suggestion";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
-// plane imports
-import { useOutsideClickDetector } from "@plane/hooks";
-import { cn } from "@plane/utils";
+// nerve imports
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { cn } from "@nerve/utils";
 
 export type EmojiItem = {
   name: string;

@@ -5,9 +5,9 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import type { IWorkItemFilterInstance } from "@plane/shared-state";
-import type { TWorkItemFilterExpression, TWorkItemFilterProperty } from "@plane/types";
+// nerve imports
+import type { IWorkItemFilterInstance } from "@nerve/shared-state";
+import type { TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";
 // components
 import type { TFiltersRowProps } from "@/components/rich-filters/filters-row";
 import { FiltersRow } from "@/components/rich-filters/filters-row";

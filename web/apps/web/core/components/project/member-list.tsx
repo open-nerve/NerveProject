@@ -6,10 +6,10 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 import { SearchOutline } from "@makeplane/propel/icons";
 // components
 import { MembersSettingsLoader } from "@/components/ui/loader/settings/members";

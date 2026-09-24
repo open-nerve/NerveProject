@@ -4,12 +4,12 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { I_THEME_OPTION } from "@plane/constants";
-import { THEME_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import type { I_THEME_OPTION } from "@nerve/constants";
+import { THEME_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // constants
-import { CustomSelect } from "@plane/ui";
+import { CustomSelect } from "@nerve/ui";
 // ui
 
 type Props = {

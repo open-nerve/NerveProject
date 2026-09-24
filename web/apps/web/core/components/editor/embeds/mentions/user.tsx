@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { ROLE } from "@plane/constants";
-import { Popover } from "@plane/propel/popover";
-import { cn, getFileURL } from "@plane/utils";
+import { ROLE } from "@nerve/constants";
+import { Popover } from "@nerve/propel/popover";
+import { cn, getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";

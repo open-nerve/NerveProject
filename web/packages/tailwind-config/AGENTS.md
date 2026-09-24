@@ -71,13 +71,13 @@ function Page() {
 
 **Rules**:
 
-- Surfaces are **siblings**, not nested (in the same plane)
+- Surfaces are **siblings**, not nested (in the same stacking context)
 - Each surface should use its corresponding layer for nested elements
 - Surfaces provide the base for stacking layers
 
-**Exception - Different Planes**:
+**Exception - Different Stacking Contexts**:
 
-- Modals, overlays, and popovers exist on a **different plane** (different z-index/stacking context)
+- Modals, overlays, and popovers exist in a **different stacking context** (a different z-index)
 - In these cases, it's acceptable to use a surface even when there's a surface below
 - This is because they are visually and functionally separate from the underlying content
 
@@ -104,21 +104,21 @@ function Page() {
   </main>
 </div>
 
-// ❌ Wrong: Surface nested in surface (same plane)
+// ❌ Wrong: Surface nested in surface (same stacking context)
 <div className="bg-surface-1">
   <div className="bg-surface-2">
     {/* This breaks the philosophy */}
   </div>
 </div>
 
-// ✅ Correct: Modal on different plane
+// ✅ Correct: Modal in a different stacking context
 <div className="bg-canvas">
   {/* Main page content */}
   <div className="bg-surface-1">
     Page content
   </div>
 
-  {/* Modal overlay - different plane */}
+  {/* Modal overlay - different stacking context */}
   <div className="fixed inset-0 z-50">
     <div className="bg-backdrop fixed inset-0" />
     <div className="bg-surface-1 rounded-lg shadow-lg p-6">
@@ -349,14 +349,14 @@ function HomePage() {
 ### Pattern 3: Dropdown/Modal
 
 ```tsx
-// ✅ Correct: Modal structure (different plane exception)
+// ✅ Correct: Modal structure (different stacking context exception)
 function PageWithModal() {
   return (
     <div className="bg-surface-1">
       {/* Main page content */}
       <div>Page content</div>
 
-      {/* Modal - different plane, can use surface even with surface below */}
+      {/* Modal - different stacking context, can use surface even with surface below */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50">
           <div className="bg-backdrop fixed inset-0" />
@@ -448,7 +448,7 @@ Is this a top-level container that sits on canvas?
 AND
 Is it a sibling to other containers (not nested)?
 OR
-Is this a modal/overlay on a different plane (z-index)?
+Is this a modal/overlay in a different stacking context (z-index)?
 ├─ YES → Use bg-surface-1 (or surface-2/3 for variation)
 └─ NO → Continue to Layer decision
 ```
@@ -522,10 +522,10 @@ function Page() {
 }
 ```
 
-### ❌ Mistake 2: Nested Surfaces (Same Plane)
+### ❌ Mistake 2: Nested Surfaces (Same Stacking Context)
 
 ```tsx
-// ❌ Wrong: Nested surfaces in same plane
+// ❌ Wrong: Nested surfaces in the same stacking context
 <div className="bg-surface-1">
   <div className="bg-surface-2">
     Nested surface
@@ -539,11 +539,11 @@ function Page() {
   </div>
 </div>
 
-// ✅ Correct: Exception - Modal on different plane
+// ✅ Correct: Exception - Modal in a different stacking context
 <div className="bg-canvas">
   <div className="bg-surface-1">Page content</div>
   <div className="fixed inset-0 z-50">
-    <div className="bg-surface-1">Modal (different plane)</div>
+    <div className="bg-surface-1">Modal (different stacking context)</div>
   </div>
 </div>
 ```
@@ -606,7 +606,7 @@ function Page() {
 
 1. **Canvas is Application Root Only**: Canvas should only appear once in your entire application - at the root level (App.tsx or root layout). All pages use surfaces, not canvas.
 
-2. **Use Surfaces for Pages and Top-Level Containers**: Surfaces are siblings, not nested (except modals/overlays on different planes)
+2. **Use Surfaces for Pages and Top-Level Containers**: Surfaces are siblings, not nested (except modals/overlays in different stacking contexts)
 
 3. **Match Layers to Surfaces**: surface-1 → layer-1, surface-2 → layer-2, etc. (Very rare exception: form elements can go one level above for visual separation)
 
@@ -654,7 +654,7 @@ When reviewing components, ensure:
 
 - [ ] Canvas is only used at the application root (one place in entire app)
 - [ ] Pages use surfaces, not canvas
-- [ ] Surfaces are siblings, not nested (except modals/overlays on different planes)
+- [ ] Surfaces are siblings, not nested (except modals/overlays in different stacking contexts)
 - [ ] Layers match their surface (surface-1 → layer-1) - except rare cases for form elements
 - [ ] Sidebar menu items use transparent backgrounds with hover states
 - [ ] Hover states match base layers

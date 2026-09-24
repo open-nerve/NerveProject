@@ -9,8 +9,7 @@ import { ChevronDownOutline, ChevronRightOutline, MoreHorizontalOutline } from "
 import * as React from "react";
 import ReactDOM from "react-dom";
 import { usePopper } from "react-popper";
-import { useOutsideClickDetector } from "@plane/hooks";
-// plane helpers
+import { useOutsideClickDetector } from "@nerve/hooks";
 // helpers
 import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";
 import { cn } from "../utils";

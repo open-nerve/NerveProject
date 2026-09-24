@@ -7,8 +7,8 @@
 import { Component, Fragment } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 
 type Props = {
   children: ReactNode;

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue, TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@plane/types";
+import type { TIssue, TWorkspaceDraftIssue, TWorkspaceDraftPaginationInfo } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

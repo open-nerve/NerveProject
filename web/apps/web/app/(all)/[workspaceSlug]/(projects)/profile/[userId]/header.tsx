@@ -8,9 +8,9 @@
 import { observer } from "mobx-react";
 import { useParams, useNavigate } from "react-router";
 import { ChevronDownOutline, RightSidePaneOutline, YourWorkOutline } from "@makeplane/propel/icons";
-import { PROFILE_TABS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Breadcrumbs, Header, CustomMenu } from "@plane/ui";
+import { PROFILE_TABS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Breadcrumbs, Header, CustomMenu } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { ProfileIssuesFilter } from "@/components/profile/profile-issues-filter";
@@ -18,7 +18,7 @@ import { useProfileMember } from "@/components/profile/use-profile-member";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useUser, useUserPermissions } from "@/hooks/store/user";
-import { Button } from "@plane/propel/button";
+import { Button } from "@nerve/propel/button";
 
 type TUserProfileHeader = {
   type?: string | undefined;

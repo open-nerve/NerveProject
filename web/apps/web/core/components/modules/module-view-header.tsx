@@ -8,16 +8,15 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
-// plane helpers
-import { MODULE_VIEW_LAYOUTS } from "@plane/constants";
-import { useOutsideClickDetector } from "@plane/hooks";
+// nerve helpers
+import { MODULE_VIEW_LAYOUTS } from "@nerve/constants";
+import { useOutsideClickDetector } from "@nerve/hooks";
 // types
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TModuleFilters } from "@plane/types";
+import type { TModuleFilters } from "@nerve/types";
 // ui
-import { cn, calculateTotalFilters } from "@plane/utils";
-// plane utils
+import { cn, calculateTotalFilters } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 import { ModuleFiltersSelection, ModuleOrderByDropdown } from "@/components/modules/dropdowns";
@@ -28,7 +27,7 @@ import { useMember } from "@/hooks/store/use-member";
 import { useModuleFilter } from "@/hooks/store/use-module-filter";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { ModuleLayoutIcon } from "./module-layout-icon";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 // i18n
 
 export const ModuleViewHeader = observer(function ModuleViewHeader() {

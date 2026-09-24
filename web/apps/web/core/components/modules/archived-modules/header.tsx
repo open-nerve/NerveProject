@@ -9,11 +9,10 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // icons
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
-import { useOutsideClickDetector } from "@plane/hooks";
-// plane helpers
+import { useOutsideClickDetector } from "@nerve/hooks";
 // types
-import type { TModuleFilters } from "@plane/types";
-import { cn, calculateTotalFilters } from "@plane/utils";
+import type { TModuleFilters } from "@nerve/types";
+import { cn, calculateTotalFilters } from "@nerve/utils";
 // components
 import { ArchiveTabsList } from "@/components/archives";
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";

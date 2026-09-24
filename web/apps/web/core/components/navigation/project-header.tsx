@@ -6,10 +6,10 @@
 
 import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { ProjectsOutline } from "@makeplane/propel/icons";
-import type { ICustomSearchSelectOption } from "@plane/types";
-import { CustomSearchSelect } from "@plane/ui";
+import type { ICustomSearchSelectOption } from "@nerve/types";
+import { CustomSearchSelect } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";

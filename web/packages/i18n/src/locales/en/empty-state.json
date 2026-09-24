@@ -12,11 +12,6 @@
       "title": "No matching results.",
       "description": "No results found. Try adjusting your search terms."
     },
-    "not_found": {
-      "title": "Oops! Something seems wrong",
-      "description": "We are unable to fetch your plane account currently. This might be a network error.",
-      "cta_primary": "Try reloading"
-    },
     "server_error": {
       "title": "Server error",
       "description": "We are unable to connect and fetch data from our server. Don't worry, we are working on it.",

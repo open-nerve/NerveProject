@@ -6,10 +6,10 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { useMatch } from "react-router";
-import { SIDEBAR_WIDTH } from "@plane/constants";
-import { useLocalStorage } from "@plane/hooks";
+import { SIDEBAR_WIDTH } from "@nerve/constants";
+import { useLocalStorage } from "@nerve/hooks";
 // components
 import { ResizableSidebar } from "@/components/sidebar/resizable-sidebar";
 // hooks

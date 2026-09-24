@@ -5,8 +5,8 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // components
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // hooks

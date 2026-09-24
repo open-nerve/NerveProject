@@ -8,8 +8,8 @@
 import { useCallback, useMemo } from "react";
 // types
 import { useParams } from "react-router";
-import type { TSupportedFilterTypeForUpdate } from "@plane/constants";
-import { EDraftIssuePaginationType } from "@plane/constants";
+import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
+import { EDraftIssuePaginationType } from "@nerve/constants";
 import type {
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
@@ -19,8 +19,8 @@ import type {
   TLoader,
   TProfileViews,
   TSupportedFilterForUpdate,
-} from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+} from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 
 export interface IssueActions {

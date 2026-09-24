@@ -11,9 +11,9 @@ import { observer } from "mobx-react";
 // icons
 import { AttachOutline, DueDateOutline, LinkOutline, StartDateOutline, ViewsOutline } from "@makeplane/propel/icons";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, IIssueDisplayProperties, TIssuePriorities } from "@plane/types";
+import type { TIssue, IIssueDisplayProperties, TIssuePriorities } from "@nerve/types";
 // ui
 import {
   cn,
@@ -21,7 +21,7 @@ import {
   renderFormattedPayloadDate,
   generateWorkItemLink,
   shouldHighlightIssueDueDate,
-} from "@plane/utils";
+} from "@nerve/utils";
 // components
 import { CycleDropdown } from "@/components/dropdowns/cycle";
 import { DateDropdown } from "@/components/dropdowns/date";

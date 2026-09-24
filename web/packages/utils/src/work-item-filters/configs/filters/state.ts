@@ -4,10 +4,10 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import { STATE_GROUPS } from "@plane/constants";
-import type { IState, TFilterProperty, TStateGroups, TSupportedOperators } from "@plane/types";
-import { COLLECTION_OPERATOR, EQUALITY_OPERATOR } from "@plane/types";
+// nerve imports
+import { STATE_GROUPS } from "@nerve/constants";
+import type { IState, TFilterProperty, TStateGroups, TSupportedOperators } from "@nerve/types";
+import { COLLECTION_OPERATOR, EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import type { IFilterIconConfig, TCreateFilterConfig, TCreateFilterConfigParams } from "../../../rich-filters";
 import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } from "../../../rich-filters";

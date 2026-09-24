@@ -6,14 +6,14 @@
 
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
-// plane imports
-import { USE_CASES } from "@plane/constants";
-import { Button } from "@plane/propel/button";
+// nerve imports
+import { USE_CASES } from "@nerve/constants";
+import { Button } from "@nerve/propel/button";
 import { TickOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TUserProfile } from "@plane/types";
-import { EOnboardingSteps } from "@plane/types";
-import { cn } from "@plane/utils";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TUserProfile } from "@nerve/types";
+import { EOnboardingSteps } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // local imports
@@ -86,7 +86,7 @@ export const UseCaseSetupStep = observer(function UseCaseSetupStep({ handleStepC
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-10">
       {/* Header */}
-      <CommonOnboardingHeader title="What brings you to Plane?" description="Tell us your goals and team size." />
+      <CommonOnboardingHeader title="What brings you to Nerve?" description="Tell us your goals and team size." />
 
       {/* Use Case Selection */}
       <div className="flex flex-col gap-3">

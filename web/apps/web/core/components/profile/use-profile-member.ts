@@ -1,13 +1,12 @@
 /**
- * Copyright (c) 2023-present Plane Software, Inc. and contributors
+ * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
- * See the LICENSE file for details.
  */
 
 import useSWR from "swr";
-// plane imports
-import { WORKSPACE_MEMBERS } from "@plane/constants";
-import type { IUserLite } from "@plane/types";
+// nerve imports
+import { WORKSPACE_MEMBERS } from "@nerve/constants";
+import type { IUserLite } from "@nerve/types";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 

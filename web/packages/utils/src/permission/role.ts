@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import { EUserPermissions } from "@plane/constants";
-import type { EUserProjectRoles, EUserWorkspaceRoles } from "@plane/types";
+// nerve imports
+import { EUserPermissions } from "@nerve/constants";
+import type { EUserProjectRoles, EUserWorkspaceRoles } from "@nerve/types";
 
 export const getUserRole = (role: EUserPermissions | EUserWorkspaceRoles | EUserProjectRoles) => {
   switch (role) {

@@ -5,8 +5,8 @@
  */
 
 import React from "react";
-// plane imports
-import type { TWorkItemWidgets } from "@plane/types";
+// nerve imports
+import type { TWorkItemWidgets } from "@nerve/types";
 // local imports
 import { IssueDetailWidgetActionButtons } from "./action-buttons";
 import { IssueDetailWidgetCollapsibles } from "./issue-detail-widget-collapsibles";

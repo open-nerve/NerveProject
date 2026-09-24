@@ -6,10 +6,10 @@
 
 import { cloneDeep, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction, computed } from "mobx";
-// plane imports
-import { EUserPermissions } from "@plane/constants";
-import type { IUser, TUserPermissions } from "@plane/types";
-// plane web imports
+// nerve imports
+import { EUserPermissions } from "@nerve/constants";
+import type { IUser, TUserPermissions } from "@nerve/types";
+// store
 import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { UserPermissionStore } from "@/store/user/permissions.store";

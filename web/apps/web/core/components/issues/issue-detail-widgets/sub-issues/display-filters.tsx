@@ -8,9 +8,9 @@ import { useMemo } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 import { PreferencesOutline } from "@makeplane/propel/icons";
-// plane imports
-import type { IIssueDisplayFilterOptions, ILayoutDisplayFiltersOptions, IIssueDisplayProperties } from "@plane/types";
-import { cn } from "@plane/utils";
+// nerve imports
+import type { IIssueDisplayFilterOptions, ILayoutDisplayFiltersOptions, IIssueDisplayProperties } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
 import {
   FilterDisplayProperties,

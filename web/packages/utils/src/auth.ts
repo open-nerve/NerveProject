@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { E_PASSWORD_STRENGTH } from "@plane/constants";
+import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 
 /**
  * Calculate password strength based on various criteria

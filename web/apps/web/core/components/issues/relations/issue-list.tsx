@@ -6,9 +6,9 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
-import type { TIssue } from "@plane/types";
-import type { TIssueRelationTypes } from "@plane/types";
+// nerve imports
+import type { TIssue } from "@nerve/types";
+import type { TIssueRelationTypes } from "@nerve/types";
 // local imports
 import { RelationIssueListItem } from "./issue-list-item";
 

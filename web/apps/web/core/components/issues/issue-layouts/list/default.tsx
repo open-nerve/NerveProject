@@ -19,7 +19,7 @@ import type {
   TIssueOrderByOptions,
   IGroupByColumn,
   TIssueKanbanFilters,
-} from "@plane/types";
+} from "@nerve/types";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // utils

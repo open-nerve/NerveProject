@@ -7,16 +7,16 @@
 import type { MutableRefObject } from "react";
 import { useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-// plane helpers
-import { useOutsideClickDetector } from "@plane/hooks";
-import type { ISvgIcons } from "@plane/propel/icons";
+// nerve helpers
+import { useOutsideClickDetector } from "@nerve/hooks";
+import type { ISvgIcons } from "@nerve/propel/icons";
 import { CloseOutline } from "@makeplane/propel/icons";
 // types
-import type { IIssueLabel } from "@plane/types";
+import type { IIssueLabel } from "@nerve/types";
 // ui
-import { CustomMenu, DragHandle } from "@plane/ui";
+import { CustomMenu, DragHandle } from "@nerve/ui";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // components
 import { LabelName } from "./label-name";
 

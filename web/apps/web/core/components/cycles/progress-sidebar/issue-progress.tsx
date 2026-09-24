@@ -9,15 +9,14 @@ import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
-import type { ICycle, TProgressSnapshot } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { getDate } from "@plane/utils";
+import type { ICycle, TProgressSnapshot } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { getDate } from "@nerve/utils";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
-// plane web components
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
 // local imports
 import { CycleProgressStats } from "./progress-stats";
@@ -48,7 +47,7 @@ export const CycleProgress = observer(function CycleProgress(props: TCycleProgre
   // router
   const [searchParams] = useSearchParams();
   const peekCycle = searchParams.get("peekCycle") || undefined;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { getCycleById } = useCycle();

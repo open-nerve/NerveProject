@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { ICycle, TCycleGroups, TFilterProperty, TSupportedOperators } from "@plane/types";
-import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@plane/types";
+// nerve imports
+import type { ICycle, TCycleGroups, TFilterProperty, TSupportedOperators } from "@nerve/types";
+import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@nerve/types";
 // local imports
 import type { TCreateFilterConfigParams, IFilterIconConfig, TCreateFilterConfig } from "../../../rich-filters";
 import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } from "../../../rich-filters";

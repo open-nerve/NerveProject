@@ -11,14 +11,14 @@ import { observer } from "mobx-react";
 import { matchPath, useParams, useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { IconButton } from "@plane/propel/icon-button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { IconButton } from "@nerve/propel/icon-button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { Loader } from "@plane/ui";
-import { copyUrlToClipboard, cn, orderJoinedProjects } from "@plane/utils";
+import { Loader } from "@nerve/ui";
+import { copyUrlToClipboard, cn, orderJoinedProjects } from "@nerve/utils";
 // components
 import { CreateProjectModal } from "@/components/project/create-project-modal";
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
@@ -28,8 +28,8 @@ import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
-// plane web imports
-import type { TProject } from "@plane/types";
+// nerve imports
+import type { TProject } from "@nerve/types";
 // local imports
 import { SidebarProjectsListItem } from "./projects-list-item";
 

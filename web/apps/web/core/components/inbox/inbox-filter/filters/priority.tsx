@@ -6,11 +6,10 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { ISSUE_PRIORITIES } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { PriorityIcon } from "@plane/propel/icons";
-import type { TIssuePriorities } from "@plane/types";
-// plane constants
+import { ISSUE_PRIORITIES } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { PriorityIcon } from "@nerve/propel/icons";
+import type { TIssuePriorities } from "@nerve/types";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks

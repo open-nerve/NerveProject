@@ -8,11 +8,11 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams, useNavigate } from "react-router";
 // types
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IProjectView } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IProjectView } from "@nerve/types";
 // ui
-import { AlertModalCore } from "@plane/ui";
+import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useProjectView } from "@/hooks/store/use-project-view";
 

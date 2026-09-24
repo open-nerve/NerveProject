@@ -6,16 +6,16 @@
 
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
-// plane hooks
-import { useOutsideClickDetector } from "@plane/hooks";
+// nerve hooks
+import { useOutsideClickDetector } from "@nerve/hooks";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useProjectFilter } from "@/hooks/store/use-project-filter";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 export const ProjectSearch = observer(function ProjectSearch() {
   // i18n

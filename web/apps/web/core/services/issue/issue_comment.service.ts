@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane types
-import type { TIssueComment } from "@plane/types";
+// nerve types
+import type { TIssueComment } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";

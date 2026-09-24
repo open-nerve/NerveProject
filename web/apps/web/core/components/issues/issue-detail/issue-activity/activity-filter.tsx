@@ -6,13 +6,13 @@
 
 import { observer } from "mobx-react";
 import { FilterOutline, TickOutline } from "@makeplane/propel/icons";
-// plane imports
-import type { TActivityFilters, TActivityFilterOption } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { IconButton } from "@plane/propel/icon-button";
-import { PopoverMenu } from "@plane/ui";
+// nerve imports
+import type { TActivityFilters, TActivityFilterOption } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { IconButton } from "@nerve/propel/icon-button";
+import { PopoverMenu } from "@nerve/ui";
 // helper
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // constants
 
 type TActivityFilter = {

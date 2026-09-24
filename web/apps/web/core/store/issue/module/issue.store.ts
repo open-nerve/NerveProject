@@ -6,9 +6,9 @@
 
 import { action, makeObservable, runInAction } from "mobx";
 // base class
-import type { TIssue, TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@plane/types";
+import type { TIssue, TLoader, ViewFlags, IssuePaginationOptions, TIssuesResponse } from "@nerve/types";
 // helpers
-import { getDistributionPathsPostUpdate } from "@plane/utils";
+import { getDistributionPathsPostUpdate } from "@nerve/utils";
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
 import { BaseIssuesStore } from "../helpers/base-issues.store";
 //

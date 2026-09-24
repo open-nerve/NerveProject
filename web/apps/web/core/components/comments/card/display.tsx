@@ -8,19 +8,19 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { useLocation } from "react-router";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { EditorRefApi } from "@plane/editor";
-import { useHashScroll } from "@plane/hooks";
-import type { TCommentsOperations, TIssueComment } from "@plane/types";
-import { calculateTimeAgo, cn, getFileURL, renderFormattedDate, renderFormattedTime } from "@plane/utils";
+import type { EditorRefApi } from "@nerve/editor";
+import { useHashScroll } from "@nerve/hooks";
+import type { TCommentsOperations, TIssueComment } from "@nerve/types";
+import { calculateTimeAgo, cn, getFileURL, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 // local imports
 import { CommentReactions } from "../comment-reaction";
 import { CommentCardEditForm } from "./edit-form";
-import { EmojiReactionButton, EmojiReactionPicker } from "@plane/propel/emoji-reaction";
+import { EmojiReactionButton, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import { useMember } from "@/hooks/store/use-member";
 
 export type TCommentCardDisplayProps = {

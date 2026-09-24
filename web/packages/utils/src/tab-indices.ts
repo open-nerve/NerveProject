@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { ETabIndices } from "@plane/constants";
-import { TAB_INDEX_MAP } from "@plane/constants";
+// nerve imports
+import type { ETabIndices } from "@nerve/constants";
+import { TAB_INDEX_MAP } from "@nerve/constants";
 
 export const getTabIndex = (type?: ETabIndices, isMobile: boolean = false) => {
   const getIndex = (key: string) =>

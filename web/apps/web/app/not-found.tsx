@@ -6,7 +6,7 @@
 
 import { Link } from "react-router";
 // ui
-import { Button } from "@plane/propel/button";
+import { Button } from "@nerve/propel/button";
 // images
 import Image404 from "@/app/assets/404.svg?url";
 // types

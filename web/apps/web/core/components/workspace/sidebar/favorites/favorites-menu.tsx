@@ -17,24 +17,24 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronRightOutline, CreateFolderOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-import { IS_FAVORITE_MENU_OPEN } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IFavorite } from "@plane/types";
+import type { IFavorite } from "@nerve/types";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
 import useLocalStorage from "@/hooks/use-local-storage";
-// plane web components
+// local imports
 import { FavoriteFolder } from "./favorite-folder";
 import { FavoriteRoot } from "./favorite-items";
 import type { TargetData } from "./favorites.helpers";
 import { getInstructionFromPayload } from "./favorites.helpers";
 import { NewFavoriteFolder } from "./new-fav-folder";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 export const SidebarFavoritesMenu = observer(function SidebarFavoritesMenu() {
   // states

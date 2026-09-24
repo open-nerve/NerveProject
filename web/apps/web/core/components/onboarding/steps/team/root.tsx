@@ -18,16 +18,16 @@ import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { usePopper } from "react-popper";
 import { AddOutline, ChevronDownOutline, CloseCircleOutline, TickOutline } from "@makeplane/propel/icons";
 import { Listbox } from "@headlessui/react";
-// plane imports
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import type { EUserPermissions } from "@plane/constants";
-import { ROLE, ROLE_DETAILS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { EOnboardingSteps } from "@plane/types";
-import { Spinner } from "@plane/ui";
+import type { EUserPermissions } from "@nerve/constants";
+import { ROLE, ROLE_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { EOnboardingSteps } from "@nerve/types";
+import { Spinner } from "@nerve/ui";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 // services
@@ -347,7 +347,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
     >
       <CommonOnboardingHeader
         title="Invite your teammates"
-        description="Work in plane happens best with your team. Invite them now to use Plane to its potential."
+        description="Work in Nerve happens best with your team. Invite them now to use Nerve to its potential."
       />
       <div className="w-full py-4 text-13">
         <div className="group relative mx-8 grid grid-cols-10 gap-4 py-2">

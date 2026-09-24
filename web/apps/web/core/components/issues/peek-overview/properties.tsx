@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui icons
 import {
   CyclesOutline,
@@ -20,7 +20,7 @@ import {
   StateOutline,
   UserOutline,
 } from "@makeplane/propel/icons";
-import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@plane/utils";
+import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
@@ -33,7 +33,7 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
-// plane web components
+// components
 import { IssueParentSelectRoot } from "@/components/issues/parent-select-root";
 import type { TIssueOperations } from "../issue-detail";
 import { IssueCycleSelect } from "../issue-detail/cycle-select";
@@ -122,12 +122,9 @@ export const PeekOverviewProperties = observer(function PeekOverviewProperties(p
 
         {createdByDetails && (
           <SidebarPropertyListItem icon={UserOutline} label={t("common.created_by")} childrenClassName="px-2">
-            <ButtonAvatars
-              showTooltip
-              userIds={createdByDetails?.display_name?.includes("-intake") ? null : createdByDetails?.id}
-            />
+            <ButtonAvatars showTooltip userIds={createdByDetails.id} />
             <span className="grow truncate text-body-xs-medium leading-5 text-secondary">
-              {createdByDetails?.display_name?.includes("-intake") ? "Plane" : createdByDetails?.display_name}
+              {createdByDetails.display_name}
             </span>
           </SidebarPropertyListItem>
         )}

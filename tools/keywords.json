@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P4",
+  "phase": "M1/P5",
   "rules": [
     {
       "id": "deploy-files",
@@ -17,7 +17,11 @@
           "web/apps/web/public/sw.js.map",
           "web/apps/web/public/workbox-9f2f79cf.js"
         ],
-        "miss": ["web/apps/web/public/manifest.json", "web/apps/web/public/swagger.js", "deploy/compose.dev.yaml"]
+        "miss": [
+          "web/apps/web/public/site.webmanifest.json",
+          "web/apps/web/public/swagger.js",
+          "deploy/compose.dev.yaml"
+        ]
       }
     },
     {
@@ -260,7 +264,7 @@
           "  const { getNavigationPreferences, updateBulkSidebarPreferences } = useWorkspace();",
           "  navigationPreferencesMap: Record<string, IWorkspaceSidebarNavigation>;",
           "  } = usePersonalNavigationPreferences();",
-          "import { WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS, EUserPermissionsLevel } from \"@plane/constants\";",
+          "import { WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS, EUserPermissionsLevel } from \"@nerve/constants\";",
           "export const WORKSPACE_SIDEBAR_PREFERENCES = (workspaceSlug: string) =>",
           "import { ExtendedSidebarItem } from \"@/components/workspace/sidebar/extended-sidebar-item\";",
           "import { ExtendedAppSidebar } from \"./extended-sidebar\";"
@@ -368,24 +372,24 @@
           "    return this.post(`/api/workspaces/${workspaceSlug}/user-activity/${userId}/export/`, data)",
           "  async getUserProfileData(workspaceSlug: string, userId: string): Promise<IUserProfileData> {",
           "  userProjectsData: IUserProfileProjectSegregation | undefined;",
-          "import type { IUserStateDistribution, TStateGroups } from \"@plane/types\";",
+          "import type { IUserStateDistribution, TStateGroups } from \"@nerve/types\";",
           "  priority_distribution: IUserPriorityDistribution[];",
           "export interface IUserActivity {",
           "  ): Promise<IUserActivityResponse> {",
-          "import { USER_PROFILE_DATA } from \"@plane/constants\";",
+          "import { USER_PROFILE_DATA } from \"@nerve/constants\";",
           "      <h3 className=\"text-16 font-medium\">{t(\"profile.stats.workload\")}</h3>",
           "    i18n_label: \"profile.tabs.summary\",",
-          "import { PROFILE_VIEWER_TAB, PROFILE_ADMINS_TAB } from \"@plane/constants\";",
+          "import { PROFILE_VIEWER_TAB, PROFILE_ADMINS_TAB } from \"@nerve/constants\";",
           "import { ProfileActivityListPage } from \"@/components/profile/activity/profile-activity-list\";",
           "import { WorkspaceActivityListPage } from \"@/components/profile/activity/workspace-activity-list\";",
           "  async downloadProfileActivity(",
           "    \"your_work_by_priority\": {",
-          "import { USER_PROFILE_ACTIVITY } from \"@plane/constants\";",
+          "import { USER_PROFILE_ACTIVITY } from \"@nerve/constants\";",
           "export const USER_PROFILE_PROJECT_SEGREGATION = (workspaceSlug: string, userId: string) =>",
           "    i18n_label: \"profile.tabs.activity\","
         ],
         "miss": [
-          "import { PROFILE_TABS } from \"@plane/constants\";",
+          "import { PROFILE_TABS } from \"@nerve/constants\";",
           "    i18n_label: \"profile.tabs.assigned\",",
           "import UserActivityIcon from \"./user-activity-icon\";",
           "      `/api/workspaces/${workspaceSlug}/user-issues/${userId}/`,",
@@ -588,7 +592,7 @@
           "  \"whats_new\": \"What's new?\","
         ],
         "miss": [
-          "import { PlaneVersionNumber } from \"@/components/global/version-number\";",
+          "import { VersionNumber } from \"@/components/global/version-number\";",
           "  \"keyboard_shortcuts\": \"Keyboard shortcuts\","
         ],
         "files": {
@@ -617,7 +621,7 @@
           "  \"stickies\": \"Stickies\",",
           "      allStickiesModal: observable,",
           "export const STICKY_COLORS_LIST: {",
-          "import { STICKIES_PER_PAGE } from \"@plane/constants\";",
+          "import { STICKIES_PER_PAGE } from \"@nerve/constants\";",
           "  | \"sticky-toolbar\""
         ],
         "miss": [
@@ -653,7 +657,7 @@
           "import { DashboardStore } from \"./dashboard.store\";",
           "import { useDashboard } from \"@/hooks/store/use-dashboard\";",
           "export const CustomThemeSelector = observer(() => {",
-          "import type { THomeWidgetKeys, THomeWidgetProps } from \"@plane/types\";",
+          "import type { THomeWidgetKeys, THomeWidgetProps } from \"@nerve/types\";",
           "    return this.get(`/api/workspaces/${workspaceSlug}/home-preferences/`)",
           "          title={t(\"customize_your_theme\")}",
           "import { generateThemePalettes } from \"./palette-generator\";"
@@ -718,7 +722,7 @@
       "samples": {
         "hit": [
           "VITE_ADMIN_BASE_PATH=\"/god-mode\"",
-          "import { GOD_MODE_URL } from \"@plane/constants\";",
+          "import { GOD_MODE_URL } from \"@nerve/constants\";",
           "          {t(\"enter_god_mode\")}",
           "    \"VITE_ADMIN_BASE_PATH\",",
           "    return this.get(\"/api/users/me/instance-admin/\")",
@@ -750,7 +754,7 @@
       },
       "samples": {
         "hit": [
-          "import { OAuthOptions } from \"@plane/ui\";",
+          "import { OAuthOptions } from \"@nerve/ui\";",
           "import { useOAuthConfig } from \"@/hooks/oauth\";",
           "  \"sso\": {",
           "        title: \"LDAP\",",
@@ -797,7 +801,7 @@
           "    await authService.setPassword(token, { password });",
           "    this.post(\"/auth/email-check/\", data, { headers: {} })",
           "      .emailCheck(data)",
-          "import type { IEmailCheckData } from \"@plane/types\";",
+          "import type { IEmailCheckData } from \"@nerve/types\";",
           "import giteaLogo from \"@/app/assets/logos/gitea-logo.svg?url\";",
           "import gitlabLogo from \"@/app/assets/logos/gitlab-logo.svg?url\";",
           "      (config?.is_google_enabled ||",
@@ -806,7 +810,7 @@
           "    user?.is_password_autoset ? EProfileSetupSteps.USER_DETAILS : EProfileSetupSteps.ALL",
           "import { EAuthModes, EAuthSteps } from \"@/helpers/authentication.helper\";",
           "        const loginMedium = rowData.member.last_login_medium;",
-          "import { EUserPermissions, EUserPermissionsLevel, LOGIN_MEDIUM_LABELS } from \"@plane/constants\";"
+          "import { EUserPermissions, EUserPermissionsLevel, LOGIN_MEDIUM_LABELS } from \"@nerve/constants\";"
         ],
         "miss": [
           "            {mode === EAuthModes.SIGN_IN ? t(\"auth.common.password.label\") : t(\"auth.common.password.set_password\")}",
@@ -836,7 +840,7 @@
         "hit": [
           "        message: t(\"email_notification_setting_updated_successfully\"),",
           "  has_marketing_email_consent?: boolean;",
-          "import type { IUserEmailNotificationSettings } from \"@plane/types\";",
+          "import type { IUserEmailNotificationSettings } from \"@nerve/types\";",
           "  const changeEmailT = (path: string) => t(`account_settings.profile.change_email_modal.${path}`);",
           "export const ChangeEmailModal = observer(function ChangeEmailModal(props: Props) {",
           "    return this.get(\"/api/users/me/notification-preferences/\")",
@@ -874,9 +878,9 @@
           "  space_base_url: string | undefined;",
           "    return this.get(`/api/workspaces/${workspaceSlug}/projects/${projectID}/project-deploy-boards/`)",
           "import { PublishProjectModal } from \"../project/publish-project/modal\";",
-          "import type { TProjectPublishLayouts, TProjectPublishSettings } from \"@plane/types\";",
+          "import type { TProjectPublishLayouts, TProjectPublishSettings } from \"@nerve/types\";",
           "            <div>{t(\"publish_project\")}</div>",
-          "import { getPublishViewLink } from \"@plane/utils\";",
+          "import { getPublishViewLink } from \"@nerve/utils\";",
           "export const useViewPublish = (isPublished: boolean, isAuthorized: boolean) => ({",
           "export interface IPublishedProjectView extends Omit<IProjectView, \"rich_filters\"> {",
           "export interface IPublicIssue extends Pick<",
@@ -884,7 +888,7 @@
           "import type { TIssueReaction, IIssuePublicReaction, IPublicVote } from \"./issue_reaction\";",
           "export type TInboxForm = {",
           "export type TAnchors = { [key: string]: string };",
-          "import { EIssueCommentAccessSpecifier } from \"@plane/types\";",
+          "import { EIssueCommentAccessSpecifier } from \"@nerve/types\";",
           "              ? t(\"issue.comments.switch.public\")"
         ],
         "miss": [
@@ -1004,12 +1008,12 @@
           "              {displayProperties && (displayProperties.key || displayProperties.issue_type) && (",
           "      activity_type: \"ISSUE_ADDITIONAL_PROPERTIES_ACTIVITY\";",
           "import { useWorkItemProperties } from \"@/hooks/use-issue-properties\";",
-          "import type { ISearchIssueResponse, TIssue, TIssuePropertyValues, TIssuePropertyValueErrors } from \"@plane/types\";",
+          "import type { ISearchIssueResponse, TIssue, TIssuePropertyValues, TIssuePropertyValueErrors } from \"@nerve/types\";",
           "  is_issue_type_enabled: ToDoOutline,"
         ],
         "miss": [
           "      activity_type: \"DEFAULT\";",
-          "import type { TIssue, TIssuePriorities } from \"@plane/types\";"
+          "import type { TIssue, TIssuePriorities } from \"@nerve/types\";"
         ],
         "files": {
           "hit": [
@@ -1043,7 +1047,7 @@
           "export const MultipleSelectEntityAction = observer(function MultipleSelectEntityAction(props: Props) {",
           "import type { TSelectionHelper } from \"@/hooks/use-multiple-select\";",
           "          \"rounded-none px-page-x text-left group-[.selected-issue-row]:bg-accent-primary/5 group-[.selected-issue-row]:hover:bg-accent-primary/10\",",
-          "import { SPREADSHEET_SELECT_GROUP } from \"@plane/constants\";"
+          "import { SPREADSHEET_SELECT_GROUP } from \"@nerve/constants\";"
         ],
         "miss": [
           "                    multiple",
@@ -1153,7 +1157,7 @@
           "import { AIService } from \"@/services/ai.service\";",
           "export function AiIcon({ width = \"16\", height = \"16\", className, color = \"currentColor\" }: ISvgIcons) {",
           "export * from \"./ai-icon\";",
-          "import { PiChatLogo } from \"@plane/propel/icons\";",
+          "import { PiChatLogo } from \"@nerve/propel/icons\";",
           "      key: \"pi-chat\",",
           "  \"pi_chat\": \"Plane AI\",",
           "      \"plane-intelligence\": {",
@@ -1215,18 +1219,18 @@
         "hit": [
           "        title={t(\"bulk_operations.upgrade_banner.message\")}",
           "export const BillingWorkspaceSettingsHeader = observer(function BillingWorkspaceSettingsHeader() {",
-          "import type { EProductSubscriptionEnum, TBillingFrequency, TSubscriptionPrice } from \"@plane/types\";",
+          "import type { EProductSubscriptionEnum, TBillingFrequency, TSubscriptionPrice } from \"@nerve/types\";",
           "          <span className=\"text-11\">{t(\"contact_sales\")}</span>",
           "  \"plane-pro\",",
           "  \"plane-ultimate\",",
           "  \"plane-enterprise\",",
           "export function LockedComponent(props: { toolTipContent?: string }) {",
           "import { WorkspaceEditionBadge } from \"@/components/workspace/edition-badge\";",
-          "import type { EProductSubscriptionEnum, IPaymentProduct, TSubscriptionPrice } from \"@plane/types\";",
+          "import type { EProductSubscriptionEnum, IPaymentProduct, TSubscriptionPrice } from \"@nerve/types\";",
           "      \"title\": \"Your 14-day Business plan trial is live!\",",
           "    \"add_seats\": \"Add Seats\",",
-          "import { TALK_TO_SALES_URL } from \"@plane/constants\";",
-          "import { MARKETING_PLANE_ONE_PAGE_LINK } from \"@plane/constants\";",
+          "import { TALK_TO_SALES_URL } from \"@nerve/constants\";",
+          "import { MARKETING_PLANE_ONE_PAGE_LINK } from \"@nerve/constants\";",
           "export const MARKETING_CONTACT_US_PAGE_LINK = \"https://plane.so/contact\";",
           "  \"deactivate_your_account_description\": \"Once deactivated, you can't be assigned work items and be billed for your workspace. To reactivate your account, you will need an invite to a workspace at this email address.\","
         ],
@@ -1268,7 +1272,7 @@
           "import type { IEditorPropsExtended, TEditorCommands, TExtensions } from \"@/types\";",
           "import type { IEditorPropsExtended, TExtendedEditorCommands } from \"@/types/editor-extended\";",
           "export type TExtendedEditorRefApi = unknown;",
-          "import type { TExtendedFileHandler } from \"@plane/editor\";",
+          "import type { TExtendedFileHandler } from \"@nerve/editor\";",
           "export type TExtendedCommandExtraProps = unknown;",
           "export const CoreEditorAdditionalExtensions = (props: TCoreAdditionalExtensionsProps): Extensions => {",
           "import { RichTextEditorAdditionalExtensions } from \"@/extensions/rich-text-extensions\";",
@@ -1367,7 +1371,7 @@
     {
       "id": "integrations",
       "phase": "M1/P3",
-      "why": "集成、导入器和本地缓存（M1 设计 2.2、7.4 的死代码一行，P2 评审裁定 10）：集成设置、GitHub 同步、Slack 和应用安装、Jira 等导入器、从 CSV 导入成员、注释掉的 IndexedDB 缓存，以及保留地址中的 silo（Plane 的导入服务）。设计中的 app-installation 写成 app[-_]?installation：Plane 的写法是 AppInstallationService 和 app_installation.service；github-repository、app 安装在本 Phase 开始时已没有命中，命中样本取自 P2 删除之前的代码。不搜单独的 github：保留的\"在 GitHub 上加星\"链接",
+      "why": "集成、导入器和本地缓存（M1 设计 2.2、7.4 的死代码一行，P2 评审裁定 10）：集成设置、GitHub 同步、Slack 和应用安装、Jira 等导入器、从 CSV 导入成员、注释掉的 IndexedDB 缓存，以及保留地址中的 silo（Plane 的导入服务）。设计中的 app-installation 写成 app[-_]?installation：Plane 的写法是 AppInstallationService 和 app_installation.service；github-repository、app 安装在本 Phase 开始时已没有命中，命中样本取自 P2 删除之前的代码。不搜单独的 github：保留的 REPOSITORY_URL（Nerve 在 GitHub 上的仓库，帮助菜单和命令面板的文档、问题反馈指向它）、链接的 GitHub 图标和编辑器的 GitHub 表情",
       "files": {
         "source": "^(?:web/.*\\.(?:[cm]?[jt]sx?|json)|web/apps/web/\\.env\\.example|turbo\\.json)$",
         "flags": ""
@@ -1389,8 +1393,8 @@
           "  \"silo\","
         ],
         "miss": [
-          "import githubBlackImage from \"@/app/assets/logos/github-black.png?url\";",
-          "    \"star_us_on_github\": \"Star us on GitHub\""
+          "import { DocumentationOutline, Github, RocketOutline } from \"@makeplane/propel/icons\";",
+          "export const REPOSITORY_URL = \"https://github.com/open-nerve/NerveProject\";"
         ],
         "files": {
           "hit": [
@@ -1494,6 +1498,102 @@
           "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
         }
       }
+    },
+    {
+      "id": "plane-package",
+      "phase": "M1/P5",
+      "why": "工作区里的包名一律是 @nerve/*（M1 设计第 5 节）：@plane/* 已整体改名，锁文件只随改名变化。范围是 docs/ 以外的全部文件（docs/ 记录的是历史），规则文件本身除外（它的样本必须写出旧包名）。不会误伤 @makeplane/propel：那是 Plane 发布在 npm 上的第三方包，保留（M1 设计 3.10）",
+      "files": {
+        "source": "^(?!docs/|tools/keywords\\.json$)",
+        "flags": ""
+      },
+      "content": {
+        "source": "@plane/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "import { PlaneLogo } from \"@plane/propel/icons\";",
+          "  \"name\": \"@plane/constants\",",
+          "      '@plane/constants':",
+          "@import \"@plane/tailwind-config/index.css\";"
+        ],
+        "miss": [
+          "  \"name\": \"@nerve/constants\",",
+          "import { Tooltip } from \"@makeplane/propel/components/tooltip\";",
+          "  \"@makeplane/propel\": \"0.3.0\""
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/app/root.tsx",
+            "web/packages/constants/package.json",
+            "pnpm-lock.yaml",
+            "e2e/package.json"
+          ],
+          "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
+        }
+      }
+    },
+    {
+      "id": "brand",
+      "phase": "M1/P5",
+      "why": "界面、元数据、链接、代码标识符、会话存储键、剪贴板类型、组件名和注释里都不再出现 Plane（M1 设计第 5 节）：Logo、文案、页面标题换成 Nerve，Plane 服务的链接删除或指向 Nerve 的仓库。两处精确排除写在正则里：Plane 文件的版权声明行（保留，总体设计 2.3）和第三方包名 @makeplane/propel（保留，M1 设计 3.10）。图片里的 Logo 看不到，由目视核对",
+      "files": {
+        "source": "^(?:web/.*|pnpm-(?:workspace|lock)\\.yaml|turbo\\.json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "(?!(?<=Copyright \\(c\\) 2023-present )Plane Software, Inc\\.)(?!(?<=@make)plane\\/propel(?![\\w-]))plane",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { PlaneLogo } from \"@nerve/propel/icons\";",
+          "  { property: \"og:image:alt\", content: \"Plane - Modern project management\" },",
+          "        window.open(\"https://forum.plane.so\", \"_blank\", \"noopener,noreferrer\");",
+          "const STALE_ASSET_RELOAD_KEY = \"__plane_chunk_reload\";",
+          "Button.displayName = \"plane-ui-button\";",
+          " * GlobalModals component manages all workspace-level modals across Plane applications.",
+          "              <EmptySpaceItem Icon={StarOutline} title=\"Star us on GitHub\" href=\"https://github.com/makeplane\" />"
+        ],
+        "miss": [
+          " * Copyright (c) 2023-present Plane Software, Inc. and contributors",
+          "import { Tooltip } from \"@makeplane/propel/components/tooltip\";",
+          "  \"@makeplane/propel\": \"0.3.0\"",
+          "  '@makeplane/propel@0.3.0':",
+          "const STALE_ASSET_RELOAD_KEY = \"__nerve_chunk_reload\";"
+        ],
+        "files": {
+          "hit": ["web/apps/web/app/root.tsx", "pnpm-workspace.yaml", "pnpm-lock.yaml", "turbo.json"],
+          "miss": [
+            "README.md",
+            "e2e/stories/smoke/s2-web-app.spec.ts",
+            "docs/v0/frontend-changes.md",
+            "tools/keywords.json"
+          ]
+        }
+      }
+    },
+    {
+      "id": "brand-files",
+      "phase": "M1/P5",
+      "why": "web/ 里名字带 plane 的文件和目录：Plane 的 Logo 组件和图片已换成 Nerve 的（app/assets/brand/、core/components/common/nerve-logo.tsx），不再有以 Plane 命名的文件（M1 设计第 5 节）",
+      "path": {
+        "source": "^web/.*plane",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/app/assets/plane-takeoff.png",
+          "web/packages/propel/src/icons/brand/plane-lockup.tsx",
+          "web/packages/propel/src/icons/sub-brand/plane-icon.tsx"
+        ],
+        "miss": [
+          "web/apps/web/app/assets/brand/mark.svg",
+          "web/apps/web/core/components/common/nerve-logo.tsx",
+          "web/packages/propel/src/icons/index.ts"
+        ]
+      }
     }
   ],
   "exceptions": [
@@ -1525,6 +1625,14 @@
       "count": 1,
       "reason": "joinProject 调用的 Plane 地址 /projects/invitations/（加入公开项目），M3 定义项目成员接口时替换",
       "until": "M3"
+    },
+    {
+      "rule": "brand",
+      "path": "pnpm-workspace.yaml",
+      "match": "Plane",
+      "count": 3,
+      "reason": "三行中文注释记录这份配置的来源：文件开头说 catalog 等各节来自 Plane 提交 02c19e1 的 pnpm-workspace.yaml、英文注释是 Plane 的原文（M0/P5 spec 2.4），allowBuilds 里说最后三项不来自 Plane（M0/P6）。来源说明随文件长期存在，在 v0 内不会消失",
+      "until": "M9"
     }
   ]
 }

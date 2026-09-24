@@ -5,8 +5,8 @@
  */
 
 import { createContext } from "react";
-// plane imports
-import type { ISearchIssueResponse } from "@plane/types";
+// nerve imports
+import type { ISearchIssueResponse } from "@nerve/types";
 
 export type TIssueModalContext = {
   allowedProjectIds: string[];

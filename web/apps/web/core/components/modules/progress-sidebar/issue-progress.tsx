@@ -9,18 +9,17 @@ import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
 import { ChevronDownOutline, ChevronUpOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-import { useTranslation } from "@plane/i18n";
-import { EIssuesStoreType } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { EIssuesStoreType } from "@nerve/types";
 // components
 // constants
 // helpers
-import { getDate } from "@plane/utils";
+import { getDate } from "@nerve/utils";
 import ProgressChart from "@/components/core/sidebar/progress-chart";
 import { ModuleProgressStats } from "@/components/modules";
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";
-// plane web constants
 type TModuleProgressProps = {
   moduleId: string;
 };
@@ -31,7 +30,7 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
   // router
   const [searchParams] = useSearchParams();
   const peekModule = searchParams.get("peekModule") || undefined;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { getModuleById } = useModule();

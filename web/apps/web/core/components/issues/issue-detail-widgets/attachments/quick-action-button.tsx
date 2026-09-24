@@ -9,11 +9,10 @@ import { observer } from "mobx-react";
 import type { FileRejection } from "react-dropzone";
 import { useDropzone } from "react-dropzone";
 import { AddOutline } from "@makeplane/propel/icons";
-// plane imports
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+// nerve imports
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-// plane web hooks
 import { useFileSize } from "@/hooks/use-file-size";
 // local imports
 import { useAttachmentOperations } from "./helper";

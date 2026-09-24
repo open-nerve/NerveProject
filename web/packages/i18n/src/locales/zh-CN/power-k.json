@@ -116,8 +116,7 @@
     },
     "help_actions": {
       "open_keyboard_shortcuts": "打开键盘快捷键",
-      "open_plane_documentation": "打开 Plane 文档",
-      "join_forum": "加入我们的论坛",
+      "open_documentation": "打开文档",
       "report_bug": "报告 Bug",
       "chat_with_us": "与我们聊天"
     },

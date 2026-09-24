@@ -1,5 +1,5 @@
 {
-  "name": "@plane/constants",
+  "name": "@nerve/constants",
   "version": "1.4.2",
   "private": true,
   "license": "AGPL-3.0",
@@ -21,10 +21,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plane/types": "workspace:*"
+    "@nerve/types": "workspace:*"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "tsdown": "catalog:",

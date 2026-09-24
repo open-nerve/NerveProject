@@ -8,15 +8,15 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { HideOutline, ShowOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { E_PASSWORD_STRENGTH } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { PasswordStrengthIndicator } from "@plane/ui";
-import { getPasswordStrength } from "@plane/utils";
+import { E_PASSWORD_STRENGTH } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { PasswordStrengthIndicator } from "@nerve/ui";
+import { getPasswordStrength } from "@nerve/utils";
 // components
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // helpers

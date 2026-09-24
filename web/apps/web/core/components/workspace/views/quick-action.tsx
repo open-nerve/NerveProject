@@ -6,12 +6,12 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IWorkspaceView } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
-import { copyUrlToClipboard, cn } from "@plane/utils";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkspaceView } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
+import { copyUrlToClipboard, cn } from "@nerve/utils";
 // helpers
 import { useViewMenuItems } from "@/components/common/quick-actions-helper";
 // hooks

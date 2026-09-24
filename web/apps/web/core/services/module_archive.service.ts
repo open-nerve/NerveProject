@@ -5,7 +5,7 @@
  */
 
 // type
-import type { IModule } from "@plane/types";
+import type { IModule } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

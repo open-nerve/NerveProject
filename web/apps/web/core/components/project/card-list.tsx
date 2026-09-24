@@ -5,13 +5,13 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import { EUserPermissionsLevel, EUserPermissions } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import { ContentWrapper } from "@plane/ui";
+// nerve imports
+import { EUserPermissionsLevel, EUserPermissions } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import { ContentWrapper } from "@nerve/ui";
 // components
-import { calculateTotalFilters } from "@plane/utils";
+import { calculateTotalFilters } from "@nerve/utils";
 import { ProjectsLoader } from "@/components/ui/loader/projects-loader";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
@@ -28,7 +28,7 @@ type TProjectCardListProps = {
 
 export const ProjectCardList = observer(function ProjectCardList(props: TProjectCardListProps) {
   const { totalProjectIds: totalProjectIdsProps, filteredProjectIds: filteredProjectIdsProps } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateProjectModal } = useCommandPalette();

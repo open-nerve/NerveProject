@@ -8,11 +8,11 @@ import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import type { TCycleFilters } from "@plane/types";
-import { calculateTotalFilters } from "@plane/utils";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import type { TCycleFilters } from "@nerve/types";
+import { calculateTotalFilters } from "@nerve/utils";
 // components
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // hooks
@@ -25,7 +25,7 @@ import { ArchivedCyclesView } from "./view";
 export const ArchivedCycleLayoutRoot = observer(function ArchivedCycleLayoutRoot() {
   // router
   const { workspaceSlug, projectId } = useParams();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { fetchArchivedCycles, currentProjectArchivedCycleIds, loader } = useCycle();

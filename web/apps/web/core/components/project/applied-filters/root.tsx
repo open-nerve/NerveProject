@@ -4,14 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@plane/types";
-import { EHeaderVariant, Header } from "@plane/ui";
-import { replaceUnderscoreIfSnakeCase } from "@plane/utils";
+import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@nerve/types";
+import { EHeaderVariant, Header } from "@nerve/ui";
+import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 // local imports
 import { AppliedAccessFilters } from "./access";
 import { AppliedDateFilters } from "./date";

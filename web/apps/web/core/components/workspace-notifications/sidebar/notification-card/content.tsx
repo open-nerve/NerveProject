@@ -5,14 +5,14 @@
  */
 
 import type { ReactNode } from "react";
-// plane imports
-import type { TNotification } from "@plane/types";
+// nerve imports
+import type { TNotification } from "@nerve/types";
 import {
   renderFormattedDate,
   replaceUnderscoreIfSnakeCase,
   sanitizeCommentForNotification,
   stripAndTruncateHTML,
-} from "@plane/utils";
+} from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 

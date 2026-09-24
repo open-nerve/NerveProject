@@ -6,9 +6,9 @@
 
 import { useState } from "react";
 // ui
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";

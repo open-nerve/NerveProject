@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IFavorite, TFavoriteEntityType } from "@plane/types";
+import type { IFavorite, TFavoriteEntityType } from "@nerve/types";
 
 // The link of a favourite, under its project's address; a folder only groups favourites and has none
 export const FAVORITE_ITEM_LINKS: Partial<Record<TFavoriteEntityType, (favorite: IFavorite) => string>> = {

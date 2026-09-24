@@ -6,11 +6,11 @@
 
 import { ArrowNarrowLeftOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
-// plane imports
-import { ROLE_DETAILS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { IconButton } from "@plane/propel/icon-button";
+// nerve imports
+import { ROLE_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import { IconButton } from "@nerve/propel/icon-button";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";

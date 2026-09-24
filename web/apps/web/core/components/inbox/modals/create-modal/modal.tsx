@@ -5,8 +5,8 @@
  */
 
 import { useState } from "react";
-// plane imports
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+// nerve imports
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import useKeypress from "@/hooks/use-keypress";
 // local imports

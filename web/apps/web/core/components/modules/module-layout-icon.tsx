@@ -6,8 +6,8 @@
 
 import * as React from "react";
 import { GridOutline, ListOutline } from "@makeplane/propel/icons";
-import type { TModuleLayoutOptions } from "@plane/types";
-import { cn } from "@plane/utils";
+import type { TModuleLayoutOptions } from "@nerve/types";
+import { cn } from "@nerve/utils";
 
 interface ILayoutIcon {
   className?: string;

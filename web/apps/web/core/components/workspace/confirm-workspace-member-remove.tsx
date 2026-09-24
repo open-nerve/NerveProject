@@ -8,9 +8,9 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // ui
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useUser } from "@/hooks/store/user";
 

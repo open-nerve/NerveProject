@@ -3,7 +3,7 @@
     "label": "Workspace settings",
     "page_label": "{workspace} - General settings",
     "key_created": "Key created",
-    "copy_key": "Copy and save this secret key in Plane Pages. You can't see this key after you hit Close. A CSV file containing the key has been downloaded.",
+    "copy_key": "Copy and save this secret key somewhere safe. You can't see this key after you hit Close. A CSV file containing the key has been downloaded.",
     "token_copied": "Token copied to clipboard.",
     "settings": {
       "general": {
@@ -126,7 +126,7 @@
         "generating": "Generating",
         "delete": {
           "title": "Delete access token",
-          "description": "Any application using this token will no longer have the access to Plane data. This action cannot be undone.",
+          "description": "Any application using this token will no longer have the access to Nerve data. This action cannot be undone.",
           "success": {
             "title": "Success!",
             "message": "The token has been successfully deleted"
@@ -139,10 +139,6 @@
       }
     },
     "empty_state": {
-      "api_tokens": {
-        "title": "No access tokens created",
-        "description": "Plane APIs can be used to integrate your data in Plane with any external system. Create a token to get started."
-      },
       "webhooks": {
         "title": "No webhooks added",
         "description": "Create webhooks to receive real-time updates and automate actions."

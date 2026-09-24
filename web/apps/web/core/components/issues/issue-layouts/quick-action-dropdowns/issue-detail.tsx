@@ -9,12 +9,12 @@ import { omit } from "lodash-es";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
-// plane imports
-import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import type { TIssue } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { ContextMenu, CustomMenu } from "@plane/ui";
-import { cn } from "@plane/utils";
+// nerve imports
+import { ARCHIVABLE_STATE_GROUPS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { TIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { ContextMenu, CustomMenu } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";
@@ -27,7 +27,7 @@ import { CreateUpdateIssueModal } from "../../issue-modal/modal";
 import type { IQuickActionProps } from "../list/list-view-types";
 import type { MenuItemFactoryProps } from "./helper";
 import { useWorkItemDetailMenuItems } from "./helper";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 type TWorkItemDetailQuickActionProps = IQuickActionProps & {
   toggleEditIssueModal?: (value: boolean) => void;

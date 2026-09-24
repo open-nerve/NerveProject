@@ -5,10 +5,10 @@
  */
 
 import { observer } from "mobx-react";
-import { PROJECT_CREATED_AT_FILTER_OPTIONS } from "@plane/constants";
+import { PROJECT_CREATED_AT_FILTER_OPTIONS } from "@nerve/constants";
 import { CloseOutline } from "@makeplane/propel/icons";
 // helpers
-import { renderFormattedDate, capitalizeFirstLetter } from "@plane/utils";
+import { renderFormattedDate, capitalizeFirstLetter } from "@nerve/utils";
 // constants
 
 type Props = {

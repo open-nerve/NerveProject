@@ -14,12 +14,12 @@ import {
   TickOutline,
 } from "@makeplane/propel/icons";
 // constants
-import { SPREADSHEET_PROPERTY_DETAILS } from "@plane/constants";
+import { SPREADSHEET_PROPERTY_DETAILS } from "@nerve/constants";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // types
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueOrderByOptions } from "@plane/types";
-import { CustomMenu, Row } from "@plane/ui";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties, TIssueOrderByOptions } from "@nerve/types";
+import { CustomMenu, Row } from "@nerve/ui";
 import useLocalStorage from "@/hooks/use-local-storage";
 import { SpreadSheetPropertyIcon } from "../../utils";
 

@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import { EStartOfTheWeek } from "@plane/types";
+// nerve imports
+import { EStartOfTheWeek } from "@nerve/types";
 
 export const PROFILE_TABS = [
   {

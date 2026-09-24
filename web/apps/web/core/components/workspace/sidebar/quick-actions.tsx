@@ -7,11 +7,11 @@
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { AddWorkItemOutline } from "@makeplane/propel/icons";
-import type { TIssue } from "@plane/types";
+import type { TIssue } from "@nerve/types";
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { SidebarAddButton } from "@/components/sidebar/add-button";

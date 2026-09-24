@@ -7,16 +7,16 @@
 import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { ROLE, EUserPermissions } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
+import { ROLE, EUserPermissions } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 import { AddOutline, ChevronDownOutline, CloseOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { CustomSelect, CustomSearchSelect, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // helpers
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -49,7 +49,7 @@ const defaultValues: FormValues = {
 
 export const AddProjectMembersModal = observer(function AddProjectMembersModal(props: Props) {
   const { isOpen, onClose, onSuccess, projectId, workspaceSlug } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { getProjectRoleByWorkspaceSlugAndProjectId } = useUserPermissions();

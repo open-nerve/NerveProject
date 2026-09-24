@@ -12,12 +12,12 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronRightOutline } from "@makeplane/propel/icons";
 // types
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, IIssueDisplayProperties, TIssueMap } from "@plane/types";
+import type { TIssue, IIssueDisplayProperties, TIssueMap } from "@nerve/types";
 // ui
-import { Spinner, ControlLink, Row } from "@plane/ui";
-import { cn, generateWorkItemLink } from "@plane/utils";
+import { Spinner, ControlLink, Row } from "@nerve/ui";
+import { cn, generateWorkItemLink } from "@nerve/utils";
 // components
 import { IssueProperties } from "@/components/issues/issue-layouts/properties";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";

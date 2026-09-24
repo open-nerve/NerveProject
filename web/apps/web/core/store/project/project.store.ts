@@ -7,12 +7,12 @@
 import { sortBy, cloneDeep, update, set } from "lodash-es";
 import { observable, action, computed, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
-import type { TFetchStatus, TLoader } from "@plane/types";
+// nerve imports
+import type { TFetchStatus, TLoader } from "@nerve/types";
 // helpers
-import { orderProjects, shouldFilterProject } from "@plane/utils";
+import { orderProjects, shouldFilterProject } from "@nerve/utils";
 // services
-import type { TProject, TPartialProject } from "@plane/types";
+import type { TProject, TPartialProject } from "@nerve/types";
 import { IssueLabelService, IssueService } from "@/services/issue";
 import { ProjectService, ProjectStateService, ProjectArchiveService } from "@/services/project";
 // store

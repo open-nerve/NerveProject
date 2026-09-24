@@ -7,7 +7,7 @@
 import React, { useMemo } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
-import { Breadcrumbs } from "@plane/ui";
+import { Breadcrumbs } from "@nerve/ui";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {

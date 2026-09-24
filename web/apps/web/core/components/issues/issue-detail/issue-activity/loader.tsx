@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import { Loader } from "@plane/ui";
+// nerve imports
+import { Loader } from "@nerve/ui";
 
 export function IssueActivityLoader() {
   return (

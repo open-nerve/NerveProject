@@ -5,9 +5,9 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import type { TIssue } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+// nerve imports
+import type { TIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // components
 import { DeleteIssueModal } from "@/components/issues/delete-issue-modal";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";

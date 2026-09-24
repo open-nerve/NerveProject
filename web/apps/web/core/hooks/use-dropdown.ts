@@ -5,8 +5,8 @@
  */
 
 import { useEffect } from "react";
-// plane helpers
-import { useOutsideClickDetector } from "@plane/hooks";
+// nerve helpers
+import { useOutsideClickDetector } from "@nerve/hooks";
 // hooks
 import { useDropdownKeyDown } from "@/hooks/use-dropdown-key-down";
 import { usePlatformOS } from "./use-platform-os";

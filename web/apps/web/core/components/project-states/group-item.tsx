@@ -7,13 +7,13 @@
 import { useState, useRef } from "react";
 import { observer } from "mobx-react";
 
-// plane imports
-import { EIconSize } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { StateGroupIcon } from "@plane/propel/icons";
+// nerve imports
+import { EIconSize } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { StateGroupIcon } from "@nerve/propel/icons";
 import { AddOutline, ChevronDownOutline } from "@makeplane/propel/icons";
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@plane/types";
-import { cn } from "@plane/utils";
+import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
 import { StateList, StateCreate } from "@/components/project-states";
 
@@ -45,7 +45,7 @@ export const GroupItem = observer(function GroupItem(props: TGroupItem) {
   } = props;
   // refs
   const dropElementRef = useRef<HTMLDivElement | null>(null);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // state
   const [createState, setCreateState] = useState(false);

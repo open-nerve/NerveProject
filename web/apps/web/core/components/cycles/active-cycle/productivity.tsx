@@ -8,10 +8,10 @@ import { Fragment } from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTheme } from "next-themes";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import type { ICycle } from "@plane/types";
-import { Loader } from "@plane/ui";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import type { ICycle } from "@nerve/types";
+import { Loader } from "@nerve/ui";
 // assets
 import darkChartAsset from "@/app/assets/empty-state/active-cycle/chart-dark.webp?url";
 import lightChartAsset from "@/app/assets/empty-state/active-cycle/chart-light.webp?url";
@@ -29,7 +29,7 @@ export const ActiveCycleProductivity = observer(function ActiveCycleProductivity
   const { workspaceSlug, projectId, cycle } = props;
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // derived values
   const resolvedPath = resolvedTheme === "light" ? lightChartAsset : darkChartAsset;

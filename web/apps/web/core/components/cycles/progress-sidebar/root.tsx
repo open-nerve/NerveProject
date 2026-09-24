@@ -6,8 +6,8 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
-import { Loader } from "@plane/ui";
+// nerve imports
+import { Loader } from "@nerve/ui";
 // local imports
 import useCyclesDetails from "../active-cycle/use-cycles-details";
 import { CycleProgress } from "./issue-progress";

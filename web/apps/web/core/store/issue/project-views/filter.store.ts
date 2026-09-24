@@ -8,8 +8,8 @@ import { isEmpty, set } from "lodash-es";
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 // base class
 import { computedFn } from "mobx-utils";
-import type { TSupportedFilterTypeForUpdate } from "@plane/constants";
-import { EIssueFilterType } from "@plane/constants";
+import type { TSupportedFilterTypeForUpdate } from "@nerve/constants";
+import { EIssueFilterType } from "@nerve/constants";
 import type {
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
@@ -20,9 +20,9 @@ import type {
   IProjectView,
   TWorkItemFilterExpression,
   TSupportedFilterForUpdate,
-} from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { handleIssueQueryParamsByLayout } from "@plane/utils";
+} from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { handleIssueQueryParamsByLayout } from "@nerve/utils";
 // services
 import { ViewService } from "@/services/view.service";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";

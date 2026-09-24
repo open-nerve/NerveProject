@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { TSupportedOperators } from "@plane/types";
-import { OPERATORS } from "@plane/types";
+import type { TSupportedOperators } from "@nerve/types";
+import { OPERATORS } from "@nerve/types";
 
 export type TFiltersOperatorConfigs = {
   allowedOperators: Set<TSupportedOperators>;

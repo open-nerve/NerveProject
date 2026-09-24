@@ -6,9 +6,9 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { CyclesOutline } from "@makeplane/propel/icons";
-import type { ICycle } from "@plane/types";
+import type { ICycle } from "@nerve/types";
 // local imports
 import { PowerKMenuBuilder } from "./builder";
 

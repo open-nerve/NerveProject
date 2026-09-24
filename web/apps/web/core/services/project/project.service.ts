@@ -4,10 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@plane/types";
+import type { IProjectUserPropertiesResponse, ISearchIssueResponse, TProjectIssuesSearchParams } from "@nerve/types";
 // helpers
-// plane web types
-import type { TProject, TPartialProject } from "@plane/types";
+// nerve imports
+import type { TProject, TPartialProject } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 

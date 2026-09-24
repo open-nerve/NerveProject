@@ -9,14 +9,14 @@ import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { AddOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-// plane imports
-import { EUserPermissionsLevel, getRandomLabelColor } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import type { IIssueLabel } from "@plane/types";
-import { EUserProjectRoles } from "@plane/types";
+// nerve imports
+import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import type { IIssueLabel } from "@nerve/types";
+import { EUserProjectRoles } from "@nerve/types";
 // helpers
-import { getTabIndex } from "@plane/utils";
+import { getTabIndex } from "@nerve/utils";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";

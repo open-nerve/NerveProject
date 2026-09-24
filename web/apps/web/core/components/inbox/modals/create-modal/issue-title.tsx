@@ -5,14 +5,14 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ETabIndices } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { TIssue } from "@plane/types";
+import { ETabIndices } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { TIssue } from "@nerve/types";
 
 // helpers
-import { getTabIndex } from "@plane/utils";
+import { getTabIndex } from "@nerve/utils";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 

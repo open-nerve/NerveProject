@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane utils
-import { cn } from "@plane/utils";
+// nerve utils
+import { cn } from "@nerve/utils";
 // types
 import type { ISlashCommandItem } from "@/types";
 

@@ -5,7 +5,7 @@
  */
 
 // services
-import type { IIntakeState, IState } from "@plane/types";
+import type { IIntakeState, IState } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 // helpers
 // types

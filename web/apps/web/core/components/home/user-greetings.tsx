@@ -4,10 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane types
-import { useTranslation } from "@plane/i18n";
-import type { IUser } from "@plane/types";
-// plane ui
+// nerve types
+import { useTranslation } from "@nerve/i18n";
+import type { IUser } from "@nerve/types";
 // hooks
 import { useCurrentTime } from "@/hooks/use-current-time";
 

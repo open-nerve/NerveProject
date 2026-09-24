@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { Collapsible } from "@makeplane/propel/components/collapsible";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";

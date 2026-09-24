@@ -6,7 +6,7 @@
 
 import type { MutableRefObject } from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
@@ -18,8 +18,8 @@ import type {
   TIssueKanbanFilters,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
-} from "@plane/types";
-import { Row } from "@plane/ui";
+} from "@nerve/types";
+import { Row } from "@nerve/ui";
 // hooks
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 // local imports

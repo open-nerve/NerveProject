@@ -7,10 +7,10 @@
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
-// plane constants
-import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
-import { EIssueLayoutTypes, EIssuesStoreType } from "@plane/types";
-import { Spinner } from "@plane/ui";
+// nerve constants
+import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
+import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
+import { Spinner } from "@nerve/ui";
 // components
 import { ProjectLevelWorkItemFiltersHOC } from "@/components/work-item-filters/filters-hoc/project-level";
 import { WorkItemFiltersRow } from "@/components/work-item-filters/filters-row";

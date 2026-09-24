@@ -7,9 +7,9 @@
 import React from "react";
 // ui
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { ControlLink, Row } from "@plane/ui";
+import { ControlLink, Row } from "@nerve/ui";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useNavigate } from "react-router";
 

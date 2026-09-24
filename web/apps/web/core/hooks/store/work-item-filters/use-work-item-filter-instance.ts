@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { IWorkItemFilterInstance } from "@plane/shared-state";
-import type { EIssuesStoreType } from "@plane/types";
+// nerve imports
+import type { IWorkItemFilterInstance } from "@nerve/shared-state";
+import type { EIssuesStoreType } from "@nerve/types";
 // local imports
 import { useWorkItemFilters } from "./use-work-item-filters";
 

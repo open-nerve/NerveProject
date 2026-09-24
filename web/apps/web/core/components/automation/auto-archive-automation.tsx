@@ -8,12 +8,12 @@ import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { RestoreOutline } from "@makeplane/propel/icons";
-// plane imports
-import { PROJECT_AUTOMATION_MONTHS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { IProject } from "@plane/types";
+// nerve imports
+import { PROJECT_AUTOMATION_MONTHS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { IProject } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
-import { CustomSelect, Loader } from "@plane/ui";
+import { CustomSelect, Loader } from "@nerve/ui";
 // component
 import { SelectMonthModal } from "@/components/automation";
 import { SettingsControlItem } from "@/components/settings/control-item";

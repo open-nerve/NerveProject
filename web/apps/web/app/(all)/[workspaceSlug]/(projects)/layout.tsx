@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { Outlet } from "react-router";
 import { ProjectsAppPowerKProvider } from "@/components/power-k/projects-app-provider";
-// plane web components
+// local imports
 import { ProjectAppSidebar } from "./_sidebar";
 import { ExtendedProjectSidebar } from "./extended-project-sidebar";
 

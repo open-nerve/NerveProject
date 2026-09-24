@@ -6,7 +6,7 @@
 
 import { range } from "lodash-es";
 // ui
-import { Loader } from "@plane/ui";
+import { Loader } from "@nerve/ui";
 
 export function HomeLoader() {
   return (

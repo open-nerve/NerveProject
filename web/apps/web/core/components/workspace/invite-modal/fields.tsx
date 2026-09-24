@@ -7,14 +7,14 @@
 import { observer } from "mobx-react";
 import type { Control, FieldArrayWithId, FormState } from "react-hook-form";
 import { Controller } from "react-hook-form";
-// plane imports
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ROLE } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { ROLE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { CloseOutline } from "@makeplane/propel/icons";
-import { CustomSelect } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { CustomSelect } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
 import type { InvitationFormValues } from "@/hooks/use-workspace-invitation";
@@ -37,7 +37,7 @@ export const InvitationFields = observer(function InvitationFields(props: TInvit
     remove,
     className,
   } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { workspaceInfoBySlug } = useUserPermissions();

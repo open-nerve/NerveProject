@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // ui
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
 // hooks
 import { SpreadsheetHeaderColumn } from "./spreadsheet-header-column";
 

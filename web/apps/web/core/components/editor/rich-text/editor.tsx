@@ -5,11 +5,11 @@
  */
 
 import { forwardRef } from "react";
-// plane imports
-import { RichTextEditorWithRef } from "@plane/editor";
-import type { EditorRefApi, IRichTextEditorProps, TFileHandler } from "@plane/editor";
-import type { MakeOptional, TSearchEntityRequestPayload, TSearchResponse } from "@plane/types";
-import { cn } from "@plane/utils";
+// nerve imports
+import { RichTextEditorWithRef } from "@nerve/editor";
+import type { EditorRefApi, IRichTextEditorProps, TFileHandler } from "@nerve/editor";
+import type { MakeOptional, TSearchEntityRequestPayload, TSearchResponse } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 // hooks

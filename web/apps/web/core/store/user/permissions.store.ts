@@ -7,22 +7,21 @@
 import { unset, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
-// plane imports
-import type { TUserPermissions, TUserPermissionsLevel } from "@plane/constants";
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import type { EUserProjectRoles, IUserProjectsRole, IWorkspaceMemberMe, TProjectMembership } from "@plane/types";
-import { EUserWorkspaceRoles } from "@plane/types";
-// plane web imports
+// nerve imports
+import type { TUserPermissions, TUserPermissionsLevel } from "@nerve/constants";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { EUserProjectRoles, IUserProjectsRole, IWorkspaceMemberMe, TProjectMembership } from "@nerve/types";
+import { EUserWorkspaceRoles } from "@nerve/types";
+// services
 import { WorkspaceService } from "@/services/workspace.service";
 import type { RootStore } from "@/store/root.store";
-// services
 import projectMemberService from "@/services/project/project-member.service";
 import userService from "@/services/user.service";
 
 // derived services
 const workspaceService = new WorkspaceService();
 
-type ETempUserRole = TUserPermissions | EUserWorkspaceRoles | EUserProjectRoles; // TODO: Remove this once we have migrated user permissions to enums to plane constants package
+type ETempUserRole = TUserPermissions | EUserWorkspaceRoles | EUserProjectRoles; // TODO: Remove this once user permissions are enums in @nerve/constants
 
 export interface IUserPermissionStore {
   loader: boolean;

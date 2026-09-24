@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane web components
-import { EIssuesStoreType } from "@plane/types";
+// nerve imports
+import { EIssuesStoreType } from "@nerve/types";
 // components
 import { ProjectArchivedEmptyState } from "./archived-issues";
 import { CycleEmptyState } from "./cycle";

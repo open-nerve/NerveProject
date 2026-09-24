@@ -5,10 +5,10 @@
  */
 
 import type { AxiosRequestConfig } from "axios";
-// plane types
-import { getFileMetaDataForUpload, generateFileUploadPayload } from "@plane/services";
-import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@plane/types";
-import { getAssetIdFromUrl } from "@plane/utils";
+// nerve types
+import { getFileMetaDataForUpload, generateFileUploadPayload } from "@nerve/services";
+import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@nerve/types";
+import { getAssetIdFromUrl } from "@nerve/utils";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

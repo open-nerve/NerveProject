@@ -6,12 +6,12 @@
 
 import { useMemo } from "react";
 import { observer } from "mobx-react";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@plane/propel/toast";
-import type { TIssue } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
+import type { TIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // assets
 import emptyIssue from "@/app/assets/empty-state/issue.svg?url";
 // components

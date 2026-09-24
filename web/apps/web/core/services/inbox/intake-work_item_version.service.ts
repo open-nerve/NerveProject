@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@plane/types";
+// nerve imports
+import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

@@ -10,12 +10,12 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-// plane constants
-import { DRAG_ALLOWED_GROUPS } from "@plane/constants";
+// nerve constants
+import { DRAG_ALLOWED_GROUPS } from "@nerve/constants";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 //types
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type {
   TGroupedIssues,
   TIssue,
@@ -24,9 +24,9 @@ import type {
   TSubGroupedIssues,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
-} from "@plane/types";
-import { EIssueLayoutTypes } from "@plane/types";
-import { cn } from "@plane/utils";
+} from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
+import { cn } from "@nerve/utils";
 import type { GroupDropLocation } from "@/components/issues/issue-layouts/utils";
 // components
 import {

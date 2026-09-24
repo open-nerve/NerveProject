@@ -5,9 +5,9 @@
  */
 
 import { observer } from "mobx-react";
-// plane types
-import type { IIssueLabel, TIssue } from "@plane/types";
-import { Spinner } from "@plane/ui";
+// nerve types
+import type { IIssueLabel, TIssue } from "@nerve/types";
+import { Spinner } from "@nerve/ui";
 // components
 import { PowerKLabelsMenu } from "@/components/power-k/menus/labels";
 // hooks

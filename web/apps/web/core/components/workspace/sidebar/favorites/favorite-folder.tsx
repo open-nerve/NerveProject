@@ -27,15 +27,15 @@ import {
   StarFilled,
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
-import { useOutsideClickDetector } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
-import { FavoriteFolderIcon } from "@plane/propel/icons";
+// nerve imports
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
+import { FavoriteFolderIcon } from "@nerve/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IFavorite, InstructionType } from "@plane/types";
-import { CustomMenu, DropIndicator, DragHandle } from "@plane/ui";
+import type { IFavorite, InstructionType } from "@nerve/types";
+import { CustomMenu, DropIndicator, DragHandle } from "@nerve/ui";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
 import { usePlatformOS } from "@/hooks/use-platform-os";

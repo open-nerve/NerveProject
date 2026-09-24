@@ -6,14 +6,14 @@
 
 import { observer } from "mobx-react";
 import { MinusCircle } from "lucide-react";
-import { useTranslation } from "@plane/i18n";
-import type { TIssue } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import type { TIssue } from "@nerve/types";
 // component
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";
 // ui
-import { ControlLink, CustomMenu } from "@plane/ui";
+import { ControlLink, CustomMenu } from "@nerve/ui";
 // helpers
-import { generateWorkItemLink } from "@plane/utils";
+import { generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useProject } from "@/hooks/store/use-project";

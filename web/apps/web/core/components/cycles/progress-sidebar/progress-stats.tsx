@@ -7,11 +7,11 @@ import { Fragment } from "react";
 
 import { observer } from "mobx-react";
 import { Tab } from "@headlessui/react";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import type { TWorkItemFilterCondition } from "@plane/shared-state";
-import type { TCycleDistribution } from "@plane/types";
-import { cn, toFilterArray } from "@plane/utils";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import type { TWorkItemFilterCondition } from "@nerve/shared-state";
+import type { TCycleDistribution } from "@nerve/types";
+import { cn, toFilterArray } from "@nerve/utils";
 // components
 import type { TAssigneeData } from "@/components/core/sidebar/progress-stats/assignee";
 import { AssigneeStatComponent } from "@/components/core/sidebar/progress-stats/assignee";
@@ -51,7 +51,7 @@ export const CycleProgressStats = observer(function CycleProgressStats(props: TC
     size = "sm",
     totalIssuesCount,
   } = props;
-  // plane imports
+  // nerve imports
   const { t } = useTranslation();
   // store imports
   const { storedValue: currentTab, setValue: setCycleTab } = useLocalStorage(

@@ -6,8 +6,8 @@
 
 import { useState } from "react";
 // ui
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { AlertModalCore } from "@plane/ui";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useWebhook } from "@/hooks/store/use-webhook";
 import { useParams, useNavigate } from "react-router";

@@ -9,8 +9,8 @@ import type { MarkType, NodeType } from "@tiptap/pm/model";
 import type { Selection } from "@tiptap/pm/state";
 import type { EditorProps, EditorView } from "@tiptap/pm/view";
 import type { NodeViewProps as TNodeViewProps } from "@tiptap/react";
-// plane imports
-import type { TCustomComponentsMetaData } from "@plane/utils";
+// nerve imports
+import type { TCustomComponentsMetaData } from "@nerve/utils";
 // extension types
 import type { TTextAlign } from "@/extensions";
 // types

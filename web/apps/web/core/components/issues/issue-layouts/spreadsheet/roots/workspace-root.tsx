@@ -6,10 +6,10 @@
 
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-// plane constants
-import { ALL_ISSUES, EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import type { IIssueDisplayFilterOptions } from "@plane/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
+// nerve constants
+import { ALL_ISSUES, EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { IIssueDisplayFilterOptions } from "@nerve/types";
+import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // components
 import { AllIssueQuickActions } from "@/components/issues/issue-layouts/quick-action-dropdowns";
 import { SpreadsheetLayoutLoader } from "@/components/ui/loader/layouts/spreadsheet-layout-loader";

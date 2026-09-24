@@ -5,10 +5,10 @@
  */
 
 import { useState } from "react";
-// plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import type { IWorkspaceMember, TProjectMembership } from "@plane/types";
-import { renderFormattedDate } from "@plane/utils";
+// nerve imports
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { IWorkspaceMember, TProjectMembership } from "@nerve/types";
+import { renderFormattedDate } from "@nerve/utils";
 // components
 import { MemberHeaderColumn } from "@/components/project/member-header-column";
 import { AccountTypeColumn, NameColumn } from "@/components/project/settings/member-columns";

@@ -6,15 +6,15 @@
 
 import { observer } from "mobx-react";
 
-import { useTranslation } from "@plane/i18n";
-// plane imports
+import { useTranslation } from "@nerve/i18n";
+// nerve imports
 import { LinkOutline, NewTabOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // ui
-import type { TStaticViewTypes } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
-import { CustomMenu } from "@plane/ui";
-import { copyUrlToClipboard, cn } from "@plane/utils";
+import type { TStaticViewTypes } from "@nerve/types";
+import type { TContextMenuItem } from "@nerve/ui";
+import { CustomMenu } from "@nerve/ui";
+import { copyUrlToClipboard, cn } from "@nerve/utils";
 // helpers
 type Props = {
   workspaceSlug: string;

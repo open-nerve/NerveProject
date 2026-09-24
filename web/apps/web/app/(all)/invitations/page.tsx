@@ -10,27 +10,26 @@ import { Link, useNavigate } from "react-router";
 
 import useSWR, { mutate } from "swr";
 import { TickCircleOutline } from "@makeplane/propel/icons";
-// plane imports
-import { ROLE } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { ROLE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // types
-import { Button } from "@plane/propel/button";
-import { PlaneLogo } from "@plane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IWorkspaceMemberInvitation } from "@plane/types";
-import { truncateText } from "@plane/utils";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkspaceMemberInvitation } from "@nerve/types";
+import { truncateText } from "@nerve/utils";
 // assets
 import emptyInvitation from "@/app/assets/empty-state/invitation.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
+import { NerveLogo } from "@/components/common/nerve-logo";
 import { WorkspaceLogo } from "@/components/workspace/logo";
-import { USER_WORKSPACES_LIST } from "@plane/constants";
+import { USER_WORKSPACES_LIST } from "@nerve/constants";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 // services
 import { AuthenticationWrapper } from "@/lib/wrappers/authentication-wrapper";
-// plane web services
 import { WorkspaceService } from "@/services/workspace.service";
 
 const workspaceService = new WorkspaceService();
@@ -116,7 +115,7 @@ function UserInvitationsPage() {
             to="/"
             className="absolute top-1/2 left-5 z-10 grid -translate-y-1/2 place-items-center px-3 sm:top-12 sm:left-1/2 sm:-translate-x-[15px] sm:translate-y-0 sm:px-0 sm:py-5 md:left-1/3"
           >
-            <PlaneLogo className="h-9 w-auto text-primary" />
+            <NerveLogo className="h-9 w-auto" />
           </Link>
           <div className="absolute top-1/4 right-4 -translate-y-1/2 text-13 text-primary sm:fixed sm:top-12 sm:right-16 sm:translate-y-0 sm:py-5">
             {currentUser?.email}

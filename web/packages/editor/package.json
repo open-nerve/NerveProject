@@ -1,8 +1,8 @@
 {
-  "name": "@plane/editor",
+  "name": "@nerve/editor",
   "version": "1.4.2",
   "private": true,
-  "description": "Core Editor that powers Plane",
+  "description": "Core Editor that powers Nerve",
   "keywords": [
     "editor",
     "markdown",
@@ -34,10 +34,10 @@
     "@floating-ui/react": "catalog:",
     "@headlessui/react": "catalog:",
     "@makeplane/propel": "catalog:",
-    "@plane/hooks": "workspace:*",
-    "@plane/propel": "workspace:*",
-    "@plane/types": "workspace:*",
-    "@plane/utils": "workspace:*",
+    "@nerve/hooks": "workspace:*",
+    "@nerve/propel": "workspace:*",
+    "@nerve/types": "workspace:*",
+    "@nerve/utils": "workspace:*",
     "@tiptap/core": "catalog:",
     "@tiptap/extension-blockquote": "catalog:",
     "@tiptap/extension-emoji": "catalog:",
@@ -66,7 +66,7 @@
     "uuid": "catalog:"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "@types/lodash-es": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

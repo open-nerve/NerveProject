@@ -7,9 +7,9 @@
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
-import { useTranslation } from "@plane/i18n";
-import type { IIssueFilterOptions, IState } from "@plane/types";
-import { cn } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import type { IIssueFilterOptions, IState } from "@nerve/types";
+import { cn } from "@nerve/utils";
 import {
   FilterAssignees,
   FilterDueDate,
@@ -31,7 +31,7 @@ type TSubIssueFiltersProps = {
 
 export const SubIssueFilters = observer(function SubIssueFilters(props: TSubIssueFiltersProps) {
   const { handleFiltersUpdate, filters, memberIds, states, availableFilters } = props;
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // states
   const [filtersSearchQuery, setFiltersSearchQuery] = useState("");

@@ -6,8 +6,8 @@
 
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
-// plane helpers
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
+// nerve helpers
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // components
 import { SidebarWrapper } from "@/components/sidebar/sidebar-wrapper";
 import { SidebarFavoritesMenu } from "@/components/workspace/sidebar/favorites/favorites-menu";

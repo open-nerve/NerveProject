@@ -10,16 +10,16 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane helpers
+// nerve helpers
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
-import { useOutsideClickDetector } from "@plane/hooks";
+import { useOutsideClickDetector } from "@nerve/hooks";
 // types
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, IIssueDisplayProperties, IIssueMap } from "@plane/types";
+import type { TIssue, IIssueDisplayProperties, IIssueMap } from "@nerve/types";
 // ui
-import { ControlLink, DropIndicator } from "@plane/ui";
-import { cn, generateWorkItemLink } from "@plane/utils";
+import { ControlLink, DropIndicator } from "@nerve/ui";
+import { cn, generateWorkItemLink } from "@nerve/utils";
 // components
 import RenderIfVisible from "@/components/core/render-if-visible-HOC";
 import { HIGHLIGHT_CLASS, getIssueBlockId } from "@/components/issues/issue-layouts/utils";

@@ -6,8 +6,8 @@
 
 import { MailOutline, PlusCircleOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
-// plane imports
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // components
 import { SettingsSidebarItem } from "@/components/settings/sidebar/item";
 import { WorkspaceLogo } from "@/components/workspace/logo";

@@ -60,7 +60,7 @@
       "description": "配置自动化操作以简化项目管理工作流并减少手动任务。",
       "auto-archive": {
         "title": "自动归档已关闭的工作项",
-        "description": "Plane 将自动归档已完成或已取消的工作项。",
+        "description": "Nerve 将自动归档已完成或已取消的工作项。",
         "duration": "自动归档已关闭"
       }
     },
@@ -109,11 +109,6 @@
         "in_app": {
           "title": "应用内",
           "description": "从工作区成员和访客获取新的工作项，不影响现有工作项。"
-        },
-        "email": {
-          "title": "电子邮件",
-          "description": "从任何向 Plane 邮箱地址发送邮件的人收集新的工作项。",
-          "fieldName": "电子邮件 ID"
         },
         "toasts": {
           "set": {

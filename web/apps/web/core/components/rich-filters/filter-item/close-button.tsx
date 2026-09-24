@@ -6,10 +6,10 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// plane imports
+// nerve imports
 import { CloseOutline } from "@makeplane/propel/icons";
-import type { IFilterInstance } from "@plane/shared-state";
-import type { TExternalFilter, TFilterProperty } from "@plane/types";
+import type { IFilterInstance } from "@nerve/shared-state";
+import type { TExternalFilter, TFilterProperty } from "@nerve/types";
 
 interface FilterItemCloseButtonProps<P extends TFilterProperty, E extends TExternalFilter> {
   conditionId: string;

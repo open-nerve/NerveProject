@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "@plane/types";
+import type { TIssue } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 // types
 // constants

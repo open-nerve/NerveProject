@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { TProjectAppliedDisplayFilterKeys, TProjectOrderByOptions } from "@plane/types";
+// nerve imports
+import type { TProjectAppliedDisplayFilterKeys, TProjectOrderByOptions } from "@nerve/types";
 // local imports
 
 export type TNetworkChoiceIconKey = "Lock" | "Globe2";

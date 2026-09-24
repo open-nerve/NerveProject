@@ -5,9 +5,9 @@
  */
 
 import { observer } from "mobx-react";
-// plane imports
-import { setPromiseToast } from "@plane/propel/toast";
-import type { IProject } from "@plane/types";
+// nerve imports
+import { setPromiseToast } from "@nerve/propel/toast";
+import type { IProject } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
 // components
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";

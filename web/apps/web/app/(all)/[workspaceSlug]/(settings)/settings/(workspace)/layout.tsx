@@ -10,9 +10,9 @@ import { Outlet, useLocation } from "react-router";
 import { NotAuthorizedView } from "@/components/auth-screens/not-authorized-view";
 import { getWorkspaceActivePath, pathnameToAccessKey } from "@/components/settings/helper";
 import { SettingsMobileNav } from "@/components/settings/mobile/nav";
-// plane imports
-import { WORKSPACE_SETTINGS_ACCESS } from "@plane/constants";
-import type { EUserWorkspaceRoles } from "@plane/types";
+// nerve imports
+import { WORKSPACE_SETTINGS_ACCESS } from "@nerve/constants";
+import type { EUserWorkspaceRoles } from "@nerve/types";
 // components
 import { WorkspaceSettingsSidebarRoot } from "@/components/settings/workspace/sidebar";
 // hooks

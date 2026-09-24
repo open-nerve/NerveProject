@@ -12,11 +12,6 @@
       "title": "未找到匹配结果。",
       "description": "未找到结果。请尝试调整搜索条件。"
     },
-    "not_found": {
-      "title": "糟糕!似乎出了点问题",
-      "description": "我们目前无法获取您的 Plane 账户。这可能是网络错误。",
-      "cta_primary": "尝试重新加载"
-    },
     "server_error": {
       "title": "服务器错误",
       "description": "我们无法连接并从服务器获取数据。请放心,我们正在处理。",

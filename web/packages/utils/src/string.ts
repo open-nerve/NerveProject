@@ -5,7 +5,7 @@
  */
 
 import sanitizeHtml from "sanitize-html";
-import type { Content, JSONContent } from "@plane/types";
+import type { Content, JSONContent } from "@nerve/types";
 
 /**
  * @description Adds space between camelCase words
@@ -147,7 +147,7 @@ export const stripAndTruncateHTML = (html: string, length: number = 55) => trunc
  * @description Returns true if email is valid, false otherwise
  * @param {string} email string to check if it is a valid email
  * @example checkEmailValidity("hello world") => false
- * @example checkEmailValidity("example@plane.so") => true
+ * @example checkEmailValidity("user@example.com") => true
  */
 export const checkEmailValidity = (email: string): boolean => {
   if (!email) return false;

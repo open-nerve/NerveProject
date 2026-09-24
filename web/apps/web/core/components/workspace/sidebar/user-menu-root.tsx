@@ -7,12 +7,12 @@
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { LogOutOutline, SettingsOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { CustomMenu } from "@plane/ui";
-import { getFileURL } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { CustomMenu } from "@nerve/ui";
+import { getFileURL } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";

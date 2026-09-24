@@ -7,12 +7,12 @@
 import { lazy, Suspense } from "react";
 import { useTheme } from "next-themes";
 import { SWRConfig } from "swr";
-// Plane Imports
-import { WEB_SWR_CONFIG } from "@plane/constants";
-import { TranslationProvider } from "@plane/i18n";
-import { Toast } from "@plane/propel/toast";
+// Nerve Imports
+import { WEB_SWR_CONFIG } from "@nerve/constants";
+import { TranslationProvider } from "@nerve/i18n";
+import { Toast } from "@nerve/propel/toast";
 // helpers
-import { resolveGeneralTheme } from "@plane/utils";
+import { resolveGeneralTheme } from "@nerve/utils";
 // mobx store provider
 import { StoreProvider } from "@/lib/store-context";
 

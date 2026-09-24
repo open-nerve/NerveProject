@@ -9,12 +9,12 @@ import { Link } from "react-router";
 import { Controller, useForm } from "react-hook-form";
 import { CircleMinus } from "lucide-react";
 import { Disclosure } from "@headlessui/react";
-// plane imports
-import { ROLE, EUserPermissions } from "@plane/constants";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { EUserProjectRoles, IUser, IWorkspaceMember, TProjectMembership } from "@plane/types";
-import { CustomMenu, CustomSelect } from "@plane/ui";
-import { getFileURL } from "@plane/utils";
+// nerve imports
+import { ROLE, EUserPermissions } from "@nerve/constants";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { EUserProjectRoles, IUser, IWorkspaceMember, TProjectMembership } from "@nerve/types";
+import { CustomMenu, CustomSelect } from "@nerve/ui";
+import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";

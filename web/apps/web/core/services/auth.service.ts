@@ -5,7 +5,7 @@
  */
 
 // types
-import type { ICsrfTokenData } from "@plane/types";
+import type { ICsrfTokenData } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

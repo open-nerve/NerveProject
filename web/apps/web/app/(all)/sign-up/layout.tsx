@@ -5,10 +5,11 @@
  */
 
 import { Outlet } from "react-router";
+import { SITE_NAME } from "@nerve/constants";
 import type { Route } from "./+types/layout";
 
 export const meta: Route.MetaFunction = () => [
-  { title: "Sign up - Plane" },
+  { title: `Sign up - ${SITE_NAME}` },
   { name: "robots", content: "index, nofollow" },
 ];
 

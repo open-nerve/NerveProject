@@ -7,13 +7,13 @@
 import { observer } from "mobx-react";
 import { ChevronRightOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-// plane imports
+// nerve imports
 import {
   WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,
   WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS,
-} from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { cn } from "@plane/utils";
+} from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { cn } from "@nerve/utils";
 // hooks
 import useLocalStorage from "@/hooks/use-local-storage";
 import { SidebarItemBase } from "./sidebar-item";

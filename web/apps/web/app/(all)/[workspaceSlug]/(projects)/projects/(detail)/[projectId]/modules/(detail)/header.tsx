@@ -8,19 +8,19 @@ import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
 // icons
 import { ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import {
   EIssueFilterType,
   ISSUE_DISPLAY_FILTERS_BY_PAGE,
   EUserPermissions,
   EUserPermissionsLevel,
-} from "@plane/constants";
-import { Button } from "@plane/propel/button";
+} from "@nerve/constants";
+import { Button } from "@nerve/propel/button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
-import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@plane/ui";
-import { cn } from "@plane/utils";
+import type { ICustomSearchSelectOption, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
+import { Breadcrumbs, Header, BreadcrumbNavigationSearchDropdown } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { SwitcherLabel } from "@/components/common/switcher-label";
@@ -42,9 +42,9 @@ import { useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 import useLocalStorage from "@/hooks/use-local-storage";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// plane web imports
+// components
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 type TProps = {
   workspaceSlug: string;

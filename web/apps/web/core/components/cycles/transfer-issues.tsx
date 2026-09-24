@@ -7,7 +7,7 @@
 import React from "react";
 import { TransferWorkItemOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 // ui
-import { Button } from "@plane/propel/button";
+import { Button } from "@nerve/propel/button";
 
 type Props = {
   handleClick: () => void;

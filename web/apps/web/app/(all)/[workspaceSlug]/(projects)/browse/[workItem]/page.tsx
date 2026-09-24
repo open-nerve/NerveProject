@@ -8,10 +8,10 @@ import { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 import useSWR from "swr";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import type { TIssue } from "@plane/types";
-import { Loader } from "@plane/ui";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import type { TIssue } from "@nerve/types";
+import { Loader } from "@nerve/ui";
 // assets
 import emptyIssueDark from "@/app/assets/empty-state/search/issues-dark.webp?url";
 import emptyIssueLight from "@/app/assets/empty-state/search/issues-light.webp?url";
@@ -25,7 +25,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useNavigate } from "react-router";
 // layouts
 import { ProjectAuthWrapper } from "@/layouts/auth-layout/project-wrapper";
-// plane web imports
+// components
 import { WorkItemDetailRoot } from "@/components/browse/workItem-detail";
 
 import type { Route } from "./+types/page";

@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@plane/types";
-import { EInboxIssueSource } from "@plane/types";
+// nerve imports
+import type { TInboxIssue, TIssue, TInboxIssueWithPagination } from "@nerve/types";
+import { EInboxIssueSource } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

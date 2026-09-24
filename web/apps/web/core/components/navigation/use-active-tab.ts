@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo } from "react";
 import { matchPath } from "react-router";
-import type { TIssue } from "@plane/types";
+import type { TIssue } from "@nerve/types";
 import type { TNavigationItem } from "@/components/navigation/tab-navigation-root";
 
 type UseActiveTabProps = {

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TTimezones } from "@plane/types";
+import type { TTimezones } from "@nerve/types";
 // helpers
 // api services
 import { APIService } from "@/services/api.service";

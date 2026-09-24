@@ -5,7 +5,7 @@
  */
 
 // types
-import type { IProjectBulkAddFormData, TProjectMembership } from "@plane/types";
+import type { IProjectBulkAddFormData, TProjectMembership } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 

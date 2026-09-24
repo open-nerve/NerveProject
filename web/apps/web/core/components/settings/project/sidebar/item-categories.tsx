@@ -6,14 +6,14 @@
 
 import { observer } from "mobx-react";
 import { matchPath, useParams, useLocation } from "react-router";
-// plane imports
+// nerve imports
 import {
   EUserPermissionsLevel,
   GROUPED_PROJECT_SETTINGS,
   PROJECT_SETTINGS_CATEGORIES,
   PROJECT_SETTINGS_CATEGORY_LABELS,
-} from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+} from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { SettingsSidebarItem } from "@/components/settings/sidebar/item";
 // hooks

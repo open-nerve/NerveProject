@@ -10,16 +10,16 @@ import { useParams } from "react-router";
 import { usePopper } from "react-popper";
 import { ChevronDownOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-// plane imports
-import { EUserPermissionsLevel, getRandomLabelColor } from "@plane/constants";
-import { useOutsideClickDetector } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { EUserPermissionsLevel, getRandomLabelColor } from "@nerve/constants";
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 // types
-import type { IIssueLabel } from "@plane/types";
-import { EUserProjectRoles } from "@plane/types";
+import type { IIssueLabel } from "@nerve/types";
+import { EUserProjectRoles } from "@nerve/types";
 // components
-import { ComboDropDown } from "@plane/ui";
-import { sortBySelectedFirst } from "@plane/utils";
+import { ComboDropDown } from "@nerve/ui";
+import { sortBySelectedFirst } from "@nerve/utils";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 import { useUserPermissions } from "@/hooks/store/user";

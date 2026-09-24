@@ -11,9 +11,9 @@ import { common, createLowlight } from "lowlight";
 import { CopyOutline, TickOutline } from "@makeplane/propel/icons";
 import { useState } from "react";
 // ui
-import { Tooltip } from "@plane/propel/tooltip";
-// plane utils
-import { cn } from "@plane/utils";
+import { Tooltip } from "@nerve/propel/tooltip";
+// nerve utils
+import { cn } from "@nerve/utils";
 // types
 import type { TCodeBlockAttributes } from "./types";
 import { ECodeBlockAttributeNames } from "./types";

@@ -10,16 +10,16 @@ import { useParams, Link } from "react-router";
 import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makeplane/propel/icons";
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { Button, getButtonStyling } from "@plane/propel/button";
-import { PlaneLogo } from "@plane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { Button, getButtonStyling } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // assets
 import WorkSpaceNotAvailable from "@/app/assets/workspace/workspace-not-available.png?url";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
+import { NerveLogo } from "@/components/common/nerve-logo";
 // constants
 import {
   WORKSPACE_MEMBERS,
@@ -29,7 +29,7 @@ import {
   WORKSPACE_FAVORITE,
   WORKSPACE_STATES,
   WORKSPACE_PROJECT_NAVIGATION_PREFERENCES,
-} from "@plane/constants";
+} from "@nerve/constants";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
 import { useMember } from "@/hooks/store/use-member";
@@ -142,7 +142,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
         <div className="relative container mx-auto flex h-full w-full flex-col overflow-hidden overflow-y-auto px-5 py-14 md:px-0">
           <div className="relative flex flex-shrink-0 items-center justify-between gap-4">
             <div className="z-10 flex-shrink-0 bg-surface-2 py-4">
-              <PlaneLogo className="h-9 w-auto text-primary" />
+              <NerveLogo className="h-9 w-auto" />
             </div>
             <div className="relative flex items-center gap-2">
               <div className="text-13 font-medium">{currentUser?.email}</div>
@@ -158,7 +158,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
           </div>
           <div className="relative flex h-full w-full flex-grow flex-col items-center justify-center space-y-3">
             <div className="relative flex-shrink-0">
-              <img src={WorkSpaceNotAvailable} className="h-[220px] object-contain object-center" alt="Plane logo" />
+              <img src={WorkSpaceNotAvailable} className="h-[220px] object-contain object-center" alt="" />
             </div>
             <h3 className="text-center text-16 font-semibold">Workspace not found</h3>
             <p className="text-center text-13 text-secondary">

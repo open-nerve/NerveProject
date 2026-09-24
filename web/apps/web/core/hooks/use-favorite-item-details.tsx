@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
-import type { IFavorite } from "@plane/types";
+// nerve imports
+import type { IFavorite } from "@nerve/types";
 // components
 import {
   FavoriteItemIcon,

@@ -10,9 +10,9 @@ import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import type { EIssuesStoreType } from "@plane/types";
-import { EIssueLayoutTypes } from "@plane/types";
+import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { EIssuesStoreType } from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 //hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";

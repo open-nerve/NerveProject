@@ -7,12 +7,13 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { HelpOutline, PagesOutline } from "@makeplane/propel/icons";
-import { useTranslation } from "@plane/i18n";
+import { REPOSITORY_URL } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { CustomMenu } from "@plane/ui";
+import { CustomMenu } from "@nerve/ui";
 // components
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
-import { PlaneVersionNumber } from "@/components/global/version-number";
+import { VersionNumber } from "@/components/global/version-number";
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";
 
@@ -41,7 +42,7 @@ export const HelpMenuRoot = observer(function HelpMenuRoot() {
       maxHeight="lg"
       closeOnSelect
     >
-      <CustomMenu.MenuItem onClick={() => window.open("https://go.plane.so/p-docs", "_blank")}>
+      <CustomMenu.MenuItem onClick={() => window.open(REPOSITORY_URL, "_blank", "noopener,noreferrer")}>
         <div className="flex items-center gap-x-2 rounded-sm text-11">
           <PagesOutline className="h-3.5 w-3.5 text-secondary" height={14} width={14} />
           <span className="text-11">{t("documentation")}</span>
@@ -57,13 +58,8 @@ export const HelpMenuRoot = observer(function HelpMenuRoot() {
           <span className="text-11">{t("keyboard_shortcuts")}</span>
         </button>
       </CustomMenu.MenuItem>
-      <CustomMenu.MenuItem onClick={() => window.open("https://forum.plane.so", "_blank", "noopener,noreferrer")}>
-        <div className="flex items-center gap-x-2 rounded-sm text-11">
-          <span className="text-11">Forum</span>
-        </div>
-      </CustomMenu.MenuItem>
       <div className="mt-1 border-t border-subtle px-1 pt-2 text-11 text-secondary">
-        <PlaneVersionNumber />
+        <VersionNumber />
       </div>
     </CustomMenu>
   );

@@ -7,10 +7,10 @@
 import { observer } from "mobx-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTheme } from "next-themes";
-// plane imports
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EUserProjectRoles, EInboxIssueCurrentTab } from "@plane/types";
+// nerve imports
+import { EUserPermissionsLevel, SITE_NAME } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EUserProjectRoles, EInboxIssueCurrentTab } from "@nerve/types";
 // assets
 import darkIntakeAsset from "@/app/assets/empty-state/disabled-feature/intake-dark.webp?url";
 import lightIntakeAsset from "@/app/assets/empty-state/disabled-feature/intake-light.webp?url";
@@ -32,7 +32,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
   const inboxIssueId = searchParams.get("inboxIssueId");
   // theme hook
   const { resolvedTheme } = useTheme();
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // hooks
   const { currentProjectDetails } = useProject();
@@ -61,13 +61,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
     );
 
   // derived values
-  const pageTitle = currentProjectDetails?.name
-    ? t("inbox_issue.page_label", {
-        workspace: currentProjectDetails?.name,
-      })
-    : t("inbox_issue.page_label", {
-        workspace: "Plane",
-      });
+  const pageTitle = t("inbox_issue.page_label", { workspace: currentProjectDetails?.name || SITE_NAME });
 
   const currentNavigationTab = navigationTab
     ? navigationTab === "open"

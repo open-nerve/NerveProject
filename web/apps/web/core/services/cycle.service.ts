@@ -5,7 +5,7 @@
  */
 
 // services
-import type { CycleDateCheckData, ICycle, TIssuesResponse, TCycleDistribution, TProgressSnapshot } from "@plane/types";
+import type { CycleDateCheckData, ICycle, TIssuesResponse, TCycleDistribution, TProgressSnapshot } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 
 export class CycleService extends APIService {

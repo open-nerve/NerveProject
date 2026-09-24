@@ -21,13 +21,13 @@ import {
   UserMinusOutline,
   UserPlusOutline,
 } from "@makeplane/propel/icons";
-// plane imports
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { setToast, TOAST_TYPE } from "@plane/propel/toast";
-import type { ICycle, IIssueLabel, IModule, TIssue, TIssuePriorities } from "@plane/types";
-import { EUserPermissions } from "@plane/types";
-import { copyTextToClipboard } from "@plane/utils";
+// nerve imports
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
+import type { ICycle, IIssueLabel, IModule, TIssue, TIssuePriorities } from "@nerve/types";
+import { EUserPermissions } from "@nerve/types";
+import { copyTextToClipboard } from "@nerve/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks

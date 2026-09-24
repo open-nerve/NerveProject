@@ -6,7 +6,7 @@
 
 import type { MutableRefObject } from "react";
 // components
-import type { TIssue, IIssueDisplayProperties, TIssueMap, TGroupedIssues } from "@plane/types";
+import type { TIssue, IIssueDisplayProperties, TIssueMap, TGroupedIssues } from "@nerve/types";
 // types
 import { IssueBlockRoot } from "./block-root";
 import type { TRenderQuickActions } from "./list-view-types";

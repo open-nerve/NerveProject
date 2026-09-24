@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueActivity } from "@plane/types";
+import type { TIssueActivity } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 // types
 // helper

@@ -5,8 +5,8 @@
  */
 
 // types
-import type { ICycle, IModule, IProjectView, IWorkspaceView } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
+import type { ICycle, IModule, IProjectView, IWorkspaceView } from "@nerve/types";
+import type { TContextMenuItem } from "@nerve/ui";
 // hooks
 import { useQuickActionsFactory } from "@/components/common/quick-actions-factory";
 

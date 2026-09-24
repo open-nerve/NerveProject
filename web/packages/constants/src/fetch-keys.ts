@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { EUserPermissions } from "@plane/types";
+import type { EUserPermissions } from "@nerve/types";
 
 const paramsToKey = (params: any) => {
   const {

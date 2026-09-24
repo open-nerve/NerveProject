@@ -7,15 +7,15 @@
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
-// Plane Imports
+// Nerve Imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IWorkspace } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkspace } from "@nerve/types";
 
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUserSettings } from "@/hooks/store/user";

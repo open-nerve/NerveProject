@@ -7,13 +7,13 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { FilterOutline } from "@makeplane/propel/icons";
-// plane imports
-import type { TButtonSize, TButtonVariant } from "@plane/propel/button";
-import { getButtonStyling } from "@plane/propel/button";
-import type { IFilterInstance } from "@plane/shared-state";
-import type { TExternalFilter, TFilterProperty, TSupportedOperators } from "@plane/types";
-import { LOGICAL_OPERATOR } from "@plane/types";
-import { cn } from "@plane/utils";
+// nerve imports
+import type { TButtonSize, TButtonVariant } from "@nerve/propel/button";
+import { getButtonStyling } from "@nerve/propel/button";
+import type { IFilterInstance } from "@nerve/shared-state";
+import type { TExternalFilter, TFilterProperty, TSupportedOperators } from "@nerve/types";
+import { LOGICAL_OPERATOR } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // local imports
 import { AddFilterDropdown } from "./dropdown";
 

@@ -8,17 +8,17 @@ import React from "react";
 import { observer } from "mobx-react";
 import type { Control, FormState } from "react-hook-form";
 import { Controller } from "react-hook-form";
-// plane imports
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { ETabIndices } from "@plane/constants";
+import { ETabIndices } from "@nerve/constants";
 // types
-import { useTranslation } from "@plane/i18n";
-import type { TIssue } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import type { TIssue } from "@nerve/types";
 // ui
 
 // helpers
-import { getTabIndex } from "@plane/utils";
+import { getTabIndex } from "@nerve/utils";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 

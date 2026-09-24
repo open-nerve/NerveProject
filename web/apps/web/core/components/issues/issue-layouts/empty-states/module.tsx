@@ -7,13 +7,13 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { ISearchIssueResponse } from "@plane/types";
-import { EIssuesStoreType, EUserProjectRoles } from "@plane/types";
+// nerve imports
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { ISearchIssueResponse } from "@nerve/types";
+import { EIssuesStoreType, EUserProjectRoles } from "@nerve/types";
 // components
 import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 // hooks
@@ -27,7 +27,7 @@ export const ModuleEmptyState = observer(function ModuleEmptyState() {
   const { workspaceSlug, projectId, moduleId } = useParams();
   // states
   const [moduleIssuesListModal, setModuleIssuesListModal] = useState(false);
-  // plane hooks
+  // nerve hooks
   const { t } = useTranslation();
   // store hooks
   const { issues } = useIssues(EIssuesStoreType.MODULE);

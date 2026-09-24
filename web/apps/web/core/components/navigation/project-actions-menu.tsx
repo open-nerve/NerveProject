@@ -13,9 +13,9 @@ import {
   MoreHorizontalOutline,
   SettingsOutline,
 } from "@makeplane/propel/icons";
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import { CustomMenu } from "@plane/ui";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { CustomMenu } from "@nerve/ui";
 
 type Props = {
   workspaceSlug: string;

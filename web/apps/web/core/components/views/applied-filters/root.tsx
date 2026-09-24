@@ -4,12 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-// plane imports
-import type { EViewAccess, TViewFilterProps } from "@plane/types";
-import { replaceUnderscoreIfSnakeCase } from "@plane/utils";
+// nerve imports
+import type { EViewAccess, TViewFilterProps } from "@nerve/types";
+import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 // components
 import { AppliedDateFilters } from "@/components/common/applied-filters/date";
 import { AppliedMembersFilters } from "@/components/common/applied-filters/members";

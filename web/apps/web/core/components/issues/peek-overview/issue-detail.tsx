@@ -7,10 +7,10 @@
 
 import { useEffect } from "react";
 import { observer } from "mobx-react";
-// plane imports
-import type { EditorRefApi } from "@plane/editor";
-import { EFileAssetType } from "@plane/types";
-import type { TNameDescriptionLoader } from "@plane/types";
+// nerve imports
+import type { EditorRefApi } from "@nerve/editor";
+import { EFileAssetType } from "@nerve/types";
+import type { TNameDescriptionLoader } from "@nerve/types";
 // components
 import { DescriptionVersionsRoot } from "@/components/core/description-versions";
 import { DescriptionInput } from "@/components/editor/rich-text/description-input";
@@ -20,7 +20,6 @@ import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";
 import useReloadConfirmations from "@/hooks/use-reload-confirmation";
-// plane web hooks
 // services
 import { WorkItemVersionService } from "@/services/issue";
 // local components

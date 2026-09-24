@@ -1,5 +1,5 @@
 {
-  "name": "@plane/propel",
+  "name": "@nerve/propel",
   "version": "1.4.2",
   "private": true,
   "license": "AGPL-3.0",
@@ -53,8 +53,8 @@
   "dependencies": {
     "@base-ui-components/react": "catalog:",
     "@makeplane/propel": "catalog:",
-    "@plane/constants": "workspace:*",
-    "@plane/types": "workspace:*",
+    "@nerve/constants": "workspace:*",
+    "@nerve/types": "workspace:*",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "cmdk": "catalog:",
@@ -69,7 +69,7 @@
     "use-font-face-observer": "catalog:"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "tsdown": "catalog:",

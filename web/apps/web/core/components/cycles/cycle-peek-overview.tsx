@@ -8,7 +8,7 @@ import React, { useEffect } from "react";
 import { observer } from "mobx-react";
 import { useNavigate, useLocation, useSearchParams } from "react-router";
 // hooks
-import { generateQueryParams } from "@plane/utils";
+import { generateQueryParams } from "@nerve/utils";
 import { useCycle } from "@/hooks/store/use-cycle";
 // components
 import { CycleDetailsSidebar } from "./progress-sidebar";

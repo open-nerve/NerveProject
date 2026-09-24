@@ -8,10 +8,10 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // ui
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { EIssuesStoreType } from "@plane/types";
-import { ContextMenu, CustomMenu } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { EIssuesStoreType } from "@nerve/types";
+import { ContextMenu, CustomMenu } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";

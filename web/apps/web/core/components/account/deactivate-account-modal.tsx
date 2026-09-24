@@ -5,12 +5,12 @@
  */
 
 import { useState } from "react";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { Button } from "@plane/propel/button";
+import { Button } from "@nerve/propel/button";
 import { DeleteOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useUser } from "@/hooks/store/user";
 import { useNavigate } from "react-router";

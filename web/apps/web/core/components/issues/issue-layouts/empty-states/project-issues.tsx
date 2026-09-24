@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// plane imports
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import { EIssuesStoreType, EUserProjectRoles } from "@plane/types";
+// nerve imports
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import { EIssuesStoreType, EUserProjectRoles } from "@nerve/types";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useUserPermissions } from "@/hooks/store/user";
@@ -19,7 +19,7 @@ import { useWorkItemFilterInstance } from "@/hooks/store/work-item-filters/use-w
 export const ProjectEmptyState = observer(function ProjectEmptyState() {
   // router
   const { projectId } = useParams();
-  // plane imports
+  // nerve imports
   const { t } = useTranslation();
   // store hooks
   const { toggleCreateIssueModal } = useCommandPalette();

@@ -7,12 +7,12 @@
 import { useMemo } from "react";
 import uniq from "lodash-es/uniq";
 import { observer } from "mobx-react";
-// plane package imports
-import type { TActivityFilters } from "@plane/constants";
-import { E_SORT_ORDER, defaultActivityFilters } from "@plane/constants";
-import { useLocalStorage } from "@plane/hooks";
+// nerve package imports
+import type { TActivityFilters } from "@nerve/constants";
+import { E_SORT_ORDER, defaultActivityFilters } from "@nerve/constants";
+import { useLocalStorage } from "@nerve/hooks";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // components
 import { CommentCreate } from "@/components/comments/comment-create";
 // hooks

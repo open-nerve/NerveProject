@@ -4,14 +4,14 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type {
   TFilterConditionPayload,
   TFilterExpression,
   TFilterGroupNode,
   TFilterProperty,
   TFilterValue,
-} from "@plane/types";
+} from "@nerve/types";
 // local imports
 import { createAndGroupNode } from "../../factories/nodes/core";
 import { getGroupChildren } from "../../types";

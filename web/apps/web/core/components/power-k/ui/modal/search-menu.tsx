@@ -6,10 +6,10 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "react-router";
-// plane imports
-import { WORKSPACE_DEFAULT_SEARCH_RESULT } from "@plane/constants";
-import type { IWorkspaceSearchResults } from "@plane/types";
-import { cn } from "@plane/utils";
+// nerve imports
+import { WORKSPACE_DEFAULT_SEARCH_RESULT } from "@nerve/constants";
+import type { IWorkspaceSearchResults } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";
 import useDebounce from "@/hooks/use-debounce";

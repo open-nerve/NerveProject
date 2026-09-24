@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-// plane types
-import type { TSearchEntities } from "@plane/types";
+// nerve types
+import type { TSearchEntities } from "@nerve/types";
 
 export type TMentionSuggestion = {
   entity_identifier: string;

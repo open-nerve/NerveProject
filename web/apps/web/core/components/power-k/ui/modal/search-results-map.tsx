@@ -5,14 +5,14 @@
  */
 
 import { CyclesOutline, GridOutline, ModuleOutline, ProjectsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-// plane imports
+// nerve imports
 import type {
   IWorkspaceDefaultSearchResult,
   IWorkspaceIssueSearchResult,
   IWorkspaceProjectSearchResult,
   IWorkspaceSearchResult,
-} from "@plane/types";
-import { generateWorkItemLink } from "@plane/utils";
+} from "@nerve/types";
+import { generateWorkItemLink } from "@nerve/utils";
 // components
 import type { TPowerKSearchResultsKeys } from "@/components/power-k/core/types";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";

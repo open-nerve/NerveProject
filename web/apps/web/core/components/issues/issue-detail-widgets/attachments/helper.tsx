@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from "react";
-import { setPromiseToast, TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { setPromiseToast, TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types

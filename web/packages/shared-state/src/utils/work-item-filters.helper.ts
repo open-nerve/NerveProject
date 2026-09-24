@@ -4,14 +4,14 @@
  * See the LICENSE file for details.
  */
 
-// plane imports
+// nerve imports
 import type {
   TBuildFilterExpressionParams,
   TFilterConditionForBuild,
   TFilterValue,
   TWorkItemFilterExpression,
   TWorkItemFilterProperty,
-} from "@plane/types";
+} from "@nerve/types";
 // local imports
 import { workItemFiltersAdapter } from "../store/work-item-filters/adapter";
 import { buildTempFilterExpressionFromConditions } from "./rich-filter.helper";

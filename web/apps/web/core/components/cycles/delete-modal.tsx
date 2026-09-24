@@ -7,12 +7,12 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // types
-import { PROJECT_ERROR_MESSAGES } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { ICycle } from "@plane/types";
+import { PROJECT_ERROR_MESSAGES } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { ICycle } from "@nerve/types";
 // ui
-import { AlertModalCore } from "@plane/ui";
+import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useParams, useNavigate, useSearchParams } from "react-router";

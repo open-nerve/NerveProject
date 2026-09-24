@@ -5,10 +5,10 @@
  */
 
 import { useNavigate } from "react-router";
-// plane types
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import type { TActivityEntityData, TProjectEntityData } from "@plane/types";
-import { calculateTimeAgo } from "@plane/utils";
+// nerve types
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import type { TActivityEntityData, TProjectEntityData } from "@nerve/types";
+import { calculateTimeAgo } from "@nerve/utils";
 // components
 import { ListItem } from "@/components/core/list";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";

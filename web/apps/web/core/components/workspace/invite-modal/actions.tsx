@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 
-// plane imports
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
 import { AddOutline } from "@makeplane/propel/icons";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 
 type TInvitationModalActionsProps = {
   isInviteDisabled?: boolean;

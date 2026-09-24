@@ -7,11 +7,11 @@
 import type React from "react";
 import { observer } from "mobx-react";
 // ui
-import type { ISvgIcons } from "@plane/propel/icons";
+import type { ISvgIcons } from "@nerve/propel/icons";
 import { GridOutline, ListOutline } from "@makeplane/propel/icons";
-// plane package imports
-import type { TCycleLayoutOptions } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
+// nerve package imports
+import type { TCycleLayoutOptions } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
 // hooks
 import { useCycleFilter } from "@/hooks/store/use-cycle-filter";
 import { useProject } from "@/hooks/store/use-project";

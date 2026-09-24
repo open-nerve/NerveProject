@@ -11,13 +11,13 @@ import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import { ArrowNarrowRightOutline, CalendarOutline, CloseOutline, DueDateOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-// plane imports
-import { useTranslation } from "@plane/i18n";
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 // ui
-import type { DateRange, Matcher } from "@plane/propel/calendar";
-import { Calendar } from "@plane/propel/calendar";
-import { ComboDropDown } from "@plane/ui";
-import { cn, renderFormattedDate } from "@plane/utils";
+import type { DateRange, Matcher } from "@nerve/propel/calendar";
+import { Calendar } from "@nerve/propel/calendar";
+import { ComboDropDown } from "@nerve/ui";
+import { cn, renderFormattedDate } from "@nerve/utils";
 // helpers
 // hooks
 import { useUserProfile } from "@/hooks/store/user";

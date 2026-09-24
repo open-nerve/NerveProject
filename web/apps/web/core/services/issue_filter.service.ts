@@ -5,7 +5,7 @@
  */
 
 // services
-import type { IIssueFiltersResponse } from "@plane/types";
+import type { IIssueFiltersResponse } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 // types
 
