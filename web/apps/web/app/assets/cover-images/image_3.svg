@@ -1,0 +1,22 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 3: concentric discs in sunset. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#3B0A1E"/>
+  <circle cx="800" cy="1125" r="1831.7" fill="#3B0A1E"/>
+  <circle cx="800" cy="1125" r="1727.6" fill="#530C25"/>
+  <circle cx="800" cy="1125" r="1603.3" fill="#6C0E2B"/>
+  <circle cx="800" cy="1125" r="1466.2" fill="#841032"/>
+  <circle cx="800" cy="1125" r="1351" fill="#9C1238"/>
+  <circle cx="800" cy="1125" r="1212.7" fill="#AD143C"/>
+  <circle cx="800" cy="1125" r="1104.6" fill="#BD1740"/>
+  <circle cx="800" cy="1125" r="979.5" fill="#CD1A44"/>
+  <circle cx="800" cy="1125" r="829" fill="#DD1C47"/>
+  <circle cx="800" cy="1125" r="709.6" fill="#E63346"/>
+  <circle cx="800" cy="1125" r="603.4" fill="#EC4F43"/>
+  <circle cx="800" cy="1125" r="461.5" fill="#F26C40"/>
+  <circle cx="800" cy="1125" r="329.7" fill="#F9883D"/>
+  <circle cx="800" cy="1125" r="229.2" fill="#FB9F48"/>
+</svg>

@@ -120,6 +120,7 @@
 | `tailwind-config`、`typescript-config` 的 `package.json`；仓库根目录的 `package.json` | 两个包加 `check:format`、`fix:format`（oxlint 在它们里面没有可读的文件）；根目录的格式检查加上 `package.json`、`pnpm-workspace.yaml`、`turbo.json`、`knip.jsonc`、`.oxlintrc.json`、`.oxfmtrc.json`；`typescript-config` 删掉只在打包发布时起作用、又只列了 4 个配置中 3 个的 `files` | P1 评审第 6 节 (b) |
 | en、zh-CN 的文案 | 删掉没有代码引用的 500 个键（严格方法下的 482 个，加上 18 个只因名字与无关的字面量相同而算作有引用的键），以及它们留下的 149 个空对象；每种语言 1577 → 1077 个键；主题选项的标签只剩一个来源（`i18n_label` 是键），Power K 的主题菜单在中文界面下不再显示英文 | M1 设计 6、9 节 |
 | `app/assets/` | 删掉 133 张没有被导入的图片（6.1 MiB）：126 张空状态插图（画的是 Plane 的界面）、认证页的三张、项目 emoji、命令键图形和两张图库人像 | M1 设计 9 节；P5 评审 |
+| `app/assets/cover-images/`、`helpers/cover-image.helper.ts` | 29 张预设封面从来源和许可查不到的照片换成 Nerve 自己画的抽象图（色块、波纹、圆盘、条带、切面、点阵、等高线，中到深色，画面中部有细节：封面会被裁成宽条，上面写白字）。SVG 是源文件，带 Nerve 的版权声明；应用导入由它渲染的 WebP（1920 × 1080，质量 0.9），因为项目或个人资料选用预设封面时应用会上传一份副本，上传只接受 JPEG、PNG、WebP。同目录的 `SOURCES.md` 写明做法和每张画的是什么。旧的 29 张 JPEG 删除，封面辅助函数导入新文件，上传的兜底文件名随格式改为 `image.webp` | 收尾 spec 第 9 节第 1 条的裁定：来源和许可查不到的图片不随 Nerve 发布，功能保留 |
 
 ---
 

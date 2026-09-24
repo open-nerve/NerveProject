@@ -1,0 +1,22 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 10: concentric discs in emerald. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#022C22"/>
+  <circle cx="800" cy="1125" r="1849.1" fill="#022C22"/>
+  <circle cx="800" cy="1125" r="1726.6" fill="#03382B"/>
+  <circle cx="800" cy="1125" r="1585.4" fill="#044533"/>
+  <circle cx="800" cy="1125" r="1456.5" fill="#05513C"/>
+  <circle cx="800" cy="1125" r="1334.7" fill="#065E45"/>
+  <circle cx="800" cy="1125" r="1202.1" fill="#066B4E"/>
+  <circle cx="800" cy="1125" r="1103.2" fill="#067856"/>
+  <circle cx="800" cy="1125" r="965.7" fill="#05865F"/>
+  <circle cx="800" cy="1125" r="843.5" fill="#059367"/>
+  <circle cx="800" cy="1125" r="711.4" fill="#0EA172"/>
+  <circle cx="800" cy="1125" r="589" fill="#19B07E"/>
+  <circle cx="800" cy="1125" r="452.3" fill="#25BF89"/>
+  <circle cx="800" cy="1125" r="343.9" fill="#30CE95"/>
+  <circle cx="800" cy="1125" r="218.6" fill="#46D8A2"/>
+</svg>

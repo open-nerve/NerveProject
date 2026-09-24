@@ -1,0 +1,36 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 18: stepped diagonal bands in cobalt. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#172554"/>
+  <g transform="rotate(-49.4 800 450)">
+  <rect x="-1300" y="-1400" width="199.1" height="3700" fill="#4D8CF0"/>
+  <rect x="-1101.9" y="-1400" width="127.4" height="3700" fill="#5799F5"/>
+  <rect x="-975.5" y="-1400" width="159.8" height="3700" fill="#5EA2F9"/>
+  <rect x="-816.6" y="-1400" width="195.9" height="3700" fill="#6DA1F0"/>
+  <rect x="-621.7" y="-1400" width="147.3" height="3700" fill="#7A9CE7"/>
+  <rect x="-475.5" y="-1400" width="138.6" height="3700" fill="#69A2F4"/>
+  <rect x="-337.9" y="-1400" width="156.8" height="3700" fill="#5DA1F8"/>
+  <rect x="-182.1" y="-1400" width="119.1" height="3700" fill="#5596F4"/>
+  <rect x="-64" y="-1400" width="168.4" height="3700" fill="#4F8FF1"/>
+  <rect x="103.4" y="-1400" width="117" height="3700" fill="#4683ED"/>
+  <rect x="219.3" y="-1400" width="149.5" height="3700" fill="#407CEA"/>
+  <rect x="367.9" y="-1400" width="112.9" height="3700" fill="#3972E6"/>
+  <rect x="479.8" y="-1400" width="217.8" height="3700" fill="#336AE3"/>
+  <rect x="696.7" y="-1400" width="184.2" height="3700" fill="#285CDE"/>
+  <rect x="879.9" y="-1400" width="176.6" height="3700" fill="#1F50D9"/>
+  <rect x="1055.6" y="-1400" width="196.9" height="3700" fill="#1C49C9"/>
+  <rect x="1251.4" y="-1400" width="161.2" height="3700" fill="#1B43B6"/>
+  <rect x="1411.6" y="-1400" width="192.2" height="3700" fill="#1B3EA5"/>
+  <rect x="1602.8" y="-1400" width="195" height="3700" fill="#1A3892"/>
+  <rect x="1796.8" y="-1400" width="197.7" height="3700" fill="#19327F"/>
+  <rect x="1993.5" y="-1400" width="201" height="3700" fill="#182E72"/>
+  <rect x="2193.4" y="-1400" width="135.3" height="3700" fill="#193586"/>
+  <rect x="2327.7" y="-1400" width="181.4" height="3700" fill="#1A3993"/>
+  <rect x="2508.1" y="-1400" width="162.7" height="3700" fill="#1B3EA6"/>
+  <rect x="2669.8" y="-1400" width="170.2" height="3700" fill="#1B43B6"/>
+  <rect x="2839" y="-1400" width="62" height="3700" fill="#1C49C7"/>
+  </g>
+</svg>

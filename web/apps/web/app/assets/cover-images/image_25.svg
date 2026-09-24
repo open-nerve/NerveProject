@@ -1,0 +1,22 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 25: concentric discs in ocean. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#082F49"/>
+  <circle cx="480" cy="855" r="1842.3" fill="#082F49"/>
+  <circle cx="480" cy="855" r="1711.3" fill="#083958"/>
+  <circle cx="480" cy="855" r="1594.3" fill="#084366"/>
+  <circle cx="480" cy="855" r="1452.1" fill="#074E75"/>
+  <circle cx="480" cy="855" r="1334.1" fill="#075883"/>
+  <circle cx="480" cy="855" r="1215.2" fill="#066293"/>
+  <circle cx="480" cy="855" r="1079.3" fill="#056DA3"/>
+  <circle cx="480" cy="855" r="963.1" fill="#0477B3"/>
+  <circle cx="480" cy="855" r="836.6" fill="#0282C3"/>
+  <circle cx="480" cy="855" r="726.1" fill="#0C8FD0"/>
+  <circle cx="480" cy="855" r="579.7" fill="#199CDC"/>
+  <circle cx="480" cy="855" r="479.8" fill="#26AAE8"/>
+  <circle cx="480" cy="855" r="327.6" fill="#33B8F4"/>
+  <circle cx="480" cy="855" r="206.7" fill="#4CC3F9"/>
+</svg>

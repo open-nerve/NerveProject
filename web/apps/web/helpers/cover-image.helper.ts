@@ -7,35 +7,35 @@
 import type { EFileAssetType } from "@nerve/types";
 import { getFileURL } from "@nerve/utils";
 
-import CoverImage1 from "@/app/assets/cover-images/image_1.jpg?url";
-import CoverImage10 from "@/app/assets/cover-images/image_10.jpg?url";
-import CoverImage11 from "@/app/assets/cover-images/image_11.jpg?url";
-import CoverImage12 from "@/app/assets/cover-images/image_12.jpg?url";
-import CoverImage13 from "@/app/assets/cover-images/image_13.jpg?url";
-import CoverImage14 from "@/app/assets/cover-images/image_14.jpg?url";
-import CoverImage15 from "@/app/assets/cover-images/image_15.jpg?url";
-import CoverImage16 from "@/app/assets/cover-images/image_16.jpg?url";
-import CoverImage17 from "@/app/assets/cover-images/image_17.jpg?url";
-import CoverImage18 from "@/app/assets/cover-images/image_18.jpg?url";
-import CoverImage19 from "@/app/assets/cover-images/image_19.jpg?url";
-import CoverImage2 from "@/app/assets/cover-images/image_2.jpg?url";
-import CoverImage20 from "@/app/assets/cover-images/image_20.jpg?url";
-import CoverImage21 from "@/app/assets/cover-images/image_21.jpg?url";
-import CoverImage22 from "@/app/assets/cover-images/image_22.jpg?url";
-import CoverImage23 from "@/app/assets/cover-images/image_23.jpg?url";
-import CoverImage24 from "@/app/assets/cover-images/image_24.jpg?url";
-import CoverImage25 from "@/app/assets/cover-images/image_25.jpg?url";
-import CoverImage26 from "@/app/assets/cover-images/image_26.jpg?url";
-import CoverImage27 from "@/app/assets/cover-images/image_27.jpg?url";
-import CoverImage28 from "@/app/assets/cover-images/image_28.jpg?url";
-import CoverImage29 from "@/app/assets/cover-images/image_29.jpg?url";
-import CoverImage3 from "@/app/assets/cover-images/image_3.jpg?url";
-import CoverImage4 from "@/app/assets/cover-images/image_4.jpg?url";
-import CoverImage5 from "@/app/assets/cover-images/image_5.jpg?url";
-import CoverImage6 from "@/app/assets/cover-images/image_6.jpg?url";
-import CoverImage7 from "@/app/assets/cover-images/image_7.jpg?url";
-import CoverImage8 from "@/app/assets/cover-images/image_8.jpg?url";
-import CoverImage9 from "@/app/assets/cover-images/image_9.jpg?url";
+import CoverImage1 from "@/app/assets/cover-images/image_1.webp?url";
+import CoverImage10 from "@/app/assets/cover-images/image_10.webp?url";
+import CoverImage11 from "@/app/assets/cover-images/image_11.webp?url";
+import CoverImage12 from "@/app/assets/cover-images/image_12.webp?url";
+import CoverImage13 from "@/app/assets/cover-images/image_13.webp?url";
+import CoverImage14 from "@/app/assets/cover-images/image_14.webp?url";
+import CoverImage15 from "@/app/assets/cover-images/image_15.webp?url";
+import CoverImage16 from "@/app/assets/cover-images/image_16.webp?url";
+import CoverImage17 from "@/app/assets/cover-images/image_17.webp?url";
+import CoverImage18 from "@/app/assets/cover-images/image_18.webp?url";
+import CoverImage19 from "@/app/assets/cover-images/image_19.webp?url";
+import CoverImage2 from "@/app/assets/cover-images/image_2.webp?url";
+import CoverImage20 from "@/app/assets/cover-images/image_20.webp?url";
+import CoverImage21 from "@/app/assets/cover-images/image_21.webp?url";
+import CoverImage22 from "@/app/assets/cover-images/image_22.webp?url";
+import CoverImage23 from "@/app/assets/cover-images/image_23.webp?url";
+import CoverImage24 from "@/app/assets/cover-images/image_24.webp?url";
+import CoverImage25 from "@/app/assets/cover-images/image_25.webp?url";
+import CoverImage26 from "@/app/assets/cover-images/image_26.webp?url";
+import CoverImage27 from "@/app/assets/cover-images/image_27.webp?url";
+import CoverImage28 from "@/app/assets/cover-images/image_28.webp?url";
+import CoverImage29 from "@/app/assets/cover-images/image_29.webp?url";
+import CoverImage3 from "@/app/assets/cover-images/image_3.webp?url";
+import CoverImage4 from "@/app/assets/cover-images/image_4.webp?url";
+import CoverImage5 from "@/app/assets/cover-images/image_5.webp?url";
+import CoverImage6 from "@/app/assets/cover-images/image_6.webp?url";
+import CoverImage7 from "@/app/assets/cover-images/image_7.webp?url";
+import CoverImage8 from "@/app/assets/cover-images/image_8.webp?url";
+import CoverImage9 from "@/app/assets/cover-images/image_9.webp?url";
 
 import { FileService } from "@/services/file.service";
 
@@ -203,7 +203,7 @@ export const uploadCoverImage = async (
     throw new Error("Invalid file type. Please select an image.");
   }
 
-  const fileName = imageUrl.split("/").pop()?.split("?")[0] || "image.jpg";
+  const fileName = imageUrl.split("/").pop()?.split("?")[0] || "image.webp";
   const file = new File([blob], fileName, { type: blob.type });
 
   // Upload based on context

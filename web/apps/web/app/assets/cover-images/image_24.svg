@@ -1,0 +1,43 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 24: stepped diagonal bands in slate. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#0B1120"/>
+  <g transform="rotate(-39 800 450)">
+  <rect x="-1300" y="-1400" width="114.3" height="3700" fill="#111929"/>
+  <rect x="-1186.7" y="-1400" width="195.6" height="3700" fill="#131B2B"/>
+  <rect x="-992.1" y="-1400" width="128.4" height="3700" fill="#161E2F"/>
+  <rect x="-864.7" y="-1400" width="185.6" height="3700" fill="#172132"/>
+  <rect x="-680.1" y="-1400" width="108.7" height="3700" fill="#1A2436"/>
+  <rect x="-572.4" y="-1400" width="128.4" height="3700" fill="#1C2638"/>
+  <rect x="-445" y="-1400" width="187.3" height="3700" fill="#1E283A"/>
+  <rect x="-258.7" y="-1400" width="184.5" height="3700" fill="#212C3E"/>
+  <rect x="-75.1" y="-1400" width="83.4" height="3700" fill="#232F42"/>
+  <rect x="7.3" y="-1400" width="148.2" height="3700" fill="#253143"/>
+  <rect x="154.5" y="-1400" width="77.7" height="3700" fill="#273346"/>
+  <rect x="231.2" y="-1400" width="97.7" height="3700" fill="#283548"/>
+  <rect x="327.9" y="-1400" width="213.8" height="3700" fill="#2A374A"/>
+  <rect x="540.7" y="-1400" width="146.3" height="3700" fill="#2D3A4E"/>
+  <rect x="686" y="-1400" width="134" height="3700" fill="#303D51"/>
+  <rect x="819" y="-1400" width="125.8" height="3700" fill="#324053"/>
+  <rect x="943.8" y="-1400" width="107.2" height="3700" fill="#354357"/>
+  <rect x="1050.1" y="-1400" width="89.1" height="3700" fill="#39475B"/>
+  <rect x="1138.2" y="-1400" width="90.8" height="3700" fill="#3C4A5F"/>
+  <rect x="1228" y="-1400" width="168.9" height="3700" fill="#3A495D"/>
+  <rect x="1395.9" y="-1400" width="202.6" height="3700" fill="#344256"/>
+  <rect x="1597.5" y="-1400" width="175.2" height="3700" fill="#303E52"/>
+  <rect x="1771.7" y="-1400" width="108.9" height="3700" fill="#2D3B4E"/>
+  <rect x="1879.6" y="-1400" width="141.6" height="3700" fill="#2C394C"/>
+  <rect x="2020.2" y="-1400" width="112.7" height="3700" fill="#293649"/>
+  <rect x="2132" y="-1400" width="110.7" height="3700" fill="#283447"/>
+  <rect x="2241.7" y="-1400" width="104.6" height="3700" fill="#263245"/>
+  <rect x="2345.3" y="-1400" width="91.5" height="3700" fill="#243043"/>
+  <rect x="2435.7" y="-1400" width="83.7" height="3700" fill="#232E41"/>
+  <rect x="2518.4" y="-1400" width="88.7" height="3700" fill="#212D3F"/>
+  <rect x="2606.1" y="-1400" width="120.7" height="3700" fill="#202B3E"/>
+  <rect x="2725.8" y="-1400" width="149.6" height="3700" fill="#1E293B"/>
+  <rect x="2874.4" y="-1400" width="26.6" height="3700" fill="#1C2638"/>
+  </g>
+</svg>

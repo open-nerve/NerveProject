@@ -1,0 +1,22 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 17: concentric discs in plum. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#2E0854"/>
+  <circle cx="192" cy="945" r="1830.6" fill="#2E0854"/>
+  <circle cx="192" cy="945" r="1701.3" fill="#3D0E68"/>
+  <circle cx="192" cy="945" r="1602.6" fill="#4C147D"/>
+  <circle cx="192" cy="945" r="1463" fill="#5A1A91"/>
+  <circle cx="192" cy="945" r="1354.2" fill="#6920A6"/>
+  <circle cx="192" cy="945" r="1213" fill="#782CB9"/>
+  <circle cx="192" cy="945" r="1102.3" fill="#8739CC"/>
+  <circle cx="192" cy="945" r="957.6" fill="#9645DF"/>
+  <circle cx="192" cy="945" r="851.7" fill="#A552F2"/>
+  <circle cx="192" cy="945" r="701.1" fill="#B45CF7"/>
+  <circle cx="192" cy="945" r="595.2" fill="#C364F8"/>
+  <circle cx="192" cy="945" r="467.6" fill="#D36DF8"/>
+  <circle cx="192" cy="945" r="334.8" fill="#E376F9"/>
+  <circle cx="192" cy="945" r="216.3" fill="#EA87FA"/>
+</svg>
