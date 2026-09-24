@@ -36,7 +36,7 @@ const useReloadConfirmations = (isActive = true, message?: string, defaultShowAl
       const isAnchorTargetBlank = anchorElement.getAttribute("target") === "_blank";
       if (isAnchorTargetBlank) return;
       // show confirm dialog
-      const isLeaving = confirm(alertMessage);
+      const isLeaving = window.confirm(alertMessage);
       if (isLeaving) {
         onLeave && onLeave();
       } else {

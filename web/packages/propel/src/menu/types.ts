@@ -37,15 +37,6 @@ export type TMenuProps = {
   handleOpenChange?: (open: boolean) => void;
 };
 
-export type TSubMenuProps = {
-  children: React.ReactNode;
-  trigger: React.ReactNode;
-  disabled?: boolean;
-  className?: string;
-  contentClassName?: string;
-  placement?: TPlacement;
-};
-
 export type TMenuItemProps = {
   children: React.ReactNode;
   disabled?: boolean;

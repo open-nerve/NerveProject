@@ -6,44 +6,12 @@
 
 import * as React from "react";
 import { Menu as BaseMenu } from "@base-ui-components/react/menu";
-import { ChevronDownOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
+import { ChevronDownOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { cn } from "../utils/classname";
-import type { TMenuProps, TSubMenuProps, TMenuItemProps } from "./types";
-
-// Context for main menu to communicate with submenus
-const MenuContext = React.createContext<{
-  closeAllSubmenus: () => void;
-  registerSubmenu: (closeSubmenu: () => void) => () => void;
-} | null>(null);
-
-// SubMenu context for closing submenu from nested items
-const SubMenuContext = React.createContext<{ closeSubmenu: () => void } | null>(null);
-
-// Hook to use submenu context
-const useSubMenu = () => React.useContext(SubMenuContext);
-
-// SubMenu implementation
-function SubMenu(props: TSubMenuProps) {
-  const { children, trigger, disabled = false, className = "" } = props;
-
-  return (
-    <BaseMenu.SubmenuRoot disabled={disabled}>
-      <BaseMenu.SubmenuTrigger className={""}>
-        <span className="flex-1">{trigger}</span>
-        <ChevronRightOutline />
-      </BaseMenu.SubmenuTrigger>
-      <BaseMenu.Portal>
-        <BaseMenu.Positioner className={""} alignOffset={-4} sideOffset={-4}>
-          <BaseMenu.Popup className={className}>{children} </BaseMenu.Popup>
-        </BaseMenu.Positioner>
-      </BaseMenu.Portal>
-    </BaseMenu.SubmenuRoot>
-  );
-}
+import type { TMenuProps, TMenuItemProps } from "./types";
 
 function MenuItem(props: TMenuItemProps) {
   const { children, disabled = false, onClick, className } = props;
-  const submenuContext = useSubMenu();
 
   return (
     <BaseMenu.Item
@@ -55,11 +23,7 @@ function MenuItem(props: TMenuItemProps) {
         },
         className
       )}
-      onClick={(e) => {
-        close();
-        onClick?.(e);
-        submenuContext?.closeSubmenu();
-      }}
+      onClick={onClick}
     >
       {children}
     </BaseMenu.Item>
@@ -91,30 +55,17 @@ function Menu(props: TMenuProps) {
   } = props;
 
   const [isOpen, setIsOpen] = React.useState(false);
-  // refs
-  const submenuClosersRef = React.useRef<Set<() => void>>(new Set());
 
-  const closeAllSubmenus = React.useCallback(() => {
-    submenuClosersRef.current.forEach((closeSubmenu) => closeSubmenu());
-  }, []);
-
-  const registerSubmenu = React.useCallback((closeSubmenu: () => void) => {
-    submenuClosersRef.current.add(closeSubmenu);
-    return () => {
-      submenuClosersRef.current.delete(closeSubmenu);
-    };
-  }, []);
   const openDropdown = () => {
     setIsOpen(true);
   };
 
   const closeDropdown = React.useCallback(() => {
     if (isOpen) {
-      closeAllSubmenus();
       onMenuClose?.();
     }
     setIsOpen(false);
-  }, [isOpen, closeAllSubmenus, onMenuClose]);
+  }, [isOpen, onMenuClose]);
 
   const handleMenuButtonClick = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
@@ -196,7 +147,7 @@ function Menu(props: TMenuProps) {
             )}
             data-main-menu="true"
           >
-            <MenuContext.Provider value={{ closeAllSubmenus, registerSubmenu }}>{children}</MenuContext.Provider>
+            {children}
           </BaseMenu.Popup>
         </BaseMenu.Positioner>
       </BaseMenu.Portal>
@@ -205,6 +156,5 @@ function Menu(props: TMenuProps) {
 }
 
 Menu.MenuItem = MenuItem;
-Menu.SubMenu = SubMenu;
 
 export { Menu };
