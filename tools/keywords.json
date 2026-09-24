@@ -1,5 +1,5 @@
 {
-  "phase": "M1/P5",
+  "phase": "M1/closeout",
   "rules": [
     {
       "id": "deploy-files",
@@ -19,7 +19,7 @@
         ],
         "miss": [
           "web/apps/web/public/site.webmanifest.json",
-          "web/apps/web/public/swagger.js",
+          "web/packages/tailwind-config/postcss.config.js",
           "deploy/compose.dev.yaml"
         ]
       }
@@ -34,7 +34,7 @@
       },
       "samples": {
         "hit": [".prettierignore", "web/packages/ui/.prettierignore"],
-        "miss": ["web/packages/ui/.gitignore"]
+        "miss": [".gitignore"]
       }
     },
     {
@@ -51,14 +51,9 @@
       },
       "samples": {
         "hit": ["\"serve\": \"catalog:\"", "  serve@14.2.5:", "serve -s build/client -l 3000", "      serve:"],
-        "miss": [
-          "\"@react-router/serve>express\": \"^5.2.1\"",
-          "  serve-static@1.16.2:",
-          "preserve: true",
-          "observe(value)"
-        ],
+        "miss": ["\"@react-router/serve>express\": \"^5.2.1\"", "  serve-static@2.2.1:", "    use-font-face-observer:"],
         "files": {
-          "hit": ["web/apps/web/package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"],
+          "hit": ["web/apps/web/package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "package.json"],
           "miss": ["turbo.json", "web/apps/web/app/root.tsx"]
         }
       }
@@ -72,8 +67,12 @@
         "flags": ""
       },
       "samples": {
-        "hit": ["web/packages/ui/.storybook/main.ts", "web/packages/propel/src/button/button.stories.tsx"],
-        "miss": ["web/packages/propel/src/button/button.tsx", "web/packages/ui/src/stories.ts"]
+        "hit": [
+          "web/packages/ui/.storybook/main.ts",
+          "web/packages/propel/src/button/button.stories.tsx",
+          "storybook-static/index.html"
+        ],
+        "miss": ["web/packages/propel/src/button/button.tsx"]
       }
     },
     {
@@ -94,7 +93,7 @@
           "\"@chromatic-com/storybook\": \"5.2.1\"",
           "// Static toast for Storybook"
         ],
-        "miss": ["\"@tanstack/react-table\": \"catalog:\"", "user story"],
+        "miss": ["    \"oxfmt\": \"catalog:\",", "  '@tiptap/extension-history@2.26.1':"],
         "files": {
           "hit": [
             "web/packages/ui/package.json",
@@ -106,7 +105,7 @@
             ".oxlintrc.json",
             "knip.jsonc"
           ],
-          "miss": ["server/internal/main.go", ".oxfmtrc.json", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["server/cmd/nerve/main.go", ".oxfmtrc.json", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -120,7 +119,7 @@
       },
       "samples": {
         "hit": ["web/apps/web/app/compat/next/image.tsx", "web/apps/web/app/types/next-script.d.ts"],
-        "miss": ["web/apps/web/app/compat/next/link.tsx", "web/apps/web/app/types/next-link.d.ts"]
+        "miss": ["web/apps/web/app/types/react-router-virtual.d.ts"]
       }
     },
     {
@@ -138,12 +137,13 @@
       "samples": {
         "hit": [
           "import Script from \"next/script\";",
-          "      \"next/script\": path.resolve(__dirname, \"app/compat/next/script.tsx\"),"
+          "      \"next/script\": path.resolve(__dirname, \"app/compat/next/script.tsx\"),",
+          "import Image from \"next/image\";"
         ],
-        "miss": ["import Link from \"next/link\";", "// Minimal shim so code using next/image compiles"],
+        "miss": ["import { Outlet } from \"react-router\";"],
         "files": {
           "hit": ["web/apps/web/app/root.tsx", "web/packages/ui/package.json"],
-          "miss": ["web/apps/web/README.md", "server/internal/main.go"]
+          "miss": ["web/packages/tailwind-config/AGENTS.md", "server/cmd/nerve/main.go"]
         }
       }
     },
@@ -193,10 +193,10 @@
           "export type { TTranslationKeys } from \"./keys.generated\";",
           "\"build\": \"pnpm run generate:types && tsdown\""
         ],
-        "miss": ["export type { TLanguage } from \"./types\";", "\"generate\": \"tsx scripts/generate.ts\""],
+        "miss": ["export type TWorkItemDetailRoot = {", "    \"check:sync\": \"tsx scripts/sync-check.ts\","],
         "files": {
           "hit": ["web/packages/i18n/src/index.ts", ".gitignore", ".oxfmtrc.json", "knip.jsonc", "turbo.json"],
-          "miss": ["server/internal/main.go", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["server/cmd/nerve/main.go", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -211,7 +211,13 @@
       "samples": {
         "hit": [
           "web/packages/i18n/src/locales/en/tour.json",
-          "web/packages/i18n/src/locales/zh-CN/work-item-type.json"
+          "web/packages/i18n/src/locales/zh-CN/work-item-type.json",
+          "web/packages/i18n/src/locales/en/automation.json",
+          "web/packages/i18n/src/locales/en/editor.json",
+          "web/packages/i18n/src/locales/en/template.json",
+          "web/packages/i18n/src/locales/en/update.json",
+          "web/packages/i18n/src/locales/en/wiki.json",
+          "web/packages/i18n/src/locales/en/workflow.json"
         ],
         "miss": ["web/packages/i18n/src/locales/en/work-item.json", "web/packages/i18n/src/locales/en/workspace.json"]
       }
@@ -230,7 +236,10 @@
       },
       "samples": {
         "hit": ["    \"applications\": {"],
-        "miss": ["    \"api_tokens\": {", "\"title\": \"Applications\""],
+        "miss": [
+          "    \"api_tokens\": {",
+          "\"description\": \"Generate secure API tokens to integrate your data with external systems and applications.\","
+        ],
         "files": {
           "hit": [
             "web/packages/i18n/src/locales/en/workspace-settings.json",
@@ -278,9 +287,10 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/sidebar/sidebar-wrapper.tsx",
-            "web/packages/constants/src/workspace.ts"
+            "web/packages/constants/src/workspace.ts",
+            "web/packages/i18n/src/locales/en/common.json"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -307,13 +317,14 @@
         "miss": [
           "import { CycleProgress } from \"./issue-progress\";",
           "  fetchActiveCycleDistribution: action,",
-          "    `/api/workspaces/${workspaceSlug}/projects/${projectId}/cycles/${cycleId}/progress/`"
+          "  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();"
         ],
         "files": {
           "hit": [
             "web/apps/web/core/services/cycle.service.ts",
             "pnpm-workspace.yaml",
-            "web/packages/utils/src/tlds.ts"
+            "web/packages/utils/src/tlds.ts",
+            "turbo.json"
           ],
           "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "Makefile", "api/openapi.yaml"]
         }
@@ -342,14 +353,14 @@
           "  async workspaceActiveCycles("
         ],
         "miss": [
-          "export const ActiveCycleRoot = observer(function ActiveCycleRoot(props: Props) {",
+          "export type ActiveCycleStatsProps = {",
           "  \"active_cycle\": {",
           "export type ActiveCycleProgressProps = {",
           "  const { fetchActiveCycleProgress, getCycleById, fetchActiveCycleDistribution } = useCycle();"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/cycle.service.ts", "web/packages/i18n/src/locales/en/common.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -391,13 +402,12 @@
         "miss": [
           "import { PROFILE_TABS } from \"@nerve/constants\";",
           "    i18n_label: \"profile.tabs.assigned\",",
-          "import UserActivityIcon from \"./user-activity-icon\";",
           "      `/api/workspaces/${workspaceSlug}/user-issues/${userId}/`,",
           "  const { data: members, isLoading } = useSWR("
         ],
         "files": {
           "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/empty-state.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -426,11 +436,11 @@
           "export const calculateCycleProgress = (cycle: ICycle | undefined, includeInProgress: boolean = false): number => {",
           "  const totalIssues = cycleDetails?.total_issues || 0;",
           "export type TCycleDistribution = {",
-          "  \"points\": \"Points\","
+          "    const emojiCodePoints = Array.from(emoji).map((char) => char.codePointAt(0));"
         ],
         "files": {
           "hit": ["web/apps/web/core/store/cycle.store.ts", "web/packages/i18n/src/locales/en/common.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -458,7 +468,6 @@
           "export const useTimeLineRelationOptions = () => ISSUE_RELATION_OPTIONS;"
         ],
         "miss": [
-          "      \"view_timeline\",",
           "    name: \"view_timeline\",",
           "import { ISSUE_RELATION_OPTIONS } from \"@/components/relations\";",
           "export const REVERSE_RELATIONS: { [key in TIssueRelationTypes]: TIssueRelationTypes } = {",
@@ -468,7 +477,7 @@
         "files": {
           "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/work-item.json"],
           "miss": [
-            "web/apps/web/app/assets/empty-state/cycle-issues/gantt_chart-light.webp",
+            "web/apps/web/app/assets/empty-state/disabled-feature/modules-light.webp",
             "docs/v0/M1-frontend-trim/M1-design.md"
           ]
         }
@@ -497,7 +506,7 @@
         ],
         "miss": [
           "  archive_in?: number;",
-          "  const defaultState = projectStates?.[0]?.id;",
+          "  showDefaultState?: boolean;",
           "    const defaultState = projectState.projectStates?.find((state) => state.default);",
           "import { AutoArchiveAutomation } from \"@/components/automation\";",
           "                    <Field name=\"archive_in\" invalid={Boolean(errors.archive_in)}>"
@@ -508,7 +517,7 @@
             "web/packages/i18n/src/locales/en/project-settings.json"
           ],
           "miss": [
-            "web/apps/web/app/assets/logo.svg",
+            "web/apps/web/app/assets/brand/mark.svg",
             "tools/plane-schema/plane-v1.4.2-schema.sql",
             "docs/v0/M1-frontend-trim/M1-design.md"
           ]
@@ -552,10 +561,10 @@
         "miss": [
           "import { RecentProject } from \"./project\";",
           "import { find } from \"linkifyjs\";",
-          "export default function ProjectIssuesPage() {",
-          "  const pathname = usePathname();",
+          "import { PageHead } from \"@/components/core/page-title\";",
+          "  const { pathname } = useLocation();",
           "  description_html: string | null;",
-          "import { HelpOutline, PagesOutline, UserOutline } from \"@makeplane/propel/icons\";",
+          "import { HelpOutline, PagesOutline } from \"@makeplane/propel/icons\";",
           "export const UniqueID = Extension.create<UniqueIDOptions>({"
         ],
         "files": {
@@ -567,7 +576,7 @@
             "turbo.json",
             "pnpm-workspace.yaml"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md", "pnpm-lock.yaml"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md", "pnpm-lock.yaml"]
         }
       }
     },
@@ -597,7 +606,7 @@
         ],
         "files": {
           "hit": ["web/packages/i18n/src/locales/en/common.json", "web/packages/types/src/instance/base.ts"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -625,14 +634,18 @@
           "  | \"sticky-toolbar\""
         ],
         "miss": [
-          "        <div className=\"sticky top-0 z-10\">",
-          "  position: sticky;",
-          "const CustomXAxisTick = (props: TAxisTickProps) => {",
-          "            {/* Single sticky column */}"
+          "      <div className=\"sticky top-0 flex w-full flex-shrink-0 items-center justify-between gap-6\">",
+          "import { TickCircleOutline } from \"@makeplane/propel/icons\";",
+          "      {/* Single sticky column containing both identifier and workitem */}"
         ],
         "files": {
-          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/navigation.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/core/store/root.store.ts",
+            "web/packages/i18n/src/locales/en/navigation.json",
+            "web/apps/web/styles/globals.css",
+            "web/apps/web/public/stickies.yaml"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -663,14 +676,18 @@
           "import { generateThemePalettes } from \"./palette-generator\";"
         ],
         "miss": [
-          "import { RecentActivityWidget } from \"./recents\";",
-          "  \"custom\": \"Custom\",",
+          "import { HomeLoader, NoProjectsEmptyState, RecentActivityWidget } from \"./widgets\";",
+          "    else if (data.expired_at === \"custom\") {",
           "        <div className=\"h-full w-full\">",
           "import { useProject } from \"@/hooks/store/use-project\";"
         ],
         "files": {
-          "hit": ["web/apps/web/core/store/root.store.ts", "web/packages/i18n/src/locales/en/home.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/core/store/root.store.ts",
+            "web/packages/i18n/src/locales/en/home.json",
+            "web/apps/web/styles/globals.css"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -698,12 +715,16 @@
         "miss": [
           "export const RESTRICTED_URLS: string[] = [",
           "export * from \"./project.service\";",
-          "import { exportAsCSV } from \"./csv\";",
-          "  \"webhooks\": \"Webhooks\","
+          "export const ProjectAppSidebar = observer(function ProjectAppSidebar() {",
+          "  const settingsDetails = WORKSPACE_SETTINGS.webhooks;"
         ],
         "files": {
-          "hit": ["web/apps/web/app/routes/core.ts", "web/packages/constants/src/workspace.ts"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/app/routes/core.ts",
+            "web/packages/constants/src/workspace.ts",
+            "web/packages/i18n/src/locales/en/common.json"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -736,7 +757,7 @@
         ],
         "files": {
           "hit": ["web/apps/web/.env.example", "turbo.json", "web/packages/constants/src/endpoints.ts"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -763,12 +784,12 @@
         ],
         "miss": [
           "import { AuthService } from \"@/services/auth.service\";",
-          "        header: \"Work in all dimensions.\",",
+          "    header: \"Work in all dimensions.\",",
           "const authService = new AuthService();"
         ],
         "files": {
-          "hit": ["web/packages/i18n/src/locales/en/auth.json", "web/packages/ui/src/index.ts"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": ["web/packages/i18n/src/locales/en/auth.json", "web/packages/ui/src/index.ts", "turbo.json"],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -819,8 +840,12 @@
           "  { name: \"Gitlab\", element: Gitlab },"
         ],
         "files": {
-          "hit": ["web/apps/web/core/services/auth.service.ts", "web/packages/i18n/src/locales/zh-CN/auth.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/core/services/auth.service.ts",
+            "web/packages/i18n/src/locales/zh-CN/auth.json",
+            "turbo.json"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -852,7 +877,7 @@
         ],
         "files": {
           "hit": ["web/apps/web/core/services/user.service.ts", "web/packages/i18n/src/locales/en/common.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -898,7 +923,7 @@
         ],
         "files": {
           "hit": ["web/apps/web/.env.example", "turbo.json", "web/packages/types/src/views.ts"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -952,8 +977,13 @@
           "  const { issues: projectIssues } = useIssues(EIssuesStoreType.PROJECT);"
         ],
         "files": {
-          "hit": ["web/apps/web/core/hooks/store/use-issues.ts", "web/packages/i18n/src/locales/en/work-item.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/core/hooks/store/use-issues.ts",
+            "web/packages/i18n/src/locales/en/work-item.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -982,8 +1012,13 @@
           "      id: \"invite-team\","
         ],
         "files": {
-          "hit": ["web/apps/web/core/store/issue/root.store.ts", "web/packages/i18n/src/locales/en/common.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/core/store/issue/root.store.ts",
+            "web/packages/i18n/src/locales/en/common.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1018,9 +1053,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-modal/form.tsx",
-            "web/packages/i18n/src/locales/en/empty-state.json"
+            "web/packages/i18n/src/locales/en/empty-state.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1058,9 +1095,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-layouts/list/block.tsx",
-            "web/packages/i18n/src/locales/en/work-item.json"
+            "web/packages/i18n/src/locales/en/work-item.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1095,9 +1134,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-modal/provider.tsx",
-            "web/packages/i18n/src/locales/en/work-item.json"
+            "web/packages/i18n/src/locales/en/work-item.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1129,9 +1170,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-layouts/list/list-group.tsx",
-            "web/packages/constants/src/fetch-keys.ts"
+            "web/packages/constants/src/fetch-keys.ts",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1167,9 +1210,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx",
-            "web/packages/types/src/instance/base.ts"
+            "web/packages/types/src/instance/base.ts",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1198,8 +1243,12 @@
           "export const DEFAULT_COVER_IMAGE_URL = STATIC_COVER_IMAGES.IMAGE_1;"
         ],
         "files": {
-          "hit": ["web/apps/web/core/components/core/image-picker-popover.tsx", "turbo.json"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/core/components/core/image-picker-popover.tsx",
+            "turbo.json",
+            "web/apps/web/.env.example"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1241,9 +1290,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/sidebar/sidebar-wrapper.tsx",
-            "web/packages/i18n/src/locales/en/common.json"
+            "web/packages/i18n/src/locales/en/common.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1331,8 +1382,13 @@
           "import { ACCEPTED_ATTACHMENT_MIME_TYPES, ACCEPTED_IMAGE_MIME_TYPES } from \"@/constants/config\";"
         ],
         "files": {
-          "hit": ["web/apps/web/app/routes.ts", "web/packages/editor/src/types/editor.ts"],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "hit": [
+            "web/apps/web/app/routes.ts",
+            "web/packages/editor/src/types/editor.ts",
+            "turbo.json",
+            "web/apps/web/.env.example"
+          ],
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1362,9 +1418,11 @@
         "files": {
           "hit": [
             "web/apps/web/core/components/project/member-list.tsx",
-            "web/packages/i18n/src/locales/en/project-settings.json"
+            "web/packages/i18n/src/locales/en/project-settings.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/logo.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1399,9 +1457,11 @@
         "files": {
           "hit": [
             "web/packages/constants/src/workspace.ts",
-            "web/packages/i18n/src/locales/en/workspace-settings.json"
+            "web/packages/i18n/src/locales/en/workspace-settings.json",
+            "turbo.json",
+            "web/apps/web/.env.example"
           ],
-          "miss": ["web/apps/web/app/assets/services/jira.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
+          "miss": ["web/apps/web/app/assets/brand/mark.svg", "docs/v0/M1-frontend-trim/M1-design.md"]
         }
       }
     },
@@ -1494,7 +1554,11 @@
           "export function ensureAPITrailingSlash(url: string): string {"
         ],
         "files": {
-          "hit": ["web/apps/web/vite.config.ts", "web/apps/web/core/components/home/root.tsx"],
+          "hit": [
+            "web/apps/web/vite.config.ts",
+            "web/apps/web/core/components/home/root.tsx",
+            "web/packages/i18n/src/locales/en/common.json"
+          ],
           "miss": ["docs/v0/M1-frontend-trim/M1-design.md", "tools/keywords.json"]
         }
       }
