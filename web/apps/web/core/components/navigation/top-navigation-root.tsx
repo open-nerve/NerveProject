@@ -6,8 +6,7 @@
 
 // components
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { useLocation } from "react-router";
+import { useParams, useLocation } from "react-router";
 import { cn } from "@plane/utils";
 import { TopNavPowerK } from "@/components/navigation";
 import { HelpMenuRoot } from "@/components/workspace/sidebar/help-section/root";

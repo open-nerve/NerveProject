@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Placement } from "@popperjs/core";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
 import { Combobox } from "@headlessui/react";
@@ -99,7 +99,7 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
         content: (
           <div className="flex items-center gap-2">
             <div className="w-4">
-              {isUserSuspended(userId, workspaceSlug?.toString()) ? (
+              {isUserSuspended(userId, workspaceSlug) ? (
                 <DeactivatedUserOutline className="h-3.5 w-3.5 text-placeholder" />
               ) : (
                 <Avatar
@@ -111,10 +111,7 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
               )}
             </div>
             <span
-              className={cn(
-                "flex-grow truncate",
-                isUserSuspended(userId, workspaceSlug?.toString()) ? "text-placeholder" : ""
-              )}
+              className={cn("flex-grow truncate", isUserSuspended(userId, workspaceSlug) ? "text-placeholder" : "")}
             >
               {currentUser?.id === userId ? t("you") : userDetails?.display_name}
             </span>
@@ -171,18 +168,16 @@ export const MemberOptions = observer(function MemberOptions(props: Props) {
                           "flex w-full items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 select-none",
                           active && "bg-layer-transparent-hover",
                           selected ? "text-primary" : "text-secondary",
-                          isUserSuspended(option.value, workspaceSlug?.toString())
-                            ? "cursor-not-allowed"
-                            : "cursor-pointer"
+                          isUserSuspended(option.value, workspaceSlug) ? "cursor-not-allowed" : "cursor-pointer"
                         )
                       }
-                      disabled={isUserSuspended(option.value, workspaceSlug?.toString())}
+                      disabled={isUserSuspended(option.value, workspaceSlug)}
                     >
                       {({ selected }) => (
                         <>
                           <span className="flex-grow truncate">{option.content}</span>
                           {selected && <TickOutline className="h-3.5 w-3.5 flex-shrink-0" />}
-                          {isUserSuspended(option.value, workspaceSlug?.toString()) && (
+                          {isUserSuspended(option.value, workspaceSlug) && (
                             <Pill variant={EPillVariant.DEFAULT} size={EPillSize.XS} className="border-none">
                               Suspended
                             </Pill>

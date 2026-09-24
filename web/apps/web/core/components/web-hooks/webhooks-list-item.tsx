@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { Link } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link } from "react-router";
 // Plane imports
 import type { IWebhook } from "@plane/types";
 import { Switch } from "@makeplane/propel/components/switch";

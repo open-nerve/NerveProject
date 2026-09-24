@@ -6,7 +6,6 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE, DEFAULT_GLOBAL_VIEWS_LIST } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -28,13 +27,17 @@ import { useGlobalView } from "@/hooks/store/use-global-view";
 import { useIssues } from "@/hooks/store/use-issues";
 import { useNavigate } from "react-router";
 
-export const GlobalIssuesHeader = observer(function GlobalIssuesHeader() {
+type TProps = {
+  workspaceSlug: string;
+  globalViewId?: string;
+};
+
+export const GlobalIssuesHeader = observer(function GlobalIssuesHeader(props: TProps) {
   // states
   const [createViewModal, setCreateViewModal] = useState(false);
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, globalViewId: routerGlobalViewId } = useParams();
-  const globalViewId = routerGlobalViewId ? routerGlobalViewId.toString() : undefined;
+  const { workspaceSlug, globalViewId } = props;
   // store hooks
   const {
     issuesFilter: { filters, updateFilters },

@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { Link, useLocation } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link, useLocation } from "react-router";
 // plane imports
 import { PROFILE_TABS } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";

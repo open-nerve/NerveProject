@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 // plane helpers
 import { MODULE_VIEW_LAYOUTS } from "@plane/constants";

@@ -12,10 +12,8 @@ import { PowerKModalCommandItem } from "@/components/power-k/ui/modal/command-it
 
 export type TPowerKProjectStatesMenuItemsProps = {
   handleSelect: (stateId: string) => void;
-  projectId: string | undefined;
   selectedStateId: string | undefined;
   states: IState[];
-  workspaceSlug: string;
 };
 
 export const PowerKProjectStatesMenuItems = observer(function PowerKProjectStatesMenuItems(

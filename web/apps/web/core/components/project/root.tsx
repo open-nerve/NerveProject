@@ -6,8 +6,7 @@
 
 import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { useLocation } from "react-router";
+import { useParams, useLocation } from "react-router";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import type { TProjectAppliedDisplayFilterKeys, TProjectFilters } from "@plane/types";
@@ -76,7 +75,8 @@ export const ProjectRoot = observer(function ProjectRoot() {
   }, [clearAllFilters, clearAllAppliedDisplayFilters, workspaceSlug]);
 
   useEffect(() => {
-    updateDisplayFilters(workspaceSlug.toString(), { archived_projects: isArchived });
+    if (!workspaceSlug) return;
+    updateDisplayFilters(workspaceSlug, { archived_projects: isArchived });
   }, [pathname]);
 
   return (

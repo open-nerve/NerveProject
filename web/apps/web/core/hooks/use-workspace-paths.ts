@@ -4,8 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import { useParams } from "next/navigation";
-import { useLocation } from "react-router";
+import { useParams, useLocation } from "react-router";
 
 /**
  * Custom hook to detect different workspace paths

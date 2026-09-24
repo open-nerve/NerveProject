@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // types
 import { PROJECT_ERROR_MESSAGES } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -17,7 +16,7 @@ import { AlertModalCore } from "@plane/ui";
 // constants
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 
 type Props = {
   data: IModule;

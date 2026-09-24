@@ -17,7 +17,7 @@ import { setCustomNativeDragPreview } from "@atlaskit/pragmatic-drag-and-drop/el
 import { attachInstruction } from "@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item";
 
 import { orderBy } from "lodash-es";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { createRoot } from "react-dom/client";
 import {
   ChevronRightOutline,
@@ -143,6 +143,8 @@ export function FavoriteFolder(props: Props) {
   }, [isDragging, favorite.id, isLastChild, favorite.id]);
 
   useOutsideClickDetector(actionSectionRef, () => setIsMenuActive(false));
+
+  if (!workspaceSlug) return null;
 
   return folderToRename ? (
     <NewFavoriteFolder
@@ -276,7 +278,7 @@ export function FavoriteFolder(props: Props) {
                   {orderBy(favorite.children, "sequence", "desc").map((child, index) => (
                     <FavoriteRoot
                       key={child.id}
-                      workspaceSlug={workspaceSlug.toString()}
+                      workspaceSlug={workspaceSlug}
                       favorite={child}
                       isLastChild={index === favorite.children.length - 1}
                       parentId={favorite.id}

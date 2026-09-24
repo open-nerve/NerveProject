@@ -6,7 +6,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -151,19 +151,21 @@ export const ExtendedProjectSidebar = observer(function ExtendedProjectSidebar()
           </div>
         ) : (
           <div className="vertical-scrollbar mt-4 scrollbar-sm flex flex-grow flex-col gap-0.5 overflow-x-hidden overflow-y-auto pr-2 pl-9">
-            {filteredProjects.map((projectId, index) => (
-              <SidebarProjectsListItem
-                key={projectId}
-                projectId={projectId}
-                handleCopyText={() => handleCopyText(projectId)}
-                projectListType={"JOINED"}
-                disableDrag={false}
-                disableDrop={false}
-                isLastChild={index === filteredProjects.length - 1}
-                handleOnProjectDrop={handleOnProjectDrop}
-                renderInExtendedSidebar
-              />
-            ))}
+            {workspaceSlug &&
+              filteredProjects.map((projectId, index) => (
+                <SidebarProjectsListItem
+                  key={projectId}
+                  workspaceSlug={workspaceSlug}
+                  projectId={projectId}
+                  handleCopyText={() => handleCopyText(projectId)}
+                  projectListType="JOINED"
+                  disableDrag={false}
+                  disableDrop={false}
+                  isLastChild={index === filteredProjects.length - 1}
+                  handleOnProjectDrop={handleOnProjectDrop}
+                  renderInExtendedSidebar
+                />
+              ))}
           </div>
         )}
       </ExtendedSidebarWrapper>

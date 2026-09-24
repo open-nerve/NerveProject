@@ -6,7 +6,6 @@
 
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // icons
 import { CyclesOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
@@ -47,12 +46,18 @@ import useLocalStorage from "@/hooks/use-local-storage";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const CycleIssuesHeader = observer(function CycleIssuesHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  cycleId: string;
+};
+
+export const CycleIssuesHeader = observer(function CycleIssuesHeader(props: TProps) {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId, cycleId } = useParams();
+  const { workspaceSlug, projectId, cycleId } = props;
   // i18n
   const { t } = useTranslation();
   // store hooks

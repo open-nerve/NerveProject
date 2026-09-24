@@ -6,7 +6,6 @@
 
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // icons
 import { ModuleOutline, PreferencesOutline, RightSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
@@ -47,13 +46,18 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 import { IconButton } from "@plane/propel/icon-button";
 
-export const ModuleIssuesHeader = observer(function ModuleIssuesHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  moduleId: string;
+};
+
+export const ModuleIssuesHeader = observer(function ModuleIssuesHeader(props: TProps) {
   // refs
   const parentRef = useRef<HTMLDivElement>(null);
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId, moduleId: routerModuleId } = useParams();
-  const moduleId = routerModuleId ? routerModuleId.toString() : undefined;
+  const { workspaceSlug, projectId, moduleId } = props;
   // hooks
   const { isMobile } = usePlatformOS();
   // store hooks

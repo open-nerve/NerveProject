@@ -6,8 +6,7 @@
 
 // ui
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { ChevronDownOutline, RightSidePaneOutline, YourWorkOutline } from "@makeplane/propel/icons";
 import { PROFILE_TABS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";

@@ -6,12 +6,11 @@
 
 import { useMemo, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePowerK } from "@/hooks/store/use-power-k";
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 // plane web imports
 import { ProjectLevelModals } from "@/components/modals/project-level";
 import { WorkItemLevelModals } from "@/components/modals/work-item-level";
@@ -44,7 +43,7 @@ export const ProjectsAppPowerKProvider = observer(function ProjectsAppPowerKProv
   // derived values
   const workItemId = workItemIdentifier ? getIssueIdByIdentifier(workItemIdentifier.toString()) : undefined;
   const workItemDetails = workItemId ? getIssueById(workItemId) : undefined;
-  const projectId: string | string[] | undefined | null = routerProjectId ?? workItemDetails?.project_id;
+  const projectId = routerProjectId ?? workItemDetails?.project_id ?? undefined;
   const commands = useProjectsAppPowerKCommands();
   // Build command context from props and store
   const context: TPowerKContext = useMemo(

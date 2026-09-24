@@ -6,7 +6,7 @@
 
 import { useState, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -41,12 +41,14 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
   // store hooks
   const { projectLabels, updateLabelPosition, projectLabelsTree, createLabel, updateLabel } = useLabel();
   const { allowPermissions } = useUserPermissions();
+
+  if (!workspaceSlug || !projectId) return null;
+
   // derived values
   const isEditable = allowPermissions([EUserPermissions.ADMIN], EUserPermissionsLevel.PROJECT);
   const labelOperationsCallbacks: TLabelOperationsCallbacks = {
-    createLabel: (data: Partial<IIssueLabel>) => createLabel(workspaceSlug?.toString(), projectId?.toString(), data),
-    updateLabel: (labelId: string, data: Partial<IIssueLabel>) =>
-      updateLabel(workspaceSlug?.toString(), projectId?.toString(), labelId, data),
+    createLabel: (data: Partial<IIssueLabel>) => createLabel(workspaceSlug, projectId, data),
+    updateLabel: (labelId: string, data: Partial<IIssueLabel>) => updateLabel(workspaceSlug, projectId, labelId, data),
   };
 
   const newLabel = () => {
@@ -60,17 +62,7 @@ export const ProjectSettingsLabelList = observer(function ProjectSettingsLabelLi
     droppedLabelId: string | undefined,
     dropAtEndOfList: boolean
   ) => {
-    if (workspaceSlug && projectId) {
-      updateLabelPosition(
-        workspaceSlug?.toString(),
-        projectId?.toString(),
-        draggingLabelId,
-        droppedParentId,
-        droppedLabelId,
-        dropAtEndOfList
-      );
-      return;
-    }
+    updateLabelPosition(workspaceSlug, projectId, draggingLabelId, droppedParentId, droppedLabelId, dropAtEndOfList);
   };
 
   return (

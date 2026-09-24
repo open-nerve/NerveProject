@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { StarOff } from "lucide-react";
 import { LinkOutline, StarOutline } from "@makeplane/propel/icons";
 // plane imports

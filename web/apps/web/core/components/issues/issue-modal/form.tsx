@@ -9,7 +9,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { FormProvider, useForm } from "react-hook-form";
 // editor
 import { ETabIndices, DEFAULT_WORK_ITEM_FORM_VALUES } from "@plane/constants";
@@ -54,6 +54,7 @@ export interface IssueFormProps {
   onChange?: (formData: Partial<TIssue> | null) => void;
   onClose: () => void;
   onSubmit: (values: Partial<TIssue>, is_draft_issue?: boolean) => Promise<void>;
+  workspaceSlug: string;
   projectId: string;
   isDraft: boolean;
   moveToIssue?: boolean;
@@ -77,6 +78,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     onChange,
     onClose,
     onSubmit,
+    workspaceSlug,
     projectId: defaultProjectId,
     isCreateMoreToggleEnabled,
     onCreateMoreToggleChange,
@@ -100,7 +102,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
 
   // router
-  const { workspaceSlug, projectId: routeProjectId } = useParams();
+  const { projectId: routeProjectId } = useParams();
 
   // store hooks
   const { getProjectById } = useProject();
@@ -137,7 +139,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   //reset few fields on projectId change
   useEffect(() => {
     if (isDirty) reset(getUpdateFormDataForReset(projectId, getValues()));
-    if (projectId && routeProjectId !== projectId) fetchCycles(workspaceSlug?.toString(), projectId);
+    if (projectId && routeProjectId !== projectId) fetchCycles(workspaceSlug, projectId);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
@@ -192,7 +194,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
     if (!data?.id || !data?.project_id || !data) return;
     setIsMoving(true);
     try {
-      await moveIssue(workspaceSlug.toString(), data.id, {
+      await moveIssue(workspaceSlug, data.id, {
         ...data,
         ...getValues(),
       } as TWorkspaceDraftIssue);
@@ -231,9 +233,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
 
     const stateDetails = getStateById(issue.state_id);
 
-    setSelectedParentIssue(
-      convertWorkItemDataToSearchResponse(workspaceSlug?.toString(), issue, projectDetails, stateDetails)
-    );
+    setSelectedParentIssue(convertWorkItemDataToSearchResponse(workspaceSlug, issue, projectDetails, stateDetails));
     // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [watch, getIssueById, getProjectById, selectedParentIssue, getStateById]);
 
@@ -311,7 +311,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   descriptionHtmlData={data?.description_html}
                   editorRef={editorRef}
                   submitBtnRef={submitBtnRef}
-                  workspaceSlug={workspaceSlug?.toString()}
+                  workspaceSlug={workspaceSlug}
                   projectId={projectId}
                   handleFormChange={handleFormChange}
                   handleDescriptionHTMLDataChange={(description_html) =>
@@ -328,7 +328,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
                   control={control}
                   id={data?.id}
                   projectId={projectId}
-                  workspaceSlug={workspaceSlug?.toString()}
+                  workspaceSlug={workspaceSlug}
                   selectedParentIssue={selectedParentIssue}
                   startDate={watch("start_date")}
                   targetDate={watch("target_date")}

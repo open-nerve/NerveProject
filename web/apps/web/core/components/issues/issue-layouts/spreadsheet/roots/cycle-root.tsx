@@ -6,7 +6,7 @@
 
 import React, { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // hooks
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useCycle } from "@/hooks/store/use-cycle";

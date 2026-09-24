@@ -6,7 +6,6 @@
 
 import { useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import { EIssueFilterType, ISSUE_LAYOUTS, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -27,9 +26,15 @@ const SUPPORTED_LAYOUTS = [
   { key: "calendar", i18n_title: "issue.layouts.calendar", icon: CalendarOutline },
 ];
 
-export const ModuleIssuesMobileHeader = observer(function ModuleIssuesMobileHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  moduleId: string;
+};
+
+export const ModuleIssuesMobileHeader = observer(function ModuleIssuesMobileHeader(props: TProps) {
   // router
-  const { workspaceSlug, projectId, moduleId } = useParams();
+  const { workspaceSlug, projectId, moduleId } = props;
   // plane hooks
   const { t } = useTranslation();
   // store hooks

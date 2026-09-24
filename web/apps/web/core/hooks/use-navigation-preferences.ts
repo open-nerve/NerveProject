@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import type {
   TProjectNavigationPreferences,
   TProjectNavigationMode,

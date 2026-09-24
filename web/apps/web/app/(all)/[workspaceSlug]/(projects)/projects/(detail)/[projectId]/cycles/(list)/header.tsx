@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // ui
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
@@ -23,10 +22,15 @@ import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const CyclesListHeader = observer(function CyclesListHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+export const CyclesListHeader = observer(function CyclesListHeader(props: TProps) {
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId } = useParams();
+  const { workspaceSlug, projectId } = props;
 
   // store hooks
   const { toggleCreateCycleModal } = useCommandPalette();

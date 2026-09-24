@@ -7,8 +7,7 @@
 import type { SyntheticEvent } from "react";
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
-import { Link, useNavigate, useSearchParams, useLocation } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link, useNavigate, useSearchParams, useLocation } from "react-router";
 import { InfoOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // plane package imports
 import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";

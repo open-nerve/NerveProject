@@ -7,7 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isEqual, xor } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // Plane imports
 import { useTranslation } from "@plane/i18n";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
@@ -77,7 +77,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
   const { createIssue, updateIssue } = useIssuesActions(storeType);
   // derived values
   const routerProjectIdentifier = workItem?.toString().split("-")[0];
-  const projectIdFromRouter = getProjectByIdentifier(routerProjectIdentifier)?.id;
+  const projectIdFromRouter = routerProjectIdentifier ? getProjectByIdentifier(routerProjectIdentifier)?.id : undefined;
   const projectId = data?.project_id ?? routerProjectId?.toString() ?? projectIdFromRouter;
 
   const fetchIssueDetail = async (issueId: string | undefined) => {
@@ -170,7 +170,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
       // use the project issue store to create issues
       else if (
         (payload.cycle_id !== cycleId && storeType === EIssuesStoreType.CYCLE) ||
-        (!payload.module_ids?.includes(moduleId?.toString()) && storeType === EIssuesStoreType.MODULE)
+        (!(moduleId && payload.module_ids?.includes(moduleId)) && storeType === EIssuesStoreType.MODULE)
       ) {
         response = await projectIssues.createIssue(workspaceSlug.toString(), payload.project_id, payload);
       } // else just use the existing store type's create method
@@ -205,7 +205,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
         if (
           payload.module_ids &&
           payload.module_ids.length > 0 &&
-          (!payload.module_ids.includes(moduleId?.toString()) || storeType !== EIssuesStoreType.MODULE)
+          (!(moduleId && payload.module_ids.includes(moduleId)) || storeType !== EIssuesStoreType.MODULE)
         ) {
           await addIssueToModule(response, payload.module_ids);
         }
@@ -357,8 +357,8 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
 
   const handleDuplicateIssueModal = (value: boolean) => setIsDuplicateModalOpen(value);
 
-  // don't open the modal if there are no projects
-  if (!allowedProjectIds || allowedProjectIds.length === 0 || !activeProjectId) return null;
+  // don't open the modal outside a workspace or if there are no projects
+  if (!workspaceSlug || !allowedProjectIds || allowedProjectIds.length === 0 || !activeProjectId) return null;
 
   const commonIssueModalProps: IssueFormProps = {
     issueTitleRef: issueTitleRef,
@@ -371,6 +371,7 @@ export const CreateUpdateIssueModalBase = observer(function CreateUpdateIssueMod
     onAssetUpload: handleUpdateUploadedAssetIds,
     onClose: handleClose,
     onSubmit: (payload) => handleFormSubmit(payload, isDraft),
+    workspaceSlug,
     projectId: activeProjectId,
     isCreateMoreToggleEnabled: createMore,
     onCreateMoreToggleChange: handleCreateMoreToggleChange,

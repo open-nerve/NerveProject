@@ -6,7 +6,7 @@
 
 import { useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { Logo } from "@plane/propel/emoji-icon-picker";
 import { ViewsOutline } from "@makeplane/propel/icons";
 // types
@@ -32,6 +32,8 @@ export const ProjectViewListItem = observer(function ProjectViewListItem(props: 
   // store hooks
   const { isMobile } = usePlatformOS();
 
+  if (!workspaceSlug || !projectId) return null;
+
   return (
     <ListItem
       prependTitleElement={
@@ -48,12 +50,7 @@ export const ProjectViewListItem = observer(function ProjectViewListItem(props: 
       actionableItems={<ViewListItemAction parentRef={parentRef} view={view} />}
       quickActionElement={
         <div className="block md:hidden">
-          <ViewQuickActions
-            parentRef={parentRef}
-            projectId={projectId.toString()}
-            view={view}
-            workspaceSlug={workspaceSlug.toString()}
-          />
+          <ViewQuickActions parentRef={parentRef} projectId={projectId} view={view} workspaceSlug={workspaceSlug} />
         </div>
       }
       isMobile={isMobile}

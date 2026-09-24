@@ -59,7 +59,7 @@ export interface IWorkspaceMemberStore {
     data: Partial<IWorkspaceMemberInvitation>
   ) => Promise<void>;
   deleteMemberInvitation: (workspaceSlug: string, invitationId: string) => Promise<void>;
-  isUserSuspended: (userId: string, workspaceSlug: string) => boolean;
+  isUserSuspended: (userId: string, workspaceSlug: string | undefined) => boolean;
 }
 
 export class WorkspaceMemberStore implements IWorkspaceMemberStore {
@@ -358,7 +358,7 @@ export class WorkspaceMemberStore implements IWorkspaceMemberStore {
       });
     });
 
-  isUserSuspended = computedFn((userId: string, workspaceSlug: string) => {
+  isUserSuspended = computedFn((userId: string, workspaceSlug: string | undefined) => {
     if (!workspaceSlug) return false;
     const workspaceMember = this.workspaceMemberMap?.[workspaceSlug]?.[userId];
     return workspaceMember?.is_active === false;

@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import {
   CloseOutline,
   CyclesOutline,
@@ -62,9 +62,10 @@ export const TransferIssuesModal = observer(function TransferIssuesModal(props: 
 
   /**To update issue counts in target cycle and current cycle */
   const getCycleDetails = async (newCycleId: string) => {
+    if (!workspaceSlug || !projectId) return;
     const cyclesFetch = [
-      fetchActiveCycleProgress(workspaceSlug.toString(), projectId.toString(), cycleId),
-      fetchActiveCycleProgress(workspaceSlug.toString(), projectId.toString(), newCycleId),
+      fetchActiveCycleProgress(workspaceSlug, projectId, cycleId),
+      fetchActiveCycleProgress(workspaceSlug, projectId, newCycleId),
     ];
     await Promise.all(cyclesFetch).catch((error) => {
       setToast({

@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { useDropzone } from "react-dropzone";
 import { Popover } from "@headlessui/react";
 // plane imports

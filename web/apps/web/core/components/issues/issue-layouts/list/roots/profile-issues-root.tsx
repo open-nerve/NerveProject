@@ -5,7 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
@@ -23,7 +23,7 @@ export const ProfileIssuesListLayout = observer(function ProfileIssuesListLayout
     allowPermissions(
       [EUserPermissions.ADMIN, EUserPermissions.MEMBER],
       EUserPermissionsLevel.PROJECT,
-      workspaceSlug.toString(),
+      workspaceSlug,
       projectId
     );
 

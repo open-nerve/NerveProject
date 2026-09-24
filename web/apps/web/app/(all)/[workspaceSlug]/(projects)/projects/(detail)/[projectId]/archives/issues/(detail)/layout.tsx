@@ -9,11 +9,20 @@ import { Outlet } from "react-router";
 import { AppHeader } from "@/components/core/app-header";
 import { ContentWrapper } from "@/components/core/content-wrapper";
 import { ProjectArchivedIssueDetailsHeader } from "./header";
+import type { Route } from "./+types/layout";
 
-export default function ProjectArchivedIssueDetailLayout() {
+export default function ProjectArchivedIssueDetailLayout({ params }: Route.ComponentProps) {
   return (
     <>
-      <AppHeader header={<ProjectArchivedIssueDetailsHeader />} />
+      <AppHeader
+        header={
+          <ProjectArchivedIssueDetailsHeader
+            workspaceSlug={params.workspaceSlug}
+            projectId={params.projectId}
+            archivedIssueId={params.archivedIssueId}
+          />
+        }
+      />
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>

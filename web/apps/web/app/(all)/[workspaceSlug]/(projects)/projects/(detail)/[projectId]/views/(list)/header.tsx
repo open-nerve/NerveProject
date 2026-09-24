@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // ui
 import { Button } from "@plane/propel/button";
 import { ViewsOutline } from "@makeplane/propel/icons";
@@ -19,8 +18,13 @@ import { useProject } from "@/hooks/store/use-project";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const ProjectViewsHeader = observer(function ProjectViewsHeader() {
-  const { workspaceSlug, projectId } = useParams();
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+};
+
+export const ProjectViewsHeader = observer(function ProjectViewsHeader(props: TProps) {
+  const { workspaceSlug, projectId } = props;
   // store hooks
   const { toggleCreateViewModal } = useCommandPalette();
   const { loader } = useProject();

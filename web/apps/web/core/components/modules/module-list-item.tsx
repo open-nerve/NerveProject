@@ -6,7 +6,6 @@
 
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // icons
 import { InfoOutline, TickOutline } from "@makeplane/propel/icons";
 // ui
@@ -18,7 +17,7 @@ import { ModuleListItemAction, ModuleQuickActions } from "@/components/modules";
 // helpers
 // hooks
 import { useModule } from "@/hooks/store/use-module";
-import { useNavigate, useSearchParams, useLocation } from "react-router";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router";
 import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
@@ -41,7 +40,7 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
   // derived values
   const moduleDetails = getModuleById(moduleId);
 
-  if (!moduleDetails) return null;
+  if (!workspaceSlug || !projectId || !moduleDetails) return null;
 
   const completionPercentage =
     ((moduleDetails.completed_issues + moduleDetails.cancelled_issues) / moduleDetails.total_issues) * 100;
@@ -113,8 +112,8 @@ export const ModuleListItem = observer(function ModuleListItem(props: Props) {
           <ModuleQuickActions
             parentRef={parentRef}
             moduleId={moduleId}
-            projectId={projectId.toString()}
-            workspaceSlug={workspaceSlug.toString()}
+            projectId={projectId}
+            workspaceSlug={workspaceSlug}
           />
         </div>
       }

@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import type { TIssue } from "@plane/types";
 import { EIssuesStoreType } from "@plane/types";
@@ -15,7 +14,7 @@ import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
 
 export type TWorkItemLevelModalsProps = {

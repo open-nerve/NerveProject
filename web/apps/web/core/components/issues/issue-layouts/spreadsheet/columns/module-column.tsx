@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import { xor } from "lodash-es";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // types
 import type { TIssue } from "@plane/types";
 // components

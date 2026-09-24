@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { Ban } from "lucide-react";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { EUserProjectRoles } from "@plane/types";

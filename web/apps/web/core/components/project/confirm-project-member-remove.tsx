@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { WarningTriangleOutline } from "@makeplane/propel/icons";
 // types
 import { Button } from "@plane/propel/button";

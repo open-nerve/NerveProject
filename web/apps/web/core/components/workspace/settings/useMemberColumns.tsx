@@ -5,7 +5,7 @@
  */
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";
 import { renderFormattedDate } from "@plane/utils";
@@ -54,15 +54,16 @@ export const useMemberColumns = () => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => (
-        <NameColumn
-          rowData={rowData}
-          workspaceSlug={workspaceSlug}
-          isAdmin={isAdmin}
-          currentUser={currentUser}
-          setRemoveMemberModal={setRemoveMemberModal}
-        />
-      ),
+      tdRender: (rowData: RowData) =>
+        workspaceSlug && (
+          <NameColumn
+            rowData={rowData}
+            workspaceSlug={workspaceSlug}
+            isAdmin={isAdmin}
+            currentUser={currentUser}
+            setRemoveMemberModal={setRemoveMemberModal}
+          />
+        ),
     },
 
     {
@@ -105,7 +106,8 @@ export const useMemberColumns = () => {
           handleDisplayFilterUpdate={handleDisplayFilterUpdate}
         />
       ),
-      tdRender: (rowData: RowData) => <AccountTypeColumn rowData={rowData} workspaceSlug={workspaceSlug} />,
+      tdRender: (rowData: RowData) =>
+        workspaceSlug && <AccountTypeColumn rowData={rowData} workspaceSlug={workspaceSlug} />,
     },
 
     {

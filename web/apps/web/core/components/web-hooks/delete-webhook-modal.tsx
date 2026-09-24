@@ -5,13 +5,12 @@
  */
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
 // ui
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
 import { AlertModalCore } from "@plane/ui";
 // hooks
 import { useWebhook } from "@/hooks/store/use-webhook";
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 
 interface IDeleteWebhook {
   isOpen: boolean;

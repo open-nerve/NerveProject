@@ -6,7 +6,6 @@
 
 import { useCallback, useRef } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 
 // plane imports
 import {
@@ -37,13 +36,18 @@ import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  viewId: string;
+};
+
+export const ProjectViewIssuesHeader = observer(function ProjectViewIssuesHeader(props: TProps) {
   // refs
   const parentRef = useRef(null);
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId, viewId: routerViewId } = useParams();
-  const viewId = routerViewId ? routerViewId.toString() : undefined;
+  const { workspaceSlug, projectId, viewId } = props;
   // store hooks
   const {
     issuesFilter: { issueFilters, updateFilters },

@@ -6,11 +6,10 @@
 
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane imports
 import type { IWorkspaceSearchResults } from "@plane/types";
 // hooks
-import { useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 // helpers
 import { PowerKModalCommandItem } from "./command-item";
 import { POWER_K_SEARCH_RESULTS_GROUPS_MAP } from "./search-results-map";

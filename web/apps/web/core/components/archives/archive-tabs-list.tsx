@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { Link, useLocation } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link, useLocation } from "react-router";
 // types
 import type { IProject } from "@plane/types";
 // hooks

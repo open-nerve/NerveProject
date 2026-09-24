@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { Signal, TicketCheck } from "lucide-react";
 import {
   CyclesOutline,

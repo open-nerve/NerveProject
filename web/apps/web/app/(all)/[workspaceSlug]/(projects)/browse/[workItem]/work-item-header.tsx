@@ -6,7 +6,6 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 // plane ui
 import { WorkItemsOutline } from "@makeplane/propel/icons";
 import { Breadcrumbs, Header } from "@plane/ui";
@@ -20,10 +19,15 @@ import { useNavigate } from "react-router";
 // plane web imports
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
-export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader() {
+type TProps = {
+  workspaceSlug: string;
+  workItem: string;
+};
+
+export const WorkItemDetailsHeader = observer(function WorkItemDetailsHeader(props: TProps) {
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, workItem } = useParams();
+  const { workspaceSlug, workItem } = props;
   // store hooks
   const { getProjectById, loader } = useProject();
   const {

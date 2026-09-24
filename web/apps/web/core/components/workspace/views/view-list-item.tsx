@@ -6,8 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { Link } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link } from "react-router";
 // plane imports
 import { DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 import { CustomMenu } from "@plane/ui";

@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 // components
 import { EUserPermissionsLevel } from "@plane/constants";
 import { useTranslation } from "@plane/i18n";

@@ -4,13 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import type { NavigateFunction } from "react-router";
+import type { NavigateFunction, Params } from "react-router";
 
 export type TPowerKContextType = "work-item" | "cycle" | "module";
 
 export type TPowerKContext = {
   // Route information
-  params: Record<string, string | string[] | undefined>;
+  params: Params;
   // Current user
   currentUserId?: string;
   activeCommand: TPowerKCommandConfig | null;

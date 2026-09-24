@@ -7,8 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // plane imports
-import { useParams } from "next/navigation";
-import { useLocation } from "react-router";
+import { useParams, useLocation } from "react-router";
 import { SIDEBAR_WIDTH } from "@plane/constants";
 import { useLocalStorage } from "@plane/hooks";
 // components

@@ -7,7 +7,7 @@
 import type { Dispatch, MouseEvent, MutableRefObject, SetStateAction } from "react";
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 // plane helpers
 import { useOutsideClickDetector } from "@plane/hooks";

@@ -10,11 +10,15 @@ import { ContentWrapper } from "@/components/core/content-wrapper";
 // local components
 import { ProjectViewsHeader } from "./header";
 import { ViewMobileHeader } from "./mobile-header";
+import type { Route } from "./+types/layout";
 
-export default function ProjectViewsListLayout() {
+export default function ProjectViewsListLayout({ params }: Route.ComponentProps) {
   return (
     <>
-      <AppHeader header={<ProjectViewsHeader />} mobileHeader={<ViewMobileHeader />} />
+      <AppHeader
+        header={<ProjectViewsHeader workspaceSlug={params.workspaceSlug} projectId={params.projectId} />}
+        mobileHeader={<ViewMobileHeader />}
+      />
       <ContentWrapper>
         <Outlet />
       </ContentWrapper>

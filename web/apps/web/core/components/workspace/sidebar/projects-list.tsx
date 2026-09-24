@@ -8,8 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import { autoScrollForElements } from "@atlaskit/pragmatic-drag-and-drop-auto-scroll/element";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { useLocation } from "react-router";
+import { useParams, useLocation } from "react-router";
 import { AddOutline, ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
@@ -234,12 +233,13 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                   ))}
                 </Loader>
               )}
-              {isAllProjectsListOpen && (
+              {workspaceSlug && isAllProjectsListOpen && (
                 <Disclosure.Panel as="div" className="flex flex-col gap-0.5" static>
                   <>
                     {displayedProjects.map((projectId, index) => (
                       <SidebarProjectsListItem
                         key={projectId}
+                        workspaceSlug={workspaceSlug}
                         projectId={projectId}
                         handleCopyText={() => handleCopyText(projectId)}
                         projectListType={"JOINED"}

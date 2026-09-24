@@ -31,7 +31,7 @@ export interface IUserPermissionStore {
   projectUserInfo: Record<string, Record<string, TProjectMembership>>; // workspaceSlug -> projectId -> TProjectMembership
   workspaceProjectsPermissions: Record<string, IUserProjectsRole>; // workspaceSlug -> IUserProjectsRole
   // computed helpers
-  workspaceInfoBySlug: (workspaceSlug: string) => IWorkspaceMemberMe | undefined;
+  workspaceInfoBySlug: (workspaceSlug: string | undefined) => IWorkspaceMemberMe | undefined;
   getWorkspaceRoleByWorkspaceSlug: (workspaceSlug: string) => TUserPermissions | EUserWorkspaceRoles | undefined;
   getProjectRolesByWorkspaceSlug: (workspaceSlug: string) => IUserProjectsRole;
   getProjectRoleByWorkspaceSlugAndProjectId: (
@@ -88,10 +88,10 @@ export class UserPermissionStore implements IUserPermissionStore {
   // computed helpers
   /**
    * @description Returns the current workspace information
-   * @param { string } workspaceSlug
+   * @param { string | undefined } workspaceSlug
    * @returns { IWorkspaceMemberMe | undefined }
    */
-  workspaceInfoBySlug = computedFn((workspaceSlug: string): IWorkspaceMemberMe | undefined => {
+  workspaceInfoBySlug = computedFn((workspaceSlug: string | undefined): IWorkspaceMemberMe | undefined => {
     if (!workspaceSlug) return undefined;
     return this.workspaceUserInfo[workspaceSlug] || undefined;
   });

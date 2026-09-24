@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 import { IntakeOutline, RefreshOutline } from "@makeplane/propel/icons";
 // ui
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
@@ -41,12 +41,14 @@ export const ProjectInboxHeader = observer(function ProjectInboxHeader() {
     EUserPermissionsLevel.PROJECT
   );
 
+  if (!workspaceSlug || !projectId) return null;
+
   return (
     <Header>
       <Header.LeftItem>
         <div className="flex flex-grow items-center gap-4">
           <Breadcrumbs isLoading={currentProjectDetailsLoader === "init-loader"}>
-            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug?.toString()} projectId={projectId?.toString()} />
+            <CommonProjectBreadcrumbs workspaceSlug={workspaceSlug} projectId={projectId} />
             <Breadcrumbs.Item
               component={
                 <BreadcrumbLink
@@ -69,7 +71,7 @@ export const ProjectInboxHeader = observer(function ProjectInboxHeader() {
         </div>
       </Header.LeftItem>
       <Header.RightItem>
-        {currentProjectDetails?.inbox_view && workspaceSlug && projectId && isAuthorized ? (
+        {currentProjectDetails?.inbox_view && isAuthorized ? (
           <div className="flex items-center gap-2">
             <InboxIssueCreateModalRoot
               workspaceSlug={workspaceSlug.toString()}

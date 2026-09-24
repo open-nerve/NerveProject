@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 import { ArchiveOutline, CyclesOutline, ModuleOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { EIssuesStoreType } from "@plane/types";
@@ -22,6 +21,8 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 import { CommonProjectBreadcrumbs } from "@/components/breadcrumbs/common";
 
 type TProps = {
+  workspaceSlug: string;
+  projectId: string;
   activeTab: "issues" | "cycles" | "modules";
 };
 
@@ -50,10 +51,9 @@ const PROJECT_ARCHIVES_BREADCRUMB_LIST: {
 };
 
 export const ProjectArchivesHeader = observer(function ProjectArchivesHeader(props: TProps) {
-  const { activeTab } = props;
+  const { activeTab, workspaceSlug, projectId } = props;
   // router
   const navigate = useNavigate();
-  const { workspaceSlug, projectId } = useParams();
   // store hooks
   const {
     issues: { getGroupIssueCount },

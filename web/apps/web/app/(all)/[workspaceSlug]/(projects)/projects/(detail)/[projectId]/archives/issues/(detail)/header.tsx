@@ -5,7 +5,6 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
 import useSWR from "swr";
 // ui
 import { ArchiveOutline, WorkItemsOutline } from "@makeplane/propel/icons";
@@ -24,9 +23,15 @@ import { IssueService } from "@/services/issue";
 
 const issueService = new IssueService();
 
-export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchivedIssueDetailsHeader() {
+type TProps = {
+  workspaceSlug: string;
+  projectId: string;
+  archivedIssueId: string;
+};
+
+export const ProjectArchivedIssueDetailsHeader = observer(function ProjectArchivedIssueDetailsHeader(props: TProps) {
   // router
-  const { workspaceSlug, projectId, archivedIssueId } = useParams();
+  const { workspaceSlug, projectId, archivedIssueId } = props;
   // store hooks
   const { currentProjectDetails, loader } = useProject();
 

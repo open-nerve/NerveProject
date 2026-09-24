@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
+import { useParams } from "react-router";
 // plane imports
 import { useTranslation } from "@plane/i18n";
 import type { IWorkspaceBulkInviteFormData } from "@plane/types";
@@ -38,6 +38,8 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
     onClose,
   });
 
+  if (!workspaceSlug) return null;
+
   return (
     <ModalCore isOpen={isOpen} position={EModalPosition.TOP} width={EModalWidth.XXL}>
       <InvitationForm
@@ -54,7 +56,7 @@ export const SendWorkspaceInvitationModal = observer(function SendWorkspaceInvit
         className="p-5"
       >
         <InvitationFields
-          workspaceSlug={workspaceSlug.toString()}
+          workspaceSlug={workspaceSlug}
           fields={fields}
           control={control}
           formState={formState}

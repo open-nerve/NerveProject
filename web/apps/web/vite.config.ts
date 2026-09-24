@@ -1,4 +1,3 @@
-import path from "node:path";
 import { reactRouter } from "@react-router/dev/vite";
 import { defineConfig } from "vite";
 
@@ -9,10 +8,6 @@ export default defineConfig(() => ({
   plugins: [reactRouter()],
   resolve: {
     tsconfigPaths: true,
-    alias: {
-      // Next.js compatibility shims used within web
-      "next/navigation": path.resolve(__dirname, "app/compat/next/navigation.ts"),
-    },
     dedupe: ["react", "react-dom", "@headlessui/react"],
   },
   server: {
@@ -22,5 +17,4 @@ export default defineConfig(() => ({
       "/api": "http://127.0.0.1:8080",
     },
   },
-  // No SSR-specific overrides needed; alias resolves to ESM build
 }));

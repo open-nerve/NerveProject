@@ -7,8 +7,7 @@
 import React from "react";
 // mobx
 import { observer } from "mobx-react";
-import { Link } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link } from "react-router";
 import { CloseOutline, MembersOutline, ProjectsOutline, TickOutline } from "@makeplane/propel/icons";
 // plane ui
 import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";

@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { Link } from "react-router";
-import { useParams } from "next/navigation";
+import { useParams, Link } from "react-router";
 import { SettingsOutline, TickOutline, UserPlusOutline } from "@makeplane/propel/icons";
 import { Menu } from "@headlessui/react";
 // plane imports

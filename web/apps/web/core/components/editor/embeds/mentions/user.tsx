@@ -5,8 +5,7 @@
  */
 
 import { observer } from "mobx-react";
-import { useParams } from "next/navigation";
-import { Link } from "react-router";
+import { useParams, Link } from "react-router";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { ROLE } from "@plane/constants";
