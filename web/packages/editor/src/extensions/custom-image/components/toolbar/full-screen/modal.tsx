@@ -273,7 +273,7 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
           {!isTouchDevice && (
             <button
               type="button"
-              onClick={() => window.open(downloadSrc, "_blank")}
+              onClick={() => window.open(downloadSrc, "_blank", "noopener,noreferrer")}
               className="grid size-8 flex-shrink-0 place-items-center text-white/60 transition-colors duration-200 hover:text-white"
               aria-label="Download image"
             >
@@ -283,7 +283,7 @@ function ImageFullScreenModalWithoutPortal(props: Props) {
           {!isTouchDevice && (
             <button
               type="button"
-              onClick={() => window.open(src, "_blank")}
+              onClick={() => window.open(src, "_blank", "noopener,noreferrer")}
               className="grid size-8 flex-shrink-0 place-items-center text-white/60 transition-colors duration-200 hover:text-white"
               aria-label="Open image in new tab"
             >

@@ -63,7 +63,7 @@ export const CycleQuickActions = observer(function CycleQuickActions(props: Prop
         message: t("common.link_copied_to_clipboard"),
       });
     });
-  const handleOpenInNewTab = () => window.open(`/${cycleLink}`, "_blank");
+  const handleOpenInNewTab = () => window.open(`/${cycleLink}`, "_blank", "noopener,noreferrer");
 
   const handleRestoreCycle = async () =>
     await restoreCycle(workspaceSlug, projectId, cycleId)

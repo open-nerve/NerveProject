@@ -1659,6 +1659,36 @@
           "web/packages/propel/src/icons/index.ts"
         ]
       }
+    },
+    {
+      "id": "window-open",
+      "phase": "M1/closeout",
+      "why": "window.open 打开的页面拿得到 window.opener（链接里的 target=\"_blank\" 浏览器默认 noopener，window.open 不会）；编辑器打开别的成员写的链接、附件和图片来自另一个源。每次调用都在同一行传 \"noopener,noreferrer\"",
+      "files": {
+        "source": "^web/.*\\.[cm]?[jt]sx?$",
+        "flags": ""
+      },
+      "content": {
+        "source": "window\\.open\\((?![^\\n]*noopener)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "          window.open(href, target);",
+          "  const handleOpenInNewTab = () => window.open(`/${cycleLink}`, \"_blank\");"
+        ],
+        "miss": [
+          "        window.open(REPOSITORY_URL, \"_blank\", \"noopener,noreferrer\");",
+          "        onClick={() => window.open(workItemLink, \"_blank\", \"noopener,noreferrer\")}"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/editor/src/extensions/custom-link/helpers/clickHandler.ts",
+            "web/apps/web/core/components/cycles/quick-actions.tsx"
+          ],
+          "miss": ["e2e/playwright.config.ts", "web/apps/web/app/assets/brand/mark.svg"]
+        }
+      }
     }
   ],
   "exceptions": [
