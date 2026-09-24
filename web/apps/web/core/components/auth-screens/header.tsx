@@ -8,7 +8,7 @@ import React from "react";
 import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTranslation } from "@nerve/i18n";
-import { PlaneLockup } from "@nerve/propel/icons";
+import { NerveLockup } from "@/components/common/nerve-logo";
 import { PageHead } from "@/components/core/page-title";
 import { EAuthModes } from "@/helpers/authentication.helper";
 import { useInstance } from "@/hooks/store/use-instance";
@@ -71,7 +71,7 @@ function AuthHeaderBase(props: TAuthHeaderBase) {
       <PageHead title={pageTitle + " - Plane"} />
       <div className="sticky top-0 flex w-full flex-shrink-0 items-center justify-between gap-6">
         <Link to="/">
-          <PlaneLockup height={20} width={95} className="text-primary" />
+          <NerveLockup className="h-5 w-auto" />
         </Link>
         {additionalAction}
       </div>

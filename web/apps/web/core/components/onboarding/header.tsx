@@ -6,12 +6,13 @@
 
 import { observer } from "mobx-react";
 // nerve imports
-import { PlaneLockup } from "@nerve/propel/icons";
 import { ChevronLeftOutline } from "@makeplane/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 import { cn } from "@nerve/utils";
+// components
+import { NerveLockup } from "@/components/common/nerve-logo";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
 import { useUser } from "@/hooks/store/user";
@@ -84,7 +85,7 @@ export const OnboardingHeader = observer(function OnboardingHeader(props: Onboar
               <ChevronLeftOutline className="size-6 text-placeholder" />
             </button>
           )}
-          <PlaneLockup height={20} width={95} className="text-primary" />
+          <NerveLockup className="h-5 w-auto" />
         </div>
         <SwitchAccountDropdown fullName={userName} />
       </div>

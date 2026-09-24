@@ -62,17 +62,12 @@ import {
   UserPropertyIcon,
   UserSquarePropertyIcon,
 } from "./properties";
-// Sub-brand icons
 import { CopyLinkIcon } from "./actions/copy-link";
 import { LabelFilledIcon } from "./properties/label-filled-icon";
-import { PlaneNewIcon } from "./sub-brand";
 // Workspace icons
 import { ArchiveIcon, DashboardIcon, DraftIcon, HomeIcon, InboxIcon, ProjectIcon, YourWorkIcon } from "./workspace";
 
 export const ICON_REGISTRY = {
-  // Sub-brand icons
-  "sub-brand.plane": PlaneNewIcon,
-
   // Workspace icons
   "workspace.archive": ArchiveIcon,
   "workspace.cycle": CycleIcon,
