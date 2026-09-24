@@ -74,7 +74,7 @@ P4 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 4. **本 Task 改到的页面上看不到 Plane**：列出本 Task 改到的页面或组件，逐个写明改后显示什么（文字、图片）；改了图片的，写出文件、大小和 SHA-256 前 16 位，并看过它（用读图工具打开 PNG；WebP、SVG 先用 `$P5TMP/t3/crop.mjs` 渲染成 PNG）。
 5. **存储键读写一致**：本 Task 改到的存储键、剪贴板类型，列出它的每个读取方和写入方（`git grep -n -F <键> -- web`），确认一起改了；不写迁移（spec 第 1 节）。没有改到的写"无"。
 6. **没有新的共享或模块级可变状态**：`git diff --cached -U0 -- web` 存到文件后，`grep -E '^\+(export )?(let|var|const|class) '` 列出的每个新增顶层声明写明它是组件、函数还是只读数据；不能有 `let`、`var`。
-7. **版权声明按来源**：本 Task 新增的文件带 Nerve 的声明（`Copyright (c) 2026-present Nerve contributors`、`SPDX-License-Identifier: AGPL-3.0-only`；SVG 用 XML 注释；放不下的登记在同目录的 `SOURCES.md`）；改写的 Plane 文件保留 Plane 的声明。
+7. **版权声明按来源**：本 Task 新增的文件带 Nerve 的声明（`Copyright (c) 2026-present OpenNerve`、`SPDX-License-Identifier: AGPL-3.0-only`；SVG 用 XML 注释；放不下的登记在同目录的 `SOURCES.md`）；改写的 Plane 文件保留 Plane 的声明。
 
 ### 一次性脚本
 
@@ -121,6 +121,29 @@ P4 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 | `metadata.ts`（`REPOSITORY_URL`）、帮助菜单、命令面板、错误页、维护页、登录表单、顶部栏、两个邀请页、项目设置页、`README.md` | 外部链接 | 5 |
 | `version-number.tsx`、`stale-asset-error.ts`、editor 的剪贴板、propel 和 ui 的 12 个组件、4 处注释、`string.ts`、editor 的 `package.json` 和 Readme、`tailwind-config/AGENTS.md` | 标识符、存储键、剪贴板类型、组件名、注释 | 6 |
 | `tools/keywords.json`、12 个 Nerve 写的文件、`docs/v0/frontend-changes.md`、`README.md`、`docs/v0/M1-frontend-trim/handoffs/M0-P6-knip-notes.md` | 规则 `brand`、`brand-files` 和 1 条例外；版权声明；文档 | 7 |
+
+---
+
+## 控制者评审补充（执行前必读）
+
+控制者在执行前复核了 spec 和本计划（原型 `40a54db..36680de` 的数字、每个 Task 的步骤、浏览器核对）。本节与上文冲突时以本节为准。
+
+### spec 第 3 节和第 7 节的裁定
+
+- 第 3 节第 1–16 条全部采纳。
+- 第 7 节的三个待定项：版本号交 M8；新文件头的持有者是 OpenNerve；`web/` 以外不加文件头（spec 7.2）。封面照片交收尾；propel 的对应源码交 M8（spec 7.1、7.3）。
+
+### 对计划的修正
+
+1. **新文件头的持有者是 `OpenNerve`**：`Copyright (c) 2026-present OpenNerve`，与 README 的"Copyright © 2026 OpenNerve"一致。
+   - `$P5TMP` 里写这一行的 7 个文件（`t3/brand/` 的三个 SVG 和两个 `SOURCES` 文件、`t7/headers.mjs`、`t7/docs.mjs`）已由控制者改好，`p5tmp.tar` 已更新；上文 Task 3 Step 2 的 `nerve-logo.tsx` 按这一行写。
+   - 因此 Task 3、7 与原型提交的差异里会有这几行版权声明，三个 SVG 各小 9 字节（`mark.svg` 580、`lockup.svg` 1267、`lockup-on-dark.svg` 1194），构建的 other 相应小 27 字节；这是说明过的差异，写进报告。
+   - XML 注释不参与渲染，`rasterize.mjs` 的 PNG、ICO 哈希应与 Task 3 Step 3 相同；不同时打开图片看过、写进报告（原型的教训 4）。
+   - 风险点第 7 条和 Task 7 Step 6 的 `git grep -c` 都按 `Copyright (c) 2026-present OpenNerve`。
+2. **执行方式沿用 P4**：
+   - Task 1、2 是机械改动。评审包由控制者先在基点的干净克隆上重放脚本，确认提交的差异与脚本写出的相同，评审者只判断每一类替换的意思是否不变。
+   - Task 3–7 按常规评审；Task 3 的评审者要打开新图片看过。
+3. **浏览器核对由控制者在 Task 3、6 之后和修复轮之后跑**（最后一节），截图由控制者目视；实现者不写探测脚本。
 
 ---
 
@@ -224,7 +247,7 @@ Run: `mkdir -p web/apps/web/app/assets/brand`，
 
 ```tsx
 /**
- * Copyright (c) 2026-present Nerve contributors
+ * Copyright (c) 2026-present OpenNerve
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
@@ -476,7 +499,7 @@ Run: `node $P5TMP/t7/docs.mjs` → 3 行 `edited …`（`docs/v0/frontend-change
 
 - 固定节奏第 2–6 步；`brandhits.mjs --summary` → `3	comment`、`brand hits: 3, file names: 0`（都是登记的例外）。
 - 对 Phase 基线：`symref.mjs orphaned 96d8c1d`、`keyref.mjs orphaned 96d8c1d` → 0；`dangling.mjs 96d8c1d` → 0；`headers.sh 96d8c1d` 没有输出；`infile-orphans.mjs 96d8c1d` → 11 行（Task 3 的 8 个、Task 5 的 2 个、Task 6 的 1 个），都以 `defined now: 0)` 结尾。
-- `git grep -c "Copyright (c) 2026-present Nerve contributors" -- web` → 18 个文件。
+- `git grep -c "Copyright (c) 2026-present OpenNerve" -- web` → 18 个文件。
 - 构建之后 `node $P5TMP/web-size.mjs` → `js: 397 files, 6818890 bytes`、`css: 3 files, 296816 bytes`、`fonts: 25 files, 3755608 bytes`、`other: 110 files, 6457945 bytes`、`largest chunk: … 1379320 bytes`、`locale chunks: 34`（基线见 spec 2.2）。
 - 全 Phase 新增的行（`git diff -U0 96d8c1d -- web` 存到文件后查）没有 `={"`、`${"`、`let`、`var` 的顶层声明。
 - `git diff --cached --stat 36680de` 为空；提交信息见 `$P5TMP/t7/msg.txt`。

@@ -105,8 +105,8 @@
 
 | 文件 | 内容 | 大小（字节） |
 |---|---|---:|
-| `app/assets/brand/mark.svg` | 图标：深青色（`#155E75`）圆角方块上，一条白色的线从左下的突触折到右上的突触，写成一个 N | 589 |
-| `app/assets/brand/lockup.svg`、`lockup-on-dark.svg` | 横版标志：半尺寸的图标加小写字标 "nerve"（描边路径），字标分别是深色 `#1F2937` 和浅色 `#F9FAFB` | 1276、1203 |
+| `app/assets/brand/mark.svg` | 图标：深青色（`#155E75`）圆角方块上，一条白色的线从左下的突触折到右上的突触，写成一个 N | 580 |
+| `app/assets/brand/lockup.svg`、`lockup-on-dark.svg` | 横版标志：半尺寸的图标加小写字标 "nerve"（描边路径），字标分别是深色 `#1F2937` 和浅色 `#F9FAFB` | 1267、1194 |
 | `app/assets/brand/favicon-16x16.png`、`favicon-32x32.png`、`favicon.ico`（16/32/48） | 网站图标 | 489、927、2897 |
 | `app/assets/brand/icon-180x180.png`、`icon-512x512.png` | 苹果触屏图标 | 5095、14873 |
 | `app/assets/brand/og-image.png` | 1200×630 的分享图：横版标志和一行 "Open-source project management"（Inter） | 27992 |
@@ -164,7 +164,7 @@ P4 的 45 条规则之上新增 3 条，全部 `"phase": "M1/P5"`；每个顶层
 
 - **例外**（1 条）：`brand`、`pnpm-workspace.yaml`、`Plane`、`count: 3`、`until: M9`：文件开头两行和 `allowBuilds` 里一行中文注释记录这份配置来自 Plane 的哪个提交、哪些不来自 Plane（M0/P5 spec 2.4、M0/P6），在 v0 内不会消失。
 - **规则先在基线上核对**：`rulehits.mjs` 在基线副本上报 `brand: 3902 hits in 1165 files`、`brand-files: 5 paths`，在 Task 6 之后的树上只有 `pnpm-workspace.yaml` 的 3 处。
-- **Nerve 文件的版权**：迁入之后新增的 `web/` 文件里（`newfiles.mjs`，30 个，其中 P5 自己的 12 个），P1–P4 写的 18 个照抄了 Plane 的声明。`origin.mjs` 逐行在迁入的代码里查找：12 个是 Nerve 自己写的（测试、测试配置、`use-profile-member.ts`，至多 2 行短代码与迁入的代码相同），改为 `Copyright (c) 2026-present Nerve contributors` 和 `SPDX-License-Identifier: AGPL-3.0-only`；6 个复述 Plane 的代码，保留 Plane 的声明：`sidebar-chart.tsx`、`links/types.ts`、`project-navigation-dialog.tsx`、`utils/src/theme.ts`（搬过来的代码）、`home-body.tsx`（Plane 的 `home-dashboard-widgets.tsx` 删减而来）、`profile-index.tsx`（照 Plane 的重定向模块写成）。
+- **Nerve 文件的版权**：迁入之后新增的 `web/` 文件里（`newfiles.mjs`，30 个，其中 P5 自己的 12 个），P1–P4 写的 18 个照抄了 Plane 的声明。`origin.mjs` 逐行在迁入的代码里查找：12 个是 Nerve 自己写的（测试、测试配置、`use-profile-member.ts`，至多 2 行短代码与迁入的代码相同），改为 `Copyright (c) 2026-present OpenNerve` 和 `SPDX-License-Identifier: AGPL-3.0-only`（持有者与 README 的"Copyright © 2026 OpenNerve"一致，控制者评审）；6 个复述 Plane 的代码，保留 Plane 的声明：`sidebar-chart.tsx`、`links/types.ts`、`project-navigation-dialog.tsx`、`utils/src/theme.ts`（搬过来的代码）、`home-body.tsx`（Plane 的 `home-dashboard-widgets.tsx` 删减而来）、`profile-index.tsx`（照 Plane 的重定向模块写成）。
 - **`@makeplane/propel` 的来源**（M1 设计 3.10）：0.3.0，AGPL-3.0-only；tarball 完整性 `sha512-nGhiE42vLQVvv7NZOcQYKARJiTXyKDSSTcHOzPdtFpa+WkSz9B91jw6i+3Ikz5cpkv/aEKjOTJF+cByw2zv5ZQ==`；npm 的 SLSA 来源证明记录它由 `github.com/makeplane/propel` 的 `packages/propel`、提交 `0a31b1529c0f249a058e59ade313d8b34ea8f964` 经 `.github/workflows/release.yml` 构建；这个仓库不公开（访问为 404）；包里的 source map 带着 1376 个源文件中 1375 个的全文。记在前端改动清单第一节。
 - **文档**：前端改动清单新增 1.5 节、第四节全部 `已完成 / M1/P5`；README 的"版权"一节说明 Nerve 文件的声明和 `SOURCES.md`；`M0-P6-knip-notes` 写"处理结果（M1/P5）"，改为 `closed`（第 7.4 节）。
 
@@ -220,8 +220,8 @@ P4 的 45 条规则之上新增 3 条，全部 `"phase": "M1/P5"`；每个顶层
 
 - 版权声明行本身（总体设计 2.3：来自 Plane 的文件保留原有的声明）。
 - `@makeplane/propel` 的替换或并入源码（设计 3.10：保留）；它的图标名、样式里的 Plane 痕迹看不到，不改。
-- 包的版本号：12 个包和 web 应用的版本仍是 Plane 的 1.4.2，帮助菜单显示 "Version: v1.4.2"（第 7 节，待控制者裁定）。
-- `web/` 以外 Nerve 自己的代码（`server/`、`e2e/`、`tools/`、`api-client`）没有文件头，本 Phase 不加（第 7 节）。
+- 包的版本号：12 个包和 web 应用的版本仍是 Plane 的 1.4.2，帮助菜单显示 "Version: v1.4.2"（第 7 节：版本号随发布定，交 M8）。
+- `web/` 以外 Nerve 自己的代码（`server/`、`e2e/`、`tools/`、`api-client`）没有文件头，以仓库根目录的 `LICENSE` 为准（第 7 节）。
 - 基线就有、与品牌无关的问题：482 个无引用的文案键、错误页插图的 `alt="ProjectSettingImg"`、从不渲染的应用栏（P4 裁定 9，本 Phase 只把其中的 `PlaneNewIcon` 换成 `NerveLogo`）。
 - 29 张封面照片（`app/assets/cover-images/`）没有品牌，来源和许可不在本 Phase 核对（第 7 节）。
 
@@ -250,17 +250,18 @@ P4 的 45 条规则之上新增 3 条，全部 `"phase": "M1/P5"`；每个顶层
 | M | 事项 |
 |---|---|
 | M4 | - 收集箱列表和工作项详情不再为 Plane 的收集箱机器人（`intake@plane.so`、名字带 `-intake`）显示特殊的头像和名字，创建者按普通用户显示。由系统代为创建的工作项怎样显示，随工作项和收集箱的接口一起定。<br>- 工作项动态里自动归档的操作者显示为写死的 "Nerve"（基线是 "Plane"）；系统操作者的显示同上。 |
+| M8 | - **propel 的对应源码**：`@makeplane/propel` 以编译后的形式随 Nerve 分发（AGPL-3.0-only），它的上游仓库不公开。公开发布之前，取得提交 `0a31b15` 的源码，或从包里的 source map 还原（1376 个源文件中缺 `src/internal/variant-props.ts`），以便提供对应源码（2.9）。<br>- **版本号**：12 个包和 web 应用的 `version` 仍是 Plane 的 1.4.2，帮助菜单显示它；Nerve 的版本号随首次发布定，届时一起改。 |
 
-### 7.2 待控制者裁定
+### 7.2 控制者的裁定（执行前）
 
-- 帮助菜单显示的版本号是 Plane 的 1.4.2（`VersionNumber` 读取 web 应用 `package.json` 的 `version`）。建议：P5 不改；Nerve 的版本号在收尾或首次发布时定，届时同时改 12 个包和 web 应用的 `version`。
-- 版权持有者的写法：README 写 "Copyright © 2026 OpenNerve"，新文件头写 "Nerve contributors"（本 Phase 按已定的写法）。建议收尾时统一说法，或在 README 说明两者的关系。
-- `web/` 以外的 Nerve 代码（Go 服务、`e2e/`、`tools/`）和 `web/packages/api-client` 都没有文件头。建议：维持现状，以仓库根目录的 `LICENSE` 为准；只有 `web/` 里与 Plane 文件混在一起的地方才按来源标注。
+- 版本号：P5 不改；Nerve 的版本号随首次发布定，交 M8（7.1）。
+- 版权持有者：新文件头写 `Copyright (c) 2026-present OpenNerve`，与 README 的"Copyright © 2026 OpenNerve"一致（原稿写的 "Nerve contributors" 是控制者给的默认值，与 README 不符，执行前改正）。
+- `web/` 以外的 Nerve 代码（Go 服务、`e2e/`、`tools/`）和 `web/packages/api-client` 不加文件头，以仓库根目录的 `LICENSE` 为准；只有 `web/` 里与 Plane 文件混在一起的地方按来源标注。
 
 ### 7.3 交给 M1 收尾
 
 - `brand` 在 `pnpm-workspace.yaml` 的例外（`until: M9`）：按设计 11 节重新核对理由。
-- 29 张封面照片的来源和许可（看起来是图库照片，Plane 随代码分发）。
+- 29 张封面照片的来源和许可（看起来是图库照片，Plane 随代码分发）：收尾查明来源；查不到许可的替换或删除。
 - 其余基线就有的事项见第 5 节。
 
 ### 7.4 M0 交接的落点
