@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IApiToken } from "@plane/types";
+import type { IApiToken } from "@nerve/types";
 import { APIService } from "../api.service";
 
 export class APITokenService extends APIService {

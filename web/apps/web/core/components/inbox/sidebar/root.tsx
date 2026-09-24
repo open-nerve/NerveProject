@@ -6,13 +6,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import type { TInboxIssueCurrentTab } from "@plane/types";
-import { EInboxIssueCurrentTab } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import type { TInboxIssueCurrentTab } from "@nerve/types";
+import { EInboxIssueCurrentTab } from "@nerve/types";
 // plane imports
-import { Header, Loader, EHeaderVariant } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { Header, Loader, EHeaderVariant } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // components
 import { InboxSidebarLoader } from "@/components/ui/loader/layouts/project-inbox/inbox-sidebar-loader";
 // hooks

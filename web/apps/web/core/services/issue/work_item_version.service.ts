@@ -5,7 +5,7 @@
  */
 
 // plane imports
-import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@plane/types";
+import type { TDescriptionVersionsListResponse, TDescriptionVersionDetails } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

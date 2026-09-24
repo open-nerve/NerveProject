@@ -7,12 +7,12 @@
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 // plane imports
-import { PROGRESS_STATE_GROUPS_DETAILS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { TWorkItemFilterCondition } from "@plane/shared-state";
+import { PROGRESS_STATE_GROUPS_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { TWorkItemFilterCondition } from "@nerve/shared-state";
 import { LinearProgress } from "@makeplane/propel/components/linear-progress";
-import type { ICycle } from "@plane/types";
-import { Loader } from "@plane/ui";
+import type { ICycle } from "@nerve/types";
+import { Loader } from "@nerve/ui";
 // assets
 import darkProgressAsset from "@/app/assets/empty-state/active-cycle/progress-dark.webp?url";
 import lightProgressAsset from "@/app/assets/empty-state/active-cycle/progress-light.webp?url";

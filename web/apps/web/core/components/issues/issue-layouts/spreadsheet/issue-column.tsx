@@ -7,7 +7,7 @@
 import { useRef } from "react";
 import { observer } from "mobx-react";
 // types
-import type { IIssueDisplayProperties, TIssue } from "@plane/types";
+import type { IIssueDisplayProperties, TIssue } from "@nerve/types";
 // constants
 import { SPREADSHEET_COLUMNS } from "../utils";
 // components

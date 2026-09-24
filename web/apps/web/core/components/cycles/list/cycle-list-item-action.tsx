@@ -16,15 +16,15 @@ import {
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
-import { useLocalStorage } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
+import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
+import { useLocalStorage } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { setPromiseToast } from "@plane/propel/toast";
+import { setPromiseToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { ICycle, TCycleGroups } from "@plane/types";
-import { FavoriteStar } from "@plane/ui";
-import { getDate, getFileURL, generateQueryParams } from "@plane/utils";
+import type { ICycle, TCycleGroups } from "@nerve/types";
+import { FavoriteStar } from "@nerve/ui";
+import { getDate, getFileURL, generateQueryParams } from "@nerve/utils";
 // components
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";

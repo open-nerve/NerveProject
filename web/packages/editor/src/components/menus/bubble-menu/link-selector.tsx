@@ -9,7 +9,7 @@ import type { Editor } from "@tiptap/core";
 import { useCallback, useRef, useState } from "react";
 import { DeleteOutline, LinkOutline, TickOutline } from "@makeplane/propel/icons";
 // plane imports
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // constants
 import { CORE_EXTENSIONS } from "@/constants/extension";
 // helpers

@@ -8,14 +8,14 @@ import { useCallback } from "react";
 import { observer } from "mobx-react";
 import { PreferencesOutline } from "@makeplane/propel/icons";
 // plane imports
-import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
-import { EIssueLayoutTypes, EIssuesStoreType } from "@plane/types";
+import { EIssueFilterType, ISSUE_STORE_TO_FILTERS_MAP } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssueLayoutTypes, EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 // plane web imports
-import type { TProject } from "@plane/types";
+import type { TProject } from "@nerve/types";
 // local imports
 import { WorkItemFiltersToggle } from "../work-item-filters/filters-toggle";
 import {

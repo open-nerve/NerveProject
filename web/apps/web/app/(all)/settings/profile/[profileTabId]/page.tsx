@@ -6,9 +6,9 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { PROFILE_SETTINGS_TABS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { TProfileSettingsTabs } from "@plane/types";
+import { PROFILE_SETTINGS_TABS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { TProfileSettingsTabs } from "@nerve/types";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 import { PageHead } from "@/components/core/page-title";

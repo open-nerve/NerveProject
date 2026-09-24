@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 
-import type { ENotificationFilterType } from "@plane/constants";
+import type { ENotificationFilterType } from "@nerve/constants";
 import { TickOutline } from "@makeplane/propel/icons";
 // plane imports
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // hooks
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 

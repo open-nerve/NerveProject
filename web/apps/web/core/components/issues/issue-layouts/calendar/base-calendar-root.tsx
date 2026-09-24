@@ -9,10 +9,10 @@ import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // plane imports
-import { EIssueGroupByToServerOptions, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TGroupedIssues } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+import { EIssueGroupByToServerOptions, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TGroupedIssues } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useCalendarView } from "@/hooks/store/use-calendar-view";
 import { useIssues } from "@/hooks/store/use-issues";

@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // helpers
-import { getValidKeysFromObject } from "@plane/utils";
+import { getValidKeysFromObject } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";

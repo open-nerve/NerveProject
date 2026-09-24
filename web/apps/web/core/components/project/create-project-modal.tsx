@@ -5,8 +5,8 @@
  */
 
 import { useEffect, useState } from "react";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
-import { getAssetIdFromUrl, checkURLValidity } from "@plane/utils";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { getAssetIdFromUrl, checkURLValidity } from "@nerve/utils";
 // plane ui
 // helpers
 // hooks
@@ -14,7 +14,7 @@ import useKeypress from "@/hooks/use-keypress";
 // plane web components
 import { CreateProjectForm } from "@/components/projects/create/root";
 // plane web types
-import type { TProject } from "@plane/types";
+import type { TProject } from "@nerve/types";
 // services
 import { FileService } from "@/services/file.service";
 const fileService = new FileService();

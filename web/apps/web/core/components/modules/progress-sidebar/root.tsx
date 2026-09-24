@@ -19,18 +19,18 @@ import {
   WorkItemsOutline,
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
+import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // plane types
-import { useTranslation } from "@plane/i18n";
-import { ModuleStatusIcon } from "@plane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { ILinkDetails, IModule, ModuleLink } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { ModuleStatusIcon } from "@nerve/propel/icons";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { ILinkDetails, IModule, ModuleLink } from "@nerve/types";
 // plane ui
-import { Loader, CustomSelect } from "@plane/ui";
+import { Loader, CustomSelect } from "@nerve/ui";
 import { TextArea } from "@makeplane/propel/components/text-area";
 // components
 // helpers
-import { getDate, renderFormattedPayloadDate } from "@plane/utils";
+import { getDate, renderFormattedPayloadDate } from "@nerve/utils";
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
 import { CreateUpdateModuleLinkModal, ModuleProgress, ModuleLinksList } from "@/components/modules";

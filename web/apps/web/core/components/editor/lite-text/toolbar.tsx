@@ -7,16 +7,16 @@
 import React, { useEffect, useState, useCallback } from "react";
 
 // editor
-import type { EditorRefApi } from "@plane/editor";
+import type { EditorRefApi } from "@nerve/editor";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { Button } from "@plane/propel/button";
+import { Button } from "@nerve/propel/button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // constants
-import { cn } from "@plane/utils";
-import type { ToolbarMenuItem } from "@plane/editor";
-import { TOOLBAR_ITEMS } from "@plane/editor";
+import { cn } from "@nerve/utils";
+import type { ToolbarMenuItem } from "@nerve/editor";
+import { TOOLBAR_ITEMS } from "@nerve/editor";
 // helpers
 
 type Props = {

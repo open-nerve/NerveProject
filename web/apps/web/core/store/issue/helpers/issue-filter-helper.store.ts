@@ -6,8 +6,8 @@
 
 import { isEmpty } from "lodash-es";
 // plane constants
-import type { EIssueFilterType } from "@plane/constants";
-import { EIssueGroupByToServerOptions, EServerGroupByToFilterOptions } from "@plane/constants";
+import type { EIssueFilterType } from "@nerve/constants";
+import { EIssueGroupByToServerOptions, EServerGroupByToFilterOptions } from "@nerve/constants";
 import type {
   EIssuesStoreType,
   IIssueDisplayFilterOptions,
@@ -20,9 +20,9 @@ import type {
   TIssueParams,
   TStaticViewTypes,
   TWorkItemFilterExpression,
-} from "@plane/types";
+} from "@nerve/types";
 // helpers
-import { getComputedDisplayFilters, getComputedDisplayProperties } from "@plane/utils";
+import { getComputedDisplayFilters, getComputedDisplayProperties } from "@nerve/utils";
 // lib
 import { storage } from "@/lib/local-storage";
 

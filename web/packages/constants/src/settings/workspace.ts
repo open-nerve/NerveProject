@@ -5,8 +5,8 @@
  */
 
 // plane imports
-import type { TWorkspaceSettingsItem, TWorkspaceSettingsTabs } from "@plane/types";
-import { EUserWorkspaceRoles } from "@plane/types";
+import type { TWorkspaceSettingsItem, TWorkspaceSettingsTabs } from "@nerve/types";
+import { EUserWorkspaceRoles } from "@nerve/types";
 
 export enum WORKSPACE_SETTINGS_CATEGORY {
   ADMINISTRATION = "administration",

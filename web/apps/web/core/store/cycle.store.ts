@@ -9,9 +9,9 @@ import { sortBy, set } from "lodash-es";
 import { action, computed, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // types
-import type { ICycle, TProgressSnapshot, TCycleDistribution } from "@plane/types";
-import type { DistributionUpdates } from "@plane/utils";
-import { orderCycles, shouldFilterCycle, getDate, updateDistribution } from "@plane/utils";
+import type { ICycle, TProgressSnapshot, TCycleDistribution } from "@nerve/types";
+import type { DistributionUpdates } from "@nerve/utils";
+import { orderCycles, shouldFilterCycle, getDate, updateDistribution } from "@nerve/utils";
 // helpers
 // services
 import { CycleService } from "@/services/cycle.service";

@@ -10,12 +10,12 @@ import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { GroupOutline, LabelsOutline, LoadingOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
 import { Combobox } from "@headlessui/react";
-import { getRandomLabelColor } from "@plane/constants";
+import { getRandomLabelColor } from "@nerve/constants";
 // plane imports
-import { useOutsideClickDetector } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
-import type { IIssueLabel } from "@plane/types";
-import { cn } from "@plane/utils";
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
+import type { IIssueLabel } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
 import { IssueLabelsList } from "@/components/ui/labels-list";
 // hooks

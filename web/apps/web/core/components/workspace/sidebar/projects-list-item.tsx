@@ -24,14 +24,14 @@ import {
 } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useOutsideClickDetector } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { IconButton } from "@plane/propel/icon-button";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import { IconButton } from "@nerve/propel/icon-button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { CustomMenu, DropIndicator, DragHandle, ControlLink } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { CustomMenu, DropIndicator, DragHandle, ControlLink } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // components
 import { DEFAULT_TAB_KEY, getTabUrl } from "@/components/navigation/tab-navigation-utils";
 import { useTabPreferences } from "@/components/navigation/use-tab-preferences";

@@ -10,12 +10,12 @@ import { useParams, Link } from "react-router";
 import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makeplane/propel/icons";
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { Button, getButtonStyling } from "@plane/propel/button";
-import { PlaneLogo } from "@plane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { Button, getButtonStyling } from "@nerve/propel/button";
+import { PlaneLogo } from "@nerve/propel/icons";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // assets
 import WorkSpaceNotAvailable from "@/app/assets/workspace/workspace-not-available.png?url";
 // components
@@ -29,7 +29,7 @@ import {
   WORKSPACE_FAVORITE,
   WORKSPACE_STATES,
   WORKSPACE_PROJECT_NAVIGATION_PREFERENCES,
-} from "@plane/constants";
+} from "@nerve/constants";
 // hooks
 import { useFavorite } from "@/hooks/store/use-favorite";
 import { useMember } from "@/hooks/store/use-member";

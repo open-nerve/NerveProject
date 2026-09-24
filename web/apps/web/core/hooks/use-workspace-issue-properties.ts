@@ -6,7 +6,7 @@
 
 import useSWR from "swr";
 // plane web imports
-import { WORKSPACE_CYCLES, WORKSPACE_LABELS, WORKSPACE_MODULES } from "@plane/constants";
+import { WORKSPACE_CYCLES, WORKSPACE_LABELS, WORKSPACE_MODULES } from "@nerve/constants";
 // plane imports
 import { useCycle } from "./store/use-cycle";
 import { useLabel } from "./store/use-label";

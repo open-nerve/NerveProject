@@ -12,12 +12,12 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
 import { InfoOutline } from "@makeplane/propel/icons";
 // plane imports
-import { ETabIndices } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { TProject } from "@plane/types";
+import { ETabIndices } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { TProject } from "@nerve/types";
 // ui
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { projectIdentifierSanitizer, getTabIndex } from "@plane/utils";
+import { projectIdentifierSanitizer, getTabIndex } from "@nerve/utils";
 
 type Props = {
   setValue: UseFormSetValue<TProject>;

@@ -7,11 +7,11 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // plane-i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { AlertModalCore } from "@plane/ui";
+import { AlertModalCore } from "@nerve/ui";
 // helper
-import { getFileName } from "@plane/utils";
+import { getFileName } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types

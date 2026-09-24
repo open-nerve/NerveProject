@@ -1,5 +1,5 @@
 {
-  "name": "@plane/utils",
+  "name": "@nerve/utils",
   "version": "1.4.2",
   "private": true,
   "description": "Helper functions shared across multiple apps internally",
@@ -23,8 +23,8 @@
   },
   "dependencies": {
     "@makeplane/propel": "catalog:",
-    "@plane/constants": "workspace:*",
-    "@plane/types": "workspace:*",
+    "@nerve/constants": "workspace:*",
+    "@nerve/types": "workspace:*",
     "clsx": "catalog:",
     "date-fns": "catalog:",
     "hast": "catalog:",
@@ -43,7 +43,7 @@
     "uuid": "catalog:"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "@types/hast": "catalog:",
     "@types/lodash-es": "catalog:",
     "@types/mdast": "catalog:",

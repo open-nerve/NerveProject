@@ -8,10 +8,10 @@ import React from "react";
 import { Link } from "react-router";
 import { DefaultTabOutline, MoreHorizontalOutline, PinOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { Menu } from "@plane/propel/menu";
+import { useTranslation } from "@nerve/i18n";
+import { Menu } from "@nerve/propel/menu";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // local imports
 import type { TNavigationItem } from "./tab-navigation-root";
 import type { TTabPreferences } from "./tab-navigation-utils";

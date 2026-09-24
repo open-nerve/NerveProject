@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useOutsideClickDetector } from "@plane/hooks";
+import { useOutsideClickDetector } from "@nerve/hooks";
 
 type UseExpandableSearchOptions = {
   onClose?: () => void;

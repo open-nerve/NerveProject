@@ -6,14 +6,14 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { CloseOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplane/propel/icons";
 // plane imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssueRelationTypes } from "@plane/types";
-import type { TIssue } from "@plane/types";
-import { ControlLink, CustomMenu } from "@plane/ui";
-import { generateWorkItemLink } from "@plane/utils";
+import type { TIssueRelationTypes } from "@nerve/types";
+import type { TIssue } from "@nerve/types";
+import { ControlLink, CustomMenu } from "@nerve/ui";
+import { generateWorkItemLink } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useProject } from "@/hooks/store/use-project";

@@ -5,7 +5,7 @@
  */
 
 import sanitizeHtml from "sanitize-html";
-import type { Content, JSONContent } from "@plane/types";
+import type { Content, JSONContent } from "@nerve/types";
 
 /**
  * @description Adds space between camelCase words

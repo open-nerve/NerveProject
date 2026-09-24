@@ -9,10 +9,10 @@ import { observer } from "mobx-react";
 import { AddFilterOutline } from "@makeplane/propel/icons";
 import { Transition } from "@headlessui/react";
 // plane imports
-import { Button } from "@plane/propel/button";
-import type { IFilterInstance } from "@plane/shared-state";
-import type { TExternalFilter, TFilterProperty } from "@plane/types";
-import { cn, EHeaderVariant, Header, Loader } from "@plane/ui";
+import { Button } from "@nerve/propel/button";
+import type { IFilterInstance } from "@nerve/shared-state";
+import type { TExternalFilter, TFilterProperty } from "@nerve/types";
+import { cn, EHeaderVariant, Header, Loader } from "@nerve/ui";
 // local imports
 import type { TAddFilterButtonProps } from "./add-filters/button";
 import { AddFilterButton } from "./add-filters/button";

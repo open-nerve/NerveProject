@@ -7,10 +7,10 @@
 import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // plane types
 import { ProjectsOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { TActivityEntityData, TRecentActivityFilterKeys } from "@plane/types";
+import type { TActivityEntityData, TRecentActivityFilterKeys } from "@nerve/types";
 // plane ui
 // components
 import { ContentOverflowWrapper } from "@/components/core/content-overflow-HOC";

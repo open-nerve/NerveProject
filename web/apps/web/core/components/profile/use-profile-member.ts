@@ -6,8 +6,8 @@
 
 import useSWR from "swr";
 // plane imports
-import { WORKSPACE_MEMBERS } from "@plane/constants";
-import type { IUserLite } from "@plane/types";
+import { WORKSPACE_MEMBERS } from "@nerve/constants";
+import type { IUserLite } from "@nerve/types";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 

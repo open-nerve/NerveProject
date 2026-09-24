@@ -9,9 +9,9 @@ import { useCallback, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // plane imports
-import { ALL_ISSUES, EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import type { EIssuesStoreType, IIssueDisplayFilterOptions } from "@plane/types";
-import { EIssueLayoutTypes } from "@plane/types";
+import { ALL_ISSUES, EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import type { EIssuesStoreType, IIssueDisplayFilterOptions } from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";

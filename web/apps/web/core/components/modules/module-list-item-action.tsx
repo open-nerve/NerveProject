@@ -9,14 +9,14 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { UserAltOutline } from "@makeplane/propel/icons";
 // Plane imports
-import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
-import { useLocalStorage } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@plane/propel/toast";
+import { MODULE_STATUS, EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
+import { useLocalStorage } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IModule } from "@plane/types";
-import { FavoriteStar } from "@plane/ui";
-import { renderFormattedPayloadDate, getDate } from "@plane/utils";
+import type { IModule } from "@nerve/types";
+import { FavoriteStar } from "@nerve/ui";
+import { renderFormattedPayloadDate, getDate } from "@nerve/utils";
 // components
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 import { ModuleQuickActions } from "@/components/modules";

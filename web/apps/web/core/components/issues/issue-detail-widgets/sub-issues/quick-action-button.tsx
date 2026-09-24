@@ -7,10 +7,10 @@
 import React from "react";
 import { observer } from "mobx-react";
 // plane imports
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { AddOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import type { TIssue } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
+import type { TIssue } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 

@@ -5,8 +5,8 @@
  */
 
 import { BoardOutline, CalendarOutline, ListOutline, TableOutline } from "@makeplane/propel/icons";
-import type { ISvgIcons } from "@plane/propel/icons";
-import { EIssueLayoutTypes } from "@plane/types";
+import type { ISvgIcons } from "@nerve/propel/icons";
+import { EIssueLayoutTypes } from "@nerve/types";
 
 export function IssueLayoutIcon({
   layout,

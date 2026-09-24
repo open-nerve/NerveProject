@@ -9,9 +9,9 @@ import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTheme } from "next-themes";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import type { ICycle } from "@plane/types";
-import { Loader } from "@plane/ui";
+import { useTranslation } from "@nerve/i18n";
+import type { ICycle } from "@nerve/types";
+import { Loader } from "@nerve/ui";
 // assets
 import darkChartAsset from "@/app/assets/empty-state/active-cycle/chart-dark.webp?url";
 import lightChartAsset from "@/app/assets/empty-state/active-cycle/chart-light.webp?url";

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueCommentReaction, TIssueReaction } from "@plane/types";
+import type { TIssueCommentReaction, TIssueReaction } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 // types

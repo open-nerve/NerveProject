@@ -11,7 +11,7 @@ import { InfoOutline, TickOutline } from "@makeplane/propel/icons";
 // ui
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
 // components
-import { generateQueryParams } from "@plane/utils";
+import { generateQueryParams } from "@nerve/utils";
 import { ListItem } from "@/components/core/list";
 import { ModuleListItemAction, ModuleQuickActions } from "@/components/modules";
 // helpers

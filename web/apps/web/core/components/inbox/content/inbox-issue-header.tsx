@@ -21,15 +21,15 @@ import {
   TickCircleFilled,
 } from "@makeplane/propel/icons";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { IconButton, getIconButtonStyling } from "@plane/propel/icon-button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TNameDescriptionLoader } from "@plane/types";
-import { EInboxIssueStatus } from "@plane/types";
-import { ControlLink, CustomMenu, Row } from "@plane/ui";
-import { copyUrlToClipboard, findHowManyDaysLeft, generateWorkItemLink } from "@plane/utils";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { IconButton, getIconButtonStyling } from "@nerve/propel/icon-button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TNameDescriptionLoader } from "@nerve/types";
+import { EInboxIssueStatus } from "@nerve/types";
+import { ControlLink, CustomMenu, Row } from "@nerve/ui";
+import { copyUrlToClipboard, findHowManyDaysLeft, generateWorkItemLink } from "@nerve/utils";
 // components
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";
 import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-status";

@@ -7,14 +7,14 @@
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 // plane imports
-import { ETabIndices } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@plane/propel/emoji-icon-picker";
+import { ETabIndices } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EmojiPicker, EmojiIconPickerTypes, Logo } from "@nerve/propel/emoji-icon-picker";
 import { CloseOutline } from "@makeplane/propel/icons";
 // plane types
-import type { IProject } from "@plane/types";
+import type { IProject } from "@nerve/types";
 // plane ui
-import { getTabIndex } from "@plane/utils";
+import { getTabIndex } from "@nerve/utils";
 // components
 import { CoverImage } from "@/components/common/cover-image";
 import { ImagePickerPopover } from "@/components/core/image-picker-popover";

@@ -7,9 +7,9 @@
 import { SquarePlus } from "lucide-react";
 import { CreateFolderOutline, CyclesOutline, ModuleOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 // components
-import { EUserProjectRoles } from "@plane/types";
+import { EUserProjectRoles } from "@nerve/types";
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";

@@ -5,7 +5,7 @@
  */
 
 import { Link } from "react-router";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 
 // ============================================================================
 // TYPES

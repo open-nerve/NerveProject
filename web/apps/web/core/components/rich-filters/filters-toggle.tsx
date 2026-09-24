@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 import { FilterOutline, SelectedFilterOutline } from "@makeplane/propel/icons";
-import { cn } from "@plane/utils";
-import type { IFilterInstance } from "@plane/shared-state";
-import type { TExternalFilter, TFilterProperty } from "@plane/types";
+import { cn } from "@nerve/utils";
+import type { IFilterInstance } from "@nerve/shared-state";
+import type { TExternalFilter, TFilterProperty } from "@nerve/types";
 // components
 import { AddFilterButton } from "@/components/rich-filters/add-filters/button";
 

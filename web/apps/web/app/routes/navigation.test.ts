@@ -18,8 +18,8 @@ import {
   WORKSPACE_SETTINGS,
   WORKSPACE_SIDEBAR_PERSONAL_NAVIGATION_ITEMS,
   WORKSPACE_SIDEBAR_WORKSPACE_NAVIGATION_ITEMS,
-} from "@plane/constants";
-import { generateWorkItemLink, joinUrlPath } from "@plane/utils";
+} from "@nerve/constants";
+import { generateWorkItemLink, joinUrlPath } from "@nerve/utils";
 import routes from "../routes";
 
 // Every internal navigation has to land on a page, not on "page not found" (M1 design 4.2): Plane's legacy

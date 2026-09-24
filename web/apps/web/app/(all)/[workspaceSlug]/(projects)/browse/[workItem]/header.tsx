@@ -6,8 +6,8 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { Header, Row } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { Header, Row } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // components
 import { AppHeader } from "@/components/core/app-header";
 import { TabNavigationRoot } from "@/components/navigation";

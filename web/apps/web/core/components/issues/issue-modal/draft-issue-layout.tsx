@@ -8,10 +8,10 @@ import { useState } from "react";
 import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 // Plane imports
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TIssue } from "@plane/types";
-import { isEmptyHtmlString } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TIssue } from "@nerve/types";
+import { isEmptyHtmlString } from "@nerve/utils";
 // hooks
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 // local imports

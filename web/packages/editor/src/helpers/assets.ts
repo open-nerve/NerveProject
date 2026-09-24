@@ -6,7 +6,7 @@
 
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 // plane imports
-import { CORE_EXTENSIONS } from "@plane/utils";
+import { CORE_EXTENSIONS } from "@nerve/utils";
 // extensions
 import { getImageBlockId } from "@/extensions/custom-image/utils";
 // types

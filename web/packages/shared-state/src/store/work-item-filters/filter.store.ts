@@ -7,10 +7,10 @@
 import { action, makeObservable, observable } from "mobx";
 import { computedFn } from "mobx-utils";
 // plane imports
-import type { TExpressionOptions } from "@plane/constants";
-import type { EIssuesStoreType, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@plane/types";
-import { LOGICAL_OPERATOR } from "@plane/types";
-import { getOperatorForPayload } from "@plane/utils";
+import type { TExpressionOptions } from "@nerve/constants";
+import type { EIssuesStoreType, TWorkItemFilterExpression, TWorkItemFilterProperty } from "@nerve/types";
+import { LOGICAL_OPERATOR } from "@nerve/types";
+import { getOperatorForPayload } from "@nerve/utils";
 // local imports
 import type { TWorkItemFilterCondition } from "../../utils";
 import { buildWorkItemFilterExpressionFromConditions } from "../../utils";

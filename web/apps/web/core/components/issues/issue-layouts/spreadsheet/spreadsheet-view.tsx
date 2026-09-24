@@ -7,10 +7,10 @@
 import React, { useRef } from "react";
 import { observer } from "mobx-react";
 // plane constants
-import { SPREADSHEET_PROPERTY_LIST } from "@plane/constants";
+import { SPREADSHEET_PROPERTY_LIST } from "@nerve/constants";
 // types
-import type { TIssue, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
-import { EIssueLayoutTypes } from "@plane/types";
+import type { TIssue, IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // local imports

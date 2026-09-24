@@ -6,9 +6,9 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { Loader } from "@plane/ui";
-import { getDate } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import { Loader } from "@nerve/ui";
+import { getDate } from "@nerve/utils";
 // components
 import ProgressChart from "@/components/core/sidebar/progress-chart";
 import { validateCycleSnapshot } from "@/components/cycles/progress-sidebar/issue-progress";

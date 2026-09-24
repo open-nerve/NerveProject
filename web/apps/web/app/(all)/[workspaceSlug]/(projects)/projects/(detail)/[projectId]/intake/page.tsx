@@ -8,9 +8,9 @@ import { observer } from "mobx-react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTheme } from "next-themes";
 // plane imports
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EUserProjectRoles, EInboxIssueCurrentTab } from "@plane/types";
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EUserProjectRoles, EInboxIssueCurrentTab } from "@nerve/types";
 // assets
 import darkIntakeAsset from "@/app/assets/empty-state/disabled-feature/intake-dark.webp?url";
 import lightIntakeAsset from "@/app/assets/empty-state/disabled-feature/intake-light.webp?url";

@@ -9,7 +9,7 @@ import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // hooks
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // power-k
 import type { TPowerKCommandConfig, TPowerKContext } from "@/components/power-k/core/types";
 import { ProjectsAppPowerKCommandsList } from "@/components/power-k/ui/modal/commands-list";

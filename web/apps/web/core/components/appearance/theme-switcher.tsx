@@ -8,10 +8,10 @@ import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
 import { useTheme } from "next-themes";
 // plane imports
-import type { I_THEME_OPTION } from "@plane/constants";
-import { THEME_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { setPromiseToast } from "@plane/propel/toast";
+import type { I_THEME_OPTION } from "@nerve/constants";
+import { THEME_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { setPromiseToast } from "@nerve/propel/toast";
 // components
 import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";

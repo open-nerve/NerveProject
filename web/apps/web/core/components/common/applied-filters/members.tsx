@@ -9,7 +9,7 @@ import { CloseOutline } from "@makeplane/propel/icons";
 // plane ui
 import { Avatar } from "@makeplane/propel/components/avatar";
 // helpers
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 // types
 import { useMember } from "@/hooks/store/use-member";
 

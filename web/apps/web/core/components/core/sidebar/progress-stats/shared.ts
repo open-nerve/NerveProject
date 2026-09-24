@@ -4,8 +4,8 @@
  * See the LICENSE file for details.
  */
 
-import type { TWorkItemFilterCondition } from "@plane/shared-state";
-import type { TFilterConditionNodeForDisplay, TFilterValue, TWorkItemFilterProperty } from "@plane/types";
+import type { TWorkItemFilterCondition } from "@nerve/shared-state";
+import type { TFilterConditionNodeForDisplay, TFilterValue, TWorkItemFilterProperty } from "@nerve/types";
 
 export const PROGRESS_STATS = [
   {

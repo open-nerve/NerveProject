@@ -5,8 +5,8 @@
  */
 
 // plane imports
-import type { TActivityFilters, TActivityFilterOption } from "@plane/constants";
-import { ACTIVITY_FILTER_TYPE_OPTIONS } from "@plane/constants";
+import type { TActivityFilters, TActivityFilterOption } from "@nerve/constants";
+import { ACTIVITY_FILTER_TYPE_OPTIONS } from "@nerve/constants";
 // components
 import { ActivityFilter } from "@/components/issues/issue-detail/issue-activity";
 

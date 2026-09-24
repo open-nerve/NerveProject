@@ -7,8 +7,8 @@
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // plane types
-import type { TIssue } from "@plane/types";
-import { Spinner } from "@plane/ui";
+import type { TIssue } from "@nerve/types";
+import { Spinner } from "@nerve/ui";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";
 // local imports

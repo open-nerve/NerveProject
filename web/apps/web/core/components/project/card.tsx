@@ -18,17 +18,17 @@ import {
   UserPlusOutline,
 } from "@makeplane/propel/icons";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
-import { useLocalStorage } from "@plane/hooks";
+import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
+import { useLocalStorage } from "@nerve/hooks";
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { Button } from "@plane/propel/button";
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { setPromiseToast, setToast, TOAST_TYPE } from "@plane/propel/toast";
+import { Button } from "@nerve/propel/button";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import { setPromiseToast, setToast, TOAST_TYPE } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IProject } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
-import { ContextMenu, FavoriteStar } from "@plane/ui";
-import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@plane/utils";
+import type { IProject } from "@nerve/types";
+import type { TContextMenuItem } from "@nerve/ui";
+import { ContextMenu, FavoriteStar } from "@nerve/ui";
+import { copyUrlToClipboard, cn, getFileURL, renderFormattedDate } from "@nerve/utils";
 // components
 // hooks
 import { useMember } from "@/hooks/store/use-member";

@@ -8,12 +8,12 @@ import { useState, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { EmptyStateCompact } from "@plane/propel/empty-state";
-import type { IIssueLabel } from "@plane/types";
-import { Loader } from "@plane/ui";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { EmptyStateCompact } from "@nerve/propel/empty-state";
+import type { IIssueLabel } from "@nerve/types";
+import { Loader } from "@nerve/ui";
 import type { TLabelOperationsCallbacks } from "@/components/labels";
 import {
   CreateUpdateLabelInline,

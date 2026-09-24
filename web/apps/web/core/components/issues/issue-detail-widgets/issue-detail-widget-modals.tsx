@@ -6,8 +6,8 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { ISearchIssueResponse, TIssue, TWorkItemWidgets } from "@plane/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { ISearchIssueResponse, TIssue, TWorkItemWidgets } from "@nerve/types";
 // components
 import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 // hooks

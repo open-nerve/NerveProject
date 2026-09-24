@@ -1,8 +1,8 @@
-# @plane/editor
+# @nerve/editor
 
 ## Description
 
-The `@plane/editor` package serves as the foundation for our editor system. It provides the base functionality for our other editor packages, but it will not be used directly in any of the projects but only for extending other editors.
+The `@nerve/editor` package serves as the foundation for our editor system. It provides the base functionality for our other editor packages, but it will not be used directly in any of the projects but only for extending other editors.
 
 ## Utilities
 

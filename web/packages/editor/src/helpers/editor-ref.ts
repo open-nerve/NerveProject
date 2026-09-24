@@ -7,7 +7,7 @@
 import type { Editor } from "@tiptap/core";
 import { DOMSerializer } from "@tiptap/pm/model";
 // plane imports
-import { convertHTMLToMarkdown } from "@plane/utils";
+import { convertHTMLToMarkdown } from "@nerve/utils";
 // components
 import { getEditorMenuItems } from "@/components/menus";
 // constants

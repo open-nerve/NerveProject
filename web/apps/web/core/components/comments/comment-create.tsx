@@ -8,9 +8,9 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { useForm, Controller } from "react-hook-form";
 // plane imports
-import type { EditorRefApi } from "@plane/editor";
-import type { TIssueComment, TCommentsOperations } from "@plane/types";
-import { cn, isCommentEmpty } from "@plane/utils";
+import type { EditorRefApi } from "@nerve/editor";
+import type { TIssueComment, TCommentsOperations } from "@nerve/types";
+import { cn, isCommentEmpty } from "@nerve/utils";
 // components
 import { LiteTextEditor } from "@/components/editor/lite-text";
 // hooks

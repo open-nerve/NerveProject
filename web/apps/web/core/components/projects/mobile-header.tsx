@@ -9,9 +9,9 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronDownOutline, FilterOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import type { TProjectFilters } from "@plane/types";
-import { calculateTotalFilters } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import type { TProjectFilters } from "@nerve/types";
+import { calculateTotalFilters } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 import { ProjectFiltersSelection } from "@/components/project/dropdowns/filters";

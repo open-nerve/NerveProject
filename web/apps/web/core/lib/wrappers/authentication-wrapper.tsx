@@ -9,7 +9,7 @@ import { observer } from "mobx-react";
 import { Navigate, useLocation, useSearchParams } from "react-router";
 import useSWR from "swr";
 // plane imports
-import { isValidNextPath } from "@plane/utils";
+import { isValidNextPath } from "@nerve/utils";
 // components
 import { LogoSpinner } from "@/components/common/logo-spinner";
 // helpers

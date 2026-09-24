@@ -5,11 +5,11 @@
  */
 
 import type { LucideIcon } from "lucide-react";
-import { VIEW_ACCESS_SPECIFIERS as VIEW_ACCESS_SPECIFIERS_CONSTANTS } from "@plane/constants";
+import { VIEW_ACCESS_SPECIFIERS as VIEW_ACCESS_SPECIFIERS_CONSTANTS } from "@nerve/constants";
 import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
 
-import type { ISvgIcons } from "@plane/propel/icons";
-import { EViewAccess } from "@plane/types";
+import type { ISvgIcons } from "@nerve/propel/icons";
+import { EViewAccess } from "@nerve/types";
 
 const VIEW_ACCESS_ICONS = {
   [EViewAccess.PUBLIC]: GlobeOutline,

@@ -4,9 +4,9 @@
  * See the LICENSE file for details.
  */
 
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateCompact } from "@plane/propel/empty-state";
-import type { CompactAssetType } from "@plane/propel/empty-state";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateCompact } from "@nerve/propel/empty-state";
+import type { CompactAssetType } from "@nerve/propel/empty-state";
 
 const getDisplayContent = (type: string): { assetKey: CompactAssetType; text: string } => {
   switch (type) {

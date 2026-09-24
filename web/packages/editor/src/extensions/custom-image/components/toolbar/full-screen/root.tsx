@@ -7,7 +7,7 @@
 import { FullScreenOutline } from "@makeplane/propel/icons";
 import { useEffect, useState } from "react";
 // plane imports
-import { Tooltip } from "@plane/propel/tooltip";
+import { Tooltip } from "@nerve/propel/tooltip";
 // local imports
 import { ImageFullScreenModal } from "./modal";
 

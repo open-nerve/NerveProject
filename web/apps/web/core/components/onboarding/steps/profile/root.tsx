@@ -9,11 +9,11 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { ImageOutline } from "@makeplane/propel/icons";
 // plane imports
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IUser } from "@plane/types";
-import { EOnboardingSteps } from "@plane/types";
-import { cn, getFileURL, validatePersonName } from "@plane/utils";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IUser } from "@nerve/types";
+import { EOnboardingSteps } from "@nerve/types";
+import { cn, getFileURL, validatePersonName } from "@nerve/utils";
 // components
 import { UserImageUploadModal } from "@/components/core/modals/user-image-upload-modal";
 // hooks

@@ -6,7 +6,7 @@
 
 import { observable, action, makeObservable, runInAction } from "mobx";
 // types
-import type { IInstanceConfig } from "@plane/types";
+import type { IInstanceConfig } from "@nerve/types";
 // services
 import { InstanceService } from "@/services/instance.service";
 

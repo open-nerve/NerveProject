@@ -10,15 +10,15 @@ import { Controller, useForm } from "react-hook-form";
 
 import { Disclosure } from "@headlessui/react";
 // plane imports
-import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
+import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
-import { Pill, EPillVariant, EPillSize } from "@plane/propel/pill";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IUser, IWorkspaceMember } from "@plane/types";
+import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IUser, IWorkspaceMember } from "@nerve/types";
 // plane ui
-import { CustomSelect, PopoverMenu } from "@plane/ui";
+import { CustomSelect, PopoverMenu } from "@nerve/ui";
 // helpers
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser, useUserPermissions } from "@/hooks/store/user";

@@ -6,7 +6,7 @@
 
 import { isEmpty, sortBy } from "lodash-es";
 // plane imports
-import type { ICycle, TCycleFilters, TProgressSnapshot } from "@plane/types";
+import type { ICycle, TCycleFilters, TProgressSnapshot } from "@nerve/types";
 // local imports
 import { getDate } from "./datetime";
 import { satisfiesDateFilter } from "./filter";

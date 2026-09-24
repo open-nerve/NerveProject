@@ -25,10 +25,10 @@ import {
 } from "@makeplane/propel/icons";
 // plane types
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { EIconSize, ISSUE_PRIORITIES, STATE_GROUPS } from "@plane/constants";
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import type { ISvgIcons } from "@plane/propel/icons";
-import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@plane/propel/icons";
+import { EIconSize, ISSUE_PRIORITIES, STATE_GROUPS } from "@nerve/constants";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import type { ISvgIcons } from "@nerve/propel/icons";
+import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type {
   GroupByColumnTypes,
   IGroupByColumn,
@@ -42,17 +42,17 @@ import type {
   IIssueDisplayFilterOptions,
   TGetColumns,
   TSpreadsheetColumn,
-} from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+} from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // plane ui
 
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 // store
 import { store } from "@/lib/store-context";
 import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.store";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
 // constants
-import { ISSUE_GROUP_BY_OPTIONS } from "@plane/constants";
+import { ISSUE_GROUP_BY_OPTIONS } from "@nerve/constants";
 // components
 import {
   SpreadsheetAssigneeColumn,

@@ -8,8 +8,8 @@
 import { observer } from "mobx-react";
 import { useMatch, useParams } from "react-router";
 import { SettingsOutline, TickOutline } from "@makeplane/propel/icons";
-import { ContextMenu } from "@plane/propel/context-menu";
-import { cn } from "@plane/utils";
+import { ContextMenu } from "@nerve/propel/context-menu";
+import { cn } from "@nerve/utils";
 // components
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 // hooks

@@ -8,8 +8,8 @@ import React, { useMemo, useState } from "react";
 import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 // ui
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { Loader } from "@plane/ui";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import { Loader } from "@nerve/ui";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // hooks

@@ -5,7 +5,7 @@
  */
 
 // plane imports
-import type { IFavorite } from "@plane/types";
+import type { IFavorite } from "@nerve/types";
 // components
 import {
   FavoriteItemIcon,

@@ -11,20 +11,20 @@ import { Link, useNavigate } from "react-router";
 import useSWR, { mutate } from "swr";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // plane imports
-import { ROLE } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { ROLE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // types
-import { Button } from "@plane/propel/button";
-import { PlaneLogo } from "@plane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IWorkspaceMemberInvitation } from "@plane/types";
-import { truncateText } from "@plane/utils";
+import { Button } from "@nerve/propel/button";
+import { PlaneLogo } from "@nerve/propel/icons";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkspaceMemberInvitation } from "@nerve/types";
+import { truncateText } from "@nerve/utils";
 // assets
 import emptyInvitation from "@/app/assets/empty-state/invitation.svg?url";
 // components
 import { EmptyState } from "@/components/common/empty-state";
 import { WorkspaceLogo } from "@/components/workspace/logo";
-import { USER_WORKSPACES_LIST } from "@plane/constants";
+import { USER_WORKSPACES_LIST } from "@nerve/constants";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";

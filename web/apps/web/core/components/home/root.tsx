@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { ContentWrapper } from "@plane/ui";
+import { ContentWrapper } from "@nerve/ui";
 // hooks
 import { useUserProfile, useUser } from "@/hooks/store/user";
 // plane web imports

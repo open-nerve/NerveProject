@@ -8,9 +8,9 @@ import { useMemo } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 // components
-import { EUserPermissionsLevel } from "@plane/constants";
-import type { IState, TStateOperationsCallbacks } from "@plane/types";
-import { EUserProjectRoles } from "@plane/types";
+import { EUserPermissionsLevel } from "@nerve/constants";
+import type { IState, TStateOperationsCallbacks } from "@nerve/types";
+import { EUserProjectRoles } from "@nerve/types";
 import { ProjectStateLoader, GroupList } from "@/components/project-states";
 // hooks
 import { useProjectState } from "@/hooks/store/use-project-state";

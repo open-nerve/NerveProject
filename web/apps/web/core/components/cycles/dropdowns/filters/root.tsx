@@ -8,7 +8,7 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
 // plane imports
-import type { TCycleFilters, TCycleGroups } from "@plane/types";
+import type { TCycleFilters, TCycleGroups } from "@nerve/types";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports

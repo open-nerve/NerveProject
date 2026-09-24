@@ -9,7 +9,7 @@ import { Links, Meta, Outlet, Scripts } from "react-router";
 import type { LinksFunction } from "react-router";
 import { ThemeProvider } from "next-themes";
 // plane imports
-import { SITE_DESCRIPTION, SITE_NAME } from "@plane/constants";
+import { SITE_DESCRIPTION, SITE_NAME } from "@nerve/constants";
 // types
 // assets
 import favicon16 from "@/app/assets/favicon/favicon-16x16.png?url";

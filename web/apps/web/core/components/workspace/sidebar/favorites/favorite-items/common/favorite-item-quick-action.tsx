@@ -8,11 +8,11 @@ import React from "react";
 import { observer } from "mobx-react";
 import { MoreHorizontalOutline, StarFilled } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import type { IFavorite } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
+import { useTranslation } from "@nerve/i18n";
+import type { IFavorite } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 
 type Props = {
   ref: React.MutableRefObject<HTMLDivElement | null>;

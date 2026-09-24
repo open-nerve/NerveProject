@@ -7,16 +7,16 @@
 import { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 // plane helpers
-import { useOutsideClickDetector } from "@plane/hooks";
+import { useOutsideClickDetector } from "@nerve/hooks";
 import { PreferencesOutline } from "@makeplane/propel/icons";
-import { ScrollArea } from "@plane/propel/scrollarea";
+import { ScrollArea } from "@nerve/propel/scrollarea";
 // components
 import { ProjectNavigationDialog } from "@/components/navigation/project-navigation-dialog";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import useSize from "@/hooks/use-window-size";
 import { AppSidebarToggleButton } from "./sidebar-toggle-button";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 type TSidebarWrapperProps = {
   title: string;

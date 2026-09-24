@@ -6,7 +6,7 @@
 
 import { CloseOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // local imports
 import type { TPowerKContextType } from "../../core/types";
 import { useContextIndicator } from "../../hooks/use-context-indicator";

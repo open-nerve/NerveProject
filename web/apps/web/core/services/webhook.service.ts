@@ -5,7 +5,7 @@
  */
 
 // api services
-import type { IWebhook } from "@plane/types";
+import type { IWebhook } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 // helpers
 // types

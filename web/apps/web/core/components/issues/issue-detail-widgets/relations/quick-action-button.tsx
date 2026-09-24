@@ -7,16 +7,16 @@
 import React from "react";
 import { observer } from "mobx-react";
 
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
 // plane imports
-import { CustomMenu } from "@plane/ui";
+import { CustomMenu } from "@nerve/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";
 // types
-import type { TIssueRelationTypes } from "@plane/types";
+import type { TIssueRelationTypes } from "@nerve/types";
 
 type Props = {
   issueId: string;

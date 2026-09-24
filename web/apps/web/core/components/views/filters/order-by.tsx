@@ -6,11 +6,11 @@
 
 import { SortAscendingOutline, SortDescendingOutline, TickOutline } from "@makeplane/propel/icons";
 // plane imports
-import { VIEW_SORT_BY_OPTIONS, VIEW_SORTING_KEY_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { getButtonStyling } from "@plane/propel/button";
-import type { TViewFiltersSortBy, TViewFiltersSortKey } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
+import { VIEW_SORT_BY_OPTIONS, VIEW_SORTING_KEY_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { getButtonStyling } from "@nerve/propel/button";
+import type { TViewFiltersSortBy, TViewFiltersSortKey } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
 
 type Props = {
   onChange: (value: { key?: TViewFiltersSortKey; order?: TViewFiltersSortBy }) => void;

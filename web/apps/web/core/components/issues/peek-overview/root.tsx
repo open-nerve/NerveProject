@@ -9,11 +9,11 @@ import { observer } from "mobx-react";
 import { useLocation } from "react-router";
 // Plane imports
 import useSWR from "swr";
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@plane/propel/toast";
-import type { IWorkItemPeekOverview, TIssue } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
+import type { IWorkItemPeekOverview, TIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useIssues } from "@/hooks/store/use-issues";

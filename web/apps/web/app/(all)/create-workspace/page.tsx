@@ -8,10 +8,10 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { Link, useNavigate } from "react-router";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { Button, getButtonStyling } from "@plane/propel/button";
-import { PlaneLogo } from "@plane/propel/icons";
-import type { IWorkspace } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { Button, getButtonStyling } from "@nerve/propel/button";
+import { PlaneLogo } from "@nerve/propel/icons";
+import type { IWorkspace } from "@nerve/types";
 // assets
 import WorkspaceCreationDisabled from "@/app/assets/workspace/workspace-creation-disabled.png?url";
 // components

@@ -7,7 +7,7 @@
 import { observer } from "mobx-react";
 import { NavLink, useParams } from "react-router";
 // types
-import type { IProject } from "@plane/types";
+import type { IProject } from "@nerve/types";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 

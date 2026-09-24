@@ -5,7 +5,7 @@
  */
 
 // plane imports
-import { Loader } from "@plane/ui";
+import { Loader } from "@nerve/ui";
 
 export function IssueActivityLoader() {
   return (

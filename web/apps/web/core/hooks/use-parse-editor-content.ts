@@ -6,8 +6,8 @@
 
 import { useCallback } from "react";
 // helpers
-import { getEditorAssetSrc } from "@plane/utils";
-import type { TCustomComponentsMetaData } from "@plane/utils";
+import { getEditorAssetSrc } from "@nerve/utils";
+import type { TCustomComponentsMetaData } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 

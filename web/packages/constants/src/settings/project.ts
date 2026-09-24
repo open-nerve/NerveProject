@@ -5,8 +5,8 @@
  */
 
 // plane imports
-import { EUserProjectRoles } from "@plane/types";
-import type { TProjectSettingsItem, TProjectSettingsTabs } from "@plane/types";
+import { EUserProjectRoles } from "@nerve/types";
+import type { TProjectSettingsItem, TProjectSettingsTabs } from "@nerve/types";
 
 export enum PROJECT_SETTINGS_CATEGORY {
   GENERAL = "general",

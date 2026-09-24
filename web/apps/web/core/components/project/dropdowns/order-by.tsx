@@ -6,11 +6,11 @@
 
 import { SortDescendingOutline, TickOutline } from "@makeplane/propel/icons";
 // plane imports
-import { PROJECT_ORDER_BY_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { getButtonStyling } from "@plane/propel/button";
-import type { TProjectOrderByOptions } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
+import { PROJECT_ORDER_BY_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { getButtonStyling } from "@nerve/propel/button";
+import type { TProjectOrderByOptions } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
 
 type Props = {
   onChange: (value: TProjectOrderByOptions) => void;

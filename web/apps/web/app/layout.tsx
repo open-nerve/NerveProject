@@ -6,7 +6,7 @@
 
 import { Outlet } from "react-router";
 // plane imports
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // local
 import { AppProvider } from "./provider";
 

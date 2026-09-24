@@ -7,8 +7,8 @@
 import { observer } from "mobx-react";
 import { HomeOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { Breadcrumbs, Header } from "@plane/ui";
+import { useTranslation } from "@nerve/i18n";
+import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 

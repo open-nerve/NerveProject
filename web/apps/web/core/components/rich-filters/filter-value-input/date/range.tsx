@@ -7,8 +7,8 @@
 import React from "react";
 import { observer } from "mobx-react";
 // plane imports
-import type { TDateRangeFilterFieldConfig, TFilterConditionNodeForDisplay, TFilterProperty } from "@plane/types";
-import { cn, isValidDate, renderFormattedPayloadDate, toFilterArray } from "@plane/utils";
+import type { TDateRangeFilterFieldConfig, TFilterConditionNodeForDisplay, TFilterProperty } from "@nerve/types";
+import { cn, isValidDate, renderFormattedPayloadDate, toFilterArray } from "@nerve/utils";
 // components
 import { DateRangeDropdown } from "@/components/dropdowns/date-range";
 // local imports

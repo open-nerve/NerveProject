@@ -9,13 +9,13 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { TickCircleOutline } from "@makeplane/propel/icons";
 // plane imports
-import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IUser, IWorkspace } from "@plane/types";
-import { Spinner } from "@plane/ui";
-import { cn, validateWorkspaceName, validateSlug } from "@plane/utils";
+import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IUser, IWorkspace } from "@nerve/types";
+import { Spinner } from "@nerve/ui";
+import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
 import { useInstance } from "@/hooks/store/use-instance";
 import { useWorkspace } from "@/hooks/store/use-workspace";

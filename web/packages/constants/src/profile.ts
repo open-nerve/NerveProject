@@ -5,7 +5,7 @@
  */
 
 // plane imports
-import { EStartOfTheWeek } from "@plane/types";
+import { EStartOfTheWeek } from "@nerve/types";
 
 export const PROFILE_TABS = [
   {

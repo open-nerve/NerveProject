@@ -7,10 +7,10 @@
 import { useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-import { Logo } from "@plane/propel/emoji-icon-picker";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
 import { ViewsOutline } from "@makeplane/propel/icons";
 // types
-import type { IProjectView } from "@plane/types";
+import type { IProjectView } from "@nerve/types";
 // components
 import { ListItem } from "@/components/core/list";
 // hooks

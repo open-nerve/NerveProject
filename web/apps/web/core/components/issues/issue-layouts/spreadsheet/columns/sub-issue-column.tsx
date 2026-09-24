@@ -7,10 +7,10 @@
 import React from "react";
 import { observer } from "mobx-react";
 // types
-import type { TIssue } from "@plane/types";
+import type { TIssue } from "@nerve/types";
 // helpers
-import { Row } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { Row } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useParams, useNavigate } from "react-router";
 

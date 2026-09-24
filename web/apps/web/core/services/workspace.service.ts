@@ -20,7 +20,7 @@ import type {
   TSearchEntityRequestPayload,
   TActivityEntityData,
   IWorkspaceUserPropertiesResponse,
-} from "@plane/types";
+} from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 

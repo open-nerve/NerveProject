@@ -9,9 +9,9 @@ import { useTheme } from "next-themes";
 import { Languages } from "lucide-react";
 import { CalendarOutline, GlobeOutline, PaletteOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { setToast, TOAST_TYPE } from "@plane/propel/toast";
-import type { EStartOfTheWeek, TUserProfile } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
+import type { EStartOfTheWeek, TUserProfile } from "@nerve/types";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks

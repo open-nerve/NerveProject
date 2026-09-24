@@ -6,10 +6,10 @@
 
 import { useState } from "react";
 // types
-import { Button } from "@plane/propel/button";
-import type { IProject } from "@plane/types";
+import { Button } from "@nerve/propel/button";
+import type { IProject } from "@nerve/types";
 // ui
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
 import { useNavigate } from "react-router";

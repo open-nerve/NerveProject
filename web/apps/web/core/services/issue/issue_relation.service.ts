@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueRelation, TIssue, TIssueRelationTypes } from "@plane/types";
+import type { TIssueRelation, TIssue, TIssueRelationTypes } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 

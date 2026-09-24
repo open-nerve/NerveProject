@@ -6,13 +6,13 @@
 
 import { observer } from "mobx-react";
 
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { CopyOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 // ui
-import { CustomMenu } from "@plane/ui";
-import { calculateTimeAgo, copyTextToClipboard } from "@plane/utils";
+import { CustomMenu } from "@nerve/ui";
+import { calculateTimeAgo, copyTextToClipboard } from "@nerve/utils";
 // helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";

@@ -7,10 +7,10 @@
 import { observer } from "mobx-react";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { useTranslation } from "@plane/i18n";
-import type { TDescriptionVersion } from "@plane/types";
-import { CustomMenu } from "@plane/ui";
-import { calculateTimeAgo, getFileURL } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import type { TDescriptionVersion } from "@nerve/types";
+import { CustomMenu } from "@nerve/ui";
+import { calculateTimeAgo, getFileURL } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 

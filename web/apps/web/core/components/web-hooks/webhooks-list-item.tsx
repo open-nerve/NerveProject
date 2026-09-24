@@ -6,7 +6,7 @@
 
 import { useParams, Link } from "react-router";
 // Plane imports
-import type { IWebhook } from "@plane/types";
+import type { IWebhook } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
 // hooks
 import { useWebhook } from "@/hooks/store/use-webhook";

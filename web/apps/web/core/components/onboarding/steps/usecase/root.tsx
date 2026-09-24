@@ -7,13 +7,13 @@
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 // plane imports
-import { USE_CASES } from "@plane/constants";
-import { Button } from "@plane/propel/button";
+import { USE_CASES } from "@nerve/constants";
+import { Button } from "@nerve/propel/button";
 import { TickOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TUserProfile } from "@plane/types";
-import { EOnboardingSteps } from "@plane/types";
-import { cn } from "@plane/utils";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TUserProfile } from "@nerve/types";
+import { EOnboardingSteps } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // local imports

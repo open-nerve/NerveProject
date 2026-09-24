@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 import { Link } from "react-router";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { Button, getButtonStyling } from "@plane/propel/button";
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { Row } from "@plane/ui";
+import { Button, getButtonStyling } from "@nerve/propel/button";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import { Row } from "@nerve/ui";
 // components
 import { ProjectFeaturesList } from "@/components/project/settings/features-list";
 // hooks

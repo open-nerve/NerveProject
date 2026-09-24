@@ -5,7 +5,7 @@
  */
 
 // plane imports
-import { joinUrlPath } from "@plane/utils";
+import { joinUrlPath } from "@nerve/utils";
 // local imports
 import type { TPowerKContext } from "../core/types";
 

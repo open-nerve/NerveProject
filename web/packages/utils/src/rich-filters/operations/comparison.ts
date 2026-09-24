@@ -12,8 +12,8 @@ import type {
   TFilterGroupNode,
   TFilterProperty,
   TFilterValue,
-} from "@plane/types";
-import { FILTER_NODE_TYPE } from "@plane/types";
+} from "@nerve/types";
+import { FILTER_NODE_TYPE } from "@nerve/types";
 // local imports
 import { isConditionNode, isGroupNode } from "../types/core";
 import { processGroupNode } from "../types/shared";

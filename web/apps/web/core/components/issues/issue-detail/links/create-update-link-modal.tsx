@@ -9,12 +9,12 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // plane types
-import { Button } from "@plane/propel/button";
-import type { TIssueLinkEditableFields } from "@plane/types";
+import { Button } from "@nerve/propel/button";
+import type { TIssueLinkEditableFields } from "@nerve/types";
 // plane ui
-import { ModalCore } from "@plane/ui";
+import { ModalCore } from "@nerve/ui";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types

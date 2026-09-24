@@ -8,8 +8,8 @@
 import { isRouteErrorResponse } from "react-router";
 import { Banner } from "@makeplane/propel/components/banner";
 import { InfoFilled } from "@makeplane/propel/icons";
-import { Button } from "@plane/propel/button";
-import { Card, ECardVariant } from "@plane/propel/card";
+import { Button } from "@nerve/propel/button";
+import { Card, ECardVariant } from "@nerve/propel/card";
 
 interface ErrorActionsProps {
   onGoHome: () => void;

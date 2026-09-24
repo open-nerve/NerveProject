@@ -6,11 +6,11 @@
 
 import React, { useState } from "react";
 // plane imports
-import { LiteTextEditorWithRef } from "@plane/editor";
-import type { EditorRefApi, ILiteTextEditorProps, TFileHandler } from "@plane/editor";
-import { useTranslation } from "@plane/i18n";
-import type { MakeOptional } from "@plane/types";
-import { cn, isCommentEmpty } from "@plane/utils";
+import { LiteTextEditorWithRef } from "@nerve/editor";
+import type { EditorRefApi, ILiteTextEditorProps, TFileHandler } from "@nerve/editor";
+import { useTranslation } from "@nerve/i18n";
+import type { MakeOptional } from "@nerve/types";
+import { cn, isCommentEmpty } from "@nerve/utils";
 // components
 import { EditorMentionsRoot } from "@/components/editor/embeds/mentions";
 import { IssueCommentToolbar } from "@/components/editor/lite-text/toolbar";

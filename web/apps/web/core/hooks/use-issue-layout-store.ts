@@ -6,7 +6,7 @@
 
 import { createContext, useContext } from "react";
 import { useParams } from "react-router";
-import { EIssuesStoreType } from "@plane/types";
+import { EIssuesStoreType } from "@nerve/types";
 import { useIssues } from "./store/use-issues";
 
 export const IssuesStoreContext = createContext<EIssuesStoreType | undefined>(undefined);

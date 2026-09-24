@@ -8,13 +8,13 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useDropzone } from "react-dropzone";
 // plane imports
-import { ACCEPTED_AVATAR_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE, MAX_FILE_SIZE } from "@plane/constants";
-import { Button } from "@plane/propel/button";
+import { ACCEPTED_AVATAR_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE, MAX_FILE_SIZE } from "@nerve/constants";
+import { Button } from "@nerve/propel/button";
 import { UserOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { EFileAssetType } from "@plane/types";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
-import { getAssetIdFromUrl, getFileURL, checkURLValidity } from "@plane/utils";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { EFileAssetType } from "@nerve/types";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { getAssetIdFromUrl, getFileURL, checkURLValidity } from "@nerve/utils";
 // services
 import { FileService } from "@/services/file.service";
 const fileService = new FileService();

@@ -6,9 +6,9 @@
 
 import React from "react";
 // helpers
-import { Button } from "@plane/propel/button";
+import { Button } from "@nerve/propel/button";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // types
 import { usePlatformOS } from "@/hooks/use-platform-os";
 import { BACKGROUND_BUTTON_VARIANTS, BORDER_BUTTON_VARIANTS } from "./constants";

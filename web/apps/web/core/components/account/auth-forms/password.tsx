@@ -12,11 +12,11 @@ import { CloseCircleOutline, HideOutline, ShowOutline, WarningCircleOutline } fr
 import { Banner } from "@makeplane/propel/components/banner";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { E_PASSWORD_STRENGTH } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { PasswordStrengthIndicator, Spinner } from "@plane/ui";
-import { checkEmailValidity, getPasswordStrength } from "@plane/utils";
+import { E_PASSWORD_STRENGTH } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { PasswordStrengthIndicator, Spinner } from "@nerve/ui";
+import { checkEmailValidity, getPasswordStrength } from "@nerve/utils";
 // helpers
 import { EAuthModes } from "@/helpers/authentication.helper";
 // services

@@ -8,10 +8,10 @@ import { useEffect, useState } from "react";
 import { observer } from "mobx-react";
 import { IntakeOutline, LeftSidePaneOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateCompact } from "@plane/propel/empty-state";
-import { EInboxIssueCurrentTab } from "@plane/types";
-import { cn } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateCompact } from "@nerve/propel/empty-state";
+import { EInboxIssueCurrentTab } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
 import { InboxContentRoot } from "@/components/inbox/content";
 import { InboxSidebar } from "@/components/inbox/sidebar";

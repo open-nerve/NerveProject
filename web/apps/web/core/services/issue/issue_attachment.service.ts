@@ -6,8 +6,8 @@
 
 import type { AxiosRequestConfig } from "axios";
 // plane types
-import { getFileMetaDataForUpload, generateFileUploadPayload } from "@plane/services";
-import type { TIssueAttachment, TIssueAttachmentUploadResponse } from "@plane/types";
+import { getFileMetaDataForUpload, generateFileUploadPayload } from "@nerve/services";
+import type { TIssueAttachment, TIssueAttachmentUploadResponse } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssueLink } from "@plane/types";
+import type { TIssueLink } from "@nerve/types";
 
 export type TLinkOperations = {
   create: (data: Partial<TIssueLink>) => Promise<void>;

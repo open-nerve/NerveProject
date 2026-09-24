@@ -5,8 +5,8 @@
  */
 
 // plane imports
-import type { IUserLite, TFilterProperty } from "@plane/types";
-import { EQUALITY_OPERATOR } from "@plane/types";
+import type { IUserLite, TFilterProperty } from "@nerve/types";
+import { EQUALITY_OPERATOR } from "@nerve/types";
 // local imports
 import type { TCreateFilterConfig } from "../shared";
 import { createFilterConfig, createOperatorConfigEntry } from "../shared";

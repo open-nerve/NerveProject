@@ -8,12 +8,12 @@ import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // plane imports
-import { useOutsideClickDetector } from "@plane/hooks";
-import { useTranslation } from "@plane/i18n";
-import { IconButton } from "@plane/propel/icon-button";
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
+import { IconButton } from "@nerve/propel/icon-button";
 import { EditOutline } from "@makeplane/propel/icons";
-import { Loader } from "@plane/ui";
-import { cn, renderFormattedDate, getFileURL } from "@plane/utils";
+import { Loader } from "@nerve/ui";
+import { cn, renderFormattedDate, getFileURL } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";

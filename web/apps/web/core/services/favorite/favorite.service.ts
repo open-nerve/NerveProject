@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IFavorite } from "@plane/types";
+import type { IFavorite } from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

@@ -10,8 +10,8 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
 // plane constants
-import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
-import { EIssuesStoreType, EIssueLayoutTypes } from "@plane/types";
+import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
+import { EIssuesStoreType, EIssueLayoutTypes } from "@nerve/types";
 // components
 import { TransferIssues } from "@/components/cycles/transfer-issues";
 import { TransferIssuesModal } from "@/components/cycles/transfer-issues-modal";

@@ -10,10 +10,10 @@ import { useParams } from "react-router";
 // lucide icons
 import { Circle } from "lucide-react";
 import { AddOutline, ArrowCollapseOutline, FullScreenOutline } from "@makeplane/propel/icons";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TIssue, ISearchIssueResponse, TIssueKanbanFilters, TIssueGroupByOptions } from "@plane/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TIssue, ISearchIssueResponse, TIssueKanbanFilters, TIssueGroupByOptions } from "@nerve/types";
 // ui
-import { CustomMenu } from "@plane/ui";
+import { CustomMenu } from "@nerve/ui";
 // components
 import { ExistingIssuesListModal } from "@/components/core/modals/existing-issues-list-modal";
 import { CreateUpdateIssueModal } from "@/components/issues/issue-modal/modal";

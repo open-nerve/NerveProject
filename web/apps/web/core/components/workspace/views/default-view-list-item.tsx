@@ -6,9 +6,9 @@
 
 import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // helpers
-import { truncateText } from "@plane/utils";
+import { truncateText } from "@nerve/utils";
 
 type Props = { view: { key: string; i18n_label: string } };
 

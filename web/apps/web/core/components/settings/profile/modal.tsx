@@ -8,8 +8,8 @@ import { useCallback } from "react";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { observer } from "mobx-react";
 // plane imports
-import { IconButton } from "@plane/propel/icon-button";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { IconButton } from "@nerve/propel/icon-button";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
 // local imports

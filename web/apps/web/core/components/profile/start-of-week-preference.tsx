@@ -6,10 +6,10 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { START_OF_THE_WEEK_OPTIONS } from "@plane/constants";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { EStartOfTheWeek } from "@plane/types";
-import { CustomSelect } from "@plane/ui";
+import { START_OF_THE_WEEK_OPTIONS } from "@nerve/constants";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { EStartOfTheWeek } from "@nerve/types";
+import { CustomSelect } from "@nerve/ui";
 // components
 import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks

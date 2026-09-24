@@ -15,7 +15,7 @@ import type {
   TIssueReaction,
   TIssueRelationTypes,
   TWorkItemWidgets,
-} from "@plane/types";
+} from "@nerve/types";
 // plane web store
 import { IssueActivityStore } from "./activity.store";
 import type { IIssueActivityStore, IIssueActivityStoreActions, TActivityLoader } from "./activity.store";

@@ -6,8 +6,8 @@
 
 import { CalendarOutline, DueDateOutline, StartDateOutline } from "@makeplane/propel/icons";
 // plane imports
-import type { TStateGroups } from "@plane/types";
-import { cn, renderFormattedDate, shouldHighlightIssueDueDate } from "@plane/utils";
+import type { TStateGroups } from "@nerve/types";
+import { cn, renderFormattedDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 
 type Props = {
   startDate: string | null;

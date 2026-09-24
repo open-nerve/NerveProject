@@ -11,9 +11,9 @@ import { useNavigate, useSearchParams, useLocation } from "react-router";
 import { CircularProgress } from "@makeplane/propel/components/circular-progress";
 import { TickOutline } from "@makeplane/propel/icons";
 // plane imports
-import type { TCycleGroups } from "@plane/types";
+import type { TCycleGroups } from "@nerve/types";
 // components
-import { generateQueryParams, calculateCycleProgress } from "@plane/utils";
+import { generateQueryParams, calculateCycleProgress } from "@nerve/utils";
 import { ListItem } from "@/components/core/list";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";

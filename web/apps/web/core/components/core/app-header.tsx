@@ -7,9 +7,9 @@
 import type { ReactNode } from "react";
 import { observer } from "mobx-react";
 // plane imports
-import { Row } from "@plane/ui";
+import { Row } from "@nerve/ui";
 // components
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 import { HeaderWithSidebarToggle } from "@/components/common/header-with-sidebar-toggle";
 
 export interface AppHeaderProps {

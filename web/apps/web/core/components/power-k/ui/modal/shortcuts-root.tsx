@@ -9,7 +9,7 @@ import { Dialog, Transition } from "@headlessui/react";
 // plane imports
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { CloseOutline, SearchOutline } from "@makeplane/propel/icons";
-import { ScrollArea } from "@plane/propel/scrollarea";
+import { ScrollArea } from "@nerve/propel/scrollarea";
 
 // hooks
 import { usePowerK } from "@/hooks/store/use-power-k";

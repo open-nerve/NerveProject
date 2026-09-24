@@ -5,11 +5,11 @@
  */
 
 // plane imports
-import { ISSUE_LAYOUTS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { ISSUE_LAYOUTS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { EIssueLayoutTypes } from "@plane/types";
-import { cn } from "@plane/utils";
+import type { EIssueLayoutTypes } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // components
 import { IssueLayoutIcon } from "@/components/issues/issue-layouts/layout-icon";
 // hooks

@@ -7,10 +7,10 @@
 import { observer } from "mobx-react";
 import { Link, useMatch, useParams } from "react-router";
 // plane imports
-import type { IWorkspaceSidebarNavigationItem } from "@plane/constants";
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { joinUrlPath } from "@plane/utils";
+import type { IWorkspaceSidebarNavigationItem } from "@nerve/constants";
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { joinUrlPath } from "@nerve/utils";
 // components
 import { SidebarNavItem } from "@/components/sidebar/sidebar-navigation";
 // hooks

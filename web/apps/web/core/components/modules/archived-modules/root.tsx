@@ -9,11 +9,11 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import useSWR from "swr";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import type { TModuleFilters } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import type { TModuleFilters } from "@nerve/types";
 // components
-import { calculateTotalFilters } from "@plane/utils";
+import { calculateTotalFilters } from "@nerve/utils";
 import { ArchivedModulesView, ModuleAppliedFiltersList } from "@/components/modules";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
 // helpers

@@ -1,5 +1,5 @@
 {
-  "name": "@plane/services",
+  "name": "@nerve/services",
   "version": "1.4.2",
   "private": true,
   "license": "AGPL-3.0",
@@ -21,13 +21,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plane/constants": "workspace:*",
-    "@plane/types": "workspace:*",
+    "@nerve/constants": "workspace:*",
+    "@nerve/types": "workspace:*",
     "axios": "catalog:",
     "file-type": "catalog:"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

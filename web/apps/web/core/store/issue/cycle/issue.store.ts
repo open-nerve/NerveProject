@@ -8,10 +8,10 @@ import { get, set, concat, uniq, update } from "lodash-es";
 import { action, observable, makeObservable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // plane imports
-import { ALL_ISSUES } from "@plane/constants";
-import type { TIssue, TLoader, IssuePaginationOptions, TIssuesResponse, ViewFlags } from "@plane/types";
+import { ALL_ISSUES } from "@nerve/constants";
+import type { TIssue, TLoader, IssuePaginationOptions, TIssuesResponse, ViewFlags } from "@nerve/types";
 // helpers
-import { getDistributionPathsPostUpdate } from "@plane/utils";
+import { getDistributionPathsPostUpdate } from "@nerve/utils";
 //local
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
 import { BaseIssuesStore } from "../helpers/base-issues.store";

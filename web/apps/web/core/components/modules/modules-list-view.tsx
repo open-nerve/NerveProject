@@ -7,11 +7,11 @@
 import { observer } from "mobx-react";
 import { useParams, useSearchParams } from "react-router";
 // components
-import { EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { EmptyStateDetailed } from "@plane/propel/empty-state";
-import { EUserProjectRoles } from "@plane/types";
-import { ContentWrapper, Row, ERowVariant } from "@plane/ui";
+import { EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { EmptyStateDetailed } from "@nerve/propel/empty-state";
+import { EUserProjectRoles } from "@nerve/types";
+import { ContentWrapper, Row, ERowVariant } from "@nerve/ui";
 // components
 import { ListLayout } from "@/components/core/list";
 import { ModuleCardItem, ModuleListItem, ModulePeekOverview } from "@/components/modules";

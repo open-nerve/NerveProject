@@ -8,10 +8,10 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // types
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IIssueLabel } from "@plane/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IIssueLabel } from "@nerve/types";
 // ui
-import { AlertModalCore } from "@plane/ui";
+import { AlertModalCore } from "@nerve/ui";
 // hooks
 import { useLabel } from "@/hooks/store/use-label";
 

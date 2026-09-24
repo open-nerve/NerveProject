@@ -8,13 +8,13 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { MoreHorizontalOutline } from "@makeplane/propel/icons";
 // types
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { IconButton } from "@plane/propel/icon-button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IProjectView } from "@plane/types";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { IconButton } from "@nerve/propel/icon-button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IProjectView } from "@nerve/types";
 // ui
-import { ContextMenu, CustomMenu } from "@plane/ui";
-import { copyUrlToClipboard, cn } from "@plane/utils";
+import { ContextMenu, CustomMenu } from "@nerve/ui";
+import { copyUrlToClipboard, cn } from "@nerve/utils";
 // helpers
 import { useViewMenuItems } from "@/components/common/quick-actions-helper";
 // hooks

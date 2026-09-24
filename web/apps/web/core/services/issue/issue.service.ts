@@ -5,7 +5,7 @@
  */
 
 // plane imports
-import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@plane/types";
+import type { TIssueParams, TIssue, TIssueActivity, TIssueLink, TIssuesResponse, TIssueSubIssues } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 

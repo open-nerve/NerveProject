@@ -9,11 +9,11 @@ import { sortBy } from "lodash-es";
 import { observer } from "mobx-react";
 // plane types
 import { Avatar } from "@makeplane/propel/components/avatar";
-import type { TInboxIssueFilterMemberKeys } from "@plane/types";
+import type { TInboxIssueFilterMemberKeys } from "@nerve/types";
 // plane ui
-import { Loader } from "@plane/ui";
+import { Loader } from "@nerve/ui";
 // components
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
 // helpers
 // hooks

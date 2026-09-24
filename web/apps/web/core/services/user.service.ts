@@ -5,7 +5,7 @@
  */
 
 // services
-import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@plane/types";
+import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@nerve/types";
 import { APIService } from "@/services/api.service";
 // types
 // helpers

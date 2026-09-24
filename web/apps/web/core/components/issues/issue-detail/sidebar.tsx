@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // i18n
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui
 import {
   CyclesOutline,
@@ -20,7 +20,7 @@ import {
   StateOutline,
   UserOutline,
 } from "@makeplane/propel/icons";
-import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@plane/utils";
+import { cn, getDate, renderFormattedPayloadDate, shouldHighlightIssueDueDate } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";

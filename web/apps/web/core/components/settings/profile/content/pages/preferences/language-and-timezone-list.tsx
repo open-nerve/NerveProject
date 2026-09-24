@@ -6,9 +6,9 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { SUPPORTED_LANGUAGES, toSupportedLanguage, useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { CustomSelect } from "@plane/ui";
+import { SUPPORTED_LANGUAGES, toSupportedLanguage, useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { CustomSelect } from "@nerve/ui";
 // components
 import { TimezoneSelect } from "@/components/global";
 import { StartOfWeekPreference } from "@/components/profile/start-of-week-preference";

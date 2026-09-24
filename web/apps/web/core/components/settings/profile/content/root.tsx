@@ -7,9 +7,9 @@
 import { Suspense } from "react";
 import { observer } from "mobx-react";
 // plane imports
-import { ScrollArea } from "@plane/propel/scrollarea";
-import type { TProfileSettingsTabs } from "@plane/types";
-import { cn } from "@plane/utils";
+import { ScrollArea } from "@nerve/propel/scrollarea";
+import type { TProfileSettingsTabs } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // local imports
 import { PROFILE_SETTINGS_PAGES_MAP } from "./pages";
 

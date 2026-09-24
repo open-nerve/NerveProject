@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import type { IIssueLabel } from "@plane/types";
+import type { IIssueLabel } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
 // types

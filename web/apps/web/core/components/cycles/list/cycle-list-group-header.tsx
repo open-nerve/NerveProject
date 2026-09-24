@@ -6,13 +6,13 @@
 
 import React from "react";
 // types
-import { CycleGroupIcon } from "@plane/propel/icons";
+import { CycleGroupIcon } from "@nerve/propel/icons";
 import { ChevronDownOutline } from "@makeplane/propel/icons";
-import type { TCycleGroups } from "@plane/types";
+import type { TCycleGroups } from "@nerve/types";
 // icons
-import { Row } from "@plane/ui";
+import { Row } from "@nerve/ui";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 
 type Props = {
   type: TCycleGroups;

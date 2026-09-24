@@ -11,11 +11,11 @@ import { SquareStackIcon } from "lucide-react";
 import { CopyOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
 // plane utils
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TWorkspaceDraftIssue } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import type { TContextMenuItem } from "@plane/ui";
-import { Row } from "@plane/ui";
-import { cn } from "@plane/utils";
+import type { TWorkspaceDraftIssue } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import type { TContextMenuItem } from "@nerve/ui";
+import { Row } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useProject } from "@/hooks/store/use-project";

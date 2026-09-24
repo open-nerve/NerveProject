@@ -7,11 +7,11 @@
 import { useRef } from "react";
 import { WarningCircleOutline } from "@makeplane/propel/icons";
 // plane imports
-import { ISSUE_ORDER_BY_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { TIssueOrderByOptions } from "@plane/types";
+import { ISSUE_ORDER_BY_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { TIssueOrderByOptions } from "@nerve/types";
 // helpers
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 
 type Props = {
   dragColumnOrientation: "justify-start" | "justify-center" | "justify-end";

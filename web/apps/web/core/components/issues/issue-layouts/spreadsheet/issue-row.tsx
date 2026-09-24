@@ -10,13 +10,13 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { ChevronRightOutline, MoreHorizontalOutline } from "@makeplane/propel/icons";
 // plane helpers
-import { useOutsideClickDetector } from "@plane/hooks";
+import { useOutsideClickDetector } from "@nerve/hooks";
 // types
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IIssueDisplayProperties, TIssue } from "@plane/types";
+import type { IIssueDisplayProperties, TIssue } from "@nerve/types";
 // ui
-import { ControlLink, Row } from "@plane/ui";
-import { cn, generateWorkItemLink } from "@plane/utils";
+import { ControlLink, Row } from "@nerve/ui";
+import { cn, generateWorkItemLink } from "@nerve/utils";
 // components
 import RenderIfVisible from "@/components/core/render-if-visible-HOC";
 import { IssueIdentifier } from "@/components/issues/issue-detail/issue-identifier";

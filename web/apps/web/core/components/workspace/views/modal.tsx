@@ -6,10 +6,10 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IWorkspaceView } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkspaceView } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
 import { useWorkItemFilters } from "@/hooks/store/work-item-filters/use-work-item-filters";

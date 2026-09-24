@@ -6,7 +6,7 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { EIssueLayoutTypes } from "@plane/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 // components
 import { LayoutErrorBoundary } from "@/components/common/layout-error-boundary";
 import { CalendarLayoutLoader } from "@/components/ui/loader/layouts/calendar-layout-loader";

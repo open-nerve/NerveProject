@@ -15,7 +15,7 @@ import type {
   TIssueSubIssuesIdMap,
   TSubIssuesStateDistribution,
   TLoader,
-} from "@plane/types";
+} from "@nerve/types";
 // services
 import { IssueService } from "@/services/issue";
 // store

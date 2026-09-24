@@ -7,16 +7,16 @@
 import { observer } from "mobx-react";
 import { FilterOutline } from "@makeplane/propel/icons";
 // plane imports
-import type { ENotificationFilterType } from "@plane/constants";
-import { FILTER_TYPE_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import type { ENotificationFilterType } from "@nerve/constants";
+import { FILTER_TYPE_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { PopoverMenu } from "@plane/ui";
+import { PopoverMenu } from "@nerve/ui";
 // hooks
 import { usePlatformOS } from "@/hooks/use-platform-os";
 // local imports
 import { NotificationFilterOptionItem } from "./menu-option-item";
-import { IconButton } from "@plane/propel/icon-button";
+import { IconButton } from "@nerve/propel/icon-button";
 
 export const NotificationFilter = observer(function NotificationFilter() {
   // hooks

@@ -1,5 +1,5 @@
 {
-  "name": "@plane/hooks",
+  "name": "@nerve/hooks",
   "version": "1.4.2",
   "private": true,
   "description": "React hooks that are shared across multiple apps internally",
@@ -24,7 +24,7 @@
     "react": "catalog:"
   },
   "devDependencies": {
-    "@plane/typescript-config": "workspace:*",
+    "@nerve/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "tsdown": "catalog:",

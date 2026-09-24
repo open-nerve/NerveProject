@@ -8,9 +8,9 @@ import { useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { createPortal } from "react-dom";
 // plane imports
-import type { EditorRefApi } from "@plane/editor";
-import type { TNameDescriptionLoader } from "@plane/types";
-import { cn } from "@plane/utils";
+import type { EditorRefApi } from "@nerve/editor";
+import type { TNameDescriptionLoader } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import useKeypress from "@/hooks/use-keypress";

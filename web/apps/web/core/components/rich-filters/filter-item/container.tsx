@@ -7,9 +7,9 @@
 import { useEffect, useRef } from "react";
 // plane imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { cn } from "@plane/propel/utils";
-import type { SingleOrArray, TFilterValue } from "@plane/types";
-import { hasValidValue } from "@plane/utils";
+import { cn } from "@nerve/propel/utils";
+import type { SingleOrArray, TFilterValue } from "@nerve/types";
+import { hasValidValue } from "@nerve/utils";
 
 interface FilterItemContainerProps {
   children: React.ReactNode;

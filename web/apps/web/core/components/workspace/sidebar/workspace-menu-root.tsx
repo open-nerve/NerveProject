@@ -12,11 +12,11 @@ import { ChevronDownOutline, LogOutOutline, MailOutline, PlusCircleOutline } fro
 // ui
 import { Menu, Transition } from "@headlessui/react";
 // plane imports
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IWorkspace } from "@plane/types";
-import { Loader } from "@plane/ui";
-import { orderWorkspacesList, cn } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IWorkspace } from "@nerve/types";
+import { Loader } from "@nerve/ui";
+import { orderWorkspacesList, cn } from "@nerve/utils";
 // helpers
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 // hooks

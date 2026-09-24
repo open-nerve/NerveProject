@@ -9,7 +9,7 @@ import type { Editor } from "@tiptap/core";
 import { Ban } from "lucide-react";
 import { ChevronRightOutline, PaletteOutline } from "@makeplane/propel/icons";
 // plane imports
-import { cn } from "@plane/utils";
+import { cn } from "@nerve/utils";
 // constants
 import { COLORS_LIST } from "@/constants/common";
 import { CORE_EXTENSIONS } from "@/constants/extension";

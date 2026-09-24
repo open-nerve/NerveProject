@@ -8,11 +8,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline, FilterOutline, SearchOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useOutsideClickDetector } from "@plane/hooks";
-import { IconButton } from "@plane/propel/icon-button";
-import { useTranslation } from "@plane/i18n";
-import type { TCycleFilters } from "@plane/types";
-import { cn, calculateTotalFilters } from "@plane/utils";
+import { useOutsideClickDetector } from "@nerve/hooks";
+import { IconButton } from "@nerve/propel/icon-button";
+import { useTranslation } from "@nerve/i18n";
+import type { TCycleFilters } from "@nerve/types";
+import { cn, calculateTotalFilters } from "@nerve/utils";
 // components
 import { FiltersDropdown } from "@/components/issues/issue-layouts/filters";
 // hooks

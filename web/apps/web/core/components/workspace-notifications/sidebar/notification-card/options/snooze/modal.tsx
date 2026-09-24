@@ -7,12 +7,12 @@
 import { useParams } from "react-router";
 import { useForm, Controller } from "react-hook-form";
 // plane imports
-import { allTimeIn30MinutesInterval12HoursFormat } from "@plane/constants";
-import { Button } from "@plane/propel/button";
+import { allTimeIn30MinutesInterval12HoursFormat } from "@nerve/constants";
+import { Button } from "@nerve/propel/button";
 import { CloseOutline } from "@makeplane/propel/icons";
-import { CustomSelect, EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { CustomSelect, EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // components
-import { getDate, cn } from "@plane/utils";
+import { getDate, cn } from "@nerve/utils";
 import { DateDropdown } from "@/components/dropdowns/date";
 
 type TNotificationSnoozeModal = {

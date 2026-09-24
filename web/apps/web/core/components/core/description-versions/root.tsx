@@ -8,8 +8,8 @@ import { useCallback, useState } from "react";
 import { observer } from "mobx-react";
 import useSWR from "swr";
 // plane imports
-import type { TDescriptionVersionDetails, TDescriptionVersionsListResponse } from "@plane/types";
-import { cn } from "@plane/utils";
+import type { TDescriptionVersionDetails, TDescriptionVersionsListResponse } from "@nerve/types";
+import { cn } from "@nerve/utils";
 // local imports
 import { DescriptionVersionsDropdown } from "./dropdown";
 import { DescriptionVersionsModal } from "./modal";

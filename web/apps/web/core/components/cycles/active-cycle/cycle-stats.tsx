@@ -13,15 +13,15 @@ import { CompletedAtOutline } from "@makeplane/propel/icons";
 import { Tab } from "@headlessui/react";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { useTranslation } from "@plane/i18n";
-import { PriorityIcon } from "@plane/propel/icons";
+import { useTranslation } from "@nerve/i18n";
+import { PriorityIcon } from "@nerve/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TWorkItemFilterCondition } from "@plane/shared-state";
-import type { ICycle } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+import type { TWorkItemFilterCondition } from "@nerve/shared-state";
+import type { ICycle } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // ui
-import { Loader } from "@plane/ui";
-import { cn, renderFormattedDate, renderFormattedDateWithoutYear, getFileURL } from "@plane/utils";
+import { Loader } from "@nerve/ui";
+import { cn, renderFormattedDate, renderFormattedDateWithoutYear, getFileURL } from "@nerve/utils";
 // assets
 import darkAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-dark.webp?url";
 import lightAssigneeAsset from "@/app/assets/empty-state/active-cycle/assignee-light.webp?url";

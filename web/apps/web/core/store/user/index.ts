@@ -7,8 +7,8 @@
 import { cloneDeep, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction, computed } from "mobx";
 // plane imports
-import { EUserPermissions } from "@plane/constants";
-import type { IUser, TUserPermissions } from "@plane/types";
+import { EUserPermissions } from "@nerve/constants";
+import type { IUser, TUserPermissions } from "@nerve/types";
 // plane web imports
 import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";

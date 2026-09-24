@@ -10,14 +10,14 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 import useSWR from "swr";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IProject, IUserLite, IWorkspace } from "@plane/types";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IProject, IUserLite, IWorkspace } from "@nerve/types";
 import { Switch } from "@makeplane/propel/components/switch";
-import { Loader } from "@plane/ui";
+import { Loader } from "@nerve/ui";
 // constants
-import { PROJECT_DETAILS } from "@plane/constants";
+import { PROJECT_DETAILS } from "@nerve/constants";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useUserPermissions } from "@/hooks/store/user";

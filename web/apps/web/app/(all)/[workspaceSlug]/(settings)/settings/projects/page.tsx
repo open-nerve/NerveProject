@@ -8,8 +8,8 @@ import { observer } from "mobx-react";
 import { Link } from "react-router";
 import { useTheme } from "next-themes";
 // plane imports
-import { Button, getButtonStyling } from "@plane/propel/button";
-import { cn } from "@plane/utils";
+import { Button, getButtonStyling } from "@nerve/propel/button";
+import { cn } from "@nerve/utils";
 // assets
 import ProjectDarkEmptyState from "@/app/assets/empty-state/project-settings/no-projects-dark.png?url";
 import ProjectLightEmptyState from "@/app/assets/empty-state/project-settings/no-projects-light.png?url";

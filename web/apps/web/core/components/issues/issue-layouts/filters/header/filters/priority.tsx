@@ -7,10 +7,10 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 // plane constants
-import { ISSUE_PRIORITIES } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { ISSUE_PRIORITIES } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { PriorityIcon } from "@plane/propel/icons";
+import { PriorityIcon } from "@nerve/propel/icons";
 
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";

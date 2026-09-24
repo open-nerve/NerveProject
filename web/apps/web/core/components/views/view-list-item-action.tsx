@@ -9,12 +9,12 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { GlobeOutline, LockOutline } from "@makeplane/propel/icons";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@plane/constants";
-import { useLocalStorage } from "@plane/hooks";
+import { EUserPermissions, EUserPermissionsLevel, IS_FAVORITE_MENU_OPEN } from "@nerve/constants";
+import { useLocalStorage } from "@nerve/hooks";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IProjectView } from "@plane/types";
-import { EViewAccess } from "@plane/types";
-import { FavoriteStar } from "@plane/ui";
+import type { IProjectView } from "@nerve/types";
+import { EViewAccess } from "@nerve/types";
+import { FavoriteStar } from "@nerve/ui";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useProjectView } from "@/hooks/store/use-project-view";

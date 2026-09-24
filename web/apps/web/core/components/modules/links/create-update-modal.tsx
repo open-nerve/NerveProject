@@ -9,11 +9,11 @@ import { Controller, useForm } from "react-hook-form";
 // plane types
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { ILinkDetails, ModuleLink } from "@plane/types";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { ILinkDetails, ModuleLink } from "@nerve/types";
 // plane ui
-import { ModalCore } from "@plane/ui";
+import { ModalCore } from "@nerve/ui";
 type Props = {
   createLink: (formData: ModuleLink) => Promise<void>;
   data?: ILinkDetails | null;

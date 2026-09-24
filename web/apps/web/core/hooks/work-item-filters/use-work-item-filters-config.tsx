@@ -21,8 +21,8 @@ import {
 } from "@makeplane/propel/icons";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { Logo } from "@plane/propel/emoji-icon-picker";
-import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@plane/propel/icons";
+import { Logo } from "@nerve/propel/emoji-icon-picker";
+import { CycleGroupIcon, PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
 import type {
   ICycle,
   IState,
@@ -32,7 +32,7 @@ import type {
   IModule,
   IProject,
   TWorkItemFilterProperty,
-} from "@plane/types";
+} from "@nerve/types";
 
 import {
   getAssigneeFilterConfig,
@@ -52,7 +52,7 @@ import {
   getTargetDateFilterConfig,
   getUpdatedAtFilterConfig,
   isLoaderReady,
-} from "@plane/utils";
+} from "@nerve/utils";
 // store hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useLabel } from "@/hooks/store/use-label";

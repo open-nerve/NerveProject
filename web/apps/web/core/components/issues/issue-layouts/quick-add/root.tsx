@@ -11,11 +11,11 @@ import { useParams } from "react-router";
 import type { UseFormRegister } from "react-hook-form";
 import { useForm } from "react-hook-form";
 // plane imports
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { AddOutline } from "@makeplane/propel/icons";
-import { setPromiseToast } from "@plane/propel/toast";
-import type { IProject, TIssue, EIssueLayoutTypes } from "@plane/types";
-import { cn, createIssuePayload } from "@plane/utils";
+import { setPromiseToast } from "@nerve/propel/toast";
+import type { IProject, TIssue, EIssueLayoutTypes } from "@nerve/types";
+import { cn, createIssuePayload } from "@nerve/utils";
 // local imports
 import { QuickAddIssueFormRoot } from "./form";
 import { CreateIssueToastActionItems } from "../../create-issue-toast-action-items";

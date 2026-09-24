@@ -6,11 +6,11 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { ENotificationFilterType, FILTER_TYPE_OPTIONS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { ENotificationFilterType, FILTER_TYPE_OPTIONS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-import { Header, EHeaderVariant } from "@plane/ui";
+import { Header, EHeaderVariant } from "@nerve/ui";
 // hooks
 import { useWorkspaceNotifications } from "@/hooks/store/notifications";
 

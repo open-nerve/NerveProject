@@ -10,11 +10,11 @@ import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
 import { Disclosure, Transition } from "@headlessui/react";
 // plane imports
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { ChevronDownOutline, ChevronUpOutline } from "@makeplane/propel/icons";
-import type { ICycle, TProgressSnapshot } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { getDate } from "@plane/utils";
+import type { ICycle, TProgressSnapshot } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { getDate } from "@nerve/utils";
 // hooks
 import { useCycle } from "@/hooks/store/use-cycle";
 // plane web components

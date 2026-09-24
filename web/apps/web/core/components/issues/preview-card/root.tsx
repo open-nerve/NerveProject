@@ -6,8 +6,8 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { PriorityIcon, StateGroupIcon } from "@plane/propel/icons";
-import type { TIssue, TStateGroups } from "@plane/types";
+import { PriorityIcon, StateGroupIcon } from "@nerve/propel/icons";
+import type { TIssue, TStateGroups } from "@nerve/types";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";

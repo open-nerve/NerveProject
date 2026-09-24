@@ -10,13 +10,13 @@ import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // icons
 import { CopyOutline, HideOutline, RefreshOutline, ShowOutline } from "@makeplane/propel/icons";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IWebhook } from "@plane/types";
+import type { IWebhook } from "@nerve/types";
 // ui
-import { csvDownload, copyTextToClipboard } from "@plane/utils";
+import { csvDownload, copyTextToClipboard } from "@nerve/utils";
 // hooks
 import { useWebhook } from "@/hooks/store/use-webhook";
 import { useWorkspace } from "@/hooks/store/use-workspace";

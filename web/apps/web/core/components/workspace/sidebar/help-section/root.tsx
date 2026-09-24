@@ -7,9 +7,9 @@
 import React, { useState } from "react";
 import { observer } from "mobx-react";
 import { HelpOutline, PagesOutline } from "@makeplane/propel/icons";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // ui
-import { CustomMenu } from "@plane/ui";
+import { CustomMenu } from "@nerve/ui";
 // components
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 import { PlaneVersionNumber } from "@/components/global/version-number";

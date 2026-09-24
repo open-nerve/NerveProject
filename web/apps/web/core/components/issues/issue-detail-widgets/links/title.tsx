@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // plane imports
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 

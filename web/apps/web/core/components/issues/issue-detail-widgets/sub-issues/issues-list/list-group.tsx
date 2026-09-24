@@ -8,9 +8,9 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CircleDashed } from "lucide-react";
 import { Collapsible } from "@makeplane/propel/components/collapsible";
-import { ALL_ISSUES } from "@plane/constants";
-import type { IGroupByColumn, TIssue, TSubIssueOperations } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+import { ALL_ISSUES } from "@nerve/constants";
+import type { IGroupByColumn, TIssue, TSubIssueOperations } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 import { SubIssuesListItem } from "./list-item";
 
 interface TSubIssuesListGroupProps {

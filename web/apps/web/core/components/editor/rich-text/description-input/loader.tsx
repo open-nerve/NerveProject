@@ -5,8 +5,8 @@
  */
 
 // plane imports
-import { Loader } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { Loader } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 
 type Props = {
   className?: string;

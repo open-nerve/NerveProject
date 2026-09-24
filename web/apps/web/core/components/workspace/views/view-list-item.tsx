@@ -9,8 +9,8 @@ import { observer } from "mobx-react";
 import { useParams, Link } from "react-router";
 // plane imports
 import { DeleteOutline, EditOutline } from "@makeplane/propel/icons";
-import { CustomMenu } from "@plane/ui";
-import { truncateText } from "@plane/utils";
+import { CustomMenu } from "@nerve/ui";
+import { truncateText } from "@nerve/utils";
 // hooks
 import { useGlobalView } from "@/hooks/store/use-global-view";
 // local imports

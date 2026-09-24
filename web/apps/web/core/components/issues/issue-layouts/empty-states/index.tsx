@@ -5,7 +5,7 @@
  */
 
 // plane web components
-import { EIssuesStoreType } from "@plane/types";
+import { EIssuesStoreType } from "@nerve/types";
 // components
 import { ProjectArchivedEmptyState } from "./archived-issues";
 import { CycleEmptyState } from "./cycle";

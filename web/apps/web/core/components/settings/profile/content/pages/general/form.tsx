@@ -11,13 +11,13 @@ import { UserOutline } from "@makeplane/propel/icons";
 // plane imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@plane/propel/toast";
-import { EFileAssetType } from "@plane/types";
-import type { IUser, TUserProfile } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
+import { EFileAssetType } from "@nerve/types";
+import type { IUser, TUserProfile } from "@nerve/types";
 
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 // components
 import { DeactivateAccountModal } from "@/components/account/deactivate-account-modal";
 import { ImagePickerPopover } from "@/components/core/image-picker-popover";
@@ -29,7 +29,7 @@ import { handleCoverImageChange } from "@/helpers/cover-image.helper";
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
 // utils
-import { validatePersonName, validateDisplayName } from "@plane/utils";
+import { validatePersonName, validateDisplayName } from "@nerve/utils";
 
 type TUserProfileForm = {
   avatar_url: string;

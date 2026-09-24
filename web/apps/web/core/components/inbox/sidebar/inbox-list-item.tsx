@@ -9,10 +9,10 @@ import { observer } from "mobx-react";
 import { Link, useSearchParams } from "react-router";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { PriorityIcon } from "@plane/propel/icons";
+import { PriorityIcon } from "@nerve/propel/icons";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import { Row } from "@plane/ui";
-import { cn, renderFormattedDate } from "@plane/utils";
+import { Row } from "@nerve/ui";
+import { cn, renderFormattedDate } from "@nerve/utils";
 // components
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 // hooks

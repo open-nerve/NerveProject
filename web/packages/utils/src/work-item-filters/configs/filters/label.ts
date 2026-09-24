@@ -5,8 +5,8 @@
  */
 
 // plane imports
-import type { IIssueLabel, TFilterProperty, TSupportedOperators } from "@plane/types";
-import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@plane/types";
+import type { IIssueLabel, TFilterProperty, TSupportedOperators } from "@nerve/types";
+import { EQUALITY_OPERATOR, COLLECTION_OPERATOR } from "@nerve/types";
 // local imports
 import type { TCreateFilterConfigParams, IFilterIconConfig, TCreateFilterConfig } from "../../../rich-filters";
 import { createFilterConfig, getMultiSelectConfig, createOperatorConfigEntry } from "../../../rich-filters";

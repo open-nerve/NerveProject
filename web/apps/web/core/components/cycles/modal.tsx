@@ -7,12 +7,12 @@
 import { useEffect, useState } from "react";
 import { mutate } from "swr";
 // types
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { CycleDateCheckData, ICycle, TCycleTabOptions } from "@plane/types";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { CycleDateCheckData, ICycle, TCycleTabOptions } from "@nerve/types";
 // ui
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
-import { renderFormattedPayloadDate } from "@plane/utils";
+import { renderFormattedPayloadDate } from "@nerve/utils";
 import { useCycle } from "@/hooks/store/use-cycle";
 import { useProject } from "@/hooks/store/use-project";
 import useKeypress from "@/hooks/use-keypress";

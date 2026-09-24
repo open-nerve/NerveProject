@@ -11,8 +11,8 @@ import type {
   TProjectNavigationMode,
   TAppRailPreferences,
   TAppRailDisplayMode,
-} from "@plane/types";
-import { DEFAULT_PROJECT_PREFERENCES, DEFAULT_APP_RAIL_PREFERENCES } from "@plane/types";
+} from "@nerve/types";
+import { DEFAULT_PROJECT_PREFERENCES, DEFAULT_APP_RAIL_PREFERENCES } from "@nerve/types";
 import { useWorkspace } from "./store/use-workspace";
 import useLocalStorage from "./use-local-storage";
 

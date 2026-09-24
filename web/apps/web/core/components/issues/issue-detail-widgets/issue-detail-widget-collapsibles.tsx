@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // plane imports
-import type { TWorkItemWidgets } from "@plane/types";
+import type { TWorkItemWidgets } from "@nerve/types";
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { ISSUE_RELATION_OPTIONS } from "@/components/relations";

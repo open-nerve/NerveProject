@@ -7,11 +7,11 @@
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 // plane imports
-import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { EHeaderVariant, Header } from "@plane/ui";
+import { EIssueFilterType, ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { IIssueDisplayFilterOptions, IIssueDisplayProperties } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { EHeaderVariant, Header } from "@nerve/ui";
 // components
 import { ArchiveTabsList } from "@/components/archives";
 import { DisplayFiltersSelection, FiltersDropdown } from "@/components/issues/issue-layouts/filters";

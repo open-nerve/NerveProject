@@ -5,11 +5,11 @@
  */
 
 import { useMemo } from "react";
-import { useTranslation } from "@plane/i18n";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import { EFileAssetType } from "@plane/types";
-import type { TCommentsOperations } from "@plane/types";
-import { copyUrlToClipboard, formatTextList, generateWorkItemLink } from "@plane/utils";
+import { useTranslation } from "@nerve/i18n";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import { EFileAssetType } from "@nerve/types";
+import type { TCommentsOperations } from "@nerve/types";
+import { copyUrlToClipboard, formatTextList, generateWorkItemLink } from "@nerve/utils";
 import { useEditorAsset } from "@/hooks/store/use-editor-asset";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";

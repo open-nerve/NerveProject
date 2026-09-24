@@ -7,7 +7,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { AxiosInstance, AxiosRequestConfig } from "axios";
 import { create } from "axios";
-import { normalizeAPIRequestURL } from "@plane/services";
+import { normalizeAPIRequestURL } from "@nerve/services";
 
 export abstract class APIService {
   private axiosInstance: AxiosInstance;

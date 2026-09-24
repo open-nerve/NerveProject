@@ -6,7 +6,7 @@
 
 import { action, makeObservable, runInAction } from "mobx";
 // base class
-import type { IssuePaginationOptions, TIssue, TIssuesResponse, TLoader, ViewFlags } from "@plane/types";
+import type { IssuePaginationOptions, TIssue, TIssuesResponse, TLoader, ViewFlags } from "@nerve/types";
 // services
 import { WorkspaceService } from "@/services/workspace.service";
 // types

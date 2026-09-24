@@ -8,10 +8,10 @@ import { useState } from "react";
 import { observer } from "mobx-react";
 import { CloseOutline } from "@makeplane/propel/icons";
 // plane imports
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { Checkbox } from "@makeplane/propel/components/checkbox";
-import { EModalPosition, EModalWidth, ModalCore } from "@plane/ui";
-import { cn } from "@plane/utils";
+import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+import { cn } from "@nerve/utils";
 // hooks
 import { useProjectNavigationPreferences } from "@/hooks/use-navigation-preferences";
 

@@ -5,7 +5,7 @@
  */
 
 import { uniq, orderBy, isEmpty, indexOf, groupBy, set } from "lodash-es";
-import { ALL_ISSUES, EIssueFilterType, FILTER_TO_ISSUE_MAP, ISSUE_PRIORITIES } from "@plane/constants";
+import { ALL_ISSUES, EIssueFilterType, FILTER_TO_ISSUE_MAP, ISSUE_PRIORITIES } from "@nerve/constants";
 import type {
   IIssueDisplayFilterOptions,
   IIssueDisplayProperties,
@@ -14,8 +14,8 @@ import type {
   TIssue,
   TIssueGroupByOptions,
   TIssueOrderByOptions,
-} from "@plane/types";
-import { checkDateCriteria, convertToISODateString, parseDateFilter } from "@plane/utils";
+} from "@nerve/types";
+import { checkDateCriteria, convertToISODateString, parseDateFilter } from "@nerve/utils";
 import { EIssueGroupedAction, ISSUE_GROUP_BY_KEY } from "./base-issues.store";
 
 /**

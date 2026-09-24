@@ -9,10 +9,10 @@ import { useParams } from "react-router";
 import { StarOff } from "lucide-react";
 import { LinkOutline, StarOutline } from "@makeplane/propel/icons";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import { setToast, TOAST_TYPE } from "@plane/propel/toast";
-import { copyTextToClipboard } from "@plane/utils";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
+import { copyTextToClipboard } from "@nerve/utils";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks

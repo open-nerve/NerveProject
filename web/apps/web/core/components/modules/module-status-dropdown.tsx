@@ -6,12 +6,12 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-import { MODULE_STATUS } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { TModuleStatus } from "@plane/propel/icons";
-import { ModuleStatusIcon } from "@plane/propel/icons";
-import type { IModule } from "@plane/types";
-import { CustomSelect } from "@plane/ui";
+import { MODULE_STATUS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { TModuleStatus } from "@nerve/propel/icons";
+import { ModuleStatusIcon } from "@nerve/propel/icons";
+import type { IModule } from "@nerve/types";
+import { CustomSelect } from "@nerve/ui";
 
 type Props = {
   isDisabled: boolean;

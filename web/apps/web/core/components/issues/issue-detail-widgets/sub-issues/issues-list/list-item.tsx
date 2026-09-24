@@ -5,14 +5,14 @@
  */
 
 import { observer } from "mobx-react";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { ChevronRightOutline, CloseOutline, DeleteOutline, EditOutline, LinkOutline } from "@makeplane/propel/icons";
 // plane imports
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { TIssue, TSubIssueOperations } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
-import { ControlLink, CustomMenu } from "@plane/ui";
-import { cn, generateWorkItemLink } from "@plane/utils";
+import type { TIssue, TSubIssueOperations } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
+import { ControlLink, CustomMenu } from "@nerve/ui";
+import { cn, generateWorkItemLink } from "@nerve/utils";
 // helpers
 import { useSubIssueOperations } from "@/components/issues/issue-detail-widgets/sub-issues/helper";
 import { WithDisplayPropertiesHOC } from "@/components/issues/issue-layouts/properties/with-display-properties-HOC";

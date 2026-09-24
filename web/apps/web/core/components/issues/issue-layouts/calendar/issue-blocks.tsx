@@ -5,10 +5,10 @@
  */
 
 import { observer } from "mobx-react";
-import { useTranslation } from "@plane/i18n";
-import type { TIssue, TPaginationData } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import type { TIssue, TPaginationData } from "@nerve/types";
 // components
-import { renderFormattedPayloadDate } from "@plane/utils";
+import { renderFormattedPayloadDate } from "@nerve/utils";
 // helpers
 import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 import type { TRenderQuickActions } from "../list/list-view-types";

@@ -11,7 +11,7 @@ import type {
   TNotificationPaginatedInfoQueryParams,
   TNotification,
   TUnreadNotificationsCount,
-} from "@plane/types";
+} from "@nerve/types";
 // helpers
 // services
 import { APIService } from "@/services/api.service";

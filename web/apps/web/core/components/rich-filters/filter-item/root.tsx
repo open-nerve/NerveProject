@@ -7,7 +7,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 // plane imports
-import type { IFilterInstance } from "@plane/shared-state";
+import type { IFilterInstance } from "@nerve/shared-state";
 import type {
   SingleOrArray,
   TExternalFilter,
@@ -15,9 +15,9 @@ import type {
   TFilterValue,
   TFilterConditionNodeForDisplay,
   TAllAvailableOperatorsForDisplay,
-} from "@plane/types";
-import { CustomSearchSelect } from "@plane/ui";
-import { cn, getOperatorForPayload } from "@plane/utils";
+} from "@nerve/types";
+import { CustomSearchSelect } from "@nerve/ui";
+import { cn, getOperatorForPayload } from "@nerve/utils";
 // local imports
 import { FilterValueInput } from "../filter-value-input/root";
 import { COMMON_FILTER_ITEM_BORDER_CLASSNAME } from "../shared";

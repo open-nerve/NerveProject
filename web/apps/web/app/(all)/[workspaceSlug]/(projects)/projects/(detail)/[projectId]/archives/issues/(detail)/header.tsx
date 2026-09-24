@@ -8,12 +8,12 @@ import { observer } from "mobx-react";
 import useSWR from "swr";
 // ui
 import { ArchiveOutline, WorkItemsOutline } from "@makeplane/propel/icons";
-import { Breadcrumbs, Header } from "@plane/ui";
+import { Breadcrumbs, Header } from "@nerve/ui";
 // components
 import { BreadcrumbLink } from "@/components/common/breadcrumb-link";
 import { IssueDetailQuickActions } from "@/components/issues/issue-detail/issue-detail-quick-actions";
 // constants
-import { ISSUE_DETAILS } from "@plane/constants";
+import { ISSUE_DETAILS } from "@nerve/constants";
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 // plane web

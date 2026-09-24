@@ -8,7 +8,7 @@ import { isEqual, concat, get, indexOf, isEmpty, orderBy, pull, set, uniq, updat
 import { action, computed, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // plane constants
-import { ALL_ISSUES, ISSUE_PRIORITIES } from "@plane/constants";
+import { ALL_ISSUES, ISSUE_PRIORITIES } from "@nerve/constants";
 // types
 import type {
   TIssue,
@@ -23,10 +23,10 @@ import type {
   TIssuePaginationData,
   TGroupedIssueCount,
   TPaginationData,
-} from "@plane/types";
-import { EIssueLayoutTypes } from "@plane/types";
+} from "@nerve/types";
+import { EIssueLayoutTypes } from "@nerve/types";
 // helpers
-import { convertToISODateString } from "@plane/utils";
+import { convertToISODateString } from "@nerve/utils";
 // plane web imports
 // services
 import { CycleService } from "@/services/cycle.service";

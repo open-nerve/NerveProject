@@ -9,12 +9,12 @@ import { observer } from "mobx-react";
 import { useSearchParams } from "react-router";
 import { ChevronDownOutline, ChevronUpOutline, WarningCircleOutline } from "@makeplane/propel/icons";
 import { Disclosure, Transition } from "@headlessui/react";
-import { useTranslation } from "@plane/i18n";
-import { EIssuesStoreType } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { EIssuesStoreType } from "@nerve/types";
 // components
 // constants
 // helpers
-import { getDate } from "@plane/utils";
+import { getDate } from "@nerve/utils";
 import ProgressChart from "@/components/core/sidebar/progress-chart";
 import { ModuleProgressStats } from "@/components/modules";
 // hooks

@@ -19,11 +19,11 @@ import {
   NewTabOutline,
   TickCircleFilled,
 } from "@makeplane/propel/icons";
-import { IconButton, getIconButtonStyling } from "@plane/propel/icon-button";
-import type { TNameDescriptionLoader } from "@plane/types";
+import { IconButton, getIconButtonStyling } from "@nerve/propel/icon-button";
+import type { TNameDescriptionLoader } from "@nerve/types";
 
-import { Header, CustomMenu, EHeaderVariant } from "@plane/ui";
-import { cn, findHowManyDaysLeft, generateWorkItemLink } from "@plane/utils";
+import { Header, CustomMenu, EHeaderVariant } from "@nerve/ui";
+import { cn, findHowManyDaysLeft, generateWorkItemLink } from "@nerve/utils";
 // components
 import { NameDescriptionUpdateStatus } from "@/components/issues/issue-update-status";
 // hooks

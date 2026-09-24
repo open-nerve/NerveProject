@@ -13,11 +13,11 @@ import { usePopper } from "react-popper";
 import { Combobox } from "@headlessui/react";
 // plane imports
 import { Avatar } from "@makeplane/propel/components/avatar";
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { DeactivatedUserOutline, SearchOutline, TickOutline } from "@makeplane/propel/icons";
-import { EPillSize, EPillVariant, Pill } from "@plane/propel/pill";
-import type { IUserLite } from "@plane/types";
-import { cn, getFileURL, sortByCurrentUserThenSelected } from "@plane/utils";
+import { EPillSize, EPillVariant, Pill } from "@nerve/propel/pill";
+import type { IUserLite } from "@nerve/types";
+import { cn, getFileURL, sortByCurrentUserThenSelected } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
 import { useUser } from "@/hooks/store/user";

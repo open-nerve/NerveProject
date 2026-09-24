@@ -16,10 +16,10 @@ import {
   ViewsOutline,
 } from "@makeplane/propel/icons";
 // plane imports
-import { Button } from "@plane/propel/button";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { TUserProfile } from "@plane/types";
-import { EOnboardingSteps } from "@plane/types";
+import { Button } from "@nerve/propel/button";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { TUserProfile } from "@nerve/types";
+import { EOnboardingSteps } from "@nerve/types";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 // local components

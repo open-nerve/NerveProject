@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { ICycle, IModule, IState, TIssue } from "@plane/types";
+import type { ICycle, IModule, IState, TIssue } from "@nerve/types";
 import { calculateCycleProgress } from "./cycle";
 import { getDistributionPathsPostUpdate, updateDistribution } from "./distribution-update";
 

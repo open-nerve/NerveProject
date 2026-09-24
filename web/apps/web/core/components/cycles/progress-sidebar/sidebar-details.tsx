@@ -9,12 +9,12 @@ import { isEmpty } from "lodash-es";
 import { observer } from "mobx-react";
 import { MembersOutline, UserAltOutline, WorkItemsOutline } from "@makeplane/propel/icons";
 // plane types
-import { useTranslation } from "@plane/i18n";
+import { useTranslation } from "@nerve/i18n";
 import { Avatar } from "@makeplane/propel/components/avatar";
 import { TextArea } from "@makeplane/propel/components/text-area";
-import type { ICycle } from "@plane/types";
+import type { ICycle } from "@nerve/types";
 // helpers
-import { getFileURL } from "@plane/utils";
+import { getFileURL } from "@nerve/utils";
 // hooks
 import { AvatarGroupOverflow } from "@/components/common/avatar-group-overflow";
 import { useMember } from "@/hooks/store/use-member";

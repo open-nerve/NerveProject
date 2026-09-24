@@ -6,9 +6,9 @@
 
 import { useState } from "react";
 import { observer } from "mobx-react";
-import { STATE_GROUPS } from "@plane/constants";
-import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IState, TStateGroups, TStateOperationsCallbacks } from "@plane/types";
+import { STATE_GROUPS } from "@nerve/constants";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
+import type { IState, TStateGroups, TStateOperationsCallbacks } from "@nerve/types";
 // components
 import { StateForm } from "@/components/project-states";
 

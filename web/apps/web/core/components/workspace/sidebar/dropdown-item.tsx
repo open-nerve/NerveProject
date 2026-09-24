@@ -9,10 +9,10 @@ import { useParams, Link } from "react-router";
 import { SettingsOutline, TickOutline, UserPlusOutline } from "@makeplane/propel/icons";
 import { Menu } from "@headlessui/react";
 // plane imports
-import { EUserPermissions } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
-import type { IWorkspace } from "@plane/types";
-import { cn, getFileURL, getUserRole } from "@plane/utils";
+import { EUserPermissions } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
+import type { IWorkspace } from "@nerve/types";
+import { cn, getFileURL, getUserRole } from "@nerve/utils";
 
 type TProps = {
   workspace: IWorkspace;

@@ -6,12 +6,12 @@
 
 import { observer } from "mobx-react";
 // plane imports
-import { EUserPermissions, EUserPermissionsLevel } from "@plane/constants";
-import { useTranslation } from "@plane/i18n";
+import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { PillButton } from "@makeplane/propel/components/pill";
 import { CloseOutline } from "@makeplane/propel/icons";
-import type { TCycleFilters } from "@plane/types";
-import { replaceUnderscoreIfSnakeCase } from "@plane/utils";
+import type { TCycleFilters } from "@nerve/types";
+import { replaceUnderscoreIfSnakeCase } from "@nerve/utils";
 // hooks
 import { useUserPermissions } from "@/hooks/store/user";
 // local imports

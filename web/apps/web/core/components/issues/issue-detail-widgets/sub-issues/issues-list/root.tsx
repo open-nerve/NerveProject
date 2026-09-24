@@ -8,10 +8,10 @@ import { useCallback, useMemo } from "react";
 import { observer } from "mobx-react";
 // plane imports
 import { FilterOutline } from "@makeplane/propel/icons";
-import { useTranslation } from "@plane/i18n";
-import { Button } from "@plane/propel/button";
-import type { GroupByColumnTypes, TIssue, TSubIssueOperations } from "@plane/types";
-import { EIssuesStoreType } from "@plane/types";
+import { useTranslation } from "@nerve/i18n";
+import { Button } from "@nerve/propel/button";
+import type { GroupByColumnTypes, TIssue, TSubIssueOperations } from "@nerve/types";
+import { EIssuesStoreType } from "@nerve/types";
 // hooks
 import { SectionEmptyState } from "@/components/empty-state/section-empty-state-root";
 import { getGroupByColumns, isWorkspaceLevel } from "@/components/issues/issue-layouts/utils";

@@ -7,9 +7,9 @@
 import { observer } from "mobx-react";
 // plane imports
 import { WorkItemsOutline } from "@makeplane/propel/icons";
-import { EInboxIssueSource } from "@plane/types";
+import { EInboxIssueSource } from "@nerve/types";
 // hooks
-import { capitalizeFirstLetter } from "@plane/utils";
+import { capitalizeFirstLetter } from "@nerve/utils";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // local imports
 import { IssueActivityBlockComponent } from "./";

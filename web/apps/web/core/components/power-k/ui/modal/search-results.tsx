@@ -7,7 +7,7 @@
 import { Command } from "cmdk";
 import { observer } from "mobx-react";
 // plane imports
-import type { IWorkspaceSearchResults } from "@plane/types";
+import type { IWorkspaceSearchResults } from "@nerve/types";
 // hooks
 import { useParams, useNavigate } from "react-router";
 // helpers
