@@ -144,7 +144,7 @@ export const usePowerKNavigationCommandsRecord = (): Record<TPowerKNavigationCom
       group: "navigation",
       i18n_title: "power_k.navigation_actions.nav_account_settings",
       icon: SettingsOutline,
-      action: (ctx) => handlePowerKNavigate(ctx, [ctx.params.workspaceSlug?.toString(), "settings", "account"]),
+      action: (ctx) => handlePowerKNavigate(ctx, ["settings", "profile", "general"]),
       isEnabled: (ctx) => baseWorkspaceConditions(ctx),
       isVisible: (ctx) => baseWorkspaceConditions(ctx),
       closeOnSelect: true,

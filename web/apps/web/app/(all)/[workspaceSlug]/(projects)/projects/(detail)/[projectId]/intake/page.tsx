@@ -52,7 +52,7 @@ function ProjectInboxPage({ params }: Route.ComponentProps) {
           primaryButton={{
             text: t("disabled_project.empty_state.inbox.primary_button.text"),
             onClick: () => {
-              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features`);
+              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/intake`);
             },
             disabled: !canPerformEmptyStateActions,
           }}

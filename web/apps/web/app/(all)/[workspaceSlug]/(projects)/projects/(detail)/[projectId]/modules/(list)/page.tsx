@@ -74,7 +74,7 @@ function ProjectModulesPage({ params }: Route.ComponentProps) {
           primaryButton={{
             text: t("disabled_project.empty_state.module.primary_button.text"),
             onClick: () => {
-              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features`);
+              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/modules`);
             },
             disabled: !canPerformEmptyStateActions,
           }}

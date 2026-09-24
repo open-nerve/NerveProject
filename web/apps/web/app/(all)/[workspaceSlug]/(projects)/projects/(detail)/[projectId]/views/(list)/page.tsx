@@ -77,7 +77,7 @@ function ProjectViewsPage({ params }: Route.ComponentProps) {
           primaryButton={{
             text: t("disabled_project.empty_state.view.primary_button.text"),
             onClick: () => {
-              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features`);
+              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/views`);
             },
             disabled: !canPerformEmptyStateActions,
           }}

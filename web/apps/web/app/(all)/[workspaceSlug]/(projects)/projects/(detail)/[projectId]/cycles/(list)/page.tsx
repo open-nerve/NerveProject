@@ -81,7 +81,7 @@ function ProjectCyclesPage({ params }: Route.ComponentProps) {
           primaryButton={{
             text: t("disabled_project.empty_state.cycle.primary_button.text"),
             onClick: () => {
-              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features`);
+              navigate(`/${workspaceSlug}/settings/projects/${projectId}/features/cycles`);
             },
             disabled: !hasAdminLevelPermission,
           }}

@@ -10,7 +10,8 @@
     "check:lint": "node ../../../tools/lint-cap.mjs 566",
     "check:types": "react-router typegen && tsc --noEmit",
     "check:format": "oxfmt --check .",
-    "fix:format": "oxfmt ."
+    "fix:format": "oxfmt .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@atlaskit/pragmatic-drag-and-drop": "catalog:",
@@ -67,6 +68,7 @@
     "@types/react-color": "catalog:",
     "@types/react-dom": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }
