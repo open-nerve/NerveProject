@@ -13,22 +13,15 @@ import { cn } from "@nerve/utils";
 
 interface AppSidebarItemData {
   href?: string;
-  label?: string;
   icon?: React.ReactNode;
   isActive?: boolean;
   onClick?: () => void;
   disabled?: boolean;
-  showLabel?: boolean;
 }
 
 interface AppSidebarItemProps {
   variant?: "link" | "button";
   item?: AppSidebarItemData;
-}
-
-interface AppSidebarItemLabelProps {
-  highlight?: boolean;
-  label?: string;
 }
 
 interface AppSidebarItemIconProps {
@@ -58,29 +51,11 @@ const styles = {
   icon: "flex items-center justify-center gap-2 size-8 rounded-md text-tertiary",
   iconActive: "bg-layer-transparent-selected text-secondary !text-icon-primary",
   iconInactive: "group-hover:text-icon-secondary group-hover:bg-layer-transparent-hover !text-icon-tertiary",
-  label: "text-11 font-medium",
-  labelActive: "text-secondary",
-  labelInactive: "group-hover:text-secondary text-tertiary",
 } as const;
 
 // ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
-
-function AppSidebarItemLabel({ highlight = false, label }: AppSidebarItemLabelProps) {
-  if (!label) return null;
-
-  return (
-    <span
-      className={cn(styles.label, {
-        [styles.labelActive]: highlight,
-        [styles.labelInactive]: !highlight,
-      })}
-    >
-      {label}
-    </span>
-  );
-}
 
 function AppSidebarItemIcon({ icon, highlight }: AppSidebarItemIconProps) {
   if (!icon) return null;
@@ -118,14 +93,9 @@ function AppSidebarButtonItem({ children, onClick, disabled = false, className }
 function AppSidebarItem({ variant = "link", item }: AppSidebarItemProps) {
   if (!item) return null;
 
-  const { icon, isActive, label, href, onClick, disabled, showLabel = true } = item;
+  const { icon, isActive, href, onClick, disabled } = item;
 
-  const commonItems = (
-    <>
-      <AppSidebarItemIcon icon={icon} highlight={isActive} />
-      {showLabel && <AppSidebarItemLabel highlight={isActive} label={label} />}
-    </>
-  );
+  const commonItems = <AppSidebarItemIcon icon={icon} highlight={isActive} />;
 
   if (variant === "link") {
     return <AppSidebarLinkItem href={href}>{commonItems}</AppSidebarLinkItem>;
@@ -138,14 +108,4 @@ function AppSidebarItem({ variant = "link", item }: AppSidebarItemProps) {
   );
 }
 
-// ============================================================================
-// COMPOUND COMPONENT ASSIGNMENT
-// ============================================================================
-
-AppSidebarItem.Label = AppSidebarItemLabel;
-AppSidebarItem.Icon = AppSidebarItemIcon;
-AppSidebarItem.Link = AppSidebarLinkItem;
-AppSidebarItem.Button = AppSidebarButtonItem;
-
 export { AppSidebarItem };
-export type { AppSidebarItemData };

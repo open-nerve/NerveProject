@@ -1689,6 +1689,65 @@
           "miss": ["e2e/playwright.config.ts", "web/apps/web/app/assets/brand/mark.svg"]
         }
       }
+    },
+    {
+      "id": "app-rail",
+      "phase": "M1/closeout",
+      "why": "从不渲染的应用栏已整条删除（M1/P4 评审第 4 节裁定 9）：AppRailVisibilityProvider 默认关闭、唯一的使用处不打开它，是藏在开关后面的功能。它的 provider、组件、显示偏好（本地存储键 app_rail_preferences、APP_RAIL_<slug>）、@nerve/types 里的类型和只有它用的 useWorkspacePaths 都不再出现。tools/plane-schema 里 Plane 的表结构不在范围内（记录的是 Plane 的库）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "app[-_ ]?rail|use-?workspace-?paths",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "import { AppRailVisibilityProvider } from \"@/lib/app-rail\";",
+          "const APP_RAIL_PREFERENCES_KEY = \"app_rail_preferences\";",
+          "              <span className=\"text-11\">{isCollapsed ? \"Dock App Rail\" : \"Undock App Rail\"}</span>",
+          "    const { isProjectsPath, isNotificationsPath } = useWorkspacePaths();",
+          "import { useWorkspacePaths } from \"@/hooks/use-workspace-paths\";"
+        ],
+        "miss": [
+          "import { useWorkspace } from \"@/hooks/store/use-workspace\";",
+          "import { useWorkspaceNotifications } from \"@/hooks/store/notifications\";",
+          "export function ensureAPITrailingSlash(url: string): string {"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/workspace/content-wrapper.tsx",
+            "web/packages/types/src/navigation-preferences.ts",
+            "web/packages/i18n/src/locales/en/common.json"
+          ],
+          "miss": [
+            "tools/plane-schema/plane-v1.4.2-schema.sql",
+            "docs/v0/M1-frontend-trim/reviews/P4-router-native-review.md"
+          ]
+        }
+      }
+    },
+    {
+      "id": "app-rail-files",
+      "phase": "M1/closeout",
+      "why": "应用栏的文件（core/lib/app-rail/、navigation/app-rail-*.tsx）和只有它用的 use-workspace-paths.ts 已删除（M1/P4 评审第 4 节裁定 9）；目录 index.ts 这类文件的内容里没有这个名字，所以按路径另立一条",
+      "path": {
+        "source": "^web/.*(?:app-rail|use-workspace-paths)",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "web/apps/web/core/lib/app-rail/index.ts",
+          "web/apps/web/core/components/navigation/app-rail-root.tsx",
+          "web/apps/web/core/hooks/use-workspace-paths.ts"
+        ],
+        "miss": [
+          "web/apps/web/core/hooks/use-navigation-preferences.ts",
+          "web/apps/web/core/components/navigation/top-navigation-root.tsx",
+          "web/apps/web/core/hooks/store/use-workspace.ts"
+        ]
+      }
     }
   ],
   "exceptions": [

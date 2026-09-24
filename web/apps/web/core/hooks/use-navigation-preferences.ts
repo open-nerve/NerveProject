@@ -6,17 +6,9 @@
 
 import { useCallback, useMemo } from "react";
 import { useParams } from "react-router";
-import type {
-  TProjectNavigationPreferences,
-  TProjectNavigationMode,
-  TAppRailPreferences,
-  TAppRailDisplayMode,
-} from "@nerve/types";
-import { DEFAULT_PROJECT_PREFERENCES, DEFAULT_APP_RAIL_PREFERENCES } from "@nerve/types";
+import type { TProjectNavigationPreferences, TProjectNavigationMode } from "@nerve/types";
+import { DEFAULT_PROJECT_PREFERENCES } from "@nerve/types";
 import { useWorkspace } from "./store/use-workspace";
-import useLocalStorage from "./use-local-storage";
-
-const APP_RAIL_PREFERENCES_KEY = "app_rail_preferences";
 
 export const useProjectNavigationPreferences = () => {
   const { workspaceSlug } = useParams();
@@ -89,33 +81,5 @@ export const useProjectNavigationPreferences = () => {
     updateNavigationMode,
     updateShowLimitedProjects,
     updateLimitedProjectsCount,
-  };
-};
-
-export const useAppRailPreferences = () => {
-  const { storedValue, setValue } = useLocalStorage<TAppRailPreferences>(
-    APP_RAIL_PREFERENCES_KEY,
-    DEFAULT_APP_RAIL_PREFERENCES
-  );
-
-  const updateDisplayMode = useCallback(
-    (mode: TAppRailDisplayMode) => {
-      setValue({
-        displayMode: mode,
-      });
-    },
-    [setValue]
-  );
-
-  const toggleDisplayMode = useCallback(() => {
-    const currentPreferences = storedValue || DEFAULT_APP_RAIL_PREFERENCES;
-    const newMode = currentPreferences.displayMode === "icon_only" ? "icon_with_label" : "icon_only";
-    updateDisplayMode(newMode);
-  }, [storedValue, updateDisplayMode]);
-
-  return {
-    preferences: storedValue || DEFAULT_APP_RAIL_PREFERENCES,
-    updateDisplayMode,
-    toggleDisplayMode,
   };
 };
