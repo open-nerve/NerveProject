@@ -87,8 +87,8 @@ func TestRefreshRotates(t *testing.T) {
 	if !ok || next.SessionID != sessionID || next.Generation != 4 || !signedWith.Verify(next.MACMessage(), next.Tag) {
 		t.Fatalf("refresh token = %+v, %v; want generation 4 of the session, tagged", next, ok)
 	}
-	if f.row.State.Generation != 4 || !bytes.Equal(f.row.State.TokenHash, next.SecretHash()) || f.row.State.Revoked || !f.row.State.ExpiresAt.Equal(sessionEnd) {
-		t.Errorf("session = %+v; want generation 4 with the new secret's hash, its end unchanged", f.row.State)
+	if f.row.State.Generation != 4 || !bytes.Equal(f.row.State.TokenHash, next.SecretHash()) || f.row.State.Revoked || !f.row.State.ExpiresAt.Equal(sessionEnd) || !f.row.changedAt.Equal(now) {
+		t.Errorf("session = %+v, changed at %v; want generation 4 with the new secret's hash, its end unchanged, changed now", f.row.State, f.row.changedAt)
 	}
 	want := app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now.Add(15 * time.Minute)}
 	if !slices.Equal(f.tokens.issued, []app.AccessClaims{want}) || !tokens.RefreshExpiresAt.Equal(sessionEnd) || tokens.AccessExpiresIn != 15*time.Minute {
@@ -123,8 +123,9 @@ func TestRefreshDetectsReuse(t *testing.T) {
 	if !errors.Is(err, domain.ErrRefreshTokenInvalid) {
 		t.Errorf("Execute() = %v, want identity.refresh_token_invalid", err)
 	}
-	if !f.row.State.Revoked || f.row.reason != "reuse_detected" || f.row.State.Generation != 3 || len(f.sessions.outsideTx) != 0 {
-		t.Errorf("session = %+v (%s), writes outside the transaction %q; want revoked for reuse_detected in it", f.row.State, f.row.reason, f.sessions.outsideTx)
+	if !f.row.State.Revoked || f.row.reason != "reuse_detected" || !f.row.changedAt.Equal(now) || f.row.State.Generation != 3 || len(f.sessions.outsideTx) != 0 {
+		t.Errorf("session = %+v (%s at %v), writes outside the transaction %q; want revoked for reuse_detected now, in it",
+			f.row.State, f.row.reason, f.row.changedAt, f.sessions.outsideTx)
 	}
 	want := `"level":"WARN","msg":"refresh token reused: session revoked","user_id":"` + userID.String() +
 		`","session_id":"` + sessionID.String() + `","ip":"203.0.113.7"`

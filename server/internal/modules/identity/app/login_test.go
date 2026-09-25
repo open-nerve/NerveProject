@@ -152,6 +152,9 @@ func TestLoginRehashesWhenTheParametersChanged(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if len(f.logins.hashTimes) != 1 || !f.logins.hashTimes[0].Equal(now) {
+		t.Errorf("the hash was written at %v, want once at the clock's now", f.logins.hashTimes)
+	}
 	if f.hasher.calls != 1 || !slices.Equal(f.logins.hashUpdates, []string{"hashed:Tr0ub4dor&3"}) || len(f.logins.outsideTx) != 0 || len(f.logins.sessions) != 1 {
 		t.Errorf("hashed %d times, wrote %q, outside the transaction %q, sessions %d; want one new hash written in the transaction",
 			f.hasher.calls, f.logins.hashUpdates, f.logins.outsideTx, len(f.logins.sessions))

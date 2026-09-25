@@ -82,10 +82,11 @@ type fakeLogins struct {
 	account     app.LoginAccount // found by email
 	email       string           // the account's normalized address
 	active      bool
-	hash        string   // the row's hash, as LockForCredentials reads it
-	lookedUp    []string // addresses FindLoginAccount was given
-	locks       int      // LockForCredentials calls
-	hashUpdates []string // hashes UpdatePasswordHash wrote
+	hash        string      // the row's hash, as LockForCredentials reads it
+	lookedUp    []string    // addresses FindLoginAccount was given
+	locks       int         // LockForCredentials calls
+	hashUpdates []string    // hashes UpdatePasswordHash wrote
+	hashTimes   []time.Time // the times it was given
 	sessions    []app.NewSession
 	outsideTx   []string
 }
@@ -109,11 +110,12 @@ func (f *fakeLogins) LockForCredentials(ctx context.Context, id uuid.UUID) (app.
 	return app.LockedAccount{PasswordHash: f.hash, Active: f.active}, nil
 }
 
-func (f *fakeLogins) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, _ time.Time) error {
+func (f *fakeLogins) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, now time.Time) error {
 	if !inTx(ctx) || id != f.account.ID {
 		f.outsideTx = append(f.outsideTx, "password of "+id.String())
 	}
 	f.hashUpdates = append(f.hashUpdates, hash)
+	f.hashTimes = append(f.hashTimes, now)
 	f.hash = hash
 	return nil
 }
@@ -129,7 +131,8 @@ func (f *fakeLogins) CreateSession(ctx context.Context, n app.NewSession) error 
 // fakeSession is a session row as refresh and logout see it.
 type fakeSession struct {
 	app.RefreshSession
-	reason string // revoke_reason
+	reason    string    // revoke_reason
+	changedAt time.Time // updated_at, which each write sets
 }
 
 // fakeSessions is refresh's and logout's ports, in memory. RotateSession and
@@ -173,16 +176,17 @@ func (f *fakeSessions) RotateSession(ctx context.Context, g app.SessionGeneratio
 	if ok {
 		s.State.Generation++
 		s.State.TokenHash = newHash
+		s.changedAt = g.Now
 	}
 	return ok, nil
 }
 
-func (f *fakeSessions) RevokeForReuse(ctx context.Context, id uuid.UUID, _ time.Time) error {
+func (f *fakeSessions) RevokeForReuse(ctx context.Context, id uuid.UUID, now time.Time) error {
 	if !inTx(ctx) {
 		f.outsideTx = append(f.outsideTx, "revoke")
 	}
 	if s, ok := f.rows[id]; ok && !s.State.Revoked {
-		s.State.Revoked, s.reason = true, "reuse_detected"
+		s.State.Revoked, s.reason, s.changedAt = true, "reuse_detected", now
 	}
 	return nil
 }
@@ -190,7 +194,7 @@ func (f *fakeSessions) RevokeForReuse(ctx context.Context, id uuid.UUID, _ time.
 func (f *fakeSessions) EndSession(_ context.Context, g app.SessionGeneration) (bool, error) {
 	s, ok := f.at(g)
 	if ok {
-		s.State.Revoked, s.reason = true, "logout"
+		s.State.Revoked, s.reason, s.changedAt = true, "logout", g.Now
 	}
 	return ok, nil
 }

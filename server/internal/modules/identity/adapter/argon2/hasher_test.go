@@ -174,12 +174,16 @@ func TestVerifyRejectsAnotherFormat(t *testing.T) {
 		{"zero iterations", with(3, "m=64,t=0,p=1")},
 		{"zero lanes", with(3, "m=64,t=1,p=0")},
 		{"lanes beyond a byte", with(3, "m=64,t=1,p=256")},
+		{"memory beyond 32 bits", with(3, "m=4294967360,t=1,p=1")},
 		{"a signed parameter", with(3, "m=+64,t=1,p=1")},
 		{"a short salt", with(4, parts[4][:10])},
 		{"a salt with padding", with(4, parts[4]+"==")},
+		// The same 16 bytes, with an unused bit of the last character set.
+		{"a salt in another spelling", with(4, parts[4][:21]+string(rune(parts[4][21]+1)))},
 		{"a short key", with(5, parts[5][:20])},
 		{"an empty key", with(5, "")},
 		{"a trailing part", good + "$x"},
+		{"a leading part", "x" + good},
 	}
 	for _, tt := range tests {
 		ok, rehash, err := h.Verify(context.Background(), "Tr0ub4dor&3", tt.hash)

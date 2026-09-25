@@ -22,8 +22,9 @@ func TestLogoutEndsTheSessionOfTheCurrentGeneration(t *testing.T) {
 
 	err := uc.Execute(context.Background(), issued(signedWith, 3, 3).String())
 
-	if err != nil || !f.row.State.Revoked || f.row.reason != "logout" || f.tx.calls != 0 {
-		t.Errorf("Execute() = %v, session %+v (%s), %d transactions; want revoked for logout by one statement", err, f.row.State, f.row.reason, f.tx.calls)
+	if err != nil || !f.row.State.Revoked || f.row.reason != "logout" || !f.row.changedAt.Equal(now) || f.tx.calls != 0 {
+		t.Errorf("Execute() = %v, session %+v (%s at %v), %d transactions; want revoked for logout now, by one statement",
+			err, f.row.State, f.row.reason, f.row.changedAt, f.tx.calls)
 	}
 	if want := `"msg":"signed out","session_id":"` + sessionID.String() + `"`; !strings.Contains(f.logs.String(), want) {
 		t.Errorf("logs = %s, want %s", f.logs, want)
