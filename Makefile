@@ -126,7 +126,7 @@ test-web: ## 运行前端单元测试（各包 test 脚本中的 vitest，经 tu
 .PHONY: build
 build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需要 Node 和 Go）
 	find $(WEBUI_DIST) -mindepth 1 ! -name .gitkeep -delete
-	cp -R web/apps/web/build/client/. $(WEBUI_DIST)/
+	cp -R $(WEB_CLIENT)/. $(WEBUI_DIST)/
 	cd server && go build -ldflags "$(GO_LDFLAGS)" -o ../bin/nerve ./cmd/nerve
 
 .PHONY: build-web
