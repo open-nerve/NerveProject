@@ -100,7 +100,9 @@ func (e APIErrors) BodyError(w http.ResponseWriter, r *http.Request, err error) 
 
 // Write answers err, returned by a handler or a per-route middleware:
 //
-//   - a ProblemError: its status, code, detail, fields and Retry-After;
+//   - a ProblemError: its status, code, detail, fields and Retry-After; a
+//     401 also carries WWW-Authenticate: Bearer (RFC 9110 15.5.2), unless a
+//     challenge was already set;
 //   - *http.MaxBytesError: 413 payload_too_large;
 //   - context.Canceled while the request's context is cancelled: the client
 //     went away; logged at debug level, no 500;
@@ -128,6 +130,9 @@ func (e APIErrors) Write(w http.ResponseWriter, r *http.Request, err error) {
 		p, retry := problemOf(pe)
 		if retry > 0 {
 			w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(retry.Seconds()))))
+		}
+		if p.Status == http.StatusUnauthorized && w.Header().Get("WWW-Authenticate") == "" {
+			w.Header().Set("WWW-Authenticate", "Bearer")
 		}
 		WriteProblem(w, p)
 	case errors.As(err, &tooLarge):

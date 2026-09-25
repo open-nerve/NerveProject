@@ -183,7 +183,7 @@ type ProblemError interface {
 ```
 
 - `NewAPIErrors(logger)`；`BadRequest`（参数绑定，照旧）；`BodyError`（请求体读取、解析、解码）：`ProblemError` 和 `*http.MaxBytesError` 交给 `Write`，其余是 400 `bad_request`，`detail` 固定为 "The request body could not be decoded."，解码器的原话只进 DEBUG 日志（它带 Go 的类型名）。
-- `Write` 是"一条路"：`ProblemError` → 它自己的状态、码、`detail`、字段、`Retry-After`（向上取整到秒）；`*http.MaxBytesError` → 413 `payload_too_large`（"The request body exceeds N bytes."）；请求的 `context` 已取消而错误是 `context.Canceled` → 记 DEBUG "client went away"、写 499，不算 500；其余 → 记 ERROR "API handler failed"、500 `internal_error` 不带 `detail`。响应已开始时记 WARN 并 `panic(http.ErrAbortHandler)`（沿用 M0）。
+- `Write` 是"一条路"：`ProblemError` → 它自己的状态、码、`detail`、字段、`Retry-After`（向上取整到秒），401 还带 `WWW-Authenticate: Bearer`（已经设置的挑战保留，M2 设计 3.6）；`*http.MaxBytesError` → 413 `payload_too_large`（"The request body exceeds N bytes."）；请求的 `context` 已取消而错误是 `context.Canceled` → 记 DEBUG "client went away"、写 499，不算 500；其余 → 记 ERROR "API handler failed"、500 `internal_error` 不带 `detail`。响应已开始时记 WARN 并 `panic(http.ErrAbortHandler)`（沿用 M0）。
 - `InternalError` 删除，生成代码的 `ResponseErrorHandlerFunc` 接 `Write`，`RequestErrorHandlerFunc` 接 `BodyError`。
 
 **`API`**：

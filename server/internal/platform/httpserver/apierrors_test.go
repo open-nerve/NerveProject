@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -136,6 +137,41 @@ func TestWriteMapsProblemErrors(t *testing.T) {
 			}
 			if got := rec.Header().Get("Retry-After"); got != tt.retryAfter {
 				t.Errorf("Retry-After = %q, want %q", got, tt.retryAfter)
+			}
+		})
+	}
+}
+
+// Every 401 carries a challenge (RFC 9110 15.5.2, M2 design 3.6); one that
+// is already set, like the deny-by-default middleware's invalid_token, stays.
+func TestWriteChallengesEvery401(t *testing.T) {
+	unauthorized := problemErr{status: http.StatusUnauthorized, code: "unauthorized", detail: "Authentication is required."}
+	tests := []struct {
+		name   string
+		err    error
+		preset string
+		status int
+		want   []string
+	}{
+		{"401", unauthorized, "", http.StatusUnauthorized, []string{"Bearer"}},
+		{"wrapped 401", fmt.Errorf("log in: %w", unauthorized), "", http.StatusUnauthorized, []string{"Bearer"}},
+		{"401 with a challenge set", unauthorized, `Bearer error="invalid_token"`, http.StatusUnauthorized, []string{`Bearer error="invalid_token"`}},
+		{"not a 401", problemErr{status: http.StatusForbidden, code: "forbidden", detail: "No."}, "", http.StatusForbidden, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			errs := NewAPIErrors(slog.New(slog.DiscardHandler))
+			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tt.preset != "" {
+					w.Header().Set("WWW-Authenticate", tt.preset)
+				}
+				errs.Write(w, r, tt.err)
+			})
+
+			rec := serve(h, httptest.NewRequest(http.MethodPost, "/api/v0/auth/login", nil))
+
+			if got := rec.Header().Values("WWW-Authenticate"); rec.Code != tt.status || !slices.Equal(got, tt.want) {
+				t.Errorf("response = %d WWW-Authenticate %q, want %d %q", rec.Code, got, tt.status, tt.want)
 			}
 		})
 	}
