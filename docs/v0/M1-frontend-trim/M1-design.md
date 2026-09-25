@@ -132,7 +132,7 @@
     - `UniqueID` 扩展：所有编辑器都安装它，非协作编辑器也用节点的 id 定位节点。它只去掉 `provider`。
     - `copyMarkdownToClipboard`：描述历史在用。
     - 用户 @提及。
-    - 图片和附件的节点。
+    - 图片节点。附件由工作项的附件区承担；编辑器里要不要支持附件（社区版的编辑器本来就没有附件节点），由 M5 决定（[M5 的交接](../M5-files/handoffs/M1-P3-trim-platform.md)）。
   - 改动只在编辑器包和它的调用方。
 
 ### 3.2 个人主页
@@ -652,15 +652,15 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
 ---
 
 ## 11. 完成标准
-- [ ] P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review。
-- [ ] 类型检查通过；knip 为零，并且是持续集成的门禁；oxlint 的每个包都等于新的上限，上限由 7.1 自动核对；格式检查通过；前端单元测试在持续集成中运行并通过。
-- [ ] 关键词守卫在持续集成中运行，没有未登记的命中，只剩明确跨 M 的例外；`until` 超出 M8 的例外逐条重新核对过，理由仍然成立；中英文文案中没有代码不再引用的键。
-- [ ] 7.5 的保留行为矩阵逐行核对过，临时脚本都写在各 Phase review 的附录中。
-- [ ] `make build` 能构建；S1–S4 全部通过。
-- [ ] 多语言只剩 `zh-CN` 和 `en`；界面上没有 Plane 的名称和 Logo；包名全部是 `@nerve/*`。
-- [ ] oxlint 清零计划、构建体积对比写进收尾 review。
-- [ ] `handoffs/` 中没有 `open` 状态的事项；交给后续 M 的事项已放进对应 M 的 `handoffs/`。
-- [ ] 前端改动清单同步（第二、四节，以及本文件第 3 节带来的增减）；总体设计中 M1 的状态改为"已完成"。
+- [x] P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review。
+- [x] 类型检查通过；knip 为零，并且是持续集成的门禁；oxlint 的每个包都等于新的上限，上限由 7.1 自动核对；格式检查通过；前端单元测试在持续集成中运行并通过。
+- [x] 关键词守卫在持续集成中运行，没有未登记的命中，只剩明确跨 M 的例外；`until` 超出 M8 的例外逐条重新核对过，理由仍然成立；中英文文案中没有代码不再引用的键。
+- [x] 7.5 的保留行为矩阵逐行核对过，临时脚本都写在各 Phase review 的附录中。
+- [x] `make build` 能构建；S1–S4 全部通过。
+- [x] 多语言只剩 `zh-CN` 和 `en`；界面上没有 Plane 的名称和 Logo；包名全部是 `@nerve/*`。
+- [x] oxlint 清零计划、构建体积对比写进收尾 review。
+- [x] `handoffs/` 中没有 `open` 状态的事项；交给后续 M 的事项已放进对应 M 的 `handoffs/`。
+- [x] 前端改动清单同步（第二、四节，以及本文件第 3 节带来的增减）；总体设计中 M1 的状态改为"已完成"。
 
 ---
 
@@ -673,7 +673,7 @@ M1 不以新的后端为完成前提，但"页面停在启动错误页"不能证
 | P3 | trim-platform | 已完成 | [spec](specs/P3-trim-platform.md) | [plan](plans/P3-trim-platform.md) | [review](reviews/P3-trim-platform-review.md) |
 | P4 | router-native | 已完成 | [spec](specs/P4-router-native.md) | [plan](plans/P4-router-native.md) | [review](reviews/P4-router-native-review.md) |
 | P5 | brand | 已完成 | [spec](specs/P5-brand.md) | [plan](plans/P5-brand.md) | [review](reviews/P5-brand-review.md) |
-| 收尾 | closeout | 未开始 | — | — | — |
+| 收尾 | closeout | 已完成 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | [review](reviews/closeout-review.md)；[Codex 对 M1 的对抗评审](reviews/M1-codex-adversarial-review.md) |
 
 ---
 

@@ -5,7 +5,7 @@ to: M2
 created: 2026-09-25
 ---
 
-# M1 收尾留下的清理：死成员和死 prop、oxlint
+# M1 收尾留下的清理：死成员和死 prop、oxlint、主题下拉框的位置
 
 M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 spec](../../M1-frontend-trim/specs/closeout.md)）。下面几项留给后续各 M，做法都是"谁改谁清"：本 M 重写或修改到的代码，在本 M 结束时不再带着它们。
 
@@ -29,4 +29,9 @@ M1 结束时 oxlint 警告共 694 个（web 565、editor 65、ui 25、utils 18�
 - 上限随之调低（`tools/lint-cap.mjs` 要求警告数等于上限）。
 - **关闭条件**：本 M 的 review 写明改到的文件的警告数（为 0）、清掉的规则和各包上限的变化。
 
-来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节。
+## 个人设置的主题下拉框
+
+M1 收尾的浏览器核对看到：界面语言为 zh-CN 时，个人设置里主题的下拉框画在页面的左上角，不在它的按钮旁（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 2.10 的 I1，基线上相同）。主题选择器是 ui 的 `CustomSelect`（`web/packages/ui/src/dropdowns/custom-select.tsx`，react-popper 定位，`createPortal` 到 `document.body`），整个 M1 里只改过包名，是 Plane 原有的行为。个人设置归本 M，改写这一页时一起查定位。
+- **关闭条件**：本 M 的浏览器核对写明个人设置的主题下拉框在它的按钮旁展开（zh-CN 和 en 各一次）。
+
+来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节，2.10 的 I1。
