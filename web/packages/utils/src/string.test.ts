@@ -47,6 +47,7 @@ describe("isEmptyHtmlString", () => {
 
 describe("isCommentEmpty", () => {
   it("counts an image or a mention as content", () => {
+    expect(isCommentEmpty(undefined)).toBe(true);
     expect(isCommentEmpty("<p></p>")).toBe(true);
     expect(isCommentEmpty("  ")).toBe(true);
     expect(isCommentEmpty(IMAGE_ONLY)).toBe(false);

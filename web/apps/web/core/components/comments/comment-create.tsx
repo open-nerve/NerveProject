@@ -81,7 +81,7 @@ export const CommentCreate = observer(function CommentCreate(props: TCommentCrea
   };
 
   const commentHTML = watch("comment_html");
-  const isEmpty = isCommentEmpty(commentHTML ?? undefined);
+  const isEmpty = isCommentEmpty(commentHTML);
 
   return (
     <div

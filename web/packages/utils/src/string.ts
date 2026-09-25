@@ -4,8 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import type { Content, JSONContent } from "@nerve/types";
-
 /**
  * @description Replaces underscores with spaces in snake_case strings
  * @param {string} str - String to replace underscores in
@@ -110,75 +108,9 @@ export const isEmptyHtmlString = (htmlString: string) => {
   return (body.textContent ?? "").trim() === "" && !body.querySelector(TEXTLESS_CONTENT_TAGS);
 };
 
-/**
- * @description
- * Check if a JSONContent object is empty
- * @param {JSONContent} content
- * @returns {boolean}
- */
-const isJSONContentEmpty = (content: JSONContent | undefined): boolean => {
-  // If it has text, check if text is meaningful
-  if (!content) {
-    return true;
-  }
-  if (content.text !== undefined) {
-    return !content.text || content.text.trim() === "";
-  }
-
-  // If it has no content array, consider it empty
-  if (!content.content || content.content.length === 0) {
-    // Special case: empty paragraph nodes should be considered empty
-    if (content.type === "paragraph" || content.type === "doc") {
-      return true;
-    }
-    // For other node types without content (like hard breaks), check if they're meaningful
-    return (
-      content.type !== "hardBreak" &&
-      content.type !== "image" &&
-      content.type !== "mention-component" &&
-      content.type !== "image-component"
-    );
-  }
-
-  // Check if all nested content is empty
-  return content.content.every(isJSONContentEmpty);
-};
-
-/**
- * @description
- * This function will check if the comment is empty or not.
- * It returns true if comment is empty.
- * Now supports TipTap Content types (HTMLContent, JSONContent, JSONContent[], null)
- *
- * For HTML content:
- * 1. If comment is undefined/null
- * 2. If comment is an empty string
- * 3. If comment is "<p></p>"
- * 4. If comment contains only empty HTML tags
- *
- * For JSON content:
- * 1. If content is null/undefined
- * 2. If content has no meaningful text or nested content
- * 3. If all nested content is empty
- *
- * @param {Content} comment - TipTap Content type
- * @returns {boolean}
- */
-export const isCommentEmpty = (comment: Content | undefined): boolean => {
-  // Handle null/undefined
-  if (!comment) return true;
-
-  // Handle HTMLContent (string)
-  if (typeof comment === "string") return isEmptyHtmlString(comment);
-
-  // Handle JSONContent[] (array)
-  if (Array.isArray(comment)) {
-    return comment.length === 0 || comment.every(isJSONContentEmpty);
-  }
-
-  // Handle JSONContent (object)
-  return isJSONContentEmpty(comment);
-};
+// true when a comment's HTML has no content; undefined is the comment form before it holds a value
+export const isCommentEmpty = (comment: string | undefined): boolean =>
+  comment === undefined || isEmptyHtmlString(comment);
 
 /**
  * @description

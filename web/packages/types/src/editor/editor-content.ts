@@ -5,22 +5,15 @@
  */
 
 /**
- * Editor content types - locally defined to avoid external dependencies
+ * Editor JSON content type - locally defined to avoid external dependencies
  */
 
 export type JSONContent = {
-  type?: string;
   attrs?: Record<string, unknown>;
-  content?: JSONContent[];
   marks?: {
     type: string;
     attrs?: Record<string, unknown>;
     [key: string]: unknown;
   }[];
-  text?: string;
   [key: string]: unknown;
 };
-
-type HTMLContent = string;
-
-export type Content = HTMLContent | JSONContent | JSONContent[] | null;

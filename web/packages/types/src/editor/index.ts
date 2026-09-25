@@ -4,4 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export type { JSONContent, Content } from "./editor-content";
+export type { JSONContent } from "./editor-content";
