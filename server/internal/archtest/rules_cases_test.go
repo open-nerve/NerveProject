@@ -17,11 +17,11 @@ func TestRules(t *testing.T) {
 		pure     = "domain and app import only the standard library (not net/http or database/sql), their own module's inner layers and internal/shared"
 		kernel   = "internal/shared imports only the standard library (not net/http or database/sql) and internal/shared"
 		isolated = "modules do not import each other"
-		business = "platform does not import modules or bootstrap"
+		business = "platform does not import modules, bootstrap or internal/shared"
 		entry    = "only bootstrap imports modules"
-		gen      = "generated code is imported only by its module's http adapter"
+		gen      = "generated code is imported only by its own adapter"
 		platform = "platform packages do not import each other, except config"
-		testOnly = "test helpers (pgtest, apitest) are imported only by tests"
+		testOnly = "test helpers (pgtest, apitest, clocktest) are imported only by tests"
 	)
 	tests := []struct {
 		from, to string
@@ -63,7 +63,10 @@ func TestRules(t *testing.T) {
 		{m("internal/shared/id"), "github.com/jackc/pgx/v5", []string{kernel}},
 		{m("internal/shared/id"), m("internal/platform/config"), []string{kernel}},
 		{m("internal/shared/id"), m("internal/modules/issue/domain"), []string{entry, kernel}},
-		{m("internal/platform/postgres"), m("internal/shared/tx"), nil},
+
+		// The platform declares the interfaces shared satisfies; it never imports it.
+		{m("internal/platform/postgres"), m("internal/shared"), []string{business}},
+		{m("internal/platform/httpserver"), m("internal/shared"), []string{business}},
 
 		// Module isolation and the composition root.
 		{m("internal/modules/issue/app"), m("internal/modules/project/domain"), []string{isolated}},
@@ -78,6 +81,11 @@ func TestRules(t *testing.T) {
 		{m("internal/modules/issue/app"), m("internal/modules/issue/adapter/http/gen"), []string{inward, gen}},
 		{m("internal/modules/issue/adapter/postgres"), m("internal/modules/issue/adapter/http/gen"), []string{gen}},
 		{m("internal/modules/project/adapter/http"), m("internal/modules/issue/adapter/http/gen"), []string{isolated, gen}},
+		// sqlc's code under adapter/postgres/gen follows the same rule.
+		{m("internal/modules/issue/adapter/postgres"), m("internal/modules/issue/adapter/postgres/gen"), nil},
+		{m("internal/modules/issue/adapter/postgres/gen"), "github.com/jackc/pgx/v5", nil},
+		{m("internal/modules/issue/adapter/http"), m("internal/modules/issue/adapter/postgres/gen"), []string{gen}},
+		{m("internal/modules/issue"), m("internal/modules/issue/adapter/postgres/gen"), []string{gen}},
 
 		// Platform packages.
 		{m("internal/platform/logging"), m("internal/platform/config"), nil},
@@ -88,6 +96,8 @@ func TestRules(t *testing.T) {
 		{m("internal/bootstrap"), m("internal/platform/postgres/pgtest"), []string{testOnly}},
 		{m("internal/modules/instance/adapter/http"), m("internal/platform/httpserver/apitest"), []string{testOnly}},
 		{m("internal/platform/httpserver"), m("internal/platform/httpserver/apitest"), []string{testOnly}},
+		{m("internal/bootstrap"), m("internal/platform/clock/clocktest"), []string{testOnly}},
+		{m("internal/platform/clock/clocktest"), "time", nil},
 	}
 	fired := map[string]bool{}
 	for _, tt := range tests {

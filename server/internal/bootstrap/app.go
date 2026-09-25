@@ -15,7 +15,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// The platform and the shared kernel meet here by structure: neither imports
+// the other (M2 design 3.3, 3.11).
+var _ shared.TxManager = (*postgres.TxManager)(nil)
 
 // app is a fully wired nerve server.
 type app struct {
