@@ -171,7 +171,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 | 令牌 | 形式 | 内容 | 服务端存什么 |
 |---|---|---|---|
 | 访问令牌 | JWT，头部 `{"alg":"EdDSA","typ":"JWT"}` | 只有 `sub`（用户 id）、`sid`（会话 id）、`exp`，没有任何权限信息（总体设计 4.1） | 不存 |
-| 刷新令牌 | `nrv_rt_` + base64url（不补 `=`）编码的 68 字节：会话 id 16 字节 + 代数 4 字节（大端）+ 随机密文 32 字节 + 标签 16 字节，共 91 个字符 | 对客户端是不透明的字符串 | 只存当前一代密文的 SHA-256（`auth_sessions.token_hash`，4.5） |
+| 刷新令牌 | `nrv_rt_` + base64url（不补 `=`）编码的 68 字节：会话 id 16 字节 + 代数 4 字节（大端）+ 随机密文 32 字节 + 标签 16 字节；base64url 部分 91 个字符，整个令牌（`nrv_rt_` 加 91）98 个字符 | 对客户端是不透明的字符串 | 只存当前一代密文的 SHA-256（`auth_sessions.token_hash`，4.5） |
 | PAT | `nrv_pat_` + base64url 编码的 32 字节随机数，共 43 个字符 | — | 只存整个令牌的 SHA-256（`api_tokens.token_hash`） |
 
 - **JWT 库**：用 `github.com/golang-jwt/jwt/v5` v5.3.1。
@@ -181,7 +181,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - `标签 = HMAC-SHA256(K, 会话 id ‖ 代数 ‖ 密文)` 的前 16 字节。
   - `K = HKDF-SHA256(签名私钥的种子, info = "nerve refresh-token mac v1")`，32 字节：从 3.7 的 Ed25519 密钥派生，不新增配置项和密钥文件；`info` 把它和签名的用途分开。
   - 标签让服务端不存历史也能认出"这个会话真的发过的某一代"。它由持有密钥材料的适配器计算（`identity/adapter/signing`，6.2），`identity/app` 声明一个小端口；`domain` 只管 68 字节的布局。比较用 `hmac.Equal`（常数时间）。
-  - spike（Go 标准库的 `crypto/hkdf`、`crypto/hmac`）：令牌 91 个字符，符合 8.6 的正则；改动 68 字节中的任何一个，标签都不再成立；随机的标签不成立；换一把签名密钥后，旧令牌的标签不成立；派生出的 K 与种子不同。
+  - spike（Go 标准库的 `crypto/hkdf`、`crypto/hmac`）：令牌的 base64url 部分 91 个字符，整个令牌 98 个字符，符合 8.6 的正则；改动 68 字节中的任何一个，标签都不再成立；随机的标签不成立；换一把签名密钥后，旧令牌的标签不成立；派生出的 K 与种子不同。
 - **随机数**：用 `crypto/rand`，不做成端口。Go 1.24 起它不会返回错误；测试只核对格式和唯一性，不需要控制具体的值。
 - **有效期**：访问令牌 15 分钟（`auth.access_token_ttl`）；会话从登录起 30 天（`auth.session_ttl`），刷新令牌随会话一起到期（3.5）。
 
@@ -760,10 +760,15 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | P1 | 总体设计 | 5.5 | 审计时间列由用例的时钟显式写入（3.13） |
 | P1 | 总体设计 | 5.6 | 改别的模块的表的迁移由后建的 M 编写，文件归被改表的模块（3.14） |
 | P1 | 总体设计 | 6.2 | 端口由使用方在 `app` 层声明；`shared` 的内容是 Actor、领域错误、`TxManager`；时钟端口由各模块自己声明（3.3） |
+| P1 | 总体设计 | 6.2（`module.go` 一行） | `Register(mux, apiErrors)` 改为 `Register(router, api)`，`api`（`httpserver.API`）提供错误映射和按路由的中间件；`PublicOperations()` 列出不需要令牌的操作；其他模块或 `bootstrap` 要用的能力由访问方法导出，例如 `Authenticator()`（3.3、3.6；P1 补登） |
 | P1 | 总体设计 | 6.3 | 架构测试：平台不导入 `internal/shared`；sqlc 按模块限定 `schema`，`ALTER TABLE` 按表的所有者（3.3、3.14） |
 | P1 | 总体设计 | 6.4 | 按路由挂载的中间件及其顺序（P1 的部分：请求元信息、期限、请求体上限、认证、请求体结构）；参数在它们之前绑定（3.6、3.11）；`TxManager` 的 `COMMIT` 不受请求期限的取消，有自己的期限（3.6） |
 | P1 | 总体设计 | 8.2 | 失败时保存 trace、截图、nerve 日志和数据库快照，不录像（9.5） |
+| P1 | 总体设计 | 8.2（fixture 目录） | `server.ts` 由"随机端口"改为在 `127.0.0.1:0` 上监听、从 `server.addr_file` 读出实际地址，需要另一种配置的故事在同一个库上另起一个 nerve；`db.ts` 每个进程一个连接池；断言函数移到 `assert/`，按表分文件；加上 `auth.ts`（9.5；P1 补登） |
+| P1 | M0 设计 | 3.1 | 包职责表：`platform` 不能依赖 `modules`、`bootstrap` 和 `internal/shared`；`module.go` 的入口改为 `Register(router, api)` 和 `PublicOperations()`；`internal/shared` 不再是"预计在 M2"，由 P1 建立（`Actor`、`Error`、`TxManager`）（3.3、3.6；P1 补登） |
 | P1 | M0 设计 | 3.3 | 按路由挂载的中间件及其顺序（3.6） |
+| P1 | M0 设计 | 3.3（中间件以外） | 路由由 `httpserver.Router` 包一层，记下注册的模式（3.6）；`/healthz`、`/readyz` 的访问日志降为 DEBUG（6.1）；平台错误码加入 `unauthorized`、`payload_too_large`、`validation_failed`、`server_busy`；生成代码的错误出口不再是 `InternalError`：参数绑定失败 → `BadRequest`，请求体解码失败 → `BodyError`（超过上限是 413），handler 出错 → `APIErrors.Write`（按 `ProblemError` 映射，其余 500，`context.Canceled` 不算 500）（3.11；P1 补登） |
+| P1 | M0 设计 | 3.5 | `//go:embed all:sql` 改为 `//go:embed sql/*.sql`，删掉占位的 `sql/.gitkeep`；"M0 不包含任何迁移文件"改为迁移文件从 M2 开始：P1 加入 `00001`–`00003`，`server/migrations/schema_test.go` 核对 up、down、再 up，以及约束名和 CHECK（4.1；P1 补登） |
 | P1 | 差异清单 | 一 B | `sessions` 由 `auth_sessions` 替代（替换模型，不逐列继承） |
 | P1 | 差异清单 | 二·全局 | 3.13 的全局约定：外键的 `ON DELETE` 写进数据库；不用 `DEFERRABLE`；约束和索引一律改名；不建 `*_like` 索引和多数外键列的索引；审计时间列由应用写入 |
 | P1 | 差异清单 | 二·按表 | `users`、`profiles` 逐列（4.2、4.3）；`auth_sessions` 按实际的列改写原来那一行（4.5） |
@@ -972,7 +977,7 @@ users
 
 | 方法与路径 | operationId | 认证 | 请求体 | 成功 | 主要错误 |
 |---|---|---|---|---|---|
-| `POST /api/v0/auth/register` | `register` | 公开 | `RegisterRequest {email, password}` | 201 `AuthTokens` | 403 `identity.signup_disabled`（先于其他检查，3.9）；422 `validation_failed`；409 `identity.email_taken`；503 `server_busy` |
+| `POST /api/v0/auth/register` | `register` | 公开 | `RegisterRequest {email, password}` | 201 `AuthTokens` | 403 `identity.signup_disabled`（结构合乎契约的请求在查看邮箱和密码之前就得到它；平台链的 400 结构错误和 413 可以在它之前，3.9）；422 `validation_failed`；409 `identity.email_taken`；503 `server_busy` |
 | `POST /api/v0/auth/login` | `login` | 公开 | `LoginRequest {email, password}` | 200 `AuthTokens` | 401 `identity.invalid_credentials`；403 `identity.account_deactivated`；503 `server_busy`。缺字段是 400（结构） |
 | `POST /api/v0/auth/refresh` | `refreshTokens` | 公开 | `RefreshRequest {refresh_token}` | 200 `AuthTokens` | 401 `identity.refresh_token_invalid` |
 | `POST /api/v0/auth/logout` | `logout` | 公开 | `LogoutRequest {refresh_token}` | 204 | 无。令牌未知、已过期、已撤销、不是当前一代时也返回 204，不泄露它的状态（3.5） |
@@ -1599,7 +1604,7 @@ files:
 - 仓储的每条查询，包括：
   - 续期的查找和条件轮换（时刻作为参数传入；轮换后 `generation` 加一、`token_hash` 换成新值；代数或哈希不符时不命中）；
   - 游标分页（`created_at` 相同的两行不重不漏）；
-  - 违反唯一约束和 CHECK 时映射为领域错误；
+  - 违反约束：只有 `users_email_key` 的唯一冲突映射为领域错误 `identity.email_taken`；其余约束违反，包括每一个 CHECK，都是缺陷（领域已先校验过），按 3.11 成为 500 `internal_error`。identity 的 postgres 适配器的 `TestCreateUserBreakingACheckIsInternal` 核对 CHECK 触发时仓储返回原样的数据库错误，不是领域错误，所以答 500；
   - CHECK 的反例：邮箱的大写和空白、`onboarding_step` 的七种反例（4.3）、`start_of_the_week = 7`、`revoked_at` 与 `revoke_reason` 不一致；
   - 审计列：插入和业务更新之后，`created_at`、`updated_at` 等于固定时钟的时刻（3.13）；
   - 重置密码在一个事务里撤销会话和 PAT；
@@ -2200,7 +2205,7 @@ files:
 | M-4 | 密钥文件路径进了日志 | 3.7；6.5；13.1 | P1 |
 | M-5 | 续期非 401 失败时是否退出，两处说法相反 | 7.1；9.4 | P4 |
 | M-6 | A7 的页面版和 PAT 版不能用同一个会话预期 | 第 2 节的约定；A7；9.5 | P3（接口）、P5（页面） |
-| M-7 | 前缀不会让托管平台自动识别 | 3.4；8.6 的正则（刷新令牌 91 个字符）；8.7 | P3 |
+| M-7 | 前缀不会让托管平台自动识别 | 3.4；8.6 的正则（刷新令牌的 base64url 部分 91 个字符，整个令牌 98 个字符）；8.7 | P3 |
 | M-8 | 差异登记的时点；"照搬"的用词 | 3.13；3.20 改为按 Phase；第 4 节的说明和各表；4.5 替换模型；4.6 的 Phase 一栏；4.7 删除关系图；第 12 节的合并条件 | P1、P3 |
 | M-9 | 密码名单的数量口径 | 3.8 | P1 |
 | §4 | 四个决策点和 11.1 | 第 10 节；11.1 | — |
