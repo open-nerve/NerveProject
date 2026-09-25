@@ -100,12 +100,14 @@ export const checkEmailValidity = (email: string): boolean => {
   return isEmailValid;
 };
 
-// true when the HTML has no text and none of the allowed tags
-export const isEmptyHtmlString = (htmlString: string, allowedHTMLTags: string[] = []) => {
+// the tags the editor writes for content that has no text: images and mentions
+const TEXTLESS_CONTENT_TAGS = "img, mention-component, image-component";
+
+// true when the HTML has no text and none of the editor's textless content (an image-only or mention-only
+// description or comment is not empty)
+export const isEmptyHtmlString = (htmlString: string) => {
   const body = parseHTML(htmlString);
-  return (
-    (body.textContent ?? "").trim() === "" && !(allowedHTMLTags.length && body.querySelector(allowedHTMLTags.join(",")))
-  );
+  return (body.textContent ?? "").trim() === "" && !body.querySelector(TEXTLESS_CONTENT_TAGS);
 };
 
 /**
@@ -167,13 +169,7 @@ export const isCommentEmpty = (comment: Content | undefined): boolean => {
   if (!comment) return true;
 
   // Handle HTMLContent (string)
-  if (typeof comment === "string") {
-    return (
-      comment.trim() === "" ||
-      comment === "<p></p>" ||
-      isEmptyHtmlString(comment, ["img", "mention-component", "image-component"])
-    );
-  }
+  if (typeof comment === "string") return isEmptyHtmlString(comment);
 
   // Handle JSONContent[] (array)
   if (Array.isArray(comment)) {

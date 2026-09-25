@@ -23,6 +23,14 @@ describe("stripAndTruncateHTML", () => {
   });
 });
 
+// What the editor writes for a description that holds only an image, or only a mention. The draft modal asks
+// isEmptyHtmlString whether a new work item's description is empty (an empty one closes without asking), and
+// isCommentEmpty asks it for a comment: both count the same tags as content.
+const IMAGE_ONLY =
+  '<image-component src="asset-1" width="35%" alignment="center" status="uploaded"></image-component><p></p>';
+const MENTION_ONLY =
+  '<p><mention-component id="mention-1" entity_identifier="user-1" entity_name="user_mention"></mention-component></p>';
+
 describe("isEmptyHtmlString", () => {
   it("is empty when there is no text", () => {
     expect(isEmptyHtmlString("<p></p>")).toBe(true);
@@ -30,17 +38,18 @@ describe("isEmptyHtmlString", () => {
     expect(isEmptyHtmlString("<p>x</p>")).toBe(false);
   });
 
-  it("is not empty when an allowed tag is there without text", () => {
-    expect(isEmptyHtmlString('<p></p><img src="x">')).toBe(true);
-    expect(isEmptyHtmlString('<p></p><img src="x">', ["img"])).toBe(false);
-    expect(isEmptyHtmlString('<mention-component label="Ada"></mention-component>', ["mention-component"])).toBe(false);
+  it("does not call an image-only or mention-only description empty", () => {
+    expect(isEmptyHtmlString(IMAGE_ONLY)).toBe(false);
+    expect(isEmptyHtmlString(MENTION_ONLY)).toBe(false);
+    expect(isEmptyHtmlString('<p></p><img src="x">')).toBe(false);
   });
 });
 
 describe("isCommentEmpty", () => {
   it("counts an image or a mention as content", () => {
     expect(isCommentEmpty("<p></p>")).toBe(true);
-    expect(isCommentEmpty('<image-component src="a"></image-component>')).toBe(false);
-    expect(isCommentEmpty('<p><mention-component label="Ada"></mention-component></p>')).toBe(false);
+    expect(isCommentEmpty("  ")).toBe(true);
+    expect(isCommentEmpty(IMAGE_ONLY)).toBe(false);
+    expect(isCommentEmpty(MENTION_ONLY)).toBe(false);
   });
 });
