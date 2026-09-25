@@ -34,7 +34,7 @@ func run(t *testing.T, pattern, body string, limit int64) (reached string, calle
 }
 
 func TestMiddlewarePassesAValidBodyOnUnchanged(t *testing.T) {
-	body := `{ "name": "a",  "nested": {"a": "y"} }`
+	body := " \t\r\n" + `{ "name": "a",  "nested": {"a": "y"} }` + "\n"
 
 	reached, called, err := run(t, pattern, body, 0)
 
@@ -57,7 +57,10 @@ func TestMiddlewareAnswersEveryStructuralProblem(t *testing.T) {
 }
 
 func TestMiddlewareAnswersABodyThatIsNotJSON(t *testing.T) {
-	for _, body := range []string{`{"name":`, `{"name":"a","nested":{"a":"y"}} trailing`, `nope`} {
+	// A form feed is not JSON whitespace (RFC 8259 §2): the body is not JSON,
+	// neither empty nor an object with space before it.
+	for _, body := range []string{`{"name":`, `{"name":"a","nested":{"a":"y"}} trailing`, `nope`,
+		"\f", "\f" + `{"name":"a","nested":{"a":"y"}}`} {
 		_, called, err := run(t, pattern, body, 0)
 
 		if called || !errors.Is(err, ErrNotJSON) {
@@ -71,7 +74,7 @@ func TestMiddlewareAnswersABodyThatIsNotJSON(t *testing.T) {
 func TestMiddlewarePassesOnWhatItDoesNotCheck(t *testing.T) {
 	tests := []struct{ name, pattern, body string }{
 		{"empty body", pattern, ""},
-		{"blank body", pattern, "  \n"},
+		{"blank body", pattern, " \t\r\n"},
 		{"route without a body schema", "GET /api/v0/things", "not even JSON"},
 	}
 	for _, tt := range tests {

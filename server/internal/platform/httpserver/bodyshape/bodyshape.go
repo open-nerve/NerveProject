@@ -11,6 +11,7 @@
 package bodyshape
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/json"
 	"fmt"
@@ -132,6 +133,11 @@ func (e *Error) ProblemFields() []error {
 	return errs
 }
 
+// jsonSpace is JSON's insignificant whitespace (RFC 8259 §2): space, tab, CR
+// and LF. Other spaces, such as a form feed or U+00A0, are not JSON: the
+// decoder rejects a body that starts with one, and so does this package.
+const jsonSpace = " \t\r\n"
+
 // Check reports the structural problems of body, a syntactically valid JSON
 // document, against the root of pattern, sorted by path. A pattern without a
 // root has no JSON body to check.
@@ -141,7 +147,9 @@ func (t *Table) Check(pattern string, body []byte) []FieldError {
 		return nil
 	}
 	var errs []FieldError
-	t.walk(root, body, "", &errs)
+	// walk takes the exact bytes of one value; the whitespace around the
+	// document's root value is not part of it.
+	t.walk(root, bytes.Trim(body, jsonSpace), "", &errs)
 	slices.SortFunc(errs, func(a, b FieldError) int {
 		return cmp.Or(cmp.Compare(a.Field, b.Field), cmp.Compare(a.Code, b.Code))
 	})

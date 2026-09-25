@@ -71,6 +71,13 @@ func TestCheck(t *testing.T) {
 		{"wrong uuid", `{"name":"a","nested":{"a":"y"},"id":"xyz"}`,
 			[]FieldError{{"id", "invalid_format"}}},
 		{"the body is not an object", `["name"]`, []FieldError{{"", "invalid_format"}}},
+		{"a space before the body", " " + `{"name":"a","nested":{"a":"y"}}`, nil},
+		{"a newline before the body", "\n" + `{"name":"a","nested":{"a":"y"}}`, nil},
+		{"a tab before the body", "\t" + `{"name":"a","nested":{"a":"y"}}`, nil},
+		{"CRLF before the body", "\r\n" + `{"name":"a","nested":{"a":"y"}}`, nil},
+		{"whitespace after the body", `{"name":"a","nested":{"a":"y"}}` + " \t\r\n", nil},
+		{"a form feed is not JSON whitespace", "\f" + `{"name":"a","nested":{"a":"y"}}`,
+			[]FieldError{{"", "invalid_format"}}},
 		{"every problem at once, sorted by path", `{"when":"yesterday","zzz":1,"nested":{"a":"y","b":"2"}}`,
 			[]FieldError{{"name", "required"}, {"nested.b", "invalid_format"}, {"when", "invalid_format"}, {"zzz", "not_allowed"}}},
 	}
