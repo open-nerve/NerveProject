@@ -16,9 +16,15 @@ info:
 # 所有操作都可能返回的平台错误码，只写在这里（M2 设计 3.11）。rate_limited 随 M2/P2 的限流加入
 x-problem-codes: [bad_request, payload_too_large, internal_error]
 tags:
+  - name: identity
+    description: Accounts, sign-in and sessions.
   - name: instance
     description: What this instance runs.
 paths:
+  /api/v0/auth/register:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1auth~1register'
+  /api/v0/me:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me'
   /api/v0/instance:
     $ref: 'modules/instance.yaml#/paths/~1api~1v0~1instance'
 components:

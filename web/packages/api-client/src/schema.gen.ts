@@ -4,6 +4,43 @@
  */
 
 export interface paths {
+    "/api/v0/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create an account and sign in
+         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, every request answers identity.signup_disabled before anything else is checked, whether the address is registered or not. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password.
+         */
+        post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller's account */
+        get: operations["getMe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/instance": {
         parameters: {
             query?: never;
@@ -28,6 +65,14 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        RegisterRequest: {
+            /**
+             * Format: email
+             * @description The sign-in address; stored trimmed and in lower case.
+             */
+            email: string;
+            password: string;
+        };
         /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
             /** @description The field's path in the request body, e.g. password or tags[1].name. */
@@ -51,6 +96,38 @@ export interface components {
             detail?: string;
             /** @description The invalid fields of the request. */
             errors?: components["schemas"]["FieldError"][];
+        };
+        /** @description A session's tokens. Send access_token as "Authorization: Bearer"; when it expires, exchange refresh_token for a new pair (M2/P2). */
+        AuthTokens: {
+            /** @enum {string} */
+            token_type: "Bearer";
+            access_token: string;
+            /** @description Seconds from this response until the access token expires. */
+            access_token_expires_in: number;
+            /** @description An opaque nrv_rt_ token. */
+            refresh_token: string;
+            /**
+             * Format: date-time
+             * @description When the session ends; refreshing never extends it.
+             */
+            refresh_token_expires_at: string;
+        };
+        User: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            first_name: string;
+            last_name: string;
+            display_name: string;
+            /** @description An IANA time zone name. */
+            user_timezone: string;
+            /** @description Null until uploads arrive (M5). */
+            avatar_url: string | null;
+            /** @description Null until uploads arrive (M5). */
+            cover_image_url: string | null;
+            /** Format: date-time */
+            created_at: string;
         };
         InstanceInfo: {
             /**
@@ -90,6 +167,52 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description The account exists and is signed in. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokens"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's account. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     getInstance: {
         parameters: {
             query?: never;

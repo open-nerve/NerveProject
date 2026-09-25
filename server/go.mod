@@ -13,6 +13,7 @@ require (
 	github.com/knadh/koanf/providers/env/v2 v2.0.1
 	github.com/knadh/koanf/providers/rawbytes v1.0.1
 	github.com/knadh/koanf/v2 v2.3.6
+	github.com/oapi-codegen/nullable v1.2.0
 	github.com/pressly/goose/v3 v3.28.0
 	github.com/spf13/cobra v1.10.2
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
