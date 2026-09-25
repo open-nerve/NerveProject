@@ -7,7 +7,9 @@
 //
 // It reads the module's API description with oapi-codegen's own loader and
 // the module's oapi-codegen configuration, so the formats follow the same
-// type-mapping as server.gen.go. make gen-go runs it for every module:
+// type-mapping as server.gen.go, and a number generated as a Go type whose
+// range the check does not cover fails the generation. make gen-go runs it
+// for every module:
 //
 //	go -C server/tools run ./bodyshapegen -config <oapi-codegen.yaml> -out <bodyshape.gen.go> <api/modules/m.yaml>
 package main

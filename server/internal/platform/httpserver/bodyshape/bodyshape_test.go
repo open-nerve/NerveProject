@@ -61,6 +61,10 @@ func TestCheck(t *testing.T) {
 		{"an exponent is not an integer", `{"name":"a","nested":{"a":"y"},"count":1e2}`,
 			[]FieldError{{"count", "invalid_format"}}},
 		{"an integer is a number", `{"name":"a","nested":{"a":"y"},"note":7}`, nil},
+		{"an integer no int64 holds", `{"name":"a","nested":{"a":"y"},"count":9223372036854775808}`,
+			[]FieldError{{"count", "invalid_format"}}},
+		{"a number no float64 holds", `{"name":"a","nested":{"a":"y"},"note":1e400}`,
+			[]FieldError{{"note", "invalid_format"}}},
 		{"array items", `{"name":"a","nested":{"a":"y"},"tags":[{"name":"t"},{},{"name":"u","x":1}]}`,
 			[]FieldError{{"tags[1].name", "required"}, {"tags[2].x", "not_allowed"}}},
 		{"open map values", `{"name":"a","nested":{"a":"y"},"labels":{"k":5,"j":"ok"}}`,
@@ -136,6 +140,26 @@ func TestFormatsMatchTheDecoder(t *testing.T) {
 	// Both outcomes occur, so the comparison is not trivially one-sided.
 	if accepted == 0 || accepted == len(tests) {
 		t.Errorf("%d of %d values accepted, want some of each", accepted, len(tests))
+	}
+}
+
+// A number passes the check exactly when the generated decoder can decode it
+// into the Go types bodyshapegen allows: int64 (and int) for Integer, float64
+// for Number.
+func TestNumbersMatchTheDecoder(t *testing.T) {
+	for _, raw := range []string{
+		"0", "-0", "7", "9223372036854775807", "-9223372036854775808", "9223372036854775808", "-9223372036854775809",
+		"1.5", "1e2", "1E-2", "-0.0", "1.7976931348623157e308", "1.8e308", "1e400", "-1e400", "4.9e-324", "1e-400",
+	} {
+		kind := kindOf([]byte(raw))
+		intErr := json.Unmarshal([]byte(raw), new(int64))
+		floatErr := json.Unmarshal([]byte(raw), new(float64))
+		if (kind&Integer != 0) != (intErr == nil) {
+			t.Errorf("%s: Integer %v, int64 decoder %v", raw, kind&Integer != 0, intErr)
+		}
+		if (kind&Number != 0) != (floatErr == nil) {
+			t.Errorf("%s: Number %v, float64 decoder %v", raw, kind&Number != 0, floatErr)
+		}
 	}
 }
 

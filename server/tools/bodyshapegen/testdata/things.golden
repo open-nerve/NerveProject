@@ -10,7 +10,7 @@ import "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/b
 func BodyShapes() *bodyshape.Table {
 	return &bodyshape.Table{
 		Nodes: []bodyshape.Node{
-			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"anything": 1, "count": 2, "due": 3, "email": 4, "extra": 5, "labels": 6, "name": 8, "ratio": 9, "settings": 10, "tags": 12}, Required: []string{"email", "name", "settings"}},
+			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"anything": 1, "count": 2, "due": 3, "email": 4, "extra": 5, "labels": 6, "name": 8, "ratio": 9, "settings": 10, "tags": 12, "total": 16, "weight": 17}, Required: []string{"email", "name", "settings"}},
 			/* 1 */ {Types: bodyshape.Any, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 2 */ {Types: bodyshape.Integer, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 3 */ {Types: bodyshape.String, Format: bodyshape.FormatTime, Extra: bodyshape.Open, Items: bodyshape.Open},
@@ -26,13 +26,15 @@ func BodyShapes() *bodyshape.Table {
 			/* 13 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"color": 14, "name": 15}, Required: []string{"name"}},
 			/* 14 */ {Types: bodyshape.Null | bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 15 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 16 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 17, "owner_id": 18, "settings": 19}},
-			/* 17 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 18 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 19 */ {Types: bodyshape.Null | bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"notify": 11}},
+			/* 16 */ {Types: bodyshape.Integer, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 17 */ {Types: bodyshape.Number, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 18 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 19, "owner_id": 20, "settings": 21}},
+			/* 19 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 20 */ {Types: bodyshape.Null | bodyshape.String, Format: bodyshape.FormatUUID, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 21 */ {Types: bodyshape.Null | bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"notify": 11}},
 		},
 		Roots: map[string]int{
-			"PATCH /api/v0/things/{thing_id}": 16,
+			"PATCH /api/v0/things/{thing_id}": 18,
 			"POST /api/v0/things":             0,
 		},
 	}

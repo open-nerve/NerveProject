@@ -24,8 +24,10 @@ import (
 // Type is a set of JSON types.
 type Type uint8
 
-// The JSON types. Integer is a number literal that a Go integer can hold; it
-// also counts as a Number.
+// The JSON types. Integer is a number literal that an int64 can hold; it also
+// counts as a Number, a literal that a float64 can hold. These are the Go
+// types bodyshapegen lets the generated code decode numbers into, so the
+// check covers their whole range.
 const (
 	Null Type = 1 << iota
 	Boolean
@@ -200,7 +202,9 @@ func (t *Table) walk(i int, raw []byte, path string, errs *[]FieldError) {
 	}
 }
 
-// kindOf returns the JSON type of a valid JSON value.
+// kindOf returns the JSON type of a valid JSON value. A number literal that
+// not even a float64 holds, such as 1e400, has no type: the generated decoder
+// could not decode it into any field bodyshapegen allows.
 func kindOf(raw []byte) Type {
 	switch raw[0] {
 	case 'n':
@@ -217,7 +221,10 @@ func kindOf(raw []byte) Type {
 	if _, err := strconv.ParseInt(string(raw), 10, 64); err == nil {
 		return Integer | Number
 	}
-	return Number
+	if _, err := strconv.ParseFloat(string(raw), 64); err == nil {
+		return Number
+	}
+	return 0
 }
 
 // checkFormat decodes the value's own bytes into the format's Go type with

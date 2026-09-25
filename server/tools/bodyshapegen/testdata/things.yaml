@@ -68,6 +68,12 @@ components:
           type: integer
         ratio:
           type: number
+        total:
+          type: integer
+          format: int64
+        weight:
+          type: number
+          format: double
         due:
           type: string
           format: date-time

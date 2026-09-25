@@ -514,7 +514,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 格式检查器按**生成的 Go 类型**登记：`time.Time`、标准库的 `uuid.UUID` 各一个，都是上面那一行 `json.Unmarshal`。`bodyshape` 只依赖标准库。
       - 上一稿还为 `format: date` 登记了 `openapi_types.Date`，让 `bodyshape` 依赖 `oapi-codegen/runtime/types`，而那个包导入 `github.com/google/uuid`（核验 F1，3.12）。M2 没有 `date` 字段，这个检查器删去；生成器遇到 `date` 就失败（见下）。以后第一个用到 `date` 的 M 选定它的 Go 类型，带着测试登记检查器。
     - `server/tools/bodyshapegen`：生成器，放在工具模块（`server/tools/go.mod`），与 oapi-codegen 同一个模块。它用 oapi-codegen 自己的加载器读 `api/modules/<m>.yaml`（跨文件的 `$ref` 一并解析，与生成 `server.gen.go` 时读到的是同一份），为每个带 JSON 请求体的操作生成根节点，写出 `internal/modules/<m>/adapter/http/gen/bodyshape.gen.go`。它不在 `server/go.mod` 里，更不链接进 nerve；工具模块已有 oapi-codegen v2.8.0 和它用的 kin-openapi，不新增依赖。
-      - **格式的清单取自同一份 `type-mapping`**：生成器读这个模块的 `oapi-codegen.yaml` 中的 `output-options.type-mapping`，与 oapi-codegen 的默认映射合并（`codegen.DefaultTypeMapping.Merge`，与 `oapi-codegen/v2@v2.8.0/pkg/codegen/codegen.go:162-165` 的做法相同），得到每个字段实际生成的 Go 类型。生成为 `string` 的格式（`email`）不检查，交给领域层；生成为已登记检查器的类型（`time.Time`、`uuid.UUID`）的，表中记下检查器；生成为其他类型的，生成失败并说明原因。模板改了映射，表随之改变，两边不会走样。
+      - **格式的清单取自同一份 `type-mapping`**：生成器读这个模块的 `oapi-codegen.yaml` 中的 `output-options.type-mapping`，与 oapi-codegen 的默认映射合并（`codegen.DefaultTypeMapping.Merge`，与 `oapi-codegen/v2@v2.8.0/pkg/codegen/codegen.go:162-165` 的做法相同），得到每个字段实际生成的 Go 类型。生成为 `string` 的格式（`email`）不检查，交给领域层；生成为已登记检查器的类型（`time.Time`、`uuid.UUID`）的，表中记下检查器；生成为其他类型的，生成失败并说明原因。数值同理：`bodyshape` 的 `Integer` 是 int64 容纳得下的字面量、`Number` 是 float64 容纳得下的，所以 `integer` 只能生成为 `int` 或 `int64`，`number` 只能生成为 `float64`（模板把 `number` 的默认映射改为 `float64`，3.12）；生成为更窄的整数、无符号整数、`float32`，或 `format` 不在映射里的，生成失败。模板改了映射，表随之改变，两边不会走样。
       - 字段带 `x-go-type`（或 `x-go-type-import`）时生成失败：它绕过 `type-mapping`，生成器推不出实际的类型。M2 的接口描述不用它。
       - 支持的写法：对象（属性、必填、`additionalProperties` 为 `false`、`true` 或一个 schema）、数组、标量、`type: [X, 'null']` 和 `anyOf: [X, {type: 'null'}]`，以及上一条的格式。遇到其他 `anyOf`/`oneOf`/`allOf`，或生成为没有检查器的类型的格式（例如 `date`、`byte`、`binary`、`duration`），生成失败并说明原因。
       - 输出是确定的：路径、方法、属性都排序后再编号。spike 中按 map 顺序遍历，两次生成的编号不同，`gen-check` 会误报。
@@ -573,6 +573,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 - **oapi-codegen 的模块模板**（M0-P3 交接 1，从 M2 起每个模块照抄；spike 已验证下面的选项能生成、能编译，0.3）：
   - `output-options.nullable-type: true`：可为空又可省略的字段生成 `nullable.Nullable[T]`，PATCH 能区分"没传"和"传 `null`"。依赖 `github.com/oapi-codegen/nullable` v1.2.0，写死。
   - `output-options.type-mapping.string.formats`：`uuid` → `{type: uuid.UUID, import: uuid}`（标准库）；`email` → `{type: string}`。默认的 `openapi_types.Email` 在解码时自己校验格式，会绕过 3.11 的分层；映射为 `string` 以后，邮箱格式由领域层校验（422）。
+  - `output-options.type-mapping.number.default`：`{type: float64}`。默认的 `float32` 容纳不了的值会通过边界的检查、再被解码器拒绝，不带 `errors[]`（3.11）。
   - `prefer-skip-optional-pointer` 保持默认（`false`）：可省略的字段是 `*T`，`nil` 表示没传。
   - 第一个带路径参数的操作会让生成代码导入 `github.com/oapi-codegen/runtime`，写死为 v1.7.0。
 - **`github.com/google/uuid` 的守卫改为直接检查**（核验 F1，控制者裁定；P3，与第一个带参数的操作一起）：

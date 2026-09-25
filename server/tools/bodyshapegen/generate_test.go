@@ -17,8 +17,9 @@ const (
 )
 
 // The golden file is the reviewed output: every supported construct, the
-// type-mapping (uuid checked, email left to the domain), a reference into
-// another file, and one root per operation with a JSON body.
+// type-mapping (uuid checked, email left to the domain, numbers as int, int64
+// and float64), a reference into another file, and one root per operation
+// with a JSON body.
 func TestGenerateMatchesTheGoldenFile(t *testing.T) {
 	got, err := generate(thingsSpec, thingsConf)
 	if err != nil {
@@ -76,6 +77,12 @@ func TestGenerateRejectsWhatItCannotCheck(t *testing.T) {
 	tests := []struct{ name, property, want string }{
 		{"date", "{type: string, format: date}", `due: format "date" is generated as openapi_types.Date`},
 		{"byte", "{type: string, format: byte}", `due: format "byte" is generated as []byte`},
+		{"int32", "{type: integer, format: int32}", `due: integer format "int32" is generated as int32, whose range bodyshape does not check`},
+		{"uint", "{type: integer, format: uint}", `due: integer format "uint" is generated as uint, whose range bodyshape does not check`},
+		{"nullable int8", "{type: [integer, 'null'], format: int8}", `due: integer format "int8" is generated as int8`},
+		{"unknown integer format", "{type: integer, format: int128}", `due: integer format "int128" is not in the type-mapping`},
+		{"float", "{type: number, format: float}", `due: number format "float" is generated as float32, whose range bodyshape does not check`},
+		{"unknown number format", "{type: number, format: decimal}", `due: number format "decimal" is not in the type-mapping`},
 		{"x-go-type", "{type: string, x-go-type: civil.Date}", "due: x-go-type bypasses the type-mapping"},
 		{"x-go-type-import", "{type: string, x-go-type-import: {path: time}}", "due: x-go-type-import bypasses the type-mapping"},
 		{"oneOf", "{oneOf: [{type: string}, {type: integer}]}", "due: allOf, oneOf and not are not supported"},
@@ -84,23 +91,62 @@ func TestGenerateRejectsWhatItCannotCheck(t *testing.T) {
 		{"anyOf of two types", "{anyOf: [{type: string}, {type: integer}]}", "due: anyOf is supported only as [X, {type: 'null'}]"},
 		{"nullable", "{type: string, nullable: true}", "due: nullable is OpenAPI 3.0"},
 		{"nested", "{type: object, properties: {at: {type: array, items: {type: string, format: date}}}}", `due.at[]: format "date"`},
+		{"nested number", "{type: array, items: {anyOf: [{type: integer, format: uint64}, {type: 'null'}]}}", `due[]: integer format "uint64" is generated as uint64`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spec := filepath.Join(t.TempDir(), "m.yaml")
-			src := "openapi: 3.1.0\ninfo: {title: t, version: v0}\npaths:\n  /api/v0/x:\n    post:\n" +
-				"      requestBody:\n        content:\n          application/json:\n            schema:\n" +
-				"              type: object\n              properties:\n                due: " + tt.property + "\n" +
-				"      responses: {'204': {description: none}}\n"
-			if err := os.WriteFile(spec, []byte(src), 0o644); err != nil {
-				t.Fatal(err)
-			}
-
-			_, err := generate(spec, thingsConf)
+			_, err := generate(bodySpec(t, tt.property), thingsConf)
 
 			if err == nil || !strings.Contains(err.Error(), "POST /api/v0/x: "+tt.want) {
 				t.Errorf("generate() = %v, want an error containing %q", err, "POST /api/v0/x: "+tt.want)
 			}
 		})
 	}
+}
+
+// A number passes when it is generated as a Go type whose whole range
+// bodyshape checks: int or int64 for an integer, float64 for a number.
+func TestGenerateAcceptsTheNumbersItCanCheck(t *testing.T) {
+	for _, property := range []string{
+		"{type: integer}",
+		"{type: integer, format: int64}",
+		"{type: [integer, 'null']}",
+		"{type: number}",
+		"{type: number, format: double}",
+	} {
+		if _, err := generate(bodySpec(t, property), thingsConf); err != nil {
+			t.Errorf("generate() of %s = %v, want nil", property, err)
+		}
+	}
+}
+
+// Without the module template's number mapping, a number is generated as
+// float32, which bodyshape cannot check: the table follows the mapping.
+func TestGenerateRejectsTheDefaultNumberMapping(t *testing.T) {
+	conf := filepath.Join(t.TempDir(), "oapi-codegen.yaml")
+	if err := os.WriteFile(conf, []byte("package: gen\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := generate(bodySpec(t, "{type: number}"), conf)
+
+	want := "POST /api/v0/x: due: number is generated as float32, whose range bodyshape does not check"
+	if err == nil || !strings.Contains(err.Error(), want) {
+		t.Errorf("generate() = %v, want an error containing %q", err, want)
+	}
+}
+
+// bodySpec writes a description whose one operation, POST /api/v0/x, takes an
+// object with the one property due, and returns its path.
+func bodySpec(t *testing.T, property string) string {
+	t.Helper()
+	spec := filepath.Join(t.TempDir(), "m.yaml")
+	src := "openapi: 3.1.0\ninfo: {title: t, version: v0}\npaths:\n  /api/v0/x:\n    post:\n" +
+		"      requestBody:\n        content:\n          application/json:\n            schema:\n" +
+		"              type: object\n              properties:\n                due: " + property + "\n" +
+		"      responses: {'204': {description: none}}\n"
+	if err := os.WriteFile(spec, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return spec
 }

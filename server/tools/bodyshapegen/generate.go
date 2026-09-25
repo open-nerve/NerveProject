@@ -151,6 +151,16 @@ func (g *generator) add(ref *openapi3.SchemaRef, at string) (int, error) {
 			return fail("format %q is generated as %s, which has no bodyshape checker", s.Format, spec.Type)
 		}
 	}
+	if s.Type.Includes("integer") {
+		if problem := uncheckedNumber("integer", g.types.Integer, s.Format, "int", "int64"); problem != "" {
+			return fail("%s", problem)
+		}
+	}
+	if s.Type.Includes("number") {
+		if problem := uncheckedNumber("number", g.types.Number, s.Format, "float64"); problem != "" {
+			return fail("%s", problem)
+		}
+	}
 	if s.Type.Includes("object") || len(s.Properties) > 0 {
 		n.props = map[string]int{}
 		for _, name := range slices.Sorted(maps.Keys(s.Properties)) {
@@ -209,6 +219,27 @@ func (g *generator) addNullable(s *openapi3.Schema, at string, fail func(string,
 	g.nodes = append(g.nodes, n)
 	g.seen[s] = len(g.nodes) - 1
 	return len(g.nodes) - 1, nil
+}
+
+// uncheckedNumber says why a number of JSON type t with format is generated as
+// a Go type whose range bodyshape does not check, or returns "" when it is one
+// of covered. bodyshape's Integer is a literal that an int64 holds, its Number
+// one that a float64 holds: a narrower or unsigned integer, or float32, would
+// let values through that the generated decoder then rejects without a field
+// error. A format the mapping does not know falls back to the default type,
+// which need not hold the range the format names.
+func uncheckedNumber(t string, m codegen.FormatMapping, format string, covered ...string) string {
+	what := t
+	if format != "" {
+		what = fmt.Sprintf("%s format %q", t, format)
+		if _, known := m.Formats[format]; !known {
+			return what + " is not in the type-mapping; the default Go type need not hold the range it names"
+		}
+	}
+	if spec := m.Resolve(format); spec.Import != "" || !slices.Contains(covered, spec.Type) {
+		return fmt.Sprintf("%s is generated as %s, whose range bodyshape does not check", what, spec.Type)
+	}
+	return ""
 }
 
 func join(at, name string) string {

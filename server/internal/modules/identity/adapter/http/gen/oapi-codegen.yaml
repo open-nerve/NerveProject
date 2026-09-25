@@ -15,6 +15,10 @@ output-options:
   # 可为空又可省略的字段生成 nullable.Nullable[T]：PATCH 能区分"没传"和"传 null"
   nullable-type: true
   type-mapping:
+    # 不带 format 的 number 默认生成 float32，bodyshape 查不了它的范围；bodyshapegen 只接受 int、int64 和 float64
+    number:
+      default:
+        type: float64
     string:
       formats:
         # 标准库的 uuid：默认的 openapi_types.UUID 会带进 github.com/google/uuid

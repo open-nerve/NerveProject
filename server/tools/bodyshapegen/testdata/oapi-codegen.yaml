@@ -8,6 +8,9 @@ generate:
 output-options:
   nullable-type: true
   type-mapping:
+    number:
+      default:
+        type: float64
     string:
       formats:
         uuid:
