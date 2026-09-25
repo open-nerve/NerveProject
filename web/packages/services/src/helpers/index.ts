@@ -4,4 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export * from "./url";
+export { normalizeAPIRequestURL } from "./url";
