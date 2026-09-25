@@ -15,7 +15,6 @@ import { getDistributionPathsPostUpdate } from "@nerve/utils";
 //local
 import type { IBaseIssuesStore } from "../helpers/base-issues.store";
 import { BaseIssuesStore } from "../helpers/base-issues.store";
-//
 import type { IIssueRootStore } from "../root.store";
 import type { ICycleIssuesFilter } from "./filter.store";
 

@@ -7,11 +7,11 @@
 import { observer } from "mobx-react";
 
 import { CopyOutline, DeleteOutline, EditOutline } from "@makeplane/propel/icons";
-// nerve types
+// nerve imports
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { ILinkDetails } from "@nerve/types";
-// nerve ui
+// nerve utils
 import { getIconForLink, copyTextToClipboard, calculateTimeAgo } from "@nerve/utils";
 // hooks
 import { useMember } from "@/hooks/store/use-member";
