@@ -379,11 +379,11 @@
     "pending": "待处理",
     "invite": "邀请",
     "deactivated_user": "已停用用户",
-    "your_profile": "Your profile",
-    "developer": "Developer",
-    "work_structure": "Work structure",
-    "execution": "Execution",
-    "administration": "Administration"
+    "your_profile": "您的个人资料",
+    "developer": "开发者",
+    "work_structure": "工作结构",
+    "execution": "执行",
+    "administration": "管理"
   },
   "form": {
     "title": {
