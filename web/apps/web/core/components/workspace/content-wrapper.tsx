@@ -6,7 +6,7 @@
 
 import React from "react";
 import { observer } from "mobx-react";
-// nerve imports
+// components
 import { TopNavigationRoot } from "@/components/navigation/top-navigation-root";
 
 export const WorkspaceContentWrapper = observer(function WorkspaceContentWrapper({
