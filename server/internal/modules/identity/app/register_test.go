@@ -33,21 +33,23 @@ type registerFixture struct {
 func newRegister(policy app.SignupPolicy) *registerFixture {
 	f := &registerFixture{store: &fakeStore{}, tx: &fakeTx{}, hasher: &fakeHasher{}, tokens: newFakeTokens(), logs: &bytes.Buffer{}}
 	f.uc = app.NewRegister(app.RegisterDeps{
-		Policy:     policy,
-		Rules:      domain.NewPasswordRules(),
-		Hasher:     f.hasher,
-		Tx:         f.tx,
-		Users:      f.store,
-		Profiles:   f.store,
-		Sessions:   f.store,
-		Tokens:     f.tokens,
-		MAC:        fakeMAC{},
-		Clock:      clocktest.At(now),
-		Logger:     slog.New(slog.NewJSONHandler(f.logs, nil)),
-		AccessTTL:  15 * time.Minute,
-		SessionTTL: 720 * time.Hour,
+		Policy:   policy,
+		Rules:    domain.NewPasswordRules(),
+		Hasher:   f.hasher,
+		Tx:       f.tx,
+		Users:    f.store,
+		Profiles: f.store,
+		Sessions: f.store,
+		Issuance: issuance(f.tokens, fakeMAC{}),
+		Clock:    clocktest.At(now),
+		Logger:   slog.New(slog.NewJSONHandler(f.logs, nil)),
 	})
 	return f
+}
+
+// issuance has auth's default TTLs: 15 minutes, 30 days.
+func issuance(tokens *fakeTokens, mac fakeMAC) app.Issuance {
+	return app.Issuance{Tokens: tokens, MAC: mac, AccessTTL: 15 * time.Minute, SessionTTL: 720 * time.Hour}
 }
 
 // isV7 reports whether id is a version 7 UUID (RFC 9562 5.7): ids are

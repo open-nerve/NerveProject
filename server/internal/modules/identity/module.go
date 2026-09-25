@@ -64,19 +64,21 @@ func New(d Deps) (*Module, error) {
 	store := postgresadapter.New(d.Pool)
 	tokens := signing.NewAccessTokens(keys)
 	register := app.NewRegister(app.RegisterDeps{
-		Policy:     d.SignupPolicy,
-		Rules:      domain.NewPasswordRules(),
-		Hasher:     argon2adapter.New(argon2adapter.Params(d.Password), d.Logger),
-		Tx:         d.Tx,
-		Users:      store,
-		Profiles:   store,
-		Sessions:   store,
-		Tokens:     tokens,
-		MAC:        signing.NewRefreshTokenMAC(keys),
-		Clock:      d.Clock,
-		Logger:     d.Logger,
-		AccessTTL:  d.AccessTokenTTL,
-		SessionTTL: d.SessionTTL,
+		Policy:   d.SignupPolicy,
+		Rules:    domain.NewPasswordRules(),
+		Hasher:   argon2adapter.New(argon2adapter.Params(d.Password), d.Logger),
+		Tx:       d.Tx,
+		Users:    store,
+		Profiles: store,
+		Sessions: store,
+		Issuance: app.Issuance{
+			Tokens:     tokens,
+			MAC:        signing.NewRefreshTokenMAC(keys),
+			AccessTTL:  d.AccessTokenTTL,
+			SessionTTL: d.SessionTTL,
+		},
+		Clock:  d.Clock,
+		Logger: d.Logger,
 	})
 	return &Module{
 		uc:            httpadapter.UseCases{Register: register, GetMe: app.NewGetMe(store)},

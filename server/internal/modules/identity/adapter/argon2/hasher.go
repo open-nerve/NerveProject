@@ -5,9 +5,13 @@ package argon2adapter
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -59,6 +63,67 @@ func (h *Hasher) Hash(ctx context.Context, password string) (string, error) {
 	key := argon2.IDKey([]byte(password), salt, h.p.Iterations, h.p.MemoryKiB, h.p.Parallelism, keyLen)
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, h.p.MemoryKiB, h.p.Iterations, h.p.Parallelism,
 		base64.RawStdEncoding.EncodeToString(salt), base64.RawStdEncoding.EncodeToString(key)), nil
+}
+
+// Verify reports whether password matches hash, a PHC string that Hash
+// wrote, and whether hash has other parameters than the current ones, so
+// that login hashes the password again (M2 design 3.8). It takes a slot like
+// Hash, with the same wait and the same 503. A hash in another format is an
+// error.
+func (h *Hasher) Verify(ctx context.Context, password, hash string) (ok, rehash bool, err error) {
+	p, err := parsePHC(hash)
+	if err != nil {
+		return false, false, err
+	}
+	if err := h.acquire(ctx); err != nil {
+		return false, false, err
+	}
+	defer func() { <-h.slots }()
+	key := argon2.IDKey([]byte(password), p.salt, p.iterations, p.memoryKiB, p.parallelism, keyLen)
+	ok = subtle.ConstantTimeCompare(key, p.key) == 1
+	rehash = p.memoryKiB != h.p.MemoryKiB || p.iterations != h.p.Iterations || p.parallelism != h.p.Parallelism
+	return ok, rehash, nil
+}
+
+// phc is a PHC string's parameters, salt and key.
+type phc struct {
+	memoryKiB   uint32
+	iterations  uint32
+	parallelism uint8
+	salt, key   []byte
+}
+
+// errNotOurHash never quotes the hash.
+var errNotOurHash = errors.New("password hash is not an argon2id PHC string of this hasher")
+
+// parsePHC reads $argon2id$v=19$m=<KiB>,t=<iterations>,p=<lanes>$<salt>$<key>
+// with a 16-byte salt and a 32-byte key, the only form Hash writes.
+func parsePHC(s string) (phc, error) {
+	parts := strings.Split(s, "$")
+	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != fmt.Sprintf("v=%d", argon2.Version) {
+		return phc{}, errNotOurHash
+	}
+	params := strings.Split(parts[3], ",")
+	if len(params) != 3 {
+		return phc{}, errNotOurHash
+	}
+	m, okM := param(params[0], "m", 32)
+	t, okT := param(params[1], "t", 32)
+	l, okP := param(params[2], "p", 8)
+	salt, errSalt := base64.RawStdEncoding.Strict().DecodeString(parts[4])
+	key, errKey := base64.RawStdEncoding.Strict().DecodeString(parts[5])
+	if !okM || !okT || !okP || errSalt != nil || errKey != nil || len(salt) != saltLen || len(key) != keyLen {
+		return phc{}, errNotOurHash
+	}
+	return phc{memoryKiB: uint32(m), iterations: uint32(t), parallelism: uint8(l), salt: salt, key: key}, nil
+}
+
+// param reads name=<n> with 0 < n < 2^bits: argon2 panics at zero rounds
+// or lanes.
+func param(s, name string, bits int) (uint64, bool) {
+	value, found := strings.CutPrefix(s, name+"=")
+	n, err := strconv.ParseUint(value, 10, bits)
+	return n, found && err == nil && n > 0
 }
 
 func (h *Hasher) acquire(ctx context.Context) error {

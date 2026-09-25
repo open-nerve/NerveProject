@@ -2,39 +2,26 @@ package app
 
 import (
 	"context"
-	"crypto/rand"
 	"log/slog"
 	"net/netip"
-	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Tokens are what registration (and from M2/P2 login and refresh) returns.
-type Tokens struct {
-	AccessToken      string
-	AccessExpiresIn  time.Duration
-	RefreshToken     string
-	RefreshExpiresAt time.Time // the session's absolute end (M2 design 3.5)
-}
-
 // RegisterDeps are Register's collaborators and settings.
 type RegisterDeps struct {
-	Policy     SignupPolicy
-	Rules      *domain.PasswordRules
-	Hasher     PasswordHasher
-	Tx         shared.TxManager
-	Users      UserCreator
-	Profiles   ProfileCreator
-	Sessions   SessionCreator
-	Tokens     AccessTokens
-	MAC        RefreshTokenMAC
-	Clock      Clock
-	Logger     *slog.Logger
-	AccessTTL  time.Duration // auth.access_token_ttl
-	SessionTTL time.Duration // auth.session_ttl
+	Policy   SignupPolicy
+	Rules    *domain.PasswordRules
+	Hasher   PasswordHasher
+	Tx       shared.TxManager
+	Users    UserCreator
+	Profiles ProfileCreator
+	Sessions SessionCreator
+	Issuance Issuance
+	Clock    Clock
+	Logger   *slog.Logger
 }
 
 // Register creates an account and signs it in: POST /api/v0/auth/register.
@@ -85,19 +72,7 @@ func (r *Register) Execute(ctx context.Context, in RegisterInput) (Tokens, error
 
 	now := r.d.Clock.Now()
 	user := NewUser{ID: uuid.NewV7(), Email: email, PasswordHash: hash, DisplayName: domain.DisplayNameFromEmail(email), Now: now}
-	refresh := domain.RefreshToken{SessionID: uuid.NewV7(), Generation: 0}
-	_, _ = rand.Read(refresh.Secret[:]) // never fails since Go 1.24
-	refresh.Tag = r.d.MAC.Tag(refresh.MACMessage())
-	session := NewSession{
-		ID:        refresh.SessionID,
-		UserID:    user.ID,
-		TokenHash: refresh.SecretHash(),
-		UserAgent: domain.SanitizeUserAgent(in.UserAgent),
-		IP:        in.IP,
-		ExpiresAt: now.Add(r.d.SessionTTL),
-		Now:       now,
-	}
-	access, err := r.d.Tokens.Issue(AccessClaims{UserID: user.ID, SessionID: session.ID, ExpiresAt: now.Add(r.d.AccessTTL)})
+	session, tokens, err := r.d.Issuance.newSession(user.ID, in.UserAgent, in.IP, now)
 	if err != nil {
 		return Tokens{}, err
 	}
@@ -112,10 +87,5 @@ func (r *Register) Execute(ctx context.Context, in RegisterInput) (Tokens, error
 		return Tokens{}, err
 	}
 	r.d.Logger.InfoContext(ctx, "account registered", slog.String("user_id", user.ID.String()))
-	return Tokens{
-		AccessToken:      access,
-		AccessExpiresIn:  r.d.AccessTTL,
-		RefreshToken:     refresh.String(),
-		RefreshExpiresAt: session.ExpiresAt,
-	}, nil
+	return tokens, nil
 }
