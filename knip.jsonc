@@ -6,8 +6,8 @@
     ".": {
       // 由 Makefile 调用（make gen-web、make lint-web 等），package.json 的脚本中看不到
       "ignoreDependencies": ["@redocly/cli", "turbo"],
-      // 关键词守卫由 make lint-web 调用，package.json 的脚本中看不到
-      "entry": ["tools/keywords.mjs"],
+      // 关键词守卫由 make lint-web 调用；常见密码名单的生成脚本由人手动运行（M2 设计 3.8）。package.json 的脚本中都看不到
+      "entry": ["tools/keywords.mjs", "tools/password-blocklist/build.mjs"],
     },
     "web/packages/api-client": {
       // 类型测试只由 tsc 检查，其中的函数不会被调用
