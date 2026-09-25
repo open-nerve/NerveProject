@@ -11,7 +11,7 @@ M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 
 
 ## 死成员和死 prop
 
-类型检查器能找出两类 knip 和 tsc 都不报的死代码：没有代码读取的对象成员（store、service 的方法和属性，接口和类型的字段），和没有调用方传入的组件 prop。M1 收尾结束时，web 里一共 1346 个（成员 894、prop 452），属于本 M 领域（通知、收集箱、视图、收藏、最近访问、首页）的有 **88 个**（成员 63、prop 25）。
+类型检查器能找出两类 knip 和 tsc 都不报的死代码：没有代码读取的对象成员（store、service 的方法和属性，接口和类型的字段），和没有调用方传入的组件 prop。M1 收尾结束时，web 里一共 1347 个（成员 895、prop 452），属于本 M 领域（通知、收集箱、视图、收藏、最近访问、首页）的有 **88 个**（成员 63、prop 25）。
 
 M1 没有删它们（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 第 4 节）：
 - 本 M 按总体设计 7.2 重写这一领域的 types、services、stores 和相关组件，大部分会随重写消失，M1 先删一遍等于做两遍；
@@ -23,7 +23,7 @@ M1 没有删它们（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 第
 
 ## oxlint 的清理（M1 设计 7.3）
 
-M1 结束时 oxlint 警告共 696 个（web 566、editor 65、ui 25、utils 19、propel 16、hooks 3、constants 1、i18n 1），按包、按规则的表在 [收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.3 和 [收尾 review](../../M1-frontend-trim/reviews/closeout-review.md)。
+M1 结束时 oxlint 警告共 695 个（web 566、editor 65、ui 25、utils 18、propel 16、hooks 3、constants 1、i18n 1），按包、按规则的表在 [收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.3 和 [收尾 review](../../M1-frontend-trim/reviews/closeout-review.md)。
 - **谁改谁清**：本 M 改到的文件，在本 M 结束时没有 oxlint 警告；
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`、`eslint-plugin-promise(always-return)`、`eslint(no-unneeded-ternary)`）；
 - 上限随之调低（`tools/lint-cap.mjs` 要求警告数等于上限）。
