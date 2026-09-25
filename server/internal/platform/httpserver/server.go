@@ -25,10 +25,10 @@ type Server struct {
 	addrFile        string
 }
 
-// NewServer serves h behind the platform middleware chain
-// (request ID -> recover -> access log). Reading and writing on a connection
-// are bounded: request headers (server.read_header_timeout), the whole
-// request with its body (server.read_timeout), the response
+// NewServer serves h behind the platform middleware chain (request ID ->
+// recover -> access log -> security headers). Reading and writing on a
+// connection are bounded: request headers (server.read_header_timeout), the
+// whole request with its body (server.read_timeout), the response
 // (server.write_timeout) and idle keep-alive (idleTimeout). A handler that
 // legitimately needs longer, such as a file upload, extends its own deadlines
 // with http.ResponseController instead of raising them for every request.
