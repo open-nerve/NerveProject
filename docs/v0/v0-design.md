@@ -146,7 +146,7 @@ NerveProject/
 - **HTTP 方法**：
   - GET 查询，POST 创建，DELETE 删除（软删除）。
   - PATCH 部分更新：只改传入的字段，传 `null` 表示清空。
-  - **POST 和 PATCH 都返回改完之后的完整资源。**
+  - **POST 和 PATCH 都返回改完之后的完整资源。** 例外：注册（`POST /api/v0/auth/register`）返回令牌，不返回新建的账户，账户由 `GET /api/v0/me` 读取（M2 设计 5.1）。
 - **接口描述**：放在 `api/`，按模块拆分（`api/modules/<模块>.yaml`，公共组件放在 `api/common.yaml`），打包为 `api/dist/openapi.yaml`。先改接口描述，再写实现。
 - **OpenAPI 版本：已定为 3.1**（`openapi: 3.1.0`）。M0/P3 验证了整条工具链，结论和写法约定见 [P3 spec](M0-foundation/specs/P3-api-contract.md) 2.2、2.4。
 
@@ -193,11 +193,14 @@ GET   /api/v0/issues/{issue_id}/comments
   ```json
   { "status": 422, "code": "issue.state_not_in_project", "title": "Unprocessable Entity",
     "detail": "状态不属于该项目",
-    "errors": [{ "field": "state_id", "message": "..." }] }
+    "errors": [{ "field": "state_id", "code": "not_allowed", "message": "..." }] }
   ```
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
 - `title` 固定为 HTTP 状态短语，即 Go 的 `http.StatusText(status)`（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
-- 平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；模块的错误码带模块前缀。
+- 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
+- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
+- `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径，`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
+- **错误码写进接口描述**：每个操作用扩展字段 `x-problem-codes` 列出它可能返回的码；所有操作都可能返回的平台码只写在 `api/openapi.yaml` 的顶层，声明了 `bearer` 的操作另外隐含 `unauthorized`。`apitest` 核对码的写法、测试中返回的码都已声明、每个声明的码都有测试返回过（M2 设计 3.11）。
 - 请求 ID 只出现在 `X-Request-Id` 响应头中，不放进响应体。
 
 ### 3.6 其他
@@ -215,7 +218,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | 令牌 | 获取方式 | 形式 | 有效期 |
 |---|---|---|---|
 | 访问令牌 | 登录，或用刷新令牌换取 | JWT（Ed25519 签名），只包含用户 id、会话 id 和过期时间，**不含任何权限信息** | 15 分钟 |
-| 刷新令牌 | 登录时一并下发 | 随机字符串，数据库只存哈希（`auth_sessions`） | 30 天；每次使用后换新，并检测旧令牌是否被重复使用 |
+| 刷新令牌 | 注册、登录时一并下发 | `nrv_rt_` 加 68 字节的 base64url：会话 id、代数、32 字节的随机密文和 16 字节的 HMAC 标签，MAC 密钥从签名密钥派生；数据库只存当前一代密文的哈希（`auth_sessions`，M2 设计 3.4） | 30 天；每次使用后换新，并检测旧令牌是否被重复使用 |
 | 个人访问令牌（PAT） | 在设置页生成 | `nrv_pat_` 前缀的随机字符串，数据库只存哈希（`api_tokens`） | 由用户设定；可随时撤销 |
 
 ### 4.2 规则
@@ -223,7 +226,7 @@ GET   /api/v0/issues/{issue_id}/comments
 - **会话撤销**：退出登录、修改密码、账户停用时，吊销该账户的刷新令牌；账户停用时，同时让该账户的所有会话失效。
 - **重复使用检测**：一旦发现某个已经换过新的刷新令牌又被使用，就作废这次登录派生出的所有令牌。
 - **密码哈希**：用 argon2id。
-- **登录方式**：v0 只有邮箱加密码。是否开放注册由配置控制；被邀请的邮箱始终可以注册。
+- **登录方式**：v0 只有邮箱加密码。是否开放注册由配置 `auth.signup_enabled` 控制：prod 默认关闭，dev、test 默认开放；关闭时注册先答"注册已关闭"，不查邮箱。prod 的第一个账户由服务器管理员用 `nerve users create` 创建（M2/P3 加入；在那之前用 `NERVE_AUTH__SIGNUP_ENABLED=true` 临时打开注册）（M2 设计决策点 2）。被邀请的邮箱始终可以注册。
 - **忘记密码**：没有邮件服务，由服务器管理员通过命令行重置：`nerve users reset-password --email <email>`。
 
 ### 4.3 浏览器端
@@ -308,7 +311,7 @@ draft_issues(id, workspace_id, project_id NULL, payload jsonb,
   - 项目由项目管理员归档。
   - **自动归档**：项目设置了 `archive_in`（1–12 个月）后，定时任务每天把已完成或已取消、并且超过 `archive_in × 30` 天未更新的工作项自动归档，同时记录一条操作动态。
   - 迭代归档时，同时移除指向它的收藏（照搬 Plane）。
-- **审计字段**：`created_by` / `updated_by` 在业务代码中显式赋值为当前账户。
+- **审计字段**：`created_by` / `updated_by` 在业务代码中显式赋值为当前账户；`created_at` / `updated_at` 同样由应用在每次插入、每次业务更新时显式写入，取自用例的时钟，数据库的 `DEFAULT now()` 只是应用之外写入时的兜底（M2 设计 3.13）。
 - **排序**：`sort_order` 是浮点数，拖拽时由前端计算新值；初始值的算法和 Plane 一致。
 - **ID**：UUID 类型，由 Go 1.27 标准库的 `uuid.NewV7()` 生成；数据库不设默认值。
 - **默认状态**：新建项目时自动生成 6 个状态：Backlog（默认）、Todo、In Progress、Done、Cancelled、Triage（待分诊，供收集箱使用）。
@@ -318,7 +321,7 @@ draft_issues(id, workspace_id, project_id NULL, payload jsonb,
 - **数据库**：PostgreSQL 18。
 - **迁移**：goose（纯 SQL），迁移文件内嵌进程序。
 - **建表方式**：**每个 M 为自己模块的表编写迁移**，不在 M0 一次性建全部表。起点是 M0 生成的 Plane 表结构快照 [`tools/plane-schema/plane-v1.4.2-schema.sql`](../../tools/plane-schema/plane-v1.4.2-schema.sql)（在临时库上跑完 Plane 自带的 Django 迁移，再用 `pg_dump --schema-only` 导出），然后按 5.3 和[差异清单](plane-diff.md)修改。**不手抄。**
-- **外键方向**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键；指向更晚建立的模块的外键，由后建的模块用 `ALTER TABLE` 补上。
+- **外键方向**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键；指向更晚建立的模块的外键，由后建的 M 用 `ALTER TABLE` 补上。这个迁移文件归**被改表的模块**：文件名带那个模块的名字，列在那个模块的 sqlc 条目里。例如 M5 给 `users` 加头像的外键，写 `<v>_identity_users_avatar_asset.sql`（M2 设计 3.14）。
 - **数据访问**：pgx + sqlc，手写 SQL，生成类型安全的 Go 代码。
 
 ---
@@ -347,8 +350,9 @@ server/
                             全项目只有这里负责"接线"
     platform/               与业务无关的技术基础件：config、postgres（连接池、事务管理器）、
                             logging、httpserver（中间件、problem+json）、ratelimit、clock、idgen
-    shared/                 共享内核，尽量小：ID 类型、Actor（当前账户）、领域错误与错误码、
-                            分页游标、领域事件接口、Authorizer 端口
+    shared/                 共享内核，尽量小，只放值会跨越模块边界的东西（M2 设计 3.3）：Actor（当前账户）、
+                            领域错误与错误码、TxManager 端口；以后加入分页游标的封套、领域事件接口、
+                            Authorizer 端口。平台不导入它；时钟等其余端口由使用方的 app 层声明
     modules/
       identity/             账户、会话、PAT、密码
       access/               成员角色查询与权限规则表（实现 Authorizer 端口）
@@ -367,13 +371,16 @@ server/
 **每个模块内部的结构（以 issue 为例）：**
 ```
 modules/issue/
-  domain/            实体、值对象、业务规则、领域事件、领域错误，以及本模块需要的端口（仓储接口等）
+  domain/            实体、值对象、业务规则、领域事件、领域错误：纯规则，没有 I/O
   app/               用例，一个用例一个文件（create_issue.go、archive_issue.go……）：
-                     负责事务边界、权限检查和流程编排
+                     负责事务边界、权限检查和流程编排；本模块需要的端口（仓储、时钟等小接口）
+                     声明在 app/ports.go，由使用方定义（M2 设计 3.3）
   adapter/
     postgres/        仓储实现（基于 sqlc）；列表引擎这类复杂读取写成专门的查询
     http/            handler：把 oapi-codegen 生成的请求类型转成用例的输入，再把结果转成响应
-  module.go          模块入口：New(依赖) *Module；(*Module).Register(mux, apiErrors) 把模块生成的路由挂到 bootstrap 的根路由上（M0/P3）
+  module.go          模块入口：New(依赖)；(*Module).Register(router, api) 把模块生成的路由挂到 bootstrap 的根路由上，
+                     api（httpserver.API）提供错误映射和按路由的中间件；PublicOperations() 列出不需要令牌的操作；
+                     其他模块或 bootstrap 要用的能力由访问方法导出，例如 Authenticator()（M2 设计 3.3、3.6）
 ```
 
 ### 6.3 依赖规则（在持续集成中强制检查）
@@ -391,7 +398,8 @@ modules/issue/
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
 6. **强制手段**：
    - Go 编译器本身禁止包之间的循环依赖。
-   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块内的包只能放在 `domain`、`app`、`adapter` 和模块根；`shared` 本身也只能依赖标准库（不含 `net/http`、`database/sql`）；这几层连间接依赖也不能碰到 `net/http`、`database/sql` 和第三方库；模块之间不能互相导入；`platform` 不依赖模块，`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；生成的代码只能被本模块的适配器导入；测试工具只能被测试代码导入。
+   - **架构测试**（写法类似 Java 的 ArchUnit，随 `go test` 一起运行）检查：依赖只能向内；`domain` 和 `app` 只能依赖标准库（不含 `net/http`、`database/sql`）、本模块的内层包和 `shared`；模块内的包只能放在 `domain`、`app`、`adapter` 和模块根；`shared` 本身也只能依赖标准库（不含 `net/http`、`database/sql`）；这几层连间接依赖也不能碰到 `net/http`、`database/sql` 和第三方库；模块之间不能互相导入；`platform` 不依赖模块、`bootstrap` 和 `shared`（平台声明自己需要的小接口，`shared` 的类型按结构满足它们，`bootstrap` 用编译期断言对上），`platform` 的各个包之间也不互相依赖；只有组合根能导入各个模块；`adapter/<技术>/gen` 下生成的代码只能被同一个适配器导入；测试工具只能被测试代码导入。
+   - **sqlc 按模块限定**：`server/sqlc.yaml` 中每个模块的 `schema` 只列这个模块的迁移，一个模块的查询只能碰本模块的表（跨模块的读取在 `app` 层声明端口）；给别的模块的表加列、加约束的迁移归被改表的模块。架构测试 `TestSQLCSchemaScope` 核对这份配置（M2 设计 3.14）。
    - golangci-lint 的 depguard 只负责禁止使用某些库（比如第三方 uuid 库、viper、标准库 `log`）。
    - 以上都作为持续集成的门禁。
 
@@ -402,16 +410,21 @@ modules/issue/
 
 ### 6.4 请求处理流程
 ```
-请求 → 请求 ID → 异常恢复 → 访问日志 → 认证（识别 JWT 或 PAT，得到 Actor）
-     → 限流 → 接口调用日志（只记写操作，异步批量写入）
-     → handler（生成的代码只做参数绑定和 JSON 解码，不校验取值；校验放在哪一层由 M2 决定，见 [P3 spec](M0-foundation/specs/P3-api-contract.md) 7）
-     → 用例：TxManager.WithinTx { 权限 → 业务规则 → 写数据 → 发布领域事件 } 提交
-     → 响应 / problem+json
+请求 → 请求 ID → 异常恢复 → 访问日志                            （固定链，httpserver.NewServer）
+     → 路由匹配 → 生成的代码绑定路径参数和查询参数（格式错误 → 400）
+     → 请求元信息（客户端 IP、UA）→ 请求期限 → 请求体上限           （按路由，httpserver.API）
+     → 认证（识别 JWT 或 PAT，得到 Actor；公开操作不看令牌）→ 限流
+     → 请求体结构检查（不合契约 → 400）→ 生成的代码解码 JSON 请求体
+     → handler（只做类型转换）
+     → 用例：TxManager.WithinTx { 权限 → 领域校验（不合规 → 422）→ 业务规则 → 写数据 → 发布领域事件 } 提交
+     → 响应；或者 error → APIErrors → problem+json
 ```
 - **请求 ID → 异常恢复 → 访问日志**这三个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。
-- **认证、限流、接口调用日志**挂在访问日志之后，按路由分别接到各个 API 路由上，不作用于健康检查和前端页面。
+- **按路由的中间件**由 `httpserver.API.Middlewares` 按上图的顺序交给每个模块的生成代码，只作用于 `/api/v0` 的操作，不作用于健康检查和前端页面（M2 设计 3.6）。认证默认拒绝：除了模块声明为公开的操作，没有有效令牌一律 401。限流由 M2/P2 加入，接口调用日志由 M8 挂在限流之后。
+- **参数先于这些中间件绑定**：生成的代码在它们之前绑定路径参数和查询参数，参数格式错误的请求在认证之前就得到 400；请求体在它们之后才解码，没有通过认证的请求不会被解析请求体。
 - **每个写操作对应一个事务。** 业务数据、操作动态、历史版本、投递给 River 的任务，要么一起成功，要么一起回滚。
 - **事务的传递**：`TxManager` 端口声明在 `internal/shared`（由使用方定义接口），`platform/postgres` 提供实现，`bootstrap` 负责接线；仓储从 `ctx` 中取出当前事务。用例代码不接触任何数据库类型。
+- **提交不受请求期限的取消**：事务里的语句带请求的 `context`，请求期限（`server.request_timeout`）到了就取消；`COMMIT` 和 `ROLLBACK` 在 `context.WithoutCancel` 下执行，有自己的期限 `database.commit_timeout`。语句都已做完的事务不会因为请求期限在提交时被取消，失败的事务也总能回滚（M2 设计 3.6）。
 
 ### 6.5 权限
 - **规则照搬 Plane**：
@@ -601,8 +614,11 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
   ```
   e2e/
     fixtures/
-      server.ts    每个 Playwright 并行进程启动一个 nerve（NERVE_ENV=test，随机端口）
-      db.ts        每个并行进程一个独立数据库（从模板库复制），以及数据库断言函数
+      server.ts    每个 Playwright 并行进程启动一个 nerve（NERVE_ENV=test，在 127.0.0.1:0 上监听，
+                   从 server.addr_file 读出实际地址）；需要另一种配置的故事在同一个库上另起一个
+      db.ts        每个并行进程一个独立数据库（从模板库复制）和一个连接池
+      assert/      数据库断言函数，按表分文件；页面版本和接口版本调用同一个函数
+      auth.ts      通过接口注册、登录，创建 PAT；页面的登录状态（M2 起）
       api.ts       用生成的 TS 客户端通过接口准备数据
       test.ts      把以上几个接成 Playwright 的 fixture；故事从这里导入 test、expect
       webhook.ts   本地 Webhook 接收端，记录投递并验证签名
@@ -613,7 +629,7 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
   - 被测对象是**真正要发布的产物**：打包好的 `nerve` 程序（内嵌前端）、Postgres 18、本地文件存储。
   - 前置数据通过接口准备，只有被测的那一步走页面。
   - 需要"时间流逝"的故事（比如自动归档），在测试环境中通过可注入的时钟来推进，不真的等待。
-  - 失败时保存操作记录（trace）和截图；M0 另外保存 nerve 的日志。录像和数据库快照从有业务表的 M 起再加入（M0/P6：trace 已含每一步的截屏，录像还要多下载 ffmpeg；M0 没有业务表）。
+  - 失败时保存操作记录（trace）、截图、nerve 的日志和本 worker 数据库的快照（`pg_dump`，M2/P1 起）。不录像：trace 已含每一步的截屏，录像还要多下载 ffmpeg（M2 设计 9.5）。
 - **运行时机**：
   - 本地：`make e2e` 一条命令完成编译、启动数据库和运行全部故事（M0/P6 裁定：命令入口是 Makefile，不是根 `package.json` 的脚本）。
   - **每次提交 PR 都运行完整的端到端测试。**

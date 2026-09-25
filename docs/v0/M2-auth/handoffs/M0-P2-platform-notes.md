@@ -38,3 +38,18 @@ M2 第一次加入认证、事务、后台任务和真正的迁移文件，届�
    - `/healthz` 和 `/readyz` 的每次探测都会写一条 info 级别的访问日志，在生产环境中可能过多。
 
 来源：[M0/P2 评审记录](../../M0-foundation/reviews/P2-server-platform-review.md)。
+
+## 处理结果（M2/P1）
+
+1. **TxManager**（完成）：`shared.TxManager` 由使用方声明，`platform/postgres.TxManager` 按结构满足，`bootstrap` 编译期断言。`COMMIT`、`ROLLBACK` 在 `context.WithoutCancel` 下执行，有自己的期限 `database.commit_timeout`（M2 设计 3.6）。
+2. **按路由挂载**（认证完成）：`httpserver.API.Middlewares` 把请求元信息、请求期限、请求体上限、默认拒绝的认证和请求体结构检查挂在每个模块的生成代码上，`NewServer` 的固定链不变。
+3. **`RequestID`**（完成）：已导出，`APIErrors` 记 500 时带上它。
+4. **`LogValue`**（完成）：`*_file` 只记是否设置（`addr_file_set`、`private_key_file_set`），不记路径。
+5. **期限**（请求期限完成）：`server.request_timeout`（默认 15 秒）给每个接口请求一个期限。
+6. **archtest**（完成）：规则 6 推广到 `adapter/*/gen`；规则 4 加上"平台不导入 `internal/shared`"。
+7. **迁移与就绪检查**（完成）：第一批迁移已加入；S1 核对全部迁移都已应用、`goose_db_version` 的最大版本等于最后一个迁移文件；README 的"部署"一节写明服务的角色要能读 `goose_db_version`。
+8. **三个小问题**（完成）：环境变量给布尔、数字、时长配置项传空值时报错；`nerve serve` 在 logger 建好之后出现致命错误时另记一条 ERROR "nerve serve failed"；`/healthz`、`/readyz` 的访问日志降为 DEBUG。
+
+仍未处理，状态保持 `open`：第 2 条的限流（M2/P2）和接口调用日志（M8，挂在限流之后）；第 5 条的 River、停机顺序、连接池关闭的时限和 River 的迁移（M2/P3）。
+
+来源：[M2/P1 spec](../specs/P1-platform-core.md) 第 7 节。

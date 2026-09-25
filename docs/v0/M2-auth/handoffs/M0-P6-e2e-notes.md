@@ -48,3 +48,15 @@ created: 2026-09-22
 - 可注入的时钟（M4，用于"时间流逝"类故事，比如自动归档）同样按这个模式加一个 `clock.ts`。
 
 来源：[M0/P6 评审记录](../../M0-foundation/reviews/P6-e2e-ci-review.md)。
+
+## 处理结果（M2/P1）
+
+- **认证 fixture**（注册完成）：`e2e/fixtures/auth.ts` 提供 `password`、`emailFor`、`register`；A1、A2 的接口版本调用 `e2e/fixtures/assert/identity.ts` 的断言函数。
+- **数据库断言**（完成）：每个 worker 一个 `pg` 连接池（`openDatabase`），断言函数按表放在 `e2e/fixtures/assert/`。测试失败时，自动 fixture `databaseSnapshot` 用 `docker exec … pg_dump` 导出本 worker 的库到 `database.sql`，作为附件和 trace、截图、nerve 日志放在一起。
+- **S1**（完成）：核对 `nerve migrate status` 的每一行都是 `applied`、来源依次等于迁移文件，`goose_db_version` 的最大版本等于最后一个文件的序号。模板库仍只由全局准备连接。
+- **端口与等待**（完成）：nerve 在 `127.0.0.1:0` 上监听，把实际地址写进 `server.addr_file`，fixture 读取；空闲端口的猜测和"就绪后再等一个轮询间隔"的缓解一起删除。读地址文件和轮询 `/readyz` 共用 30 秒的期限，每个请求只用剩余时间；`pg_dump` 超过 60 秒就 SIGKILL；`nerveWith` 另起的 nerve 把自己的预算加到测试的超时上。
+- **录像**（完成）：不录像，总体设计 8.2 已改为"trace、截图、nerve 日志和数据库快照"。
+
+仍未处理，状态保持 `open`：PAT 对等验收，认证 fixture 的登录、PAT 和页面的登录状态（M2/P2–P4）；S3 的 `signup_enabled`（M2/P3）；S2 的断言（M2/P4）；River 停机与 fixture 的预算（M2/P3）；fixture 写法的延伸（M4、M5、M8）。
+
+来源：[M2/P1 spec](../specs/P1-platform-core.md) 2.16。

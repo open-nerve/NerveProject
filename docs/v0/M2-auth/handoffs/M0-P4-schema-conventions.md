@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 from: M0/P4
 to: M2
 created: 2026-09-22
@@ -26,3 +26,10 @@ created: 2026-09-22
 94 张业务表的主键是没有默认值的 `id uuid`，与"由应用生成 UUIDv7"（[v0 设计](../../v0-design.md) 5.5）一致；`sessions`（主键 `session_key`）、`project_identifiers`（整数 identity 主键）是例外，两张都不保留。
 
 来源：[M0/P4 评审记录](../../M0-foundation/reviews/P4-plane-schema-review.md)。
+
+## 处理结果（M2/P1）
+
+1. **约定**：按 M2 设计 3.13 一次定下，差异清单二·全局已登记。外键照搬 Django 模型的 `on_delete`，不用 `DEFERRABLE`；主键、外键、唯一约束和一列唯一的 CHECK 用 Postgres 的默认名，多列的 CHECK 显式命名，索引命名为 `<表>_<列>_idx`；默认值和取值范围从 Plane 的模型读出写进数据库，差异清单逐列写明"新加"；系统表不照搬；不建 `*_like` 索引，外键列只在用到时建索引；`varchar(n)` 照搬。`00001`–`00003` 按这些约定建出 `users`、`profiles`、`auth_sessions`；`server/migrations/schema_test.go` 核对 19 个约束和索引名，以及 25 个 CHECK 的反例。
+2. **主键与 ID**：照旧，没有默认值的 `id uuid`，由应用用 `uuid.NewV7()` 生成。
+
+来源：[M2/P1 spec](../specs/P1-platform-core.md) 2.10。

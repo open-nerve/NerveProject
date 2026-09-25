@@ -139,13 +139,13 @@ NerveProject/
 |---|---|---|
 | `cmd/nerve` | 解析命令行参数，调用 `bootstrap` | `bootstrap`、`platform/config`、`platform/buildinfo`、`server/configs`（内嵌的配置数据） |
 | `internal/bootstrap` | **唯一的组合根**：创建各个适配器，接到各模块上，调用各模块的 `Register` 把生成的路由挂到根路由上，启动服务 | 所有 `platform` 包和 `modules` 包 |
-| `internal/platform/*` | 与业务无关的技术基础件，各包之间互不依赖（`config` 除外，它可以被任何包使用） | 标准库和第三方库；**不能依赖 `modules`** |
+| `internal/platform/*` | 与业务无关的技术基础件，各包之间互不依赖（`config` 除外，它可以被任何包使用） | 标准库和第三方库；**不能依赖 `modules`、`bootstrap` 和 `internal/shared`**（M2/P1：平台声明自己需要的小接口，`shared` 的类型按结构满足） |
 | `internal/modules/<m>/domain` | 领域模型与规则 | 只能依赖标准库（以后可以依赖 `shared`） |
 | `internal/modules/<m>/app` | 用例；声明本模块需要的端口 | 只能依赖本模块的 `domain` 和 `internal/shared`；不能依赖 `platform` 或第三方技术库。archtest 检查这条规则 |
 | `internal/modules/<m>/adapter/*` | 端口的实现（http、postgres 等）；http 适配器的包名为 `httpadapter`，避免遮住标准库 `net/http` | 本模块的 `app` 和 `domain`、`platform`、生成的代码 |
-| `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖) *Module`；`(*Module).Register(mux, apiErrors)` 把模块生成的路由挂到根路由上 | 本模块内部的各个包 |
+| `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖)`；`(*Module).Register(router, api)` 把模块生成的路由挂到根路由上，`api`（`httpserver.API`）提供错误映射和按路由的中间件；`PublicOperations()` 列出不需要令牌的操作（M2/P1） | 本模块内部的各个包 |
 
-`internal/shared`（共享内核）在第一次真正需要跨模块共享类型时才建立（预计在 M2），M0 不建空包。
+`internal/shared`（共享内核）在第一次真正需要跨模块共享类型时才建立，M0 不建空包。M2/P1 建立它：`Actor`、领域错误 `Error`、`TxManager` 端口（M2 设计 3.3）。
 
 ### 3.2 试点模块 `instance`
 - **接口**：`GET /api/v0/instance`，不需要登录。返回 `{ "product": "Nerve", "version": "0.1.0-dev", "commit": "…", "api_version": "v0" }`。
@@ -164,7 +164,7 @@ NerveProject/
 - **为什么简单也要分层**：这个接口很简单，分层看起来有点"仪式感"。但它的作用是**模块模板**，用来把"生成接口 → 用例 → 端口 → 适配器 → 组合根接线"这条路走通，并让架构测试有东西可查。每一层都只有一个很小的文件。
 
 ### 3.3 HTTP 服务
-- **路由**：Go 标准库的 `ServeMux`（Go 1.22 以后支持按方法和路径匹配）。挂载规则如下：
+- **路由**：Go 标准库的 `ServeMux`（Go 1.22 以后支持按方法和路径匹配）。M2/P1 起由 `httpserver.Router` 包一层，记下注册的每个模式，供整程序测试与接口描述核对（M2 设计 3.6）。挂载规则如下：
   - `/api/v0/…`：各模块生成的路由，由 `bootstrap` 逐个挂载。
   - `/healthz`：存活检查，不访问数据库。
   - `/readyz`：就绪检查，检查数据库能否连通、迁移是否已完成。
@@ -173,10 +173,11 @@ NerveProject/
 - **中间件**（顺序固定）：
   1. 请求 ID：读取 `X-Request-Id`，只有是 1–128 个 `[A-Za-z0-9._:-]` 字符时才采用，否则生成 UUIDv7，并写回响应头。
   2. 异常恢复：捕获 panic，返回 500 problem+json，并记录日志。
-  3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。
+  3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。`/healthz`、`/readyz` 的记录是 DEBUG 级别，其余是 INFO（M2/P1）。
+- **按路由的中间件**（M2/P1，M2 设计 3.6）：`/api/v0` 的操作另有一串中间件，由 `httpserver.API.Middlewares` 交给每个模块的生成代码，在访问日志之后、按这个顺序：请求元信息（客户端 IP、UA）→ 请求期限（`server.request_timeout`）→ 请求体上限（`server.max_body_bytes`，超过是 413）→ 默认拒绝的认证（模块声明为公开的操作之外，没有有效令牌一律 401）→ 请求体结构检查（不合契约是 400）。生成代码在它们之前绑定路径参数和查询参数，在它们之后解码请求体。
 - **`/readyz`**：按顺序执行各项检查，全部共用一个 2 秒的超时预算，遇到第一个失败就停止，返回通用的 `detail`（`<检查名> is not ready`）；具体错误只写进日志，不返回给客户端。
-- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；领域错误码的体系在 M2 建立。
-- **生成代码的错误出口**（M0/P3）：oapi-codegen 生成的代码在参数绑定、请求体解码、handler 返回错误三处默认输出纯文本；`httpserver.APIErrors` 把三处都接成 problem+json：绑定或解码失败 → `BadRequest`（400 `bad_request`，`detail` 是失败原因）；handler 出错或响应写出失败 → `InternalError`（500 `internal_error`，不带 `detail`；响应已经开始时改为记录日志并中断连接，不追加 problem）。
+- **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；M2/P1 加入 `unauthorized`、`payload_too_large`、`validation_failed`、`server_busy` 和领域错误码的体系（M2 设计 3.11）。
+- **生成代码的错误出口**（M0/P3，M2/P1 修改）：oapi-codegen 生成的代码在参数绑定、请求体解码、handler 返回错误三处默认输出纯文本；`httpserver.APIErrors` 把三处都接成 problem+json：参数绑定失败 → `BadRequest`（400 `bad_request`，`detail` 是失败原因）；请求体解码失败 → `BodyError`（400 `bad_request`，`detail` 是通用的一句话，不带出 Go 的类型名；超过请求体上限是 413 `payload_too_large`）；handler 出错或响应写出失败 → `Write`：满足 `httpserver.ProblemError` 的错误映射为它的状态、码、`detail` 和字段，其余是 500 `internal_error`（不带 `detail`，原因只进日志）；客户端断开（`context.Canceled`）不算 500；响应已经开始时改为记录日志并中断连接，不追加 problem。
 - **非规范的 `/api/` 路径**：例如 `/api/v0//instance`、`/api/v0/./instance`、`/api`，Go 的 `ServeMux` 会先返回 307 跳转到规范路径，而不是直接落进平台的 404 兜底。M0/P3 评审后接受这个行为，不作特殊处理。
 - **生命周期**：收到 SIGINT 或 SIGTERM 后停止接收新请求，在 `server.shutdown_timeout` 时间内处理完已有请求，然后退出。
 - **连接上的读写都有上限**：读请求头（`server.read_header_timeout`）、读整个请求含请求体（`server.read_timeout`）、写响应（`server.write_timeout`），以及 2 分钟的空闲连接超时（包内常量）。只限制请求头不够：客户端发完请求头、声明了请求体却不发，服务端会一直等（M0 对抗性评审 Critical 2）。确实要更久的接口（M5 的文件上传、下载）在自己的 handler 里用 `http.ResponseController` 单独放宽，不调大全局值。这些上限管的是连接上的读写，不管 handler 自身的执行时间：`write_timeout` 到期只会让写出失败，既不停止 handler，也不取消它的 context；handler 里的数据库等阻塞调用要自带期限。
@@ -194,14 +195,14 @@ NerveProject/
 ### 3.5 数据库与迁移
 - **连接**：`pgxpool`，参数来自配置（`database.url`、`database.max_conns`）。
 - **迁移执行器**（`platform/postgres`）：用 goose Provider 执行 `server/migrations/sql/` 中的 SQL 文件。
-- **迁移文件如何内嵌**：`server/migrations/embed.go` 用 `//go:embed all:sql` 内嵌整个目录。之所以不写 `//go:embed *.sql`，是因为它在一个 `.sql` 文件都没有时会编译失败。
+- **迁移文件如何内嵌**：`server/migrations/embed.go` 用 `//go:embed sql/*.sql` 内嵌迁移文件。M0 没有迁移文件，当时写的是 `//go:embed all:sql`（`*.sql` 在一个文件都没有时会编译失败）；M2/P1 加入第一批迁移后改为现在的写法，删掉了占位的 `sql/.gitkeep`。
 - **没有迁移文件时**：goose 会返回 `ErrNoMigrations`，迁移执行器把它当作"无事可做"，正常继续。
 - **何时执行迁移**：
   - `nerve serve`：`database.auto_migrate=true` 时，启动前自动执行。dev 和 test 环境默认开启，prod 环境默认关闭。
   - `nerve migrate up | down | status`：手动执行。生产环境按"先迁移、再启动"的顺序操作。
 - **迁移文件的命名**：`NNNNN_<模块>_<说明>.sql`（goose 按序号排序），文件名能看出归属哪个模块。
 - **外键方向约定**：每个模块的迁移只建自己的表，以及指向更早建立的模块的外键。指向更晚建立的模块的外键（比如 `users.avatar_asset_id → file_assets`），由后建的那个模块的迁移用 `ALTER TABLE` 补上。
-- **M0 不包含任何迁移文件**：迁移机制（执行、回滚、查看状态、没有迁移文件时的处理）由集成测试验证，测试使用专门的测试迁移集，只存在于测试中。
+- **迁移文件从 M2 开始**：M0 不包含任何迁移文件，迁移机制（执行、回滚、查看状态、没有迁移文件时的处理）由集成测试验证，测试使用专门的测试迁移集，只存在于测试中。M2/P1 加入第一批迁移（`users`、`profiles`、`auth_sessions`），`server/migrations/schema_test.go` 核对它们能 up、down、再 up，以及约束名和 CHECK。
 - **`goose_db_version` 的产生**：第一次对一个从未迁移过的库执行 `/readyz`，会顺带建出 goose 的 `goose_db_version` 表，这是 goose 自身的行为，无害。
 - **不启用 goose 的会话锁**：v0 是单实例部署，暂不需要。
 - **部分失败时**：某次迁移失败，`migrate up` 仍会先报出这之前已经执行成功的迁移，再报错。
