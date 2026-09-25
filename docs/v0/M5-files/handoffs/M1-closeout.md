@@ -5,7 +5,7 @@ to: M5
 created: 2026-09-25
 ---
 
-# M1 收尾留下的清理：死成员和死 prop、oxlint、附件图标的标志、新建项目的封面值
+# M1 收尾留下的清理：死成员和死 prop、oxlint、附件图标的标志、新建项目的封面值、复制资源的权限
 
 M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 spec](../../M1-frontend-trim/specs/closeout.md)）。下面几项留给后续各 M，做法都是"谁改谁清"：本 M 重写或修改到的代码，在本 M 结束时不再带着它们。
 
@@ -23,7 +23,7 @@ M1 没有删它们（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 第
 
 ## oxlint 的清理（M1 设计 7.3）
 
-M1 结束时 oxlint 警告共 695 个（web 566、editor 65、ui 25、utils 18、propel 16、hooks 3、constants 1、i18n 1），按包、按规则的表在 [收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.3 和 [收尾 review](../../M1-frontend-trim/reviews/closeout-review.md)。
+M1 结束时 oxlint 警告共 694 个（web 565、editor 65、ui 25、utils 18、propel 16、hooks 3、constants 1、i18n 1），按包、按规则的表在 [收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.3 和 [收尾 review](../../M1-frontend-trim/reviews/closeout-review.md)。
 - **谁改谁清**：本 M 改到的文件，在本 M 结束时没有 oxlint 警告；
 - **按规则清一类**：另外按规则集中清掉至少一类，优先能机械修复的（`eslint(no-shadow)`、`eslint-plugin-promise(always-return)`、`eslint(no-unneeded-ternary)`）；
 - 上限随之调低（`tools/lint-cap.mjs` 要求警告数等于上限）。
@@ -40,4 +40,10 @@ M1 结束时 oxlint 警告共 695 个（web 566、editor 65、ui 25、utils 18�
 新建项目时（`projects/create/root.tsx` 的 `onSubmit`），前端先上传预设封面的副本，再创建项目，但 `POST …/projects/` 的 `cover_image_url` 仍是构建里预设封面的地址（`/assets/image_<n>-<hash>.webp`，每次构建都会变）；项目建好之后才登记副本（`POST …/bulk/`）、用副本的地址覆盖（`PATCH …/projects/<id>/`）。这两步有一步失败时，项目保存的是一个下次构建就失效的地址（上传本身失败时不创建项目）。这是 Plane 原有的行为，M1 收尾 T14 的浏览器核对记下了这几个请求的顺序（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.15、第 8 节）。
 - **关闭条件**：本 M 的封面接口只保存上传后的资源（或预设的编号），不保存构建路径；新建项目只写一次封面值。
 
-来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节；2.4 D4、3.15、第 9 节第 6 条。
+## 复制资源的权限
+
+在编辑器里复制、再粘贴时，剪贴板带编辑器自己的类型 `text/nerve-editor-html`。粘贴这个类型时，`src` 是资源 id（不以 `http` 开头）的每个 `image-component` 都被标为复制（`web/packages/editor/src/helpers/asset-duplication.ts`），图片节点随后经应用请求 `POST /api/assets/v2/workspaces/{workspaceSlug}/duplicate-assets/{asset_id}/`（`web/apps/web/core/services/file.service.ts` 的 `duplicateAsset`），请求体带目标的 `entity_type`、`entity_id`、`project_id`。任何网页都能在自己的复制事件里写这个类型，里面的资源 id 可以是别人的。M1 收尾 T17 只让这段 HTML 在惰性文档里解析（不再执行里面的脚本），复制的请求照旧；T17 的评审确认这是 Plane 原有的行为，不是收尾引入的（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 2.9 的 Critical 1、3.17）。资源归本 M。
+- **怎样处理**：本 M 实现复制接口时，先核对请求者能读取源资源（它所在的工作区和项目），再复制；读不到的与不存在的一样回答，不透露资源是否存在。
+- **关闭条件**：复制接口对请求者读不到的资源返回 404（或本项目对无权资源的约定），有测试覆盖这种情况。
+
+来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节；2.4 D4、2.9 的 Critical 1、3.15、3.17、第 9 节第 6 条。

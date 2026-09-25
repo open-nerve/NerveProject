@@ -13,9 +13,9 @@
 **原型：** `$COTMP/proto`，分支 `proto-closeout`，基点 `c493255`。每个 Task 的原型提交：
 T1 `c9eeb28`、T2 `5eb9494`、T3 `7b802a8`、T4 `cccf8be`、T5 `30c798d`、T6 `17becf9`、T7 `344ab76`、T8 `ec6c3e5`、T9 `2d51151`、T10 `3cb038f`、T11 `b13b3d8`、T12 `3ebfe70`、T13 `328843f`、T14 `131e1de`、T15 `f997e8a`、T16 `3c64669`。
 本计划的每个数字都来自对应的原型提交。按本计划的脚本步骤重放：T1–T13 在基点的干净克隆上（`$COTMP/replay.mjs`），每个 Task 得到的树都与原型提交相同；T14–T16 在 `328843f` 的干净克隆上，三棵树与原型提交相同（T14、T15 的 WebP 逐字节相同），又在本分支 T13（`300eff0`）的克隆上重放，每个 Task 改到的图片、代码和 `server/` 路径与原型提交相同；重放的每个提交都通过五个门禁。T15 的 `t15/handoff.mjs`（M5 交接）是原型之后按裁定加的一步，不在原型提交 `f997e8a` 里，只在 `300eff0` 的重放上跑过。
-T17–T20 的原型在分支 `proto-codex`，基点是本分支修复轮的最后一个提交 `9a98148`：T17 `bad3483`、T18 `b85f861`、T19 `a994925`、T20 `c9b24e1`。在 `9a98148` 的干净检出上按本计划的步骤重放，四棵树与原型提交相同（T20 的 WebP 逐字节相同），每个原型提交都通过五个门禁。
+T17–T20 的原型在分支 `proto-codex`，基点是本分支修复轮的最后一个提交 `9a98148`：T17 `bad3483`、T18 `b85f861`、T19 `a994925`、T20 `c9b24e1`。在 `9a98148` 的干净检出上按本计划的步骤重放，四棵树与原型提交相同（T20 的 WebP 逐字节相同），每个原型提交都通过五个门禁。那是 T20 按裁定改 `intake-light.webp` 的填法之前的步骤；现在 Task 20 的步骤写出的是本分支 `ff555bf` 的 9 张图，`disabled-feature/SOURCES.md` 的一段按 Step 2 改写。
 
-**本分支的实际提交：** T1 `aea47e4` 和跟进提交 `483ca9d`（5 个不命中样本，spec 3.6）、T2 `1cfc629`、T3 `4e1893c`、T4 `7f189da`、T5 `4cf483f`、T6 `20ac5b6`、T7 `acdbf50`、T8 `d25f08c`、T9 `98ecc86`、T10 `263aef9`、T11 `f9fb015`、T12 `4797772`、T13 `300eff0`、T14 `89244e3`、T15 `e349924`、T16 `985675a`；修复轮 `1896bca`–`9a98148`（10 个提交，spec 3.16）。本分支是准绳：它与原型不同的地方（T1 的样本、T4、T6、T9 的行数，T11 的样本等，spec 3.1、3.6、3.9）在 spec 里写明；所以 `300eff0` 的树与 `328843f` 不同，T14–T16 只比较本 Task 改到的路径（见各 Task 的最后一步）。T17–T20 也只比较本 Task 的路径：本分支在 `9a98148` 之后多了一个加入它们的文档提交（改本计划和 spec），原型没有。
+**本分支的实际提交：** T1 `aea47e4` 和跟进提交 `483ca9d`（5 个不命中样本，spec 3.6）、T2 `1cfc629`、T3 `4e1893c`、T4 `7f189da`、T5 `4cf483f`、T6 `20ac5b6`、T7 `acdbf50`、T8 `d25f08c`、T9 `98ecc86`、T10 `263aef9`、T11 `f9fb015`、T12 `4797772`、T13 `300eff0`、T14 `89244e3`、T15 `e349924`、T16 `985675a`；修复轮 `1896bca`–`9a98148`（10 个提交，spec 3.16）；T17 `7836c7a`、T18 `fc3069a` 和跟进提交 `e070065`（`make build` 复制时也读 `$(WEB_CLIENT)`）、T19 `c84f26d` 和跟进提交 `f9d1ab2`（分组行的 key，web 的上限 565）、T20 `ff555bf`（`intake-light.webp` 的一框重复左边一列，见 Task 20）。本分支是准绳：它与原型不同的地方（T1 的样本、T4、T6、T9 的行数，T11 的样本等，spec 3.1、3.6、3.9）在 spec 里写明；所以 `300eff0` 的树与 `328843f` 不同，T14–T16 只比较本 Task 改到的路径（见各 Task 的最后一步）。T17–T20 也只比较本 Task 的路径：本分支在 `9a98148` 之后多了一个加入它们的文档提交（改本计划和 spec），原型没有。
 
 ---
 
@@ -82,7 +82,7 @@ P5 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 
 T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, export 2`，`infile-orphans.mjs` 没有行，其余各项都是 0。第 7 步只比较本 Task 改到的路径（本分支 T13 的树与原型 `328843f` 不同，见开头"本分支的实际提交"），命令写在各 Task 的最后一步。
 
-T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后的那一个），其余是上一个 Task 的提交（裁定 2）。第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 898, export 2`；T17 的 `deadorph.mjs` 以修复轮最后一个提交 `9a98148` 的 `$COTMP/logs/impl-fb3-deadsym.tsv` 为前一个（控制者留下的）；`infile-orphans.mjs` 没有行，其余各项都是 0。第 5 步上限合计 695。第 6 步 `tests.sh` 的 editor 一行 T17 起是 35 个测试（共 101 个）。第 7 步只比较本 Task 改到的路径。
+T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后的那一个），其余是上一个 Task 的提交（裁定 2）。第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 898, export 2`；T17 的 `deadorph.mjs` 以修复轮最后一个提交 `9a98148` 的 `$COTMP/logs/impl-fb3-deadsym.tsv` 为前一个（控制者留下的）；`infile-orphans.mjs` 没有行，其余各项都是 0。第 5 步上限合计 695，T19 的跟进（`f9d1ab2`）起 694。第 6 步 `tests.sh` 的 editor 一行 T17 起是 35 个测试（共 101 个）。第 7 步只比较本 Task 改到的路径。
 
 ### 风险点（每个 Task 报告必答）
 
@@ -152,8 +152,8 @@ T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后�
 | `app/assets/onboarding/`、`app/assets/empty-state/`（改 11、增 2、删 8）、`cycles/active-cycle/root.tsx`、`docs/v0/frontend-changes.md`、`docs/v0/M5-files/handoffs/M1-closeout.md` | 头像、人名、没有显示的图；交给 M5 的两项 | 15 |
 | `server/internal/platform/webui/handler_test.go` | 夹具名 | 16 |
 | editor 的 `helpers/paste-asset.ts`、`helpers/asset-duplication.ts`、`editor-interaction.test.ts`、`vitest.setup.ts` | 粘贴的惰性解析、测试 | 17 |
-| `Makefile` | `build-web` 先清空产物目录 | 18 |
-| `cycles/active-cycle/progress.tsx`、en 和 zh-CN 的 `project.json` | 进度口径、两个键 | 19 |
+| `Makefile` | `build-web` 先清空产物目录；跟进：`make build` 复制 `$(WEB_CLIENT)` | 18 |
+| `cycles/active-cycle/progress.tsx`、en 和 zh-CN 的 `project.json`；跟进另改 `web/apps/web/package.json` | 进度口径、两个键；跟进：分组行的 key、web 的上限 | 19 |
 | `app/assets/onboarding/`、`app/assets/empty-state/disabled-feature/`（改 9 张图、2 个 `SOURCES.md`） | 涂掉已删功能的控件 | 20 |
 
 ---
@@ -192,6 +192,7 @@ T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后�
 
 - **负责人批准按建议分诊**（2026-09-25）Codex 对整个 M1 的对抗评审（`reviews/M1-codex-adversarial-review.md`，提交 `d2bd4fc`，评审对象 `c493255`）。逐条的去向见 spec 2.9：Critical 1 → T17；Important 1 → T18；Important 2 → T19；Important 4 → T20；Important 3（AGPL 第 5(a)、5(d)、13 条的验收，jsDelivr 的第三方请求）→ 控制者在收尾 review 的提交里写进 M8 收尾交接的关闭条件，时点是"任何对外的网络部署之前"，条款的解读由负责人在 M8 定；Minor 2 → 控制者在收尾 review 的提交里改 M1 设计 3.1 的写法；Minor 1 → 分诊时写的是"T4 已解决"，依据是 spec B12 原来的一格，核对之后不成立（`ensureAPITrailingSlash` 仍经 `services` 的两个 `export *` 桶文件公开），架构师建议放进整分支评审之后的修复轮，待控制者确认（spec 第 9 节第 7 条）。
 - T17–T20 的原型（`bad3483`、`b85f861`、`a994925`、`c9b24e1`）采纳。
+- **T20 实现时的裁定**：原型给 `intake-light.webp` 的一框（`[1700,1090,650,44]`）填纯白，抹掉了卡片 650 px 长的一段底边，还把白色涂进卡片外透明的边距，在应用里看得见（实现者发现）。这一框改为重复它左边一列（x=1699）的像素（`patch.mjs` 的 `"fill": "left"`），其余 9 个框照原型；`disabled-feature/SOURCES.md` 写明这一框的填法（Task 20 的 Step 1、Step 2）。
 - 控制者第 3 轮浏览器核对顺带看到的两件事（spec 2.10），基线上相同：个人设置的主题下拉框画在左上角，交 M2（个人设置），控制者在收尾 review 的提交里写进 M2 的收尾交接；zh-CN 界面上的英文，交 M8（"每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"），同样在收尾 review 的提交里写进，其中 zh-CN 与英文相同的 5 个值在整分支评审之后的修复轮里翻译。
 
 ---
@@ -890,11 +891,13 @@ Expected: 两次都是 `planted file: gone`、`531 files`，最后两行：
 cold and warm build/client are byte-identical (531 files)
 no stale file in either build
 ```
-持续集成（`ci.yml`）在干净的工作区里构建，Turbo 的缓存不跨任务保存，`rm -rf` 在那里什么都不删。
+持续集成（`ci.yml`）的 web 任务和 e2e 任务的 Build 一步从干净的检出开始（Turbo 的缓存不跨任务保存），`rm -rf` 在那里什么都不删。e2e 任务接着跑 `make e2e`，它依赖 `build`，再构建一次：这时 `rm -rf` 删掉第一次构建的 `client`，Turbo 从本任务自己的缓存恢复它，就是上面的热构建。
 
 - [ ] **Step 4: 核对、门禁与提交**
 
 固定节奏第 2–8 步（web 没有改动，数字与 T17 相同）；与原型对比：`git diff --cached --stat b85f861 -- Makefile` 为空，`git diff --cached --shortstat` → `1 file changed, 2 insertions(+)`；提交信息见 `$COTMP/t18/msg.txt`。
+
+**跟进提交**（本分支 `e070065`，原型没有）：`make build` 的 `cp -R web/apps/web/build/client/. $(WEBUI_DIST)/` 改为 `cp -R $(WEB_CLIENT)/. $(WEBUI_DIST)/`，`build-web` 清空的目录和 `make build` 嵌入的目录是同一个值，不会一处改了路径、另一处没改。`build-web` 的 `##` 说明仍写字面的路径，因为 `make help` 原样打印，不展开变量。`git show --shortstat e070065` → `1 file changed, 1 insertion(+), 1 deletion(-)`。
 
 ---
 
@@ -922,17 +925,22 @@ Codex 的两个例子已在共享函数的测试里（`web/packages/utils/src/pr
 
 固定节奏第 2–8 步；与原型对比：`git diff --cached --stat a994925 -- web/apps/web/core/components/cycles web/packages/i18n` 为空，`git diff --cached --shortstat` → `3 files changed, 14 insertions(+), 12 deletions(-)`；提交信息见 `$COTMP/t19/msg.txt`。
 
+本分支的 `c84f26d` 与原型有一行不同：取消的说明直接写在它的一行里，外面一层只包着文字的 `<span>` 删除（行数不变；上面的 `--stat a994925` 因此列出 `progress.tsx`，`2 +-`）。
+
+**跟进提交**（本分支 `f9d1ab2`，原型没有；2 个文件，+24 / −26）：分组行的 `map` 原来返回一个不带 key、只有一个子元素的片段，key 写在里面的 `div` 上，React 不认，报 `Each child in a list should have a unique "key" prop`（开发模式）。现在 `map` 直接返回可点击的那一行，`key={group}`（下标仍用来取分组的颜色）；外面那层没有属性的 `div` 删除，这一行成了列的弹性子项，宽度不变，布局不变。数组下标不再作 key，web 的 oxlint 警告少一个 `react/no-array-index-key`：`web/apps/web/package.json` 的上限 566 → 565，`bash $COTMP/caps.sh | tail -1` → `caps total: 694`。
+
 ---
 
 ### Task 20: 保留的截图里不再显示已删的功能
 
-spec 2.9 的 Important 4、3.17、第 4 节第 30 条。原型提交 `c9b24e1`（11 个文件：改 9 张 WebP 和 2 个 `SOURCES.md`，+20 行）。
+spec 2.9 的 Important 4、3.17、第 4 节第 30 条。原型提交 `c9b24e1`（11 个文件：改 9 张 WebP 和 2 个 `SOURCES.md`，+20 行）；本分支 `ff555bf` 是同样的 11 个文件，+22 行：`intake-light.webp` 的一框按控制者的裁定改了填法（Step 1 末尾），`disabled-feature/SOURCES.md` 的说明随之多两行。
 
 **Steps**
 
 - [ ] **Step 1: 先看前后对照**
 
-Run: `node $COTMP/t20/patch.mjs . $COTMP/t20/spec.json $COTMP/t20/look-impl --dry`
+Run: `node $COTMP/t20/patch.mjs . $COTMP/t20/impl-spec-alt.json $COTMP/t20/look-impl --dry`
+（`impl-spec-alt.json` 是 `t20/spec.json` 改了一项：`intake-light` 的框写 `{ "box": [1700, 1090, 650, 44], "fill": "left" }`，不取色；不在时照这一项从 `spec.json` 改出来。）
 Expected（每张图一行，缩进的是每个框）:
 ```
 web/apps/web/app/assets/onboarding/issues.webp: 1 covers; WebP quality 0.95: 229264 -> 194670 bytes
@@ -950,8 +958,8 @@ web/apps/web/app/assets/empty-state/disabled-feature/modules-dark.webp: 1 covers
   cover 1 [2212,221,38,34] solid rgb(15,16,20)
 web/apps/web/app/assets/empty-state/disabled-feature/cycles-dark.webp: 1 covers; WebP quality 0.73: 72372 -> 72190 bytes
   cover 1 [2460,210,30,28] solid rgb(17,17,19)
-web/apps/web/app/assets/empty-state/disabled-feature/intake-light.webp: 1 covers; WebP quality 0.77: 86990 -> 87122 bytes
-  cover 1 [1700,1090,650,44] solid rgb(255,255,255)
+web/apps/web/app/assets/empty-state/disabled-feature/intake-light.webp: 1 covers; WebP quality 0.77: 86990 -> 87076 bytes
+  cover 1 [1700,1090,650,44] left column from x=1699
 web/apps/web/app/assets/empty-state/disabled-feature/intake-dark.webp: 1 covers; WebP quality 0.78: 83694 -> 83140 bytes
   cover 1 [1828,956,536,50] solid rgb(17,17,19)
 ```
@@ -961,21 +969,23 @@ web/apps/web/app/assets/empty-state/disabled-feature/intake-dark.webp: 1 covers;
 - "功能未开启"的 `modules-light`、`modules-dark`、`cycles-light`、`cycles-dark`：标题栏的甘特图/时间线布局图标；
 - `intake-light`、`intake-dark`：工作项属性里 "Estimate: 2 Months" 一行（两张图的面板滚动位置不同，框分别量）。
 
+`intake-light` 的框不取色（控制者的裁定）：那一行被卡片的下边缘截断，框的下部压着卡片的底边和卡片下面透明的边距。原型按别的框的做法填纯白（`solid rgb(255,255,255)`，87122 字节），抹掉了 650 px 长的一段底边，还把白色涂进卡片外透明的边距，在应用里看得见。所以这一框用 `patch.mjs` 的 `"fill": "left"`：重复框左边一列（x=1699）的像素，这一列从上到下带着卡片的白、底边和透明的边距。看它的 after 图时核对：底边连着，框下面仍是透明的。
+
 `--dry` 不写图，只把每个框的前后对照（框四周加 8 px，放大 4 倍，不平滑）写成 `$COTMP/t20/look-impl/<图名>-cover<k>-before.png`、`-after.png`，20 张。逐张打开，报告写明：after 里控件不见了；四周的线、字和图标没有被盖住；填的颜色与背景一致，看不出方块。
 
 - [ ] **Step 2: 写图和 `SOURCES.md`**
 
-Run: `node $COTMP/t20/patch.mjs . $COTMP/t20/spec.json $COTMP/t20/look-impl` → 与 Step 1 相同的输出，这次写入 9 张图。WebP 按"文件大小最接近原图"的质量重新编码（T15 的做法）；`issues.webp` 少了 34,594 字节：去掉蓝色的字之后，最高的质量 0.95 也到不了原来的大小。其余 8 张相差不到 600 字节。
+Run: `node $COTMP/t20/patch.mjs . $COTMP/t20/impl-spec-alt.json $COTMP/t20/look-impl` → 与 Step 1 相同的输出，这次写入 9 张图。WebP 按"文件大小最接近原图"的质量重新编码（T15 的做法）；`issues.webp` 少了 34,594 字节：去掉蓝色的字之后，最高的质量 0.95 也到不了原来的大小。其余 8 张相差不到 1,000 字节（最多是 `views.webp` 的 812）。
 Run: `node $COTMP/t20/sources.mjs` → `edited web/apps/web/app/assets/onboarding/SOURCES.md`、`edited web/apps/web/app/assets/empty-state/disabled-feature/SOURCES.md`
 
-每个 `SOURCES.md` 在最后一个表之后加一段做法说明和一个 "Removed" 表（按 oxfmt 的排版写，不用再格式化）。不写 "Analytics" 这个词：守卫的 `analytics` 规则读 `web/` 下的所有文件，`SOURCES.md` 也在内，所以写作 "the reporting button"。
+每个 `SOURCES.md` 在最后一个表之后加一段做法说明和一个 "Removed" 表（按 oxfmt 的排版写，不用再格式化）。不写 "Analytics" 这个词：守卫的 `analytics` 规则读 `web/` 下的所有文件，`SOURCES.md` 也在内，所以写作 "the reporting button"。`sources.mjs` 写的是原型的段落（"each with the flat background it sat on (a solid colour sampled beside it)"），对 `intake-light.webp` 不成立：用编辑工具把 `disabled-feature/SOURCES.md` 的这一段改为"每个框用旁边取的纯色填平，`intake-light.webp` 除外：那一行被卡片的下边缘截断，框重复它左边一列的像素，这一列带着卡片的白、底边和卡片下面透明的边距"，排版照旧（第 6 步的格式检查通过）。改完这个文件是 +12 行（原型 +10 行）。
 
 Run: `node $COTMP/t14/sha.mjs web/apps/web/app/assets/onboarding '\.(webp|md)$' | tail -1` → `5 files	649617	list 3baee9777c5f2795`
-Run: `node $COTMP/t14/sha.mjs web/apps/web/app/assets/empty-state/disabled-feature '\.(webp|md)$' | tail -1` → `9 files	556337	list 0dad81521de949eb`
+Run: `node $COTMP/t14/sha.mjs web/apps/web/app/assets/empty-state/disabled-feature '\.(webp|md)$' | tail -1` → `9 files	556530	list 6800fdec45b6728d`
 
 逐个文件（字节，SHA-256 前 16 位）：
 - `onboarding/`：`cycles.webp` 153810 `b5fe3d4045f2c10d`、`issues.webp` 194670 `61eb8fed12e72872`、`views.webp` 134650 `500c5336e002728e`、`modules.webp` 163952 `8aa036aad5c3d3f3`（不变）、`SOURCES.md` 2535 `160d83e1a3d5f788`；
-- `disabled-feature/`：`cycles-light` 67294 `976132e22b2fb46e`、`cycles-dark` 72190 `a017867c15d63d47`、`intake-light` 87122 `71eb35783ace0bad`、`intake-dark` 83140 `a3e769ed53eae5ae`、`modules-light` 67726 `3f7d752ebb406807`、`modules-dark` 64440 `61c4a07e29bc4de7`、`views-light` 55798 `4716aabaa3f60b95`（不变）、`views-dark` 55302 `1acf41cc0299b8ac`（不变）、`SOURCES.md` 3325 `4f99c5db8376b76b`。
+- `disabled-feature/`：`cycles-light` 67294 `976132e22b2fb46e`、`cycles-dark` 72190 `a017867c15d63d47`、`intake-light` 87076 `cebac06cb5461d08`（原型 87122 `71eb35783ace0bad`）、`intake-dark` 83140 `a3e769ed53eae5ae`、`modules-light` 67726 `3f7d752ebb406807`、`modules-dark` 64440 `61c4a07e29bc4de7`、`views-light` 55798 `4716aabaa3f60b95`（不变）、`views-dark` 55302 `1acf41cc0299b8ac`（不变）、`SOURCES.md` 3564 `4abedff13d02f71d`（原型 3325 `4f99c5db8376b76b`）。
 
 - [ ] **Step 3: 看整张图**
 
@@ -988,8 +998,8 @@ Run: `node $COTMP/t20/topng.mjs . $COTMP/t20/look-impl/full 900 web/apps/web/app
 
 固定节奏第 2–8 步，另外核对：
 - `node $COTMP/assets.mjs 2>&1 >/dev/null` → `0 of 134 images unreferenced`；`node $COTMP/t15/assetpaths.mjs 2>&1 >/dev/null` → `0 of 134 images unreferenced by path`；
-- 构建体积 `bash $COTMP/size.sh . impl-t20` → `js: 396 files, 6586872 bytes`、`css: 3 files, 293801 bytes`、`fonts: 25 files, 3755608 bytes`、`other: 107 files, 4126953 bytes`、`largest chunk: assets/use-parse-editor-content-*.js, 1378580 bytes`、`locale chunks: 34`（"其他"比 T19 少 35,948 字节；spec 3.4）；
-- 与原型对比（第 7 步）：`git diff --cached --stat c9b24e1 -- web/apps/web/app/assets` 为空（WebP 逐字节相同）；`git diff --cached --shortstat` → `11 files changed, 20 insertions(+)`；
+- 构建体积 `bash $COTMP/size.sh . impl-t20` → `js: 396 files, 6586782 bytes`、`css: 3 files, 293801 bytes`、`fonts: 25 files, 3755608 bytes`、`other: 107 files, 4126907 bytes`、`largest chunk: assets/use-parse-editor-content-*.js, 1378580 bytes`、`locale chunks: 34`（"其他"比 T19 的跟进 `f9d1ab2` 少 35,994 字节；JS 比原型的 6586872 少 90，来自 T19 与原型不同的两处；spec 3.4）；
+- 与原型对比（第 7 步）：`git diff --cached --stat c9b24e1 -- web/apps/web/app/assets` 只列 `intake-light.webp`（`Bin 87122 -> 87076 bytes`）和 `disabled-feature/SOURCES.md`，其余 8 张改过的 WebP 逐字节相同；`git diff --cached --shortstat` → `11 files changed, 22 insertions(+)`；
 - 提交信息见 `$COTMP/t20/msg.txt`。
 
 ---
@@ -1033,7 +1043,7 @@ Run: `node $COTMP/t20/topng.mjs . $COTMP/t20/look-impl/full 900 web/apps/web/app
 
 ## 完成后
 
-- T20 之后，控制者在一个文档提交里给前端改动清单 1.6 节加 T17–T20 各一行（与修复轮的 `4be6cba` 同一种做法；T17–T20 的原型没有改清单）。
+- T20 之后，控制者在一个文档提交里给前端改动清单 1.6 节加 T17–T20 各一行（与修复轮的 `4be6cba` 同一种做法；T17–T20 的原型没有改清单），同时把 spec、本计划和 M2–M8 收尾交接里的数字改成本分支 T17–T20 的实测（T19 的跟进之后上限合计 694，构建 14,763,098 字节），给 M5、M6 的收尾交接各加一节（spec 8.1）。
 - 整分支评审之前，控制者在本分支的 20 个 Task 和修复轮的提交上跑一次中间值（`$COTMP/pertask.mjs` 的检查，或在本仓库里按固定节奏第 3–5 步逐个提交跑），与 spec 3.2 的表对照；再跑 A、B 两组核对。
 - 整分支评审之后的修复轮里已定的一项：zh-CN 与英文相同的 5 个值（`common` 的 `developer`、`your_profile`、`work_structure`、`execution`、`administration`）翻译（spec 2.10 的 I2）。建议的一项，待控制者确认：`@nerve/services` 的 `helpers/index.ts` 只按名字转出 `normalizeAPIRequestURL`（spec 2.9 的 Minor 1、第 9 节第 7 条）。
 - 收尾 review 写明：3.3 的表和清零计划、3.4 的体积对比、3.5 的锁文件、spec 第 9 节各项的裁定；把 M1 设计 12 节收尾一行改为"已完成"并加上 spec、plan、review 的链接，勾上 11 节，改总体设计 9.4 和 M1 的状态（时机按 spec 第 9 节第 3 条的裁定）。
