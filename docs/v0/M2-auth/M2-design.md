@@ -2080,7 +2080,7 @@ files:
 
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
-| P1 | platform-core | 未开始 | — | — | — |
+| P1 | platform-core | 进行中 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | — |
 | P2 | sessions | 未开始 | — | — | — |
 | P3 | account-api | 未开始 | — | — | — |
 | P4 | web-auth | 未开始 | — | — | — |
