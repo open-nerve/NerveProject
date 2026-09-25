@@ -18,7 +18,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-// sampleMigrations stands in for the production set, which is empty in M0.
+// sampleMigrations are two probe tables, for the tests of how the app applies
+// and reports migrations, whatever the production set holds.
 var sampleMigrations = fstest.MapFS{
 	"00001_probe_create_widgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE widgets (id bigint);\n-- +goose Down\nDROP TABLE widgets;\n")},
 	"00002_probe_create_gadgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE gadgets (id bigint);\n-- +goose Down\nDROP TABLE gadgets;\n")},

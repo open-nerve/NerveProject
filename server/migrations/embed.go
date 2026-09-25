@@ -1,5 +1,6 @@
 // Package migrations embeds the SQL schema migrations. Files live in sql/ and
-// are named NNNNN_<module>_<description>.sql.
+// are named NNNNN_<module>_<description>.sql; a migration belongs to the
+// module that owns the table it changes (M2 design 3.14).
 package migrations
 
 import (
@@ -7,10 +8,7 @@ import (
 	"io/fs"
 )
 
-// "all:" keeps sql/.gitkeep, so the pattern still matches while no migration
-// exists; a plain *.sql pattern would fail to compile then.
-//
-//go:embed all:sql
+//go:embed sql/*.sql
 var files embed.FS
 
 // FS returns the migrations, with the files at its root.

@@ -13,7 +13,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-// sampleMigrations is a test-only migration set: M0 ships no migrations.
+// sampleMigrations is a test-only migration set, independent of the
+// production schema (whose own up/down test is in server/migrations).
 var sampleMigrations = fstest.MapFS{
 	"00001_probe_create_widgets.sql": {Data: []byte(`-- +goose Up
 CREATE TABLE widgets (id bigint PRIMARY KEY);
