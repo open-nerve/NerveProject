@@ -12,7 +12,7 @@
 让 M1 设计第 11 节的完成标准成立，并清掉 P1–P5 留给收尾的全部事项。收尾不删产品功能，删的是从不渲染、没有读取方的代码和资源：
 
 - **安全**：每个 `window.open` 都带 `noopener,noreferrer`，守卫看住；propel 的菜单项不再调用全局的 `window.close()`。
-- **死代码**：从不渲染的应用栏；没有其他文件读取的工作区包导出（三轮，512 个）；各评审点名的死代码；基线的退化结构（`={"…"}` 等 80 处、别名、模板字面量、204 行悬空的导入分组注释）。
+- **死代码**：从不渲染的应用栏；没有其他文件读取的工作区包导出（三轮，512 个导出：274 个连同声明删除，238 个只去掉导出）；各评审点名的死代码；基线的退化结构（`={"…"}` 等 80 处、别名、模板字面量、204 行悬空的导入分组注释）。
 - **死资源**：没有代码引用的文案键（每种语言 1599 → 1077 个）、没有被导入的图片（133 张）和导入了却从不显示的图片（8 张）。
 - **图片的来源和肖像**（第 9 节第 1 条的裁定）：来源和许可查不到的 29 张预设封面换成 Nerve 自己画的图；保留的图片里的真人照片头像换成字母头像，真实的人名换成中性的名字。
 - **测试夹具**（第 9 节第 2 条的裁定）：`handler_test.go` 的夹具用构建真实产出的文件名。
@@ -41,7 +41,7 @@
 | # | 事项 | 来源 | 基线实测 | 去向 |
 |---|---|---|---|---|
 | B1 | 从不渲染的应用栏，包括 `use-workspace-paths.ts` | P4 评审第 4 节裁定 9、第 7 节 | `AppRailVisibilityProvider` 默认关闭，唯一的使用处（工作区布局）不打开它；8 个文件、`@nerve/types` 的 3 个类型、propel 右键菜单里只有它用的部分 | **T3**；守卫 `app-rail`、`app-rail-files` |
-| B2 | 没人用的包导出 | P3 评审第 7 节（347 个，`symref.mjs`）；P3 spec 7.4 | 类型检查器（`deadsym.mjs`）：426 个导出没有别的文件读取 | **T4**：三轮删完（512 个），剩 2 个（`api-client` 类型测试文件里的两个导出，文件本身就是检查） |
+| B2 | 没人用的包导出 | P3 评审第 7 节（347 个，`symref.mjs`）；P3 spec 7.4 | 类型检查器（`deadsym.mjs`）：426 个导出没有别的文件读取 | **T4**：三轮删完（512 个导出：274 个连同声明删除，238 个只去掉导出，3.8），剩 2 个（`api-client` 类型测试文件里的两个导出，文件本身就是检查） |
 | B3 | `convertHexEmojiToDecimal`、`emojiCodeToUnicode`、`TrailingNode` 的导出 | P3、P4 评审第 7 节 | 没有调用方 | **T4**（属于 B2） |
 | B4 | `useProjectIssueProperties` 的 5 个 fetcher 只有 `fetchCycles` 有调用方；P3 说的 `fetchStates` | P3、P4 评审第 7 节 | 同左 | **T5**：hook 删除，工作项表单直接调用迭代 store 的 `fetchAllCycles` |
 | B5 | `IssueFormRoot` 挂载时的重置（可能是空操作） | P3 评审第 7 节 | 把表单重置为 `useForm` 刚用过的初始值，是空操作 | **T5** |
@@ -195,7 +195,7 @@
 结论：
 
 1. **原型的步骤可以照做。** 重放发现 T3、T4、T6、T8 要在脚本之后跑一次 oxfmt，plan 已写进步骤；重放之后又发现 T4 让 propel `EmptyState` 的 `asset` 属性成了孤儿（`deadorph.mjs` 报 1），改在 T4 删掉，T11 补了主题选项（C3），重放和门禁都重跑过。
-2. **包导出要用类型检查器找。** knip 把每个包的入口都当作已使用；`symref.mjs` 按名字数引用，同名的局部变量、属性也算。`deadsym.mjs` 用 TypeScript 的程序模型：一个导出只有在它自己以外的文件读取它时才算使用（经过任何桶文件；重新导出不算读取）。删一轮会让上一层的导出变成没人用，所以要删到某一轮为零为止（第 1 轮 424 个、第 2 轮 26 个、第 3 轮 62 个、第 4 轮 0）。
+2. **包导出要用类型检查器找。** knip 把每个包的入口都当作已使用；`symref.mjs` 按名字数引用，同名的局部变量、属性也算。`deadsym.mjs` 用 TypeScript 的程序模型：一个导出只有在它自己以外的文件读取它时才算使用（经过任何桶文件；重新导出不算读取）。删一轮会让上一层的导出变成没人用，所以要删到某一轮为零为止（没有别的文件读取的导出，不计 `api-client` 类型测试文件的 2 个：第 1 轮 424 个、第 2 轮 26 个、第 3 轮 62 个，共 512 个；第 4 轮 0）。
 3. **T7 的 `deadorph` 报 1 是已知的例外。** 新加的 `parseHTML` 写在属性对象的类型里，由 TipTap 在解析 HTML 时读取，脚本只看项目自己的代码；T7 的测试证明它被读取（去掉它，第一个用例以 `128161` 失败）。
 4. **外部化警告的根源在依赖，不在 Vite 配置。** `devwarn.mjs` 打开 `/`，页面加载两次，浏览器 44 条、服务端 44 行（每次加载各 22 条），都来自 postcss 读取 `path`、`fs`、`url`、`source-map-js`；web 里只有 `sanitize-html` 把 postcss 带进浏览器端，它的全部用处是 `@nerve/utils` 的三个 HTML 工具。应用是纯客户端的构建（`ssr: false`），浏览器自带的 `DOMParser` 就够用；删掉之后警告为 0，还修掉了通知预览显示 `&amp;` 的问题（3.10）。
 5. **测试输出的噪声也是依赖的问题。** `prosemirror-codemark` 0.4.2 是最新版本，发布的每个构建文件末尾都指向一个列出未发布源文件的 source map；补丁只删这 12 行注释（`strip.mjs`），与仓库里已有的 `react-color` 补丁同一种做法。
@@ -299,7 +299,7 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 ### 3.8 死代码（T3、T4、T5）
 
 - **应用栏**（T3）：删掉 `core/lib/app-rail/`（4 个文件）、`navigation/app-rail-hoc.tsx`、`app-rail-root.tsx`、`items-root.tsx`、`hooks/use-workspace-paths.ts`；`use-navigation-preferences.ts` 里的 `useAppRailPreferences` 和它的本地存储键；`@nerve/types` 的 `TAppRailDisplayMode`、`TAppRailPreferences`、`DEFAULT_APP_RAIL_PREFERENCES`。只有应用栏喂的东西一起走：顶部栏读应用栏的显示模式，那只有应用栏能改，所以它的 `px-2` 分支永远走不到；`AppSidebarItem` 删掉只有应用栏传的 `label`、`showLabel` 和没人读的复合静态成员（`Label`、`Icon`、`Link`、`Button`）；propel 的右键菜单删掉只有应用栏用的 `Separator` 和 `Trigger`、`Content` 的 `className`。
-- **包导出**（T4，3.2 结论 2）：每轮由 `t4/round.mjs` 完成：`deadsym.mjs` 列出没人读的导出 → 没有别的读取方、自己文件里也不用的声明删除，自己文件里还用的去掉 `export` → 什么都不再导出的文件连同桶文件里的那一行和包的子路径一起删除 → 这些删除在同一文件里留下的没用的声明和导入删除（按 `lintdiff.sh` 报出的新 `no-unused-vars`）。三轮共 512 个导出：274 个声明删除，283 个去掉 `export`（220 个关键字、63 个说明符），166 个文件删除，其中 propel 的 accordion、avatar、badge、banner、collapsible、combobox、command、dialog、input、skeleton、switch、tabs、toolbar 组件和图标注册表连同只有它提到的图标（111 个文件；应用用的是 `@makeplane/propel` 的图标），ui 的 avatar、collapsible、input、tag、textarea。之后：没有导入方的 16 个包入口（`subpaths.mjs`：propel 的 `animated-counter`、`spinners`，两个样式路径的别名，一个指向不存在目录的 tsdown 入口等）；propel 的 `cmdk` 依赖；`tlds.ts`；propel `EmptyState` 的 `asset` 属性（传它的只有被删的 `EmptyState` 包装组件，`assetKey` 每个调用方都传，改为必填，选择二者的分支删除）；只被删掉的代码提到的 22 个键（用户角色、优先级筛选、两个迭代图标标签和 6 个只在 `tlds.ts` 里出现的顶级域名）。
+- **包导出**（T4，3.2 结论 2）：每轮由 `t4/round.mjs` 完成：`deadsym.mjs` 列出没人读的导出 → 没有别的读取方、自己文件里也不用的声明删除，自己文件里还用的去掉 `export` → 什么都不再导出的文件连同桶文件里的那一行和包的子路径一起删除 → 这些删除在同一文件里留下的没用的声明和导入删除（按 `lintdiff.sh` 报出的新 `no-unused-vars`）。三轮共 512 个导出（没有别的文件读取的导出名，每个在声明它的文件里计一次）：274 个连同声明删除（263 个导出的声明；11 个 `export { … }` 里的名字，说明符去掉之后文件里没有别处用它，声明也删掉），238 个当时在自己的文件里还有人用，只去掉导出（220 个 `export` 关键字、18 个 `export { … }` 里的说明符；其中 64 个所在的文件随后什么都不再导出，整个删除）；另外去掉桶文件里按名字转出它们的 34 个说明符。`round.mjs` 每轮打印的 `delete`、`unexport` 数的是 `unexport.mjs` 的操作行，不是导出：三轮合计 274 行 `delete`（上面删掉的声明）和 283 行 `unexport`（220 个关键字、29 个声明所在文件里的说明符、34 个桶文件里的说明符）；那 11 个名字各占一行 `unexport` 和一行 `delete`，所以 274 + 283 − 11 − 34 = 512。166 个文件删除，其中 propel 的 accordion、avatar、badge、banner、collapsible、combobox、command、dialog、input、skeleton、switch、tabs、toolbar 组件和图标注册表连同只有它提到的图标（111 个文件；应用用的是 `@makeplane/propel` 的图标），ui 的 avatar、collapsible、input、tag、textarea。之后：没有导入方的 16 个包入口（`subpaths.mjs`：propel 的 `animated-counter`、`spinners`，两个样式路径的别名，一个指向不存在目录的 tsdown 入口等）；propel 的 `cmdk` 依赖；`tlds.ts`；propel `EmptyState` 的 `asset` 属性（传它的只有被删的 `EmptyState` 包装组件，`assetKey` 每个调用方都传，改为必填，选择二者的分支删除）；只被删掉的代码提到的 22 个键（用户角色、优先级筛选、两个迭代图标标签和 6 个只在 `tlds.ts` 里出现的顶级域名）。
 - **点名的死代码**（T5，B4–B6）和复合组件没人读的部分：propel `ContextMenu.Submenu`、`SubmenuTrigger`；propel `Menu.SubMenu` 和只为它存在的子菜单上下文；ui `CustomMenu` 的 `Portal`、`SubMenuTrigger`、`SubMenuContent` 这三个静态成员（`CustomMenu.SubMenu` 保留；`Portal` 组件本身也保留，`CustomMenu` 的子菜单在用）。
 
 ### 3.9 退化结构和小项（T6）
@@ -502,13 +502,15 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 
 ## 8. 移交事项
 
-### 8.1 交给后续 M（T13 写进对应 M 的 `handoffs/M1-closeout.md`；M5 的两条由 T15 写进）
+### 8.1 交给后续 M（T13 写进对应 M 的 `handoffs/M1-closeout.md`；M5 的两条由 T15 写进，M4 的后两条由修复轮写进）
 
 | M | 事项 | 关闭条件 |
 |---|---|---|
 | M2–M7 | 本 M 领域里的死成员和死 prop（第 4 节第 4 条的数目）；oxlint 的清理（3.3 的计划） | 本 M 合并时 `domains.mjs … --rows M<n>` 列出的每一行都已消失或写进本 M 的 review；review 写明改到的文件的警告数为 0、清掉的规则和上限的变化 |
 | M4 | 另有 `viewId as TProfileViews` | `git grep -n "as TProfileViews" -- web` 没有输出 |
-| M5 | 另有新建项目时的封面值：前端先把构建里预设封面的地址（`/assets/image_<n>-<hash>.webp`，每次构建都变）写进 `cover_image_url`，再上传副本、用副本的地址覆盖；上传失败时项目保存的是下次构建就失效的地址。这是 Plane 原有的行为，T14 的浏览器核对记下了它（3.15） | 本 M 的封面接口只保存上传后的资源（或预设的编号），不保存构建路径；新建项目只写一次封面值 |
+| M4 | 另有工作项弹窗的描述不读编辑器的 `isMigrationUpdate`（`issue-modal/components/description-editor.tsx`；`description-input/root.tsx` 读它），旧描述补块 ID 时表单被标为已改（修复轮写进交接） | `git grep -n isMigrationUpdate -- web/apps/web/core/components/issues/issue-modal` 有输出，测试或浏览器核对写明不改动时表单没有被标为已改 |
+| M4 | 另有标注块的 tiptap-markdown 序列化把 `data-emoji-url` 等属性不转义地拼进 HTML（`callout/extension-config.ts`）；`getMarkdown()` 没有调用方、`transformCopiedText` 为 `false`，各扩展的节点序列化看起来都是死代码，删还是转义由 M4 决定（修复轮写进交接） | `git grep -n "markdown: {" -- web/packages/editor/src` 没有输出，或者测试证明写出的属性经过转义 |
+| M5 | 另有新建项目时的封面值：`projects/create/root.tsx` 的 `onSubmit` 先上传预设封面的副本，再创建项目（`POST …/projects/` 的 `cover_image_url` 仍是构建里预设封面的地址 `/assets/image_<n>-<hash>.webp`，每次构建都变），然后登记副本（`POST …/bulk/`）、用副本的地址覆盖（`PATCH …/projects/<id>/`）。上传失败时不创建项目；项目建好之后的两步有一步失败，项目保存的就是下次构建就失效的地址。这是 Plane 原有的行为，T14 的浏览器核对记下了这几个请求的顺序（3.15） | 本 M 的封面接口只保存上传后的资源（或预设的编号），不保存构建路径；新建项目只写一次封面值 |
 | M5 | 另有附件图标里的第三方标志：`app/assets/attachment/` 的 `figma-icon.png`、`pdf-icon.png`、`csv-icon.png`、`excel-icon.png`（2.4 D4，第 9 节第 6 条） | `app/assets/attachment/` 里没有第三方的标志 |
 | M8 | 本 M 领域（Webhook）的 6 个死成员；共享部分的 286 个；oxlint 在发布前清零、警告改为错误、删除上限；13 个 `package.json` 的 `"license": "AGPL-3.0"` 改为 `AGPL-3.0-only` | 发布之前 `--rows shared` 为空或写进 review；oxlint 没有警告；`git grep -n '"license": "AGPL-3.0"' -- '*package.json'` 没有输出 |
 

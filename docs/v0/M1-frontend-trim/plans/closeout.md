@@ -297,6 +297,7 @@ round 3:  62 dead exports, 0 re-export specifiers
 round 4:  0 dead exports, 0 re-export specifiers
           round 4: no dead exports
 ```
+各数的单位：`dead exports` 是没有别的文件读取的导出名（三轮共 424 + 26 + 62 = 512 个），`re-export specifiers` 是桶文件里按名字转出它们的说明符（34 个）；`delete`、`unexport` 是 `unexport.mjs` 的操作行，不是导出：`delete` 合计 274 行，每行删掉一个声明，`unexport` 合计 283 行，是 220 个 `export` 关键字和 63 个说明符（29 个在声明所在的文件里，34 个在桶文件里）；11 个 `export { … }` 里的名字先去掉说明符，文件里没有别处用它，声明随之删除，各占一行 `unexport` 和一行 `delete`。所以 512 = 274 + 283 − 11 − 34：274 个导出连同声明删除，238 个只去掉导出（220 个关键字、18 个说明符）。`empty` 是什么都不再导出、随后整个删除的文件（spec 3.8）。
 读 diff 的抽样（评审包会按类别看）：删掉的声明在 `web/` 里没有别的读取方；去掉 `export` 的声明在自己文件里还在用；删掉的文件连同桶文件的那一行和包的子路径。
 
 - [ ] **Step 2: 包入口、`tlds.ts`、`asset` 属性**

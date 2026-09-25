@@ -5,7 +5,7 @@ to: M4
 created: 2026-09-25
 ---
 
-# M1 收尾留下的清理：死成员和死 prop、oxlint、一处类型断言
+# M1 收尾留下的清理：死成员和死 prop、oxlint、一处类型断言、弹窗描述的 ID 迁移、标注块的 Markdown 序列化
 
 M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 spec](../../M1-frontend-trim/specs/closeout.md)）。下面几项留给后续各 M，做法都是"谁改谁清"：本 M 重写或修改到的代码，在本 M 结束时不再带着它们。
 
@@ -27,6 +27,20 @@ M1 没有删它们（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 第
 
 - **关闭条件**：`git grep -n "as TProfileViews" -- web` 没有输出。
 
+## 工作项弹窗把描述的 ID 迁移当作改动
+
+编辑器给没有块 ID 的旧描述补上 ID 时，也会触发 `onChange`，第三个参数带 `isMigrationUpdate: true`（`packages/editor/src/hooks/use-editor.ts`，事务的 `uniqueIdOnlyChange` 标记）。详情页的描述（`web/apps/web/core/components/editor/rich-text/description-input/root.tsx`）读取它，这次保存带 `skip_activity`，不记动态；工作项弹窗的描述（`web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx`）的 `onChange` 不读，照常写回表单的 `description_html` 并调用 `handleFormChange`。所以在弹窗里打开一条描述是旧格式的工作项，什么都不改，表单也被标为已改。M1 收尾的评审发现；工作项弹窗归本 M。
+
+- **关闭条件**：`git grep -n isMigrationUpdate -- web/apps/web/core/components/issues/issue-modal` 有输出，并且本 M 的测试或浏览器核对写明：在弹窗里打开描述没有块 ID 的工作项、不做改动，表单没有被标为已改。
+
+## 标注块的 Markdown 序列化不转义
+
+`web/packages/editor/src/extensions/callout/extension-config.ts` 给 tiptap-markdown 的节点序列化（`addStorage` 的 `markdown.serialize`）把属性原样拼进 HTML：`` `> <img src="${attrs["data-emoji-url"]}" alt="${attrs["data-emoji-unicode"]}" width="30px" />` ``，图标一支同样把 `data-icon-name` 拼进 `<icon>…</icon>`。这些属性来自描述的 HTML 和本地存储：`data-emoji-url` 里的 `"` 会提前结束属性，`data-icon-name` 里的 `<` 会写出新的标签。
+
+它现在不会运行：tiptap-markdown 的 `getMarkdown()` 在应用里没有调用方（编辑器 ref 的 `getMarkDown` 用的是 `@nerve/utils` 的 `convertHTMLToMarkdown`），`Markdown.configure` 的 `transformCopiedText` 是 `false`（复制时不序列化；`transformPastedText` 是粘贴时的解析，不用节点序列化）。所以各扩展的节点序列化（标注块、`custom-color`、`custom-image`、`emoji`、`mentions`）看起来都是死代码。编辑器归本 M，由本 M 决定删掉它们，还是保留并转义。
+
+- **关闭条件**：`git grep -n "markdown: {" -- web/packages/editor/src` 没有输出（删除）；或者保留，并且本 M 的测试证明标注块写出的属性经过转义（`data-emoji-url` 里的 `"` 写出后仍在属性值里）。
+
 ## oxlint 的清理（M1 设计 7.3）
 
 M1 结束时 oxlint 警告共 696 个（web 566、editor 65、ui 25、utils 19、propel 16、hooks 3、constants 1、i18n 1），按包、按规则的表在 [收尾 spec](../../M1-frontend-trim/specs/closeout.md) 3.3 和 [收尾 review](../../M1-frontend-trim/reviews/closeout-review.md)。
@@ -35,4 +49,4 @@ M1 结束时 oxlint 警告共 696 个（web 566、editor 65、ui 25、utils 19�
 - 上限随之调低（`tools/lint-cap.mjs` 要求警告数等于上限）。
 - **关闭条件**：本 M 的 review 写明改到的文件的警告数（为 0）、清掉的规则和各包上限的变化。
 
-来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节。
+来源：[M1 收尾 spec](../../M1-frontend-trim/specs/closeout.md)第 4 节、第 8 节；弹窗描述和标注块两节来自收尾各 Task 的评审。
