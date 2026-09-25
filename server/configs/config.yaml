@@ -28,7 +28,7 @@ database:
 
 auth:
   # 是否开放注册。基础配置（也就是 prod）关闭；config.dev.yaml、config.test.yaml 覆盖为 true。
-  # 关闭时第一个账户用 nerve users create 创建
+  # 关闭时第一个账户用 nerve users create 创建（M2/P3 加入；在那之前临时设 NERVE_AUTH__SIGNUP_ENABLED=true）
   signup_enabled: false
   access_token_ttl: 15m
   # 会话从登录起算的期限（30 天），续期不延长

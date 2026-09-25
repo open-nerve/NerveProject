@@ -172,7 +172,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 |---|---|---|---|
 | 访问令牌 | JWT，头部 `{"alg":"EdDSA","typ":"JWT"}` | 只有 `sub`（用户 id）、`sid`（会话 id）、`exp`，没有任何权限信息（总体设计 4.1） | 不存 |
 | 刷新令牌 | `nrv_rt_` + base64url（不补 `=`）编码的 68 字节：会话 id 16 字节 + 代数 4 字节（大端）+ 随机密文 32 字节 + 标签 16 字节；base64url 部分 91 个字符，整个令牌（`nrv_rt_` 加 91）98 个字符 | 对客户端是不透明的字符串 | 只存当前一代密文的 SHA-256（`auth_sessions.token_hash`，4.5） |
-| PAT | `nrv_pat_` + base64url 编码的 32 字节随机数，共 43 个字符 | — | 只存整个令牌的 SHA-256（`api_tokens.token_hash`） |
+| PAT | `nrv_pat_` + base64url 编码的 32 字节随机数，base64url 部分 43 个字符，整个令牌 `nrv_pat_` + 43 = 51 个字符 | — | 只存整个令牌的 SHA-256（`api_tokens.token_hash`） |
 
 - **JWT 库**：用 `github.com/golang-jwt/jwt/v5` v5.3.1。
   - 它没有任何传递依赖；解析时用 `WithValidMethods([]string{"EdDSA"})`、`WithExpirationRequired()`、`WithStrictDecoding()`。
@@ -510,7 +510,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 候选一还要复制上游 147 行的 strict 模板，升级 oapi-codegen 时模板的漂移 `gen-check` 发现不了；它从 Go 类型的写法推断契约，而 `omitempty` 也会因 `readOnly`、`writeOnly`、`x-omitempty` 出现（`oapi-codegen/v2@v2.8.0/pkg/codegen/schema.go:1427`）。候选二直接读契约里的 `required`、可为空和 `additionalProperties`，遇到不支持的组合就让生成失败。
     - 规模：候选二的运行时校验器约 170 行（加上格式检查约 200 行），生成器约 200 行；候选一约 190 行加 147 行复制的模板。
   - **候选二的组成**：
-    - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），用 `UseNumber` 解码成通用值，按表检查，收集全部问题，按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析两次，上限 1 MiB，代价可以接受。
+    - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），按表检查原始字节（逐层取 `json.RawMessage`，不解码成通用值，格式检查器拿到的就是生成代码解码时看到的字节），收集全部问题，按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析两次，上限 1 MiB，代价可以接受。
     - 格式检查器按**生成的 Go 类型**登记：`time.Time`、标准库的 `uuid.UUID` 各一个，都是上面那一行 `json.Unmarshal`。`bodyshape` 只依赖标准库。
       - 上一稿还为 `format: date` 登记了 `openapi_types.Date`，让 `bodyshape` 依赖 `oapi-codegen/runtime/types`，而那个包导入 `github.com/google/uuid`（核验 F1，3.12）。M2 没有 `date` 字段，这个检查器删去；生成器遇到 `date` 就失败（见下）。以后第一个用到 `date` 的 M 选定它的 Go 类型，带着测试登记检查器。
     - `server/tools/bodyshapegen`：生成器，放在工具模块（`server/tools/go.mod`），与 oapi-codegen 同一个模块。它用 oapi-codegen 自己的加载器读 `api/modules/<m>.yaml`（跨文件的 `$ref` 一并解析，与生成 `server.gen.go` 时读到的是同一份），为每个带 JSON 请求体的操作生成根节点，写出 `internal/modules/<m>/adapter/http/gen/bodyshape.gen.go`。它不在 `server/go.mod` 里，更不链接进 nerve；工具模块已有 oapi-codegen v2.8.0 和它用的 kin-openapi，不新增依赖。
@@ -1606,7 +1606,7 @@ files:
   - 续期的查找和条件轮换（时刻作为参数传入；轮换后 `generation` 加一、`token_hash` 换成新值；代数或哈希不符时不命中）；
   - 游标分页（`created_at` 相同的两行不重不漏）；
   - 违反约束：只有 `users_email_key` 的唯一冲突映射为领域错误 `identity.email_taken`；其余约束违反，包括每一个 CHECK，都是缺陷（领域已先校验过），按 3.11 成为 500 `internal_error`。identity 的 postgres 适配器的 `TestCreateUserBreakingACheckIsInternal` 核对 CHECK 触发时仓储返回原样的数据库错误，不是领域错误，所以答 500；
-  - CHECK 的反例：邮箱的大写和空白、`onboarding_step` 的七种反例（4.3）、`start_of_the_week = 7`、`revoked_at` 与 `revoke_reason` 不一致；
+  - CHECK 的反例：邮箱的大写和空白、`onboarding_step` 的八种反例（4.3）、`start_of_the_week = 7`、`revoked_at` 与 `revoke_reason` 不一致；
   - 审计列：插入和业务更新之后，`created_at`、`updated_at` 等于固定时钟的时刻（3.13）；
   - 重置密码在一个事务里撤销会话和 PAT；
   - 两个请求同时合并 `onboarding_step` 的不同键，两个键都保留（3.14）；

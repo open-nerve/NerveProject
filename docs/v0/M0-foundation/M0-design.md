@@ -140,7 +140,7 @@ NerveProject/
 | `cmd/nerve` | 解析命令行参数，调用 `bootstrap` | `bootstrap`、`platform/config`、`platform/buildinfo`、`server/configs`（内嵌的配置数据） |
 | `internal/bootstrap` | **唯一的组合根**：创建各个适配器，接到各模块上，调用各模块的 `Register` 把生成的路由挂到根路由上，启动服务 | 所有 `platform` 包和 `modules` 包 |
 | `internal/platform/*` | 与业务无关的技术基础件，各包之间互不依赖（`config` 除外，它可以被任何包使用） | 标准库和第三方库；**不能依赖 `modules`、`bootstrap` 和 `internal/shared`**（M2/P1：平台声明自己需要的小接口，`shared` 的类型按结构满足） |
-| `internal/modules/<m>/domain` | 领域模型与规则 | 只能依赖标准库（以后可以依赖 `shared`） |
+| `internal/modules/<m>/domain` | 领域模型与规则 | 只能依赖标准库和 `internal/shared`（从 M2/P1 起 `identity/domain` 依赖 `shared`） |
 | `internal/modules/<m>/app` | 用例；声明本模块需要的端口 | 只能依赖本模块的 `domain` 和 `internal/shared`；不能依赖 `platform` 或第三方技术库。archtest 检查这条规则 |
 | `internal/modules/<m>/adapter/*` | 端口的实现（http、postgres 等）；http 适配器的包名为 `httpadapter`，避免遮住标准库 `net/http` | 本模块的 `app` 和 `domain`、`platform`、生成的代码 |
 | `internal/modules/<m>` 下的 `module.go` | 模块的对外入口：`New(依赖)`；`(*Module).Register(router, api)` 把模块生成的路由挂到根路由上，`api`（`httpserver.API`）提供错误映射和按路由的中间件；`PublicOperations()` 列出不需要令牌的操作（M2/P1） | 本模块内部的各个包 |

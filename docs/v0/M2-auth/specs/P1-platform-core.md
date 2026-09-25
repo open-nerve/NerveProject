@@ -205,7 +205,7 @@ type RequestMeta struct{ ClientIP netip.Addr; UserAgent string }
 func RequestMetaFrom(ctx context.Context) RequestMeta
 ```
 
-- `Middlewares` 按"请求元信息 → 期限 → 请求体上限 → 认证 → 请求体结构"的顺序排好，再**反转**返回（生成代码把列表最后一个包在最外层）。顺序由 `api_test.go` 的三个测试从外部核对（`TestMetaAndDeadlineRunBeforeAuthentication`、`TestAuthenticationRunsBeforeTheBodyCheck`、`TestBodyLimitRunsBeforeTheBodyCheck`）；去掉反转，这三个和 `TestBodyCheckAnswersEveryProblemAs400` 共四个测试失败（原型的变异核对）。
+- `Middlewares` 按"请求元信息 → 期限 → 请求体上限 → 认证 → 请求体结构"的顺序排好，再**反转**返回（生成代码把列表最后一个包在最外层）。顺序由 `api_test.go` 的三个测试从外部核对（`TestMetaAndDeadlineRunBeforeAuthentication`、`TestAuthenticationRunsBeforeTheBodyCheck`、`TestBodyLimitRunsBeforeTheBodyCheck`）；去掉反转，这三个和 `TestRequestMetaClientIP`（请求元信息落到认证之后，认证器拿到的 `context` 里还没有它）共四个测试失败（变异核对）；`TestBodyCheckAnswersEveryProblemAs400` 仍然通过，因为结构检查到了最外层，在认证之前答出同样的 400。
 - 请求元信息：`ClientIP` 取连接的对端地址，去掉端口和 zone，IPv4 映射的 IPv6 地址转为 IPv4；解析不了时是零值。可信代理在 P2 加入。
 - 认证：`r.Pattern` 在公开集合中就放行，不看 `Authorization`；否则要求 `Authorization: Bearer <token>`（方案名不区分大小写，令牌不能有空白）。没有令牌 → 401 `WWW-Authenticate: Bearer`、`detail` "This operation requires a bearer token."；认证器返回 `ProblemStatus()` 为 401 的错误 → 401 `WWW-Authenticate: Bearer error="invalid_token"`、"The bearer token is invalid or has expired."；失败原因只进 DEBUG 日志（"authentication failed"，带 `request_id`、`route`、`error`）；认证器的其他错误走 `Write`。认证器返回的第二个值（限流键）P1 不用，P2 的限流用它。
 
