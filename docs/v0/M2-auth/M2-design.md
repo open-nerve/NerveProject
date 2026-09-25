@@ -7,7 +7,7 @@
 | 状态 | 第三稿。第 10 节的四个决策点都已由负责人裁定（2026-09-25：1 选 B，2 选 C，3 选 A，4 选 A）；第 11.1 节已由负责人批准 |
 | 上级文档 | [v0 总体设计](../v0-design.md) 1.1、3、4、5、6、7、8、9 节；[差异清单](../plane-diff.md)；[前端改动清单](../frontend-changes.md) |
 | 前置交接 | `handoffs/` 中的 10 份：M0-P1、M0-P2、M0-P3、M0-P4、M0-P5、M0-P6、M1-P2、M1-P3、M1-P4、M1-closeout。逐条落到 Phase，见第 13 节 |
-| 设计评审 | 第一稿（`f6ea660`）经独立评审（opus），结论 Ready with fixes，第二稿（`498735d`）逐条落实。第二稿经 Codex 对抗性评审（[`reviews/M2-design-codex-adversarial-review.md`](reviews/M2-design-codex-adversarial-review.md)：Critical 0、Important 12、Minor 9）和控制者的复核（N1–N4、m1–m7）。第三稿按控制者的裁定修订，逐条落点见第 17 节 |
+| 设计评审 | 第一稿（`f6ea660`）经独立评审（opus），结论 Ready with fixes，第二稿（`498735d`）逐条落实。第二稿经 Codex 对抗性评审（[`reviews/M2-design-codex-adversarial-review.md`](reviews/M2-design-codex-adversarial-review.md)：Critical 0、Important 12、Minor 9）和控制者的复核（N1–N4、m1–m7）。第三稿按控制者的裁定修订，又经控制者复核（R1–R8 和几处细节）后补改，逐条落点见第 17 节 |
 
 ---
 
@@ -16,11 +16,11 @@
 ### 0.1 目标
 M2 是第一个做真实业务的里程碑，也是前端第一次对接新接口。M2 结束时：
 1. 任何调用方都能通过接口注册、登录、续期、退出、修改密码、停用自己的账户，管理自己的资料、偏好和个人访问令牌（PAT）。用 PAT 能做的事和页面一样多。
-2. 后端第一次有业务表（5 张）、第一批 sqlc 查询、第一个 River 定时任务（清理过期会话）。以下平台约定一次定下，后续 M 照做：
+2. 后端第一次有业务表（4 张）、第一批 sqlc 查询、第一个 River 定时任务（清理过期会话）。以下平台约定一次定下，后续 M 照做：
    - 认证：默认拒绝，只放行声明为公开的操作；认证之前按 IP 的失败闸门；当前账户（Actor）的传递；
    - 限流：每个桶都有速率和突发；
    - 错误码：在接口描述中逐个操作声明；**结构在接口边界，取值在领域**：请求体的未知字段、不合法的 `null`、缺少的必填字段在进入 handler 之前按契约拒绝（400），长度、格式、取值范围由领域层校验（422）；
-   - 事务，以及凭证签发和变更时的账户行锁；
+   - 事务：提交不受请求期限的取消；凭证签发和变更时的账户行锁；
    - 表结构约定：审计时间列由用例的时钟写入；迁移归被改表的模块所有；sqlc 的模块边界；
    - 分页游标的封套；
    - oapi-codegen 的生成选项和请求体结构表的生成。
@@ -41,7 +41,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 | 端到端：认证 fixture、PAT 对等验收、数据库断言的写法 | 可注入的时钟（M4，M0-P6 交接） |
 
 ### 0.3 关于文中的 spike
-文中的"spike"是写设计时在仓库之外做的验证（放在临时目录，不进仓库）。结论、实测的数字和关键的行号都已写在正文中，读者不需要那些文件。其中"spike `server.gen.go:…`"指用仓库锁定的 oapi-codegen v2.8.0 为一份试验用的接口描述生成的代码；P1 实现时以仓库中生成的代码为准，行号会不同，顺序不变。第三稿新做的 spike：请求体结构校验的两种做法（3.11）、`shared.Error` 与平台接口的草图能编译（3.11）、表结构的 CHECK 和 sqlc（4.2、4.3、3.14）、常见密码名单的重新测量（3.8）。
+文中的"spike"是写设计时在仓库之外做的验证（放在临时目录，不进仓库）。结论、实测的数字和关键的行号都已写在正文中，读者不需要那些文件。其中"spike `server.gen.go:…`"指用仓库锁定的 oapi-codegen v2.8.0 为一份试验用的接口描述生成的代码；P1 实现时以仓库中生成的代码为准，行号会不同，顺序不变。第三稿新做的 spike：请求体结构校验的两种做法（3.11）、`shared.Error` 与平台接口的草图能编译（3.11）、表结构的 CHECK 和 sqlc（4.2、4.3、3.14）、常见密码名单的重新测量（3.8）、刷新令牌的 MAC 标签（3.4）、失败闸门在并发下的计数（3.6、3.10）、`golang.org/x/time/rate` 的 `CancelAt` 能否事后退回（3.10）、账户行锁的锁模式（3.5）。
 
 ---
 
@@ -64,7 +64,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 | 死成员和死 prop | `deadsym.mjs` → `prop 452, member 898, export 2`；`domains.mjs --rows M2` → 66 行（成员 59、prop 7），与 M1-closeout 交接一致 |
 | oxlint | 共 694 条警告；按 `domains.mjs` 的划分，M2 领域 32 条，分布在 19 个文件 |
 | Plane 的表 | `users` 40 列，`profiles` 29 列，`api_tokens` 17 列，`sessions` 5 列；`instances`、`instance_admins`、`instance_configurations` 已按差异清单一 B 不保留（`tools/plane-schema/plane-v1.4.2-schema.sql`）。快照中没有任何列默认值，CHECK 只有 Django 正整数字段生成的 `>= 0` |
-| 新手引导挂载时的请求 | `/onboarding` 一打开就预取工作区列表和收到的邀请（`web/apps/web/app/(all)/onboarding/page.tsx:32-45`），两者都是 M3 的旧接口；工作区的取数在 SWR 的 fetcher 中没有 `return`/`await`（`web/apps/web/core/store/workspace/index.ts:146-158`），失败会成为未处理的 Promise 拒绝 |
+| 新手引导挂载时的请求 | `/onboarding` 一打开就预取工作区列表和收到的邀请（`web/apps/web/app/(all)/onboarding/page.tsx:32-45`），两者都是 M3 的旧接口；工作区的取数在 SWR 的 fetcher 中没有 `return`/`await`（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`；被调用的 `fetchWorkspaces` 在 `web/apps/web/core/store/workspace/index.ts:146-158`），失败会成为未处理的 Promise 拒绝 |
 
 ---
 
@@ -79,12 +79,12 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 
 | 编号 | 故事 | 页面 | 数据库 | 接口版本 |
 |---|---|---|---|---|
-| A1 | 新用户注册 | 在 `/sign-up` 填邮箱、密码、确认密码，进入 `/onboarding` 的资料步骤。浏览器里没有任何 Cookie；localStorage 的 `nerve.auth` 是 `{refresh_token, login_id}` | `users` 新增一行：邮箱已转小写；`password` 以 `$argon2id$` 开头；`display_name` 是邮箱 @ 之前的部分；`is_active`。`profiles` 新增一行，各列是默认值。`auth_sessions` 新增一行：`generation = 0`，记下 UA 和 IP，`expires_at` 约为 30 天后，未撤销。`auth_refresh_tokens` 新增一行：`(会话 id, 0)`，`token_hash` 等于令牌中密文部分的 SHA-256 | `POST /api/v0/auth/register`，同一组断言 |
+| A1 | 新用户注册 | 在 `/sign-up` 填邮箱、密码、确认密码，进入 `/onboarding` 的资料步骤。浏览器里没有任何 Cookie；localStorage 的 `nerve.auth` 是 `{refresh_token, login_id}` | `users` 新增一行：邮箱已转小写；`password` 以 `$argon2id$` 开头；`display_name` 是邮箱 @ 之前的部分；`is_active`。`profiles` 新增一行，各列是默认值。`auth_sessions` 新增一行：`generation = 0`，`token_hash` 等于令牌中密文部分的 SHA-256，记下 UA 和 IP，`expires_at` 约为 30 天后，未撤销 | `POST /api/v0/auth/register`，同一组断言 |
 | A2 | 注册被拒绝 | 邮箱已存在：错误就地显示在表单上方，不跳转，邮箱仍在输入框里。密码不合规：字段下方显示规则。密码太常见（例如 `Password1!`、`Password1!~`）：字段下方显示"密码太常见"。关闭注册的独立 nerve（用覆盖项 `NERVE_AUTH__SIGNUP_ENABLED=false`）：页头没有"注册"链接；直接打开 `/sign-up` 提交，显示"注册已关闭"，已存在的邮箱也是这一句 | 四种情况都没有新增账户、资料和会话 | 409 `identity.email_taken`；422 `validation_failed`（`errors[].field = password`，`code` 分别是 `weak_password`、`common_password`）；403 `identity.signup_disabled`，关闭时已存在的邮箱同样是 403。"prod 在没有任何覆盖时默认关闭"由 `platform/config` 的加载测试证明（决策点 2），端到端只证明覆盖项和界面 |
 | A3 | 登录与 `next_path` | 未登录打开 `/settings/profile/general?tab=x#y`，跳到登录页，地址带编码后的 `next_path`。登录后回到原地址，查询参数和片段都在。`next_path` 为 `//evil.example`、`/\evil`、`javascript:…`、带控制字符时，登录后落到默认页。错误密码和不存在的邮箱：页面显示同一句提示 | 成功时新增一行会话和一行 `generation = 0` 的刷新令牌；失败时没有 | `POST /api/v0/auth/login`；两种失败都是 401 `identity.invalid_credentials`；缺少 `password` 字段是 400 `bad_request`（`errors[{field: password, code: required}]`） |
-| A4 | 续期与多标签页 | 访问令牌有效期 3 秒的独立 nerve。同一个浏览器上下文开两个标签页，过期后同时操作：两边都成功，没有跳到登录页；两次续期请求在时间上不重叠。同一个测试再跑一遍，用 `addInitScript` 删掉 `navigator.locks`，走 localStorage 租约（7.1） | 会话未被撤销；`generation` 等于续期次数；`auth_refresh_tokens` 有 `generation + 1` 行；`last_refreshed_at` 已更新；`expires_at` 不变（绝对期限，3.5） | 每次用**上一次返回的**刷新令牌续期：每次返回新的一对令牌，`generation` 递增，`refresh_token_expires_at` 不变。旧令牌的重复使用只在 A5 测 |
-| A5 | 刷新令牌被重复使用 | 测试从 localStorage 取出刷新令牌，先在接口上用它续期一次（模拟被盗）。页面下一次续期时，会话被作废，跳到登录页，`next_path` 是当前地址 | `revoked_at` 已填，`revoke_reason = 'reuse_detected'` | 纯接口复现：真实的旧令牌再用一次得到 401 `identity.refresh_token_invalid`，会话被撤销；之后这个会话的访问令牌和最新的刷新令牌也都是 401。伪造的旧代（会话 id 和代数是真的，密文是随机的）：401，会话不变 |
-| A6 | 退出与切换账户 | 用户菜单点"退出"，回到登录页，localStorage 里没有 `nerve.auth`。同一上下文的另一个标签页也回到登录页（`storage` 事件）。**切换账户**：标签页甲以账户 X 登录，标签页乙退出后以账户 Y 登录；标签页甲收到 `storage` 事件，丢掉内存中的访问令牌和 stores，重新取 `/me`，显示 Y；它此后发出的写请求都是 Y 的，页面不会仍显示 X | `revoke_reason = 'logout'`；这个会话的访问令牌在下一个请求就得到 401 | `POST /api/v0/auth/logout`，同一组断言。用上一代刷新令牌退出：204，会话不变（3.5） |
+| A4 | 续期与多标签页 | 访问令牌有效期 3 秒的独立 nerve。同一个浏览器上下文开两个标签页，过期后同时操作：两边都成功，没有跳到登录页；两次续期请求在时间上不重叠。同一个测试再跑一遍，用 `addInitScript` 删掉 `navigator.locks`，走 localStorage 租约（7.1） | 会话未被撤销；`generation` 等于续期次数；`token_hash` 等于最新令牌的密文的哈希；`last_refreshed_at` 已更新；`expires_at` 不变（绝对期限，3.5） | 每次用**上一次返回的**刷新令牌续期：每次返回新的一对令牌，`generation` 递增，`refresh_token_expires_at` 不变。旧令牌的重复使用只在 A5 测 |
+| A5 | 刷新令牌被重复使用 | 测试从 localStorage 取出刷新令牌，先在接口上用它续期一次（模拟被盗）。页面下一次续期时，会话被作废，跳到登录页，`next_path` 是当前地址 | `revoked_at` 已填，`revoke_reason = 'reuse_detected'` | 纯接口复现：真实的旧令牌再用一次得到 401 `identity.refresh_token_invalid`，会话被撤销；之后这个会话的访问令牌和最新的刷新令牌也都是 401。伪造的旧代（会话 id 和代数是真的，密文和标签是随机的）：401，会话不变 |
+| A6 | 退出与切换账户 | 用户菜单点"退出"，回到登录页，localStorage 里没有 `nerve.auth`。同一上下文的另一个标签页也回到登录页（`storage` 事件）。**切换账户**（两种走法各一次）：① 标签页甲以账户 X 登录并保持登录；测试在标签页乙中通过接口登录 Y，按令牌管理器的写入路径换上 Y 的记录（新的 `login_id`），中间不退出。标签页甲收到 `storage` 事件，丢掉内存中的访问令牌和 stores，重新取 `/me`，显示 Y；它此后发出的写请求都是 Y 的，页面不会仍显示 X。② 标签页乙先退出（甲随之回到登录页），再以 Y 登录：甲收到"记录出现"的事件，取 `/me`，以 Y 进入 | `revoke_reason = 'logout'`；这个会话的访问令牌在下一个请求就得到 401 | `POST /api/v0/auth/logout`，同一组断言。用上一代刷新令牌退出：204，会话不变（3.5） |
 | A7 | 修改密码 | 在安全页输入当前密码和新密码，成功提示，页面保持登录。当前密码错误：字段错误，数据库不变。安全页列出账户的 PAT，并说明修改密码不会撤销它们 | 共用断言 `assertPasswordChanged(user, {survivingSession})`：`users.password` 已改变；除 `survivingSession` 外的会话 `revoke_reason = 'password_changed'`；`api_tokens` 不变；旧密码登录 401，新密码 200。页面版本传入当前会话 | PAT 调用 `POST /api/v0/me/change-password`，同一个断言，`survivingSession` 为空：PAT 没有"当前会话"，全部会话都被撤销；PAT 本身继续可用。这是有理由的差异：页面保留正在操作的那一处登录 |
 | A8 | 修改资料 | 在 general 页改名、姓和显示名，在偏好页改时区；刷新页面后仍是新值 | `users` 对应列；`updated_at` 已更新 | PAT 调用 `PATCH /api/v0/me`；`{"first_name": null}` 是 400 `bad_request`（`code: invalid_format`），数据库不变 |
 | A9 | 修改偏好 | 主题、语言、每周第一天；刷新页面后仍生效；主题下拉框在按钮旁展开（中英文各一次，9.6） | `profiles` 对应列 | PAT 调用 `PATCH /api/v0/me/profile` |
@@ -92,7 +92,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 | A11 | PAT 的创建、使用和撤销 | 创建（名称、说明、有效期 1 周），令牌只显示一次；列表中出现，但没有令牌原文；撤销后从列表消失 | `token_hash` 等于令牌的 SHA-256，表中任何一列都不含令牌原文；`expired_at` 约为 7 天后。用这个 PAT 调用 `GET /api/v0/me` 成功，`last_used` 被写入。撤销后 `deleted_at` 已填，再用它得到 401。把另一个 PAT 的 `expired_at` 改到过去，也得到 401 | 用另一个 PAT 创建、列出（翻页）、撤销（`DELETE /api/v0/api-tokens/{token_id}`） |
 | A12 | 停用账户（决策点 3，已裁定为 A） | 在 general 页点"停用账户"，确认弹窗，回到登录页。再用原密码登录：页面显示"账户已停用" | `users.is_active = false`，`password` 不变；全部会话 `revoke_reason = 'deactivated'`；`profiles` 的 `onboarding_step` 四个键都是 `false`，`is_onboarded`、`is_tour_completed` 为 `false`，`last_workspace_id` 为空；`api_tokens` 不变（`deleted_at` 为空） | PAT 调用 `POST /api/v0/me/deactivate`：204，同一组断言；同一个 PAT 再调用 `GET /me` 得到 401；原密码登录 403 `identity.account_deactivated`。然后 `nerve users activate --email …`：输出里有重新可用的 PAT 数；这个 PAT 调用 `GET /me` 200，原密码登录 200。`nerve users deactivate --email …` 得到与自助停用相同的数据库结果 |
 | A13 | 管理员重置密码 | — | `nerve users reset-password --email …` 从标准输入读新密码：`users.password` 改变；全部会话 `revoke_reason = 'password_reset'`；全部 PAT 的 `deleted_at` 已填；输出一行，带撤销的会话数和 PAT 数 | 用接口核对：新密码能登录；旧会话的刷新令牌和旧 PAT 都得到 401 |
-| A14 | 过期会话被清理 | — | 把一行会话的 `expires_at` 改到过去，限时轮询，直到这一行和它的 `auth_refresh_tokens` 都被删除；未过期的会话仍在 | — |
+| A14 | 过期会话被清理 | — | 把一行会话的 `expires_at` 改到过去，限时轮询，直到这一行被删除；未过期的会话仍在 | — |
 | A15 | 登录限流 | 限流很低的独立 nerve：同一 IP + 邮箱失败到上限后，页面显示"尝试次数过多"；换一个邮箱仍能尝试，直到同一 IP 的总次数到达按 IP 的上限 | 没有新增会话 | 两个桶各触发一次：429 `rate_limited`，带 `Retry-After`。被 `login_ip_email` 拒绝的请求不消耗 `login_ip`（3.10） |
 | A16 | 管理员修改登录邮箱（决策点 1，已裁定为 B） | — | `nerve users set-email --email <旧> --new-email <新，含大写>`：`users.email` 变为规范化后的新邮箱；该账户全部会话 `revoke_reason = 'email_changed'`；PAT 不变；输出一行，带撤销的会话数。新邮箱已被别的账户使用：退出码 1，输出说明，数据库不变 | 用接口核对：旧邮箱登录 401，新邮箱登录 200；旧会话的刷新令牌 401；PAT 调用 `GET /api/v0/me` 返回新邮箱 |
 | A17 | 管理员创建账户（决策点 2，已裁定为 C） | — | `nerve users create --email <邮箱，含大写>` 从标准输入读密码：`users` 新增一行，邮箱已规范化；`profiles` 新增一行；没有会话；输出一行。邮箱已被使用、密码不合规：退出码 1，输出说明，数据库不变 | 用接口核对：新账户能登录 |
@@ -171,46 +171,57 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 | 令牌 | 形式 | 内容 | 服务端存什么 |
 |---|---|---|---|
 | 访问令牌 | JWT，头部 `{"alg":"EdDSA","typ":"JWT"}` | 只有 `sub`（用户 id）、`sid`（会话 id）、`exp`，没有任何权限信息（总体设计 4.1） | 不存 |
-| 刷新令牌 | `nrv_rt_` + base64url（不补 `=`）编码的 52 字节：会话 id 16 字节 + 代数 4 字节（大端）+ 随机密文 32 字节，共 70 个字符 | 对客户端是不透明的字符串 | 每一代一行：密文部分的 SHA-256（`auth_refresh_tokens.token_hash`，4.5） |
+| 刷新令牌 | `nrv_rt_` + base64url（不补 `=`）编码的 68 字节：会话 id 16 字节 + 代数 4 字节（大端）+ 随机密文 32 字节 + 标签 16 字节，共 91 个字符 | 对客户端是不透明的字符串 | 只存当前一代密文的 SHA-256（`auth_sessions.token_hash`，4.5） |
 | PAT | `nrv_pat_` + base64url 编码的 32 字节随机数，共 43 个字符 | — | 只存整个令牌的 SHA-256（`api_tokens.token_hash`） |
 
 - **JWT 库**：用 `github.com/golang-jwt/jwt/v5` v5.3.1。
   - 它没有任何传递依赖；解析时用 `WithValidMethods([]string{"EdDSA"})`、`WithExpirationRequired()`、`WithStrictDecoding()`。
   - 自己手写约 100 行也行（还能用 RFC 9864 的 `Ed25519` 算法名），但要自己写、自己测严格的 base64url 解码、算法固定和声明校验。v0 只有 nerve 自己验签，算法名是 `EdDSA` 还是 `Ed25519` 没有外部影响。
+- **刷新令牌的标签**（Codex I-2 的选项②，3.5）：
+  - `标签 = HMAC-SHA256(K, 会话 id ‖ 代数 ‖ 密文)` 的前 16 字节。
+  - `K = HKDF-SHA256(签名私钥的种子, info = "nerve refresh-token mac v1")`，32 字节：从 3.7 的 Ed25519 密钥派生，不新增配置项和密钥文件；`info` 把它和签名的用途分开。
+  - 标签让服务端不存历史也能认出"这个会话真的发过的某一代"。它由持有密钥材料的适配器计算（`identity/adapter/signing`，6.2），`identity/app` 声明一个小端口；`domain` 只管 68 字节的布局。比较用 `hmac.Equal`（常数时间）。
+  - spike（Go 标准库的 `crypto/hkdf`、`crypto/hmac`）：令牌 91 个字符，符合 8.6 的正则；改动 68 字节中的任何一个，标签都不再成立；随机的标签不成立；换一把签名密钥后，旧令牌的标签不成立；派生出的 K 与种子不同。
 - **随机数**：用 `crypto/rand`，不做成端口。Go 1.24 起它不会返回错误；测试只核对格式和唯一性，不需要控制具体的值。
 - **有效期**：访问令牌 15 分钟（`auth.access_token_ttl`）；会话从登录起 30 天（`auth.session_ttl`），刷新令牌随会话一起到期（3.5）。
 
 ### 3.5 会话、轮换和重复使用检测
-- **一次登录一行 `auth_sessions`**。行的 id 就是访问令牌里的 `sid`。
-- **每一代刷新令牌一行 `auth_refresh_tokens`**（`session_id, generation, token_hash`，4.5），保存到会话被清理为止。`auth_sessions.generation` 是当前的代数。
-  - 每个哈希只存一处，`auth_sessions` 不再有 `token_hash` 列：当前一代的哈希就是 `(sid, generation)` 那一行，再存一份就要让两处始终一致。续期和退出都按主键 `(sid, g)` 查找。
+- **一次登录一行 `auth_sessions`**。行的 id 就是访问令牌里的 `sid`。`generation` 是当前的代数，`token_hash` 是当前这一代密文的 SHA-256。每个会话只有这一行，大小固定。
 - **绝对期限**：登录时 `expires_at = 登录时刻 + auth.session_ttl`（默认 30 天），之后**永不延长**。
   - 续期只换令牌，不动 `expires_at`。30 天后无论是否活跃，都要重新登录。
   - 理由：这是总体设计 4.1"30 天"的字面意思；它给被盗的刷新令牌定了一个上限（PAT 另算，见 8.5）。第一稿每次续期都把期限推后 30 天，一个每月至少用一次的会话永不结束，而且没有登记这个差异。
   - Plane 的会话固定 7 天，请求不会延长它（`SESSION_COOKIE_AGE = 604800`，`SESSION_SAVE_EVERY_REQUEST` 默认关闭，`plane/apps/api/plane/settings/common.py:373-376`）。Nerve 是 30 天，登记为差异（4.6）。
 - **业务判断用的时间都来自用例的时钟**：用例从 `Clock` 取当前时刻，作为参数传给 SQL（`expires_at > $now`），不在 SQL 中写 `now()`。审计列也由同一个时钟写入（3.13）。
 - **续期**（一个事务）：
-  1. 客户端交出刷新令牌。服务端解出会话 id、代数 g 和密文，不查库；格式不对直接 401。
-  2. 按主键查 `auth_refresh_tokens` 中 `(sid, g)` 的一行，要求 `token_hash = SHA-256(密文)`，同时读出会话的当前代数、期限和撤销状态。
+  1. 客户端交出刷新令牌。服务端解出会话 id、代数 g、密文和标签，不查库；格式不对直接 401。
+  2. 按主键读出会话行。
   3. 按下表处理：
 
-     | 查到的行 | 会话 | 结果 |
-     |---|---|---|
-     | 没有：未知的令牌，或会话 id 和代数是真的、密文不对（伪造） | — | 401 `identity.refresh_token_invalid`，**不撤销** |
-     | 有，g 等于当前代数 | 未撤销、未过期 | 轮换：`UPDATE auth_sessions SET generation = g + 1, last_refreshed_at = $now, updated_at = $now WHERE id = $sid AND generation = $g AND revoked_at IS NULL AND expires_at > $now`，命中后插入 `(sid, g + 1, 新密文的哈希)`，返回新的一对令牌 |
-     | 有，g 小于当前代数 | 未撤销 | 这个会话真的发过的旧令牌被再次使用：撤销会话（`revoke_reason = 'reuse_detected'`），记一条 WARN 日志，返回 401（码同上） |
-     | 有 | 已撤销或已过期 | 401（码同上） |
+     | 情况 | 结果 |
+     |---|---|
+     | g 等于当前代数，`SHA-256(密文) = token_hash`，未撤销、未过期 | 轮换：`UPDATE auth_sessions SET generation = g + 1, token_hash = 新密文的哈希, last_refreshed_at = $now, updated_at = $now WHERE id = $sid AND generation = $g AND token_hash = $h AND revoked_at IS NULL AND expires_at > $now`，返回新的一对令牌。这一支不看标签 |
+     | g 小于当前代数，标签成立（3.4），未撤销、未过期 | 这个会话真的发过的旧令牌被再次使用：撤销会话（`revoke_reason = 'reuse_detected'`），记一条 WARN 日志，返回 401 `identity.refresh_token_invalid` |
+     | 其他：会话不存在；g 等于当前代数但哈希不符；g 大于当前代数；g 较旧但标签不成立；会话已撤销或已过期 | 401（码同上），**不撤销** |
 
-  - 条件 `UPDATE` 没有命中时（并发的续期抢先轮换了，或并发的重置撤销了会话），在同一个事务里重读这一行，按表的后两行处理。两个请求用同一个令牌同时续期，后到的那个看到的 g 已是旧代，判为重复使用；同一浏览器内由跨标签页的协调避免这种情况（7.1）。
-  - **为什么先确认旧令牌是真的**（Codex I-2）：第二稿只凭"g 小于当前代数"就撤销。会话 id 就写在访问令牌里，拿到一个早已过期的访问令牌的人，拼上 `g = 0` 和任意密文就能让会话下线。现在要撤销，必须交出这个会话真的发过的某一代令牌。
-  - **存储**：每续期一次多一行，约 100 字节。访问令牌 15 分钟、会话 30 天：一个一直开着的页面最多约 2,900 行，约 0.3 MB。会话被清理时级联删除（3.15）。
+  - 条件 `UPDATE` 没有命中时（并发的续期抢先轮换了，或并发的重置撤销了会话），在同一个事务里重读这一行，再按表处理。两个请求用同一个令牌同时续期，后到的那个看到的 g 已是旧代，而它的标签成立，判为重复使用；同一浏览器内由跨标签页的协调避免这种情况（7.1）。
+  - **当前一代为什么不看标签**：存的哈希已经证明了它；而且换签名密钥时，正在用的令牌不会因此失效，不会让所有人被迫重新登录。
+  - **为什么要确认旧令牌是真的**（Codex I-2）：第二稿只凭"g 小于当前代数"就撤销。会话 id 就写在访问令牌里，拿到一个早已过期的访问令牌的人，拼上 `g = 0` 和任意密文就能让会话下线。现在要撤销，必须交出这个会话真的发过的某一代令牌：只有服务端能算出它的标签。
+  - **为什么用标签，不存历史**（Codex I-2 先取选项①，复核后改为选项②）：
+    - 选项①给每一代存一行哈希（第三稿的 `auth_refresh_tokens`）。去掉按会话计数的续期桶以后（3.10），轮换只受按 IP 的 `anonymous` 约束（每分钟 600 次）：一个 IP 可以让它自己的会话在 30 天里积累约 2,600 万行、约 2.6 GB。第三稿写的"每个会话最多约 2,900 行"不成立。
+    - 两种补救都不行：限制最短的轮换间隔，会误伤多个标签页（每个标签页有自己的内存访问令牌、各自续期，同时打开的标签页相隔几秒就会续期）；只留最近 K 代，攻击者快速轮换 K 次就能逃过检测。
+    - 标签用密码学证明真实性，每个会话只存一行（O(1)）。
+  - **换签名密钥之后**（3.7）：换钥之前签发的旧代令牌，标签无法验证，按伪造处理（401，不撤销）；当前一代不受影响。dev 的临时密钥在重启后同理。重复使用检测只对换钥之前的旧令牌有这个缺口（§16）。
 - **服务端期限**（控制者复核 N2）：续期和退出有自己的服务端期限 `auth.refresh_deadline`（默认 4 秒）。
-  - 顺序：服务端期限 4 秒 < 客户端超时 8 秒 < 租约 10 秒（7.1）。客户端放弃之前，服务端已经提交或回滚，客户端不会在服务端仍可能提交时换一个标签页用旧令牌重试。
+  - 顺序：服务端的语句期限 4 秒 + 提交的期限 2 秒（3.6）< 客户端超时 8 秒 < 租约 10 秒（7.1）。客户端放弃之前，服务端已经提交或回滚，客户端不会在服务端仍可能提交时换一个标签页用旧令牌重试。启动校验这个不等式（6.5）。
   - 放在 `identity` 的 HTTP 适配器：handler 调用用例之前 `context.WithTimeout(ctx, refreshDeadline)`。这个期限是轮换协议的一部分（它必须短于前端的超时），不是传输层的策略；平台的请求期限对一个模块的全部操作一视同仁（m7）；`context` 的期限只能缩短，在 15 秒之内再缩短到 4 秒，适配器自己就能做到。
   - 需要**放宽**期限或请求体上限的是传输层的事（M5 的上传），由 M5 在平台加按操作的设置（13.2），与这里不重复。
-  - 剩下的情况：提交成功、响应在网络上走了 4 秒以上；或者持有租约的标签页被浏览器冻结、超过了租约期（7.1）。两者的结果都是一次重复使用检测，用户重新登录。
-- **已知代价**：续期的响应在网络上丢失时，客户端重试会被判为重复使用，用户需要重新登录。这是严格检测的固有代价。
-- **退出**：只有**当前这一代、有效**的刷新令牌能撤销会话（`revoke_reason = 'logout'`），查找方式与续期相同。
+  - 提交不受这个期限的取消（3.6 的全局规则）：语句在 4 秒内做完的轮换一定能提交，不会在提交时被取消成 500。
+  - 剩下的三种情况，结果都是一次重复使用检测，用户重新登录：
+    1. 请求这一段：请求在网络上走得太久，到达服务端时客户端的 8 秒已所剩无几；服务端按时提交，响应回来时客户端已经放弃；
+    2. 响应这一段：提交成功，响应在网络上走得太久或丢失；
+    3. 持有租约的标签页被浏览器冻结，超过了租约期（7.1）。
+- **已知代价**：上面三种情况是严格检测的固有代价。
+- **退出**：只有**当前这一代、有效**的刷新令牌能撤销会话（`revoke_reason = 'logout'`），判定与续期表的第一行相同。
   - 未知、已过期、已撤销、上一代、伪造的令牌：204，什么都不做，不泄露它的状态，也不触发重复使用检测。重复使用只在续期时判定。
   - 前端退出时和续期共用同一把锁，所以交出的总是最新一代（7.1）。
 - **撤销规则**：
@@ -233,27 +244,39 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - 总体设计 4.2 本来就要求每个请求从数据库读取成员关系；多一次主键查询的代价可以接受。
   - PAT 同理：按 `token_hash` 查询，要求未删除、未过期、账户未停用。
   - `last_used` 最多每分钟写一次（`UPDATE … WHERE last_used IS NULL OR last_used < $now - interval '1 minute'`）。Plane 每个请求都写一次（`plane/apps/api/plane/api/middleware/api_authentication.py:41-42`）；Agent 高频调用时，每次都写太重。登记为行为差异。
-- **清理**：`expires_at` 已过的会话由 River 定时任务删除，它的各代刷新令牌随之级联删除（3.15）。已撤销的行保留到它原本的过期时间，便于排查问题。
+- **清理**：`expires_at` 已过的会话由 River 定时任务删除（3.15）。已撤销的行保留到它原本的过期时间，便于排查问题。
 
 **凭证的签发与变更：账户行锁**（Codex I-1，后续 M 凡是签发或变更凭证的写入都照做）
 - **问题**：登录先读出哈希，在事务外做 argon2 校验，再插入会话。管理员重置密码如果恰好在"校验"和"插入"之间提交，新会话就逃过了重置的撤销；登录时的重新哈希还可能把旧密码的哈希写回去。创建 PAT 同理：认证发生在用例之前，重置提交之后插入的 PAT 逃过了批量撤销。重置是账户被盗后唯一的恢复手段，它必须赶走所有凭证。
+- **锁**：`SELECT … FROM users WHERE id = $1 FOR NO KEY UPDATE`，下文称"锁账户行"。
+  - 它与自己、与 `FOR UPDATE` 冲突，所以同一个账户上签发和变更凭证的事务一个接一个执行。
+  - 它不与外键检查取的 `FOR KEY SHARE` 冲突，所以别的事务插入引用这个账户的行（会话、PAT、资料）不会被它挡住。`FOR UPDATE` 会挡住它们。
+  - spike（开发库）：一个事务持有 `FOR NO KEY UPDATE` 时，另一个事务插入引用这一行的记录，不到 1 毫秒完成；换成 `FOR UPDATE`，插入一直等到前者提交（2.4 秒）。
+  - 改唯一列 `email` 的 `UPDATE`（`set-email`）在 Postgres 中算作改键，这条语句自己就把行锁升级为 `FOR UPDATE`；spike 中外键插入等到它提交为止。只改 `password` 这类非键列时，外键插入不受影响。`set-email` 只有几条语句，这样的等待无害。
 - **协议**：
 
   | 操作 | 做法 |
   |---|---|
-  | 用密码签发：登录（以及登录时的重新哈希） | 读出账户，记下哈希的快照 → 事务外做 argon2 校验；需要重新哈希时，新哈希也在事务外算好 → 事务：`SELECT … FROM users WHERE id = $1 FOR UPDATE`；哈希仍等于快照，否则 401 `identity.invalid_credentials`；账户未停用，否则 403 `identity.account_deactivated`；需要时写回新哈希；插入会话和第 0 代刷新令牌 |
-  | 用凭证签发或变更：创建 PAT、修改密码、自助停用 | 事务：先锁账户行，再确认调用者的凭证仍然有效（会话未撤销、未过期；PAT 未删除、未过期）、账户未停用，否则 401 `unauthorized`；然后写入。修改密码的两次 argon2（校验当前密码、哈希新密码）在事务外做，事务内核对哈希仍等于快照，否则 422 `identity.current_password_incorrect` |
+  | 用密码签发：登录（以及登录时的重新哈希） | 读出账户，记下哈希的快照 → 事务外做 argon2 校验；需要重新哈希时，新哈希也在事务外算好 → 事务：锁账户行；哈希仍等于快照（不等时见下）；账户未停用，否则 403 `identity.account_deactivated`；需要时写回新哈希；插入会话 |
+  | 用凭证签发或变更：创建 PAT、修改密码、自助停用 | 事务：先锁账户行，再确认调用者的凭证仍然有效（会话未撤销、未过期；PAT 未删除、未过期）、账户未停用，否则 401 `unauthorized`；然后写入。修改密码的两次 argon2（校验当前密码、哈希新密码）在事务外做，事务内核对哈希仍等于快照（不等时见下） |
   | 管理员的变更：`reset-password`、`set-email`、`deactivate`、`activate` | 事务：先锁账户行，再改写、撤销 |
   | 续期 | 不锁账户行。会话行上的条件 `UPDATE` 在拿到行锁后重新求值，重置先提交时 `revoked_at IS NULL` 不再成立，续期失败 |
 
   注册和 `nerve users create` 插入的是新账户，没有可以竞争的旧凭证，靠邮箱的唯一约束。
-- **加锁顺序**：`users` → `auth_sessions` → `auth_refresh_tokens` → `api_tokens`。所有事务按这个顺序取锁，不会互相等成环。清理任务删会话时用 `FOR UPDATE SKIP LOCKED` 分批取行，跳过正被别的事务锁住的会话，下一轮再删（3.15）。
+- **哈希与快照不等时**：可能只是并发的登录做了重新哈希（密码没变，参数变了），也可能密码真的被改了。所以在事务外用新的哈希再校验一次密码：成立，就以新的哈希为快照，把锁内那一步重做一次；不成立，登录答 401 `identity.invalid_credentials`，修改密码答 422 `identity.current_password_incorrect`；重做时哈希又变了，同样失败。只在这种竞争中多做一次 argon2。
+- **登录与 `set-email` 并发**：登录按旧邮箱找到账户、校验了正确的密码，`set-email` 在这之间提交。登录的插入等 `set-email` 提交后照常完成（哈希未变、账户未停用），新会话不在被撤销之列。这无害：签发给的是知道密码的人，与他稍后用新邮箱登录得到的会话相同；`set-email` 撤销会话是为了让大家改用新邮箱登录，不是账户被盗后的恢复手段（3.17）。
+- **加锁顺序**：`users` → `profiles` → `auth_sessions` → `api_tokens`。所有事务按这个顺序取锁，不会互相等成环。
+  - 外键检查（插入或改动引用 `users` 的行）对那一行 `users` 取 `FOR KEY SHARE`，按顺序规则算作一次 `users` 的锁：一个事务在锁住后三张表的行以后，不再插入引用另一个账户的行。M2 的事务都是先锁自己的账户行，再插入引用它的行。
+  - 停用要重置资料中的新手引导，所以 `profiles` 排在 `users` 之后、会话之前。
+  - 清理任务删会话时用 `FOR UPDATE SKIP LOCKED` 分批取行，跳过正被别的事务锁住的会话，下一轮再删（3.15）。
 - **argon2 始终在锁外**：持锁的时间只有几条语句，锁不会因为哈希排队。
 - **测试**（P3 的完成线）：在真实数据库上确定性地交错（`pgtest`），用会阻塞的假哈希器或钩子端口卡住一方，不只测顺序执行：
   1. 登录校验完成 → 重置提交 → 登录的插入失败（401），没有新会话；
   2. 登录的重新哈希不会覆盖重置写入的哈希；
   3. 用被并发重置撤销的凭证创建 PAT，失败，没有新 PAT；
-  4. 修改密码与登录交错：登录用的是旧密码时失败。
+  4. 修改密码与登录交错：登录用的是旧密码时失败；
+  5. 两个登录交错，其中一个做了重新哈希：另一个重新校验一次后成功；
+  6. 一个事务锁着账户行时，别的事务插入引用它的会话不必等待。
 
 ### 3.6 认证：默认拒绝
 - **规则**：`/api/v0` 下的每个操作默认需要有效的令牌，只有模块声明为公开的操作例外。
@@ -266,21 +289,26 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   | 操作 | 没有令牌 | 带了令牌，本 IP 的失败闸门已空 | 带了令牌，认证失败 | 令牌有效 |
   |---|---|---|---|---|
   | 公开 | 放行 | 放行，不看令牌 | 放行，不认证 | 放行，不认证 |
-  | 其他 | 401 `unauthorized` | 429 `rate_limited`，**不调用认证器** | 401 `unauthorized`，闸门扣一次 | 认证器返回的 `context` 带着当前账户，交给下一层；闸门不扣 |
+  | 其他 | 401 `unauthorized` | 429 `rate_limited`，**不调用认证器** | 401 `unauthorized`；预留的一个单位留下（计数），签名有效而只是过期的 JWT 除外 | 认证器返回的 `context` 带着当前账户，交给下一层；预留的单位退回 |
 
   - 401 都带 `WWW-Authenticate: Bearer`；令牌无效时再加 `error="invalid_token"`。失败的原因只进 DEBUG 日志。
   - 公开操作不看 `Authorization`：页面在登录状态下读实例配置，不会因为访问令牌刚好过期而多一次 401。
 - **认证之前的失败闸门**（Codex I-3）：
   - 第二稿让无效的令牌"计入按 IP 的桶"，但计数发生在认证之后：桶空了以后，每个请求仍然先验签或查一次数据库，429 限制不了这部分工作。
-  - 现在由按 IP 的 `auth_failure` 桶（3.10）在认证之前把关：非公开操作带了令牌，而本 IP 的失败额度已用完，直接 429，不调用认证器。认证失败时扣一次额度再返回 401；认证成功不扣。
-  - 只有认证器返回的"未认证"错误（满足 3.11 的 `ProblemError`，状态为 401）计数并映射为 401。其他错误（例如数据库不可用）按 3.11 映射为 problem 或 500，不计数。
-  - **代价**：同一个出口 IP 后面的攻击流量会把额度用完，这个 IP 后面有效的调用方也会得到 429，直到额度恢复（每分钟 60 次，3.10）。这是按 IP 计数的固有代价；可信代理的配置决定"IP"是谁（3.10）。
-  - 测试：用一个计数的假认证器，超过额度以后调用次数不再增加。
+  - 现在由按 IP 的 `auth_failure` 桶（3.10）在认证之前把关：非公开操作带了令牌时，**先预留一个单位**，拿不到就直接 429，不调用认证器。认证失败时这个单位留下（计数），再返回 401；认证成功、或者认证器返回的不是"未认证"的错误时，把它退回。
+  - **为什么先预留**（控制者复核 R5）：先查余额、失败后再扣，并发的请求都会在余额只剩 1 时通过检查，失败的次数可以超出额度任意多。先预留，同时在认证中的请求也占着额度，失败的次数不会超过额度。spike：额度 3，50 个并发的无效令牌，认证器只被调用 3 次，其余 47 个得到 429。
+  - **预留的代价**：认证期间每个请求占着一个单位，同一个 IP 同时在认证中的请求超过突发（60）时，多出的得到 429（spike：额度 3、认证 20 毫秒时，50 个并发的有效请求只有 3 个通过）。认证是一次验签加一次按主键的查询，正常负载下同一 IP 远到不了 60 个并发；数据库变慢时会更早碰到，§16 登记。
+  - **计数的是什么**：不是真的、或已被撤销的凭证。也就是认证器返回的"未认证"错误（满足 3.11 的 `ProblemError`，状态为 401），包括：JWT 签名不对或格式不对；JWT 的会话不存在、已撤销或已过期；PAT 不存在、已撤销或已过期；账户已停用。
+  - **不计数**：签名有效、只是 `exp` 已过的 JWT。它是协议里正常的续期信号（7.1），在查库之前就判定，不花数据库的工作；计入的话，共享出口 IP 后面一批标签页同时醒来，就会得到 429。认证器对它返回的 401 错误另外实现 `ExpiredCredential() bool`（`httpserver` 声明的可选接口），中间件据此退回单位。认证器返回的其他错误（例如数据库不可用）按 3.11 映射为 problem 或 500，同样退回。
+  - **代价**：同一个出口 IP 后面的攻击流量会把额度用完，这个 IP 后面有效的调用方也会得到 429，直到额度恢复（每分钟 60 次，3.10）。这是按 IP 计数的固有代价；可信代理的配置和 IPv6 的前缀长度决定"IP"是谁（3.10）。
+  - 预留和退回与 `AllowAll` 用同一套机制（3.10 的 `platform/ratelimit`）。
+  - 测试：用一个计数的假认证器，超过额度以后调用次数不再增加；并发时也不超过额度；过期的 JWT、数据库错误、成功都退回单位。
 - **认证器**（`httpserver` 声明，`identity` 实现，`bootstrap` 接上，M0-P3 交接 4）：
   ```go
   type Authenticator interface {
       // 成功时返回带当前账户的 context，以及这个凭证的限流键。
-      // 令牌无效时返回 ProblemStatus() 为 401 的错误；其他错误是内部故障。
+      // 令牌无效时返回 ProblemStatus() 为 401 的错误；签名有效而只是过期的 JWT，
+      // 这个错误另外实现 ExpiredCredential() bool 并返回 true。其他错误是内部故障。
       Authenticate(ctx context.Context, token string) (context.Context, string, error)
   }
   ```
@@ -299,23 +327,26 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 - **模块入口的演进**（M0-P3 交接 4）：
   - 平台交给模块的 HTTP 依赖合成一个值 `httpserver.API`：`Errors`（3.11 的映射），和方法 `Middlewares(bodies)`：按下面的顺序返回按路由的中间件，最里层是这个模块的请求体结构检查（3.11）。顺序只在平台里写一次，模块不需要知道。
   - 模块写成 `Register(router, api)`；`httpadapter.Register` 接收一个用例集合的结构体，不再逐个传指针。
-- **按路由的中间件和顺序**：请求元信息（客户端 IP、UA）→ 请求期限 → 请求体上限 → 失败闸门和认证 → 限流 → 请求体结构 → （生成的代码）解码请求体 → handler。
+- **按路由的中间件和顺序**：请求元信息（客户端 IP 和限流用的 IP 键、UA）→ 请求期限 → 请求体上限 → 失败闸门和认证 → 限流 → 请求体结构 → （生成的代码）解码请求体 → handler。
   - oapi-codegen 的 `Middlewares` 列表中最后一个在最外层，所以 `API.Middlewares` 按相反的顺序返回，并有测试核对。
   - 生成代码在这些中间件**之前**绑定路径参数和查询参数，在它们**之后**（strict handler 中）解码请求体（spike `server.gen.go:119-141`、`:477`）。所以参数格式错误的请求在认证和限流之前就得到 400。这类请求不碰数据库，不计入限流也没有代价。
   - 请求体的结构检查放在认证和限流之后：没有认证的请求不值得解析请求体。
   - **请求期限**：`server.request_timeout`（默认 15 秒）的 `context.WithTimeout`。handler 和用例里的数据库调用都带请求的 `context`，到期即取消。`server.write_timeout` 到期只让写出失败，不会取消请求的 `context`（M0-P2 交接 5），所以需要这一层。续期和退出在适配器里再缩短到 4 秒（3.5）。
+  - **提交不受请求期限的取消**（控制者复核 R7，全局规则，在 `platform/postgres` 的 `TxManager`）：事务里的语句带请求的 `context`，期限到了就取消；`COMMIT` 在 `context.WithoutCancel(ctx)` 下执行，另有自己的短期限 `database.commit_timeout`（默认 2 秒）。这样请求期限约束的是语句，一个语句都已做完的事务不会在提交时被取消，也就不会出现"数据库已提交、接口却答 500"。提交本身超时时回滚并答 500，那是数据库的故障。测试：语句做完之后取消请求的 `context`，事务仍然提交。
 
 ### 3.7 签名密钥
 - **来源**：
   - `auth.jwt.private_key_file`：PKCS#8 PEM 格式的 Ed25519 私钥文件。这是总体设计 6.8 举的例子，环境变量是 `NERVE_AUTH__JWT__PRIVATE_KEY_FILE`。
   - prod 必须提供，否则启动失败，并指出这个配置项。
   - dev 和 test 可以留空：启动时生成一把临时密钥，记一条 WARN。
-    - 刷新令牌存在数据库里，与签名密钥无关。重启之后，旧的访问令牌验签失败，客户端按 401 续期一次就恢复，所以临时密钥不影响开发。
+    - 当前一代刷新令牌由数据库中的哈希认出，与签名密钥无关。重启之后，旧的访问令牌验签失败，客户端按 401 续期一次就恢复，所以临时密钥不影响开发。
     - 端到端测试的每个 worker 有自己的 nerve，令牌不跨进程使用。
   - 生成密钥：`openssl genpkey -algorithm ed25519 -out nerve-jwt.pem`，写进 README。不另做命令。
+- **两个用途**：这把密钥签访问令牌；刷新令牌标签用的 MAC 密钥也从它的种子派生（HKDF，`info` 分开两种用途，3.4）。所以没有第二个密钥文件和配置项。两者都由 `identity/adapter/signing` 持有（6.2）。
 - **轮换**：换掉密钥文件，重启。
   - 旧的访问令牌验签失败，客户端续期一次，不需要新旧密钥并存。所以不引入 `kid`，也不提供 JWKS：v0 没有外部验签方。
-  - 以后要多实例部署或让外部系统验签时，再加 `kid` 和公钥列表。
+  - 当前一代刷新令牌照常续期（3.5 的当前一代不看标签）。换钥之前签发的**旧代**刷新令牌，标签无法再验证，按伪造处理：401，不撤销会话。也就是说，换钥的那一刻起，更早的旧令牌被再次使用时不再能被发现（§16）。dev 的临时密钥每次重启都相当于换钥。
+  - 以后要多实例部署或让外部系统验签时，再加 `kid` 和公钥列表；那时 MAC 密钥也按 `kid` 保留上一把，旧代令牌在换钥之后仍能验证。
 - **日志**：私钥的内容永远不进日志。`LogValue` 对所有 `*_file` 配置项只记"是否设置"（`private_key_file_set: true`），不记路径，按 M0-P2 交接 4 的原文关闭（Codex M-4）。
 
 ### 3.8 密码
@@ -366,21 +397,23 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 - **注册**：
   - 注册关闭时，先答 403 `identity.signup_disabled`，再做任何邮箱查询和哈希（m6）：关闭的实例对已注册和未注册的邮箱回答相同。
   - 注册开放时，邮箱已存在必然失败，没有邮件通道就没法做到"不暴露"（Plane 同样返回 `USER_ALREADY_EXIST`）。用按 IP 的注册限流（3.10）压低探测速度，并在 8.2 写明这个局限。
-- **令牌的比较**：刷新令牌按主键 `(sid, g)` 查找、在 SQL 中比较 `token_hash`；PAT 按 `token_hash` 查唯一索引。被比较的是 256 位随机数的 SHA-256，比较耗时最多泄露哈希的前几个字节，据此推不出令牌，也拼不出另一个能用的令牌，所以不需要常数时间比较。第一稿写"用 `ConstantTimeCompare`"，与实际的匹配位置不符，已改。
+- **令牌的比较**：
+  - 刷新令牌的当前一代按会话 id 读出会话行，在 SQL 的条件 `UPDATE` 中比较 `token_hash`；PAT 按 `token_hash` 查唯一索引。被比较的是 256 位随机数的 SHA-256，比较耗时最多泄露哈希的前几个字节，据此推不出令牌，也拼不出另一个能用的令牌，所以不需要常数时间比较。第一稿写"用 `ConstantTimeCompare`"，与实际的匹配位置不符，已改。
+  - 旧代的标签是 MAC，比较耗时会一点点泄露正确的标签，所以用 `hmac.Equal`（常数时间，3.4）。
 
 ### 3.10 限流
-"具体数值在 M2 确定，默认参考 Plane"（总体设计 3.6）。实现是进程内按键的令牌桶（`golang.org/x/time/rate`），闲置的键定期清掉。令牌桶需要速率和突发两个参数：一次页面加载会并行发出两三个请求，只有速率没有突发的桶会误伤它们。所以**每个桶都有 `per_minute` 和 `burst` 两个配置项**（6.5）。
+"具体数值在 M2 确定，默认参考 Plane"（总体设计 3.6）。实现是 `platform/ratelimit` 自己的进程内按键令牌桶（约 100 行，只用标准库），闲置的键定期清掉。不用 `golang.org/x/time/rate`：M2 要"几个桶全扣或全不扣"和"事后退回一个单位"（3.6 的失败闸门），它的 `Reservation.CancelAt` 在预留的时刻过去之后什么也不退（spike：预留后 5 毫秒再取消，余额没有恢复），做不到后者。令牌桶需要速率和突发两个参数：一次页面加载会并行发出两三个请求，只有速率没有突发的桶会误伤它们。所以**每个桶都有 `per_minute` 和 `burst` 两个配置项**（6.5）。
 
 **桶**：
 
 | 桶 | 键 | 默认（每分钟 / 突发） | 位置 | Plane 的对应项 |
 |---|---|---|---|---|
-| `anonymous` | 客户端 IP | 600 / 100 | `httpserver`，每个公开操作 | 匿名请求 30/minute（`DEFAULT_THROTTLE_RATES`，`settings/common.py:140-144`）。Nerve 的页面每次加载都会不带令牌调用实例配置、时区和续期，同一出口 IP 后的团队很快就会碰到 30。续期和退出只经过这一个桶 |
-| `auth_failure` | 客户端 IP | 60 / 60 | `httpserver`，认证之前的失败闸门（3.6）：只有认证失败才扣 | 无 |
+| `anonymous` | 客户端 IP 键 | 600 / 100 | `httpserver`，每个公开操作 | 匿名请求 30/minute（`DEFAULT_THROTTLE_RATES`，`settings/common.py:140-144`）。Nerve 的页面每次加载都会不带令牌调用实例配置、时区和续期，同一出口 IP 后的团队很快就会碰到 30。续期和退出只经过这一个桶 |
+| `auth_failure` | 客户端 IP 键 | 60 / 60 | `httpserver`，认证之前的失败闸门（3.6）：先预留，只有认证失败才留下 | 无 |
 | `authenticated` | 凭证：会话 id 或 PAT id（3.6 的限流键） | 1200 / 200 | `httpserver`，每个非公开操作 | 页面请求不限流，API Key 每分钟 60 次。Nerve 的页面和 Agent 用同一套令牌，60 次连一次项目页面的加载都撑不住 |
-| `login_ip` | 客户端 IP | 30 / 10 | `identity` 适配器 | 认证接口合计每 IP 10/minute（`AUTHENTICATION_RATE_LIMIT`，`plane/apps/api/plane/authentication/rate_limit.py:26-30`） |
-| `login_ip_email` | 客户端 IP + 规范化后的邮箱 | 10 / 5 | `identity` 适配器 | 同上 |
-| `register_ip` | 客户端 IP | 10 / 5 | `identity` 适配器 | 同上 |
+| `login_ip` | 客户端 IP 键 | 30 / 10 | `identity` 适配器 | 认证接口合计每 IP 10/minute（`AUTHENTICATION_RATE_LIMIT`，`plane/apps/api/plane/authentication/rate_limit.py:26-30`） |
+| `login_ip_email` | 客户端 IP 键 + 规范化后的邮箱 | 10 / 5 | `identity` 适配器 | 同上 |
+| `register_ip` | 客户端 IP 键 | 10 / 5 | `identity` 适配器 | 同上 |
 | `password_user` | 账户 id | 5 / 5 | `identity` 适配器 | 无。所有需要校验密码的已认证操作都经过它；M2 中只有修改密码 |
 
 **每个操作经过哪些桶**：
@@ -392,7 +425,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 | 续期、退出、实例配置、时区 | `anonymous` | — | 0 |
 | 修改密码 | `authenticated` | `password_user` | 2（校验旧密码，哈希新密码） |
 | 其余需要登录的操作 | `authenticated` | — | 0 |
-| 非公开操作带了令牌 | 认证之前查 `auth_failure`；认证失败时扣一次 | — | 0 |
+| 非公开操作带了令牌 | 认证之前预留 `auth_failure` 的一个单位；认证失败时留下，其余情况退回 | — | 0 |
 
 - **为什么这样分**（评审 I3、Codex I-3、控制者复核 N3）：
   - 第一稿的登录只按 IP + 邮箱计数，换一个邮箱就是一个新桶；修改密码只受每凭证 1200 次的约束，而一个账户可以开任意多个会话和 PAT。任何人都能占满 4 个哈希名额，真正的登录排队到超时。
@@ -402,7 +435,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - **限流键不取未经验证的输入**（控制者裁定）：第三稿的初稿曾按刷新令牌里的会话 id 另设一个桶。会话 id 没有经过验证，拿它做键，知道某个会话 id 的人就能用伪造的令牌耗尽这个会话的额度，让它续不了期。所以键只能是两类：认证过的凭证（`authenticated`、`password_user`），或者包含调用方自己的 IP（`anonymous`、`auth_failure`、`login_ip`、`register_ip`，以及 `login_ip_email`：邮箱同样没有验证，但键里有调用方的 IP，耗尽的只是调用方自己的额度）。
   - 无效的令牌由认证之前的闸门限制（3.6）。
 - **全有或全无**（控制者复核 m6）：用 `Allow()` 依次检查几个桶，后面的桶拒绝时，前面的桶已经扣掉了。例如同一个邮箱反复失败，`login_ip_email` 拒绝的每一次都扣了 `login_ip`，这个 IP 很快连别的邮箱也登录不了。
-  - `platform/ratelimit` 提供一次检查多个键的 `AllowAll(checks…)`：对每个桶 `ReserveN(now, 1)`，只要有一个不能立即放行，就把全部预留 `CancelAt(now)` 退回，返回最长的等待时间。spike 已用 `golang.org/x/time/rate` v0.16.0 验证：`login_ip_email` 拒绝 10 次之后，`login_ip` 的余额不变。
+  - `platform/ratelimit` 提供一次检查多个键的 `AllowAll(checks…)`：在同一把锁下先看每个桶是否都有余额，都有才一起扣；有一个没有，就都不扣，返回最长的等待时间。另有 `Reserve(check)`：扣一个单位，同时返回一个只能用一次的退回函数（3.6 的失败闸门用它）。spike：`login_ip_email` 拒绝 10 次之后，`login_ip` 的余额不变；失败闸门在 50 个并发请求下只放过额度内的 3 个。
   - `identity` 适配器声明的小接口只有 `AllowAll`，一个操作在适配器里的桶一次查完。`httpserver` 的桶在它之前扣：被适配器拒绝的请求仍然算作一次匿名或已认证的请求，这是有意的。
 - **位置**：
   - `anonymous`、`authenticated`、`auth_failure` 在 `httpserver`（3.6）。有限流键时按凭证计数，没有时按 IP 计数。
@@ -413,6 +446,11 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - `server.trusted_proxies`（CIDR 列表）非空，并且对端在列表中时，才从 `X-Forwarded-For` 从右往左取第一个不可信的地址。
   - 默认部署前面有 Caddy 时，要配置这一项。README 写明。
   - 对端不在可信列表中、请求却带着 `X-Forwarded-For` 时，进程记一次 WARN（只记一次）：多半是反向代理没有配置成可信，所有人都会落进代理地址这一个桶。
+- **客户端 IP 键**（控制者复核 R6）：按 IP 计数的桶（`anonymous`、`auth_failure`、`login_ip`、`login_ip_email`、`register_ip`）都用同一个键，由请求元信息中间件算出：
+  - IPv4 地址：就是这个地址；IPv4 映射的 IPv6 地址（`::ffff:a.b.c.d`）按 IPv4 处理。
+  - IPv6 地址：取前缀，长度是 `ratelimit.ipv6_prefix_len`（默认 64）。一台主机通常拿到整个 /64，按完整地址计数时，它换一个地址就是一个新桶。
+  - 日志和 `auth_sessions.ip` 仍记完整的地址。
+  - 测试：同一个 /64 里的两个地址落进同一个桶，不同 /64 的不落进；映射的 IPv4 与原 IPv4 相同；前缀长度可配。
 - **测试环境**：test 配置把上限都调得很高，否则同一个 IP 注册的大量测试账户会被限住。A15 用一个限流很低的独立 nerve。
 
 ### 3.11 错误码与取值校验
@@ -454,7 +492,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 未声明的字段（`additionalProperties: false`）：拒绝，字段码 `not_allowed`；
     - 不可为空的字段传了 `null`：拒绝，字段码 `invalid_format`；
     - 缺少必填字段：拒绝，字段码 `required`；
-    - 生成为 Go 类型的字符串格式（`date-time`、`date`、`uuid`）写错：拒绝，字段码 `invalid_format`。生成的类型装不下错误的值，这几种格式只能在解码之前检查。
+    - 生成为 Go 类型的字符串格式（M2 的模板下是 `date-time`、`date`、`uuid`）写错：拒绝，字段码 `invalid_format`。生成的类型装不下错误的值，这几种格式只能在解码之前检查。检查**与生成的解码器接受的完全相同**：直接调用那个类型自己的解析（`time.Time` 的 `UnmarshalText`，即严格的 RFC 3339；标准库 `uuid.UUID` 的 `UnmarshalText`；oapi-codegen 的 `openapi_types.Date` 的 `UnmarshalJSON`，即 `2006-01-02`），不另写正则（控制者复核 R1）。
     - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题，`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`）。
   - **领域层**负责长度、其余格式（邮箱这类映射为 `string` 的格式）、枚举、取值范围和跨字段的规则：一次收集全部字段的问题，返回一个 422 `validation_failed`。handler 只做类型转换，从不自己解码请求体。
   - **做法**（spike 比较了两种，选第二种）：
@@ -462,20 +500,25 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     2. 候选二：构建时的生成器读接口描述，为每个模块生成一张紧凑的结构表；平台的校验器在解码之前按 `r.Pattern` 检查原始请求体。
     - spike 用同一份接口描述（嵌套对象、可为空的对象和字段、数组、开放的 map、部分更新的嵌套对象、`date-time`）跑了 25 个请求，两者在 23 个上结果相同。不同的两个都是 `date-time` 字段传了数字：候选一的反射遍历把有自己解码方法的类型当作不透明的叶子（spike 中是 `time.Time`；标准库的 `uuid.UUID` 实现了 `UnmarshalText`，按同样的道理也是如此），这一项漏出了一次收集，再由 Go 的解码器报错，错误信息 `Time.UnmarshalJSON: input is not a JSON string` 进了响应；候选二在同一次里报出 `when: invalid_format`。
     - 候选一还要复制上游 147 行的 strict 模板，升级 oapi-codegen 时模板的漂移 `gen-check` 发现不了；它从 Go 类型的写法推断契约，而 `omitempty` 也会因 `readOnly`、`writeOnly`、`x-omitempty` 出现（`oapi-codegen/v2@v2.8.0/pkg/codegen/schema.go:1427`）。候选二直接读契约里的 `required`、可为空和 `additionalProperties`，遇到不支持的组合就让生成失败。
-    - 规模：候选二的运行时校验器约 170 行（只用标准库），生成器约 200 行；候选一约 190 行加 147 行复制的模板。
+    - 规模：候选二的运行时校验器约 170 行（加上格式检查约 200 行），生成器约 200 行；候选一约 190 行加 147 行复制的模板。
   - **候选二的组成**：
     - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），用 `UseNumber` 解码成通用值，按表检查，收集全部问题，按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析两次，上限 1 MiB，代价可以接受。
-    - `server/cmd/bodyshapegen`：生成器，用 kin-openapi 读 `api/modules/<m>.yaml`（跨文件的 `$ref` 一并解析），为每个带 JSON 请求体的操作生成根节点，写出 `internal/modules/<m>/adapter/http/gen/bodyshape.gen.go`。它不链接进 nerve，`TestNerveBinaryLinksNoBannedModule` 照旧成立。
-      - 支持的写法：对象（属性、必填、`additionalProperties` 为 `false`、`true` 或一个 schema）、数组、标量、`type: [X, 'null']` 和 `anyOf: [X, {type: 'null'}]`。格式只认两类：`date-time`、`date`、`uuid` 由校验器检查；`email` 由模板映射为 `string`（3.12），不在这里检查。遇到其他 `anyOf`/`oneOf`/`allOf`，或别的格式（例如 `byte`、`binary`、`duration`，它们会生成为带自己解码逻辑的 Go 类型），生成失败并说明原因。
+    - 格式检查器按**生成的 Go 类型**登记：`time.Time`、`uuid.UUID`、`openapi_types.Date` 各一个，调用上面那个类型自己的解析。`bodyshape` 因此依赖标准库和 `github.com/oapi-codegen/runtime` 的 `types`（生成代码本来就依赖它，3.12）。
+    - `server/tools/bodyshapegen`：生成器，放在工具模块（`server/tools/go.mod`），与 oapi-codegen 同一个模块。它用 oapi-codegen 自己的加载器读 `api/modules/<m>.yaml`（跨文件的 `$ref` 一并解析，与生成 `server.gen.go` 时读到的是同一份），为每个带 JSON 请求体的操作生成根节点，写出 `internal/modules/<m>/adapter/http/gen/bodyshape.gen.go`。它不在 `server/go.mod` 里，更不链接进 nerve；工具模块已有 oapi-codegen v2.8.0 和它用的 kin-openapi，不新增依赖。
+      - **格式的清单取自同一份 `type-mapping`**：生成器读这个模块的 `oapi-codegen.yaml` 中的 `output-options.type-mapping`，与 oapi-codegen 的默认映射合并（`codegen.DefaultTypeMapping.Merge`，与 `oapi-codegen/v2@v2.8.0/pkg/codegen/codegen.go:162-165` 的做法相同），得到每个字段实际生成的 Go 类型。生成为 `string` 的格式（`email`）不检查，交给领域层；生成为已登记检查器的类型（`time.Time`、`uuid.UUID`、`openapi_types.Date`）的，表中记下检查器；生成为其他类型的，生成失败并说明原因。模板改了映射，表随之改变，两边不会走样。
+      - 支持的写法：对象（属性、必填、`additionalProperties` 为 `false`、`true` 或一个 schema）、数组、标量、`type: [X, 'null']` 和 `anyOf: [X, {type: 'null'}]`，以及上一条的格式。遇到其他 `anyOf`/`oneOf`/`allOf`，或生成为没有检查器的类型的格式（例如 `byte`、`binary`、`duration`），生成失败并说明原因。
       - 输出是确定的：路径、方法、属性都排序后再编号。spike 中按 map 顺序遍历，两次生成的编号不同，`gen-check` 会误报。
     - 接线：模块的 HTTP 适配器在 `Register` 中调用 `api.Middlewares(gen.BodyShapes)`，结构检查就是最里层的中间件（3.6）。没有全局的表，每个模块的表跟着自己的路由。
-    - `make gen-go` 在 oapi-codegen 之后逐个模块运行生成器；输出在 `GEN_GO_OUT` 已包含的目录里，`gen-check` 覆盖它。
+    - `make gen-go` 在 oapi-codegen 之后逐个模块运行生成器（`go -C tools run ./bodyshapegen …`）；输出在 `GEN_GO_OUT` 已包含的目录里，`gen-check` 覆盖它。
+    - **格式检查的第一个使用者在 P3**：M2 中请求体带格式字段的是 `createApiToken` 的 `expired_at`（`date-time`）和 `updateProfile` 的 `last_workspace_id`（`uuid`），都在 P3。P1 建好检查器并做单元测试，整程序测试中逐格式的情况从 P3 起有操作可测。
   - **第四个整程序测试**（`bootstrap`，P1；前三个见 3.6）：从接口描述中找出每个带请求体的操作，由它的 schema 造出一个合法的请求体，再逐项改坏，发给真实组合出来的程序（非公开操作带一个有效的令牌），断言 400 和对应的 `errors[].field`、`code`：
     1. 顶层多一个未知字段；
     2. 嵌套对象里多一个未知字段（有嵌套对象时）；
     3. 可省略、不可为空的字段传 `null`（有这种字段时）；
     4. 缺一个必填字段（有必填字段时）；
-    5. 可为空的字段传 `null` 不得到 400（总体设计 3.1："传 `null` 表示清空"）。
+    5. 可为空的字段传 `null` 不得到 400（总体设计 3.1："传 `null` 表示清空"）；
+    6. 每种带格式的字段传一个写错的字符串（有这种字段时）：400 `invalid_format`，`field` 是这个字段；
+    7. 同一个请求里同时有未知字段、缺少的必填字段和写错的格式：一次返回全部问题。
   - **随之删除的规则**：第二稿给"零值也合法的必填字段"加 `writeOnly: true` 的规则删除：必填字段是否出现，现在在边界上检查。第二稿"已知的不一致"一段（未知字段被忽略、`null` 等同没传）随之删除。
   - `apitest` 的 `CheckRequest` 保留，让测试发出的请求也按契约校验。它是测试的辅助，不是服务端的保证；故意发不合契约请求的测试（例如 `limit=0`）绕过它。
 - **`FieldError` 加上 `code`**：
@@ -554,7 +597,7 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | `DEFERRABLE` | 不用 | Django 需要它来批量插入；Nerve 在同一个事务里按"先父后子"的顺序写 |
 | 约束和索引的名字 | 主键、外键、唯一约束，以及只涉及一列、每列至多一个的 CHECK，用 Postgres 的默认名（`<表>_pkey`、`<表>_<列>_fkey`、`<表>_<列>_key`、`<表>_<列>_check`）。**涉及多列的 CHECK，或同一列的第二个 CHECK，必须显式命名**：`<表>_<含义>_check`。一列上的几个条件写成一个 CHECK（用 `AND` 连接）时，仍是这一列唯一的 CHECK，用默认名。索引必须命名：`<表>_<列>_idx`；部分唯一索引写成 `<表>_<列>_key` | 快照中的名字带 Django 的哈希后缀，而且有 29 张表的主键名与表名不对应（M0-P4 交接）。表级 CHECK 的默认名随创建顺序变化：在开发库中用回滚的临时表实测，多列的是 `<表>_check`、`<表>_check1`，同一列的第二个是 `<表>_<列>_check1`。按约束名映射错误、以后 `DROP CONSTRAINT` 都需要稳定的名字 |
 | 默认值和取值范围 | 从 `plane/apps/api/plane/db/models/` 读取模型的默认值和取值范围，写进 `DEFAULT` 和 `CHECK`；`id` 不设默认值。这些都是**新加到数据库的**：快照中没有任何列默认值，CHECK 只有正整数字段的 `>= 0`。差异清单逐列写明，不写成"照搬" | 总体设计 5.3、5.5 |
-| 审计时间列（Codex I-10） | `created_at`、`updated_at` 由应用在每次插入、每次业务更新时**显式写入**，取自用例的 `Clock`。`DEFAULT now()` 只是应用之外写入时的兜底；数据库不会在 `UPDATE` 时自动改 `updated_at`。仓储的集成测试断言这两列等于固定时钟的时刻 | 总体设计 5.5 的自动归档按"超过 `archive_in × 30` 天未更新"判断，必然读 `updated_at`（交接 M4）。时间只有一个来源，固定时钟的测试才和数据库一致 |
+| 审计时间列（Codex I-10） | `created_at`、`updated_at` 由应用在每次插入、每次业务更新时**显式写入**，取自用例的 `Clock`。`DEFAULT now()` 只是应用之外写入时的兜底；数据库不会在 `UPDATE` 时自动改 `updated_at`。仓储的集成测试断言这两列等于固定时钟的时刻；测试用的固定时钟截到微秒（`timestamptz` 的精度），读回的值才能与它逐位相等 | 总体设计 5.5 的自动归档按"超过 `archive_in × 30` 天未更新"判断，必然读 `updated_at`（交接 M4）。时间只有一个来源，固定时钟的测试才和数据库一致 |
 | Django 的系统表 | 不照搬 | M0-P4 交接 |
 | `*_like`（`varchar_pattern_ops`）索引 | 不建 | 它们只服务 Django 的 `LIKE 'x%'`，Nerve 按等值查找 |
 | 外键列的索引 | 只给查询或级联真正用到的外键列建索引；`created_by_id`、`updated_by_id` 不建 | Django 给每个外键都建了 btree，多数用不上 |
@@ -624,7 +667,7 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
   - `platform/jobs` 能创建两种客户端：服务用的（配队列，调用 `Start`），命令行用的"只投递"客户端（不配队列，不调用 `Start`，`river@v0.47.0/client.go:89-95`）。见 3.17。
 - **第一个定时任务**：`identity.cleanup_expired_sessions`。
   - 用 `river.NewPeriodicJob(river.PeriodicInterval(auth.session_cleanup_interval), …, &river.PeriodicJobOpts{ID: …, RunOnStart: true})`。间隔默认 1 小时，test 配置为 2 秒。
-  - 它删除 `expires_at` 早于用例时钟当前时刻的会话，每批最多 1000 行，行由 `SELECT … FOR UPDATE SKIP LOCKED` 取得：正被重置、续期锁住的会话跳过，下一轮再删，所以不会和 3.5 的加锁顺序形成死锁。各代刷新令牌随会话级联删除。
+  - 它删除 `expires_at` 早于用例时钟当前时刻的会话，每批最多 1000 行，行由 `SELECT … FOR UPDATE SKIP LOCKED` 取得：正被重置、续期锁住的会话跳过，下一轮再删，所以不会和 3.5 的加锁顺序形成死锁。
   - River 没有内置 cron（spike：`periodic_job.go` 只有 `PeriodicInterval` 和一个 `Next(time.Time)` 接口），M2 也不需要 cron，不引入 `robfig/cron`。
 - **生命周期**（M0-P2 交接 5）：
   - `bootstrap` 的 `run` 让 HTTP 和 River 一起运行。
@@ -693,19 +736,18 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 |---|---|---|---|
 | P1 | 总体设计 | 3.1 | 注册返回令牌，不返回新建的账户（账户由 `GET /me` 读取，5.1） |
 | P1 | 总体设计 | 3.5 | 平台错误码加入 `unauthorized`、`payload_too_large`、`validation_failed`、`server_busy`；`FieldError` 带 `code`；结构不合契约是 400、取值不合规是 422（3.11）；每个操作用 `x-problem-codes` 声明错误码 |
-| P1 | 总体设计 | 4.1 | 刷新令牌的哈希存在 `auth_refresh_tokens`，每一代一行（4.5） |
+| P1 | 总体设计 | 4.1 | 刷新令牌的格式：会话 id、代数、随机密文和 HMAC 标签，MAC 密钥从签名密钥派生；数据库只存当前一代密文的哈希（3.4、3.5） |
 | P1 | 总体设计 | 4.2 | 是否开放注册：prod 默认关闭，dev、test 默认开放；第一个账户用 `nerve users create`（决策点 2） |
-| P1 | 总体设计 | 5.2 | 新增的表由 1 张变为 2 张（`auth_sessions`、`auth_refresh_tokens`），共 46 张 |
 | P1 | 总体设计 | 5.5 | 审计时间列由用例的时钟显式写入（3.13） |
 | P1 | 总体设计 | 5.6 | 改别的模块的表的迁移由后建的 M 编写，文件归被改表的模块（3.14） |
-| P1 | 总体设计 | 6.2 | 端口由使用方在 `app` 层声明；`shared` 的内容是 Actor、领域错误、`TxManager`、游标的封套；时钟端口由各模块自己声明（3.3） |
+| P1 | 总体设计 | 6.2 | 端口由使用方在 `app` 层声明；`shared` 的内容是 Actor、领域错误、`TxManager`；时钟端口由各模块自己声明（3.3） |
 | P1 | 总体设计 | 6.3 | 架构测试：平台不导入 `internal/shared`；sqlc 按模块限定 `schema`，`ALTER TABLE` 按表的所有者（3.3、3.14） |
-| P1 | 总体设计 | 6.4 | 按路由挂载的中间件及其顺序（P1 的部分：请求元信息、期限、请求体上限、认证、请求体结构）；参数在它们之前绑定（3.6、3.11） |
+| P1 | 总体设计 | 6.4 | 按路由挂载的中间件及其顺序（P1 的部分：请求元信息、期限、请求体上限、认证、请求体结构）；参数在它们之前绑定（3.6、3.11）；`TxManager` 的 `COMMIT` 不受请求期限的取消，有自己的期限（3.6） |
 | P1 | 总体设计 | 8.2 | 失败时保存 trace、截图、nerve 日志和数据库快照，不录像（9.5） |
 | P1 | M0 设计 | 3.3 | 按路由挂载的中间件及其顺序（3.6） |
-| P1 | 差异清单 | 一 B | `sessions` 由 `auth_sessions` 和 `auth_refresh_tokens` 替代（替换模型，不逐列继承） |
+| P1 | 差异清单 | 一 B | `sessions` 由 `auth_sessions` 替代（替换模型，不逐列继承） |
 | P1 | 差异清单 | 二·全局 | 3.13 的全局约定：外键的 `ON DELETE` 写进数据库；不用 `DEFERRABLE`；约束和索引一律改名；不建 `*_like` 索引和多数外键列的索引；审计时间列由应用写入 |
-| P1 | 差异清单 | 二·按表 | `users`、`profiles` 逐列（4.2、4.3）；`auth_sessions`、`auth_refresh_tokens` 按实际的列改写原来那一行（4.5） |
+| P1 | 差异清单 | 二·按表 | `users`、`profiles` 逐列（4.2、4.3）；`auth_sessions` 按实际的列改写原来那一行（4.5） |
 | P1 | 差异清单 | 三 | 错误码在接口描述中逐个操作声明；请求体按契约拒绝未知字段、不合法的 `null` 和缺少的必填字段 |
 | P1 | 差异清单 | 四 | 4.6 中标 P1 的行 |
 | P2 | 总体设计 | 3.5 | `rate_limited` |
@@ -716,7 +758,7 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | P2 | M0 设计 | 3.3 | 固定链由三个中间件变为四个 |
 | P2 | 差异清单 | 四 | 4.6 中标 P2 的行 |
 | P3 | 总体设计 | 3.1 | 修改密码、停用账户返回 204（5.1） |
-| P3 | 总体设计 | 3.4 | 游标的封套由 `shared` 定义，载荷由各列表按自己的排序定义（3.12） |
+| P3 | 总体设计 | 3.4、6.2 | 游标的封套由 `shared` 定义（6.2 中 `shared` 的内容随之加上它），载荷由各列表按自己的排序定义（3.12） |
 | P3 | 总体设计 | 4.2 | 修改密码结束其他会话；停用结束全部会话，恢复后 PAT 重新可用；管理员重置密码同时撤销全部 PAT（3.5）；凭证的签发与变更按账户行锁（3.5） |
 | P3 | M0 设计 | 3.2 | 原文"M2 加入 `signup_enabled`，M5 加入文件大小上限"改为：M2 加入 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit`（5.3） |
 | P3 | M0/P3 spec | 第 7 节 | 分页的公共组件由 M2 加入（3.12） |
@@ -741,11 +783,10 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | `00001_identity_users.sql` | `users` | P1 |
 | `00002_identity_profiles.sql` | `profiles` | P1 |
 | `00003_identity_auth_sessions.sql` | `auth_sessions`（新增） | P1 |
-| `00004_identity_auth_refresh_tokens.sql` | `auth_refresh_tokens`（新增） | P1 |
-| `00005_identity_api_tokens.sql` | `api_tokens` | P3 |
-| `00006_river_main_v2_to_v7.sql` | River 主线第 2–7 版（3.15），`StatementBegin`/`End` 包住整段 | P3 |
+| `00004_identity_api_tokens.sql` | `api_tokens` | P3 |
+| `00005_river_main_v2_to_v7.sql` | River 主线第 2–7 版（3.15），`StatementBegin`/`End` 包住整段 | P3 |
 
-`00006` 的 Down 段是 `migrate-get --down` 的原样输出。每个迁移都要能 up、down、再 up（`platform/postgres` 的迁移测试沿用 M0 的写法）。
+`00005` 的 Down 段是 `migrate-get --down` 的原样输出。每个迁移都要能 up、down、再 up（`platform/postgres` 的迁移测试沿用 M0 的写法）。
 
 ### 4.2 `users`（Plane 40 列 → 10 列）
 | 列 | 类型与约束 | 与 Plane 的差异 |
@@ -837,18 +878,19 @@ ELSE false END)
   - `allowed_rate_limit`：没有任何限流读取它。
 - **索引**：`api_tokens_user_id_created_at_idx ON (user_id, created_at DESC, id DESC) WHERE deleted_at IS NULL`，用于列表。
 
-### 4.5 `auth_sessions` 与 `auth_refresh_tokens`（新增，替代 Plane 的 `sessions`）
-Plane 的 `sessions`（`session_key`、`session_data`、`expire_date`、`device_info`、`user_id`）是 Django 的会话存储，不逐列继承。差异清单一 B 登记为"替换模型"：由这两张表替代（3.20）。
+### 4.5 `auth_sessions`（新增，替代 Plane 的 `sessions`）
+Plane 的 `sessions`（`session_key`、`session_data`、`expire_date`、`device_info`、`user_id`）是 Django 的会话存储，不逐列继承。差异清单一 B 登记为"替换模型"：由 `auth_sessions` 替代（3.20）。
 
-**`auth_sessions`**（11 列）：一次登录一行。
+**`auth_sessions`**（12 列）：一次登录一行，大小固定。
 
 | 列 | 类型与约束 | 说明 |
 |---|---|---|
 | `id` | `uuid PRIMARY KEY` | 访问令牌中的 `sid`，也写在刷新令牌里 |
 | `user_id` | `uuid NOT NULL REFERENCES users ON DELETE CASCADE` | |
+| `token_hash` | `bytea NOT NULL`，`CHECK (octet_length(token_hash) = 32)` | 当前这一代刷新令牌密文的 SHA-256 |
 | `generation` | `integer NOT NULL DEFAULT 0`，`CHECK (generation >= 0)` | 当前这一代的代数：每续期一次加 1（3.5） |
 | `user_agent` | `text NOT NULL DEFAULT ''` | 登录时的 UA，截断到 512 个字符 |
-| `ip` | `inet` | 登录时的客户端 IP（3.10） |
+| `ip` | `inet` | 登录时的客户端 IP，完整的地址（3.10） |
 | `expires_at` | `timestamptz NOT NULL` | 登录时设为登录时刻加 `auth.session_ttl`，之后不变（3.5） |
 | `last_refreshed_at` | `timestamptz` | |
 | `revoked_at` | `timestamptz` | |
@@ -856,21 +898,9 @@ Plane 的 `sessions`（`session_key`、`session_data`、`expire_date`、`device_
 | `created_at`、`updated_at` | `timestamptz NOT NULL DEFAULT now()` | 由应用写入（3.13） |
 
 - **表级约束**：`CONSTRAINT auth_sessions_revoked_consistent_check CHECK ((revoked_at IS NULL) = (revoke_reason IS NULL))`，显式命名（3.13）。
-- **索引**：`auth_sessions_user_id_idx`（撤销某个账户的全部会话），`auth_sessions_expires_at_idx`（清理任务）。
-- 第二稿的 `token_hash` 列删除：哈希只存在 `auth_refresh_tokens`（3.5）。
-
-**`auth_refresh_tokens`**（4 列）：每一代刷新令牌一行（Codex I-2）。
-
-| 列 | 类型与约束 | 说明 |
-|---|---|---|
-| `session_id` | `uuid NOT NULL REFERENCES auth_sessions ON DELETE CASCADE` | |
-| `generation` | `integer NOT NULL`，`CHECK (generation >= 0)` | |
-| `token_hash` | `bytea NOT NULL`，`CHECK (octet_length(token_hash) = 32)` | 这一代密文的 SHA-256 |
-| `created_at` | `timestamptz NOT NULL DEFAULT now()` | 由应用写入。行一经写入就不再修改，所以没有 `updated_at` |
-
-- **主键**：`(session_id, generation)`，默认名 `auth_refresh_tokens_pkey`。续期、退出按它查找，不需要别的索引；级联删除也走它的前缀。
-- **大小**：每行约 100 字节；一个会话最多约 2,900 行（3.5）。会话被清理时级联删除；spike 实测删除过期会话后，它的各代令牌都不在了。
-- **与差异清单原来那一行的对照**：差异清单写的是"刷新令牌的哈希、令牌轮换链（用于重复使用检测）、UA、IP、过期和撤销时间"。"轮换链"就是 `auth_refresh_tokens` 的各代；P1 按实际的列改写这一行。
+- **索引**：`auth_sessions_user_id_idx`（撤销某个账户的全部会话），`auth_sessions_expires_at_idx`（清理任务）。续期、退出按主键查找。
+- **旧代令牌不存**：它们由令牌里的标签认出（3.4、3.5），所以一个会话无论续期多少次都只有这一行。第三稿一度为每一代另建一张 `auth_refresh_tokens` 表（Codex I-2 的选项①），它的行数只受按 IP 的限流约束，已按选项②删除（3.5）。
+- **与差异清单原来那一行的对照**：差异清单写的是"刷新令牌的哈希、令牌轮换链（用于重复使用检测）、UA、IP、过期和撤销时间"。"轮换链"在这里是代数加上令牌里的标签，不是一串存下来的记录；P1 按实际的列改写这一行。
 
 ### 4.6 行为差异（登记到差异清单第四节）
 "Phase"一栏是实现它、同时登记它的 Phase（3.20）。
@@ -904,12 +934,11 @@ Plane 的 `sessions`（`session_key`、`session_data`、`expire_date`、`device_
 users
  ├── profiles.user_id                     ON DELETE CASCADE
  ├── auth_sessions.user_id                ON DELETE CASCADE
- │     └── auth_refresh_tokens.session_id ON DELETE CASCADE
- ├── api_tokens.user_id                   ON DELETE CASCADE
+  ├── api_tokens.user_id                   ON DELETE CASCADE
  ├── api_tokens.created_by_id             ON DELETE SET NULL
  └── api_tokens.updated_by_id             ON DELETE SET NULL
 ```
-- M2 从不物理删除账户：停用只改 `is_active`。M2 的物理删除只有一处：清理任务删除过期的会话，各代刷新令牌随之级联删除。
+- M2 从不物理删除账户：停用只改 `is_active`。M2 的物理删除只有一处：清理任务删除过期的会话。
 - M4 的"物理删除软删除超过 60 天的数据"会删到 `api_tokens`（交接）。
 - 以后引用 `users` 的表（成员、工作项的创建人和负责人、评论……）由各自的 M 在这张图上延伸，写明物理删除时每条外键的去向（交接 M3、M4、M6）。
 
@@ -997,19 +1026,19 @@ users
 | 包 | 内容 | 依赖 |
 |---|---|---|
 | `internal/shared` | `Actor`、`Error`（含 `FieldError`）、`TxManager`、游标的封套（3.3、3.12） | 只有标准库 |
-| `platform/postgres` | `TxManager` 的实现，按结构满足 `shared.TxManager`：事务放进 `context`，仓储用 `postgres.DB(ctx, pool)` 取当前事务或连接池；连接池按 UTC 扫描 `timestamptz` | pgx、goose |
+| `platform/postgres` | `TxManager` 的实现，按结构满足 `shared.TxManager`：事务放进 `context`，仓储用 `postgres.DB(ctx, pool)` 取当前事务或连接池；`COMMIT` 在 `context.WithoutCancel` 下执行，有自己的 `database.commit_timeout`（3.6）；连接池按 UTC 扫描 `timestamptz` | pgx、goose |
 | `platform/clock` | `System` 时钟，按结构满足各模块声明的 `Clock` | 标准库 |
-| `platform/ratelimit` | 按键的令牌桶（速率和突发），闲置的键定期清掉；`AllowAll` 一次检查多个键，全有或全无（3.10） | `golang.org/x/time/rate` |
+| `platform/ratelimit` | 自己实现的按键令牌桶（速率和突发），闲置的键定期清掉；`AllowAll` 一次检查多个键，全有或全无；`Reserve` 扣一个单位并返回退回函数（3.6、3.10） | 标准库 |
 | `platform/jobs` | River 客户端的创建、启动、停止；服务用的客户端和命令行用的只投递客户端 | River、pgx |
-| `platform/httpserver` | `Router`（在 `HandleFunc`、`Handle` 时记下模式）；`API` 值（`Errors`、`Middlewares(bodies)`）；默认拒绝的认证中间件和它前面的失败闸门；限流中间件；请求元信息（客户端 IP；不可信的对端带 `X-Forwarded-For` 时记一次 WARN）；请求期限；请求体上限；3.11 的 `ProblemError` 映射和新平台码；导出 `RequestID`（M0-P2 交接 3）；固定链上加安全响应头（8.3） | 标准库 |
-| `platform/httpserver/bodyshape` | 请求体结构表的类型、校验器和中间件（3.11） | 标准库 |
+| `platform/httpserver` | `Router`（在 `HandleFunc`、`Handle` 时记下模式）；`API` 值（`Errors`、`Middlewares(bodies)`）；默认拒绝的认证中间件和它前面的失败闸门；限流中间件；请求元信息（客户端 IP 和限流用的 IP 键；不可信的对端带 `X-Forwarded-For` 时记一次 WARN）；请求期限；请求体上限；3.11 的 `ProblemError` 映射和新平台码；导出 `RequestID`（M0-P2 交接 3）；固定链上加安全响应头（8.3） | 标准库 |
+| `platform/httpserver/bodyshape` | 请求体结构表的类型、校验器（含按生成的 Go 类型登记的格式检查器）和中间件（3.11） | 标准库；`oapi-codegen/runtime` 的 `types`（`openapi_types.Date`） |
 | `platform/webui` | CSP：启动时算出 `index.html` 内联脚本的哈希（8.3） | 标准库 |
 | `platform/config` | 6.5 的新配置项和校验；`LogValue` 对 `*_file` 只记是否设置（3.7，M0-P2 交接 4）；环境变量给布尔配置项传空值时报错，不再悄悄当作 `false`（M0-P2 交接 8） | koanf |
 | `modules/identity` | 6.2 | `internal/shared`；适配器另外依赖平台、pgx、x/crypto、golang-jwt、River |
 | `modules/instance` | 三个配置字段、时区列表 | 同 M0 |
 | `bootstrap` | 接线；汇总各模块的公开操作；`run` 让 HTTP 和 River 一起运行，按 3.15 的顺序停机；`users` 命令的最小组合（3.17）；在创建 logger 之后出现的致命错误写一条结构化日志（M0-P2 交接 8）；编译期断言 `postgres` 的事务管理器满足 `shared.TxManager`；启动时的环境提醒（见下） | 全部 |
 | `cmd/nerve` | `nerve users create`、`reset-password`、`set-email`、`deactivate`、`activate` 的参数解析 | 同 M0 |
-| `cmd/bodyshapegen` | 请求体结构表的生成器（3.11），只在 `make gen-go` 中运行，不链接进 nerve | kin-openapi |
+| `tools/bodyshapegen`（工具模块） | 请求体结构表的生成器（3.11），只在 `make gen-go` 中运行，不在 `server/go.mod` 里 | oapi-codegen 的加载器和类型映射 |
 | `internal/archtest` | 规则 4 加上 `internal/shared`；规则 6 推广到 `adapter/*/gen`；`TestSQLCSchemaScope`，含 `ALTER TABLE` 的所有者（3.14） | — |
 
 - **启动时的环境提醒**（控制者复核 m5）：`env` 不是 prod、而监听地址不是回环地址时，记一次 WARN，写明两个后果：注册默认开放（决策点 2），没有配置签名密钥时使用临时密钥（3.7）。部署时忘了设 `NERVE_ENV=prod` 就会这样；dev 的配置只监听 `127.0.0.1`，只有显式改了监听地址才会出现。M8 的镜像设置 `NERVE_ENV=prod`（交接）。
@@ -1024,7 +1053,7 @@ modules/identity/
     profile.go              Profile；Theme、Language、WeekStart；OnboardingSteps 的部分更新（只校验，合并在 SQL）
     password.go             密码规则：组合规则、常见密码名单、主干（3.8）
     common_passwords.txt    生成的名单，go:embed（3.8）
-    session.go              Session；刷新令牌的编解码；续期的判定表（3.5）
+    session.go              Session；刷新令牌 68 字节的布局（编解码，不算标签）；续期的判定表（3.5）
     api_token.go            APIToken；PAT 的格式；名称和过期时间的规则；列表游标的载荷
     errors.go               本模块的错误码（5.4）
   app/
@@ -1039,7 +1068,7 @@ modules/identity/
     http/                   handler，按资源分文件；操作级限流；续期、退出的服务端期限；公开操作的清单；
                             gen/（oapi-codegen 生成的 server.gen.go 和 bodyshapegen 生成的 bodyshape.gen.go）
     argon2/                 PasswordHasher（并发上限和等待上限）
-    jwt/                    AccessTokens（Ed25519）
+    signing/                持有 Ed25519 密钥：AccessTokens（JWT）和 RefreshTokenMAC（HKDF 派生的 MAC 密钥，3.4）
     river/                  清理会话的 worker
     authn/                  Authenticator 的实现：调用认证用例，把 Actor 放进 context，返回限流键
   module.go                 New(Deps)；Register(router, api)；PublicOperations()；Authenticator()；Jobs()；Admin()
@@ -1050,15 +1079,16 @@ modules/identity/
 ### 6.3 端口
 | 端口 | 声明在 | 实现 | 测试 |
 |---|---|---|---|
-| `Users`（含 `LockForUpdate`）、`Profiles`、`Sessions`（含各代刷新令牌）、`APITokens`（仓储，按用例需要拆成小接口） | `identity/app` | `identity/adapter/postgres`（sqlc） | 集成测试，每个测试一个独立的库（`pgtest`）；3.5 的交错测试 |
+| `Users`（含锁账户行的 `LockForCredentials`）、`Profiles`、`Sessions`、`APITokens`（仓储，按用例需要拆成小接口） | `identity/app` | `identity/adapter/postgres`（sqlc） | 集成测试，每个测试一个独立的库（`pgtest`）；3.5 的交错测试 |
 | `PasswordHasher`（`Hash`、`Verify` 返回"是否需要重新哈希"） | `identity/app` | `identity/adapter/argon2` | 往返、错误密码、参数变化后要求重新哈希、并发上限、等待超时返回 `server_busy`。交错测试用一个带闸门的假实现：`Verify` 停在闸门上，测试在这时提交另一个事务 |
-| `AccessTokens`（`Issue`、`Verify`） | `identity/app` | `identity/adapter/jwt` | 往返；过期；算法不是 `EdDSA`；换了密钥；缺 `sub`、`sid`；篡改载荷 |
+| `AccessTokens`（`Issue`、`Verify`；过期而签名有效时返回可区分的错误） | `identity/app` | `identity/adapter/signing` | 往返；过期（与签名不对区分开）；算法不是 `EdDSA`；换了密钥；缺 `sub`、`sid`；篡改载荷 |
+| `RefreshTokenMAC`（`Tag`、`Verify`） | `identity/app` | `identity/adapter/signing` | 往返；改动会话 id、代数、密文中任何一个字节都不成立；随机的标签不成立；换了签名密钥后不成立；比较用 `hmac.Equal` |
 | `SignupPolicy`（是否允许注册） | `identity/app` | `bootstrap` 从配置传入的值 | 用例测试。M3 扩展它的实现（持有邀请的人仍可注册，13.2） |
-| `Clock` | `identity/app` | `platform/clock` 的 `System`；测试用固定时钟 | 两种实现都跑同一个小的契约测试（总体设计 6.1 的里氏替换） |
+| `Clock` | `identity/app` | `platform/clock` 的 `System`；测试用固定时钟，截到微秒（3.13） | 两种实现都跑同一个小的契约测试（总体设计 6.1 的里氏替换） |
 | `RateLimiter`（`AllowAll`） | `identity/adapter/http` | `platform/ratelimit` | 适配器测试：登录、注册、修改密码的键和桶；续期、退出不经过适配器的桶；被后面的桶拒绝时前面的桶不扣 |
 | `TxManager` | `internal/shared` | `platform/postgres`（按结构满足） | 提交、回滚、嵌套调用时复用同一个事务 |
-| `Authenticator` | `platform/httpserver` | `identity/adapter/authn` | 中间件的单元测试用计数的假实现；整程序测试用真实现 |
-| `Limiter` | `platform/httpserver` | `platform/ratelimit` | 同上 |
+| `Authenticator` | `platform/httpserver` | `identity/adapter/authn` | 中间件的单元测试用计数的假实现（含并发、过期的 JWT）；整程序测试用真实现 |
+| `Limiter`（`Allow`、`Reserve`） | `platform/httpserver` | `platform/ratelimit` | 同上 |
 | `ProblemError` | `platform/httpserver` | `shared.Error`（按结构满足） | `bootstrap` 的测试逐个 `Kind` 核对状态和码 |
 
 没有"随机数"端口：理由见 3.4。
@@ -1069,9 +1099,9 @@ modules/identity/
      → 路由匹配：Router 找到模式，填进 r.Pattern
      → 生成的代码：绑定路径参数和查询参数（格式错误 → 400）
      → 请求元信息（客户端 IP、UA）→ 请求期限 → 请求体上限        （按路由，3.6）
-     → 失败闸门：本 IP 的失败额度已空 → 429，不调用认证器
-     → 认证：公开操作直接放行；其他操作要求 JWT（验签 + 会话和账户的主键查询）或 PAT（按哈希查询），
-       通过后 Actor 进入 context；失败 → 401，闸门扣一次
+     → 失败闸门：预留本 IP 键的一个单位；已空 → 429，不调用认证器
+     → 认证：公开操作直接放行；其他操作要求 JWT（验签，再做会话和账户的主键查询）或 PAT（按哈希查询），
+       通过后 Actor 进入 context，单位退回；失败 → 401，单位留下（只是过期的 JWT 退回）
      → 限流：有凭证按凭证计数，没有按 IP 计数
      → 请求体结构：未知字段、不合法的 null、缺少的必填字段 → 400（3.11）
      → 生成的代码：解码 JSON 请求体
@@ -1083,7 +1113,7 @@ modules/identity/
 - **事务**：以下各自在一个事务里完成；带"锁"的先锁账户行（3.5）：
   - 注册、`nerve users create`：账户、资料（注册另加会话和第 0 代刷新令牌）；
   - 登录（锁）：核对哈希快照和账户状态，需要时写回新哈希，插入会话和第 0 代刷新令牌；
-  - 续期：条件轮换加插入新一代；发现重复使用时撤销；
+  - 续期：条件轮换；发现重复使用时撤销；
   - 创建 PAT（锁）：复核调用者的凭证，插入；
   - 修改密码（锁）：复核凭证和哈希快照，改哈希，撤销其他会话；
   - 停用（锁）：`is_active`、撤销会话、重置资料中的新手引导，以及 M3 加入的成员关系检查（13.2）；
@@ -1100,11 +1130,13 @@ server:
   max_body_bytes: 1048576      # JSON 接口的请求体上限
   request_timeout: 15s         # 每个接口请求的期限（3.6）
   addr_file: ""                # 非空时，监听成功后把实际地址写进这个文件（端到端测试用 :0 监听，9.5）
+database:
+  commit_timeout: 2s           # COMMIT 自己的期限，不受请求期限的取消（3.6）
 auth:
   signup_enabled: false        # 基础配置关闭；config.dev.yaml、config.test.yaml 覆盖为 true（决策点 2）
   access_token_ttl: 15m
   session_ttl: 720h            # 30 天，从登录起算，续期不延长（3.5）
-  refresh_deadline: 4s         # 续期和退出的服务端期限，必须短于前端的 8 秒超时（3.5、7.1）
+  refresh_deadline: 4s         # 续期和退出的语句期限；加上 commit_timeout 必须短于前端的 8 秒超时（3.5、7.1）
   session_cleanup_interval: 1h # test: 2s
   jwt:
     private_key_file: ""       # prod 必填；dev/test 为空时启动时生成临时密钥（3.7）
@@ -1115,6 +1147,7 @@ auth:
     max_concurrent_hashes: 4
     max_wait: 2s               # 拿不到名额时最多等这么久，然后 503 server_busy（3.8）
 ratelimit:                     # 每个桶都有速率和突发；test 全部调高（3.10）
+  ipv6_prefix_len: 64          # IPv6 客户端按这个长度的前缀计数（3.10）
   anonymous:       {per_minute: 600,  burst: 100}
   auth_failure:    {per_minute: 60,   burst: 60}
   authenticated:   {per_minute: 1200, burst: 200}
@@ -1134,8 +1167,8 @@ files:
 - **启动校验**：
   - 时长为正；
   - `session_ttl` 大于 `access_token_ttl`；
-  - `refresh_deadline` 小于 8 秒（前端续期请求的超时，7.1）；
-  - 每个桶的 `per_minute` 为正，`burst` 至少为 1；
+  - `refresh_deadline` 加 `database.commit_timeout` 小于 8 秒（前端续期请求的超时，3.5、7.1）；
+  - 每个桶的 `per_minute` 为正，`burst` 至少为 1；`ipv6_prefix_len` 在 1–128 之间；
   - CIDR 合法；
   - argon2 的参数在 x/crypto 允许的范围内；
   - `env = prod` 时 `auth.jwt.private_key_file` 必须提供，而且文件能读出一把 Ed25519 私钥。
@@ -1148,14 +1181,12 @@ files:
 | `github.com/golang-jwt/jwt/v5` | v5.3.1 | `server/go.mod` | 访问令牌（P1） |
 | `golang.org/x/crypto` | v0.57.0 | `server/go.mod` | argon2id（P1） |
 | `github.com/oapi-codegen/runtime`、`github.com/oapi-codegen/nullable` | v1.7.0、v1.2.0 | `server/go.mod` | 生成代码的依赖（3.12，P1） |
-| `github.com/getkin/kin-openapi` | v0.149.0（已有） | `server/go.mod` | `bodyshapegen` 和测试使用，不链接进 nerve（P1） |
-| `golang.org/x/time` | v0.16.0（spike 时的最新版） | `server/go.mod` | 限流（P2） |
 | `github.com/riverqueue/river`、`riverdriver/riverpgxv5` | v0.47.0 | `server/go.mod` | 后台任务（P3） |
 | River CLI（`github.com/riverqueue/river/cmd/river`） | v0.47.0 | 不进仓库 | 只在写迁移时导出 SQL；命令写进迁移文件的注释 |
 | `golang.org/x/term` | v0.46.0（x/crypto v0.57.0 所需的版本） | `server/go.mod` | 命令行不回显地输入密码（P3） |
 
 - 常见密码名单是嵌入的数据文件，不是依赖（3.8）。
-- 这些依赖都不在架构测试的禁止链接名单里（`github.com/google/uuid`、kin-openapi、testcontainers、docker），kin-openapi 只被生成器和测试导入。传递依赖同样不能碰到这个名单，由 `TestNerveBinaryLinksNoBannedModule` 在加入依赖的那个 Phase 核对。
+- 这些依赖都不在架构测试的禁止链接名单里（`github.com/google/uuid`、kin-openapi、testcontainers、docker）。kin-openapi 在 `server/go.mod` 中只被测试（`apitest`）导入；请求体结构的生成器在工具模块，用的是 oapi-codegen 带的那一份。传递依赖同样不能碰到这个名单，由 `TestNerveBinaryLinksNoBannedModule` 在加入依赖的那个 Phase 核对。
 - River 让程序大约增加 0.96 MB（spike 实测，未去符号表时）。
 
 ---
@@ -1175,6 +1206,7 @@ files:
   - localStorage 的一个键 `nerve.auth`，值是 `{"refresh_token": …, "login_id": …}`，一次写入，两者总是成对。
   - `login_id` 是 16 字节的随机数（`crypto.getRandomValues`，十六进制），在每次登录、注册时新生成，续期时保持不变。刷新令牌对客户端仍是不透明的，前端不解析它。
   - 租约用另一个键 `nerve.auth.refresh_lease`（见下）。
+  - **每次写 `nerve.auth` 都在同一把锁（或租约）下**（控制者复核 R4）：登录、注册写入新记录，续期换令牌，退出删除记录，都先拿续期用的那把锁。否则登录写入新记录的同时，另一个标签页的续期可能把旧会话的令牌写回去，盖掉新记录。
 - **取访问令牌**：离过期还有 30 秒以上就直接用，否则先续期。
   - 过期时刻 = 本地收到响应的时刻 + `access_token_expires_in` 秒（5.2）。前端不解析 JWT，也不拿本机时钟和服务端的时刻比较。
   - 理由：本机时钟快了十几分钟时（硬件时钟按本地时间设置的双系统电脑很常见），和服务端的时刻比较会让每个请求都先续期一次，很快碰到限流（评审 I14）。
@@ -1192,7 +1224,8 @@ files:
   - 同一个标签页内，同一时刻只有一次续期，其他调用共用同一个 Promise。
   - 跨标签页串行（见下一条）。拿到锁之后重新读 `nerve.auth`：另一个标签页可能刚换过令牌。
   - 续期请求用一个不挂认证中间件的客户端，避免递归。
-  - **超时**：续期请求自己的超时是 8 秒，`navigator.locks` 和租约两条路径都一样。三者的顺序是服务端期限 4 秒（3.5）< 客户端超时 8 秒 < 租约 10 秒：客户端放弃时，服务端已经提交或回滚。
+  - **超时**：续期请求自己的超时是 8 秒，`navigator.locks` 和租约两条路径都一样。顺序是服务端的语句期限 4 秒加提交期限 2 秒（3.5、3.6）< 客户端超时 8 秒 < 租约 10 秒：客户端放弃时，服务端已经提交或回滚。
+  - **写回之前核对 `login_id`**：续期在锁内读出记录，拿到响应后、写回之前再读一次；`login_id` 已经变了（租约非原子时另一个标签页登录了），就丢弃这次续期的结果，不写回，按"`login_id` 变了"处理（见"其他标签页"）。
   - 续期的结果：
 
     | 结果 | 处理 |
@@ -1231,6 +1264,7 @@ files:
   | 事件 | 含义 | 处理 |
   |---|---|---|
   | 记录被删除 | 别的标签页退出了 | 结束会话（A6） |
+  | 本标签页未登录时记录出现 | 别的标签页登录或注册了 | 续期拿到访问令牌，取 `/me`，由 `AuthenticationWrapper` 按规则跳转（A6 的第二种切换） |
   | `login_id` 变了 | 别的标签页登录了另一个会话（可能是另一个账户） | 丢掉内存中的访问令牌，重置 stores，重新取 `/me`，按新账户显示（A6 的切换账户） |
   | `login_id` 没变 | 只是续期换了令牌 | 什么都不做；下一次续期在锁内重新读记录 |
 
@@ -1256,7 +1290,7 @@ files:
 ### 7.3 登录页与注册页
 - **路由**不变：`/` 是登录，`/sign-up` 是注册（M1/P3）。
 - **提交**：`password.tsx` 的 `onSubmit` 调用 store 的 `signIn` / `signUp`。
-  - 成功：令牌交给令牌管理器（新的 `login_id`），取当前账户，由 `AuthenticationWrapper` 按规则跳转。
+  - 成功：令牌交给令牌管理器，它在续期的那把锁下写入新记录（新的 `login_id`，7.1），然后取当前账户，由 `AuthenticationWrapper` 按规则跳转。
 - **错误就地显示**（M1-P3 交接）：不跳转，邮箱留在输入框里。
   - `problem.code` 映射到 `t()` 的文案；`validation_failed` 和 `bad_request` 的字段错误显示在对应字段下方（`weak_password` 显示规则，`common_password` 显示"密码太常见"，`required` 显示"必填"）；429 显示"尝试次数过多，请稍后再试"；503 `server_busy` 显示"服务器繁忙，请稍后再试"；403 `signup_disabled` 显示"注册已关闭"。
   - `auth-root.tsx` 不再读地址里的 `error_code`、`email`。
@@ -1394,7 +1428,7 @@ files:
 | 净变化 | 减少约 50 行 | |
 
 **后端**：
-- 生产代码约 5,300 行（不含生成的代码和名单文件；其中请求体结构的校验器和生成器约 370 行，账户行锁约 150 行），测试约 6,500 行（含交错测试和第四个整程序测试）；
+- 生产代码约 5,450 行（不含生成的代码和名单文件；其中请求体结构的校验器、格式检查器和生成器约 400 行，账户行锁约 150 行，自己的令牌桶约 100 行，刷新令牌的 MAC 约 50 行），测试约 6,700 行（含六个交错测试、失败闸门的并发测试和第四个整程序测试）；
 - 手写的 SQL 约 350 行，加上 River 的迁移（318 + 189 行）；
 - `identity.yaml` 约 900 行；
 - 常见密码名单 33,887 行（生成的数据，277 KB）。
@@ -1506,7 +1540,7 @@ files:
 - **停用**（决策点 3）：任何凭证都能停用自己的账户，**包括 PAT**，不只是访问令牌；与 Plane 一样不要求输入密码。拿到一个 PAT 的人可以让账户停用，服务器管理员用 `nerve users activate` 恢复。恢复后账户的 PAT 重新可用；怀疑账户被盗时，恢复之后再执行 `reset-password`（3.17）。
 - **密钥扫描**（Codex M-7）：`nrv_pat_`、`nrv_rt_` 前缀让代码托管平台的密钥扫描**可以配置**识别泄露的令牌的自定义规则；前缀本身不会让平台自动识别。精确的正则：
   - PAT：`nrv_pat_[A-Za-z0-9_-]{43}`（32 字节，base64url 不补 `=`）；
-  - 刷新令牌：`nrv_rt_[A-Za-z0-9_-]{70}`（52 字节）。
+  - 刷新令牌：`nrv_rt_[A-Za-z0-9_-]{91}`（68 字节，含 16 字节的标签；spike 生成的令牌与之匹配）。
   - README 写明在哪里启用：例如 GitHub 仓库或组织设置中的 Secret scanning → Custom patterns（需要平台提供这项功能）。
 - 直接用 HTTP 部署时，浏览器不在安全上下文中：跨标签页的续期用租约（7.1），复制令牌用剪贴板工具已有的 `execCommand` 退路（`web/packages/utils/src/string.ts:201-206`）。README 的部署说明建议公网部署用 HTTPS。
 
@@ -1516,14 +1550,14 @@ files:
 | 内容 | Phase |
 |---|---|
 | 部署时设 `NERVE_ENV=prod`；不设时注册默认开放、签名密钥是临时的，启动日志会提醒（6.1） | P1 |
-| 生成签名密钥：`openssl genpkey -algorithm ed25519 -out nerve-jwt.pem`（3.7） | P1 |
+| 生成签名密钥：`openssl genpkey -algorithm ed25519 -out nerve-jwt.pem`；换密钥时，换钥之前的旧代刷新令牌不再能被认出重复使用（3.7） | P1 |
 | 常见密码名单的第三方声明（3.8） | P1 |
+| 迁移角色的权限：用单独的角色执行迁移时，运行服务的角色要能读 `goose_db_version`（6.1）。第一批迁移在 P1，所以放在 P1 | P1 |
 | 前面有反向代理时配置 `server.trusted_proxies`（3.10） | P2 |
 | 第一个账户：`nerve users create --email …`（决策点 2） | P3 |
 | 管理命令：`reset-password` 撤销全部会话和 PAT；`set-email` 和 `activate` 不撤销 PAT，怀疑账户被盗时另外执行 `reset-password`（3.17） | P3 |
 | 注册会暴露邮箱是否已注册（8.2）；刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5） | P3 |
 | 密钥扫描的自定义规则和启用位置（8.6） | P3 |
-| 迁移角色的权限（6.1） | P3 |
 | HTTP 部署时多标签页靠租约；公网部署用 HTTPS（7.1、8.6） | P4 |
 
 ---
@@ -1533,35 +1567,37 @@ files:
 ### 9.1 后端单元测试
 | 对象 | 内容 |
 |---|---|
-| `identity/domain` | 邮箱规范化和格式；名字中的网址；显示名；时区；主题、语言、每周第一天；新手引导的部分对象（未知的键、值不是布尔值时拒绝）；密码规则（表格驱动：8、128 的边界，缺各类字符，非 ASCII 字符；主干的提取；名单命中和不命中的例子，包括 3.8 列出的那些和七个绕过第二稿的写法；主干等于邮箱前缀的主干；名单中每个条目都满足生成时的过滤条件）；刷新令牌的编码和解码（长度不对、前缀不对、base64 非法）；续期的判定表（当前代、真实的旧代、查不到、已撤销、已过期）；PAT 的格式、名称、过期时间；PAT 列表游标的载荷 |
-| `identity/app` | 每个用例用内存里的假端口测试：注册（关闭注册时先答 403、不查邮箱；邮箱已存在；三行在一个事务里）；登录（邮箱不存在时仍做一次假校验；事务里哈希已变 → 401；停用只在密码正确后报出；参数变化后重新哈希）；续期（轮换；真实的旧令牌撤销；伪造的旧代、过期访问令牌里的 `sid` 加 `g = 0` 都不撤销；`expires_at` 不变；用固定时钟推到期限之后续期失败；条件更新没有命中时重读）；退出（只有当前一代有效的令牌才撤销，其余都是 204 且不变）；修改密码（撤销其他会话；用 PAT 修改时撤销全部；PAT 不变；凭证已被撤销时 401）；停用（撤销全部会话、重置新手引导、密码和 PAT 不变）；恢复；创建账户（不经过 `SignupPolicy`，不建会话）；重置密码（撤销全部会话和全部 PAT，返回数量）；修改邮箱（两个邮箱都规范化；新邮箱已被使用时 `identity.email_taken`；新旧相同时报错；撤销全部会话，PAT 不变）；PAT 的创建（凭证已被撤销时 401）、列出（`limit` 为 0、101 时 422）、撤销；认证（JWT 加会话检查；账户停用时 401；PAT 的过期和 `last_used` 的写入频率）；清理过期会话 |
-| 适配器 | 6.3 表中各端口的测试；`authn` 把 `Actor` 放进 `context` 并返回限流键，令牌无效时返回 401 的错误，数据库出错时返回别的错误；HTTP 适配器：登录、注册、修改密码的限流键和桶，续期和退出不经过适配器的桶（只受 `anonymous` 约束，3.10），续期和退出的 `context` 带 4 秒的期限 |
-| `platform` | 认证中间件（公开操作不看令牌；非公开操作没有令牌、令牌无效、令牌有效；闸门已空时 429 且计数的假认证器没有被调用；失败扣一次、成功不扣；认证器返回非 401 的错误时 500 且不扣）；`Router` 在 `HandleFunc` 和 `Handle` 时都记下模式；`bodyshape` 的校验器（spike 的 25 个请求：未知字段、`null`、必填、数组、可为空的对象、开放的 map、类型、`date-time`、一次收集多个问题）和中间件（把请求体原样放回）；`bodyshapegen`（两次生成的输出相同；遇到不支持的组合时失败）；限流（突发、`AllowAll` 被拒时退回全部预留、清理闲置的键、`Retry-After`）；请求期限；可信代理下的客户端 IP，不可信的对端带 `X-Forwarded-For` 时只记一次 WARN；413；`ProblemError` 的映射（字段错误、`RetryAfter`、不满足接口时 500），包括不带 Go 类型名的解码错误和 `context.Canceled`；`webui` 的 CSP 哈希；配置的新校验、`LogValue` 不含密钥文件的路径、prod 在没有覆盖时 `signup_enabled` 为假 |
+| `identity/domain` | 邮箱规范化和格式；名字中的网址；显示名；时区；主题、语言、每周第一天；新手引导的部分对象（未知的键、值不是布尔值时拒绝）；密码规则（表格驱动：8、128 的边界，缺各类字符，非 ASCII 字符；主干的提取；名单命中和不命中的例子，包括 3.8 列出的那些和七个绕过第二稿的写法；主干等于邮箱前缀的主干；名单中每个条目都满足生成时的过滤条件）；刷新令牌 68 字节布局的编码和解码（往返；长度不对、前缀不对、base64 非法；字段的偏移）；续期的判定表（3.5 的每一行：当前代且哈希相符；当前代但哈希不符；旧代且标签成立；旧代但标签不成立；g 大于当前代；查不到、已撤销、已过期；标签的结果由调用方传入）；PAT 的格式、名称、过期时间；PAT 列表游标的载荷 |
+| `identity/app` | 每个用例用内存里的假端口测试：注册（关闭注册时先答 403、不查邮箱；邮箱已存在；三行在一个事务里）；登录（邮箱不存在时仍做一次假校验；事务里哈希已变：新哈希下密码仍成立（并发的重新哈希）时重做一次锁内那一步后成功，不成立时 401，重做时又变了也是 401；停用只在密码正确后报出；参数变化后重新哈希）；续期（轮换，`token_hash` 换成新密文的哈希；真实的旧令牌（标签成立）撤销；伪造的旧代（随机密文加随机标签）、过期访问令牌里的 `sid` 加 `g = 0` 都 401 且不撤销；当前代而哈希不符时不撤销；换了签名密钥之后，换钥之前的旧代令牌 401 且不撤销，当前一代照常续期；`expires_at` 不变；用固定时钟推到期限之后续期失败；条件更新没有命中时重读）；退出（只有当前一代有效的令牌才撤销，其余都是 204 且不变）；修改密码（撤销其他会话；用 PAT 修改时撤销全部；PAT 不变；凭证已被撤销时 401；哈希只因并发的重新哈希而变时重新校验一次后成功）；停用（撤销全部会话、重置新手引导、密码和 PAT 不变）；恢复；创建账户（不经过 `SignupPolicy`，不建会话）；重置密码（撤销全部会话和全部 PAT，返回数量）；修改邮箱（两个邮箱都规范化；新邮箱已被使用时 `identity.email_taken`；新旧相同时报错；撤销全部会话，PAT 不变）；PAT 的创建（凭证已被撤销时 401）、列出（`limit` 为 0、101 时 422）、撤销；认证（JWT 加会话检查；账户停用时 401；PAT 的过期和 `last_used` 的写入频率）；清理过期会话 |
+| 适配器 | 6.3 表中各端口的测试，包括 `signing` 的 MAC 标签（往返、改一个字节不成立、随机标签不成立、换密钥后不成立）；`authn` 把 `Actor` 放进 `context` 并返回限流键，令牌无效时返回 401 的错误，签名有效而只是过期的 JWT 返回的 401 错误实现 `ExpiredCredential()` 且为真，其他 401（签名不对、会话已撤销或已过期、PAT 不存在、账户停用）不实现或为假，数据库出错时返回别的错误；HTTP 适配器：登录、注册、修改密码的限流键和桶，续期和退出不经过适配器的桶（只受 `anonymous` 约束，3.10），续期和退出的 `context` 带 4 秒的期限 |
+| `platform` | 认证中间件（公开操作不看令牌；非公开操作没有令牌、令牌无效、令牌有效；闸门已空时 429 且计数的假认证器没有被调用；先预留：认证失败时单位留下，成功、签名有效而只是过期的 JWT（`ExpiredCredential()`）、认证器返回非 401 的错误（500）时退回；并发：额度 3、50 个并发的无效令牌，假认证器只被调用 3 次，其余 429）；`Router` 在 `HandleFunc` 和 `Handle` 时都记下模式；`bodyshape` 的校验器（spike 的 25 个请求：未知字段、`null`、必填、数组、可为空的对象、开放的 map、类型、一次收集多个问题；格式：`date-time`、`date`、`uuid` 各取生成代码的解码接受和拒绝的写法，校验器的结论与同一个解析函数一致，不合法时 `invalid_format`）和中间件（把请求体原样放回）；`bodyshapegen`（两次生成的输出相同；格式来自 `type-mapping`，遇到没有校验器的 Go 类型或不支持的组合时失败）；限流（自己的令牌桶：突发、`AllowAll` 被拒时一个都不扣、`Reserve` 的退回只生效一次且不超过突发、清理闲置的键、`Retry-After`）；请求期限；可信代理下的客户端 IP，不可信的对端带 `X-Forwarded-For` 时只记一次 WARN；客户端 IP 键（IPv4；IPv4 映射的地址；同一个 /64 的两个 IPv6 地址同键、不同 /64 不同键；前缀长度可配）；413；`ProblemError` 的映射（字段错误、`RetryAfter`、不满足接口时 500），包括不带 Go 类型名的解码错误和 `context.Canceled`；`webui` 的 CSP 哈希；配置的新校验、`LogValue` 不含密钥文件的路径、prod 在没有覆盖时 `signup_enabled` 为假 |
 | `bootstrap` | 非 prod 且监听在非回环地址时记一次 WARN；`API.Middlewares` 的顺序 |
 
 ### 9.2 集成测试（连接真实的 Postgres，`pgtest`）
 - 仓储的每条查询，包括：
-  - 续期的查找和条件轮换（时刻作为参数传入）；插入新一代；
+  - 续期的查找和条件轮换（时刻作为参数传入；轮换后 `generation` 加一、`token_hash` 换成新值；代数或哈希不符时不命中）；
   - 游标分页（`created_at` 相同的两行不重不漏）；
   - 违反唯一约束和 CHECK 时映射为领域错误；
   - CHECK 的反例：邮箱的大写和空白、`onboarding_step` 的七种反例（4.3）、`start_of_the_week = 7`、`revoked_at` 与 `revoke_reason` 不一致；
   - 审计列：插入和业务更新之后，`created_at`、`updated_at` 等于固定时钟的时刻（3.13）；
   - 重置密码在一个事务里撤销会话和 PAT；
   - 两个请求同时合并 `onboarding_step` 的不同键，两个键都保留（3.14）；
-  - 清理任务跳过被锁住的会话，下一轮再删；删除会话时各代刷新令牌随之删除。
+  - 清理任务跳过被锁住的会话，下一轮再删。
 - **账户行锁的交错测试**（3.5，P3 的完成线）：用带闸门的假哈希器确定性地交错：
   1. 登录校验完成 → 重置提交 → 登录的插入失败，没有新会话；
   2. 登录的重新哈希不会覆盖重置写入的哈希；
   3. 用被并发重置撤销的凭证创建 PAT，失败，没有新 PAT；
-  4. 修改密码与登录交错：登录用的是旧密码时失败。
-- `TxManager`。
-- 6 个迁移都能 up、down、再 up。
+  4. 修改密码与登录交错：登录用的是旧密码时失败；
+  5. 两个登录交错，其中一个做了重新哈希：另一个重新校验一次后成功；
+  6. 一个事务以 `FOR NO KEY UPDATE` 锁着账户行时，别的事务插入引用它的会话不必等待（有语句超时，超时即失败）。
+- `TxManager`：提交与回滚；语句都做完之后取消请求的 `context`，事务仍然提交，数据在库里（3.6 的提交规则）。
+- 5 个迁移都能 up、down、再 up。
 - River worker 的 `Work()` 只删除过期的会话。
 - `archtest` 的 `TestSQLCSchemaScope`（3.14），包括用人造的迁移文件核对"`ALTER TABLE` 放在不属于表所有者的文件里时失败"。
 
 ### 9.3 契约测试
 - `identity`、`instance` 的 handler 测试对每种状态（包括每种 problem）调用 `CheckResponse`。
-- `bootstrap` 的四个整程序测试：3.6 的三个（公开集合等于 `security: []`；注册的 `/api/v0` 路由等于接口描述的全部操作；每个非公开操作不带令牌得到 401 problem），和 3.11 的一个（每个带请求体的操作，结构不合契约时 400，可为空的字段传 `null` 不是 400）。另外，带 PAT 调用 `GET /me` 成功。
+- `bootstrap` 的四个整程序测试：3.6 的三个（公开集合等于 `security: []`；注册的 `/api/v0` 路由等于接口描述的全部操作；每个非公开操作不带令牌得到 401 problem），和 3.11 的一个（每个带请求体的操作，结构不合契约时 400，可为空的字段传 `null` 不是 400；从 P3 起，每个带格式的字段各传一个不合法的字符串得到 400 `invalid_format`，另有一个同时有未知字段、缺少的必填字段和写错的格式的请求，一次返回全部问题）。另外，带 PAT 调用 `GET /me` 成功。
 - `apitest`：
   - 写法检查加上 `security` 的两条规则（3.12）和 `x-problem-codes` 的写法（3.11）；
   - `CheckResponse` 核对 problem 的码在这个操作声明的集合里；每个模块的 handler 测试跑完时，核对声明的码都被返回过（3.11）；
@@ -1575,7 +1611,9 @@ files:
   - 续期请求在两条路径上都是 8 秒超时；
   - 过期时刻由 `access_token_expires_in` 和本地收到响应的时刻算出，本机时钟偏差不影响；
   - `nerve.auth` 一次写入刷新令牌和 `login_id`；登录、注册时生成新的 `login_id`，续期时不变；
-  - `storage` 事件的三种情况：记录被删除时结束会话；`login_id` 变了时丢掉访问令牌、重置 stores、重新取 `/me`；只换了令牌时不动；
+  - 登录、注册、续期、退出写 `nerve.auth` 时都持有同一把锁（或租约）：假的 `locks` 记录每次写入时锁是否被持有；
+  - 续期的响应回来之前 `login_id` 被换掉（假的 storage 在续期途中写入另一个账户的记录）：丢弃这次续期的结果，不写回，记录仍是新账户的，按"`login_id` 变了"处理；
+  - `storage` 事件的四种情况：记录被删除时结束会话；本标签页未登录时记录出现，续期、取 `/me`；`login_id` 变了时丢掉访问令牌、重置 stores、重新取 `/me`；只换了令牌时不动；
   - 启动时第一次续期的三种结果：200 已登录；401 未登录；429、5xx、网络错误进入"会话暂不可用"，保留记录并退避重试，不跳到登录页；
   - 401 → 续期 → 重发一次；续期得到 401、或重发后仍是 401 时结束会话；续期得到 429、5xx、网络错误时保留记录并退避；
   - 没有 `nerve.auth` 时不请求 `/me`；
@@ -1608,7 +1646,9 @@ files:
   - 登录页、注册页的就地错误（包括"密码太常见"）；
   - `next_path` 的各种取值；
   - 两个标签页的续期和退出；
-  - **两个账户、两个标签页**：标签页甲以 X 登录，标签页乙退出后以 Y 登录；标签页甲切换为 Y，此后它发出的写请求都是 Y 的（Codex I-5）；
+  - **两个账户、两个标签页**（Codex I-5、控制者复核 R4），两种走法：
+    - 标签页甲以 X 登录并保持登录，不退出；在标签页乙中通过接口登录 Y，按令牌管理器的写入路径换上 Y 的记录。标签页甲切换为 Y，此后它发出的写请求都是 Y 的；甲在切换前后正好续期时，也不会把 X 的令牌写回去；
+    - 标签页乙先退出，再以 Y 登录：标签页甲收到"记录出现"，以 Y 进入；
   - **用 HTTP 在局域网 IP 上打开**（nerve 监听 `0.0.0.0`，浏览器打开 `http://<本机局域网 IP>:<端口>`，不是 localhost，所以不是安全上下文）：确认 `window.isSecureContext` 为假、`navigator.locks` 不存在；开两个标签页，等访问令牌过期后同时操作，两边都成功，数据库中这个会话未被撤销；启动日志有非回环地址的提醒；
   - **会话暂不可用**：已登录时停掉 nerve、刷新页面，显示等待和重试，没有跳到登录页；启动 nerve 后自动恢复；
   - 实例请求失败时的维护页；
@@ -1737,9 +1777,10 @@ files:
 - 没有需要负责人裁定的架构问题。
 - 评审提出的"平台包能否导入 `internal/shared`"，已由控制者裁定为不导入（3.3）：平台自己声明认证器和错误接口，`identity`、`shared` 按结构满足它们。这保持了总体设计 6.2"平台与业务无关"，M0 设计 3.1 不用改。代价是 `shared.Error` 带着 HTTP 状态（3.11）。
 - 第三稿新定的平台约定（按控制者的裁定，经 spike 选定做法）：
-  1. **请求体的结构校验**（3.11）：新增一个平台子包 `httpserver/bodyshape` 和一个构建时的生成器 `cmd/bodyshapegen`。生成器用 kin-openapi 读契约，但不链接进 nerve；运行时只用标准库。
-  2. **凭证签发和变更的账户行锁**（3.5）：加锁顺序是全局约定，以后签发或变更凭证的写入（例如 M3 的邀请令牌）照做。
+  1. **请求体的结构校验**（3.11）：新增一个平台子包 `httpserver/bodyshape` 和一个构建时的生成器 `tools/bodyshapegen`。生成器在工具模块，用 oapi-codegen 自己的加载器和 `type-mapping` 读契约，不链接进 nerve；运行时只用标准库和 oapi-codegen 的运行时类型。
+  2. **凭证签发和变更的账户行锁**（3.5）：`FOR NO KEY UPDATE` 和加锁顺序是全局约定，以后签发或变更凭证的写入（例如 M3 的邀请令牌）照做。
   3. **迁移归被改表的模块所有**（3.14），由 `TestSQLCSchemaScope` 守住。
+  4. **提交不受请求期限的取消**（3.6）：`TxManager` 的 `COMMIT` 在 `context.WithoutCancel` 下执行，有自己的期限。
 - 以下几处看起来像与上级设计冲突，核对后都在现有规则内，已作为裁定写在第 3、5 节：
   1. **M1-P4 交接要求服务端校验 `next_path`**（3.18）：它的前提（服务端发出跳转）在 JSON 接口下不存在了。
   2. **后续 M 的字段**（3.2）：本身可为空的引用字段随实体进入接口，值为 `null`；实例配置的字段按 M1 设计 3.7 在 M2 定义。
@@ -1778,24 +1819,24 @@ files:
 ### P1 `platform-core`：平台约定与第一个认证（后端）
 - **目标**：任何调用方都能注册，并用注册得到的令牌访问 `GET /me`；不带令牌访问非公开操作一律 401；不合契约的请求体一律 400；后续 M 照做的平台约定全部定下。
 - **交付物**：
-  1. 表结构约定（3.13，含审计列和 JSON 列的 CHECK）；迁移 `00001`–`00004`；sqlc 接入（3.14），按模块限定 `schema`，`TestSQLCSchemaScope` 含 `ALTER TABLE` 的所有者；架构测试规则 4 加上 `internal/shared`，规则 6 推广到 `adapter/*/gen`。
+  1. 表结构约定（3.13，含审计列和 JSON 列的 CHECK）；迁移 `00001`–`00003`（`users`、`profiles`、`auth_sessions`，4.1）；sqlc 接入（3.14），按模块限定 `schema`，`TestSQLCSchemaScope` 含 `ALTER TABLE` 的所有者；架构测试规则 4 加上 `internal/shared`，规则 6 推广到 `adapter/*/gen`。
   2. 平台：
-     - `internal/shared`（含游标的封套）、`platform/postgres` 的事务和 UTC、`platform/clock`；
+     - `internal/shared`（游标的封套到 P3 随第一个列表加入）、`platform/postgres` 的事务（`COMMIT` 不受请求期限的取消，3.6）和 UTC、`platform/clock`（固定时钟截到微秒，3.13）；
      - `httpserver` 的 `Router`、`API` 值、默认拒绝的认证中间件、请求元信息、请求期限、请求体上限、`ProblemError` 的映射和新平台码、导出 `RequestID`（3.6、3.11）；
-     - 请求体的结构校验：`httpserver/bodyshape`、`cmd/bodyshapegen`、`make gen-go` 的接入（3.11）；
+     - 请求体的结构校验：`httpserver/bodyshape`（含 `date-time`、`date`、`uuid` 的格式检查器，第一个使用者在 P3）、`tools/bodyshapegen`、`make gen-go` 的接入（3.11）；
      - 配置（6.5 中 P1 用到的部分，含按环境的注册默认值和 `LogValue`），M0-P2 交接 8 的三个小问题，启动时的环境提醒（6.1）。
   3. 接口描述：oapi-codegen 的模块模板（含 `email` 映射为 `string`）；`security` 的写法和 `apitest` 的两条规则；`x-problem-codes` 和 `apitest` 的三项核对；`FieldError.code`；`CheckRequest`（3.11、3.12）。
   4. `identity`：
      - `register`、`getMe`；
      - argon2id，含并发上限和等待上限；密码规则（新的主干）、常见密码名单和生成它的脚本（3.8）；
-     - Ed25519 JWT 和密钥（3.7）；注册时建会话和第 0 代刷新令牌、发令牌；
+     - `signing` 适配器：Ed25519 JWT、刷新令牌的 MAC 标签和密钥（3.4、3.7）；注册时建会话、发令牌；
      - 认证用例和 `authn` 适配器（JWT 加会话检查）。
   5. `bootstrap` 的四个整程序测试（3.6、3.11）。
   6. 端到端：
      - fixture 的扩展（9.5，页面的登录状态除外；`auth.ts` 这时只有注册）；
      - S1 的迁移断言；
      - A1、A2 的接口版本。
-  7. 3.20 中 P1 的各行（含差异清单：一 B、二·全局，`users`、`profiles`、`auth_sessions`、`auth_refresh_tokens` 逐列）；8.7 中 P1 的 README 内容。
+  7. 3.20 中 P1 的各行（含差异清单：一 B、二·全局，`users`、`profiles`、`auth_sessions` 逐列）；8.7 中 P1 的 README 内容。
 - **关闭**：
   - M0-P1；
   - M0-P2 的第 1、3、4、6、7、8 条和第 2 条中认证的部分（第 4 条按原文：`*_file` 不记路径）；
@@ -1807,13 +1848,14 @@ files:
   - 四个整程序测试和 `apitest` 的新核对通过；
   - `make gen-check` 覆盖 sqlc 和请求体结构表的输出，`bodyshapegen` 两次生成的输出相同；
   - 架构测试和传递依赖测试通过；
-  - 审计列等于固定时钟的集成测试、CHECK 的反例测试通过。
+  - 审计列等于固定时钟的集成测试、CHECK 的反例测试通过；
+  - `TxManager` 在请求的 `context` 被取消后仍然提交的集成测试通过。
 
 ### P2 `sessions`：登录与会话（后端）
 - **目标**：登录、续期、退出可用；刷新令牌的轮换和重复使用检测、会话的绝对期限、限流、安全响应头全部到位。
 - **交付物**：
-  1. `login`（按账户行锁签发；假哈希；停用只在密码正确后报出；重新哈希）；`refreshTokens`（按 `(sid, g)` 和哈希查找；轮换；只对真实的旧令牌撤销；绝对期限）；`logout`（只认当前一代）；续期和退出的 4 秒服务端期限（3.5、3.9）。
-  2. 限流：`platform/ratelimit`（突发、`AllowAll`）；`httpserver` 的限流中间件和认证之前的失败闸门；`identity` 适配器中登录、注册的桶（续期、退出只经过 `anonymous`）；`server.trusted_proxies` 和不可信 `X-Forwarded-For` 的提醒（3.6、3.10）。
+  1. `login`（按账户行锁签发；假哈希；停用只在密码正确后报出；重新哈希）；`refreshTokens`（按会话 id 取出会话行；当前一代比对 `token_hash` 后条件轮换；旧代由 MAC 标签确认是这个会话真的发过的才撤销，其余 401 不撤销；绝对期限）；`logout`（只认当前一代）；续期和退出的 4 秒语句期限，提交另有期限（3.5、3.6、3.9）。
+  2. 限流：`platform/ratelimit`（自己的令牌桶：突发、`AllowAll`、`Reserve` 和退回）；`httpserver` 的限流中间件和认证之前的失败闸门（先预留；签名有效而只是过期的 JWT 不计数）；`identity` 适配器中登录、注册的桶（续期、退出只经过 `anonymous`）；客户端 IP 键（IPv6 取前缀）；`server.trusted_proxies` 和不可信 `X-Forwarded-For` 的提醒（3.6、3.10）。
   3. 固定链上的安全响应头（8.3）。
   4. 端到端：`auth.ts` 加上登录；A3、A4、A5、A6、A15 的接口版本。
   5. 3.20 中 P2 的各行；8.7 中 P2 的 README 内容。
@@ -1821,30 +1863,32 @@ files:
 - **完成线**：
   - A3–A6、A15 的接口版本通过，P1 的故事仍然通过；
   - 登录的耗时测试（邮箱存在与否，耗时相同）通过；
-  - 续期的三个测试通过：伪造的旧代（随机密文）401、不撤销；过期访问令牌里的 `sid` 加 `g = 0` 不撤销；真实的旧令牌撤销；
-  - 3.10 表中除 `password_user`（随修改密码在 P3 加入）外的每个桶都有测试，续期、退出只经过 `anonymous`；失败闸门用计数的假认证器证明超额后不再调用认证器。
+  - 续期的四个测试通过：伪造的旧代（随机密文加随机标签）401、不撤销；过期访问令牌里的 `sid` 加 `g = 0` 401、不撤销；真实的旧令牌撤销；换了签名密钥之后，换钥之前的旧代令牌 401、不撤销，当前一代照常续期；
+  - 3.10 表中除 `password_user`（随修改密码在 P3 加入）外的每个桶都有测试，续期、退出只经过 `anonymous`；客户端 IP 键的 IPv6 前缀有测试；
+  - 失败闸门用计数的假认证器证明：超额后不再调用认证器；50 个并发的无效令牌也不超过额度；签名有效而只是过期的 JWT、成功、数据库错误都退回单位。
 
 ### P3 `account-api`：账户接口（后端）
 - **目标**：账户的其余接口都可用，而且都能用 PAT 完成；管理命令可用；River 的第一个定时任务运行；凭证的签发与变更在并发下仍然正确。
 - **交付物**：
   1. `updateMe`、`getProfile`、`updateProfile`（`onboarding_step` 在 SQL 中合并）、`changePassword`（账户行锁、3.5 的撤销规则、`password_user` 桶）、`deactivateMe`（账户行锁）。
   2. PAT：
-     - 迁移 `00005`；
-     - 创建（账户行锁下复核凭证）、分页列表（`common.yaml` 的分页组件、PAT 列表的游标载荷、`limit` 的 422）、撤销（`DELETE /api-tokens/{token_id}`）；
+     - 迁移 `00004`；
+     - 创建（账户行锁下复核凭证）、分页列表（`shared` 的游标封套、`common.yaml` 的分页组件、PAT 列表的游标载荷、`limit` 的 422）、撤销（`DELETE /api-tokens/{token_id}`）；
      - PAT 认证和 `last_used`。
   3. `instance` 的三个字段和 `listTimezones`；嵌入 `time/tzdata`。
   4. 管理命令：`nerve users create`、`reset-password`、`set-email`、`deactivate`、`activate`；`Admin()`（3.17）。
   5. River（3.15）：
-     - 迁移 `00006`；
+     - 迁移 `00005`；
      - `platform/jobs`（服务用和只投递两种客户端）；
      - `bootstrap` 的运行和停机顺序；命令行的最小组合（3.17）；
      - 清理过期会话的定时任务（`SKIP LOCKED` 分批）。
-  6. 账户行锁的四个交错测试（3.5、9.2）。
-  7. 端到端：
+  6. 账户行锁的六个交错测试（3.5、9.2）。
+  7. 请求体格式检查的第一批使用者（`createApiToken` 的 `expired_at`、`updateProfile` 的 `last_workspace_id`）和第四个整程序测试中逐格式、一次收集多种问题的情况（3.11）。
+  8. 端到端：
      - A7–A14、A16、A17 的接口版本（需要登录的都用 PAT）；
      - S3；
      - 实测 nerve 的停机时间。
-  8. 3.20 中 P3 的各行（含差异清单的 `api_tokens` 逐列和 River 的表）；8.7 中 P3 的 README 内容。
+  9. 3.20 中 P3 的各行（含差异清单的 `api_tokens` 逐列和 River 的表）；8.7 中 P3 的 README 内容。
 - **关闭**：
   - M0-P2 第 5 条；
   - M0-P3 整体（参数绑定的出口由 `listApiTokens`、`revokeApiToken` 测过）；
@@ -1854,14 +1898,14 @@ files:
 - **完成线**：
   - A7–A14、A16、A17 的接口版本通过，P1、P2 的故事仍然通过；
   - 每个需要登录的操作都有 PAT 的测试；
-  - 四个整程序测试覆盖新加的全部操作；
-  - 账户行锁的四个交错测试通过；
+  - 四个整程序测试覆盖新加的全部操作，包括每个带格式的字段写错时 400 `invalid_format`；
+  - 账户行锁的六个交错测试通过；
   - `onboarding_step` 的并发合并测试通过；`limit` 为 0、101、`abc` 的测试通过。
 
 ### P4 `web-auth`：前端认证
 - **目标**：浏览器通过令牌管理器登录、续期、退出；Cookie 和 CSRF 从前端消失；用 HTTP 部署时多标签页也能正常续期；切换账户时标签页不会以错误的身份写入；M2 能到达的页面挂载时不请求 M3 的旧接口。
 - **交付物**：
-  1. `@nerve/api-client` 接入 web（`--root-types`）；令牌管理器（`nerve.auth` 和 `login_id`、三种 `storage` 事件、"会话暂不可用"、两条路径上的 8 秒超时、只有续期 401 才结束会话）、跨标签页的协调（`navigator.locks` 和租约）和它们的测试（7.1）。
+  1. `@nerve/api-client` 接入 web（`--root-types`）；令牌管理器（`nerve.auth` 和 `login_id`，每次写入都在同一把锁或租约下，续期写回之前核对 `login_id`；四种 `storage` 事件，含本标签页未登录时记录出现；"会话暂不可用"；两条路径上的 8 秒超时；只有续期 401 才结束会话）、跨标签页的协调（`navigator.locks` 和租约）和它们的测试（7.1）。
   2. 传输层的清理：CSRF 4 处、表单提交、web 的 axios 基类（7.2）。
   3. 登录页、注册页、错误文案表（7.3）；`next_path`（3.18）。
   4. `AuthenticationWrapper`（已完成引导的用户直接去 `/create-workspace`；"会话暂不可用"的界面）、`InstanceWrapper`（7.4）；user、profile、instance 三个 store 和相关类型，以及删除 `IUser` 牵连的地方（7.5 中与认证有关的部分）。
@@ -1919,7 +1963,7 @@ files:
 | | 4 新的密钥类配置写进 `LogValue` | P1。按原文关闭：`*_file` 只记是否设置，不记路径（3.7） |
 | | 5 River 与停机顺序、连接池关闭的时限、handler 的期限、River 的迁移 | P1 请求期限（3.6）；P3 River、停机和迁移（3.15） |
 | | 6 规则 6 推广到 `adapter/*/gen` | P1（3.14） |
-| | 7 迁移与就绪检查、迁移角色的权限 | P1 S1；P3 README（8.7） |
+| | 7 迁移与就绪检查、迁移角色的权限 | P1：S1；README 的迁移角色一行（8.7），与第一批迁移同时 |
 | | 8 布尔配置的空值、logger 之后的致命错误、健康检查的日志 | P1（6.1） |
 | M0-P3-api-codegen-notes | 1 生成选项 | P1（3.12） |
 | | 2 错误映射、校验层、解码错误、413、`context.Canceled`、错误出口的测试、`CheckRequest` | P1：映射、分层（结构在边界，取值在领域）、请求体解码和 handler 两个出口；P3：参数绑定的出口（`listApiTokens`、`revokeApiToken`）。交接在 P3 整体关闭；不为测试在生产的接口描述里加操作（3.11） |
@@ -1964,7 +2008,7 @@ files:
 | 接收 | 事项 |
 |---|---|
 | M3 | **邀请**（负责人确认的产品改动）：邮箱未经验证期间，接受邀请不能只靠邮箱匹配，要凭邀请链接中的令牌（M1 设计 3.15 留下的路径）；关闭注册时，持有有效邀请的人仍可注册。后者由 M3 扩展 `SignupPolicy` 的实现和注册请求（加上邀请令牌），不另加端口（评审 M16）。这改变总体设计 1.1"系统内接受邀请"和 4.2"被邀请的邮箱始终可以注册"的做法，由 M3 的设计交负责人确认。prod 默认关闭注册（决策点 2）不能代替接受邀请时的身份证明。参考：Plane 把任何未删除的工作区邀请都算上（`plane/apps/api/plane/authentication/adapter/base.py:102-120`）。签发邀请令牌按 3.5 的账户行锁 |
-| M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。同时修正工作区取数的 SWR fetcher 没有 `return`/`await` 的问题（`web/apps/web/core/store/workspace/index.ts:146-158`），否则失败会成为未处理的 Promise 拒绝 |
+| M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()` 的 Promise：原来的 fetcher（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`，M2 随预取一起删掉）没有，失败会成为未处理的 Promise 拒绝。被调用的 `fetchWorkspaces` 本身在 `web/apps/web/core/store/workspace/index.ts:146-158` |
 | M3 | `profiles.last_workspace_id` 是否补外键（`ON DELETE SET NULL`）。补的话，迁移归 `identity`（`<v>_identity_profiles_last_workspace_fk.sql`，3.14），版本号大于建 `workspaces` 的迁移 |
 | M3 | `workspace_creation_enabled` 的执行，以及关闭时是否提供创建工作区的命令（3.16） |
 | M3 | **停用的端口**（决策点 3 已裁定为 A）：给停用用例加上它声明的端口并实现，在停用的同一个事务里调用。唯一管理员时拒绝（按 Plane 的本意，修正它查询的缺陷，登记差异），并给 `deactivateMe` 声明对应的错误码；停用成员关系；删除发给这个邮箱的邀请 |
@@ -1992,7 +2036,7 @@ files:
 - [ ] 后端：单元测试、集成测试（含账户行锁的交错测试）、契约测试（四个整程序测试、`apitest` 对错误码的核对）、架构测试（含规则 4 的扩展和 `TestSQLCSchemaScope`）和 depguard 全部通过；`make gen-check` 覆盖 oapi-codegen、请求体结构表、sqlc 和 TS 客户端。
 - [ ] 前端：类型检查通过，knip 为零；oxlint 等于上限，上限已按 7.8 调低；前端单元测试通过；关键词守卫没有未登记的命中。
 - [ ] `git grep -n -E "csrfmiddlewaretoken|X-CSRFTOKEN" -- web` 没有输出；前端不再调用 `/auth/…` 和 Plane 的用户、实例、令牌、时区地址（7.9 的规则守着）；M2 能到达的页面挂载时不请求 M3 的旧接口（3.1）。
-- [ ] 5 张表由 M2 的迁移创建，以 Plane 表结构快照为起点；差异清单在建表的 Phase 登记了全局的建表约定（3.13）、每一列的改动和每一条行为差异（4.6），`sessions` 登记为替换模型。
+- [ ] 4 张业务表（`users`、`profiles`、`auth_sessions`、`api_tokens`）由 M2 的迁移创建，以 Plane 表结构快照为起点；River 的表由它自己的迁移创建（3.15）；差异清单在建表的 Phase 登记了全局的建表约定（3.13）、每一列的改动和每一条行为差异（4.6），`sessions` 登记为替换模型。
 - [ ] 第 10 节的四个决策点已由负责人裁定（2026-09-25）并已实现；第 11.1 节已由负责人批准，总体设计 4.2 已改写。
 - [ ] 浏览器核对（9.6，含局域网 HTTP、两个账户两个标签页、会话暂不可用）的脚本全文写在各 Phase review 的附录中。
 - [ ] `handoffs/` 中没有 `open` 的事项；交给 M3–M8 的交接已写好（13.2）。
@@ -2018,18 +2062,19 @@ files:
 
 | 风险 | 应对 |
 |---|---|
-| 重复使用检测过严：续期的响应在网络上丢失，客户端重试会被当成重复使用，用户被迫重新登录 | 同一浏览器内由跨标签页的协调避免并发续期；服务端期限短于客户端超时（3.5）；发现重复使用时记 WARN 日志，P4、P5 的核对中观察它是否频繁出现。真的频繁时，可以加"上一代令牌在几秒内仍可用"的宽限期（各代的哈希已经都在），但要重新审视安全语义，留到以后 |
+| 重复使用检测过严：续期的响应在网络上丢失，客户端重试会被当成重复使用，用户被迫重新登录 | 同一浏览器内由跨标签页的协调避免并发续期；服务端期限短于客户端超时（3.5）；发现重复使用时记 WARN 日志，P4、P5 的核对中观察它是否频繁出现。真的频繁时，可以加"上一代令牌在几秒内仍可用"的宽限期（会话行上要多存上一代的哈希和轮换时刻），但要重新审视安全语义，留到以后 |
 | 租约不是原子的：没有 `navigator.locks` 时，两个标签页极小概率同时续期；持有租约的标签页被冻结、超过租期时，另一个标签页会用旧令牌续期 | "写入后再读一次"；代价与上一行相同。A4 的无 `locks` 版本和局域网 HTTP 的浏览器核对观察它 |
-| 认证之前的失败闸门按 IP 计数：同一个出口 IP 后的攻击流量会让有效的调用方也得到 429 | 额度每分钟 60 次、突发 60；可信代理配好以后按真实的客户端 IP 计数（3.10）；配置项可调；M8 做性能实测时观察 |
+| 认证之前的失败闸门按 IP 计数：同一个出口 IP 后的攻击流量会让有效的调用方也得到 429；先预留的做法让同一个 IP 同时在认证中的请求不能超过突发（60），数据库变慢时更早碰到 | 额度每分钟 60 次、突发 60；签名有效而只是过期的 JWT 不计数；认证成功立即退回；可信代理配好以后按真实的客户端 IP 计数，IPv6 按前缀（默认 /64，可配，3.10）；配置项可调；M8 做性能实测时观察同一 IP 的并发 |
 | 续期和退出只受按 IP 的 `anonymous` 约束：同一出口 IP 后的大量伪造刷新令牌会用掉这个 IP 的匿名额度 | 伪造的令牌每次只花一次按主键的查找；额度每分钟 600 次、突发 100，正常页面每 15 分钟才续期一次；续期得到 429 时前端保留令牌、退避重试（7.1）。不按令牌里的会话 id 另设桶：那是未经验证的输入，会让知道会话 id 的人耗尽别人的额度（3.10） |
 | 泄露的刷新令牌可以派生永不过期的 PAT，影响超过 30 天 | 8.5 写明风险和恢复步骤；PAT 列表显示创建时间和最后使用时间；管理员重置密码撤销全部 PAT。重新输入密码、限制派生是负责人以后可选的产品选项 |
 | 任何凭证（包括 PAT）都能停用账户 | 与 Plane 相同的产品取舍（决策点 3）；管理员用 `nerve users activate` 恢复；停用写 INFO 日志 |
 | 部署时忘了设 `NERVE_ENV=prod`：注册开放、签名密钥是临时的 | dev 的配置只监听回环地址；非 prod 而监听在非回环地址时启动日志提醒；README 写明；M8 的镜像设 `NERVE_ENV=prod` |
-| 账户行锁：持锁太久或死锁 | argon2 始终在锁外；全局的加锁顺序；清理任务用 `SKIP LOCKED`；四个交错测试（3.5） |
+| 账户行锁：持锁太久或死锁 | argon2 始终在锁外；锁用 `FOR NO KEY UPDATE`，不挡别的事务的外键检查；全局的加锁顺序（外键检查也算一次 `users` 的锁）；清理任务用 `SKIP LOCKED`；六个交错测试（3.5） |
 | 默认拒绝漏声明公开操作：公开的接口被 401 | 整程序测试要求公开集合等于接口描述的 `security: []`，漏一个就失败 |
 | 请求体的结构检查：请求体被解析两次；以后的 M 用到生成器不支持的 schema 写法 | 请求体上限 1 MiB，M8 实测开销；生成器遇到不支持的写法时失败并说明原因，由那个 M 带着测试扩展生成器，不会悄悄放过 |
 | 每个带令牌的请求多一次数据库查询 | 按主键查询；M8 做性能和内存实测时一起观察 |
-| 每一代刷新令牌都保存 | 每个会话最多约 2,900 行、0.3 MB；会话被清理时级联删除（4.5） |
+| 换签名密钥之后，换钥之前签发的旧代刷新令牌被再次使用时不再能被发现：标签无法验证，按伪造处理（401，不撤销） | 当前一代照常续期，换钥不让用户重新登录；换钥是少见的运维动作，README 写明这个后果（3.7、8.7）；需要时再加 `kid`，过渡期保留旧的 MAC 密钥（3.7） |
+| 会话表的大小 | 每个会话只有一行，续期多少次都不增加（3.5、4.5）；行数只随登录、注册增长，受 3.10 的桶约束；过期的行由清理任务删除（3.15） |
 | openapi-fetch 0.17.0 的中间件能否重发请求 | P4 先做原型；不行时在薄 service 层统一包一层"401 后续期重试" |
 | 生成的类型替换 `IUser` 等之后，牵连的使用方比 7.5 列出的多 | 类型检查会列出全部；超出估计时按领域拆成更小的任务 |
 | 常见密码名单误伤或漏网 | 判定规则确定，单元测试列出命中和不命中的例子（含绕过第二稿的七个写法）；被拒绝时提示明确；名单可以用脚本重新生成 |
@@ -2088,7 +2133,7 @@ files:
 - 核对评审引用时发现的出入：Plane 重置命令中 zxcvbn 的位置是 `reset_password.py:56`，不是评审写的 `:122`；Plane 停用时的"唯一管理员"检查确实写在代码里，但按代码推导它从不拒绝（决策点 3）。
 
 ### 17.2 第二稿的 Codex 评审与控制者复核（第三稿落实）
-第二稿 `498735d` 经 Codex 对抗性评审（Critical 0、Important 12、Minor 9，另有四个决策点和偏离核对表），控制者又复核出 N1–N4、m1–m7。控制者对每一条作了裁定，负责人裁定了全部决策点。第三稿逐条落实；"Phase"一栏是实现并验证它的 Phase。Codex 报告第 8 节记录同样的处理结果。
+第二稿 `498735d` 经 Codex 对抗性评审（Critical 0、Important 12、Minor 9，另有四个决策点和偏离核对表），控制者又复核出 N1–N4、m1–m7。控制者对每一条作了裁定，负责人裁定了全部决策点。第三稿逐条落实；"Phase"一栏是实现并验证它的 Phase。Codex 报告第 8 节记录同样的处理结果。控制者复核第三稿后又提出 R1–R8 和几处细节（本节末），下面两张表已按复核后的做法更新，其中 I-2 由选项①改为选项②。
 
 **负责人的裁定**（2026-09-25）：
 
@@ -2104,12 +2149,12 @@ files:
 
 | 编号 | 问题 | 落点 | Phase |
 |---|---|---|---|
-| I-1 | 管理员重置赶不走并发签发的凭证 | 3.5 的账户行锁协议和加锁顺序；3.15 `SKIP LOCKED`；6.4；9.2 的四个交错测试；P3 的完成线 | P2（登录）、P3（其余和交错测试） |
-| I-2 | 只凭旧代数就撤销，没有证明旧令牌是真的 | 3.4；3.5 的判定表；4.1、4.5 新表 `auth_refresh_tokens`，`auth_sessions.token_hash` 删除；8.4 会话 id 不再带来能力，日志直接记 `session_id`，`session_ref` 删除；9.1；A1、A4、A5 | P1（表）、P2（逻辑和测试） |
-| I-3 | 无效令牌的限流发生在认证之后 | 3.6 认证之前的失败闸门；3.10 `auth_failure`；6.4；8.6；9.1；§16 | P2 |
+| I-1 | 管理员重置赶不走并发签发的凭证 | 3.5 的账户行锁协议（`FOR NO KEY UPDATE`，spike；哈希只因重新哈希而变时重新校验一次）和加锁顺序（`users` → `profiles` → `auth_sessions` → `api_tokens`，外键检查算一次 `users` 的锁）；3.15 `SKIP LOCKED`；6.3；6.4；9.2 的六个交错测试；P3 的完成线；§16 | P2（登录）、P3（其余和交错测试） |
+| I-2 | 只凭旧代数就撤销，没有证明旧令牌是真的 | 第三稿先取选项①（`auth_refresh_tokens` 存每一代），复核（R3）指出它的行数只受按 IP 的限流约束，改为选项②：3.4 刷新令牌带 16 字节的 HMAC 标签，MAC 密钥由 HKDF 从签名密钥派生；3.5 的判定表（当前代比对 `token_hash`，旧代要标签成立才撤销）、为什么改、换钥的后果；3.7；4.1、4.5 每个会话一行；6.2、6.3 `RefreshTokenMAC`；8.4 日志直接记 `session_id`，`session_ref` 删除；8.6 正则；9.1；A1、A4、A5；§16 | P1（令牌格式和表）、P2（逻辑和测试） |
+| I-3 | 无效令牌的限流发生在认证之后 | 3.6 认证之前的失败闸门：先预留，只有认证失败才留下；签名有效而只是过期的 JWT 不计数；计数的确切范围；3.10 `auth_failure`、自己的令牌桶（`AllowAll`、`Reserve`）、客户端 IP 键；6.3；6.4；8.6；9.1 的并发测试；§16 | P2 |
 | I-4 | 刷新令牌泄露可派生长期 PAT | 8.5 的风险链、恢复步骤、不采用的产品选项；8.6；8.7；7.7 | P3 |
-| I-5 | 另一个标签页换了账户，旧标签页身份错乱 | 7.1 `nerve.auth` 和 `login_id`、三种 `storage` 事件；A6；9.4；9.6；P4 | P4 |
-| I-6 | 服务端接受契约禁止的请求 | 0.1；3.11 结构在边界、取值在领域，两种做法的 spike，第四个整程序测试，删除 `writeOnly` 规则和"已知的不一致"；3.12 `email` 映射；5.1、5.2；6.1；6.4；A3、A8、A10；P1 | P1 |
+| I-5 | 另一个标签页换了账户，旧标签页身份错乱 | 7.1 `nerve.auth` 和 `login_id`、四种 `storage` 事件、每次写入都在同一把锁下、续期写回之前核对 `login_id`；A6 的两种走法；9.4；9.6；P4 | P4 |
+| I-6 | 服务端接受契约禁止的请求 | 0.1；3.11 结构在边界、取值在领域，两种做法的 spike，格式检查用生成类型自己的解析，`tools/bodyshapegen`，第四个整程序测试，删除 `writeOnly` 规则和"已知的不一致"；3.12 `email` 映射；5.1、5.2；6.1；6.4；A3、A8、A10；P1、P3 | P1（P3 起有格式字段） |
 | I-7 | sqlc 的跨模块 `ALTER` 没有归属 | 3.14 迁移归被改表的模块，spike，`TestSQLCSchemaScope`；4.2；13.2（M3、M5）；3.20（总体设计 5.6） | P1 |
 | I-8 | `onboarding_step` 的合并会丢更新 | 3.14 `||` 合并和 spike；4.3；6.2；9.2；P3 | P3 |
 | I-9 | 共享游标固定为 `(created_at, id)` | 3.3；3.12 封套与载荷；13.2（M4、M7） | P3 |
@@ -2122,7 +2167,7 @@ files:
 | M-4 | 密钥文件路径进了日志 | 3.7；6.5；13.1 | P1 |
 | M-5 | 续期非 401 失败时是否退出，两处说法相反 | 7.1；9.4 | P4 |
 | M-6 | A7 的页面版和 PAT 版不能用同一个会话预期 | 第 2 节的约定；A7；9.5 | P3（接口）、P5（页面） |
-| M-7 | 前缀不会让托管平台自动识别 | 3.4；8.6 的正则；8.7 | P3 |
+| M-7 | 前缀不会让托管平台自动识别 | 3.4；8.6 的正则（刷新令牌 91 个字符）；8.7 | P3 |
 | M-8 | 差异登记的时点；"照搬"的用词 | 3.13；3.20 改为按 Phase；第 4 节的说明和各表；4.5 替换模型；4.6 的 Phase 一栏；4.7 删除关系图；第 12 节的合并条件 | P1、P3 |
 | M-9 | 密码名单的数量口径 | 3.8 | P1 |
 | §4 | 四个决策点和 11.1 | 第 10 节；11.1 | — |
@@ -2147,9 +2192,32 @@ files:
 | m6 | 依次 `Allow()` 会白扣前面的桶；注册先查邮箱 | 3.9；3.10 `AllowAll` 和 spike；6.3 | P1（注册的顺序）、P2 |
 | m7 | 模块级中间件会挡住 M5 的上传 | 3.5；13.2（M5） | — |
 
-**第三稿核对时发现的出入**：
+**控制者对第三稿的复核**（`5ea72f9`，Ready with fixes）：
+
+| 编号 | 问题 | 落点 | Phase |
+|---|---|---|---|
+| R1 | 边界上的格式检查要与生成的解码器一致 | 3.11 直接调用生成类型自己的解析，格式清单来自 `type-mapping`，生成器移到工具模块，第一个使用者在 P3，第四个整程序测试的第 6、7 项；6.1；9.1；9.3；12 P1、P3 | P1（检查器）、P3（使用者和整程序测试） |
+| R2 | `FOR UPDATE` 挡住外键插入；加锁顺序漏了 `profiles` | 3.5 `FOR NO KEY UPDATE` 和 spike，`set-email` 改唯一列时自己升级，`profiles` 进入顺序，外键检查算一次 `users` 的锁；6.3；9.2 第 5、6 项；§16 | P2、P3 |
+| R3 | 每一代一行的存储没有上界 | 由 I-2 改为选项②解决：每个会话一行（3.5、4.5）；§16 | P1、P2 |
+| R4 | `login_id` 的写入竞争 | 7.1 每次写 `nerve.auth` 都在同一把锁下、写回之前核对 `login_id`、"记录出现"一行；A6 的两种走法；9.4；9.6；12 P4 | P4 |
+| R5 | 先查后扣的失败闸门在并发下超额 | 3.6 先预留、失败留下、其余退回，spike 和预留的代价；3.10 `Reserve`；9.1 的并发测试；§16 | P2 |
+| R6 | IPv6 一台主机拿到整个 /64 | 3.10 客户端 IP 键；6.5 `ratelimit.ipv6_prefix_len`；9.1；§16 | P2 |
+| R7 | 请求期限会在 `COMMIT` 时取消已做完的事务；剩下的情况漏了请求这一段 | 3.5 剩下的三种情况；3.6 `COMMIT` 在 `context.WithoutCancel` 下执行、有自己的期限（全局规则）；6.1；6.5 `database.commit_timeout` 和启动时的不等式；7.1；9.2；3.20（总体设计 6.4） | P1（`TxManager`）、P2（续期） |
+| R8 | 迁移角色的 README 说明放错了 Phase | 8.7 移到 P1；13.1 M0-P2 第 7 条在 P1 关闭 | P1 |
+| 细节 | 判定表中重复使用那一行写明"未撤销、未过期" | 3.5 | P2 |
+| 细节 | 哈希只因并发的重新哈希而变 | 3.5 在事务外重新校验一次、重做一次锁内那一步；9.1；9.2 第 5 项 | P2、P3 |
+| 细节 | 登录与 `set-email` 并发 | 3.5 说明它无害的原因 | — |
+| 细节 | M3 交接的引用 | 第 1 节；13.2 改为 `web/apps/web/app/(all)/onboarding/page.tsx:33-37` | — |
+| 细节 | 游标的封套随第一个列表加入 | 3.20；12 P1、P3 | P3 |
+| 细节 | 测试用的固定时钟截到微秒 | 3.13；6.3 | P1 |
+| 细节 | 换签名密钥的风险 | 3.5；3.7；8.7；§16 | — |
+| 细节 | 失败闸门计数的是什么 | 3.6 计数和不计数的清单；3.10；9.1 | P2 |
+
+**第三稿及其复核核对时发现的出入**：
 - 第二稿的"294"用的是"至少一个字母"的近似条件；精确的条件（至少两个 ASCII 字母）是 288（3.8）。
 - oapi-codegen 默认把 `format: email` 生成为 `openapi_types.Email`，它在解码时自己校验，会绕过分层；模板改为映射到 `string`（3.12）。
 - `jsonb - text[]` 作用在标量上报 22023 而不是 CHECK 违例，JSON 列的 CHECK 要包在 `CASE` 里（3.13）。
 - glibc 的 `[[:space:]]` 不含 U+00A0（4.2）。
 - sqlc 要求引用同一张表的子查询起别名（3.14）。
+- `golang.org/x/time/rate` 的 `Reservation.CancelAt` 在预留的时刻已过之后什么也不退回（spike）。复核要的"与 `AllowAll` 同一套预留和退回"建不到它上面：认证之后才知道要不要退。`platform/ratelimit` 改为自己的令牌桶，这个依赖删除（3.10、6.6）。
+- 改唯一列的 `UPDATE` 在 Postgres 中算改键：即使事务先取的是 `FOR NO KEY UPDATE`，`set-email` 的那条语句也会把行锁升级，外键插入要等它提交（spike，3.5）。
