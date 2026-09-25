@@ -2,19 +2,20 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 让 M1 设计第 11 节成立，清掉 P1–P5 留给收尾的事项（spec 第 2 节的分诊）：`window.open` 都带 `noopener,noreferrer`，菜单项不再调用 `window.close()`；删掉从不渲染的应用栏、没人用的包导出、评审点名的死代码、基线的退化结构、没有引用的文案和图片；守卫只剩跨 M 的例外，每个分支都有命中样本；删掉 `sanitize-html`、给 `prosemirror-codemark` 打补丁、格式检查覆盖配置；写出前端改动清单和给 M2–M8 的交接；来源和许可查不到的预设封面换成 Nerve 自己画的图，保留的图片里不留真人的照片和名字，`handler_test.go` 的夹具用构建真实产出的文件名（spec 第 9 节第 1、2 条的裁定）。
+**Goal:** 让 M1 设计第 11 节成立，清掉 P1–P5 留给收尾的事项（spec 第 2 节的分诊）：`window.open` 都带 `noopener,noreferrer`，菜单项不再调用 `window.close()`；删掉从不渲染的应用栏、没人用的包导出、评审点名的死代码、基线的退化结构、没有引用的文案和图片；守卫只剩跨 M 的例外，每个分支都有命中样本；删掉 `sanitize-html`、给 `prosemirror-codemark` 打补丁、格式检查覆盖配置；写出前端改动清单和给 M2–M8 的交接；来源和许可查不到的预设封面换成 Nerve 自己画的图，保留的图片里不留真人的照片和名字，`handler_test.go` 的夹具用构建真实产出的文件名（spec 第 9 节第 1、2 条的裁定）；Codex 对抗评审的四项（spec 2.9）：粘贴编辑器自己的剪贴板类型时在惰性文档里解析，`make build-web` 从空的产物目录开始，活动迭代卡片用共享的进度口径，保留的截图里不再显示已删的功能。
 
-**Architecture:** 16 个 Task，每个一个提交：守卫（T1）→ 安全（T2）→ 死代码（T3 应用栏、T4 包导出、T5 点名的死代码）→ 退化结构（T6）→ 编辑器与 HTML 工具（T7、T8）→ 依赖与格式检查（T9、T10）→ 死文案、死图片（T11、T12）→ 文档（T13）→ 图片与测试夹具（T14 预设封面、T15 头像和人名、T16 `handler_test.go`）。每一处改动都由 `$COTMP` 下的一次性脚本做精确替换（原文不在就停下、什么都不写），脚本不进仓库；机械的批量删除（T4、T6、T11、T12）由脚本完成，输出逐项可核对。
+**Architecture:** 20 个 Task，每个一个提交：守卫（T1）→ 安全（T2）→ 死代码（T3 应用栏、T4 包导出、T5 点名的死代码）→ 退化结构（T6）→ 编辑器与 HTML 工具（T7、T8）→ 依赖与格式检查（T9、T10）→ 死文案、死图片（T11、T12）→ 文档（T13）→ 图片与测试夹具（T14 预设封面、T15 头像和人名、T16 `handler_test.go`）→ 修复轮（任务评审和浏览器核对发现的已知问题，控制者派发，10 个提交，spec 3.16）→ Codex 对抗评审的四项（T17 粘贴、T18 构建目录、T19 活动迭代的进度、T20 截图）。每一处改动都由 `$COTMP` 下的一次性脚本做精确替换（原文不在就停下、什么都不写），脚本不进仓库；机械的批量删除（T4、T6、T11、T12）由脚本完成，输出逐项可核对。
 
-**Tech Stack:** Node 24、pnpm 11.10.0、turbo 2.10.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、vitest 4.1.11、React Router 8.3.0、Vite 8.0.16、TypeScript 5.8.3、jsdom 30.1.1；Playwright 1.63.0（取自 `e2e/`，只用于 `devwarn.mjs`、联系表、T14 的渲染、T15 的修图和控制者的探测）；Go 与 golangci-lint 2.13.2（T16 的 `make test`、`make lint-go`）。
+**Tech Stack:** Node 24、pnpm 11.10.0、turbo 2.10.11、oxlint 1.51.0、oxfmt 0.35.0、knip 6.37.0、vitest 4.1.11、React Router 8.3.0、Vite 8.0.16、TypeScript 5.8.3、jsdom 30.1.1；Playwright 1.63.0（取自 `e2e/`，只用于 `devwarn.mjs`、联系表、T14 的渲染、T15 和 T20 的修图和控制者的探测）；Go 与 golangci-lint 2.13.2（T16 的 `make test`、`make lint-go`）。
 
 **Spec:** `docs/v0/M1-frontend-trim/specs/closeout.md`（上级：`docs/v0/M1-frontend-trim/M1-design.md`）
 
 **原型：** `$COTMP/proto`，分支 `proto-closeout`，基点 `c493255`。每个 Task 的原型提交：
 T1 `c9eeb28`、T2 `5eb9494`、T3 `7b802a8`、T4 `cccf8be`、T5 `30c798d`、T6 `17becf9`、T7 `344ab76`、T8 `ec6c3e5`、T9 `2d51151`、T10 `3cb038f`、T11 `b13b3d8`、T12 `3ebfe70`、T13 `328843f`、T14 `131e1de`、T15 `f997e8a`、T16 `3c64669`。
 本计划的每个数字都来自对应的原型提交。按本计划的脚本步骤重放：T1–T13 在基点的干净克隆上（`$COTMP/replay.mjs`），每个 Task 得到的树都与原型提交相同；T14–T16 在 `328843f` 的干净克隆上，三棵树与原型提交相同（T14、T15 的 WebP 逐字节相同），又在本分支 T13（`300eff0`）的克隆上重放，每个 Task 改到的图片、代码和 `server/` 路径与原型提交相同；重放的每个提交都通过五个门禁。T15 的 `t15/handoff.mjs`（M5 交接）是原型之后按裁定加的一步，不在原型提交 `f997e8a` 里，只在 `300eff0` 的重放上跑过。
+T17–T20 的原型在分支 `proto-codex`，基点是本分支修复轮的最后一个提交 `9a98148`：T17 `bad3483`、T18 `b85f861`、T19 `a994925`、T20 `c9b24e1`。在 `9a98148` 的干净检出上按本计划的步骤重放，四棵树与原型提交相同（T20 的 WebP 逐字节相同），每个原型提交都通过五个门禁。
 
-**本分支的实际提交（T1–T13）：** T1 `aea47e4` 和跟进提交 `483ca9d`（5 个不命中样本，spec 3.6）、T2 `1cfc629`、T3 `4e1893c`、T4 `7f189da`、T5 `4cf483f`、T6 `20ac5b6`、T7 `acdbf50`、T8 `d25f08c`、T9 `98ecc86`、T10 `263aef9`、T11 `f9fb015`、T12 `4797772`、T13 `300eff0`。本分支是准绳：它与原型不同的地方（T1 的样本、T4、T6、T9 的行数，T11 的样本等，spec 3.1、3.6、3.9）在 spec 里写明；所以 `300eff0` 的树与 `328843f` 不同，T14–T16 只比较本 Task 改到的路径（见各 Task 的最后一步）。
+**本分支的实际提交：** T1 `aea47e4` 和跟进提交 `483ca9d`（5 个不命中样本，spec 3.6）、T2 `1cfc629`、T3 `4e1893c`、T4 `7f189da`、T5 `4cf483f`、T6 `20ac5b6`、T7 `acdbf50`、T8 `d25f08c`、T9 `98ecc86`、T10 `263aef9`、T11 `f9fb015`、T12 `4797772`、T13 `300eff0`、T14 `89244e3`、T15 `e349924`、T16 `985675a`；修复轮 `1896bca`–`9a98148`（10 个提交，spec 3.16）。本分支是准绳：它与原型不同的地方（T1 的样本、T4、T6、T9 的行数，T11 的样本等，spec 3.1、3.6、3.9）在 spec 里写明；所以 `300eff0` 的树与 `328843f` 不同，T14–T16 只比较本 Task 改到的路径（见各 Task 的最后一步）。T17–T20 也只比较本 Task 的路径：本分支在 `9a98148` 之后多了一个加入它们的文档提交（改本计划和 spec），原型没有。
 
 ---
 
@@ -34,11 +35,12 @@ P5 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
   之后 `git show <原型提交> -- <路径>` 看某个文件的结果，`git diff --cached --stat <原型提交>` 在提交前比较整棵树。
 - **一个 Bash 调用只跑一个 git 命令**：不把多个 git 命令串在一起（`;`、`&&`、管道都不行），不在 git 命令里用花括号展开，不写调用 git 的 shell 循环；不把算出来的 shell 变量传给 node 或 sed；多步逻辑写成 `$COTMP` 下的脚本。不用 `git stash`、`git clean`、`git reset --hard`；不做浅拉取；不碰 `plane/`、`refer/` 和其他 Phase 的临时目录；不停、不改 Docker 容器。
 - **`replay.mjs`、`replay-range.mjs`、`pertask.mjs`、`gates-range.mjs` 只对 `$COTMP/replay` 用**（它们在那个克隆里检出、提交），不要在 worktree 里运行。
-- **生成的文件不手写、不手改**：`pnpm-lock.yaml` 只由 `pnpm install` 改写（T4、T8、T9）；`patches/prosemirror-codemark@0.4.2.patch` 只由 `pnpm patch-commit` 生成（T9）；en、zh-CN 的文案只由 `delkeys.mjs` 改（T4、T11）。
+- **生成的文件不手写、不手改**：`pnpm-lock.yaml` 只由 `pnpm install` 改写（T4、T8、T9）；`patches/prosemirror-codemark@0.4.2.patch` 只由 `pnpm patch-commit` 生成（T9）；en、zh-CN 的文案只由脚本改（T4、T11 的 `delkeys.mjs`，T19 的 `t19/edits.mjs`）。
 - **文件内容用编辑工具写**，不用带反引号的 heredoc。
 - **开发服务器**：只有 T8 的 `devwarn.mjs` 会起（它自己停掉，报告端口）；实现者不跑 `make web-dev`。
 - **T14–T16 的原型和脚本**：T14 开始之前（只需一次）`git fetch .superpowers/sdd/closeout/proto-2.bundle proto-closeout`（包含 T1–T16 的原型提交；`proto.bundle` 只到 T13）。每个 Task 开始时核对 `ls $COTMP/t14/apply.mjs $COTMP/t15/apply.mjs $COTMP/t16/edit.mjs`；不在时从 `cotmp-2.tar` 恢复：`mkdir -p $COTMP`，再 `tar -xf .superpowers/sdd/closeout/cotmp-2.tar -C $COTMP`（它包含 `cotmp.tar` 的全部内容和 `t14/`–`t16/`）。
-- **T14、T15 用 Chromium 出图**（取 `e2e/` 的 Playwright，不起服务器）：T14 把 SVG 渲染成 WebP，T15 画字母头像、写名字。在同一台机器上重放，字节与原型相同；不同时写明 Chromium 的版本，并照各自的"看图"一步看过新的图。
+- **T14、T15、T20 用 Chromium 出图**（取 `e2e/` 的 Playwright，不起服务器）：T14 把 SVG 渲染成 WebP，T15 画字母头像、写名字，T20 涂掉已删功能的控件。在同一台机器上重放，字节与原型相同；不同时写明 Chromium 的版本，并照各自的"看图"一步看过新的图。
+- **T17–T20 的原型和脚本**：T17 开始之前（只需一次）`git fetch .superpowers/sdd/closeout/proto-codex.bundle proto-codex`（T17–T20 的原型提交；这个 bundle 以 `9a98148` 为前提，本分支有它）。每个 Task 开始时核对 `ls $COTMP/t17/edits.mjs $COTMP/t18/prove.sh $COTMP/t19/edits.mjs $COTMP/t20/patch.mjs`；不在时先照上一条恢复 `cotmp-2.tar`，再 `tar -xf .superpowers/sdd/closeout/cotmp-3.tar -C $COTMP`（它只有 `t17/`–`t20/`）。T17 的测试只在 editor 包里跑；T18 的 `prove.sh` 构建两次，每次几分钟。
 - **T16 的 Go 检查**：`make test` 经 testcontainers 启动临时的 PostgreSQL 容器，测试进程退出后由 Ryuk 删除，不碰开发用的容器；跑完之后 `docker ps -a --filter label=org.testcontainers=true` 应为空。`make lint-go` 第一次会把锁定版本的 golangci-lint 2.13.2 下载到仓库的 `bin/`（`.gitignore` 已忽略，不是全局安装）。
 
 ### 沿用的裁定（P2–P5 评审，P5 计划的控制者评审补充）
@@ -54,9 +56,9 @@ P5 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 6. **knip 是门禁**，每个 Task 结束时 `make knip` 为零。
 7. **测试输出要干净**：`bash $COTMP/tests.sh` 在 T1–T8 只有 editor 包的 5 行 `prosemirror-codemark`（显示为 `(recorded prosemirror-codemark sourcemap lines: 5)`），T9 起连这一行也没有；任何时候都不能有 `!` 开头的行。
 8. **守卫**：每条规则的每个顶层分支和 `(?:a|b)` 的每一支都有真实代码里的命中样本（三个例外是示意的写法，因为守卫看住的写法在仓库里从来没有过，spec 3.6），`files` 选择器也一样（`node $COTMP/alts.mjs all --files` → `alternatives or variants without a hit sample: 0`）；不命中样本都引用保留的代码：`node $COTMP/missquote.mjs` → `miss samples that quote nothing kept: 0`，`node $COTMP/missreal.mjs` → `miss samples that do not quote kept code: 0`（`missquote` 在任何被跟踪的文件里找，样本自己在 `keywords.json` 里的那一行也算；`missreal` 只在规则读取的文件里找）。删掉或改名被引用代码的 Task 在同一提交里改样本；例外精确到原文、带 `count` 和 `until`，只减不增。
-9. **图片由人看**：删除图片之前拼成联系表看过（T12）；新画的和改过的图片按能看清 20 px 细节的尺寸看（T14、T15）；保留的其余图片由原型按同样的尺寸复看过，结果见 spec 3.15 的表。
+9. **图片由人看**：删除图片之前拼成联系表看过（T12）；新画的和改过的图片按能看清 20 px 细节的尺寸看（T14、T15、T20）；保留的其余图片由原型按同样的尺寸复看过，结果见 spec 3.15 的表。
 10. **报告放在最后一条回复里**（子 agent 不能写报告文件）：提交哈希；每一步的命令、实测输出和预期；与原型的差异及原因；下面的风险点；没做到的事和疑问。状态写 `DONE`、`DONE_WITH_CONCERNS` 或 `BLOCKED`。
-11. **执行方式沿用 P5**：实现者不指定模型（继承 Opus 5.5），各 Task 评审用 sonnet，整分支评审用 opus；T4、T6、T11、T12 是机械改动，控制者先在基点的干净克隆上重放脚本、确认提交就是脚本的输出，评审者判断每一类删除的意思；控制者在 T5、T8 之后和修复轮之后跑浏览器核对（最后一节），并在基线的构建上做反向对照。
+11. **执行方式沿用 P5**：实现者不指定模型（继承 Opus 5.5），各 Task 评审用 sonnet，整分支评审用 opus；T4、T6、T11、T12 是机械改动，控制者先在基点的干净克隆上重放脚本、确认提交就是脚本的输出，评审者判断每一类删除的意思；控制者在 T5、T8 之后、修复轮之后和 T20 之后跑浏览器核对（最后一节），并在基线的构建上做反向对照。
 
 ### 每个 Task 的固定节奏
 
@@ -80,6 +82,8 @@ P5 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 
 T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, export 2`，`infile-orphans.mjs` 没有行，其余各项都是 0。第 7 步只比较本 Task 改到的路径（本分支 T13 的树与原型 `328843f` 不同，见开头"本分支的实际提交"），命令写在各 Task 的最后一步。
 
+T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后的那一个），其余是上一个 Task 的提交（裁定 2）。第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 898, export 2`；T17 的 `deadorph.mjs` 以修复轮最后一个提交 `9a98148` 的 `$COTMP/logs/impl-fb3-deadsym.tsv` 为前一个（控制者留下的）；`infile-orphans.mjs` 没有行，其余各项都是 0。第 5 步上限合计 695。第 6 步 `tests.sh` 的 editor 一行 T17 起是 35 个测试（共 101 个）。第 7 步只比较本 Task 改到的路径。
+
 ### 风险点（每个 Task 报告必答）
 
 1. **保留的东西没有失去最后的读取方或入口**：固定节奏第 3 步的六项；删掉的每个成员、prop、键、图片、包入口，写出 `git grep` 找不到读取方的证据（批量删除的 T4、T11、T12 按类别写）。
@@ -90,7 +94,7 @@ T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, exp
 
 ### 一次性脚本
 
-都在 `$COTMP`（备份 `.superpowers/sdd/closeout/cotmp.tar`；T14–T16 的在 `cotmp-2.tar`，它也包含前者的全部内容），从仓库根目录运行。P5 的同名脚本照搬（`symref`、`infile-orphans`、`keyref`、`keycount`、`headers`、`kw`、`caps`、`lintdiff`、`gates`、`tests`、`assets`、`web-size`、`lock-diff`、`dangling`），`alts.mjs` 加了路径规则和 `--files`。
+都在 `$COTMP`（备份 `.superpowers/sdd/closeout/cotmp.tar`；T14–T16 的在 `cotmp-2.tar`，它也包含前者的全部内容；T17–T20 的在 `cotmp-3.tar`，只有这四个目录），从仓库根目录运行。P5 的同名脚本照搬（`symref`、`infile-orphans`、`keyref`、`keycount`、`headers`、`kw`、`caps`、`lintdiff`、`gates`、`tests`、`assets`、`web-size`、`lock-diff`、`dangling`），`alts.mjs` 加了路径规则和 `--files`。
 
 | 脚本 | 用途 |
 |---|---|
@@ -110,7 +114,12 @@ T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, exp
 | `t14/covers.mjs <目录>`、`t14/render.mjs <仓库> <源目录> <目标目录> <格式> <宽> <质量>`、`t14/apply.mjs`、`t14/ledger.mjs`、`t14/sha.mjs <目录> <正则>`、`t14/sheet.mjs`、`t14/lum.mjs <仓库> <目录> <扩展名>`、`t14/measure.sh` | 画封面（带种子，可重复）；渲染；T14 的全部改动；清单的一行；大小和哈希；联系表和应用的裁切；白字的对比度；格式实测 |
 | `t15/spec.json`、`t15/retouch.mjs <仓库> <spec> <输出> [--dry] [筛选]`、`t15/apply.mjs`、`t15/ledger.mjs`、`t15/handoff.mjs`、`t15/context.mjs <仓库> <spec> <输出> <倍数> <边距>`、`t15/assetpaths.mjs`、`t15/uses.mjs <仓库>`、`t15/inventory.mjs`、`t15/look.mjs`、`t15/tiles.mjs` | 每张图的头像组和名字框；字母头像和名字；T15 的全部改动；清单的一行；M5 交接的两项；改过的地方放大看；按路径没有被引用的图片；导入了、却传给没人读的值的图片；保留图片的清单和复看 |
 | `t16/edit.mjs`、`t16/names.mjs` | 夹具改名；夹具名与构建产物对照 |
-| `t14/probe/covers-probe.mjs`、`t15/probe/pictures-probe.mjs` | 控制者的浏览器核对第 12、13 项 |
+| `t17/test.mjs`、`t17/edits.mjs` | 先失败的编辑器测试；粘贴的 HTML 在惰性文档里解析 |
+| `t18/edits.mjs`、`t18/prove.sh <仓库的绝对路径>` | `build-web` 先清空产物目录；在产物目录里放一个文件，冷、热构建各一次，看它还在不在，比较两次的文件清单 |
+| `t19/edits.mjs` | 活动迭代卡片的进度和两个文案键 |
+| `t20/spec.json`、`t20/patch.mjs <仓库> <spec> <输出> [--dry] [筛选]`、`t20/sources.mjs`、`t20/topng.mjs <仓库> <输出> [条高] [--crop x,y,w,h,倍数] <图>…` | 每张图要涂掉的框和取色点；涂掉、重新编码，写出每个框的前后对照；两个 `SOURCES.md` 的记录；看图用的 PNG（整张和分条） |
+| `t20/investb-hardcoded.mjs`、`t20/investb-untranslated.mjs` | zh-CN 界面上的英文从哪来（spec 2.10 的 I2，只读） |
+| `t14/probe/covers-probe.mjs`、`t15/probe/pictures-probe.mjs`、`t17/probe/copy-probe.mjs` | 控制者的浏览器核对第 12、13、14 项 |
 
 ### 原型的教训（执行前必读）
 
@@ -142,6 +151,10 @@ T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, exp
 | `app/assets/cover-images/`（删 29、增 59）、`helpers/cover-image.helper.ts`、`docs/v0/frontend-changes.md` | 预设封面 | 14 |
 | `app/assets/onboarding/`、`app/assets/empty-state/`（改 11、增 2、删 8）、`cycles/active-cycle/root.tsx`、`docs/v0/frontend-changes.md`、`docs/v0/M5-files/handoffs/M1-closeout.md` | 头像、人名、没有显示的图；交给 M5 的两项 | 15 |
 | `server/internal/platform/webui/handler_test.go` | 夹具名 | 16 |
+| editor 的 `helpers/paste-asset.ts`、`helpers/asset-duplication.ts`、`editor-interaction.test.ts`、`vitest.setup.ts` | 粘贴的惰性解析、测试 | 17 |
+| `Makefile` | `build-web` 先清空产物目录 | 18 |
+| `cycles/active-cycle/progress.tsx`、en 和 zh-CN 的 `project.json` | 进度口径、两个键 | 19 |
+| `app/assets/onboarding/`、`app/assets/empty-state/disabled-feature/`（改 9 张图、2 个 `SOURCES.md`） | 涂掉已删功能的控件 | 20 |
 
 ---
 
@@ -162,7 +175,10 @@ T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, exp
 
 ### 对计划的修正
 
-1. **Task 增加到 16 个，另有 Codex 的发现。** T14–T16 由架构师接着在 `$COTMP/proto`（`328843f` 之上）做原型，控制者在 T13 提交之后、T14 开始之前把它们的步骤追加进本计划（一个文档提交）。Codex 的发现在报告到达后分诊，追加为 T17 起的 Task 或放进修复轮。
+1. **Task 增加到 20 个，另有一个修复轮。** T14–T16 由架构师接着在 `$COTMP/proto`（`328843f` 之上）做原型，控制者在 T13 提交之后、T14 开始之前把它们的步骤追加进本计划（一个文档提交）。T16 之后，各 Task 的评审和控制者的浏览器核对发现的已知问题由控制者派发成修复轮（10 个提交，spec 3.16）。Codex 的发现在报告到达后分诊（spec 2.9）：四项成为 T17–T20，由架构师在 `$COTMP/proto` 的 `proto-codex` 分支（`9a98148` 之上）做原型，在修复轮之后、T17 开始之前由一个文档提交追加进本计划（就是加入本条的提交）；其余几项写进交接或设计文档，由控制者在收尾 review 的提交里改。
+2. **并行时不碰别人的东西。** T1–T13 执行期间，架构师只在 `$COTMP/proto` 和 `$COTMP/t14/`–`t16/` 下工作，不改本计划点名的任何脚本；实现者不碰 `$COTMP/proto`。T17–T20 的原型同样只在 `$COTMP/proto` 和 `$COTMP/t17/`–`t20/` 下做。Codex 在主检出（`/Users/xiaoruan/project/nerve-project`）里评审：实现者和评审者都只在本 worktree 里工作，不读写主检出。
+3. **机械的 Task（T4、T6、T11、T12）**：控制者核对提交的树与原型提交相同（`git diff --stat <原型提交> <实际提交>`，差异逐处有说明），评审者判断每一类删除的意思。其余 Task 按常规评审。
+4. **`window-open` 规则只看同一行**：跨行的调用即使带了 `noopener` 也会被报出（宁可误报）。规则的 `why` 已写明"每次调用都在同一行传"；T2 的评审者核对 12 处都在一行里。
 
 ### T14–T16 原型之后的裁定
 
@@ -171,9 +187,12 @@ T14–T16：第 3 步 `deadsym.mjs` 的 stderr 都是 `prop 452, member 894, exp
 - 采纳原型的两处补充：T15 删掉活动迭代根组件传给内层组件、却没人读的属性，连同它按主题选出的两张图；T15 删掉 T12 按文件名查时漏掉的 6 张同名图（不改 T12）。
 - **spec 第 9 节第 6 条（附件图标里的第三方标志）：交 M5。** 已裁定，不再待定：spec 8.1 的 M5 一行，关闭条件是 `app/assets/attachment/` 里没有第三方的标志；spec 第 6 节把它列为收尾范围之外。spec 8.1 另一条 M5 的事项（新建项目时的封面值）同样确认。两条由 T15 写进 `docs/v0/M5-files/handoffs/M1-closeout.md`（T15 Step 2 的 `t15/handoff.mjs`）。
 - 本计划和 spec 的数字以本分支的实际提交为准，与原型不同的地方逐处写明（开头"本分支的实际提交"，spec 3.1、3.6、3.9）。
-2. **并行时不碰别人的东西。** T1–T13 执行期间，架构师只在 `$COTMP/proto` 和 `$COTMP/t14/`–`t16/` 下工作，不改本计划点名的任何脚本；实现者不碰 `$COTMP/proto`。Codex 在主检出（`/Users/xiaoruan/project/nerve-project`）里评审：实现者和评审者都只在本 worktree 里工作，不读写主检出。
-3. **机械的 Task（T4、T6、T11、T12）**：控制者核对提交的树与原型提交相同（`git diff --stat <原型提交> <实际提交>`，差异逐处有说明），评审者判断每一类删除的意思。其余 Task 按常规评审。
-4. **`window-open` 规则只看同一行**：跨行的调用即使带了 `noopener` 也会被报出（宁可误报）。规则的 `why` 已写明"每次调用都在同一行传"；T2 的评审者核对 12 处都在一行里。
+
+### Codex 对抗评审之后的裁定
+
+- **负责人批准按建议分诊**（2026-09-25）Codex 对整个 M1 的对抗评审（`reviews/M1-codex-adversarial-review.md`，提交 `d2bd4fc`，评审对象 `c493255`）。逐条的去向见 spec 2.9：Critical 1 → T17；Important 1 → T18；Important 2 → T19；Important 4 → T20；Important 3（AGPL 第 5(a)、5(d)、13 条的验收，jsDelivr 的第三方请求）→ 控制者在收尾 review 的提交里写进 M8 收尾交接的关闭条件，时点是"任何对外的网络部署之前"，条款的解读由负责人在 M8 定；Minor 2 → 控制者在收尾 review 的提交里改 M1 设计 3.1 的写法；Minor 1 → 分诊时写的是"T4 已解决"，依据是 spec B12 原来的一格，核对之后不成立（`ensureAPITrailingSlash` 仍经 `services` 的两个 `export *` 桶文件公开），架构师建议放进整分支评审之后的修复轮，待控制者确认（spec 第 9 节第 7 条）。
+- T17–T20 的原型（`bad3483`、`b85f861`、`a994925`、`c9b24e1`）采纳。
+- 控制者第 3 轮浏览器核对顺带看到的两件事（spec 2.10），基线上相同：个人设置的主题下拉框画在左上角，交 M2（个人设置），控制者在收尾 review 的提交里写进 M2 的收尾交接；zh-CN 界面上的英文，交 M8（"每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"），同样在收尾 review 的提交里写进，其中 zh-CN 与英文相同的 5 个值在整分支评审之后的修复轮里翻译。
 
 ---
 
@@ -790,9 +809,194 @@ Run: `make lint-go` → `0 issues.`
 
 ---
 
+### Task 17: 粘贴编辑器自己的剪贴板类型时，在惰性文档里解析
+
+spec 2.9 的 Critical 1、3.17、第 4 节第 27 条。原型提交 `bad3483`（4 个文件，+56 / −53）。基点是加入 T17–T20 的文档提交；T17–T20 的数字见"每个 Task 的固定节奏"最后一段。
+
+**Steps**
+
+- [ ] **Step 1: 先写会失败的测试**
+
+Run: `node $COTMP/t17/test.mjs` → `edited web/packages/editor/vitest.setup.ts`、`edited web/packages/editor/src/editor-interaction.test.ts`
+
+读 diff：
+- `vitest.setup.ts` 声明 jsdom 没有的 `ClipboardEvent`：编辑器的粘贴处理调用 ProseMirror 的 `pasteHTML`，它会新建一个（不带剪贴板数据）；
+- 测试文件加一个用例：往编辑器粘贴 `text/nerve-editor-html` 类型的 HTML，里面有一个带 `onerror` 的 `<img>` 和一张已上传的图（`src` 是资源的 id）。它监视 `Element.prototype.innerHTML` 的 setter，断言带 `onerror` 的标记从不写进活动文档里的元素；文字粘进来了；编辑器里没有 `[onerror]`；那张图被标为复制（`status` 是 `duplicating`，`id` 换成新的）。
+
+Run: `pnpm --dir web/packages/editor exec vitest run src/editor-interaction.test.ts`
+Expected: `Tests  1 failed | 7 passed (8)`，失败的是新用例，`AssertionError: expected [ …(2) ] to deeply equal []`：旧代码把这段 HTML 两次赋给活动文档里一个 `div` 的 `innerHTML`（解析一次，处理完再解析一次）。
+
+- [ ] **Step 2: 在惰性文档里解析**
+
+Run: `node $COTMP/t17/edits.mjs` → `edited web/packages/editor/src/helpers/paste-asset.ts`、`edited web/packages/editor/src/helpers/asset-duplication.ts`
+
+读 diff：
+- `processAssetDuplication` 用 `new DOMParser().parseFromString(htmlContent, "text/html")` 解析：这个文档没有浏览上下文，里面的图片不加载，事件属性不执行。每类节点的处理函数原地标记元素，最后序列化一次 `body.innerHTML`。原来"改一个元素、在字符串里替换它的旧标记、再解析一遍"的做法删除；
+- `asset-duplication.ts` 的处理函数只接收元素，原地设 `status` 和新的 `id`；只有它用的 `AssetDuplicationContext`、`AssetDuplicationResult` 两个类型删除。粘贴处理（`props.ts`）不变：它把结果交给 `pasteHTML`，ProseMirror 在它自己新建的文档里按编辑器的 schema 再解析一次，只留 schema 声明的节点和属性。
+
+Run: 同上的 vitest → `Tests  8 passed (8)`。
+
+- [ ] **Step 3: 核对、门禁与提交**
+
+固定节奏第 2–8 步，另外核对：
+- `bash $COTMP/tests.sh` 的 editor 一行是 `Test Files 5 passed (5) | Tests 35 passed (35)`；
+- 与原型对比（第 7 步）：`git diff --cached --stat bad3483 -- web/packages/editor` 为空；`git diff --cached --shortstat` → `4 files changed, 56 insertions(+), 53 deletions(-)`；
+- 提交信息见 `$COTMP/t17/msg.txt`。
+
+浏览器里的复制、粘贴和跨源载荷由控制者核对（最后一节第 14 项）。
+
+---
+
+### Task 18: `make build-web` 从空的产物目录开始
+
+spec 2.9 的 Important 1、3.17、第 4 节第 28 条。原型提交 `b85f861`（`Makefile`，+2）。
+
+**Steps**
+
+- [ ] **Step 1: 反向对照（旧的 `Makefile`）**
+
+Run: `bash $COTMP/t18/prove.sh <仓库的绝对路径>`（构建两次）
+Expected:
+```
+== cold build (TURBO_FORCE=true: Turbo rebuilds, no cache restore)
+ Tasks: 11 successful, 11 total
+Cached: 0 cached, 11 total
+  planted file: gone
+cold: 531 files
+== warm build (cache hit: Turbo restores the recorded outputs)
+ Tasks: 11 successful, 11 total
+Cached: 11 cached, 11 total
+  planted file: PRESENT
+warm: 532 files
+== the two manifests
+DIFFER:
+443a444
+> 3bb22bc0e99919e72cf42236d7e871ddf85fec0da19426d82e9a7eadcc5dda4f  ./assets/t18-stale-probe.txt
+STALE FILE IN BUILD
+```
+脚本每次构建之前在 `web/apps/web/build/client/assets/` 放一个文件。冷构建时 Vite 自己清空输出目录；热构建由 Turbo 从缓存恢复，只写不删，文件留下，`make build` 会把它复制进 `server/internal/platform/webui/dist`、嵌进 Go 程序（Codex 的实验）。
+
+- [ ] **Step 2: 改 `Makefile`**
+
+Run: `node $COTMP/t18/edits.mjs` → `edited Makefile`
+
+读 diff，只有两行：`WEBUI_DIST` 下面加 `WEB_CLIENT := web/apps/web/build/client`；`build-web` 在 Turbo 之前 `rm -rf $(WEB_CLIENT)`。
+
+- [ ] **Step 3: 冷、热构建都从空目录开始**
+
+Run: `bash $COTMP/t18/prove.sh <仓库的绝对路径>`
+Expected: 两次都是 `planted file: gone`、`531 files`，最后两行：
+```
+cold and warm build/client are byte-identical (531 files)
+no stale file in either build
+```
+持续集成（`ci.yml`）在干净的工作区里构建，Turbo 的缓存不跨任务保存，`rm -rf` 在那里什么都不删。
+
+- [ ] **Step 4: 核对、门禁与提交**
+
+固定节奏第 2–8 步（web 没有改动，数字与 T17 相同）；与原型对比：`git diff --cached --stat b85f861 -- Makefile` 为空，`git diff --cached --shortstat` → `1 file changed, 2 insertions(+)`；提交信息见 `$COTMP/t18/msg.txt`。
+
+---
+
+### Task 19: 活动迭代卡片的进度用共享的口径
+
+spec 2.9 的 Important 2、3.17、第 4 节第 29 条；M1 设计 3.4。原型提交 `a994925`（3 个文件，+14 / −12）。
+
+**Steps**
+
+- [ ] **Step 1: 卡片和两个文案键**
+
+Run: `node $COTMP/t19/edits.mjs` → `edited web/apps/web/core/components/cycles/active-cycle/progress.tsx`、`edited web/packages/i18n/src/locales/en/project.json`、`edited web/packages/i18n/src/locales/zh-CN/project.json`
+
+读 diff：
+- 进度条的值改为 `calculateCycleProgress(cycle ?? undefined)`（`@nerve/utils`，迭代列表也用它）：完成 / (总数 − 取消)。原来是 (完成 + 取消) / (总数 − 取消)，取消 2、完成 8、共 10 时是 125%，文字写 "10/8 closed"；
+- 进度条上方的文字由 `t("project_cycles.active_cycle.work_items_completed", { completed, total })` 写出，`total` 是总数 − 取消；取消的说明由 `t("project_cycles.active_cycle.cancelled_excluded", { count })` 写出。原来两句都是模板字面量拼的英文；
+- en 的两个值用 ICU 复数：`{completed}/{total} {total, plural, one {work item} other {work items}} completed`、`{count, plural, one {# cancelled work item is} other {# cancelled work items are}} excluded from this report.`；zh-CN：`{completed}/{total} 个工作项已完成`、`报告中已排除 {count} 个已取消的工作项。`
+
+Run: `node $COTMP/keycount.mjs` → `en: 1079 keys`、`zh-CN: 1079 keys`
+Run: `node $COTMP/keyref.mjs unused 2>&1 | tail -1` → `keys not referenced now: 0`
+
+Codex 的两个例子已在共享函数的测试里（`web/packages/utils/src/progress.test.ts`：共 10、完成 3、取消 2 → 38；共 10、完成 8、取消 2 → 100），卡片改为经它计算，不另加测试（spec 第 4 节第 29 条）。
+
+- [ ] **Step 2: 核对、门禁与提交**
+
+固定节奏第 2–8 步；与原型对比：`git diff --cached --stat a994925 -- web/apps/web/core/components/cycles web/packages/i18n` 为空，`git diff --cached --shortstat` → `3 files changed, 14 insertions(+), 12 deletions(-)`；提交信息见 `$COTMP/t19/msg.txt`。
+
+---
+
+### Task 20: 保留的截图里不再显示已删的功能
+
+spec 2.9 的 Important 4、3.17、第 4 节第 30 条。原型提交 `c9b24e1`（11 个文件：改 9 张 WebP 和 2 个 `SOURCES.md`，+20 行）。
+
+**Steps**
+
+- [ ] **Step 1: 先看前后对照**
+
+Run: `node $COTMP/t20/patch.mjs . $COTMP/t20/spec.json $COTMP/t20/look-impl --dry`
+Expected（每张图一行，缩进的是每个框）:
+```
+web/apps/web/app/assets/onboarding/issues.webp: 1 covers; WebP quality 0.95: 229264 -> 194670 bytes
+  cover 1 [1345,141,138,52] solid rgb(255,255,255)
+web/apps/web/app/assets/onboarding/cycles.webp: 2 covers; WebP quality 0.88: 154282 -> 153810 bytes
+  cover 1 [610,226,146,57] solid rgb(255,255,255)
+  cover 2 [230,233,38,44] solid rgb(232,232,232)
+web/apps/web/app/assets/onboarding/views.webp: 1 covers; WebP quality 0.85: 135462 -> 134650 bytes
+  cover 1 [750,213,36,34] solid rgb(232,232,232)
+web/apps/web/app/assets/empty-state/disabled-feature/modules-light.webp: 1 covers; WebP quality 0.79: 67542 -> 67726 bytes
+  cover 1 [2212,221,38,34] solid rgb(243,243,243)
+web/apps/web/app/assets/empty-state/disabled-feature/cycles-light.webp: 1 covers; WebP quality 0.76: 67230 -> 67294 bytes
+  cover 1 [2468,214,36,32] solid rgb(255,255,255)
+web/apps/web/app/assets/empty-state/disabled-feature/modules-dark.webp: 1 covers; WebP quality 0.79: 64154 -> 64440 bytes
+  cover 1 [2212,221,38,34] solid rgb(15,16,20)
+web/apps/web/app/assets/empty-state/disabled-feature/cycles-dark.webp: 1 covers; WebP quality 0.73: 72372 -> 72190 bytes
+  cover 1 [2460,210,30,28] solid rgb(17,17,19)
+web/apps/web/app/assets/empty-state/disabled-feature/intake-light.webp: 1 covers; WebP quality 0.77: 86990 -> 87122 bytes
+  cover 1 [1700,1090,650,44] solid rgb(255,255,255)
+web/apps/web/app/assets/empty-state/disabled-feature/intake-dark.webp: 1 covers; WebP quality 0.78: 83694 -> 83140 bytes
+  cover 1 [1828,956,536,50] solid rgb(17,17,19)
+```
+`t20/spec.json` 给出每个框（`[x, y, 宽, 高]`，原图像素）和取色的点（框外紧挨着的平的背景）。框住的是 M1 删掉的功能留下的控件：
+- 导览 `issues.webp`：面包屑旁的 "Public" 可见性标签（项目发布）；
+- 导览 `cycles.webp`：Add Issue 左边的数据分析按钮，工作项栏里的甘特图布局图标；导览 `views.webp`：同一个甘特图图标；
+- "功能未开启"的 `modules-light`、`modules-dark`、`cycles-light`、`cycles-dark`：标题栏的甘特图/时间线布局图标；
+- `intake-light`、`intake-dark`：工作项属性里 "Estimate: 2 Months" 一行（两张图的面板滚动位置不同，框分别量）。
+
+`--dry` 不写图，只把每个框的前后对照（框四周加 8 px，放大 4 倍，不平滑）写成 `$COTMP/t20/look-impl/<图名>-cover<k>-before.png`、`-after.png`，20 张。逐张打开，报告写明：after 里控件不见了；四周的线、字和图标没有被盖住；填的颜色与背景一致，看不出方块。
+
+- [ ] **Step 2: 写图和 `SOURCES.md`**
+
+Run: `node $COTMP/t20/patch.mjs . $COTMP/t20/spec.json $COTMP/t20/look-impl` → 与 Step 1 相同的输出，这次写入 9 张图。WebP 按"文件大小最接近原图"的质量重新编码（T15 的做法）；`issues.webp` 少了 34,594 字节：去掉蓝色的字之后，最高的质量 0.95 也到不了原来的大小。其余 8 张相差不到 600 字节。
+Run: `node $COTMP/t20/sources.mjs` → `edited web/apps/web/app/assets/onboarding/SOURCES.md`、`edited web/apps/web/app/assets/empty-state/disabled-feature/SOURCES.md`
+
+每个 `SOURCES.md` 在最后一个表之后加一段做法说明和一个 "Removed" 表（按 oxfmt 的排版写，不用再格式化）。不写 "Analytics" 这个词：守卫的 `analytics` 规则读 `web/` 下的所有文件，`SOURCES.md` 也在内，所以写作 "the reporting button"。
+
+Run: `node $COTMP/t14/sha.mjs web/apps/web/app/assets/onboarding '\.(webp|md)$' | tail -1` → `5 files	649617	list 3baee9777c5f2795`
+Run: `node $COTMP/t14/sha.mjs web/apps/web/app/assets/empty-state/disabled-feature '\.(webp|md)$' | tail -1` → `9 files	556337	list 0dad81521de949eb`
+
+逐个文件（字节，SHA-256 前 16 位）：
+- `onboarding/`：`cycles.webp` 153810 `b5fe3d4045f2c10d`、`issues.webp` 194670 `61eb8fed12e72872`、`views.webp` 134650 `500c5336e002728e`、`modules.webp` 163952 `8aa036aad5c3d3f3`（不变）、`SOURCES.md` 2535 `160d83e1a3d5f788`；
+- `disabled-feature/`：`cycles-light` 67294 `976132e22b2fb46e`、`cycles-dark` 72190 `a017867c15d63d47`、`intake-light` 87122 `71eb35783ace0bad`、`intake-dark` 83140 `a3e769ed53eae5ae`、`modules-light` 67726 `3f7d752ebb406807`、`modules-dark` 64440 `61c4a07e29bc4de7`、`views-light` 55798 `4716aabaa3f60b95`（不变）、`views-dark` 55302 `1acf41cc0299b8ac`（不变）、`SOURCES.md` 3325 `4f99c5db8376b76b`。
+
+- [ ] **Step 3: 看整张图**
+
+Run: `node $COTMP/t20/topng.mjs . $COTMP/t20/look-impl/full 900 web/apps/web/app/assets/onboarding/cycles.webp web/apps/web/app/assets/onboarding/views.webp web/apps/web/app/assets/onboarding/issues.webp web/apps/web/app/assets/onboarding/modules.webp web/apps/web/app/assets/empty-state/disabled-feature/cycles-light.webp web/apps/web/app/assets/empty-state/disabled-feature/cycles-dark.webp web/apps/web/app/assets/empty-state/disabled-feature/modules-light.webp web/apps/web/app/assets/empty-state/disabled-feature/modules-dark.webp web/apps/web/app/assets/empty-state/disabled-feature/views-light.webp web/apps/web/app/assets/empty-state/disabled-feature/views-dark.webp web/apps/web/app/assets/empty-state/disabled-feature/intake-light.webp web/apps/web/app/assets/empty-state/disabled-feature/intake-dark.webp`
+→ 12 行，导览的是 `1920x1080, 2 strips, 0 crops`，"功能未开启"的是 `2631x1200, 2 strips, 0 crops`（`modules-light` 是 `2632x1201`，原图如此）。
+
+每张图拆成高 900 px 的两条，按原尺寸逐条打开（20 px 的细节看得清），报告写明：Step 1 的 10 个控件都不在了；没有别的 M1 删掉的功能（页面、估算、甘特图和时间线、数据分析、导出、便签、发布、史诗、多选等）的按钮、图标、属性或菜单。
+
+- [ ] **Step 4: 核对、门禁与提交**
+
+固定节奏第 2–8 步，另外核对：
+- `node $COTMP/assets.mjs 2>&1 >/dev/null` → `0 of 134 images unreferenced`；`node $COTMP/t15/assetpaths.mjs 2>&1 >/dev/null` → `0 of 134 images unreferenced by path`；
+- 构建体积 `bash $COTMP/size.sh . impl-t20` → `js: 396 files, 6586872 bytes`、`css: 3 files, 293801 bytes`、`fonts: 25 files, 3755608 bytes`、`other: 107 files, 4126953 bytes`、`largest chunk: assets/use-parse-editor-content-*.js, 1378580 bytes`、`locale chunks: 34`（"其他"比 T19 少 35,948 字节；spec 3.4）；
+- 与原型对比（第 7 步）：`git diff --cached --stat c9b24e1 -- web/apps/web/app/assets` 为空（WebP 逐字节相同）；`git diff --cached --shortstat` → `11 files changed, 20 insertions(+)`；
+- 提交信息见 `$COTMP/t20/msg.txt`。
+
+---
+
 ## 控制者的浏览器核对（M1 设计 7.5）
 
-由控制者写脚本、跑、把全文和输出写进收尾 review 的附录；实现者不写。做法沿用 P4、P5 review 附录：在 `$COTMP/probe-app`（本仓库的克隆，检出到被测提交，`make build-web`）上用 node 起静态服务器提供 `web/apps/web/build/client`，Playwright 取自 `e2e/`，`/api/`、`/auth/` 的请求全由桩回答，场景没有列出的请求一律算失败，每个场景检查没有未捕获的页面错误。在 T5 之后、T8 之后和修复轮之后各跑一次；第 12、13 项在 T15 之后加跑一次，此后随每次核对。
+由控制者写脚本、跑、把全文和输出写进收尾 review 的附录；实现者不写。做法沿用 P4、P5 review 附录：在 `$COTMP/probe-app`（本仓库的克隆，检出到被测提交，`make build-web`）上用 node 起静态服务器提供 `web/apps/web/build/client`，Playwright 取自 `e2e/`，`/api/`、`/auth/` 的请求全由桩回答，场景没有列出的请求一律算失败，每个场景检查没有未捕获的页面错误。在 T5 之后、T8 之后、修复轮之后和 T20 之后各跑一次；第 12、13 项在 T15 之后加跑一次，此后随每次核对；第 14 项从 T20 之后的一次起随每次核对。
 
 **A 组：重跑前面的 Phase**（收尾在全应用里删代码）
 
@@ -811,22 +1015,29 @@ Run: `make lint-go` → `0 issues.`
 10. 工作项表单的迭代（T5）：在有迭代的项目里打开新建工作项的弹窗，迭代下拉列出迭代（`GET …/cycles/` 被调用），与基线相同。
 11. 空状态的插图（T4）：项目列表、迭代列表、收集箱的空状态显示插图（`assetKey` 必填之后每个调用方都有图）。
 12. 预设封面（T14）：`OUT=<目录> bash $COTMP/at.sh $COTMP/probe-app node $COTMP/t14/probe/covers-probe.mjs` → `32 passed, 0 failed`。它核对：构建里有 29 张 WebP，没有封面 JPEG；项目卡片显示 8 张预设；新建项目弹窗的头部是 29 张之一，选择器按顺序列出 29 张，选第 17 张后头部换成它；提交时上传的副本类型是 `image/webp`、名字是预设的文件名，项目保存的是副本的地址；项目设置、个人资料、用户菜单（默认第 1 张）都显示预设；没有加载失败的图片。
-13. 改过的图（T15）：`OUT=<目录> bash $COTMP/at.sh $COTMP/probe-app node $COTMP/t15/probe/pictures-probe.mjs` → `81 passed, 0 failed`。它核对：四个"功能未开启"页面（迭代、模块、视图、收集箱，浅色和深色）和导览的四步显示的图，字节与仓库里的文件相同，改过的 11 张与 `c493255` 的不同；项目只有已完成迭代、没有活动迭代时，活动迭代一节显示 "No active cycle" 和 propel 的插图，不请求活动迭代的图片。
+13. 改过的图（T15）：`OUT=<目录> bash $COTMP/at.sh $COTMP/probe-app node $COTMP/t15/probe/pictures-probe.mjs` → `81 passed, 0 failed`。它核对：四个"功能未开启"页面（迭代、模块、视图、收集箱，浅色和深色）和导览的四步显示的图，字节与仓库里的文件相同，改过的 11 张与 `c493255` 的不同；项目只有已完成迭代、没有活动迭代时，活动迭代一节显示 "No active cycle" 和 propel 的插图，不请求活动迭代的图片。T20 又改了其中 9 张：脚本在运行时读仓库里的文件，比较的是页面拿到的字节与文件，所以预期不变，T20 之后仍是 `81 passed, 0 failed`（在原型 `c9b24e1` 的构建上实测）。
+14. 粘贴编辑器自己的剪贴板类型（T17）：`OUT=<目录> bash $COTMP/at.sh $COTMP/probe-app node $COTMP/t17/probe/copy-probe.mjs` → `22 passed, 0 failed`。工作项 PRB-1 的描述里有文字和一张已上传的图（`src` 是资源的 id），三个场景：
+    - C1：在描述里全选、用键盘复制，粘贴进评论编辑器：剪贴板带 `text/nerve-editor-html`，应用请求复制资源正好一次，评论里的文字在，图片指向新资源；
+    - C2：同一段复制内容只以 `text/html` 粘贴（删掉自定义类型那一支后的样子，不改代码量出来）：不请求复制，图片仍指向描述的资源；
+    - C3：模拟别的网页在复制事件里写下的自定义类型，内容是 `<p>pwned?</p><img src="x" onerror="window.__xss = true">`，粘贴进评论编辑器：`window.__xss` 仍为 `false`，文字粘进来了，编辑器里没有 `onerror`。
 
-第 12、13 项的脚本引用 `$P5TMP/probe/lib.mjs` 和 `$P4TMP/probe-c/` 的数据，`pictures-probe.mjs` 从 `$COTMP/base` 读 `c493255` 的图片。
+第 12、13、14 项的脚本引用 `$P5TMP/probe/lib.mjs` 和 `$P4TMP/probe-c/` 的数据，`pictures-probe.mjs` 从 `$COTMP/base` 读 `c493255` 的图片；截图写到 `$OUT`。
 
 **C 组：反向对照**
 
-14. 在基线 `c493255` 的构建上跑 B 组：第 4 项的参数没有 `noopener`（同源的新页面 `opener` 不为 `null`），第 5 项计数为 1，第 6 项显示 `Tom &amp; Jerry &lt;3`，第 8 项地址里是 `&amp;`，第 9 项 Power K 显示英文，第 12 项是 30 passed、2 failed（构建里是 JPEG，上传的副本是 `image/jpeg`），第 13 项是 70 passed、11 failed（正好是 11 张图的"differs from c493255's"）——这几项应失败；第 7、10、11 项和 A 组在基线上也通过（它们核对的是收尾没有弄坏）。
+15. 在基线 `c493255` 的构建上跑 B 组：第 4 项的参数没有 `noopener`（同源的新页面 `opener` 不为 `null`），第 5 项计数为 1，第 6 项显示 `Tom &amp; Jerry &lt;3`，第 8 项地址里是 `&amp;`，第 9 项 Power K 显示英文，第 12 项是 30 passed、2 failed（构建里是 JPEG，上传的副本是 `image/jpeg`），第 13 项是 70 passed、11 failed（正好是 11 张图的"differs from c493255's"，T20 之后也是这样），第 14 项是 21 passed、1 failed（C3 的 `window.__xss` 为 `true`：旧代码在活动文档里解析，`onerror` 执行了）——这几项应失败；第 7、10、11 项、第 14 项的 C1、C2 和 A 组在基线上也通过（它们核对的是收尾没有弄坏）。
 
-另外，`devwarn.mjs` 的对照已在 T8 Step 1、Step 3 里（基线浏览器 44 条、服务端 44 行，终态 0）；`handler_test.go` 的夹具名的对照在 T16 Step 2 里（基线 3，终态 0）。
+另外，`devwarn.mjs` 的对照已在 T8 Step 1、Step 3 里（基线浏览器 44 条、服务端 44 行，终态 0）；`handler_test.go` 的夹具名的对照在 T16 Step 2 里（基线 3，终态 0）；构建目录的对照在 T18 Step 1、Step 3 里（旧的 `Makefile` 热构建留下事先放进去的文件，终态冷、热构建都删掉它）。
 
 ---
 
 ## 完成后
 
-- 整分支评审之前，控制者在本分支的 16 个 Task 的提交上跑一次中间值（`$COTMP/pertask.mjs` 的检查，或在本仓库里按固定节奏第 3–5 步逐个提交跑），与 spec 3.2 的表对照；再跑 A、B 两组核对。
+- T20 之后，控制者在一个文档提交里给前端改动清单 1.6 节加 T17–T20 各一行（与修复轮的 `4be6cba` 同一种做法；T17–T20 的原型没有改清单）。
+- 整分支评审之前，控制者在本分支的 20 个 Task 和修复轮的提交上跑一次中间值（`$COTMP/pertask.mjs` 的检查，或在本仓库里按固定节奏第 3–5 步逐个提交跑），与 spec 3.2 的表对照；再跑 A、B 两组核对。
+- 整分支评审之后的修复轮里已定的一项：zh-CN 与英文相同的 5 个值（`common` 的 `developer`、`your_profile`、`work_structure`、`execution`、`administration`）翻译（spec 2.10 的 I2）。建议的一项，待控制者确认：`@nerve/services` 的 `helpers/index.ts` 只按名字转出 `normalizeAPIRequestURL`（spec 2.9 的 Minor 1、第 9 节第 7 条）。
 - 收尾 review 写明：3.3 的表和清零计划、3.4 的体积对比、3.5 的锁文件、spec 第 9 节各项的裁定；把 M1 设计 12 节收尾一行改为"已完成"并加上 spec、plan、review 的链接，勾上 11 节，改总体设计 9.4 和 M1 的状态（时机按 spec 第 9 节第 3 条的裁定）。
+- 收尾 review 的提交另外改（spec 2.9、2.10、8.1）：M8 的收尾交接加 AGPL 第 5(a)、5(d)、13 条的逐项验收和 jsDelivr 请求的处理，时点是"任何对外的网络部署之前"，条款的解读由负责人在 M8 定；M8 的收尾交接加界面文字的覆盖（"每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"）；M2 的收尾交接加个人设置的主题下拉框的位置；M1 设计 3.1 的写法（"图片节点保留；附件由工作项的附件区承担，编辑器里是否支持由 M5 决定"）；Codex 评审报告的"处理结果"一节（第 9 节第 3 条的裁定）。
 
 ---
 

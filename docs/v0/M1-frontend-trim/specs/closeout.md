@@ -13,12 +13,14 @@
 
 - **安全**：每个 `window.open` 都带 `noopener,noreferrer`，守卫看住；propel 的菜单项不再调用全局的 `window.close()`。
 - **死代码**：从不渲染的应用栏；没有其他文件读取的工作区包导出（三轮，512 个导出：274 个连同声明删除，238 个只去掉导出）；各评审点名的死代码；基线的退化结构（`={"…"}` 等 80 处、别名、模板字面量、204 行悬空的导入分组注释）。
-- **死资源**：没有代码引用的文案键（每种语言 1599 → 1077 个）、没有被导入的图片（133 张）和导入了却从不显示的图片（8 张）。
+- **死资源**：没有代码引用的文案键（每种语言 1599 → 1077 个；T19 为活动迭代卡片加 2 个，终态 1079）、没有被导入的图片（133 张）和导入了却从不显示的图片（8 张）。
 - **图片的来源和肖像**（第 9 节第 1 条的裁定）：来源和许可查不到的 29 张预设封面换成 Nerve 自己画的图；保留的图片里的真人照片头像换成字母头像，真实的人名换成中性的名字。
 - **测试夹具**（第 9 节第 2 条的裁定）：`handler_test.go` 的夹具用构建真实产出的文件名。
 - **守卫**：顶层 `phase` 为 `M1/closeout`，工具据此报出过期的例外，只剩跨 M 的 3 条；每条规则的每个分支都有命中样本，不命中样本都引用保留的代码。
 - **工具链与依赖**：删掉 `sanitize-html`（开发环境的外部化警告的根源），给 `prosemirror-codemark` 打补丁（测试输出的 5 行噪声），格式检查覆盖两个配置包和根目录的工具链配置；编辑器标注块的属性按字符串读取。
 - **报告与文档**：oxlint 按包、按规则的表和清零计划，构建体积与 P1 基线的对比，最后一次锁文件核对；前端改动清单；P1–P5 交给后续 M 的交接都写上关闭条件，收尾自己的交接（死成员和死 prop、oxlint 的清理）按领域交给 M2–M8。
+- **修复轮**（3.16）：各 Task 的评审和控制者的浏览器核对发现的已知问题，T16 之后由控制者派发，10 个提交。
+- **Codex 对抗评审的发现**（2.9，负责人批准的分诊）：粘贴编辑器自己的剪贴板类型时在惰性文档里解析，不再执行里面的脚本（T17）；`make build-web` 从空的产物目录开始（T18）；活动迭代卡片的进度用共享的口径（T19）；保留的截图里不再显示已删的功能（T20）。
 
 死成员和死 prop（类型检查器找得到、knip 和 tsc 都不报的 1350 个）不在收尾删：它们几乎都在 M2 起逐个领域重写的代码里（第 4 节第 4 条），按领域交给后续 M。
 
@@ -51,7 +53,7 @@
 | B9 | 只给导入常量起别名的 3 个 `const`；`no-projects.tsx` 没有插值的模板字面量 | P4 评审第 7 节 | 另有一处同类别名（打盹弹窗） | **T6** |
 | B10 | `` t(`${getDescriptionPlaceholderI18n(…)}`) `` 外层多余的模板 | P3 评审第 7 节 | 1 处 | **T6** |
 | B11 | `use-issues-actions.tsx` 的 `viewId as TProfileViews` | P4 评审第 7 节 | 1 处 | **交 M4**：根治要改工作项 store 共用的 hook 接口，M4 重写工作项 store 时一起做。关闭条件：`git grep -n "as TProfileViews" -- web` 没有输出 |
-| B12 | `helpers/index.ts` 仍导出 `ensureAPITrailingSlash` | P1 评审第 6 节 (d) | 桶文件已不存在；这个函数在 `services/src/helpers/url.ts` 里被 `normalizeAPIRequestURL` 使用，并有测试 | **不做**：已在 P3、P4 解决 |
+| B12 | `helpers/index.ts` 仍导出 `ensureAPITrailingSlash` | P1 评审第 6 节 (d)；Codex 对抗评审 Minor 1（2.9） | 仍然如此（这一格原来写"桶文件已不存在"，不对）：`services/src/helpers/index.ts` 是 `export * from "./url"`，包入口 `export * from "./helpers"`；应用只导入 `normalizeAPIRequestURL`（`core/services/api.service.ts`）。函数本身被 `normalizeAPIRequestURL` 调用，按名字导入它的只有 `url.test.ts`，所以 T4 的 `deadsym.mjs` 不报它（测试文件也是"别的文件"） | **整分支评审之后的修复轮**（建议，待控制者确认，第 9 节第 7 条）：`helpers/index.ts` 只按名字转出 `normalizeAPIRequestURL`；`ensureAPITrailingSlash` 留在 `url.ts`，由 `normalizeAPIRequestURL` 和它的测试使用 |
 
 ### 2.3 死文案
 
@@ -110,11 +112,34 @@
 | H2 | 构建体积与 P1 基线的对比（同一条命令） | M1 设计 7.6；P1–P5 spec | 第 3.4 节 |
 | H3 | 锁文件核对 | M1 设计 9、9.7 节 | 第 3.5 节 |
 | H4 | 第 11 节的完成标准逐项核对 | M1 设计 11 节 | 第 5 节 |
-| H5 | 前端改动清单（第二、四节和第 3 节带来的增减）同步 | M1 设计 9、11 节 | **T13**（1.6 节 13 行、第二节两行）；T14、T15 各在 1.6 节末尾加一行；第四节在 P5 已全部"已完成" |
+| H5 | 前端改动清单（第二、四节和第 3 节带来的增减）同步 | M1 设计 9、11 节 | **T13**（1.6 节 13 行、第二节两行）；T14、T15 各在 1.6 节末尾加一行；修复轮加 7 行（`4be6cba`，3.16）；T17–T20 各一行由控制者在 T20 之后的文档提交里加；第四节在 P5 已全部"已完成" |
 | H6 | 本 M 的交接全部关闭；交给后续 M 的交接都有接收的 M 和关闭条件 | M1 设计 9、11 节 | `M0-P5-frontend-trim-notes`、`M0-P6-knip-notes` 在基线已是 `closed`；P2–P5 写给 M2–M8 的 17 份交接各加一节"关闭条件"，收尾自己给 M2–M8 各写一份（**T13**） |
 | H7 | M1 设计 12 节收尾一行、11 节打勾、总体设计 9.4 和 M1 的状态改为"已完成" | M1 设计 9、11 节 | 控制者在收尾 review 的提交里改（与 P5 相同）；时机见第 9 节第 3 条 |
 
-**规模**：16 个 Task，原型改 875 个文件（+6091 / −12814 行；T1–T13 是 763 个文件，+1377 / −12685；本分支的实际数字见 3.1），其中大部分是机械的：T4 的三轮删除、T6 的 oxlint 修复和注释、T11 的键、T12 的图片、T14 的封面、T15 的头像和人名都由脚本完成，脚本的输出逐项可核对（T14 的 +4658 行几乎都是 29 张 SVG 源文件）。要逐处判断的是 T2、T3、T5、T6 的手写部分、T7、T8。死成员和死 prop 若在收尾删，要在 348 个文件里逐个判断 1350 处（很多是 Plane 接口类型的字段，M2 起按 OpenAPI 生成的类型整体替换），不适合放在一个 Phase 里，交给重写这些代码的 M。
+### 2.9 Codex 对抗评审的分诊
+
+Codex 对整个 M1 的对抗评审（[报告](../reviews/M1-codex-adversarial-review.md)，`main` 上的提交 `d2bd4fc`，本分支合并时带进来；评审对象 `c493255`）第 4 节有 7 条新发现。按第 9 节第 3 条的裁定分诊进收尾，负责人 2026-09-25 批准按建议处理（plan 的"Codex 对抗评审之后的裁定"）。"核对"一栏是架构师在本分支修复轮之后（`9a98148`）和基线上的复核。报告第 6 节的已知事项和第 7 节的前瞻风险是已有交接的复述，不另分诊；第 7 节里 jsDelivr 的请求随 Important 3 交 M8。每条的处理结果由控制者写进报告的"处理结果"一节（收尾 review 的提交）。
+
+| # | 发现 | 核对 | 去向 |
+|---|---|---|---|
+| Critical 1 | 编辑器的粘贴处理把剪贴板里自定义类型 `text/nerve-editor-html` 的 HTML 在清洗之前赋给一个离屏 `div` 的 `innerHTML`，带 `onerror` 的 `<img>` 会执行；任何网页都能在自己的复制事件里写这个类型 | 属实：`helpers/paste-asset.ts` 的 `processAssetDuplication`（`tempDiv.innerHTML = htmlContent`，处理之后再赋一次）；`div` 不挂到页面上，但它属于活动文档，图片照样加载。`t17/probe/copy-probe.mjs` 的 C3 在 `c493255` 的构建上 `window.__xss` 变为 `true` | **T17**：在 `DOMParser` 的惰性文档里解析（3.17，第 4 节第 27 条） |
+| Important 1 | 命中 Turbo 缓存的 `make build-web` 不删产物目录里原有的文件，`make build` 把陈旧的资源嵌进 Go 程序 | 属实：`t18/prove.sh` 在旧的 `Makefile` 上，事先放进 `build/client/assets/` 的文件在热构建（11 个任务都命中缓存）之后还在；冷构建时 Vite 自己清空了目录 | **T18**：`build-web` 在 Turbo 之前 `rm -rf web/apps/web/build/client`（第 4 节第 28 条） |
+| Important 2 | 活动迭代卡片的进度是 (完成 + 取消) / (总数 − 取消)，文字写 "x/y closed"；共享的 `calculateCycleProgress` 是 完成 / (总数 − 取消)。取消 2、完成 8、共 10 时卡片写 "10/8 closed" | 属实：`cycles/active-cycle/progress.tsx`；卡片的公式在 Plane 就有，M1 设计 3.4 改写了共享的口径 | **T19**：卡片经 `calculateCycleProgress` 计算，文字写完成 / (总数 − 取消)，两句文案进 en、zh-CN（第 4 节第 29 条） |
+| Important 3 | 公开部署的 AGPL 验收没有覆盖第 5(a) 条（修改说明和日期）、5(d) 条（交互界面的法律声明）、13 条（网络用户取得对应源码）；另外表情数据（`emojibase-data@latest`）和标注块的默认表情图片从 jsDelivr 取，会向第三方发请求 | 属实：M8 的交接写了 propel 的对应源码、版本号和 OG 地址，没有这三条的验收；jsDelivr 的两类请求在 M1 之前就有。条款怎样适用（例如 5(d) 对原版界面的例外）是法律解读 | **交 M8**：控制者在收尾 review 的提交里给 M8 的收尾交接加关闭条件：第 5(a)、5(d)、13 条逐项验收，页面上的源码入口指向运行的提交和完整的对应源码；jsDelivr 的请求改为自托管固定版本，或明确告知并接受。时点是"任何对外的网络部署之前"，最迟 M8 发布；条款的解读由负责人在 M8 定（8.1） |
+| Important 4 | 保留页面的图片还显示已删的功能：收集箱关闭时的两张图印着 "Estimate 2 Months"，导览的 `cycles.webp` 有数据分析按钮 | 属实；T15 复看截图时已记下同类的另外 7 处（T20 的原型又按原尺寸看了一遍，没有更多）：甘特图、时间线布局图标（导览 `cycles.webp`、`views.webp`，"功能未开启"的模块、迭代各两张），导览 `issues.webp` 的 "Public" 发布标签 | **T20**：9 张图里涂掉 10 个控件（3.17，第 4 节第 30 条） |
+| Minor 1 | P1 交给 P3 的孤儿导出 `ensureAPITrailingSlash` 没有收口，两个桶文件仍公开它 | 属实，本 spec 的 B12 原来写错了（2.2）：`services/src/helpers/index.ts` 和包入口都是 `export *`，应用只用 `normalizeAPIRequestURL`；T4 没有删它，因为 `url.test.ts` 按名字导入它 | **整分支评审之后的修复轮**（建议，待控制者确认，第 9 节第 7 条）：`helpers/index.ts` 只按名字转出 `normalizeAPIRequestURL`（B12） |
+| Minor 2 | M1 设计 3.1 写"保留图片和附件的节点"，社区版的编辑器却没有附件节点（M5 的交接写明了） | 属实 | 控制者在收尾 review 的提交里把 M1 设计 3.1 改为"图片节点保留；附件由工作项的附件区承担，编辑器里是否支持由 M5 决定" |
+
+### 2.10 浏览器核对顺带发现的两件事
+
+控制者第 3 轮浏览器核对（`9a98148` 对基线）看到的，基线上相同。架构师查了来源：
+
+| # | 事项 | 核对 | 去向 |
+|---|---|---|---|
+| I1 | 个人设置（zh-CN）里主题的下拉框画在页面左上角 | 继承自 Plane：主题选择器是 ui 的 `CustomSelect`（`web/packages/ui/src/dropdowns/custom-select.tsx`，react-popper 定位，`createPortal` 到 `document.body`）。整个 M1（导入的 `48e1a63` 到 `9a98148`）里它只改过包名，去掉改名的行之后与 Plane 的 `02c19e1` 相同；`theme-switch.tsx` 只改了标签的键 | **交 M2**（个人设置）：控制者在收尾 review 的提交里写进 M2 的收尾交接，关闭条件是本 M 的浏览器核对写明个人设置的下拉框在它的按钮旁展开（8.1） |
+| I2 | zh-CN 界面上有英文 | 两种来源，都是 Plane 原有的：(1) 没有经过 `t()` 的英文字面量，`t20/investb-hardcoded.mjs` 在 `web/apps/web` 的 978 个 `.tsx` 里粗略找到约 457 处（估计的量级：会算进少数不是界面的字符串，漏掉模板字面量），最多的是工作项 83、项目 49、模块 36、导览 36、收集箱 35、迭代 24，例如 "First day of the week"、"Search commands..."；(2) zh-CN 的值与英文相同的键 11 个（`t20/investb-untranslated.mjs`），其中 5 个是没翻译的词：`common` 的 `developer`、`your_profile`、`work_structure`、`execution`、`administration`，其余是不用翻译的 URL、ID、Webhooks、`name@company.com`。两种语言的键一一对应，没有缺键 | (1) **交 M8**：控制者在收尾 review 的提交里写进 M8 的收尾交接："每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"（8.1）；(2) 5 个值在整分支评审之后的修复轮里翻译 |
+
+**规模**：20 个 Task 和一个修复轮。T1–T16 的原型改 875 个文件（+6091 / −12814 行；T1–T13 是 763 个文件，+1377 / −12685），修复轮 27 个文件（+212 / −157），T17–T20 的原型 19 个文件（其中 9 张 WebP；+92 / −65）；本分支的实际数字见 3.1。其中大部分是机械的：T4 的三轮删除、T6 的 oxlint 修复和注释、T11 的键、T12 的图片、T14 的封面、T15 的头像和人名、T20 的涂改都由脚本完成，脚本的输出逐项可核对（T14 的 +4658 行几乎都是 29 张 SVG 源文件）。要逐处判断的是 T2、T3、T5、T6 的手写部分、T7、T8、T17、T19。死成员和死 prop 若在收尾删，要在 348 个文件里逐个判断 1350 处（很多是 Plane 接口类型的字段，M2 起按 OpenAPI 生成的类型整体替换），不适合放在一个 Phase 里，交给重写这些代码的 M。
 
 ---
 
@@ -122,9 +147,9 @@
 
 ### 3.1 文件总览
 
-16 个 Task，每个一个提交。原型（在 `$COTMP/proto`）实测：T1–T13（`c493255..328843f`）`763 files changed, 1377 insertions(+), 12685 deletions(-)`；T1–T16（`c493255..3c64669`）`875 files changed, 6091 insertions(+), 12814 deletions(-)`。
+20 个 Task，每个一个提交；T16 之后另有修复轮的 10 个提交（3.16）。原型（在 `$COTMP/proto`）实测：T1–T13（`c493255..328843f`）`763 files changed, 1377 insertions(+), 12685 deletions(-)`；T1–T16（`c493255..3c64669`）`875 files changed, 6091 insertions(+), 12814 deletions(-)`；T17–T20（分支 `proto-codex`，`9a98148..c9b24e1`）`19 files changed, 92 insertions(+), 65 deletions(-)`（9 张 WebP 不计行数）。
 
-本分支的实际提交是准绳，与下表的原型不同之处：T1 另有跟进提交 `483ca9d`（`tools/keywords.json`，+6 / −5，3.6）；T4 `7f189da` 是 325 个文件，+166 / −9183；T6 `20ac5b6` 是 +101 / −343（3.9）；T9 `98ecc86` 是 +125 / −3；T11 `f9fb015` 的行数相同，`i18n-applications` 的样本不同（3.6）。本分支 T1–T13 的净改动（`c493255..300eff0`，不计本 spec 和 plan）是 `764 files changed, 1379 insertions(+), 12684 deletions(-)`。T15 按 plan 比原型多写 M5 的交接（8.1），在分支 `300eff0` 上重放 T14、T15 得到 24 个文件，+63 / −95。其余 Task 与原型相同。
+本分支的实际提交是准绳，与下表的原型不同之处：T1 另有跟进提交 `483ca9d`（`tools/keywords.json`，+6 / −5，3.6）；T4 `7f189da` 是 325 个文件，+166 / −9183；T6 `20ac5b6` 是 +101 / −343（3.9）；T9 `98ecc86` 是 +125 / −3；T11 `f9fb015` 的行数相同，`i18n-applications` 的样本不同（3.6）。本分支 T1–T13 的净改动（`c493255..300eff0`，不计本 spec 和 plan）是 `764 files changed, 1379 insertions(+), 12684 deletions(-)`。T15 按 plan 比原型多写 M5 的交接（8.1），在分支 `300eff0` 上重放 T14、T15 得到 24 个文件，+63 / −95。其余 Task 与原型相同。本分支到修复轮结束（`c493255..9a98148`，不计本 spec 和 plan）是 `883 files changed, 6280 insertions(+), 12934 deletions(-)`；在它上面加 T17–T20 的原型（`c493255..c9b24e1`）是 `888 files changed, 6367 insertions(+), 12994 deletions(-)`。
 
 | Task | 标题 | 删 | 增 | 改 | 行（+/−） | 原型提交 |
 |---|---|---:|---:|---:|---|---|
@@ -144,25 +169,31 @@
 | 14 | 预设封面换成 Nerve 自己画的图 | 29 | 59 | 2 | +4658 / −30 | `131e1de` |
 | 15 | 保留的图片里没有真人；没有显示的图片删除 | 8 | 2 | 13 | +51 / −94 | `f997e8a` |
 | 16 | `handler_test.go` 的夹具用构建真实产出的文件名 | — | — | 1 | +5 / −5 | `3c64669` |
+| 17 | 粘贴编辑器自己的剪贴板类型时，在惰性文档里解析 | — | — | 4 | +56 / −53 | `bad3483` |
+| 18 | `make build-web` 从空的产物目录开始 | — | — | 1 | +2 / −0 | `b85f861` |
+| 19 | 活动迭代卡片的进度用共享的口径 | — | — | 3 | +14 / −12 | `a994925` |
+| 20 | 保留的截图里不再显示已删的功能 | — | — | 11 | +20 / −0（9 张 WebP） | `c9b24e1` |
 
 ### 3.2 原型验证：结论与证据
 
 在 `$COTMP/proto`（从本分支的基线克隆）中逐个 Task 做过一遍，每个 Task 结束时 `pnpm exec turbo run check:types`、`make lint-web`、`make test-web`、`make build-web`、`make knip` 都通过。之后在一个从基线新建的克隆（`$COTMP/replay`）上按 plan 的步骤重放了全部 13 个 Task（`replay.mjs`），每个 Task 得到的树与原型提交完全相同；T4–T13 的五个门禁和测试输出的核对又在重放的提交上重跑了一遍（`gates-range.mjs`，T1–T3 的原型提交没有变），全部通过。T14–T16 在 `328843f` 的干净克隆上按 plan 的步骤重放，三棵树与原型提交相同（T14、T15 的 WebP 逐字节相同）；又在本分支 T13（`300eff0`）的克隆上重放，每个 Task 改到的图片、代码和 `server/` 路径与原型提交相同，五个门禁通过，构建体积与下表相同。T15 写 M5 交接的一步（`t15/handoff.mjs`）是原型之后按裁定加的，不在原型提交 `f997e8a` 里；它只在 `300eff0` 的重放上跑过（M5 交接 +12 / −1）。
 
-下表的"收尾结束"是原型 `3c64669`（T16）；与 T13（`328843f`）不同的只有图片、构建体积两行（括号里是 T13 的值）和新加的按路径查图片、Go 的检查两行。本分支 T16 之后的修复轮（`1896bca`–`6048ad3`）改了其中三行：vitest、lint 上限合计和 `deadsym.mjs`，写的是修复轮之后的值，括号里是 `3c64669` 的；构建体积仍是 `3c64669` 的实测。
+T17–T20 在 `$COTMP/proto` 的 `proto-codex` 分支上做，基点是本分支修复轮的最后一个提交 `9a98148`，每个提交结束时五个门禁通过；又在 `9a98148` 的干净检出上按 plan 的步骤重放，四棵树与原型提交相同（T20 的 WebP 逐字节相同）。每个提交的孤儿核对都是 0（`infile-orphans.mjs` 没有行），`deadsym.mjs` 都是 `prop 452, member 898, export 2`，`deadorph.mjs` 对 `9a98148` 为 0。
 
-| 项 | 基线（`c493255`） | 收尾结束（`3c64669`） |
+下表的"收尾结束"是 T20 的原型 `c9b24e1`（本分支 `9a98148` 加 T17–T20）的实测；括号里是更早的值：T16 的原型 `3c64669`、本分支修复轮之后的 `9a98148`，或 T13（`328843f`）。T17–T20 只改变 vitest、键、构建体积三行，新加粘贴、构建目录、活动迭代卡片三行；修复轮改变 vitest、lint 上限合计和 `deadsym.mjs` 三行。
+
+| 项 | 基线（`c493255`） | 收尾结束（`c9b24e1`） |
 |---|---|---|
 | `make lint-web` | `keywords: 48 rules, 5 exceptions, no hits.` + 52 个 turbo 任务 | `keywords: 51 rules, 3 exceptions, no hits.` + 54 |
 | `check:types` / `make test-web` / `make build-web` | 23 / 16 / 11 | 不变 |
-| vitest | 77 个测试（web 5、constants 11、editor 16、i18n 10、services 11、utils 24），stderr 有 editor 的 5 行 `prosemirror-codemark` | 100 个（editor 34、utils 29），没有 stderr（`3c64669`：86 个，editor 20） |
+| vitest | 77 个测试（web 5、constants 11、editor 16、i18n 10、services 11、utils 24），stderr 有 editor 的 5 行 `prosemirror-codemark` | 101 个（editor 35、utils 29），没有 stderr（`3c64669`：86 个，editor 20；`9a98148`：100 个，editor 34） |
 | `make knip` | 零 | 零（每个 Task） |
 | lint 上限合计 | 711 | 695（hooks 4→3、propel 21→16、ui 28→25、utils 25→18）；`lintdiff.sh` 没有新增的警告（`3c64669`：696，utils 19） |
 | 守卫：没有命中样本的分支（`alts.mjs`） / 引用不存在代码的不命中样本（`missquote.mjs` / `missreal.mjs`） | 42 / 50 / — | 0 / 0 / 0（本分支；原型 T11 起 `missreal` 为 1，3.6） |
 | 例外 | 5（`analytics` M6、`project-invitations` M3、`brand` M9、`tlds.ts` 的 `analytics`、`wiki` M9） | 3（前三条） |
 | 不带 `noopener` 的 `window.open` | 16 处中 12 处 | 0（规则 `window-open`） |
 | 包导出 / 死成员 / 死 prop（`deadsym.mjs`） | 426 / 1150 / 638 | 2 / 898 / 452（`3c64669`：2 / 894 / 452；多出的四个见结论 3） |
-| 每种语言的键 / 无引用的键（`keyref.mjs`） / 只被无关字面量命中的键（`keyfalse.mjs` 的 `?`） | 1599 / 482 / 34 | 1077 / 0 / 12（都到得了 `t()`） |
+| 每种语言的键 / 无引用的键（`keyref.mjs`） / 只被无关字面量命中的键（`keyfalse.mjs` 的 `?`） | 1599 / 482 / 34 | 1079 / 0 / 12（都到得了 `t()`；T11–T18 是 1077，T19 加 2 个） |
 | 图片 / 没有引用的（`assets.mjs`） | 246 / 133 | 134 / 0（T13：113 / 0；T14 加 29 张 SVG 源文件，T15 删 8 张） |
 | 按路径没有被引用的图片（`t15/assetpaths.mjs`） | — | 0（T14 之后 6 张，T15 删除） |
 | 导入分组注释：悬空 / 重复（`labels-all.mjs`） | 208 / 4 | 0 / 0 |
@@ -170,8 +201,11 @@
 | 只给导入常量起别名的 `const` | 4 | 0 |
 | 开发服务器的外部化警告（`devwarn.mjs`，打开 `/`，页面加载两次） | 浏览器 44 条、服务端 44 行（每次加载各 22） | 0 / 0 |
 | 锁文件 | — | 删 17 个包，不新增、不升级（3.5） |
-| 构建体积合计 | 534 个文件，17,306,349 字节 | 531 个，14,799,463 字节（T13：533 个，17,071,770；3.4） |
+| 构建体积合计 | 534 个文件，17,306,349 字节 | 531 个，14,763,234 字节（`3c64669`：14,799,463；T13：533 个，17,071,770；3.4） |
 | Go：`make test` / `make lint-go` | 通过 / `0 issues.` | 不变（T16 只改测试数据） |
+| 粘贴带 `onerror` 的 `text/nerve-editor-html`（`t17/probe/copy-probe.mjs` 的 C3） | 脚本执行（`window.__xss` 为 `true`） | 不执行；同编辑器之间复制图片仍复制资源（C1） |
+| `make build-web` 之前放进产物目录的文件（`t18/prove.sh`） | 热构建（命中缓存）之后还在，`make build` 把它嵌进 Go 程序 | 冷、热构建之后都不在；两次的 531 个文件逐字节相同 |
+| 活动迭代卡片（共 10、完成 3、取消 2） | 进度 62.5%，"5/8 Work items closed" | 38%（`calculateCycleProgress`，`progress.test.ts` 有这一例），"3/8 work items completed"（T19；文案用 intl-messageformat 渲染核对过，页面上没有跑） |
 
 每个 Task 结束时的中间值（`pertask.mjs` 在重放的提交上重算）：
 
@@ -190,8 +224,10 @@
 | T14 | 2 / 894 / 452 | 696 | 1077 | 0 / 142 | 51 / 3 | 0 / 0 |
 | T15、T16 | 2 / 894 / 452 | 696 | 1077 | 0 / 134 | 51 / 3 | 0 / 0 |
 | 修复轮 | 2 / 898 / 452 | 695 | 1077 | 0 / 134 | 51 / 3 | 0 / 0 |
+| T17、T18 | 2 / 898 / 452 | 695 | 1077 | 0 / 134 | 51 / 3 | 0 / 0 |
+| T19、T20 | 2 / 898 / 452 | 695 | 1079 | 0 / 134 | 51 / 3 | 0 / 0 |
 
-每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref.mjs orphaned`、`dangling.mjs`、`keyref.mjs orphaned` 都是 0，`headers.sh` 没有输出；`deadorph.mjs`（新出现的死成员、死 prop、死导出）除 T7 和修复轮的 FW4、FW10 外都是 0（结论 3）；`infile-orphans.mjs` 在 T3、T4、T5 列出 12、165、4 行，都以 `defined now: 0)` 结尾（被删掉的符号），其余 Task 为 0。
+每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref.mjs orphaned`、`dangling.mjs`、`keyref.mjs orphaned` 都是 0，`headers.sh` 没有输出；`deadorph.mjs`（新出现的死成员、死 prop、死导出）除 T7 和修复轮的 FW4、FW10 外都是 0（结论 3）；`infile-orphans.mjs` 在 T3、T4、T5 列出 12、165、4 行，都以 `defined now: 0)` 结尾（被删掉的符号），其余 Task 为 0。T17–T20 的数字是原型上的实测（T17、T19 对各自的基点重跑，T18、T20 不改代码）。
 
 结论：
 
@@ -201,11 +237,13 @@
 4. **外部化警告的根源在依赖，不在 Vite 配置。** `devwarn.mjs` 打开 `/`，页面加载两次，浏览器 44 条、服务端 44 行（每次加载各 22 条），都来自 postcss 读取 `path`、`fs`、`url`、`source-map-js`；web 里只有 `sanitize-html` 把 postcss 带进浏览器端，它的全部用处是 `@nerve/utils` 的三个 HTML 工具。应用是纯客户端的构建（`ssr: false`），浏览器自带的 `DOMParser` 就够用；删掉之后警告为 0，还修掉了通知预览显示 `&amp;` 的问题（3.10）。
 5. **测试输出的噪声也是依赖的问题。** `prosemirror-codemark` 0.4.2 是最新版本，发布的每个构建文件末尾都指向一个列出未发布源文件的 source map；补丁只删这 12 行注释（`strip.mjs`），与仓库里已有的 `react-color` 补丁同一种做法。
 6. **没有新的共享可变状态。** 全 Phase 新增的顶层声明都是函数、只读数据或测试辅助；唯一的模块级可变值是 T7 测试文件里等待 `afterEach` 销毁的编辑器列表。新增的行里没有 `={"`、`${"`，也没有不带插值的模板字面量。
-7. **T1–T13 的构建产物几乎不变。** 删掉的图片本来就不在构建里（没有被导入）；JS 少 231,564 字节（propel 和 ui 的死组件、`sanitize-html`），CSS 少 3,015 字节（3.4）。T14、T15 让"其他"少 2,272,137 字节：29 张封面从 JPEG 换成 WebP，活动迭代的两张图删除（3.4、3.15）。
+7. **T1–T13 的构建产物几乎不变。** 删掉的图片本来就不在构建里（没有被导入）；JS 少 231,564 字节（propel 和 ui 的死组件、`sanitize-html`），CSS 少 3,015 字节（3.4）。T14、T15 让"其他"少 2,272,137 字节：29 张封面从 JPEG 换成 WebP，活动迭代的两张图删除（3.4、3.15）。修复轮和 T17–T20 只差几百字节的 JS；T20 让"其他"再少 35,948 字节（3.4）。
+8. **粘贴的缺口只在 ProseMirror 之前的一步（T17）。** ProseMirror 的 `pasteHTML` 在它自己新建的文档（`document.implementation.createHTMLDocument`）里按编辑器的 schema 解析，只留 schema 声明的节点和属性，本来就不执行脚本；执行发生在更早的 `processAssetDuplication`：它在活动文档里建 `div` 解析同一段 HTML，好标记要复制的图片。`div` 没有挂到页面上，但它的元素属于页面，图片照样加载，`onerror` 照样执行。`DOMParser` 的文档没有浏览上下文，里面什么都不加载、不执行。编辑器的新测试在旧代码上失败（带 `onerror` 的标记两次写进活动文档的元素），浏览器里的 C3 在基线上执行、在 T17 之后不执行。
+9. **Turbo 的缓存恢复只写不删（T18）。** 冷构建时 Vite 在写之前清空输出目录，所以 Codex 的实验要命中缓存才出现：Turbo 把记录下来的输出文件写回原处，不管目录里还有什么。清空这一步要在 Turbo 之前，由 `make build-web` 做；清空之后，冷、热两次构建的 531 个文件逐字节相同。
 
 ### 3.3 oxlint：按包、按规则（M1 设计 7.3）
 
-`linttable.mjs` 与 `tools/lint-cap.mjs` 同样的跑法（在每个包目录里 `oxlint --format=json .`），每个包的合计等于上限。基线 711 个：web 566、editor 65、ui 28、utils 25、propel 21、hooks 4、constants 1、i18n 1。收尾结束时 695 个，39 条规则（修复轮删掉 utils 的 1 个 `no-useless-length-check`，它在删掉的 JSON 分支里）：
+`linttable.mjs` 与 `tools/lint-cap.mjs` 同样的跑法（在每个包目录里 `oxlint --format=json .`），每个包的合计等于上限。基线 711 个：web 566、editor 65、ui 28、utils 25、propel 21、hooks 4、constants 1、i18n 1。收尾结束时 695 个，39 条规则（修复轮删掉 utils 的 1 个 `no-useless-length-check`，它在删掉的 JSON 分支里；T17–T20 不增不减）：
 
 | 规则 | web | constants | editor | hooks | i18n | propel | ui | utils | 合计 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -262,17 +300,17 @@
 
 P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make build-web`，然后 `node web-size.mjs`（`size.sh`）。
 
-| 项 | P1 之前（`0f2b3e0`） | 收尾之前（`c493255`） | T13 之后（`328843f`） | 收尾之后（`3c64669`） | 对 P1 之前 |
-|---|---|---|---|---|---|
-| JS | 1055 个，15,151,327 字节 | 397 个，6,818,887 | 396 个，6,587,323 | 396 个，6,587,153 | −56.5% |
-| CSS | 3 个，326,068 | 3 个，296,816 | 3 个，293,801 | 3 个，293,801 | −9.9% |
-| 字体 | 34 个，6,849,620 | 25 个，3,755,608 | 25 个，3,755,608 | 25 个，3,755,608 | −45.2% |
-| 其他 | 147 个，9,905,117 | 109 个，6,435,038 | 109 个，6,435,038 | 107 个，4,162,901 | −58.0% |
-| 最大的 chunk | `toolbar-*.js` 1,821,937 | `use-parse-editor-content-*.js` 1,379,320 | 同名 1,378,717 | 同名 1,378,717 | |
-| 语言 chunk | 588 | 34 | 34 | 34 | |
-| **合计** | **1239 个，32,232,132 字节（30.7 MiB）** | **534 个，17,306,349（16.5 MiB）** | **533 个，17,071,770（16.3 MiB）** | **531 个，14,799,463（14.1 MiB）** | **−54.1%** |
+| 项 | P1 之前（`0f2b3e0`） | 收尾之前（`c493255`） | T13 之后（`328843f`） | T16 之后（`3c64669`） | 收尾之后（`c9b24e1`） | 对 P1 之前 |
+|---|---|---|---|---|---|---|
+| JS | 1055 个，15,151,327 字节 | 397 个，6,818,887 | 396 个，6,587,323 | 396 个，6,587,153 | 396 个，6,586,872 | −56.5% |
+| CSS | 3 个，326,068 | 3 个，296,816 | 3 个，293,801 | 3 个，293,801 | 3 个，293,801 | −9.9% |
+| 字体 | 34 个，6,849,620 | 25 个，3,755,608 | 25 个，3,755,608 | 25 个，3,755,608 | 25 个，3,755,608 | −45.2% |
+| 其他 | 147 个，9,905,117 | 109 个，6,435,038 | 109 个，6,435,038 | 107 个，4,162,901 | 107 个，4,126,953 | −58.3% |
+| 最大的 chunk | `toolbar-*.js` 1,821,937 | `use-parse-editor-content-*.js` 1,379,320 | 同名 1,378,717 | 同名 1,378,717 | 同名 1,378,580 | |
+| 语言 chunk | 588 | 34 | 34 | 34 | 34 | |
+| **合计** | **1239 个，32,232,132 字节（30.7 MiB）** | **534 个，17,306,349（16.5 MiB）** | **533 个，17,071,770（16.3 MiB）** | **531 个，14,799,463（14.1 MiB）** | **531 个，14,763,234（14.1 MiB）** | **−54.2%** |
 
-文件数只作记录，不作为门禁。本分支 T13（`300eff0`）的构建与 `328843f` 的数字相同；T14–T16 在它上面重放，得到的也是最后一列。T14 把 29 张封面从 3,512,619 字节的 JPEG 换成 1,379,140 字节的 WebP（"其他" −2,133,479，JS +30：29 个导入和兜底文件名各多一个字符）；T15 删掉活动迭代的两张图（−140,562），改过的 11 张共 +1,904 字节，JS −200（删掉的属性和导入）。
+文件数只作记录，不作为门禁。本分支 T13（`300eff0`）的构建与 `328843f` 的数字相同；T14–T16 在它上面重放，得到的也是 `3c64669` 一列。T14 把 29 张封面从 3,512,619 字节的 JPEG 换成 1,379,140 字节的 WebP（"其他" −2,133,479，JS +30：29 个导入和兜底文件名各多一个字符）；T15 删掉活动迭代的两张图（−140,562），改过的 11 张共 +1,904 字节，JS −200（删掉的属性和导入）。之后只有 JS 和"其他"变了：修复轮 JS −250（本分支 `9a98148`，合计 14,799,213）；T17 JS −264（粘贴处理变短）；T18 不变；T19 JS +233（两个文案键和对共享函数的调用）；T20 "其他" −35,948（`issues.webp` −34,594，其余 8 张合计 −1,354）。最后一列是 T20 的原型 `c9b24e1` 的实测。
 
 ### 3.5 锁文件（M1 设计 9、9.7）
 
@@ -337,10 +375,10 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 | 手段 | 核对 | 落点 |
 |---|---|---|
 | 构建与静态检查 | 五个门禁；守卫；每个 Task 的孤儿核对；`lintdiff.sh`；锁文件 | 每个 Task |
-| 进仓库的测试 | 77 → 100 个（T7 的 4 个、T8 的 5 个、修复轮的 14 个）；测试输出没有 stderr（T9 起） | 每个 Task |
-| 一次性核对 | `devwarn.mjs` 的外部化警告（T8）；`t1/expiry-probe.mjs`（T1）；`t10/negative.mjs`（T10）；封面和改过的图按能看清 20 px 的尺寸看（T14、T15）；`t16/names.mjs` 对照夹具名和构建产物（T16） | 对应 Task |
+| 进仓库的测试 | 77 → 101 个（T7 的 4 个、T8 的 5 个、修复轮的 14 个、T17 的 1 个）；测试输出没有 stderr（T9 起） | 每个 Task |
+| 一次性核对 | `devwarn.mjs` 的外部化警告（T8）；`t1/expiry-probe.mjs`（T1）；`t10/negative.mjs`（T10）；封面和改过的图按能看清 20 px 的尺寸看（T14、T15、T20）；`t16/names.mjs` 对照夹具名和构建产物（T16）；`t18/prove.sh` 的冷、热构建，旧的 `Makefile` 上反向对照（T18） | 对应 Task |
 | Go 的测试 | `make test`、`make lint-go`（T16） | T16 |
-| 临时核对脚本（控制者写和跑，plan 最后一节） | 重跑 P2–P5 的探测；`window.open` 的参数和 `opener`；菜单项不调用 `window.close()`；通知预览的实体；评论和草稿的"是否为空"；标注块的属性和本地存储；Power K 的主题菜单；页面上没有原样显示的键、没有加载失败的图片；工作项表单的迭代下拉；预设封面的显示、选择和上传的副本（`t14/probe/covers-probe.mjs`）；改过的图在页面上的字节和活动迭代的空状态（`t15/probe/pictures-probe.mjs`）；在基线的构建上做反向对照 | 收尾 review 附录 |
+| 临时核对脚本（控制者写和跑，plan 最后一节） | 重跑 P2–P5 的探测；`window.open` 的参数和 `opener`；菜单项不调用 `window.close()`；通知预览的实体；评论和草稿的"是否为空"；标注块的属性和本地存储；Power K 的主题菜单；页面上没有原样显示的键、没有加载失败的图片；工作项表单的迭代下拉；预设封面的显示、选择和上传的副本（`t14/probe/covers-probe.mjs`）；改过的图在页面上的字节和活动迭代的空状态（`t15/probe/pictures-probe.mjs`，T20 之后预期不变）；编辑器之间的复制粘贴和跨源的剪贴板载荷（`t17/probe/copy-probe.mjs`）；在基线的构建上做反向对照 | 收尾 review 附录 |
 | S1–S4 | 照常通过 | 合并前 |
 
 ### 3.15 图片与测试夹具（T14、T15、T16）
@@ -399,6 +437,49 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
   没有找到别的真人照片、真实人名或 Plane 的标志。propel 的空状态插图是矢量组件；仓库里的代码和 SVG 都没有内嵌的位图（`data:image` 只出现在两个测试里）。
 - **测试夹具**（T16）：`handler_test.go` 的 `built` 用构建真实产出的 `site.webmanifest.json`、`icons/icon-192x192.png`，回退用例的目录用 `/icons`，注释"mirrors the layout of web/apps/web/build/client"因此成立。`t16/names.mjs` 对照构建为 0（基线为 3）；`make test` 通过，`make lint-go` 为 `0 issues.`。
 
+### 3.16 修复轮（T16 之后）
+
+各 Task 的评审和控制者的浏览器核对发现的小缺陷，没有原型，T16 之后由控制者派发（`.superpowers/sdd/closeout/fixbatch-brief.md`），实现者自己设计，每项一个提交；编号是控制者记录里的编号。前端改动清单 1.6 节有它们的 7 行（`4be6cba`）。
+
+| 编号 | 提交 | 改动 | 来源 | 文件，行（+/−） |
+|---|---|---|---|---|
+| FW1 | `1896bca` | propel 右键菜单的 `Trigger`、`Content` 的属性类型去掉 `className`（`Omit`）：T3 删掉了它们自己声明的 `className`，继承的 base-ui 属性里还有，传进来时 `Trigger` 会用它换掉 `outline-none`，`Content` 会不声不响地丢掉它；现在传它是类型错误 | T3 的评审 | 1，+5 / −2 |
+| FW3 | `c167005` | 4 行只有 `//` 的导入分组标签删除或改为 `// local imports`；模块链接列表项的两个错标改名（`// nerve imports`、`// nerve utils`）；只改注释行 | T6 的评审 | 5，+4 / −6 |
+| FW4 | `28bedba` | 标注块从本地存储读上次用的图标时先检查形状，不符合的值写日志、删掉、改用默认值；原来 `as TLogoProps` 直接信任，T7 删掉 `.toString()` 之后，不是字符串的 emoji 值会让插入抛错；editor 加 14 个测试 | T7 的评审 | 2，+119 / −27 |
+| FW5 | `773b3d8` | 算作内容的标签只写在 `isEmptyHtmlString` 里（`img`、`image-component`、`mention-component`），草稿弹窗和 `isCommentEmpty` 都调用它：只有图片或只有提及的草稿，关闭时不再不问就丢掉；带测试 | 控制者的浏览器核对（基线和本分支都能重现） | 3，+24 / −19 |
+| FW6 | `6f2b484` | 个人主页的顶部栏在窄于 768 px 时，菜单按钮显示标签的名字（`t(currentTab.i18n_label)`），不再显示 `profile.tabs.assigned` 这样的键 | 控制者的浏览器核对（`a3-profile.mjs`，480 px） | 2，+7 / −5 |
+| FW7 | `4ea6397` | 仓库根目录加 `fix:format`（文件列表与 `check:format` 相同），`turbo.json` 登记 `//#fix:format`（不缓存），`turbo run fix:format` 也格式化根目录的文件 | T10 的评审（P1 spec 的保证） | 2，+5 / −1 |
+| FW8、FW9、FW13 | `827823c` | 文档：M4 的收尾交接加两节（工作项弹窗把描述的 ID 迁移当作改动；标注块的 Markdown 序列化不转义，8.1）；512 个导出的单位（3.8）；8.1 M5 一行的请求顺序；前端改动清单 T15 一行的措辞 | T8、T13、T15 的评审 | 4，+27 / −10 |
+| FW10 | `6048ad3` | `isCommentEmpty` 只接受评论的 HTML，走不到的 JSON 分支和只有它用的 `Content`、`HTMLContent` 删除；utils 的 oxlint 上限 19 → 18 | 修 FW5 时发现 | 6，+8 / −82 |
+| — | `4be6cba` | 文档：前端改动清单加修复轮的 7 行；本 spec、交接里随修复轮变的数字 | 修复轮 | 9，+43 / −36 |
+| — | `9a98148` | `JSONContent` 的 `type`、`content`、`text` 恢复（它描述 TipTap 的 JSON，只写一半不如不写），与 `TIssueComment.comment_json` 一起交 M4（3.2 结论 3） | 控制者复核 FW10 | 10，+22 / −18 |
+
+修复轮之后（`9a98148`）：五个门禁通过；vitest 100 个；`deadsym.mjs` 2 / 898 / 452；oxlint 上限合计 695。控制者的第 3 轮浏览器核对（`9a98148` 对基线）：A、B 两组全部通过；在基线上失败的都是收尾修掉的，其中修复轮的两项是草稿（plan 浏览器核对第 7 项，FW5）和个人主页窄屏的顶部栏（FW6）。
+
+### 3.17 Codex 的发现（T17–T20）
+
+- **粘贴**（T17，2.9 Critical 1）：
+  - `processAssetDuplication` 用 `DOMParser` 解析剪贴板里 `text/nerve-editor-html` 的 HTML，每类节点的处理函数原地标记元素（已上传的图片设 `status` 为 `duplicating`、换新的 `id`），最后序列化一次 `body.innerHTML`；原来的字符串替换和第二次解析删除。
+  - 结果照旧交给 ProseMirror 的 `pasteHTML`，它按 schema 再解析一次（3.2 结论 8）。同编辑器之间复制已上传的图片，仍然请求复制资源（`copy-probe.mjs` 的 C1）。
+  - `editor-interaction.test.ts` 加 1 个用例（旧代码上失败）；`vitest.setup.ts` 声明 jsdom 没有的 `ClipboardEvent`。
+- **构建目录**（T18，2.9 Important 1）：`Makefile` 加 `WEB_CLIENT := web/apps/web/build/client`，`build-web` 在 Turbo 之前 `rm -rf $(WEB_CLIENT)`。`t18/prove.sh` 在产物目录里放一个文件再构建：旧的 `Makefile` 上热构建之后它还在，新的上冷、热构建之后都不在，两次的 531 个文件逐字节相同（3.2 结论 9）。
+- **活动迭代的进度**（T19，2.9 Important 2）：`active-cycle/progress.tsx` 的进度条用 `calculateCycleProgress`，文字写完成 / (总数 − 取消)。文字和取消的说明改为两个文案键 `project_cycles.active_cycle.work_items_completed`、`cancelled_excluded`：en 用 ICU 复数，zh-CN 是"{completed}/{total} 个工作项已完成""报告中已排除 {count} 个已取消的工作项。"。
+- **截图**（T20，2.9 Important 4）：
+  - 10 个控件用框外紧挨着的背景色填平（`t20/spec.json` 的框和取色点），WebP 按"大小最接近原图"的质量重新编码（T15 的做法）：
+
+    | 图 | 涂掉的 | 字节（前 → 后） |
+    |---|---|---|
+    | 导览 `issues.webp` | 面包屑旁的 "Public" 可见性标签（项目发布） | 229,264 → 194,670 |
+    | 导览 `cycles.webp` | Add Issue 左边的数据分析按钮；工作项栏的甘特图布局图标 | 154,282 → 153,810 |
+    | 导览 `views.webp` | 甘特图布局图标 | 135,462 → 134,650 |
+    | "功能未开启"的 `modules-light`、`modules-dark` | 标题栏的甘特图/时间线布局图标 | 67,542 → 67,726；64,154 → 64,440 |
+    | "功能未开启"的 `cycles-light`、`cycles-dark` | 同上 | 67,230 → 67,294；72,372 → 72,190 |
+    | "功能未开启"的 `intake-light`、`intake-dark` | 工作项属性里 "Estimate: 2 Months" 一行 | 86,990 → 87,122；83,694 → 83,140 |
+
+  - 每个框的前后对照放大 4 倍看过；12 张截图（导览 4 张、"功能未开启"8 张）按原尺寸重新看过一遍，没有找到别的已删功能。
+  - 两个 `SOURCES.md` 各加一段做法说明和一个 "Removed" 表；不写 "Analytics"，因为守卫的 `analytics` 规则读 `web/` 下的所有文件。
+  - `pictures-probe.mjs` 在运行时读仓库里的文件，T20 之后仍是 81 / 0（基线 70 / 11）。
+
 ---
 
 ## 4. 与上级设计的差异和补充
@@ -439,6 +520,14 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 25. **`onboarding/views.webp` 的 5 px 残边保留（T15）。** 一个深色头像只露出视图面板边缘下的一条 5 px 的边，看不出是照片；为它改动面板边缘得不偿失，写在 `SOURCES.md` 里。
 26. **T16 只改测试数据。** `handler.go` 只读 `index.html` 和 `assets/` 前缀，与文件名无关；改的是 Go 服务的测试，不算跨模块的协同。
 
+第 27–31 条是 Codex 对抗评审带来的决定（2.9），负责人已批准分诊，T17–T20 的原型已采纳（plan 的"Codex 对抗评审之后的裁定"）。
+
+27. **T17 只把解析换到惰性文档里，不另写白名单。** Codex 推荐的做法是先按编辑器的节点做白名单清洗、再交给 `pasteHTML`。ProseMirror 按 schema 解析就是白名单：只留 schema 声明的节点和属性，而且在它自己新建的、不执行脚本的文档里做（3.2 结论 8）；缺口只在它之前、在活动文档里的那次解析。另写一份白名单就是同一件事的第二个来源，还要随 schema 同步。自定义类型保留，不采用 Codex 的做法 2（删掉这一支）：删掉之后，两个编辑器之间复制的已上传图片会指向同一个资源（`copy-probe.mjs` 的 C2 实测：不请求复制，图片仍是原资源），在一处删掉或换掉它，另一处跟着变。
+28. **T18 只清 `build/client`，而且放在 `make build-web` 里。** `make build` 复制的就是这个目录；清空要在 Turbo 恢复缓存之前，Turbo 自己没有这一步。Codex 的做法 2（`make build` 复制时按清单筛选）要维护清单，漏列就漏打包，不采用。持续集成在干净的工作区里构建，`rm -rf` 在那里什么都不删。
+29. **T19 的文字与进度条同一口径，并进 i18n。** "完成 / (总数 − 取消)"是 M1 设计 3.4 的取消项排除口径，进度条经 `calculateCycleProgress` 计算，只有一份定义。原来的两句英文由模板字面量拼成、没有翻译，改为两个键（en 用 ICU 复数，zh-CN 不分单复数），每种语言 1077 → 1079 个键；"closed" 改为 "completed"，因为取消的不再算进分子。Codex 要的取消 > 0 和全部完成两个例子已在 `progress.test.ts` 里（38、100），卡片经它计算，不另加测试；web 应用的测试只在 Node 里核对路由表，没有渲染这张卡片的环境，文案的复数形式用 intl-messageformat 核对过。
+30. **T20 用旁边的背景色把控件填平，不重画截图。** 这些控件都在平的背景上（白、浅灰、深色面板），填平之后看不出来，其余像素只经历一次有损的重新编码，与 T15 相同。Codex 的做法 2（换成自己的插画）要重新设计四个空状态和导览，超出收尾。`issues.webp` 小了 34,594 字节：去掉蓝色的字之后，最高的质量 0.95 也到不了原来的大小；其余 8 张相差不到 600 字节。
+31. **B12 改正（Codex Minor 1）。** 本 spec 原来写"桶文件已不存在，已在 P3、P4 解决"，没有核对。`deadsym.mjs` 把测试文件的读取也算作使用，所以 T4 的三轮都没有报它。只收窄 `services` 的 `helpers/index.ts`，函数和它的测试不动，放在整分支评审之后的修复轮（Codex 推荐的做法 1）。控制者分诊时依据的是 B12 原来的写法（"T4 已解决"），这个去向请控制者确认（第 9 节第 7 条）。
+
 ---
 
 ## 5. 验收标准
@@ -448,27 +537,28 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 | # | 完成标准 | 本 Phase 的证据 |
 |---|---|---|
 | 1 | P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review | P1–P5 已有；收尾的 spec、plan（本提交）和 review（控制者） |
-| 2 | 类型检查通过；knip 为零且是门禁；oxlint 每个包等于新上限，上限自动核对；格式检查通过；前端单元测试在持续集成中运行并通过 | 每个 Task 的五个门禁；上限 695；格式检查覆盖到两个配置包和根目录（T10）；vitest 100 个 |
+| 2 | 类型检查通过；knip 为零且是门禁；oxlint 每个包等于新上限，上限自动核对；格式检查通过；前端单元测试在持续集成中运行并通过 | 每个 Task 的五个门禁；上限 695；格式检查覆盖到两个配置包和根目录（T10）；vitest 101 个 |
 | 3 | 守卫在持续集成中运行，没有未登记的命中，只剩明确跨 M 的例外；`until` 超出 M8 的逐条核对过；没有无引用的键 | `keywords: 51 rules, 3 exceptions, no hits.`，`phase` 为 `M1/closeout`（工具检查到期）；`brand` 的 `M9` 例外核对过（3.6），`tlds.ts` 的两条随文件删除；`keyref.mjs unused` 为 0 |
 | 4 | 7.5 的保留行为矩阵逐行核对，临时脚本在各 Phase review 的附录 | 控制者的探测（plan 最后一节）重跑 P2–P5 的场景，写进收尾 review 附录 |
 | 5 | `make build` 能构建；S1–S4 通过 | 门禁；合并前 S1–S4 和持续集成 |
 | 6 | 只剩 `zh-CN` 和 `en`；界面上没有 Plane 的名称和 Logo；包名都是 `@nerve/*` | P1、P5 已完成；守卫的 `plane-package`、`brand`、`brand-files` 照常通过；删掉的 133 + 8 张图里的 Plane 界面截图不再在仓库里；保留的图片复看过，没有 Plane 的标志和真人（3.15） |
 | 7 | oxlint 清零计划、构建体积对比写进收尾 review | 本 spec 3.3、3.4，review 复述 |
-| 8 | `handoffs/` 中没有 `open`；交给后续 M 的事项在对应 M 的 `handoffs/` | M1 的两份在基线已 `closed`；17 份补关闭条件，7 份新交接（T13）；M5 的交接另加两项（T15，8.1） |
+| 8 | `handoffs/` 中没有 `open`；交给后续 M 的事项在对应 M 的 `handoffs/` | M1 的两份在基线已 `closed`；17 份补关闭条件，7 份新交接（T13）；M5 的交接另加两项（T15），M4 的另加两项（修复轮），M2、M8 的另加几项（收尾 review 的提交，2.9、2.10，8.1） |
 | 9 | 前端改动清单同步；总体设计中 M1 的状态改为"已完成" | T13；状态由控制者改（第 4 节第 18 条） |
 
 ### 5.2 本 Phase
 
-- [ ] 16 个 Task 各一个提交（T1 另有跟进提交 `483ca9d`），每个提交结束时 `check:types` 23、`make lint-web` 52（T10 起 54）、`make test-web` 16、`make build-web` 11 个任务通过，`make knip` 为零。
+- [ ] 20 个 Task 各一个提交（T1 另有跟进提交 `483ca9d`），T16 之后有修复轮的 10 个提交（3.16）；每个提交结束时 `check:types` 23、`make lint-web` 52（T10 起 54）、`make test-web` 16、`make build-web` 11 个任务通过，`make knip` 为零。
 - [ ] `make lint-web`：`keywords: 51 rules, 3 exceptions, no hits.`；上限合计 695；`alts.mjs` 为 0；`missquote.mjs`、`missreal.mjs` 为 0。
 - [ ] `make test`、`make lint-go` 通过（T16）；`t16/names.mjs` 为 0。
-- [ ] vitest 100 个测试，没有 stderr。
-- [ ] 每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref`、`dangling`、`keyref orphaned` 为 0，`headers.sh` 没有输出，`deadorph` 为 0（T7 为 `parseHTML` 一行），`infile-orphans` 的每一行都以 `defined now: 0)` 结尾。
-- [ ] `deadsym.mjs`：导出 2、成员 898、prop 452；`keyref.mjs unused` 0，每种语言 1077 个键；`assets.mjs` `0 of 134`（T12、T13 为 `0 of 113`，T14 为 `0 of 142`）；`t15/assetpaths.mjs` `0 of 134`；`labels-all.mjs` `dangling 0, repeat 0`；`rulecount.mjs . react/jsx-curly-brace-presence` 0。
-- [ ] 锁文件与 3.5 相同；`devwarn.mjs` 为 0；构建体积与 3.4 相同（内容哈希除外）。
-- [ ] 控制者的浏览器核对全部通过（含 T14、T15 的第 12、13 项），反向对照在基线上失败的正好是收尾修掉的几项；S1–S4、持续集成通过。
-- [ ] 前端改动清单 1.6 节 15 行（T13 的 13 行，T14、T15 各一行）；README、24 份交接与 T13 相同，M5 的收尾交接另有 T15 加的两节。
-- [ ] 新画的和改过的图片按能看清 20 px 细节的尺寸看过（T14、T15），哈希与 plan 相同。
+- [ ] vitest 101 个测试（editor 35），没有 stderr；T17 的新用例在旧代码上失败。
+- [ ] 每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref`、`dangling`、`keyref orphaned` 为 0，`headers.sh` 没有输出，`deadorph` 为 0（T7 为 `parseHTML` 一行；修复轮的 FW4、FW10 见 3.2 结论 3），`infile-orphans` 的每一行都以 `defined now: 0)` 结尾。
+- [ ] `deadsym.mjs`：导出 2、成员 898、prop 452；`keyref.mjs unused` 0，每种语言 1079 个键（T11–T18 为 1077）；`assets.mjs` `0 of 134`（T12、T13 为 `0 of 113`，T14 为 `0 of 142`）；`t15/assetpaths.mjs` `0 of 134`；`labels-all.mjs` `dangling 0, repeat 0`；`rulecount.mjs . react/jsx-curly-brace-presence` 0。
+- [ ] 锁文件与 3.5 相同；`devwarn.mjs` 为 0；构建体积与 3.4 的最后一列相同（内容哈希除外）。
+- [ ] `t18/prove.sh`：冷、热构建之后都没有事先放进去的文件，两次的 531 个文件逐字节相同；在旧的 `Makefile` 上热构建留下它（T18）。
+- [ ] 控制者的浏览器核对全部通过（含 T14、T15 的第 12、13 项和 T17 的第 14 项），反向对照在基线上失败的正好是收尾修掉的几项（第 14 项只有 C3）；S1–S4、持续集成通过。
+- [ ] 前端改动清单 1.6 节 22 行（T13 的 13 行，T14、T15 各一行，修复轮 7 行），T20 之后控制者再加 T17–T20 各一行；README、24 份交接与 T13 相同，M5 的收尾交接另有 T15 加的两节，M4 的另有修复轮加的两节和 `comment_json` 一条，M2–M8 的数目随修复轮更新。
+- [ ] 新画的和改过的图片按能看清 20 px 细节的尺寸看过（T14、T15、T20），哈希与 plan 相同。
 
 ---
 
@@ -479,6 +569,7 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 - oxlint 的 695 个警告（3.3 的计划）。
 - 附件图标里的第三方标志（2.4 D4，第 9 节第 6 条：交 M5）；新建项目时写进封面值的构建路径（交 M5，8.1）。
 - 包的版本号和 `license` 字段（交 M8）；`@makeplane/propel` 的对应源码（P5 交 M8）。
+- AGPL 第 5(a)、5(d)、13 条的验收和 jsDelivr 的第三方请求（交 M8，2.9 的 Important 3）；没有经过 `t()` 的英文界面文字（交 M8，2.10 的 I2）；个人设置里主题下拉框的位置（交 M2，2.10 的 I1）。
 
 ---
 
@@ -497,28 +588,37 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 | 封面的扩展名改为 `.webp` 后，已保存的封面值或上传失效（T14） | 预设文件名只有辅助函数的导入表读取；已保存的值是上传副本的地址；探测核对选择器、新建项目的上传，以及项目卡片、项目设置、个人资料显示的预设（plan 浏览器核对第 12 项，32 项）。新建项目时先写构建路径的行为是 Plane 原有的，交 M5（8.1） |
 | 修图改到了头像和名字以外的像素，或者留下了照片的碎片（T15） | 修图只在列出的圆和名字的框里画；`look.mjs` 按 20 px 细节的尺寸出对照图，每张看过；哈希写在 plan；5 px 的残边写明保留的理由（第 4 节第 25 条） |
 | 删掉活动迭代的 `activeCycleResolvedPath` 属性后空状态变了（T15） | 内层组件只把它解构成 `_activeCycleResolvedPath`，从来不读；类型检查证明没有别的传入方；探测在没有活动迭代的项目里核对 "No active cycle" 和 propel 的插图，且不请求活动迭代的图片（plan 浏览器核对第 13 项） |
+| 惰性解析之后，编辑器之间复制图片不再复制资源，或者粘贴丢了格式（T17） | 解析之后的 HTML 与原来一样交给 `pasteHTML`，只是不再在活动文档里解析；编辑器测试核对已上传的图片被标为复制；探测核对同编辑器复制粘贴时请求复制资源一次、图片指向新资源（plan 浏览器核对第 14 项的 C1） |
+| `rm -rf` 删掉了构建之外的东西，或者 Turbo 的缓存恢复不完整（T18） | 只删 `web/apps/web/build/client`，那是构建的输出目录；`prove.sh` 核对冷、热两次构建的文件清单逐字节相同（531 个）；门禁照常构建 |
+| 修图盖住了控件旁边的内容，或者留下看得出的方块（T20） | 每个框的前后对照放大 4 倍看过；12 张截图按原尺寸重新看过；哈希写在 plan；`pictures-probe.mjs` 核对页面上的字节与文件相同 |
 
 ---
 
 ## 8. 移交事项
 
-### 8.1 交给后续 M（T13 写进对应 M 的 `handoffs/M1-closeout.md`；M5 的两条由 T15 写进，M4 的后两条由修复轮写进）
+### 8.1 交给后续 M（T13 写进对应 M 的 `handoffs/M1-closeout.md`；M5 的两条由 T15 写进，M4 的后两条由修复轮写进，M2 的一条和 M8 的后两条由控制者在收尾 review 的提交里写进）
 
 | M | 事项 | 关闭条件 |
 |---|---|---|
 | M2–M7 | 本 M 领域里的死成员和死 prop（第 4 节第 4 条的数目）；oxlint 的清理（3.3 的计划） | 本 M 合并时 `domains.mjs … --rows M<n>` 列出的每一行都已消失或写进本 M 的 review；review 写明改到的文件的警告数为 0、清掉的规则和上限的变化 |
+| M2 | 另有个人设置里主题的下拉框画在页面左上角：ui 的 `CustomSelect` 的定位，Plane 原有（2.10 的 I1） | 本 M 的浏览器核对写明：个人设置的主题下拉框在它的按钮旁展开（zh-CN 和 en） |
 | M4 | 另有 `viewId as TProfileViews` | `git grep -n "as TProfileViews" -- web` 没有输出 |
 | M4 | 另有工作项弹窗的描述不读编辑器的 `isMigrationUpdate`（`issue-modal/components/description-editor.tsx`；`description-input/root.tsx` 读它），旧描述补块 ID 时表单被标为已改（修复轮写进交接） | `git grep -n isMigrationUpdate -- web/apps/web/core/components/issues/issue-modal` 有输出，测试或浏览器核对写明不改动时表单没有被标为已改 |
 | M4 | 另有标注块的 tiptap-markdown 序列化把 `data-emoji-url` 等属性不转义地拼进 HTML（`callout/extension-config.ts`）；`getMarkdown()` 没有调用方、`transformCopiedText` 为 `false`，各扩展的节点序列化看起来都是死代码，删还是转义由 M4 决定（修复轮写进交接） | `git grep -n "markdown: {" -- web/packages/editor/src` 没有输出，或者测试证明写出的属性经过转义 |
 | M5 | 另有新建项目时的封面值：`projects/create/root.tsx` 的 `onSubmit` 先上传预设封面的副本，再创建项目（`POST …/projects/` 的 `cover_image_url` 仍是构建里预设封面的地址 `/assets/image_<n>-<hash>.webp`，每次构建都变），然后登记副本（`POST …/bulk/`）、用副本的地址覆盖（`PATCH …/projects/<id>/`）。上传失败时不创建项目；项目建好之后的两步有一步失败，项目保存的就是下次构建就失效的地址。这是 Plane 原有的行为，T14 的浏览器核对记下了这几个请求的顺序（3.15） | 本 M 的封面接口只保存上传后的资源（或预设的编号），不保存构建路径；新建项目只写一次封面值 |
 | M5 | 另有附件图标里的第三方标志：`app/assets/attachment/` 的 `figma-icon.png`、`pdf-icon.png`、`csv-icon.png`、`excel-icon.png`（2.4 D4，第 9 节第 6 条） | `app/assets/attachment/` 里没有第三方的标志 |
 | M8 | 本 M 领域（Webhook）的 6 个死成员；共享部分的 287 个；oxlint 在发布前清零、警告改为错误、删除上限；13 个 `package.json` 的 `"license": "AGPL-3.0"` 改为 `AGPL-3.0-only` | 发布之前 `--rows shared` 为空或写进 review；oxlint 没有警告；`git grep -n '"license": "AGPL-3.0"' -- '*package.json'` 没有输出 |
+| M8 | 另有 AGPL 的三项义务：第 5(a) 条（修改说明和日期）、5(d) 条（交互界面的法律声明，含原版界面的例外）、13 条（网络用户取得运行版本的对应源码）；jsDelivr 的两类请求（表情数据 `emojibase-data@latest`、标注块的默认表情图片）（2.9 的 Important 3） | 任何对外的网络部署之前（最迟 M8 发布）：三条逐项验收写进 review，条款的解读由负责人定；页面上的源码入口指向运行的提交和完整的对应源码；jsDelivr 的请求改为自托管固定版本，或明确告知并接受，写进 review |
+| M8 | 另有界面文字的中文覆盖：没有经过 `t()` 的英文字面量约 457 处（2.10 的 I2） | 每个 M 把改到的界面文字接入 `t()`；M8 发布之前 zh-CN 界面上没有未翻译的界面文字，核对的方法写进 review |
 
 P2–P5 写给 M2–M8 的 17 份交接各补一节"关闭条件"（T13）。
 
 ### 8.2 交给控制者
 
 - 收尾 review（`reviews/closeout-review.md`）：复述 3.3、3.4，写进浏览器核对的脚本和输出；M1 设计 12 节收尾一行、11 节的勾、总体设计 9.4 和 M1 的状态（第 9 节第 3 条）。
+- 收尾 review 的提交另外改：8.1 里 M2 的一条和 M8 的后两条写进对应的收尾交接；M1 设计 3.1 的写法（2.9 的 Minor 2）；Codex 评审报告的"处理结果"一节（2.9）。
+- T20 之后的文档提交：前端改动清单 1.6 节加 T17–T20 各一行。
+- 整分支评审之后的修复轮：zh-CN 与英文相同的 5 个值翻译（2.10 的 I2）；第 9 节第 7 条确认之后，`services` 的 `helpers/index.ts`（2.9 的 Minor 1）。
 - 第 9 节的裁定。
 
 ---
@@ -535,5 +635,6 @@ P2–P5 写给 M2–M8 的 17 份交接各补一节"关闭条件"（T13）。
 4. **死成员和死 prop 的分法（请确认第 4 节第 4 条）。** 按领域交 M2–M8、共享部分交 M8，每份交接带列出的命令和关闭条件。如果控制者要在 M1 内删，建议另开一个 Phase，按包分 Task（propel、ui、types、utils 等共享包先做），每处写明读取方的核对。
 5. **删除的图片按 300×200 看是否足够（请确认第 4 节第 14 条）。**
 6. **附件图标里的第三方标志（T15 复看时发现）。** `app/assets/attachment/` 的 17 个文件类型图标里，4 个用了第三方的标志（2.4 D4）。附件归 M5；收尾换掉它们要为 17 个图标定一套新的样子，超出"去掉真人和人名"的范围。已裁定：交 M5，关闭条件是 `app/assets/attachment/` 里没有第三方的标志（8.1），由 T15 写进 M5 的交接。
+7. **Codex Minor 1 的去向（请确认）。** 批准的分诊写的是"T4 已解决（桶文件已不存在）"，依据是本 spec B12 原来的一格；核对之后不成立：`ensureAPITrailingSlash` 仍经 `services` 的两个 `export *` 桶文件公开（2.2 B12、2.9）。建议放进整分支评审之后的修复轮：`helpers/index.ts` 改为只按名字转出 `normalizeAPIRequestURL`，一行（第 4 节第 31 条）。另一种做法是交给重写 `services` 的 M（M2 或 M5），Codex 认为那样 M2 可能把它当作稳定的接口。
 
-**控制者的裁定**（详见 plan 的"控制者评审补充"和"T14–T16 原型之后的裁定"）：第 1 条替换，封面为 T14、导览截图为 T15，保留的其余图片全部按能看清 20 px 细节的尺寸复看一遍；第 2 条收尾做，T16；第 3 条以收尾合并为 M1 的终点，已经启动的 Codex 评审的发现分诊进收尾，状态在收尾 review 的提交里改；第 4、5 条采纳；第 6 条交 M5（2.4 D4、8.1）。T14–T16 的原型被接受；8.1 交 M5 的两条（新建项目时的封面值、附件图标的标志）已确认；T15 的两处补充采纳（删掉活动迭代没人读的属性和它的两张图；删掉 T12 按文件名查时漏掉的 6 张同名图，T12 不改）。
+**控制者的裁定**（详见 plan 的"控制者评审补充"和"T14–T16 原型之后的裁定"）：第 1 条替换，封面为 T14、导览截图为 T15，保留的其余图片全部按能看清 20 px 细节的尺寸复看一遍；第 2 条收尾做，T16；第 3 条以收尾合并为 M1 的终点，已经启动的 Codex 评审的发现分诊进收尾，状态在收尾 review 的提交里改；第 4、5 条采纳；第 6 条交 M5（2.4 D4、8.1）。T14–T16 的原型被接受；8.1 交 M5 的两条（新建项目时的封面值、附件图标的标志）已确认；T15 的两处补充采纳（删掉活动迭代没人读的属性和它的两张图；删掉 T12 按文件名查时漏掉的 6 张同名图，T12 不改）。Codex 对抗评审的分诊由负责人批准（2.9）：Critical 1、Important 1、2、4 成为 T17–T20，原型采纳；Important 3 交 M8、Minor 2 改 M1 设计 3.1，都在收尾 review 的提交里；Minor 1 待第 7 条确认。浏览器核对顺带发现的两件事交 M2、M8，5 个未翻译的值在整分支评审之后的修复轮里翻译（2.10）。
