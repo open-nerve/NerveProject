@@ -124,7 +124,7 @@
 **`platform/postgres`**：
 
 - `TxManager`（`NewTxManager(pool, commitTimeout)`）按结构满足 `shared.TxManager`；`bootstrap` 写编译期断言 `var _ shared.TxManager = (*postgres.TxManager)(nil)`。事务放在 `context` 里，嵌套的 `WithinTx` 加入外层事务；`fn` 出错或 panic 都回滚。
-- **`COMMIT`、`ROLLBACK` 在 `context.WithoutCancel(ctx)` 下执行，另有 `database.commit_timeout` 的期限**（M2 设计 3.6 控制者复核 R7）。测试 `TestWithinTxCommitsAfterTheContextIsCancelled`（语句做完后取消 `context`，仍然提交）、`TestWithinTxRollsBackAfterAFailedStatementAndCancel`（语句失败后取消，回滚完成，连接可以再用）。
+- **`COMMIT`、`ROLLBACK` 在 `context.WithoutCancel(ctx)` 下执行，另有 `database.commit_timeout` 的期限**（M2 设计 3.6 控制者复核 R7）。测试 `TestWithinTxCommitsAfterTheContextIsCancelled`（语句做完后取消 `context`，仍然提交）、`TestWithinTxRollsBackAfterAFailedStatementAndCancel`（语句失败后取消，回滚完成，连接可以再用）。`ROLLBACK` 本身失败时，返回的错误包住这次失败，只保留 `fn` 错误的文字、不保留它的身份，由 `Write` 答 500（`TestWithinTxReportsAFailedRollback`）。
 - `DB(ctx, pool) Querier`：有事务时返回事务，否则返回连接池；`Querier` 与 sqlc 生成的 `DBTX` 方法相同，仓储把它交给生成的查询。
 - 连接池的 `AfterConnect` 把 `timestamptz` 的扫描时区设为 UTC（`TestPoolScansTimestamptzInUTC`）。
 

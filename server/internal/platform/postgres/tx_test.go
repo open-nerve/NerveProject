@@ -3,9 +3,12 @@ package postgres_test
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -157,6 +160,48 @@ func TestWithinTxCommitsAfterTheContextIsCancelled(t *testing.T) {
 
 	if err != nil || countNotes(t, pool) != 1 {
 		t.Errorf("WithinTx() = %v with %d notes, want nil and 1", err, countNotes(t, pool))
+	}
+}
+
+// conflict stands for a module's domain error: a ProblemError by structure,
+// which APIErrors.Write would answer as 409.
+type conflict struct{}
+
+func (conflict) Error() string       { return "the name is taken" }
+func (conflict) ProblemStatus() int  { return 409 }
+func (conflict) ProblemCode() string { return "things.taken" }
+
+// A ROLLBACK that fails is an infrastructure fault: the domain error that
+// caused it keeps its text but not its identity, so it is not answered as a
+// 409 that hides the fault.
+func TestWithinTxReportsAFailedRollback(t *testing.T) {
+	pool := newNotes(t, 2)
+	tm := postgres.NewTxManager(pool, commitTimeout)
+
+	err := tm.WithinTx(context.Background(), func(ctx context.Context) error {
+		var backend int
+		if err := postgres.DB(ctx, pool).QueryRow(ctx, "SELECT pg_backend_pid()").Scan(&backend); err != nil {
+			return err
+		}
+		// The pool's other connection ends this transaction's backend and
+		// waits until it is gone: the ROLLBACK reads the server's FATAL.
+		var gone bool
+		if err := pool.QueryRow(context.Background(), "SELECT pg_terminate_backend($1, 5000)", backend).Scan(&gone); err != nil || !gone {
+			return fmt.Errorf("terminate backend %d: %t, %w", backend, gone, err)
+		}
+		return conflict{}
+	})
+
+	var problem interface{ ProblemStatus() int }
+	if err == nil || errors.As(err, &problem) {
+		t.Fatalf("WithinTx() = %v, want an error that is no ProblemError", err)
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "57P01" {
+		t.Errorf("WithinTx() = %v, want it to wrap the ROLLBACK's failure, 57P01 admin_shutdown", err)
+	}
+	if !strings.Contains(err.Error(), conflict{}.Error()) {
+		t.Errorf("WithinTx() = %v, want the text of fn's error kept", err)
 	}
 }
 

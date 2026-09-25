@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -41,7 +40,10 @@ func DB(ctx context.Context, pool *pgxpool.Pool) Querier {
 // have all finished therefore commits even if the request is cancelled
 // meanwhile, and a failed one is rolled back and its connection returned to
 // the pool in a known state (M2 design 3.6). A COMMIT that gets no answer
-// within commitTimeout has an unknown outcome and returns an error.
+// within commitTimeout has an unknown outcome and returns an error. A ROLLBACK
+// that fails is an infrastructure fault: WithinTx returns an error that wraps
+// the failure and keeps only the text of fn's error, so a domain error behind
+// it is answered as a logged 500, not as itself.
 type TxManager struct {
 	pool          *pgxpool.Pool
 	commitTimeout time.Duration
@@ -73,7 +75,9 @@ func (m *TxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) e
 	returned = true
 	if err != nil {
 		if rbErr := m.end(ctx, tx.Rollback); rbErr != nil {
-			return errors.Join(err, fmt.Errorf("roll back transaction: %w", rbErr))
+			// fn's error keeps only its text: a domain error must not
+			// hide the infrastructure fault behind its own answer.
+			return fmt.Errorf("roll back transaction after %v: %w", err, rbErr)
 		}
 		return err
 	}
