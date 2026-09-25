@@ -155,11 +155,13 @@ func TestReserveAndRefund(t *testing.T) {
 	if !ok || units(b, "192.0.2.1") != 1 {
 		t.Fatalf("Reserve() ok = %v, bucket holds %v; want a unit taken", ok, units(b, "192.0.2.1"))
 	}
+	b.Reserve("192.0.2.1") // empty the bucket, so a second refund would show
 	refund()
 	refund()
-	if got := units(b, "192.0.2.1"); got != 2 {
-		t.Errorf("after refunding twice the bucket holds %v, want 2: a refund counts once", got)
+	if got := units(b, "192.0.2.1"); got != 1 {
+		t.Errorf("after refunding twice the bucket holds %v, want 1: a refund counts once", got)
 	}
+	clock.advance(time.Second) // the bucket is full again
 
 	refundA, _, _ := b.Reserve("192.0.2.1")
 	b.Reserve("192.0.2.1")
