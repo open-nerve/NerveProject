@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, every request answers identity.signup_disabled before anything else is checked, whether the address is registered or not. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password.
+         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, a well-formed request answers identity.signup_disabled before the address or the password is looked at, so the answer never depends on whether the address is registered. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password.
          */
         post: operations["register"];
         delete?: never;
