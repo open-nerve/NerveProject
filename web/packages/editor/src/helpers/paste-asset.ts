@@ -6,29 +6,13 @@
 
 import { assetDuplicationHandlers } from "@/helpers/asset-duplication";
 
-// Utility function to process HTML content with all registered handlers
+// Marks the assets in HTML that a Nerve editor copied (text/nerve-editor-html) for duplication. Any page can write
+// that clipboard type, so the HTML is parsed in an inert document: nothing in it loads or runs. The editor parses
+// the result again, against its schema, when it pastes it.
 export const processAssetDuplication = (htmlContent: string): { processedHtml: string } => {
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = htmlContent;
-
-  let processedHtml = htmlContent;
-
-  // Process each registered component type
-  for (const [componentName, handler] of Object.entries(assetDuplicationHandlers)) {
-    const elements = tempDiv.querySelectorAll(componentName);
-
-    if (elements.length > 0) {
-      elements.forEach((element) => {
-        const result = handler({ element, originalHtml: processedHtml });
-        if (result.shouldProcess) {
-          processedHtml = result.modifiedHtml;
-        }
-      });
-
-      // Update tempDiv with processed HTML for next iteration
-      tempDiv.innerHTML = processedHtml;
-    }
+  const { body } = new DOMParser().parseFromString(htmlContent, "text/html");
+  for (const [selector, handler] of Object.entries(assetDuplicationHandlers)) {
+    body.querySelectorAll(selector).forEach(handler);
   }
-
-  return { processedHtml };
+  return { processedHtml: body.innerHTML };
 };
