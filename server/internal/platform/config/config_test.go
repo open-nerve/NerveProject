@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"log/slog"
+	"net/netip"
 	"strings"
 	"testing"
 )
@@ -37,6 +38,16 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 		"config.auth.password.argon2_parallelism=1",
 		"config.auth.password.max_concurrent_hashes=4",
 		"config.auth.password.max_wait=2s",
+		"config.auth.refresh_deadline=4s",
+		"config.server.trusted_proxies=10.0.0.0/8,2001:db8::/32",
+		"config.ratelimit.ipv6_prefix_len=64",
+		"config.ratelimit.anonymous.per_minute=600",
+		"config.ratelimit.anonymous.burst=100",
+		"config.ratelimit.auth_failure.per_minute=60",
+		"config.ratelimit.authenticated.burst=200",
+		"config.ratelimit.login_ip.per_minute=30",
+		"config.ratelimit.login_ip_email.burst=5",
+		"config.ratelimit.register_ip.per_minute=10",
 		"config.log.format=json",
 	} {
 		if !strings.Contains(out, want) {
@@ -49,6 +60,7 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 // M2 design 3.7): the path of a key file tells where secrets live.
 func TestLogValueHidesFilePaths(t *testing.T) {
 	cfg := validConfig()
+	cfg.Server.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8"), netip.MustParsePrefix("fd00::/8")}
 	cfg.Server.AddrFile = "/run/nerve/addr-secret-dir"
 	cfg.Auth.JWT.PrivateKeyFile = "/etc/nerve/secret-dir/jwt.pem"
 	var buf bytes.Buffer
@@ -58,7 +70,11 @@ func TestLogValueHidesFilePaths(t *testing.T) {
 	if strings.Contains(out, "secret-dir") {
 		t.Errorf("log output shows a file path: %s", out)
 	}
-	for _, want := range []string{"config.server.addr_file_set=true", "config.auth.jwt.private_key_file_set=true"} {
+	for _, want := range []string{
+		"config.server.addr_file_set=true",
+		"config.auth.jwt.private_key_file_set=true",
+		"config.server.trusted_proxies=10.0.0.0/8,fd00::/8", // not secret: the log should say whom nerve trusts
+	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("log output lacks %q: %s", want, out)
 		}

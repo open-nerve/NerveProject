@@ -1,8 +1,10 @@
 package config
 
 import (
+	"net/netip"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -19,6 +21,7 @@ server:
   request_timeout: 15s
   max_body_bytes: 1048576
   addr_file: ""
+  trusted_proxies: []
 database:
   url: ""
   max_conns: 10
@@ -28,6 +31,7 @@ auth:
   signup_enabled: false
   access_token_ttl: 15m
   session_ttl: 720h
+  refresh_deadline: 4s
   jwt:
     private_key_file: ""
   password:
@@ -36,6 +40,14 @@ auth:
     argon2_parallelism: 1
     max_concurrent_hashes: 4
     max_wait: 2s
+ratelimit:
+  ipv6_prefix_len: 64
+  anonymous: {per_minute: 600, burst: 100}
+  auth_failure: {per_minute: 60, burst: 60}
+  authenticated: {per_minute: 1200, burst: 200}
+  login_ip: {per_minute: 30, burst: 10}
+  login_ip_email: {per_minute: 10, burst: 5}
+  register_ip: {per_minute: 10, burst: 5}
 log:
   level: info
   format: json
@@ -72,6 +84,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			"NERVE_DATABASE__AUTO_MIGRATE=false",
 			"NERVE_AUTH__SIGNUP_ENABLED=true",
 			"NERVE_AUTH__PASSWORD__ARGON2_MEMORY_KIB=64",
+			"NERVE_SERVER__TRUSTED_PROXIES=10.0.0.0/8,fd00::/8",
+			"NERVE_RATELIMIT__LOGIN_IP__BURST=3",
 		},
 		LocalFile: local,
 	})
@@ -89,6 +103,7 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			ShutdownTimeout:   40 * time.Second,
 			RequestTimeout:    15 * time.Second,
 			MaxBodyBytes:      1048576,
+			TrustedProxies:    []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8"), netip.MustParsePrefix("fd00::/8")}, // environment
 		},
 		Database: DatabaseConfig{
 			URL:           "postgres://embedded-dev", // built-in config.dev.yaml
@@ -97,9 +112,10 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			CommitTimeout: 2 * time.Second,
 		},
 		Auth: AuthConfig{
-			SignupEnabled:  true, // environment
-			AccessTokenTTL: 15 * time.Minute,
-			SessionTTL:     720 * time.Hour,
+			SignupEnabled:   true, // environment
+			AccessTokenTTL:  15 * time.Minute,
+			SessionTTL:      720 * time.Hour,
+			RefreshDeadline: 4 * time.Second,
 			Password: PasswordConfig{
 				Argon2MemoryKiB:     64, // environment
 				Argon2Iterations:    2,
@@ -108,10 +124,48 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 				MaxWait:             2 * time.Second,
 			},
 		},
+		RateLimit: RateLimitConfig{
+			IPv6PrefixLen: 64,
+			Anonymous:     BucketConfig{PerMinute: 600, Burst: 100},
+			AuthFailure:   BucketConfig{PerMinute: 60, Burst: 60},
+			Authenticated: BucketConfig{PerMinute: 1200, Burst: 200},
+			LoginIP:       BucketConfig{PerMinute: 30, Burst: 3}, // environment
+			LoginIPEmail:  BucketConfig{PerMinute: 10, Burst: 5},
+			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
+		},
 		Log: LogConfig{Level: "debug", Format: "text"},
 	}
-	if cfg != want {
+	if !reflect.DeepEqual(cfg, want) {
 		t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)
+	}
+}
+
+// A list key comes from YAML as a list and from the environment as one
+// comma-separated value; the empty value is the empty list.
+func TestLoadReadsTrustedProxies(t *testing.T) {
+	yaml := "server:\n  trusted_proxies: [192.0.2.0/24, \"2001:db8::/32\"]\n"
+	tests := []struct {
+		name    string
+		profile string
+		environ []string
+		want    []netip.Prefix
+	}{
+		{"from YAML", yaml, nil, []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24"), netip.MustParsePrefix("2001:db8::/32")}},
+		{"from the environment", "", []string{"NERVE_SERVER__TRUSTED_PROXIES= 192.0.2.0/24 ,2001:db8::/32"},
+			[]netip.Prefix{netip.MustParsePrefix("192.0.2.0/24"), netip.MustParsePrefix("2001:db8::/32")}},
+		{"emptied by the environment", yaml, []string{"NERVE_SERVER__TRUSTED_PROXIES="}, []netip.Prefix{}},
+		{"none", "", nil, []netip.Prefix{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := Load(Sources{
+				Embedded: embedded(map[string]string{"test": tt.profile}),
+				Environ:  append([]string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"}, tt.environ...),
+			})
+			if err != nil || !reflect.DeepEqual(cfg.Server.TrustedProxies, tt.want) {
+				t.Errorf("Load() = %#v, %v; want %v", cfg.Server.TrustedProxies, err, tt.want)
+			}
+		})
 	}
 }
 
@@ -232,6 +286,50 @@ func TestLoadErrors(t *testing.T) {
 			name:    "empty duration in the environment",
 			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x", "NERVE_AUTH__SESSION_TTL="},
 			want:    "'auth.session_ttl' must not be empty",
+		},
+		// A YAML key without a value would leave its key at the zero value,
+		// whatever the layers below it say (M2/P1 review M2).
+		{
+			name:    "boolean without a value in YAML",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "auth:\n  signup_enabled:\n",
+			want:    "invalid configuration:\nauth.signup_enabled: must not be null (a key without a value in YAML)",
+		},
+		{
+			name:    "section without a value in YAML",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "ratelimit:\n",
+			want:    "invalid configuration:\nratelimit: must not be null (a key without a value in YAML)",
+		},
+		// Weakly typed decoding would wrap or cut a number its type cannot
+		// hold (M2/P1 review M2).
+		{
+			name:    "negative number for an unsigned key",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "auth:\n  password:\n    argon2_memory_kib: -1\n",
+			want:    "'auth.password.argon2_memory_kib' must be a whole number from 0 to 4294967295, got -1",
+		},
+		{
+			name:    "number too large for its key",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "database:\n  max_conns: 5000000000\n",
+			want:    "'database.max_conns' must be a whole number from -2147483648 to 2147483647, got 5000000000",
+		},
+		{
+			name:    "fraction for a whole number",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "ratelimit:\n  login_ip:\n    burst: 1.5\n",
+			want:    "'ratelimit.login_ip.burst' must be a whole number from -9223372036854775808 to 9223372036854775807, got 1.5",
+		},
+		{
+			name:    "negative number for an unsigned key in the environment",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x", "NERVE_AUTH__PASSWORD__ARGON2_ITERATIONS=-1"},
+			want:    "'auth.password.argon2_iterations' cannot parse value as 'uint32'",
+		},
+		{
+			name:    "malformed CIDR",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x", "NERVE_SERVER__TRUSTED_PROXIES=10.0.0.1"},
+			want:    "'server.trusted_proxies[0]' netip.ParsePrefix: no '/'",
 		},
 	}
 	for _, tt := range tests {

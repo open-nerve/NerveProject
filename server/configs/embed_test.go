@@ -1,12 +1,32 @@
 package configs_test
 
 import (
+	"net/netip"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/configs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
+)
+
+// The default buckets (M2 design 3.10), and the test profile's, raised so
+// that one IP can sign many accounts up and in.
+var (
+	defaultLimits = config.RateLimitConfig{
+		IPv6PrefixLen: 64,
+		Anonymous:     config.BucketConfig{PerMinute: 600, Burst: 100},
+		AuthFailure:   config.BucketConfig{PerMinute: 60, Burst: 60},
+		Authenticated: config.BucketConfig{PerMinute: 1200, Burst: 200},
+		LoginIP:       config.BucketConfig{PerMinute: 30, Burst: 10},
+		LoginIPEmail:  config.BucketConfig{PerMinute: 10, Burst: 5},
+		RegisterIP:    config.BucketConfig{PerMinute: 10, Burst: 5},
+	}
+	high       = config.BucketConfig{PerMinute: 600000, Burst: 100000}
+	testLimits = config.RateLimitConfig{
+		IPv6PrefixLen: 64, Anonymous: high, AuthFailure: high, Authenticated: high, LoginIP: high, LoginIPEmail: high, RegisterIP: high,
+	}
 )
 
 func TestBuiltInProfiles(t *testing.T) {
@@ -20,12 +40,13 @@ func TestBuiltInProfiles(t *testing.T) {
 		argon2      uint32 // auth.password.argon2_memory_kib
 		iterations  uint32 // auth.password.argon2_iterations
 		keyFile     string // auth.jwt.private_key_file
+		limits      config.RateLimitConfig
 		level       string
 		format      string
 	}{
-		{env: "dev", addr: "127.0.0.1:8080", url: devURL, autoMigrate: true, signup: true, argon2: 19456, iterations: 2, level: "debug", format: "text"},
-		{env: "test", addr: ":8080", url: "postgres://from-env", autoMigrate: true, signup: true, argon2: 64, iterations: 1, level: "warn", format: "text"},
-		{env: "prod", addr: ":8080", url: "postgres://from-env", autoMigrate: false, signup: false, argon2: 19456, iterations: 2, keyFile: "/etc/nerve/jwt.pem", level: "info", format: "json"},
+		{env: "dev", addr: "127.0.0.1:8080", url: devURL, autoMigrate: true, signup: true, argon2: 19456, iterations: 2, limits: defaultLimits, level: "debug", format: "text"},
+		{env: "test", addr: ":8080", url: "postgres://from-env", autoMigrate: true, signup: true, argon2: 64, iterations: 1, limits: testLimits, level: "warn", format: "text"},
+		{env: "prod", addr: ":8080", url: "postgres://from-env", autoMigrate: false, signup: false, argon2: 19456, iterations: 2, keyFile: "/etc/nerve/jwt.pem", limits: defaultLimits, level: "info", format: "json"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.env, func(t *testing.T) {
@@ -50,13 +71,15 @@ func TestBuiltInProfiles(t *testing.T) {
 					ShutdownTimeout:   20 * time.Second,
 					RequestTimeout:    15 * time.Second,
 					MaxBodyBytes:      1 << 20,
+					TrustedProxies:    []netip.Prefix{}, // none: the client is the connection's peer
 				},
 				Database: config.DatabaseConfig{URL: tt.url, MaxConns: 10, AutoMigrate: tt.autoMigrate, CommitTimeout: 2 * time.Second},
 				Auth: config.AuthConfig{
-					SignupEnabled:  tt.signup,
-					AccessTokenTTL: 15 * time.Minute,
-					SessionTTL:     30 * 24 * time.Hour,
-					JWT:            config.JWTConfig{PrivateKeyFile: tt.keyFile},
+					SignupEnabled:   tt.signup,
+					AccessTokenTTL:  15 * time.Minute,
+					SessionTTL:      30 * 24 * time.Hour,
+					RefreshDeadline: 4 * time.Second,
+					JWT:             config.JWTConfig{PrivateKeyFile: tt.keyFile},
 					Password: config.PasswordConfig{
 						Argon2MemoryKiB:     tt.argon2,
 						Argon2Iterations:    tt.iterations,
@@ -65,9 +88,10 @@ func TestBuiltInProfiles(t *testing.T) {
 						MaxWait:             2 * time.Second,
 					},
 				},
-				Log: config.LogConfig{Level: tt.level, Format: tt.format},
+				RateLimit: tt.limits,
+				Log:       config.LogConfig{Level: tt.level, Format: tt.format},
 			}
-			if cfg != want {
+			if !reflect.DeepEqual(cfg, want) {
 				t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)
 			}
 		})
