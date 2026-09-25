@@ -6,13 +6,27 @@ info:
   version: v0
   description: >-
     The HTTP API of Nerve. The web app is one client of it; every account can
-    use every endpoint the same way.
+    use every endpoint the same way. Every operation lists the problem codes
+    it can answer in x-problem-codes; the top-level x-problem-codes can come
+    from every operation, and an operation that needs a bearer token can also
+    answer unauthorized.
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
+# 所有操作都可能返回的平台错误码，只写在这里（M2 设计 3.11）。rate_limited 随 M2/P2 的限流加入
+x-problem-codes: [bad_request, payload_too_large, internal_error]
 tags:
   - name: instance
     description: What this instance runs.
 paths:
   /api/v0/instance:
     $ref: 'modules/instance.yaml#/paths/~1api~1v0~1instance'
+components:
+  # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: >-
+        An access token (JWT) from register, login or refresh, or a personal
+        access token (nrv_pat_…).

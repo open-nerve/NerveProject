@@ -20,7 +20,8 @@ const instanceJSON = `{"product":"Nerve","version":"0.1.0-dev","commit":"unknown
 
 // Component names become Go and TypeScript type names. Redocly's bundler
 // renames a clash between module files to "Name-2" and only warns, so a
-// clash has to fail here instead.
+// clash has to fail here instead. Security schemes are the exception: they
+// name no type, and every module declares the same bearer (M2 design 3.12).
 func TestComponentNamesAreTypeNames(t *testing.T) {
 	c := Load(t)
 	valid := regexp.MustCompile(`^[A-Z][A-Za-z0-9]*$`)
@@ -29,7 +30,11 @@ func TestComponentNamesAreTypeNames(t *testing.T) {
 		t.Fatal("the contract has no components")
 	}
 	for _, name := range names {
-		if _, base, _ := strings.Cut(name, "/"); !valid.MatchString(base) {
+		kind, base, _ := strings.Cut(name, "/")
+		if kind == "securitySchemes" {
+			continue
+		}
+		if !valid.MatchString(base) {
 			t.Errorf("component %s is not a PascalCase type name; two module files may define it differently", name)
 		}
 	}

@@ -3,7 +3,6 @@ package apitest
 import (
 	"fmt"
 	"maps"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -20,40 +19,52 @@ func TestContractFollowsAuthoringRules(t *testing.T) {
 	if c.doc.Paths.Len() == 0 {
 		t.Fatal("the contract has no paths")
 	}
-	for _, v := range authoringViolations(c.doc) {
+	for _, v := range authoringViolations(c.doc, pathOwners(t)) {
 		t.Error(v)
 	}
+}
+
+// pathOwners maps every path of api/modules/*.yaml to its module.
+func pathOwners(t *testing.T) map[string]string {
+	t.Helper()
+	names, err := moduleNames()
+	if err != nil || len(names) == 0 {
+		t.Fatalf("module files = %q, %v; want at least one", names, err)
+	}
+	owners := map[string]string{}
+	for _, name := range names {
+		doc, err := loadModule(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for path := range doc.Paths.Map() {
+			owners[path] = name
+		}
+	}
+	return owners
 }
 
 // Go serves every path of api/modules/*.yaml, but the TS client and the
 // contract tests know only the paths that the root api/openapi.yaml lists.
 func TestRootListsEveryModulePath(t *testing.T) {
 	c := Load(t)
-	files, err := filepath.Glob(filepath.Join(apiDir(), "modules", "*.yaml"))
-	if err != nil || len(files) == 0 {
-		t.Fatalf("module files = %q, %v; want at least one", files, err)
-	}
-	for _, file := range files {
-		loader := newLoader()
-		loader.IsExternalRefsAllowed = true // module files reference ../common.yaml
-		doc, err := loader.LoadFromFile(file)
-		if err != nil {
-			t.Fatalf("load %s: %v", file, err)
-		}
-		for _, path := range slices.Sorted(maps.Keys(doc.Paths.Map())) {
-			if c.doc.Paths.Value(path) == nil {
-				t.Errorf("api/modules/%s declares %s, which api/dist/openapi.yaml lacks: list it in api/openapi.yaml and run make gen",
-					filepath.Base(file), path)
-			}
+	owners := pathOwners(t)
+	for _, path := range slices.Sorted(maps.Keys(owners)) {
+		if c.doc.Paths.Value(path) == nil {
+			t.Errorf("api/modules/%s.yaml declares %s, which api/dist/openapi.yaml lacks: list it in api/openapi.yaml and run make gen",
+				owners[path], path)
 		}
 	}
 }
 
 // authoringViolations reports where doc breaks the authoring rules of spec P3
-// 2.4. It takes the document so that each check is proven on hand-built bad
-// documents (rules_cases_test.go) as well as applied to the real contract.
-func authoringViolations(doc *openapi3.T) []string {
-	r := &ruleCheck{doc: doc, lowerCamel: regexp.MustCompile(`^[a-z][A-Za-z0-9]*$`)}
+// 2.4 and M2 design 3.11–3.12; owners maps each path to the module file that
+// declares it. It takes the document so that each check is proven on
+// hand-built bad documents (rules_cases_test.go) as well as applied to the
+// real contract.
+func authoringViolations(doc *openapi3.T, owners map[string]string) []string {
+	r := &ruleCheck{doc: doc, owners: owners, lowerCamel: regexp.MustCompile(`^[a-z][A-Za-z0-9]*$`)}
+	r.topCodes()
 	for _, path := range slices.Sorted(maps.Keys(doc.Paths.Map())) {
 		r.path(path, doc.Paths.Value(path))
 	}
@@ -64,11 +75,12 @@ func authoringViolations(doc *openapi3.T) []string {
 }
 
 // ruleCheck walks one document and collects its violations: path checks the
-// /api/v0/ prefix, operation the operationId, tags and default problem,
-// closedObject additionalProperties, and schema the keywords that
-// oapi-codegen mistranslates.
+// /api/v0/ prefix, operation the operationId, tags, default problem,
+// security and problem codes, closedObject additionalProperties, and schema
+// the keywords that oapi-codegen mistranslates.
 type ruleCheck struct {
 	doc        *openapi3.T
+	owners     map[string]string
 	lowerCamel *regexp.Regexp
 	found      []string
 }
@@ -86,11 +98,73 @@ func (r *ruleCheck) path(path string, item *openapi3.PathItem) {
 	}
 	ops := item.Operations()
 	for _, method := range slices.Sorted(maps.Keys(ops)) {
-		r.operation(method+" "+path, ops[method])
+		r.operation(method+" "+path, r.owners[path], ops[method])
 	}
 }
 
-func (r *ruleCheck) operation(where string, op *openapi3.Operation) {
+// topCodes checks the codes every operation can answer: only platform
+// codes, listed once at the top level.
+func (r *ruleCheck) topCodes() {
+	codes, present, err := problemCodes(r.doc.Extensions)
+	switch {
+	case err != nil:
+		r.report("top level", "%v", err)
+	case !present:
+		r.report("top level", "has no %s", problemCodesKey)
+	}
+	for _, code := range codes {
+		if !slices.Contains(platformCodes, code) {
+			r.report("top level", "%s holds %q, which is not a platform code", problemCodesKey, code)
+		}
+	}
+}
+
+// security: every operation declares its own security, [{bearer: []}] or []
+// for a public one (M0-P3 handoff 3): the bundler drops a module file's
+// top-level security, and doc.Validate accepts a reference to a scheme the
+// bundle lacks.
+func (r *ruleCheck) security(where string, op *openapi3.Operation) {
+	if op.Security == nil {
+		r.report(where, "declares no security; write [{bearer: []}], or [] for a public operation")
+		return
+	}
+	for _, req := range *op.Security {
+		for _, name := range slices.Sorted(maps.Keys(req)) {
+			if r.doc.Components == nil || r.doc.Components.SecuritySchemes[name] == nil {
+				r.report(where, "security scheme %q is not declared in components.securitySchemes", name)
+			}
+		}
+	}
+}
+
+// problemCodes: every operation lists the codes it can answer beyond the
+// top-level ones (M2 design 3.11). A module's code is prefixed with the
+// module file that declares the path; a code without prefix is a platform
+// code.
+func (r *ruleCheck) problemCodes(where, owner string, op *openapi3.Operation) {
+	codes, present, err := problemCodes(op.Extensions)
+	switch {
+	case err != nil:
+		r.report(where, "%v", err)
+	case !present:
+		r.report(where, "has no %s; write [] when it answers only the top-level codes", problemCodesKey)
+	}
+	for _, code := range codes {
+		prefix, _, prefixed := strings.Cut(code, ".")
+		switch {
+		case !codePattern.MatchString(code):
+			r.report(where, "problem code %q is not spelled [module.]lower_snake", code)
+		case prefixed && prefix != owner:
+			r.report(where, "problem code %q is not prefixed with its module %q", code, owner)
+		case !prefixed && !slices.Contains(platformCodes, code):
+			r.report(where, "problem code %q has no module prefix and is not a platform code", code)
+		}
+	}
+}
+
+func (r *ruleCheck) operation(where, owner string, op *openapi3.Operation) {
+	r.security(where, op)
+	r.problemCodes(where, owner, op)
 	if !r.lowerCamel.MatchString(op.OperationID) {
 		r.report(where, "operationId %q is not lower camelCase", op.OperationID)
 	}

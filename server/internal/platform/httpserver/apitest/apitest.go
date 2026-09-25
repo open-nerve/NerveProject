@@ -41,8 +41,10 @@ func Load(t testing.TB) *Contract {
 }
 
 // CheckResponse fails t unless res, the response to req, is documented by
-// req's operation: the status, the Content-Type and the body schema. res.Body
-// stays readable for the caller.
+// req's operation: the status, the Content-Type, the body schema and, for a
+// problem, a code the operation may answer (x-problem-codes, M2 design
+// 3.11). The code is recorded for Main. res.Body stays readable for the
+// caller.
 func (c *Contract) CheckResponse(t testing.TB, req *http.Request, res *http.Response) {
 	t.Helper()
 	body, err := io.ReadAll(res.Body)
@@ -52,6 +54,17 @@ func (c *Contract) CheckResponse(t testing.TB, req *http.Request, res *http.Resp
 	res.Body = io.NopCloser(bytes.NewReader(body))
 	if err := c.validateResponse(req, res.StatusCode, res.Header, body); err != nil {
 		t.Errorf("%s %s answered %d %s: %v", req.Method, req.URL.Path, res.StatusCode, body, err)
+	}
+}
+
+// CheckRequest fails t unless req, a request a test is about to send, is
+// documented: path, method, parameters and body. Security is not checked:
+// tests send tokens the contract cannot judge. req.Body stays readable. A
+// test that sends a request breaking the contract on purpose skips it.
+func (c *Contract) CheckRequest(t testing.TB, req *http.Request) {
+	t.Helper()
+	if err := c.validateRequest(req); err != nil {
+		t.Errorf("%s %s does not follow the contract: %v", req.Method, req.URL.Path, err)
 	}
 }
 
@@ -123,7 +136,32 @@ func (c *Contract) validateResponse(req *http.Request, status int, header http.H
 		Options:                &openapi3filter.Options{IncludeResponseStatus: true, MultiError: true},
 	}
 	in.SetBodyBytes(body)
-	return openapi3filter.ValidateResponse(context.Background(), in)
+	if err := openapi3filter.ValidateResponse(context.Background(), in); err != nil {
+		return err
+	}
+	return c.checkProblemCode(route.Operation, header, body)
+}
+
+func (c *Contract) validateRequest(req *http.Request) error {
+	var body []byte
+	if req.Body != nil {
+		var err error
+		if body, err = io.ReadAll(req.Body); err != nil {
+			return fmt.Errorf("read request body: %w", err)
+		}
+	}
+	defer func() { req.Body = io.NopCloser(bytes.NewReader(body)) }()
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	route, pathParams, err := c.router.FindRoute(req)
+	if err != nil {
+		return fmt.Errorf("no documented operation: %w", err)
+	}
+	return openapi3filter.ValidateRequest(context.Background(), &openapi3filter.RequestValidationInput{
+		Request:    req,
+		PathParams: pathParams,
+		Route:      route,
+		Options:    &openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc, MultiError: true},
+	})
 }
 
 func (c *Contract) validateSchema(name string, body []byte) error {

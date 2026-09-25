@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Nerve API
   version: v0
-  description: The HTTP API of Nerve. The web app is one client of it; every account can use every endpoint the same way.
+  description: The HTTP API of Nerve. The web app is one client of it; every account can use every endpoint the same way. Every operation lists the problem codes it can answer in x-problem-codes; the top-level x-problem-codes can come from every operation, and an operation that needs a bearer token can also answer unauthorized.
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
@@ -17,6 +17,8 @@ paths:
         - instance
       summary: Describe this instance
       description: 'Reports the product, the build and the API version this instance runs. Public: needs no authentication.'
+      security: []
+      x-problem-codes: []
       responses:
         '200':
           description: What this instance runs.
@@ -27,6 +29,11 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
 components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: An access token (JWT) from register, login or refresh, or a personal access token (nrv_pat_…).
   schemas:
     FieldError:
       description: One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared.
@@ -116,3 +123,7 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+x-problem-codes:
+  - bad_request
+  - payload_too_large
+  - internal_error
