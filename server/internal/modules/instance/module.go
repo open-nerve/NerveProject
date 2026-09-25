@@ -4,8 +4,6 @@
 package instance
 
 import (
-	"net/http"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/adapter/buildinfo"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/instance/adapter/http"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/app"
@@ -14,16 +12,21 @@ import (
 
 // Module is the wired instance module.
 type Module struct {
-	getInfo *app.GetInfo
+	uc httpadapter.UseCases
 }
 
 // New wires the module: GetInfo reads the build of the running binary.
 func New() *Module {
-	return &Module{getInfo: app.NewGetInfo(buildinfo.Source{})}
+	return &Module{uc: httpadapter.UseCases{GetInfo: app.NewGetInfo(buildinfo.Source{})}}
 }
 
-// Register mounts the module's API on mux, the root router from
-// httpserver.NewMux; apiErrors answers binding and handler errors.
-func (m *Module) Register(mux *http.ServeMux, apiErrors httpserver.APIErrors) {
-	httpadapter.Register(mux, m.getInfo, apiErrors)
+// PublicOperations are the module's routes that need no token.
+func (m *Module) PublicOperations() []string {
+	return httpadapter.PublicOperations()
+}
+
+// Register mounts the module's API on router, the root router from
+// httpserver.NewRouter, behind api's per-route middlewares.
+func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
+	httpadapter.Register(router, api, m.uc)
 }

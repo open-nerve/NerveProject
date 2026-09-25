@@ -37,11 +37,11 @@ func rules() []rule {
 		{"module layers point inward: adapter -> app -> domain", layersPointInward},
 		{"domain and app import only the standard library (not net/http or database/sql), their own module's inner layers and internal/shared", innerLayersArePure},
 		{"modules do not import each other", modulesAreIsolated},
-		{"platform does not import modules or bootstrap", platformIsBusinessFree},
+		{"platform does not import modules, bootstrap or internal/shared", platformIsBusinessFree},
 		{"only bootstrap imports modules", onlyBootstrapImportsModules},
-		{"generated code is imported only by its module's http adapter", generatedCodeStaysInAdapter},
+		{"generated code is imported only by its own adapter", generatedCodeStaysInAdapter},
 		{"platform packages do not import each other, except config", platformPackagesAreIndependent},
-		{"test helpers (pgtest, apitest) are imported only by tests", testHelpersOnlyInTests},
+		{"test helpers (pgtest, apitest, clocktest) are imported only by tests", testHelpersOnlyInTests},
 		{"module packages live in domain, app or adapter, or at the module root", moduleLayoutIsKnown},
 		{"internal/shared imports only the standard library (not net/http or database/sql) and internal/shared", sharedKernelIsPure},
 	}
@@ -209,9 +209,13 @@ func modulesAreIsolated(from, to string) bool {
 	return ok && fm != tm
 }
 
+// platformIsBusinessFree keeps the platform free of business code. That
+// includes internal/shared (M2 design 3.3): the platform declares the small
+// interfaces it needs (Authenticator, ProblemError) and shared's types
+// satisfy them by structure.
 func platformIsBusinessFree(from, to string) bool {
 	return inModuleDir(from, "internal/platform") &&
-		(inModuleDir(to, "internal/modules") || inModuleDir(to, "internal/bootstrap"))
+		(inModuleDir(to, "internal/modules") || inModuleDir(to, "internal/bootstrap") || inModuleDir(to, "internal/shared"))
 }
 
 func onlyBootstrapImportsModules(from, to string) bool {
@@ -219,18 +223,31 @@ func onlyBootstrapImportsModules(from, to string) bool {
 		!inModuleDir(from, "internal/modules") && !inModuleDir(from, "internal/bootstrap")
 }
 
+// generatedCodeStaysInAdapter lets only an adapter import its own generated
+// code: modules/<m>/adapter/<a>/gen (oapi-codegen for http, sqlc for
+// postgres) is imported by modules/<m>/adapter/<a> and its own subpackages.
 func generatedCodeStaysInAdapter(from, to string) bool {
-	name, _, ok := moduleOf(to)
+	adapter, ok := generatedCodeOwner(to)
 	if !ok {
 		return false
 	}
-	adapter := "internal/modules/" + name + "/adapter/http"
-	gen := adapter + "/gen"
-	if !inModuleDir(to, gen) {
-		return false
-	}
 	r, _ := local(from)
-	return r != adapter && !within(r, gen)
+	return r != adapter && !within(r, adapter+"/gen")
+}
+
+// generatedCodeOwner returns the adapter that owns path when path is inside
+// internal/modules/<m>/adapter/<a>/gen.
+func generatedCodeOwner(path string) (string, bool) {
+	r, ok := local(path)
+	if !ok {
+		return "", false
+	}
+	parts := strings.Split(r, "/")
+	// internal/modules/<m>/adapter/<a>/gen[/...]
+	if len(parts) < 6 || parts[0] != "internal" || parts[1] != "modules" || parts[3] != "adapter" || parts[5] != "gen" {
+		return "", false
+	}
+	return strings.Join(parts[:5], "/"), true
 }
 
 func platformPackagesAreIndependent(from, to string) bool {
@@ -245,5 +262,6 @@ func platformPackagesAreIndependent(from, to string) bool {
 func testHelpersOnlyInTests(_, to string) bool {
 	// The graph holds no test files, so any importer is production code.
 	return inModuleDir(to, "internal/platform/postgres/pgtest") ||
-		inModuleDir(to, "internal/platform/httpserver/apitest")
+		inModuleDir(to, "internal/platform/httpserver/apitest") ||
+		inModuleDir(to, "internal/platform/clock/clocktest")
 }

@@ -147,11 +147,26 @@ func envKey(name, value string) (string, any) {
 func decode(k *koanf.Koanf, cfg *Config) error {
 	return k.UnmarshalWithConf("", cfg, koanf.UnmarshalConf{
 		DecoderConfig: &mapstructure.DecoderConfig{
-			DecodeHook:       durationHook,
+			DecodeHook:       mapstructure.ComposeDecodeHookFunc(emptyValueHook, durationHook),
 			ErrorUnused:      true,
 			WeaklyTypedInput: true, // environment values are strings
 		},
 	})
+}
+
+// emptyValueHook rejects an empty string for a key that is not a string.
+// Weakly typed decoding would otherwise turn NERVE_AUTH__SIGNUP_ENABLED=
+// into false and NERVE_DATABASE__MAX_CONNS= into 0 without a word.
+func emptyValueHook(from, to reflect.Type, data any) (any, error) {
+	if from.Kind() != reflect.String || to.Kind() == reflect.String || data != "" {
+		return data, nil
+	}
+	switch to.Kind() {
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+		return nil, errors.New("must not be empty")
+	}
+	return data, nil
 }
 
 // durationHook decodes Go duration strings such as "5s". Bare numbers are

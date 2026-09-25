@@ -62,3 +62,15 @@ created: 2026-09-22
 - **写法检查目前没有 map 型对象的例外。** `TestContractFollowsAuthoringRules` 要求每个 object 类型的组件 schema 都设 `additionalProperties: false`；一个 `type: object, additionalProperties: {type: string}` 这样的 map 型 schema 会被判为违规，目前没有例外（P3 final-fix-report C3）。M2 如果需要 map 型对象，扩展 apitest 的检查函数 `closedObject`（`server/internal/platform/httpserver/apitest/rules_test.go`），加一个例外分支和一个反例用例。
 
 来源：[M0/P3 评审记录](../../M0-foundation/reviews/P3-api-contract-review.md)。
+
+## 处理结果（M2/P1）
+
+1. **生成配置**（google/uuid 的守卫之外完成）：模块模板写 `nullable-type: true`，`type-mapping` 把 `uuid` 映射为标准库的 `uuid.UUID`、`email` 映射为 `string`；`prefer-skip-optional-pointer` 保持默认。`github.com/oapi-codegen/nullable` v1.2.0 随 identity 的生成代码加入。google/uuid 的守卫按 M2 设计 3.12 改为直接检查，随第一个带参数的操作（`oapi-codegen/runtime`）在 M2/P3 实现。
+2. **错误映射**（请求体解码和 handler 两个出口完成）：结构在接口边界（`bodyshape`，400 `bad_request`、`errors[{field, code}]`），取值在领域（422 `validation_failed`）；解码失败的 `detail` 是通用的一句话，不带出 Go 的类型名；`http.MaxBytesError` 是 413 `payload_too_large`；`context.Canceled` 不记 500；handler 返回 `error`，由 `APIErrors.Write` 按 `ProblemError` 映射。identity 的 handler 测试覆盖请求体解码和 handler 两个出口，并对 problem 做 `CheckResponse`；`apitest.CheckRequest` 已加入。
+3. **安全声明**（完成）：每个操作写 `security`；`securitySchemes.bearer` 同时写在 `api/openapi.yaml` 和每个模块文件；`apitest` 的写法检查拒绝没有 `security` 的操作和未声明的 scheme。
+4. **模块入口**（完成）：`Register(router, api)`，`api` 是 `httpserver.API`；`httpadapter.Register` 接收用例集合；`API.Middlewares` 按相反的顺序返回，有测试核对；`identity` 导出 `Authenticator()` 和 `PublicOperations()`。
+5. **组织规则**（完成）：照旧；M2 没有 map 型对象，`closedObject` 不需要例外。
+
+仍未处理，状态保持 `open`：第 1 条中 google/uuid 的守卫，第 2 条中参数绑定的出口（`listApiTokens`、`revokeApiToken`），都在 M2/P3。
+
+来源：[M2/P1 spec](../specs/P1-platform-core.md) 第 7 节。

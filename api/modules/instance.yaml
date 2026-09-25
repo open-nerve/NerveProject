@@ -13,6 +13,8 @@ paths:
       description: >-
         Reports the product, the build and the API version this instance runs.
         Public: needs no authentication.
+      security: []
+      x-problem-codes: []
       responses:
         '200':
           description: What this instance runs.
@@ -23,6 +25,11 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
 components:
+  # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

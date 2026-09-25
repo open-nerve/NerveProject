@@ -2,14 +2,62 @@ openapi: 3.1.0
 info:
   title: Nerve API
   version: v0
-  description: The HTTP API of Nerve. The web app is one client of it; every account can use every endpoint the same way.
+  description: The HTTP API of Nerve. The web app is one client of it; every account can use every endpoint the same way. Every operation lists the problem codes it can answer in x-problem-codes; the top-level x-problem-codes can come from every operation, and an operation that needs a bearer token can also answer unauthorized.
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
 tags:
+  - name: identity
+    description: Accounts, sign-in and sessions.
   - name: instance
     description: What this instance runs.
 paths:
+  /api/v0/auth/register:
+    post:
+      operationId: register
+      tags:
+        - identity
+      summary: Create an account and sign in
+      description: 'Creates an account with its default profile and signs it in: the response holds a new session''s tokens. While sign-up is off, a well-formed request answers identity.signup_disabled before the address or the password is looked at, so the answer never depends on whether the address is registered. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password.'
+      security: []
+      x-problem-codes:
+        - identity.signup_disabled
+        - validation_failed
+        - identity.email_taken
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: The account exists and is signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me:
+    get:
+      operationId: getMe
+      tags:
+        - identity
+      summary: Read the caller's account
+      security:
+        - bearer: []
+      x-problem-codes: []
+      responses:
+        '200':
+          description: The caller's account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/instance:
     get:
       operationId: getInstance
@@ -17,6 +65,8 @@ paths:
         - instance
       summary: Describe this instance
       description: 'Reports the product, the build and the API version this instance runs. Public: needs no authentication.'
+      security: []
+      x-problem-codes: []
       responses:
         '200':
           description: What this instance runs.
@@ -27,17 +77,51 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
 components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: An access token (JWT) from register, login or refresh, or a personal access token (nrv_pat_…).
   schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          description: The sign-in address; stored trimmed and in lower case.
+          type: string
+          format: email
+        password:
+          type: string
     FieldError:
-      description: One invalid field of a request.
+      description: One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared.
       type: object
       additionalProperties: false
       required:
         - field
+        - code
         - message
       properties:
         field:
+          description: The field's path in the request body, e.g. password or tags[1].name.
           type: string
+        code:
+          description: What is wrong with the field.
+          type: string
+          enum:
+            - required
+            - invalid_format
+            - too_short
+            - too_long
+            - out_of_range
+            - not_allowed
+            - weak_password
+            - common_password
+            - must_be_future
+            - contains_url
         message:
           type: string
     Problem:
@@ -53,7 +137,7 @@ components:
           description: HTTP status code.
           type: integer
         code:
-          description: Stable error code. Platform codes have no prefix (not_found, bad_request, internal_error, not_ready); module codes are prefixed with the module, e.g. issue.state_not_in_project.
+          description: Stable error code. Platform codes have no prefix (bad_request, unauthorized, not_found, payload_too_large, validation_failed, server_busy, internal_error, not_ready); module codes are prefixed with the module, e.g. identity.email_taken. Each operation lists the codes it can answer in x-problem-codes.
           type: string
         title:
           description: HTTP status phrase, e.g. "Not Found".
@@ -66,6 +150,75 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FieldError'
+    AuthTokens:
+      description: 'A session''s tokens. Send access_token as "Authorization: Bearer"; when it expires, exchange refresh_token for a new pair (M2/P2).'
+      type: object
+      additionalProperties: false
+      required:
+        - token_type
+        - access_token
+        - access_token_expires_in
+        - refresh_token
+        - refresh_token_expires_at
+      properties:
+        token_type:
+          type: string
+          enum:
+            - Bearer
+        access_token:
+          type: string
+        access_token_expires_in:
+          description: Seconds from this response until the access token expires.
+          type: integer
+        refresh_token:
+          description: An opaque nrv_rt_ token.
+          type: string
+        refresh_token_expires_at:
+          description: When the session ends; refreshing never extends it.
+          type: string
+          format: date-time
+    User:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - email
+        - first_name
+        - last_name
+        - display_name
+        - user_timezone
+        - avatar_url
+        - cover_image_url
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        display_name:
+          type: string
+        user_timezone:
+          description: An IANA time zone name.
+          type: string
+        avatar_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        cover_image_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        created_at:
+          type: string
+          format: date-time
     InstanceInfo:
       type: object
       additionalProperties: false
@@ -100,3 +253,7 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+x-problem-codes:
+  - bad_request
+  - payload_too_large
+  - internal_error

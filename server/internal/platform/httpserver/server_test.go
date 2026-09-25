@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -57,7 +59,7 @@ func wait(t *testing.T, done <-chan error) error {
 }
 
 func TestServeAppliesMiddlewareAndStopsOnCancel(t *testing.T) {
-	url, cancel, done := startServer(t, time.Second, NewMux(slog.New(slog.DiscardHandler)))
+	url, cancel, done := startServer(t, time.Second, NewRouter(slog.New(slog.DiscardHandler)))
 
 	resp, err := client.Get(url + "/healthz")
 	if err != nil {
@@ -215,5 +217,43 @@ func TestListenAndServeReportsListenError(t *testing.T) {
 
 	if err == nil || !strings.Contains(err.Error(), "listen on "+taken.Addr().String()) {
 		t.Errorf("ListenAndServe() = %v, want a listen error", err)
+	}
+}
+
+// Listening on port 0, the server tells where it listens through
+// server.addr_file; the end-to-end fixture reads it instead of guessing a
+// free port (M0-P6 handoff).
+func TestListenAndServeWritesTheAddrFile(t *testing.T) {
+	addrFile := filepath.Join(t.TempDir(), "addr")
+	cfg := config.ServerConfig{Addr: "127.0.0.1:0", AddrFile: addrFile, ReadHeaderTimeout: time.Second, ShutdownTimeout: time.Second}
+	srv := NewServer(cfg, NewRouter(slog.New(slog.DiscardHandler)), slog.New(slog.DiscardHandler))
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- srv.ListenAndServe(ctx) }()
+
+	var addr []byte
+	for deadline := time.Now().Add(5 * time.Second); len(addr) == 0 && time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		addr, _ = os.ReadFile(addrFile)
+	}
+	resp, err := client.Get("http://" + string(addr) + "/healthz")
+	if err != nil {
+		t.Fatalf("GET /healthz at the address in addr_file %q: %v", addr, err)
+	}
+	_ = resp.Body.Close()
+	cancel()
+	if err := wait(t, done); err != nil || resp.StatusCode != http.StatusOK {
+		t.Errorf("GET /healthz = %d, ListenAndServe() = %v; want 200 and nil", resp.StatusCode, err)
+	}
+}
+
+// The error names the key, never the path: *_file keys are not logged.
+func TestListenAndServeReportsAnUnwritableAddrFile(t *testing.T) {
+	addrFile := filepath.Join(t.TempDir(), "secret-dir", "missing", "addr")
+	cfg := config.ServerConfig{Addr: "127.0.0.1:0", AddrFile: addrFile, ReadHeaderTimeout: time.Second, ShutdownTimeout: time.Second}
+
+	err := NewServer(cfg, http.NotFoundHandler(), slog.New(slog.DiscardHandler)).ListenAndServe(context.Background())
+
+	if err == nil || !strings.HasPrefix(err.Error(), "server.addr_file: ") || strings.Contains(err.Error(), "secret-dir") {
+		t.Errorf("ListenAndServe() = %v, want a server.addr_file error without the path", err)
 	}
 }

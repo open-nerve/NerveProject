@@ -6,15 +6,16 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 )
 
 func TestHealthzDoesNotRunChecks(t *testing.T) {
 	failing := Check{Name: "database", Run: func(context.Context) error { return errors.New("down") }}
-	mux := NewMux(slog.New(slog.DiscardHandler), failing)
+	router := NewRouter(slog.New(slog.DiscardHandler), failing)
 
-	rec := serve(mux, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	rec := serve(router, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
 	if rec.Code != http.StatusOK || rec.Body.String() != `{"status":"ok"}`+"\n" {
 		t.Errorf("GET /healthz = %d %s, want 200 {\"status\":\"ok\"}", rec.Code, rec.Body)
@@ -32,9 +33,9 @@ func TestReadyzWhenAllChecksPass(t *testing.T) {
 			return nil
 		}}
 	}
-	mux := NewMux(slog.New(slog.DiscardHandler), check("database"), check("migrations"))
+	router := NewRouter(slog.New(slog.DiscardHandler), check("database"), check("migrations"))
 
-	rec := serve(mux, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	rec := serve(router, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 
 	if rec.Code != http.StatusOK || rec.Body.String() != `{"status":"ok"}`+"\n" {
 		t.Errorf("GET /readyz = %d %s, want 200 {\"status\":\"ok\"}", rec.Code, rec.Body)
@@ -47,12 +48,12 @@ func TestReadyzWhenAllChecksPass(t *testing.T) {
 func TestReadyzReportsFirstFailingCheck(t *testing.T) {
 	logger, logs := captureLogs(t)
 	secondRan := false
-	mux := NewMux(logger,
+	router := NewRouter(logger,
 		Check{Name: "database", Run: func(context.Context) error { return errors.New("connection refused") }},
 		Check{Name: "migrations", Run: func(context.Context) error { secondRan = true; return nil }},
 	)
 
-	rec := serve(mux, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	rec := serve(router, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d, want 503", rec.Code)
@@ -74,9 +75,9 @@ func TestReadyzReportsFirstFailingCheck(t *testing.T) {
 }
 
 func TestUnknownAPIPathIsProblem404(t *testing.T) {
-	mux := NewMux(slog.New(slog.DiscardHandler))
+	router := NewRouter(slog.New(slog.DiscardHandler))
 	for _, target := range []string{"/api/", "/api/v0/nope"} {
-		rec := serve(mux, httptest.NewRequest(http.MethodPost, target, nil))
+		rec := serve(router, httptest.NewRequest(http.MethodPost, target, nil))
 
 		if rec.Code != http.StatusNotFound || rec.Header().Get("Content-Type") != ContentTypeProblem {
 			t.Errorf("POST %s = %d %s, want 404 problem+json", target, rec.Code, rec.Header().Get("Content-Type"))
@@ -88,10 +89,35 @@ func TestUnknownAPIPathIsProblem404(t *testing.T) {
 	}
 }
 
+// The whole-program tests compare the registered API patterns with the
+// contract, so both registration methods must record (M2 design 3.6).
+func TestRouterRecordsEveryPattern(t *testing.T) {
+	router := NewRouter(slog.New(slog.DiscardHandler))
+	router.HandleFunc("GET /api/v0/things", func(http.ResponseWriter, *http.Request) {})
+	router.Handle("/", http.NotFoundHandler())
+
+	want := []string{"GET /healthz", "GET /readyz", "/api/", "GET /api/v0/things", "/"}
+	if got := router.Patterns(); !slices.Equal(got, want) {
+		t.Errorf("Patterns() = %q, want %q", got, want)
+	}
+}
+
+func TestRouterRoutesToTheRegisteredHandler(t *testing.T) {
+	router := NewRouter(slog.New(slog.DiscardHandler))
+	var pattern string
+	router.HandleFunc("GET /api/v0/things/{id}", func(_ http.ResponseWriter, r *http.Request) { pattern = r.Pattern })
+
+	serve(router, httptest.NewRequest(http.MethodGet, "/api/v0/things/7", nil))
+
+	if pattern != "GET /api/v0/things/{id}" {
+		t.Errorf("r.Pattern = %q, want the registered pattern", pattern)
+	}
+}
+
 func TestOtherPathsAreLeftForTheWebUI(t *testing.T) {
-	rec := serve(NewMux(slog.New(slog.DiscardHandler)), httptest.NewRequest(http.MethodGet, "/projects", nil))
+	rec := serve(NewRouter(slog.New(slog.DiscardHandler)), httptest.NewRequest(http.MethodGet, "/projects", nil))
 
 	if rec.Code != http.StatusNotFound || rec.Header().Get("Content-Type") == ContentTypeProblem {
-		t.Errorf("GET /projects = %d %s, want the mux's plain 404", rec.Code, rec.Header().Get("Content-Type"))
+		t.Errorf("GET /projects = %d %s, want the router's plain 404", rec.Code, rec.Header().Get("Content-Type"))
 	}
 }

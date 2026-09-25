@@ -11,6 +11,7 @@ import (
 const ruleCasesBase = `
 openapi: 3.1.0
 info: {title: rule cases, version: v0}
+x-problem-codes: [bad_request, internal_error]
 tags:
   - name: things
 paths:
@@ -18,6 +19,8 @@ paths:
     get:
       operationId: listThings
       tags: [things]
+      security: [{bearer: []}]
+      x-problem-codes: [not_found]
       parameters:
         - {name: kind, in: query, schema: {type: string, enum: [a, b]}}
       responses:
@@ -29,6 +32,8 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
 components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer}
   responses:
     Problem:
       description: Error.
@@ -59,11 +64,22 @@ components:
         - {required: [name]}
 `
 
+// ruleCasesOwners says which module file declares each path of the base.
+var ruleCasesOwners = map[string]string{"/api/v0/things": "things"}
+
+// A module's own prefixed code passes.
+func TestModuleCodesPass(t *testing.T) {
+	doc := parse(t, strings.Replace(ruleCasesBase, "x-problem-codes: [not_found]", "x-problem-codes: [things.taken, validation_failed]", 1))
+	if got := authoringViolations(doc, ruleCasesOwners); len(got) != 0 {
+		t.Errorf("violations = %q, want none", got)
+	}
+}
+
 // TestAuthoringRulesReportViolations proves each check of
 // authoringViolations on a hand-built document, since the real contract
 // passes them all.
 func TestAuthoringRulesReportViolations(t *testing.T) {
-	if got := authoringViolations(parse(t, ruleCasesBase)); len(got) != 0 {
+	if got := authoringViolations(parse(t, ruleCasesBase), ruleCasesOwners); len(got) != 0 {
 		t.Fatalf("the base document breaks rules: %q", got)
 	}
 	const (
@@ -101,6 +117,23 @@ func TestAuthoringRulesReportViolations(t *testing.T) {
 		{"additionalProperties: true", thing, "    Thing:\n      type: object\n      additionalProperties: true\n", "components/schemas/Thing" + open},
 		{"composition with properties of its own", "    Named:\n      type: object\n",
 			"    Named:\n      type: object\n      properties: {id: {type: string}}\n", "components/schemas/Named" + open},
+		{"no top-level codes", "x-problem-codes: [bad_request, internal_error]\n", "", "top level: has no x-problem-codes"},
+		{"module code at the top level", "[bad_request, internal_error]", "[bad_request, things.taken]",
+			`top level: x-problem-codes holds "things.taken", which is not a platform code`},
+		{"no security", "      security: [{bearer: []}]\n", "",
+			"GET /api/v0/things: declares no security; write [{bearer: []}], or [] for a public operation"},
+		{"undeclared scheme", "security: [{bearer: []}]", "security: [{apiKey: []}]",
+			`GET /api/v0/things: security scheme "apiKey" is not declared in components.securitySchemes`},
+		{"no operation codes", "      x-problem-codes: [not_found]\n", "",
+			"GET /api/v0/things: has no x-problem-codes; write [] when it answers only the top-level codes"},
+		{"codes not a list", "x-problem-codes: [not_found]", "x-problem-codes: not_found",
+			"GET /api/v0/things: x-problem-codes is not a list"},
+		{"code misspelled", "x-problem-codes: [not_found]", "x-problem-codes: [Things.Taken]",
+			`GET /api/v0/things: problem code "Things.Taken" is not spelled [module.]lower_snake`},
+		{"code of another module", "x-problem-codes: [not_found]", "x-problem-codes: [stuff.taken]",
+			`GET /api/v0/things: problem code "stuff.taken" is not prefixed with its module "things"`},
+		{"unprefixed code that is not the platform's", "x-problem-codes: [not_found]", "x-problem-codes: [taken]",
+			`GET /api/v0/things: problem code "taken" has no module prefix and is not a platform code`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -108,7 +141,7 @@ func TestAuthoringRulesReportViolations(t *testing.T) {
 				t.Fatalf("the base document has no %q", tt.old)
 			}
 			doc := parse(t, strings.Replace(ruleCasesBase, tt.old, tt.new, 1))
-			if got := authoringViolations(doc); !slices.Equal(got, []string{tt.want}) {
+			if got := authoringViolations(doc, ruleCasesOwners); !slices.Equal(got, []string{tt.want}) {
 				t.Errorf("violations = %q, want %q", got, tt.want)
 			}
 		})

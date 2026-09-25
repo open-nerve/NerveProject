@@ -16,10 +16,26 @@ server:
   read_timeout: 30s
   write_timeout: 60s
   shutdown_timeout: 20s
+  request_timeout: 15s
+  max_body_bytes: 1048576
+  addr_file: ""
 database:
   url: ""
   max_conns: 10
   auto_migrate: true
+  commit_timeout: 2s
+auth:
+  signup_enabled: false
+  access_token_ttl: 15m
+  session_ttl: 720h
+  jwt:
+    private_key_file: ""
+  password:
+    argon2_memory_kib: 19456
+    argon2_iterations: 2
+    argon2_parallelism: 1
+    max_concurrent_hashes: 4
+    max_wait: 2s
 log:
   level: info
   format: json
@@ -54,6 +70,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			"NERVE_CONFIG_DIR=" + dir,
 			"NERVE_SERVER__READ_HEADER_TIMEOUT=9s",
 			"NERVE_DATABASE__AUTO_MIGRATE=false",
+			"NERVE_AUTH__SIGNUP_ENABLED=true",
+			"NERVE_AUTH__PASSWORD__ARGON2_MEMORY_KIB=64",
 		},
 		LocalFile: local,
 	})
@@ -69,11 +87,26 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			ReadTimeout:       30 * time.Second,
 			WriteTimeout:      60 * time.Second,
 			ShutdownTimeout:   40 * time.Second,
+			RequestTimeout:    15 * time.Second,
+			MaxBodyBytes:      1048576,
 		},
 		Database: DatabaseConfig{
-			URL:         "postgres://embedded-dev", // built-in config.dev.yaml
-			MaxConns:    30,                        // config dir: config.dev.yaml beats config.yaml
-			AutoMigrate: false,                     // environment
+			URL:           "postgres://embedded-dev", // built-in config.dev.yaml
+			MaxConns:      30,                        // config dir: config.dev.yaml beats config.yaml
+			AutoMigrate:   false,                     // environment
+			CommitTimeout: 2 * time.Second,
+		},
+		Auth: AuthConfig{
+			SignupEnabled:  true, // environment
+			AccessTokenTTL: 15 * time.Minute,
+			SessionTTL:     720 * time.Hour,
+			Password: PasswordConfig{
+				Argon2MemoryKiB:     64, // environment
+				Argon2Iterations:    2,
+				Argon2Parallelism:   1,
+				MaxConcurrentHashes: 4,
+				MaxWait:             2 * time.Second,
+			},
 		},
 		Log: LogConfig{Level: "debug", Format: "text"},
 	}
@@ -117,6 +150,7 @@ func TestLoadSkipsVariablesThatAreNotKeys(t *testing.T) {
 			"NERVE_CONFIG_DIR=" + t.TempDir(),
 			"NERVE_DEV_DB_PORT=55433",
 			"NERVE_DATABASE__URL=postgres://from-env",
+			"NERVE_AUTH__JWT__PRIVATE_KEY_FILE=/etc/nerve/jwt.pem",
 			"OTHER__VAR=ignored",
 		},
 	})
@@ -182,6 +216,22 @@ func TestLoadErrors(t *testing.T) {
 			environ: []string{"NERVE_ENV=test"},
 			dirFile: "server: [",
 			want:    "config.yaml: yaml:",
+		},
+		// Weakly typed decoding would read an empty value as false or 0 (M0-P2 handoff 8).
+		{
+			name:    "empty boolean in the environment",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x", "NERVE_AUTH__SIGNUP_ENABLED="},
+			want:    "'auth.signup_enabled' must not be empty",
+		},
+		{
+			name:    "empty number in the environment",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x", "NERVE_DATABASE__MAX_CONNS="},
+			want:    "'database.max_conns' must not be empty",
+		},
+		{
+			name:    "empty duration in the environment",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x", "NERVE_AUTH__SESSION_TTL="},
+			want:    "'auth.session_ttl' must not be empty",
 		},
 	}
 	for _, tt := range tests {

@@ -41,8 +41,10 @@ func Load(t testing.TB) *Contract {
 }
 
 // CheckResponse fails t unless res, the response to req, is documented by
-// req's operation: the status, the Content-Type and the body schema. res.Body
-// stays readable for the caller.
+// req's operation: the status, the Content-Type, the body schema and, for a
+// problem, a code the operation may answer (x-problem-codes, M2 design
+// 3.11). The code is recorded for Main. res.Body stays readable for the
+// caller.
 func (c *Contract) CheckResponse(t testing.TB, req *http.Request, res *http.Response) {
 	t.Helper()
 	body, err := io.ReadAll(res.Body)
@@ -55,6 +57,17 @@ func (c *Contract) CheckResponse(t testing.TB, req *http.Request, res *http.Resp
 	}
 }
 
+// CheckRequest fails t unless req, a request a test is about to send, is
+// documented: path, method, parameters and body. Security is not checked:
+// tests send tokens the contract cannot judge. req.Body stays readable. A
+// test that sends a request breaking the contract on purpose skips it.
+func (c *Contract) CheckRequest(t testing.TB, req *http.Request) {
+	t.Helper()
+	if err := c.validateRequest(req); err != nil {
+		t.Errorf("%s %s does not follow the contract: %v", req.Method, req.URL.Path, err)
+	}
+}
+
 // CheckSchema fails t unless body is a JSON value valid against the schema
 // components.schemas[name], e.g. "Problem".
 func (c *Contract) CheckSchema(t testing.TB, name string, body []byte) {
@@ -62,6 +75,18 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte) {
 	if err := c.validateSchema(name, body); err != nil {
 		t.Errorf("%s: %v", body, err)
 	}
+}
+
+// Enum returns the string enum of property in components.schemas[name], e.g.
+// Enum(t, "FieldError", "code") for the field codes, and fails t unless the
+// property has one.
+func (c *Contract) Enum(t testing.TB, name, property string) []string {
+	t.Helper()
+	values, err := c.enum(name, property)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return values
 }
 
 // apiDir locates the repository's api/ from this file, five directories below
@@ -123,7 +148,32 @@ func (c *Contract) validateResponse(req *http.Request, status int, header http.H
 		Options:                &openapi3filter.Options{IncludeResponseStatus: true, MultiError: true},
 	}
 	in.SetBodyBytes(body)
-	return openapi3filter.ValidateResponse(context.Background(), in)
+	if err := openapi3filter.ValidateResponse(context.Background(), in); err != nil {
+		return err
+	}
+	return c.checkProblemCode(route.Operation, header, body)
+}
+
+func (c *Contract) validateRequest(req *http.Request) error {
+	var body []byte
+	if req.Body != nil {
+		var err error
+		if body, err = io.ReadAll(req.Body); err != nil {
+			return fmt.Errorf("read request body: %w", err)
+		}
+	}
+	defer func() { req.Body = io.NopCloser(bytes.NewReader(body)) }()
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	route, pathParams, err := c.router.FindRoute(req)
+	if err != nil {
+		return fmt.Errorf("no documented operation: %w", err)
+	}
+	return openapi3filter.ValidateRequest(context.Background(), &openapi3filter.RequestValidationInput{
+		Request:    req,
+		PathParams: pathParams,
+		Route:      route,
+		Options:    &openapi3filter.Options{AuthenticationFunc: openapi3filter.NoopAuthenticationFunc, MultiError: true},
+	})
 }
 
 func (c *Contract) validateSchema(name string, body []byte) error {
@@ -140,4 +190,24 @@ func (c *Contract) validateSchema(name string, body []byte) error {
 		opts = append(opts, openapi3.EnableJSONSchema2020())
 	}
 	return schema.Value.VisitJSON(value, opts...)
+}
+
+func (c *Contract) enum(name, property string) ([]string, error) {
+	schema, ok := c.doc.Components.Schemas[name]
+	if !ok {
+		return nil, fmt.Errorf("no schema %q in the contract", name)
+	}
+	prop, ok := schema.Value.Properties[property]
+	if !ok || len(prop.Value.Enum) == 0 {
+		return nil, fmt.Errorf("%s.%s has no enum", name, property)
+	}
+	values := make([]string, len(prop.Value.Enum))
+	for i, v := range prop.Value.Enum {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s.%s: enum value %v is not a string", name, property, v)
+		}
+		values[i] = s
+	}
+	return values, nil
 }

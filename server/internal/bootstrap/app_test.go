@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"io/fs"
 	"log/slog"
-	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -18,7 +19,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-// sampleMigrations stands in for the production set, which is empty in M0.
+// sampleMigrations are two probe tables, for the tests of how the app applies
+// and reports migrations, whatever the production set holds.
 var sampleMigrations = fstest.MapFS{
 	"00001_probe_create_widgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE widgets (id bigint);\n-- +goose Down\nDROP TABLE widgets;\n")},
 	"00002_probe_create_gadgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE gadgets (id bigint);\n-- +goose Down\nDROP TABLE gadgets;\n")},
@@ -33,28 +35,48 @@ const unreachableDB = "postgres://nobody@127.0.0.1:1/nowhere"
 
 var client = &http.Client{Timeout: 5 * time.Second}
 
+// testConfig listens on a port the system picks and reports it through
+// server.addr_file. Password hashing is cheap: the tests hash many times.
 func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := ln.Addr().String()
-	if err := ln.Close(); err != nil {
-		t.Fatal(err)
-	}
 	return config.Config{
 		Env: config.EnvTest,
 		Server: config.ServerConfig{
-			Addr:              addr,
+			Addr:              "127.0.0.1:0",
+			AddrFile:          filepath.Join(t.TempDir(), "addr"),
 			ReadHeaderTimeout: time.Second,
 			ReadTimeout:       5 * time.Second,
 			WriteTimeout:      5 * time.Second,
 			ShutdownTimeout:   5 * time.Second,
+			RequestTimeout:    5 * time.Second,
+			MaxBodyBytes:      1 << 20,
 		},
-		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate},
-		Log:      config.LogConfig{Level: "error", Format: "text"},
+		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate, CommitTimeout: 2 * time.Second},
+		Auth: config.AuthConfig{
+			SignupEnabled:  true,
+			AccessTokenTTL: 15 * time.Minute,
+			SessionTTL:     720 * time.Hour,
+			Password: config.PasswordConfig{
+				Argon2MemoryKiB:     64,
+				Argon2Iterations:    1,
+				Argon2Parallelism:   1,
+				MaxConcurrentHashes: 4,
+				MaxWait:             2 * time.Second,
+			},
+		},
+		Log: config.LogConfig{Level: "error", Format: "text"},
 	}
+}
+
+// buildApp wires the app, serving testWebUI, and closes it when the test ends.
+func buildApp(t *testing.T, cfg config.Config, migrations fs.FS) *app {
+	t.Helper()
+	a, err := newApp(context.Background(), cfg, slog.New(slog.DiscardHandler), migrations, testWebUI)
+	if err != nil {
+		t.Fatalf("newApp() error = %v", err)
+	}
+	t.Cleanup(a.close)
+	return a
 }
 
 // startApp runs the app, serving testWebUI, until the test ends and returns
@@ -62,28 +84,29 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 // down cleanly.
 func startApp(t *testing.T, cfg config.Config, migrations fs.FS) string {
 	t.Helper()
-	a, err := newApp(context.Background(), cfg, slog.New(slog.DiscardHandler), migrations, testWebUI)
-	if err != nil {
-		t.Fatalf("newApp() error = %v", err)
-	}
+	a := buildApp(t, cfg, migrations)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- a.run(ctx) }()
+	// Cleanups run last-in first-out: run stops before buildApp's close.
 	t.Cleanup(func() {
 		cancel()
 		if err := <-done; err != nil {
 			t.Errorf("run() = %v, want nil after cancel", err)
 		}
-		a.close()
 	})
 
-	base := "http://" + cfg.Server.Addr
 	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
 		select {
 		case err := <-done:
 			t.Fatalf("run() returned early: %v", err)
 		default:
 		}
+		addr, err := os.ReadFile(cfg.Server.AddrFile)
+		if err != nil {
+			continue
+		}
+		base := "http://" + string(addr)
 		if resp, err := client.Get(base + "/healthz"); err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {

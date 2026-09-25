@@ -8,7 +8,6 @@ import { runNerve } from "./fixtures/server";
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
   const postgres = await startPostgres();
-  const template = await createDatabase(templateDatabase);
-  await runNerve(["migrate", "up"], template.url);
+  await runNerve(["migrate", "up"], await createDatabase(templateDatabase));
   return postgres.stop;
 }

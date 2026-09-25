@@ -1,5 +1,6 @@
 // Package httpserver provides nerve's HTTP platform: the fixed middleware
-// chain, problem+json errors, health endpoints and the server lifecycle.
+// chain, the router, the per-route middlewares that API operations share
+// (API), problem+json errors, health endpoints and the server lifecycle.
 package httpserver
 
 import (
@@ -10,13 +11,17 @@ import (
 // ContentTypeProblem is the media type of RFC 9457 problem details.
 const ContentTypeProblem = "application/problem+json"
 
-// Codes of the problems the platform itself reports. Module codes are
-// namespaced by module, e.g. "issue.state_not_in_project".
+// Codes of the problems the platform itself reports. The other platform codes
+// (validation_failed, server_busy) come from domain errors through
+// ProblemError; module codes are namespaced by module, e.g.
+// "identity.email_taken" (M2 design 3.11).
 const (
-	CodeNotFound   = "not_found"
-	CodeBadRequest = "bad_request"
-	CodeInternal   = "internal_error"
-	CodeNotReady   = "not_ready"
+	CodeBadRequest      = "bad_request"
+	CodeUnauthorized    = "unauthorized"
+	CodeNotFound        = "not_found"
+	CodePayloadTooLarge = "payload_too_large"
+	CodeInternal        = "internal_error"
+	CodeNotReady        = "not_ready"
 )
 
 // Problem is an RFC 9457 problem details body (v0 design, section 3.5).
@@ -29,9 +34,12 @@ type Problem struct {
 	Errors []FieldError `json:"errors,omitempty"`
 }
 
-// FieldError points at one invalid field of a request.
+// FieldError points at one invalid field of a request. Code is one of the
+// closed set of field codes (api/common.yaml); clients translate it rather
+// than show Message.
 type FieldError struct {
 	Field   string `json:"field"`
+	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 

@@ -13,10 +13,14 @@ GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 
 # 代码生成（见 docs/v0/M0-foundation/specs/P3-api-contract.md）
 OAPI_CODEGEN := go tool -modfile=tools/go.mod oapi-codegen
+# 请求体结构表的生成器在工具模块里（M2 设计 3.11）；go -C 切到 server/tools，所以参数都用绝对路径
+BODYSHAPEGEN := go -C server/tools run ./bodyshapegen
+# sqlc 一律不用 cgo 运行：它改用编译成 wasm 的 libpg_query，不需要 C 编译器（M2 设计 3.14，M0-P1 交接 1）
+SQLC := CGO_ENABLED=0 go tool -modfile=tools/go.mod sqlc
 REDOCLY := REDOCLY_SUPPRESS_UPDATE_NOTICE=true pnpm exec redocly
 # 每个模块一个描述文件 api/modules/<模块>.yaml，生成到该模块的 adapter/http/gen
 API_MODULES := $(basename $(notdir $(wildcard api/modules/*.yaml)))
-GEN_GO_OUT := server/internal/platform/httpserver/apigen server/internal/modules/*/adapter/http/gen
+GEN_GO_OUT := server/internal/platform/httpserver/apigen server/internal/modules/*/adapter/http/gen server/internal/modules/*/adapter/postgres/gen
 GEN_WEB_OUT := api/dist web/packages/api-client/src/schema.gen.ts
 # 生成物必须已提交且没有差异；$(1) 是生成物的路径
 check-committed = test -z "$$(git status --porcelain -- $(1))" || { git status --short -- $(1); git --no-pager diff -- $(1); echo "生成物与接口描述不一致：执行 make gen，并提交生成的文件"; exit 1; }
@@ -70,13 +74,17 @@ tools: ## 安装锁定版本的 golangci-lint 到 ./bin
 gen: gen-go gen-web ## 重新生成全部代码：Go 接口层、api/dist、TS 客户端
 
 .PHONY: gen-go
-gen-go: ## 由 api/ 生成 Go 接口层（只需要 Go）
-	rm -f server/internal/platform/httpserver/apigen/*.gen.go server/internal/modules/*/adapter/http/gen/*.gen.go
+gen-go: ## 由 api/ 生成 Go 接口层和请求体结构表，由 server/sqlc.yaml 生成查询代码（只需要 Go）
+	rm -f server/internal/platform/httpserver/apigen/*.gen.go server/internal/modules/*/adapter/http/gen/*.gen.go server/internal/modules/*/adapter/postgres/gen/*.go
 	cd server && $(OAPI_CODEGEN) -config internal/platform/httpserver/apigen/oapi-codegen.yaml ../api/common.yaml
 	@set -e; for m in $(API_MODULES); do \
+		gen=$(CURDIR)/server/internal/modules/$$m/adapter/http/gen; \
 		echo "cd server && $(OAPI_CODEGEN) -config internal/modules/$$m/adapter/http/gen/oapi-codegen.yaml ../api/modules/$$m.yaml"; \
 		(cd server && $(OAPI_CODEGEN) -config internal/modules/$$m/adapter/http/gen/oapi-codegen.yaml ../api/modules/$$m.yaml); \
+		echo "$(BODYSHAPEGEN) -config $$gen/oapi-codegen.yaml -out $$gen/bodyshape.gen.go $(CURDIR)/api/modules/$$m.yaml"; \
+		$(BODYSHAPEGEN) -config $$gen/oapi-codegen.yaml -out $$gen/bodyshape.gen.go $(CURDIR)/api/modules/$$m.yaml; \
 	done
+	cd server && $(SQLC) generate
 
 .PHONY: gen-web
 gen-web: ## 打包 api/dist/openapi.yaml，生成 TS 客户端的类型（需要 Node）
@@ -98,8 +106,9 @@ gen-check-web: gen-web ## 重新生成 api/dist 和 TS 类型并检查（持续�
 lint: lint-go lint-web ## 运行全部静态检查
 
 .PHONY: lint-go
-lint-go: tools ## 运行 golangci-lint（server）
+lint-go: tools ## 运行 golangci-lint（server 和它的工具模块）
 	cd server && $(GOLANGCI_LINT) run ./...
+	cd server/tools && $(GOLANGCI_LINT) run --config ../.golangci.yml ./...
 
 # 关键词守卫（tools/keywords.mjs，规则在 tools/keywords.json）检查整个仓库，不属于任何工作区包，所以不经过 turbo
 .PHONY: lint-web
@@ -114,10 +123,12 @@ knip: ## 检查未使用的文件、导出和依赖（需要 Node；门禁）
 	pnpm --filter web exec react-router typegen
 	pnpm exec knip --treat-config-hints-as-errors
 
-# go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存
+# go test 的缓存不跟踪 server/ 之外的文件，契约测试读取的 api/dist/openapi.yaml 改了也会重放旧结果，所以不用缓存。
+# server/tools 是嵌套的独立模块，server 的 ./... 不进入它，另跑一次（M2 设计 3.11）
 .PHONY: test
-test: ## 运行 Go 测试（server，不用测试缓存）
+test: ## 运行 Go 测试（server 和它的工具模块，不用测试缓存）
 	cd server && go test -count=1 ./...
+	go -C server/tools test -count=1 ./...
 
 .PHONY: test-web
 test-web: ## 运行前端单元测试（各包 test 脚本中的 vitest，经 turbo；需要 Node；持续集成 web 任务）

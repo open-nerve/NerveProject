@@ -20,7 +20,8 @@ const instanceJSON = `{"product":"Nerve","version":"0.1.0-dev","commit":"unknown
 
 // Component names become Go and TypeScript type names. Redocly's bundler
 // renames a clash between module files to "Name-2" and only warns, so a
-// clash has to fail here instead.
+// clash has to fail here instead. Security schemes are the exception: they
+// name no type, and every module declares the same bearer (M2 design 3.12).
 func TestComponentNamesAreTypeNames(t *testing.T) {
 	c := Load(t)
 	valid := regexp.MustCompile(`^[A-Z][A-Za-z0-9]*$`)
@@ -29,7 +30,11 @@ func TestComponentNamesAreTypeNames(t *testing.T) {
 		t.Fatal("the contract has no components")
 	}
 	for _, name := range names {
-		if _, base, _ := strings.Cut(name, "/"); !valid.MatchString(base) {
+		kind, base, _ := strings.Cut(name, "/")
+		if kind == "securitySchemes" {
+			continue
+		}
+		if !valid.MatchString(base) {
 			t.Errorf("component %s is not a PascalCase type name; two module files may define it differently", name)
 		}
 	}
@@ -173,6 +178,22 @@ func TestLoadIgnoresServers(t *testing.T) {
 	c.CheckResponse(t, httptest.NewRequest(http.MethodGet, "/api/v0/instance", nil), instanceResponse())
 }
 
+func TestEnum(t *testing.T) {
+	c := Load(t)
+	if codes, err := c.enum("FieldError", "code"); err != nil || !slices.Contains(codes, "required") {
+		t.Errorf("enum(FieldError, code) = %q, %v; want the field codes", codes, err)
+	}
+	for _, tt := range []struct{ schema, property string }{
+		{"Nope", "code"},
+		{"FieldError", "nope"},
+		{"FieldError", "field"}, // a property without an enum
+	} {
+		if values, err := c.enum(tt.schema, tt.property); err == nil {
+			t.Errorf("enum(%s, %s) = %q, want an error", tt.schema, tt.property, values)
+		}
+	}
+}
+
 func TestValidateSchema(t *testing.T) {
 	c := Load(t)
 	tests := []struct {
@@ -180,7 +201,9 @@ func TestValidateSchema(t *testing.T) {
 		valid              bool
 	}{
 		{"problem", "Problem", `{"status":404,"code":"not_found","title":"Not Found","detail":"no API endpoint for GET /api/v0/nope"}`, true},
-		{"problem with field errors", "Problem", `{"status":422,"code":"issue.invalid","title":"Unprocessable Entity","errors":[{"field":"name","message":"is required"}]}`, true},
+		{"problem with field errors", "Problem", `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","errors":[{"field":"name","code":"required","message":"is required"}]}`, true},
+		{"field error without code", "Problem", `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","errors":[{"field":"name","message":"is required"}]}`, false},
+		{"field error with an unknown code", "Problem", `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","errors":[{"field":"name","code":"blank","message":"is required"}]}`, false},
 		{"problem without code", "Problem", `{"status":404,"title":"Not Found"}`, false},
 		{"problem with an unknown member", "Problem", `{"status":404,"code":"not_found","title":"Not Found","instance":"/x"}`, false},
 		{"unknown schema", "Nope", `{}`, false},

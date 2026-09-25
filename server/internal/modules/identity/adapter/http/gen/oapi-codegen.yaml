@@ -1,0 +1,33 @@
+# oapi-codegen 配置：api/modules/identity.yaml → server.gen.go。
+# 由 make gen-go 在 server/ 下执行，路径相对于 server/。
+package: gen
+output: internal/modules/identity/adapter/http/gen/server.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+compatibility:
+  # 枚举常量总是带类型名前缀：以后别的枚举出现同名的值，也不会改掉已有常量的名字
+  always-prefix-enum-values: true
+# output-options 是每个模块照抄的模板（M2 设计 3.12），bodyshapegen 读同一份 type-mapping
+output-options:
+  name-normalizer: ToCamelCaseWithInitialisms
+  # 可为空又可省略的字段生成 nullable.Nullable[T]：PATCH 能区分"没传"和"传 null"
+  nullable-type: true
+  type-mapping:
+    # 不带 format 的 number 默认生成 float32，bodyshape 查不了它的范围；bodyshapegen 只接受 int、int64 和 float64
+    number:
+      default:
+        type: float64
+    string:
+      formats:
+        # 标准库的 uuid：默认的 openapi_types.UUID 会带进 github.com/google/uuid
+        uuid:
+          type: uuid.UUID
+          import: uuid
+        # 邮箱的格式由领域层校验（422）；默认的 openapi_types.Email 在解码时自己校验，绕过这一层
+        email:
+          type: string
+import-mapping:
+  # common.yaml 的组件生成在共享包 apigen 里，这里只引用
+  ../common.yaml: github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/instance/adapter/http"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/app"
@@ -20,13 +21,20 @@ func (s fixedSource) Build() domain.Build { return domain.Build(s) }
 
 func TestGetInstanceMatchesTheContract(t *testing.T) {
 	contract := apitest.Load(t)
-	mux := http.NewServeMux()
+	logger := slog.New(slog.DiscardHandler)
+	router := httpserver.NewRouter(logger)
+	api := httpserver.NewAPI(httpserver.APIConfig{
+		Logger:           logger,
+		PublicOperations: httpadapter.PublicOperations(),
+		MaxBodyBytes:     1 << 20,
+		RequestTimeout:   time.Second,
+	})
 	getInfo := app.NewGetInfo(fixedSource{Version: "1.2.3", Commit: "4f2a9c1"})
-	httpadapter.Register(mux, getInfo, httpserver.NewAPIErrors(slog.New(slog.DiscardHandler)))
+	httpadapter.Register(router, api, httpadapter.UseCases{GetInfo: getInfo})
 	req := httptest.NewRequest(http.MethodGet, "/api/v0/instance", nil)
 	rec := httptest.NewRecorder()
 
-	mux.ServeHTTP(rec, req)
+	router.ServeHTTP(rec, req)
 	res := rec.Result()
 
 	contract.CheckResponse(t, req, res)

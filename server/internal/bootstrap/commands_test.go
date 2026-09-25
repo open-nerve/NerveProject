@@ -3,11 +3,13 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -100,5 +102,21 @@ func TestMigrateCommandReportsBadURL(t *testing.T) {
 	err := MigrateStatus(context.Background(), testConfig(t, "postgres://nerve:secret@localhost:notaport/nerve", false), &bytes.Buffer{})
 	if err == nil || strings.Contains(err.Error(), "secret") {
 		t.Errorf("MigrateStatus() = %v, want a database.url error without the password", err)
+	}
+}
+
+// Once the logger exists, a fatal error of serve is also a structured log
+// record (M0-P2 handoff 8).
+func TestServeLogsAFatalError(t *testing.T) {
+	cfg := testConfig(t, unreachableDB, false)
+	cfg.Log = config.LogConfig{Level: "error", Format: "json"}
+	cfg.Auth.JWT.PrivateKeyFile = filepath.Join(t.TempDir(), "missing.pem")
+	var logs bytes.Buffer
+
+	err := Serve(context.Background(), cfg, &logs)
+
+	want := `"level":"ERROR","msg":"nerve serve failed","error":"auth.jwt.private_key_file: no such file or directory"}`
+	if err == nil || !strings.Contains(logs.String(), want) {
+		t.Errorf("Serve() = %v, logs:\n%s\nwant a record ending %s", err, logs.String(), want)
 	}
 }

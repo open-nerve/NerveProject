@@ -10,6 +10,12 @@ server:
   read_timeout: 30s
   write_timeout: 60s
   shutdown_timeout: 20s
+  # 每个接口请求的期限：到期取消请求的 context，数据库调用随之结束。必须短于 write_timeout
+  request_timeout: 15s
+  # JSON 接口的请求体上限（字节），超出时 413
+  max_body_bytes: 1048576
+  # 非空时，监听成功后把实际地址写进这个文件（端到端测试用 127.0.0.1:0 监听）
+  addr_file: ""
 
 database:
   # 必须提供。dev 环境写在 config.dev.yaml 中；test 和 prod 通过 NERVE_DATABASE__URL 提供。
@@ -17,6 +23,28 @@ database:
   max_conns: 10
   # nerve serve 启动前是否自动执行迁移
   auto_migrate: true
+  # COMMIT、ROLLBACK 自己的期限：它们不随请求期限取消
+  commit_timeout: 2s
+
+auth:
+  # 是否开放注册。基础配置（也就是 prod）关闭；config.dev.yaml、config.test.yaml 覆盖为 true。
+  # 关闭时第一个账户用 nerve users create 创建（M2/P3 加入；在那之前临时设 NERVE_AUTH__SIGNUP_ENABLED=true）
+  signup_enabled: false
+  access_token_ttl: 15m
+  # 会话从登录起算的期限（30 天），续期不延长
+  session_ttl: 720h
+  jwt:
+    # PKCS#8 PEM 格式的 Ed25519 私钥文件：openssl genpkey -algorithm ed25519 -out nerve-jwt.pem
+    # prod 必填；dev、test 为空时，启动时生成一把临时密钥（重启后旧的访问令牌失效）
+    private_key_file: ""
+  password:
+    # argon2id 的参数（OWASP 推荐的最低配置）
+    argon2_memory_kib: 19456
+    argon2_iterations: 2
+    argon2_parallelism: 1
+    # 同时进行的哈希计算上限；拿不到名额时最多等 max_wait，然后 503 server_busy
+    max_concurrent_hashes: 4
+    max_wait: 2s
 
 log:
   level: info    # debug | info | warn | error

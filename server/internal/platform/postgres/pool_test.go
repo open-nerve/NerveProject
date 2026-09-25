@@ -4,10 +4,25 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
+
+// pgx returns timestamptz in time.Local by default; the pool returns UTC.
+func TestPoolScansTimestamptzInUTC(t *testing.T) {
+	pool := newPool(t, pgtest.NewEmptyDatabase(t))
+	var got time.Time
+
+	err := pool.QueryRow(context.Background(), "SELECT '2026-09-25 18:00:00+08'::timestamptz").Scan(&got)
+
+	want := time.Date(2026, 9, 25, 10, 0, 0, 0, time.UTC)
+	if err != nil || got.Location() != time.UTC || !got.Equal(want) {
+		t.Errorf("scanned %v (%v), want %v in UTC", got, err, want)
+	}
+}
 
 func TestNewPoolAppliesMaxConns(t *testing.T) {
 	pool, err := postgres.NewPool(context.Background(), config.DatabaseConfig{

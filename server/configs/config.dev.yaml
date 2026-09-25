@@ -8,6 +8,10 @@ database:
   # 用 NERVE_DEV_DB_PORT 换了端口时，要同时覆盖这一项（NERVE_DATABASE__URL 或 config.local.yaml）。
   url: postgres://nerve:nerve@localhost:55432/nerve?sslmode=disable
 
+auth:
+  # 开发环境开放注册（prod 默认关闭，见 config.yaml）
+  signup_enabled: true
+
 log:
   level: debug
   format: text
