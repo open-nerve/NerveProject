@@ -178,6 +178,65 @@ func TestAccessTokenVerifyRejects(t *testing.T) {
 	}
 }
 
+// Every rejection is exactly one of the fixed reasons, never the text of
+// jwt/v5 or encoding/json: Authenticate logs the reason (M2 design 3.6), and
+// that text can quote what the sender put in a forged token.
+func TestAccessTokenVerifyGivesOnlyFixedReasons(t *testing.T) {
+	const marker = "MARKER-chosen-by-the-sender"
+	keys := testKeys(t)
+	a := NewAccessTokens(keys)
+	parts := strings.Split(issue(t, a, now.Add(time.Minute)), ".")
+	b64 := func(s string) string { return base64.RawURLEncoding.EncodeToString([]byte(s)) }
+	// forge keeps a valid header and signature over another payload.
+	forge := func(payload string) string { return parts[0] + "." + b64(payload) + "." + parts[2] }
+	sign := func(method jwt.SigningMethod, key any, c jwt.MapClaims) string {
+		s, err := jwt.NewWithClaims(method, c).SignedString(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	sub, sid, exp := userID.String(), sessionID.String(), now.Add(time.Minute).Unix()
+	expJSON := `"exp":` + strconv.FormatInt(exp, 10)
+	withTimes := func(times string) string { return `{"sub":"` + sub + `","sid":"` + sid + `",` + times + `}` }
+	tests := []struct {
+		name  string
+		token string
+		want  error
+	}{
+		{"exp is a string", forge(withTimes(`"exp":"` + marker + `"`)), errMalformed},
+		{"nbf is a string", forge(withTimes(expJSON + `,"nbf":"` + marker + `"`)), errMalformed},
+		{"iat is a string", forge(withTimes(expJSON + `,"iat":"` + marker + `"`)), errMalformed},
+		{"payload is not JSON", forge(marker), errMalformed},
+		{"header is not JSON", b64(marker) + "." + parts[1] + "." + parts[2], errMalformed},
+		{"bad signature", forge(`{"sub":"` + marker + `",` + expJSON + `}`), errSignatureInvalid},
+		{"signature is not a signature", parts[0] + "." + parts[1] + "." + b64(marker), errSignatureInvalid},
+		{"alg none", b64(`{"alg":"none","typ":"JWT"}`) + "." + parts[1] + ".", errSignatureInvalid},
+		{"alg HS256", sign(jwt.SigningMethodHS256, []byte(keys.public), jwt.MapClaims{"sub": sub, "sid": sid, "exp": exp}), errSignatureInvalid},
+		{"alg unknown", b64(`{"alg":"`+marker+`","typ":"JWT"}`) + "." + parts[1] + "." + parts[2], errSignatureInvalid},
+		{"signed, sub is not a uuid", sign(jwt.SigningMethodEdDSA, keys.private, jwt.MapClaims{"sub": marker, "sid": sid, "exp": exp}), errClaimsInvalid},
+		{"signed, nbf in the future", sign(jwt.SigningMethodEdDSA, keys.private, jwt.MapClaims{"sub": sub, "sid": sid, "exp": exp, "nbf": exp}), errClaimsInvalid},
+		{"signed, no exp", sign(jwt.SigningMethodEdDSA, keys.private, jwt.MapClaims{"sub": sub, "sid": sid}), errClaimsInvalid},
+		{"expired", issue(t, a, now), app.ErrAccessTokenExpired},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := a.Verify(tt.token, now)
+			if err == nil || !errors.Is(err, tt.want) || err.Error() != tt.want.Error() {
+				t.Fatalf("Verify() = %v, want exactly %q", err, tt.want)
+			}
+			if strings.Contains(err.Error(), marker) {
+				t.Errorf("Verify() = %q quotes the sender's text", err)
+			}
+			for _, part := range strings.Split(tt.token, ".") {
+				if part != "" && strings.Contains(err.Error(), part) {
+					t.Errorf("Verify() = %q quotes the token's segment %q", err, part)
+				}
+			}
+		})
+	}
+}
+
 func TestRefreshTokenMAC(t *testing.T) {
 	keys := testKeys(t)
 	m := NewRefreshTokenMAC(keys)
