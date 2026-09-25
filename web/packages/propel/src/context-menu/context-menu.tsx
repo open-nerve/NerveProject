@@ -12,11 +12,14 @@ interface ContextMenuProps extends React.ComponentProps<typeof ContextMenuPrimit
   children: React.ReactNode;
 }
 
-interface ContextMenuTriggerProps extends React.ComponentProps<typeof ContextMenuPrimitive.Trigger> {
+interface ContextMenuTriggerProps extends Omit<React.ComponentProps<typeof ContextMenuPrimitive.Trigger>, "className"> {
   children: React.ReactNode;
 }
 
-interface ContextMenuContentProps extends React.ComponentProps<typeof ContextMenuPrimitive.Positioner> {
+interface ContextMenuContentProps extends Omit<
+  React.ComponentProps<typeof ContextMenuPrimitive.Positioner>,
+  "className"
+> {
   children: React.ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   sideOffset?: number;
