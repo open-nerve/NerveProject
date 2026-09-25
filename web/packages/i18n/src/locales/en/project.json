@@ -26,7 +26,9 @@
       "priority_issue": "Priority work items",
       "assignees": "Assignees",
       "issue_burndown": "Work item burndown",
-      "labels": "Labels"
+      "labels": "Labels",
+      "work_items_completed": "{completed}/{total} {total, plural, one {work item} other {work items}} completed",
+      "cancelled_excluded": "{count, plural, one {# cancelled work item is} other {# cancelled work items are}} excluded from this report."
     },
     "upcoming_cycle": {
       "label": "Upcoming cycle"
