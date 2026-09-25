@@ -25,3 +25,15 @@ the original's. How each picture was measured and changed: `docs/v0/M1-frontend-
 | `modules-dark.webp`  | 9 avatars, as in the light picture; "Acme Design" as in the light picture                                                |
 | `views-light.webp`   | The assignee's avatar; the view owner's and the assignee's names are now "Robin" and "Robin Park"; "Acme Design" (M1/P5) |
 | `views-dark.webp`    | As in the light picture                                                                                                  |
+
+The controls of features this milestone removed were painted out with the background they sat on, then one more
+lossy WebP encode at the size-closest quality, as above. Each is filled with a solid colour sampled beside it, except
+in `intake-light.webp`: there the row is cut off by the card's bottom edge, so its box repeats the pixel column just
+left of it, which carries the card's white, its bottom border and the transparent margin below the card. How each
+was measured: `docs/v0/M1-frontend-trim/plans/closeout.md`, Task 20.
+
+| File                                      | Removed                                                    |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| `modules-light.webp`, `modules-dark.webp` | the Gantt/timeline layout icon in the modules header       |
+| `cycles-light.webp`, `cycles-dark.webp`   | the Gantt/timeline layout icon in the cycles header        |
+| `intake-light.webp`, `intake-dark.webp`   | the "Estimate: 2 Months" row in the work item's properties |

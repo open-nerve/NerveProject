@@ -21,3 +21,13 @@ the original's. How each picture was measured and changed: `docs/v0/M1-frontend-
 | `issues.webp`  | 5 avatars                                                                                     |
 | `views.webp`   | 5 avatars (a 5-px sliver of a dark avatar under the edge of the views panel is left as it is) |
 | `modules.webp` | Nothing: it shows no avatar and no name                                                       |
+
+The controls of features this milestone removed were painted out, each with the flat background it sat on (a solid
+colour sampled beside it), then one more lossy WebP encode at the size-closest quality, as above. How each was
+measured: `docs/v0/M1-frontend-trim/plans/closeout.md`, Task 20.
+
+| File          | Removed                                                                                 |
+| ------------- | --------------------------------------------------------------------------------------- |
+| `cycles.webp` | the reporting button (left of Add Issue) and the Gantt layout icon in the work-item bar |
+| `views.webp`  | the Gantt layout icon in the work-item bar                                              |
+| `issues.webp` | the "Public" visibility pill next to the Issues breadcrumb                              |
