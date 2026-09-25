@@ -20,7 +20,7 @@
 - **工具链与依赖**：删掉 `sanitize-html`（开发环境的外部化警告的根源），给 `prosemirror-codemark` 打补丁（测试输出的 5 行噪声），格式检查覆盖两个配置包和根目录的工具链配置；编辑器标注块的属性按字符串读取。
 - **报告与文档**：oxlint 按包、按规则的表和清零计划，构建体积与 P1 基线的对比，最后一次锁文件核对；前端改动清单；P1–P5 交给后续 M 的交接都写上关闭条件，收尾自己的交接（死成员和死 prop、oxlint 的清理）按领域交给 M2–M8。
 
-死成员和死 prop（类型检查器找得到、knip 和 tsc 都不报的 1347 个）不在收尾删：它们几乎都在 M2 起逐个领域重写的代码里（第 4 节第 4 条），按领域交给后续 M。
+死成员和死 prop（类型检查器找得到、knip 和 tsc 都不报的 1350 个）不在收尾删：它们几乎都在 M2 起逐个领域重写的代码里（第 4 节第 4 条），按领域交给后续 M。
 
 ---
 
@@ -46,7 +46,7 @@
 | B4 | `useProjectIssueProperties` 的 5 个 fetcher 只有 `fetchCycles` 有调用方；P3 说的 `fetchStates` | P3、P4 评审第 7 节 | 同左 | **T5**：hook 删除，工作项表单直接调用迭代 store 的 `fetchAllCycles` |
 | B5 | `IssueFormRoot` 挂载时的重置（可能是空操作） | P3 评审第 7 节 | 把表单重置为 `useForm` 刚用过的初始值，是空操作 | **T5** |
 | B6 | `ui/empty-space.tsx` 没人传的属性和只有一个子元素的片段 | P5 评审第 7 节 | `EmptySpace` 的 `Icon`、`EmptySpaceItem` 的 `description`；2 个片段 | **T5** |
-| B7 | knip 看不见的死成员和死 prop | P3 评审第 7 节（启发式脚本：182 个成员、205 个 prop） | `deadsym.mjs`：成员 1150、prop 638 | 收尾删掉自己的 Task 造成的和评审点名的（→ 成员 895、prop 452）；其余**按领域交 M2–M8**，共享部分交 M8（第 4 节第 4 条，第 8 节） |
+| B7 | knip 看不见的死成员和死 prop | P3 评审第 7 节（启发式脚本：182 个成员、205 个 prop） | `deadsym.mjs`：成员 1150、prop 638 | 收尾删掉自己的 Task 造成的和评审点名的（→ 成员 898、prop 452）；其余**按领域交 M2–M8**，共享部分交 M8（第 4 节第 4 条，第 8 节） |
 | B8 | `={"…"}` 这类写法 | P4 评审第 7 节 | `react/jsx-curly-brace-presence`：80 处，58 个文件 | **T6**：oxlint 修掉，规则设为错误 |
 | B9 | 只给导入常量起别名的 3 个 `const`；`no-projects.tsx` 没有插值的模板字面量 | P4 评审第 7 节 | 另有一处同类别名（打盹弹窗） | **T6** |
 | B10 | `` t(`${getDescriptionPlaceholderI18n(…)}`) `` 外层多余的模板 | P3 评审第 7 节 | 1 处 | **T6** |
@@ -114,7 +114,7 @@
 | H6 | 本 M 的交接全部关闭；交给后续 M 的交接都有接收的 M 和关闭条件 | M1 设计 9、11 节 | `M0-P5-frontend-trim-notes`、`M0-P6-knip-notes` 在基线已是 `closed`；P2–P5 写给 M2–M8 的 17 份交接各加一节"关闭条件"，收尾自己给 M2–M8 各写一份（**T13**） |
 | H7 | M1 设计 12 节收尾一行、11 节打勾、总体设计 9.4 和 M1 的状态改为"已完成" | M1 设计 9、11 节 | 控制者在收尾 review 的提交里改（与 P5 相同）；时机见第 9 节第 3 条 |
 
-**规模**：16 个 Task，原型改 875 个文件（+6091 / −12814 行；T1–T13 是 763 个文件，+1377 / −12685；本分支的实际数字见 3.1），其中大部分是机械的：T4 的三轮删除、T6 的 oxlint 修复和注释、T11 的键、T12 的图片、T14 的封面、T15 的头像和人名都由脚本完成，脚本的输出逐项可核对（T14 的 +4658 行几乎都是 29 张 SVG 源文件）。要逐处判断的是 T2、T3、T5、T6 的手写部分、T7、T8。死成员和死 prop 若在收尾删，要在 348 个文件里逐个判断 1347 处（很多是 Plane 接口类型的字段，M2 起按 OpenAPI 生成的类型整体替换），不适合放在一个 Phase 里，交给重写这些代码的 M。
+**规模**：16 个 Task，原型改 875 个文件（+6091 / −12814 行；T1–T13 是 763 个文件，+1377 / −12685；本分支的实际数字见 3.1），其中大部分是机械的：T4 的三轮删除、T6 的 oxlint 修复和注释、T11 的键、T12 的图片、T14 的封面、T15 的头像和人名都由脚本完成，脚本的输出逐项可核对（T14 的 +4658 行几乎都是 29 张 SVG 源文件）。要逐处判断的是 T2、T3、T5、T6 的手写部分、T7、T8。死成员和死 prop 若在收尾删，要在 348 个文件里逐个判断 1350 处（很多是 Plane 接口类型的字段，M2 起按 OpenAPI 生成的类型整体替换），不适合放在一个 Phase 里，交给重写这些代码的 M。
 
 ---
 
@@ -161,7 +161,7 @@
 | 守卫：没有命中样本的分支（`alts.mjs`） / 引用不存在代码的不命中样本（`missquote.mjs` / `missreal.mjs`） | 42 / 50 / — | 0 / 0 / 0（本分支；原型 T11 起 `missreal` 为 1，3.6） |
 | 例外 | 5（`analytics` M6、`project-invitations` M3、`brand` M9、`tlds.ts` 的 `analytics`、`wiki` M9） | 3（前三条） |
 | 不带 `noopener` 的 `window.open` | 16 处中 12 处 | 0（规则 `window-open`） |
-| 包导出 / 死成员 / 死 prop（`deadsym.mjs`） | 426 / 1150 / 638 | 2 / 895 / 452（`3c64669`：2 / 894 / 452；多出的一个见结论 3） |
+| 包导出 / 死成员 / 死 prop（`deadsym.mjs`） | 426 / 1150 / 638 | 2 / 898 / 452（`3c64669`：2 / 894 / 452；多出的四个见结论 3） |
 | 每种语言的键 / 无引用的键（`keyref.mjs`） / 只被无关字面量命中的键（`keyfalse.mjs` 的 `?`） | 1599 / 482 / 34 | 1077 / 0 / 12（都到得了 `t()`） |
 | 图片 / 没有引用的（`assets.mjs`） | 246 / 133 | 134 / 0（T13：113 / 0；T14 加 29 张 SVG 源文件，T15 删 8 张） |
 | 按路径没有被引用的图片（`t15/assetpaths.mjs`） | — | 0（T14 之后 6 张，T15 删除） |
@@ -189,15 +189,15 @@
 | T12、T13 | 2 / 894 / 452 | 696 | 1077 | 0 / 113 | 51 / 3 | 0 / 0 |
 | T14 | 2 / 894 / 452 | 696 | 1077 | 0 / 142 | 51 / 3 | 0 / 0 |
 | T15、T16 | 2 / 894 / 452 | 696 | 1077 | 0 / 134 | 51 / 3 | 0 / 0 |
-| 修复轮 | 2 / 895 / 452 | 695 | 1077 | 0 / 134 | 51 / 3 | 0 / 0 |
+| 修复轮 | 2 / 898 / 452 | 695 | 1077 | 0 / 134 | 51 / 3 | 0 / 0 |
 
-每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref.mjs orphaned`、`dangling.mjs`、`keyref.mjs orphaned` 都是 0，`headers.sh` 没有输出；`deadorph.mjs`（新出现的死成员、死 prop、死导出）除 T7 和修复轮的 FW4 外都是 0（结论 3）；`infile-orphans.mjs` 在 T3、T4、T5 列出 12、165、4 行，都以 `defined now: 0)` 结尾（被删掉的符号），其余 Task 为 0。
+每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref.mjs orphaned`、`dangling.mjs`、`keyref.mjs orphaned` 都是 0，`headers.sh` 没有输出；`deadorph.mjs`（新出现的死成员、死 prop、死导出）除 T7 和修复轮的 FW4、FW10 外都是 0（结论 3）；`infile-orphans.mjs` 在 T3、T4、T5 列出 12、165、4 行，都以 `defined now: 0)` 结尾（被删掉的符号），其余 Task 为 0。
 
 结论：
 
 1. **原型的步骤可以照做。** 重放发现 T3、T4、T6、T8 要在脚本之后跑一次 oxfmt，plan 已写进步骤；重放之后又发现 T4 让 propel `EmptyState` 的 `asset` 属性成了孤儿（`deadorph.mjs` 报 1），改在 T4 删掉，T11 补了主题选项（C3），重放和门禁都重跑过。
 2. **包导出要用类型检查器找。** knip 把每个包的入口都当作已使用；`symref.mjs` 按名字数引用，同名的局部变量、属性也算。`deadsym.mjs` 用 TypeScript 的程序模型：一个导出只有在它自己以外的文件读取它时才算使用（经过任何桶文件；重新导出不算读取）。删一轮会让上一层的导出变成没人用，所以要删到某一轮为零为止（没有别的文件读取的导出，不计 `api-client` 类型测试文件的 2 个：第 1 轮 424 个、第 2 轮 26 个、第 3 轮 62 个，共 512 个；第 4 轮 0）。
-3. **T7 和修复轮 FW4 的 `deadorph` 各报 1，是已知的例外。** 新加的 `parseHTML` 写在属性对象的类型里，由 TipTap 在解析 HTML 时读取，脚本只看项目自己的代码；T7 的测试证明它被读取（去掉它，第一个用例以 `128161` 失败）。修复轮的 FW4 同样报 1，是同一类：`TLogoProps.emoji.url`（`types/src/common.ts`）。它唯一有类型的读取方是标注块 `getStoredLogo` 里的 `as TLogoProps`；FW4 改为在运行时检查本地存储里的 JSON（类型是 `unknown`），仍然读取 `url`，脚本只看有类型的读取。它喂给的 `data-emoji-url` 只有标注块的 Markdown 序列化在用（交 M4，8.1）。
+3. **T7、修复轮 FW4 和 FW10 的 `deadorph` 报出的是已知的例外。** 新加的 `parseHTML` 写在属性对象的类型里，由 TipTap 在解析 HTML 时读取，脚本只看项目自己的代码；T7 的测试证明它被读取（去掉它，第一个用例以 `128161` 失败）。修复轮的 FW4 同样报 1，是同一类：`TLogoProps.emoji.url`（`types/src/common.ts`）。它唯一有类型的读取方是标注块 `getStoredLogo` 里的 `as TLogoProps`；FW4 改为在运行时检查本地存储里的 JSON（类型是 `unknown`），仍然读取 `url`，脚本只看有类型的读取。它喂给的 `data-emoji-url` 只有标注块的 Markdown 序列化在用（交 M4，8.1）。FW10 删掉 `isCommentEmpty` 走不到的 JSON 分支之后，`JSONContent`（`types/src/editor/editor-content.ts`）的 `type`、`content`、`text` 没有了读取方，`deadsym.mjs` 多报 3 个成员（`deadorph.mjs` 按文件和名字比较，列出 `content`、`text` 两行：`type` 与 T16 时已报的 `marks` 里的 `type` 同名）。它们保留：`JSONContent` 描述的是 TipTap 的 JSON 格式，只写一半不如不写；它唯一的使用者 `TIssueComment.comment_json` 本身没有读写方，属于 M4 的领域，两者由 M4 一起处理（M4 的交接）。
 4. **外部化警告的根源在依赖，不在 Vite 配置。** `devwarn.mjs` 打开 `/`，页面加载两次，浏览器 44 条、服务端 44 行（每次加载各 22 条），都来自 postcss 读取 `path`、`fs`、`url`、`source-map-js`；web 里只有 `sanitize-html` 把 postcss 带进浏览器端，它的全部用处是 `@nerve/utils` 的三个 HTML 工具。应用是纯客户端的构建（`ssr: false`），浏览器自带的 `DOMParser` 就够用；删掉之后警告为 0，还修掉了通知预览显示 `&amp;` 的问题（3.10）。
 5. **测试输出的噪声也是依赖的问题。** `prosemirror-codemark` 0.4.2 是最新版本，发布的每个构建文件末尾都指向一个列出未发布源文件的 source map；补丁只删这 12 行注释（`strip.mjs`），与仓库里已有的 `react-color` 补丁同一种做法。
 6. **没有新的共享可变状态。** 全 Phase 新增的顶层声明都是函数、只读数据或测试辅助；唯一的模块级可变值是 T7 测试文件里等待 `afterEach` 销毁的编辑器列表。新增的行里没有 `={"`、`${"`，也没有不带插值的模板字面量。
@@ -408,10 +408,10 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 1. **守卫认识 `M<n>/closeout`（T1）。** 设计 7.4 说收尾时"只允许剩下明确跨 M 的例外"，原来靠人核对。工具加一种 Phase 写法，排在该 M 的编号 Phase 之后，于是 M1 内到期的例外由工具报错。它改动的是 `tools/keywords.mjs` 的 Phase 解析（一个正则、一个常量），`t1/expiry-probe.mjs` 证明到期、不到期和写错三种情况。
 2. **每个 `window.open` 都带 `noopener,noreferrer`，包括同源的"在新标签页打开"（T2）。** P5 评审点名的是打开外部内容的 5 处。同源的 7 处不会泄露给别的源，但一条对所有调用都成立的规则才能由守卫看住；这些调用都不读返回值，加上之后行为不变。`target="_blank"` 的链接不改（A2）。
 3. **`window.close()` 的缺陷和 `no-restricted-globals`（T5，补充）。** 在清点菜单的复合组件时发现。只删这一行会留下同类缺陷的入口；ESLint 的 confusing-browser-globals 列表正是为这类"缺了局部绑定、落到全局"的情况设计的，设为错误后树里只有一处有意的用法，写成 `window.confirm`。
-4. **死成员和死 prop 按领域交给后续 M，不在收尾删（B7）。** 收尾结束时还有 1347 个（成员 895、prop 452）。按总体设计 9.2 的领域划分（`domains.mjs`，按路径取第一个匹配）：M2 66（59 / 7）、M3 210（142 / 68）、M4 558（435 / 123）、M5 48（40 / 8）、M6 84（46 / 38）、M7 88（63 / 25）、M8 6（6 / 0），共享 287（104 / 183）。理由：
+4. **死成员和死 prop 按领域交给后续 M，不在收尾删（B7）。** 收尾结束时还有 1350 个（成员 898、prop 452）。按总体设计 9.2 的领域划分（`domains.mjs`，按路径取第一个匹配）：M2 66（59 / 7）、M3 210（142 / 68）、M4 561（438 / 123）、M5 48（40 / 8）、M6 84（46 / 38）、M7 88（63 / 25）、M8 6（6 / 0），共享 287（104 / 183）。理由：
    - M2 起每个 M 按总体设计 7.2 重写本领域的 types、services、stores 和组件，前端的数据结构改用 OpenAPI 生成的类型；成员里的大多数是 Plane 接口类型的字段和 store 的方法，会随重写消失，收尾先删一遍等于做两遍；
    - 每一处都要判断：对象经展开传入、按另一个类型写入、交给第三方库回调的成员脚本也会列出（例如 ui 表格列对象的 `thRender`、`tdRender` 由 `useProjectColumns` 写入）；删一个 prop 还要收掉读它的分支。这是逐处的工作，不能写成脚本；
-   - 收尾的每个 Task 仍然删掉它自己造成的孤儿（`deadorph.mjs` 每个 Task 为 0，T7 的 `parseHTML` 和修复轮 FW4 的 `TLogoProps.emoji.url` 除外，3.2 结论 3；修复轮的 FW10 删掉只有 JSON 分支读取的 `JSONContent` 的 `type`、`content`、`text`），评审点名的都已删除。
+   - 收尾的每个 Task 仍然删掉它自己造成的孤儿（`deadorph.mjs` 每个 Task 为 0，T7 的 `parseHTML`，修复轮 FW4 的 `TLogoProps.emoji.url` 和 FW10 之后 `JSONContent` 的 `type`、`content`、`text` 除外，3.2 结论 3），评审点名的都已删除。
    交接里写明列出的命令、处理方法和关闭条件；共享部分（propel、ui、types、utils、constants、hooks、i18n 和 web 的通用组件）交 M8，M2–M7 改到时照做。
 5. **包导出用类型检查器找，删到零为止（T4，3.2 结论 2）。** P3 交接用的是 `symref.mjs`（347 个）；它按名字数，漏掉同名局部变量遮住的死导出，也数不到"只被重新导出"的情况。`deadsym.mjs` 的第一轮就有 424 个。删除后 `infile-orphans` 的 165 行都是被删的符号。
 6. **`tlds.ts` 整个删除（T4）。** 两条 `M9` 例外原本要"重新核对理由"。核对发现文件唯一的读取方是 T4 删掉的地址解析链（没有调用方），文件和例外一起删。
@@ -464,7 +464,7 @@ P1 的方法（P1 spec 2.14）：先 `rm -rf web/apps/web/build`，再 `make bui
 - [ ] `make test`、`make lint-go` 通过（T16）；`t16/names.mjs` 为 0。
 - [ ] vitest 100 个测试，没有 stderr。
 - [ ] 每个 Task 的孤儿核对（基点是上一个 Task 的提交）：`symref`、`dangling`、`keyref orphaned` 为 0，`headers.sh` 没有输出，`deadorph` 为 0（T7 为 `parseHTML` 一行），`infile-orphans` 的每一行都以 `defined now: 0)` 结尾。
-- [ ] `deadsym.mjs`：导出 2、成员 895、prop 452；`keyref.mjs unused` 0，每种语言 1077 个键；`assets.mjs` `0 of 134`（T12、T13 为 `0 of 113`，T14 为 `0 of 142`）；`t15/assetpaths.mjs` `0 of 134`；`labels-all.mjs` `dangling 0, repeat 0`；`rulecount.mjs . react/jsx-curly-brace-presence` 0。
+- [ ] `deadsym.mjs`：导出 2、成员 898、prop 452；`keyref.mjs unused` 0，每种语言 1077 个键；`assets.mjs` `0 of 134`（T12、T13 为 `0 of 113`，T14 为 `0 of 142`）；`t15/assetpaths.mjs` `0 of 134`；`labels-all.mjs` `dangling 0, repeat 0`；`rulecount.mjs . react/jsx-curly-brace-presence` 0。
 - [ ] 锁文件与 3.5 相同；`devwarn.mjs` 为 0；构建体积与 3.4 相同（内容哈希除外）。
 - [ ] 控制者的浏览器核对全部通过（含 T14、T15 的第 12、13 项），反向对照在基线上失败的正好是收尾修掉的几项；S1–S4、持续集成通过。
 - [ ] 前端改动清单 1.6 节 15 行（T13 的 13 行，T14、T15 各一行）；README、24 份交接与 T13 相同，M5 的收尾交接另有 T15 加的两节。

@@ -11,7 +11,7 @@ M1 收尾把 knip、tsc 看得见的死代码和包导出都删完了（[收尾 
 
 ## 死成员和死 prop
 
-类型检查器能找出两类 knip 和 tsc 都不报的死代码：没有代码读取的对象成员（store、service 的方法和属性，接口和类型的字段），和没有调用方传入的组件 prop。M1 收尾结束时，web 里一共 1347 个（成员 895、prop 452），属于本 M 领域（工作项、草稿、评论、表情、关联、筛选、布局、动态、搜索、描述，以及 `packages/editor`、`packages/shared-state`）的有 **558 个**（成员 435、prop 123）。
+类型检查器能找出两类 knip 和 tsc 都不报的死代码：没有代码读取的对象成员（store、service 的方法和属性，接口和类型的字段），和没有调用方传入的组件 prop。M1 收尾结束时，web 里一共 1350 个（成员 898、prop 452），属于本 M 领域（工作项、草稿、评论、表情、关联、筛选、布局、动态、搜索、描述，以及 `packages/editor`、`packages/shared-state`）的有 **561 个**（成员 438、prop 123）。
 
 M1 没有删它们（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 第 4 节）：
 - 本 M 按总体设计 7.2 重写这一领域的 types、services、stores 和相关组件，大部分会随重写消失，M1 先删一遍等于做两遍；
@@ -19,6 +19,7 @@ M1 没有删它们（[收尾 spec](../../M1-frontend-trim/specs/closeout.md) 第
 
 - **怎样列出**：在仓库根目录先 `pnpm --filter web exec react-router typegen`，再 `node deadsym.mjs --tsv > dead.tsv`、`node domains.mjs dead.tsv --rows M4`。三个脚本的全文在 [M1 收尾计划](../../M1-frontend-trim/plans/closeout.md)的附录 A（`lib/program.mjs` 放在 `deadsym.mjs` 旁边的 `lib/` 下）。每行是 `member` 或 `prop`、文件和行号、名称；领域按文件路径划分（附录 A 中 `domains.mjs` 的 `DOMAINS`，取第一个匹配）。
 - **怎样处理**：本 M 改到一个文件时，删掉其中列出的死成员和死 prop，连同只为它们存在的代码；确认是误报的不删。
+- **`comment_json` 和 `JSONContent` 一起处理**：`@nerve/types` 的 `JSONContent`（`types/src/editor/editor-content.ts`）描述 TipTap 的 JSON，唯一的使用者是 `TIssueComment.comment_json`，而它本身没有代码读写；M1 收尾的修复轮删掉 `isCommentEmpty` 走不到的 JSON 分支之后，`JSONContent` 的字段也都没有了读取方。它们保留在上面的列表里，因为只删一半的字段会让这个类型不再如实描述它的格式。本 M 按接口决定：两者一起删，或者给 `comment_json` 一个读取方并保留 `JSONContent`。`comment-create.tsx` 的编辑器回调里还有一个没用的参数也叫 `comment_json`。关闭条件：`git grep -n -w -e JSONContent -e comment_json -- web` 没有输出，或者保留下来的都有读取方。
 - **关闭条件**：本 M 合并时，`domains.mjs … --rows M4` 列出的每一行都已消失，或者写进本 M 的 review（文件、名称、谁在读或传它）。
 
 ## `viewId as TProfileViews`

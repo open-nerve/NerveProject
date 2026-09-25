@@ -128,7 +128,7 @@
 | 草稿弹窗；`@nerve/utils` 的 `isEmptyHtmlString` | 只有图片或只有提及的草稿，关闭时不再不问就丢掉：弹窗判断描述是否为空时只把 `img` 算作内容，编辑器写的却是 `<image-component>`、`<mention-component>`。算作内容的标签只写在 `isEmptyHtmlString` 里（`img`、`image-component`、`mention-component`），它不再接受标签列表，弹窗和 `isCommentEmpty` 一样调用它；带单元测试 | 控制者的浏览器核对（基线和本分支都能重现；修复轮） |
 | 个人主页的顶部栏 | 窗口窄于 768 px 时，菜单按钮显示 `profile.tabs.assigned` 这样的文案键：布局把当前标签的 `i18n_label` 当作 `type` 传给顶部栏，顶部栏原样显示（Plane 原有）。顶部栏改为接收当前标签本身，用 `t(currentTab.i18n_label)` 显示，与它的菜单项同一种写法 | 控制者的浏览器核对（`a3-profile.mjs`，480 px；修复轮） |
 | 仓库根目录的 `package.json`、`turbo.json` | 根目录加 `fix:format`，文件列表与 `check:format` 相同；`turbo.json` 登记 `//#fix:format`（不缓存）。原来 `pnpm exec turbo run fix:format` 不格式化根目录的文件，与 README 说的"格式化每个包"不符 | 收尾的任务评审；P1 spec 的保证（修复轮） |
-| `@nerve/utils` 的 `isCommentEmpty`；`@nerve/types` 的 `Content`、`JSONContent` | `isCommentEmpty` 只接受评论的 HTML（`string` 或 `undefined`），三个调用方传的都是它；从来走不到的 JSON 分支删除（它列的节点类型写的是 HTML 标签名，编辑器的节点叫 `mention`、`imageComponent`），连同只有它用的 `Content`、`HTMLContent` 和 `JSONContent` 的 `type`、`content`、`text`；utils 的 oxlint 上限 19 → 18 | 修复草稿弹窗时发现（修复轮）：删除，不隐藏 |
+| `@nerve/utils` 的 `isCommentEmpty`；`@nerve/types` 的 `Content` | `isCommentEmpty` 只接受评论的 HTML（`string` 或 `undefined`），三个调用方传的都是它；从来走不到的 JSON 分支删除（它列的节点类型写的是 HTML 标签名，编辑器的节点叫 `mention`、`imageComponent`），连同只有它用的 `Content`、`HTMLContent`；utils 的 oxlint 上限 19 → 18。`JSONContent` 保留：它描述 TipTap 的 JSON，只写一半的字段不如不写；它唯一的使用者 `TIssueComment.comment_json` 没有读写方，交 M4 一起处理 | 修复草稿弹窗时发现（修复轮）：删除，不隐藏 |
 
 ---
 
