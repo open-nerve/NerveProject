@@ -37,6 +37,25 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const findLoginAccount = `-- name: FindLoginAccount :one
+SELECT id, password
+FROM users
+WHERE email = $1
+`
+
+type FindLoginAccountRow struct {
+	ID       uuid.UUID
+	Password string
+}
+
+// What login reads before its transaction; the hash is its snapshot (M2 design 3.5).
+func (q *Queries) FindLoginAccount(ctx context.Context, email string) (FindLoginAccountRow, error) {
+	row := q.db.QueryRow(ctx, findLoginAccount, email)
+	var i FindLoginAccountRow
+	err := row.Scan(&i.ID, &i.Password)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, email, first_name, last_name, display_name, user_timezone, created_at
 FROM users
@@ -66,4 +85,44 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const lockUserForCredentials = `-- name: LockUserForCredentials :one
+SELECT password, is_active
+FROM users
+WHERE id = $1
+FOR NO KEY UPDATE
+`
+
+type LockUserForCredentialsRow struct {
+	Password string
+	IsActive bool
+}
+
+// The account row lock of M2 design 3.5. FOR NO KEY UPDATE conflicts with itself and with
+// FOR UPDATE, so the credential transactions of one account run one after another; it does not
+// conflict with the FOR KEY SHARE that foreign-key checks take, so inserting rows that reference
+// the account does not wait.
+func (q *Queries) LockUserForCredentials(ctx context.Context, id uuid.UUID) (LockUserForCredentialsRow, error) {
+	row := q.db.QueryRow(ctx, lockUserForCredentials, id)
+	var i LockUserForCredentialsRow
+	err := row.Scan(&i.Password, &i.IsActive)
+	return i, err
+}
+
+const updatePasswordHash = `-- name: UpdatePasswordHash :exec
+UPDATE users
+SET password = $1, updated_at = $2
+WHERE id = $3
+`
+
+type UpdatePasswordHashParams struct {
+	Password string
+	Now      time.Time
+	ID       uuid.UUID
+}
+
+func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
+	_, err := q.db.Exec(ctx, updatePasswordHash, arg.Password, arg.Now, arg.ID)
+	return err
 }
