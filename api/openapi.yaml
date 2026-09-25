@@ -13,8 +13,8 @@ info:
   license:
     name: AGPL-3.0-only
     identifier: AGPL-3.0-only
-# 所有操作都可能返回的平台错误码，只写在这里（M2 设计 3.11）。rate_limited 随 M2/P2 的限流加入
-x-problem-codes: [bad_request, payload_too_large, internal_error]
+# 所有操作都可能返回的平台错误码，只写在这里（M2 设计 3.11）
+x-problem-codes: [bad_request, payload_too_large, rate_limited, internal_error]
 tags:
   - name: identity
     description: Accounts, sign-in and sessions.

@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -96,7 +98,10 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
 	)
 	a.publicOperations = slices.Concat(ident.PublicOperations(), inst.PublicOperations())
-	api := httpserver.NewAPI(httpserver.APIConfig{
+	// time.Now, not the Clock: its monotonic reading keeps a step of the wall
+	// clock from filling or draining the buckets.
+	limiter := ratelimit.New(time.Now)
+	api, err := httpserver.NewAPI(httpserver.APIConfig{
 		Logger:           logger,
 		Authenticator:    ident.Authenticator(),
 		PublicOperations: a.publicOperations,
@@ -104,7 +109,14 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		RequestTimeout:   cfg.Server.RequestTimeout,
 		TrustedProxies:   cfg.Server.TrustedProxies,
 		IPv6PrefixLen:    cfg.RateLimit.IPv6PrefixLen,
+		Anonymous:        bucket(limiter, "anonymous", cfg.RateLimit.Anonymous),
+		Authenticated:    bucket(limiter, "authenticated", cfg.RateLimit.Authenticated),
+		AuthFailure:      bucket(limiter, "auth_failure", cfg.RateLimit.AuthFailure),
 	})
+	if err != nil {
+		a.close()
+		return nil, err
+	}
 	// Modules mount their generated routes on this root router, next to the
 	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.
 	ident.Register(a.router, api)
@@ -130,6 +142,12 @@ func readSigningKey(path string) ([]byte, error) {
 		return nil, fmt.Errorf("auth.jwt.private_key_file: %w", err)
 	}
 	return data, nil
+}
+
+// bucket is the rate-limit bucket name on limiter, sized by c (M2 design
+// 3.10).
+func bucket(limiter *ratelimit.Limiter, name string, c config.BucketConfig) *ratelimit.Bucket {
+	return limiter.Bucket(name, ratelimit.Rate{PerMinute: c.PerMinute, Burst: c.Burst})
 }
 
 // signupSwitch is auth.signup_enabled as identity's SignupPolicy.

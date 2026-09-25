@@ -2,6 +2,7 @@ package apitest
 
 import (
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -96,17 +97,23 @@ func TestValidateResponseChecksTheProblemCode(t *testing.T) {
 	}
 }
 
+// The operation and its code are this test's own: no other test answers
+// them, so what the recorder holds for them is what CheckResponse put there.
 func TestCheckResponseRecordsTheAnsweredCode(t *testing.T) {
-	c := contractFrom(t, thingsContract)
+	doc := strings.NewReplacer("operationId: createThing", "operationId: recordThing", "[things.taken]", "[things.recorded]").Replace(thingsContract)
+	c := contractFrom(t, doc)
+	if got := answered.snapshot()["recordThing"]; got != nil {
+		t.Fatalf("recordThing has answers %v before CheckResponse", got)
+	}
 	rec := httptest.NewRecorder()
 	rec.Header().Set("Content-Type", "application/problem+json")
 	rec.WriteHeader(http.StatusConflict)
-	_, _ = rec.WriteString(`{"code":"things.taken"}`)
+	_, _ = rec.WriteString(`{"code":"things.recorded"}`)
 
 	c.CheckResponse(t, httptest.NewRequest(http.MethodPost, "/api/v0/things", nil), rec.Result())
 
-	if !answered.snapshot()["createThing"]["things.taken"] {
-		t.Error("createThing: things.taken was not recorded")
+	if got := answered.snapshot()["recordThing"]; !maps.Equal(got, map[string]bool{"things.recorded": true}) {
+		t.Errorf("recordThing answered %v, want only things.recorded", got)
 	}
 }
 

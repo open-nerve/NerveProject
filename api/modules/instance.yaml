@@ -33,6 +33,21 @@ components:
   responses:
     Problem:
       description: Error (RFC 9457 problem details).
+      headers:
+        Retry-After:
+          description: >-
+            Whole seconds to wait before trying again, rounded up; sent with
+            rate_limited and server_busy.
+          schema:
+            type: integer
+            minimum: 1
+        WWW-Authenticate:
+          description: >-
+            Sent with every 401 (RFC 9110 15.5.2): Bearer, or
+            Bearer error="invalid_token" when the bearer token sent is invalid
+            or has expired (RFC 6750 3).
+          schema:
+            type: string
       content:
         application/problem+json:
           schema:

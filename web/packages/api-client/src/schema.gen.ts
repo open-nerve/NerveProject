@@ -88,7 +88,7 @@ export interface components {
         Problem: {
             /** @description HTTP status code. */
             status: number;
-            /** @description Stable error code. Platform codes have no prefix (bad_request, unauthorized, not_found, payload_too_large, validation_failed, server_busy, internal_error, not_ready); module codes are prefixed with the module, e.g. identity.email_taken. Each operation lists the codes it can answer in x-problem-codes. */
+            /** @description Stable error code. Platform codes have no prefix (bad_request, unauthorized, not_found, payload_too_large, validation_failed, rate_limited, server_busy, internal_error, not_ready); module codes are prefixed with the module, e.g. identity.email_taken. Each operation lists the codes it can answer in x-problem-codes. */
             code: string;
             /** @description HTTP status phrase, e.g. "Not Found". */
             title: string;
@@ -153,6 +153,10 @@ export interface components {
         /** @description Error (RFC 9457 problem details). */
         Problem: {
             headers: {
+                /** @description Whole seconds to wait before trying again, rounded up; sent with rate_limited and server_busy. */
+                "Retry-After"?: number;
+                /** @description Sent with every 401 (RFC 9110 15.5.2): Bearer, or Bearer error="invalid_token" when the bearer token sent is invalid or has expired (RFC 6750 3). */
+                "WWW-Authenticate"?: string;
                 [name: string]: unknown;
             };
             content: {

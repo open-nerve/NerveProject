@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -61,16 +62,25 @@ func (fakeAuth) Authenticate(ctx context.Context, token string) (context.Context
 	return shared.WithActor(ctx, shared.Actor{UserID: userID, SessionID: sessionID}), "session:" + sessionID.String(), nil
 }
 
-func newServer(register *fakeRegister) http.Handler {
+func newServer(t *testing.T, register *fakeRegister) http.Handler {
+	t.Helper()
 	logger := slog.New(slog.DiscardHandler)
 	router := httpserver.NewRouter(logger)
-	api := httpserver.NewAPI(httpserver.APIConfig{
+	limit := ratelimit.New(time.Now).Bucket("test", ratelimit.Rate{PerMinute: 600, Burst: 100})
+	api, err := httpserver.NewAPI(httpserver.APIConfig{
 		Logger:           logger,
 		Authenticator:    fakeAuth{},
 		PublicOperations: httpadapter.PublicOperations(),
 		MaxBodyBytes:     1024,
 		RequestTimeout:   5 * time.Second,
+		IPv6PrefixLen:    64,
+		Anonymous:        limit,
+		Authenticated:    limit,
+		AuthFailure:      limit,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{Register: register, GetMe: fakeGetMe{}})
 	return router
 }
@@ -100,7 +110,7 @@ func TestRegisterAnswers201WithTheTokens(t *testing.T) {
 	req := registerRequest(`{"email":"Alice@Corp.com","password":"Tr0ub4dor&3"}`)
 	apitest.Load(t).CheckRequest(t, req)
 
-	res, body := do(t, newServer(register), req)
+	res, body := do(t, newServer(t, register), req)
 
 	want := `{"access_token":"access","access_token_expires_in":900,"refresh_token":"nrv_rt_x",` +
 		`"refresh_token_expires_at":"2026-10-25T10:00:00.123456Z","token_type":"Bearer"}` + "\n"
@@ -129,7 +139,7 @@ func TestRegisterProblems(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, body := do(t, newServer(&fakeRegister{err: tt.err}), registerRequest(`{"email":"a@b.co","password":"x"}`))
+			res, body := do(t, newServer(t, &fakeRegister{err: tt.err}), registerRequest(`{"email":"a@b.co","password":"x"}`))
 
 			if res.StatusCode != tt.status || !strings.Contains(body, `"code":"`+tt.code+`"`) || res.Header.Get("Retry-After") != tt.retryAfter {
 				t.Errorf("response = %d %s Retry-After %q, want %d %s", res.StatusCode, body, res.Header.Get("Retry-After"), tt.status, tt.code)
@@ -156,7 +166,7 @@ func TestRegisterBodyProblems(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			register := &fakeRegister{}
-			res, body := do(t, newServer(register), registerRequest(tt.body))
+			res, body := do(t, newServer(t, register), registerRequest(tt.body))
 
 			if res.StatusCode != tt.status || !strings.Contains(body, tt.want) || strings.Contains(body, "Go struct") {
 				t.Errorf("response = %d %s, want %d with %s", res.StatusCode, body, tt.status, tt.want)
@@ -173,7 +183,7 @@ func TestGetMe(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid")
 	apitest.Load(t).CheckRequest(t, req)
 
-	res, body := do(t, newServer(&fakeRegister{}), req)
+	res, body := do(t, newServer(t, &fakeRegister{}), req)
 
 	want := `{"avatar_url":null,"cover_image_url":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
 		`"email":"alice@corp.com","first_name":"","id":"` + userID.String() + `","last_name":"","user_timezone":"UTC"}` + "\n"
@@ -189,7 +199,7 @@ func TestGetMeWithoutAValidToken(t *testing.T) {
 			req.Header.Set("Authorization", header)
 		}
 
-		res, body := do(t, newServer(&fakeRegister{}), req)
+		res, body := do(t, newServer(t, &fakeRegister{}), req)
 
 		if res.StatusCode != http.StatusUnauthorized || !strings.Contains(body, `"code":"unauthorized"`) {
 			t.Errorf("GET /me with %q = %d %s, want 401 unauthorized", header, res.StatusCode, body)

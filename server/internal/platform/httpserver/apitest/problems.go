@@ -135,8 +135,8 @@ func Main(m *testing.M, module string) {
 		}
 		if missing := unanswered(doc, answered.snapshot()); len(missing) > 0 {
 			fmt.Fprintf(os.Stderr, "api/modules/%s.yaml declares problem codes that no test answered through CheckResponse:\n", module)
-			for _, m := range missing {
-				fmt.Fprintln(os.Stderr, "  "+m)
+			for _, entry := range missing {
+				fmt.Fprintln(os.Stderr, "  "+entry)
 			}
 			code = 1
 		}

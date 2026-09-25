@@ -115,7 +115,7 @@ func TestIPKey(t *testing.T) {
 // for logs and sessions, the key for the buckets.
 func TestRequestMetaCarriesTheClientAndItsKey(t *testing.T) {
 	auth := &fakeAuth{}
-	api := newTestAPI(auth, slog.New(slog.DiscardHandler))
+	api := newTestAPI(t, auth, slog.New(slog.DiscardHandler))
 	router, _ := mount(t, api, slog.New(slog.DiscardHandler))
 	req := post("/api/v0/things", "tok", `{"name":"a"}`)
 	req.RemoteAddr = "[2001:db8:1:2::7]:443"

@@ -255,7 +255,15 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	return m
 }
 
-type ProblemApplicationProblemPlusJSONResponse externalRef0.Problem
+type ProblemResponseHeaders struct {
+	RetryAfter      *int
+	WWWAuthenticate *string
+}
+type ProblemApplicationProblemPlusJSONResponse struct {
+	Body externalRef0.Problem
+
+	Headers ProblemResponseHeaders
+}
 
 type RegisterRequestObject struct {
 	Body *RegisterJSONRequestBody
@@ -281,6 +289,7 @@ func (response Register201JSONResponse) VisitRegisterResponse(w http.ResponseWri
 
 type RegisterdefaultApplicationProblemPlusJSONResponse struct {
 	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
 	StatusCode int
 }
 
@@ -291,6 +300,12 @@ func (response RegisterdefaultApplicationProblemPlusJSONResponse) VisitRegisterR
 		return err
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
 	w.WriteHeader(response.StatusCode)
 	_, err := buf.WriteTo(w)
 	return err
@@ -319,6 +334,7 @@ func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) e
 
 type GetMedefaultApplicationProblemPlusJSONResponse struct {
 	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
 	StatusCode int
 }
 
@@ -329,6 +345,12 @@ func (response GetMedefaultApplicationProblemPlusJSONResponse) VisitGetMeRespons
 		return err
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
 	w.WriteHeader(response.StatusCode)
 	_, err := buf.WriteTo(w)
 	return err
