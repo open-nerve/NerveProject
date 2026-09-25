@@ -1,0 +1,200 @@
+package signing
+
+import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
+	"errors"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+)
+
+// testKeyPEM is what `openssl genpkey -algorithm ed25519` writes (OpenSSL
+// 3.6.3). A key for tests only.
+const testKeyPEM = `-----BEGIN PRIVATE KEY-----
+MC4CAQAwBQYDK2VwBCIEIGqen6oN2FFQjS+yPQPHLVBIW0B2O9faCmNwftOWxqyE
+-----END PRIVATE KEY-----
+`
+
+func testKeys(t *testing.T) *Keys {
+	t.Helper()
+	k, err := ParseKeys([]byte(testKeyPEM))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return k
+}
+
+func TestParseKeysReadsAnOpenSSLKey(t *testing.T) {
+	k := testKeys(t)
+	if len(k.private) != 64 || len(k.public) != 32 || len(k.mac) != 32 {
+		t.Errorf("key sizes = %d, %d, %d; want 64, 32, 32", len(k.private), len(k.public), len(k.mac))
+	}
+	if bytes.Equal(k.mac, k.private.Seed()) {
+		t.Error("the MAC key equals the seed, want a derived key")
+	}
+}
+
+func TestParseKeysRejects(t *testing.T) {
+	ec, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ecPKCS8, err := x509.MarshalPKCS8PrivateKey(ec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct{ name, pem, want string }{
+		{"not PEM", "secret-looking-garbage", `not a PEM "PRIVATE KEY" block (PKCS#8)`},
+		{"another block type", strings.ReplaceAll(testKeyPEM, "PRIVATE KEY", "EC PRIVATE KEY"), `not a PEM "PRIVATE KEY" block (PKCS#8)`},
+		{"an EC key", string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: ecPKCS8})), "the key is *ecdsa.PrivateKey, want an Ed25519 key"},
+		{"not PKCS#8", string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: []byte("secret-looking-garbage")})), "parse PKCS#8: "},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseKeys([]byte(tt.pem))
+			if err == nil || !strings.HasPrefix(err.Error(), tt.want) || strings.Contains(err.Error(), "secret-looking-garbage") {
+				t.Errorf("ParseKeys() = %v, want %q without the input", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestEphemeralKeysDiffer(t *testing.T) {
+	a, b := EphemeralKeys(), EphemeralKeys()
+	if bytes.Equal(a.private, b.private) || bytes.Equal(a.mac, b.mac) {
+		t.Error("two ephemeral keys are equal")
+	}
+}
+
+var (
+	userID    = uuid.MustParse("0199a2b4-0000-7000-8000-000000000001")
+	sessionID = uuid.MustParse("0199a2b4-0000-7000-8000-000000000002")
+	now       = time.Date(2026, 9, 25, 10, 0, 0, 0, time.UTC)
+)
+
+func issue(t *testing.T, a *AccessTokens, exp time.Time) string {
+	t.Helper()
+	token, err := a.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: exp})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return token
+}
+
+func segment(t *testing.T, token string, i int) string {
+	t.Helper()
+	parts := strings.Split(token, ".")
+	raw, err := base64.RawURLEncoding.DecodeString(parts[i])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(raw)
+}
+
+func TestAccessTokenRoundTrip(t *testing.T) {
+	a := NewAccessTokens(testKeys(t))
+	token := issue(t, a, now.Add(15*time.Minute))
+
+	if h := segment(t, token, 0); h != `{"alg":"EdDSA","typ":"JWT"}` {
+		t.Errorf("header = %s", h)
+	}
+	if p := segment(t, token, 1); p != `{"sub":"`+userID.String()+`","exp":`+strconv.FormatInt(now.Add(15*time.Minute).Unix(), 10)+`,"sid":"`+sessionID.String()+`"}` {
+		t.Errorf("payload = %s, want only sub, exp and sid", p)
+	}
+	got, err := a.Verify(token, now)
+	want := app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now.Add(15 * time.Minute)}
+	if err != nil || got.UserID != want.UserID || got.SessionID != want.SessionID || !got.ExpiresAt.Equal(want.ExpiresAt) {
+		t.Errorf("Verify() = %+v, %v; want %+v", got, err, want)
+	}
+}
+
+func TestAccessTokenExpiry(t *testing.T) {
+	a := NewAccessTokens(testKeys(t))
+	token := issue(t, a, now.Add(time.Minute))
+
+	if _, err := a.Verify(token, now.Add(59*time.Second)); err != nil {
+		t.Errorf("Verify() a second before exp = %v, want valid", err)
+	}
+	if _, err := a.Verify(token, now.Add(time.Minute)); !errors.Is(err, app.ErrAccessTokenExpired) {
+		t.Errorf("Verify() at exp = %v, want ErrAccessTokenExpired", err)
+	}
+	// An expired token with a bad signature is invalid, not expired.
+	forged := token[:len(token)-4] + "AAAA"
+	if _, err := a.Verify(forged, now.Add(time.Hour)); err == nil || errors.Is(err, app.ErrAccessTokenExpired) {
+		t.Errorf("Verify() of a forged expired token = %v, want invalid and not expired", err)
+	}
+}
+
+func TestAccessTokenVerifyRejects(t *testing.T) {
+	keys := testKeys(t)
+	a := NewAccessTokens(keys)
+	valid := issue(t, a, now.Add(time.Minute))
+	parts := strings.Split(valid, ".")
+	sign := func(c jwt.Claims) string {
+		s, err := jwt.NewWithClaims(jwt.SigningMethodEdDSA, c).SignedString(keys.private)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	hs256, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: userID.String(), ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute))},
+		SessionID:        sessionID.String(),
+	}).SignedString([]byte(keys.public)) // the public key as an HMAC secret: the classic confusion
+	if err != nil {
+		t.Fatal(err)
+	}
+	tampered := base64.RawURLEncoding.EncodeToString([]byte(strings.Replace(segment(t, valid, 1), userID.String(), sessionID.String(), 1)))
+	tests := []struct{ name, token string }{
+		{"another key", issue(t, NewAccessTokens(EphemeralKeys()), now.Add(time.Minute))},
+		{"HS256", hs256},
+		{"alg none", base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`)) + "." + parts[1] + "."},
+		{"tampered payload", parts[0] + "." + tampered + "." + parts[2]},
+		{"padded base64", parts[0] + "." + parts[1] + "=." + parts[2]},
+		{"no exp", sign(claims{RegisteredClaims: jwt.RegisteredClaims{Subject: userID.String()}, SessionID: sessionID.String()})},
+		{"no sub", sign(claims{RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute))}, SessionID: sessionID.String()})},
+		{"no sid", sign(claims{RegisteredClaims: jwt.RegisteredClaims{Subject: userID.String(), ExpiresAt: jwt.NewNumericDate(now.Add(time.Minute))}})},
+		{"a refresh token", "nrv_rt_" + strings.Repeat("A", 91)},
+		{"empty", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := a.Verify(tt.token, now); err == nil || errors.Is(err, app.ErrAccessTokenExpired) {
+				t.Errorf("Verify() = %v, want invalid", err)
+			}
+		})
+	}
+}
+
+func TestRefreshTokenMAC(t *testing.T) {
+	keys := testKeys(t)
+	m := NewRefreshTokenMAC(keys)
+	msg := bytes.Repeat([]byte{7}, 52)
+	tag := m.Tag(msg)
+
+	if m.Tag(bytes.Clone(msg)) != tag {
+		t.Error("the tag of the same message differs")
+	}
+	for i := range msg {
+		changed := bytes.Clone(msg)
+		changed[i] ^= 1
+		if m.Tag(changed) == tag {
+			t.Errorf("changing byte %d keeps the tag", i)
+		}
+	}
+	if NewRefreshTokenMAC(EphemeralKeys()).Tag(msg) == tag {
+		t.Error("another key gives the same tag")
+	}
+}
