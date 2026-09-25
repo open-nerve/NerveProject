@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -140,22 +141,35 @@ func (e *Error) ProblemFields() []error {
 // decoder rejects a body that starts with one, and so does this package.
 const jsonSpace = " \t\r\n"
 
-// Check reports the structural problems of body, a syntactically valid JSON
-// document, against the root of pattern, sorted by path. A pattern without a
-// root has no JSON body to check.
-func (t *Table) Check(pattern string, body []byte) []FieldError {
+// ErrNotJSON is Check's answer for a body that is not one valid JSON document.
+var ErrNotJSON = errors.New("the request body is not valid JSON")
+
+// Check checks body, a whole request body, against the root of pattern. It
+// returns nil when there is nothing to check: a pattern without a root has no
+// JSON body, and an empty body, or one of only JSON whitespace, is left to the
+// generated decoder. A body that is not one valid JSON document is ErrNotJSON;
+// one that breaks the structure is an *Error with every problem, sorted by
+// path.
+func (t *Table) Check(pattern string, body []byte) error {
 	root, ok := t.Roots[pattern]
-	if !ok {
-		return nil
-	}
-	var errs []FieldError
 	// walk takes the exact bytes of one value; the whitespace around the
 	// document's root value is not part of it.
-	t.walk(root, bytes.Trim(body, jsonSpace), "", &errs)
+	value := bytes.Trim(body, jsonSpace)
+	switch {
+	case !ok, len(value) == 0:
+		return nil
+	case !json.Valid(value):
+		return ErrNotJSON
+	}
+	var errs []FieldError
+	t.walk(root, value, "", &errs)
+	if len(errs) == 0 {
+		return nil
+	}
 	slices.SortFunc(errs, func(a, b FieldError) int {
 		return cmp.Or(cmp.Compare(a.Field, b.Field), cmp.Compare(a.Code, b.Code))
 	})
-	return errs
+	return &Error{Fields: errs}
 }
 
 // walk checks raw, the exact bytes of one JSON value, against node i.

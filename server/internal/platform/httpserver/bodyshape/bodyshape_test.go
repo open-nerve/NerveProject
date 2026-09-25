@@ -2,6 +2,7 @@ package bodyshape
 
 import (
 	"encoding/json"
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -80,15 +81,49 @@ func TestCheck(t *testing.T) {
 		{"a tab before the body", "\t" + `{"name":"a","nested":{"a":"y"}}`, nil},
 		{"CRLF before the body", "\r\n" + `{"name":"a","nested":{"a":"y"}}`, nil},
 		{"whitespace after the body", `{"name":"a","nested":{"a":"y"}}` + " \t\r\n", nil},
-		{"a form feed is not JSON whitespace", "\f" + `{"name":"a","nested":{"a":"y"}}`,
-			[]FieldError{{"", "invalid_format"}}},
 		{"every problem at once, sorted by path", `{"when":"yesterday","zzz":1,"nested":{"a":"y","b":"2"}}`,
 			[]FieldError{{"name", "required"}, {"nested.b", "invalid_format"}, {"when", "invalid_format"}, {"zzz", "not_allowed"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := things().Check(pattern, []byte(tt.body)); !slices.Equal(got, tt.want) {
+			err := things().Check(pattern, []byte(tt.body))
+
+			var shape *Error
+			if err != nil && !errors.As(err, &shape) {
+				t.Fatalf("Check(%s) = %v, want nil or a *Error", tt.body, err)
+			}
+			var got []FieldError
+			if shape != nil {
+				got = shape.Fields
+			}
+			if !slices.Equal(got, tt.want) {
 				t.Errorf("Check(%s) = %v, want %v", tt.body, got, tt.want)
+			}
+		})
+	}
+}
+
+// Check owns what a body without one JSON value means, so it answers every
+// body: nothing to check when the body is empty or only JSON whitespace (the
+// generated decoder answers it), ErrNotJSON when it is not JSON.
+func TestCheckOfABodyThatIsNotOneJSONValue(t *testing.T) {
+	tests := []struct {
+		name, body string
+		want       error
+	}{
+		{"empty", "", nil},
+		{"only JSON whitespace", " \t\r\n", nil},
+		{"cut short", `{"name":`, ErrNotJSON},
+		{"trailing data", `{"name":"a","nested":{"a":"y"}} trailing`, ErrNotJSON},
+		// A form feed is not JSON whitespace (RFC 8259 §2), so neither body
+		// is empty or an object with space before it.
+		{"a form feed", "\f", ErrNotJSON},
+		{"a form feed before the body", "\f" + `{"name":"a","nested":{"a":"y"}}`, ErrNotJSON},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := things().Check(pattern, []byte(tt.body)); !errors.Is(err, tt.want) {
+				t.Errorf("Check(%q) = %v, want %v", tt.body, err, tt.want)
 			}
 		})
 	}

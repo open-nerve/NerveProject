@@ -89,11 +89,11 @@
 **`platform/httpserver/bodyshape`**（只用标准库和标准库的 `uuid`）：
 
 - 类型：`Type`（位集合 `Null`、`Boolean`、`Integer`、`Number`、`String`、`Array`、`Object`，`Any` 为 0）；`Format`（`FormatNone`、`FormatTime`、`FormatUUID`）；`Node{Types, Format, Props map[string]int, Required []string, Extra, Items}`，`Extra`、`Items` 是节点下标或 `Closed`（-1）、`Open`（-2）；`Table{Nodes []Node, Roots map[string]int}`，`Roots` 的键是路由模式。
-- `(*Table).Check(pattern string, body []byte) []FieldError`：一次遍历收集全部问题，按字段、再按码排序。字段路径形如 `tags[1].name`，请求体本身是空路径。字段码只有 `required`、`invalid_format`、`not_allowed` 三个。
+- `(*Table).Check(pattern string, body []byte) error`：对任何请求体都有答复。路由没有结构表、请求体为空或只有 JSON 空白时返回 nil（没有要查的，由生成代码的解码报错）；不是一个合法的 JSON 文档时返回 `ErrNotJSON`；否则一次遍历收集全部问题，按字段、再按码排序，有问题时返回 `*Error`。字段路径形如 `tags[1].name`，请求体本身是空路径。字段码只有 `required`、`invalid_format`、`not_allowed` 三个。
   - 遍历原始字节（`map[string]json.RawMessage` / `[]json.RawMessage`），不用 `UseNumber` 的通用解码：格式检查器拿到的是原样的字节，与生成代码解码时看到的相同。`Integer` 判定为 `strconv.ParseInt`（64 位）能解析，`Number` 判定为 `strconv.ParseFloat`（64 位）能解析；两者都解析不了的数（如 `1e400`）不属于任何类型，对有类型的节点是 `invalid_format`。
   - 格式检查把原始值 `json.Unmarshal` 进 `time.Time` 或 `uuid.UUID`，与生成代码解码用的是同一条路（M2 设计 3.11）。
 - `Error{Fields []FieldError}` 满足 `httpserver.ProblemError`：400 `bad_request`，`detail` 固定为 "The request body does not match the API description."；`FieldError` 满足字段接口，`message` 分别是 "is required"、"is not a property of this request"、"has the wrong type or format"。
-- `Middleware(t *Table, onError func(http.ResponseWriter, *http.Request, error)) func(http.Handler) http.Handler`：路由没有结构表或没有请求体时放行；读出请求体后放回；空白的请求体放行（由生成代码的解码报错）；不是合法 JSON 时 `onError(ErrNotJSON)`；有问题时 `onError(&Error{…})`；读取失败（包括超过请求体上限）原样交给 `onError`。`API` 把 `onError` 接到 `APIErrors.BodyError`。
+- `Middleware(t *Table, onError func(http.ResponseWriter, *http.Request, error)) func(http.Handler) http.Handler`：路由没有结构表或没有请求体时放行；读出请求体后放回，交给 `Check`：`Check` 返回的错误（`ErrNotJSON`、`*Error`）交给 `onError`，返回 nil（包括空白的请求体）就放行；读取失败（包括超过请求体上限）原样交给 `onError`。`API` 把 `onError` 接到 `APIErrors.BodyError`。
 
 **`server/tools/bodyshapegen`**：`go -C server/tools run ./bodyshapegen -config <模块的 oapi-codegen.yaml> -out <gen>/bodyshape.gen.go <模块的接口描述>`。
 
