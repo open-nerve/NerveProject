@@ -69,10 +69,12 @@ func TestClientIPOfAnUnparsablePeerIsZero(t *testing.T) {
 
 // X-Forwarded-For from a peer that is not trusted most likely means a proxy
 // missing from server.trusted_proxies: warned once per process, never again.
+// A direct request without the header is no such sign, and is not warned.
 func TestUntrustedForwardingIsWarnedOnce(t *testing.T) {
 	logger, logs := captureLogs(t)
 	c := clientsTrusting(logger, "10.0.0.0/8")
 
+	c.of(requestFrom("203.0.113.6:5555"))
 	c.of(requestFrom("203.0.113.7:5555", "198.51.100.1"))
 	c.of(requestFrom("203.0.113.8:5555", "198.51.100.2"))
 	c.of(requestFrom("10.0.0.1:5555", "198.51.100.3"))
@@ -112,18 +114,21 @@ func TestIPKey(t *testing.T) {
 }
 
 // The request meta middleware puts both in the context: the full address
-// for logs and sessions, the key for the buckets.
+// for logs and sessions, the key for the buckets. NewAPI hands the client-IP
+// code the trusted proxies and the IPv6 prefix length: the client is what
+// the trusted proxy forwarded, keyed by its /64.
 func TestRequestMetaCarriesTheClientAndItsKey(t *testing.T) {
 	auth := &fakeAuth{}
 	api := newTestAPI(t, auth, slog.New(slog.DiscardHandler))
 	router, _ := mount(t, api, slog.New(slog.DiscardHandler))
 	req := post("/api/v0/things", "tok", `{"name":"a"}`)
-	req.RemoteAddr = "[2001:db8:1:2::7]:443"
+	req.RemoteAddr = "[fd00::1]:443"
+	req.Header.Set("X-Forwarded-For", "2001:db8:1:2::7")
 
 	serve(router, req)
 
 	meta := RequestMetaFrom(auth.ctx)
 	if meta.ClientIP != netip.MustParseAddr("2001:db8:1:2::7") || meta.IPKey != "2001:db8:1:2::/64" {
-		t.Errorf("meta = %+v, want the full address and its /64", meta)
+		t.Errorf("meta = %+v, want the forwarded client and its /64", meta)
 	}
 }

@@ -148,7 +148,8 @@ func mount(t *testing.T, api *API, logger *slog.Logger) (*Router, *reached) {
 	return router, got
 }
 
-// testAPIConfig has limiters that never run out in these tests.
+// testAPIConfig trusts the proxies of fd00::/8 and has limiters that never
+// run out in these tests.
 func testAPIConfig(auth Authenticator, logger *slog.Logger) APIConfig {
 	return APIConfig{
 		Logger:           logger,
@@ -156,6 +157,7 @@ func testAPIConfig(auth Authenticator, logger *slog.Logger) APIConfig {
 		PublicOperations: []string{publicRoute},
 		MaxBodyBytes:     64,
 		RequestTimeout:   2 * time.Second,
+		TrustedProxies:   []netip.Prefix{netip.MustParsePrefix("fd00::/8")},
 		IPv6PrefixLen:    64,
 		Anonymous:        newFakeLimiter(100),
 		Authenticated:    newFakeLimiter(100),
