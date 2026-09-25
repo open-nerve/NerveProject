@@ -55,7 +55,7 @@ P5 计划的 Global Constraints 和"控制者评审补充"在本 Phase 继续有
 5. **导入分组不重排**：换掉一个导入时，新导入放在原来那一组；T6 只删注释行。
 6. **knip 是门禁**，每个 Task 结束时 `make knip` 为零。
 7. **测试输出要干净**：`bash $COTMP/tests.sh` 在 T1–T8 只有 editor 包的 5 行 `prosemirror-codemark`（显示为 `(recorded prosemirror-codemark sourcemap lines: 5)`），T9 起连这一行也没有；任何时候都不能有 `!` 开头的行。
-8. **守卫**：每条规则的每个顶层分支和 `(?:a|b)` 的每一支都有真实代码里的命中样本（三个例外是示意的写法，因为守卫看住的写法在仓库里从来没有过，spec 3.6），`files` 选择器也一样（`node $COTMP/alts.mjs all --files` → `alternatives or variants without a hit sample: 0`）；不命中样本都引用保留的代码：`node $COTMP/missquote.mjs` → `miss samples that quote nothing kept: 0`，`node $COTMP/missreal.mjs` → `miss samples that do not quote kept code: 0`（`missquote` 在任何被跟踪的文件里找，样本自己在 `keywords.json` 里的那一行也算；`missreal` 只在规则读取的文件里找）。删掉或改名被引用代码的 Task 在同一提交里改样本；例外精确到原文、带 `count` 和 `until`，只减不增。
+8. **守卫**：每条规则的每个顶层分支和 `(?:a|b)` 的每一支都有命中样本（T1 新增的都取自真实代码，三个例外是示意的写法，因为守卫看住的写法在仓库里从来没有过；P1–P5 留下的样本有 39 个在本仓库的历史里没有原样的一行，spec 3.6），`files` 选择器也一样（`node $COTMP/alts.mjs all --files` → `alternatives or variants without a hit sample: 0`）；不命中样本都引用保留的代码：`node $COTMP/missquote.mjs` → `miss samples that quote nothing kept: 0`，`node $COTMP/missreal.mjs` → `miss samples that do not quote kept code: 0`（`missquote` 在任何被跟踪的文件里找，样本自己在 `keywords.json` 里的那一行也算；`missreal` 只在规则读取的文件里找）。删掉或改名被引用代码的 Task 在同一提交里改样本；例外精确到原文、带 `count` 和 `until`，只减不增。
 9. **图片由人看**：删除图片之前拼成联系表看过（T12）；新画的和改过的图片按能看清 20 px 细节的尺寸看（T14、T15、T20）；保留的其余图片由原型按同样的尺寸复看过，结果见 spec 3.15 的表。
 10. **报告放在最后一条回复里**（子 agent 不能写报告文件）：提交哈希；每一步的命令、实测输出和预期；与原型的差异及原因；下面的风险点；没做到的事和疑问。状态写 `DONE`、`DONE_WITH_CONCERNS` 或 `BLOCKED`。
 11. **执行方式沿用 P5**：实现者不指定模型（继承 Opus 5.5），各 Task 评审用 sonnet，整分支评审用 opus；T4、T6、T11、T12 是机械改动，控制者先在基点的干净克隆上重放脚本、确认提交就是脚本的输出，评审者判断每一类删除的意思；控制者在 T5、T8 之后、修复轮之后和 T20 之后跑浏览器核对（最后一节），并在基线的构建上做反向对照。
@@ -119,7 +119,7 @@ T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后�
 | `t19/edits.mjs` | 活动迭代卡片的进度和两个文案键 |
 | `t20/spec.json`、`t20/patch.mjs <仓库> <spec> <输出> [--dry] [筛选]`、`t20/sources.mjs`、`t20/topng.mjs <仓库> <输出> [条高] [--crop x,y,w,h,倍数] <图>…` | 每张图要涂掉的框和取色点；涂掉、重新编码，写出每个框的前后对照；两个 `SOURCES.md` 的记录；看图用的 PNG（整张和分条） |
 | `t20/investb-hardcoded.mjs`、`t20/investb-untranslated.mjs` | zh-CN 界面上的英文从哪来（spec 2.10 的 I2，只读） |
-| `t14/probe/covers-probe.mjs`、`t15/probe/pictures-probe.mjs`、`t17/probe/copy-probe.mjs` | 控制者的浏览器核对第 12、13、14 项 |
+| `t14/probe/covers-probe.mjs`、`t15/probe/pictures-probe.mjs`、`t17/probe/copy-probe.mjs`、`probe/active-cycle.mjs` | 控制者的浏览器核对第 12、13、14、15 项 |
 
 ### 原型的教训（执行前必读）
 
@@ -190,10 +190,10 @@ T17–T20：T17 的基点是加入 T17–T20 的文档提交（`9a98148` 之后�
 
 ### Codex 对抗评审之后的裁定
 
-- **负责人批准按建议分诊**（2026-09-25）Codex 对整个 M1 的对抗评审（`reviews/M1-codex-adversarial-review.md`，提交 `d2bd4fc`，评审对象 `c493255`）。逐条的去向见 spec 2.9：Critical 1 → T17；Important 1 → T18；Important 2 → T19；Important 4 → T20；Important 3（AGPL 第 5(a)、5(d)、13 条的验收，jsDelivr 的第三方请求）→ 控制者在收尾 review 的提交里写进 M8 收尾交接的关闭条件，时点是"任何对外的网络部署之前"，条款的解读由负责人在 M8 定；Minor 2 → 控制者在收尾 review 的提交里改 M1 设计 3.1 的写法；Minor 1 → 分诊时写的是"T4 已解决"，依据是 spec B12 原来的一格，核对之后不成立（`ensureAPITrailingSlash` 仍经 `services` 的两个 `export *` 桶文件公开），架构师建议放进整分支评审之后的修复轮，待控制者确认（spec 第 9 节第 7 条）。
+- **负责人批准按建议分诊**（2026-09-25）Codex 对整个 M1 的对抗评审（`reviews/M1-codex-adversarial-review.md`，提交 `d2bd4fc`，评审对象 `c493255`）。逐条的去向见 spec 2.9：Critical 1 → T17；Important 1 → T18；Important 2 → T19；Important 4 → T20；Important 3（AGPL 第 5(a)、5(d)、13 条的验收，jsDelivr 的第三方请求）→ 控制者在收尾 review 的提交里写进 M8 收尾交接的关闭条件，时点是"任何对外的网络部署之前"，条款的解读由负责人在 M8 定；Minor 2 → 控制者在收尾 review 的提交里改 M1 设计 3.1 的写法；Minor 1 → 分诊时写的是"T4 已解决"，依据是 spec B12 原来的一格，核对之后不成立（`ensureAPITrailingSlash` 仍经 `services` 的两个 `export *` 桶文件公开），架构师建议放进整分支评审之后的修复轮，控制者确认（spec 第 9 节第 7 条），做在 FW15 `df4cbf7`。
 - T17–T20 的原型（`bad3483`、`b85f861`、`a994925`、`c9b24e1`）采纳。
 - **T20 实现时的裁定**：原型给 `intake-light.webp` 的一框（`[1700,1090,650,44]`）填纯白，抹掉了卡片 650 px 长的一段底边，还把白色涂进卡片外透明的边距，在应用里看得见（实现者发现）。这一框改为重复它左边一列（x=1699）的像素（`patch.mjs` 的 `"fill": "left"`），其余 9 个框照原型；`disabled-feature/SOURCES.md` 写明这一框的填法（Task 20 的 Step 1、Step 2）。
-- 控制者第 3 轮浏览器核对顺带看到的两件事（spec 2.10），基线上相同：个人设置的主题下拉框画在左上角，交 M2（个人设置），控制者在收尾 review 的提交里写进 M2 的收尾交接；zh-CN 界面上的英文，交 M8（"每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"），同样在收尾 review 的提交里写进，其中 zh-CN 与英文相同的 5 个值在整分支评审之后的修复轮里翻译。
+- 控制者第 3 轮浏览器核对顺带看到的两件事（spec 2.10），基线上相同：个人设置的主题下拉框画在左上角，交 M2（个人设置），控制者在收尾 review 的提交里写进 M2 的收尾交接；zh-CN 界面上的英文，交 M8（"每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"），同样在收尾 review 的提交里写进，其中 zh-CN 与英文相同的 5 个值在整分支评审之后的修复轮里翻译（FW14 `e171d64`）。
 
 ---
 
@@ -340,7 +340,7 @@ Run: `pnpm exec oxfmt tools web/packages`。
 
 - [ ] **Step 5: 核对、门禁与提交**
 
-固定节奏第 2–8 步：`node tools/keywords.mjs` → `keywords: 51 rules, 3 exceptions, no hits.`；`deadsym` 的 stderr `prop 468, member 895, export 2`（剩下的 2 个是 `api-client/test/client.typecheck.ts` 的两个导出，这个文件本身就是类型检查）；`deadorph` 0；`infile-orphans` 165 行，都是 `defined now: 0)`；`keycount.mjs` → `en: 1577 keys`；上限合计 697；`git diff --cached --stat cccf8be` 为空。
+固定节奏第 2–8 步：`node tools/keywords.mjs` → `keywords: 51 rules, 3 exceptions, no hits.`；`deadsym` 的 stderr `prop 468, member 895, export 2`（剩下的 2 个是 `api-client/test/client.typecheck.ts` 的两个导出，这个文件本身就是类型检查）；`deadorph` 0；`infile-orphans` 166 行（本分支 `7f189da` 的实测：它把基线上两处写着 `THEMES` 的注释改为写 `THEME_OPTIONS`，所以比原型的 165 行多出 `THEMES` 一行，spec 3.2），都是 `defined now: 0)`；`keycount.mjs` → `en: 1577 keys`；上限合计 697；`git diff --cached --stat cccf8be` 为空。
 
 ---
 
@@ -685,7 +685,7 @@ Run: `node $COTMP/t14/lum.mjs . web/apps/web/app/assets/cover-images webp | grep
 
 ### Task 15: 保留的图片里没有真人；没有显示的图片删除
 
-spec 第 9 节第 1 条的裁定；spec 2.4 D3–D4、3.15、第 4 节第 21–25 条、8.1。原型提交 `f997e8a`（23 个文件：删 8、增 2、改 13，+51 / −94）。本 Task 比原型多一步（Step 2 的 M5 交接，控制者在原型之后的裁定），所以是 24 个文件，+63 / −95。
+spec 第 9 节第 1 条的裁定；spec 2.4 D3–D4、3.15、第 4 节第 21–25 条、8.1。原型提交 `f997e8a`（23 个文件：删 8、增 2、改 13，+51 / −94）。本 Task 比原型多一步（Step 2 的 M5 交接，控制者在原型之后的裁定），所以是 24 个文件；本分支 `e349924` 是 +64 / −96（M5 的交接 +13 / −2：比下面 Step 2 的脚本多改一行，交接的标题写上这两项；只照脚本做是 +63 / −95）。
 
 **Steps**
 
@@ -763,7 +763,7 @@ Run: `node $COTMP/t15/context.mjs . $COTMP/t15/spec.json $COTMP/t15/look-impl 2 
 - `node $COTMP/t15/assetpaths.mjs 2>&1 >/dev/null` → `0 of 134 images unreferenced by path`；
 - `git grep -n -e activeCycleResolvedPath -e "cycle/active-" -- web` 没有输出；
 - 构建体积 `bash $COTMP/size.sh . impl-t15` → `js: 396 files, 6587153 bytes`、`css: 3 files, 293801 bytes`、`fonts: 25 files, 3755608 bytes`、`other: 107 files, 4162901 bytes`、`largest chunk: assets/use-parse-editor-content-*.js, 1378717 bytes`、`locale chunks: 34`；
-- 与原型对比（第 7 步）：`git diff --cached --stat f997e8a -- web/apps/web/app/assets web/apps/web/core/components/cycles/active-cycle/root.tsx` 为空；`git diff --cached --numstat -- docs` → `12	1	docs/v0/M5-files/handoffs/M1-closeout.md` 和 `1	0	docs/v0/frontend-changes.md`；`git diff --cached --shortstat` → `24 files changed, 63 insertions(+), 95 deletions(-)`；
+- 与原型对比（第 7 步）：`git diff --cached --stat f997e8a -- web/apps/web/app/assets web/apps/web/core/components/cycles/active-cycle/root.tsx` 为空；`git diff --cached --numstat -- docs` → `12	1	docs/v0/M5-files/handoffs/M1-closeout.md` 和 `1	0	docs/v0/frontend-changes.md`；`git diff --cached --shortstat` → `24 files changed, 63 insertions(+), 95 deletions(-)`（本分支 `e349924` 另改交接的标题：`13	2`，`64 insertions(+), 96 deletions(-)`）；
 - 提交信息见 `$COTMP/t15/msg.txt`。
 
 ---
@@ -919,7 +919,7 @@ Run: `node $COTMP/t19/edits.mjs` → `edited web/apps/web/core/components/cycles
 Run: `node $COTMP/keycount.mjs` → `en: 1079 keys`、`zh-CN: 1079 keys`
 Run: `node $COTMP/keyref.mjs unused 2>&1 | tail -1` → `keys not referenced now: 0`
 
-Codex 的两个例子已在共享函数的测试里（`web/packages/utils/src/progress.test.ts`：共 10、完成 3、取消 2 → 38；共 10、完成 8、取消 2 → 100），卡片改为经它计算，不另加测试（spec 第 4 节第 29 条）。
+Codex 的两个例子已在共享函数的测试里（`web/packages/utils/src/progress.test.ts`：共 10、完成 3、取消 2 → 38；共 10、完成 8、取消 2 → 100），卡片改为经它计算，不另加测试（spec 第 4 节第 29 条）。卡片在页面上的文字（en、zh-CN）、进度条和分组行的 key 由控制者核对（最后一节第 15 项）。
 
 - [ ] **Step 2: 核对、门禁与提交**
 
@@ -1006,7 +1006,7 @@ Run: `node $COTMP/t20/topng.mjs . $COTMP/t20/look-impl/full 900 web/apps/web/app
 
 ## 控制者的浏览器核对（M1 设计 7.5）
 
-由控制者写脚本、跑、把全文和输出写进收尾 review 的附录；实现者不写。做法沿用 P4、P5 review 附录：在 `$COTMP/probe-app`（本仓库的克隆，检出到被测提交，`make build-web`）上用 node 起静态服务器提供 `web/apps/web/build/client`，Playwright 取自 `e2e/`，`/api/`、`/auth/` 的请求全由桩回答，场景没有列出的请求一律算失败，每个场景检查没有未捕获的页面错误。在 T5 之后、T8 之后、修复轮之后和 T20 之后各跑一次；第 12、13 项在 T15 之后加跑一次，此后随每次核对；第 14 项从 T20 之后的一次起随每次核对。
+由控制者写脚本、跑、把全文和输出写进收尾 review 的附录；实现者不写。做法沿用 P4、P5 review 附录：在 `$COTMP/probe-app`（本仓库的克隆，检出到被测提交，`make build-web`）上用 node 起静态服务器提供 `web/apps/web/build/client`，Playwright 取自 `e2e/`，`/api/`、`/auth/` 的请求全由桩回答，场景没有列出的请求一律算失败，每个场景检查没有未捕获的页面错误。在 T5 之后、T8 之后、修复轮之后和 T20 之后各跑一次；第 12、13 项在 T15 之后加跑一次，此后随每次核对；第 14、15 项从 T20 之后的一次（第 4 轮）起随每次核对。
 
 **A 组：重跑前面的 Phase**（收尾在全应用里删代码）
 
@@ -1030,12 +1030,16 @@ Run: `node $COTMP/t20/topng.mjs . $COTMP/t20/look-impl/full 900 web/apps/web/app
     - C1：在描述里全选、用键盘复制，粘贴进评论编辑器：剪贴板带 `text/nerve-editor-html`，应用请求复制资源正好一次，评论里的文字在，图片指向新资源；
     - C2：同一段复制内容只以 `text/html` 粘贴（删掉自定义类型那一支后的样子，不改代码量出来）：不请求复制，图片仍指向描述的资源；
     - C3：模拟别的网页在复制事件里写下的自定义类型，内容是 `<p>pwned?</p><img src="x" onerror="window.__xss = true">`，粘贴进评论编辑器：`window.__xss` 仍为 `false`，文字粘进来了，编辑器里没有 `onerror`。
+15. 活动迭代卡片（T19）：`PROBE_PORT=<端口> OUT=<目录> bash $COTMP/at.sh $COTMP/probe-app node $COTMP/probe/active-cycle.mjs` → `23 passed, 0 failed`。项目当前的迭代共 10 个工作项，打开迭代列表页：
+    - A（完成 3、取消 2、进行中 3、未开始 1、待办 1），en：卡片的标题是 "3/8 work items completed"，进度条的 `aria-valuenow` 是 38，说明是 "2 cancelled work items are excluded from this report."，分组行是完成 3、进行中 3、未开始 1、待办 1，行列表的每一项有自己的 React key；zh-CN：标题 "3/8 个工作项已完成"，说明 "报告中已排除 2 个已取消的工作项。"，`aria-valuenow` 38；
+    - B（完成 8、取消 2），en：标题 "8/8 work items completed"，`aria-valuenow` 100。
+    - key 从 React 自己的记录（fiber）读：生产构建不打印 key 的警告，看控制台在任何构建上都通过。
 
-第 12、13、14 项的脚本引用 `$P5TMP/probe/lib.mjs` 和 `$P4TMP/probe-c/` 的数据，`pictures-probe.mjs` 从 `$COTMP/base` 读 `c493255` 的图片；截图写到 `$OUT`。
+第 12、13、14 项的脚本引用 `$P5TMP/probe/lib.mjs` 和 `$P4TMP/probe-c/` 的数据，`pictures-probe.mjs` 从 `$COTMP/base` 读 `c493255` 的图片；第 15 项的脚本引用 `$COTMP/probe/nerve-p4/` 下 P4 的 `lib.mjs`、`p3data.mjs`、`stubs.mjs` 的副本（静态服务器的端口取 `PROBE_PORT`）；截图写到 `$OUT`。
 
 **C 组：反向对照**
 
-15. 在基线 `c493255` 的构建上跑 B 组：第 4 项的参数没有 `noopener`（同源的新页面 `opener` 不为 `null`），第 5 项计数为 1，第 6 项显示 `Tom &amp; Jerry &lt;3`，第 8 项地址里是 `&amp;`，第 9 项 Power K 显示英文，第 12 项是 30 passed、2 failed（构建里是 JPEG，上传的副本是 `image/jpeg`），第 13 项是 70 passed、11 failed（正好是 11 张图的"differs from c493255's"，T20 之后也是这样），第 14 项是 21 passed、1 failed（C3 的 `window.__xss` 为 `true`：旧代码在活动文档里解析，`onerror` 执行了）——这几项应失败；第 7、10、11 项、第 14 项的 C1、C2 和 A 组在基线上也通过（它们核对的是收尾没有弄坏）。
+16. 在基线 `c493255` 的构建上跑 B 组：第 4 项的参数没有 `noopener`（同源的新页面 `opener` 不为 `null`），第 5 项计数为 1，第 6 项显示 `Tom &amp; Jerry &lt;3`，第 7 项只有图片、只有提及的草稿关闭时不问就丢掉（修复轮 FW5），第 8 项地址里是 `&amp;`，第 9 项 Power K 显示英文，第 12 项是 30 passed、2 failed（构建里是 JPEG，上传的副本是 `image/jpeg`），第 13 项是 70 passed、11 failed（正好是 11 张图的"differs from c493255's"，T20 之后也是这样），第 14 项是 21 passed、1 failed（C3 的 `window.__xss` 为 `true`：旧代码在活动文档里解析，`onerror` 执行了），第 15 项是 16 passed、7 failed（标题是 "5/8 Work items closed"、"10/8 Work items closed"，进度 62.5，zh-CN 的标题和说明是英文，分组行是不带 key 的片段）——这几项应失败；A 组第 3 项在个人主页的页面上也失败：顶部栏窄屏时才显示的菜单按钮里是 `profile.tabs.*` 这样的键（修复轮 FW6）。第 7 项的其余场景、第 10、11 项、第 14 项的 C1、C2 和 A 组的其余项在基线上也通过（它们核对的是收尾没有弄坏）。第 4 轮（T20 之后）的实测见 spec 3.14。
 
 另外，`devwarn.mjs` 的对照已在 T8 Step 1、Step 3 里（基线浏览器 44 条、服务端 44 行，终态 0）；`handler_test.go` 的夹具名的对照在 T16 Step 2 里（基线 3，终态 0）；构建目录的对照在 T18 Step 1、Step 3 里（旧的 `Makefile` 热构建留下事先放进去的文件，终态冷、热构建都删掉它）。
 
@@ -1045,7 +1049,7 @@ Run: `node $COTMP/t20/topng.mjs . $COTMP/t20/look-impl/full 900 web/apps/web/app
 
 - T20 之后，控制者在一个文档提交里给前端改动清单 1.6 节加 T17–T20 各一行（与修复轮的 `4be6cba` 同一种做法；T17–T20 的原型没有改清单），同时把 spec、本计划和 M2–M8 收尾交接里的数字改成本分支 T17–T20 的实测（T19 的跟进之后上限合计 694，构建 14,763,098 字节），给 M5、M6 的收尾交接各加一节（spec 8.1）。
 - 整分支评审之前，控制者在本分支的 20 个 Task 和修复轮的提交上跑一次中间值（`$COTMP/pertask.mjs` 的检查，或在本仓库里按固定节奏第 3–5 步逐个提交跑），与 spec 3.2 的表对照；再跑 A、B 两组核对。
-- 整分支评审之后的修复轮里已定的一项：zh-CN 与英文相同的 5 个值（`common` 的 `developer`、`your_profile`、`work_structure`、`execution`、`administration`）翻译（spec 2.10 的 I2）。建议的一项，待控制者确认：`@nerve/services` 的 `helpers/index.ts` 只按名字转出 `normalizeAPIRequestURL`（spec 2.9 的 Minor 1、第 9 节第 7 条）。
+- 整分支评审之后的修复轮（spec 3.16）：zh-CN 与英文相同的 5 个值（`common` 的 `developer`、`your_profile`、`work_structure`、`execution`、`administration`）翻译（spec 2.10 的 I2，FW14 `e171d64`）；`@nerve/services` 的 `helpers/index.ts` 只按名字转出 `normalizeAPIRequestURL`（spec 2.9 的 Minor 1、第 9 节第 7 条，控制者确认，FW15 `df4cbf7`）；整分支评审的 Minor R2、R3（FW16 `8a6bea5`、FW17 `73f8c36`），其余的 R1、R4–R7 在随后的文档提交里改。
 - 收尾 review 写明：3.3 的表和清零计划、3.4 的体积对比、3.5 的锁文件、spec 第 9 节各项的裁定；把 M1 设计 12 节收尾一行改为"已完成"并加上 spec、plan、review 的链接，勾上 11 节，改总体设计 9.4 和 M1 的状态（时机按 spec 第 9 节第 3 条的裁定）。
 - 收尾 review 的提交另外改（spec 2.9、2.10、8.1）：M8 的收尾交接加 AGPL 第 5(a)、5(d)、13 条的逐项验收和 jsDelivr 请求的处理，时点是"任何对外的网络部署之前"，条款的解读由负责人在 M8 定；M8 的收尾交接加界面文字的覆盖（"每个 M 把改到的界面文字接入 `t()`；M8 发布前中文覆盖"）；M2 的收尾交接加个人设置的主题下拉框的位置；M1 设计 3.1 的写法（"图片节点保留；附件由工作项的附件区承担，编辑器里是否支持由 M5 决定"）；Codex 评审报告的"处理结果"一节（第 9 节第 3 条的裁定）。
 
