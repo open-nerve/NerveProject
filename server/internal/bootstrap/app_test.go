@@ -64,7 +64,8 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 				MaxWait:             2 * time.Second,
 			},
 		},
-		Log: config.LogConfig{Level: "error", Format: "text"},
+		RateLimit: config.RateLimitConfig{IPv6PrefixLen: 64},
+		Log:       config.LogConfig{Level: "error", Format: "text"},
 	}
 }
 

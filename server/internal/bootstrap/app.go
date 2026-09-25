@@ -102,6 +102,8 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		PublicOperations: a.publicOperations,
 		MaxBodyBytes:     cfg.Server.MaxBodyBytes,
 		RequestTimeout:   cfg.Server.RequestTimeout,
+		TrustedProxies:   cfg.Server.TrustedProxies,
+		IPv6PrefixLen:    cfg.RateLimit.IPv6PrefixLen,
 	})
 	// Modules mount their generated routes on this root router, next to the
 	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.

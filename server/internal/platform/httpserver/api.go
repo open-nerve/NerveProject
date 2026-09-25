@@ -30,8 +30,10 @@ type APIConfig struct {
 	// PublicOperations are the route patterns that need no token, e.g.
 	// "POST /api/v0/auth/register": the union of every module's list.
 	PublicOperations []string
-	MaxBodyBytes     int64         // server.max_body_bytes
-	RequestTimeout   time.Duration // server.request_timeout
+	MaxBodyBytes     int64          // server.max_body_bytes
+	RequestTimeout   time.Duration  // server.request_timeout
+	TrustedProxies   []netip.Prefix // server.trusted_proxies
+	IPv6PrefixLen    int            // ratelimit.ipv6_prefix_len
 }
 
 // API is what the platform hands to every module's HTTP adapter: the error
@@ -43,6 +45,7 @@ type API struct {
 	public         map[string]bool
 	maxBodyBytes   int64
 	requestTimeout time.Duration
+	clients        *clientIPs
 }
 
 // NewAPI returns the API value for cfg.
@@ -58,6 +61,7 @@ func NewAPI(cfg APIConfig) *API {
 		public:         public,
 		maxBodyBytes:   cfg.MaxBodyBytes,
 		requestTimeout: cfg.RequestTimeout,
+		clients:        &clientIPs{logger: cfg.Logger, trusted: cfg.TrustedProxies, v6Prefix: cfg.IPv6PrefixLen},
 	}
 }
 
@@ -83,10 +87,14 @@ func (a *API) Middlewares(bodies *bodyshape.Table) []func(http.Handler) http.Han
 
 // RequestMeta describes the client of a request.
 type RequestMeta struct {
-	// ClientIP is the connection's peer address, without port and zone; an
-	// IPv4-mapped IPv6 address is its IPv4 address. (M2/P2 adds trusted
-	// proxies.) The zero Addr when the peer address cannot be parsed.
-	ClientIP  netip.Addr
+	// ClientIP is the client's full address: the connection's peer, or what
+	// a trusted proxy forwarded (M2 design 3.10); without zone, and an
+	// IPv4-mapped IPv6 address is its IPv4 address. Logs and sessions record
+	// it. The zero Addr when the peer address cannot be parsed.
+	ClientIP netip.Addr
+	// IPKey is what the per-IP rate-limit buckets count the client by: an
+	// IPv4 address, or the prefix of an IPv6 one (ratelimit.ipv6_prefix_len).
+	IPKey     string
 	UserAgent string
 }
 
@@ -101,11 +109,8 @@ func RequestMetaFrom(ctx context.Context) RequestMeta {
 
 func (a *API) requestMeta(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var ip netip.Addr
-		if ap, err := netip.ParseAddrPort(r.RemoteAddr); err == nil {
-			ip = ap.Addr().Unmap().WithZone("")
-		}
-		meta := RequestMeta{ClientIP: ip, UserAgent: r.UserAgent()}
+		ip := a.clients.of(r)
+		meta := RequestMeta{ClientIP: ip, IPKey: a.clients.key(ip), UserAgent: r.UserAgent()}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), metaKey{}, meta)))
 	})
 }

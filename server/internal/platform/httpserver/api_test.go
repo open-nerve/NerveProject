@@ -90,6 +90,7 @@ func newTestAPI(auth Authenticator, logger *slog.Logger) *API {
 		PublicOperations: []string{publicRoute},
 		MaxBodyBytes:     64,
 		RequestTimeout:   2 * time.Second,
+		IPv6PrefixLen:    64,
 	})
 }
 
