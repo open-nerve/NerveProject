@@ -4,7 +4,8 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "check:format": "oxfmt --check tools package.json pnpm-workspace.yaml turbo.json knip.jsonc .oxlintrc.json .oxfmtrc.json",
-    "check:lint": "oxlint --max-warnings=0 tools"
+    "check:lint": "oxlint --max-warnings=0 tools",
+    "fix:format": "oxfmt tools package.json pnpm-workspace.yaml turbo.json knip.jsonc .oxlintrc.json .oxfmtrc.json"
   },
   "devDependencies": {
     "@redocly/cli": "2.53.3",
