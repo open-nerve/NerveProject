@@ -1,0 +1,17 @@
+# The module template's options that matter to bodyshapegen (M2 design 3.12).
+package: gen
+output: internal/modules/things/adapter/http/gen/server.gen.go
+generate:
+  models: true
+  std-http-server: true
+  strict-server: true
+output-options:
+  nullable-type: true
+  type-mapping:
+    string:
+      formats:
+        uuid:
+          type: uuid.UUID
+          import: uuid
+        email:
+          type: string
