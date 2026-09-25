@@ -3,6 +3,13 @@ package shared_test
 import (
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -88,4 +95,52 @@ func TestIsMatchesKindAndCode(t *testing.T) {
 	if errors.Is(wrapped, shared.NewError(shared.KindConflict, "identity.other", "")) {
 		t.Error("errors.Is matched another code")
 	}
+}
+
+// FieldCodes is the whole closed set: it lists every Field* constant of the
+// package's source, so a code declared but left out of it fails here, not
+// silently past the contract test in bootstrap.
+func TestFieldCodesListEveryFieldConstant(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var declared []string
+	for _, name := range files {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		f, err := parser.ParseFile(token.NewFileSet(), name, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, decl := range f.Decls {
+			if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.CONST {
+				for _, spec := range gen.Specs {
+					declared = append(declared, fieldCodes(spec.(*ast.ValueSpec))...)
+				}
+			}
+		}
+	}
+	slices.Sort(declared)
+	listed := slices.Sorted(slices.Values(shared.FieldCodes()))
+	if len(declared) == 0 || !slices.Equal(listed, declared) {
+		t.Errorf("FieldCodes() = %q, want the Field* constants %q", listed, declared)
+	}
+}
+
+// fieldCodes returns the values of the Field* string constants of spec.
+func fieldCodes(spec *ast.ValueSpec) []string {
+	var codes []string
+	for i, name := range spec.Names {
+		if !strings.HasPrefix(name.Name, "Field") || i >= len(spec.Values) {
+			continue
+		}
+		if lit, ok := spec.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+			if code, err := strconv.Unquote(lit.Value); err == nil {
+				codes = append(codes, code)
+			}
+		}
+	}
+	return codes
 }

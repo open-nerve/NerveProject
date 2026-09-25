@@ -5,10 +5,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -43,5 +45,16 @@ func TestEveryKindBecomesItsProblem(t *testing.T) {
 		if got := rec.Body.String(); got != tt.want+"\n" || rec.Header().Get("Retry-After") != tt.retryAfter {
 			t.Errorf("Write(%v) = %s Retry-After %q, want %s Retry-After %q", tt.err, got, rec.Header().Get("Retry-After"), tt.want, tt.retryAfter)
 		}
+	}
+}
+
+// The field codes of internal/shared and the contract's FieldError.code enum
+// are one closed set (M2 design 3.11): a code on only one side fails.
+func TestFieldCodesAreTheContractsEnum(t *testing.T) {
+	enum := slices.Sorted(slices.Values(apitest.Load(t).Enum(t, "FieldError", "code")))
+	codes := slices.Sorted(slices.Values(shared.FieldCodes()))
+
+	if !slices.Equal(codes, enum) {
+		t.Errorf("shared.FieldCodes() = %q, want the contract's FieldError.code enum %q", codes, enum)
 	}
 }

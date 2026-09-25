@@ -47,6 +47,15 @@ const (
 	FieldContainsURL    = "contains_url"
 )
 
+// FieldCodes returns the closed set of field codes: every Field* constant.
+// The bootstrap tests hold it equal to the contract's enum.
+func FieldCodes() []string {
+	return []string{
+		FieldRequired, FieldInvalidFormat, FieldTooShort, FieldTooLong, FieldOutOfRange,
+		FieldNotAllowed, FieldWeakPassword, FieldCommonPassword, FieldMustBeFuture, FieldContainsURL,
+	}
+}
+
 // status is the HTTP status of the problem an error of kind k becomes. The
 // numbers are literal: shared must not import net/http (architecture rule 10).
 func (k Kind) status() int {

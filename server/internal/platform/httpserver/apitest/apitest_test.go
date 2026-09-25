@@ -178,6 +178,22 @@ func TestLoadIgnoresServers(t *testing.T) {
 	c.CheckResponse(t, httptest.NewRequest(http.MethodGet, "/api/v0/instance", nil), instanceResponse())
 }
 
+func TestEnum(t *testing.T) {
+	c := Load(t)
+	if codes, err := c.enum("FieldError", "code"); err != nil || !slices.Contains(codes, "required") {
+		t.Errorf("enum(FieldError, code) = %q, %v; want the field codes", codes, err)
+	}
+	for _, tt := range []struct{ schema, property string }{
+		{"Nope", "code"},
+		{"FieldError", "nope"},
+		{"FieldError", "field"}, // a property without an enum
+	} {
+		if values, err := c.enum(tt.schema, tt.property); err == nil {
+			t.Errorf("enum(%s, %s) = %q, want an error", tt.schema, tt.property, values)
+		}
+	}
+}
+
 func TestValidateSchema(t *testing.T) {
 	c := Load(t)
 	tests := []struct {

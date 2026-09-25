@@ -114,7 +114,7 @@
 **`internal/shared`**（只导入标准库和标准库的 `uuid`）：
 
 - `type Kind int`：`KindInvalid`（422）、`KindBadRequest`（400）、`KindUnauthenticated`（401）、`KindForbidden`（403）、`KindNotFound`（404）、`KindConflict`（409）、`KindRateLimited`（429）、`KindUnavailable`（503）；状态码写成字面量（`shared` 不导入 `net/http`）。
-- 平台码常量 `CodeValidationFailed`、`CodeUnauthorized`、`CodeServerBusy`；字段码常量是 3.11 的封闭集合全部十个（`FieldRequired` … `FieldContainsURL`），与 `api/common.yaml` 的枚举一致。
+- 平台码常量 `CodeValidationFailed`、`CodeUnauthorized`、`CodeServerBusy`；字段码常量是 3.11 的封闭集合全部十个（`FieldRequired` … `FieldContainsURL`），与 `api/common.yaml` 的枚举一致：`FieldCodes()` 列出全部十个（`TestFieldCodesListEveryFieldConstant` 读源码核对没有漏掉的 `Field*` 常量），bootstrap 的 `TestFieldCodesAreTheContractsEnum` 用 `apitest` 的 `Enum` 读 `api/dist/openapi.yaml`，两个方向核对。
 - `FieldError{Field, Code, Message}`；`Error{Kind, Code, Detail, Fields, RetryDelay}`，方法 `Error`、`Is`（按 Kind 和 Code 匹配）、`ProblemStatus`、`ProblemCode`、`ProblemFields`、`RetryAfter`。构造函数 `NewError(kind, code, detail)`、`Invalid(fields...)`（detail "The request has invalid values."）、`Unauthenticated()`（"Authentication is required."）、`ServerBusy(retry)`（"The server is busy; retry shortly."）。
 - `Actor{UserID, SessionID}`、`WithActor`、`RequireActor`（取不到时是 `Unauthenticated()`）。
 - `TxManager` 接口：`WithinTx(ctx, fn func(ctx) error) error`。

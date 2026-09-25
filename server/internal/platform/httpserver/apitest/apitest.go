@@ -77,6 +77,18 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte) {
 	}
 }
 
+// Enum returns the string enum of property in components.schemas[name], e.g.
+// Enum(t, "FieldError", "code") for the field codes, and fails t unless the
+// property has one.
+func (c *Contract) Enum(t testing.TB, name, property string) []string {
+	t.Helper()
+	values, err := c.enum(name, property)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return values
+}
+
 // apiDir locates the repository's api/ from this file, five directories below
 // the repository root (tests run without -trimpath).
 func apiDir() string {
@@ -178,4 +190,24 @@ func (c *Contract) validateSchema(name string, body []byte) error {
 		opts = append(opts, openapi3.EnableJSONSchema2020())
 	}
 	return schema.Value.VisitJSON(value, opts...)
+}
+
+func (c *Contract) enum(name, property string) ([]string, error) {
+	schema, ok := c.doc.Components.Schemas[name]
+	if !ok {
+		return nil, fmt.Errorf("no schema %q in the contract", name)
+	}
+	prop, ok := schema.Value.Properties[property]
+	if !ok || len(prop.Value.Enum) == 0 {
+		return nil, fmt.Errorf("%s.%s has no enum", name, property)
+	}
+	values := make([]string, len(prop.Value.Enum))
+	for i, v := range prop.Value.Enum {
+		s, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s.%s: enum value %v is not a string", name, property, v)
+		}
+		values[i] = s
+	}
+	return values, nil
 }
