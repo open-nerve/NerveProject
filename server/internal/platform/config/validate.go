@@ -34,12 +34,27 @@ func (c Config) validate() error {
 	if c.Server.ShutdownTimeout <= 0 {
 		fail("server.shutdown_timeout", "must be positive, got %s", c.Server.ShutdownTimeout)
 	}
+	switch {
+	case c.Server.RequestTimeout <= 0:
+		fail("server.request_timeout", "must be positive, got %s", c.Server.RequestTimeout)
+	case c.Server.WriteTimeout > 0 && c.Server.RequestTimeout >= c.Server.WriteTimeout:
+		// A request that runs into its deadline still has to write its error
+		// response before write_timeout cuts the connection.
+		fail("server.request_timeout", "must be less than server.write_timeout (%s), got %s", c.Server.WriteTimeout, c.Server.RequestTimeout)
+	}
+	if c.Server.MaxBodyBytes < 1 {
+		fail("server.max_body_bytes", "must be at least 1, got %d", c.Server.MaxBodyBytes)
+	}
 	if c.Database.URL == "" {
 		fail("database.url", "is required")
 	}
 	if c.Database.MaxConns < 1 {
 		fail("database.max_conns", "must be at least 1, got %d", c.Database.MaxConns)
 	}
+	if c.Database.CommitTimeout <= 0 {
+		fail("database.commit_timeout", "must be positive, got %s", c.Database.CommitTimeout)
+	}
+	c.Auth.validate(c.Env, fail)
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(c.Log.Level)); err != nil {
 		fail("log.level", "must be one of debug, info, warn, error, got %q", c.Log.Level)
@@ -48,4 +63,38 @@ func (c Config) validate() error {
 		fail("log.format", "must be text or json, got %q", c.Log.Format)
 	}
 	return errors.Join(errs...)
+}
+
+func (a AuthConfig) validate(env string, fail func(key, format string, args ...any)) {
+	if a.AccessTokenTTL <= 0 {
+		fail("auth.access_token_ttl", "must be positive, got %s", a.AccessTokenTTL)
+	}
+	switch {
+	case a.SessionTTL <= 0:
+		fail("auth.session_ttl", "must be positive, got %s", a.SessionTTL)
+	case a.SessionTTL <= a.AccessTokenTTL:
+		fail("auth.session_ttl", "must be longer than auth.access_token_ttl (%s), got %s", a.AccessTokenTTL, a.SessionTTL)
+	}
+	if env == EnvProd && a.JWT.PrivateKeyFile == "" {
+		// The file itself is read when nerve starts (bootstrap), not here.
+		fail("auth.jwt.private_key_file", "is required in prod: a PKCS#8 PEM Ed25519 private key, e.g. from openssl genpkey -algorithm ed25519")
+	}
+	p := a.Password
+	// golang.org/x/crypto/argon2 panics below one iteration or one lane, and
+	// silently raises memory below 8 KiB per lane: reject those instead.
+	if p.Argon2Iterations < 1 {
+		fail("auth.password.argon2_iterations", "must be at least 1, got %d", p.Argon2Iterations)
+	}
+	if p.Argon2Parallelism < 1 {
+		fail("auth.password.argon2_parallelism", "must be at least 1, got %d", p.Argon2Parallelism)
+	}
+	if minMemory := 8 * uint32(p.Argon2Parallelism); p.Argon2MemoryKiB < max(minMemory, 8) {
+		fail("auth.password.argon2_memory_kib", "must be at least 8 per lane (%d), got %d", max(minMemory, 8), p.Argon2MemoryKiB)
+	}
+	if p.MaxConcurrentHashes < 1 {
+		fail("auth.password.max_concurrent_hashes", "must be at least 1, got %d", p.MaxConcurrentHashes)
+	}
+	if p.MaxWait <= 0 {
+		fail("auth.password.max_wait", "must be positive, got %s", p.MaxWait)
+	}
 }
