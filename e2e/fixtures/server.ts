@@ -1,7 +1,6 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { once } from "node:events";
-import { closeSync, mkdirSync, openSync } from "node:fs";
-import { createServer, type AddressInfo } from "node:net";
+import { closeSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -47,15 +46,28 @@ export async function runNerve(args: string[], databaseUrl: string): Promise<{ s
 }
 
 /**
- * Starts nerve serve with the test configuration on a free local port and
- * waits until /readyz answers 200. Its output goes to logFile.
+ * Starts nerve serve with the test configuration, plus the variables of env
+ * (e.g. NERVE_AUTH__SIGNUP_ENABLED=false for a nerve with sign-up off), and
+ * waits until /readyz answers 200. nerve listens on a port the system picks
+ * and writes its address to server.addr_file, next to logFile, which gets
+ * its output.
  */
-export async function startNerve(databaseUrl: string, logFile: string): Promise<Nerve> {
-  const addr = `127.0.0.1:${await freePort()}`;
+export async function startNerve(
+  databaseUrl: string,
+  logFile: string,
+  env: Record<string, string> = {}
+): Promise<Nerve> {
   mkdirSync(path.dirname(logFile), { recursive: true });
+  const addrFile = logFile.replace(/\.log$/, "") + ".addr";
+  rmSync(addrFile, { force: true });
   const log = openSync(logFile, "w");
   const child = spawn(binary, ["serve"], {
-    env: { ...nerveEnv(databaseUrl), NERVE_SERVER__ADDR: addr },
+    env: {
+      ...nerveEnv(databaseUrl),
+      NERVE_SERVER__ADDR: "127.0.0.1:0",
+      NERVE_SERVER__ADDR_FILE: addrFile,
+      ...env,
+    },
     stdio: ["ignore", log, log],
   });
   closeSync(log); // the child has its own copy
@@ -65,14 +77,13 @@ export async function startNerve(databaseUrl: string, logFile: string): Promise<
   child.once("error", (err) => {
     spawnError = err;
   });
-  const baseURL = `http://${addr}`;
   try {
-    await waitUntilReady(child, `${baseURL}/readyz`, Date.now() + readyTimeoutMs, () => spawnError);
+    const baseURL = await waitUntilReady(child, addrFile, Date.now() + readyTimeoutMs, () => spawnError);
+    return { baseURL, stop: () => stop(child, logFile) };
   } catch (err) {
     await kill(child);
     throw new Error(`nerve did not become ready (log: ${logFile})`, { cause: err });
   }
-  return { baseURL, stop: () => stop(child, logFile) };
 }
 
 /** The test configuration on the given database; the caller's own NERVE_* variables are left out. */
@@ -83,27 +94,31 @@ function nerveEnv(databaseUrl: string): NodeJS.ProcessEnv {
   return { ...Object.fromEntries(inherited), NERVE_ENV: "test", NERVE_DATABASE__URL: url.toString() };
 }
 
-async function freePort(): Promise<number> {
-  const server = createServer().listen(0, "127.0.0.1");
-  await once(server, "listening");
-  const { port } = server.address() as AddressInfo;
-  server.close();
-  await once(server, "close");
-  return port;
+/** The address nerve wrote to addrFile; undefined until it has. nerve renames the file into place, so it is never partial. */
+function readAddr(addrFile: string): string | undefined {
+  try {
+    return readFileSync(addrFile, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      return undefined;
+    }
+    throw err;
+  }
 }
 
 /**
- * Polls /readyz until it answers 200; fails when nerve exits, fails to spawn,
- * or the deadline passes. Each request may only use the time left, so a
- * server that accepts the connection but never answers cannot hold the wait
- * past the deadline.
+ * Waits until nerve has written its address and /readyz there answers 200,
+ * and returns the base URL; fails when nerve exits, fails to spawn, or the
+ * deadline passes. Each request may only use the time left, so a server that
+ * accepts the connection but never answers cannot hold the wait past the
+ * deadline.
  */
 async function waitUntilReady(
   child: ChildProcess,
-  readyzUrl: string,
+  addrFile: string,
   deadline: number,
   spawnError: () => Error | undefined
-): Promise<void> {
+): Promise<string> {
   const failure = spawnError();
   if (failure) {
     throw failure;
@@ -113,30 +128,21 @@ async function waitUntilReady(
   }
   const timeLeft = deadline - Date.now();
   if (timeLeft <= 0) {
-    throw new Error(`${readyzUrl} did not answer 200 within ${readyTimeoutMs} ms`);
+    throw new Error(`nerve did not answer /readyz with 200 within ${readyTimeoutMs} ms`);
   }
-  const ready = await fetch(readyzUrl, { signal: AbortSignal.timeout(timeLeft) }).then(
-    (res) => res.ok,
-    () => false // not listening yet, or no answer before the deadline
-  );
-  if (ready) {
-    // Another worker's nerve can briefly answer on this port before this
-    // child's own listener binds it; recheck after one more poll interval
-    // that this child is still the process actually running.
-    await sleep(pollIntervalMs);
-    const lateFailure = spawnError();
-    if (lateFailure) {
-      throw lateFailure;
+  const addr = readAddr(addrFile);
+  if (addr !== undefined) {
+    const baseURL = `http://${addr}`;
+    const ready = await fetch(`${baseURL}/readyz`, { signal: AbortSignal.timeout(timeLeft) }).then(
+      (res) => res.ok,
+      () => false // no answer before the deadline
+    );
+    if (ready) {
+      return baseURL;
     }
-    if (child.exitCode !== null || child.signalCode !== null) {
-      throw new Error(
-        `nerve exited with code ${child.exitCode}, signal ${child.signalCode} right after answering ready`
-      );
-    }
-    return;
   }
   await sleep(pollIntervalMs);
-  return waitUntilReady(child, readyzUrl, deadline, spawnError);
+  return waitUntilReady(child, addrFile, deadline, spawnError);
 }
 
 /** Kills a nerve that never became ready and waits until it is gone. */
