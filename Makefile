@@ -26,6 +26,7 @@ TURBO := TURBO_TELEMETRY_DISABLED=1 pnpm exec turbo
 TURBO_QUIET := --output-logs=errors-only
 # make build 把前端的构建产物复制到这里，由 go:embed 编进 nerve
 WEBUI_DIST := server/internal/platform/webui/dist
+WEB_CLIENT := web/apps/web/build/client
 # nerve 的版本号：make build 把它写进 bin/nerve，端到端测试 S3 核对它。
 # 默认值与 server/internal/platform/buildinfo 中的相同；发布时指定，例如 make build VERSION=0.1.0
 VERSION ?= 0.1.0-dev
@@ -130,6 +131,7 @@ build: build-web ## 构建前端并嵌入 Go 程序，编译出 bin/nerve（需�
 
 .PHONY: build-web
 build-web: ## 构建前端，产物在 web/apps/web/build/client（需要 Node；持续集成 web 任务）
+	rm -rf $(WEB_CLIENT)
 	$(TURBO) run build --filter=web $(TURBO_QUIET)
 
 .PHONY: e2e
