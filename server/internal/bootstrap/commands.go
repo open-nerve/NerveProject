@@ -20,11 +20,18 @@ import (
 // Serve implements `nerve serve`: it logs the effective configuration (secrets
 // masked) to logOut, applies pending migrations when database.auto_migrate is
 // on, and serves the API and the embedded web frontend until ctx is done.
-func Serve(ctx context.Context, cfg config.Config, logOut io.Writer) error {
+// Once the logger exists, a fatal error is also logged, as a structured
+// record (M0-P2 handoff 8).
+func Serve(ctx context.Context, cfg config.Config, logOut io.Writer) (err error) {
 	logger, err := logging.New(logOut, cfg.Log)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			logger.ErrorContext(ctx, "nerve serve failed", slog.Any("error", err))
+		}
+	}()
 	logger.InfoContext(ctx, "configuration loaded", slog.Any("config", cfg))
 	a, err := newApp(ctx, cfg, logger, migrations.FS(), webui.FS())
 	if err != nil {
