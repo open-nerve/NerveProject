@@ -40,6 +40,9 @@ func TestAuthenticateAValidToken(t *testing.T) {
 	if len(store.credentials) != 1 || store.credentials[0] != sessionID {
 		t.Errorf("sessions looked up = %v, want one lookup of %v", store.credentials, sessionID)
 	}
+	if len(tokens.verifiedAt) != 1 || !tokens.verifiedAt[0].Equal(now) {
+		t.Errorf("token verified at %v, want once at the clock's %v", tokens.verifiedAt, now)
+	}
 }
 
 func TestAuthenticateRejects(t *testing.T) {
@@ -68,11 +71,11 @@ func TestAuthenticateRejects(t *testing.T) {
 			}
 			uc, tokens, _ := newAuthenticate(cred, tt.credErr)
 			token := tt.token
-			if token == "" {
+			switch token {
+			case "":
 				token, _ = tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now.Add(time.Minute)})
-			}
-			if token == "expired" {
-				tokens.expired[token] = true
+			case "expired":
+				token, _ = tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now})
 			}
 
 			_, err := uc.Execute(context.Background(), token)
@@ -92,9 +95,9 @@ func TestAuthenticateRejects(t *testing.T) {
 // refresh, which the M2/P2 failure gate does not count.
 func TestAuthenticateTellsAnExpiredAccessToken(t *testing.T) {
 	uc, tokens, _ := newAuthenticate(validCredential(), nil)
-	tokens.expired["old"] = true
+	old, _ := tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now})
 
-	_, expired := uc.Execute(context.Background(), "old")
+	_, expired := uc.Execute(context.Background(), old)
 	_, forged := uc.Execute(context.Background(), "forged")
 
 	if !errors.Is(expired, app.ErrAccessTokenExpired) || errors.Is(forged, app.ErrAccessTokenExpired) {
@@ -105,7 +108,7 @@ func TestAuthenticateTellsAnExpiredAccessToken(t *testing.T) {
 func TestAuthenticateDatabaseFailureIsNot401(t *testing.T) {
 	boom := errors.New("connection refused")
 	uc, tokens, _ := newAuthenticate(app.SessionCredential{}, boom)
-	token, _ := tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID})
+	token, _ := tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now.Add(time.Minute)})
 
 	_, err := uc.Execute(context.Background(), token)
 

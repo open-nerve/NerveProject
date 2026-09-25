@@ -12,13 +12,17 @@ import (
 
 func TestGetMe(t *testing.T) {
 	want := domain.User{ID: userID, Email: "alice@corp.com", DisplayName: "alice", Timezone: "UTC", CreatedAt: now}
-	uc := app.NewGetMe(&fakeStore{getUser: want})
+	store := &fakeStore{getUser: want}
+	uc := app.NewGetMe(store)
 	ctx := shared.WithActor(context.Background(), shared.Actor{UserID: userID, SessionID: sessionID})
 
 	got, err := uc.Execute(ctx)
 
 	if err != nil || got != want {
 		t.Errorf("Execute() = %+v, %v; want %+v", got, err, want)
+	}
+	if len(store.getUserIDs) != 1 || store.getUserIDs[0] != userID {
+		t.Errorf("accounts looked up = %v, want one lookup of the actor's %v", store.getUserIDs, userID)
 	}
 }
 

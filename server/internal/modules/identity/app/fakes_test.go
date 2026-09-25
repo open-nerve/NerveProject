@@ -33,6 +33,7 @@ type fakeStore struct {
 	createErr   error    // CreateUser's error
 	getUser     domain.User
 	getUserErr  error
+	getUserIDs  []uuid.UUID // accounts looked up
 	credential  app.SessionCredential
 	credErr     error
 	credentials []uuid.UUID // sessions looked up
@@ -65,7 +66,8 @@ func (s *fakeStore) CreateSession(ctx context.Context, n app.NewSession) error {
 	return nil
 }
 
-func (s *fakeStore) GetUser(context.Context, uuid.UUID) (domain.User, error) {
+func (s *fakeStore) GetUser(_ context.Context, id uuid.UUID) (domain.User, error) {
+	s.getUserIDs = append(s.getUserIDs, id)
 	return s.getUser, s.getUserErr
 }
 
@@ -88,16 +90,17 @@ func (h *fakeHasher) Hash(_ context.Context, password string) (string, error) {
 	return "hashed:" + password, nil
 }
 
-// fakeTokens issues "access:<sid>" and verifies what it issued; tokens in
-// expired are expired.
+// fakeTokens issues "access:<sid>" and verifies what it issued at the instant
+// it is given: like a JWT's exp, a token is expired from its ExpiresAt on. It
+// records those instants.
 type fakeTokens struct {
-	issued  []app.AccessClaims
-	claims  map[string]app.AccessClaims
-	expired map[string]bool
+	issued     []app.AccessClaims
+	claims     map[string]app.AccessClaims
+	verifiedAt []time.Time
 }
 
 func newFakeTokens() *fakeTokens {
-	return &fakeTokens{claims: map[string]app.AccessClaims{}, expired: map[string]bool{}}
+	return &fakeTokens{claims: map[string]app.AccessClaims{}}
 }
 
 func (f *fakeTokens) Issue(c app.AccessClaims) (string, error) {
@@ -109,13 +112,14 @@ func (f *fakeTokens) Issue(c app.AccessClaims) (string, error) {
 
 var errBadSignature = errors.New("signature is invalid")
 
-func (f *fakeTokens) Verify(token string, _ time.Time) (app.AccessClaims, error) {
-	if f.expired[token] {
-		return app.AccessClaims{}, app.ErrAccessTokenExpired
-	}
+func (f *fakeTokens) Verify(token string, now time.Time) (app.AccessClaims, error) {
+	f.verifiedAt = append(f.verifiedAt, now)
 	c, ok := f.claims[token]
 	if !ok {
 		return app.AccessClaims{}, errBadSignature
+	}
+	if !now.Before(c.ExpiresAt) {
+		return app.AccessClaims{}, app.ErrAccessTokenExpired
 	}
 	return c, nil
 }
