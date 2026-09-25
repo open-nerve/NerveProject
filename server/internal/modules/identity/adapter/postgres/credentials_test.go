@@ -76,7 +76,11 @@ func TestTheCredentialLockBlocksLocksNotInserts(t *testing.T) {
 			return nil
 		})
 	}()
-	<-locked
+	select {
+	case <-locked:
+	case err := <-held:
+		t.Fatalf("taking the lock: %v", err)
+	}
 	defer func() {
 		close(release)
 		if err := <-held; err != nil {
@@ -114,9 +118,9 @@ func TestUpdatePasswordHash(t *testing.T) {
 	s, pool := newStore(t)
 	u := newUser("alice@corp.com")
 	mustCreate(t, s, u)
-	later := now.Add(time.Hour)
+	rehashed := now.Add(time.Hour)
 
-	if err := s.UpdatePasswordHash(context.Background(), u.ID, "$argon2id$new", later); err != nil {
+	if err := s.UpdatePasswordHash(context.Background(), u.ID, "$argon2id$new", rehashed); err != nil {
 		t.Fatal(err)
 	}
 
@@ -126,7 +130,7 @@ func TestUpdatePasswordHash(t *testing.T) {
 		Scan(&password, &created, &updated); err != nil {
 		t.Fatal(err)
 	}
-	if password != "$argon2id$new" || !created.Equal(now) || !updated.Equal(later) {
-		t.Errorf("row = %q, created %v, updated %v; want the new hash, updated at %v", password, created, updated, later)
+	if password != "$argon2id$new" || !created.Equal(now) || !updated.Equal(rehashed) {
+		t.Errorf("row = %q, created %v, updated %v; want the new hash, updated at %v", password, created, updated, rehashed)
 	}
 }
