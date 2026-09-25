@@ -74,33 +74,31 @@ export const ActiveCycleProgress = observer(function ActiveCycleProgress(props: 
 
       {cycle.total_issues > 0 ? (
         <div className="flex flex-col gap-5">
-          {Object.keys(groupedIssues).map((group, index) => (
-            <>
-              {groupedIssues[group] > 0 && (
-                <div key={index}>
-                  <div
-                    className="flex cursor-pointer items-center justify-between gap-2 text-13"
-                    onClick={() => {
-                      handleFiltersUpdate([{ property: "state_group", operator: "in", value: [group] }]);
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="block h-3 w-3 rounded-full"
-                        style={{
-                          backgroundColor: PROGRESS_STATE_GROUPS_DETAILS[index].color,
-                        }}
-                      />
-                      <span className="w-16 font-medium text-tertiary capitalize">{group}</span>
-                    </div>
-                    <span className="text-tertiary">{`${groupedIssues[group]} ${
-                      groupedIssues[group] > 1 ? "Work items" : "Work item"
-                    }`}</span>
+          {Object.keys(groupedIssues).map(
+            (group, index) =>
+              groupedIssues[group] > 0 && (
+                <div
+                  key={group}
+                  className="flex cursor-pointer items-center justify-between gap-2 text-13"
+                  onClick={() => {
+                    handleFiltersUpdate([{ property: "state_group", operator: "in", value: [group] }]);
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="block h-3 w-3 rounded-full"
+                      style={{
+                        backgroundColor: PROGRESS_STATE_GROUPS_DETAILS[index].color,
+                      }}
+                    />
+                    <span className="w-16 font-medium text-tertiary capitalize">{group}</span>
                   </div>
+                  <span className="text-tertiary">{`${groupedIssues[group]} ${
+                    groupedIssues[group] > 1 ? "Work items" : "Work item"
+                  }`}</span>
                 </div>
-              )}
-            </>
-          ))}
+              )
+          )}
           {cycle.cancelled_issues > 0 && (
             <span className="flex items-center gap-2 text-13 text-tertiary">
               {t("project_cycles.active_cycle.cancelled_excluded", { count: cycle.cancelled_issues })}
