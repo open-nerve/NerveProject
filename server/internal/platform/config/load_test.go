@@ -301,6 +301,22 @@ func TestLoadErrors(t *testing.T) {
 			dirFile: "ratelimit:\n",
 			want:    "invalid configuration:\nratelimit: must not be null (a key without a value in YAML)",
 		},
+		// A list is one value to koanf: the decoder would turn a null in it
+		// into a zero element.
+		{
+			name:    "null in a list in YAML",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "server:\n  trusted_proxies: [10.0.0.0/8, ~]\n",
+			want:    "invalid configuration:\nserver.trusted_proxies[1]: must not be null (a key without a value in YAML)",
+		},
+		{
+			name:    "nulls nested in a list in YAML",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "server:\n  trusted_proxies: [[10.0.0.0/8, ~], {via: ~}]\n",
+			want: "invalid configuration:\n" +
+				"server.trusted_proxies[0][1]: must not be null (a key without a value in YAML)\n" +
+				"server.trusted_proxies[1].via: must not be null (a key without a value in YAML)",
+		},
 		// Weakly typed decoding would wrap or cut a number its type cannot
 		// hold (M2/P1 review M2).
 		{
@@ -320,6 +336,26 @@ func TestLoadErrors(t *testing.T) {
 			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
 			dirFile: "ratelimit:\n  login_ip:\n    burst: 1.5\n",
 			want:    "'ratelimit.login_ip.burst' must be a whole number from -9223372036854775808 to 9223372036854775807, got 1.5",
+		},
+		// 2^63 is the first float past a 64-bit signed key, and float64 rounds
+		// that key's maximum, 2^63-1, up to it.
+		{
+			name:    "float past an int64 key",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "server:\n  max_body_bytes: 9223372036854775808.0\n",
+			want:    "'server.max_body_bytes' must be a whole number from -9223372036854775808 to 9223372036854775807, got 9.223372036854776e+18",
+		},
+		{
+			name:    "float past an int key",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "ratelimit:\n  anonymous:\n    per_minute: 9223372036854775808.0\n",
+			want:    "'ratelimit.anonymous.per_minute' must be a whole number from -9223372036854775808 to 9223372036854775807, got 9.223372036854776e+18",
+		},
+		{
+			name:    "float past an unsigned key",
+			environ: []string{"NERVE_ENV=test", "NERVE_DATABASE__URL=postgres://x"},
+			dirFile: "auth:\n  password:\n    argon2_parallelism: 256.0\n",
+			want:    "'auth.password.argon2_parallelism' must be a whole number from 0 to 255, got 256",
 		},
 		{
 			name:    "negative number for an unsigned key in the environment",

@@ -146,17 +146,40 @@ func envKey(name, value string) (string, any) {
 	return strings.ToLower(strings.ReplaceAll(key, envKeySep, ".")), value
 }
 
-// rejectNulls fails every key that a layer left without a value. The decoder
-// would skip it and leave the key at its zero value: signup_enabled: in a
-// YAML file would silently mean false, whatever the layers below it say.
+// rejectNulls fails every key that a layer left without a value, and every
+// null inside a list. The decoder would skip a null key and leave it at its
+// zero value (signup_enabled: in a YAML file would silently mean false,
+// whatever the layers below it say), and turn a null list item into a zero
+// item. koanf flattens the maps of a layer into keys but keeps a list, with
+// whatever it holds, as one value, so each value is searched too.
 func rejectNulls(k *koanf.Koanf) error {
 	var errs []error
 	for _, key := range k.Keys() {
-		if k.Get(key) == nil {
-			errs = append(errs, fmt.Errorf("%s: must not be null (a key without a value in YAML)", key))
-		}
+		errs = appendNulls(errs, key, k.Get(key))
 	}
 	return errors.Join(errs...)
+}
+
+// appendNulls appends an error for value if it is null, and for every null
+// inside it if it is a list or a map, each named by its path: key[1] for a
+// list item, key.name for a map entry.
+func appendNulls(errs []error, path string, value any) []error {
+	if value == nil {
+		return append(errs, fmt.Errorf("%s: must not be null (a key without a value in YAML)", path))
+	}
+	switch v := reflect.ValueOf(value); v.Kind() {
+	case reflect.Slice:
+		for i := range v.Len() {
+			errs = appendNulls(errs, fmt.Sprintf("%s[%d]", path, i), v.Index(i).Interface())
+		}
+	case reflect.Map: // YAML keys need not be strings: order them as printed
+		keys := v.MapKeys()
+		slices.SortFunc(keys, func(a, b reflect.Value) int { return strings.Compare(fmt.Sprint(a), fmt.Sprint(b)) })
+		for _, key := range keys {
+			errs = appendNulls(errs, fmt.Sprintf("%s.%v", path, key), v.MapIndex(key).Interface())
+		}
+	}
+	return errs
 }
 
 // decode copies the merged layers into cfg. Unknown keys are errors, so a typo
@@ -208,11 +231,17 @@ func durationHook(_ reflect.Type, to reflect.Type, data any) (any, error) {
 func numberHook(_ reflect.Type, to reflect.Type, data any) (any, error) {
 	var lo int64
 	var hi uint64
+	// above is hi+1, the first number past the type. A float is compared with
+	// it rather than with hi: float64 holds every power of two exactly, but
+	// rounds a 64-bit hi up to above, which would let above itself through.
+	var above float64
 	switch to.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		lo, hi = -1<<(to.Bits()-1), 1<<(to.Bits()-1)-1
+		above = math.Ldexp(1, to.Bits()-1)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		hi = math.MaxUint64 >> (64 - to.Bits())
+		above = math.Ldexp(1, to.Bits())
 	default:
 		return data, nil
 	}
@@ -227,7 +256,7 @@ func numberHook(_ reflect.Type, to reflect.Type, data any) (any, error) {
 		fits = v.Uint() <= hi
 	case v.CanFloat():
 		f := v.Float()
-		fits = f == math.Trunc(f) && f >= float64(lo) && f <= float64(hi)
+		fits = f == math.Trunc(f) && f >= float64(lo) && f < above // float64(lo) is exact: -2^(bits-1), or 0
 	default:
 		return data, nil
 	}
