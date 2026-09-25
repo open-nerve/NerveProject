@@ -101,7 +101,8 @@ func TestParseRefreshTokenRejects(t *testing.T) {
 		{"standard base64", good[:20] + "+" + good[21:]},
 		{"a newline inside", good[:50] + "\n" + good[51:]},
 		{"a space in front", " " + good[:len(good)-1]},
-		{"a space behind", good[1:] + " "},
+		{"a space behind", good[:len(good)-1] + " "},
+		{"a newline behind", good + "\n"},
 		// 91 characters carry 546 bits for 544: the last two must be zero,
 		// so that one token has one spelling.
 		{"unused bits set", good[:len(good)-1] + string(alphabet[last|1])},
