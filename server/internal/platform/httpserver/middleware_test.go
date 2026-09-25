@@ -103,7 +103,7 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 		rec := serve(middleware(h, slog.New(slog.DiscardHandler)), httptest.NewRequest(http.MethodGet, "/", nil))
 
 		for header, value := range want {
-			if got := rec.Header().Get(header); got != value {
+			if got := rec.Result().Header.Get(header); got != value {
 				t.Errorf("%s response: %s = %q, want %q", name, header, got, value)
 			}
 		}

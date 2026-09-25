@@ -18,7 +18,7 @@ type requestIDKey struct{}
 
 // securityHeaders go on every response (M2 design 8.3): no MIME sniffing, no
 // referrer beyond this site, and no framing by any page. The CSP goes on the
-// HTML pages only, and webui sets it.
+// HTML pages only, so webui adds it (M2/P4).
 var securityHeaders = [...][2]string{
 	{"X-Content-Type-Options", "nosniff"},
 	{"Referrer-Policy", "same-origin"},
