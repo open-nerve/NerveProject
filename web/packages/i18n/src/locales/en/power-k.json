@@ -52,8 +52,7 @@
       "create_cycle": "New cycle",
       "create_module": "New module",
       "create_project": "New project",
-      "create_workspace": "New workspace",
-      "create_project_automation": "New automation"
+      "create_workspace": "New workspace"
     },
     "navigation_actions": {
       "open_workspace": "Open a workspace",
@@ -101,7 +100,6 @@
       "update_language": "Change interface language",
       "toast": {
         "theme": {
-          "success": "Theme updated successfully.",
           "error": "Failed to update theme. Please try again."
         },
         "timezone": {
@@ -117,8 +115,7 @@
     "help_actions": {
       "open_keyboard_shortcuts": "Open keyboard shortcuts",
       "open_documentation": "Open documentation",
-      "report_bug": "Report a bug",
-      "chat_with_us": "Chat with us"
+      "report_bug": "Report a bug"
     },
     "page_placeholders": {
       "default": "Type a command or search",
@@ -144,14 +141,12 @@
     },
     "search_menu": {
       "no_results": "No results found",
-      "clear_search": "Clear search",
-      "go_to_advanced_search": "Go to advanced search"
+      "clear_search": "Clear search"
     },
     "footer": {
       "workspace_level": "Workspace level"
     },
     "group_titles": {
-      "actions": "Actions",
       "contextual": "Contextual",
       "navigation": "Navigate",
       "create": "Create",

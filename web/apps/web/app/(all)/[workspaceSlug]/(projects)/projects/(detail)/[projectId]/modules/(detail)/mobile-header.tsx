@@ -70,7 +70,7 @@ export const ModuleIssuesMobileHeader = observer(function ModuleIssuesMobileHead
     <div className="block md:hidden">
       <div className="flex justify-evenly border-b border-subtle bg-surface-1 py-2">
         <CustomMenu
-          maxHeight={"md"}
+          maxHeight="md"
           className="flex flex-grow justify-center text-13 text-secondary"
           placement="bottom-start"
           customButton={<span className="flex flex-grow justify-center text-13 text-secondary">Layout</span>}

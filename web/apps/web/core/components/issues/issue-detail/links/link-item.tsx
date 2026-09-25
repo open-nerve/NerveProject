@@ -13,7 +13,6 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 // ui
 import { CustomMenu } from "@nerve/ui";
 import { calculateTimeAgo, copyTextToClipboard } from "@nerve/utils";
-// helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { usePlatformOS } from "@/hooks/use-platform-os";

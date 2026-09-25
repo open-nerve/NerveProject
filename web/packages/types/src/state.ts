@@ -19,17 +19,6 @@ export interface IState {
   order: number;
 }
 
-export interface IStateLite {
-  color: string;
-  group: TStateGroups;
-  id: string;
-  name: string;
-}
-
-export interface IStateResponse {
-  [key: string]: IState[];
-}
-
 export type TStateOperationsCallbacks = {
   createState: (data: Partial<IState>) => Promise<IState>;
   updateState: (stateId: string, data: Partial<IState>) => Promise<IState | undefined>;

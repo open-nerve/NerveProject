@@ -13,8 +13,6 @@ import type { TModuleOrderByOptions } from "@nerve/types";
 import { CustomMenu } from "@nerve/ui";
 // helpers
 import { cn } from "@nerve/utils";
-// types
-// constants
 
 type Props = {
   onChange: (value: TModuleOrderByOptions) => void;

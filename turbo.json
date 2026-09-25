@@ -13,6 +13,9 @@
       "inputs": ["tools/**"],
       "outputs": []
     },
+    "//#fix:format": {
+      "cache": false
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "build/**", ".react-router/**"]

@@ -7,7 +7,7 @@
 // types
 import type { TModuleLayoutOptions, TModuleOrderByOptions, TModuleStatus } from "@nerve/types";
 
-export const MODULE_STATUS_COLORS: {
+const MODULE_STATUS_COLORS: {
   [key in TModuleStatus]: string;
 } = {
   backlog: "#a3a3a2",

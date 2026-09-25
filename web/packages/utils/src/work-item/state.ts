@@ -7,12 +7,7 @@
 // nerve imports
 import type { TDraggableData } from "@nerve/constants";
 import { STATE_GROUPS } from "@nerve/constants";
-import type { IState, IStateResponse } from "@nerve/types";
-
-export const orderStateGroups = (unorderedStateGroups: IStateResponse | undefined): IStateResponse | undefined => {
-  if (!unorderedStateGroups) return undefined;
-  return Object.assign({ backlog: [], unstarted: [], started: [], completed: [], cancelled: [] }, unorderedStateGroups);
-};
+import type { IState } from "@nerve/types";
 
 export const sortStates = (states: IState[]) => {
   if (!states || states.length === 0) return;

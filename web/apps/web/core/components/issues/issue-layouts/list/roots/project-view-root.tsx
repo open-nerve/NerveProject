@@ -7,8 +7,6 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
-// store
-// constants
 // types
 import { ProjectIssueQuickActions } from "../../quick-action-dropdowns";
 // components

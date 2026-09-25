@@ -24,6 +24,6 @@ export const NAMESPACES = [
   "workspace-settings",
 ] as const;
 
-export type TNamespace = (typeof NAMESPACES)[number];
+type TNamespace = (typeof NAMESPACES)[number];
 
 export const DEFAULT_NAMESPACE: TNamespace = "common";

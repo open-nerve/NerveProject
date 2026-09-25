@@ -4,25 +4,6 @@
  * See the LICENSE file for details.
  */
 
-import sanitizeHtml from "sanitize-html";
-import type { Content, JSONContent } from "@nerve/types";
-
-/**
- * @description Adds space between camelCase words
- * @param {string} str - String to add spaces to
- * @returns {string} String with spaces between camelCase words
- * @example
- * addSpaceIfCamelCase("camelCase") // returns "camel Case"
- * addSpaceIfCamelCase("thisIsATest") // returns "this Is A Test"
- */
-export const addSpaceIfCamelCase = (str: string) => {
-  if (str === undefined || str === null) return "";
-
-  if (typeof str !== "string") str = `${str}`;
-
-  return str.replace(/([a-z])([A-Z])/g, "$1 $2");
-};
-
 /**
  * @description Replaces underscores with spaces in snake_case strings
  * @param {string} str - String to replace underscores in
@@ -47,22 +28,6 @@ export const truncateText = (str: string, length: number) => {
 };
 
 /**
- * @description Creates a similar string by randomly shuffling characters
- * @param {string} str - String to shuffle
- * @returns {string} Shuffled string with same characters
- * @example
- * createSimilarString("hello") // might return "olleh" or "lehol"
- */
-export const createSimilarString = (str: string) => {
-  const shuffled = str
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
-
-  return shuffled;
-};
-
-/**
  * @description Copies full URL (origin + path) to clipboard
  * @param {string} path - URL path to copy
  * @returns {Promise<void>} Promise that resolves when copying is complete
@@ -75,23 +40,6 @@ export const copyUrlToClipboard = async (path: string) => {
   // create URL object and ensure proper path formatting
   const url = new URL(path, originUrl);
   await copyTextToClipboard(url.toString());
-};
-
-/**
- * @description Gets first character of first word or first characters of first two words
- * @param {string} str - Input string
- * @returns {string} First character(s)
- * @example
- * getFirstCharacters("John") // returns "J"
- * getFirstCharacters("John Doe") // returns "JD"
- */
-export const getFirstCharacters = (str: string) => {
-  const words = str.trim().split(" ");
-  if (words.length === 1) {
-    return words[0].charAt(0);
-  } else {
-    return words[0].charAt(0) + words[1].charAt(0);
-  }
 };
 
 /**
@@ -116,19 +64,8 @@ export const getNumberCount = (number: number): string => {
  */
 export const capitalizeFirstLetter = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
-/**
- * @description : This function will remove all the HTML tags from the string
- * @param {string} htmlString
- * @return {string}
- * @example :
- * const html = "<p>Some text</p>";
-const text = stripHTML(html);
-console.log(text); // Some text
- */
-export const sanitizeHTML = (htmlString: string) => {
-  const sanitizedText = sanitizeHtml(htmlString, { allowedTags: [] }); // sanitize the string to remove all HTML tags
-  return sanitizedText.trim(); // trim the string to remove leading and trailing whitespaces
-};
+// the body of an HTML fragment, as the browser parses it
+const parseHTML = (html: string) => new DOMParser().parseFromString(html, "text/html").body;
 
 /**
  * @description: This function will remove all the HTML tags from the string and truncate the string to the specified length
@@ -140,7 +77,8 @@ export const sanitizeHTML = (htmlString: string) => {
  * const text = stripAndTruncateHTML(html);
  * console.log(text); // Some text
  */
-export const stripAndTruncateHTML = (html: string, length: number = 55) => truncateText(sanitizeHTML(html), length);
+export const stripAndTruncateHTML = (html: string, length: number = 55) =>
+  truncateText((parseHTML(html).textContent ?? "").trim(), length);
 
 /**
  * @returns {boolean} true if email is valid, false otherwise
@@ -160,105 +98,19 @@ export const checkEmailValidity = (email: string): boolean => {
   return isEmailValid;
 };
 
-export const isEmptyHtmlString = (htmlString: string, allowedHTMLTags: string[] = []) => {
-  // Remove HTML tags using sanitize-html
-  const cleanText = sanitizeHtml(htmlString, { allowedTags: allowedHTMLTags });
-  // Trim the string and check if it's empty
-  return cleanText.trim() === "";
+// the tags the editor writes for content that has no text: images and mentions
+const TEXTLESS_CONTENT_TAGS = "img, mention-component, image-component";
+
+// true when the HTML has no text and none of the editor's textless content (an image-only or mention-only
+// description or comment is not empty)
+export const isEmptyHtmlString = (htmlString: string) => {
+  const body = parseHTML(htmlString);
+  return (body.textContent ?? "").trim() === "" && !body.querySelector(TEXTLESS_CONTENT_TAGS);
 };
 
-/**
- * @description
- * Check if a JSONContent object is empty
- * @param {JSONContent} content
- * @returns {boolean}
- */
-export const isJSONContentEmpty = (content: JSONContent | undefined): boolean => {
-  // If it has text, check if text is meaningful
-  if (!content) {
-    return true;
-  }
-  if (content.text !== undefined) {
-    return !content.text || content.text.trim() === "";
-  }
-
-  // If it has no content array, consider it empty
-  if (!content.content || content.content.length === 0) {
-    // Special case: empty paragraph nodes should be considered empty
-    if (content.type === "paragraph" || content.type === "doc") {
-      return true;
-    }
-    // For other node types without content (like hard breaks), check if they're meaningful
-    return (
-      content.type !== "hardBreak" &&
-      content.type !== "image" &&
-      content.type !== "mention-component" &&
-      content.type !== "image-component"
-    );
-  }
-
-  // Check if all nested content is empty
-  return content.content.every(isJSONContentEmpty);
-};
-
-/**
- * @description
- * This function will check if the comment is empty or not.
- * It returns true if comment is empty.
- * Now supports TipTap Content types (HTMLContent, JSONContent, JSONContent[], null)
- *
- * For HTML content:
- * 1. If comment is undefined/null
- * 2. If comment is an empty string
- * 3. If comment is "<p></p>"
- * 4. If comment contains only empty HTML tags
- *
- * For JSON content:
- * 1. If content is null/undefined
- * 2. If content has no meaningful text or nested content
- * 3. If all nested content is empty
- *
- * @param {Content} comment - TipTap Content type
- * @returns {boolean}
- */
-export const isCommentEmpty = (comment: Content | undefined): boolean => {
-  // Handle null/undefined
-  if (!comment) return true;
-
-  // Handle HTMLContent (string)
-  if (typeof comment === "string") {
-    return (
-      comment.trim() === "" ||
-      comment === "<p></p>" ||
-      isEmptyHtmlString(comment, ["img", "mention-component", "image-component"])
-    );
-  }
-
-  // Handle JSONContent[] (array)
-  if (Array.isArray(comment)) {
-    return comment.length === 0 || comment.every(isJSONContentEmpty);
-  }
-
-  // Handle JSONContent (object)
-  return isJSONContentEmpty(comment);
-};
-
-/**
- * @description
- * Legacy function for backward compatibility with string comments
- * @param {string | undefined} comment
- * @returns {boolean}
- * @deprecated Use isCommentEmpty with Content type instead
- */
-export const isStringCommentEmpty = (comment: string | undefined): boolean => {
-  // return true if comment is undefined
-  if (!comment) return true;
-  return (
-    comment?.trim() === "" ||
-    comment === "<p></p>" ||
-    isEmptyHtmlString(comment ?? "", ["img", "mention-component", "image-component", "embed-component"])
-  );
-};
+// true when a comment's HTML has no content; undefined is the comment form before it holds a value
+export const isCommentEmpty = (comment: string | undefined): boolean =>
+  comment === undefined || isEmptyHtmlString(comment);
 
 /**
  * @description
@@ -281,33 +133,6 @@ export const checkURLValidity = (url: string): boolean => {
 
   return urlPattern.test(url);
 };
-
-/**
- * Combines array elements with a separator and adds a conjunction before the last element
- * @param array Array of strings to combine
- * @param separator Separator to use between elements (default: ", ")
- * @param conjunction Conjunction to use before last element (default: "and")
- * @returns Combined string with conjunction before the last element
- */
-export const joinWithConjunction = (array: string[], separator: string = ", ", conjunction: string = "and"): string => {
-  if (!array || array.length === 0) return "";
-  if (array.length === 1) return array[0];
-  if (array.length === 2) return `${array[0]} ${conjunction} ${array[1]}`;
-
-  const lastElement = array[array.length - 1];
-  const elementsExceptLast = array.slice(0, -1);
-
-  return `${elementsExceptLast.join(separator)}${separator}${conjunction} ${lastElement}`;
-};
-
-/**
- * @description Ensures a URL has a protocol
- * @param {string} url
- * @returns {string}
- * @example
- * ensureUrlHasProtocol("example.com") => "http://example.com"
- */
-export const ensureUrlHasProtocol = (url: string): string => (url.startsWith("http") ? url : `http://${url}`);
 
 /**
  * @returns {boolean} true if searchQuery is substring of text in the same order, false otherwise

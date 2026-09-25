@@ -13,7 +13,6 @@ export * from "./file";
 export * from "./fetch-keys";
 export * from "./filter";
 export * from "./icon";
-export * from "./instance";
 export * from "./intake";
 export * from "./issue";
 export * from "./members";

@@ -12,7 +12,6 @@ import { ISSUE_DISPLAY_FILTERS_BY_PAGE } from "@nerve/constants";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import type { EIssueLayoutTypes } from "@nerve/types";
 import { EIssuesStoreType, STATIC_VIEW_TYPES } from "@nerve/types";
-// assets
 // components
 import { IssuePeekOverview } from "@/components/issues/peek-overview";
 import { WorkspaceActiveLayout } from "@/components/views/helper";

@@ -12,7 +12,6 @@ import type {
   TNotification,
   TUnreadNotificationsCount,
 } from "@nerve/types";
-// helpers
 // services
 import { APIService } from "@/services/api.service";
 

@@ -12,7 +12,6 @@ import { useTranslation } from "@nerve/i18n";
 import { EmptyStateDetailed } from "@nerve/propel/empty-state";
 import { EUserProjectRoles } from "@nerve/types";
 import { ContentWrapper, Row, ERowVariant } from "@nerve/ui";
-// components
 import { ListLayout } from "@/components/core/list";
 import { ModuleCardItem, ModuleListItem, ModulePeekOverview } from "@/components/modules";
 import { CycleModuleBoardLayoutLoader } from "@/components/ui/loader/cycle-module-board-loader";

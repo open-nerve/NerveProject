@@ -10,7 +10,7 @@ import { CORE_EXTENSIONS } from "@/constants/extension";
 // extensions
 import { handleBackspace, handleDelete } from "@/extensions/custom-list-keymap/list-helpers";
 
-export type ListKeymapOptions = {
+type ListKeymapOptions = {
   listTypes: Array<{
     itemName: string;
     wrapperNames: string[];

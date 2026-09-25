@@ -13,7 +13,6 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TIssue } from "@nerve/types";
 // ui
 import { AlertModalCore } from "@nerve/ui";
-// constants
 // hooks
 import { useProject } from "@/hooks/store/use-project";
 

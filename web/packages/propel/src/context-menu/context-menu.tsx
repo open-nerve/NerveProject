@@ -8,24 +8,25 @@ import * as React from "react";
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui-components/react/context-menu";
 import { cn } from "../utils";
 
-export interface ContextMenuProps extends React.ComponentProps<typeof ContextMenuPrimitive.Root> {
+interface ContextMenuProps extends React.ComponentProps<typeof ContextMenuPrimitive.Root> {
   children: React.ReactNode;
 }
 
-export interface ContextMenuTriggerProps extends React.ComponentProps<typeof ContextMenuPrimitive.Trigger> {
+interface ContextMenuTriggerProps extends Omit<React.ComponentProps<typeof ContextMenuPrimitive.Trigger>, "className"> {
   children: React.ReactNode;
-  className?: string;
 }
 
-export interface ContextMenuContentProps extends React.ComponentProps<typeof ContextMenuPrimitive.Positioner> {
+interface ContextMenuContentProps extends Omit<
+  React.ComponentProps<typeof ContextMenuPrimitive.Positioner>,
+  "className"
+> {
   children: React.ReactNode;
-  className?: string;
   side?: "top" | "right" | "bottom" | "left";
   sideOffset?: number;
   positionerClassName?: string;
 }
 
-export interface ContextMenuItemProps extends React.ComponentProps<typeof ContextMenuPrimitive.Item> {
+interface ContextMenuItemProps extends React.ComponentProps<typeof ContextMenuPrimitive.Item> {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
@@ -39,11 +40,11 @@ const ContextMenuRoot = React.forwardRef(function ContextMenuRoot(
 });
 
 const ContextMenuTrigger = React.forwardRef(function ContextMenuTrigger(
-  { className, children, ...props }: ContextMenuTriggerProps,
+  { children, ...props }: ContextMenuTriggerProps,
   ref: React.ForwardedRef<React.ElementRef<typeof ContextMenuPrimitive.Trigger>>
 ) {
   return (
-    <ContextMenuPrimitive.Trigger ref={ref} className={cn("outline-none", className)} {...props}>
+    <ContextMenuPrimitive.Trigger ref={ref} className="outline-none" {...props}>
       {children}
     </ContextMenuPrimitive.Trigger>
   );
@@ -52,7 +53,7 @@ const ContextMenuTrigger = React.forwardRef(function ContextMenuTrigger(
 const ContextMenuPortal = ContextMenuPrimitive.Portal;
 
 const ContextMenuContent = React.forwardRef(function ContextMenuContent(
-  { positionerClassName, className, children, side = "bottom", sideOffset = 4, ...props }: ContextMenuContentProps,
+  { positionerClassName, children, side = "bottom", sideOffset = 4, ...props }: ContextMenuContentProps,
   ref: React.ForwardedRef<React.ElementRef<typeof ContextMenuPrimitive.Positioner>>
 ) {
   return (
@@ -63,16 +64,7 @@ const ContextMenuContent = React.forwardRef(function ContextMenuContent(
       {...props}
       className={positionerClassName}
     >
-      <ContextMenuPrimitive.Popup
-        className={cn(
-          "shadow-md z-50 min-w-32 overflow-hidden rounded-md border border-subtle bg-surface-1 p-1",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2",
-          "data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
-          className
-        )}
-      >
+      <ContextMenuPrimitive.Popup className="shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 min-w-32 overflow-hidden rounded-md border border-subtle bg-surface-1 p-1">
         {children}
       </ContextMenuPrimitive.Popup>
     </ContextMenuPrimitive.Positioner>
@@ -100,42 +92,10 @@ const ContextMenuItem = React.forwardRef(function ContextMenuItem(
   );
 });
 
-const ContextMenuSeparator = React.forwardRef(function ContextMenuSeparator(
-  { className, ...props }: React.ComponentProps<typeof ContextMenuPrimitive.Separator>,
-  ref: React.ForwardedRef<React.ElementRef<typeof ContextMenuPrimitive.Separator>>
-) {
-  return (
-    <ContextMenuPrimitive.Separator ref={ref} className={cn("bg-subtle-1 -mx-1 my-1 h-px", className)} {...props} />
-  );
-});
-
-const ContextMenuSubmenu = ContextMenuPrimitive.SubmenuRoot;
-
-const ContextMenuSubmenuTrigger = React.forwardRef(function ContextMenuSubmenuTrigger(
-  { className, children, ...props }: React.ComponentProps<typeof ContextMenuPrimitive.SubmenuTrigger>,
-  ref: React.ForwardedRef<React.ElementRef<typeof ContextMenuPrimitive.SubmenuTrigger>>
-) {
-  return (
-    <ContextMenuPrimitive.SubmenuTrigger
-      ref={ref}
-      className={cn(
-        "flex cursor-default items-center rounded-xs px-2 py-1.5 text-13 outline-none select-none focus:outline-none",
-        "focus:bg-surface-2 data-[state=open]:bg-surface-2",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </ContextMenuPrimitive.SubmenuTrigger>
-  );
-});
-
 ContextMenuRoot.displayName = "ContextMenu";
 ContextMenuTrigger.displayName = "ContextMenuTrigger";
 ContextMenuContent.displayName = "ContextMenuContent";
 ContextMenuItem.displayName = "ContextMenuItem";
-ContextMenuSeparator.displayName = "ContextMenuSeparator";
-ContextMenuSubmenuTrigger.displayName = "ContextMenuSubmenuTrigger";
 
 // compound components
 const ContextMenu = Object.assign(ContextMenuRoot, {
@@ -143,9 +103,6 @@ const ContextMenu = Object.assign(ContextMenuRoot, {
   Portal: ContextMenuPortal,
   Content: ContextMenuContent,
   Item: ContextMenuItem,
-  Separator: ContextMenuSeparator,
-  Submenu: ContextMenuSubmenu,
-  SubmenuTrigger: ContextMenuSubmenuTrigger,
 });
 
 export { ContextMenu };

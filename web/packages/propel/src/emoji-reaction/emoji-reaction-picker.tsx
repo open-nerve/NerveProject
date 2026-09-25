@@ -12,7 +12,7 @@ import { cn } from "../utils/classname";
 import { convertPlacementToSideAndAlign } from "../utils/placement";
 import type { TPlacement, TSide, TAlign } from "../utils/placement";
 
-export interface EmojiReactionPickerProps {
+interface EmojiReactionPickerProps {
   isOpen: boolean;
   handleToggle: (value: boolean) => void;
   buttonClassName?: string;

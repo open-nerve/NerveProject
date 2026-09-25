@@ -11,14 +11,11 @@ import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { observer } from "mobx-react";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { TGroupedIssues, TIssue, TIssueMap, TPaginationData, ICalendarDate } from "@nerve/types";
-// types
-// ui
 // components
 import { cn, renderFormattedPayloadDate } from "@nerve/utils";
 import { highlightIssueOnDrop } from "@/components/issues/issue-layouts/utils";
 // helpers
 import { MONTHS_LIST } from "@nerve/constants";
-// helpers
 // types
 import type { ICycleIssuesFilter } from "@/store/issue/cycle";
 import type { IModuleIssuesFilter } from "@/store/issue/module";

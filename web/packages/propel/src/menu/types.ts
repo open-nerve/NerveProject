@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export type TPlacement = "top" | "bottom" | "left" | "right";
+type TPlacement = "top" | "bottom" | "left" | "right";
 
 export type TMenuProps = {
   customButtonClassName?: string;
@@ -35,15 +35,6 @@ export type TMenuProps = {
   openOnHover?: boolean;
   ariaLabel?: string;
   handleOpenChange?: (open: boolean) => void;
-};
-
-export type TSubMenuProps = {
-  children: React.ReactNode;
-  trigger: React.ReactNode;
-  disabled?: boolean;
-  className?: string;
-  contentClassName?: string;
-  placement?: TPlacement;
 };
 
 export type TMenuItemProps = {

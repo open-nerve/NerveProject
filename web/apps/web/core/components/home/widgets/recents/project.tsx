@@ -12,7 +12,6 @@ import { calculateTimeAgo } from "@nerve/utils";
 // components
 import { ListItem } from "@/components/core/list";
 import { MemberDropdown } from "@/components/dropdowns/member/dropdown";
-// helpers
 
 type BlockProps = {
   activity: TActivityEntityData;

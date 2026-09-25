@@ -81,7 +81,7 @@ export const CommentCreate = observer(function CommentCreate(props: TCommentCrea
   };
 
   const commentHTML = watch("comment_html");
-  const isEmpty = isCommentEmpty(commentHTML ?? undefined);
+  const isEmpty = isCommentEmpty(commentHTML);
 
   return (
     <div
@@ -107,7 +107,7 @@ export const CommentCreate = observer(function CommentCreate(props: TCommentCrea
             editable
             workspaceId={workspaceId}
             id={"add_comment_" + entityId}
-            value={"<p></p>"}
+            value="<p></p>"
             workspaceSlug={workspaceSlug}
             projectId={projectId}
             onEnterKeyPress={(e) => {

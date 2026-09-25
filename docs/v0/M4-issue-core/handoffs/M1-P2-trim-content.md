@@ -33,4 +33,14 @@ M4 的描述更新接口要照此处理：`skip_activity` 为真时不记动态�
 
 M4 重写描述保存时一并修复。复现步骤和输出见 [M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)附录 6.3 第 7 节。
 
+## 关闭条件
+
+M4 合并时：
+
+- 工作项接口没有 `estimate_point`、`description_binary`，没有 `/issue-dates/`，搜索结果没有 `page` 类型；
+- 描述更新接口在 `skip_activity` 为真时不记动态，有测试；
+- 描述保存的"撤销再重做"问题已修复，有覆盖它的测试或写进 review 附录的探测。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。

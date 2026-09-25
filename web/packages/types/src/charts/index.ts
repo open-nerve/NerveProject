@@ -16,7 +16,7 @@ export type TChartLegend = {
   wrapperStyles?: CSSProperties;
 };
 
-export type TChartMargin = {
+type TChartMargin = {
   top?: number;
   right?: number;
   bottom?: number;
@@ -28,7 +28,7 @@ export type TChartData<K extends string, T extends string> = {
   [key in K]: string | number;
 } & Record<T, any>;
 
-export type TBaseChartProps<K extends string, T extends string> = {
+type TBaseChartProps<K extends string, T extends string> = {
   data: TChartData<K, T>[];
   className?: string;
   legend?: TChartLegend;
@@ -38,7 +38,7 @@ export type TBaseChartProps<K extends string, T extends string> = {
 };
 
 // Props specific to charts with X and Y axes
-export type TAxisChartProps<K extends string, T extends string> = TBaseChartProps<K, T> & {
+type TAxisChartProps<K extends string, T extends string> = TBaseChartProps<K, T> & {
   xAxis: {
     key: keyof TChartData<K, T>;
     label?: string;
@@ -68,7 +68,7 @@ export type TAxisChartProps<K extends string, T extends string> = TBaseChartProp
 // Area Chart
 // ============================================================
 
-export type TAreaItem<T extends string> = {
+type TAreaItem<T extends string> = {
   key: T;
   label: string;
   stackId: string;

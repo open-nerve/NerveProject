@@ -17,13 +17,6 @@ export const ALL_ISSUES = "All Issues";
 
 export type TIssuePriorities = "urgent" | "high" | "medium" | "low" | "none";
 
-export type TIssueFilterPriorityObject = {
-  key: TIssuePriorities;
-  titleTranslationKey: string;
-  className: string;
-  icon: string;
-};
-
 export enum EIssueGroupByToServerOptions {
   "state" = "state_id",
   "priority" = "priority",
@@ -35,26 +28,6 @@ export enum EIssueGroupByToServerOptions {
   "target_date" = "target_date",
   "project" = "project_id",
   "created_by" = "created_by",
-}
-
-export enum EIssueGroupBYServerToProperty {
-  "state_id" = "state_id",
-  "priority" = "priority",
-  "labels__id" = "label_ids",
-  "state__group" = "state__group",
-  "assignees__id" = "assignee_ids",
-  "cycle_id" = "cycle_id",
-  "issue_module__module_id" = "module_ids",
-  "target_date" = "target_date",
-  "project_id" = "project_id",
-  "created_by" = "created_by",
-}
-
-export enum EIssueListRow {
-  HEADER = "HEADER",
-  ISSUE = "ISSUE",
-  NO_ISSUES = "NO_ISSUES",
-  QUICK_ADD = "QUICK_ADD",
 }
 
 export const ISSUE_PRIORITIES: {

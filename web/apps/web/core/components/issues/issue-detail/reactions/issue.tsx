@@ -11,13 +11,11 @@ import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-rea
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IUser } from "@nerve/types";
-// hooks
 // ui
 import { cn } from "@nerve/utils";
 // helpers
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
-// types
 
 export type TIssueReaction = {
   workspaceSlug: string;

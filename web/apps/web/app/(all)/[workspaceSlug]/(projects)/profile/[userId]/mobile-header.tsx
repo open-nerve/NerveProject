@@ -74,7 +74,7 @@ export const ProfileIssuesMobileHeader = observer(function ProfileIssuesMobileHe
   return (
     <div className="flex justify-evenly border-b border-subtle py-2 md:hidden">
       <CustomMenu
-        maxHeight={"md"}
+        maxHeight="md"
         className="flex flex-grow justify-center text-13 text-secondary"
         placement="bottom-start"
         customButton={

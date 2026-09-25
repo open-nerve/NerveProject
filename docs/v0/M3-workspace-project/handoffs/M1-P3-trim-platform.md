@@ -30,4 +30,15 @@ M1/P3 删掉了公开发布（Task 2）、企业版项目功能（Task 3）、�
 - `ProjectService.checkProjectIdentifierAvailability` 的地址没有结尾斜杠（`/api/workspaces/<slug>/project-identifiers`，靠 Django 的 `APPEND_SLASH` 重定向）。M3 重新定义这个接口时一并处理。
 - 工作区设置只剩 `general`、`members`、`webhooks` 三个标签页，没有空分组（`navigation.test.ts`）。
 
+## 关闭条件
+
+M3 合并时：
+
+- 项目、视图、收集箱的接口不读写 `anchor`、发布设置、`anchors`、`is_form_enabled`，项目动态不产生本文件列出的几类记录；
+- 项目成员只有"从工作区成员中添加"一种方式；`joinProject` 改用新接口，守卫的 `project-invitations` 例外已从 `tools/keywords.json` 删掉（`node tools/keywords.mjs` 通过，例外少一条）；
+- `RESTRICTED_URLS` 与后端的保留名单同源，Plane 的产品词逐个有结论；
+- `project-identifiers` 的地址随新接口统一结尾斜杠。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。

@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "../utils";
 
-export interface AnimatedCounterProps {
+interface AnimatedCounterProps {
   count: number;
   className?: string;
   size?: "sm" | "md" | "lg";

@@ -9,7 +9,7 @@ import { cn } from "../utils";
 import type { TCardDirection, TCardSpacing, TCardVariant } from "./helper";
 import { ECardDirection, ECardSpacing, ECardVariant, getCardStyle } from "./helper";
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: TCardVariant;
   spacing?: TCardSpacing;
   direction?: TCardDirection;

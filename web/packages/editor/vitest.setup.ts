@@ -18,3 +18,9 @@ const unlaidOut = document.createElement("div");
 Range.prototype.getClientRects = () => unlaidOut.getClientRects();
 // oxlint-disable-next-line no-extend-native -- declares what the test environment lacks; tests only
 Range.prototype.getBoundingClientRect = () => unlaidOut.getBoundingClientRect();
+
+// jsdom has no ClipboardEvent. ProseMirror's pasteHTML, which the editor's paste handler calls, creates one to stand
+// for the paste it runs; that event carries no clipboard data.
+globalThis.ClipboardEvent ??= class extends Event {
+  readonly clipboardData = null;
+} as unknown as typeof ClipboardEvent;

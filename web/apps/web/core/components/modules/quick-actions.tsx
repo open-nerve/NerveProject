@@ -61,7 +61,7 @@ export const ModuleQuickActions = observer(function ModuleQuickActions(props: Pr
         message: "Module link copied to clipboard.",
       });
     });
-  const handleOpenInNewTab = () => window.open(`/${moduleLink}`, "_blank");
+  const handleOpenInNewTab = () => window.open(`/${moduleLink}`, "_blank", "noopener,noreferrer");
 
   const handleRestoreModule = async () => {
     try {

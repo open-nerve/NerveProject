@@ -21,4 +21,14 @@ M1/P4 去掉了 Next.js 兼容层：web 应用只用 React Router 的写法，�
 - 修改密码页（`settings/profile/content/pages/security.tsx`）把错误断言为 `Error & { error_code?: string }`，Plane 实际返回的是数字，靠 `err.error_code?.toString()` 才能与枚举匹配（P4 Task 7 删空转换时因此保留了这一处）。认证错误的契约由 OpenAPI 生成时，类型要与实际取值一致，这个断言和转换随之去掉。
 - 登录、注册表单和退出直接提交到 `/auth/…`（相对地址），不再有基础地址。
 
+## 关闭条件
+
+M2 合并时：
+
+- Go 的登录、注册处理器按本文件的规则校验 `next_path`，测试覆盖以 `//`、`\` 开头、带协议和带控制字符的值（都按没有 `next_path` 处理）；
+- `AuthenticationWrapper` 和 401 处理随令牌管理器重写，没有照搬恒为真的判断；
+- "由 M2 决定"的三项在 M2 的设计或 review 里各有结论。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P4 评审记录](../../M1-frontend-trim/reviews/P4-router-native-review.md)第 7 节。

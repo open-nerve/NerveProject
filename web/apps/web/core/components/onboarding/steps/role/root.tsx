@@ -135,9 +135,7 @@ export const RoleSetupStep = observer(function RoleSetupStep({ handleStepChange 
                     </div>
                     {isSelected && (
                       <>
-                        <button
-                          className={`border-blue-500 flex size-4 items-center justify-center rounded-sm border-2 bg-accent-primary`}
-                        >
+                        <button className="border-blue-500 flex size-4 items-center justify-center rounded-sm border-2 bg-accent-primary">
                           <TickOutline className="h-3 w-3 text-on-color" />
                         </button>
                       </>

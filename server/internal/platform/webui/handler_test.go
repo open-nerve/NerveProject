@@ -15,8 +15,8 @@ const indexHTML = "<!doctype html><title>Nerve</title>"
 var built = fstest.MapFS{
 	".gitkeep":                  {},
 	"index.html":                {Data: []byte(indexHTML)},
-	"manifest.json":             {Data: []byte(`{"name":"Nerve"}`)},
-	"favicon/android-192.png":   {Data: []byte("\x89PNG\r\n\x1a\n")},
+	"site.webmanifest.json":     {Data: []byte(`{"name":"Nerve"}`)},
+	"icons/icon-192x192.png":    {Data: []byte("\x89PNG\r\n\x1a\n")},
 	"assets/entry.client-a1.js": {Data: []byte("export {};")},
 	"assets/globals-b2.css":     {Data: []byte("body{}")},
 	"assets/.hidden":            {Data: []byte("secret")},
@@ -57,7 +57,7 @@ func TestPagePathsFallBackToIndex(t *testing.T) {
 		"/sign-up",
 		"/acme/projects/0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f/issues",
 		"/acme/settings/",
-		"/favicon",       // a directory, not a file
+		"/icons",         // a directory, not a file
 		"/.gitkeep",      // hidden files are never served
 		"/favicon.ico",   // no such file outside assets/
 		"/acme?tab=home", // the query does not matter
@@ -75,8 +75,8 @@ func TestServesFilesWithCachePolicy(t *testing.T) {
 		{"/assets/entry.client-a1.js", "text/javascript; charset=utf-8", "public, max-age=31536000, immutable", "export {};"},
 		{"/assets/globals-b2.css", "text/css; charset=utf-8", "public, max-age=31536000, immutable", "body{}"},
 		// Files copied from public/ keep their names, so they are revalidated.
-		{"/manifest.json", "application/json", "no-cache", `{"name":"Nerve"}`},
-		{"/favicon/android-192.png", "image/png", "no-cache", "\x89PNG\r\n\x1a\n"},
+		{"/site.webmanifest.json", "application/json", "no-cache", `{"name":"Nerve"}`},
+		{"/icons/icon-192x192.png", "image/png", "no-cache", "\x89PNG\r\n\x1a\n"},
 	}
 	for _, tt := range tests {
 		wantResponse(t, serve(h, http.MethodGet, tt.target), tt.target, http.StatusOK, tt.contentType, tt.cacheControl, tt.body)

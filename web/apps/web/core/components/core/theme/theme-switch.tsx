@@ -10,7 +10,6 @@ import { THEME_OPTIONS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 // constants
 import { CustomSelect } from "@nerve/ui";
-// ui
 
 type Props = {
   value: I_THEME_OPTION | null;
@@ -48,7 +47,7 @@ export function ThemeSwitch(props: Props) {
                 }}
               />
             </div>
-            {t(value.key)}
+            {t(value.i18n_label)}
           </div>
         ) : (
           t("select_your_theme")
@@ -82,7 +81,7 @@ export function ThemeSwitch(props: Props) {
                 }}
               />
             </div>
-            {t(themeOption.key)}
+            {t(themeOption.i18n_label)}
           </div>
         </CustomSelect.Option>
       ))}

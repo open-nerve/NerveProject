@@ -18,7 +18,6 @@ import type { IProjectIssues, IProjectIssuesFilter } from "@/store/issue/project
 import type { IProjectViewIssues, IProjectViewIssuesFilter } from "@/store/issue/project-views";
 import type { IWorkspaceIssuesFilter } from "@/store/issue/workspace";
 import type { IWorkspaceDraftIssues, IWorkspaceDraftIssuesFilter } from "@/store/issue/workspace-draft";
-// constants
 
 type defaultIssueStore = {
   issueMap: TIssueMap;

@@ -8,7 +8,6 @@ export default defineConfig({
   exports: {
     customExports: (exports) => ({
       ...exports,
-      "./styles.css": "./dist/styles/index.css",
       "./styles": "./dist/styles/index.css",
     }),
   },

@@ -12,7 +12,6 @@ import { useLocalStorage } from "@nerve/hooks";
 import { cn } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
-// hooks
 import useExtendedSidebarOutsideClickDetector from "@/hooks/use-extended-sidebar-overview-outside-click";
 
 type Props = {

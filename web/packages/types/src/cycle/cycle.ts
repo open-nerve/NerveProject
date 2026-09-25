@@ -4,22 +4,21 @@
  * See the LICENSE file for details.
  */
 
-import type { TIssue } from "../issues/issue";
 import type { IIssueFilterOptions } from "../view-props";
 
 export type TCycleGroups = "current" | "upcoming" | "completed" | "draft";
 
-export type TCycleCompletionChartDistribution = {
+type TCycleCompletionChartDistribution = {
   [key: string]: number | null;
 };
 
-export type TCycleDistributionBase = {
+type TCycleDistributionBase = {
   total_issues: number;
   pending_issues: number;
   completed_issues: number;
 };
 
-export type TCycleAssigneesDistribution = {
+type TCycleAssigneesDistribution = {
   assignee_id: string | null;
   avatar_url: string | null;
   first_name: string | null;
@@ -27,7 +26,7 @@ export type TCycleAssigneesDistribution = {
   display_name: string | null;
 };
 
-export type TCycleLabelsDistribution = {
+type TCycleLabelsDistribution = {
   color: string | null;
   label_id: string | null;
   label_name: string | null;
@@ -49,7 +48,7 @@ export type TProgressSnapshot = {
   distribution?: TCycleDistribution;
 };
 
-export interface IProjectDetails {
+interface IProjectDetails {
   id: string;
 }
 
@@ -80,43 +79,8 @@ export interface ICycle extends TProgressSnapshot {
   project_detail: IProjectDetails;
 }
 
-export interface CycleIssueResponse {
-  id: string;
-  issue_detail: TIssue;
-  created_at: Date;
-  updated_at: Date;
-  created_by: string;
-  updated_by: string;
-  project: string;
-  workspace: string;
-  issue: string;
-  cycle: string;
-  sub_issues_count: number;
-}
-
-export type SelectCycleType = (ICycle & { actionType: "edit" | "delete" | "create-issue" }) | undefined;
-
 export type CycleDateCheckData = {
   start_date: string;
   end_date: string;
   cycle_id?: string;
 };
-
-export type TPublicCycle = {
-  id: string;
-  name: string;
-  status: string;
-};
-
-export type TProgressChartData = {
-  date: string;
-  scope: number;
-  completed: number;
-  backlog: number;
-  started: number;
-  unstarted: number;
-  cancelled: number;
-  pending: number;
-  ideal: number;
-  actual: number;
-}[];

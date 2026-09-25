@@ -12,7 +12,6 @@ import type { CompactAssetType } from "./assets/asset-types";
 import type { BaseEmptyStateCommonProps } from "./types";
 
 export function EmptyStateCompact({
-  asset,
   assetKey,
   title,
   description,
@@ -23,8 +22,7 @@ export function EmptyStateCompact({
   align = "center",
   customButton,
 }: BaseEmptyStateCommonProps) {
-  // Determine which asset to use: assetKey takes precedence, fallback to custom asset
-  const resolvedAsset = assetKey ? getCompactAsset(assetKey as CompactAssetType, assetClassName) : asset;
+  const resolvedAsset = getCompactAsset(assetKey as CompactAssetType, assetClassName);
 
   const rootAlignClasses = align === "center" ? "items-center" : "items-start";
   const containerAlignClasses = align === "center" ? "items-center text-center" : "items-start text-left";

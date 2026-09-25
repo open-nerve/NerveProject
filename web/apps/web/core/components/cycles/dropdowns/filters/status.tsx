@@ -11,8 +11,6 @@ import { useTranslation } from "@nerve/i18n";
 import type { TCycleGroups } from "@nerve/types";
 // components
 import { FilterHeader, FilterOption } from "@/components/issues/issue-layouts/filters";
-// types
-// constants
 
 type Props = {
   appliedFilters: TCycleGroups[] | null;

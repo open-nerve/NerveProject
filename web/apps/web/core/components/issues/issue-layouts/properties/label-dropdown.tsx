@@ -269,7 +269,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                   onKeyDown={searchInputKeyDown}
                 />
               </div>
-              <div className={`mt-2 max-h-48 overflow-y-scroll`}>
+              <div className="mt-2 max-h-48 overflow-y-scroll">
                 {isLoading ? (
                   <p className="text-center text-secondary">{t("common.loading")}</p>
                 ) : filteredOptions && filteredOptions.length > 0 ? (
@@ -296,7 +296,7 @@ export function LabelDropdown(props: ILabelDropdownProps) {
                             {option.content}
                             {selected && (
                               <div className="flex-shrink-0">
-                                <TickOutline className={`h-3.5 w-3.5`} />
+                                <TickOutline className="h-3.5 w-3.5" />
                               </div>
                             )}
                           </>

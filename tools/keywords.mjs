@@ -18,13 +18,15 @@ function fail(message) {
   process.exit(2);
 }
 
-const PHASE_RE = /^M(\d+)(?:\/P(\d+))?$/;
+const PHASE_RE = /^M(\d+)(?:\/(?:P(\d+)|(closeout)))?$/;
+// the closeout of an M comes after all of its numbered phases
+const CLOSEOUT = Number.MAX_SAFE_INTEGER;
 
-// Parses "M3" or "M1/P4" into a [milestone, phase] pair, the phase number 0 when absent, so two phase
-// strings compare lexicographically on that pair.
+// Parses "M3", "M1/P4" or "M1/closeout" into a [milestone, phase] pair — the phase number 0 when absent and
+// CLOSEOUT for the closeout — so two phase strings compare lexicographically on that pair.
 function parsePhase(spec) {
   const match = PHASE_RE.exec(spec);
-  return [Number(match[1]), match[2] ? Number(match[2]) : 0];
+  return [Number(match[1]), match[3] ? CLOSEOUT : match[2] ? Number(match[2]) : 0];
 }
 
 function comparePhase(a, b) {
@@ -55,7 +57,7 @@ function loadRules() {
     fail(`${RULES_FILE} needs "rules" and "exceptions" arrays`);
   }
   if (typeof config.phase !== "string" || !PHASE_RE.test(config.phase)) {
-    fail(`${RULES_FILE} needs a top-level "phase" such as "M3" or "M1/P4"`);
+    fail(`${RULES_FILE} needs a top-level "phase" such as "M3", "M1/P4" or "M1/closeout"`);
   }
   const ids = new Set();
   const rules = config.rules.map((rule) => {
@@ -110,7 +112,7 @@ function loadRules() {
       fail(`exception ${JSON.stringify(e)} needs an existing "rule", a "path" and a "match"`);
     }
     if (typeof e.reason !== "string" || e.reason === "" || !PHASE_RE.test(e.until ?? "")) {
-      fail(`exception ${JSON.stringify(e)} needs a "reason" and an "until" such as "M3" or "M1/P4"`);
+      fail(`exception ${JSON.stringify(e)} needs a "reason" and an "until" such as "M3", "M1/P4" or "M1/closeout"`);
     }
     if (e.count !== undefined && (!Number.isInteger(e.count) || e.count < 1)) {
       fail(`exception ${JSON.stringify(e)} needs "count" to be an integer of at least 1`);

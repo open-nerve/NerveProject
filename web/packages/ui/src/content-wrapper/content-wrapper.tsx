@@ -10,7 +10,7 @@ import type { TRowVariant } from "../row/helper";
 import { ERowVariant } from "../row/helper";
 import { cn } from "../utils";
 
-export interface ContentWrapperProps extends React.HTMLAttributes<HTMLDivElement> {
+interface ContentWrapperProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: TRowVariant;
   className?: string;
   children: React.ReactNode;

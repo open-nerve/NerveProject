@@ -42,7 +42,7 @@ import {
 } from "./vertical-stack";
 
 // Horizontal Stack Asset Registry
-export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.ComponentType<{ className?: string }>> = {
+const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.ComponentType<{ className?: string }>> = {
   intake: IntakeHorizontalStackIllustration,
   label: LabelHorizontalStackIllustration,
   members: MembersHorizontalStackIllustration,
@@ -56,7 +56,7 @@ export const HORIZONTAL_STACK_ASSETS: Record<HorizontalStackAssetType, React.Com
 };
 
 // Vertical Stack Asset Registry
-export const VERTICAL_STACK_ASSETS: Record<VerticalStackAssetType, React.ComponentType<{ className?: string }>> = {
+const VERTICAL_STACK_ASSETS: Record<VerticalStackAssetType, React.ComponentType<{ className?: string }>> = {
   "archived-cycle": ArchivedCycleVerticalStackIllustration,
   "archived-module": ArchivedModuleVerticalStackIllustration,
   "archived-work-item": ArchivedWorkItemVerticalStackIllustration,
@@ -73,7 +73,7 @@ export const VERTICAL_STACK_ASSETS: Record<VerticalStackAssetType, React.Compone
 };
 
 // Illustration Asset Registry
-export const ILLUSTRATION_ASSETS: Record<IllustrationAssetType, React.ComponentType<{ className?: string }>> = {
+const ILLUSTRATION_ASSETS: Record<IllustrationAssetType, React.ComponentType<{ className?: string }>> = {
   inbox: InboxIllustration,
   search: SearchIllustration,
 };

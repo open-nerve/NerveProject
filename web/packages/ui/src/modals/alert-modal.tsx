@@ -12,10 +12,8 @@ import { Button } from "@nerve/propel/button";
 import { cn } from "../utils";
 import { EModalPosition, EModalWidth } from "./constants";
 import { ModalCore } from "./modal-core";
-// constants
-// helpers
 
-export type TModalVariant = "danger" | "primary";
+type TModalVariant = "danger" | "primary";
 
 type Props = {
   content: React.ReactNode | string;

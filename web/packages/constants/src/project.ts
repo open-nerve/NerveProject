@@ -6,11 +6,10 @@
 
 // nerve imports
 import type { TProjectAppliedDisplayFilterKeys, TProjectOrderByOptions } from "@nerve/types";
-// local imports
 
 export type TNetworkChoiceIconKey = "Lock" | "Globe2";
 
-export type TNetworkChoice = {
+type TNetworkChoice = {
   key: 0 | 2;
   labelKey: string;
   i18n_label: string;
@@ -97,11 +96,3 @@ export const PROJECT_ERROR_MESSAGES = {
     i18n_message: "workspace_projects.error.issue_delete",
   },
 };
-
-export enum EProjectFeatureKey {
-  WORK_ITEMS = "work_items",
-  CYCLES = "cycles",
-  MODULES = "modules",
-  VIEWS = "views",
-  INTAKE = "intake",
-}

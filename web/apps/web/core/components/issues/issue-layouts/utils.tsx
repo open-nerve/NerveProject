@@ -239,9 +239,8 @@ const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefin
 };
 
 const getStateGroupColumns = (): IGroupByColumn[] => {
-  const stateGroups = STATE_GROUPS;
   // map state groups to group by columns
-  return Object.values(stateGroups).map((stateGroup) => ({
+  return Object.values(STATE_GROUPS).map((stateGroup) => ({
     id: stateGroup.key,
     name: stateGroup.label,
     icon: (
@@ -254,9 +253,8 @@ const getStateGroupColumns = (): IGroupByColumn[] => {
 };
 
 const getPriorityColumns = (): IGroupByColumn[] => {
-  const priorities = ISSUE_PRIORITIES;
   // map priorities to group by columns
-  return priorities.map((priority) => ({
+  return ISSUE_PRIORITIES.map((priority) => ({
     id: priority.key,
     name: priority.title,
     icon: <PriorityIcon priority={priority?.key} />,

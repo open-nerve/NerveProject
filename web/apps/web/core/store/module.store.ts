@@ -11,7 +11,6 @@ import { computedFn } from "mobx-utils";
 import type { IModule, ILinkDetails } from "@nerve/types";
 import type { DistributionUpdates } from "@nerve/utils";
 import { updateDistribution, orderModules, shouldFilterModule } from "@nerve/utils";
-// helpers
 // services
 import { ModuleService } from "@/services/module.service";
 import { ModuleArchiveService } from "@/services/module_archive.service";

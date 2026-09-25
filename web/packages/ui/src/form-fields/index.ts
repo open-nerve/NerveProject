@@ -4,6 +4,4 @@
  * See the LICENSE file for details.
  */
 
-export * from "./input";
-export * from "./textarea";
 export * from "./password";

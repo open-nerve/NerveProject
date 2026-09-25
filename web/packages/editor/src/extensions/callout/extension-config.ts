@@ -35,10 +35,19 @@ export const CustomCalloutExtensionConfig: CustomCalloutExtensionType = Node.cre
         (acc, value) => {
           acc[value] = {
             default: DEFAULT_CALLOUT_BLOCK_ATTRIBUTES[value],
+            // every callout attribute is a string: keep what the HTML says (TipTap's default parsing would turn a
+            // numeric string such as an emoji's code point into a number)
+            parseHTML: (element) => element.getAttribute(value),
           };
           return acc;
         },
-        {} as Record<ECalloutAttributeNames, { default: TCalloutBlockAttributes[ECalloutAttributeNames] }>
+        {} as Record<
+          ECalloutAttributeNames,
+          {
+            default: TCalloutBlockAttributes[ECalloutAttributeNames];
+            parseHTML: (element: HTMLElement) => string | null;
+          }
+        >
       ),
     };
 

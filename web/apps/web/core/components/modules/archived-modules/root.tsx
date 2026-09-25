@@ -16,7 +16,6 @@ import type { TModuleFilters } from "@nerve/types";
 import { calculateTotalFilters } from "@nerve/utils";
 import { ArchivedModulesView, ModuleAppliedFiltersList } from "@/components/modules";
 import { CycleModuleListLayoutLoader } from "@/components/ui/loader/cycle-module-list-loader";
-// helpers
 // hooks
 import { useModule } from "@/hooks/store/use-module";
 import { useModuleFilter } from "@/hooks/store/use-module-filter";

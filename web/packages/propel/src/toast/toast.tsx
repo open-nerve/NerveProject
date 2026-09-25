@@ -48,7 +48,7 @@ type PromiseToastOptions<ToastData> = {
   error: PromiseToastData<ToastData>;
 };
 
-export type ToastProps = {
+type ToastProps = {
   theme: "light" | "dark" | "system";
 };
 
@@ -215,23 +215,6 @@ export const setToast = (props: SetToastProps) => {
   return toastId;
 };
 
-export const updateToast = (id: string, props: SetToastProps) => {
-  toastManager.update(id, {
-    data:
-      props.type === TOAST_TYPE.LOADING
-        ? {
-            type: TOAST_TYPE.LOADING,
-            title: props.title,
-          }
-        : {
-            type: props.type,
-            title: props.title,
-            message: props.message,
-            actionItems: props.actionItems,
-          },
-  });
-};
-
 export const setPromiseToast = <ToastData,>(
   promise: Promise<ToastData>,
   options: PromiseToastOptions<ToastData>
@@ -262,8 +245,4 @@ export const setPromiseToast = <ToastData,>(
       },
     }),
   });
-};
-
-export const dismissToast = (tId: string) => {
-  toastManager.close(tId);
 };

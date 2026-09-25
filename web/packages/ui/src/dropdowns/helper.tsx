@@ -105,17 +105,3 @@ export interface ICustomSubMenuProps {
   contentClassName?: string;
   placement?: Placement;
 }
-
-export interface ICustomSubMenuTriggerProps {
-  children: React.ReactNode;
-  disabled?: boolean;
-  className?: string;
-}
-
-export interface ICustomSubMenuContentProps {
-  children: React.ReactNode;
-  className?: string;
-  placement?: Placement;
-  sideOffset?: number;
-  alignOffset?: number;
-}

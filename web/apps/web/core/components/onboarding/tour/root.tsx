@@ -95,8 +95,8 @@ export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) 
                 Welcome to Nerve, {currentUser?.first_name} {currentUser?.last_name}
               </h3>
               <p className="mt-3 text-13 text-secondary">
-                We{"'"}re glad that you decided to try out Nerve. You can now manage your projects with ease. Get
-                started by creating a project.
+                We're glad that you decided to try out Nerve. You can now manage your projects with ease. Get started by
+                creating a project.
               </p>
               <div className="flex h-full items-end">
                 <div className="mt-12 flex items-center gap-6">

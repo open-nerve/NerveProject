@@ -79,18 +79,8 @@ export interface IUserSettings {
 }
 
 export interface IUserTheme {
-  theme: string | undefined; // one of THEMES, or 'system'
+  theme: string | undefined; // a value of THEME_OPTIONS
 }
-
-export interface IUserMemberLite extends IUserLite {
-  email?: string;
-}
-
-export type UserAuth = {
-  isMember: boolean;
-  isOwner: boolean;
-  isGuest: boolean;
-};
 
 export type TOnboardingSteps = {
   profile_complete: boolean;
@@ -104,10 +94,3 @@ export interface IUserProjectsRole {
 }
 
 export type TProfileViews = "assigned" | "created" | "subscribed";
-
-export type TPublicMember = {
-  id: string;
-  member: string;
-  member__display_name: string;
-  member__avatar: string;
-};

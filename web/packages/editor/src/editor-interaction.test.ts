@@ -5,7 +5,7 @@
 
 import { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 // local imports
 import { CoreEditorExtensions } from "@/extensions/extensions";
 import { SideMenuExtension } from "@/extensions/side-menu";
@@ -51,6 +51,7 @@ const openEditors: Editor[] = [];
 afterEach(() => {
   for (const editor of openEditors.splice(0)) editor.destroy();
   document.body.replaceChildren();
+  vi.restoreAllMocks();
 });
 
 const createEditor = async ({ editable = true, content = "" }: { editable?: boolean; content?: string } = {}) => {
@@ -223,6 +224,40 @@ describe("a rich-text editor built like the kept ones", () => {
     expect(image?.getAttribute("src")).toBe("asset-1");
     expect(image?.getAttribute("alignment")).toBe("center");
     expect(refOf(reopened).getMarkDown()).toContain("![diagram.png](https://files.example/asset-1)");
+  });
+
+  it("pastes what a Nerve editor copied: the markup never reaches the live document, an uploaded image is duplicated", async () => {
+    const editor = await createEditor({ content: "<p>Notes</p>" });
+    editor.commands.focus("end");
+    // Any page can write the editor's clipboard type in its copy event. The <img> runs its handler as soon as its
+    // markup becomes an element of the live document, attached or not.
+    const copied =
+      '<p>From the other editor</p><img src="x" onerror="window.pasted = true">' +
+      '<image-component src="asset-1" id="image-1" width="35%" alignment="center" status="uploaded"></image-component>';
+    const innerHTML = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML");
+    const liveMarkup: string[] = [];
+    vi.spyOn(Element.prototype, "innerHTML", "set").mockImplementation(function (this: Element, html: string) {
+      if (this.ownerDocument === document) liveMarkup.push(html);
+      innerHTML?.set?.call(this, html);
+    });
+    const paste = new Event("paste", { bubbles: true, cancelable: true });
+    Object.defineProperty(paste, "clipboardData", {
+      value: { getData: (type: string) => (type === "text/nerve-editor-html" ? copied : "") },
+    });
+
+    editor.view.dom.dispatchEvent(paste);
+
+    expect(liveMarkup.filter((html) => html.includes("onerror"))).toEqual([]);
+    expect(editor.getText()).toContain("From the other editor");
+    expect(parse(editor.getHTML()).querySelector("[onerror]")).toBeNull();
+    const images: ProseMirrorNode[] = [];
+    editor.state.doc.descendants((node: ProseMirrorNode) => {
+      if (node.type.name === "imageComponent" && node.attrs.src === "asset-1") images.push(node);
+    });
+    expect(images).toHaveLength(1);
+    expect(images[0].attrs.status).toBe("duplicating");
+    expect(images[0].attrs.id).toEqual(expect.any(String));
+    expect(images[0].attrs.id).not.toBe("image-1");
   });
 
   it("gives every block node an id, keeps it through a save and gives new blocks new ones", async () => {

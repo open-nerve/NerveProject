@@ -92,7 +92,7 @@ export type TIssueMap = {
   [issue_id: string]: TIssue;
 };
 
-export type TIssueResponseResults =
+type TIssueResponseResults =
   | TBaseIssue[]
   | {
       [key: string]: {

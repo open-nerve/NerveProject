@@ -8,7 +8,6 @@ import { observer } from "mobx-react";
 import { EStartOfTheWeek } from "@nerve/types";
 import { getOrderedDays } from "@nerve/utils";
 import { DAYS_LIST } from "@nerve/constants";
-// helpers
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 

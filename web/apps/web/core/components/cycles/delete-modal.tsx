@@ -86,7 +86,7 @@ export const CycleDeleteModal = observer(function CycleDeleteModal(props: ICycle
         <>
           Are you sure you want to delete cycle{' "'}
           <span className="font-medium break-words text-primary">{cycle?.name}</span>
-          {'"'}? All of the data related to the cycle will be permanently removed. This action cannot be undone.
+          "? All of the data related to the cycle will be permanently removed. This action cannot be undone.
         </>
       }
     />

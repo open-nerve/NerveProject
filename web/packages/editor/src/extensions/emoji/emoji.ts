@@ -72,7 +72,7 @@ type EmojiItem = {
   [key: string]: unknown;
 };
 
-export type EmojiOptions = {
+type EmojiOptions = {
   HTMLAttributes: Record<string, unknown>;
   emojis: EmojiItem[];
   enableEmoticons: boolean;

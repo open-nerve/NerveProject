@@ -7,8 +7,6 @@
 // services
 import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// types
-// helpers
 
 export class UserService extends APIService {
   async currentUser(): Promise<IUser> {

@@ -6,8 +6,6 @@
 
 import type { TIssueActivity } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// types
-// helper
 
 export class IssueActivityService extends APIService {
   async getIssueActivities(

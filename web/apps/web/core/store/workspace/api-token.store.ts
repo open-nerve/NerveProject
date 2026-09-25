@@ -9,7 +9,6 @@ import { computedFn } from "mobx-utils";
 // types
 import { APITokenService } from "@nerve/services";
 import type { IApiToken } from "@nerve/types";
-// services
 // store
 import type { RootStore } from "../root.store";
 

@@ -9,8 +9,6 @@ import { observer } from "mobx-react";
 import { usePopper } from "react-popper";
 import { Popover, Transition } from "@headlessui/react";
 import { ChevronLeftOutline, ChevronRightOutline } from "@makeplane/propel/icons";
-//hooks
-// icons
 // constants
 import { getDate } from "@nerve/utils";
 import { MONTHS_LIST } from "@nerve/constants";
@@ -19,7 +17,6 @@ import type { ICycleIssuesFilter } from "@/store/issue/cycle";
 import type { IModuleIssuesFilter } from "@/store/issue/module";
 import type { IProjectIssuesFilter } from "@/store/issue/project";
 import type { IProjectViewIssuesFilter } from "@/store/issue/project-views";
-// helpers
 
 interface Props {
   issuesFilterStore: IProjectIssuesFilter | IModuleIssuesFilter | ICycleIssuesFilter | IProjectViewIssuesFilter;

@@ -6,12 +6,6 @@
 
 export type TProjectNavigationMode = "ACCORDION" | "TABBED";
 
-export interface TProjectDisplaySettings {
-  navigationMode: TProjectNavigationMode;
-  showLimitedProjects: boolean;
-  limitedProjectsCount: number;
-}
-
 export interface TProjectNavigationPreferences {
   navigationMode: TProjectNavigationMode;
   showLimitedProjects: boolean;
@@ -22,14 +16,4 @@ export const DEFAULT_PROJECT_PREFERENCES: TProjectNavigationPreferences = {
   navigationMode: "ACCORDION",
   showLimitedProjects: false,
   limitedProjectsCount: 10,
-};
-
-export type TAppRailDisplayMode = "icon_only" | "icon_with_label";
-
-export interface TAppRailPreferences {
-  displayMode: TAppRailDisplayMode;
-}
-
-export const DEFAULT_APP_RAIL_PREFERENCES: TAppRailPreferences = {
-  displayMode: "icon_with_label",
 };

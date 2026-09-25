@@ -5,7 +5,6 @@
  */
 
 import type { TTimezones } from "@nerve/types";
-// helpers
 // api services
 import { APIService } from "@/services/api.service";
 

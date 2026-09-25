@@ -10,7 +10,7 @@ import { ChevronLeftOutline } from "@makeplane/propel/icons";
 
 import { cn } from "../utils";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
 export function Calendar({ className, showOutsideDays = true, ...props }: CalendarProps) {
   const currentYear = new Date().getFullYear();

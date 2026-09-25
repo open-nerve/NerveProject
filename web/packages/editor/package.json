@@ -17,7 +17,6 @@
   "exports": {
     ".": "./dist/index.js",
     "./package.json": "./package.json",
-    "./styles.css": "./dist/styles/index.css",
     "./styles": "./dist/styles/index.css"
   },
   "scripts": {

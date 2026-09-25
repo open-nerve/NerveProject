@@ -1,5 +1,7 @@
-import type { TPlacement } from "@nerve/propel/utils/placement";
 import type { TIssue } from "@nerve/types";
+import type { CustomMenu } from "@nerve/ui";
+
+type TQuickActionPlacement = React.ComponentProps<typeof CustomMenu>["placement"];
 
 export interface IQuickActionProps {
   parentRef: React.RefObject<HTMLElement | null>;
@@ -13,7 +15,7 @@ export interface IQuickActionProps {
   customActionButton?: React.ReactElement;
   portalElement?: HTMLDivElement | null;
   readOnly?: boolean;
-  placements?: TPlacement;
+  placements?: TQuickActionPlacement;
 }
 
 export type TRenderQuickActions = ({
@@ -26,6 +28,6 @@ export type TRenderQuickActions = ({
   issue: TIssue;
   parentRef: React.RefObject<HTMLElement | null>;
   customActionButton?: React.ReactElement;
-  placement?: TPlacement;
+  placement?: TQuickActionPlacement;
   portalElement?: HTMLDivElement | null;
 }) => React.ReactNode;

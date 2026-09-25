@@ -242,7 +242,7 @@ export const SidebarProjectsList = observer(function SidebarProjectsList() {
                         workspaceSlug={workspaceSlug}
                         projectId={projectId}
                         handleCopyText={() => handleCopyText(projectId)}
-                        projectListType={"JOINED"}
+                        projectListType="JOINED"
                         disableDrag={false}
                         disableDrop={false}
                         isLastChild={index === displayedProjects.length - 1}

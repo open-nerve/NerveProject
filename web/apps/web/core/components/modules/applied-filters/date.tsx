@@ -9,8 +9,6 @@ import { observer } from "mobx-react";
 import { DATE_AFTER_FILTER_OPTIONS } from "@nerve/constants";
 import { CloseOutline } from "@makeplane/propel/icons";
 import { renderFormattedDate, capitalizeFirstLetter } from "@nerve/utils";
-// helpers
-// constants
 
 type Props = {
   editable: boolean | undefined;

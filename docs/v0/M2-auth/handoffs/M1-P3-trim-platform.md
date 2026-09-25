@@ -46,4 +46,17 @@ M1/P3 删掉了第三方登录、验证码登录、找回 / 重置 / 设置密�
 - `packages/services` 的 API 令牌 `retrieve`（GET）和 `destroy`（DELETE）的地址没有结尾斜杠（`/api/users/api-tokens/${tokenId}`，靠 Django 的 `APPEND_SLASH` 重定向）。M2 重新定义令牌接口时一并处理。
 - 个人设置只剩 `general`、`security`、`preferences`、`api-tokens` 四个标签页，由 `web/packages/constants/src/navigation.test.ts` 守住。
 
+## 关闭条件
+
+M2 合并时：
+
+- `git grep -n -E "csrfmiddlewaretoken|X-CSRFTOKEN" -- web` 没有输出，登录、注册、退出、修改密码都走令牌管理器；
+- 认证错误由接口直接返回，前端不再从 `/?error_code=…` 读取；
+- 修改登录邮箱的三选一有项目负责人的裁定，写进 M2 设计；
+- `IInstanceConfig` 的 4 个字段在 `api/` 里各有定义或已删除，`is_self_managed` 连同新手引导的两个步骤有结论，`enable_signup` 的名称已定；
+- "不再读的用户字段""不再调用的地址"两节列出的都不出现在 M2 的接口描述里；
+- API 令牌的地址随新接口统一结尾斜杠。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。

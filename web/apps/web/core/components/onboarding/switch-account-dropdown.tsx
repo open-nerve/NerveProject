@@ -9,7 +9,6 @@ import { observer } from "mobx-react";
 import { Menu, Transition } from "@headlessui/react";
 // ui
 import { cn, getFileURL } from "@nerve/utils";
-// helpers
 // hooks
 import { useUser } from "@/hooks/store/user";
 // components

@@ -56,11 +56,6 @@ export const findTableAncestor = (node: Node | null): HTMLTableElement | null =>
   return node as HTMLTableElement;
 };
 
-export const getTrimmedHTML = (html: string) =>
-  html
-    .replace(/^(?:<p><\/p>)+/g, "") // Remove from beginning
-    .replace(/(?:<p><\/p>)+$/g, ""); // Remove from end
-
 export const isValidHttpUrl = (string: string): { isValid: boolean; url: string } => {
   // List of potentially dangerous protocols to block
   const blockedProtocols = ["javascript:", "data:", "vbscript:", "file:", "about:"];

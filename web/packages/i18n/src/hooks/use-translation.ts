@@ -9,7 +9,7 @@ import { useTranslation as useI18nextTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES, LANGUAGE_STORAGE_KEY, toSupportedLanguage } from "../constants/language";
 import type { TLanguage, ILanguageOption } from "../types";
 
-export type TTranslationStore = {
+type TTranslationStore = {
   t: (key: string, params?: Record<string, unknown>) => string;
   currentLocale: TLanguage;
   changeLanguage: (lng: TLanguage) => void;

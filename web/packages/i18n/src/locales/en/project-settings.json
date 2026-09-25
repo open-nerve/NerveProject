@@ -3,33 +3,11 @@
     "general": {
       "enter_project_id": "Enter project ID",
       "please_select_a_timezone": "Please select a timezone",
-      "archive_project": {
-        "title": "Archive project",
-        "description": "Archiving a project will unlist your project from your side navigation although you will still be able to access it from your projects page. You can restore the project or delete it whenever you want.",
-        "button": "Archive project"
-      },
-      "delete_project": {
-        "title": "Delete project",
-        "description": "When deleting a project, all of the data and resources within that project will be permanently removed and cannot be recovered.",
-        "button": "Delete my project"
-      },
       "toast": {
-        "success": "Project updated successfully",
-        "error": "Project could not be updated. Please try again."
+        "success": "Project updated successfully"
       }
     },
     "members": {
-      "label": "Members",
-      "project_lead": "Project lead",
-      "project_lead_description": "Select the project lead for the project.",
-      "default_assignee": "Default assignee",
-      "default_assignee_description": "Select the default assignee for the project.",
-      "project_subscribers": "Project subscribers",
-      "project_subscribers_description": "Select members who will receive notifications for this project.",
-      "guest_super_permissions": {
-        "title": "Grant view access to all work items for guest users:",
-        "sub_heading": "This will allow guests to have view access to all the project work items."
-      },
       "add_members": {
         "title": "Add members",
         "sub_heading": "Add workspace members to work on your project."
@@ -38,7 +16,6 @@
     "states": {
       "heading": "States",
       "description": "Define and customize workflow states to track the progress of your work items.",
-      "describe_this_state_for_your_members": "Describe this state for your members.",
       "empty_state": {
         "title": "No states available for the {groupKey} group",
         "description": "Please create a new state"
@@ -64,12 +41,6 @@
         "duration": "Auto-archive work items that are closed for"
       }
     },
-    "empty_state": {
-      "labels": {
-        "title": "No labels yet",
-        "description": "Create labels to help organize and filter work items in you project."
-      }
-    },
     "features": {
       "cycles": {
         "title": "Cycles",
@@ -93,125 +64,11 @@
         "toggle_description": "Project members will be able to create and edit views."
       },
       "intake": {
-        "intake_responsibility": "Intake responsibility",
-        "intake_sources": "Intake sources",
         "title": "Intake",
         "short_title": "Intake",
         "description": "Consider and discuss work items before you add them to your project.",
         "toggle_title": "Enable intake",
-        "toggle_description": "Let project members create in app intake requests.",
-        "toggle_tooltip_on": "Ask your Project Admin to turn this on.",
-        "toggle_tooltip_off": "Ask your Project Admin to turn this off.",
-        "notify_assignee": {
-          "title": "Notify assignees",
-          "description": "For a new request to intake, default assignees will be alerted via notifications"
-        },
-        "in_app": {
-          "title": "In-app",
-          "description": "Get new work items from Members and Guests in your workspace without disruption to your existing work items."
-        },
-        "toasts": {
-          "set": {
-            "loading": "Setting assignees...",
-            "success": {
-              "title": "Success!",
-              "message": "Assignees set successfully."
-            },
-            "error": {
-              "title": "Error!",
-              "message": "Something went wrong while setting assignees. Please try again."
-            }
-          }
-        }
-      },
-      "toasts": {
-        "loading": "Updating project feature...",
-        "success": "Project feature updated successfully.",
-        "error": "Something went wrong while updating project feature. Please try again."
-      }
-    },
-    "cycles": {
-      "auto_schedule": {
-        "heading": "Auto-schedule cycles",
-        "description": "Keep cycles moving without manual setup.",
-        "tooltip": "Automatically create new cycles based on your chosen schedule.",
-        "edit_button": "Edit",
-        "form": {
-          "cycle_title": {
-            "label": "Cycle Title",
-            "placeholder": "Title",
-            "tooltip": "The title will be appended with numbers for subsequent cycles. For eg: Design - 1/2/3",
-            "validation": {
-              "required": "Cycle title is required",
-              "max_length": "Title must not exceed 255 characters"
-            }
-          },
-          "cycle_duration": {
-            "label": "Cycle Duration",
-            "unit": "Weeks",
-            "validation": {
-              "required": "Cycle duration is required",
-              "min": "Cycle duration must be at least 1 week",
-              "max": "Cycle duration cannot exceed 30 weeks",
-              "positive": "Cycle duration must be positive"
-            }
-          },
-          "cooldown_period": {
-            "label": "Cooldown Period",
-            "unit": "days",
-            "tooltip": "Pause between cycles before the next begins.",
-            "validation": {
-              "required": "Cooldown period is required",
-              "negative": "Cooldown period cannot be negative"
-            }
-          },
-          "start_date": {
-            "label": "Cycle starts day",
-            "validation": {
-              "required": "Start date is required",
-              "past": "Start date cannot be in the past"
-            }
-          },
-          "number_of_cycles": {
-            "label": "Number of future cycles",
-            "validation": {
-              "required": "Number of cycles is required",
-              "min": "At least 1 cycle is required",
-              "max": "Cannot schedule more than 3 cycles"
-            }
-          },
-          "auto_rollover": {
-            "label": "Auto-rollover work items",
-            "tooltip": "On the day a cycle completes, move all unfinished work items into the next cycle."
-          }
-        },
-        "toast": {
-          "toggle": {
-            "loading_enable": "Enabling auto-schedule cycles",
-            "loading_disable": "Disabling auto-schedule cycles",
-            "success": {
-              "title": "Success!",
-              "message": "Auto-schedule cycles toggled successfully."
-            },
-            "error": {
-              "title": "Error!",
-              "message": "Failed to toggle auto-schedule cycles."
-            }
-          },
-          "save": {
-            "loading": "Saving auto-schedule cycles configuration",
-            "success": {
-              "title": "Success!",
-              "message_create": "Auto-schedule cycles configuration saved successfully.",
-              "message_update": "Auto-schedule cycles configuration updated successfully."
-            },
-            "error": {
-              "title": "Error!",
-              "message_create": "Failed to save auto-schedule cycles configuration.",
-              "message_update": "Failed to update auto-schedule cycles configuration."
-            }
-          }
-        }
+        "toggle_description": "Let project members create in app intake requests."
       }
     }
   }

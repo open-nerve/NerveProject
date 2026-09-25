@@ -72,9 +72,7 @@ const createComparableChildren = <P extends TFilterProperty>(
  * @param group - The group to create a comparable representation for
  * @returns A comparable object without ID
  */
-export const createGroupComparable = <P extends TFilterProperty>(
-  group: TFilterGroupNode<P>
-): Record<string, unknown> => {
+const createGroupComparable = <P extends TFilterProperty>(group: TFilterGroupNode<P>): Record<string, unknown> => {
   const baseComparable = {
     // Explicitly exclude: id (random UUID should not be compared)
     type: group.type,
@@ -93,7 +91,7 @@ export const createGroupComparable = <P extends TFilterProperty>(
  * @param expression - The expression to create a comparable representation for
  * @returns A comparable object without IDs or null if the expression is empty
  */
-export const createExpressionComparable = <P extends TFilterProperty>(
+const createExpressionComparable = <P extends TFilterProperty>(
   expression: TFilterExpression<P> | null
 ): Record<string, unknown> | null => {
   if (!expression) return null;
@@ -119,7 +117,7 @@ export const createExpressionComparable = <P extends TFilterProperty>(
  * @param expression - The filter expression to normalize
  * @returns The normalized expression or null if the entire expression is empty
  */
-export const normalizeFilterExpression = <P extends TFilterProperty>(
+const normalizeFilterExpression = <P extends TFilterProperty>(
   expression: TFilterExpression<P> | null
 ): TFilterExpression<P> | null => {
   const result = transformExpressionTree<P>(expression, (node: TFilterExpression<P>) => {

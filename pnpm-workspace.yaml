@@ -47,7 +47,6 @@ catalog:
   "@types/react": "19.2.17"
   "@types/react-color": "^3.0.9"
   "@types/react-dom": "19.2.3"
-  "@types/sanitize-html": "2.16.0"
   "axios": "1.18.1"
   "class-variance-authority": "0.7.1"
   "clsx": "^2.1.1"
@@ -95,7 +94,6 @@ catalog:
   "rehype-remark": "^10.0.1"
   "remark-gfm": "^4.0.1"
   "remark-stringify": "^11.0.0"
-  "sanitize-html": "2.17.7"
   "smooth-scroll-into-view-if-needed": "^2.0.2"
   "swr": "2.4.2"
   "tailwind-merge": "3.4.0"
@@ -175,6 +173,10 @@ minimumReleaseAgeExclude:
   - "@makeplane/propel@0.3.0"
 
 patchedDependencies:
+  # prosemirror-codemark 0.4.2 is the latest release (2022). Every JS file of its build ends with a sourceMappingURL
+  # comment whose map names ../../src/*.ts, which the package does not publish, so Vite warns that the sources are
+  # missing when the editor's tests load it. The patch drops the comments.
+  prosemirror-codemark@0.4.2: patches/prosemirror-codemark@0.4.2.patch
   react-color@2.19.3: patches/react-color@2.19.3.patch
 
 peerDependencyRules:

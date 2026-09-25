@@ -6,7 +6,7 @@
 
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 
-export interface StrengthInfo {
+interface StrengthInfo {
   message: string;
   textColor: string;
   activeFragments: number;

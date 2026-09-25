@@ -14,7 +14,6 @@ import type { TNameDescriptionLoader } from "@nerve/types";
 import { cn } from "@nerve/utils";
 import useDebounce from "@/hooks/use-debounce";
 import type { TIssueOperations } from "./issue-detail";
-// hooks
 
 export type IssueTitleInputProps = {
   disabled?: boolean;

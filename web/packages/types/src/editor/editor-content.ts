@@ -5,7 +5,7 @@
  */
 
 /**
- * Editor content types - locally defined to avoid external dependencies
+ * Editor JSON content type - locally defined to avoid external dependencies
  */
 
 export type JSONContent = {
@@ -20,7 +20,3 @@ export type JSONContent = {
   text?: string;
   [key: string]: unknown;
 };
-
-export type HTMLContent = string;
-
-export type Content = HTMLContent | JSONContent | JSONContent[] | null;

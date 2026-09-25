@@ -13,15 +13,8 @@ import { useOutsideClickDetector } from "@nerve/hooks";
 // helpers
 import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";
 import { cn } from "../utils";
-// hooks
 // types
-import type {
-  ICustomMenuDropdownProps,
-  ICustomMenuItemProps,
-  ICustomSubMenuProps,
-  ICustomSubMenuTriggerProps,
-  ICustomSubMenuContentProps,
-} from "./helper";
+import type { ICustomMenuDropdownProps, ICustomMenuItemProps, ICustomSubMenuProps } from "./helper";
 
 interface PortalProps {
   children: React.ReactNode;
@@ -492,52 +485,8 @@ function MenuItem(props: ICustomMenuItemProps) {
   );
 }
 
-function SubMenuTrigger(props: ICustomSubMenuTriggerProps) {
-  const { children, disabled = false, className } = props;
-
-  return (
-    <Menu.Item as="div" disabled={disabled}>
-      {({ active }) => (
-        <div
-          className={cn(
-            "flex w-full items-center justify-between rounded-sm px-1 py-1.5 text-left text-secondary select-none",
-            {
-              "bg-layer-transparent-hover": active && !disabled,
-              "text-placeholder": disabled,
-              "cursor-pointer": !disabled,
-              "cursor-not-allowed": disabled,
-            },
-            className
-          )}
-        >
-          <span className="flex-1">{children}</span>
-          <ChevronRightOutline className="h-3.5 w-3.5 flex-shrink-0" />
-        </div>
-      )}
-    </Menu.Item>
-  );
-}
-
-function SubMenuContent(props: ICustomSubMenuContentProps) {
-  const { children, className } = props;
-
-  return (
-    <div
-      className={cn(
-        "shadow-md z-[15] min-w-[12rem] overflow-hidden rounded-md border border-strong-1 bg-surface-1 p-1 text-11 ring-1 ring-strong-1/15",
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
 // Add all components as static properties for external use
-CustomMenu.Portal = Portal;
 CustomMenu.MenuItem = MenuItem;
 CustomMenu.SubMenu = SubMenu;
-CustomMenu.SubMenuTrigger = SubMenuTrigger;
-CustomMenu.SubMenuContent = SubMenuContent;
 
 export { CustomMenu };

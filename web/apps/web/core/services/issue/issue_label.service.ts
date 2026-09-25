@@ -7,7 +7,6 @@
 import type { IIssueLabel } from "@nerve/types";
 // services
 import { APIService } from "@/services/api.service";
-// types
 
 export class IssueLabelService extends APIService {
   async getWorkspaceIssueLabels(workspaceSlug: string): Promise<IIssueLabel[]> {

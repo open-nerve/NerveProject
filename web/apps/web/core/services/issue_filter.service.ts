@@ -7,7 +7,6 @@
 // services
 import type { IIssueFiltersResponse } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// types
 
 export class IssueFiltersService extends APIService {
   // // workspace issue filters

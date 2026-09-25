@@ -12,7 +12,6 @@ import type { TIssue } from "@nerve/types";
 // components
 import { getDate, renderFormattedPayloadDate } from "@nerve/utils";
 import { DateDropdown } from "@/components/dropdowns/date";
-// helpers
 
 type Props = {
   issue: TIssue;

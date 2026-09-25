@@ -19,7 +19,7 @@ export interface EmojiReactionType {
   users?: string[];
 }
 
-export interface EmojiReactionProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface EmojiReactionProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   emoji: string;
   count: number;
   reacted?: boolean;
@@ -29,7 +29,7 @@ export interface EmojiReactionProps extends React.ButtonHTMLAttributes<HTMLButto
   showCount?: boolean;
 }
 
-export interface EmojiReactionGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+interface EmojiReactionGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   reactions: EmojiReactionType[];
   onReactionClick?: (emoji: string) => void;
   onAddReaction?: () => void;
@@ -38,7 +38,7 @@ export interface EmojiReactionGroupProps extends React.HTMLAttributes<HTMLDivEle
   maxDisplayUsers?: number;
 }
 
-export interface EmojiReactionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface EmojiReactionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   onAddReaction?: () => void;
   className?: string;
 }
@@ -154,4 +154,4 @@ EmojiReaction.displayName = "EmojiReaction";
 EmojiReactionButton.displayName = "EmojiReactionButton";
 EmojiReactionGroup.displayName = "EmojiReactionGroup";
 
-export { EmojiReaction, EmojiReactionButton, EmojiReactionGroup };
+export { EmojiReactionButton, EmojiReactionGroup };

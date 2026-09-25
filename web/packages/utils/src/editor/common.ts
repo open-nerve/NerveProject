@@ -43,14 +43,6 @@ export const getEditorAssetDownloadSrc = (args: TEditorSrcArgs): string | undefi
   return url;
 };
 
-export const getTextContent = (jsx: React.ReactNode | null | undefined): string => {
-  if (!jsx) return "";
-
-  const div = document.createElement("div");
-  div.innerHTML = jsx.toString();
-  return div.textContent?.trim() ?? "";
-};
-
 export const isEditorEmpty = (description: string | undefined): boolean =>
   !description ||
   description === "<p></p>" ||

@@ -3,10 +3,6 @@
     "projects_sidebar": {
       "workspace_logo": "工作空间徽标",
       "open_workspace_switcher": "打开工作空间切换器",
-      "open_user_menu": "打开用户菜单",
-      "open_command_palette": "打开命令面板",
-      "open_extended_sidebar": "打开扩展侧边栏",
-      "close_extended_sidebar": "关闭扩展侧边栏",
       "create_favorites_folder": "创建收藏夹文件夹",
       "open_folder": "打开文件夹",
       "close_folder": "关闭文件夹",
@@ -18,15 +14,12 @@
       "close_projects_menu": "关闭项目菜单",
       "toggle_quick_actions_menu": "切换快速操作菜单",
       "open_project_menu": "打开项目菜单",
-      "close_project_menu": "关闭项目菜单",
-      "collapse_sidebar": "折叠侧边栏",
-      "expand_sidebar": "展开侧边栏"
+      "close_project_menu": "关闭项目菜单"
     },
     "auth_forms": {
       "clear_email": "清除邮箱",
       "show_password": "显示密码",
-      "hide_password": "隐藏密码",
-      "close_alert": "关闭警告"
+      "hide_password": "隐藏密码"
     }
   }
 }

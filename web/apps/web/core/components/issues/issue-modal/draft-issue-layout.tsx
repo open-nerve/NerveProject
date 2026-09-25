@@ -44,7 +44,7 @@ export const DraftIssueLayout = observer(function DraftIssueLayout(props: DraftI
       if (
         issueKey === "description_html" &&
         changesMade?.description_html &&
-        isEmptyHtmlString(changesMade.description_html, ["img"])
+        isEmptyHtmlString(changesMade.description_html)
       )
         delete sanitizedChanges.description_html;
     });

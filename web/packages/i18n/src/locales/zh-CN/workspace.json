@@ -23,7 +23,6 @@
         "request_button": "请求实例管理员"
       },
       "validation": {
-        "name_alphanumeric": "工作区名称只能包含 (' '), ('-'), ('_') 和字母数字字符。",
         "name_length": "名称限制在 80 个字符以内。",
         "url_alphanumeric": "URL 只能包含 ('-') 和字母数字字符。",
         "url_length": "URL 限制在 48 个字符以内。",
@@ -82,8 +81,7 @@
       "archived_projects": "已归档"
     },
     "common": {
-      "months_count": "{months, plural, one{# 个月} other{# 个月}}",
-      "days_count": "{days, plural, one{# 天} other{# 天}}"
+      "months_count": "{months, plural, one{# 个月} other{# 个月}}"
     },
     "empty_state": {
       "general": {
@@ -99,45 +97,11 @@
         "primary_button": {
           "text": "开始您的第一个项目"
         }
-      },
-      "search": {
-        "description": "未检测到符合匹配条件的项目。\n创建一个新项目"
       }
     }
   },
   "workspace_views": {
     "add_view": "添加视图",
-    "empty_state": {
-      "all-issues": {
-        "title": "项目中没有工作项",
-        "description": "第一个项目完成！现在，将您的工作分解成可跟踪的工作项。让我们开始吧！",
-        "primary_button": {
-          "text": "创建新工作项"
-        }
-      },
-      "assigned": {
-        "title": "还没有工作项",
-        "description": "可以在这里跟踪分配给您的工作项。",
-        "primary_button": {
-          "text": "创建新工作项"
-        }
-      },
-      "created": {
-        "title": "还没有工作项",
-        "description": "您创建的所有工作项都会出现在这里，直接在这里跟踪它们。",
-        "primary_button": {
-          "text": "创建新工作项"
-        }
-      },
-      "subscribed": {
-        "title": "还没有工作项",
-        "description": "订阅您感兴趣的工作项，在这里跟踪所有这些工作项。"
-      },
-      "custom-view": {
-        "title": "还没有工作项",
-        "description": "符合筛选条件的工作项，在这里跟踪所有这些工作项。"
-      }
-    },
     "delete_view": {
       "title": "您确定要删除此视图吗？",
       "content": "如果您确认，您为此视图选择的所有排序、筛选和显示选项 + 布局将被永久删除，无法恢复。"
@@ -145,13 +109,6 @@
   },
   "workspace_draft_issues": {
     "draft_an_issue": "起草工作项",
-    "empty_state": {
-      "title": "半写的工作项，以及即将推出的评论将在这里显示。",
-      "description": "要试用此功能，请开始添加工作项并中途离开，或在下方创建您的第一个草稿。😉",
-      "primary_button": {
-        "text": "创建您的第一个草稿"
-      }
-    },
     "delete_modal": {
       "title": "删除草稿",
       "description": "您确定要删除此草稿吗？此操作无法撤消。"

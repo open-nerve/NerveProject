@@ -1,0 +1,22 @@
+<!--
+  Copyright (c) 2026-present OpenNerve
+  SPDX-License-Identifier: AGPL-3.0-only
+  Preset project cover 13: soft fields of colour in night. Drawn for Nerve; see SOURCES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1600 900">
+  <defs><linearGradient id="g" x1="0" y1="0.5" x2="1" y2="0.5"><stop offset="0%" stop-color="#020617"/><stop offset="100%" stop-color="#1E1B4B"/></linearGradient>
+    <radialGradient id="b0"><stop offset="0%" stop-color="#06B6D4" stop-opacity="0.6920000000000001"/><stop offset="25%" stop-color="#06B6D4" stop-opacity="0.5529999999999999"/><stop offset="50%" stop-color="#06B6D4" stop-opacity="0.311"/><stop offset="75%" stop-color="#06B6D4" stop-opacity="0.10400000000000001"/><stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b1"><stop offset="0%" stop-color="#06B6D4" stop-opacity="0.643"/><stop offset="25%" stop-color="#06B6D4" stop-opacity="0.514"/><stop offset="50%" stop-color="#06B6D4" stop-opacity="0.289"/><stop offset="75%" stop-color="#06B6D4" stop-opacity="0.096"/><stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b2"><stop offset="0%" stop-color="#7C3AED" stop-opacity="0.662"/><stop offset="25%" stop-color="#7C3AED" stop-opacity="0.529"/><stop offset="50%" stop-color="#7C3AED" stop-opacity="0.298"/><stop offset="75%" stop-color="#7C3AED" stop-opacity="0.099"/><stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b3"><stop offset="0%" stop-color="#06B6D4" stop-opacity="0.613"/><stop offset="25%" stop-color="#06B6D4" stop-opacity="0.491"/><stop offset="50%" stop-color="#06B6D4" stop-opacity="0.276"/><stop offset="75%" stop-color="#06B6D4" stop-opacity="0.092"/><stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b4"><stop offset="0%" stop-color="#7C3AED" stop-opacity="0.6759999999999999"/><stop offset="25%" stop-color="#7C3AED" stop-opacity="0.541"/><stop offset="50%" stop-color="#7C3AED" stop-opacity="0.304"/><stop offset="75%" stop-color="#7C3AED" stop-opacity="0.10099999999999999"/><stop offset="100%" stop-color="#7C3AED" stop-opacity="0"/></radialGradient>
+    <radialGradient id="h"><stop offset="0%" stop-color="#A5F3FC" stop-opacity="0.45"/><stop offset="25%" stop-color="#A5F3FC" stop-opacity="0.36"/><stop offset="50%" stop-color="#A5F3FC" stop-opacity="0.203"/><stop offset="75%" stop-color="#A5F3FC" stop-opacity="0.068"/><stop offset="100%" stop-color="#A5F3FC" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <ellipse cx="69.8" cy="519.6" rx="791" ry="328.7" fill="url(#b0)"/>
+  <ellipse cx="479.5" cy="522.5" rx="752.7" ry="522.6" fill="url(#b1)"/>
+  <ellipse cx="827.6" cy="541.8" rx="474.7" ry="356.7" fill="url(#b2)"/>
+  <ellipse cx="1115.9" cy="534.4" rx="744.3" ry="576.2" fill="url(#b3)"/>
+  <ellipse cx="1390.6" cy="512" rx="491.1" ry="420.7" fill="url(#b4)"/>
+  <ellipse cx="704.5" cy="450" rx="342" ry="209" fill="url(#h)"/>
+</svg>

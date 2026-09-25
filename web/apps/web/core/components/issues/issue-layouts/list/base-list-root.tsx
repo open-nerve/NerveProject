@@ -13,11 +13,9 @@ import { EIssueFilterType, EUserPermissions, EUserPermissionsLevel } from "@nerv
 // types
 import type { EIssuesStoreType, GroupByColumnTypes, TGroupedIssues, TIssueKanbanFilters } from "@nerve/types";
 import { EIssueLayoutTypes } from "@nerve/types";
-// constants
 // hooks
 import { useIssues } from "@/hooks/store/use-issues";
 import { useUserPermissions } from "@/hooks/store/user";
-// hooks
 import { useGroupIssuesDragNDrop } from "@/hooks/use-group-dragndrop";
 import { useIssueStoreType } from "@/hooks/use-issue-layout-store";
 import { useIssuesActions } from "@/hooks/use-issues-actions";
@@ -143,7 +141,7 @@ export const BaseListRoot = observer(function BaseListRoot(props: IBaseListRoot)
 
   return (
     <IssueLayoutHOC layout={EIssueLayoutTypes.LIST}>
-      <div className={`relative size-full bg-surface-2`}>
+      <div className="relative size-full bg-surface-2">
         <List
           issuesMap={issueMap}
           displayProperties={displayProperties}

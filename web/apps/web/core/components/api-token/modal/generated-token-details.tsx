@@ -12,10 +12,8 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import type { IApiToken } from "@nerve/types";
 // ui
 import { renderFormattedDate, renderFormattedTime, copyTextToClipboard } from "@nerve/utils";
-// helpers
 // types
 import { usePlatformOS } from "@/hooks/use-platform-os";
-// hooks
 
 type Props = {
   handleClose: () => void;

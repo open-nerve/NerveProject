@@ -11,8 +11,6 @@ import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
 import type { TCommentsOperations, TIssueComment } from "@nerve/types";
-// helpers
-// local imports
 
 export type TProps = {
   comment: TIssueComment;

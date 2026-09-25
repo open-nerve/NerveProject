@@ -6,8 +6,6 @@
 
 import type { IProjectView } from "@nerve/types";
 import { APIService } from "@/services/api.service";
-// types
-// helpers
 
 export class ViewService extends APIService {
   async createView(workspaceSlug: string, projectId: string, data: Partial<IProjectView>): Promise<any> {

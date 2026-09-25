@@ -9,7 +9,7 @@ import type { TAllAvailableOperatorsForDisplay, TSupportedOperators } from "@ner
 /**
  * Result type for operator conversion
  */
-export type TOperatorForPayload = {
+type TOperatorForPayload = {
   operator: TSupportedOperators;
   isNegation: boolean;
 };

@@ -4,11 +4,6 @@
  * See the LICENSE file for details.
  */
 
-export interface ICalendarRange {
-  startDate: Date;
-  endDate: Date;
-}
-
 export interface ICalendarDate {
   date: Date;
   year: number;
@@ -24,7 +19,7 @@ export interface ICalendarWeek {
   [date: string]: ICalendarDate;
 }
 
-export interface ICalendarMonth {
+interface ICalendarMonth {
   [monthIndex: string]: {
     [weekNumber: string]: ICalendarWeek;
   };

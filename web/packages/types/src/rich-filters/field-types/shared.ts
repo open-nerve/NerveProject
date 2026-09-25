@@ -12,7 +12,7 @@ import type { TFilterValue } from "../expression";
  * - allowNegative: Whether the operator supports negation
  * - negOperatorLabel: Label to use when the operator is negated
  */
-export type TNegativeOperatorConfig = { allowNegative: true; negOperatorLabel?: string } | { allowNegative?: false };
+type TNegativeOperatorConfig = { allowNegative: true; negOperatorLabel?: string } | { allowNegative?: false };
 
 /**
  * Base filter configuration shared by all filter types.

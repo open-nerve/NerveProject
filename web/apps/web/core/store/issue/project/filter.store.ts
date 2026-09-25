@@ -24,12 +24,9 @@ import { EIssuesStoreType } from "@nerve/types";
 import { handleIssueQueryParamsByLayout } from "@nerve/utils";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
-// helpers
 // types
 import type { IIssueRootStore } from "../root.store";
 import { ProjectService } from "@/services/project";
-// constants
-// services
 
 export interface IProjectIssuesFilter extends IBaseIssueFilterStore {
   //helper actions

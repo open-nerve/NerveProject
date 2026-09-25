@@ -9,7 +9,6 @@ import type { AxiosRequestConfig } from "axios";
 import { getFileMetaDataForUpload, generateFileUploadPayload } from "@nerve/services";
 import type { EFileAssetType, TFileEntityInfo, TFileSignedURLResponse } from "@nerve/types";
 import { getAssetIdFromUrl } from "@nerve/utils";
-// helpers
 // services
 import { APIService } from "@/services/api.service";
 import { FileUploadService } from "@/services/file-upload.service";

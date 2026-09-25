@@ -7,12 +7,10 @@
 // components
 import { observer } from "mobx-react";
 import { useMatch, useParams } from "react-router";
-import { cn } from "@nerve/utils";
 import { TopNavPowerK } from "@/components/navigation";
 import { HelpMenuRoot } from "@/components/workspace/sidebar/help-section/root";
 import { UserMenuRoot } from "@/components/workspace/sidebar/user-menu-root";
 import { WorkspaceMenuRoot } from "@/components/workspace/sidebar/workspace-menu-root";
-import { useAppRailPreferences } from "@/hooks/use-navigation-preferences";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { AppSidebarItem } from "@/components/sidebar/sidebar-item";
 import { InboxOutline } from "@makeplane/propel/icons";
@@ -26,9 +24,6 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
 
   // store hooks
   const { unreadNotificationsCount, getUnreadNotificationsCount } = useWorkspaceNotifications();
-  const { preferences } = useAppRailPreferences();
-
-  const showLabel = preferences.displayMode === "icon_with_label";
 
   // Fetch notification count
   useSWR(
@@ -43,11 +38,7 @@ export const TopNavigationRoot = observer(function TopNavigationRoot() {
     : unreadNotificationsCount.total_unread_notifications_count;
 
   return (
-    <div
-      className={cn("z-[27] flex min-h-10 w-full items-center bg-canvas px-3.5 transition-all duration-300", {
-        "px-2": !showLabel,
-      })}
-    >
+    <div className="z-[27] flex min-h-10 w-full items-center bg-canvas px-3.5 transition-all duration-300">
       {/* Workspace Menu */}
       <div className="flex-1 shrink-0">
         <WorkspaceMenuRoot variant="top-navigation" />

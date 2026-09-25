@@ -7,7 +7,6 @@
 // components
 import type { TLabelOperations } from "../root";
 import { IssueLabelSelect } from "./label-select";
-// types
 
 type TIssueLabelSelectRoot = {
   workspaceSlug: string;

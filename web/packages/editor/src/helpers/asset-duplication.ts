@@ -7,38 +7,16 @@
 import { v4 as uuidv4 } from "uuid";
 import { ECustomImageAttributeNames, ECustomImageStatus } from "@/extensions/custom-image/types";
 
-type AssetDuplicationContext = {
-  element: Element;
-  originalHtml: string;
-};
+// marks one element of the pasted HTML (parsed by processAssetDuplication) in place
+type AssetDuplicationHandler = (element: Element) => void;
 
-type AssetDuplicationResult = {
-  modifiedHtml: string;
-  shouldProcess: boolean;
-};
-
-export type AssetDuplicationHandler = (context: AssetDuplicationContext) => AssetDuplicationResult;
-
-const imageComponentHandler: AssetDuplicationHandler = ({ element, originalHtml }) => {
+// An image of an uploaded asset (its src is the asset's id, not a web address) becomes a new image that
+// duplicates the asset.
+const imageComponentHandler: AssetDuplicationHandler = (element) => {
   const src = element.getAttribute("src");
-
-  if (!src || src.startsWith("http")) {
-    return { modifiedHtml: originalHtml, shouldProcess: false };
-  }
-
-  // Capture the original HTML BEFORE making any modifications
-  const originalTag = element.outerHTML;
-
-  // Use setAttribute to update attributes
-  const newId = uuidv4();
+  if (!src || src.startsWith("http")) return;
   element.setAttribute(ECustomImageAttributeNames.STATUS, ECustomImageStatus.DUPLICATING);
-  element.setAttribute(ECustomImageAttributeNames.ID, newId);
-
-  // Get the modified HTML AFTER the changes
-  const modifiedTag = element.outerHTML;
-  const modifiedHtml = originalHtml.replaceAll(originalTag, modifiedTag);
-
-  return { modifiedHtml, shouldProcess: true };
+  element.setAttribute(ECustomImageAttributeNames.ID, uuidv4());
 };
 
 export const assetDuplicationHandlers: Record<string, AssetDuplicationHandler> = {

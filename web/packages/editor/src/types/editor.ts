@@ -8,7 +8,6 @@ import type { Extensions, RawCommands } from "@tiptap/core";
 import type { MarkType, NodeType } from "@tiptap/pm/model";
 import type { Selection } from "@tiptap/pm/state";
 import type { EditorProps, EditorView } from "@tiptap/pm/view";
-import type { NodeViewProps as TNodeViewProps } from "@tiptap/react";
 // nerve imports
 import type { TCustomComponentsMetaData } from "@nerve/utils";
 // extension types
@@ -133,17 +132,3 @@ export type ILiteTextEditorProps = IEditorProps;
 export type IRichTextEditorProps = IEditorProps & {
   dragDropEnabled?: boolean;
 };
-
-export type EditorEvents = {
-  beforeCreate: never;
-  create: never;
-  update: never;
-  selectionUpdate: never;
-  transaction: never;
-  focus: never;
-  blur: never;
-  destroy: never;
-  ready: { height: number };
-};
-
-export type NodeViewProps = TNodeViewProps;

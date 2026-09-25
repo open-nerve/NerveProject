@@ -17,4 +17,10 @@ M1/P5 删掉了这两处：Nerve 不区分人和智能体，也没有 Plane 的�
 
 工作项动态里，自动归档的那一条的操作者是写死的站点名（`issue-activity/activity/actions/archived-at.tsx` 把 `SITE_NAME` 作为 `customUserName`，基线写死 "Plane"），恢复时显示真实的用户。系统操作的动态由谁发出、怎样显示，与上一节一起定。
 
+## 关闭条件
+
+M4 合并时：由系统代为创建或操作的工作项记在谁名下、界面怎样显示，写进 M4 的设计；前端没有按邮箱或名字猜测系统用户的代码；自动归档那一条动态的操作者按这个结论显示。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P5 评审记录](../../M1-frontend-trim/reviews/P5-brand-review.md)第 7 节。

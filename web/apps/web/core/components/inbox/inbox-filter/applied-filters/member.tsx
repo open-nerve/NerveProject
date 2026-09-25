@@ -59,7 +59,7 @@ export const InboxIssueAppliedFiltersMember = observer(function InboxIssueApplie
               className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
               onClick={() => handleInboxIssueFilters(filterKey, handleFilterValue(value))}
             >
-              <CloseOutline className={`h-3 w-3`} />
+              <CloseOutline className="h-3 w-3" />
             </div>
           </div>
         );
@@ -69,7 +69,7 @@ export const InboxIssueAppliedFiltersMember = observer(function InboxIssueApplie
         className="relative flex h-3 w-3 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden text-tertiary transition-all hover:text-secondary"
         onClick={clearFilter}
       >
-        <CloseOutline className={`h-3 w-3`} />
+        <CloseOutline className="h-3 w-3" />
       </div>
     </div>
   );

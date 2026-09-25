@@ -10,7 +10,7 @@ import { cn } from "../utils";
 import type { THeaderVariant } from "./helper";
 import { EHeaderVariant, getHeaderStyle } from "./helper";
 
-export interface HeaderProps {
+interface HeaderProps {
   variant?: THeaderVariant;
   setHeight?: boolean;
   className?: string;

@@ -13,10 +13,8 @@ import { Tooltip } from "@makeplane/propel/components/tooltip";
 import { CustomMenu } from "@nerve/ui";
 import { convertBytesToSize, getFileExtension, getFileName, getFileURL, renderFormattedDate } from "@nerve/utils";
 // components
-//
 import { ButtonAvatars } from "@/components/dropdowns/member/avatar";
 import { getFileIcon } from "@/components/icons";
-// helpers
 // hooks
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 import { useMember } from "@/hooks/store/use-member";
@@ -54,7 +52,7 @@ export const IssueAttachmentsListItem = observer(function IssueAttachmentsListIt
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          window.open(fileURL, "_blank");
+          window.open(fileURL, "_blank", "noopener,noreferrer");
         }}
       >
         <div className="group flex h-11 items-center justify-between gap-3 px-3 hover:bg-surface-2">

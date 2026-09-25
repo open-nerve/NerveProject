@@ -9,7 +9,6 @@ import React, { Fragment } from "react";
 // constants
 import { cn } from "../utils";
 import { EModalPosition, EModalWidth } from "./constants";
-// helpers
 
 type Props = {
   children: React.ReactNode;

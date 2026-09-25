@@ -53,7 +53,7 @@ export const ViewQuickActions = observer(function ViewQuickActions(props: Props)
         message: "View link copied to clipboard.",
       });
     });
-  const handleOpenInNewTab = () => window.open(`/${viewLink}`, "_blank");
+  const handleOpenInNewTab = () => window.open(`/${viewLink}`, "_blank", "noopener,noreferrer");
 
   const MENU_ITEMS = useViewMenuItems({
     isOwner,

@@ -8,11 +8,9 @@ import React, { useState } from "react";
 import { xor } from "lodash-es";
 import { observer } from "mobx-react";
 import { useTranslation } from "@nerve/i18n";
-// hooks
 // components
 import { cn } from "@nerve/utils";
 import { ModuleDropdown } from "@/components/dropdowns/module/dropdown";
-// ui
 // helpers
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // types

@@ -4,26 +4,9 @@
       "heading": "Preferences",
       "description": "Customize your app experience the way you work"
     },
-    "notifications": {
-      "select_default_view": "Select default view",
-      "compact": "Compact",
-      "full": "Full Screen"
-    },
-    "security": {
-      "heading": "Security"
-    },
     "api_tokens": {
       "title": "Personal Access Tokens",
       "description": "Generate secure API tokens to integrate your data with external systems and applications."
-    },
-    "activity": {
-      "heading": "Activity",
-      "description": "Track your recent actions and changes across all projects and work items."
-    },
-    "connections": {
-      "title": "Connections",
-      "heading": "Connections",
-      "description": "Manage your workspace connections settings."
     }
   },
   "profile": {
@@ -58,25 +41,6 @@
       "subscribed": {
         "title": "No work items yet",
         "description": "Subscribe to work items you are interested in, track all of them here."
-      }
-    }
-  },
-  "themes": {
-    "theme_options": {
-      "system_preference": {
-        "label": "System preference"
-      },
-      "light": {
-        "label": "Light"
-      },
-      "dark": {
-        "label": "Dark"
-      },
-      "light_contrast": {
-        "label": "Light high contrast"
-      },
-      "dark_contrast": {
-        "label": "Dark high contrast"
       }
     }
   }

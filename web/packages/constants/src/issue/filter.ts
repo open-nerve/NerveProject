@@ -11,7 +11,6 @@ import type {
   TWorkItemFilterProperty,
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
-import type { TIssueFilterPriorityObject } from "./common";
 import { ISSUE_DISPLAY_PROPERTIES_KEYS, SUB_ISSUES_DISPLAY_PROPERTIES_KEYS } from "./common";
 
 export enum EServerGroupByToFilterOptions {
@@ -39,49 +38,16 @@ export type TSupportedFilterTypeForUpdate =
   | EIssueFilterType.DISPLAY_PROPERTIES
   | EIssueFilterType.KANBAN_FILTERS;
 
-export const ISSUE_PRIORITY_FILTERS: TIssueFilterPriorityObject[] = [
-  {
-    key: "urgent",
-    titleTranslationKey: "issue.priority.urgent",
-    className: "bg-layer-2 text-priority-urgent border-strong",
-    icon: "error",
-  },
-  {
-    key: "high",
-    titleTranslationKey: "issue.priority.high",
-    className: "bg-layer-2 text-priority-high border-strong",
-    icon: "signal_cellular_alt",
-  },
-  {
-    key: "medium",
-    titleTranslationKey: "issue.priority.medium",
-    className: "bg-layer-2 text-priority-medium border-strong",
-    icon: "signal_cellular_alt_2_bar",
-  },
-  {
-    key: "low",
-    titleTranslationKey: "issue.priority.low",
-    className: "bg-layer-2 text-priority-low border-strong",
-    icon: "signal_cellular_alt_1_bar",
-  },
-  {
-    key: "none",
-    titleTranslationKey: "common.none",
-    className: "bg-layer-2 text-priority-none border-strong",
-    icon: "block",
-  },
-];
-
-export type TFiltersLayoutOptions = {
+type TFiltersLayoutOptions = {
   [layoutType: string]: ILayoutDisplayFiltersOptions;
 };
 
-export type TFilterPropertiesByPageType = {
+type TFilterPropertiesByPageType = {
   filters: TWorkItemFilterProperty[];
   layoutOptions: TFiltersLayoutOptions;
 };
 
-export type TIssueFiltersToDisplayByPageType = {
+type TIssueFiltersToDisplayByPageType = {
   [pageType: string]: TFilterPropertiesByPageType;
 };
 
@@ -282,7 +248,7 @@ export enum EActivityFilterType {
 
 export type TActivityFilters = EActivityFilterType;
 
-export type TActivityFilterOptionsKey = Exclude<TActivityFilters, EActivityFilterType.DEFAULT>;
+type TActivityFilterOptionsKey = Exclude<TActivityFilters, EActivityFilterType.DEFAULT>;
 
 export const ACTIVITY_FILTER_TYPE_OPTIONS: Record<TActivityFilterOptionsKey, { labelTranslationKey: string }> = {
   [EActivityFilterType.ACTIVITY]: {

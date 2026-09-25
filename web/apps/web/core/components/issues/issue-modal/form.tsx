@@ -35,7 +35,6 @@ import {
   IssueProjectSelect,
   IssueTitleInput,
 } from "@/components/issues/issue-modal/components";
-// helpers
 // hooks
 import { useIssueModal } from "@/hooks/context/use-issue-modal";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
@@ -43,7 +42,7 @@ import { useProject } from "@/hooks/store/use-project";
 import { useProjectState } from "@/hooks/store/use-project-state";
 import { useWorkspaceDraftIssues } from "@/hooks/store/workspace-draft";
 import { usePlatformOS } from "@/hooks/use-platform-os";
-import { useProjectIssueProperties } from "@/hooks/use-project-issue-properties";
+import { useCycle } from "@/hooks/store/use-cycle";
 
 export interface IssueFormProps {
   data?: Partial<TIssue>;
@@ -113,7 +112,7 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   const {
     issue: { getIssueById },
   } = useIssueDetail();
-  const { fetchCycles } = useProjectIssueProperties();
+  const { fetchAllCycles } = useCycle();
   const { getStateById } = useProjectState();
 
   // form info
@@ -139,18 +138,10 @@ export const IssueFormRoot = observer(function IssueFormRoot(props: IssueFormPro
   //reset few fields on projectId change
   useEffect(() => {
     if (isDirty) reset(getUpdateFormDataForReset(projectId, getValues()));
-    if (projectId && routeProjectId !== projectId) fetchCycles(workspaceSlug, projectId);
+    if (projectId && routeProjectId !== projectId) fetchAllCycles(workspaceSlug, projectId);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
-
-  // Reset form with the given data once mounted
-  useEffect(() => {
-    if (data) {
-      reset({ ...DEFAULT_WORK_ITEM_FORM_VALUES, project_id: projectId, ...data });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleFormSubmit = async (formData: Partial<TIssue>, is_draft_issue = false) => {
     // Check if the editor is ready to discard

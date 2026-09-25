@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export const ISSUE_FORM_TAB_INDICES = [
+const ISSUE_FORM_TAB_INDICES = [
   "name",
   "description_html",
   "state_id",
@@ -24,7 +24,7 @@ export const ISSUE_FORM_TAB_INDICES = [
   "remove_parent",
 ];
 
-export const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
+const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
   "name",
   "description_html",
   "state_id",
@@ -41,9 +41,9 @@ export const INTAKE_ISSUE_CREATE_FORM_TAB_INDICES = [
   "submit_button",
 ];
 
-export const CREATE_LABEL_TAB_INDICES = ["name", "color", "cancel", "submit"];
+const CREATE_LABEL_TAB_INDICES = ["name", "color", "cancel", "submit"];
 
-export const PROJECT_CREATE_TAB_INDICES = [
+const PROJECT_CREATE_TAB_INDICES = [
   "name",
   "identifier",
   "description",
@@ -56,9 +56,9 @@ export const PROJECT_CREATE_TAB_INDICES = [
   "logo_props",
 ];
 
-export const PROJECT_CYCLE_TAB_INDICES = ["name", "description", "date_range", "cancel", "submit", "project_id"];
+const PROJECT_CYCLE_TAB_INDICES = ["name", "description", "date_range", "cancel", "submit", "project_id"];
 
-export const PROJECT_MODULE_TAB_INDICES = [
+const PROJECT_MODULE_TAB_INDICES = [
   "name",
   "description",
   "date_range",
@@ -69,7 +69,7 @@ export const PROJECT_MODULE_TAB_INDICES = [
   "submit",
 ];
 
-export const PROJECT_VIEW_TAB_INDICES = ["name", "description", "filters", "cancel", "submit"];
+const PROJECT_VIEW_TAB_INDICES = ["name", "description", "filters", "cancel", "submit"];
 
 export enum ETabIndices {
   ISSUE_FORM = "issue-form",

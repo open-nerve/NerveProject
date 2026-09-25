@@ -11,7 +11,6 @@ import { SITE_NAME } from "@nerve/constants";
 import { useIssueDetail } from "@/hooks/store/use-issue-detail";
 // components
 import { IssueActivityBlockComponent } from "./";
-// ui
 
 type TIssueArchivedAtActivity = { activityId: string; ends: "top" | "bottom" | undefined };
 

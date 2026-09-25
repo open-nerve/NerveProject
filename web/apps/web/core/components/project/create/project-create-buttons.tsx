@@ -10,7 +10,6 @@ import { ETabIndices } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { IProject } from "@nerve/types";
-// ui
 // helpers
 import { getTabIndex } from "@nerve/utils";
 

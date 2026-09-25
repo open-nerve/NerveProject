@@ -10,7 +10,7 @@ export type TIssueIdentifierSize = "xs" | "sm" | "md" | "lg";
 
 export type TIdentifierTextVariant = "default" | "secondary" | "tertiary" | "primary" | "primary-subtle" | "success";
 
-export type TIssueIdentifierBaseProps = {
+type TIssueIdentifierBaseProps = {
   projectId: string;
   size?: TIssueIdentifierSize;
   variant?: TIdentifierTextVariant;
@@ -18,11 +18,11 @@ export type TIssueIdentifierBaseProps = {
   enableClickToCopyIdentifier?: boolean;
 };
 
-export type TIssueIdentifierFromStore = TIssueIdentifierBaseProps & {
+type TIssueIdentifierFromStore = TIssueIdentifierBaseProps & {
   issueId: string;
 };
 
-export type TIssueIdentifierWithDetails = TIssueIdentifierBaseProps & {
+type TIssueIdentifierWithDetails = TIssueIdentifierBaseProps & {
   projectIdentifier: string;
   issueSequenceId: string | number;
 };

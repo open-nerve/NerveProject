@@ -234,8 +234,8 @@ export const CycleListItemAction = observer(function CycleListItemAction(props: 
         cycleDetails.start_date && (
           <>
             <DateRangeDropdown
-              buttonVariant={"transparent-with-text"}
-              buttonContainerClassName={`h-6 w-full cursor-auto flex items-center gap-1.5 text-tertiary rounded-sm text-11 [&>div]:hover:bg-transparent`}
+              buttonVariant="transparent-with-text"
+              buttonContainerClassName="h-6 w-full cursor-auto flex items-center gap-1.5 text-tertiary rounded-sm text-11 [&>div]:hover:bg-transparent"
               buttonClassName="p-0"
               minDate={new Date()}
               value={{

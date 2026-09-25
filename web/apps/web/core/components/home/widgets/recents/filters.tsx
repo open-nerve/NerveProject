@@ -39,7 +39,7 @@ export const FiltersDropdown = observer(function FiltersDropdown(props: TFilters
   const title = activeFilter ? filters?.find((filter) => filter.name === activeFilter)?.i18n_key : "";
   return (
     <CustomMenu
-      maxHeight={"md"}
+      maxHeight="md"
       className={cn("flex w-fit justify-center text-11 text-secondary", className)}
       placement="bottom-start"
       customButton={

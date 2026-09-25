@@ -14,7 +14,6 @@ import { useIssuesStore } from "@/hooks/use-issue-layout-store";
 import type { TRenderQuickActions } from "../list/list-view-types";
 import { CalendarIssueBlockRoot } from "./issue-block-root";
 import { CalendarQuickAddIssueActions } from "./quick-add-issue-actions";
-// types
 
 type Props = {
   date: Date;

@@ -27,8 +27,3 @@ export type TProjectFilters = {
   members?: string[] | null;
   created_at?: string[] | null;
 };
-
-export type TProjectStoredFilters = {
-  display_filters?: TProjectDisplayFilters;
-  filters?: TProjectFilters;
-};

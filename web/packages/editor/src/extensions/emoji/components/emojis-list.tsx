@@ -18,7 +18,7 @@ export type EmojiItem = {
   tags: string[];
 };
 
-export type EmojiListRef = {
+type EmojiListRef = {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 };
 

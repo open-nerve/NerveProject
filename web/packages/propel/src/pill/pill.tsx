@@ -39,7 +39,7 @@ type TPillVariant =
   | EPillVariant.INFO;
 type TPillSize = EPillSize.SM | EPillSize.MD | EPillSize.LG | EPillSize.XS;
 
-export interface PillProps extends React.HTMLAttributes<HTMLSpanElement> {
+interface PillProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: TPillVariant;
   size?: TPillSize;
   className?: string;

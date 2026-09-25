@@ -17,4 +17,13 @@ created: 2026-09-24
 
 表格的"子工作项"列（`spreadsheet/columns/sub-issue-column.tsx`）跳到 `/:workspaceSlug/projects/:projectId/issues/:issueId#sub-issues`（归档的工作项多一段 `archives/`）。这个地址由加载器重定向到 `/browse/…`，React Router 给加载器的请求不含片段，所以 `#sub-issues` 丢失。没有元素读取这个片段，它本来就不起作用。M4 重做工作项地址时一并决定：直接生成 `/browse/…`（像评论链接的 `#comment-…` 那样），或者去掉片段。
 
+## 关闭条件
+
+M4 合并时：
+
+- 个人设置页上挂载的工作项弹窗有结论：去掉挂载，或在 review 里写明保留的理由；
+- `#sub-issues` 片段有结论：直接生成 `/browse/…#sub-issues` 并有元素读取它，或者去掉片段。
+
+逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
+
 来源：[M1/P4 评审记录](../../M1-frontend-trim/reviews/P4-router-native-review.md)第 7 节。
