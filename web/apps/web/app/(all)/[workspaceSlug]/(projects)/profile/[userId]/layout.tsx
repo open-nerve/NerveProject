@@ -42,11 +42,11 @@ function UseProfileLayout({ params }: Route.ComponentProps) {
 
   return (
     <>
-      {/* Passing the type prop from the current route value as we need the header as top most component. */}
+      {/* Passing the current tab from the route value as we need the header as top most component. */}
       <div className="flex h-full w-full flex-col overflow-hidden md:flex-row">
         <div className="flex h-full w-full flex-col overflow-hidden">
           <AppHeader
-            header={<UserProfileHeader type={currentTab?.i18n_label} showProfileIssuesFilter={isIssuesTab} />}
+            header={<UserProfileHeader currentTab={currentTab} showProfileIssuesFilter={isIssuesTab} />}
             mobileHeader={isIssuesTab && <ProfileIssuesMobileHeader />}
           />
           <ContentWrapper>
