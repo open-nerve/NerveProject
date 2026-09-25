@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -21,6 +22,7 @@ type Server struct {
 	srv             *http.Server
 	logger          *slog.Logger
 	shutdownTimeout time.Duration
+	addrFile        string
 }
 
 // NewServer serves h behind the platform middleware chain
@@ -46,17 +48,40 @@ func NewServer(cfg config.ServerConfig, h http.Handler, logger *slog.Logger) *Se
 		},
 		logger:          logger,
 		shutdownTimeout: cfg.ShutdownTimeout,
+		addrFile:        cfg.AddrFile,
 	}
 }
 
-// ListenAndServe listens on server.addr and then behaves like Serve.
+// ListenAndServe listens on server.addr, writes the address it got to
+// server.addr_file when that is set (the end-to-end tests listen on port 0),
+// and then behaves like Serve.
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", s.srv.Addr)
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", s.srv.Addr, err)
 	}
+	if s.addrFile != "" {
+		if err := writeAddrFile(s.addrFile, ln.Addr().String()); err != nil {
+			_ = ln.Close()
+			return err
+		}
+	}
 	return s.Serve(ctx, ln)
+}
+
+// writeAddrFile writes addr to path through a temporary file and a rename,
+// so a reader never sees a partial address. The error leaves the path out:
+// like every *_file key, server.addr_file is not logged.
+func writeAddrFile(path, addr string) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, []byte(addr), 0o600); err != nil {
+		return fmt.Errorf("server.addr_file: write: %w", errors.Unwrap(err))
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return fmt.Errorf("server.addr_file: rename: %w", errors.Unwrap(err))
+	}
+	return nil
 }
 
 // Serve serves HTTP on ln until ctx is done. It then stops accepting

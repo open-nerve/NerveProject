@@ -24,22 +24,26 @@ func TestPlatformProblemsMatchTheContract(t *testing.T) {
 		target string
 		status int
 	}{
-		{"unknown API path", NewMux(discard), "/api/v0/nope", http.StatusNotFound},
-		{"not ready", NewMux(discard, notReady), "/readyz", http.StatusServiceUnavailable},
+		{"unknown API path", NewRouter(discard), "/api/v0/nope", http.StatusNotFound},
+		{"not ready", NewRouter(discard, notReady), "/readyz", http.StatusServiceUnavailable},
 		{"panic", middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") }), discard), "/api/v0/boom", http.StatusInternalServerError},
 		{"bad request", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			errs.BadRequest(w, r, errors.New("Invalid format for parameter limit"))
 		}), "/api/v0/things?limit=x", http.StatusBadRequest},
 		{"internal error", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			errs.InternalError(w, r, errors.New("boom"))
+			errs.Write(w, r, errors.New("boom"))
 		}), "/api/v0/things", http.StatusInternalServerError},
-		{"field errors", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			WriteProblem(w, Problem{
-				Status: http.StatusUnprocessableEntity,
-				Code:   "issue.invalid",
-				Title:  http.StatusText(http.StatusUnprocessableEntity),
-				Detail: "the issue is invalid",
-				Errors: []FieldError{{Field: "name", Message: "is required"}},
+		{"body not decoded", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			errs.BodyError(w, r, errors.New("EOF"))
+		}), "/api/v0/things", http.StatusBadRequest},
+		{"payload too large", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			errs.Write(w, r, &http.MaxBytesError{Limit: 1024})
+		}), "/api/v0/things", http.StatusRequestEntityTooLarge},
+		{"unauthorized", newTestAPI(&fakeAuth{}, discard).authenticate(http.NotFoundHandler()), "/api/v0/things", http.StatusUnauthorized},
+		{"field errors", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			errs.Write(w, r, problemErr{
+				status: http.StatusUnprocessableEntity, code: "validation_failed", detail: "The request has invalid values.",
+				fields: []error{fieldErr{"name", "required", "is required"}, fieldErr{"password", "common_password", "is too common"}},
 			})
 		}), "/api/v0/issues", http.StatusUnprocessableEntity},
 	}

@@ -20,13 +20,14 @@ func (s fixedSource) Build() domain.Build { return domain.Build(s) }
 
 func TestGetInstanceMatchesTheContract(t *testing.T) {
 	contract := apitest.Load(t)
-	mux := http.NewServeMux()
+	logger := slog.New(slog.DiscardHandler)
+	router := httpserver.NewRouter(logger)
 	getInfo := app.NewGetInfo(fixedSource{Version: "1.2.3", Commit: "4f2a9c1"})
-	httpadapter.Register(mux, getInfo, httpserver.NewAPIErrors(slog.New(slog.DiscardHandler)))
+	httpadapter.Register(router, getInfo, httpserver.NewAPIErrors(logger))
 	req := httptest.NewRequest(http.MethodGet, "/api/v0/instance", nil)
 	rec := httptest.NewRecorder()
 
-	mux.ServeHTTP(rec, req)
+	router.ServeHTTP(rec, req)
 	res := rec.Result()
 
 	contract.CheckResponse(t, req, res)

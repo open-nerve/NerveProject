@@ -5,24 +5,23 @@ package httpadapter
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
 
-// Register mounts the module's routes on mux, the root router from
-// httpserver.NewMux. They are more specific than the platform's /api/
+// Register mounts the module's routes on router, the root router from
+// httpserver.NewRouter. They are more specific than the platform's /api/
 // fallback, which keeps answering every other API path with a 404 problem.
-// Binding and handler errors are answered as problem+json by apiErrors.
-func Register(mux *http.ServeMux, getInfo *app.GetInfo, apiErrors httpserver.APIErrors) {
+// Binding, body and handler errors are answered as problem+json by apiErrors.
+func Register(router *httpserver.Router, getInfo *app.GetInfo, apiErrors httpserver.APIErrors) {
 	strict := gen.NewStrictHandlerWithOptions(handler{getInfo: getInfo}, nil, gen.StrictHTTPServerOptions{
-		RequestErrorHandlerFunc:  apiErrors.BadRequest,
-		ResponseErrorHandlerFunc: apiErrors.InternalError,
+		RequestErrorHandlerFunc:  apiErrors.BodyError,
+		ResponseErrorHandlerFunc: apiErrors.Write,
 	})
 	gen.HandlerWithOptions(strict, gen.StdHTTPServerOptions{
-		BaseRouter:       mux,
+		BaseRouter:       router,
 		ErrorHandlerFunc: apiErrors.BadRequest,
 	})
 }

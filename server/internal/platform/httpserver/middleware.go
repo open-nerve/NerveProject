@@ -22,8 +22,9 @@ func middleware(h http.Handler, logger *slog.Logger) http.Handler {
 	return withRequestID(withRecover(logger, withAccessLog(logger, h)))
 }
 
-// requestID returns the ID the request ID middleware assigned to the request.
-func requestID(ctx context.Context) string {
+// RequestID returns the ID the request ID middleware assigned to the request,
+// for log lines outside this package; "" outside a request.
+func RequestID(ctx context.Context) string {
 	id, _ := ctx.Value(requestIDKey{}).(string)
 	return id
 }
@@ -75,7 +76,7 @@ func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 				panic(v)
 			}
 			logger.ErrorContext(r.Context(), "panic serving request",
-				slog.String("request_id", requestID(r.Context())),
+				slog.String("request_id", RequestID(r.Context())),
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.Any("panic", v),
@@ -102,7 +103,8 @@ func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 
 // withAccessLog logs one line per request: method, path, status, duration
 // and request ID. A request whose handler panicked is logged as a 500, the
-// answer the recover middleware gives.
+// answer the recover middleware gives. The health probes log at debug level:
+// an orchestrator probes every few seconds (M0-P2 handoff 8).
 func withAccessLog(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -116,8 +118,12 @@ func withAccessLog(logger *slog.Logger, next http.Handler) http.Handler {
 			case status == 0:
 				status = http.StatusOK
 			}
-			logger.LogAttrs(r.Context(), slog.LevelInfo, "http request",
-				slog.String("request_id", requestID(r.Context())),
+			level := slog.LevelInfo
+			if r.URL.Path == "/healthz" || r.URL.Path == "/readyz" {
+				level = slog.LevelDebug
+			}
+			logger.LogAttrs(r.Context(), level, "http request",
+				slog.String("request_id", RequestID(r.Context())),
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.Int("status", status),

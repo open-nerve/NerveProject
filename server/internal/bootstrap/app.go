@@ -49,17 +49,17 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		pool.Close()
 		return nil, err
 	}
-	mux := httpserver.NewMux(logger,
+	router := httpserver.NewRouter(logger,
 		httpserver.Check{Name: "database", Run: pool.Ping},
 		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
 	)
-	// Modules mount their generated routes on this root mux, next to the
+	// Modules mount their generated routes on this root router, next to the
 	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.
-	instance.New().Register(mux, httpserver.NewAPIErrors(logger))
+	instance.New().Register(router, httpserver.NewAPIErrors(logger))
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
-	mux.Handle("/", webui.Handler(webFiles))
-	return &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, handler: mux}, nil
+	router.Handle("/", webui.Handler(webFiles))
+	return &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, handler: router}, nil
 }
 
 // run applies pending migrations when database.auto_migrate is on, then

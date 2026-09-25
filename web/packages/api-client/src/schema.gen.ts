@@ -28,16 +28,22 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description One invalid field of a request. */
+        /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
+            /** @description The field's path in the request body, e.g. password or tags[1].name. */
             field: string;
+            /**
+             * @description What is wrong with the field.
+             * @enum {string}
+             */
+            code: "required" | "invalid_format" | "too_short" | "too_long" | "out_of_range" | "not_allowed" | "weak_password" | "common_password" | "must_be_future" | "contains_url";
             message: string;
         };
         /** @description RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it. */
         Problem: {
             /** @description HTTP status code. */
             status: number;
-            /** @description Stable error code. Platform codes have no prefix (not_found, bad_request, internal_error, not_ready); module codes are prefixed with the module, e.g. issue.state_not_in_project. */
+            /** @description Stable error code. Platform codes have no prefix (bad_request, unauthorized, not_found, payload_too_large, validation_failed, server_busy, internal_error, not_ready); module codes are prefixed with the module, e.g. identity.email_taken. Each operation lists the codes it can answer in x-problem-codes. */
             code: string;
             /** @description HTTP status phrase, e.g. "Not Found". */
             title: string;

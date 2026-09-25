@@ -50,7 +50,7 @@ func serve(h http.Handler, r *http.Request) *httptest.ResponseRecorder {
 func TestRequestIDIsGeneratedWhenMissing(t *testing.T) {
 	var seen string
 	h := middleware(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		seen = requestID(r.Context())
+		seen = RequestID(r.Context())
 	}), slog.New(slog.DiscardHandler))
 
 	rec := serve(h, httptest.NewRequest(http.MethodGet, "/", nil))
@@ -208,9 +208,23 @@ func TestAccessLog(t *testing.T) {
 				t.Fatal("no access log entry")
 			}
 			if entry["method"] != "POST" || entry["path"] != "/things" || entry["status"] != tt.want ||
-				entry["request_id"] != "req-2" || entry["duration"] == nil {
+				entry["request_id"] != "req-2" || entry["duration"] == nil || entry["level"] != "INFO" {
 				t.Errorf("access log = %v", entry)
 			}
 		})
+	}
+}
+
+// Orchestrators probe every few seconds: the probes' access log lines are
+// debug level (M0-P2 handoff 8).
+func TestAccessLogOfProbesIsDebug(t *testing.T) {
+	for _, path := range []string{"/healthz", "/readyz"} {
+		logger, logs := captureLogs(t)
+
+		serve(middleware(http.NotFoundHandler(), logger), httptest.NewRequest(http.MethodGet, path, nil))
+
+		if entry := findLog(logs(), "http request"); entry == nil || entry["level"] != "DEBUG" {
+			t.Errorf("GET %s access log = %v, want level DEBUG", path, entry)
+		}
 	}
 }

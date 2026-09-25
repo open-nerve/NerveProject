@@ -4,8 +4,6 @@
 package instance
 
 import (
-	"net/http"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/adapter/buildinfo"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/instance/adapter/http"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance/app"
@@ -22,8 +20,8 @@ func New() *Module {
 	return &Module{getInfo: app.NewGetInfo(buildinfo.Source{})}
 }
 
-// Register mounts the module's API on mux, the root router from
-// httpserver.NewMux; apiErrors answers binding and handler errors.
-func (m *Module) Register(mux *http.ServeMux, apiErrors httpserver.APIErrors) {
-	httpadapter.Register(mux, m.getInfo, apiErrors)
+// Register mounts the module's API on router, the root router from
+// httpserver.NewRouter; apiErrors answers binding and handler errors.
+func (m *Module) Register(router *httpserver.Router, apiErrors httpserver.APIErrors) {
+	httpadapter.Register(router, m.getInfo, apiErrors)
 }

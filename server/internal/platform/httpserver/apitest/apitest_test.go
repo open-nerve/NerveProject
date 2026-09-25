@@ -180,7 +180,9 @@ func TestValidateSchema(t *testing.T) {
 		valid              bool
 	}{
 		{"problem", "Problem", `{"status":404,"code":"not_found","title":"Not Found","detail":"no API endpoint for GET /api/v0/nope"}`, true},
-		{"problem with field errors", "Problem", `{"status":422,"code":"issue.invalid","title":"Unprocessable Entity","errors":[{"field":"name","message":"is required"}]}`, true},
+		{"problem with field errors", "Problem", `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","errors":[{"field":"name","code":"required","message":"is required"}]}`, true},
+		{"field error without code", "Problem", `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","errors":[{"field":"name","message":"is required"}]}`, false},
+		{"field error with an unknown code", "Problem", `{"status":422,"code":"validation_failed","title":"Unprocessable Entity","errors":[{"field":"name","code":"blank","message":"is required"}]}`, false},
 		{"problem without code", "Problem", `{"status":404,"title":"Not Found"}`, false},
 		{"problem with an unknown member", "Problem", `{"status":404,"code":"not_found","title":"Not Found","instance":"/x"}`, false},
 		{"unknown schema", "Nope", `{}`, false},

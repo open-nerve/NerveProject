@@ -12,7 +12,7 @@ func TestWriteProblem(t *testing.T) {
 		Status: http.StatusUnprocessableEntity,
 		Code:   "issue.state_not_in_project",
 		Title:  "State is not in the project",
-		Errors: []FieldError{{Field: "state_id", Message: "unknown state"}},
+		Errors: []FieldError{{Field: "state_id", Code: "not_allowed", Message: "unknown state"}},
 	})
 
 	if rec.Code != http.StatusUnprocessableEntity {
@@ -22,7 +22,7 @@ func TestWriteProblem(t *testing.T) {
 		t.Errorf("Content-Type = %q, want application/problem+json", ct)
 	}
 	want := `{"status":422,"code":"issue.state_not_in_project","title":"State is not in the project",` +
-		`"errors":[{"field":"state_id","message":"unknown state"}]}` + "\n"
+		`"errors":[{"field":"state_id","code":"not_allowed","message":"unknown state"}]}` + "\n"
 	if got := rec.Body.String(); got != want {
 		t.Errorf("body = %s, want %s", got, want)
 	}
