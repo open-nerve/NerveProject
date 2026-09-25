@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M2/P1 `platform-core` |
 | 日期 | 2026-09-26 |
-| 状态 | 待评审 |
+| 状态 | 已完成（[评审记录](../reviews/P1-platform-core-review.md)） |
 | 上级文档 | [M2 设计文档](../M2-design.md) 第 3.3–3.14、3.20、4.1–4.3、4.5–4.7、5.1–5.4、6.1–6.6、8.7、9.1–9.5、12（P1）、13.1、16 节；[v0 总体设计](../../v0-design.md) 3.1、3.5、4、5.5、5.6、6.2–6.4、6.8、8.2 节；[M0 设计](../../M0-foundation/M0-design.md) 3.1、3.3、3.5 节 |
 | 前置交接 | [M0-P1-sqlc-cgo](../handoffs/M0-P1-sqlc-cgo.md)、[M0-P2-platform-notes](../handoffs/M0-P2-platform-notes.md)、[M0-P3-api-codegen-notes](../handoffs/M0-P3-api-codegen-notes.md)、[M0-P4-schema-conventions](../handoffs/M0-P4-schema-conventions.md)、[M0-P6-e2e-notes](../handoffs/M0-P6-e2e-notes.md)（本 Phase 关闭或部分关闭的条目见第 7 节） |
 | 计划 | [P1 plan](../plans/P1-platform-core.md) |

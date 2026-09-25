@@ -2051,11 +2051,13 @@ files:
 | M3 | **停用的端口**（决策点 3 已裁定为 A）：给停用用例加上它声明的端口并实现，在停用的同一个事务里调用。唯一管理员时拒绝（按 Plane 的本意，修正它查询的缺陷，登记差异），并给 `deactivateMe` 声明对应的错误码；停用成员关系；删除发给这个邮箱的邀请 |
 | M3 | 3.2 的字段规则：工作区图标、项目封面、成员头像随实体进入接口，M5 之前为 `null`；`IUserLite.avatar_url` 改为可为 `null`；读取它们的代码不动 |
 | M3 | sqlc 的模块边界（3.14）：`access` 模块读成员表，是在 `app` 层声明端口，还是作为 `TestSQLCSchemaScope` 中写明理由的例外 |
+| M3 | `TestSQLCSchemaScope` 的所有者规则用正则识别 `ALTER TABLE`，漏掉带引号的标识符，以及别的模块的表上 `ALTER` 以外的 DDL（`CREATE INDEX … ON users`、`CREATE TRIGGER`、`DROP TABLE`）；M3 是第一个有跨模块外键的 M，补上这几种写法和它们的反例（P1 评审 M5） |
 | M3、M4、M6 | **物理删除与跨模块外键的关系图**：每张新表按 3.13 照搬 `on_delete`，并在 4.7 的图上延伸，写明物理删除时每条外键的去向。Plane `project.py:77-89` 的项目负责人、`cycle.py:65-68` 的迭代负责人都是 `CASCADE`：物理删除一个账户会连带删除项目或迭代。M2 只停用、不删除账户；各 M 写明允许物理删除的范围 |
 | M3 | CSP：表情选择器从 `cdn.jsdelivr.net` 下载 `emojibase-data`，改为随前端一起构建、从本站提供（8.3） |
 | M3 | 新手引导的创建工作区、加入工作区、邀请成员三步；`user.service.ts` 中留下的 `leaveWorkspace`、`joinProject`、`leaveProject`；`IUserLite` 的 `is_bot`；时区接口也供工作区和项目设置使用 |
 | M4 | **游标**：工作项按 `sort_order`、优先级或日期排序，每种排序定义自己的游标载荷，最后以 `id` 保证稳定（3.12）；不复用 PAT 列表的 `(created_at, id)` |
 | M4 | **自动归档读 `updated_at`**：它由用例的时钟显式写入（3.13），测试用固定时钟 |
+| M4 | **请求体检查的两处延伸**（P1 评审）：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前），改为按数组下标的数值排序；不限类型的节点（`{}`、开放对象、没有 `items` 的数组）不看数的范围，`1e400` 这类 float64 放不下的数仍然得到解码器笼统的 400，改为在边界上报出。两者都在第一个带数组或开放对象请求体的操作到来时处理 |
 | M4 | **草稿发布**复用同一个结构检查：发布时，草稿的 `payload` 按"创建工作项"的请求 schema 走 `bodyshape` 的校验（3.11），与创建工作项走同一条路 |
 | M4 | **60 天物理清理**：把软删除的 `api_tokens` 纳入；`issue_activities` 对工作项、评论的外键是 `DO_NOTHING`（不写 `ON DELETE`），先删工作项会被它挡住：先删除或置空这些引用，或者登记为 `SET NULL` 的差异 |
 | M4 | `user.service.ts` 中的 `getUserProfileIssues`；事件订阅者的写法（3.15）；CSP：编辑器 callout 的默认表情图来自 `cdn.jsdelivr.net`，改为本站资源或原生表情，并核对表情回应（8.3） |
@@ -2086,7 +2088,7 @@ files:
 
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
-| P1 | platform-core | 进行中 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | — |
+| P1 | platform-core | 已完成 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | [review](reviews/P1-platform-core-review.md) |
 | P2 | sessions | 未开始 | — | — | — |
 | P3 | account-api | 未开始 | — | — | — |
 | P4 | web-auth | 未开始 | — | — | — |
