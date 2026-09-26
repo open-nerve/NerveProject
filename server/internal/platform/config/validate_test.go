@@ -23,10 +23,11 @@ func validConfig() Config {
 		},
 		Database: DatabaseConfig{URL: "postgres://nerve:secret@localhost:5432/nerve", MaxConns: 10, CommitTimeout: 2 * time.Second},
 		Auth: AuthConfig{
-			SignupEnabled:   true,
-			AccessTokenTTL:  15 * time.Minute,
-			SessionTTL:      720 * time.Hour,
-			RefreshDeadline: 4 * time.Second,
+			SignupEnabled:          true,
+			AccessTokenTTL:         15 * time.Minute,
+			SessionTTL:             720 * time.Hour,
+			RefreshDeadline:        4 * time.Second,
+			SessionCleanupInterval: 3 * time.Hour,
 			Password: PasswordConfig{
 				Argon2MemoryKiB:     19456,
 				Argon2Iterations:    2,
@@ -45,6 +46,8 @@ func validConfig() Config {
 			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
 			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 3},
 		},
+		// Unlike server.shutdown_timeout and the default.
+		Jobs: JobsConfig{ShutdownTimeout: 12 * time.Second},
 		// Unlike the defaults and unlike auth.signup_enabled, so that a key
 		// logged from the wrong field shows.
 		Workspace: WorkspaceConfig{CreationEnabled: false},
@@ -83,6 +86,7 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"database.commit_timeout: must be positive, got 0s",
 		"auth.access_token_ttl: must be positive, got 0s",
 		"auth.session_ttl: must be positive, got 0s",
+		"auth.session_cleanup_interval: must be at least 1s, got 0s",
 		"auth.jwt.private_key_file: is required in prod: a PKCS#8 PEM Ed25519 private key, e.g. from openssl genpkey -algorithm ed25519",
 		"auth.password.argon2_iterations: must be at least 1, got 0",
 		"auth.password.argon2_parallelism: must be at least 1, got 0",
@@ -105,6 +109,7 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"ratelimit.register_ip.burst: must be at least 1, got 0",
 		"ratelimit.password_user.per_minute: must be at least 1, got 0",
 		"ratelimit.password_user.burst: must be at least 1, got 0",
+		"jobs.shutdown_timeout: must be positive, got 0s",
 		"files.size_limit: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
 		`log.format: must be text or json, got "xml"`,
@@ -179,6 +184,17 @@ func TestValidateCrossKeyRules(t *testing.T) {
 				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("::/0"))
 			},
 			want: "server.trusted_proxies: ::/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
+		},
+		{
+			// River runs a periodic job at most once a second.
+			name:   "session cleanup more often than once a second",
+			change: func(c *Config) { c.Auth.SessionCleanupInterval = 500 * time.Millisecond },
+			want:   "auth.session_cleanup_interval: must be at least 1s, got 500ms",
+		},
+		{
+			name:   "negative jobs shutdown timeout",
+			change: func(c *Config) { c.Jobs.ShutdownTimeout = -time.Second },
+			want:   "jobs.shutdown_timeout: must be positive, got -1s",
 		},
 		{
 			name:   "negative file size limit",

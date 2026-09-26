@@ -39,6 +39,8 @@ auth:
   session_ttl: 720h
   # 续期、退出的语句期限；加上 database.commit_timeout 必须短于前端续期请求的 8 秒超时
   refresh_deadline: 4s
+  # 定时任务删除过期会话的间隔，至少 1 秒
+  session_cleanup_interval: 1h
   jwt:
     # PKCS#8 PEM 格式的 Ed25519 私钥文件：openssl genpkey -algorithm ed25519 -out nerve-jwt.pem
     # prod 必填；dev、test 为空时，启动时生成一把临时密钥（重启后旧的访问令牌失效）
@@ -70,6 +72,11 @@ ratelimit:
   register_ip: {per_minute: 10, burst: 5}
   # 需要校验密码的已认证操作（M2 中是修改密码），按账户
   password_user: {per_minute: 5, burst: 5}
+
+# 后台任务（River）
+jobs:
+  # 停机时，HTTP 服务停下之后等正在运行的任务结束的时长；到期后取消它们
+  shutdown_timeout: 10s
 
 workspace:
   # 是否允许创建工作区。实例配置接口报告它；创建工作区在 M3 加入时照它执行
