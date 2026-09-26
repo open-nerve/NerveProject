@@ -24,6 +24,17 @@ FROM users
 WHERE id = sqlc.arg(id)
 FOR NO KEY UPDATE;
 
+-- name: UpdateUser :one
+-- PATCH /me: only the fields that are set change (M2 design 3.14); the rest keep what a concurrent write left.
+UPDATE users
+SET updated_at    = sqlc.arg(now),
+    first_name    = CASE WHEN sqlc.arg(set_first_name)::boolean THEN sqlc.arg(first_name)::text ELSE first_name END,
+    last_name     = CASE WHEN sqlc.arg(set_last_name)::boolean THEN sqlc.arg(last_name)::text ELSE last_name END,
+    display_name  = CASE WHEN sqlc.arg(set_display_name)::boolean THEN sqlc.arg(display_name)::text ELSE display_name END,
+    user_timezone = CASE WHEN sqlc.arg(set_user_timezone)::boolean THEN sqlc.arg(user_timezone)::text ELSE user_timezone END
+WHERE id = sqlc.arg(id)
+RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at;
+
 -- name: UpdatePasswordHash :exec
 UPDATE users
 SET password = sqlc.arg(password), updated_at = sqlc.arg(now)

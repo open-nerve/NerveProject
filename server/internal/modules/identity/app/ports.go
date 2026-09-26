@@ -43,6 +43,26 @@ type UserReader interface {
 	GetUser(ctx context.Context, id uuid.UUID) (domain.User, error)
 }
 
+// UserUpdater applies partial updates to accounts.
+type UserUpdater interface {
+	// UpdateUser applies p to account id at now and returns the account;
+	// ErrNotFound when there is none.
+	UpdateUser(ctx context.Context, id uuid.UUID, p domain.UserPatch, now time.Time) (domain.User, error)
+}
+
+// ProfileReader reads preferences.
+type ProfileReader interface {
+	// GetProfile returns ErrNotFound when userID has no profile.
+	GetProfile(ctx context.Context, userID uuid.UUID) (domain.Profile, error)
+}
+
+// ProfileUpdater applies partial updates to preferences.
+type ProfileUpdater interface {
+	// UpdateProfile applies p to userID's profile at now and returns it;
+	// ErrNotFound when there is none.
+	UpdateProfile(ctx context.Context, userID uuid.UUID, p domain.ProfilePatch, now time.Time) (domain.Profile, error)
+}
+
 // LoginAccount is what login reads of an account before its transaction:
 // the hash is the snapshot it verifies the password against (M2 design 3.5).
 type LoginAccount struct {

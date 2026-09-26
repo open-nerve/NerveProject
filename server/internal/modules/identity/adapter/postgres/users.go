@@ -44,6 +44,38 @@ func (s *Store) GetUser(ctx context.Context, id uuid.UUID) (domain.User, error) 
 	}, nil
 }
 
+// UpdateUser applies p to account id at now, in one statement, and returns
+// the account; app.ErrNotFound when there is none.
+func (s *Store) UpdateUser(ctx context.Context, id uuid.UUID, p domain.UserPatch, now time.Time) (domain.User, error) {
+	arg := gen.UpdateUserParams{Now: now, ID: id}
+	arg.SetFirstName, arg.FirstName = set(p.FirstName)
+	arg.SetLastName, arg.LastName = set(p.LastName)
+	arg.SetDisplayName, arg.DisplayName = set(p.DisplayName)
+	arg.SetUserTimezone, arg.UserTimezone = set(p.Timezone)
+	row, err := s.queries(ctx).UpdateUser(ctx, arg)
+	if err != nil {
+		return domain.User{}, notFound(err)
+	}
+	return domain.User{
+		ID:          row.ID,
+		Email:       row.Email,
+		FirstName:   row.FirstName,
+		LastName:    row.LastName,
+		DisplayName: row.DisplayName,
+		Timezone:    row.UserTimezone,
+		CreatedAt:   row.CreatedAt,
+	}, nil
+}
+
+// set is an optional value as a query's set flag and value.
+func set[T any](v *T) (bool, T) {
+	if v == nil {
+		var zero T
+		return false, zero
+	}
+	return true, *v
+}
+
 // FindLoginAccount reads the account of email, a normalized address;
 // app.ErrNotFound when there is none.
 func (s *Store) FindLoginAccount(ctx context.Context, email string) (app.LoginAccount, error) {
