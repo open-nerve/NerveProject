@@ -149,14 +149,16 @@ type APITokenCursor struct {
 	ID        uuid.UUID
 }
 
-// MarshalJSON writes the cursor as [created_at, id].
+// MarshalJSON writes the cursor as [created_at, id], created_at in UTC, so
+// each position has exactly one spelling.
 func (c APITokenCursor) MarshalJSON() ([]byte, error) {
-	return json.Marshal([2]string{c.CreatedAt.Format(time.RFC3339Nano), c.ID.String()})
+	return json.Marshal([2]string{c.CreatedAt.UTC().Format(time.RFC3339Nano), c.ID.String()})
 }
 
 // UnmarshalJSON reads an array of exactly two strings, an RFC 3339 time and
 // a uuid. It also reads spellings of them that MarshalJSON never writes,
-// such as an offset for Z or upper-case hex; DecodeCursor refuses those.
+// such as the time at an offset instead of in UTC, or upper-case hex;
+// DecodeCursor refuses those.
 func (c *APITokenCursor) UnmarshalJSON(b []byte) error {
 	var parts []string
 	if err := json.Unmarshal(b, &parts); err != nil {

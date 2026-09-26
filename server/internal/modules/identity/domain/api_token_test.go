@@ -179,7 +179,7 @@ func ptr[T any](v T) *T { return &v }
 
 // DecodeCursor accepts only what EncodeCursor writes, so the time MarshalJSON
 // writes must read back to the same instant and the same spelling, with or
-// without a fraction, in UTC or at another offset.
+// without a fraction. A time at another offset is written in UTC.
 func TestAPITokenCursorRoundTrip(t *testing.T) {
 	tests := []struct {
 		name string
@@ -191,7 +191,7 @@ func TestAPITokenCursorRoundTrip(t *testing.T) {
 		{"a whole second", time.Date(2026, 9, 25, 10, 0, 0, 0, time.UTC),
 			`["2026-09-25T10:00:00Z","0199a2b4-0000-7000-8000-000000000001"]`},
 		{"an offset other than UTC", time.Date(2026, 9, 25, 15, 30, 0, 123456000, time.FixedZone("", 5*3600+30*60)),
-			`["2026-09-25T15:30:00.123456+05:30","0199a2b4-0000-7000-8000-000000000001"]`},
+			`["2026-09-25T10:00:00.123456Z","0199a2b4-0000-7000-8000-000000000001"]`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -233,11 +233,13 @@ func TestAPITokenCursorRejects(t *testing.T) {
 
 // UnmarshalJSON reads other spellings of the same time and id than
 // MarshalJSON writes; DecodeCursor refuses them, as it accepts only what
-// EncodeCursor writes.
+// EncodeCursor writes. The same instant at another offset is one of them:
+// each position has one spelling.
 func TestAPITokenCursorRefusesOtherSpellings(t *testing.T) {
 	const at, id = "2026-09-25T10:00:00.123456", "0199a2b4-0000-7000-8000-000000000001"
 	for _, payload := range []string{
 		`["` + at + `+00:00","` + id + `"]`,
+		`["2026-09-25T18:00:00.123456+08:00","` + id + `"]`,
 		`["` + at + `0Z","` + id + `"]`,
 		`["` + at + `Z","` + strings.ToUpper(id) + `"]`,
 		`["` + at + `Z","{` + id + `}"]`,
