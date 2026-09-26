@@ -582,7 +582,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - **改为直接检查三件事**：
     1. 传递依赖测试仍然禁止 `github.com/google/uuid`，只有一个例外：程序里导入它的每个包都属于 `github.com/oapi-codegen/runtime` 模块（目前是 `runtime` 和 `runtime/types`）。我们的代码或别的库导入它，测试失败并打印导入链。
     2. archtest 新规则：`adapter/*/gen` 下的生成文件引用 `openapi_types.UUID` 就失败。这才是原意：代码里只有一种 uuid 类型，漏了 `type-mapping` 的模块当场被发现。
-    3. depguard 照旧禁止手写代码直接导入 google/uuid。
+    3. depguard 照旧禁止手写代码直接导入 google/uuid；P3a 的收尾修复又禁止手写代码导入 `github.com/oapi-codegen/runtime` 和 `runtime/types`（`types.UUID` 是 google/uuid 的别名，`runtime` 只给生成代码绑定参数用；生成的文件由 golangci-lint 默认排除）。
   - 其余禁止的模块（kin-openapi、testcontainers、docker）不变。3.20 在 P3 改 M0 设计和 M0/P3 spec 的相应文字。
   - 加依赖之后核对 `server/go.mod` 仍是 `go 1.27` / `toolchain go1.27.1`。
   - 每个模块另由 `bodyshapegen` 生成请求体结构表（3.11），与 `server.gen.go` 放在同一个 `gen` 目录。

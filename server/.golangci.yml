@@ -19,6 +19,12 @@ linters:
               desc: 用标准库 uuid
             - pkg: github.com/satori/go.uuid
               desc: 用标准库 uuid
+            # oapi-codegen 的运行时只给生成代码绑定参数用。生成的文件（带 "Code generated … DO NOT EDIT." 头）
+            # 不受这些规则约束：golangci-lint 默认排除它们的问题（linters.exclusions.generated）
+            - pkg: github.com/oapi-codegen/runtime/types
+              desc: 它的 UUID 是 google/uuid 的别名；用标准库 uuid
+            - pkg: github.com/oapi-codegen/runtime
+              desc: 只有生成代码用它绑定参数
             - pkg: github.com/spf13/viper
               desc: 用 koanf（platform/config）
             - pkg: github.com/pkg/errors
