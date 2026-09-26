@@ -82,6 +82,7 @@ func TestListAPITokensPageByPage(t *testing.T) {
 	}
 
 	var got []uuid.UUID
+	var sizes []int
 	var after *domain.APITokenCursor
 	for range 4 {
 		page, err := s.ListAPITokens(context.Background(), alice.ID, after, 2)
@@ -91,6 +92,7 @@ func TestListAPITokensPageByPage(t *testing.T) {
 		if len(page) == 0 {
 			break
 		}
+		sizes = append(sizes, len(page))
 		for _, tok := range page {
 			got = append(got, tok.ID)
 		}
@@ -99,6 +101,11 @@ func TestListAPITokensPageByPage(t *testing.T) {
 	}
 	if want := expectedOrder(t, pool, alice.ID); !slices.Equal(got, want) || len(got) != 5 {
 		t.Errorf("pages = %v, want %v", got, want)
+	}
+	// A page stops at the limit: the use case asks for one row more than it
+	// returns to tell whether another page follows.
+	if !slices.Equal(sizes, []int{2, 2, 1}) {
+		t.Errorf("page sizes = %v, want [2 2 1]", sizes)
 	}
 }
 
@@ -196,9 +203,36 @@ func TestAPITokenCredentials(t *testing.T) {
 	n := newToken(u.ID, "deploy", now)
 	n.ExpiredAt = &expires
 	mustCreateToken(t, s, n)
+	// Another account with its own token, always in the opposite state: a
+	// read reports the state of its token's owner, never another account's.
+	bob := newUser("bob@corp.com")
+	mustCreate(t, s, bob)
+	bobs := newToken(bob.ID, "bob's", now)
+	mustCreateToken(t, s, bobs)
+	setActive := func(id uuid.UUID, active bool) {
+		t.Helper()
+		if _, err := pool.Exec(context.Background(), "UPDATE users SET is_active = $2 WHERE id = $1", id, active); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bobsCredentials := func(active bool) {
+		t.Helper()
+		byHash, err1 := s.APITokenByHash(context.Background(), bobs.TokenHash)
+		byID, err2 := s.APITokenByID(context.Background(), bobs.ID)
+		if err := errors.Join(err1, err2); err != nil {
+			t.Fatal(err)
+		}
+		for _, got := range []app.APITokenCredential{byHash, byID} {
+			if got.ID != bobs.ID || got.UserID != bob.ID || got.UserActive != active {
+				t.Errorf("the other account's credential = %+v, want its own token and account, active %v", got, active)
+			}
+		}
+	}
+	setActive(bob.ID, false)
 
 	byHash, err1 := s.APITokenByHash(context.Background(), n.TokenHash)
 	byID, err2 := s.APITokenByID(context.Background(), n.ID)
+	bobsCredentials(false)
 
 	want := app.APITokenCredential{ID: n.ID, UserID: u.ID, ExpiredAt: &expires, UserActive: true}
 	for _, got := range []app.APITokenCredential{byHash, byID} {
@@ -218,16 +252,25 @@ func TestAPITokenCredentials(t *testing.T) {
 		t.Errorf("APITokenByID(unknown) = %v, want app.ErrNotFound", err)
 	}
 
+	used := now.Add(time.Minute)
+	if err := s.TouchAPIToken(context.Background(), n.ID, used, used.Add(-time.Minute)); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := s.RevokeAPIToken(context.Background(), n.ID, u.ID, now); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(context.Background(), "UPDATE users SET is_active = false"); err != nil {
-		t.Fatal(err)
-	}
+	setActive(u.ID, false)
+	setActive(bob.ID, true)
 	byHash, err1 = s.APITokenByHash(context.Background(), n.TokenHash)
 	byID, err2 = s.APITokenByID(context.Background(), n.ID)
+	bobsCredentials(true)
 	if err := errors.Join(err1, err2); err != nil || !byHash.Revoked || byHash.UserActive || !byID.Revoked || byID.UserActive {
 		t.Errorf("after revoke and deactivate: by hash %+v, by id %+v, %v", byHash, byID, err)
+	}
+	for _, got := range []app.APITokenCredential{byHash, byID} {
+		if got.LastUsed == nil || !got.LastUsed.Equal(used) {
+			t.Errorf("credential last used = %v, want %v", got.LastUsed, used)
+		}
 	}
 }
 
@@ -239,9 +282,18 @@ func TestTouchAPIToken(t *testing.T) {
 	mustCreate(t, s, u)
 	n := newToken(u.ID, "deploy", now)
 	mustCreateToken(t, s, n)
+	// The account's other token is never used: touching n leaves it alone.
+	other := newToken(u.ID, "other", now)
+	mustCreateToken(t, s, other)
 	lastUsed := func() time.Time {
 		t.Helper()
-		var used *time.Time
+		var used, otherUsed *time.Time
+		if err := pool.QueryRow(context.Background(), "SELECT last_used FROM api_tokens WHERE id = $1", other.ID).Scan(&otherUsed); err != nil {
+			t.Fatal(err)
+		}
+		if otherUsed != nil {
+			t.Errorf("the other token's last_used = %v, want it never used", otherUsed)
+		}
 		var updated time.Time
 		if err := pool.QueryRow(context.Background(), "SELECT last_used, updated_at FROM api_tokens WHERE id = $1", n.ID).Scan(&used, &updated); err != nil {
 			t.Fatal(err)
@@ -269,6 +321,11 @@ func TestTouchAPIToken(t *testing.T) {
 	touch(first.Add(59 * time.Second))
 	if got := lastUsed(); !got.Equal(first) {
 		t.Errorf("last_used after a use within the minute = %v, want it still %v", got, first)
+	}
+	// Exactly a minute on, last_used equals stale_before: not older, no write.
+	touch(first.Add(time.Minute))
+	if got := lastUsed(); !got.Equal(first) {
+		t.Errorf("last_used a minute on = %v, want it still %v", got, first)
 	}
 	touch(first.Add(61 * time.Second))
 	if got := lastUsed(); !got.Equal(first.Add(61 * time.Second)) {
