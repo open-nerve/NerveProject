@@ -316,7 +316,7 @@ type ListAPITokensParams struct {
 	// Limit The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
 	Limit *externalRef0.Limit `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// Cursor The next_cursor of the page before; absent for the first page. A cursor that this list did not issue is 400 bad_request on cursor.
+	// Cursor The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
 	Cursor *externalRef0.Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 

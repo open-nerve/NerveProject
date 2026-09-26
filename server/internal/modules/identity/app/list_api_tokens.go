@@ -26,10 +26,11 @@ type APITokenPage struct {
 }
 
 // Execute returns the page that limit and cursor ask for, from the start
-// when cursor is nil. A cursor this list did not issue is 400 bad_request
-// and a limit outside 1–100 is 422 validation_failed; the cursor, being
-// the request's structure, is judged first. One row more than the page is
-// read to tell whether another page follows.
+// when cursor is nil. A cursor that shared.DecodeCursor refuses for this
+// list's payload is 400 bad_request and a limit outside 1–100 is 422
+// validation_failed; the cursor, being the request's structure, is judged
+// first. One row more than the page is read to tell whether another page
+// follows.
 func (l *ListAPITokens) Execute(ctx context.Context, limit *int, cursor *string) (APITokenPage, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

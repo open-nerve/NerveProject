@@ -71,7 +71,7 @@ func TestDecodeCursorRejects(t *testing.T) {
 			err := shared.DecodeCursor(tt.cursor, &got)
 
 			var se *shared.Error
-			want := []shared.FieldError{{Field: "cursor", Code: shared.FieldInvalidFormat, Message: "is not a cursor of this list"}}
+			want := []shared.FieldError{{Field: "cursor", Code: shared.FieldInvalidFormat, Message: "is not a cursor this list can read"}}
 			if !errors.As(err, &se) || se.ProblemStatus() != 400 || se.Code != "bad_request" || !slices.Equal(se.Fields, want) {
 				t.Errorf("DecodeCursor(%q) = %v, want 400 bad_request on cursor", tt.cursor, err)
 			}

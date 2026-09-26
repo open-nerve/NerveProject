@@ -25,7 +25,9 @@ components:
       in: query
       description: >-
         The next_cursor of the page before; absent for the first page. A
-        cursor that this list did not issue is 400 bad_request on cursor.
+        cursor that does not decode, has an unknown version or a payload of
+        another shape than this list's, or is not spelled as the server
+        writes it is 400 bad_request on cursor.
       schema:
         type: string
   schemas:

@@ -36,6 +36,8 @@ func EncodeCursor(payload any) (string, error) {
 // spelling of the same JSON or base64 (blanks, a name's case, a repeated
 // member, \r or \n, unused bits set) is InvalidCursor, as is a cursor that
 // does not decode, or whose payload is missing, null or not the list's.
+// A cursor is not signed: one edited to another payload of the list's shape,
+// spelled as EncodeCursor writes it, decodes like any other.
 func DecodeCursor(cursor string, payload any) error {
 	raw, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
@@ -60,11 +62,11 @@ func DecodeCursor(cursor string, payload any) error {
 	return nil
 }
 
-// InvalidCursor reports a cursor that is not one the list issued: 400
-// bad_request on the cursor parameter (M2 design 3.11, 3.12).
+// InvalidCursor reports a cursor that DecodeCursor refuses: 400 bad_request
+// on the cursor parameter (M2 design 3.11, 3.12).
 func InvalidCursor() *Error {
 	return &Error{
-		Kind: KindBadRequest, Code: CodeBadRequest, Detail: "The cursor is not one this list issued.",
-		Fields: []FieldError{{Field: "cursor", Code: FieldInvalidFormat, Message: "is not a cursor of this list"}},
+		Kind: KindBadRequest, Code: CodeBadRequest, Detail: "The cursor is not one this list can read.",
+		Fields: []FieldError{{Field: "cursor", Code: FieldInvalidFormat, Message: "is not a cursor this list can read"}},
 	}
 }

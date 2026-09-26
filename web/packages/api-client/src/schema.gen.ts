@@ -525,7 +525,7 @@ export interface components {
     parameters: {
         /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
         Limit: number;
-        /** @description The next_cursor of the page before; absent for the first page. A cursor that this list did not issue is 400 bad_request on cursor. */
+        /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
         Cursor: string;
     };
     requestBodies: never;
@@ -771,7 +771,7 @@ export interface operations {
             query?: {
                 /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
                 limit?: components["parameters"]["Limit"];
-                /** @description The next_cursor of the page before; absent for the first page. A cursor that this list did not issue is 400 bad_request on cursor. */
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
                 cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
