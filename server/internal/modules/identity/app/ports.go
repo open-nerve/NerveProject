@@ -196,6 +196,14 @@ type SessionRevoker interface {
 	RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason domain.RevokeReason, now time.Time) (int, error)
 }
 
+// ExpiredSessionDeleter deletes expired sessions (M2 design 3.15).
+type ExpiredSessionDeleter interface {
+	// DeleteExpiredSessions deletes up to limit sessions that expired
+	// before now, skipping those another transaction has locked, and
+	// returns how many it deleted.
+	DeleteExpiredSessions(ctx context.Context, now time.Time, limit int) (int, error)
+}
+
 // SessionEnder ends sessions at logout.
 type SessionEnder interface {
 	// EndSession revokes the session with reason logout while it is at g;
