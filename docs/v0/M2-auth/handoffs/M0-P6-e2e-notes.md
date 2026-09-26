@@ -60,3 +60,12 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：PAT 对等验收，认证 fixture 的登录、PAT 和页面的登录状态（M2/P2–P4）；S3 的 `signup_enabled`（M2/P3）；S2 的断言（M2/P4）；River 停机与 fixture 的预算（M2/P3）；fixture 写法的延伸（M4、M5、M8）。
 
 来源：[M2/P1 spec](../specs/P1-platform-core.md) 2.16。
+
+## 处理结果（M2/P2）
+
+- **认证 fixture 的登录**（完成）：`e2e/fixtures/auth.ts` 加上 `login` 和 `refresh`；A3、A4、A5、A6、A15 的接口版本调用 `e2e/fixtures/assert/identity.ts` 的断言函数（`expectSignedIn`、`expectRefreshed`、`expectRevoked`、`sessionOf`）；A15 用 `nerveWith` 另起一个限流很低的 nerve。
+- **新等待的期限**：P2 没有新增等待；A15 另起的 nerve 沿用 `nerveWith` 的预算。
+
+仍未处理，状态保持 `open`：PAT 对等验收和认证 fixture 的 PAT（M2/P3）；页面的登录状态（M2/P4）；S3 的 `signup_enabled`（M2/P3）；S2 的断言（M2/P4）；River 停机与 fixture 的预算（M2/P3）；fixture 写法的延伸（M4、M5、M8）。
+
+来源：[M2/P2 spec](../specs/P2-sessions.md) 第 7 节。

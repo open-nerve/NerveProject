@@ -53,3 +53,11 @@ M2 第一次加入认证、事务、后台任务和真正的迁移文件，届�
 仍未处理，状态保持 `open`：第 2 条的限流（M2/P2）和接口调用日志（M8，挂在限流之后）；第 5 条的 River、停机顺序、连接池关闭的时限和 River 的迁移（M2/P3）。
 
 来源：[M2/P1 spec](../specs/P1-platform-core.md) 第 7 节。
+
+## 处理结果（M2/P2）
+
+2. **按路由挂载**（限流完成）：`httpserver.API.Middlewares` 在认证之前加上按 IP 的失败闸门（`auth_failure`：先预留一个单位，只有认证失败才留下），在认证之后、请求体结构检查之前加上限流（有凭证按凭证计数的 `authenticated`，没有按 IP 计数的 `anonymous`）。桶由 `platform/ratelimit` 提供，`httpserver` 通过自己声明的 `Limiter` 接口使用它，`bootstrap` 接上；登录、注册的桶在 `identity` 的 HTTP 适配器里。限流没有改动 `NewServer`（固定链加上的安全响应头属于 M0-P5 交接，M2 设计 8.3）。
+
+仍未处理，状态保持 `open`：第 2 条的接口调用日志（M8，挂在限流之后）；第 5 条的 River、停机顺序、连接池关闭的时限和 River 的迁移（M2/P3）。
+
+来源：[M2/P2 spec](../specs/P2-sessions.md) 第 7 节。
