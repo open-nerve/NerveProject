@@ -48,14 +48,15 @@ export interface SessionRow {
   revoke_reason: string | null;
 }
 
+/** The columns of a SessionRow. */
+const sessionColumns = `id, user_id, token_hash, generation, user_agent, ip, expires_at, created_at, last_refreshed_at,
+       revoked_at, revoke_reason`;
+
 /** The row of the session that refreshToken belongs to. */
 export async function sessionOf(db: Database, refreshToken: string): Promise<SessionRow> {
-  const rows = await db.query<SessionRow>(
-    `SELECT id, user_id, token_hash, generation, user_agent, ip, expires_at, created_at, last_refreshed_at,
-            revoked_at, revoke_reason
-       FROM auth_sessions WHERE id = $1`,
-    [parseRefreshToken(refreshToken).sessionId]
-  );
+  const rows = await db.query<SessionRow>(`SELECT ${sessionColumns} FROM auth_sessions WHERE id = $1`, [
+    parseRefreshToken(refreshToken).sessionId,
+  ]);
   expect(rows, "the session of the refresh token").toHaveLength(1);
   return rows[0] as SessionRow;
 }
@@ -89,12 +90,12 @@ async function expectNewSession(db: Database, userId: string | undefined, s: Sig
 }
 
 /**
- * A1: registration added one account with the address lowercased, an
- * argon2id hash and the display name from the address; its default profile;
- * and its one session, a new one.
+ * A1, A17: one account has the address typed, lowercased, with an argon2id
+ * hash, the display name from the address, active, and its default
+ * profile. Returns its id.
  */
-export async function expectRegistered(db: Database, r: SignIn): Promise<void> {
-  const email = r.email.toLowerCase();
+async function expectNewAccount(db: Database, typed: string): Promise<string | undefined> {
+  const email = typed.toLowerCase();
   const users = await db.query<{ id: string; password: string; display_name: string; is_active: boolean }>(
     "SELECT id, password, display_name, is_active FROM users WHERE email = $1",
     [email]
@@ -126,9 +127,20 @@ export async function expectRegistered(db: Database, r: SignIn): Promise<void> {
       start_of_the_week: 0,
     },
   ]);
+  return user?.id;
+}
 
-  expect(await db.query("SELECT id FROM auth_sessions WHERE user_id = $1", [user?.id])).toHaveLength(1);
-  await expectNewSession(db, user?.id, r);
+/** A1: registration added a new account and its one session, a new one. */
+export async function expectRegistered(db: Database, r: SignIn): Promise<void> {
+  const id = await expectNewAccount(db, r.email);
+  expect(await db.query("SELECT id FROM auth_sessions WHERE user_id = $1", [id])).toHaveLength(1);
+  await expectNewSession(db, id, r);
+}
+
+/** A17: nerve users create added a new account of the address typed, without a session. */
+export async function expectCreated(db: Database, typed: string): Promise<void> {
+  const id = await expectNewAccount(db, typed);
+  expect(await db.query("SELECT id FROM auth_sessions WHERE user_id = $1", [id])).toEqual([]);
 }
 
 /** A3: a login added a new session to the account of the address. */
@@ -157,6 +169,28 @@ export async function expectRefreshed(
   expect(session.last_refreshed_at).not.toBeNull();
   expect(session.expires_at.getTime()).toBe(new Date(sessionEnd).getTime());
   expect(session.revoked_at).toBeNull();
+}
+
+/**
+ * A12, A13, A16: every session of the account userId, and it has one at
+ * least, is revoked for reason.
+ */
+async function expectAllSessionsRevoked(
+  db: Database,
+  userId: string,
+  reason: "deactivated" | "password_reset" | "email_changed"
+): Promise<void> {
+  const sessions = await db.query<{ id: string; revoked: boolean; revoke_reason: string | null }>(
+    "SELECT id, revoked_at IS NOT NULL AS revoked, revoke_reason FROM auth_sessions WHERE user_id = $1",
+    [userId]
+  );
+  expect(sessions.length).toBeGreaterThan(0);
+  for (const s of sessions) {
+    expect({ revoked: s.revoked, revoke_reason: s.revoke_reason }, `session ${s.id}`).toEqual({
+      revoked: true,
+      revoke_reason: reason,
+    });
+  }
 }
 
 /** A5, A6: the session of refreshToken is revoked, for reason. */
@@ -198,11 +232,38 @@ export async function tokensOf(db: Database, userId: string): Promise<{ id: stri
   return db.query("SELECT id, deleted_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at, id", [userId]);
 }
 
+/** An account's row, its sessions and its personal access tokens, oldest first. */
+interface AccountState {
+  account: AccountRow;
+  sessions: SessionRow[];
+  tokens: { id: string; deleted_at: Date | null }[];
+}
+
 /**
- * A7: the password of the account `before` changed, to another argon2id
- * hash; every session of the account is revoked for password_changed but
- * survivingSession, the refresh token of the page's own session, which
- * stays live; the personal access tokens are as they were (M2 design 3.5).
+ * A12, A13, A16: the state of the account of email, a lowercased address,
+ * which a command given another account must leave as it was.
+ */
+export async function accountStateOf(db: Database, email: string): Promise<AccountState> {
+  const account = await accountOf(db, email);
+  const sessions = await db.query<SessionRow>(
+    `SELECT ${sessionColumns} FROM auth_sessions WHERE user_id = $1 ORDER BY created_at, id`,
+    [account.id]
+  );
+  return { account, sessions, tokens: await tokensOf(db, account.id) };
+}
+
+/** A7, A13: the password of the account `before` changed, to another argon2id hash. */
+async function expectNewPassword(db: Database, before: AccountRow): Promise<void> {
+  const [after] = await db.query<{ password: string }>("SELECT password FROM users WHERE id = $1", [before.id]);
+  expect(after?.password).toMatch(/^\$argon2id\$/);
+  expect(after?.password).not.toBe(before.password);
+}
+
+/**
+ * A7: the password of the account `before` changed; every session of the
+ * account is revoked for password_changed but survivingSession, the refresh
+ * token of the page's own session, which stays live; the personal access
+ * tokens are as they were (M2 design 3.5).
  */
 export async function expectPasswordChanged(
   db: Database,
@@ -210,9 +271,7 @@ export async function expectPasswordChanged(
   tokensBefore: { id: string; deleted_at: Date | null }[],
   survivingSession?: string
 ): Promise<void> {
-  const [after] = await db.query<{ password: string }>("SELECT password FROM users WHERE id = $1", [before.id]);
-  expect(after?.password).toMatch(/^\$argon2id\$/);
-  expect(after?.password).not.toBe(before.password);
+  await expectNewPassword(db, before);
   const surviving = survivingSession === undefined ? undefined : (await sessionOf(db, survivingSession)).id;
   const sessions = await db.query<{ id: string; revoke_reason: string | null }>(
     "SELECT id, revoke_reason FROM auth_sessions WHERE user_id = $1",
@@ -222,6 +281,74 @@ export async function expectPasswordChanged(
   for (const s of sessions) {
     expect(s.revoke_reason, `session ${s.id}`).toBe(s.id === surviving ? null : "password_changed");
   }
+  expect(await tokensOf(db, before.id)).toEqual(tokensBefore);
+}
+
+/**
+ * A12: the account `before` is deactivated and its password unchanged;
+ * every session is revoked for deactivated; its onboarding starts over;
+ * its personal access tokens are as they were (M2 design 3.5, decision 3).
+ */
+export async function expectDeactivated(
+  db: Database,
+  before: AccountRow,
+  tokensBefore: { id: string; deleted_at: Date | null }[]
+): Promise<void> {
+  expect(await db.query("SELECT is_active, password FROM users WHERE id = $1", [before.id])).toEqual([
+    { is_active: false, password: before.password },
+  ]);
+  await expectAllSessionsRevoked(db, before.id, "deactivated");
+  expect(
+    await db.query(
+      "SELECT onboarding_step, is_onboarded, is_tour_completed, last_workspace_id FROM profiles WHERE user_id = $1",
+      [before.id]
+    )
+  ).toEqual([
+    {
+      onboarding_step: {
+        profile_complete: false,
+        workspace_create: false,
+        workspace_invite: false,
+        workspace_join: false,
+      },
+      is_onboarded: false,
+      is_tour_completed: false,
+      last_workspace_id: null,
+    },
+  ]);
+  expect(await tokensOf(db, before.id)).toEqual(tokensBefore);
+}
+
+/**
+ * A13: the password of the account `before` changed; every session is
+ * revoked for password_reset and every personal access token deleted (M2
+ * design 3.5).
+ */
+export async function expectPasswordReset(db: Database, before: AccountRow): Promise<void> {
+  await expectNewPassword(db, before);
+  await expectAllSessionsRevoked(db, before.id, "password_reset");
+  const tokens = await tokensOf(db, before.id);
+  expect(tokens.length).toBeGreaterThan(0);
+  for (const t of tokens) {
+    expect(t.deleted_at, `token ${t.id}`).not.toBeNull();
+  }
+}
+
+/**
+ * A16: the account `before` has the address email, and its password; every
+ * session is revoked for email_changed; its personal access tokens are as
+ * they were (M2 decision 1).
+ */
+export async function expectEmailChanged(
+  db: Database,
+  before: AccountRow,
+  email: string,
+  tokensBefore: { id: string; deleted_at: Date | null }[]
+): Promise<void> {
+  expect(await db.query("SELECT email, password FROM users WHERE id = $1", [before.id])).toEqual([
+    { email, password: before.password },
+  ]);
+  await expectAllSessionsRevoked(db, before.id, "email_changed");
   expect(await tokensOf(db, before.id)).toEqual(tokensBefore);
 }
 

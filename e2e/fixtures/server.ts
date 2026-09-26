@@ -32,17 +32,28 @@ export interface Nerve {
 }
 
 /**
- * Runs a nerve command, such as migrate up, with the test configuration on
- * the database at databaseUrl. It rejects when the command exits non-zero,
- * and kills it after commandTimeoutMs: global setup runs it before any
- * Playwright timeout applies.
+ * Runs a nerve command, such as migrate up or users create, with the test
+ * configuration on the database at databaseUrl, plus the variables of env.
+ * input, a password for instance, is its standard input, which is closed
+ * after it, so a command that reads more gets end of file rather than
+ * waiting. It rejects when the command exits non-zero, with the exit code as
+ * the error's code and its stdout and stderr, and kills it after
+ * commandTimeoutMs: global setup runs it before any Playwright timeout
+ * applies.
  */
-export async function runNerve(args: string[], databaseUrl: string): Promise<{ stdout: string; stderr: string }> {
-  return promisify(execFile)(binary, args, {
-    env: nerveEnv(databaseUrl),
+export async function runNerve(
+  args: string[],
+  databaseUrl: string,
+  input = "",
+  env: Record<string, string> = {}
+): Promise<{ stdout: string; stderr: string }> {
+  const run = promisify(execFile)(binary, args, {
+    env: { ...nerveEnv(databaseUrl), ...env },
     timeout: commandTimeoutMs,
     killSignal: "SIGKILL",
   });
+  run.child.stdin?.end(input);
+  return run;
 }
 
 /**
