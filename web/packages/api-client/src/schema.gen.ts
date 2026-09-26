@@ -513,7 +513,7 @@ export interface components {
             headers: {
                 /** @description Whole seconds to wait before trying again, rounded up; sent with rate_limited and server_busy. */
                 "Retry-After"?: number;
-                /** @description Sent with every 401 (RFC 9110 15.5.2): Bearer, or Bearer error="invalid_token" when the bearer token sent is invalid or has expired (RFC 6750 3). */
+                /** @description Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token" (RFC 6750 3) when the bearer token sent is refused before the operation runs, being invalid or expired; plain Bearer for every other 401, including a credential that the operation finds revoked while it runs. */
                 "WWW-Authenticate"?: string;
                 [name: string]: unknown;
             };
