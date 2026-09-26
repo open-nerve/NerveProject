@@ -200,7 +200,7 @@ func decodeProblem(t *testing.T, rec *httptest.ResponseRecorder) Problem {
 
 func TestNewAPIRequiresItsDependencies(t *testing.T) {
 	_, err := NewAPI(APIConfig{PublicOperations: []string{publicRoute}, MaxBodyBytes: 64})
-	want := "httpserver: APIConfig lacks Logger, Authenticator, Anonymous, Authenticated, AuthFailure"
+	want := "httpserver: APIConfig lacks Logger, Authenticator, Anonymous, Authenticated, AuthFailure; has IPv6PrefixLen 0, outside 1-128"
 	if err == nil || err.Error() != want {
 		t.Errorf("NewAPI(without dependencies) error = %v, want %q", err, want)
 	}
@@ -208,6 +208,26 @@ func TestNewAPIRequiresItsDependencies(t *testing.T) {
 	cfg.AuthFailure = nil
 	if _, err := NewAPI(cfg); err == nil || err.Error() != "httpserver: APIConfig lacks AuthFailure" {
 		t.Errorf("NewAPI(without AuthFailure) error = %v, want it named alone", err)
+	}
+}
+
+// A prefix length that cannot key an IPv6 client is refused at startup: a
+// bootstrap that forgets ratelimit.ipv6_prefix_len does not start.
+func TestNewAPIRequiresAnIPv6PrefixLenFrom1To128(t *testing.T) {
+	for _, n := range []int{0, 129} {
+		cfg := testAPIConfig(&fakeAuth{}, slog.New(slog.DiscardHandler))
+		cfg.IPv6PrefixLen = n
+		want := fmt.Sprintf("httpserver: APIConfig has IPv6PrefixLen %d, outside 1-128", n)
+		if _, err := NewAPI(cfg); err == nil || err.Error() != want {
+			t.Errorf("NewAPI(IPv6PrefixLen %d) error = %v, want %q", n, err, want)
+		}
+	}
+	for _, n := range []int{1, 128} {
+		cfg := testAPIConfig(&fakeAuth{}, slog.New(slog.DiscardHandler))
+		cfg.IPv6PrefixLen = n
+		if _, err := NewAPI(cfg); err != nil {
+			t.Errorf("NewAPI(IPv6PrefixLen %d) error = %v, want none", n, err)
+		}
 	}
 }
 

@@ -116,11 +116,13 @@ func TestIPKey(t *testing.T) {
 // The request meta middleware puts both in the context: the full address
 // for logs and sessions, the key for the buckets. NewAPI hands the client-IP
 // code the trusted proxies and the IPv6 prefix length: the client is what
-// the trusted proxy forwarded, keyed by its /64.
+// the trusted proxy forwarded, keyed by its prefix of the configured length
+// (/48 here, so that the default 64 does not pass by chance).
 func TestRequestMetaCarriesTheClientAndItsKey(t *testing.T) {
 	auth := &fakeAuth{}
-	api := newTestAPI(t, auth, slog.New(slog.DiscardHandler))
-	router, _ := mount(t, api, slog.New(slog.DiscardHandler))
+	cfg := testAPIConfig(auth, slog.New(slog.DiscardHandler))
+	cfg.IPv6PrefixLen = 48
+	router, _ := mount(t, buildAPI(t, cfg), slog.New(slog.DiscardHandler))
 	req := post("/api/v0/things", "tok", `{"name":"a"}`)
 	req.RemoteAddr = "[fd00::1]:443"
 	req.Header.Set("X-Forwarded-For", "2001:db8:1:2::7")
@@ -128,7 +130,7 @@ func TestRequestMetaCarriesTheClientAndItsKey(t *testing.T) {
 	serve(router, req)
 
 	meta := RequestMetaFrom(auth.ctx)
-	if meta.ClientIP != netip.MustParseAddr("2001:db8:1:2::7") || meta.IPKey != "2001:db8:1:2::/64" {
-		t.Errorf("meta = %+v, want the forwarded client and its /64", meta)
+	if meta.ClientIP != netip.MustParseAddr("2001:db8:1:2::7") || meta.IPKey != "2001:db8:1::/48" {
+		t.Errorf("meta = %+v, want the forwarded client and its /48", meta)
 	}
 }

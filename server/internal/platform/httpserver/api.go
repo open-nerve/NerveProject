@@ -64,9 +64,10 @@ type API struct {
 	authFailure    Limiter
 }
 
-// NewAPI returns the API value for cfg; every dependency of cfg is required.
+// NewAPI returns the API value for cfg; every dependency of cfg is required,
+// and IPv6PrefixLen is from 1 to 128. The error names every problem at once.
 func NewAPI(cfg APIConfig) (*API, error) {
-	var missing []string
+	var missing, problems []string
 	for _, dep := range []struct {
 		name string
 		nil  bool
@@ -82,7 +83,13 @@ func NewAPI(cfg APIConfig) (*API, error) {
 		}
 	}
 	if len(missing) > 0 {
-		return nil, fmt.Errorf("httpserver: APIConfig lacks %s", strings.Join(missing, ", "))
+		problems = append(problems, "lacks "+strings.Join(missing, ", "))
+	}
+	if cfg.IPv6PrefixLen < 1 || cfg.IPv6PrefixLen > 128 {
+		problems = append(problems, fmt.Sprintf("has IPv6PrefixLen %d, outside 1-128", cfg.IPv6PrefixLen))
+	}
+	if len(problems) > 0 {
+		return nil, fmt.Errorf("httpserver: APIConfig %s", strings.Join(problems, "; "))
 	}
 	public := make(map[string]bool, len(cfg.PublicOperations))
 	for _, p := range cfg.PublicOperations {

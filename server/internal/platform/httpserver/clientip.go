@@ -69,7 +69,7 @@ func (c *clientIPs) key(ip netip.Addr) string {
 	case ip.Is4():
 		return ip.String()
 	}
-	p, _ := ip.Prefix(c.v6Prefix) // the configuration holds it to 1-128
+	p, _ := ip.Prefix(c.v6Prefix) // NewAPI holds it to 1-128
 	return p.String()
 }
 
