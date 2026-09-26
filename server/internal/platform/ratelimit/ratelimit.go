@@ -105,8 +105,8 @@ type Check struct {
 
 // AllowAll takes one unit from the bucket of every check, or from none: when
 // a bucket is empty it takes nothing and returns the empty bucket with the
-// longest wait, and that wait. denied is nil when every bucket gave a unit.
-// Every bucket must belong to l.
+// longest wait, and that wait, always positive (it becomes Retry-After).
+// denied is nil when every bucket gave a unit. Every bucket must belong to l.
 func (l *Limiter) AllowAll(checks ...Check) (denied *Bucket, retry time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -119,7 +119,9 @@ func (l *Limiter) AllowAll(checks ...Check) (denied *Bucket, retry time.Duration
 		}
 		levels[i] = l.level(c, now)
 		if units := levels[i].units; units < 1 {
-			if wait := time.Duration((1 - units) * float64(c.Bucket.interval)); denied == nil || wait > retry {
+			// At least 1ns: the missing fraction of a unit can round to 0.
+			wait := max(time.Duration((1-units)*float64(c.Bucket.interval)), time.Nanosecond)
+			if denied == nil || wait > retry {
 				denied, retry = c.Bucket, wait
 			}
 		}

@@ -133,6 +133,19 @@ func TestAllowAllReportsTheLongestWait(t *testing.T) {
 	}
 }
 
+// A refusal always has a positive wait, which becomes Retry-After: here the
+// float arithmetic puts the missing part of a unit just under 1ns.
+func TestRefusalWaitsAtLeastANanosecond(t *testing.T) {
+	clock := newClock()
+	b := New(clock.now).Bucket("login_ip", Rate{PerMinute: 48, Burst: 1}) // a unit every 1.25 s
+	b.Allow("k")
+	clock.advance(1250*time.Millisecond - time.Nanosecond)
+
+	if retry, ok := b.Allow("k"); ok || retry != time.Nanosecond {
+		t.Errorf("1ns before the unit is back: Allow() = %v, %v; want refused, retry in 1ns", retry, ok)
+	}
+}
+
 func TestAllowAllRejectsABucketOfAnotherLimiter(t *testing.T) {
 	l := New(newClock().now)
 	other := New(newClock().now).Bucket("other", Rate{PerMinute: 1, Burst: 1})
