@@ -40,11 +40,14 @@ func (f *fakeChangePassword) Execute(_ context.Context, in app.ChangePasswordInp
 	return f.err
 }
 
-type fakeDeactivate struct{ calls int }
+type fakeDeactivate struct {
+	calls int
+	err   error
+}
 
 func (f *fakeDeactivate) Execute(context.Context) error {
 	f.calls++
-	return nil
+	return f.err
 }
 
 // patchJSON is a PATCH with the bearer token fakeAuth accepts.
@@ -146,6 +149,18 @@ func TestDeactivateMe(t *testing.T) {
 
 	if res.StatusCode != http.StatusNoContent || body != "" || deactivate.calls != 1 {
 		t.Errorf("POST /me/deactivate = %d %q after %d calls, want 204 after one", res.StatusCode, body, deactivate.calls)
+	}
+}
+
+// A credential revoked since authentication: the use case's 401 is the
+// answer, not 204.
+func TestDeactivateMeProblem(t *testing.T) {
+	req := withToken(httptest.NewRequest(http.MethodPost, "/api/v0/me/deactivate", nil))
+
+	res, body := do(t, newServer(t, fakes{deactivate: &fakeDeactivate{err: shared.Unauthenticated()}}), req)
+
+	if res.StatusCode != http.StatusUnauthorized || !strings.Contains(body, `"code":"unauthorized"`) {
+		t.Errorf("POST /me/deactivate = %d %s, want 401 unauthorized", res.StatusCode, body)
 	}
 }
 

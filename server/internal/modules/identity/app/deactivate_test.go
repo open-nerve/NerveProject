@@ -66,6 +66,29 @@ func TestDeactivateRechecksTheCredentialUnderTheLock(t *testing.T) {
 	}
 }
 
+// A failed write fails the deactivation, which is then not logged.
+func TestDeactivateWhenAWriteFails(t *testing.T) {
+	boom := errors.New("connection reset")
+	tests := []struct {
+		name string
+		fail func(*fakeCredentials)
+	}{
+		{"the account", func(c *fakeCredentials) { c.deactivateErr = boom }},
+		{"the onboarding", func(c *fakeCredentials) { c.resetErr = boom }},
+		{"the sessions", func(c *fakeCredentials) { c.revokeErr = boom }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newCredentialFixture()
+			tt.fail(f.creds)
+
+			if err := f.deactivate().Execute(shared.WithActor(context.Background(), sessionActor)); !errors.Is(err, boom) || strings.Contains(f.logs.String(), "account deactivated") {
+				t.Errorf("Execute() = %v, logs %s; want %v and no deactivation logged", err, f.logs.String(), boom)
+			}
+		})
+	}
+}
+
 func TestDeactivateWithoutAnActor(t *testing.T) {
 	f := newCredentialFixture()
 

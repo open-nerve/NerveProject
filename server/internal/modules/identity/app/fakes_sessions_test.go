@@ -188,15 +188,17 @@ func (f *fakeSessions) EndSession(_ context.Context, g app.SessionGeneration) (b
 // lock reads. A change of password and a deactivation read and write the
 // account's rows: it logs them too.
 type fakeCredentials struct {
-	log        *callLog
-	email      string
-	account    app.LockedAccount
-	accountErr error
-	session    app.SessionCredential
-	sessionErr error
-	hashErr    error       // UpdatePasswordHash fails with it
-	revokeErr  error       // RevokeSessions fails with it
-	writtenAt  []time.Time // the times the writes were given
+	log           *callLog
+	email         string
+	account       app.LockedAccount
+	accountErr    error
+	session       app.SessionCredential
+	sessionErr    error
+	hashErr       error       // UpdatePasswordHash fails with it
+	deactivateErr error       // DeactivateUser fails with it
+	resetErr      error       // ResetOnboarding fails with it
+	revokeErr     error       // RevokeSessions fails with it
+	writtenAt     []time.Time // the times the writes were given
 }
 
 func (f *fakeCredentials) PasswordAccount(ctx context.Context, id uuid.UUID) (app.PasswordAccount, error) {
@@ -215,12 +217,18 @@ func (f *fakeCredentials) UpdatePasswordHash(ctx context.Context, id uuid.UUID, 
 }
 
 func (f *fakeCredentials) DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error {
+	if f.deactivateErr != nil {
+		return f.deactivateErr
+	}
 	f.log.add(ctx, "deactivate "+id.String())
 	f.writtenAt = append(f.writtenAt, now)
 	return nil
 }
 
 func (f *fakeCredentials) ResetOnboarding(ctx context.Context, userID uuid.UUID, now time.Time) error {
+	if f.resetErr != nil {
+		return f.resetErr
+	}
 	f.log.add(ctx, "reset onboarding of "+userID.String())
 	f.writtenAt = append(f.writtenAt, now)
 	return nil

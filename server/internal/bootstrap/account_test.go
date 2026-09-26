@@ -78,11 +78,15 @@ func TestDeactivatingWithAPersonalAccessToken(t *testing.T) {
 	deactivated, body := call(t, contract, http.MethodPost, base+"/api/v0/me/deactivate", token, "")
 	reason := revocation(t, pool, "leaving@example.com")
 	me, _ := call(t, contract, http.MethodGet, base+"/api/v0/me", token, "")
-	signIn, _ := login(t, base, "leaving@example.com", "Tr0ub4dor&3")
+	signIn, problem := call(t, contract, http.MethodPost, base+"/api/v0/auth/login", "",
+		`{"email":"leaving@example.com","password":"Tr0ub4dor&3"}`)
 
-	if deactivated != http.StatusNoContent || reason != "deactivated" || me != http.StatusUnauthorized || signIn != http.StatusForbidden {
-		t.Errorf("deactivate = %d %s; the session revoked for %q; the token's GET /me %d; login %d; want 204, deactivated, 401, 403",
-			deactivated, body, reason, me, signIn)
+	if deactivated != http.StatusNoContent || reason != "deactivated" || me != http.StatusUnauthorized {
+		t.Errorf("deactivate = %d %s; the session revoked for %q; the token's GET /me %d; want 204, deactivated, 401",
+			deactivated, body, reason, me)
+	}
+	if signIn != http.StatusForbidden || !strings.Contains(problem, `"code":"identity.account_deactivated"`) {
+		t.Errorf("login with the right password = %d %s, want 403 identity.account_deactivated", signIn, problem)
 	}
 	var active, startsOver bool
 	var revokedTokens int
