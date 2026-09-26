@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M2/P3a `account-api` |
 | 日期 | 2026-09-26 |
-| 状态 | 进行中 |
+| 状态 | 已完成 |
 | 上级文档 | [M2 设计文档](../M2-design.md) 第 2（A7–A11）、3.5、3.10–3.12、3.14、3.19、3.20（P3a 各行）、4.1、4.2–4.4、4.6、5、6.2–6.5、8.2、8.6、8.7、9、12（P3a）、13.1 节；[v0 总体设计](../../v0-design.md) 3.1、3.4、3.6、4.2、6.2 节；[M0 设计](../../M0-foundation/M0-design.md) 3.2、3.7 节；[M0/P3 spec](../../M0-foundation/specs/P3-api-contract.md) 2.8、第 7 节 |
 | 前置交接 | [M0-P3-api-codegen-notes](../handoffs/M0-P3-api-codegen-notes.md)、[M0-P6-e2e-notes](../handoffs/M0-P6-e2e-notes.md)、[M1-P2-trim-content](../handoffs/M1-P2-trim-content.md)、[M1-P3-trim-platform](../handoffs/M1-P3-trim-platform.md)；[P2 评审记录](../reviews/P2-sessions-review.md) 第 6 节交给 P3 的两项（本 Phase 的处理见第 7 节） |
 | 计划 | [P3a plan](../plans/P3a-account-api.md) |
