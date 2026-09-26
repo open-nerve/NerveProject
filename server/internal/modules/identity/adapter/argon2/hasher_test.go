@@ -151,8 +151,13 @@ func TestVerifyAsksForARehashWhenTheParametersChanged(t *testing.T) {
 	}
 }
 
-func TestVerifyRejectsAnotherFormat(t *testing.T) {
-	h := New(testParams, slog.New(slog.DiscardHandler))
+// A hash in another format is an unusable password: no password matches
+// it, and it is no error, so a login with it answers 401 like any wrong
+// password rather than a quick 500 (M2 design 3.9). The warning never
+// quotes the hash.
+func TestVerifyMatchesNothingAgainstAnotherFormat(t *testing.T) {
+	var logs bytes.Buffer
+	h := New(testParams, slog.New(slog.NewJSONHandler(&logs, nil)))
 	good, err := h.Hash(context.Background(), "Tr0ub4dor&3")
 	if err != nil {
 		t.Fatal(err)
@@ -188,13 +193,45 @@ func TestVerifyRejectsAnotherFormat(t *testing.T) {
 		{"a leading part", "x" + good},
 	}
 	for _, tt := range tests {
+		logs.Reset()
 		ok, rehash, err := h.Verify(context.Background(), "Tr0ub4dor&3", tt.hash)
-		if ok || rehash || !errors.Is(err, errNotOurHash) {
-			t.Errorf("%s: Verify() = %v, rehash %v, %v; want the format error", tt.name, ok, rehash, err)
+		if ok || rehash || err != nil {
+			t.Errorf("%s: Verify() = %v, rehash %v, %v; want no match and no error", tt.name, ok, rehash, err)
 		}
-		if tt.hash != "" && strings.Contains(err.Error(), tt.hash) {
-			t.Errorf("%s: the error %q quotes the hash", tt.name, err)
+		if _, err := parsePHC(tt.hash); !errors.Is(err, errNotOurHash) {
+			t.Errorf("%s: parsePHC() = %v, want the format error", tt.name, err)
 		}
+		if out := logs.String(); !strings.Contains(out, `"level":"WARN","msg":"a stored password hash is not an argon2id PHC string: no password matches it"`) ||
+			tt.hash != "" && strings.Contains(out, tt.hash) {
+			t.Errorf("%s: logs = %s, want the warning without the hash", tt.name, out)
+		}
+	}
+}
+
+// An unusable password costs a slot like any other: with none free, the
+// login waits and gets 503 the same way.
+func TestVerifyOfAnotherFormatIsBusyWhenNoSlotFreesUp(t *testing.T) {
+	h := New(testParams, slog.New(slog.DiscardHandler))
+	h.slots <- struct{}{}
+	h.slots <- struct{}{}
+
+	_, _, err := h.Verify(context.Background(), "Tr0ub4dor&3", "!")
+
+	var se *shared.Error
+	if !errors.As(err, &se) || se.Code != shared.CodeServerBusy {
+		t.Errorf("Verify() = %v, want 503 server_busy", err)
+	}
+}
+
+// The stand-in for an unusable password has the current parameters, so
+// verifying against it costs what verifying a current hash costs, and its
+// own salt and key.
+func TestTheUnusableStandInHasTheCurrentParameters(t *testing.T) {
+	p := Params{MemoryKiB: 128, Iterations: 3, Parallelism: 2, MaxConcurrent: 1, MaxWait: time.Second}
+	a, b := New(p, slog.New(slog.DiscardHandler)).unusable, New(p, slog.New(slog.DiscardHandler)).unusable
+	if a.memoryKiB != 128 || a.iterations != 3 || a.parallelism != 2 || len(a.salt) != saltLen || len(a.key) != keyLen ||
+		bytes.Equal(a.salt, b.salt) || bytes.Equal(a.key, b.key) {
+		t.Errorf("stand-ins %+v and %+v; want the parameters m=128,t=3,p=2 and random salts and keys", a, b)
 	}
 }
 

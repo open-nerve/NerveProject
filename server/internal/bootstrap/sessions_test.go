@@ -132,30 +132,39 @@ func median(d []time.Duration) time.Duration {
 	return s[len(s)/2]
 }
 
-// With the default argon2id parameters, a login for an unknown address
-// takes as long as one with a wrong password for a known one: both verify
-// one hash (M2 design 3.9). The two kinds alternate, and their medians
-// must lie within a quarter of each other.
+// With the default argon2id parameters, a login for an unknown address, or
+// for an account whose stored password is unusable (a hash in another
+// format, which v0 never writes), takes as long as one with a wrong
+// password for a known account: each verifies one hash (M2 design 3.9; P2
+// review section 6). The three kinds alternate, and their medians must lie
+// within a quarter of each other.
 func TestLoginTakesAsLongForAnUnknownAddress(t *testing.T) {
-	cfg := testConfig(t, pgtest.NewDatabase(t), false)
+	url := pgtest.NewDatabase(t)
+	cfg := testConfig(t, url, false)
 	cfg.Auth.Password.Argon2MemoryKiB, cfg.Auth.Password.Argon2Iterations = 19456, 2
 	base := startApp(t, cfg, migrations.FS())
-	registerAccount(t, apitest.Load(t), base, "timing@example.com")
+	contract := apitest.Load(t)
+	registerAccount(t, contract, base, "timing@example.com")
+	registerAccount(t, contract, base, "unusable@example.com")
+	if _, err := openPool(t, url).Exec(context.Background(), "UPDATE users SET password = '!' WHERE email = 'unusable@example.com'"); err != nil {
+		t.Fatal(err)
+	}
 
-	var known, unknown []time.Duration
+	var known, unknown, unusable []time.Duration
 	for range 15 {
 		statusKnown, k := login(t, base, "timing@example.com", "Wr0ng-password")
 		statusUnknown, u := login(t, base, "nobody@example.com", "Wr0ng-password")
-		if statusKnown != http.StatusUnauthorized || statusUnknown != http.StatusUnauthorized {
-			t.Fatalf("logins = %d, %d; want 401 for both", statusKnown, statusUnknown)
+		statusUnusable, x := login(t, base, "unusable@example.com", "Tr0ub4dor&3")
+		if statusKnown != http.StatusUnauthorized || statusUnknown != http.StatusUnauthorized || statusUnusable != http.StatusUnauthorized {
+			t.Fatalf("logins = %d, %d, %d; want 401 for all three", statusKnown, statusUnknown, statusUnusable)
 		}
-		known, unknown = append(known, k), append(unknown, u)
+		known, unknown, unusable = append(known, k), append(unknown, u), append(unusable, x)
 	}
 
-	mk, mu := median(known), median(unknown)
-	t.Logf("median login: known address %v, unknown address %v", mk, mu)
-	if diff := max(mk, mu) - min(mk, mu); diff*4 > max(mk, mu) {
-		t.Errorf("median login: known address %v, unknown address %v; want them within a quarter of each other", mk, mu)
+	mk, mu, mx := median(known), median(unknown), median(unusable)
+	t.Logf("median login: known address %v, unknown address %v, unusable password %v", mk, mu, mx)
+	if diff := max(mk, mu, mx) - min(mk, mu, mx); diff*4 > max(mk, mu, mx) {
+		t.Errorf("median login: known address %v, unknown address %v, unusable password %v; want them within a quarter of each other", mk, mu, mx)
 	}
 }
 

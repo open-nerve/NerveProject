@@ -42,11 +42,17 @@ type Hasher struct {
 	logger  *slog.Logger
 	slots   chan struct{}
 	waiting atomic.Int64
+	// unusable stands in for a stored hash in another format: Verify does
+	// the same work against it and matches no password.
+	unusable phc
 }
 
 // New returns a hasher with params p.
 func New(p Params, logger *slog.Logger) *Hasher {
-	return &Hasher{p: p, logger: logger, slots: make(chan struct{}, p.MaxConcurrent)}
+	unusable := phc{memoryKiB: p.MemoryKiB, iterations: p.Iterations, parallelism: p.Parallelism, salt: make([]byte, saltLen), key: make([]byte, keyLen)}
+	_, _ = rand.Read(unusable.salt) // never fails since Go 1.24
+	_, _ = rand.Read(unusable.key)
+	return &Hasher{p: p, logger: logger, slots: make(chan struct{}, p.MaxConcurrent), unusable: unusable}
 }
 
 // Hash returns the PHC string of password:
@@ -68,18 +74,27 @@ func (h *Hasher) Hash(ctx context.Context, password string) (string, error) {
 // Verify reports whether password matches hash, a PHC string that Hash
 // wrote, and whether hash has other parameters than the current ones, so
 // that login hashes the password again (M2 design 3.8). It takes a slot like
-// Hash, with the same wait and the same 503. A hash in another format is an
-// error.
+// Hash, with the same wait and the same 503.
+//
+// A hash in another format is an unusable password (v0 writes none): it
+// matches no password, and Verify says so only after the work of a real
+// verification at the current parameters, so that a login's answer takes
+// as long as for any other account (M2 design 3.9). It is logged as a
+// warning, without the hash.
 func (h *Hasher) Verify(ctx context.Context, password, hash string) (ok, rehash bool, err error) {
-	p, err := parsePHC(hash)
-	if err != nil {
-		return false, false, err
+	p, parseErr := parsePHC(hash)
+	if parseErr != nil {
+		p = h.unusable
 	}
 	if err := h.acquire(ctx); err != nil {
 		return false, false, err
 	}
 	defer func() { <-h.slots }()
 	key := argon2.IDKey([]byte(password), p.salt, p.iterations, p.memoryKiB, p.parallelism, keyLen)
+	if parseErr != nil {
+		h.logger.WarnContext(ctx, "a stored password hash is not an argon2id PHC string: no password matches it")
+		return false, false, nil
+	}
 	ok = subtle.ConstantTimeCompare(key, p.key) == 1
 	rehash = p.memoryKiB != h.p.MemoryKiB || p.iterations != h.p.Iterations || p.parallelism != h.p.Parallelism
 	return ok, rehash, nil
@@ -93,7 +108,7 @@ type phc struct {
 	salt, key   []byte
 }
 
-// errNotOurHash never quotes the hash.
+// errNotOurHash is parsePHC's error for a hash in another format.
 var errNotOurHash = errors.New("password hash is not an argon2id PHC string of this hasher")
 
 // parsePHC reads $argon2id$v=19$m=<KiB>,t=<iterations>,p=<lanes>$<salt>$<key>
