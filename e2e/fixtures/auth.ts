@@ -28,3 +28,26 @@ export async function register(api: Api, email: string, headers: Record<string, 
   }
   return data;
 }
+
+/** Signs email in with the fixture's password and returns the new session's tokens. */
+export async function login(api: Api, email: string, headers: Record<string, string> = {}): Promise<AuthTokens> {
+  const { data, error, response } = await api.POST("/api/v0/auth/login", {
+    body: { email, password },
+    headers,
+  });
+  expect(response.status, `login ${email}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`login ${email} answered 200 without tokens`);
+  }
+  return data;
+}
+
+/** Exchanges refreshToken for the session's next tokens. */
+export async function refresh(api: Api, refreshToken: string): Promise<AuthTokens> {
+  const { data, error, response } = await api.POST("/api/v0/auth/refresh", { body: { refresh_token: refreshToken } });
+  expect(response.status, `refresh: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error("refresh answered 200 without tokens");
+  }
+  return data;
+}
