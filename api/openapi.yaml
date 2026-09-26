@@ -31,6 +31,8 @@ paths:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1auth~1logout'
   /api/v0/me:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me'
+  /api/v0/me/deactivate:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1deactivate'
   /api/v0/me/change-password:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1change-password'
   /api/v0/me/profile:

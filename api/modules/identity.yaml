@@ -156,6 +156,24 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/me/deactivate:
+    post:
+      operationId: deactivateMe
+      tags: [identity]
+      summary: Deactivate the caller's account
+      description: >-
+        Any credential may, a personal access token too; no password is
+        asked for. Every session is signed out and onboarding starts over.
+        The password and the personal access tokens stay, but nothing
+        authenticates as the account until the server's administrator
+        activates it again.
+      security: [{bearer: []}]
+      x-problem-codes: []
+      responses:
+        '204':
+          description: Deactivated.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/change-password:
     post:
       operationId: changePassword

@@ -52,6 +52,11 @@ type ChangePasswordUseCase interface {
 	Execute(ctx context.Context, in app.ChangePasswordInput) error
 }
 
+// DeactivateUseCase is app.Deactivate.
+type DeactivateUseCase interface {
+	Execute(ctx context.Context) error
+}
+
 // GetProfileUseCase is app.GetProfile.
 type GetProfileUseCase interface {
 	Execute(ctx context.Context) (domain.Profile, error)
@@ -86,6 +91,7 @@ type UseCases struct {
 	GetMe          GetMeUseCase
 	UpdateMe       UpdateMeUseCase
 	ChangePassword ChangePasswordUseCase
+	Deactivate     DeactivateUseCase
 	GetProfile     GetProfileUseCase
 	UpdateProfile  UpdateProfileUseCase
 	ListAPITokens  ListAPITokensUseCase

@@ -23,3 +23,10 @@ SET updated_at        = sqlc.arg(now),
     last_workspace_id = CASE WHEN sqlc.arg(set_last_workspace_id)::boolean THEN sqlc.narg(last_workspace_id)::uuid ELSE last_workspace_id END
 WHERE user_id = sqlc.arg(user_id)
 RETURNING theme, language, start_of_the_week, onboarding_step, is_onboarded, is_tour_completed, last_workspace_id, updated_at;
+
+-- name: ResetOnboarding :exec
+-- Deactivation: onboarding starts over, from the defaults of registration (M2 design 3.5, story A12).
+UPDATE profiles
+SET updated_at = sqlc.arg(now), onboarding_step = DEFAULT, is_onboarded = DEFAULT, is_tour_completed = DEFAULT,
+    last_workspace_id = DEFAULT
+WHERE user_id = sqlc.arg(user_id);

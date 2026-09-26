@@ -293,8 +293,8 @@ func (l *callLog) add(ctx context.Context, call string) {
 }
 
 // fakeCredentials is the account row and the session that the credential
-// lock reads. A change of password reads the row and writes it and the
-// sessions: it logs them too.
+// lock reads. A change of password and a deactivation read and write the
+// account's rows: it logs them too.
 type fakeCredentials struct {
 	log        *callLog
 	email      string
@@ -319,6 +319,18 @@ func (f *fakeCredentials) UpdatePasswordHash(ctx context.Context, id uuid.UUID, 
 	f.log.add(ctx, "password "+id.String()+" "+hash)
 	f.writtenAt = append(f.writtenAt, now)
 	f.account.PasswordHash = hash
+	return nil
+}
+
+func (f *fakeCredentials) DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "deactivate "+id.String())
+	f.writtenAt = append(f.writtenAt, now)
+	return nil
+}
+
+func (f *fakeCredentials) ResetOnboarding(ctx context.Context, userID uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "reset onboarding of "+userID.String())
+	f.writtenAt = append(f.writtenAt, now)
 	return nil
 }
 

@@ -46,6 +46,14 @@ func (h handler) ChangePassword(ctx context.Context, req gen.ChangePasswordReque
 	return gen.ChangePassword204Response{}, nil
 }
 
+// DeactivateMe serves POST /api/v0/me/deactivate.
+func (h handler) DeactivateMe(ctx context.Context, _ gen.DeactivateMeRequestObject) (gen.DeactivateMeResponseObject, error) {
+	if err := h.uc.Deactivate.Execute(ctx); err != nil {
+		return nil, err
+	}
+	return gen.DeactivateMe204Response{}, nil
+}
+
 // user is u as the API shows it.
 func user(u domain.User) gen.User {
 	return gen.User{

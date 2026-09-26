@@ -41,6 +41,15 @@ func (s *Store) UpdateProfile(ctx context.Context, userID uuid.UUID, p domain.Pr
 	return profileOf(gen.GetProfileRow(row))
 }
 
+// ResetOnboarding puts userID's onboarding back to the defaults it had at
+// registration, at now.
+func (s *Store) ResetOnboarding(ctx context.Context, userID uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).ResetOnboarding(ctx, gen.ResetOnboardingParams{Now: now, UserID: userID}); err != nil {
+		return fmt.Errorf("reset onboarding: %w", err)
+	}
+	return nil
+}
+
 // profileOf reads a profile row. The steps are the object that the
 // column's CHECK guarantees: four booleans.
 func profileOf(row gen.GetProfileRow) (domain.Profile, error) {

@@ -106,6 +106,19 @@ type CredentialLocker interface {
 	LockForCredentials(ctx context.Context, id uuid.UUID) (LockedAccount, error)
 }
 
+// UserDeactivator deactivates accounts.
+type UserDeactivator interface {
+	// DeactivateUser sets account id inactive at now.
+	DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error
+}
+
+// OnboardingResetter starts an account's onboarding over.
+type OnboardingResetter interface {
+	// ResetOnboarding puts userID's onboarding steps, is_onboarded,
+	// is_tour_completed and last workspace back to their defaults at now.
+	ResetOnboarding(ctx context.Context, userID uuid.UUID, now time.Time) error
+}
+
 // PasswordHashWriter stores a new hash of an account's password.
 type PasswordHashWriter interface {
 	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, now time.Time) error

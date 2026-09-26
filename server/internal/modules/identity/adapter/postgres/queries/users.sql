@@ -42,6 +42,11 @@ SET updated_at    = sqlc.arg(now),
 WHERE id = sqlc.arg(id)
 RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at;
 
+-- name: DeactivateUser :exec
+UPDATE users
+SET is_active = false, updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id);
+
 -- name: UpdatePasswordHash :exec
 UPDATE users
 SET password = sqlc.arg(password), updated_at = sqlc.arg(now)

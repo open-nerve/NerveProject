@@ -112,6 +112,9 @@ func New(d Deps) (*Module, error) {
 				Accounts: store, Lock: lock, Passwords: store, Sessions: store, Hasher: hasher,
 				Rules: rules, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
 			}),
+			Deactivate: app.NewDeactivate(app.DeactivateDeps{
+				Lock: lock, Users: store, Profiles: store, Sessions: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+			}),
 			GetProfile:    app.NewGetProfile(store),
 			UpdateProfile: app.NewUpdateProfile(store, d.Clock),
 			ListAPITokens: app.NewListAPITokens(store),

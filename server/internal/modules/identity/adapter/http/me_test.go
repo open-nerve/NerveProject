@@ -40,6 +40,13 @@ func (f *fakeChangePassword) Execute(_ context.Context, in app.ChangePasswordInp
 	return f.err
 }
 
+type fakeDeactivate struct{ calls int }
+
+func (f *fakeDeactivate) Execute(context.Context) error {
+	f.calls++
+	return nil
+}
+
 // patchJSON is a PATCH with the bearer token fakeAuth accepts.
 func patchJSON(path, body string) *http.Request {
 	req := withToken(httptest.NewRequest(http.MethodPatch, path, strings.NewReader(body)))
@@ -127,6 +134,18 @@ func TestChangePassword(t *testing.T) {
 	want := app.ChangePasswordInput{Current: "Tr0ub4dor&3", New: "N3w-Passw0rd!"}
 	if res.StatusCode != http.StatusNoContent || body != "" || change.in != want {
 		t.Errorf("POST /me/change-password = %d %q, use case got %+v; want 204 for %+v", res.StatusCode, body, change.in, want)
+	}
+}
+
+func TestDeactivateMe(t *testing.T) {
+	deactivate := &fakeDeactivate{}
+	req := withToken(httptest.NewRequest(http.MethodPost, "/api/v0/me/deactivate", nil))
+	apitest.Load(t).CheckRequest(t, req)
+
+	res, body := do(t, newServer(t, fakes{deactivate: deactivate}), req)
+
+	if res.StatusCode != http.StatusNoContent || body != "" || deactivate.calls != 1 {
+		t.Errorf("POST /me/deactivate = %d %q after %d calls, want 204 after one", res.StatusCode, body, deactivate.calls)
 	}
 }
 

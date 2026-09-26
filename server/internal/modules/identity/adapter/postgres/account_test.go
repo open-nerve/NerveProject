@@ -152,6 +152,60 @@ func TestUpdateUnknownProfile(t *testing.T) {
 	}
 }
 
+// Deactivation sets the account inactive and starts its onboarding over,
+// from the defaults of registration; the password, the other preferences
+// and other accounts stay (M2 design 3.5, story A12).
+func TestDeactivateUserAndResetOnboarding(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := accountWithProfile(t, s), newUser("bob@corp.com")
+	mustCreate(t, s, bob)
+	if err := s.CreateDefaultProfile(context.Background(), uuid.NewV7(), bob.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	workspace := uuid.NewV7()
+	onboarded := domain.ProfilePatch{
+		Theme: ptr("dark"), OnboardingStep: domain.OnboardingStepsPatch{ProfileComplete: ptr(true), WorkspaceJoin: ptr(true)},
+		IsOnboarded: ptr(true), IsTourCompleted: ptr(true), LastWorkspaceSet: true, LastWorkspaceID: &workspace,
+	}
+	var bobs domain.Profile
+	for _, u := range []app.NewUser{alice, bob} {
+		p, err := s.UpdateProfile(context.Background(), u.ID, onboarded, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bobs = p
+	}
+	deactivated := now.Add(time.Hour)
+
+	if err := errors.Join(s.DeactivateUser(context.Background(), alice.ID, deactivated),
+		s.ResetOnboarding(context.Background(), alice.ID, deactivated)); err != nil {
+		t.Fatal(err)
+	}
+
+	active := func(u app.NewUser) (bool, string) {
+		var active bool
+		var password string
+		if err := pool.QueryRow(context.Background(), "SELECT is_active, password FROM users WHERE id = $1", u.ID).Scan(&active, &password); err != nil {
+			t.Fatal(err)
+		}
+		return active, password
+	}
+	if a, password := active(alice); a || password != alice.PasswordHash {
+		t.Errorf("alice: active %v, password %q; want inactive with the password kept", a, password)
+	}
+	if b, _ := active(bob); !b {
+		t.Error("bob is inactive, want him untouched")
+	}
+	assertUpdatedAt(t, pool, "users", "id", alice.ID, deactivated)
+	want := domain.Profile{Theme: "dark", Language: "en", UpdatedAt: deactivated}
+	if got, err := s.GetProfile(context.Background(), alice.ID); err != nil || !sameProfile(got, want) {
+		t.Errorf("alice's profile = %+v, %v; want %+v", got, err, want)
+	}
+	if got, err := s.GetProfile(context.Background(), bob.ID); err != nil || !sameProfile(got, bobs) {
+		t.Errorf("bob's profile = %+v, %v; want it untouched, %+v", got, err, bobs)
+	}
+}
+
 func sameProfile(a, b domain.Profile) bool {
 	sameWorkspace := (a.LastWorkspaceID == nil) == (b.LastWorkspaceID == nil) &&
 		(a.LastWorkspaceID == nil || *a.LastWorkspaceID == *b.LastWorkspaceID)

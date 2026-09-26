@@ -17,9 +17,14 @@ import (
 // statements.
 type RevokeReason string
 
-// RevokePasswordChanged revokes the other sessions of an account whose
-// password its owner changed.
-const RevokePasswordChanged RevokeReason = "password_changed"
+// The reasons of the use cases that revoke an account's sessions.
+const (
+	// RevokePasswordChanged revokes the other sessions of an account whose
+	// password its owner changed.
+	RevokePasswordChanged RevokeReason = "password_changed"
+	// RevokeDeactivated revokes every session of a deactivated account.
+	RevokeDeactivated RevokeReason = "deactivated"
+)
 
 // RefreshTokenPrefix starts every refresh token (M2 design 3.4).
 const RefreshTokenPrefix = "nrv_rt_"

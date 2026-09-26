@@ -107,6 +107,14 @@ func (s *Store) LockForCredentials(ctx context.Context, id uuid.UUID) (app.Locke
 	return app.LockedAccount{PasswordHash: row.Password, Active: row.IsActive}, nil
 }
 
+// DeactivateUser sets account id inactive at now.
+func (s *Store) DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).DeactivateUser(ctx, gen.DeactivateUserParams{Now: now, ID: id}); err != nil {
+		return fmt.Errorf("deactivate user: %w", err)
+	}
+	return nil
+}
+
 // UpdatePasswordHash stores hash as account id's password.
 func (s *Store) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, now time.Time) error {
 	if err := s.queries(ctx).UpdatePasswordHash(ctx, gen.UpdatePasswordHashParams{Password: hash, Now: now, ID: id}); err != nil {

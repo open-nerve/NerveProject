@@ -62,6 +62,24 @@ func (q *Queries) GetProfile(ctx context.Context, userID uuid.UUID) (GetProfileR
 	return i, err
 }
 
+const resetOnboarding = `-- name: ResetOnboarding :exec
+UPDATE profiles
+SET updated_at = $1, onboarding_step = DEFAULT, is_onboarded = DEFAULT, is_tour_completed = DEFAULT,
+    last_workspace_id = DEFAULT
+WHERE user_id = $2
+`
+
+type ResetOnboardingParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+}
+
+// Deactivation: onboarding starts over, from the defaults of registration (M2 design 3.5, story A12).
+func (q *Queries) ResetOnboarding(ctx context.Context, arg ResetOnboardingParams) error {
+	_, err := q.db.Exec(ctx, resetOnboarding, arg.Now, arg.UserID)
+	return err
+}
+
 const updateProfile = `-- name: UpdateProfile :one
 UPDATE profiles
 SET updated_at        = $1,

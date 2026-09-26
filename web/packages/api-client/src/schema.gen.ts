@@ -105,6 +105,26 @@ export interface paths {
         patch: operations["updateMe"];
         trace?: never;
     };
+    "/api/v0/me/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate the caller's account
+         * @description Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again.
+         */
+        post: operations["deactivateMe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/change-password": {
         parameters: {
             query?: never;
@@ -606,6 +626,25 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deactivateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deactivated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

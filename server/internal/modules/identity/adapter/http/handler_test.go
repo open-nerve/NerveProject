@@ -80,6 +80,7 @@ type fakes struct {
 	logout        *fakeLogout
 	updateMe      *fakeUpdateMe
 	change        *fakeChangePassword
+	deactivate    *fakeDeactivate
 	getProfile    *fakeGetProfile
 	updateProfile *fakeUpdateProfile
 	listTokens    *fakeListTokens
@@ -144,6 +145,9 @@ func serverWith(t *testing.T, f fakes, s httpadapter.Settings) http.Handler {
 	if f.change == nil {
 		f.change = &fakeChangePassword{}
 	}
+	if f.deactivate == nil {
+		f.deactivate = &fakeDeactivate{}
+	}
 	if f.getProfile == nil {
 		f.getProfile = &fakeGetProfile{}
 	}
@@ -161,7 +165,8 @@ func serverWith(t *testing.T, f fakes, s httpadapter.Settings) http.Handler {
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
 		Register: f.register, Login: f.login, Refresh: f.refresh, Logout: f.logout,
-		GetMe: fakeGetMe{}, UpdateMe: f.updateMe, ChangePassword: f.change, GetProfile: f.getProfile, UpdateProfile: f.updateProfile,
+		GetMe: fakeGetMe{}, UpdateMe: f.updateMe, ChangePassword: f.change, Deactivate: f.deactivate,
+		GetProfile: f.getProfile, UpdateProfile: f.updateProfile,
 		ListAPITokens: f.listTokens, CreateAPIToken: f.createToken, RevokeAPIToken: f.revokeToken,
 	}, s)
 	return router
