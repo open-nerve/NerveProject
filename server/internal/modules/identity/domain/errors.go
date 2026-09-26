@@ -3,7 +3,8 @@ package domain
 import "github.com/open-nerve/NerveProject/server/internal/shared"
 
 // The identity module's errors (M2 design 5.4). api/modules/identity.yaml
-// declares their codes in x-problem-codes.
+// declares the codes of those the API answers with in x-problem-codes; the
+// last two are the server administrator's commands' only (3.17).
 var (
 	// ErrSignupDisabled answers a well-formed registration while sign-up is
 	// off, before the address or the password is looked at (M2 design 3.9);
@@ -28,4 +29,10 @@ var (
 	// exist, is revoked already or belongs to another account: what the
 	// caller cannot see is not found (v0 design 3.5).
 	ErrAPITokenNotFound = shared.NewError(shared.KindNotFound, "identity.api_token_not_found", "The API token does not exist.")
+	// ErrAccountNotFound answers a command of the server's administrator
+	// for an address no account has.
+	ErrAccountNotFound = shared.NewError(shared.KindNotFound, "identity.account_not_found", "No account has this e-mail address.")
+	// ErrEmailUnchanged answers `nerve users set-email` when the new address
+	// is, once normalized, the account's own.
+	ErrEmailUnchanged = shared.NewError(shared.KindInvalid, "identity.email_unchanged", "The new e-mail address is the account's current one.")
 )

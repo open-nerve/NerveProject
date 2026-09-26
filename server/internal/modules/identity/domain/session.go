@@ -24,6 +24,12 @@ const (
 	RevokePasswordChanged RevokeReason = "password_changed"
 	// RevokeDeactivated revokes every session of a deactivated account.
 	RevokeDeactivated RevokeReason = "deactivated"
+	// RevokePasswordReset revokes every session of an account whose
+	// password the server's administrator reset.
+	RevokePasswordReset RevokeReason = "password_reset"
+	// RevokeEmailChanged revokes every session of an account whose address
+	// the server's administrator changed.
+	RevokeEmailChanged RevokeReason = "email_changed"
 )
 
 // RefreshTokenPrefix starts every refresh token (M2 design 3.4).

@@ -112,3 +112,26 @@ func TestCheckUserPatchReportsEveryField(t *testing.T) {
 		})
 	}
 }
+
+// A new address follows the rules of registration, reported on the field
+// the caller names (M2 decision 1).
+func TestNewEmail(t *testing.T) {
+	if email, err := NewEmail("new_email", "  Alice@New.EXAMPLE "); err != nil || email != "alice@new.example" {
+		t.Errorf("NewEmail() = %q, %v; want alice@new.example", email, err)
+	}
+	tests := []struct {
+		email string
+		want  shared.FieldError
+	}{
+		{" ", shared.FieldError{Field: "new_email", Code: "required", Message: "is required"}},
+		{"not-an-address", shared.FieldError{Field: "new_email", Code: "invalid_format", Message: "is not a valid e-mail address"}},
+		{strings.Repeat("a", 250) + "@x.com", shared.FieldError{Field: "new_email", Code: "too_long", Message: "must be at most 255 characters"}},
+	}
+	for _, tt := range tests {
+		_, err := NewEmail("new_email", tt.email)
+		var se *shared.Error
+		if !errors.As(err, &se) || se.Code != shared.CodeValidationFailed || !slices.Equal(se.Fields, []shared.FieldError{tt.want}) {
+			t.Errorf("NewEmail(%q) = %+v, want validation_failed with %+v", tt.email, err, tt.want)
+		}
+	}
+}

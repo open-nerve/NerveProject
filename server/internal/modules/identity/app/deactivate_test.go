@@ -10,6 +10,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -17,6 +18,14 @@ import (
 func (f *credentialFixture) deactivate() *app.Deactivate {
 	return app.NewDeactivate(app.DeactivateDeps{
 		Lock: f.lock(), Users: f.creds, Profiles: f.creds, Sessions: f.creds, Tx: f.tx, Clock: clocktest.At(now), Logger: f.logger(),
+	})
+}
+
+// The administrator's deactivation takes no credential lock: it has no
+// caller's credential to check again.
+func (f *adminFixture) deactivate() *app.Deactivate {
+	return app.NewDeactivate(app.DeactivateDeps{
+		Accounts: f.store, Users: f.store, Profiles: f.store, Sessions: f.store, Tx: f.tx, Clock: clocktest.At(now), Logger: f.logger(),
 	})
 }
 
@@ -94,5 +103,38 @@ func TestDeactivateWithoutAnActor(t *testing.T) {
 
 	if err := f.deactivate().Execute(context.Background()); !errors.Is(err, shared.Unauthenticated()) || len(f.log.calls) != 0 {
 		t.Errorf("Execute() = %v after calls %q, want 401 before any", err, f.log.calls)
+	}
+}
+
+// `nerve users deactivate` locks the account by its normalized address and
+// writes what the self-service deactivation writes, in the same order
+// (M2 decision 3, design 3.17).
+func TestDeactivateByEmail(t *testing.T) {
+	f := newAdminFixture()
+
+	got, err := f.deactivate().ExecuteByEmail(context.Background(), " Alice@Corp.com ")
+
+	if want := (app.DeactivateResult{Email: "alice@corp.com", Sessions: 1}); err != nil || got != want {
+		t.Fatalf("ExecuteByEmail() = %+v, %v; want %+v", got, err, want)
+	}
+	want := []string{
+		"lock alice@corp.com", "deactivate " + userID.String(), "reset onboarding of " + userID.String(),
+		"revoke deactivated sessions of " + userID.String() + " but " + uuid.Nil().String(),
+	}
+	if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 || !slices.Equal(f.store.writtenAt, []time.Time{now, now, now}) {
+		t.Errorf("calls %q in %d transactions at %v; want %q in one at %v", f.log.calls, f.tx.calls, f.store.writtenAt, want, now)
+	}
+	if logs := f.logs.String(); !strings.Contains(logs, `"msg":"account deactivated","user_id":"`+userID.String()+`","revoked_sessions":1,"by":"cli"`) {
+		t.Errorf("logs = %s, want the deactivation with user_id and the sessions revoked, by cli", logs)
+	}
+}
+
+func TestDeactivateByEmailOfAnUnknownAccount(t *testing.T) {
+	f := newAdminFixture()
+
+	_, err := f.deactivate().ExecuteByEmail(context.Background(), "carol@corp.com")
+
+	if !errors.Is(err, domain.ErrAccountNotFound) || !slices.Equal(f.log.calls, []string{"lock carol@corp.com"}) || f.logs.Len() != 0 {
+		t.Errorf("ExecuteByEmail() = %v after calls %q, logs %s; want identity.account_not_found after the lock alone", err, f.log.calls, f.logs.String())
 	}
 }
