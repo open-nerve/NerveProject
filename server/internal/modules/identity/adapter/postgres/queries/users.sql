@@ -51,3 +51,23 @@ WHERE id = sqlc.arg(id);
 UPDATE users
 SET password = sqlc.arg(password), updated_at = sqlc.arg(now)
 WHERE id = sqlc.arg(id);
+
+-- name: LockAccountByEmail :one
+-- The account row lock of M2 design 3.5 for the server administrator's commands, which name the
+-- account by its address: one statement finds and locks the row, inside the command's
+-- transaction, so the account cannot change between the two.
+SELECT id
+FROM users
+WHERE email = sqlc.arg(email)
+FOR NO KEY UPDATE;
+
+-- name: ChangeEmail :exec
+-- nerve users set-email (M2 decision 1). users_email_key rejects an address another account has.
+UPDATE users
+SET email = sqlc.arg(email), updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id);
+
+-- name: ActivateUser :exec
+UPDATE users
+SET is_active = true, updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id);

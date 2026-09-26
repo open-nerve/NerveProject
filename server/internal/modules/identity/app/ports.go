@@ -106,6 +106,29 @@ type CredentialLocker interface {
 	LockForCredentials(ctx context.Context, id uuid.UUID) (LockedAccount, error)
 }
 
+// AccountLocker takes the account row lock of M2 design 3.5 by address:
+// the server administrator's commands name accounts by address (3.17).
+type AccountLocker interface {
+	// LockAccount locks the row of the account with email, a normalized
+	// address, until the transaction ends (SELECT … FOR NO KEY UPDATE) and
+	// returns its id; ErrNotFound when there is none. Call it inside a
+	// transaction, before any other statement of the account.
+	LockAccount(ctx context.Context, email string) (uuid.UUID, error)
+}
+
+// EmailChanger changes accounts' addresses.
+type EmailChanger interface {
+	// ChangeEmail sets account id's address to email, a normalized one, at
+	// now; domain.ErrEmailTaken when another account has it.
+	ChangeEmail(ctx context.Context, id uuid.UUID, email string, now time.Time) error
+}
+
+// UserActivator activates accounts.
+type UserActivator interface {
+	// ActivateUser sets account id active at now.
+	ActivateUser(ctx context.Context, id uuid.UUID, now time.Time) error
+}
+
 // UserDeactivator deactivates accounts.
 type UserDeactivator interface {
 	// DeactivateUser sets account id inactive at now.
@@ -241,6 +264,22 @@ type APITokenRevoker interface {
 	// RevokeAPIToken revokes token id of userID at now; false when userID
 	// has no such unrevoked token.
 	RevokeAPIToken(ctx context.Context, id, userID uuid.UUID, now time.Time) (bool, error)
+}
+
+// AllAPITokensRevoker revokes all of an account's personal access tokens:
+// the server administrator's reset of the password (M2 design 3.5).
+type AllAPITokensRevoker interface {
+	// RevokeAllAPITokens revokes at now every unrevoked token of userID,
+	// expired ones too, and returns how many. No account makes the change:
+	// updated_by_id is NULL.
+	RevokeAllAPITokens(ctx context.Context, userID uuid.UUID, now time.Time) (int, error)
+}
+
+// UsableAPITokenCounter counts an account's usable personal access tokens.
+type UsableAPITokenCounter interface {
+	// CountUsableAPITokens counts the tokens of userID that authenticate
+	// while the account is active: unrevoked and unexpired at now.
+	CountUsableAPITokens(ctx context.Context, userID uuid.UUID, now time.Time) (int, error)
 }
 
 // APITokenCredential is what authentication and the credential lock check
