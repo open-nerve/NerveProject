@@ -2,6 +2,7 @@ package config
 
 import (
 	"net/netip"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -198,6 +199,42 @@ func TestValidateCrossKeyRules(t *testing.T) {
 				t.Errorf("validate() = %v, want %q", err, tt.want)
 			}
 		})
+	}
+}
+
+// Every bucket in RateLimitConfig is validated from its own settings, under
+// its own key: with only one setting of one bucket invalid, validate reports
+// that key and nothing else. The buckets are found by reflection, so a bucket
+// added to the struct but not to validate fails here too.
+func TestValidateChecksEachBucketUnderItsOwnKey(t *testing.T) {
+	limits := reflect.TypeFor[RateLimitConfig]()
+	buckets := 0
+	for i := range limits.NumField() {
+		field := limits.Field(i)
+		if field.Type != reflect.TypeFor[BucketConfig]() {
+			continue
+		}
+		buckets++
+		for _, setting := range []struct {
+			key  string
+			zero func(*BucketConfig)
+		}{
+			{"per_minute", func(b *BucketConfig) { b.PerMinute = 0 }},
+			{"burst", func(b *BucketConfig) { b.Burst = 0 }},
+		} {
+			key := "ratelimit." + field.Tag.Get("koanf") + "." + setting.key
+			t.Run(key, func(t *testing.T) {
+				cfg := validConfig()
+				setting.zero(reflect.ValueOf(&cfg.RateLimit).Elem().Field(i).Addr().Interface().(*BucketConfig))
+				want := key + ": must be at least 1, got 0"
+				if err := cfg.validate(); err == nil || err.Error() != want {
+					t.Errorf("validate() = %v, want only %q", err, want)
+				}
+			})
+		}
+	}
+	if buckets == 0 {
+		t.Fatal("RateLimitConfig has no BucketConfig field; want the buckets to be found")
 	}
 }
 
