@@ -43,9 +43,10 @@ func TestCreateUser(t *testing.T) {
 	if err != nil || email != "carol@corp.com" {
 		t.Fatalf("Execute() = %q, %v; want carol@corp.com", email, err)
 	}
-	if len(f.store.users) != 1 || len(f.store.profiles) != 1 || len(f.store.sessions) != 0 || f.tx.calls != 1 || len(f.store.outsideTx) != 0 {
-		t.Fatalf("%d accounts, %d profiles, %d sessions in %d transactions (outside: %v); want one account and profile in one, no session",
-			len(f.store.users), len(f.store.profiles), len(f.store.sessions), f.tx.calls, f.store.outsideTx)
+	if len(f.store.users) != 1 || len(f.store.profiles) != 1 || len(f.store.sessions) != 0 || f.tx.calls != 1 || len(f.store.outsideTx) != 0 ||
+		f.hasher.calls != 1 {
+		t.Fatalf("%d accounts, %d profiles, %d sessions in %d transactions (outside: %v) after %d hashes; want one account and profile in one, no session, one hash",
+			len(f.store.users), len(f.store.profiles), len(f.store.sessions), f.tx.calls, f.store.outsideTx, f.hasher.calls)
 	}
 	u := f.store.users[0]
 	if u.Email != "carol@corp.com" || u.PasswordHash != "hashed:Tr0ub4dor&3" || u.DisplayName != "carol" || !u.Now.Equal(now) ||

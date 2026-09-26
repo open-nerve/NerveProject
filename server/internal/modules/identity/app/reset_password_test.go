@@ -59,8 +59,8 @@ func TestResetPassword(t *testing.T) {
 		"revoke password_reset sessions of " + userID.String() + " but " + uuid.Nil().String(),
 		"revoke the tokens of " + userID.String(),
 	}
-	if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 || !slices.Equal(f.store.writtenAt, []time.Time{now, now, now}) {
-		t.Errorf("calls %q in %d transactions at %v; want %q in one at %v", f.log.calls, f.tx.calls, f.store.writtenAt, want, now)
+	if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 || !slices.Equal(f.store.writtenAt, []time.Time{now, now, now}) || f.hasher.calls != 1 {
+		t.Errorf("calls %q in %d transactions at %v after %d hashes; want %q in one at %v after one", f.log.calls, f.tx.calls, f.store.writtenAt, f.hasher.calls, want, now)
 	}
 	logs := f.logs.String()
 	if !strings.Contains(logs, `"msg":"password reset","user_id":"`+userID.String()+`","revoked_sessions":1,"revoked_api_tokens":3,"by":"cli"`) {
@@ -77,6 +77,7 @@ func TestResetPasswordChecksTheNewPassword(t *testing.T) {
 		name, email, password, code string
 	}{
 		{"weak", "alice@corp.com", "short", shared.FieldWeakPassword},
+		{"common", "alice@corp.com", "Password1!", shared.FieldCommonPassword},
 		{"the address's stem", "zebracorn@corp.com", "Zebracorn1!", shared.FieldCommonPassword},
 	}
 	for _, tt := range tests {
@@ -111,6 +112,7 @@ func TestResetPasswordWhenAWriteFails(t *testing.T) {
 	for _, fail := range []func(*fakeAdmin){
 		func(s *fakeAdmin) { s.hashErr = boom },
 		func(s *fakeAdmin) { s.revokeErr = boom },
+		func(s *fakeAdmin) { s.tokensErr = boom },
 	} {
 		f := newAdminFixture()
 		fail(f.store)
@@ -118,5 +120,18 @@ func TestResetPasswordWhenAWriteFails(t *testing.T) {
 		if _, err := f.resetPassword().Execute(context.Background(), "alice@corp.com", newPassword); !errors.Is(err, boom) || f.logs.Len() != 0 {
 			t.Errorf("Execute() = %v, logs %s; want %v and nothing logged", err, f.logs.String(), boom)
 		}
+	}
+}
+
+// argon2 runs before the transaction: a busy hasher is server_busy before
+// the account row is locked (M2 design 3.5, 3.8).
+func TestResetPasswordWhenTheHasherIsBusy(t *testing.T) {
+	f := newAdminFixture()
+	f.hasher.err = shared.ServerBusy(time.Second)
+
+	_, err := f.resetPassword().Execute(context.Background(), "alice@corp.com", newPassword)
+
+	if !errors.Is(err, shared.ServerBusy(0)) || f.tx.calls != 0 || len(f.log.calls) != 0 {
+		t.Errorf("Execute() = %v after %d transactions, calls %q; want server_busy before any", err, f.tx.calls, f.log.calls)
 	}
 }

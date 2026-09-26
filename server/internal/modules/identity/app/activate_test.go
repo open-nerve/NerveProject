@@ -46,6 +46,7 @@ func TestActivateFails(t *testing.T) {
 	}{
 		{"unknown account", "carol@corp.com", func(*fakeAdmin) {}, domain.ErrAccountNotFound},
 		{"a failed write", "alice@corp.com", func(s *fakeAdmin) { s.activateErr = boom }, boom},
+		{"a failed count", "alice@corp.com", func(s *fakeAdmin) { s.countErr = boom }, boom},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

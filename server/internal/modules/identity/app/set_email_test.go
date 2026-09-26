@@ -59,7 +59,7 @@ func TestSetEmailChecksTheNewAddress(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newAdminFixture()
 
-			_, err := f.setEmail().Execute(context.Background(), "alice@corp.com", tt.newEmail)
+			_, err := f.setEmail().Execute(context.Background(), " ALICE@Corp.com ", tt.newEmail)
 
 			var got, want *shared.Error
 			if !errors.As(err, &got) || !errors.As(tt.want, &want) || got.Code != want.Code || len(got.Fields) != len(want.Fields) ||

@@ -17,6 +17,8 @@ type fakeAdmin struct {
 	tokens      int   // RevokeAllAPITokens revokes this many
 	usable      int   // CountUsableAPITokens counts this many
 	activateErr error // ActivateUser fails with it
+	tokensErr   error // RevokeAllAPITokens fails with it
+	countErr    error // CountUsableAPITokens fails with it
 }
 
 const takenEmail = "bob@corp.com"
@@ -52,12 +54,18 @@ func (f *fakeAdmin) ActivateUser(ctx context.Context, id uuid.UUID, now time.Tim
 }
 
 func (f *fakeAdmin) RevokeAllAPITokens(ctx context.Context, userID uuid.UUID, now time.Time) (int, error) {
+	if f.tokensErr != nil {
+		return 0, f.tokensErr
+	}
 	f.log.add(ctx, "revoke the tokens of "+userID.String())
 	f.writtenAt = append(f.writtenAt, now)
 	return f.tokens, nil
 }
 
 func (f *fakeAdmin) CountUsableAPITokens(ctx context.Context, userID uuid.UUID, now time.Time) (int, error) {
+	if f.countErr != nil {
+		return 0, f.countErr
+	}
 	f.log.add(ctx, "count the tokens of "+userID.String())
 	f.writtenAt = append(f.writtenAt, now)
 	return f.usable, nil

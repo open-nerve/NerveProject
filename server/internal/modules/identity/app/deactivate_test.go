@@ -138,3 +138,15 @@ func TestDeactivateByEmailOfAnUnknownAccount(t *testing.T) {
 		t.Errorf("ExecuteByEmail() = %v after calls %q, logs %s; want identity.account_not_found after the lock alone", err, f.log.calls, f.logs.String())
 	}
 }
+
+// A failed write fails the administrator's deactivation too, which is then
+// not logged.
+func TestDeactivateByEmailWhenAWriteFails(t *testing.T) {
+	boom := errors.New("connection reset")
+	f := newAdminFixture()
+	f.store.revokeErr = boom
+
+	if _, err := f.deactivate().ExecuteByEmail(context.Background(), "alice@corp.com"); !errors.Is(err, boom) || f.logs.Len() != 0 {
+		t.Errorf("ExecuteByEmail() = %v, logs %s; want %v and nothing logged", err, f.logs.String(), boom)
+	}
+}
