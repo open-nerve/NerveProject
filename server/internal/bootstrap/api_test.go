@@ -13,43 +13,56 @@ import (
 )
 
 // The API needs no database: the app runs against an unreachable one. The
-// instance reports the settings of the configuration (M2 design 5.3).
+// instance reports the settings of the configuration (M2 design 5.3). Each
+// flag takes both values, and the two differ in each case, so a setting
+// read from another one, or fixed, is caught.
 func TestServesTheInstanceAPI(t *testing.T) {
 	contract := apitest.Load(t)
-	cfg := testConfig(t, unreachableDB, false)
-	cfg.Auth.SignupEnabled, cfg.Workspace.CreationEnabled, cfg.Files.SizeLimit = true, false, 7340032
-	base := startApp(t, cfg, fstest.MapFS{})
-	req, err := http.NewRequest(http.MethodGet, base+"/api/v0/instance", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, tt := range []struct {
+		name                      string
+		signup, workspaceCreation bool
+		fileSizeLimit             int64
+	}{
+		{"sign-up on, workspace creation off", true, false, 7340032},
+		{"sign-up off, workspace creation on", false, true, 7340033},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := testConfig(t, unreachableDB, false)
+			cfg.Auth.SignupEnabled, cfg.Workspace.CreationEnabled, cfg.Files.SizeLimit = tt.signup, tt.workspaceCreation, tt.fileSizeLimit
+			base := startApp(t, cfg, fstest.MapFS{})
+			req, err := http.NewRequest(http.MethodGet, base+"/api/v0/instance", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	res, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = res.Body.Close() }()
+			res, err := client.Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = res.Body.Close() }()
 
-	contract.CheckResponse(t, req, res)
-	var got struct {
-		Product                  string `json:"product"`
-		Version                  string `json:"version"`
-		APIVersion               string `json:"api_version"`
-		SignupEnabled            bool   `json:"signup_enabled"`
-		WorkspaceCreationEnabled bool   `json:"workspace_creation_enabled"`
-		FileSizeLimit            int64  `json:"file_size_limit"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
-		t.Fatalf("decode: %v", err)
-	}
-	if res.StatusCode != http.StatusOK || got.Product != "Nerve" || got.Version != buildinfo.Get().Version || got.APIVersion != "v0" {
-		t.Errorf("GET /api/v0/instance = %d %+v, want 200 Nerve %s v0", res.StatusCode, got, buildinfo.Get().Version)
-	}
-	if !got.SignupEnabled || got.WorkspaceCreationEnabled || got.FileSizeLimit != 7340032 {
-		t.Errorf("settings %+v, want sign-up on, workspace creation off, 7340032 bytes", got)
-	}
-	if res.Header.Get(httpserver.HeaderRequestID) == "" {
-		t.Error("response has no X-Request-Id: the platform middleware did not run")
+			contract.CheckResponse(t, req, res)
+			var got struct {
+				Product                  string `json:"product"`
+				Version                  string `json:"version"`
+				APIVersion               string `json:"api_version"`
+				SignupEnabled            bool   `json:"signup_enabled"`
+				WorkspaceCreationEnabled bool   `json:"workspace_creation_enabled"`
+				FileSizeLimit            int64  `json:"file_size_limit"`
+			}
+			if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if res.StatusCode != http.StatusOK || got.Product != "Nerve" || got.Version != buildinfo.Get().Version || got.APIVersion != "v0" {
+				t.Errorf("GET /api/v0/instance = %d %+v, want 200 Nerve %s v0", res.StatusCode, got, buildinfo.Get().Version)
+			}
+			if got.SignupEnabled != tt.signup || got.WorkspaceCreationEnabled != tt.workspaceCreation || got.FileSizeLimit != tt.fileSizeLimit {
+				t.Errorf("settings %+v, want %s, %d bytes", got, tt.name, tt.fileSizeLimit)
+			}
+			if res.Header.Get(httpserver.HeaderRequestID) == "" {
+				t.Error("response has no X-Request-Id: the platform middleware did not run")
+			}
+		})
 	}
 }
 
