@@ -2089,7 +2089,7 @@ files:
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
 | P1 | platform-core | 已完成 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | [review](reviews/P1-platform-core-review.md) |
-| P2 | sessions | 进行中 | [spec](specs/P2-sessions.md) | [plan](plans/P2-sessions.md) | — |
+| P2 | sessions | 已完成 | [spec](specs/P2-sessions.md) | [plan](plans/P2-sessions.md) | [review](reviews/P2-sessions-review.md) |
 | P3 | account-api | 未开始 | — | — | — |
 | P4 | web-auth | 未开始 | — | — | — |
 | P5 | web-account | 未开始 | — | — | — |

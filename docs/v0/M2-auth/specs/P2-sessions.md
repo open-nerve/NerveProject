@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M2/P2 `sessions` |
 | 日期 | 2026-09-26 |
-| 状态 | 进行中 |
+| 状态 | 已完成（[评审记录](../reviews/P2-sessions-review.md)） |
 | 上级文档 | [M2 设计文档](../M2-design.md) 第 2（A3–A6、A15）、3.4–3.6、3.9、3.10、3.20（P2 各行）、4.6、6.2–6.5、8.3、8.4、8.7、9.5、11.1、12（P2）、13.1 节；[v0 总体设计](../../v0-design.md) 3.5、3.6、4.1、4.2、6.4 节；[M0 设计](../../M0-foundation/M0-design.md) 3.3 节 |
 | 前置交接 | [M0-P2-platform-notes](../handoffs/M0-P2-platform-notes.md)、[M0-P5-frontend-api-notes](../handoffs/M0-P5-frontend-api-notes.md)、[M0-P6-e2e-notes](../handoffs/M0-P6-e2e-notes.md)；[P1 评审记录](../reviews/P1-platform-core-review.md) 第 6 节中交给 P2 的五项（本 Phase 的处理见第 7 节） |
 | 计划 | [P2 plan](../plans/P2-sessions.md) |
