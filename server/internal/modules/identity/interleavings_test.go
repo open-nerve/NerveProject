@@ -191,23 +191,6 @@ func (a *account) sessionsAndHash(t *testing.T) (int, string) {
 	return n, hash
 }
 
-// waitForLockWait returns once a statement on the account's database waits
-// for a lock, and fails the test after waitLimit.
-func (a *account) waitForLockWait(t *testing.T) {
-	t.Helper()
-	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
-		var waiting int
-		if err := a.pool.QueryRow(context.Background(),
-			"SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'").Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
-		if waiting > 0 {
-			return
-		}
-	}
-	t.Fatal("no statement waited for a lock")
-}
-
 // Interleaving 4: a login verified the old password; the password change
 // commits before the login's transaction begins, so no transaction waits
 // for the lock. The login's transaction finds a hash other than its
@@ -283,7 +266,7 @@ func TestAPasswordChangeWaitsForALoginThatHoldsTheLock(t *testing.T) {
 			shared.WithActor(context.Background(), shared.Actor{UserID: a.id, SessionID: a.session}),
 			app.ChangePasswordInput{Current: "Tr0ub4dor&3", New: "N3w-Passw0rd!"})
 	}()
-	a.waitForLockWait(t)
+	pgtest.WaitForLockWait(t, a.pool, waitLimit)
 	close(g.opened)
 	err := await(t, done)
 	var changeErr error

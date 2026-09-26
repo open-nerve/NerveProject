@@ -1,5 +1,6 @@
-// Package pgtest gives integration tests their own PostgreSQL database. Only
-// test code may import it (enforced by internal/archtest).
+// Package pgtest gives integration tests their own PostgreSQL database, and
+// a way to wait until a statement there waits for a lock. Only test code may
+// import it (enforced by internal/archtest).
 //
 // The first call in a test binary starts one PostgreSQL container, shared by
 // every test of that package, and migrates a template database with the

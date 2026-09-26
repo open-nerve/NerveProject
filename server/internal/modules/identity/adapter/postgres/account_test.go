@@ -14,6 +14,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -251,7 +252,7 @@ func TestUpdateProfileMergesConcurrentSteps(t *testing.T) {
 		_, err := s.UpdateProfile(ctx, u.ID, domain.ProfilePatch{OnboardingStep: domain.OnboardingStepsPatch{WorkspaceCreate: ptr(true)}}, now)
 		second <- err
 	}()
-	waitForLockWait(t, pool)
+	pgtest.WaitForLockWait(t, pool, 10*time.Second)
 	releaseFirst()
 	for name, done := range map[string]chan error{"first": first, "second": second} {
 		select {
@@ -269,21 +270,4 @@ func TestUpdateProfileMergesConcurrentSteps(t *testing.T) {
 	if err != nil || got.OnboardingStep != want {
 		t.Errorf("steps = %+v, %v; want both updates kept: %+v", got.OnboardingStep, err, want)
 	}
-}
-
-// waitForLockWait returns once a backend of this test's database waits for
-// a lock, and fails the test after 10s.
-func waitForLockWait(t *testing.T, pool *pgxpool.Pool) {
-	t.Helper()
-	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
-		var waiting int
-		if err := pool.QueryRow(context.Background(),
-			"SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'").Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
-		if waiting > 0 {
-			return
-		}
-	}
-	t.Fatal("no statement waited for a lock within 10s")
 }
