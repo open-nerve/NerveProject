@@ -29,7 +29,8 @@ func TestCleanupKind(t *testing.T) {
 }
 
 // The worker's integration test calls Work (M2 design 3.15): the expired
-// sessions of both accounts go, the live ones stay.
+// sessions of both accounts go, the live ones stay. The job's context
+// reaches the statements, so that stopping cancels a cleanup that runs on.
 func TestCleanupWorkerDeletesTheExpiredSessions(t *testing.T) {
 	ctx := context.Background()
 	pool, err := postgres.NewPool(ctx, config.DatabaseConfig{URL: pgtest.NewDatabase(t), MaxConns: 2})
@@ -55,6 +56,11 @@ func TestCleanupWorkerDeletesTheExpiredSessions(t *testing.T) {
 		}
 	}
 	w := riveradapter.NewCleanupWorker(app.NewCleanupSessions(store, clocktest.At(now), slog.New(slog.DiscardHandler)))
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	if err := w.Work(cancelled, &river.Job[riveradapter.CleanupArgs]{}); !errors.Is(err, context.Canceled) {
+		t.Errorf("Work(a cancelled context) = %v, want context.Canceled", err)
+	}
 
 	if err := w.Work(ctx, &river.Job[riveradapter.CleanupArgs]{}); err != nil {
 		t.Fatalf("Work() = %v", err)

@@ -17,12 +17,14 @@ import (
 
 // fakeExpiries is the sessions' expiry times, in memory. It deletes the
 // way the query does: up to limit of those before now. failAt fails that
-// call, counting from 1.
+// call, counting from 1. Each call moves clock, when set, a second on: the
+// run must keep the now it read first.
 type fakeExpiries struct {
 	expires []time.Time
 	calls   []int // the limit of each call
 	nows    []time.Time
 	failAt  int
+	clock   *clocktest.Fixed
 }
 
 var errDatabaseGone = errors.New("connection reset")
@@ -30,6 +32,9 @@ var errDatabaseGone = errors.New("connection reset")
 func (f *fakeExpiries) DeleteExpiredSessions(_ context.Context, now time.Time, limit int) (int, error) {
 	f.calls = append(f.calls, limit)
 	f.nows = append(f.nows, now)
+	if f.clock != nil {
+		f.clock.Advance(time.Second)
+	}
 	if len(f.calls) == f.failAt {
 		return 0, errDatabaseGone
 	}
@@ -69,10 +74,11 @@ func TestCleanupSessionsDeletesBatchAfterBatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f := &fakeExpiries{expires: sessionsExpiring(tt.expired, now.Add(-time.Second), 2)}
+			clock := clocktest.At(now)
+			f := &fakeExpiries{expires: sessionsExpiring(tt.expired, now.Add(-time.Second), 2), clock: clock}
 			var logs bytes.Buffer
 
-			n, err := app.NewCleanupSessions(f, clocktest.At(now), slog.New(slog.NewJSONHandler(&logs, nil))).Execute(context.Background())
+			n, err := app.NewCleanupSessions(f, clock, slog.New(slog.NewJSONHandler(&logs, nil))).Execute(context.Background())
 
 			if err != nil || n != tt.expired || len(f.expires) != 2 || !slices.Equal(f.calls, tt.calls) {
 				t.Errorf("Execute() = %d, %v with %d sessions left, calls %v; want %d, the 2 live left, calls %v",

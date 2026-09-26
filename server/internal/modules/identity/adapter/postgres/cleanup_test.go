@@ -87,32 +87,41 @@ func TestDeleteExpiredSessions(t *testing.T) {
 
 // A session another transaction holds, e.g. being refreshed or revoked, is
 // skipped rather than waited for (FOR UPDATE SKIP LOCKED); the next run
-// deletes it. lock_timeout turns a wait into a failure.
+// deletes it. lock_timeout turns a wait into a failure. Every wait of the
+// test, the holding transaction's too, ends with ctx: it fails, not hangs.
 func TestDeleteExpiredSessionsSkipsLockedRows(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newUser("alice@corp.com")
 	mustCreate(t, s, alice)
 	held, free := sessionUntil(t, s, alice, now.Add(-time.Hour)), sessionUntil(t, s, alice, now.Add(-time.Hour))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	tx := postgres.NewTxManager(pool, 2*time.Second)
 	locked, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
-		done <- tx.WithinTx(context.Background(), func(ctx context.Context) error {
+		done <- tx.WithinTx(ctx, func(ctx context.Context) error {
 			if _, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE auth_sessions SET updated_at = $2 WHERE id = $1", held, later); err != nil {
 				return err
 			}
 			close(locked)
-			<-release
-			return nil
+			select {
+			case <-release:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		})
 	}()
 	select {
 	case <-locked:
 	case err := <-done:
 		t.Fatalf("locking the session: %v", err)
+	case <-ctx.Done():
+		t.Fatal("the session was not locked within 10s")
 	}
 
 	var n int
-	err := tx.WithinTx(context.Background(), func(ctx context.Context) error {
+	err := tx.WithinTx(ctx, func(ctx context.Context) error {
 		if _, err := postgres.DB(ctx, pool).Exec(ctx, "SET LOCAL lock_timeout = '500ms'"); err != nil {
 			return err
 		}
@@ -121,14 +130,19 @@ func TestDeleteExpiredSessionsSkipsLockedRows(t *testing.T) {
 		return err
 	})
 	close(release)
-	if err := <-done; err != nil {
-		t.Fatalf("the transaction holding the session: %v", err)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("the transaction holding the session: %v", err)
+		}
+	case <-ctx.Done():
+		t.Fatal("the transaction holding the session did not end within 10s")
 	}
 
 	if err != nil || n != 1 || !slices.Equal(sessionIDs(t, pool), []uuid.UUID{held}) {
 		t.Errorf("DeleteExpiredSessions() = %d, %v leaving %v; want %v deleted without waiting, %v left", n, err, sessionIDs(t, pool), free, held)
 	}
-	if n, err := s.DeleteExpiredSessions(context.Background(), now, 1000); err != nil || n != 1 || len(sessionIDs(t, pool)) != 0 {
+	if n, err := s.DeleteExpiredSessions(ctx, now, 1000); err != nil || n != 1 || len(sessionIDs(t, pool)) != 0 {
 		t.Errorf("the next run = %d, %v; want the released session deleted", n, err)
 	}
 }
