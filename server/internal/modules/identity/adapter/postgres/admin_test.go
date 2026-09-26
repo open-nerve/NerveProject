@@ -17,29 +17,43 @@ import (
 )
 
 // holdLock runs lock in a transaction and keeps the transaction open until
-// the test ends.
+// the test ends. Every wait, the holding transaction's too, ends within 10s:
+// the test fails, not hangs.
 func holdLock(t *testing.T, tx *postgres.TxManager, lock func(ctx context.Context) error) {
 	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	t.Cleanup(cancel)
 	locked, release, held := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
-		held <- tx.WithinTx(context.Background(), func(ctx context.Context) error {
+		held <- tx.WithinTx(ctx, func(ctx context.Context) error {
 			if err := lock(ctx); err != nil {
 				return err
 			}
 			close(locked)
-			<-release
-			return nil
+			select {
+			case <-release:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		})
 	}()
 	select {
 	case <-locked:
 	case err := <-held:
 		t.Fatalf("taking the lock: %v", err)
+	case <-ctx.Done():
+		t.Fatal("the lock was not taken within 10s")
 	}
 	t.Cleanup(func() {
 		close(release)
-		if err := <-held; err != nil {
-			t.Errorf("the transaction holding the lock: %v", err)
+		select {
+		case err := <-held:
+			if err != nil {
+				t.Errorf("the transaction holding the lock: %v", err)
+			}
+		case <-ctx.Done():
+			t.Error("the transaction holding the lock did not end within 10s")
 		}
 	})
 }

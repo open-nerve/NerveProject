@@ -128,33 +128,47 @@ func TestLockForCredentialsReadsTheRow(t *testing.T) {
 // FOR NO KEY UPDATE (M2 design 3.5): while one transaction holds the lock,
 // a second lock of the row waits, and inserting a session that references
 // the account does not (interleaving 6). lock_timeout turns a wait into a
-// failure.
+// failure. The holding transaction's waits end within 10s: the test fails,
+// not hangs.
 func TestTheCredentialLockBlocksLocksNotInserts(t *testing.T) {
 	s, pool := newStore(t)
 	u := newUser("alice@corp.com")
 	mustCreate(t, s, u)
 	tx := postgres.NewTxManager(pool, 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	locked, release := make(chan struct{}), make(chan struct{})
 	held := make(chan error, 1)
 	go func() {
-		held <- tx.WithinTx(context.Background(), func(ctx context.Context) error {
+		held <- tx.WithinTx(ctx, func(ctx context.Context) error {
 			if _, err := s.LockForCredentials(ctx, u.ID); err != nil {
 				return err
 			}
 			close(locked)
-			<-release
-			return nil
+			select {
+			case <-release:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		})
 	}()
 	select {
 	case <-locked:
 	case err := <-held:
 		t.Fatalf("taking the lock: %v", err)
+	case <-ctx.Done():
+		t.Fatal("the lock was not taken within 10s")
 	}
 	defer func() {
 		close(release)
-		if err := <-held; err != nil {
-			t.Errorf("the transaction holding the lock: %v", err)
+		select {
+		case err := <-held:
+			if err != nil {
+				t.Errorf("the transaction holding the lock: %v", err)
+			}
+		case <-ctx.Done():
+			t.Error("the transaction holding the lock did not end within 10s")
 		}
 	}()
 	withTimeout := func(fn func(ctx context.Context) error) error {
