@@ -148,6 +148,64 @@ type SessionEnder interface {
 	EndSession(ctx context.Context, g SessionGeneration) (bool, error)
 }
 
+// NewAPIToken is a personal access token to insert. The account creates it
+// for itself, at Now.
+type NewAPIToken struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	TokenHash   []byte // domain.PAT.Hash
+	Label       string
+	Description string
+	ExpiredAt   *time.Time
+	Now         time.Time
+}
+
+// APITokenCreator inserts personal access tokens.
+type APITokenCreator interface {
+	CreateAPIToken(ctx context.Context, t NewAPIToken) error
+}
+
+// APITokenLister reads an account's tokens, a page at a time.
+type APITokenLister interface {
+	// ListAPITokens returns up to limit of userID's unrevoked tokens,
+	// newest first and then by id: from the start when after is nil,
+	// otherwise those after its row.
+	ListAPITokens(ctx context.Context, userID uuid.UUID, after *domain.APITokenCursor, limit int) ([]domain.APIToken, error)
+}
+
+// APITokenRevoker revokes personal access tokens.
+type APITokenRevoker interface {
+	// RevokeAPIToken revokes token id of userID at now; false when userID
+	// has no such unrevoked token.
+	RevokeAPIToken(ctx context.Context, id, userID uuid.UUID, now time.Time) (bool, error)
+}
+
+// APITokenCredential is what authentication and the credential lock check
+// of a personal access token.
+type APITokenCredential struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	ExpiredAt  *time.Time // nil: never expires
+	LastUsed   *time.Time
+	Revoked    bool
+	UserActive bool
+}
+
+// APITokenReader reads what authentication and the credential lock need.
+type APITokenReader interface {
+	// APITokenByHash returns ErrNotFound when no token has hash.
+	APITokenByHash(ctx context.Context, hash []byte) (APITokenCredential, error)
+	// APITokenByID returns ErrNotFound when there is no token id.
+	APITokenByID(ctx context.Context, id uuid.UUID) (APITokenCredential, error)
+}
+
+// APITokenToucher records that a token was used.
+type APITokenToucher interface {
+	// TouchAPIToken sets token id's last_used to now when it is unset or
+	// older than staleBefore.
+	TouchAPIToken(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) error
+}
+
 // PasswordHasher hashes and verifies passwords with argon2id. Both return a
 // *shared.Error of 503 server_busy when no slot frees up within the wait
 // limit (M2 design 3.8).
