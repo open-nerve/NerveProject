@@ -226,8 +226,8 @@ export async function expectPasswordChanged(
 }
 
 /**
- * A11: the new token's row holds the SHA-256 of the token, and no column
- * holds the token itself; it expires at expiredAt and is live.
+ * A11: the new token's row holds the SHA-256 of the token, and no text
+ * column holds the token's text; it expires at expiredAt and is live.
  */
 export async function expectTokenStored(db: Database, id: string, token: string, expiredAt: string): Promise<void> {
   const rows = await db.query<{ token_hash: Buffer; expired_at: Date; deleted_at: Date | null; row: string }>(
@@ -237,6 +237,10 @@ export async function expectTokenStored(db: Database, id: string, token: string,
   expect(rows).toHaveLength(1);
   const [row] = rows;
   expect(row?.token_hash.equals(createHash("sha256").update(token).digest())).toBe(true);
+  // row_to_json writes the whole row as text, so this catches the token's
+  // text, with or without its prefix, in a text column. A bytea column is
+  // written as hex, which this does not search: that token_hash holds only
+  // the hash is the Go store test's to check (TestCreateAPIToken).
   expect(row?.row).not.toContain(token.slice("nrv_pat_".length));
   expect(row?.expired_at.getTime()).toBe(new Date(expiredAt).getTime());
   expect(row?.deleted_at).toBeNull();
