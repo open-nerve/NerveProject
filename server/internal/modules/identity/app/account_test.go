@@ -112,7 +112,8 @@ func TestAccountPatchesAreChecked(t *testing.T) {
 }
 
 // Without an actor, and when the account is gone since authentication, the
-// caller is unauthenticated; a database error stays one (500).
+// caller is unauthenticated; a database error stays one (500). Without an
+// actor the store is never asked.
 func TestAccountUseCasesErrors(t *testing.T) {
 	boom := errors.New("connection refused")
 	gone := uuid.MustParse("0199a2b4-0000-7000-8000-000000000009")
@@ -140,10 +141,11 @@ func TestAccountUseCasesErrors(t *testing.T) {
 		account uuid.UUID // the id of the fake's account
 		err     error     // the fake's error
 		want    error
+		asked   bool // whether the store is asked
 	}{
-		{"without an actor", context.Background(), userID, nil, shared.Unauthenticated()},
-		{"when the account is gone", authed, gone, nil, shared.Unauthenticated()},
-		{"when the database fails", authed, userID, boom, boom},
+		{"without an actor", context.Background(), userID, nil, shared.Unauthenticated(), false},
+		{"when the account is gone", authed, gone, nil, shared.Unauthenticated(), true},
+		{"when the database fails", authed, userID, boom, boom, true},
 	}
 	for _, uc := range useCases {
 		for _, tt := range tests {
@@ -152,6 +154,9 @@ func TestAccountUseCasesErrors(t *testing.T) {
 
 				if err := uc.run(tt.ctx, account); !errors.Is(err, tt.want) {
 					t.Errorf("Execute() = %v, want %v", err, tt.want)
+				}
+				if calls := len(account.userUpdates) + len(account.profileReads) + len(account.profileUpdates); (calls == 1) != tt.asked {
+					t.Errorf("the store was asked %d times, want asked: %v", calls, tt.asked)
 				}
 			})
 		}

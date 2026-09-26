@@ -39,22 +39,35 @@ func asJSON(v any) string {
 	return string(out)
 }
 
+// Each field sent reaches the use case; an absent one stays nil.
 func TestUpdateMe(t *testing.T) {
-	update := &fakeUpdateMe{user: domain.User{
-		ID: userID, Email: "alice@corp.com", FirstName: "Ann", DisplayName: "alice", Timezone: "Asia/Shanghai", CreatedAt: created,
-	}}
-	req := patchJSON("/api/v0/me", `{"first_name":"Ann","user_timezone":"Asia/Shanghai"}`)
-	apitest.Load(t).CheckRequest(t, req)
-
-	res, body := do(t, newServer(t, fakes{updateMe: update}), req)
-
-	want := `{"avatar_url":null,"cover_image_url":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
-		`"email":"alice@corp.com","first_name":"Ann","id":"` + userID.String() + `","last_name":"","user_timezone":"Asia/Shanghai"}` + "\n"
-	if res.StatusCode != http.StatusOK || body != want {
-		t.Errorf("PATCH /me = %d %s, want 200 %s", res.StatusCode, body, want)
+	tests := []struct {
+		name, body, patch string
+	}{
+		{"every field", `{"first_name":"Ann","last_name":"Lee","display_name":"annie","user_timezone":"Asia/Shanghai"}`,
+			`{"FirstName":"Ann","LastName":"Lee","DisplayName":"annie","Timezone":"Asia/Shanghai"}`},
+		{"a name and the time zone", `{"first_name":"Ann","user_timezone":"Asia/Shanghai"}`,
+			`{"FirstName":"Ann","LastName":null,"DisplayName":null,"Timezone":"Asia/Shanghai"}`},
 	}
-	if got, want := asJSON(update.patch), `{"FirstName":"Ann","LastName":null,"DisplayName":null,"Timezone":"Asia/Shanghai"}`; got != want {
-		t.Errorf("use case got %s, want %s", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			update := &fakeUpdateMe{user: domain.User{
+				ID: userID, Email: "alice@corp.com", FirstName: "Ann", LastName: "Lee", DisplayName: "alice", Timezone: "Asia/Shanghai", CreatedAt: created,
+			}}
+			req := patchJSON("/api/v0/me", tt.body)
+			apitest.Load(t).CheckRequest(t, req)
+
+			res, body := do(t, newServer(t, fakes{updateMe: update}), req)
+
+			want := `{"avatar_url":null,"cover_image_url":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
+				`"email":"alice@corp.com","first_name":"Ann","id":"` + userID.String() + `","last_name":"Lee","user_timezone":"Asia/Shanghai"}` + "\n"
+			if res.StatusCode != http.StatusOK || body != want {
+				t.Errorf("PATCH /me = %d %s, want 200 %s", res.StatusCode, body, want)
+			}
+			if got := asJSON(update.patch); got != tt.patch {
+				t.Errorf("use case got %s, want %s", got, tt.patch)
+			}
+		})
 	}
 }
 
