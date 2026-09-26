@@ -24,8 +24,8 @@ func bannedFromBinary() []string {
 // oapiRuntime is the module that generated code imports to bind parameters.
 // It imports google/uuid itself (runtime/types/uuid.go and the runtime
 // package's styleparam.go, v1.7.0), so its packages, and only they, may
-// (M2 design 3.12). That generated code uses the standard library's uuid is
-// checked directly, by TestGeneratedCodeUsesTheStandardUUID.
+// import google/uuid (M2 design 3.12). That generated code uses the standard
+// library's uuid is checked directly, by TestGeneratedCodeUsesTheStandardUUID.
 const oapiRuntime = "github.com/oapi-codegen/runtime"
 
 // isBannedFromBinary judges the import of path by importer.
