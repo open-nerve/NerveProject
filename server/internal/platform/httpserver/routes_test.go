@@ -58,7 +58,7 @@ func TestReadyzReportsFirstFailingCheck(t *testing.T) {
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d, want 503", rec.Code)
 	}
-	if ct := rec.Header().Get("Content-Type"); ct != ContentTypeProblem {
+	if ct := rec.Result().Header.Get("Content-Type"); ct != ContentTypeProblem {
 		t.Errorf("Content-Type = %q, want %q", ct, ContentTypeProblem)
 	}
 	want := `{"status":503,"code":"not_ready","title":"Service Unavailable","detail":"database is not ready"}` + "\n"
@@ -79,8 +79,8 @@ func TestUnknownAPIPathIsProblem404(t *testing.T) {
 	for _, target := range []string{"/api/", "/api/v0/nope"} {
 		rec := serve(router, httptest.NewRequest(http.MethodPost, target, nil))
 
-		if rec.Code != http.StatusNotFound || rec.Header().Get("Content-Type") != ContentTypeProblem {
-			t.Errorf("POST %s = %d %s, want 404 problem+json", target, rec.Code, rec.Header().Get("Content-Type"))
+		if ct := rec.Result().Header.Get("Content-Type"); rec.Code != http.StatusNotFound || ct != ContentTypeProblem {
+			t.Errorf("POST %s = %d %s, want 404 problem+json", target, rec.Code, ct)
 		}
 		want := `{"status":404,"code":"not_found","title":"Not Found","detail":"no API endpoint for POST ` + target + `"}` + "\n"
 		if rec.Body.String() != want {
@@ -117,7 +117,7 @@ func TestRouterRoutesToTheRegisteredHandler(t *testing.T) {
 func TestOtherPathsAreLeftForTheWebUI(t *testing.T) {
 	rec := serve(NewRouter(slog.New(slog.DiscardHandler)), httptest.NewRequest(http.MethodGet, "/projects", nil))
 
-	if rec.Code != http.StatusNotFound || rec.Header().Get("Content-Type") == ContentTypeProblem {
-		t.Errorf("GET /projects = %d %s, want the router's plain 404", rec.Code, rec.Header().Get("Content-Type"))
+	if ct := rec.Result().Header.Get("Content-Type"); rec.Code != http.StatusNotFound || ct == ContentTypeProblem {
+		t.Errorf("GET /projects = %d %s, want the router's plain 404", rec.Code, ct)
 	}
 }

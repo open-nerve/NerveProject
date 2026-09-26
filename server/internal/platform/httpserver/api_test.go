@@ -331,9 +331,10 @@ func TestAuthenticationDeniesByDefault(t *testing.T) {
 
 			rec := serve(router, req)
 
-			if rec.Code != tt.status || rec.Header().Get("WWW-Authenticate") != tt.challenge || auth.calls != tt.authCalls {
+			challenge := rec.Result().Header.Get("WWW-Authenticate")
+			if rec.Code != tt.status || challenge != tt.challenge || auth.calls != tt.authCalls {
 				t.Errorf("response = %d, WWW-Authenticate %q, authenticator called %d times; want %d, %q, %d",
-					rec.Code, rec.Header().Get("WWW-Authenticate"), auth.calls, tt.status, tt.challenge, tt.authCalls)
+					rec.Code, challenge, auth.calls, tt.status, tt.challenge, tt.authCalls)
 			}
 			if tt.status == 401 {
 				if p := decodeProblem(t, rec); p.Code != CodeUnauthorized {
@@ -408,8 +409,9 @@ func TestFailureGateTurnsAwayWithoutAuthenticating(t *testing.T) {
 	for _, token := range []string{"bad", "tok"} {
 		rec := serve(router, post("/api/v0/things", token, `{"name":"a"}`))
 
-		if p := decodeProblem(t, rec); rec.Code != http.StatusTooManyRequests || p.Code != CodeRateLimited || rec.Header().Get("Retry-After") != "2" {
-			t.Errorf("token %s: response = %d %+v, Retry-After %q; want 429 rate_limited, Retry-After 2", token, rec.Code, p, rec.Header().Get("Retry-After"))
+		retry := rec.Result().Header.Get("Retry-After")
+		if p := decodeProblem(t, rec); rec.Code != http.StatusTooManyRequests || p.Code != CodeRateLimited || retry != "2" {
+			t.Errorf("token %s: response = %d %+v, Retry-After %q; want 429 rate_limited, Retry-After 2", token, rec.Code, p, retry)
 		}
 	}
 	if auth.calls != 2 || got.called {
@@ -546,9 +548,10 @@ func TestRateLimitedRequestIs429(t *testing.T) {
 			rec := serve(router, post(tt.route, tt.token, `{"nope":1}`))
 
 			want := `{"status":429,"code":"rate_limited","title":"Too Many Requests","detail":"Too many requests; retry later."}` + "\n"
-			if rec.Code != http.StatusTooManyRequests || rec.Body.String() != want || rec.Header().Get("Retry-After") != "2" || got.called {
+			retry := rec.Result().Header.Get("Retry-After")
+			if rec.Code != http.StatusTooManyRequests || rec.Body.String() != want || retry != "2" || got.called {
 				t.Errorf("response = %d %s, Retry-After %q, handler called %v; want 429 %s, Retry-After 2",
-					rec.Code, rec.Body, rec.Header().Get("Retry-After"), got.called, want)
+					rec.Code, rec.Body, retry, got.called, want)
 			}
 			entry := findLog(logs(), "rate limited")
 			if entry == nil || entry["level"] != "INFO" || entry["bucket"] != tt.bucket || entry["ip"] != "203.0.113.7" || entry["request_id"] == nil {

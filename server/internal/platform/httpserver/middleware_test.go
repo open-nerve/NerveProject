@@ -55,7 +55,7 @@ func TestRequestIDIsGeneratedWhenMissing(t *testing.T) {
 
 	rec := serve(h, httptest.NewRequest(http.MethodGet, "/", nil))
 
-	id := rec.Header().Get(HeaderRequestID)
+	id := rec.Result().Header.Get(HeaderRequestID)
 	if _, err := uuid.Parse(id); err != nil {
 		t.Fatalf("X-Request-Id = %q, want a UUID: %v", id, err)
 	}
@@ -80,7 +80,7 @@ func TestRequestIDFromCaller(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(HeaderRequestID, tt.header)
 
-			got := serve(h, req).Header().Get(HeaderRequestID)
+			got := serve(h, req).Result().Header.Get(HeaderRequestID)
 			if kept := got == tt.header; kept != tt.kept {
 				t.Errorf("X-Request-Id = %q for caller ID %q, kept = %v, want %v", got, tt.header, kept, tt.kept)
 			}
@@ -123,7 +123,7 @@ func TestPanicBecomes500Problem(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}
-	if ct := rec.Header().Get("Content-Type"); ct != ContentTypeProblem {
+	if ct := rec.Result().Header.Get("Content-Type"); ct != ContentTypeProblem {
 		t.Errorf("Content-Type = %q, want %q", ct, ContentTypeProblem)
 	}
 	want := `{"status":500,"code":"internal_error","title":"Internal Server Error"}` + "\n"
