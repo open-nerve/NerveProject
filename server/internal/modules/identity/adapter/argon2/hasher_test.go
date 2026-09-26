@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -153,14 +154,18 @@ func TestVerifyAsksForARehashWhenTheParametersChanged(t *testing.T) {
 
 // A hash in another format is an unusable password: no password matches
 // it, and it is no error, so a login with it answers 401 like any wrong
-// password rather than a quick 500 (M2 design 3.9). The warning never
-// quotes the hash.
+// password rather than a quick 500 (M2 design 3.9). Each such Verify logs
+// one warning with nothing but its message: neither the hash nor the
+// password, in any spelling. A hash of this format logs nothing.
 func TestVerifyMatchesNothingAgainstAnotherFormat(t *testing.T) {
 	var logs bytes.Buffer
 	h := New(testParams, slog.New(slog.NewJSONHandler(&logs, nil)))
 	good, err := h.Hash(context.Background(), "Tr0ub4dor&3")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if ok, _, err := h.Verify(context.Background(), "Tr0ub4dor&3", good); !ok || err != nil || logs.Len() != 0 {
+		t.Fatalf("Verify(good) = %v, %v with logs %s; want a match and no log", ok, err, logs.String())
 	}
 	parts := strings.Split(good, "$")
 	with := func(i int, s string) string {
@@ -201,9 +206,10 @@ func TestVerifyMatchesNothingAgainstAnotherFormat(t *testing.T) {
 		if _, err := parsePHC(tt.hash); !errors.Is(err, errNotOurHash) {
 			t.Errorf("%s: parsePHC() = %v, want the format error", tt.name, err)
 		}
-		if out := logs.String(); !strings.Contains(out, `"level":"WARN","msg":"a stored password hash is not an argon2id PHC string: no password matches it"`) ||
-			tt.hash != "" && strings.Contains(out, tt.hash) {
-			t.Errorf("%s: logs = %s, want the warning without the hash", tt.name, out)
+		var line map[string]any
+		if err := json.Unmarshal(logs.Bytes(), &line); err != nil || len(line) != 3 || line["level"] != "WARN" ||
+			line["msg"] != "a stored password hash is not an argon2id PHC string: no password matches it" {
+			t.Errorf("%s: logs = %s, want one warning with nothing but its time, level and message", tt.name, logs.String())
 		}
 	}
 }
