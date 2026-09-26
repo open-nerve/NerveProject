@@ -91,17 +91,20 @@ func TestAuthenticateRejects(t *testing.T) {
 	}
 }
 
-// Only a valid signature with a past exp is "expired": the client's cue to
-// refresh, which the M2/P2 failure gate does not count.
+// Only a valid signature whose exp has come, at that instant or past it, is
+// "expired": the client's cue to refresh, which the failure gate does not
+// count (M2 design 3.6).
 func TestAuthenticateTellsAnExpiredAccessToken(t *testing.T) {
-	uc, tokens, _ := newAuthenticate(validCredential(), nil)
-	old, _ := tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: now})
+	for _, exp := range []time.Time{now, now.Add(-time.Second)} {
+		uc, tokens, _ := newAuthenticate(validCredential(), nil)
+		old, _ := tokens.Issue(app.AccessClaims{UserID: userID, SessionID: sessionID, ExpiresAt: exp})
 
-	_, expired := uc.Execute(context.Background(), old)
-	_, forged := uc.Execute(context.Background(), "forged")
+		_, expired := uc.Execute(context.Background(), old)
+		_, forged := uc.Execute(context.Background(), "forged")
 
-	if !errors.Is(expired, app.ErrAccessTokenExpired) || errors.Is(forged, app.ErrAccessTokenExpired) {
-		t.Errorf("expired = %v, forged = %v; want only the first to be ErrAccessTokenExpired", expired, forged)
+		if !errors.Is(expired, app.ErrAccessTokenExpired) || errors.Is(forged, app.ErrAccessTokenExpired) {
+			t.Errorf("exp %v: expired = %v, forged = %v; want only the first to be ErrAccessTokenExpired", exp, expired, forged)
+		}
 	}
 }
 

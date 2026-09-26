@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"math"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 	"uuid"
 )
@@ -65,6 +67,90 @@ func TestSanitizeUserAgent(t *testing.T) {
 		got := SanitizeUserAgent(tt.in)
 		if got != tt.want || !utf8.ValidString(got) {
 			t.Errorf("SanitizeUserAgent(%.20q) = %.20q (%d runes), want %.20q", tt.in, got, utf8.RuneCountInString(got), tt.want)
+		}
+	}
+}
+
+func TestParseRefreshTokenReadsWhatStringWrites(t *testing.T) {
+	for _, generation := range []uint32{0, 0x01020304, math.MaxInt32} {
+		tok := sampleToken()
+		tok.Generation = generation
+
+		got, ok := ParseRefreshToken(tok.String())
+
+		if !ok || got != tok {
+			t.Errorf("ParseRefreshToken(String()) at generation %d = %+v, %v; want the token back", generation, got, ok)
+		}
+	}
+}
+
+func TestParseRefreshTokenRejects(t *testing.T) {
+	good := sampleToken().String()
+	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+	last := strings.IndexByte(alphabet, good[len(good)-1])
+	beyond := sampleToken()
+	beyond.Generation = math.MaxInt32 + 1
+	tests := []struct{ name, token string }{
+		{"empty", ""},
+		{"the prefix alone", RefreshTokenPrefix},
+		{"another prefix", "nrv_xx_" + good[len(RefreshTokenPrefix):]},
+		{"a personal access token", "nrv_pat_" + strings.Repeat("A", 43)},
+		{"one character short", good[:len(good)-1]},
+		{"one character more", good + "A"},
+		{"padded", good[:len(good)-1] + "="},
+		{"standard base64", good[:20] + "+" + good[21:]},
+		{"a newline inside", good[:50] + "\n" + good[51:]},
+		{"a space in front", " " + good[:len(good)-1]},
+		{"a space behind", good[:len(good)-1] + " "},
+		{"a newline behind", good + "\n"},
+		// 91 characters carry 546 bits for 544: the last two must be zero,
+		// so that one token has one spelling.
+		{"unused bits set", good[:len(good)-1] + string(alphabet[last|1])},
+		{"a generation beyond integer", beyond.String()},
+	}
+	for _, tt := range tests {
+		if got, ok := ParseRefreshToken(tt.token); ok {
+			t.Errorf("%s: ParseRefreshToken(%q) = %+v, want false", tt.name, tt.token, got)
+		}
+	}
+}
+
+// Every row of M2 design 3.5's table. The session is at generation 5; a
+// session that does not exist is the use case's to reject.
+func TestJudgeRefresh(t *testing.T) {
+	now := time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
+	current := sampleToken()
+	current.Generation = 5
+	live := SessionState{Generation: 5, TokenHash: current.SecretHash(), ExpiresAt: now.Add(time.Hour)}
+	older, newer, otherSecret := current, current, current
+	older.Generation, newer.Generation = 4, 6
+	otherSecret.Secret[0] ^= 1
+	revoked, expired, lastInstant := live, live, live
+	revoked.Revoked = true
+	expired.ExpiresAt = now
+	lastInstant.ExpiresAt = now.Add(time.Microsecond)
+	tests := []struct {
+		name     string
+		state    SessionState
+		token    RefreshToken
+		tagValid bool
+		want     Verdict
+	}{
+		{"current generation", live, current, false, Rotate},
+		{"current generation, tag valid too", live, current, true, Rotate},
+		{"current generation, another secret", live, otherSecret, true, Reject},
+		{"older generation the session issued", live, older, true, Reuse},
+		{"older generation, forged", live, older, false, Reject},
+		{"newer generation", live, newer, true, Reject},
+		{"revoked, current generation", revoked, current, false, Reject},
+		{"revoked, older generation the session issued", revoked, older, true, Reject},
+		{"expired at this instant", expired, current, false, Reject},
+		{"expired, older generation the session issued", expired, older, true, Reject},
+		{"a microsecond before expiry", lastInstant, current, false, Rotate},
+	}
+	for _, tt := range tests {
+		if got := JudgeRefresh(tt.state, tt.token, tt.tagValid, now); got != tt.want {
+			t.Errorf("%s: JudgeRefresh() = %d, want %d", tt.name, got, tt.want)
 		}
 	}
 }

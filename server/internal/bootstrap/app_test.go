@@ -35,6 +35,9 @@ const unreachableDB = "postgres://nobody@127.0.0.1:1/nowhere"
 
 var client = &http.Client{Timeout: 5 * time.Second}
 
+// roomy is a rate no test here reaches; the tests of a limit set their own.
+var roomy = config.BucketConfig{PerMinute: 600000, Burst: 100000}
+
 // testConfig listens on a port the system picks and reports it through
 // server.addr_file. Password hashing is cheap: the tests hash many times.
 func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
@@ -53,9 +56,10 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		},
 		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate, CommitTimeout: 2 * time.Second},
 		Auth: config.AuthConfig{
-			SignupEnabled:  true,
-			AccessTokenTTL: 15 * time.Minute,
-			SessionTTL:     720 * time.Hour,
+			SignupEnabled:   true,
+			AccessTokenTTL:  15 * time.Minute,
+			SessionTTL:      720 * time.Hour,
+			RefreshDeadline: 4 * time.Second,
 			Password: config.PasswordConfig{
 				Argon2MemoryKiB:     64,
 				Argon2Iterations:    1,
@@ -63,6 +67,11 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 				MaxConcurrentHashes: 4,
 				MaxWait:             2 * time.Second,
 			},
+		},
+		RateLimit: config.RateLimitConfig{
+			IPv6PrefixLen: 64,
+			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
+			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy,
 		},
 		Log: config.LogConfig{Level: "error", Format: "text"},
 	}

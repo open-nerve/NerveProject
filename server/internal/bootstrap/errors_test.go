@@ -31,8 +31,8 @@ func TestEveryKindBecomesItsProblem(t *testing.T) {
 		{shared.NewError(shared.KindForbidden, "things.forbidden", "d"), `{"status":403,"code":"things.forbidden","title":"Forbidden","detail":"d"}`, ""},
 		{shared.NewError(shared.KindNotFound, "things.missing", "d"), `{"status":404,"code":"things.missing","title":"Not Found","detail":"d"}`, ""},
 		{shared.NewError(shared.KindConflict, "things.taken", "d"), `{"status":409,"code":"things.taken","title":"Conflict","detail":"d"}`, ""},
-		{&shared.Error{Kind: shared.KindRateLimited, Code: "rate_limited", Detail: "d", RetryDelay: 1500 * time.Millisecond},
-			`{"status":429,"code":"rate_limited","title":"Too Many Requests","detail":"d"}`, "2"},
+		{shared.RateLimited(1500 * time.Millisecond),
+			`{"status":429,"code":"rate_limited","title":"Too Many Requests","detail":"Too many requests; retry later."}`, "2"},
 		{fmt.Errorf("register: %w", shared.ServerBusy(time.Second)),
 			`{"status":503,"code":"server_busy","title":"Service Unavailable","detail":"The server is busy; retry shortly."}`, "1"},
 	}

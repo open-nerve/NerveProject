@@ -17,6 +17,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -61,17 +62,66 @@ func (fakeAuth) Authenticate(ctx context.Context, token string) (context.Context
 	return shared.WithActor(ctx, shared.Actor{UserID: userID, SessionID: sessionID}), "session:" + sessionID.String(), nil
 }
 
-func newServer(register *fakeRegister) http.Handler {
+// fakes are the use cases behind a test server; newServer puts an idle fake
+// in place of each one left nil.
+type fakes struct {
+	register *fakeRegister
+	login    *fakeLogin
+	refresh  *fakeRefresh
+	logout   *fakeLogout
+}
+
+// newServer serves the module with limits no test here reaches.
+func newServer(t *testing.T, f fakes) http.Handler {
+	t.Helper()
+	limiter := ratelimit.New(time.Now)
+	roomy := func(name string) *ratelimit.Bucket {
+		return limiter.Bucket(name, ratelimit.Rate{PerMinute: 600, Burst: 100})
+	}
+	return serverWith(t, f, httpadapter.Settings{
+		Limits:          httpadapter.Limits{Limiter: limiter, LoginIP: roomy("login_ip"), LoginIPEmail: roomy("login_ip_email"), RegisterIP: roomy("register_ip")},
+		RefreshDeadline: refreshDeadline,
+		Logger:          slog.New(slog.DiscardHandler),
+	})
+}
+
+// refreshDeadline is shorter than the request timeout of serverWith.
+const refreshDeadline = 4 * time.Second
+
+func serverWith(t *testing.T, f fakes, s httpadapter.Settings) http.Handler {
+	t.Helper()
 	logger := slog.New(slog.DiscardHandler)
 	router := httpserver.NewRouter(logger)
-	api := httpserver.NewAPI(httpserver.APIConfig{
+	limit := ratelimit.New(time.Now).Bucket("test", ratelimit.Rate{PerMinute: 600, Burst: 100})
+	api, err := httpserver.NewAPI(httpserver.APIConfig{
 		Logger:           logger,
 		Authenticator:    fakeAuth{},
 		PublicOperations: httpadapter.PublicOperations(),
 		MaxBodyBytes:     1024,
 		RequestTimeout:   5 * time.Second,
+		IPv6PrefixLen:    64,
+		Anonymous:        limit,
+		Authenticated:    limit,
+		AuthFailure:      limit,
 	})
-	httpadapter.Register(router, api, httpadapter.UseCases{Register: register, GetMe: fakeGetMe{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.register == nil {
+		f.register = &fakeRegister{}
+	}
+	if f.login == nil {
+		f.login = &fakeLogin{}
+	}
+	if f.refresh == nil {
+		f.refresh = &fakeRefresh{}
+	}
+	if f.logout == nil {
+		f.logout = &fakeLogout{}
+	}
+	httpadapter.Register(router, api, httpadapter.UseCases{
+		Register: f.register, Login: f.login, Refresh: f.refresh, Logout: f.logout, GetMe: fakeGetMe{},
+	}, s)
 	return router
 }
 
@@ -85,13 +135,16 @@ func do(t *testing.T, h http.Handler, req *http.Request) (*http.Response, string
 	return res, string(body)
 }
 
-func registerRequest(body string) *http.Request {
-	req := httptest.NewRequest(http.MethodPost, "/api/v0/auth/register", strings.NewReader(body))
+// postJSON is a request from 203.0.113.7 with agent/1.
+func postJSON(path, body string) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "agent/1")
 	req.RemoteAddr = "203.0.113.7:5555"
 	return req
 }
+
+func registerRequest(body string) *http.Request { return postJSON("/api/v0/auth/register", body) }
 
 func TestRegisterAnswers201WithTheTokens(t *testing.T) {
 	register := &fakeRegister{tokens: app.Tokens{
@@ -100,7 +153,7 @@ func TestRegisterAnswers201WithTheTokens(t *testing.T) {
 	req := registerRequest(`{"email":"Alice@Corp.com","password":"Tr0ub4dor&3"}`)
 	apitest.Load(t).CheckRequest(t, req)
 
-	res, body := do(t, newServer(register), req)
+	res, body := do(t, newServer(t, fakes{register: register}), req)
 
 	want := `{"access_token":"access","access_token_expires_in":900,"refresh_token":"nrv_rt_x",` +
 		`"refresh_token_expires_at":"2026-10-25T10:00:00.123456Z","token_type":"Bearer"}` + "\n"
@@ -129,7 +182,7 @@ func TestRegisterProblems(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, body := do(t, newServer(&fakeRegister{err: tt.err}), registerRequest(`{"email":"a@b.co","password":"x"}`))
+			res, body := do(t, newServer(t, fakes{register: &fakeRegister{err: tt.err}}), registerRequest(`{"email":"a@b.co","password":"x"}`))
 
 			if res.StatusCode != tt.status || !strings.Contains(body, `"code":"`+tt.code+`"`) || res.Header.Get("Retry-After") != tt.retryAfter {
 				t.Errorf("response = %d %s Retry-After %q, want %d %s", res.StatusCode, body, res.Header.Get("Retry-After"), tt.status, tt.code)
@@ -156,7 +209,7 @@ func TestRegisterBodyProblems(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			register := &fakeRegister{}
-			res, body := do(t, newServer(register), registerRequest(tt.body))
+			res, body := do(t, newServer(t, fakes{register: register}), registerRequest(tt.body))
 
 			if res.StatusCode != tt.status || !strings.Contains(body, tt.want) || strings.Contains(body, "Go struct") {
 				t.Errorf("response = %d %s, want %d with %s", res.StatusCode, body, tt.status, tt.want)
@@ -173,7 +226,7 @@ func TestGetMe(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid")
 	apitest.Load(t).CheckRequest(t, req)
 
-	res, body := do(t, newServer(&fakeRegister{}), req)
+	res, body := do(t, newServer(t, fakes{}), req)
 
 	want := `{"avatar_url":null,"cover_image_url":null,"created_at":"2026-09-25T10:00:00.123456Z","display_name":"alice",` +
 		`"email":"alice@corp.com","first_name":"","id":"` + userID.String() + `","last_name":"","user_timezone":"UTC"}` + "\n"
@@ -189,7 +242,7 @@ func TestGetMeWithoutAValidToken(t *testing.T) {
 			req.Header.Set("Authorization", header)
 		}
 
-		res, body := do(t, newServer(&fakeRegister{}), req)
+		res, body := do(t, newServer(t, fakes{}), req)
 
 		if res.StatusCode != http.StatusUnauthorized || !strings.Contains(body, `"code":"unauthorized"`) {
 			t.Errorf("GET /me with %q = %d %s, want 401 unauthorized", header, res.StatusCode, body)

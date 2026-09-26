@@ -3,6 +3,8 @@ package config
 
 import (
 	"log/slog"
+	"net/netip"
+	"strings"
 	"time"
 )
 
@@ -17,11 +19,12 @@ const (
 type Config struct {
 	// Env is the profile the configuration was loaded for. It comes from
 	// NERVE_ENV and is not a configuration key.
-	Env      string         `koanf:"-"`
-	Server   ServerConfig   `koanf:"server"`
-	Database DatabaseConfig `koanf:"database"`
-	Auth     AuthConfig     `koanf:"auth"`
-	Log      LogConfig      `koanf:"log"`
+	Env       string          `koanf:"-"`
+	Server    ServerConfig    `koanf:"server"`
+	Database  DatabaseConfig  `koanf:"database"`
+	Auth      AuthConfig      `koanf:"auth"`
+	RateLimit RateLimitConfig `koanf:"ratelimit"`
+	Log       LogConfig       `koanf:"log"`
 }
 
 // ServerConfig configures the HTTP server. The timeouts bound the reads and
@@ -40,6 +43,9 @@ type ServerConfig struct {
 	// AddrFile, when set, receives the address the server listens on once it
 	// does, e.g. for addr ":0".
 	AddrFile string `koanf:"addr_file"`
+	// TrustedProxies are the reverse proxies whose X-Forwarded-For names the
+	// client (M2 design 3.10). Empty: the client is the connection's peer.
+	TrustedProxies []netip.Prefix `koanf:"trusted_proxies"`
 }
 
 // DatabaseConfig configures the PostgreSQL pool and schema migrations.
@@ -54,11 +60,15 @@ type DatabaseConfig struct {
 
 // AuthConfig configures accounts and credentials (M2 design 6.5).
 type AuthConfig struct {
-	SignupEnabled  bool           `koanf:"signup_enabled"`
-	AccessTokenTTL time.Duration  `koanf:"access_token_ttl"`
-	SessionTTL     time.Duration  `koanf:"session_ttl"`
-	JWT            JWTConfig      `koanf:"jwt"`
-	Password       PasswordConfig `koanf:"password"`
+	SignupEnabled  bool          `koanf:"signup_enabled"`
+	AccessTokenTTL time.Duration `koanf:"access_token_ttl"`
+	SessionTTL     time.Duration `koanf:"session_ttl"`
+	// RefreshDeadline bounds the statements of a refresh or a logout; with
+	// database.commit_timeout it must end before the web client gives up on
+	// a refresh (M2 design 3.5).
+	RefreshDeadline time.Duration  `koanf:"refresh_deadline"`
+	JWT             JWTConfig      `koanf:"jwt"`
+	Password        PasswordConfig `koanf:"password"`
 }
 
 // JWTConfig locates the Ed25519 signing key.
@@ -77,6 +87,37 @@ type PasswordConfig struct {
 	MaxWait             time.Duration `koanf:"max_wait"`
 }
 
+// RateLimitConfig sizes the rate-limit buckets (M2 design 3.10).
+type RateLimitConfig struct {
+	// IPv6PrefixLen is how much of an IPv6 client address the per-IP buckets
+	// count by: a host usually holds a whole /64.
+	IPv6PrefixLen int `koanf:"ipv6_prefix_len"`
+	// Anonymous limits the public operations, by client IP.
+	Anonymous BucketConfig `koanf:"anonymous"`
+	// AuthFailure is the gate before authentication: requests whose token
+	// fails, by client IP.
+	AuthFailure BucketConfig `koanf:"auth_failure"`
+	// Authenticated limits the operations that need a token, by credential.
+	Authenticated BucketConfig `koanf:"authenticated"`
+	// LoginIP and LoginIPEmail limit sign-in by client IP, and by client IP
+	// and address; RegisterIP limits sign-up by client IP.
+	LoginIP      BucketConfig `koanf:"login_ip"`
+	LoginIPEmail BucketConfig `koanf:"login_ip_email"`
+	RegisterIP   BucketConfig `koanf:"register_ip"`
+}
+
+// BucketConfig is a token bucket: it holds at most Burst units and gains
+// PerMinute units a minute.
+type BucketConfig struct {
+	PerMinute int `koanf:"per_minute"`
+	Burst     int `koanf:"burst"`
+}
+
+// LogValue renders the bucket as its two settings.
+func (b BucketConfig) LogValue() slog.Value {
+	return slog.GroupValue(slog.Int("per_minute", b.PerMinute), slog.Int("burst", b.Burst))
+}
+
 // LogConfig configures the process logger.
 type LogConfig struct {
 	Level  string `koanf:"level"`  // debug, info, warn or error
@@ -87,6 +128,10 @@ type LogConfig struct {
 // effective configuration can be logged at startup. Only the keys listed here
 // reach the log; every *_file key logs whether it is set, never its path.
 func (c Config) LogValue() slog.Value {
+	proxies := make([]string, len(c.Server.TrustedProxies))
+	for i, p := range c.Server.TrustedProxies {
+		proxies[i] = p.String()
+	}
 	return slog.GroupValue(
 		slog.String("env", c.Env),
 		slog.Group("server",
@@ -98,12 +143,14 @@ func (c Config) LogValue() slog.Value {
 			slog.Duration("request_timeout", c.Server.RequestTimeout),
 			slog.Int64("max_body_bytes", c.Server.MaxBodyBytes),
 			slog.Bool("addr_file_set", c.Server.AddrFile != ""),
+			slog.String("trusted_proxies", strings.Join(proxies, ",")),
 		),
 		slog.Any("database", c.Database),
 		slog.Group("auth",
 			slog.Bool("signup_enabled", c.Auth.SignupEnabled),
 			slog.Duration("access_token_ttl", c.Auth.AccessTokenTTL),
 			slog.Duration("session_ttl", c.Auth.SessionTTL),
+			slog.Duration("refresh_deadline", c.Auth.RefreshDeadline),
 			slog.Group("jwt",
 				slog.Bool("private_key_file_set", c.Auth.JWT.PrivateKeyFile != ""),
 			),
@@ -114,6 +161,15 @@ func (c Config) LogValue() slog.Value {
 				slog.Int("max_concurrent_hashes", c.Auth.Password.MaxConcurrentHashes),
 				slog.Duration("max_wait", c.Auth.Password.MaxWait),
 			),
+		),
+		slog.Group("ratelimit",
+			slog.Int("ipv6_prefix_len", c.RateLimit.IPv6PrefixLen),
+			slog.Any("anonymous", c.RateLimit.Anonymous),
+			slog.Any("auth_failure", c.RateLimit.AuthFailure),
+			slog.Any("authenticated", c.RateLimit.Authenticated),
+			slog.Any("login_ip", c.RateLimit.LoginIP),
+			slog.Any("login_ip_email", c.RateLimit.LoginIPEmail),
+			slog.Any("register_ip", c.RateLimit.RegisterIP),
 		),
 		slog.Group("log",
 			slog.String("level", c.Log.Level),

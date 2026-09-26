@@ -16,10 +16,29 @@ const maxRequestIDLen = 128
 
 type requestIDKey struct{}
 
+// securityHeaders go on every response (M2 design 8.3): no MIME sniffing, no
+// referrer beyond this site, and no framing by any page. The CSP goes on the
+// HTML pages only, so webui adds it (M2/P4).
+var securityHeaders = [...][2]string{
+	{"X-Content-Type-Options", "nosniff"},
+	{"Referrer-Policy", "same-origin"},
+	{"X-Frame-Options", "DENY"},
+}
+
 // middleware wraps h in the platform chain. The order is fixed, outermost
-// first: request ID -> recover -> access log.
+// first: request ID -> recover -> access log -> security headers.
 func middleware(h http.Handler, logger *slog.Logger) http.Handler {
-	return withRequestID(withRecover(logger, withAccessLog(logger, h)))
+	return withRequestID(withRecover(logger, withAccessLog(logger, withSecurityHeaders(h))))
+}
+
+// withSecurityHeaders sets securityHeaders before the handler writes.
+func withSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for _, h := range securityHeaders {
+			w.Header().Set(h[0], h[1])
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // RequestID returns the ID the request ID middleware assigned to the request,
@@ -61,9 +80,10 @@ func validRequestID(id string) bool {
 
 // withRecover turns a panic into a logged 500 problem. Headers the handler set
 // are dropped, except the request ID: a Set-Cookie must not leak, and a stale
-// Content-Length or Content-Encoding would corrupt the problem body. If the
-// response has already started, the connection is aborted instead so the
-// client cannot mistake a truncated body for a complete one.
+// Content-Length or Content-Encoding would corrupt the problem body. The
+// security headers, which the chain set before the handler ran, are set again.
+// If the response has already started, the connection is aborted instead so
+// the client cannot mistake a truncated body for a complete one.
 func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rec := &statusRecorder{ResponseWriter: w}
@@ -90,6 +110,9 @@ func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 				if name != HeaderRequestID {
 					delete(header, name)
 				}
+			}
+			for _, h := range securityHeaders {
+				header.Set(h[0], h[1])
 			}
 			WriteProblem(rec, Problem{
 				Status: http.StatusInternalServerError,

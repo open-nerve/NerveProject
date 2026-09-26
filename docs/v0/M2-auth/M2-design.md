@@ -398,7 +398,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
 ### 3.9 账户枚举与时间
 - **登录**：
   - 邮箱不存在和密码错误，返回同一个 401 `identity.invalid_credentials`。
-  - 邮箱不存在时，仍然用同样的参数对一个启动时生成的假哈希做一次校验，让两种情况耗时相同。
+  - 邮箱不存在时，仍然用同样的参数对一个启动时生成的假哈希做一次校验，让两种情况耗时相同（存储的哈希都用当前参数时；调高参数之后的局限见 §16）。
   - Plane 会返回 `USER_DOES_NOT_EXIST`（`plane/apps/api/plane/authentication/views/app/email.py:90-104`），登记为差异。
 - **停用的账户**：只在密码正确之后才返回 403 `identity.account_deactivated`（3.5 的登录事务里判定），所以只对知道密码的人暴露账户状态。
 - **注册**：
@@ -2089,7 +2089,7 @@ files:
 | Phase | 名称 | 状态 | spec | plan | review |
 |---|---|---|---|---|---|
 | P1 | platform-core | 已完成 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | [review](reviews/P1-platform-core-review.md) |
-| P2 | sessions | 未开始 | — | — | — |
+| P2 | sessions | 已完成 | [spec](specs/P2-sessions.md) | [plan](plans/P2-sessions.md) | [review](reviews/P2-sessions-review.md) |
 | P3 | account-api | 未开始 | — | — | — |
 | P4 | web-auth | 未开始 | — | — | — |
 | P5 | web-account | 未开始 | — | — | — |
@@ -2124,6 +2124,7 @@ files:
 | sqlc 的解析器只认 PG 17 | 3.13 的语法约定；真正需要 PG 18 的语法时，评估升级到已发布的新版 sqlc |
 | River 仍是 0.x | 锁定 v0.47.0；升级时按 3.15 另写迁移，不改已发布的迁移 |
 | argon2 占用内存和 CPU | 并发上限 4，约 76 MiB；等待上限 2 秒（3.8）；3.10 的桶限制每个 IP 和每个账户能触发的次数；M8 实测 |
+| 调高 argon2 参数（`argon2_memory_kib`、`argon2_iterations`）之后，登录耗时能区分休眠的账户（调高之后还没有登录过）和不存在的邮箱：休眠账户的哈希仍是旧参数，密码错误时按旧参数校验，不存在的邮箱按新参数校验假哈希（3.9）；每个账户成功登录一次、重新哈希（3.8）之后才一致 | 与 Django 的 argon2 哈希器的局限相同（它的 `harden_runtime` 什么也不做；Django 的 PBKDF2 哈希器在密码错误时补算新旧迭代次数之差）。Plane 用 Django 默认的 PBKDF2，但邮箱不存在时直接答 `USER_DOES_NOT_EXIST`（3.9），暴露得更多。参数少调；prod 默认关闭注册，登录按 IP 和按 IP + 邮箱限流（3.10）。是否加缓解，留给负责人以后决定 |
 | CSP 挡住某个库的内联脚本或外部资源 | 内联脚本的哈希在启动时计算；外部来源已清点并交给 M3、M4、M5、M8（8.3）；S2 统计违规事件 |
 | 端到端的耗时增加 | 独立的 nerve 只用于 A2、A4、A15 三个故事；P5 实测并写进 review |
 | 新手引导的工作区步骤在 M3 之前失败 | 预期行为（3.1）：只有用户自己提交 M3 的表单时才会遇到 404；页面挂载时不请求旧接口，A10 和浏览器核对守着 |

@@ -29,6 +29,7 @@ const (
 const (
 	CodeValidationFailed = "validation_failed"
 	CodeUnauthorized     = "unauthorized"
+	CodeRateLimited      = "rate_limited"
 	CodeServerBusy       = "server_busy"
 )
 
@@ -119,6 +120,13 @@ func Invalid(fields ...FieldError) *Error {
 // Unauthenticated reports a request without a valid credential: 401 unauthorized.
 func Unauthenticated() *Error {
 	return &Error{Kind: KindUnauthenticated, Code: CodeUnauthorized, Detail: "Authentication is required."}
+}
+
+// RateLimited reports a caller over one of a module's rate limits: 429
+// rate_limited with Retry-After, as the platform answers for its own
+// (M2 design 3.10).
+func RateLimited(retry time.Duration) *Error {
+	return &Error{Kind: KindRateLimited, Code: CodeRateLimited, Detail: "Too many requests; retry later.", RetryDelay: retry}
 }
 
 // ServerBusy reports that the server is temporarily overloaded, whoever the

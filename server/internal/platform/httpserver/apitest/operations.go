@@ -17,8 +17,11 @@ type Operation struct {
 	Method string // upper case
 	Path   string
 	Public bool // security: []
-	params openapi3.Parameters
-	body   *openapi3.Schema
+	// ProblemHeaders are the headers its default response, the problem,
+	// declares, sorted.
+	ProblemHeaders []string
+	params         openapi3.Parameters
+	body           *openapi3.Schema
 }
 
 // Pattern is the route pattern the generated code registers, e.g.
@@ -61,6 +64,9 @@ func (c *Contract) Operations() []Operation {
 				if media := rb.Value.Content.Get("application/json"); media != nil && media.Schema != nil {
 					o.body = media.Schema.Value
 				}
+			}
+			if problem := op.Responses.Default(); problem != nil && problem.Value != nil {
+				o.ProblemHeaders = slices.Sorted(maps.Keys(problem.Value.Headers))
 			}
 			ops = append(ops, o)
 		}

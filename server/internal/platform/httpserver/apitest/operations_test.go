@@ -42,6 +42,11 @@ paths:
       x-problem-codes: []
       responses:
         '204': {description: none}
+        default:
+          description: problem
+          headers:
+            WWW-Authenticate: {schema: {type: string}}
+            Retry-After: {schema: {type: integer}}
   /api/v0/things/{thing_id}:
     parameters:
       - {name: thing_id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -67,6 +72,9 @@ func TestOperations(t *testing.T) {
 		ops[1].Pattern() != "GET /api/v0/things/{thing_id}" || ops[1].Public || ops[1].HasJSONBody() ||
 		ops[2].Pattern() != "POST /api/v0/things" || ops[2].Public || !ops[2].HasJSONBody() {
 		t.Errorf("Operations() = %+v", ops)
+	}
+	if !slices.Equal(ops[0].ProblemHeaders, []string{"Retry-After", "WWW-Authenticate"}) || ops[1].ProblemHeaders != nil {
+		t.Errorf("ProblemHeaders = %q, %q; want the default response's, sorted, and none without one", ops[0].ProblemHeaders, ops[1].ProblemHeaders)
 	}
 }
 

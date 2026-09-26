@@ -88,6 +88,28 @@ func TestRequestIDFromCaller(t *testing.T) {
 	}
 }
 
+// Every response carries the security headers (M2 design 8.3), whatever the
+// handler answers.
+func TestSecurityHeadersOnEveryResponse(t *testing.T) {
+	handlers := map[string]http.Handler{
+		"200": http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) }),
+		"404": http.NotFoundHandler(),
+		"problem": http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			WriteProblem(w, Problem{Status: 400, Code: CodeBadRequest})
+		}),
+	}
+	want := map[string]string{"X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "X-Frame-Options": "DENY"}
+	for name, h := range handlers {
+		rec := serve(middleware(h, slog.New(slog.DiscardHandler)), httptest.NewRequest(http.MethodGet, "/", nil))
+
+		for header, value := range want {
+			if got := rec.Result().Header.Get(header); got != value {
+				t.Errorf("%s response: %s = %q, want %q", name, header, got, value)
+			}
+		}
+	}
+}
+
 func TestPanicBecomes500Problem(t *testing.T) {
 	logger, logs := captureLogs(t)
 	h := middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
@@ -147,6 +169,11 @@ func TestPanicDiscardsHeadersSetBeforeIt(t *testing.T) {
 	}
 	if id := resp.Header.Get(HeaderRequestID); id != "req-3" {
 		t.Errorf("X-Request-Id = %q, want req-3", id)
+	}
+	for _, h := range securityHeaders {
+		if got := resp.Header.Get(h[0]); got != h[1] {
+			t.Errorf("%s = %q, want %q: the 500 of a panic keeps the security headers", h[0], got, h[1])
+		}
 	}
 	var p Problem
 	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil || p.Code != CodeInternal {

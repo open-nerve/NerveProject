@@ -257,3 +257,37 @@ func TestRefreshTokenMAC(t *testing.T) {
 		t.Error("another key gives the same tag")
 	}
 }
+
+func TestRefreshTokenMACVerify(t *testing.T) {
+	m := NewRefreshTokenMAC(testKeys(t))
+	msg := bytes.Repeat([]byte{7}, 52)
+	tag := m.Tag(msg)
+	var random [16]byte
+	_, _ = rand.Read(random[:])
+	lastBit := tag
+	lastBit[15] ^= 1
+
+	if !m.Verify(msg, tag) {
+		t.Error("Verify() of the message's own tag = false")
+	}
+	for name, forged := range map[string][16]byte{
+		"a random tag":                      random,
+		"the tag with its last bit flipped": lastBit,
+		"the zero tag":                      {},
+	} {
+		if m.Verify(msg, forged) {
+			t.Errorf("Verify() of %s = true", name)
+		}
+	}
+	// Session id, generation and secret: a change anywhere voids the tag.
+	for i := range msg {
+		changed := bytes.Clone(msg)
+		changed[i] ^= 1
+		if m.Verify(changed, tag) {
+			t.Errorf("Verify() with byte %d of the message changed = true", i)
+		}
+	}
+	if NewRefreshTokenMAC(EphemeralKeys()).Verify(msg, tag) {
+		t.Error("Verify() under another key = true")
+	}
+}

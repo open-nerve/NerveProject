@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -17,12 +18,14 @@ func validConfig() Config {
 			ShutdownTimeout:   20 * time.Second,
 			RequestTimeout:    15 * time.Second,
 			MaxBodyBytes:      1 << 20,
+			TrustedProxies:    []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8"), netip.MustParsePrefix("2001:db8::/32")},
 		},
 		Database: DatabaseConfig{URL: "postgres://nerve:secret@localhost:5432/nerve", MaxConns: 10, CommitTimeout: 2 * time.Second},
 		Auth: AuthConfig{
-			SignupEnabled:  true,
-			AccessTokenTTL: 15 * time.Minute,
-			SessionTTL:     720 * time.Hour,
+			SignupEnabled:   true,
+			AccessTokenTTL:  15 * time.Minute,
+			SessionTTL:      720 * time.Hour,
+			RefreshDeadline: 4 * time.Second,
 			Password: PasswordConfig{
 				Argon2MemoryKiB:     19456,
 				Argon2Iterations:    2,
@@ -30,6 +33,15 @@ func validConfig() Config {
 				MaxConcurrentHashes: 4,
 				MaxWait:             2 * time.Second,
 			},
+		},
+		RateLimit: RateLimitConfig{
+			IPv6PrefixLen: 64,
+			Anonymous:     BucketConfig{PerMinute: 600, Burst: 100},
+			AuthFailure:   BucketConfig{PerMinute: 60, Burst: 60},
+			Authenticated: BucketConfig{PerMinute: 1200, Burst: 200},
+			LoginIP:       BucketConfig{PerMinute: 30, Burst: 10},
+			LoginIPEmail:  BucketConfig{PerMinute: 10, Burst: 5},
+			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
 		},
 		Log: LogConfig{Level: "info", Format: "json"},
 	}
@@ -71,6 +83,20 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"auth.password.argon2_memory_kib: must be at least 8 per lane (8), got 0",
 		"auth.password.max_concurrent_hashes: must be at least 1, got 0",
 		"auth.password.max_wait: must be positive, got 0s",
+		"auth.refresh_deadline: must be positive, got 0s",
+		"ratelimit.ipv6_prefix_len: must be from 1 to 128, got 0",
+		"ratelimit.anonymous.per_minute: must be at least 1, got 0",
+		"ratelimit.anonymous.burst: must be at least 1, got 0",
+		"ratelimit.auth_failure.per_minute: must be at least 1, got 0",
+		"ratelimit.auth_failure.burst: must be at least 1, got 0",
+		"ratelimit.authenticated.per_minute: must be at least 1, got 0",
+		"ratelimit.authenticated.burst: must be at least 1, got 0",
+		"ratelimit.login_ip.per_minute: must be at least 1, got 0",
+		"ratelimit.login_ip.burst: must be at least 1, got 0",
+		"ratelimit.login_ip_email.per_minute: must be at least 1, got 0",
+		"ratelimit.login_ip_email.burst: must be at least 1, got 0",
+		"ratelimit.register_ip.per_minute: must be at least 1, got 0",
+		"ratelimit.register_ip.burst: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
 		`log.format: must be text or json, got "xml"`,
 	}
@@ -114,6 +140,41 @@ func TestValidateCrossKeyRules(t *testing.T) {
 			name:   "prod without a signing key",
 			change: func(c *Config) { c.Env = EnvProd },
 			want:   "auth.jwt.private_key_file: is required in prod: a PKCS#8 PEM Ed25519 private key, e.g. from openssl genpkey -algorithm ed25519",
+		},
+		{
+			// The server must be done with a refresh before the web client
+			// gives up on it after 8 s (M2 design 3.5, 7.1).
+			name:   "refresh deadline and commit timeout reach the web client's timeout",
+			change: func(c *Config) { c.Auth.RefreshDeadline = 6 * time.Second },
+			want:   "auth.refresh_deadline: plus database.commit_timeout (2s) must be less than 8s, the web client's refresh timeout, got 6s",
+		},
+		{
+			// The client IP is unmapped before it is compared (M2 design 3.10).
+			name: "IPv4-mapped trusted proxy",
+			change: func(c *Config) {
+				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("::ffff:10.0.0.0/104"))
+			},
+			want: "server.trusted_proxies: ::ffff:10.0.0.0/104 is an IPv4-mapped IPv6 prefix, which no address matches: write the IPv4 prefix",
+		},
+		{
+			// Every client could then choose its own IP (M2 design 3.10).
+			name: "every IPv4 address trusted",
+			change: func(c *Config) {
+				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("0.0.0.0/0"))
+			},
+			want: "server.trusted_proxies: 0.0.0.0/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
+		},
+		{
+			name: "every IPv6 address trusted",
+			change: func(c *Config) {
+				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("::/0"))
+			},
+			want: "server.trusted_proxies: ::/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
+		},
+		{
+			name:   "IPv6 prefix longer than an address",
+			change: func(c *Config) { c.RateLimit.IPv6PrefixLen = 129 },
+			want:   "ratelimit.ipv6_prefix_len: must be from 1 to 128, got 129",
 		},
 	}
 	for _, tt := range tests {

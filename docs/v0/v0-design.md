@@ -197,14 +197,18 @@ GET   /api/v0/issues/{issue_id}/comments
   ```
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
 - `title` 固定为 HTTP 状态短语，即 Go 的 `http.StatusText(status)`（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
-- 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
+- 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`rate_limited`（429，带 `Retry-After`）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
 - **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
 - `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径，`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
 - **错误码写进接口描述**：每个操作用扩展字段 `x-problem-codes` 列出它可能返回的码；所有操作都可能返回的平台码只写在 `api/openapi.yaml` 的顶层，声明了 `bearer` 的操作另外隐含 `unauthorized`。`apitest` 核对码的写法、测试中返回的码都已声明、每个声明的码都有测试返回过（M2 设计 3.11）。
 - 请求 ID 只出现在 `X-Request-Id` 响应头中，不放进响应体。
 
 ### 3.6 其他
-- **限流**：按令牌计数，在进程内实现。登录接口单独按"IP + 邮箱"限流。具体数值在 M2 确定，默认参考 Plane。
+- **限流**：在进程内实现，按键的令牌桶，每个桶有速率和突发两个配置项（`ratelimit.<桶>.per_minute`、`burst`）。超出时 429 `rate_limited`，带 `Retry-After`（秒，向上取整）（M2 设计 3.10）：
+  - 公开操作按客户端 IP 计数（`anonymous`，每分钟 600、突发 100），其余操作按凭证计数（`authenticated`，每分钟 1200、突发 200）；
+  - 登录另按 IP（`login_ip`，30、10）和"IP + 邮箱"（`login_ip_email`，10、5）计数，两个桶全扣或全不扣；注册另按 IP 计数（`register_ip`，10、5）；修改密码按账户计数（`password_user`，M2/P3）；
+  - **认证之前的失败闸门**：非公开操作带了令牌时，先预留本 IP 的一个单位（`auth_failure`，60、60），闸门已空就直接 429，不再验证令牌；认证失败时单位留下，成功、只是过期的访问令牌、内部错误时退回（M2 设计 3.6）；
+  - 客户端 IP 取连接的对端，前面有反向代理时配置 `server.trusted_proxies`；IPv6 按前缀计数（`ratelimit.ipv6_prefix_len`，默认 64）。
 - **关联对象只返回 ID**：以后按需增加 `?expand=`。
 - **v0 不做乐观锁**：PATCH 只改传入的字段，同一字段并发修改时以后写入的为准。
 
@@ -218,13 +222,13 @@ GET   /api/v0/issues/{issue_id}/comments
 | 令牌 | 获取方式 | 形式 | 有效期 |
 |---|---|---|---|
 | 访问令牌 | 登录，或用刷新令牌换取 | JWT（Ed25519 签名），只包含用户 id、会话 id 和过期时间，**不含任何权限信息** | 15 分钟 |
-| 刷新令牌 | 注册、登录时一并下发 | `nrv_rt_` 加 68 字节的 base64url：会话 id、代数、32 字节的随机密文和 16 字节的 HMAC 标签，MAC 密钥从签名密钥派生；数据库只存当前一代密文的哈希（`auth_sessions`，M2 设计 3.4） | 30 天；每次使用后换新，并检测旧令牌是否被重复使用 |
+| 刷新令牌 | 注册、登录时一并下发 | `nrv_rt_` 加 68 字节的 base64url：会话 id、代数、32 字节的随机密文和 16 字节的 HMAC 标签，MAC 密钥从签名密钥派生；数据库只存当前一代密文的哈希（`auth_sessions`，M2 设计 3.4） | 从登录起 30 天，续期不延长（绝对期限，M2 设计 3.5）；每次使用后换新，并检测旧令牌是否被重复使用 |
 | 个人访问令牌（PAT） | 在设置页生成 | `nrv_pat_` 前缀的随机字符串，数据库只存哈希（`api_tokens`） | 由用户设定；可随时撤销 |
 
 ### 4.2 规则
 - **权限不放进令牌**：每个请求都从数据库读取成员关系和角色。所以移出项目、调整角色是立即生效的。
-- **会话撤销**：退出登录、修改密码、账户停用时，吊销该账户的刷新令牌；账户停用时，同时让该账户的所有会话失效。
-- **重复使用检测**：一旦发现某个已经换过新的刷新令牌又被使用，就作废这次登录派生出的所有令牌。
+- **会话撤销**：退出登录只结束当前这一处登录，同一账户的其他会话不受影响（M2 设计 11.1）；修改密码、账户停用时，吊销该账户的刷新令牌；账户停用时，同时让该账户的所有会话失效。
+- **重复使用检测**：一旦发现某个已经换过新的刷新令牌又被使用，就作废这次登录派生出的所有令牌。只有交出的旧令牌确是这个会话签发过的（它的 MAC 标签成立）才作废；会话 id 和代数对、密文和标签是伪造的旧令牌得到 401，会话不受影响（M2 设计 3.5）。
 - **密码哈希**：用 argon2id。
 - **登录方式**：v0 只有邮箱加密码。是否开放注册由配置 `auth.signup_enabled` 控制：prod 默认关闭，dev、test 默认开放；关闭时注册先答"注册已关闭"，不查邮箱。prod 的第一个账户由服务器管理员用 `nerve users create` 创建（M2/P3 加入；在那之前用 `NERVE_AUTH__SIGNUP_ENABLED=true` 临时打开注册）（M2 设计决策点 2）。被邀请的邮箱始终可以注册。
 - **忘记密码**：没有邮件服务，由服务器管理员通过命令行重置：`nerve users reset-password --email <email>`。
@@ -410,17 +414,18 @@ modules/issue/
 
 ### 6.4 请求处理流程
 ```
-请求 → 请求 ID → 异常恢复 → 访问日志                            （固定链，httpserver.NewServer）
+请求 → 请求 ID → 异常恢复 → 访问日志 → 安全响应头              （固定链，httpserver.NewServer）
      → 路由匹配 → 生成的代码绑定路径参数和查询参数（格式错误 → 400）
-     → 请求元信息（客户端 IP、UA）→ 请求期限 → 请求体上限           （按路由，httpserver.API）
-     → 认证（识别 JWT 或 PAT，得到 Actor；公开操作不看令牌）→ 限流
+     → 请求元信息（客户端 IP 和限流用的 IP 键、UA）→ 请求期限 → 请求体上限（按路由，httpserver.API）
+     → 失败闸门（非公开操作带了令牌时，先预留本 IP 的一个单位，已空 → 429）
+     → 认证（识别 JWT 或 PAT，得到 Actor；公开操作不看令牌）→ 限流（有凭证按凭证，没有按 IP）
      → 请求体结构检查（不合契约 → 400）→ 生成的代码解码 JSON 请求体
      → handler（只做类型转换）
      → 用例：TxManager.WithinTx { 权限 → 领域校验（不合规 → 422）→ 业务规则 → 写数据 → 发布领域事件 } 提交
      → 响应；或者 error → APIErrors → problem+json
 ```
-- **请求 ID → 异常恢复 → 访问日志**这三个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。
-- **按路由的中间件**由 `httpserver.API.Middlewares` 按上图的顺序交给每个模块的生成代码，只作用于 `/api/v0` 的操作，不作用于健康检查和前端页面（M2 设计 3.6）。认证默认拒绝：除了模块声明为公开的操作，没有有效令牌一律 401。限流由 M2/P2 加入，接口调用日志由 M8 挂在限流之后。
+- **请求 ID → 异常恢复 → 访问日志 → 安全响应头**这四个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。安全响应头（`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`）加在每个响应上，包括 panic 之后的 500；CSP 只加在页面上，由 `webui` 在 M2/P4 加入（M2 设计 8.3）。
+- **按路由的中间件**由 `httpserver.API.Middlewares` 按上图的顺序交给每个模块的生成代码，只作用于 `/api/v0` 的操作，不作用于健康检查和前端页面（M2 设计 3.6）。认证默认拒绝：除了模块声明为公开的操作，没有有效令牌一律 401。限流的桶见 3.6；接口调用日志由 M8 挂在限流之后。
 - **参数先于这些中间件绑定**：生成的代码在它们之前绑定路径参数和查询参数，参数格式错误的请求在认证之前就得到 400；请求体在它们之后才解码，没有通过认证的请求不会被解析请求体。
 - **每个写操作对应一个事务。** 业务数据、操作动态、历史版本、投递给 River 的任务，要么一起成功，要么一起回滚。
 - **事务的传递**：`TxManager` 端口声明在 `internal/shared`（由使用方定义接口），`platform/postgres` 提供实现，`bootstrap` 负责接线；仓储从 `ctx` 中取出当前事务。用例代码不接触任何数据库类型。
