@@ -111,7 +111,8 @@ func TestParamCases(t *testing.T) {
 	}
 }
 
-// An optional parameter gets its case too, set only there.
+// An optional parameter gets its case too, set only there. A header
+// parameter gets none: a target cannot carry it.
 func TestParamCasesOfAnOptionalParameter(t *testing.T) {
 	op := contractFrom(t, `
 openapi: 3.1.0
@@ -122,6 +123,7 @@ paths:
       parameters:
         - {name: flag, in: query, schema: {type: boolean}}
         - {name: at, in: query, schema: {type: string, format: date-time}}
+        - {name: X-Page, in: header, schema: {type: integer}}
       responses: {'204': {description: none}}
 `).Operations()[0]
 

@@ -110,10 +110,16 @@ func TestCreateAPITokenInvalid(t *testing.T) {
 	}
 }
 
+// Each field of a listed token is answered: one token has every field set,
+// the other every nullable field null.
 func TestListAPITokens(t *testing.T) {
-	used := created.Add(time.Hour)
+	used, expires := created.Add(time.Hour), created.Add(7*24*time.Hour)
+	unused := uuid.MustParse("0199a2b4-0000-7000-8000-000000000004")
 	list := &fakeListTokens{page: app.APITokenPage{
-		Tokens:     []domain.APIToken{{ID: tokenID, Label: "deploy", LastUsed: &used, CreatedAt: created}},
+		Tokens: []domain.APIToken{
+			{ID: tokenID, Label: "deploy", Description: "ci", ExpiredAt: &expires, LastUsed: &used, CreatedAt: created},
+			{ID: unused, Label: "spare", CreatedAt: created},
+		},
 		NextCursor: "next",
 	}}
 	req := withToken(httptest.NewRequest(http.MethodGet, "/api/v0/me/api-tokens?limit=2&cursor=abc", nil))
@@ -121,8 +127,10 @@ func TestListAPITokens(t *testing.T) {
 
 	res, body := do(t, newServer(t, fakes{listTokens: list}), req)
 
-	want := `{"data":[{"created_at":"2026-09-25T10:00:00.123456Z","description":"","expired_at":null,"id":"` + tokenID.String() +
-		`","label":"deploy","last_used":"2026-09-25T11:00:00.123456Z"}],"next_cursor":"next"}` + "\n"
+	want := `{"data":[{"created_at":"2026-09-25T10:00:00.123456Z","description":"ci","expired_at":"2026-10-02T10:00:00.123456Z","id":"` + tokenID.String() +
+		`","label":"deploy","last_used":"2026-09-25T11:00:00.123456Z"},` +
+		`{"created_at":"2026-09-25T10:00:00.123456Z","description":"","expired_at":null,"id":"` + unused.String() +
+		`","label":"spare","last_used":null}],"next_cursor":"next"}` + "\n"
 	if res.StatusCode != http.StatusOK || body != want {
 		t.Errorf("GET /me/api-tokens = %d %s, want 200 %s", res.StatusCode, body, want)
 	}
@@ -193,20 +201,29 @@ func TestRevokeAnAPITokenThatIsNotTheCallers(t *testing.T) {
 }
 
 // The parameter binding exit (M0-P3 handoff 2): a parameter that does not
-// bind is 400 with the parameter as the field, before authentication (M2
-// design 3.6) and without Go's words; the use case never runs.
+// bind is 400 with the parameter as the field and without Go's words.
+// Without a token it is still 400, not 401: parameters bind before
+// authentication (M2 design 3.6). With a valid token, the use case, which
+// would run if binding fell through, never does.
 func TestParametersThatDoNotBind(t *testing.T) {
 	tests := []struct {
 		name, method, target, field string
+		token                       bool
 	}{
-		{"limit not an integer", http.MethodGet, "/api/v0/me/api-tokens?limit=abc", "limit"},
-		{"token_id not a uuid", http.MethodDelete, "/api/v0/api-tokens/not-a-uuid", "token_id"},
+		{"limit not an integer, no token", http.MethodGet, "/api/v0/me/api-tokens?limit=abc", "limit", false},
+		{"limit not an integer, valid token", http.MethodGet, "/api/v0/me/api-tokens?limit=abc", "limit", true},
+		{"token_id not a uuid, no token", http.MethodDelete, "/api/v0/api-tokens/not-a-uuid", "token_id", false},
+		{"token_id not a uuid, valid token", http.MethodDelete, "/api/v0/api-tokens/not-a-uuid", "token_id", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			list, revoke := &fakeListTokens{}, &fakeRevokeToken{}
+			req := httptest.NewRequest(tt.method, tt.target, nil)
+			if tt.token {
+				req = withToken(req)
+			}
 
-			res, body := do(t, newServer(t, fakes{listTokens: list, revokeToken: revoke}), httptest.NewRequest(tt.method, tt.target, nil))
+			res, body := do(t, newServer(t, fakes{listTokens: list, revokeToken: revoke}), req)
 
 			want := `{"status":400,"code":"bad_request","title":"Bad Request","detail":"The request parameters do not match the API description.",` +
 				`"errors":[{"field":"` + tt.field + `","code":"invalid_format","message":"has the wrong type or format"}]}` + "\n"

@@ -58,8 +58,8 @@ func (h handler) RevokeAPIToken(ctx context.Context, req gen.RevokeAPITokenReque
 }
 
 // nullableTime is t as a required field that may be null: the zero
-// Nullable is "unspecified" and would marshal as "", so nil is set to null
-// explicitly.
+// Nullable is "unspecified" and would marshal as the zero time,
+// 0001-01-01T00:00:00Z, so nil is set to null explicitly.
 func nullableTime(t *time.Time) nullable.Nullable[time.Time] {
 	if t == nil {
 		return nullable.NewNullNullable[time.Time]()
