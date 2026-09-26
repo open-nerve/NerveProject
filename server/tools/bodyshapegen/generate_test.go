@@ -90,6 +90,10 @@ func TestGenerateRejectsWhatItCannotCheck(t *testing.T) {
 		{"not", "{not: {type: string}}", "due: allOf, oneOf and not are not supported"},
 		{"anyOf of two types", "{anyOf: [{type: string}, {type: integer}]}", "due: anyOf is supported only as [X, {type: 'null'}]"},
 		{"nullable", "{type: string, nullable: true}", "due: nullable is OpenAPI 3.0"},
+		{"contentMediaType", "{type: string, contentMediaType: image/png}",
+			`due: contentMediaType, read as format "binary", is generated as openapi_types.File`},
+		{"contentEncoding base64", "{type: string, contentEncoding: base64}",
+			`due: contentEncoding base64, read as format "byte", is generated as []byte`},
 		{"nested", "{type: object, properties: {at: {type: array, items: {type: string, format: date}}}}", `due.at[]: format "date"`},
 		{"nested number", "{type: array, items: {anyOf: [{type: integer, format: uint64}, {type: 'null'}]}}", `due[]: integer format "uint64" is generated as uint64`},
 	}
@@ -101,6 +105,20 @@ func TestGenerateRejectsWhatItCannotCheck(t *testing.T) {
 				t.Errorf("generate() = %v, want an error containing %q", err, "POST /api/v0/x: "+tt.want)
 			}
 		})
+	}
+}
+
+// oapi-codegen reads contentMediaType and contentEncoding only when format is
+// absent, and maps no contentEncoding but base64: these stay strings.
+func TestGenerateAcceptsTheStringsItCanCheck(t *testing.T) {
+	for _, property := range []string{
+		"{type: string, contentEncoding: base64url}",
+		"{type: string, format: uuid, contentEncoding: base64}",
+		"{type: string, format: date-time, contentMediaType: text/plain}",
+	} {
+		if _, err := generate(bodySpec(t, property), thingsConf); err != nil {
+			t.Errorf("generate() of %s = %v, want nil", property, err)
+		}
 	}
 }
 

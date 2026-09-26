@@ -42,20 +42,82 @@ func (minimalErr) Error() string       { return "the thing is gone" }
 func (minimalErr) ProblemStatus() int  { return http.StatusNotFound }
 func (minimalErr) ProblemCode() string { return "things.not_found" }
 
-func TestAPIErrorsBadRequest(t *testing.T) {
-	errs := NewAPIErrors(slog.New(slog.DiscardHandler))
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		errs.BadRequest(w, r, errors.New("Invalid format for parameter limit: not a number"))
-	})
-
-	rec := serve(h, httptest.NewRequest(http.MethodGet, "/api/v0/things?limit=x", nil))
-
-	if rec.Code != http.StatusBadRequest || rec.Header().Get("Content-Type") != ContentTypeProblem {
-		t.Errorf("response = %d %s, want 400 problem+json", rec.Code, rec.Header().Get("Content-Type"))
+// Lookalikes of the binding errors that oapi-codegen declares in each
+// module's gen package (identity's server.gen.go): the platform sees only
+// their shape.
+type (
+	InvalidParamFormatError struct {
+		ParamName string
+		Err       error
 	}
-	want := `{"status":400,"code":"bad_request","title":"Bad Request","detail":"Invalid format for parameter limit: not a number"}` + "\n"
-	if rec.Body.String() != want {
-		t.Errorf("body = %s, want %s", rec.Body, want)
+	RequiredParamError  struct{ ParamName string }
+	RequiredHeaderError struct {
+		ParamName string
+		Err       error
+	}
+	TooManyValuesForParamError struct {
+		ParamName string
+		Count     int
+	}
+	numberedParamError struct{ ParamName int }
+	codeError          string
+)
+
+func (e *InvalidParamFormatError) Error() string {
+	return "Invalid format for parameter " + e.ParamName + ": " + e.Err.Error()
+}
+func (e *RequiredParamError) Error() string {
+	return "Query argument " + e.ParamName + " is required, but not found"
+}
+func (e *RequiredHeaderError) Error() string {
+	return "Header parameter " + e.ParamName + " is required, but not found"
+}
+func (e *TooManyValuesForParamError) Error() string {
+	return fmt.Sprintf("Expected one value for %s, got %d", e.ParamName, e.Count)
+}
+func (e *numberedParamError) Error() string { return fmt.Sprint("parameter number ", e.ParamName) }
+func (e codeError) Error() string           { return string(e) }
+
+// The parameter comes from the binding error; its message names Go
+// functions, so the detail is generic and the message goes to the debug log.
+func TestAPIErrorsBadRequestNamesTheParameter(t *testing.T) {
+	const detail = `"detail":"The request parameters do not match the API description."`
+	invalid := &InvalidParamFormatError{ParamName: "limit", Err: errors.New(`error binding string parameter: strconv.ParseInt: parsing "abc": invalid syntax`)}
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"invalid format", invalid, `,"errors":[{"field":"limit","code":"invalid_format","message":"has the wrong type or format"}]`},
+		{"required", &RequiredParamError{ParamName: "view"}, `,"errors":[{"field":"view","code":"required","message":"is required"}]`},
+		{"required header", &RequiredHeaderError{ParamName: "X-Thing", Err: errors.New("missing")},
+			`,"errors":[{"field":"X-Thing","code":"required","message":"is required"}]`},
+		{"too many values", &TooManyValuesForParamError{ParamName: "X-Thing", Count: 2},
+			`,"errors":[{"field":"X-Thing","code":"invalid_format","message":"has the wrong type or format"}]`},
+		{"not a binding error", errors.New("Invalid format for parameter limit"), ""},
+		{"ParamName not a string", &numberedParamError{ParamName: 7}, ""},
+		{"not a struct", codeError("limit"), ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger, logs := captureLogs(t)
+			errs := NewAPIErrors(logger)
+			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { errs.BadRequest(w, r, tt.err) })
+			req := httptest.NewRequest(http.MethodGet, "/api/v0/things?limit=abc", nil)
+			req.Header.Set(HeaderRequestID, "req-9")
+
+			rec := serve(middleware(h, logger), req)
+
+			sent := rec.Result().Header // as the status went out, not as set after it
+			want := `{"status":400,"code":"bad_request","title":"Bad Request",` + detail + tt.want + "}\n"
+			if rec.Code != http.StatusBadRequest || sent.Get("Content-Type") != ContentTypeProblem || rec.Body.String() != want {
+				t.Errorf("response = %d %s %s, want 400 problem+json %s", rec.Code, sent.Get("Content-Type"), rec.Body, want)
+			}
+			entry := findLog(logs(), "request parameters not bound")
+			if entry == nil || entry["level"] != "DEBUG" || entry["error"] != tt.err.Error() || entry["request_id"] != "req-9" {
+				t.Errorf("log = %v, want the binding error with request_id at debug level", entry)
+			}
+		})
 	}
 }
 
@@ -132,10 +194,11 @@ func TestWriteMapsProblemErrors(t *testing.T) {
 
 			rec := serve(h, httptest.NewRequest(http.MethodPost, "/api/v0/things", nil))
 
-			if rec.Code != tt.status || rec.Header().Get("Content-Type") != ContentTypeProblem || rec.Body.String() != tt.body+"\n" {
-				t.Errorf("response = %d %s %s, want %d problem+json %s", rec.Code, rec.Header().Get("Content-Type"), rec.Body, tt.status, tt.body)
+			sent := rec.Result().Header
+			if rec.Code != tt.status || sent.Get("Content-Type") != ContentTypeProblem || rec.Body.String() != tt.body+"\n" {
+				t.Errorf("response = %d %s %s, want %d problem+json %s", rec.Code, sent.Get("Content-Type"), rec.Body, tt.status, tt.body)
 			}
-			if got := rec.Header().Get("Retry-After"); got != tt.retryAfter {
+			if got := sent.Get("Retry-After"); got != tt.retryAfter {
 				t.Errorf("Retry-After = %q, want %q", got, tt.retryAfter)
 			}
 		})
@@ -170,7 +233,7 @@ func TestWriteChallengesEvery401(t *testing.T) {
 
 			rec := serve(h, httptest.NewRequest(http.MethodPost, "/api/v0/auth/login", nil))
 
-			if got := rec.Header().Values("WWW-Authenticate"); rec.Code != tt.status || !slices.Equal(got, tt.want) {
+			if got := rec.Result().Header.Values("WWW-Authenticate"); rec.Code != tt.status || !slices.Equal(got, tt.want) {
 				t.Errorf("response = %d WWW-Authenticate %q, want %d %q", rec.Code, got, tt.status, tt.want)
 			}
 		})
@@ -190,8 +253,8 @@ func TestWriteLogsAndHidesAnInternalError(t *testing.T) {
 
 	rec := serve(h, req)
 
-	if rec.Code != http.StatusInternalServerError || rec.Header().Get("Content-Type") != ContentTypeProblem {
-		t.Errorf("response = %d %s, want 500 problem+json", rec.Code, rec.Header().Get("Content-Type"))
+	if ct := rec.Result().Header.Get("Content-Type"); rec.Code != http.StatusInternalServerError || ct != ContentTypeProblem {
+		t.Errorf("response = %d %s, want 500 problem+json", rec.Code, ct)
 	}
 	want := `{"status":500,"code":"internal_error","title":"Internal Server Error"}` + "\n"
 	if rec.Body.String() != want {
