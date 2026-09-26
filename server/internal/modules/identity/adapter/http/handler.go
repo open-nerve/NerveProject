@@ -47,6 +47,11 @@ type UpdateMeUseCase interface {
 	Execute(ctx context.Context, p domain.UserPatch) (domain.User, error)
 }
 
+// ChangePasswordUseCase is app.ChangePassword.
+type ChangePasswordUseCase interface {
+	Execute(ctx context.Context, in app.ChangePasswordInput) error
+}
+
 // GetProfileUseCase is app.GetProfile.
 type GetProfileUseCase interface {
 	Execute(ctx context.Context) (domain.Profile, error)
@@ -80,6 +85,7 @@ type UseCases struct {
 	Logout         LogoutUseCase
 	GetMe          GetMeUseCase
 	UpdateMe       UpdateMeUseCase
+	ChangePassword ChangePasswordUseCase
 	GetProfile     GetProfileUseCase
 	UpdateProfile  UpdateProfileUseCase
 	ListAPITokens  ListAPITokensUseCase

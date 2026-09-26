@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -24,6 +26,18 @@ func (f *fakeUpdateMe) Execute(_ context.Context, p domain.UserPatch) (domain.Us
 	f.calls++
 	f.patch = p
 	return f.user, f.err
+}
+
+type fakeChangePassword struct {
+	calls int
+	in    app.ChangePasswordInput
+	err   error
+}
+
+func (f *fakeChangePassword) Execute(_ context.Context, in app.ChangePasswordInput) error {
+	f.calls++
+	f.in = in
+	return f.err
 }
 
 // patchJSON is a PATCH with the bearer token fakeAuth accepts.
@@ -98,6 +112,45 @@ func TestUpdateMeProblems(t *testing.T) {
 			}
 			if ran := update.calls == 1; ran != tt.ran {
 				t.Errorf("use case ran: %v, want %v", ran, tt.ran)
+			}
+		})
+	}
+}
+
+func TestChangePassword(t *testing.T) {
+	change := &fakeChangePassword{}
+	req := withToken(postJSON("/api/v0/me/change-password", `{"current_password":"Tr0ub4dor&3","new_password":"N3w-Passw0rd!"}`))
+	apitest.Load(t).CheckRequest(t, req)
+
+	res, body := do(t, newServer(t, fakes{change: change}), req)
+
+	want := app.ChangePasswordInput{Current: "Tr0ub4dor&3", New: "N3w-Passw0rd!"}
+	if res.StatusCode != http.StatusNoContent || body != "" || change.in != want {
+		t.Errorf("POST /me/change-password = %d %q, use case got %+v; want 204 for %+v", res.StatusCode, body, change.in, want)
+	}
+}
+
+// The handler exit: every error the use case returns becomes its problem.
+func TestChangePasswordProblems(t *testing.T) {
+	tests := []struct {
+		name       string
+		err        error
+		status     int
+		code       string
+		retryAfter string
+	}{
+		{"weak new password", shared.Invalid(shared.FieldError{Field: "new_password", Code: shared.FieldWeakPassword, Message: "is weak"}),
+			422, "validation_failed", ""},
+		{"wrong current password", domain.ErrCurrentPasswordIncorrect, 422, "identity.current_password_incorrect", ""},
+		{"hashing saturated", shared.ServerBusy(time.Second), 503, "server_busy", "1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, body := do(t, newServer(t, fakes{change: &fakeChangePassword{err: tt.err}}),
+				withToken(postJSON("/api/v0/me/change-password", `{"current_password":"x","new_password":"y"}`)))
+
+			if res.StatusCode != tt.status || !strings.Contains(body, `"code":"`+tt.code+`"`) || res.Header.Get("Retry-After") != tt.retryAfter {
+				t.Errorf("response = %d %s Retry-After %q, want %d %s", res.StatusCode, body, res.Header.Get("Retry-After"), tt.status, tt.code)
 			}
 		})
 	}

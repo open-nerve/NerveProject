@@ -155,6 +155,30 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/me/change-password:
+    post:
+      operationId: changePassword
+      tags:
+        - identity
+      summary: Change the caller's password
+      description: 'Needs the current password. The new one follows the rules of registration. Every other session of the account is signed out: all of them when the caller is a personal access token. Personal access tokens keep working. Password changes have a rate limit of their own per account.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - identity.current_password_incorrect
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Changed.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/profile:
     get:
       operationId: getProfile
@@ -476,6 +500,17 @@ components:
           type: string
         user_timezone:
           description: An IANA time zone name, e.g. from GET /api/v0/timezones.
+          type: string
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - current_password
+        - new_password
+      properties:
+        current_password:
+          type: string
+        new_password:
           type: string
     Theme:
       type: string

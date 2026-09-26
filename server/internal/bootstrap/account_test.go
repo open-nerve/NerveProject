@@ -35,6 +35,32 @@ func call(t *testing.T, contract *apitest.Contract, method, url, token, body str
 	return res.StatusCode, string(out)
 }
 
+// Changing the password with a personal access token revokes every
+// session, the token keeps working, and only the new password signs in (M2
+// design 3.5, story A7).
+func TestChangingThePasswordWithAPersonalAccessToken(t *testing.T) {
+	base, pool := sessionApp(t)
+	contract := apitest.Load(t)
+	session := registerAccount(t, contract, base, "change@example.com")
+	token := createPAT(t, contract, base, session.AccessToken).Token
+
+	changed, body := call(t, contract, http.MethodPost, base+"/api/v0/me/change-password", token,
+		`{"current_password":"Tr0ub4dor&3","new_password":"N3w-Passw0rd!"}`)
+	reason := revocation(t, pool, "change@example.com")
+	refreshed, _ := postTokens(t, contract, base, "/api/v0/auth/refresh", session.RefreshToken)
+	me, _ := call(t, contract, http.MethodGet, base+"/api/v0/me", token, "")
+	oldLogin, _ := login(t, base, "change@example.com", "Tr0ub4dor&3")
+	newLogin, _ := login(t, base, "change@example.com", "N3w-Passw0rd!")
+
+	if changed != http.StatusNoContent || reason != "password_changed" || refreshed != http.StatusUnauthorized || me != http.StatusOK {
+		t.Errorf("change = %d %s; the session revoked for %q, its refresh %d; the token's GET /me %d; want 204, password_changed, 401, 200",
+			changed, body, reason, refreshed, me)
+	}
+	if oldLogin != http.StatusUnauthorized || newLogin != http.StatusOK {
+		t.Errorf("login with the old password %d, with the new one %d; want 401, 200", oldLogin, newLogin)
+	}
+}
+
 func TestTheAccountAndItsPreferencesWithAPersonalAccessToken(t *testing.T) {
 	contract, base, token := accountApp(t, "account@example.com")
 

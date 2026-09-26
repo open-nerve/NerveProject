@@ -17,7 +17,7 @@ import (
 
 // tightLimits are small buckets on a limiter whose clock stands still, so
 // nothing refills during a test: login_ip 3, login_ip_email 2,
-// register_ip 1, each regaining a unit a minute.
+// register_ip 1, password_user 2, each regaining a unit a minute.
 func tightLimits() httpadapter.Limits {
 	limiter := ratelimit.New(func() time.Time { return created })
 	return httpadapter.Limits{
@@ -25,6 +25,7 @@ func tightLimits() httpadapter.Limits {
 		LoginIP:      limiter.Bucket("login_ip", ratelimit.Rate{PerMinute: 1, Burst: 3}),
 		LoginIPEmail: limiter.Bucket("login_ip_email", ratelimit.Rate{PerMinute: 1, Burst: 2}),
 		RegisterIP:   limiter.Bucket("register_ip", ratelimit.Rate{PerMinute: 1, Burst: 1}),
+		PasswordUser: limiter.Bucket("password_user", ratelimit.Rate{PerMinute: 1, Burst: 2}),
 	}
 }
 
@@ -97,6 +98,34 @@ func TestRegisterLimitsByIP(t *testing.T) {
 	}
 	if entries := rateLimitLogs(t, &logs); len(entries) != 1 || entries[0]["bucket"] != "register_ip" {
 		t.Errorf("rate limited logs = %v, want register_ip", entries)
+	}
+}
+
+// password_user counts the account, whatever the client (M2 design 3.10):
+// the account's third change is refused although it comes from another IP,
+// and another account still has its own units.
+func TestChangePasswordLimitsByAccount(t *testing.T) {
+	var logs bytes.Buffer
+	change := &fakeChangePassword{err: domain.ErrCurrentPasswordIncorrect}
+	h := limitedServer(t, fakes{change: change}, tightLimits(), &logs)
+	attempt := func(token, peer string) int {
+		req := postJSON("/api/v0/me/change-password", `{"current_password":"x","new_password":"y"}`)
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.RemoteAddr = peer
+		res, _ := do(t, h, req)
+		return res.StatusCode
+	}
+
+	statuses := []int{
+		attempt("valid", "203.0.113.7:5555"), attempt("valid", "198.51.100.9:5555"),
+		attempt("valid", "192.0.2.1:5555"), attempt("other", "203.0.113.7:5555"),
+	}
+
+	if want := []int{422, 422, 429, 422}; !slices.Equal(statuses, want) || change.calls != 3 {
+		t.Errorf("statuses = %v after %d changes, want %v after 3", statuses, change.calls, want)
+	}
+	if entries := rateLimitLogs(t, &logs); len(entries) != 1 || entries[0]["bucket"] != "password_user" {
+		t.Errorf("rate limited logs = %v, want password_user", entries)
 	}
 }
 

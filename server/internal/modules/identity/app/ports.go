@@ -77,6 +77,20 @@ type LoginAccountReader interface {
 	FindLoginAccount(ctx context.Context, email string) (LoginAccount, error)
 }
 
+// PasswordAccount is what changing the password reads of the account
+// before its transaction: the address, for the password rules, and the
+// hash, as the snapshot (M2 design 3.5).
+type PasswordAccount struct {
+	Email        string // normalized
+	PasswordHash string
+}
+
+// PasswordAccountReader reads an account whose password is to change.
+type PasswordAccountReader interface {
+	// PasswordAccount returns ErrNotFound when there is no account id.
+	PasswordAccount(ctx context.Context, id uuid.UUID) (PasswordAccount, error)
+}
+
 // LockedAccount is an account's row under the credential lock.
 type LockedAccount struct {
 	PasswordHash string
@@ -159,6 +173,14 @@ type SessionRotator interface {
 	// RevokeForReuse revokes session id with reason reuse_detected, unless
 	// it is revoked already.
 	RevokeForReuse(ctx context.Context, id uuid.UUID, now time.Time) error
+}
+
+// SessionRevoker revokes an account's sessions (M2 design 3.5).
+type SessionRevoker interface {
+	// RevokeSessions revokes at now, with reason, every session of userID
+	// that is neither revoked nor expired, except keep (uuid.Nil keeps
+	// none), and returns how many it revoked.
+	RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason domain.RevokeReason, now time.Time) (int, error)
 }
 
 // SessionEnder ends sessions at logout.

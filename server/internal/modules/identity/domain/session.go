@@ -12,6 +12,15 @@ import (
 	"uuid"
 )
 
+// RevokeReason is why a session was revoked: auth_sessions.revoke_reason
+// (M2 design 3.5). Logout and reuse detection write theirs in their own
+// statements.
+type RevokeReason string
+
+// RevokePasswordChanged revokes the other sessions of an account whose
+// password its owner changed.
+const RevokePasswordChanged RevokeReason = "password_changed"
+
 // RefreshTokenPrefix starts every refresh token (M2 design 3.4).
 const RefreshTokenPrefix = "nrv_rt_"
 

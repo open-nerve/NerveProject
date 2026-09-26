@@ -71,7 +71,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		RateLimit: config.RateLimitConfig{
 			IPv6PrefixLen: 64,
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
-			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy,
+			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
 		Log: config.LogConfig{Level: "error", Format: "text"},
 	}

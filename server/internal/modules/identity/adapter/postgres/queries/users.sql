@@ -14,6 +14,13 @@ SELECT id, password
 FROM users
 WHERE email = sqlc.arg(email);
 
+-- name: GetPasswordAccount :one
+-- What changing the password reads before its transaction: the address for the password rules,
+-- the hash as the snapshot (M2 design 3.5).
+SELECT email, password
+FROM users
+WHERE id = sqlc.arg(id);
+
 -- name: LockUserForCredentials :one
 -- The account row lock of M2 design 3.5. FOR NO KEY UPDATE conflicts with itself and with
 -- FOR UPDATE, so the credential transactions of one account run one after another; it does not

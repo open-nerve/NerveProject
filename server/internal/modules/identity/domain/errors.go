@@ -20,6 +20,10 @@ var (
 	// ErrRefreshTokenInvalid answers every refresh that does not rotate:
 	// unknown, expired, revoked, reused or forged (M2 design 3.5).
 	ErrRefreshTokenInvalid = shared.NewError(shared.KindUnauthenticated, "identity.refresh_token_invalid", "The refresh token is not valid; sign in again.")
+	// ErrCurrentPasswordIncorrect answers a change of password whose current
+	// password is wrong, or was changed concurrently since it was verified
+	// (M2 design 3.5).
+	ErrCurrentPasswordIncorrect = shared.NewError(shared.KindInvalid, "identity.current_password_incorrect", "The current password is incorrect.")
 	// ErrAPITokenNotFound answers a revocation of a token that does not
 	// exist, is revoked already or belongs to another account: what the
 	// caller cannot see is not found (v0 design 3.5).

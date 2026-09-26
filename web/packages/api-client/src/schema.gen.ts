@@ -105,6 +105,26 @@ export interface paths {
         patch: operations["updateMe"];
         trace?: never;
     };
+    "/api/v0/me/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the caller's password
+         * @description Needs the current password. The new one follows the rules of registration. Every other session of the account is signed out: all of them when the caller is a personal access token. Personal access tokens keep working. Password changes have a rate limit of their own per account.
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/profile": {
         parameters: {
             query?: never;
@@ -285,6 +305,10 @@ export interface components {
             display_name?: string;
             /** @description An IANA time zone name, e.g. from GET /api/v0/timezones. */
             user_timezone?: string;
+        };
+        ChangePasswordRequest: {
+            current_password: string;
+            new_password: string;
         };
         /** @enum {string} */
         Theme: "system" | "light" | "dark" | "light-contrast" | "dark-contrast";
@@ -582,6 +606,29 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Changed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

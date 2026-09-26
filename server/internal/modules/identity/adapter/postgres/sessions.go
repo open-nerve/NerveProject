@@ -81,6 +81,16 @@ func (s *Store) RevokeForReuse(ctx context.Context, id uuid.UUID, now time.Time)
 	return nil
 }
 
+// RevokeSessions revokes userID's live sessions but keep at now, with
+// reason, and returns how many.
+func (s *Store) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason domain.RevokeReason, now time.Time) (int, error) {
+	n, err := s.queries(ctx).RevokeSessions(ctx, gen.RevokeSessionsParams{Now: now, Reason: string(reason), UserID: userID, Keep: keep})
+	if err != nil {
+		return 0, fmt.Errorf("revoke sessions: %w", err)
+	}
+	return int(n), nil
+}
+
 // EndSession revokes the session with reason logout while it is at g;
 // false when it is not.
 func (s *Store) EndSession(ctx context.Context, g app.SessionGeneration) (bool, error) {

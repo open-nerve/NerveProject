@@ -293,13 +293,34 @@ func (l *callLog) add(ctx context.Context, call string) {
 }
 
 // fakeCredentials is the account row and the session that the credential
-// lock reads.
+// lock reads. A change of password reads the row and writes it and the
+// sessions: it logs them too.
 type fakeCredentials struct {
 	log        *callLog
+	email      string
 	account    app.LockedAccount
 	accountErr error
 	session    app.SessionCredential
 	sessionErr error
+	writtenAt  []time.Time // the times the writes were given
+}
+
+func (f *fakeCredentials) PasswordAccount(ctx context.Context, id uuid.UUID) (app.PasswordAccount, error) {
+	f.log.add(ctx, "read "+id.String())
+	return app.PasswordAccount{Email: f.email, PasswordHash: f.account.PasswordHash}, f.accountErr
+}
+
+func (f *fakeCredentials) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, now time.Time) error {
+	f.log.add(ctx, "password "+id.String()+" "+hash)
+	f.writtenAt = append(f.writtenAt, now)
+	f.account.PasswordHash = hash
+	return nil
+}
+
+func (f *fakeCredentials) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason domain.RevokeReason, now time.Time) (int, error) {
+	f.log.add(ctx, "revoke "+string(reason)+" sessions of "+userID.String()+" but "+keep.String())
+	f.writtenAt = append(f.writtenAt, now)
+	return 1, nil
 }
 
 func (f *fakeCredentials) LockForCredentials(ctx context.Context, id uuid.UUID) (app.LockedAccount, error) {
