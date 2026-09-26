@@ -101,9 +101,10 @@ func TestRegisterLimitsByIP(t *testing.T) {
 	}
 }
 
-// password_user counts the account, whatever the client (M2 design 3.10):
-// the account's third change is refused although it comes from another IP,
-// and another account still has its own units.
+// password_user counts the account, whatever the client or the credential
+// (M2 design 3.10): the account's third change is refused although it comes
+// from another IP with a personal access token instead of the session, and
+// another account still has its own units.
 func TestChangePasswordLimitsByAccount(t *testing.T) {
 	var logs bytes.Buffer
 	change := &fakeChangePassword{err: domain.ErrCurrentPasswordIncorrect}
@@ -118,7 +119,7 @@ func TestChangePasswordLimitsByAccount(t *testing.T) {
 
 	statuses := []int{
 		attempt("valid", "203.0.113.7:5555"), attempt("valid", "198.51.100.9:5555"),
-		attempt("valid", "192.0.2.1:5555"), attempt("other", "203.0.113.7:5555"),
+		attempt("pat", "192.0.2.1:5555"), attempt("other", "203.0.113.7:5555"),
 	}
 
 	if want := []int{422, 422, 429, 422}; !slices.Equal(statuses, want) || change.calls != 3 {

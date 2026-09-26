@@ -302,6 +302,8 @@ type fakeCredentials struct {
 	accountErr error
 	session    app.SessionCredential
 	sessionErr error
+	hashErr    error       // UpdatePasswordHash fails with it
+	revokeErr  error       // RevokeSessions fails with it
 	writtenAt  []time.Time // the times the writes were given
 }
 
@@ -311,6 +313,9 @@ func (f *fakeCredentials) PasswordAccount(ctx context.Context, id uuid.UUID) (ap
 }
 
 func (f *fakeCredentials) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string, now time.Time) error {
+	if f.hashErr != nil {
+		return f.hashErr
+	}
 	f.log.add(ctx, "password "+id.String()+" "+hash)
 	f.writtenAt = append(f.writtenAt, now)
 	f.account.PasswordHash = hash
@@ -318,6 +323,9 @@ func (f *fakeCredentials) UpdatePasswordHash(ctx context.Context, id uuid.UUID, 
 }
 
 func (f *fakeCredentials) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason domain.RevokeReason, now time.Time) (int, error) {
+	if f.revokeErr != nil {
+		return 0, f.revokeErr
+	}
 	f.log.add(ctx, "revoke "+string(reason)+" sessions of "+userID.String()+" but "+keep.String())
 	f.writtenAt = append(f.writtenAt, now)
 	return 1, nil

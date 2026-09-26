@@ -53,6 +53,8 @@ func TestChangePassword(t *testing.T) {
 	}
 	assertNoSecret(t, logs, "current password", []byte(change.Current))
 	assertNoSecret(t, logs, "new password", []byte(change.New))
+	assertNoSecret(t, logs, "snapshot hash", []byte("hashed:"+change.Current))
+	assertNoSecret(t, logs, "new hash", []byte("hashed:"+change.New))
 }
 
 // A personal access token has no session: every session is revoked, and
@@ -140,6 +142,9 @@ func TestChangePasswordAfterAConcurrentChange(t *testing.T) {
 			if !errors.Is(err, tt.err) || !slices.Equal(h.verified, tt.verified) || h.calls != 1 {
 				t.Errorf("Execute() = %v, verified %q, %d hashes; want %v, %q, one hash", err, h.verified, h.calls, tt.err, tt.verified)
 			}
+			if f.log.calls[0] != "read "+userID.String()+" outside tx" || slices.Contains(f.log.calls[1:], f.log.calls[0]) {
+				t.Errorf("calls %q, want the account read once, first: the retry redoes only the check and the transaction", f.log.calls)
+			}
 			if changed := f.creds.account.PasswordHash == "hashed:N3w-Passw0rd!"; changed != tt.changed {
 				t.Errorf("the row holds %q, want the new password: %v", f.creds.account.PasswordHash, tt.changed)
 			}
@@ -182,6 +187,29 @@ func TestChangePasswordErrors(t *testing.T) {
 
 			if err := uc.Execute(tt.ctx, change); !errors.Is(err, tt.want) || len(f.creds.writtenAt) != 0 {
 				t.Errorf("Execute() = %v, %d writes; want %v and none", err, len(f.creds.writtenAt), tt.want)
+			}
+		})
+	}
+}
+
+// A write that fails fails the change, and its transaction with it: the
+// change is not logged as done.
+func TestChangePasswordWhenAWriteFails(t *testing.T) {
+	boom := errors.New("connection reset")
+	tests := []struct {
+		name string
+		fail func(*fakeCredentials)
+	}{
+		{"the hash", func(c *fakeCredentials) { c.hashErr = boom }},
+		{"the sessions", func(c *fakeCredentials) { c.revokeErr = boom }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, _, uc := newPasswordChange()
+			tt.fail(f.creds)
+
+			if err := uc.Execute(shared.WithActor(context.Background(), sessionActor), change); !errors.Is(err, boom) || strings.Contains(f.logs.String(), "password changed") {
+				t.Errorf("Execute() = %v, logs %s; want %v and no change logged", err, f.logs.String(), boom)
 			}
 		})
 	}

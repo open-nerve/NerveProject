@@ -53,7 +53,8 @@ func (fakeGetMe) Execute(ctx context.Context) (domain.User, error) {
 }
 
 // fakeAuth accepts the token "valid" as a session of the account userID,
-// and "other" as a personal access token of otherUserID.
+// "pat" as a personal access token of the same account, and "other" as a
+// personal access token of otherUserID.
 type fakeAuth struct{}
 
 var otherUserID = uuid.MustParse("0199a2b4-0000-7000-8000-000000000009")
@@ -62,6 +63,8 @@ func (fakeAuth) Authenticate(ctx context.Context, token string) (context.Context
 	switch token {
 	case "valid":
 		return shared.WithActor(ctx, shared.Actor{UserID: userID, SessionID: sessionID}), "session:" + sessionID.String(), nil
+	case "pat":
+		return shared.WithActor(ctx, shared.Actor{UserID: userID, APITokenID: tokenID}), "pat:" + tokenID.String(), nil
 	case "other":
 		return shared.WithActor(ctx, shared.Actor{UserID: otherUserID, APITokenID: tokenID}), "pat:" + tokenID.String(), nil
 	}
