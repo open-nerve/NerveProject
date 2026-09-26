@@ -122,6 +122,9 @@ func TestCloseDoesNotWaitForAConnectionInUse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newApp() error = %v", err)
 	}
+	if a.poolCloseTimeout != 5*time.Second {
+		t.Errorf("newApp waits %s for the pool, want 5s", a.poolCloseTimeout)
+	}
 	a.poolCloseTimeout = 200 * time.Millisecond
 	conn, err := a.pool.Acquire(context.Background())
 	if err != nil {
@@ -196,7 +199,10 @@ func TestRunStopsTheJobsAfterHTTP(t *testing.T) {
 	cancel()
 	waitForLog(`msg="http server shutting down"`)
 	time.Sleep(time.Second) // the jobs would stop meanwhile if they did not wait for HTTP
-	stoppedEarly := strings.Contains(logs.String(), `msg="jobs stopped"`)
+	// Neither the runner's Stop nor River itself has stopped them: River
+	// stops on its own once the context it was started with ends.
+	early := logs.String()
+	stoppedEarly := strings.Contains(early, `msg="jobs stopped"`) || strings.Contains(early, `msg="River client stopped"`)
 	if err := holder.Rollback(context.Background()); err != nil {
 		t.Fatal(err)
 	}
