@@ -425,7 +425,7 @@ modules/issue/
      → 用例：TxManager.WithinTx { 权限 → 领域校验（不合规 → 422）→ 业务规则 → 写数据 → 发布领域事件 } 提交
      → 响应；或者 error → APIErrors → problem+json
 ```
-- **请求 ID → 异常恢复 → 访问日志 → 安全响应头**这四个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。安全响应头（`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`）加在每个响应上，包括 panic 之后的 500；CSP 只加在页面上，由 `webui` 在 M2/P4 加入（M2 设计 8.3）。
+- **请求 ID → 异常恢复 → 访问日志 → 安全响应头**这四个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。安全响应头（`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`）加在每个响应上，包括 panic 之后的 500；`/api/` 下的响应另带 `Cache-Control: no-store`（M2/P3a），接口的回答带凭证、都是调用者自己的数据，不能被缓存；CSP 只加在页面上，由 `webui` 在 M2/P4 加入（M2 设计 8.3）。
 - **按路由的中间件**由 `httpserver.API.Middlewares` 按上图的顺序交给每个模块的生成代码，只作用于 `/api/v0` 的操作，不作用于健康检查和前端页面（M2 设计 3.6）。认证默认拒绝：除了模块声明为公开的操作，没有有效令牌一律 401。限流的桶见 3.6；接口调用日志由 M8 挂在限流之后。
 - **参数先于这些中间件绑定**：生成的代码在它们之前绑定路径参数和查询参数，参数格式错误的请求在认证之前就得到 400；请求体在它们之后才解码，没有通过认证的请求不会被解析请求体。
 - **每个写操作对应一个事务。** 业务数据、操作动态、历史版本、投递给 River 的任务，要么一起成功，要么一起回滚。

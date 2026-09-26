@@ -174,7 +174,7 @@ NerveProject/
   1. 请求 ID：读取 `X-Request-Id`，只有是 1–128 个 `[A-Za-z0-9._:-]` 字符时才采用，否则生成 UUIDv7，并写回响应头。
   2. 异常恢复：捕获 panic，返回 500 problem+json，并记录日志。
   3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。`/healthz`、`/readyz` 的记录是 DEBUG 级别，其余是 INFO（M2/P1）。
-  4. 安全响应头（M2/P2，M2 设计 8.3）：每个响应都带 `X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`；异常恢复清掉已设的响应头之后重新设上它们，panic 的 500 同样带着。
+  4. 安全响应头（M2/P2，M2 设计 8.3）：每个响应都带 `X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`；`/api/` 下的响应另带 `Cache-Control: no-store`（M2/P3a）；异常恢复清掉已设的响应头之后重新设上它们，panic 的 500 同样带着。
 - **按路由的中间件**（M2/P1、P2，M2 设计 3.6）：`/api/v0` 的操作另有一串中间件，由 `httpserver.API.Middlewares` 交给每个模块的生成代码，在固定链之后、按这个顺序：请求元信息（客户端 IP 和限流用的 IP 键、UA）→ 请求期限（`server.request_timeout`）→ 请求体上限（`server.max_body_bytes`，超过是 413）→ 失败闸门和默认拒绝的认证（模块声明为公开的操作之外，没有有效令牌一律 401；带了令牌时先预留本 IP 的一个 `auth_failure` 单位，已空是 429）→ 限流（有凭证按凭证计数，没有按 IP 计数，超出是 429）→ 请求体结构检查（不合契约是 400）。生成代码在它们之前绑定路径参数和查询参数，在它们之后解码请求体。
 - **`/readyz`**：按顺序执行各项检查，全部共用一个 2 秒的超时预算，遇到第一个失败就停止，返回通用的 `detail`（`<检查名> is not ready`）；具体错误只写进日志，不返回给客户端。
 - **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；M2/P1 加入 `unauthorized`、`payload_too_large`、`validation_failed`、`server_busy` 和领域错误码的体系（M2 设计 3.11），M2/P2 加入 `rate_limited`（429，带 `Retry-After`）。
