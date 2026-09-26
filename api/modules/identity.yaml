@@ -132,6 +132,71 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateMe
+      tags: [identity]
+      summary: Change the caller's names and time zone
+      description: >-
+        Changes the fields sent and leaves the others. The e-mail address
+        cannot change here: the server's administrator changes it.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: The caller's account, changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/profile:
+    get:
+      operationId: getProfile
+      tags: [identity]
+      summary: Read the caller's preferences
+      security: [{bearer: []}]
+      x-problem-codes: []
+      responses:
+        '200':
+          description: The caller's preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateProfile
+      tags: [identity]
+      summary: Change the caller's preferences
+      description: >-
+        Changes the fields sent and leaves the others. The onboarding steps
+        sent are merged into the stored ones: a step not sent keeps its value,
+        also when another request changes it at the same time.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: The caller's preferences, changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/api-tokens:
     get:
       operationId: listApiTokens
@@ -325,6 +390,103 @@ components:
         created_at:
           type: string
           format: date-time
+    UserUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        first_name:
+          description: At most 255 characters, without a web address.
+          type: string
+        last_name:
+          description: At most 255 characters, without a web address.
+          type: string
+        display_name:
+          description: 1–255 characters.
+          type: string
+        user_timezone:
+          description: An IANA time zone name, e.g. from GET /api/v0/timezones.
+          type: string
+    Theme:
+      type: string
+      enum: [system, light, dark, light-contrast, dark-contrast]
+    Language:
+      description: The language of the web UI.
+      type: string
+      enum: [en, zh-CN]
+    StartOfTheWeek:
+      description: The first day of the week, 0 Sunday to 6 Saturday.
+      type: integer
+      enum: [0, 1, 2, 3, 4, 5, 6]
+    OnboardingSteps:
+      type: object
+      additionalProperties: false
+      required: [profile_complete, workspace_create, workspace_invite, workspace_join]
+      properties:
+        profile_complete:
+          type: boolean
+        workspace_create:
+          type: boolean
+        workspace_invite:
+          type: boolean
+        workspace_join:
+          type: boolean
+    OnboardingStepsUpdate:
+      description: The steps to set; the others keep their values.
+      type: object
+      additionalProperties: false
+      properties:
+        profile_complete:
+          type: boolean
+        workspace_create:
+          type: boolean
+        workspace_invite:
+          type: boolean
+        workspace_join:
+          type: boolean
+    Profile:
+      type: object
+      additionalProperties: false
+      required: [theme, language, start_of_the_week, onboarding_step, is_onboarded, is_tour_completed, last_workspace_id, updated_at]
+      properties:
+        theme:
+          $ref: '#/components/schemas/Theme'
+        language:
+          $ref: '#/components/schemas/Language'
+        start_of_the_week:
+          $ref: '#/components/schemas/StartOfTheWeek'
+        onboarding_step:
+          $ref: '#/components/schemas/OnboardingSteps'
+        is_onboarded:
+          type: boolean
+        is_tour_completed:
+          type: boolean
+        last_workspace_id:
+          description: The workspace the web app opens last; null for none. It is not checked to exist.
+          type: [string, 'null']
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        theme:
+          $ref: '#/components/schemas/Theme'
+        language:
+          $ref: '#/components/schemas/Language'
+        start_of_the_week:
+          $ref: '#/components/schemas/StartOfTheWeek'
+        onboarding_step:
+          $ref: '#/components/schemas/OnboardingStepsUpdate'
+        is_onboarded:
+          type: boolean
+        is_tour_completed:
+          type: boolean
+        last_workspace_id:
+          description: Null clears it.
+          type: [string, 'null']
+          format: uuid
     ApiToken:
       description: >-
         A personal access token as lists show it. The token itself appears

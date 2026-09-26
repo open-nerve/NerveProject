@@ -1,0 +1,52 @@
+package bootstrap
+
+import (
+	"net/http"
+	"strings"
+	"testing"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/migrations"
+)
+
+// accountApp is the wired app on a new database, with a personal access
+// token of a new account: every operation that needs a token works with one
+// (M2 design 12, P3).
+func accountApp(t *testing.T, email string) (contract *apitest.Contract, base, token string) {
+	t.Helper()
+	contract = apitest.Load(t)
+	base = startApp(t, testConfig(t, pgtest.NewDatabase(t), false), migrations.FS())
+	return contract, base, createPAT(t, contract, base, registerAccount(t, contract, base, email).AccessToken).Token
+}
+
+// call sends a request that the contract allows and returns its status and
+// body.
+func call(t *testing.T, contract *apitest.Contract, method, url, token, body string) (int, string) {
+	t.Helper()
+	var b []byte
+	if body != "" {
+		b = []byte(body)
+	}
+	req := newRequest(t, method, url, token, b)
+	contract.CheckRequest(t, req)
+	res, out := send(t, req)
+	contract.CheckResponse(t, req, res)
+	return res.StatusCode, string(out)
+}
+
+func TestTheAccountAndItsPreferencesWithAPersonalAccessToken(t *testing.T) {
+	contract, base, token := accountApp(t, "account@example.com")
+
+	meStatus, me := call(t, contract, http.MethodPatch, base+"/api/v0/me", token, `{"first_name":"Ann","user_timezone":"Asia/Shanghai"}`)
+	patchStatus, _ := call(t, contract, http.MethodPatch, base+"/api/v0/me/profile", token, `{"theme":"dark","onboarding_step":{"profile_complete":true}}`)
+	getStatus, profile := call(t, contract, http.MethodGet, base+"/api/v0/me/profile", token, "")
+
+	if meStatus != http.StatusOK || !strings.Contains(me, `"first_name":"Ann"`) || !strings.Contains(me, `"user_timezone":"Asia/Shanghai"`) {
+		t.Errorf("PATCH /me = %d %s, want 200 with the new name and time zone", meStatus, me)
+	}
+	if patchStatus != http.StatusOK || getStatus != http.StatusOK || !strings.Contains(profile, `"theme":"dark"`) ||
+		!strings.Contains(profile, `"onboarding_step":{"profile_complete":true,"workspace_create":false,`) {
+		t.Errorf("PATCH /me/profile %d, then GET = %d %s; want 200 and the new theme with the step merged", patchStatus, getStatus, profile)
+	}
+}

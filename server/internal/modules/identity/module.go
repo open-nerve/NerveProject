@@ -1,7 +1,7 @@
 // Package identity is the accounts module (M2 design 3.3, 6.2): accounts,
 // profiles, sessions and personal access tokens. It brings registration,
-// login, refresh, logout, the caller's account and tokens, and the
-// authentication every other operation goes through.
+// login, refresh, logout, the caller's account, preferences and tokens, and
+// the authentication every other operation goes through.
 package identity
 
 import (
@@ -105,6 +105,9 @@ func New(d Deps) (*Module, error) {
 			Refresh:       app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
 			Logout:        app.NewLogout(store, d.Clock, d.Logger),
 			GetMe:         app.NewGetMe(store),
+			UpdateMe:      app.NewUpdateMe(store, d.Clock),
+			GetProfile:    app.NewGetProfile(store),
+			UpdateProfile: app.NewUpdateProfile(store, d.Clock),
 			ListAPITokens: app.NewListAPITokens(store),
 			CreateAPIToken: app.NewCreateAPIToken(app.CreateAPITokenDeps{
 				Lock: lock, Tokens: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,

@@ -42,6 +42,21 @@ type GetMeUseCase interface {
 	Execute(ctx context.Context) (domain.User, error)
 }
 
+// UpdateMeUseCase is app.UpdateMe.
+type UpdateMeUseCase interface {
+	Execute(ctx context.Context, p domain.UserPatch) (domain.User, error)
+}
+
+// GetProfileUseCase is app.GetProfile.
+type GetProfileUseCase interface {
+	Execute(ctx context.Context) (domain.Profile, error)
+}
+
+// UpdateProfileUseCase is app.UpdateProfile.
+type UpdateProfileUseCase interface {
+	Execute(ctx context.Context, p domain.ProfilePatch) (domain.Profile, error)
+}
+
 // ListAPITokensUseCase is app.ListAPITokens.
 type ListAPITokensUseCase interface {
 	Execute(ctx context.Context, limit *int, cursor *string) (app.APITokenPage, error)
@@ -64,6 +79,9 @@ type UseCases struct {
 	Refresh        RefreshUseCase
 	Logout         LogoutUseCase
 	GetMe          GetMeUseCase
+	UpdateMe       UpdateMeUseCase
+	GetProfile     GetProfileUseCase
+	UpdateProfile  UpdateProfileUseCase
 	ListAPITokens  ListAPITokensUseCase
 	CreateAPIToken CreateAPITokenUseCase
 	RevokeAPIToken RevokeAPITokenUseCase

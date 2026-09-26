@@ -35,6 +35,84 @@ func (e AuthTokensTokenType) Valid() bool {
 	}
 }
 
+// Defines values for Language.
+const (
+	LanguageEn   Language = "en"
+	LanguageZhCN Language = "zh-CN"
+)
+
+// Valid indicates whether the value is a known member of the Language enum.
+func (e Language) Valid() bool {
+	switch e {
+	case LanguageEn:
+		return true
+	case LanguageZhCN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StartOfTheWeek.
+const (
+	StartOfTheWeekN0 StartOfTheWeek = 0
+	StartOfTheWeekN1 StartOfTheWeek = 1
+	StartOfTheWeekN2 StartOfTheWeek = 2
+	StartOfTheWeekN3 StartOfTheWeek = 3
+	StartOfTheWeekN4 StartOfTheWeek = 4
+	StartOfTheWeekN5 StartOfTheWeek = 5
+	StartOfTheWeekN6 StartOfTheWeek = 6
+)
+
+// Valid indicates whether the value is a known member of the StartOfTheWeek enum.
+func (e StartOfTheWeek) Valid() bool {
+	switch e {
+	case StartOfTheWeekN0:
+		return true
+	case StartOfTheWeekN1:
+		return true
+	case StartOfTheWeekN2:
+		return true
+	case StartOfTheWeekN3:
+		return true
+	case StartOfTheWeekN4:
+		return true
+	case StartOfTheWeekN5:
+		return true
+	case StartOfTheWeekN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Theme.
+const (
+	ThemeDark          Theme = "dark"
+	ThemeDarkContrast  Theme = "dark-contrast"
+	ThemeLight         Theme = "light"
+	ThemeLightContrast Theme = "light-contrast"
+	ThemeSystem        Theme = "system"
+)
+
+// Valid indicates whether the value is a known member of the Theme enum.
+func (e Theme) Valid() bool {
+	switch e {
+	case ThemeDark:
+		return true
+	case ThemeDarkContrast:
+		return true
+	case ThemeLight:
+		return true
+	case ThemeLightContrast:
+		return true
+	case ThemeSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // APIToken A personal access token as lists show it. The token itself appears only in ApiTokenCreated.
 type APIToken struct {
 	CreatedAt   time.Time `json:"created_at"`
@@ -103,6 +181,9 @@ type AuthTokens struct {
 // AuthTokensTokenType defines model for AuthTokens.TokenType.
 type AuthTokensTokenType string
 
+// Language The language of the web UI.
+type Language string
+
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	// Email The sign-in address, in any case, with or without surrounding blanks.
@@ -114,6 +195,59 @@ type LoginRequest struct {
 type LogoutRequest struct {
 	// RefreshToken The refresh_token of the last AuthTokens of the session.
 	RefreshToken string `json:"refresh_token"`
+}
+
+// OnboardingSteps defines model for OnboardingSteps.
+type OnboardingSteps struct {
+	ProfileComplete bool `json:"profile_complete"`
+	WorkspaceCreate bool `json:"workspace_create"`
+	WorkspaceInvite bool `json:"workspace_invite"`
+	WorkspaceJoin   bool `json:"workspace_join"`
+}
+
+// OnboardingStepsUpdate The steps to set; the others keep their values.
+type OnboardingStepsUpdate struct {
+	ProfileComplete *bool `json:"profile_complete,omitempty"`
+	WorkspaceCreate *bool `json:"workspace_create,omitempty"`
+	WorkspaceInvite *bool `json:"workspace_invite,omitempty"`
+	WorkspaceJoin   *bool `json:"workspace_join,omitempty"`
+}
+
+// Profile defines model for Profile.
+type Profile struct {
+	IsOnboarded     bool `json:"is_onboarded"`
+	IsTourCompleted bool `json:"is_tour_completed"`
+
+	// Language The language of the web UI.
+	Language Language `json:"language"`
+
+	// LastWorkspaceID The workspace the web app opens last; null for none. It is not checked to exist.
+	LastWorkspaceID nullable.Nullable[uuid.UUID] `json:"last_workspace_id"`
+	OnboardingStep  OnboardingSteps              `json:"onboarding_step"`
+
+	// StartOfTheWeek The first day of the week, 0 Sunday to 6 Saturday.
+	StartOfTheWeek StartOfTheWeek `json:"start_of_the_week"`
+	Theme          Theme          `json:"theme"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+// ProfileUpdate defines model for ProfileUpdate.
+type ProfileUpdate struct {
+	IsOnboarded     *bool `json:"is_onboarded,omitempty"`
+	IsTourCompleted *bool `json:"is_tour_completed,omitempty"`
+
+	// Language The language of the web UI.
+	Language *Language `json:"language,omitempty"`
+
+	// LastWorkspaceID Null clears it.
+	LastWorkspaceID nullable.Nullable[uuid.UUID] `json:"last_workspace_id,omitempty"`
+
+	// OnboardingStep The steps to set; the others keep their values.
+	OnboardingStep *OnboardingStepsUpdate `json:"onboarding_step,omitempty"`
+
+	// StartOfTheWeek The first day of the week, 0 Sunday to 6 Saturday.
+	StartOfTheWeek *StartOfTheWeek `json:"start_of_the_week,omitempty"`
+	Theme          *Theme          `json:"theme,omitempty"`
 }
 
 // RefreshRequest defines model for RefreshRequest.
@@ -128,6 +262,12 @@ type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+// StartOfTheWeek The first day of the week, 0 Sunday to 6 Saturday.
+type StartOfTheWeek int
+
+// Theme defines model for Theme.
+type Theme string
 
 // User defines model for User.
 type User struct {
@@ -145,6 +285,21 @@ type User struct {
 
 	// UserTimezone An IANA time zone name.
 	UserTimezone string `json:"user_timezone"`
+}
+
+// UserUpdate defines model for UserUpdate.
+type UserUpdate struct {
+	// DisplayName 1–255 characters.
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// FirstName At most 255 characters, without a web address.
+	FirstName *string `json:"first_name,omitempty"`
+
+	// LastName At most 255 characters, without a web address.
+	LastName *string `json:"last_name,omitempty"`
+
+	// UserTimezone An IANA time zone name, e.g. from GET /api/v0/timezones.
+	UserTimezone *string `json:"user_timezone,omitempty"`
 }
 
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
@@ -171,8 +326,14 @@ type RefreshTokensJSONRequestBody = RefreshRequest
 // RegisterJSONRequestBody defines body for Register for application/json ContentType.
 type RegisterJSONRequestBody = RegisterRequest
 
+// UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
+type UpdateMeJSONRequestBody = UserUpdate
+
 // CreateAPITokenJSONRequestBody defines body for CreateAPIToken for application/json ContentType.
 type CreateAPITokenJSONRequestBody = APITokenCreate
+
+// UpdateProfileJSONRequestBody defines body for UpdateProfile for application/json ContentType.
+type UpdateProfileJSONRequestBody = ProfileUpdate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -194,12 +355,21 @@ type ServerInterface interface {
 	// GetMe Read the caller's account
 	// (GET /api/v0/me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// UpdateMe Change the caller's names and time zone
+	// (PATCH /api/v0/me)
+	UpdateMe(w http.ResponseWriter, r *http.Request)
 	// ListAPITokens List the caller's personal access tokens
 	// (GET /api/v0/me/api-tokens)
 	ListAPITokens(w http.ResponseWriter, r *http.Request, params ListAPITokensParams)
 	// CreateAPIToken Create a personal access token
 	// (POST /api/v0/me/api-tokens)
 	CreateAPIToken(w http.ResponseWriter, r *http.Request)
+	// GetProfile Read the caller's preferences
+	// (GET /api/v0/me/profile)
+	GetProfile(w http.ResponseWriter, r *http.Request)
+	// UpdateProfile Change the caller's preferences
+	// (PATCH /api/v0/me/profile)
+	UpdateProfile(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -307,6 +477,20 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateMe operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMe(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListAPITokens operation middleware
 func (siw *ServerInterfaceWrapper) ListAPITokens(w http.ResponseWriter, r *http.Request) {
 
@@ -358,6 +542,34 @@ func (siw *ServerInterfaceWrapper) CreateAPIToken(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateAPIToken(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetProfile operation middleware
+func (siw *ServerInterfaceWrapper) GetProfile(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProfile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProfile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProfile(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -492,6 +704,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/auth/refresh", wrapper.RefreshTokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/auth/logout", wrapper.Logout)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me", wrapper.GetMe)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me", wrapper.UpdateMe)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/profile", wrapper.GetProfile)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/profile", wrapper.UpdateProfile)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/api-tokens", wrapper.ListAPITokens)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/me/api-tokens", wrapper.CreateAPIToken)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/api-tokens/{token_id}", wrapper.RevokeAPIToken)
@@ -772,6 +987,52 @@ func (response GetMedefaultApplicationProblemPlusJSONResponse) VisitGetMeRespons
 	return err
 }
 
+type UpdateMeRequestObject struct {
+	Body *UpdateMeJSONRequestBody
+}
+
+type UpdateMeResponseObject interface {
+	VisitUpdateMeResponse(w http.ResponseWriter) error
+}
+
+type UpdateMe200JSONResponse User
+
+func (response UpdateMe200JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateMedefaultApplicationProblemPlusJSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListAPITokensRequestObject struct {
 	Params ListAPITokensParams
 }
@@ -864,6 +1125,97 @@ func (response CreateAPITokendefaultApplicationProblemPlusJSONResponse) VisitCre
 	return err
 }
 
+type GetProfileRequestObject struct {
+}
+
+type GetProfileResponseObject interface {
+	VisitGetProfileResponse(w http.ResponseWriter) error
+}
+
+type GetProfile200JSONResponse Profile
+
+func (response GetProfile200JSONResponse) VisitGetProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetProfiledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetProfiledefaultApplicationProblemPlusJSONResponse) VisitGetProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProfileRequestObject struct {
+	Body *UpdateProfileJSONRequestBody
+}
+
+type UpdateProfileResponseObject interface {
+	VisitUpdateProfileResponse(w http.ResponseWriter) error
+}
+
+type UpdateProfile200JSONResponse Profile
+
+func (response UpdateProfile200JSONResponse) VisitUpdateProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProfiledefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateProfiledefaultApplicationProblemPlusJSONResponse) VisitUpdateProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// RevokeAPIToken Revoke a personal access token
@@ -884,12 +1236,21 @@ type StrictServerInterface interface {
 	// GetMe Read the caller's account
 	// (GET /api/v0/me)
 	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// UpdateMe Change the caller's names and time zone
+	// (PATCH /api/v0/me)
+	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
 	// ListAPITokens List the caller's personal access tokens
 	// (GET /api/v0/me/api-tokens)
 	ListAPITokens(ctx context.Context, request ListAPITokensRequestObject) (ListAPITokensResponseObject, error)
 	// CreateAPIToken Create a personal access token
 	// (POST /api/v0/me/api-tokens)
 	CreateAPIToken(ctx context.Context, request CreateAPITokenRequestObject) (CreateAPITokenResponseObject, error)
+	// GetProfile Read the caller's preferences
+	// (GET /api/v0/me/profile)
+	GetProfile(ctx context.Context, request GetProfileRequestObject) (GetProfileResponseObject, error)
+	// UpdateProfile Change the caller's preferences
+	// (PATCH /api/v0/me/profile)
+	UpdateProfile(ctx context.Context, request UpdateProfileRequestObject) (UpdateProfileResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -1105,6 +1466,37 @@ func (sh *strictHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateMe operation middleware
+func (sh *strictHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	var request UpdateMeRequestObject
+
+	var body UpdateMeJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMe(ctx, request.(UpdateMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMe")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateMeResponseObject); ok {
+		if err := validResponse.VisitUpdateMeResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListAPITokens operation middleware
 func (sh *strictHandler) ListAPITokens(w http.ResponseWriter, r *http.Request, params ListAPITokensParams) {
 	var request ListAPITokensRequestObject
@@ -1155,6 +1547,61 @@ func (sh *strictHandler) CreateAPIToken(w http.ResponseWriter, r *http.Request) 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateAPITokenResponseObject); ok {
 		if err := validResponse.VisitCreateAPITokenResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetProfile operation middleware
+func (sh *strictHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
+	var request GetProfileRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProfile(ctx, request.(GetProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProfileResponseObject); ok {
+		if err := validResponse.VisitGetProfileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProfile operation middleware
+func (sh *strictHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	var request UpdateProfileRequestObject
+
+	var body UpdateProfileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProfile(ctx, request.(UpdateProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProfile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProfileResponseObject); ok {
+		if err := validResponse.VisitUpdateProfileResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

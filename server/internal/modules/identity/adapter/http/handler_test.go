@@ -65,13 +65,16 @@ func (fakeAuth) Authenticate(ctx context.Context, token string) (context.Context
 // fakes are the use cases behind a test server; newServer puts an idle fake
 // in place of each one left nil.
 type fakes struct {
-	register    *fakeRegister
-	login       *fakeLogin
-	refresh     *fakeRefresh
-	logout      *fakeLogout
-	listTokens  *fakeListTokens
-	createToken *fakeCreateToken
-	revokeToken *fakeRevokeToken
+	register      *fakeRegister
+	login         *fakeLogin
+	refresh       *fakeRefresh
+	logout        *fakeLogout
+	updateMe      *fakeUpdateMe
+	getProfile    *fakeGetProfile
+	updateProfile *fakeUpdateProfile
+	listTokens    *fakeListTokens
+	createToken   *fakeCreateToken
+	revokeToken   *fakeRevokeToken
 }
 
 // newServer serves the module with limits no test here reaches.
@@ -122,6 +125,15 @@ func serverWith(t *testing.T, f fakes, s httpadapter.Settings) http.Handler {
 	if f.logout == nil {
 		f.logout = &fakeLogout{}
 	}
+	if f.updateMe == nil {
+		f.updateMe = &fakeUpdateMe{}
+	}
+	if f.getProfile == nil {
+		f.getProfile = &fakeGetProfile{}
+	}
+	if f.updateProfile == nil {
+		f.updateProfile = &fakeUpdateProfile{}
+	}
 	if f.listTokens == nil {
 		f.listTokens = &fakeListTokens{}
 	}
@@ -132,7 +144,8 @@ func serverWith(t *testing.T, f fakes, s httpadapter.Settings) http.Handler {
 		f.revokeToken = &fakeRevokeToken{}
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		Register: f.register, Login: f.login, Refresh: f.refresh, Logout: f.logout, GetMe: fakeGetMe{},
+		Register: f.register, Login: f.login, Refresh: f.refresh, Logout: f.logout,
+		GetMe: fakeGetMe{}, UpdateMe: f.updateMe, GetProfile: f.getProfile, UpdateProfile: f.updateProfile,
 		ListAPITokens: f.listTokens, CreateAPIToken: f.createToken, RevokeAPIToken: f.revokeToken,
 	}, s)
 	return router

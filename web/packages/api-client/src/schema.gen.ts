@@ -98,7 +98,32 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change the caller's names and time zone
+         * @description Changes the fields sent and leaves the others. The e-mail address cannot change here: the server's administrator changes it.
+         */
+        patch: operations["updateMe"];
+        trace?: never;
+    };
+    "/api/v0/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller's preferences */
+        get: operations["getProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's preferences
+         * @description Changes the fields sent and leaves the others. The onboarding steps sent are merged into the stored ones: a step not sent keeps its value, also when another request changes it at the same time.
+         */
+        patch: operations["updateProfile"];
         trace?: never;
     };
     "/api/v0/me/api-tokens": {
@@ -250,6 +275,69 @@ export interface components {
             cover_image_url: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        UserUpdate: {
+            /** @description At most 255 characters, without a web address. */
+            first_name?: string;
+            /** @description At most 255 characters, without a web address. */
+            last_name?: string;
+            /** @description 1–255 characters. */
+            display_name?: string;
+            /** @description An IANA time zone name, e.g. from GET /api/v0/timezones. */
+            user_timezone?: string;
+        };
+        /** @enum {string} */
+        Theme: "system" | "light" | "dark" | "light-contrast" | "dark-contrast";
+        /**
+         * @description The language of the web UI.
+         * @enum {string}
+         */
+        Language: "en" | "zh-CN";
+        /**
+         * @description The first day of the week, 0 Sunday to 6 Saturday.
+         * @enum {integer}
+         */
+        StartOfTheWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        OnboardingSteps: {
+            profile_complete: boolean;
+            workspace_create: boolean;
+            workspace_invite: boolean;
+            workspace_join: boolean;
+        };
+        Profile: {
+            theme: components["schemas"]["Theme"];
+            language: components["schemas"]["Language"];
+            start_of_the_week: components["schemas"]["StartOfTheWeek"];
+            onboarding_step: components["schemas"]["OnboardingSteps"];
+            is_onboarded: boolean;
+            is_tour_completed: boolean;
+            /**
+             * Format: uuid
+             * @description The workspace the web app opens last; null for none. It is not checked to exist.
+             */
+            last_workspace_id: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description The steps to set; the others keep their values. */
+        OnboardingStepsUpdate: {
+            profile_complete?: boolean;
+            workspace_create?: boolean;
+            workspace_invite?: boolean;
+            workspace_join?: boolean;
+        };
+        ProfileUpdate: {
+            theme?: components["schemas"]["Theme"];
+            language?: components["schemas"]["Language"];
+            start_of_the_week?: components["schemas"]["StartOfTheWeek"];
+            onboarding_step?: components["schemas"]["OnboardingStepsUpdate"];
+            is_onboarded?: boolean;
+            is_tour_completed?: boolean;
+            /**
+             * Format: uuid
+             * @description Null clears it.
+             */
+            last_workspace_id?: string | null;
         };
         /** @description A personal access token as lists show it. The token itself appears only in ApiTokenCreated. */
         ApiToken: {
@@ -468,6 +556,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's account, changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's preferences. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's preferences, changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
                 };
             };
             default: components["responses"]["Problem"];
