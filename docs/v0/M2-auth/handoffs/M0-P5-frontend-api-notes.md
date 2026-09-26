@@ -23,7 +23,7 @@ created: 2026-09-22
 ## 处理结果（M2/P2）
 
 - **安全响应头**（完成）：`httpserver.NewServer` 的固定链加上第四个中间件，每个响应（接口、页面、健康检查、panic 之后的 500）都带 `X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`。
-- **与 CSP 分在两层**（有意的安排，M2 设计 8.3）：这三个响应头对接口的响应同样有意义，所以放在固定链上；CSP 只对页面有意义，而且要用 `index.html` 里内联脚本的哈希，只有 `webui` 知道这些脚本，所以由 M2/P4 在 `webui` 中加入。交接原文"和 CSP 放在同一层"的本意是两者都由服务端在 M2 加入，这一点照做；这一项在 P4 加入 CSP 时正式关闭。
+- **与 CSP 分在两层**（有意的安排，M2 设计 8.3）：这三个响应头对接口的响应同样有意义，所以放在固定链上；CSP 只对页面有意义，而且要用 `index.html` 里内联脚本的哈希，只有 `webui` 知道这些脚本，所以由 M2/P4 在 `webui` 中加入。交接原文"和 CSP 的决定放在一起做——大概率是同一层中间件"的本意是两者都由服务端在 M2 加入，这一点照做；这一项在 P4 加入 CSP 时正式关闭。
 - **认证接口在 `/api/v0/` 下**（接口完成）：`register`、`login`、`refreshTokens`、`logout` 都在 `/api/v0/auth/` 下。
 
 仍未处理，状态保持 `open`：CSP（M2/P4）；前端改调 `/api/v0/instance` 和认证接口，以及同源部署的核对（M2/P4）。
