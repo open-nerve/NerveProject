@@ -25,3 +25,11 @@ M2 合并时：`api/` 里用户资料或偏好的接口描述中，主题只有 
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。
+
+## 处理结果（M2/P3a）
+
+- **接口描述**（完成）：`Profile` 和 `ProfileUpdate` 的 `theme` 是枚举 `Theme`，只有 `system`、`light`、`dark`、`light-contrast`、`dark-contrast` 五个值，没有 `custom`，也没有调色板字段；`profiles.theme` 的 CHECK 是同样五个值。
+
+仍未处理，状态保持 `open`：前端的 `IUserTheme` 改用生成的类型（M2/P4、P5）。
+
+来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。

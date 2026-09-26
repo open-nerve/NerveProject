@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 from: M0/P3
 to: M2
 created: 2026-09-22
@@ -74,3 +74,12 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：第 1 条中 google/uuid 的守卫，第 2 条中参数绑定的出口（`listApiTokens`、`revokeApiToken`），都在 M2/P3。
 
 来源：[M2/P1 spec](../specs/P1-platform-core.md) 第 7 节。
+
+## 处理结果（M2/P3a）
+
+1. **google/uuid 的守卫**（完成，M2 设计 3.12）：`github.com/oapi-codegen/runtime` v1.7.0 随第一批带参数的操作（`listApiTokens`、`revokeApiToken`）加入，`server/go.mod` 仍是 `go 1.27`、`toolchain go1.27.1`。它自己的参数绑定导入 google/uuid，所以传递依赖测试 `TestNerveBinaryLinksNoBannedModule` 只允许 `oapi-codegen/runtime` 模块的包导入 google/uuid，别的包导入仍然失败并打印导入链；"生成代码不漏 uuid 的映射"由新规则 `TestGeneratedCodeUsesTheStandardUUID` 直接检查：生成文件不得引用 `oapi-codegen/runtime/types` 的 `UUID`（不论导入时用什么名字；生成代码默认叫它 `openapi_types`）。
+2. **参数绑定的出口**（完成）：参数绑定失败由 `APIErrors.BadRequest` 答 400 `bad_request`，`errors` 里写出参数名（`code` 为 `invalid_format`，缺少必填参数时为 `required`），`detail` 不带出 Go 的类型名。identity 的 handler 测试（`limit=abc`、`token_id=not-a-uuid`）和整程序测试 5（从接口描述推出每个会拒绝某些字符串的参数）覆盖这个出口，并对 problem 做 `CheckResponse`。
+
+全部处理完，状态改为 `done`。
+
+来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。
