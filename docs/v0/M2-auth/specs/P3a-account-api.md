@@ -107,10 +107,10 @@ func InvalidCursor() *Error                         // 400 bad_request，errors[
 ### 2.7 PAT 与令牌规格（M2 设计 3.4、4.4、4.6）
 
 - `domain.PATPrefix = "nrv_pat_"`；`domain.PAT [32]byte`；`String()` 是前缀加 43 个字符的无补位 base64url；`Hash()` 是**整个令牌**的 SHA-256；`ParsePAT(s) (PAT, bool)`：恰好 51 个字符、前缀正确、`base64.RawURLEncoding.Strict()` 解出 32 字节，不查库。
-- `domain.APITokenSpec{Label *string; Description string; ExpiredAt *time.Time}`；`CheckAPIToken(spec, now)`：标签 1–255 个字符（按字符计）；标签和说明不含 NUL（第 3 节第 9 条）；`expired_at` 晚于 `now`（`must_be_future`）；一次报出全部问题。
+- `domain.APITokenSpec{Label *string; Description string; ExpiredAt *time.Time}`；`CheckAPIToken(spec, now) (APITokenSpec, error)`：标签 1–255 个字符（按字符计）；标签和说明不含 NUL（第 3 节第 9 条）；`expired_at` 晚于 `now`（`must_be_future`）；一次报出全部问题。返回的规格中 `expired_at` 转为 UTC、截到微秒（数据库存的精度），检查、插入和 201 都用它（收尾修复：原来 201 照原样回显带偏移或不足微秒的时间，与列表读回的不同）。
 - `domain.PageSize(limit *int)`：`nil` 是 50；1–100 之外 422 `limit` `out_of_range`（第 3 节第 8 条）。
-- `domain.APITokenCursor{CreatedAt; ID}`，JSON 是 `[created_at, id]`（RFC 3339 带微秒、uuid）。
-- 测试：`TestPATRoundTrip`；`TestParsePATRejects`（11 个）；`TestCheckAPITokenAcceptsAValidSpec`；`TestCheckAPITokenReportsEveryField`（6 个）；`TestPageSize`；`TestAPITokenCursorRoundTrip`；`TestAPITokenCursorRejects`（8 种载荷）。
+- `domain.APITokenCursor{CreatedAt; ID}`，JSON 是 `[created_at, id]`（RFC 3339 带微秒、uuid）；`created_at` 一律写成 UTC，每个位置只有一种写法（收尾修复）。
+- 测试：`TestPATRoundTrip`；`TestParsePATRejects`（11 个）；`TestCheckAPITokenAcceptsAValidSpec`；`TestCheckAPITokenNormalizesTheExpiry`；`TestCheckAPITokenReportsEveryField`（7 个）；`TestPageSize`；`TestAPITokenCursorRoundTrip`；`TestAPITokenCursorRejects`（8 种载荷）。
 
 ### 2.8 `api_tokens` 表与查询（M2 设计 3.5、3.13、3.14、4.4）
 
