@@ -45,6 +45,7 @@ auth:
     private_key_file: ""
   password:
     # argon2id 的参数（OWASP 推荐的最低配置）
+    # 调高之后，休眠的账户再登录一次之前，登录耗时能把它和不存在的邮箱区分开（M2 设计 §16）
     argon2_memory_kib: 19456
     argon2_iterations: 2
     argon2_parallelism: 1
