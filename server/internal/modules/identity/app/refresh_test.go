@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"log/slog"
 	"net/netip"
@@ -263,9 +262,9 @@ func TestRefreshLogsNoSecret(t *testing.T) {
 	_, _ = f.uc.Execute(context.Background(), old.String(), clientIP)
 
 	logs := f.logs.String()
-	for _, secret := range []string{old.String(), tokens.RefreshToken, tokens.AccessToken, hex.EncodeToString(old.SecretHash()), hex.EncodeToString(f.row.State.TokenHash)} {
-		if strings.Contains(logs, secret) {
-			t.Errorf("logs contain %q:\n%s", secret, logs)
-		}
-	}
+	assertNoSecret(t, logs, "reused refresh token", []byte(old.String()))
+	assertNoSecret(t, logs, "reused token's hash", old.SecretHash())
+	assertNoSecret(t, logs, "refresh token", []byte(tokens.RefreshToken))
+	assertNoSecret(t, logs, "access token", []byte(tokens.AccessToken))
+	assertNoSecret(t, logs, "token hash", f.row.State.TokenHash)
 }

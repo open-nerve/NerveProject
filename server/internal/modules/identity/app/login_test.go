@@ -239,9 +239,15 @@ func TestLoginLogsNoSecret(t *testing.T) {
 			t.Errorf("logs lack %s:\n%s", want, logs)
 		}
 	}
-	for _, secret := range []string{"Tr0ub4dor", "Wr0ng", "alice", "bob", tokens.AccessToken, tokens.RefreshToken, string(session.TokenHash)} {
-		if strings.Contains(logs, secret) {
-			t.Errorf("logs contain %q:\n%s", secret, logs)
+	for _, address := range []string{"alice", "bob"} {
+		if strings.Contains(logs, address) {
+			t.Errorf("logs contain %q:\n%s", address, logs)
 		}
 	}
+	assertNoSecret(t, logs, "password", []byte(loginInput.Password))
+	assertNoSecret(t, logs, "wrong password", []byte("Wr0ng-password"))
+	assertNoSecret(t, logs, "password hash", []byte(f.logins.hash))
+	assertNoSecret(t, logs, "access token", []byte(tokens.AccessToken))
+	assertNoSecret(t, logs, "refresh token", []byte(tokens.RefreshToken))
+	assertNoSecret(t, logs, "token hash", session.TokenHash)
 }
