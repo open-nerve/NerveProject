@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -63,16 +65,55 @@ func NewAPIErrors(logger *slog.Logger) APIErrors {
 	return APIErrors{logger: logger}
 }
 
-// BadRequest answers 400 bad_request for a request whose parameters the
-// generated code could not bind; err says what was wrong and becomes the
-// detail. (M2/P3 derives the field from binding errors instead.)
-func (APIErrors) BadRequest(w http.ResponseWriter, _ *http.Request, err error) {
-	WriteProblem(w, Problem{
+// BadRequest answers a request whose path, query or header parameters the
+// generated code could not bind: 400 bad_request, with the parameter in
+// errors (M2 design 3.11). The binding errors' messages name Go functions and
+// types, so the detail is generic and err is logged at debug level only.
+func (e APIErrors) BadRequest(w http.ResponseWriter, r *http.Request, err error) {
+	e.logger.LogAttrs(r.Context(), slog.LevelDebug, "request parameters not bound",
+		slog.String("request_id", RequestID(r.Context())), slog.Any("error", err))
+	p := Problem{
 		Status: http.StatusBadRequest,
 		Code:   CodeBadRequest,
 		Title:  http.StatusText(http.StatusBadRequest),
-		Detail: err.Error(),
-	})
+		Detail: "The request parameters do not match the API description.",
+	}
+	if f, ok := parameterOf(err); ok {
+		p.Errors = []FieldError{f}
+	}
+	WriteProblem(w, p)
+}
+
+// The field codes of a parameter that did not bind (api/common.yaml).
+const (
+	fieldRequired      = "required"
+	fieldInvalidFormat = "invalid_format"
+)
+
+// parameterOf reads the parameter that a binding error names. oapi-codegen
+// declares the binding errors (InvalidParamFormatError, RequiredParamError
+// and four more) in each module's gen package, which the platform does not
+// import, and gives them no method that names the parameter. Each is a
+// pointer to a struct with the name in the string field ParamName, so the
+// name is read by reflection; a type named Required... reports a missing
+// parameter. The whole-program test of bootstrap binds every operation's
+// parameters with a wrong value through the generated code.
+func parameterOf(err error) (FieldError, bool) {
+	v := reflect.ValueOf(err)
+	if v.Kind() == reflect.Pointer {
+		v = v.Elem()
+	}
+	if v.Kind() != reflect.Struct {
+		return FieldError{}, false
+	}
+	name := v.FieldByName("ParamName")
+	if name.Kind() != reflect.String {
+		return FieldError{}, false
+	}
+	if strings.HasPrefix(v.Type().Name(), "Required") {
+		return FieldError{Field: name.String(), Code: fieldRequired, Message: "is required"}, true
+	}
+	return FieldError{Field: name.String(), Code: fieldInvalidFormat, Message: "has the wrong type or format"}, true
 }
 
 // BodyError answers a request body that could not be read, parsed or

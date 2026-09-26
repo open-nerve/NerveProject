@@ -286,7 +286,7 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | `modules/instance/adapter/http/handler_test.go` | `GET /api/v0/instance` 的响应符合契约，内容正确（M0 设计 3.8） |
 | `bootstrap/api_test.go` | 整个程序（含三个中间件）：instance 返回 200、`version` 等于 `buildinfo.Get().Version`、带 `X-Request-Id`；`GET /api/v0/nope`、`POST /api/v0/instance` 返回 404 problem+json。不需要数据库 |
 
-**archtest 规则 8** 改为"测试工具（`pgtest`、`apitest`）只能被测试导入"；规则表格补上相应的违规例子，以及 `gen` → `apigen` 这条合法的边。规则 8 只保证测试工具包本身不进生产程序，管不到别的途径：生成的代码（`embedded-spec: true`，或没有映射的 `format: uuid` 经 `oapi-codegen/runtime/types` 引入 `github.com/google/uuid`）或其他导入，而 depguard 不检查生成的文件。所以 archtest 另有 **`TestNerveBinaryLinksNoBannedModule`**：用 `packages.Load`（`NeedName | NeedImports | NeedDeps`，不含测试）读取 `./cmd/nerve` 的全部传递依赖，出现以 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并给出一条导入链，例如 `cmd/nerve → internal/bootstrap → internal/platform/httpserver → github.com/getkin/kin-openapi/openapi3`。它与规则测试共用遍历源码目录的函数，新的导入会让缓存的结果失效。两者合起来保证：测试工具只在测试中使用，测试专用和禁用的模块不进 `nerve` 程序。
+**archtest 规则 8** 改为"测试工具（`pgtest`、`apitest`）只能被测试导入"；规则表格补上相应的违规例子，以及 `gen` → `apigen` 这条合法的边。规则 8 只保证测试工具包本身不进生产程序，管不到别的途径：生成的代码（`embedded-spec: true`，或没有映射的 `format: uuid` 经 `oapi-codegen/runtime/types` 引入 `github.com/google/uuid`）或其他导入，而 depguard 不检查生成的文件。所以 archtest 另有 **`TestNerveBinaryLinksNoBannedModule`**：用 `packages.Load`（`NeedName | NeedImports | NeedDeps`，不含测试）读取 `./cmd/nerve` 的全部传递依赖，出现以 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并给出一条导入链，例如 `cmd/nerve → internal/bootstrap → internal/platform/httpserver → github.com/getkin/kin-openapi/openapi3`。它与规则测试共用遍历源码目录的函数，新的导入会让缓存的结果失效。两者合起来保证：测试工具只在测试中使用，测试专用和禁用的模块不进 `nerve` 程序。（M2/P3a 改写：`github.com/google/uuid` 只允许由 `oapi-codegen/runtime` 模块的包导入；没有映射的 `format: uuid` 由生成文件的规则 `TestGeneratedCodeUsesTheStandardUUID` 拦下：生成文件不得引用 `oapi-codegen/runtime/types` 的 `UUID`（不论导入时用什么名字；生成代码默认叫它 `openapi_types`）。见 M2 设计 3.12。）
 
 ### 2.9 TS 客户端：`web/packages/api-client`
 
@@ -408,7 +408,7 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | M2 | 请求取值的校验放在哪一层（生成的代码不校验枚举、长度等），以及"参数校验错误"的错误码和 `errors` 字段；领域错误在 `ResponseErrorHandlerFunc` 中映射为 problem |
 | M2 | 错误出口的细节：请求体 JSON 解码失败时，`BadRequest` 的 `detail` 会带出 Go 的类型名（`json: cannot unmarshal … Go struct field IssueCreate.name …`），改为 `errors[]` 或通用的说明；`http.MaxBytesError` → 413；`context.Canceled` 不产生 500，也不记 ERROR 日志 |
 | M2 | problem 只走一条路：用 `apigen.Problem` 的 typed `default` 响应，或者 handler 返回错误再统一映射，二选一 |
-| M2 | `format: uuid`：用 `output-options.type-mapping` 映射到标准库 `uuid.UUID`，否则生成代码会用 `github.com/google/uuid`（2.2 已验证可行；漏掉时 archtest 的传递依赖测试失败） |
+| M2 | `format: uuid`：用 `output-options.type-mapping` 映射到标准库 `uuid.UUID`，否则生成代码会用 `github.com/google/uuid`（2.2 已验证可行；漏掉时生成代码引用 `openapi_types.UUID`，archtest 的生成文件规则失败，M2 设计 3.12） |
 | M2 | PATCH 的"传 `null` 清空"：`output-options.nullable-type: true`，生成 `nullable.Nullable[T]`（引入 `github.com/oapi-codegen/nullable`） |
 | M2 | 模块配置的模板选项一次定下、每个模块照抄：`nullable-type`、`prefer-skip-optional-pointer`、uuid 的 `type-mapping`（与上两行一起决定） |
 | M2 | 第一个带参数的接口会让生成代码导入 `github.com/oapi-codegen/runtime`（最新版 v1.7.0），写死版本 |
@@ -416,7 +416,7 @@ func (c *Contract) CheckSchema(t testing.TB, name string, body []byte)      // �
 | M2 | 模块入口的扩展：第二个模块出现前，把平台的 HTTP 依赖合成一个值传入；`httpadapter.Register` 接收一个用例结构体；生成的 `Middlewares` 按相反的顺序包装（最后一个在最外层）；其他模块要用的能力由模块导出访问方法 |
 | M2 | 接口描述的布局：多个模块共用的接口类型放在 `common.yaml`（模块文件之间互相 `$ref` 会违反 archtest 规则 3 和 6）；一个路径只属于一个模块文件；模块文件名与 Go 的模块目录名相同 |
 | M2 | 第一个带参数或请求体的模块，为每个错误出口写测试；可选：`apitest` 增加 `CheckRequest` |
-| M3 | 第一个列表接口把 `Limit`、`Cursor`（parameters）和 `NextCursor`（schema，`type: [string, 'null']`）加入 `api/common.yaml` |
+| M2 | 第一个列表接口把 `Limit`、`Cursor`（parameters）和 `NextCursor`（schema，`type: [string, 'null']`）加入 `api/common.yaml`（原定 M3；M2/P3a 随 `listApiTokens` 加入，M2 设计 3.12） |
 | P5 | oxfmt、oxlint 排除 `web/packages/api-client/src/schema.gen.ts` 和 `api/dist/`；`make lint-web` 改为 turbo 驱动，保留 api-client 的类型检查（脚本已按 Plane 的习惯叫 `check:types`）；`typescript` 改用 `catalog:`；合并 Plane 根目录的 `package.json` 时保留 `@redocly/cli` |
 | P6 | 端到端测试通过 `@nerve/api-client` 的 `createClient({ baseUrl })` 调用接口 |
 | P6 | `e2e` 任务的 `if` 和 `needs`：同仓 PR 跳过的任务也报告为成功，`e2e` 经 `needs` 继承这一点；将来把检查设为必需之前，去掉跳过条件或加一个 `if: always()` 的汇总任务 |

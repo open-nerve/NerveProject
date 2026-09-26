@@ -43,6 +43,26 @@ type UserReader interface {
 	GetUser(ctx context.Context, id uuid.UUID) (domain.User, error)
 }
 
+// UserUpdater applies partial updates to accounts.
+type UserUpdater interface {
+	// UpdateUser applies p to account id at now and returns the account;
+	// ErrNotFound when there is none.
+	UpdateUser(ctx context.Context, id uuid.UUID, p domain.UserPatch, now time.Time) (domain.User, error)
+}
+
+// ProfileReader reads preferences.
+type ProfileReader interface {
+	// GetProfile returns ErrNotFound when userID has no profile.
+	GetProfile(ctx context.Context, userID uuid.UUID) (domain.Profile, error)
+}
+
+// ProfileUpdater applies partial updates to preferences.
+type ProfileUpdater interface {
+	// UpdateProfile applies p to userID's profile at now and returns it;
+	// ErrNotFound when there is none.
+	UpdateProfile(ctx context.Context, userID uuid.UUID, p domain.ProfilePatch, now time.Time) (domain.Profile, error)
+}
+
 // LoginAccount is what login reads of an account before its transaction:
 // the hash is the snapshot it verifies the password against (M2 design 3.5).
 type LoginAccount struct {
@@ -55,6 +75,20 @@ type LoginAccountReader interface {
 	// FindLoginAccount returns ErrNotFound when no account has email, a
 	// normalized address.
 	FindLoginAccount(ctx context.Context, email string) (LoginAccount, error)
+}
+
+// PasswordAccount is what changing the password reads of the account
+// before its transaction: the address, for the password rules, and the
+// hash, as the snapshot (M2 design 3.5).
+type PasswordAccount struct {
+	Email        string // normalized
+	PasswordHash string
+}
+
+// PasswordAccountReader reads an account whose password is to change.
+type PasswordAccountReader interface {
+	// PasswordAccount returns ErrNotFound when there is no account id.
+	PasswordAccount(ctx context.Context, id uuid.UUID) (PasswordAccount, error)
 }
 
 // LockedAccount is an account's row under the credential lock.
@@ -70,6 +104,19 @@ type CredentialLocker interface {
 	// (SELECT … FOR NO KEY UPDATE) and returns it; ErrNotFound when there
 	// is none. Call it inside a transaction.
 	LockForCredentials(ctx context.Context, id uuid.UUID) (LockedAccount, error)
+}
+
+// UserDeactivator deactivates accounts.
+type UserDeactivator interface {
+	// DeactivateUser sets account id inactive at now.
+	DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error
+}
+
+// OnboardingResetter starts an account's onboarding over.
+type OnboardingResetter interface {
+	// ResetOnboarding puts userID's onboarding steps, is_onboarded,
+	// is_tour_completed and last workspace back to their defaults at now.
+	ResetOnboarding(ctx context.Context, userID uuid.UUID, now time.Time) error
 }
 
 // PasswordHashWriter stores a new hash of an account's password.
@@ -141,11 +188,77 @@ type SessionRotator interface {
 	RevokeForReuse(ctx context.Context, id uuid.UUID, now time.Time) error
 }
 
+// SessionRevoker revokes an account's sessions (M2 design 3.5).
+type SessionRevoker interface {
+	// RevokeSessions revokes at now, with reason, every session of userID
+	// that is neither revoked nor expired, except keep (uuid.Nil keeps
+	// none), and returns how many it revoked.
+	RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason domain.RevokeReason, now time.Time) (int, error)
+}
+
 // SessionEnder ends sessions at logout.
 type SessionEnder interface {
 	// EndSession revokes the session with reason logout while it is at g;
 	// false when it is not.
 	EndSession(ctx context.Context, g SessionGeneration) (bool, error)
+}
+
+// NewAPIToken is a personal access token to insert. The account creates it
+// for itself, at Now.
+type NewAPIToken struct {
+	ID          uuid.UUID
+	UserID      uuid.UUID
+	TokenHash   []byte // domain.PAT.Hash
+	Label       string
+	Description string
+	ExpiredAt   *time.Time
+	Now         time.Time
+}
+
+// APITokenCreator inserts personal access tokens.
+type APITokenCreator interface {
+	CreateAPIToken(ctx context.Context, t NewAPIToken) error
+}
+
+// APITokenLister reads an account's tokens, a page at a time.
+type APITokenLister interface {
+	// ListAPITokens returns up to limit of userID's unrevoked tokens,
+	// newest first and then by id: from the start when after is nil,
+	// otherwise those after its row.
+	ListAPITokens(ctx context.Context, userID uuid.UUID, after *domain.APITokenCursor, limit int) ([]domain.APIToken, error)
+}
+
+// APITokenRevoker revokes personal access tokens.
+type APITokenRevoker interface {
+	// RevokeAPIToken revokes token id of userID at now; false when userID
+	// has no such unrevoked token.
+	RevokeAPIToken(ctx context.Context, id, userID uuid.UUID, now time.Time) (bool, error)
+}
+
+// APITokenCredential is what authentication and the credential lock check
+// of a personal access token.
+type APITokenCredential struct {
+	ID         uuid.UUID
+	UserID     uuid.UUID
+	ExpiredAt  *time.Time // nil: never expires
+	LastUsed   *time.Time
+	Revoked    bool
+	UserActive bool
+}
+
+// APITokenReader reads what authentication and the credential lock need.
+type APITokenReader interface {
+	// APITokenByHash returns ErrNotFound when no token has hash.
+	APITokenByHash(ctx context.Context, hash []byte) (APITokenCredential, error)
+	// APITokenByID returns ErrNotFound when there is no token id.
+	APITokenByID(ctx context.Context, id uuid.UUID) (APITokenCredential, error)
+}
+
+// APITokenToucher records that a token was used.
+type APITokenToucher interface {
+	// TouchAPIToken sets token id's last_used to now when it is unset or
+	// older than staleBefore.
+	TouchAPIToken(ctx context.Context, id uuid.UUID, now, staleBefore time.Time) error
 }
 
 // PasswordHasher hashes and verifies passwords with argon2id. Both return a

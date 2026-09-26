@@ -57,10 +57,10 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 3 {
-		t.Fatalf("Up() = %d migrations, %v; want 3", len(up), err)
+	if err != nil || len(up) != 4 {
+		t.Fatalf("Up() = %d migrations, %v; want 4", len(up), err)
 	}
-	if got, want := tables(t, pool), []string{"auth_sessions", "profiles", "users"}; !slices.Equal(got, want) {
+	if got, want := tables(t, pool), []string{"api_tokens", "auth_sessions", "profiles", "users"}; !slices.Equal(got, want) {
 		t.Errorf("tables after Up = %q, want %q", got, want)
 	}
 	for range up {
@@ -71,8 +71,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	if got := tables(t, pool); len(got) != 0 {
 		t.Errorf("tables after every Down = %q, want none", got)
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 3 {
-		t.Errorf("Up() again = %d migrations, %v; want 3", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 4 {
+		t.Errorf("Up() again = %d migrations, %v; want 4", len(again), err)
 	}
 }
 
@@ -82,10 +82,10 @@ func TestConstraintAndIndexNames(t *testing.T) {
 	pool := newPool(t, pgtest.NewDatabase(t))
 	rows, err := pool.Query(context.Background(), `
 		SELECT conname || ' ' || contype::text || CASE WHEN contype = 'f' THEN ' ' || confdeltype::text ELSE '' END FROM pg_constraint
-		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass)
+		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass)
 			AND contype <> 'n' -- PG 18 lists NOT NULL as constraints too
 		UNION ALL
-		SELECT indexname || ' i' FROM pg_indexes WHERE tablename IN ('users', 'profiles', 'auth_sessions')
+		SELECT indexname || ' i' FROM pg_indexes WHERE tablename IN ('users', 'profiles', 'auth_sessions', 'api_tokens')
 		ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)
@@ -98,8 +98,19 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		}
 		got = append(got, s)
 	}
-	// contype: p primary key, u unique, f foreign key (confdeltype c: ON DELETE CASCADE), c check.
+	// contype: p primary key, u unique, f foreign key (confdeltype c: ON
+	// DELETE CASCADE, n: ON DELETE SET NULL), c check.
 	want := []string{
+		"api_tokens_created_by_id_fkey f n",
+		"api_tokens_label_check c",
+		"api_tokens_pkey i",
+		"api_tokens_pkey p",
+		"api_tokens_token_hash_check c",
+		"api_tokens_token_hash_key i",
+		"api_tokens_token_hash_key u",
+		"api_tokens_updated_by_id_fkey f n",
+		"api_tokens_user_id_created_at_idx i",
+		"api_tokens_user_id_fkey f c",
 		"auth_sessions_expires_at_idx i",
 		"auth_sessions_generation_check c",
 		"auth_sessions_pkey i",
@@ -143,6 +154,7 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		`UPDATE profiles SET onboarding_step = onboarding_step || '{"profile_complete": true}'`,
 		"UPDATE profiles SET onboarding_step = onboarding_step || '{}'",
 		"UPDATE auth_sessions SET revoked_at = now(), revoke_reason = 'logout'",
+		"INSERT INTO api_tokens (id, user_id, token_hash, label) VALUES ('0199a2b4-0000-7000-8000-000000000004', " + user + ", sha256('t'), 'x')",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -177,6 +189,8 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		{"unknown revoke reason", "UPDATE auth_sessions SET revoke_reason = 'expired'", "auth_sessions_revoke_reason_check"},
 		{"revoked without a reason", "UPDATE auth_sessions SET revoke_reason = NULL", "auth_sessions_revoked_consistent_check"},
 		{"a reason without revoked_at", "UPDATE auth_sessions SET revoked_at = NULL", "auth_sessions_revoked_consistent_check"},
+		{"token hash of a PAT not 32 bytes", "UPDATE api_tokens SET token_hash = '\\x00'", "api_tokens_token_hash_check"},
+		{"empty label", "UPDATE api_tokens SET label = ''", "api_tokens_label_check"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

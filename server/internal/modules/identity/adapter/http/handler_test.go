@@ -52,23 +52,40 @@ func (fakeGetMe) Execute(ctx context.Context) (domain.User, error) {
 	return domain.User{ID: actor.UserID, Email: "alice@corp.com", DisplayName: "alice", Timezone: "UTC", CreatedAt: created}, nil
 }
 
-// fakeAuth accepts the token "valid" as the account userID.
+// fakeAuth accepts the token "valid" as a session of the account userID,
+// "pat" as a personal access token of the same account, and "other" as a
+// personal access token of otherUserID.
 type fakeAuth struct{}
 
+var otherUserID = uuid.MustParse("0199a2b4-0000-7000-8000-000000000009")
+
 func (fakeAuth) Authenticate(ctx context.Context, token string) (context.Context, string, error) {
-	if token != "valid" {
-		return nil, "", shared.Unauthenticated()
+	switch token {
+	case "valid":
+		return shared.WithActor(ctx, shared.Actor{UserID: userID, SessionID: sessionID}), "session:" + sessionID.String(), nil
+	case "pat":
+		return shared.WithActor(ctx, shared.Actor{UserID: userID, APITokenID: tokenID}), "pat:" + tokenID.String(), nil
+	case "other":
+		return shared.WithActor(ctx, shared.Actor{UserID: otherUserID, APITokenID: tokenID}), "pat:" + tokenID.String(), nil
 	}
-	return shared.WithActor(ctx, shared.Actor{UserID: userID, SessionID: sessionID}), "session:" + sessionID.String(), nil
+	return nil, "", shared.Unauthenticated()
 }
 
 // fakes are the use cases behind a test server; newServer puts an idle fake
 // in place of each one left nil.
 type fakes struct {
-	register *fakeRegister
-	login    *fakeLogin
-	refresh  *fakeRefresh
-	logout   *fakeLogout
+	register      *fakeRegister
+	login         *fakeLogin
+	refresh       *fakeRefresh
+	logout        *fakeLogout
+	updateMe      *fakeUpdateMe
+	change        *fakeChangePassword
+	deactivate    *fakeDeactivate
+	getProfile    *fakeGetProfile
+	updateProfile *fakeUpdateProfile
+	listTokens    *fakeListTokens
+	createToken   *fakeCreateToken
+	revokeToken   *fakeRevokeToken
 }
 
 // newServer serves the module with limits no test here reaches.
@@ -79,7 +96,10 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		return limiter.Bucket(name, ratelimit.Rate{PerMinute: 600, Burst: 100})
 	}
 	return serverWith(t, f, httpadapter.Settings{
-		Limits:          httpadapter.Limits{Limiter: limiter, LoginIP: roomy("login_ip"), LoginIPEmail: roomy("login_ip_email"), RegisterIP: roomy("register_ip")},
+		Limits: httpadapter.Limits{
+			Limiter: limiter, LoginIP: roomy("login_ip"), LoginIPEmail: roomy("login_ip_email"),
+			RegisterIP: roomy("register_ip"), PasswordUser: roomy("password_user"),
+		},
 		RefreshDeadline: refreshDeadline,
 		Logger:          slog.New(slog.DiscardHandler),
 	})
@@ -119,8 +139,35 @@ func serverWith(t *testing.T, f fakes, s httpadapter.Settings) http.Handler {
 	if f.logout == nil {
 		f.logout = &fakeLogout{}
 	}
+	if f.updateMe == nil {
+		f.updateMe = &fakeUpdateMe{}
+	}
+	if f.change == nil {
+		f.change = &fakeChangePassword{}
+	}
+	if f.deactivate == nil {
+		f.deactivate = &fakeDeactivate{}
+	}
+	if f.getProfile == nil {
+		f.getProfile = &fakeGetProfile{}
+	}
+	if f.updateProfile == nil {
+		f.updateProfile = &fakeUpdateProfile{}
+	}
+	if f.listTokens == nil {
+		f.listTokens = &fakeListTokens{}
+	}
+	if f.createToken == nil {
+		f.createToken = &fakeCreateToken{}
+	}
+	if f.revokeToken == nil {
+		f.revokeToken = &fakeRevokeToken{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		Register: f.register, Login: f.login, Refresh: f.refresh, Logout: f.logout, GetMe: fakeGetMe{},
+		Register: f.register, Login: f.login, Refresh: f.refresh, Logout: f.logout,
+		GetMe: fakeGetMe{}, UpdateMe: f.updateMe, ChangePassword: f.change, Deactivate: f.deactivate,
+		GetProfile: f.getProfile, UpdateProfile: f.updateProfile,
+		ListAPITokens: f.listTokens, CreateAPIToken: f.createToken, RevokeAPIToken: f.revokeToken,
 	}, s)
 	return router
 }

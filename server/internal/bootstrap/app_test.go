@@ -26,10 +26,16 @@ var sampleMigrations = fstest.MapFS{
 	"00002_probe_create_gadgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE gadgets (id bigint);\n-- +goose Down\nDROP TABLE gadgets;\n")},
 }
 
-// testWebUI stands in for the built frontend, so tests do not depend on make build.
+// testWebUI stands in for the built frontend, so tests do not depend on make
+// build: index.html and one of Vite's content-hashed assets.
 const testIndexHTML = "<!doctype html><title>Nerve test</title>"
 
-var testWebUI = fstest.MapFS{"index.html": {Data: []byte(testIndexHTML)}}
+const testAsset = "assets/index-1a2b3c4d.js"
+
+var testWebUI = fstest.MapFS{
+	"index.html": {Data: []byte(testIndexHTML)},
+	testAsset:    {Data: []byte("export {};\n")},
+}
 
 const unreachableDB = "postgres://nobody@127.0.0.1:1/nowhere"
 
@@ -71,9 +77,11 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		RateLimit: config.RateLimitConfig{
 			IPv6PrefixLen: 64,
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
-			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy,
+			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
-		Log: config.LogConfig{Level: "error", Format: "text"},
+		Workspace: config.WorkspaceConfig{CreationEnabled: true},
+		Files:     config.FilesConfig{SizeLimit: 5242880},
+		Log:       config.LogConfig{Level: "error", Format: "text"},
 	}
 }
 

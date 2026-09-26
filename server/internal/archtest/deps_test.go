@@ -54,31 +54,33 @@ func (b bannedImport) via() string {
 	return strings.Join(hops, " → ")
 }
 
-// bannedImports walks g from root and returns every banned package that an
-// allowed package imports, each with the shortest chain to it. The imports
-// of a banned package are not followed: it has to go anyway.
-func bannedImports(g graph, root string, isBanned func(path string) bool) []bannedImport {
+// bannedImports walks g from root and returns every import of a banned
+// package by a package that root reaches, each with the shortest chain to the
+// importer. isBanned judges one import edge, so a package can be banned for
+// some importers only. The imports of a banned package are not followed: it
+// has to go anyway.
+func bannedImports(g graph, root string, isBanned func(importer, path string) bool) []bannedImport {
 	importer := map[string]string{root: ""}
 	var found []bannedImport
 	for queue := []string{root}; len(queue) > 0; queue = queue[1:] {
 		pkg := queue[0]
-		if isBanned(pkg) {
-			var chain []string
-			for p := pkg; p != ""; p = importer[p] {
-				chain = append(chain, p)
-			}
-			slices.Reverse(chain)
-			found = append(found, bannedImport{chain})
-			continue
-		}
 		for _, dep := range g[pkg] {
+			if isBanned(pkg, dep) {
+				var chain []string
+				for p := pkg; p != ""; p = importer[p] {
+					chain = append(chain, p)
+				}
+				slices.Reverse(chain)
+				found = append(found, bannedImport{append(chain, dep)})
+				continue
+			}
 			if _, seen := importer[dep]; !seen {
 				importer[dep] = pkg
 				queue = append(queue, dep)
 			}
 		}
 	}
-	slices.SortFunc(found, func(a, b bannedImport) int {
+	slices.SortStableFunc(found, func(a, b bannedImport) int {
 		return strings.Compare(a.banned(), b.banned())
 	})
 	return found

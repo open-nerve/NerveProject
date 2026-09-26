@@ -41,6 +41,18 @@ func TestAuthenticatePutsTheActorInTheContext(t *testing.T) {
 	}
 }
 
+// A personal access token is limited by its own id (M2 design 3.10).
+func TestAuthenticateKeysAPATByItsID(t *testing.T) {
+	actor := shared.Actor{UserID: uuid.MustParse("0199a2b4-0000-7000-8000-000000000001"), APITokenID: uuid.MustParse("0199a2b4-0000-7000-8000-000000000003")}
+
+	ctx, key, err := authn.New(fakeUseCase{token: "nrv_pat_x", actor: actor}).Authenticate(context.Background(), "nrv_pat_x")
+
+	got, actorErr := shared.RequireActor(ctx)
+	if err != nil || actorErr != nil || got != actor || key != "pat:0199a2b4-0000-7000-8000-000000000003" {
+		t.Errorf("Authenticate() = actor %+v (%v), key %q, %v", got, actorErr, key, err)
+	}
+}
+
 // expiredCredential is the platform's optional interface on a 401.
 type expiredCredential interface{ ExpiredCredential() bool }
 

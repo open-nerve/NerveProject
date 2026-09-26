@@ -14,10 +14,20 @@ type Build struct {
 	Commit  string // git revision, "unknown" without a VCS stamp
 }
 
+// Settings are the configuration that an instance reports to clients, so
+// that they adapt to it (M2 design 5.3). The modules that act on them
+// enforce them.
+type Settings struct {
+	SignupEnabled            bool  // auth.signup_enabled
+	WorkspaceCreationEnabled bool  // workspace.creation_enabled
+	FileSizeLimit            int64 // files.size_limit, in bytes
+}
+
 // Info is what an instance tells API clients about itself.
 type Info struct {
 	Product    string
 	Version    string
 	Commit     string
 	APIVersion string
+	Settings
 }

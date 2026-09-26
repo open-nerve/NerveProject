@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -64,6 +65,107 @@ func TestRegisterThenGetMe(t *testing.T) {
 	if !strings.HasPrefix(tokens.RefreshToken, "nrv_rt_") {
 		t.Errorf("refresh token %q lacks the nrv_rt_ prefix", tokens.RefreshToken)
 	}
+}
+
+// A personal access token made through the app authenticates as its
+// account until it is revoked (M2 design 3.4, 3.5). It can make another
+// token, which the credential lock checks it for, and revoke itself.
+func TestAPersonalAccessTokenAuthenticates(t *testing.T) {
+	contract := apitest.Load(t)
+	base := startApp(t, testConfig(t, pgtest.NewDatabase(t), false), migrations.FS())
+	access := registerAccount(t, contract, base, "pat@example.com").AccessToken
+	status := func(method, path, token string) int {
+		t.Helper()
+		req := newRequest(t, method, base+path, token, nil)
+		res, _ := send(t, req)
+		contract.CheckResponse(t, req, res)
+		return res.StatusCode
+	}
+
+	first := createPAT(t, contract, base, access)
+	second := createPAT(t, contract, base, first.Token)
+	me, revoked, after, other := status(http.MethodGet, "/api/v0/me", first.Token),
+		status(http.MethodDelete, "/api/v0/api-tokens/"+first.ID, first.Token),
+		status(http.MethodGet, "/api/v0/me", first.Token),
+		status(http.MethodGet, "/api/v0/me", second.Token)
+
+	if me != http.StatusOK || revoked != http.StatusNoContent || after != http.StatusUnauthorized || other != http.StatusOK {
+		t.Errorf("GET /me %d, revoke itself %d, GET /me after %d, the other token %d; want 200, 204, 401, 200", me, revoked, after, other)
+	}
+}
+
+// last_used is best effort (M2 design 3.6): when the database refuses to
+// write it, the token still authenticates.
+func TestAPersonalAccessTokenAuthenticatesWhenLastUsedIsNotWritten(t *testing.T) {
+	base, pool := sessionApp(t)
+	contract := apitest.Load(t)
+	token := createPAT(t, contract, base, registerAccount(t, contract, base, "touch@example.com").AccessToken)
+	ctx := context.Background()
+	for _, sql := range []string{
+		`CREATE FUNCTION refuse_last_used() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'last_used refused'; END $$`,
+		`CREATE TRIGGER refuse_last_used BEFORE UPDATE OF last_used ON api_tokens FOR EACH ROW EXECUTE FUNCTION refuse_last_used()`,
+	} {
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	status, body := call(t, contract, http.MethodGet, base+"/api/v0/me", token.Token, "")
+
+	var written bool
+	err := pool.QueryRow(ctx, "SELECT last_used IS NOT NULL FROM api_tokens WHERE id = $1", token.ID).Scan(&written)
+	if status != http.StatusOK || err != nil || written {
+		t.Errorf("GET /me = %d %s; last_used written %v (%v); want 200 with last_used not written", status, body, written, err)
+	}
+}
+
+// A token's expiry reads back as the creation answered it: whatever offset
+// and precision the caller sent, both say it in UTC to the microsecond, as
+// the database stores it (M2 design 3.13).
+func TestATokenExpiryReadsBackAsCreated(t *testing.T) {
+	contract, base, token := accountApp(t, "expiry@example.com")
+
+	createStatus, body := call(t, contract, http.MethodPost, base+"/api/v0/me/api-tokens", token, `{"expired_at":"2030-01-01T12:00:00.1234567+02:00"}`)
+	listStatus, list := call(t, contract, http.MethodGet, base+"/api/v0/me/api-tokens", token, "")
+
+	type listed struct {
+		ID        string `json:"id"`
+		ExpiredAt string `json:"expired_at"`
+	}
+	var created listed
+	var page struct {
+		Data []listed `json:"data"`
+	}
+	if createStatus != http.StatusCreated || listStatus != http.StatusOK || json.Unmarshal([]byte(body), &created) != nil || json.Unmarshal([]byte(list), &page) != nil {
+		t.Fatalf("POST /me/api-tokens = %d %s, then GET = %d %s; want 201, 200", createStatus, body, listStatus, list)
+	}
+	if created.ExpiredAt != "2030-01-01T10:00:00.123456Z" {
+		t.Errorf("POST /me/api-tokens answered expired_at %q, want 2030-01-01T10:00:00.123456Z", created.ExpiredAt)
+	}
+	i := slices.IndexFunc(page.Data, func(read listed) bool { return read.ID == created.ID })
+	if i < 0 || page.Data[i].ExpiredAt != created.ExpiredAt {
+		t.Errorf("GET /me/api-tokens = %s, want the token created with expired_at %q", list, created.ExpiredAt)
+	}
+}
+
+// pat is the ApiTokenCreated answer.
+type pat struct {
+	ID    string `json:"id"`
+	Token string `json:"token"`
+}
+
+// createPAT makes a personal access token with the bearer token given.
+func createPAT(t *testing.T, contract *apitest.Contract, base, bearer string) pat {
+	t.Helper()
+	req := newRequest(t, http.MethodPost, base+"/api/v0/me/api-tokens", bearer, []byte(`{"label":"ci"}`))
+	contract.CheckRequest(t, req)
+	res, body := send(t, req)
+	contract.CheckResponse(t, req, res)
+	var created pat
+	if err := json.Unmarshal(body, &created); err != nil || res.StatusCode != http.StatusCreated || !strings.HasPrefix(created.Token, "nrv_pat_") {
+		t.Fatalf("POST /me/api-tokens = %d %s, want 201 with a token", res.StatusCode, body)
+	}
+	return created
 }
 
 // signedBy reports whether the JWT's EdDSA signature verifies with the

@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/netip"
 	"time"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
@@ -41,13 +42,61 @@ type GetMeUseCase interface {
 	Execute(ctx context.Context) (domain.User, error)
 }
 
+// UpdateMeUseCase is app.UpdateMe.
+type UpdateMeUseCase interface {
+	Execute(ctx context.Context, p domain.UserPatch) (domain.User, error)
+}
+
+// ChangePasswordUseCase is app.ChangePassword.
+type ChangePasswordUseCase interface {
+	Execute(ctx context.Context, in app.ChangePasswordInput) error
+}
+
+// DeactivateUseCase is app.Deactivate.
+type DeactivateUseCase interface {
+	Execute(ctx context.Context) error
+}
+
+// GetProfileUseCase is app.GetProfile.
+type GetProfileUseCase interface {
+	Execute(ctx context.Context) (domain.Profile, error)
+}
+
+// UpdateProfileUseCase is app.UpdateProfile.
+type UpdateProfileUseCase interface {
+	Execute(ctx context.Context, p domain.ProfilePatch) (domain.Profile, error)
+}
+
+// ListAPITokensUseCase is app.ListAPITokens.
+type ListAPITokensUseCase interface {
+	Execute(ctx context.Context, limit *int, cursor *string) (app.APITokenPage, error)
+}
+
+// CreateAPITokenUseCase is app.CreateAPIToken.
+type CreateAPITokenUseCase interface {
+	Execute(ctx context.Context, spec domain.APITokenSpec) (app.CreatedAPIToken, error)
+}
+
+// RevokeAPITokenUseCase is app.RevokeAPIToken.
+type RevokeAPITokenUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	Register RegisterUseCase
-	Login    LoginUseCase
-	Refresh  RefreshUseCase
-	Logout   LogoutUseCase
-	GetMe    GetMeUseCase
+	Register       RegisterUseCase
+	Login          LoginUseCase
+	Refresh        RefreshUseCase
+	Logout         LogoutUseCase
+	GetMe          GetMeUseCase
+	UpdateMe       UpdateMeUseCase
+	ChangePassword ChangePasswordUseCase
+	Deactivate     DeactivateUseCase
+	GetProfile     GetProfileUseCase
+	UpdateProfile  UpdateProfileUseCase
+	ListAPITokens  ListAPITokensUseCase
+	CreateAPIToken CreateAPITokenUseCase
+	RevokeAPIToken RevokeAPITokenUseCase
 }
 
 // Settings are what the handler applies around the use cases.

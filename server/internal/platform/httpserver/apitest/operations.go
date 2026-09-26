@@ -36,21 +36,65 @@ func (o Operation) HasJSONBody() bool { return o.body != nil }
 // Parameters bind before the middlewares, so a wrong one would answer 400
 // before anything else runs (M2 design 3.6).
 func (o Operation) Target() string {
+	return o.target("", "")
+}
+
+// target is Target with parameter name set to value, when name is not "".
+func (o Operation) target(name, value string) string {
 	path, query := o.Path, url.Values{}
 	for _, ref := range o.params {
 		p := ref.Value
-		value := fmt.Sprint(validValue(p.Schema.Value))
+		v, set := fmt.Sprint(validValue(p.Schema.Value)), p.Required
+		if p.Name == name {
+			v, set = value, true
+		}
 		switch {
 		case p.In == openapi3.ParameterInPath:
-			path = strings.ReplaceAll(path, "{"+p.Name+"}", url.PathEscape(value))
-		case p.In == openapi3.ParameterInQuery && p.Required:
-			query.Set(p.Name, value)
+			path = strings.ReplaceAll(path, "{"+p.Name+"}", url.PathEscape(v))
+		case p.In == openapi3.ParameterInQuery && set:
+			query.Set(p.Name, v)
 		}
 	}
 	if len(query) == 0 {
 		return path
 	}
 	return path + "?" + query.Encode()
+}
+
+// ParamCase is a request target with one parameter that cannot bind, and
+// the parameter the 400 must name.
+type ParamCase struct {
+	Name   string
+	Target string
+	Field  string
+}
+
+// ParamCases derives the cases of the parameter binding whole-program test
+// (M2 design 3.11): for each path or query parameter whose Go type rejects
+// some strings, a number, a boolean, or a string whose format is generated
+// as a Go type, the example target with that parameter wrong. Other strings,
+// enums too, bind whatever they are.
+func (o Operation) ParamCases() []ParamCase {
+	var cases []ParamCase
+	for _, ref := range o.params {
+		p := ref.Value
+		if p.In != openapi3.ParameterInPath && p.In != openapi3.ParameterInQuery {
+			continue
+		}
+		var wrong string
+		switch s := p.Schema.Value; {
+		case s.Type.Includes("integer"), s.Type.Includes("number"):
+			wrong = "not-a-number"
+		case s.Type.Includes("boolean"):
+			wrong = "not-a-boolean"
+		case checkedFormat(s):
+			wrong = "not-a-" + s.Format
+		default:
+			continue
+		}
+		cases = append(cases, ParamCase{Name: "wrong " + p.Name, Target: o.target(p.Name, wrong), Field: p.Name})
+	}
+	return cases
 }
 
 // Operations lists every operation of the contract, sorted by pattern.
@@ -104,8 +148,9 @@ const unknownField = "nerve_undeclared"
 //  4. each required property missing;
 //  5. null for a nullable property: not 400;
 //  6. each format property with a wrong string;
-//  7. an undeclared property, a missing required property and a wrong
-//     format together: every problem in one answer.
+//  7. every kind of 1–4 and 6 that the schema has, each on a property of its
+//     own, together: every problem in one answer. Left out when the schema
+//     has only the first kind.
 func (o Operation) BodyCases() []BodyCase {
 	s := o.body
 	valid := validValue(s).(map[string]any)
@@ -115,55 +160,87 @@ func (o Operation) BodyCases() []BodyCase {
 		out, _ := json.Marshal(body)
 		return out
 	}
-	var cases []BodyCase
-	cases = append(cases, BodyCase{Name: "undeclared property", Body: with(func(b map[string]any) { b[unknownField] = 1 }),
-		Fields: []FieldProblem{{unknownField, "not_allowed"}}})
 	names := slices.Sorted(maps.Keys(s.Properties))
+	var nested string
+	var optional, required, formatted []string
 	for _, name := range names {
 		p := s.Properties[name].Value
-		if isObject(p) {
-			nested := validValue(p).(map[string]any)
-			nested[unknownField] = 1
-			cases = append(cases, BodyCase{Name: "undeclared property in " + name, Body: with(func(b map[string]any) { b[name] = nested }),
-				Fields: []FieldProblem{{name + "." + unknownField, "not_allowed"}}})
-			break
+		if nested == "" && isObject(p) {
+			nested = name
+		}
+		if !isNullable(p) && !slices.Contains(s.Required, name) {
+			optional = append(optional, name)
+		}
+		if checkedFormat(p) {
+			formatted = append(formatted, name)
 		}
 	}
+	required = slices.Sorted(slices.Values(s.Required))
+	undeclaredIn := func(name string) map[string]any {
+		v := validValue(s.Properties[name].Value).(map[string]any)
+		v[unknownField] = 1
+		return v
+	}
+	wrong := func(name string) string { return "not-a-" + s.Properties[name].Value.Format }
+
+	cases := []BodyCase{{Name: "undeclared property", Body: with(func(b map[string]any) { b[unknownField] = 1 }),
+		Fields: []FieldProblem{{unknownField, "not_allowed"}}}}
+	if nested != "" {
+		cases = append(cases, BodyCase{Name: "undeclared property in " + nested, Body: with(func(b map[string]any) { b[nested] = undeclaredIn(nested) }),
+			Fields: []FieldProblem{{nested + "." + unknownField, "not_allowed"}}})
+	}
 	for _, name := range names {
-		switch p := s.Properties[name].Value; {
-		case isNullable(p):
+		switch {
+		case isNullable(s.Properties[name].Value):
 			cases = append(cases, BodyCase{Name: "null for nullable " + name, Body: with(func(b map[string]any) { b[name] = nil }), Accepted: true})
-		case !slices.Contains(s.Required, name):
+		case slices.Contains(optional, name):
 			cases = append(cases, BodyCase{Name: "null for optional " + name, Body: with(func(b map[string]any) { b[name] = nil }),
 				Fields: []FieldProblem{{name, "invalid_format"}}})
 		}
 	}
-	for _, name := range slices.Sorted(slices.Values(s.Required)) {
+	for _, name := range required {
 		cases = append(cases, BodyCase{Name: "missing " + name, Body: with(func(b map[string]any) { delete(b, name) }),
 			Fields: []FieldProblem{{name, "required"}}})
 	}
-	var formatted string
-	for _, name := range names {
-		if p := s.Properties[name].Value; checkedFormat(p) {
-			formatted = name
-			cases = append(cases, BodyCase{Name: "wrong " + p.Format + " in " + name, Body: with(func(b map[string]any) { b[name] = "not-a-" + p.Format }),
-				Fields: []FieldProblem{{name, "invalid_format"}}})
-		}
+	for _, name := range formatted {
+		cases = append(cases, BodyCase{Name: "wrong " + s.Properties[name].Value.Format + " in " + name,
+			Body: with(func(b map[string]any) { b[name] = wrong(name) }), Fields: []FieldProblem{{name, "invalid_format"}}})
 	}
-	if len(s.Required) > 0 {
-		missing := slices.Sorted(slices.Values(s.Required))[0]
-		all := []FieldProblem{{unknownField, "not_allowed"}, {missing, "required"}}
-		if formatted != "" && formatted != missing {
-			all = append(all, FieldProblem{formatted, "invalid_format"})
-		}
-		slices.SortFunc(all, func(a, b FieldProblem) int { return strings.Compare(a.Field, b.Field) })
-		cases = append(cases, BodyCase{Name: "every problem at once", Body: with(func(b map[string]any) {
-			b[unknownField] = 1
-			delete(b, missing)
-			if formatted != "" && formatted != missing {
-				b[formatted] = "not-a-format"
+
+	// Case 7: each kind takes the first property no earlier kind took.
+	body := maps.Clone(valid)
+	body[unknownField] = 1
+	all := []FieldProblem{{unknownField, "not_allowed"}}
+	used := map[string]bool{}
+	first := func(names []string) string {
+		for _, name := range names {
+			if !used[name] {
+				used[name] = true
+				return name
 			}
-		}), Fields: all})
+		}
+		return ""
+	}
+	if name := first([]string{nested}); name != "" {
+		body[name] = undeclaredIn(name)
+		all = append(all, FieldProblem{name + "." + unknownField, "not_allowed"})
+	}
+	if name := first(optional); name != "" {
+		body[name] = nil
+		all = append(all, FieldProblem{name, "invalid_format"})
+	}
+	if name := first(required); name != "" {
+		delete(body, name)
+		all = append(all, FieldProblem{name, "required"})
+	}
+	if name := first(formatted); name != "" {
+		body[name] = wrong(name)
+		all = append(all, FieldProblem{name, "invalid_format"})
+	}
+	if len(all) >= 2 {
+		slices.SortFunc(all, func(a, b FieldProblem) int { return strings.Compare(a.Field, b.Field) })
+		out, _ := json.Marshal(body)
+		cases = append(cases, BodyCase{Name: "every problem at once", Body: out, Fields: all})
 	}
 	return cases
 }

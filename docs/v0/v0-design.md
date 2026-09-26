@@ -146,7 +146,7 @@ NerveProject/
 - **HTTP 方法**：
   - GET 查询，POST 创建，DELETE 删除（软删除）。
   - PATCH 部分更新：只改传入的字段，传 `null` 表示清空。
-  - **POST 和 PATCH 都返回改完之后的完整资源。** 例外：注册（`POST /api/v0/auth/register`）返回令牌，不返回新建的账户，账户由 `GET /api/v0/me` 读取（M2 设计 5.1）。
+  - **POST 和 PATCH 都返回改完之后的完整资源。** 例外：注册（`POST /api/v0/auth/register`）返回令牌，不返回新建的账户，账户由 `GET /api/v0/me` 读取；登录（`POST /api/v0/auth/login`）和续期（`POST /api/v0/auth/refresh`）同样返回令牌；退出（`POST /api/v0/auth/logout`）、修改密码（`POST /api/v0/me/change-password`）和停用账户（`POST /api/v0/me/deactivate`）没有要返回的资源，返回 204（M2 设计 5.1）。
 - **接口描述**：放在 `api/`，按模块拆分（`api/modules/<模块>.yaml`，公共组件放在 `api/common.yaml`），打包为 `api/dist/openapi.yaml`。先改接口描述，再写实现。
 - **OpenAPI 版本：已定为 3.1**（`openapi: 3.1.0`）。M0/P3 验证了整条工具链，结论和写法约定见 [P3 spec](M0-foundation/specs/P3-api-contract.md) 2.2、2.4。
 
@@ -178,7 +178,7 @@ GET   /api/v0/issues/{issue_id}/comments
 - 依据：Plane 社区版前端的筛选器只会生成"多个条件全部满足"的组合，每个条件只有"等于 / 属于 / 范围"三种判断，上面的格式能完整表达。
 
 ### 3.4 分页与分组
-- **分页**：用游标。请求带 `?limit=50&cursor=...`，响应格式为 `{ "data": [...], "next_cursor": "..." }`。游标是不透明的字符串。
+- **分页**：用游标。请求带 `?limit=50&cursor=...`，响应格式为 `{ "data": [...], "next_cursor": "..." }`，最后一页的 `next_cursor` 是 `null`。游标是不透明的字符串：封套（版本号加载荷，base64url 编码）由 `internal/shared` 定义，载荷由各个列表按自己的排序定义，例如 PAT 列表的载荷是这一页最后一行的 `(created_at, id)`（M2 设计 3.12）。解不开、版本不认识、载荷不合这个列表的格式、不是 `EncodeCursor` 原样写出的游标，都是 400 `bad_request`；游标不签名，改成另一个合格的位置照样可用，它只决定从哪里接着读。`limit` 超出 1–100 是 422 `validation_failed`。
 - **分组**：作为列表接口的可选参数，由服务端完成：
   ```
   GET /api/v0/projects/{id}/issues?group_by=state_id&sub_group_by=priority&limit=50
@@ -206,7 +206,7 @@ GET   /api/v0/issues/{issue_id}/comments
 ### 3.6 其他
 - **限流**：在进程内实现，按键的令牌桶，每个桶有速率和突发两个配置项（`ratelimit.<桶>.per_minute`、`burst`）。超出时 429 `rate_limited`，带 `Retry-After`（秒，向上取整）（M2 设计 3.10）：
   - 公开操作按客户端 IP 计数（`anonymous`，每分钟 600、突发 100），其余操作按凭证计数（`authenticated`，每分钟 1200、突发 200）；
-  - 登录另按 IP（`login_ip`，30、10）和"IP + 邮箱"（`login_ip_email`，10、5）计数，两个桶全扣或全不扣；注册另按 IP 计数（`register_ip`，10、5）；修改密码按账户计数（`password_user`，M2/P3）；
+  - 登录另按 IP（`login_ip`，30、10）和"IP + 邮箱"（`login_ip_email`，10、5）计数，两个桶全扣或全不扣；注册另按 IP 计数（`register_ip`，10、5）；修改密码按账户计数（`password_user`，5、5）；
   - **认证之前的失败闸门**：非公开操作带了令牌时，先预留本 IP 的一个单位（`auth_failure`，60、60），闸门已空就直接 429，不再验证令牌；认证失败时单位留下，成功、只是过期的访问令牌、内部错误时退回（M2 设计 3.6）；
   - 客户端 IP 取连接的对端，前面有反向代理时配置 `server.trusted_proxies`；IPv6 按前缀计数（`ratelimit.ipv6_prefix_len`，默认 64）。
 - **关联对象只返回 ID**：以后按需增加 `?expand=`。
@@ -227,10 +227,11 @@ GET   /api/v0/issues/{issue_id}/comments
 
 ### 4.2 规则
 - **权限不放进令牌**：每个请求都从数据库读取成员关系和角色。所以移出项目、调整角色是立即生效的。
-- **会话撤销**：退出登录只结束当前这一处登录，同一账户的其他会话不受影响（M2 设计 11.1）；修改密码、账户停用时，吊销该账户的刷新令牌；账户停用时，同时让该账户的所有会话失效。
+- **会话撤销**：退出登录只结束当前这一处登录，同一账户的其他会话不受影响（M2 设计 11.1）；修改密码结束该账户的其他会话，用 PAT 修改时没有当前会话，全部结束，PAT 不受影响；停用账户结束该账户的全部会话，PAT 不删除，但停用期间认证失败（M2 设计 3.5）。
+- **账户行锁**：签发和变更凭证的事务（登录、创建 PAT、修改密码、停用）先锁账户行，再确认调用者的凭证仍然有效，所以并发的修改不会让已被撤销的凭证再签发或变更凭证；续期靠会话行上的条件更新（M2 设计 3.5）。
 - **重复使用检测**：一旦发现某个已经换过新的刷新令牌又被使用，就作废这次登录派生出的所有令牌。只有交出的旧令牌确是这个会话签发过的（它的 MAC 标签成立）才作废；会话 id 和代数对、密文和标签是伪造的旧令牌得到 401，会话不受影响（M2 设计 3.5）。
 - **密码哈希**：用 argon2id。
-- **登录方式**：v0 只有邮箱加密码。是否开放注册由配置 `auth.signup_enabled` 控制：prod 默认关闭，dev、test 默认开放；关闭时注册先答"注册已关闭"，不查邮箱。prod 的第一个账户由服务器管理员用 `nerve users create` 创建（M2/P3 加入；在那之前用 `NERVE_AUTH__SIGNUP_ENABLED=true` 临时打开注册）（M2 设计决策点 2）。被邀请的邮箱始终可以注册。
+- **登录方式**：v0 只有邮箱加密码。是否开放注册由配置 `auth.signup_enabled` 控制：prod 默认关闭，dev、test 默认开放；关闭时注册先答"注册已关闭"，不查邮箱。prod 的第一个账户由服务器管理员用 `nerve users create` 创建（M2/P3b 加入；在那之前用 `NERVE_AUTH__SIGNUP_ENABLED=true` 临时打开注册）（M2 设计决策点 2）。被邀请的邮箱始终可以注册。
 - **忘记密码**：没有邮件服务，由服务器管理员通过命令行重置：`nerve users reset-password --email <email>`。
 
 ### 4.3 浏览器端
@@ -355,7 +356,7 @@ server/
     platform/               与业务无关的技术基础件：config、postgres（连接池、事务管理器）、
                             logging、httpserver（中间件、problem+json）、ratelimit、clock、idgen
     shared/                 共享内核，尽量小，只放值会跨越模块边界的东西（M2 设计 3.3）：Actor（当前账户）、
-                            领域错误与错误码、TxManager 端口；以后加入分页游标的封套、领域事件接口、
+                            领域错误与错误码、TxManager 端口、分页游标的封套；以后加入领域事件接口、
                             Authorizer 端口。平台不导入它；时钟等其余端口由使用方的 app 层声明
     modules/
       identity/             账户、会话、PAT、密码
@@ -424,7 +425,7 @@ modules/issue/
      → 用例：TxManager.WithinTx { 权限 → 领域校验（不合规 → 422）→ 业务规则 → 写数据 → 发布领域事件 } 提交
      → 响应；或者 error → APIErrors → problem+json
 ```
-- **请求 ID → 异常恢复 → 访问日志 → 安全响应头**这四个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。安全响应头（`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`）加在每个响应上，包括 panic 之后的 500；CSP 只加在页面上，由 `webui` 在 M2/P4 加入（M2 设计 8.3）。
+- **请求 ID → 异常恢复 → 访问日志 → 安全响应头**这四个平台中间件固定在 `httpserver.NewServer` 内部，不可漏掉或调换。安全响应头（`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`）加在每个响应上，包括 panic 之后的 500；`/api/` 下的响应另带 `Cache-Control: no-store`（M2/P3a），接口的回答带凭证、都是调用者自己的数据，不能被缓存；CSP 只加在页面上，由 `webui` 在 M2/P4 加入（M2 设计 8.3）。
 - **按路由的中间件**由 `httpserver.API.Middlewares` 按上图的顺序交给每个模块的生成代码，只作用于 `/api/v0` 的操作，不作用于健康检查和前端页面（M2 设计 3.6）。认证默认拒绝：除了模块声明为公开的操作，没有有效令牌一律 401。限流的桶见 3.6；接口调用日志由 M8 挂在限流之后。
 - **参数先于这些中间件绑定**：生成的代码在它们之前绑定路径参数和查询参数，参数格式错误的请求在认证之前就得到 400；请求体在它们之后才解码，没有通过认证的请求不会被解析请求体。
 - **每个写操作对应一个事务。** 业务数据、操作动态、历史版本、投递给 River 的任务，要么一起成功，要么一起回滚。

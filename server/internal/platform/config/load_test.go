@@ -48,6 +48,11 @@ ratelimit:
   login_ip: {per_minute: 30, burst: 10}
   login_ip_email: {per_minute: 10, burst: 5}
   register_ip: {per_minute: 10, burst: 5}
+  password_user: {per_minute: 5, burst: 5}
+workspace:
+  creation_enabled: true
+files:
+  size_limit: 5242880
 log:
   level: info
   format: json
@@ -86,6 +91,9 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			"NERVE_AUTH__PASSWORD__ARGON2_MEMORY_KIB=64",
 			"NERVE_SERVER__TRUSTED_PROXIES=10.0.0.0/8,fd00::/8",
 			"NERVE_RATELIMIT__LOGIN_IP__BURST=3",
+			"NERVE_RATELIMIT__PASSWORD_USER__PER_MINUTE=7",
+			"NERVE_WORKSPACE__CREATION_ENABLED=false",
+			"NERVE_FILES__SIZE_LIMIT=1024",
 		},
 		LocalFile: local,
 	})
@@ -132,8 +140,11 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			LoginIP:       BucketConfig{PerMinute: 30, Burst: 3}, // environment
 			LoginIPEmail:  BucketConfig{PerMinute: 10, Burst: 5},
 			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
+			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 5}, // environment
 		},
-		Log: LogConfig{Level: "debug", Format: "text"},
+		Workspace: WorkspaceConfig{CreationEnabled: false}, // environment
+		Files:     FilesConfig{SizeLimit: 1024},            // environment
+		Log:       LogConfig{Level: "debug", Format: "text"},
 	}
 	if !reflect.DeepEqual(cfg, want) {
 		t.Errorf("Load() =\n%+v\nwant\n%+v", cfg, want)

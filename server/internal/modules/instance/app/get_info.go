@@ -2,14 +2,15 @@ package app
 
 import "github.com/open-nerve/NerveProject/server/internal/modules/instance/domain"
 
-// GetInfo tells API clients what this instance runs.
+// GetInfo tells API clients what this instance runs and how it is set up.
 type GetInfo struct {
-	source InfoSource
+	source   InfoSource
+	settings domain.Settings
 }
 
 // NewGetInfo returns the use case, reading the build from source.
-func NewGetInfo(source InfoSource) *GetInfo {
-	return &GetInfo{source: source}
+func NewGetInfo(source InfoSource, settings domain.Settings) *GetInfo {
+	return &GetInfo{source: source, settings: settings}
 }
 
 // Execute describes the instance.
@@ -20,5 +21,6 @@ func (uc *GetInfo) Execute() domain.Info {
 		Version:    build.Version,
 		Commit:     build.Commit,
 		APIVersion: domain.APIVersion,
+		Settings:   uc.settings,
 	}
 }

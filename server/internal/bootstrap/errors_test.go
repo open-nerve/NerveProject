@@ -42,8 +42,9 @@ func TestEveryKindBecomesItsProblem(t *testing.T) {
 
 		errs.Write(rec, httptest.NewRequest(http.MethodGet, "/api/v0/things", nil), tt.err)
 
-		if got := rec.Body.String(); got != tt.want+"\n" || rec.Header().Get("Retry-After") != tt.retryAfter {
-			t.Errorf("Write(%v) = %s Retry-After %q, want %s Retry-After %q", tt.err, got, rec.Header().Get("Retry-After"), tt.want, tt.retryAfter)
+		sent := rec.Result().Header // as the status went out, not as set after it
+		if got := rec.Body.String(); got != tt.want+"\n" || sent.Get("Retry-After") != tt.retryAfter {
+			t.Errorf("Write(%v) = %s Retry-After %q, want %s Retry-After %q", tt.err, got, sent.Get("Retry-After"), tt.want, tt.retryAfter)
 		}
 	}
 }

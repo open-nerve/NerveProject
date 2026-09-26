@@ -31,8 +31,20 @@ paths:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1auth~1logout'
   /api/v0/me:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me'
+  /api/v0/me/deactivate:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1deactivate'
+  /api/v0/me/change-password:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1change-password'
+  /api/v0/me/profile:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1profile'
+  /api/v0/me/api-tokens:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1api-tokens'
+  /api/v0/api-tokens/{token_id}:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1api-tokens~1{token_id}'
   /api/v0/instance:
     $ref: 'modules/instance.yaml#/paths/~1api~1v0~1instance'
+  /api/v0/timezones:
+    $ref: 'modules/instance.yaml#/paths/~1api~1v0~1timezones'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

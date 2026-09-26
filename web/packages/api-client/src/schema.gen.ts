@@ -98,6 +98,117 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change the caller's names and time zone
+         * @description Changes the fields sent and leaves the others. The e-mail address cannot change here: the server's administrator changes it.
+         */
+        patch: operations["updateMe"];
+        trace?: never;
+    };
+    "/api/v0/me/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate the caller's account
+         * @description Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again.
+         */
+        post: operations["deactivateMe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/me/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change the caller's password
+         * @description Needs the current password. The new one follows the rules of registration. Every other session of the account is signed out: all of them when the caller is a personal access token. Personal access tokens keep working. Password changes have a rate limit of their own per account.
+         */
+        post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller's preferences */
+        get: operations["getProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's preferences
+         * @description Changes the fields sent and leaves the others. The onboarding steps sent are merged into the stored ones: a step not sent keeps its value, also when another request changes it at the same time.
+         */
+        patch: operations["updateProfile"];
+        trace?: never;
+    };
+    "/api/v0/me/api-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's personal access tokens
+         * @description The caller's personal access tokens that are not revoked, newest first, a page at a time. The tokens themselves are never listed: only createApiToken answers one, once.
+         */
+        get: operations["listApiTokens"];
+        put?: never;
+        /**
+         * Create a personal access token
+         * @description Creates a personal access token of the caller and answers the token itself, this once. Sent as "Authorization: Bearer", it acts as the account in every operation until it expires or is revoked, and it can create tokens itself. Any credential may create one; no password is asked for.
+         */
+        post: operations["createApiToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/api-tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a personal access token
+         * @description Revokes one of the caller's tokens, which stops working at once; a token may revoke itself. A token that does not exist, is revoked already or belongs to another account is identity.api_token_not_found.
+         */
+        delete: operations["revokeApiToken"];
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -110,9 +221,29 @@ export interface paths {
         };
         /**
          * Describe this instance
-         * @description Reports the product, the build and the API version this instance runs. Public: needs no authentication.
+         * @description Reports the product, the build and the API version this instance runs, and the settings clients adapt to. Public: needs no authentication.
          */
         get: operations["getInstance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/timezones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the time zones to choose from
+         * @description The time zones the web app offers, each with its offset at the time of the request, sorted by offset and then by label. user_timezone takes any IANA name, not only these. Public: needs no authentication.
+         */
+        get: operations["listTimezones"];
         put?: never;
         post?: never;
         delete?: never;
@@ -205,6 +336,129 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        UserUpdate: {
+            /** @description At most 255 characters, without a web address. */
+            first_name?: string;
+            /** @description At most 255 characters, without a web address. */
+            last_name?: string;
+            /** @description 1–255 characters. */
+            display_name?: string;
+            /** @description An IANA time zone name, e.g. from GET /api/v0/timezones. */
+            user_timezone?: string;
+        };
+        ChangePasswordRequest: {
+            current_password: string;
+            new_password: string;
+        };
+        /** @enum {string} */
+        Theme: "system" | "light" | "dark" | "light-contrast" | "dark-contrast";
+        /**
+         * @description The language of the web UI.
+         * @enum {string}
+         */
+        Language: "en" | "zh-CN";
+        /**
+         * @description The first day of the week, 0 Sunday to 6 Saturday.
+         * @enum {integer}
+         */
+        StartOfTheWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+        OnboardingSteps: {
+            profile_complete: boolean;
+            workspace_create: boolean;
+            workspace_invite: boolean;
+            workspace_join: boolean;
+        };
+        Profile: {
+            theme: components["schemas"]["Theme"];
+            language: components["schemas"]["Language"];
+            start_of_the_week: components["schemas"]["StartOfTheWeek"];
+            onboarding_step: components["schemas"]["OnboardingSteps"];
+            is_onboarded: boolean;
+            is_tour_completed: boolean;
+            /**
+             * Format: uuid
+             * @description The workspace the web app opens last; null for none. It is not checked to exist.
+             */
+            last_workspace_id: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description The steps to set; the others keep their values. */
+        OnboardingStepsUpdate: {
+            profile_complete?: boolean;
+            workspace_create?: boolean;
+            workspace_invite?: boolean;
+            workspace_join?: boolean;
+        };
+        ProfileUpdate: {
+            theme?: components["schemas"]["Theme"];
+            language?: components["schemas"]["Language"];
+            start_of_the_week?: components["schemas"]["StartOfTheWeek"];
+            onboarding_step?: components["schemas"]["OnboardingStepsUpdate"];
+            is_onboarded?: boolean;
+            is_tour_completed?: boolean;
+            /**
+             * Format: uuid
+             * @description Null clears it.
+             */
+            last_workspace_id?: string | null;
+        };
+        /** @description A personal access token as lists show it. The token itself appears only in ApiTokenCreated. */
+        ApiToken: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            description: string;
+            /**
+             * Format: date-time
+             * @description When the token stops working; null when it never does.
+             */
+            expired_at: string | null;
+            /**
+             * Format: date-time
+             * @description When the token last authenticated a request, to the minute; null when it never has.
+             */
+            last_used: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description The cursor of the next page; null on the last page. */
+        NextCursor: string | null;
+        ApiTokenPage: {
+            data: components["schemas"]["ApiToken"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        ApiTokenCreate: {
+            /** @description 1–255 characters; 32 hexadecimal digits are made up when it is absent. */
+            label?: string;
+            description?: string;
+            /**
+             * Format: date-time
+             * @description A time in the future; absent or null for a token that never expires.
+             */
+            expired_at?: string | null;
+        };
+        /** @description A new personal access token: the fields of ApiToken, and the token itself, which is shown this once and cannot be read again. */
+        ApiTokenCreated: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            description: string;
+            /**
+             * Format: date-time
+             * @description When the token stops working; null when it never does.
+             */
+            expired_at: string | null;
+            /**
+             * Format: date-time
+             * @description Null; the token has not been used yet.
+             */
+            last_used: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The token, nrv_pat_ and 43 more characters. */
+            token: string;
+        };
         InstanceInfo: {
             /**
              * @description Product name.
@@ -223,6 +477,34 @@ export interface components {
              * @enum {string}
              */
             api_version: "v0";
+            /** @description Whether anyone may register (auth.signup_enabled). */
+            signup_enabled: boolean;
+            /** @description Whether workspaces can be created (workspace.creation_enabled). */
+            workspace_creation_enabled: boolean;
+            /** @description The largest file an upload may have, in bytes (files.size_limit). */
+            file_size_limit: number;
+        };
+        Timezone: {
+            /** @description A place in the time zone, e.g. Beijing. */
+            label: string;
+            /**
+             * @description The IANA name, what user_timezone takes.
+             * @example Asia/Shanghai
+             */
+            value: string;
+            /**
+             * @description The offset at the time of the request.
+             * @example UTC+08:00
+             */
+            utc_offset: string;
+            /**
+             * @description The same offset, written from GMT.
+             * @example GMT+08:00
+             */
+            gmt_offset: string;
+        };
+        TimezoneList: {
+            data: components["schemas"]["Timezone"][];
         };
     };
     responses: {
@@ -231,7 +513,7 @@ export interface components {
             headers: {
                 /** @description Whole seconds to wait before trying again, rounded up; sent with rate_limited and server_busy. */
                 "Retry-After"?: number;
-                /** @description Sent with every 401 (RFC 9110 15.5.2): Bearer, or Bearer error="invalid_token" when the bearer token sent is invalid or has expired (RFC 6750 3). */
+                /** @description Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token" (RFC 6750 3) when the bearer token sent is refused before the operation runs, being invalid or expired; plain Bearer for every other 401, including a credential that the operation finds revoked while it runs. */
                 "WWW-Authenticate"?: string;
                 [name: string]: unknown;
             };
@@ -240,7 +522,12 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+        Limit: number;
+        /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+        Cursor: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -366,6 +653,191 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's account, changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deactivateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deactivated. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    changePassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Changed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's preferences. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's preferences, changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listApiTokens: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createApiToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiTokenCreate"];
+            };
+        };
+        responses: {
+            /** @description The new token, with the token itself. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenCreated"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeApiToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     getInstance: {
         parameters: {
             query?: never;
@@ -382,6 +854,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InstanceInfo"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTimezones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The time zones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimezoneList"];
                 };
             };
             default: components["responses"]["Problem"];

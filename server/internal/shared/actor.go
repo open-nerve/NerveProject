@@ -10,8 +10,11 @@ import (
 // tells which credential authenticated the request, never what kind of
 // account it is (v0 design 0.2, principle 1).
 type Actor struct {
-	UserID    uuid.UUID
-	SessionID uuid.UUID // the login session of the access token
+	UserID uuid.UUID
+	// The credential: the login session of an access token, or a personal
+	// access token. Exactly one of them is set.
+	SessionID  uuid.UUID
+	APITokenID uuid.UUID
 }
 
 type actorKey struct{}

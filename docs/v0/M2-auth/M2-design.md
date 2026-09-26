@@ -582,7 +582,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - **改为直接检查三件事**：
     1. 传递依赖测试仍然禁止 `github.com/google/uuid`，只有一个例外：程序里导入它的每个包都属于 `github.com/oapi-codegen/runtime` 模块（目前是 `runtime` 和 `runtime/types`）。我们的代码或别的库导入它，测试失败并打印导入链。
     2. archtest 新规则：`adapter/*/gen` 下的生成文件引用 `openapi_types.UUID` 就失败。这才是原意：代码里只有一种 uuid 类型，漏了 `type-mapping` 的模块当场被发现。
-    3. depguard 照旧禁止手写代码直接导入 google/uuid。
+    3. depguard 照旧禁止手写代码直接导入 google/uuid；P3a 的收尾修复又禁止手写代码导入 `github.com/oapi-codegen/runtime` 和 `runtime/types`（`types.UUID` 是 google/uuid 的别名，`runtime` 只给生成代码绑定参数用；生成的文件由 golangci-lint 默认排除）。
   - 其余禁止的模块（kin-openapi、testcontainers、docker）不变。3.20 在 P3 改 M0 设计和 M0/P3 spec 的相应文字。
   - 加依赖之后核对 `server/go.mod` 仍是 `go 1.27` / `toolchain go1.27.1`。
   - 每个模块另由 `bodyshapegen` 生成请求体结构表（3.11），与 `server.gen.go` 放在同一个 `gen` 目录。
@@ -684,7 +684,8 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 - **位置**：
   - `platform/jobs` 负责创建和启动 River 客户端，接收连接池、worker 和定时任务列表，只依赖 River 和 pgx，不导入别的平台包。
   - 模块的 worker 是一个适配器（`identity/adapter/river`），只包一层用例。模块入口导出自己的 worker 和定时任务，由 `bootstrap` 汇总后交给 `platform/jobs`。
-  - `platform/jobs` 能创建两种客户端：服务用的（配队列，调用 `Start`），命令行用的"只投递"客户端（不配队列，不调用 `Start`，`river@v0.47.0/client.go:89-95`）。见 3.17。
+  - `platform/jobs` 在 M2 只创建服务用的客户端（配队列，调用 `Start`）。
+  - 命令行用的"只投递"客户端（不配队列，不调用 `Start`，`river@v0.47.0/client.go:89-95`）推迟到 M4，随第一个投递任务的命令加入。M2 没有投递任务的命令（负责人 2026-09-26 批准，3.17、13.2）。
 - **第一个定时任务**：`identity.cleanup_expired_sessions`。
   - 用 `river.NewPeriodicJob(river.PeriodicInterval(auth.session_cleanup_interval), …, &river.PeriodicJobOpts{ID: …, RunOnStart: true})`。间隔默认 1 小时，test 配置为 2 秒。
   - 它删除 `expires_at` 早于用例时钟当前时刻的会话，每批最多 1000 行，行由 `SELECT … FOR UPDATE SKIP LOCKED` 取得：正被重置、续期锁住的会话跳过，下一轮再删，所以不会和 3.5 的加锁顺序形成死锁。
@@ -724,8 +725,8 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 - 没有界面，也没有接口的命令：`create`、`reset-password`、`set-email`、`activate`。个人设置里的邮箱只读（7.7）。
 - **命令的实现**：
   - `cmd/nerve` 只解析参数。
-  - `bootstrap` 建一个最小组合：连接池、`identity` 的 `Admin()` 用例，以及一个只投递的 River 客户端（3.15）；不启动 HTTP，也不处理任务。
-  - M2 的命令还不投递任务。组合里放上只投递的客户端，是为了以后的用例在事务中投递任务时（例如 M4 的领域事件），命令行不会因为缺少客户端而坏掉。它和服务共用同一段组合代码，不是专门为命令行多写的。
+  - `bootstrap` 建一个最小组合：连接池和 `identity` 的 `Admin()` 用例；不启动 HTTP，不处理任务，也没有 River 客户端。
+  - M2 的命令都不投递任务，所以组合里不放只投递的客户端。它随第一个投递任务的命令加入（M4，例如在事务中投递领域事件的用例；负责人 2026-09-26 批准推迟，13.2）。P3b 的 River 只有服务用的客户端（3.15）。
   - 用例和 HTTP 接口共用，规则只写一份。
 
 ### 3.18 `next_path`
@@ -782,16 +783,19 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | P2 | 总体设计 | 6.4 | 固定链由三个中间件变为四个（加上安全响应头，8.3）；按路由加上限流 |
 | P2 | M0 设计 | 3.3 | 固定链由三个中间件变为四个 |
 | P2 | 差异清单 | 四 | 4.6 中标 P2 的行 |
-| P3 | 总体设计 | 3.1 | 修改密码、停用账户返回 204（5.1） |
-| P3 | 总体设计 | 3.4、6.2 | 游标的封套由 `shared` 定义（6.2 中 `shared` 的内容随之加上它），载荷由各列表按自己的排序定义（3.12） |
-| P3 | 总体设计 | 4.2 | 修改密码结束其他会话；停用结束全部会话，恢复后 PAT 重新可用；管理员重置密码同时撤销全部 PAT（3.5）；凭证的签发与变更按账户行锁（3.5） |
-| P3 | M0 设计 | 3.2 | 原文"M2 加入 `signup_enabled`，M5 加入文件大小上限"改为：M2 加入 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit`（5.3） |
-| P3 | M0/P3 spec | 第 7 节 | 分页的公共组件由 M2 加入（3.12） |
-| P3 | M0 设计 | 3.7（传递依赖测试，`M0-design.md:248`） | 禁止 `github.com/google/uuid` 的真实意图是"生成代码不漏 uuid 的映射"：google/uuid 只允许由 `oapi-codegen/runtime` 模块的包导入；另加规则，生成文件不得引用 `openapi_types.UUID`（3.12） |
-| P3 | M0/P3 spec | 2.8（`:289`）、第 7 节（`:411`） | 同上；交接表中 `format: uuid` 一行"漏掉时 archtest 的传递依赖测试失败"改为"漏掉时生成代码引用 `openapi_types.UUID`，archtest 的新规则失败"（3.12） |
-| P3 | 差异清单 | 二·按表 | `api_tokens` 逐列（4.4）；River 的表登记为新增的基础设施表 |
-| P3 | 差异清单 | 三 | PAT 撤销的路径 `/api-tokens/{id}` |
-| P3 | 差异清单 | 四 | 4.6 中标 P3 的行 |
+| P3a | 总体设计 | 3.1 | 修改密码、停用账户返回 204（5.1） |
+| P3a | 总体设计 | 3.4、6.2 | 游标的封套由 `shared` 定义（6.2 中 `shared` 的内容随之加上它），载荷由各列表按自己的排序定义（3.12） |
+| P3a | 总体设计 | 4.2 | 修改密码结束其他会话；停用结束全部会话，PAT 不删除但停用期间认证失败（3.5）；凭证的签发与变更按账户行锁（3.5） |
+| P3a | M0 设计 | 3.2 | 原文"M2 加入 `signup_enabled`，M5 加入文件大小上限"改为：M2 加入 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit`（5.3） |
+| P3a | M0/P3 spec | 第 7 节 | 分页的公共组件由 M2 加入（3.12） |
+| P3a | M0 设计 | 3.7（传递依赖测试，`M0-design.md:248`） | 禁止 `github.com/google/uuid` 的真实意图是"生成代码不漏 uuid 的映射"：google/uuid 只允许由 `oapi-codegen/runtime` 模块的包导入；另加规则，生成文件不得引用 `openapi_types.UUID`（3.12） |
+| P3a | M0/P3 spec | 2.8（`:289`）、第 7 节（`:411`） | 同上；交接表中 `format: uuid` 一行"漏掉时 archtest 的传递依赖测试失败"改为"漏掉时生成代码引用 `openapi_types.UUID`，archtest 的新规则失败"（3.12） |
+| P3a | 差异清单 | 二·按表 | `api_tokens` 逐列（4.4） |
+| P3a | 差异清单 | 三 | PAT 撤销的路径 `/api-tokens/{id}` |
+| P3a | 差异清单 | 四 | 4.6 中标 P3a 的行 |
+| P3b | 总体设计 | 4.2 | 恢复后 PAT 重新可用；管理员重置密码同时撤销全部 PAT（3.5、3.17）；P3a 写下的"随 M2/P3b 加入"改为已加入（总体设计 4.2；差异清单四的密码规则、注册默认、停用账户三行；README 的注册一条） |
+| P3b | 差异清单 | 二·按表 | River 的表登记为新增的基础设施表 |
+| P3b | 差异清单 | 四 | 4.6 中标 P3b 的行 |
 | P4 | 总体设计 | 4.3 | 没有 `navigator.locks` 时用 localStorage 租约；`nerve.auth` 记录带 `login_id`；只有续期得到 401 才结束会话；"会话暂不可用"（7.1） |
 | P4 | 前端改动清单 | 3.1 | CSRF 一行已完成 |
 | P5 | 前端改动清单 | 3.2 | M2 一行已完成 |
@@ -810,8 +814,8 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | `00001_identity_users.sql` | `users` | P1 |
 | `00002_identity_profiles.sql` | `profiles` | P1 |
 | `00003_identity_auth_sessions.sql` | `auth_sessions`（新增） | P1 |
-| `00004_identity_api_tokens.sql` | `api_tokens` | P3 |
-| `00005_river_main_v2_to_v7.sql` | River 主线第 2–7 版（3.15），`StatementBegin`/`End` 包住整段 | P3 |
+| `00004_identity_api_tokens.sql` | `api_tokens` | P3a |
+| `00005_river_main_v2_to_v7.sql` | River 主线第 2–7 版（3.15），`StatementBegin`/`End` 包住整段 | P3b |
 
 `00005` 的 Down 段是 `migrate-get --down` 的原样输出。每个迁移都要能 up、down、再 up（`platform/postgres` 的迁移测试沿用 M0 的写法）。
 
@@ -942,18 +946,18 @@ Plane 的 `sessions`（`session_key`、`session_data`、`expire_date`、`device_
 | 登录时邮箱不存在 | 返回 `USER_DOES_NOT_EXIST` | 与密码错误相同的 401，耗时也相同（3.9） | P2 |
 | 会话的期限 | Django 会话，从登录起固定 7 天（`SESSION_COOKIE_AGE`），请求不延长 | 访问令牌 15 分钟；会话从登录起 30 天，续期不延长；刷新令牌每次使用后换新，并检测重复使用（3.5） | P2 |
 | 限流 | 认证接口合计每 IP 10/min，匿名 30/min，API Key 60/min；`/api/v1` 的响应带 `X-RateLimit-Remaining`、`X-RateLimit-Reset`（`plane/apps/api/plane/api/views/base.py:120-126`） | 3.10 的七个桶；超出时 429 带 `Retry-After`，不加 `X-RateLimit-*` | P2 |
-| 无效的 PAT | 403（`AuthenticationFailed` 没有 `authenticate_header`） | 401 `unauthorized` | P3 |
-| 退出、修改密码、停用后旧凭证失效 | 其他会话在下一个请求时失效 | 相同，由每个请求的会话检查做到（3.5） | P3 |
-| 管理员重置密码 | 只改密码（会话随之失效），PAT 不动 | 撤销全部会话和全部 PAT，输出撤销的数量（3.5、3.17） | P3 |
-| `reset_password` 命令的邮箱 | 按原样匹配 | 按注册时的规则规范化 | P3 |
-| 修改登录邮箱 | 用户在个人设置中向新邮箱索取验证码后修改（M1 已删除这个流程） | 只能由服务器管理员用 `nerve users set-email` 修改，撤销该账户的全部会话，PAT 不撤销（决策点 1、3.17） | P3 |
-| 停用账户 | 自助停用：撤销会话、重置新手引导、把密码改成随机值、发邮件；"唯一管理员"的检查从不拒绝；只有命令 `activate_user` 能恢复 | 自助停用（`POST /me/deactivate`）和管理员命令 `deactivate`、`activate`；撤销全部会话，重置新手引导，不改密码，PAT 不删除但停用期间认证失败；"唯一管理员"的检查由 M3 在同一个事务里实现（决策点 3） | P3 |
-| 创建账户的命令 | 没有（第一个账户通过实例设置页创建） | `nerve users create`（决策点 2） | P3 |
-| PAT 的管理 | 只能用 Cookie 会话管理 PAT | 任何凭证都能管理，包括 PAT 本身（总体设计 0.2 原则 2） | P3 |
-| PAT 的 `last_used` | 每个请求都写 | 每分钟最多写一次 | P3 |
-| PAT 的名称和过期时间 | 不校验：名称过长时变成 500，过期时间可以是过去 | 名称 1–255 个字符；过期时间必须在未来 | P3 |
-| PAT 的编辑 | `PATCH` 可以改名称和说明，响应中带令牌原文 | 不提供（界面没有编辑入口）；令牌原文只在创建时返回一次 | P3 |
-| 时区 | 只接受 `pytz.common_timezones` | 接受任何 IANA 名称（`Local` 除外）；时区列表接口给的仍是同一份常用列表（5.3） | P3 |
+| 无效的 PAT | 403（`AuthenticationFailed` 没有 `authenticate_header`） | 401 `unauthorized` | P3a |
+| 退出、修改密码、停用后旧凭证失效 | 其他会话在下一个请求时失效 | 相同，由每个请求的会话检查做到（3.5） | P3a |
+| 管理员重置密码 | 只改密码（会话随之失效），PAT 不动 | 撤销全部会话和全部 PAT，输出撤销的数量（3.5、3.17） | P3b |
+| `reset_password` 命令的邮箱 | 按原样匹配 | 按注册时的规则规范化 | P3b |
+| 修改登录邮箱 | 用户在个人设置中向新邮箱索取验证码后修改（M1 已删除这个流程） | 只能由服务器管理员用 `nerve users set-email` 修改，撤销该账户的全部会话，PAT 不撤销（决策点 1、3.17） | P3b |
+| 停用账户 | 自助停用：撤销会话、重置新手引导、把密码改成随机值、发邮件；"唯一管理员"的检查从不拒绝；只有命令 `activate_user` 能恢复 | 自助停用（`POST /me/deactivate`）和管理员命令 `deactivate`、`activate`；撤销全部会话，重置新手引导，不改密码，PAT 不删除但停用期间认证失败；"唯一管理员"的检查由 M3 在同一个事务里实现（决策点 3） | P3a（两个命令在 P3b） |
+| 创建账户的命令 | 没有（第一个账户通过实例设置页创建） | `nerve users create`（决策点 2） | P3b |
+| PAT 的管理 | 只能用 Cookie 会话管理 PAT | 任何凭证都能管理，包括 PAT 本身（总体设计 0.2 原则 2） | P3a |
+| PAT 的 `last_used` | 每个请求都写 | 每分钟最多写一次 | P3a |
+| PAT 的名称和过期时间 | 不校验：名称过长时变成 500，过期时间可以是过去 | 名称 1–255 个字符；过期时间必须在未来 | P3a |
+| PAT 的编辑 | `PATCH` 可以改名称和说明，响应中带令牌原文 | 不提供（界面没有编辑入口）；令牌原文只在创建时返回一次 | P3a |
+| 时区 | 只接受 `pytz.common_timezones` | 接受任何 IANA 名称（`Local` 除外）；时区列表接口给的仍是同一份常用列表（5.3） | P3a |
 
 ### 4.7 删除关系图（M2 的表）
 按 3.13，每个建表的 M 画出本 M 的表的删除关系。
@@ -1042,7 +1046,7 @@ users
 | `identity.signup_disabled` | 403 | 关闭注册时注册 |
 | `identity.email_taken` | 409 | 注册时邮箱已被使用。`nerve users create`、`set-email` 的用例返回同一个错误，命令行把它显示为一句说明 |
 | `identity.refresh_token_invalid` | 401 | 刷新令牌未知、已过期、已撤销、被重复使用、被伪造，都是这一个码 |
-| `identity.current_password_incorrect` | 422 | 修改密码时当前密码错误，或校验之后密码已被并发修改；`errors[].field = current_password` |
+| `identity.current_password_incorrect` | 422 | 修改密码时当前密码错误，或校验之后密码已被并发修改。不带 `errors`：字段码是封闭的集合（3.11），没有表达"不对"的码；问题码本身指明是当前密码，前端按码显示在当前密码的字段下（7.7；P3a spec 第 3 节第 2 条） |
 | `identity.api_token_not_found` | 404 | 撤销不存在、已撤销或属于别人的 PAT（看不到的资源一律 404，总体设计 3.5） |
 
 ---
@@ -1056,7 +1060,7 @@ users
 | `platform/postgres` | `TxManager` 的实现，按结构满足 `shared.TxManager`：事务放进 `context`，仓储用 `postgres.DB(ctx, pool)` 取当前事务或连接池；`COMMIT` 和 `ROLLBACK` 在 `context.WithoutCancel` 下执行，有自己的 `database.commit_timeout`（3.6）；连接池按 UTC 扫描 `timestamptz` | pgx、goose |
 | `platform/clock` | `System` 时钟，按结构满足各模块声明的 `Clock` | 标准库 |
 | `platform/ratelimit` | 自己实现的按键令牌桶（速率和突发），闲置的键定期清掉；`AllowAll` 一次检查多个键，全有或全无；`Reserve` 扣一个单位并返回退回函数（3.6、3.10） | 标准库 |
-| `platform/jobs` | River 客户端的创建、启动、停止；服务用的客户端和命令行用的只投递客户端 | River、pgx |
+| `platform/jobs` | River 客户端的创建、启动、停止；M2 只有服务用的客户端，命令行用的只投递客户端随 M4 加入（3.15） | River、pgx |
 | `platform/httpserver` | `Router`（在 `HandleFunc`、`Handle` 时记下模式）；`API` 值（`Errors`、`Middlewares(bodies)`）；默认拒绝的认证中间件和它前面的失败闸门；限流中间件；请求元信息（客户端 IP 和限流用的 IP 键；不可信的对端带 `X-Forwarded-For` 时记一次 WARN）；请求期限；请求体上限；3.11 的 `ProblemError` 映射和新平台码；导出 `RequestID`（M0-P2 交接 3）；固定链上加安全响应头（8.3） | 标准库 |
 | `platform/httpserver/bodyshape` | 请求体结构表的类型、校验器（含按生成的 Go 类型登记的格式检查器）和中间件（3.11） | 标准库 |
 | `platform/webui` | CSP：启动时算出 `index.html` 内联脚本的哈希（8.3） | 标准库 |
@@ -1479,6 +1483,7 @@ files:
 ### 8.3 安全响应头与 CSP
 - **两层，分开放**（评审 M4）：
   - **固定链上的安全响应头**（所有响应，P2）：`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`。它们对接口的响应同样有意义，所以放在固定链上。固定链由三个中间件变为四个，M0 设计 3.3、总体设计 6.4 的说明在 P2 随之更新。
+  - **`/api/` 下的响应带 `Cache-Control: no-store`**（P3a 收尾修复加上）：注册、登录、续期的响应带令牌，`createApiToken` 的响应带 PAT，接口的回答又都是调用者自己的数据，共享缓存和代理都不能存。同一个中间件按路径设置，问题响应、平台的 `/api/` 404 和 panic 之后的 500 都带；`webui` 的文件不在 `/api/` 下，照旧由 `webui` 设置自己的 `Cache-Control`。
   - **CSP 只加在 HTML 响应上，由 `webui` 负责**（P4）：它只对页面有意义，而且要用 `index.html` 里内联脚本的哈希，只有 `webui` 知道这些脚本。
   - M0-P5 交接说"和 CSP 放在同一层"，本意是两者都由服务端在 M2 加入。按上面的理由分在两层，是有意的安排。这一项在 P4（CSP 落地时）正式关闭，review 写下这条理由。
 - **CSP 的内容**：
@@ -1582,10 +1587,11 @@ files:
 | 常见密码名单的第三方声明（3.8） | P1 |
 | 迁移角色的权限：用单独的角色执行迁移时，运行服务的角色要能读 `goose_db_version`（6.1）。第一批迁移在 P1，所以放在 P1 | P1 |
 | 前面有反向代理时配置 `server.trusted_proxies`（3.10） | P2 |
-| 第一个账户：`nerve users create --email …`（决策点 2） | P3 |
-| 管理命令：`reset-password` 撤销全部会话和 PAT；`set-email` 和 `activate` 不撤销 PAT，怀疑账户被盗时另外执行 `reset-password`（3.17） | P3 |
-| 注册会暴露邮箱是否已注册（8.2）；刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5） | P3 |
-| 密钥扫描的自定义规则和启用位置（8.6） | P3 |
+| 第一个账户：`nerve users create --email …`（决策点 2） | P3b |
+| 管理命令：`reset-password` 撤销全部会话和 PAT；`set-email` 和 `activate` 不撤销 PAT，怀疑账户被盗时另外执行 `reset-password`（3.17） | P3b |
+| 注册会暴露邮箱是否已注册（8.2） | P3a |
+| 刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5）：恢复要用 `reset-password` | P3b |
+| 密钥扫描的自定义规则和启用位置（8.6） | P3a |
 | HTTP 部署时多标签页靠租约；公网部署用 HTTPS（7.1、8.6） | P4 |
 
 ---
@@ -1901,8 +1907,11 @@ files:
   - 失败闸门用计数的假认证器证明：超额后不再调用认证器；50 个并发的无效令牌也不超过额度；签名有效而只是过期的 JWT、成功、数据库错误都退回单位；
   - `platform/ratelimit` 的测试覆盖突发、`AllowAll`、`Reserve` 的退回和闲置键的清理。
 
-### P3 `account-api`：账户接口（后端）
-- **目标**：账户的其余接口都可用，而且都能用 PAT 完成；管理命令可用；River 的第一个定时任务运行；凭证的签发与变更在并发下仍然正确。
+### P3 拆成 P3a、P3b（负责人 2026-09-26 批准）
+原来的 P3 超过一个 Phase 的规模上限（约 16 个任务，每个任务的 plan 不超过约 1,500 行），拆成两段，P3b 依赖 P3a：P3b 的 `reset-password` 撤销 PAT、`activate` 数 PAT，交错测试 3 要创建 PAT，都用 P3a 的 `api_tokens`。本文其余处写的 P3 指 P3a、P3b 合起来。
+
+### P3a `account-api`：账户接口（后端）
+- **目标**：账户的其余接口都可用，而且都能用 PAT 完成；凭证的签发与变更在并发下仍然正确。
 - **交付物**：
   1. `updateMe`、`getProfile`、`updateProfile`（`onboarding_step` 在 SQL 中合并）、`changePassword`（账户行锁、3.5 的撤销规则、`password_user` 桶）、`deactivateMe`（账户行锁）。
   2. PAT：
@@ -1910,33 +1919,54 @@ files:
      - 创建（账户行锁下复核凭证）、分页列表（`shared` 的游标封套、`common.yaml` 的分页组件、PAT 列表的游标载荷、`limit` 的 422）、撤销（`DELETE /api-tokens/{token_id}`）；
      - PAT 认证和 `last_used`。
   3. `instance` 的三个字段和 `listTimezones`；嵌入 `time/tzdata`。
-  4. 管理命令：`nerve users create`、`reset-password`、`set-email`、`deactivate`、`activate`；`Admin()`（3.17）。
-  5. River（3.15）：
+  4. 账户行锁的交错测试 4、5（3.5、9.2）。第 6 个已在 P2（`TestTheCredentialLockBlocksLocksNotInserts`）。
+  5. uuid 守卫的改写（3.12）：传递依赖测试只允许 `oapi-codegen/runtime` 模块导入 `github.com/google/uuid`；archtest 加上"生成文件不得引用 `openapi_types.UUID`"；与第一个带参数的操作同一次合并。
+  6. 请求体格式检查的第一批使用者（`createApiToken` 的 `expired_at`、`updateProfile` 的 `last_workspace_id`）和第四个整程序测试中逐格式、一次收集多种问题的情况（3.11）；参数绑定的整程序测试。
+  7. 3.10 表中每个桶与配置的接线都有整程序测试（P2 评审移交）。
+  8. 端到端：
+     - A7–A11 的接口版本（都用 PAT）；
+     - S3。
+  9. 3.20 中 P3a 的各行（含差异清单的 `api_tokens` 逐列）；8.7 中 P3a 的 README 内容。
+- **关闭**：
+  - M0-P3 整体（参数绑定的出口由 `listApiTokens`、`revokeApiToken` 测过）；
+  - M0-P6 的 S3 一项，以及 PAT 对等验收中 PAT 的部分；
+  - M1-P2、M1-P3 中接口描述的部分：主题字段；实例字段；不再读的字段和不再调用的地址都不出现在接口描述里；令牌地址不带结尾 `/`；
+  - P2 评审移交的"桶与配置的接线没有测试守住"（评审 M7）。
+- **完成线**：
+  - A7–A11 的接口版本和 S3 通过，P1、P2 的故事仍然通过；
+  - 每个需要登录的新操作都有 PAT 的测试；
+  - 整程序测试覆盖新加的全部操作，包括每个带格式的字段写错时 400 `invalid_format`、每个会拒绝某些字符串的参数写错时 400；
+  - 交错测试 4、5 在真实数据库上通过；
+  - 带着 `oapi-codegen/runtime` 的 nerve 通过改写后的传递依赖测试，生成文件的 uuid 规则通过（9.2）；
+  - `onboarding_step` 的并发合并测试通过；`limit` 为 0、101、`abc` 的测试通过；
+  - 3.10 表中的每个桶都有测试，`password_user` 按账户计数。
+
+### P3b `jobs-and-admin`：River 与管理命令（后端）
+- **目标**：管理命令可用；River 的第一个定时任务运行；账户行锁的六个交错测试全部通过。
+- **交付物**：
+  1. 管理命令：`nerve users create`、`reset-password`、`set-email`、`deactivate`、`activate`；`Admin()`（3.17）。命令行是最小组合：连接池和 `Admin()`，没有 River 客户端（3.17）。
+  2. River（3.15）：
      - 迁移 `00005`；
-     - `platform/jobs`（服务用和只投递两种客户端）；
-     - `bootstrap` 的运行和停机顺序；命令行的最小组合（3.17）；
-     - 清理过期会话的定时任务（`SKIP LOCKED` 分批）。
-  6. 账户行锁的六个交错测试（3.5、9.2）。
-  7. uuid 守卫的改写（3.12）：传递依赖测试只允许 `oapi-codegen/runtime` 模块导入 `github.com/google/uuid`；archtest 加上"生成文件不得引用 `openapi_types.UUID`"；与第一个带参数的操作同一次合并。
-  8. 请求体格式检查的第一批使用者（`createApiToken` 的 `expired_at`、`updateProfile` 的 `last_workspace_id`）和第四个整程序测试中逐格式、一次收集多种问题的情况（3.11）。
-  9. 端到端：
-     - A7–A14、A16、A17 的接口版本（需要登录的都用 PAT）；
-     - S3；
+     - `platform/jobs`（服务用的客户端）；
+     - `bootstrap` 的运行和停机顺序；
+     - 清理过期会话的定时任务（`SKIP LOCKED` 分批）；
+     - 配置 `auth.session_cleanup_interval`、`jobs.shutdown_timeout`（6.5）。
+  3. 账户行锁的交错测试 1–3（3.5、9.2），都要用管理员重置密码。
+  4. P2 评审移交：任何"不可用的密码"形式都要保持登录的耗时（P2 评审第 6 节）。
+  5. 端到端：
+     - A12（含 `deactivate`、`activate`）、A13、A14、A16、A17 的接口版本；
      - 实测 nerve 的停机时间。
-  10. 3.20 中 P3 的各行（含差异清单的 `api_tokens` 逐列和 River 的表）；8.7 中 P3 的 README 内容。
+  6. 3.20 中 P3b 的各行（含差异清单的 River 表）；8.7 中 P3b 的 README 内容。
 - **关闭**：
   - M0-P2 第 5 条；
-  - M0-P3 整体（参数绑定的出口由 `listApiTokens`、`revokeApiToken` 测过）；
-  - M0-P6 的 S3 和 River 停机两项；
-  - M1-P2、M1-P3 中接口描述的部分：主题字段；实例字段；不再读的字段和不再调用的地址都不出现在接口描述里；令牌地址不带结尾 `/`；
+  - M0-P6 的 River 停机一项；
   - M1-P3 中修改登录邮箱的一项（决策点 1）。
 - **完成线**：
-  - A7–A14、A16、A17 的接口版本通过，P1、P2 的故事仍然通过；
-  - 每个需要登录的操作都有 PAT 的测试；
-  - 四个整程序测试覆盖新加的全部操作，包括每个带格式的字段写错时 400 `invalid_format`；
-  - 账户行锁的六个交错测试通过；
-  - 带着 `oapi-codegen/runtime` 的 nerve 通过改写后的传递依赖测试，生成文件的 uuid 规则通过（9.2）；
-  - `onboarding_step` 的并发合并测试通过；`limit` 为 0、101、`abc` 的测试通过。
+  - A12–A14、A16、A17 的接口版本通过，此前的故事仍然通过；
+  - 交错测试 1–3 在真实数据库上通过，六个交错测试至此全部通过；
+  - 清理任务的测试通过：只删除过期的会话，跳过被锁住的会话；5 个迁移都能 up、down、再 up；
+  - 实测的停机时间在端到端 fixture 的预算内，写进 review；
+  - 命令行的组合只有连接池和 `Admin()`。
 
 ### P4 `web-auth`：前端认证
 - **目标**：浏览器通过令牌管理器登录、续期、退出；Cookie 和 CSRF 从前端消失；用 HTTP 部署时多标签页也能正常续期；切换账户时标签页不会以错误的身份写入；M2 能到达的页面挂载时不请求 M3 的旧接口。
@@ -1997,13 +2027,13 @@ files:
 | | 2 认证、限流、接口调用日志按路由挂载 | P1 认证（3.6）；P2 限流和失败闸门（3.10）。接口调用日志由 M8 挂在限流之后（13.2） |
 | | 3 导出 `RequestID` | P1 |
 | | 4 新的密钥类配置写进 `LogValue` | P1。按原文关闭：`*_file` 只记是否设置，不记路径（3.7） |
-| | 5 River 与停机顺序、连接池关闭的时限、handler 的期限、River 的迁移 | P1 请求期限（3.6）；P3 River、停机和迁移（3.15） |
+| | 5 River 与停机顺序、连接池关闭的时限、handler 的期限、River 的迁移 | P1 请求期限（3.6）；P3b River、停机和迁移（3.15） |
 | | 6 规则 6 推广到 `adapter/*/gen` | P1（3.14） |
 | | 7 迁移与就绪检查、迁移角色的权限 | P1：S1；README 的迁移角色一行（8.7），与第一批迁移同时 |
 | | 8 布尔配置的空值、logger 之后的致命错误、健康检查的日志 | P1（6.1） |
 | M0-P3-api-codegen-notes | 1 生成选项 | P1（3.12） |
-| | 1 中"P3 新增的架构测试会拦住对 google/uuid 的传递依赖" | P3。`runtime` 本身就带进 google/uuid，这个拦法与引入 `runtime` 冲突；守卫改为直接检查：google/uuid 只允许经由 `runtime` 模块，生成文件不得引用 `openapi_types.UUID`（3.12） |
-| | 2 错误映射、校验层、解码错误、413、`context.Canceled`、错误出口的测试、`CheckRequest` | P1：映射、分层（结构在边界，取值在领域）、请求体解码和 handler 两个出口；P3：参数绑定的出口（`listApiTokens`、`revokeApiToken`）。交接在 P3 整体关闭；不为测试在生产的接口描述里加操作（3.11） |
+| | 1 中"P3 新增的架构测试会拦住对 google/uuid 的传递依赖" | P3a。`runtime` 本身就带进 google/uuid，这个拦法与引入 `runtime` 冲突；守卫改为直接检查：google/uuid 只允许经由 `runtime` 模块，生成文件不得引用 `openapi_types.UUID`（3.12） |
+| | 2 错误映射、校验层、解码错误、413、`context.Canceled`、错误出口的测试、`CheckRequest` | P1：映射、分层（结构在边界，取值在领域）、请求体解码和 handler 两个出口；P3a：参数绑定的出口（`listApiTokens`、`revokeApiToken`）。交接在 P3a 整体关闭；不为测试在生产的接口描述里加操作（3.11） |
 | | 3 `security` 的写法 | P1（3.12） |
 | | 4 模块入口的演进 | P1（3.6） |
 | | 5 接口描述的组织规则、map 型对象 | P1（3.12；M2 没有 map 型对象） |
@@ -2011,23 +2041,23 @@ files:
 | | 2 主键与 ID | P1（照旧：`uuid`，应用生成） |
 | M0-P5-frontend-api-notes | 改调 `/api/v0/instance`；认证接口在 `/api/v0/` 下；同源 | P1、P2（接口路径）；P4（前端） |
 | | 安全响应头与 CSP 放在同一层 | P2（固定链上的响应头）；P4（CSP）。分在两层的理由见 8.3，P4 正式关闭这一项 |
-| M0-P6-e2e-notes | PAT 对等验收与认证 fixture | P1（注册）、P2（登录）、P3（PAT）、P4（页面） |
+| M0-P6-e2e-notes | PAT 对等验收与认证 fixture | P1（注册）、P2（登录）、P3a（PAT）、P4（页面） |
 | | `db.ts` 的连接池、断言的写法、失败时的数据库快照 | P1（9.5） |
 | | S1 的迁移版本 | P1 |
-| | S3 的新字段 | P3 |
+| | S3 的新字段 | P3a |
 | | S2 的"没有失败的接口请求"、控制台、`networkidle` | P4。没有刷新令牌时不请求 `/me`（7.1）；登录页没有轮询，`networkidle` 继续可用；有轮询的页面不进 S2 |
 | | 端口竞争的根本解决 | P1（`server.addr_file`） |
 | | 新等待的期限 | P1–P5 |
-| | River 停机是否仍在预算内 | P3 |
+| | River 停机是否仍在预算内 | P3b |
 | | 是否录像 | P1 定为不录像，同时同步总体设计 8.2（9.5） |
 | | fixture 写法的延伸（`storage.ts`、`webhook.ts`、`clock.ts`） | 不属于 M2：M5、M8、M4 各自按 P6 的写法加入 |
-| M1-P2-trim-content | 主题只剩一个值，五个取值，没有 `custom` 和调色板 | P3（接口，5.2）、P4（`IUserTheme` 删除，改用生成的类型） |
+| M1-P2-trim-content | 主题只剩一个值，五个取值，没有 `custom` 和调色板 | P3a（接口，5.2）、P4（`IUserTheme` 删除，改用生成的类型） |
 | M1-P3-trim-platform | 删除 Cookie 会话和 CSRF | P4（7.2） |
 | | 认证错误就地显示 | P4（7.3） |
-| | 修改登录邮箱 | 决策点 1，负责人 2026-09-25 裁定为 B：`nerve users set-email`，在 P3 实现（3.17、A16）；没有界面和接口 |
-| | `IInstanceConfig` 的 4 个字段；`is_self_managed` 和新手引导的两步；`enable_signup` 的名字 | P3（接口，5.3）、P4（前端）；两步按决策点 4（已裁定为 A）删除 |
-| | 不再读的用户字段、不再调用的地址不出现在接口描述里 | P3；收尾再核对一次 |
-| | 令牌地址统一不带结尾 `/` | P3（5.1） |
+| | 修改登录邮箱 | 决策点 1，负责人 2026-09-25 裁定为 B：`nerve users set-email`，在 P3b 实现（3.17、A16）；没有界面和接口 |
+| | `IInstanceConfig` 的 4 个字段；`is_self_managed` 和新手引导的两步；`enable_signup` 的名字 | P3a（接口，5.3）、P4（前端）；两步按决策点 4（已裁定为 A）删除 |
+| | 不再读的用户字段、不再调用的地址不出现在接口描述里 | P3a；收尾再核对一次 |
+| | 令牌地址统一不带结尾 `/` | P3a（5.1） |
 | | 新手引导挂载时请求 M3 的旧接口（交接没有列出，Codex I-11 发现） | P4（3.1）：删除预取；A10 和浏览器核对第一次打开 |
 | M1-P4-router-native | 服务端校验 `next_path` | 3.18：服务端没有跳转；前端的校验补上控制字符（P4） |
 | | 重写 `AuthenticationWrapper` | P4（7.4） |
@@ -2055,11 +2085,13 @@ files:
 | M3、M4、M6 | **物理删除与跨模块外键的关系图**：每张新表按 3.13 照搬 `on_delete`，并在 4.7 的图上延伸，写明物理删除时每条外键的去向。Plane `project.py:77-89` 的项目负责人、`cycle.py:65-68` 的迭代负责人都是 `CASCADE`：物理删除一个账户会连带删除项目或迭代。M2 只停用、不删除账户；各 M 写明允许物理删除的范围 |
 | M3 | CSP：表情选择器从 `cdn.jsdelivr.net` 下载 `emojibase-data`，改为随前端一起构建、从本站提供（8.3） |
 | M3 | 新手引导的创建工作区、加入工作区、邀请成员三步；`user.service.ts` 中留下的 `leaveWorkspace`、`joinProject`、`leaveProject`；`IUserLite` 的 `is_bot`；时区接口也供工作区和项目设置使用 |
+| M3 | **页大小的规则**：`limit` 的 1–100、默认 50（`common.yaml` 的 `Limit`）现在在 `identity/domain`，因为 M2 只有 PAT 列表一个使用者（P3a spec 第 3 节第 8 条）。第二个分页列表出现时（M3 没有就随第一个有的 M）移到 `shared`，两个列表共用 |
 | M4 | **游标**：工作项按 `sort_order`、优先级或日期排序，每种排序定义自己的游标载荷，最后以 `id` 保证稳定（3.12）；不复用 PAT 列表的 `(created_at, id)` |
 | M4 | **自动归档读 `updated_at`**：它由用例的时钟显式写入（3.13），测试用固定时钟 |
 | M4 | **请求体检查的两处延伸**（P1 评审）：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前），改为按数组下标的数值排序；不限类型的节点（`{}`、开放对象、没有 `items` 的数组）不看数的范围，`1e400` 这类 float64 放不下的数仍然得到解码器笼统的 400，改为在边界上报出。两者都在第一个带数组或开放对象请求体的操作到来时处理 |
 | M4 | **草稿发布**复用同一个结构检查：发布时，草稿的 `payload` 按"创建工作项"的请求 schema 走 `bodyshape` 的校验（3.11），与创建工作项走同一条路 |
 | M4 | **60 天物理清理**：把软删除的 `api_tokens` 纳入；`issue_activities` 对工作项、评论的外键是 `DO_NOTHING`（不写 `ON DELETE`），先删工作项会被它挡住：先删除或置空这些引用，或者登记为 `SET NULL` 的差异 |
+| M4 | 命令行的"只投递"River 客户端（3.15、3.17）随第一个投递任务的命令加入；M2 没有投递任务的命令（负责人 2026-09-26 批准推迟） |
 | M4 | `user.service.ts` 中的 `getUserProfileIssues`；事件订阅者的写法（3.15）；CSP：编辑器 callout 的默认表情图来自 `cdn.jsdelivr.net`，改为本站资源或原生表情，并核对表情回应（8.3） |
 | M5 | **头像和封面**：`users.avatar_asset_id`、`cover_image_asset_id`。迁移的范例（3.14）：先在 M5 的模块里建 `file_assets`（`<v>_<模块>_file_assets.sql`），再写 `<v+1>_identity_users_avatar_asset.sql` 给 `users` 加列和外键，后者归 `identity` 的 sqlc 条目。`User.avatar_url`、`cover_image_url` 开始返回签名地址；按新的上传协议加回 general 页和新手引导资料步骤的上传控件（3.2） |
 | M5 | **上传与按路由的中间件**：模块级的 `Middlewares`（1 MiB 请求体上限、15 秒期限）会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外，并按 3.6 的整程序测试处理：写进接口描述，或在设计中说明（控制者复核 m7）。`file_size_limit` 的执行；CSP 的 `img-src`、`connect-src` 加上存储的来源 |
@@ -2090,7 +2122,8 @@ files:
 |---|---|---|---|---|---|
 | P1 | platform-core | 已完成 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | [review](reviews/P1-platform-core-review.md) |
 | P2 | sessions | 已完成 | [spec](specs/P2-sessions.md) | [plan](plans/P2-sessions.md) | [review](reviews/P2-sessions-review.md) |
-| P3 | account-api | 未开始 | — | — | — |
+| P3a | account-api | 已完成 | [spec](specs/P3a-account-api.md) | [plan](plans/P3a-account-api.md) | [review](reviews/P3a-account-api-review.md) |
+| P3b | jobs-and-admin | 未开始 | — | — | — |
 | P4 | web-auth | 未开始 | — | — | — |
 | P5 | web-account | 未开始 | — | — | — |
 | 收尾 | closeout | 未开始 | — | — | — |
@@ -2169,7 +2202,7 @@ files:
 | M15 | 新手引导两步是产品决定 | 3.19；决策点 4 |
 | M16 | 给 M3 的交接说要"加端口"，其实已有 `SignupPolicy` | 13.2 |
 | M17 | 与总体设计 3.1、3.2 的约定不符 | 3.12 撤销路径改为 `/api-tokens/{id}`；5.1 注册的返回值；3.20 |
-| M18 | 模块入口的 `Commands()`；命令行没有 River；sqlc 没有模块边界 | 3.3 `Admin()`；3.15、3.17 只投递的客户端；3.14 按模块限定 `schema` |
+| M18 | 模块入口的 `Commands()`；命令行没有 River；sqlc 没有模块边界 | 3.3 `Admin()`；3.15、3.17 只投递的客户端（负责人 2026-09-26 批准推迟到 M4，13.2）；3.14 按模块限定 `schema` |
 
 - 评审的负责人问题 2（退出的语义）放在 11.1，负责人已批准；问题 3（平台能否导入 `shared`）由控制者裁定为不导入（3.3）。
 - 核对评审引用时发现的出入：Plane 重置命令中 zxcvbn 的位置是 `reset_password.py:56`，不是评审写的 `:122`；Plane 停用时的"唯一管理员"检查确实写在代码里，但按代码推导它从不拒绝（决策点 3）。

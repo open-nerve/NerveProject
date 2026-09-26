@@ -18,7 +18,7 @@ func TestWriteProblem(t *testing.T) {
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Errorf("status = %d, want 422", rec.Code)
 	}
-	if ct := rec.Header().Get("Content-Type"); ct != "application/problem+json" {
+	if ct := rec.Result().Header.Get("Content-Type"); ct != "application/problem+json" {
 		t.Errorf("Content-Type = %q, want application/problem+json", ct)
 	}
 	want := `{"status":422,"code":"issue.state_not_in_project","title":"State is not in the project",` +

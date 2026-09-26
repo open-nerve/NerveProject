@@ -142,13 +142,13 @@ func (g *generator) add(ref *openapi3.SchemaRef, at string) (int, error) {
 		}
 		n.types = s.Type.Slice()
 	}
-	if s.Format != "" && s.Type.Includes("string") {
-		spec := g.types.String.Resolve(s.Format)
+	if format, spelled := stringFormat(s); format != "" && s.Type.Includes("string") {
+		spec := g.types.String.Resolve(format)
 		switch checker, ok := checkers[spec]; {
 		case ok:
 			n.format = checker
 		case spec.Type != "string":
-			return fail("format %q is generated as %s, which has no bodyshape checker", s.Format, spec.Type)
+			return fail("%s is generated as %s, which has no bodyshape checker", spelled, spec.Type)
 		}
 	}
 	if s.Type.Includes("integer") {
@@ -219,6 +219,23 @@ func (g *generator) addNullable(s *openapi3.Schema, at string, fail func(string,
 	g.nodes = append(g.nodes, n)
 	g.seen[s] = len(g.nodes) - 1
 	return len(g.nodes) - 1, nil
+}
+
+// stringFormat returns the format by which oapi-codegen picks a string's Go
+// type, and how the schema spelled it. Without format, an OpenAPI 3.1 string
+// with contentMediaType is generated as format "binary", one with
+// contentEncoding base64 as format "byte" (oapi-codegen v2.8.0,
+// pkg/codegen/schema.go:1294-1330); nerve's descriptions are all 3.1.
+func stringFormat(s *openapi3.Schema) (format, spelled string) {
+	switch {
+	case s.Format != "":
+		return s.Format, fmt.Sprintf("format %q", s.Format)
+	case s.ContentMediaType != "":
+		return "binary", `contentMediaType, read as format "binary",`
+	case s.ContentEncoding == "base64":
+		return "byte", `contentEncoding base64, read as format "byte",`
+	}
+	return "", ""
 }
 
 // uncheckedNumber says why a number of JSON type t with format is generated as

@@ -10,7 +10,7 @@ import (
 // reachesInfrastructure marks what the pure layers (domain, app,
 // internal/shared) must not depend on, even indirectly: net/http,
 // database/sql and any module other than this one.
-func reachesInfrastructure(path string) bool {
+func reachesInfrastructure(_, path string) bool {
 	_, inModule := local(path)
 	return !inModule && isInfrastructure(path)
 }

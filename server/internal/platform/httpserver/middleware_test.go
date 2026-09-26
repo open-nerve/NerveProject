@@ -55,7 +55,7 @@ func TestRequestIDIsGeneratedWhenMissing(t *testing.T) {
 
 	rec := serve(h, httptest.NewRequest(http.MethodGet, "/", nil))
 
-	id := rec.Header().Get(HeaderRequestID)
+	id := rec.Result().Header.Get(HeaderRequestID)
 	if _, err := uuid.Parse(id); err != nil {
 		t.Fatalf("X-Request-Id = %q, want a UUID: %v", id, err)
 	}
@@ -80,7 +80,7 @@ func TestRequestIDFromCaller(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(HeaderRequestID, tt.header)
 
-			got := serve(h, req).Header().Get(HeaderRequestID)
+			got := serve(h, req).Result().Header.Get(HeaderRequestID)
 			if kept := got == tt.header; kept != tt.kept {
 				t.Errorf("X-Request-Id = %q for caller ID %q, kept = %v, want %v", got, tt.header, kept, tt.kept)
 			}
@@ -110,6 +110,41 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 	}
 }
 
+// Every response under /api/ carries Cache-Control: no-store (M2 design
+// 8.3): an answer, a problem, the platform's /api/ fallback and the 500 of a
+// panic. Other responses get no caching from the chain: the web UI sets its
+// own.
+func TestAPIResponsesAreNotStored(t *testing.T) {
+	discard := slog.New(slog.DiscardHandler)
+	answer := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("{}")) })
+	page := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		_, _ = w.Write([]byte("<!doctype html>"))
+	})
+	tests := []struct {
+		name, path string
+		h          http.Handler
+		want       string
+	}{
+		{"an answer", "/api/v0/me", answer, "no-store"},
+		{"a problem", "/api/v0/me", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			WriteProblem(w, Problem{Status: http.StatusUnauthorized, Code: CodeUnauthorized})
+		}), "no-store"},
+		{"the fallback", "/api/v0/nope", NewRouter(discard), "no-store"},
+		{"a panic", "/api/v0/me", http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") }), "no-store"},
+		{"a page", "/settings", page, "no-cache"},
+		{"a probe", "/healthz", NewRouter(discard), ""},
+		{"a path that only starts like the API", "/apis", answer, ""},
+	}
+	for _, tt := range tests {
+		rec := serve(middleware(tt.h, discard), httptest.NewRequest(http.MethodGet, tt.path, nil))
+
+		if got := rec.Result().Header.Get("Cache-Control"); got != tt.want {
+			t.Errorf("%s (GET %s, %d): Cache-Control = %q, want %q", tt.name, tt.path, rec.Code, got, tt.want)
+		}
+	}
+}
+
 func TestPanicBecomes500Problem(t *testing.T) {
 	logger, logs := captureLogs(t)
 	h := middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
@@ -123,7 +158,7 @@ func TestPanicBecomes500Problem(t *testing.T) {
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}
-	if ct := rec.Header().Get("Content-Type"); ct != ContentTypeProblem {
+	if ct := rec.Result().Header.Get("Content-Type"); ct != ContentTypeProblem {
 		t.Errorf("Content-Type = %q, want %q", ct, ContentTypeProblem)
 	}
 	want := `{"status":500,"code":"internal_error","title":"Internal Server Error"}` + "\n"

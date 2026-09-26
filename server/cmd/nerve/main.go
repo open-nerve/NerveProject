@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	_ "time/tzdata" // every zone is known, whatever the host has (M2 design 4.2)
 )
 
 func main() {

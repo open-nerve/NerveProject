@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 	"uuid"
@@ -21,7 +22,11 @@ var (
 func newAuthenticate(cred app.SessionCredential, credErr error) (*app.Authenticate, *fakeTokens, *fakeStore) {
 	tokens := newFakeTokens()
 	store := &fakeStore{credential: cred, credErr: credErr}
-	return app.NewAuthenticate(tokens, store, clocktest.At(now)), tokens, store
+	uc := app.NewAuthenticate(app.AuthenticateDeps{
+		AccessTokens: tokens, Sessions: store, APITokens: &fakeAPITokens{log: &callLog{}}, Touch: &fakeAPITokens{}, Clock: clocktest.At(now),
+		Logger: slog.New(slog.DiscardHandler),
+	})
+	return uc, tokens, store
 }
 
 func validCredential() app.SessionCredential {

@@ -149,7 +149,7 @@ NerveProject/
 
 ### 3.2 试点模块 `instance`
 - **接口**：`GET /api/v0/instance`，不需要登录。返回 `{ "product": "Nerve", "version": "0.1.0-dev", "commit": "…", "api_version": "v0" }`。
-- **后续扩展**：M2 加入 `signup_enabled`，M5 加入文件大小上限等。前端启动时用它读取公开配置，Agent 可以用它确认服务端的版本。
+- **后续扩展**：M2 加入 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit`（M2 设计 5.3）。前端启动时用它读取公开配置，Agent 可以用它确认服务端的版本。
 - **目录结构**（这就是以后所有模块的模板）：
   ```
   modules/instance/
@@ -174,7 +174,7 @@ NerveProject/
   1. 请求 ID：读取 `X-Request-Id`，只有是 1–128 个 `[A-Za-z0-9._:-]` 字符时才采用，否则生成 UUIDv7，并写回响应头。
   2. 异常恢复：捕获 panic，返回 500 problem+json，并记录日志。
   3. 访问日志：用 slog 记录方法、路径、状态码、耗时、请求 ID。`/healthz`、`/readyz` 的记录是 DEBUG 级别，其余是 INFO（M2/P1）。
-  4. 安全响应头（M2/P2，M2 设计 8.3）：每个响应都带 `X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`；异常恢复清掉已设的响应头之后重新设上它们，panic 的 500 同样带着。
+  4. 安全响应头（M2/P2，M2 设计 8.3）：每个响应都带 `X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`；`/api/` 下的响应另带 `Cache-Control: no-store`（M2/P3a）；异常恢复清掉已设的响应头之后重新设上它们，panic 的 500 同样带着。
 - **按路由的中间件**（M2/P1、P2，M2 设计 3.6）：`/api/v0` 的操作另有一串中间件，由 `httpserver.API.Middlewares` 交给每个模块的生成代码，在固定链之后、按这个顺序：请求元信息（客户端 IP 和限流用的 IP 键、UA）→ 请求期限（`server.request_timeout`）→ 请求体上限（`server.max_body_bytes`，超过是 413）→ 失败闸门和默认拒绝的认证（模块声明为公开的操作之外，没有有效令牌一律 401；带了令牌时先预留本 IP 的一个 `auth_failure` 单位，已空是 429）→ 限流（有凭证按凭证计数，没有按 IP 计数，超出是 429）→ 请求体结构检查（不合契约是 400）。生成代码在它们之前绑定路径参数和查询参数，在它们之后解码请求体。
 - **`/readyz`**：按顺序执行各项检查，全部共用一个 2 秒的超时预算，遇到第一个失败就停止，返回通用的 `detail`（`<检查名> is not ready`）；具体错误只写进日志，不返回给客户端。
 - **problem+json**：M0 定义统一的写出函数和 `Problem` 结构（与 `api/common.yaml` 中的定义一致），包含可选的 `detail`。平台自己的错误码不带模块前缀（`not_found`、`bad_request`、`internal_error`、`not_ready`）；M2/P1 加入 `unauthorized`、`payload_too_large`、`validation_failed`、`server_busy` 和领域错误码的体系（M2 设计 3.11），M2/P2 加入 `rate_limited`（429，带 `Retry-After`）。
@@ -247,7 +247,8 @@ NerveProject/
   8. 测试工具（`pgtest`、`apitest`）只能被测试代码导入。
   9. 模块内的包只能放在 `domain`、`app`、`adapter`（含子目录）或模块根目录（`module.go`）。放在别处的包，第 1 条排不出它的层次，第 2 条又把模块内的导入交给第 1 条判断，`domain → 模块内其他目录 → net/http` 就能两条都绕过（M0 对抗性评审 Important 1）。
   10. `internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己：`domain`、`app` 可以导入它，它不干净，技术依赖就会经它带进这两层。M0 还没有 `internal/shared`，这条规则先用合成的导入关系测试。
-- **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述、未映射的 `format: uuid`），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/google/uuid`、`github.com/docker/` 开头的包就失败，并打印导入链。
+- **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3；M2/P3a 改写）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/docker/` 开头的包就失败，并打印导入链。`github.com/google/uuid` 只允许由 `github.com/oapi-codegen/runtime` 模块的包导入（它的参数绑定自己用），别的包导入它同样失败。
+- **生成代码的 uuid 规则**（`TestGeneratedCodeUsesTheStandardUUID`，M2/P3a）：禁止 google/uuid 的真实意图是"生成代码不漏 uuid 的映射"，所以直接检查：生成文件不得引用 `oapi-codegen/runtime/types` 的 `UUID`（不论导入时用什么名字；生成代码默认叫它 `openapi_types`）（M2 设计 3.12）。
 - **纯净性的传递检查**（`TestPureLayersReachNoInfrastructure`，M0 加固）：第 2、10 条只看直接导入，而标准库里的 `expvar`、`net/rpc` 自己就导入 `net/http`，`domain → expvar` 能过这两条，却把 `net/http` 链接了进来。这个测试沿全部传递依赖检查每个 `domain`、`app`、`internal/shared` 包：不能碰到 `net/http`、`database/sql` 或本模块以外的库。发现时打印完整的导入链。
 - **depguard**：只管"整个项目都禁止使用的库"，例如：
   - 第三方 uuid 库（`github.com/google/uuid`、`github.com/gofrs/uuid`、`github.com/satori/go.uuid`）：用标准库。

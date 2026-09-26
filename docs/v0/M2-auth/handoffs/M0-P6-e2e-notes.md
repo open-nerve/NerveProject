@@ -69,3 +69,12 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：PAT 对等验收和认证 fixture 的 PAT（M2/P3）；页面的登录状态（M2/P4）；S3 的 `signup_enabled`（M2/P3）；S2 的断言（M2/P4）；River 停机与 fixture 的预算（M2/P3）；fixture 写法的延伸（M4、M5、M8）。
 
 来源：[M2/P2 spec](../specs/P2-sessions.md) 第 7 节。
+
+## 处理结果（M2/P3a）
+
+- **PAT 对等验收和认证 fixture 的 PAT**（完成）：`e2e/fixtures/auth.ts` 加上 `createPAT` 和 `bearer`；A7–A11 的接口版本只用 PAT 调接口，调用 `e2e/fixtures/assert/identity.ts` 的断言函数（`accountOf`、`tokensOf`、`expectPasswordChanged`、`expectTokenStored`），页面版本以后调用同一组函数。
+- **S3**（完成）：`toEqual` 加上 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit` 的期望值。
+
+仍未处理，状态保持 `open`：页面的登录状态（M2/P4）；S2 的断言（M2/P4）；River 停机与 fixture 的预算（M2/P3b）；fixture 写法的延伸（M4、M5、M8）。
+
+来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。

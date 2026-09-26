@@ -13,5 +13,8 @@ test("S3: a caller reads the instance information with the typed client", async 
     version,
     commit: expect.stringMatching(/^[0-9a-f]{40}$/),
     api_version: "v0",
+    signup_enabled: true,
+    workspace_creation_enabled: true,
+    file_size_limit: 5242880,
   });
 });

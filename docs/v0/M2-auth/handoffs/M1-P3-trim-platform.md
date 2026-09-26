@@ -60,3 +60,14 @@ M2 合并时：
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P3 评审记录](../../M1-frontend-trim/reviews/P3-trim-platform-review.md)第 7 节。
+
+## 处理结果（M2/P3a）
+
+- **实例配置**（接口完成，M2 设计 5.3）：`InstanceInfo` 加上 `signup_enabled`（替代 `enable_signup`）、`workspace_creation_enabled`（`is_workspace_creation_disabled` 取反）、`file_size_limit`，取自配置；`is_self_managed` 不定义，新手引导的"角色""用途"两步随之删除（M2 设计 3.19，前端在 M2/P4）。
+- **不再读的用户字段、不再调用的地址**（接口完成）：两节列出的字段和地址都不出现在 `api/` 的接口描述中。
+- **令牌的地址**（完成）：`/api/v0/me/api-tokens`、`/api/v0/api-tokens/{token_id}`，结尾都不带 `/`。
+- **修改登录邮箱**：负责人已裁定只能由管理员用命令行修改（M2 设计决策点 1），命令 `nerve users set-email` 在 M2/P3b。
+
+仍未处理，状态保持 `open`：Cookie 会话和 CSRF、认证错误就地显示、前端改读新的实例字段（M2/P4）；`set-email` 命令（M2/P3b）。
+
+来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。

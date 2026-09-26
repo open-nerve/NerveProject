@@ -24,6 +24,8 @@ type Config struct {
 	Database  DatabaseConfig  `koanf:"database"`
 	Auth      AuthConfig      `koanf:"auth"`
 	RateLimit RateLimitConfig `koanf:"ratelimit"`
+	Workspace WorkspaceConfig `koanf:"workspace"`
+	Files     FilesConfig     `koanf:"files"`
 	Log       LogConfig       `koanf:"log"`
 }
 
@@ -104,6 +106,9 @@ type RateLimitConfig struct {
 	LoginIP      BucketConfig `koanf:"login_ip"`
 	LoginIPEmail BucketConfig `koanf:"login_ip_email"`
 	RegisterIP   BucketConfig `koanf:"register_ip"`
+	// PasswordUser limits the authenticated operations that verify a
+	// password, by account: in M2, changing the password.
+	PasswordUser BucketConfig `koanf:"password_user"`
 }
 
 // BucketConfig is a token bucket: it holds at most Burst units and gains
@@ -116,6 +121,18 @@ type BucketConfig struct {
 // LogValue renders the bucket as its two settings.
 func (b BucketConfig) LogValue() slog.Value {
 	return slog.GroupValue(slog.Int("per_minute", b.PerMinute), slog.Int("burst", b.Burst))
+}
+
+// WorkspaceConfig configures workspaces. The instance API reports it to
+// clients; creating workspaces arrives, and honours it, in M3 (M2 design 5.3).
+type WorkspaceConfig struct {
+	CreationEnabled bool `koanf:"creation_enabled"`
+}
+
+// FilesConfig configures uploads. The instance API reports it to clients;
+// uploads arrive, and honour it, in M5 (M2 design 5.3).
+type FilesConfig struct {
+	SizeLimit int64 `koanf:"size_limit"` // bytes
 }
 
 // LogConfig configures the process logger.
@@ -170,6 +187,13 @@ func (c Config) LogValue() slog.Value {
 			slog.Any("login_ip", c.RateLimit.LoginIP),
 			slog.Any("login_ip_email", c.RateLimit.LoginIPEmail),
 			slog.Any("register_ip", c.RateLimit.RegisterIP),
+			slog.Any("password_user", c.RateLimit.PasswordUser),
+		),
+		slog.Group("workspace",
+			slog.Bool("creation_enabled", c.Workspace.CreationEnabled),
+		),
+		slog.Group("files",
+			slog.Int64("size_limit", c.Files.SizeLimit),
 		),
 		slog.Group("log",
 			slog.String("level", c.Log.Level),

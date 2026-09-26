@@ -5,6 +5,7 @@ package authn
 import (
 	"context"
 	"errors"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -26,7 +27,8 @@ func New(uc AuthenticateUseCase) *Authenticator {
 }
 
 // Authenticate returns a context carrying the actor of token and the
-// caller's rate-limit key, session:<id>. An invalid token is the use case's
+// caller's rate-limit key: session:<id> for an access token, pat:<id> for a
+// personal access token (M2 design 3.10). An invalid token is the use case's
 // 401 *shared.Error; for an access token that is valid but for its expiry,
 // that error also reports ExpiredCredential() true, so the platform's
 // failure gate does not count it. Any other error passes through as an
@@ -39,7 +41,11 @@ func (a *Authenticator) Authenticate(ctx context.Context, token string) (context
 	if err != nil {
 		return nil, "", err
 	}
-	return shared.WithActor(ctx, actor), "session:" + actor.SessionID.String(), nil
+	key := "session:" + actor.SessionID.String()
+	if actor.APITokenID != uuid.Nil() {
+		key = "pat:" + actor.APITokenID.String()
+	}
+	return shared.WithActor(ctx, actor), key, nil
 }
 
 // expired is the 401 of an expired access token: the client's cue to

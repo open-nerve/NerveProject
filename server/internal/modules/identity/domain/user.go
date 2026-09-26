@@ -1,5 +1,7 @@
 // Package domain holds the identity module's rules (M2 design 6.2): pure
-// functions and values, no I/O.
+// functions and values, with one exception: validTimezone calls
+// time.LoadLocation, which reads the host's zone files, so the names it
+// accepts depend on the host (spec P3a 3 item 10).
 package domain
 
 import (
@@ -19,6 +21,69 @@ type User struct {
 	DisplayName string
 	Timezone    string
 	CreatedAt   time.Time
+}
+
+// UserPatch is a partial update of an account: a nil field stays as it is.
+// The e-mail address is not in it: only the administrator's command changes
+// it (M2 decision 1).
+type UserPatch struct {
+	FirstName   *string
+	LastName    *string
+	DisplayName *string
+	Timezone    *string
+}
+
+// maxNameLength is the length of users' name columns, varchar(255), in
+// characters.
+const maxNameLength = 255
+
+// CheckUserPatch checks p (M2 design 4.2): first and last names of at most
+// 255 characters without an address in them, as Plane checks them
+// (contains_url); a display name of 1–255 characters; no NUL, which the
+// database cannot store; and a time zone that Go's time package knows, not
+// "Local". Every problem is reported at once, as one 422
+// validation_failed.
+func CheckUserPatch(p UserPatch) error {
+	var fields []shared.FieldError
+	for _, name := range []struct {
+		field string
+		value *string
+	}{{"first_name", p.FirstName}, {"last_name", p.LastName}} {
+		if name.value == nil {
+			continue
+		}
+		if f := checkText(name.field, *name.value, false, maxNameLength); f != nil {
+			fields = append(fields, *f)
+		} else if containsURL(*name.value) {
+			fields = append(fields, shared.FieldError{Field: name.field, Code: shared.FieldContainsURL, Message: "must not contain a web address"})
+		}
+	}
+	if p.DisplayName != nil {
+		if f := checkText("display_name", *p.DisplayName, true, maxNameLength); f != nil {
+			fields = append(fields, *f)
+		}
+	}
+	if p.Timezone != nil && !validTimezone(*p.Timezone) {
+		fields = append(fields, shared.FieldError{Field: "user_timezone", Code: shared.FieldInvalidFormat, Message: "is not a known time zone"})
+	}
+	if len(fields) > 0 {
+		return shared.Invalid(fields...)
+	}
+	return nil
+}
+
+// validTimezone reports whether time.LoadLocation loads name (M2 design
+// 4.2), except "" and "Local", which it takes for UTC and for the host's
+// zone. LoadLocation reads the host's zone files first and Go's own tzdata
+// after them, so one host may accept a name that another refuses:
+// "asia/shanghai" on a case-insensitive file system, "posixrules" where the
+// host has that file (spec P3a 3 item 10).
+func validTimezone(name string) bool {
+	if name == "" || name == "Local" {
+		return false
+	}
+	_, err := time.LoadLocation(name)
+	return err == nil
 }
 
 // NewAccount checks the e-mail address and the password of a new account

@@ -37,6 +37,22 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const deactivateUser = `-- name: DeactivateUser :exec
+UPDATE users
+SET is_active = false, updated_at = $1
+WHERE id = $2
+`
+
+type DeactivateUserParams struct {
+	Now time.Time
+	ID  uuid.UUID
+}
+
+func (q *Queries) DeactivateUser(ctx context.Context, arg DeactivateUserParams) error {
+	_, err := q.db.Exec(ctx, deactivateUser, arg.Now, arg.ID)
+	return err
+}
+
 const findLoginAccount = `-- name: FindLoginAccount :one
 SELECT id, password
 FROM users
@@ -53,6 +69,26 @@ func (q *Queries) FindLoginAccount(ctx context.Context, email string) (FindLogin
 	row := q.db.QueryRow(ctx, findLoginAccount, email)
 	var i FindLoginAccountRow
 	err := row.Scan(&i.ID, &i.Password)
+	return i, err
+}
+
+const getPasswordAccount = `-- name: GetPasswordAccount :one
+SELECT email, password
+FROM users
+WHERE id = $1
+`
+
+type GetPasswordAccountRow struct {
+	Email    string
+	Password string
+}
+
+// What changing the password reads before its transaction: the address for the password rules,
+// the hash as the snapshot (M2 design 3.5).
+func (q *Queries) GetPasswordAccount(ctx context.Context, id uuid.UUID) (GetPasswordAccountRow, error) {
+	row := q.db.QueryRow(ctx, getPasswordAccount, id)
+	var i GetPasswordAccountRow
+	err := row.Scan(&i.Email, &i.Password)
 	return i, err
 }
 
@@ -125,4 +161,65 @@ type UpdatePasswordHashParams struct {
 func (q *Queries) UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error {
 	_, err := q.db.Exec(ctx, updatePasswordHash, arg.Password, arg.Now, arg.ID)
 	return err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET updated_at    = $1,
+    first_name    = CASE WHEN $2::boolean THEN $3::text ELSE first_name END,
+    last_name     = CASE WHEN $4::boolean THEN $5::text ELSE last_name END,
+    display_name  = CASE WHEN $6::boolean THEN $7::text ELSE display_name END,
+    user_timezone = CASE WHEN $8::boolean THEN $9::text ELSE user_timezone END
+WHERE id = $10
+RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at
+`
+
+type UpdateUserParams struct {
+	Now             time.Time
+	SetFirstName    bool
+	FirstName       string
+	SetLastName     bool
+	LastName        string
+	SetDisplayName  bool
+	DisplayName     string
+	SetUserTimezone bool
+	UserTimezone    string
+	ID              uuid.UUID
+}
+
+type UpdateUserRow struct {
+	ID           uuid.UUID
+	Email        string
+	FirstName    string
+	LastName     string
+	DisplayName  string
+	UserTimezone string
+	CreatedAt    time.Time
+}
+
+// PATCH /me: only the fields that are set change (M2 design 3.14); the rest keep what a concurrent write left.
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.Now,
+		arg.SetFirstName,
+		arg.FirstName,
+		arg.SetLastName,
+		arg.LastName,
+		arg.SetDisplayName,
+		arg.DisplayName,
+		arg.SetUserTimezone,
+		arg.UserTimezone,
+		arg.ID,
+	)
+	var i UpdateUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FirstName,
+		&i.LastName,
+		&i.DisplayName,
+		&i.UserTimezone,
+		&i.CreatedAt,
+	)
+	return i, err
 }

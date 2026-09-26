@@ -130,13 +130,191 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateMe
+      tags:
+        - identity
+      summary: Change the caller's names and time zone
+      description: 'Changes the fields sent and leaves the others. The e-mail address cannot change here: the server''s administrator changes it.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: The caller's account, changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/deactivate:
+    post:
+      operationId: deactivateMe
+      tags:
+        - identity
+      summary: Deactivate the caller's account
+      description: Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again.
+      security:
+        - bearer: []
+      x-problem-codes: []
+      responses:
+        '204':
+          description: Deactivated.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/change-password:
+    post:
+      operationId: changePassword
+      tags:
+        - identity
+      summary: Change the caller's password
+      description: 'Needs the current password. The new one follows the rules of registration. Every other session of the account is signed out: all of them when the caller is a personal access token. Personal access tokens keep working. Password changes have a rate limit of their own per account.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - identity.current_password_incorrect
+        - server_busy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Changed.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/profile:
+    get:
+      operationId: getProfile
+      tags:
+        - identity
+      summary: Read the caller's preferences
+      security:
+        - bearer: []
+      x-problem-codes: []
+      responses:
+        '200':
+          description: The caller's preferences.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateProfile
+      tags:
+        - identity
+      summary: Change the caller's preferences
+      description: 'Changes the fields sent and leaves the others. The onboarding steps sent are merged into the stored ones: a step not sent keeps its value, also when another request changes it at the same time.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: The caller's preferences, changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/api-tokens:
+    get:
+      operationId: listApiTokens
+      tags:
+        - identity
+      summary: List the caller's personal access tokens
+      description: 'The caller''s personal access tokens that are not revoked, newest first, a page at a time. The tokens themselves are never listed: only createApiToken answers one, once.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiTokenPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createApiToken
+      tags:
+        - identity
+      summary: Create a personal access token
+      description: 'Creates a personal access token of the caller and answers the token itself, this once. Sent as "Authorization: Bearer", it acts as the account in every operation until it expires or is revoked, and it can create tokens itself. Any credential may create one; no password is asked for.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiTokenCreate'
+      responses:
+        '201':
+          description: The new token, with the token itself.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiTokenCreated'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/api-tokens/{token_id}:
+    parameters:
+      - name: token_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: revokeApiToken
+      tags:
+        - identity
+      summary: Revoke a personal access token
+      description: Revokes one of the caller's tokens, which stops working at once; a token may revoke itself. A token that does not exist, is revoked already or belongs to another account is identity.api_token_not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - identity.api_token_not_found
+      responses:
+        '204':
+          description: Revoked.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/instance:
     get:
       operationId: getInstance
       tags:
         - instance
       summary: Describe this instance
-      description: 'Reports the product, the build and the API version this instance runs. Public: needs no authentication.'
+      description: 'Reports the product, the build and the API version this instance runs, and the settings clients adapt to. Public: needs no authentication.'
       security: []
       x-problem-codes: []
       responses:
@@ -146,6 +324,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstanceInfo'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/timezones:
+    get:
+      operationId: listTimezones
+      tags:
+        - instance
+      summary: List the time zones to choose from
+      description: 'The time zones the web app offers, each with its offset at the time of the request, sorted by offset and then by label. user_timezone takes any IANA name, not only these. Public: needs no authentication.'
+      security: []
+      x-problem-codes: []
+      responses:
+        '200':
+          description: The time zones.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimezoneList'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -322,6 +518,249 @@ components:
         created_at:
           type: string
           format: date-time
+    UserUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        first_name:
+          description: At most 255 characters, without a web address.
+          type: string
+        last_name:
+          description: At most 255 characters, without a web address.
+          type: string
+        display_name:
+          description: 1–255 characters.
+          type: string
+        user_timezone:
+          description: An IANA time zone name, e.g. from GET /api/v0/timezones.
+          type: string
+    ChangePasswordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - current_password
+        - new_password
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+    Theme:
+      type: string
+      enum:
+        - system
+        - light
+        - dark
+        - light-contrast
+        - dark-contrast
+    Language:
+      description: The language of the web UI.
+      type: string
+      enum:
+        - en
+        - zh-CN
+    StartOfTheWeek:
+      description: The first day of the week, 0 Sunday to 6 Saturday.
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+    OnboardingSteps:
+      type: object
+      additionalProperties: false
+      required:
+        - profile_complete
+        - workspace_create
+        - workspace_invite
+        - workspace_join
+      properties:
+        profile_complete:
+          type: boolean
+        workspace_create:
+          type: boolean
+        workspace_invite:
+          type: boolean
+        workspace_join:
+          type: boolean
+    Profile:
+      type: object
+      additionalProperties: false
+      required:
+        - theme
+        - language
+        - start_of_the_week
+        - onboarding_step
+        - is_onboarded
+        - is_tour_completed
+        - last_workspace_id
+        - updated_at
+      properties:
+        theme:
+          $ref: '#/components/schemas/Theme'
+        language:
+          $ref: '#/components/schemas/Language'
+        start_of_the_week:
+          $ref: '#/components/schemas/StartOfTheWeek'
+        onboarding_step:
+          $ref: '#/components/schemas/OnboardingSteps'
+        is_onboarded:
+          type: boolean
+        is_tour_completed:
+          type: boolean
+        last_workspace_id:
+          description: The workspace the web app opens last; null for none. It is not checked to exist.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        updated_at:
+          type: string
+          format: date-time
+    OnboardingStepsUpdate:
+      description: The steps to set; the others keep their values.
+      type: object
+      additionalProperties: false
+      properties:
+        profile_complete:
+          type: boolean
+        workspace_create:
+          type: boolean
+        workspace_invite:
+          type: boolean
+        workspace_join:
+          type: boolean
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        theme:
+          $ref: '#/components/schemas/Theme'
+        language:
+          $ref: '#/components/schemas/Language'
+        start_of_the_week:
+          $ref: '#/components/schemas/StartOfTheWeek'
+        onboarding_step:
+          $ref: '#/components/schemas/OnboardingStepsUpdate'
+        is_onboarded:
+          type: boolean
+        is_tour_completed:
+          type: boolean
+        last_workspace_id:
+          description: Null clears it.
+          type:
+            - string
+            - 'null'
+          format: uuid
+    ApiToken:
+      description: A personal access token as lists show it. The token itself appears only in ApiTokenCreated.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - description
+        - expired_at
+        - last_used
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        description:
+          type: string
+        expired_at:
+          description: When the token stops working; null when it never does.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        last_used:
+          description: When the token last authenticated a request, to the minute; null when it never has.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    NextCursor:
+      description: The cursor of the next page; null on the last page.
+      type:
+        - string
+        - 'null'
+    ApiTokenPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiToken'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    ApiTokenCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        label:
+          description: 1–255 characters; 32 hexadecimal digits are made up when it is absent.
+          type: string
+        description:
+          type: string
+        expired_at:
+          description: A time in the future; absent or null for a token that never expires.
+          type:
+            - string
+            - 'null'
+          format: date-time
+    ApiTokenCreated:
+      description: 'A new personal access token: the fields of ApiToken, and the token itself, which is shown this once and cannot be read again.'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - description
+        - expired_at
+        - last_used
+        - created_at
+        - token
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        description:
+          type: string
+        expired_at:
+          description: When the token stops working; null when it never does.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        last_used:
+          description: Null; the token has not been used yet.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        token:
+          description: The token, nrv_pat_ and 43 more characters.
+          type: string
     InstanceInfo:
       type: object
       additionalProperties: false
@@ -330,6 +769,9 @@ components:
         - version
         - commit
         - api_version
+        - signup_enabled
+        - workspace_creation_enabled
+        - file_size_limit
       properties:
         product:
           description: Product name.
@@ -349,6 +791,53 @@ components:
           type: string
           enum:
             - v0
+        signup_enabled:
+          description: Whether anyone may register (auth.signup_enabled).
+          type: boolean
+        workspace_creation_enabled:
+          description: Whether workspaces can be created (workspace.creation_enabled).
+          type: boolean
+        file_size_limit:
+          description: The largest file an upload may have, in bytes (files.size_limit).
+          type: integer
+          minimum: 1
+    Timezone:
+      type: object
+      additionalProperties: false
+      required:
+        - label
+        - value
+        - utc_offset
+        - gmt_offset
+      properties:
+        label:
+          description: A place in the time zone, e.g. Beijing.
+          type: string
+        value:
+          description: The IANA name, what user_timezone takes.
+          type: string
+          examples:
+            - Asia/Shanghai
+        utc_offset:
+          description: The offset at the time of the request.
+          type: string
+          examples:
+            - UTC+08:00
+        gmt_offset:
+          description: The same offset, written from GMT.
+          type: string
+          examples:
+            - GMT+08:00
+    TimezoneList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timezone'
   responses:
     Problem:
       description: Error (RFC 9457 problem details).
@@ -359,13 +848,29 @@ components:
             type: integer
             minimum: 1
         WWW-Authenticate:
-          description: 'Sent with every 401 (RFC 9110 15.5.2): Bearer, or Bearer error="invalid_token" when the bearer token sent is invalid or has expired (RFC 6750 3).'
+          description: 'Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token" (RFC 6750 3) when the bearer token sent is refused before the operation runs, being invalid or expired; plain Bearer for every other 401, including a credential that the operation finds revoked while it runs.'
           schema:
             type: string
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+      schema:
+        type: string
 x-problem-codes:
   - bad_request
   - payload_too_large

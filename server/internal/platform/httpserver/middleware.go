@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 	"uuid"
 )
@@ -25,20 +26,35 @@ var securityHeaders = [...][2]string{
 	{"X-Frame-Options", "DENY"},
 }
 
+// apiPrefix is the API's path tree. No cache may store a response in it
+// (M2 design 8.3): register, login and refresh answer tokens,
+// createApiToken a personal access token, and every answer is the caller's
+// own. The web UI's files are outside it and keep the caching webui sets.
+const apiPrefix = "/api/"
+
 // middleware wraps h in the platform chain. The order is fixed, outermost
 // first: request ID -> recover -> access log -> security headers.
 func middleware(h http.Handler, logger *slog.Logger) http.Handler {
 	return withRequestID(withRecover(logger, withAccessLog(logger, withSecurityHeaders(h))))
 }
 
-// withSecurityHeaders sets securityHeaders before the handler writes.
+// withSecurityHeaders sets the fixed headers before the handler writes.
 func withSecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		for _, h := range securityHeaders {
-			w.Header().Set(h[0], h[1])
-		}
+		setFixedHeaders(w.Header(), r)
 		next.ServeHTTP(w, r)
 	})
+}
+
+// setFixedHeaders sets securityHeaders and, on a response under apiPrefix,
+// Cache-Control: no-store.
+func setFixedHeaders(header http.Header, r *http.Request) {
+	for _, h := range securityHeaders {
+		header.Set(h[0], h[1])
+	}
+	if strings.HasPrefix(r.URL.Path, apiPrefix) {
+		header.Set("Cache-Control", "no-store")
+	}
 }
 
 // RequestID returns the ID the request ID middleware assigned to the request,
@@ -81,7 +97,7 @@ func validRequestID(id string) bool {
 // withRecover turns a panic into a logged 500 problem. Headers the handler set
 // are dropped, except the request ID: a Set-Cookie must not leak, and a stale
 // Content-Length or Content-Encoding would corrupt the problem body. The
-// security headers, which the chain set before the handler ran, are set again.
+// fixed headers, which the chain set before the handler ran, are set again.
 // If the response has already started, the connection is aborted instead so
 // the client cannot mistake a truncated body for a complete one.
 func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
@@ -111,9 +127,7 @@ func withRecover(logger *slog.Logger, next http.Handler) http.Handler {
 					delete(header, name)
 				}
 			}
-			for _, h := range securityHeaders {
-				header.Set(h[0], h[1])
-			}
+			setFixedHeaders(header, r)
 			WriteProblem(rec, Problem{
 				Status: http.StatusInternalServerError,
 				Code:   CodeInternal,

@@ -30,7 +30,7 @@ func TestPlatformProblemsMatchTheContract(t *testing.T) {
 		{"not ready", NewRouter(discard, notReady), "/readyz", http.StatusServiceUnavailable},
 		{"panic", middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") }), discard), "/api/v0/boom", http.StatusInternalServerError},
 		{"bad request", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			errs.BadRequest(w, r, errors.New("Invalid format for parameter limit"))
+			errs.BadRequest(w, r, &InvalidParamFormatError{ParamName: "limit", Err: errors.New("not a number")})
 		}), "/api/v0/things?limit=x", http.StatusBadRequest},
 		{"internal error", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			errs.Write(w, r, errors.New("boom"))
@@ -54,8 +54,8 @@ func TestPlatformProblemsMatchTheContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := serve(tt.h, httptest.NewRequest(http.MethodGet, tt.target, nil))
 
-			if rec.Code != tt.status || rec.Header().Get("Content-Type") != ContentTypeProblem {
-				t.Fatalf("response = %d %s, want %d problem+json", rec.Code, rec.Header().Get("Content-Type"), tt.status)
+			if ct := rec.Result().Header.Get("Content-Type"); rec.Code != tt.status || ct != ContentTypeProblem {
+				t.Fatalf("response = %d %s, want %d problem+json", rec.Code, ct, tt.status)
 			}
 			contract.CheckSchema(t, "Problem", rec.Body.Bytes())
 		})

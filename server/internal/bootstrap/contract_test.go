@@ -130,6 +130,44 @@ func TestBodiesThatBreakTheStructureAnswer400(t *testing.T) {
 	}
 }
 
+// 5. Every path or query parameter whose Go type rejects some strings
+// answers a wrong value with 400 that names it (M2 design 3.11, M0-P3
+// handoff 2), before authentication: parameters bind first (3.6), so no
+// token is sent.
+func TestParametersThatDoNotBindAnswer400(t *testing.T) {
+	contract := apitest.Load(t)
+	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+
+	cases := 0
+	for _, op := range contract.Operations() {
+		for _, c := range op.ParamCases() {
+			cases++
+			t.Run(op.Pattern()+"/"+c.Name, func(t *testing.T) {
+				req := newRequest(t, op.Method, base+c.Target, "", nil)
+				res, body := send(t, req)
+
+				contract.CheckResponse(t, req, res)
+				var p struct {
+					Code   string                 `json:"code"`
+					Errors []apitest.FieldProblem `json:"errors"`
+				}
+				if err := json.Unmarshal(body, &p); err != nil {
+					t.Fatalf("decode %s: %v", body, err)
+				}
+				want := []apitest.FieldProblem{{Field: c.Field, Code: "invalid_format"}}
+				if res.StatusCode != http.StatusBadRequest || p.Code != "bad_request" || !slices.Equal(p.Errors, want) {
+					t.Errorf("%s = %d %s, want 400 bad_request with %v", c.Target, res.StatusCode, body, want)
+				}
+			})
+		}
+	}
+	// The contract has such parameters (limit, token_id): none found means
+	// the derivation broke, not that there is nothing to test.
+	if cases == 0 {
+		t.Fatal("no parameter case derived from the contract")
+	}
+}
+
 // Every operation's default response, the problem, declares the two headers
 // a problem may carry: Retry-After and WWW-Authenticate. Each module declares
 // its own Problem response (spec P2 3 item 13), so a module that leaves one

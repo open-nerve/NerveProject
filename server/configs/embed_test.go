@@ -22,10 +22,12 @@ var (
 		LoginIP:       config.BucketConfig{PerMinute: 30, Burst: 10},
 		LoginIPEmail:  config.BucketConfig{PerMinute: 10, Burst: 5},
 		RegisterIP:    config.BucketConfig{PerMinute: 10, Burst: 5},
+		PasswordUser:  config.BucketConfig{PerMinute: 5, Burst: 5},
 	}
 	high       = config.BucketConfig{PerMinute: 600000, Burst: 100000}
 	testLimits = config.RateLimitConfig{
 		IPv6PrefixLen: 64, Anonymous: high, AuthFailure: high, Authenticated: high, LoginIP: high, LoginIPEmail: high, RegisterIP: high,
+		PasswordUser: high,
 	}
 )
 
@@ -89,6 +91,8 @@ func TestBuiltInProfiles(t *testing.T) {
 					},
 				},
 				RateLimit: tt.limits,
+				Workspace: config.WorkspaceConfig{CreationEnabled: true},
+				Files:     config.FilesConfig{SizeLimit: 5 << 20},
 				Log:       config.LogConfig{Level: tt.level, Format: tt.format},
 			}
 			if !reflect.DeepEqual(cfg, want) {

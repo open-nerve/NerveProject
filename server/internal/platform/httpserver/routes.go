@@ -62,7 +62,7 @@ func NewRouter(logger *slog.Logger, checks ...Check) *Router {
 		}
 		writeStatusOK(w)
 	})
-	r.HandleFunc("/api/", func(w http.ResponseWriter, req *http.Request) {
+	r.HandleFunc(apiPrefix, func(w http.ResponseWriter, req *http.Request) {
 		WriteProblem(w, Problem{
 			Status: http.StatusNotFound,
 			Code:   CodeNotFound,

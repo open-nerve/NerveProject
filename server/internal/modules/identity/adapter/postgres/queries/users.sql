@@ -14,6 +14,13 @@ SELECT id, password
 FROM users
 WHERE email = sqlc.arg(email);
 
+-- name: GetPasswordAccount :one
+-- What changing the password reads before its transaction: the address for the password rules,
+-- the hash as the snapshot (M2 design 3.5).
+SELECT email, password
+FROM users
+WHERE id = sqlc.arg(id);
+
 -- name: LockUserForCredentials :one
 -- The account row lock of M2 design 3.5. FOR NO KEY UPDATE conflicts with itself and with
 -- FOR UPDATE, so the credential transactions of one account run one after another; it does not
@@ -23,6 +30,22 @@ SELECT password, is_active
 FROM users
 WHERE id = sqlc.arg(id)
 FOR NO KEY UPDATE;
+
+-- name: UpdateUser :one
+-- PATCH /me: only the fields that are set change (M2 design 3.14); the rest keep what a concurrent write left.
+UPDATE users
+SET updated_at    = sqlc.arg(now),
+    first_name    = CASE WHEN sqlc.arg(set_first_name)::boolean THEN sqlc.arg(first_name)::text ELSE first_name END,
+    last_name     = CASE WHEN sqlc.arg(set_last_name)::boolean THEN sqlc.arg(last_name)::text ELSE last_name END,
+    display_name  = CASE WHEN sqlc.arg(set_display_name)::boolean THEN sqlc.arg(display_name)::text ELSE display_name END,
+    user_timezone = CASE WHEN sqlc.arg(set_user_timezone)::boolean THEN sqlc.arg(user_timezone)::text ELSE user_timezone END
+WHERE id = sqlc.arg(id)
+RETURNING id, email, first_name, last_name, display_name, user_timezone, created_at;
+
+-- name: DeactivateUser :exec
+UPDATE users
+SET is_active = false, updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id);
 
 -- name: UpdatePasswordHash :exec
 UPDATE users

@@ -28,3 +28,132 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) er
 	_, err := q.db.Exec(ctx, createProfile, arg.ID, arg.UserID, arg.Now)
 	return err
 }
+
+const getProfile = `-- name: GetProfile :one
+SELECT theme, language, start_of_the_week, onboarding_step, is_onboarded, is_tour_completed, last_workspace_id, updated_at
+FROM profiles
+WHERE user_id = $1
+`
+
+type GetProfileRow struct {
+	Theme           string
+	Language        string
+	StartOfTheWeek  int16
+	OnboardingStep  []byte
+	IsOnboarded     bool
+	IsTourCompleted bool
+	LastWorkspaceID *uuid.UUID
+	UpdatedAt       time.Time
+}
+
+func (q *Queries) GetProfile(ctx context.Context, userID uuid.UUID) (GetProfileRow, error) {
+	row := q.db.QueryRow(ctx, getProfile, userID)
+	var i GetProfileRow
+	err := row.Scan(
+		&i.Theme,
+		&i.Language,
+		&i.StartOfTheWeek,
+		&i.OnboardingStep,
+		&i.IsOnboarded,
+		&i.IsTourCompleted,
+		&i.LastWorkspaceID,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const resetOnboarding = `-- name: ResetOnboarding :exec
+UPDATE profiles
+SET updated_at = $1, onboarding_step = DEFAULT, is_onboarded = DEFAULT, is_tour_completed = DEFAULT,
+    last_workspace_id = DEFAULT
+WHERE user_id = $2
+`
+
+type ResetOnboardingParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+}
+
+// Deactivation: onboarding starts over, from the defaults of registration (M2 design 3.5, story A12).
+func (q *Queries) ResetOnboarding(ctx context.Context, arg ResetOnboardingParams) error {
+	_, err := q.db.Exec(ctx, resetOnboarding, arg.Now, arg.UserID)
+	return err
+}
+
+const updateProfile = `-- name: UpdateProfile :one
+UPDATE profiles
+SET updated_at        = $1,
+    theme             = CASE WHEN $2::boolean THEN $3::text ELSE theme END,
+    language          = CASE WHEN $4::boolean THEN $5::text ELSE language END,
+    start_of_the_week = CASE WHEN $6::boolean THEN $7::smallint ELSE start_of_the_week END,
+    onboarding_step   = onboarding_step || $8::jsonb,
+    is_onboarded      = CASE WHEN $9::boolean THEN $10::boolean ELSE is_onboarded END,
+    is_tour_completed = CASE WHEN $11::boolean THEN $12::boolean ELSE is_tour_completed END,
+    last_workspace_id = CASE WHEN $13::boolean THEN $14::uuid ELSE last_workspace_id END
+WHERE user_id = $15
+RETURNING theme, language, start_of_the_week, onboarding_step, is_onboarded, is_tour_completed, last_workspace_id, updated_at
+`
+
+type UpdateProfileParams struct {
+	Now                 time.Time
+	SetTheme            bool
+	Theme               string
+	SetLanguage         bool
+	Language            string
+	SetStartOfTheWeek   bool
+	StartOfTheWeek      int16
+	OnboardingStepPatch []byte
+	SetIsOnboarded      bool
+	IsOnboarded         bool
+	SetIsTourCompleted  bool
+	IsTourCompleted     bool
+	SetLastWorkspaceID  bool
+	LastWorkspaceID     *uuid.UUID
+	UserID              uuid.UUID
+}
+
+type UpdateProfileRow struct {
+	Theme           string
+	Language        string
+	StartOfTheWeek  int16
+	OnboardingStep  []byte
+	IsOnboarded     bool
+	IsTourCompleted bool
+	LastWorkspaceID *uuid.UUID
+	UpdatedAt       time.Time
+}
+
+// PATCH /me/profile: only the fields that are set change, and the steps are merged into the stored object in the
+// statement (M2 design 3.14): a concurrent update of other steps waits for the row lock and is merged into the new
+// row, not lost. An empty patch, {}, merges nothing.
+func (q *Queries) UpdateProfile(ctx context.Context, arg UpdateProfileParams) (UpdateProfileRow, error) {
+	row := q.db.QueryRow(ctx, updateProfile,
+		arg.Now,
+		arg.SetTheme,
+		arg.Theme,
+		arg.SetLanguage,
+		arg.Language,
+		arg.SetStartOfTheWeek,
+		arg.StartOfTheWeek,
+		arg.OnboardingStepPatch,
+		arg.SetIsOnboarded,
+		arg.IsOnboarded,
+		arg.SetIsTourCompleted,
+		arg.IsTourCompleted,
+		arg.SetLastWorkspaceID,
+		arg.LastWorkspaceID,
+		arg.UserID,
+	)
+	var i UpdateProfileRow
+	err := row.Scan(
+		&i.Theme,
+		&i.Language,
+		&i.StartOfTheWeek,
+		&i.OnboardingStep,
+		&i.IsOnboarded,
+		&i.IsTourCompleted,
+		&i.LastWorkspaceID,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

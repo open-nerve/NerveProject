@@ -34,10 +34,11 @@ func wantResponse(t *testing.T, rec *httptest.ResponseRecorder, target string, s
 	if rec.Code != status {
 		t.Errorf("%s: status = %d, want %d", target, rec.Code, status)
 	}
-	if got := rec.Header().Get("Content-Type"); got != contentType {
+	sent := rec.Result().Header // as the status went out, not as set after it
+	if got := sent.Get("Content-Type"); got != contentType {
 		t.Errorf("%s: Content-Type = %q, want %q", target, got, contentType)
 	}
-	if got := rec.Header().Get("Cache-Control"); got != cacheControl {
+	if got := sent.Get("Cache-Control"); got != cacheControl {
 		t.Errorf("%s: Cache-Control = %q, want %q", target, got, cacheControl)
 	}
 	if got := rec.Body.String(); got != body {
@@ -98,8 +99,8 @@ func TestMissingAssetsAre404(t *testing.T) {
 func TestIndexHTMLRedirectsToRoot(t *testing.T) {
 	rec := serve(Handler(built), http.MethodGet, "/index.html")
 
-	if rec.Code != http.StatusMovedPermanently || rec.Header().Get("Location") != "./" {
-		t.Errorf("GET /index.html = %d Location %q, want 301 to ./", rec.Code, rec.Header().Get("Location"))
+	if location := rec.Result().Header.Get("Location"); rec.Code != http.StatusMovedPermanently || location != "./" {
+		t.Errorf("GET /index.html = %d Location %q, want 301 to ./", rec.Code, location)
 	}
 }
 
@@ -107,9 +108,10 @@ func TestHeadHasHeadersButNoBody(t *testing.T) {
 	h := Handler(built)
 	for _, target := range []string{"/", "/acme/projects", "/assets/entry.client-a1.js"} {
 		rec := serve(h, http.MethodHead, target)
-		if rec.Code != http.StatusOK || rec.Body.Len() != 0 || rec.Header().Get("Content-Length") == "" {
+		length := rec.Result().Header.Get("Content-Length")
+		if rec.Code != http.StatusOK || rec.Body.Len() != 0 || length == "" {
 			t.Errorf("HEAD %s = %d, body %d bytes, Content-Length %q; want 200, no body, a length",
-				target, rec.Code, rec.Body.Len(), rec.Header().Get("Content-Length"))
+				target, rec.Code, rec.Body.Len(), length)
 		}
 	}
 }
@@ -119,8 +121,8 @@ func TestOnlyGetAndHeadAreAllowed(t *testing.T) {
 		h := Handler(files)
 		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions} {
 			rec := serve(h, method, "/assets/entry.client-a1.js")
-			if rec.Code != http.StatusMethodNotAllowed || rec.Header().Get("Allow") != "GET, HEAD" {
-				t.Errorf("%s = %d Allow %q, want 405 Allow \"GET, HEAD\"", method, rec.Code, rec.Header().Get("Allow"))
+			if allow := rec.Result().Header.Get("Allow"); rec.Code != http.StatusMethodNotAllowed || allow != "GET, HEAD" {
+				t.Errorf("%s = %d Allow %q, want 405 Allow \"GET, HEAD\"", method, rec.Code, allow)
 			}
 		}
 	}

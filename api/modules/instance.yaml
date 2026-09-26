@@ -11,8 +11,9 @@ paths:
       tags: [instance]
       summary: Describe this instance
       description: >-
-        Reports the product, the build and the API version this instance runs.
-        Public: needs no authentication.
+        Reports the product, the build and the API version this instance
+        runs, and the settings clients adapt to. Public: needs no
+        authentication.
       security: []
       x-problem-codes: []
       responses:
@@ -22,6 +23,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstanceInfo'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/timezones:
+    get:
+      operationId: listTimezones
+      tags: [instance]
+      summary: List the time zones to choose from
+      description: >-
+        The time zones the web app offers, each with its offset at the time
+        of the request, sorted by offset and then by label. user_timezone
+        takes any IANA name, not only these. Public: needs no
+        authentication.
+      security: []
+      x-problem-codes: []
+      responses:
+        '200':
+          description: The time zones.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimezoneList'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -43,9 +65,11 @@ components:
             minimum: 1
         WWW-Authenticate:
           description: >-
-            Sent with every 401 (RFC 9110 15.5.2): Bearer, or
-            Bearer error="invalid_token" when the bearer token sent is invalid
-            or has expired (RFC 6750 3).
+            Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token"
+            (RFC 6750 3) when the bearer token sent is refused before the
+            operation runs, being invalid or expired; plain Bearer for every
+            other 401, including a credential that the operation finds revoked
+            while it runs.
           schema:
             type: string
       content:
@@ -56,7 +80,7 @@ components:
     InstanceInfo:
       type: object
       additionalProperties: false
-      required: [product, version, commit, api_version]
+      required: [product, version, commit, api_version, signup_enabled, workspace_creation_enabled, file_size_limit]
       properties:
         product:
           description: Product name.
@@ -73,3 +97,42 @@ components:
           description: Version of this HTTP API; every path starts with /api/{api_version}.
           type: string
           enum: [v0]
+        signup_enabled:
+          description: Whether anyone may register (auth.signup_enabled).
+          type: boolean
+        workspace_creation_enabled:
+          description: Whether workspaces can be created (workspace.creation_enabled).
+          type: boolean
+        file_size_limit:
+          description: The largest file an upload may have, in bytes (files.size_limit).
+          type: integer
+          minimum: 1
+    Timezone:
+      type: object
+      additionalProperties: false
+      required: [label, value, utc_offset, gmt_offset]
+      properties:
+        label:
+          description: A place in the time zone, e.g. Beijing.
+          type: string
+        value:
+          description: The IANA name, what user_timezone takes.
+          type: string
+          examples: [Asia/Shanghai]
+        utc_offset:
+          description: The offset at the time of the request.
+          type: string
+          examples: [UTC+08:00]
+        gmt_offset:
+          description: The same offset, written from GMT.
+          type: string
+          examples: [GMT+08:00]
+    TimezoneList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Timezone'

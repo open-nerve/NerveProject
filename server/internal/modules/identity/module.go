@@ -1,7 +1,7 @@
 // Package identity is the accounts module (M2 design 3.3, 6.2): accounts,
-// profiles, sessions and, from later phases, personal access tokens. It
-// brings registration, login, refresh, logout, GET /me and the
-// authentication every other operation goes through.
+// profiles, sessions and personal access tokens. It brings registration,
+// login, refresh, logout, the caller's account, preferences and tokens, and
+// the authentication every other operation goes through.
 package identity
 
 import (
@@ -60,6 +60,7 @@ type RateLimits struct {
 	LoginIP      *ratelimit.Bucket
 	LoginIPEmail *ratelimit.Bucket
 	RegisterIP   *ratelimit.Bucket
+	PasswordUser *ratelimit.Bucket
 }
 
 // Module is the wired identity module.
@@ -83,7 +84,9 @@ func New(d Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("hash the dummy password: %w", err)
 	}
+	rules := domain.NewPasswordRules()
 	store := postgresadapter.New(d.Pool)
+	lock := app.CredentialLock{Locker: store, Sessions: store, APITokens: store}
 	tokens := signing.NewAccessTokens(keys)
 	issuance := app.Issuance{
 		Tokens:     tokens,
@@ -94,23 +97,40 @@ func New(d Deps) (*Module, error) {
 	return &Module{
 		uc: httpadapter.UseCases{
 			Register: app.NewRegister(app.RegisterDeps{
-				Policy: d.SignupPolicy, Rules: domain.NewPasswordRules(), Hasher: hasher, Tx: d.Tx,
+				Policy: d.SignupPolicy, Rules: rules, Hasher: hasher, Tx: d.Tx,
 				Users: store, Profiles: store, Sessions: store, Issuance: issuance, Clock: d.Clock, Logger: d.Logger,
 			}),
 			Login: app.NewLogin(app.LoginDeps{
 				Accounts: store, Locker: store, Passwords: store, Sessions: store, Hasher: hasher, Tx: d.Tx,
 				Issuance: issuance, Clock: d.Clock, Logger: d.Logger, DummyHash: dummy,
 			}),
-			Refresh: app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
-			Logout:  app.NewLogout(store, d.Clock, d.Logger),
-			GetMe:   app.NewGetMe(store),
+			Refresh:  app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
+			Logout:   app.NewLogout(store, d.Clock, d.Logger),
+			GetMe:    app.NewGetMe(store),
+			UpdateMe: app.NewUpdateMe(store, d.Clock),
+			ChangePassword: app.NewChangePassword(app.ChangePasswordDeps{
+				Accounts: store, Lock: lock, Passwords: store, Sessions: store, Hasher: hasher,
+				Rules: rules, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+			}),
+			Deactivate: app.NewDeactivate(app.DeactivateDeps{
+				Lock: lock, Users: store, Profiles: store, Sessions: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+			}),
+			GetProfile:    app.NewGetProfile(store),
+			UpdateProfile: app.NewUpdateProfile(store, d.Clock),
+			ListAPITokens: app.NewListAPITokens(store),
+			CreateAPIToken: app.NewCreateAPIToken(app.CreateAPITokenDeps{
+				Lock: lock, Tokens: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+			}),
+			RevokeAPIToken: app.NewRevokeAPIToken(store, d.Clock, d.Logger),
 		},
 		settings: httpadapter.Settings{
 			Limits:          httpadapter.Limits(d.RateLimits),
 			RefreshDeadline: d.RefreshDeadline,
 			Logger:          d.Logger,
 		},
-		authenticator: authn.New(app.NewAuthenticate(tokens, store, d.Clock)),
+		authenticator: authn.New(app.NewAuthenticate(app.AuthenticateDeps{
+			AccessTokens: tokens, Sessions: store, APITokens: store, Touch: store, Clock: d.Clock, Logger: d.Logger,
+		})),
 	}, nil
 }
 

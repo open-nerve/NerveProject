@@ -58,7 +58,7 @@ func issuance(tokens *fakeTokens, mac fakeMAC) app.Issuance {
 func isV7(id uuid.UUID) bool { return id[6]>>4 == 7 }
 
 // assertNoSecret fails when logs hold secret in a spelling a log would
-// give it: as is (a string), in lower-case hex, or in either base64
+// give it: as is (a string), in hex of either case, or in either base64
 // alphabet (slog's JSON handler writes a []byte as standard base64). The
 // unpadded spellings also find the padded ones, which contain them.
 func assertNoSecret(t *testing.T, logs, name string, secret []byte) {
@@ -66,6 +66,7 @@ func assertNoSecret(t *testing.T, logs, name string, secret []byte) {
 	for _, spelling := range []string{
 		string(secret),
 		hex.EncodeToString(secret),
+		strings.ToUpper(hex.EncodeToString(secret)),
 		base64.RawStdEncoding.EncodeToString(secret),
 		base64.RawURLEncoding.EncodeToString(secret),
 	} {

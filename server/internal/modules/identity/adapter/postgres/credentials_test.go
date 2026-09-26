@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
@@ -29,6 +30,75 @@ func TestFindLoginAccount(t *testing.T) {
 		if _, err := s.FindLoginAccount(context.Background(), email); !errors.Is(err, app.ErrNotFound) {
 			t.Errorf("FindLoginAccount(%q) = %v, want app.ErrNotFound", email, err)
 		}
+	}
+}
+
+func TestPasswordAccount(t *testing.T) {
+	s, _ := newStore(t)
+	u := newUser("alice@corp.com")
+	mustCreate(t, s, u)
+
+	got, err := s.PasswordAccount(context.Background(), u.ID)
+
+	if want := (app.PasswordAccount{Email: "alice@corp.com", PasswordHash: u.PasswordHash}); err != nil || got != want {
+		t.Errorf("PasswordAccount() = %+v, %v; want %+v", got, err, want)
+	}
+	if _, err := s.PasswordAccount(context.Background(), uuid.NewV7()); !errors.Is(err, app.ErrNotFound) {
+		t.Errorf("PasswordAccount(unknown) = %v, want app.ErrNotFound", err)
+	}
+}
+
+// RevokeSessions revokes the account's live sessions but the one kept, and
+// only them: a session revoked or expired already keeps what it has, and
+// another account's is untouched (M2 design 3.5).
+func TestRevokeSessions(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newUser("alice@corp.com"), newUser("bob@corp.com")
+	mustCreate(t, s, alice)
+	mustCreate(t, s, bob)
+	session := func(u app.NewUser, expires time.Time) uuid.UUID {
+		t.Helper()
+		n := app.NewSession{ID: uuid.NewV7(), UserID: u.ID, TokenHash: secretHash[:], ExpiresAt: expires, Now: now}
+		if err := s.CreateSession(context.Background(), n); err != nil {
+			t.Fatal(err)
+		}
+		return n.ID
+	}
+	kept, live, expired, loggedOut, bobs := session(alice, sessionEnd), session(alice, sessionEnd),
+		session(alice, now.Add(time.Second)), session(alice, sessionEnd), session(bob, sessionEnd)
+	exec(t, pool, `UPDATE auth_sessions SET revoked_at = $2, revoke_reason = 'logout' WHERE id = $1`, loggedOut, now)
+
+	n, err := s.RevokeSessions(context.Background(), alice.ID, kept, domain.RevokePasswordChanged, later)
+
+	if err != nil || n != 1 {
+		t.Fatalf("RevokeSessions() = %d, %v; want 1", n, err)
+	}
+	tests := []struct {
+		name            string
+		id              uuid.UUID
+		reason          string // "" for none
+		revoked, update time.Time
+	}{
+		{"the kept session", kept, "", time.Time{}, now},
+		{"a live session", live, "password_changed", later, later},
+		{"an expired session", expired, "", time.Time{}, now},
+		{"a session logged out", loggedOut, "logout", now, now},
+		{"another account's session", bobs, "", time.Time{}, now},
+	}
+	for _, tt := range tests {
+		r := readSession(t, pool, tt.id)
+		var reason string
+		var revoked time.Time
+		if r.reason != nil {
+			reason, revoked = *r.reason, *r.revoked
+		}
+		if reason != tt.reason || !revoked.Equal(tt.revoked) || !r.updated.Equal(tt.update) {
+			t.Errorf("%s: reason %q revoked %v updated %v; want %q, %v, %v", tt.name, reason, revoked, r.updated, tt.reason, tt.revoked, tt.update)
+		}
+	}
+	// uuid.Nil keeps none.
+	if n, err := s.RevokeSessions(context.Background(), alice.ID, uuid.Nil(), domain.RevokePasswordChanged, later); err != nil || n != 1 {
+		t.Errorf("RevokeSessions(keep none) = %d, %v; want the kept one revoked", n, err)
 	}
 }
 

@@ -170,6 +170,82 @@ export async function expectRevoked(
   expect(session.revoke_reason).toBe(reason);
 }
 
+/** An account's row, as the account stories read it. */
+export interface AccountRow {
+  id: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  user_timezone: string;
+  is_active: boolean;
+  updated_at: Date;
+}
+
+/** The account of email, a lowercased address. */
+export async function accountOf(db: Database, email: string): Promise<AccountRow> {
+  const rows = await db.query<AccountRow>(
+    `SELECT id, password, first_name, last_name, display_name, user_timezone, is_active, updated_at
+       FROM users WHERE email = $1`,
+    [email]
+  );
+  expect(rows, `the account of ${email}`).toHaveLength(1);
+  return rows[0] as AccountRow;
+}
+
+/** The personal access tokens of the account userId, oldest first: id and deleted_at. */
+export async function tokensOf(db: Database, userId: string): Promise<{ id: string; deleted_at: Date | null }[]> {
+  return db.query("SELECT id, deleted_at FROM api_tokens WHERE user_id = $1 ORDER BY created_at, id", [userId]);
+}
+
+/**
+ * A7: the password of the account `before` changed, to another argon2id
+ * hash; every session of the account is revoked for password_changed but
+ * survivingSession, the refresh token of the page's own session, which
+ * stays live; the personal access tokens are as they were (M2 design 3.5).
+ */
+export async function expectPasswordChanged(
+  db: Database,
+  before: AccountRow,
+  tokensBefore: { id: string; deleted_at: Date | null }[],
+  survivingSession?: string
+): Promise<void> {
+  const [after] = await db.query<{ password: string }>("SELECT password FROM users WHERE id = $1", [before.id]);
+  expect(after?.password).toMatch(/^\$argon2id\$/);
+  expect(after?.password).not.toBe(before.password);
+  const surviving = survivingSession === undefined ? undefined : (await sessionOf(db, survivingSession)).id;
+  const sessions = await db.query<{ id: string; revoke_reason: string | null }>(
+    "SELECT id, revoke_reason FROM auth_sessions WHERE user_id = $1",
+    [before.id]
+  );
+  expect(sessions.length).toBeGreaterThan(0);
+  for (const s of sessions) {
+    expect(s.revoke_reason, `session ${s.id}`).toBe(s.id === surviving ? null : "password_changed");
+  }
+  expect(await tokensOf(db, before.id)).toEqual(tokensBefore);
+}
+
+/**
+ * A11: the new token's row holds the SHA-256 of the token, and no text
+ * column holds the token's text; it expires at expiredAt and is live.
+ */
+export async function expectTokenStored(db: Database, id: string, token: string, expiredAt: string): Promise<void> {
+  const rows = await db.query<{ token_hash: Buffer; expired_at: Date; deleted_at: Date | null; row: string }>(
+    "SELECT token_hash, expired_at, deleted_at, row_to_json(t)::text AS row FROM api_tokens t WHERE id = $1",
+    [id]
+  );
+  expect(rows).toHaveLength(1);
+  const [row] = rows;
+  expect(row?.token_hash.equals(createHash("sha256").update(token).digest())).toBe(true);
+  // row_to_json writes the whole row as text, so this catches the token's
+  // text, with or without its prefix, in a text column. A bytea column is
+  // written as hex, which this does not search: that token_hash holds only
+  // the hash is the Go store test's to check (TestCreateAPIToken).
+  expect(row?.row).not.toContain(token.slice("nrv_pat_".length));
+  expect(row?.expired_at.getTime()).toBe(new Date(expiredAt).getTime());
+  expect(row?.deleted_at).toBeNull();
+}
+
 /** How many accounts, profiles and sessions there are. */
 export interface IdentityCounts {
   users: number;
