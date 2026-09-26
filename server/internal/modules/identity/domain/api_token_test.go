@@ -80,15 +80,43 @@ func TestParsePATRejects(t *testing.T) {
 
 func TestCheckAPITokenAcceptsAValidSpec(t *testing.T) {
 	label, max := "deploy bot", strings.Repeat("界", 255)
-	later := now.Add(time.Nanosecond)
+	// The first instant after now that the database can store.
+	later := now.Add(time.Microsecond)
 	for _, spec := range []APITokenSpec{
 		{},
 		{Label: &label, Description: "ci", ExpiredAt: &later},
 		{Label: &max},
 	} {
-		if err := CheckAPIToken(spec, now); err != nil {
+		if _, err := CheckAPIToken(spec, now); err != nil {
 			t.Errorf("CheckAPIToken(%+v) = %v, want nil", spec, err)
 		}
+	}
+}
+
+// The expiry comes back as the database stores it and the API writes it: in
+// UTC, truncated to the microsecond. The other fields come back as given.
+func TestCheckAPITokenNormalizesTheExpiry(t *testing.T) {
+	label := "deploy"
+	tests := []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"an offset", time.Date(2030, 1, 1, 12, 0, 0, 123456000, time.FixedZone("", 2*3600)), "2030-01-01T10:00:00.123456Z"},
+		{"below a microsecond", time.Date(2030, 1, 1, 10, 0, 0, 123456789, time.UTC), "2030-01-01T10:00:00.123456Z"},
+		{"both", time.Date(2030, 1, 1, 5, 30, 0, 999999999, time.FixedZone("", -4*3600-30*60)), "2030-01-01T10:00:00.999999Z"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := CheckAPIToken(APITokenSpec{Label: &label, Description: "ci", ExpiredAt: &tt.at}, now)
+
+			if err != nil || got.ExpiredAt == nil || got.ExpiredAt.Location() != time.UTC || got.ExpiredAt.Format(time.RFC3339Nano) != tt.want {
+				t.Fatalf("CheckAPIToken() = %+v, %v; want the expiry %s in UTC", got, err, tt.want)
+			}
+			if got.Label != &label || got.Description != "ci" {
+				t.Errorf("CheckAPIToken() = %+v, want the label and description given", got)
+			}
+		})
 	}
 }
 
@@ -96,6 +124,8 @@ func TestCheckAPITokenAcceptsAValidSpec(t *testing.T) {
 func TestCheckAPITokenReportsEveryField(t *testing.T) {
 	empty, long, nul := "", strings.Repeat("界", 256), "a\x00b"
 	past := now.Add(-time.Second)
+	// Stored to the microsecond, it is now.
+	withinNow := now.Add(999 * time.Nanosecond)
 	tests := []struct {
 		name string
 		spec APITokenSpec
@@ -106,6 +136,7 @@ func TestCheckAPITokenReportsEveryField(t *testing.T) {
 		{"NUL in the label", APITokenSpec{Label: &nul}, []shared.FieldError{{Field: "label", Code: "invalid_format", Message: "must not contain a NUL character"}}},
 		{"NUL in the description", APITokenSpec{Description: nul}, []shared.FieldError{{Field: "description", Code: "invalid_format", Message: "must not contain a NUL character"}}},
 		{"expiry now", APITokenSpec{ExpiredAt: &now}, []shared.FieldError{{Field: "expired_at", Code: "must_be_future", Message: "must be in the future"}}},
+		{"expiry within now's microsecond", APITokenSpec{ExpiredAt: &withinNow}, []shared.FieldError{{Field: "expired_at", Code: "must_be_future", Message: "must be in the future"}}},
 		{"all at once", APITokenSpec{Label: &empty, Description: nul, ExpiredAt: &past}, []shared.FieldError{
 			{Field: "label", Code: "too_short", Message: "must not be empty"},
 			{Field: "description", Code: "invalid_format", Message: "must not contain a NUL character"},
@@ -114,7 +145,7 @@ func TestCheckAPITokenReportsEveryField(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CheckAPIToken(tt.spec, now)
+			_, err := CheckAPIToken(tt.spec, now)
 
 			var se *shared.Error
 			if !errors.As(err, &se) || se.Code != shared.CodeValidationFailed || !slices.Equal(se.Fields, tt.want) {

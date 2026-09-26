@@ -74,11 +74,18 @@ type APITokenSpec struct {
 // maxLabelLength is api_tokens.label's varchar(255), in characters.
 const maxLabelLength = 255
 
-// CheckAPIToken checks spec at now (M2 design 4.4, 4.6): a label of 1–255
-// characters, a label and a description without NUL, which the database
-// cannot store, and an expiry after now. Every problem is reported at once,
-// as one 422 validation_failed.
-func CheckAPIToken(spec APITokenSpec, now time.Time) error {
+// CheckAPIToken checks spec at now (M2 design 4.4, 4.6) and returns it with
+// the expiry as the database stores it: in UTC, truncated to the microsecond
+// (M2 design 3.13). The check, the row and the answer all use that expiry,
+// so the time a token is created with reads back unchanged. It checks for a
+// label of 1–255 characters, a label and a description without NUL, which
+// the database cannot store, and an expiry after now. Every problem is
+// reported at once, as one 422 validation_failed.
+func CheckAPIToken(spec APITokenSpec, now time.Time) (APITokenSpec, error) {
+	if spec.ExpiredAt != nil {
+		at := spec.ExpiredAt.UTC().Truncate(time.Microsecond)
+		spec.ExpiredAt = &at
+	}
 	var fields []shared.FieldError
 	if spec.Label != nil {
 		if f := checkText("label", *spec.Label, true, maxLabelLength); f != nil {
@@ -92,9 +99,9 @@ func CheckAPIToken(spec APITokenSpec, now time.Time) error {
 		fields = append(fields, shared.FieldError{Field: "expired_at", Code: shared.FieldMustBeFuture, Message: "must be in the future"})
 	}
 	if len(fields) > 0 {
-		return shared.Invalid(fields...)
+		return APITokenSpec{}, shared.Invalid(fields...)
 	}
-	return nil
+	return spec, nil
 }
 
 // checkText checks a text field: empty when it must not be, longer than

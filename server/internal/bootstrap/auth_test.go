@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -90,6 +91,35 @@ func TestAPersonalAccessTokenAuthenticates(t *testing.T) {
 
 	if me != http.StatusOK || revoked != http.StatusNoContent || after != http.StatusUnauthorized || other != http.StatusOK {
 		t.Errorf("GET /me %d, revoke itself %d, GET /me after %d, the other token %d; want 200, 204, 401, 200", me, revoked, after, other)
+	}
+}
+
+// A token's expiry reads back as the creation answered it: whatever offset
+// and precision the caller sent, both say it in UTC to the microsecond, as
+// the database stores it (M2 design 3.13).
+func TestATokenExpiryReadsBackAsCreated(t *testing.T) {
+	contract, base, token := accountApp(t, "expiry@example.com")
+
+	createStatus, body := call(t, contract, http.MethodPost, base+"/api/v0/me/api-tokens", token, `{"expired_at":"2030-01-01T12:00:00.1234567+02:00"}`)
+	listStatus, list := call(t, contract, http.MethodGet, base+"/api/v0/me/api-tokens", token, "")
+
+	type listed struct {
+		ID        string `json:"id"`
+		ExpiredAt string `json:"expired_at"`
+	}
+	var created listed
+	var page struct {
+		Data []listed `json:"data"`
+	}
+	if createStatus != http.StatusCreated || listStatus != http.StatusOK || json.Unmarshal([]byte(body), &created) != nil || json.Unmarshal([]byte(list), &page) != nil {
+		t.Fatalf("POST /me/api-tokens = %d %s, then GET = %d %s; want 201, 200", createStatus, body, listStatus, list)
+	}
+	if created.ExpiredAt != "2030-01-01T10:00:00.123456Z" {
+		t.Errorf("POST /me/api-tokens answered expired_at %q, want 2030-01-01T10:00:00.123456Z", created.ExpiredAt)
+	}
+	i := slices.IndexFunc(page.Data, func(read listed) bool { return read.ID == created.ID })
+	if i < 0 || page.Data[i].ExpiredAt != created.ExpiredAt {
+		t.Errorf("GET /me/api-tokens = %s, want the token created with expired_at %q", list, created.ExpiredAt)
 	}
 }
 

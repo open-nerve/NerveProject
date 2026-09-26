@@ -90,7 +90,31 @@ func TestCreateAPIToken(t *testing.T) {
 		t.Errorf("logs = %s, want the creation with user_id and token_id", logs)
 	}
 	assertNoSecret(t, logs, "token", []byte(got.Token))
+	assertNoSecret(t, logs, "token bytes", pat[:])
 	assertNoSecret(t, logs, "token hash", n.TokenHash)
+}
+
+// Whatever offset and precision the caller sends, the row and the answer
+// hold the expiry the database stores, in UTC to the microsecond, so the
+// answer reads back unchanged (M2 design 3.13).
+func TestCreateAPITokenStoresAndAnswersTheExpiryInUTC(t *testing.T) {
+	f := newCredentialFixture()
+	sent := time.Date(2030, 1, 1, 12, 0, 0, 123456789, time.FixedZone("", 2*3600))
+
+	got, err := f.createAPIToken().Execute(shared.WithActor(context.Background(), sessionActor), domain.APITokenSpec{ExpiredAt: &sent})
+
+	if err != nil || len(f.tokens.created) != 1 {
+		t.Fatalf("Execute() = %v with %d rows, want one row", err, len(f.tokens.created))
+	}
+	const want = "2030-01-01T10:00:00.123456Z"
+	for _, held := range []struct {
+		name string
+		at   *time.Time
+	}{{"row", f.tokens.created[0].ExpiredAt}, {"answer", got.ExpiredAt}} {
+		if held.at == nil || held.at.Location() != time.UTC || held.at.Format(time.RFC3339Nano) != want {
+			t.Errorf("the %s's expiry = %v, want %s in UTC", held.name, held.at, want)
+		}
+	}
 }
 
 // Without a label the token gets 32 hexadecimal digits, as Plane's

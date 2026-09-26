@@ -41,15 +41,17 @@ type CreatedAPIToken struct {
 // Execute checks spec, then, in one transaction, locks the caller's account
 // row, checks the caller's credential again and inserts the token (M2
 // design 3.5): a token made with a credential that a concurrent reset
-// revoked is never inserted. A spec without a label gets 32 hexadecimal
-// digits, as Plane's uuid4().hex.
+// revoked is never inserted. The row and the answer hold the expiry as the
+// check returns it, in UTC to the microsecond. A spec without a label gets
+// 32 hexadecimal digits, as Plane's uuid4().hex.
 func (c *CreateAPIToken) Execute(ctx context.Context, spec domain.APITokenSpec) (CreatedAPIToken, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return CreatedAPIToken{}, err
 	}
 	now := c.d.Clock.Now()
-	if err := domain.CheckAPIToken(spec, now); err != nil {
+	spec, err = domain.CheckAPIToken(spec, now)
+	if err != nil {
 		return CreatedAPIToken{}, err
 	}
 	var label string
