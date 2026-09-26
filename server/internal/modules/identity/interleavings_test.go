@@ -26,8 +26,10 @@ import (
 
 // The interleavings of the account row lock protocol (M2 design 3.5) run
 // the use cases on a real database. A gated hasher stops one of them in
-// argon2, outside its transaction, while the test commits another; every
-// wait has a deadline, so a test fails rather than hangs.
+// argon2, outside its transaction, while the test commits another; a gated
+// session insert stops a login inside its transaction, holding the lock,
+// until another waits for the lock. Every wait has a deadline, so a test
+// fails rather than hangs.
 
 // waitLimit bounds every wait of these tests.
 const waitLimit = 10 * time.Second
@@ -92,6 +94,20 @@ func (g *gate) await(t *testing.T) {
 	}
 }
 
+// gatedSessions stops a login inside its transaction, after it locked the
+// account row and found the hash unchanged, before it inserts its session.
+type gatedSessions struct {
+	app.SessionCreator
+	gate *gate
+}
+
+func (s gatedSessions) CreateSession(ctx context.Context, session app.NewSession) error {
+	if err := s.gate.stop(); err != nil {
+		return err
+	}
+	return s.SessionCreator.CreateSession(ctx, session)
+}
+
 // account is alice@corp.com, whose password is Tr0ub4dor&3 and whose
 // stored hash is given, with a live session, on a database of its own.
 type account struct {
@@ -123,10 +139,10 @@ func newAccount(t *testing.T, hash string) *account {
 	return a
 }
 
-func (a *account) login(h app.PasswordHasher) *app.Login {
+func (a *account) login(h app.PasswordHasher, sessions app.SessionCreator) *app.Login {
 	keys := signing.EphemeralKeys()
 	return app.NewLogin(app.LoginDeps{
-		Accounts: a.store, Locker: a.store, Passwords: a.store, Sessions: a.store, Hasher: h, Tx: a.tx,
+		Accounts: a.store, Locker: a.store, Passwords: a.store, Sessions: sessions, Hasher: h, Tx: a.tx,
 		Issuance: app.Issuance{Tokens: signing.NewAccessTokens(keys), MAC: signing.NewRefreshTokenMAC(keys), AccessTTL: time.Minute, SessionTTL: time.Hour},
 		Clock:    clock.System{}, Logger: slog.New(slog.DiscardHandler), DummyHash: "hashed:dummy:0",
 	})
@@ -175,15 +191,35 @@ func (a *account) sessionsAndHash(t *testing.T) (int, string) {
 	return n, hash
 }
 
-// Interleaving 4: a login verified the old password; the password changes
-// before the login's transaction. Under the lock the login finds another
-// hash, verifies the password again, against it, and fails: no session.
+// waitForLockWait returns once a statement on the account's database waits
+// for a lock, and fails the test after waitLimit.
+func (a *account) waitForLockWait(t *testing.T) {
+	t.Helper()
+	for deadline := time.Now().Add(waitLimit); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		var waiting int
+		if err := a.pool.QueryRow(context.Background(),
+			"SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'").Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting > 0 {
+			return
+		}
+	}
+	t.Fatal("no statement waited for a lock")
+}
+
+// Interleaving 4: a login verified the old password; the password change
+// commits before the login's transaction begins, so no transaction waits
+// for the lock. The login's transaction finds a hash other than its
+// snapshot; the login verifies the password again, against that hash, and
+// fails: no session. It pins the snapshot comparison and the second verify;
+// TestAPasswordChangeWaitsForALoginThatHoldsTheLock pins the lock.
 func TestALoginWithTheOldPasswordFailsWhenThePasswordChangesMeanwhile(t *testing.T) {
 	a := newAccount(t, "hashed:Tr0ub4dor&3:0")
 	g := newGate()
 	loginHasher := &gatedHasher{salt: "login", gate: g}
 
-	done := loginAsync(a.login(loginHasher))
+	done := loginAsync(a.login(loginHasher, a.store))
 	g.await(t)
 	changed := a.changePassword(&gatedHasher{salt: "change"}).Execute(
 		shared.WithActor(context.Background(), shared.Actor{UserID: a.id, SessionID: a.session}),
@@ -201,17 +237,20 @@ func TestALoginWithTheOldPasswordFailsWhenThePasswordChangesMeanwhile(t *testing
 }
 
 // Interleaving 5: two logins read the hash of old parameters; the second
-// hashes the password again and commits first. The first finds the new
-// hash under the lock, verifies the password against it once more, and
-// signs in, without writing its own hash over the new one.
+// hashes the password again and commits before the first's transaction
+// begins, so no transaction waits for the lock. The first's transaction
+// finds the new hash instead of its snapshot; the first verifies the
+// password against it once more and signs in, without writing its own hash
+// over the new one. It pins the snapshot comparison, the second verify and
+// that a stale rehash is not written.
 func TestTwoLoginsWhileOneHashesThePasswordAgain(t *testing.T) {
 	a := newAccount(t, "old:Tr0ub4dor&3")
 	g := newGate()
 	first := &gatedHasher{salt: "first", gate: g}
 
-	done := loginAsync(a.login(first))
+	done := loginAsync(a.login(first, a.store))
 	g.await(t)
-	_, second := a.login(&gatedHasher{salt: "second"}).Execute(context.Background(), app.LoginInput{Email: "alice@corp.com", Password: "Tr0ub4dor&3"})
+	_, second := a.login(&gatedHasher{salt: "second"}, a.store).Execute(context.Background(), app.LoginInput{Email: "alice@corp.com", Password: "Tr0ub4dor&3"})
 	close(g.opened)
 	err := await(t, done)
 
@@ -221,5 +260,49 @@ func TestTwoLoginsWhileOneHashesThePasswordAgain(t *testing.T) {
 	}
 	if want := []string{"old:Tr0ub4dor&3", "hashed:Tr0ub4dor&3:second"}; !slices.Equal(first.verified, want) {
 		t.Errorf("the first login verified %q, want %q", first.verified, want)
+	}
+}
+
+// Interleaving 4 the other way round pins the account row lock: a password
+// change must wait for the transaction of a login that holds the lock, and
+// then revoke the session that login created, so signing in with the old
+// password leaves no live session behind. The order is forced: the login
+// stops inside its transaction, holding the lock, before it inserts its
+// session; the test waits until pg_stat_activity shows the change waiting
+// for a lock, and only then lets the login go on. Every wait has a
+// deadline.
+func TestAPasswordChangeWaitsForALoginThatHoldsTheLock(t *testing.T) {
+	a := newAccount(t, "hashed:Tr0ub4dor&3:0")
+	g := newGate()
+
+	done := loginAsync(a.login(&gatedHasher{salt: "login"}, gatedSessions{a.store, g}))
+	g.await(t)
+	changed := make(chan error, 1)
+	go func() {
+		changed <- a.changePassword(&gatedHasher{salt: "change"}).Execute(
+			shared.WithActor(context.Background(), shared.Actor{UserID: a.id, SessionID: a.session}),
+			app.ChangePasswordInput{Current: "Tr0ub4dor&3", New: "N3w-Passw0rd!"})
+	}()
+	a.waitForLockWait(t)
+	close(g.opened)
+	err := await(t, done)
+	var changeErr error
+	select {
+	case changeErr = <-changed:
+	case <-time.After(waitLimit):
+		t.Fatal("the change did not finish")
+	}
+
+	var live, revoked int
+	var hash string
+	if err := a.pool.QueryRow(context.Background(), `SELECT
+		(SELECT count(*) FROM auth_sessions WHERE user_id = $1 AND revoked_at IS NULL),
+		(SELECT count(*) FROM auth_sessions WHERE user_id = $1 AND revoke_reason = 'password_changed'),
+		password FROM users WHERE id = $1`, a.id).Scan(&live, &revoked, &hash); err != nil {
+		t.Fatal(err)
+	}
+	if err != nil || changeErr != nil || live != 1 || revoked != 1 || hash != "hashed:N3w-Passw0rd!:change" {
+		t.Errorf("login %v; change %v; %d live sessions, %d revoked for password_changed, hash %q; want both done, the login's session revoked, the session of before live, the new hash",
+			err, changeErr, live, revoked, hash)
 	}
 }
