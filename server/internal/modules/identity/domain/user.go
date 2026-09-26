@@ -1,5 +1,7 @@
 // Package domain holds the identity module's rules (M2 design 6.2): pure
-// functions and values, no I/O.
+// functions and values, with one exception: validTimezone calls
+// time.LoadLocation, which reads the host's zone files, so the names it
+// accepts depend on the host (spec P3a 3 item 10).
 package domain
 
 import (
