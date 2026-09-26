@@ -100,6 +100,34 @@ func TestRegisterLimitsByIP(t *testing.T) {
 	}
 }
 
+// The module's buckets count a client by its IP key, so an IPv6 /64 is one
+// client; login_ip_email counts that key and the address together, so
+// another client trying the same address has a bucket of its own.
+func TestModuleLimitsCountByTheIPKey(t *testing.T) {
+	var logs bytes.Buffer
+	login := &fakeLogin{err: domain.ErrInvalidCredentials}
+	h := limitedServer(t, fakes{login: login, register: &fakeRegister{err: domain.ErrEmailTaken}}, tightLimits(), &logs)
+	from := func(peer, path string) int {
+		req := postJSON(path, `{"email":"alice@corp.com","password":"x"}`)
+		req.RemoteAddr = peer
+		res, _ := do(t, h, req)
+		return res.StatusCode
+	}
+
+	statuses := []int{
+		from("[2001:db8:1:2::7]:5555", "/api/v0/auth/login"),
+		from("[2001:db8:1:2::8]:5555", "/api/v0/auth/login"),
+		from("[2001:db8:1:2::9]:5555", "/api/v0/auth/login"),
+		from("198.51.100.9:5555", "/api/v0/auth/login"),
+		from("[2001:db8:1:2::7]:5555", "/api/v0/auth/register"),
+		from("[2001:db8:1:2::8]:5555", "/api/v0/auth/register"),
+	}
+
+	if want := []int{401, 401, 429, 401, 409, 429}; !slices.Equal(statuses, want) || login.calls != 3 {
+		t.Errorf("statuses = %v after %d logins, want %v after 3", statuses, login.calls, want)
+	}
+}
+
 // Refresh and logout go through no bucket of the module, only the
 // platform's anonymous one (M2 design 3.10): with every module bucket
 // empty for the client, they still answer.
