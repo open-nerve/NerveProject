@@ -3,6 +3,7 @@ package postgresadapter_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 	"uuid"
@@ -45,14 +46,22 @@ func TestUpdateUser(t *testing.T) {
 	if err != nil || got != want {
 		t.Errorf("second UpdateUser() = %+v, %v; want %+v", got, err, want)
 	}
+	// An empty patch keeps every field and still records the write.
+	evenLater := later.Add(time.Hour)
+	got, err = s.UpdateUser(context.Background(), u.ID, domain.UserPatch{}, evenLater)
+	if err != nil || got != want {
+		t.Errorf("UpdateUser(empty) = %+v, %v; want %+v", got, err, want)
+	}
 	if read, err := s.GetUser(context.Background(), u.ID); err != nil || read != want {
 		t.Errorf("GetUser() = %+v, %v; want %+v", read, err, want)
 	}
-	assertUpdatedAt(t, pool, "users", "id", u.ID, later)
+	assertUpdatedAt(t, pool, "users", "id", u.ID, evenLater)
 }
 
+// Another account exists, so a statement that ignored the id would find it.
 func TestUpdateUnknownUser(t *testing.T) {
 	s, _ := newStore(t)
+	accountWithProfile(t, s)
 	if _, err := s.UpdateUser(context.Background(), uuid.NewV7(), domain.UserPatch{FirstName: ptr("x")}, now); !errors.Is(err, app.ErrNotFound) {
 		t.Errorf("UpdateUser() = %v, want app.ErrNotFound", err)
 	}
@@ -106,24 +115,38 @@ func TestUpdateProfile(t *testing.T) {
 	if err != nil || !sameProfile(got, want) {
 		t.Errorf("UpdateProfile() = %+v, %v; want %+v", got, err, want)
 	}
+	if read, err := s.GetProfile(context.Background(), u.ID); err != nil || !sameProfile(read, want) {
+		t.Errorf("GetProfile() = %+v, %v; want %+v", read, err, want)
+	}
 
-	// An empty patch changes nothing; clearing the workspace leaves the rest.
-	got, err = s.UpdateProfile(context.Background(), u.ID, domain.ProfilePatch{}, later)
+	// An empty patch changes no preference and still records the write;
+	// clearing the workspace leaves the rest.
+	evenLater := later.Add(time.Hour)
+	got, err = s.UpdateProfile(context.Background(), u.ID, domain.ProfilePatch{}, evenLater)
+	want.UpdatedAt = evenLater
 	if err != nil || !sameProfile(got, want) {
 		t.Errorf("UpdateProfile(empty) = %+v, %v; want %+v", got, err, want)
 	}
-	got, err = s.UpdateProfile(context.Background(), u.ID, domain.ProfilePatch{LastWorkspaceSet: true}, later)
+	got, err = s.UpdateProfile(context.Background(), u.ID, domain.ProfilePatch{LastWorkspaceSet: true}, evenLater)
 	want.LastWorkspaceID = nil
 	if err != nil || !sameProfile(got, want) {
 		t.Errorf("UpdateProfile(clear the workspace) = %+v, %v; want %+v", got, err, want)
+	}
+	// Each flag is its own column.
+	got, err = s.UpdateProfile(context.Background(), u.ID, domain.ProfilePatch{IsOnboarded: ptr(false), IsTourCompleted: ptr(true)}, evenLater)
+	want.IsOnboarded = false
+	if err != nil || !sameProfile(got, want) {
+		t.Errorf("UpdateProfile(the flags apart) = %+v, %v; want %+v", got, err, want)
 	}
 	if read, err := s.GetProfile(context.Background(), u.ID); err != nil || !sameProfile(read, want) {
 		t.Errorf("GetProfile() = %+v, %v; want %+v", read, err, want)
 	}
 }
 
+// Another profile exists, so a statement that ignored the id would find it.
 func TestUpdateUnknownProfile(t *testing.T) {
 	s, _ := newStore(t)
+	accountWithProfile(t, s)
 	if _, err := s.UpdateProfile(context.Background(), uuid.NewV7(), domain.ProfilePatch{Theme: ptr("dark")}, now); !errors.Is(err, app.ErrNotFound) {
 		t.Errorf("UpdateProfile() = %v, want app.ErrNotFound", err)
 	}
@@ -158,6 +181,11 @@ func TestUpdateProfileMergesConcurrentSteps(t *testing.T) {
 			return nil
 		})
 	}()
+	// A failure below must still end the first transaction: the pool's Close
+	// in the cleanup waits for its connection.
+	var releaseOnce sync.Once
+	releaseFirst := func() { releaseOnce.Do(func() { close(release) }) }
+	defer releaseFirst()
 	select {
 	case <-updated:
 	case err := <-first:
@@ -170,7 +198,7 @@ func TestUpdateProfileMergesConcurrentSteps(t *testing.T) {
 		second <- err
 	}()
 	waitForLockWait(t, pool)
-	close(release)
+	releaseFirst()
 	for name, done := range map[string]chan error{"first": first, "second": second} {
 		select {
 		case err := <-done:

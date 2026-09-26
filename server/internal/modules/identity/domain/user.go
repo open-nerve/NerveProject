@@ -70,10 +70,12 @@ func CheckUserPatch(p UserPatch) error {
 	return nil
 }
 
-// validTimezone reports whether name is an IANA time zone that Go's time
-// package loads (M2 design 4.2): "UTC" and every zone of the embedded
-// tzdata, not "Local" or "", which LoadLocation takes for the host's zone
-// and for UTC.
+// validTimezone reports whether time.LoadLocation loads name (M2 design
+// 4.2), except "" and "Local", which it takes for UTC and for the host's
+// zone. LoadLocation reads the host's zone files first and Go's own tzdata
+// after them, so one host may accept a name that another refuses:
+// "asia/shanghai" on a case-insensitive file system, "posixrules" where the
+// host has that file (spec P3a 3 item 10).
 func validTimezone(name string) bool {
 	if name == "" || name == "Local" {
 		return false

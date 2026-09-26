@@ -16,9 +16,10 @@ func TestCheckProfilePatchAcceptsAValidPatch(t *testing.T) {
 			t.Errorf("theme %q: %v", theme, err)
 		}
 	}
-	for _, week := range []int{0, 6} {
-		if err := CheckProfilePatch(ProfilePatch{Language: ptr("zh-CN"), StartOfTheWeek: &week}); err != nil {
-			t.Errorf("week %d: %v", week, err)
+	for i, language := range []string{"en", "zh-CN"} {
+		week := 6 * i
+		if err := CheckProfilePatch(ProfilePatch{Language: &language, StartOfTheWeek: &week}); err != nil {
+			t.Errorf("language %q, week %d: %v", language, week, err)
 		}
 	}
 }
