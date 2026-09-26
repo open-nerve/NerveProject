@@ -94,6 +94,31 @@ func TestAPersonalAccessTokenAuthenticates(t *testing.T) {
 	}
 }
 
+// last_used is best effort (M2 design 3.6): when the database refuses to
+// write it, the token still authenticates.
+func TestAPersonalAccessTokenAuthenticatesWhenLastUsedIsNotWritten(t *testing.T) {
+	base, pool := sessionApp(t)
+	contract := apitest.Load(t)
+	token := createPAT(t, contract, base, registerAccount(t, contract, base, "touch@example.com").AccessToken)
+	ctx := context.Background()
+	for _, sql := range []string{
+		`CREATE FUNCTION refuse_last_used() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'last_used refused'; END $$`,
+		`CREATE TRIGGER refuse_last_used BEFORE UPDATE OF last_used ON api_tokens FOR EACH ROW EXECUTE FUNCTION refuse_last_used()`,
+	} {
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	status, body := call(t, contract, http.MethodGet, base+"/api/v0/me", token.Token, "")
+
+	var written bool
+	err := pool.QueryRow(ctx, "SELECT last_used IS NOT NULL FROM api_tokens WHERE id = $1", token.ID).Scan(&written)
+	if status != http.StatusOK || err != nil || written {
+		t.Errorf("GET /me = %d %s; last_used written %v (%v); want 200 with last_used not written", status, body, written, err)
+	}
+}
+
 // A token's expiry reads back as the creation answered it: whatever offset
 // and precision the caller sent, both say it in UTC to the microsecond, as
 // the database stores it (M2 design 3.13).

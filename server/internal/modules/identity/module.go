@@ -129,7 +129,7 @@ func New(d Deps) (*Module, error) {
 			Logger:          d.Logger,
 		},
 		authenticator: authn.New(app.NewAuthenticate(app.AuthenticateDeps{
-			AccessTokens: tokens, Sessions: store, APITokens: store, Touch: store, Clock: d.Clock,
+			AccessTokens: tokens, Sessions: store, APITokens: store, Touch: store, Clock: d.Clock, Logger: d.Logger,
 		})),
 	}, nil
 }

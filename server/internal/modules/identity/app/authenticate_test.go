@@ -3,6 +3,7 @@ package app_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 	"uuid"
@@ -23,6 +24,7 @@ func newAuthenticate(cred app.SessionCredential, credErr error) (*app.Authentica
 	store := &fakeStore{credential: cred, credErr: credErr}
 	uc := app.NewAuthenticate(app.AuthenticateDeps{
 		AccessTokens: tokens, Sessions: store, APITokens: &fakeAPITokens{log: &callLog{}}, Touch: &fakeAPITokens{}, Clock: clocktest.At(now),
+		Logger: slog.New(slog.DiscardHandler),
 	})
 	return uc, tokens, store
 }

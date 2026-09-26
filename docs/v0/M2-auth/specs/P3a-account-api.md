@@ -145,7 +145,7 @@ WHERE id = sqlc.arg(id) AND (last_used IS NULL OR last_used < sqlc.arg(stale_bef
 ### 2.9 PAT 认证与账户行锁的复核（M2 设计 3.5、3.10）
 
 - `shared.Actor` 加上 `APITokenID`：`SessionID`、`APITokenID` 恰好一个有值。
-- `app.NewAuthenticate(AuthenticateDeps{AccessTokens, Sessions, APITokens, Touch, Clock})`：`nrv_pat_` 开头的令牌走 PAT：`ParsePAT` 失败不查库；按哈希读一次；不存在、已撤销、`now >= expired_at`、账户停用都是 401（原因只进 DEBUG，P1 的做法）；`last_used` 为空或早于 `now - 1 分钟` 时写一次；读或写失败是内部错误。别的令牌照旧走访问令牌。
+- `app.NewAuthenticate(AuthenticateDeps{AccessTokens, Sessions, APITokens, Touch, Clock, Logger})`：`nrv_pat_` 开头的令牌走 PAT：`ParsePAT` 失败不查库；按哈希读一次；不存在、已撤销、`now >= expired_at`、账户停用都是 401（原因只进 DEBUG，P1 的做法）；`last_used` 为空或早于 `now - 1 分钟` 时写一次；读失败是内部错误。写 `last_used` 失败只记 WARN（`token_id` 和错误，不含令牌），认证照常通过：M2 设计 3.6 说 `last_used` 是尽力而为，收尾修复按设计改（原来写失败也是内部错误）。别的令牌照旧走访问令牌。
 - `sessionInvalid`、`tokenInvalid`：认证和锁共用的判定，一处写。
 - **`app.CredentialLock{Locker, Sessions, APITokens}`**（`credential_lock.go`，P2 spec 第 3 节第 7 条留给 P3 的共用部分）：
 
@@ -155,7 +155,7 @@ WHERE id = sqlc.arg(id) AND (last_used IS NULL OR last_used < sqlc.arg(stale_bef
 
   在事务里先 `LockForCredentials`（`FOR NO KEY UPDATE`），再在锁下按 actor 的凭证种类复核：会话未撤销、未到期、属于这个账户；或 PAT 未撤销、未到期、属于这个账户；账户未停用。不成立是 401，返回锁住的行（哈希快照供修改密码用）。创建 PAT、修改密码、停用三个用例都经过它。
 - `authn`：PAT 的限流键是 `pat:<id>`（第 3 节第 18 条）。
-- 测试：`TestAuthenticateAPAT`；`TestAuthenticateAPATTouchesAtMostOnceAMinute`（从未用过、59 秒、恰好 1 分钟、61 秒）；`TestAuthenticateRejectsAPAT`（6 个）；`TestAuthenticateAPATDatabaseFailureIsNot401`；`TestAuthenticateKeysAPATByItsID`。锁的复核由三个用例的测试覆盖（`…RechecksTheCredentialUnderTheLock`）。
+- 测试：`TestAuthenticateAPAT`；`TestAuthenticateAPATTouchesAtMostOnceAMinute`（从未用过、59 秒、恰好 1 分钟、61 秒）；`TestAuthenticateRejectsAPAT`（6 个）；`TestAuthenticateAPATDatabaseFailureIsNot401`；`TestAuthenticateAPATWhoseLastUsedIsNotWritten`；`TestAuthenticateKeysAPATByItsID`。锁的复核由三个用例的测试覆盖（`…RechecksTheCredentialUnderTheLock`）。
 
 ### 2.10 令牌的三个用例（M2 设计 3.5、3.12、4.6、5.4）
 

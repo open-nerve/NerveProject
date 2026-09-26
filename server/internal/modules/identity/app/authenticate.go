@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 	"uuid"
@@ -23,6 +24,7 @@ type AuthenticateDeps struct {
 	APITokens    APITokenReader
 	Touch        APITokenToucher
 	Clock        Clock
+	Logger       *slog.Logger
 }
 
 // Authenticate turns a bearer token into the request's actor (M2 design
@@ -56,7 +58,8 @@ var (
 
 // Execute returns the actor of token. An invalid credential is a
 // *shared.Error of 401 that wraps the reason; an expired access token also
-// matches ErrAccessTokenExpired. Any other error is an internal fault.
+// matches ErrAccessTokenExpired. Any other error is an internal fault: a
+// credential that could not be read.
 func (a *Authenticate) Execute(ctx context.Context, token string) (shared.Actor, error) {
 	now := a.d.Clock.Now()
 	if strings.HasPrefix(token, domain.PATPrefix) {
@@ -74,7 +77,9 @@ func (a *Authenticate) Execute(ctx context.Context, token string) (shared.Actor,
 }
 
 // personal authenticates a personal access token, and records its use at
-// most once a minute (M2 design 3.5).
+// most once a minute (M2 design 3.5). Recording is best effort (M2 design
+// 3.6): a failed write is a warning with the token's id, and the token still
+// authenticates.
 func (a *Authenticate) personal(ctx context.Context, token string, now time.Time) (shared.Actor, error) {
 	pat, ok := domain.ParsePAT(token)
 	if !ok {
@@ -87,7 +92,8 @@ func (a *Authenticate) personal(ctx context.Context, token string, now time.Time
 	staleBefore := now.Add(-lastUsedInterval)
 	if cred.LastUsed == nil || cred.LastUsed.Before(staleBefore) {
 		if err := a.d.Touch.TouchAPIToken(ctx, cred.ID, now, staleBefore); err != nil {
-			return shared.Actor{}, err
+			a.d.Logger.WarnContext(ctx, "API token last_used not written",
+				slog.String("token_id", cred.ID.String()), slog.Any("error", err))
 		}
 	}
 	return shared.Actor{UserID: cred.UserID, APITokenID: cred.ID}, nil

@@ -1,8 +1,11 @@
 package app_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -27,10 +30,20 @@ func samplePAT() domain.PAT {
 // newPATAuthenticate authenticates samplePAT as cred; the access tokens and
 // sessions it holds are there to show that a PAT never reaches them.
 func newPATAuthenticate(cred app.APITokenCredential) (*app.Authenticate, *fakeAPITokens, *fakeTokens, *fakeStore) {
-	tokens := &fakeAPITokens{log: &callLog{}, credential: cred, hash: samplePAT().Hash()}
-	access, sessions := newFakeTokens(), &fakeStore{}
-	uc := app.NewAuthenticate(app.AuthenticateDeps{AccessTokens: access, Sessions: sessions, APITokens: tokens, Touch: tokens, Clock: clocktest.At(now)})
+	uc, tokens, access, sessions, _ := newPATAuthenticateLogging(cred)
 	return uc, tokens, access, sessions
+}
+
+// newPATAuthenticateLogging is newPATAuthenticate with the buffer its JSON
+// logger writes to.
+func newPATAuthenticateLogging(cred app.APITokenCredential) (*app.Authenticate, *fakeAPITokens, *fakeTokens, *fakeStore, *bytes.Buffer) {
+	tokens := &fakeAPITokens{log: &callLog{}, credential: cred, hash: samplePAT().Hash()}
+	access, sessions, logs := newFakeTokens(), &fakeStore{}, &bytes.Buffer{}
+	uc := app.NewAuthenticate(app.AuthenticateDeps{
+		AccessTokens: access, Sessions: sessions, APITokens: tokens, Touch: tokens, Clock: clocktest.At(now),
+		Logger: slog.New(slog.NewJSONHandler(logs, nil)),
+	})
+	return uc, tokens, access, sessions, logs
 }
 
 func validToken() app.APITokenCredential {
@@ -136,23 +149,37 @@ func TestAuthenticateRejectsAPAT(t *testing.T) {
 	}
 }
 
-// A database failure is an internal fault, not a 401: whether reading the
-// token or writing last_used.
+// A token that cannot be read is an internal fault, not a 401.
 func TestAuthenticateAPATDatabaseFailureIsNot401(t *testing.T) {
 	boom := errors.New("connection refused")
-	for _, failing := range []string{"read", "touch"} {
-		uc, tokens, _, _ := newPATAuthenticate(validToken())
-		if failing == "read" {
-			tokens.readErr = boom
-		} else {
-			tokens.touchErr = boom
-		}
+	uc, tokens, _, _ := newPATAuthenticate(validToken())
+	tokens.readErr = boom
 
-		_, err := uc.Execute(context.Background(), samplePAT().String())
+	_, err := uc.Execute(context.Background(), samplePAT().String())
 
-		var se *shared.Error
-		if !errors.Is(err, boom) || errors.As(err, &se) {
-			t.Errorf("the %s fails: Execute() = %v, want the database error, not a problem", failing, err)
-		}
+	var se *shared.Error
+	if !errors.Is(err, boom) || errors.As(err, &se) {
+		t.Errorf("Execute() = %v, want the database error, not a problem", err)
 	}
+}
+
+// last_used is best effort (M2 design 3.6): a write that fails is a warning
+// with the token's id and the error, never the token, and the token still
+// authenticates.
+func TestAuthenticateAPATWhoseLastUsedIsNotWritten(t *testing.T) {
+	uc, tokens, _, _, logs := newPATAuthenticateLogging(validToken())
+	tokens.touchErr = errors.New("connection refused")
+
+	actor, err := uc.Execute(context.Background(), samplePAT().String())
+
+	if err != nil || actor != (shared.Actor{UserID: userID, APITokenID: tokenID}) || len(tokens.touches) != 1 {
+		t.Errorf("Execute() = %+v, %v after %d touches; want the token's account after one", actor, err, len(tokens.touches))
+	}
+	out := logs.String()
+	if !strings.Contains(out, `"level":"WARN","msg":"API token last_used not written","token_id":"`+tokenID.String()+`","error":"connection refused"`) {
+		t.Errorf("logs = %s, want the warning with token_id and the error", out)
+	}
+	pat := samplePAT()
+	assertNoSecret(t, out, "token", []byte(pat.String()))
+	assertNoSecret(t, out, "token bytes", pat[:])
 }
