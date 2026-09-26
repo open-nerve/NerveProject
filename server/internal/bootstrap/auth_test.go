@@ -66,6 +66,53 @@ func TestRegisterThenGetMe(t *testing.T) {
 	}
 }
 
+// A personal access token made through the app authenticates as its
+// account until it is revoked (M2 design 3.4, 3.5). It can make another
+// token, which the credential lock checks it for, and revoke itself.
+func TestAPersonalAccessTokenAuthenticates(t *testing.T) {
+	contract := apitest.Load(t)
+	base := startApp(t, testConfig(t, pgtest.NewDatabase(t), false), migrations.FS())
+	access := registerAccount(t, contract, base, "pat@example.com").AccessToken
+	status := func(method, path, token string) int {
+		t.Helper()
+		req := newRequest(t, method, base+path, token, nil)
+		res, _ := send(t, req)
+		contract.CheckResponse(t, req, res)
+		return res.StatusCode
+	}
+
+	first := createPAT(t, contract, base, access)
+	second := createPAT(t, contract, base, first.Token)
+	me, revoked, after, other := status(http.MethodGet, "/api/v0/me", first.Token),
+		status(http.MethodDelete, "/api/v0/api-tokens/"+first.ID, first.Token),
+		status(http.MethodGet, "/api/v0/me", first.Token),
+		status(http.MethodGet, "/api/v0/me", second.Token)
+
+	if me != http.StatusOK || revoked != http.StatusNoContent || after != http.StatusUnauthorized || other != http.StatusOK {
+		t.Errorf("GET /me %d, revoke itself %d, GET /me after %d, the other token %d; want 200, 204, 401, 200", me, revoked, after, other)
+	}
+}
+
+// pat is the ApiTokenCreated answer.
+type pat struct {
+	ID    string `json:"id"`
+	Token string `json:"token"`
+}
+
+// createPAT makes a personal access token with the bearer token given.
+func createPAT(t *testing.T, contract *apitest.Contract, base, bearer string) pat {
+	t.Helper()
+	req := newRequest(t, http.MethodPost, base+"/api/v0/me/api-tokens", bearer, []byte(`{"label":"ci"}`))
+	contract.CheckRequest(t, req)
+	res, body := send(t, req)
+	contract.CheckResponse(t, req, res)
+	var created pat
+	if err := json.Unmarshal(body, &created); err != nil || res.StatusCode != http.StatusCreated || !strings.HasPrefix(created.Token, "nrv_pat_") {
+		t.Fatalf("POST /me/api-tokens = %d %s, want 201 with a token", res.StatusCode, body)
+	}
+	return created
+}
+
 // signedBy reports whether the JWT's EdDSA signature verifies with the
 // public half of the PKCS#8 key.
 func signedBy(t *testing.T, token, keyPEM string) bool {

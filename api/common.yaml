@@ -7,7 +7,31 @@ info:
   title: Nerve common components
   version: v0
 components:
+  # 分页（M2 设计 3.12）：每个列表接口引用 Limit、Cursor，响应的 next_cursor 是 NextCursor
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: >-
+        The page size, 1–100; 50 when absent. Outside that range the answer is
+        422 validation_failed on limit.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: >-
+        The next_cursor of the page before; absent for the first page. A
+        cursor that this list did not issue is 400 bad_request on cursor.
+      schema:
+        type: string
   schemas:
+    NextCursor:
+      description: The cursor of the next page; null on the last page.
+      type: [string, 'null']
     Problem:
       description: >-
         RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status

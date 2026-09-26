@@ -1,6 +1,6 @@
 // Package identity is the accounts module (M2 design 3.3, 6.2): accounts,
-// profiles, sessions and, from later phases, personal access tokens. It
-// brings registration, login, refresh, logout, GET /me and the
+// profiles, sessions and personal access tokens. It brings registration,
+// login, refresh, logout, the caller's account and tokens, and the
 // authentication every other operation goes through.
 package identity
 
@@ -84,6 +84,7 @@ func New(d Deps) (*Module, error) {
 		return nil, fmt.Errorf("hash the dummy password: %w", err)
 	}
 	store := postgresadapter.New(d.Pool)
+	lock := app.CredentialLock{Locker: store, Sessions: store, APITokens: store}
 	tokens := signing.NewAccessTokens(keys)
 	issuance := app.Issuance{
 		Tokens:     tokens,
@@ -101,9 +102,14 @@ func New(d Deps) (*Module, error) {
 				Accounts: store, Locker: store, Passwords: store, Sessions: store, Hasher: hasher, Tx: d.Tx,
 				Issuance: issuance, Clock: d.Clock, Logger: d.Logger, DummyHash: dummy,
 			}),
-			Refresh: app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
-			Logout:  app.NewLogout(store, d.Clock, d.Logger),
-			GetMe:   app.NewGetMe(store),
+			Refresh:       app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
+			Logout:        app.NewLogout(store, d.Clock, d.Logger),
+			GetMe:         app.NewGetMe(store),
+			ListAPITokens: app.NewListAPITokens(store),
+			CreateAPIToken: app.NewCreateAPIToken(app.CreateAPITokenDeps{
+				Lock: lock, Tokens: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+			}),
+			RevokeAPIToken: app.NewRevokeAPIToken(store, d.Clock, d.Logger),
 		},
 		settings: httpadapter.Settings{
 			Limits:          httpadapter.Limits(d.RateLimits),

@@ -101,6 +101,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/me/api-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's personal access tokens
+         * @description The caller's personal access tokens that are not revoked, newest first, a page at a time. The tokens themselves are never listed: only createApiToken answers one, once.
+         */
+        get: operations["listApiTokens"];
+        put?: never;
+        /**
+         * Create a personal access token
+         * @description Creates a personal access token of the caller and answers the token itself, this once. Sent as "Authorization: Bearer", it acts as the account in every operation until it expires or is revoked, and it can create tokens itself. Any credential may create one; no password is asked for.
+         */
+        post: operations["createApiToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/api-tokens/{token_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a personal access token
+         * @description Revokes one of the caller's tokens, which stops working at once; a token may revoke itself. A token that does not exist, is revoked already or belongs to another account is identity.api_token_not_found.
+         */
+        delete: operations["revokeApiToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/instance": {
         parameters: {
             query?: never;
@@ -205,6 +251,62 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description A personal access token as lists show it. The token itself appears only in ApiTokenCreated. */
+        ApiToken: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            description: string;
+            /**
+             * Format: date-time
+             * @description When the token stops working; null when it never does.
+             */
+            expired_at: string | null;
+            /**
+             * Format: date-time
+             * @description When the token last authenticated a request, to the minute; null when it never has.
+             */
+            last_used: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description The cursor of the next page; null on the last page. */
+        NextCursor: string | null;
+        ApiTokenPage: {
+            data: components["schemas"]["ApiToken"][];
+            next_cursor: components["schemas"]["NextCursor"];
+        };
+        ApiTokenCreate: {
+            /** @description 1–255 characters; 32 hexadecimal digits are made up when it is absent. */
+            label?: string;
+            description?: string;
+            /**
+             * Format: date-time
+             * @description A time in the future; absent or null for a token that never expires.
+             */
+            expired_at?: string | null;
+        };
+        /** @description A new personal access token: the fields of ApiToken, and the token itself, which is shown this once and cannot be read again. */
+        ApiTokenCreated: {
+            /** Format: uuid */
+            id: string;
+            label: string;
+            description: string;
+            /**
+             * Format: date-time
+             * @description When the token stops working; null when it never does.
+             */
+            expired_at: string | null;
+            /**
+             * Format: date-time
+             * @description Null; the token has not been used yet.
+             */
+            last_used: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The token, nrv_pat_ and 43 more characters. */
+            token: string;
+        };
         InstanceInfo: {
             /**
              * @description Product name.
@@ -240,7 +342,12 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+        Limit: number;
+        /** @description The next_cursor of the page before; absent for the first page. A cursor that this list did not issue is 400 bad_request on cursor. */
+        Cursor: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -362,6 +469,78 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listApiTokens: {
+        parameters: {
+            query?: {
+                /** @description The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit. */
+                limit?: components["parameters"]["Limit"];
+                /** @description The next_cursor of the page before; absent for the first page. A cursor that this list did not issue is 400 bad_request on cursor. */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createApiToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiTokenCreate"];
+            };
+        };
+        responses: {
+            /** @description The new token, with the token itself. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiTokenCreated"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    revokeApiToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

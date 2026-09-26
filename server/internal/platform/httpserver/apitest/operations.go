@@ -36,21 +36,65 @@ func (o Operation) HasJSONBody() bool { return o.body != nil }
 // Parameters bind before the middlewares, so a wrong one would answer 400
 // before anything else runs (M2 design 3.6).
 func (o Operation) Target() string {
+	return o.target("", "")
+}
+
+// target is Target with parameter name set to value, when name is not "".
+func (o Operation) target(name, value string) string {
 	path, query := o.Path, url.Values{}
 	for _, ref := range o.params {
 		p := ref.Value
-		value := fmt.Sprint(validValue(p.Schema.Value))
+		v, set := fmt.Sprint(validValue(p.Schema.Value)), p.Required
+		if p.Name == name {
+			v, set = value, true
+		}
 		switch {
 		case p.In == openapi3.ParameterInPath:
-			path = strings.ReplaceAll(path, "{"+p.Name+"}", url.PathEscape(value))
-		case p.In == openapi3.ParameterInQuery && p.Required:
-			query.Set(p.Name, value)
+			path = strings.ReplaceAll(path, "{"+p.Name+"}", url.PathEscape(v))
+		case p.In == openapi3.ParameterInQuery && set:
+			query.Set(p.Name, v)
 		}
 	}
 	if len(query) == 0 {
 		return path
 	}
 	return path + "?" + query.Encode()
+}
+
+// ParamCase is a request target with one parameter that cannot bind, and
+// the parameter the 400 must name.
+type ParamCase struct {
+	Name   string
+	Target string
+	Field  string
+}
+
+// ParamCases derives the cases of the parameter binding whole-program test
+// (M2 design 3.11): for each path or query parameter whose Go type rejects
+// some strings, a number, a boolean, or a string whose format is generated
+// as a Go type, the example target with that parameter wrong. Other strings,
+// enums too, bind whatever they are.
+func (o Operation) ParamCases() []ParamCase {
+	var cases []ParamCase
+	for _, ref := range o.params {
+		p := ref.Value
+		if p.In != openapi3.ParameterInPath && p.In != openapi3.ParameterInQuery {
+			continue
+		}
+		var wrong string
+		switch s := p.Schema.Value; {
+		case s.Type.Includes("integer"), s.Type.Includes("number"):
+			wrong = "not-a-number"
+		case s.Type.Includes("boolean"):
+			wrong = "not-a-boolean"
+		case checkedFormat(s):
+			wrong = "not-a-" + s.Format
+		default:
+			continue
+		}
+		cases = append(cases, ParamCase{Name: "wrong " + p.Name, Target: o.target(p.Name, wrong), Field: p.Name})
+	}
+	return cases
 }
 
 // Operations lists every operation of the contract, sorted by pattern.

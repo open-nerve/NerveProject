@@ -31,6 +31,10 @@ paths:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1auth~1logout'
   /api/v0/me:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me'
+  /api/v0/me/api-tokens:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1me~1api-tokens'
+  /api/v0/api-tokens/{token_id}:
+    $ref: 'modules/identity.yaml#/paths/~1api~1v0~1api-tokens~1{token_id}'
   /api/v0/instance:
     $ref: 'modules/instance.yaml#/paths/~1api~1v0~1instance'
 components:

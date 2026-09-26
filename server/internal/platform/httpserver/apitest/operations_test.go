@@ -91,6 +91,49 @@ func TestTarget(t *testing.T) {
 	}
 }
 
+// Only the parameters whose Go type rejects some strings get a case: the
+// uuid path parameter and the integer, not the enum or the free string. The
+// others keep their example values.
+func TestParamCases(t *testing.T) {
+	ops := contractFrom(t, bodiesContract).Operations()
+
+	got := ops[1].ParamCases()
+
+	want := []ParamCase{
+		{"wrong thing_id", "/api/v0/things/not-a-uuid?limit=1&view=full", "thing_id"},
+		{"wrong limit", "/api/v0/things/00000000-0000-0000-0000-000000000000?limit=not-a-number&view=full", "limit"},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("ParamCases() =\n%q\nwant\n%q", got, want)
+	}
+	if got := ops[0].ParamCases(); got != nil {
+		t.Errorf("ParamCases() without parameters = %q, want none", got)
+	}
+}
+
+// An optional parameter gets its case too, set only there.
+func TestParamCasesOfAnOptionalParameter(t *testing.T) {
+	op := contractFrom(t, `
+openapi: 3.1.0
+info: {title: params, version: v0}
+paths:
+  /api/v0/x:
+    get:
+      parameters:
+        - {name: flag, in: query, schema: {type: boolean}}
+        - {name: at, in: query, schema: {type: string, format: date-time}}
+      responses: {'204': {description: none}}
+`).Operations()[0]
+
+	want := []ParamCase{
+		{"wrong flag", "/api/v0/x?flag=not-a-boolean", "flag"},
+		{"wrong at", "/api/v0/x?at=not-a-date-time", "at"},
+	}
+	if got := op.ParamCases(); !slices.Equal(got, want) || op.Target() != "/api/v0/x" {
+		t.Errorf("ParamCases() = %q, Target() = %q; want %q and no query", got, op.Target(), want)
+	}
+}
+
 func TestBodyCases(t *testing.T) {
 	post := contractFrom(t, bodiesContract).Operations()[2]
 

@@ -130,6 +130,77 @@ paths:
                 $ref: '#/components/schemas/User'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/me/api-tokens:
+    get:
+      operationId: listApiTokens
+      tags:
+        - identity
+      summary: List the caller's personal access tokens
+      description: 'The caller''s personal access tokens that are not revoked, newest first, a page at a time. The tokens themselves are never listed: only createApiToken answers one, once.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: One page of tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiTokenPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createApiToken
+      tags:
+        - identity
+      summary: Create a personal access token
+      description: 'Creates a personal access token of the caller and answers the token itself, this once. Sent as "Authorization: Bearer", it acts as the account in every operation until it expires or is revoked, and it can create tokens itself. Any credential may create one; no password is asked for.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiTokenCreate'
+      responses:
+        '201':
+          description: The new token, with the token itself.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiTokenCreated'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/api-tokens/{token_id}:
+    parameters:
+      - name: token_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: revokeApiToken
+      tags:
+        - identity
+      summary: Revoke a personal access token
+      description: Revokes one of the caller's tokens, which stops working at once; a token may revoke itself. A token that does not exist, is revoked already or belongs to another account is identity.api_token_not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - identity.api_token_not_found
+      responses:
+        '204':
+          description: Revoked.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/instance:
     get:
       operationId: getInstance
@@ -322,6 +393,111 @@ components:
         created_at:
           type: string
           format: date-time
+    ApiToken:
+      description: A personal access token as lists show it. The token itself appears only in ApiTokenCreated.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - description
+        - expired_at
+        - last_used
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        description:
+          type: string
+        expired_at:
+          description: When the token stops working; null when it never does.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        last_used:
+          description: When the token last authenticated a request, to the minute; null when it never has.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    NextCursor:
+      description: The cursor of the next page; null on the last page.
+      type:
+        - string
+        - 'null'
+    ApiTokenPage:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - next_cursor
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApiToken'
+        next_cursor:
+          $ref: '#/components/schemas/NextCursor'
+    ApiTokenCreate:
+      type: object
+      additionalProperties: false
+      properties:
+        label:
+          description: 1–255 characters; 32 hexadecimal digits are made up when it is absent.
+          type: string
+        description:
+          type: string
+        expired_at:
+          description: A time in the future; absent or null for a token that never expires.
+          type:
+            - string
+            - 'null'
+          format: date-time
+    ApiTokenCreated:
+      description: 'A new personal access token: the fields of ApiToken, and the token itself, which is shown this once and cannot be read again.'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - description
+        - expired_at
+        - last_used
+        - created_at
+        - token
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        description:
+          type: string
+        expired_at:
+          description: When the token stops working; null when it never does.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        last_used:
+          description: Null; the token has not been used yet.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        token:
+          description: The token, nrv_pat_ and 43 more characters.
+          type: string
     InstanceInfo:
       type: object
       additionalProperties: false
@@ -366,6 +542,22 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/Problem'
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: The page size, 1–100; 50 when absent. Outside that range the answer is 422 validation_failed on limit.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: The next_cursor of the page before; absent for the first page. A cursor that this list did not issue is 400 bad_request on cursor.
+      schema:
+        type: string
 x-problem-codes:
   - bad_request
   - payload_too_large
