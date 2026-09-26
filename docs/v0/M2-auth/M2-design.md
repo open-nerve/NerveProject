@@ -161,8 +161,9 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - `httpserver` 声明自己需要的小接口：认证器（3.6）和"可以映射为 problem 的错误"（3.11）。`identity`、`shared` 按结构满足它们。
   - `platform/postgres` 的事务管理器按结构满足 `shared.TxManager`，不导入 `shared`；`bootstrap` 里写一行编译期断言。
   - 架构测试规则 4 加上这一条："平台不导入模块、`bootstrap` 和 `internal/shared`"。
-- **模块入口**（`module.go`）导出：`New(Deps)`、`Register(router, api)`、`PublicOperations()`（3.6）、`Authenticator()`、`Jobs()`、`Admin()`。
-  - `Admin()` 返回命令行要调用的用例（创建账户、重置密码、修改邮箱、停用、恢复），命令的参数解析在 `cmd/nerve`，组合在 `bootstrap`（3.17）。
+- **模块入口**导出：`New(Deps)`、`Register(router, api)`、`PublicOperations()`（3.6）、`Authenticator()`、`Jobs()`（`module.go`），以及 `NewAdmin(AdminDeps)`（`admin.go`）。
+  - `NewAdmin` 返回命令行要调用的用例（创建账户、重置密码、修改邮箱、停用、恢复），命令的参数解析在 `cmd/nerve`，组合在 `bootstrap`（3.17）。
+  - 它是模块入口的另一个构造函数，不是 `Module` 的方法：命令行的组合只要连接池、事务、时钟、日志和密码参数，不该为了它去构建 HTTP 那一侧（签名密钥、令牌期限、限流的桶、注册策略）。用例本身与接口共用（控制者 2026-09-26 裁定，P3b spec 第 3 节第 3 条）。
   - 请求体的结构表是模块 HTTP 适配器的生成代码，由适配器在 `Register` 中交给平台（3.11），不经过模块入口。
 
 ### 3.4 令牌格式
@@ -725,7 +726,7 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 - 没有界面，也没有接口的命令：`create`、`reset-password`、`set-email`、`activate`。个人设置里的邮箱只读（7.7）。
 - **命令的实现**：
   - `cmd/nerve` 只解析参数。
-  - `bootstrap` 建一个最小组合：连接池和 `identity` 的 `Admin()` 用例；不启动 HTTP，不处理任务，也没有 River 客户端。
+  - `bootstrap` 建一个最小组合：连接池和 `identity.NewAdmin` 的用例；不启动 HTTP，不处理任务，也没有 River 客户端。
   - M2 的命令都不投递任务，所以组合里不放只投递的客户端。它随第一个投递任务的命令加入（M4，例如在事务中投递领域事件的用例；负责人 2026-09-26 批准推迟，13.2）。P3b 的 River 只有服务用的客户端（3.15）。
   - 用例和 HTTP 接口共用，规则只写一份。
 
@@ -1102,7 +1103,8 @@ modules/identity/
     signing/                持有 Ed25519 密钥：AccessTokens（JWT）和 RefreshTokenMAC（HKDF 派生的 MAC 密钥，3.4）
     river/                  清理会话的 worker
     authn/                  Authenticator 的实现：调用认证用例，把 Actor 放进 context，返回限流键
-  module.go                 New(Deps)；Register(router, api)；PublicOperations()；Authenticator()；Jobs()；Admin()
+  module.go                 New(Deps)；Register(router, api)；PublicOperations()；Authenticator()；Jobs()
+  admin.go                  NewAdmin(AdminDeps)：命令行的用例（3.3、3.17）
 ```
 - 一个用例一个文件（总体设计 6.1），每个文件预计 40–120 行。注册和 `create_user` 共用"建账户"这一步，放在 `create_user.go`，注册先查 `SignupPolicy`、后签发会话。
 - `domain` 的 Go 文件都在 400 行以内。
@@ -1944,7 +1946,7 @@ files:
 ### P3b `jobs-and-admin`：River 与管理命令（后端）
 - **目标**：管理命令可用；River 的第一个定时任务运行；账户行锁的六个交错测试全部通过。
 - **交付物**：
-  1. 管理命令：`nerve users create`、`reset-password`、`set-email`、`deactivate`、`activate`；`Admin()`（3.17）。命令行是最小组合：连接池和 `Admin()`，没有 River 客户端（3.17）。
+  1. 管理命令：`nerve users create`、`reset-password`、`set-email`、`deactivate`、`activate`；`identity.NewAdmin`（3.3、3.17）。命令行是最小组合：连接池和 `NewAdmin` 的用例，没有 River 客户端（3.17）。
   2. River（3.15）：
      - 迁移 `00005`；
      - `platform/jobs`（服务用的客户端）；
@@ -1966,7 +1968,7 @@ files:
   - 交错测试 1–3 在真实数据库上通过，六个交错测试至此全部通过；
   - 清理任务的测试通过：只删除过期的会话，跳过被锁住的会话；5 个迁移都能 up、down、再 up；
   - 实测的停机时间在端到端 fixture 的预算内，写进 review；
-  - 命令行的组合只有连接池和 `Admin()`。
+  - 命令行的组合只有连接池和 `NewAdmin` 的用例。
 
 ### P4 `web-auth`：前端认证
 - **目标**：浏览器通过令牌管理器登录、续期、退出；Cookie 和 CSRF 从前端消失；用 HTTP 部署时多标签页也能正常续期；切换账户时标签页不会以错误的身份写入；M2 能到达的页面挂载时不请求 M3 的旧接口。
@@ -2097,7 +2099,7 @@ files:
 | M5 | **上传与按路由的中间件**：模块级的 `Middlewares`（1 MiB 请求体上限、15 秒期限）会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外，并按 3.6 的整程序测试处理：写进接口描述，或在设计中说明（控制者复核 m7）。`file_size_limit` 的执行；CSP 的 `img-src`、`connect-src` 加上存储的来源 |
 | M6 | 迭代（`cycles`、`cycle_issues`）跨 `planning` 与工作项模块的写入用端口和共享事务；必须联表的查询，事先列为 `TestSQLCSchemaScope` 的例外并写明理由，或者用端口拆开 |
 | M7 | 保存视图的列表有多种排序：按 3.12 为每种排序定义游标载荷；跨模块的联表同 M6 |
-| M8 | 接口调用日志挂在限流之后（3.6）；Go 进程空闲内存实测时，一并测 argon2 并发上限下的峰值和常见密码名单占用的内存（3.8）；对外接口文档页不从 CDN 加载脚本（8.3）；**镜像设置 `NERVE_ENV=prod`**（决策点 2 的缓解，6.1） |
+| M8 | 接口调用日志挂在限流之后（3.6）；Go 进程空闲内存实测时，一并测 argon2 并发上限下的峰值和常见密码名单占用的内存（3.8）；对外接口文档页不从 CDN 加载脚本（8.3）；**镜像设置 `NERVE_ENV=prod`**（决策点 2 的缓解，6.1）；**容器的停止宽限期**：默认配置下停机最坏约 36 秒（HTTP 20、任务 10+1、连接池 5，P3b spec 第 3 节第 7 条），超过 Docker 默认的 10 秒，部署文件要设 `stop_grace_period`（或调小这几个期限），否则进程在收尾中被 SIGKILL |
 
 ---
 
@@ -2202,7 +2204,7 @@ files:
 | M15 | 新手引导两步是产品决定 | 3.19；决策点 4 |
 | M16 | 给 M3 的交接说要"加端口"，其实已有 `SignupPolicy` | 13.2 |
 | M17 | 与总体设计 3.1、3.2 的约定不符 | 3.12 撤销路径改为 `/api-tokens/{id}`；5.1 注册的返回值；3.20 |
-| M18 | 模块入口的 `Commands()`；命令行没有 River；sqlc 没有模块边界 | 3.3 `Admin()`；3.15、3.17 只投递的客户端（负责人 2026-09-26 批准推迟到 M4，13.2）；3.14 按模块限定 `schema` |
+| M18 | 模块入口的 `Commands()`；命令行没有 River；sqlc 没有模块边界 | 3.3 `NewAdmin(AdminDeps)`；3.15、3.17 只投递的客户端（负责人 2026-09-26 批准推迟到 M4，13.2）；3.14 按模块限定 `schema` |
 
 - 评审的负责人问题 2（退出的语义）放在 11.1，负责人已批准；问题 3（平台能否导入 `shared`）由控制者裁定为不导入（3.3）。
 - 核对评审引用时发现的出入：Plane 重置命令中 zxcvbn 的位置是 `reset_password.py:56`，不是评审写的 `:122`；Plane 停用时的"唯一管理员"检查确实写在代码里，但按代码推导它从不拒绝（决策点 3）。
