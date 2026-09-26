@@ -100,11 +100,15 @@ func TestTheAccountAndItsPreferencesWithAPersonalAccessToken(t *testing.T) {
 	contract, base, token := accountApp(t, "account@example.com")
 
 	meStatus, me := call(t, contract, http.MethodPatch, base+"/api/v0/me", token, `{"first_name":"Ann","user_timezone":"Asia/Shanghai"}`)
+	readStatus, stored := call(t, contract, http.MethodGet, base+"/api/v0/me", token, "")
 	patchStatus, _ := call(t, contract, http.MethodPatch, base+"/api/v0/me/profile", token, `{"theme":"dark","onboarding_step":{"profile_complete":true}}`)
 	getStatus, profile := call(t, contract, http.MethodGet, base+"/api/v0/me/profile", token, "")
 
 	if meStatus != http.StatusOK || !strings.Contains(me, `"first_name":"Ann"`) || !strings.Contains(me, `"user_timezone":"Asia/Shanghai"`) {
 		t.Errorf("PATCH /me = %d %s, want 200 with the new name and time zone", meStatus, me)
+	}
+	if readStatus != http.StatusOK || !strings.Contains(stored, `"first_name":"Ann"`) || !strings.Contains(stored, `"user_timezone":"Asia/Shanghai"`) {
+		t.Errorf("PATCH /me, then GET = %d %s; want 200 with the new name and time zone stored", readStatus, stored)
 	}
 	if patchStatus != http.StatusOK || getStatus != http.StatusOK || !strings.Contains(profile, `"theme":"dark"`) ||
 		!strings.Contains(profile, `"onboarding_step":{"profile_complete":true,"workspace_create":false,`) {
