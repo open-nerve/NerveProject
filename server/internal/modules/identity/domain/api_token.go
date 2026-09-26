@@ -147,8 +147,9 @@ func (c APITokenCursor) MarshalJSON() ([]byte, error) {
 	return json.Marshal([2]string{c.CreatedAt.Format(time.RFC3339Nano), c.ID.String()})
 }
 
-// UnmarshalJSON reads what MarshalJSON wrote: an array of exactly an RFC
-// 3339 time and a uuid.
+// UnmarshalJSON reads an array of exactly two strings, an RFC 3339 time and
+// a uuid. It also reads spellings of them that MarshalJSON never writes,
+// such as an offset for Z or upper-case hex; DecodeCursor refuses those.
 func (c *APITokenCursor) UnmarshalJSON(b []byte) error {
 	var parts []string
 	if err := json.Unmarshal(b, &parts); err != nil {

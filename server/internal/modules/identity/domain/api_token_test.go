@@ -3,6 +3,7 @@ package domain
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"regexp"
@@ -18,11 +19,12 @@ import (
 // now is the time the rules are checked at.
 var now = time.Date(2026, 9, 26, 10, 0, 0, 0, time.UTC)
 
-// samplePAT has every byte different, so a shifted or truncated copy differs.
+// samplePAT has every byte different, so a shifted or truncated copy
+// differs, and its text holds both "-" and "_", which only base64url writes.
 func samplePAT() PAT {
 	var p PAT
 	for i := range p {
-		p[i] = byte(i*7 + 3)
+		p[i] = byte(255 - i*7)
 	}
 	return p
 }
@@ -63,6 +65,7 @@ func TestParsePATRejects(t *testing.T) {
 		{"padded", s[:len(s)-1] + "="},
 		{"unused bits set", s[:len(s)-1] + unusedBit},
 		{"a newline inside", s[:20] + "\n" + s[21:]},
+		{"a newline added", s + "\n"},
 		{"the standard alphabet", s[:20] + "+" + s[21:]},
 		{"blank around it", " " + s[:len(s)-1]},
 	}
@@ -174,6 +177,31 @@ func TestAPITokenCursorRejects(t *testing.T) {
 		var c APITokenCursor
 		if err := json.Unmarshal([]byte(payload), &c); err == nil {
 			t.Errorf("json.Unmarshal(%s) = %+v, want an error", payload, c)
+		}
+	}
+}
+
+// UnmarshalJSON reads other spellings of the same time and id than
+// MarshalJSON writes; DecodeCursor refuses them, as it accepts only what
+// EncodeCursor writes.
+func TestAPITokenCursorRefusesOtherSpellings(t *testing.T) {
+	const at, id = "2026-09-25T10:00:00.123456", "0199a2b4-0000-7000-8000-000000000001"
+	for _, payload := range []string{
+		`["` + at + `+00:00","` + id + `"]`,
+		`["` + at + `0Z","` + id + `"]`,
+		`["` + at + `Z","` + strings.ToUpper(id) + `"]`,
+		`["` + at + `Z","{` + id + `}"]`,
+		`["` + at + `Z", "` + id + `"]`,
+	} {
+		var read APITokenCursor
+		if err := json.Unmarshal([]byte(payload), &read); err != nil {
+			t.Fatalf("json.Unmarshal(%s) = %v; the case needs a payload UnmarshalJSON reads", payload, err)
+		}
+
+		var got APITokenCursor
+		cursor := base64.RawURLEncoding.EncodeToString([]byte(`{"v":1,"p":` + payload + `}`))
+		if err := shared.DecodeCursor(cursor, &got); !errors.Is(err, shared.InvalidCursor()) {
+			t.Errorf("DecodeCursor(%s) = %v, want InvalidCursor", payload, err)
 		}
 	}
 }

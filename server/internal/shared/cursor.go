@@ -1,11 +1,8 @@
 package shared
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
-	"io"
 )
 
 // cursorVersion is the version of the cursor envelope, v.
@@ -33,25 +30,31 @@ func EncodeCursor(payload any) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(out), nil
 }
 
-// DecodeCursor reads a cursor that EncodeCursor wrote into payload, whose
-// JSON decoding judges the payload. Anything else is InvalidCursor: not
-// unpadded base64url, not the envelope and nothing more, another version, no
-// payload, or a payload that does not decode.
+// DecodeCursor decodes into payload a cursor that EncodeCursor wrote. It
+// accepts only that spelling: the decoded payload must encode back to cursor
+// byte for byte. Another version, another member, a second value, or another
+// spelling of the same JSON or base64 (blanks, a name's case, a repeated
+// member, \r or \n, unused bits set) is InvalidCursor, as is a cursor that
+// does not decode, or whose payload is missing, null or not the list's.
 func DecodeCursor(cursor string, payload any) error {
 	raw, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
 		return InvalidCursor()
 	}
-	dec := json.NewDecoder(bytes.NewReader(raw))
-	dec.DisallowUnknownFields()
 	var env cursorEnvelope
-	if err := dec.Decode(&env); err != nil || !errors.Is(dec.Decode(new(json.RawMessage)), io.EOF) {
+	if err := json.Unmarshal(raw, &env); err != nil {
 		return InvalidCursor()
 	}
-	if env.V != cursorVersion || len(env.P) == 0 || string(env.P) == "null" {
+	// A null payload is refused here: into a pointer, slice or map it
+	// decodes to nil, which encodes back to null and would pass the
+	// comparison below.
+	if len(env.P) == 0 || string(env.P) == "null" {
 		return InvalidCursor()
 	}
 	if err := json.Unmarshal(env.P, payload); err != nil {
+		return InvalidCursor()
+	}
+	if again, err := EncodeCursor(payload); err != nil || again != cursor {
 		return InvalidCursor()
 	}
 	return nil
