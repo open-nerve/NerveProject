@@ -91,10 +91,10 @@ func (r *Runner) Stop(ctx context.Context) error
 ```
 
 - `New`：默认队列最多 2 个 worker（M2 只有一个定时任务）；定时任务交给 River，由 leader 投递，多台服务也只投一次；`SoftStopTimeout = ShutdownTimeout`；同一种任务的两个 worker 是错误。
-- `Start` 在后台启动，立即返回。River 的 `Start` 先对数据库做一次 `SELECT 1`，数据库不可达时返回错误（`river@v0.47.0/client.go:1106-1115`；第 3 节第 1 条），runner 就间隔 1 秒、每次加倍、最多 30 秒地重试，每次记 WARN "jobs did not start; trying again"（`error`、`retry_in`）；启动后记 INFO "jobs started"（`shutdown_timeout`）。客户端运行在 `context.WithoutCancel(ctx)` 派生的 ctx 上：传给 River `Start` 的 ctx 一取消，River 就开始停止（附录 A 的 E1），调用者的 ctx 结束不应让任务在 `Stop` 之前停下。
-- `Stop`：结束重试；客户端启动过时调用 River 的 `Stop`，期限是 `ShutdownTimeout` 加 1 秒（`cancelGrace`）：River 不再取任务，正在运行的任务有 `ShutdownTimeout` 结束，然后它们的 ctx 被取消；1 秒后还没返回就报错 `jobs still running 1s after jobs.shutdown_timeout (…)`，停机不被挂住。成功时记 INFO "jobs stopped"。
+- `Start` 在后台启动，立即返回。River 的 `Start` 先对数据库做一次 `SELECT 1`，数据库不可达时返回错误（`river@v0.47.0/client.go:1106-1115`；第 3 节第 1 条），runner 就间隔 1 秒、每次加倍、最多 30 秒地重试，每次记 WARN "jobs did not start; trying again"（`error`、`retry_in`）；启动后记 INFO "jobs started"（`shutdown_timeout`）。每次尝试把 `context.WithoutCancel(ctx)` 派生的一个新 ctx 交给 River 的 `Start`：传给 River `Start` 的 ctx 一取消，River 就开始停止（附录 A 的 E1），调用者的 ctx 结束不应让任务在 `Stop` 之前停下。`Stop` 只在这次 `Start` 还在运行时取消这个 ctx（`SELECT 1` 挂住也不挡停机）；`Start` 返回 nil 之后 runner 不再取消它，停止交给 River 的 `Stop`（第 3 节第 17 条）。`Stop` 恰好在 `Start` 返回时到达，River 收到的仍是普通的取消：打断进行中的 `Start` 避不开这个窗口。
+- `Stop`：结束重试，取消还在进行的启动尝试的 ctx；客户端启动过时只调用 River 的 `Stop`，不先取消启动时的 ctx，River 用自己的停止原因（`startstop.ErrStop`）取消它的各个 ctx；期限是 `ShutdownTimeout` 加 1 秒（`cancelGrace`）：River 不再取任务，正在运行的任务有 `ShutdownTimeout` 结束，然后它们的 ctx 被取消；1 秒后还没返回就报错 `jobs still running 1s after jobs.shutdown_timeout (…)`，停机不被挂住。River 的 `Stop` 返回之后（成功或报错）释放启动时的 ctx。成功时记 INFO "jobs stopped"。
 - 只导入 River 和 pgx，不导入别的平台包（archtest 规则 7；M2 设计 3.15）。
-- 测试（真实数据库和假客户端）：`TestRunnerWorksAPeriodicJobUntilStopped`；`TestStopCancelsARunningJobAfterTheShutdownTimeout`（1 秒、3 秒两个设置）；`TestStopGivesUpOnAJobThatIgnoresCancellation`；`TestStartWithoutADatabase`；`TestNewRejectsTwoWorkersOfOneKind`；`TestStartTriesAgainUntilTheClientStarts`（等待 10、20、25 毫秒；调用者的 ctx 取消后客户端的 ctx 仍有效；`Stop` 的期限是时限加 1 秒）；`TestStopEndsTheAttemptsToStart`。
+- 测试（真实数据库和假客户端）：`TestRunnerWorksAPeriodicJobUntilStopped`；`TestStopCancelsARunningJobAfterTheShutdownTimeout`（1 秒、3 秒两个设置）；`TestStopGivesUpOnAJobThatIgnoresCancellation`；`TestStartWithoutADatabase`；`TestNewRejectsTwoWorkersOfOneKind`；`TestStartTriesAgainUntilTheClientStarts`（等待 10、20、25 毫秒；调用者的 ctx 取消后客户端的 ctx 仍有效；`Stop` 的期限是时限加 1 秒）；`TestStopEndsTheAttemptsToStart`；`TestStopCancelsAnAttemptUnderWay`（挂住的 `Start` 被取消，`Stop` 不等它）；`TestStopLeavesTheStartedClientToItsOwnStop`（调用客户端的 `Stop` 时启动的 ctx 仍有效，`Stop` 之后被释放）。
 
 ### 2.6 清理过期会话（M2 设计 3.5、3.15）
 
@@ -243,6 +243,7 @@ plan 的 Task 12 逐行给出文字。要点：
 14. **命令的密码只去掉行尾**：3.17 写"标准输入不是终端时读一行"。这一行只去掉 `\n` 或 `\r\n`，前后的空格保留（空格可以是密码的一部分）；空行交给密码规则（`the password is required`）；什么都读不到是错误，不当作空密码。
 15. **e2e 的命令日志开到 DEBUG**：test 配置的日志级别是 `warn`，五个命令的日志都是 INFO，照原级别运行时"日志里没有密码"的断言不可能失败。`nerveUsers`、`nerveUsersFails` 设 `NERVE_LOG__LEVEL=debug`（附录 A）。
 16. **`config/load_test.go` 到 403 行**：分层用例的表加两个键，超过约 400 行 3 行；拆开一张表反而难读，不拆（plan 的 Global Constraints 写明）。接口描述按模块一个文件，`identity.yaml` 超过 400 行，照 M0-P3 交接 5 不拆。
+17. **Runner 在 River 启动后只用 `client.Stop` 停止它**：只在 River 的 `Start` 还在运行时取消它的 ctx（`SELECT 1` 挂住也不挡停机）；启动之后取消原因由 River 自己写为 `startstop.ErrStop`，River 的重建索引在停机时据此删掉没建完的 `_ccnew` 索引。代价：删除被长事务挡住时最多 15 秒，超过任务的停机时限，`Stop` 报错。附录 A 的 C1；控制者裁定 C1-a。
 
 ## 4. 验收标准（完成线，M2 设计 12 节 P3b）
 
@@ -271,6 +272,8 @@ plan 的 Task 12 逐行给出文字。要点：
 | River 的重试把数据库故障藏在 WARN 里 | `/readyz` 照常报告数据库；每次重试都记 WARN，间隔最多 30 秒 |
 | A14 依赖真实的时间（2 秒的间隔） | 轮询以 15 秒为限；原型中 A14 的耗时 0.9–4.9 秒（附录 A），重复 5 次都通过 |
 | 管理员命令与在线的服务并发 | 命令按 3.5 的账户行锁执行，交错测试 1–3 证明它与登录、创建 PAT 正确地互相等待；清理任务用 `SKIP LOCKED`，不参与加锁顺序 |
+| 停机落在 River 启动后的最初几秒内时，River 记一两条 ERROR | River 对周期任务投递的 `Begin` 失败、通知连接上被打断的语句不看取消的原因（`periodic_job_enqueuer.go:529-532`、`notifier.go:146-151`），runner 无从避免；实测就绪后立即停机 10/10、3 秒后 7/40，运行 10 秒、30 秒后 0/40；没有任务停在 running、没有连接泄漏、没有写一半的数据（附录 A 的 C1）；README 部署一节说明（Task 12） |
+| 停机恰好落在 River 的重建索引中（默认每天 00:00 UTC），又有长事务挡住没建完的 `_ccnew` 索引的删除时，River 等这次删除最多 15 秒（`reindexer.go:263-266`），超过 `jobs.shutdown_timeout` 加 1 秒：`Stop` 报错，nerve 以退出码 1 退出，索引留下 | 恢复方法写进 README 部署一节（Task 12）：日志出现 WARN `maintenance.Reindexer: Found reindex artifact … skipping reindex` 时，用 `DROP INDEX CONCURRENTLY` 删掉 `artifact_names` 中列出的索引。改之前的 runner 在这样的停机中无论有没有长事务都留下索引，从此不再重建它（附录 A 的 C1） |
 
 ## 7. 交接的处理
 
@@ -318,6 +321,19 @@ plan 的 Task 12 逐行给出文字。要点：
 - **E4** 登录的耗时（`argon2_memory_kib` 19456、`argon2_iterations` 2，三种登录交替各 15 次）：中位数 已知地址错误密码 14.48 毫秒、未知地址 14.50 毫秒、不可用的密码 14.45 毫秒。
 - **E5** 停机时间（`bin/nerve serve`，test 配置加 `NERVE_LOG__LEVEL=info`，开发库上的一个独立的库，各 10 次）：就绪后立即 SIGTERM，退出用时最小 2、中位 2、最大 2 毫秒；就绪 3 秒后（清理任务已运行）最小 4、中位 6、最大 7 毫秒；每次日志都有 "jobs started" 和 "jobs stopped"。fixture 的 `stopTimeoutMs` 是 30 秒，worker 的预算 `nerveFixtureTimeoutMs = readyTimeoutMs + stopTimeoutMs + 10_000` 是 70 秒。
 - **E6** A14 的耗时：第一次全量运行 4.9 秒（worker 的 nerve 刚启动，River 选出 leader 之后才投递定时任务），重复 5 次时 0.9–2.9 秒。
+- **C1**（Task 11 之后的调查，2026-09-27；控制者裁定 C1-a）停机时 River 记的 ERROR。`bin/nerve serve`，test 配置加 `NERVE_LOG__LEVEL=info`，开发库上每组一个独立的库，组内顺序运行；表中是至少有一条 River ERROR 的运行数（没有一次出现 WARN）。"改后"是第 3 节第 17 条的 runner。
+
+  | SIGTERM | 清理间隔 | 原 runner | 改后 |
+  |---|---|---|---|
+  | 就绪后立即 | 2 秒（test） | 10/10 | 10/10 |
+  | 就绪 3 秒后 | 2 秒 | 7/40 | 4/40 |
+  | 就绪 10 秒、30 秒后 | 2 秒 | 0/20 | — |
+  | 就绪 10 秒、30 秒后 | 1h（默认） | 0/20 | — |
+  | 就绪 10 秒后，`river_queue` 从 7 秒起被锁 | 2 秒 | 1/10 | 0/10 |
+
+  220 次运行都以 0 退出，都有 "jobs stopped" 和 "database pool closed"，没有任务停在 `running`，`river_leader` 为空，PostgreSQL 日志中没有断开的连接或被取消的语句。出现的只有两种 ERROR：`maintenance.PeriodicJobEnqueuer: Error starting transaction`（`periodic_job_enqueuer.go:529-532`：leader 的维护服务逐个启动，每个先随机等 0–1 秒（`queue_maintainer.go:50-55`、`river_shared_maintenance.go:133`），停机落在周期任务的第一次投递之前时，这次投递在已取消的 ctx 上执行；运行中只在停机恰好落在一次投递的几毫秒内时出现）；`notifier.Notifier: Error running listener … conn closed`（`notifier.go:146-151`：停机落在 River 自己的 `Start` 之中，打断了通知连接上的 `LISTEN`，pgx 关掉这个连接）。两处都不看取消的原因，与 runner 怎样停止无关，3 秒一行的差别是噪声（Fisher 检验 p = 0.52）。
+
+  取消原因有影响的是 River 的重建索引（默认每天 00:00 UTC，`river_job` 的 7 个索引）：停机中断 `REINDEX INDEX CONCURRENTLY` 时，只有取消原因是 `startstop.ErrStop`，它才删掉没建完的 `_ccnew` 索引（`internal/maintenance/reindexer.go:263`；删除用 `context.WithoutCancel` 加 15 秒的时限，`:264-266`）。原 runner 先取消 River 启动时的 ctx，原因成了 `context.Canceled`。实验：诊断用的二进制把 `ReindexerSchedule` 设为 3 秒；另一个会话开着读 `river_job` 的事务，让 REINDEX 停在建好 `_ccnew` 之后；这时 SIGTERM，0.5 秒后结束那个事务。原 runner 5/5 留下 INVALID 的 `river_job_args_index_ccnew`，再启动后每次重建都记 WARN "Found reindex artifact … skipping reindex"（`reindexer.go:244`），这个索引不再重建；改后 5/5 删掉它，SIGTERM 后约 0.6 秒以 0 退出，再启动没有 WARN。代价：挡住删除的事务一直不结束时，River 等满 15 秒；`Stop` 在 `jobs.shutdown_timeout` 加 1 秒（默认 11 秒）时报错，连接池等删除占用的连接释放后关闭，nerve 以退出码 1 退出，索引留下（观察到一次，15.0 秒）。
 
 **变异核对**（`$M2TMP/p3btools/muts.py`：改一处代码，跑相关的包，恢复；端到端的变异由 `muts_e2e.py` 重新构建 `bin/nerve` 后跑一个故事）。共 123 个变异，按 P3a 评审列出的缺陷类别归类；每个变异按最后一次运行计，122 个被发现，1 个没有（见下）：
 

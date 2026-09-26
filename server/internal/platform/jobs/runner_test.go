@@ -140,3 +140,74 @@ func TestStopWaitsForAnAttemptUnderWay(t *testing.T) {
 		t.Errorf("the client was stopped %d times, want once: the attempt under way started it", len(slow.stops))
 	}
 }
+
+// hungStart is a client whose Start waits for its context, as River's does
+// on a SELECT 1 that the database never answers.
+type hungStart struct {
+	fakeClient
+	underWay chan struct{}
+}
+
+func (h *hungStart) Start(ctx context.Context) error {
+	close(h.underWay)
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+// Stop cancels an attempt to start that is under way, so that a database
+// that never answers cannot hold the shutdown; nothing started, so there is
+// no client to stop.
+func TestStopCancelsAnAttemptUnderWay(t *testing.T) {
+	hung := &hungStart{underWay: make(chan struct{})}
+	r := newRunner(hung, Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)})
+	start(t, r, context.Background())
+	receive(t, hung.underWay, 5*time.Second, "attempt to start")
+
+	if err := stop(t, r, context.Background(), time.Second); err != nil {
+		t.Errorf("Stop() = %v", err)
+	}
+	hung.mu.Lock()
+	defer hung.mu.Unlock()
+	if len(hung.stops) != 0 {
+		t.Errorf("the client was stopped %d times, want none: it never started", len(hung.stops))
+	}
+}
+
+// stopWatcher records whether the context the client started with was
+// still live when the runner stopped the client.
+type stopWatcher struct {
+	fakeClient
+	liveAtStop chan bool
+}
+
+func (s *stopWatcher) Stop(ctx context.Context) error {
+	s.mu.Lock()
+	started := s.starts[len(s.starts)-1]
+	s.mu.Unlock()
+	s.liveAtStop <- started.Err() == nil
+	return s.fakeClient.Stop(ctx)
+}
+
+// Once the client has started, Stop stops it with the client's Stop alone:
+// River then cancels its own contexts with its stop cause, on which its
+// reindexer drops an interrupted index build, rather than with the plain
+// cancellation of the context it started with, which skips that cleanup.
+// That context is released once the client has stopped.
+func TestStopLeavesTheStartedClientToItsOwnStop(t *testing.T) {
+	w := &stopWatcher{fakeClient: fakeClient{attempts: make(chan struct{}, 1)}, liveAtStop: make(chan bool, 1)}
+	r := newRunner(w, Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)})
+	start(t, r, context.Background())
+	receive(t, w.attempts, 5*time.Second, "attempt to start")
+
+	if err := stop(t, r, context.Background(), time.Second); err != nil {
+		t.Fatalf("Stop() = %v", err)
+	}
+	if !receive(t, w.liveAtStop, time.Second, "stop of the client") {
+		t.Error("Stop cancelled the context the client started with before calling the client's Stop")
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.starts[0].Err() == nil {
+		t.Error("the context the client started with is still live after Stop: it is never released")
+	}
+}

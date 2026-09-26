@@ -61,6 +61,9 @@ type Runner struct {
 	cancel  context.CancelFunc // ends the attempts to start
 	done    chan struct{}      // closed once the attempts have ended
 	started bool               // written before done is closed
+	// release cancels the context River started with once Stop has
+	// stopped it; written before done is closed.
+	release context.CancelFunc
 }
 
 // New builds the client on pool for jobs; Start runs it.
@@ -100,17 +103,33 @@ func newRunner(c client, cfg Config) *Runner {
 // nerve serves meanwhile and /readyz reports the database, as without jobs.
 // Call Start once, and Stop after it.
 func (r *Runner) Start(ctx context.Context) {
-	ctx, r.cancel = context.WithCancel(context.WithoutCancel(ctx))
+	base := context.WithoutCancel(ctx)
+	ctx, r.cancel = context.WithCancel(base)
 	r.done = make(chan struct{})
 	go func() {
 		defer close(r.done)
 		for wait := r.firstRetry; ; wait = min(2*wait, r.lastRetry) {
-			err := r.client.Start(ctx)
+			// Stop cancels the context River starts with only while its
+			// Start runs, so that a SELECT 1 that hangs cannot hold the
+			// shutdown. Once Start has returned, Stop stops River with
+			// client.Stop alone: River then cancels its own contexts with
+			// its stop cause, which its services take as a stop and clean
+			// up after, e.g. the reindexer drops the index that an
+			// interrupted REINDEX CONCURRENTLY leaves behind. A Stop that
+			// lands just as Start returns still cancels the context
+			// (unwatch comes too late): interrupting a Start under way
+			// cannot avoid that window.
+			attempt, cancelAttempt := context.WithCancel(base)
+			unwatch := context.AfterFunc(ctx, cancelAttempt)
+			err := r.client.Start(attempt)
+			unwatch()
 			if err == nil {
 				r.started = true
+				r.release = cancelAttempt
 				r.logger.InfoContext(ctx, "jobs started", slog.Duration("shutdown_timeout", r.shutdownTimeout))
 				return
 			}
+			cancelAttempt()
 			if ctx.Err() != nil {
 				return
 			}
@@ -134,6 +153,7 @@ func (r *Runner) Stop(ctx context.Context) error {
 	if !r.started {
 		return nil
 	}
+	defer r.release()
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), r.shutdownTimeout+cancelGrace)
 	defer cancel()
 	if err := r.client.Stop(ctx); err != nil {
