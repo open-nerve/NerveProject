@@ -157,6 +157,21 @@ func TestValidateCrossKeyRules(t *testing.T) {
 			want: "server.trusted_proxies: ::ffff:10.0.0.0/104 is an IPv4-mapped IPv6 prefix, which no address matches: write the IPv4 prefix",
 		},
 		{
+			// Every client could then choose its own IP (M2 design 3.10).
+			name: "every IPv4 address trusted",
+			change: func(c *Config) {
+				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("0.0.0.0/0"))
+			},
+			want: "server.trusted_proxies: 0.0.0.0/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
+		},
+		{
+			name: "every IPv6 address trusted",
+			change: func(c *Config) {
+				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("::/0"))
+			},
+			want: "server.trusted_proxies: ::/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
+		},
+		{
 			name:   "IPv6 prefix longer than an address",
 			change: func(c *Config) { c.RateLimit.IPv6PrefixLen = 129 },
 			want:   "ratelimit.ipv6_prefix_len: must be from 1 to 128, got 129",

@@ -1,10 +1,12 @@
 package httpserver
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"strings"
 	"testing"
 )
 
@@ -87,6 +89,36 @@ func TestUntrustedForwardingIsWarnedOnce(t *testing.T) {
 	}
 	if len(warnings) != 1 || warnings[0]["peer"] != "203.0.113.7" {
 		t.Errorf("warnings = %v, want one, naming the peer 203.0.113.7", warnings)
+	}
+}
+
+// A trusted proxy that forwards an entry that is not a bare address (with a
+// port, a host name) ends the walk at itself, so its clients count as the
+// proxy: warned once per process, naming only the proxy, never what the
+// header held. A well-formed chain is no such sign, and is not warned.
+func TestMalformedForwardingIsWarnedOnce(t *testing.T) {
+	logger, logs := captureLogs(t)
+	c := clientsTrusting(logger, "10.0.0.0/8")
+
+	c.of(requestFrom("10.0.0.1:5555"))
+	c.of(requestFrom("10.0.0.1:5555", "198.51.100.1, 10.0.0.2"))
+	c.of(requestFrom("10.0.0.1:5555", "198.51.100.2:40000, 10.0.0.2"))
+	c.of(requestFrom("10.0.0.3:5555", "client.example"))
+
+	entries := logs()
+	var warnings []map[string]any
+	for _, e := range entries {
+		if e["level"] == "WARN" {
+			warnings = append(warnings, e)
+		}
+	}
+	if len(warnings) != 1 || warnings[0]["peer"] != "10.0.0.2" {
+		t.Errorf("warnings = %v, want one, naming the proxy 10.0.0.2", warnings)
+	}
+	for _, forwarded := range []string{"198.51.100", "40000", "client.example"} {
+		if text := fmt.Sprint(entries); strings.Contains(text, forwarded) {
+			t.Errorf("logs hold %q from the header: %s", forwarded, text)
+		}
 	}
 }
 

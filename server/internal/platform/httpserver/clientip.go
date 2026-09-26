@@ -15,9 +15,12 @@ type clientIPs struct {
 	logger   *slog.Logger
 	trusted  []netip.Prefix // server.trusted_proxies
 	v6Prefix int            // ratelimit.ipv6_prefix_len
-	// warned makes the warning about X-Forwarded-For from an untrusted peer
-	// once per process: bootstrap builds one API.
-	warned sync.Once
+	// Each misconfiguration warning is logged once per process: bootstrap
+	// builds one API. warnedUntrusted is X-Forwarded-For from a peer that
+	// is not trusted; warnedMalformed is a trusted proxy forwarding an entry
+	// that is not a bare address.
+	warnedUntrusted sync.Once
+	warnedMalformed sync.Once
 }
 
 // of returns the client of r: the connection's peer, unless the peer is a
@@ -25,26 +28,33 @@ type clientIPs struct {
 // right, that is not a trusted proxy: the proxies append the address they
 // received from, so what lies left of the first untrusted one is the
 // client's to write. When every address is a trusted proxy the leftmost is
-// the client; a malformed entry ends the walk at the trusted hop that
-// forwarded it. Addresses lose their zone, and an IPv4-mapped IPv6 address is
-// its IPv4 address. The zero Addr when the peer address does not parse.
+// the client; an entry that is not a bare address (one with a port, a host
+// name) ends the walk at the trusted hop that forwarded it. Addresses lose
+// their zone, and an IPv4-mapped IPv6 address is its IPv4 address. The zero
+// Addr when the peer address does not parse.
 func (c *clientIPs) of(r *http.Request) netip.Addr {
 	client := normalize(peerAddr(r.RemoteAddr))
 	forwarded := r.Header.Values("X-Forwarded-For")
+	if len(forwarded) == 0 {
+		return client
+	}
 	if !c.isTrusted(client) {
-		if len(forwarded) > 0 {
-			c.warned.Do(func() {
-				c.logger.WarnContext(r.Context(), "ignored X-Forwarded-For from a peer that is not a trusted proxy: "+
-					"behind a reverse proxy, add its address to server.trusted_proxies, or every client counts as the proxy",
-					slog.String("peer", client.String()))
-			})
-		}
+		c.warnedUntrusted.Do(func() {
+			c.logger.WarnContext(r.Context(), "ignored X-Forwarded-For from a peer that is not a trusted proxy: "+
+				"behind a reverse proxy, add its address to server.trusted_proxies, or every client counts as the proxy",
+				slog.String("peer", client.String()))
+		})
 		return client
 	}
 	hops := strings.Split(strings.Join(forwarded, ","), ",")
 	for _, hop := range slices.Backward(hops) {
 		addr, err := netip.ParseAddr(strings.TrimSpace(hop))
 		if err != nil {
+			c.warnedMalformed.Do(func() {
+				c.logger.WarnContext(r.Context(), "a trusted proxy forwarded an X-Forwarded-For entry that is not a bare IP address: "+
+					"the clients behind it count as the proxy; the proxies must write bare addresses (README, server.trusted_proxies)",
+					slog.String("peer", client.String()))
+			})
 			break
 		}
 		client = normalize(addr)

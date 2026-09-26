@@ -52,9 +52,14 @@ func (c Config) validate() error {
 		fail("server.max_body_bytes", "must be at least 1, got %d", c.Server.MaxBodyBytes)
 	}
 	for _, p := range c.Server.TrustedProxies {
-		// Client addresses are compared unmapped (M2 design 3.10), so such a
-		// prefix would silently match nothing.
-		if p.Addr().Is4In6() {
+		switch {
+		case p.Bits() == 0:
+			// Every client would be a trusted proxy and could write its own
+			// address into X-Forwarded-For (M2 design 3.10).
+			fail("server.trusted_proxies", "%s trusts every address, so any client could choose its own IP; list only your proxies' addresses", p)
+		case p.Addr().Is4In6():
+			// Client addresses are compared unmapped (M2 design 3.10), so such a
+			// prefix would silently match nothing.
 			fail("server.trusted_proxies", "%s is an IPv4-mapped IPv6 prefix, which no address matches: write the IPv4 prefix", p)
 		}
 	}
