@@ -81,6 +81,9 @@ func (c Config) validate() error {
 			c.Database.CommitTimeout, webRefreshTimeout, c.Auth.RefreshDeadline)
 	}
 	c.RateLimit.validate(fail)
+	if c.Files.SizeLimit < 1 {
+		fail("files.size_limit", "must be at least 1, got %d", c.Files.SizeLimit)
+	}
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(c.Log.Level)); err != nil {
 		fail("log.level", "must be one of debug, info, warn, error, got %q", c.Log.Level)
@@ -139,6 +142,7 @@ func (r RateLimitConfig) validate(fail func(key, format string, args ...any)) {
 		{"login_ip", r.LoginIP},
 		{"login_ip_email", r.LoginIPEmail},
 		{"register_ip", r.RegisterIP},
+		{"password_user", r.PasswordUser},
 	} {
 		if b.bucket.PerMinute < 1 {
 			fail("ratelimit."+b.name+".per_minute", "must be at least 1, got %d", b.bucket.PerMinute)

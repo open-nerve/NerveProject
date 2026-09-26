@@ -42,8 +42,13 @@ func validConfig() Config {
 			LoginIP:       BucketConfig{PerMinute: 30, Burst: 10},
 			LoginIPEmail:  BucketConfig{PerMinute: 10, Burst: 5},
 			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
+			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 3},
 		},
-		Log: LogConfig{Level: "info", Format: "json"},
+		// Unlike the defaults and unlike auth.signup_enabled, so that a key
+		// logged from the wrong field shows.
+		Workspace: WorkspaceConfig{CreationEnabled: false},
+		Files:     FilesConfig{SizeLimit: 7340032},
+		Log:       LogConfig{Level: "info", Format: "json"},
 	}
 }
 
@@ -97,6 +102,9 @@ func TestValidateReportsEveryInvalidKey(t *testing.T) {
 		"ratelimit.login_ip_email.burst: must be at least 1, got 0",
 		"ratelimit.register_ip.per_minute: must be at least 1, got 0",
 		"ratelimit.register_ip.burst: must be at least 1, got 0",
+		"ratelimit.password_user.per_minute: must be at least 1, got 0",
+		"ratelimit.password_user.burst: must be at least 1, got 0",
+		"files.size_limit: must be at least 1, got 0",
 		`log.level: must be one of debug, info, warn, error, got "verbose"`,
 		`log.format: must be text or json, got "xml"`,
 	}
@@ -170,6 +178,11 @@ func TestValidateCrossKeyRules(t *testing.T) {
 				c.Server.TrustedProxies = append(c.Server.TrustedProxies, netip.MustParsePrefix("::/0"))
 			},
 			want: "server.trusted_proxies: ::/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
+		},
+		{
+			name:   "negative file size limit",
+			change: func(c *Config) { c.Files.SizeLimit = -1 },
+			want:   "files.size_limit: must be at least 1, got -1",
 		},
 		{
 			name:   "IPv6 prefix longer than an address",

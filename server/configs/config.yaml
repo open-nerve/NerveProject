@@ -68,6 +68,16 @@ ratelimit:
   login_ip_email: {per_minute: 10, burst: 5}
   # 注册：按客户端 IP
   register_ip: {per_minute: 10, burst: 5}
+  # 需要校验密码的已认证操作（M2 中是修改密码），按账户
+  password_user: {per_minute: 5, burst: 5}
+
+workspace:
+  # 是否允许创建工作区。实例配置接口报告它；创建工作区在 M3 加入时照它执行
+  creation_enabled: true
+
+files:
+  # 单个上传文件的大小上限（字节，默认 5 MiB）。实例配置接口报告它；上传在 M5 加入时照它执行
+  size_limit: 5242880
 
 log:
   level: info    # debug | info | warn | error

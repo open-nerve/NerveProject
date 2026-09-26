@@ -48,6 +48,10 @@ func TestLogValueMasksDatabaseURL(t *testing.T) {
 		"config.ratelimit.login_ip.per_minute=30",
 		"config.ratelimit.login_ip_email.burst=5",
 		"config.ratelimit.register_ip.per_minute=10",
+		"config.ratelimit.password_user.per_minute=7",
+		"config.ratelimit.password_user.burst=3",
+		"config.workspace.creation_enabled=false",
+		"config.files.size_limit=7340032",
 		"config.log.format=json",
 	} {
 		if !strings.Contains(out, want) {
