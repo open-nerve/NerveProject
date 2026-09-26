@@ -280,6 +280,118 @@ func (m fakeMAC) Tag(message []byte) [16]byte {
 
 func (m fakeMAC) Verify(message []byte, tag [16]byte) bool { return m.Tag(message) == tag }
 
+// callLog records the calls of the fakes that share it, in order, each
+// with the id it was given and " outside tx" when it ran outside a
+// transaction.
+type callLog struct{ calls []string }
+
+func (l *callLog) add(ctx context.Context, call string) {
+	if !inTx(ctx) {
+		call += " outside tx"
+	}
+	l.calls = append(l.calls, call)
+}
+
+// fakeCredentials is the account row and the session that the credential
+// lock reads.
+type fakeCredentials struct {
+	log        *callLog
+	account    app.LockedAccount
+	accountErr error
+	session    app.SessionCredential
+	sessionErr error
+}
+
+func (f *fakeCredentials) LockForCredentials(ctx context.Context, id uuid.UUID) (app.LockedAccount, error) {
+	f.log.add(ctx, "lock "+id.String())
+	return f.account, f.accountErr
+}
+
+func (f *fakeCredentials) SessionCredential(ctx context.Context, id uuid.UUID) (app.SessionCredential, error) {
+	f.log.add(ctx, "session "+id.String())
+	return f.session, f.sessionErr
+}
+
+// touch is one TouchAPIToken call.
+type touch struct {
+	id               uuid.UUID
+	now, staleBefore time.Time
+}
+
+// revocation is one RevokeAPIToken call.
+type revocation struct {
+	id, userID uuid.UUID
+	now        time.Time
+}
+
+// fakeAPITokens is the token ports, in memory. It finds a credential by the
+// hash and by the id it holds, so a lookup by any other key fails; it lists
+// at most limit of its rows.
+type fakeAPITokens struct {
+	log        *callLog
+	credential app.APITokenCredential
+	hash       []byte // the hash that finds credential
+	readErr    error
+	touches    []touch
+	touchErr   error
+	created    []app.NewAPIToken
+	rows       []domain.APIToken
+	listed     []listCall
+	revoked    []revocation
+	revokeOK   bool
+	revokeErr  error
+}
+
+// listCall is one ListAPITokens call.
+type listCall struct {
+	userID uuid.UUID
+	after  *domain.APITokenCursor
+	limit  int
+}
+
+func (f *fakeAPITokens) APITokenByHash(ctx context.Context, hash []byte) (app.APITokenCredential, error) {
+	f.log.add(ctx, "token by hash")
+	if f.readErr != nil {
+		return app.APITokenCredential{}, f.readErr
+	}
+	if !bytes.Equal(hash, f.hash) {
+		return app.APITokenCredential{}, app.ErrNotFound
+	}
+	return f.credential, nil
+}
+
+func (f *fakeAPITokens) APITokenByID(ctx context.Context, id uuid.UUID) (app.APITokenCredential, error) {
+	f.log.add(ctx, "token "+id.String())
+	if f.readErr != nil {
+		return app.APITokenCredential{}, f.readErr
+	}
+	if id != f.credential.ID {
+		return app.APITokenCredential{}, app.ErrNotFound
+	}
+	return f.credential, nil
+}
+
+func (f *fakeAPITokens) TouchAPIToken(_ context.Context, id uuid.UUID, now, staleBefore time.Time) error {
+	f.touches = append(f.touches, touch{id, now, staleBefore})
+	return f.touchErr
+}
+
+func (f *fakeAPITokens) CreateAPIToken(ctx context.Context, n app.NewAPIToken) error {
+	f.log.add(ctx, "insert "+n.ID.String())
+	f.created = append(f.created, n)
+	return nil
+}
+
+func (f *fakeAPITokens) ListAPITokens(_ context.Context, userID uuid.UUID, after *domain.APITokenCursor, limit int) ([]domain.APIToken, error) {
+	f.listed = append(f.listed, listCall{userID, after, limit})
+	return f.rows[:min(limit, len(f.rows))], nil
+}
+
+func (f *fakeAPITokens) RevokeAPIToken(_ context.Context, id, userID uuid.UUID, now time.Time) (bool, error) {
+	f.revoked = append(f.revoked, revocation{id, userID, now})
+	return f.revokeOK, f.revokeErr
+}
+
 type fixedPolicy struct {
 	allow bool
 	err   error

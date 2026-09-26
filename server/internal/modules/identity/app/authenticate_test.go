@@ -21,7 +21,10 @@ var (
 func newAuthenticate(cred app.SessionCredential, credErr error) (*app.Authenticate, *fakeTokens, *fakeStore) {
 	tokens := newFakeTokens()
 	store := &fakeStore{credential: cred, credErr: credErr}
-	return app.NewAuthenticate(tokens, store, clocktest.At(now)), tokens, store
+	uc := app.NewAuthenticate(app.AuthenticateDeps{
+		AccessTokens: tokens, Sessions: store, APITokens: &fakeAPITokens{log: &callLog{}}, Touch: &fakeAPITokens{}, Clock: clocktest.At(now),
+	})
+	return uc, tokens, store
 }
 
 func validCredential() app.SessionCredential {

@@ -110,7 +110,9 @@ func New(d Deps) (*Module, error) {
 			RefreshDeadline: d.RefreshDeadline,
 			Logger:          d.Logger,
 		},
-		authenticator: authn.New(app.NewAuthenticate(tokens, store, d.Clock)),
+		authenticator: authn.New(app.NewAuthenticate(app.AuthenticateDeps{
+			AccessTokens: tokens, Sessions: store, APITokens: store, Touch: store, Clock: d.Clock,
+		})),
 	}, nil
 }
 
