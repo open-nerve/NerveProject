@@ -92,7 +92,8 @@ func setEmailCommand(load configLoader) *cobra.Command {
 
 // readPassword reads the new password (M2 design 3.17): on a terminal it
 // asks twice without echo, and the two must match; otherwise it reads one
-// line, for scripts and tests. Only the line ending is removed.
+// line, for scripts and tests. Only the line ending, \n or \r\n, is
+// removed: a lone \r stays, as part of the password.
 func readPassword(in io.Reader, prompt io.Writer) (string, error) {
 	if f, ok := in.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
 		first, err := promptPassword(f, prompt, "Password: ")
@@ -112,7 +113,10 @@ func readPassword(in io.Reader, prompt io.Writer) (string, error) {
 	if err != nil && (!errors.Is(err, io.EOF) || line == "") {
 		return "", fmt.Errorf("read the password from standard input: %w", err)
 	}
-	return strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r"), nil
+	if l, ok := strings.CutSuffix(line, "\n"); ok {
+		line = strings.TrimSuffix(l, "\r")
+	}
+	return line, nil
 }
 
 func promptPassword(f *os.File, prompt io.Writer, label string) ([]byte, error) {
