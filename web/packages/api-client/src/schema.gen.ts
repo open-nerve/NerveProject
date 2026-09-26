@@ -55,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Exchange a refresh token for the next pair
-         * @description Returns new tokens of the same session and retires the refresh token sent: the next refresh uses the refresh_token of this response. The session's end, refresh_token_expires_at, never moves. Any refresh token but the current one of a session that has not ended answers identity.refresh_token_invalid; one this session issued before also ends the session, since someone else holds a copy of it.
+         * @description Returns new tokens of the same session and retires the refresh token sent: the next refresh uses the refresh_token of this response. The session's end, refresh_token_expires_at, never moves. Any refresh token but the current one of a session that has not ended answers identity.refresh_token_invalid; one this session issued before under the current signing key also ends the session, since someone else holds a copy of it.
          */
         post: operations["refreshTokens"];
         delete?: never;

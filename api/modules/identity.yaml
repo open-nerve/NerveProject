@@ -74,8 +74,9 @@ paths:
         sent: the next refresh uses the refresh_token of this response. The
         session's end, refresh_token_expires_at, never moves. Any refresh
         token but the current one of a session that has not ended answers
-        identity.refresh_token_invalid; one this session issued before also
-        ends the session, since someone else holds a copy of it.
+        identity.refresh_token_invalid; one this session issued before under
+        the current signing key also ends the session, since someone else
+        holds a copy of it.
       security: []
       x-problem-codes: [identity.refresh_token_invalid]
       requestBody:
