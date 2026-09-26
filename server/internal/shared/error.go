@@ -27,6 +27,7 @@ const (
 // Codes of the platform problems that domain errors carry. Module codes are
 // prefixed with the module, e.g. "identity.email_taken".
 const (
+	CodeBadRequest       = "bad_request"
 	CodeValidationFailed = "validation_failed"
 	CodeUnauthorized     = "unauthorized"
 	CodeRateLimited      = "rate_limited"
