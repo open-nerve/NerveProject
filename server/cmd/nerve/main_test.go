@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/open-nerve/NerveProject/server/internal/platform/buildinfo"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
@@ -71,6 +73,8 @@ func TestMigrateStatus(t *testing.T) {
 	}
 }
 
+// nerve serve runs the API and the jobs until it is cancelled, then stops in
+// the order of M2 design 3.15: HTTP, the jobs, the pool.
 func TestServeUntilCancelled(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -78,9 +82,15 @@ func TestServeUntilCancelled(t *testing.T) {
 	}
 	addr := ln.Addr().String()
 	_ = ln.Close()
+	url := pgtest.NewDatabase(t)
+	pool, err := pgxpool.New(context.Background(), url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
 	environ := []string{
 		"NERVE_ENV=test",
-		"NERVE_DATABASE__URL=" + pgtest.NewDatabase(t),
+		"NERVE_DATABASE__URL=" + url,
 		"NERVE_SERVER__ADDR=" + addr,
 		"NERVE_LOG__LEVEL=info",
 	}
@@ -97,25 +107,35 @@ func TestServeUntilCancelled(t *testing.T) {
 	}()
 
 	client := &http.Client{Timeout: time.Second}
-	ready := false
-	for deadline := time.Now().Add(10 * time.Second); !ready && time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+	ready, worked := false, false
+	for deadline := time.Now().Add(15 * time.Second); (!ready || !worked) && time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
 		if resp, err := client.Get("http://" + addr + "/readyz"); err == nil {
 			_ = resp.Body.Close()
 			ready = resp.StatusCode == http.StatusOK
 		}
+		// The jobs run: the session cleanup ran when nerve started.
+		_ = pool.QueryRow(context.Background(), "SELECT EXISTS (SELECT 1 FROM river_job WHERE state = 'completed')").Scan(&worked)
 	}
 	cancel()
 	r := <-done
 
-	if !ready {
-		t.Fatalf("nerve serve never became ready; stderr:\n%s", r.stderr)
+	if !ready || !worked {
+		t.Fatalf("nerve serve never became ready (%v) or never worked a job (%v); stderr:\n%s", ready, worked, r.stderr)
 	}
 	if r.code != 0 {
 		t.Errorf("nerve serve exit code = %d, want 0; stderr:\n%s", r.code, r.stderr)
 	}
-	for _, want := range []string{"configuration loaded", "config.database.url=xxxxx", "database pool created", "http server stopped"} {
+	for _, want := range []string{"configuration loaded", "config.database.url=xxxxx", "database pool created"} {
 		if !strings.Contains(r.stderr, want) {
 			t.Errorf("stderr lacks %q:\n%s", want, r.stderr)
 		}
+	}
+	last := -1
+	for _, step := range []string{`msg="http server stopped"`, `msg="jobs stopped"`, `msg="database pool closed"`} {
+		at := strings.Index(r.stderr, step)
+		if at <= last {
+			t.Errorf("stderr has %s at %d, want it after the step before (at %d):\n%s", step, at, last, r.stderr)
+		}
+		last = at
 	}
 }

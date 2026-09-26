@@ -21,6 +21,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
@@ -34,13 +35,20 @@ var (
 	_ httpserver.ProblemError = (*shared.Error)(nil)
 )
 
+// poolCloseTimeout bounds the wait for the pool's connections at shutdown:
+// a handler that ignores its context may still hold one (M2 design 3.15).
+const poolCloseTimeout = 5 * time.Second
+
 // app is a fully wired nerve server.
 type app struct {
 	cfg      config.Config
 	logger   *slog.Logger
 	pool     *pgxpool.Pool
 	migrator *postgres.Migrator
+	jobs     *jobs.Runner
 	router   *httpserver.Router
+	// poolCloseTimeout is the package's, but for tests.
+	poolCloseTimeout time.Duration
 	// publicOperations are the routes that need no token: the union of what
 	// the modules declare, checked against the contract by a test.
 	publicOperations []string
@@ -68,7 +76,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		pool.Close()
 		return nil, err
 	}
-	a := &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator}
+	a := &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator, poolCloseTimeout: poolCloseTimeout}
 	// Every rate-limit bucket lives on this limiter (M2 design 3.10). It reads
 	// time.Now, not the Clock: the monotonic reading keeps a step of the wall
 	// clock from filling or draining the buckets.
@@ -84,6 +92,8 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 		SessionTTL:      cfg.Auth.SessionTTL,
 		RefreshDeadline: cfg.Auth.RefreshDeadline,
+		// The periodic job that deletes the expired sessions (M2 design 3.15).
+		SessionCleanupInterval: cfg.Auth.SessionCleanupInterval,
 		Password: identity.PasswordHashing{
 			MemoryKiB:     cfg.Auth.Password.Argon2MemoryKiB,
 			Iterations:    cfg.Auth.Password.Argon2Iterations,
@@ -99,6 +109,11 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 			PasswordUser: bucket(limiter, "password_user", cfg.RateLimit.PasswordUser),
 		},
 	})
+	if err != nil {
+		a.close()
+		return nil, err
+	}
+	a.jobs, err = jobs.New(pool, jobs.Config{ShutdownTimeout: cfg.Jobs.ShutdownTimeout, Logger: logger}, ident.Jobs())
 	if err != nil {
 		a.close()
 		return nil, err
@@ -197,7 +212,10 @@ func loopback(addr string) bool {
 }
 
 // run applies pending migrations when database.auto_migrate is on, then
-// serves HTTP on server.addr until ctx is done (see httpserver.Server.Serve).
+// runs the jobs and serves HTTP on server.addr until ctx is done. It stops
+// in the order of M2 design 3.15: HTTP first (see httpserver.Server.Serve),
+// so no request is left to enqueue work, then the jobs; close then releases
+// the migrator and the pool.
 func (a *app) run(ctx context.Context) error {
 	warnIfExposed(ctx, a.logger, a.cfg)
 	if a.cfg.Database.AutoMigrate {
@@ -210,13 +228,27 @@ func (a *app) run(ctx context.Context) error {
 			return err
 		}
 	}
-	return httpserver.NewServer(a.cfg.Server, a.router, a.logger).ListenAndServe(ctx)
+	a.jobs.Start(ctx)
+	served := httpserver.NewServer(a.cfg.Server, a.router, a.logger).ListenAndServe(ctx)
+	return errors.Join(served, a.jobs.Stop(ctx))
 }
 
-// close releases the database resources. Call it after run has returned.
+// close releases the database resources: the migrator, then the pool, whose
+// wait for connections still in use is bounded. Call it after run has
+// returned.
 func (a *app) close() {
 	if err := a.migrator.Close(); err != nil {
 		a.logger.Warn("close migrator", slog.Any("error", err))
 	}
-	a.pool.Close()
+	closed := make(chan struct{})
+	go func() {
+		a.pool.Close()
+		close(closed)
+	}()
+	select {
+	case <-closed:
+		a.logger.Info("database pool closed")
+	case <-time.After(a.poolCloseTimeout):
+		a.logger.Warn("database pool not closed: connections still in use", slog.Duration("waited", a.poolCloseTimeout))
+	}
 }

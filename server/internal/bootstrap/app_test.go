@@ -46,6 +46,8 @@ var roomy = config.BucketConfig{PerMinute: 600000, Burst: 100000}
 
 // testConfig listens on a port the system picks and reports it through
 // server.addr_file. Password hashing is cheap: the tests hash many times.
+// The session cleanup runs when the app starts and then hourly: only the
+// test of the cleanup waits for a second run.
 func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 	t.Helper()
 	return config.Config{
@@ -62,10 +64,11 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		},
 		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate, CommitTimeout: 2 * time.Second},
 		Auth: config.AuthConfig{
-			SignupEnabled:   true,
-			AccessTokenTTL:  15 * time.Minute,
-			SessionTTL:      720 * time.Hour,
-			RefreshDeadline: 4 * time.Second,
+			SignupEnabled:          true,
+			AccessTokenTTL:         15 * time.Minute,
+			SessionTTL:             720 * time.Hour,
+			RefreshDeadline:        4 * time.Second,
+			SessionCleanupInterval: time.Hour,
 			Password: config.PasswordConfig{
 				Argon2MemoryKiB:     64,
 				Argon2Iterations:    1,
@@ -79,6 +82,7 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
 			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
+		Jobs:      config.JobsConfig{ShutdownTimeout: 5 * time.Second},
 		Workspace: config.WorkspaceConfig{CreationEnabled: true},
 		Files:     config.FilesConfig{SizeLimit: 5242880},
 		Log:       config.LogConfig{Level: "error", Format: "text"},
@@ -88,7 +92,13 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 // buildApp wires the app, serving testWebUI, and closes it when the test ends.
 func buildApp(t *testing.T, cfg config.Config, migrations fs.FS) *app {
 	t.Helper()
-	a, err := newApp(context.Background(), cfg, slog.New(slog.DiscardHandler), migrations, testWebUI)
+	return buildAppLogging(t, cfg, migrations, slog.New(slog.DiscardHandler))
+}
+
+// buildAppLogging is buildApp logging to logger.
+func buildAppLogging(t *testing.T, cfg config.Config, migrations fs.FS, logger *slog.Logger) *app {
+	t.Helper()
+	a, err := newApp(context.Background(), cfg, logger, migrations, testWebUI)
 	if err != nil {
 		t.Fatalf("newApp() error = %v", err)
 	}
@@ -101,7 +111,13 @@ func buildApp(t *testing.T, cfg config.Config, migrations fs.FS) *app {
 // down cleanly.
 func startApp(t *testing.T, cfg config.Config, migrations fs.FS) string {
 	t.Helper()
-	a := buildApp(t, cfg, migrations)
+	return startAppLogging(t, cfg, migrations, slog.New(slog.DiscardHandler))
+}
+
+// startAppLogging is startApp logging to logger.
+func startAppLogging(t *testing.T, cfg config.Config, migrations fs.FS, logger *slog.Logger) string {
+	t.Helper()
+	a := buildAppLogging(t, cfg, migrations, logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() { done <- a.run(ctx) }()
