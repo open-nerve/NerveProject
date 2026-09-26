@@ -27,9 +27,10 @@ import (
 // The interleavings of the account row lock protocol (M2 design 3.5) run
 // the use cases on a real database. A gated hasher stops one of them in
 // argon2, outside its transaction, while the test commits another; a gated
-// session insert stops a login inside its transaction, holding the lock,
-// until another waits for the lock. Every wait has a deadline, so a test
-// fails rather than hangs.
+// write stops one inside its transaction, holding the lock, until another
+// waits for the lock. Every wait has a deadline, so a test fails rather
+// than hangs. Interleavings 1-3, with the administrator's reset, are in
+// interleavings_reset_test.go.
 
 // waitLimit bounds every wait of these tests.
 const waitLimit = 10 * time.Second
@@ -139,10 +140,10 @@ func newAccount(t *testing.T, hash string) *account {
 	return a
 }
 
-func (a *account) login(h app.PasswordHasher, sessions app.SessionCreator) *app.Login {
+func (a *account) login(h app.PasswordHasher, passwords app.PasswordHashWriter, sessions app.SessionCreator) *app.Login {
 	keys := signing.EphemeralKeys()
 	return app.NewLogin(app.LoginDeps{
-		Accounts: a.store, Locker: a.store, Passwords: a.store, Sessions: sessions, Hasher: h, Tx: a.tx,
+		Accounts: a.store, Locker: a.store, Passwords: passwords, Sessions: sessions, Hasher: h, Tx: a.tx,
 		Issuance: app.Issuance{Tokens: signing.NewAccessTokens(keys), MAC: signing.NewRefreshTokenMAC(keys), AccessTTL: time.Minute, SessionTTL: time.Hour},
 		Clock:    clock.System{}, Logger: slog.New(slog.DiscardHandler), DummyHash: "hashed:dummy:0",
 	})
@@ -173,7 +174,7 @@ func await(t *testing.T, done <-chan error) error {
 	case err := <-done:
 		return err
 	case <-time.After(waitLimit):
-		t.Fatal("the login did not finish")
+		t.Fatal("the use case did not finish")
 		return nil
 	}
 }
@@ -202,7 +203,7 @@ func TestALoginWithTheOldPasswordFailsWhenThePasswordChangesMeanwhile(t *testing
 	g := newGate()
 	loginHasher := &gatedHasher{salt: "login", gate: g}
 
-	done := loginAsync(a.login(loginHasher, a.store))
+	done := loginAsync(a.login(loginHasher, a.store, a.store))
 	g.await(t)
 	changed := a.changePassword(&gatedHasher{salt: "change"}).Execute(
 		shared.WithActor(context.Background(), shared.Actor{UserID: a.id, SessionID: a.session}),
@@ -231,9 +232,9 @@ func TestTwoLoginsWhileOneHashesThePasswordAgain(t *testing.T) {
 	g := newGate()
 	first := &gatedHasher{salt: "first", gate: g}
 
-	done := loginAsync(a.login(first, a.store))
+	done := loginAsync(a.login(first, a.store, a.store))
 	g.await(t)
-	_, second := a.login(&gatedHasher{salt: "second"}, a.store).Execute(context.Background(), app.LoginInput{Email: "alice@corp.com", Password: "Tr0ub4dor&3"})
+	_, second := a.login(&gatedHasher{salt: "second"}, a.store, a.store).Execute(context.Background(), app.LoginInput{Email: "alice@corp.com", Password: "Tr0ub4dor&3"})
 	close(g.opened)
 	err := await(t, done)
 
@@ -258,7 +259,7 @@ func TestAPasswordChangeWaitsForALoginThatHoldsTheLock(t *testing.T) {
 	a := newAccount(t, "hashed:Tr0ub4dor&3:0")
 	g := newGate()
 
-	done := loginAsync(a.login(&gatedHasher{salt: "login"}, gatedSessions{a.store, g}))
+	done := loginAsync(a.login(&gatedHasher{salt: "login"}, a.store, gatedSessions{a.store, g}))
 	g.await(t)
 	changed := make(chan error, 1)
 	go func() {
