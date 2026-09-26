@@ -1046,7 +1046,7 @@ users
 | `identity.signup_disabled` | 403 | 关闭注册时注册 |
 | `identity.email_taken` | 409 | 注册时邮箱已被使用。`nerve users create`、`set-email` 的用例返回同一个错误，命令行把它显示为一句说明 |
 | `identity.refresh_token_invalid` | 401 | 刷新令牌未知、已过期、已撤销、被重复使用、被伪造，都是这一个码 |
-| `identity.current_password_incorrect` | 422 | 修改密码时当前密码错误，或校验之后密码已被并发修改；`errors[].field = current_password` |
+| `identity.current_password_incorrect` | 422 | 修改密码时当前密码错误，或校验之后密码已被并发修改。不带 `errors`：字段码是封闭的集合（3.11），没有表达"不对"的码；问题码本身指明是当前密码，前端按码显示在当前密码的字段下（7.7；P3a spec 第 3 节第 2 条） |
 | `identity.api_token_not_found` | 404 | 撤销不存在、已撤销或属于别人的 PAT（看不到的资源一律 404，总体设计 3.5） |
 
 ---
@@ -2084,6 +2084,7 @@ files:
 | M3、M4、M6 | **物理删除与跨模块外键的关系图**：每张新表按 3.13 照搬 `on_delete`，并在 4.7 的图上延伸，写明物理删除时每条外键的去向。Plane `project.py:77-89` 的项目负责人、`cycle.py:65-68` 的迭代负责人都是 `CASCADE`：物理删除一个账户会连带删除项目或迭代。M2 只停用、不删除账户；各 M 写明允许物理删除的范围 |
 | M3 | CSP：表情选择器从 `cdn.jsdelivr.net` 下载 `emojibase-data`，改为随前端一起构建、从本站提供（8.3） |
 | M3 | 新手引导的创建工作区、加入工作区、邀请成员三步；`user.service.ts` 中留下的 `leaveWorkspace`、`joinProject`、`leaveProject`；`IUserLite` 的 `is_bot`；时区接口也供工作区和项目设置使用 |
+| M3 | **页大小的规则**：`limit` 的 1–100、默认 50（`common.yaml` 的 `Limit`）现在在 `identity/domain`，因为 M2 只有 PAT 列表一个使用者（P3a spec 第 3 节第 8 条）。第二个分页列表出现时（M3 没有就随第一个有的 M）移到 `shared`，两个列表共用 |
 | M4 | **游标**：工作项按 `sort_order`、优先级或日期排序，每种排序定义自己的游标载荷，最后以 `id` 保证稳定（3.12）；不复用 PAT 列表的 `(created_at, id)` |
 | M4 | **自动归档读 `updated_at`**：它由用例的时钟显式写入（3.13），测试用固定时钟 |
 | M4 | **请求体检查的两处延伸**（P1 评审）：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前），改为按数组下标的数值排序；不限类型的节点（`{}`、开放对象、没有 `items` 的数组）不看数的范围，`1e400` 这类 float64 放不下的数仍然得到解码器笼统的 400，改为在边界上报出。两者都在第一个带数组或开放对象请求体的操作到来时处理 |
