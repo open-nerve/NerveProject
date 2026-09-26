@@ -139,23 +139,51 @@ var timezoneLocations = [][2]string{
 	{"Kiritimati Island", "Pacific/Kiritimati"},
 }
 
-// Timezones returns the time zones with their offsets at t, sorted by
-// offset and then by label, as Plane sorts them (base.py:209). Plane writes
-// a negative offset that is not a whole hour an hour too far west, -09:30
-// as -10:30 (base.py:192); here it is -09:30.
-func Timezones(t time.Time) ([]Timezone, error) {
+// Timezones are Plane's places with their zones loaded: LoadTimezones
+// loads them once, and At gives their offsets at any time.
+type Timezones struct {
+	places []place
+}
+
+// place is a place the web app offers and its loaded zone.
+type place struct {
+	label, name string
+	loc         *time.Location
+}
+
+// LoadTimezones loads the zone of each of Plane's places. A zone that does
+// not load is an error, for the instance module to stop startup with,
+// rather than to answer a request with.
+func LoadTimezones() (Timezones, error) {
+	return loadTimezones(timezoneLocations)
+}
+
+// loadTimezones loads the zones of places, pairs of a label and an IANA name.
+func loadTimezones(places [][2]string) (Timezones, error) {
+	z := Timezones{places: make([]place, len(places))}
+	for i, p := range places {
+		loc, err := time.LoadLocation(p[1])
+		if err != nil {
+			return Timezones{}, fmt.Errorf("time zone %s: %w", p[1], err)
+		}
+		z.places[i] = place{label: p[0], name: p[1], loc: loc}
+	}
+	return z, nil
+}
+
+// At returns the time zones with their offsets at t, sorted by offset and
+// then by label, as Plane sorts them (base.py:209). Plane writes a negative
+// offset that is not a whole hour an hour too far west, -09:30 as -10:30
+// (base.py:192); here it is -09:30.
+func (z Timezones) At(t time.Time) []Timezone {
 	type zone struct {
 		Timezone
 		seconds int
 	}
-	zones := make([]zone, 0, len(timezoneLocations))
-	for _, l := range timezoneLocations {
-		loc, err := time.LoadLocation(l[1])
-		if err != nil {
-			return nil, fmt.Errorf("time zone %s: %w", l[1], err)
-		}
-		_, seconds := t.In(loc).Zone()
-		zones = append(zones, zone{Timezone{Label: l[0], Name: l[1], Offset: offset(seconds)}, seconds})
+	zones := make([]zone, len(z.places))
+	for i, p := range z.places {
+		_, seconds := t.In(p.loc).Zone()
+		zones[i] = zone{Timezone{Label: p.label, Name: p.name, Offset: offset(seconds)}, seconds}
 	}
 	slices.SortFunc(zones, func(a, b zone) int {
 		return cmp.Or(cmp.Compare(a.seconds, b.seconds), cmp.Compare(a.Label, b.Label))
@@ -164,7 +192,7 @@ func Timezones(t time.Time) ([]Timezone, error) {
 	for i, z := range zones {
 		out[i] = z.Timezone
 	}
-	return out, nil
+	return out
 }
 
 // offset writes seconds east of UTC as ±hh:mm.

@@ -67,10 +67,7 @@ func (h handler) GetInstance(context.Context, gen.GetInstanceRequestObject) (gen
 
 // ListTimezones serves GET /api/v0/timezones.
 func (h handler) ListTimezones(context.Context, gen.ListTimezonesRequestObject) (gen.ListTimezonesResponseObject, error) {
-	zones, err := h.uc.ListTimezones.Execute()
-	if err != nil {
-		return nil, err
-	}
+	zones := h.uc.ListTimezones.Execute()
 	out := gen.ListTimezones200JSONResponse{Data: make([]gen.Timezone, len(zones))}
 	for i, z := range zones {
 		out.Data[i] = gen.Timezone{Label: z.Label, Value: z.Name, UtcOffset: "UTC" + z.Offset, GmtOffset: "GMT" + z.Offset}

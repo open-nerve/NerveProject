@@ -26,8 +26,14 @@ type Module struct {
 	uc httpadapter.UseCases
 }
 
-// New wires the module: GetInfo reads the build of the running binary.
-func New(d Deps) *Module {
+// New wires the module: GetInfo reads the build of the running binary, and
+// the time zones are loaded here, once, so a zone that does not load stops
+// startup.
+func New(d Deps) (*Module, error) {
+	zones, err := domain.LoadTimezones()
+	if err != nil {
+		return nil, err
+	}
 	settings := domain.Settings{
 		SignupEnabled:            d.SignupEnabled,
 		WorkspaceCreationEnabled: d.WorkspaceCreationEnabled,
@@ -35,8 +41,8 @@ func New(d Deps) *Module {
 	}
 	return &Module{uc: httpadapter.UseCases{
 		GetInfo:       app.NewGetInfo(buildinfo.Source{}, settings),
-		ListTimezones: app.NewListTimezones(d.Clock),
-	}}
+		ListTimezones: app.NewListTimezones(zones, d.Clock),
+	}}, nil
 }
 
 // PublicOperations are the module's routes that need no token.

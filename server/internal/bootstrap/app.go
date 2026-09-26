@@ -103,12 +103,16 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		a.close()
 		return nil, err
 	}
-	inst := instance.New(instance.Deps{
+	inst, err := instance.New(instance.Deps{
 		SignupEnabled:            cfg.Auth.SignupEnabled,
 		WorkspaceCreationEnabled: cfg.Workspace.CreationEnabled,
 		FileSizeLimit:            cfg.Files.SizeLimit,
 		Clock:                    clock.System{},
 	})
+	if err != nil {
+		a.close()
+		return nil, err
+	}
 
 	a.router = httpserver.NewRouter(logger,
 		httpserver.Check{Name: "database", Run: pool.Ping},

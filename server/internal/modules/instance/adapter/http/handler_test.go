@@ -79,7 +79,11 @@ func TestGetInstanceMatchesTheContract(t *testing.T) {
 }
 
 func TestListTimezones(t *testing.T) {
-	list := app.NewListTimezones(clocktest.At(time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)))
+	zones, err := domain.LoadTimezones()
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := app.NewListTimezones(zones, clocktest.At(time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)))
 
 	res, body := get(t, httpadapter.UseCases{ListTimezones: list}, "/api/v0/timezones")
 

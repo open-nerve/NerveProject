@@ -20,12 +20,22 @@ func minutes(t *testing.T, offset string) int {
 	return seconds / 60
 }
 
+// loaded is Plane's places with their zones loaded.
+func loaded(t *testing.T) domain.Timezones {
+	t.Helper()
+	zones, err := domain.LoadTimezones()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return zones
+}
+
 // Every zone loads; the list is sorted by offset, then by label.
 func TestTimezonesAreSorted(t *testing.T) {
-	got, err := domain.Timezones(time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC))
+	got := loaded(t).At(time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC))
 
-	if err != nil || len(got) != 120 {
-		t.Fatalf("Timezones() = %d zones, %v; want Plane's 120", len(got), err)
+	if len(got) != 120 {
+		t.Fatalf("At() = %d zones, want Plane's 120", len(got))
 	}
 	for i := 1; i < len(got); i++ {
 		a, b := got[i-1], got[i]
@@ -57,13 +67,10 @@ func TestTimezoneOffsets(t *testing.T) {
 		{"Beijing", "+08:00", "+08:00"},
 		{"Chatham Islands", "+13:45", "+12:45"},
 	}
+	zones := loaded(t)
 	offsets := func(at time.Time) map[string]string {
-		zones, err := domain.Timezones(at)
-		if err != nil {
-			t.Fatal(err)
-		}
 		m := map[string]string{}
-		for _, z := range zones {
+		for _, z := range zones.At(at) {
 			m[z.Label] = z.Offset
 		}
 		return m

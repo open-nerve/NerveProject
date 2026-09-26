@@ -253,11 +253,11 @@ WHERE user_id = sqlc.arg(user_id) AND id <> sqlc.arg(keep)
 
 - `InstanceInfo` 加上必有的 `signup_enabled`、`workspace_creation_enabled`（布尔）、`file_size_limit`（整数，至少 1）；不定义 `is_self_managed`。
 - `listTimezones`：`GET /api/v0/timezones`，公开，`x-problem-codes: []`，200 `TimezoneList{data: Timezone[]}`，`Timezone{label, value, utc_offset, gmt_offset}`（`UTC+08:00`、`GMT+08:00`）。说明写明 `user_timezone` 接受任何 IANA 名字，不只这些。
-- `domain.Settings{SignupEnabled, WorkspaceCreationEnabled, FileSizeLimit}` 嵌在 `Info` 里；`domain.Timezones(t)`：Plane 的 120 个地点（`plane/apps/api/plane/app/views/timezone/base.py:30-178`），偏移量按 `t` 时的时区数据计算，按偏移、再按标签排序（`base.py:209`），写成 `±hh:mm`（第 3 节第 11 条）。
-- `app.Clock`；`NewGetInfo(source, settings)`；`NewListTimezones(clock)`：偏移按用例的时钟算。
-- `instance.New(instance.Deps{SignupEnabled, WorkspaceCreationEnabled, FileSizeLimit, Clock})`（第 3 节第 23 条）。
+- `domain.Settings{SignupEnabled, WorkspaceCreationEnabled, FileSizeLimit}` 嵌在 `Info` 里；`domain.LoadTimezones()` 加载 Plane 的 120 个地点（`plane/apps/api/plane/app/views/timezone/base.py:30-178`）的时区，`Timezones.At(t)` 的偏移量按 `t` 时的时区数据计算，按偏移、再按标签排序（`base.py:209`），写成 `±hh:mm`（第 3 节第 11 条）。收尾修复前是每次请求都加载 120 个时区的 `domain.Timezones(t)`；现在只在构建模块时加载一次，加载不了的时区让启动失败，请求时没有错误的路径。
+- `app.Clock`；`NewGetInfo(source, settings)`；`NewListTimezones(zones, clock)`：偏移按用例的时钟算。
+- `instance.New(instance.Deps{SignupEnabled, WorkspaceCreationEnabled, FileSizeLimit, Clock}) (*Module, error)`（第 3 节第 23 条）。
 - `cmd/nerve/main.go` 导入 `time/tzdata`；`TestNerveBinaryEmbedsTheTimeZoneDatabase` 守住（第 3 节第 12 条）。
-- 测试：`TestTimezonesAreSorted`（120 个，第一个 American Samoa −11:00，最后一个 Kiritimati +14:00）；`TestTimezoneOffsets`（9 个地点在一月和七月：Marquesas −09:30、Newfoundland −03:30/−02:30、Kathmandu +05:45、Chatham +13:45/+12:45 等）；`TestGetInfoDescribesTheBuildAndTheSettings`；`TestListTimezonesAtTheClocksNow`；`TestGetInstanceMatchesTheContract`；`TestListTimezones`。
+- 测试：`TestTimezonesAreSorted`（120 个，第一个 American Samoa −11:00，最后一个 Kiritimati +14:00）；`TestTimezoneOffsets`（9 个地点在一月和七月：Marquesas −09:30、Newfoundland −03:30/−02:30、Kathmandu +05:45、Chatham +13:45/+12:45 等）；`TestLoadTimezonesFailsOnAnUnknownZone`；`TestGetInfoDescribesTheBuildAndTheSettings`；`TestListTimezonesAtTheClocksNow`；`TestGetInstanceMatchesTheContract`；`TestListTimezones`。
 
 ### 2.17 整程序测试（M2 设计 3.6、3.10、3.11，12 节 P3a 完成线）
 
