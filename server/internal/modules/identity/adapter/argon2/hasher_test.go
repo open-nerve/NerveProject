@@ -182,6 +182,8 @@ func TestVerifyRejectsAnotherFormat(t *testing.T) {
 		{"a salt in another spelling", with(4, parts[4][:21]+string(rune(parts[4][21]+1)))},
 		{"a short key", with(5, parts[5][:20])},
 		{"an empty key", with(5, "")},
+		// The same 32 bytes, with an unused bit of the last character set.
+		{"a key in another spelling", with(5, parts[5][:42]+string(rune(parts[5][42]+1)))},
 		{"a trailing part", good + "$x"},
 		{"a leading part", "x" + good},
 	}
