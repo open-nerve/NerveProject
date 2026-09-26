@@ -61,3 +61,11 @@ M2 第一次加入认证、事务、后台任务和真正的迁移文件，届�
 仍未处理，状态保持 `open`：第 2 条的接口调用日志（M8，挂在限流之后）；第 5 条的 River、停机顺序、连接池关闭的时限和 River 的迁移（M2/P3）。
 
 来源：[M2/P2 spec](../specs/P2-sessions.md) 第 7 节。
+
+## 处理结果（M2/P3b）
+
+5. **River 与停机顺序**（完成）：`platform/jobs` 建服务用的 River 客户端（v0.47.0，默认队列最多 2 个 worker），`bootstrap` 的 `run` 先启动任务、再运行 HTTP；停机时 HTTP 优雅停机 → River 停止（`jobs.shutdown_timeout`，默认 10 秒，到期后取消仍在运行的任务，再等 1 秒；River 启动之后只用它自己的 `Stop` 停止，被打断的重建索引因此删掉没建完的索引，spec 第 3 节第 17 条）→ 迁移执行器 → 连接池。`pool.Close()` 放在一个 5 秒的协程里，到期记 WARN，不挂住退出。数据库暂时不可达时，任务在后台重试启动（间隔从 1 秒加倍到 30 秒），服务照常运行，`/readyz` 答 503。River 的表用锁定版本的 `river migrate-get`（v0.47.0，`--line main --all --exclude-version 1`）导出第 2–7 版，写成 goose 迁移 `00005_river_main_v2_to_v7.sql`，Up、Down 各包在一对 `StatementBegin`/`StatementEnd` 里；5 个迁移 up、down、再 up 的测试通过。
+
+仍未处理，状态保持 `open`：第 2 条的接口调用日志（M8，挂在限流之后）。
+
+来源：[M2/P3b spec](../specs/P3b-jobs-and-admin.md) 第 7 节。
