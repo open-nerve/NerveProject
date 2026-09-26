@@ -97,7 +97,7 @@ func readMigrations(t *testing.T, dir string) []migrationFile {
 var (
 	migrationFileName = regexp.MustCompile(`^\d{5}_([a-z][a-z0-9]*)_[a-z0-9_]+\.sql$`)
 	sqlComment        = regexp.MustCompile(`--[^\n]*`)
-	createTable       = regexp.MustCompile(`(?i)\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:public\.)?([a-z_][a-z0-9_]*)`)
+	createTable       = regexp.MustCompile(`(?i)\bCREATE\s+(?:UNLOGGED\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:public\.)?([a-z_][a-z0-9_]*)`)
 	alterTable        = regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:public\.)?([a-z_][a-z0-9_]*)`)
 	moduleQueries     = regexp.MustCompile(`^internal/modules/([a-z][a-z0-9]*)/adapter/postgres/queries$`)
 )

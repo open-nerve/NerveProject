@@ -7,7 +7,8 @@ import (
 
 // The spike's layout (M2 design 3.14): identity creates users; a later
 // module, asset, creates assets; identity's own later migration alters
-// users to reference assets; River's migration belongs to no entry.
+// users to reference assets; River's migration belongs to no entry, and
+// alters an unlogged table it creates, as its real one does.
 func sqlcBase() ([]sqlcEntry, []migrationFile, []string) {
 	entries := []sqlcEntry{
 		{
@@ -23,7 +24,8 @@ func sqlcBase() ([]sqlcEntry, []migrationFile, []string) {
 	}
 	migrations := []migrationFile{
 		{"00001_identity_users.sql", "-- +goose Up\nCREATE TABLE users (id uuid PRIMARY KEY);\n-- +goose Down\nDROP TABLE users;\n"},
-		{"00005_river_main_v2_to_v7.sql", "-- +goose Up\nCREATE TABLE river_job (id bigint);\nALTER TABLE river_job ADD COLUMN x int;\n"},
+		{"00005_river_main_v2_to_v7.sql", "-- +goose Up\nCREATE TABLE river_job (id bigint);\nCREATE UNLOGGED TABLE river_leader (name text);\n" +
+			"ALTER TABLE river_job ADD COLUMN x int;\nALTER TABLE river_leader ADD COLUMN y int;\n"},
 		{"00020_asset_assets.sql", "-- +goose Up\nCREATE TABLE IF NOT EXISTS assets (id uuid PRIMARY KEY);\n"},
 		{"00021_identity_users_avatar_asset.sql", "-- +goose Up\n-- ALTER TABLE assets would be wrong; a comment is not SQL\n" +
 			"ALTER TABLE users ADD COLUMN avatar_asset_id uuid REFERENCES assets ON DELETE SET NULL;\n" +
