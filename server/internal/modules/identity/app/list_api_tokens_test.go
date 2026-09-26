@@ -62,8 +62,10 @@ func TestListAPITokensNextPage(t *testing.T) {
 	if _, err := listPage(t, tokens, ptr(2), &page.NextCursor); err != nil {
 		t.Fatal(err)
 	}
-	if next := tokens.listed[1]; next.limit != 3 || next.after == nil || next.after.ID != rows[1].ID {
-		t.Errorf("second call asked for %+v, want 3 rows after the second row", next)
+	// The store compares rows by (created_at, id): it gets both.
+	next := tokens.listed[1]
+	if next.limit != 3 || next.after == nil || next.after.ID != rows[1].ID || !next.after.CreatedAt.Equal(rows[1].CreatedAt) {
+		t.Errorf("second call asked for %+v (after %+v), want 3 rows after the second row", next, next.after)
 	}
 }
 

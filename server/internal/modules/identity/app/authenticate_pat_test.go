@@ -38,8 +38,12 @@ func validToken() app.APITokenCredential {
 	return app.APITokenCredential{ID: tokenID, UserID: userID, ExpiredAt: &expires, UserActive: true}
 }
 
+// A token without expired_at never expires, as Plane creates it by default;
+// the tests below use one that expires in an hour.
 func TestAuthenticateAPAT(t *testing.T) {
-	uc, tokens, access, sessions := newPATAuthenticate(validToken())
+	cred := validToken()
+	cred.ExpiredAt = nil
+	uc, tokens, access, sessions := newPATAuthenticate(cred)
 
 	actor, err := uc.Execute(context.Background(), samplePAT().String())
 

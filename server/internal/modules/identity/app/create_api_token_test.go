@@ -177,7 +177,8 @@ func TestCreateAPITokenLockFailureIsNot401(t *testing.T) {
 	}
 }
 
-// The spec is checked before anything is locked.
+// The spec is checked before anything is locked, before the transaction
+// opens.
 func TestCreateAPITokenChecksTheSpecFirst(t *testing.T) {
 	f := newCredentialFixture()
 	empty := ""
@@ -185,7 +186,7 @@ func TestCreateAPITokenChecksTheSpecFirst(t *testing.T) {
 	_, err := f.createAPIToken().Execute(shared.WithActor(context.Background(), sessionActor), domain.APITokenSpec{Label: &empty})
 
 	var se *shared.Error
-	if !errors.As(err, &se) || se.Code != shared.CodeValidationFailed || len(f.log.calls) != 0 {
-		t.Errorf("Execute() = %v after calls %q, want 422 before any", err, f.log.calls)
+	if !errors.As(err, &se) || se.Code != shared.CodeValidationFailed || len(f.log.calls) != 0 || f.tx.calls != 0 {
+		t.Errorf("Execute() = %v after calls %q in %d transactions, want 422 before any, in none", err, f.log.calls, f.tx.calls)
 	}
 }
