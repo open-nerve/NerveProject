@@ -24,12 +24,19 @@ func sessionApp(t *testing.T) (string, *pgxpool.Pool) {
 	t.Helper()
 	url := pgtest.NewDatabase(t)
 	base := startApp(t, testConfig(t, url, false), migrations.FS())
+	return base, openPool(t, url)
+}
+
+// openPool opens a pool on the database at url, for the assertions, and
+// closes it when the test ends.
+func openPool(t *testing.T, url string) *pgxpool.Pool {
+	t.Helper()
 	pool, err := pgxpool.New(context.Background(), url)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	return base, pool
+	return pool
 }
 
 // postTokens posts {"refresh_token": token} to the auth path and returns
@@ -160,11 +167,7 @@ func TestLoginThroughATrustedProxyRecordsTheClient(t *testing.T) {
 	cfg := testConfig(t, url, false)
 	cfg.Server.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")} // the test's own peer
 	base := startApp(t, cfg, migrations.FS())
-	pool, err := pgxpool.New(context.Background(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(pool.Close)
+	pool := openPool(t, url)
 	registerAccount(t, apitest.Load(t), base, "proxied@example.com")
 
 	req := newRequest(t, http.MethodPost, base+"/api/v0/auth/login", "", []byte(`{"email":"proxied@example.com","password":"Tr0ub4dor&3"}`))
