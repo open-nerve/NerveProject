@@ -10,8 +10,8 @@ import (
 // nerve binary: the test-only kin-openapi (apitest), testcontainers and
 // docker (pgtest), and google/uuid, which the standard library's uuid
 // replaces. Rule 8 keeps the test helpers themselves out, but generated code
-// (an embedded spec, an unmapped format: uuid) or any other import could
-// still pull these in, and depguard does not look at generated files.
+// (an embedded spec) or any other import could still pull these in, and
+// depguard does not look at generated files.
 func bannedFromBinary() []string {
 	return []string{
 		"github.com/getkin/kin-openapi",
@@ -21,7 +21,18 @@ func bannedFromBinary() []string {
 	}
 }
 
-func isBannedFromBinary(path string) bool {
+// oapiRuntime is the module that generated code imports to bind parameters.
+// It imports google/uuid itself (runtime/types/uuid.go and the runtime
+// package's styleparam.go, v1.7.0), so its packages, and only they, may
+// (M2 design 3.12). That generated code uses the standard library's uuid is
+// checked directly, by TestGeneratedCodeUsesTheStandardUUID.
+const oapiRuntime = "github.com/oapi-codegen/runtime"
+
+// isBannedFromBinary judges the import of path by importer.
+func isBannedFromBinary(importer, path string) bool {
+	if strings.HasPrefix(path, "github.com/google/uuid") && (importer == oapiRuntime || strings.HasPrefix(importer, oapiRuntime+"/")) {
+		return false
+	}
 	return slices.ContainsFunc(bannedFromBinary(), func(prefix string) bool { return strings.HasPrefix(path, prefix) })
 }
 
@@ -39,15 +50,22 @@ func TestNerveBinaryLinksNoBannedModule(t *testing.T) {
 	}
 }
 
+// google/uuid is reached first through oapi-codegen/runtime, which may
+// import it; every other import of it is still reported, each on its own.
 func TestBannedImports(t *testing.T) {
 	root := m("cmd/nerve")
+	gen := m("internal/modules/issue/adapter/http/gen")
 	g := graph{
-		root:                                         {"github.com/spf13/cobra", m("internal/bootstrap")},
-		"github.com/spf13/cobra":                     {"github.com/spf13/pflag"},
-		m("internal/bootstrap"):                      {m("internal/modules/issue/adapter/http/gen"), m("internal/platform/httpserver")},
-		m("internal/platform/httpserver"):            {"github.com/getkin/kin-openapi/openapi3", "net/http"},
-		"github.com/getkin/kin-openapi/openapi3":     {"github.com/google/uuid"},
-		m("internal/modules/issue/adapter/http/gen"): {"github.com/google/uuid"},
+		root:                                        {"github.com/spf13/cobra", m("internal/bootstrap")},
+		"github.com/spf13/cobra":                    {"github.com/spf13/pflag"},
+		m("internal/bootstrap"):                     {gen, m("internal/platform/httpserver")},
+		gen:                                         {"github.com/oapi-codegen/runtime", "github.com/oapi-codegen/runtime-extra", "net/http"},
+		"github.com/oapi-codegen/runtime":           {"github.com/google/uuid", "github.com/oapi-codegen/runtime/types"},
+		"github.com/oapi-codegen/runtime/types":     {"github.com/google/uuid"},
+		"github.com/oapi-codegen/runtime-extra":     {"github.com/google/uuid"},
+		m("internal/platform/httpserver"):           {"github.com/getkin/kin-openapi/openapi3", m("internal/platform/httpserver/bodyshape"), "net/http"},
+		"github.com/getkin/kin-openapi/openapi3":    {"github.com/google/uuid"},
+		m("internal/platform/httpserver/bodyshape"): {"github.com/google/uuid"},
 		// Not reachable from the root: test helpers stay out of the walk.
 		m("internal/platform/postgres/pgtest"): {"github.com/testcontainers/testcontainers-go"},
 	}
@@ -57,7 +75,8 @@ func TestBannedImports(t *testing.T) {
 	}
 	want := []string{
 		"cmd/nerve → internal/bootstrap → internal/platform/httpserver → github.com/getkin/kin-openapi/openapi3",
-		"cmd/nerve → internal/bootstrap → internal/modules/issue/adapter/http/gen → github.com/google/uuid",
+		"cmd/nerve → internal/bootstrap → internal/modules/issue/adapter/http/gen → github.com/oapi-codegen/runtime-extra → github.com/google/uuid",
+		"cmd/nerve → internal/bootstrap → internal/platform/httpserver → internal/platform/httpserver/bodyshape → github.com/google/uuid",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("bannedImports() =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
