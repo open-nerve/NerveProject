@@ -56,6 +56,16 @@ test("A11 (API): a token creates, lists page by page and revokes another; a revo
   expect((await api.GET("/api/v0/me", { headers: bearer(created.token) })).response.status).toBe(401);
   expect((await list()).map((t) => t.id)).toEqual([admin.id]);
 
+  // Another account's token is not found, and it keeps working.
+  const other = await createPAT(api, (await register(api, emailFor(testInfo, "other"))).access_token);
+  const foreign = await api.DELETE("/api/v0/api-tokens/{token_id}", {
+    params: { path: { token_id: other.id } },
+    headers: bearer(admin.token),
+  });
+  expect(foreign.response.status).toBe(404);
+  expect(foreign.error?.code).toBe("identity.api_token_not_found");
+  expect((await api.GET("/api/v0/me", { headers: bearer(other.token) })).response.status).toBe(200);
+
   // A token past its expiry fails too.
   const old = await createPAT(api, admin.token, { label: "old" });
   await db.query("UPDATE api_tokens SET expired_at = now() - interval '1 minute' WHERE id = $1", [old.id]);

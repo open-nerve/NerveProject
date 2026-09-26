@@ -20,13 +20,21 @@ test("A10 (API): the profile step sets the name and one step, which the others k
   expect(named.response.status).toBe(200);
   expect((await accountOf(db, email)).first_name).toBe("Ada");
 
+  // Another step is done already, so keeping it differs from resetting it
+  // to its default.
+  const joined = await api.PATCH("/api/v0/me/profile", {
+    body: { onboarding_step: { workspace_join: true } },
+    headers: bearer(pat.token),
+  });
+  expect(joined.response.status).toBe(200);
+
   // One key: it is merged in, the other three keep their values (M2 design 3.14).
   const stepped = await api.PATCH("/api/v0/me/profile", {
     body: { onboarding_step: { profile_complete: true } },
     headers: bearer(pat.token),
   });
   expect(stepped.response.status).toBe(200);
-  const merged = { profile_complete: true, workspace_create: false, workspace_invite: false, workspace_join: false };
+  const merged = { profile_complete: true, workspace_create: false, workspace_invite: false, workspace_join: true };
   expect(await steps()).toEqual(merged);
 
   // An unknown key, here misspelt, breaks the contract: the platform's 400,
