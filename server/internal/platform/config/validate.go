@@ -108,7 +108,8 @@ func (a AuthConfig) validate(env string, fail func(key, format string, args ...a
 		fail("auth.session_ttl", "must be longer than auth.access_token_ttl (%s), got %s", a.AccessTokenTTL, a.SessionTTL)
 	}
 	if a.SessionCleanupInterval < time.Second {
-		// River runs a periodic job at most once a second.
+		// River's documentation says a periodic interval should never be
+		// less than one second, but River does not enforce it; this does.
 		fail("auth.session_cleanup_interval", "must be at least 1s, got %s", a.SessionCleanupInterval)
 	}
 	if env == EnvProd && a.JWT.PrivateKeyFile == "" {

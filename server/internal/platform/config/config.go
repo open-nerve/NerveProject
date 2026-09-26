@@ -71,8 +71,9 @@ type AuthConfig struct {
 	// a refresh (M2 design 3.5).
 	RefreshDeadline time.Duration `koanf:"refresh_deadline"`
 	// SessionCleanupInterval is how often the periodic job deletes the
-	// expired sessions (M2 design 3.15). River runs periodic jobs at most
-	// once a second.
+	// expired sessions (M2 design 3.15). River's documentation says a
+	// periodic interval should never be less than one second, but River
+	// does not enforce it; validate does.
 	SessionCleanupInterval time.Duration  `koanf:"session_cleanup_interval"`
 	JWT                    JWTConfig      `koanf:"jwt"`
 	Password               PasswordConfig `koanf:"password"`

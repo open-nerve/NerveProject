@@ -186,7 +186,8 @@ func TestValidateCrossKeyRules(t *testing.T) {
 			want: "server.trusted_proxies: ::/0 trusts every address, so any client could choose its own IP; list only your proxies' addresses",
 		},
 		{
-			// River runs a periodic job at most once a second.
+			// River's documentation says a periodic interval should never be
+			// less than one second; River does not enforce it, validate does.
 			name:   "session cleanup more often than once a second",
 			change: func(c *Config) { c.Auth.SessionCleanupInterval = 500 * time.Millisecond },
 			want:   "auth.session_cleanup_interval: must be at least 1s, got 500ms",
@@ -251,6 +252,15 @@ func TestValidateChecksEachBucketUnderItsOwnKey(t *testing.T) {
 	}
 	if buckets == 0 {
 		t.Fatal("RateLimitConfig has no BucketConfig field; want the buckets to be found")
+	}
+}
+
+// The minimum is inclusive: an interval of exactly one second is allowed.
+func TestValidateAcceptsACleanupIntervalOfOneSecond(t *testing.T) {
+	cfg := validConfig()
+	cfg.Auth.SessionCleanupInterval = time.Second
+	if err := cfg.validate(); err != nil {
+		t.Errorf("validate() = %v, want nil", err)
 	}
 }
 
