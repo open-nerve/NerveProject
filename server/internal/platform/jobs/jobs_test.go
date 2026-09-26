@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -108,6 +109,14 @@ func start(t *testing.T, r *Runner, ctx context.Context) {
 	receive(t, returned, 100*time.Millisecond, "return from Start")
 }
 
+// stop runs r.Stop(ctx) and fails the test unless it returns within limit.
+func stop(t *testing.T, r *Runner, ctx context.Context, limit time.Duration) error {
+	t.Helper()
+	stopped := make(chan error, 1)
+	go func() { stopped <- r.Stop(ctx) }()
+	return receive(t, stopped, limit, "return from Stop")
+}
+
 // The periodic job runs at once, then every interval, until Stop; Stop
 // returns once the client has stopped, and nothing runs after it.
 func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
@@ -126,7 +135,7 @@ func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 	if gap := second.Sub(first); gap < 500*time.Millisecond {
 		t.Errorf("runs %s apart, want about the 1s interval", gap)
 	}
-	if err := r.Stop(context.Background()); err != nil {
+	if err := stop(t, r, context.Background(), 5*time.Second+cancelGrace+2*time.Second); err != nil {
 		t.Fatalf("Stop() = %v", err)
 	}
 	for len(runs) > 0 { // a run that was fetched before Stop
@@ -171,7 +180,7 @@ func TestStopCancelsARunningJobAfterTheShutdownTimeout(t *testing.T) {
 			receive(t, running, 15*time.Second, "running job")
 
 			stopping := time.Now()
-			err = r.Stop(context.Background())
+			err = stop(t, r, context.Background(), timeout+cancelGrace+2*time.Second)
 			took := time.Since(stopping)
 
 			at := receive(t, cancelled, time.Second, "cancellation")
@@ -205,12 +214,10 @@ func TestStopGivesUpOnAJobThatIgnoresCancellation(t *testing.T) {
 	receive(t, running, 15*time.Second, "running job")
 
 	stopping := time.Now()
-	stopped := make(chan error, 1)
-	go func() { stopped <- r.Stop(context.Background()) }()
-	err = receive(t, stopped, time.Second+cancelGrace+2*time.Second, "return from Stop")
+	err = stop(t, r, context.Background(), time.Second+cancelGrace+2*time.Second)
 	took := time.Since(stopping)
 
-	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "after jobs.shutdown_timeout (1s)") ||
+	if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "jobs still running 1s after jobs.shutdown_timeout (1s)") ||
 		took < time.Second+cancelGrace || took > time.Second+cancelGrace+500*time.Millisecond {
 		t.Errorf("Stop() = %v after %s, want the deadline after %s", err, took, time.Second+cancelGrace)
 	}
@@ -229,8 +236,11 @@ func TestStartWithoutADatabase(t *testing.T) {
 	logs.waitFor(t, `msg="jobs did not start; trying again"`, 5*time.Second)
 
 	stopping := time.Now()
-	if err := r.Stop(context.Background()); err != nil || time.Since(stopping) > 500*time.Millisecond {
+	if err := stop(t, r, context.Background(), 2*time.Second); err != nil || time.Since(stopping) > 500*time.Millisecond {
 		t.Errorf("Stop() = %v after %s, want nil at once", err, time.Since(stopping))
+	}
+	if !strings.Contains(logs.String(), " retry_in=1s") {
+		t.Errorf("logs lack the first wait of 1s:\n%s", logs.String())
 	}
 	if strings.Contains(logs.String(), `msg="jobs started"`) {
 		t.Errorf("logs claim the jobs started:\n%s", logs.String())
@@ -306,7 +316,7 @@ func TestStartTriesAgainUntilTheClientStarts(t *testing.T) {
 	}
 
 	stopping := time.Now()
-	if err := r.Stop(context.Background()); err != nil {
+	if err := stop(t, r, context.Background(), time.Second); err != nil {
 		t.Fatalf("Stop() = %v", err)
 	}
 	fake.mu.Lock()
@@ -329,12 +339,87 @@ func TestStopEndsTheAttemptsToStart(t *testing.T) {
 	receive(t, fake.attempts, 5*time.Second, "attempt to start")
 
 	stopping := time.Now()
-	if err := r.Stop(context.Background()); err != nil || time.Since(stopping) > 100*time.Millisecond {
+	if err := stop(t, r, context.Background(), time.Second); err != nil || time.Since(stopping) > 100*time.Millisecond {
 		t.Errorf("Stop() = %v after %s, want nil at once, not after the %s pause", err, time.Since(stopping), firstRetry)
 	}
 	fake.mu.Lock()
 	defer fake.mu.Unlock()
 	if len(fake.stops) != 0 || len(fake.starts) != 1 {
 		t.Errorf("client started %d times, stopped %d times; want one attempt and no stop", len(fake.starts), len(fake.stops))
+	}
+}
+
+// slowStart is a client whose Start takes until release is closed.
+type slowStart struct {
+	fakeClient
+	underWay, release chan struct{}
+}
+
+func (s *slowStart) Start(ctx context.Context) error {
+	close(s.underWay)
+	<-s.release
+	return s.fakeClient.Start(ctx)
+}
+
+// Stop waits for an attempt to start that is under way, and stops the client
+// that the attempt started.
+func TestStopWaitsForAnAttemptUnderWay(t *testing.T) {
+	slow := &slowStart{fakeClient: fakeClient{attempts: make(chan struct{}, 1)}, underWay: make(chan struct{}), release: make(chan struct{})}
+	r := newRunner(slow, Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)})
+	start(t, r, context.Background())
+	receive(t, slow.underWay, 5*time.Second, "attempt to start")
+
+	stopped := make(chan error, 1)
+	go func() { stopped <- r.Stop(context.Background()) }()
+	select {
+	case err := <-stopped:
+		t.Fatalf("Stop() = %v while an attempt to start was under way", err)
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(slow.release)
+	if err := receive(t, stopped, time.Second, "return from Stop"); err != nil {
+		t.Errorf("Stop() = %v", err)
+	}
+	slow.mu.Lock()
+	defer slow.mu.Unlock()
+	if len(slow.stops) != 1 {
+		t.Errorf("the client was stopped %d times, want once: the attempt under way started it", len(slow.stops))
+	}
+}
+
+// At most two jobs run at once: a third waits until one of them returns.
+func TestRunnerWorksTwoJobsAtOnce(t *testing.T) {
+	t.Parallel()
+	running, release := make(chan struct{}, 3), make(chan struct{})
+	job := probeJob(time.Hour, func(context.Context) error {
+		running <- struct{}{}
+		<-release
+		return nil
+	})
+	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)},
+		[]Job{{Add: job.Add}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var once sync.Once
+	releaseAll := func() { once.Do(func() { close(release) }) }
+	t.Cleanup(releaseAll) // before the pool closes: cleanups run last first
+	for range 3 {
+		if _, err := r.client.(*river.Client[pgx.Tx]).Insert(context.Background(), probeArgs{}, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	start(t, r, context.Background())
+	receive(t, running, 15*time.Second, "first job")
+	receive(t, running, 5*time.Second, "second job")
+	select {
+	case <-running:
+		t.Errorf("a third job runs alongside the first two, want at most two at once")
+	case <-time.After(1500 * time.Millisecond):
+	}
+	releaseAll()
+	receive(t, running, 5*time.Second, "third job, once the first two returned")
+	if err := stop(t, r, context.Background(), 5*time.Second); err != nil {
+		t.Errorf("Stop() = %v", err)
 	}
 }
