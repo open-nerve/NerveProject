@@ -1483,6 +1483,7 @@ files:
 ### 8.3 安全响应头与 CSP
 - **两层，分开放**（评审 M4）：
   - **固定链上的安全响应头**（所有响应，P2）：`X-Content-Type-Options: nosniff`、`Referrer-Policy: same-origin`、`X-Frame-Options: DENY`。它们对接口的响应同样有意义，所以放在固定链上。固定链由三个中间件变为四个，M0 设计 3.3、总体设计 6.4 的说明在 P2 随之更新。
+  - **`/api/` 下的响应带 `Cache-Control: no-store`**（P3a 收尾修复加上）：注册、登录、续期的响应带令牌，`createApiToken` 的响应带 PAT，接口的回答又都是调用者自己的数据，共享缓存和代理都不能存。同一个中间件按路径设置，问题响应、平台的 `/api/` 404 和 panic 之后的 500 都带；`webui` 的文件不在 `/api/` 下，照旧由 `webui` 设置自己的 `Cache-Control`。
   - **CSP 只加在 HTML 响应上，由 `webui` 负责**（P4）：它只对页面有意义，而且要用 `index.html` 里内联脚本的哈希，只有 `webui` 知道这些脚本。
   - M0-P5 交接说"和 CSP 放在同一层"，本意是两者都由服务端在 M2 加入。按上面的理由分在两层，是有意的安排。这一项在 P4（CSP 落地时）正式关闭，review 写下这条理由。
 - **CSP 的内容**：

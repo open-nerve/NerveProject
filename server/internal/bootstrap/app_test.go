@@ -26,10 +26,16 @@ var sampleMigrations = fstest.MapFS{
 	"00002_probe_create_gadgets.sql": {Data: []byte("-- +goose Up\nCREATE TABLE gadgets (id bigint);\n-- +goose Down\nDROP TABLE gadgets;\n")},
 }
 
-// testWebUI stands in for the built frontend, so tests do not depend on make build.
+// testWebUI stands in for the built frontend, so tests do not depend on make
+// build: index.html and one of Vite's content-hashed assets.
 const testIndexHTML = "<!doctype html><title>Nerve test</title>"
 
-var testWebUI = fstest.MapFS{"index.html": {Data: []byte(testIndexHTML)}}
+const testAsset = "assets/index-1a2b3c4d.js"
+
+var testWebUI = fstest.MapFS{
+	"index.html": {Data: []byte(testIndexHTML)},
+	testAsset:    {Data: []byte("export {};\n")},
+}
 
 const unreachableDB = "postgres://nobody@127.0.0.1:1/nowhere"
 
