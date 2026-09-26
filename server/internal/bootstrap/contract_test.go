@@ -130,6 +130,22 @@ func TestBodiesThatBreakTheStructureAnswer400(t *testing.T) {
 	}
 }
 
+// Every operation's default response, the problem, declares the two headers
+// a problem may carry: Retry-After and WWW-Authenticate. Each module declares
+// its own Problem response (spec P2 3 item 13), so a module that leaves one
+// out fails here.
+func TestEveryProblemResponseDeclaresItsHeaders(t *testing.T) {
+	contract := apitest.Load(t)
+
+	for _, op := range contract.Operations() {
+		for _, header := range []string{"Retry-After", "WWW-Authenticate"} {
+			if !slices.Contains(op.ProblemHeaders, header) {
+				t.Errorf("%s: the default response declares %q, want %s among them", op.Pattern(), op.ProblemHeaders, header)
+			}
+		}
+	}
+}
+
 // authTokens is the AuthTokens answer.
 type authTokens struct {
 	AccessToken  string `json:"access_token"`
