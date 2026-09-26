@@ -13,13 +13,14 @@ import (
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	GetInfo *app.GetInfo
+	GetInfo       *app.GetInfo
+	ListTimezones *app.ListTimezones
 }
 
 // PublicOperations are the module's routes that need no token (M2 design
 // 3.6), as the generated code registers them.
 func PublicOperations() []string {
-	return []string{"GET /api/v0/instance"}
+	return []string{"GET /api/v0/instance", "GET /api/v0/timezones"}
 }
 
 // Register mounts the module's routes on router, the root router from
@@ -57,5 +58,22 @@ func (h handler) GetInstance(context.Context, gen.GetInstanceRequestObject) (gen
 		Version:    info.Version,
 		Commit:     info.Commit,
 		APIVersion: gen.InstanceInfoAPIVersion(info.APIVersion),
+
+		SignupEnabled:            info.SignupEnabled,
+		WorkspaceCreationEnabled: info.WorkspaceCreationEnabled,
+		FileSizeLimit:            int(info.FileSizeLimit),
 	}, nil
+}
+
+// ListTimezones serves GET /api/v0/timezones.
+func (h handler) ListTimezones(context.Context, gen.ListTimezonesRequestObject) (gen.ListTimezonesResponseObject, error) {
+	zones, err := h.uc.ListTimezones.Execute()
+	if err != nil {
+		return nil, err
+	}
+	out := gen.ListTimezones200JSONResponse{Data: make([]gen.Timezone, len(zones))}
+	for i, z := range zones {
+		out.Data[i] = gen.Timezone{Label: z.Label, Value: z.Name, UtcOffset: "UTC" + z.Offset, GmtOffset: "GMT" + z.Offset}
+	}
+	return out, nil
 }

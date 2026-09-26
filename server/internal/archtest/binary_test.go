@@ -50,6 +50,16 @@ func TestNerveBinaryLinksNoBannedModule(t *testing.T) {
 	}
 }
 
+// The binary embeds the time zone database (M2 design 4.2): which
+// user_timezone is accepted, and the offsets of GET /api/v0/timezones, must
+// not depend on the zones of the host, which a container may lack.
+func TestNerveBinaryEmbedsTheTimeZoneDatabase(t *testing.T) {
+	g := loadDeps(t, "./cmd/nerve")
+	if !slices.Contains(g[m("cmd/nerve")], "time/tzdata") {
+		t.Errorf("cmd/nerve imports %q, not time/tzdata", g[m("cmd/nerve")])
+	}
+}
+
 // google/uuid is reached first through oapi-codegen/runtime, which may
 // import it; every other import of it is still reported, each on its own.
 func TestBannedImports(t *testing.T) {

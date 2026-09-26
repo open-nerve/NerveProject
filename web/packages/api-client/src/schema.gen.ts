@@ -221,9 +221,29 @@ export interface paths {
         };
         /**
          * Describe this instance
-         * @description Reports the product, the build and the API version this instance runs. Public: needs no authentication.
+         * @description Reports the product, the build and the API version this instance runs, and the settings clients adapt to. Public: needs no authentication.
          */
         get: operations["getInstance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/timezones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the time zones to choose from
+         * @description The time zones the web app offers, each with its offset at the time of the request, sorted by offset and then by label. user_timezone takes any IANA name, not only these. Public: needs no authentication.
+         */
+        get: operations["listTimezones"];
         put?: never;
         post?: never;
         delete?: never;
@@ -457,6 +477,34 @@ export interface components {
              * @enum {string}
              */
             api_version: "v0";
+            /** @description Whether anyone may register (auth.signup_enabled). */
+            signup_enabled: boolean;
+            /** @description Whether workspaces can be created (workspace.creation_enabled). */
+            workspace_creation_enabled: boolean;
+            /** @description The largest file an upload may have, in bytes (files.size_limit). */
+            file_size_limit: number;
+        };
+        Timezone: {
+            /** @description A place in the time zone, e.g. Beijing. */
+            label: string;
+            /**
+             * @description The IANA name, what user_timezone takes.
+             * @example Asia/Shanghai
+             */
+            value: string;
+            /**
+             * @description The offset at the time of the request.
+             * @example UTC+08:00
+             */
+            utc_offset: string;
+            /**
+             * @description The same offset, written from GMT.
+             * @example GMT+08:00
+             */
+            gmt_offset: string;
+        };
+        TimezoneList: {
+            data: components["schemas"]["Timezone"][];
         };
     };
     responses: {
@@ -806,6 +854,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InstanceInfo"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listTimezones: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The time zones. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimezoneList"];
                 };
             };
             default: components["responses"]["Problem"];

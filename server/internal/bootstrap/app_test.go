@@ -73,7 +73,9 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 			Anonymous:     roomy, AuthFailure: roomy, Authenticated: roomy,
 			LoginIP: roomy, LoginIPEmail: roomy, RegisterIP: roomy, PasswordUser: roomy,
 		},
-		Log: config.LogConfig{Level: "error", Format: "text"},
+		Workspace: config.WorkspaceConfig{CreationEnabled: true},
+		Files:     config.FilesConfig{SizeLimit: 5242880},
+		Log:       config.LogConfig{Level: "error", Format: "text"},
 	}
 }
 

@@ -38,19 +38,54 @@ type InstanceInfo struct {
 	// Commit Git revision of the running build; "unknown" when the build carries no VCS stamp.
 	Commit string `json:"commit"`
 
+	// FileSizeLimit The largest file an upload may have, in bytes (files.size_limit).
+	FileSizeLimit int `json:"file_size_limit"`
+
 	// Product Product name.
 	//
 	// Examples: Nerve
 	Product string `json:"product"`
 
+	// SignupEnabled Whether anyone may register (auth.signup_enabled).
+	SignupEnabled bool `json:"signup_enabled"`
+
 	// Version Product version of the running build.
 	//
 	// Examples: 0.1.0-dev
 	Version string `json:"version"`
+
+	// WorkspaceCreationEnabled Whether workspaces can be created (workspace.creation_enabled).
+	WorkspaceCreationEnabled bool `json:"workspace_creation_enabled"`
 }
 
 // InstanceInfoAPIVersion Version of this HTTP API; every path starts with /api/{api_version}.
 type InstanceInfoAPIVersion string
+
+// Timezone defines model for Timezone.
+type Timezone struct {
+	// GmtOffset The same offset, written from GMT.
+	//
+	// Examples: GMT+08:00
+	GmtOffset string `json:"gmt_offset"`
+
+	// Label A place in the time zone, e.g. Beijing.
+	Label string `json:"label"`
+
+	// UtcOffset The offset at the time of the request.
+	//
+	// Examples: UTC+08:00
+	UtcOffset string `json:"utc_offset"`
+
+	// Value The IANA name, what user_timezone takes.
+	//
+	// Examples: Asia/Shanghai
+	Value string `json:"value"`
+}
+
+// TimezoneList defines model for TimezoneList.
+type TimezoneList struct {
+	Data []Timezone `json:"data"`
+}
 
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
@@ -60,6 +95,9 @@ type ServerInterface interface {
 	// GetInstance Describe this instance
 	// (GET /api/v0/instance)
 	GetInstance(w http.ResponseWriter, r *http.Request)
+	// ListTimezones List the time zones to choose from
+	// (GET /api/v0/timezones)
+	ListTimezones(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -76,6 +114,20 @@ func (siw *ServerInterfaceWrapper) GetInstance(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetInstance(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTimezones operation middleware
+func (siw *ServerInterfaceWrapper) ListTimezones(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTimezones(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -206,6 +258,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/instance", wrapper.GetInstance)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/timezones", wrapper.ListTimezones)
 
 	return m
 }
@@ -265,11 +318,59 @@ func (response GetInstancedefaultApplicationProblemPlusJSONResponse) VisitGetIns
 	return err
 }
 
+type ListTimezonesRequestObject struct {
+}
+
+type ListTimezonesResponseObject interface {
+	VisitListTimezonesResponse(w http.ResponseWriter) error
+}
+
+type ListTimezones200JSONResponse TimezoneList
+
+func (response ListTimezones200JSONResponse) VisitListTimezonesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListTimezonesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListTimezonesdefaultApplicationProblemPlusJSONResponse) VisitListTimezonesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetInstance Describe this instance
 	// (GET /api/v0/instance)
 	GetInstance(ctx context.Context, request GetInstanceRequestObject) (GetInstanceResponseObject, error)
+	// ListTimezones List the time zones to choose from
+	// (GET /api/v0/timezones)
+	ListTimezones(ctx context.Context, request ListTimezonesRequestObject) (ListTimezonesResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -328,6 +429,30 @@ func (sh *strictHandler) GetInstance(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetInstanceResponseObject); ok {
 		if err := validResponse.VisitGetInstanceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTimezones operation middleware
+func (sh *strictHandler) ListTimezones(w http.ResponseWriter, r *http.Request) {
+	var request ListTimezonesRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTimezones(ctx, request.(ListTimezonesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTimezones")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListTimezonesResponseObject); ok {
+		if err := validResponse.VisitListTimezonesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

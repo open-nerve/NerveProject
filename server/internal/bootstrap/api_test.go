@@ -12,10 +12,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
-// The API needs no database: the app runs against an unreachable one.
+// The API needs no database: the app runs against an unreachable one. The
+// instance reports the settings of the configuration (M2 design 5.3).
 func TestServesTheInstanceAPI(t *testing.T) {
 	contract := apitest.Load(t)
-	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	cfg := testConfig(t, unreachableDB, false)
+	cfg.Auth.SignupEnabled, cfg.Workspace.CreationEnabled, cfg.Files.SizeLimit = true, false, 7340032
+	base := startApp(t, cfg, fstest.MapFS{})
 	req, err := http.NewRequest(http.MethodGet, base+"/api/v0/instance", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -29,9 +32,12 @@ func TestServesTheInstanceAPI(t *testing.T) {
 
 	contract.CheckResponse(t, req, res)
 	var got struct {
-		Product    string `json:"product"`
-		Version    string `json:"version"`
-		APIVersion string `json:"api_version"`
+		Product                  string `json:"product"`
+		Version                  string `json:"version"`
+		APIVersion               string `json:"api_version"`
+		SignupEnabled            bool   `json:"signup_enabled"`
+		WorkspaceCreationEnabled bool   `json:"workspace_creation_enabled"`
+		FileSizeLimit            int64  `json:"file_size_limit"`
 	}
 	if err := json.NewDecoder(res.Body).Decode(&got); err != nil {
 		t.Fatalf("decode: %v", err)
@@ -39,8 +45,30 @@ func TestServesTheInstanceAPI(t *testing.T) {
 	if res.StatusCode != http.StatusOK || got.Product != "Nerve" || got.Version != buildinfo.Get().Version || got.APIVersion != "v0" {
 		t.Errorf("GET /api/v0/instance = %d %+v, want 200 Nerve %s v0", res.StatusCode, got, buildinfo.Get().Version)
 	}
+	if !got.SignupEnabled || got.WorkspaceCreationEnabled || got.FileSizeLimit != 7340032 {
+		t.Errorf("settings %+v, want sign-up on, workspace creation off, 7340032 bytes", got)
+	}
 	if res.Header.Get(httpserver.HeaderRequestID) == "" {
 		t.Error("response has no X-Request-Id: the platform middleware did not run")
+	}
+}
+
+// The time zones need no token and no database either.
+func TestServesTheTimezones(t *testing.T) {
+	contract := apitest.Load(t)
+	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	req := newRequest(t, http.MethodGet, base+"/api/v0/timezones", "", nil)
+
+	res, body := send(t, req)
+
+	contract.CheckResponse(t, req, res)
+	var got struct {
+		Data []struct {
+			Value string `json:"value"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &got); err != nil || res.StatusCode != http.StatusOK || len(got.Data) != 120 {
+		t.Errorf("GET /api/v0/timezones = %d, %d zones (%v); want 200 with 120", res.StatusCode, len(got.Data), err)
 	}
 }
 
