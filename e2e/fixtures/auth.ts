@@ -4,6 +4,7 @@ import { expect, type TestInfo } from "@playwright/test";
 import type { Api } from "./api";
 
 export type AuthTokens = components["schemas"]["AuthTokens"];
+export type ApiTokenCreated = components["schemas"]["ApiTokenCreated"];
 
 /** A password that meets the rules and is not common. */
 export const password = "Tr0ub4dor&3";
@@ -38,6 +39,25 @@ export async function login(api: Api, email: string, headers: Record<string, str
   expect(response.status, `login ${email}: ${JSON.stringify(error)}`).toBe(200);
   if (!data) {
     throw new Error(`login ${email} answered 200 without tokens`);
+  }
+  return data;
+}
+
+/** The Authorization header of a bearer token: an access token or a personal access token. */
+export function bearer(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` };
+}
+
+/** Creates a personal access token with the bearer token given, and returns it with its token. */
+export async function createPAT(
+  api: Api,
+  token: string,
+  body: components["schemas"]["ApiTokenCreate"] = {}
+): Promise<ApiTokenCreated> {
+  const { data, error, response } = await api.POST("/api/v0/me/api-tokens", { body, headers: bearer(token) });
+  expect(response.status, `create a personal access token: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) {
+    throw new Error("createApiToken answered 201 without the token");
   }
   return data;
 }
