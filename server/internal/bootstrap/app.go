@@ -94,13 +94,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		RefreshDeadline: cfg.Auth.RefreshDeadline,
 		// The periodic job that deletes the expired sessions (M2 design 3.15).
 		SessionCleanupInterval: cfg.Auth.SessionCleanupInterval,
-		Password: identity.PasswordHashing{
-			MemoryKiB:     cfg.Auth.Password.Argon2MemoryKiB,
-			Iterations:    cfg.Auth.Password.Argon2Iterations,
-			Parallelism:   cfg.Auth.Password.Argon2Parallelism,
-			MaxConcurrent: cfg.Auth.Password.MaxConcurrentHashes,
-			MaxWait:       cfg.Auth.Password.MaxWait,
-		},
+		Password:               passwordHashing(cfg.Auth.Password),
 		RateLimits: identity.RateLimits{
 			Limiter:      limiter,
 			LoginIP:      bucket(limiter, "login_ip", cfg.RateLimit.LoginIP),
@@ -175,6 +169,17 @@ func readSigningKey(path string) ([]byte, error) {
 		return nil, fmt.Errorf("auth.jwt.private_key_file: %w", err)
 	}
 	return data, nil
+}
+
+// passwordHashing is auth.password as identity takes it.
+func passwordHashing(p config.PasswordConfig) identity.PasswordHashing {
+	return identity.PasswordHashing{
+		MemoryKiB:     p.Argon2MemoryKiB,
+		Iterations:    p.Argon2Iterations,
+		Parallelism:   p.Argon2Parallelism,
+		MaxConcurrent: p.MaxConcurrentHashes,
+		MaxWait:       p.MaxWait,
+	}
 }
 
 // bucket is the rate-limit bucket name on limiter, sized by c (M2 design
