@@ -146,20 +146,39 @@ func TestPageSize(t *testing.T) {
 
 func ptr[T any](v T) *T { return &v }
 
+// DecodeCursor accepts only what EncodeCursor writes, so the time MarshalJSON
+// writes must read back to the same instant and the same spelling, with or
+// without a fraction, in UTC or at another offset.
 func TestAPITokenCursorRoundTrip(t *testing.T) {
-	c := APITokenCursor{CreatedAt: time.Date(2026, 9, 25, 10, 0, 0, 123456000, time.UTC), ID: uuid.MustParse("0199a2b4-0000-7000-8000-000000000001")}
+	tests := []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"microseconds", time.Date(2026, 9, 25, 10, 0, 0, 123456000, time.UTC),
+			`["2026-09-25T10:00:00.123456Z","0199a2b4-0000-7000-8000-000000000001"]`},
+		{"a whole second", time.Date(2026, 9, 25, 10, 0, 0, 0, time.UTC),
+			`["2026-09-25T10:00:00Z","0199a2b4-0000-7000-8000-000000000001"]`},
+		{"an offset other than UTC", time.Date(2026, 9, 25, 15, 30, 0, 123456000, time.FixedZone("", 5*3600+30*60)),
+			`["2026-09-25T15:30:00.123456+05:30","0199a2b4-0000-7000-8000-000000000001"]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := APITokenCursor{CreatedAt: tt.at, ID: uuid.MustParse("0199a2b4-0000-7000-8000-000000000001")}
 
-	b, err := json.Marshal(c)
-	if want := `["2026-09-25T10:00:00.123456Z","0199a2b4-0000-7000-8000-000000000001"]`; err != nil || string(b) != want {
-		t.Errorf("json.Marshal() = %s, %v; want %s", b, err, want)
-	}
-	cursor, err := shared.EncodeCursor(c)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got APITokenCursor
-	if err := shared.DecodeCursor(cursor, &got); err != nil || !got.CreatedAt.Equal(c.CreatedAt) || got.ID != c.ID {
-		t.Errorf("DecodeCursor() = %+v, %v; want %+v", got, err, c)
+			b, err := json.Marshal(c)
+			if err != nil || string(b) != tt.want {
+				t.Errorf("json.Marshal() = %s, %v; want %s", b, err, tt.want)
+			}
+			cursor, err := shared.EncodeCursor(c)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got APITokenCursor
+			if err := shared.DecodeCursor(cursor, &got); err != nil || !got.CreatedAt.Equal(c.CreatedAt) || got.ID != c.ID {
+				t.Errorf("DecodeCursor() = %+v, %v; want %+v", got, err, c)
+			}
+		})
 	}
 }
 

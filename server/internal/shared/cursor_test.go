@@ -34,6 +34,22 @@ func TestCursorRoundTrip(t *testing.T) {
 	}
 }
 
+// EncodeCursor escapes <, > and & as json.Marshal does (\u003c, \u003e,
+// \u0026); the encoding DecodeCursor compares a cursor with must escape
+// them the same way, or no cursor holding them would decode.
+func TestCursorRoundTripsHTMLCharacters(t *testing.T) {
+	want := page{After: "a<b>&c"}
+	cursor, err := shared.EncodeCursor(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got page
+	if err := shared.DecodeCursor(cursor, &got); err != nil || got != want {
+		t.Errorf("DecodeCursor(%q) = %+v, %v; want %+v back", cursor, got, err, want)
+	}
+}
+
 // Anything but a cursor that EncodeCursor wrote is 400 bad_request on the
 // cursor parameter.
 func TestDecodeCursorRejects(t *testing.T) {
@@ -53,6 +69,7 @@ func TestDecodeCursorRejects(t *testing.T) {
 		{"an unknown member", b64(`{"v":1,"p":{"after":"x"},"x":0}`)},
 		{"a second value after it", b64(valid + `{}`)},
 		{"another version", b64(`{"v":2,"p":{"after":"x"}}`)},
+		{"version 0, the zero value", b64(`{"v":0,"p":{"after":"x"}}`)},
 		{"no version", b64(`{"p":{"after":"x"}}`)},
 		{"no payload", b64(`{"v":1}`)},
 		{"a null payload", b64(`{"v":1,"p":null}`)},
@@ -61,6 +78,7 @@ func TestDecodeCursorRejects(t *testing.T) {
 		{"a line feed inside", c[:10] + "\n" + c[10:]},
 		{"a carriage return inside", c[:10] + "\r" + c[10:]},
 		{"unused bits set", unusedBitSet},
+		{"the version spelled 1.0", b64(`{"v":1.0,"p":{"after":"x"}}`)},
 		{"an upper-case member name", b64(`{"V":1,"p":{"after":"x"}}`)},
 		{"a member twice", b64(`{"v":1,"v":1,"p":{"after":"x"}}`)},
 		{"blanks", b64(`{"v":1, "p":{"after":"x"}}`)},
