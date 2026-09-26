@@ -18,6 +18,7 @@ paths:
         whether the address is registered. The password needs
         8–128 characters with an upper-case letter, a lower-case letter, a
         digit and a special character, and must not be a common password.
+        Registrations have a rate limit of their own per client IP.
       security: []
       x-problem-codes: [identity.signup_disabled, validation_failed, identity.email_taken, server_busy]
       requestBody:
@@ -33,6 +34,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthTokens'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/auth/login:
+    post:
+      operationId: login
+      tags: [identity]
+      summary: Sign in with an e-mail address and a password
+      description: >-
+        Starts a new session and returns its tokens. An unknown address and a
+        wrong password get the same identity.invalid_credentials; a
+        deactivated account answers identity.account_deactivated only to the
+        right password. Logins have rate limits of their own: per client IP,
+        and per client IP and address together.
+      security: []
+      x-problem-codes: [identity.invalid_credentials, identity.account_deactivated, server_busy]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: The new session's tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/auth/refresh:
+    post:
+      operationId: refreshTokens
+      tags: [identity]
+      summary: Exchange a refresh token for the next pair
+      description: >-
+        Returns new tokens of the same session and retires the refresh token
+        sent: the next refresh uses the refresh_token of this response. The
+        session's end, refresh_token_expires_at, never moves. Any refresh
+        token but the current one of a session that has not ended answers
+        identity.refresh_token_invalid; one this session issued before also
+        ends the session, since someone else holds a copy of it.
+      security: []
+      x-problem-codes: [identity.refresh_token_invalid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: The session's next tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/auth/logout:
+    post:
+      operationId: logout
+      tags: [identity]
+      summary: End the session of a refresh token
+      description: >-
+        Ends the session when refresh_token is its current one. Any other
+        token changes nothing and gets the same answer, which tells nothing
+        about the token.
+      security: []
+      x-problem-codes: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Done, whatever the token was.
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/me:
@@ -91,10 +171,38 @@ components:
           format: email
         password:
           type: string
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          description: The sign-in address, in any case, with or without surrounding blanks.
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          description: The refresh_token of the last AuthTokens of the session.
+          type: string
+    LogoutRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          description: The refresh_token of the last AuthTokens of the session.
+          type: string
     AuthTokens:
       description: >-
         A session's tokens. Send access_token as "Authorization: Bearer"; when
-        it expires, exchange refresh_token for a new pair (M2/P2).
+        it expires, exchange refresh_token for the next pair at
+        POST /api/v0/auth/refresh.
       type: object
       additionalProperties: false
       required: [token_type, access_token, access_token_expires_in, refresh_token, refresh_token_expires_at]

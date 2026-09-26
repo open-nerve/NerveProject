@@ -49,6 +49,7 @@ func TestConstructors(t *testing.T) {
 	}{
 		{"Invalid", shared.Invalid(), 422, "validation_failed", 0},
 		{"Unauthenticated", shared.Unauthenticated(), 401, "unauthorized", 0},
+		{"RateLimited", shared.RateLimited(1500 * time.Millisecond), 429, "rate_limited", 1500 * time.Millisecond},
 		{"ServerBusy", shared.ServerBusy(time.Second), 503, "server_busy", time.Second},
 		{"NewError", shared.NewError(shared.KindConflict, "identity.email_taken", "taken"), 409, "identity.email_taken", 0},
 	}

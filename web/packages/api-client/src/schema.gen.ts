@@ -15,9 +15,69 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, a well-formed request answers identity.signup_disabled before the address or the password is looked at, so the answer never depends on whether the address is registered. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password.
+         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, a well-formed request answers identity.signup_disabled before the address or the password is looked at, so the answer never depends on whether the address is registered. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password. Registrations have a rate limit of their own per client IP.
          */
         post: operations["register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with an e-mail address and a password
+         * @description Starts a new session and returns its tokens. An unknown address and a wrong password get the same identity.invalid_credentials; a deactivated account answers identity.account_deactivated only to the right password. Logins have rate limits of their own: per client IP, and per client IP and address together.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a refresh token for the next pair
+         * @description Returns new tokens of the same session and retires the refresh token sent: the next refresh uses the refresh_token of this response. The session's end, refresh_token_expires_at, never moves. Any refresh token but the current one of a session that has not ended answers identity.refresh_token_invalid; one this session issued before also ends the session, since someone else holds a copy of it.
+         */
+        post: operations["refreshTokens"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the session of a refresh token
+         * @description Ends the session when refresh_token is its current one. Any other token changes nothing and gets the same answer, which tells nothing about the token.
+         */
+        post: operations["logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -97,7 +157,7 @@ export interface components {
             /** @description The invalid fields of the request. */
             errors?: components["schemas"]["FieldError"][];
         };
-        /** @description A session's tokens. Send access_token as "Authorization: Bearer"; when it expires, exchange refresh_token for a new pair (M2/P2). */
+        /** @description A session's tokens. Send access_token as "Authorization: Bearer"; when it expires, exchange refresh_token for the next pair at POST /api/v0/auth/refresh. */
         AuthTokens: {
             /** @enum {string} */
             token_type: "Bearer";
@@ -111,6 +171,22 @@ export interface components {
              * @description When the session ends; refreshing never extends it.
              */
             refresh_token_expires_at: string;
+        };
+        LoginRequest: {
+            /**
+             * Format: email
+             * @description The sign-in address, in any case, with or without surrounding blanks.
+             */
+            email: string;
+            password: string;
+        };
+        RefreshRequest: {
+            /** @description The refresh_token of the last AuthTokens of the session. */
+            refresh_token: string;
+        };
+        LogoutRequest: {
+            /** @description The refresh_token of the last AuthTokens of the session. */
+            refresh_token: string;
         };
         User: {
             /** Format: uuid */
@@ -192,6 +268,79 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthTokens"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description The new session's tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokens"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    refreshTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description The session's next tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthTokens"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Done, whatever the token was. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

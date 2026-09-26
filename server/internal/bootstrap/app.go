@@ -69,22 +69,33 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		return nil, err
 	}
 	a := &app{cfg: cfg, logger: logger, pool: pool, migrator: migrator}
+	// Every rate-limit bucket lives on this limiter (M2 design 3.10). It reads
+	// time.Now, not the Clock: the monotonic reading keeps a step of the wall
+	// clock from filling or draining the buckets.
+	limiter := ratelimit.New(time.Now)
 
 	ident, err := identity.New(identity.Deps{
-		Pool:           pool,
-		Tx:             postgres.NewTxManager(pool, cfg.Database.CommitTimeout),
-		Clock:          clock.System{},
-		Logger:         logger,
-		SignupPolicy:   signupSwitch(cfg.Auth.SignupEnabled),
-		SigningKeyPEM:  signingKey,
-		AccessTokenTTL: cfg.Auth.AccessTokenTTL,
-		SessionTTL:     cfg.Auth.SessionTTL,
+		Pool:            pool,
+		Tx:              postgres.NewTxManager(pool, cfg.Database.CommitTimeout),
+		Clock:           clock.System{},
+		Logger:          logger,
+		SignupPolicy:    signupSwitch(cfg.Auth.SignupEnabled),
+		SigningKeyPEM:   signingKey,
+		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
+		SessionTTL:      cfg.Auth.SessionTTL,
+		RefreshDeadline: cfg.Auth.RefreshDeadline,
 		Password: identity.PasswordHashing{
 			MemoryKiB:     cfg.Auth.Password.Argon2MemoryKiB,
 			Iterations:    cfg.Auth.Password.Argon2Iterations,
 			Parallelism:   cfg.Auth.Password.Argon2Parallelism,
 			MaxConcurrent: cfg.Auth.Password.MaxConcurrentHashes,
 			MaxWait:       cfg.Auth.Password.MaxWait,
+		},
+		RateLimits: identity.RateLimits{
+			Limiter:      limiter,
+			LoginIP:      bucket(limiter, "login_ip", cfg.RateLimit.LoginIP),
+			LoginIPEmail: bucket(limiter, "login_ip_email", cfg.RateLimit.LoginIPEmail),
+			RegisterIP:   bucket(limiter, "register_ip", cfg.RateLimit.RegisterIP),
 		},
 	})
 	if err != nil {
@@ -98,9 +109,6 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
 	)
 	a.publicOperations = slices.Concat(ident.PublicOperations(), inst.PublicOperations())
-	// time.Now, not the Clock: its monotonic reading keeps a step of the wall
-	// clock from filling or draining the buckets.
-	limiter := ratelimit.New(time.Now)
 	api, err := httpserver.NewAPI(httpserver.APIConfig{
 		Logger:           logger,
 		Authenticator:    ident.Authenticator(),

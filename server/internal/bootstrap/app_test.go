@@ -56,9 +56,10 @@ func testConfig(t *testing.T, dbURL string, autoMigrate bool) config.Config {
 		},
 		Database: config.DatabaseConfig{URL: dbURL, MaxConns: 4, AutoMigrate: autoMigrate, CommitTimeout: 2 * time.Second},
 		Auth: config.AuthConfig{
-			SignupEnabled:  true,
-			AccessTokenTTL: 15 * time.Minute,
-			SessionTTL:     720 * time.Hour,
+			SignupEnabled:   true,
+			AccessTokenTTL:  15 * time.Minute,
+			SessionTTL:      720 * time.Hour,
+			RefreshDeadline: 4 * time.Second,
 			Password: config.PasswordConfig{
 				Argon2MemoryKiB:     64,
 				Argon2Iterations:    1,

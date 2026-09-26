@@ -1,10 +1,12 @@
 // Package identity is the accounts module (M2 design 3.3, 6.2): accounts,
-// profiles, sessions and, from later phases, personal access tokens. M2/P1
-// brings registration, GET /me and the authentication every other operation
-// goes through.
+// profiles, sessions and, from later phases, personal access tokens. It
+// brings registration, login, refresh, logout, GET /me and the
+// authentication every other operation goes through.
 package identity
 
 import (
+	"context"
+	"crypto/rand"
 	"fmt"
 	"log/slog"
 	"time"
@@ -19,6 +21,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -32,10 +35,12 @@ type Deps struct {
 	SignupPolicy app.SignupPolicy
 	// SigningKeyPEM is the content of auth.jwt.private_key_file; nil for
 	// none, then the key is ephemeral (dev and test only, M2 design 3.7).
-	SigningKeyPEM  []byte
-	AccessTokenTTL time.Duration
-	SessionTTL     time.Duration
-	Password       PasswordHashing
+	SigningKeyPEM   []byte
+	AccessTokenTTL  time.Duration
+	SessionTTL      time.Duration
+	RefreshDeadline time.Duration // auth.refresh_deadline
+	Password        PasswordHashing
+	RateLimits      RateLimits
 }
 
 // PasswordHashing is auth.password: argon2id's parameters and the limits on
@@ -48,9 +53,19 @@ type PasswordHashing struct {
 	MaxWait       time.Duration
 }
 
+// RateLimits are the module's own buckets, on the limiter they belong to
+// (M2 design 3.10).
+type RateLimits struct {
+	Limiter      httpadapter.RateLimiter
+	LoginIP      *ratelimit.Bucket
+	LoginIPEmail *ratelimit.Bucket
+	RegisterIP   *ratelimit.Bucket
+}
+
 // Module is the wired identity module.
 type Module struct {
 	uc            httpadapter.UseCases
+	settings      httpadapter.Settings
 	authenticator *authn.Authenticator
 }
 
@@ -61,27 +76,40 @@ func New(d Deps) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
+	hasher := argon2adapter.New(argon2adapter.Params(d.Password), d.Logger)
+	// Login verifies an unknown address against this, so that it takes as
+	// long as a known one (M2 design 3.9).
+	dummy, err := hasher.Hash(context.Background(), rand.Text())
+	if err != nil {
+		return nil, fmt.Errorf("hash the dummy password: %w", err)
+	}
 	store := postgresadapter.New(d.Pool)
 	tokens := signing.NewAccessTokens(keys)
-	register := app.NewRegister(app.RegisterDeps{
-		Policy:   d.SignupPolicy,
-		Rules:    domain.NewPasswordRules(),
-		Hasher:   argon2adapter.New(argon2adapter.Params(d.Password), d.Logger),
-		Tx:       d.Tx,
-		Users:    store,
-		Profiles: store,
-		Sessions: store,
-		Issuance: app.Issuance{
-			Tokens:     tokens,
-			MAC:        signing.NewRefreshTokenMAC(keys),
-			AccessTTL:  d.AccessTokenTTL,
-			SessionTTL: d.SessionTTL,
-		},
-		Clock:  d.Clock,
-		Logger: d.Logger,
-	})
+	issuance := app.Issuance{
+		Tokens:     tokens,
+		MAC:        signing.NewRefreshTokenMAC(keys),
+		AccessTTL:  d.AccessTokenTTL,
+		SessionTTL: d.SessionTTL,
+	}
 	return &Module{
-		uc:            httpadapter.UseCases{Register: register, GetMe: app.NewGetMe(store)},
+		uc: httpadapter.UseCases{
+			Register: app.NewRegister(app.RegisterDeps{
+				Policy: d.SignupPolicy, Rules: domain.NewPasswordRules(), Hasher: hasher, Tx: d.Tx,
+				Users: store, Profiles: store, Sessions: store, Issuance: issuance, Clock: d.Clock, Logger: d.Logger,
+			}),
+			Login: app.NewLogin(app.LoginDeps{
+				Accounts: store, Locker: store, Passwords: store, Sessions: store, Hasher: hasher, Tx: d.Tx,
+				Issuance: issuance, Clock: d.Clock, Logger: d.Logger, DummyHash: dummy,
+			}),
+			Refresh: app.NewRefresh(app.RefreshDeps{Sessions: store, Tx: d.Tx, Issuance: issuance, Clock: d.Clock, Logger: d.Logger}),
+			Logout:  app.NewLogout(store, d.Clock, d.Logger),
+			GetMe:   app.NewGetMe(store),
+		},
+		settings: httpadapter.Settings{
+			Limits:          httpadapter.Limits(d.RateLimits),
+			RefreshDeadline: d.RefreshDeadline,
+			Logger:          d.Logger,
+		},
 		authenticator: authn.New(app.NewAuthenticate(tokens, store, d.Clock)),
 	}, nil
 }
@@ -111,5 +139,5 @@ func (m *Module) Authenticator() httpserver.Authenticator {
 
 // Register mounts the module's API on router behind api's middlewares.
 func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
-	httpadapter.Register(router, api, m.uc)
+	httpadapter.Register(router, api, m.uc, m.settings)
 }
