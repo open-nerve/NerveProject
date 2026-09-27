@@ -19,7 +19,7 @@ import { Button } from "@nerve/propel/button";
 import { PasswordStrengthIndicator, Spinner } from "@nerve/ui";
 import { checkEmailValidity, getPasswordStrength } from "@nerve/utils";
 // helpers
-import { EAuthModes, errorMessageKey, fieldErrorKeys } from "@/helpers/authentication.helper";
+import { EAuthModes, errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
 
@@ -39,10 +39,14 @@ const defaultValues: TPasswordFormValues = {
   confirm_password: "",
 };
 
+/** The fields whose messages from nerve show under them; a message for any other field shows above the form. */
+const NERVE_FIELDS = ["email", "password"];
+
 /**
  * The sign-in and sign-up form (M2 design 7.3). It calls nerve through the store; on success the token
- * manager keeps the session and AuthenticationWrapper moves on. A refusal shows here, the email kept: the
- * problem's message above the form, a field's message under the field.
+ * manager keeps the session and AuthenticationWrapper moves on. A refusal shows here, the email kept: a
+ * field's message under the field, and the problem's message above the form unless every field it names is
+ * one of the form's.
  */
 export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props) {
   const { mode } = props;
@@ -97,7 +101,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
   const confirmPassword = passwordFormData.confirm_password;
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
   const fieldErrors = fieldErrorKeys(submitError);
-  const hasFieldErrors = Object.keys(fieldErrors).length > 0;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -127,7 +130,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           onDismiss={() => setBannerMessage(false)}
         />
       )}
-      {submitError !== undefined && !hasFieldErrors && (
+      {submitError !== undefined && needsErrorBanner(submitError, NERVE_FIELDS) && (
         <Banner
           placement="inline"
           variant="danger"

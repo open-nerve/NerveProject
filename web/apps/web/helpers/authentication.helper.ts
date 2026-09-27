@@ -67,3 +67,13 @@ export function fieldErrorKeys(error: unknown): Partial<Record<string, string>> 
   if (!(error instanceof ApiError)) return {};
   return Object.fromEntries((error.problem?.errors ?? []).map((e) => [e.field, FIELD_ERROR_MESSAGES[e.code]]));
 }
+
+/**
+ * Whether a form with the given fields shows an error of a call to nerve above it: unless every field the
+ * error names is one of them, whose messages show under the fields. An error that names a field the form
+ * does not have would otherwise show nothing.
+ */
+export function needsErrorBanner(error: unknown, fields: readonly string[]): boolean {
+  const named = Object.keys(fieldErrorKeys(error));
+  return named.length === 0 || named.some((field) => !fields.includes(field));
+}

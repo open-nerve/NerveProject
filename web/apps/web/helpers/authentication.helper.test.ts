@@ -7,7 +7,13 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api-error";
 import { SessionChangedError, SessionUnavailableError } from "@/lib/auth/token-manager";
-import { FIELD_ERROR_MESSAGES, PROBLEM_MESSAGES, errorMessageKey, fieldErrorKeys } from "./authentication.helper";
+import {
+  FIELD_ERROR_MESSAGES,
+  PROBLEM_MESSAGES,
+  errorMessageKey,
+  fieldErrorKeys,
+  needsErrorBanner,
+} from "./authentication.helper";
 
 // The message tables against the API's contract (M2 design 3.11, 7.3, 9.4): api/dist/openapi.yaml is the
 // bundled description the server is checked against, so a code added there fails here until it has a message.
@@ -115,5 +121,34 @@ describe("fieldErrorKeys", () => {
   it("gives nothing for a problem without fields, or for another error", () => {
     expect(fieldErrorKeys(new ApiError(409, { status: 409, code: "identity.email_taken", title: "" }))).toEqual({});
     expect(fieldErrorKeys(new TypeError("Failed to fetch"))).toEqual({});
+  });
+});
+
+describe("needsErrorBanner", () => {
+  /** A problem that names these fields. */
+  const naming = (...fields: string[]) =>
+    new ApiError(422, {
+      status: 422,
+      code: "validation_failed",
+      title: "",
+      errors: fields.map((field) => ({ field, code: "required" as const, message: "is required" })),
+    });
+  const form = ["email", "password"];
+
+  it("leaves the messages under the fields when the form has every field the error names", () => {
+    expect(needsErrorBanner(naming("email"), form)).toBe(false);
+    expect(needsErrorBanner(naming("email", "password"), form)).toBe(false);
+  });
+
+  it("shows the error above the form when it names a field the form does not have", () => {
+    expect(needsErrorBanner(naming("first_name"), form)).toBe(true);
+    expect(needsErrorBanner(naming("email", "first_name"), form)).toBe(true);
+  });
+
+  it("shows an error without fields above the form", () => {
+    expect(needsErrorBanner(new ApiError(409, { status: 409, code: "identity.email_taken", title: "" }), form)).toBe(
+      true
+    );
+    expect(needsErrorBanner(new TypeError("Failed to fetch"), form)).toBe(true);
   });
 });
