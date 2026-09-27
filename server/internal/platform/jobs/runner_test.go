@@ -84,6 +84,46 @@ func TestStartTriesAgainUntilTheClientStarts(t *testing.T) {
 	}
 }
 
+// leakWatcher records, as each attempt to start begins, how many of the
+// earlier attempts' contexts are still live.
+type leakWatcher struct {
+	fakeClient
+	liveEarlier chan int
+}
+
+func (l *leakWatcher) Start(ctx context.Context) error {
+	l.mu.Lock()
+	live := 0
+	for _, earlier := range l.starts {
+		if earlier.Err() == nil {
+			live++
+		}
+	}
+	l.mu.Unlock()
+	l.liveEarlier <- live
+	return l.fakeClient.Start(ctx)
+}
+
+// A failed attempt to start releases its context before the next attempt
+// begins, so the retries leak none.
+func TestAFailedAttemptReleasesItsContext(t *testing.T) {
+	l := &leakWatcher{fakeClient: fakeClient{fails: 2, attempts: make(chan struct{}, 3)}, liveEarlier: make(chan int, 3)}
+	var logs logBuffer
+	r := newRunner(l, Config{ShutdownTimeout: time.Second, Logger: newLogger(&logs)})
+	r.firstRetry, r.lastRetry = 10*time.Millisecond, 10*time.Millisecond
+	start(t, r, context.Background())
+	for attempt := range 3 {
+		if live := receive(t, l.liveEarlier, 5*time.Second, "attempt to start"); live != 0 {
+			t.Errorf("attempt %d began with %d earlier attempts' contexts live, want none", attempt+1, live)
+		}
+	}
+	logs.waitFor(t, `msg="jobs started"`, 5*time.Second)
+
+	if err := stop(t, r, context.Background(), time.Second); err != nil {
+		t.Fatalf("Stop() = %v", err)
+	}
+}
+
 // Stop ends the attempts to start without waiting out the pause between
 // them, and has nothing to stop.
 func TestStopEndsTheAttemptsToStart(t *testing.T) {
