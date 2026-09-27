@@ -130,11 +130,18 @@ describe.each<Kind>(["navigator.locks", "the lease"])("tabs with %s", (kind) => 
     expect(signIn.settled).toBe(false);
     expect(b.stored()).toEqual({ refresh_token: "rt-1", login_id: X });
 
+    // As a browser may, the tabs hear of each other's writes only after the sign-in: C, of A's refresh.
+    b.storage.hold();
     b.nerve.calls[0]?.answer(json(200, b.nerve.tokens()));
     await until(() => signIn.settled && token.settled, "the sign-in");
     const y = other.tm.state.loginId;
+    expect(y).not.toBe(X);
     expect(b.stored()).toEqual({ refresh_token: "rt-y", login_id: y });
-    expect(a!.tm.state).toEqual({ status: "signed-in", loginId: y });
+    b.storage.deliver();
+    expect([a!.tm.state, other.tm.state]).toEqual([
+      { status: "signed-in", loginId: y },
+      { status: "signed-in", loginId: y },
+    ]);
   });
 
   it.each([
@@ -200,12 +207,15 @@ describe.each<Kind>(["navigator.locks", "the lease"])("tabs with %s", (kind) => 
     await vi.advanceTimersByTimeAsync(1_000);
     expect(b.nerve.calls).toHaveLength(1);
 
+    // As a browser may, the tabs hear of each other's writes only after the sign-out: A, of C's refresh.
+    b.storage.hold();
     b.nerve.calls[0]?.answer(json(200, b.nerve.tokens()));
     await until(() => b.nerve.calls.length === 2, "the logout");
     expect(b.nerve.calls[1]).toMatchObject({ path: LOGOUT, body: { refresh_token: "rt-3" } });
     b.nerve.calls[1]?.answer(noContent());
     await until(() => out.settled && token.settled, "the sign-out");
     expect(b.storage.data.has(AUTH_KEY)).toBe(false);
+    b.storage.deliver();
     expect([a!.tm.state, c!.tm.state]).toEqual([{ status: "signed-out" }, { status: "signed-out" }]);
   });
 
@@ -260,9 +270,11 @@ describe.each<Kind>(["navigator.locks", "the lease"])("tabs with %s", (kind) => 
 
     const token = track(a!.tm.renew("at-1"));
     await until(() => b.nerve.calls.length === 1, "the refresh");
+    b.storage.hold();
     b.nerve.calls[0]?.answer(json(200, b.nerve.tokens()));
     await until(() => token.settled, "the token");
-    await vi.advanceTimersByTimeAsync(100);
+    // C hears of A's refresh now.
+    b.storage.deliver();
 
     expect(b.stored()).toEqual({ refresh_token: "rt-3", login_id: X });
     expect(c!.tm.state).toBe(before);
