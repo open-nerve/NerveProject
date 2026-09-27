@@ -273,7 +273,7 @@ plan 的 Task 12 逐行给出文字。要点：
 | A14 依赖真实的时间（2 秒的间隔） | 轮询以 15 秒为限；原型中 A14 的耗时 0.9–4.9 秒（附录 A），重复 5 次都通过 |
 | 管理员命令与在线的服务并发 | 命令按 3.5 的账户行锁执行，交错测试 1–3 证明它与登录、创建 PAT 正确地互相等待；清理任务用 `SKIP LOCKED`，不参与加锁顺序 |
 | 停机落在 River 启动后的最初几秒内时，River 记一两条 ERROR | River 对周期任务投递的 `Begin` 失败、通知连接上被打断的语句不看取消的原因（`periodic_job_enqueuer.go:529-532`、`notifier.go:146-151`），runner 无从避免；实测就绪后立即停机 10/10、3 秒后 7/40，运行 10 秒、30 秒后 0/40；没有任务停在 running、没有连接泄漏、没有写一半的数据（附录 A 的 C1）；README 部署一节说明（Task 12） |
-| 停机恰好落在 River 的重建索引中（默认每天 00:00 UTC），又有长事务挡住没建完的 `_ccnew` 索引的删除时，River 等这次删除最多 15 秒（`reindexer.go:263-266`），超过 `jobs.shutdown_timeout` 加 1 秒：`Stop` 报错，nerve 以退出码 1 退出，索引留下 | 恢复方法写进 README 部署一节（Task 12）：日志出现 WARN `maintenance.Reindexer: Found reindex artifact … skipping reindex` 时，用 `DROP INDEX CONCURRENTLY` 删掉 `artifact_names` 中列出的索引。改之前的 runner 在这样的停机中无论有没有长事务都留下索引，从此不再重建它（附录 A 的 C1） |
+| 停机恰好落在 River 的重建索引中（默认每天 00:00 UTC），又有访问过 `river_job` 的长事务挡住没建完的 `_ccnew` 索引的删除时：任务的停止在 `jobs.shutdown_timeout` 加 1 秒（默认 11 秒）时放弃，nerve 记 ERROR（`jobs still running …`）并以退出码 1 退出；River 自己的这次删除另有 15 秒的时限（`reindexer.go:263-266`），连接池的关闭等它占用的连接（默认配置下 11 秒加连接池的 5 秒，长于这 15 秒）；所以只有删除被挡满 River 的 15 秒时，索引才留下 | 恢复方法写进 README 部署一节（Task 12）：日志出现 WARN `maintenance.Reindexer: Found reindex artifact … skipping reindex` 时，用 `DROP INDEX CONCURRENTLY` 删掉 `artifact_names` 中列出的索引。改之前的 runner 在这样的停机中无论有没有长事务都留下索引，从此不再重建它（附录 A 的 C1） |
 
 ## 7. 交接的处理
 
@@ -331,7 +331,7 @@ plan 的 Task 12 逐行给出文字。要点：
   | 就绪 10 秒、30 秒后 | 1h（默认） | 0/20 | — |
   | 就绪 10 秒后，`river_queue` 从 7 秒起被锁 | 2 秒 | 1/10 | 0/10 |
 
-  220 次运行都以 0 退出，都有 "jobs stopped" 和 "database pool closed"，没有任务停在 `running`，`river_leader` 为空，PostgreSQL 日志中没有断开的连接或被取消的语句。出现的只有两种 ERROR：`maintenance.PeriodicJobEnqueuer: Error starting transaction`（`periodic_job_enqueuer.go:529-532`：leader 的维护服务逐个启动，每个先随机等 0–1 秒（`queue_maintainer.go:50-55`、`river_shared_maintenance.go:133`），停机落在周期任务的第一次投递之前时，这次投递在已取消的 ctx 上执行；运行中只在停机恰好落在一次投递的几毫秒内时出现）；`notifier.Notifier: Error running listener … conn closed`（`notifier.go:146-151`：停机落在 River 自己的 `Start` 之中，打断了通知连接上的 `LISTEN`，pgx 关掉这个连接）。两处都不看取消的原因，与 runner 怎样停止无关，3 秒一行的差别是噪声（Fisher 检验 p = 0.52）。
+  210 次运行（原 runner 150 次，其中 50 次是 debug 日志级别的诊断运行、不在表中；改后 60 次）都以 0 退出，都有 "jobs stopped" 和 "database pool closed"，没有任务停在 `running`，`river_leader` 为空，PostgreSQL 日志中没有断开的连接或被取消的语句。出现的只有两种 ERROR：`maintenance.PeriodicJobEnqueuer: Error starting transaction`（`periodic_job_enqueuer.go:529-532`：leader 的维护服务逐个启动，每个先随机等 0–1 秒（`queue_maintainer.go:50-55`、`river_shared_maintenance.go:133`），停机落在周期任务的第一次投递之前时，这次投递在已取消的 ctx 上执行；运行中只在停机恰好落在一次投递的几毫秒内时出现）；`notifier.Notifier: Error running listener … conn closed`（`notifier.go:146-151`：停机落在 River 自己的 `Start` 之中，打断了通知连接上的 `LISTEN`，pgx 关掉这个连接）。两处都不看取消的原因，与 runner 怎样停止无关，3 秒一行的差别是噪声（Fisher 检验 p = 0.52）。
 
   取消原因有影响的是 River 的重建索引（默认每天 00:00 UTC，`river_job` 的 7 个索引）：停机中断 `REINDEX INDEX CONCURRENTLY` 时，只有取消原因是 `startstop.ErrStop`，它才删掉没建完的 `_ccnew` 索引（`internal/maintenance/reindexer.go:263`；删除用 `context.WithoutCancel` 加 15 秒的时限，`:264-266`）。原 runner 先取消 River 启动时的 ctx，原因成了 `context.Canceled`。实验：诊断用的二进制把 `ReindexerSchedule` 设为 3 秒；另一个会话开着读 `river_job` 的事务，让 REINDEX 停在建好 `_ccnew` 之后；这时 SIGTERM，0.5 秒后结束那个事务。原 runner 5/5 留下 INVALID 的 `river_job_args_index_ccnew`，再启动后每次重建都记 WARN "Found reindex artifact … skipping reindex"（`reindexer.go:244`），这个索引不再重建；改后 5/5 删掉它，SIGTERM 后约 0.6 秒以 0 退出，再启动没有 WARN。代价：挡住删除的事务一直不结束时，River 等满 15 秒；`Stop` 在 `jobs.shutdown_timeout` 加 1 秒（默认 11 秒）时报错，连接池等删除占用的连接释放后关闭，nerve 以退出码 1 退出，索引留下（观察到一次，15.0 秒）。
 
