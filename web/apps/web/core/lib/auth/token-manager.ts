@@ -40,10 +40,13 @@ export class SessionUnavailableError extends Error {
   }
 }
 
-/** Another tab signed in or out: this tab follows it, and the request it meant for the old session stops. */
+/**
+ * The tab is no longer in the session a request was made in (another tab signed in or out, or the session
+ * ended meanwhile): the request stops, and the tab is in the session the record holds.
+ */
 export class SessionChangedError extends Error {
   constructor() {
-    super("Another tab changed the session.");
+    super("The session changed.");
     this.name = "SessionChangedError";
   }
 }
@@ -160,17 +163,19 @@ export class TokenManager {
 
   /**
    * Ends the session loginId after nerve refused a request made in it again with the refreshed token:
-   * under the lock, removes the record if it is still that session's, else follows the record.
+   * under the lock, removes the record if it is still that session's, else follows the record. Resolves
+   * whether it ended that session: false when the record was no longer that session's.
    */
-  async endSession(loginId: string | undefined): Promise<void> {
-    await this.deps.lock.run(async () => {
+  async endSession(loginId: string | undefined): Promise<boolean> {
+    return this.deps.lock.run(async () => {
       const record = this.#read();
       if (!isRecordOf(record, loginId)) {
         this.#switchTo(record);
-        return;
+        return false;
       }
       this.deps.storage.removeItem(AUTH_KEY);
       this.#signedOut();
+      return true;
     });
   }
 

@@ -114,7 +114,7 @@ class TokenManager {
   renew(sent: string): Promise<string | undefined>;
   signIn(tokens: AuthTokens): Promise<void>;
   signOut(): Promise<void>;
-  endSession(loginId: string | undefined): Promise<void>;
+  endSession(loginId: string | undefined): Promise<boolean>;
   handleStorageChange(): void;
 }
 ```
@@ -130,7 +130,7 @@ class TokenManager {
   - 拿到响应后**再读一次记录**，`login_id` 变了就丢弃结果、不写回（不论 nerve 答 200 还是 401），跟随新记录（R4：没有 `navigator.locks` 时租约不是原子的，续期途中记录可能被另一个标签页的登录换掉）；
   - 200 → 写回新的刷新令牌，`login_id` 不变；**只有 401 结束会话**；429、5xx、400、网络错误、超时 → `SessionUnavailableError(retryAt)`，会话保留，退避期间不再请求。
 - **`renew(sent)`**（中间件在 401 之后调用）：已退出时给 `undefined`（第 3 节第 4 条）；另一个请求已经换到新令牌时直接给它；否则丢掉被拒的令牌，续期。
-- **写入都在锁下**：`signIn` 写新记录；`signOut` 在锁下读出最新的刷新令牌，用不挂中间件的客户端调 `POST /api/v0/auth/logout`（8 秒，尽力而为，失败也照样退出），再删除记录，记录已是别的会话时跟随它、谁也不登出（另一个标签页的登录已换掉本会话的刷新令牌，没有可登出的）；`endSession(loginId)`（重发仍 401 时，`loginId` 是请求所属的会话）在锁下删除记录，记录已是别的会话时跟随它、不删。
+- **写入都在锁下**：`signIn` 写新记录；`signOut` 在锁下读出最新的刷新令牌，用不挂中间件的客户端调 `POST /api/v0/auth/logout`（8 秒，尽力而为，失败也照样退出），再删除记录，记录已是别的会话时跟随它、谁也不登出（另一个标签页的登录已换掉本会话的刷新令牌，没有可登出的）；`endSession(loginId)`（重发仍 401 时，`loginId` 是请求所属的会话）在锁下删除记录，给出 `true`；记录已不是这个会话的（别的会话的，或已被删除）时跟随它、不删，给出 `false`。
 - **`storage` 事件**（`handleStorageChange()`，读此刻的记录）：记录不在了且本标签页未退出 → 退出；`login_id` 变了（包括本标签页未登录时记录出现）→ 丢掉访问令牌，以新会话 `signed-in`，访问令牌由下一次续期取得；`login_id` 没变 → 不动。
 - 订阅者（`useSession`、`store-context.tsx`）在每次状态变化后收到通知；`state` 每次是新对象。
 - 测试：`token-manager.test.ts`（32 个，单标签页）、`token-manager.session-change.test.ts`（3 个 × 两种锁 = 6 个）、`token-manager.tabs.test.ts`（10 个 × 两种锁 = 20 个），各测试的内容见 plan 的 Task 2、3，此外：`token-manager.test.ts` 另有续期、退出时 fetch 被拒绝（断网）的两个测试，续期保留会话和记录、给出 `SessionUnavailableError`，退出照样在本地退出；`token-manager.session-change.test.ts` 核对上面的规则：另一个标签页以 Y 登录先拿到锁时，以 X 发出的请求的续期以 `SessionChangedError` 结束，拿不到 Y 的令牌；以 X 要求的退出谁也不登出，以 X 结束会话不删 Y 的记录，标签页都跟随 Y。`token-manager.tabs.test.ts` 的三个测试（登录等另一个标签页的续期、退出交出另一个标签页刚写的刷新令牌、另一个标签页只续期时不动）让事件晚于登录、退出、续期才送达，核对标签页读此刻的记录。写入 `nerve.auth` 的每一处（续期写回、续期 401 时删除、登录、退出、结束会话）都有测试核对写入时 `RecordingLock.held` 为真，以续期写入或删除为结果的测试核对全部写入。测试替身：`SharedStorage`（多个标签页共用一份数据，一个标签页的写入在微任务里通知其他标签页，事件只带键，和浏览器一样不通知自己；没有改变数据的写入（同样的值、删除不存在的键）不通知任何标签页；`hold()` 之后的事件留到 `deliver()` 才送达，像浏览器那样晚于之后的写入和锁的授予）、`RecordingLock`、`FakeNerve`（把每个请求停住，直到测试 `answer` 或 `fail`：`fail` 像断网时的浏览器那样让 fetch 以 `TypeError` 失败；`tokens()` 发出递增的 `at-n`、`rt-n`）、`gate()`、`settle`（假时钟上以 10 毫秒推进，20 秒为限）。
@@ -140,13 +140,13 @@ class TokenManager {
 `authMiddleware(tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">): Middleware`：
 
 - `onRequest`：有访问令牌就设 `Authorization: Bearer …`，并在 fetch 读走请求体之前用 `request.clone()` 留一份副本，存在 `WeakMap` 中，键是 openapi-fetch 交给 `onResponse` 的同一个请求对象；没有会话时请求原样发出，不留副本。
-- `onResponse`：只处理带了令牌却得到 401 的请求。`renew(发出时的令牌)` 得到 `undefined`（续期 401 结束了会话，或会话已经结束）→ 把原来的 401 交给调用方；否则给副本换上新令牌，用 `options.fetch` 重发**一次**；重发仍是 401 → `endSession(记下的 login_id)`。续期因 429、5xx、网络失败时请求以 `SessionUnavailableError` 失败，会话保留。403、404、500 不续期。没有会话时发出的请求，在它的 401 回来之前本标签页登录了，也不重发。请求属于发出它的会话（第 2.5 节的规则）：`onRequest` 在取令牌时记下标签页的 `login_id`，和副本存在一起；401 回来时标签页已换到别的会话（另一个标签页登录或退出了），就把 401 原样交回，不续期、不重发。
-- M2 设计 7.1 要求原型先验证的一点：openapi-fetch 0.17.0 的中间件能这样重发。`auth-middleware.test.ts`（18 个，真实的令牌管理器、假 nerve）核对重发的 `PATCH` 方法、路径、请求体都与原来相同；"用已被读走的原请求重发""在设令牌之后才复制"的变异都让它失败（附录 A）。其中 3 个核对上面的会话规则：请求在外时另一个标签页以 Y 登录，X 的 401 原样交回；取令牌途中标签页跟随了 Y，请求仍属 X；重发途中跟随了 Y，重发的 401 不删 Y 的记录。另有 2 个核对 fetch 被拒绝（浏览器断网时的样子）：请求的 fetch 被拒绝时错误原样交给调用方，不续期、不重发；重发的 fetch 被拒绝时错误也交给调用方；两种情况都保留会话。
+- `onResponse`：只处理带了令牌却得到 401 的请求。`renew(发出时的令牌)` 得到 `undefined`（续期 401 结束了会话，或会话已经结束）→ 把原来的 401 交给调用方；否则给副本换上新令牌，用 `options.fetch` 重发**一次**；重发仍是 401 → `endSession(记下的 login_id)`，结束了这个会话就把重发的 401 交给调用方。续期因 429、5xx、网络失败时请求以 `SessionUnavailableError` 失败，会话保留。403、404、500 不续期。没有会话时发出的请求，在它的 401 回来之前本标签页登录了，也不重发。请求属于发出它的会话（第 2.5 节的规则）：`onRequest` 在取令牌时记下标签页的 `login_id`，和副本存在一起；401 回来时标签页已不在这个会话（另一个标签页登录或退出了，或会话已经结束），请求就以 `SessionChangedError` 失败，不续期、不重发。被会话变化打断的请求只有这一个信号：续期在锁下发现记录已是别的会话（2.5），或重发的 401 之后 `endSession` 发现记录已不是这个会话的（它跟随记录，给出 `false`），请求也都以 `SessionChangedError` 失败；调用方不会把别的会话的 401 当成标签页此刻的会话失败。
+- M2 设计 7.1 要求原型先验证的一点：openapi-fetch 0.17.0 的中间件能这样重发。`auth-middleware.test.ts`（20 个，真实的令牌管理器、假 nerve）核对重发的 `PATCH` 方法、路径、请求体都与原来相同；"用已被读走的原请求重发""在设令牌之后才复制"的变异都让它失败（附录 A）。其中 5 个核对上面的会话规则：请求在外时另一个标签页以 Y 登录，X 的 401 回来时请求以 `SessionChangedError` 失败；标签页还没听到 Y 的登录时，续期在锁下发现它，请求同样以 `SessionChangedError` 失败；取令牌途中标签页跟随了 Y，请求仍属 X；重发途中跟随了 Y，重发的 401 不删 Y 的记录，请求以 `SessionChangedError` 失败；重发途中另一个标签页退出、本标签页还没听到时，`endSession` 在锁下发现记录不在了，请求同样以 `SessionChangedError` 失败，而不是交回重发的 401。另有 2 个核对 fetch 被拒绝（浏览器断网时的样子）：请求的 fetch 被拒绝时错误原样交给调用方，不续期、不重发；重发的 fetch 被拒绝时错误也交给调用方；两种情况都保留会话。
 
 ### 2.7 `ApiError`、`unwrap` 与两个客户端（M2 设计 5.3、7.1、7.2）
 
 - `class ApiError extends Error { status: number; problem: Problem | undefined }`：消息取 `detail`，没有时取 `title`，都没有时 `HTTP <状态码>`。
-- `unwrap<T>(result)`：2xx 给 `data`（204 是 `undefined`）；否则抛出 `ApiError`。只有带字符串 `code` 的 JSON 才算 problem：代理的 HTML 错误页、没有 `code` 的 JSON 都是没有 problem 的 `ApiError`，页面显示通用的文案（2.10）。测试 `api-error.test.ts` 5 个，用真的 `createClient`，`fetch` 返回固定的响应。
+- `unwrap<T>(result)`：2xx 给 `data`（204 是 `undefined`）；否则抛出 `ApiError`。只有带字符串 `code` 的 JSON 才算 problem：代理的 HTML 错误页、没有 `code` 的 JSON 都是没有 problem 的 `ApiError`，页面显示通用的文案（2.10）。被会话变化打断的请求（2.6）以 `SessionChangedError` 本身到达调用方，`unwrap` 和 `ApiError` 不包装它：它是 `api.X()` 被拒绝，在 `unwrap` 运行之前。测试 `api-error.test.ts` 7 个，用真的 `createClient`，`fetch` 返回固定的响应；其中一个核对只有 `title` 的 problem 以 `title` 为消息，一个经真的认证中间件核对 `SessionChangedError` 不变成 `ApiError`。
 - `api-client.ts`：
   - `publicClient = createClient()`：同源、相对地址、不带令牌，给实例、注册、登录和令牌管理器自己的续期、退出用；
   - `tokenManager`：`localStorage`、2.4 的锁、`publicClient`、`Date.now`、`getRandomValues`；

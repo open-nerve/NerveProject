@@ -155,6 +155,7 @@ describe.each<Kind>(["navigator.locks", "the lease"])("with %s", (kind) => {
     expect(a.grantedAs).toEqual([Y]);
 
     expect(ended.error).toBeUndefined();
+    expect(ended.value).toBe(false);
     expect(stored()).toEqual({ refresh_token: "rt-y", login_id: Y });
     expect([a.tm.state, b.tm.state]).toEqual([
       { status: "signed-in", loginId: Y },

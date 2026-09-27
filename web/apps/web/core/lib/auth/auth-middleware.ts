@@ -4,7 +4,7 @@
  */
 
 import type { Middleware } from "@nerve/api-client";
-import type { TokenManager } from "./token-manager";
+import { SessionChangedError, type TokenManager } from "./token-manager";
 
 /**
  * Puts the access token on every request of the client, and answers a 401 to it (M2 design 7.1, Codex
@@ -13,8 +13,10 @@ import type { TokenManager } from "./token-manager";
  * refresh that fails for a passing reason (429, 5xx, no network) rejects the request with that error and
  * keeps the session. Without a session the request goes out without a token, and its 401 comes back as is.
  * A fetch that fails, the request's or its copy's, fails the request as it is and keeps the session.
- * A request belongs to the session it was sent in: when the tab has moved to another session by the time
- * its 401 comes back, the 401 comes back as is, and a copy refused again ends only the request's session.
+ * A request belongs to the session it was sent in, and a copy refused again ends only that session. When
+ * the tab is no longer in it by the time a 401 comes back, the request's or its copy's, the request
+ * rejects with SessionChangedError, as it does when the renewal finds the change: one signal for a request
+ * cut by a change of session, never a 401 its caller could take for the tab's session failing.
  */
 export function authMiddleware(
   tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">
@@ -35,13 +37,14 @@ export function authMiddleware(
     async onResponse({ request, response, options }) {
       const first = sent.get(request);
       if (response.status !== 401 || first === undefined) return undefined;
-      // The tab has moved to another session: the request is not sent again as that one.
-      if (tokens.state.loginId !== first.loginId) return undefined;
+      // The tab is no longer in the request's session: the request stops, not renewed or sent again.
+      if (tokens.state.loginId !== first.loginId) throw new SessionChangedError();
       const token = await tokens.renew(first.token);
       if (token === undefined) return undefined;
       first.copy.headers.set("Authorization", `Bearer ${token}`);
       const again = await options.fetch(first.copy);
-      if (again.status === 401) await tokens.endSession(first.loginId);
+      // Refused again: the request's session ends, unless the record is no longer that session's by then.
+      if (again.status === 401 && !(await tokens.endSession(first.loginId))) throw new SessionChangedError();
       return again;
     },
   };

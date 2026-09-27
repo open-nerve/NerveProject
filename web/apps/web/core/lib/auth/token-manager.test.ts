@@ -488,7 +488,7 @@ describe("sign-in and sign-out", () => {
     const { tm, nerve, storage, writes } = setUp();
     await tm.start();
     await tm.signIn(nerve.tokens());
-    await tm.endSession(loginId);
+    expect(await tm.endSession(loginId)).toBe(true);
     expect(tm.state).toEqual({ status: "signed-out" });
     expect(storage.data.has(AUTH_KEY)).toBe(false);
     expect(writes).toEqual([

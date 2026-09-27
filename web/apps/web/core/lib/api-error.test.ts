@@ -93,7 +93,7 @@ describe("unwrap", () => {
           renewed.push(sent);
           throw changed;
         },
-        endSession: async () => {},
+        endSession: async () => true,
       })
     );
     const error = await (async () => unwrap(await api.GET("/api/v0/me")))().catch((thrown: unknown) => thrown);

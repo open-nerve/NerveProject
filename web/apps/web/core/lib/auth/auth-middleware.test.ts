@@ -8,7 +8,7 @@ import { authMiddleware } from "./auth-middleware";
 import { RecordingLock, SharedStorage } from "./fake-browser";
 import { FakeNerve, json, problem } from "./fake-nerve";
 import { track, until } from "./fake-time";
-import { AUTH_KEY, SessionUnavailableError, TokenManager } from "./token-manager";
+import { AUTH_KEY, SessionChangedError, SessionUnavailableError, TokenManager } from "./token-manager";
 
 // The client the app uses, with the middleware on a real token manager, against a fake nerve that answers
 // when the test says (M2 design 7.1, 9.4).
@@ -184,7 +184,7 @@ describe("authMiddleware", () => {
     expect(nerve.calls).toHaveLength(3);
   });
 
-  it("hands a 401 back as it is when the tab has moved to another session by then", async () => {
+  it("stops a request with SessionChangedError when the tab has moved to another session by its 401", async () => {
     const { storage, nerve, api, tm } = await setUp();
     const saved = track(api.PATCH(ME, { body: { first_name: "Xavier" } }));
     await until(() => nerve.calls.length === 1, "the request");
@@ -195,9 +195,28 @@ describe("authMiddleware", () => {
     nerve.calls[0]?.answer(problem(401, "unauthorized"));
     await until(() => saved.settled || nerve.calls.length > 1, "the answer, or another request");
 
-    // Neither renewed in Y's session nor sent again with Y's token.
+    // Neither renewed in Y's session nor sent again with Y's token, nor handed back as a 401 in Y's session.
     expect(nerve.calls.map((c) => `${c.method} ${c.path}`)).toEqual([`PATCH ${ME}`]);
-    expect(saved.value?.response.status).toBe(401);
+    expect(saved.error).toBeInstanceOf(SessionChangedError);
+    expect(tm.state).toEqual({ status: "signed-in", loginId: loginIdY });
+    expect(storage.data.get(AUTH_KEY)).toBe(recordY);
+  });
+
+  it("stops a request with SessionChangedError when the renewal after its 401 finds the change first", async () => {
+    const { storage, nerve, api, tm } = await setUp();
+    const me = track(api.GET(ME));
+    await until(() => nerve.calls.length === 1, "the request");
+    // Another tab signs in as Y while the request is out; its storage event reaches this tab only later.
+    storage.hold();
+    storage.write(AUTH_KEY, recordY);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(tm.state).toEqual({ status: "signed-in", loginId });
+    nerve.calls[0]?.answer(problem(401, "unauthorized"));
+    await until(() => me.settled, "the answer");
+
+    // The renewal read Y's record under the lock: it followed Y, refreshed nothing, and stopped the request.
+    expect(me.error).toBeInstanceOf(SessionChangedError);
+    expect(nerve.calls).toHaveLength(1);
     expect(tm.state).toEqual({ status: "signed-in", loginId: loginIdY });
     expect(storage.data.get(AUTH_KEY)).toBe(recordY);
   });
@@ -230,11 +249,11 @@ describe("authMiddleware", () => {
 
     // The request is X's, whose token it went with: not renewed or sent again in Y's session.
     expect(nerve.calls).toHaveLength(1);
-    expect(me.value?.response.status).toBe(401);
+    expect(me.error).toBeInstanceOf(SessionChangedError);
     expect(storage.data.get(AUTH_KEY)).toBe(recordY);
   });
 
-  it("ends the request's session, not the one the tab moved to, when the request sent again is refused", async () => {
+  it("keeps the session the tab moved to when the request sent again is refused, and stops the request", async () => {
     const { storage, nerve, api, tm } = await setUp();
     const me = track(api.GET(ME));
     await until(() => nerve.calls.length === 1, "the request");
@@ -249,10 +268,36 @@ describe("authMiddleware", () => {
     nerve.calls[2]?.answer(problem(401, "unauthorized"));
     await until(() => me.settled, "the answer");
 
-    // The refused copy was of the first session, whose record Y's sign-in replaced: Y's session stays.
-    expect(me.value?.response.status).toBe(401);
+    // The refused copy was of the first session, whose record Y's sign-in replaced: Y's session stays, and
+    // the request stops with SessionChangedError, not as a 401 in Y's session.
+    expect(me.error).toBeInstanceOf(SessionChangedError);
     expect(tm.state).toEqual({ status: "signed-in", loginId: loginIdY });
     expect(storage.data.get(AUTH_KEY)).toBe(recordY);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toHaveLength(3);
+  });
+
+  it("stops the request when its copy is refused after another tab signed out, before this tab heard of it", async () => {
+    const { storage, nerve, api, tm } = await setUp();
+    const me = track(api.GET(ME));
+    await until(() => nerve.calls.length === 1, "the request");
+    nerve.calls[0]?.answer(problem(401, "unauthorized"));
+    await until(() => nerve.calls.length === 2, "the refresh");
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 3, "the request again");
+    // Another tab signs out while the copy is out; its storage event reaches this tab only later.
+    storage.hold();
+    storage.write(AUTH_KEY, null);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(tm.state).toEqual({ status: "signed-in", loginId });
+    nerve.calls[2]?.answer(problem(401, "unauthorized"));
+    await until(() => me.settled, "the answer");
+
+    // The tab was still in the request's session when the copy was refused; ending it found the record
+    // gone, so the sign-out cut the request: it stops with SessionChangedError, not as the copy's 401.
+    expect(me.error).toBeInstanceOf(SessionChangedError);
+    expect(tm.state).toEqual({ status: "signed-out" });
+    expect(storage.data.has(AUTH_KEY)).toBe(false);
     await vi.advanceTimersByTimeAsync(1_000);
     expect(nerve.calls).toHaveLength(3);
   });
