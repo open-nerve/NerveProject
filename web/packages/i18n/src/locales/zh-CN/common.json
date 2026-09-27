@@ -498,6 +498,7 @@
       "description": "这是您在 Nerve 中显示的样子。"
     },
     "switch_account": {
+      "wrong_email": "邮箱地址不对？",
       "title": "切换账户",
       "description_before_email": "如果您无意中使用",
       "description_after_email": "注册了账户，可以在这里切换到其他账户。",

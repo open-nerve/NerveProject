@@ -498,6 +498,7 @@
       "description": "This is how you will appear in Nerve."
     },
     "switch_account": {
+      "wrong_email": "Wrong e-mail address?",
       "title": "Switch account",
       "description_before_email": "If you have signed up via",
       "description_after_email": "un-intentionally, you can switch your account to a different one from here.",
