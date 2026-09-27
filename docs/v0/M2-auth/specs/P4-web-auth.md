@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M2/P4 `web-auth` |
 | 日期 | 2026-09-27 |
-| 状态 | 进行中 |
+| 状态 | 已完成 |
 | 上级文档 | [M2 设计文档](../M2-design.md) 第 2（A1–A6、A10、A15、S2）、3.1、3.2、3.18、3.19、3.20（P4 各行）、7.1–7.6、7.9、8.3、8.6、8.7（P4）、9.4–9.6、12（P4）、13.1、§16 节；[Codex 设计评审](../reviews/M2-design-codex-adversarial-review.md) I-5、I-11、M-5、R4；[v0 总体设计](../../v0-design.md) 4.3 节 |
 | 前置交接 | [M0-P5-frontend-api-notes](../handoffs/M0-P5-frontend-api-notes.md)、[M0-P6-e2e-notes](../handoffs/M0-P6-e2e-notes.md) 的页面登录状态和 S2、[M1-P2-trim-content](../handoffs/M1-P2-trim-content.md)、[M1-P3-trim-platform](../handoffs/M1-P3-trim-platform.md) 的 CSRF、认证错误和实例字段、[M1-P4-router-native](../handoffs/M1-P4-router-native.md)；[P2 评审记录](../reviews/P2-sessions-review.md) 第 7 节的"真实反向代理后面的客户端 IP"（本 Phase 的处理见第 7 节） |
 | 计划 | [P4 plan](../plans/P4-web-auth.md) |
