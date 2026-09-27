@@ -114,25 +114,26 @@ class TokenManager {
   renew(sent: string): Promise<string | undefined>;
   signIn(tokens: AuthTokens): Promise<void>;
   signOut(): Promise<void>;
-  endSession(): Promise<void>;
-  handleStorageChange(newValue: string | null): void;
+  endSession(loginId: string | undefined): Promise<void>;
+  handleStorageChange(): void;
 }
 ```
 
 - **记录**：`nerve.auth = {refresh_token, login_id}`，一次 `setItem` 写入。`login_id` 是 16 个随机字节的十六进制，每次 `signIn`（登录、注册）新生成，续期不变。访问令牌只在内存里。
+- **改变会话的操作只作用于它被调用时的会话，读此刻的记录**：续期和 `signOut` 记下调用时标签页的 `login_id`，`endSession(loginId)` 由调用方给出被拒请求所属的会话；它们在锁下读出记录，是这个会话的才续期、退出、删除，不是的就跟随记录，不碰别的会话。`storage` 事件也一样：事件只说明记录变了，标签页读此刻的记录，不用事件带来的值，因为事件可能晚于之后的写入才到（例如晚于本标签页自己的登录）。
 - **启动**（`start`，只执行一次）：没有记录 → `signed-out`，不发任何请求（S2 断言未登录时只请求 `GET /api/v0/instance`）；有记录 → `starting`，第一次续期决定状态：200 `signed-in`；401 `signed-out`，删除记录；429、5xx、400、网络错误、超时 → `unavailable`，保留记录，按 `Retry-After` 或 1、2、4……最多 30 秒退避，到时自动重试；`retry()` 立即重试；等待期间另一个标签页改了会话时不再重试。
 - **访问令牌**：剩下不到 30 秒时先续期；剩余时间按本机收到响应的时刻加 `access_token_expires_in` 算，本机时钟的偏差不影响。
 - **续期**：
   - 同一个标签页、同一个会话（按 `login_id`）一次只有一个续期，同时的请求共用它；会话换了之后发出的请求等新会话自己的续期（第 3 节第 2 条）；
-  - 在锁下读出记录，不是本会话的就跟随它（`SessionChangedError`：发给旧会话的请求到此为止）。本会话指续期开始时记下的 `login_id`，不是标签页此刻的会话：续期等锁期间标签页可能已经跟随另一个标签页的登录，这时续期同样以 `SessionChangedError` 结束，请求不会带着新会话的令牌发出；
+  - 按上面的规则，本会话指续期开始时记下的 `login_id`，不是标签页此刻的会话：锁下的记录不是本会话的，续期就跟随它并以 `SessionChangedError` 结束，发给旧会话的请求到此为止，不会带着新会话的令牌发出（续期等锁期间标签页可能已经跟随了另一个标签页的登录）；
   - 续期请求 8 秒超时（`AbortController`），超时按网络错误处理；
   - 拿到响应后**再读一次记录**，`login_id` 变了就丢弃结果、不写回（不论 nerve 答 200 还是 401），跟随新记录（R4：没有 `navigator.locks` 时租约不是原子的，续期途中记录可能被另一个标签页的登录换掉）；
   - 200 → 写回新的刷新令牌，`login_id` 不变；**只有 401 结束会话**；429、5xx、400、网络错误、超时 → `SessionUnavailableError(retryAt)`，会话保留，退避期间不再请求。
 - **`renew(sent)`**（中间件在 401 之后调用）：已退出时给 `undefined`（第 3 节第 4 条）；另一个请求已经换到新令牌时直接给它；否则丢掉被拒的令牌，续期。
-- **写入都在锁下**：`signIn` 写新记录；`signOut` 在锁下读出最新的刷新令牌，用不挂中间件的客户端调 `POST /api/v0/auth/logout`（8 秒，尽力而为，失败也照样退出），再删除记录；`endSession`（重发仍 401 时）在锁下删除记录，记录已是别的会话时跟随它、不删。
-- **`storage` 事件**（`handleStorageChange`）：记录被删除且本标签页未退出 → 退出；`login_id` 变了（包括本标签页未登录时记录出现）→ 丢掉访问令牌，以新会话 `signed-in`，访问令牌由下一次续期取得；`login_id` 没变 → 不动。
+- **写入都在锁下**：`signIn` 写新记录；`signOut` 在锁下读出最新的刷新令牌，用不挂中间件的客户端调 `POST /api/v0/auth/logout`（8 秒，尽力而为，失败也照样退出），再删除记录，记录已是别的会话时跟随它、谁也不登出（另一个标签页的登录已换掉本会话的刷新令牌，没有可登出的）；`endSession(loginId)`（重发仍 401 时，`loginId` 是请求所属的会话）在锁下删除记录，记录已是别的会话时跟随它、不删。
+- **`storage` 事件**（`handleStorageChange()`，读此刻的记录）：记录不在了且本标签页未退出 → 退出；`login_id` 变了（包括本标签页未登录时记录出现）→ 丢掉访问令牌，以新会话 `signed-in`，访问令牌由下一次续期取得；`login_id` 没变 → 不动。
 - 订阅者（`useSession`、`store-context.tsx`）在每次状态变化后收到通知；`state` 每次是新对象。
-- 测试：`token-manager.test.ts`（32 个，单标签页）、`token-manager.session-change.test.ts`（1 个 × 两种锁 = 2 个）、`token-manager.tabs.test.ts`（10 个 × 两种锁 = 20 个），各测试的内容见 plan 的 Task 2、3，此外：`token-manager.test.ts` 另有续期、退出时 fetch 被拒绝（断网）的两个测试，续期保留会话和记录、给出 `SessionUnavailableError`，退出照样在本地退出；`token-manager.session-change.test.ts` 核对上面续期一条的规则：以 X 发出的请求，续期排在另一个标签页以 Y 登录之后，以 `SessionChangedError` 结束，拿不到 Y 的令牌。写入 `nerve.auth` 的每一处（续期写回、续期 401 时删除、登录、退出、结束会话）都有测试核对写入时 `RecordingLock.held` 为真，以续期写入或删除为结果的测试核对全部写入。测试替身：`SharedStorage`（多个标签页共用一份数据，一个标签页的写入在微任务里通知其他标签页，和浏览器一样不通知自己；没有改变数据的写入（同样的值、删除不存在的键）不通知任何标签页）、`RecordingLock`、`FakeNerve`（把每个请求停住，直到测试 `answer` 或 `fail`：`fail` 像断网时的浏览器那样让 fetch 以 `TypeError` 失败；`tokens()` 发出递增的 `at-n`、`rt-n`）、`gate()`、`settle`（假时钟上以 10 毫秒推进，20 秒为限）。
+- 测试：`token-manager.test.ts`（32 个，单标签页）、`token-manager.session-change.test.ts`（3 个 × 两种锁 = 6 个）、`token-manager.tabs.test.ts`（10 个 × 两种锁 = 20 个），各测试的内容见 plan 的 Task 2、3，此外：`token-manager.test.ts` 另有续期、退出时 fetch 被拒绝（断网）的两个测试，续期保留会话和记录、给出 `SessionUnavailableError`，退出照样在本地退出；`token-manager.session-change.test.ts` 核对上面的规则：另一个标签页以 Y 登录先拿到锁时，以 X 发出的请求的续期以 `SessionChangedError` 结束，拿不到 Y 的令牌；以 X 要求的退出谁也不登出，以 X 结束会话不删 Y 的记录，标签页都跟随 Y。`token-manager.tabs.test.ts` 的三个测试（登录等另一个标签页的续期、退出交出另一个标签页刚写的刷新令牌、另一个标签页只续期时不动）让事件晚于登录、退出、续期才送达，核对标签页读此刻的记录。写入 `nerve.auth` 的每一处（续期写回、续期 401 时删除、登录、退出、结束会话）都有测试核对写入时 `RecordingLock.held` 为真，以续期写入或删除为结果的测试核对全部写入。测试替身：`SharedStorage`（多个标签页共用一份数据，一个标签页的写入在微任务里通知其他标签页，事件只带键，和浏览器一样不通知自己；没有改变数据的写入（同样的值、删除不存在的键）不通知任何标签页；`hold()` 之后的事件留到 `deliver()` 才送达，像浏览器那样晚于之后的写入和锁的授予）、`RecordingLock`、`FakeNerve`（把每个请求停住，直到测试 `answer` 或 `fail`：`fail` 像断网时的浏览器那样让 fetch 以 `TypeError` 失败；`tokens()` 发出递增的 `at-n`、`rt-n`）、`gate()`、`settle`（假时钟上以 10 毫秒推进，20 秒为限）。
 
 ### 2.6 认证中间件（M2 设计 7.1；Codex M-5）
 
