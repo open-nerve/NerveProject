@@ -173,8 +173,10 @@ func TestStopCancelsAnAttemptUnderWay(t *testing.T) {
 	}
 }
 
-// stopWatcher records whether the context the client started with was
-// still live when the runner stopped the client.
+// stopWatcher records whether the context the client started with stayed
+// live while the runner stopped the client. It watches for a moment: a
+// runner that still cancels that context on Stop does so from a goroutine
+// of context.AfterFunc's, maybe just after the client's Stop began.
 type stopWatcher struct {
 	fakeClient
 	liveAtStop chan bool
@@ -184,7 +186,12 @@ func (s *stopWatcher) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	started := s.starts[len(s.starts)-1]
 	s.mu.Unlock()
-	s.liveAtStop <- started.Err() == nil
+	select {
+	case <-started.Done():
+		s.liveAtStop <- false
+	case <-time.After(100 * time.Millisecond):
+		s.liveAtStop <- true
+	}
 	return s.fakeClient.Stop(ctx)
 }
 
@@ -195,15 +202,20 @@ func (s *stopWatcher) Stop(ctx context.Context) error {
 // That context is released once the client has stopped.
 func TestStopLeavesTheStartedClientToItsOwnStop(t *testing.T) {
 	w := &stopWatcher{fakeClient: fakeClient{attempts: make(chan struct{}, 1)}, liveAtStop: make(chan bool, 1)}
-	r := newRunner(w, Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)})
+	var logs logBuffer
+	r := newRunner(w, Config{ShutdownTimeout: time.Second, Logger: newLogger(&logs)})
 	start(t, r, context.Background())
 	receive(t, w.attempts, 5*time.Second, "attempt to start")
+	// The client's Start may still be returning. A Stop now could land in
+	// the documented window before the runner stops watching for Stop, and
+	// cancel that context; the runner logs the start only after that window.
+	logs.waitFor(t, `msg="jobs started"`, 5*time.Second)
 
 	if err := stop(t, r, context.Background(), time.Second); err != nil {
 		t.Fatalf("Stop() = %v", err)
 	}
 	if !receive(t, w.liveAtStop, time.Second, "stop of the client") {
-		t.Error("Stop cancelled the context the client started with before calling the client's Stop")
+		t.Error("Stop cancelled the context the client started with instead of leaving the client to its own Stop")
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
