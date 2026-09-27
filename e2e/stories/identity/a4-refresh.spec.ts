@@ -107,7 +107,7 @@ for (const locks of [true, false]) {
       await tab.goto(`${shortLived.baseURL}/onboarding`);
       await expect(tab.getByText("Create your profile.")).toBeVisible();
       expect(await tab.evaluate(() => "locks" in navigator)).toBe(locks);
-      await tab.getByLabel("Name").fill("Ada");
+      await tab.getByLabel("Name", { exact: true }).fill("Ada");
     };
     await openProfileStep(tabA);
     await openProfileStep(tabB);

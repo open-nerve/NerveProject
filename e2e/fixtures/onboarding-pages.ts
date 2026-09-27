@@ -14,7 +14,7 @@ export async function saveProfileStep(page: Page): Promise<number> {
         response.request().method() === "PATCH" && new URL(response.url()).pathname === "/api/v0/me/profile",
       { timeout: 10_000 }
     ),
-    page.getByRole("button", { name: "Continue" }).click(),
+    page.getByRole("button", { name: "Continue", exact: true }).click(),
   ]);
   return saved.status();
 }

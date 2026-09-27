@@ -17,7 +17,7 @@ import { expect, test } from "../../fixtures/test";
  */
 async function takeProfileStep(page: Page, watch: PageWatch, db: Database, email: string): Promise<void> {
   await expect(page.getByText("Create your profile.")).toBeVisible();
-  await page.getByLabel("Name").fill("Ada");
+  await page.getByLabel("Name", { exact: true }).fill("Ada");
   expect(await saveProfileStep(page)).toBe(200);
 
   // The next step shows; nerve has the name and the one step done.
@@ -67,13 +67,13 @@ test("A10 (page): a name nerve refuses keeps the profile step, which says why un
   const stepsBefore = await onboardingStepsOf(db, email);
 
   // The rules of the name are nerve's (M2 design 4.2): a web address in it is refused, and the step stays.
-  await page.getByLabel("Name").fill("Ada example.com");
+  await page.getByLabel("Name", { exact: true }).fill("Ada example.com");
   const refused = await answerTo(page, "PATCH", "/api/v0/me", () =>
-    page.getByRole("button", { name: "Continue" }).click()
+    page.getByRole("button", { name: "Continue", exact: true }).click()
   );
   expect(refused.status()).toBe(422);
   const nameBlock = page
-    .locator("div", { has: page.getByLabel("Name") })
+    .locator("div", { has: page.getByLabel("Name", { exact: true }) })
     .filter({ has: page.locator("label") })
     .last();
   await expect(nameBlock.getByText("Must not contain a web address")).toBeVisible();
