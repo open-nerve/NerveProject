@@ -219,7 +219,7 @@ export const setPromiseToast = <ToastData,>(
   promise: Promise<ToastData>,
   options: PromiseToastOptions<ToastData>
 ): void => {
-  toastManager.promise(promise, {
+  const toasted = toastManager.promise(promise, {
     loading: {
       data: {
         title: options.loading ?? "Loading...",
@@ -245,4 +245,6 @@ export const setPromiseToast = <ToastData,>(
       },
     }),
   });
+  // the error toast is the handling of a rejection; the promise Base UI hands back rejects again, and no one holds it
+  void toasted.catch(() => undefined);
 };
