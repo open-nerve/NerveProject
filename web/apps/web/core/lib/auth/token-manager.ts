@@ -303,19 +303,31 @@ export class TokenManager {
     throw new SessionChangedError();
   }
 
-  /** Signed out when the record is gone, else the record's session, whose access token comes by a refresh. */
+  /**
+   * Signed out when the record is gone, else the record's session, whose access token comes by a refresh. The
+   * record of the session the tab is in already changes nothing: its access token stays, and so does its
+   * state, which that session's refreshes decide (a starting or unavailable session keeps its retry).
+   */
   #switchTo(record: AuthRecord | undefined): void {
     if (record === undefined) {
       this.#signedOut();
       return;
     }
-    this.#access = undefined;
+    if (record.login_id === this.#state.loginId) return;
+    this.#leaveSession();
     this.#set({ status: "signed-in", loginId: record.login_id });
   }
 
   #signedOut(): void {
-    this.#access = undefined;
+    this.#leaveSession();
     this.#set({ status: "signed-out" });
+  }
+
+  /** Forgets what belonged to the session the tab leaves: its access token and its back-off. */
+  #leaveSession(): void {
+    this.#access = undefined;
+    this.#failures = 0;
+    this.#retryAt = 0;
   }
 
   #set(state: SessionState): void {

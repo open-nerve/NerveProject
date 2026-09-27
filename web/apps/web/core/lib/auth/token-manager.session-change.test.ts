@@ -5,16 +5,19 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordingLock, SharedStorage } from "./fake-browser";
-import { FakeNerve, json } from "./fake-nerve";
+import { FakeNerve, json, problem } from "./fake-nerve";
 import { track, until } from "./fake-time";
 import { leaseLock, webLock } from "./refresh-lock";
-import { AUTH_KEY, SessionChangedError, TokenManager } from "./token-manager";
+import { AUTH_KEY, SessionChangedError, SessionUnavailableError, TokenManager } from "./token-manager";
 
 // An operation that changes the session acts only on the session it was asked for (M2 design 7.1): a
 // refresh, a sign-out or the end of a session asked for as X, whose turn at the lock comes after another
 // tab signed in as Y, never refreshes, logs out or removes Y's session, although the tab has followed Y by
-// the time it holds the lock. With both kinds of lock, as in token-manager.tabs.test.ts; the storage events
-// are held back and reach the tabs as A's task gets the lock, so the order does not rest on the fake's.
+// the time it holds the lock. What the tab keeps belongs to its session: following the record of the session
+// it is in already changes nothing, neither its access token nor its state, and a session it follows starts
+// without the back-off of the one it left. With both kinds of lock, as in token-manager.tabs.test.ts; where
+// the order matters, the storage events are held back and reach the tabs as A's task gets the lock, so it
+// does not rest on the fake's.
 
 const REFRESH = "/api/v0/auth/refresh";
 const LOGOUT = "/api/v0/auth/logout";
@@ -42,8 +45,9 @@ function browser(kind: Kind) {
       kind === "navigator.locks"
         ? webLock(locks)
         : leaseLock({ storage: view, onStorage: view.onStorage, now: () => Date.now(), tabId: id });
-    // The tab's session each time the lock is granted to one of its tasks.
+    // The tab's session each time the lock is granted to one of its tasks, and each change of its state.
     const grantedAs: (string | undefined)[] = [];
+    const changes: string[] = [];
     const tm: TokenManager = new TokenManager({
       storage: view,
       lock: {
@@ -58,10 +62,11 @@ function browser(kind: Kind) {
       now: () => Date.now(),
       randomHex: (bytes) => `${++logins}`.padStart(bytes * 2, "b"),
     });
+    tm.subscribe(() => changes.push(`${tm.state.status} ${tm.state.loginId ?? "-"}`));
     view.onStorage((key) => {
       if (key === AUTH_KEY) tm.handleStorageChange();
     });
-    return { tm, grantedAs };
+    return { tm, grantedAs, changes };
   };
   /**
    * Tab A, started as X with a 20 s token: it refreshes before every request. Each time one of its tasks
@@ -75,6 +80,7 @@ function browser(kind: Kind) {
     nerve.calls[0]?.answer(json(200, nerve.tokens(20)));
     await until(() => started.settled, "A's start");
     a.grantedAs.length = 0;
+    a.changes.length = 0;
     return a;
   };
   const stored = () => JSON.parse(storage.data.get(AUTH_KEY) ?? "null") as unknown;
@@ -109,8 +115,10 @@ describe.each<Kind>(["navigator.locks", "the lease"])("with %s", (kind) => {
     await until(() => token.settled, "A's token");
     expect(token.error).toBeInstanceOf(SessionChangedError);
     expect(nerve.to(REFRESH)).toHaveLength(1);
-    // A follows B's session, whose record stays as B wrote it.
+    // A follows B's session, whose record stays as B wrote it; the refresh found the session A follows
+    // already, which changes nothing.
     expect(a.tm.state).toEqual({ status: "signed-in", loginId: Y });
+    expect(a.changes).toEqual([`signed-in ${Y}`]);
     expect(stored()).toEqual({ refresh_token: "rt-y", login_id: Y });
   });
 
@@ -136,6 +144,7 @@ describe.each<Kind>(["navigator.locks", "the lease"])("with %s", (kind) => {
       { status: "signed-in", loginId: Y },
       { status: "signed-in", loginId: Y },
     ]);
+    expect(a.changes).toEqual([`signed-in ${Y}`]);
   });
 
   it("keeps Y's session when a request of X, refused again, ends X's after another tab's sign-in as Y", async () => {
@@ -161,6 +170,96 @@ describe.each<Kind>(["navigator.locks", "the lease"])("with %s", (kind) => {
       { status: "signed-in", loginId: Y },
       { status: "signed-in", loginId: Y },
     ]);
+    expect(a.changes).toEqual([`signed-in ${Y}`]);
     expect(nerve.calls).toHaveLength(1);
+  });
+
+  it("keeps the access token of the session it follows already when ending X's session finds Y's record", async () => {
+    const { nerve, tab, tabA } = browser(kind);
+    const a = await tabA();
+    // B signs in as Y; A follows, and a request of A's, made as Y, gets Y's token by a refresh.
+    const b = tab("B");
+    const signedIn = track(b.tm.signIn({ ...nerve.tokens(), refresh_token: "rt-y" }));
+    await until(() => signedIn.settled && a.tm.state.loginId === Y, "B's sign-in, and A following Y");
+    const token = track(a.tm.accessToken());
+    await until(() => nerve.calls.length === 2, "A's refresh of Y");
+    expect(nerve.calls[1]?.body).toEqual({ refresh_token: "rt-y" });
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => token.settled, "Y's token");
+    expect(token.value).toBe("at-3");
+
+    // A request of A's made as X, refused again, ends X's session: the record is Y's, which A follows already.
+    const ended = track(a.tm.endSession(X));
+    await until(() => ended.settled, "the end of X's session");
+    expect(ended.value).toBe(false);
+
+    // A's next request, as Y, goes with the token A has: no other refresh.
+    const next = track(a.tm.accessToken());
+    await until(() => next.settled, "the next token");
+    expect(next.value).toBe("at-3");
+    expect(nerve.to(REFRESH)).toHaveLength(2);
+    expect(a.tm.state).toEqual({ status: "signed-in", loginId: Y });
+    expect(a.changes).toEqual([`signed-in ${Y}`]);
+  });
+
+  it("leaves X's back-off behind when it follows another tab's sign-in as Y", async () => {
+    const { storage, nerve, tab } = browser(kind);
+    const a = tab("A");
+    void a.tm.start();
+    await until(() => nerve.calls.length === 1, "A's first refresh");
+    nerve.calls[0]?.answer(problem(503, "server_busy", { "Retry-After": "30" }));
+    await until(() => a.tm.state.status === "unavailable", "unavailable");
+    expect((a.tm.state.retryAt ?? 0) - Date.now()).toBeGreaterThan(29_000);
+
+    // Another tab signs in as Y; A follows, and a request of A's, as Y, asks for Y's token at once.
+    storage.write(AUTH_KEY, JSON.stringify({ refresh_token: "rt-y", login_id: Y }));
+    await until(() => a.tm.state.loginId === Y, "A following Y");
+    const token = track(a.tm.accessToken());
+    await until(() => token.settled || nerve.calls.length === 2, "Y's token, or a refresh");
+    expect(nerve.calls[1]?.body).toEqual({ refresh_token: "rt-y" });
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => token.settled, "Y's token");
+    expect(token.value).toBe("at-1");
+    expect(a.tm.state).toEqual({ status: "signed-in", loginId: Y });
+  });
+
+  it("counts Y's back-off from Y's first failure, not from X's", async () => {
+    const { storage, nerve, tab } = browser(kind);
+    const a = tab("A");
+    void a.tm.start();
+    await until(() => nerve.calls.length === 1, "A's first refresh");
+    nerve.calls[0]?.answer(problem(503, "server_busy", { "Retry-After": "30" }));
+    await until(() => a.tm.state.status === "unavailable", "unavailable");
+
+    storage.write(AUTH_KEY, JSON.stringify({ refresh_token: "rt-y", login_id: Y }));
+    await until(() => a.tm.state.loginId === Y, "A following Y");
+    const token = track(a.tm.accessToken());
+    await until(() => nerve.calls.length === 2, "A's refresh of Y");
+    const failedAt = Date.now();
+    nerve.calls[1]?.fail();
+    await until(() => token.settled, "the refresh's end");
+    // The first failure of Y's session: 1 s, where X's count would make it 2 s.
+    expect(token.error).toEqual(new SessionUnavailableError(failedAt + 1_000));
+  });
+
+  it("keeps an unavailable session and its retry when ending another session finds its record", async () => {
+    const { nerve, tab } = browser(kind);
+    const a = tab("A");
+    void a.tm.start();
+    await until(() => nerve.calls.length === 1, "A's first refresh");
+    nerve.calls[0]?.answer(problem(503, "server_busy", { "Retry-After": "5" }));
+    await until(() => a.tm.state.status === "unavailable", "unavailable");
+    const unavailable = a.tm.state;
+
+    // The record is X's, the session A is in: following it changes nothing, and the retry comes as planned.
+    const ended = track(a.tm.endSession(Y));
+    await until(() => ended.settled, "the end of Y's session");
+    expect(ended.value).toBe(false);
+    expect(a.tm.state).toBe(unavailable);
+    await until(() => nerve.calls.length === 2, "the retry");
+    expect(nerve.calls[1]?.body).toEqual({ refresh_token: "rt-0" });
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => a.tm.state.status === "signed-in", "X's session");
+    expect(a.tm.state).toEqual({ status: "signed-in", loginId: X });
   });
 });
