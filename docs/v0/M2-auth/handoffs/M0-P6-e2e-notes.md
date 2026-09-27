@@ -90,3 +90,13 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：页面的登录状态（M2/P4）；S2 的断言（M2/P4）；fixture 写法的延伸（M4、M5、M8）。
 
 来源：[M2/P3b spec](../specs/P3b-jobs-and-admin.md) 第 7 节。
+
+## 处理结果（M2/P4）
+
+- **页面的登录状态**（完成）：fixture `signedInPage(tokens, baseURL?)` 给出一个已经登录、还没有加载任何东西的页面：页面第一次加载时，在它的任何脚本运行之前，`e2e/fixtures/auth.ts` 的 `signInContext` 把一条新的 `nerve.auth` 记录写进 localStorage；之后的加载、刷新和同一上下文里的其他标签页不再写，页面自己续期、退出。A4、A5、A6 的页面版本和 A10 整页加载的那个页面测试用它；A1–A3、A15 的页面版本和 A10 的另一个页面测试（注册之后在应用内进入 `/onboarding`）从登录页、注册页开始。A6 的切换 ① 用同一文件的 `writeRecord` 像令牌管理器一样在锁下换上另一个账户的记录。页面版本调用接口版本的同一组断言函数（`expectRegistered`、`expectSignedIn`、`expectRefreshed`、`expectRevoked`、`accountOf` 等）。
+- **S2**（完成）：`e2e/fixtures/browser.ts` 的 `watchPage` 记录页面的接口请求、失败的接口请求、发往旧接口（`/api/v0` 之外）的请求、未处理的异常、控制台的错误和警告、CSP 违规；同一文件的 `expectQuietConsole` 先让页面写一条探针错误和一条探针警告、要求收到（`watchPage` 没有接上控制台时不会空过），再断言控制台没有别的错误和警告。S2 断言未登录的页面只请求 `GET /api/v0/instance`，失败的接口请求、未处理的异常和 CSP 违规都为空，控制台没有错误，也没有警告（原文"是否断言控制台没有错误"：断言；深链接点名允许一条第三方的警告：它的页面模块加载编辑器，`is-emoji-supported` 反复读画布，Chromium 提示 `willReadFrequently`）；首页带 `Content-Security-Policy`；深链接跳到带 `next_path` 的登录页。S2 不再用 `networkidle`，改为等待具体的状态（原文的建议）：`GET /api/v0/instance` 的回答和登录页的"Go to workspace"按钮。页面不读回答的请求一直算在途中，`networkidle` 会等到测试超时，而不是在断言上失败（P4 Task 12 实测）。A2、A4、A5、A6 和 A10 的两个页面测试也用 `watchPage`。
+- **新等待的期限**：页面故事的 `waitForResponse` 都带 `{ timeout: 10_000 }`（S2；A2 的 `showSignIn`；`e2e/fixtures/auth-pages.ts` 的 `submitSignIn`、`submitSignUp`；`e2e/fixtures/onboarding-pages.ts` 的 `saveProfileStep`）；A4 的 `holdFirstRefresh` 最多扣住第一个续期请求 1 秒，等访问令牌过期的 `expect.poll` 以 10 秒为限；`expect` 的断言（包括 `expectQuietConsole` 的 `expect.poll`）受 Playwright `expect` 的超时约束（默认 5 秒）；导航、点击和 `page.evaluate` 没有自己的期限，由测试的超时（默认 30 秒，`nerveWith` 每起一个 nerve 再加它的预算）兜底，超时就失败，不会挂住。
+
+仍未处理，状态保持 `open`：fixture 写法的延伸（M4、M5、M8），由收尾转交给这些 M。
+
+来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。
