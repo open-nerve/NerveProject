@@ -99,18 +99,16 @@ export const IssueReaction = observer(function IssueReaction(props: TIssueReacti
   };
 
   // Transform reactions data to Propel EmojiReactionType format
-  const reactions: EmojiReactionType[] = useMemo(() => {
-    if (!reactionIds) return [];
-
-    return Object.keys(reactionIds)
-      .filter((reaction) => reactionIds[reaction]?.length > 0)
-      .map((reaction) => ({
-        emoji: stringToEmoji(reaction),
-        count: reactionIds[reaction].length,
-        reacted: userReactions.includes(reaction),
-        users: getReactionUsers(reaction),
-      }));
-  }, [reactionIds, userReactions]);
+  const reactions: EmojiReactionType[] = reactionIds
+    ? Object.keys(reactionIds)
+        .filter((reaction) => reactionIds[reaction]?.length > 0)
+        .map((reaction) => ({
+          emoji: stringToEmoji(reaction),
+          count: reactionIds[reaction].length,
+          reacted: userReactions.includes(reaction),
+          users: getReactionUsers(reaction),
+        }))
+    : [];
 
   const handleReactionClick = (emoji: string) => {
     if (disabled) return;

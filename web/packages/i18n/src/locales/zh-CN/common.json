@@ -487,5 +487,22 @@
   "enter_your_first_name": "输入您的名",
   "enter_your_last_name": "输入您的姓",
   "enter_your_display_name": "输入您的显示名称",
-  "cover_image_alt": "封面图片"
+  "cover_image_alt": "封面图片",
+  "cover_numbered": "封面 {number}",
+  "cover_preview": "封面预览",
+  "continue": "继续",
+  "enter_your_full_name": "输入您的全名",
+  "onboarding": {
+    "profile": {
+      "title": "创建您的个人资料。",
+      "description": "这是您在 Nerve 中显示的样子。"
+    },
+    "switch_account": {
+      "title": "切换账户",
+      "description_before_email": "如果您无意中使用",
+      "description_after_email": "注册了账户，可以在这里切换到其他账户。",
+      "switch": "切换账户",
+      "switching": "正在切换..."
+    }
+  }
 }

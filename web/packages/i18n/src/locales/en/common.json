@@ -487,5 +487,22 @@
   "enter_your_first_name": "Enter your first name",
   "enter_your_last_name": "Enter your last name",
   "enter_your_display_name": "Enter your display name",
-  "cover_image_alt": "Cover image"
+  "cover_image_alt": "Cover image",
+  "cover_numbered": "Cover {number}",
+  "cover_preview": "Cover preview",
+  "continue": "Continue",
+  "enter_your_full_name": "Enter your full name",
+  "onboarding": {
+    "profile": {
+      "title": "Create your profile.",
+      "description": "This is how you will appear in Nerve."
+    },
+    "switch_account": {
+      "title": "Switch account",
+      "description_before_email": "If you have signed up via",
+      "description_after_email": "un-intentionally, you can switch your account to a different one from here.",
+      "switch": "Switch account",
+      "switching": "Switching..."
+    }
+  }
 }
