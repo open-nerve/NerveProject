@@ -49,7 +49,7 @@ func TestOnlyPagesHaveAContentSecurityPolicy(t *testing.T) {
 		_ = res.Body.Close()
 
 		csp := res.Header.Get("Content-Security-Policy")
-		if got := strings.HasPrefix(csp, "default-src 'self'; script-src 'self';"); got != tt.page {
+		if page := strings.HasPrefix(csp, "default-src 'self'; script-src 'self';"); page != tt.page || !tt.page && csp != "" {
 			t.Errorf("GET %s (%d): Content-Security-Policy = %q, want a page's policy: %v", tt.path, res.StatusCode, csp, tt.page)
 		}
 	}
