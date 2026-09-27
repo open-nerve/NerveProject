@@ -52,6 +52,12 @@ func TestSQLCScopeReportsViolations(t *testing.T) {
 			e[1].schema = append(e[1].schema, "migrations/sql/00021_asset_users_avatar.sql")
 			return e, m, mods
 		}, "migration 00021_asset_users_avatar.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"ALTER TABLE of an unlogged table in a file of another module", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "CREATE UNLOGGED TABLE asset_uploads (id uuid);\n"
+			m = append(m, migrationFile{"00022_identity_asset_uploads.sql", "-- +goose Up\nALTER TABLE asset_uploads SET LOGGED;\n"})
+			e[0].schema = append(e[0].schema, "migrations/sql/00022_identity_asset_uploads.sql")
+			return e, m, mods
+		}, "migration 00022_identity_asset_uploads.sql alters asset_uploads, which module asset creates: the migration belongs to asset"},
 		{"ALTER TABLE of an unknown table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
 			m[0].sql = "CREATE TABLE people (id uuid);"
 			return e, m, mods
