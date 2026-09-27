@@ -107,9 +107,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
 
   const completeStep = async (workspaceId: string) => {
     if (!user) return;
-    await updateUserProfile({
-      last_workspace_id: workspaceId,
-    });
+    // the workspace opened last is a best-effort preference: the onboarding goes on whether nerve saves it or not
+    await updateUserProfile({ last_workspace_id: workspaceId }).catch(() => undefined);
     await fetchCurrentUserSettings();
   };
 

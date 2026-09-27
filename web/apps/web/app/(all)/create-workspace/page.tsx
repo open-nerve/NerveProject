@@ -52,7 +52,9 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   };
 
   const onSubmit = async (workspace: IWorkspace) => {
-    await updateUserProfile({ last_workspace_id: workspace.id }).then(() => navigate(`/${workspace.slug}`));
+    // the workspace opened last is a best-effort preference: the new workspace opens whether nerve saves it or not
+    await updateUserProfile({ last_workspace_id: workspace.id }).catch(() => undefined);
+    await navigate(`/${workspace.slug}`);
   };
 
   return (
