@@ -4,22 +4,16 @@
  * See the LICENSE file for details.
  */
 
-import { Combobox } from "@headlessui/react";
+import { Listbox } from "@headlessui/react";
 
-import React, { createContext, useCallback, useContext, useRef, useState } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { usePopper } from "react-popper";
-import { useOutsideClickDetector } from "@nerve/hooks";
 import { ChevronDownOutline, TickOutline } from "@makeplane/propel/icons";
-// hooks
-import { useDropdownKeyDown } from "../hooks/use-dropdown-key-down";
 // helpers
 import { cn } from "../utils";
 // types
 import type { ICustomSelectItemProps, ICustomSelectProps } from "./helper";
-
-// Context to share the close handler with option components
-const DropdownContext = createContext<() => void>(() => {});
 
 function CustomSelect(props: ICustomSelectProps) {
   const {
@@ -41,60 +35,40 @@ function CustomSelect(props: ICustomSelectProps) {
   } = props;
   // states
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-  const [isOpen, setIsOpen] = useState(false);
-  // refs
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
 
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "bottom-start",
   });
 
-  const openDropdown = useCallback(() => {
-    setIsOpen(true);
-    if (referenceElement) referenceElement.focus();
-  }, [referenceElement]);
-
-  const closeDropdown = useCallback(() => setIsOpen(false), []);
-  const handleKeyDown = useDropdownKeyDown(openDropdown, closeDropdown, isOpen);
-  useOutsideClickDetector(dropdownRef, closeDropdown);
-
-  const toggleDropdown = useCallback(() => {
-    if (isOpen) closeDropdown();
-    else openDropdown();
-  }, [closeDropdown, isOpen, openDropdown]);
-
   return (
-    <DropdownContext.Provider value={closeDropdown}>
-      <Combobox
-        as="div"
-        ref={dropdownRef}
-        tabIndex={tabIndex}
-        value={value}
-        onChange={(val) => {
-          onChange?.(val);
-          closeDropdown();
-        }}
-        className={cn("relative flex-shrink-0 text-left", className)}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-      >
+    // A select, so Headless UI's Listbox, whose open state is the only one. Its button opens the list (a click,
+    // Space, the arrows; Enter submits an enclosing form, as a native select's does), and the list takes the focus:
+    // the arrows move, Enter or Space picks, typing jumps to a name. A pick, Escape, Tab or a click outside closes it.
+    <Listbox
+      as="div"
+      tabIndex={tabIndex}
+      value={value}
+      onChange={onChange}
+      className={cn("relative flex-shrink-0 text-left", className)}
+      disabled={disabled}
+    >
+      {({ open }) => (
         <>
           {customButton ? (
-            <Combobox.Button as={React.Fragment}>
+            <Listbox.Button as={React.Fragment}>
               <button
                 ref={setReferenceElement}
                 type="button"
                 className={`flex items-center justify-between gap-1 rounded text-11 ${
                   disabled ? "cursor-not-allowed text-secondary" : "cursor-pointer hover:bg-layer-transparent-hover"
                 } ${customButtonClassName}`}
-                onClick={toggleDropdown}
               >
                 {customButton}
               </button>
-            </Combobox.Button>
+            </Listbox.Button>
           ) : (
-            <Combobox.Button as={React.Fragment}>
+            <Listbox.Button as={React.Fragment}>
               <button
                 ref={setReferenceElement}
                 type="button"
@@ -108,23 +82,23 @@ function CustomSelect(props: ICustomSelectProps) {
                   },
                   buttonClassName
                 )}
-                onClick={toggleDropdown}
               >
                 {label}
                 {!noChevron && !disabled && <ChevronDownOutline className="h-3 w-3" aria-hidden="true" />}
               </button>
-            </Combobox.Button>
+            </Listbox.Button>
           )}
-        </>
-        {isOpen &&
-          createPortal(
-            <Combobox.Options as="ul" data-prevent-outside-click>
-              <div
+          {open &&
+            createPortal(
+              // Popper places the list itself, whose ref Headless UI forwards.
+              <Listbox.Options
+                as="ul"
+                data-prevent-outside-click
+                ref={setPopperElement}
                 className={cn(
                   "z-30 my-1 min-w-48 overflow-y-scroll rounded-md border-[0.5px] border-subtle-1 bg-surface-1 px-2 py-2.5 text-11 whitespace-nowrap focus:outline-none",
                   optionsClassName
                 )}
-                ref={setPopperElement}
                 style={styles.popper}
                 {...attributes.popper}
               >
@@ -138,42 +112,31 @@ function CustomSelect(props: ICustomSelectProps) {
                 >
                   {children}
                 </div>
-              </div>
-            </Combobox.Options>,
-            document.body
-          )}
-      </Combobox>
-    </DropdownContext.Provider>
+              </Listbox.Options>,
+              document.body
+            )}
+        </>
+      )}
+    </Listbox>
   );
 }
 
 function Option(props: ICustomSelectItemProps) {
   const { children, value, className } = props;
-  const closeDropdown = useContext(DropdownContext);
-
-  const handleClick = useCallback(() => {
-    // Close dropdown for both new and already-selected options.
-    // Use setTimeout to ensure HeadlessUI's onChange handler fires first for new selections.
-    // For already-selected options, this ensures the dropdown closes since onChange won't fire.
-    setTimeout(() => {
-      closeDropdown();
-    }, 0);
-  }, [closeDropdown]);
 
   return (
-    <Combobox.Option
+    <Listbox.Option
       as="li"
       value={value}
-      className={({ active }) =>
+      className={({ focus }) =>
         cn(
           "flex cursor-pointer items-center justify-between gap-2 truncate rounded-sm px-1 py-1.5 text-secondary select-none",
           {
-            "bg-layer-transparent-hover": active,
+            "bg-layer-transparent-hover": focus,
           },
           className
         )
       }
-      onClick={handleClick}
     >
       {({ selected }) => (
         <div className="flex w-full items-center justify-between gap-2">
@@ -181,7 +144,7 @@ function Option(props: ICustomSelectItemProps) {
           {selected && <TickOutline className="h-3.5 w-3.5 flex-shrink-0" />}
         </div>
       )}
-    </Combobox.Option>
+    </Listbox.Option>
   );
 }
 

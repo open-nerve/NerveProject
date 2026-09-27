@@ -35,7 +35,7 @@
 
 | 路径 | 内容 | Task |
 |---|---|---|
-| `web/packages/ui/src/dropdowns/{custom-select,custom-search-select,combo-box}.tsx`、`web:core/components/dropdowns/date.tsx` | 下拉框的定位和打开状态 | 1 |
+| `web/packages/ui/src/dropdowns/{custom-select,custom-search-select,combo-box,helper}.tsx`、`web:core/components/dropdowns/date.tsx` | 下拉框的定位和打开状态 | 1 |
 | `web:core/services/api-token.service.ts`、`web:core/store/user/{api-token.store,api-token.store.test,index}.ts`、`web:core/store/workspace/index.ts`（`api-token.store.ts` 删除）、`web:core/lib/auth/fake-nerve.ts`、`web:core/lib/store-context.test.ts` | PAT 的 service 和 store | 2 |
 | `web:core/components/api-token/`、`web:core/components/settings/profile/content/pages/api-tokens.tsx`、`web:core/components/ui/loader/settings/api-token.tsx`、`web:core/hooks/store/user/` | api-tokens 页 | 3 |
 | `web/packages/services/`（`api.service.ts`、`developer/` 删除）、`web/packages/types/src/{api_token,timezone}.ts`（删除）、`web/packages/constants/src/fetch-keys.ts`、`pnpm-lock.yaml` | `@nerve/services` 和 Plane 的类型 | 3、6 |
@@ -59,10 +59,20 @@
 ### 2.3 下拉框（M2 设计 7.7；M1-closeout 交接）
 
 - **根因**（原型中查明，附录 A 的 E1）：Headless UI 2.2.10 的 `Combobox.Options` 在渲染时把自己唯一的子元素克隆一份，换上自己的 ref（它的 `Frozen` 组件）。Plane 把 react-popper 的 `ref={setPopperElement}`、`style`、`attributes` 放在这个子元素上，这个 ref 从来没有被调用，`usePopper` 没有元素可定位，列表停在默认的 `position: absolute; left: 0; top: 0`，即页面的左上角（列表经 `createPortal` 挂在 `document.body` 下）。与界面语言无关：M1 收尾交接写的是 zh-CN，英文下一样（在 `cec4ec9` 的构建上实测：列表的 `style` 是 `left: 0px; top: 0px`，左上角在 (0, 4)，4 像素是列表自己的上边距）。
-- **修复**：把 popper 的 ref、样式、属性和原来子元素的 `className` 放在 `Combobox.Options` 本身（`as="ul"`），子元素只留内容；Headless UI 转发这个 ref。修在三个组件：`CustomSelect`（主题、语言、每周第一天、api-tokens 的有效期）、`CustomSearchSelect`（时区）、`DateDropdown`（自定义有效期的日历）。它们都在 P5 的页面上。同样写法的其他 12 处在 M3–M6 的页面上，交给接上它们的 M（第 7 节）。
-- **`CustomSearchSelect` 不设模态**（`modal={false}`）：Headless UI 2.2 的模态列表对"不包含输入框、按钮、列表的祖先的兄弟"设 `inert`；搜索框在列表里，于是列表的选项被设为 inert，点不了。Plane 的结构同样如此（原型实测：默认的 `modal` 下被设为 inert 的正是选项，`modal={false}` 下没有）。列表修到按钮旁之后，时区的选项才第一次真正可以点（A8）。`CustomSelect`、`DateDropdown` 没有输入框，保持默认。
-- **打开状态跟随 Headless UI**：三个组件都有自己的 `isOpen`，Headless UI 另有一份。按钮上的 Escape 由 Headless UI 处理并停止冒泡，只关了它自己的一份：`CustomSelect` 的列表消失而 `isOpen` 仍为真，下一次点击只把它设为假，要点第二次才打开；`CustomSearchSelect`、`DateDropdown` 的列表是 `static` 的，Escape 只把焦点移到搜索框，列表不关。三个组件把 `onClose` 交给 `Combobox`（`ComboDropDown` 加上透传的 `onClose` prop），Headless UI 自己关闭时组件的状态跟着关（第 3 节第 3 条）。
-- **oxlint**：三个组件外层 `div` 的 `jsx_a11y/no-static-element-interactions` 和选项的 `jsx_a11y/click-events-have-key-events` 用带理由的禁用注释：按键由 Headless UI 的按钮和选项处理，外层只看到冒泡上来的按键；选项的点击只负责关闭列表（第 3 节第 11 条）。
+- **修复**：把 popper 的 ref、样式、属性和原来子元素的 `className` 放在列表元素本身（`Combobox.Options`，`CustomSelect` 改用 `Listbox` 之后是 `Listbox.Options`；`as="ul"`），子元素只留内容；Headless UI 转发这个 ref。修在三个组件：`CustomSelect`（主题、语言、每周第一天、api-tokens 的有效期）、`CustomSearchSelect`（时区）、`DateDropdown`（自定义有效期的日历）。它们都在 P5 的页面上。同样写法的其他 12 处在 M3–M6 的页面上，交给接上它们的 M（第 7 节）。
+- **`CustomSearchSelect` 不设模态**（`modal={false}`）：Headless UI 2.2 的模态列表对"不包含输入框、按钮、列表的祖先的兄弟"设 `inert`；搜索框在列表里，于是列表的选项被设为 inert，点不了。Plane 的结构同样如此（原型实测：默认的 `modal` 下被设为 inert 的正是选项，`modal={false}` 下没有）。列表修到按钮旁之后，时区的选项才第一次真正可以点（A8）。`CustomSelect`（`Listbox`）、`DateDropdown` 没有输入框，保持默认的模态：列表打开时页面其余部分 inert、不能滚动。
+- **打开状态**：Plane 的三个组件都有自己的 `isOpen`，Headless UI 另有一份，列表按组件的一份渲染，两份不同步。键盘打不开列表：Headless UI 的按钮处理 Enter、空格、方向键并停止冒泡，只打开它自己的一份。按钮上的 Escape 只关 Headless UI 的一份：`CustomSelect` 要点两次才再打开，`CustomSearchSelect`、`DateDropdown` 的列表是 `static` 的，关不掉（第 3 节第 3 条）。现在：
+  - **`CustomSelect` 改用 Headless UI 的 `Listbox`**，打开状态只有它的一份：列表按 `Listbox` 的 `open`（render prop）渲染；组件的 `isOpen`、外层的按键处理、点击外部的检测、选项上只为关闭列表的点击处理都删除。没有搜索框的选择正是 `Listbox` 的用途：`Combobox` 只在输入框里处理方向键和 Enter，它的按钮固定 `tabIndex: -1`，没有输入框时键盘既到不了按钮，也移动不了、选不了选项；点击打开之后焦点不在任何控件上，Escape 无处可去。`Listbox` 的按钮在 Tab 顺序里；点击、空格、上下方向键打开，打开后焦点在列表上：方向键移动，Enter 或空格选中并关闭，输入字母跳到对应的名称；Escape、Tab、点击外部关闭，Escape 之后焦点回到按钮。按钮上的 Enter 不打开列表：在表单里它提交表单，与原生 `select` 相同（Headless UI 2.2 的 `ListboxButton`；api-tokens 创建弹窗的有效期按钮上按 Enter 即提交）。角色仍是 `listbox`、`option`，公开的 props 不变，使用者不改。
+  - **`CustomSearchSelect` 仍用 `Combobox`**，打开状态只有 Headless UI 的一份：列表按 `Combobox` 的 `open` 渲染；组件的 `isOpen`、外层的按键处理、点击外部的检测、选项上的点击处理都删除。搜索框在列表里，列表打开时它取得焦点（ref 回调，不滚动），于是输入、方向键、Enter、Escape 都由 Headless UI 的输入框处理：点击按钮时 Headless UI 在 `pointerdown` 上 `preventDefault`，没有这一步焦点不在任何控件上。其余：
+    - `onClose` 交给 `Combobox`；Headless UI 没有"打开"的回调，调用方的 `onOpen` 由随列表挂载的元素调用一次；
+    - `defaultOpen`：`Combobox` 没有这个属性，组件挂载之后点一次自己的按钮（ref 保证只点一次）。它的使用者是 M4 的富筛选，没有在浏览器中核对（第 5、7 节）；
+    - `Combobox` 在单选时把清空输入框当作选了 `null`。这里的输入框只筛选选项，所以 `null` 不交给调用方，清空搜索不改值（Plane 原来清空时区的搜索就发出 `PATCH /api/v0/me`，`user_timezone` 为 `null`）；
+    - 搜索框的占位、没有结果、加载中的文字是可选的 prop（`searchPlaceholder`、`noResultsMessage`、`loadingMessage`），默认是原来的英文；时区选择由 Task 6 传入 `t()` 的文案；
+    - 已知的限制：按钮不在 Tab 顺序里（Headless UI 的 `Combobox.Button` 固定 `tabIndex: -1`；`Combobox` 以常显的输入框为 Tab 停点，这里的搜索框却在列表里）。P5 之前也是这样。修法是结构性的（像 Popover 那样的按钮，`Combobox` 放在它的面板里），交给 M3（第 5、7 节）。
+  - **`DateDropdown` 保持两份状态**：组件的 `isOpen` 决定是否渲染日历（`static`）；Headless UI 自己关闭时（按钮上的 Escape、点击外部），经 `ComboDropDown` 新加的 `onClose` prop 让 `isOpen` 跟着关；外层的按键处理保留（日历里的 Escape、Tab 关闭日历）。原因：`Combobox` 没有让组件关闭它的办法，而选中日期之后要关闭；它的主要使用者是 M4 的列表和表格单元格（带懒渲染），改成只有一份状态的结构（例如 Popover）会动到它们，现在核对不了。已知的限制，交给 M4（第 5、7 节）：
+    - 键盘打不开日历，Tab 也到不了它的按钮（Headless UI 的按钮固定 `tabIndex: -1`，它处理 Enter、方向键并停止冒泡，只打开自己的一份）。P5 之前也是这样；
+    - 两份状态会走散：日历里按 Tab 关闭时，Headless UI 的一份仍是打开的；下一次点击按钮时它的一份关、组件的一份开，日历显示着，这时点另一个下拉框，两个列表同时开着（浏览器中查明）。
+- **oxlint**：`CustomSelect`、`CustomSearchSelect` 的 5 条警告随产生它们的代码删除（外层 `div` 的 `jsx_a11y/no-static-element-interactions`、选项的 `jsx_a11y/click-events-have-key-events`、`onClose && onClose()` 的 `no-unused-expressions`），没有禁用注释。`DateDropdown` 外层 `div` 的 `jsx_a11y/no-static-element-interactions` 用带理由的禁用注释：它不是控件，只接收从日历和按钮冒泡上来的按键（第 3 节第 11 条）。上限 ui 25 → 20，web 551 → 550。
 
 ### 2.4 PAT 的 service 和 store（M2 设计 7.5、13.2 的约定）
 
@@ -118,7 +128,7 @@
 - P5 改到的 116 个 web 文件、P4 改到的全部文件：没有警告。
 - `eslint(no-unneeded-ternary)`：`cec4ec9` 有 54 条（web 53、ui 1），全部改为布尔表达式，全仓 0 条。
 - 上限（`tools/lint-cap.mjs`，警告数必须正好等于上限）逐个 Task 调低：web 551 → 550（Task 1）→ 548（2）→ 543（3）→ 541（6）→ 537（8）→ 514（9）→ 457（10）；ui 25 → 20（1）→ 19（10）；utils 18 → 16（9）。每一步都是删掉带警告的代码之后的实际数。
-- 清警告时的写法：`.then` 链改为 `await` 或返回里面的 promise；可点击的 `div` 改为 `<button type="button">`；带理由的禁用注释只用在三处：三个下拉框（2.3）和引导的资料步骤的 `autoFocus`（这一步只有这一个字段，打开就聚焦它）。两处清警告改了行为，第 3 节第 6、7 条。
+- 清警告时的写法：`.then` 链改为 `await` 或返回里面的 promise；可点击的 `div` 改为 `<button type="button">`；带理由的禁用注释只用在两处：`DateDropdown` 外层的按键处理（2.3）和引导的资料步骤的 `autoFocus`（这一步只有这一个字段，打开就聚焦它）。两处清警告改了行为，第 3 节第 6、7 条。
 
 ### 2.11 关键词规则（M2 设计 7.9 中 P5 的部分）
 
@@ -157,7 +167,8 @@
 
 1. **下拉框的根因与语言无关，修在三个组件**：7.7 写"界面语言为 zh-CN 时"，点名 `custom-select.tsx`。根因在 Headless UI 的 `Combobox.Options`（2.3），英文下一样；同样的写法还在 `CustomSearchSelect`（时区）和 `DateDropdown`（自定义有效期），都在 P5 的页面上，一起修。其他 12 处在 M3–M6 的页面上，交给接上它们的 M（第 7 节）。建议 7.7 的描述随之更正。
 2. **`CustomSearchSelect` 不设模态**：原来的选项被 Headless UI 设为 inert（2.3），Plane 的时区列表因此本来就点不了（列表在左上角，也没人发现）。只改这一个组件；`CustomSelect` 仍是模态，列表打开时页面其余部分 inert、不能滚动，这是 Headless UI 的默认行为，保留。
-3. **下拉框的打开状态跟随 Headless UI**：Escape 之后要点两次才能再打开（`CustomSelect`），或者 Escape 关不掉列表（`CustomSearchSelect`、`DateDropdown`），是 Plane 原有的问题，7.7 没有写。主题下拉框是 7.7 点名要修好的控件，所以在同一个 Task 修：`onClose` 交给 `Combobox`（2.3）。`ComboDropDown` 的其他使用者（M3–M6 的下拉框）有同样的问题，接上它们的 M 传入 `onClose` 即可（第 7 节）。
+3. **下拉框的打开状态**：键盘打不开列表，Escape 之后要点两次才能再打开（`CustomSelect`），Escape 关不掉列表（`CustomSearchSelect`、`DateDropdown`），根子都是组件自己的 `isOpen` 与 Headless UI 的一份不同步。这是 Plane 原有的问题，7.7 没有写。主题下拉框是 7.7 点名要修好的控件，所以在同一个 Task 修（2.3）：`CustomSelect` 改用 `Listbox`，`CustomSearchSelect` 仍用 `Combobox`，两者的打开状态都只有 Headless UI 的一份；`DateDropdown` 保持两份，经 `ComboDropDown` 的 `onClose` 同步。`ComboDropDown` 的其他使用者（M3–M6 的下拉框）交给接上它们的 M（第 7 节）。
+    - **控制者的裁定**（Task 1 在浏览器中查明：只跟随关闭的同步之后，点击打开的列表 Escape 仍关不掉，焦点不在任何控件上；`Combobox` 没有输入框时键盘移动不了、选不了选项；组件没有办法关闭 `Combobox`，选中日期之后日历不关）：`CustomSelect` 用 `Listbox`，按钮上的 Enter 提交所在的表单（原生 `select` 的行为）接受；`CustomSearchSelect` 只有一份状态，搜索框在打开时取得焦点；`DateDropdown` 保持 plan 的两份状态，M4 与其余 12 个下拉框一起重构；时区按钮不在 Tab 顺序里记为已知的限制，交给 M3。
 4. **创建弹窗每次打开都先回到表单**：Plane 在关闭 350 毫秒之后才清掉原文；在这之前重开，弹窗会先显示上一个令牌。7.7 要求"只显示一次"，所以在渲染时按"刚打开"重置（React 的"属性变化时调整状态"写法），350 毫秒的清理保留（原文只在弹窗显示期间留在内存）。端到端测试控制不了这 350 毫秒，"不重置"的变异由浏览器核对 C3 发现（附录 A.7）。
 5. **`appliedFilters` 的删除动到 8 个 M4 领域的过滤 store**：M2 的一行是 `issue/profile/filter.store.ts` 的 `appliedFilters`，它实现 `IBaseIssueFilterStore` 的声明，单删这一个类型检查不过。整个仓库没有代码读任何一个 `appliedFilters`，所以连同接口和其余 8 个 getter 一起删（Task 8）。
 6. **周期下拉框的取数**（`dropdowns/cycle/cycle-options.tsx`，M4 领域）：清 `react-hooks/exhaustive-deps` 时发现原来的 `onOpen` 判断 `!cycleIds`，而 `cycleIds` 总是数组，于是从不取周期。改为打开时 `getProjectCycleIds(projectId)` 为空才取。这改了行为（没取过时会取），M4 接上时再核对。
@@ -165,10 +176,10 @@
 8. **邀请页的 `fetchWorkspaces()` 拒绝**：P4 评审交给 M3 的一项（"没有返回它的 Promise，也没有处理拒绝"）。清 `promise/always-return` 时把它返回给外层的 `.catch`，失败时显示"出错了"。M3 对接邀请时不需要再改这一处；请控制者把 P4 评审的这一项记为在 P5 完成。
 9. **`EMOJI_CHECK_WARNING`**：个人设置的每次加载都有 Chromium 的 `willReadFrequently` 提示，来源与 S2 的深链接相同（编辑器的 Emoji 节点让 `is-emoji-supported` 反复读画布），但路径不同：设置页的布局挂着命令面板（`ProjectsAppPowerKProvider`，M1 保留），它建了一个编辑器（原型用调用栈确认，附录 A 的 E3）。S2 原来有自己的 `emojiCanvasWarning`；两处共用一个常量，移到 `e2e/fixtures/browser.ts`，名为 `EMOJI_CHECK_WARNING`。M2 设计 13.2 交给 M4 的一行写的是 `emojiCanvasWarning`，请随之更正，并补上：设置页的命令面板在打开之前就建编辑器，M4 做编辑器的代码分割时一并处理，之后这个常量删除。
 10. **general 页的保存、preferences 的失败提示在 P5 做**：7.7 没有逐项写，前端改动清单 3.2 写明"个人设置的其余部分（general 页的保存、preferences、安全页的 PAT 列表、api-tokens）在 P5"。按 P4 的错误文案表做（2.7、2.8）。
-11. **"改到的文件清零"中的禁用注释**：7.8 要求改到的文件没有警告。三个下拉框（6 条）和引导的资料步骤（1 条）用带理由的 `oxlint-disable-next-line`，其余都改了代码（2.10）。请控制者裁定这几条是否算作清零。
+11. **"改到的文件清零"中的禁用注释**：7.8 要求改到的文件没有警告。`DateDropdown` 外层的按键处理（1 条）和引导的资料步骤（1 条）用带理由的 `oxlint-disable-next-line`，其余都改了代码（2.10）。
     - **控制者的裁定**：禁用注释只用在规则不适用、又没有代码改动能消除需要的地方。
     - 引导资料步骤的 `autoFocus` 接受。
-    - 三个下拉框外层的按键处理和选项的点击处理，在打开状态跟随 Headless UI（第 3 条）之后可能已经多余。Task 9（A8、A9、A11 的页面版本已经有了）试着删掉它们：故事仍通过的，处理函数和禁用注释一起删；仍然需要的，保留禁用注释和理由，在报告中说明为什么需要。
+    - 下拉框：`CustomSelect`、`CustomSearchSelect` 的打开状态只有 Headless UI 的一份（第 3 条），外层的按键处理和选项的点击处理随之删除，原来的 5 条警告没有了，不用禁用注释。`DateDropdown` 保持两份状态（第 3 条），外层 `div` 仍要接收日历里冒泡上来的 Escape、Tab，这一条禁用注释和理由保留。Task 9 没有下拉框的工作。
 
 以下四条是控制者在执行前加的。它们原是第 5 节的"不改"和第 6 节的一个风险，都在 P5 负责的代码上，所以从根上修，落在拥有那个文件的 Task：
 
@@ -193,7 +204,8 @@
 
 - **收尾**：10 份交接逐项写结论；上级文档和差异清单的总核对；给 M3–M8 的交接（13.2）。
 - **M3–M6**：同样写法的其他 12 个下拉框的定位和打开状态（第 7 节列出）；它们所在页面的其余对接。
-- **M4**：编辑器的代码分割，以及设置页的命令面板提前建编辑器（第 3 节第 9 条）。
+- **M3**：`CustomSearchSelect` 的按钮不在 Tab 顺序里（2.3；P5 之前也是这样），修法是结构性的。
+- **M4**：编辑器的代码分割，以及设置页的命令面板提前建编辑器（第 3 节第 9 条）。`DateDropdown` 改成只有一份打开状态的结构（2.3：键盘打不开日历，两份状态会走散）；`CustomSearchSelect` 的 `defaultOpen` 在接上富筛选时在浏览器中核对。
 - **M5**：`@nerve/services` 剩下的文件工具和整个包；头像、封面的上传。
 - 原来列在这里"不改"的三项（每周第一天的英文、撤销确认弹窗的英文按钮、CSV 不加引号），按控制者的裁定在 P5 修（第 3 节第 13–15 条）。
 
@@ -229,8 +241,10 @@
 
 | 交给 | 事项 |
 |---|---|
-| M3–M6（接上组件的 M） | popper 的 ref 放在 `Combobox.Options` 唯一子元素上的其余 12 处（列表会停在页面左上角）：`web:core/components/dropdowns/{cycle/cycle-options,date-range,intake-state/base,member/member-options,module/module-options,priority,project/base,state/base}.tsx`、`web:core/components/issues/{issue-detail/label/select/label-select,issue-layouts/properties/label-dropdown,select/base}.tsx`、`web/packages/ui/src/dropdown/single-select.tsx`；它们的打开状态同样要跟随 Headless UI 的关闭（`ComboDropDown` 的 `onClose`）。修法见 2.3 |
+| M3–M6（接上组件的 M） | popper 的 ref 放在 `Combobox.Options` 唯一子元素上的其余 12 处（列表会停在页面左上角）：`web:core/components/dropdowns/{cycle/cycle-options,date-range,intake-state/base,member/member-options,module/module-options,priority,project/base,state/base}.tsx`、`web:core/components/issues/{issue-detail/label/select/label-select,issue-layouts/properties/label-dropdown,select/base}.tsx`、`web/packages/ui/src/dropdown/single-select.tsx`。它们的打开状态只要 Headless UI 的一份：没有搜索框的选择用 `Listbox`，有搜索框的用 `Combobox` 并在列表打开时让输入框取得焦点，同 P5 的 `CustomSelect`、`CustomSearchSelect`；只跟随 Headless UI 的关闭（`onClose`）不够（2.3）。修法见 2.3 |
+| M3 | `CustomSearchSelect` 的按钮不在 Tab 顺序里（Headless UI 的 `Combobox.Button` 固定 `tabIndex: -1`；P5 之前也是这样）：改成像 Popover 那样的按钮，`Combobox` 放在它的面板里（2.3）。M3 是第一个接上更多 `CustomSearchSelect` 的 M |
 | M4 | 编辑器的代码分割，连同设置页的命令面板提前建编辑器；之后删除 `EMOJI_CHECK_WARNING`（第 3 节第 9 条） |
+| M4 | `DateDropdown` 的两份打开状态（2.3）：键盘打不开日历；日历里按 Tab 关闭之后两份状态走散，再点另一个下拉框时两个列表同时开着。改成只有一份状态的结构（例如 Popover，选中日期时调它的 `close`），连同它在列表和表格单元格里的懒渲染（`ComboDropDown` 的 `renderByDefault`）。`CustomSearchSelect` 的 `defaultOpen`（挂载之后点一次按钮）没有在浏览器中核对，接上富筛选时核对 |
 
 ## 附录 A：原型验证记录（2026-09-27）
 

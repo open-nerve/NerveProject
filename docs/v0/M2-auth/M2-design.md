@@ -1409,7 +1409,7 @@ files:
   - 列表、撤销。列表显示创建时间和最后使用时间，便于认出不认识的令牌（8.5）。
 - **主题下拉框**（M1-closeout 交接）：主题下拉框画在页面左上角。交接写的是 zh-CN，P5 查明与界面语言无关，英文下一样。
   - **根因**（P5 spec 2.3）：Headless UI 2.2 的 `Combobox.Options` 克隆它唯一的子元素时换上自己的 ref。react-popper 的 ref 放在这个子元素上，从未被设置，列表停在 `createPortal` 挂载处的左上角。
-  - **修法**：在组件里修，不在调用处打补丁。popper 的 ref、样式、属性放在 `Combobox.Options` 本身，组件自己的打开状态跟随 Headless UI 的关闭（`onClose`）。
+  - **修法**：在组件里修，不在调用处打补丁。popper 的 ref、样式、属性放在列表元素本身。`CustomSelect` 改用 `Listbox`，`CustomSearchSelect` 仍用 `Combobox`，两者的打开状态只有 Headless UI 的一份；`DateDropdown` 保持组件自己的一份，经 `onClose` 跟随 Headless UI 的关闭（P5 spec 2.3）。
   - **范围**：P5 页面上的三个组件都修，即 `CustomSelect`、`CustomSearchSelect`、`DateDropdown`。同样写法的其余 12 处在 M3–M6 的页面上（13.2）。
   - 浏览器核对中英文各一次。
 
@@ -2102,7 +2102,7 @@ files:
 | M4 | `user.service.ts` 中的 `getUserProfileIssues`；事件订阅者的写法（3.15）；CSP：编辑器 callout 的默认表情图来自 `cdn.jsdelivr.net`，改为本站资源或原生表情，并核对表情回应（8.3） |
 | M4 | **编辑器的代码分割**（P4 Task 12）：未登录时直接打开需要登录的页面，页面模块先加载了编辑器（tiptap 的 Emoji 节点和 `is-emoji-supported`），包装层才跳到登录页。把编辑器拆出去，到用它的页面才加载。个人设置页的布局挂着命令面板（`ProjectsAppPowerKProvider`），它在打开之前就建了一个编辑器，一并处理（P5 spec 第 3 节第 9 条）。之后 e2e 对 `is-emoji-supported` 的 Chromium 警告（`willReadFrequently`）的预期 `EMOJI_CHECK_WARNING`（`e2e/fixtures/browser.ts`，S2 和个人设置的故事共用）删除 |
 | M4 | **周期下拉框的取数**（P5 spec 第 3 节第 6 条）：`dropdowns/cycle/cycle-options.tsx` 原来从不取周期（`!cycleIds` 对一个总是数组的值），P5 清 lint 时改为打开时这个项目没有周期就取。M4 接上周期时核对这个行为 |
-| M3–M6（接上组件的 M） | **其余 12 个下拉框**（P5 spec 2.3、第 7 节）：react-popper 的 ref 放在 `Combobox.Options` 唯一的子元素上，列表会停在页面左上角；打开状态也要跟随 Headless UI 的关闭（`ComboDropDown` 的 `onClose`）。文件清单见 P5 spec 第 7 节，修法同 P5 的三个组件 |
+| M3–M6（接上组件的 M） | **其余 12 个下拉框**（P5 spec 2.3、第 7 节）：react-popper 的 ref 放在 `Combobox.Options` 唯一的子元素上，列表会停在页面左上角；popper 的 ref 改放在列表元素本身。打开状态只要 Headless UI 的一份，同 P5：没有搜索框的选择用 `Listbox`（按钮在 Tab 顺序里，打开后焦点在列表上，方向键、Enter 由它处理），有搜索框的用 `Combobox`，列表打开时让输入框取得焦点。只跟随关闭（`onClose`）的同步不够：点击打开之后焦点不在任何控件上，Escape 关不掉；`Combobox` 没有输入框时，键盘移动不了、选不了选项。`DateDropdown`（M4）要只有一份状态的结构，例如 Popover（选中日期时调它的 `close`）：P5 保留 plan 的两份状态，键盘打不开日历，日历里按 Tab 关闭之后两份状态走散。`CustomSearchSelect` 的按钮不在 Tab 顺序里（Headless UI 的 `Combobox.Button` 固定 `tabIndex: -1`，P5 之前也是这样）：M3 改成像 Popover 那样的按钮，`Combobox` 放在它的面板里。`CustomSearchSelect` 的 `defaultOpen`（挂载之后点一次按钮）没有在浏览器中核对，M4 接上富筛选时核对。文件清单见 P5 spec 第 7 节 |
 | M5 | **头像和封面**：`users.avatar_asset_id`、`cover_image_asset_id`。迁移的范例（3.14）：先在 M5 的模块里建 `file_assets`（`<v>_<模块>_file_assets.sql`），再写 `<v+1>_identity_users_avatar_asset.sql` 给 `users` 加列和外键，后者归 `identity` 的 sqlc 条目。`User.avatar_url`、`cover_image_url` 开始返回签名地址；按新的上传协议加回 general 页和新手引导资料步骤的上传控件（3.2） |
 | M5 | **上传与按路由的中间件**：模块级的 `Middlewares`（1 MiB 请求体上限、15 秒期限）会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外，并按 3.6 的整程序测试处理：写进接口描述，或在设计中说明（控制者复核 m7）。`file_size_limit` 的执行；CSP 的 `img-src`、`connect-src` 加上存储的来源 |
 | M6 | 迭代（`cycles`、`cycle_issues`）跨 `planning` 与工作项模块的写入用端口和共享事务；必须联表的查询，事先列为 `TestSQLCSchemaScope` 的例外并写明理由，或者用端口拆开 |
