@@ -15,7 +15,7 @@
 | 来源提交 | Plane `02c19e1341d93141e8ad7b3278298adce208bafc`（`preview` 分支，`package.json` 中的版本是 1.4.2） |
 | 迁入方式 | M0/P5 用 `git archive` 按上面的完整提交复制。迁入时 13 个目录与 Plane 中对应目录的 git 树对象完全相同，之后的每一处改动都登记在本清单中（见 [P5 spec](M0-foundation/specs/P5-web-import.md) 2.3） |
 | 使用 | `apps/web` → `web/apps/web`；packages 中的 types、constants、ui、propel、editor、i18n、hooks、utils、shared-state、tailwind-config、typescript-config → `web/packages/<包名>`；`patches/react-color@2.19.3.patch` → 仓库根目录的 `patches/` |
-| 暂时使用 | `packages/services`：web 的令牌设置页和文件工具函数依赖它。M1/P1 删掉了其中没有调用方的 49 个文件，只剩令牌服务、地址规范化（带单元测试）和上传文件的元数据工具；M2（PAT）和 M5（文件）重写对应的接口调用后，将它删除 |
+| 暂时使用 | `packages/services`：web 的 axios 基类和文件工具函数依赖它。M1/P1 删掉了其中没有调用方的 49 个文件；M2/P5 删掉了令牌服务和 Plane 的 axios 基类（`api.service.ts`、`developer/`，PAT 改由 web 的 store 经生成的客户端调用），只剩地址规范化（带单元测试）和上传文件的元数据工具；M5 重写文件的接口调用后，将它删除 |
 | 不使用 | `apps/admin`、`apps/space`、`apps/live`、`apps/api`、`apps/proxy`、`packages/logger`、`packages/decorators`、`packages/codemods`（已核实 web 及其依赖的包都不引用它们）；根目录的 `.npmrc`（pnpm 11 只从 `.npmrc` 读取认证和仓库地址，其中的其他设置都不起作用）；husky、lint-staged（Git 钩子）和 react-doctor |
 | 第三方依赖 | `@makeplane/propel` 0.3.0：Plane 发布在 npm 上的设计系统，AGPL-3.0-only，版本锁定（`pnpm-workspace.yaml` 的 catalog，不跟随发布更新）。tarball 的完整性哈希 `sha512-nGhiE42vLQVvv7NZOcQYKARJiTXyKDSSTcHOzPdtFpa+WkSz9B91jw6i+3Ikz5cpkv/aEKjOTJF+cByw2zv5ZQ==`（`pnpm-lock.yaml`）。源码：npm 上这个版本带 SLSA 来源证明，记录它由 `github.com/makeplane/propel` 的 `packages/propel`、提交 `0a31b1529c0f249a058e59ade313d8b34ea8f964` 经 `.github/workflows/release.yml` 构建；这个仓库不公开（M1/P5 时访问为 404）。包里的 source map 带着 1376 个源文件中 1375 个的全文。以后要自己修改设计令牌时，按 [M1 设计](M1-frontend-trim/M1-design.md) 3.10 评估并入源码 |
 
@@ -198,7 +198,7 @@
 
 | 领域 | 所属 M | 状态 |
 |---|---|---|
-| 认证、用户、实例配置、PAT；令牌管理器 | M2 | 进行中 |
+| 认证、用户、实例配置、PAT；令牌管理器 | M2 | 已完成 |
 | 工作区、成员、邀请、项目、项目成员、项目归档、状态、标签、显示设置 | M3 | 计划中 |
 | 工作项、列表（分页和分组的新结构）、子任务、关联、链接、评论、表情回应、操作动态、搜索、历史版本、草稿、工作项归档 | M4 | 计划中 |
 | 文件、附件、编辑器图片（上传改为 `{method, url, headers}` 形式的 PUT） | M5 | 计划中 |
@@ -214,7 +214,7 @@
 | `core/store/issue/helpers/base-issues.store.ts` 等列表相关 store | 使用新接口的分页结构（不透明游标 `next_cursor`）和分组结构（`groups` 数组），不再按"已加载条数 ÷ 每页条数"拼页码游标 | 新接口的分页和分组设计 | 计划中 | |
 | 用户和认证相关的 store | 登录、退出、续期改走令牌管理器 | 认证改为 Bearer 令牌 | 已完成 | M2/P4 |
 | 登录、注册、退出、修改密码的提交方式 | 删除 CSRF 令牌和 Django 会话的表单提交，改走令牌管理器 | 认证改为 Bearer 令牌；CSRF 是传输方式的一部分，和它的替代品一起删除（[M1 设计](M1-frontend-trim/M1-design.md) 3.6） | 已完成 | M2/P4 |
-| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误，停用账户的弹窗显示它的 `detail` 或 `title`。其余的随各自对接新接口改：个人设置的其余部分（general 页的保存、preferences、安全页的 PAT 列表、api-tokens）在 P5（[M2 设计](M2-auth/M2-design.md) 12 节、7.7）；M3–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
+| 所有处理接口错误的地方 | 统一按 RFC 9457 的 problem+json 读取 `code`、`title`、`errors`。M2/P4 已改：`ApiError` 和 `unwrap`（`core/lib/api-error.ts`）按生成的 `Problem` 读取；登录页、注册页和安全页的修改密码按它的 `code`、`errors` 显示错误。M2/P5 改完个人设置的其余部分（[M2 设计](M2-auth/M2-design.md) 7.7）和新手引导的资料步骤：general 页的保存、资料步骤和 api-tokens 页的创建把字段错误显示在字段下方（名字的规则只在 nerve，页面只查必填，Plane 的名字校验从 `@nerve/utils` 删除），其余的错误和 preferences 的主题、时区、语言、每周第一天、PAT 的撤销、停用账户的失败都在提示中，文案按 `code` 取（`helpers/authentication.helper.ts` 的 `fieldErrorKeys`、`errorMessageKey`）。M3–M8 的领域在各自的 M，它们现在还经 Plane 的 axios 基类按 Plane 的错误格式读取 | 错误格式统一 | 进行中 | |
 | 文件上传相关的 store 和调用方 | 预签名 POST 改为 `{method, url, headers}` 形式的 PUT | 文件存储改为 PUT 上传 | 计划中 | |
 | 迭代和模块的归属 | 通过工作项的 `cycle_id`、`module_ids` 字段修改，不再调用单独的接口 | 接口设计 | 计划中 | |
 
