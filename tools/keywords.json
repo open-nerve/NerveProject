@@ -1,5 +1,5 @@
 {
-  "phase": "M1/closeout",
+  "phase": "M2/P4",
   "rules": [
     {
       "id": "deploy-files",
@@ -1747,6 +1747,27 @@
           "web/apps/web/core/components/navigation/top-navigation-root.tsx",
           "web/apps/web/core/hooks/store/use-workspace.ts"
         ]
+      }
+    },
+    {
+      "id": "is-self-managed",
+      "phase": "M2/P4",
+      "why": "Plane 实例配置的 is_self_managed 和它控制的新手引导\"角色\"\"用途\"两步（M2 设计 3.19，决策点 4 裁定为 A）；Nerve 的实例信息 GET /api/v0/instance 没有这个字段，新手引导只有资料、工作区、邀请三步",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "is_self_managed|isSelfManaged",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["  is_self_managed: boolean;", "  const isSelfManaged = instanceConfig?.is_self_managed;"],
+        "miss": ["  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;"],
+        "files": {
+          "hit": ["web/apps/web/core/components/onboarding/root.tsx", "web/packages/types/src/index.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "api/dist/openapi.yaml"]
+        }
       }
     }
   ],

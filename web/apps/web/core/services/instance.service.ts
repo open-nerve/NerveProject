@@ -4,17 +4,12 @@
  * See the LICENSE file for details.
  */
 
-// types
-import type { IInstanceInfo } from "@nerve/types";
-// services
-import { APIService } from "@/services/api.service";
+import type { InstanceInfo } from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
+import { publicClient } from "@/lib/auth/api-client";
 
-export class InstanceService extends APIService {
-  async getInstanceInfo(): Promise<IInstanceInfo> {
-    return this.get("/api/instances/")
-      .then((response) => response.data)
-      .catch((error) => {
-        throw error;
-      });
+export class InstanceService {
+  async getInstanceInfo(): Promise<InstanceInfo> {
+    return unwrap(await publicClient.GET("/api/v0/instance"));
   }
 }

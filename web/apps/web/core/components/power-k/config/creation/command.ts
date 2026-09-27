@@ -56,7 +56,7 @@ export const usePowerKCreationCommandsRecord = (): Record<TPowerKCreationCommand
       ctx.params.workspaceSlug,
       ctx.params.projectId
     );
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   const getProjectDetails = (ctx: TPowerKContext) =>
     ctx.params.projectId ? getPartialProjectById(ctx.params.projectId) : undefined;

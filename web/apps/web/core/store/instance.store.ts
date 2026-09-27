@@ -6,20 +6,20 @@
 
 import { observable, action, makeObservable, runInAction } from "mobx";
 // types
-import type { IInstanceConfig } from "@nerve/types";
+import type { InstanceInfo } from "@nerve/api-client";
 // services
 import { InstanceService } from "@/services/instance.service";
 
 export interface IInstanceStore {
   isLoading: boolean;
-  config: IInstanceConfig | undefined;
+  config: InstanceInfo | undefined;
   // action
   fetchInstanceInfo: () => Promise<void>;
 }
 
 export class InstanceStore implements IInstanceStore {
   isLoading: boolean = true;
-  config: IInstanceConfig | undefined = undefined;
+  config: InstanceInfo | undefined = undefined;
   // services
   instanceService;
 
@@ -44,7 +44,7 @@ export class InstanceStore implements IInstanceStore {
       const instanceInfo = await this.instanceService.getInstanceInfo();
       runInAction(() => {
         this.isLoading = false;
-        this.config = instanceInfo.config;
+        this.config = instanceInfo;
       });
     } catch (error) {
       runInAction(() => {

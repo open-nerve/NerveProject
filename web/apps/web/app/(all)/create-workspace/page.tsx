@@ -37,7 +37,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
     organization_size: "",
   });
   // derived values
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   // methods
   const getMailtoHref = () => {

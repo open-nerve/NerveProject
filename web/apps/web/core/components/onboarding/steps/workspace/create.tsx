@@ -51,7 +51,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
   const { fetchCurrentUserSettings } = useUserSettings();
   const { createWorkspace, fetchWorkspaces } = useWorkspace();
 
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   // form info
   const {

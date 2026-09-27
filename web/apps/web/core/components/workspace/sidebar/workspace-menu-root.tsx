@@ -42,7 +42,7 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
   const { updateUserProfile } = useUserProfile();
   const { currentWorkspace: activeWorkspace, workspaces } = useWorkspace();
   // derived values
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
   // translation
   const { t } = useTranslation();
   // local state
