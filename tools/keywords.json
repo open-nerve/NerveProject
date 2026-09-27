@@ -1773,17 +1773,20 @@
     {
       "id": "plane-user-urls",
       "phase": "M2/P4",
-      "why": "Plane 的资料、新手引导、导览和实例地址（M2 设计 7.9）；前端改调 /api/v0 下的 /me/profile 和 /instance。不禁止整个 /api/users/me/：M3 的 joinProject 等旧调用还在用它",
+      "why": "Plane 的当前用户、资料、新手引导、导览和实例地址（M2 设计 7.9）；前端改调 /api/v0 下的 /me、/me/profile 和 /instance。当前用户只禁止 /api/users/me/ 本身（后面紧跟引号），不禁止整个 /api/users/me/：M3 的 joinProject、工作区列表和邀请等旧调用还在用它下面的地址",
       "files": {
         "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
         "flags": ""
       },
       "content": {
-        "source": "/api/users/me/(?:profile|onboard|tour-completed)|/api/instances/",
+        "source": "/api/users/me/(?:profile|onboard|tour-completed|(?=[\"'`]))|/api/instances/",
         "flags": ""
       },
       "samples": {
         "hit": [
+          "    return this.get(\"/api/users/me/\", { validateStatus: null })",
+          "    return this.patch(\"/api/users/me/\", data)",
+          "    return this.delete(`/api/users/me/`)",
           "    return this.get(\"/api/users/me/profile/\")",
           "    return this.patch(\"/api/users/me/onboard/\", {",
           "    return this.patch(\"/api/users/me/tour-completed/\", {",
@@ -1793,11 +1796,43 @@
           "    return unwrap(await api.GET(\"/api/v0/me/profile\"));",
           "    return unwrap(await publicClient.GET(\"/api/v0/instance\"));",
           "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
-          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";"
+          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
+          "    return this.get(\"/api/users/me/workspaces/\")"
         ],
         "files": {
           "hit": ["web/apps/web/core/services/user.service.ts", "web/apps/web/core/services/instance.service.ts"],
           "miss": ["e2e/stories/smoke/s2-web-app.spec.ts", "docs/v0/M2-auth/M2-design.md"]
+        }
+      }
+    },
+    {
+      "id": "plane-user-assets",
+      "phase": "M2/P4",
+      "why": "Plane 的用户资源上传：/api/assets/v2/user-assets/ 的上传、确认和删除，/api/users/file-assets/ 的旧删除，头像弹窗 UserImageUploadModal，EFileAssetType 的 USER_AVATAR、USER_COVER。P4 删掉头像、封面的上传控件之后它们没有入口，一并删除；M5 用 nerve 自己的上传协议重新加入上传，不用 Plane 的地址（M2 设计 3.2）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/assets/v2/user-assets/|/api/users/file-assets/|UserImageUploadModal|\\bUSER_(?:AVATAR|COVER)\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.post(`/api/assets/v2/user-assets/`, {",
+          "    return this.delete(`/api/users/file-assets/${assetKey}/`)",
+          "import { UserImageUploadModal } from \"@/components/core/modals/user-image-upload-modal\";",
+          "        entityType: EFileAssetType.USER_COVER,",
+          "  USER_AVATAR = \"USER_AVATAR\","
+        ],
+        "miss": [
+          "    return this.delete(`/api/workspaces/file-assets/${workspaceId}/${assetKey}/`)",
+          "    const uploadResult = await fileService.uploadWorkspaceAsset(",
+          "  PROJECT_COVER = \"PROJECT_COVER\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/file.service.ts", "web/packages/types/src/enums.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/identity/a1-sign-up.spec.ts"]
         }
       }
     },
