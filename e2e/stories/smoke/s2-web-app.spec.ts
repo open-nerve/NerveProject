@@ -82,7 +82,7 @@ async function expectQuietSignedOut(
   expect(watch.apiFailures).toEqual([]);
   expect(watch.cspViolations).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  await expectQuietConsole(page, watch, thirdPartyWarnings);
+  await expectQuietConsole(page, watch, { warnings: thirdPartyWarnings });
 }
 
 test("S2: a user opens the home page in a browser", async ({ page }) => {

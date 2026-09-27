@@ -1,6 +1,7 @@
 import { expectRegistered } from "../../fixtures/assert/identity";
 import { submitSignUp } from "../../fixtures/auth-pages";
 import { emailFor, password, recordOf, register } from "../../fixtures/auth";
+import { followAccessToken } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
 // A1, a new account (M2 design 2).
@@ -9,12 +10,9 @@ test("A1 (page): a visitor signs up and lands on the profile step of onboarding"
   const email = emailFor(testInfo, "Alice");
   // What the page shows or sends where a token could leak: the console, and the addresses it asks for.
   const shown: string[] = [];
-  let accessToken = "";
+  const sentAccessToken = followAccessToken(page);
   page.on("console", (message) => shown.push(message.text()));
-  page.on("request", (request) => {
-    shown.push(request.url());
-    accessToken = request.headers().authorization?.replace(/^Bearer /, "") ?? accessToken;
-  });
+  page.on("request", (request) => shown.push(request.url()));
 
   await page.goto("/sign-up");
   expect(await submitSignUp(page, email, password)).toBe(201);
@@ -28,6 +26,7 @@ test("A1 (page): a visitor signs up and lands on the profile step of onboarding"
   expect(record?.login_id).toMatch(/^[0-9a-f]{32}$/);
   // The tokens are nowhere else: not in sessionStorage, another localStorage key, an address or the
   // console. Their bodies are looked for, so that a copy under another prefix or in quotes counts too.
+  const accessToken = sentAccessToken();
   expect(accessToken, "a request carried the access token").not.toBe("");
   const bodies = [record?.refresh_token.replace(/^nrv_rt_/, "") ?? "", accessToken.split(".")[2] ?? ""];
   expect(bodies.map((body) => body.length > 20)).toEqual([true, true]);

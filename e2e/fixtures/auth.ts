@@ -18,7 +18,7 @@ export interface AuthRecord {
 }
 
 /** The record a sign-in with tokens writes: a new login_id of 16 random bytes in hexadecimal. */
-function newRecord(tokens: AuthTokens): AuthRecord {
+export function newRecord(tokens: AuthTokens): AuthRecord {
   return { refresh_token: tokens.refresh_token, login_id: randomBytes(16).toString("hex") };
 }
 
@@ -46,6 +46,22 @@ export async function signInContext(context: BrowserContext, baseURL: string, to
 export async function recordOf(page: Page): Promise<AuthRecord | null> {
   const text = await page.evaluate((key) => localStorage.getItem(key), authKey);
   return text === null ? null : (JSON.parse(text) as AuthRecord);
+}
+
+/**
+ * Writes record into the localStorage of page as the token manager does (M2 design 7.1): in one piece,
+ * holding the refresh lock, so that no refresh of another tab writes in between. The other tabs get the
+ * storage event.
+ */
+export async function writeRecord(page: Page, record: AuthRecord): Promise<void> {
+  await page.evaluate(
+    async ({ key, text }) => {
+      await navigator.locks.request("nerve.auth.refresh", () => {
+        localStorage.setItem(key, text);
+      });
+    },
+    { key: authKey, text: JSON.stringify(record) }
+  );
 }
 
 /** A password that meets the rules and is not common. */

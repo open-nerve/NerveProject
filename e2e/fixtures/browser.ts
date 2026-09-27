@@ -47,7 +47,11 @@ export async function watchPage(page: Page): Promise<PageWatch> {
       watch.oldApiRequests.push(`${request.method()} ${path}`);
     }
   });
+  // A request nerve answered is judged by its status: Chromium also reports one failed (net::ERR_ABORTED)
+  // when the page leaves the body of its answer unread, as openapi-fetch does with a 204's.
+  const answered = new WeakSet<Request>();
   page.on("response", (response) => {
+    answered.add(response.request());
     const path = apiPath(response.request());
     if (path !== undefined && response.status() >= 400) {
       watch.apiFailures.push(`${response.status()} ${response.request().method()} ${path}`);
@@ -55,7 +59,7 @@ export async function watchPage(page: Page): Promise<PageWatch> {
   });
   page.on("requestfailed", (request) => {
     const path = apiPath(request);
-    if (path !== undefined) {
+    if (path !== undefined && !answered.has(request)) {
       watch.apiFailures.push(`${request.failure()?.errorText} ${request.method()} ${path}`);
     }
   });
@@ -83,16 +87,29 @@ export async function watchPage(page: Page): Promise<PageWatch> {
 }
 
 /**
+ * Follows the access token page sends from now on, in the Authorization header of its requests: the function
+ * returned gives the last one sent, or "" before the first.
+ */
+export function followAccessToken(page: Page): () => string {
+  let last = "";
+  page.on("request", (request) => {
+    last = request.headers().authorization?.replace(/^Bearer /, "") ?? last;
+  });
+  return () => last;
+}
+
+/**
  * Checks that page logged no error and no warning since watch began (M2 design 9.6), such as React Router's
  * "navigate() should be called in useEffect". It logs a probe of each kind first and expects to find it,
- * so that a watch that does not hear the console cannot pass. thirdPartyWarnings are the warnings, not the
- * app's own, that page logs, in order, each named by the caller with where it comes from: another warning
- * fails, and so does a named one that stops coming.
+ * so that a watch that does not hear the console cannot pass. expected names what page logs that is not
+ * the app's own, in order, each named by the caller with where it comes from: the warnings of third
+ * parties, and the errors the browser logs about what the story makes happen, such as its report of an
+ * answer of 400 or more. Any other error or warning fails, and so does a named one that stops coming.
  */
 export async function expectQuietConsole(
   page: Page,
   watch: PageWatch,
-  thirdPartyWarnings: readonly string[] = []
+  expected: { warnings?: readonly string[]; errors?: readonly string[] } = {}
 ): Promise<void> {
   const probe = "nerve-e2e: console probe";
   await page.evaluate((text) => {
@@ -101,5 +118,5 @@ export async function expectQuietConsole(
   }, probe);
   await expect
     .poll(() => ({ errors: watch.consoleErrors, warnings: watch.consoleWarnings }))
-    .toEqual({ errors: [probe], warnings: [...thirdPartyWarnings, probe] });
+    .toEqual({ errors: [...(expected.errors ?? []), probe], warnings: [...(expected.warnings ?? []), probe] });
 }
