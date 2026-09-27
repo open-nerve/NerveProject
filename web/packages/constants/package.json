@@ -21,6 +21,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@nerve/api-client": "workspace:*",
     "@nerve/types": "workspace:*"
   },
   "devDependencies": {

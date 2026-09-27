@@ -9,9 +9,9 @@ import { useTheme } from "next-themes";
 import { Languages } from "lucide-react";
 import { CalendarOutline, GlobeOutline, PaletteOutline } from "@makeplane/propel/icons";
 // nerve imports
+import type { Language, ProfileUpdate, StartOfTheWeek, Theme } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { setToast, TOAST_TYPE } from "@nerve/propel/toast";
-import type { EStartOfTheWeek, TUserProfile } from "@nerve/types";
 // components
 import type { TPowerKCommandConfig } from "@/components/power-k/core/types";
 // hooks
@@ -29,9 +29,9 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
   const { t } = useTranslation();
 
   const handleUpdateTheme = useCallback(
-    async (newTheme: string) => {
+    async (newTheme: Theme) => {
       setTheme(newTheme);
-      return updateUserTheme({ theme: newTheme })
+      return updateUserTheme(newTheme)
         .then(() => {
           setToast({
             type: TOAST_TYPE.SUCCESS,
@@ -80,7 +80,7 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
   );
 
   const handleUpdateUserProfile = useCallback(
-    (payload: Partial<TUserProfile>) => {
+    (payload: ProfileUpdate) => {
       updateUserProfile(payload)
         .then(() => {
           setToast({
@@ -112,7 +112,7 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
       i18n_title: "power_k.preferences_actions.update_theme",
       icon: PaletteOutline,
       onSelect: (data) => {
-        const theme = data as string;
+        const theme = data as Theme;
         void handleUpdateTheme(theme);
       },
       isEnabled: () => true,
@@ -142,7 +142,7 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
       i18n_title: "power_k.preferences_actions.update_start_of_week",
       icon: CalendarOutline,
       onSelect: (data) => {
-        const startOfWeek = data as EStartOfTheWeek;
+        const startOfWeek = data as StartOfTheWeek;
         handleUpdateUserProfile({ start_of_the_week: startOfWeek });
       },
       isEnabled: () => true,
@@ -157,7 +157,7 @@ export const usePowerKPreferencesCommands = (): TPowerKCommandConfig[] => {
       i18n_title: "power_k.preferences_actions.update_language",
       icon: Languages,
       onSelect: (data) => {
-        const language = data as string;
+        const language = data as Language;
         handleUpdateUserProfile({ language });
       },
       isEnabled: () => true,

@@ -31,22 +31,6 @@ export interface IUserLite {
   joining_date?: string;
 }
 
-export type TUserProfile = {
-  id: string | undefined;
-  user: string | undefined;
-  role: string | undefined;
-  last_workspace_id: string | undefined;
-  theme: IUserTheme;
-  onboarding_step: TOnboardingSteps;
-  is_onboarded: boolean;
-  is_tour_completed: boolean;
-  use_case: string | undefined;
-  language: string;
-  created_at: Date | string;
-  updated_at: Date | string;
-  start_of_the_week: EStartOfTheWeek;
-};
-
 export interface IUserSettings {
   id: string | undefined;
   email: string | undefined;
@@ -60,17 +44,6 @@ export interface IUserSettings {
     invites: number | undefined;
   };
 }
-
-export interface IUserTheme {
-  theme: string | undefined; // a value of THEME_OPTIONS
-}
-
-export type TOnboardingSteps = {
-  profile_complete: boolean;
-  workspace_create: boolean;
-  workspace_invite: boolean;
-  workspace_join: boolean;
-};
 
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;

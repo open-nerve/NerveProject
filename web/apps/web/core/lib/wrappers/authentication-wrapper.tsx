@@ -85,7 +85,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
   if (pageType === EPageTypes.NON_AUTHENTICATED) {
     if (!currentUser?.id) return <>{children}</>;
     else {
-      if (currentUserProfile?.id && isUserOnboard) {
+      if (currentUserProfile && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
         return <Navigate to={currentRedirectRoute} replace />;
       } else {
@@ -98,7 +98,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
     if (!currentUser?.id) {
       return <Navigate to={`/?next_path=${pathname}`} replace />;
     } else {
-      if (currentUser && currentUserProfile?.id && isUserOnboard) {
+      if (currentUser && currentUserProfile && isUserOnboard) {
         const currentRedirectRoute = getWorkspaceRedirectionUrl();
         return <Navigate to={currentRedirectRoute} replace />;
       } else return <>{children}</>;
@@ -107,7 +107,7 @@ export const AuthenticationWrapper = observer(function AuthenticationWrapper(pro
 
   if (pageType === EPageTypes.AUTHENTICATED) {
     if (currentUser?.id) {
-      if (currentUserProfile && currentUserProfile?.id && isUserOnboard) return <>{children}</>;
+      if (currentUserProfile && isUserOnboard) return <>{children}</>;
       else {
         return <Navigate to="/onboarding" replace />;
       }

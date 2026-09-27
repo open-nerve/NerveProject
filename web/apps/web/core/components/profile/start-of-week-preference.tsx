@@ -6,16 +6,16 @@
 
 import { observer } from "mobx-react";
 // nerve imports
+import type { StartOfTheWeek } from "@nerve/api-client";
 import { START_OF_THE_WEEK_OPTIONS } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EStartOfTheWeek } from "@nerve/types";
 import { CustomSelect } from "@nerve/ui";
 // components
 import { SettingsControlItem } from "@/components/settings/control-item";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 
-const getStartOfWeekLabel = (startOfWeek: EStartOfTheWeek) =>
+const getStartOfWeekLabel = (startOfWeek: StartOfTheWeek | undefined) =>
   START_OF_THE_WEEK_OPTIONS.find((option) => option.value === startOfWeek)?.label;
 
 export const StartOfWeekPreference = observer(function StartOfWeekPreference(props: {
@@ -24,7 +24,7 @@ export const StartOfWeekPreference = observer(function StartOfWeekPreference(pro
   // hooks
   const { data: userProfile, updateUserProfile } = useUserProfile();
 
-  const handleStartOfWeekChange = async (val: number) => {
+  const handleStartOfWeekChange = async (val: StartOfTheWeek) => {
     try {
       await updateUserProfile({ start_of_the_week: val });
       setToast({ type: TOAST_TYPE.SUCCESS, title: "Success", message: "First day of the week updated successfully" });
@@ -39,8 +39,8 @@ export const StartOfWeekPreference = observer(function StartOfWeekPreference(pro
       description={props.option.description}
       control={
         <CustomSelect
-          value={userProfile.start_of_the_week}
-          label={getStartOfWeekLabel(userProfile.start_of_the_week)}
+          value={userProfile?.start_of_the_week}
+          label={getStartOfWeekLabel(userProfile?.start_of_the_week)}
           onChange={handleStartOfWeekChange}
           buttonClassName="border border-subtle-1"
           input

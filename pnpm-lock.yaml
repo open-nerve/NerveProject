@@ -547,6 +547,9 @@ importers:
 
   web/packages/constants:
     dependencies:
+      '@nerve/api-client':
+        specifier: workspace:*
+        version: link:../api-client
       '@nerve/types':
         specifier: workspace:*
         version: link:../types

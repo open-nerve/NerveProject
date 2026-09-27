@@ -7,8 +7,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import type { OnboardingStepsUpdate } from "@nerve/api-client";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspaceMemberInvitation, TOnboardingStep, TOnboardingSteps, TUserProfile } from "@nerve/types";
+import type { IWorkspaceMemberInvitation, TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
@@ -47,21 +48,21 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
     }
   }, [user, finishUserOnboarding]);
 
-  // handle step change
+  // handle step change: nerve merges the steps it is given into the profile's
   const stepChange = useCallback(
-    async (steps: Partial<TOnboardingSteps>) => {
+    async (steps: OnboardingStepsUpdate) => {
       if (!user) return;
-
-      const payload: Partial<TUserProfile> = {
-        onboarding_step: {
-          ...userProfile.onboarding_step,
-          ...steps,
-        },
-      };
-
-      await updateUserProfile(payload);
+      try {
+        await updateUserProfile({ onboarding_step: steps });
+      } catch {
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "Failed",
+          message: "Failed to save your progress, Please try again later.",
+        });
+      }
     },
-    [user, userProfile, updateUserProfile]
+    [user, updateUserProfile]
   );
 
   const handleStepChange = useCallback(

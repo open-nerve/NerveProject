@@ -16,14 +16,14 @@ import { GeneralProfileSettingsForm } from "./form";
 export const GeneralProfileSettings = observer(function GeneralProfileSettings() {
   const { t } = useTranslation();
   // store hooks
-  const { data: currentUser, userProfile } = useUser();
+  const { data: currentUser } = useUser();
 
   if (!currentUser) return null;
 
   return (
     <>
       <PageHead title={`${t("profile.label")} - ${t("general_settings")}`} />
-      <GeneralProfileSettingsForm user={currentUser} profile={userProfile.data} />
+      <GeneralProfileSettingsForm user={currentUser} />
     </>
   );
 });

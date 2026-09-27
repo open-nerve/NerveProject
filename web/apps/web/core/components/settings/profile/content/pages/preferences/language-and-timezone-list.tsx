@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve imports
+import type { Language } from "@nerve/api-client";
 import { SUPPORTED_LANGUAGES, toSupportedLanguage, useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { CustomSelect } from "@nerve/ui";
@@ -45,7 +46,7 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
       }
     };
 
-    const handleLanguageChange = async (value: string) => {
+    const handleLanguageChange = async (value: Language) => {
       try {
         await updateUserProfile({ language: value });
         setToast({

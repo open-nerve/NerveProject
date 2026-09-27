@@ -15,7 +15,6 @@ import type { User, UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { setPromiseToast } from "@nerve/propel/toast";
-import type { TUserProfile } from "@nerve/types";
 
 import { getFileURL } from "@nerve/utils";
 // components
@@ -23,7 +22,7 @@ import { DeactivateAccountModal } from "@/components/account/deactivate-account-
 import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
 // hooks
-import { useUser, useUserProfile } from "@/hooks/store/user";
+import { useUser } from "@/hooks/store/user";
 // utils
 import { validatePersonName, validateDisplayName } from "@nerve/utils";
 
@@ -32,18 +31,14 @@ type TUserProfileForm = {
   last_name: string;
   display_name: string;
   email: string;
-  role: string;
-  language: string;
-  user_timezone: string;
 };
 
 type Props = {
   user: User;
-  profile: TUserProfile;
 };
 
 export const GeneralProfileSettingsForm = observer(function GeneralProfileSettingsForm(props: Props) {
-  const { user, profile } = props;
+  const { user } = props;
   // states
   const [isLoading, setIsLoading] = useState(false);
   const [deactivateAccountModal, setDeactivateAccountModal] = useState(false);
@@ -61,14 +56,10 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       last_name: user.last_name || "",
       display_name: user.display_name || "",
       email: user.email || "",
-      role: profile.role || "Product / Project Manager",
-      language: profile.language || "en",
-      user_timezone: user.user_timezone || "Asia/Kolkata",
     },
   });
   // store hooks
   const { data: currentUser, updateCurrentUser } = useUser();
-  const { updateUserProfile } = useUserProfile();
 
   const onSubmit = async (formData: TUserProfileForm) => {
     setIsLoading(true);
@@ -78,34 +69,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       display_name: formData?.display_name,
     };
 
-    const profilePayload: Partial<TUserProfile> = {
-      role: formData.role,
-    };
-
-    const updateCurrentUserDetail = updateCurrentUser(userPayload);
-    const promises: Promise<User | TUserProfile | undefined>[] = [updateCurrentUserDetail];
-    if (profilePayload.role !== profile.role) {
-      const updateCurrentUserProfile = updateUserProfile(profilePayload);
-      promises.push(updateCurrentUserProfile);
-    }
-
-    const updatePromise = Promise.allSettled(promises)
-      .then((results) => {
-        const rejectedResult = results.find((result) => result.status === "rejected") as
-          | PromiseRejectedResult
-          | undefined;
-        if (rejectedResult) {
-          throw rejectedResult.reason ?? new Error("Failed to update profile");
-        }
-        const values = results.map(
-          (result) => (result as PromiseFulfilledResult<User | TUserProfile | undefined>).value
-        );
-        if (values.some((v) => v === undefined)) {
-          throw new Error("Failed to update profile");
-        }
-        return values;
-      })
-      .finally(() => setIsLoading(false));
+    const updatePromise = updateCurrentUser(userPayload).finally(() => setIsLoading(false));
 
     setPromiseToast(updatePromise, {
       loading: "Updating...",

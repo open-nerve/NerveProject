@@ -5,8 +5,8 @@
  */
 
 // services
-import type { ChangePasswordRequest, User, UserUpdate } from "@nerve/api-client";
-import type { IUserSettings, TIssuesResponse, TUserProfile } from "@nerve/types";
+import type { ChangePasswordRequest, Profile, ProfileUpdate, User, UserUpdate } from "@nerve/api-client";
+import type { IUserSettings, TIssuesResponse } from "@nerve/types";
 import { unwrap } from "@/lib/api-error";
 import { api } from "@/lib/auth/api-client";
 import { APIService } from "@/services/api.service";
@@ -28,19 +28,12 @@ export class UserService extends APIService {
     unwrap(await api.POST("/api/v0/me/deactivate"));
   }
 
-  async getCurrentUserProfile(): Promise<TUserProfile> {
-    return this.get("/api/users/me/profile/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async getCurrentUserProfile(): Promise<Profile> {
+    return unwrap(await api.GET("/api/v0/me/profile"));
   }
-  async updateCurrentUserProfile(data: any): Promise<any> {
-    return this.patch("/api/users/me/profile/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+
+  async updateCurrentUserProfile(data: ProfileUpdate): Promise<Profile> {
+    return unwrap(await api.PATCH("/api/v0/me/profile", { body: data }));
   }
 
   async currentUserSettings(bustCache: boolean = false): Promise<IUserSettings> {
@@ -49,26 +42,6 @@ export class UserService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;
-      });
-  }
-
-  async updateUserOnBoard(): Promise<any> {
-    return this.patch("/api/users/me/onboard/", {
-      is_onboarded: true,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async updateUserTourCompleted(): Promise<any> {
-    return this.patch("/api/users/me/tour-completed/", {
-      is_tour_completed: true,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
       });
   }
 
