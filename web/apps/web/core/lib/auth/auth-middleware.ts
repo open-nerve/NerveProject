@@ -1,0 +1,48 @@
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { Middleware } from "@nerve/api-client";
+import type { TokenManager } from "./token-manager";
+
+/**
+ * Puts the access token on every request of the client, and answers a 401 to it (M2 design 7.1, Codex
+ * M-5): renews the token once and sends a copy of the request again, once. Two outcomes end the session:
+ * the refresh answers 401 (the token manager ends it), or the request sent again is refused as well. A
+ * refresh that fails for a passing reason (429, 5xx, no network) rejects the request with that error and
+ * keeps the session. Without a session the request goes out without a token, and its 401 comes back as is.
+ * A fetch that fails, the request's or its copy's, fails the request as it is and keeps the session.
+ * A request belongs to the session it was sent in: when the tab has moved to another session by the time
+ * its 401 comes back, the 401 comes back as is, and a copy refused again ends only the request's session.
+ */
+export function authMiddleware(
+  tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">
+): Middleware {
+  // A copy of each request made before fetch reads its body, the token it went with and that token's
+  // session; openapi-fetch hands onResponse the request object onRequest returned.
+  const sent = new WeakMap<Request, { copy: Request; token: string; loginId: string | undefined }>();
+  return {
+    async onRequest({ request }) {
+      // The session accessToken() serves, read as it is called: the tab may move on before it returns.
+      const loginId = tokens.state.loginId;
+      const token = await tokens.accessToken();
+      if (token === undefined) return undefined;
+      request.headers.set("Authorization", `Bearer ${token}`);
+      sent.set(request, { copy: request.clone(), token, loginId });
+      return request;
+    },
+    async onResponse({ request, response, options }) {
+      const first = sent.get(request);
+      if (response.status !== 401 || first === undefined) return undefined;
+      // The tab has moved to another session: the request is not sent again as that one.
+      if (tokens.state.loginId !== first.loginId) return undefined;
+      const token = await tokens.renew(first.token);
+      if (token === undefined) return undefined;
+      first.copy.headers.set("Authorization", `Bearer ${token}`);
+      const again = await options.fetch(first.copy);
+      if (again.status === 401) await tokens.endSession(first.loginId);
+      return again;
+    },
+  };
+}
