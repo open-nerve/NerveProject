@@ -132,7 +132,7 @@ class TokenManager {
 - **写入都在锁下**：`signIn` 写新记录；`signOut` 在锁下读出最新的刷新令牌，用不挂中间件的客户端调 `POST /api/v0/auth/logout`（8 秒，尽力而为，失败也照样退出），再删除记录；`endSession`（重发仍 401 时）在锁下删除记录，记录已是别的会话时跟随它、不删。
 - **`storage` 事件**（`handleStorageChange`）：记录被删除且本标签页未退出 → 退出；`login_id` 变了（包括本标签页未登录时记录出现）→ 丢掉访问令牌，以新会话 `signed-in`，访问令牌由下一次续期取得；`login_id` 没变 → 不动。
 - 订阅者（`useSession`、`store-context.tsx`）在每次状态变化后收到通知；`state` 每次是新对象。
-- 测试：`token-manager.test.ts`（30 个，单标签页）、`token-manager.tabs.test.ts`（10 个 × 两种锁 = 20 个），各测试的内容见 plan 的 Task 2、3。每个写入 `nerve.auth` 的测试都核对写入时 `RecordingLock.held` 为真。测试替身：`SharedStorage`（多个标签页共用一份数据，一个标签页的写入在微任务里通知其他标签页，和浏览器一样不通知自己）、`RecordingLock`、`FakeNerve`（把每个请求停住，直到测试 `answer`；`tokens()` 发出递增的 `at-n`、`rt-n`）、`gate()`、`settle`（假时钟上以 10 毫秒推进，20 秒为限）。
+- 测试：`token-manager.test.ts`（32 个，单标签页）、`token-manager.session-change.test.ts`（1 个 × 两种锁 = 2 个）、`token-manager.tabs.test.ts`（10 个 × 两种锁 = 20 个），各测试的内容见 plan 的 Task 2、3，此外：`token-manager.test.ts` 另有续期、退出时 fetch 被拒绝（断网）的两个测试，续期保留会话和记录、给出 `SessionUnavailableError`，退出照样在本地退出；`token-manager.session-change.test.ts` 核对上面续期一条的规则：以 X 发出的请求，续期排在另一个标签页以 Y 登录之后，以 `SessionChangedError` 结束，拿不到 Y 的令牌。写入 `nerve.auth` 的每一处（续期写回、续期 401 时删除、登录、退出、结束会话）都有测试核对写入时 `RecordingLock.held` 为真，以续期写入或删除为结果的测试核对全部写入。测试替身：`SharedStorage`（多个标签页共用一份数据，一个标签页的写入在微任务里通知其他标签页，和浏览器一样不通知自己；没有改变数据的写入（同样的值、删除不存在的键）不通知任何标签页）、`RecordingLock`、`FakeNerve`（把每个请求停住，直到测试 `answer` 或 `fail`：`fail` 像断网时的浏览器那样让 fetch 以 `TypeError` 失败；`tokens()` 发出递增的 `at-n`、`rt-n`）、`gate()`、`settle`（假时钟上以 10 毫秒推进，20 秒为限）。
 
 ### 2.6 认证中间件（M2 设计 7.1；Codex M-5）
 
