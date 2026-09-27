@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SharedStorage } from "@/lib/auth/fake-browser";
 import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
@@ -103,6 +103,17 @@ async function load() {
   return { storage, nerve, clients, tm, context, SessionChangedError, signedIn, follow };
 }
 
+// The first import of the stores compiles a few hundred modules: a second here, several on a busy CI runner,
+// where it once ran over a test's 5 s. It happens once, before the tests and with a deadline of its own, and
+// runs no app code (no token manager, no RootStore); each test's load() then evaluates the compiled modules
+// afresh, in milliseconds.
+beforeAll(async () => {
+  vi.doMock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {}, apiFor: () => ({}) }));
+  vi.doMock("@/lib/store-context", () => ({ rootStore: {} }));
+  await import("@/store/root.store");
+  vi.doUnmock("@/lib/store-context");
+  vi.doUnmock("@/lib/auth/api-client");
+}, 60_000);
 beforeEach(() => {
   vi.useFakeTimers({ now: 1_000_000 });
 });
