@@ -56,7 +56,6 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
         placement="bottom-end"
         searchPlaceholder={t("common.search.label")}
         noResultsMessage={t("common.search.no_matches_found")}
-        loadingMessage={t("common.loading")}
       />
     </div>
   );
