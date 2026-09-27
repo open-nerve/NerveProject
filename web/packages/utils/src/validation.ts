@@ -18,22 +18,6 @@
 // =============================================================================
 
 /**
- * Person Name Pattern (for first_name, last_name)
- * Allows: Unicode letters (\p{L}), spaces, hyphens, apostrophes
- * Use case: Accommodates international names like "José", "李明", "محمد", "Müller"
- * Blocks: Injection-risk characters and special symbols
- */
-const PERSON_NAME_REGEX = /^[\p{L}\s'-]+$/u;
-
-/**
- * Display Name Pattern (for display_name, usernames)
- * Allows: Unicode letters (\p{L}), numbers (\p{N}), underscore, period, hyphen
- * Use case: International usernames like "josé_123", "李明.dev", "müller-2024"
- * Blocks: Spaces and injection-risk characters
- */
-const DISPLAY_NAME_REGEX = /^[\p{L}\p{N}_.-]+$/u;
-
-/**
  * Company/Organization Name Pattern (for company_name, workspace names)
  * Allows: Unicode letters (\p{L}), numbers (\p{N}), spaces, underscores, hyphens
  * Use case: International business names like "Société Générale", "株式会社", "Müller GmbH"
@@ -58,66 +42,6 @@ const SLUG_REGEX = /^[\p{L}\p{N}_-]+$/u;
 // =============================================================================
 // VALIDATION FUNCTIONS
 // =============================================================================
-
-/**
- * @description Validates person names (first name, last name)
- * @param {string} name - Name to validate
- * @returns {boolean | string} true if valid, error message if invalid
- * @example
- * validatePersonName("John") // returns true
- * validatePersonName("O'Brien") // returns true
- * validatePersonName("Jean-Paul") // returns true
- * validatePersonName("John<script>") // returns error message
- */
-export const validatePersonName = (name: string): boolean | string => {
-  if (!name || name.trim() === "") {
-    return "Name is required";
-  }
-
-  if (name.length > 50) {
-    return "Name must be 50 characters or less";
-  }
-
-  if (hasInjectionRiskChars(name)) {
-    return "Names cannot contain special characters like < > ' \" { } [ ] * ^ ! # %";
-  }
-
-  if (!PERSON_NAME_REGEX.test(name)) {
-    return "Names can only contain letters, spaces, hyphens, and apostrophes";
-  }
-
-  return true;
-};
-
-/**
- * @description Validates display names and usernames
- * @param {string} displayName - Display name to validate
- * @returns {boolean | string} true if valid, error message if invalid
- * @example
- * validateDisplayName("john_doe") // returns true
- * validateDisplayName("john.doe-123") // returns true
- * validateDisplayName("john doe") // returns error message (spaces not allowed)
- * validateDisplayName("john<>doe") // returns error message
- */
-export const validateDisplayName = (displayName: string): boolean | string => {
-  if (!displayName || displayName.trim() === "") {
-    return true; // Display name is optional in most cases
-  }
-
-  if (displayName.length > 50) {
-    return "Display name must be 50 characters or less";
-  }
-
-  if (hasInjectionRiskChars(displayName)) {
-    return "Display name cannot contain special characters like < > ' \" { } [ ] * ^ ! # %";
-  }
-
-  if (!DISPLAY_NAME_REGEX.test(displayName)) {
-    return "Display name can only contain letters, numbers, periods, hyphens, and underscores";
-  }
-
-  return true;
-};
 
 /**
  * @description Validates company and organization names

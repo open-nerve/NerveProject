@@ -8,10 +8,13 @@ import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 // nerve imports
 import type { UserUpdate } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EOnboardingSteps } from "@nerve/types";
-import { cn, getFileURL, validatePersonName } from "@nerve/utils";
+import { cn, getFileURL } from "@nerve/utils";
+// helpers
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // local components
@@ -26,7 +29,14 @@ type TProfileSetupFormValues = {
   last_name: string;
 };
 
+/**
+ * The field the step shows, whose errors show under it. The step checks only that it is filled: the rules of the
+ * names are nerve's (M2 design 4.2), and its refusal shows under the field.
+ */
+const FIELDS = ["first_name"] as const;
+
 export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepChange }: Props) {
+  const { t } = useTranslation();
   // store hooks
   const { data: user, updateCurrentUser } = useUser();
   // form info
@@ -34,6 +44,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepC
     handleSubmit,
     control,
     watch,
+    setError,
     formState: { errors, isSubmitting, isValid },
   } = useForm<TProfileSetupFormValues>({
     defaultValues: {
@@ -52,12 +63,12 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepC
     try {
       await updateCurrentUser(userDetailsPayload);
       return true;
-    } catch {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error",
-        message: "User details update failed. Please try again!",
-      });
+    } catch (error) {
+      // A refusal of the name shows under it, anything else in a toast (M2 design 7.3).
+      const key = fieldErrorKeys(error).first_name;
+      if (key !== undefined) setError("first_name", { type: "manual", message: t(key) });
+      if (needsErrorBanner(error, FIELDS))
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
       return false;
     }
   };
@@ -100,12 +111,7 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepC
             control={control}
             name="first_name"
             rules={{
-              required: "Name is required",
-              validate: validatePersonName,
-              maxLength: {
-                value: 50,
-                message: "Name must be within 50 characters.",
-              },
+              required: t("name_is_required"),
             }}
             render={({ field: { value, onChange, ref } }) => (
               <input

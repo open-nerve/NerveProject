@@ -6,6 +6,7 @@ import { bearer, createPAT, emailFor, password, register } from "../../fixtures/
 import { expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { saveProfileStep } from "../../fixtures/onboarding-pages";
+import { answerTo } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // A10, the profile step of onboarding (M2 design 2).
@@ -50,6 +51,43 @@ test("A10 (page): a new account's first visit of /onboarding goes well, and its 
   // A full load: /onboarding mounts before the app has the account.
   await page.goto("/onboarding");
   await takeProfileStep(page, watch, db, email);
+});
+
+test("A10 (page): a name nerve refuses keeps the profile step, which says why under the name", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const email = emailFor(testInfo);
+  const page = await signedInPage(await register(api, email));
+  const watch = await watchPage(page);
+  await page.goto("/onboarding");
+  await expect(page.getByText("Create your profile.")).toBeVisible();
+  const before = await accountOf(db, email);
+  const stepsBefore = await onboardingStepsOf(db, email);
+
+  // The rules of the name are nerve's (M2 design 4.2): a web address in it is refused, and the step stays.
+  await page.getByLabel("Name").fill("Ada example.com");
+  const refused = await answerTo(page, "PATCH", "/api/v0/me", () =>
+    page.getByRole("button", { name: "Continue" }).click()
+  );
+  expect(refused.status()).toBe(422);
+  const nameBlock = page
+    .locator("div", { has: page.getByLabel("Name") })
+    .filter({ has: page.locator("label") })
+    .last();
+  await expect(nameBlock.getByText("Must not contain a web address")).toBeVisible();
+  await expect(page.getByText("Some fields are not valid.")).toHaveCount(0);
+  await expect(page.getByText("Create your profile.")).toBeVisible();
+  expect(await accountOf(db, email)).toEqual(before);
+  expect(await onboardingStepsOf(db, email)).toEqual(stepsBefore);
+
+  expect(watch.apiFailures).toEqual(["422 PATCH /api/v0/me"]);
+  expect(watch.oldApiRequests).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
+  await expectQuietConsole(page, watch, {
+    errors: ["Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"],
+  });
 });
 
 test("A10 (page): signing up goes on to /onboarding within the app, which asks no older API", async ({

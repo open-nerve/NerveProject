@@ -25,8 +25,6 @@ import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-it
 import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
-// utils
-import { validatePersonName, validateDisplayName } from "@nerve/utils";
 
 type TUserProfileForm = {
   first_name: string;
@@ -39,7 +37,10 @@ type Props = {
   user: User;
 };
 
-/** The fields of UserUpdate the form has, whose errors show under them. */
+/**
+ * The fields of UserUpdate the form has, whose errors show under them. The form checks only that the required
+ * ones are filled: the rules of the names are nerve's (M2 design 4.2), and its refusal shows under the field.
+ */
 const FIELDS = ["first_name", "last_name", "display_name"] as const;
 
 export const GeneralProfileSettingsForm = observer(function GeneralProfileSettingsForm(props: Props) {
@@ -144,7 +145,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                   name="first_name"
                   rules={{
                     required: t("common.errors.required"),
-                    validate: validatePersonName,
                   }}
                   render={({ field: { value, onChange, ref } }) => (
                     <Field name="first_name" invalid={Boolean(errors.first_name)}>
@@ -158,7 +158,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           onChange={onChange}
                           ref={ref}
                           placeholder={t("enter_your_first_name")}
-                          maxLength={50}
                           autoComplete="on"
                         />
                       </InputGroup>
@@ -172,9 +171,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                 <Controller
                   control={control}
                   name="last_name"
-                  rules={{
-                    validate: validatePersonName,
-                  }}
                   render={({ field: { value, onChange, ref } }) => (
                     <Field name="last_name" invalid={Boolean(errors.last_name)}>
                       <InputGroup size="2xl">
@@ -187,7 +183,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           onChange={onChange}
                           ref={ref}
                           placeholder={t("enter_your_last_name")}
-                          maxLength={50}
                           autoComplete="on"
                         />
                       </InputGroup>
@@ -206,7 +201,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                   name="display_name"
                   rules={{
                     required: t("common.errors.required"),
-                    validate: validateDisplayName,
                   }}
                   render={({ field: { value, onChange, ref } }) => (
                     <Field name="display_name" invalid={Boolean(errors?.display_name)}>
@@ -220,7 +214,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           onChange={onChange}
                           ref={ref}
                           placeholder={t("enter_your_display_name")}
-                          maxLength={50}
                         />
                       </InputGroup>
                     </Field>
