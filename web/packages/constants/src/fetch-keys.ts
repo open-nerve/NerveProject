@@ -93,9 +93,6 @@ export const CYCLE_ISSUES_WITH_PARAMS = (cycleId: string, params?: any) => {
 // Issues
 export const ISSUE_DETAILS = (issueId: string) => `ISSUE_DETAILS_${issueId.toUpperCase()}`;
 
-// api-tokens
-export const API_TOKENS_LIST = `API_TOKENS_LIST`;
-
 // project level keys
 export const PROJECT_DETAILS = (_workspaceSlug: string, projectId: string) =>
   `PROJECT_DETAILS_${projectId.toUpperCase()}`;

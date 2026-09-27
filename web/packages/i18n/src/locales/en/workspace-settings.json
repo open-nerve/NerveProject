@@ -4,6 +4,7 @@
     "key_created": "Key created",
     "copy_key": "Copy and save this secret key somewhere safe. You can't see this key after you hit Close. A CSV file containing the key has been downloaded.",
     "token_copied": "Token copied to clipboard.",
+    "token_not_copied": "The token could not be copied to the clipboard.",
     "settings": {
       "general": {
         "title": "General",
@@ -92,7 +93,6 @@
         }
       },
       "api_tokens": {
-        "title": "Access Tokens",
         "add_token": "Add access token",
         "create_token": "Create token",
         "never_expires": "Never expires",
@@ -106,8 +106,7 @@
             "message": "The token has been successfully deleted"
           },
           "error": {
-            "title": "Error!",
-            "message": "The token could not be deleted"
+            "title": "Error!"
           }
         }
       }

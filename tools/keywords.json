@@ -1,5 +1,5 @@
 {
-  "phase": "M2/P4",
+  "phase": "M2/P5",
   "rules": [
     {
       "id": "deploy-files",
@@ -150,17 +150,18 @@
     {
       "id": "services-files",
       "phase": "M1/P1",
-      "why": "packages/services 只留 web 用到的令牌服务、地址工具和上传元数据工具，整包在 M5 删除；新的接口调用用生成的客户端",
+      "why": "packages/services 只留 web 用到的地址工具和上传元数据工具，整包在 M5 删除；新的接口调用用生成的客户端。M2/P5 删掉了 Plane 的 axios 基类 api.service.ts 和令牌服务 developer/（PAT 改由 web 的 store 经生成的客户端调用）",
       "path": {
-        "source": "^web/packages/services/(?!(?:package\\.json|tsconfig\\.json|tsdown\\.config\\.ts|src/(?:index|api\\.service)\\.ts|src/helpers/(?:index|url|url\\.test)\\.ts|src/developer/(?:index|api-token\\.service)\\.ts|src/file/(?:index|helper)\\.ts)$)",
+        "source": "^web/packages/services/(?!(?:package\\.json|tsconfig\\.json|tsdown\\.config\\.ts|src/index\\.ts|src/helpers/(?:index|url|url\\.test)\\.ts|src/file/(?:index|helper)\\.ts)$)",
         "flags": ""
       },
       "samples": {
-        "hit": ["web/packages/services/src/issue/sites-issue.service.ts", "web/packages/services/src/live.service.ts"],
-        "miss": [
-          "web/packages/services/src/helpers/url.test.ts",
+        "hit": [
+          "web/packages/services/src/issue/sites-issue.service.ts",
+          "web/packages/services/src/api.service.ts",
           "web/packages/services/src/developer/api-token.service.ts"
-        ]
+        ],
+        "miss": ["web/packages/services/src/helpers/url.test.ts", "web/packages/services/src/file/helper.ts"]
       }
     },
     {
@@ -1919,6 +1920,57 @@
             "web/apps/web/helpers/authentication.helper.ts"
           ],
           "miss": ["server/internal/shared/error.go", "docs/v0/M2-auth/M2-design.md"]
+        }
+      }
+    },
+    {
+      "id": "with-credentials",
+      "phase": "M2/P5",
+      "why": "Plane 靠 Cookie 认证，axios 实例都带 withCredentials: true；Nerve 的令牌在 Authorization 头里，不发 Cookie（M2 设计 7.2）。最后一处是 @nerve/services 的 api.service.ts，随 PAT 的重写删除（M2 设计 7.9）。上传到对象存储的 withCredentials: false 属于 M5，不命中",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "withCredentials:\\s*true",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["      withCredentials: true,", "    this.axiosInstance = create({ withCredentials:true });"],
+        "miss": ["      withCredentials: false,"],
+        "files": {
+          "hit": ["web/packages/services/src/api.service.ts", "web/apps/web/core/services/api.service.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/platform/httpapi/cors.go"]
+        }
+      }
+    },
+    {
+      "id": "plane-api-token-urls",
+      "phase": "M2/P5",
+      "why": "Plane 的个人访问令牌地址 /api/users/api-tokens/；web 的 PAT store 改调 /api/v0/me/api-tokens 和 /api/v0/api-tokens/{token_id}（M2 设计 7.5、7.9）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/users/api-tokens",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(`${API_BASE_URL}/api/users/api-tokens/`)",
+          "    return this.delete(`/api/users/api-tokens/${tokenId}/`)"
+        ],
+        "miss": [
+          "    return unwrap(await this.api.GET(\"/api/v0/me/api-tokens\", { params: { query: { limit: 100, cursor } } }));",
+          "    unwrap(await this.api.DELETE(\"/api/v0/api-tokens/{token_id}\", { params: { path: { token_id: tokenId } } }));"
+        ],
+        "files": {
+          "hit": [
+            "web/packages/services/src/developer/api-token.service.ts",
+            "web/apps/web/core/services/api-token.service.ts"
+          ],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/identity/a11-api-tokens.spec.ts"]
         }
       }
     }

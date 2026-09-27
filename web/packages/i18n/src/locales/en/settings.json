@@ -6,7 +6,27 @@
     },
     "api_tokens": {
       "title": "Personal Access Tokens",
-      "description": "Generate secure API tokens to integrate your data with external systems and applications."
+      "description": "Generate secure API tokens to integrate your data with external systems and applications.",
+      "load_failed": "The tokens could not be loaded.",
+      "active": "Active",
+      "expired": "Expired",
+      "expires_at": "Expires {date} at {time}",
+      "expired_at": "Expired {date} at {time}",
+      "created_at": "Created {date}",
+      "last_used": "Last used {date} at {time}",
+      "never_used": "Never used",
+      "revoke": "Revoke token",
+      "copy": "Copy secret key",
+      "expiry": {
+        "1_week": "1 week",
+        "1_month": "1 month",
+        "3_months": "3 months",
+        "1_year": "1 year",
+        "custom": "Custom date",
+        "set": "Set expiration date",
+        "set_date": "Set date",
+        "required": "Choose when the token expires, or that it never does."
+      }
     }
   },
   "profile": {

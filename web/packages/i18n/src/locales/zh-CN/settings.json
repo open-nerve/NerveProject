@@ -6,7 +6,27 @@
     },
     "api_tokens": {
       "title": "个人访问令牌",
-      "description": "生成安全的 API 令牌，将您的数据与外部系统和应用程序集成。"
+      "description": "生成安全的 API 令牌，将您的数据与外部系统和应用程序集成。",
+      "load_failed": "无法加载令牌。",
+      "active": "有效",
+      "expired": "已过期",
+      "expires_at": "{date} {time} 过期",
+      "expired_at": "已于 {date} {time} 过期",
+      "created_at": "创建于 {date}",
+      "last_used": "最后使用于 {date} {time}",
+      "never_used": "从未使用",
+      "revoke": "撤销令牌",
+      "copy": "复制密钥",
+      "expiry": {
+        "1_week": "1 周",
+        "1_month": "1 个月",
+        "3_months": "3 个月",
+        "1_year": "1 年",
+        "custom": "自定义日期",
+        "set": "设置过期时间",
+        "set_date": "选择日期",
+        "required": "请选择令牌何时过期，或设为永不过期。"
+      }
     }
   },
   "profile": {

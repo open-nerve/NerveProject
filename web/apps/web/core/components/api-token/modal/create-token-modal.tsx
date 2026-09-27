@@ -4,16 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
-import { mutate } from "swr";
+import { useEffect, useRef, useState } from "react";
 // nerve imports
-import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { APITokenService } from "@nerve/services";
-import type { IApiToken } from "@nerve/types";
+import type { ApiTokenCreate, ApiTokenCreated } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 import { renderFormattedDate, csvDownload } from "@nerve/utils";
-// constants
-import { API_TOKENS_LIST } from "@nerve/constants";
+// hooks
+import { useApiTokens } from "@/hooks/store/user";
 // local imports
 import { CreateApiTokenForm } from "./form";
 import { GeneratedTokenDetails } from "./generated-token-details";
@@ -23,16 +21,42 @@ type Props = {
   onClose: () => void;
 };
 
-// services
-const apiTokenService = new APITokenService();
-
 export function CreateApiTokenModal(props: Props) {
   const { isOpen, onClose } = props;
+  // store hooks
+  const { createToken } = useApiTokens();
   // states
   const [neverExpires, setNeverExpires] = useState<boolean>(false);
-  const [generatedToken, setGeneratedToken] = useState<IApiToken | null | undefined>(null);
+  // The new token with the token itself: only here, while the modal shows it (M2 design 7.7).
+  const [generatedToken, setGeneratedToken] = useState<ApiTokenCreated | null>(null);
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  // How many times an opening has ended, by a close or by leaving the page. A create belongs to the opening it
+  // was made in: answered after that opening ended (Cancel stays clickable while it is out), it keeps no secret
+  // and downloads no CSV; the list shows the token, which can be revoked there. A count, not an open flag, so a
+  // reopening in the meantime does not take the answer as its own.
+  const endedOpenings = useRef(0);
+  const { t } = useTranslation();
+
+  // Each opening starts with the form: set while rendering, so that no frame of an opening shows the token of
+  // the last, not even one opened before the reset after closing has run.
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) {
+      setNeverExpires(false);
+      setGeneratedToken(null);
+    }
+  }
+
+  // Leaving the page ends the opening too.
+  useEffect(
+    () => () => {
+      endedOpenings.current += 1;
+    },
+    []
+  );
 
   const handleClose = () => {
+    endedOpenings.current += 1;
     onClose();
 
     setTimeout(() => {
@@ -41,44 +65,25 @@ export function CreateApiTokenModal(props: Props) {
     }, 350);
   };
 
-  const downloadSecretKey = (data: IApiToken) => {
+  const downloadSecretKey = (data: ApiTokenCreated) => {
     const csvData = {
       Title: data.label,
       Description: data.description,
-      Expiry: data.expired_at ? (renderFormattedDate(data.expired_at)?.replace(",", " ") ?? "") : "Never expires",
-      "Secret key": data.token ?? "",
+      Expiry: data.expired_at
+        ? (renderFormattedDate(data.expired_at) ?? "")
+        : t("workspace_settings.settings.api_tokens.never_expires"),
+      "Secret key": data.token,
     };
 
     csvDownload(csvData, `secret-key-${Date.now()}`);
   };
 
-  const handleCreateToken = async (data: Partial<IApiToken>) => {
-    // make the request to generate the token
-    await apiTokenService
-      .create(data)
-      .then((res) => {
-        setGeneratedToken(res);
-        downloadSecretKey(res);
-
-        mutate<IApiToken[]>(
-          API_TOKENS_LIST,
-          (prevData) => {
-            if (!prevData) return;
-
-            return [res, ...prevData];
-          },
-          false
-        );
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: err.message || err.detail,
-        });
-
-        throw err;
-      });
+  const handleCreateToken = async (data: ApiTokenCreate) => {
+    const opening = endedOpenings.current;
+    const created = await createToken(data);
+    if (endedOpenings.current !== opening) return;
+    setGeneratedToken(created);
+    downloadSecretKey(created);
   };
 
   return (
