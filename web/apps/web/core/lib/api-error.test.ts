@@ -41,6 +41,20 @@ describe("unwrap", () => {
     expect(() => unwrap(result)).toThrow(expect.objectContaining({ status: 409, problem, message: problem.detail }));
   });
 
+  it("takes the problem's title for the message when the problem has no detail", async () => {
+    const withoutDetail = { status: 409, code: "identity.email_taken", title: "Conflict" };
+    const answer = new Response(JSON.stringify(withoutDetail), {
+      status: 409,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+    const result = await clientAnswering(answer).POST("/api/v0/auth/register", {
+      body: { email: "a@example.com", password: "x" },
+    });
+    expect(() => unwrap(result)).toThrow(
+      expect.objectContaining({ status: 409, problem: withoutDetail, message: "Conflict" })
+    );
+  });
+
   it("throws an answer without a problem, e.g. a proxy's HTML page, as an ApiError without one", async () => {
     const answer = new Response("<html>Bad Gateway</html>", { status: 502, headers: { "Content-Type": "text/html" } });
     const result = await clientAnswering(answer).GET("/api/v0/instance");
