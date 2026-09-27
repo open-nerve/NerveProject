@@ -109,10 +109,14 @@ test("A11 (page): a token created on the page shows once, and nowhere after; the
   ]);
   expect(row?.deleted_at).not.toBeNull();
   expect((await api.GET("/api/v0/me", { headers: bearer(created.token) })).response.status).toBe(401);
+  // The security page, which lists the tokens too, says there is none.
+  await page.getByRole("button", { name: "Security" }).click();
+  await expect(page).toHaveURL("/settings/profile/security");
+  await expect(page.getByText("You have no personal access tokens.")).toBeVisible();
 
   expect(watch.apiFailures).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  // Two loads of the page: the first, and the reload.
+  // Two loads of the page: the first, and the reload; the sidebar's buttons navigate within the app.
   await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
 });
 

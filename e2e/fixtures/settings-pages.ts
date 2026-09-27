@@ -183,3 +183,15 @@ export async function submitPasswordChange(page: Page, current: string, next: st
   );
   return answer.status();
 }
+
+/**
+ * The block of the security page's field of id: its heading, the field and the messages under it. That is the
+ * innermost div around the field that holds a heading too, the last such div in document order. A message in a
+ * toast or under another field is not in it.
+ */
+export function fieldBlock(page: Page, id: string): Locator {
+  return page
+    .locator("div", { has: page.locator(`#${id}`) })
+    .filter({ has: page.getByRole("heading") })
+    .last();
+}

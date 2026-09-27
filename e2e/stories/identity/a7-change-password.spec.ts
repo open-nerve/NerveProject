@@ -1,7 +1,7 @@
 import { accountOf, expectPasswordChanged, tokensOf } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { registerOnboarded, submitPasswordChange } from "../../fixtures/settings-pages";
+import { fieldBlock, registerOnboarded, submitPasswordChange } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // A7, changing the password (M2 design 2). The page keeps its own session,
@@ -37,9 +37,9 @@ test("A7 (page): the security page changes the password, keeps its own session, 
   // A wrong current password shows under its field; a new password too common, under the new one. Nothing
   // changes.
   expect(await submitPasswordChange(page, "Wr0ng-password", newPassword)).toBe(422);
-  await expect(page.getByText("The current password is wrong.")).toBeVisible();
+  await expect(fieldBlock(page, "old_password").getByText("The current password is wrong.")).toBeVisible();
   expect(await submitPasswordChange(page, password, "Password1!")).toBe(422);
-  await expect(page.getByText("This password is too common")).toBeVisible();
+  await expect(fieldBlock(page, "new_password").getByText("This password is too common")).toBeVisible();
   await expect(page.getByText("The current password is wrong.")).toHaveCount(0);
   expect(await accountOf(db, email)).toEqual(before);
 
