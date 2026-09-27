@@ -32,10 +32,14 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
 
   // A weak password: the rules show under the field, and the page sends nothing (counted at the end).
   await fillSignUp(page, newEmail, "password");
-  await expect(page.getByText("8–128 characters")).toBeVisible();
-  await expect(page.getByText("Min 1 upper-case letter")).toBeVisible();
+  const upperCaseRule = page.getByText("Min 1 upper-case letter", { exact: true });
+  await expect(page.getByText("8–128 characters", { exact: true })).toBeVisible();
+  await expect(upperCaseRule).toBeVisible();
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(formAlert(page)).toHaveText("Try setting-up a strong password to proceed");
+  // A valid password: the rules go.
+  await page.getByLabel("Set a password", { exact: true }).fill("N3wPassw0rd!");
+  await expect(upperCaseRule).toHaveCount(0);
 
   // Common passwords, which only nerve knows: the message is under the field, none above the form.
   const expectTooCommon = async (common: string) => {

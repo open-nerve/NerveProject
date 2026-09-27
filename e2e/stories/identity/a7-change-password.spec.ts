@@ -34,10 +34,12 @@ test("A7 (page): the security page changes the password, keeps its own session, 
   const before = await accountOf(db, email);
   const tokensBefore = await tokensOf(db, before.id);
 
-  // The rules under the new password show while it is not valid, and go once it is, though the field keeps its
-  // focus: the page decides by the password alone.
+  // The rules under the new password show while it is neither empty nor valid, and go once it is valid, though the
+  // field keeps its focus: the page decides by the password alone.
   const newField = page.locator("#new_password");
-  const specialRule = fieldBlock(page, "new_password").getByText("Min 1 special character");
+  const specialRule = fieldBlock(page, "new_password").getByText("Min 1 special character", { exact: true });
+  await expect(newField).toHaveValue("");
+  await expect(specialRule).toHaveCount(0);
   await newField.fill("N3wPassw0rd");
   await expect(newField).toBeFocused();
   await expect(specialRule).toBeVisible();
