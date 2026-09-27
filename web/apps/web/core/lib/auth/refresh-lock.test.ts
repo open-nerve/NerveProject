@@ -187,16 +187,40 @@ describe("leaseLock", () => {
 
 describe("webLock", () => {
   it("runs the task under the lock nerve.auth.refresh and passes its result on", async () => {
-    const names: string[] = [];
+    // A lock the test grants by hand, held from the grant until the callback it runs settles.
+    const requests: unknown[][] = [];
+    const grant = gate();
+    let held = false;
     const locks = {
-      request: (async (name: string, granted: () => Promise<unknown>) => {
-        names.push(name);
-        return granted();
+      request: (async (...args: unknown[]) => {
+        const granted = args.pop() as () => Promise<unknown>;
+        requests.push(args);
+        await grant.promise;
+        held = true;
+        try {
+          return await granted();
+        } finally {
+          held = false;
+        }
       }) as LockManager["request"],
     };
+    const body = gate<number>();
+    const seen: boolean[] = [];
+    const done = webLock(locks).run(async () => {
+      seen.push(held);
+      const value = await body.promise;
+      seen.push(held);
+      return value;
+    });
 
-    await expect(webLock(locks).run(async () => 42)).resolves.toBe(42);
-    expect(names).toEqual([LOCK_NAME]);
+    // One exclusive request (no options), and the task waits for the grant.
+    expect(requests).toEqual([[LOCK_NAME]]);
+    expect(seen).toEqual([]);
+    grant.open();
+    body.open(42);
+    await expect(done).resolves.toBe(42);
+    expect(seen).toEqual([true, true]);
+    expect(held).toBe(false);
     expect(LOCK_NAME).toBe("nerve.auth.refresh");
   });
 });
