@@ -6,7 +6,7 @@
 
 import { action, makeObservable, observable, runInAction } from "mobx";
 // nerve imports
-import type { Profile, ProfileUpdate, Theme } from "@nerve/api-client";
+import type { ApiClient, Profile, ProfileUpdate, Theme } from "@nerve/api-client";
 import { setLanguage } from "@nerve/i18n";
 // services
 import { UserService } from "@/services/user.service";
@@ -30,7 +30,10 @@ export class ProfileStore implements IUserProfileStore {
   // services
   userService: UserService;
 
-  constructor(public store: RootStore) {
+  constructor(
+    public store: RootStore,
+    api: ApiClient
+  ) {
     makeObservable(this, {
       // observables
       data: observable,
@@ -42,7 +45,7 @@ export class ProfileStore implements IUserProfileStore {
       updateUserTheme: action,
     });
     // services
-    this.userService = new UserService();
+    this.userService = new UserService(api);
   }
 
   /**

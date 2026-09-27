@@ -86,15 +86,18 @@ describe("unwrap", () => {
     const renewed: string[] = [];
     const api = clientAnswering(answer);
     api.use(
-      authMiddleware({
-        state: { status: "signed-in", loginId: "login-x" },
-        accessToken: async () => "at-x",
-        renew: async (sent) => {
-          renewed.push(sent);
-          throw changed;
+      authMiddleware(
+        {
+          state: { status: "signed-in", loginId: "login-x" },
+          accessToken: async () => "at-x",
+          renew: async (sent) => {
+            renewed.push(sent);
+            throw changed;
+          },
+          endSession: async () => true,
         },
-        endSession: async () => true,
-      })
+        "login-x"
+      )
     );
     const error = await (async () => unwrap(await api.GET("/api/v0/me")))().catch((thrown: unknown) => thrown);
     expect(renewed).toEqual(["at-x"]);

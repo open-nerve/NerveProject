@@ -6,6 +6,7 @@
 
 import { action, makeObservable, observable, runInAction } from "mobx";
 // nerve imports
+import type { ApiClient } from "@nerve/api-client";
 import type { IUserSettings } from "@nerve/types";
 // services
 import { UserService } from "@/services/user.service";
@@ -50,7 +51,7 @@ export class UserSettingsStore implements IUserSettingsStore {
   // services
   userService: UserService;
 
-  constructor() {
+  constructor(api: ApiClient) {
     makeObservable(this, {
       // observables
       isLoading: observable.ref,
@@ -64,7 +65,7 @@ export class UserSettingsStore implements IUserSettingsStore {
       toggleIsScrolled: action,
     });
     // services
-    this.userService = new UserService();
+    this.userService = new UserService(api);
   }
 
   // actions

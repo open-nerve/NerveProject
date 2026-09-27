@@ -6,7 +6,14 @@
 
 import { action, makeObservable, observable, runInAction, computed } from "mobx";
 // nerve imports
-import type { ChangePasswordRequest, LoginRequest, RegisterRequest, User, UserUpdate } from "@nerve/api-client";
+import type {
+  ApiClient,
+  ChangePasswordRequest,
+  LoginRequest,
+  RegisterRequest,
+  User,
+  UserUpdate,
+} from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
 import type { TUserPermissions } from "@nerve/types";
 // lib
@@ -59,13 +66,16 @@ export class UserStore implements IUserStore {
   userService: UserService;
   authService: AuthService;
 
-  constructor(private store: RootStore) {
+  constructor(
+    private store: RootStore,
+    api: ApiClient
+  ) {
     // stores
-    this.userProfile = new ProfileStore(store);
-    this.userSettings = new UserSettingsStore();
-    this.permission = new UserPermissionStore(store);
+    this.userProfile = new ProfileStore(store, api);
+    this.userSettings = new UserSettingsStore(api);
+    this.permission = new UserPermissionStore(store, api);
     // service
-    this.userService = new UserService();
+    this.userService = new UserService(api);
     this.authService = new AuthService();
     // observables
     makeObservable(this, {

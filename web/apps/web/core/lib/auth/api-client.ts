@@ -4,6 +4,7 @@
  */
 
 import { createClient } from "@nerve/api-client";
+import type { ApiClient } from "@nerve/api-client";
 import { authMiddleware } from "./auth-middleware";
 import { leaseLock, webLock } from "./refresh-lock";
 import type { RefreshLock } from "./refresh-lock";
@@ -54,6 +55,12 @@ onStorage((key) => {
 // The session is decided once, as the app loads: before the stores exist, so they start with it.
 void tokenManager.start();
 
-/** The client of every other operation: the access token on each request, and a 401 renewed once. */
-export const api = createClient();
-api.use(authMiddleware(tokenManager));
+/**
+ * The client of every other operation for the stores of the session loginId (undefined: none): the access
+ * token on each request, a 401 renewed once, and nothing sent once the tab is in another session.
+ */
+export function apiFor(loginId: string | undefined): ApiClient {
+  const api = createClient();
+  api.use(authMiddleware(tokenManager, loginId));
+  return api;
+}

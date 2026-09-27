@@ -5,35 +5,39 @@
  */
 
 // services
-import type { ChangePasswordRequest, Profile, ProfileUpdate, User, UserUpdate } from "@nerve/api-client";
+import type { ApiClient, ChangePasswordRequest, Profile, ProfileUpdate, User, UserUpdate } from "@nerve/api-client";
 import type { IUserSettings, TIssuesResponse } from "@nerve/types";
 import { unwrap } from "@/lib/api-error";
-import { api } from "@/lib/auth/api-client";
 import { APIService } from "@/services/api.service";
 
 export class UserService extends APIService {
+  /** api: the client bound to the session of the stores that build this service (RootStore). */
+  constructor(private readonly api: ApiClient) {
+    super();
+  }
+
   async currentUser(): Promise<User> {
-    return unwrap(await api.GET("/api/v0/me"));
+    return unwrap(await this.api.GET("/api/v0/me"));
   }
 
   async updateCurrentUser(data: UserUpdate): Promise<User> {
-    return unwrap(await api.PATCH("/api/v0/me", { body: data }));
+    return unwrap(await this.api.PATCH("/api/v0/me", { body: data }));
   }
 
   async changePassword(data: ChangePasswordRequest): Promise<void> {
-    unwrap(await api.POST("/api/v0/me/change-password", { body: data }));
+    unwrap(await this.api.POST("/api/v0/me/change-password", { body: data }));
   }
 
   async deactivate(): Promise<void> {
-    unwrap(await api.POST("/api/v0/me/deactivate"));
+    unwrap(await this.api.POST("/api/v0/me/deactivate"));
   }
 
   async getCurrentUserProfile(): Promise<Profile> {
-    return unwrap(await api.GET("/api/v0/me/profile"));
+    return unwrap(await this.api.GET("/api/v0/me/profile"));
   }
 
   async updateCurrentUserProfile(data: ProfileUpdate): Promise<Profile> {
-    return unwrap(await api.PATCH("/api/v0/me/profile", { body: data }));
+    return unwrap(await this.api.PATCH("/api/v0/me/profile", { body: data }));
   }
 
   async currentUserSettings(bustCache: boolean = false): Promise<IUserSettings> {
@@ -88,7 +92,3 @@ export class UserService extends APIService {
       });
   }
 }
-
-const userService = new UserService();
-
-export default userService;

@@ -7,16 +7,20 @@
 import type { ReactElement } from "react";
 import { createContext } from "react";
 // lib
-import { tokenManager } from "@/lib/auth/api-client";
+import { apiFor, tokenManager } from "@/lib/auth/api-client";
 // store
 import { RootStore } from "@/store/root.store";
 
-export let rootStore = new RootStore();
+// The stores serve one session at a time, with a client bound to it (M2 design 7.1): first the session the
+// token manager took up as the app loaded (api-client.ts starts it before the stores exist).
+let loginId = tokenManager.state.loginId;
+
+export let rootStore = new RootStore(apiFor(loginId));
 
 export const StoreContext = createContext<RootStore>(rootStore);
 
 const initializeStore = () => {
-  const newRootStore = rootStore ?? new RootStore();
+  const newRootStore = rootStore ?? new RootStore(apiFor(loginId));
   if (typeof window === "undefined") return newRootStore;
   if (!rootStore) rootStore = newRootStore;
   return newRootStore;
@@ -24,13 +28,13 @@ const initializeStore = () => {
 
 export const store = initializeStore();
 
-// A tab that signs out, or follows another tab's sign-in as another account, starts again with new stores
-// (M2 design 7.1): nothing of the account it showed stays on screen. A sign-in after a sign-out finds them
-// new already.
-let loginId = tokenManager.state.loginId;
+// Whenever the tab's session changes, the stores start again for the new one: the tab signed out or in, or
+// followed another tab's sign-in, maybe as another account. Nothing of the account it showed stays on screen,
+// and nothing the old stores still do reaches the new session: their client is bound to the old one. A change
+// of state within the session (its first refresh, a retry) keeps them.
 tokenManager.subscribe(() => {
   const next = tokenManager.state.loginId;
-  if (loginId !== undefined && next !== loginId) store.resetOnSignOut();
+  if (next !== loginId) store.resetOnSignOut(apiFor(next));
   loginId = next;
 });
 

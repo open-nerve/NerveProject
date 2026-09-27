@@ -6,6 +6,7 @@
 
 import { enableStaticRendering } from "mobx-react";
 // nerve imports
+import type { ApiClient } from "@nerve/api-client";
 import { FALLBACK_LANGUAGE, setLanguage } from "@nerve/i18n";
 import type { IWorkItemFilterStore } from "@nerve/shared-state";
 import { WorkItemFilterStore } from "@nerve/shared-state";
@@ -83,11 +84,15 @@ export class RootStore {
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
 
-  constructor() {
+  /**
+   * The stores of one session, the one api is bound to (store-context.tsx): the services they build on
+   * nerve's API send through api, so the stores act for that session only (M2 design 7.1).
+   */
+  constructor(api: ApiClient) {
     this.router = new RouterStore();
     this.commandPalette = new CommandPaletteStore();
     this.instance = new InstanceStore();
-    this.user = new UserStore(this);
+    this.user = new UserStore(this, api);
     this.theme = new ThemeStore();
     this.workspaceRoot = new WorkspaceRootStore(this);
     this.projectRoot = new ProjectRootStore(this);
@@ -98,7 +103,7 @@ export class RootStore {
     this.moduleFilter = new ModuleFilterStore(this);
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
-    this.issue = new IssueRootStore(this);
+    this.issue = new IssueRootStore(this, api);
     this.state = new StateStore(this);
     this.label = new LabelStore(this);
     this.projectInbox = new ProjectInboxStore(this);
@@ -110,17 +115,18 @@ export class RootStore {
   }
 
   /**
-   * Forgets the account's data when the session ends or changes to another account, while the page stays
-   * (M2 design 7.1). The instance's information and the address's parameters are not the account's: the
-   * page goes on with them, and nothing would fetch or set them again until the next page load or
-   * navigation.
+   * Starts the stores again for the tab's new session, the one api is bound to, while the page stays (M2
+   * design 7.1): the tab signed out or in, or followed another tab. Nothing of the account shown before
+   * stays, and the stores left behind cannot act for the new session: their client is bound to the old one.
+   * The instance's information and the address's parameters are not the account's: the page goes on with
+   * them, and nothing would fetch or set them again until the next page load or navigation.
    */
-  resetOnSignOut() {
+  resetOnSignOut(api: ApiClient) {
     // handling the system theme when user logged out from the app
     localStorage.setItem("theme", "system");
     void setLanguage(FALLBACK_LANGUAGE);
     this.commandPalette = new CommandPaletteStore();
-    this.user = new UserStore(this);
+    this.user = new UserStore(this, api);
     this.workspaceRoot = new WorkspaceRootStore(this);
     this.projectRoot = new ProjectRootStore(this);
     this.memberRoot = new MemberRootStore(this);
@@ -130,7 +136,7 @@ export class RootStore {
     this.moduleFilter = new ModuleFilterStore(this);
     this.projectView = new ProjectViewStore(this);
     this.globalView = new GlobalViewStore(this);
-    this.issue = new IssueRootStore(this);
+    this.issue = new IssueRootStore(this, api);
     this.state = new StateStore(this);
     this.label = new LabelStore(this);
     this.projectInbox = new ProjectInboxStore(this);

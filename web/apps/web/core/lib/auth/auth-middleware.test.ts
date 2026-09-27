@@ -55,8 +55,9 @@ async function setUp(record = true) {
   }
   await until(() => started.settled, "the start");
   nerve.calls.length = 0;
+  // The client of the stores of the tab's session, as the app builds one for them.
   const api = nerve.client();
-  api.use(authMiddleware(tm));
+  api.use(authMiddleware(tm, tm.state.loginId));
   return { storage, nerve, tm, api };
 }
 
@@ -221,24 +222,27 @@ describe("authMiddleware", () => {
     expect(storage.data.get(AUTH_KEY)).toBe(recordY);
   });
 
-  it("records the session a token was asked for in, though the tab moves on before the token comes", async () => {
+  it("keeps a request in the session its token was asked for in, though the tab moves on before the token comes", async () => {
     const { storage, nerve, tm } = await setUp();
     // The tab hears another tab's sign-in as Y after the request asked for its token, before the token
     // reaches the request: forced here by an accessToken that writes Y's record as it is called.
     const api = nerve.client();
     api.use(
-      authMiddleware({
-        get state() {
-          return tm.state;
+      authMiddleware(
+        {
+          get state() {
+            return tm.state;
+          },
+          accessToken: () => {
+            const token = tm.accessToken();
+            storage.write(AUTH_KEY, recordY);
+            return token;
+          },
+          renew: (sent) => tm.renew(sent),
+          endSession: (id) => tm.endSession(id),
         },
-        accessToken: () => {
-          const token = tm.accessToken();
-          storage.write(AUTH_KEY, recordY);
-          return token;
-        },
-        renew: (sent) => tm.renew(sent),
-        endSession: (id) => tm.endSession(id),
-      })
+        loginId
+      )
     );
     const me = track(api.GET(ME));
     await until(() => nerve.calls.length === 1, "the request");

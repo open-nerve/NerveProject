@@ -7,6 +7,7 @@
 import { isEmpty } from "lodash-es";
 import { autorun, makeObservable, observable } from "mobx";
 // types
+import type { ApiClient } from "@nerve/api-client";
 import type { ICycle, IIssueLabel, IModule, IProject, IState, IUserLite } from "@nerve/types";
 // store
 import type { IIssueDetail } from "@/store/issue/issue-details/root.store";
@@ -144,7 +145,7 @@ export class IssueRootStore implements IIssueRootStore {
   issueKanBanView: IIssueKanBanViewStore;
   issueCalendarView: ICalendarStore;
 
-  constructor(rootStore: RootStore) {
+  constructor(rootStore: RootStore, api: ApiClient) {
     makeObservable(this, {
       workspaceSlug: observable.ref,
       projectId: observable.ref,
@@ -196,7 +197,7 @@ export class IssueRootStore implements IIssueRootStore {
     this.workspaceIssues = new WorkspaceIssues(this, this.workspaceIssuesFilter);
 
     this.profileIssuesFilter = new ProfileIssuesFilter(this);
-    this.profileIssues = new ProfileIssues(this, this.profileIssuesFilter);
+    this.profileIssues = new ProfileIssues(this, this.profileIssuesFilter, api);
 
     this.workspaceDraftIssuesFilter = new WorkspaceDraftIssuesFilter(this);
     this.workspaceDraftIssues = new WorkspaceDraftIssues(this);
