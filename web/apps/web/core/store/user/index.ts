@@ -103,7 +103,8 @@ export class UserStore implements IUserStore {
   /**
    * @description fetches the account and its profile, once the session is decided: without one it asks
    * nerve nothing (M2 design 7.1). The workspaces come with M3 (M2 design 3.1). A change of session while
-   * they load is no failure: the stores start again with the new session (store-context.tsx).
+   * they load is no failure: the new session has a RootStore of its own (store-context.tsx), and
+   * AuthenticationWrapper fetches the new session's account through it.
    * @returns {Promise<User | undefined>}
    */
   fetchCurrentUser = async (): Promise<User | undefined> => {
@@ -174,7 +175,8 @@ export class UserStore implements IUserStore {
   };
 
   /**
-   * @description signs out this browser's session; the stores start again when the session ends
+   * @description signs out this browser's session; once it ends, a new RootStore without a session takes
+   * over (store-context.tsx)
    * @returns {Promise<void>}
    */
   signOut = async (): Promise<void> => {

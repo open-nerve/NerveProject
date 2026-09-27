@@ -10,12 +10,16 @@ import { RecordingLock, SharedStorage } from "@/lib/auth/fake-browser";
 import { FakeNerve, json } from "@/lib/auth/fake-nerve";
 import { track, until } from "@/lib/auth/fake-time";
 import { AUTH_KEY, SessionChangedError, TokenManager } from "@/lib/auth/token-manager";
+import type { GlobalViewStore } from "@/store/global-view.store";
+import type { ProfileStore } from "@/store/user/profile.store";
 
-// The stores of a session act for it only (M2 design 7.1: a tab never writes as the wrong account). RootStore
-// hands the client it is built or rebuilt with, bound to a session, to the stores that send requests with the
-// session's token. The real stores, token manager and middleware, against a fake nerve.
+// A RootStore holds the stores of one session (M2 design 7.1: a tab never writes as the wrong account): it hands
+// the client it is built with, bound to that session, to the stores that send requests with the session's
+// token, and builds its stores anew for each session but for what is the page's. The real stores, token
+// manager and middleware, against a fake nerve. How store-context.tsx starts a RootStore for each session of
+// the tab is store-context.test.ts.
 
-// The page's localStorage: resetOnSignOut resets the theme there.
+// The page's localStorage, which stores read as they are built.
 const page = new Map<string, string>();
 vi.stubGlobal("localStorage", {
   getItem: (key: string) => page.get(key) ?? null,
@@ -27,7 +31,7 @@ vi.mock("@nerve/i18n", () => ({ FALLBACK_LANGUAGE: "en", setLanguage: async () =
 // The stores get their session's client from RootStore; what else they import from api-client is not used here.
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 // command-palette.store imports store-context, which builds the app's RootStore: a cycle through root.store.
-vi.mock("@/lib/store-context", () => ({ store: {} }));
+vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 
 const { RootStore } = await import("@/store/root.store");
 
@@ -38,6 +42,8 @@ const X = "0123456789abcdef0123456789abcdef";
 /** The session of another account, Y, which another tab signs in to. */
 const Y = "fedcba9876543210fedcba9876543210";
 const recordY = JSON.stringify({ refresh_token: "rt-y", login_id: Y });
+/** The stores that are the page's, not the account's. */
+const PAGE_STORES = ["instance", "router", "theme"];
 
 /** A tab in the session X; apiFor builds a client for the stores of a session, as api-client.ts does. */
 async function setUp() {
@@ -70,7 +76,7 @@ async function setUp() {
     storage.write(AUTH_KEY, recordY);
     await until(() => tm.state.loginId === Y, "the switch to Y");
   };
-  return { storage, nerve, tm, apiFor, followY };
+  return { nerve, apiFor, followY };
 }
 
 beforeEach(() => {
@@ -81,22 +87,27 @@ afterEach(() => {
 });
 
 describe("RootStore", () => {
-  it("resetOnSignOut keeps the instance and the router, and starts the account's stores again", () => {
+  it("built for the next session, goes on with the page's stores and builds the account's anew", () => {
     const nerve = new FakeNerve();
-    const store = new RootStore(nerve.client());
-    const { instance, router, theme, user, workspaceRoot } = store;
-    store.resetOnSignOut(nerve.client());
-    expect(store.instance).toBe(instance);
-    expect(store.router).toBe(router);
-    expect(store.theme).toBe(theme);
-    expect(store.user).not.toBe(user);
-    expect(store.workspaceRoot).not.toBe(workspaceRoot);
+    const x = new RootStore(nerve.client());
+    const y = new RootStore(nerve.client(), x);
+    const stores = Object.keys(x) as (keyof typeof x)[];
+    expect(stores).toHaveLength(23);
+    for (const name of stores) {
+      if (PAGE_STORES.includes(name)) expect(y[name], name).toBe(x[name]);
+      else expect(y[name], name).not.toBe(x[name]);
+    }
+    // The page's stores hold nothing of the RootStore before; the new stores reach their siblings through y.
+    for (const name of PAGE_STORES) expect(Object.values(x[name as keyof typeof x])).not.toContain(x);
+    expect((y.user.userProfile as ProfileStore).store).toBe(y);
+    expect((y.globalView as GlobalViewStore).rootStore).toBe(y);
+    expect(y.issue.rootStore).toBe(y);
   });
 
-  it("sends as the session it is built for and, rebuilt for another session, as that one", async () => {
+  it("sends as the session it is built for: X's as X, and the one built for Y as Y", async () => {
     const { nerve, apiFor, followY } = await setUp();
-    const store = new RootStore(apiFor(X));
-    const themed = track(store.user.userProfile.updateUserTheme("dark"));
+    const x = new RootStore(apiFor(X));
+    const themed = track(x.user.userProfile.updateUserTheme("dark"));
     await until(() => nerve.calls.length === 1, "X's request");
     expect(nerve.calls[0]).toMatchObject({ method: "PATCH", path: PROFILE, authorization: "Bearer at-1" });
     nerve.calls[0]?.answer(json(200, { theme: "dark" }));
@@ -104,8 +115,8 @@ describe("RootStore", () => {
     expect(themed.error).toBeUndefined();
 
     await followY();
-    store.resetOnSignOut(apiFor(Y));
-    const named = track(store.user.updateCurrentUser({ first_name: "Yvonne" }));
+    const y = new RootStore(apiFor(Y), x);
+    const named = track(y.user.updateCurrentUser({ first_name: "Yvonne" }));
     await until(() => nerve.calls.length === 2, "Y's refresh");
     expect(nerve.calls[1]).toMatchObject({ path: REFRESH, body: { refresh_token: "rt-y" } });
     nerve.calls[1]?.answer(json(200, nerve.tokens()));
@@ -114,41 +125,12 @@ describe("RootStore", () => {
     nerve.calls[2]?.answer(json(200, { first_name: "Yvonne" }));
     await until(() => named.settled, "Y's answer");
     expect(named.error).toBeUndefined();
-    const stepped = track(store.user.userProfile.updateUserProfile({ onboarding_step: { profile_complete: true } }));
-    await until(() => nerve.calls.length === 4, "Y's second request");
-    expect(nerve.calls[3]).toMatchObject({ method: "PATCH", path: PROFILE, authorization: "Bearer at-2" });
-    nerve.calls[3]?.answer(json(200, {}));
-    await until(() => stepped.settled, "Y's second answer");
-    expect(stepped.error).toBeUndefined();
-  });
 
-  it("stops the write a retired store makes from a stale reference, unsent: the profile step's save, then its step", async () => {
-    const { storage, nerve, tm, apiFor, followY } = await setUp();
-    const store = new RootStore(apiFor(X));
-    // What the profile step holds from its render in X's session (onboarding/steps/profile/root.tsx saves the
-    // names, then onboarding/root.tsx changes the step).
-    const { updateCurrentUser } = store.user;
-    const { updateUserProfile } = store.user.userProfile;
-    const step = track(
-      (async () => {
-        await updateCurrentUser({ first_name: "Xavier" });
-        await updateUserProfile({ onboarding_step: { profile_complete: true } });
-      })()
-    );
-    await until(() => nerve.calls.length === 1, "X's save");
-    expect(nerve.calls[0]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-1" });
-    // Another tab signs in as Y while the save is out; this tab follows, and its stores start again for Y.
-    await followY();
-    store.resetOnSignOut(apiFor(Y));
-    // X's token is still good: the save succeeds, as X.
-    nerve.calls[0]?.answer(json(200, { first_name: "Xavier" }));
-    await until(() => step.settled || nerve.calls.length > 1, "the step, or another request");
-
-    // The step change was X's: not sent with Y's token, nor as Y's refresh.
-    expect(step.error).toBeInstanceOf(SessionChangedError);
+    // X's stores send nothing now: their client is bound to X.
+    const stepped = track(x.user.userProfile.updateUserProfile({ onboarding_step: { profile_complete: true } }));
+    await until(() => stepped.settled || nerve.calls.length > 3, "X's answer, or a request");
+    expect(stepped.error).toBeInstanceOf(SessionChangedError);
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(nerve.calls.map((c) => `${c.method} ${c.path}`)).toEqual([`PATCH ${ME}`]);
-    expect(tm.state).toEqual({ status: "signed-in", loginId: Y });
-    expect(storage.data.get(AUTH_KEY)).toBe(recordY);
+    expect(nerve.calls).toHaveLength(3);
   });
 });
