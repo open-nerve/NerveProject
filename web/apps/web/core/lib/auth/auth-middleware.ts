@@ -17,10 +17,12 @@ import { SessionChangedError, type TokenManager } from "./token-manager";
  * The client serves one session, loginId (undefined: none), the session of the stores it was built for: a
  * request made once the tab is in another session rejects with SessionChangedError before it is sent. A
  * request belongs to that session, and a copy refused again ends only that session. The request rejects with
- * SessionChangedError as well when the tab has left the session by the time its 401 comes back, when the
- * renewal finds the change, and when ending the session after the copy's 401 finds the record no longer that
- * session's: one signal for a request cut by a change of session, never a 401 its caller could take for the
- * tab's session failing.
+ * SessionChangedError as well when the tab's state shows it has left the session by the time the request's
+ * own 401 comes back, and when the renewal finds the change under the lock. After the copy's 401, no state
+ * is checked: endSession(loginId) decides, and its false (the record under the lock is no longer that
+ * session's, even when the tab has not heard of the change yet) rejects the request with SessionChangedError.
+ * One signal for a request cut by a change of session, never a 401 its caller could take for the tab's
+ * session failing.
  */
 export function authMiddleware(
   tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">,
