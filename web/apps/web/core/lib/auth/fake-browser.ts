@@ -6,8 +6,8 @@
 // Test doubles of the browser for the auth tests: one localStorage shared by several tabs, which tells
 // the other tabs about every change with a storage event, and a lock whose holder the tests can see. The
 // event comes in a microtask of the writing task, sooner than in a browser, where it reaches the other
-// tabs in a later task. The event carries the changed key only; the code under test reads the value
-// itself.
+// tabs in a later task, maybe after later writes and lock grants: a test plays that with hold() and
+// deliver(). The event carries the changed key only; the code under test reads the value itself.
 
 import type { RefreshLock } from "./refresh-lock";
 
@@ -17,6 +17,8 @@ type StorageListener = (key: string | null) => void;
 export class SharedStorage {
   readonly data = new Map<string, string>();
   private readonly listeners = new Map<string, Set<StorageListener>>();
+  /** The events hold() keeps back, in the order of their writes; undefined while events flow. */
+  private held: (() => void)[] | undefined;
 
   /** The view of the tab `tab`: its writes reach the other tabs' listeners, never its own. */
   tab(tab: string) {
@@ -41,6 +43,18 @@ export class SharedStorage {
     this.change("elsewhere", key, value);
   }
 
+  /** Keeps every storage event back until deliver(), as a browser may deliver one after later writes. */
+  hold(): void {
+    this.held ??= [];
+  }
+
+  /** Delivers the held events in the order of their writes; the events after it flow again. */
+  deliver(): void {
+    const held = this.held ?? [];
+    this.held = undefined;
+    for (const event of held) event();
+  }
+
   /** Sets key to value, or removes it for null; like a browser, tells no tab of a write that changes nothing. */
   private change(writer: string, key: string, value: string | null): void {
     if ((this.data.get(key) ?? null) === value) return;
@@ -52,10 +66,13 @@ export class SharedStorage {
   private notify(writer: string, key: string): void {
     for (const [tab, set] of this.listeners) {
       if (tab === writer) continue;
-      // Like a browser, never inside the write; unlike one, before the writing task ends (a microtask).
-      queueMicrotask(() => {
+      const event = () => {
         for (const listener of set) listener(key);
-      });
+      };
+      // Like a browser, never inside the write; unlike one, before the writing task ends (a microtask),
+      // unless the test holds the events back.
+      if (this.held === undefined) queueMicrotask(event);
+      else this.held.push(event);
     }
   }
 }
