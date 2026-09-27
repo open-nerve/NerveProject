@@ -133,17 +133,19 @@ function UserInvitationsPage() {
                         }`}
                         onClick={() => handleInvitation(invitation, isSelected ? "withdraw" : "accepted")}
                       >
-                        <div className="flex-shrink-0">
+                        <span className="block flex-shrink-0">
                           <WorkspaceLogo
                             logo={invitation.workspace.logo_url}
                             name={invitation.workspace.name}
                             classNames="size-9 flex-shrink-0"
                           />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-13 font-medium">{truncateText(invitation.workspace.name, 30)}</div>
-                          <p className="text-11 text-secondary">{ROLE[invitation.role]}</p>
-                        </div>
+                        </span>
+                        <span className="block min-w-0 flex-1">
+                          <span className="block text-13 font-medium">
+                            {truncateText(invitation.workspace.name, 30)}
+                          </span>
+                          <span className="block text-11 text-secondary">{ROLE[invitation.role]}</span>
+                        </span>
                         <span className={`flex-shrink-0 ${isSelected ? "text-accent-primary" : "text-secondary"}`}>
                           <TickCircleOutline className="h-5 w-5" />
                         </span>

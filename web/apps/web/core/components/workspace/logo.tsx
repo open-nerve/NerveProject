@@ -19,8 +19,9 @@ export const WorkspaceLogo = observer(function WorkspaceLogo(props: Props) {
   // translation
   const { t } = useTranslation();
 
+  // A span: the logo sits inside buttons (the workspace menus, the invitations page), which take phrasing content
   return (
-    <div
+    <span
       className={cn(
         `relative grid h-6 w-6 flex-shrink-0 place-items-center uppercase ${
           !props.logo && "rounded-md bg-accent-primary text-on-color"
@@ -36,6 +37,6 @@ export const WorkspaceLogo = observer(function WorkspaceLogo(props: Props) {
       ) : (
         (props.name?.[0] ?? "...")
       )}
-    </div>
+    </span>
   );
 });
