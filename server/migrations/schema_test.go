@@ -38,18 +38,18 @@ func names(t *testing.T, pool *pgxpool.Pool, query string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var names []string
+	var found []string
 	for rows.Next() {
 		var n string
 		if err := rows.Scan(&n); err != nil {
 			t.Fatal(err)
 		}
-		names = append(names, n)
+		found = append(found, n)
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	return names
+	return found
 }
 
 // Every migration can go up, down and up again (M2 design 4.1), River's
