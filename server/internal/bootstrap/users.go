@@ -87,8 +87,20 @@ func ActivateUser(email string) UserCommand {
 	}
 }
 
-// fieldNames name the use cases' fields as the command line knows them.
-var fieldNames = map[string]string{"email": "--email", "new_email": "--new-email", "password": "the password"}
+// cliFieldName names a use case's field as the command line knows it; a
+// field it does not know keeps its own name.
+func cliFieldName(field string) string {
+	switch field {
+	case "email":
+		return "--email"
+	case "new_email":
+		return "--new-email"
+	case "password":
+		return "the password"
+	default:
+		return field
+	}
+}
 
 // commandError is err as one line for the administrator: the invalid
 // fields of a domain error, each as "<field> <problem>", or its detail.
@@ -99,11 +111,7 @@ func commandError(err error) error {
 	}
 	problems := make([]string, len(se.Fields))
 	for i, f := range se.Fields {
-		name, ok := fieldNames[f.Field]
-		if !ok {
-			name = f.Field
-		}
-		problems[i] = name + " " + f.Message
+		problems[i] = cliFieldName(f.Field) + " " + f.Message
 	}
 	return errors.New(strings.Join(problems, "; "))
 }
