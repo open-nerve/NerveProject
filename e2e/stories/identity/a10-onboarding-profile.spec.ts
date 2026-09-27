@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 import { accountOf } from "../../fixtures/assert/identity";
 import { submitSignUp } from "../../fixtures/auth-pages";
 import { bearer, createPAT, emailFor, password, register } from "../../fixtures/auth";
-import { watchPage, type PageWatch } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import type { Database } from "../../fixtures/db";
 import { expect, test } from "../../fixtures/test";
 
@@ -46,13 +46,13 @@ async function takeProfileStep(page: Page, watch: PageWatch, db: Database, email
   });
   expect((await accountOf(db, email)).first_name).toBe("Ada");
   // Nothing went wrong on the way (M2 design 3.1): no API call failed, none went to an older API, such as
-  // M3's workspaces and invitations, no exception or rejection was left unhandled, the console has no
-  // error, the CSP blocked nothing.
+  // M3's workspaces and invitations, no exception or rejection was left unhandled, the CSP blocked
+  // nothing, the console has no error or warning.
   expect(watch.apiFailures).toEqual([]);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  expect(watch.consoleErrors).toEqual([]);
   expect(watch.cspViolations).toEqual([]);
+  await expectQuietConsole(page, watch);
 }
 
 test("A10 (page): a new account's first visit of /onboarding goes well, and its profile step saves the name", async ({

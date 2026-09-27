@@ -254,10 +254,10 @@ class TokenManager {
   - **A4**（2 个：有 `navigator.locks`；`addInitScript` 删掉 `Navigator.prototype.locks`，走租约）：访问令牌 3 秒的 nerve，同一个上下文的两个标签页都在资料步骤；第一个续期被扣住最多 1 秒；两个标签页同时点"Continue"，都等到这一步最后一个请求的 200、进入下一步；每次续期 200，发出的刷新令牌代数依次是 0、1、2……各一次；`expectRefreshed`（第 3 节第 8 条）；
   - **A5**：页面的刷新令牌先被"别人"在接口上用过一次；页面重新加载时续期被拒，到带 `next_path` 的登录页，记录删除，会话 `reuse_detected`；
   - **A6**（3 个）：在一个标签页通过账户菜单退出，两个标签页都回到登录页，记录删除，会话 `logout`，这个会话的访问令牌下一次请求就是 401（第 3 节第 7 条）；切换 ①：标签页乙用 `writeRecord` 换上 Y 的记录、不退出，标签页甲显示 Y，此后保存的名字写进 Y，X 的名字不变、会话未被撤销；切换 ②：标签页乙先退出（甲随之到登录页），再以 Y 登录，两个标签页都以 Y 回到 `/onboarding`；
-  - **A10**（2 个）：新账户进入 `/onboarding` 的两条路：整页加载（`signedInPage`，页面挂载时还没有账户），和注册之后应用内的跳转（页面挂载时账户已经取到，文档仍是 `/sign-up` 的那一个）；每条路上都没有失败的接口请求、发往旧接口的请求、未处理的异常、控制台错误、CSP 违规；填名字后等到 `PATCH /api/v0/me/profile` 的 200，下一步出现；数据库中只有 `profile_complete` 为真，名字已保存；
+  - **A10**（2 个）：新账户进入 `/onboarding` 的两条路：整页加载（`signedInPage`，页面挂载时还没有账户），和注册之后应用内的跳转（页面挂载时账户已经取到，文档仍是 `/sign-up` 的那一个）；每条路上都没有失败的接口请求、发往旧接口的请求、未处理的异常、CSP 违规、控制台的错误和警告；填名字后等到 `PATCH /api/v0/me/profile` 的 200，下一步出现；数据库中只有 `profile_complete` 为真，名字已保存；
   - **A15**：限流很低的 nerve：同一个邮箱 401、401、429，另一个邮箱 401，第三个邮箱 429（按 IP）；两句提示分别是"The email or the password is wrong."和"Too many attempts. Please try again later."；
-  - **S2**（2 个，改写）：未登录时只请求 `GET /api/v0/instance`，没有失败的请求、CSP 违规、未处理的异常、控制台错误；首页带 `Content-Security-Policy`，"Go to workspace"按钮出现；深链接跳到带 `next_path` 的登录页。S2 不再等 `networkidle`，而是等 `GET /api/v0/instance` 的回答和登录页出现：页面不读回答的请求一直算在途中，`networkidle` 就等到测试超时，而不是在断言上失败（Task 12 实测）。
-- 每个断言内容的检查之前，先断言元素或请求存在（缺陷类别"页面没有渲染被检查的东西"）。
+  - **S2**（2 个，改写）：未登录时只请求 `GET /api/v0/instance`，没有失败的请求、CSP 违规、未处理的异常、控制台的错误和警告（深链接另有一条第三方的警告：它的页面模块加载编辑器，tiptap 建 Emoji 节点时 `is-emoji-supported` 反复读画布，Chromium 提示 `willReadFrequently`；测试点名要求它，其他警告都失败）；首页带 `Content-Security-Policy`，"Go to workspace"按钮出现；深链接跳到带 `next_path` 的登录页。S2 不再等 `networkidle`，而是等 `GET /api/v0/instance` 的回答和登录页出现：页面不读回答的请求一直算在途中，`networkidle` 就等到测试超时，而不是在断言上失败（Task 12 实测）。
+- 每个断言内容的检查之前，先断言元素或请求存在（缺陷类别"页面没有渲染被检查的东西"）；控制台的检查先写一条探针错误和探针警告，要求收到，`watchPage` 没有接上控制台时不会空过。
 - 测试数：22 → 29（Task 12；A10 的应用内进入由 Task 5 的评审加入）→ 35（Task 13）。新增的等待都有期限：`waitForResponse` 10 秒，A4 的扣住最多 1 秒。
 
 ### 2.15 文档、README 与交接（M2 设计 3.20、8.7）

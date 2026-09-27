@@ -1,11 +1,20 @@
 import type { Page, Response } from "@playwright/test";
 
 import { signInPath } from "../../fixtures/auth-pages";
-import { watchPage, type PageWatch } from "../../fixtures/browser";
+import { expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
 /** A page of the frontend's router, not a file: nerve answers it with index.html. */
 const deepLink = "/acme/projects/0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f/issues";
+
+/**
+ * Chromium's hint when a script reads a canvas back often, which the deep link logs once: its page's module
+ * loads the editor before the page goes to the sign-in, and tiptap builds the editor's Emoji node as the
+ * module loads, which asks is-emoji-supported about each emoji version (a canvas and getImageData each
+ * time). A hint about a third party's code, not an error of the app.
+ */
+const emojiCanvasWarning =
+  "Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently";
 
 interface Visit {
   document: Response;
@@ -61,15 +70,19 @@ async function open(page: Page, path: string): Promise<Visit> {
 
 /**
  * Signed out, the app asks nerve for the instance's settings only: without a refresh token it neither
- * refreshes nor asks for /me (M2 design 7.1), so no API call fails; and the page's Content-Security-Policy
- * blocks nothing of it (8.3).
+ * refreshes nor asks for /me (M2 design 7.1), so no API call fails; the page's Content-Security-Policy
+ * blocks nothing of it (8.3); and its console has no error, and no warning but thirdPartyWarnings.
  */
-function expectQuietSignedOut(watch: PageWatch): void {
+async function expectQuietSignedOut(
+  page: Page,
+  watch: PageWatch,
+  thirdPartyWarnings: readonly string[] = []
+): Promise<void> {
   expect(watch.apiRequests).toEqual(["GET /api/v0/instance"]);
   expect(watch.apiFailures).toEqual([]);
   expect(watch.cspViolations).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  expect(watch.consoleErrors).toEqual([]);
+  await expectQuietConsole(page, watch, thirdPartyWarnings);
 }
 
 test("S2: a user opens the home page in a browser", async ({ page }) => {
@@ -81,7 +94,7 @@ test("S2: a user opens the home page in a browser", async ({ page }) => {
   expect(loaded).toContainEqual(expect.stringMatching(/^200 .*\/assets\/[^/]+\.js$/));
   expect(failed).toEqual([]);
   expect(elsewhere).toEqual([]);
-  expectQuietSignedOut(watch);
+  await expectQuietSignedOut(page, watch);
 });
 
 test("S2: a user opens a deep link directly", async ({ page, request }) => {
@@ -94,5 +107,5 @@ test("S2: a user opens a deep link directly", async ({ page, request }) => {
   await expect(page).toHaveURL(signInPath(deepLink));
   expect(failed).toEqual([]);
   expect(elsewhere).toEqual([]);
-  expectQuietSignedOut(watch);
+  await expectQuietSignedOut(page, watch, [emojiCanvasWarning]);
 });

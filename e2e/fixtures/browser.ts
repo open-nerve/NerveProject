@@ -1,4 +1,4 @@
-import type { Page, Request } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
 
 /** What a page did that a story checks: its API calls, and what went wrong in it. */
 export interface PageWatch {
@@ -80,4 +80,26 @@ export async function watchPage(page: Page): Promise<PageWatch> {
     });
   });
   return watch;
+}
+
+/**
+ * Checks that page logged no error and no warning since watch began (M2 design 9.6), such as React Router's
+ * "navigate() should be called in useEffect". It logs a probe of each kind first and expects to find it,
+ * so that a watch that does not hear the console cannot pass. thirdPartyWarnings are the warnings, not the
+ * app's own, that page logs, in order, each named by the caller with where it comes from: another warning
+ * fails, and so does a named one that stops coming.
+ */
+export async function expectQuietConsole(
+  page: Page,
+  watch: PageWatch,
+  thirdPartyWarnings: readonly string[] = []
+): Promise<void> {
+  const probe = "nerve-e2e: console probe";
+  await page.evaluate((text) => {
+    console.error(text);
+    console.warn(text);
+  }, probe);
+  await expect
+    .poll(() => ({ errors: watch.consoleErrors, warnings: watch.consoleWarnings }))
+    .toEqual({ errors: [probe], warnings: [...thirdPartyWarnings, probe] });
 }
