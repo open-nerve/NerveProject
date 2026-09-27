@@ -21,9 +21,14 @@
  * isValidNextPath("dashboard") // false (must start with /)
  * isValidNextPath("\\malicious") // false (backslash)
  * isValidNextPath("  /dashboard  ") // true (trimmed)
+ * isValidNextPath("\t/dashboard") // false (control character)
  */
 export function isValidNextPath(url: string): boolean {
   if (!url || typeof url !== "string") return false;
+
+  // No control characters (U+0000–U+001F, U+007F) anywhere: browsers drop some of them from an address,
+  // which can turn what was checked into something else (M2 design 3.18).
+  if ([...url].some((c) => c.charCodeAt(0) <= 0x1f || c.charCodeAt(0) === 0x7f)) return false;
 
   // Trim leading/trailing whitespace
   const trimmedUrl = url.trim();
@@ -65,4 +70,15 @@ export function isValidNextPath(url: string): boolean {
     // If URL constructor fails, it's an invalid path
     return false;
   }
+}
+
+/**
+ * The address of the sign-in page that comes back to `path` after signing in: `path` is the page's
+ * pathname, search and hash together, encoded as one value (M2 design 3.18).
+ *
+ * @example
+ * signInPath("/settings/profile/general?tab=x#y") // "/?next_path=%2Fsettings%2Fprofile%2Fgeneral%3Ftab%3Dx%23y"
+ */
+export function signInPath(path: string): string {
+  return `/?next_path=${encodeURIComponent(path)}`;
 }

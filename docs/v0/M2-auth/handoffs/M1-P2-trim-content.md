@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 from: M1/P2
 to: M2
 created: 2026-09-23
@@ -33,3 +33,11 @@ M2 合并时：`api/` 里用户资料或偏好的接口描述中，主题只有 
 仍未处理，状态保持 `open`：前端的 `IUserTheme` 改用生成的类型（M2/P4、P5）。
 
 来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。
+
+## 处理结果（M2/P4）
+
+- **前端的类型**（完成）：`IUserTheme` 连同 `IUser`、`TUserProfile`、`TOnboardingSteps` 一起删除。资料 store 直接用生成的 `Profile`、`ProfileUpdate`，个人设置、新手引导和主题切换经它读写资料；主题是生成的 `Theme`（接口描述中的枚举）；`THEME_OPTIONS` 各项的 `value` 类型是 `Theme`（`@nerve/constants` 为此依赖 `@nerve/api-client`），写错或写出第六个值都过不了类型检查。前端不再有 `custom` 主题的分支。设计原把这一项分给 P4、P5，资料 store 在 P4 整个改写，所以在 P4 一次完成。
+
+全部处理完，状态改为 `done`。
+
+来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。

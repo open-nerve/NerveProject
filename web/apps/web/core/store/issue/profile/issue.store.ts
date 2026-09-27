@@ -6,6 +6,7 @@
 
 import { action, observable, makeObservable, computed, runInAction } from "mobx";
 // base class
+import type { ApiClient } from "@nerve/api-client";
 import type { TIssue, TLoader, IssuePaginationOptions, TIssuesResponse, ViewFlags, TProfileViews } from "@nerve/types";
 import { UserService } from "@/services/user.service";
 
@@ -56,7 +57,7 @@ export class ProfileIssues extends BaseIssuesStore implements IProfileIssues {
   // services
   userService;
 
-  constructor(_rootStore: IIssueRootStore, issueFilterStore: IProfileIssuesFilter) {
+  constructor(_rootStore: IIssueRootStore, issueFilterStore: IProfileIssuesFilter, api: ApiClient) {
     super(_rootStore, issueFilterStore);
     makeObservable(this, {
       // observable
@@ -72,7 +73,7 @@ export class ProfileIssues extends BaseIssuesStore implements IProfileIssues {
     // filter store
     this.issueFilterStore = issueFilterStore;
     // services
-    this.userService = new UserService();
+    this.userService = new UserService(api);
   }
 
   get viewFlags() {

@@ -532,6 +532,34 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type RegisterRequest = components['schemas']['RegisterRequest'];
+export type FieldError = components['schemas']['FieldError'];
+export type Problem = components['schemas']['Problem'];
+export type AuthTokens = components['schemas']['AuthTokens'];
+export type LoginRequest = components['schemas']['LoginRequest'];
+export type RefreshRequest = components['schemas']['RefreshRequest'];
+export type LogoutRequest = components['schemas']['LogoutRequest'];
+export type User = components['schemas']['User'];
+export type UserUpdate = components['schemas']['UserUpdate'];
+export type ChangePasswordRequest = components['schemas']['ChangePasswordRequest'];
+export type Theme = components['schemas']['Theme'];
+export type Language = components['schemas']['Language'];
+export type StartOfTheWeek = components['schemas']['StartOfTheWeek'];
+export type OnboardingSteps = components['schemas']['OnboardingSteps'];
+export type Profile = components['schemas']['Profile'];
+export type OnboardingStepsUpdate = components['schemas']['OnboardingStepsUpdate'];
+export type ProfileUpdate = components['schemas']['ProfileUpdate'];
+export type ApiToken = components['schemas']['ApiToken'];
+export type NextCursor = components['schemas']['NextCursor'];
+export type ApiTokenPage = components['schemas']['ApiTokenPage'];
+export type ApiTokenCreate = components['schemas']['ApiTokenCreate'];
+export type ApiTokenCreated = components['schemas']['ApiTokenCreated'];
+export type InstanceInfo = components['schemas']['InstanceInfo'];
+export type Timezone = components['schemas']['Timezone'];
+export type TimezoneList = components['schemas']['TimezoneList'];
+export type ResponseProblem = components['responses']['Problem'];
+export type ParameterLimit = components['parameters']['Limit'];
+export type ParameterCursor = components['parameters']['Cursor'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {

@@ -37,7 +37,7 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
     organization_size: "",
   });
   // derived values
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   // methods
   const getMailtoHref = () => {
@@ -52,7 +52,9 @@ const CreateWorkspacePage = observer(function CreateWorkspacePage() {
   };
 
   const onSubmit = async (workspace: IWorkspace) => {
-    await updateUserProfile({ last_workspace_id: workspace.id }).then(() => navigate(`/${workspace.slug}`));
+    // the workspace opened last is a best-effort preference: the new workspace opens whether nerve saves it or not
+    await updateUserProfile({ last_workspace_id: workspace.id }).catch(() => undefined);
+    await navigate(`/${workspace.slug}`);
   };
 
   return (

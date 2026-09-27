@@ -79,3 +79,13 @@ M2 合并时：
 仍未处理，状态保持 `open`：Cookie 会话和 CSRF、认证错误就地显示、前端改读新的实例字段（M2/P4）。
 
 来源：[M2/P3b spec](../specs/P3b-jobs-and-admin.md) 第 7 节。
+
+## 处理结果（M2/P4）
+
+- **Cookie 会话和 CSRF**（完成）：四处都已换掉。登录、注册由 `useUser().signIn`、`signUp` 经 `AuthService` 用 JSON 调 `POST /api/v0/auth/login`、`register`（不带令牌的 `publicClient`），令牌交给令牌管理器；退出由令牌管理器在续期用的那把锁下调 `POST /api/v0/auth/logout`；修改密码调 `POST /api/v0/me/change-password`，访问令牌由认证中间件加上。web 的 axios 基类删掉 `withCredentials` 和 401 拦截。`git grep -n -E "csrfmiddlewaretoken|X-CSRFTOKEN" -- web` 没有输出，关键词规则 `csrf`（不区分大小写）和 `plane-auth-urls` 看住。
+- **认证错误就地显示**（完成，M2 设计 7.3）：接口直接返回 problem，登录、注册表单把它显示在表单上方或对应字段下方（`weak_password` 显示规则，`common_password` 显示"密码太常见"），不跳转，输入的内容留在表单里；表单上方的提示按 `problem.code` 取文案，字段下方的按字段错误的 `code` 取（`helpers/authentication.helper.ts`；单元测试对着 `openapi.yaml` 核对两张表）。前端不再读 `/?error_code=…`，Plane 的错误码枚举 `EAuthenticationErrorCodes`（原在 `helpers/authentication.helper.tsx`）和 `@nerve/types` 的 `auth.ts` 删除，关键词规则 `auth-error-code` 看住。A2、A3、A15 的页面版本覆盖。
+- **实例配置**（完成）：`IInstanceConfig`、`IInstanceInfo` 删除，instance store 直接用生成的 `InstanceInfo`；注册链接读 `signup_enabled`，创建工作区的四处读 `workspace_creation_enabled`，`use-file-size` 读 `file_size_limit`。新手引导的"角色""用途"两步连同 `is_self_managed` 删除（M2 设计 3.19），关键词规则 `is-self-managed` 看住。
+
+仍未处理，状态保持 `open`：`packages/services` 的 API 令牌服务仍调旧地址 `/api/users/api-tokens/…`（没有结尾斜杠的 `retrieve`、`destroy` 也在其中），M2/P5 把 api-tokens 标签页改接 `/api/v0/me/api-tokens`、`/api/v0/api-tokens/{token_id}` 时删除。
+
+来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。

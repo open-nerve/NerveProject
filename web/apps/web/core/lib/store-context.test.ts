@@ -1,0 +1,230 @@
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SharedStorage } from "@/lib/auth/fake-browser";
+import { FakeNerve, json, noContent, problem } from "@/lib/auth/fake-nerve";
+import { track, until } from "@/lib/auth/fake-time";
+import type { GlobalViewStore } from "@/store/global-view.store";
+import type { RootStore } from "@/store/root.store";
+
+// Each session of the tab has its own RootStore (M2 design 7.1: a tab never writes as the wrong account):
+// store-context.tsx builds one for the session the app loaded with, and a new one, with a client bound to the
+// new session, each time the tab's session changes; the stores of a session reach their siblings through
+// their own RootStore. The real store-context, stores, token manager and middleware, against a fake nerve:
+// each test loads the app's modules afresh, with api-client.ts's composition on the fakes.
+
+const AUTH_KEY = "nerve.auth";
+const REFRESH = "/api/v0/auth/refresh";
+const LOGOUT = "/api/v0/auth/logout";
+const ME = "/api/v0/me";
+const PROFILE = "/api/v0/me/profile";
+const X = "0123456789abcdef0123456789abcdef";
+/** The sessions of other accounts, which other tabs sign in to. */
+const Y = "fedcba9876543210fedcba9876543210";
+const W = "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd";
+/** The session this tab signs in to itself. */
+const Z = "abababababababababababababababab";
+/** The record a sign-in as loginId writes. */
+const record = (loginId: string) => JSON.stringify({ refresh_token: `rt-${loginId}`, login_id: loginId });
+
+/** The page's theme and language, each time something set them. */
+const page = vi.hoisted(() => ({ themes: [] as string[], languages: [] as string[] }));
+vi.stubGlobal("localStorage", {
+  getItem: () => null,
+  setItem: (key: string, value: string) => {
+    if (key === "theme") page.themes.push(value);
+  },
+  removeItem: () => {},
+});
+vi.mock("@nerve/i18n", () => ({
+  FALLBACK_LANGUAGE: "en",
+  setLanguage: async (language: string) => {
+    page.languages.push(language);
+  },
+}));
+
+/** Loads the app's modules afresh in a tab of a browser that holds X's record: its first refresh is out. */
+async function load() {
+  vi.resetModules();
+  page.themes = [];
+  page.languages = [];
+  const storage = new SharedStorage();
+  storage.data.set(AUTH_KEY, record(X));
+  const nerve = new FakeNerve();
+  /** The session of each client apiFor built: one for each RootStore. */
+  const clients: (string | undefined)[] = [];
+  // api-client.ts on the fakes: the token manager starts as the module loads, before the stores exist, and
+  // apiFor puts the real middleware on each client.
+  vi.doMock("@/lib/auth/api-client", async () => {
+    const { RecordingLock } = await import("@/lib/auth/fake-browser");
+    const { authMiddleware } = await import("@/lib/auth/auth-middleware");
+    const { TokenManager } = await import("@/lib/auth/token-manager");
+    const view = storage.tab("A");
+    const tokenManager = new TokenManager({
+      storage: view,
+      lock: new RecordingLock(),
+      client: nerve.client(),
+      now: () => Date.now(),
+      randomHex: () => Z,
+    });
+    view.onStorage((key) => {
+      if (key === AUTH_KEY) tokenManager.handleStorageChange();
+    });
+    void tokenManager.start();
+    return {
+      publicClient: nerve.client(),
+      tokenManager,
+      apiFor: (loginId: string | undefined) => {
+        clients.push(loginId);
+        const api = nerve.client();
+        api.use(authMiddleware(tokenManager, loginId));
+        return api;
+      },
+    };
+  });
+  const { tokenManager: tm } = await import("@/lib/auth/api-client");
+  const context = await import("@/lib/store-context");
+  const { SessionChangedError } = await import("@/lib/auth/token-manager");
+  /** Answers the first refresh: the tab is signed in as X. */
+  const signedIn = async () => {
+    await until(() => nerve.calls.length === 1, "the first refresh");
+    nerve.calls[0]?.answer(json(200, nerve.tokens()));
+    await until(() => tm.state.status === "signed-in", "X's session");
+    nerve.calls.length = 0;
+  };
+  /** Another tab signs in as loginId, and this tab follows it. */
+  const follow = async (loginId: string) => {
+    storage.write(AUTH_KEY, record(loginId));
+    await until(() => tm.state.loginId === loginId, `the switch to ${loginId}`);
+  };
+  return { storage, nerve, clients, tm, context, SessionChangedError, signedIn, follow };
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({ now: 1_000_000 });
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe("store-context", () => {
+  it("starts a new RootStore for each new session, never within one, and tells its listeners", async () => {
+    const { nerve, clients, tm, context, follow } = await load();
+    const x = context.rootStore;
+    expect(context.snapshot()).toBe(x);
+    // The app loaded while the session X was starting.
+    expect(clients).toEqual([X]);
+    const started: RootStore[] = [];
+    context.subscribe(() => started.push(context.snapshot()));
+    // A component's subscription to the session comes after store-context's: at each change it hears of, the
+    // RootStore of the tab's session is in place.
+    const heard: [string | undefined, RootStore][] = [];
+    tm.subscribe(() => heard.push([tm.state.loginId, context.rootStore]));
+
+    // Within X: the first refresh fails for a passing reason, and the retry succeeds.
+    await until(() => nerve.calls.length === 1, "the first refresh");
+    nerve.calls[0]?.answer(problem(503, "server_busy", { "Retry-After": "1" }));
+    await until(() => tm.state.status === "unavailable", "unavailable");
+    await until(() => nerve.calls.length === 2, "the retry");
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => tm.state.status === "signed-in", "X's session");
+    expect(started).toEqual([]);
+    expect(context.rootStore).toBe(x);
+
+    // Another tab signs in as Y; this tab signs out; it signs in as Z; another tab signs in as W.
+    await follow(Y);
+    const out = track(tm.signOut());
+    await until(() => nerve.calls.length === 3, "the logout");
+    expect(nerve.calls[2]?.path).toBe(LOGOUT);
+    nerve.calls[2]?.answer(noContent());
+    await until(() => out.settled, "the sign-out");
+    await tm.signIn(nerve.tokens());
+    await follow(W);
+
+    expect(clients).toEqual([X, Y, undefined, Z, W]);
+    expect(started).toHaveLength(4);
+    expect(new Set([x, ...started]).size).toBe(5);
+    expect(context.rootStore).toBe(started[3]);
+    expect(context.snapshot()).toBe(started[3]);
+    const rootOf = new Map([X, Y, undefined, Z, W].map((loginId, i) => [loginId, [x, ...started][i]]));
+    expect(heard.length).toBeGreaterThan(4);
+    for (const [loginId, root] of heard) expect(root).toBe(rootOf.get(loginId));
+    // Each new session starts with the system's theme and the default language, until its profile sets them.
+    expect(page.themes).toEqual(["system", "system", "system", "system"]);
+    expect(page.languages).toEqual(["en", "en", "en", "en"]);
+  });
+
+  it("leaves a session's stores with their own siblings: a retired store's request through its root rejects unsent", async () => {
+    const { nerve, context, SessionChangedError, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // A store of X's that reaches its siblings through its RootStore, as the stores do after an await
+    // (global-view.store.ts, updateGlobalView).
+    const globalView = x.globalView as GlobalViewStore;
+    await follow(Y);
+
+    const named = track(globalView.rootStore.user.updateCurrentUser({ first_name: "Xavier" }));
+    await until(() => named.settled || nerve.calls.length > 0, "the answer, or a request");
+    // Not sent with Y's token, nor as Y's refresh.
+    expect(named.error).toBeInstanceOf(SessionChangedError);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toEqual([]);
+
+    // The RootStore of Y's session sends as Y.
+    const y = context.rootStore;
+    expect(y).not.toBe(x);
+    const saved = track(y.user.updateCurrentUser({ first_name: "Yvonne" }));
+    await until(() => nerve.calls.length === 1, "Y's refresh");
+    expect(nerve.calls[0]).toMatchObject({ path: REFRESH, body: { refresh_token: `rt-${Y}` } });
+    nerve.calls[0]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 2, "Y's request");
+    expect(nerve.calls[1]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-2" });
+    nerve.calls[1]?.answer(json(200, { first_name: "Yvonne" }));
+    await until(() => saved.settled, "Y's answer");
+    expect(saved.error).toBeUndefined();
+  });
+
+  it("stops the write a retired store makes after an await, unsent: the profile step's save, then its step", async () => {
+    const { storage, nerve, tm, context, SessionChangedError, signedIn, follow } = await load();
+    await signedIn();
+    // What the profile step holds from its render in X's session (onboarding/steps/profile/root.tsx saves the
+    // names, then onboarding/root.tsx changes the step).
+    const { updateCurrentUser } = context.rootStore.user;
+    const { updateUserProfile } = context.rootStore.user.userProfile;
+    const step = track(
+      (async () => {
+        await updateCurrentUser({ first_name: "Xavier" });
+        await updateUserProfile({ onboarding_step: { profile_complete: true } });
+      })()
+    );
+    await until(() => nerve.calls.length === 1, "X's save");
+    expect(nerve.calls[0]).toMatchObject({ method: "PATCH", path: ME, authorization: "Bearer at-1" });
+    // Another tab signs in as Y while the save is out; this tab follows, with a RootStore for Y.
+    await follow(Y);
+    // X's token is still good: the save succeeds, as X.
+    nerve.calls[0]?.answer(json(200, { first_name: "Xavier" }));
+    await until(() => step.settled || nerve.calls.length > 1, "the step, or another request");
+
+    // The step change was X's: not sent with Y's token, nor as Y's refresh.
+    expect(step.error).toBeInstanceOf(SessionChangedError);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls.map((c) => `${c.method} ${c.path}`)).toEqual([`PATCH ${ME}`]);
+    expect(nerve.to(PROFILE)).toEqual([]);
+    expect(tm.state).toEqual({ status: "signed-in", loginId: Y });
+    expect(storage.data.get(AUTH_KEY)).toBe(record(Y));
+  });
+
+  it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {
+    const { context, signedIn, follow } = await load();
+    await signedIn();
+    await follow(Y);
+    // The RootStore the app renders with; command-palette.store reads the shortcuts modal of the one in
+    // store-context's rootStore.
+    const y = context.snapshot();
+    y.powerK.toggleShortcutsListModal(true);
+    expect(y.commandPalette.isAnyModalOpen).toBe(true);
+  });
+});

@@ -8,7 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "gen": "openapi-typescript ../../../api/dist/openapi.yaml --output src/schema.gen.ts",
+    "gen": "openapi-typescript ../../../api/dist/openapi.yaml --root-types --root-types-no-schema-prefix --output src/schema.gen.ts",
     "check:types": "tsc --noEmit",
     "check:lint": "node ../../../tools/lint-cap.mjs 0",
     "check:format": "oxfmt --check .",

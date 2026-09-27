@@ -47,7 +47,7 @@ import { EIssuesStoreType } from "@nerve/types";
 
 import { getFileURL } from "@nerve/utils";
 // store
-import { store } from "@/lib/store-context";
+import { rootStore } from "@/lib/store-context";
 import { ISSUE_FILTER_DEFAULT_DATA } from "@/store/issue/helpers/base-issues.store";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/store/issue/issue-details/sub_issues_filter.store";
 // constants
@@ -142,7 +142,7 @@ export const getGroupByColumns = ({
 };
 
 const getProjectColumns = (): IGroupByColumn[] | undefined => {
-  const { joinedProjectIds: projectIds, projectMap } = store.projectRoot.project;
+  const { joinedProjectIds: projectIds, projectMap } = rootStore.projectRoot.project;
   // Return undefined if no project ids
   if (!projectIds) return;
   // Map project ids to project columns
@@ -165,10 +165,10 @@ const getProjectColumns = (): IGroupByColumn[] | undefined => {
 };
 
 const getCycleColumns = (): IGroupByColumn[] | undefined => {
-  const { currentProjectDetails } = store.projectRoot.project;
+  const { currentProjectDetails } = rootStore.projectRoot.project;
   // Check for the current project details
   if (!currentProjectDetails || !currentProjectDetails?.id) return;
-  const { getProjectCycleDetails } = store.cycle;
+  const { getProjectCycleDetails } = rootStore.cycle;
   // Get the cycle details for the current project
   const cycleDetails = currentProjectDetails?.id ? getProjectCycleDetails(currentProjectDetails?.id) : undefined;
   // Map the cycle details to the group by columns
@@ -196,10 +196,10 @@ const getCycleColumns = (): IGroupByColumn[] | undefined => {
 
 const getModuleColumns = (): IGroupByColumn[] | undefined => {
   // get current project details
-  const { currentProjectDetails } = store.projectRoot.project;
+  const { currentProjectDetails } = rootStore.projectRoot.project;
   if (!currentProjectDetails || !currentProjectDetails?.id) return;
   // get project module ids and module details
-  const { getProjectModuleDetails } = store.module;
+  const { getProjectModuleDetails } = rootStore.module;
   // get module details
   const moduleDetails = currentProjectDetails?.id ? getProjectModuleDetails(currentProjectDetails?.id) : undefined;
   // map module details to group by columns
@@ -222,7 +222,7 @@ const getModuleColumns = (): IGroupByColumn[] | undefined => {
 };
 
 const getStateColumns = ({ projectId }: TGetColumns): IGroupByColumn[] | undefined => {
-  const { getProjectStates, projectStates } = store.state;
+  const { getProjectStates, projectStates } = rootStore.state;
   const _states = projectId ? getProjectStates(projectId) : projectStates;
   if (!_states) return;
   // map project states to group by columns
@@ -263,7 +263,7 @@ const getPriorityColumns = (): IGroupByColumn[] => {
 };
 
 const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] => {
-  const { workspaceLabels, projectLabels } = store.label;
+  const { workspaceLabels, projectLabels } = rootStore.label;
   // map labels to group by columns
   const labels = [
     ...(isWorkspaceLevel ? workspaceLabels || [] : projectLabels || []),
@@ -282,7 +282,7 @@ const getLabelsColumns = ({ isWorkspaceLevel }: TGetColumns): IGroupByColumn[] =
 
 const getAssigneeColumns = ({ isWorkspaceLevel, projectId }: TGetColumns): IGroupByColumn[] | undefined => {
   // store values
-  const { getUserDetails } = store.memberRoot;
+  const { getUserDetails } = rootStore.memberRoot;
   // derived values
   const { memberIds, includeNone } = getScopeMemberIds({ isWorkspaceLevel, projectId });
   const assigneeColumns: IGroupByColumn[] = [];
@@ -317,7 +317,7 @@ const getCreatedByColumns = (): IGroupByColumn[] | undefined => {
   const {
     project: { projectMemberIds },
     getUserDetails,
-  } = store.memberRoot;
+  } = rootStore.memberRoot;
   if (!projectMemberIds) return;
   // Map project member ids to group by created by columns
   return projectMemberIds.map((memberId) => {
@@ -745,8 +745,8 @@ type TGetScopeMemberIdsResult = {
 
 const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetScopeMemberIdsResult => {
   // store values
-  const { workspaceMemberIds } = store.memberRoot.workspace;
-  const { projectMemberIds } = store.memberRoot.project;
+  const { workspaceMemberIds } = rootStore.memberRoot.workspace;
+  const { projectMemberIds } = rootStore.memberRoot.project;
   // derived values
   const memberIds = workspaceMemberIds;
 
@@ -755,7 +755,7 @@ const getScopeMemberIds = ({ isWorkspaceLevel, projectId }: TGetColumns): TGetSc
   }
 
   if (projectId || (projectMemberIds && projectMemberIds.length > 0)) {
-    const { getProjectMemberIds } = store.memberRoot.project;
+    const { getProjectMemberIds } = rootStore.memberRoot.project;
     const _projectMemberIds = projectId ? getProjectMemberIds(projectId, false) : projectMemberIds;
     return {
       memberIds: _projectMemberIds ?? [],

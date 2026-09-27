@@ -12,7 +12,8 @@ import { Disclosure } from "@headlessui/react";
 // nerve imports
 import { ROLE, EUserPermissions } from "@nerve/constants";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { EUserProjectRoles, IUser, IWorkspaceMember, TProjectMembership } from "@nerve/types";
+import type { User } from "@nerve/api-client";
+import type { EUserProjectRoles, IWorkspaceMember, TProjectMembership } from "@nerve/types";
 import { CustomMenu, CustomSelect } from "@nerve/ui";
 import { getFileURL } from "@nerve/utils";
 // hooks
@@ -27,7 +28,7 @@ type NameProps = {
   rowData: RowData;
   workspaceSlug: string;
   isAdmin: boolean;
-  currentUser: IUser | undefined;
+  currentUser: User | undefined;
   setRemoveMemberModal: (rowData: RowData) => void;
 };
 

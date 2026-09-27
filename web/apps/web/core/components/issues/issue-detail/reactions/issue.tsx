@@ -10,7 +10,7 @@ import { stringToEmoji } from "@nerve/propel/emoji-icon-picker";
 import { EmojiReactionGroup, EmojiReactionPicker } from "@nerve/propel/emoji-reaction";
 import type { EmojiReactionType } from "@nerve/propel/emoji-reaction";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IUser } from "@nerve/types";
+import type { User } from "@nerve/api-client";
 // ui
 import { cn } from "@nerve/utils";
 // helpers
@@ -21,7 +21,7 @@ export type TIssueReaction = {
   workspaceSlug: string;
   projectId: string;
   issueId: string;
-  currentUser: IUser;
+  currentUser: User;
   disabled?: boolean;
   className?: string;
 };

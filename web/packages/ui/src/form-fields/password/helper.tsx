@@ -25,7 +25,7 @@ export const getStrengthInfo = (strength: E_PASSWORD_STRENGTH): StrengthInfo => 
       };
     case E_PASSWORD_STRENGTH.LENGTH_NOT_VALID:
       return {
-        message: "Password is too short",
+        message: "Password must be 8–128 characters",
         textColor: "text-danger-primary",
         activeFragments: 1,
       };

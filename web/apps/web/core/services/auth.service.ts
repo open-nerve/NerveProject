@@ -4,40 +4,17 @@
  * See the LICENSE file for details.
  */
 
-// types
-import type { ICsrfTokenData } from "@nerve/types";
-// services
-import { APIService } from "@/services/api.service";
+import type { AuthTokens, LoginRequest, RegisterRequest } from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
+import { publicClient } from "@/lib/auth/api-client";
 
-export class AuthService extends APIService {
-  async requestCSRFToken(): Promise<ICsrfTokenData> {
-    return this.get("/auth/get-csrf-token/")
-      .then((response) => response.data)
-      .catch((error) => {
-        throw error;
-      });
+// Sign-in and sign-up; the token manager refreshes and signs out itself (M2 design 7.5).
+export class AuthService {
+  async register(body: RegisterRequest): Promise<AuthTokens> {
+    return unwrap(await publicClient.POST("/api/v0/auth/register", { body }));
   }
 
-  async signOut(): Promise<any> {
-    await this.requestCSRFToken().then((data) => {
-      const csrfToken = data?.csrf_token;
-
-      if (!csrfToken) throw Error("CSRF token not found");
-
-      const form = document.createElement("form");
-      const element1 = document.createElement("input");
-
-      form.method = "POST";
-      form.action = "/auth/sign-out/";
-
-      element1.value = csrfToken;
-      element1.name = "csrfmiddlewaretoken";
-      element1.type = "hidden";
-      form.appendChild(element1);
-
-      document.body.appendChild(form);
-
-      form.submit();
-    });
+  async login(body: LoginRequest): Promise<AuthTokens> {
+    return unwrap(await publicClient.POST("/api/v0/auth/login", { body }));
   }
 }

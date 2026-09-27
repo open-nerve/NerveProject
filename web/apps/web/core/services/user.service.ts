@@ -5,32 +5,39 @@
  */
 
 // services
-import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@nerve/types";
+import type { ApiClient, ChangePasswordRequest, Profile, ProfileUpdate, User, UserUpdate } from "@nerve/api-client";
+import type { IUserSettings, TIssuesResponse } from "@nerve/types";
+import { unwrap } from "@/lib/api-error";
 import { APIService } from "@/services/api.service";
 
 export class UserService extends APIService {
-  async currentUser(): Promise<IUser> {
-    // Using validateStatus: null to bypass interceptors for unauthorized errors.
-    return this.get("/api/users/me/", { validateStatus: null })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  /** api: the client bound to the session of the stores that build this service (RootStore). */
+  constructor(private readonly api: ApiClient) {
+    super();
   }
 
-  async getCurrentUserProfile(): Promise<TUserProfile> {
-    return this.get("/api/users/me/profile/")
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async currentUser(): Promise<User> {
+    return unwrap(await this.api.GET("/api/v0/me"));
   }
-  async updateCurrentUserProfile(data: any): Promise<any> {
-    return this.patch("/api/users/me/profile/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+
+  async updateCurrentUser(data: UserUpdate): Promise<User> {
+    return unwrap(await this.api.PATCH("/api/v0/me", { body: data }));
+  }
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    unwrap(await this.api.POST("/api/v0/me/change-password", { body: data }));
+  }
+
+  async deactivate(): Promise<void> {
+    unwrap(await this.api.POST("/api/v0/me/deactivate"));
+  }
+
+  async getCurrentUserProfile(): Promise<Profile> {
+    return unwrap(await this.api.GET("/api/v0/me/profile"));
+  }
+
+  async updateCurrentUserProfile(data: ProfileUpdate): Promise<Profile> {
+    return unwrap(await this.api.PATCH("/api/v0/me/profile", { body: data }));
   }
 
   async currentUserSettings(bustCache: boolean = false): Promise<IUserSettings> {
@@ -39,46 +46,6 @@ export class UserService extends APIService {
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response;
-      });
-  }
-
-  async updateUser(data: Partial<IUser>): Promise<any> {
-    return this.patch("/api/users/me/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async updateUserOnBoard(): Promise<any> {
-    return this.patch("/api/users/me/onboard/", {
-      is_onboarded: true,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async updateUserTourCompleted(): Promise<any> {
-    return this.patch("/api/users/me/tour-completed/", {
-      is_tour_completed: true,
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async changePassword(token: string, data: { old_password: string; new_password: string }): Promise<any> {
-    return this.post(`/auth/change-password/`, data, {
-      headers: {
-        "X-CSRFTOKEN": token,
-      },
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
       });
   }
 
@@ -95,14 +62,6 @@ export class UserService extends APIService {
       },
       config
     )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deactivateAccount() {
-    return this.delete(`/api/users/me/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
@@ -133,7 +92,3 @@ export class UserService extends APIService {
       });
   }
 }
-
-const userService = new UserService();
-
-export default userService;

@@ -29,6 +29,11 @@ function parseRefreshToken(token: string): RefreshTokenParts {
   };
 }
 
+/** The generation a refresh token carries: 0 at the sign-in, one more at each refresh. */
+export function generationOf(refreshToken: string): number {
+  return parseRefreshToken(refreshToken).generation;
+}
+
 function secretHash(refreshToken: string): Buffer {
   return createHash("sha256").update(parseRefreshToken(refreshToken).secret).digest();
 }
@@ -225,6 +230,16 @@ export async function accountOf(db: Database, email: string): Promise<AccountRow
   );
   expect(rows, `the account of ${email}`).toHaveLength(1);
   return rows[0] as AccountRow;
+}
+
+/** The onboarding steps of the account of email, a lowercased address, as its profile holds them. */
+export async function onboardingStepsOf(db: Database, email: string): Promise<unknown> {
+  const { id } = await accountOf(db, email);
+  const rows = await db.query<{ onboarding_step: unknown }>("SELECT onboarding_step FROM profiles WHERE user_id = $1", [
+    id,
+  ]);
+  expect(rows, `the profile of ${email}`).toHaveLength(1);
+  return rows[0]?.onboarding_step;
 }
 
 /** The personal access tokens of the account userId, oldest first: id and deleted_at. */

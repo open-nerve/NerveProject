@@ -6,7 +6,7 @@
 
 import type { TUserPermissions } from "./enums";
 import type { TProjectMembership } from "./project";
-import type { IUser, IUserLite } from "./users";
+import type { IUserLite } from "./users";
 import type { IWorkspaceViewProps } from "./view-props";
 
 export enum EUserWorkspaceRoles {
@@ -17,7 +17,7 @@ export enum EUserWorkspaceRoles {
 
 export interface IWorkspace {
   readonly id: string;
-  readonly owner: IUser;
+  readonly owner: IUserLite;
   readonly created_at: Date;
   readonly updated_at: Date;
   name: string;
@@ -130,8 +130,6 @@ export interface IWorkspaceSearchResults {
 
 export enum EOnboardingSteps {
   PROFILE_SETUP = "PROFILE_SETUP",
-  ROLE_SETUP = "ROLE_SETUP",
-  USE_CASE_SETUP = "USE_CASE_SETUP",
   WORKSPACE_CREATE_OR_JOIN = "WORKSPACE_CREATE_OR_JOIN",
   INVITE_MEMBERS = "INVITE_MEMBERS",
 }

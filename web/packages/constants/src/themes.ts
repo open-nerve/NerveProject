@@ -4,8 +4,10 @@
  * See the LICENSE file for details.
  */
 
+import type { Theme } from "@nerve/api-client";
+
 export interface I_THEME_OPTION {
-  value: string;
+  value: Theme;
   i18n_label: string;
   type: string;
   icon: {

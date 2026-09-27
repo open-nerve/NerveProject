@@ -1,5 +1,5 @@
 {
-  "phase": "M1/closeout",
+  "phase": "M2/P4",
   "rules": [
     {
       "id": "deploy-files",
@@ -1747,6 +1747,179 @@
           "web/apps/web/core/components/navigation/top-navigation-root.tsx",
           "web/apps/web/core/hooks/store/use-workspace.ts"
         ]
+      }
+    },
+    {
+      "id": "is-self-managed",
+      "phase": "M2/P4",
+      "why": "Plane 实例配置的 is_self_managed 和它控制的新手引导\"角色\"\"用途\"两步（M2 设计 3.19，决策点 4 裁定为 A）；Nerve 的实例信息 GET /api/v0/instance 没有这个字段，新手引导只有资料、工作区、邀请三步",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "is_self_managed|isSelfManaged",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["  is_self_managed: boolean;", "  const isSelfManaged = instanceConfig?.is_self_managed;"],
+        "miss": ["  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;"],
+        "files": {
+          "hit": ["web/apps/web/core/components/onboarding/root.tsx", "web/packages/types/src/index.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "api/dist/openapi.yaml"]
+        }
+      }
+    },
+    {
+      "id": "plane-user-urls",
+      "phase": "M2/P4",
+      "why": "Plane 的当前用户、资料、新手引导、导览和实例地址（M2 设计 7.9）；前端改调 /api/v0 下的 /me、/me/profile 和 /instance。当前用户只禁止 /api/users/me/ 本身（后面紧跟引号），不禁止整个 /api/users/me/：M3 的 joinProject、工作区列表和邀请等旧调用还在用它下面的地址",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/users/me/(?:profile|onboard|tour-completed|(?=[\"'`]))|/api/instances/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.get(\"/api/users/me/\", { validateStatus: null })",
+          "    return this.patch(\"/api/users/me/\", data)",
+          "    return this.delete(`/api/users/me/`)",
+          "    return this.get(\"/api/users/me/profile/\")",
+          "    return this.patch(\"/api/users/me/onboard/\", {",
+          "    return this.patch(\"/api/users/me/tour-completed/\", {",
+          "    return this.get(\"/api/instances/\")"
+        ],
+        "miss": [
+          "    return unwrap(await api.GET(\"/api/v0/me/profile\"));",
+          "    return unwrap(await publicClient.GET(\"/api/v0/instance\"));",
+          "    return this.post(`/api/users/me/workspaces/${workspaceSlug}/projects/invitations/`, { project_ids })",
+          "    const url = bustCache ? `/api/users/me/settings/?t=${Date.now()}` : \"/api/users/me/settings/\";",
+          "    return this.get(\"/api/users/me/workspaces/\")"
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/user.service.ts", "web/apps/web/core/services/instance.service.ts"],
+          "miss": ["e2e/stories/smoke/s2-web-app.spec.ts", "docs/v0/M2-auth/M2-design.md"]
+        }
+      }
+    },
+    {
+      "id": "plane-user-assets",
+      "phase": "M2/P4",
+      "why": "Plane 的用户资源上传：/api/assets/v2/user-assets/ 的上传、确认和删除，/api/users/file-assets/ 的旧删除，头像弹窗 UserImageUploadModal，EFileAssetType 的 USER_AVATAR、USER_COVER。P4 删掉头像、封面的上传控件之后它们没有入口，一并删除；M5 用 nerve 自己的上传协议重新加入上传，不用 Plane 的地址（M2 设计 3.2）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/assets/v2/user-assets/|/api/users/file-assets/|UserImageUploadModal|\\bUSER_(?:AVATAR|COVER)\\b",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "    return this.post(`/api/assets/v2/user-assets/`, {",
+          "    return this.delete(`/api/users/file-assets/${assetKey}/`)",
+          "import { UserImageUploadModal } from \"@/components/core/modals/user-image-upload-modal\";",
+          "        entityType: EFileAssetType.USER_COVER,",
+          "  USER_AVATAR = \"USER_AVATAR\","
+        ],
+        "miss": [
+          "    return this.delete(`/api/workspaces/file-assets/${workspaceId}/${assetKey}/`)",
+          "    const uploadResult = await fileService.uploadWorkspaceAsset(",
+          "  PROJECT_COVER = \"PROJECT_COVER\","
+        ],
+        "files": {
+          "hit": ["web/apps/web/core/services/file.service.ts", "web/packages/types/src/enums.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/identity/a1-sign-up.spec.ts"]
+        }
+      }
+    },
+    {
+      "id": "csrf",
+      "phase": "M2/P4",
+      "why": "Plane 的会话 cookie 要 CSRF 令牌（取令牌、表单隐藏字段、X-CSRFTOKEN 头）；Nerve 的请求带 Authorization: Bearer，不用 cookie，也就没有 CSRF（M2 设计 7.2，M1-P3 交接）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "csrf",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "        <input type=\"hidden\" name=\"csrfmiddlewaretoken\" />",
+          "      headers: { \"X-CSRFTOKEN\": csrfToken },",
+          "  requestCSRFToken = async (): Promise<ICsrfTokenData> =>"
+        ],
+        "miss": ["  request.headers.set(\"Authorization\", `Bearer ${token}`);"],
+        "files": {
+          "hit": ["web/apps/web/core/services/auth.service.ts", "web/packages/types/src/auth.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/identity/adapter/http/auth.go"]
+        }
+      }
+    },
+    {
+      "id": "plane-auth-urls",
+      "phase": "M2/P4",
+      "why": "Plane 的认证接口在根路径 /auth/ 下（登录、注册、退出、改密码、取 CSRF 令牌），登录页用原生表单 POST 过去；Nerve 的认证接口都在 /api/v0/auth 和 /api/v0/me 下，由生成的客户端调用（M2 设计 7.2、7.3）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "(?<![\\w.@-])/auth/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "        action={`/auth/${mode === EAuthModes.SIGN_IN ? \"sign-in\" : \"sign-up\"}/`}",
+          "      form.action = \"/auth/sign-out/\";",
+          "    return this.post(`/auth/change-password/`, data, {"
+        ],
+        "miss": [
+          "    return unwrap(await publicClient.POST(\"/api/v0/auth/login\", { body }));",
+          "import Unauthorized from \"@/app/assets/auth/unauthorized.svg?url\";"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/account/auth-forms/password.tsx",
+            "web/apps/web/core/services/user.service.ts"
+          ],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/auth/a1-sign-up.spec.ts"]
+        }
+      }
+    },
+    {
+      "id": "auth-error-code",
+      "phase": "M2/P4",
+      "why": "Plane 登录失败时跳回登录页，把数字错误码放在地址的 error_code 里，前端按 EAuthenticationErrorCodes 查文案；Nerve 的错误是 problem+json 的 code，登录页就地显示，文案表由测试对着 openapi.yaml 核对（M2 设计 3.11、7.3）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "error_code|EAuthenticationErrorCodes",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const error_code = searchParams.get(\"error_code\");",
+          "      const err = error as Error & { error_code?: string };",
+          "  if (code && passwordErrors.includes(code as EAuthenticationErrorCodes)) {"
+        ],
+        "miss": [
+          "      if (error instanceof ApiError && error.problem?.code === \"identity.current_password_incorrect\") {"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/account/auth-forms/auth-root.tsx",
+            "web/apps/web/helpers/authentication.helper.ts"
+          ],
+          "miss": ["server/internal/shared/error.go", "docs/v0/M2-auth/M2-design.md"]
+        }
       }
     }
   ],

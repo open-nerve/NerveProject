@@ -164,11 +164,3 @@ export const WORKSPACE_DEFAULT_SEARCH_RESULT: IWorkspaceSearchResults = {
     issue_view: [],
   },
 };
-
-export const USE_CASES = [
-  "Plan and track product roadmaps",
-  "Manage engineering sprints",
-  "Coordinate cross-functional projects",
-  "Replace our current tool",
-  "Just exploring",
-];

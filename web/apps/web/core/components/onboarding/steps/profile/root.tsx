@@ -4,18 +4,14 @@
  * See the LICENSE file for details.
  */
 
-import { useState } from "react";
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
-import { ImageOutline } from "@makeplane/propel/icons";
 // nerve imports
+import type { UserUpdate } from "@nerve/api-client";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IUser } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 import { cn, getFileURL, validatePersonName } from "@nerve/utils";
-// components
-import { UserImageUploadModal } from "@/components/core/modals/user-image-upload-modal";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // local components
@@ -25,71 +21,50 @@ type Props = {
   handleStepChange: (step: EOnboardingSteps, skipInvites?: boolean) => void;
 };
 
-export type TProfileSetupFormValues = {
+type TProfileSetupFormValues = {
   first_name: string;
   last_name: string;
-  avatar_url?: string | null;
-  role?: string;
-  use_case?: string[];
-};
-
-const defaultValues: Partial<TProfileSetupFormValues> = {
-  first_name: "",
-  last_name: "",
-  avatar_url: "",
 };
 
 export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepChange }: Props) {
-  // states
-  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   // store hooks
   const { data: user, updateCurrentUser } = useUser();
   // form info
   const {
-    getValues,
     handleSubmit,
     control,
     watch,
-    setValue,
     formState: { errors, isSubmitting, isValid },
   } = useForm<TProfileSetupFormValues>({
     defaultValues: {
-      ...defaultValues,
-      first_name: user?.first_name,
-      last_name: user?.last_name,
-      avatar_url: user?.avatar_url,
+      first_name: user?.first_name ?? "",
+      last_name: user?.last_name ?? "",
     },
     mode: "onChange",
   });
-  // derived values
-  const userAvatar = watch("avatar_url");
 
-  const handleSubmitUserDetail = async (formData: TProfileSetupFormValues) => {
-    const userDetailsPayload: Partial<IUser> = {
+  /** Saves the names; false when nerve did not, so the step stays (M2 design 7.1: nor for another account). */
+  const handleSubmitUserDetail = async (formData: TProfileSetupFormValues): Promise<boolean> => {
+    const userDetailsPayload: UserUpdate = {
       first_name: formData.first_name,
       last_name: formData.last_name,
-      avatar_url: formData.avatar_url ?? undefined,
     };
     try {
       await updateCurrentUser(userDetailsPayload);
+      return true;
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Error",
         message: "User details update failed. Please try again!",
       });
+      return false;
     }
   };
 
   const onSubmit = async (formData: TProfileSetupFormValues) => {
     if (!user) return;
-    await handleSubmitUserDetail(formData);
-    handleStepChange(EOnboardingSteps.PROFILE_SETUP);
-  };
-
-  const handleDelete = (url: string | null | undefined) => {
-    if (!url) return;
-    setValue("avatar_url", "");
+    if (await handleSubmitUserDetail(formData)) handleStepChange(EOnboardingSteps.PROFILE_SETUP);
   };
 
   const isButtonDisabled = isSubmitting || !isValid;
@@ -99,49 +74,17 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepC
       {/* Header */}
       <CommonOnboardingHeader title="Create your profile." description="This is how you will appear in Nerve." />
 
-      {/* Profile Picture Section */}
-      <Controller
-        control={control}
-        name="avatar_url"
-        render={({ field: { onChange, value } }) => (
-          <UserImageUploadModal
-            isOpen={isImageUploadModalOpen}
-            onClose={() => setIsImageUploadModalOpen(false)}
-            handleRemove={async () => handleDelete(getValues("avatar_url"))}
-            onSuccess={(url) => {
-              onChange(url);
-              setIsImageUploadModalOpen(false);
-            }}
-            value={value && value.trim() !== "" ? value : null}
+      {/* Profile picture: shown, not uploaded, until the file storage (M5) */}
+      <div className="flex size-12 items-center justify-center rounded-full bg-accent-primary text-18 font-semibold text-on-color">
+        {user?.avatar_url ? (
+          <img
+            src={getFileURL(user.avatar_url)}
+            alt={user.display_name}
+            className="h-full w-full rounded-full object-cover"
           />
+        ) : (
+          <>{watch("first_name")[0] ?? "R"}</>
         )}
-      />
-      <div className="flex items-center gap-4">
-        <button
-          className="flex size-12 items-center justify-center rounded-full bg-accent-primary text-18 font-semibold text-on-color"
-          type="button"
-          onClick={() => setIsImageUploadModalOpen(true)}
-        >
-          {userAvatar ? (
-            <img
-              src={getFileURL(userAvatar ?? "")}
-              onClick={() => setIsImageUploadModalOpen(true)}
-              alt={user?.display_name}
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <>{watch("first_name")[0] ?? "R"}</>
-          )}
-        </button>
-        <input type="file" className="hidden" id="profile-image-input" />
-        <button
-          className="flex items-center gap-1.5 px-2 py-1 text-13 text-tertiary hover:text-secondary"
-          type="button"
-          onClick={() => setIsImageUploadModalOpen(true)}
-        >
-          <ImageOutline className="size-4" />
-          <span className="text-13">{userAvatar ? "Change image" : "Upload image"}</span>
-        </button>
       </div>
 
       <div className="flex w-full flex-col gap-6">

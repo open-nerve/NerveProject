@@ -42,13 +42,16 @@ export const WorkspaceMenuRoot = observer(function WorkspaceMenuRoot(props: Work
   const { updateUserProfile } = useUserProfile();
   const { currentWorkspace: activeWorkspace, workspaces } = useWorkspace();
   // derived values
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
   // translation
   const { t } = useTranslation();
   // local state
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
 
-  const handleWorkspaceNavigation = (workspace: IWorkspace) => updateUserProfile({ last_workspace_id: workspace?.id });
+  // the workspace opened last is a best-effort preference: the link opens the workspace whether nerve saves it or not
+  const handleWorkspaceNavigation = (workspace: IWorkspace) => {
+    void updateUserProfile({ last_workspace_id: workspace?.id }).catch(() => undefined);
+  };
 
   const handleSignOut = async () => {
     await signOut().catch(() =>

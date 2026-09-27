@@ -9,13 +9,14 @@ import type { AxiosInstance, AxiosRequestConfig } from "axios";
 import { create } from "axios";
 import { normalizeAPIRequestURL } from "@nerve/services";
 
+// The domains that do not use nerve's API yet (M3–M8) still call their old addresses through this class, and
+// nerve answers them 404 problem; each domain moves to the generated client when it gets its API (M2 design
+// 7.2). It sends no token, and never navigates: sending the user to sign in is AuthenticationWrapper's.
 export abstract class APIService {
   private axiosInstance: AxiosInstance;
 
   constructor() {
-    this.axiosInstance = create({
-      withCredentials: true,
-    });
+    this.axiosInstance = create();
 
     this.setupInterceptors();
   }
@@ -33,17 +34,6 @@ export abstract class APIService {
       }
       return config;
     });
-
-    this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response && error.response.status === 401) {
-          const currentPath = window.location.pathname;
-          window.location.replace(`/${currentPath ? `?next_path=${currentPath}` : ``}`);
-        }
-        return Promise.reject(error);
-      }
-    );
   }
 
   get(url: string, params = {}, config: AxiosRequestConfig = {}) {

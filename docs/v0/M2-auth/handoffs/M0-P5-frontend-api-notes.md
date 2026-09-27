@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 from: M0/P5
 to: M2
 created: 2026-09-22
@@ -29,3 +29,14 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：CSP（M2/P4）；前端改调 `/api/v0/instance` 和认证接口，以及同源部署的核对（M2/P4）。
 
 来源：[M2/P2 spec](../specs/P2-sessions.md) 第 7 节。
+
+## 处理结果（M2/P4）
+
+- **CSP**（完成，M2 设计 8.3）：`webui.Handler` 构造时从内嵌的 `index.html` 取出内联脚本（不带 `src` 的 `<script>`），各算一个 SHA-256，只在 `.html` 的响应上设 `Content-Security-Policy`：`default-src 'self'`，`script-src 'self'` 加每个内联脚本的哈希，`connect-src 'self'`、`object-src 'none'`、`base-uri 'none'`、`form-action 'self'`、`frame-ancestors 'none'` 等（全文见 P4 spec 2.12）；没有构建前端时不设。`webui` 的单元测试用包外另算的哈希核对；`bootstrap` 的测试经整个服务核对页面带它，静态文件、健康检查和接口（包括 `/api/` 下的 404）都不带任何 CSP。S2 核对首页带它，S2、A2、A10 核对没有 CSP 违规；原型的浏览器核对 C9 逐个打开 M2 能到达的 8 个页面，都没有违规（P4 spec 附录 A）。
+- **安全响应头与 CSP 分在两层**（关闭，M2 设计 8.3）：三个安全响应头对接口的响应同样有意义，放在 `httpserver` 的固定链上（M2/P2）；CSP 只对页面有意义，而且要用 `index.html` 里内联脚本的哈希，只有 `webui` 知道这些脚本，所以由 `webui` 设置。交接原文"大概率是同一层中间件"的本意是两者都由服务端在 M2 加入，这一点已经做到；分在两层是有意的安排，P4 的评审记录要写下这条理由（P4 spec 第 4 节）。
+- **前端改调新接口**（完成）：启动时的 `GET /api/instances/` 改为 `GET /api/v0/instance`；注册、登录、续期、退出走 `/api/v0/auth/` 下的接口，当前账户、资料、修改密码、停用走 `/api/v0/me` 下的接口。前端不再调用 `/auth/…`，关键词规则 `plane-auth-urls` 看住。未登录的页面只请求 `GET /api/v0/instance`（S2）。
+- **同源部署**（核对）：前端没有环境变量（M1/P4）；web 的客户端（`publicClient`，和 `apiFor` 给每一代 stores 建的客户端）都由 `createClient()` 建成，不设 `baseUrl`，还没对接的领域用的 axios 基类也不设基础地址，接口一律用相对路径；S2 断言页面的请求都发往 nerve 自身；原型的浏览器核对 C5 在局域网地址上用 HTTP 打开页面，注册和两个标签页的续期都成功（P4 spec 附录 A）。
+
+全部处理完，状态改为 `done`。
+
+来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。

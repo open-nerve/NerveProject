@@ -80,20 +80,14 @@ function UserInvitationsPage() {
         mutate(USER_WORKSPACES_LIST);
         const firstInviteId = invitationsRespond[0];
         const redirectWorkspace = invitations?.find((i) => i.id === firstInviteId)?.workspace;
+        // the workspace opened last is a best-effort preference: the joined workspace opens whether nerve saves it or not
         updateUserProfile({ last_workspace_id: redirectWorkspace?.id })
+          .catch(() => undefined)
           .then(() => {
             setIsJoiningWorkspaces(false);
             fetchWorkspaces().then(() => {
               navigate(`/${redirectWorkspace?.slug}`);
             });
-          })
-          .catch(() => {
-            setToast({
-              type: TOAST_TYPE.ERROR,
-              title: t("error"),
-              message: t("something_went_wrong_please_try_again"),
-            });
-            setIsJoiningWorkspaces(false);
           });
       })
       .catch((_err) => {

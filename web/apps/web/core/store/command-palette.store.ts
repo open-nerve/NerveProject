@@ -11,7 +11,7 @@ import type { TCreateModalStoreTypes } from "@nerve/constants";
 import type { TProfileSettingsTabs } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 // lib
-import { store } from "@/lib/store-context";
+import { rootStore } from "@/lib/store-context";
 
 export interface ICommandPaletteStore {
   // computed
@@ -91,7 +91,7 @@ export class CommandPaletteStore implements ICommandPaletteStore {
       this.isCreateProjectModalOpen ||
       this.isCreateModuleModalOpen ||
       this.isCreateViewModalOpen ||
-      store.powerK.isShortcutsListModalOpen ||
+      rootStore.powerK.isShortcutsListModalOpen ||
       this.isDeleteIssueModalOpen
     );
   }

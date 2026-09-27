@@ -30,39 +30,6 @@ export interface IUserLite {
   last_name: string;
   joining_date?: string;
 }
-export interface IUser extends IUserLite {
-  // only for uploading the cover image
-  cover_image_asset?: string | null;
-  cover_image?: string | null;
-  // only for rendering the cover image
-  cover_image_url: string | null;
-  date_joined: string;
-  email: string;
-  is_active: boolean;
-  is_email_verified: boolean;
-  is_tour_completed: boolean;
-  mobile_number: string | null;
-  last_workspace_id: string;
-  user_timezone: string;
-  username: string;
-  theme: IUserTheme;
-}
-
-export type TUserProfile = {
-  id: string | undefined;
-  user: string | undefined;
-  role: string | undefined;
-  last_workspace_id: string | undefined;
-  theme: IUserTheme;
-  onboarding_step: TOnboardingSteps;
-  is_onboarded: boolean;
-  is_tour_completed: boolean;
-  use_case: string | undefined;
-  language: string;
-  created_at: Date | string;
-  updated_at: Date | string;
-  start_of_the_week: EStartOfTheWeek;
-};
 
 export interface IUserSettings {
   id: string | undefined;
@@ -77,17 +44,6 @@ export interface IUserSettings {
     invites: number | undefined;
   };
 }
-
-export interface IUserTheme {
-  theme: string | undefined; // a value of THEME_OPTIONS
-}
-
-export type TOnboardingSteps = {
-  profile_complete: boolean;
-  workspace_create: boolean;
-  workspace_invite: boolean;
-  workspace_join: boolean;
-};
 
 export interface IUserProjectsRole {
   [projectId: string]: TUserPermissions;

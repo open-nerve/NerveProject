@@ -13,7 +13,6 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
 
 type Props = {
   isOpen: boolean;
@@ -21,11 +20,10 @@ type Props = {
 };
 
 export function DeactivateAccountModal(props: Props) {
-  const navigate = useNavigate();
   const { isOpen, onClose } = props;
   // hooks
   const { t } = useTranslation();
-  const { deactivateAccount, signOut } = useUser();
+  const { deactivateAccount } = useUser();
 
   // states
   const [isDeactivating, setIsDeactivating] = useState(false);
@@ -45,16 +43,16 @@ export function DeactivateAccountModal(props: Props) {
           title: "Success!",
           message: "Account deactivated successfully.",
         });
-        signOut();
-        navigate("/");
         handleClose();
         return;
       })
-      .catch((err: any) => {
+      .catch((error: unknown) => {
+        // An ApiError's message is its problem's detail or title, else the HTTP status; the other failures (the
+        // session changed or is unavailable, no network) are errors with a message as well.
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "Error!",
-          message: err?.error,
+          message: error instanceof Error ? error.message : undefined,
         });
       })
       .finally(() => setIsDeactivating(false));

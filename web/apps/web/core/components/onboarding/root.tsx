@@ -7,11 +7,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import type { OnboardingStepsUpdate } from "@nerve/api-client";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IWorkspaceMemberInvitation, TOnboardingStep, TOnboardingSteps, TUserProfile } from "@nerve/types";
+import type { IWorkspaceMemberInvitation, TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 // hooks
-import { useInstance } from "@/hooks/store/use-instance";
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
 // local components
@@ -28,10 +28,8 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
   const { data: user } = useUser();
   const { data: userProfile, updateUserProfile, finishUserOnboarding } = useUserProfile();
   const { workspaces } = useWorkspace();
-  const { config: instanceConfig } = useInstance();
 
   const workspacesList = Object.values(workspaces ?? {});
-  const isSelfManaged = instanceConfig?.is_self_managed;
 
   // Calculate total steps based on whether invitations are available
   const hasInvitations = invitations.length > 0;
@@ -50,43 +48,34 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
     }
   }, [user, finishUserOnboarding]);
 
-  // handle step change
+  // handle step change: nerve merges the steps it is given into the profile's
   const stepChange = useCallback(
-    async (steps: Partial<TOnboardingSteps>) => {
+    async (steps: OnboardingStepsUpdate) => {
       if (!user) return;
-
-      const payload: Partial<TUserProfile> = {
-        onboarding_step: {
-          ...userProfile.onboarding_step,
-          ...steps,
-        },
-      };
-
-      await updateUserProfile(payload);
+      try {
+        await updateUserProfile({ onboarding_step: steps });
+      } catch {
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: "Failed",
+          message: "Failed to save your progress, Please try again later.",
+        });
+      }
     },
-    [user, userProfile, updateUserProfile]
+    [user, updateUserProfile]
   );
 
+  // finishing sets all four steps in its one write, so it goes without the step change it supersedes: two
+  // profile writes in flight would leave the store with whichever answer lands last
   const handleStepChange = useCallback(
     (step: EOnboardingSteps, skipInvites?: boolean) => {
       switch (step) {
         case EOnboardingSteps.PROFILE_SETUP:
-          if (isSelfManaged) {
-            // Skip role & use case steps for self-hosted
-            stepChange({ profile_complete: true });
-            if (workspacesList.length > 0) finishOnboarding();
-            else setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
-          } else {
-            setCurrentStep(EOnboardingSteps.ROLE_SETUP);
-          }
-          break;
-        case EOnboardingSteps.ROLE_SETUP:
-          setCurrentStep(EOnboardingSteps.USE_CASE_SETUP);
-          break;
-        case EOnboardingSteps.USE_CASE_SETUP:
-          stepChange({ profile_complete: true });
           if (workspacesList.length > 0) finishOnboarding();
-          else setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
+          else {
+            stepChange({ profile_complete: true });
+            setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
+          }
           break;
         case EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN:
           if (skipInvites) finishOnboarding();
@@ -96,12 +85,11 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
           }
           break;
         case EOnboardingSteps.INVITE_MEMBERS:
-          stepChange({ workspace_invite: true });
           finishOnboarding();
           break;
       }
     },
-    [stepChange, finishOnboarding, workspacesList, isSelfManaged]
+    [stepChange, finishOnboarding, workspacesList]
   );
 
   const updateCurrentStep = (step: EOnboardingSteps) => setCurrentStep(step);

@@ -12,7 +12,7 @@ import { useTheme } from "next-themes";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useRouterParams } from "@/hooks/store/use-router-params";
-import { useUserProfile } from "@/hooks/store/user";
+import { useUser, useUserProfile } from "@/hooks/store/user";
 
 type TStoreWrapper = {
   children: ReactNode;
@@ -27,6 +27,7 @@ function StoreWrapper(props: TStoreWrapper) {
   // store hooks
   const { setQuery } = useRouterParams();
   const { sidebarCollapsed, toggleSidebar } = useAppTheme();
+  const { data: currentUser } = useUser();
   const { data: userProfile } = useUserProfile();
   // Track if we've initialized theme from server (one-time only)
   const hasInitializedThemeRef = useRef(false);
@@ -50,7 +51,7 @@ function StoreWrapper(props: TStoreWrapper) {
    * This prevents a feedback loop where server updates trigger UI updates in a cycle.
    */
   useEffect(() => {
-    const userId = userProfile?.id;
+    const userId = currentUser?.id;
 
     // Reset initialization flag when user changes (logout/login)
     // This handles both logout (userId becomes undefined) and login (userId changes)
@@ -60,16 +61,16 @@ function StoreWrapper(props: TStoreWrapper) {
     }
 
     // Only initialize theme from server on FIRST load for this user
-    if (!userProfile?.theme?.theme || hasInitializedThemeRef.current) {
+    if (!userProfile?.theme || hasInitializedThemeRef.current) {
       return; // Skip if already initialized or no profile data
     }
 
     // Apply theme from server profile (one-time only)
-    setTheme(userProfile?.theme?.theme || "system");
+    setTheme(userProfile.theme);
 
     // Mark as initialized - prevents future syncs from server
     hasInitializedThemeRef.current = true;
-  }, [userProfile?.theme?.theme, setTheme]);
+  }, [currentUser?.id, userProfile?.theme, setTheme]);
 
   useEffect(() => {
     if (!params) return;

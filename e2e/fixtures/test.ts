@@ -1,8 +1,9 @@
 import path from "node:path";
 
-import { test as base } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
 
 import { createApi, type Api } from "./api";
+import { signInContext, type AuthTokens } from "./auth";
 import { createDatabase, openDatabase, templateDatabase, type Database } from "./db";
 import { nerveFixtureTimeoutMs, startNerve, type Nerve } from "./server";
 
@@ -25,6 +26,11 @@ interface TestFixtures {
    * fixture's own timeouts fire first.
    */
   nerveWith: (env: Record<string, string>) => Promise<Nerve>;
+  /**
+   * Signs the test's browser context in with tokens, at the worker's nerve or at baseURL (M2 design 9.5),
+   * and returns the test's page, which has loaded nothing yet: its first page refreshes the session.
+   */
+  signedInPage: (tokens: AuthTokens, baseURL?: string) => Promise<Page>;
   /** When the test fails, a pg_dump of the worker's database joins its trace, screenshot and nerve log. */
   databaseSnapshot: void;
 }
@@ -70,6 +76,12 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       return nerve;
     });
     await Promise.all(started.map((nerve) => nerve.stop()));
+  },
+  signedInPage: async ({ page, nerve }, use) => {
+    await use(async (tokens, baseURL = nerve.baseURL) => {
+      await signInContext(page.context(), baseURL, tokens);
+      return page;
+    });
   },
   databaseSnapshot: [
     async ({ db }, use, testInfo) => {

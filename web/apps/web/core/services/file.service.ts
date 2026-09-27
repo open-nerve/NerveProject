@@ -122,40 +122,6 @@ export class FileService extends APIService {
       });
   }
 
-  private async updateUserAssetUploadStatus(assetId: string): Promise<void> {
-    return this.patch(`/api/assets/v2/user-assets/${assetId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async uploadUserAsset(data: TFileEntityInfo, file: File): Promise<TFileSignedURLResponse> {
-    const fileMetaData = await getFileMetaDataForUpload(file);
-    return this.post(`/api/assets/v2/user-assets/`, {
-      ...data,
-      ...fileMetaData,
-    })
-      .then(async (response) => {
-        const signedURLResponse: TFileSignedURLResponse = response?.data;
-        const fileUploadPayload = generateFileUploadPayload(signedURLResponse, file);
-        await this.fileUploadService.uploadFile(signedURLResponse.upload_data.url, fileUploadPayload);
-        await this.updateUserAssetUploadStatus(signedURLResponse.asset_id);
-        return signedURLResponse;
-      })
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deleteUserAsset(assetId: string): Promise<void> {
-    return this.delete(`/api/assets/v2/user-assets/${assetId}/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async deleteNewAsset(assetPath: string): Promise<void> {
     return this.delete(assetPath)
       .then((response) => response?.data)
@@ -167,15 +133,6 @@ export class FileService extends APIService {
   async deleteOldWorkspaceAsset(workspaceId: string, src: string): Promise<any> {
     const assetKey = getAssetIdFromUrl(src);
     return this.delete(`/api/workspaces/file-assets/${workspaceId}/${assetKey}/`)
-      .then((response) => response?.status)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deleteOldUserAsset(src: string): Promise<any> {
-    const assetKey = getAssetIdFromUrl(src);
-    return this.delete(`/api/users/file-assets/${assetKey}/`)
       .then((response) => response?.status)
       .catch((error) => {
         throw error?.response?.data;

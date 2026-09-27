@@ -13,7 +13,8 @@ import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IUser, IWorkspace } from "@nerve/types";
+import type { User } from "@nerve/api-client";
+import type { IWorkspace } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
@@ -26,7 +27,7 @@ import { WorkspaceService } from "@/services/workspace.service";
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
-  user: IUser | undefined;
+  user: User | undefined;
   onComplete: (skipInvites?: boolean) => void;
   handleCurrentViewChange: () => void;
   hasInvitations?: boolean;
@@ -51,7 +52,7 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
   const { fetchCurrentUserSettings } = useUserSettings();
   const { createWorkspace, fetchWorkspaces } = useWorkspace();
 
-  const isWorkspaceCreationDisabled = config?.is_workspace_creation_disabled ?? false;
+  const isWorkspaceCreationDisabled = config?.workspace_creation_enabled === false;
 
   // form info
   const {
@@ -106,9 +107,8 @@ export const WorkspaceCreateStep = observer(function WorkspaceCreateStep({
 
   const completeStep = async (workspaceId: string) => {
     if (!user) return;
-    await updateUserProfile({
-      last_workspace_id: workspaceId,
-    });
+    // the workspace opened last is a best-effort preference: the onboarding goes on whether nerve saves it or not
+    await updateUserProfile({ last_workspace_id: workspaceId }).catch(() => undefined);
     await fetchCurrentUserSettings();
   };
 

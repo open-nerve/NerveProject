@@ -8,6 +8,7 @@ import { unset, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction } from "mobx";
 import { computedFn } from "mobx-utils";
 // nerve imports
+import type { ApiClient } from "@nerve/api-client";
 import type { TUserPermissions, TUserPermissionsLevel } from "@nerve/constants";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
 import type { EUserProjectRoles, IUserProjectsRole, IWorkspaceMemberMe, TProjectMembership } from "@nerve/types";
@@ -16,7 +17,7 @@ import { EUserWorkspaceRoles } from "@nerve/types";
 import { WorkspaceService } from "@/services/workspace.service";
 import type { RootStore } from "@/store/root.store";
 import projectMemberService from "@/services/project/project-member.service";
-import userService from "@/services/user.service";
+import { UserService } from "@/services/user.service";
 
 // derived services
 const workspaceService = new WorkspaceService();
@@ -64,9 +65,14 @@ export class UserPermissionStore implements IUserPermissionStore {
   workspaceUserInfo: Record<string, IWorkspaceMemberMe> = {};
   projectUserInfo: Record<string, Record<string, TProjectMembership>> = {};
   workspaceProjectsPermissions: Record<string, IUserProjectsRole> = {};
+  // services
+  userService: UserService;
   // observables
 
-  constructor(protected store: RootStore) {
+  constructor(
+    protected store: RootStore,
+    api: ApiClient
+  ) {
     makeObservable(this, {
       // observables
       loader: observable.ref,
@@ -82,6 +88,8 @@ export class UserPermissionStore implements IUserPermissionStore {
       joinProject: action,
       leaveProject: action,
     });
+    // services
+    this.userService = new UserService(api);
   }
 
   // computed helpers
@@ -241,7 +249,7 @@ export class UserPermissionStore implements IUserPermissionStore {
    */
   leaveWorkspace = async (workspaceSlug: string): Promise<void> => {
     try {
-      await userService.leaveWorkspace(workspaceSlug);
+      await this.userService.leaveWorkspace(workspaceSlug);
       runInAction(() => {
         unset(this.workspaceUserInfo, workspaceSlug);
         unset(this.projectUserInfo, workspaceSlug);
@@ -301,7 +309,7 @@ export class UserPermissionStore implements IUserPermissionStore {
    */
   joinProject = async (workspaceSlug: string, projectId: string): Promise<void> => {
     try {
-      const response = await userService.joinProject(workspaceSlug, [projectId]);
+      const response = await this.userService.joinProject(workspaceSlug, [projectId]);
       const projectMemberRole = this.getWorkspaceRoleByWorkspaceSlug(workspaceSlug) ?? EUserPermissions.MEMBER;
       if (response) {
         runInAction(() => {
@@ -323,7 +331,7 @@ export class UserPermissionStore implements IUserPermissionStore {
    */
   leaveProject = async (workspaceSlug: string, projectId: string): Promise<void> => {
     try {
-      await userService.leaveProject(workspaceSlug, projectId);
+      await this.userService.leaveProject(workspaceSlug, projectId);
       runInAction(() => {
         unset(this.workspaceProjectsPermissions, [workspaceSlug, projectId]);
         unset(this.projectUserInfo, [workspaceSlug, projectId]);

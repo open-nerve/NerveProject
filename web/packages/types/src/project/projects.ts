@@ -7,7 +7,7 @@
 import type { TLogoProps } from "../common";
 import type { TUserPermissions } from "../enums";
 import type { TStateGroups } from "../state";
-import type { IUser, IUserLite } from "../users";
+import type { IUserLite } from "../users";
 import type { IWorkspace } from "../workspace";
 
 export enum EUserProjectRoles {
@@ -48,7 +48,7 @@ export interface IProject extends IPartialProject {
   cover_image?: string;
   // only for rendering the cover image
   readonly cover_image_url?: string;
-  default_assignee?: IUser | string | null;
+  default_assignee?: IUserLite | string | null;
   description?: string;
   is_favorite?: boolean;
   members?: string[];

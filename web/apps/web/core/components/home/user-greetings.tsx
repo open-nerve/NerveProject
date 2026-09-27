@@ -6,12 +6,12 @@
 
 // nerve types
 import { useTranslation } from "@nerve/i18n";
-import type { IUser } from "@nerve/types";
+import type { User } from "@nerve/api-client";
 // hooks
 import { useCurrentTime } from "@/hooks/use-current-time";
 
 export interface IUserGreetingsView {
-  user: IUser;
+  user: User;
 }
 
 export function UserGreetingsView(props: IUserGreetingsView) {

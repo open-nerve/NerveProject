@@ -27,17 +27,24 @@ const (
 //     as a missing file instead of turning into HTML;
 //   - any other path: index.html, and the client-side router renders the page.
 //
+// An HTML file goes out with the Content-Security-Policy made from index.html
+// when the handler is made (M2 design 8.3); other files and errors have none.
+//
 // Hidden files (any name part starting with "."), such as dist/.gitkeep, are
 // never served. Without index.html every request answers 404 with a hint.
 // Mount it on the pattern "/" so that /api/ and the probes keep their routes.
 func Handler(files fs.FS) http.Handler {
-	_, err := fs.Stat(files, indexFile)
-	return &handler{files: files, built: err == nil}
+	index, err := fs.ReadFile(files, indexFile)
+	if err != nil {
+		return &handler{files: files}
+	}
+	return &handler{files: files, built: true, csp: contentSecurityPolicy(index)}
 }
 
 type handler struct {
 	files fs.FS
 	built bool
+	csp   string // the pages' Content-Security-Policy, once built
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -80,6 +87,9 @@ func (h *handler) serveFile(w http.ResponseWriter, r *http.Request, name string)
 		cache = cacheImmutable
 	}
 	w.Header().Set("Cache-Control", cache)
+	if path.Ext(name) == ".html" {
+		w.Header().Set("Content-Security-Policy", h.csp)
+	}
 	// ServeFileFS sets Content-Type from the extension (sniffing the content
 	// otherwise), answers HEAD and Range, and redirects /index.html to ./.
 	http.ServeFileFS(w, r, h.files, name)

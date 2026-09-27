@@ -34,16 +34,16 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
   // derived values
   const currentTheme = useMemo(() => {
     // oxlint-disable-next-line no-shadow
-    const userThemeOption = THEME_OPTIONS.find((t) => t.value === userProfile?.theme?.theme);
+    const userThemeOption = THEME_OPTIONS.find((t) => t.value === userProfile?.theme);
     return userThemeOption || null;
-  }, [userProfile?.theme?.theme]);
+  }, [userProfile?.theme]);
 
   const handleThemeChange = useCallback(
     async (themeOption: I_THEME_OPTION) => {
       try {
         setTheme(themeOption.value);
 
-        const updatePromise = updateUserTheme({ theme: themeOption.value });
+        const updatePromise = updateUserTheme(themeOption.value);
         setPromiseToast(updatePromise, {
           loading: "Updating theme...",
           success: {

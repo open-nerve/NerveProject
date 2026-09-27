@@ -1,8 +1,83 @@
+import type { Browser, Page } from "@playwright/test";
+
 import { countIdentity, expectNothingAdded, expectSignedIn } from "../../fixtures/assert/identity";
-import { emailFor, login, password, register } from "../../fixtures/auth";
+import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
+import { bearer, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
-// A3, signing in (M2 design 2). The page version, with next_path, joins in M2/P4.
+// A3, signing in (M2 design 2), with next_path (3.18).
+
+/** A page in a browser context of its own: signed out, whatever the other pages did. */
+async function freshPage(browser: Browser, baseURL: string): Promise<Page> {
+  const context = await browser.newContext({ baseURL });
+  return context.newPage();
+}
+
+test("A3 (page): signing in comes back to the page asked for, and only to a page of this site", async ({
+  browser,
+  api,
+  db,
+  nerve,
+}, testInfo) => {
+  const email = emailFor(testInfo, "Alice");
+  const tokens = await register(api, email);
+  // Onboarded, so that the settings open once signed in.
+  const onboarded = await api.PATCH("/api/v0/me/profile", {
+    body: { is_onboarded: true },
+    headers: bearer(tokens.access_token),
+  });
+  expect(onboarded.response.status).toBe(200);
+
+  // Signed out, a page behind the sign-in goes to the sign-in page; the page comes back after it, with
+  // its query and fragment.
+  const asked = "/settings/profile/general?tab=x#y";
+  const page = await freshPage(browser, nerve.baseURL);
+  await page.goto(asked);
+  await expect(page).toHaveURL(signInPath(asked));
+  expect(signInPath(asked)).toBe("/?next_path=%2Fsettings%2Fprofile%2Fgeneral%3Ftab%3Dx%23y");
+  expect(await submitSignIn(page, email, password)).toBe(200);
+  await expect(page).toHaveURL(asked);
+  const userAgent = await page.evaluate(() => navigator.userAgent);
+  await expectSignedIn(db, {
+    email,
+    refreshToken: (await recordOf(page))?.refresh_token ?? "",
+    userAgent,
+    ip: "127.0.0.1",
+  });
+  await page.context().close();
+
+  // A next_path that could lead elsewhere is dropped: the account's default page instead.
+  await Promise.all(
+    ["//evil.example", "/\\evil.example", "javascript:alert(1)", "/\t/evil.example"].map(async (nextPath) => {
+      const other = await freshPage(browser, nerve.baseURL);
+      await other.goto(`/?next_path=${encodeURIComponent(nextPath)}`);
+      expect(await submitSignIn(other, email, password), nextPath).toBe(200);
+      await expect(other, nextPath).toHaveURL("/create-workspace");
+      await other.context().close();
+    })
+  );
+});
+
+test("A3 (page): a wrong password and an unknown address get the same message, and no session", async ({
+  page,
+  api,
+  db,
+}, testInfo) => {
+  const email = emailFor(testInfo, "Alice");
+  await register(api, email);
+  const before = await countIdentity(db);
+
+  await page.goto("/");
+  const expectRefused = async (address: string, pw: string) => {
+    expect(await submitSignIn(page, address, pw), address).toBe(401);
+    await expect(formAlert(page)).toHaveText("The email or the password is wrong.");
+    await expect(page).toHaveURL("/");
+    await expect(page.getByLabel("Email", { exact: true })).toHaveValue(address);
+  };
+  await expectRefused(email, "Wr0ng-password");
+  await expectRefused(emailFor(testInfo, "nobody"), password);
+  await expectNothingAdded(db, before);
+});
 
 test("A3 (API): a caller signs in; a wrong password and an unknown address answer alike", async ({
   api,

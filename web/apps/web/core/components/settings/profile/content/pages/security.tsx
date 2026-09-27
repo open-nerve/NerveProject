@@ -20,11 +20,11 @@ import { getPasswordStrength } from "@nerve/utils";
 // components
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // helpers
-import { authErrorHandler, EAuthenticationErrorCodes, passwordErrors } from "@/helpers/authentication.helper";
+import { errorMessageKey, fieldErrorKeys } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
-// services
-import { AuthService } from "@/services/auth.service";
+// lib
+import { ApiError } from "@/lib/api-error";
 
 export interface FormValues {
   old_password: string;
@@ -37,8 +37,6 @@ const defaultValues: FormValues = {
   new_password: "",
   confirm_password: "",
 };
-
-const authService = new AuthService();
 
 const defaultShowPassword = {
   oldPassword: false,
@@ -78,10 +76,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   const handleChangePassword = async (formData: FormValues) => {
     const { old_password, new_password } = formData;
     try {
-      const csrfToken = await authService.requestCSRFToken().then((data) => data?.csrf_token);
-      if (!csrfToken) throw new Error("csrf token not found");
-
-      await changePassword(csrfToken, { old_password, new_password });
+      await changePassword({ current_password: old_password, new_password });
 
       reset(defaultValues);
       setShowPassword(defaultShowPassword);
@@ -91,25 +86,21 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
         message: t("auth.common.password.toast.change_password.success.message"),
       });
     } catch (error: unknown) {
-      const err = error as Error & { error_code?: string };
-      const code = err.error_code?.toString();
-      const errorInfo = code ? authErrorHandler(code as EAuthenticationErrorCodes) : undefined;
-
+      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+      if (error instanceof ApiError && error.problem?.code === "identity.current_password_incorrect") {
+        setError("old_password", { type: "manual", message: t(errorMessageKey(error)) });
+        return;
+      }
+      const newPassword = fieldErrorKeys(error).new_password;
+      if (newPassword !== undefined) {
+        setError("new_password", { type: "manual", message: t(newPassword) });
+        return;
+      }
       setToast({
         type: TOAST_TYPE.ERROR,
-        title: errorInfo?.title ?? t("auth.common.password.toast.change_password.error.title"),
-        message:
-          typeof errorInfo?.message === "string"
-            ? errorInfo.message
-            : t("auth.common.password.toast.change_password.error.message"),
+        title: t("auth.common.password.toast.change_password.error.title"),
+        message: t(errorMessageKey(error)),
       });
-
-      if (code && passwordErrors.includes(code as EAuthenticationErrorCodes)) {
-        setError("new_password", {
-          type: "manual",
-          message: errorInfo?.message?.toString() || t("auth.common.password.toast.change_password.error.message"),
-        });
-      }
     }
   };
 
