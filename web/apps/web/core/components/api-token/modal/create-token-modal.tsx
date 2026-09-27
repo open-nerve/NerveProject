@@ -30,11 +30,12 @@ export function CreateApiTokenModal(props: Props) {
   // The new token with the token itself: only here, while the modal shows it (M2 design 7.7).
   const [generatedToken, setGeneratedToken] = useState<ApiTokenCreated | null>(null);
   const [wasOpen, setWasOpen] = useState(isOpen);
-  // How many times an opening has ended, by a close or by leaving the page. A create belongs to the opening it
-  // was made in: answered after that opening ended (Cancel stays clickable while it is out), it keeps no secret
-  // and downloads no CSV; the list shows the token, which can be revoked there. A count, not an open flag, so a
-  // reopening in the meantime does not take the answer as its own.
-  const endedOpenings = useRef(0);
+  // The modal's phase, which moves on at each opening and each close (and when the page is left). What a phase
+  // started and finishes in another acts on no opening of its own, so it does nothing: a create answered after
+  // its opening closed (Cancel stays clickable while it is out) keeps no secret and downloads no CSV, and the
+  // list shows the token, which can be revoked there; the cleanup after a close leaves a modal opened again
+  // meanwhile as it is. A count, not an open flag, so that a close and a reopening are two moves.
+  const phase = useRef(0);
   const { t } = useTranslation();
 
   // Each opening starts with the form: set while rendering, so that no frame of an opening shows the token of
@@ -42,24 +43,27 @@ export function CreateApiTokenModal(props: Props) {
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
     if (isOpen) {
+      phase.current += 1;
       setNeverExpires(false);
       setGeneratedToken(null);
     }
   }
 
-  // Leaving the page ends the opening too.
+  // Leaving the page ends the phase too.
   useEffect(
     () => () => {
-      endedOpenings.current += 1;
+      phase.current += 1;
     },
     []
   );
 
   const handleClose = () => {
-    endedOpenings.current += 1;
+    phase.current += 1;
+    const closed = phase.current;
     onClose();
 
     setTimeout(() => {
+      if (phase.current !== closed) return;
       setNeverExpires(false);
       setGeneratedToken(null);
     }, 350);
@@ -79,9 +83,9 @@ export function CreateApiTokenModal(props: Props) {
   };
 
   const handleCreateToken = async (data: ApiTokenCreate) => {
-    const opening = endedOpenings.current;
+    const opening = phase.current;
     const created = await createToken(data);
-    if (endedOpenings.current !== opening) return;
+    if (phase.current !== opening) return;
     setGeneratedToken(created);
     downloadSecretKey(created);
   };
