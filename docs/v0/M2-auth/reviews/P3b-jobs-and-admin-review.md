@@ -183,7 +183,13 @@ P2 评审第 6 节交来的"不可用的密码保持登录耗时"由 Task 9 关�
 - **River 在启动后的最初几秒内停机时记 ERROR**（spec 第 6 节，附录 A 的 C1）：`maintenance.PeriodicJobEnqueuer: Error starting transaction`，River 自己还没启动完时还有 `notifier.Notifier: Error running listener … conn closed`。这两处 River 不看取消的原因，runner 无从避免。实测就绪后立即停机 10/10，3 秒后 7/40（改后的 runner 4/40，差别是噪声），运行 10 秒、30 秒后 0/40；都以 0 退出，没有任务停在 `running`，没有连接泄漏。README 部署一节说明。
 - **停机落在 River 的重建索引中，又有长事务挡住删除**（spec 第 6 节）：River 每天 00:00 UTC 重建 `river_job` 的索引。停机打断重建、又有访问过 `river_job` 的长事务挡住没建完的 `_ccnew` 索引的删除时，任务的停止在 `jobs.shutdown_timeout` 加 1 秒（默认 11 秒）放弃，nerve 记 ERROR 并以退出码 1 退出。River 自己的删除另有 15 秒的时限，连接池关闭时会等它的连接；只有删除被挡满 15 秒，索引才留下（实验中观察到一次，15.0 秒退出）。恢复方法写在 README：用 `DROP INDEX CONCURRENTLY` 删掉 WARN 的 `artifact_names` 中列出的索引。改之前的 runner 在这样的停机中无论有没有长事务都留下索引。
 - **`Stop` 恰好落在 River 的 `Start` 返回时**，River 收到的仍是普通的取消，这一次的重建索引清理照旧失去（spec 2.5）：要能打断进行中的 `Start`，就避不开这个窗口。
-- **终端上的密码提示没有自动化测试**（spec 第 6 节）：要伪终端，得改 `go.mod`。代码只用 `term.IsTerminal` 和 `term.ReadPassword`，两次输入不同时失败；"接受不同的两次输入""提示写到标准输出"两个变异存活。spec 的应对是人工核对一次；本 Phase 的记录中没有这次核对的结果。标准输入的路径由单元测试和 A13、A17 覆盖。
+- **终端上的密码提示没有自动化测试**（spec 第 6 节）：要伪终端，得改 `go.mod`。代码只用 `term.IsTerminal` 和 `term.ReadPassword`，两次输入不同时失败；"接受不同的两次输入""提示写到标准输出"两个变异存活。spec 的应对是人工核对一次，控制者在合并前做了：在伪终端上运行 `nerve users`（`281aba6` 构建，开发库上的一个临时库，用后删除），每次等提示出现后才输入：
+  - 两次不同时，两个提示都出现，`nerve: the passwords do not match`，退出码 1，没有建账户；
+  - 两次相同时，`created user tty@example.com`，退出码 0；
+  - `reset-password` 同样两次提示，退出码 0；
+  - 三次运行中，终端上都没有出现输入的密码。
+
+  标准输入的路径由单元测试和 A13、A17 覆盖。
 - **停机时"迁移执行器先于连接池关闭"没有测试能看出来**（spec 第 6 节）：两步都只在进程退出前运行一次，迁移执行器的 `*sql.DB` 不在两次调用之间保留连接池的连接（`SetMaxIdleConns(0)`）。把两步对调的变异在原型和 Task 5 中都存活；顺序写在 `close` 的注释和代码里。
 - **管理员命令在等锁之前读时钟**（第 4 节 M2）：撤销时刻可能比并发凭证的创建时刻早一个等锁的时间，`activate` 可能算上等锁期间过期的 PAT。没有安全上的影响。
 - **`Runner.Stop` 先于 `Start` 调用时 panic**（第 3 节 Task 5）：唯一的调用者满足前提；以后调换顺序，启动 bootstrap 的测试会发现。
