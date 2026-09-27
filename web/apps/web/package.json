@@ -23,6 +23,7 @@
     "@fontsource/material-symbols-rounded": "catalog:",
     "@headlessui/react": "catalog:",
     "@makeplane/propel": "catalog:",
+    "@nerve/api-client": "workspace:*",
     "@nerve/constants": "workspace:*",
     "@nerve/editor": "workspace:*",
     "@nerve/hooks": "workspace:*",

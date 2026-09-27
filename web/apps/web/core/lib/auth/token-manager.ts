@@ -1,0 +1,329 @@
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { ApiClient, AuthTokens } from "@nerve/api-client";
+import type { RefreshLock } from "./refresh-lock";
+
+// The browser's tokens (M2 design 7.1): the access token lives in memory only; localStorage keeps one
+// record, nerve.auth = {refresh_token, login_id}, written in one piece and only under the refresh lock.
+// login_id is new at every sign-in and kept by refreshes, so a tab can tell another tab's refresh (same
+// login_id) from another tab's sign-in (a new one), which may be another account.
+
+/** The localStorage key of the session's record. */
+export const AUTH_KEY = "nerve.auth";
+/** An access token closer than this to its end is refreshed before it is used. */
+const REFRESH_MARGIN_MS = 30_000;
+/** How long a refresh or a logout may take: longer than nerve's own 4 s + 2 s (M2 design 3.5). */
+const REQUEST_TIMEOUT_MS = 8_000;
+/** The longest wait between two refreshes that failed for a passing reason. */
+const MAX_BACKOFF_MS = 30_000;
+
+type AuthRecord = { refresh_token: string; login_id: string };
+
+/**
+ * starting: the first refresh is under way; signed-in: loginId's record is in use; signed-out: no record;
+ * unavailable: the first refresh failed for a passing reason (429, 5xx, no network), the record is kept and
+ * the refresh is tried again at retryAt.
+ */
+type SessionStatus = "starting" | "signed-in" | "signed-out" | "unavailable";
+export type SessionState = Readonly<{ status: SessionStatus; loginId?: string; retryAt?: number }>;
+
+/** The session cannot be used for now: a refresh failed for a passing reason; try again from retryAt. */
+export class SessionUnavailableError extends Error {
+  constructor(readonly retryAt: number) {
+    super("The session is unavailable for now.");
+    this.name = "SessionUnavailableError";
+  }
+}
+
+/** Another tab signed in or out: this tab follows it, and the request it meant for the old session stops. */
+export class SessionChangedError extends Error {
+  constructor() {
+    super("Another tab changed the session.");
+    this.name = "SessionChangedError";
+  }
+}
+
+export type TokenManagerDeps = {
+  storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  lock: RefreshLock;
+  /** A client without the auth middleware: a refresh must not wait on itself. */
+  client: ApiClient;
+  now: () => number;
+  /** n random bytes as hexadecimal (crypto.getRandomValues: non-secure contexts have it too). */
+  randomHex: (bytes: number) => string;
+};
+
+type Outcome =
+  | { kind: "tokens"; tokens: AuthTokens; receivedAt: number }
+  | { kind: "unauthorized" }
+  | { kind: "unavailable"; retryAfterMs?: number };
+
+export class TokenManager {
+  #state: SessionState = { status: "starting" };
+  #listeners = new Set<() => void>();
+  #access: { token: string; expiresAt: number } | undefined;
+  #refreshing: { loginId: string | undefined; promise: Promise<string | undefined> } | undefined;
+  #failures = 0;
+  #retryAt = 0;
+  #retryTimer: ReturnType<typeof setTimeout> | undefined;
+  #started: Promise<void> | undefined;
+
+  constructor(private readonly deps: TokenManagerDeps) {}
+
+  /** The session as the tab shows it; a new object on every change. */
+  get state(): SessionState {
+    return this.#state;
+  }
+
+  /** Calls listener after every change of state; returns the unsubscribe. */
+  subscribe = (listener: () => void): (() => void) => {
+    this.#listeners.add(listener);
+    return () => {
+      this.#listeners.delete(listener);
+    };
+  };
+
+  /**
+   * Decides the session when the app starts, once. Without a record the tab is signed out and asks
+   * nothing, so the sign-in page makes no request that fails (S2); with one, the first refresh decides.
+   */
+  start(): Promise<void> {
+    this.#started ??= this.#start();
+    return this.#started;
+  }
+
+  /** Tries the first refresh again now, e.g. from the "try again" button. */
+  retry = async (): Promise<void> => {
+    clearTimeout(this.#retryTimer);
+    this.#retryAt = 0;
+    await this.#firstRefresh();
+  };
+
+  /**
+   * The access token for a request: the one in memory while more than 30 s of it are left, else a
+   * refreshed one; undefined when signed out. The time left is counted on this computer's clock from when
+   * the token arrived, so a wrong clock changes nothing (M2 design 7.1).
+   */
+  async accessToken(): Promise<string | undefined> {
+    if (this.#state.status === "signed-out") return undefined;
+    const access = this.#access;
+    if (access !== undefined && access.expiresAt - this.deps.now() > REFRESH_MARGIN_MS) return access.token;
+    return this.#refresh();
+  }
+
+  /**
+   * A new access token after nerve refused `sent` with 401: the one another request got meanwhile, else a
+   * refreshed one; undefined when the refresh ended the session, or it had ended already.
+   */
+  async renew(sent: string): Promise<string | undefined> {
+    if (this.#state.status === "signed-out") return undefined;
+    if (this.#access !== undefined && this.#access.token !== sent) return this.accessToken();
+    this.#access = undefined;
+    return this.#refresh();
+  }
+
+  /** Keeps the tokens of a sign-in or a sign-up, with a new login_id, under the lock (M2 design 7.3). */
+  async signIn(tokens: AuthTokens): Promise<void> {
+    const receivedAt = this.deps.now();
+    await this.deps.lock.run(async () => {
+      const record = { refresh_token: tokens.refresh_token, login_id: this.deps.randomHex(16) };
+      this.deps.storage.setItem(AUTH_KEY, JSON.stringify(record));
+      this.#keep(tokens, receivedAt);
+      this.#set({ status: "signed-in", loginId: record.login_id });
+    });
+  }
+
+  /**
+   * Signs out: under the lock, so the refresh token handed over is the latest, logs out with it (best
+   * effort) and removes the record (M2 design 7.1, review M7).
+   */
+  async signOut(): Promise<void> {
+    await this.deps.lock.run(async () => {
+      const record = this.#read();
+      if (record !== undefined) {
+        await this.#call("/api/v0/auth/logout", record.refresh_token);
+        this.deps.storage.removeItem(AUTH_KEY);
+      }
+      this.#signedOut();
+    });
+  }
+
+  /** Ends the session after nerve refused a request again with the refreshed token. */
+  async endSession(): Promise<void> {
+    await this.deps.lock.run(async () => {
+      const record = this.#read();
+      if (!isRecordOf(record, this.#state.loginId)) {
+        this.#switchTo(record);
+        return;
+      }
+      this.deps.storage.removeItem(AUTH_KEY);
+      this.#signedOut();
+    });
+  }
+
+  /**
+   * Another tab changed nerve.auth (the storage event): removed, it signed out; a new login_id, it signed
+   * in, maybe as another account; the same login_id, it only refreshed.
+   */
+  handleStorageChange(newValue: string | null): void {
+    const record = parse(newValue);
+    if (record === undefined ? this.#state.status !== "signed-out" : record.login_id !== this.#state.loginId) {
+      this.#switchTo(record);
+    }
+  }
+
+  async #start(): Promise<void> {
+    const record = this.#read();
+    if (record === undefined) {
+      this.#set({ status: "signed-out" });
+      return;
+    }
+    this.#set({ status: "starting", loginId: record.login_id });
+    await this.#firstRefresh();
+  }
+
+  /** The refresh that decides a starting or unavailable session; a passing failure makes it unavailable. */
+  async #firstRefresh(): Promise<void> {
+    try {
+      await this.#refresh();
+    } catch (error) {
+      if (error instanceof SessionChangedError) return;
+      if (!(error instanceof SessionUnavailableError)) throw error;
+      this.#set({ status: "unavailable", loginId: this.#state.loginId, retryAt: error.retryAt });
+      this.#retryTimer = setTimeout(() => void this.retry(), error.retryAt - this.deps.now());
+    }
+  }
+
+  /**
+   * One refresh at a time for the tab's session: a request made after another tab signed in waits for a
+   * refresh of the new record, not for the old session's refresh, which ends in SessionChangedError.
+   */
+  #refresh(): Promise<string | undefined> {
+    const loginId = this.#state.loginId;
+    const current = this.#refreshing;
+    if (current !== undefined && current.loginId === loginId) return current.promise;
+    const promise = this.#refreshUnderLock(loginId).finally(() => {
+      if (this.#refreshing?.promise === promise) this.#refreshing = undefined;
+    });
+    this.#refreshing = { loginId, promise };
+    return promise;
+  }
+
+  /** Refreshes the session loginId: the tab's when the refresh was asked for, which may not be the tab's now. */
+  async #refreshUnderLock(loginId: string | undefined): Promise<string | undefined> {
+    if (this.deps.now() < this.#retryAt) throw new SessionUnavailableError(this.#retryAt);
+    return this.deps.lock.run(async () => {
+      // Read under the lock: another tab may have refreshed, signed out or signed in meanwhile. A record of
+      // another session is followed, never refreshed, even when the tab has heard of it while this refresh
+      // waited for the lock: the caller's request was made in loginId's session, not in that one.
+      const record = this.#read();
+      if (!isRecordOf(record, loginId)) this.#follow(record);
+      const outcome = await this.#call("/api/v0/auth/refresh", record.refresh_token);
+      // Read again before writing: without navigator.locks another tab can sign in while the lease is held.
+      const now = this.#read();
+      if (now?.login_id !== record.login_id) this.#follow(now);
+      switch (outcome.kind) {
+        case "tokens":
+          this.deps.storage.setItem(
+            AUTH_KEY,
+            JSON.stringify({ refresh_token: outcome.tokens.refresh_token, login_id: record.login_id })
+          );
+          this.#keep(outcome.tokens, outcome.receivedAt);
+          if (this.#state.status !== "signed-in") this.#set({ status: "signed-in", loginId: record.login_id });
+          return outcome.tokens.access_token;
+        case "unauthorized":
+          // Only a 401 to a refresh ends the session.
+          this.deps.storage.removeItem(AUTH_KEY);
+          this.#signedOut();
+          return undefined;
+        case "unavailable":
+          throw new SessionUnavailableError(this.#backOff(outcome.retryAfterMs));
+      }
+    });
+  }
+
+  /** POSTs refresh_token to path, with its own timeout; never throws. A logout's answer does not matter. */
+  async #call(path: "/api/v0/auth/refresh" | "/api/v0/auth/logout", refreshToken: string): Promise<Outcome> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const { data, response } = await this.deps.client.POST(path, {
+        body: { refresh_token: refreshToken },
+        signal: controller.signal,
+      });
+      if (data !== undefined) return { kind: "tokens", tokens: data, receivedAt: this.deps.now() };
+      if (response.status === 401) return { kind: "unauthorized" };
+      const retryAfter = Number(response.headers.get("Retry-After"));
+      return { kind: "unavailable", retryAfterMs: retryAfter > 0 ? retryAfter * 1000 : undefined };
+    } catch {
+      // No network, or the timeout.
+      return { kind: "unavailable" };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** Waits Retry-After, else 1, 2, 4 … up to 30 s after each failure in a row; returns when to try again. */
+  #backOff(retryAfterMs: number | undefined): number {
+    const delay = retryAfterMs ?? Math.min(1000 * 2 ** this.#failures, MAX_BACKOFF_MS);
+    this.#failures++;
+    this.#retryAt = this.deps.now() + delay;
+    return this.#retryAt;
+  }
+
+  #keep(tokens: AuthTokens, receivedAt: number): void {
+    this.#access = { token: tokens.access_token, expiresAt: receivedAt + tokens.access_token_expires_in * 1000 };
+    this.#failures = 0;
+    this.#retryAt = 0;
+  }
+
+  /** Follows another tab's change of the record, and stops the request that was meant for the old session. */
+  #follow(record: AuthRecord | undefined): never {
+    this.#switchTo(record);
+    throw new SessionChangedError();
+  }
+
+  /** Signed out when the record is gone, else the record's session, whose access token comes by a refresh. */
+  #switchTo(record: AuthRecord | undefined): void {
+    if (record === undefined) {
+      this.#signedOut();
+      return;
+    }
+    this.#access = undefined;
+    this.#set({ status: "signed-in", loginId: record.login_id });
+  }
+
+  #signedOut(): void {
+    this.#access = undefined;
+    this.#set({ status: "signed-out" });
+  }
+
+  #set(state: SessionState): void {
+    if (state.status !== "unavailable") clearTimeout(this.#retryTimer);
+    this.#state = state;
+    for (const listener of this.#listeners) listener();
+  }
+
+  #read(): AuthRecord | undefined {
+    return parse(this.deps.storage.getItem(AUTH_KEY));
+  }
+}
+
+/** Whether record is the record of the session loginId. */
+function isRecordOf(record: AuthRecord | undefined, loginId: string | undefined): record is AuthRecord {
+  return record !== undefined && record.login_id === loginId;
+}
+
+function parse(value: string | null): AuthRecord | undefined {
+  try {
+    const record = JSON.parse(value ?? "null") as Partial<AuthRecord> | null;
+    return typeof record?.refresh_token === "string" && typeof record.login_id === "string"
+      ? { refresh_token: record.refresh_token, login_id: record.login_id }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
