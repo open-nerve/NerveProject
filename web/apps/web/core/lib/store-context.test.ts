@@ -21,6 +21,7 @@ const REFRESH = "/api/v0/auth/refresh";
 const LOGOUT = "/api/v0/auth/logout";
 const ME = "/api/v0/me";
 const PROFILE = "/api/v0/me/profile";
+const TOKENS = "/api/v0/me/api-tokens";
 const X = "0123456789abcdef0123456789abcdef";
 /** The sessions of other accounts, which other tabs sign in to. */
 const Y = "fedcba9876543210fedcba9876543210";
@@ -29,6 +30,15 @@ const W = "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd";
 const Z = "abababababababababababababababab";
 /** The record a sign-in as loginId writes. */
 const record = (loginId: string) => JSON.stringify({ refresh_token: `rt-${loginId}`, login_id: loginId });
+/** A personal access token of the account of loginId, as lists show it. */
+const tokenOf = (loginId: string) => ({
+  id: `${loginId.slice(0, 8)}-0000-4000-8000-000000000000`,
+  label: `token of ${loginId}`,
+  description: "",
+  expired_at: null,
+  last_used: null,
+  created_at: "2026-09-27T00:00:00Z",
+});
 
 /** The page's theme and language, each time something set them. */
 const page = vi.hoisted(() => ({ themes: [] as string[], languages: [] as string[] }));
@@ -226,6 +236,50 @@ describe("store-context", () => {
     expect(nerve.to(PROFILE)).toEqual([]);
     expect(tm.state).toEqual({ status: "signed-in", loginId: Y });
     expect(storage.data.get(AUTH_KEY)).toBe(record(Y));
+  });
+
+  it("gives each session the tokens of its own account: a load cut by the switch stops, the new list loads as the new account", async () => {
+    const { nerve, context, SessionChangedError, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // The api-tokens page of X's session loads X's list, a page at a time.
+    const listedX = track(x.user.apiTokens.fetchTokens());
+    await until(() => nerve.calls.length === 1, "X's first page");
+    expect(nerve.calls[0]).toMatchObject({ method: "GET", path: TOKENS, authorization: "Bearer at-1" });
+    // Another tab signs in as Y while the page is out; this tab follows.
+    await follow(Y);
+    nerve.calls[0]?.answer(json(200, { data: [tokenOf(X)], next_cursor: "c-1" }));
+    await until(() => listedX.settled || nerve.calls.length > 1, "X's list, or another request");
+
+    // X's next page is not asked for, as X or as Y; the load gives up quietly and shows nothing.
+    expect(listedX).toEqual({ settled: true, value: undefined });
+    expect(x.user.apiTokens.tokens).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toHaveLength(1);
+
+    // Y's session has a store of its own, which shows nothing until it has Y's list, loaded as Y.
+    const y = context.rootStore;
+    expect(y.user.apiTokens).not.toBe(x.user.apiTokens);
+    expect(y.user.apiTokens.tokens).toBeUndefined();
+    const listedY = track(y.user.apiTokens.fetchTokens());
+    await until(() => nerve.calls.length === 2, "Y's refresh");
+    expect(nerve.calls[1]).toMatchObject({ path: REFRESH, body: { refresh_token: `rt-${Y}` } });
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 3, "Y's list");
+    expect(nerve.calls[2]).toMatchObject({ method: "GET", path: TOKENS, authorization: "Bearer at-2" });
+    // Y's first page: no cursor of X's list.
+    expect(nerve.calls[2]?.query).toEqual({ limit: "100" });
+    nerve.calls[2]?.answer(json(200, { data: [tokenOf(Y)], next_cursor: null }));
+    await until(() => listedY.settled, "Y's list");
+    expect(y.user.apiTokens.tokens).toEqual([tokenOf(Y)]);
+
+    // A revocation from X's page, which the tab no longer shows, is not sent: not with Y's token.
+    const revoked = track(x.user.apiTokens.revokeToken(tokenOf(X).id));
+    await until(() => revoked.settled || nerve.calls.length > 3, "the answer, or a request");
+    expect(revoked.error).toBeInstanceOf(SessionChangedError);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toHaveLength(3);
+    expect(y.user.apiTokens.tokens).toEqual([tokenOf(Y)]);
   });
 
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {

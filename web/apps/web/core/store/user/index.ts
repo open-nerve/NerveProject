@@ -30,6 +30,8 @@ import { UserService } from "@/services/user.service";
 import type { IUserProfileStore } from "@/store/user/profile.store";
 import { ProfileStore } from "@/store/user/profile.store";
 // local imports
+import type { IApiTokenStore } from "./api-token.store";
+import { ApiTokenStore } from "./api-token.store";
 import type { IUserSettingsStore } from "./settings.store";
 import { UserSettingsStore } from "./settings.store";
 
@@ -40,6 +42,7 @@ export interface IUserStore {
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
+  apiTokens: IApiTokenStore;
   // actions
   fetchCurrentUser: () => Promise<User | undefined>;
   updateCurrentUser: (data: UserUpdate) => Promise<User>;
@@ -60,6 +63,7 @@ export class UserStore implements IUserStore {
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
+  apiTokens: IApiTokenStore;
   // service
   userService: UserService;
   authService: AuthService;
@@ -72,6 +76,7 @@ export class UserStore implements IUserStore {
     this.userProfile = new ProfileStore(store, api);
     this.userSettings = new UserSettingsStore(api);
     this.permission = new UserPermissionStore(store, api);
+    this.apiTokens = new ApiTokenStore(api);
     // service
     this.userService = new UserService(api);
     this.authService = new AuthService();
@@ -82,6 +87,7 @@ export class UserStore implements IUserStore {
       userProfile: observable,
       userSettings: observable,
       permission: observable,
+      apiTokens: observable,
       // actions
       fetchCurrentUser: action,
       updateCurrentUser: action,
