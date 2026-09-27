@@ -2,7 +2,11 @@
   "account_settings": {
     "preferences": {
       "heading": "偏好设置",
-      "description": "按照您的工作方式自定义您的应用体验"
+      "description": "按照您的工作方式自定义您的应用体验",
+      "start_of_week": {
+        "title": "一周的第一天",
+        "description": "这会改变应用中所有日历的显示方式。"
+      }
     },
     "api_tokens": {
       "title": "个人访问令牌",

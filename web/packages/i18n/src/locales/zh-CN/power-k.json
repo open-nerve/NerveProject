@@ -100,6 +100,9 @@
       "update_language": "更改界面语言",
       "toast": {
         "theme": {
+          "updating": "正在更新主题...",
+          "updated": "主题已更新",
+          "reloading": "正在重新加载以应用更改...",
           "error": "主题更新失败。请重试。"
         },
         "timezone": {

@@ -36,6 +36,7 @@
   "load_more": "Load more",
   "select_or_customize_your_interface_color_scheme": "Select or customize your interface color scheme.",
   "timezone_setting": "Current timezone setting.",
+  "select_a_timezone": "Select a timezone",
   "language_setting": "Choose the language used in the user interface.",
   "theme": "Theme",
   "system_preference": "System Preference",
@@ -201,6 +202,15 @@
   "toast": {
     "success": "Success!",
     "error": "Error!"
+  },
+  "days": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
   },
   "links": {
     "toasts": {

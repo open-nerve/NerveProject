@@ -1973,6 +1973,27 @@
           "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/identity/a11-api-tokens.spec.ts"]
         }
       }
+    },
+    {
+      "id": "plane-timezone-urls",
+      "phase": "M2/P5",
+      "why": "Plane 的时区列表地址 /api/timezones/；web 改用生成的客户端调用公开的 /api/v0/timezones（M2 设计 5.3、7.9）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "/api/timezones/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": ["    return this.get(`/api/timezones/`)", "    return this.get(\"/api/timezones/\")"],
+        "miss": ["    return unwrap(await publicClient.GET(\"/api/v0/timezones\")).data;"],
+        "files": {
+          "hit": ["web/apps/web/core/services/timezone.service.ts", "web/apps/web/core/hooks/use-timezone.tsx"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/instance/app/list_timezones.go"]
+        }
+      }
     }
   ],
   "exceptions": [

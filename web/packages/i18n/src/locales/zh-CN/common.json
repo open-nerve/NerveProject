@@ -36,6 +36,7 @@
   "load_more": "加载更多",
   "select_or_customize_your_interface_color_scheme": "选择或自定义您的界面配色方案。",
   "timezone_setting": "当前时区设置。",
+  "select_a_timezone": "选择时区",
   "language_setting": "选择用户界面使用的语言。",
   "theme": "主题",
   "system_preference": "系统偏好",
@@ -201,6 +202,15 @@
   "toast": {
     "success": "成功！",
     "error": "错误！"
+  },
+  "days": {
+    "sunday": "星期日",
+    "monday": "星期一",
+    "tuesday": "星期二",
+    "wednesday": "星期三",
+    "thursday": "星期四",
+    "friday": "星期五",
+    "saturday": "星期六"
   },
   "links": {
     "toasts": {

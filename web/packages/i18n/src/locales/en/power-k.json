@@ -100,6 +100,9 @@
       "update_language": "Change interface language",
       "toast": {
         "theme": {
+          "updating": "Updating theme...",
+          "updated": "Theme updated",
+          "reloading": "Reloading to apply changes...",
           "error": "Failed to update theme. Please try again."
         },
         "timezone": {

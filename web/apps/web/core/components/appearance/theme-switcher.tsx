@@ -15,6 +15,8 @@ import { setPromiseToast } from "@nerve/propel/toast";
 // components
 import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";
+// helpers
+import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
 
@@ -33,8 +35,7 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
   const { t } = useTranslation();
   // derived values
   const currentTheme = useMemo(() => {
-    // oxlint-disable-next-line no-shadow
-    const userThemeOption = THEME_OPTIONS.find((t) => t.value === userProfile?.theme);
+    const userThemeOption = THEME_OPTIONS.find((option) => option.value === userProfile?.theme);
     return userThemeOption || null;
   }, [userProfile?.theme]);
 
@@ -45,14 +46,14 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
 
         const updatePromise = updateUserTheme(themeOption.value);
         setPromiseToast(updatePromise, {
-          loading: "Updating theme...",
+          loading: t("power_k.preferences_actions.toast.theme.updating"),
           success: {
-            title: "Theme updated",
-            message: () => "Reloading to apply changes...",
+            title: t("power_k.preferences_actions.toast.theme.updated"),
+            message: () => t("power_k.preferences_actions.toast.theme.reloading"),
           },
           error: {
-            title: "Error!",
-            message: () => "Failed to update theme. Please try again.",
+            title: t("toast.error"),
+            message: (error) => t(errorMessageKey(error)),
           },
         });
         // Wait for the promise to resolve, then reload after showing toast
@@ -62,7 +63,7 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
         console.error("Error updating theme:", error);
       }
     },
-    [setTheme, updateUserTheme]
+    [setTheme, updateUserTheme, t]
   );
 
   if (!userProfile) return null;

@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { CustomSearchSelect } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
@@ -28,7 +29,7 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
     value,
     onChange,
     error = false,
-    label = "Select a timezone",
+    label,
     buttonClassName = "",
     className = "",
     optionsClassName = "",
@@ -36,12 +37,13 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
   } = props;
   // hooks
   const { disabled: isDisabled, timezones, selectedValue } = useTimezone();
+  const { t } = useTranslation();
 
   return (
     <div>
       <CustomSearchSelect
         value={value}
-        label={value && selectedValue ? selectedValue(value) : label}
+        label={value && selectedValue ? selectedValue(value) : (label ?? t("select_a_timezone"))}
         options={isDisabled || disabled ? [] : timezones}
         onChange={onChange}
         buttonClassName={cn(buttonClassName, "border border-subtle-1", {
@@ -52,6 +54,9 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
         input
         disabled={isDisabled || disabled}
         placement="bottom-end"
+        searchPlaceholder={t("common.search.label")}
+        noResultsMessage={t("common.search.no_matches_found")}
+        loadingMessage={t("common.loading")}
       />
     </div>
   );

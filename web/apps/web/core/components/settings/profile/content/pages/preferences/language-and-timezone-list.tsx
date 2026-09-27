@@ -14,6 +14,8 @@ import { CustomSelect } from "@nerve/ui";
 import { TimezoneSelect } from "@/components/global";
 import { StartOfWeekPreference } from "@/components/profile/start-of-week-preference";
 import { SettingsControlItem } from "@/components/settings/control-item";
+// helpers
+import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
 
@@ -33,16 +35,12 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
       try {
         await updateCurrentUser({ user_timezone: value });
         setToast({
-          title: "Success!",
-          message: "Timezone updated successfully",
+          title: t("toast.success"),
+          message: t("power_k.preferences_actions.toast.timezone.success"),
           type: TOAST_TYPE.SUCCESS,
         });
-      } catch (_error) {
-        setToast({
-          title: "Error!",
-          message: "Failed to update timezone",
-          type: TOAST_TYPE.ERROR,
-        });
+      } catch (error) {
+        setToast({ title: t("toast.error"), message: t(errorMessageKey(error)), type: TOAST_TYPE.ERROR });
       }
     };
 
@@ -50,16 +48,12 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
       try {
         await updateUserProfile({ language: value });
         setToast({
-          title: "Success!",
-          message: "Language updated successfully",
+          title: t("toast.success"),
+          message: t("power_k.preferences_actions.toast.generic.success"),
           type: TOAST_TYPE.SUCCESS,
         });
-      } catch (_error) {
-        setToast({
-          title: "Error!",
-          message: "Failed to update language",
-          type: TOAST_TYPE.ERROR,
-        });
+      } catch (error) {
+        setToast({ title: t("toast.error"), message: t(errorMessageKey(error)), type: TOAST_TYPE.ERROR });
       }
     };
 
@@ -97,8 +91,8 @@ export const ProfileSettingsLanguageAndTimezonePreferencesList = observer(
         />
         <StartOfWeekPreference
           option={{
-            title: "First day of the week",
-            description: "This will change how all calendars in your app look.",
+            title: t("account_settings.preferences.start_of_week.title"),
+            description: t("account_settings.preferences.start_of_week.description"),
           }}
         />
       </div>
