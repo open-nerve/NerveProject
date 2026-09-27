@@ -173,16 +173,16 @@ class TokenManager {
   | 会话 | 页面 | 结果 |
   |---|---|---|
   | `starting` | 任何 | 加载图标 |
-  | `unavailable` | 任何 | `SessionUnavailable`，按钮调 `tokenManager.retry()`；不跳转，地址和记录都不变 |
+  | `unavailable` | 任何 | `SessionUnavailable`，说明页面会自动重试（令牌管理器按 `retryAt` 排定了重试），按钮调 `tokenManager.retry()`；不跳转，地址和记录都不变 |
   | `signed-out` | 公开页、登录页、注册页 | 照常显示 |
   | `signed-out` | 其他 | `<Navigate to={signInPath(pathname + search + hash)} replace />` |
-  | `signed-in` | 任何 | 账户按 `["CURRENT_USER", loginId]` 用 SWR 取（换会话就重取；焦点变化时不重取，不自动重试）；取失败 → `SessionUnavailable`，按钮重取；账户或资料还没到 → 加载图标 |
+  | `signed-in` | 任何 | 账户按 `["CURRENT_USER", loginId]` 用 SWR 取（换会话就重取；焦点变化时不重取，不自动重试）；取失败 → `SessionUnavailable`，说明不承诺自动重试，按钮重取；被会话变化打断的取（`SessionChangedError`）不是失败，`fetchCurrentUser` 给出 `undefined`，等新会话的键和新的 store；账户或资料还没到 → 加载图标 |
   | `signed-in` | 登录页、注册页 | 合格的 `next_path`；没有时，完成了新手引导去 `/create-workspace`，否则去 `/onboarding` |
   | `signed-in` | 新手引导页 | 完成了新手引导就去合格的 `next_path` 或 `/create-workspace` |
   | `signed-in` | 其他 | 没完成新手引导就去 `/onboarding` |
 
   "完成"是 `is_onboarded`，或 `onboarding_step` 的四个键都为真。
-- **`SessionUnavailable({ onRetry })`**：`role="alert"`，标题、说明、"Try again"；文案键 `auth.session_unavailable.{title,description,retry}`（"Cannot reach the server for now" / "暂时无法连接服务器"）。
+- **`SessionUnavailable({ onRetry, autoRetry })`**：`role="alert"`，标题、说明、"Try again"；文案键 `auth.session_unavailable.{title,description,description_auto_retry,retry}`（"Cannot reach the server for now" / "暂时无法连接服务器"）。只有排定了重试（`autoRetry`：`unavailable` 且有 `retryAt`）时说明才用 `description_auto_retry`（"页面会自动重试"），否则用不作此承诺的 `description`。
 - **`next_path`**（3.18）：`signInPath(path) = "/?next_path=" + encodeURIComponent(path)`，路径、查询、片段整体编码；`isValidNextPath` 另外拒绝任何位置的控制字符（`\u0000`–`\u001f`、`\u007f`：浏览器会从地址里丢掉制表符和换行，`/\t/evil.example` 会变成 `//evil.example`）。服务端没有跳转，M1-P4 交接"服务端校验 `next_path`"按此关闭。测试 `next-path.test.ts` 11 → 20 个。
 - **web 的 axios 基类**：删掉 `withCredentials: true` 和 401 拦截，`window.location.replace` 随之消失，恒为真的 `currentPath` 判断不照搬；此后只给还没对接的 M3–M8 领域用，不带令牌、不跳转。
 
