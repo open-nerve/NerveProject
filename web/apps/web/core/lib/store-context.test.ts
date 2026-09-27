@@ -282,6 +282,50 @@ describe("store-context", () => {
     expect(y.user.apiTokens.tokens).toEqual([tokenOf(Y)]);
   });
 
+  it("leaves the page's language to the tab's session now: no store sets it, and a profile is only nerve's answer", async () => {
+    const { nerve, context, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // X's profile load and X's change of language are out when another tab signs in as Y; this tab follows.
+    const loaded = track(x.user.userProfile.fetchUserProfile());
+    await until(() => nerve.calls.length === 1, "X's load");
+    const changed = track(x.user.userProfile.updateUserProfile({ language: "zh-CN" }));
+    await until(() => nerve.calls.length === 2, "X's change");
+    await follow(Y);
+    // nerve answers both as X, whose token is still good: both succeed, into X's retired profile only.
+    nerve.calls[0]?.answer(json(200, { language: "zh-CN" }));
+    nerve.calls[1]?.answer(json(200, { language: "zh-CN" }));
+    await until(() => loaded.settled && changed.settled, "X's answers");
+    expect([loaded.error, changed.error]).toEqual([undefined, undefined]);
+    expect(x.user.userProfile.data).toEqual({ language: "zh-CN" });
+    // The page's language was set once, by the switch, to the default; X's late answers did not reach it.
+    expect(page.languages).toEqual(["en"]);
+
+    // Y's profile is nerve's answer and nothing else: a change out leaves it, a refused one too.
+    const profile = context.rootStore.user.userProfile;
+    const fetched = track(profile.fetchUserProfile());
+    await until(() => nerve.calls.length === 3, "Y's refresh");
+    nerve.calls[2]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 4, "Y's load");
+    nerve.calls[3]?.answer(json(200, { language: "en" }));
+    await until(() => fetched.settled, "Y's profile");
+    const refused = track(profile.updateUserProfile({ language: "zh-CN" }));
+    await until(() => nerve.calls.length === 5, "Y's change");
+    expect(profile.data).toEqual({ language: "en" });
+    nerve.calls[4]?.answer(problem(500, "internal_error"));
+    await until(() => refused.settled, "the refusal");
+    expect(refused.error).toBeDefined();
+    expect(profile.data).toEqual({ language: "en" });
+    const accepted = track(profile.updateUserProfile({ language: "zh-CN" }));
+    await until(() => nerve.calls.length === 6, "Y's next change");
+    expect(profile.data).toEqual({ language: "en" });
+    nerve.calls[5]?.answer(json(200, { language: "zh-CN" }));
+    await until(() => accepted.settled, "the acceptance");
+    expect(profile.data).toEqual({ language: "zh-CN" });
+    // Still no store set the page's language: the page follows the profile of the tab's session (StoreWrapper).
+    expect(page.languages).toEqual(["en"]);
+  });
+
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {
     const { context, signedIn, follow } = await load();
     await signedIn();

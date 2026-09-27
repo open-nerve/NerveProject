@@ -9,6 +9,8 @@ import { useEffect, useRef } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "react-router";
 import { useTheme } from "next-themes";
+// nerve imports
+import { setLanguage } from "@nerve/i18n";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useRouterParams } from "@/hooks/store/use-router-params";
@@ -71,6 +73,16 @@ function StoreWrapper(props: TStoreWrapper) {
     // Mark as initialized - prevents future syncs from server
     hasInitializedThemeRef.current = true;
   }, [currentUser?.id, userProfile?.theme, setTheme]);
+
+  /**
+   * The page's language is the profile's of the tab's session now, as nerve answered it: the stores never set it.
+   * A refused change leaves the profile, and so the page, as it was; a retired session's store, answered late,
+   * changes only its own profile, which nothing here reads. Signed out, or before the profile loads, the page keeps
+   * the language it has (a new session starts with the default: store-context.tsx).
+   */
+  useEffect(() => {
+    if (userProfile?.language) void setLanguage(userProfile.language);
+  }, [userProfile?.language]);
 
   useEffect(() => {
     if (!params) return;

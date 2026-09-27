@@ -118,49 +118,75 @@ test("A9 (page): the preferences page changes the theme, the language and the fi
   });
 });
 
-/** nerve's answer when it cannot make a change: a problem whose code the page says why by. */
-const serverError = {
-  status: 500,
+/** nerve's answer when it cannot make a change, as a problem of status and code: the page says why by the code. */
+const refusal = (status: number, title: string, code: string) => ({
+  status,
   contentType: "application/problem+json",
-  body: JSON.stringify({ type: "about:blank", title: "Internal Server Error", status: 500, code: "internal_error" }),
-};
+  body: JSON.stringify({ type: "about:blank", title, status, code }),
+});
 
 test("A9 (page): a refused change leaves the page as nerve has it", async ({ api, db, signedInPage }, testInfo) => {
   const email = emailFor(testInfo);
   const page = await signedInPage(await registerOnboarded(api, email));
   const watch = await watchPage(page);
   await page.goto("/settings/profile/preferences");
+  const language = page.getByRole("button", { name: "English" });
   const theme = page.getByRole("button", { name: "System Preference" });
-  await expect(theme).toBeVisible();
   const html = page.locator("html");
+  await expect(language).toBeVisible();
+  await expect(theme).toBeVisible();
+  await expect(html).toHaveAttribute("lang", "en");
   await expect(html).toHaveAttribute("data-theme", "light");
-  // nerve refuses every change of the profile from here on.
-  await page.route("**/api/v0/me/profile", (route) =>
-    route.request().method() === "PATCH" ? route.fulfill(serverError) : route.fallback()
+  await page.evaluate(() => {
+    (window as unknown as { beforeRefusals?: true }).beforeRefusals = true;
+  });
+  // nerve refuses the next two changes of the profile: first as a server error, then as busy.
+  const refusals = [
+    refusal(500, "Internal Server Error", "internal_error"),
+    refusal(503, "Service Unavailable", "server_busy"),
+  ];
+  await page.route("**/api/v0/me/profile", (route) => {
+    const next = route.request().method() === "PATCH" ? refusals.shift() : undefined;
+    return next ? route.fulfill(next) : route.fallback();
+  });
+
+  // The language: 简体中文 refused; the page stays in English, its button says English, and the toast says why.
+  await language.click();
+  const spoken = await answerTo(page, "PATCH", "/api/v0/me/profile", () =>
+    page.getByRole("option", { name: "简体中文" }).click()
   );
+  expect(spoken.status()).toBe(500);
+  await expect(page.getByText("Something went wrong on the server. Please try again.")).toBeVisible();
+  await expect(language).toBeVisible();
+  await expect(page.getByText("Language & Time")).toBeVisible();
 
   // The theme: Dark refused; the page keeps its theme, says why, and does not reload.
-  await page.evaluate(() => {
-    (window as unknown as { beforeRefusal?: true }).beforeRefusal = true;
-  });
+  await expect(theme).toBeVisible();
   await theme.click();
   const themed = await answerTo(page, "PATCH", "/api/v0/me/profile", () =>
     page.getByRole("option", { name: "Dark", exact: true }).click()
   );
-  expect(themed.status()).toBe(500);
-  await expect(page.getByText("Something went wrong on the server. Please try again.")).toBeVisible();
+  expect(themed.status()).toBe(503);
+  await expect(page.getByText("The server is busy. Please try again later.")).toBeVisible();
   await expect(html).toHaveAttribute("data-theme", "light");
   await expect(theme).toBeVisible();
-  expect(await page.evaluate(() => (window as unknown as { beforeRefusal?: true }).beforeRefusal)).toBe(true);
 
+  // Both refusals behind it, the page is as nerve has it: in English, in its theme, never reloaded.
+  await expect(html).toHaveAttribute("lang", "en");
+  await expect(page.getByText("Language & Time")).toBeVisible();
+  await expect(language).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { beforeRefusals?: true }).beforeRefusals)).toBe(true);
   expect(await profileOf(db, email)).toEqual([{ theme: "system", language: "en", start_of_the_week: 0 }]);
-  expect(watch.apiFailures).toEqual(["500 PATCH /api/v0/me/profile"]);
+  expect(watch.apiFailures).toEqual(["500 PATCH /api/v0/me/profile", "503 PATCH /api/v0/me/profile"]);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
-  // One load; the browser's report of the refusal.
+  // One load; the browser's report of each refusal.
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING],
-    errors: ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"],
+    errors: [
+      "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    ],
   });
 });
 

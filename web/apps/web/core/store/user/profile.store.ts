@@ -7,7 +7,6 @@
 import { action, makeObservable, observable, runInAction } from "mobx";
 // nerve imports
 import type { ApiClient, Profile, ProfileUpdate, Theme } from "@nerve/api-client";
-import { setLanguage } from "@nerve/i18n";
 // services
 import { UserService } from "@/services/user.service";
 // store
@@ -49,7 +48,8 @@ export class ProfileStore implements IUserProfileStore {
   }
 
   /**
-   * @description fetches the account's profile, and shows the app in its language
+   * @description fetches the account's profile. The page's language follows the profile of the tab's session now
+   * (StoreWrapper): a store sets no page state, so a retired session's store cannot reach the page.
    * @returns {Promise<Profile>}
    */
   fetchUserProfile = async (): Promise<Profile> => {
@@ -57,16 +57,15 @@ export class ProfileStore implements IUserProfileStore {
     runInAction(() => {
       this.data = profile;
     });
-    void setLanguage(profile.language);
     return profile;
   };
 
   /**
-   * @description changes the given fields of the profile (onboarding_step key by key); fails when nerve refuses
+   * @description changes the given fields of the profile (onboarding_step key by key); fails when nerve refuses.
+   * The profile becomes nerve's answer, never the change asked for: a refused change leaves it as it was.
    * @returns {Promise<Profile>}
    */
   updateUserProfile = async (data: ProfileUpdate): Promise<Profile> => {
-    if (data.language) void setLanguage(data.language);
     const profile = await this.userService.updateCurrentUserProfile(data);
     runInAction(() => {
       this.data = profile;

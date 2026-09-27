@@ -1287,7 +1287,7 @@ files:
   - **只有两种情况结束会话**：续期得到 401；续期成功、重发后仍是 401。续期得到 429、5xx 或网络错误时保留记录，把这次的错误交给调用方。
   - 没有刷新令牌时，401 原样交给调用方。
 - **结束会话**：
-  - 清掉内存和 `nerve.auth`。令牌管理器不认识 stores：`store-context.tsx` 订阅着它，会话一变（这里是变成没有会话）就为新的会话建一个新的 `RootStore`，沿用页面的 `instance`、`router`、`theme`，换进它导出的 `rootStore`，`StoreProvider` 随之提供新的一代；旧的 stores 留着旧的 `RootStore` 和绑定旧会话的客户端（P4 spec 2.8，第 3 节第 17 条）。
+  - 清掉内存和 `nerve.auth`。令牌管理器不认识 stores：`store-context.tsx` 订阅着它，会话一变（这里是变成没有会话）就为新的会话建一个新的 `RootStore`，沿用页面的 `instance`、`router`、`theme`，换进它导出的 `rootStore`，`StoreProvider` 随之提供新的一代；旧的 stores 留着旧的 `RootStore` 和绑定旧会话的客户端（P4 spec 2.8，第 3 节第 17 条）。P4 在那一条记下的已知局限（旧一代的 `ProfileStore` 迟到的应答仍改界面语言）已由 P5 关闭：界面语言由 `StoreWrapper` 按当前一代资料的 `language` 设置，stores 不再设它，旧的一代够不到页面（P5 spec 第 3 节第 16 条）。
   - 当前账户变为空，`AuthenticationWrapper` 渲染 `<Navigate to="/?next_path=…" replace />`（3.18）。
   - 跳转只在包装层这一处发生；现在的 `window.location.replace` 删除。
 - **退出**（评审 M7）：

@@ -104,7 +104,7 @@
 
 - 时区：`TimezoneService.list()` 经 `publicClient` 调公开的 `GET /api/v0/timezones`（与实例信息一样不带令牌），返回生成的 `Timezone[]`；`use-timezone.tsx` 把同一时区的地点合成一个选项，选项的搜索文本含时区名、地点、GMT 和 UTC 偏移。Plane 的地址和 `TTimezoneObject` 删除。
 - 主题、语言、时区、每周第一天：成功和失败的提示都经 `t()`；失败的文案按 `code` 取（`errorMessageKey`），不再是写死的英文。主题切换之后刷新页面的行为保留（7.7）。
-- 页面反映 nerve 持有的值：主题在 nerve 应答成功之后才应用（随后刷新页面）；被拒绝时页面保持原来的主题、不刷新，提示说明原因。原来先应用、失败不撤回。
+- 页面反映 nerve 持有的值：主题在 nerve 应答成功之后才应用（随后刷新页面）；被拒绝时页面保持原来的主题、不刷新，提示说明原因。原来先应用、失败不撤回。界面语言由 `StoreWrapper` 按当前一代资料的 `language` 设置，`ProfileStore` 不再设它，资料只取 nerve 的应答：被拒绝的修改不改语言，旧一代迟到的应答也到不了页面（第 3 节第 16 条）。
 - 页面上的其余文案也经 `t()`：每周第一天的标题、说明和星期名（第 3 节第 15 条；命令面板的"更改一周的第一天"菜单同样用这些键，`START_OF_THE_WEEK_OPTIONS` 不再有英文的 `label`），时区列表的搜索框、"没有匹配"和按钮的"选择时区"（"加载中"在这里不会出现：加载时按钮是禁用的），主题的"正在更新""已更新""正在重新加载"（命令面板的主题提示用同样的键）。
 
 ### 2.8 general、停用账户、维护页（M2 设计 7.3、7.7；P4 spec 第 3 节第 14 条）
@@ -156,7 +156,7 @@
     - 键盘：从语言的按钮按 Tab 到它的按钮，下箭头打开列表（在按钮旁，选项是中文的星期名；按钮上的 Enter 不打开列表，2.3），再按下箭头、Enter 从星期日改为星期一：`PATCH` 200，列表关闭，焦点回到按钮；空格再打开，Escape 关闭，焦点仍在按钮上；
     - 鼠标点已选中的选项（`aria-selected` 的星期一）：列表关闭，再发一次同样的 `PATCH`（200）；
     - 四次选择各发一个 `PATCH /api/v0/me/profile`，时区的搜索不发请求；数据库和刷新之后都对（按钮显示深色、简体中文、星期一）。
-  - **A9 的第二个页面测试**（被拒绝的修改）：`page.route` 让 `PATCH /api/v0/me/profile` 回答 500（`internal_error`）；选 Dark：提示"Something went wrong on the server. Please try again."，页面的主题仍是原来的（`data-theme` 为 light），按钮仍是 System Preference，页面没有刷新；数据库不变；失败的请求和控制台的错误逐条点名（500 的 `PATCH` 一条，浏览器对它的报错一条）。
+  - **A9 的第二个页面测试**（被拒绝的修改）：`page.route` 让接下来两次 `PATCH /api/v0/me/profile` 分别回答 500（`internal_error`）和 503（`server_busy`）。选简体中文：提示"Something went wrong on the server. Please try again."，页面仍是英文（`lang` 为 en），语言按钮仍是 English。选 Dark：提示"The server is busy. Please try again later."，页面的主题仍是原来的（`data-theme` 为 light），按钮仍是 System Preference。两次之后页面没有刷新，仍是英文；数据库不变；失败的请求和控制台的错误逐条点名（两个 `PATCH`，浏览器对它们的两条报错）。
   - **A12**：确认弹窗的文案；204；回到带 `next_path` 的登录页并提示；浏览器没有记录；数据库里已停用、会话结束、PAT 保留；再登录 403 "This account is deactivated."；`nerve users activate` 之后登录进入引导，PAT 又能用。
 - 每个内容断言之前先断言元素或请求存在；控制台只允许点名的消息（每次加载一条 `EMOJI_CHECK_WARNING`，故事造成的 422、403 的浏览器报错）。
 - 测试数：35 → 41。新增的等待都有期限（`answerTo` 10 秒，下载 10 秒）。
@@ -193,6 +193,10 @@
 13. **CSV 按 RFC 4180 加引号**（Task 3）：名称或说明含逗号、引号、换行时，Plane 的 `csvDownload` 会错列。CSV 文本放进一个纯函数，写单元测试，`csvDownload` 调用它。PAT 创建弹窗和 webhook 的两个组件都用它，一起受益。
 14. **撤销确认弹窗的按钮文案**（Task 3）：`AlertModalCore` 本来就接受 `primaryButtonText`、`secondaryButtonText`，P5 的调用处传入 `t()` 的文案，P5 的页面上不留写死的英文。
 15. **每周第一天的标题和星期名**（Task 6）：按 `@nerve/constants` 现有的 i18n 键写法翻译（中英文），preferences 页在中文界面下不再是英文。
+
+以下一条是控制者在 Task 6 的修复轮裁定的：
+
+16. **界面语言跟随当前一代的资料**（Task 6）：`ProfileStore` 原来在发出修改之前就设界面语言，被拒绝时不撤回，页面停在 nerve 没有的语言；`fetchUserProfile` 在应答之后设语言，旧一代迟到的应答会改新会话的页面（P4 spec 第 3 节第 17 条记的已知局限）。只把设语言挪到应答之后并不够：会话切换之后才回来的 200 照常成功（认证中间件只在发出之前、或应答 401 时抛出 `SessionChangedError`），旧一代仍会改到新会话的语言。现在界面语言是当前一代资料的派生状态：`StoreWrapper` 经 hooks 读当前的 `RootStore`，资料的 `language` 一变就设语言，与它按资料设主题的写法一样；stores 不再设语言，资料只取 nerve 的应答（`updateUserProfile` 不先写入要改的值）；没有登录或资料未到时不设，`startSession` 设的默认值保留。`store-context.test.ts` 用强制的顺序核对（X 的取数和修改在途中，标签页跟随 Y，两个 200 回来：页面的语言只被切换设过一次；Y 的修改在途中和被拒绝时资料不变）；A9 的第二个页面测试核对被拒绝的修改。
 
 ## 4. 验收标准（完成线，M2 设计 12 节 P5）
 
