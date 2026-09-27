@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -22,6 +23,34 @@ func TestSecurityHeadersOnEveryResponse(t *testing.T) {
 			if got := res.Header.Get(header); got != value {
 				t.Errorf("GET %s (%d): %s = %q, want %q", path, res.StatusCode, header, got, value)
 			}
+		}
+	}
+}
+
+// The CSP is the web UI's, on its pages only (M2 design 8.3): the probes and
+// the API's answers have none.
+func TestOnlyPagesHaveAContentSecurityPolicy(t *testing.T) {
+	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	for _, tt := range []struct {
+		path string
+		page bool
+	}{
+		{"/", true},
+		{"/settings/profile/general", true},
+		{"/" + testAsset, false},
+		{"/healthz", false},
+		{"/api/v0/instance", false},
+		{"/api/v0/nope", false},
+	} {
+		res, err := client.Get(base + tt.path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = res.Body.Close()
+
+		csp := res.Header.Get("Content-Security-Policy")
+		if got := strings.HasPrefix(csp, "default-src 'self'; script-src 'self';"); got != tt.page {
+			t.Errorf("GET %s (%d): Content-Security-Policy = %q, want a page's policy: %v", tt.path, res.StatusCode, csp, tt.page)
 		}
 	}
 }
