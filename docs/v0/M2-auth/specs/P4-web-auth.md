@@ -50,7 +50,7 @@
 | `web:core/components/account/auth-forms/{auth-root,auth-header,password}.tsx`、`web:helpers/authentication.helper.ts`、`authentication.helper.test.ts`（`.tsx` 删除）、`web:vitest.config.ts`、`security.tsx`、`web/packages/i18n/src/locales/{en,zh-CN}/auth.json` | 登录页、注册页、错误文案表、修改密码 | 9、10 |
 | `tools/keywords.json` | 5 条规则 | 6、8、10 |
 | `server/internal/platform/webui/csp.go`、`csp_test.go`、`handler.go`；`server/internal/bootstrap/headers_test.go` | 页面的 CSP | 11 |
-| `e2e/tsconfig.json`、`e2e/fixtures/{test,auth,auth-pages,browser}.ts`、`e2e/fixtures/assert/identity.ts`、`e2e/stories/identity/a{1,2,3,4,5,6,10,15}-*.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts` | fixture；页面版本；S2 | 12、13 |
+| `e2e/tsconfig.json`、`e2e/fixtures/{test,auth,auth-pages,onboarding-pages,browser}.ts`、`e2e/fixtures/assert/identity.ts`、`e2e/stories/identity/a{1,2,3,4,5,6,10,15}-*.spec.ts`、`e2e/stories/smoke/s2-web-app.spec.ts` | fixture；页面版本；S2 | 12、13 |
 | `docs/v0/v0-design.md`、`docs/v0/frontend-changes.md`、`README.md`、五份交接 | 文档同步、交接 | 14 |
 
 ### 2.2 依赖
@@ -245,15 +245,16 @@ class TokenManager {
   - `auth.ts`：`signInContext(context, baseURL, tokens)` 用 `context.addInitScript` 在页面的任何脚本之前把一条新记录（`login_id` 是 16 个随机字节）写进这个 nerve 源的 localStorage，只在第一次加载时写（标记 `nerve.auth.e2e-seeded`），之后的加载、刷新和其他标签页看到的是页面自己续期或删除之后的记录；`recordOf(page)`；`newRecord(tokens)`；`writeRecord(page, record)` 像令牌管理器一样在 `nerve.auth.refresh` 锁下一次写入，其他标签页收到 `storage` 事件；
   - `test.ts` 的 fixture `signedInPage(tokens, baseURL?)`：返回还没有加载任何东西的页面；
   - `auth-pages.ts`：`signInPath`（测试自己的一份，不依赖前端的实现）、`formAlert`、`submitSignIn`、`fillSignUp`、`submitSignUp`；
-  - `browser.ts`：`watchPage(page)`，在页面第一次打开之前调用，记下接口请求、失败的接口请求、发往 `/api/v0` 之外的接口的请求（M3 的旧接口）、未处理的异常和拒绝、控制台的错误和警告、CSP 违规（`securitypolicyviolation` 事件经 `exposeBinding` 送回测试）；
-  - `assert/identity.ts`：`generationOf(refreshToken)`。
+  - `onboarding-pages.ts`：`saveProfileStep(page)`，点资料步骤的"Continue"，给出这一步最后一个请求（`PATCH /api/v0/me/profile`）的状态码；
+  - `browser.ts`：`watchPage(page)`，在页面第一次打开之前调用，记下接口请求、失败的接口请求、发往 `/api/v0` 之外的接口的请求（M3 的旧接口）、未处理的异常和拒绝、控制台的错误和警告、CSP 违规（`securitypolicyviolation` 事件经 `exposeBinding` 送回测试）；有回答的请求按状态码算，没有回答的才记浏览器的错误（页面不读 204 的空响应体时 Chromium 也报 `net::ERR_ABORTED`，openapi-fetch 对 204 就不读；Task 13 实测）；`expectQuietConsole(page, watch, expected)`，`expected` 点名不是应用自己的消息：第三方的警告、浏览器对故事造成的事的报错（如对 401 的报告）；`followAccessToken(page)`，页面此后带的最后一个访问令牌；
+  - `assert/identity.ts`：`generationOf(refreshToken)`、`onboardingStepsOf(db, email)`。
 - **故事的页面版本**：接口版本不变，页面版本与接口版本调用同一组断言函数。plan 的 Task 12、13 逐条写明，要点：
   - **A1**：注册后到资料步骤；没有 Cookie；记录只有 `refresh_token`、`login_id`；两个令牌的主体（刷新令牌去掉前缀、访问令牌的签名段）不出现在 sessionStorage、localStorage 的其他键、页面地址、任何请求的地址和任何控制台消息中（第 3 节第 10 条）；
   - **A2**：邮箱已存在（大写输入）409，提示在表单上方，地址和输入框不变；不合规的密码不发请求（故事结束时数注册请求：5 个，不合规的密码一个也没有）；`common_password` 在字段下方；关闭注册的 nerve 没有"Sign up"链接（开放的 nerve 有）、两个邮箱都是 403；两个 nerve 的页面都没有 CSP 违规；数据库没有新增；
   - **A3**（2 个）：未登录打开 `/settings/profile/general?tab=x#y` 到带 `next_path` 的登录页，登录后原样回来；`//evil.example`、`/\evil.example`、`javascript:alert(1)`、`/\t/evil.example` 登录后都落到 `/create-workspace`；错误密码与不存在的邮箱是同一句提示，没有新会话；
-  - **A4**（2 个：有 `navigator.locks`；`addInitScript` 删掉 `Navigator.prototype.locks`，走租约）：访问令牌 3 秒的 nerve，同一个上下文的两个标签页都在资料步骤；第一个续期被扣住最多 1 秒；两个标签页同时点"Continue"，都等到这一步最后一个请求的 200、进入下一步；每次续期 200，发出的刷新令牌代数依次是 0、1、2……各一次；`expectRefreshed`（第 3 节第 8 条）；
-  - **A5**：页面的刷新令牌先被"别人"在接口上用过一次；页面重新加载时续期被拒，到带 `next_path` 的登录页，记录删除，会话 `reuse_detected`；
-  - **A6**（3 个）：在一个标签页通过账户菜单退出，两个标签页都回到登录页，记录删除，会话 `logout`，这个会话的访问令牌下一次请求就是 401（第 3 节第 7 条）；切换 ①：标签页乙用 `writeRecord` 换上 Y 的记录、不退出，标签页甲显示 Y，此后保存的名字写进 Y，X 的名字不变、会话未被撤销；切换 ②：标签页乙先退出（甲随之到登录页），再以 Y 登录，两个标签页都以 Y 回到 `/onboarding`；
+  - **A4**（2 个：有 `navigator.locks`；`addInitScript` 删掉 `Navigator.prototype.locks`，走租约）：访问令牌 3 秒的 nerve，同一个上下文的两个标签页都在资料步骤；第一个续期被扣住最多 1 秒；两个标签页同时点"Continue"，都等到这一步最后一个请求的 200、进入下一步；每次续期 200，发出的刷新令牌代数依次是 0、1、2……各一次；`expectRefreshed`（第 3 节第 8 条）；两个标签页都没有失败的接口请求、未处理的异常、控制台的错误和警告；
+  - **A5**：页面的刷新令牌先被"别人"在接口上用过一次；页面重新加载时续期被拒，到带 `next_path` 的登录页，记录删除，会话 `reuse_detected`；唯一失败的请求就是这次续期（401），控制台只有 Chromium 对它的一条报错，没有未处理的异常；
+  - **A6**（3 个）：在一个标签页通过账户菜单退出，两个标签页都回到登录页，记录删除，会话 `logout`，这个会话的访问令牌退出之前是 200（先证明取到了令牌），退出之后下一次请求就是 401（第 3 节第 7 条）；切换 ①：标签页乙用 `writeRecord` 换上 Y 的记录、不退出，标签页甲显示 Y，此后资料步骤的两次写入（名字、`profile_complete`）都进 Y，X 的名字和步骤不变、会话未被撤销；切换 ②：标签页乙先退出（甲随之到登录页），再以 Y 登录，两个标签页都以 Y 回到 `/onboarding`；三个测试中开着应用的每个标签页都没有失败的接口请求、未处理的异常、控制台的错误和警告；
   - **A10**（2 个）：新账户进入 `/onboarding` 的两条路：整页加载（`signedInPage`，页面挂载时还没有账户），和注册之后应用内的跳转（页面挂载时账户已经取到，文档仍是 `/sign-up` 的那一个）；每条路上都没有失败的接口请求、发往旧接口的请求、未处理的异常、CSP 违规、控制台的错误和警告；填名字后等到 `PATCH /api/v0/me/profile` 的 200，下一步出现；数据库中只有 `profile_complete` 为真，名字已保存；
   - **A15**：限流很低的 nerve：同一个邮箱 401、401、429，另一个邮箱 401，第三个邮箱 429（按 IP）；两句提示分别是"The email or the password is wrong."和"Too many attempts. Please try again later."；
   - **S2**（2 个，改写）：未登录时只请求 `GET /api/v0/instance`，没有失败的请求、CSP 违规、未处理的异常、控制台的错误和警告（深链接另有一条第三方的警告：它的页面模块加载编辑器，tiptap 建 Emoji 节点时 `is-emoji-supported` 反复读画布，Chromium 提示 `willReadFrequently`；测试点名要求它，其他警告都失败）；首页带 `Content-Security-Policy`，"Go to workspace"按钮出现；深链接跳到带 `next_path` 的登录页。S2 不再等 `networkidle`，而是等 `GET /api/v0/instance` 的回答和登录页出现：页面不读回答的请求一直算在途中，`networkidle` 就等到测试超时，而不是在断言上失败（Task 12 实测）。
