@@ -33,6 +33,8 @@ vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }))
 // command-palette.store imports store-context, which builds the app's RootStore: a cycle through root.store.
 vi.mock("@/lib/store-context", () => ({ rootStore: {} }));
 
+// At the top level, after the mocks: the first import of the stores compiles a few hundred modules, which must
+// happen as the file loads, not inside a test's 5 s (store-context.test.ts's beforeAll).
 const { RootStore } = await import("@/store/root.store");
 
 const REFRESH = "/api/v0/auth/refresh";
