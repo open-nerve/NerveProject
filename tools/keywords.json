@@ -1800,6 +1800,92 @@
           "miss": ["e2e/stories/smoke/s2-web-app.spec.ts", "docs/v0/M2-auth/M2-design.md"]
         }
       }
+    },
+    {
+      "id": "csrf",
+      "phase": "M2/P4",
+      "why": "Plane 的会话 cookie 要 CSRF 令牌（取令牌、表单隐藏字段、X-CSRFTOKEN 头）；Nerve 的请求带 Authorization: Bearer，不用 cookie，也就没有 CSRF（M2 设计 7.2，M1-P3 交接）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "csrf",
+        "flags": "i"
+      },
+      "samples": {
+        "hit": [
+          "        <input type=\"hidden\" name=\"csrfmiddlewaretoken\" />",
+          "      headers: { \"X-CSRFTOKEN\": csrfToken },",
+          "  requestCSRFToken = async (): Promise<ICsrfTokenData> =>"
+        ],
+        "miss": ["  request.headers.set(\"Authorization\", `Bearer ${token}`);"],
+        "files": {
+          "hit": ["web/apps/web/core/services/auth.service.ts", "web/packages/types/src/auth.ts"],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "server/internal/modules/identity/adapter/http/auth.go"]
+        }
+      }
+    },
+    {
+      "id": "plane-auth-urls",
+      "phase": "M2/P4",
+      "why": "Plane 的认证接口在根路径 /auth/ 下（登录、注册、退出、改密码、取 CSRF 令牌），登录页用原生表单 POST 过去；Nerve 的认证接口都在 /api/v0/auth 和 /api/v0/me 下，由生成的客户端调用（M2 设计 7.2、7.3）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "(?<![\\w.@-])/auth/",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "        action={`/auth/${mode === EAuthModes.SIGN_IN ? \"sign-in\" : \"sign-up\"}/`}",
+          "      form.action = \"/auth/sign-out/\";",
+          "    return this.post(`/auth/change-password/`, data, {"
+        ],
+        "miss": [
+          "    return unwrap(await publicClient.POST(\"/api/v0/auth/login\", { body }));",
+          "import Unauthorized from \"@/app/assets/auth/unauthorized.svg?url\";"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/account/auth-forms/password.tsx",
+            "web/apps/web/core/services/user.service.ts"
+          ],
+          "miss": ["docs/v0/M2-auth/M2-design.md", "e2e/stories/auth/a1-sign-up.spec.ts"]
+        }
+      }
+    },
+    {
+      "id": "auth-error-code",
+      "phase": "M2/P4",
+      "why": "Plane 登录失败时跳回登录页，把数字错误码放在地址的 error_code 里，前端按 EAuthenticationErrorCodes 查文案；Nerve 的错误是 problem+json 的 code，登录页就地显示，文案表由测试对着 openapi.yaml 核对（M2 设计 3.11、7.3）",
+      "files": {
+        "source": "^web/.*\\.(?:[cm]?[jt]sx?|json)$",
+        "flags": ""
+      },
+      "content": {
+        "source": "error_code|EAuthenticationErrorCodes",
+        "flags": ""
+      },
+      "samples": {
+        "hit": [
+          "  const error_code = searchParams.get(\"error_code\");",
+          "      const err = error as Error & { error_code?: string };",
+          "  if (code && passwordErrors.includes(code as EAuthenticationErrorCodes)) {"
+        ],
+        "miss": [
+          "      if (error instanceof ApiError && error.problem?.code === \"identity.current_password_incorrect\") {"
+        ],
+        "files": {
+          "hit": [
+            "web/apps/web/core/components/account/auth-forms/auth-root.tsx",
+            "web/apps/web/helpers/authentication.helper.ts"
+          ],
+          "miss": ["server/internal/shared/error.go", "docs/v0/M2-auth/M2-design.md"]
+        }
+      }
     }
   ],
   "exceptions": [

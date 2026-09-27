@@ -19,7 +19,6 @@ import { WorkspaceService } from "@/services/workspace.service";
 type TAuthHeader = {
   workspaceSlug: string | undefined;
   invitationId: string | undefined;
-  invitationEmail: string | undefined;
   authMode: EAuthModes;
 };
 
@@ -37,7 +36,7 @@ const Titles = {
 const workSpaceService = new WorkspaceService();
 
 export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
-  const { workspaceSlug, invitationId, invitationEmail, authMode } = props;
+  const { workspaceSlug, invitationId, authMode } = props;
   // nerve imports
   const { t } = useTranslation();
 
@@ -50,13 +49,9 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
     }
   );
 
-  const getHeaderSubHeader = (
-    mode: EAuthModes,
-    invitation: IWorkspaceMemberInvitation | undefined,
-    email: string | undefined
-  ) => {
-    if (invitation && email && invitation.email === email && invitation.workspace) {
-      const workspace = invitation.workspace;
+  const getHeaderSubHeader = (mode: EAuthModes, current: IWorkspaceMemberInvitation | undefined) => {
+    if (current?.workspace) {
+      const workspace = current.workspace;
       return {
         header: (
           <div className="relative inline-flex items-center gap-2">
@@ -75,7 +70,7 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
     return Titles[mode];
   };
 
-  const { header, subHeader } = getHeaderSubHeader(authMode, invitation || undefined, invitationEmail);
+  const { header, subHeader } = getHeaderSubHeader(authMode, invitation || undefined);
 
   if (isLoading)
     return (

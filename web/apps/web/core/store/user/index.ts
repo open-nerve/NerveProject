@@ -6,7 +6,7 @@
 
 import { action, makeObservable, observable, runInAction, computed } from "mobx";
 // nerve imports
-import type { ChangePasswordRequest, User, UserUpdate } from "@nerve/api-client";
+import type { ChangePasswordRequest, LoginRequest, RegisterRequest, User, UserUpdate } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
 import type { TUserPermissions } from "@nerve/types";
 // lib
@@ -17,6 +17,7 @@ import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { UserPermissionStore } from "@/store/user/permissions.store";
 // services
+import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";
 // stores
 import type { IUserProfileStore } from "@/store/user/profile.store";
@@ -38,6 +39,8 @@ export interface IUserStore {
   updateCurrentUser: (data: UserUpdate) => Promise<User>;
   deactivateAccount: () => Promise<void>;
   changePassword: (payload: ChangePasswordRequest) => Promise<void>;
+  signIn: (credentials: LoginRequest) => Promise<void>;
+  signUp: (credentials: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
   // computed
   canPerformAnyCreateAction: boolean;
@@ -54,6 +57,7 @@ export class UserStore implements IUserStore {
   permission: IUserPermissionStore;
   // service
   userService: UserService;
+  authService: AuthService;
 
   constructor(private store: RootStore) {
     // stores
@@ -62,6 +66,7 @@ export class UserStore implements IUserStore {
     this.permission = new UserPermissionStore(store);
     // service
     this.userService = new UserService();
+    this.authService = new AuthService();
     // observables
     makeObservable(this, {
       // observables
@@ -76,6 +81,8 @@ export class UserStore implements IUserStore {
       updateCurrentUser: action,
       deactivateAccount: action,
       changePassword: action,
+      signIn: action,
+      signUp: action,
       signOut: action,
       // computed
       canPerformAnyCreateAction: computed,
@@ -137,6 +144,23 @@ export class UserStore implements IUserStore {
     const loginId = tokenManager.state.loginId;
     await this.userService.deactivate();
     await tokenManager.endSession(loginId);
+  };
+
+  /**
+   * @description signs in; the token manager keeps the session, and AuthenticationWrapper fetches the
+   * account and moves on (M2 design 7.3). Fails, with nothing kept, when nerve refuses.
+   * @returns {Promise<void>}
+   */
+  signIn = async (credentials: LoginRequest): Promise<void> => {
+    await tokenManager.signIn(await this.authService.login(credentials));
+  };
+
+  /**
+   * @description creates the account and signs it in, as signIn does
+   * @returns {Promise<void>}
+   */
+  signUp = async (credentials: RegisterRequest): Promise<void> => {
+    await tokenManager.signIn(await this.authService.register(credentials));
   };
 
   /**

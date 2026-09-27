@@ -6,6 +6,14 @@
 
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 
+// The server's password lengths, in UTF-16 code units like password.length
+// (server/internal/modules/identity/domain/password.go).
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
+
+const isLengthValid = (password: string) =>
+  password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH;
+
 /**
  * Calculate password strength based on various criteria
  */
@@ -14,7 +22,7 @@ export const getPasswordStrength = (password: string): E_PASSWORD_STRENGTH => {
     return E_PASSWORD_STRENGTH.EMPTY;
   }
 
-  if (password.length < 8) {
+  if (!isLengthValid(password)) {
     return E_PASSWORD_STRENGTH.LENGTH_NOT_VALID;
   }
 
@@ -43,8 +51,8 @@ type PasswordCriteria = {
 export const getPasswordCriteria = (password: string): PasswordCriteria[] => [
   {
     key: "length",
-    label: "Min 8 characters",
-    isValid: password.length >= 8,
+    label: "8–128 characters",
+    isValid: isLengthValid(password),
   },
   {
     key: "uppercase",
