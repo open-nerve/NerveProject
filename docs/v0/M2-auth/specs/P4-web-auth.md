@@ -137,11 +137,11 @@ class TokenManager {
 
 ### 2.6 认证中间件（M2 设计 7.1；Codex M-5）
 
-`authMiddleware(tokens: Pick<TokenManager, "accessToken" | "renew" | "endSession">): Middleware`：
+`authMiddleware(tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">): Middleware`：
 
 - `onRequest`：有访问令牌就设 `Authorization: Bearer …`，并在 fetch 读走请求体之前用 `request.clone()` 留一份副本，存在 `WeakMap` 中，键是 openapi-fetch 交给 `onResponse` 的同一个请求对象；没有会话时请求原样发出，不留副本。
-- `onResponse`：只处理带了令牌却得到 401 的请求。`renew(发出时的令牌)` 得到 `undefined`（续期 401 结束了会话，或会话已经结束）→ 把原来的 401 交给调用方；否则给副本换上新令牌，用 `options.fetch` 重发**一次**；重发仍是 401 → `endSession()`。续期因 429、5xx、网络失败时请求以 `SessionUnavailableError` 失败，会话保留。403、404、500 不续期。没有会话时发出的请求，在它的 401 回来之前本标签页登录了，也不重发。
-- M2 设计 7.1 要求原型先验证的一点：openapi-fetch 0.17.0 的中间件能这样重发。`auth-middleware.test.ts`（13 个，真实的令牌管理器、假 nerve）核对重发的 `PATCH` 方法、路径、请求体都与原来相同；"用已被读走的原请求重发""在设令牌之后才复制"的变异都让它失败（附录 A）。
+- `onResponse`：只处理带了令牌却得到 401 的请求。`renew(发出时的令牌)` 得到 `undefined`（续期 401 结束了会话，或会话已经结束）→ 把原来的 401 交给调用方；否则给副本换上新令牌，用 `options.fetch` 重发**一次**；重发仍是 401 → `endSession(记下的 login_id)`。续期因 429、5xx、网络失败时请求以 `SessionUnavailableError` 失败，会话保留。403、404、500 不续期。没有会话时发出的请求，在它的 401 回来之前本标签页登录了，也不重发。请求属于发出它的会话（第 2.5 节的规则）：`onRequest` 在取令牌时记下标签页的 `login_id`，和副本存在一起；401 回来时标签页已换到别的会话（另一个标签页登录或退出了），就把 401 原样交回，不续期、不重发。
+- M2 设计 7.1 要求原型先验证的一点：openapi-fetch 0.17.0 的中间件能这样重发。`auth-middleware.test.ts`（18 个，真实的令牌管理器、假 nerve）核对重发的 `PATCH` 方法、路径、请求体都与原来相同；"用已被读走的原请求重发""在设令牌之后才复制"的变异都让它失败（附录 A）。其中 3 个核对上面的会话规则：请求在外时另一个标签页以 Y 登录，X 的 401 原样交回；取令牌途中标签页跟随了 Y，请求仍属 X；重发途中跟随了 Y，重发的 401 不删 Y 的记录。另有 2 个核对 fetch 被拒绝（浏览器断网时的样子）：请求的 fetch 被拒绝时错误原样交给调用方，不续期、不重发；重发的 fetch 被拒绝时错误也交给调用方；两种情况都保留会话。
 
 ### 2.7 `ApiError`、`unwrap` 与两个客户端（M2 设计 5.3、7.1、7.2）
 
