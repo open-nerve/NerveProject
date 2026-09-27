@@ -11,6 +11,7 @@ import useSWR from "swr";
 // ui
 import { LogOutOutline } from "@makeplane/propel/icons";
 import { EUserPermissions, EUserPermissionsLevel } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { Button, getButtonStyling } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
@@ -41,13 +42,14 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 
 interface IWorkspaceAuthWrapper {
   children: ReactNode;
-  isLoading?: boolean;
 }
 
 export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props: IWorkspaceAuthWrapper) {
-  const { children, isLoading: isParentLoading = false } = props;
+  const { children } = props;
   // router params
   const { workspaceSlug } = useParams();
+  // translation
+  const { t } = useTranslation();
   // store hooks
   const { signOut, data: currentUser } = useUser();
   const { fetchPartialProjects } = useProject();
@@ -125,7 +127,7 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
   };
 
   // if list of workspaces are not there then we have to render the spinner
-  if (isParentLoading || allWorkspaces === undefined || loader) {
+  if (allWorkspaces === undefined || loader) {
     return (
       <div className="grid h-full place-items-center rounded-lg border border-subtle p-4">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -146,14 +148,16 @@ export const WorkspaceAuthWrapper = observer(function WorkspaceAuthWrapper(props
             </div>
             <div className="relative flex items-center gap-2">
               <div className="text-13 font-medium">{currentUser?.email}</div>
-              <div
+              <button
+                type="button"
+                aria-label={t("sign_out")}
                 className="relative flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-sm hover:bg-layer-1"
                 onClick={handleSignOut}
               >
-                <Tooltip label="Sign out" alignOffset={8} disabled={isMobile}>
+                <Tooltip label={t("sign_out")} alignOffset={8} disabled={isMobile}>
                   <LogOutOutline width={14} height={14} />
                 </Tooltip>
-              </div>
+              </button>
             </div>
           </div>
           <div className="relative flex h-full w-full flex-grow flex-col items-center justify-center space-y-3">

@@ -70,7 +70,6 @@ export class ModuleIssuesFilter extends IssueFilterHelperStore implements IModul
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilters: action,
@@ -86,13 +85,6 @@ export class ModuleIssuesFilter extends IssueFilterHelperStore implements IModul
     if (!moduleId) return undefined;
 
     return this.getIssueFilters(moduleId);
-  }
-
-  get appliedFilters() {
-    const moduleId = this.rootIssueStore.moduleId;
-    if (!moduleId) return undefined;
-
-    return this.getAppliedFilters(moduleId);
   }
 
   getIssueFilters(moduleId: string) {

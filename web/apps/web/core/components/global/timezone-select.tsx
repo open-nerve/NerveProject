@@ -16,7 +16,6 @@ type TTimezoneSelect = {
   value: string | undefined;
   onChange: (value: string) => void;
   error?: boolean;
-  label?: string;
   buttonClassName?: string;
   className?: string;
   optionsClassName?: string;
@@ -29,7 +28,6 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
     value,
     onChange,
     error = false,
-    label,
     buttonClassName = "",
     className = "",
     optionsClassName = "",
@@ -43,7 +41,7 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
     <div>
       <CustomSearchSelect
         value={value}
-        label={value && selectedValue ? selectedValue(value) : (label ?? t("select_a_timezone"))}
+        label={value && selectedValue ? selectedValue(value) : t("select_a_timezone")}
         options={isDisabled || disabled ? [] : timezones}
         onChange={onChange}
         buttonClassName={cn(buttonClassName, "border border-subtle-1", {

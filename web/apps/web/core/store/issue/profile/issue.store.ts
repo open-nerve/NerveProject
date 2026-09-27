@@ -18,7 +18,6 @@ import type { IProfileIssuesFilter } from "./filter.store";
 
 export interface IProfileIssues extends IBaseIssuesStore {
   // observable
-  currentView: TProfileViews;
   viewFlags: ViewFlags;
   // actions
   setViewId: (viewId: TProfileViews) => void;
@@ -46,8 +45,6 @@ export interface IProfileIssues extends IBaseIssuesStore {
   createIssue: (workspaceSlug: string, projectId: string, data: Partial<TIssue>) => Promise<TIssue>;
   updateIssue: (workspaceSlug: string, projectId: string, issueId: string, data: Partial<TIssue>) => Promise<void>;
   archiveIssue: (workspaceSlug: string, projectId: string, issueId: string) => Promise<void>;
-
-  quickAddIssue: undefined;
 }
 
 export class ProfileIssues extends BaseIssuesStore implements IProfileIssues {
@@ -219,7 +216,4 @@ export class ProfileIssues extends BaseIssuesStore implements IProfileIssues {
   // Using aliased names as they cannot be overridden in other stores
   updateIssue = this.issueUpdate;
   archiveIssue = this.issueArchive;
-
-  // Setting them as undefined as they can not performed on profile issues
-  quickAddIssue = undefined;
 }

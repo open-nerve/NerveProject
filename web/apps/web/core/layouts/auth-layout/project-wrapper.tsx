@@ -38,11 +38,10 @@ interface IProjectAuthWrapper {
   workspaceSlug: string;
   projectId: string;
   children: ReactNode;
-  isLoading?: boolean;
 }
 
 export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IProjectAuthWrapper) {
-  const { workspaceSlug, projectId, children, isLoading: isParentLoading = false } = props;
+  const { workspaceSlug, projectId, children } = props;
   // states
   const [isJoiningProject, setIsJoiningProject] = useState(false);
   // store hooks
@@ -125,7 +124,7 @@ export const ProjectAuthWrapper = observer(function ProjectAuthWrapper(props: IP
     joinProject(workspaceSlug, projectId).finally(() => setIsJoiningProject(false));
   };
 
-  const isProjectLoading = (isParentLoading || isProjectDetailsLoading) && !projectDetailsError;
+  const isProjectLoading = isProjectDetailsLoading && !projectDetailsError;
 
   if (isProjectLoading) return null;
 

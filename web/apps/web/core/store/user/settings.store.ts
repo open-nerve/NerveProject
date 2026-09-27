@@ -11,30 +11,18 @@ import type { IUserSettings } from "@nerve/types";
 // services
 import { UserService } from "@/services/user.service";
 
-type TError = {
-  status: string;
-  message: string;
-};
-
 export interface IUserSettingsStore {
   // observables
-  isLoading: boolean;
-  error: TError | undefined;
   data: IUserSettings;
   sidebarCollapsed: boolean;
-  isScrolled: boolean;
   // actions
-  fetchCurrentUserSettings: (bustCache?: boolean) => Promise<IUserSettings | undefined>;
+  fetchCurrentUserSettings: (bustCache?: boolean) => Promise<IUserSettings>;
   toggleSidebar: (collapsed?: boolean) => void;
-  toggleIsScrolled: (isScrolled?: boolean) => void;
 }
 
 export class UserSettingsStore implements IUserSettingsStore {
   // observables
-  isLoading: boolean = false;
   sidebarCollapsed: boolean = true;
-  error: TError | undefined = undefined;
-  isScrolled: boolean = false;
   data: IUserSettings = {
     id: undefined,
     email: undefined,
@@ -54,15 +42,11 @@ export class UserSettingsStore implements IUserSettingsStore {
   constructor(api: ApiClient) {
     makeObservable(this, {
       // observables
-      isLoading: observable.ref,
-      error: observable,
       data: observable,
       sidebarCollapsed: observable.ref,
-      isScrolled: observable.ref,
       // actions
       fetchCurrentUserSettings: action,
       toggleSidebar: action,
-      toggleIsScrolled: action,
     });
     // services
     this.userService = new UserService(api);
@@ -73,36 +57,16 @@ export class UserSettingsStore implements IUserSettingsStore {
     this.sidebarCollapsed = collapsed ?? !this.sidebarCollapsed;
   };
 
-  toggleIsScrolled = (isScrolled?: boolean) => {
-    this.isScrolled = isScrolled ?? !this.isScrolled;
-  };
-
   // actions
   /**
    * @description fetches user profile information
-   * @returns {Promise<IUserSettings | undefined>}
+   * @returns {Promise<IUserSettings>}
    */
   fetchCurrentUserSettings = async (bustCache: boolean = false) => {
-    try {
-      runInAction(() => {
-        this.isLoading = true;
-        this.error = undefined;
-      });
-      const userSettings = await this.userService.currentUserSettings(bustCache);
-      runInAction(() => {
-        this.isLoading = false;
-        this.data = userSettings;
-      });
-      return userSettings;
-    } catch (error) {
-      runInAction(() => {
-        this.isLoading = false;
-        this.error = {
-          status: "error",
-          message: "Failed to fetch user settings",
-        };
-      });
-      throw error;
-    }
+    const userSettings = await this.userService.currentUserSettings(bustCache);
+    runInAction(() => {
+      this.data = userSettings;
+    });
+    return userSettings;
   };
 }

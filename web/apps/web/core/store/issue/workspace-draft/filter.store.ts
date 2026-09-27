@@ -68,7 +68,6 @@ export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implement
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilters: action,
@@ -84,13 +83,6 @@ export class WorkspaceDraftIssuesFilter extends IssueFilterHelperStore implement
     if (!workspaceSlug) return undefined;
 
     return this.getIssueFilters(workspaceSlug);
-  }
-
-  get appliedFilters() {
-    const workspaceSlug = this.rootIssueStore.workspaceSlug;
-    if (!workspaceSlug) return undefined;
-
-    return this.getAppliedFilters(workspaceSlug);
   }
 
   getIssueFilters(workspaceSlug: string) {

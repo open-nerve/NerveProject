@@ -38,7 +38,6 @@ export interface IBaseIssueFilterStore {
   // observables
   filters: Record<string, IIssueFilters>;
   //computed
-  appliedFilters: Partial<Record<TIssueParams, string | boolean>> | undefined;
   issueFilters: IIssueFilters | undefined;
 }
 
@@ -62,9 +61,6 @@ export interface IIssueFilterHelperStore {
 }
 
 export class IssueFilterHelperStore implements IIssueFilterHelperStore {
-  // oxlint-disable-next-line no-useless-constructor
-  constructor() {}
-
   /**
    * @description This method is used to apply the display filters on the issues
    * @param {IIssueFilters} filters
