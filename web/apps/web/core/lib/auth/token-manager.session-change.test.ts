@@ -61,8 +61,8 @@ describe.each<Kind>(["navigator.locks", "the lease"])("with %s", (kind) => {
         now: () => Date.now(),
         randomHex: (bytes) => `${++logins}`.padStart(bytes * 2, "b"),
       });
-      view.onStorage((key, value) => {
-        if (key === AUTH_KEY) tm.handleStorageChange(value);
+      view.onStorage((key) => {
+        if (key === AUTH_KEY) tm.handleStorageChange();
       });
       return { tm, grantedAs };
     };

@@ -6,11 +6,12 @@
 // Test doubles of the browser for the auth tests: one localStorage shared by several tabs, which tells
 // the other tabs about every change with a storage event, and a lock whose holder the tests can see. The
 // event comes in a microtask of the writing task, sooner than in a browser, where it reaches the other
-// tabs in a later task.
+// tabs in a later task. The event carries the changed key only; the code under test reads the value
+// itself.
 
 import type { RefreshLock } from "./refresh-lock";
 
-type StorageListener = (key: string | null, newValue: string | null) => void;
+type StorageListener = (key: string | null) => void;
 
 /** The localStorage of one browser: every tab's view writes the same data. */
 export class SharedStorage {
@@ -45,15 +46,15 @@ export class SharedStorage {
     if ((this.data.get(key) ?? null) === value) return;
     if (value === null) this.data.delete(key);
     else this.data.set(key, value);
-    this.notify(writer, key, value);
+    this.notify(writer, key);
   }
 
-  private notify(writer: string, key: string, value: string | null): void {
+  private notify(writer: string, key: string): void {
     for (const [tab, set] of this.listeners) {
       if (tab === writer) continue;
       // Like a browser, never inside the write; unlike one, before the writing task ends (a microtask).
       queueMicrotask(() => {
-        for (const listener of set) listener(key, value);
+        for (const listener of set) listener(key);
       });
     }
   }

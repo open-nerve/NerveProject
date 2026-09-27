@@ -45,8 +45,8 @@ function browser(kind: Kind) {
     });
     const changes: string[] = [];
     tm.subscribe(() => changes.push(`${tm.state.status} ${tm.state.loginId ?? "-"}`));
-    view.onStorage((key, value) => {
-      if (key === AUTH_KEY) tm.handleStorageChange(value);
+    view.onStorage((key) => {
+      if (key === AUTH_KEY) tm.handleStorageChange();
     });
     return { tm, changes };
   }

@@ -167,8 +167,8 @@ describe("start", () => {
 
   it("stops trying again when another tab changes the session meanwhile", async () => {
     const { tm, nerve, storage } = setUp({ refresh_token: "rt-0", login_id: loginId });
-    storage.tab("A").onStorage((key, value) => {
-      if (key === AUTH_KEY) tm.handleStorageChange(value);
+    storage.tab("A").onStorage((key) => {
+      if (key === AUTH_KEY) tm.handleStorageChange();
     });
     void tm.start();
     await until(() => nerve.calls.length === 1, "the refresh");
@@ -340,8 +340,8 @@ describe("refresh", () => {
 
   it("gives a request made after another tab's sign-in a refresh of its own, not the old session's", async () => {
     const s = await signedIn(20);
-    s.storage.tab("A").onStorage((key, value) => {
-      if (key === AUTH_KEY) s.tm.handleStorageChange(value);
+    s.storage.tab("A").onStorage((key) => {
+      if (key === AUTH_KEY) s.tm.handleStorageChange();
     });
     // The old session's refresh is out when another tab's sign-in lands (the lease's race window).
     const old = track(s.tm.accessToken());
@@ -488,7 +488,7 @@ describe("sign-in and sign-out", () => {
     const { tm, nerve, storage, writes } = setUp();
     await tm.start();
     await tm.signIn(nerve.tokens());
-    await tm.endSession();
+    await tm.endSession(loginId);
     expect(tm.state).toEqual({ status: "signed-out" });
     expect(storage.data.has(AUTH_KEY)).toBe(false);
     expect(writes).toEqual([

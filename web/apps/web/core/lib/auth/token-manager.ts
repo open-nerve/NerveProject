@@ -9,7 +9,9 @@ import type { RefreshLock } from "./refresh-lock";
 // The browser's tokens (M2 design 7.1): the access token lives in memory only; localStorage keeps one
 // record, nerve.auth = {refresh_token, login_id}, written in one piece and only under the refresh lock.
 // login_id is new at every sign-in and kept by refreshes, so a tab can tell another tab's refresh (same
-// login_id) from another tab's sign-in (a new one), which may be another account.
+// login_id) from another tab's sign-in (a new one), which may be another account. An operation that changes
+// the session (a refresh, a sign-out, the end of a session) acts only on the session it was called for, and
+// every decision reads the record there now, never a copy: a record of another session is followed.
 
 /** The localStorage key of the session's record. */
 export const AUTH_KEY = "nerve.auth";
@@ -137,25 +139,33 @@ export class TokenManager {
   }
 
   /**
-   * Signs out: under the lock, so the refresh token handed over is the latest, logs out with it (best
-   * effort) and removes the record (M2 design 7.1, review M7).
+   * Signs the tab's session out: under the lock, so the refresh token handed over is the latest, logs out
+   * with it (best effort) and removes the record (M2 design 7.1, review M7). When the record is another
+   * session's by then (another tab signed in first), the tab follows it and logs nobody out: that sign-in
+   * replaced this session's refresh token, so the browser has nothing of it left to log out with.
    */
   async signOut(): Promise<void> {
+    const loginId = this.#state.loginId;
     await this.deps.lock.run(async () => {
       const record = this.#read();
-      if (record !== undefined) {
-        await this.#call("/api/v0/auth/logout", record.refresh_token);
-        this.deps.storage.removeItem(AUTH_KEY);
+      if (!isRecordOf(record, loginId)) {
+        this.#switchTo(record);
+        return;
       }
+      await this.#call("/api/v0/auth/logout", record.refresh_token);
+      this.deps.storage.removeItem(AUTH_KEY);
       this.#signedOut();
     });
   }
 
-  /** Ends the session after nerve refused a request again with the refreshed token. */
-  async endSession(): Promise<void> {
+  /**
+   * Ends the session loginId after nerve refused a request made in it again with the refreshed token:
+   * under the lock, removes the record if it is still that session's, else follows the record.
+   */
+  async endSession(loginId: string | undefined): Promise<void> {
     await this.deps.lock.run(async () => {
       const record = this.#read();
-      if (!isRecordOf(record, this.#state.loginId)) {
+      if (!isRecordOf(record, loginId)) {
         this.#switchTo(record);
         return;
       }
@@ -166,10 +176,12 @@ export class TokenManager {
 
   /**
    * Another tab changed nerve.auth (the storage event): removed, it signed out; a new login_id, it signed
-   * in, maybe as another account; the same login_id, it only refreshed.
+   * in, maybe as another account; the same login_id, it only refreshed. The event only says that the record
+   * changed: the tab reads the record there now, since an event can arrive after a later write, even after
+   * the tab's own sign-in.
    */
-  handleStorageChange(newValue: string | null): void {
-    const record = parse(newValue);
+  handleStorageChange(): void {
+    const record = this.#read();
     if (record === undefined ? this.#state.status !== "signed-out" : record.login_id !== this.#state.loginId) {
       this.#switchTo(record);
     }
