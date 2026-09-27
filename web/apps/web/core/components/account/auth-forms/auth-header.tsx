@@ -22,14 +22,15 @@ type TAuthHeader = {
   authMode: EAuthModes;
 };
 
-const Titles = {
+/** The keys of the heading and the line under it, for each mode. */
+const TITLE_KEYS = {
   [EAuthModes.SIGN_IN]: {
-    header: "Work in all dimensions.",
-    subHeader: "Welcome back to Nerve.",
+    header: "auth.common.header",
+    subHeader: "auth.sign_in.sub_header",
   },
   [EAuthModes.SIGN_UP]: {
-    header: "Work in all dimensions.",
-    subHeader: "Create your Nerve account.",
+    header: "auth.common.header",
+    subHeader: "auth.sign_up.sub_header",
   },
 };
 
@@ -60,14 +61,13 @@ export const AuthHeader = observer(function AuthHeader(props: TAuthHeader) {
             {workspace.name}
           </div>
         ),
-        subHeader:
-          mode == EAuthModes.SIGN_UP
-            ? "Create an account to start managing work with your team."
-            : "Log in to start managing work with your team.",
+        subHeader: t(
+          mode === EAuthModes.SIGN_UP ? "auth.sign_up.invitation_sub_header" : "auth.sign_in.invitation_sub_header"
+        ),
       };
     }
 
-    return Titles[mode];
+    return { header: t(TITLE_KEYS[mode].header), subHeader: t(TITLE_KEYS[mode].subHeader) };
   };
 
   const { header, subHeader } = getHeaderSubHeader(authMode, invitation || undefined);

@@ -504,6 +504,54 @@
       "description_after_email": "注册了账户，可以在这里切换到其他账户。",
       "switch": "切换账户",
       "switching": "正在切换..."
+    },
+    "workspace": {
+      "description": "所有工作，汇于一处。",
+      "name_placeholder": "输入工作区名称",
+      "join_existing": "加入已有的工作区",
+      "creation_disabled": "您似乎还没有收到任何工作区的邀请，而实例管理员限制了创建新工作区。请先请工作区的所有者或管理员邀请您加入工作区，再回到这里加入。",
+      "join_title": "接受邀请，或创建工作区",
+      "create_new": "创建新工作区",
+      "no_invitations": "没有找到邀请"
+    },
+    "invite": {
+      "title": "邀请您的队友",
+      "description": "在 Nerve 中，与团队一起工作效果最好。现在就邀请他们，充分发挥 Nerve 的作用。",
+      "role": "角色",
+      "not_an_email": "这看起来不像邮箱地址。",
+      "add_another": "再添加一个",
+      "later": "稍后再说"
+    },
+    "tour": {
+      "welcome": {
+        "title": "欢迎使用 Nerve，{firstName} {lastName}",
+        "description": "很高兴您决定试用 Nerve。现在您可以轻松管理项目了。从创建一个项目开始吧。",
+        "start": "开始产品导览",
+        "skip": "不用了，我自己探索"
+      },
+      "work_items": {
+        "title": "用工作项做计划",
+        "description": "工作项是 Nerve 的基本单元。Nerve 中的大多数概念都与工作项及其属性相关。"
+      },
+      "cycles": {
+        "title": "用周期推进",
+        "description": "周期帮助您和团队更快地推进，类似于敏捷开发中常用的冲刺。"
+      },
+      "modules": {
+        "title": "拆分为模块",
+        "description": "模块把大的事情拆成项目或功能，帮助您更好地组织工作。"
+      },
+      "views": {
+        "title": "视图",
+        "description": "创建自定义筛选，只显示对您重要的工作项。只需几次点击即可保存和共享筛选。"
+      },
+      "sidebar": {
+        "title": "开始吧！",
+        "subtitle": "充分利用 Nerve。"
+      },
+      "back": "上一步",
+      "next": "下一步",
+      "create_first_project": "创建您的第一个项目"
     }
   }
 }

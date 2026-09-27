@@ -131,7 +131,7 @@ for (const locks of [true, false]) {
     expect(await Promise.all([tabA, tabB].map((tab) => saveProfileStep(tab)))).toEqual([200, 200]);
     await Promise.all(
       [tabA, tabB].map(async (tab) => {
-        await expect(tab.getByText("Create your workspace")).toBeVisible();
+        await expect(tab.getByText("Create your workspace", { exact: true })).toBeVisible();
         await expect(tab).toHaveURL(`${shortLived.baseURL}/onboarding`);
       })
     );

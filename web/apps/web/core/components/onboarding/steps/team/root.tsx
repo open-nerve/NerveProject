@@ -22,7 +22,7 @@ import { Listbox } from "@headlessui/react";
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import type { EUserPermissions } from "@nerve/constants";
-import { ROLE, ROLE_DETAILS } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
@@ -146,7 +146,7 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
             rules={{
               pattern: {
                 value: emailRegex,
-                message: "Invalid Email ID",
+                message: t("auth.common.email.errors.invalid"),
               },
             }}
             render={({ field: { value, onChange, ref } }) => (
@@ -196,7 +196,7 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
                       !getValues(`emails.${index}.role_active`) ? "text-placeholder" : "text-primary"
                     } sm:text-13`}
                   >
-                    {ROLE[value]}
+                    {t(ROLE_DETAILS[value].i18n_title)}
                   </span>
 
                   <ChevronDownOutline
@@ -213,7 +213,7 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
                     style={styles.popper}
                     {...attributes.popper}
                   >
-                    {Object.entries(ROLE_DETAILS).map(([key, value]) => (
+                    {Object.entries(ROLE_DETAILS).map(([key, details]) => (
                       <Listbox.Option
                         as="div"
                         key={key}
@@ -227,8 +227,8 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
                         {({ selected }) => (
                           <div className="flex items-center gap-2 p-1 text-wrap">
                             <div className="flex flex-col">
-                              <div className="text-13 font-medium">{t(value.i18n_title)}</div>
-                              <div className="flex text-11 text-tertiary">{t(value.i18n_description)}</div>
+                              <div className="text-13 font-medium">{t(details.i18n_title)}</div>
+                              <div className="flex text-11 text-tertiary">{t(details.i18n_description)}</div>
                             </div>
                             {selected && <TickOutline className="h-4 w-4 shrink-0" />}
                           </div>
@@ -254,7 +254,7 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
       {email && !emailRegex.test(email) && (
         <div className="mx-8 my-1">
           <span className="text-13">🤥</span>{" "}
-          <span className="mt-1 text-11 text-danger-primary">That doesn't look like an email address.</span>
+          <span className="mt-1 text-11 text-danger-primary">{t("onboarding.invite.not_an_email")}</span>
         </div>
       )}
     </div>
@@ -263,6 +263,7 @@ const InviteMemberInput = observer(function InviteMemberInput(props: InviteMembe
 
 export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
   const { handleStepChange } = props;
+  const { t } = useTranslation();
 
   const [isInvitationDisabled, setIsInvitationDisabled] = useState(true);
 
@@ -304,15 +305,15 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
       .then(async () => {
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Invitations sent successfully.",
+          title: t("toast.success"),
+          message: t("workspace_settings.settings.members.invitations_sent_successfully"),
         });
-        await nextStep();
+        return nextStep();
       })
       .catch((err) => {
         setToast({
           type: TOAST_TYPE.ERROR,
-          title: "Error!",
+          title: t("toast.error"),
           message: err?.error,
         });
       });
@@ -345,14 +346,11 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
         if (e.code === "Enter") e.preventDefault();
       }}
     >
-      <CommonOnboardingHeader
-        title="Invite your teammates"
-        description="Work in Nerve happens best with your team. Invite them now to use Nerve to its potential."
-      />
+      <CommonOnboardingHeader title={t("onboarding.invite.title")} description={t("onboarding.invite.description")} />
       <div className="w-full py-4 text-13">
         <div className="group relative mx-8 grid grid-cols-10 gap-4 py-2">
-          <div className="col-span-6 px-1 text-13 font-medium text-secondary">Email</div>
-          <div className="col-span-4 px-1 text-13 font-medium text-secondary">Role</div>
+          <div className="col-span-6 px-1 text-13 font-medium text-secondary">{t("email")}</div>
+          <div className="col-span-4 px-1 text-13 font-medium text-secondary">{t("onboarding.invite.role")}</div>
         </div>
         <div className="mb-3 space-y-3 sm:space-y-4">
           {fields.map((field, index) => (
@@ -378,7 +376,7 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
           onClick={appendField}
         >
           <AddOutline className="h-4 w-4" />
-          Add another
+          {t("onboarding.invite.add_another")}
         </button>
       </div>
       <div className="mx-auto flex w-full flex-col items-center justify-center gap-4 px-8 sm:px-2">
@@ -389,10 +387,10 @@ export const InviteTeamStep = observer(function InviteTeamStep(props: Props) {
           className="w-full"
           disabled={isInvitationDisabled || !isValid || isSubmitting}
         >
-          {isSubmitting ? <Spinner height="20px" width="20px" /> : "Continue"}
+          {isSubmitting ? <Spinner height="20px" width="20px" /> : t("continue")}
         </Button>
         <Button variant="ghost" size="xl" className="w-full" onClick={nextStep}>
-          I’ll do it later
+          {t("onboarding.invite.later")}
         </Button>
       </div>
     </form>

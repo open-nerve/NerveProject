@@ -273,7 +273,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           ) : mode === EAuthModes.SIGN_IN ? (
             t("common.go_to_workspace")
           ) : (
-            "Create account"
+            t("auth.sign_up.submit")
           )}
         </Button>
       </form>

@@ -504,6 +504,54 @@
       "description_after_email": "un-intentionally, you can switch your account to a different one from here.",
       "switch": "Switch account",
       "switching": "Switching..."
+    },
+    "workspace": {
+      "description": "All your work — unified.",
+      "name_placeholder": "Enter workspace name",
+      "join_existing": "Join existing workspace",
+      "creation_disabled": "You don't seem to have any invites to a workspace and your instance admin has restricted creation of new workspaces. Please ask a workspace owner or admin to invite you to a workspace first and come back to this screen to join.",
+      "join_title": "Join invites or create a workspace",
+      "create_new": "Create new workspace",
+      "no_invitations": "No Invitations found"
+    },
+    "invite": {
+      "title": "Invite your teammates",
+      "description": "Work in Nerve happens best with your team. Invite them now to use Nerve to its potential.",
+      "role": "Role",
+      "not_an_email": "That doesn't look like an email address.",
+      "add_another": "Add another",
+      "later": "I’ll do it later"
+    },
+    "tour": {
+      "welcome": {
+        "title": "Welcome to Nerve, {firstName} {lastName}",
+        "description": "We're glad that you decided to try out Nerve. You can now manage your projects with ease. Get started by creating a project.",
+        "start": "Take a Product Tour",
+        "skip": "No thanks, I will explore it myself"
+      },
+      "work_items": {
+        "title": "Plan with work items",
+        "description": "The work item is the building block of Nerve. Most concepts in Nerve are either associated with work items and their properties."
+      },
+      "cycles": {
+        "title": "Move with cycles",
+        "description": "Cycles help you and your team to progress faster, similar to the sprints commonly used in agile development."
+      },
+      "modules": {
+        "title": "Break into modules",
+        "description": "Modules break your big thing into Projects or Features, to help you organize better."
+      },
+      "views": {
+        "title": "Views",
+        "description": "Create custom filters to display only the work items that matter to you. Save and share your filters in just a few clicks."
+      },
+      "sidebar": {
+        "title": "Let's get started!",
+        "subtitle": "Get more out of Nerve."
+      },
+      "back": "Back",
+      "next": "Next",
+      "create_first_project": "Create your first project"
     }
   }
 }

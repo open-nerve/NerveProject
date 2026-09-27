@@ -21,7 +21,7 @@ async function takeProfileStep(page: Page, watch: PageWatch, db: Database, email
   expect(await saveProfileStep(page)).toBe(200);
 
   // The next step shows; nerve has the name and the one step done.
-  await expect(page.getByText("Create your workspace")).toBeVisible();
+  await expect(page.getByText("Create your workspace", { exact: true })).toBeVisible();
   expect(await onboardingStepsOf(db, email)).toEqual({
     profile_complete: true,
     workspace_create: false,
