@@ -35,7 +35,6 @@ import { UserSettingsStore } from "./settings.store";
 
 export interface IUserStore {
   // observables
-  isLoading: boolean;
   data: User | undefined;
   // store observables
   userProfile: IUserProfileStore;
@@ -56,7 +55,6 @@ export interface IUserStore {
 
 export class UserStore implements IUserStore {
   // observables
-  isLoading: boolean = false;
   data: User | undefined = undefined;
   // store observables
   userProfile: IUserProfileStore;
@@ -79,8 +77,6 @@ export class UserStore implements IUserStore {
     this.authService = new AuthService();
     // observables
     makeObservable(this, {
-      // observables
-      isLoading: observable.ref,
       // model observables
       data: observable,
       userProfile: observable,
@@ -110,9 +106,6 @@ export class UserStore implements IUserStore {
   fetchCurrentUser = async (): Promise<User | undefined> => {
     await tokenManager.start();
     if (tokenManager.state.status !== "signed-in") return undefined;
-    runInAction(() => {
-      this.isLoading = true;
-    });
     try {
       const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
       runInAction(() => {
@@ -122,10 +115,6 @@ export class UserStore implements IUserStore {
     } catch (error) {
       if (error instanceof SessionChangedError) return undefined;
       throw error;
-    } finally {
-      runInAction(() => {
-        this.isLoading = false;
-      });
     }
   };
 
