@@ -1432,9 +1432,10 @@ files:
 | Plane 的认证错误码参数 `error_code` | P4 |
 | `is_self_managed` | P4 |
 | `withCredentials:\s*true` | P5：`web/packages/services/src/api.service.ts:23` 要到 P5 才随 PAT 的重写删除，放在 P4 会让守卫在 P4 失败（评审 M5） |
-| Plane 的用户、实例、时区地址：`/api/users/me/profile`、`/api/users/me/onboard`、`/api/users/me/tour-completed`、`/api/users/api-tokens`、`/api/instances/`、`/api/timezones/` | P4、P5 |
+| Plane 的用户、实例、时区地址：`/api/users/me/` 本身（后面紧跟引号）、`/api/users/me/profile`、`/api/users/me/onboard`、`/api/users/me/tour-completed`、`/api/users/api-tokens`、`/api/instances/`、`/api/timezones/` | P4、P5 |
+| Plane 的用户资源上传：`/api/assets/v2/user-assets/`、`/api/users/file-assets/`、`UserImageUploadModal`、`EFileAssetType` 的 `USER_AVATAR`、`USER_COVER` | P4（M5 按 Nerve 自己的协议加回上传） |
 
-- 不禁止整个 `/api/users/me/`：`joinProject` 等 M3 的旧调用还在用它。
+- 不禁止整个 `/api/users/me/`：只禁止它本身和上面几个子路径，`/api/users/me/settings/` 和 `joinProject` 等 M3 的旧调用还在用它下面的地址。
 - `file-upload.service.ts` 的 `withCredentials: false` 属于 M5，不会命中上面的正则。
 
 ### 7.10 规模估计
@@ -1995,7 +1996,7 @@ files:
 ### P5 `web-account`：前端账户设置
 - **目标**：个人设置的四个标签页对接新接口；M2 领域的前端清理完毕。
 - **交付物**：
-  1. general（含停用账户）、preferences、security（含 PAT 列表）、api-tokens（7.7）；PAT store（7.5）；主题下拉框的定位；维护页的文案不再暗示 nerve 没有正常启动（nerve 只是暂时不可达时也显示它，P4 spec 第 3 节第 14 条）。general 页的头像和封面上传控件已随 P4 删除 `IUser` 一起删掉（3.2；P4 spec 第 3 节第 12 条）。
+  1. general（含停用账户）、preferences、security（含 PAT 列表）、api-tokens（7.7）；PAT store（7.5）；主题下拉框的定位；维护页的文案不再暗示 nerve 没有正常启动（nerve 只是暂时不可达时也显示它，P4 spec 第 3 节第 14 条）。general 页的头像和封面上传控件已随 P4 删除 `IUser` 一起删掉（3.2；P4 spec 第 3 节第 12 条）；security 修改密码的错误处理已随 P4 完成（13.1 中 M1-P4 的一行），P5 做它的 PAT 列表。
   2. `@nerve/services` 删到只剩地址工具和文件工具；删除剩下的 Plane 类型（7.5）。
   3. 清理：
      - 死成员和死 prop 的 66 行；
@@ -2066,7 +2067,7 @@ files:
 | | 重写 `AuthenticationWrapper` | P4（7.4） |
 | | 401 处理不照搬恒为真的判断 | P4（7.1、7.2） |
 | | 由 M2 决定：`next_path` 带查询和片段 | 3.18：带上 |
-| | 由 M2 决定：`security.tsx` 的错误断言 | P5（7.7） |
+| | 由 M2 决定：`security.tsx` 的错误断言 | P4（随删除 CSRF 一起改这个文件）：错误是 `ApiError`，按 `problem.code` 和 `problem.errors` 显示，断言和 `toString()` 删除（7.7）；security 的 PAT 列表仍在 P5 |
 | | 由 M2 决定：表单不再提交到 `/auth/…` | P4（7.2） |
 | M1-closeout | 死成员和死 prop（66 行） | P4、P5（7.8） |
 | | oxlint：改到的文件清零，另清一类规则 | P4、P5（7.8）：`no-unneeded-ternary` |
@@ -2079,7 +2080,7 @@ files:
 |---|---|
 | M3 | **邀请**（负责人确认的产品改动）：邮箱未经验证期间，接受邀请不能只靠邮箱匹配，要凭邀请链接中的令牌（M1 设计 3.15 留下的路径）；关闭注册时，持有有效邀请的人仍可注册。后者由 M3 扩展 `SignupPolicy` 的实现和注册请求（加上邀请令牌），不另加端口（评审 M16）。这改变总体设计 1.1"系统内接受邀请"和 4.2"被邀请的邮箱始终可以注册"的做法，由 M3 的设计交负责人确认。prod 默认关闭注册（决策点 2）不能代替接受邀请时的身份证明。参考：Plane 把任何未删除的工作区邀请都算上（`plane/apps/api/plane/authentication/adapter/base.py:102-120`）。签发邀请令牌按 3.5 的账户行锁 |
 | M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()` 的 Promise：原来的 fetcher（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`，M2 随预取一起删掉）没有，失败会成为未处理的 Promise 拒绝。被调用的 `fetchWorkspaces` 本身在 `web/apps/web/core/store/workspace/index.ts:146-158`。同样的缺陷还留在 `web/apps/web/app/(all)/invitations/page.tsx:88`：加入工作区之后的 `fetchWorkspaces().then(…)` 没有返回它的 Promise，也没有处理拒绝（P4 Task 8 的裁定留给 M3），M3 对接邀请时一并改 |
-| M3 及以后有 stores 的 M | **stores 按会话分代**（P4 spec 2.8，第 3 节第 16、17 条）：每个会话一个 `RootStore`，它的客户端绑定这个会话。一代 stores 的 services 由这一代的 stores 用这一代的客户端建，经构造函数传入；没有模块级的带令牌客户端，也没有模块级的 service。store 只经自己的 `RootStore` 找兄弟 store（`store-context.tsx` 导出的 `rootStore` 只给没有自己 `RootStore` 的代码做同步读取，现在是 `issue-layouts/utils.tsx`，以及 `command-palette.store`、`issue/issue.store` 中只读、不发请求的两处）。填充 stores 的 SWR 键带上会话的 `loginId`，像 `AuthenticationWrapper` 的 `["CURRENT_USER", loginId]` 那样，新的一代取自己的数据 |
+| M3 及以后有 stores 的 M | **stores 按会话分代**（P4 spec 2.8，第 3 节第 16、17 条）：每个会话一个 `RootStore`，它的客户端绑定这个会话。一代 stores 的 services 由这一代的 stores 用这一代的客户端建，经构造函数传入；没有模块级的带令牌客户端，也没有模块级的 service。store 只经自己的 `RootStore` 找兄弟 store（`store-context.tsx` 导出的 `rootStore` 只给没有自己 `RootStore` 的代码做同步读取，现在是 `issue-layouts/utils.tsx`，以及 `command-palette.store`、`issue/issue.store` 中只读、不发请求的两处）。填充 stores 的 SWR 键带上会话的 `loginId`，像 `AuthenticationWrapper` 的 `["CURRENT_USER", loginId]` 那样，新的一代取自己的数据。Plane 的 stores 在沿用的 `router` 上注册的 `reaction`、`autorun`（`cycle_filter`、`module_filter`、`project_filter` 的 `reaction`，`IssueRootStore` 的 `autorun`）不随退役的一代释放：它们只做本地的同步更新，不发请求（旧的客户端在发出前拒绝），代价是每换一次会话留下一代 stores 的内存。这些 stores 接上新接口时，一代退役要释放它注册的反应（例如 `RootStore` 提供释放的方法，由 `store-context.tsx` 在换代时调用） |
 | M3 | `profiles.last_workspace_id` 是否补外键（`ON DELETE SET NULL`）。补的话，迁移归 `identity`（`<v>_identity_profiles_last_workspace_fk.sql`，3.14），版本号大于建 `workspaces` 的迁移 |
 | M3 | `workspace_creation_enabled` 的执行，以及关闭时是否提供创建工作区的命令（3.16） |
 | M3 | **停用的端口**（决策点 3 已裁定为 A）：给停用用例加上它声明的端口并实现，在停用的同一个事务里调用。唯一管理员时拒绝（按 Plane 的本意，修正它查询的缺陷，登记差异），并给 `deactivateMe` 声明对应的错误码；停用成员关系；删除发给这个邮箱的邀请 |
