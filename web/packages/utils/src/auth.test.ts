@@ -13,6 +13,9 @@ import { getPasswordCriteria, getPasswordStrength } from "./auth";
 
 const strong = (length: number) => "Aa1!" + "x".repeat(length - 4);
 
+// The server's special characters (server/internal/modules/identity/domain/password.go, passwordSpecials).
+const specials = `!@#$%^&*()-_+=[]{}|;:'",.<>?/`;
+
 describe("getPasswordStrength", () => {
   it("takes 8 to 128 characters", () => {
     expect(getPasswordStrength(strong(8))).toBe(E_PASSWORD_STRENGTH.STRENGTH_VALID);
@@ -33,6 +36,13 @@ describe("getPasswordStrength", () => {
     expect(getPasswordStrength("aa1!xxxx")).toBe(E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID);
     expect(getPasswordStrength("")).toBe(E_PASSWORD_STRENGTH.EMPTY);
   });
+
+  it("takes each of the server's special characters, and nothing else as one", () => {
+    for (const special of specials)
+      expect(getPasswordStrength(`Aa1${special}xxxx`), special).toBe(E_PASSWORD_STRENGTH.STRENGTH_VALID);
+    for (const other of " ~`\\")
+      expect(getPasswordStrength(`Aa1${other}xxxx`), other).toBe(E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID);
+  });
 });
 
 describe("getPasswordCriteria", () => {
@@ -41,5 +51,11 @@ describe("getPasswordCriteria", () => {
     expect(length(strong(128))).toMatchObject({ label: "8–128 characters", isValid: true });
     expect(length(strong(129))?.isValid).toBe(false);
     expect(length(strong(7))?.isValid).toBe(false);
+  });
+
+  it("shows the special-character rule as met by each of the server's special characters alone", () => {
+    const special = (password: string) => getPasswordCriteria(password).find((c) => c.key === "special")?.isValid;
+    for (const character of specials) expect(special(`a${character}`), character).toBe(true);
+    for (const other of " ~`\\") expect(special(`a${other}`), other).toBe(false);
   });
 });
