@@ -161,11 +161,11 @@ export const substringMatch = (text: string, searchQuery: string): boolean => {
 };
 
 /**
- * @description Copies text to clipboard
+ * @description copies text by selecting it in a textarea and running document.execCommand("copy"). The command
+ * is deprecated, but it is the only copy where navigator.clipboard is undefined: on an origin that is not secure,
+ * such as a server on plain http.
  * @param {string} text - Text to copy
- * @returns {Promise<void>} Promise that resolves when copying is complete
- * @example
- * await copyTextToClipboard("Hello, World!") // copies "Hello, World!" to clipboard
+ * @throws when the copy fails: execCommand throws, or returns false
  */
 const fallbackCopyTextToClipboard = (text: string) => {
   const textArea = document.createElement("textarea");
@@ -177,24 +177,20 @@ const fallbackCopyTextToClipboard = (text: string) => {
   textArea.style.position = "fixed";
 
   document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-
   try {
-    // FIXME: Even though we are using this as a fallback, execCommand is deprecated 👎. We should find a better way to do this.
+    textArea.focus();
+    textArea.select();
     // https://developer.mozilla.org/en-US/docs/Web/API/Document/execCommand
-    document.execCommand("copy");
-  } catch (_err) {
-    // catch fallback error
+    if (!document.execCommand("copy")) throw new Error("The text could not be copied to the clipboard.");
+  } finally {
+    document.body.removeChild(textArea);
   }
-
-  document.body.removeChild(textArea);
 };
 
 /**
  * @description Copies text to clipboard
  * @param {string} text - Text to copy
- * @returns {Promise<void>} Promise that resolves when copying is complete
+ * @returns {Promise<void>} Promise that resolves when copying is complete, and rejects when it fails
  * @example
  * await copyTextToClipboard("Hello, World!") // copies "Hello, World!" to clipboard
  */
