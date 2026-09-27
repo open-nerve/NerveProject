@@ -76,6 +76,56 @@ test("A12 (page): the general page deactivates the account once confirmed; the s
   });
 });
 
+test("A12 (page): a deactivation nerve fails says why; the account and the page's session stay", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const email = emailFor(testInfo);
+  const page = await signedInPage(await registerOnboarded(api, email));
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/general");
+  await expect(page.getByRole("button", { name: "Deactivate account" })).toBeVisible();
+  const before = await accountStateOf(db, email);
+  const held = await recordOf(page);
+  expect(held, "the page's session").not.toBeNull();
+  // nerve fails the deactivation.
+  await page.route("**/api/v0/me/deactivate", (route) =>
+    route.fulfill({
+      status: 500,
+      contentType: "application/problem+json",
+      body: JSON.stringify({
+        type: "about:blank",
+        title: "Internal Server Error",
+        status: 500,
+        code: "internal_error",
+      }),
+    })
+  );
+
+  await page.getByRole("button", { name: "Deactivate account" }).click();
+  const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", () =>
+    page.getByRole("button", { name: "Confirm" }).click()
+  );
+  expect(refused.status()).toBe(500);
+
+  // The toast says why, by the problem's code; the confirmation stays open, to confirm again or cancel; the page
+  // stays signed in, on the general page; nothing changed.
+  await expect(page.getByText("Something went wrong on the server. Please try again.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirm" })).toBeVisible();
+  await expect(page).toHaveURL("/settings/profile/general");
+  expect(await recordOf(page)).toEqual(held);
+  expect(await accountStateOf(db, email)).toEqual(before);
+
+  expect(watch.apiFailures).toEqual(["500 POST /api/v0/me/deactivate"]);
+  expect(watch.oldApiRequests).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"],
+  });
+});
+
 test("A12 (API): a token deactivates the account; nerve users activate brings it and its tokens back, deactivate does as the API did", async ({
   api,
   db,
