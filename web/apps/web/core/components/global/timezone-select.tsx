@@ -17,22 +17,12 @@ type TTimezoneSelect = {
   onChange: (value: string) => void;
   error?: boolean;
   buttonClassName?: string;
-  className?: string;
-  optionsClassName?: string;
   disabled?: boolean;
 };
 
 export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneSelect) {
   // props
-  const {
-    value,
-    onChange,
-    error = false,
-    buttonClassName = "",
-    className = "",
-    optionsClassName = "",
-    disabled = false,
-  } = props;
+  const { value, onChange, error = false, buttonClassName = "", disabled = false } = props;
   // hooks
   const { disabled: isDisabled, timezones, selectedValue } = useTimezone();
   const { t } = useTranslation();
@@ -47,8 +37,8 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
         buttonClassName={cn(buttonClassName, "border border-subtle-1", {
           "border-danger-strong": error,
         })}
-        className={cn("rounded-md", className)}
-        optionsClassName={cn("w-72", optionsClassName)}
+        className="rounded-md"
+        optionsClassName="w-72"
         input
         disabled={isDisabled || disabled}
         placement="bottom-end"
