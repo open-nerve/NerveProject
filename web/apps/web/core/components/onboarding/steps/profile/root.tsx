@@ -7,9 +7,9 @@
 import { observer } from "mobx-react";
 import { Controller, useForm } from "react-hook-form";
 // nerve imports
+import type { UserUpdate } from "@nerve/api-client";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IUser } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
 import { cn, getFileURL, validatePersonName } from "@nerve/utils";
 // hooks
@@ -43,26 +43,28 @@ export const ProfileSetupStep = observer(function ProfileSetupStep({ handleStepC
     mode: "onChange",
   });
 
-  const handleSubmitUserDetail = async (formData: TProfileSetupFormValues) => {
-    const userDetailsPayload: Partial<IUser> = {
+  /** Saves the names; false when nerve did not, so the step stays (M2 design 7.1: nor for another account). */
+  const handleSubmitUserDetail = async (formData: TProfileSetupFormValues): Promise<boolean> => {
+    const userDetailsPayload: UserUpdate = {
       first_name: formData.first_name,
       last_name: formData.last_name,
     };
     try {
       await updateCurrentUser(userDetailsPayload);
+      return true;
     } catch {
       setToast({
         type: TOAST_TYPE.ERROR,
         title: "Error",
         message: "User details update failed. Please try again!",
       });
+      return false;
     }
   };
 
   const onSubmit = async (formData: TProfileSetupFormValues) => {
     if (!user) return;
-    await handleSubmitUserDetail(formData);
-    handleStepChange(EOnboardingSteps.PROFILE_SETUP);
+    if (await handleSubmitUserDetail(formData)) handleStepChange(EOnboardingSteps.PROFILE_SETUP);
   };
 
   const isButtonDisabled = isSubmitting || !isValid;

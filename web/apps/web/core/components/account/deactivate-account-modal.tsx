@@ -13,7 +13,6 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
 
 type Props = {
   isOpen: boolean;
@@ -21,11 +20,10 @@ type Props = {
 };
 
 export function DeactivateAccountModal(props: Props) {
-  const navigate = useNavigate();
   const { isOpen, onClose } = props;
   // hooks
   const { t } = useTranslation();
-  const { deactivateAccount, signOut } = useUser();
+  const { deactivateAccount } = useUser();
 
   // states
   const [isDeactivating, setIsDeactivating] = useState(false);
@@ -45,8 +43,6 @@ export function DeactivateAccountModal(props: Props) {
           title: "Success!",
           message: "Account deactivated successfully.",
         });
-        signOut();
-        navigate("/");
         handleClose();
         return;
       })

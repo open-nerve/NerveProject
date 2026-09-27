@@ -14,7 +14,6 @@ import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
 import { useUser } from "@/hooks/store/user";
-import { useNavigate } from "react-router";
 
 type Props = {
   isOpen: boolean;
@@ -25,8 +24,6 @@ export function SwitchAccountModal(props: Props) {
   const { isOpen, onClose } = props;
   // states
   const [switchingAccount, setSwitchingAccount] = useState(false);
-  // router
-  const navigate = useNavigate();
   // store hooks
   const { data: userData, signOut } = useUser();
 
@@ -43,7 +40,6 @@ export function SwitchAccountModal(props: Props) {
     await signOut()
       .then(() => {
         setTheme("system");
-        navigate("/");
         handleClose();
       })
       .catch(() =>

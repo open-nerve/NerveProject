@@ -4,17 +4,19 @@
  * See the LICENSE file for details.
  */
 
-import { cloneDeep, set } from "lodash-es";
 import { action, makeObservable, observable, runInAction, computed } from "mobx";
 // nerve imports
+import type { ChangePasswordRequest, User, UserUpdate } from "@nerve/api-client";
 import { EUserPermissions } from "@nerve/constants";
-import type { IUser, TUserPermissions } from "@nerve/types";
+import type { TUserPermissions } from "@nerve/types";
+// lib
+import { tokenManager } from "@/lib/auth/api-client";
+import { SessionChangedError } from "@/lib/auth/token-manager";
 // store
 import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
 import { UserPermissionStore } from "@/store/user/permissions.store";
 // services
-import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";
 // stores
 import type { IUserProfileStore } from "@/store/user/profile.store";
@@ -23,30 +25,19 @@ import { ProfileStore } from "@/store/user/profile.store";
 import type { IUserSettingsStore } from "./settings.store";
 import { UserSettingsStore } from "./settings.store";
 
-type TUserErrorStatus = {
-  status: string;
-  message: string;
-};
-
 export interface IUserStore {
   // observables
-  isAuthenticated: boolean;
   isLoading: boolean;
-  error: TUserErrorStatus | undefined;
-  data: IUser | undefined;
+  data: User | undefined;
   // store observables
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
   // actions
-  fetchCurrentUser: () => Promise<IUser | undefined>;
-  updateCurrentUser: (data: Partial<IUser>) => Promise<IUser | undefined>;
+  fetchCurrentUser: () => Promise<User | undefined>;
+  updateCurrentUser: (data: UserUpdate) => Promise<User>;
   deactivateAccount: () => Promise<void>;
-  changePassword: (
-    csrfToken: string,
-    payload: { old_password: string; new_password: string }
-  ) => Promise<IUser | undefined>;
-  reset: () => void;
+  changePassword: (payload: ChangePasswordRequest) => Promise<void>;
   signOut: () => Promise<void>;
   // computed
   canPerformAnyCreateAction: boolean;
@@ -55,17 +46,14 @@ export interface IUserStore {
 
 export class UserStore implements IUserStore {
   // observables
-  isAuthenticated: boolean = false;
   isLoading: boolean = false;
-  error: TUserErrorStatus | undefined = undefined;
-  data: IUser | undefined = undefined;
+  data: User | undefined = undefined;
   // store observables
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
   // service
   userService: UserService;
-  authService: AuthService;
 
   constructor(private store: RootStore) {
     // stores
@@ -74,13 +62,10 @@ export class UserStore implements IUserStore {
     this.permission = new UserPermissionStore(store);
     // service
     this.userService = new UserService();
-    this.authService = new AuthService();
     // observables
     makeObservable(this, {
       // observables
-      isAuthenticated: observable.ref,
       isLoading: observable.ref,
-      error: observable,
       // model observables
       data: observable,
       userProfile: observable,
@@ -91,7 +76,6 @@ export class UserStore implements IUserStore {
       updateCurrentUser: action,
       deactivateAccount: action,
       changePassword: action,
-      reset: action,
       signOut: action,
       // computed
       canPerformAnyCreateAction: computed,
@@ -100,136 +84,67 @@ export class UserStore implements IUserStore {
   }
 
   /**
-   * @description fetches the current user
-   * @returns {Promise<IUser>}
+   * @description fetches the account and its profile, once the session is decided: without one it asks
+   * nerve nothing (M2 design 7.1). The workspaces come with M3 (M2 design 3.1). A change of session while
+   * they load is no failure: the stores start again with the new session (store-context.tsx).
+   * @returns {Promise<User | undefined>}
    */
-  fetchCurrentUser = async (): Promise<IUser> => {
+  fetchCurrentUser = async (): Promise<User | undefined> => {
+    await tokenManager.start();
+    if (tokenManager.state.status !== "signed-in") return undefined;
+    runInAction(() => {
+      this.isLoading = true;
+    });
     try {
+      const [user] = await Promise.all([this.userService.currentUser(), this.userProfile.fetchUserProfile()]);
       runInAction(() => {
-        this.isLoading = true;
-        this.error = undefined;
+        this.data = user;
       });
-      const user = await this.userService.currentUser();
-      if (user && user?.id) {
-        await Promise.all([
-          this.userProfile.fetchUserProfile(),
-          this.userSettings.fetchCurrentUserSettings(),
-          this.store.workspaceRoot.fetchWorkspaces(),
-        ]);
-        runInAction(() => {
-          this.data = user;
-          this.isLoading = false;
-          this.isAuthenticated = true;
-        });
-      } else
-        runInAction(() => {
-          this.data = user;
-          this.isLoading = false;
-          this.isAuthenticated = false;
-        });
       return user;
     } catch (error) {
+      if (error instanceof SessionChangedError) return undefined;
+      throw error;
+    } finally {
       runInAction(() => {
         this.isLoading = false;
-        this.isAuthenticated = false;
-        this.error = {
-          status: "user-fetch-error",
-          message: "Failed to fetch current user",
-        };
       });
-      throw error;
     }
   };
 
   /**
-   * @description updates the current user
-   * @param data
-   * @returns {Promise<IUser>}
+   * @description updates the account's names or time zone
+   * @returns {Promise<User>}
    */
-  updateCurrentUser = async (data: Partial<IUser>): Promise<IUser> => {
-    const currentUserData = cloneDeep(this.data);
-    try {
-      if (currentUserData) {
-        Object.keys(data).forEach((key: string) => {
-          const userKey: keyof IUser = key as keyof IUser;
-          if (this.data) set(this.data, userKey, data[userKey]);
-        });
-      }
-      const user = await this.userService.updateUser(data);
-      if (user && this.data) {
-        runInAction(() => {
-          Object.keys(user).forEach((key: string) => {
-            const userKey: keyof IUser = key as keyof IUser;
-            if (this.data) set(this.data, userKey, user[userKey]);
-          });
-        });
-      }
-      return user;
-    } catch (error) {
-      if (currentUserData) {
-        Object.keys(currentUserData).forEach((key: string) => {
-          const userKey: keyof IUser = key as keyof IUser;
-          if (this.data) set(this.data, userKey, currentUserData[userKey]);
-        });
-      }
-      runInAction(() => {
-        this.error = {
-          status: "user-update-error",
-          message: "Failed to update current user",
-        };
-      });
-      throw error;
-    }
+  updateCurrentUser = async (data: UserUpdate): Promise<User> => {
+    const user = await this.userService.updateCurrentUser(data);
+    runInAction(() => {
+      this.data = user;
+    });
+    return user;
   };
 
-  changePassword = async (
-    csrfToken: string,
-    payload: {
-      old_password: string;
-      new_password: string;
-    }
-  ): Promise<IUser | undefined> => {
-    try {
-      const user = await this.userService.changePassword(csrfToken, payload);
-      return user;
-    } catch (error) {
-      console.log(error);
-      throw error;
-    }
+  changePassword = async (payload: ChangePasswordRequest): Promise<void> => {
+    await this.userService.changePassword(payload);
   };
 
   /**
-   * @description deactivates the current user
+   * @description deactivates the account; nerve ends all its sessions, and this browser forgets its own:
+   * the session the account was deactivated in, read before the request, since the tab may follow another
+   * tab's sign-in while the request is out
    * @returns {Promise<void>}
    */
   deactivateAccount = async (): Promise<void> => {
-    await this.userService.deactivateAccount();
-    this.store.resetOnSignOut();
+    const loginId = tokenManager.state.loginId;
+    await this.userService.deactivate();
+    await tokenManager.endSession(loginId);
   };
 
   /**
-   * @description resets the user store
-   * @returns {void}
-   */
-  reset = (): void => {
-    runInAction(() => {
-      this.isAuthenticated = false;
-      this.isLoading = false;
-      this.error = undefined;
-      this.data = undefined;
-      this.userProfile = new ProfileStore(this.store);
-      this.userSettings = new UserSettingsStore();
-      this.permission = new UserPermissionStore(this.store);
-    });
-  };
-
-  /**
-   * @description signs out the current user
+   * @description signs out this browser's session; the stores start again when the session ends
    * @returns {Promise<void>}
    */
   signOut = async (): Promise<void> => {
-    await this.authService.signOut();
-    this.store.resetOnSignOut();
+    await tokenManager.signOut();
   };
 
   // helper actions

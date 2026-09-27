@@ -6,6 +6,8 @@
 
 import type { ReactElement } from "react";
 import { createContext } from "react";
+// lib
+import { tokenManager } from "@/lib/auth/api-client";
 // store
 import { RootStore } from "@/store/root.store";
 
@@ -21,6 +23,16 @@ const initializeStore = () => {
 };
 
 export const store = initializeStore();
+
+// A tab that signs out, or follows another tab's sign-in as another account, starts again with new stores
+// (M2 design 7.1): nothing of the account it showed stays on screen. A sign-in after a sign-out finds them
+// new already.
+let loginId = tokenManager.state.loginId;
+tokenManager.subscribe(() => {
+  const next = tokenManager.state.loginId;
+  if (loginId !== undefined && next !== loginId) store.resetOnSignOut();
+  loginId = next;
+});
 
 export function StoreProvider({ children }: { children: ReactElement }) {
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;

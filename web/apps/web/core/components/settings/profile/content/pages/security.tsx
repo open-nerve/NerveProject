@@ -23,8 +23,6 @@ import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 import { authErrorHandler, EAuthenticationErrorCodes, passwordErrors } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
-// services
-import { AuthService } from "@/services/auth.service";
 
 export interface FormValues {
   old_password: string;
@@ -37,8 +35,6 @@ const defaultValues: FormValues = {
   new_password: "",
   confirm_password: "",
 };
-
-const authService = new AuthService();
 
 const defaultShowPassword = {
   oldPassword: false,
@@ -78,10 +74,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   const handleChangePassword = async (formData: FormValues) => {
     const { old_password, new_password } = formData;
     try {
-      const csrfToken = await authService.requestCSRFToken().then((data) => data?.csrf_token);
-      if (!csrfToken) throw new Error("csrf token not found");
-
-      await changePassword(csrfToken, { old_password, new_password });
+      await changePassword({ current_password: old_password, new_password });
 
       reset(defaultValues);
       setShowPassword(defaultShowPassword);

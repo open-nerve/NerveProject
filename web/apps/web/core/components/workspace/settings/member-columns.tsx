@@ -14,7 +14,8 @@ import { ROLE, EUserPermissions, EUserPermissionsLevel } from "@nerve/constants"
 import { DeactivatedUserOutline, DeleteOutline } from "@makeplane/propel/icons";
 import { Pill, EPillVariant, EPillSize } from "@nerve/propel/pill";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IUser, IWorkspaceMember } from "@nerve/types";
+import type { User } from "@nerve/api-client";
+import type { IWorkspaceMember } from "@nerve/types";
 // nerve ui
 import { CustomSelect, PopoverMenu } from "@nerve/ui";
 // helpers
@@ -33,7 +34,7 @@ type NameProps = {
   rowData: RowData;
   workspaceSlug: string;
   isAdmin: boolean;
-  currentUser: IUser | undefined;
+  currentUser: User | undefined;
   setRemoveMemberModal: (rowData: RowData) => void;
 };
 

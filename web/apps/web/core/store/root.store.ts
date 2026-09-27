@@ -109,13 +109,17 @@ export class RootStore {
     this.powerK = new PowerKStore();
   }
 
+  /**
+   * Forgets the account's data when the session ends or changes to another account, while the page stays
+   * (M2 design 7.1). The instance's information and the address's parameters are not the account's: the
+   * page goes on with them, and nothing would fetch or set them again until the next page load or
+   * navigation.
+   */
   resetOnSignOut() {
     // handling the system theme when user logged out from the app
     localStorage.setItem("theme", "system");
     void setLanguage(FALLBACK_LANGUAGE);
-    this.router = new RouterStore();
     this.commandPalette = new CommandPaletteStore();
-    this.instance = new InstanceStore();
     this.user = new UserStore(this);
     this.workspaceRoot = new WorkspaceRootStore(this);
     this.projectRoot = new ProjectRootStore(this);

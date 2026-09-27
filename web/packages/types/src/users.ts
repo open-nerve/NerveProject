@@ -30,23 +30,6 @@ export interface IUserLite {
   last_name: string;
   joining_date?: string;
 }
-export interface IUser extends IUserLite {
-  // only for uploading the cover image
-  cover_image_asset?: string | null;
-  cover_image?: string | null;
-  // only for rendering the cover image
-  cover_image_url: string | null;
-  date_joined: string;
-  email: string;
-  is_active: boolean;
-  is_email_verified: boolean;
-  is_tour_completed: boolean;
-  mobile_number: string | null;
-  last_workspace_id: string;
-  user_timezone: string;
-  username: string;
-  theme: IUserTheme;
-}
 
 export type TUserProfile = {
   id: string | undefined;

@@ -13,7 +13,8 @@ import { ORGANIZATION_SIZE, RESTRICTED_URLS } from "@nerve/constants";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IUser, IWorkspace } from "@nerve/types";
+import type { User } from "@nerve/api-client";
+import type { IWorkspace } from "@nerve/types";
 import { Spinner } from "@nerve/ui";
 import { cn, validateWorkspaceName, validateSlug } from "@nerve/utils";
 // hooks
@@ -26,7 +27,7 @@ import { WorkspaceService } from "@/services/workspace.service";
 import { CommonOnboardingHeader } from "../common";
 
 type Props = {
-  user: IUser | undefined;
+  user: User | undefined;
   onComplete: (skipInvites?: boolean) => void;
   handleCurrentViewChange: () => void;
   hasInvitations?: boolean;

@@ -11,31 +11,23 @@ import { UserOutline } from "@makeplane/propel/icons";
 // nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
+import type { User, UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { TOAST_TYPE, setPromiseToast, setToast } from "@nerve/propel/toast";
-import { EFileAssetType } from "@nerve/types";
-import type { IUser, TUserProfile } from "@nerve/types";
+import { setPromiseToast } from "@nerve/propel/toast";
+import type { TUserProfile } from "@nerve/types";
 
 import { getFileURL } from "@nerve/utils";
 // components
 import { DeactivateAccountModal } from "@/components/account/deactivate-account-modal";
-import { ImagePickerPopover } from "@/components/core/image-picker-popover";
-import { UserImageUploadModal } from "@/components/core/modals/user-image-upload-modal";
 import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
-// helpers
-import { handleCoverImageChange } from "@/helpers/cover-image.helper";
 // hooks
 import { useUser, useUserProfile } from "@/hooks/store/user";
 // utils
 import { validatePersonName, validateDisplayName } from "@nerve/utils";
 
 type TUserProfileForm = {
-  avatar_url: string;
-  cover_image: string;
-  cover_image_asset: any;
-  cover_image_url: string;
   first_name: string;
   last_name: string;
   display_name: string;
@@ -46,7 +38,7 @@ type TUserProfileForm = {
 };
 
 type Props = {
-  user: IUser;
+  user: User;
   profile: TUserProfile;
 };
 
@@ -54,7 +46,6 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   const { user, profile } = props;
   // states
   const [isLoading, setIsLoading] = useState(false);
-  const [isImageUploadModalOpen, setIsImageUploadModalOpen] = useState(false);
   const [deactivateAccountModal, setDeactivateAccountModal] = useState(false);
   // language support
   const { t } = useTranslation();
@@ -63,13 +54,9 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
     handleSubmit,
     watch,
     control,
-    setValue,
     formState: { errors },
   } = useForm<TUserProfileForm>({
     defaultValues: {
-      avatar_url: user.avatar_url || "",
-      cover_image_asset: null,
-      cover_image_url: user.cover_image_url || "",
       first_name: user.first_name || "",
       last_name: user.last_name || "",
       display_name: user.display_name || "",
@@ -79,75 +66,24 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       user_timezone: user.user_timezone || "Asia/Kolkata",
     },
   });
-  // derived values
-  const userAvatar = watch("avatar_url");
-  const userCover = watch("cover_image_url");
   // store hooks
   const { data: currentUser, updateCurrentUser } = useUser();
   const { updateUserProfile } = useUserProfile();
 
-  const handleProfilePictureDelete = async (url: string | null | undefined) => {
-    if (!url) return;
-    await updateCurrentUser({
-      avatar_url: "",
-    })
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Profile picture deleted successfully.",
-        });
-        setValue("avatar_url", "");
-        return;
-      })
-      .catch(() => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "There was some error in deleting your profile picture. Please try again.",
-        });
-      })
-      .finally(() => {
-        setIsImageUploadModalOpen(false);
-      });
-  };
-
   const onSubmit = async (formData: TUserProfileForm) => {
     setIsLoading(true);
-    const userPayload: Partial<IUser> = {
+    const userPayload: UserUpdate = {
       first_name: formData.first_name,
       last_name: formData.last_name,
-      avatar_url: formData.avatar_url,
       display_name: formData?.display_name,
     };
-
-    try {
-      const coverImagePayload = await handleCoverImageChange(user.cover_image_url, formData.cover_image_url, {
-        entityIdentifier: "",
-        entityType: EFileAssetType.USER_COVER,
-        isUserAsset: true,
-      });
-
-      if (coverImagePayload) {
-        Object.assign(userPayload, coverImagePayload);
-      }
-    } catch (error) {
-      console.error("Error handling cover image:", error);
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: t("toast.error"),
-        message: error instanceof Error ? error.message : "Failed to process cover image",
-      });
-      setIsLoading(false);
-      return;
-    }
 
     const profilePayload: Partial<TUserProfile> = {
       role: formData.role,
     };
 
     const updateCurrentUserDetail = updateCurrentUser(userPayload);
-    const promises: Promise<IUser | TUserProfile | undefined>[] = [updateCurrentUserDetail];
+    const promises: Promise<User | TUserProfile | undefined>[] = [updateCurrentUserDetail];
     if (profilePayload.role !== profile.role) {
       const updateCurrentUserProfile = updateUserProfile(profilePayload);
       promises.push(updateCurrentUserProfile);
@@ -162,7 +98,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
           throw rejectedResult.reason ?? new Error("Failed to update profile");
         }
         const values = results.map(
-          (result) => (result as PromiseFulfilledResult<IUser | TUserProfile | undefined>).value
+          (result) => (result as PromiseFulfilledResult<User | TUserProfile | undefined>).value
         );
         if (values.some((v) => v === undefined)) {
           throw new Error("Failed to update profile");
@@ -187,67 +123,33 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
   return (
     <>
       <DeactivateAccountModal isOpen={deactivateAccountModal} onClose={() => setDeactivateAccountModal(false)} />
-      <Controller
-        control={control}
-        name="avatar_url"
-        render={({ field: { onChange, value } }) => (
-          <UserImageUploadModal
-            isOpen={isImageUploadModalOpen}
-            onClose={() => setIsImageUploadModalOpen(false)}
-            handleRemove={async () => await handleProfilePictureDelete(currentUser?.avatar_url)}
-            onSuccess={(url) => {
-              onChange(url);
-              handleSubmit(onSubmit)();
-              setIsImageUploadModalOpen(false);
-            }}
-            value={value && value.trim() !== "" ? value : null}
-          />
-        )}
-      />
       <form onSubmit={handleSubmit(onSubmit)} className="w-full">
         <div className="flex w-full flex-col gap-7">
+          {/* The picture and the cover are shown, not uploaded, until the file storage (M5, M2 design 3.2) */}
           <div className="relative h-44 w-full">
             <CoverImage
-              src={userCover}
+              src={user.cover_image_url ?? undefined}
               className="h-44 w-full rounded-lg"
               alt={currentUser?.first_name ?? "Cover image"}
             />
             <div className="absolute -bottom-6 left-6 flex items-end justify-between">
               <div className="flex gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-surface-2">
-                  <button type="button" onClick={() => setIsImageUploadModalOpen(true)}>
-                    {!userAvatar || userAvatar === "" ? (
-                      <div className="h-16 w-16 rounded-md bg-layer-1 p-2">
-                        <UserOutline className="h-full w-full text-secondary" />
-                      </div>
-                    ) : (
-                      <div className="relative h-16 w-16 overflow-hidden">
-                        <img
-                          src={getFileURL(userAvatar)}
-                          className="absolute top-0 left-0 h-full w-full rounded-lg object-cover"
-                          onClick={() => setIsImageUploadModalOpen(true)}
-                          alt={currentUser?.display_name}
-                          role="button"
-                        />
-                      </div>
-                    )}
-                  </button>
+                  {user.avatar_url ? (
+                    <div className="relative h-16 w-16 overflow-hidden">
+                      <img
+                        src={getFileURL(user.avatar_url)}
+                        className="absolute top-0 left-0 h-full w-full rounded-lg object-cover"
+                        alt={currentUser?.display_name}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-16 w-16 rounded-md bg-layer-1 p-2">
+                      <UserOutline className="h-full w-full text-secondary" />
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-            <div className="absolute right-3 bottom-3 flex">
-              <Controller
-                control={control}
-                name="cover_image_url"
-                render={({ field: { value, onChange } }) => (
-                  <ImagePickerPopover
-                    label={t("change_cover")}
-                    onChange={(imageUrl) => onChange(imageUrl)}
-                    value={value}
-                    isProfileCover
-                  />
-                )}
-              />
             </div>
           </div>
           <div className="item-center mt-6 flex justify-between">

@@ -5,17 +5,27 @@
  */
 
 // services
-import type { IUser, IUserSettings, TIssuesResponse, TUserProfile } from "@nerve/types";
+import type { ChangePasswordRequest, User, UserUpdate } from "@nerve/api-client";
+import type { IUserSettings, TIssuesResponse, TUserProfile } from "@nerve/types";
+import { unwrap } from "@/lib/api-error";
+import { api } from "@/lib/auth/api-client";
 import { APIService } from "@/services/api.service";
 
 export class UserService extends APIService {
-  async currentUser(): Promise<IUser> {
-    // Using validateStatus: null to bypass interceptors for unauthorized errors.
-    return this.get("/api/users/me/", { validateStatus: null })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response;
-      });
+  async currentUser(): Promise<User> {
+    return unwrap(await api.GET("/api/v0/me"));
+  }
+
+  async updateCurrentUser(data: UserUpdate): Promise<User> {
+    return unwrap(await api.PATCH("/api/v0/me", { body: data }));
+  }
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    unwrap(await api.POST("/api/v0/me/change-password", { body: data }));
+  }
+
+  async deactivate(): Promise<void> {
+    unwrap(await api.POST("/api/v0/me/deactivate"));
   }
 
   async getCurrentUserProfile(): Promise<TUserProfile> {
@@ -42,14 +52,6 @@ export class UserService extends APIService {
       });
   }
 
-  async updateUser(data: Partial<IUser>): Promise<any> {
-    return this.patch("/api/users/me/", data)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async updateUserOnBoard(): Promise<any> {
     return this.patch("/api/users/me/onboard/", {
       is_onboarded: true,
@@ -70,18 +72,6 @@ export class UserService extends APIService {
       });
   }
 
-  async changePassword(token: string, data: { old_password: string; new_password: string }): Promise<any> {
-    return this.post(`/auth/change-password/`, data, {
-      headers: {
-        "X-CSRFTOKEN": token,
-      },
-    })
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
   async getUserProfileIssues(
     workspaceSlug: string,
     userId: string,
@@ -95,14 +85,6 @@ export class UserService extends APIService {
       },
       config
     )
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
-  }
-
-  async deactivateAccount() {
-    return this.delete(`/api/users/me/`)
       .then((response) => response?.data)
       .catch((error) => {
         throw error?.response?.data;
