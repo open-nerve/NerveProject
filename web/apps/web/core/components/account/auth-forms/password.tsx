@@ -22,6 +22,7 @@ import { checkEmailValidity, getPasswordStrength } from "@nerve/utils";
 import { EAuthModes, errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 
 type Props = {
   mode: EAuthModes;
@@ -51,6 +52,7 @@ const NERVE_FIELDS = ["email", "password"];
 export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props) {
   const { mode } = props;
   const { t } = useTranslation();
+  const passwordStrengthLabels = usePasswordStrengthLabels();
   const { signIn, signUp } = useUser();
   // ref
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -219,11 +221,9 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
             </InputGroup>
           </Field>
           {fieldErrors.password && <p className="px-0.5 text-11 text-danger-primary">{t(fieldErrors.password)}</p>}
-          {mode === EAuthModes.SIGN_UP &&
-            password.length > 0 &&
-            getPasswordStrength(password) !== E_PASSWORD_STRENGTH.STRENGTH_VALID && (
-              <PasswordStrengthIndicator password={password} />
-            )}
+          {mode === EAuthModes.SIGN_UP && (
+            <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
+          )}
         </div>
 
         {mode === EAuthModes.SIGN_UP && (

@@ -39,9 +39,11 @@ export const getPasswordStrength = (password: string): E_PASSWORD_STRENGTH => {
   return E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID;
 };
 
+/** The password rules, in the order they are shown; the caller gives each its text. */
+export type TPasswordCriterionKey = "length" | "uppercase" | "lowercase" | "number" | "special";
+
 type PasswordCriteria = {
-  key: string;
-  label: string;
+  key: TPasswordCriterionKey;
   isValid: boolean;
 };
 
@@ -51,27 +53,22 @@ type PasswordCriteria = {
 export const getPasswordCriteria = (password: string): PasswordCriteria[] => [
   {
     key: "length",
-    label: "8–128 characters",
     isValid: isLengthValid(password),
   },
   {
     key: "uppercase",
-    label: "Min 1 upper-case letter",
     isValid: /[A-Z]/.test(password),
   },
   {
     key: "lowercase",
-    label: "Min 1 lower-case letter",
     isValid: /[a-z]/.test(password),
   },
   {
     key: "number",
-    label: "Min 1 number",
     isValid: /[0-9]/.test(password),
   },
   {
     key: "special",
-    label: "Min 1 special character",
     isValid: /[!@#$%^&*()\-_+=[\]{}|;:'",.<>?/]/.test(password),
   },
 ];

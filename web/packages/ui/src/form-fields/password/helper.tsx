@@ -6,46 +6,30 @@
 
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 
+/** The strengths the indicator shows: the password is not empty and not yet valid. */
+export type TShownPasswordStrength = E_PASSWORD_STRENGTH.LENGTH_NOT_VALID | E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID;
+
+type TActiveFragments = 1 | 2;
+
 interface StrengthInfo {
-  message: string;
   textColor: string;
-  activeFragments: number;
+  activeFragments: TActiveFragments;
 }
 
 /**
- * Get strength information including message, color, and active fragments
+ * Get the message's color and the number of active fragments of a shown strength
  */
-export const getStrengthInfo = (strength: E_PASSWORD_STRENGTH): StrengthInfo => {
+export const getStrengthInfo = (strength: TShownPasswordStrength): StrengthInfo => {
   switch (strength) {
-    case E_PASSWORD_STRENGTH.EMPTY:
-      return {
-        message: "Please enter your password",
-        textColor: "text-primary",
-        activeFragments: 0,
-      };
     case E_PASSWORD_STRENGTH.LENGTH_NOT_VALID:
       return {
-        message: "Password must be 8–128 characters",
         textColor: "text-danger-primary",
         activeFragments: 1,
       };
     case E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID:
       return {
-        message: "Password is weak",
         textColor: "text-orange-500",
         activeFragments: 2,
-      };
-    case E_PASSWORD_STRENGTH.STRENGTH_VALID:
-      return {
-        message: "Password is strong",
-        textColor: "text-success-primary",
-        activeFragments: 3,
-      };
-    default:
-      return {
-        message: "Please enter your password",
-        textColor: "text-primary",
-        activeFragments: 0,
       };
   }
 };
@@ -53,7 +37,7 @@ export const getStrengthInfo = (strength: E_PASSWORD_STRENGTH): StrengthInfo => 
 /**
  * Get fragment color based on position and active state
  */
-export const getFragmentColor = (fragmentIndex: number, activeFragments: number): string => {
+export const getFragmentColor = (fragmentIndex: number, activeFragments: TActiveFragments): string => {
   if (fragmentIndex >= activeFragments) {
     return "bg-layer-1";
   }
@@ -63,9 +47,5 @@ export const getFragmentColor = (fragmentIndex: number, activeFragments: number)
       return "bg-danger-primary";
     case 2:
       return "bg-orange-500";
-    case 3:
-      return "bg-success-primary";
-    default:
-      return "bg-layer-1";
   }
 };

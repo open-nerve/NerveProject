@@ -46,9 +46,25 @@ describe("getPasswordStrength", () => {
 });
 
 describe("getPasswordCriteria", () => {
+  it("keys each rule, in the order shown; a character of one class meets that class's rule alone", () => {
+    const met = (password: string) => getPasswordCriteria(password).flatMap((c) => (c.isValid ? [c.key] : []));
+    expect(getPasswordCriteria("").map((c) => c.key)).toEqual([
+      "length",
+      "uppercase",
+      "lowercase",
+      "number",
+      "special",
+    ]);
+    expect(met("A")).toEqual(["uppercase"]);
+    expect(met("a")).toEqual(["lowercase"]);
+    expect(met("1")).toEqual(["number"]);
+    expect(met("!")).toEqual(["special"]);
+    expect(met(" ".repeat(8))).toEqual(["length"]);
+  });
+
   it("shows the length rule as unmet above 128 characters", () => {
     const length = (password: string) => getPasswordCriteria(password).find((c) => c.key === "length");
-    expect(length(strong(128))).toMatchObject({ label: "8–128 characters", isValid: true });
+    expect(length(strong(128))?.isValid).toBe(true);
     expect(length(strong(129))?.isValid).toBe(false);
     expect(length(strong(7))?.isValid).toBe(false);
   });

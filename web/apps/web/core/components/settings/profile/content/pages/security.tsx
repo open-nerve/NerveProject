@@ -24,6 +24,7 @@ import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 import { errorMessageKey, fieldErrorKeys } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 // lib
 import { ApiError } from "@/lib/api-error";
 
@@ -68,6 +69,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   const confirmPassword = watch("confirm_password");
   // i18n
   const { t } = useTranslation();
+  const passwordStrengthLabels = usePasswordStrengthLabels();
 
   const isNewPasswordSameAsOldPassword = oldPassword !== "" && password !== "" && password === oldPassword;
 
@@ -112,11 +114,6 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
     confirmPassword.trim() === "" ||
     password !== confirmPassword ||
     password === oldPassword;
-
-  const passwordSupport = password.length > 0 &&
-    getPasswordStrength(password) != E_PASSWORD_STRENGTH.STRENGTH_VALID && (
-      <PasswordStrengthIndicator password={password} />
-    );
 
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
 
@@ -210,7 +207,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                   </Field>
                 )}
               />
-              {passwordSupport}
+              <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
               {errors.new_password && (
                 <span className="text-11 text-danger-primary">{errors.new_password.message}</span>
               )}
