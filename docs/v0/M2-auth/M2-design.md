@@ -1407,8 +1407,10 @@ files:
   - 创建（名称、说明、有效期：1 周、1 个月、3 个月、1 年、自定义日期、永不过期）；
   - 创建后令牌只显示一次，同时下载 CSV（照搬现有行为）；
   - 列表、撤销。列表显示创建时间和最后使用时间，便于认出不认识的令牌（8.5）。
-- **主题下拉框**（M1-closeout 交接）：界面语言为 zh-CN 时，主题下拉框画在页面左上角。
-  - P5 查明 `web/packages/ui/src/dropdowns/custom-select.tsx` 中 react-popper 定位加 `createPortal` 的根因，在组件里修复，不在调用处打补丁。
+- **主题下拉框**（M1-closeout 交接）：主题下拉框画在页面左上角。交接写的是 zh-CN，P5 查明与界面语言无关，英文下一样。
+  - **根因**（P5 spec 2.3）：Headless UI 2.2 的 `Combobox.Options` 克隆它唯一的子元素时换上自己的 ref。react-popper 的 ref 放在这个子元素上，从未被设置，列表停在 `createPortal` 挂载处的左上角。
+  - **修法**：在组件里修，不在调用处打补丁。popper 的 ref、样式、属性放在 `Combobox.Options` 本身，组件自己的打开状态跟随 Headless UI 的关闭（`onClose`）。
+  - **范围**：P5 页面上的三个组件都修，即 `CustomSelect`、`CustomSearchSelect`、`DateDropdown`。同样写法的其余 12 处在 M3–M6 的页面上（13.2）。
   - 浏览器核对中英文各一次。
 
 ### 7.8 约束 M2 的 M1 收尾规则
@@ -2079,7 +2081,7 @@ files:
 | 接收 | 事项 |
 |---|---|
 | M3 | **邀请**（负责人确认的产品改动）：邮箱未经验证期间，接受邀请不能只靠邮箱匹配，要凭邀请链接中的令牌（M1 设计 3.15 留下的路径）；关闭注册时，持有有效邀请的人仍可注册。后者由 M3 扩展 `SignupPolicy` 的实现和注册请求（加上邀请令牌），不另加端口（评审 M16）。这改变总体设计 1.1"系统内接受邀请"和 4.2"被邀请的邮箱始终可以注册"的做法，由 M3 的设计交负责人确认。prod 默认关闭注册（决策点 2）不能代替接受邀请时的身份证明。参考：Plane 把任何未删除的工作区邀请都算上（`plane/apps/api/plane/authentication/adapter/base.py:102-120`）。签发邀请令牌按 3.5 的账户行锁 |
-| M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()` 的 Promise：原来的 fetcher（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`，M2 随预取一起删掉）没有，失败会成为未处理的 Promise 拒绝。被调用的 `fetchWorkspaces` 本身在 `web/apps/web/core/store/workspace/index.ts:146-158`。同样的缺陷还留在 `web/apps/web/app/(all)/invitations/page.tsx:88`：加入工作区之后的 `fetchWorkspaces().then(…)` 没有返回它的 Promise，也没有处理拒绝（P4 Task 8 的裁定留给 M3），M3 对接邀请时一并改 |
+| M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()` 的 Promise：原来的 fetcher（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`，M2 随预取一起删掉）没有，失败会成为未处理的 Promise 拒绝。被调用的 `fetchWorkspaces` 本身在 `web/apps/web/core/store/workspace/index.ts:146-158`。`web/apps/web/app/(all)/invitations/page.tsx` 中加入工作区之后的 `fetchWorkspaces()` 原来有同样的缺陷，P5 已改：它的 Promise 返回给外层的 `.catch`，失败时提示（P5 spec 第 3 节第 8 条） |
 | M3 及以后有 stores 的 M | **stores 按会话分代**（P4 spec 2.8，第 3 节第 16、17 条）：每个会话一个 `RootStore`，它的客户端绑定这个会话。一代 stores 的 services 由这一代的 stores 用这一代的客户端建，经构造函数传入；没有模块级的带令牌客户端，也没有模块级的 service。store 只经自己的 `RootStore` 找兄弟 store（`store-context.tsx` 导出的 `rootStore` 只给没有自己 `RootStore` 的代码做同步读取，现在是 `issue-layouts/utils.tsx`，以及 `command-palette.store`、`issue/issue.store` 中只读、不发请求的两处）。填充 stores 的 SWR 键带上会话的 `loginId`，像 `AuthenticationWrapper` 的 `["CURRENT_USER", loginId]` 那样，新的一代取自己的数据。Plane 的 stores 在沿用的 `router` 上注册的 `reaction`、`autorun`（`cycle_filter`、`module_filter`、`project_filter` 的 `reaction`，`IssueRootStore` 的 `autorun`）不随退役的一代释放：它们只做本地的同步更新，不发请求（旧的客户端在发出前拒绝），代价是每换一次会话留下一代 stores 的内存。这些 stores 接上新接口时，一代退役要释放它注册的反应（例如 `RootStore` 提供释放的方法，由 `store-context.tsx` 在换代时调用） |
 | M3 | `profiles.last_workspace_id` 是否补外键（`ON DELETE SET NULL`）。补的话，迁移归 `identity`（`<v>_identity_profiles_last_workspace_fk.sql`，3.14），版本号大于建 `workspaces` 的迁移 |
 | M3 | `workspace_creation_enabled` 的执行，以及关闭时是否提供创建工作区的命令（3.16） |
@@ -2098,7 +2100,9 @@ files:
 | M4 | **60 天物理清理**：把软删除的 `api_tokens` 纳入；`issue_activities` 对工作项、评论的外键是 `DO_NOTHING`（不写 `ON DELETE`），先删工作项会被它挡住：先删除或置空这些引用，或者登记为 `SET NULL` 的差异 |
 | M4 | 命令行的"只投递"River 客户端（3.15、3.17）随第一个投递任务的命令加入；M2 没有投递任务的命令（负责人 2026-09-26 批准推迟） |
 | M4 | `user.service.ts` 中的 `getUserProfileIssues`；事件订阅者的写法（3.15）；CSP：编辑器 callout 的默认表情图来自 `cdn.jsdelivr.net`，改为本站资源或原生表情，并核对表情回应（8.3） |
-| M4 | **编辑器的代码分割**（P4 Task 12）：未登录时直接打开需要登录的页面，页面模块先加载了编辑器（tiptap 的 Emoji 节点和 `is-emoji-supported`），包装层才跳到登录页。把编辑器拆出去，到用它的页面才加载；S2 深链接测试对 `is-emoji-supported` 的 Chromium 警告（`willReadFrequently`）的预期 `emojiCanvasWarning` 随之删除 |
+| M4 | **编辑器的代码分割**（P4 Task 12）：未登录时直接打开需要登录的页面，页面模块先加载了编辑器（tiptap 的 Emoji 节点和 `is-emoji-supported`），包装层才跳到登录页。把编辑器拆出去，到用它的页面才加载。个人设置页的布局挂着命令面板（`ProjectsAppPowerKProvider`），它在打开之前就建了一个编辑器，一并处理（P5 spec 第 3 节第 9 条）。之后 e2e 对 `is-emoji-supported` 的 Chromium 警告（`willReadFrequently`）的预期 `EMOJI_CHECK_WARNING`（`e2e/fixtures/browser.ts`，S2 和个人设置的故事共用）删除 |
+| M4 | **周期下拉框的取数**（P5 spec 第 3 节第 6 条）：`dropdowns/cycle/cycle-options.tsx` 原来从不取周期（`!cycleIds` 对一个总是数组的值），P5 清 lint 时改为打开时这个项目没有周期就取。M4 接上周期时核对这个行为 |
+| M3–M6（接上组件的 M） | **其余 12 个下拉框**（P5 spec 2.3、第 7 节）：react-popper 的 ref 放在 `Combobox.Options` 唯一的子元素上，列表会停在页面左上角；打开状态也要跟随 Headless UI 的关闭（`ComboDropDown` 的 `onClose`）。文件清单见 P5 spec 第 7 节，修法同 P5 的三个组件 |
 | M5 | **头像和封面**：`users.avatar_asset_id`、`cover_image_asset_id`。迁移的范例（3.14）：先在 M5 的模块里建 `file_assets`（`<v>_<模块>_file_assets.sql`），再写 `<v+1>_identity_users_avatar_asset.sql` 给 `users` 加列和外键，后者归 `identity` 的 sqlc 条目。`User.avatar_url`、`cover_image_url` 开始返回签名地址；按新的上传协议加回 general 页和新手引导资料步骤的上传控件（3.2） |
 | M5 | **上传与按路由的中间件**：模块级的 `Middlewares`（1 MiB 请求体上限、15 秒期限）会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外，并按 3.6 的整程序测试处理：写进接口描述，或在设计中说明（控制者复核 m7）。`file_size_limit` 的执行；CSP 的 `img-src`、`connect-src` 加上存储的来源 |
 | M6 | 迭代（`cycles`、`cycle_issues`）跨 `planning` 与工作项模块的写入用端口和共享事务；必须联表的查询，事先列为 `TestSQLCSchemaScope` 的例外并写明理由，或者用端口拆开 |
