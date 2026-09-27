@@ -17,8 +17,8 @@
 
 - `@nerve/api-client` 用 `--root-types` 直接导出生成的类型，web 依赖它；
 - 令牌管理器、跨标签页的锁（`navigator.locks`，没有它时用 localStorage 租约）、认证中间件，以及 9.4 的单元测试；
-- web 的两个客户端：不带令牌的 `publicClient`、挂着认证中间件的 `api`；`ApiError` 与 `unwrap`；
-- user、profile、instance 三个 store 改用生成的 `User`、`Profile`、`InstanceInfo`；会话换人时 stores 重建；删除 `IUser`、`TUserProfile`、`IUserTheme`、`TOnboardingSteps`、`IInstanceInfo`、`IInstanceConfig` 和 Plane 的认证类型；
+- web 的客户端：不带令牌的 `publicClient`；每一代 stores 一个挂着认证中间件的客户端，绑定这一代 stores 所属的会话；`ApiError` 与 `unwrap`；
+- user、profile、instance 三个 store 改用生成的 `User`、`Profile`、`InstanceInfo`；会话变化时 stores 重建；删除 `IUser`、`TUserProfile`、`IUserTheme`、`TOnboardingSteps`、`IInstanceInfo`、`IInstanceConfig` 和 Plane 的认证类型；
 - `AuthenticationWrapper` 重写；"会话暂不可用"；`next_path` 带查询和片段、拒绝控制字符；web 的 axios 基类不带 Cookie、不拦截 401；
 - 登录页、注册页调用接口，错误就地显示；错误文案表由测试对着 `openapi.yaml` 核对；安全页修改密码的错误；密码 8–128 个字符；
 - 新手引导只剩三步，挂载时不预取，资料步骤没有头像上传；
@@ -39,10 +39,10 @@
 | `web/packages/api-client/package.json`、`src/index.ts`；`src/schema.gen.ts`（生成） | `--root-types`；`ApiClient`、`Middleware` | 2、4 |
 | `web/apps/web/package.json`、`web/packages/constants/package.json`、`pnpm-lock.yaml` | 两个工作区内的依赖；web 的 oxlint 上限 | 2、5、7、8、10 |
 | `web:core/lib/auth/token-manager.ts`、`token-manager.test.ts`、`token-manager.tabs.test.ts`、`fake-nerve.ts`、`fake-time.ts` | 令牌管理器 | 2、3 |
-| `web:core/lib/auth/auth-middleware.ts`、`auth-middleware.test.ts` | 认证中间件 | 4 |
+| `web:core/lib/auth/auth-middleware.ts`、`auth-middleware.test.ts`、`auth-middleware.session.test.ts` | 认证中间件；客户端绑定会话 | 4、10b |
 | `web:app/(all)/onboarding/page.tsx`、`web:core/components/onboarding/`（`steps/role/`、`steps/usecase/` 删除）、`web/packages/types/src/workspace.ts` | 三步的新手引导 | 5、7、8 |
-| `web:core/lib/api-error.ts`、`api-error.test.ts`；`web:core/lib/auth/api-client.ts` | `ApiError`、`unwrap`；两个客户端和令牌管理器的组合 | 6、7 |
-| `web:core/services/{instance,auth,user,api}.service.ts`；`web:core/store/{instance.store,root.store}.ts`、`web:core/store/user/{index,profile.store}.ts`；`web:core/lib/store-context.tsx` | services 和 stores | 6–10 |
+| `web:core/lib/api-error.ts`、`api-error.test.ts`；`web:core/lib/auth/api-client.ts` | `ApiError`、`unwrap`；`publicClient`、`apiFor` 和令牌管理器的组合 | 6、7、10b |
+| `web:core/services/{instance,auth,user,api}.service.ts`；`web:core/store/{instance.store,root.store,root.store.test}.ts`、`web:core/store/user/{index,profile.store,settings.store,permissions.store}.ts`、`web:core/store/issue/{root.store,profile/issue.store}.ts`；`web:core/lib/store-context.tsx`、`store-context.test.ts` | services 和 stores；每一代 stores 绑定自己的会话 | 6–10、10b |
 | `web/packages/types/src/`（`instance/`、`auth.ts` 删除；`users.ts`、`index.ts`、`project/projects.ts`、`search.ts` 修改）；`web/packages/constants/src/themes.ts` | Plane 的手写类型；`Theme` | 6、7、8、10 |
 | 读实例配置、账户、资料的组件（plan 的文件结构表逐个列出）；`web:core/components/core/modals/user-image-upload-modal.tsx`（删除） | 生成的类型；没有上传 | 6、7、8 |
 | `web:core/lib/wrappers/{authentication,store}-wrapper.tsx`、`web:core/lib/auth/use-session.ts`、`web:core/components/account/session-unavailable.tsx` | 认证包装；会话暂不可用 | 8、9 |
@@ -137,30 +137,31 @@ class TokenManager {
 
 ### 2.6 认证中间件（M2 设计 7.1；Codex M-5）
 
-`authMiddleware(tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">): Middleware`：
+`authMiddleware(tokens: Pick<TokenManager, "state" | "accessToken" | "renew" | "endSession">, loginId: string | undefined): Middleware`。挂着它的客户端属于会话 `loginId`（`undefined` 是没有会话），即建这个客户端的那一代 stores 的会话（2.8）：
 
-- `onRequest`：有访问令牌就设 `Authorization: Bearer …`，并在 fetch 读走请求体之前用 `request.clone()` 留一份副本，存在 `WeakMap` 中，键是 openapi-fetch 交给 `onResponse` 的同一个请求对象；没有会话时请求原样发出，不留副本。
-- `onResponse`：只处理带了令牌却得到 401 的请求。`renew(发出时的令牌)` 得到 `undefined`（续期 401 结束了会话，或会话已经结束）→ 把原来的 401 交给调用方；否则给副本换上新令牌，用 `options.fetch` 重发**一次**；重发仍是 401 → `endSession(记下的 login_id)`，结束了这个会话就把重发的 401 交给调用方。续期因 429、5xx、网络失败时请求以 `SessionUnavailableError` 失败，会话保留。403、404、500 不续期。没有会话时发出的请求，在它的 401 回来之前本标签页登录了，也不重发。请求属于发出它的会话（第 2.5 节的规则）：`onRequest` 在取令牌时记下标签页的 `login_id`，和副本存在一起；401 回来时标签页已不在这个会话（另一个标签页登录或退出了，或会话已经结束），请求就以 `SessionChangedError` 失败，不续期、不重发。被会话变化打断的请求只有这一个信号：续期在锁下发现记录已是别的会话（2.5），或重发的 401 之后 `endSession` 发现记录已不是这个会话的（它跟随记录，给出 `false`），请求也都以 `SessionChangedError` 失败；调用方不会把别的会话的 401 当成标签页此刻的会话失败。
-- M2 设计 7.1 要求原型先验证的一点：openapi-fetch 0.17.0 的中间件能这样重发。`auth-middleware.test.ts`（20 个，真实的令牌管理器、假 nerve）核对重发的 `PATCH` 方法、路径、请求体都与原来相同；"用已被读走的原请求重发""在设令牌之后才复制"的变异都让它失败（附录 A）。其中 5 个核对上面的会话规则：请求在外时另一个标签页以 Y 登录，X 的 401 回来时请求以 `SessionChangedError` 失败；标签页还没听到 Y 的登录时，续期在锁下发现它，请求同样以 `SessionChangedError` 失败；取令牌途中标签页跟随了 Y，请求仍属 X；重发途中跟随了 Y，重发的 401 不删 Y 的记录，请求以 `SessionChangedError` 失败；重发途中另一个标签页退出、本标签页还没听到时，`endSession` 在锁下发现记录不在了，请求同样以 `SessionChangedError` 失败，而不是交回重发的 401。另有 2 个核对 fetch 被拒绝（浏览器断网时的样子）：请求的 fetch 被拒绝时错误原样交给调用方，不续期、不重发；重发的 fetch 被拒绝时错误也交给调用方；两种情况都保留会话。
+- `onRequest`：标签页此刻的 `login_id` 不是 `loginId` 时（另一个标签页登录或退出了，本标签页登录或退出了，或会话已经结束），请求以 `SessionChangedError` 失败，不发出；这个核对紧挨着取令牌，取到的是这个会话的令牌。有访问令牌就设 `Authorization: Bearer …`，并在 fetch 读走请求体之前用 `request.clone()` 留一份副本，存在 `WeakMap` 中，键是 openapi-fetch 交给 `onResponse` 的同一个请求对象；没有会话时请求原样发出，不留副本。
+- `onResponse`：只处理带了令牌却得到 401 的请求。`renew(发出时的令牌)` 得到 `undefined`（续期 401 结束了会话，或会话已经结束）→ 把原来的 401 交给调用方；否则给副本换上新令牌，用 `options.fetch` 重发**一次**；重发仍是 401 → `endSession(loginId)`，结束了这个会话就把重发的 401 交给调用方。续期因 429、5xx、网络失败时请求以 `SessionUnavailableError` 失败，会话保留。403、404、500 不续期。没有会话时发出的请求，在它的 401 回来之前本标签页登录了，也不重发。请求属于客户端的会话 `loginId`（第 2.5 节的规则）；401 回来时标签页已不在这个会话，请求就以 `SessionChangedError` 失败，不续期、不重发。被会话变化打断的请求只有这一个信号：续期在锁下发现记录已是别的会话（2.5），或重发的 401 之后 `endSession` 发现记录已不是这个会话的（它跟随记录，给出 `false`），请求也都以 `SessionChangedError` 失败；调用方不会把别的会话的 401 当成标签页此刻的会话失败。
+- M2 设计 7.1 要求原型先验证的一点：openapi-fetch 0.17.0 的中间件能这样重发。`auth-middleware.test.ts`（20 个，真实的令牌管理器、假 nerve）核对重发的 `PATCH` 方法、路径、请求体都与原来相同；"用已被读走的原请求重发""在设令牌之后才复制"的变异都让它失败（附录 A）。其中 5 个核对上面的会话规则：请求在外时另一个标签页以 Y 登录，X 的 401 回来时请求以 `SessionChangedError` 失败；标签页还没听到 Y 的登录时，续期在锁下发现它，请求同样以 `SessionChangedError` 失败；取令牌途中标签页跟随了 Y，请求仍属 X；重发途中跟随了 Y，重发的 401 不删 Y 的记录，请求以 `SessionChangedError` 失败；重发途中另一个标签页退出、本标签页还没听到时，`endSession` 在锁下发现记录不在了，请求同样以 `SessionChangedError` 失败，而不是交回重发的 401。另有 2 个核对 fetch 被拒绝（浏览器断网时的样子）：请求的 fetch 被拒绝时错误原样交给调用方，不续期、不重发；重发的 fetch 被拒绝时错误也交给调用方；两种情况都保留会话。这些测试的客户端属于 setUp 时标签页的会话。
+- `auth-middleware.session.test.ts`（4 个，同样的真实令牌管理器和假 nerve）核对客户端绑定会话：标签页跟随了另一个标签页以别的账户登录、或跟随了另一个标签页退出之后，属于 X 的客户端的请求以 `SessionChangedError` 失败，假 nerve 什么也没收到（2 个）；在会话 X 开始时建的客户端，经过第一次续期、另一个标签页续期、本标签页自己续期，照常以当时的令牌发出；没有会话时建的客户端，本标签页登录之后请求同样失败、不发出。"去掉核对""核对比较的是标签页此刻的会话而不是客户端的""状态一变就拒绝"的变异都让它失败。
 
-### 2.7 `ApiError`、`unwrap` 与两个客户端（M2 设计 5.3、7.1、7.2）
+### 2.7 `ApiError`、`unwrap` 与客户端（M2 设计 5.3、7.1、7.2）
 
 - `class ApiError extends Error { status: number; problem: Problem | undefined }`：消息取 `detail`，没有时取 `title`，都没有时 `HTTP <状态码>`。
-- `unwrap<T>(result)`：2xx 给 `data`（204 是 `undefined`）；否则抛出 `ApiError`。只有带字符串 `code` 的 JSON 才算 problem：代理的 HTML 错误页、没有 `code` 的 JSON 都是没有 problem 的 `ApiError`，页面显示通用的文案（2.10）。被会话变化打断的请求（2.6）以 `SessionChangedError` 本身到达调用方，`unwrap` 和 `ApiError` 不包装它：它是 `api.X()` 被拒绝，在 `unwrap` 运行之前。测试 `api-error.test.ts` 7 个，用真的 `createClient`，`fetch` 返回固定的响应；其中一个核对只有 `title` 的 problem 以 `title` 为消息，一个经真的认证中间件核对 `SessionChangedError` 不变成 `ApiError`。
+- `unwrap<T>(result)`：2xx 给 `data`（204 是 `undefined`）；否则抛出 `ApiError`。只有带字符串 `code` 的 JSON 才算 problem：代理的 HTML 错误页、没有 `code` 的 JSON 都是没有 problem 的 `ApiError`，页面显示通用的文案（2.10）。被会话变化打断的请求（2.6）以 `SessionChangedError` 本身到达调用方，`unwrap` 和 `ApiError` 不包装它：它是客户端的调用（如 `GET(…)`）被拒绝，在 `unwrap` 运行之前。测试 `api-error.test.ts` 7 个，用真的 `createClient`，`fetch` 返回固定的响应；其中一个核对只有 `title` 的 problem 以 `title` 为消息，一个经真的认证中间件核对 `SessionChangedError` 不变成 `ApiError`。
 - `api-client.ts`：
   - `publicClient = createClient()`：同源、相对地址、不带令牌，给实例、注册、登录和令牌管理器自己的续期、退出用；
   - `tokenManager`：`localStorage`、2.4 的锁、`publicClient`、`Date.now`、`getRandomValues`；
   - `storage` 事件中键为 `nerve.auth` 或 `null` 的交给 `handleStorageChange`；
   - 模块加载时 `void tokenManager.start()`，早于 stores 的创建；
-  - `api = createClient()` 挂上 `authMiddleware(tokenManager)`，其余所有调用都走它。
+  - `apiFor(loginId)`：新建一个客户端，挂上 `authMiddleware(tokenManager, loginId)`。其余所有调用都走这样的客户端，每一代 stores 一个（2.8）；没有模块级的带令牌客户端。
 
 ### 2.8 stores 与类型（M2 设计 7.1、7.5；M1-P2 交接）
 
-- **会话换人时重建 stores**：`store-context.tsx` 订阅令牌管理器，`loginId` 从一个值变成另一个值或没有值时调用 `store.resetOnSignOut()`：本标签页退出、会话结束、跟随另一个标签页换成别的账户，页面上都不留旧账户的数据。`RootStore.resetOnSignOut()` 不再重建 `router` 和 `instance`（第 3 节第 1 条）。
+- **会话变化时重建 stores，每一代 stores 属于一个会话**（第 3 节第 16 条）：应用加载时 `store-context.tsx` 为令牌管理器此刻的会话建 `new RootStore(apiFor(loginId))`（`start()` 在模块加载时已同步定下有没有记录、是哪个 `login_id`）；它订阅令牌管理器，`loginId` 一变（变成另一个值、变成没有值、从没有值变成一个值）就调用 `store.resetOnSignOut(apiFor(新的 loginId))`；同一会话内的状态变化（第一次续期、`unavailable` 和重试）不重建。本标签页退出、会话结束、跟随另一个标签页换成别的账户，页面上都不留旧账户的数据；本标签页登录、跟随另一个标签页登录，也换一代 stores。`RootStore` 把客户端交给建 `UserService` 的 stores：`UserStore` 自己和它建的 `ProfileStore`、`UserSettingsStore`、`UserPermissionStore`，`IssueRootStore` 建的 `ProfileIssues`，都在构造时 `new UserService(api)`。旧一代 stores 的引用（组件闭包里的动作、`await` 之后接着的写入）用的是旧会话的客户端：标签页已换了会话，请求就以 `SessionChangedError` 失败，不发出。`RootStore.resetOnSignOut()` 不再重建 `router` 和 `instance`（第 3 节第 1 条）。测试：`store-context.test.ts`（1 个，假的令牌管理器和 `RootStore`）核对加载时为 X 建、同一会话内的通知不重建、X→Y、→没有、没有→Z、Z→W 各重建一次，每次用新会话的客户端；`root.store.test.ts`（3 个，真的 stores、令牌管理器和中间件，假 nerve）核对 `resetOnSignOut` 保留 `instance`、`router` 和 `theme`，为 X 建的 stores 以 X 的令牌发出、重建给 Y 之后以 Y 的令牌发出，以及资料步骤的竞争：X 的保存在标签页跟随 Y 之后以 200 回来，旧 stores 接着的步骤写入以 `SessionChangedError` 失败，假 nerve 只收到那次保存。
 - **`InstanceStore`**：`config: InstanceInfo | undefined`；`InstanceService.getInstanceInfo()` 经 `publicClient` 调 `GET /api/v0/instance`。`InstanceWrapper` 不改，请求失败时仍是维护页（附录 A 的 C7）。读实例配置的五处改读新字段：页头的注册链接读 `signup_enabled`；`/create-workspace`、新手引导的创建工作区、工作区菜单、命令面板读 `workspace_creation_enabled`。
 - **`UserStore`**：`data: User | undefined`；`fetchCurrentUser()` 先等 `tokenManager.start()`，只在 `signed-in` 时并行取 `GET /api/v0/me` 和 `GET /api/v0/me/profile`（7.1：没有记录时不请求 `/me`；设置和工作区不再在登录时取，3.1）；`signIn(LoginRequest)`、`signUp(RegisterRequest)` 把得到的令牌交给 `tokenManager.signIn`，失败时抛出 `ApiError`，什么都不留；`signOut()` 就是 `tokenManager.signOut()`；`deactivateAccount()` 调 `POST /api/v0/me/deactivate` 后 `tokenManager.endSession()`；`updateCurrentUser(UserUpdate)`、`changePassword(ChangePasswordRequest)`。死成员（`reset`、`isAuthenticated`、`error` 等）删除。
 - **`ProfileStore`**：`data: Profile | undefined`；`fetchUserProfile()` 按资料的语言切换界面语言；`updateUserProfile(ProfileUpdate)` **失败时抛出**（Plane 的版本吞掉错误，调用方的提示从不出现）；`finishUserOnboarding()` 一次 `PATCH /api/v0/me/profile`（四个步骤、`is_onboarded`，有工作区时带 `last_workspace_id`）；`updateTourCompleted()`、`updateUserTheme(theme: Theme)` 用同一个接口。新手引导的步骤是 `OnboardingStepsUpdate` 的部分更新，由服务端合并。
-- **services**：`AuthService.register`、`login` 经 `publicClient`；`UserService` 的 M2 方法（`currentUser`、`updateCurrentUser`、`changePassword`、`deactivate`、`getCurrentUserProfile`、`updateCurrentUserProfile`）经 `api` 和 `unwrap`；Plane 的 `/api/users/me/profile/`、`/onboard/`、`/tour-completed/`、`/api/instances/` 删除；属于其他领域的 4 个方法原样留下（7.5）。
+- **services**：`AuthService.register`、`login` 经 `publicClient`；`UserService` 在构造时接收建它的那一代 stores 的客户端（`constructor(api: ApiClient)`），M2 方法（`currentUser`、`updateCurrentUser`、`changePassword`、`deactivate`、`getCurrentUserProfile`、`updateCurrentUserProfile`）经它和 `unwrap`；Plane 的 `/api/users/me/profile/`、`/onboard/`、`/tour-completed/`、`/api/instances/` 删除；属于其他领域的 4 个方法原样留下（7.5）；Plane 的模块级实例（`export default userService`）删除，它唯一的使用者 `UserPermissionStore` 用自己建的实例。
 - **删除的类型**：`IUser`、`TUserProfile`、`IUserTheme`、`TOnboardingSteps`、`IInstanceInfo`、`IInstanceConfig`，以及 `@nerve/types` 的 `auth.ts`（`ICsrfTokenData` 等）。`IUser` 的使用方按 7.5 的表改为 `User` 或 `IUserLite`；`StoreWrapper` 按账户 id 判断换人，按 `profile.theme` 设主题；`@nerve/constants` 的 `I_THEME_OPTION.value: Theme`，写错或多出一个主题值都过不了类型检查。
 - **general 页**：表单只有名、姓、显示名和只读的邮箱（`UserUpdate` 的字段）；写回 `role` 默认值的逻辑删除（3.19）；头像、封面只显示，上传控件和 `UserImageUploadModal` 删除（第 3 节第 12 条）。停用账户、切换账户的弹窗不再自己跳转，跳转交给 `AuthenticationWrapper`。
 - `TTimezones`、`IApiToken`、`settings.store` 的死成员、PAT store、`@nerve/services`：P5（第 5 节）。
@@ -270,9 +271,9 @@ plan 的 Task 14 逐行给出文字。要点：
 
 ## 3. 与设计的差异和补充（请控制者裁定）
 
-以下都没有改变 M2 设计的架构和前后端契约。第 11、12 条动到设计分给 P5 的事项，第 13、14 条是设计文本的错误，请控制者裁定。
+以下都没有改变 M2 设计的架构和前后端契约。第 11、12 条动到设计分给 P5 的事项，第 13、14 条是设计文本的错误，请控制者裁定。第 16 条记下控制者加的 Task 10b。
 
-1. **`resetOnSignOut` 不重建 `instance` 和 `router`**：7.1 写"结束会话……调用 `rootStore.resetOnSignOut()`"。Plane 的 `resetOnSignOut` 重建全部 store，包括 `instance` 和 `router`；它们不是账户的数据，重建之后在下一次整页加载之前没有代码会再填它们。原型中照原样重建时，A5 停在 `InstanceWrapper` 的加载图标上；"重建 `instance`"的变异让 A5 失败（附录 A）。重建由 `store-context.tsx` 订阅令牌管理器触发（`loginId` 变成别的值或没有值），不由令牌管理器回调：令牌管理器不认识 stores。
+1. **`resetOnSignOut` 不重建 `instance` 和 `router`**：7.1 写"结束会话……调用 `rootStore.resetOnSignOut()`"。Plane 的 `resetOnSignOut` 重建全部 store，包括 `instance` 和 `router`；它们不是账户的数据，重建之后在下一次整页加载之前没有代码会再填它们。原型中照原样重建时，A5 停在 `InstanceWrapper` 的加载图标上；"重建 `instance`"的变异让 A5 失败（附录 A）。重建由 `store-context.tsx` 订阅令牌管理器触发（`loginId` 变成别的值或没有值；第 16 条起也包括从没有值变成一个值），不由令牌管理器回调：令牌管理器不认识 stores。
 2. **续期按会话去重**：9.4 写"同一标签页内只续期一次"。原型的第一稿按标签页去重：另一个标签页登录 Y 之后，本标签页新发出的请求加入了 X 那次还在途中的续期；X 的续期写回前发现 `login_id` 变了，以 `SessionChangedError` 结束，这个本该以 Y 发出的请求也随之失败（浏览器核对 C4b 发现）。改为按 `login_id` 去重：换了会话之后发出的请求等新会话自己的续期。测试 "gives a request made after another tab's sign-in a refresh of its own, not the old session's"；"续期在会话之间共用""旧续期结束时清掉新续期"两个变异都让它失败。
 3. **租约先在本标签页内排队**：7.1 的"租约是自己的就写入"对同一标签页的第二个任务等于没有锁（两个任务的 owner 相同）。`leaseLock` 先让本标签页的任务排队，再取租约；去掉队列的变异让 "runs the tasks of one tab one after the other" 失败。
 4. **`renew` 在已退出时给 `undefined`**：会话已经结束时（另一个请求的续期刚得到 401，或另一个标签页退出了），被拒的请求再调 `renew`，第一稿会以没有 `login_id` 的状态续期、在锁下读到空记录时抛出 `TypeError`（`tsc` 报 `Object is possibly 'undefined'` 时发现）。改为直接给 `undefined`，中间件把原来的 401 交给调用方。另外，中间件只对自己带了令牌的请求续期：未登录时发出的请求，即使 401 回来之前本标签页登录了，也不会以新会话的身份重发。两条各有测试和变异（附录 A）。
@@ -287,6 +288,7 @@ plan 的 Task 14 逐行给出文字。要点：
 13. **3.20 中前端改动清单的节号写反**：3.20 写"P4：前端改动清单 3.1，CSRF 一行已完成""P5：3.2，M2 一行已完成"，但 CSRF 一行在 3.2（"登录、注册、退出、修改密码的提交方式"），M2 一行在 3.1。P4 按内容处理：3.2 的 CSRF 一行和"用户和认证相关的 store"一行（P4 做完）改为已完成，3.1 的 M2 一行改为进行中；P5 应把 3.1 的 M2 一行改为已完成。设计文本请随之更正。
 14. **9.6 的"会话暂不可用"写法与实际不符**：9.6 写"已登录时停掉 nerve、刷新页面，显示等待和重试"。nerve 同时提供页面：生产构建下停掉 nerve 再刷新，页面本身加载不了，浏览器显示自己的错误页；用 Vite 开发服务器时页面能加载，但先失败的是实例请求，显示的是维护页（C6a 实测：维护页，地址和记录都在，nerve 恢复后 4.9 秒自动回到原页面）。"会话暂不可用"出现在 nerve 回答、但续期失败时：数据库停掉（续期 500，C6b）或续期得到 503、429（C6c）。建议 9.6 改为"停掉 nerve 的数据库（或让续期得到 503）后刷新页面"，并另列"停掉 nerve：维护页，恢复后自动回来"。维护页的文案"Looks like Nerve didn't start up correctly!"在 nerve 只是暂时不可达时有误导，P4 不改（7.4 只要求"仍显示维护页"），建议 P5 或 M8 改写。
 15. **`token-manager.test.ts` 472 行**：超过约 400 行的规则。它是一个类的单标签页测试，按 `describe` 分三组，拆开要重复假实现的搭建；与 P3b 的 `load_test.go` 同样处理，plan 的 Global Constraints 写明。
+16. **每一代 stores 一个绑定会话的客户端**（控制者加的 Task 10b）：7.1、7.5 要求标签页不以错误的身份写入，但原来所有 stores 共用一个模块级的 `api`，它的中间件取标签页此刻会话的令牌。在会话 X 中开始、`await` 之后才发下一个请求的操作，标签页在这中间跟随另一个标签页以 Y 登录之后，下一个请求带着 Y 的令牌发出：资料步骤以 X 的令牌保存名字（200）之后改 `onboarding_step`，写进了 Y 的资料；新手引导的创建工作区、`/create-workspace`、`/invitations` 之后写 `last_workspace_id`，新手引导根组件的后续写入，也是这个形状（Task 7、Task 8 发现）。逐处比较 `loginId` 只能补一处，所以改成一个机制：中间件属于一个会话，标签页已不在这个会话时请求在发出之前以 `SessionChangedError` 失败（2.6）；`api-client.ts` 不再有模块级的带令牌客户端，`apiFor(loginId)` 为一代 stores 建一个；`RootStore` 在建立和重建时把它交给 stores，`UserService` 从构造函数接收它（2.8）。为此 `store-context.tsx` 在从没有会话变成有会话时（本标签页登录，或跟随另一个标签页登录）也重建 stores：没有会话时建的 stores 属于"没有会话"，不重建的话登录之后它们的请求都会被拒绝（`auth-middleware.session.test.ts` 的最后一个测试）；Task 7 的"登录时 stores 已是新的，不重建"因此不再成立。这次重建也照 `resetOnSignOut` 把主题设为跟随系统、语言设为默认；登录之后 `fetchUserProfile` 按资料设语言，`StoreWrapper` 在包装层跳转之后按资料设主题。Plane 的模块级 `userService` 删除，唯一的使用者 `UserPermissionStore` 改为自己建实例。7.1 的位置一项写 `api-client.ts` 是"web 使用的生成客户端实例，挂上认证中间件"，现在是 `publicClient`、令牌管理器和 `apiFor`，设计文本请随之更正。
 
 ## 4. 验收标准（完成线，M2 设计 12 节 P4）
 
