@@ -21,8 +21,9 @@ export enum EAuthModes {
 }
 
 /**
- * The message of every problem code nerve's API answers: the codes of every x-problem-codes in
- * api/dist/openapi.yaml, which a test keeps equal to the keys (M2 design 3.11, 7.3).
+ * The message of every problem code an operation lists in x-problem-codes of api/dist/openapi.yaml, which a
+ * test keeps equal to the keys (M2 design 3.11, 7.3). Any other code, such as the unauthorized that an
+ * operation needing a bearer token can also answer, gets auth.errors.unknown from errorMessageKey.
  */
 export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   bad_request: "auth.errors.bad_request",
