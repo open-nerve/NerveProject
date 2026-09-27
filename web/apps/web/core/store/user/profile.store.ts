@@ -25,6 +25,9 @@ export interface IUserProfileStore {
 
 export class ProfileStore implements IUserProfileStore {
   data: Profile | undefined = undefined;
+  /** The number of the last update sent, and of the one whose answer the profile holds (updateUserProfile). */
+  private updatesSent = 0;
+  private updateWritten = 0;
 
   // services
   userService: UserService;
@@ -62,14 +65,22 @@ export class ProfileStore implements IUserProfileStore {
 
   /**
    * @description changes the given fields of the profile (onboarding_step key by key); fails when nerve refuses.
-   * The profile becomes nerve's answer, never the change asked for: a refused change leaves it as it was.
+   * The profile becomes nerve's answer, never the change asked for: a refused change leaves it as it was. The
+   * updates are numbered as they are sent, and an answer older than the one the profile holds is dropped: this
+   * assumes nerve applies the updates in the order they were sent, as the PAT store assumes of its requests, so
+   * the older answer is an older profile. Only answers count: when the newer update fails, the older one's
+   * answer still writes.
    * @returns {Promise<Profile>}
    */
   updateUserProfile = async (data: ProfileUpdate): Promise<Profile> => {
+    const update = ++this.updatesSent;
     const profile = await this.userService.updateCurrentUserProfile(data);
-    runInAction(() => {
-      this.data = profile;
-    });
+    if (update > this.updateWritten) {
+      this.updateWritten = update;
+      runInAction(() => {
+        this.data = profile;
+      });
+    }
     return profile;
   };
 

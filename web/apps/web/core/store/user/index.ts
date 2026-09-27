@@ -67,6 +67,9 @@ export class UserStore implements IUserStore {
   // service
   userService: UserService;
   authService: AuthService;
+  /** The number of the last update sent, and of the one whose answer data holds (updateCurrentUser). */
+  private updatesSent = 0;
+  private updateWritten = 0;
 
   constructor(
     private store: RootStore,
@@ -125,14 +128,22 @@ export class UserStore implements IUserStore {
   };
 
   /**
-   * @description updates the account's names or time zone
+   * @description updates the account's names or time zone; fails, writing nothing, when nerve refuses. The
+   * updates are numbered as they are sent, and an answer older than the one data holds is dropped: this assumes
+   * nerve applies the updates in the order they were sent, as the PAT store assumes of its requests, so the older
+   * answer is an older account. Only answers count: when the newer update fails, the older one's answer still
+   * writes.
    * @returns {Promise<User>}
    */
   updateCurrentUser = async (data: UserUpdate): Promise<User> => {
+    const update = ++this.updatesSent;
     const user = await this.userService.updateCurrentUser(data);
-    runInAction(() => {
-      this.data = user;
-    });
+    if (update > this.updateWritten) {
+      this.updateWritten = update;
+      runInAction(() => {
+        this.data = user;
+      });
+    }
     return user;
   };
 

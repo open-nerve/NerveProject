@@ -61,8 +61,7 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
     [user, updateUserProfile, t]
   );
 
-  // finishing sets all four steps in its one write, so it goes without the step change it supersedes: two
-  // profile writes in flight would leave the store with whichever answer lands last
+  // finishing sets all four steps in its one write, so it goes without the step change it supersedes
   const handleStepChange = useCallback(
     (step: EOnboardingSteps, skipInvites?: boolean) => {
       switch (step) {
