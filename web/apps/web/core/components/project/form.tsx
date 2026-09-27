@@ -171,7 +171,6 @@ export function ProjectDetailsForm(props: IProjectDetailsForm) {
         workspaceSlug,
         entityIdentifier: project.id,
         entityType: EFileAssetType.PROJECT_COVER,
-        isUserAsset: false,
       });
 
       if (coverImagePayload) {
