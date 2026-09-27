@@ -46,11 +46,13 @@ export function DeactivateAccountModal(props: Props) {
         handleClose();
         return;
       })
-      .catch((err: any) => {
+      .catch((error: unknown) => {
+        // An ApiError's message is its problem's detail or title, else the HTTP status; the other failures (the
+        // session changed or is unavailable, no network) are errors with a message as well.
         setToast({
           type: TOAST_TYPE.ERROR,
           title: "Error!",
-          message: err?.error,
+          message: error instanceof Error ? error.message : undefined,
         });
       })
       .finally(() => setIsDeactivating(false));
