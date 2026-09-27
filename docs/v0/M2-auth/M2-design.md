@@ -2125,7 +2125,7 @@ files:
 | P1 | platform-core | 已完成 | [spec](specs/P1-platform-core.md) | [plan](plans/P1-platform-core.md) | [review](reviews/P1-platform-core-review.md) |
 | P2 | sessions | 已完成 | [spec](specs/P2-sessions.md) | [plan](plans/P2-sessions.md) | [review](reviews/P2-sessions-review.md) |
 | P3a | account-api | 已完成 | [spec](specs/P3a-account-api.md) | [plan](plans/P3a-account-api.md) | [review](reviews/P3a-account-api-review.md) |
-| P3b | jobs-and-admin | 进行中 | [spec](specs/P3b-jobs-and-admin.md) | [plan](plans/P3b-jobs-and-admin.md) | — |
+| P3b | jobs-and-admin | 已完成 | [spec](specs/P3b-jobs-and-admin.md) | [plan](plans/P3b-jobs-and-admin.md) | [review](reviews/P3b-jobs-and-admin-review.md) |
 | P4 | web-auth | 未开始 | — | — | — |
 | P5 | web-account | 未开始 | — | — | — |
 | 收尾 | closeout | 未开始 | — | — | — |

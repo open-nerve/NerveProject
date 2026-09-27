@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M2/P3b `jobs-and-admin` |
 | 日期 | 2026-09-26 |
-| 状态 | 进行中 |
+| 状态 | 已完成 |
 | 上级文档 | [M2 设计文档](../M2-design.md) 第 2（A12–A14、A16、A17）、3.5、3.8–3.10、3.15、3.17、3.20（P3b 各行）、4.1、4.6、5、6.4–6.6、8.5、8.7、9、12（P3b）、13.1 节，决策点 1–3；[v0 总体设计](../../v0-design.md) 4.2、5.2、6.7 节 |
 | 前置交接 | [M0-P2-platform-notes](../handoffs/M0-P2-platform-notes.md) 第 5 条、[M0-P6-e2e-notes](../handoffs/M0-P6-e2e-notes.md) 的 River 停机一项、[M1-P3-trim-platform](../handoffs/M1-P3-trim-platform.md) 的修改登录邮箱；[P2 评审记录](../reviews/P2-sessions-review.md) 第 6 节和 [P3a 评审记录](../reviews/P3a-account-api-review.md) 第 6 节交给 P3b 的事项（本 Phase 的处理见第 7 节） |
 | 计划 | [P3b plan](../plans/P3b-jobs-and-admin.md) |
