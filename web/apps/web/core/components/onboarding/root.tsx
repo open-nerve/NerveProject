@@ -65,13 +65,17 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
     [user, updateUserProfile]
   );
 
+  // finishing sets all four steps in its one write, so it goes without the step change it supersedes: two
+  // profile writes in flight would leave the store with whichever answer lands last
   const handleStepChange = useCallback(
     (step: EOnboardingSteps, skipInvites?: boolean) => {
       switch (step) {
         case EOnboardingSteps.PROFILE_SETUP:
-          stepChange({ profile_complete: true });
           if (workspacesList.length > 0) finishOnboarding();
-          else setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
+          else {
+            stepChange({ profile_complete: true });
+            setCurrentStep(EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN);
+          }
           break;
         case EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN:
           if (skipInvites) finishOnboarding();
@@ -81,7 +85,6 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
           }
           break;
         case EOnboardingSteps.INVITE_MEMBERS:
-          stepChange({ workspace_invite: true });
           finishOnboarding();
           break;
       }
