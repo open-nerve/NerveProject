@@ -27,7 +27,7 @@ vi.stubGlobal("localStorage", {
   removeItem: (key: string) => void page.delete(key),
 });
 // The stores switch the app's language; the translations are not what these tests look at.
-vi.mock("@nerve/i18n", () => ({ FALLBACK_LANGUAGE: "en", setLanguage: async () => {} }));
+vi.mock("@nerve/i18n", () => ({ setLanguage: async () => {} }));
 // The stores get their session's client from RootStore; what else they import from api-client is not used here.
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 // command-palette.store imports store-context, which builds the app's RootStore: a cycle through root.store.
