@@ -41,27 +41,27 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
 
   const handleThemeChange = useCallback(
     async (themeOption: I_THEME_OPTION) => {
+      const updatePromise = updateUserTheme(themeOption.value);
+      setPromiseToast(updatePromise, {
+        loading: t("power_k.preferences_actions.toast.theme.updating"),
+        success: {
+          title: t("power_k.preferences_actions.toast.theme.updated"),
+          message: () => t("power_k.preferences_actions.toast.theme.reloading"),
+        },
+        error: {
+          title: t("toast.error"),
+          message: (error) => t(errorMessageKey(error)),
+        },
+      });
       try {
-        setTheme(themeOption.value);
-
-        const updatePromise = updateUserTheme(themeOption.value);
-        setPromiseToast(updatePromise, {
-          loading: t("power_k.preferences_actions.toast.theme.updating"),
-          success: {
-            title: t("power_k.preferences_actions.toast.theme.updated"),
-            message: () => t("power_k.preferences_actions.toast.theme.reloading"),
-          },
-          error: {
-            title: t("toast.error"),
-            message: (error) => t(errorMessageKey(error)),
-          },
-        });
-        // Wait for the promise to resolve, then reload after showing toast
         await updatePromise;
-        window.location.reload();
-      } catch (error) {
-        console.error("Error updating theme:", error);
+      } catch {
+        // refused: the toast says why, and the page keeps the theme nerve holds
+        return;
       }
+      // The page takes the theme once nerve holds it, then reloads to apply it everywhere.
+      setTheme(themeOption.value);
+      window.location.reload();
     },
     [setTheme, updateUserTheme, t]
   );

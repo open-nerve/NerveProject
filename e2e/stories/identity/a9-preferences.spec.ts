@@ -118,6 +118,52 @@ test("A9 (page): the preferences page changes the theme, the language and the fi
   });
 });
 
+/** nerve's answer when it cannot make a change: a problem whose code the page says why by. */
+const serverError = {
+  status: 500,
+  contentType: "application/problem+json",
+  body: JSON.stringify({ type: "about:blank", title: "Internal Server Error", status: 500, code: "internal_error" }),
+};
+
+test("A9 (page): a refused change leaves the page as nerve has it", async ({ api, db, signedInPage }, testInfo) => {
+  const email = emailFor(testInfo);
+  const page = await signedInPage(await registerOnboarded(api, email));
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/preferences");
+  const theme = page.getByRole("button", { name: "System Preference" });
+  await expect(theme).toBeVisible();
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", "light");
+  // nerve refuses every change of the profile from here on.
+  await page.route("**/api/v0/me/profile", (route) =>
+    route.request().method() === "PATCH" ? route.fulfill(serverError) : route.fallback()
+  );
+
+  // The theme: Dark refused; the page keeps its theme, says why, and does not reload.
+  await page.evaluate(() => {
+    (window as unknown as { beforeRefusal?: true }).beforeRefusal = true;
+  });
+  await theme.click();
+  const themed = await answerTo(page, "PATCH", "/api/v0/me/profile", () =>
+    page.getByRole("option", { name: "Dark", exact: true }).click()
+  );
+  expect(themed.status()).toBe(500);
+  await expect(page.getByText("Something went wrong on the server. Please try again.")).toBeVisible();
+  await expect(html).toHaveAttribute("data-theme", "light");
+  await expect(theme).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { beforeRefusal?: true }).beforeRefusal)).toBe(true);
+
+  expect(await profileOf(db, email)).toEqual([{ theme: "system", language: "en", start_of_the_week: 0 }]);
+  expect(watch.apiFailures).toEqual(["500 PATCH /api/v0/me/profile"]);
+  expect(watch.oldApiRequests).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
+  // One load; the browser's report of the refusal.
+  await expectQuietConsole(page, watch, {
+    warnings: [EMOJI_CHECK_WARNING],
+    errors: ["Failed to load resource: the server responded with a status of 500 (Internal Server Error)"],
+  });
+});
+
 test("A9 (API): a personal access token changes the theme, the language and the first day of the week", async ({
   api,
   db,
