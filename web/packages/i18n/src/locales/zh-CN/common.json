@@ -26,7 +26,7 @@
   "saving": "保存中",
   "save_changes": "保存更改",
   "deactivate_account": "停用账号",
-  "deactivate_account_description": "停用账号后，该账号内的所有数据和资源将被永久删除且无法恢复。",
+  "deactivate_account_description": "在所有地方退出登录；在这台服务器的管理员重新启用账户之前，密码和个人访问令牌都无法使用。数据不会被删除。",
   "preferences": "偏好设置",
   "language_and_time": "语言和时间",
   "create_workspace": "创建工作区",
@@ -124,7 +124,7 @@
   "you_can_see_here_if_someone_invites_you_to_a_workspace": "如果有人邀请您加入工作区，您可以在这里看到",
   "back_to_home": "返回首页",
   "deactivate_your_account": "停用您的账户",
-  "deactivate_your_account_description": "一旦停用，您将无法被分配工作项。要重新激活您的账户，您需要收到发送到此电子邮件地址的工作区邀请。",
+  "deactivate_your_account_description": "您将在所有地方退出登录，密码和个人访问令牌都将无法使用。数据不会被删除，也不会发送邮件：如需再次使用此账户，请联系这台服务器的管理员重新启用。",
   "deactivating": "正在停用",
   "confirm": "确认",
   "draft_created": "草稿已创建",
@@ -477,5 +477,15 @@
   "accordion_navigation_control": "折叠侧边栏导航",
   "horizontal_navigation_bar": "标签式导航",
   "show_limited_projects_on_sidebar": "在侧边栏显示有限数量的项目",
-  "enter_number_of_projects": "输入项目数量"
+  "enter_number_of_projects": "输入项目数量",
+  "profile_updated": "个人资料已更新。",
+  "account_deactivated": "您的账户已停用。",
+  "maintenance": {
+    "title": "暂时无法连接 Nerve",
+    "description": "页面没能读取这台服务器的设置。它会自动重试，服务器恢复应答后继续。"
+  },
+  "enter_your_first_name": "输入您的名",
+  "enter_your_last_name": "输入您的姓",
+  "enter_your_display_name": "输入您的显示名称",
+  "cover_image_alt": "封面图片"
 }

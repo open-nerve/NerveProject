@@ -2,13 +2,15 @@ import { randomUUID } from "node:crypto";
 
 import type { Api } from "../../fixtures/api";
 import { accountOf, accountStateOf, expectDeactivated, tokensOf } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, login, password, register } from "../../fixtures/auth";
+import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
+import { bearer, createPAT, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
+import { answerTo, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 import { nerveUsers } from "../../fixtures/users";
 
-// A12, deactivating an account (M2 design 2, decision 3): the API version,
-// with the administrator's nerve users activate and deactivate. The page
-// version joins in M2/P5.
+// A12, deactivating an account (M2 design 2, decision 3), with the
+// administrator's nerve users activate and deactivate.
 
 /** Finishes onboarding, so that starting it over shows. */
 async function onboard(api: Api, token: string): Promise<void> {
@@ -23,6 +25,56 @@ async function onboard(api: Api, token: string): Promise<void> {
   });
   expect(response.status).toBe(200);
 }
+
+test("A12 (page): the general page deactivates the account once confirmed; the session ends, sign-in says so, and nerve users activate lets it in again", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const email = emailFor(testInfo);
+  const tokens = await registerOnboarded(api, email);
+  const pat = await createPAT(api, tokens.access_token);
+  // Another session of the account, which ends too.
+  await login(api, email);
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/general");
+  const before = await accountOf(db, email);
+  const tokensBefore = await tokensOf(db, before.id);
+
+  // The confirmation says what deactivating does, as nerve does it (decision 3).
+  await page.getByRole("button", { name: "Deactivate account" }).click();
+  await expect(page.getByText("ask an administrator of this server to reactivate it", { exact: false })).toBeVisible();
+  const deactivated = await answerTo(page, "POST", "/api/v0/me/deactivate", () =>
+    page.getByRole("button", { name: "Confirm" }).click()
+  );
+  expect(deactivated.status()).toBe(204);
+
+  // The page is back at sign-in, which comes back to the general page, and the browser keeps no session.
+  await expect(page).toHaveURL(signInPath("/settings/profile/general"));
+  await expect(page.getByText("Your account is deactivated.")).toBeVisible();
+  expect(await recordOf(page)).toBeNull();
+  await expectDeactivated(db, before, tokensBefore);
+
+  // Signing in again: the account is deactivated.
+  expect(await submitSignIn(page, email, password)).toBe(403);
+  await expect(formAlert(page)).toHaveText("This account is deactivated.");
+
+  // The administrator activates it: it signs in, into onboarding, which deactivating started over.
+  expect(await nerveUsers(db, ["activate", "--email", email])).toBe(
+    `activated ${email}: 1 API tokens are usable again\n`
+  );
+  expect(await submitSignIn(page, email, password)).toBe(200);
+  await expect(page).toHaveURL("/onboarding");
+  expect((await api.GET("/api/v0/me", { headers: bearer(pat.token) })).response.status).toBe(200);
+
+  expect(watch.apiFailures).toEqual(["403 POST /api/v0/auth/login"]);
+  expect(watch.pageErrors).toEqual([]);
+  await expectQuietConsole(page, watch, {
+    errors: ["Failed to load resource: the server responded with a status of 403 (Forbidden)"],
+    warnings: [EMOJI_CHECK_WARNING],
+  });
+});
 
 test("A12 (API): a token deactivates the account; nerve users activate brings it and its tokens back, deactivate does as the API did", async ({
   api,

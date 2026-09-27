@@ -14,13 +14,15 @@ import { Input, InputGroup } from "@makeplane/propel/components/input";
 import type { User, UserUpdate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
-import { setPromiseToast } from "@nerve/propel/toast";
+import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 
 import { getFileURL } from "@nerve/utils";
 // components
 import { DeactivateAccountModal } from "@/components/account/deactivate-account-modal";
 import { CoverImage } from "@/components/common/cover-image";
 import { SettingsBoxedControlItem } from "@/components/settings/boxed-control-item";
+// helpers
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
 // utils
@@ -37,6 +39,9 @@ type Props = {
   user: User;
 };
 
+/** The fields of UserUpdate the form has, whose errors show under them. */
+const FIELDS = ["first_name", "last_name", "display_name"] as const;
+
 export const GeneralProfileSettingsForm = observer(function GeneralProfileSettingsForm(props: Props) {
   const { user } = props;
   // states
@@ -49,6 +54,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
     handleSubmit,
     watch,
     control,
+    setError,
     formState: { errors },
   } = useForm<TUserProfileForm>({
     defaultValues: {
@@ -69,19 +75,21 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
       display_name: formData?.display_name,
     };
 
-    const updatePromise = updateCurrentUser(userPayload).finally(() => setIsLoading(false));
-
-    setPromiseToast(updatePromise, {
-      loading: "Updating...",
-      success: {
-        title: "Success!",
-        message: () => `Profile updated successfully.`,
-      },
-      error: {
-        title: "Error!",
-        message: () => `There was some error in updating your profile. Please try again.`,
-      },
-    });
+    try {
+      await updateCurrentUser(userPayload);
+      setToast({ type: TOAST_TYPE.SUCCESS, title: t("toast.success"), message: t("profile_updated") });
+    } catch (error) {
+      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+      const fields = fieldErrorKeys(error);
+      for (const field of FIELDS) {
+        const key = fields[field];
+        if (key !== undefined) setError(field, { type: "manual", message: t(key) });
+      }
+      if (needsErrorBanner(error, FIELDS))
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -94,7 +102,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
             <CoverImage
               src={user.cover_image_url ?? undefined}
               className="h-44 w-full rounded-lg"
-              alt={currentUser?.first_name ?? "Cover image"}
+              alt={currentUser?.first_name ?? t("cover_image_alt")}
             />
             <div className="absolute -bottom-6 left-6 flex items-end justify-between">
               <div className="flex gap-3">
@@ -135,7 +143,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                   control={control}
                   name="first_name"
                   rules={{
-                    required: "Please enter first name",
+                    required: t("common.errors.required"),
                     validate: validatePersonName,
                   }}
                   render={({ field: { value, onChange, ref } }) => (
@@ -149,7 +157,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           value={value}
                           onChange={onChange}
                           ref={ref}
-                          placeholder="Enter your first name"
+                          placeholder={t("enter_your_first_name")}
                           maxLength={50}
                           autoComplete="on"
                         />
@@ -178,7 +186,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           value={value}
                           onChange={onChange}
                           ref={ref}
-                          placeholder="Enter your last name"
+                          placeholder={t("enter_your_last_name")}
                           maxLength={50}
                           autoComplete="on"
                         />
@@ -197,7 +205,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                   control={control}
                   name="display_name"
                   rules={{
-                    required: "Display name is required.",
+                    required: t("common.errors.required"),
                     validate: validateDisplayName,
                   }}
                   render={({ field: { value, onChange, ref } }) => (
@@ -211,7 +219,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           value={value}
                           onChange={onChange}
                           ref={ref}
-                          placeholder="Enter your display name"
+                          placeholder={t("enter_your_display_name")}
                           maxLength={50}
                         />
                       </InputGroup>
@@ -231,7 +239,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                   control={control}
                   name="email"
                   rules={{
-                    required: "Email is required.",
+                    required: t("common.errors.required"),
                   }}
                   render={({ field: { value, ref } }) => (
                     <Field name="email" invalid={Boolean(errors.email)}>
@@ -243,7 +251,7 @@ export const GeneralProfileSettingsForm = observer(function GeneralProfileSettin
                           type="email"
                           value={value}
                           ref={ref}
-                          placeholder="Enter your email"
+                          placeholder={t("auth.common.email.placeholder")}
                           autoComplete="on"
                           disabled
                         />

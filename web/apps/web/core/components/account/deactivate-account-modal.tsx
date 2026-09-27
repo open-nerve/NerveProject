@@ -11,6 +11,8 @@ import { Button } from "@nerve/propel/button";
 import { DeleteOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EModalPosition, EModalWidth, ModalCore } from "@nerve/ui";
+// helpers
+import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
 
@@ -38,21 +40,20 @@ export function DeactivateAccountModal(props: Props) {
 
     await deactivateAccount()
       .then(() => {
+        // The session has ended: the sign-in page takes over (AuthenticationWrapper), and shows this.
         setToast({
           type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Account deactivated successfully.",
+          title: t("toast.success"),
+          message: t("account_deactivated"),
         });
         handleClose();
         return;
       })
       .catch((error: unknown) => {
-        // An ApiError's message is its problem's detail or title, else the HTTP status; the other failures (the
-        // session changed or is unavailable, no network) are errors with a message as well.
         setToast({
           type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: error instanceof Error ? error.message : undefined,
+          title: t("toast.error"),
+          message: t(errorMessageKey(error)),
         });
       })
       .finally(() => setIsDeactivating(false));

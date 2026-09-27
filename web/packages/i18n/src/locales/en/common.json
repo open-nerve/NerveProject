@@ -26,7 +26,7 @@
   "saving": "Saving",
   "save_changes": "Save changes",
   "deactivate_account": "Deactivate account",
-  "deactivate_account_description": "When deactivating an account, all of the data and resources within that account will be permanently removed and cannot be recovered.",
+  "deactivate_account_description": "Signs you out everywhere; your password and personal access tokens stop working until an administrator of this server reactivates the account. Nothing is deleted.",
   "preferences": "Preferences",
   "language_and_time": "Language & Time",
   "create_workspace": "Create workspace",
@@ -124,7 +124,7 @@
   "you_can_see_here_if_someone_invites_you_to_a_workspace": "You can see here if someone invites you to a workspace",
   "back_to_home": "Back to home",
   "deactivate_your_account": "Deactivate your account",
-  "deactivate_your_account_description": "Once deactivated, you can't be assigned work items. To reactivate your account, you will need an invite to a workspace at this email address.",
+  "deactivate_your_account_description": "You will be signed out everywhere, and neither your password nor your personal access tokens will work. Nothing is deleted and no email is sent: to use the account again, ask an administrator of this server to reactivate it.",
   "deactivating": "Deactivating",
   "confirm": "Confirm",
   "draft_created": "Draft created",
@@ -477,5 +477,15 @@
   "accordion_navigation_control": "Accordion sidebar navigation",
   "horizontal_navigation_bar": "Tabbed Navigation",
   "show_limited_projects_on_sidebar": "Show limited projects on sidebar",
-  "enter_number_of_projects": "Enter number of projects"
+  "enter_number_of_projects": "Enter number of projects",
+  "profile_updated": "Your profile is updated.",
+  "account_deactivated": "Your account is deactivated.",
+  "maintenance": {
+    "title": "Nerve cannot be reached right now",
+    "description": "The page could not load this server's settings. It tries again by itself and carries on once the server answers."
+  },
+  "enter_your_first_name": "Enter your first name",
+  "enter_your_last_name": "Enter your last name",
+  "enter_your_display_name": "Enter your display name",
+  "cover_image_alt": "Cover image"
 }
