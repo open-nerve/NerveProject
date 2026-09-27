@@ -61,7 +61,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
     retypePassword: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPasswordInputFocused, setIsPasswordInputFocused] = useState(false);
   const [isRetryPasswordInputFocused, setIsRetryPasswordInputFocused] = useState(false);
   const [isBannerMessage, setBannerMessage] = useState(false);
   const [isEmailInputFocused, setIsEmailInputFocused] = useState(false);
@@ -199,8 +198,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
                 value={passwordFormData.password}
                 onChange={(e) => handleFormChange("password", e.target.value)}
                 placeholder={t("auth.common.password.placeholder")}
-                onFocus={() => setIsPasswordInputFocused(true)}
-                onBlur={() => setIsPasswordInputFocused(false)}
                 autoComplete={mode === EAuthModes.SIGN_IN ? "current-password" : "new-password"}
               />
               <button
@@ -225,7 +222,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           {mode === EAuthModes.SIGN_UP &&
             password.length > 0 &&
             getPasswordStrength(password) !== E_PASSWORD_STRENGTH.STRENGTH_VALID && (
-              <PasswordStrengthIndicator password={password} isFocused={isPasswordInputFocused} />
+              <PasswordStrengthIndicator password={password} />
             )}
         </div>
 

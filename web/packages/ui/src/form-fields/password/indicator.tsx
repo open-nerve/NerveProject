@@ -6,28 +6,20 @@
 
 import { TickCircleOutline } from "@makeplane/propel/icons";
 import React from "react";
-import { E_PASSWORD_STRENGTH } from "@nerve/constants";
 import { cn, getPasswordStrength, getPasswordCriteria } from "@nerve/utils";
 import { getStrengthInfo, getFragmentColor } from "./helper";
 
 interface PasswordStrengthIndicatorProps {
   password: string;
   showCriteria?: boolean;
-  isFocused?: boolean;
 }
 
-export function PasswordStrengthIndicator({
-  password,
-  showCriteria = true,
-  isFocused = false,
-}: PasswordStrengthIndicatorProps) {
+export function PasswordStrengthIndicator({ password, showCriteria = true }: PasswordStrengthIndicatorProps) {
   const strength = getPasswordStrength(password);
   const criteria = getPasswordCriteria(password);
   const strengthInfo = getStrengthInfo(strength);
 
-  const isPasswordMeterVisible = isFocused || strength !== E_PASSWORD_STRENGTH.STRENGTH_VALID;
-
-  if ((!password && !showCriteria) || !isPasswordMeterVisible) {
+  if (!password && !showCriteria) {
     return null;
   }
 
