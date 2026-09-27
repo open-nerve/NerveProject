@@ -18,6 +18,7 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { PasswordStrengthIndicator } from "@nerve/ui";
 import { getPasswordStrength } from "@nerve/utils";
 // components
+import { ApiTokenList } from "@/components/api-token/token-list";
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // helpers
 import { errorMessageKey, fieldErrorKeys } from "@/helpers/authentication.helper";
@@ -148,7 +149,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                       type="button"
                       className="grid size-5 place-items-center"
                       onClick={() => handleShowPassword("oldPassword")}
-                      aria-label={showPassword?.oldPassword ? "Hide password" : "Show password"}
+                      aria-label={t(
+                        showPassword?.oldPassword
+                          ? "aria_labels.auth_forms.hide_password"
+                          : "aria_labels.auth_forms.show_password"
+                      )}
                     >
                       {showPassword?.oldPassword ? (
                         <HideOutline className="size-5 text-placeholder" />
@@ -189,7 +194,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                         type="button"
                         className="grid size-5 place-items-center"
                         onClick={() => handleShowPassword("password")}
-                        aria-label={showPassword?.password ? "Hide password" : "Show password"}
+                        aria-label={t(
+                          showPassword?.password
+                            ? "aria_labels.auth_forms.hide_password"
+                            : "aria_labels.auth_forms.show_password"
+                        )}
                       >
                         {showPassword?.password ? (
                           <HideOutline className="size-5 text-placeholder" />
@@ -237,7 +246,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                         type="button"
                         className="grid size-5 place-items-center"
                         onClick={() => handleShowPassword("confirmPassword")}
-                        aria-label={showPassword?.confirmPassword ? "Hide password" : "Show password"}
+                        aria-label={t(
+                          showPassword?.confirmPassword
+                            ? "aria_labels.auth_forms.hide_password"
+                            : "aria_labels.auth_forms.show_password"
+                        )}
                       >
                         {showPassword?.confirmPassword ? (
                           <HideOutline className="size-5 text-placeholder" />
@@ -263,6 +276,15 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
           </div>
         </div>
       </form>
+      <section className="mt-12 flex flex-col gap-4">
+        <ProfileSettingsHeading
+          title={t("account_settings.security.api_tokens.title")}
+          description={t("account_settings.security.api_tokens.description")}
+        />
+        <ApiTokenList
+          empty={<p className="text-13 text-placeholder">{t("account_settings.security.api_tokens.empty")}</p>}
+        />
+      </section>
     </div>
   );
 });

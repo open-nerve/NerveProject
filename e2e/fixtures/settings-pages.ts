@@ -102,7 +102,8 @@ function tokenForms(token: string): string[] {
 }
 
 /**
- * Checks that page holds token in none of its forms (tokenForms): not in the document, its address, its
+ * Checks that page holds token in none of its forms (tokenForms): not in the document, the values of its form
+ * controls (a value typed or set by script need not show in the document's markup), its address, its
  * localStorage, sessionStorage or cookies, nor in what the page logged, which log collects.
  */
 export async function expectTokenGone(page: Page, token: string, log: readonly string[]): Promise<void> {
@@ -110,8 +111,12 @@ export async function expectTokenGone(page: Page, token: string, log: readonly s
     const [local, session] = [localStorage, sessionStorage].map((area) =>
       Array.from({ length: area.length }, (_, i) => `${area.key(i)}=${area.getItem(area.key(i) ?? "")}`).join("\n")
     );
+    const controls = document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      "input, textarea, select"
+    );
     return {
       document: document.documentElement.outerHTML,
+      formValues: Array.from(controls, (control) => control.value).join("\n"),
       address: window.location.href,
       localStorage: local ?? "",
       sessionStorage: session ?? "",
@@ -163,4 +168,18 @@ export async function expectListBesideButton(page: Page, button: Locator): Promi
   const left = Math.abs(at.x - beside.x);
   const right = Math.abs(at.x + at.width - (beside.x + beside.width));
   expect(Math.min(left, right), "between the left edges or the right edges").toBeLessThan(2);
+}
+
+/**
+ * Fills the security page's form, which page shows, with the current password and a new one typed twice, and
+ * submits it: resolves with the status of nerve's answer to the one change it sends.
+ */
+export async function submitPasswordChange(page: Page, current: string, next: string): Promise<number> {
+  await page.locator("#old_password").fill(current);
+  await page.locator("#new_password").fill(next);
+  await page.locator("#confirm_password").fill(next);
+  const answer = await answerTo(page, "POST", "/api/v0/me/change-password", () =>
+    page.getByRole("button", { name: "Change password" }).click()
+  );
+  return answer.status();
 }

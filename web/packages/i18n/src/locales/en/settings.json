@@ -27,6 +27,13 @@
         "set_date": "Set date",
         "required": "Choose when the token expires, or that it never does."
       }
+    },
+    "security": {
+      "api_tokens": {
+        "title": "Personal access tokens",
+        "description": "Changing your password does not revoke these tokens: each one works until it expires or you revoke it here.",
+        "empty": "You have no personal access tokens."
+      }
     }
   },
   "profile": {
