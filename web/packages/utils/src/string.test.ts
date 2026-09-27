@@ -5,7 +5,13 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { copyTextToClipboard, isCommentEmpty, isEmptyHtmlString, stripAndTruncateHTML } from "./string";
+import {
+  checkEmailValidity,
+  copyTextToClipboard,
+  isCommentEmpty,
+  isEmptyHtmlString,
+  stripAndTruncateHTML,
+} from "./string";
 
 // The HTML helpers read HTML the way the browser parses it. The notification preview shows the text of a
 // comment: entities come out decoded (sanitize-html, which these helpers used before, returned them escaped,
@@ -52,6 +58,35 @@ describe("isCommentEmpty", () => {
     expect(isCommentEmpty("  ")).toBe(true);
     expect(isCommentEmpty(IMAGE_ONLY)).toBe(false);
     expect(isCommentEmpty(MENTION_ONLY)).toBe(false);
+  });
+});
+
+// The sign-in and sign-up forms flag an address this check refuses. A local part is a run of dot-separated words
+// without a quote, a backslash, a space or one of <>()[],;:@, or anything between two quotes.
+describe("checkEmailValidity", () => {
+  it("takes a plain, a dotted or a quoted local part, and a name or an IP address for the domain", () => {
+    for (const email of [
+      "user@example.com",
+      "first.last@mail.example.org",
+      '"john doe"@example.com',
+      '"a@b"@example.com',
+      "user@[192.168.0.1]",
+    ])
+      expect(checkEmailValidity(email), email).toBe(true);
+  });
+
+  it("refuses a quote, a backslash or a space outside quotes, an unclosed quote, and an address without a domain", () => {
+    for (const email of [
+      'jo"hn@example.com',
+      'john.do"e@example.com',
+      '"john@example.com',
+      "jo\\hn@example.com",
+      "john doe@example.com",
+      "user@",
+      "hello world",
+      "",
+    ])
+      expect(checkEmailValidity(email), email).toBe(false);
   });
 });
 
