@@ -78,3 +78,15 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：页面的登录状态（M2/P4）；S2 的断言（M2/P4）；River 停机与 fixture 的预算（M2/P3b）；fixture 写法的延伸（M4、M5、M8）。
 
 来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。
+
+## 处理结果（M2/P3b）
+
+- **River 停机与 fixture 的预算**（完成）：River 运行时实测 nerve 从收到 SIGTERM 到退出的时间（`bin/nerve serve`，test 配置，每种情形 10 次，依次是最小、中位、最大）。Task 11 的两轮（改前的 runner）：就绪后立即停机 3.5、4.3、4.6 毫秒，另一轮 1.5、2.6、4.6 毫秒；就绪 3 秒后停机 4.1、9.1、17.6 毫秒，另一轮 3.6、8.1、11.4 毫秒。3 秒后停机的那 10 次中，停机前清理任务完成过的只有 8 次：River 选出 leader 之后，它的维护服务逐个错开启动，定时任务的第一次投递可能晚于 3 秒。C1 调查的 210 次（改前的 runner 150 次、改后的 60 次，就绪后 0–30 秒停机）都在 3.3–21.7 毫秒之间，都以 0 退出。这些都远在 fixture 的 `stopTimeoutMs`（30 秒）和 worker 的预算（`nerveFixtureTimeoutMs = readyTimeoutMs + stopTimeoutMs + 10_000`，70 秒）之内。按配置算的最坏情况（HTTP 20 秒、任务 10 秒加 1 秒、连接池 5 秒，共 36 秒）超过 `stopTimeoutMs`：那时 fixture 在 30 秒时 SIGKILL，报出带日志路径的错误，不会挂住；停机要这么久本身就是缺陷。
+
+  停机落在 River 启动后的最初几秒内时，River 会记 ERROR：`maintenance.PeriodicJobEnqueuer: Error starting transaction`（`context canceled`）；River 自己还没启动完时还有 `notifier.Notifier: Error running listener … conn closed`。这两处 River 不看取消的原因，runner 无从避免：改后的 runner 在 River 启动之后只调用 River 自己的 `Stop`，出现的比例不变。C1 调查中至少有一条 River ERROR 的运行，改前、改后依次是：就绪后立即停机 10/10、10/10；就绪 3 秒后 7/40、4/40（Fisher 检验 p = 0.52，是噪声）；就绪 10 秒后、`river_queue` 从 7 秒起被锁 1/10、0/10；运行 10 秒、30 秒后停机（test 配置和默认间隔各 20 次，只测了改前的 runner）0/40。所有运行都以 0 退出，没有任务停在 `running`，没有连接泄漏，没有写了一半的数据。所以 worker 的 nerve 日志里（尤其是 `nerveWith` 另起、很快又停的 nerve）出现这两条不是失败。
+- **命令的标准输入**：`runNerve` 接受标准输入和额外的环境变量，写完就关闭标准输入，读密码的命令拿到文件结尾，不会一直等；`e2e/fixtures/users.ts` 的 `nerveUsers`、`nerveUsersFails` 在 worker 的库上运行 `nerve users`（A12、A13、A16、A17），日志开到 DEBUG：`nerveUsers` 核对命令确实记了日志，两者都核对输出和日志里没有密码（原文、十六进制和两种 base64）。
+- **新等待的期限**：A14 用 `expect.poll` 等清理任务删掉过期的会话，以 15 秒为限（test 配置的间隔是 2 秒）。
+
+仍未处理，状态保持 `open`：页面的登录状态（M2/P4）；S2 的断言（M2/P4）；fixture 写法的延伸（M4、M5、M8）。
+
+来源：[M2/P3b spec](../specs/P3b-jobs-and-admin.md) 第 7 节。

@@ -12,6 +12,40 @@ import (
 	"uuid"
 )
 
+const activateUser = `-- name: ActivateUser :exec
+UPDATE users
+SET is_active = true, updated_at = $1
+WHERE id = $2
+`
+
+type ActivateUserParams struct {
+	Now time.Time
+	ID  uuid.UUID
+}
+
+func (q *Queries) ActivateUser(ctx context.Context, arg ActivateUserParams) error {
+	_, err := q.db.Exec(ctx, activateUser, arg.Now, arg.ID)
+	return err
+}
+
+const changeEmail = `-- name: ChangeEmail :exec
+UPDATE users
+SET email = $1, updated_at = $2
+WHERE id = $3
+`
+
+type ChangeEmailParams struct {
+	Email string
+	Now   time.Time
+	ID    uuid.UUID
+}
+
+// nerve users set-email (M2 decision 1). users_email_key rejects an address another account has.
+func (q *Queries) ChangeEmail(ctx context.Context, arg ChangeEmailParams) error {
+	_, err := q.db.Exec(ctx, changeEmail, arg.Email, arg.Now, arg.ID)
+	return err
+}
+
 const createUser = `-- name: CreateUser :exec
 INSERT INTO users (id, email, password, display_name, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $5)
@@ -121,6 +155,23 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const lockAccountByEmail = `-- name: LockAccountByEmail :one
+SELECT id
+FROM users
+WHERE email = $1
+FOR NO KEY UPDATE
+`
+
+// The account row lock of M2 design 3.5 for the server administrator's commands, which name the
+// account by its address: one statement finds and locks the row, inside the command's
+// transaction, so the account cannot change between the two.
+func (q *Queries) LockAccountByEmail(ctx context.Context, email string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockAccountByEmail, email)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const lockUserForCredentials = `-- name: LockUserForCredentials :one

@@ -24,6 +24,7 @@ type Config struct {
 	Database  DatabaseConfig  `koanf:"database"`
 	Auth      AuthConfig      `koanf:"auth"`
 	RateLimit RateLimitConfig `koanf:"ratelimit"`
+	Jobs      JobsConfig      `koanf:"jobs"`
 	Workspace WorkspaceConfig `koanf:"workspace"`
 	Files     FilesConfig     `koanf:"files"`
 	Log       LogConfig       `koanf:"log"`
@@ -68,9 +69,14 @@ type AuthConfig struct {
 	// RefreshDeadline bounds the statements of a refresh or a logout; with
 	// database.commit_timeout it must end before the web client gives up on
 	// a refresh (M2 design 3.5).
-	RefreshDeadline time.Duration  `koanf:"refresh_deadline"`
-	JWT             JWTConfig      `koanf:"jwt"`
-	Password        PasswordConfig `koanf:"password"`
+	RefreshDeadline time.Duration `koanf:"refresh_deadline"`
+	// SessionCleanupInterval is how often the periodic job deletes the
+	// expired sessions (M2 design 3.15). River's documentation says a
+	// periodic interval should never be less than one second, but River
+	// does not enforce it; validate does.
+	SessionCleanupInterval time.Duration  `koanf:"session_cleanup_interval"`
+	JWT                    JWTConfig      `koanf:"jwt"`
+	Password               PasswordConfig `koanf:"password"`
 }
 
 // JWTConfig locates the Ed25519 signing key.
@@ -123,6 +129,14 @@ func (b BucketConfig) LogValue() slog.Value {
 	return slog.GroupValue(slog.Int("per_minute", b.PerMinute), slog.Int("burst", b.Burst))
 }
 
+// JobsConfig configures the background jobs (M2 design 3.15).
+type JobsConfig struct {
+	// ShutdownTimeout is how long nerve waits at shutdown for the running
+	// jobs, after the HTTP server has stopped; then their contexts are
+	// cancelled.
+	ShutdownTimeout time.Duration `koanf:"shutdown_timeout"`
+}
+
 // WorkspaceConfig configures workspaces. The instance API reports it to
 // clients; creating workspaces arrives, and honours it, in M3 (M2 design 5.3).
 type WorkspaceConfig struct {
@@ -168,6 +182,7 @@ func (c Config) LogValue() slog.Value {
 			slog.Duration("access_token_ttl", c.Auth.AccessTokenTTL),
 			slog.Duration("session_ttl", c.Auth.SessionTTL),
 			slog.Duration("refresh_deadline", c.Auth.RefreshDeadline),
+			slog.Duration("session_cleanup_interval", c.Auth.SessionCleanupInterval),
 			slog.Group("jwt",
 				slog.Bool("private_key_file_set", c.Auth.JWT.PrivateKeyFile != ""),
 			),
@@ -188,6 +203,9 @@ func (c Config) LogValue() slog.Value {
 			slog.Any("login_ip_email", c.RateLimit.LoginIPEmail),
 			slog.Any("register_ip", c.RateLimit.RegisterIP),
 			slog.Any("password_user", c.RateLimit.PasswordUser),
+		),
+		slog.Group("jobs",
+			slog.Duration("shutdown_timeout", c.Jobs.ShutdownTimeout),
 		),
 		slog.Group("workspace",
 			slog.Bool("creation_enabled", c.Workspace.CreationEnabled),

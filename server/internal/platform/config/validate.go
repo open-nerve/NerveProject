@@ -81,6 +81,9 @@ func (c Config) validate() error {
 			c.Database.CommitTimeout, webRefreshTimeout, c.Auth.RefreshDeadline)
 	}
 	c.RateLimit.validate(fail)
+	if c.Jobs.ShutdownTimeout <= 0 {
+		fail("jobs.shutdown_timeout", "must be positive, got %s", c.Jobs.ShutdownTimeout)
+	}
 	if c.Files.SizeLimit < 1 {
 		fail("files.size_limit", "must be at least 1, got %d", c.Files.SizeLimit)
 	}
@@ -103,6 +106,11 @@ func (a AuthConfig) validate(env string, fail func(key, format string, args ...a
 		fail("auth.session_ttl", "must be positive, got %s", a.SessionTTL)
 	case a.SessionTTL <= a.AccessTokenTTL:
 		fail("auth.session_ttl", "must be longer than auth.access_token_ttl (%s), got %s", a.AccessTokenTTL, a.SessionTTL)
+	}
+	if a.SessionCleanupInterval < time.Second {
+		// River's documentation says a periodic interval should never be
+		// less than one second, but River does not enforce it; this does.
+		fail("auth.session_cleanup_interval", "must be at least 1s, got %s", a.SessionCleanupInterval)
 	}
 	if env == EnvProd && a.JWT.PrivateKeyFile == "" {
 		// The file itself is read when nerve starts (bootstrap), not here.

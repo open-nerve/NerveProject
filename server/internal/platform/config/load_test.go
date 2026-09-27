@@ -32,6 +32,7 @@ auth:
   access_token_ttl: 15m
   session_ttl: 720h
   refresh_deadline: 4s
+  session_cleanup_interval: 1h
   jwt:
     private_key_file: ""
   password:
@@ -49,6 +50,8 @@ ratelimit:
   login_ip_email: {per_minute: 10, burst: 5}
   register_ip: {per_minute: 10, burst: 5}
   password_user: {per_minute: 5, burst: 5}
+jobs:
+  shutdown_timeout: 10s
 workspace:
   creation_enabled: true
 files:
@@ -92,6 +95,8 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			"NERVE_SERVER__TRUSTED_PROXIES=10.0.0.0/8,fd00::/8",
 			"NERVE_RATELIMIT__LOGIN_IP__BURST=3",
 			"NERVE_RATELIMIT__PASSWORD_USER__PER_MINUTE=7",
+			"NERVE_AUTH__SESSION_CLEANUP_INTERVAL=90s",
+			"NERVE_JOBS__SHUTDOWN_TIMEOUT=7s",
 			"NERVE_WORKSPACE__CREATION_ENABLED=false",
 			"NERVE_FILES__SIZE_LIMIT=1024",
 		},
@@ -120,10 +125,11 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			CommitTimeout: 2 * time.Second,
 		},
 		Auth: AuthConfig{
-			SignupEnabled:   true, // environment
-			AccessTokenTTL:  15 * time.Minute,
-			SessionTTL:      720 * time.Hour,
-			RefreshDeadline: 4 * time.Second,
+			SignupEnabled:          true, // environment
+			AccessTokenTTL:         15 * time.Minute,
+			SessionTTL:             720 * time.Hour,
+			RefreshDeadline:        4 * time.Second,
+			SessionCleanupInterval: 90 * time.Second, // environment
 			Password: PasswordConfig{
 				Argon2MemoryKiB:     64, // environment
 				Argon2Iterations:    2,
@@ -142,8 +148,9 @@ func TestLoadAppliesLayersInOrder(t *testing.T) {
 			RegisterIP:    BucketConfig{PerMinute: 10, Burst: 5},
 			PasswordUser:  BucketConfig{PerMinute: 7, Burst: 5}, // environment
 		},
-		Workspace: WorkspaceConfig{CreationEnabled: false}, // environment
-		Files:     FilesConfig{SizeLimit: 1024},            // environment
+		Jobs:      JobsConfig{ShutdownTimeout: 7 * time.Second}, // environment
+		Workspace: WorkspaceConfig{CreationEnabled: false},      // environment
+		Files:     FilesConfig{SizeLimit: 1024},                 // environment
 		Log:       LogConfig{Level: "debug", Format: "text"},
 	}
 	if !reflect.DeepEqual(cfg, want) {

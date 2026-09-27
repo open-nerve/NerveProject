@@ -12,6 +12,25 @@ import (
 	"uuid"
 )
 
+const countUsableAPITokens = `-- name: CountUsableAPITokens :one
+SELECT count(*)
+FROM api_tokens
+WHERE user_id = $1 AND deleted_at IS NULL AND (expired_at IS NULL OR expired_at > $2::timestamptz)
+`
+
+type CountUsableAPITokensParams struct {
+	UserID uuid.UUID
+	Now    time.Time
+}
+
+// The tokens that authenticate while the account is active: unrevoked, and unexpired at now.
+func (q *Queries) CountUsableAPITokens(ctx context.Context, arg CountUsableAPITokensParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsableAPITokens, arg.UserID, arg.Now)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAPIToken = `-- name: CreateAPIToken :exec
 INSERT INTO api_tokens (id, user_id, token_hash, label, description, expired_at, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6,
@@ -179,6 +198,28 @@ type RevokeAPITokenParams struct {
 // Revoking is a soft delete. Another account's token, or one revoked already, is not hit (M2 design 5.4).
 func (q *Queries) RevokeAPIToken(ctx context.Context, arg RevokeAPITokenParams) (int64, error) {
 	result, err := q.db.Exec(ctx, revokeAPIToken, arg.Now, arg.UserID, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const revokeAllAPITokens = `-- name: RevokeAllAPITokens :execrows
+UPDATE api_tokens
+SET updated_at = $1, deleted_at = $1, updated_by_id = NULL
+WHERE user_id = $2 AND deleted_at IS NULL
+`
+
+type RevokeAllAPITokensParams struct {
+	Now    time.Time
+	UserID uuid.UUID
+}
+
+// nerve users reset-password revokes every token of the account, expired ones too (M2 design 3.5).
+// No account makes the change, so updated_by_id is NULL, as Plane's BaseModel.save writes it when
+// no user is signed in, e.g. in a management command (plane/apps/api/plane/db/models/base.py:31-33).
+func (q *Queries) RevokeAllAPITokens(ctx context.Context, arg RevokeAllAPITokensParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeAllAPITokens, arg.Now, arg.UserID)
 	if err != nil {
 		return 0, err
 	}

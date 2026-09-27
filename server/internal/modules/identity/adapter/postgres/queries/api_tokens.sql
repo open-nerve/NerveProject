@@ -41,3 +41,17 @@ WHERE t.id = sqlc.arg(id);
 UPDATE api_tokens
 SET last_used = sqlc.arg(now)::timestamptz
 WHERE id = sqlc.arg(id) AND (last_used IS NULL OR last_used < sqlc.arg(stale_before)::timestamptz);
+
+-- name: RevokeAllAPITokens :execrows
+-- nerve users reset-password revokes every token of the account, expired ones too (M2 design 3.5).
+-- No account makes the change, so updated_by_id is NULL, as Plane's BaseModel.save writes it when
+-- no user is signed in, e.g. in a management command (plane/apps/api/plane/db/models/base.py:31-33).
+UPDATE api_tokens
+SET updated_at = sqlc.arg(now), deleted_at = sqlc.arg(now), updated_by_id = NULL
+WHERE user_id = sqlc.arg(user_id) AND deleted_at IS NULL;
+
+-- name: CountUsableAPITokens :one
+-- The tokens that authenticate while the account is active: unrevoked, and unexpired at now.
+SELECT count(*)
+FROM api_tokens
+WHERE user_id = sqlc.arg(user_id) AND deleted_at IS NULL AND (expired_at IS NULL OR expired_at > sqlc.arg(now)::timestamptz);

@@ -53,6 +53,26 @@ func (s *Store) RevokeAPIToken(ctx context.Context, id, userID uuid.UUID, now ti
 	return n == 1, nil
 }
 
+// RevokeAllAPITokens soft-deletes every unrevoked token of userID, expired
+// ones too, at now, with updated_by_id NULL, and returns how many.
+func (s *Store) RevokeAllAPITokens(ctx context.Context, userID uuid.UUID, now time.Time) (int, error) {
+	n, err := s.queries(ctx).RevokeAllAPITokens(ctx, gen.RevokeAllAPITokensParams{Now: now, UserID: userID})
+	if err != nil {
+		return 0, fmt.Errorf("revoke all API tokens: %w", err)
+	}
+	return int(n), nil
+}
+
+// CountUsableAPITokens counts userID's tokens that are unrevoked and
+// unexpired at now.
+func (s *Store) CountUsableAPITokens(ctx context.Context, userID uuid.UUID, now time.Time) (int, error) {
+	n, err := s.queries(ctx).CountUsableAPITokens(ctx, gen.CountUsableAPITokensParams{UserID: userID, Now: now})
+	if err != nil {
+		return 0, fmt.Errorf("count usable API tokens: %w", err)
+	}
+	return int(n), nil
+}
+
 // APITokenByHash reads what authentication checks of the token with hash;
 // app.ErrNotFound when there is none.
 func (s *Store) APITokenByHash(ctx context.Context, hash []byte) (app.APITokenCredential, error) {

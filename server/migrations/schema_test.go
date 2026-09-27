@@ -25,28 +25,35 @@ func newPool(t *testing.T, url string) *pgxpool.Pool {
 	return pool
 }
 
-func tables(t *testing.T, pool *pgxpool.Pool) []string {
+// The schema's tables (but goose's own), enum types and functions.
+const (
+	tablesQuery    = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> 'goose_db_version' ORDER BY 1"
+	enumsQuery     = "SELECT typname FROM pg_type WHERE typnamespace = 'public'::regnamespace AND typtype = 'e' ORDER BY 1"
+	functionsQuery = "SELECT proname FROM pg_proc WHERE pronamespace = 'public'::regnamespace ORDER BY 1"
+)
+
+func names(t *testing.T, pool *pgxpool.Pool, query string) []string {
 	t.Helper()
-	rows, err := pool.Query(context.Background(),
-		"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name <> 'goose_db_version' ORDER BY 1")
+	rows, err := pool.Query(context.Background(), query)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var names []string
+	var found []string
 	for rows.Next() {
 		var n string
 		if err := rows.Scan(&n); err != nil {
 			t.Fatal(err)
 		}
-		names = append(names, n)
+		found = append(found, n)
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	return names
+	return found
 }
 
-// Every migration can go up, down and up again (M2 design 4.1).
+// Every migration can go up, down and up again (M2 design 4.1), River's
+// too: goose runs each of its halves as one statement (M2 design 3.15).
 func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewEmptyDatabase(t))
@@ -57,22 +64,33 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 4 {
-		t.Fatalf("Up() = %d migrations, %v; want 4", len(up), err)
+	if err != nil || len(up) != 5 {
+		t.Fatalf("Up() = %d migrations, %v; want 5", len(up), err)
 	}
-	if got, want := tables(t, pool), []string{"api_tokens", "auth_sessions", "profiles", "users"}; !slices.Equal(got, want) {
-		t.Errorf("tables after Up = %q, want %q", got, want)
+	for _, want := range []struct {
+		query string
+		names []string
+	}{
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users"}},
+		{enumsQuery, []string{"river_job_state"}},
+		{functionsQuery, []string{"river_job_state_in_bitmask"}},
+	} {
+		if got := names(t, pool, want.query); !slices.Equal(got, want.names) {
+			t.Errorf("after Up, %s = %q, want %q", want.query, got, want.names)
+		}
 	}
 	for range up {
 		if _, err := m.Down(ctx); err != nil {
 			t.Fatalf("Down() error = %v", err)
 		}
 	}
-	if got := tables(t, pool); len(got) != 0 {
-		t.Errorf("tables after every Down = %q, want none", got)
+	for _, query := range []string{tablesQuery, enumsQuery, functionsQuery} {
+		if got := names(t, pool, query); len(got) != 0 {
+			t.Errorf("after every Down, %s = %q, want none", query, got)
+		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 4 {
-		t.Errorf("Up() again = %d migrations, %v; want 4", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 5 {
+		t.Errorf("Up() again = %d migrations, %v; want 5", len(again), err)
 	}
 }
 

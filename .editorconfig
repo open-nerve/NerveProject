@@ -20,3 +20,6 @@ trim_trailing_whitespace = false
 
 [{go.mod,go.sum,go.work}]
 indent_style = tab
+
+[server/migrations/sql/00005_river_main_v2_to_v7.sql]
+trim_trailing_whitespace = false

@@ -50,3 +50,16 @@ UPDATE auth_sessions
 SET updated_at = sqlc.arg(now), revoked_at = sqlc.arg(now), revoke_reason = 'logout'
 WHERE id = sqlc.arg(id) AND generation = sqlc.arg(generation) AND token_hash = sqlc.arg(token_hash)
   AND revoked_at IS NULL AND expires_at > sqlc.arg(now);
+
+-- name: DeleteExpiredSessions :execrows
+-- The periodic cleanup (M2 design 3.15): up to batch sessions that expired before now. A row
+-- another transaction holds (a refresh, a revocation) is skipped, not waited for: the next run
+-- deletes it, and the cleanup never joins the lock order of 3.5. The subquery needs its alias:
+-- without it sqlc finds expires_at ambiguous.
+DELETE FROM auth_sessions
+WHERE id IN (
+    SELECT s.id FROM auth_sessions s
+    WHERE s.expires_at < sqlc.arg(now)
+    LIMIT sqlc.arg(batch)
+    FOR UPDATE SKIP LOCKED
+);

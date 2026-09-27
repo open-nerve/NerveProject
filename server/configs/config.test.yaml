@@ -2,6 +2,8 @@
 auth:
   # 测试环境开放注册（prod 默认关闭，见 config.yaml）
   signup_enabled: true
+  # 端到端测试等清理任务删掉过期的会话（A14），间隔调短
+  session_cleanup_interval: 2s
   password:
     # 测试用最低的 argon2 参数，让大量注册的测试不被哈希拖慢
     argon2_memory_kib: 64

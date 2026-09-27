@@ -100,7 +100,7 @@ export interface paths {
         head?: never;
         /**
          * Change the caller's names and time zone
-         * @description Changes the fields sent and leaves the others. The e-mail address cannot change here: the server's administrator changes it.
+         * @description Changes the fields sent and leaves the others. The e-mail address cannot change here: the server's administrator changes it with `nerve users set-email`, which signs every session out.
          */
         patch: operations["updateMe"];
         trace?: never;
@@ -116,7 +116,7 @@ export interface paths {
         put?: never;
         /**
          * Deactivate the caller's account
-         * @description Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again.
+         * @description Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again with `nerve users activate`; then its unexpired personal access tokens authenticate again.
          */
         post: operations["deactivateMe"];
         delete?: never;

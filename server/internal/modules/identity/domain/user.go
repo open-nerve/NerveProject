@@ -92,13 +92,8 @@ func validTimezone(name string) bool {
 func NewAccount(rules *PasswordRules, email, password string) (string, error) {
 	email = NormalizeEmail(email)
 	var fields []shared.FieldError
-	switch {
-	case email == "":
-		fields = append(fields, shared.FieldError{Field: "email", Code: shared.FieldRequired, Message: "is required"})
-	case utf8.RuneCountInString(email) > MaxEmailLength:
-		fields = append(fields, shared.FieldError{Field: "email", Code: shared.FieldTooLong, Message: "must be at most 255 characters"})
-	case !ValidEmail(email):
-		fields = append(fields, shared.FieldError{Field: "email", Code: shared.FieldInvalidFormat, Message: "is not a valid e-mail address"})
+	if f := checkEmail("email", email); f != nil {
+		fields = append(fields, *f)
 	}
 	if f := rules.Check("password", password, email); f != nil {
 		fields = append(fields, *f)
@@ -107,4 +102,28 @@ func NewAccount(rules *PasswordRules, email, password string) (string, error) {
 		return "", shared.Invalid(fields...)
 	}
 	return email, nil
+}
+
+// NewEmail checks the new address of an account by the rules of
+// registration and returns it normalized: `nerve users set-email` (M2
+// decision 1). A problem is 422 validation_failed on field.
+func NewEmail(field, email string) (string, error) {
+	email = NormalizeEmail(email)
+	if f := checkEmail(field, email); f != nil {
+		return "", shared.Invalid(*f)
+	}
+	return email, nil
+}
+
+// checkEmail checks a normalized address.
+func checkEmail(field, email string) *shared.FieldError {
+	switch {
+	case email == "":
+		return &shared.FieldError{Field: field, Code: shared.FieldRequired, Message: "is required"}
+	case utf8.RuneCountInString(email) > MaxEmailLength:
+		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: "must be at most 255 characters"}
+	case !ValidEmail(email):
+		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "is not a valid e-mail address"}
+	}
+	return nil
 }

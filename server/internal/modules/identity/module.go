@@ -1,7 +1,8 @@
 // Package identity is the accounts module (M2 design 3.3, 6.2): accounts,
 // profiles, sessions and personal access tokens. It brings registration,
-// login, refresh, logout, the caller's account, preferences and tokens, and
-// the authentication every other operation goes through.
+// login, refresh, logout, the caller's account, preferences and tokens, the
+// authentication every other operation goes through, and the job that
+// deletes the expired sessions.
 package identity
 
 import (
@@ -17,10 +18,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/authn"
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
+	riveradapter "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/river"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/signing"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/jobs"
 	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -39,8 +42,10 @@ type Deps struct {
 	AccessTokenTTL  time.Duration
 	SessionTTL      time.Duration
 	RefreshDeadline time.Duration // auth.refresh_deadline
-	Password        PasswordHashing
-	RateLimits      RateLimits
+	// SessionCleanupInterval is auth.session_cleanup_interval.
+	SessionCleanupInterval time.Duration
+	Password               PasswordHashing
+	RateLimits             RateLimits
 }
 
 // PasswordHashing is auth.password: argon2id's parameters and the limits on
@@ -68,6 +73,7 @@ type Module struct {
 	uc            httpadapter.UseCases
 	settings      httpadapter.Settings
 	authenticator *authn.Authenticator
+	jobs          []jobs.Job
 }
 
 // New wires the module. A signing key that cannot be parsed is an error
@@ -131,6 +137,9 @@ func New(d Deps) (*Module, error) {
 		authenticator: authn.New(app.NewAuthenticate(app.AuthenticateDeps{
 			AccessTokens: tokens, Sessions: store, APITokens: store, Touch: store, Clock: d.Clock, Logger: d.Logger,
 		})),
+		jobs: []jobs.Job{
+			riveradapter.CleanupJob(app.NewCleanupSessions(store, d.Clock, d.Logger), d.SessionCleanupInterval),
+		},
 	}, nil
 }
 
@@ -155,6 +164,11 @@ func (m *Module) PublicOperations() []string {
 // Authenticator checks the bearer token of every non-public operation.
 func (m *Module) Authenticator() httpserver.Authenticator {
 	return m.authenticator
+}
+
+// Jobs are the module's background jobs, for platform/jobs to run.
+func (m *Module) Jobs() []jobs.Job {
+	return m.jobs
 }
 
 // Register mounts the module's API on router behind api's middlewares.

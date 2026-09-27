@@ -71,3 +71,11 @@ M2 合并时：
 仍未处理，状态保持 `open`：Cookie 会话和 CSRF、认证错误就地显示、前端改读新的实例字段（M2/P4）；`set-email` 命令（M2/P3b）。
 
 来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。
+
+## 处理结果（M2/P3b）
+
+- **修改登录邮箱**（完成）：`nerve users set-email --email <旧邮箱> --new-email <新邮箱>`（M2 设计决策点 1、3.17）。新邮箱按注册时的规则规范化和校验，改写 `users.email`，结束该账户的全部会话（`email_changed`），PAT 不撤销；新邮箱已被别的账户使用、或与旧邮箱相同时，退出码为 1，数据库不变。端到端 A16 覆盖。接口和界面都没有修改邮箱的入口，`updateMe` 的说明写明这个命令。
+
+仍未处理，状态保持 `open`：Cookie 会话和 CSRF、认证错误就地显示、前端改读新的实例字段（M2/P4）。
+
+来源：[M2/P3b spec](../specs/P3b-jobs-and-admin.md) 第 7 节。

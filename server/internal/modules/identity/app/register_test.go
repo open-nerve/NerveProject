@@ -130,14 +130,17 @@ func TestRegisterCreatesTheAccountAndSignsIn(t *testing.T) {
 }
 
 // Closed sign-up answers the same for every address: before validation,
-// any lookup or any hash (M2 design 3.9).
+// any lookup or any hash (M2 design 3.9). A valid registration spends no
+// hasher slot either.
 func TestRegisterWhileSignupIsOff(t *testing.T) {
-	f := newRegister(fixedPolicy{allow: false})
+	for _, in := range []app.RegisterInput{{Email: "not an address", Password: "x"}, input} {
+		f := newRegister(fixedPolicy{allow: false})
 
-	_, err := f.uc.Execute(context.Background(), app.RegisterInput{Email: "not an address", Password: "x"})
+		_, err := f.uc.Execute(context.Background(), in)
 
-	if !errors.Is(err, domain.ErrSignupDisabled) || f.hasher.calls != 0 || f.tx.calls != 0 {
-		t.Errorf("Execute() = %v, hashes %d, transactions %d; want identity.signup_disabled and nothing else", err, f.hasher.calls, f.tx.calls)
+		if !errors.Is(err, domain.ErrSignupDisabled) || f.hasher.calls != 0 || f.tx.calls != 0 {
+			t.Errorf("Execute(%q) = %v, hashes %d, transactions %d; want identity.signup_disabled and nothing else", in.Email, err, f.hasher.calls, f.tx.calls)
+		}
 	}
 }
 

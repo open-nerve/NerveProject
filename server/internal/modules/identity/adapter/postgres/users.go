@@ -107,6 +107,38 @@ func (s *Store) LockForCredentials(ctx context.Context, id uuid.UUID) (app.Locke
 	return app.LockedAccount{PasswordHash: row.Password, Active: row.IsActive}, nil
 }
 
+// LockAccount locks the row of the account with email, a normalized
+// address, until the transaction ends and returns its id; app.ErrNotFound
+// when there is none. Call it inside a transaction, as LockForCredentials.
+func (s *Store) LockAccount(ctx context.Context, email string) (uuid.UUID, error) {
+	id, err := s.queries(ctx).LockAccountByEmail(ctx, email)
+	if err != nil {
+		return uuid.Nil(), notFound(err)
+	}
+	return id, nil
+}
+
+// ChangeEmail sets account id's address to email, a normalized one, at now.
+// An address another account has is domain.ErrEmailTaken.
+func (s *Store) ChangeEmail(ctx context.Context, id uuid.UUID, email string, now time.Time) error {
+	err := s.queries(ctx).ChangeEmail(ctx, gen.ChangeEmailParams{Email: email, Now: now, ID: id})
+	switch {
+	case uniqueViolation(err, "users_email_key"):
+		return domain.ErrEmailTaken
+	case err != nil:
+		return fmt.Errorf("change email: %w", err)
+	}
+	return nil
+}
+
+// ActivateUser sets account id active at now.
+func (s *Store) ActivateUser(ctx context.Context, id uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).ActivateUser(ctx, gen.ActivateUserParams{Now: now, ID: id}); err != nil {
+		return fmt.Errorf("activate user: %w", err)
+	}
+	return nil
+}
+
 // DeactivateUser sets account id inactive at now.
 func (s *Store) DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error {
 	if err := s.queries(ctx).DeactivateUser(ctx, gen.DeactivateUserParams{Now: now, ID: id}); err != nil {
