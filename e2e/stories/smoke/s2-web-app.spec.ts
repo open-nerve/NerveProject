@@ -1,20 +1,11 @@
 import type { Page, Response } from "@playwright/test";
 
 import { signInPath } from "../../fixtures/auth-pages";
-import { expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
+import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
 /** A page of the frontend's router, not a file: nerve answers it with index.html. */
 const deepLink = "/acme/projects/0199f1c2-7a1b-7c3d-8e4f-5a6b7c8d9e0f/issues";
-
-/**
- * Chromium's hint when a script reads a canvas back often, which the deep link logs once: its page's module
- * loads the editor before the page goes to the sign-in, and tiptap builds the editor's Emoji node as the
- * module loads, which asks is-emoji-supported about each emoji version (a canvas and getImageData each
- * time). A hint about a third party's code, not an error of the app.
- */
-const emojiCanvasWarning =
-  "Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently";
 
 interface Visit {
   document: Response;
@@ -107,5 +98,5 @@ test("S2: a user opens a deep link directly", async ({ page, request }) => {
   await expect(page).toHaveURL(signInPath(deepLink));
   expect(failed).toEqual([]);
   expect(elsewhere).toEqual([]);
-  await expectQuietSignedOut(page, watch, [emojiCanvasWarning]);
+  await expectQuietSignedOut(page, watch, [EMOJI_CHECK_WARNING]);
 });
