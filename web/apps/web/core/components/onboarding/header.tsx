@@ -14,7 +14,6 @@ import { cn } from "@nerve/utils";
 // components
 import { NerveLockup } from "@/components/common/nerve-logo";
 // hooks
-import { useInstance } from "@/hooks/store/use-instance";
 import { useUser } from "@/hooks/store/user";
 // local imports
 import { SwitchAccountDropdown } from "./switch-account-dropdown";
@@ -29,22 +28,10 @@ export const OnboardingHeader = observer(function OnboardingHeader(props: Onboar
   const { currentStep, updateCurrentStep, hasInvitations } = props;
   // store hooks
   const { data: user } = useUser();
-  const { config: instanceConfig } = useInstance();
-  const isSelfManaged = instanceConfig?.is_self_managed;
 
   // handle step back
   const handleStepBack = () => {
-    switch (currentStep) {
-      case EOnboardingSteps.ROLE_SETUP:
-        updateCurrentStep(EOnboardingSteps.PROFILE_SETUP);
-        break;
-      case EOnboardingSteps.USE_CASE_SETUP:
-        updateCurrentStep(EOnboardingSteps.ROLE_SETUP);
-        break;
-      case EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN:
-        updateCurrentStep(isSelfManaged ? EOnboardingSteps.PROFILE_SETUP : EOnboardingSteps.USE_CASE_SETUP);
-        break;
-    }
+    if (currentStep === EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN) updateCurrentStep(EOnboardingSteps.PROFILE_SETUP);
   };
 
   // can go back
@@ -54,7 +41,6 @@ export const OnboardingHeader = observer(function OnboardingHeader(props: Onboar
   const showInviteStep = !hasInvitations || currentStep === EOnboardingSteps.INVITE_MEMBERS;
   const stepOrder: TOnboardingStep[] = [
     EOnboardingSteps.PROFILE_SETUP,
-    ...(isSelfManaged ? [] : [EOnboardingSteps.ROLE_SETUP, EOnboardingSteps.USE_CASE_SETUP]),
     EOnboardingSteps.WORKSPACE_CREATE_OR_JOIN,
     ...(showInviteStep ? [EOnboardingSteps.INVITE_MEMBERS] : []),
   ];
