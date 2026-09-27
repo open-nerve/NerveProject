@@ -797,7 +797,7 @@ M0-P4 交接要求在第一次建表时一次定下。这些约定改变了 Plan
 | P3b | 总体设计 | 4.2 | 恢复后 PAT 重新可用；管理员重置密码同时撤销全部 PAT（3.5、3.17）；P3a 写下的"随 M2/P3b 加入"改为已加入（总体设计 4.2；差异清单四的密码规则、注册默认、停用账户三行；README 的注册一条） |
 | P3b | 差异清单 | 二·按表 | River 的表登记为新增的基础设施表 |
 | P3b | 差异清单 | 四 | 4.6 中标 P3b 的行 |
-| P4 | 总体设计 | 4.3 | 没有 `navigator.locks` 时用 localStorage 租约；`nerve.auth` 记录带 `login_id`；只有续期得到 401 才结束会话；"会话暂不可用"（7.1） |
+| P4 | 总体设计 | 4.3 | 没有 `navigator.locks` 时用 localStorage 租约；`nerve.auth` 记录带 `login_id`；只有续期得到 401、或者重发后仍是 401 才结束会话；"会话暂不可用"（7.1） |
 | P4 | 前端改动清单 | 3.2 | CSRF 一行、"用户和认证相关的 store"一行已完成；3.1 的 M2 一行改为进行中 |
 | P5 | 前端改动清单 | 3.1 | M2 一行已完成 |
 | 收尾 | 总体设计 | 9.4 | M2 的状态 |
@@ -1233,7 +1233,7 @@ files:
 - **位置**：
   - `web/apps/web/core/lib/auth/token-manager.ts`：`TokenManager` 类。
   - `web/apps/web/core/lib/auth/refresh-lock.ts`：跨标签页的协调（`navigator.locks` 或 localStorage 租约）。
-  - `web/apps/web/core/lib/auth/api-client.ts`：web 使用的生成客户端实例，挂上认证中间件。
+  - `web/apps/web/core/lib/auth/api-client.ts`：不带令牌的 `publicClient`（实例、注册、登录和令牌管理器自己的续期、退出用它）；令牌管理器；`apiFor(loginId)`：为一个会话的 stores 建挂着认证中间件、绑定这个会话的客户端（P4 spec 第 3 节第 16 条）。
   - 端到端测试直接用 `@nerve/api-client`，自己带 `Authorization`，不经过令牌管理器。
 - **存放**（Codex I-5）：
   - 访问令牌和它的过期时刻只在内存里。
@@ -1252,7 +1252,8 @@ files:
     |---|---|---|
     | 200 | 已登录 | 照常 |
     | 401 | 未登录：清掉记录 | `AuthenticationWrapper` 跳到登录页 |
-    | 429、5xx、网络错误 | **会话暂不可用**：保留记录 | 显示"暂时连不上服务器"和"重试"按钮，同时自动退避重试（有 `Retry-After` 就按它，没有就 1、2、4……秒，最多 30 秒）；成功后进入"已登录"。不跳到登录页（控制者复核 N3） |
+    | 429、5xx、网络错误 | **会话暂不可用**：保留记录 | 显示"暂时无法连接服务器"和"重试"按钮，同时自动退避重试（有 `Retry-After` 就按它，没有就 1、2、4……秒，最多 30 秒）；成功后进入"已登录"。不跳到登录页（控制者复核 N3） |
+    | 200，随后取账户（`/me` 和资料）失败 | 已登录 | 同样显示"暂时无法连接服务器"和"重试"按钮，但不自动重试，说明也不承诺自动重试；"重试"重新取账户。不跳到登录页 |
 
 - **续期**：
   - 同一个标签页内，同一时刻只有一次续期，其他调用共用同一个 Promise。
@@ -1286,7 +1287,7 @@ files:
   - **只有两种情况结束会话**：续期得到 401；续期成功、重发后仍是 401。续期得到 429、5xx 或网络错误时保留记录，把这次的错误交给调用方。
   - 没有刷新令牌时，401 原样交给调用方。
 - **结束会话**：
-  - 清掉内存和 `nerve.auth`，调用应用注册的回调：`rootStore.resetOnSignOut()`。
+  - 清掉内存和 `nerve.auth`。令牌管理器不认识 stores：`store-context.tsx` 订阅着它，会话一变（这里是变成没有会话）就为新的会话建一个新的 `RootStore`，沿用页面的 `instance`、`router`、`theme`，换进它导出的 `rootStore`，`StoreProvider` 随之提供新的一代；旧的 stores 留着旧的 `RootStore` 和绑定旧会话的客户端（P4 spec 2.8，第 3 节第 17 条）。
   - 当前账户变为空，`AuthenticationWrapper` 渲染 `<Navigate to="/?next_path=…" replace />`（3.18）。
   - 跳转只在包装层这一处发生；现在的 `window.location.replace` 删除。
 - **退出**（评审 M7）：
@@ -1299,7 +1300,7 @@ files:
   |---|---|---|
   | 记录被删除 | 别的标签页退出了 | 结束会话（A6） |
   | 本标签页未登录时记录出现 | 别的标签页登录或注册了 | 续期拿到访问令牌，取 `/me`，由 `AuthenticationWrapper` 按规则跳转（A6 的第二种切换） |
-  | `login_id` 变了 | 别的标签页登录了另一个会话（可能是另一个账户） | 丢掉内存中的访问令牌，重置 stores，重新取 `/me`，按新账户显示（A6 的切换账户） |
+  | `login_id` 变了 | 别的标签页登录了另一个会话（可能是另一个账户） | 丢掉内存中的访问令牌和上一个会话的退避，为新会话换一个新的 `RootStore`，重新取 `/me`，按新账户显示（A6 的切换账户） |
   | `login_id` 没变 | 只是续期换了令牌 | 什么都不做；下一次续期在锁内重新读记录 |
 
   - 第二稿只处理"被删除"：两个标签页先后登录不同的账户时，旧标签页仍显示第一个账户，下一次续期却用了第二个账户的刷新令牌，写入落到第二个账户。
@@ -2047,7 +2048,7 @@ files:
 | | `db.ts` 的连接池、断言的写法、失败时的数据库快照 | P1（9.5） |
 | | S1 的迁移版本 | P1 |
 | | S3 的新字段 | P3a |
-| | S2 的"没有失败的接口请求"、控制台、`networkidle` | P4。没有刷新令牌时不请求 `/me`（7.1）；登录页没有轮询，`networkidle` 继续可用；有轮询的页面不进 S2 |
+| | S2 的"没有失败的接口请求"、控制台、`networkidle` | P4。没有刷新令牌时不请求 `/me`（7.1）。S2 不再等 `networkidle`，而是等 `GET /api/v0/instance` 的回答和登录页的登录按钮出现（P4 Task 12）：页面不读回答的请求一直算在途中，`networkidle` 就一直等到测试超时，而不是在断言上失败；有轮询的页面不进 S2 |
 | | 端口竞争的根本解决 | P1（`server.addr_file`） |
 | | 新等待的期限 | P1–P5 |
 | | River 停机是否仍在预算内 | P3b |
@@ -2077,7 +2078,8 @@ files:
 | 接收 | 事项 |
 |---|---|
 | M3 | **邀请**（负责人确认的产品改动）：邮箱未经验证期间，接受邀请不能只靠邮箱匹配，要凭邀请链接中的令牌（M1 设计 3.15 留下的路径）；关闭注册时，持有有效邀请的人仍可注册。后者由 M3 扩展 `SignupPolicy` 的实现和注册请求（加上邀请令牌），不另加端口（评审 M16）。这改变总体设计 1.1"系统内接受邀请"和 4.2"被邀请的邮箱始终可以注册"的做法，由 M3 的设计交负责人确认。prod 默认关闭注册（决策点 2）不能代替接受邀请时的身份证明。参考：Plane 把任何未删除的工作区邀请都算上（`plane/apps/api/plane/authentication/adapter/base.py:102-120`）。签发邀请令牌按 3.5 的账户行锁 |
-| M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()` 的 Promise：原来的 fetcher（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`，M2 随预取一起删掉）没有，失败会成为未处理的 Promise 拒绝。被调用的 `fetchWorkspaces` 本身在 `web/apps/web/core/store/workspace/index.ts:146-158` |
+| M3 | **登录后的落点与新手引导的取数**：M2 让已完成引导的用户直接去 `/create-workspace`，删掉了新手引导页对工作区和邀请的预取（3.1）。M3 在新接口上加回：`AuthenticationWrapper` 的落点数据（"上次的工作区"、工作区列表）、新手引导页的工作区和邀请。加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()` 的 Promise：原来的 fetcher（`web/apps/web/app/(all)/onboarding/page.tsx:33-37`，M2 随预取一起删掉）没有，失败会成为未处理的 Promise 拒绝。被调用的 `fetchWorkspaces` 本身在 `web/apps/web/core/store/workspace/index.ts:146-158`。同样的缺陷还留在 `web/apps/web/app/(all)/invitations/page.tsx:88`：加入工作区之后的 `fetchWorkspaces().then(…)` 没有返回它的 Promise，也没有处理拒绝（P4 Task 8 的裁定留给 M3），M3 对接邀请时一并改 |
+| M3 及以后有 stores 的 M | **stores 按会话分代**（P4 spec 2.8，第 3 节第 16、17 条）：每个会话一个 `RootStore`，它的客户端绑定这个会话。一代 stores 的 services 由这一代的 stores 用这一代的客户端建，经构造函数传入；没有模块级的带令牌客户端，也没有模块级的 service。store 只经自己的 `RootStore` 找兄弟 store（`store-context.tsx` 导出的 `rootStore` 只给没有自己 `RootStore` 的代码做同步读取，现在是 `issue-layouts/utils.tsx`，以及 `command-palette.store`、`issue/issue.store` 中只读、不发请求的两处）。填充 stores 的 SWR 键带上会话的 `loginId`，像 `AuthenticationWrapper` 的 `["CURRENT_USER", loginId]` 那样，新的一代取自己的数据 |
 | M3 | `profiles.last_workspace_id` 是否补外键（`ON DELETE SET NULL`）。补的话，迁移归 `identity`（`<v>_identity_profiles_last_workspace_fk.sql`，3.14），版本号大于建 `workspaces` 的迁移 |
 | M3 | `workspace_creation_enabled` 的执行，以及关闭时是否提供创建工作区的命令（3.16） |
 | M3 | **停用的端口**（决策点 3 已裁定为 A）：给停用用例加上它声明的端口并实现，在停用的同一个事务里调用。唯一管理员时拒绝（按 Plane 的本意，修正它查询的缺陷，登记差异），并给 `deactivateMe` 声明对应的错误码；停用成员关系；删除发给这个邮箱的邀请 |
@@ -2095,6 +2097,7 @@ files:
 | M4 | **60 天物理清理**：把软删除的 `api_tokens` 纳入；`issue_activities` 对工作项、评论的外键是 `DO_NOTHING`（不写 `ON DELETE`），先删工作项会被它挡住：先删除或置空这些引用，或者登记为 `SET NULL` 的差异 |
 | M4 | 命令行的"只投递"River 客户端（3.15、3.17）随第一个投递任务的命令加入；M2 没有投递任务的命令（负责人 2026-09-26 批准推迟） |
 | M4 | `user.service.ts` 中的 `getUserProfileIssues`；事件订阅者的写法（3.15）；CSP：编辑器 callout 的默认表情图来自 `cdn.jsdelivr.net`，改为本站资源或原生表情，并核对表情回应（8.3） |
+| M4 | **编辑器的代码分割**（P4 Task 12）：未登录时直接打开需要登录的页面，页面模块先加载了编辑器（tiptap 的 Emoji 节点和 `is-emoji-supported`），包装层才跳到登录页。把编辑器拆出去，到用它的页面才加载；S2 深链接测试对 `is-emoji-supported` 的 Chromium 警告（`willReadFrequently`）的预期 `emojiCanvasWarning` 随之删除 |
 | M5 | **头像和封面**：`users.avatar_asset_id`、`cover_image_asset_id`。迁移的范例（3.14）：先在 M5 的模块里建 `file_assets`（`<v>_<模块>_file_assets.sql`），再写 `<v+1>_identity_users_avatar_asset.sql` 给 `users` 加列和外键，后者归 `identity` 的 sqlc 条目。`User.avatar_url`、`cover_image_url` 开始返回签名地址；按新的上传协议加回 general 页和新手引导资料步骤的上传控件（3.2） |
 | M5 | **上传与按路由的中间件**：模块级的 `Middlewares`（1 MiB 请求体上限、15 秒期限）会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外，并按 3.6 的整程序测试处理：写进接口描述，或在设计中说明（控制者复核 m7）。`file_size_limit` 的执行；CSP 的 `img-src`、`connect-src` 加上存储的来源 |
 | M6 | 迭代（`cycles`、`cycle_issues`）跨 `planning` 与工作项模块的写入用端口和共享事务；必须联表的查询，事先列为 `TestSQLCSchemaScope` 的例外并写明理由，或者用端口拆开 |
@@ -2138,6 +2141,7 @@ files:
 |---|---|
 | 重复使用检测过严：续期的响应在网络上丢失，客户端重试会被当成重复使用，用户被迫重新登录 | 同一浏览器内由跨标签页的协调避免并发续期；服务端期限短于客户端超时（3.5）；发现重复使用时记 WARN 日志，P4、P5 的核对中观察它是否频繁出现。真的频繁时，可以加"上一代令牌在几秒内仍可用"的宽限期（会话行上要多存上一代的哈希和轮换时刻），但要重新审视安全语义，留到以后 |
 | 租约不是原子的：没有 `navigator.locks` 时，两个标签页极小概率同时续期；持有租约的标签页被冻结、超过租期时，另一个标签页会用旧令牌续期 | "写入后再读一次"；代价与上一行相同。A4 的无 `locks` 版本和局域网 HTTP 的浏览器核对观察它 |
+| 有 `navigator.locks` 时，localStorage 和锁的授予之间也没有顺序：跨渲染进程时，Chromium 的 localStorage 缓存是异步同步的，拿到锁的标签页可能读到另一个进程已经换掉的记录，用已经轮换过的刷新令牌续期 | 后果是一次重复使用检测，代价与上面两行相同。证据：A4 重复 10 次、浏览器核对 C3 和 C5，每一代刷新令牌都只用了一次。应对与上面两行一样：观察 |
 | 认证之前的失败闸门按 IP 计数：同一个出口 IP 后的攻击流量会让有效的调用方也得到 429；先预留的做法让同一个 IP 同时在认证中的请求不能超过桶里当时剩下的单位（满时是突发 60，已有失败扣掉一部分时更少），数据库变慢时更早碰到 | 额度每分钟 60 次、突发 60；签名有效而只是过期的 JWT 不计数；认证成功立即退回；可信代理配好以后按真实的客户端 IP 计数，IPv6 按前缀（默认 /64，可配，3.10）；配置项可调；M8 做性能实测时观察同一 IP 的并发 |
 | 续期和退出只受按 IP 的 `anonymous` 约束：同一出口 IP 后的大量伪造刷新令牌会用掉这个 IP 的匿名额度 | 伪造的令牌每次只花一次按主键的查找；额度每分钟 600 次、突发 100，正常页面每 15 分钟才续期一次；续期得到 429 时前端保留令牌、退避重试（7.1）。不按令牌里的会话 id 另设桶：那是未经验证的输入，会让知道会话 id 的人耗尽别人的额度（3.10） |
 | 泄露的刷新令牌可以派生永不过期的 PAT，影响超过 30 天 | 8.5 写明风险和恢复步骤；PAT 列表显示创建时间和最后使用时间；管理员重置密码撤销全部 PAT。重新输入密码、限制派生是负责人以后可选的产品选项 |
