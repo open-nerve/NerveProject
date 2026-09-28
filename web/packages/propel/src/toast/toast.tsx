@@ -33,7 +33,8 @@ type SetToastProps =
       actionItems?: React.ReactNode;
     };
 
-type PromiseToastCallback<ToastData> = (data: ToastData) => string;
+/** A promise toast's message from the promise's result; undefined: the toast has none. */
+type PromiseToastCallback<ToastData> = (data: ToastData) => string | undefined;
 type ActionItemsPromiseToastCallback<ToastData> = (data: ToastData) => React.ReactNode;
 
 type PromiseToastData<ToastData> = {

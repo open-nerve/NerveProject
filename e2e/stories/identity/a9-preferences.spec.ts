@@ -1,7 +1,7 @@
 import { accountOf } from "../../fixtures/assert/identity";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, expectListBesideButton, registerOnboarded } from "../../fixtures/settings-pages";
+import { answerTo, expectListBesideButton, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // A9, changing the preferences (M2 design 2), with the theme's list beside
@@ -188,6 +188,78 @@ test("A9 (page): a refused change leaves the page as nerve has it", async ({ api
       "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
     ],
   });
+});
+
+test("A9 (page): a theme change nerve answers after the tab followed another account's sign-in leaves that account's page: its theme, no reload", async ({
+  api,
+  context,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const x = emailFor(testInfo, "x");
+  const y = emailFor(testInfo, "y");
+  const tabA = await signedInPage(await registerOnboarded(api, x));
+  const watch = await watchPage(tabA);
+  // Y's theme is one X does not pick: the page shows it once the tab follows Y.
+  const { response } = await api.PATCH("/api/v0/me/profile", {
+    body: { theme: "light-contrast" },
+    headers: bearer((await registerOnboarded(api, y)).access_token),
+  });
+  expect(response.status).toBe(200);
+  await tabA.goto("/settings/profile/preferences");
+  const html = tabA.locator("html");
+  const theme = tabA.getByRole("button", { name: "System Preference", exact: true });
+  await expect(theme).toBeVisible();
+  await expect(html).toHaveAttribute("data-theme", "light");
+
+  // X picks Dark; nerve makes the change, and its answer waits.
+  const release = await holdAnswer(tabA, "PATCH", "/api/v0/me/profile");
+  await theme.click();
+  const sent = tabA.waitForRequest(
+    (request) => request.method() === "PATCH" && new URL(request.url()).pathname === "/api/v0/me/profile",
+    { timeout: 10_000 }
+  );
+  await tabA.getByRole("option", { name: "Dark", exact: true }).click();
+  await sent;
+  // Tab B keeps a sign-in of Y as the token manager does; tab A follows, and shows Y's theme.
+  const tabB = await context.newPage();
+  await tabB.goto("/site.webmanifest.json");
+  await writeRecord(tabB, newRecord(await login(api, y)));
+  await expect(tabA.getByRole("button", { name: "Light high contrast", exact: true })).toBeVisible();
+  await expect(html).toHaveAttribute("data-theme", "light-contrast");
+
+  // nerve's answer to X's change reaches tab A. A reload would start a navigation of tab A at once: the change's
+  // continuation runs as its answer settles it, which is also what shows the success toast; the window of 2 s after
+  // the release, most of it after the toast, is two orders of magnitude longer than the moment the browser takes to
+  // start one. The document of before the release must still be there too.
+  await tabA.evaluate(() => {
+    (window as unknown as { beforeRelease?: true }).beforeRelease = true;
+  });
+  const reloaded = tabA
+    .waitForEvent("request", { predicate: (request) => request.isNavigationRequest(), timeout: 2_000 })
+    .then(
+      () => true,
+      () => false
+    );
+  const answered = await answerTo(tabA, "PATCH", "/api/v0/me/profile", release);
+  expect(answered.status()).toBe(200);
+  // The change succeeded, as X's, and says so; the page does not reload for it, so the toast does not say it will
+  // (counted at once: the toast's title and message show together, and a retrying check would pass once it goes).
+  await expect(tabA.getByText("Theme updated", { exact: true })).toBeVisible();
+  expect(await tabA.getByText("Reloading to apply changes...").count()).toBe(0);
+  expect(await reloaded).toBe(false);
+  expect(await tabA.evaluate(() => (window as unknown as { beforeRelease?: true }).beforeRelease)).toBe(true);
+  await expect(html).toHaveAttribute("data-theme", "light-contrast");
+  await expect(tabA.getByRole("button", { name: "Light high contrast", exact: true })).toBeVisible();
+
+  // nerve holds X's change; Y's theme is as it was.
+  expect(await profileOf(db, x)).toEqual([{ theme: "dark", language: "en", start_of_the_week: 0 }]);
+  expect(await profileOf(db, y)).toEqual([{ theme: "light-contrast", language: "en", start_of_the_week: 0 }]);
+  expect(watch.apiFailures).toEqual([]);
+  expect(watch.oldApiRequests).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
+  // One load of tab A.
+  await expectQuietConsole(tabA, watch, { warnings: [EMOJI_CHECK_WARNING] });
 });
 
 test("A9 (API): a personal access token changes the theme, the language and the first day of the week", async ({
