@@ -443,7 +443,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   - **限流键不取未经验证的输入**（控制者裁定）：第三稿的初稿曾按刷新令牌里的会话 id 另设一个桶。会话 id 没有经过验证，拿它做键，知道某个会话 id 的人就能用伪造的令牌耗尽这个会话的额度，让它续不了期。所以键只能是两类：认证过的凭证（`authenticated`、`password_user`），或者包含调用方自己的 IP（`anonymous`、`auth_failure`、`login_ip`、`register_ip`，以及 `login_ip_email`：邮箱同样没有验证，但键里有调用方的 IP，耗尽的只是调用方自己的额度）。
   - 无效的令牌由认证之前的闸门限制（3.6）。
 - **全有或全无**（控制者复核 m6）：用 `Allow()` 依次检查几个桶，后面的桶拒绝时，前面的桶已经扣掉了。例如同一个邮箱反复失败，`login_ip_email` 拒绝的每一次都扣了 `login_ip`，这个 IP 很快连别的邮箱也登录不了。
-  - `platform/ratelimit` 提供一次检查多个键的 `AllowAll(checks…)`：在同一把锁下先看每个桶是否都有余额，都有才一起扣；有一个没有，就都不扣，返回最长的等待时间。另有 `Reserve(check)`：扣一个单位，同时返回一个只能用一次的退回函数（3.6 的失败闸门用它）。spike：`login_ip_email` 拒绝 10 次之后，`login_ip` 的余额不变；失败闸门在 50 个并发请求下只放过额度内的 3 个。
+  - `platform/ratelimit` 提供一次检查多个键的 `AllowAll(checks…)`：在同一把锁下先看每个桶是否都有余额，都有才一起扣；有一个没有，就都不扣，返回最长的等待时间。同一个桶和键在一次调用里出现两次是编程错误，`AllowAll` panic：它会看两次同一份余额、扣两个单位，余额可能变成负数（codex-fixes）。另有 `Reserve(check)`：扣一个单位，同时返回一个只能用一次的退回函数（3.6 的失败闸门用它）。spike：`login_ip_email` 拒绝 10 次之后，`login_ip` 的余额不变；失败闸门在 50 个并发请求下只放过额度内的 3 个。
   - `identity` 适配器声明的小接口只有 `AllowAll`，一个操作在适配器里的桶一次查完。`httpserver` 的桶在它之前扣：被适配器拒绝的请求仍然算作一次匿名或已认证的请求，这是有意的。
 - **位置**：
   - `anonymous`、`authenticated`、`auth_failure` 在 `httpserver`（3.6）。有限流键时按凭证计数，没有时按 IP 计数。
@@ -502,7 +502,13 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 缺少必填字段：拒绝，字段码 `required`；
     - 生成为 Go 类型的字符串格式（M2 的模板下是 `date-time` 和 `uuid`）写错：拒绝，字段码 `invalid_format`。生成的类型装不下错误的值，这几种格式只能在解码之前检查。检查**与生成的解码器接受的完全相同**：用 `encoding/json` 把这个字段的原始 JSON 值解码进映射到的 Go 类型，即 `json.Unmarshal(raw, new(T))`，`T` 是 `time.Time` 或标准库的 `uuid.UUID`。生成的解码器对这个字段做的正是这件事，所以两者按构造一致，JSON 字符串里的转义也一样处理；不另写正则（控制者复核 R1，核验 F1）。
       - spike（仓库锁定的 Go 1.27.1）：16 种写法上检查器与解码器的结论全部相同。`date-time`：带 `Z` 和带时区偏移的 RFC 3339 接受；空格分隔、只有日期、数字、布尔、任意字符串拒绝；`Z` 写成 JSON 转义时同样接受。`uuid`：标准写法、大写、无连字符、带花括号、带 `urn:uuid:` 前缀、含 JSON 转义的都接受，非法字符串和数字拒绝。标准库的解析比 RFC 9562 的标准写法宽松，边界与解码器一致，领域拿到的是同一个值。
-    - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题，`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`）。
+    - **一份请求体只有一种读法**（Codex 对 M2 的评审 Critical 1，codex-fixes）：同一个对象里同名的成员出现两次，拒绝，字段码 `duplicate`，`field` 是这个成员的路径，一个名字只报一次；名字按解码之后比较，`"a"` 和它的 `\u` 转义是同一个名字。字符串（成员名或值）不是合法的 Unicode，拒绝，字段码 `invalid_format`：不是 UTF-8 的字节，或者不成对的代理项转义。这是 I-JSON（RFC 7493）的两条要求。这两项先于其余各项检查：有这两种问题的请求体只得到它们，结构在请求体只有一种读法之后才检查。
+      - **为什么**：结构检查把对象读成 map，同名的成员以后一个为准；生成的 handler 用 `encoding/json` 把同一个请求体解码进结构体，同名的对象合并，字段名先精确匹配、再不区分大小写地匹配。Codex 的复现：`PATCH /me/profile` 的 `{"onboarding_step":{"WORKSPACE_INVITE":true}}` 得到 400 `not_allowed`，后面再加一个 `"onboarding_step":{}` 就得到 200，`workspace_invite` 写成了 `true`。不是 UTF-8 的字节和落单的代理项被解码器换成 U+FFFD，领域拿到的不是客户端写的文字。
+      - **不变式：结构检查接受的请求体，解码器读不出结构检查没看过的东西。**①每个对象里的名字各不相同（按解码之后比较），map 和结构体读到的是同一组成员，没有可合并的；②每个对象 schema，组件和内联的，都是 `additionalProperties: false`（`apitest` 的 `closedObject` 规则逐个检查，`rules_cases_test.go` 有内联的反例），接受的名字恰好是声明的名字，解码器按它们精确匹配，不区分大小写的退路用不上：只差大小写的名字是未声明的字段，400 `not_allowed`；以后要用开放的 map，先改这条规则（生成的代码把 map 的键原样读入 `map[string]T`，不区分大小写的匹配只在结构体的字段上）；③转义由两边同一个 `encoding/json` 解码，结构检查比较、检查的正是解码之后的名字；④字符串都是合法的 Unicode，解码出的文字就是客户端写的；⑤请求体是一个 JSON 值，前后只有 JSON 空白（`json.Valid`，原有的一条）。
+      - 做法：`bodyshape/ambiguity.go` 在按表检查之前把请求体扫描一遍，只用标准库。它只解码成员名，值的字符串在字节上检查。第四个整程序测试的第 8、9 项让每个带请求体的操作都拒绝重复的成员和不是 UTF-8 的字节。
+    - **代价跟着请求体走**（codex-fixes 的预检 H1）：路径按段压栈，只在报问题时写出；一个请求体最多报 16 个问题，扫描和按表检查共用这个上限，满了就停。否则代价是请求体的平方：`json.Valid` 允许嵌套一万层，每层写出一条路径，约 1 MiB 的请求体要 4.4 GB；一个很长的名字下面每隔几个字节一个问题，每个问题都带着这个名字，要 17 GB。现在这两个请求体各用 3 MB、6 MB。按表检查的问题同样受限：开放 map 的键是客户端写的，它下面的每个问题都带着它。按表检查只沿 schema 下降，每层把对象的成员复制一次（`json.Unmarshal` 进 `map[string]json.RawMessage`），代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层，没有数组、开放 map 和递归。第一个递归的请求体 schema 会让它变成请求体乘请求体的深度，那时按表检查改为一遍读完（M4 交接第 4 节）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住这几种请求体，`TestCheckListsAtMostSixteenProblems` 守住上限和"每次报同样的 16 个"（按表检查按名字的顺序读对象的成员）。
+    - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题（能有两种读法的请求体只列出这两种问题；最多 16 个），`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`）。
+    - **`Content-Type` 照旧宽松**：`text/plain` 的请求体同样检查、同样解码。Nerve 没有 Cookie 认证，非公开操作都要 `Authorization` 头，跨站的"简单请求"带不上它，所以没有 CSRF 的风险（codex-fixes 核对后保留）。
   - **领域层**负责长度、其余格式（邮箱这类映射为 `string` 的格式）、枚举、取值范围和跨字段的规则：一次收集全部字段的问题，返回一个 422 `validation_failed`。handler 只做类型转换，从不自己解码请求体。
   - **做法**（spike 比较了两种，选第二种）：
     1. 候选一：覆盖 oapi-codegen 的 strict 模板，把请求体的解码换成平台的严格解码器，由生成的 Go 类型推断契约（`nullable.Nullable[T]` 表示可为空，没有 `omitempty` 表示必填，`DisallowUnknownFields`）。
@@ -511,7 +517,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 候选一还要复制上游 147 行的 strict 模板，升级 oapi-codegen 时模板的漂移 `gen-check` 发现不了；它从 Go 类型的写法推断契约，而 `omitempty` 也会因 `readOnly`、`writeOnly`、`x-omitempty` 出现（`oapi-codegen/v2@v2.8.0/pkg/codegen/schema.go:1427`）。候选二直接读契约里的 `required`、可为空和 `additionalProperties`，遇到不支持的组合就让生成失败。
     - 规模：候选二的运行时校验器约 170 行（加上格式检查约 200 行），生成器约 200 行；候选一约 190 行加 147 行复制的模板。
   - **候选二的组成**：
-    - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），按表检查原始字节（逐层取 `json.RawMessage`，不解码成通用值，格式检查器拿到的就是生成代码解码时看到的字节），收集全部问题，按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析两次，上限 1 MiB，代价可以接受。
+    - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），按表检查原始字节（逐层取 `json.RawMessage`，不解码成通用值，格式检查器拿到的就是生成代码解码时看到的字节），收集问题（最多 16 个），按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析三遍：歧义扫描、按表检查、生成的解码器（之前还有一遍 `json.Valid`）；每遍的代价与请求体成正比（按表检查是请求体乘 schema 的层数，见上面的"代价跟着请求体走"），上限 1 MiB，代价可以接受。
     - 格式检查器按**生成的 Go 类型**登记：`time.Time`、标准库的 `uuid.UUID` 各一个，都是上面那一行 `json.Unmarshal`。`bodyshape` 只依赖标准库。
       - 上一稿还为 `format: date` 登记了 `openapi_types.Date`，让 `bodyshape` 依赖 `oapi-codegen/runtime/types`，而那个包导入 `github.com/google/uuid`（核验 F1，3.12）。M2 没有 `date` 字段，这个检查器删去；生成器遇到 `date` 就失败（见下）。以后第一个用到 `date` 的 M 选定它的 Go 类型，带着测试登记检查器。
     - `server/tools/bodyshapegen`：生成器，放在工具模块（`server/tools/go.mod`），与 oapi-codegen 同一个模块。它用 oapi-codegen 自己的加载器读 `api/modules/<m>.yaml`（跨文件的 `$ref` 一并解析，与生成 `server.gen.go` 时读到的是同一份），为每个带 JSON 请求体的操作生成根节点，写出 `internal/modules/<m>/adapter/http/gen/bodyshape.gen.go`。它不在 `server/go.mod` 里，更不链接进 nerve；工具模块已有 oapi-codegen v2.8.0 和它用的 kin-openapi，不新增依赖。
@@ -531,11 +537,13 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     5. 可为空的字段传 `null` 不得到 400（总体设计 3.1："传 `null` 表示清空"）；
     6. 每种带格式的字段传一个写错的字符串（有这种字段时）：400 `invalid_format`，`field` 是这个字段；
     7. 同一个请求里同时有未知字段、缺少的必填字段和写错的格式：一次返回全部问题。
+    8. 第一个字段出现两次；嵌套对象的第一个字段在嵌套对象里出现两次（有嵌套对象时）：400 `duplicate`（codex-fixes）；
+    9. 第一个字符串字段的值是不合 UTF-8 的字节：400 `invalid_format`（codex-fixes）。M2 的 8 个带请求体的操作都有第 8、9 项。它们不并进第 7 项：能有两种读法的请求体只得到这两种问题。
   - **随之删除的规则**：第二稿给"零值也合法的必填字段"加 `writeOnly: true` 的规则删除：必填字段是否出现，现在在边界上检查。第二稿"已知的不一致"一段（未知字段被忽略、`null` 等同没传）随之删除。
   - `apitest` 的 `CheckRequest` 保留，让测试发出的请求也按契约校验。它是测试的辅助，不是服务端的保证；故意发不合契约请求的测试（例如 `limit=0`）绕过它。
 - **`FieldError` 加上 `code`**：
   - `{field, code, message}`。前端按 `problem.code` 和 `errors[].code` 查 `t()` 的文案，不直接显示服务端的英文 `message`（M1 收尾的规则：界面文案都走 `t()`）。
-  - 字段码是一个封闭的小集合：`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`weak_password`、`common_password`、`must_be_future`、`contains_url`。
+  - 字段码是一个封闭的小集合：`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`duplicate`（codex-fixes）、`weak_password`、`common_password`、`must_be_future`、`contains_url`。
   - `api/common.yaml` 的 `FieldError` 和 `httpserver.FieldError` 同步修改。
 - **错误码写进接口描述**（评审 I13，约束后续每个 M）：
   - 每个操作用扩展字段 `x-problem-codes` 列出它可能返回的错误码。
@@ -1075,7 +1083,10 @@ users
 
 - **启动时的环境提醒**（控制者复核 m5）：`env` 不是 prod、而监听地址不是回环地址时，记一次 WARN，写明两个后果：注册默认开放（决策点 2），没有配置签名密钥时使用临时密钥（3.7）。部署时忘了设 `NERVE_ENV=prod` 就会这样；dev 的配置只监听 `127.0.0.1`，只有显式改了监听地址才会出现。M8 的镜像设置 `NERVE_ENV=prod`（交接）。
 - **健康检查的访问日志**：`/healthz`、`/readyz` 的访问日志降为 DEBUG 级别（M0-P2 交接 8：生产环境中每次探测一条 INFO 太多）。
-- **只读的迁移角色**：生产环境用单独的数据库角色执行迁移时，运行服务的角色需要 `goose_db_version` 的 SELECT 权限（M0-P2 交接 7），写进 README 的部署说明。
+- **分开的迁移角色和服务角色**：生产环境用表的所有者执行迁移、服务用另一个角色时，服务的角色需要的权限全部写在 `deploy/runtime-grants.sql`，授权给组角色 `nerve_runtime`，每次迁移之后由所有者执行：业务表的读写；River 的表和序列；`river_job` 的 `MAINTAIN`（River 每天的 `REINDEX INDEX CONCURRENTLY`，PostgreSQL 17 起）；`goose_db_version` 的 SELECT（`/readyz`，M0-P2 交接 7）。README 的部署说明指向它。少了 River 的权限时 `/readyz` 仍是 200，River 的任务（会话清理）和索引重建因 42501 失败，只记在日志里；少了业务表的权限时接口请求失败；少了 `goose_db_version` 的读时 `/readyz` 是 503（Codex 对 M2 的评审 Important 2，codex-fixes）。
+  - 文件逐个列出表和序列，不用 `ON ALL TABLES IN SCHEMA` 加 `ALTER DEFAULT PRIVILEGES`：默认权限只对执行它的那个角色以后建的对象生效，换了执行迁移的角色就悄悄失效，要到部署之后才发现；`ON ALL TABLES` 给每张表同样的权限，`goose_db_version` 也会得到写权限（写成 `GRANT ALL` 还会连 `TRUNCATE`、`REFERENCES`、`TRIGGER` 一并给出）。文件按表给读写（DML），不给 `TRUNCATE`、`REFERENCES`、`TRIGGER` 和 DDL。函数和类型不在文件里：PostgreSQL 默认让 PUBLIC 执行函数、使用类型，River 的 `river_job_state_in_bitmask` 和 `river_job_state` 靠的就是它。
+  - 列表不会漏：`server/internal/bootstrap/runtime_role_test.go` 在 `public` 里任何一张表、视图、物化视图、序列或函数的权限与文件的规则不符时失败（新的迁移加了表而文件没有跟上，就是这样；视图要 `SELECT`，函数要 `EXECUTE`），并用恰好这些权限运行 nerve：就绪、River 的清理任务完成、River 的每个索引都能 `REINDEX INDEX CONCURRENTLY`。
+  - 服务的角色不是表的所有者，删不掉索引：River 的重建被停机打断、留下 `*_ccnew` 索引时，由所有者删除（README"部署"）。
 
 ### 6.2 `identity` 模块的结构
 ```
@@ -1241,6 +1252,7 @@ files:
   - `login_id` 是 16 字节的随机数（`crypto.getRandomValues`，十六进制），在每次登录、注册时新生成，续期时保持不变。刷新令牌对客户端仍是不透明的，前端不解析它。
   - 租约用另一个键 `nerve.auth.refresh_lease`（见下）。
   - **每次写 `nerve.auth` 都在同一把锁（或租约）下**（控制者复核 R4）：登录、注册写入新记录，续期换令牌，退出删除记录，都先拿续期用的那把锁。否则登录写入新记录的同时，另一个标签页的续期可能把旧会话的令牌写回去，盖掉新记录。
+  - **请求和锁回来之后先重读记录**（Codex 对 M2 的评审 Important 1，codex-fixes）：每个请求的 `await` 回来之后，以及锁把失败的第一次续期交回来之后，写或删 `nerve.auth`、改本标签页的状态之前，都再读一次记录；它已不是这次操作所属的会话（`login_id` 变了，或者记录没了），就不写、不删，跟随记录（见"其他标签页"）。租约不是原子的：持有者的请求超过租期时，另一个标签页可以拿到租约登录。逐条核对过：续期的写回（"续期"）；退出的删除（"退出"）；启动时第一次续期失败之后进入"会话暂不可用"之前（`navigator.locks` 把失败交回来是在之后的任务里，另一个标签页的登录可能先到）；结束会话在锁内没有 `await`，读和删之间不会插进别的标签页。登录和注册等到锁之后写新会话的记录，不重读：按"最后登录为准"（P4），另一个标签页先写的记录被替换。
 - **取访问令牌**：离过期还有 30 秒以上就直接用，否则先续期。
   - 过期时刻 = 本地收到响应的时刻 + `access_token_expires_in` 秒（5.2）。前端不解析 JWT，也不拿本机时钟和服务端的时刻比较。
   - 理由：本机时钟快了十几分钟时（硬件时钟按本地时间设置的双系统电脑很常见），和服务端的时刻比较会让每个请求都先续期一次，很快碰到限流（评审 I14）。
@@ -1293,7 +1305,7 @@ files:
 - **退出**（评审 M7）：
   - 在续期用的同一把锁（或租约）下，读出当前的刷新令牌，用不挂认证中间件的客户端调用 `POST /auth/logout`。
   - 不能用挂了认证中间件的客户端：访问令牌恰好过期时，中间件会先续期、再重发，重发的请求体里还是续期前的刷新令牌，服务端看到的是上一代，退出什么也没做（3.5）。
-  - 尽力而为：失败也清本地。然后结束会话，回到登录页。
+  - 尽力而为：失败也清本地。`logout` 回来之后在锁内重读记录：仍是这次退出的会话，才删除记录、结束会话、回到登录页；已是另一个会话（租约在请求期间过期，另一个标签页登录了），就不删，跟随它。
 - **其他标签页**（`nerve.auth` 的 `storage` 事件，Codex I-5）：
 
   | 事件 | 含义 | 处理 |
@@ -1355,8 +1367,8 @@ files:
 | `core/services/user.service.ts` | Plane 的 `/api/users/me/…` | M2 的方法改为生成客户端的薄封装，加上 `deactivate`。属于其他领域的 4 个方法（`getUserProfileIssues`、`leaveWorkspace`、`joinProject`、`leaveProject`）原样留下，由 M3、M4 对接时迁走 |
 | `core/services/instance.service.ts`、`timezone.service.ts` | Plane 的地址 | 生成的客户端 |
 | `@nerve/services` 的 `api.service.ts`、`developer/` | `APITokenService`（Plane 的 `/api/users/api-tokens/`） | 删除（P5）。包里只剩地址工具和文件工具，整个包由 M5 删除（总体设计 7.1） |
-| `store/user/index.ts`（`UserStore`） | `IUser`；登录时先取账户，再并行取资料、设置、工作区三样 | `data: User`；没有 `nerve.auth` 时不取数（7.1）；`fetchCurrentUser` 只取 `/me` 和 `/me/profile`；`signIn`、`signUp`、`signOut`、`deactivate` 通过令牌管理器；删除死成员（`reset`、`isAuthenticated`、`error` 等） |
-| `store/user/profile.store.ts` | `TUserProfile`；`updateUserProfile` 吞掉错误（`:138-148`），调用方的错误提示从不出现 | `data: Profile`；失败时抛出。`finishUserOnboarding` 合并为一次 `PATCH /me/profile`（部分的 `onboarding_step` + `is_onboarded` + `last_workspace_id`）；`updateTourCompleted`、`updateUserTheme` 同样用这一个接口 |
+| `store/user/index.ts`（`UserStore`） | `IUser`；登录时先取账户，再并行取资料、设置、工作区三样 | `data: User`；没有 `nerve.auth` 时不取数（7.1）；`fetchCurrentUser` 只取 `/me` 和 `/me/profile`；`signIn`、`signUp`、`signOut`、`deactivate` 通过令牌管理器；删除死成员（`reset`、`isAuthenticated`、`error` 等）；`updateCurrentUser` 一个接一个发出（7.7，codex-fixes） |
+| `store/user/profile.store.ts` | `TUserProfile`；`updateUserProfile` 吞掉错误（`:138-148`），调用方的错误提示从不出现 | `data: Profile`；失败时抛出。`finishUserOnboarding` 合并为一次 `PATCH /me/profile`（部分的 `onboarding_step` + `is_onboarded` + `last_workspace_id`）；`updateTourCompleted`、`updateUserTheme` 同样用这一个接口；修改一个接一个发出（7.7，codex-fixes） |
 | `store/user/settings.store.ts` | `/users/me/settings/` 加上侧边栏状态 | 从登录流程中拿掉（3.1）；删除死成员（`isScrolled`、`toggleIsScrolled` 等）；工作区数据留给 M3 |
 | `store/instance.store.ts` | `IInstanceConfig` | `config: InstanceInfo` |
 | `store/workspace/api-token.store.ts` | 没有任何代码读它（`store/workspace/index.ts:93` 只是创建）；页面用 SWR 直接调用 service | 移到 `store/user/api-token.store.ts`，用生成的客户端重写，翻页直到取完；页面和弹窗改为经 store 读写（总体设计 7.2：组件不直接调用接口） |
@@ -1407,6 +1419,11 @@ files:
   - 创建（名称、说明、有效期：1 周、1 个月、3 个月、1 年、自定义日期、永不过期）；
   - 创建后令牌只显示一次，同时下载 CSV（照搬现有行为）；
   - 列表、撤销。列表显示创建时间和最后使用时间，便于认出不认识的令牌（8.5）。
+- **修改的顺序**（Codex 对 M2 的评审第 6 节，codex-fixes）：`ProfileStore` 和 `UserStore` 的修改经 `core/lib/one-at-a-time.ts` 的队列发出，前一个修改有了应答或失败之后，下一个才发出。于是 nerve 按做出的顺序应用有了应答的修改，最后一个应答就是 nerve 保存的值；失败也放行队列。没有应答的失败（请求到了 nerve 之后连接断了）不在此列，它仍可能在下一个修改之后才被应用；一个一直不结束的请求挡住这个 store 的队列，nerve 在 `server.request_timeout` 之内应答它收到的每个请求。只排队修改；取数不排队（会话开始时取资料的应答晚于一个修改的应答到来时，store 显示取数时的值，与以前相同）。P5 原来的做法（按发出的顺序给修改编号，丢弃较旧的应答）假定 nerve 按发出的顺序处理，Codex 的页面实验推翻了它：先发出的修改后到，页面显示 English，nerve 保存的是简体中文。它随之删除。
+  - preferences、general、新手引导、主题切换和命令面板的主题命令都经这两个 store 修改资料和账户。
+  - 只在一个标签页之内成立；多个标签页或多个客户端之间以后写入的为准（v0 不做乐观锁，总体设计 3.6）。
+  - PAT 的创建和撤销不依赖 nerve 的处理顺序：撤销要用创建返回的 id，两者本来有先后；列表"取最新"靠提交先于确认，不靠请求的顺序。
+- **会话的主题**（Codex 对 M2 的评审 Minor 1，codex-fixes）：没有会话时（本标签页或其他标签页退出、账户停用、续期被拒）页面用默认的"跟随系统"；有会话时，这个会话第一次取到资料时用资料的主题，每个会话一次：next-themes 的 `setTheme` 随主题变化，效果会重跑，旧的资料不能在每次主题变化（本标签页或别的标签页）时把自己的主题再设一遍。两者都只在 `StoreWrapper` 设置（总体设计 7.7），决定是 `core/lib/wrappers/session-theme.ts` 的纯函数 `sessionTheme`，有单元测试；`startSession` 不再写 localStorage 的主题，切换账户弹窗的退出不再自己设主题。
 - **主题下拉框**（M1-closeout 交接）：主题下拉框画在页面左上角。交接写的是 zh-CN，P5 查明与界面语言无关，英文下一样。
   - **根因**（P5 spec 2.3）：Headless UI 2.2 的 `Combobox.Options` 克隆它唯一的子元素时换上自己的 ref。react-popper 的 ref 放在这个子元素上，从未被设置，列表停在 `createPortal` 挂载处的左上角。
   - **修法**：在组件里修，不在调用处打补丁。popper 的 ref、样式、属性放在列表元素本身。`CustomSelect` 改用 `Listbox`，`CustomSearchSelect` 仍用 `Combobox`，两者的打开状态只有 Headless UI 的一份；`DateDropdown` 保持组件自己的一份，经 `onClose` 跟随 Headless UI 的关闭（P5 spec 2.3）。
@@ -1558,9 +1575,10 @@ files:
   - 会话有绝对期限，续期不延长（3.5）；
   - 访问令牌只在内存里，15 分钟过期；
   - 退出、修改密码在下一个请求就生效（3.5）。
-- **怀疑泄露时的恢复步骤**（README 的安全说明，8.7）：
-  1. 在个人设置的 api-tokens 页或安全页查看 PAT 列表，按创建时间和最后使用时间认出不认识的令牌，逐个撤销；
-  2. 或者请服务器管理员执行 `nerve users reset-password`：撤销全部会话和全部 PAT（3.5）。
+- **怀疑泄露时的恢复步骤**（README 的安全说明，8.7；顺序按 Codex 对 M2 的评审第 7 节收紧，codex-fixes）：
+  1. 先退出、重新登录（或在另一个浏览器登录），在新的会话里修改密码（安全页）：修改密码结束除当前会话以外的全部会话（3.5）。被盗的刷新令牌多半就是这个浏览器会话的（XSS 读的是本页的 localStorage），在它里面改密码不会结束它；退出也不一定结束它（对方续期之后，本页的刷新令牌已是旧的一代，退出只结束当前一代的会话，不改变什么）。从新会话改密码之后，被盗的会话和由它换来的访问令牌在下一个请求就失效，对方不能再用会话创建 PAT；
+  2. 再在 api-tokens 页或安全页按创建时间和最后使用时间认出不认识的 PAT，全部撤销（修改密码不撤销 PAT），然后重新核对列表：PAT 能创建 PAT，撤销期间可能又出现新的，列表里不再有不认识的令牌才算完成；
+  3. 只撤销 PAT、不先改密码是不够的：对方仍有会话，随时能再建一个 PAT。对方不断建新令牌、自助撤销跟不上，或者用户已无法登录时，请服务器管理员执行 `nerve users reset-password`：一个事务里撤销全部会话和全部 PAT（3.5）。
 - **负责人以后可以选的产品选项**（记录在此，v0 **不采用**）：
   - 创建 PAT 时重新输入密码。这改变已定下的"创建 PAT 不要求密码"（与 Plane 相同），也影响自动化的调用方；
   - 不允许用 PAT 创建 PAT，或给 PAT 的有效期设上限。两者要一起做：只限有效期、仍允许无限派生，解决不了问题。
@@ -1591,12 +1609,12 @@ files:
 | 部署时设 `NERVE_ENV=prod`；不设时注册默认开放、签名密钥是临时的，启动日志会提醒（6.1） | P1 |
 | 生成签名密钥：`openssl genpkey -algorithm ed25519 -out nerve-jwt.pem`；换密钥的后果：换钥之前的旧代刷新令牌不再能被认出重复使用，刷新令牌正被盗用时受害者只是被登出（恢复靠修改密码或 `reset-password`），同一出口 IP 后的大量标签页会短暂得到 429；所以在低峰时换（3.7、§16） | P1 |
 | 常见密码名单的第三方声明（3.8） | P1 |
-| 迁移角色的权限：用单独的角色执行迁移时，运行服务的角色要能读 `goose_db_version`（6.1）。第一批迁移在 P1，所以放在 P1 | P1 |
+| 迁移角色的权限：用单独的角色执行迁移时，运行服务的角色要能读 `goose_db_version`（6.1）。第一批迁移在 P1，所以放在 P1；codex-fixes 改为指向列出全部权限的 `deploy/runtime-grants.sql` | P1、codex-fixes |
 | 前面有反向代理时配置 `server.trusted_proxies`（3.10） | P2 |
 | 第一个账户：`nerve users create --email …`（决策点 2） | P3b |
 | 管理命令：`reset-password` 撤销全部会话和 PAT；`set-email` 和 `activate` 不撤销 PAT，怀疑账户被盗时另外执行 `reset-password`（3.17） | P3b |
 | 注册会暴露邮箱是否已注册（8.2） | P3a |
-| 刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5）：恢复要用 `reset-password` | P3b |
+| 刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5）：自助：退出重登后在新会话里改密码，再撤销 PAT 并重新核对；管理员用 `reset-password` | P3b、codex-fixes |
 | 密钥扫描的自定义规则和启用位置（8.6） | P3a |
 | HTTP 部署时多标签页靠租约；公网部署用 HTTPS（7.1、8.6） | P4 |
 
@@ -1820,7 +1838,7 @@ files:
 - 没有需要负责人裁定的架构问题。
 - 评审提出的"平台包能否导入 `internal/shared`"，已由控制者裁定为不导入（3.3）：平台自己声明认证器和错误接口，`identity`、`shared` 按结构满足它们。这保持了总体设计 6.2"平台与业务无关"，M0 设计 3.1 不用改。代价是 `shared.Error` 带着 HTTP 状态（3.11）。
 - 第三稿新定的平台约定（按控制者的裁定，经 spike 选定做法）：
-  1. **请求体的结构校验**（3.11）：新增一个平台子包 `httpserver/bodyshape` 和一个构建时的生成器 `tools/bodyshapegen`。生成器在工具模块，用 oapi-codegen 自己的加载器和 `type-mapping` 读契约，不链接进 nerve；运行时只用标准库和 oapi-codegen 的运行时类型。
+  1. **请求体的结构校验**（3.11）：新增一个平台子包 `httpserver/bodyshape` 和一个构建时的生成器 `tools/bodyshapegen`。生成器在工具模块，用 oapi-codegen 自己的加载器和 `type-mapping` 读契约，不链接进 nerve；运行时只用标准库（核验 F1 之后，格式检查把原始值 `json.Unmarshal` 进映射的类型，不再依赖 oapi-codegen 的运行时类型，3.11）。
   2. **凭证签发和变更的账户行锁**（3.5）：`FOR NO KEY UPDATE` 和加锁顺序是全局约定，以后签发或变更凭证的写入（例如 M3 的邀请令牌）照做。
   3. **迁移归被改表的模块所有**（3.14），由 `TestSQLCSchemaScope` 守住。
   4. **提交不受请求期限的取消**（3.6）：`TxManager` 的 `COMMIT` 在 `context.WithoutCancel` 下执行，有自己的期限。
@@ -2160,7 +2178,7 @@ files:
 | 部署时忘了设 `NERVE_ENV=prod`：注册开放、签名密钥是临时的 | dev 的配置只监听回环地址；非 prod 而监听在非回环地址时启动日志提醒；README 写明；M8 的镜像设 `NERVE_ENV=prod` |
 | 账户行锁：持锁太久或死锁 | argon2 始终在锁外；锁用 `FOR NO KEY UPDATE`，不挡别的事务的外键检查；全局的加锁顺序（外键检查也算一次 `users` 的锁）；清理任务用 `SKIP LOCKED`；六个交错测试（3.5） |
 | 默认拒绝漏声明公开操作：公开的接口被 401 | 整程序测试要求公开集合等于接口描述的 `security: []`，漏一个就失败 |
-| 请求体的结构检查：请求体被解析两次；以后的 M 用到生成器不支持的 schema 写法 | 请求体上限 1 MiB，M8 实测开销；生成器遇到不支持的写法时失败并说明原因，由那个 M 带着测试扩展生成器，不会悄悄放过 |
+| 请求体的结构检查：请求体被解析三遍（歧义扫描、按表检查、生成的解码器，codex-fixes）；以后的 M 用到生成器不支持的 schema 写法 | 请求体上限 1 MiB；每遍的代价与请求体成正比：路径按段压栈，最多报 16 个问题，`TestCheckCostsAboutTheBody` 守住（3.11）；按表检查是请求体乘 schema 的层数，递归的 schema 到来时改为一遍读完（M4 交接第 4 节）；M8 实测开销；生成器遇到不支持的写法时失败并说明原因，由那个 M 带着测试扩展生成器，不会悄悄放过 |
 | 每个带令牌的请求多一次数据库查询 | 按主键查询；M8 做性能和内存实测时一起观察 |
 | 换签名密钥之后，换钥之前签发的旧代刷新令牌被再次使用时不再能被发现：标签无法验证，按伪造处理（401，不撤销） | 当前一代照常续期，换钥不让用户重新登录；换钥是少见的运维动作，README 写明这个后果（3.7、8.7）；需要时再加 `kid`，过渡期保留旧的 MAC 密钥（3.7） |
 | 换签名密钥清空失败闸门：换钥之后，每个标签页手里的访问令牌都验签失败，计入 `auth_failure`；同一个出口 IP 后超过 60 个标签页时，闸门暂时用空，有效的请求也得到 429 | 这些 401 让标签页去续期，续期是公开操作，不经过闸门；当前一代照常续期，新的访问令牌验签通过。闸门每分钟恢复 60 次，前端遇到 429 退避重试（7.1）。换钥在低峰时做，README 写明（8.7） |
@@ -2327,3 +2345,20 @@ files:
 - 改唯一列的 `UPDATE` 在 Postgres 中算改键：即使事务先取的是 `FOR NO KEY UPDATE`，`set-email` 的那条语句也会把行锁升级，外键插入要等它提交（spike，3.5）。
 - 导入 `github.com/google/uuid` 的不只是 `runtime/types`（`uuid.go:4`），`runtime` 包自己的 `styleparam.go:30` 也导入它（spike，`go list -deps`）。所以传递依赖测试的例外按模块写：导入者都属于 `github.com/oapi-codegen/runtime` 模块，而不是只认 `runtime/types` 一个包（3.12）。
 - 标准库的 `uuid.UUID` 除了标准写法，还接受无连字符、带花括号和带 `urn:uuid:` 前缀的写法；边界的检查与解码器一致，照样接受（3.11）。
+
+### 17.3 实现之后的 Codex 对抗性评审（codex-fixes 落实）
+M2 合并之后（`9ef4a4a`），Codex 对全部 M2 做了对抗性评审（[报告](reviews/M2-codex-adversarial-review.md)）：Critical 1、Important 2、Minor 3，另有对已知事项（报告第 6 节）和负责人裁定（第 7 节）的意见。负责人的指示：仔细处理报告，干净地完成 M2，不开始 M3。控制者逐条裁定，codex-fixes 落实（[spec](specs/codex-fixes.md)、[plan](plans/codex-fixes.md)）；每一条的先红后绿、变异表和门禁在 spec 的附录。
+
+| 编号 | 问题 | 裁定 | 落点 |
+|---|---|---|---|
+| Critical 1 | 重复的 JSON 键绕过请求体的结构检查：结构检查按 map 读（后一个为准），生成的 handler 按结构体解码（合并，字段名不区分大小写） | 在平台的边界修：同一个对象里重复的成员名（按解码之后比较）和不是合法 Unicode 的字符串，400 `bad_request`；新的字段码 `duplicate`；证明结构检查接受的请求体，解码器读不出别的 | 3.11 的"一份请求体只有一种读法"、不变式和"代价跟着请求体走"，字段码、第四个整程序测试的第 8、9 项；`bodyshape/ambiguity.go`；A10 的接口版本发 Codex 的两个请求 |
+| Important 1 | 旧标签页的退出在租约过期之后回来，删掉另一个标签页的新登录 | 修这一类：请求和锁回来之后先重读记录 | 7.1 的"请求和锁回来之后先重读记录"和"退出"；核对出同类的第二处，启动时第一次续期失败之后的"会话暂不可用"；总体设计 4.3 |
+| Important 2 | 迁移和服务分用两个角色时 README 只写了 `goose_db_version`：River 因 42501 失败，`/readyz` 仍是 200；River 的索引重建要 `MAINTAIN` | 权限写进一个文件，逐个列出，由测试守住完整 | 6.1；8.7；`deploy/runtime-grants.sql`；`server/internal/bootstrap/runtime_role_test.go`；README"部署"；M4、M8 的交接 |
+| Minor 1 | 自助停用之后当前标签页保留旧账户的主题，直到刷新 | 主题只在 `StoreWrapper` 按会话设置，删除退出按钮上的补丁 | 7.7 的"会话的主题"；总体设计 7.7；A5、A6、A12 的页面版本 |
+| Minor 2 | A8–A10 的页面版本和接口版本共用查询，没有共用业务断言 | 抽出三个带参数的小断言，不建通用框架 | `e2e/fixtures/assert/identity.ts` 的 `expectAccountChanged`、`expectPreferences`、`expectProfileStepTaken` |
+| Minor 3 | 11.2 说 `bodyshape` 用 oapi-codegen 的运行时类型；收尾 spec 和收尾 review 说 `identity.yaml` 有 15 个操作、每个约 40 行 | 改正 | 11.2；收尾 spec 附录 B.5 第 5 条、收尾 review 第 7 节第 5 条：13 个操作，每个约 48 行 |
+| 第 6 节 | P5 假定 nerve 按发出的顺序处理资料和账户的修改，Codex 的页面实验推翻了它 | 一个 store 的修改一个接一个发出，失败也放行；删除"丢弃较旧的应答" | 7.5；7.7 的"修改的顺序"；总体设计 7.7；A9 的页面版本 |
+| 第 7 节 | README 和 8.5 把"逐个撤销 PAT"与 `reset-password` 并列，自助的恢复不完整 | 自助：退出重登后在新会话里改密码，再撤销 PAT 并重新核对；管理员用 `reset-password` | 8.5；8.7；README"部署" |
+| 第 6 节（P2） | `AllowAll` 里同一个桶和键出现两次会扣两次 | 作为编程错误拒绝（panic） | 3.10；`platform/ratelimit` |
+| 第 6 节 | `DateDropdown` 的键盘；时区按钮的 Tab 顺序 | 仍按期限推迟：它们是共用组件，其他调用方在 M2 到不了的页面上；交接已有关闭条件 | 不变：M4 交接第 10 节、M3 交接第 14 节 |
+| 第 6 节其余 | 已知事项的其余判定 | 同意，不改 | — |
