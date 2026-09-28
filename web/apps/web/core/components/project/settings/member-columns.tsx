@@ -77,7 +77,7 @@ export function NameColumn(props: NameProps) {
                 placement="bottom-end"
               >
                 <CustomMenu.MenuItem onClick={() => setRemoveMemberModal(rowData)}>
-                  <div className="flex cursor-pointer items-center gap-x-1 font-medium text-danger-primary">
+                  <div className="flex items-center gap-x-1 font-medium text-danger-primary">
                     <CircleMinus className="size-3.5 flex-shrink-0" />
                     {rowData.member?.id === currentUser?.id ? "Leave " : "Remove "}
                   </div>
