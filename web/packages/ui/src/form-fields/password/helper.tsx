@@ -28,7 +28,7 @@ export const getStrengthInfo = (strength: TShownPasswordStrength): StrengthInfo 
       };
     case E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID:
       return {
-        textColor: "text-orange-500",
+        textColor: "text-warning-primary",
         activeFragments: 2,
       };
   }
@@ -46,6 +46,6 @@ export const getFragmentColor = (fragmentIndex: number, activeFragments: TActive
     case 1:
       return "bg-danger-primary";
     case 2:
-      return "bg-orange-500";
+      return "bg-warning-primary";
   }
 };
