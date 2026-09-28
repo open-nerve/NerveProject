@@ -192,12 +192,17 @@ func (o Operation) BodyCases() []BodyCase {
 	}
 	wrong := func(name string) string { return "not-a-" + s.Properties[name].Value.Format }
 	// raw is the valid body with name's value written as text, which json.Marshal would not write: a
-	// second member of the same name, bytes that are not UTF-8.
+	// second member of the same name, bytes that are not UTF-8. The mark must be the body's only one, or
+	// the text would land elsewhere, or nowhere, and the case would test something else.
 	raw := func(name, text string) []byte {
 		body := maps.Clone(valid)
 		body[name] = rawMark
 		out, _ := json.Marshal(body)
-		return bytes.Replace(out, []byte(`"`+rawMark+`"`), []byte(text), 1)
+		mark := []byte(`"` + rawMark + `"`)
+		if n := bytes.Count(out, mark); n != 1 {
+			panic(fmt.Sprintf("apitest: the body %s has the raw mark %d times, want once", out, n))
+		}
+		return bytes.Replace(out, mark, []byte(text), 1)
 	}
 	// twice is the text of name's value v, then of a second member name: v.
 	twice := func(name string, v any) string {

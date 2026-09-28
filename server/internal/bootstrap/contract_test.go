@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -129,6 +130,64 @@ func TestBodiesThatBreakTheStructureAnswer400(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// The answer to a body that breaks the structure stays small, whatever the
+// body (M2 design 3.11): each problem at a path of at most 256 bytes, at most
+// 16 problems. The final review of codex-fixes sent these bodies to the
+// anonymous login: 16 problems under one name of about 1 MiB, each repeating
+// the name, got an answer of about 100 MB. 32 KiB holds 16 paths of 256
+// bytes that the encoding writes 6 bytes each, with their messages.
+func TestTheAnswerToABrokenBodyStaysSmall(t *testing.T) {
+	contract := apitest.Load(t)
+	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+
+	angles := strings.Repeat("<", 1<<20-400)
+	var twice, notUTF8 []string
+	for i := range 16 {
+		key := fmt.Sprintf(`"k%02d"`, i)
+		twice = append(twice, key+":1,"+key+":1")
+		notUTF8 = append(notUTF8, key+":\"\xff\"")
+	}
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"names twice under a name of 1 MiB", `{"` + angles + `":{` + strings.Join(twice, ",") + `}}`},
+		{"strings that are not UTF-8 under a name of 1 MiB", `{"` + angles + `":{` + strings.Join(notUTF8, ",") + `}}`},
+		{"names twice under 9,990 names of 90 bytes",
+			strings.Repeat(`{"`+angles[:90]+`":`, 9990) + `{` + strings.Join(twice, ",") + `}` + strings.Repeat("}", 9990)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := newRequest(t, http.MethodPost, base+"/api/v0/auth/login", "", []byte(tt.body))
+			res, body := send(t, req)
+
+			// The answer is not printed: on a failure it may be 100 MB.
+			contract.CheckResponse(t, req, res)
+			var p struct {
+				Code   string                 `json:"code"`
+				Errors []apitest.FieldProblem `json:"errors"`
+			}
+			if err := json.Unmarshal(body, &p); err != nil {
+				t.Fatalf("decode the answer of %d bytes: %v", len(body), err)
+			}
+			if res.StatusCode != http.StatusBadRequest || p.Code != "bad_request" || len(p.Errors) == 0 {
+				t.Errorf("answer = %d %s with %d problems, want 400 bad_request with some", res.StatusCode, p.Code, len(p.Errors))
+			}
+			if len(body) > 32<<10 {
+				t.Errorf("the answer is %d bytes, want at most 32 KiB", len(body))
+			}
+			longest := 0
+			for _, f := range p.Errors {
+				longest = max(longest, len(f.Field))
+			}
+			if longest > 256 {
+				t.Errorf("a path of %d bytes, want at most 256", longest)
+			}
+			t.Logf("%s: %d bytes sent; answer %d, %d bytes, %d problems", tt.name, len(tt.body), res.StatusCode, len(body), len(p.Errors))
+		})
 	}
 }
 

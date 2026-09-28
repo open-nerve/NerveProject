@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 // At most maxProblems problems come back, and the same ones every time: the
@@ -58,10 +59,11 @@ func TestCheckListsAtMostSixteenProblems(t *testing.T) {
 // with the body, and its answer does not. A path string for every value
 // costs the square of the depth, and every problem with its path the number
 // of problems times the name: the first four bodies make such code allocate
-// hundreds of megabytes, and gigabytes at the 1 MiB body limit. The last
+// hundreds of megabytes, and gigabytes at the 1 MiB body limit. The next
 // three are from the final review of codex-fixes: whole paths make their
-// answers 16 copies of a path of about 1 MiB (M2 design 3.11). Not parallel:
-// TotalAlloc counts the whole process.
+// answers 16 copies of a path of about 1 MiB. The last repeats one problem,
+// which is reported once and not counted, so each repeat must cost little
+// (M2 design 3.11). Not parallel: TotalAlloc counts the whole process.
 func TestCheckCostsAboutTheBody(t *testing.T) {
 	// An open map of closed objects: a client's key is part of every path under it.
 	groups := &Table{
@@ -89,6 +91,9 @@ func TestCheckCostsAboutTheBody(t *testing.T) {
 	longTwice := `{"` + angles + `":{` + strings.Join(twice, ",") + `}}`
 	longNotUTF8 := `{"` + angles + `":{` + strings.Join(notUTF8, ",") + `}}`
 	deepTwice := strings.Repeat(`{"`+angles[:90]+`":`, 9990) + `{` + strings.Join(twice, ",") + `}` + strings.Repeat("}", 9990)
+	// One problem 200,000 times: the paths are cut short to the same text, so
+	// the problem is reported once, and each repeat is compared, not counted.
+	repeated := `{"` + angles[:300] + `":[` + strings.Repeat("\"\xff\",", 200000) + "\"\xff\"]}"
 	tests := []struct {
 		name  string
 		table *Table
@@ -109,12 +114,17 @@ func TestCheckCostsAboutTheBody(t *testing.T) {
 		{"names twice under a name of 1 MiB", things(), longTwice, 6 * len(longTwice)},
 		{"strings that are not UTF-8 under a name of 1 MiB", things(), longNotUTF8, 6 * len(longNotUTF8)},
 		{"names twice under 9,990 names of 90 bytes", things(), deepTwice, 6 * len(deepTwice)},
+		// 6 times the body guards the repeats too: a path string for each would
+		// be about 50 times the body.
+		{"a string that is not UTF-8, 200,000 times under a name of 300 bytes", things(), repeated, 6 * len(repeated)},
 	}
 	for _, tt := range tests {
 		runtime.GC()
 		var before, after runtime.MemStats
 		runtime.ReadMemStats(&before)
+		start := time.Now()
 		err := tt.table.Check(pattern, []byte(tt.body))
+		took := time.Since(start)
 		runtime.ReadMemStats(&after)
 
 		var shape *Error
@@ -133,7 +143,7 @@ func TestCheckCostsAboutTheBody(t *testing.T) {
 		if paths > maxProblems*maxPath {
 			t.Errorf("%s: the paths of the answer are %d bytes, want at most %d", tt.name, paths, maxProblems*maxPath)
 		}
-		t.Logf("%s: %d bytes, %d problems, paths of %d bytes, allocated %d KiB", tt.name, len(tt.body), len(shape.Fields), paths,
-			got>>10)
+		t.Logf("%s: %d bytes, %d problems, paths of %d bytes, allocated %d KiB in %v", tt.name, len(tt.body), len(shape.Fields),
+			paths, got>>10, took.Round(100*time.Microsecond))
 	}
 }
