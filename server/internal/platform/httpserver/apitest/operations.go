@@ -1,6 +1,7 @@
 package apitest
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"maps"
@@ -138,6 +139,10 @@ type BodyCase struct {
 // unknownField is the property no schema declares.
 const unknownField = "nerve_undeclared"
 
+// rawMark stands for a value that json.Marshal cannot write, until BodyCases
+// puts the JSON text in its place.
+const rawMark = "nerve_raw_value"
+
 // BodyCases derives the cases of M2 design 3.11's fourth whole-program test
 // from the operation's body schema: a valid body, broken one way at a time.
 // Cases whose kind of field the schema lacks are left out.
@@ -148,9 +153,13 @@ const unknownField = "nerve_undeclared"
 //  4. each required property missing;
 //  5. null for a nullable property: not 400;
 //  6. each format property with a wrong string;
-//  7. every kind of 1–4 and 6 that the schema has, each on a property of its
+//  7. the first property twice: duplicate (a body read two ways);
+//  8. the first property of the nested object twice, in it;
+//  9. bytes that are not UTF-8 in the first string property: invalid_format;
+//  10. every kind of 1–4 and 6 that the schema has, each on a property of its
 //     own, together: every problem in one answer. Left out when the schema
-//     has only the first kind.
+//     has only the first kind. 7–9 are not in it: a body read two ways gets
+//     only those answers, before its structure is checked.
 func (o Operation) BodyCases() []BodyCase {
 	s := o.body
 	valid := validValue(s).(map[string]any)
@@ -182,6 +191,26 @@ func (o Operation) BodyCases() []BodyCase {
 		return v
 	}
 	wrong := func(name string) string { return "not-a-" + s.Properties[name].Value.Format }
+	// raw is the valid body with name's value written as text, which json.Marshal would not write: a
+	// second member of the same name, bytes that are not UTF-8.
+	raw := func(name, text string) []byte {
+		body := maps.Clone(valid)
+		body[name] = rawMark
+		out, _ := json.Marshal(body)
+		return bytes.Replace(out, []byte(`"`+rawMark+`"`), []byte(text), 1)
+	}
+	// twice is the text of name's value v, then of a second member name: v.
+	twice := func(name string, v any) string {
+		value, _ := json.Marshal(v)
+		return string(value) + `,"` + name + `":` + string(value)
+	}
+	// valueOf is name's value in values, else a valid one for its schema.
+	valueOf := func(schema *openapi3.Schema, name string, values map[string]any) any {
+		if v, ok := values[name]; ok {
+			return v
+		}
+		return validValue(schema.Properties[name].Value)
+	}
 
 	cases := []BodyCase{{Name: "undeclared property", Body: with(func(b map[string]any) { b[unknownField] = 1 }),
 		Fields: []FieldProblem{{unknownField, "not_allowed"}}}}
@@ -206,8 +235,25 @@ func (o Operation) BodyCases() []BodyCase {
 		cases = append(cases, BodyCase{Name: "wrong " + s.Properties[name].Value.Format + " in " + name,
 			Body: with(func(b map[string]any) { b[name] = wrong(name) }), Fields: []FieldProblem{{name, "invalid_format"}}})
 	}
+	if len(names) > 0 {
+		name := names[0]
+		cases = append(cases, BodyCase{Name: name + " twice", Body: raw(name, twice(name, valueOf(s, name, valid))),
+			Fields: []FieldProblem{{name, "duplicate"}}})
+	}
+	if nested != "" {
+		n := s.Properties[nested].Value
+		if inner := slices.Sorted(maps.Keys(n.Properties)); len(inner) > 0 {
+			text := `{"` + inner[0] + `":` + twice(inner[0], valueOf(n, inner[0], nil)) + `}`
+			cases = append(cases, BodyCase{Name: nested + "." + inner[0] + " twice", Body: raw(nested, text),
+				Fields: []FieldProblem{{nested + "." + inner[0], "duplicate"}}})
+		}
+	}
+	if i := slices.IndexFunc(names, func(name string) bool { return s.Properties[name].Value.Type.Includes("string") }); i >= 0 {
+		cases = append(cases, BodyCase{Name: "not UTF-8 in " + names[i], Body: raw(names[i], "\"\xff\""),
+			Fields: []FieldProblem{{names[i], "invalid_format"}}})
+	}
 
-	// Case 7: each kind takes the first property no earlier kind took.
+	// Case 10: each kind takes the first property no earlier kind took.
 	body := maps.Clone(valid)
 	body[unknownField] = 1
 	all := []FieldProblem{{unknownField, "not_allowed"}}

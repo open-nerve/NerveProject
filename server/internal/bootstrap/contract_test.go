@@ -88,8 +88,10 @@ func TestOperationsThatNeedATokenAnswer401WithoutOne(t *testing.T) {
 
 // 4. Every operation with a JSON body answers a body that breaks its
 // structure with 400 and every broken field, and lets null through where the
-// schema allows it. Operations that need a token get a valid one, so the
-// body check, not the authentication, answers.
+// schema allows it; a body that can be read two ways (a property twice, at
+// the top and in the nested object; bytes that are not UTF-8) gets 400 too,
+// before its structure is checked. Operations that need a token get a valid
+// one, so the body check, not the authentication, answers.
 func TestBodiesThatBreakTheStructureAnswer400(t *testing.T) {
 	contract := apitest.Load(t)
 	base := startApp(t, testConfig(t, pgtest.NewDatabase(t), false), migrations.FS())

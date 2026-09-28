@@ -77,8 +77,8 @@ func authoringViolations(doc *openapi3.T, owners map[string]string) []string {
 // ruleCheck walks one document and collects its violations: path checks the
 // /api/v0/ prefix, operation the operationId, tags, default problem,
 // security and problem codes, parameter and requestBody the shapes the
-// whole-program tests build, closedObject additionalProperties, and schema
-// the keywords that oapi-codegen mistranslates.
+// whole-program tests build, and schema the keywords that oapi-codegen
+// mistranslates and, through closedObject, additionalProperties.
 type ruleCheck struct {
 	doc        *openapi3.T
 	owners     map[string]string
@@ -207,7 +207,6 @@ func (r *ruleCheck) defaultIsProblem(op *openapi3.Operation) bool {
 
 func (r *ruleCheck) components(c *openapi3.Components) {
 	for _, name := range slices.Sorted(maps.Keys(c.Schemas)) {
-		r.closedObject("components/schemas/"+name, c.Schemas[name])
 		r.schema("components/schemas/"+name, c.Schemas[name])
 	}
 	for _, name := range slices.Sorted(maps.Keys(c.Parameters)) {
@@ -228,9 +227,11 @@ func (r *ruleCheck) components(c *openapi3.Components) {
 	}
 }
 
-// closedObject lets contract tests catch undocumented fields: a component
-// object schema must set additionalProperties: false. The rule targets
-// response objects and is applied to request schemas as well. Exempt are
+// closedObject lets contract tests catch undocumented fields: every object
+// schema, a component or an inline one, must set additionalProperties: false.
+// The rule targets response objects and is applied to request schemas as
+// well, where it keeps the decoder's case-insensitive match of field names
+// out of reach (M2 design 3.11, invariant 2). Exempt are
 // composition wrappers (allOf, oneOf or anyOf without properties of their
 // own): additionalProperties does not see the subschemas' properties, so
 // closing a wrapper would reject every instance.
@@ -288,9 +289,9 @@ func (r *ruleCheck) content(where string, content openapi3.Content) {
 	}
 }
 
-// schema checks the keywords that oapi-codegen mistranslates, in the schema
-// and, recursively, its inline subschemas; a $ref is checked where its target
-// is defined. kin-openapi decodes `nullable: false` and `const: null` to zero
+// schema checks that an object is closed and the keywords that oapi-codegen
+// mistranslates, in the schema and, recursively, its inline subschemas; a
+// $ref is checked where its target is defined. kin-openapi decodes `nullable: false` and `const: null` to zero
 // values that look like an absent keyword, so the keys the loader recorded
 // per schema (Origin) are checked as well as the decoded fields. Walking the
 // raw YAML instead would need a direct YAML dependency and would have to
@@ -299,6 +300,7 @@ func (r *ruleCheck) schema(where string, ref *openapi3.SchemaRef) {
 	if ref == nil || ref.Ref != "" || ref.Value == nil {
 		return
 	}
+	r.closedObject(where, ref)
 	s := ref.Value
 	if s.Nullable || spells(s, "nullable") {
 		r.report(where, "uses nullable, the OpenAPI 3.0 keyword; write type: [T, 'null']")

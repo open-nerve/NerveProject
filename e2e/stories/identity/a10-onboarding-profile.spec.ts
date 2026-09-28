@@ -148,3 +148,41 @@ test("A10 (API): the profile step sets the name and one step, which the others k
   ]);
   expect(await onboardingStepsOf(db, email)).toEqual(merged);
 });
+
+test("A10 (API): onboarding_step twice is the platform's 400, whatever the other one holds, and nothing changes", async ({
+  api,
+  db,
+  request,
+}, testInfo) => {
+  const email = emailFor(testInfo);
+  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const stepsBefore = await onboardingStepsOf(db, email);
+  // The body as written, byte for byte: an object of the typed client cannot hold a key twice.
+  const send = async (body: string) => {
+    const response = await request.patch("/api/v0/me/profile", {
+      data: body,
+      headers: { ...bearer(pat.token), "Content-Type": "application/json" },
+    });
+    const problem = (await response.json()) as { code: string; errors?: { field: string; code: string }[] };
+    return {
+      status: response.status(),
+      code: problem.code,
+      errors: problem.errors?.map(({ field, code }) => ({ field, code })),
+    };
+  };
+
+  // WORKSPACE_INVITE is not a step: the platform's 400.
+  expect(await send('{"onboarding_step":{"WORKSPACE_INVITE":true}}')).toEqual({
+    status: 400,
+    code: "bad_request",
+    errors: [{ field: "onboarding_step.WORKSPACE_INVITE", code: "not_allowed" }],
+  });
+  // The same, and onboarding_step again, empty (M2 Codex review, Critical 1): a decoder that merges the two would
+  // take WORKSPACE_INVITE for workspace_invite. The body can be read two ways, which is a 400 before any reading.
+  expect(await send('{"onboarding_step":{"WORKSPACE_INVITE":true},"onboarding_step":{}}')).toEqual({
+    status: 400,
+    code: "bad_request",
+    errors: [{ field: "onboarding_step", code: "duplicate" }],
+  });
+  expect(await onboardingStepsOf(db, email)).toEqual(stepsBefore);
+});

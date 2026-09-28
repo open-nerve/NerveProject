@@ -158,6 +158,9 @@ func TestBodyCases(t *testing.T) {
 		`missing name {"owner_id":"00000000-0000-0000-0000-000000000000"}`,
 		`missing owner_id {"name":"x"}`,
 		`wrong uuid in owner_id {"name":"x","owner_id":"not-a-uuid"}`,
+		`count twice {"count":1,"count":1,` + valid + `}`,
+		`settings.notify twice {` + valid + `,"settings":{"notify":false,"notify":false}}`,
+		"not UTF-8 in kind {\"kind\":\"\xff\"," + valid + `}`,
 		`every problem at once {"count":null,"nerve_undeclared":1,"owner_id":"not-a-uuid","settings":{"nerve_undeclared":1}}`,
 	}
 	if !slices.Equal(got, want) {
