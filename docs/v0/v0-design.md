@@ -590,9 +590,9 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 - **填充 stores 的 SWR 键带上 `loginId`**（例如 `["CURRENT_USER", loginId]`）：换了会话，新的一代取自己的数据。
 - **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收。M2 结束时 `RootStore` 还没有释放的方法：第一个接上这类 store 的 M 给 `RootStore` 加上它，由 `store-context.tsx` 在换代时调用，之后的 M 照做（要释放的反应列在各 M 的交接里）。只观察本代对象的反应不用释放。
 - **`SessionChangedError` 不是认证失败**：它表示请求属于标签页已经离开的会话：请求在发出之前被拦下；或者请求（或续期之后重发的副本）得到 401 时，标签页已经离开它的会话，于是不再续期、重发，也不结束标签页此刻的会话。它只出现在请求发出之前或一个 401 之后，所以操作确实没有做。调用方不退出、不跳转；后台加载忽略它，由新的一代重新取数；用户发起的操作被它截断时可以提示失败。
-- **页面级的状态从当前的 `RootStore` 派生**：界面语言、主题这类作用于整个页面的状态，由 `StoreWrapper` 读当前一代的资料来设置；store 不直接改全局状态，旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
+- **页面级的状态跟随当前的会话**：界面语言由 `StoreWrapper`（`core/lib/wrappers/store-wrapper.tsx`）按当前一代的资料设置，store 不设。主题在每个会话第一次取到资料时由 `StoreWrapper` 按资料设置一次，之后由改它的组件在 nerve 应答成功之后设置，设置之前先核对标签页仍在发出修改时的会话（`core/components/appearance/theme-switcher.tsx` 的 `inSession()`，M2/P5 spec 2.7）。store 不直接改全局状态；组件在一个 `await` 之后改页面级的状态时，都先核对会话没变。这样旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
 - **`@nerve/ui` 不依赖 `@nerve/i18n`**：组件的文字由调用方经 `t()` 以 props 传入。`@nerve/ui` 的 `package.json` 不声明 `@nerve/i18n`，pnpm 不把没有声明的包放进它的 `node_modules`，从 `@nerve/i18n` 导入的名字过不了 `@nerve/ui` 的类型检查。
-- 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/auth/api-client.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
+- 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/auth/api-client.ts`、`core/lib/auth/auth-middleware.ts`（`SessionChangedError`）和 `core/lib/wrappers/store-wrapper.tsx`；照这些规则写的 store 可以看 `core/store/user/api-token.store.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
 
 ---
 
@@ -722,4 +722,4 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 | 各接口的限流数值、各类数据的保留期 | 相关 M 的设计文档 |
 | 没有邮件服务时账户如何找回（目前只能由管理员用命令行重置） | 以后接入邮件服务时再议（v0 之后） |
 | 调高 argon2 参数（`argon2_memory_kib`、`argon2_iterations`）之后，登录耗时能区分休眠的账户和不存在的邮箱，直到每个账户重新登录一次（M2 设计 §16） | 是否加缓解由负责人以后决定；M8 的 argon2 实测提供数字（[M8 的交接](M8-open-release/handoffs/M2-closeout.md)第 2 节） |
-| 泄露的刷新令牌可以派生永不过期的 PAT，影响不以刷新令牌的 30 天为限（M2 设计 §16、8.5） | 恢复步骤已写在 README 的"部署"一节（撤销不认识的 PAT，或由管理员 `nerve users reset-password`）；创建 PAT 时重新输入密码、不允许用 PAT 创建 PAT 或给 PAT 的有效期设上限，是负责人以后可选的产品选项，v0 不采用 |
+| 泄露的刷新令牌可以派生永不过期的 PAT，影响不以刷新令牌的 30 天为限（M2 设计 §16、8.5） | 恢复步骤已写在 README 的"部署"一节（撤销不认识的 PAT，或由管理员 `nerve users reset-password`）。负责人以后可选的产品选项有两个，v0 都不采用（M2 设计 8.5）：创建 PAT 时重新输入密码；或者不允许用 PAT 创建 PAT，同时给 PAT 的有效期设上限（两者要一起做：只限有效期、仍允许无限派生，解决不了问题） |
