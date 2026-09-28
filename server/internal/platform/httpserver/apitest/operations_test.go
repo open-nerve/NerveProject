@@ -158,6 +158,9 @@ func TestBodyCases(t *testing.T) {
 		`missing name {"owner_id":"00000000-0000-0000-0000-000000000000"}`,
 		`missing owner_id {"name":"x"}`,
 		`wrong uuid in owner_id {"name":"x","owner_id":"not-a-uuid"}`,
+		`count twice {"count":1,"count":1,` + valid + `}`,
+		`settings.notify twice {` + valid + `,"settings":{"notify":false,"notify":false}}`,
+		"not UTF-8 in kind {\"kind\":\"\xff\"," + valid + `}`,
 		`every problem at once {"count":null,"nerve_undeclared":1,"owner_id":"not-a-uuid","settings":{"nerve_undeclared":1}}`,
 	}
 	if !slices.Equal(got, want) {
@@ -207,6 +210,19 @@ func TestBodyCasesCombineEveryKindTheSchemaHas(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A case written as text puts the text in place of the one mark it wrote
+// into the body. A valid value that is the mark as well would make the case
+// test something else, so BodyCases fails loudly.
+func TestBodyCasesPanicWhenAValidValueIsTheRawMark(t *testing.T) {
+	op := bodyOperation(t, "{type: object, required: [kind], properties: {a: {type: string}, kind: {type: string, enum: [nerve_raw_value]}}}")
+	defer func() {
+		if recover() == nil {
+			t.Error("BodyCases() returned, want a panic: the body holds the raw mark twice")
+		}
+	}()
+	op.BodyCases()
 }
 
 // bodyOperation returns the one operation of a contract whose JSON body has

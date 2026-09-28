@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { accountOf, onboardingStepsOf } from "../../fixtures/assert/identity";
+import { accountOf, expectProfileStepTaken, onboardingStepsOf } from "../../fixtures/assert/identity";
 import { submitSignUp } from "../../fixtures/auth-pages";
 import { bearer, createPAT, emailFor, password, register } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage, type PageWatch } from "../../fixtures/browser";
@@ -17,18 +17,13 @@ import { expect, test } from "../../fixtures/test";
  */
 async function takeProfileStep(page: Page, watch: PageWatch, db: Database, email: string): Promise<void> {
   await expect(page.getByText("Create your profile.")).toBeVisible();
+  const stepsBefore = await onboardingStepsOf(db, email);
   await page.getByLabel("Name", { exact: true }).fill("Ada");
   expect(await saveProfileStep(page)).toBe(200);
 
   // The next step shows; nerve has the name and the one step done.
   await expect(page.getByText("Create your workspace", { exact: true })).toBeVisible();
-  expect(await onboardingStepsOf(db, email)).toEqual({
-    profile_complete: true,
-    workspace_create: false,
-    workspace_invite: false,
-    workspace_join: false,
-  });
-  expect((await accountOf(db, email)).first_name).toBe("Ada");
+  await expectProfileStepTaken(db, email, "Ada", stepsBefore);
   // Nothing went wrong on the way (M2 design 3.1): no API call failed, none went to an older API, such as
   // M3's workspaces and invitations, no exception or rejection was left unhandled, the CSP blocked
   // nothing, the console has no error or warning.
@@ -115,10 +110,6 @@ test("A10 (API): the profile step sets the name and one step, which the others k
   const email = emailFor(testInfo);
   const pat = await createPAT(api, (await register(api, email)).access_token);
 
-  const named = await api.PATCH("/api/v0/me", { body: { first_name: "Ada" }, headers: bearer(pat.token) });
-  expect(named.response.status).toBe(200);
-  expect((await accountOf(db, email)).first_name).toBe("Ada");
-
   // Another step is done already, so keeping it differs from resetting it
   // to its default.
   const joined = await api.PATCH("/api/v0/me/profile", {
@@ -126,15 +117,18 @@ test("A10 (API): the profile step sets the name and one step, which the others k
     headers: bearer(pat.token),
   });
   expect(joined.response.status).toBe(200);
+  const stepsBefore = await onboardingStepsOf(db, email);
 
-  // One key: it is merged in, the other three keep their values (M2 design 3.14).
+  // The name, then the step: one key, merged in, the other three keep their values.
+  const named = await api.PATCH("/api/v0/me", { body: { first_name: "Ada" }, headers: bearer(pat.token) });
+  expect(named.response.status).toBe(200);
   const stepped = await api.PATCH("/api/v0/me/profile", {
     body: { onboarding_step: { profile_complete: true } },
     headers: bearer(pat.token),
   });
   expect(stepped.response.status).toBe(200);
-  const merged = { profile_complete: true, workspace_create: false, workspace_invite: false, workspace_join: true };
-  expect(await onboardingStepsOf(db, email)).toEqual(merged);
+  await expectProfileStepTaken(db, email, "Ada", stepsBefore);
+  const merged = await onboardingStepsOf(db, email);
 
   // An unknown key, here misspelt, breaks the contract: the platform's 400,
   // and nothing changes.
@@ -147,4 +141,42 @@ test("A10 (API): the profile step sets the name and one step, which the others k
     { field: "onboarding_step.profile_completed", code: "not_allowed" },
   ]);
   expect(await onboardingStepsOf(db, email)).toEqual(merged);
+});
+
+test("A10 (API): onboarding_step twice is the platform's 400, whatever the other one holds, and nothing changes", async ({
+  api,
+  db,
+  request,
+}, testInfo) => {
+  const email = emailFor(testInfo);
+  const pat = await createPAT(api, (await register(api, email)).access_token);
+  const stepsBefore = await onboardingStepsOf(db, email);
+  // The body as written, byte for byte: an object of the typed client cannot hold a key twice.
+  const send = async (body: string) => {
+    const response = await request.patch("/api/v0/me/profile", {
+      data: body,
+      headers: { ...bearer(pat.token), "Content-Type": "application/json" },
+    });
+    const problem = (await response.json()) as { code: string; errors?: { field: string; code: string }[] };
+    return {
+      status: response.status(),
+      code: problem.code,
+      errors: problem.errors?.map(({ field, code }) => ({ field, code })),
+    };
+  };
+
+  // WORKSPACE_INVITE is not a step: the platform's 400.
+  expect(await send('{"onboarding_step":{"WORKSPACE_INVITE":true}}')).toEqual({
+    status: 400,
+    code: "bad_request",
+    errors: [{ field: "onboarding_step.WORKSPACE_INVITE", code: "not_allowed" }],
+  });
+  // The same, and onboarding_step again, empty (M2 Codex review, Critical 1): a decoder that merges the two would
+  // take WORKSPACE_INVITE for workspace_invite. The body can be read two ways, which is a 400 before any reading.
+  expect(await send('{"onboarding_step":{"WORKSPACE_INVITE":true},"onboarding_step":{}}')).toEqual({
+    status: 400,
+    code: "bad_request",
+    errors: [{ field: "onboarding_step", code: "duplicate" }],
+  });
+  expect(await onboardingStepsOf(db, email)).toEqual(stepsBefore);
 });

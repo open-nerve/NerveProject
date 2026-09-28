@@ -7,6 +7,7 @@ package apigen
 const (
 	FieldErrorCodeCommonPassword FieldErrorCode = "common_password"
 	FieldErrorCodeContainsURL    FieldErrorCode = "contains_url"
+	FieldErrorCodeDuplicate      FieldErrorCode = "duplicate"
 	FieldErrorCodeInvalidFormat  FieldErrorCode = "invalid_format"
 	FieldErrorCodeMustBeFuture   FieldErrorCode = "must_be_future"
 	FieldErrorCodeNotAllowed     FieldErrorCode = "not_allowed"
@@ -23,6 +24,8 @@ func (e FieldErrorCode) Valid() bool {
 	case FieldErrorCodeCommonPassword:
 		return true
 	case FieldErrorCodeContainsURL:
+		return true
+	case FieldErrorCodeDuplicate:
 		return true
 	case FieldErrorCodeInvalidFormat:
 		return true
@@ -50,7 +53,7 @@ type FieldError struct {
 	// Code What is wrong with the field.
 	Code FieldErrorCode `json:"code"`
 
-	// Field The field's path in the request body, e.g. password or tags[1].name.
+	// Field The field's path in the request body, e.g. password or tags[1].name. A path longer than 256 bytes is cut short and ends with `…`.
 	Field   string `json:"field"`
 	Message string `json:"message"`
 }

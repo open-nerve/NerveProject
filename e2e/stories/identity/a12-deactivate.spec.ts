@@ -34,11 +34,19 @@ test("A12 (page): the general page deactivates the account once confirmed; the s
   const email = emailFor(testInfo);
   const tokens = await registerOnboarded(api, email);
   const pat = await createPAT(api, tokens.access_token);
+  // A theme the page shows once the profile arrives, and no longer without a session.
+  const themed = await api.PATCH("/api/v0/me/profile", {
+    body: { theme: "dark" },
+    headers: bearer(tokens.access_token),
+  });
+  expect(themed.response.status).toBe(200);
   // Another session of the account, which ends too.
   await login(api, email);
   const page = await signedInPage(tokens);
   const watch = await watchPage(page);
   await page.goto("/settings/profile/general");
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", "dark");
   const before = await accountOf(db, email);
   const tokensBefore = await tokensOf(db, before.id);
 
@@ -50,9 +58,11 @@ test("A12 (page): the general page deactivates the account once confirmed; the s
   );
   expect(deactivated.status()).toBe(204);
 
-  // The page is back at sign-in, which comes back to the general page, and the browser keeps no session.
+  // The page is back at sign-in, which comes back to the general page, in the default theme; the browser keeps no
+  // session.
   await expect(page).toHaveURL(signInPath("/settings/profile/general"));
   await expect(page.getByText("Your account is deactivated.")).toBeVisible();
+  await expect(html).toHaveAttribute("data-theme", "light");
   expect(await recordOf(page)).toBeNull();
   await expectDeactivated(db, before, tokensBefore);
 

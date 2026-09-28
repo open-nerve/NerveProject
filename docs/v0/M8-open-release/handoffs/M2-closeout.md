@@ -24,7 +24,7 @@ M8 做 Go 进程的内存实测（总体设计 9.2：空闲时低于 50 MB）时
 - **argon2 的 CPU**：生产参数下登录、注册、修改密码的耗时；持续集成没有测过（测试环境用 m = 64 KiB、t = 1，M2/P1 评审第 7 节）。
 - **常见密码名单的内存**：`server/internal/modules/identity/domain/common_passwords.txt`（33,904 行、278,161 字节）加载之后占用的内存。
 - **失败闸门的并发**：认证之前的失败闸门按 IP 计数，先预留、后退回；同一个出口 IP 后同时在认证中的请求不能超过桶里当时剩下的单位（M2 设计 3.10）。实测同一 IP 的并发，看有效的调用方会不会得到 429。
-- **请求体结构检查的开销**：请求体被解析两次（结构检查一次、生成代码解码一次，上限 1 MiB）。
+- **请求体结构检查的开销**：请求体被解析三遍（codex-fixes 加了歧义扫描：歧义扫描、按表检查、生成代码解码，上限 1 MiB）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住已知最坏的几种请求体的内存，整程序测试 `TestTheAnswerToABrokenBodyStaysSmall` 守住 400 回答的大小：报出的路径最长 256 字节，最多 16 个问题（M2 设计 3.11）。codex-fixes 的最终评审找到的三种约 1 MiB 的请求体，在路径截短之前让匿名的登录接口回答约 100 MB，`Check` 分配 18–99 MB；截短之后回答约 1.7 KB，`Check` 分配 1.4–2.0 MiB。M8 实测常见请求体的耗时。
 - **每个带令牌的请求多一次数据库查询**：访问令牌查它的会话行，PAT 查它的哈希（M2 设计 6.4、§16）。
 - **与负责人的事项的关系**：调高 argon2 参数之后，登录耗时能区分休眠的账户和不存在的邮箱，是否加缓解由负责人以后决定，记在[总体设计第 10 节](../../v0-design.md)。它不是 M8 的任务；M8 的 argon2 数字供负责人参考。
 - **关闭条件**：M8 的 review 有每一项的数字、测法和结论；超出预期的写明处理（调参、改默认值，或登记风险）。
@@ -34,7 +34,8 @@ M8 做 Go 进程的内存实测（总体设计 9.2：空闲时低于 50 MB）时
 - **镜像设 `NERVE_ENV=prod`**（M2 设计决策点 2 的缓解，6.1）：不设时 nerve 按 dev 的默认值运行，注册开放，签名密钥是临时的（README"部署"一节的第一条）。
 - **容器的停止宽限期**：默认配置下停机最坏约 36 秒（HTTP 20、任务 10+1、连接池 5，M2/P3b spec 第 3 节第 7 条），超过 Docker 默认的 10 秒。部署文件要设 `stop_grace_period`（或调小这几个期限），否则进程在收尾中被 SIGKILL。
 - **数据库恢复之后 River 能重新启动**：M2 只读过代码（M2/P3b spec 附录 A 的 E1）并用假客户端测了重试；真实的客户端只测了"数据库不可达时启动失败、`Stop` 立即结束重试"（M2/P3b 评审第 7 节）。部署核对中停一次数据库、再恢复，看定时任务恢复运行（清理任务的日志，或 `river_job` 的新行）。
-- **关闭条件**：镜像的环境里有 `NERVE_ENV=prod`；部署文件的停止宽限期不短于停机的最坏时间（或写明调小了哪些期限）；数据库重启的核对结果写进 M8 的 review。
+- **迁移和服务分用两个数据库角色**（M2 codex-fixes，M2 设计 6.1）：部署文件这样做时，每次 `nerve migrate up` 之后以表的所有者执行 `deploy/runtime-grants.sql`（README"部署"的"迁移"一条）。部署核对在这样的环境里看：`/readyz` 200；清理任务的日志，或 `river_job` 里 `identity.cleanup_expired_sessions` 的 `completed` 行；以服务角色执行一次 `REINDEX INDEX CONCURRENTLY river_job_pkey` 成功（River 每天 00:00 UTC 的索引重建要 `MAINTAIN`）；日志里没有 `permission denied`。自动化的证明是 `server/internal/bootstrap/runtime_role_test.go`。
+- **关闭条件**：镜像的环境里有 `NERVE_ENV=prod`；部署文件的停止宽限期不短于停机的最坏时间（或写明调小了哪些期限）；数据库重启的核对结果写进 M8 的 review；分用两个角色的部署按 `deploy/runtime-grants.sql` 授权，核对结果写进 M8 的 review。
 
 ## 4. 对外接口文档页不从 CDN 加载脚本
 

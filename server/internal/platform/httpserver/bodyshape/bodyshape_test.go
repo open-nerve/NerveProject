@@ -3,9 +3,12 @@ package bodyshape
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 	"uuid"
 )
 
@@ -33,6 +36,16 @@ func things() *Table {
 		},
 		Roots: map[string]int{pattern: 0},
 	}
+}
+
+// fields writes problems as path and code: %v would write each one's
+// Error(), which leaves the path out.
+func fields(errs []FieldError) string {
+	s := make([]string, len(errs))
+	for i, f := range errs {
+		s[i] = fmt.Sprintf("%q %s", f.Field, f.Code)
+	}
+	return "[" + strings.Join(s, ", ") + "]"
 }
 
 func TestCheck(t *testing.T) {
@@ -97,7 +110,46 @@ func TestCheck(t *testing.T) {
 				got = shape.Fields
 			}
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("Check(%s) = %v, want %v", tt.body, got, tt.want)
+				t.Errorf("Check(%s) = %s, want %s", tt.body, fields(got), fields(tt.want))
+			}
+		})
+	}
+}
+
+// A path longer than maxPath bytes is cut short: its first bytes, cut at a
+// rune boundary, then an ellipsis, maxPath bytes in all at most (M2 design
+// 3.11). The cut is maxPath minus the ellipsis's 3 bytes, 253; the names of
+// é (2 bytes) and 中 (3 bytes) put it inside a rune.
+func TestCheckCutsALongPathShort(t *testing.T) {
+	x := func(n int) string { return strings.Repeat("x", n) }
+	const valid = `"name":"a","nested":{"a":"y"`
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"a path of maxPath bytes is whole", `{` + valid + `},"` + x(256) + `":1}`, x(256)},
+		{"a path of one byte more is cut short", `{` + valid + `},"` + x(257) + `":1}`, x(253) + "…"},
+		{"a nested path of maxPath bytes is whole", `{` + valid + `,"` + x(249) + `":1}}`, "nested." + x(249)},
+		{"a nested path is cut short as a whole", `{` + valid + `,"` + x(250) + `":1}}`, "nested." + x(246) + "…"},
+		{"the cut falls on the second byte of é", `{` + valid + `},"` + strings.Repeat("é", 200) + `":1}`,
+			strings.Repeat("é", 126) + "…"},
+		{"the cut falls on the second byte of 中", `{` + valid + `},"` + strings.Repeat("中", 100) + `":1}`,
+			strings.Repeat("中", 84) + "…"},
+		{"the cut falls on the third byte of 中", `{` + valid + `},"xx` + strings.Repeat("中", 100) + `":1}`,
+			"xx" + strings.Repeat("中", 83) + "…"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var shape *Error
+			if err := things().Check(pattern, []byte(tt.body)); !errors.As(err, &shape) {
+				t.Fatalf("Check = %v, want a *Error", err)
+			}
+			if want := []FieldError{{tt.want, "not_allowed"}}; !slices.Equal(shape.Fields, want) {
+				t.Errorf("Check = %s, want %s", fields(shape.Fields), fields(want))
+			}
+			if got := shape.Fields[0].Field; len(got) > maxPath || !utf8.ValidString(got) {
+				t.Errorf("path of %d bytes, valid UTF-8 %v; want at most %d, valid", len(got), utf8.ValidString(got), maxPath)
 			}
 		})
 	}

@@ -232,14 +232,72 @@ export async function accountOf(db: Database, email: string): Promise<AccountRow
   return rows[0] as AccountRow;
 }
 
-/** The onboarding steps of the account of email, a lowercased address, as its profile holds them. */
-export async function onboardingStepsOf(db: Database, email: string): Promise<unknown> {
+/** The names and the time zone of an account, which A8 changes. */
+type AccountChange = Partial<Pick<AccountRow, "first_name" | "last_name" | "display_name" | "user_timezone">>;
+
+/**
+ * A8: the account of email, a lowercased address, is the account `before` with change, and nothing else changed but
+ * its updated_at, which moved on. Returns it now.
+ */
+export async function expectAccountChanged(
+  db: Database,
+  email: string,
+  before: AccountRow,
+  change: AccountChange
+): Promise<AccountRow> {
+  const after = await accountOf(db, email);
+  expect(after).toEqual({ ...before, ...change, updated_at: after.updated_at });
+  expect(after.updated_at.getTime()).toBeGreaterThan(before.updated_at.getTime());
+  return after;
+}
+
+/** The preferences of a profile, which A9 changes. */
+export interface Preferences {
+  theme: string;
+  language: string;
+  start_of_the_week: number;
+}
+
+/** A9: the profile of the account of email, a lowercased address, holds preferences. */
+export async function expectPreferences(db: Database, email: string, preferences: Preferences): Promise<void> {
   const { id } = await accountOf(db, email);
-  const rows = await db.query<{ onboarding_step: unknown }>("SELECT onboarding_step FROM profiles WHERE user_id = $1", [
-    id,
-  ]);
+  expect(
+    await db.query("SELECT theme, language, start_of_the_week FROM profiles WHERE user_id = $1", [id]),
+    `the preferences of ${email}`
+  ).toEqual([preferences]);
+}
+
+/** A profile's onboarding steps: done or not. */
+export interface OnboardingSteps {
+  profile_complete: boolean;
+  workspace_create: boolean;
+  workspace_invite: boolean;
+  workspace_join: boolean;
+}
+
+/** The onboarding steps of the account of email, a lowercased address, as its profile holds them. */
+export async function onboardingStepsOf(db: Database, email: string): Promise<OnboardingSteps> {
+  const { id } = await accountOf(db, email);
+  const rows = await db.query<{ onboarding_step: OnboardingSteps }>(
+    "SELECT onboarding_step FROM profiles WHERE user_id = $1",
+    [id]
+  );
   expect(rows, `the profile of ${email}`).toHaveLength(1);
-  return rows[0]?.onboarding_step;
+  return rows[0]?.onboarding_step as OnboardingSteps;
+}
+
+/**
+ * A10: the account of email, a lowercased address, took the profile step: its first name is firstName, and its
+ * onboarding steps are stepsBefore with the profile's done; the others keep their values (M2 design 3.14).
+ */
+export async function expectProfileStepTaken(
+  db: Database,
+  email: string,
+  firstName: string,
+  stepsBefore: OnboardingSteps
+): Promise<void> {
+  expect((await accountOf(db, email)).first_name).toBe(firstName);
+  expect(await onboardingStepsOf(db, email)).toEqual({ ...stepsBefore, profile_complete: true });
 }
 
 /** The personal access tokens of the account userId, oldest first: id and deleted_at. */

@@ -374,7 +374,7 @@ components:
         - message
       properties:
         field:
-          description: The field's path in the request body, e.g. password or tags[1].name.
+          description: The field's path in the request body, e.g. password or tags[1].name. A path longer than 256 bytes is cut short and ends with `…`.
           type: string
         code:
           description: What is wrong with the field.
@@ -386,6 +386,7 @@ components:
             - too_long
             - out_of_range
             - not_allowed
+            - duplicate
             - weak_password
             - common_password
             - must_be_future

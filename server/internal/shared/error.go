@@ -43,6 +43,7 @@ const (
 	FieldTooLong        = "too_long"
 	FieldOutOfRange     = "out_of_range"
 	FieldNotAllowed     = "not_allowed"
+	FieldDuplicate      = "duplicate"
 	FieldWeakPassword   = "weak_password"
 	FieldCommonPassword = "common_password"
 	FieldMustBeFuture   = "must_be_future"
@@ -54,7 +55,7 @@ const (
 func FieldCodes() []string {
 	return []string{
 		FieldRequired, FieldInvalidFormat, FieldTooShort, FieldTooLong, FieldOutOfRange,
-		FieldNotAllowed, FieldWeakPassword, FieldCommonPassword, FieldMustBeFuture, FieldContainsURL,
+		FieldNotAllowed, FieldDuplicate, FieldWeakPassword, FieldCommonPassword, FieldMustBeFuture, FieldContainsURL,
 	}
 }
 

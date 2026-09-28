@@ -266,13 +266,13 @@ export interface components {
         };
         /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
-            /** @description The field's path in the request body, e.g. password or tags[1].name. */
+            /** @description The field's path in the request body, e.g. password or tags[1].name. A path longer than 256 bytes is cut short and ends with `…`. */
             field: string;
             /**
              * @description What is wrong with the field.
              * @enum {string}
              */
-            code: "required" | "invalid_format" | "too_short" | "too_long" | "out_of_range" | "not_allowed" | "weak_password" | "common_password" | "must_be_future" | "contains_url";
+            code: "required" | "invalid_format" | "too_short" | "too_long" | "out_of_range" | "not_allowed" | "duplicate" | "weak_password" | "common_password" | "must_be_future" | "contains_url";
             message: string;
         };
         /** @description RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it. */

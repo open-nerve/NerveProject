@@ -49,6 +49,7 @@ export const FIELD_ERROR_MESSAGES: Readonly<Record<FieldError["code"], string>> 
   too_long: "auth.errors.field.too_long",
   out_of_range: "auth.errors.field.out_of_range",
   not_allowed: "auth.errors.field.not_allowed",
+  duplicate: "auth.errors.field.duplicate",
   weak_password: "auth.errors.field.weak_password",
   common_password: "auth.errors.field.common_password",
   must_be_future: "auth.errors.field.must_be_future",

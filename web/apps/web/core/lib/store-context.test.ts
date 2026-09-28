@@ -40,15 +40,8 @@ const tokenOf = (loginId: string) => ({
   created_at: "2026-09-27T00:00:00Z",
 });
 
-/** The page's theme and language, each time something set them. */
-const page = vi.hoisted(() => ({ themes: [] as string[], languages: [] as string[] }));
-vi.stubGlobal("localStorage", {
-  getItem: () => null,
-  setItem: (key: string, value: string) => {
-    if (key === "theme") page.themes.push(value);
-  },
-  removeItem: () => {},
-});
+/** The page's language, each time something set it. The theme follows the session in StoreWrapper. */
+const page = vi.hoisted(() => ({ languages: [] as string[] }));
 vi.mock("@nerve/i18n", () => ({
   FALLBACK_LANGUAGE: "en",
   setLanguage: async (language: string) => {
@@ -59,7 +52,6 @@ vi.mock("@nerve/i18n", () => ({
 /** Loads the app's modules afresh in a tab of a browser that holds X's record: its first refresh is out. */
 async function load() {
   vi.resetModules();
-  page.themes = [];
   page.languages = [];
   const storage = new SharedStorage();
   storage.data.set(AUTH_KEY, record(X));
@@ -173,8 +165,7 @@ describe("store-context", () => {
     const rootOf = new Map([X, Y, undefined, Z, W].map((loginId, i) => [loginId, [x, ...started][i]]));
     expect(heard.length).toBeGreaterThan(4);
     for (const [loginId, root] of heard) expect(root).toBe(rootOf.get(loginId));
-    // Each new session starts with the system's theme and the default language, until its profile sets them.
-    expect(page.themes).toEqual(["system", "system", "system", "system"]);
+    // Each new session starts with the default language, until its profile sets it.
     expect(page.languages).toEqual(["en", "en", "en", "en"]);
   });
 
