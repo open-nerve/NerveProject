@@ -4,16 +4,10 @@
  * See the LICENSE file for details.
  */
 
-import { useCallback } from "react";
 import { useTranslation as useI18nextTranslation } from "react-i18next";
-import { SUPPORTED_LANGUAGES, LANGUAGE_STORAGE_KEY, toSupportedLanguage } from "../constants/language";
-import type { TLanguage, ILanguageOption } from "../types";
 
 type TTranslationStore = {
   t: (key: string, params?: Record<string, unknown>) => string;
-  currentLocale: TLanguage;
-  changeLanguage: (lng: TLanguage) => void;
-  languages: ILanguageOption[];
 };
 
 // Crash guard: i18next-icu unconditionally returns raw objects when t() is called
@@ -36,33 +30,15 @@ function coerceToString(key: string, value: unknown): string {
   return key;
 }
 
+/** The text of a key in the page's language. The language itself is set by setLanguage alone. */
 export function useTranslation(): TTranslationStore {
   // No namespace arg — fallbackNS in the i18next config ensures all namespaces
   // are searched for any key. Passing NAMESPACES here would trigger concurrent
   // async loads per component, causing a re-render cascade.
-  const { t, i18n } = useI18nextTranslation();
-
-  const changeLanguage = useCallback(
-    (lng: TLanguage) => {
-      void (async () => {
-        try {
-          await i18n.changeLanguage(lng);
-          if (typeof window === "undefined") return;
-          localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
-          document.documentElement.lang = lng;
-        } catch (err) {
-          console.error("Failed to change language:", err);
-        }
-      })();
-    },
-    [i18n]
-  );
+  const { t } = useI18nextTranslation();
 
   return {
     t: (key: string, params?: Record<string, unknown>) =>
       coerceToString(key, params === undefined ? t(key) : t(key, params)),
-    currentLocale: toSupportedLanguage(i18n.language),
-    changeLanguage,
-    languages: SUPPORTED_LANGUAGES,
   };
 }
