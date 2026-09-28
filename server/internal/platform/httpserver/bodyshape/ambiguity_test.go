@@ -46,6 +46,8 @@ func TestCheckReadsABodyOneWayOnly(t *testing.T) {
 			[]FieldError{{"tags[0].name", "invalid_format"}}},
 		{"bytes that are not UTF-8 in a name", "{" + valid + ",\"n\xffx\":1}", []FieldError{{"n" + replacement + "x", "invalid_format"}}},
 		{"a lone high surrogate", "{\"name\":\"A\\ud800B\",\"nested\":{\"a\":\"y\"}}", []FieldError{{"name", "invalid_format"}}},
+		{"a high surrogate before an escape that is no surrogate", "{\"name\":\"\\ud800\\u0041\",\"nested\":{\"a\":\"y\"}}",
+			[]FieldError{{"name", "invalid_format"}}},
 		{"a high surrogate at the end", "{\"name\":\"A\\udbff\",\"nested\":{\"a\":\"y\"}}", []FieldError{{"name", "invalid_format"}}},
 		{"a lone low surrogate", "{\"name\":\"\\udc00\",\"nested\":{\"a\":\"y\"}}", []FieldError{{"name", "invalid_format"}}},
 		{"two high surrogates", "{\"name\":\"\\ud83d\\ud83d\\ude00\",\"nested\":{\"a\":\"y\"}}", []FieldError{{"name", "invalid_format"}}},
@@ -56,6 +58,10 @@ func TestCheckReadsABodyOneWayOnly(t *testing.T) {
 		{"every ambiguity, and nothing of the structure", "{\"nested\":{\"a\":\"\xff\"},\"nested\":{},\"zzz\":1}",
 			[]FieldError{{"nested", "duplicate"}, {"nested.a", "invalid_format"}}},
 		{"a string body that is not UTF-8", "\"\xff\"", []FieldError{{"", "invalid_format"}}},
+		// A problem is reported once, however often the body repeats it.
+		{"a name twice, its value not UTF-8 each time", "{\"a\":\"\xff\",\"a\":\"\xff\"}",
+			[]FieldError{{"a", "duplicate"}, {"a", "invalid_format"}}},
+		{"a name that is not UTF-8, twice", "{\"\xff\":1,\"\xff\":2}", []FieldError{{replacement, "invalid_format"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -70,7 +76,7 @@ func TestCheckReadsABodyOneWayOnly(t *testing.T) {
 				got = shape.Fields
 			}
 			if !slices.Equal(got, tt.want) {
-				t.Errorf("Check(%q) = %v, want %v", tt.body, got, tt.want)
+				t.Errorf("Check(%q) = %s, want %s", tt.body, fields(got), fields(tt.want))
 			}
 		})
 	}

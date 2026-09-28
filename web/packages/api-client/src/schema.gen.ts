@@ -266,7 +266,7 @@ export interface components {
         };
         /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
-            /** @description The field's path in the request body, e.g. password or tags[1].name. */
+            /** @description The field's path in the request body, e.g. password or tags[1].name. A path longer than 256 bytes is cut short and ends with `…`. */
             field: string;
             /**
              * @description What is wrong with the field.

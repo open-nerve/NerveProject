@@ -129,7 +129,9 @@ func validUnicode(raw []byte) bool { return utf8.Valid(raw) && pairedSurrogates(
 
 // pairedSurrogates reports whether every \u escape of a surrogate in raw, a
 // valid JSON string with its quotes, is one half of a pair: a high one right
-// before a low one. A lone half decodes to U+FFFD.
+// before a low one. A lone half decodes to U+FFFD. The closing quote is read
+// like any other character, so a high half at the end of the string fails
+// the same check as a high half before any other character.
 func pairedSurrogates(raw []byte) bool {
 	high := false // the escape just read is a high surrogate
 	for i := 0; i < len(raw); {
@@ -149,7 +151,7 @@ func pairedSurrogates(raw []byte) bool {
 		}
 		high = unit >= 0xD800 && unit <= 0xDBFF
 	}
-	return !high
+	return true
 }
 
 func (s *scanner) space() {

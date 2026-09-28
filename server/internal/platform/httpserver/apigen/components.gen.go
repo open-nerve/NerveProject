@@ -53,7 +53,7 @@ type FieldError struct {
 	// Code What is wrong with the field.
 	Code FieldErrorCode `json:"code"`
 
-	// Field The field's path in the request body, e.g. password or tags[1].name.
+	// Field The field's path in the request body, e.g. password or tags[1].name. A path longer than 256 bytes is cut short and ends with `…`.
 	Field   string `json:"field"`
 	Message string `json:"message"`
 }
