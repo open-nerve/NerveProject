@@ -8,6 +8,7 @@
 package ratelimit
 
 import (
+	"slices"
 	"sync"
 	"time"
 )
@@ -106,7 +107,9 @@ type Check struct {
 // AllowAll takes one unit from the bucket of every check, or from none: when
 // a bucket is empty it takes nothing and returns the empty bucket with the
 // longest wait, and that wait, always positive (it becomes Retry-After).
-// denied is nil when every bucket gave a unit. Every bucket must belong to l.
+// denied is nil when every bucket gave a unit. Every bucket must belong to l,
+// and each check must be another bucket or key: one check twice would see
+// the unit that is left twice and take two, below zero.
 func (l *Limiter) AllowAll(checks ...Check) (denied *Bucket, retry time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -116,6 +119,9 @@ func (l *Limiter) AllowAll(checks ...Check) (denied *Bucket, retry time.Duration
 	for i, c := range checks {
 		if c.Bucket.limiter != l {
 			panic("ratelimit: AllowAll with a bucket of another limiter")
+		}
+		if slices.Contains(checks[:i], c) {
+			panic("ratelimit: AllowAll with the same bucket and key twice")
 		}
 		levels[i] = l.level(c, now)
 		if units := levels[i].units; units < 1 {

@@ -157,6 +157,19 @@ func TestAllowAllRejectsABucketOfAnotherLimiter(t *testing.T) {
 	l.AllowAll(Check{Bucket: other, Key: "k"})
 }
 
+// The same bucket and key twice would take two units where one is left: a
+// programming error, like a bucket of another limiter.
+func TestAllowAllRejectsTheSameCheckTwice(t *testing.T) {
+	l := New(newClock().now)
+	b := l.Bucket("login_ip", Rate{PerMinute: 1, Burst: 1})
+	defer func() {
+		if recover() == nil {
+			t.Error("AllowAll() with the same bucket and key twice did not panic")
+		}
+	}()
+	l.AllowAll(Check{Bucket: b, Key: "k"}, Check{Bucket: b, Key: "k"})
+}
+
 // Reserve takes a unit at once; its refund gives it back once, and never
 // beyond the burst (M2 design 3.6: the failure gate refunds unless the
 // credential failed).
