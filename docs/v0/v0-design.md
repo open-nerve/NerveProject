@@ -532,7 +532,7 @@ server/configs/
 ### 7.1 代码来源
 - **来源提交**：Plane `02c19e1341d93141e8ad7b3278298adce208bafc`（`preview` 分支）。M0/P5 已从这个提交原样迁入，之后的每一处改动登记在[前端改动清单](frontend-changes.md)。
 - **使用**：Plane 的 `apps/web`，以及 packages 中的 types、constants、ui、propel、editor、i18n、hooks、utils、shared-state、tailwind-config、typescript-config。
-- **暂时使用**：packages/services。web 中的令牌设置页和文件工具函数依赖它；M2（PAT）和 M5（文件）对接新接口时，将它删除。
+- **暂时使用**：packages/services。M2/P5 删掉了其中的令牌服务和 axios 基类，web 只剩地址规范化和上传文件的元数据工具依赖它；M5 对接文件接口时，将它删除（[前端改动清单](frontend-changes.md) 3.1）。
 - **不使用**：apps/admin、apps/space、apps/live、apps/api、apps/proxy、packages/logger、packages/decorators、packages/codemods（已核实 web 及其依赖的包都不引用它们）。
 - **工具链**：沿用 pnpm + turbo + Vite。开发时由 Vite 把 `/api` 转发给本地 Go 服务；发布时，打包好的静态文件通过 `go:embed` 编进 Go 程序。
 
@@ -688,7 +688,7 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 |---|---|---|---|
 | M0 | 基础骨架 | 已完成 | [M0-design.md](M0-foundation/M0-design.md) |
 | M1 | 前端瘦身 | 已完成 | [M1-design.md](M1-frontend-trim/M1-design.md) |
-| M2 | 账户认证 | 未开始 | — |
+| M2 | 账户认证 | 进行中 | [M2-design.md](M2-auth/M2-design.md) |
 | M3 | 工作区与项目 | 未开始 | — |
 | M4 | 工作项核心 | 未开始 | — |
 | M5 | 文件 | 未开始 | — |

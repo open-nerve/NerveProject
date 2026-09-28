@@ -240,11 +240,11 @@ NerveProject/
   1. 模块内的依赖只能向内：`adapter → app → domain`。
   2. `domain` 和 `app` 都只能依赖标准库、本模块的内层包和 `internal/shared`，不能依赖 `platform`、数据库驱动、HTTP 等技术库。
   3. 模块之间不能互相导入。
-  4. `platform` 不能导入 `modules` 和 `bootstrap`。
+  4. `platform` 不能导入 `modules`、`bootstrap` 和 `internal/shared`（M2/P1 加上后者：平台声明自己需要的小接口，`shared` 的类型按结构满足它们）。
   5. 只有 `bootstrap` 能导入各个模块。
-  6. 生成的代码只能被本模块的 http 适配器导入。
+  6. 生成的代码（`adapter/<技术>/gen`）只能被同一个适配器导入（M2/P1 从 http 适配器推广到所有适配器，包括 sqlc 的 `adapter/postgres/gen`）。
   7. `platform` 的各个包之间互不导入（`config` 除外）。
-  8. 测试工具（`pgtest`、`apitest`）只能被测试代码导入。
+  8. 测试工具（`pgtest`、`apitest`，M2/P1 加上 `clocktest`）只能被测试代码导入。
   9. 模块内的包只能放在 `domain`、`app`、`adapter`（含子目录）或模块根目录（`module.go`）。放在别处的包，第 1 条排不出它的层次，第 2 条又把模块内的导入交给第 1 条判断，`domain → 模块内其他目录 → net/http` 就能两条都绕过（M0 对抗性评审 Important 1）。
   10. `internal/shared` 只能依赖标准库（不含 `net/http`、`database/sql`）和它自己：`domain`、`app` 可以导入它，它不干净，技术依赖就会经它带进这两层。M0 还没有 `internal/shared`，这条规则先用合成的导入关系测试。
 - **传递依赖测试**（`TestNerveBinaryLinksNoBannedModule`，M0/P3；M2/P3a 改写）：规则 8 只挡住测试工具包本身，挡不住生成的代码或其他途径间接引入的依赖（例如内嵌的接口描述），depguard 也不检查生成的文件。这个测试用 `golang.org/x/tools/go/packages` 读取 `./cmd/nerve` 的全部传递依赖（不含测试），出现 `github.com/getkin/kin-openapi`、`github.com/testcontainers/`、`github.com/docker/` 开头的包就失败，并打印导入链。`github.com/google/uuid` 只允许由 `github.com/oapi-codegen/runtime` 模块的包导入（它的参数绑定自己用），别的包导入它同样失败。
