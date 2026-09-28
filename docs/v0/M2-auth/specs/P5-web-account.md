@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M2/P5 `web-account` |
 | 日期 | 2026-09-27 |
-| 状态 | 进行中 |
+| 状态 | 已完成 |
 | 上级文档 | [M2 设计文档](../M2-design.md) 第 2（A7–A9、A11、A12）、3.5、3.20（P5 一行）、5.3、7.3、7.5、7.7–7.9、9.5、9.6（P5）、12（P5）、13.1、13.2、§16 节；[Codex 设计评审](../reviews/M2-design-codex-adversarial-review.md) M-6 |
 | 前置交接 | [M1-closeout](../handoffs/M1-closeout.md)（死成员和死 prop、oxlint、主题下拉框）、[M1-P3-trim-platform](../handoffs/M1-P3-trim-platform.md) 剩下的一项（`@nerve/services` 的 API 令牌旧地址）；[P4 评审记录](../reviews/P4-web-auth-review.md) 第 6 节交给 P5 的事项 |
 | 计划 | [P5 plan](../plans/P5-web-account.md) |
