@@ -198,8 +198,8 @@ GET   /api/v0/issues/{issue_id}/comments
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
 - `title` 固定为 HTTP 状态短语，即 Go 的 `http.StatusText(status)`（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
 - 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`rate_limited`（429，带 `Retry-After`）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
-- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、能有两种读法（同一个对象里同名的成员出现两次，名字按解码之后比较；字符串不是合法的 Unicode）、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题（能有两种读法的请求体只列出这两种问题；最多 16 个）；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
-- `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径，`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`duplicate`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
+- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、能有两种读法（同一个对象里同名的成员出现两次，名字按解码之后比较；字符串不是合法的 Unicode）、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题（能有两种读法的请求体只列出这两种问题；每个问题只报一次，最多 16 个，路径最长 256 字节）；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
+- `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径（超过 256 字节的截短，以 `…` 结尾），`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`duplicate`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
 - **错误码写进接口描述**：每个操作用扩展字段 `x-problem-codes` 列出它可能返回的码；所有操作都可能返回的平台码只写在 `api/openapi.yaml` 的顶层，声明了 `bearer` 的操作另外隐含 `unauthorized`。`apitest` 核对码的写法、测试中返回的码都已声明、每个声明的码都有测试返回过（M2 设计 3.11）。
 - 请求 ID 只出现在 `X-Request-Id` 响应头中，不放进响应体。
 
@@ -723,4 +723,4 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 | 各接口的限流数值、各类数据的保留期 | 相关 M 的设计文档 |
 | 没有邮件服务时账户如何找回（目前只能由管理员用命令行重置） | 以后接入邮件服务时再议（v0 之后） |
 | 调高 argon2 参数（`argon2_memory_kib`、`argon2_iterations`）之后，登录耗时能区分休眠的账户和不存在的邮箱，直到每个账户重新登录一次（M2 设计 §16） | 是否加缓解由负责人以后决定；M8 的 argon2 实测提供数字（[M8 的交接](M8-open-release/handoffs/M2-closeout.md)第 2 节） |
-| 泄露的刷新令牌可以派生永不过期的 PAT，影响不以刷新令牌的 30 天为限（M2 设计 §16、8.5） | 恢复步骤已写在 README 的"部署"一节（撤销不认识的 PAT，或由管理员 `nerve users reset-password`）。负责人以后可选的产品选项有两个，v0 都不采用（M2 设计 8.5）：创建 PAT 时重新输入密码；或者不允许用 PAT 创建 PAT，同时给 PAT 的有效期设上限（两者要一起做：只限有效期、仍允许无限派生，解决不了问题） |
+| 泄露的刷新令牌可以派生永不过期的 PAT，影响不以刷新令牌的 30 天为限（M2 设计 §16、8.5） | 恢复步骤已写在 README 的"部署"一节（自助：退出重登后在新会话里修改密码，再撤销不认识的 PAT 并重新核对；管理员：`nerve users reset-password`）。负责人以后可选的产品选项有两个，v0 都不采用（M2 设计 8.5）：创建 PAT 时重新输入密码；或者不允许用 PAT 创建 PAT，同时给 PAT 的有效期设上限（两者要一起做：只限有效期、仍允许无限派生，解决不了问题） |
