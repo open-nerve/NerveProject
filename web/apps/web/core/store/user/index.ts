@@ -19,6 +19,7 @@ import type { TUserPermissions } from "@nerve/types";
 // lib
 import { tokenManager } from "@/lib/auth/api-client";
 import { SessionChangedError } from "@/lib/auth/token-manager";
+import { oneAtATime } from "@/lib/one-at-a-time";
 // store
 import type { RootStore } from "@/store/root.store";
 import type { IUserPermissionStore } from "@/store/user/permissions.store";
@@ -67,9 +68,8 @@ export class UserStore implements IUserStore {
   // service
   userService: UserService;
   authService: AuthService;
-  /** The number of the last update sent, and of the one whose answer data holds (updateCurrentUser). */
-  private updatesSent = 0;
-  private updateWritten = 0;
+  /** The account's changes, sent one at a time (updateCurrentUser). */
+  private readonly changes = oneAtATime();
 
   constructor(
     private store: RootStore,
@@ -128,24 +128,19 @@ export class UserStore implements IUserStore {
   };
 
   /**
-   * @description updates the account's names or time zone; fails, writing nothing, when nerve refuses. The
-   * updates are numbered as they are sent, and an answer older than the one data holds is dropped: this assumes
-   * nerve applies the updates in the order they were sent, as the PAT store assumes of its requests, so the older
-   * answer is an older account. Only answers count: when the newer update fails, the older one's answer still
-   * writes.
+   * @description updates the account's names or time zone; fails, writing nothing, when nerve refuses. An update
+   * is sent once the one before it is answered, or has failed: nerve applies them in the order they were made, and
+   * the answer to the last one is the account nerve holds.
    * @returns {Promise<User>}
    */
-  updateCurrentUser = async (data: UserUpdate): Promise<User> => {
-    const update = ++this.updatesSent;
-    const user = await this.userService.updateCurrentUser(data);
-    if (update > this.updateWritten) {
-      this.updateWritten = update;
+  updateCurrentUser = (data: UserUpdate): Promise<User> =>
+    this.changes(async () => {
+      const user = await this.userService.updateCurrentUser(data);
       runInAction(() => {
         this.data = user;
       });
-    }
-    return user;
-  };
+      return user;
+    });
 
   changePassword = async (payload: ChangePasswordRequest): Promise<void> => {
     await this.userService.changePassword(payload);

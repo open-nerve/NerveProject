@@ -1,3 +1,5 @@
+import type { Request } from "@playwright/test";
+
 import { expectPreferences } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
@@ -110,6 +112,87 @@ test("A9 (page): the preferences page changes the theme, the language and the fi
   await expectQuietConsole(page, watch, {
     warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING],
   });
+});
+
+/** Whether request is a change of the profile. */
+const isProfileChange = (request: Request) =>
+  request.method() === "PATCH" && new URL(request.url()).pathname === "/api/v0/me/profile";
+
+test("A9 (page): two changes of the language in a row reach nerve one after the other; the page, nerve and a reload agree on the last", async ({
+  api,
+  db,
+  signedInPage,
+}, testInfo) => {
+  const email = emailFor(testInfo);
+  const tokens = await registerOnboarded(api, email);
+  const page = await signedInPage(tokens);
+  const watch = await watchPage(page);
+  await page.goto("/settings/profile/preferences");
+  const language = page.getByRole("button", { name: "English" });
+  const html = page.locator("html");
+  await expect(language).toBeVisible();
+  // The languages of the changes the page sends, in order, and in the order they go on to nerve: the first waits on
+  // its way until the test lets it go (M2 Codex review, 6).
+  const sent: string[] = [];
+  const passed: string[] = [];
+  let letFirstGo!: () => void;
+  const firstMayGo = new Promise<void>((resolve) => {
+    letFirstGo = resolve;
+  });
+  await page.route("**/api/v0/me/profile", async (route) => {
+    if (!isProfileChange(route.request())) {
+      await route.fallback();
+      return;
+    }
+    const { language: lng } = route.request().postDataJSON() as { language: string };
+    sent.push(lng);
+    if (sent.length === 1) await firstMayGo;
+    passed.push(lng);
+    await route.fallback();
+  });
+
+  // 简体中文: the change leaves the page and waits. Until nerve answers it, the page is in English: English again.
+  await language.click();
+  const first = page.waitForRequest(isProfileChange, { timeout: 10_000 });
+  await page.getByRole("option", { name: "简体中文" }).click();
+  await first;
+  await language.click();
+  await page.getByRole("option", { name: "English" }).click();
+  // A request the page makes after the second choice, answered: a change sent at that choice would have reached the
+  // route before it. The page holds the second change until nerve has answered the first.
+  expect(await page.evaluate(async () => (await fetch("/api/v0/instance")).status)).toBe(200);
+  expect(sent).toEqual(["zh-CN"]);
+
+  // The first goes on to nerve; once it is answered, the second goes.
+  const second = page.waitForResponse(
+    (response) =>
+      isProfileChange(response.request()) &&
+      (response.request().postDataJSON() as { language: string }).language === "en",
+    { timeout: 10_000 }
+  );
+  letFirstGo();
+  expect((await second).status()).toBe(200);
+  expect(passed).toEqual(["zh-CN", "en"]);
+
+  // The page, nerve and a reload agree on the last choice: English.
+  await expect(page.getByText("Language & Time")).toBeVisible();
+  await expect(html).toHaveAttribute("lang", "en");
+  await expectPreferences(db, email, { theme: "system", language: "en", start_of_the_week: 0 });
+  const read = await api.GET("/api/v0/me/profile", { headers: bearer(tokens.access_token) });
+  expect(read.data?.language).toBe("en");
+  await page.reload();
+  await expect(page.getByText("Language & Time")).toBeVisible();
+  await expect(language).toBeVisible();
+  await expect(html).toHaveAttribute("lang", "en");
+
+  expect(watch.apiRequests.filter((request) => request.startsWith("PATCH "))).toEqual(
+    Array(2).fill("PATCH /api/v0/me/profile")
+  );
+  expect(watch.apiFailures).toEqual([]);
+  expect(watch.oldApiRequests).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
+  // Two loads: the first and the reload.
+  await expectQuietConsole(page, watch, { warnings: [EMOJI_CHECK_WARNING, EMOJI_CHECK_WARNING] });
 });
 
 /** nerve's answer when it cannot make a change, as a problem of status and code: the page says why by the code. */

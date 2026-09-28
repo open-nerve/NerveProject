@@ -11,28 +11,27 @@ import { track, until } from "@/lib/auth/fake-time";
 import type { RootStore } from "@/store/root.store";
 import { ProfileStore } from "@/store/user/profile.store";
 
-// The profile's updates against a fake nerve that answers them in the order each test sets: the profile holds the
-// answer to the newest update nerve accepted, whichever answer lands last. The page's language and theme follow
-// the profile (StoreWrapper), so an older answer landing last would take them back.
+// The profile's changes against a fake nerve that answers each when the test says: a change goes out once the one
+// before it is answered or has failed, so nerve applies them in the order they were made and the last answer is
+// what nerve holds. The page's language and theme follow the profile (StoreWrapper).
 
 const PROFILE = "/api/v0/me/profile";
 
 /** nerve's answer to a change of the language: the profile with it. */
 const profileIn = (language: "en" | "zh-CN") => ({ language, theme: "system" }) as Profile;
 
-/** A store, and the two updates it sends, to English and then to Chinese, both out. */
-async function twoUpdatesOut() {
+/** A store, and two changes made one after the other, to Chinese and then to English: only the first is out. */
+async function twoChanges() {
   const nerve = new FakeNerve();
   const store = new ProfileStore({} as RootStore, nerve.client());
-  const older = track(store.updateUserProfile({ language: "en" }));
-  const newer = track(store.updateUserProfile({ language: "zh-CN" }));
-  await until(() => nerve.calls.length === 2, "both updates");
+  const first = track(store.updateUserProfile({ language: "zh-CN" }));
+  const second = track(store.updateUserProfile({ language: "en" }));
+  await until(() => nerve.calls.length === 1, "the first change");
+  await vi.advanceTimersByTimeAsync(1_000);
   expect(nerve.calls.map((call) => [call.method, call.path, call.body])).toEqual([
-    ["PATCH", PROFILE, { language: "en" }],
     ["PATCH", PROFILE, { language: "zh-CN" }],
   ]);
-  const [answerOlder, answerNewer] = nerve.calls.map((call) => call.answer);
-  return { store, older, newer, answerOlder: answerOlder!, answerNewer: answerNewer! };
+  return { nerve, store, first, second };
 }
 
 beforeEach(() => {
@@ -43,43 +42,43 @@ afterEach(() => {
 });
 
 describe("ProfileStore.updateUserProfile", () => {
-  it("keeps the newer answer when nerve answers the newer update first", async () => {
-    const { store, older, newer, answerOlder, answerNewer } = await twoUpdatesOut();
+  it("sends a change once nerve has answered the one before it", async () => {
+    const { nerve, store, first, second } = await twoChanges();
 
-    answerNewer(json(200, profileIn("zh-CN")));
-    await until(() => newer.settled, "the newer answer");
+    nerve.calls[0]?.answer(json(200, profileIn("zh-CN")));
+    await until(() => nerve.calls.length === 2, "the second change");
+    expect(first.value).toEqual(profileIn("zh-CN"));
     expect(store.data).toEqual(profileIn("zh-CN"));
-    answerOlder(json(200, profileIn("en")));
-    await until(() => older.settled, "the older answer");
+    expect(nerve.calls[1]?.body).toEqual({ language: "en" });
+    nerve.calls[1]?.answer(json(200, profileIn("en")));
+    await until(() => second.settled, "the second answer");
 
-    // The older answer lands last, and is dropped; each caller still gets its own answer.
-    expect(store.data).toEqual(profileIn("zh-CN"));
-    expect(older.value).toEqual(profileIn("en"));
-    expect(newer.value).toEqual(profileIn("zh-CN"));
+    expect(second.value).toEqual(profileIn("en"));
+    expect(store.data).toEqual(profileIn("en"));
   });
 
-  it("keeps the older answer when nerve refuses the newer update and accepts the older one", async () => {
-    const { store, older, newer, answerOlder, answerNewer } = await twoUpdatesOut();
+  it("sends the next change when nerve refuses the one before it, which leaves the profile as it was", async () => {
+    const { nerve, store, first, second } = await twoChanges();
 
-    answerNewer(problem(500, "internal_error"));
-    await until(() => newer.settled, "the refusal");
-    expect(newer.error).toBeInstanceOf(ApiError);
+    nerve.calls[0]?.answer(problem(500, "internal_error"));
+    await until(() => nerve.calls.length === 2, "the second change");
+    expect(first.error).toBeInstanceOf(ApiError);
     expect(store.data).toBeUndefined();
-    answerOlder(json(200, profileIn("en")));
-    await until(() => older.settled, "the older answer");
+    nerve.calls[1]?.answer(json(200, profileIn("en")));
+    await until(() => second.settled, "the second answer");
 
     expect(store.data).toEqual(profileIn("en"));
   });
 
-  it("keeps the newer answer when nerve answers in order", async () => {
-    const { store, older, newer, answerOlder, answerNewer } = await twoUpdatesOut();
+  it("sends the next change when the one before it gets no answer", async () => {
+    const { nerve, store, first, second } = await twoChanges();
 
-    answerOlder(json(200, profileIn("en")));
-    await until(() => older.settled, "the older answer");
+    nerve.calls[0]?.fail();
+    await until(() => nerve.calls.length === 2, "the second change");
+    expect(first.error).toBeInstanceOf(TypeError);
+    nerve.calls[1]?.answer(json(200, profileIn("en")));
+    await until(() => second.settled, "the second answer");
+
     expect(store.data).toEqual(profileIn("en"));
-    answerNewer(json(200, profileIn("zh-CN")));
-    await until(() => newer.settled, "the newer answer");
-
-    expect(store.data).toEqual(profileIn("zh-CN"));
   });
 });

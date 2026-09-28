@@ -11,9 +11,10 @@ import { track, until } from "@/lib/auth/fake-time";
 import type { RootStore } from "@/store/root.store";
 import { UserStore } from "@/store/user";
 
-// The account's updates (names, time zone) against a fake nerve that answers them in the order each test sets: the
-// account holds the answer to the newest update nerve accepted, whichever answer lands last. The store gets its
-// session's client from RootStore; the token manager it imports is not used here.
+// The account's changes (names, time zone) against a fake nerve that answers each when the test says: a change goes
+// out once the one before it is answered or has failed, so nerve applies them in the order they were made and the
+// last answer is what nerve holds. The store gets its session's client from RootStore; the token manager it
+// imports is not used here.
 vi.mock("@/lib/auth/api-client", () => ({ tokenManager: {}, publicClient: {} }));
 
 const ME = "/api/v0/me";
@@ -21,19 +22,18 @@ const ME = "/api/v0/me";
 /** nerve's answer to a change of the time zone: the account in it. */
 const accountIn = (user_timezone: string) => ({ first_name: "Ada", user_timezone }) as User;
 
-/** A store, and the two updates it sends, to Berlin and then to Shanghai, both out. */
-async function twoUpdatesOut() {
+/** A store, and two changes made one after the other, to Shanghai and then to Berlin: only the first is out. */
+async function twoChanges() {
   const nerve = new FakeNerve();
   const store = new UserStore({} as RootStore, nerve.client());
-  const older = track(store.updateCurrentUser({ user_timezone: "Europe/Berlin" }));
-  const newer = track(store.updateCurrentUser({ user_timezone: "Asia/Shanghai" }));
-  await until(() => nerve.calls.length === 2, "both updates");
+  const first = track(store.updateCurrentUser({ user_timezone: "Asia/Shanghai" }));
+  const second = track(store.updateCurrentUser({ user_timezone: "Europe/Berlin" }));
+  await until(() => nerve.calls.length === 1, "the first change");
+  await vi.advanceTimersByTimeAsync(1_000);
   expect(nerve.calls.map((call) => [call.method, call.path, call.body])).toEqual([
-    ["PATCH", ME, { user_timezone: "Europe/Berlin" }],
     ["PATCH", ME, { user_timezone: "Asia/Shanghai" }],
   ]);
-  const [answerOlder, answerNewer] = nerve.calls.map((call) => call.answer);
-  return { store, older, newer, answerOlder: answerOlder!, answerNewer: answerNewer! };
+  return { nerve, store, first, second };
 }
 
 beforeEach(() => {
@@ -44,43 +44,43 @@ afterEach(() => {
 });
 
 describe("UserStore.updateCurrentUser", () => {
-  it("keeps the newer answer when nerve answers the newer update first", async () => {
-    const { store, older, newer, answerOlder, answerNewer } = await twoUpdatesOut();
+  it("sends a change once nerve has answered the one before it", async () => {
+    const { nerve, store, first, second } = await twoChanges();
 
-    answerNewer(json(200, accountIn("Asia/Shanghai")));
-    await until(() => newer.settled, "the newer answer");
+    nerve.calls[0]?.answer(json(200, accountIn("Asia/Shanghai")));
+    await until(() => nerve.calls.length === 2, "the second change");
+    expect(first.value).toEqual(accountIn("Asia/Shanghai"));
     expect(store.data).toEqual(accountIn("Asia/Shanghai"));
-    answerOlder(json(200, accountIn("Europe/Berlin")));
-    await until(() => older.settled, "the older answer");
+    expect(nerve.calls[1]?.body).toEqual({ user_timezone: "Europe/Berlin" });
+    nerve.calls[1]?.answer(json(200, accountIn("Europe/Berlin")));
+    await until(() => second.settled, "the second answer");
 
-    // The older answer lands last, and is dropped; each caller still gets its own answer.
-    expect(store.data).toEqual(accountIn("Asia/Shanghai"));
-    expect(older.value).toEqual(accountIn("Europe/Berlin"));
-    expect(newer.value).toEqual(accountIn("Asia/Shanghai"));
+    expect(second.value).toEqual(accountIn("Europe/Berlin"));
+    expect(store.data).toEqual(accountIn("Europe/Berlin"));
   });
 
-  it("keeps the older answer when nerve refuses the newer update and accepts the older one", async () => {
-    const { store, older, newer, answerOlder, answerNewer } = await twoUpdatesOut();
+  it("sends the next change when nerve refuses the one before it, which leaves the account as it was", async () => {
+    const { nerve, store, first, second } = await twoChanges();
 
-    answerNewer(problem(500, "internal_error"));
-    await until(() => newer.settled, "the refusal");
-    expect(newer.error).toBeInstanceOf(ApiError);
+    nerve.calls[0]?.answer(problem(500, "internal_error"));
+    await until(() => nerve.calls.length === 2, "the second change");
+    expect(first.error).toBeInstanceOf(ApiError);
     expect(store.data).toBeUndefined();
-    answerOlder(json(200, accountIn("Europe/Berlin")));
-    await until(() => older.settled, "the older answer");
+    nerve.calls[1]?.answer(json(200, accountIn("Europe/Berlin")));
+    await until(() => second.settled, "the second answer");
 
     expect(store.data).toEqual(accountIn("Europe/Berlin"));
   });
 
-  it("keeps the newer answer when nerve answers in order", async () => {
-    const { store, older, newer, answerOlder, answerNewer } = await twoUpdatesOut();
+  it("sends the next change when the one before it gets no answer", async () => {
+    const { nerve, store, first, second } = await twoChanges();
 
-    answerOlder(json(200, accountIn("Europe/Berlin")));
-    await until(() => older.settled, "the older answer");
+    nerve.calls[0]?.fail();
+    await until(() => nerve.calls.length === 2, "the second change");
+    expect(first.error).toBeInstanceOf(TypeError);
+    nerve.calls[1]?.answer(json(200, accountIn("Europe/Berlin")));
+    await until(() => second.settled, "the second answer");
+
     expect(store.data).toEqual(accountIn("Europe/Berlin"));
-    answerNewer(json(200, accountIn("Asia/Shanghai")));
-    await until(() => newer.settled, "the newer answer");
-
-    expect(store.data).toEqual(accountIn("Asia/Shanghai"));
   });
 });
