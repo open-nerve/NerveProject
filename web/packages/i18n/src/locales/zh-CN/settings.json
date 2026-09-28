@@ -10,7 +10,7 @@
     },
     "api_tokens": {
       "title": "个人访问令牌",
-      "description": "生成安全的 API 令牌，将您的数据与外部系统和应用程序集成。",
+      "description": "生成安全的访问令牌，将您的数据与外部系统和应用程序集成。",
       "load_failed": "无法加载令牌。",
       "active": "有效",
       "expired": "已过期",
