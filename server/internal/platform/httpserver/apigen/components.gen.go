@@ -7,6 +7,7 @@ package apigen
 const (
 	FieldErrorCodeCommonPassword FieldErrorCode = "common_password"
 	FieldErrorCodeContainsURL    FieldErrorCode = "contains_url"
+	FieldErrorCodeDuplicate      FieldErrorCode = "duplicate"
 	FieldErrorCodeInvalidFormat  FieldErrorCode = "invalid_format"
 	FieldErrorCodeMustBeFuture   FieldErrorCode = "must_be_future"
 	FieldErrorCodeNotAllowed     FieldErrorCode = "not_allowed"
@@ -23,6 +24,8 @@ func (e FieldErrorCode) Valid() bool {
 	case FieldErrorCodeCommonPassword:
 		return true
 	case FieldErrorCodeContainsURL:
+		return true
+	case FieldErrorCodeDuplicate:
 		return true
 	case FieldErrorCodeInvalidFormat:
 		return true

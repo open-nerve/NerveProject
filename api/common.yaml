@@ -87,6 +87,7 @@ components:
             - too_long
             - out_of_range
             - not_allowed
+            - duplicate
             - weak_password
             - common_password
             - must_be_future

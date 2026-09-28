@@ -272,7 +272,7 @@ export interface components {
              * @description What is wrong with the field.
              * @enum {string}
              */
-            code: "required" | "invalid_format" | "too_short" | "too_long" | "out_of_range" | "not_allowed" | "weak_password" | "common_password" | "must_be_future" | "contains_url";
+            code: "required" | "invalid_format" | "too_short" | "too_long" | "out_of_range" | "not_allowed" | "duplicate" | "weak_password" | "common_password" | "must_be_future" | "contains_url";
             message: string;
         };
         /** @description RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it. */

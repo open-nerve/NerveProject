@@ -1,9 +1,12 @@
 // Package bodyshape checks the structure of JSON request bodies at the API
 // boundary, before the generated strict handler decodes them (M2 design
-// 3.11): JSON types, undeclared properties, null where the contract does not
-// allow it, missing required properties, and the string formats that the
-// generated code decodes into Go types. Every problem is collected in one
-// pass. Values (lengths, enums, ranges, e-mail syntax) are the domain's.
+// 3.11): first that the body can be read one way only (no member name twice
+// in an object, no string that is not valid Unicode), then JSON types,
+// undeclared properties, null where the contract does not allow it, missing
+// required properties, and the string formats that the generated code
+// decodes into Go types. The problems of a kind are collected in one pass,
+// at most maxProblems of them. Values (lengths, enums, ranges, e-mail syntax)
+// are the domain's.
 //
 // The tables are generated per module from the API description by
 // server/tools/bodyshapegen, next to the module's server.gen.go. The package
@@ -16,8 +19,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"uuid"
 )
@@ -86,6 +91,7 @@ const (
 	codeRequired      = "required"
 	codeInvalidFormat = "invalid_format"
 	codeNotAllowed    = "not_allowed"
+	codeDuplicate     = "duplicate"
 )
 
 // FieldError is one structural problem. Field is the JSON path, e.g.
@@ -102,6 +108,8 @@ func (f FieldError) Error() string {
 		return "is required"
 	case codeNotAllowed:
 		return "is not a property of this request"
+	case codeDuplicate:
+		return "appears more than once in its object"
 	default:
 		return "has the wrong type or format"
 	}
@@ -147,9 +155,11 @@ var ErrNotJSON = errors.New("the request body is not valid JSON")
 // Check checks body, a whole request body, against the root of pattern. It
 // returns nil when there is nothing to check: a pattern without a root has no
 // JSON body, and an empty body, or one of only JSON whitespace, is left to the
-// generated decoder. A body that is not one valid JSON document is ErrNotJSON;
-// one that breaks the structure is an *Error with every problem, sorted by
-// path.
+// generated decoder. A body that is not one valid JSON document is ErrNotJSON.
+// One that can be read two ways (ambiguity.go) is an *Error with its
+// ambiguities: its structure is checked once it has one reading. One that
+// breaks the structure is an *Error with its problems. Either lists at most
+// maxProblems, sorted by path.
 func (t *Table) Check(pattern string, body []byte) error {
 	root, ok := t.Roots[pattern]
 	// walk takes the exact bytes of one value; the whitespace around the
@@ -161,47 +171,113 @@ func (t *Table) Check(pattern string, body []byte) error {
 	case !json.Valid(value):
 		return ErrNotJSON
 	}
-	var errs []FieldError
-	t.walk(root, value, "", &errs)
-	if len(errs) == 0 {
+	var p problems
+	ambiguities(value, &p)
+	if len(p.errs) == 0 {
+		t.walk(root, value, &p)
+	}
+	if len(p.errs) == 0 {
 		return nil
 	}
-	slices.SortFunc(errs, func(a, b FieldError) int {
+	slices.SortFunc(p.errs, func(a, b FieldError) int {
 		return cmp.Or(cmp.Compare(a.Field, b.Field), cmp.Compare(a.Code, b.Code))
 	})
-	return &Error{Fields: errs}
+	return &Error{Fields: p.errs}
 }
 
-// walk checks raw, the exact bytes of one JSON value, against node i.
-func (t *Table) walk(i int, raw []byte, path string, errs *[]FieldError) {
+// maxProblems bounds the problems of one body. A problem's path can be as
+// long as the body, and a body can have a problem every few bytes: listing
+// them all could cost the square of the body (M2 design 3.11).
+const maxProblems = 16
+
+// problems collects the problems of one body while it is read. The path of
+// the value being read is a stack of segments, written out only for a
+// problem: a string per value would cost the square of the depth.
+type problems struct {
+	path []segment
+	errs []FieldError
+}
+
+// segment is one step of a path: a member's name, or an item's index.
+type segment struct {
+	name  string
+	index int // -1 for a name
+}
+
+func (p *problems) enter(name string) { p.path = append(p.path, segment{name, -1}) }
+
+func (p *problems) enterItem(i int) { p.path = append(p.path, segment{"", i}) }
+
+func (p *problems) leave() { p.path = p.path[:len(p.path)-1] }
+
+// full reports whether maxProblems have been reported: the rest is not read.
+func (p *problems) full() bool { return len(p.errs) >= maxProblems }
+
+// report adds a problem at the current path, unless p is full.
+func (p *problems) report(code string) {
+	if !p.full() {
+		p.errs = append(p.errs, FieldError{p.at(), code})
+	}
+}
+
+// at writes out the current path: names joined by dots, indexes in brackets,
+// e.g. tags[1].name; the body itself is the empty path.
+func (p *problems) at() string {
+	var b strings.Builder
+	for _, s := range p.path {
+		switch {
+		case s.index >= 0:
+			b.WriteString("[" + strconv.Itoa(s.index) + "]")
+		case b.Len() > 0:
+			b.WriteString("." + s.name)
+		default:
+			b.WriteString(s.name)
+		}
+	}
+	return b.String()
+}
+
+// walk checks raw, the exact bytes of one JSON value, against node i. It
+// goes only where the schema goes: declared properties, the values of an
+// open map, the items of an array with an item schema. It reads the members
+// of an object in name order, so a body with more than maxProblems problems
+// gets the same ones every time.
+func (t *Table) walk(i int, raw []byte, p *problems) {
+	if p.full() {
+		return
+	}
 	n := t.Nodes[i]
 	kind := kindOf(raw)
 	if n.Types != Any && kind&n.Types == 0 {
-		*errs = append(*errs, FieldError{path, codeInvalidFormat})
+		p.report(codeInvalidFormat)
 		return
 	}
 	switch kind {
 	case String:
 		if n.Format != FormatNone && checkFormat(n.Format, raw) != nil {
-			*errs = append(*errs, FieldError{path, codeInvalidFormat})
+			p.report(codeInvalidFormat)
 		}
 	case Object:
 		var props map[string]json.RawMessage
 		_ = json.Unmarshal(raw, &props) // the whole body was valid JSON
-		for name, value := range props {
+		for _, name := range slices.Sorted(maps.Keys(props)) {
+			p.enter(name)
 			child, declared := n.Props[name]
 			switch {
 			case declared:
-				t.walk(child, value, join(path, name), errs)
+				t.walk(child, props[name], p)
 			case n.Extra == Closed:
-				*errs = append(*errs, FieldError{join(path, name), codeNotAllowed})
+				p.report(codeNotAllowed)
 			case n.Extra >= 0:
-				t.walk(n.Extra, value, join(path, name), errs)
+				t.walk(n.Extra, props[name], p)
 			}
+			p.leave()
 		}
 		for _, name := range n.Required {
 			if _, ok := props[name]; !ok {
-				*errs = append(*errs, FieldError{join(path, name), codeRequired})
+				p.enter(name)
+				p.report(codeRequired)
+				p.leave()
 			}
 		}
 	case Array:
@@ -211,7 +287,9 @@ func (t *Table) walk(i int, raw []byte, path string, errs *[]FieldError) {
 		var items []json.RawMessage
 		_ = json.Unmarshal(raw, &items)
 		for j, item := range items {
-			t.walk(n.Items, item, fmt.Sprintf("%s[%d]", path, j), errs)
+			p.enterItem(j)
+			t.walk(n.Items, item, p)
+			p.leave()
 		}
 	}
 }
@@ -252,11 +330,4 @@ func checkFormat(f Format, raw []byte) error {
 		return json.Unmarshal(raw, new(uuid.UUID))
 	}
 	return fmt.Errorf("bodyshape: unknown format %d", f)
-}
-
-func join(path, name string) string {
-	if path == "" {
-		return name
-	}
-	return path + "." + name
 }
