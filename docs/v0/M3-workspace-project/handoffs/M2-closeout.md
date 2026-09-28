@@ -25,7 +25,7 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 - **Plane 的 `/api/users/me/settings/` 还在**（M2 设计 7.5：工作区数据留给 M3）：`web/apps/web/core/services/user.service.ts:43` 的 `currentUserSettings` 仍调它，nerve 答 404；`web/apps/web/core/store/user/settings.store.ts` 的 `fetchCurrentUserSettings` 把回答存成 `IUserSettings`，工作区 store 的 `getWorkspaceRedirectionUrl`（`web/apps/web/core/store/workspace/index.ts:93-99`）按其中的 `last_workspace_slug`、`fallback_workspace_slug` 算落点。创建、加入、删除工作区和移出成员之后有四处 `await fetchCurrentUserSettings()`（`web/apps/web/core/components/` 下的 `onboarding/steps/workspace/{create,join-invites}.tsx`、`workspace/delete-workspace-form.tsx`、`workspace/settings/members-list-item.tsx`）。M3 让落点由 `profiles.last_workspace_id` 和工作区列表算出，删掉这个方法、`IUserSettings` 的工作区部分和这四处调用，或者给它们新接口；不改的话，工作区接上之后这些 `await` 因 404 抛出，例如新手引导建好工作区却报失败。
 - **守卫**：A3、A10 的页面测试用 `watchPage`（`e2e/fixtures/browser.ts`）断言这些页面挂载时没有旧接口请求（`oldApiRequests`）、没有失败的接口请求。加回的取数走 `/api/v0`，这些断言照旧通过；失败说明还在调旧地址。
 - **挂载时的规则是否往后延伸**：M2 设计 3.1 的规则只管 M2 能到达的页面。工作区接上之后，工作区的页面挂载时会请求 M4–M8 的旧接口（例如首页的最近访问，M7）；是否对 M3 能到达的页面照这条规则做（`watchPage` 的 `oldApiRequests` 能守住），写进 M3 设计。
-- **关闭条件**：完成引导的用户登录后落到上次的工作区，没有时按 Plane 的规则落到第一个工作区或 `/create-workspace`；新手引导的工作区、邀请两步用新接口取数；A3、A10 的断言不改仍通过；取数失败时页面没有未处理的拒绝（故事或单元测试）；`currentUserSettings` 不再调 Plane 的地址（改接或删除），上面四处不再因它失败；README"前端"一节的"M2 中看到的页面"一条随之改写；M3 的设计写明这条规则是否延伸到 M3 能到达的页面。
+- **关闭条件**：完成引导的用户登录后落到上次的工作区，没有时按 Plane 的规则落到第一个工作区或 `/create-workspace`；新手引导的工作区、邀请两步用新接口取数；A3、A10 的断言不改仍通过；取数失败时页面没有未处理的拒绝（故事或单元测试）；`currentUserSettings` 不再调 Plane 的地址（改接或删除），上面四处不再因它失败；README"前端"一节的"M2 中看到的页面"一条随之改写；M3 的设计写明 M2 设计 3.1 挂载时的规则是否延伸到 M3 能到达的页面。
 
 ## 3. stores 按会话分代（规则在总体设计 7.7）
 
