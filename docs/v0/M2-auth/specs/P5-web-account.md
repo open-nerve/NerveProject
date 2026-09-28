@@ -31,7 +31,7 @@
 
 ### 2.1 文件总览
 
-路径相对于仓库根目录，`web/apps/web/` 简写为 `web:`。"Task"是 plan 中负责它的任务；几个 Task 号表示先写过渡版本、最后一个 Task 写成最终版本。plan 的文件结构表和各 Task 列出 plan 中的 130 个；Task 1–10 按控制者的裁定和修复轮又改了 28 个，下表一并列出。共改动或新增 158 个文件（不算 plan、本 spec 和 M2 设计：它的进度表，以及按裁定同步的 7.1、7.7、13.2），删除 6 个。
+路径相对于仓库根目录，`web/apps/web/` 简写为 `web:`。"Task"是 plan 中负责它的任务；几个 Task 号表示先写过渡版本、最后一个 Task 写成最终版本。plan 的文件结构表和各 Task 列出 plan 中的 130 个；Task 1–10 按控制者的裁定和修复轮又改了 28 个，整分支评审之后的修复轮又改了 20 个（表中记为 FW1–FW12），下表一并列出。共改动或新增 178 个文件（不算 plan、本 spec 和 M2 设计：它的进度表，以及按裁定同步的 7.1、7.7、13.2），删除 6 个（`git diff --name-status --no-renames cec4ec9b` 到本分支）。
 
 | 路径 | 内容 | Task |
 |---|---|---|
@@ -39,20 +39,24 @@
 | `web:core/services/api-token.service.ts`、`web:core/store/user/{api-token.store,api-token.store.test,index}.ts`、`web:core/store/workspace/index.ts`（`api-token.store.ts` 删除）、`web:core/lib/auth/fake-nerve.ts`、`web:core/lib/store-context.test.ts` | PAT 的 service 和 store；取数途中完成的创建、撤销（第 3 节第 12 条）。`store-context.test.ts` 另有界面语言的测试（Task 6） | 2、6 |
 | `web:core/components/api-token/`、`web:core/components/settings/profile/content/pages/api-tokens.tsx`、`web:core/components/ui/loader/settings/api-token.tsx`、`web:core/hooks/store/user/` | api-tokens 页；创建弹窗迟到的创建和关闭后的清理只作用于自己那次打开 | 3 |
 | `web/packages/services/`（`api.service.ts`、`developer/` 删除）、`web/packages/types/src/{api_token,timezone}.ts`（删除）、`web/packages/types/src/index.ts`、`web/packages/constants/src/fetch-keys.ts`、`pnpm-lock.yaml` | `@nerve/services` 和 Plane 的类型 | 3、6 |
-| `web/packages/utils/src/{file,file.test,string,string.test,validation,auth,auth.test}.ts` | `@nerve/utils`：CSV 按 RFC 4180（第 3 节第 13 条）；复制到剪贴板失败时拒绝，纯 http 下也是（Task 3）；删掉 Plane 的名字校验（Task 7）；邮箱检查的正则、密码强度的规则（Task 9、10） | 3、7、9、10 |
-| `web/packages/i18n/src/locales/{en,zh-CN}/{settings,workspace-settings,common,power-k,auth}.json` | 文案 | 3、5–7、9、10 |
+| `web/packages/utils/src/{file,file.test,string,string.test,validation,auth,auth.test}.ts` | `@nerve/utils`：CSV 按 RFC 4180（第 3 节第 13 条）；复制到剪贴板失败时拒绝，纯 http 下也是（Task 3）；删掉 Plane 的名字校验（Task 7）；邮箱检查的正则、密码强度的规则（Task 9、10）；密码的规则只有一份，强度和显示的规则都由它得出（FW8） | 3、7、9、10、FW8 |
+| `web/packages/i18n/src/locales/{en,zh-CN}/{settings,workspace-settings,common,power-k,auth,empty-state}.json` | 文案；PAT 的空状态说令牌属于账户，中文的 PAT 操作统一称"访问令牌"（FW9） | 3、5–7、9、10、FW1、FW9 |
 | `tools/keywords.json` | 3 条规则；`services-files` 收窄 | 3、6 |
-| `e2e/fixtures/{settings-pages,browser,onboarding-pages}.ts`、`e2e/stories/identity/a{2,4,6,7,8,9,10,11,12}-*.spec.ts`、`e2e/stories/smoke/{s2-web-app,s5-maintenance}.spec.ts` | fixture；页面版本；其余故事的修改（2.12） | 3–7、9、10 |
+| `e2e/fixtures/{settings-pages,browser,onboarding-pages}.ts`、`e2e/stories/identity/a{2,4,6,7,8,9,10,11,12}-*.spec.ts`、`e2e/stories/smoke/{s2-web-app,s5-maintenance}.spec.ts` | fixture；页面版本；其余故事的修改（2.12） | 3–7、9、10、FW1、FW3、FW4、FW7 |
 | `web:core/components/settings/profile/content/pages/security.tsx` | 安全页的 PAT 列表 | 5、10 |
-| `web:core/services/timezone.service.ts`、`web:core/hooks/use-timezone.tsx`、`web:core/components/{appearance/theme-switcher,profile/start-of-week-preference,global/timezone-select}.tsx`、`web:core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web:core/components/power-k/{config/preferences-commands.ts,ui/pages/preferences/start-of-week-menu.tsx}`、`web/packages/constants/src/profile.ts` | preferences；命令面板的主题提示和"一周的第一天"菜单用同样的文案（2.7） | 6、8 |
+| `web:core/services/timezone.service.ts`、`web:core/hooks/use-timezone.tsx`、`web:core/components/{appearance/theme-switcher,profile/start-of-week-preference,global/timezone-select}.tsx`、`web:core/components/settings/profile/content/pages/preferences/language-and-timezone-list.tsx`、`web:core/components/power-k/{config/preferences-commands.ts,ui/pages/preferences/start-of-week-menu.tsx}`、`web/packages/constants/src/profile.ts` | preferences；命令面板的主题提示和"一周的第一天"菜单用同样的文案（2.7）；主题的修改在标签页换了会话之后才得到应答时不应用、不刷新（FW3）；时区按钮在列表加载中或没有这个时区时显示时区名（FW7） | 6、8、FW3、FW7 |
 | `web:core/lib/wrappers/store-wrapper.tsx`、`web:core/store/user/profile.store.ts`、`web:core/store/root.store.test.ts` | 界面语言跟随当前一代的资料（第 3 节第 16 条） | 6、10 |
-| `web:core/components/settings/profile/content/pages/general/form.tsx`、`web:core/components/account/deactivate-account-modal.tsx`、`web:core/components/instance/maintenance-message.tsx`、`web:core/components/onboarding/steps/profile/root.tsx` | general、停用账户、维护页；general 页和引导的资料步骤的名字只按 nerve 的规则，被拒绝时显示在字段下方 | 7、9 |
+| `web:core/components/settings/profile/content/pages/general/form.tsx`、`web:core/components/account/deactivate-account-modal.tsx`、`web:core/components/instance/maintenance-message.tsx`、`web:core/components/onboarding/steps/profile/root.tsx` | general、停用账户、维护页；general 页和引导的资料步骤的名字只按 nerve 的规则，被拒绝时显示在字段下方；停用的请求在途中时确认按钮禁用（FW4） | 7、9、FW4 |
 | `web:core/store/user/{settings,permissions}.store.ts`、`web:core/store/issue/*/filter.store.ts`（8 个）、`web:core/store/issue/{helpers/issue-filter-helper,profile/issue}.store.ts`、`web/packages/constants/src/settings/profile.ts`、`web:core/components/{auth-screens/not-authorized-view,profile/sidebar,settings/profile/heading}.tsx`、`web:core/layouts/auth-layout/{project,workspace}-wrapper.tsx` | 死成员和死 prop；`TimezoneSelect` 没有调用方传入的 `label`、`className`、`optionsClassName` 也删除（文件在上面 preferences 一行） | 8 |
-| `web:app/(all)/invitations/page.tsx`、`web:core/components/{core/image-picker-popover,issues/issue-detail/reactions/issue,onboarding/switch-account-modal,onboarding/switch-account-dropdown,project/form,project/settings/member-columns,workspace/settings/member-columns,workspace/logo}.tsx` | P4、P5 改到的文件的 oxlint；引导页剩下的英文经 `t()`；按钮里只放短语内容（邀请页的卡片、`WorkspaceLogo`） | 9 |
+| `web:app/(all)/invitations/page.tsx`、`web:core/components/{core/image-picker-popover,issues/issue-detail/reactions/issue,onboarding/switch-account-modal,onboarding/switch-account-dropdown,project/form,project/settings/member-columns,workspace/settings/member-columns,workspace/logo}.tsx` | P4、P5 改到的文件的 oxlint；引导页剩下的英文经 `t()`；按钮里只放短语内容（邀请页的卡片、`WorkspaceLogo`）；项目成员表"离开"一项里多余的 `cursor-pointer` 删除（FW11） | 9、FW11 |
 | 44 个文件（plan Task 10 逐个列出：`web:app`、`web:core` 下 43 个，其中 `store-wrapper.tsx` 在上面界面语言一行；另有 `web/packages/ui/src/form-fields/password/indicator.tsx`） | `no-unneeded-ternary` | 10 |
-| `web/packages/ui/src/form-fields/password/{indicator,helper}.tsx`、`web:core/hooks/use-password-strength-labels.ts`、`web:core/components/account/auth-forms/password.tsx` | 密码强度提示自己决定何时显示（密码非空又不合规时），文案由调用方经 `t()` 传入；没有作用的焦点判断删除 | 10 |
-| `web/apps/web/package.json`、`web/packages/{ui,utils}/package.json` | oxlint 上限：web 551 → 457，ui 25 → 19，utils 18 → 12 | 1–3、6、8–10 |
-| `docs/v0/frontend-changes.md`、`README.md`、`docs/v0/M2-auth/handoffs/{M1-P3-trim-platform,M1-closeout}.md` | 文档同步、交接 | 11 |
+| `web/packages/ui/src/form-fields/password/{indicator,helper}.tsx`、`web:core/hooks/use-password-strength-labels.ts`、`web:core/components/account/auth-forms/password.tsx` | 密码强度提示自己决定何时显示（密码非空又不合规时），文案由调用方经 `t()` 传入；没有作用的焦点判断删除；弱密码的文字和两段进度条用设计系统的 `warning` 令牌（原来的 `orange-500` 不在主题里，文字没有颜色，两段是透明的，FW10） | 10、FW1、FW10 |
+| `web:core/components/account/auth-forms/auth-header.tsx`、`web:core/components/auth-screens/header.tsx`、`web:core/components/onboarding/root.tsx`、`web:core/components/onboarding/steps/{team/root,workspace/create,workspace/join-invites}.tsx`、`web:core/components/onboarding/tour/{root,sidebar}.tsx`、`e2e/fixtures/auth-pages.ts` | 登录、注册、引导页剩下的英文经 `t()`（注册按钮在上面一行的 `password.tsx`）；引导在步骤之间更新资料失败时的提示按 `code`；加入工作区一步的每个邀请由可点击的 `div` 改为 `<label>` 连着 `Checkbox`（2.10） | FW1 |
+| `web:core/store/user/{profile.store,index}.test.ts`（`profile.store.ts`、`index.ts` 在上面） | 资料、账户的修改：应答比已写入的那次更早发出时不写入（2.7） | FW2 |
+| `web/packages/propel/src/toast/toast.tsx` | `setPromiseToast` 的消息回调可以不给消息：换了会话之后，主题的成功提示不说要刷新（FW3，2.7） | FW3 |
+| `web/packages/i18n/src/{index,core/instance,core/set-language,core/set-language.test,hooks/use-translation}.ts` | 界面语言只有一个写入者：`useTranslation` 没人用的 `changeLanguage`、`currentLocale`、`languages` 和包里没人用的导出删除；`setLanguage` 只在 i18next 应用的正是它要的语言时才写（2.7）；i18next 初始化时的推广提示关闭；`instance.ts` 的 oxlint 警告（2.10） | FW5、FW6 |
+| `web/apps/web/package.json`、`web/packages/{ui,utils,i18n}/package.json` | oxlint 上限：web 551 → 452，ui 25 → 19，utils 18 → 12，i18n 1 → 0 | 1–3、6、8–10、FW1、FW6 |
+| `docs/v0/frontend-changes.md`、`README.md`、`docs/v0/M2-auth/handoffs/{M1-P3-trim-platform,M1-closeout}.md` | 文档同步、交接 | 11、FW12 |
 
 ### 2.2 依赖
 
@@ -108,12 +112,16 @@
 - 时区：`TimezoneService.list()` 经 `publicClient` 调公开的 `GET /api/v0/timezones`（与实例信息一样不带令牌），返回生成的 `Timezone[]`；`use-timezone.tsx` 把同一时区的地点合成一个选项，选项的搜索文本含时区名、地点、GMT 和 UTC 偏移。Plane 的地址和 `TTimezoneObject` 删除。
 - 主题、语言、时区、每周第一天：成功和失败的提示都经 `t()`；失败的文案按 `code` 取（`errorMessageKey`），不再是写死的英文。主题切换之后刷新页面的行为保留（7.7）。
 - 页面反映 nerve 持有的值：主题在 nerve 应答成功之后才应用（随后刷新页面）；被拒绝时页面保持原来的主题、不刷新，提示说明原因。原来先应用、失败不撤回。界面语言由 `StoreWrapper` 按当前一代资料的 `language` 设置，`ProfileStore` 不再设它，资料只取 nerve 的应答：被拒绝的修改不改语言，旧一代迟到的应答也到不了页面（第 3 节第 16 条）。
-- 页面上的其余文案也经 `t()`：每周第一天的标题、说明和星期名（第 3 节第 15 条；命令面板的"更改一周的第一天"菜单同样用这些键，`START_OF_THE_WEEK_OPTIONS` 不再有英文的 `label`），时区列表的搜索框、"没有匹配"和按钮的"选择时区"（"加载中"在这里不会出现：加载时按钮是禁用的），主题的"正在更新""已更新""正在重新加载"（命令面板的主题提示用同样的键）。
+- 应答的先后（整分支评审之后的修复轮）：
+  - 两次修改的应答先后颠倒时，比已写入的那次更早发出的不写入（`ProfileStore.updateUserProfile`，`UserStore.updateCurrentUser` 同样）；较新的一次被拒绝时，较早一次的成功照常写入。这假定 nerve 按发出的顺序应用修改，与 PAT store 的假定相同。各有 3 个强制顺序的单元测试（FW2）。
+  - 主题的修改在标签页跟随了另一个标签页的登录之后才得到应答时，不应用、不刷新，成功的提示也不说要刷新：页面已是另一个账户的（M2 设计 7.1，P4 spec 2.8）。A9 的第三个页面测试（FW3）。
+  - `setLanguage` 只在 i18next 应用的正是它要的语言时才写 `<html lang>` 和存储：i18next 只应用最后要的语言，被后来的调用超过的那一次什么也不写，写的是超过它的那一次。`useTranslation` 没人用的 `changeLanguage` 删除，`setLanguage` 是唯一的写入者（FW5、FW6；`set-language.test.ts`）。
+- 页面上的其余文案也经 `t()`：每周第一天的标题、说明和星期名（第 3 节第 15 条；命令面板的"更改一周的第一天"菜单同样用这些键，`START_OF_THE_WEEK_OPTIONS` 不再有英文的 `label`），时区列表的搜索框、"没有匹配"和按钮的"选择时区"（"加载中"在这里不会出现：加载时按钮是禁用的；按钮显示账户的时区，列表加载中或没有这个时区时是时区名本身，原来是空的，Plane 的 `Asia/Kolkata` 默认值删除，nerve 总给 `user_timezone`，FW7），主题的"正在更新""已更新""正在重新加载"（命令面板的主题提示用同样的键）。
 
 ### 2.8 general、停用账户、维护页（M2 设计 7.3、7.7；P4 spec 第 3 节第 14 条）
 
 - **general 的保存**：`PATCH /api/v0/me`；成功提示"个人资料已更新"；`first_name`、`last_name`、`display_name` 的字段错误显示在字段下，其余在提示里（`fieldErrorKeys`、`needsErrorBanner`、`errorMessageKey`，P4 的错误文案表）。
-- **停用账户**：确认弹窗的文案按 Nerve 的行为改写：所有地方退出，密码和 PAT 都不能用；什么都不删除，也不发邮件；要再用这个账户，请服务器管理员恢复（决策点 3）。成功时会话已由 `deactivateAccount` 结束（P4），登录页接管，显示"你的账户已停用"；失败按 `errorMessageKey` 提示。
+- **停用账户**：确认弹窗的文案按 Nerve 的行为改写：所有地方退出，密码和 PAT 都不能用；什么都不删除，也不发邮件；要再用这个账户，请服务器管理员恢复（决策点 3）。成功时会话已由 `deactivateAccount` 结束（P4），登录页接管，显示"你的账户已停用"；失败按 `errorMessageKey` 提示。请求在途中时确认按钮禁用（"Deactivating"），连点只发一次（FW4）。
 - **维护页**（`InstanceWrapper` 读不到实例信息时）：标题"暂时无法连接 Nerve"，说明页面没能读取这台服务器的设置，会自动重试，服务器恢复应答后继续。原来的"Looks like Nerve didn't start up correctly!"在 nerve 只是暂时不可达时有误导。文案进 `common.json`；自动重试是 SWR 的默认行为，浏览器核对 C6 实测放开之后 5.3–10.4 秒自己到登录页。
 
 ### 2.9 死成员和死 prop（M2 设计 7.8；M1-closeout 交接）
@@ -130,10 +138,15 @@
 
 ### 2.10 oxlint（M2 设计 7.8；P4 spec 第 6 节）
 
-- P5 改到的 138 个 web 文件、P4 改到的全部文件：没有警告。
+- P5 改到的 157 个 web 文件、P4 改到的全部文件：没有警告（在每个 web 包里像 `check:lint` 那样跑 `oxlint --format=json .`，警告的文件与 `git diff --name-status cec4ec9b` 到本分支的文件取交集）。
 - `eslint(no-unneeded-ternary)`：`cec4ec9` 有 54 条（web 53、ui 1），全部改为布尔表达式，全仓 0 条。
-- 上限（`tools/lint-cap.mjs`，警告数必须正好等于上限）逐个 Task 调低：web 551 → 550（Task 1）→ 548（2）→ 543（3）→ 541（6）→ 537（8）→ 514（9）→ 457（10）；ui 25 → 20（1）→ 19（10）；utils 18 → 16（9）→ 12（9 的修复轮：`string.ts` 邮箱正则的 4 条 `no-useless-escape`，Task 3 改过这个文件）。每一步都是删掉带警告的代码之后的实际数。
-- 清警告时的写法：`.then` 链改为 `await` 或返回里面的 promise；可点击的 `div` 改为 `<button type="button">`；带理由的禁用注释只用在两处：`DateDropdown` 外层的按键处理（2.3）和引导的资料步骤的 `autoFocus`（这一步只有这一个字段，打开就聚焦它）。两处清警告改了行为，第 3 节第 6、7 条。
+- 上限（`tools/lint-cap.mjs`，警告数必须正好等于上限）逐个 Task 调低：web 551 → 550（Task 1）→ 548（2）→ 543（3）→ 541（6）→ 537（8）→ 514（9）→ 457（10）→ 452（FW1：引导页的 2 条 `no-shadow`、1 条 `promise/always-return`、加入工作区一步的 2 条 `jsx_a11y`）；ui 25 → 20（1）→ 19（10）；utils 18 → 16（9）→ 12（9 的修复轮：`string.ts` 邮箱正则的 4 条 `no-useless-escape`，Task 3 改过这个文件）；i18n 1 → 0（FW6 改到 `core/instance.ts`，它的 `import/no-named-as-default-member` 改用 i18next 具名导出的 `createInstance`，同一个函数）。每一步都是删掉带警告的代码之后的实际数。
+- 清警告时的写法：`.then` 链改为 `await` 或返回里面的 promise；可点击的 `div` 改为 `<button type="button">`，加入工作区一步的邀请改为 `<label>` 连着它的 `Checkbox`（设计系统的写法，FW1）；带理由的禁用注释只用在两处：`DateDropdown` 外层的按键处理（2.3）和引导的资料步骤的 `autoFocus`（这一步只有这一个字段，打开就聚焦它）。
+- 几处清警告改了行为（后三处在 M2 的页面上到不了，交给 M3 核对，M2 设计 13.2）：
+  - 第 3 节第 6、7、8 条（周期下拉框的取数，项目成员表没有角色时按访客算，邀请页 `fetchWorkspaces()` 的拒绝）；
+  - `ProfileSidebar` 的窗口大小监听经 ref 读当前的折叠状态，原来读第一次渲染时的值；
+  - `WorkspaceAuthWrapper`"找不到工作区"界面的退出登录改为 `<button type="button">`：Tab 能到，Enter、空格退出；
+  - 加入工作区一步的邀请（FW1）：Tab 能到勾选框，空格勾选，点一行仍勾选。
 
 ### 2.11 关键词规则（M2 设计 7.9 中 P5 的部分）
 
@@ -151,26 +164,28 @@
 - **fixture**：
   - `e2e/fixtures/settings-pages.ts`：`registerOnboarded`、`answerTo`、`holdAnswer`（nerve 对下一个这样的请求的回答，等测试放行才交给页面）、`parseCsv`（RFC 4180）、`expectTokenGone`（令牌的各种形式：原文、去掉前缀的密文，以及原文、密文和密文字节各自的十六进制、base64、去掉填充的 base64、base64url，去掉重合的之后至多十种；都不在文档、表单控件的值、地址、localStorage、sessionStorage、Cookie 和页面的控制台输出里）、`recordTokensShown`（`MutationObserver` 记下文档从此出现过的每个令牌，哪怕只出现一瞬间）、`expectListBesideButton`（页面上唯一的列表在按钮正下方或正上方 8 像素之内，左边缘或右边缘对齐 2 像素之内）、`submitPasswordChange`、`fieldBlock`（安全页、general 页上一个字段的标题、字段和它下方的消息：核对错误显示在哪个字段下）；
   - `e2e/fixtures/browser.ts`：`EMOJI_CHECK_WARNING`（第 3 节第 9 条），S2 和个人设置的故事共用；
-  - `e2e/fixtures/onboarding-pages.ts`：引导的资料步骤的"Continue"按全文匹配（A4、A6、A10 的"Name"也是）。原来部分匹配，这两个文案缺了翻译键也能通过。
+  - `e2e/fixtures/onboarding-pages.ts`：引导的资料步骤的"Continue"按全文匹配（A4、A6、A10 的"Name"也是）。原来部分匹配，这两个文案缺了翻译键也能通过；
+  - `e2e/fixtures/auth-pages.ts`：注册按钮"Create account"按全文匹配；A2 的"Sign up"链接，A4、A6、A10 的"Create your workspace"也是（FW1：这些文案改经 `t()`）。
 - **页面版本**（接口版本不变；plan Task 4–7 逐条写明，之后的裁定和修复轮加的写在各条里）：
   - **A11**（3 个）：
     - 创建、原文显示一次、CSV（说明是"ci, #1"，按 RFC 4180 解析：表头和一行四个字段，第四个是原文）、关闭后各种形式都不在（再打开弹窗、经侧栏去安全页再回来、刷新之后都再核对）、撤销（按钮不用悬停就显示）、数据库和 PAT 的实际效果，撤销之后安全页显示"没有令牌"；自定义日期的日历在按钮旁，Escape 关闭、一次点击再打开（用鼠标：键盘打不开日历，2.3）。
     - 弹窗一次打开留下的事只作用于那次打开：创建的回答在弹窗关闭之后才到（关闭后不再打开、关闭后又打开两种），令牌只进列表，从不在文档中出现，也不下载；弹窗自己的创建显示原文，它的 CSV 是唯一的下载；关闭之后立即再打开，关闭 350 毫秒之后的清理不清掉新打开的弹窗里的令牌。页面的时钟由 Playwright 控制（`page.clock`），重开在关闭后 350 毫秒之内，"打开时不重置"的变异让它失败。
     - 另一个标签页以另一个账户登录，本标签页的列表换成那个账户的（缺陷类别：只有一个账户）。
   - **A7**：安全页列出 PAT 和说明；新密码下方的规则按密码本身显示（非空又不合规时显示，合规之后消失，字段仍有焦点）；当前密码错、新密码太常见各显示在自己的字段下（`fieldBlock`）；成功之后页面的会话延续、别的会话结束、PAT 仍可用、旧密码登录 401。
-  - **A8**（2 个）：general 页的三个名字、preferences 页的时区（列表在按钮旁，Escape 之后再打开，搜索、选择，选中之后列表关闭）；刷新之后都在；没有发往旧接口的请求。第二个：名字按 nerve 的规则（姓可以为空，显示名可以有空格），提示"Your profile is updated."；名里有网址时 nerve 答 422，原因只显示在这个字段下，数据库不变。
+  - **A8**（2 个）：general 页的三个名字、preferences 页的时区（列表在按钮旁，Escape 之后再打开，搜索、选择，选中之后列表关闭）；刷新之后都在（刷新时扣住时区列表的回答：按钮先显示"Asia/Shanghai"，列表到了之后显示"Beijing"，FW7）；没有发往旧接口的请求。第二个：名字按 nerve 的规则（姓可以为空，显示名可以有空格），提示"Your profile is updated."；名里有网址时 nerve 答 422，原因只显示在这个字段下，数据库不变。
   - **A9**：主题（英文下列表在按钮旁；选 Dark，页面自己刷新）、语言（选简体中文，页面立即变中文，每周第一天的标题和按钮随之变中文：Sunday → 星期日）、中文下主题的列表在按钮旁（Escape 之后一次点击再打开）、中文下时区列表的搜索框和"未找到匹配项"、每周第一天：
     - 键盘：从语言的按钮按 Tab 到它的按钮，下箭头打开列表（在按钮旁，选项是中文的星期名；按钮上的 Enter 不打开列表，2.3），再按下箭头、Enter 从星期日改为星期一：`PATCH` 200，列表关闭，焦点回到按钮；空格再打开，Escape 关闭，焦点仍在按钮上；
     - 鼠标点已选中的选项（`aria-selected` 的星期一）：列表关闭，再发一次同样的 `PATCH`（200）；
     - 四次选择各发一个 `PATCH /api/v0/me/profile`，时区的搜索不发请求；数据库和刷新之后都对（按钮显示深色、简体中文、星期一）。
   - **A9 的第二个页面测试**（被拒绝的修改）：`page.route` 让接下来两次 `PATCH /api/v0/me/profile` 分别回答 500（`internal_error`）和 503（`server_busy`）。选简体中文：提示"Something went wrong on the server. Please try again."，页面仍是英文（`lang` 为 en），语言按钮仍是 English。选 Dark：提示"The server is busy. Please try again later."，页面的主题仍是原来的（`data-theme` 为 light），按钮仍是 System Preference。两次之后页面没有刷新，仍是英文；数据库不变；失败的请求和控制台的错误逐条点名（两个 `PATCH`，浏览器对它们的两条报错）。
-  - **A12**（2 个）：确认弹窗的文案；204；回到带 `next_path` 的登录页并提示；浏览器没有记录；数据库里已停用、会话结束、PAT 保留；再登录 403 "This account is deactivated."；`nerve users activate` 之后登录进入引导，PAT 又能用。第二个：`page.route` 让停用回答 500：提示"Something went wrong on the server. Please try again."，确认弹窗仍开着，页面仍登录、仍在 general 页，数据库不变。
+  - **A9 的第三个页面测试**（换了会话之后才回来的主题修改，FW3）：Y 的主题是高对比度浅色。X 在标签页 A 选 Dark，`PATCH` 的回答扣住；标签页 B 写入 Y 的登录，标签页 A 跟随，显示 Y 的主题。放行之后：提示"Theme updated"，没有"Reloading to apply changes..."；放行后 2 秒内标签页 A 没有开始导航，放行前做的标记仍在文档里（没有刷新）；`data-theme` 仍是 Y 的；数据库里是 X 的 Dark，Y 的主题不变。
+  - **A12**（2 个）：确认弹窗的文案；204；回到带 `next_path` 的登录页并提示；浏览器没有记录；数据库里已停用、会话结束、PAT 保留；再登录 403 "This account is deactivated."；`nerve users activate` 之后登录进入引导，PAT 又能用。第二个：`page.route` 让停用回答 500，回答等测试放行：双击 Confirm，按钮变为禁用的"Deactivating"，放行之后提示"Something went wrong on the server. Please try again."，确认弹窗仍开着，页面仍登录、仍在 general 页，数据库不变，页面只发了一个 `POST /api/v0/me/deactivate`（FW4）。
 - **其余改动的故事**：
   - **A10**：新增一个页面测试：名字里有网址时 nerve 答 422，资料步骤不动，原因显示在名字下方，数据库不变。
   - **A2**：弱密码的规则显示之后，改成合规的密码，规则消失。
   - **S5**（新的冒烟故事）：实例请求回答 503 时，页面显示维护页的标题和说明；放开之后，页面自己的重试（SWR 的退避，Playwright 的时钟快进）拿到回答，不刷新就到登录页。
 - 每个内容断言之前先断言元素或请求存在；控制台只允许点名的消息（每次加载一条 `EMOJI_CHECK_WARNING`，故事造成的 422、403、500、503 的浏览器报错）。
-- 测试数：35 → 47（A7 1 个、A8 2 个、A9 2 个、A10 1 个、A11 3 个、A12 2 个、S5 1 个）。新增的等待都有期限（`answerTo`、下载、等请求发出 10 秒，A11 等弹窗离开的轮询 5 秒）。
+- 测试数：35 → 48（A7 1 个、A8 2 个、A9 3 个、A10 1 个、A11 3 个、A12 2 个、S5 1 个；`make e2e` 报告的数）。新增的等待都有期限（`answerTo`、下载、等请求发出 10 秒，A11 等弹窗离开的轮询 5 秒，A9 的第三个页面测试等导航 2 秒）。
 
 ### 2.13 文档与交接（M2 设计 3.20）
 
@@ -211,11 +226,11 @@
 
 ## 4. 验收标准（完成线，M2 设计 12 节 P5）
 
-- [ ] 全部故事的页面版本和接口版本通过；此前的故事仍然通过（`make e2e` 共 47 个测试）。
+- [ ] 全部故事的页面版本和接口版本通过；此前的故事仍然通过（`make e2e` 共 48 个测试）。
 - [ ] `domains.mjs --rows M2` 剩 24 行，每一行在附录 A.4 写明是误报，review 照录。
 - [ ] `grep -rnE "withCredentials:\s*true|/api/users/api-tokens|/api/timezones/" web`（排除 `node_modules`、`dist`、`build`、`.turbo`）没有输出。
-- [ ] P4、P5 改到的文件没有 oxlint 警告；`no-unneeded-ternary` 全仓 0 条；上限 web 457、ui 19、utils 12。
-- [ ] web 单元测试 148 个、utils 59 个通过（`--testTimeout=1000` 也通过）。web 新增的：PAT store 14 个，`store-context.test.ts` 2 个（换会话时的 PAT 列表、界面语言），有效期 3 个；utils 新增的：CSV 8 个，剪贴板 3 个，邮箱检查 2 个，密码强度 3 个。
+- [ ] P4、P5 改到的文件没有 oxlint 警告；`no-unneeded-ternary` 全仓 0 条；上限 web 452、ui 19、utils 12、i18n 0。
+- [ ] web 单元测试 154 个、utils 59 个、i18n 12 个通过（各包 `vitest run --testTimeout=1000`）。web 新增的：PAT store 14 个，`store-context.test.ts` 2 个（换会话时的 PAT 列表、界面语言），有效期 3 个，资料和账户的修改应答的先后 6 个（FW2）；utils 新增的：CSV 8 个，剪贴板 3 个，邮箱检查 2 个，密码强度 3 个；i18n 新增的：`setLanguage` 2 个（FW6）。
 - [ ] 9.6 中 P5 的浏览器核对在合并前的代码上重跑（脚本对任意构建运行，见附录 A.6），写进 review。
 - [ ] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。
 - [ ] 3.20 中 P5 的一行、README 在同一次合并中写好；两份交接按第 7 节处理。
