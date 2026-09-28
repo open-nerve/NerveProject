@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 按控制者的分诊修好 Codex 对全部 M2 的对抗性评审的每一条（spec 2.1），每一处都在根因上修、有能失败的回归：请求体只有一种读法（Critical 1），令牌管理器在每个 `await` 之后重读记录（Important 1），服务角色的权限只有一个出处并由测试守住（Important 2），会话的主题只在一处设置（Minor 1），A8–A10 共用业务断言（Minor 2），文档漂移（Minor 3），一个 store 的修改一个接一个发出（报告第 6 节），完整的恢复说明（第 7 节），`AllowAll` 拒绝重复的检查。M2 在这一阶段合并时再次完成。
+**Goal:** 按控制者的分诊修好 Codex 对全部 M2 的对抗性评审的每一条（spec 2.1），每一处都在根因上修、有能失败的回归：请求体只有一种读法，检查的代价跟着请求体走（Critical 1），令牌管理器在请求和锁回来之后重读记录（Important 1），服务角色的权限只有一个出处并由测试守住（Important 2），会话的主题只在一处设置（Minor 1），A8–A10 共用业务断言（Minor 2），文档漂移（Minor 3），一个 store 的修改一个接一个发出（报告第 6 节），完整的恢复说明（第 7 节），`AllowAll` 拒绝重复的检查。M2 在这一阶段合并时再次完成。
 
 **Architecture:** Task 0 随 spec 和本计划提交（M2 设计第 15 节的一行）。之后 11 个 Task，前 10 个各一个提交：`bodyshape` 的扫描器和字段码（T1）→ 整程序测试和 Codex 的请求（T2）→ 令牌管理器（T3）→ 服务角色的权限（T4）→ `AllowAll`（T5）→ 共用断言（T6）→ 修改的队列（T7）→ 会话的主题（T8）→ M2 设计（T9）→ 上级文档、README 的恢复、交接、收尾的数字（T10）→ 全部门禁（T11，不提交）。每一处改动都写成下面的块，由 `$M2TMP/codexfix/planapply.mjs` 精确地应用；生成的代码不写成块，由 `make gen` 生成（T1）。状态翻转在 codex-fixes review 的提交里，由控制者做，替换的全文在最后一节。
 
@@ -11,6 +11,8 @@
 **Spec:** `docs/v0/M2-auth/specs/codex-fixes.md`（上级：M2 设计 3.10、3.11、6.1、7.1、7.5、7.7、8.5、8.7、11.2、第 15 节、17.3；总体设计 3.5、4.3、7.7；输入：`docs/v0/M2-auth/reviews/M2-codex-adversarial-review.md`）
 
 **原型：** `$M2TMP/codexfix/proto`，本分支在 `37b7e9c` 的克隆。下面每个块都由原型的文件生成（`$M2TMP/codexfix/mkblocks.py`），块里的代码就是原型上跑过的代码；每个 Task 的检查、先红后绿（spec 附录 A）、变异（附录 B）和全部门禁（附录 C）都在原型上做过。本计划的块依次应用到 `37b7e9c` 的另一份干净副本上，得到的树与原型逐字节相同（文末"块的核对"）。
+
+**预检之后的修订：** 本计划的第一稿（`f66b7a92`）经过预检（`$M2TMP/m2-codex/preflight.md`），控制者接受了全部发现（`preflight-rulings.md`），这一稿按裁定修订：扫描器的路径按段压栈、最多报 16 个问题，按表检查同样受限，加代价的回归（H1，T1）；恢复说明的第一步在新会话里改密码（H2，T9、T10）；`closedObject` 查每个对象 schema（M1，T2）；主题的决定是有单元测试的纯函数（M2，T8）；T10 的检查只找错句本身（M3）；权限的措辞、完整性测试的范围（M4、L2、L3，T4、T9）；以及 L1、L4–L8。修订之后原型重新跑过每个 Task 的检查、变异和七个门禁，并重新回放。
 
 ---
 
@@ -80,13 +82,15 @@
 | `docs/v0/M2-auth/M2-design.md` | 第 15 节"Codex 修复"一行（随 spec 提交） | 0 |
 | `server/internal/platform/httpserver/bodyshape/ambiguity.go` | 新文件：一种读法的扫描器 | 1 |
 | `server/internal/platform/httpserver/bodyshape/ambiguity_test.go` | 新文件：24 个子测试和 `duplicate` 的消息 | 1 |
-| `server/internal/platform/httpserver/bodyshape/bodyshape.go` | `Check` 先扫描；`codeDuplicate` 和它的消息；包和函数的注释 | 1 |
+| `server/internal/platform/httpserver/bodyshape/bodyshape.go` | `Check` 先扫描；`problems`：路径的栈，最多 16 个问题；按表检查用它，按名字的顺序读对象的成员；`codeDuplicate` 和它的消息；包和函数的注释 | 1 |
+| `server/internal/platform/httpserver/bodyshape/cost_test.go` | 新文件：上限的测试、代价的测试 | 1 |
 | `server/internal/shared/error.go` | `FieldDuplicate`，进 `FieldCodes()` | 1 |
 | `api/common.yaml` | `FieldError.code` 的枚举加 `duplicate` | 1 |
 | `api/dist/openapi.yaml`、`server/internal/platform/httpserver/apigen/components.gen.go`、`web/packages/api-client/src/schema.gen.ts` | `make gen` 生成 | 1 |
 | `web/packages/i18n/src/locales/{en,zh-CN}/auth.json`、`web/apps/web/helpers/authentication.helper.ts` | `duplicate` 的文案和字段码表 | 1 |
 | `server/internal/platform/httpserver/apitest/operations.go`、`operations_test.go` | 整程序用例第 7–9 项（两处重复、非 UTF-8） | 2 |
 | `server/internal/bootstrap/contract_test.go` | 第四个整程序测试的注释 | 2 |
+| `server/internal/platform/httpserver/apitest/rules_test.go`、`rules_cases_test.go` | `closedObject` 查每个对象 schema，组件和内联的；两个内联的反例 | 2 |
 | `e2e/stories/identity/a10-onboarding-profile.spec.ts` | 新故事：Codex 的两个请求 | 2 |
 | `web/apps/web/core/lib/auth/token-manager.ts`、`token-manager.session-change.test.ts` | 退出和第一次续期在 `await` 之后重读；两个测试 | 3 |
 | `deploy/runtime-grants.sql` | 新文件：服务角色的权限 | 4 |
@@ -102,6 +106,7 @@
 | `web/apps/web/core/store/user/profile.store.test.ts`、`index.test.ts` | 改写：6 个测试 | 7 |
 | `e2e/stories/identity/a9-preferences.spec.ts` | 新故事：Codex 的页面实验 | 7 |
 | `web/apps/web/core/lib/wrappers/store-wrapper.tsx` | 主题按会话设置 | 8 |
+| `web/apps/web/core/lib/wrappers/session-theme.ts`、`session-theme.test.ts` | 新文件：主题的决定（纯函数）；5 个单元测试 | 8 |
 | `web/apps/web/core/lib/store-context.tsx`、`store-context.test.ts` | 删 `startSession` 写的主题 | 8 |
 | `web/apps/web/core/components/onboarding/switch-account-modal.tsx` | 删 `setTheme` | 8 |
 | `e2e/stories/identity/a5-refresh-reuse.spec.ts`、`a6-sign-out.spec.ts`、`a12-deactivate.spec.ts` | 回到默认主题的断言 | 8 |
@@ -109,7 +114,8 @@
 | `docs/v0/v0-design.md` | 3.5、4.3、7.7 | 10 |
 | `docs/v0/plane-diff.md` | 第三节"请求体" | 10 |
 | `README.md` | "令牌泄露后的恢复" | 10 |
-| `docs/v0/M4-issue-core/handoffs/M2-closeout.md`、`docs/v0/M8-open-release/handoffs/M2-closeout.md` | 第 6 节、第 3 节各一条和关闭条件 | 10 |
+| `docs/v0/M4-issue-core/handoffs/M2-closeout.md` | 第 4 节：路径排序的出处、map 型对象、结构检查的代价和关闭条件；第 6 节：服务角色的权限和关闭条件 | 10 |
+| `docs/v0/M8-open-release/handoffs/M2-closeout.md` | 第 2 节：请求体解析三遍；第 3 节：分用两个角色的部署核对和关闭条件 | 10 |
 | `docs/v0/M2-auth/specs/closeout.md`、`docs/v0/M2-auth/reviews/closeout-review.md` | 13 个操作、约 48 行 | 10 |
 | — | 全部门禁 | 11 |
 
@@ -134,7 +140,7 @@ codex-fixes review 的提交（控制者）另改 `docs/v0/M2-auth/M2-design.md`
 
 ### Task 1: 请求体只有一种读法：`bodyshape` 的扫描器和字段码 `duplicate`
 
-spec 2.2。`ambiguity.go` 在 `Check` 按表检查之前扫描 `json.Valid` 已确认的请求体：对象里按解码后的名字计数，第二次出现时报 `duplicate`（每个名字一次）；字符串用 `utf8.Valid` 和代理项配对判断，不合法报 `invalid_format`。有这两种问题的请求体只得到它们（spec D3）。新码 `duplicate` 进入 3.11 列出和核对字段码的每一处：契约的枚举、`shared.FieldCodes()`、前端的字段码表、中英文案。
+spec 2.2。`ambiguity.go` 在 `Check` 按表检查之前扫描 `json.Valid` 已确认的请求体：对象里按解码后的名字计数，第二次出现时报 `duplicate`（每个名字一次）；字符串用 `utf8.Valid` 和代理项配对判断，不合法报 `invalid_format`；只有成员名要解码，值的字符串在字节上检查。有这两种问题的请求体只得到它们（spec D3）。扫描和按表检查共用 `bodyshape.go` 的 `problems`：路径是一个段的栈，只在报问题时写出；最多 16 个问题，满了就停；按表检查按名字的顺序读对象的成员，同一个请求体每次得到同样的 16 个（spec 2.2 的"代价"）。新码 `duplicate` 进入 3.11 列出和核对字段码的每一处：契约的枚举、`shared.FieldCodes()`、前端的字段码表、中英文案。
 
 - [ ] **Step 1：应用块**（`… apply . 1`）：
 
@@ -159,33 +165,34 @@ import (
 // UTF-8 bytes, and a \u escape of a surrogate only as one half of a pair.
 // Then every decoder reads the one document the client wrote.
 
-// ambiguities returns what lets value, one valid JSON value, be read two
+// ambiguities reports to p what lets value, one valid JSON value, be read two
 // ways: a member name repeated in its object (duplicate, once per name) and a
 // string that is not valid Unicode (invalid_format), each at its JSON path.
-func ambiguities(value []byte) []FieldError {
-	s := scanner{data: value}
-	s.value("")
-	return s.errs
+// It stops when p is full.
+func ambiguities(value []byte, p *problems) {
+	s := scanner{data: value, p: p}
+	s.value()
 }
 
 // scanner reads a valid JSON value byte by byte; it does not check the
-// syntax again.
+// syntax again. It decodes member names only: a value's string is checked on
+// its bytes.
 type scanner struct {
 	data []byte
 	pos  int
-	errs []FieldError
+	p    *problems
 }
 
-func (s *scanner) value(path string) {
+func (s *scanner) value() {
 	s.space()
 	switch s.data[s.pos] {
 	case '{':
-		s.object(path)
+		s.object()
 	case '[':
-		s.array(path)
+		s.array()
 	case '"':
-		if _, ok := s.str(); !ok {
-			s.errs = append(s.errs, FieldError{path, codeInvalidFormat})
+		if !validUnicode(s.str()) {
+			s.p.report(codeInvalidFormat)
 		}
 	default: // a number, true, false or null
 		for s.pos < len(s.data) && !isEnd(s.data[s.pos]) {
@@ -194,7 +201,7 @@ func (s *scanner) value(path string) {
 	}
 }
 
-func (s *scanner) object(path string) {
+func (s *scanner) object() {
 	seen := map[string]int{}
 	s.pos++ // {
 	if s.space(); s.data[s.pos] == '}' {
@@ -203,18 +210,24 @@ func (s *scanner) object(path string) {
 	}
 	for {
 		s.space()
-		name, ok := s.str()
-		at := join(path, name)
+		raw := s.str()
+		var name string
+		_ = json.Unmarshal(raw, &name) // the whole document is valid JSON
 		seen[name]++
+		s.p.enter(name)
 		switch {
-		case !ok:
-			s.errs = append(s.errs, FieldError{at, codeInvalidFormat})
+		case !validUnicode(raw):
+			s.p.report(codeInvalidFormat)
 		case seen[name] == 2:
-			s.errs = append(s.errs, FieldError{at, codeDuplicate})
+			s.p.report(codeDuplicate)
 		}
 		s.space()
 		s.pos++ // :
-		s.value(at)
+		s.value()
+		s.p.leave()
+		if s.p.full() {
+			return
+		}
 		s.space()
 		s.pos++ // , or }
 		if s.data[s.pos-1] == '}' {
@@ -223,14 +236,19 @@ func (s *scanner) object(path string) {
 	}
 }
 
-func (s *scanner) array(path string) {
+func (s *scanner) array() {
 	s.pos++ // [
 	if s.space(); s.data[s.pos] == ']' {
 		s.pos++
 		return
 	}
 	for i := 0; ; i++ {
-		s.value(path + "[" + strconv.Itoa(i) + "]")
+		s.p.enterItem(i)
+		s.value()
+		s.p.leave()
+		if s.p.full() {
+			return
+		}
 		s.space()
 		s.pos++ // , or ]
 		if s.data[s.pos-1] == ']' {
@@ -239,9 +257,8 @@ func (s *scanner) array(path string) {
 	}
 }
 
-// str reads the string at s.pos: decoded, as encoding/json decodes it, and
-// whether it is valid Unicode.
-func (s *scanner) str() (string, bool) {
+// str reads the string at s.pos and returns it as written, with its quotes.
+func (s *scanner) str() []byte {
 	start := s.pos
 	for s.pos++; s.data[s.pos] != '"'; s.pos++ {
 		if s.data[s.pos] == '\\' {
@@ -249,11 +266,13 @@ func (s *scanner) str() (string, bool) {
 		}
 	}
 	s.pos++
-	raw := s.data[start:s.pos]
-	var decoded string
-	_ = json.Unmarshal(raw, &decoded) // the whole document is valid JSON
-	return decoded, utf8.Valid(raw) && pairedSurrogates(raw)
+	return s.data[start:s.pos]
 }
+
+// validUnicode reports whether raw, a valid JSON string with its quotes,
+// decodes to the text it spells: UTF-8 bytes, and every \u escape of a
+// surrogate one half of a pair.
+func validUnicode(raw []byte) bool { return utf8.Valid(raw) && pairedSurrogates(raw) }
 
 // pairedSurrogates reports whether every \u escape of a surrogate in raw, a
 // valid JSON string with its quotes, is one half of a pair: a high one right
@@ -390,8 +409,27 @@ func TestADuplicateSaysWhy(t *testing.T) {
 // in an object, no string that is not valid Unicode), then JSON types,
 // undeclared properties, null where the contract does not allow it, missing
 // required properties, and the string formats that the generated code
-// decodes into Go types. Every problem of a kind is collected in one pass.
-// Values (lengths, enums, ranges, e-mail syntax) are the domain's.
+// decodes into Go types. The problems of a kind are collected in one pass,
+// at most maxProblems of them. Values (lengths, enums, ranges, e-mail syntax)
+// are the domain's.
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+	"fmt"
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+	"fmt"
+	"maps"
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+	"strconv"
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+	"strconv"
+	"strings"
 ````
 
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
@@ -421,22 +459,302 @@ func TestADuplicateSaysWhy(t *testing.T) {
 
 ````new server/internal/platform/httpserver/bodyshape/bodyshape.go
 // generated decoder. A body that is not one valid JSON document is ErrNotJSON.
-// One that can be read two ways (ambiguity.go) is an *Error with each
-// ambiguity: its structure is checked once it has one reading. One that
-// breaks the structure is an *Error with every problem. The problems are
-// sorted by path.
+// One that can be read two ways (ambiguity.go) is an *Error with its
+// ambiguities: its structure is checked once it has one reading. One that
+// breaks the structure is an *Error with its problems. Either lists at most
+// maxProblems, sorted by path.
 ````
 
 ````old server/internal/platform/httpserver/bodyshape/bodyshape.go
 	var errs []FieldError
 	t.walk(root, value, "", &errs)
+	if len(errs) == 0 {
 ````
 
 ````new server/internal/platform/httpserver/bodyshape/bodyshape.go
-	errs := ambiguities(value)
-	if len(errs) == 0 {
-		t.walk(root, value, "", &errs)
+	var p problems
+	ambiguities(value, &p)
+	if len(p.errs) == 0 {
+		t.walk(root, value, &p)
 	}
+	if len(p.errs) == 0 {
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+	slices.SortFunc(errs, func(a, b FieldError) int {
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+	slices.SortFunc(p.errs, func(a, b FieldError) int {
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+	return &Error{Fields: errs}
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+	return &Error{Fields: p.errs}
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+// walk checks raw, the exact bytes of one JSON value, against node i.
+func (t *Table) walk(i int, raw []byte, path string, errs *[]FieldError) {
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+// maxProblems bounds the problems of one body. A problem's path can be as
+// long as the body, and a body can have a problem every few bytes: listing
+// them all could cost the square of the body (M2 design 3.11).
+const maxProblems = 16
+
+// problems collects the problems of one body while it is read. The path of
+// the value being read is a stack of segments, written out only for a
+// problem: a string per value would cost the square of the depth.
+type problems struct {
+	path []segment
+	errs []FieldError
+}
+
+// segment is one step of a path: a member's name, or an item's index.
+type segment struct {
+	name  string
+	index int // -1 for a name
+}
+
+func (p *problems) enter(name string) { p.path = append(p.path, segment{name, -1}) }
+
+func (p *problems) enterItem(i int) { p.path = append(p.path, segment{"", i}) }
+
+func (p *problems) leave() { p.path = p.path[:len(p.path)-1] }
+
+// full reports whether maxProblems have been reported: the rest is not read.
+func (p *problems) full() bool { return len(p.errs) >= maxProblems }
+
+// report adds a problem at the current path, unless p is full.
+func (p *problems) report(code string) {
+	if !p.full() {
+		p.errs = append(p.errs, FieldError{p.at(), code})
+	}
+}
+
+// at writes out the current path: names joined by dots, indexes in brackets,
+// e.g. tags[1].name; the body itself is the empty path.
+func (p *problems) at() string {
+	var b strings.Builder
+	for _, s := range p.path {
+		switch {
+		case s.index >= 0:
+			b.WriteString("[" + strconv.Itoa(s.index) + "]")
+		case b.Len() > 0:
+			b.WriteString("." + s.name)
+		default:
+			b.WriteString(s.name)
+		}
+	}
+	return b.String()
+}
+
+// walk checks raw, the exact bytes of one JSON value, against node i. It
+// goes only where the schema goes: declared properties, the values of an
+// open map, the items of an array with an item schema. It reads the members
+// of an object in name order, so a body with more than maxProblems problems
+// gets the same ones every time.
+func (t *Table) walk(i int, raw []byte, p *problems) {
+	if p.full() {
+		return
+	}
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+	if n.Types != Any && kind&n.Types == 0 {
+		*errs = append(*errs, FieldError{path, codeInvalidFormat})
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+	if n.Types != Any && kind&n.Types == 0 {
+		p.report(codeInvalidFormat)
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+			*errs = append(*errs, FieldError{path, codeInvalidFormat})
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+			p.report(codeInvalidFormat)
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+		for name, value := range props {
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+		for _, name := range slices.Sorted(maps.Keys(props)) {
+			p.enter(name)
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+				t.walk(child, value, join(path, name), errs)
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+				t.walk(child, props[name], p)
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+				*errs = append(*errs, FieldError{join(path, name), codeNotAllowed})
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+				p.report(codeNotAllowed)
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+				t.walk(n.Extra, value, join(path, name), errs)
+			}
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+				t.walk(n.Extra, props[name], p)
+			}
+			p.leave()
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+				*errs = append(*errs, FieldError{join(path, name), codeRequired})
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+				p.enter(name)
+				p.report(codeRequired)
+				p.leave()
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+			t.walk(n.Items, item, fmt.Sprintf("%s[%d]", path, j), errs)
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+			p.enterItem(j)
+			t.walk(n.Items, item, p)
+			p.leave()
+````
+
+````old server/internal/platform/httpserver/bodyshape/bodyshape.go
+
+func join(path, name string) string {
+	if path == "" {
+		return name
+	}
+	return path + "." + name
+}
+
+````
+
+````new server/internal/platform/httpserver/bodyshape/bodyshape.go
+
+````
+
+````file server/internal/platform/httpserver/bodyshape/cost_test.go
+package bodyshape
+
+import (
+	"errors"
+	"fmt"
+	"runtime"
+	"slices"
+	"strings"
+	"testing"
+)
+
+// At most maxProblems problems come back, and the same ones every time: the
+// first in the body for the ambiguities, the first by name for the
+// structure (the members are written in reverse order here).
+func TestCheckListsAtMostSixteenProblems(t *testing.T) {
+	var twice, undeclared []string
+	var wantTwice, wantUndeclared []FieldError
+	for i := range 20 {
+		name := fmt.Sprintf("x%02d", i)
+		twice = append(twice, `"`+name+`":1,"`+name+`":2`)
+		undeclared = slices.Insert(undeclared, 0, `"`+name+`":1`)
+		if i < 16 {
+			wantTwice = append(wantTwice, FieldError{name, "duplicate"})
+			wantUndeclared = append(wantUndeclared, FieldError{name, "not_allowed"})
+		}
+	}
+	const valid = `"name":"a","nested":{"a":"y"},`
+	tests := []struct {
+		name string
+		body string
+		want []FieldError
+	}{
+		{"twenty names twice", `{` + valid + strings.Join(twice, ",") + `}`, wantTwice},
+		{"twenty undeclared names", `{` + valid + strings.Join(undeclared, ",") + `}`, wantUndeclared},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var shape *Error
+			if err := things().Check(pattern, []byte(tt.body)); !errors.As(err, &shape) {
+				t.Fatalf("Check = %v, want a *Error", err)
+			}
+			if !slices.Equal(shape.Fields, tt.want) {
+				t.Errorf("Check = %v, want %v", shape.Fields, tt.want)
+			}
+		})
+	}
+}
+
+// A body can nest values as deep as json.Valid allows, and have a problem
+// every few bytes under a long name. Check keeps the path as a stack and
+// lists at most maxProblems problems, so what it allocates grows with the
+// body. A path string for every value costs the square of the depth, and
+// every problem with its path the number of problems times the name: each
+// body here makes such code allocate hundreds of megabytes, and gigabytes at
+// the 1 MiB body limit (M2 design 3.11). Not parallel: TotalAlloc counts the
+// whole process.
+func TestCheckCostsAboutTheBody(t *testing.T) {
+	// An open map of closed objects: a client's key is part of every path under it.
+	groups := &Table{
+		Nodes: []Node{
+			{Types: Object, Extra: 1, Items: Open, Props: map[string]int{}},
+			{Types: Object, Extra: Closed, Items: Open, Props: map[string]int{}},
+		},
+		Roots: map[string]int{pattern: 0},
+	}
+	long := strings.Repeat("n", 1<<16)
+	var members []string
+	for i := range 8000 {
+		members = append(members, fmt.Sprintf(`"m%04d":1`, i))
+	}
+	tests := []struct {
+		name  string
+		table *Table
+		body  string
+	}{
+		{"objects nested as deep as JSON allows", things(),
+			strings.Repeat(`{"nnnnnnnnnnnnnnnn":`, 10000) + "1" + strings.Repeat("}", 10000)},
+		{"arrays nested as deep as JSON allows", things(), strings.Repeat("[", 10000) + strings.Repeat("]", 10000)},
+		{"strings that are not UTF-8 under a long name", things(),
+			`{"` + long + `":[` + strings.Repeat("\"\xff\",", 7999) + "\"\xff\"]}"},
+		{"undeclared members under a long map key", groups, `{"` + long + `":{` + strings.Join(members, ",") + `}}`},
+	}
+	for _, tt := range tests {
+		runtime.GC()
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		err := tt.table.Check(pattern, []byte(tt.body))
+		runtime.ReadMemStats(&after)
+
+		var shape *Error
+		if !errors.As(err, &shape) {
+			t.Fatalf("%s: Check = %v, want a *Error", tt.name, err)
+		}
+		if got := after.TotalAlloc - before.TotalAlloc; got > 64<<20 {
+			t.Errorf("%s: Check of %d bytes allocated %d MiB, want at most 64", tt.name, len(tt.body), got>>20)
+		}
+		t.Logf("%s: %d bytes, %d problems, allocated %d KiB", tt.name, len(tt.body), len(shape.Fields),
+			(after.TotalAlloc-before.TotalAlloc)>>10)
+	}
+}
 ````
 
 ````old server/internal/shared/error.go
@@ -492,19 +810,23 @@ func TestADuplicateSaysWhy(t *testing.T) {
   duplicate: "auth.errors.field.duplicate",
 ````
 
-- [ ] **Step 2：生成**：`make gen`。`git status --short` 多出三个生成的文件，都只是枚举多了 `duplicate`：`api/dist/openapi.yaml`、`server/internal/platform/httpserver/apigen/components.gen.go`、`web/packages/api-client/src/schema.gen.ts`。
+- [ ] **Step 2：生成**：`make gen`。`git status --short` 多出三个生成的文件，都只是枚举多了 `duplicate`；`shasum -a 256` 与原型的相同：
+  - `api/dist/openapi.yaml`：`5dd975f9fbf04c785281efd9d3276f97dd6b7abe6cd9d785231151944c9bf1cc`；
+  - `server/internal/platform/httpserver/apigen/components.gen.go`：`3a5a3b29d2cdc22578aa28a5f259734f11db1fe4b74fe3e8f4413b2ab9b1c953`；
+  - `web/packages/api-client/src/schema.gen.ts`：`6a2ddc966b855c5b316d54395265b825ad74daa5b72dad7d072ffe2394573505`。
 
 - [ ] **Step 3：检查**：
   - `go -C server test -count=1 ./internal/platform/httpserver/bodyshape/ -run 'TestCheckReadsABodyOneWayOnly|TestADuplicateSaysWhy' -v` → 24 个子测试和 `TestADuplicateSaysWhy` 都是 `PASS`；
+  - `go -C server test -count=1 ./internal/platform/httpserver/bodyshape/ -run 'TestCheckListsAtMostSixteenProblems|TestCheckCostsAboutTheBody' -v` → 两个都 `PASS`；代价的测试记下四个请求体各分配多少，原型上是 `objects nested as deep as JSON allows: 210001 bytes, 3 problems, allocated 1529 KiB`、`arrays …: 20000 bytes, 1 problems, allocated 977 KiB`、`strings that are not UTF-8 under a long name: 97542 bytes, 16 problems, allocated 2600 KiB`、`undeclared members under a long map key: 145542 bytes, 16 problems, allocated 5951 KiB`（KiB 数随运行略有不同，上限是 64 MiB；逐层写出路径的第一稿各要 844、150、564、1130 MiB，spec 附录 B 的 eager-paths）；
   - `go -C server test -count=1 ./internal/platform/httpserver/... ./internal/shared/` → 全部 `ok`；`go -C server test -count=1 ./internal/bootstrap/ -run TestFieldCodesAreTheContractsEnum` → `ok`（契约的枚举和 `shared.FieldCodes()` 相等）；
   - `pnpm -C web/apps/web exec vitest run helpers/authentication.helper.test.ts` → 全部通过（字段码表覆盖枚举、文案键存在）；
   - `make lint-go` → 两段 `0 issues.`。
 
-- [ ] **Step 4：提交**（`fix(M2/codex-fixes): bodyshape reads a body one way only; a duplicate name or invalid Unicode is 400`）
+- [ ] **Step 4：提交**（`fix(M2/codex-fixes): bodyshape reads a body one way only, at a cost that follows the body; a duplicate name or invalid Unicode is 400`）
 
 ### Task 2: 每个带请求体的操作都拒绝重复和非 UTF-8；A10 发 Codex 的请求
 
-spec 2.2 的回归。`apitest.BodyCases` 为每个带请求体的操作加三种用例：第一个字段出现两次、嵌套对象的第一个字段在其中出现两次（有嵌套对象时）、第一个字符串字段的值是字节 `0xff`。它们用 `raw` 把 `json.Marshal` 写不出的文字放进合法的请求体。第四个整程序测试据此发给真实组合的程序。A10 的新故事用 Playwright 的 `request` 原样发 Codex 的两个请求体（生成的客户端的对象装不下重复的键）。
+spec 2.2 的回归。`apitest.BodyCases` 为每个带请求体的操作加三种用例：第一个字段出现两次、嵌套对象的第一个字段在其中出现两次（有嵌套对象时）、第一个字符串字段的值是字节 `0xff`。它们用 `raw` 把 `json.Marshal` 写不出的文字放进合法的请求体。第四个整程序测试据此发给真实组合的程序。A10 的新故事用 Playwright 的 `request` 原样发 Codex 的两个请求体（生成的客户端的对象装不下重复的键）。不变式②的前提由契约的写法检查守住：`closedObject` 从 `schema()` 调用，查每个对象 schema，组件和内联的都查（`components()` 不再另调，同一个组件不报两次）；`rules_cases_test.go` 加两个内联的反例（属性里的对象、数组项里的对象）。现在的契约照样通过。
 
 - [ ] **Step 1：应用块**（`… apply . 2`）：
 
@@ -637,6 +959,77 @@ const rawMark = "nerve_raw_value"
 // one, so the body check, not the authentication, answers.
 ````
 
+````old server/internal/platform/httpserver/apitest/rules_test.go
+// whole-program tests build, closedObject additionalProperties, and schema
+// the keywords that oapi-codegen mistranslates.
+````
+
+````new server/internal/platform/httpserver/apitest/rules_test.go
+// whole-program tests build, and schema the keywords that oapi-codegen
+// mistranslates and, through closedObject, additionalProperties.
+````
+
+````old server/internal/platform/httpserver/apitest/rules_test.go
+	for _, name := range slices.Sorted(maps.Keys(c.Schemas)) {
+		r.closedObject("components/schemas/"+name, c.Schemas[name])
+````
+
+````new server/internal/platform/httpserver/apitest/rules_test.go
+	for _, name := range slices.Sorted(maps.Keys(c.Schemas)) {
+````
+
+````old server/internal/platform/httpserver/apitest/rules_test.go
+// closedObject lets contract tests catch undocumented fields: a component
+// object schema must set additionalProperties: false. The rule targets
+// response objects and is applied to request schemas as well. Exempt are
+````
+
+````new server/internal/platform/httpserver/apitest/rules_test.go
+// closedObject lets contract tests catch undocumented fields: every object
+// schema, a component or an inline one, must set additionalProperties: false.
+// The rule targets response objects and is applied to request schemas as
+// well, where it keeps the decoder's case-insensitive match of field names
+// out of reach (M2 design 3.11, invariant 2). Exempt are
+````
+
+````old server/internal/platform/httpserver/apitest/rules_test.go
+// schema checks the keywords that oapi-codegen mistranslates, in the schema
+// and, recursively, its inline subschemas; a $ref is checked where its target
+// is defined. kin-openapi decodes `nullable: false` and `const: null` to zero
+````
+
+````new server/internal/platform/httpserver/apitest/rules_test.go
+// schema checks that an object is closed and the keywords that oapi-codegen
+// mistranslates, in the schema and, recursively, its inline subschemas; a
+// $ref is checked where its target is defined. kin-openapi decodes `nullable: false` and `const: null` to zero
+````
+
+````old server/internal/platform/httpserver/apitest/rules_test.go
+		return
+	}
+	s := ref.Value
+````
+
+````new server/internal/platform/httpserver/apitest/rules_test.go
+		return
+	}
+	r.closedObject(where, ref)
+	s := ref.Value
+````
+
+````old server/internal/platform/httpserver/apitest/rules_cases_test.go
+		{"additionalProperties: true", thing, "    Thing:\n      type: object\n      additionalProperties: true\n", "components/schemas/Thing" + open},
+````
+
+````new server/internal/platform/httpserver/apitest/rules_cases_test.go
+		{"additionalProperties: true", thing, "    Thing:\n      type: object\n      additionalProperties: true\n", "components/schemas/Thing" + open},
+		{"open inline object", "        labels: {type: array, items: {type: string}}\n",
+			"        labels: {type: array, items: {type: string}}\n        nested: {type: object, properties: {a: {type: string}}}\n",
+			"components/schemas/Thing/properties/nested" + open},
+		{"open object in items", "items: {type: string}", "items: {type: object, properties: {a: {type: string}}}",
+			"components/schemas/Thing/properties/labels/items" + open},
+````
+
 ````old e2e/stories/identity/a10-onboarding-profile.spec.ts
   expect(await onboardingStepsOf(db, email)).toEqual(merged);
 });
@@ -689,14 +1082,15 @@ test("A10 (API): onboarding_step twice is the platform's 400, whatever the other
 
 - [ ] **Step 2：检查**：
   - `go -C server test -count=1 ./internal/platform/httpserver/apitest/ -run TestBodyCases` → `ok`；
+  - `go -C server test -count=1 ./internal/platform/httpserver/apitest/ -run 'TestAuthoringRulesReportViolations|TestContractFollowsAuthoringRules' -v` → 两个都 `PASS`，其中有 `open_inline_object` 和 `open_object_in_items`；
   - `go -C server test -count=1 ./internal/bootstrap/ -run TestBodiesThatBreakTheStructureAnswer400 -v` → 新的 17 个子测试（8 个操作的"`<字段>` twice"和"not UTF-8 in `<字段>`"，`onboarding_step.profile_complete twice`）和原有的都 `PASS`；
   - `make build`，然后 `pnpm -C e2e exec playwright test a10-onboarding` → `5 passed`。
 
-- [ ] **Step 3：提交**（`test(M2/codex-fixes): every body operation refuses a duplicate and invalid UTF-8; A10 sends Codex's request`）
+- [ ] **Step 3：提交**（`test(M2/codex-fixes): every body operation refuses a duplicate and invalid UTF-8; closedObject checks inline objects; A10 sends Codex's request`）
 
-### Task 3: 令牌管理器在每个 `await` 之后重读记录
+### Task 3: 令牌管理器在请求和锁回来之后重读记录
 
-spec 2.3。`signOut` 在 `logout` 回来之后经新的 `#end(loginId)` 重读记录：仍是自己的会话才删除，否则跟随；`endSession` 用同一个 `#end`。`#firstRefresh` 在续期失败之后、设"会话暂不可用"之前重读：已是另一个会话就跟随，不设状态、不排重试。两个测试用 `gate` 扣住请求、写过期的租约、用包着 `locks.run` 的锁推迟交回，强制出 Codex 的顺序。
+spec 2.3。`signOut` 在 `logout` 回来之后经新的 `#end(loginId)` 重读记录：仍是自己的会话才删除，否则跟随；`endSession` 用同一个 `#end`。`#firstRefresh` 在续期失败之后、设"会话暂不可用"之前重读：已是另一个会话就跟随，不设状态、不排重试。文件头的注释照代码写：每个请求的 `await` 之后、锁把失败的第一次续期交回来之后重读；登录按"最后登录为准"不重读。两个测试用 `gate` 扣住请求、写过期的租约、用包着 `locks.run` 的锁推迟交回，强制出 Codex 的顺序。
 
 - [ ] **Step 1：应用块**（`… apply . 3`）：
 
@@ -706,8 +1100,10 @@ spec 2.3。`signOut` 在 `logout` 回来之后经新的 `#end(loginId)` 重读�
 
 ````new web/apps/web/core/lib/auth/token-manager.ts
 // every decision reads the record there now, never a copy: a record of another session is followed. After
-// each await (a request, the lock), the record is read again before anything is written or decided: without
-// navigator.locks, the lease is not atomic, and another tab may sign in meanwhile (M2 design 7.1).
+// each request's await, and after the lock hands a failed first refresh back, the record is read again before
+// anything is written or decided: without navigator.locks, the lease is not atomic, and another tab may sign
+// in meanwhile (M2 design 7.1). A sign-in writes its new session's record without reading it: the last sign-in
+// wins.
 ````
 
 ````old web/apps/web/core/lib/auth/token-manager.ts
@@ -917,11 +1313,11 @@ describe("after an await", () => {
 
 - [ ] **Step 2：检查**：`pnpm -C web/apps/web exec vitest run core/lib/auth/` → 全部通过，其中 `token-manager.session-change.test.ts` 为 16 个（新的 2 个在 `describe("after an await")` 下）。
 
-- [ ] **Step 3：提交**（`fix(M2/codex-fixes): the token manager reads the record again after each await`）
+- [ ] **Step 3：提交**（`fix(M2/codex-fixes): the token manager reads the record again after a request or the lock`）
 
 ### Task 4: 服务角色的权限：`deploy/runtime-grants.sql` 和守住它的测试
 
-spec 2.4。文件逐个列出表和序列，授权给组角色 `nerve_runtime`。`runtime_role_test.go` 在自己的 testcontainers 库里建所有者和服务两个角色：所有者迁移并执行文件，服务角色运行整个 nerve；另一个测试核对库里每张表、每个序列的实际权限等于文件的规则（多给、少给都失败）。README 的"迁移"一条改为指向文件；River 索引的删除一句补上分离角色的情况。
+spec 2.4。文件逐个列出表和序列，按表给读写（DML），授权给组角色 `nerve_runtime`；函数和类型靠 PostgreSQL 默认给 PUBLIC 的权限，文件头写明这个范围。`runtime_role_test.go` 在自己的 testcontainers 库里建所有者和服务两个角色：所有者迁移并执行文件，服务角色运行整个 nerve；另一个测试核对 `public` 里每张表、视图、物化视图、序列和函数的实际权限等于文件的规则（多给、少给都失败）。README 的"迁移"一条改为指向文件，写明少了哪种权限是什么结果；River 索引的删除一句补上分离角色的情况。
 
 - [ ] **Step 1：应用块**（`… apply . 4`）：
 
@@ -931,8 +1327,14 @@ spec 2.4。文件逐个列出表和序列，授权给组角色 `nerve_runtime`�
 -- Run it as the owner of the tables after every `nerve migrate up`: it names each table and sequence, and a new
 -- migration may add one. Running it again changes nothing.
 --
+-- Tables get reads and writes (DML) by table: no TRUNCATE, REFERENCES, TRIGGER or DDL. Functions and types get
+-- nothing here: PUBLIC may run every function and use every type by default, and River's river_job_state_in_bitmask
+-- and river_job_state rely on that. A migration that adds a view grants SELECT on it here; one that takes EXECUTE
+-- on a function from PUBLIC grants it here.
+--
 -- server/internal/bootstrap/runtime_role_test.go runs nerve on a role with exactly these grants (ready, River's
--- jobs, River's reindex), and fails when a table or sequence of the schema has no grant here.
+-- jobs, River's reindex), and fails when a table, view, sequence or function of the schema public has other
+-- privileges than these.
 
 GRANT USAGE ON SCHEMA public TO nerve_runtime;
 
@@ -977,7 +1379,7 @@ import (
 // The role nerve serves with when another role owns the tables and runs the
 // migrations (README "部署"): a login role in the group role nerve_runtime,
 // which deploy/runtime-grants.sql grants to. These tests run nerve on such a
-// role, and hold the file to every table and sequence of the schema.
+// role, and hold the file to every relation and function of the schema.
 
 // splitRoles is a database whose tables belong to an owner role that ran the
 // migrations and then deploy/runtime-grants.sql, and a login role in
@@ -1088,53 +1490,65 @@ func TestTheRuntimeRoleServesWithTheGrantsFile(t *testing.T) {
 	}
 }
 
-// Every table and sequence the migrations leave has its grant in the file,
-// and no more: a migration that adds one fails here until the file grants
+// Every table, view, materialized view, sequence and function the
+// migrations leave in the schema public has its grant, and no more: a
+// migration that adds one fails here until deploy/runtime-grants.sql grants
 // it. The runtime role reads and writes every table but goose's record,
-// which it only reads; it uses the sequences of the tables it writes; it
-// may reindex River's jobs.
-func TestTheGrantsFileCoversEveryTableAndSequence(t *testing.T) {
+// which it only reads; it reads the views; it uses the sequences of the
+// tables it writes; it may reindex River's jobs; it runs the functions,
+// River's river_job_state_in_bitmask among them, which it may through
+// PUBLIC's default EXECUTE. Types are left to PUBLIC's default USAGE.
+func TestTheGrantsFileCoversEveryRelationAndFunction(t *testing.T) {
 	roles := newSplitRoles(t)
 	rows, err := roles.owner.Query(context.Background(), `
-		SELECT c.relname, c.relkind = 'S',
-		       CASE WHEN c.relkind = 'S' THEN ARRAY[has_sequence_privilege($1, c.oid, 'USAGE'), false, false, false, false, false, false, false]
+		SELECT c.relname, c.relkind::text,
+		       CASE WHEN c.relkind = 'S' THEN ARRAY[has_sequence_privilege($1, c.oid, 'USAGE'),
+		                       has_sequence_privilege($1, c.oid, 'SELECT'), has_sequence_privilege($1, c.oid, 'UPDATE')]
 		            ELSE ARRAY[has_table_privilege($1, c.oid, 'SELECT'), has_table_privilege($1, c.oid, 'INSERT'),
 		                       has_table_privilege($1, c.oid, 'UPDATE'), has_table_privilege($1, c.oid, 'DELETE'),
 		                       has_table_privilege($1, c.oid, 'TRUNCATE'), has_table_privilege($1, c.oid, 'REFERENCES'),
 		                       has_table_privilege($1, c.oid, 'TRIGGER'), has_table_privilege($1, c.oid, 'MAINTAIN')] END
 		  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-		 WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'S')
-		 ORDER BY c.relname`, roles.serverName)
+		 WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'S')
+		UNION ALL
+		SELECT p.oid::regprocedure::text, 'f', ARRAY[has_function_privilege($1, p.oid, 'EXECUTE')]
+		  FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+		 WHERE n.nspname = 'public'
+		 ORDER BY 1`, roles.serverName)
 	if err != nil {
 		t.Fatal(err)
 	}
+	privileges := map[string][]string{
+		"S": {"USAGE", "SELECT", "UPDATE"},
+		"f": {"EXECUTE"},
+	}
 	tablePrivileges := []string{"SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"}
 	dml := []string{"SELECT", "INSERT", "UPDATE", "DELETE"}
-	seen := 0
+	seen := map[string]int{}
 	for rows.Next() {
-		var name string
-		var sequence bool
+		var name, kind string
 		var has []bool
-		if err := rows.Scan(&name, &sequence, &has); err != nil {
+		if err := rows.Scan(&name, &kind, &has); err != nil {
 			t.Fatal(err)
 		}
-		seen++
+		seen[kind]++
+		names, ok := privileges[kind]
+		if !ok {
+			names = tablePrivileges
+		}
 		var got, want []string
 		for i, ok := range has {
-			if !ok {
-				continue
-			}
-			if sequence {
-				got = append(got, "USAGE")
-			} else {
-				got = append(got, tablePrivileges[i])
+			if ok {
+				got = append(got, names[i])
 			}
 		}
 		switch {
 		case name == "goose_db_version_id_seq":
-		case sequence:
+		case kind == "S":
 			want = []string{"USAGE"}
-		case name == "goose_db_version":
+		case kind == "f":
+			want = []string{"EXECUTE"}
+		case kind == "v", kind == "m", name == "goose_db_version":
 			want = []string{"SELECT"}
 		case name == "river_job":
 			want = append(slices.Clone(dml), "MAINTAIN")
@@ -1142,14 +1556,14 @@ func TestTheGrantsFileCoversEveryTableAndSequence(t *testing.T) {
 			want = dml
 		}
 		if !slices.Equal(got, want) {
-			t.Errorf("%s: %s has %v, want %v: deploy/runtime-grants.sql grants each table and sequence", name, roles.serverName, got, want)
+			t.Errorf("%s: %s has %v, want %v: deploy/runtime-grants.sql grants each of them", name, roles.serverName, got, want)
 		}
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if seen == 0 {
-		t.Fatal("no table or sequence in the schema public")
+	if seen["r"] == 0 || seen["S"] == 0 || seen["f"] == 0 {
+		t.Fatalf("the schema public has %v tables (r), sequences (S) and functions (f), want some of each", seen)
 	}
 }
 ````
@@ -1160,9 +1574,9 @@ func TestTheGrantsFileCoversEveryTableAndSequence(t *testing.T) {
 
 ````new README.md
 - **迁移**：prod 默认不在启动时迁移（`database.auto_migrate: false`），先执行 `nerve migrate up`，再 `nerve serve`。
-  - **迁移和服务分用两个数据库角色时**（表的所有者执行迁移，服务用另一个角色），服务的角色需要的权限全部写在 [`deploy/runtime-grants.sql`](deploy/runtime-grants.sql)：业务表的读写，River 的表和序列，`river_job` 的 `MAINTAIN`（River 每天 00:00 UTC 用 `REINDEX INDEX CONCURRENTLY` 重建它的索引，需要 PostgreSQL 17 起），`goose_db_version` 的读（`/readyz` 靠它判断迁移是否已完成）。文件授权给组角色 `nerve_runtime`：先建一次组角色，服务登录用的角色加入它，例如 `CREATE ROLE nerve_runtime NOLOGIN;`、`CREATE ROLE nerve_app LOGIN PASSWORD '…' IN ROLE nerve_runtime;`。
+  - **迁移和服务分用两个数据库角色时**（表的所有者执行迁移，服务用另一个角色），服务的角色需要的权限全部写在 [`deploy/runtime-grants.sql`](deploy/runtime-grants.sql)：业务表的读写，River 的表和序列，`river_job` 的 `MAINTAIN`（River 每天 00:00 UTC 用 `REINDEX INDEX CONCURRENTLY` 重建它的索引，需要 PostgreSQL 17 起），`goose_db_version` 的读（`/readyz` 靠它判断迁移是否已完成）。按表给读写（DML），不给 `TRUNCATE`、`REFERENCES`、`TRIGGER` 和 DDL。函数和类型不在文件里：PostgreSQL 默认让 PUBLIC 执行函数、使用类型，River 的 `river_job_state_in_bitmask` 和 `river_job_state` 靠的就是它；迁移收回了 PUBLIC 的这些权限时，把它们加进文件。文件授权给组角色 `nerve_runtime`：先建一次组角色，服务登录用的角色加入它，例如 `CREATE ROLE nerve_runtime NOLOGIN;`、`CREATE ROLE nerve_app LOGIN PASSWORD '…' IN ROLE nerve_runtime;`。
   - **每次 `nerve migrate up` 之后**，以表的所有者执行一次这个文件，例如 `psql -v ON_ERROR_STOP=1 -f deploy/runtime-grants.sql`：新的迁移可能加了表，文件逐个列出表和序列；重复执行没有影响。
-  - 少了权限时 `/readyz` 仍是 200，但 River 的任务（会话清理）和索引重建因 `permission denied`（42501）失败，只记在日志里。`server/internal/bootstrap/runtime_role_test.go` 用恰好这些权限的角色运行 nerve（就绪、会话清理、索引重建），库里有表或序列的权限与文件不符时失败。
+  - 少了 River 的权限时 `/readyz` 仍是 200，River 的任务（会话清理）和索引重建因 `permission denied`（42501）失败，只记在日志里；少了业务表的权限时接口请求失败；少了 `goose_db_version` 的读时 `/readyz` 是 503。`server/internal/bootstrap/runtime_role_test.go` 用恰好这些权限的角色运行 nerve（就绪、会话清理、索引重建），`public` 里有表、视图、序列或函数的权限与文件不符时失败。
 ````
 
 ````old README.md
@@ -1173,7 +1587,7 @@ func TestTheGrantsFileCoversEveryTableAndSequence(t *testing.T) {
 - **停机时 River 的日志**：nerve 启动后的最初几秒内停机时，River 可能记几条 ERROR：它的维护服务还在错开启动时是 `maintenance.PeriodicJobEnqueuer: Error starting transaction`（`context canceled`）；nerve 还没记 `jobs started` 时，还可能有 `notifier.Notifier: Error running listener (will attempt reconnect after backoff)` 等几条 `conn closed`。这是 River 停止时自己记的，不是故障：退出码为 0，没有任务停在 `running`，没有连接泄漏；这次没投递的会话清理，下次启动时投递。运行中的 nerve 停机，只有恰好落在清理任务投递的那几毫秒（每 `auth.session_cleanup_interval` 一次）才会出现第一条。River 每天 00:00 UTC 用 `REINDEX INDEX CONCURRENTLY` 重建 `river_job` 的索引；停机打断重建时，River 先删掉没建完的 `*_ccnew` 索引再停下，这次删除最多等 15 秒。有访问过 `river_job` 的长事务挡住删除、超过 `jobs.shutdown_timeout` 加 1 秒时，nerve 记 ERROR（`jobs still running …`）并以退出码 1 退出；挡满 15 秒时索引留下，River 此后跳过这个索引，每次重建都记 WARN `maintenance.Reindexer: Found reindex artifact … skipping reindex`：用 `DROP INDEX CONCURRENTLY` 删掉这条 WARN 的 `artifact_names` 中列出的索引。迁移和服务分用两个角色时，索引属于表的所有者，服务的角色删不掉它（River 停机时的那次删除也会因此失败，索引留下）：由表的所有者执行这条删除。
 ````
 
-- [ ] **Step 2：检查**：`go -C server test -count=1 ./internal/bootstrap/ -run 'TestTheRuntimeRoleServesWithTheGrantsFile|TestTheGrantsFileCoversEveryTableAndSequence' -v` → 两个都 `PASS`（原型上约 4.5 秒）。
+- [ ] **Step 2：检查**：`go -C server test -count=1 ./internal/bootstrap/ -run 'TestTheRuntimeRoleServesWithTheGrantsFile|TestTheGrantsFileCoversEveryRelationAndFunction' -v` → 两个都 `PASS`（原型上约 3 秒）。
 
 - [ ] **Step 3：提交**（`feat(M2/codex-fixes): the runtime role's grants in deploy/runtime-grants.sql, proven by serving on them`）
 
@@ -1538,7 +1952,7 @@ async function takeProfileStep(page: Page, watch: PageWatch, db: Database, email
 
 ### Task 7: 一个 store 的修改一个接一个发出
 
-spec 2.8。`oneAtATime()` 返回一个队列：每个任务在前一个结束（成功或失败）之后才开始。`ProfileStore.updateUserProfile` 和 `UserStore.updateCurrentUser` 经它发出，编号和"丢弃较旧的应答"删除。两个 store 的测试改写（`whole` 块）。A9 的新故事是 Codex 的页面实验：第一个修改在路由上扣住，再选一次，一个已应答的探测请求证明第二个修改没有发出（spec D7），放行之后页面、接口、数据库和刷新都是最后的选择。
+spec 2.8。`oneAtATime()` 返回一个队列：每个任务在前一个结束（成功或失败）之后才开始；它的注释只对有了应答的修改承诺顺序。`ProfileStore.updateUserProfile` 和 `UserStore.updateCurrentUser` 经它发出，编号和"丢弃较旧的应答"删除。两个 store 的测试改写（`whole` 块）。A9 的新故事是 Codex 的页面实验：第一个修改在路由上扣住，再选一次，一个已应答的探测请求证明第二个修改没有发出（spec D7），放行之后页面、接口、数据库和刷新都是最后的选择。
 
 - [ ] **Step 1：应用块**（`… apply . 7`）：
 
@@ -1551,7 +1965,10 @@ spec 2.8。`oneAtATime()` 返回一个队列：每个任务在前一个结束（
 /**
  * A queue that runs the tasks given to it one at a time, in the order given: each starts once the one before it
  * has settled, whether it succeeded or failed. A store sends its changes of one resource through one, so nerve
- * applies them in the order they were made, and the last change made is what nerve holds (v0 design 7.7).
+ * applies the changes it answers in the order they were made, and the last change answered is what nerve holds
+ * (v0 design 7.7). A change that failed without an answer (the connection broke after the request reached nerve)
+ * may still be applied after the next one. A task that never settles holds the queue: nerve answers every request
+ * it receives within its server.request_timeout.
  */
 export function oneAtATime(): <T>(task: () => Promise<T>) => Promise<T> {
   let last: Promise<unknown> = Promise.resolve();
@@ -1968,7 +2385,7 @@ test("A9 (page): two changes of the language in a row reach nerve one after the 
 
 ### Task 8: 页面的主题只在 `StoreWrapper` 按会话设置
 
-spec 2.5。没有会话时设"跟随系统"，每个会话第一次取到资料时用资料的主题；`startSession` 写的主题和切换账户弹窗的 `setTheme` 删除（`store-context.test.ts` 随之不再记主题）。A5、A6、A12 的页面版本先让资料的主题是深色，断言页面先是 `dark`，会话结束（续期被拒、退出、停用）之后是 `light`。
+spec 2.5。没有会话时设"跟随系统"，每个会话第一次取到资料时用资料的主题；决定写成 `session-theme.ts` 的纯函数 `sessionTheme`，`StoreWrapper` 的效果只调用它、记下会话、设主题，5 个单元测试覆盖没有会话、会话的第一份资料、同一会话再跑或资料的主题变了、新的会话。`startSession` 写的主题和切换账户弹窗的 `setTheme` 删除（`store-context.test.ts` 随之不再记主题）。A5、A6、A12 的页面版本先让资料的主题是深色，断言页面先是 `dark`，会话结束（续期被拒、退出、停用）之后是 `light`。
 
 - [ ] **Step 1：应用块**（`… apply . 8`）：
 
@@ -1993,6 +2410,7 @@ import { useUser, useUserProfile } from "@/hooks/store/user";
 import type { IUserStore } from "@/store/user";
 // lib
 import { useSession } from "@/lib/auth/use-session";
+import { sessionTheme } from "@/lib/wrappers/session-theme";
 
 type TStoreWrapper = {
   children: ReactNode;
@@ -2023,20 +2441,16 @@ function StoreWrapper(props: TStoreWrapper) {
   }, [sidebarCollapsed, setTheme, toggleSidebar]);
 
   /**
-   * The page's theme follows the tab's session (v0 design 7.7), here and nowhere else: without a session (signed out
-   * in this tab or another, the account deactivated, a refresh refused), the default; with one, its profile's, once,
-   * when the profile first arrives. Later changes are applied by the component that makes them, once nerve holds
-   * them (theme-switcher.tsx). Until a new session's profile arrives, the page keeps the theme it shows.
+   * The page's theme follows the tab's session (v0 design 7.7), here and nowhere else (session-theme.ts): without a
+   * session (signed out in this tab or another, the account deactivated, a refresh refused), the default; with one,
+   * its profile's, once, when the profile first arrives. Later changes are applied by the component that makes them,
+   * once nerve holds them (theme-switcher.tsx). Until a new session's profile arrives, the page keeps the theme it
+   * shows.
    */
   useEffect(() => {
-    if (status === "signed-out") {
-      themedBy.current = undefined;
-      setTheme("system");
-      return;
-    }
-    if (!userProfile?.theme || themedBy.current === user) return;
-    themedBy.current = user;
-    setTheme(userProfile.theme);
+    const next = sessionTheme(status, user, userProfile?.theme, themedBy.current);
+    themedBy.current = next.themedBy;
+    if (next.theme) setTheme(next.theme);
   }, [status, user, userProfile?.theme, setTheme]);
 
   /**
@@ -2058,6 +2472,77 @@ function StoreWrapper(props: TStoreWrapper) {
 }
 
 export default observer(StoreWrapper);
+````
+
+````file web/apps/web/core/lib/wrappers/session-theme.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import type { SessionState } from "@/lib/auth/token-manager";
+
+/**
+ * The page's theme as the tab's session has it (v0 design 7.7): without a session, the default; with one, its
+ * profile's, once per session, when the profile first arrives. session identifies the session (each has its own
+ * user store) and themedBy the one whose profile's theme the page took last. It returns the theme to set, or
+ * undefined to keep the one shown, and the session themedBy is now. Once per session, because a later change of
+ * the profile's theme is applied by the component that makes it (theme-switcher.tsx), and a stale profile must not
+ * set its theme again each time the page's theme changes (next-themes' setTheme changes with it, in this tab or
+ * another).
+ */
+export function sessionTheme<S>(
+  status: SessionState["status"],
+  session: S,
+  profileTheme: string | undefined,
+  themedBy: S | undefined
+): { theme: string | undefined; themedBy: S | undefined } {
+  if (status === "signed-out") return { theme: "system", themedBy: undefined };
+  if (!profileTheme || themedBy === session) return { theme: undefined, themedBy };
+  return { theme: profileTheme, themedBy: session };
+}
+````
+
+````file web/apps/web/core/lib/wrappers/session-theme.test.ts
+/**
+ * Copyright (c) 2026-present OpenNerve
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { describe, expect, it } from "vitest";
+import { sessionTheme } from "@/lib/wrappers/session-theme";
+
+// StoreWrapper sets the page's theme from what sessionTheme returns, each time its effect runs: when the session,
+// its user store, the profile's theme or next-themes' setTheme changes. Two sessions, as StoreWrapper tells them
+// apart: each has its own user store.
+const X = { session: "X" };
+const Y = { session: "Y" };
+
+describe("sessionTheme", () => {
+  it("is the default without a session, whatever the page took before", () => {
+    expect(sessionTheme("signed-out", Y, undefined, X)).toEqual({ theme: "system", themedBy: undefined });
+    expect(sessionTheme("signed-out", X, "dark", X)).toEqual({ theme: "system", themedBy: undefined });
+  });
+
+  it("is the profile's theme when a session's profile first arrives", () => {
+    expect(sessionTheme("signed-in", X, "dark", undefined)).toEqual({ theme: "dark", themedBy: X });
+  });
+
+  it("keeps the theme shown until the session's profile arrives", () => {
+    expect(sessionTheme("starting", X, undefined, undefined)).toEqual({ theme: undefined, themedBy: undefined });
+    expect(sessionTheme("signed-in", Y, undefined, X)).toEqual({ theme: undefined, themedBy: X });
+  });
+
+  it("is set once per session: not when the effect runs again, nor when the profile's theme changes", () => {
+    expect(sessionTheme("signed-in", X, "dark", X)).toEqual({ theme: undefined, themedBy: X });
+    expect(sessionTheme("signed-in", X, "light", X)).toEqual({ theme: undefined, themedBy: X });
+    expect(sessionTheme("unavailable", X, "dark", X)).toEqual({ theme: undefined, themedBy: X });
+  });
+
+  it("is a new session's profile's theme: a new user store is a new session", () => {
+    expect(sessionTheme("signed-in", Y, "light", X)).toEqual({ theme: "light", themedBy: Y });
+  });
+});
 ````
 
 ````old web/apps/web/core/lib/store-context.tsx
@@ -2281,7 +2766,7 @@ import { bearer, emailFor, recordOf, refresh, register } from "../../fixtures/au
 ````
 
 - [ ] **Step 2：检查**：
-  - `pnpm -C web/apps/web exec vitest run core/lib/store-context.test.ts` → 6 个通过；
+  - `pnpm -C web/apps/web exec vitest run core/lib/store-context.test.ts core/lib/wrappers/session-theme.test.ts` → 11 个通过（6 + 5）；
   - `make lint-web` → `keywords: 60 rules, 3 exceptions, no hits.`，`Tasks: 54 successful, 54 total`；
   - `make build`，然后 `pnpm -C e2e exec playwright test a5-refresh a6-sign-out a12-deact` → `9 passed`。
 
@@ -2289,7 +2774,7 @@ import { bearer, emailFor, recordOf, refresh, register } from "../../fixtures/au
 
 ### Task 9: M2 设计记下这些修复和 Codex 的评审（17.3）
 
-spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Type`、整程序测试第 8、9 项、字段码）、6.1（分开的角色和权限文件）、7.1（`await` 之后重读、退出）、7.5（两个 store 的一格）、7.7（修改的顺序、会话的主题）、8.5（恢复步骤）、8.7（两行）、11.2（只用标准库）、新的 17.3。
+spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式（②由 `closedObject` 查每个对象 schema）、代价跟着请求体走、`Content-Type`、"一次收集全部问题"的两个例外、整程序测试第 8、9 项、字段码、候选二的"解析三遍"）、6.1（分开的角色和权限文件：少了哪种权限是什么结果、按表给 DML、函数和类型的范围）、7.1（请求和锁回来之后重读、登录不重读、退出）、7.5（两个 store 的一格）、7.7（修改的顺序只对有了应答的修改成立、只排队修改；会话的主题和 `sessionTheme`）、8.5（恢复的第一步：退出重登，在新会话里改密码）、8.7（两行）、11.2（只用标准库）、§16（解析三遍的一行）、新的 17.3。
 
 - [ ] **Step 1：应用块**（`… apply . 9`）：
 
@@ -2302,18 +2787,25 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
-      - spike（仓库锁定的 Go 1.27.1）：16 种写法上检查器与解码器的结论全部相同。`date-time`：带 `Z` 和带时区偏移的 RFC 3339 接受；空格分隔、只有日期、数字、布尔、任意字符串拒绝；`Z` 写成 JSON 转义时同样接受。`uuid`：标准写法、大写、无连字符、带花括号、带 `urn:uuid:` 前缀、含 JSON 转义的都接受，非法字符串和数字拒绝。标准库的解析比 RFC 9562 的标准写法宽松，边界与解码器一致，领域拿到的是同一个值。
     - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题，`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`）。
 ````
 
 ````new docs/v0/M2-auth/M2-design.md
-      - spike（仓库锁定的 Go 1.27.1）：16 种写法上检查器与解码器的结论全部相同。`date-time`：带 `Z` 和带时区偏移的 RFC 3339 接受；空格分隔、只有日期、数字、布尔、任意字符串拒绝；`Z` 写成 JSON 转义时同样接受。`uuid`：标准写法、大写、无连字符、带花括号、带 `urn:uuid:` 前缀、含 JSON 转义的都接受，非法字符串和数字拒绝。标准库的解析比 RFC 9562 的标准写法宽松，边界与解码器一致，领域拿到的是同一个值。
     - **一份请求体只有一种读法**（Codex 对 M2 的评审 Critical 1，codex-fixes）：同一个对象里同名的成员出现两次，拒绝，字段码 `duplicate`，`field` 是这个成员的路径，一个名字只报一次；名字按解码之后比较，`"a"` 和它的 `\u` 转义是同一个名字。字符串（成员名或值）不是合法的 Unicode，拒绝，字段码 `invalid_format`：不是 UTF-8 的字节，或者不成对的代理项转义。这是 I-JSON（RFC 7493）的两条要求。这两项先于其余各项检查：有这两种问题的请求体只得到它们，结构在请求体只有一种读法之后才检查。
       - **为什么**：结构检查把对象读成 map，同名的成员以后一个为准；生成的 handler 用 `encoding/json` 把同一个请求体解码进结构体，同名的对象合并，字段名先精确匹配、再不区分大小写地匹配。Codex 的复现：`PATCH /me/profile` 的 `{"onboarding_step":{"WORKSPACE_INVITE":true}}` 得到 400 `not_allowed`，后面再加一个 `"onboarding_step":{}` 就得到 200，`workspace_invite` 写成了 `true`。不是 UTF-8 的字节和落单的代理项被解码器换成 U+FFFD，领域拿到的不是客户端写的文字。
-      - **不变式：结构检查接受的请求体，解码器读不出结构检查没看过的东西。**①每个对象里的名字各不相同（按解码之后比较），map 和结构体读到的是同一组成员，没有可合并的；②每个对象 schema 都是 `additionalProperties: false`（`apitest` 的 `closedObject` 规则），接受的名字恰好是声明的名字，解码器按它们精确匹配，不区分大小写的退路用不上：只差大小写的名字是未声明的字段，400 `not_allowed`；以后的开放 map 由生成的代码按键原样读取；③转义由两边同一个 `encoding/json` 解码，结构检查比较、检查的正是解码之后的名字；④字符串都是合法的 Unicode，解码出的文字就是客户端写的；⑤请求体是一个 JSON 值，前后只有 JSON 空白（`json.Valid`，原有的一条）。
-      - 做法：`bodyshape/ambiguity.go` 在按表检查之前把请求体扫描一遍，只用标准库。第四个整程序测试的第 8、9 项让每个带请求体的操作都拒绝重复的成员和不是 UTF-8 的字节。
-    - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题，`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`）。
+      - **不变式：结构检查接受的请求体，解码器读不出结构检查没看过的东西。**①每个对象里的名字各不相同（按解码之后比较），map 和结构体读到的是同一组成员，没有可合并的；②每个对象 schema，组件和内联的，都是 `additionalProperties: false`（`apitest` 的 `closedObject` 规则逐个检查，`rules_cases_test.go` 有内联的反例），接受的名字恰好是声明的名字，解码器按它们精确匹配，不区分大小写的退路用不上：只差大小写的名字是未声明的字段，400 `not_allowed`；以后要用开放的 map，先改这条规则（生成的代码把 map 的键原样读入 `map[string]T`，不区分大小写的匹配只在结构体的字段上）；③转义由两边同一个 `encoding/json` 解码，结构检查比较、检查的正是解码之后的名字；④字符串都是合法的 Unicode，解码出的文字就是客户端写的；⑤请求体是一个 JSON 值，前后只有 JSON 空白（`json.Valid`，原有的一条）。
+      - 做法：`bodyshape/ambiguity.go` 在按表检查之前把请求体扫描一遍，只用标准库。它只解码成员名，值的字符串在字节上检查。第四个整程序测试的第 8、9 项让每个带请求体的操作都拒绝重复的成员和不是 UTF-8 的字节。
+    - **代价跟着请求体走**（codex-fixes 的预检 H1）：路径按段压栈，只在报问题时写出；一个请求体最多报 16 个问题，扫描和按表检查共用这个上限，满了就停。否则代价是请求体的平方：`json.Valid` 允许嵌套一万层，每层写出一条路径，约 1 MiB 的请求体要 4.4 GB；一个很长的名字下面每隔几个字节一个问题，每个问题都带着这个名字，要 17 GB。现在这两个请求体各用 3 MB、6 MB。按表检查的问题同样受限：开放 map 的键是客户端写的，它下面的每个问题都带着它。按表检查只沿 schema 下降，每层把对象的成员复制一次（`json.Unmarshal` 进 `map[string]json.RawMessage`），代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层，没有数组、开放 map 和递归。第一个递归的请求体 schema 会让它变成请求体乘请求体的深度，那时按表检查改为一遍读完（M4 交接第 4 节）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住这几种请求体，`TestCheckListsAtMostSixteenProblems` 守住上限和"每次报同样的 16 个"（按表检查按名字的顺序读对象的成员）。
+    - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题（能有两种读法的请求体只列出这两种问题；最多 16 个），`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`）。
     - **`Content-Type` 照旧宽松**：`text/plain` 的请求体同样检查、同样解码。Nerve 没有 Cookie 认证，非公开操作都要 `Authorization` 头，跨站的"简单请求"带不上它，所以没有 CSRF 的风险（codex-fixes 核对后保留）。
+````
+
+````old docs/v0/M2-auth/M2-design.md
+    - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），按表检查原始字节（逐层取 `json.RawMessage`，不解码成通用值，格式检查器拿到的就是生成代码解码时看到的字节），收集全部问题，按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析两次，上限 1 MiB，代价可以接受。
+````
+
+````new docs/v0/M2-auth/M2-design.md
+    - `platform/httpserver/bodyshape`：结构表的类型、校验器和中间件。中间件读出请求体（已受请求体上限约束），按表检查原始字节（逐层取 `json.RawMessage`，不解码成通用值，格式检查器拿到的就是生成代码解码时看到的字节），收集问题（最多 16 个），按字段路径排序；然后把请求体原样放回，交给生成的 strict handler 解码。请求体被解析三遍：歧义扫描、按表检查、生成的解码器（之前还有一遍 `json.Valid`）；每遍的代价与请求体成正比（按表检查是请求体乘 schema 的层数，见上面的"代价跟着请求体走"），上限 1 MiB，代价可以接受。
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
@@ -2339,9 +2831,9 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 ````
 
 ````new docs/v0/M2-auth/M2-design.md
-- **分开的迁移角色和服务角色**：生产环境用表的所有者执行迁移、服务用另一个角色时，服务的角色需要的权限全部写在 `deploy/runtime-grants.sql`，授权给组角色 `nerve_runtime`，每次迁移之后由所有者执行：业务表的读写；River 的表和序列；`river_job` 的 `MAINTAIN`（River 每天的 `REINDEX INDEX CONCURRENTLY`，PostgreSQL 17 起）；`goose_db_version` 的 SELECT（`/readyz`，M0-P2 交接 7）。README 的部署说明指向它。少了其中一项时 `/readyz` 仍是 200，River 的任务却因 42501 失败，只记在日志里（Codex 对 M2 的评审 Important 2，codex-fixes）。
-  - 文件逐个列出表和序列，不用 `ON ALL TABLES IN SCHEMA` 加 `ALTER DEFAULT PRIVILEGES`：默认权限只对执行它的那个角色以后建的对象生效，换了执行迁移的角色就悄悄失效，要到部署之后才发现；它还会把 `goose_db_version` 的写权限、`TRUNCATE`、`REFERENCES`、`TRIGGER` 一并给出。
-  - 列表不会漏：`server/internal/bootstrap/runtime_role_test.go` 在库里任何一张表或一个序列的权限与文件的规则不符时失败（新的迁移加了表而文件没有跟上，就是这样），并用恰好这些权限运行 nerve：就绪、River 的清理任务完成、River 的每个索引都能 `REINDEX INDEX CONCURRENTLY`。
+- **分开的迁移角色和服务角色**：生产环境用表的所有者执行迁移、服务用另一个角色时，服务的角色需要的权限全部写在 `deploy/runtime-grants.sql`，授权给组角色 `nerve_runtime`，每次迁移之后由所有者执行：业务表的读写；River 的表和序列；`river_job` 的 `MAINTAIN`（River 每天的 `REINDEX INDEX CONCURRENTLY`，PostgreSQL 17 起）；`goose_db_version` 的 SELECT（`/readyz`，M0-P2 交接 7）。README 的部署说明指向它。少了 River 的权限时 `/readyz` 仍是 200，River 的任务（会话清理）和索引重建因 42501 失败，只记在日志里；少了业务表的权限时接口请求失败；少了 `goose_db_version` 的读时 `/readyz` 是 503（Codex 对 M2 的评审 Important 2，codex-fixes）。
+  - 文件逐个列出表和序列，不用 `ON ALL TABLES IN SCHEMA` 加 `ALTER DEFAULT PRIVILEGES`：默认权限只对执行它的那个角色以后建的对象生效，换了执行迁移的角色就悄悄失效，要到部署之后才发现；`ON ALL TABLES` 给每张表同样的权限，`goose_db_version` 也会得到写权限（写成 `GRANT ALL` 还会连 `TRUNCATE`、`REFERENCES`、`TRIGGER` 一并给出）。文件按表给读写（DML），不给 `TRUNCATE`、`REFERENCES`、`TRIGGER` 和 DDL。函数和类型不在文件里：PostgreSQL 默认让 PUBLIC 执行函数、使用类型，River 的 `river_job_state_in_bitmask` 和 `river_job_state` 靠的就是它。
+  - 列表不会漏：`server/internal/bootstrap/runtime_role_test.go` 在 `public` 里任何一张表、视图、物化视图、序列或函数的权限与文件的规则不符时失败（新的迁移加了表而文件没有跟上，就是这样；视图要 `SELECT`，函数要 `EXECUTE`），并用恰好这些权限运行 nerve：就绪、River 的清理任务完成、River 的每个索引都能 `REINDEX INDEX CONCURRENTLY`。
   - 服务的角色不是表的所有者，删不掉索引：River 的重建被停机打断、留下 `*_ccnew` 索引时，由所有者删除（README"部署"）。
 ````
 
@@ -2351,7 +2843,7 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 
 ````new docs/v0/M2-auth/M2-design.md
   - **每次写 `nerve.auth` 都在同一把锁（或租约）下**（控制者复核 R4）：登录、注册写入新记录，续期换令牌，退出删除记录，都先拿续期用的那把锁。否则登录写入新记录的同时，另一个标签页的续期可能把旧会话的令牌写回去，盖掉新记录。
-  - **每个 `await` 之后先重读记录**（Codex 对 M2 的评审 Important 1，codex-fixes）：一个请求或等锁的 `await` 回来之后，写或删 `nerve.auth`、改本标签页的状态之前，都再读一次记录；它已不是这次操作所属的会话（`login_id` 变了，或者记录没了），就不写、不删，跟随记录（见"其他标签页"）。租约不是原子的：持有者的请求超过租期时，另一个标签页可以拿到租约登录。逐条核对过：续期的写回（"续期"）；退出的删除（"退出"）；启动时第一次续期失败之后进入"会话暂不可用"之前（`navigator.locks` 把失败交回来是在之后的任务里，另一个标签页的登录可能先到）；登录、注册和结束会话在锁内没有 `await`，读和写之间不会插进别的标签页。
+  - **请求和锁回来之后先重读记录**（Codex 对 M2 的评审 Important 1，codex-fixes）：每个请求的 `await` 回来之后，以及锁把失败的第一次续期交回来之后，写或删 `nerve.auth`、改本标签页的状态之前，都再读一次记录；它已不是这次操作所属的会话（`login_id` 变了，或者记录没了），就不写、不删，跟随记录（见"其他标签页"）。租约不是原子的：持有者的请求超过租期时，另一个标签页可以拿到租约登录。逐条核对过：续期的写回（"续期"）；退出的删除（"退出"）；启动时第一次续期失败之后进入"会话暂不可用"之前（`navigator.locks` 把失败交回来是在之后的任务里，另一个标签页的登录可能先到）；结束会话在锁内没有 `await`，读和删之间不会插进别的标签页。登录和注册等到锁之后写新会话的记录，不重读：按"最后登录为准"（P4），另一个标签页先写的记录被替换。
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
@@ -2378,11 +2870,11 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 
 ````new docs/v0/M2-auth/M2-design.md
   - 列表、撤销。列表显示创建时间和最后使用时间，便于认出不认识的令牌（8.5）。
-- **修改的顺序**（Codex 对 M2 的评审第 6 节，codex-fixes）：`ProfileStore` 和 `UserStore` 的修改经 `core/lib/one-at-a-time.ts` 的队列发出，前一个修改有了应答或失败之后，下一个才发出。于是 nerve 按做出的顺序应用它们，最后一个应答就是 nerve 保存的值；失败也放行队列。P5 原来的做法（按发出的顺序给修改编号，丢弃较旧的应答）假定 nerve 按发出的顺序处理，Codex 的页面实验推翻了它：先发出的修改后到，页面显示 English，nerve 保存的是简体中文。它随之删除。
+- **修改的顺序**（Codex 对 M2 的评审第 6 节，codex-fixes）：`ProfileStore` 和 `UserStore` 的修改经 `core/lib/one-at-a-time.ts` 的队列发出，前一个修改有了应答或失败之后，下一个才发出。于是 nerve 按做出的顺序应用有了应答的修改，最后一个应答就是 nerve 保存的值；失败也放行队列。没有应答的失败（请求到了 nerve 之后连接断了）不在此列，它仍可能在下一个修改之后才被应用；一个一直不结束的请求挡住这个 store 的队列，nerve 在 `server.request_timeout` 之内应答它收到的每个请求。只排队修改；取数不排队（会话开始时取资料的应答晚于一个修改的应答到来时，store 显示取数时的值，与以前相同）。P5 原来的做法（按发出的顺序给修改编号，丢弃较旧的应答）假定 nerve 按发出的顺序处理，Codex 的页面实验推翻了它：先发出的修改后到，页面显示 English，nerve 保存的是简体中文。它随之删除。
   - preferences、general、新手引导、主题切换和命令面板的主题命令都经这两个 store 修改资料和账户。
   - 只在一个标签页之内成立；多个标签页或多个客户端之间以后写入的为准（v0 不做乐观锁，总体设计 3.6）。
   - PAT 的创建和撤销不依赖 nerve 的处理顺序：撤销要用创建返回的 id，两者本来有先后；列表"取最新"靠提交先于确认，不靠请求的顺序。
-- **会话的主题**（Codex 对 M2 的评审 Minor 1，codex-fixes）：没有会话时（本标签页或其他标签页退出、账户停用、续期被拒）页面用默认的"跟随系统"；有会话时，这个会话第一次取到资料时用资料的主题。两者都只在 `StoreWrapper` 设置（总体设计 7.7）；`startSession` 不再写 localStorage 的主题，切换账户弹窗的退出不再自己设主题。
+- **会话的主题**（Codex 对 M2 的评审 Minor 1，codex-fixes）：没有会话时（本标签页或其他标签页退出、账户停用、续期被拒）页面用默认的"跟随系统"；有会话时，这个会话第一次取到资料时用资料的主题，每个会话一次：next-themes 的 `setTheme` 随主题变化，效果会重跑，旧的资料不能在每次主题变化（本标签页或别的标签页）时把自己的主题再设一遍。两者都只在 `StoreWrapper` 设置（总体设计 7.7），决定是 `core/lib/wrappers/session-theme.ts` 的纯函数 `sessionTheme`，有单元测试；`startSession` 不再写 localStorage 的主题，切换账户弹窗的退出不再自己设主题。
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
@@ -2393,8 +2885,8 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 
 ````new docs/v0/M2-auth/M2-design.md
 - **怀疑泄露时的恢复步骤**（README 的安全说明，8.7；顺序按 Codex 对 M2 的评审第 7 节收紧，codex-fixes）：
-  1. 先在安全页修改密码：账户的其他会话全部撤销（3.5），被盗的刷新令牌和由它换来的访问令牌在下一个请求就失效，对方不能再经会话创建 PAT；
-  2. 再在 api-tokens 页或安全页按创建时间和最后使用时间认出不认识的 PAT，全部撤销，然后重新核对列表：PAT 能创建 PAT，撤销期间可能又出现新的，列表里不再有不认识的令牌才算完成；
+  1. 先退出、重新登录（或在另一个浏览器登录），在新的会话里修改密码（安全页）：修改密码结束除当前会话以外的全部会话（3.5）。被盗的刷新令牌多半就是这个浏览器会话的（XSS 读的是本页的 localStorage），在它里面改密码不会结束它；退出也不一定结束它（对方续期之后，本页的刷新令牌已是旧的一代，退出只结束当前一代的会话，不改变什么）。从新会话改密码之后，被盗的会话和由它换来的访问令牌在下一个请求就失效，对方不能再用会话创建 PAT；
+  2. 再在 api-tokens 页或安全页按创建时间和最后使用时间认出不认识的 PAT，全部撤销（修改密码不撤销 PAT），然后重新核对列表：PAT 能创建 PAT，撤销期间可能又出现新的，列表里不再有不认识的令牌才算完成；
   3. 只撤销 PAT、不先改密码是不够的：对方仍有会话，随时能再建一个 PAT。对方不断建新令牌、自助撤销跟不上，或者用户已无法登录时，请服务器管理员执行 `nerve users reset-password`：一个事务里撤销全部会话和全部 PAT（3.5）。
 ````
 
@@ -2411,7 +2903,7 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 ````
 
 ````new docs/v0/M2-auth/M2-design.md
-| 刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5）：自助先改密码、再撤销 PAT 并重新核对，管理员用 `reset-password` | P3b、codex-fixes |
+| 刷新令牌泄露时可能派生 PAT，以及恢复步骤（8.5）：自助：退出重登后在新会话里改密码，再撤销 PAT 并重新核对；管理员用 `reset-password` | P3b、codex-fixes |
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
@@ -2420,6 +2912,14 @@ spec 2.12。3.10（`AllowAll`）、3.11（一种读法、不变式、`Content-Ty
 
 ````new docs/v0/M2-auth/M2-design.md
   1. **请求体的结构校验**（3.11）：新增一个平台子包 `httpserver/bodyshape` 和一个构建时的生成器 `tools/bodyshapegen`。生成器在工具模块，用 oapi-codegen 自己的加载器和 `type-mapping` 读契约，不链接进 nerve；运行时只用标准库（核验 F1 之后，格式检查把原始值 `json.Unmarshal` 进映射的类型，不再依赖 oapi-codegen 的运行时类型，3.11）。
+````
+
+````old docs/v0/M2-auth/M2-design.md
+| 请求体的结构检查：请求体被解析两次；以后的 M 用到生成器不支持的 schema 写法 | 请求体上限 1 MiB，M8 实测开销；生成器遇到不支持的写法时失败并说明原因，由那个 M 带着测试扩展生成器，不会悄悄放过 |
+````
+
+````new docs/v0/M2-auth/M2-design.md
+| 请求体的结构检查：请求体被解析三遍（歧义扫描、按表检查、生成的解码器，codex-fixes）；以后的 M 用到生成器不支持的 schema 写法 | 请求体上限 1 MiB；每遍的代价与请求体成正比：路径按段压栈，最多报 16 个问题，`TestCheckCostsAboutTheBody` 守住（3.11）；按表检查是请求体乘 schema 的层数，递归的 schema 到来时改为一遍读完（M4 交接第 4 节）；M8 实测开销；生成器遇到不支持的写法时失败并说明原因，由那个 M 带着测试扩展生成器，不会悄悄放过 |
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
@@ -2435,14 +2935,14 @@ M2 合并之后（`9ef4a4a`），Codex 对全部 M2 做了对抗性评审（[报
 
 | 编号 | 问题 | 裁定 | 落点 |
 |---|---|---|---|
-| Critical 1 | 重复的 JSON 键绕过请求体的结构检查：结构检查按 map 读（后一个为准），生成的 handler 按结构体解码（合并，字段名不区分大小写） | 在平台的边界修：同一个对象里重复的成员名（按解码之后比较）和不是合法 Unicode 的字符串，400 `bad_request`；新的字段码 `duplicate`；证明结构检查接受的请求体，解码器读不出别的 | 3.11 的"一份请求体只有一种读法"和不变式、字段码、第四个整程序测试的第 8、9 项；`bodyshape/ambiguity.go`；A10 的接口版本发 Codex 的两个请求 |
-| Important 1 | 旧标签页的退出在租约过期之后回来，删掉另一个标签页的新登录 | 修这一类：锁内每个 `await` 之后先重读记录 | 7.1 的"每个 `await` 之后先重读记录"和"退出"；核对出同类的第二处，启动时第一次续期失败之后的"会话暂不可用"；总体设计 4.3 |
+| Critical 1 | 重复的 JSON 键绕过请求体的结构检查：结构检查按 map 读（后一个为准），生成的 handler 按结构体解码（合并，字段名不区分大小写） | 在平台的边界修：同一个对象里重复的成员名（按解码之后比较）和不是合法 Unicode 的字符串，400 `bad_request`；新的字段码 `duplicate`；证明结构检查接受的请求体，解码器读不出别的 | 3.11 的"一份请求体只有一种读法"、不变式和"代价跟着请求体走"，字段码、第四个整程序测试的第 8、9 项；`bodyshape/ambiguity.go`；A10 的接口版本发 Codex 的两个请求 |
+| Important 1 | 旧标签页的退出在租约过期之后回来，删掉另一个标签页的新登录 | 修这一类：请求和锁回来之后先重读记录 | 7.1 的"请求和锁回来之后先重读记录"和"退出"；核对出同类的第二处，启动时第一次续期失败之后的"会话暂不可用"；总体设计 4.3 |
 | Important 2 | 迁移和服务分用两个角色时 README 只写了 `goose_db_version`：River 因 42501 失败，`/readyz` 仍是 200；River 的索引重建要 `MAINTAIN` | 权限写进一个文件，逐个列出，由测试守住完整 | 6.1；8.7；`deploy/runtime-grants.sql`；`server/internal/bootstrap/runtime_role_test.go`；README"部署"；M4、M8 的交接 |
 | Minor 1 | 自助停用之后当前标签页保留旧账户的主题，直到刷新 | 主题只在 `StoreWrapper` 按会话设置，删除退出按钮上的补丁 | 7.7 的"会话的主题"；总体设计 7.7；A5、A6、A12 的页面版本 |
 | Minor 2 | A8–A10 的页面版本和接口版本共用查询，没有共用业务断言 | 抽出三个带参数的小断言，不建通用框架 | `e2e/fixtures/assert/identity.ts` 的 `expectAccountChanged`、`expectPreferences`、`expectProfileStepTaken` |
 | Minor 3 | 11.2 说 `bodyshape` 用 oapi-codegen 的运行时类型；收尾 spec 和收尾 review 说 `identity.yaml` 有 15 个操作、每个约 40 行 | 改正 | 11.2；收尾 spec 附录 B.5 第 5 条、收尾 review 第 7 节第 5 条：13 个操作，每个约 48 行 |
 | 第 6 节 | P5 假定 nerve 按发出的顺序处理资料和账户的修改，Codex 的页面实验推翻了它 | 一个 store 的修改一个接一个发出，失败也放行；删除"丢弃较旧的应答" | 7.5；7.7 的"修改的顺序"；总体设计 7.7；A9 的页面版本 |
-| 第 7 节 | README 和 8.5 把"逐个撤销 PAT"与 `reset-password` 并列，自助的恢复不完整 | 自助先改密码、再撤销 PAT 并重新核对；管理员用 `reset-password` | 8.5；8.7；README"部署" |
+| 第 7 节 | README 和 8.5 把"逐个撤销 PAT"与 `reset-password` 并列，自助的恢复不完整 | 自助：退出重登后在新会话里改密码，再撤销 PAT 并重新核对；管理员用 `reset-password` | 8.5；8.7；README"部署" |
 | 第 6 节（P2） | `AllowAll` 里同一个桶和键出现两次会扣两次 | 作为编程错误拒绝（panic） | 3.10；`platform/ratelimit` |
 | 第 6 节 | `DateDropdown` 的键盘；时区按钮的 Tab 顺序 | 仍按期限推迟：它们是共用组件，其他调用方在 M2 到不了的页面上；交接已有关闭条件 | 不变：M4 交接第 10 节、M3 交接第 14 节 |
 | 第 6 节其余 | 已知事项的其余判定 | 同意，不改 | — |
@@ -2455,7 +2955,7 @@ M2 合并之后（`9ef4a4a`），Codex 对全部 M2 做了对抗性评审（[报
 
 ### Task 10: 上级文档、README 的恢复说明、M4 和 M8 的交接、收尾的数字
 
-spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请求体"一行；README"令牌泄露后的恢复"；M4 交接第 6 节、M8 交接第 3 节；收尾 spec 附录 B.5 第 5 条和收尾 review 第 7 节第 5 条。
+spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请求体"一行；README"令牌泄露后的恢复"（第一步在新会话里改密码）；M4 交接第 4、6 节，M8 交接第 2、3 节（第 3 节的部署核对含以服务角色 `REINDEX INDEX CONCURRENTLY river_job_pkey`）；收尾 spec 附录 B.5 第 5 条和收尾 review 第 7 节第 5 条。
 
 - [ ] **Step 1：应用块**（`… apply . 10`）：
 
@@ -2465,7 +2965,7 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 ````
 
 ````new docs/v0/v0-design.md
-- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、能有两种读法（同一个对象里同名的成员出现两次，名字按解码之后比较；字符串不是合法的 Unicode）、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
+- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、能有两种读法（同一个对象里同名的成员出现两次，名字按解码之后比较；字符串不是合法的 Unicode）、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题（能有两种读法的请求体只列出这两种问题；最多 16 个）；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
 - `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径，`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`duplicate`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
 ````
 
@@ -2474,7 +2974,7 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 ````
 
 ````new docs/v0/v0-design.md
-- **多标签页续期**：用 `navigator.locks` 保证同一时间只有一个标签页在续期；没有它时（用 HTTP 部署，浏览器不在安全上下文中）用 localStorage 的租约。登录、注册、续期、退出、结束会话写 `nerve.auth` 都在这同一把锁或租约下；锁内每个 `await`（请求、等锁）回来之后，写、删记录或改标签页的状态之前都再读一次记录，它已不是这次操作的会话（`login_id` 变了，或者记录没了）就不写、不删，跟随新的记录：续期的写回、退出的删除、启动时进入"会话暂不可用"都是这样（M2 设计 7.1）。
+- **多标签页续期**：用 `navigator.locks` 保证同一时间只有一个标签页在续期；没有它时（用 HTTP 部署，浏览器不在安全上下文中）用 localStorage 的租约。登录、注册、续期、退出、结束会话写 `nerve.auth` 都在这同一把锁或租约下；每个请求的 `await` 回来之后，以及锁把失败的第一次续期交回来之后，写、删记录或改标签页的状态之前都再读一次记录，它已不是这次操作的会话（`login_id` 变了，或者记录没了）就不写、不删，跟随新的记录：续期的写回、退出的删除、启动时进入"会话暂不可用"都是这样；登录写新会话的记录，按"最后登录为准"不重读（M2 设计 7.1）。
 ````
 
 ````old docs/v0/v0-design.md
@@ -2483,7 +2983,7 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 
 ````new docs/v0/v0-design.md
 - **页面级的状态跟随当前的会话**：界面语言由 `StoreWrapper`（`core/lib/wrappers/store-wrapper.tsx`）按当前一代的资料设置，store 不设。主题同样由 `StoreWrapper` 按会话设置，别处不设：没有会话时（本标签页或别的标签页退出、账户停用、续期被拒）是默认的"跟随系统"，每个会话第一次取到资料时按资料设置一次；之后由改它的组件在 nerve 应答成功之后设置，设置之前先核对标签页仍在发出修改时的会话（`core/components/appearance/theme-switcher.tsx` 的 `inSession()`，M2/P5 spec 2.7）。store 不直接改全局状态；组件在一个 `await` 之后改页面级的状态时，都先核对会话没变。这样旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
-- **一个 store 的修改一个接一个发出**：前一个修改有了应答或失败之后才发出下一个（`core/lib/one-at-a-time.ts`），nerve 按做出的顺序应用，最后的应答就是 nerve 保存的值。不要用"丢弃较旧的应答"代替它：丢掉的只是应答，nerve 仍可能按另一种顺序写入（M2 设计 7.7，Codex 对 M2 的评审第 6 节）。这只在一个标签页之内成立。
+- **一个 store 的修改一个接一个发出**：前一个修改有了应答或失败之后才发出下一个（`core/lib/one-at-a-time.ts`），nerve 按做出的顺序应用有了应答的修改，最后的应答就是 nerve 保存的值；没有应答的失败（连接在请求到达之后断了）不在此列。只排队修改；取数不排队。不要用"丢弃较旧的应答"代替它：丢掉的只是应答，nerve 仍可能按另一种顺序写入（M2 设计 7.7，Codex 对 M2 的评审第 6 节）。这只在一个标签页之内成立。
 ````
 
 ````old docs/v0/plane-diff.md
@@ -2491,7 +2991,7 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 ````
 
 ````new docs/v0/plane-diff.md
-| 请求体 | DRF 的序列化器忽略未知字段；重复的键以后一个为准（Python 的 `json`） | 按契约拒绝未知字段、不合法的 `null` 和缺少的必填字段，也拒绝能有两种读法的请求体（同一个对象里重复的成员名，字符串不是合法的 Unicode）：400 `bad_request`，一次列出全部问题（M2 设计 3.11） |
+| 请求体 | DRF 的序列化器忽略未知字段；重复的键以后一个为准（Python 的 `json`） | 按契约拒绝未知字段、不合法的 `null` 和缺少的必填字段，也拒绝能有两种读法的请求体（同一个对象里重复的成员名，字符串不是合法的 Unicode）：400 `bad_request`，一次列出全部问题（能有两种读法的请求体只列出这两种问题；最多 16 个；M2 设计 3.11） |
 ````
 
 ````old README.md
@@ -2500,10 +3000,35 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 
 ````new README.md
 - **令牌泄露后的恢复**：刷新令牌存在浏览器的 localStorage 里，页面上的 XSS 能读出它，换来访问令牌后创建一个永不过期的 PAT（创建 PAT 不要求输入密码）。这个 PAT 不受退出、修改密码和会话 30 天期限的影响，还能再创建 PAT，所以泄露的影响不以 30 天为限（M2 设计 8.5）。怀疑泄露时，按这个顺序做：
-  1. **先修改密码**（个人设置的 security 页）：账户的其他会话全部结束，被盗的刷新令牌和由它换来的访问令牌在下一个请求就失效，对方不能再用会话创建 PAT；当前页面的会话保留。
+  1. **先退出、重新登录（或在另一个浏览器登录），在新的会话里修改密码**（个人设置的 security 页）：修改密码结束除当前会话以外的全部会话。被盗的刷新令牌多半就是这个浏览器会话的（XSS 读的是本页的 localStorage），在它里面改密码不会结束它；退出也不一定结束它（对方续期之后，本页的刷新令牌已是旧的一代，退出不改变什么）。从新会话改密码之后，被盗的会话和由它换来的访问令牌在下一个请求就失效，对方不能再用会话创建 PAT。
   2. **再撤销不认识的 PAT**：在 api-tokens 页或 security 页的列表中（或 `GET /api/v0/me/api-tokens`），按创建时间和最后使用时间认出不认识的令牌，全部撤销，拿不准的也撤销；然后重新打开列表核对。PAT 能创建 PAT：撤销的同时，对方可能用还没撤销的 PAT 建了新的，列表里不再出现不认识的令牌才算完成。
 
   只撤销 PAT、不先改密码是不够的：对方还握着会话，随时能再建一个 PAT。对方不断建新令牌、撤销跟不上，或者用户已无法登录时，请服务器管理员执行 `nerve users reset-password --email <邮箱>`：它在一个事务里设新密码、结束该账户的全部会话、撤销全部 PAT。
+````
+
+````old docs/v0/M4-issue-core/handoffs/M2-closeout.md
+- **路径的排序**：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前，`server/internal/platform/httpserver/bodyshape/bodyshape.go:169`），改为按数组下标的数值排序。
+````
+
+````new docs/v0/M4-issue-core/handoffs/M2-closeout.md
+- **路径的排序**：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前，`server/internal/platform/httpserver/bodyshape/bodyshape.go` 的 `Check` 末尾的 `slices.SortFunc`），改为按数组下标的数值排序。
+````
+
+````old docs/v0/M4-issue-core/handoffs/M2-closeout.md
+- **map 型对象**：契约的写法检查要求每个 object 组件 schema 设 `additionalProperties: false`（`server/internal/platform/httpserver/apitest/rules_test.go` 的 `closedObject`），`type: object, additionalProperties: {type: string}` 这样的 map 型 schema 会被判为违规（M0/P3 评审 C3，M0-P3 交接第 5 节；M2 没有用到）。第一个需要它的 M（可能早于 M4）给 `closedObject` 加一个例外分支和一个反例用例。
+````
+
+````new docs/v0/M4-issue-core/handoffs/M2-closeout.md
+- **map 型对象**：契约的写法检查要求每个 object schema 设 `additionalProperties: false`（`server/internal/platform/httpserver/apitest/rules_test.go` 的 `closedObject`；codex-fixes 起组件和内联的都查，它是 M2 设计 3.11 不变式②的前提），`type: object, additionalProperties: {type: string}` 这样的 map 型 schema 会被判为违规（M0/P3 评审 C3，M0-P3 交接第 5 节；M2 没有用到）。第一个需要它的 M（可能早于 M4）给 `closedObject` 加一个例外分支和一个反例用例，并在 3.11 的不变式②写明解码器怎样读 map 的键。
+- **结构检查的代价**（M2 设计 3.11，codex-fixes）：路径按段压栈、一个请求体最多报 16 个问题，`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住。按表检查每层把对象的成员复制一次，代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层、不递归。第一个递归的请求体 schema 让它变成请求体乘请求体的深度：那时按表检查改为一遍读完，代价测试加上这种请求体。第一个数组或开放 map 的请求体 schema 到来时，代价测试同样加上它。
+````
+
+````old docs/v0/M4-issue-core/handoffs/M2-closeout.md
+- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试；第一个 map 型 schema 出现时，`closedObject` 有例外分支和反例用例（或者本 M 的 review 写明没有用到）。
+````
+
+````new docs/v0/M4-issue-core/handoffs/M2-closeout.md
+- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试；第一个 map 型 schema 出现时，`closedObject` 有例外分支和反例用例（或者本 M 的 review 写明没有用到）；数组、开放 map 或递归的请求体 schema 出现时，`TestCheckCostsAboutTheBody` 有这种请求体，递归的由一遍读完的按表检查通过（或者本 M 的 review 写明没有用到）。
 ````
 
 ````old docs/v0/M4-issue-core/handoffs/M2-closeout.md
@@ -2511,8 +3036,16 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 ````
 
 ````new docs/v0/M4-issue-core/handoffs/M2-closeout.md
-- **服务角色的权限**（M2 codex-fixes，M2 设计 6.1）：M4 的迁移加了表，或者 River 升级（总体设计 5.2）加了表或序列，同一个提交把授权加进 `deploy/runtime-grants.sql`。`server/internal/bootstrap/runtime_role_test.go` 的 `TestTheGrantsFileCoversEveryTableAndSequence` 在少了时失败；`TestTheRuntimeRoleServesWithTheGrantsFile` 用恰好这些权限运行 nerve（就绪、River 的清理任务、River 的索引重建），M4 的第一个业务定时任务在它读写的表上照样要有权限。
+- **服务角色的权限**（M2 codex-fixes，M2 设计 6.1）：M4 的迁移加了表、视图或序列，或者 River 升级（总体设计 5.2）加了它们，同一个提交把授权加进 `deploy/runtime-grants.sql`（函数和类型靠 PUBLIC 的默认权限，收回时同样要加）。`server/internal/bootstrap/runtime_role_test.go` 的 `TestTheGrantsFileCoversEveryRelationAndFunction` 在少了或多了时失败；`TestTheRuntimeRoleServesWithTheGrantsFile` 用恰好这些权限运行 nerve（就绪、River 的清理任务、River 的索引重建），M4 的第一个业务定时任务在它读写的表上照样要有权限。
 - **关闭条件**：漏注册 worker 的变异让测试失败；事件订阅者的写法写进 M4 设计；`deploy/runtime-grants.sql` 覆盖 M4 的表，上面两个测试通过。
+````
+
+````old docs/v0/M8-open-release/handoffs/M2-closeout.md
+- **请求体结构检查的开销**：请求体被解析两次（结构检查一次、生成代码解码一次，上限 1 MiB）。
+````
+
+````new docs/v0/M8-open-release/handoffs/M2-closeout.md
+- **请求体结构检查的开销**：请求体被解析三遍（codex-fixes 加了歧义扫描：歧义扫描、按表检查、生成代码解码，上限 1 MiB）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 已守住最坏的几种请求体的内存（M2 设计 3.11），M8 实测常见请求体的耗时。
 ````
 
 ````old docs/v0/M8-open-release/handoffs/M2-closeout.md
@@ -2520,7 +3053,7 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 ````
 
 ````new docs/v0/M8-open-release/handoffs/M2-closeout.md
-- **迁移和服务分用两个数据库角色**（M2 codex-fixes，M2 设计 6.1）：部署文件这样做时，每次 `nerve migrate up` 之后以表的所有者执行 `deploy/runtime-grants.sql`（README"部署"的"迁移"一条）。部署核对在这样的环境里看：`/readyz` 200；清理任务的日志，或 `river_job` 里 `identity.cleanup_expired_sessions` 的 `completed` 行；日志里没有 `permission denied`。自动化的证明是 `server/internal/bootstrap/runtime_role_test.go`。
+- **迁移和服务分用两个数据库角色**（M2 codex-fixes，M2 设计 6.1）：部署文件这样做时，每次 `nerve migrate up` 之后以表的所有者执行 `deploy/runtime-grants.sql`（README"部署"的"迁移"一条）。部署核对在这样的环境里看：`/readyz` 200；清理任务的日志，或 `river_job` 里 `identity.cleanup_expired_sessions` 的 `completed` 行；以服务角色执行一次 `REINDEX INDEX CONCURRENTLY river_job_pkey` 成功（River 每天 00:00 UTC 的索引重建要 `MAINTAIN`）；日志里没有 `permission denied`。自动化的证明是 `server/internal/bootstrap/runtime_role_test.go`。
 - **关闭条件**：镜像的环境里有 `NERVE_ENV=prod`；部署文件的停止宽限期不短于停机的最坏时间（或写明调小了哪些期限）；数据库重启的核对结果写进 M8 的 review；分用两个角色的部署按 `deploy/runtime-grants.sql` 授权，核对结果写进 M8 的 review。
 ````
 
@@ -2540,7 +3073,9 @@ spec 2.7、2.9、2.12。总体设计 3.5、4.3、7.7；差异清单第三节"请
 5. 接口描述按操作估，约每个操作 48 行（`identity.yaml` 623 行、13 个操作；codex-fixes 更正，原写约 40 行）；
 ````
 
-- [ ] **Step 2：检查**：`node tools/keywords.mjs` → 没有命中；`grep -rn -E "15 个操作、约|约每个操作 40|oapi-codegen 的运行时类型" docs README.md` 只剩 Codex 报告里的引文（`docs/v0/M2-auth/reviews/M2-codex-adversarial-review.md`）。
+- [ ] **Step 2：检查**：
+  - `node tools/keywords.mjs` → 没有命中；
+  - Minor 3 的三句错话都改掉了：`grep -rn -E "运行时只用标准库和 oapi-codegen 的运行时类型|623 行、15 个操作，约每个操作 40 行|接口描述按操作估，约每个操作 40 行" docs README.md --exclude=codex-fixes.md` → 没有输出。排除的是本计划和同名的本阶段 spec：本计划写着这条命令，它的旧文本块里有这三句原文（不排除时只命中本计划）。Codex 的报告没有逐字引用它们；更正之后的收尾 spec 写的是"原写 15 个操作、约 40 行"，收尾 review 写的是"原写约 40 行"，都不命中。
 
 - [ ] **Step 3：提交**（`docs(M2/codex-fixes): parent docs, README recovery, M4 and M8 handoffs, closeout counts`）
 
@@ -2562,7 +3097,7 @@ spec 第 4 节、附录 C。不改文件，没有提交；结果写进 codex-fix
 
 之后按 Global Constraints 的"容器"一条核对：没有这次运行建的容器，没有留下后台进程。
 
-- [ ] **Step 2：本分支的改动就是文件表**：`git diff --stat 37b7e9c -- . ':!docs/v0/M2-auth/specs/codex-fixes.md' ':!docs/v0/M2-auth/plans/codex-fixes.md'` 列出的文件与"文件结构"的表相同（44 个文件：T0 一个，T1 十一个（含三个生成的），T2 四个，T3 两个，T4 三个，T5 两个，T6 四个，T7 六个，T8 七个，T9 一个，T10 七个；A9、A10、README、M2 设计各被两个 Task 改到，只算一次）。
+- [ ] **Step 2：本分支的改动就是文件表**：`git diff --stat 37b7e9c -- . ':!docs/v0/M2-auth/specs/codex-fixes.md' ':!docs/v0/M2-auth/plans/codex-fixes.md'` 列出的文件与"文件结构"的表相同（49 个文件：T0 一个，T1 十二个（含三个生成的），T2 六个，T3 两个，T4 三个，T5 两个，T6 四个，T7 六个，T8 九个，T9 一个，T10 七个；A9、A10、README、M2 设计各被两个 Task 改到，只算一次）。
 
 ---
 
@@ -2590,144 +3125,173 @@ codex-fixes 的 review 写好之后，控制者在同一个提交里做下面两
 
 ## 块的核对
 
-写计划时在 `$M2TMP/codexfix/` 下做了三件事，结果记在这里；执行者开始前可以重跑第一件，得到同样的输出。
+写计划时在 `$M2TMP/codexfix/` 下做了三件事，结果记在这里（预检之后的修订全部重做了一遍，`replay/` 从归档重新解开）；执行者开始前可以重跑第一件，得到同样的输出。
 
 **1. 每一块依次应用时恰好一处。** `node $M2TMP/codexfix/planapply.mjs docs/v0/M2-auth/plans/codex-fixes.md check $M2TMP/codexfix/base`（`base/` 是 `37b7e9c` 的归档解开的树）。"in order"是依次应用本计划的块时这个旧文本在当时的文件里出现的次数，必须是 1；"at 37b7e9c"是它在基点的文件里出现的次数，只作参考：T7 的一块改的是 T6 写入的 `import`，review 提交的第一块改的是 Task 0 写入的一行，它们在基点上是 0 处。退出码 0：
 
 ```
-T0  old   docs/v0/M2-auth/M2-design.md (plan:126): at 37b7e9c 1, in order 1
+T0  old   docs/v0/M2-auth/M2-design.md (plan:132): at 37b7e9c 1, in order 1
 T1  new   server/internal/platform/httpserver/bodyshape/ambiguity.go: absent
 T1  new   server/internal/platform/httpserver/bodyshape/ambiguity_test.go: absent
-T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:381): at 37b7e9c 1, in order 1
-T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:397): at 37b7e9c 1, in order 1
-T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:406): at 37b7e9c 1, in order 1
-T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:416): at 37b7e9c 1, in order 1
-T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:430): at 37b7e9c 1, in order 1
-T1  old   server/internal/shared/error.go (plan:442): at 37b7e9c 1, in order 1
-T1  old   server/internal/shared/error.go (plan:451): at 37b7e9c 1, in order 1
-T1  old   api/common.yaml (plan:459): at 37b7e9c 1, in order 1
-T1  old   web/packages/i18n/src/locales/en/auth.json (plan:468): at 37b7e9c 1, in order 1
-T1  old   web/packages/i18n/src/locales/zh-CN/auth.json (plan:477): at 37b7e9c 1, in order 1
-T1  old   web/apps/web/helpers/authentication.helper.ts (plan:486): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:511): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:520): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:534): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:545): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:554): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:582): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:609): at 37b7e9c 1, in order 1
-T2  old   server/internal/platform/httpserver/apitest/operations_test.go (plan:617): at 37b7e9c 1, in order 1
-T2  old   server/internal/bootstrap/contract_test.go (plan:628): at 37b7e9c 1, in order 1
-T2  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:640): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:703): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:713): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:722): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:733): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:750): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:765): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:778): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:805): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:815): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:823): at 37b7e9c 1, in order 1
-T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:832): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:400): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:417): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:426): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:435): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:444): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:454): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:468): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:483): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:491): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:499): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:568): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:578): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:586): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:595): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:603): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:611): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:622): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:632): at 37b7e9c 1, in order 1
+T1  old   server/internal/platform/httpserver/bodyshape/bodyshape.go (plan:642): at 37b7e9c 1, in order 1
+T1  new   server/internal/platform/httpserver/bodyshape/cost_test.go: absent
+T1  old   server/internal/shared/error.go (plan:760): at 37b7e9c 1, in order 1
+T1  old   server/internal/shared/error.go (plan:769): at 37b7e9c 1, in order 1
+T1  old   api/common.yaml (plan:777): at 37b7e9c 1, in order 1
+T1  old   web/packages/i18n/src/locales/en/auth.json (plan:786): at 37b7e9c 1, in order 1
+T1  old   web/packages/i18n/src/locales/zh-CN/auth.json (plan:795): at 37b7e9c 1, in order 1
+T1  old   web/apps/web/helpers/authentication.helper.ts (plan:804): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:833): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:842): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:856): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:867): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:876): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:904): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations.go (plan:931): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/operations_test.go (plan:939): at 37b7e9c 1, in order 1
+T2  old   server/internal/bootstrap/contract_test.go (plan:950): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/rules_test.go (plan:962): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/rules_test.go (plan:972): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/rules_test.go (plan:981): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/rules_test.go (plan:995): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/rules_test.go (plan:1007): at 37b7e9c 1, in order 1
+T2  old   server/internal/platform/httpserver/apitest/rules_cases_test.go (plan:1020): at 37b7e9c 1, in order 1
+T2  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1033): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1097): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1109): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1118): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1129): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1146): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1161): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.ts (plan:1174): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:1201): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:1211): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:1219): at 37b7e9c 1, in order 1
+T3  old   web/apps/web/core/lib/auth/token-manager.session-change.test.ts (plan:1228): at 37b7e9c 1, in order 1
 T4  new   deploy/runtime-grants.sql: absent
 T4  new   server/internal/bootstrap/runtime_role_test.go: absent
-T4  old   README.md (plan:1157): at 37b7e9c 1, in order 1
-T4  old   README.md (plan:1168): at 37b7e9c 1, in order 1
-T5  old   server/internal/platform/ratelimit/ratelimit.go (plan:1186): at 37b7e9c 1, in order 1
-T5  old   server/internal/platform/ratelimit/ratelimit.go (plan:1195): at 37b7e9c 1, in order 1
-T5  old   server/internal/platform/ratelimit/ratelimit.go (plan:1205): at 37b7e9c 1, in order 1
-T5  old   server/internal/platform/ratelimit/ratelimit_test.go (plan:1216): at 37b7e9c 1, in order 1
-T6  old   e2e/fixtures/assert/identity.ts (plan:1251): at 37b7e9c 1, in order 1
-T6  old   e2e/fixtures/assert/identity.ts (plan:1308): at 37b7e9c 1, in order 1
-T6  old   e2e/fixtures/assert/identity.ts (plan:1321): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1343): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1351): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1367): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1378): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1391): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1403): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1411): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1424): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1433): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1441): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1451): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1461): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1469): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1480): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1494): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1506): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1515): at 37b7e9c 1, in order 1
-T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1525): at 37b7e9c 1, in order 1
+T4  old   README.md (plan:1571): at 37b7e9c 1, in order 1
+T4  old   README.md (plan:1582): at 37b7e9c 1, in order 1
+T5  old   server/internal/platform/ratelimit/ratelimit.go (plan:1600): at 37b7e9c 1, in order 1
+T5  old   server/internal/platform/ratelimit/ratelimit.go (plan:1609): at 37b7e9c 1, in order 1
+T5  old   server/internal/platform/ratelimit/ratelimit.go (plan:1619): at 37b7e9c 1, in order 1
+T5  old   server/internal/platform/ratelimit/ratelimit_test.go (plan:1630): at 37b7e9c 1, in order 1
+T6  old   e2e/fixtures/assert/identity.ts (plan:1665): at 37b7e9c 1, in order 1
+T6  old   e2e/fixtures/assert/identity.ts (plan:1722): at 37b7e9c 1, in order 1
+T6  old   e2e/fixtures/assert/identity.ts (plan:1735): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1757): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1765): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1781): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1792): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a8-update-me.spec.ts (plan:1805): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1817): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1825): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1838): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1847): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1855): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1865): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1875): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1883): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1894): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1908): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1920): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1929): at 37b7e9c 1, in order 1
+T6  old   e2e/stories/identity/a10-onboarding-profile.spec.ts (plan:1939): at 37b7e9c 1, in order 1
 T7  new   web/apps/web/core/lib/one-at-a-time.ts: absent
-T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1566): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1576): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1587): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1601): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1615): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1983): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/profile.store.ts (plan:1993): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/profile.store.ts (plan:2004): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/profile.store.ts (plan:2018): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/profile.store.ts (plan:2032): at 37b7e9c 1, in order 1
 T7  whole web/apps/web/core/store/user/profile.store.test.ts: present
-T7  old   web/apps/web/core/store/user/index.ts (plan:1713): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/index.ts (plan:1722): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/index.ts (plan:1733): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/index.ts (plan:1747): at 37b7e9c 1, in order 1
-T7  old   web/apps/web/core/store/user/index.ts (plan:1761): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/index.ts (plan:2130): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/index.ts (plan:2139): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/index.ts (plan:2150): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/index.ts (plan:2164): at 37b7e9c 1, in order 1
+T7  old   web/apps/web/core/store/user/index.ts (plan:2178): at 37b7e9c 1, in order 1
 T7  whole web/apps/web/core/store/user/index.test.ts: present
-T7  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1861): at 37b7e9c 0, in order 1
-T7  old   e2e/stories/identity/a9-preferences.spec.ts (plan:1871): at 37b7e9c 1, in order 1
+T7  old   e2e/stories/identity/a9-preferences.spec.ts (plan:2278): at 37b7e9c 0, in order 1
+T7  old   e2e/stories/identity/a9-preferences.spec.ts (plan:2288): at 37b7e9c 1, in order 1
 T8  whole web/apps/web/core/lib/wrappers/store-wrapper.tsx: present
-T8  old   web/apps/web/core/lib/store-context.tsx (plan:2063): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/lib/store-context.tsx (plan:2073): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/lib/store-context.test.ts (plan:2082): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/lib/store-context.test.ts (plan:2099): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/lib/store-context.test.ts (plan:2108): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/components/onboarding/switch-account-modal.tsx (plan:2117): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/components/onboarding/switch-account-modal.tsx (plan:2126): at 37b7e9c 1, in order 1
-T8  old   web/apps/web/core/components/onboarding/switch-account-modal.tsx (plan:2136): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2145): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2153): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2168): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2178): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2186): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2195): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2210): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2220): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2228): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2237): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2251): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2265): at 37b7e9c 1, in order 1
-T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2274): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2296): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2304): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2319): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2329): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2337): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2348): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2357): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2365): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2375): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2388): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2401): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2409): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2417): at 37b7e9c 1, in order 1
-T9  old   docs/v0/M2-auth/M2-design.md (plan:2425): at 37b7e9c 1, in order 1
-T10  old   docs/v0/v0-design.md (plan:2462): at 37b7e9c 1, in order 1
-T10  old   docs/v0/v0-design.md (plan:2472): at 37b7e9c 1, in order 1
-T10  old   docs/v0/v0-design.md (plan:2480): at 37b7e9c 1, in order 1
-T10  old   docs/v0/plane-diff.md (plan:2489): at 37b7e9c 1, in order 1
-T10  old   README.md (plan:2497): at 37b7e9c 1, in order 1
-T10  old   docs/v0/M4-issue-core/handoffs/M2-closeout.md (plan:2509): at 37b7e9c 1, in order 1
-T10  old   docs/v0/M8-open-release/handoffs/M2-closeout.md (plan:2518): at 37b7e9c 1, in order 1
-T10  old   docs/v0/M2-auth/specs/closeout.md (plan:2527): at 37b7e9c 1, in order 1
-T10  old   docs/v0/M2-auth/reviews/closeout-review.md (plan:2535): at 37b7e9c 1, in order 1
-TR  old   docs/v0/M2-auth/M2-design.md (plan:2573): at 37b7e9c 0, in order 1
-TR  old   docs/v0/M2-auth/M2-design.md (plan:2581): at 37b7e9c 1, in order 1
-118 replacements, 8 whole files; all ok
+T8  new   web/apps/web/core/lib/wrappers/session-theme.ts: absent
+T8  new   web/apps/web/core/lib/wrappers/session-theme.test.ts: absent
+T8  old   web/apps/web/core/lib/store-context.tsx (plan:2548): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/lib/store-context.tsx (plan:2558): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/lib/store-context.test.ts (plan:2567): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/lib/store-context.test.ts (plan:2584): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/lib/store-context.test.ts (plan:2593): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/components/onboarding/switch-account-modal.tsx (plan:2602): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/components/onboarding/switch-account-modal.tsx (plan:2611): at 37b7e9c 1, in order 1
+T8  old   web/apps/web/core/components/onboarding/switch-account-modal.tsx (plan:2621): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2630): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2638): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2653): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2663): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a5-refresh-reuse.spec.ts (plan:2671): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2680): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2695): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2705): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a6-sign-out.spec.ts (plan:2713): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2722): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2736): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2750): at 37b7e9c 1, in order 1
+T8  old   e2e/stories/identity/a12-deactivate.spec.ts (plan:2759): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2781): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2789): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2803): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2811): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2821): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2829): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2840): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2849): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2857): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2867): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2880): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2893): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2901): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2909): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2917): at 37b7e9c 1, in order 1
+T9  old   docs/v0/M2-auth/M2-design.md (plan:2925): at 37b7e9c 1, in order 1
+T10  old   docs/v0/v0-design.md (plan:2962): at 37b7e9c 1, in order 1
+T10  old   docs/v0/v0-design.md (plan:2972): at 37b7e9c 1, in order 1
+T10  old   docs/v0/v0-design.md (plan:2980): at 37b7e9c 1, in order 1
+T10  old   docs/v0/plane-diff.md (plan:2989): at 37b7e9c 1, in order 1
+T10  old   README.md (plan:2997): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M4-issue-core/handoffs/M2-closeout.md (plan:3009): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M4-issue-core/handoffs/M2-closeout.md (plan:3017): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M4-issue-core/handoffs/M2-closeout.md (plan:3026): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M4-issue-core/handoffs/M2-closeout.md (plan:3034): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M8-open-release/handoffs/M2-closeout.md (plan:3043): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M8-open-release/handoffs/M2-closeout.md (plan:3051): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M2-auth/specs/closeout.md (plan:3060): at 37b7e9c 1, in order 1
+T10  old   docs/v0/M2-auth/reviews/closeout-review.md (plan:3068): at 37b7e9c 1, in order 1
+TR  old   docs/v0/M2-auth/M2-design.md (plan:3108): at 37b7e9c 0, in order 1
+TR  old   docs/v0/M2-auth/M2-design.md (plan:3116): at 37b7e9c 1, in order 1
+144 replacements, 11 whole files; all ok
 ```
 
 **2. 计划的树就是原型的树。** 把 `37b7e9c` 的归档解开到 `$M2TMP/codexfix/replay`，`pnpm install --frozen-lockfile`，`bash $M2TMP/codexfix/replay.sh <本计划> <spec>`：依次 `apply` Task 0–10，Task 1 之后 `make gen`，最后放入 spec 和本计划。`node $M2TMP/codexfix/treediff.mjs $M2TMP/codexfix/replay $M2TMP/codexfix/proto`：
 
 ```
-2661 and 2661 files; 0 differences
+2664 and 2664 files; 0 differences
 ```
 
 （不比较 `node_modules`、`.git` 和构建产物；`api/dist` 比较。）
