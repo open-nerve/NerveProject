@@ -508,7 +508,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
       - 做法：`bodyshape/ambiguity.go` 在按表检查之前把请求体扫描一遍，只用标准库。它只解码成员名，值的字符串在字节上检查。第四个整程序测试的第 7–9 项让每个带请求体的操作都拒绝重复的成员和不是 UTF-8 的字节。
     - **代价跟着请求体走**（codex-fixes 的预检 H1 和最终评审）：读的时候路径是一段文本，只留前 257 字节（比报出的路径多一个字节，用来知道它更长），另记每一段从哪里开始，读完这一段就截回去；报问题时才写出。一个请求体最多报 16 个问题，扫描和按表检查共用这个上限，满了就停；路径和码都相同的问题只报一次，重复的不占上限。否则代价是请求体的平方：`json.Valid` 允许嵌套一万层，每层写出一条路径，约 1 MiB 的请求体要 4.4 GB；一个很长的名字下面每隔几个字节一个问题，每个问题都带着这个名字，要 17 GB。现在这两个请求体（经 identity 的表）各用 2.4 MB、0.9 MB。按表检查的问题同样受限：开放 map 的键是客户端写的，它下面的每个问题都带着它。按表检查只沿 schema 下降，每层把对象的成员复制一次（`json.Unmarshal` 进 `map[string]json.RawMessage`），代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层，没有数组、开放 map 和递归。第一个递归的请求体 schema 会让它变成请求体乘请求体的深度，那时按表检查改为一遍读完（M4 交接第 4 节）。`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住这几种请求体，`TestCheckListsAtMostSixteenProblems` 守住上限和"每次报同样的 16 个"（按表检查按名字的顺序读对象的成员）。
       - **路径最长 256 字节**（codex-fixes 的最终评审）：更长的路径截短，保留开头，在字符的边界上截断，以 `…` 结尾，合计不超过 256 字节。只限问题的个数不够：16 个问题都在同一个约 1 MiB 的名字下面，每个都重复它，匿名的登录接口对约 1 MiB 的请求体回答约 100 MB（`<` 在回答里转义成 6 个字节）。截短之后，一个回答里的路径最多 16 × 256 字节（转义之后约 24 KiB），与请求体无关。契约里真实的路径最长几十个字节，M4 的 `tags[10].name` 也远不到 256；两个长路径截短之后相同时只报一次，客户端本来也分不出它们。
-      - 报一个问题的代价约是 256 字节，与路径多长、多深无关，所以重复的问题不占上限也不贵。若每次报问题都从段的栈重新写出截短的路径，9,999 层空名字下一再重复同一个问题的约 1 MiB 请求体要 1.3 秒，300 字节的名字下重复 200,000 次要分配 50 MB；现在各是 12 ms、0.8 MB。
+      - 报一个问题只复制不到 257 字节，再与已报出的至多 16 条路径比较，与路径多长、多深无关，所以重复的问题不占上限也不贵。若每次报问题都从段的栈重新写出截短的路径，9,999 层空名字下一再重复同一个问题的约 1 MiB 请求体要 1.3 秒，300 字节的名字下重复 200,000 次要分配 50 MB；现在各是 12 ms、0.8 MB。
       - 实测（`TestCheckCostsAboutTheBody`、整程序测试 `TestTheAnswerToABrokenBodyStaysSmall`）：最终评审的三个请求体（约 1 MiB 的 `<` 名字下 16 对重复的键；同一个名字下 16 个不是 UTF-8 的值；9,990 层 90 字节的 `<` 名字下 16 对重复的键），`Check` 各分配 2.0、2.0、1.4 MiB，回答各 1,735、1,732、1,725 字节；截短之前各分配 18.0、18.0、96.6 MiB，回答各 100.6、100.6、86.5 MB。
       - **报哪 16 个**：按固定的顺序读，遇到的前 16 个。扫描按文档的顺序读；按表检查按名字的顺序读一个对象的成员，深度优先，读完成员再报它缺少的必填成员。然后按路径排序。所以同一个请求体每次得到同样的 16 个，但不一定是路径最小的 16 个：16 个未声明的成员可以把缺少的 `email` 挤出去。
     - 以上一律 400 `bad_request`，`errors[{field, code}]`，一次收集全部问题（能有两种读法的请求体只列出这两种问题；每个问题只报一次，最多 16 个），`field` 是 JSON 路径（`onboarding_step.profile_completed`、`tags[1].name`；超过 256 字节的截短，以 `…` 结尾）。
@@ -2141,7 +2141,7 @@ files:
 ---
 
 ## 14. 完成标准
-- [x] P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review。（第 15 节的七行都是"已完成"，各有三个链接。）
+- [x] P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review。（第 15 节的八行都是"已完成"，各有三个链接；Codex 修复一行的来由见 17.3。）
 - [x] A1–A17 的页面版本（有页面的）和接口版本全部通过，S1–S4 通过。需要登录的每个操作都有 PAT 版本，调用同一组数据库断言；因凭证种类而不同的预期由参数表达，并写在故事里（A7）。（收尾的头上 `make e2e`：48 passed。故事在 `e2e/stories/identity/`（A1–A17）和 `e2e/stories/smoke/`（S1–S5）；页面版本和接口版本调用 `e2e/fixtures/assert/identity.ts` 的同一组断言。）
 - [x] 后端：单元测试、集成测试（含账户行锁的交错测试）、契约测试（四个整程序测试、`apitest` 对错误码的核对）、架构测试（含规则 4 的扩展和 `TestSQLCSchemaScope`）和 depguard 全部通过；`make gen-check` 覆盖 oapi-codegen、请求体结构表、sqlc 和 TS 客户端。（收尾的头上 `make test`：32 个包 `ok`、没有 `FAIL`；`make lint-go`：两段 `0 issues.`；`make gen-check`：没有差异。交错测试在 `server/internal/modules/identity/interleavings_test.go`、`interleavings_reset_test.go`，整程序测试在 `server/internal/bootstrap/contract_test.go`，规则 4 的扩展是 `server/internal/archtest/rules_test.go:40`，`TestSQLCSchemaScope` 在 `server/internal/archtest/sqlc_test.go`；`make gen-go` 依次跑 oapi-codegen、`bodyshapegen`、sqlc，`make gen-web` 生成 TS 客户端。）
 - [x] 前端：类型检查通过，knip 为零；oxlint 等于上限，上限已按 7.8 调低；前端单元测试通过；关键词守卫没有未登记的命中。（收尾的头上 `make lint-web`：`keywords: 60 rules, 3 exceptions, no hits.`，54 个任务成功（类型检查、oxlint 等于上限、格式、中英文的键）；`make knip` 为零；`make test-web`：16 个任务成功。上限在 M2 中调低：web 565 → 551（P4）→ 452（P5），ui 25 → 19、utils 18 → 12、i18n 1 → 0（P5）。）
@@ -2166,7 +2166,7 @@ files:
 | P4 | web-auth | 已完成 | [spec](specs/P4-web-auth.md) | [plan](plans/P4-web-auth.md) | [review](reviews/P4-web-auth-review.md) |
 | P5 | web-account | 已完成 | [spec](specs/P5-web-account.md) | [plan](plans/P5-web-account.md) | [review](reviews/P5-web-account-review.md) |
 | 收尾 | closeout | 已完成 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | [review](reviews/closeout-review.md) |
-| Codex 修复 | codex-fixes | 进行中 | [spec](specs/codex-fixes.md) | [plan](plans/codex-fixes.md) | — |
+| Codex 修复 | codex-fixes | 已完成 | [spec](specs/codex-fixes.md) | [plan](plans/codex-fixes.md) | [review](reviews/codex-fixes-review.md) |
 
 ---
 

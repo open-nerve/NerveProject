@@ -211,8 +211,9 @@ const ellipsis = "…"
 // path of the value being read as text, cut after maxPath+1 bytes, and where
 // each segment began. Writing a path for every value would cost the square of
 // the depth, and the whole path for every problem the problems times the
-// name. This way a report costs about maxPath, however long or deep the path,
-// so a body can repeat one problem as often as it likes.
+// name. This way a report copies at most maxPath bytes and compares them with
+// the paths already reported, at most maxProblems of them, however long or
+// deep the path, so a body can repeat one problem as often as it likes.
 type problems struct {
 	path  []byte // names joined by dots, indexes in brackets, e.g. tags[1].name
 	marks []int  // len(path) before each segment, for leave
