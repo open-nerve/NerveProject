@@ -7,7 +7,7 @@ created: 2026-09-28
 
 # M2 交给 M4：命令行的只投递 River 客户端、游标与请求体检查、清理任务、编辑器和下拉框
 
-M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命令和第一个 River 定时任务（[M2 设计](../../M2-auth/M2-design.md)）。下面这些是 M2 定下的约定第一次落到工作项上的地方，或 M2 改到而要由 M4 接上的代码。每一节来自 M2 设计 13.2 中接收者含 M4 的一行（多个 M 的行只取 M4 的部分），另有 M0-P6 交接剩下的一项（第 13 节）和收尾在 13.2 之外找到的几项：第 2 节的游标不签名，第 4 节的生成器遇到不支持的写法（M2 设计 §16）和第一个 `date` 字段，第 6 节的定时任务，第 8 节的 `worker-src`、`frame-src`。
+M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命令和第一个 River 定时任务（[M2 设计](../../M2-auth/M2-design.md)）。下面这些是 M2 定下的约定第一次落到工作项上的地方，或 M2 改到而要由 M4 接上的代码。每一节来自 M2 设计 13.2 中接收者含 M4 的一行（多个 M 的行只取 M4 的部分），另有 M0-P6 交接剩下的一项（第 13 节）和收尾在 13.2 之外找到的几项：第 2 节的游标不签名，第 4 节的生成器遇到不支持的写法（M2 设计 §16）、第一个 `date` 字段和 map 型对象，第 6 节的定时任务，第 8 节的 `worker-src`、`frame-src`。
 
 ## 1. 命令行的"只投递"River 客户端（负责人：做好记录，以后别漏了）
 
@@ -36,9 +36,10 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - **数的范围**：不限类型的节点（`{}`、开放对象、没有 `items` 的数组）不看数的范围，`1e400` 这类 float64 放不下的数仍然得到解码器笼统的 400，改为在边界上报出。
 - 两者都在第一个带数组或开放对象请求体的操作到来时处理（M2/P1 评审）；在那之前客户端不能依赖路径的顺序。
 - **生成器**（`server/tools/bodyshapegen`）遇到不支持的 schema 写法时失败并说明原因；遇到它的 M 带着测试扩展生成器，不放过（M2 设计 §16）。
+- **map 型对象**：契约的写法检查要求每个 object 组件 schema 设 `additionalProperties: false`（`server/internal/platform/httpserver/apitest/rules_test.go` 的 `closedObject`），`type: object, additionalProperties: {type: string}` 这样的 map 型 schema 会被判为违规（M0/P3 评审 C3，M0-P3 交接第 5 节；M2 没有用到）。第一个需要它的 M（可能早于 M4）给 `closedObject` 加一个例外分支和一个反例用例。
 - **第一个 `format: date` 的字段**（工作项的开始、截止日期）：`bodyshape` 的格式检查器按生成的 Go 类型登记，现在只有 `time.Time` 和标准库的 `uuid.UUID`；M2 没有 `date` 字段，生成器遇到 `date` 就失败。M4 选定它的 Go 类型（不能是 `openapi_types.Date`：它所在的包导入 `github.com/google/uuid`），带着测试登记检查器（M2 设计 3.11）。
 - **草稿发布**复用同一个结构检查：发布时，草稿的 `payload` 按"创建工作项"的请求 schema 走 `bodyshape` 的校验（M2 设计 3.11），与创建工作项走同一条路（总体设计 5.4，差异清单第四节"草稿发布"）。
-- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试。
+- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试；第一个 map 型 schema 出现时，`closedObject` 有例外分支和反例用例（或者本 M 的 review 写明没有用到）。
 
 ## 5. 60 天物理清理与删除关系图（M4 的部分）
 
@@ -48,7 +49,7 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 
 ## 6. 定时任务和事件订阅者
 
-- **漏注册 worker 时只有一条 WARN**（收尾找到，M2/P3b 评审第 7 节）：River 的 `Start` 因配置错误失败时，runner 当作数据库不可达一样无限重试，每次一条 WARN "jobs did not start; trying again"（`server/internal/platform/jobs/jobs.go:136`），nerve 照常服务，但没有任务。模块加了定时任务却漏了 worker，这条 WARN 是唯一的迹象。M4 是第一个加业务定时任务的 M（自动归档、60 天清理）：加一个测试，漏注册时失败（M2 的做法是 `bootstrap` 的测试核对 `identity.cleanup_expired_sessions` 已注册，M2 设计 3.15），或者让 `platform/jobs` 在构造时拒绝没有 worker 的定时任务。
+- **漏注册 worker 没有响亮的迹象**（M2/P3b 评审第 7 节；收尾评审对照 `river@v0.47.0` 更正）：runner 只在 River 的 `Start` 失败时像数据库不可达一样无限重试、每次一条 WARN "jobs did not start; trying again"（`server/internal/platform/jobs/jobs.go:136`），而 `Start` 因配置失败只发生在一个 worker 都没有的时候（`river@v0.47.0/client.go:1102-1104`）。`identity` 总是注册 `identity.cleanup_expired_sessions` 的 worker，所以 M4 的模块给定时任务漏了自己的 worker 时，River 照常启动，leader 照常投递（定时任务的投递不核对 worker，`river@v0.47.0/periodic_job.go:254-260`），执行时 River 记 ERROR "jobexecutor.JobExecutor: Unhandled job kind"（`river@v0.47.0/internal/jobexecutor/job_executor.go:215`）并重试到放弃；`bootstrap` 漏接整个 `jobs.Job` 时什么都不记。M4 是第一个加业务定时任务的 M（自动归档、60 天清理）：加一个测试，漏注册时失败（M2 的做法是 `bootstrap` 的测试等 `identity.cleanup_expired_sessions` 在 `river_job` 中 `completed`，`server/internal/bootstrap/jobs_test.go:45`，M2 设计 3.15），或者让 `platform/jobs` 在构造时拒绝 kind 没有 worker 的定时任务。
 - **事件订阅者的写法**：事务内投递用 `InsertTx(ctx, tx, …)`，回滚的事务不留任务（M2 设计 3.15 的 spike）；订阅者怎样写由第一个需要它的 M 定，就是 M4。
 - **关闭条件**：漏注册 worker 的变异让测试失败；事件订阅者的写法写进 M4 设计。
 
@@ -67,7 +68,7 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 
 ## 9. 命令面板的主题命令
 
-- **做什么**：`web/apps/web/core/components/power-k/config/preferences-commands.ts` 先 `setTheme`，再发 `PATCH /api/v0/me/profile`，失败时不撤回，页面停在 nerve 没有的主题；失败的提示是固定的文案，不按 `code`。P5 起 preferences 页（`web/apps/web/core/components/appearance/theme-switcher.tsx`）在 nerve 应答成功之后才应用主题（M2/P5 spec 2.7）；M4 处理命令面板时照样改。
+- **做什么**：`web/apps/web/core/components/power-k/config/preferences-commands.ts` 先 `setTheme`，再发 `PATCH /api/v0/me/profile`，失败时不撤回，页面停在 nerve 没有的主题；失败的提示是固定的文案，不按 `code`。P5 起 preferences 页（`web/apps/web/core/components/appearance/theme-switcher.tsx`）在 nerve 应答成功之后才应用主题（M2/P5 spec 2.7）；M4 处理命令面板时照样改（应答成功、且标签页仍在发出修改时的会话才 `setTheme`，同 `theme-switcher.tsx` 的 `inSession()`；总体设计 7.7）。
 - **关闭条件**：命令面板的主题命令在应答成功之后才应用，失败时按 `code` 提示，有故事或浏览器核对。
 
 ## 10. 下拉框（M4 的部分）
