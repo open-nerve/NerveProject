@@ -50,6 +50,9 @@ export const initPromise = i18nInstance
     // intent here so this isn't accidentally flipped.
     returnObjects: false,
     react: { useSuspense: false },
+    // i18next logs a notice about its maker's product on init unless told not to: the page's console, and the
+    // tests', have no use for it.
+    showSupportNotice: false,
   })
   // Eagerly pre-load all namespaces for the initial language so they're cached
   // before any component renders. This prevents the re-render cascade that occurs
