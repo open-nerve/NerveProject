@@ -1,4 +1,4 @@
-import { accountOf } from "../../fixtures/assert/identity";
+import { expectPreferences } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, login, newRecord, register, writeRecord } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { answerTo, expectListBesideButton, holdAnswer, registerOnboarded } from "../../fixtures/settings-pages";
@@ -6,11 +6,6 @@ import { expect, test } from "../../fixtures/test";
 
 // A9, changing the preferences (M2 design 2), with the theme's list beside
 // its button in both languages (7.7, 9.6).
-
-const profileOf = async (db: Parameters<typeof accountOf>[0], email: string) =>
-  db.query("SELECT theme, language, start_of_the_week FROM profiles WHERE user_id = $1", [
-    (await accountOf(db, email)).id,
-  ]);
 
 test("A9 (page): the preferences page changes the theme, the language and the first day of the week, each list beside its button; they hold after a reload", async ({
   api,
@@ -97,8 +92,7 @@ test("A9 (page): the preferences page changes the theme, the language and the fi
   expect(await repicked.json()).toMatchObject({ start_of_the_week: 1 });
   await expect(page.getByRole("listbox")).toHaveCount(0);
 
-  const change = { theme: "dark", language: "zh-CN", start_of_the_week: 1 };
-  expect(await profileOf(db, email)).toEqual([change]);
+  await expectPreferences(db, email, { theme: "dark", language: "zh-CN", start_of_the_week: 1 });
   // One change for each pick, the day picked again included; the time zone's search sent none.
   expect(watch.apiRequests.filter((request) => request.startsWith("PATCH "))).toEqual(
     Array(4).fill("PATCH /api/v0/me/profile")
@@ -176,7 +170,7 @@ test("A9 (page): a refused change leaves the page as nerve has it", async ({ api
   await expect(page.getByText("Language & Time")).toBeVisible();
   await expect(language).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { beforeRefusals?: true }).beforeRefusals)).toBe(true);
-  expect(await profileOf(db, email)).toEqual([{ theme: "system", language: "en", start_of_the_week: 0 }]);
+  await expectPreferences(db, email, { theme: "system", language: "en", start_of_the_week: 0 });
   expect(watch.apiFailures).toEqual(["500 PATCH /api/v0/me/profile", "503 PATCH /api/v0/me/profile"]);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
@@ -253,8 +247,8 @@ test("A9 (page): a theme change nerve answers after the tab followed another acc
   await expect(tabA.getByRole("button", { name: "Light high contrast", exact: true })).toBeVisible();
 
   // nerve holds X's change; Y's theme is as it was.
-  expect(await profileOf(db, x)).toEqual([{ theme: "dark", language: "en", start_of_the_week: 0 }]);
-  expect(await profileOf(db, y)).toEqual([{ theme: "light-contrast", language: "en", start_of_the_week: 0 }]);
+  await expectPreferences(db, x, { theme: "dark", language: "en", start_of_the_week: 0 });
+  await expectPreferences(db, y, { theme: "light-contrast", language: "en", start_of_the_week: 0 });
   expect(watch.apiFailures).toEqual([]);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);
@@ -274,7 +268,7 @@ test("A9 (API): a personal access token changes the theme, the language and the 
 
   expect(response.status).toBe(200);
   expect(data).toMatchObject(change);
-  expect(await profileOf(db, email)).toEqual([change]);
+  await expectPreferences(db, email, change);
   const read = await api.GET("/api/v0/me/profile", { headers: bearer(pat.token) });
   expect(read.data).toEqual(data);
 });

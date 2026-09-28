@@ -1,4 +1,4 @@
-import { accountOf } from "../../fixtures/assert/identity";
+import { accountOf, expectAccountChanged } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
 import {
@@ -49,10 +49,12 @@ test("A8 (page): the general page changes the names, the preferences page the ti
   // The pick closes the list.
   await expect(page.getByRole("listbox")).toHaveCount(0);
 
-  const change = { first_name: "Ada", last_name: "Lovelace", display_name: "ada", user_timezone: "Asia/Shanghai" };
-  const after = await accountOf(db, email);
-  expect(after).toMatchObject(change);
-  expect(after.updated_at.getTime()).toBeGreaterThan(before.updated_at.getTime());
+  await expectAccountChanged(db, email, before, {
+    first_name: "Ada",
+    last_name: "Lovelace",
+    display_name: "ada",
+    user_timezone: "Asia/Shanghai",
+  });
 
   // After a reload, both pages show what nerve has. While nerve's list of time zones loads, the button shows the
   // account's zone by its name; then by its places.
@@ -81,6 +83,7 @@ test("A8 (page): the general page saves the names nerve takes, an empty last nam
   const page = await signedInPage(await registerOnboarded(api, email));
   const watch = await watchPage(page);
   await page.goto("/settings/profile/general");
+  const before = await accountOf(db, email);
   const save = () => page.getByRole("button", { name: "Save changes" }).click();
 
   // The rules of the names are nerve's (M2 design 4.2): the last name may stay empty, as onboarding leaves it,
@@ -90,8 +93,11 @@ test("A8 (page): the general page saves the names nerve takes, an empty last nam
   await page.locator("#display_name").fill("Ada Lovelace");
   expect((await answerTo(page, "PATCH", "/api/v0/me", save)).status()).toBe(200);
   await expect(page.getByText("Your profile is updated.")).toBeVisible();
-  const saved = await accountOf(db, email);
-  expect(saved).toMatchObject({ first_name: "Ada", last_name: "", display_name: "Ada Lovelace" });
+  const saved = await expectAccountChanged(db, email, before, {
+    first_name: "Ada",
+    last_name: "",
+    display_name: "Ada Lovelace",
+  });
 
   // A web address in the first name: nerve refuses it, the page says why under that field and nowhere else,
   // and nothing changes.
@@ -124,9 +130,7 @@ test("A8 (API): a personal access token changes the names and the time zone; nul
 
   expect(response.status).toBe(200);
   expect(data).toMatchObject(change);
-  const after = await accountOf(db, email);
-  expect(after).toMatchObject(change);
-  expect(after.updated_at.getTime()).toBeGreaterThan(before.updated_at.getTime());
+  const after = await expectAccountChanged(db, email, before, change);
 
   // null breaks the contract: the platform's 400, and nothing changes.
   const nulled = await api.PATCH("/api/v0/me", {
