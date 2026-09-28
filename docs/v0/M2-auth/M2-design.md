@@ -2117,17 +2117,17 @@ files:
 ---
 
 ## 14. 完成标准
-- [ ] P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review。
-- [ ] A1–A17 的页面版本（有页面的）和接口版本全部通过，S1–S4 通过。需要登录的每个操作都有 PAT 版本，调用同一组数据库断言；因凭证种类而不同的预期由参数表达，并写在故事里（A7）。
-- [ ] 后端：单元测试、集成测试（含账户行锁的交错测试）、契约测试（四个整程序测试、`apitest` 对错误码的核对）、架构测试（含规则 4 的扩展和 `TestSQLCSchemaScope`）和 depguard 全部通过；`make gen-check` 覆盖 oapi-codegen、请求体结构表、sqlc 和 TS 客户端。
-- [ ] 前端：类型检查通过，knip 为零；oxlint 等于上限，上限已按 7.8 调低；前端单元测试通过；关键词守卫没有未登记的命中。
-- [ ] `git grep -n -E "csrfmiddlewaretoken|X-CSRFTOKEN" -- web` 没有输出；前端不再调用 `/auth/…` 和 Plane 的用户、实例、令牌、时区地址（7.9 的规则守着）；M2 能到达的页面挂载时不请求 M3 的旧接口（3.1）。
-- [ ] 4 张业务表（`users`、`profiles`、`auth_sessions`、`api_tokens`）由 M2 的迁移创建，以 Plane 表结构快照为起点；River 的表由它自己的迁移创建（3.15）；差异清单在建表的 Phase 登记了全局的建表约定（3.13）、每一列的改动和每一条行为差异（4.6），`sessions` 登记为替换模型。
-- [ ] 第 10 节的四个决策点已由负责人裁定（2026-09-25）并已实现；第 11.1 节已由负责人批准，总体设计 4.2 已改写。
-- [ ] 浏览器核对（9.6，含局域网 HTTP、两个账户两个标签页、会话暂不可用）的脚本全文写在各 Phase review 的附录中。
-- [ ] `handoffs/` 中没有 `open` 的事项；交给 M3–M8 的交接已写好（13.2）。
-- [ ] 总体设计、M0 设计、M0/P3 spec、差异清单、前端改动清单已在各 Phase 按 3.20 同步，收尾逐行核对过；README 已按 8.7 写好；总体设计中 M2 的状态改为"已完成"。
-- [ ] 收尾 review 写明规模估计与实际的对比（7.10）。
+- [x] P1–P5 和收尾全部完成，每个 Phase 都有 spec、plan 和 review。（第 15 节的七行都是"已完成"，各有三个链接。）
+- [x] A1–A17 的页面版本（有页面的）和接口版本全部通过，S1–S4 通过。需要登录的每个操作都有 PAT 版本，调用同一组数据库断言；因凭证种类而不同的预期由参数表达，并写在故事里（A7）。（收尾的头上 `make e2e`：48 passed。故事在 `e2e/stories/identity/`（A1–A17）和 `e2e/stories/smoke/`（S1–S5）；页面版本和接口版本调用 `e2e/fixtures/assert/identity.ts` 的同一组断言。）
+- [x] 后端：单元测试、集成测试（含账户行锁的交错测试）、契约测试（四个整程序测试、`apitest` 对错误码的核对）、架构测试（含规则 4 的扩展和 `TestSQLCSchemaScope`）和 depguard 全部通过；`make gen-check` 覆盖 oapi-codegen、请求体结构表、sqlc 和 TS 客户端。（收尾的头上 `make test`：32 个包 `ok`、没有 `FAIL`；`make lint-go`：两段 `0 issues.`；`make gen-check`：没有差异。交错测试在 `server/internal/modules/identity/interleavings_test.go`、`interleavings_reset_test.go`，整程序测试在 `server/internal/bootstrap/contract_test.go`，规则 4 的扩展是 `server/internal/archtest/rules_test.go:40`，`TestSQLCSchemaScope` 在 `server/internal/archtest/sqlc_test.go`；`make gen-go` 依次跑 oapi-codegen、`bodyshapegen`、sqlc，`make gen-web` 生成 TS 客户端。）
+- [x] 前端：类型检查通过，knip 为零；oxlint 等于上限，上限已按 7.8 调低；前端单元测试通过；关键词守卫没有未登记的命中。（收尾的头上 `make lint-web`：`keywords: 60 rules, 3 exceptions, no hits.`，54 个任务成功（类型检查、oxlint 等于上限、格式、中英文的键）；`make knip` 为零；`make test-web`：16 个任务成功。上限在 M2 中调低：web 565 → 551（P4）→ 452（P5），ui 25 → 19、utils 18 → 12、i18n 1 → 0（P5）。）
+- [x] `git grep -n -E "csrfmiddlewaretoken|X-CSRFTOKEN" -- web` 没有输出；前端不再调用 `/auth/…` 和 Plane 的用户、实例、令牌、时区地址（7.9 的规则守着）；M2 能到达的页面挂载时不请求 M3 的旧接口（3.1）。（收尾的头上 `git grep` 退出码 1；7.9 的规则是 `tools/keywords.json` 的 `csrf`、`plane-auth-urls`、`auth-error-code`、`is-self-managed`、`with-credentials`、`plane-user-urls`、`plane-api-token-urls`、`plane-timezone-urls`、`plane-user-assets`；挂载时的旧接口由故事守着：登录页 S2，注册页和 `/onboarding` A10，`/create-workspace` A3（收尾加），个人设置的四个标签页 A7、A8、A9、A11、A12，[收尾 spec](specs/closeout.md) 2.6。）
+- [x] 4 张业务表（`users`、`profiles`、`auth_sessions`、`api_tokens`）由 M2 的迁移创建，以 Plane 表结构快照为起点；River 的表由它自己的迁移创建（3.15）；差异清单在建表的 Phase 登记了全局的建表约定（3.13）、每一列的改动和每一条行为差异（4.6），`sessions` 登记为替换模型。（`server/migrations/sql/00001`–`00004` 建四张表，`00005` 是 River 的迁移；差异清单一 B、二·全局、二·按表、第四节由收尾按第 4 节逐列核对，[收尾 spec](specs/closeout.md) 2.3。）
+- [x] 第 10 节的四个决策点已由负责人裁定（2026-09-25）并已实现；第 11.1 节已由负责人批准，总体设计 4.2 已改写。（决策点 1 B：`nerve users set-email`，A16；2 C：prod 默认关闭注册、`nerve users create`，A2、A17、S3；3 A：自助停用和 `deactivate`、`activate` 两个命令，A12；4 A：两步删除，关键词规则 `is-self-managed`；11.1：退出只结束当前会话，A6；总体设计 4.2 第二条已改写。）
+- [x] 浏览器核对（9.6，含局域网 HTTP、两个账户两个标签页、会话暂不可用）的脚本全文写在各 Phase review 的附录中。（P4、P5 两个有页面的 Phase 的 review 附录"9.6 的浏览器核对"：P4 的 C5 在局域网 HTTP 上，C4a–C4c 是两个账户两个标签页，C6b、C6c 是会话暂不可用；P1–P3b 只有后端。）
+- [x] `handoffs/` 中没有 `open` 的事项；交给 M3–M8 的交接已写好（13.2）。（`grep -l -E '^status: (open|done)$' docs/v0/M2-auth/handoffs/*.md` 没有输出；M3–M8 各有 `handoffs/M2-closeout.md`，13.2 的每一行链接到它。）
+- [x] 总体设计、M0 设计、M0/P3 spec、差异清单、前端改动清单已在各 Phase 按 3.20 同步，收尾逐行核对过；README 已按 8.7 写好；总体设计中 M2 的状态改为"已完成"。（逐行核对见[收尾 spec](specs/closeout.md) 2.2：四处漏同步由收尾补上，记为各 Phase 的漏项；README 的 8.7 各条在"部署"一节，同一节核对。）
+- [x] 收尾 review 写明规模估计与实际的对比（7.10）。（[收尾 review](reviews/closeout-review.md)；实测和测法在[收尾 spec](specs/closeout.md) 附录 B。）
 
 ---
 
@@ -2141,7 +2141,7 @@ files:
 | P3b | jobs-and-admin | 已完成 | [spec](specs/P3b-jobs-and-admin.md) | [plan](plans/P3b-jobs-and-admin.md) | [review](reviews/P3b-jobs-and-admin-review.md) |
 | P4 | web-auth | 已完成 | [spec](specs/P4-web-auth.md) | [plan](plans/P4-web-auth.md) | [review](reviews/P4-web-auth-review.md) |
 | P5 | web-account | 已完成 | [spec](specs/P5-web-account.md) | [plan](plans/P5-web-account.md) | [review](reviews/P5-web-account-review.md) |
-| 收尾 | closeout | 进行中 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | — |
+| 收尾 | closeout | 已完成 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | [review](reviews/closeout-review.md) |
 
 ---
 

@@ -700,7 +700,7 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 |---|---|---|---|
 | M0 | 基础骨架 | 已完成 | [M0-design.md](M0-foundation/M0-design.md) |
 | M1 | 前端瘦身 | 已完成 | [M1-design.md](M1-frontend-trim/M1-design.md) |
-| M2 | 账户认证 | 进行中 | [M2-design.md](M2-auth/M2-design.md) |
+| M2 | 账户认证 | 已完成 | [M2-design.md](M2-auth/M2-design.md) |
 | M3 | 工作区与项目 | 未开始 | — |
 | M4 | 工作项核心 | 未开始 | — |
 | M5 | 文件 | 未开始 | — |
