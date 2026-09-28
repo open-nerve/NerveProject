@@ -16,7 +16,7 @@
     "dev": "tsdown --watch --no-clean",
     "build": "tsdown",
     "check:sync": "tsx scripts/sync-check.ts",
-    "check:lint": "node ../../../tools/lint-cap.mjs 1",
+    "check:lint": "node ../../../tools/lint-cap.mjs 0",
     "check:types": "tsc --noEmit",
     "check:format": "oxfmt --check .",
     "fix:format": "oxfmt .",
