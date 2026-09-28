@@ -2142,6 +2142,7 @@ files:
 | P4 | web-auth | 已完成 | [spec](specs/P4-web-auth.md) | [plan](plans/P4-web-auth.md) | [review](reviews/P4-web-auth-review.md) |
 | P5 | web-account | 已完成 | [spec](specs/P5-web-account.md) | [plan](plans/P5-web-account.md) | [review](reviews/P5-web-account-review.md) |
 | 收尾 | closeout | 已完成 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | [review](reviews/closeout-review.md) |
+| Codex 修复 | codex-fixes | 进行中 | [spec](specs/codex-fixes.md) | [plan](plans/codex-fixes.md) | — |
 
 ---
 
