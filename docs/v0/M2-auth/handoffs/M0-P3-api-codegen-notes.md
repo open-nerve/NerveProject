@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M0/P3
 to: M2
 created: 2026-09-22
@@ -83,3 +83,17 @@ created: 2026-09-22
 全部处理完，状态改为 `done`。
 
 来源：[M2/P3a spec](../specs/P3a-account-api.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+五条都已在 M2/P1、P3a 完成，收尾在 `d97c513` 上核对：
+
+1. **生成配置和 google/uuid 的守卫**：`TestNerveBinaryLinksNoBannedModule`、`TestGeneratedCodeUsesTheStandardUUID` 随 `make test` 通过；`make gen-check` 没有差异。
+2. **错误映射**：三个出口由 identity 的 handler 测试和整程序测试（`server/internal/bootstrap/contract_test.go` 的 `TestBodiesThatBreakTheStructureAnswer400`、`TestParametersThatDoNotBindAnswer400`）覆盖，随 `make test` 通过。
+3. **安全声明**：`apitest` 的写法检查随 `make test` 通过。
+4. **模块入口**：`Register(router, api)`、`PublicOperations()`；`TestPublicOperationsAreTheContractsPublicOperations` 通过。
+5. **组织规则**：照旧。接口描述按模块一个文件，不受约 400 行的限制（`api/modules/identity.yaml` 623 行），收尾写进总体设计 6.3 的规则 5。
+
+状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

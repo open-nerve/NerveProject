@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M0/P6
 to: M2
 created: 2026-09-22
@@ -100,3 +100,19 @@ created: 2026-09-22
 仍未处理，状态保持 `open`：fixture 写法的延伸（M4、M5、M8），由收尾转交给这些 M。
 
 来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+逐节的结论：
+
+- **PAT 对等验收与认证 fixture**：M2/P1–P4 完成（`e2e/fixtures/auth.ts`）。
+- **数据库断言**：M2/P1 完成（`e2e/fixtures/assert/`）。
+- **S1、S3**：M2/P1、P3a 完成。
+- **S2**：M2/P4 完成。
+- **端口与停机**：M2/P1、P3b 完成。
+- **录像**：M2/P1 定为不录像。
+- **fixture 模式的延伸**：不属于 M2，转交：`clock.ts` 给 M4（[M4 的交接](../../M4-issue-core/handoffs/M2-closeout.md)第 13 节），`storage.ts` 给 M5（[M5 的交接](../../M5-files/handoffs/M2-closeout.md)第 5 节），`webhook.ts` 给 M8（[M8 的交接](../../M8-open-release/handoffs/M2-closeout.md)第 5 节）。
+
+收尾的头上 `make e2e` 48 个测试通过（收尾 spec 附录 A）。全部有结论，状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

@@ -278,7 +278,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | 接口日志 | `api_activity_logs` |
 | 文件 | `file_assets` |
 
-归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表：用 River 为锁定版本导出的迁移 SQL（`river migrate-get`）写成 goose 迁移，和业务表在同一条迁移链上——一个版本表、一次 `migrate up`、一个就绪检查，e2e 的模板库也只迁移一次；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
+归档不需要单独的表，用 `issues`、`cycles`、`modules`、`projects` 上的 `archived_at` 列表示，项目的自动归档周期存在 `projects.archive_in`。另有 River 任务队列自带的表：用 River 为锁定版本导出的迁移 SQL（`river migrate-get`）写成 goose 迁移，和业务表在同一条迁移链上——一个版本表、一次 `migrate up`、一个就绪检查，e2e 的模板库也只迁移一次；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。升级 River 时，用新版本的 CLI 导出新增的版本（`--version N`），另写一份 goose 迁移，不改已发布的迁移文件（M2 设计 3.15）。Plane 原有 96 张表，未保留的 52 张及原因见[差异清单](plane-diff.md#一未保留的表)。
 
 ### 5.3 主要改动
 
@@ -400,7 +400,7 @@ modules/issue/
    - 订阅者在同一个事务内被调用，通常只做一件事：往 River 里投递任务。所以事务是原子的，同时各模块之间解耦。
 4. **只在组合根接线**：禁止全局可变状态，禁止 `init()` 副作用，禁止服务定位器。所有依赖都通过构造函数显式传入。
 5. **不写大文件、不建大杂烩包**：
-   - 一个文件只做一件事；超过约 400 行的文件在评审时必须说明理由或者拆分。
+   - 一个文件只做一件事；超过约 400 行的文件在评审时必须说明理由或者拆分。接口描述按模块一个文件（3.1），不受这一条的限制（M2/P3a 评审）。
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
 6. **强制手段**：
    - Go 编译器本身禁止包之间的循环依赖。
@@ -532,7 +532,7 @@ server/configs/
 ### 7.1 代码来源
 - **来源提交**：Plane `02c19e1341d93141e8ad7b3278298adce208bafc`（`preview` 分支）。M0/P5 已从这个提交原样迁入，之后的每一处改动登记在[前端改动清单](frontend-changes.md)。
 - **使用**：Plane 的 `apps/web`，以及 packages 中的 types、constants、ui、propel、editor、i18n、hooks、utils、shared-state、tailwind-config、typescript-config。
-- **暂时使用**：packages/services。web 中的令牌设置页和文件工具函数依赖它；M2（PAT）和 M5（文件）对接新接口时，将它删除。
+- **暂时使用**：packages/services。M2/P5 删掉了其中的令牌服务和 axios 基类，web 只剩地址规范化和上传文件的元数据工具依赖它；M5 对接文件接口时，将它删除（[前端改动清单](frontend-changes.md) 3.1）。
 - **不使用**：apps/admin、apps/space、apps/live、apps/api、apps/proxy、packages/logger、packages/decorators、packages/codemods（已核实 web 及其依赖的包都不引用它们）。
 - **工具链**：沿用 pnpm + turbo + Vite。开发时由 Vite 把 `/api` 转发给本地 Go 服务；发布时，打包好的静态文件通过 `go:embed` 编进 Go 程序。
 
@@ -581,6 +581,18 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 - **TypeScript 类型检查、oxlint、knip 长期作为持续集成的门禁**，不只在 M1 执行，防止死代码重新长回来。oxfmt 的格式检查和前端构建也是持续集成的门禁（M0/P5 加入）。删掉的功能由关键词守卫看住，防止重新长回来（M1 加入，见 [M1 设计](M1-frontend-trim/M1-design.md) 7.4）。
 - **oxlint 的警告采用"只降不升"的基线**：Plane 现有代码带着上万条警告（它自己也是按每个包的警告上限来管理的）。警告数超过基线，持续集成就失败；警告减少后，同一个提交里就把基线调低。M1 会重新测出基线，并制定逐步清零的计划。
 - 新写的代码遵循 7.2 的职责划分，和 Plane 现有的写法保持一致（MobX store、`observer` 组件）。
+
+### 7.7 stores 按会话分代（长期有效，M2 起）
+4.3 的"不以别的会话的身份发请求"在代码上靠下面几条做到（M2 设计 7.1、7.5，M2/P4 spec 2.8）。M3 以后每个接上新接口的 store、service 和页面都照做；各 M 的交接只列自己的范围，不重复这些规则。
+- **每个会话一个 `RootStore`**：会话（`login_id`）每次变化，`store-context.tsx` 建一个新的 `RootStore`，交给它这个会话的客户端（`apiFor(loginId)`）。只有不属于账户的 `instance`、`router`、`theme` 从上一代沿用，其余 store 都新建。组件经 `StoreProvider` 拿到此刻的 `RootStore`，换代之后以新的一代重新渲染。
+- **service 从构造函数拿这一代的客户端**：store 在构造时建它的 service，传入这一代的客户端。没有模块级的带令牌客户端，也没有用它的模块级 service 实例；只调公开操作的 service 用 `publicClient`，可以是模块级的（例如 `core/hooks/use-timezone.tsx` 的 `TimezoneService`）。
+- **store 只经自己的 `RootStore` 找兄弟 store**。`store-context.tsx` 导出的 `rootStore` 只给没有自己 `RootStore` 的代码做同步读取，不发请求。
+- **填充 stores 的 SWR 键带上 `loginId`**（例如 `["CURRENT_USER", loginId]`）：换了会话，新的一代取自己的数据。
+- **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收。M2 结束时 `RootStore` 还没有释放的方法：第一个接上这类 store 的 M 给 `RootStore` 加上它，由 `store-context.tsx` 在换代时调用，之后的 M 照做（要释放的反应列在各 M 的交接里）。只观察本代对象的反应不用释放。
+- **`SessionChangedError` 不是认证失败**：它表示请求属于标签页已经离开的会话：请求在发出之前被拦下；或者请求（或续期之后重发的副本）得到 401 时，标签页已经离开它的会话，于是不再续期、重发，也不结束标签页此刻的会话。它只出现在请求发出之前或一个 401 之后，所以操作确实没有做。调用方不退出、不跳转；后台加载忽略它，由新的一代重新取数；用户发起的操作被它截断时可以提示失败。
+- **页面级的状态跟随当前的会话**：界面语言由 `StoreWrapper`（`core/lib/wrappers/store-wrapper.tsx`）按当前一代的资料设置，store 不设。主题在每个会话第一次取到资料时由 `StoreWrapper` 按资料设置一次，之后由改它的组件在 nerve 应答成功之后设置，设置之前先核对标签页仍在发出修改时的会话（`core/components/appearance/theme-switcher.tsx` 的 `inSession()`，M2/P5 spec 2.7）。store 不直接改全局状态；组件在一个 `await` 之后改页面级的状态时，都先核对会话没变。这样旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
+- **`@nerve/ui` 不依赖 `@nerve/i18n`**：组件的文字由调用方经 `t()` 以 props 传入。`@nerve/ui` 的 `package.json` 不声明 `@nerve/i18n`，pnpm 不把没有声明的包放进它的 `node_modules`，从 `@nerve/i18n` 导入的名字过不了 `@nerve/ui` 的类型检查。
+- 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/auth/api-client.ts`、`core/lib/auth/auth-middleware.ts`（`SessionChangedError`）和 `core/lib/wrappers/store-wrapper.tsx`；照这些规则写的 store 可以看 `core/store/user/api-token.store.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
 
 ---
 
@@ -688,7 +700,7 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 |---|---|---|---|
 | M0 | 基础骨架 | 已完成 | [M0-design.md](M0-foundation/M0-design.md) |
 | M1 | 前端瘦身 | 已完成 | [M1-design.md](M1-frontend-trim/M1-design.md) |
-| M2 | 账户认证 | 未开始 | — |
+| M2 | 账户认证 | 已完成 | [M2-design.md](M2-auth/M2-design.md) |
 | M3 | 工作区与项目 | 未开始 | — |
 | M4 | 工作项核心 | 未开始 | — |
 | M5 | 文件 | 未开始 | — |
@@ -704,8 +716,10 @@ M0 和 M1 可以同时进行。M2 之后按顺序推进。
 |---|---|
 | 列表引擎的复杂度（分组、子分组、多值分组、游标和多种排序的组合）可能超出预期 | M4 设计文档；必要时把 M4 拆成两个 M |
 | 操作动态的事件类型和格式：Plane 有 27 种，前端的渲染依赖这些格式 | M4 设计文档，逐一对照 Plane 的实现 |
-| 前端对接新接口时，store 和组件的实际改动量 | 各 M 的设计文档中评估；M2 是第一个对接的领域，用它来校准后续的估算 |
+| 前端对接新接口时，store 和组件的实际改动量 | 各 M 的设计文档中评估；M2 是第一个对接的领域，用它来校准后续的估算：实测和对 M3 以后的含义见 [M2 收尾 spec](M2-auth/specs/closeout.md) 附录 B |
 | 通知的生成规则：谁在什么情况下会收到通知 | M7 设计文档，对照 Plane 的 `notification_task` |
 | 依赖的版本和成熟度（2026-09-22 已核实，见 M0 设计文档第 1 节）；OpenAPI 3.1 工具链是否可用 | M0/P3 验证；River 在 M2 接入时锁定版本 |
 | 各接口的限流数值、各类数据的保留期 | 相关 M 的设计文档 |
 | 没有邮件服务时账户如何找回（目前只能由管理员用命令行重置） | 以后接入邮件服务时再议（v0 之后） |
+| 调高 argon2 参数（`argon2_memory_kib`、`argon2_iterations`）之后，登录耗时能区分休眠的账户和不存在的邮箱，直到每个账户重新登录一次（M2 设计 §16） | 是否加缓解由负责人以后决定；M8 的 argon2 实测提供数字（[M8 的交接](M8-open-release/handoffs/M2-closeout.md)第 2 节） |
+| 泄露的刷新令牌可以派生永不过期的 PAT，影响不以刷新令牌的 30 天为限（M2 设计 §16、8.5） | 恢复步骤已写在 README 的"部署"一节（撤销不认识的 PAT，或由管理员 `nerve users reset-password`）。负责人以后可选的产品选项有两个，v0 都不采用（M2 设计 8.5）：创建 PAT 时重新输入密码；或者不允许用 PAT 创建 PAT，同时给 PAT 的有效期设上限（两者要一起做：只限有效期、仍允许无限派生，解决不了问题） |

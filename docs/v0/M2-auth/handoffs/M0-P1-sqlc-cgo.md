@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M0/P1
 to: M2
 created: 2026-09-22
@@ -22,3 +22,14 @@ M2 首次接入 sqlc（v1.31.1，放进 `server/tools/go.mod`）时处理：
 2. **PG 17 解析器**：迁移不写 PG 18 的语法，也不写 `DEFAULT uuidv7()`，ID 由应用生成（M2 设计 3.13）。`00001`–`00003` 由 sqlc 解析通过。
 
 来源：[M2/P1 spec](../specs/P1-platform-core.md) 2.10。
+
+## 处理结果（M2/收尾）
+
+两条都在 M2/P1 完成，收尾在 `d97c513` 上核对仍然成立：
+
+1. **cgo**：`Makefile` 的 `SQLC` 是 `CGO_ENABLED=0 go tool -modfile=tools/go.mod sqlc`；`make gen-check` 重新生成 sqlc 的代码，没有差异。
+2. **PG 17 的解析器**：五个迁移（`server/migrations/sql/00001`–`00005`）都没有 `uuidv7()`（`git grep -n -i uuidv7 -- server/migrations/sql` 没有输出）；sqlc 解析 `identity` 的四个（`00001`–`00004`，`server/sqlc.yaml` 的 `schema`），`make gen-check` 没有差异。River 的 `00005` 是原样导出，不在 sqlc 的 `schema` 里。
+
+状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

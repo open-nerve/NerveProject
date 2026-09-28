@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M1/P3
 to: M2
 created: 2026-09-24
@@ -97,3 +97,18 @@ M2 合并时：
 全部处理完，状态改为 `done`。
 
 来源：[M2/P5 spec](../specs/P5-web-account.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+逐条核对关闭条件（`d97c513`）：
+
+- **CSRF**：`git grep -n -E "csrfmiddlewaretoken|X-CSRFTOKEN" -- web` 没有输出；登录、注册、退出、修改密码都走令牌管理器（M2/P4）。
+- **认证错误**：接口直接返回 problem，前端不读 `/?error_code=…`（关键词规则 `auth-error-code`，M2/P4）。
+- **修改登录邮箱**：负责人裁定为 B，`nerve users set-email`（M2/P3b，A16）。
+- **实例配置**：`InstanceInfo` 有 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit`（`api/modules/instance.yaml:83`）；`is_self_managed` 连同新手引导的两步删除（关键词规则 `is-self-managed`，M2/P4）。
+- **不再读的用户字段、不再调用的地址**（原文要求收尾再核对一次）：`git grep -n -i -E 'is_password_autoset|last_login_medium|has_marketing_email_consent|billing_address|has_billing_address|property_change|state_change|issue_completed|comment|[^_]mention|provider|notification|email-check|magic|forgot|reset-password|set-password|generate-code|change-email|instance-admin|is_instance_admin|google|github|gitlab|gitea|[^0]/auth/' d97c513 -- api` 没有输出（退出码 1）。接口描述共 15 个操作、12 个路径，都在 `/api/v0/auth/`、`/api/v0/me`、`/api/v0/api-tokens/{token_id}`、`/api/v0/instance`、`/api/v0/timezones` 下。
+- **令牌的地址**：`/api/v0/me/api-tokens`、`/api/v0/api-tokens/{token_id}`，结尾都没有 `/`（M2/P3a）。
+
+状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

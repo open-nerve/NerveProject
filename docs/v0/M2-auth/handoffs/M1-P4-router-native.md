@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M1/P4
 to: M2
 created: 2026-09-24
@@ -46,3 +46,9 @@ M2 合并时：
 全部处理完，状态改为 `done`。
 
 来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+三项在 M2/P4 完成，收尾在 `d97c513` 上核对：`next_path` 的关口是 `@nerve/utils` 的 `isValidNextPath`（`web/packages/utils/src/url.ts`），单元测试 `web/packages/utils/src/next-path.test.ts` 随 `make test-web` 通过，A3 的页面测试打开四个不合格的 `next_path`，登录后都落到 `/create-workspace`（`make e2e`）；`AuthenticationWrapper` 和 401 处理（`web/apps/web/core/lib/auth/auth-middleware.ts`）随令牌管理器重写；"由 M2 决定"的三项在 M2 设计 3.18、7.2、7.7 有结论。状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。
