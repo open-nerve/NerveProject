@@ -2,11 +2,42 @@
   "account_settings": {
     "preferences": {
       "heading": "偏好设置",
-      "description": "按照您的工作方式自定义您的应用体验"
+      "description": "按照您的工作方式自定义您的应用体验",
+      "start_of_week": {
+        "title": "一周的第一天",
+        "description": "这会改变应用中所有日历的显示方式。"
+      }
     },
     "api_tokens": {
       "title": "个人访问令牌",
-      "description": "生成安全的 API 令牌，将您的数据与外部系统和应用程序集成。"
+      "description": "生成安全的访问令牌，将您的数据与外部系统和应用程序集成。",
+      "load_failed": "无法加载令牌。",
+      "active": "有效",
+      "expired": "已过期",
+      "expires_at": "{date} {time} 过期",
+      "expired_at": "已于 {date} {time} 过期",
+      "created_at": "创建于 {date}",
+      "last_used": "最后使用于 {date} {time}",
+      "never_used": "从未使用",
+      "revoke": "撤销令牌",
+      "copy": "复制密钥",
+      "expiry": {
+        "1_week": "1 周",
+        "1_month": "1 个月",
+        "3_months": "3 个月",
+        "1_year": "1 年",
+        "custom": "自定义日期",
+        "set": "设置过期时间",
+        "set_date": "选择日期",
+        "required": "请选择令牌何时过期，或设为永不过期。"
+      }
+    },
+    "security": {
+      "api_tokens": {
+        "title": "个人访问令牌",
+        "description": "修改密码不会撤销这些令牌：每个令牌在过期或您在此撤销之前一直有效。",
+        "empty": "您没有个人访问令牌。"
+      }
     }
   },
   "profile": {

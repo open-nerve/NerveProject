@@ -9,7 +9,8 @@ import React, { useState } from "react";
 import { useTheme } from "next-themes";
 import { ArrowRightLeft } from "lucide-react";
 import { Dialog, Transition } from "@headlessui/react";
-// ui
+// nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 // hooks
@@ -22,6 +23,7 @@ type Props = {
 
 export function SwitchAccountModal(props: Props) {
   const { isOpen, onClose } = props;
+  const { t } = useTranslation();
   // states
   const [switchingAccount, setSwitchingAccount] = useState(false);
   // store hooks
@@ -37,19 +39,19 @@ export function SwitchAccountModal(props: Props) {
   const handleSwitchAccount = async () => {
     setSwitchingAccount(true);
 
-    await signOut()
-      .then(() => {
-        setTheme("system");
-        handleClose();
-      })
-      .catch(() =>
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: "Failed to sign out. Please try again.",
-        })
-      )
-      .finally(() => setSwitchingAccount(false));
+    try {
+      await signOut();
+      setTheme("system");
+      handleClose();
+    } catch {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: t("auth.sign_out.toast.error.title"),
+        message: t("auth.sign_out.toast.error.message"),
+      });
+    } finally {
+      setSwitchingAccount(false);
+    }
   };
 
   return (
@@ -88,12 +90,13 @@ export function SwitchAccountModal(props: Props) {
                     </div>
                     <div className="flex flex-col gap-y-6 py-3">
                       <Dialog.Title as="h3" className="text-20 leading-6 font-medium text-primary">
-                        Switch account
+                        {t("onboarding.switch_account.title")}
                       </Dialog.Title>
                       {userData?.email && (
                         <div className="text-14 font-regular text-secondary">
-                          If you have signed up via <span className="text-accent-primary">{userData.email}</span>{" "}
-                          un-intentionally, you can switch your account to a different one from here.
+                          {t("onboarding.switch_account.description_before_email")}{" "}
+                          <span className="text-accent-primary">{userData.email}</span>{" "}
+                          {t("onboarding.switch_account.description_after_email")}
                         </div>
                       )}
                     </div>
@@ -101,7 +104,9 @@ export function SwitchAccountModal(props: Props) {
                 </div>
                 <div className="mb-2 flex items-center justify-end gap-3 p-4 sm:px-6">
                   <Button variant="secondary" size="lg" onClick={handleSwitchAccount} disabled={switchingAccount}>
-                    {switchingAccount ? "Switching..." : "Switch account"}
+                    {switchingAccount
+                      ? t("onboarding.switch_account.switching")
+                      : t("onboarding.switch_account.switch")}
                   </Button>
                 </div>
               </Dialog.Panel>

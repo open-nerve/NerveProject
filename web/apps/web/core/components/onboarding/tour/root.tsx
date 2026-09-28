@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { CloseOutline } from "@makeplane/propel/icons";
 // assets
@@ -30,42 +31,39 @@ export type TTourSteps = "welcome" | "work-items" | "cycles" | "modules" | "view
 
 const TOUR_STEPS: {
   key: TTourSteps;
-  title: string;
-  description: string;
+  i18n_title: string;
+  i18n_description: string;
   image: string;
   prevStep?: TTourSteps;
   nextStep?: TTourSteps;
 }[] = [
   {
     key: "work-items",
-    title: "Plan with work items",
-    description:
-      "The work item is the building block of Nerve. Most concepts in Nerve are either associated with work items and their properties.",
+    i18n_title: "onboarding.tour.work_items.title",
+    i18n_description: "onboarding.tour.work_items.description",
     image: IssuesTour,
     nextStep: "cycles",
   },
   {
     key: "cycles",
-    title: "Move with cycles",
-    description:
-      "Cycles help you and your team to progress faster, similar to the sprints commonly used in agile development.",
+    i18n_title: "onboarding.tour.cycles.title",
+    i18n_description: "onboarding.tour.cycles.description",
     image: CyclesTour,
     prevStep: "work-items",
     nextStep: "modules",
   },
   {
     key: "modules",
-    title: "Break into modules",
-    description: "Modules break your big thing into Projects or Features, to help you organize better.",
+    i18n_title: "onboarding.tour.modules.title",
+    i18n_description: "onboarding.tour.modules.description",
     image: ModulesTour,
     prevStep: "cycles",
     nextStep: "views",
   },
   {
     key: "views",
-    title: "Views",
-    description:
-      "Create custom filters to display only the work items that matter to you. Save and share your filters in just a few clicks.",
+    i18n_title: "onboarding.tour.views.title",
+    i18n_description: "onboarding.tour.views.description",
     image: ViewsTour,
     prevStep: "modules",
   },
@@ -73,6 +71,7 @@ const TOUR_STEPS: {
 
 export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) {
   const { onComplete } = props;
+  const { t } = useTranslation();
   // states
   const [step, setStep] = useState<TTourSteps>("welcome");
   // store hooks
@@ -92,12 +91,12 @@ export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) 
             </div>
             <div className="flex flex-col overflow-y-auto p-6">
               <h3 className="font-semibold sm:text-18">
-                Welcome to Nerve, {currentUser?.first_name} {currentUser?.last_name}
+                {t("onboarding.tour.welcome.title", {
+                  firstName: currentUser?.first_name ?? "",
+                  lastName: currentUser?.last_name ?? "",
+                })}
               </h3>
-              <p className="mt-3 text-13 text-secondary">
-                We're glad that you decided to try out Nerve. You can now manage your projects with ease. Get started by
-                creating a project.
-              </p>
+              <p className="mt-3 text-13 text-secondary">{t("onboarding.tour.welcome.description")}</p>
               <div className="flex h-full items-end">
                 <div className="mt-12 flex items-center gap-6">
                   <Button
@@ -106,7 +105,7 @@ export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) 
                       setStep("work-items");
                     }}
                   >
-                    Take a Product Tour
+                    {t("onboarding.tour.welcome.start")}
                   </Button>
                   <button
                     type="button"
@@ -115,7 +114,7 @@ export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) 
                       onComplete();
                     }}
                   >
-                    No thanks, I will explore it myself
+                    {t("onboarding.tour.welcome.skip")}
                   </button>
                 </div>
               </div>
@@ -138,21 +137,25 @@ export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) 
                 currentStepIndex % 2 === 0 ? "justify-end" : "justify-start"
               }`}
             >
-              <img src={currentStep?.image} className="h-full w-full object-cover" alt={currentStep?.title} />
+              <img
+                src={currentStep?.image}
+                className="h-full w-full object-cover"
+                alt={currentStep ? t(currentStep.i18n_title) : undefined}
+              />
             </div>
             <div className="flex h-1/2 flex-col overflow-y-auto p-4 sm:h-2/5">
-              <h3 className="font-semibold sm:text-18">{currentStep?.title}</h3>
-              <p className="mt-3 text-13 text-secondary">{currentStep?.description}</p>
+              <h3 className="font-semibold sm:text-18">{currentStep && t(currentStep.i18n_title)}</h3>
+              <p className="mt-3 text-13 text-secondary">{currentStep && t(currentStep.i18n_description)}</p>
               <div className="mt-3 flex h-full items-end justify-between gap-4">
                 <div className="flex items-center gap-4">
                   {currentStep?.prevStep && (
                     <Button variant="secondary" onClick={() => setStep(currentStep.prevStep ?? "welcome")}>
-                      Back
+                      {t("onboarding.tour.back")}
                     </Button>
                   )}
                   {currentStep?.nextStep && (
                     <Button variant="primary" onClick={() => setStep(currentStep.nextStep ?? "work-items")}>
-                      Next
+                      {t("onboarding.tour.next")}
                     </Button>
                   )}
                 </div>
@@ -164,7 +167,7 @@ export const TourRoot = observer(function TourRoot(props: TOnboardingTourProps) 
                       toggleCreateProjectModal(true);
                     }}
                   >
-                    Create your first project
+                    {t("onboarding.tour.create_first_project")}
                   </Button>
                 )}
               </div>

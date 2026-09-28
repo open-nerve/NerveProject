@@ -18,11 +18,13 @@ import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { PasswordStrengthIndicator } from "@nerve/ui";
 import { getPasswordStrength } from "@nerve/utils";
 // components
+import { ApiTokenList } from "@/components/api-token/token-list";
 import { ProfileSettingsHeading } from "@/components/settings/profile/heading";
 // helpers
 import { errorMessageKey, fieldErrorKeys } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 // lib
 import { ApiError } from "@/lib/api-error";
 
@@ -67,6 +69,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
   const confirmPassword = watch("confirm_password");
   // i18n
   const { t } = useTranslation();
+  const passwordStrengthLabels = usePasswordStrengthLabels();
 
   const isNewPasswordSameAsOldPassword = oldPassword !== "" && password !== "" && password === oldPassword;
 
@@ -112,11 +115,6 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
     password !== confirmPassword ||
     password === oldPassword;
 
-  const passwordSupport = password.length > 0 &&
-    getPasswordStrength(password) != E_PASSWORD_STRENGTH.STRENGTH_VALID && (
-      <PasswordStrengthIndicator password={password} isFocused={isPasswordInputFocused} />
-    );
-
   const renderPasswordMatchError = !isRetryPasswordInputFocused || confirmPassword.length >= password.length;
 
   return (
@@ -148,7 +146,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                       type="button"
                       className="grid size-5 place-items-center"
                       onClick={() => handleShowPassword("oldPassword")}
-                      aria-label={showPassword?.oldPassword ? "Hide password" : "Show password"}
+                      aria-label={t(
+                        showPassword?.oldPassword
+                          ? "aria_labels.auth_forms.hide_password"
+                          : "aria_labels.auth_forms.show_password"
+                      )}
                     >
                       {showPassword?.oldPassword ? (
                         <HideOutline className="size-5 text-placeholder" />
@@ -189,7 +191,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                         type="button"
                         className="grid size-5 place-items-center"
                         onClick={() => handleShowPassword("password")}
-                        aria-label={showPassword?.password ? "Hide password" : "Show password"}
+                        aria-label={t(
+                          showPassword?.password
+                            ? "aria_labels.auth_forms.hide_password"
+                            : "aria_labels.auth_forms.show_password"
+                        )}
                       >
                         {showPassword?.password ? (
                           <HideOutline className="size-5 text-placeholder" />
@@ -201,7 +207,7 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                   </Field>
                 )}
               />
-              {passwordSupport}
+              <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
               {errors.new_password && (
                 <span className="text-11 text-danger-primary">{errors.new_password.message}</span>
               )}
@@ -237,7 +243,11 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
                         type="button"
                         className="grid size-5 place-items-center"
                         onClick={() => handleShowPassword("confirmPassword")}
-                        aria-label={showPassword?.confirmPassword ? "Hide password" : "Show password"}
+                        aria-label={t(
+                          showPassword?.confirmPassword
+                            ? "aria_labels.auth_forms.hide_password"
+                            : "aria_labels.auth_forms.show_password"
+                        )}
                       >
                         {showPassword?.confirmPassword ? (
                           <HideOutline className="size-5 text-placeholder" />
@@ -263,6 +273,15 @@ export const SecurityProfileSettings = observer(function SecurityProfileSettings
           </div>
         </div>
       </form>
+      <section className="mt-12 flex flex-col gap-4">
+        <ProfileSettingsHeading
+          title={t("account_settings.security.api_tokens.title")}
+          description={t("account_settings.security.api_tokens.description")}
+        />
+        <ApiTokenList
+          empty={<p className="text-13 text-placeholder">{t("account_settings.security.api_tokens.empty")}</p>}
+        />
+      </section>
     </div>
   );
 });

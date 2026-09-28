@@ -21,6 +21,7 @@ const REFRESH = "/api/v0/auth/refresh";
 const LOGOUT = "/api/v0/auth/logout";
 const ME = "/api/v0/me";
 const PROFILE = "/api/v0/me/profile";
+const TOKENS = "/api/v0/me/api-tokens";
 const X = "0123456789abcdef0123456789abcdef";
 /** The sessions of other accounts, which other tabs sign in to. */
 const Y = "fedcba9876543210fedcba9876543210";
@@ -29,6 +30,15 @@ const W = "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd";
 const Z = "abababababababababababababababab";
 /** The record a sign-in as loginId writes. */
 const record = (loginId: string) => JSON.stringify({ refresh_token: `rt-${loginId}`, login_id: loginId });
+/** A personal access token of the account of loginId, as lists show it. */
+const tokenOf = (loginId: string) => ({
+  id: `${loginId.slice(0, 8)}-0000-4000-8000-000000000000`,
+  label: `token of ${loginId}`,
+  description: "",
+  expired_at: null,
+  last_used: null,
+  created_at: "2026-09-27T00:00:00Z",
+});
 
 /** The page's theme and language, each time something set them. */
 const page = vi.hoisted(() => ({ themes: [] as string[], languages: [] as string[] }));
@@ -226,6 +236,94 @@ describe("store-context", () => {
     expect(nerve.to(PROFILE)).toEqual([]);
     expect(tm.state).toEqual({ status: "signed-in", loginId: Y });
     expect(storage.data.get(AUTH_KEY)).toBe(record(Y));
+  });
+
+  it("gives each session the tokens of its own account: a load cut by the switch stops, the new list loads as the new account", async () => {
+    const { nerve, context, SessionChangedError, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // The api-tokens page of X's session loads X's list, a page at a time.
+    const listedX = track(x.user.apiTokens.fetchTokens());
+    await until(() => nerve.calls.length === 1, "X's first page");
+    expect(nerve.calls[0]).toMatchObject({ method: "GET", path: TOKENS, authorization: "Bearer at-1" });
+    // Another tab signs in as Y while the page is out; this tab follows.
+    await follow(Y);
+    nerve.calls[0]?.answer(json(200, { data: [tokenOf(X)], next_cursor: "c-1" }));
+    await until(() => listedX.settled || nerve.calls.length > 1, "X's list, or another request");
+
+    // X's next page is not asked for, as X or as Y; the load gives up quietly and shows nothing.
+    expect(listedX).toEqual({ settled: true, value: undefined });
+    expect(x.user.apiTokens.tokens).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toHaveLength(1);
+
+    // Y's session has a store of its own, which shows nothing until it has Y's list, loaded as Y.
+    const y = context.rootStore;
+    expect(y.user.apiTokens).not.toBe(x.user.apiTokens);
+    expect(y.user.apiTokens.tokens).toBeUndefined();
+    const listedY = track(y.user.apiTokens.fetchTokens());
+    await until(() => nerve.calls.length === 2, "Y's refresh");
+    expect(nerve.calls[1]).toMatchObject({ path: REFRESH, body: { refresh_token: `rt-${Y}` } });
+    nerve.calls[1]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 3, "Y's list");
+    expect(nerve.calls[2]).toMatchObject({ method: "GET", path: TOKENS, authorization: "Bearer at-2" });
+    // Y's first page: no cursor of X's list.
+    expect(nerve.calls[2]?.query).toEqual({ limit: "100" });
+    nerve.calls[2]?.answer(json(200, { data: [tokenOf(Y)], next_cursor: null }));
+    await until(() => listedY.settled, "Y's list");
+    expect(y.user.apiTokens.tokens).toEqual([tokenOf(Y)]);
+
+    // A revocation from X's page, which the tab no longer shows, is not sent: not with Y's token.
+    const revoked = track(x.user.apiTokens.revokeToken(tokenOf(X).id));
+    await until(() => revoked.settled || nerve.calls.length > 3, "the answer, or a request");
+    expect(revoked.error).toBeInstanceOf(SessionChangedError);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(nerve.calls).toHaveLength(3);
+    expect(y.user.apiTokens.tokens).toEqual([tokenOf(Y)]);
+  });
+
+  it("leaves the page's language to the tab's session now: no store sets it, and a profile is only nerve's answer", async () => {
+    const { nerve, context, signedIn, follow } = await load();
+    await signedIn();
+    const x = context.rootStore;
+    // X's profile load and X's change of language are out when another tab signs in as Y; this tab follows.
+    const loaded = track(x.user.userProfile.fetchUserProfile());
+    await until(() => nerve.calls.length === 1, "X's load");
+    const changed = track(x.user.userProfile.updateUserProfile({ language: "zh-CN" }));
+    await until(() => nerve.calls.length === 2, "X's change");
+    await follow(Y);
+    // nerve answers both as X, whose token is still good: both succeed, into X's retired profile only.
+    nerve.calls[0]?.answer(json(200, { language: "zh-CN" }));
+    nerve.calls[1]?.answer(json(200, { language: "zh-CN" }));
+    await until(() => loaded.settled && changed.settled, "X's answers");
+    expect([loaded.error, changed.error]).toEqual([undefined, undefined]);
+    expect(x.user.userProfile.data).toEqual({ language: "zh-CN" });
+    // The page's language was set once, by the switch, to the default; X's late answers did not reach it.
+    expect(page.languages).toEqual(["en"]);
+
+    // Y's profile is nerve's answer and nothing else: a change out leaves it, a refused one too.
+    const profile = context.rootStore.user.userProfile;
+    const fetched = track(profile.fetchUserProfile());
+    await until(() => nerve.calls.length === 3, "Y's refresh");
+    nerve.calls[2]?.answer(json(200, nerve.tokens()));
+    await until(() => nerve.calls.length === 4, "Y's load");
+    nerve.calls[3]?.answer(json(200, { language: "en" }));
+    await until(() => fetched.settled, "Y's profile");
+    const refused = track(profile.updateUserProfile({ language: "zh-CN" }));
+    await until(() => nerve.calls.length === 5, "Y's change");
+    expect(profile.data).toEqual({ language: "en" });
+    nerve.calls[4]?.answer(problem(500, "internal_error"));
+    await until(() => refused.settled, "the refusal");
+    expect(refused.error).toBeDefined();
+    expect(profile.data).toEqual({ language: "en" });
+    const accepted = track(profile.updateUserProfile({ language: "zh-CN" }));
+    await until(() => nerve.calls.length === 6, "Y's next change");
+    expect(profile.data).toEqual({ language: "en" });
+    nerve.calls[5]?.answer(json(200, { language: "zh-CN" }));
+    await until(() => accepted.settled, "the acceptance");
+    expect(profile.data).toEqual({ language: "zh-CN" });
+    // Still no store set the page's language: the page follows the profile of the tab's session (StoreWrapper).
+    expect(page.languages).toEqual(["en"]);
   });
 
   it("gives the code that reads the stores outside the components the RootStore of the session now", async () => {

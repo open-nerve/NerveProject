@@ -15,8 +15,12 @@ import { setPromiseToast } from "@nerve/propel/toast";
 // components
 import { ThemeSwitch } from "@/components/core/theme/theme-switch";
 import { SettingsControlItem } from "@/components/settings/control-item";
+// helpers
+import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useUserProfile } from "@/hooks/store/user";
+// lib
+import { tokenManager } from "@/lib/auth/api-client";
 
 export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
   option: {
@@ -33,36 +37,41 @@ export const ThemeSwitcher = observer(function ThemeSwitcher(props: {
   const { t } = useTranslation();
   // derived values
   const currentTheme = useMemo(() => {
-    // oxlint-disable-next-line no-shadow
-    const userThemeOption = THEME_OPTIONS.find((t) => t.value === userProfile?.theme);
+    const userThemeOption = THEME_OPTIONS.find((option) => option.value === userProfile?.theme);
     return userThemeOption || null;
   }, [userProfile?.theme]);
 
   const handleThemeChange = useCallback(
     async (themeOption: I_THEME_OPTION) => {
+      // The session the change is made in: the tab may follow another tab's sign-in while the change is out, and
+      // then the page is that session's, which keeps its theme and does not reload (an operation acts only for the
+      // session it was made in: M2 design 7.1, P4 spec 2.8).
+      const loginId = tokenManager.state.loginId;
+      const inSession = () => tokenManager.state.loginId === loginId;
+      const updatePromise = updateUserTheme(themeOption.value);
+      setPromiseToast(updatePromise, {
+        loading: t("power_k.preferences_actions.toast.theme.updating"),
+        success: {
+          title: t("power_k.preferences_actions.toast.theme.updated"),
+          message: () => (inSession() ? t("power_k.preferences_actions.toast.theme.reloading") : undefined),
+        },
+        error: {
+          title: t("toast.error"),
+          message: (error) => t(errorMessageKey(error)),
+        },
+      });
       try {
-        setTheme(themeOption.value);
-
-        const updatePromise = updateUserTheme(themeOption.value);
-        setPromiseToast(updatePromise, {
-          loading: "Updating theme...",
-          success: {
-            title: "Theme updated",
-            message: () => "Reloading to apply changes...",
-          },
-          error: {
-            title: "Error!",
-            message: () => "Failed to update theme. Please try again.",
-          },
-        });
-        // Wait for the promise to resolve, then reload after showing toast
         await updatePromise;
-        window.location.reload();
-      } catch (error) {
-        console.error("Error updating theme:", error);
+      } catch {
+        // refused: the toast says why, and the page keeps the theme nerve holds
+        return;
       }
+      if (!inSession()) return;
+      // The page takes the theme once nerve holds it, then reloads to apply it everywhere.
+      setTheme(themeOption.value);
+      window.location.reload();
     },
-    [setTheme, updateUserTheme]
+    [setTheme, updateUserTheme, t]
   );
 
   if (!userProfile) return null;

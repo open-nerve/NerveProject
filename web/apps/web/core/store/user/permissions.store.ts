@@ -38,7 +38,6 @@ export interface IUserPermissionStore {
     workspaceSlug: string,
     projectId?: string
   ) => EUserPermissions | undefined;
-  fetchWorkspaceLevelProjectEntities: (workspaceSlug: string, projectId: string) => void;
   allowPermissions: (
     allowPermissions: ETempUserRole[],
     level: TUserPermissionsLevel,

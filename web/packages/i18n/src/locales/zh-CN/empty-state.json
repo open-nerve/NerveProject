@@ -101,8 +101,8 @@
     },
     "tokens": {
       "title": "暂无个人令牌",
-      "description": "生成安全的 API 令牌以将工作空间与外部系统和应用程序连接。",
-      "cta_primary": "添加 API 令牌"
+      "description": "生成安全的访问令牌，让脚本和其他应用程序以您的账户使用 API。",
+      "cta_primary": "添加访问令牌"
     },
     "webhooks": {
       "title": "尚未添加 Webhook",

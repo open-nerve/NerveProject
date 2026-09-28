@@ -42,7 +42,7 @@ export async function submitSignUp(page: Page, email: string, password: string):
   await fillSignUp(page, email, password);
   const [response] = await Promise.all([
     page.waitForResponse((res) => new URL(res.url()).pathname === "/api/v0/auth/register", { timeout: 10_000 }),
-    page.getByRole("button", { name: "Create account" }).click(),
+    page.getByRole("button", { name: "Create account", exact: true }).click(),
   ]);
   return response.status();
 }

@@ -849,9 +849,6 @@ importers:
       '@nerve/types':
         specifier: workspace:*
         version: link:../types
-      axios:
-        specifier: 1.18.1
-        version: 1.18.1(supports-color@10.2.2)
       file-type:
         specifier: 'catalog:'
         version: 21.3.3(supports-color@10.2.2)

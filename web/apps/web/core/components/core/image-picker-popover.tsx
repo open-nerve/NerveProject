@@ -13,6 +13,7 @@ import { Popover } from "@headlessui/react";
 import { Tab, Tabs, TabsList, TabsPanel } from "@makeplane/propel/components/tabs";
 import { ACCEPTED_COVER_IMAGE_MIME_TYPES_FOR_REACT_DROPZONE, MAX_FILE_SIZE } from "@nerve/constants";
 import { useOutsideClickDetector } from "@nerve/hooks";
+import { useTranslation } from "@nerve/i18n";
 import { Button, getButtonStyling } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { EFileAssetType } from "@nerve/types";
@@ -42,6 +43,7 @@ const fileService = new FileService();
 
 export const ImagePickerPopover = observer(function ImagePickerPopover(props: Props) {
   const { label, value, onChange, disabled = false, tabIndex, projectId } = props;
+  const { t } = useTranslation();
   // states
   const [image, setImage] = useState<File | null>(null);
   const [isImageUploading, setIsImageUploading] = useState(false);
@@ -150,17 +152,18 @@ export const ImagePickerPopover = observer(function ImagePickerPopover(props: Pr
                     <TabsPanel value="images">
                       <div className="grid grid-cols-4 gap-4">
                         {Object.values(STATIC_COVER_IMAGES).map((imageUrl, index) => (
-                          <div
+                          <button
+                            type="button"
                             key={imageUrl}
                             className="relative col-span-2 aspect-video md:col-span-1"
                             onClick={() => handleStaticImageSelect(imageUrl)}
                           >
                             <img
                               src={imageUrl}
-                              alt={`Cover image ${index + 1}`}
+                              alt={t("cover_numbered", { number: index + 1 })}
                               className="absolute top-0 left-0 h-full w-full cursor-pointer rounded-sm object-cover transition-opacity hover:opacity-80"
                             />
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </TabsPanel>
@@ -185,7 +188,7 @@ export const ImagePickerPopover = observer(function ImagePickerPopover(props: Pr
                               <>
                                 <img
                                   src={image ? URL.createObjectURL(image) : getCoverImageDisplayURL(value, "")}
-                                  alt="image"
+                                  alt={t("cover_preview")}
                                   className="h-full w-full rounded-lg object-cover"
                                 />
                               </>

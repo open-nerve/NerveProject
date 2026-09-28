@@ -17,6 +17,8 @@ type Props = {
   onChange?: (value: any) => void;
   disabled?: boolean | undefined;
   onKeyDown?: KeyboardEventHandler<HTMLDivElement> | undefined;
+  /** Called when Headless UI closes the combobox on its own (Escape on the button, a click outside). */
+  onClose?: () => void;
   multiple?: boolean;
   renderByDefault?: boolean;
   button: ReactNode;

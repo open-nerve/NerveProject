@@ -68,7 +68,6 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilters: action,
@@ -84,13 +83,6 @@ export class ArchivedIssuesFilter extends IssueFilterHelperStore implements IArc
     if (!projectId) return undefined;
 
     return this.getIssueFilters(projectId);
-  }
-
-  get appliedFilters() {
-    const projectId = this.rootIssueStore.projectId;
-    if (!projectId) return undefined;
-
-    return this.getAppliedFilters(projectId);
   }
 
   getIssueFilters(projectId: string) {

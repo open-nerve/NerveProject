@@ -68,7 +68,6 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilterExpression: action,
@@ -85,13 +84,6 @@ export class ProjectIssuesFilter extends IssueFilterHelperStore implements IProj
     if (!projectId) return undefined;
 
     return this.getIssueFilters(projectId);
-  }
-
-  get appliedFilters() {
-    const projectId = this.rootIssueStore.projectId;
-    if (!projectId) return undefined;
-
-    return this.getAppliedFilters(projectId);
   }
 
   getIssueFilters(projectId: string) {

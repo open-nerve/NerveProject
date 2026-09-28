@@ -30,6 +30,8 @@ import { UserService } from "@/services/user.service";
 import type { IUserProfileStore } from "@/store/user/profile.store";
 import { ProfileStore } from "@/store/user/profile.store";
 // local imports
+import type { IApiTokenStore } from "./api-token.store";
+import { ApiTokenStore } from "./api-token.store";
 import type { IUserSettingsStore } from "./settings.store";
 import { UserSettingsStore } from "./settings.store";
 
@@ -40,6 +42,7 @@ export interface IUserStore {
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
+  apiTokens: IApiTokenStore;
   // actions
   fetchCurrentUser: () => Promise<User | undefined>;
   updateCurrentUser: (data: UserUpdate) => Promise<User>;
@@ -60,9 +63,13 @@ export class UserStore implements IUserStore {
   userProfile: IUserProfileStore;
   userSettings: IUserSettingsStore;
   permission: IUserPermissionStore;
+  apiTokens: IApiTokenStore;
   // service
   userService: UserService;
   authService: AuthService;
+  /** The number of the last update sent, and of the one whose answer data holds (updateCurrentUser). */
+  private updatesSent = 0;
+  private updateWritten = 0;
 
   constructor(
     private store: RootStore,
@@ -72,6 +79,7 @@ export class UserStore implements IUserStore {
     this.userProfile = new ProfileStore(store, api);
     this.userSettings = new UserSettingsStore(api);
     this.permission = new UserPermissionStore(store, api);
+    this.apiTokens = new ApiTokenStore(api);
     // service
     this.userService = new UserService(api);
     this.authService = new AuthService();
@@ -82,6 +90,7 @@ export class UserStore implements IUserStore {
       userProfile: observable,
       userSettings: observable,
       permission: observable,
+      apiTokens: observable,
       // actions
       fetchCurrentUser: action,
       updateCurrentUser: action,
@@ -119,14 +128,22 @@ export class UserStore implements IUserStore {
   };
 
   /**
-   * @description updates the account's names or time zone
+   * @description updates the account's names or time zone; fails, writing nothing, when nerve refuses. The
+   * updates are numbered as they are sent, and an answer older than the one data holds is dropped: this assumes
+   * nerve applies the updates in the order they were sent, as the PAT store assumes of its requests, so the older
+   * answer is an older account. Only answers count: when the newer update fails, the older one's answer still
+   * writes.
    * @returns {Promise<User>}
    */
   updateCurrentUser = async (data: UserUpdate): Promise<User> => {
+    const update = ++this.updatesSent;
     const user = await this.userService.updateCurrentUser(data);
-    runInAction(() => {
-      this.data = user;
-    });
+    if (update > this.updateWritten) {
+      this.updateWritten = update;
+      runInAction(() => {
+        this.data = user;
+      });
+    }
     return user;
   };
 

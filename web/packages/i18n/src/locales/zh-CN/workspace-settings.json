@@ -4,6 +4,7 @@
     "key_created": "密钥已创建",
     "copy_key": "复制并妥善保存此密钥。关闭后您将无法看到此密钥。包含密钥的 CSV 文件已下载。",
     "token_copied": "令牌已复制到剪贴板。",
+    "token_not_copied": "无法将令牌复制到剪贴板。",
     "settings": {
       "general": {
         "title": "常规",
@@ -92,22 +93,20 @@
         }
       },
       "api_tokens": {
-        "title": "API 令牌",
         "add_token": "添加访问令牌",
         "create_token": "创建令牌",
         "never_expires": "永不过期",
         "generate_token": "生成令牌",
         "generating": "生成中",
         "delete": {
-          "title": "删除 API 令牌",
+          "title": "删除访问令牌",
           "description": "使用此令牌的任何应用程序将无法再访问 Nerve 数据。此操作无法撤消。",
           "success": {
             "title": "成功！",
-            "message": "API 令牌已成功删除"
+            "message": "访问令牌已成功删除"
           },
           "error": {
-            "title": "错误！",
-            "message": "无法删除 API 令牌"
+            "title": "错误！"
           }
         }
       }

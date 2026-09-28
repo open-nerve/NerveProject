@@ -1,5 +1,5 @@
 ---
-status: open
+status: done
 from: M1/P3
 to: M2
 created: 2026-09-24
@@ -89,3 +89,11 @@ M2 合并时：
 仍未处理，状态保持 `open`：`packages/services` 的 API 令牌服务仍调旧地址 `/api/users/api-tokens/…`（没有结尾斜杠的 `retrieve`、`destroy` 也在其中），M2/P5 把 api-tokens 标签页改接 `/api/v0/me/api-tokens`、`/api/v0/api-tokens/{token_id}` 时删除。
 
 来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。
+
+## 处理结果（M2/P5）
+
+- **API 令牌的旧地址**（完成）：`@nerve/services` 的令牌服务 `developer/` 和它的 axios 基类 `api.service.ts` 删除，包里只剩地址工具和文件工具（M2 设计 7.5）。api-tokens 页和 security 页的令牌列表经 PAT store（`core/store/user/api-token.store.ts`）用生成的客户端调 `GET`、`POST /api/v0/me/api-tokens` 和 `DELETE /api/v0/api-tokens/{token_id}`；store 属于会话的 `RootStore`，用这个会话的客户端。关键词规则 `plane-api-token-urls`（`/api/users/api-tokens`）和 `with-credentials`（`withCredentials:\s*true`）看住。
+
+全部处理完，状态改为 `done`。
+
+来源：[M2/P5 spec](../specs/P5-web-account.md) 第 7 节。

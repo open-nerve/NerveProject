@@ -4,12 +4,12 @@
  * See the LICENSE file for details.
  */
 
+import type { ApiTokenCreated } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { CopyOutline } from "@makeplane/propel/icons";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import { Tooltip } from "@makeplane/propel/components/tooltip";
-import type { IApiToken } from "@nerve/types";
 // ui
 import { renderFormattedDate, renderFormattedTime, copyTextToClipboard } from "@nerve/utils";
 // types
@@ -17,7 +17,8 @@ import { usePlatformOS } from "@/hooks/use-platform-os";
 
 type Props = {
   handleClose: () => void;
-  tokenDetails: IApiToken;
+  /** The new token, with the token itself, which shows here this once. */
+  tokenDetails: ApiTokenCreated;
 };
 
 export function GeneratedTokenDetails(props: Props) {
@@ -25,13 +26,21 @@ export function GeneratedTokenDetails(props: Props) {
   const { isMobile } = usePlatformOS();
   const { t } = useTranslation();
   const copyApiToken = (token: string) => {
-    copyTextToClipboard(token).then(() =>
-      setToast({
-        type: TOAST_TYPE.SUCCESS,
-        title: `${t("success")}!`,
-        message: t("workspace_settings.token_copied"),
-      })
-    );
+    void copyTextToClipboard(token)
+      .then(() =>
+        setToast({
+          type: TOAST_TYPE.SUCCESS,
+          title: `${t("success")}!`,
+          message: t("workspace_settings.token_copied"),
+        })
+      )
+      .catch(() =>
+        setToast({
+          type: TOAST_TYPE.ERROR,
+          title: `${t("error")}!`,
+          message: t("workspace_settings.token_not_copied"),
+        })
+      );
   };
 
   return (
@@ -42,19 +51,22 @@ export function GeneratedTokenDetails(props: Props) {
       </div>
       <button
         type="button"
-        onClick={() => copyApiToken(tokenDetails.token ?? "")}
+        onClick={() => copyApiToken(tokenDetails.token)}
         className="mt-4 flex w-full items-center justify-between truncate rounded-md border-[0.5px] border-subtle px-3 py-2 text-13 font-medium outline-none"
       >
         <span className="truncate pr-2">{tokenDetails.token}</span>
-        <Tooltip label="Copy secret key" disabled={isMobile}>
+        <Tooltip label={t("account_settings.api_tokens.copy")} disabled={isMobile}>
           <CopyOutline className="h-4 w-4 flex-shrink-0 text-placeholder" />
         </Tooltip>
       </button>
       <div className="mt-6 flex items-center justify-between">
         <p className="text-11 text-placeholder">
           {tokenDetails.expired_at
-            ? `Expires ${renderFormattedDate(tokenDetails.expired_at)} at ${renderFormattedTime(tokenDetails.expired_at)}`
-            : "Never expires"}
+            ? t("account_settings.api_tokens.expires_at", {
+                date: renderFormattedDate(tokenDetails.expired_at),
+                time: renderFormattedTime(tokenDetails.expired_at),
+              })
+            : t("workspace_settings.settings.api_tokens.never_expires")}
         </p>
         <Button variant="secondary" onClick={handleClose}>
           {t("close")}

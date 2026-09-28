@@ -13,6 +13,8 @@ import type { AuthTokens } from "@nerve/api-client";
 export type Call = {
   method: string;
   path: string;
+  /** The parameters of the query string. */
+  query: Record<string, string>;
   authorization: string | null;
   body: unknown;
   /** When the request arrived, on the fake clock. */
@@ -33,13 +35,15 @@ export class FakeNerve {
   /** The fetch of the client under test: reads the body as fetch does, parks the request until answered or failed. */
   fetch = async (request: Request): Promise<Response> => {
     const text = await request.text();
+    const url = new URL(request.url);
     return new Promise<Response>((resolve, reject) => {
       const onAbort = () => reject(new DOMException("The operation was aborted.", "AbortError"));
       if (request.signal.aborted) return onAbort();
       request.signal.addEventListener("abort", onAbort);
       this.calls.push({
         method: request.method,
-        path: new URL(request.url).pathname,
+        path: url.pathname,
+        query: Object.fromEntries(url.searchParams),
         authorization: request.headers.get("Authorization"),
         body: text === "" ? undefined : (JSON.parse(text) as unknown),
         at: Date.now(),

@@ -107,7 +107,7 @@ for (const locks of [true, false]) {
       await tab.goto(`${shortLived.baseURL}/onboarding`);
       await expect(tab.getByText("Create your profile.")).toBeVisible();
       expect(await tab.evaluate(() => "locks" in navigator)).toBe(locks);
-      await tab.getByLabel("Name").fill("Ada");
+      await tab.getByLabel("Name", { exact: true }).fill("Ada");
     };
     await openProfileStep(tabA);
     await openProfileStep(tabB);
@@ -131,7 +131,7 @@ for (const locks of [true, false]) {
     expect(await Promise.all([tabA, tabB].map((tab) => saveProfileStep(tab)))).toEqual([200, 200]);
     await Promise.all(
       [tabA, tabB].map(async (tab) => {
-        await expect(tab.getByText("Create your workspace")).toBeVisible();
+        await expect(tab.getByText("Create your workspace", { exact: true })).toBeVisible();
         await expect(tab).toHaveURL(`${shortLived.baseURL}/onboarding`);
       })
     );

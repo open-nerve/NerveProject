@@ -8,14 +8,14 @@ import { useState } from "react";
 import { add } from "date-fns";
 import { Controller, useForm } from "react-hook-form";
 import { CalendarOutline } from "@makeplane/propel/icons";
-// types
+// nerve imports
 import { Field } from "@makeplane/propel/components/field";
 import { Input, InputGroup } from "@makeplane/propel/components/input";
 import { TextArea, TextAreaGroup } from "@makeplane/propel/components/text-area";
+import type { ApiTokenCreate } from "@nerve/api-client";
 import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import type { IApiToken } from "@nerve/types";
 // ui
 import { Switch } from "@makeplane/propel/components/switch";
 import { CustomSelect } from "@nerve/ui";
@@ -23,56 +23,33 @@ import { cn, renderFormattedDate, renderFormattedTime } from "@nerve/utils";
 // components
 import { DateDropdown } from "@/components/dropdowns/date";
 // helpers
+import { errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
+// local imports
+import type { TExpiryChoice } from "./expiry";
+import { EXPIRY_PERIODS, expiryDate } from "./expiry";
+
 type Props = {
   handleClose: () => void;
   neverExpires: boolean;
   toggleNeverExpires: () => void;
-  onSubmit: (data: Partial<IApiToken>) => Promise<void>;
+  /** Creates the token; fails as nerve refuses. */
+  onSubmit: (data: ApiTokenCreate) => Promise<void>;
 };
 
-const EXPIRY_DATE_OPTIONS = [
-  {
-    key: "1_week",
-    label: "1 week",
-    value: { weeks: 1 },
-  },
-  {
-    key: "1_month",
-    label: "1 month",
-    value: { months: 1 },
-  },
-  {
-    key: "3_months",
-    label: "3 months",
-    value: { months: 3 },
-  },
-  {
-    key: "1_year",
-    label: "1 year",
-    value: { years: 1 },
-  },
-];
+type TFormValues = {
+  label: string;
+  description: string;
+  expiry: TExpiryChoice | null;
+};
 
-const defaultValues: Partial<IApiToken> = {
+const defaultValues: TFormValues = {
   label: "",
   description: "",
-  expired_at: null,
+  expiry: null,
 };
 
-const getExpiryDate = (val: string): Date | null | undefined => {
-  const today = new Date();
-  const dateToAdd = EXPIRY_DATE_OPTIONS.find((option) => option.key === val)?.value;
-  if (dateToAdd) return add(today, dateToAdd);
-  return null;
-};
-
-const getFormattedDate = (date: Date): Date => {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const seconds = now.getSeconds();
-  return add(date, { hours, minutes, seconds });
-};
+/** The fields of ApiTokenCreate whose errors show under the form's fields. */
+const FIELDS = ["label", "expired_at"] as const;
 
 export function CreateApiTokenForm(props: Props) {
   const { handleClose, neverExpires, toggleNeverExpires, onSubmit } = props;
@@ -83,49 +60,37 @@ export function CreateApiTokenForm(props: Props) {
     control,
     formState: { errors, isSubmitting },
     handleSubmit,
-    reset,
+    setError,
     watch,
-  } = useForm<IApiToken>({ defaultValues });
+  } = useForm<TFormValues>({ defaultValues });
   // hooks
   const { t } = useTranslation();
 
-  const handleFormSubmit = async (data: IApiToken) => {
-    // if never expires is toggled off, and the user has not selected a custom date or a predefined date, show an error
-    if (!neverExpires && (!data.expired_at || (data.expired_at === "custom" && !customDate)))
-      return setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Error!",
-        message: "Please select an expiration date.",
+  const handleFormSubmit = async (data: TFormValues) => {
+    const expiresAt = data.expiry === null ? undefined : expiryDate(data.expiry, new Date(), customDate);
+    if (!neverExpires && expiresAt === undefined) {
+      setError("expiry", { type: "manual", message: t("account_settings.api_tokens.expiry.required") });
+      return;
+    }
+    try {
+      await onSubmit({
+        label: data.label,
+        description: data.description,
+        expired_at: neverExpires ? null : expiresAt?.toISOString(),
       });
-
-    const payload: Partial<IApiToken> = {
-      label: data.label,
-      description: data.description,
-    };
-
-    // if never expires is toggled on, set expired_at to null
-    if (neverExpires) payload.expired_at = null;
-    // if never expires is toggled off, and the user has selected a custom date, set expired_at to the custom date
-    else if (data.expired_at === "custom") {
-      payload.expired_at = customDate && getFormattedDate(customDate).toISOString();
+    } catch (error) {
+      // A refusal shows under the field it is about, anything else in a toast (M2 design 7.3).
+      const fields = fieldErrorKeys(error);
+      if (fields.label !== undefined) setError("label", { type: "manual", message: t(fields.label) });
+      if (fields.expired_at !== undefined) setError("expiry", { type: "manual", message: t(fields.expired_at) });
+      if (needsErrorBanner(error, FIELDS))
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
     }
-    // if never expires is toggled off, and the user has selected a predefined date, set expired_at to the predefined date
-    else {
-      const expiryDate = getExpiryDate(data.expired_at ?? "");
-      if (expiryDate) payload.expired_at = expiryDate.toISOString();
-    }
-
-    await onSubmit(payload).then(() => {
-      reset(defaultValues);
-      setCustomDate(null);
-    });
   };
 
-  const today = new Date();
-  const tomorrow = add(today, { days: 1 });
-  const expiredAt = watch("expired_at");
-  const expiryDate = getExpiryDate(expiredAt ?? "");
-  const customDateFormatted = customDate && getFormattedDate(customDate);
+  const tomorrow = add(new Date(), { days: 1 });
+  const expiry = watch("expiry");
+  const expiresAt = expiry === null ? undefined : expiryDate(expiry, new Date(), customDate);
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)}>
@@ -177,20 +142,19 @@ export function CreateApiTokenForm(props: Props) {
                     value={value}
                     onChange={onChange}
                     placeholder={t("description")}
+                    aria-label={t("description")}
                   />
                 </TextAreaGroup>
               </Field>
             )}
           />
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Controller
-                control={control}
-                name="expired_at"
-                render={({ field: { onChange, value } }) => {
-                  const selectedOption = EXPIRY_DATE_OPTIONS.find((option) => option.key === value);
-
-                  return (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Controller
+                  control={control}
+                  name="expiry"
+                  render={({ field: { onChange, value } }) => (
                     <CustomSelect
                       customButton={
                         <div
@@ -202,67 +166,58 @@ export function CreateApiTokenForm(props: Props) {
                           )}
                         >
                           <CalendarOutline className="h-3 w-3" />
-                          {value === "custom"
-                            ? "Custom date"
-                            : selectedOption
-                              ? selectedOption.label
-                              : "Set expiration date"}
+                          {t(`account_settings.api_tokens.expiry.${value ?? "set"}`)}
                         </div>
                       }
                       value={value}
                       onChange={onChange}
                       disabled={neverExpires}
                     >
-                      {EXPIRY_DATE_OPTIONS.map((option) => (
+                      {EXPIRY_PERIODS.map((option) => (
                         <CustomSelect.Option key={option.key} value={option.key}>
-                          {option.label}
+                          {t(`account_settings.api_tokens.expiry.${option.key}`)}
                         </CustomSelect.Option>
                       ))}
-                      <CustomSelect.Option value="custom">Custom</CustomSelect.Option>
+                      <CustomSelect.Option value="custom">
+                        {t("account_settings.api_tokens.expiry.custom")}
+                      </CustomSelect.Option>
                     </CustomSelect>
-                  );
-                }}
-              />
-              {expiredAt === "custom" && (
-                <div className="h-7">
-                  <DateDropdown
-                    value={customDate}
-                    onChange={(date) => setCustomDate(date)}
-                    minDate={tomorrow}
-                    icon={<CalendarOutline className="h-3 w-3" />}
-                    buttonVariant="border-with-text"
-                    placeholder="Set date"
-                    disabled={neverExpires}
-                  />
-                </div>
+                  )}
+                />
+                {expiry === "custom" && (
+                  <div className="h-7">
+                    <DateDropdown
+                      value={customDate}
+                      onChange={(date) => setCustomDate(date)}
+                      minDate={tomorrow}
+                      icon={<CalendarOutline className="h-3 w-3" />}
+                      buttonVariant="border-with-text"
+                      placeholder={t("account_settings.api_tokens.expiry.set_date")}
+                      disabled={neverExpires}
+                    />
+                  </div>
+                )}
+              </div>
+              {!neverExpires && expiresAt && (
+                <span className="text-11 text-placeholder">
+                  {t("account_settings.api_tokens.expires_at", {
+                    date: renderFormattedDate(expiresAt),
+                    time: renderFormattedTime(expiresAt),
+                  })}
+                </span>
               )}
             </div>
-            {!neverExpires && (
-              <span className="text-11 text-placeholder">
-                {expiredAt === "custom"
-                  ? customDate
-                    ? `Expires ${renderFormattedDate(customDateFormatted ?? "")} at ${renderFormattedTime(customDateFormatted ?? "")}`
-                    : null
-                  : expiredAt
-                    ? `Expires ${renderFormattedDate(expiryDate ?? "")} at ${renderFormattedTime(expiryDate ?? "")}`
-                    : null}
-              </span>
+            {!neverExpires && errors.expiry && (
+              <span className="text-11 text-danger-primary">{errors.expiry.message}</span>
             )}
           </div>
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 border-t-[0.5px] border-subtle px-5 py-4">
-        <div className="flex cursor-pointer items-center gap-1.5" onClick={toggleNeverExpires}>
-          <div className="flex cursor-pointer items-center justify-center">
-            <Switch
-              size="sm"
-              checked={neverExpires}
-              onCheckedChange={() => {}}
-              aria-label={t("workspace_settings.settings.api_tokens.never_expires")}
-            />
-          </div>
+        <label className="flex cursor-pointer items-center gap-1.5">
+          <Switch size="sm" checked={neverExpires} onCheckedChange={toggleNeverExpires} />
           <span className="text-11">{t("workspace_settings.settings.api_tokens.never_expires")}</span>
-        </div>
+        </label>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={handleClose}>
             {t("cancel")}

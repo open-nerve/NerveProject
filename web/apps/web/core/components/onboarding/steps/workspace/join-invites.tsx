@@ -6,7 +6,8 @@
 
 import { useState } from "react";
 // nerve imports
-import { ROLE } from "@nerve/constants";
+import { ROLE_DETAILS } from "@nerve/constants";
+import { useTranslation } from "@nerve/i18n";
 import { Button } from "@nerve/propel/button";
 import type { IWorkspaceMemberInvitation } from "@nerve/types";
 import { Checkbox } from "@makeplane/propel/components/checkbox";
@@ -31,6 +32,7 @@ const workspaceService = new WorkspaceService();
 
 export function WorkspaceJoinInvitesStep(props: Props) {
   const { invitations, handleNextStep, handleCurrentViewChange } = props;
+  const { t } = useTranslation();
   // states
   const [isJoiningWorkspaces, setIsJoiningWorkspaces] = useState(false);
   const [invitationsRespond, setInvitationsRespond] = useState<string[]>([]);
@@ -49,7 +51,7 @@ export function WorkspaceJoinInvitesStep(props: Props) {
 
   // submit invitations
   const submitInvitations = async () => {
-    const invitation = invitations?.find((invitation) => invitation.id === invitationsRespond[0]);
+    const invitation = invitations?.find((item) => item.id === invitationsRespond[0]);
 
     if (invitationsRespond.length <= 0 && !invitation?.role) return;
 
@@ -68,34 +70,44 @@ export function WorkspaceJoinInvitesStep(props: Props) {
 
   return invitations && invitations.length > 0 ? (
     <div className="flex flex-col gap-10">
-      <CommonOnboardingHeader title="Join invites or create a workspace" description="All your work — unified." />
+      <CommonOnboardingHeader
+        title={t("onboarding.workspace.join_title")}
+        description={t("onboarding.workspace.description")}
+      />
       <div className="flex flex-col gap-3">
         {invitations &&
           invitations.length > 0 &&
           invitations.map((invitation) => {
             const isSelected = invitationsRespond.includes(invitation.id);
             const invitedWorkspace = invitation.workspace;
+            const checkboxId = `invitation-${invitation.id}`;
+            // The row is the checkbox's label: a click anywhere on it, or Space on the checkbox, picks the
+            // invitation (a label takes phrasing content only, so the row holds spans)
             return (
-              <div
+              <label
                 key={invitation.id}
+                htmlFor={checkboxId}
                 className="flex cursor-pointer items-center gap-2 rounded-lg border border-subtle px-3 py-2 hover:bg-surface-2"
-                onClick={() => handleInvitation(invitation, isSelected ? "withdraw" : "accepted")}
               >
-                <div className="flex-shrink-0">
+                <span className="block flex-shrink-0">
                   <WorkspaceLogo
                     logo={invitedWorkspace?.logo_url}
                     name={invitedWorkspace?.name}
                     classNames="size-8 flex-shrink-0 rounded-lg"
                   />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-13 font-medium">{truncateText(invitedWorkspace?.name, 30)}</div>
-                  <p className="text-11 text-secondary">{ROLE[invitation.role]}</p>
-                </div>
-                <span className="pointer-events-none flex-shrink-0">
-                  <Checkbox checked={isSelected} aria-label={invitedWorkspace?.name ?? "Select workspace invitation"} />
                 </span>
-              </div>
+                <span className="block min-w-0 flex-1">
+                  <span className="block text-13 font-medium">{truncateText(invitedWorkspace?.name, 30)}</span>
+                  <span className="block text-11 text-secondary">{t(ROLE_DETAILS[invitation.role].i18n_title)}</span>
+                </span>
+                <span className="flex-shrink-0">
+                  <Checkbox
+                    id={checkboxId}
+                    checked={isSelected}
+                    onCheckedChange={(checked) => handleInvitation(invitation, checked ? "accepted" : "withdraw")}
+                  />
+                </span>
+              </label>
             );
           })}
       </div>
@@ -107,7 +119,7 @@ export function WorkspaceJoinInvitesStep(props: Props) {
           onClick={submitInvitations}
           disabled={isJoiningWorkspaces || !invitationsRespond.length}
         >
-          {isJoiningWorkspaces ? <Spinner height="20px" width="20px" /> : "Continue"}
+          {isJoiningWorkspaces ? <Spinner height="20px" width="20px" /> : t("continue")}
         </Button>
         <Button
           variant="ghost"
@@ -116,11 +128,11 @@ export function WorkspaceJoinInvitesStep(props: Props) {
           onClick={handleCurrentViewChange}
           disabled={isJoiningWorkspaces}
         >
-          Create new workspace
+          {t("onboarding.workspace.create_new")}
         </Button>
       </div>
     </div>
   ) : (
-    <div>No Invitations found</div>
+    <div>{t("onboarding.workspace.no_invitations")}</div>
   );
 }

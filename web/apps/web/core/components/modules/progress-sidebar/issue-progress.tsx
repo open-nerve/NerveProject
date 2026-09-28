@@ -64,7 +64,7 @@ export const ModuleProgress = observer(function ModuleProgress(props: TModulePro
   if (!moduleDetails) return <></>;
   return (
     <div className="space-y-4 border-t border-subtle px-3 py-4">
-      <Disclosure defaultOpen={isModuleDateValid ? true : false}>
+      <Disclosure defaultOpen={!!isModuleDateValid}>
         {({ open }) => (
           <div className="space-y-6">
             {/* progress bar header */}

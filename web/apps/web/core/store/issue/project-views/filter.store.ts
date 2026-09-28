@@ -75,7 +75,6 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilters: action,
@@ -92,13 +91,6 @@ export class ProjectViewIssuesFilter extends IssueFilterHelperStore implements I
     if (!viewId) return undefined;
 
     return this.getIssueFilters(viewId);
-  }
-
-  get appliedFilters() {
-    const viewId = this.rootIssueStore.viewId;
-    if (!viewId) return undefined;
-
-    return this.getAppliedFilters(viewId);
   }
 
   getIssueFilters(viewId: string) {

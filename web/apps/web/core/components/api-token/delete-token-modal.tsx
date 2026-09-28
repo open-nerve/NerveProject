@@ -5,16 +5,15 @@
  */
 
 import { useState } from "react";
-import { mutate } from "swr";
-// types
+// nerve imports
 import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
-import { APITokenService } from "@nerve/services";
-import type { IApiToken } from "@nerve/types";
 // ui
 import { AlertModalCore } from "@nerve/ui";
-// fetch-keys
-import { API_TOKENS_LIST } from "@nerve/constants";
+// helpers
+import { errorMessageKey } from "@/helpers/authentication.helper";
+// hooks
+import { useApiTokens } from "@/hooks/store/user";
 
 type Props = {
   isOpen: boolean;
@@ -22,13 +21,12 @@ type Props = {
   tokenId: string;
 };
 
-const apiTokenService = new APITokenService();
-
 export function DeleteApiTokenModal(props: Props) {
   const { isOpen, onClose, tokenId } = props;
+  // store hooks
+  const { revokeToken } = useApiTokens();
   // states
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
-  // router params
   const { t } = useTranslation();
 
   const handleClose = () => {
@@ -38,33 +36,22 @@ export function DeleteApiTokenModal(props: Props) {
 
   const handleDeletion = async () => {
     setDeleteLoading(true);
-
-    await apiTokenService
-      .destroy(tokenId)
-      .then(() => {
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: t("workspace_settings.settings.api_tokens.delete.success.title"),
-          message: t("workspace_settings.settings.api_tokens.delete.success.message"),
-        });
-
-        mutate<IApiToken[]>(
-          API_TOKENS_LIST,
-          (prevData) => (prevData ?? []).filter((token) => token.id !== tokenId),
-          false
-        );
-
-        handleClose();
-        setDeleteLoading(false);
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: t("workspace_settings.settings.api_tokens.delete.error.title"),
-          message: err?.message ?? t("workspace_settings.settings.api_tokens.delete.error.message"),
-        });
-        setDeleteLoading(false);
+    try {
+      await revokeToken(tokenId);
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: t("workspace_settings.settings.api_tokens.delete.success.title"),
+        message: t("workspace_settings.settings.api_tokens.delete.success.message"),
       });
+      handleClose();
+    } catch (error) {
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: t("workspace_settings.settings.api_tokens.delete.error.title"),
+        message: t(errorMessageKey(error)),
+      });
+      setDeleteLoading(false);
+    }
   };
 
   return (
@@ -75,6 +62,8 @@ export function DeleteApiTokenModal(props: Props) {
       isOpen={isOpen}
       title={t("workspace_settings.settings.api_tokens.delete.title")}
       content={<>{t("workspace_settings.settings.api_tokens.delete.description")} </>}
+      primaryButtonText={{ default: t("delete"), loading: t("deleting") }}
+      secondaryButtonText={t("cancel")}
     />
   );
 }

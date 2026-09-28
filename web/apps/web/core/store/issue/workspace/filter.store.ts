@@ -72,7 +72,6 @@ export class WorkspaceIssuesFilter extends IssueFilterHelperStore implements IWo
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // fetch actions
       fetchFilters: action,
       updateFilters: action,
@@ -115,11 +114,6 @@ export class WorkspaceIssuesFilter extends IssueFilterHelperStore implements IWo
   get issueFilters() {
     const viewId = this.rootIssueStore.globalViewId;
     return this.getIssueFilters(viewId);
-  }
-
-  get appliedFilters() {
-    const viewId = this.rootIssueStore.globalViewId;
-    return this.getAppliedFilters(viewId);
   }
 
   getFilterParams = computedFn(
@@ -171,13 +165,13 @@ export class WorkspaceIssuesFilter extends IssueFilterHelperStore implements IWo
 
     // Get the view details if the view is not a static view
     if (STATIC_VIEW_TYPES.includes(viewId) === false) {
-      const _filters = await this.issueFilterService.getViewDetails(workspaceSlug, viewId);
-      richFilters = _filters?.rich_filters;
-      displayFilters = this.computedDisplayFilters(_filters?.display_filters, {
+      const view = await this.issueFilterService.getViewDetails(workspaceSlug, viewId);
+      richFilters = view?.rich_filters;
+      displayFilters = this.computedDisplayFilters(view?.display_filters, {
         layout: EIssueLayoutTypes.SPREADSHEET,
         order_by: "-created_at",
       });
-      displayProperties = this.computedDisplayProperties(_filters?.display_properties);
+      displayProperties = this.computedDisplayProperties(view?.display_properties);
     }
 
     // override existing order by if ordered by manual sort_order

@@ -6,6 +6,7 @@
 
 import { observer } from "mobx-react";
 // nerve imports
+import { useTranslation } from "@nerve/i18n";
 import { CustomSearchSelect } from "@nerve/ui";
 import { cn } from "@nerve/utils";
 // hooks
@@ -15,43 +16,35 @@ type TTimezoneSelect = {
   value: string | undefined;
   onChange: (value: string) => void;
   error?: boolean;
-  label?: string;
   buttonClassName?: string;
-  className?: string;
-  optionsClassName?: string;
   disabled?: boolean;
 };
 
 export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneSelect) {
   // props
-  const {
-    value,
-    onChange,
-    error = false,
-    label = "Select a timezone",
-    buttonClassName = "",
-    className = "",
-    optionsClassName = "",
-    disabled = false,
-  } = props;
+  const { value, onChange, error = false, buttonClassName = "", disabled = false } = props;
   // hooks
   const { disabled: isDisabled, timezones, selectedValue } = useTimezone();
+  const { t } = useTranslation();
 
   return (
     <div>
       <CustomSearchSelect
         value={value}
-        label={value && selectedValue ? selectedValue(value) : label}
+        // a zone the list lacks, or any zone while the list loads, shows by its name
+        label={value ? (selectedValue(value) ?? value) : t("select_a_timezone")}
         options={isDisabled || disabled ? [] : timezones}
         onChange={onChange}
         buttonClassName={cn(buttonClassName, "border border-subtle-1", {
           "border-danger-strong": error,
         })}
-        className={cn("rounded-md", className)}
-        optionsClassName={cn("w-72", optionsClassName)}
+        className="rounded-md"
+        optionsClassName="w-72"
         input
         disabled={isDisabled || disabled}
         placement="bottom-end"
+        searchPlaceholder={t("common.search.label")}
+        noResultsMessage={t("common.search.no_matches_found")}
       />
     </div>
   );

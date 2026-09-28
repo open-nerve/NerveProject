@@ -15,14 +15,13 @@ import WorkspaceNotAuthorizedImg from "@/app/assets/auth/workspace-not-authorize
 import DefaultLayout from "@/layouts/default-layout";
 
 type Props = {
-  actionButton?: React.ReactNode;
   section?: "settings" | "general";
   isProjectView?: boolean;
   className?: string;
 };
 
 export const NotAuthorizedView = observer(function NotAuthorizedView(props: Props) {
-  const { actionButton, section = "general", isProjectView = false, className } = props;
+  const { section = "general", isProjectView = false, className } = props;
 
   // assets
   const settingAsset = isProjectView ? ProjectNotAuthorizedImg : WorkspaceNotAuthorizedImg;
@@ -35,7 +34,6 @@ export const NotAuthorizedView = observer(function NotAuthorizedView(props: Prop
           <img src={asset} className="h-[176px] w-[288px] object-contain" alt="" />
         </div>
         <h1 className="text-18 font-medium text-primary">Oops! You are not authorized to view this page</h1>
-        {actionButton}
       </div>
     </DefaultLayout>
   );

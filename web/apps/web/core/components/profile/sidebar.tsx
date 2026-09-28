@@ -13,7 +13,7 @@ import { useTranslation } from "@nerve/i18n";
 import { IconButton } from "@nerve/propel/icon-button";
 import { EditOutline } from "@makeplane/propel/icons";
 import { Loader } from "@nerve/ui";
-import { cn, renderFormattedDate, getFileURL } from "@nerve/utils";
+import { renderFormattedDate, getFileURL } from "@nerve/utils";
 // hooks
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useCommandPalette } from "@/hooks/store/use-command-palette";
@@ -21,12 +21,7 @@ import { useUser } from "@/hooks/store/user";
 // local imports
 import { useProfileMember } from "./use-profile-member";
 
-type TProfileSidebar = {
-  className?: string;
-};
-
-export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSidebar) {
-  const { className = "" } = props;
+export const ProfileSidebar = observer(function ProfileSidebar() {
   // refs
   const ref = useRef<HTMLDivElement>(null);
   // router
@@ -34,6 +29,9 @@ export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSi
   // store hooks
   const { data: currentUser } = useUser();
   const { profileSidebarCollapsed, toggleProfileSidebar } = useAppTheme();
+  // the state now, for the resize listener, which is added once
+  const collapsed = useRef(profileSidebarCollapsed);
+  collapsed.current = profileSidebarCollapsed;
   const { toggleProfileSettingsModal } = useCommandPalette();
   const profileMember = useProfileMember(workspaceSlug ?? "", userId ?? "");
   const { t } = useTranslation();
@@ -51,7 +49,7 @@ export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSi
       if (window && window.innerWidth < 768) {
         toggleProfileSidebar(true);
       }
-      if (window && profileSidebarCollapsed && window.innerWidth >= 768) {
+      if (window && collapsed.current && window.innerWidth >= 768) {
         toggleProfileSidebar(false);
       }
     };
@@ -59,7 +57,7 @@ export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSi
     window.addEventListener("resize", handleToggleProfileSidebar);
     handleToggleProfileSidebar();
     return () => window.removeEventListener("resize", handleToggleProfileSidebar);
-  }, []);
+  }, [toggleProfileSidebar]);
 
   const renderContent = () => {
     if (profileMember.status === "loading")
@@ -125,10 +123,7 @@ export const ProfileSidebar = observer(function ProfileSidebar(props: TProfileSi
   return (
     <div
       ref={ref}
-      className={cn(
-        `vertical-scrollbar fixed z-5 scrollbar-md h-full w-full shrink-0 overflow-hidden overflow-y-auto border-l border-subtle bg-surface-1 shadow-raised-200 transition-all md:relative md:w-[300px]`,
-        className
-      )}
+      className="vertical-scrollbar fixed z-5 scrollbar-md h-full w-full shrink-0 overflow-hidden overflow-y-auto border-l border-subtle bg-surface-1 shadow-raised-200 transition-all md:relative md:w-[300px]"
       style={profileSidebarCollapsed ? { marginLeft: `${window?.innerWidth || 0}px` } : {}}
     >
       {renderContent()}

@@ -22,13 +22,13 @@ export const PROFILE_SETTINGS_CATEGORY_LABELS: Record<PROFILE_SETTINGS_CATEGORY,
   [PROFILE_SETTINGS_CATEGORY.DEVELOPER]: "common.developer",
 };
 
-const PROFILE_SETTINGS: Record<
-  TProfileSettingsTabs,
-  {
-    key: TProfileSettingsTabs;
-    i18n_label: string;
-  }
-> = {
+/** A tab of the profile settings, as the sidebar lists it. */
+type TProfileSettingsTab = {
+  key: TProfileSettingsTabs;
+  i18n_label: string;
+};
+
+const PROFILE_SETTINGS: Record<TProfileSettingsTabs, TProfileSettingsTab> = {
   general: {
     key: "general",
     i18n_label: "profile.actions.profile",
@@ -49,10 +49,7 @@ const PROFILE_SETTINGS: Record<
 
 export const PROFILE_SETTINGS_TABS: TProfileSettingsTabs[] = Object.keys(PROFILE_SETTINGS) as TProfileSettingsTabs[];
 
-export const GROUPED_PROFILE_SETTINGS: Record<
-  PROFILE_SETTINGS_CATEGORY,
-  { key: TProfileSettingsTabs; i18n_label: string }[]
-> = {
+export const GROUPED_PROFILE_SETTINGS: Record<PROFILE_SETTINGS_CATEGORY, TProfileSettingsTab[]> = {
   [PROFILE_SETTINGS_CATEGORY.YOUR_PROFILE]: [
     PROFILE_SETTINGS["general"],
     PROFILE_SETTINGS["preferences"],

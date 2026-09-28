@@ -65,7 +65,9 @@ interface CustomSearchSelectProps {
   footerOption?: React.ReactNode;
   onChange: any;
   onClose?: () => void;
+  searchPlaceholder?: string;
   noResultsMessage?: string;
+  loadingMessage?: string;
   options?: ICustomSearchSelectOption[];
 }
 

@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-import i18n from "i18next";
+import { createInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
 import ICU from "i18next-icu";
 import resourcesToBackend from "i18next-resources-to-backend";
@@ -18,7 +18,7 @@ import { NAMESPACES, DEFAULT_NAMESPACE } from "../constants/namespaces";
 
 import type { i18n as I18nInstance } from "i18next";
 
-export const i18nInstance: I18nInstance = i18n.createInstance();
+export const i18nInstance: I18nInstance = createInstance();
 
 i18nInstance
   .use(ICU)
@@ -50,6 +50,9 @@ export const initPromise = i18nInstance
     // intent here so this isn't accidentally flipped.
     returnObjects: false,
     react: { useSuspense: false },
+    // i18next logs a notice about its maker's product on init unless told not to: the page's console, and the
+    // tests', have no use for it.
+    showSupportNotice: false,
   })
   // Eagerly pre-load all namespaces for the initial language so they're cached
   // before any component renders. This prevents the re-render cascade that occurs

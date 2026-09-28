@@ -4,20 +4,13 @@
  * See the LICENSE file for details.
  */
 
-import type { TTimezones } from "@nerve/types";
-// api services
-import { APIService } from "@/services/api.service";
+import type { Timezone } from "@nerve/api-client";
+import { unwrap } from "@/lib/api-error";
+import { publicClient } from "@/lib/auth/api-client";
 
-class TimezoneService extends APIService {
-  async fetch(): Promise<TTimezones> {
-    return this.get(`/api/timezones/`)
-      .then((response) => response?.data)
-      .catch((error) => {
-        throw error?.response?.data;
-      });
+export class TimezoneService {
+  /** The time zones to choose from, with their offsets now (M2 design 5.3): public, like the instance. */
+  async list(): Promise<Timezone[]> {
+    return unwrap(await publicClient.GET("/api/v0/timezones")).data;
   }
 }
-
-const timezoneService = new TimezoneService();
-
-export default timezoneService;

@@ -78,7 +78,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
   const startOfWeek = data?.start_of_the_week;
   // popper-js refs
   const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
   // popper-js init
   const { styles, attributes } = usePopper(referenceElement, popperElement, {
     placement: placement ?? "bottom-start",
@@ -163,6 +163,7 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
   );
 
   return (
+    // oxlint-disable-next-line jsx_a11y/no-static-element-interactions -- not a control: it hears the keys that bubble up from the calendar and the button inside it (Escape and Tab close the calendar)
     <ComboDropDown
       as="div"
       ref={dropdownRef}
@@ -173,38 +174,44 @@ export const DateDropdown = observer(function DateDropdown(props: Props) {
           if (!isOpen) handleKeyDown(e);
         } else handleKeyDown(e);
       }}
+      // Headless UI also closes on its own (Escape on the button, a click outside): isOpen follows; else the
+      // calendar, a static list, stays open.
+      onClose={handleClose}
       button={comboButton}
       disabled={disabled}
       renderByDefault={renderByDefault}
     >
       {isOpen &&
         createPortal(
-          <Combobox.Options as="ul" data-prevent-outside-click static>
-            <div
-              className={cn(
-                "z-30 my-1 overflow-hidden rounded-md border-[0.5px] border-strong bg-surface-1 shadow-raised-200",
-                optionsClassName
-              )}
-              ref={setPopperElement}
-              style={styles.popper}
-              {...attributes.popper}
-            >
-              <Calendar
-                className="rounded-md border border-subtle p-3"
-                captionLayout="dropdown"
-                selected={getDate(value)}
-                defaultMonth={getDate(value)}
-                onSelect={(date: Date | undefined) => {
-                  dropdownOnChange(date ?? null);
-                }}
-                showOutsideDays
-                initialFocus
-                disabled={disabledDays}
-                mode="single"
-                fixedWeeks
-                weekStartsOn={startOfWeek}
-              />
-            </div>
+          // Popper places the list itself, whose ref Headless UI forwards: a ref on the list's one child would never
+          // be set (@nerve/ui's custom-search-select.tsx), and the calendar would stay at the top left of the page.
+          <Combobox.Options
+            as="ul"
+            data-prevent-outside-click
+            static
+            ref={setPopperElement}
+            className={cn(
+              "z-30 my-1 overflow-hidden rounded-md border-[0.5px] border-strong bg-surface-1 shadow-raised-200",
+              optionsClassName
+            )}
+            style={styles.popper}
+            {...attributes.popper}
+          >
+            <Calendar
+              className="rounded-md border border-subtle p-3"
+              captionLayout="dropdown"
+              selected={getDate(value)}
+              defaultMonth={getDate(value)}
+              onSelect={(date: Date | undefined) => {
+                dropdownOnChange(date ?? null);
+              }}
+              showOutsideDays
+              initialFocus
+              disabled={disabledDays}
+              mode="single"
+              fixedWeeks
+              weekStartsOn={startOfWeek}
+            />
           </Combobox.Options>,
           document.body
         )}

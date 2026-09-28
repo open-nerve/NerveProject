@@ -70,7 +70,6 @@ export class CycleIssuesFilter extends IssueFilterHelperStore implements ICycleI
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilters: action,
@@ -86,13 +85,6 @@ export class CycleIssuesFilter extends IssueFilterHelperStore implements ICycleI
     if (!cycleId) return undefined;
 
     return this.getIssueFilters(cycleId);
-  }
-
-  get appliedFilters() {
-    const cycleId = this.rootIssueStore.cycleId;
-    if (!cycleId) return undefined;
-
-    return this.getAppliedFilters(cycleId);
   }
 
   getIssueFilters(cycleId: string) {

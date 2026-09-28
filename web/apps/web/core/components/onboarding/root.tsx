@@ -8,9 +8,12 @@ import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react";
 // nerve imports
 import type { OnboardingStepsUpdate } from "@nerve/api-client";
+import { useTranslation } from "@nerve/i18n";
 import { TOAST_TYPE, setToast } from "@nerve/propel/toast";
 import type { IWorkspaceMemberInvitation, TOnboardingStep } from "@nerve/types";
 import { EOnboardingSteps } from "@nerve/types";
+// helpers
+import { errorMessageKey } from "@/helpers/authentication.helper";
 // hooks
 import { useWorkspace } from "@/hooks/store/use-workspace";
 import { useUser, useUserProfile } from "@/hooks/store/user";
@@ -24,6 +27,7 @@ type Props = {
 
 export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [] }: Props) {
   const [currentStep, setCurrentStep] = useState<TOnboardingStep>(EOnboardingSteps.PROFILE_SETUP);
+  const { t } = useTranslation();
   // store hooks
   const { data: user } = useUser();
   const { data: userProfile, updateUserProfile, finishUserOnboarding } = useUserProfile();
@@ -34,39 +38,30 @@ export const OnboardingRoot = observer(function OnboardingRoot({ invitations = [
   // Calculate total steps based on whether invitations are available
   const hasInvitations = invitations.length > 0;
 
-  // complete onboarding
+  // complete onboarding; a failure says why, by the problem's code
   const finishOnboarding = useCallback(async () => {
     if (!user) return;
     try {
       await finishUserOnboarding();
-    } catch (_error) {
-      setToast({
-        type: TOAST_TYPE.ERROR,
-        title: "Failed",
-        message: "Failed to finish onboarding, Please try again later.",
-      });
+    } catch (error) {
+      setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
     }
-  }, [user, finishUserOnboarding]);
+  }, [user, finishUserOnboarding, t]);
 
-  // handle step change: nerve merges the steps it is given into the profile's
+  // handle step change: nerve merges the steps it is given into the profile's; a failure says why, by the code
   const stepChange = useCallback(
     async (steps: OnboardingStepsUpdate) => {
       if (!user) return;
       try {
         await updateUserProfile({ onboarding_step: steps });
-      } catch {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Failed",
-          message: "Failed to save your progress, Please try again later.",
-        });
+      } catch (error) {
+        setToast({ type: TOAST_TYPE.ERROR, title: t("toast.error"), message: t(errorMessageKey(error)) });
       }
     },
-    [user, updateUserProfile]
+    [user, updateUserProfile, t]
   );
 
-  // finishing sets all four steps in its one write, so it goes without the step change it supersedes: two
-  // profile writes in flight would leave the store with whichever answer lands last
+  // finishing sets all four steps in its one write, so it goes without the step change it supersedes
   const handleStepChange = useCallback(
     (step: EOnboardingSteps, skipInvites?: boolean) => {
       switch (step) {

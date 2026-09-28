@@ -23,7 +23,6 @@
   "dependencies": {
     "@nerve/constants": "workspace:*",
     "@nerve/types": "workspace:*",
-    "axios": "catalog:",
     "file-type": "catalog:"
   },
   "devDependencies": {

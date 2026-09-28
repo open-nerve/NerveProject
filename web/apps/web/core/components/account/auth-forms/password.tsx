@@ -22,6 +22,7 @@ import { checkEmailValidity, getPasswordStrength } from "@nerve/utils";
 import { EAuthModes, errorMessageKey, fieldErrorKeys, needsErrorBanner } from "@/helpers/authentication.helper";
 // hooks
 import { useUser } from "@/hooks/store/user";
+import { usePasswordStrengthLabels } from "@/hooks/use-password-strength-labels";
 
 type Props = {
   mode: EAuthModes;
@@ -51,6 +52,7 @@ const NERVE_FIELDS = ["email", "password"];
 export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props) {
   const { mode } = props;
   const { t } = useTranslation();
+  const passwordStrengthLabels = usePasswordStrengthLabels();
   const { signIn, signUp } = useUser();
   // ref
   const emailInputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +63,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
     retypePassword: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPasswordInputFocused, setIsPasswordInputFocused] = useState(false);
   const [isRetryPasswordInputFocused, setIsRetryPasswordInputFocused] = useState(false);
   const [isBannerMessage, setBannerMessage] = useState(false);
   const [isEmailInputFocused, setIsEmailInputFocused] = useState(false);
@@ -199,8 +200,6 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
                 value={passwordFormData.password}
                 onChange={(e) => handleFormChange("password", e.target.value)}
                 placeholder={t("auth.common.password.placeholder")}
-                onFocus={() => setIsPasswordInputFocused(true)}
-                onBlur={() => setIsPasswordInputFocused(false)}
                 autoComplete={mode === EAuthModes.SIGN_IN ? "current-password" : "new-password"}
               />
               <button
@@ -222,11 +221,9 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
             </InputGroup>
           </Field>
           {fieldErrors.password && <p className="px-0.5 text-11 text-danger-primary">{t(fieldErrors.password)}</p>}
-          {mode === EAuthModes.SIGN_UP &&
-            password.length > 0 &&
-            getPasswordStrength(password) !== E_PASSWORD_STRENGTH.STRENGTH_VALID && (
-              <PasswordStrengthIndicator password={password} isFocused={isPasswordInputFocused} />
-            )}
+          {mode === EAuthModes.SIGN_UP && (
+            <PasswordStrengthIndicator password={password} labels={passwordStrengthLabels} />
+          )}
         </div>
 
         {mode === EAuthModes.SIGN_UP && (
@@ -276,7 +273,7 @@ export const AuthPasswordForm = observer(function AuthPasswordForm(props: Props)
           ) : mode === EAuthModes.SIGN_IN ? (
             t("common.go_to_workspace")
           ) : (
-            "Create account"
+            t("auth.sign_up.submit")
           )}
         </Button>
       </form>

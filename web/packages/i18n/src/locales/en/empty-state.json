@@ -101,7 +101,7 @@
     },
     "tokens": {
       "title": "No Personal token yet",
-      "description": "Generate secure API tokens to connect your workspace with external systems and applications.",
+      "description": "Generate secure tokens that let scripts and other applications use the API as your account.",
       "cta_primary": "Add access token"
     },
     "webhooks": {

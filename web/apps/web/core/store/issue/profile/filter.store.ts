@@ -22,15 +22,12 @@ import type {
 } from "@nerve/types";
 import { EIssuesStoreType } from "@nerve/types";
 import { handleIssueQueryParamsByLayout } from "@nerve/utils";
-import { IssueFiltersService } from "@/services/issue_filter.service";
 import type { IBaseIssueFilterStore } from "../helpers/issue-filter-helper.store";
 import { IssueFilterHelperStore } from "../helpers/issue-filter-helper.store";
 // types
 import type { IIssueRootStore } from "../root.store";
 
 export interface IProfileIssuesFilter extends IBaseIssueFilterStore {
-  // observables
-  userId: string;
   //helper actions
   getFilterParams: (
     options: IssuePaginationOptions,
@@ -53,30 +50,23 @@ export interface IProfileIssuesFilter extends IBaseIssueFilterStore {
 
 export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProfileIssuesFilter {
   // observables
-  userId: string = "";
   filters: { [userId: string]: IIssueFilters } = {};
   // root store
   rootIssueStore: IIssueRootStore;
-  // services
-  issueFilterService;
 
   constructor(_rootStore: IIssueRootStore) {
     super();
     makeObservable(this, {
       // observables
-      userId: observable.ref,
       filters: observable,
       // computed
       issueFilters: computed,
-      appliedFilters: computed,
       // actions
       fetchFilters: action,
       updateFilters: action,
     });
     // root store
     this.rootIssueStore = _rootStore;
-    // services
-    this.issueFilterService = new IssueFiltersService();
   }
 
   get issueFilters() {
@@ -84,13 +74,6 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
     if (!userId) return undefined;
 
     return this.getIssueFilters(userId);
-  }
-
-  get appliedFilters() {
-    const userId = this.rootIssueStore.userId;
-    if (!userId) return undefined;
-
-    return this.getAppliedFilters(userId);
   }
 
   getIssueFilters(userId: string) {
@@ -134,7 +117,6 @@ export class ProfileIssuesFilter extends IssueFilterHelperStore implements IProf
   );
 
   fetchFilters = async (workspaceSlug: string, userId: string) => {
-    this.userId = userId;
     const _filters = this.handleIssuesLocalFilters.get(EIssuesStoreType.PROFILE, workspaceSlug, userId, undefined);
 
     const richFilters: TWorkItemFilterExpression = _filters?.rich_filters;

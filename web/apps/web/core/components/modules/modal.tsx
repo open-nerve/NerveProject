@@ -57,45 +57,44 @@ export const CreateUpdateModuleModal = observer(function CreateUpdateModuleModal
     if (!workspaceSlug || !projectId) return;
 
     const selectedProjectId = payload.project_id ?? projectId;
-    await createModule(workspaceSlug, selectedProjectId, payload)
-      .then((_res) => {
-        handleClose();
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Module created successfully.",
-        });
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: err?.detail ?? err?.error ?? "Module could not be created. Please try again.",
-        });
+    try {
+      await createModule(workspaceSlug, selectedProjectId, payload);
+      handleClose();
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "Success!",
+        message: "Module created successfully.",
       });
+    } catch (err: unknown) {
+      const error = err as { detail?: string; error?: string } | undefined;
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: error?.detail ?? error?.error ?? "Module could not be created. Please try again.",
+      });
+    }
   };
 
   const handleUpdateModule = async (payload: Partial<IModule>) => {
     if (!workspaceSlug || !projectId || !data) return;
 
     const selectedProjectId = payload.project_id ?? projectId;
-    await updateModuleDetails(workspaceSlug, selectedProjectId, data.id, payload)
-      .then((_res) => {
-        handleClose();
-
-        setToast({
-          type: TOAST_TYPE.SUCCESS,
-          title: "Success!",
-          message: "Module updated successfully.",
-        });
-      })
-      .catch((err) => {
-        setToast({
-          type: TOAST_TYPE.ERROR,
-          title: "Error!",
-          message: err?.detail ?? err?.error ?? "Module could not be updated. Please try again.",
-        });
+    try {
+      await updateModuleDetails(workspaceSlug, selectedProjectId, data.id, payload);
+      handleClose();
+      setToast({
+        type: TOAST_TYPE.SUCCESS,
+        title: "Success!",
+        message: "Module updated successfully.",
       });
+    } catch (err: unknown) {
+      const error = err as { detail?: string; error?: string } | undefined;
+      setToast({
+        type: TOAST_TYPE.ERROR,
+        title: "Error!",
+        message: error?.detail ?? error?.error ?? "Module could not be updated. Please try again.",
+      });
+    }
   };
 
   const handleFormSubmit = async (formData: Partial<IModule>) => {
@@ -138,7 +137,7 @@ export const CreateUpdateModuleModal = observer(function CreateUpdateModuleModal
       <ModuleForm
         handleFormSubmit={handleFormSubmit}
         handleClose={handleClose}
-        status={data ? true : false}
+        status={!!data}
         projectId={activeProject ?? ""}
         setActiveProject={setActiveProject}
         data={data}

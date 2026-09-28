@@ -111,9 +111,9 @@ test("A6 (page): another tab signs another account in without signing out: every
   // Tab A follows: it shows Y, and what it writes from now on is Y's.
   await expect(accountMenu(tabA, y)).toBeVisible();
   await expect(accountMenu(tabA, x)).toHaveCount(0);
-  await tabA.getByLabel("Name").fill("Yvonne");
+  await tabA.getByLabel("Name", { exact: true }).fill("Yvonne");
   expect(await saveProfileStep(tabA)).toBe(200);
-  await expect(tabA.getByText("Create your workspace")).toBeVisible();
+  await expect(tabA.getByText("Create your workspace", { exact: true })).toBeVisible();
   // Both of the step's writes went to Y, the name and then the step done; X's account is as it was.
   expect((await accountOf(db, y.toLowerCase())).first_name).toBe("Yvonne");
   expect(await onboardingStepsOf(db, y.toLowerCase())).toEqual({ ...noStepDone, profile_complete: true });

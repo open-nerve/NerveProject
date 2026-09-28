@@ -32,10 +32,14 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
 
   // A weak password: the rules show under the field, and the page sends nothing (counted at the end).
   await fillSignUp(page, newEmail, "password");
-  await expect(page.getByText("8–128 characters")).toBeVisible();
-  await expect(page.getByText("Min 1 upper-case letter")).toBeVisible();
-  await page.getByRole("button", { name: "Create account" }).click();
+  const upperCaseRule = page.getByText("Min 1 upper-case letter", { exact: true });
+  await expect(page.getByText("8–128 characters", { exact: true })).toBeVisible();
+  await expect(upperCaseRule).toBeVisible();
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
   await expect(formAlert(page)).toHaveText("Try setting-up a strong password to proceed");
+  // A valid password: the rules go.
+  await page.getByLabel("Set a password", { exact: true }).fill("N3wPassw0rd!");
+  await expect(upperCaseRule).toHaveCount(0);
 
   // Common passwords, which only nerve knows: the message is under the field, none above the form.
   const expectTooCommon = async (common: string) => {
@@ -49,7 +53,7 @@ test("A2 (page): a refused sign-up says why in place, keeps the address and adds
 
   // With sign-up off the header has no sign-up link, which it has with sign-up on; and nerve refuses
   // every address alike, a taken one too.
-  const signUpLink = page.getByRole("link", { name: "Sign up" });
+  const signUpLink = page.getByRole("link", { name: "Sign up", exact: true });
   await showSignIn(page, nerve.baseURL);
   await expect(signUpLink).toBeVisible();
   const closed = await nerveWith({ NERVE_AUTH__SIGNUP_ENABLED: "false" });

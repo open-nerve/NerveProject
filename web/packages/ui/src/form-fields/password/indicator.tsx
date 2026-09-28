@@ -7,29 +7,30 @@
 import { TickCircleOutline } from "@makeplane/propel/icons";
 import React from "react";
 import { E_PASSWORD_STRENGTH } from "@nerve/constants";
+import type { TPasswordCriterionKey } from "@nerve/utils";
 import { cn, getPasswordStrength, getPasswordCriteria } from "@nerve/utils";
+import type { TShownPasswordStrength } from "./helper";
 import { getStrengthInfo, getFragmentColor } from "./helper";
+
+/** The indicator's texts, which the caller translates: a message per shown strength, a label per rule. */
+export type TPasswordStrengthLabels = {
+  strength: Record<TShownPasswordStrength, string>;
+  criteria: Record<TPasswordCriterionKey, string>;
+};
 
 interface PasswordStrengthIndicatorProps {
   password: string;
-  showCriteria?: boolean;
-  isFocused?: boolean;
+  labels: TPasswordStrengthLabels;
 }
 
-export function PasswordStrengthIndicator({
-  password,
-  showCriteria = true,
-  isFocused = false,
-}: PasswordStrengthIndicatorProps) {
+/** The strength and the rules of a password while it is not valid: nothing while it is empty, or once it is valid. */
+export function PasswordStrengthIndicator({ password, labels }: PasswordStrengthIndicatorProps) {
   const strength = getPasswordStrength(password);
-  const criteria = getPasswordCriteria(password);
-  const strengthInfo = getStrengthInfo(strength);
-
-  const isPasswordMeterVisible = isFocused ? true : strength === E_PASSWORD_STRENGTH.STRENGTH_VALID ? false : true;
-
-  if ((!password && !showCriteria) || !isPasswordMeterVisible) {
+  if (strength === E_PASSWORD_STRENGTH.EMPTY || strength === E_PASSWORD_STRENGTH.STRENGTH_VALID) {
     return null;
   }
+  const criteria = getPasswordCriteria(password);
+  const strengthInfo = getStrengthInfo(strength);
 
   return (
     <div className={cn("space-y-3")}>
@@ -48,34 +49,32 @@ export function PasswordStrengthIndicator({
         </div>
 
         {/* Strength Message */}
-        {password && <p className={cn("!text-13 font-medium", strengthInfo.textColor)}>{strengthInfo.message}</p>}
+        <p className={cn("!text-13 font-medium", strengthInfo.textColor)}>{labels.strength[strength]}</p>
       </div>
 
       {/* Criteria list */}
-      {showCriteria && (
-        <div className="flex flex-wrap gap-2">
-          {criteria.map((criterion) => (
-            <div key={criterion.key} className="flex items-center gap-1.5">
-              <div className="flex items-center justify-center p-0.5">
-                <TickCircleOutline
-                  className={cn("h-3 w-3 flex-shrink-0", {
-                    "text-success-primary": criterion.isValid,
-                    "text-primary": !criterion.isValid,
-                  })}
-                />
-              </div>
-              <span
-                className={cn("!text-11", {
+      <div className="flex flex-wrap gap-2">
+        {criteria.map((criterion) => (
+          <div key={criterion.key} className="flex items-center gap-1.5">
+            <div className="flex items-center justify-center p-0.5">
+              <TickCircleOutline
+                className={cn("h-3 w-3 flex-shrink-0", {
                   "text-success-primary": criterion.isValid,
                   "text-primary": !criterion.isValid,
                 })}
-              >
-                {criterion.label}
-              </span>
+              />
             </div>
-          ))}
-        </div>
-      )}
+            <span
+              className={cn("!text-11", {
+                "text-success-primary": criterion.isValid,
+                "text-primary": !criterion.isValid,
+              })}
+            >
+              {labels.criteria[criterion.key]}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
