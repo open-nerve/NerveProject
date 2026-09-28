@@ -14,33 +14,17 @@ const MAX_PASSWORD_LENGTH = 128;
 const isLengthValid = (password: string) =>
   password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH;
 
-/**
- * Calculate password strength based on various criteria
- */
-export const getPasswordStrength = (password: string): E_PASSWORD_STRENGTH => {
-  if (!password || password === "" || password.length <= 0) {
-    return E_PASSWORD_STRENGTH.EMPTY;
-  }
-
-  if (!isLengthValid(password)) {
-    return E_PASSWORD_STRENGTH.LENGTH_NOT_VALID;
-  }
-
-  // Check all criteria
-  const hasUpperCase = /[A-Z]/.test(password);
-  const hasLowerCase = /[a-z]/.test(password);
-  const hasDigit = /[0-9]/.test(password);
-  const hasSpecialChar = /[!@#$%^&*()\-_+=[\]{}|;:'",.<>?/]/.test(password);
-
-  if (hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar) {
-    return E_PASSWORD_STRENGTH.STRENGTH_VALID;
-  }
-
-  return E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID;
-};
-
 /** The password rules, in the order they are shown; the caller gives each its text. */
 export type TPasswordCriterionKey = "length" | "uppercase" | "lowercase" | "number" | "special";
+
+/** The one set of the password rules, each with its test: the strength and the rules shown both come from it. */
+const PASSWORD_RULES: { key: TPasswordCriterionKey; test: (password: string) => boolean }[] = [
+  { key: "length", test: isLengthValid },
+  { key: "uppercase", test: (password) => /[A-Z]/.test(password) },
+  { key: "lowercase", test: (password) => /[a-z]/.test(password) },
+  { key: "number", test: (password) => /[0-9]/.test(password) },
+  { key: "special", test: (password) => /[!@#$%^&*()\-_+=[\]{}|;:'",.<>?/]/.test(password) },
+];
 
 type PasswordCriteria = {
   key: TPasswordCriterionKey;
@@ -50,25 +34,22 @@ type PasswordCriteria = {
 /**
  * Get password criteria for validation display
  */
-export const getPasswordCriteria = (password: string): PasswordCriteria[] => [
-  {
-    key: "length",
-    isValid: isLengthValid(password),
-  },
-  {
-    key: "uppercase",
-    isValid: /[A-Z]/.test(password),
-  },
-  {
-    key: "lowercase",
-    isValid: /[a-z]/.test(password),
-  },
-  {
-    key: "number",
-    isValid: /[0-9]/.test(password),
-  },
-  {
-    key: "special",
-    isValid: /[!@#$%^&*()\-_+=[\]{}|;:'",.<>?/]/.test(password),
-  },
-];
+export const getPasswordCriteria = (password: string): PasswordCriteria[] =>
+  PASSWORD_RULES.map(({ key, test }) => ({ key, isValid: test(password) }));
+
+/**
+ * Calculate password strength based on various criteria
+ */
+export const getPasswordStrength = (password: string): E_PASSWORD_STRENGTH => {
+  if (!password) {
+    return E_PASSWORD_STRENGTH.EMPTY;
+  }
+
+  if (!isLengthValid(password)) {
+    return E_PASSWORD_STRENGTH.LENGTH_NOT_VALID;
+  }
+
+  return getPasswordCriteria(password).every((criterion) => criterion.isValid)
+    ? E_PASSWORD_STRENGTH.STRENGTH_VALID
+    : E_PASSWORD_STRENGTH.STRENGTH_NOT_VALID;
+};
