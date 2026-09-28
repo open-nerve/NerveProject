@@ -3,6 +3,7 @@ import type { Browser, Page } from "@playwright/test";
 import { countIdentity, expectNothingAdded, expectSignedIn } from "../../fixtures/assert/identity";
 import { formAlert, signInPath, submitSignIn } from "../../fixtures/auth-pages";
 import { bearer, emailFor, login, password, recordOf, register } from "../../fixtures/auth";
+import { watchPage } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
 // A3, signing in (M2 design 2), with next_path (3.18).
@@ -46,13 +47,20 @@ test("A3 (page): signing in comes back to the page asked for, and only to a page
   });
   await page.context().close();
 
-  // A next_path that could lead elsewhere is dropped: the account's default page instead.
+  // A next_path that could lead elsewhere is dropped: the account's default page instead. That page,
+  // /create-workspace, is one M2 reaches, so it asks no older API as it mounts (M2 design 3.1): the
+  // workspace addresses answer 404 until M3.
   await Promise.all(
     ["//evil.example", "/\\evil.example", "javascript:alert(1)", "/\t/evil.example"].map(async (nextPath) => {
       const other = await freshPage(browser, nerve.baseURL);
+      const watch = await watchPage(other);
       await other.goto(`/?next_path=${encodeURIComponent(nextPath)}`);
       expect(await submitSignIn(other, email, password), nextPath).toBe(200);
       await expect(other, nextPath).toHaveURL("/create-workspace");
+      await expect(other.locator("#workspaceName"), nextPath).toBeVisible();
+      expect(watch.oldApiRequests, nextPath).toEqual([]);
+      expect(watch.apiFailures, nextPath).toEqual([]);
+      expect(watch.pageErrors, nextPath).toEqual([]);
       await other.context().close();
     })
   );
