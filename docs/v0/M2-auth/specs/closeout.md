@@ -150,7 +150,7 @@ git grep -c -E '^[[:space:]]+operationId:' d97c513 -- api/dist/openapi.yaml
 | §16（生成器遇到不支持的写法一行） | 遇到它的 M 带着测试扩展生成器 | M4 交接第 4 节（第一个带数组或开放对象请求体的 M） |
 | P3a 评审第 6 节"P3b 及以后的 plan" | 约 400 行的规则不适用于接口描述的模块文件 | 总体设计 6.3 规则 5（D3） |
 | P3a 评审第 7 节"游标不签名" | 游标内容会影响可见范围的列表要另加检查 | M4 交接第 2 节、M7 交接第 1 节、M3 交接第 12 节（下一个分页列表） |
-| P3b 评审第 7 节 | River 启动失败时 runner 无限重试、只记 WARN：模块漏注册 worker 时这是唯一的迹象 | M4 交接第 6 节（第一个加业务定时任务的 M） |
+| P3b 评审第 7 节 | 模块漏注册 worker 时 River 照常启动，只在执行时记 ERROR（整个 `jobs.Job` 漏接时什么都不记）；runner 的 WARN 只在一个 worker 都没有时出现（收尾评审更正 P3b 评审的说法） | M4 交接第 6 节（第一个加业务定时任务的 M） |
 | P3b 评审第 7 节 | 数据库恢复之后真实的 River 客户端能否重新启动，只读过代码 | M8 交接第 3 节（部署核对） |
 | P5 spec 第 5 节"M5" | `@nerve/services` 剩下的文件工具和整个包 | M5 交接第 3 节；同时发现地址规范化的调用方是 web 的 axios 基类（`web/apps/web/core/services/api.service.ts:10`），M6–M8 的旧调用还要它，删包时要挪进 web |
 | 7.9 最后一行"P4（M5 按 Nerve 自己的协议加回上传）" | 规则 `plane-user-assets` 挡住 `USER_AVATAR`、`USER_COVER` | M5 交接第 1 节：M5 沿用这两个名字时收窄规则 |
@@ -185,10 +185,11 @@ git grep -c -E '^[[:space:]]+operationId:' d97c513 -- api/dist/openapi.yaml
 - 3.7"以后要多实例部署或让外部系统验签时，再加 `kid`"：v0 只有一个进程（总体设计 3.6），条件在 v0 里不出现，留在 M2 设计作记录。
 - 3.11"以后出现第二种传输时，再把状态表移到那一侧"：v0 没有第二种传输。
 - 7.3 保留 `invitation_id`、`slug`（M3 的"加入某个工作区"标题）：读它们的 `auth-header.tsx` 在 M3 §3 的 service 实例里，M3 接上邀请时一并处理。
-- 7.9"`file-upload.service.ts` 的 `withCredentials: false` 属于 M5"：M5 §2 重写上传时处理这个文件；守卫只挡 `true`。
+- 7.9"`file-upload.service.ts` 的 `withCredentials: false` 属于 M5"：这是 M5 重写上传时整个替换的文件（M5 §2 的上传），守卫只挡 `true`，不需要单独的一条。
 - 8.5"服务端清洗 HTML（M4，bluemonday）"：总体设计 6.9 的"富文本安全"已写明（`v0-design.md:524`）。
 - 8.5 的"升级路径"（刷新令牌移进 HttpOnly Cookie）：总体设计 4.3 已写明（`v0-design.md:240`）。
 - §16 第一行"真的频繁时，可以加宽限期"：条件由 P4、P5 的核对观察，P4 评审第 6 节记下没有出现（C3、C5 的 15 次页面续期和 A4 两遍各 10 次都是 200）。
+- §16 第二、三行（租约不是原子的；`navigator.locks` 下 localStorage 与锁的授予没有顺序）：应对是观察；P4、P5 的核对（C3、C5）和 A4 两遍各 10 次都没有出现重复使用，此后每次 `make e2e` 的 A4 继续观察，不需要交给某个 M。
 - 决策点 1 的"以后接入邮件服务时，再做带验证的自助修改"、11.1 的"以后需要'在所有设备上退出'时，可以作为单独的按钮加入"：是负责人已裁定的决策中放下的做法，设计没有把它们标为待负责人决定；邮件服务这个前提已在总体设计第 10 节"没有邮件服务时账户如何找回"一行。
 - 决策点 4"以后想了解用户的角色和用途，要重新加回"：是代价的说明，不是留下的事。
 
@@ -208,7 +209,7 @@ git grep -c -E '^[[:space:]]+operationId:' d97c513 -- api/dist/openapi.yaml
 | 1 | P1–P5 和收尾都有 spec、plan、review | 第 15 节的前六行都是"已完成"，各有三个链接；收尾一行"进行中"，有 spec 和 plan 的链接（T0） | 收尾 review 的提交补上 review 的链接（D1） |
 | 2 | A1–A17 的页面和接口版本、S1–S4 | `make e2e`：48 passed（`e2e/stories/identity/` 17 个文件，`e2e/stories/smoke/` S1–S5）。页面版本和接口版本调用 `e2e/fixtures/assert/identity.ts` 的同一组断言（M0-P6 交接的处理结果，P1–P4） | — |
 | 3 | 后端的各类测试、depguard、`gen-check` 的覆盖 | `make test`：32 个包 `ok`，没有 `FAIL`；`make lint-go`：两段 `0 issues.`（depguard 在 golangci-lint 里）；`make gen-check`：没有差异。交错测试在 `server/internal/modules/identity/interleavings_test.go`、`interleavings_reset_test.go`；整程序测试 `server/internal/bootstrap/contract_test.go`；规则 4 的扩展 `server/internal/archtest/rules_test.go:40`；`TestSQLCSchemaScope` 在 `sqlc_test.go`；`make gen-go` 依次跑 oapi-codegen、`bodyshapegen`、sqlc（`Makefile:77-92`），`make gen-web` 生成 TS 客户端 | — |
-| 4 | 前端的类型检查、knip、oxlint、单元测试、守卫 | `make lint-web`：`keywords: 60 rules, 3 exceptions, no hits.`，`Tasks: 54 successful, 54 total`（类型检查、oxlint 等于上限、格式、中英文的键）；`make knip` 为零；`make test-web`：`Tasks: 16 successful, 16 total`。上限在 P5 调低（web 551 → 452，ui 25 → 19，utils 18 → 12，i18n 1 → 0，P5 评审第 2 节第 4 行） | — |
+| 4 | 前端的类型检查、knip、oxlint、单元测试、守卫 | `make lint-web`：`keywords: 60 rules, 3 exceptions, no hits.`，`Tasks: 54 successful, 54 total`（类型检查、oxlint 等于上限、格式、中英文的键）；`make knip` 为零；`make test-web`：`Tasks: 16 successful, 16 total`。上限在 M2 中调低：web 565 → 551（P4）→ 452（P5），ui 25 → 19、utils 18 → 12、i18n 1 → 0（P5）；见 P4 评审第 2 节第 5 行、P5 评审第 2 节第 4 行 | — |
 | 5 | CSRF 的 `grep`；7.9 的规则；挂载时不请求 M3 的旧接口 | CSRF：在原型的 `web/` 上 `grep -rn -E 'csrfmiddlewaretoken|X-CSRFTOKEN'`（不含 `node_modules` 和构建目录）没有输出，`d97c513` 上 `git grep` 退出码 1。7.9 的七行对应 `tools/keywords.json` 的九条规则：`csrf`（不分大小写，含 `X-CSRFTOKEN`、`csrfmiddlewaretoken`、`get-csrf-token`）、`plane-auth-urls`（`/auth/` 的所有写法）、`auth-error-code`、`is-self-managed`、`with-credentials`、`plane-user-urls`、`plane-api-token-urls`、`plane-timezone-urls`（三者合起来是用户、实例、令牌、时区的地址）、`plane-user-assets`。挂载时的旧接口：见下表 | T2 补上 `/create-workspace` |
 | 6 | 四张业务表、River 的表、差异清单 | `server/migrations/sql/00001`–`00004` 建四张表，`00005` 是 River 的迁移（S1 核对全部已应用）；差异清单见 2.3 | — |
 | 7 | 四个决策点、11.1 | 决策点 1 B：`nerve users set-email`（A16）；2 C：prod 默认关闭注册、`nerve users create`（A2、A17、S3）；3 A：自助停用和 `deactivate`、`activate`（A12）；4 A：两步删除（规则 `is-self-managed`，M2 设计 3.19）；11.1：退出只结束当前会话（A6），总体设计 4.2 第二条（`v0-design.md:230`） | — |
@@ -572,7 +573,7 @@ e2e: exit 0 in 14s;  48 passed (12.7s)
 1. **测试是新增的大头。** 前端新增的 4,996 行中 3,712 行是测试（74%），7.10 估的是 450；后端测试是生产代码的 2 倍。M3 起估新增时，测试按生产代码的 1–2 倍单独估，不并进"其余"。
 2. **Plane 的代码多是删掉重写，而不是改。** 重写只有估计的一半（1,605 对 3,000），删除是两倍（2,214 对 1,050）：stores、认证页、个人设置、新手引导都是删掉旧的、写新的薄 service 和 store。M3 起把领域文件组的大部分行估为"删除"，新写的 service、store 估为"新增"，"重写"只留给组件。
 3. **改动的文件数被横向的清理放大。** 206 个文件中 102 个在 7.10 的文件组之外：跟随类型的使用方，P5 的下拉框（`CustomSelect`、`CustomSearchSelect` 和它们的调用方），以及 M1 收尾交接要求的死成员、oxlint 和一整类规则（`no-unneeded-ternary` 54 处，遍布全仓）。M3 起把 M1 收尾交接的清理单列一项估，不算进领域的改动。
-4. **后端的生产代码多了 40%，多在平台上。** 限流器、请求体结构检查、River 的 runner、配置和管理命令都是第一次建；M3 起复用它们，领域代码更接近按用例估的数。测试照 2 倍估。
+4. **后端的生产代码多了 40%。** 7.10 没有按层估，多出的部分分不到层。实际新增的 7,866 行里，`identity` 模块 4,462 行（49 个文件）；平台 1,953 行（`httpserver` 1,035、`config` 389、`ratelimit` 173、`jobs` 167、`postgres` 114、`webui` 60、`clock` 15），`bodyshapegen` 376 行，`shared` 285 行，合计约三分之一，都是第一次建、M3 起复用；其余是 `instance` 335、`bootstrap` 313、`cmd` 139、`migrations` 3（`embed.go`）。M3 起按用例估领域模块，平台只估新加的部分。测试照 2 倍估。
 5. **接口描述比估的短。** `identity.yaml` 623 行、15 个操作，约每个操作 40 行（含 schema）；M3 起按操作数估。
 6. **端到端：故事按估计，fixture 是两倍。** 故事 2,191 对 2,150；fixture 1,118 对 500（页面的观察 `watchPage`、认证和个人设置页的帮助函数）。持续集成上 E2E 一步从 18 秒到 56 秒，多了 43 个测试，约每个测试 0.9 秒；照这个速度，M3–M8 再加 150 个测试会多约 2–3 分钟。每个 M 的设计估计它；E2E 一步超过约 5 分钟时考虑分片。
 
@@ -605,3 +606,25 @@ e2e: exit 0 in 14s;  48 passed (12.7s)
 | L13 | `plane-user-urls` 可以在 M3 迁走最后一个旧调用之后收紧 | M3 §11 加一条，关闭条件随之加 |
 
 重扫 M2 设计另找到的（不是预检的发现）：M3 §6 的加锁顺序、M3 §8 的 `Authorizer`、M3 §11 的 `owner`、M4 §4 的第一个 `date` 字段、M7 §2 的最近访问的模块文件、M7 §5 的关系图和 13.2 那一行加上 M7（D9）、总体设计 5.2 的 River 升级（D10）。全表在 2.4。
+
+---
+
+## 附录 D：整分支评审的发现和落点
+
+整分支评审（`$M2TMP/m2-closeout/final-review.md`，范围 `d97c513..7ece0a78`；Critical 0、Important 3、Minor 5，另有 4 项没有去处的遗留）的发现控制者全部接受，可选的两处（I3 的 M4 §9、遗留 4）也做。评审给了改正文字的，照它用；与代码对不上的地方按代码写，下表写明。评审同意的已排队的一项（M5 的 M1-P3 交接）一起做。
+
+| 发现 | 内容 | 落在哪里 |
+|---|---|---|
+| I1 | 总体设计第 10 节 PAT 派生一行把负责人的选项写成三个并列的，丢了 M2 设计 8.5 的"两者要一起做" | 那一行的右格照评审改：两个选项，第二个是"不允许用 PAT 创建 PAT，同时给有效期设上限" |
+| I2 | M4 §6 说漏注册 worker 时 runner 的 WARN 是唯一的迹象；在 `river@v0.47.0` 上 `Start` 只在一个 worker 都没有时失败，`identity` 总有一个，所以 River 照常启动，执行时记 ERROR | M4 §6 第一条照评审改：River 日志的原文按它的代码写作 "jobexecutor.JobExecutor: Unhandled job kind"（评审写的是 "jobExecutor: …"，前缀由 `baseservice.Init` 按包名和类型名生成），River 源码的路径都带上 `river@v0.47.0/`；本 spec 2.4 P3b 一行的中间格照评审改 |
+| I3 | 总体设计 7.7 的页面级状态一条说主题由 `StoreWrapper` 设置，没有写改它的组件在应答之后先核对会话 | 7.7 那一条照评审改，只一处按代码写："每个会话第一次取到资料时"（评审写的是"每个账户"；新的一代的 `UserStore` 开始时没有资料，`StoreWrapper` 的标记随之清掉，同一个账户重新登录也再设一次）；M4 §9 的"做什么"加上 `inSession()` 的说明（可选的部分） |
+| m1 | 7.7 的代码一条少了 `auth-middleware.ts`、`store-wrapper.tsx` | 7.7 最后一条照评审改，并点名 PAT store 作范例 |
+| m2 | 13.2 保留的两行与工作副本不同（模块级的 service；`fetchWorkspaces` 的行号） | M2 设计 13.2 的引言照评审加一句：以交接和 7.7 为准 |
+| m3 | 附录 B.5 第 4 条"多在平台上"没有数 | B.5 第 4 条照评审按区域分列。在 `git diff --numstat 559c3c6 d97c513 -- server` 的同样 89 个文件上重算，每一项与评审相同；评审的表加起来是 7,863 行，另外 3 行是 `server/migrations/embed.go`，列在"其余" |
+| m4 | 2.4 说 M5 §2 处理 `file-upload.service.ts`，而 M5 §2 没有点名它 | 2.4"查过、不需要新的去处的"那一条照评审改 |
+| m5 | 第 14 节第 4 项的勾和本 spec 2.6 第 4 行只写了 P5 调低的上限 | 2.6 第 4 行照评审改，句末留着出处（P4 评审第 2 节第 5 行、P5 评审第 2 节第 4 行）；计划最后一节第 14 节第 4 项的说明照评审改 |
+| 遗留 1 | M0/P3 评审 C3 的 map 型对象例外：M0-P3 交接已关闭，以后的 M 没有被告知 | M4 §4 照评审加一条，关闭条件随之加一句；M4 交接的开头随之列上 |
+| 遗留 2 | README"前端"一节的"M2 中看到的页面"在 M3 之后过时，没有交接要求改写 | M3 §2 的关闭条件照评审加上 |
+| 遗留 3 | §16 第二、三行（租约不是原子的；`navigator.locks` 下的顺序）的应对是观察，没有写谁观察 | 2.4"查过、不需要新的去处的"照评审加一条 |
+| 遗留 4 | M2 设计 3.1 的挂载规则只管 M2 能到达的页面，以后是否延伸没有去处 | M3 §2 照评审加一条，是给 M3 设计的问题，不是 M3 必做的事；关闭条件随之加一句；M3 交接的开头随之列上 |
+| 已排队 | M5 的 M1-P3 交接先列 8 种资源类型，再说现在是 6 种 | 那一条改为 6 种，与 `web/packages/types/src/enums.ts` 核对过 |
