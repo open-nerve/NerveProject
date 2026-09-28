@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 让 M2 设计第 14 节成立，按第 12 节的收尾一段关闭 M2（spec 第 2 节的分诊）：关键词守卫进入 `M2/closeout`，例外只剩跨 M 的三条；`/create-workspace` 挂载时不请求旧接口由故事守住；3.20 核对出的漏同步补上（各记为所在 Phase 的漏项）；M2 定下的长期前端规则和负责人未决的 argon2 事项在总体设计里有唯一的落点；写好给 M3–M8 的交接（13.2 的每一行、M0-P2 和 M0-P6 剩下的两项、表外的遗留）；M2 收到的 10 份交接逐项写下结论并关闭；13.2 的每一行指向它的交接；全部门禁在收尾的头上重新证明一次。
+**Goal:** 让 M2 设计第 14 节成立，按第 12 节的收尾一段关闭 M2（spec 第 2 节的分诊）：关键词守卫进入 `M2/closeout`，例外只剩跨 M 的三条；`/create-workspace` 挂载时不请求旧接口由故事守住；3.20 核对出的漏同步补上（各记为所在 Phase 的漏项）；M2 定下的长期规则（前端的会话分代、River 的升级）和负责人以后可选的两件事（argon2 调参、PAT 的派生）在总体设计里有唯一的落点；写好给 M3–M8 的交接（13.2 的每一行、M0-P2 和 M0-P6 剩下的两项、表外的遗留）；M2 收到的 10 份交接逐项写下结论并关闭；13.2 的每一行指向它的交接；全部门禁在收尾的头上重新证明一次。
 
 **Architecture:** 9 个 Task，每个一个提交：守卫（T1）→ 故事（T2）→ 上级文档的漏同步（T3）→ 长期规则的落点（T4）→ 给 M3、M4 的交接（T5）→ 给 M5–M8 的交接和已有交接中过时的两处（T6）→ 关闭收到的交接（T7）→ M2 设计的 13.2 和 §16（T8）→ 全部门禁（T9）。除 T2 的故事以外都是文档和配置：每一处改动都写成下面的块，由 `$M2TMP/closeout/planapply.mjs` 精确地应用（原文不是恰好一处就停下、什么都不写）。状态翻转（总体设计 9.4 的"已完成"、M2 设计第 15 节的收尾一行、第 14 节的勾）按 M1 的先例放在收尾 review 的提交里，由控制者做，替换的全文在最后一节（spec 第 4 节 D1）。
 
@@ -10,7 +10,9 @@
 
 **Spec:** `docs/v0/M2-auth/specs/closeout.md`（上级：`docs/v0/M2-auth/M2-design.md` 第 12 节的收尾、第 13、14 节）
 
-**原型：** `$M2TMP/closeout/proto`，`d97c513` 的克隆（`git clone --branch worktree-m2-closeout`），Task 0–8 依次用 `planapply.mjs` 应用本计划的块，每个 Task 之后跑它的检查，最后跑全部门禁（结果在各 Task 的预期和 spec 附录 A）。本计划的块依次应用到 `d97c513` 的另一份干净副本上，得到的树与原型逐字节相同（文末"块的核对"）。
+**原型：** `$M2TMP/closeout/proto2`，本分支在 `11f773bd`（Task 0、Task 1 已提交）的克隆（`git clone --branch worktree-m2-closeout`），Task 2–8 依次用 `planapply.mjs` 应用本计划的块，每个 Task 之后跑它的检查，最后跑全部门禁（结果在各 Task 的预期和 spec 附录 A）。本计划的块依次应用到 `d97c513` 的另一份干净副本上，得到的树与原型逐字节相同（文末"块的核对"）。
+
+**预检：** 预检的 19 条发现（`$M2TMP/m2-closeout/preflight.md`）和控制者的裁定（`$M2TMP/m2-closeout/preflight-rulings.md`）已并入本计划和 spec（spec 附录 C 逐条列出落在哪里）；裁定要求的对 M2 设计的重扫结果在 spec 2.4。
 
 ---
 
@@ -87,13 +89,13 @@
 | `docs/v0/v0-design.md` | 9.4 的 M2 一行（P1 的漏项）；7.1 的 `packages/services`（P5 的漏项） | 3 |
 | `docs/v0/M0-foundation/M0-design.md` | 3.7 的规则 4、6、8（P1 的漏项） | 3 |
 | `docs/v0/plane-diff.md` | 第四节"退出、修改密码、停用之后的旧凭证"（P3a 的漏项） | 3 |
-| `docs/v0/v0-design.md` | 新的 7.7（stores 按会话分代）；6.3 规则 5 的契约文件；第 10 节的校准一行、argon2 一行 | 4 |
+| `docs/v0/v0-design.md` | 新的 7.7（stores 按会话分代）；6.3 规则 5 的契约文件；5.2 的 River 升级；第 10 节的校准一行、argon2 一行、PAT 派生一行 | 4 |
 | `docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/M4-issue-core/handoffs/M2-closeout.md` | 新文件 | 5 |
 | `docs/v0/M5-files/handoffs/M2-closeout.md`、`docs/v0/M6-cycles-modules/handoffs/M2-closeout.md`、`docs/v0/M7-collaboration/handoffs/M2-closeout.md`、`docs/v0/M8-open-release/handoffs/M2-closeout.md` | 新文件 | 6 |
 | `docs/v0/M{3,4,5,6,7,8}-*/handoffs/M1-closeout.md` | 候选规则中的 `no-unneeded-ternary` 已由 M2/P5 清零 | 6 |
 | `docs/v0/M5-files/handoffs/M1-P3-trim-platform.md` | 资源类型现在是 6 种 | 6 |
 | `docs/v0/M2-auth/handoffs/*.md`（10 个） | `## 处理结果（M2/收尾）`，`status: closed` | 7 |
-| `docs/v0/M2-auth/M2-design.md` | 13.2 的接收者指向交接；§16 的 argon2 一行指向总体设计第 10 节 | 8 |
+| `docs/v0/M2-auth/M2-design.md` | 13.2 的接收者指向交接（关系图一行加上 M7）；§16 的 argon2 一行、PAT 派生一行指向总体设计第 10 节 | 8 |
 | — | 全部门禁；核对 | 9 |
 
 收尾 review 的提交（控制者）另改 `docs/v0/v0-design.md` 9.4 和 `docs/v0/M2-auth/M2-design.md` 的第 14、15 节，见最后一节。
@@ -114,7 +116,9 @@
 | 收尾 | closeout | 进行中 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | — |
 ````
 
-### Task 1: 关键词守卫进入 `M2/closeout`
+### Task 1: 关键词守卫进入 `M2/closeout`（已提交：`11f773bd`）
+
+预检之前已按下面的块提交，与块相同。
 
 spec 2.5。`phase` 从 `M2/P5` 改为 `M2/closeout`。三条例外的 `until` 是 M3、M6、M9，都在 `M2/closeout` 之后，照旧有效；`until` 为 M2 的任何 Phase 的例外从此都算过期。P1–P5 的例外都已在各自的 Phase 删掉，没有要删的。
 
@@ -214,7 +218,9 @@ import { expect, test } from "../../fixtures/test";
 
 - [ ] **Step 3：故事**：`make e2e` → `48 passed`（测试数不变）。
 
-- [ ] **Step 4：变异**：`bash $M2TMP/closeout/probes/mount-mutation.sh .` 在 `web/apps/web/app/(all)/create-workspace/page.tsx` 里依次放进两种挂载时的旧接口请求（`useEffect` 里的 `fetch("/api/workspaces/")`；`useSWR` 的 fetcher 里的同一个请求），每种 `make build` 之后跑三遍 A3（`--repeat-each 3`），最后写回原文件、再 `make build` 一次。预期每种变异都让 A3 的第一个页面测试三遍都失败在 `watch.oldApiRequests`（收到 `"GET /api/workspaces/"`），另外两个测试（第二个页面测试和接口版本）三遍都通过：
+- [ ] **Step 4：不改页面时稳定**：新的断言在表单出现之后把数组读一次，这一步看它在页面没有变异时是否稳定。`make build`，然后 `NERVE_VERSION=0.1.0-dev pnpm -C e2e exec playwright test stories/identity/a3-sign-in.spec.ts --repeat-each 10` → `30 passed`（A3 的三个测试各十遍）。原型（`$M2TMP/closeout/proto2`）：`30 passed (9.0s)`。
+
+- [ ] **Step 5：变异**：`bash $M2TMP/closeout/probes/mount-mutation.sh .` 在 `web/apps/web/app/(all)/create-workspace/page.tsx` 里依次放进两种挂载时的旧接口请求（`useEffect` 里的 `fetch("/api/workspaces/")`；`useSWR` 的 fetcher 里的同一个请求），每种 `make build` 之后跑三遍 A3（`--repeat-each 3`），最后写回原文件、再 `make build` 一次。预期每种变异都让 A3 的第一个页面测试三遍都失败在 `watch.oldApiRequests`（收到 `"GET /api/workspaces/"`），另外两个测试（第二个页面测试和接口版本）三遍都通过：
 
 ```
 mutation effect-fetch: a3 exit 1;  3 failed  6 passed (4.7s) ; failures quoting watch.oldApiRequests: 3; received: "GET /api/workspaces/" 
@@ -225,7 +231,7 @@ rebuilt: ok
 
 写回之后 `git status --short` 只有本 Task 的文件。原型另把 A3 换回 `d97c513` 的版本跑了同样两种变异：`9 passed`，两种都没有被发现；`d97c513` 的整套故事加上 `useEffect` 的变异也是 `48 passed`（spec 附录 A.3）。这就是本 Task 补上的缺口。
 
-- [ ] **Step 5：提交**（`test(M2/closeout): A3 watches /create-workspace for older API requests as it mounts`）
+- [ ] **Step 6：提交**（`test(M2/closeout): A3 watches /create-workspace for older API requests as it mounts`）
 
 ### Task 3: 上级文档的漏同步
 
@@ -304,12 +310,15 @@ spec 2.2。3.20 的规则是"每处偏离，在实现它的那个 Phase 的同�
 
 ### Task 4: 长期规则的落点
 
-spec 第 4 节 D2、D3、D4 和 2.4 的第 5、6 行。四处都在总体设计：
+spec 第 4 节 D2、D3、D4 和 2.4。五处都在总体设计：
 
 1. **新的 7.7**：M2 定下的前端会话约定（M2 设计 13.2"M3 及以后有 stores 的 M"一行）。它不是一次性的任务：M3–M8 都要建 stores，交接关闭之后规则还要在。7.7 是它唯一的全文，4.3 讲浏览器端的行为，7.7 讲代码怎样做到；各 M 的交接只列自己的 stores 和 services，指向 7.7。
 2. **6.3 规则 5**：约 400 行的规则不适用于接口描述的模块文件（M0-P3 交接第 5 条的组织规则：一个模块一个文件）。这是 P3a 评审交给"P3b 及以后的 plan"的事项，P3b、P4、P5 的 plan 各自写进 Global Constraints，没有长期的落点。
 3. **第 10 节的校准一行**：总体设计让 M2 校准前端改动量的估算，结果写在收尾 spec 的附录 B，这一行指向它。
-4. **第 10 节新加一行**：调高 argon2 参数之后，登录耗时能区分休眠的账户和不存在的邮箱，是否加缓解由负责人以后决定（M2 设计 §16）。它不是任何 M 的任务，M2 关闭之后要有地方记着。
+4. **第 10 节新加两行**：负责人以后可以选的两件事，都不是任何 M 的任务，M2 关闭之后要有地方记着（spec 第 4 节 D4）：
+   - 调高 argon2 参数之后，登录耗时能区分休眠的账户和不存在的邮箱，是否加缓解（M2 设计 §16）；
+   - 泄露的刷新令牌可以派生永不过期的 PAT：创建 PAT 时重新输入密码、限制派生是可选的产品选项（M2 设计 §16、8.5）。
+5. **5.2 的 River 迁移一句之后**：升级 River 时另写一份迁移、不改已发布的文件（M2 设计 3.15）。这是以后每次升级都要照做的规则，只写在 M2 设计里（收尾重扫 M2 设计找到，spec 2.4）。
 
 **文件：** `docs/v0/v0-design.md`
 
@@ -333,11 +342,11 @@ spec 第 4 节 D2、D3、D4 和 2.4 的第 5、6 行。四处都在总体设计�
 ### 7.7 stores 按会话分代（长期有效，M2 起）
 4.3 的"不以别的会话的身份发请求"在代码上靠下面几条做到（M2 设计 7.1、7.5，M2/P4 spec 2.8）。M3 以后每个接上新接口的 store、service 和页面都照做；各 M 的交接只列自己的范围，不重复这些规则。
 - **每个会话一个 `RootStore`**：会话（`login_id`）每次变化，`store-context.tsx` 建一个新的 `RootStore`，交给它这个会话的客户端（`apiFor(loginId)`）。只有不属于账户的 `instance`、`router`、`theme` 从上一代沿用，其余 store 都新建。组件经 `StoreProvider` 拿到此刻的 `RootStore`，换代之后以新的一代重新渲染。
-- **service 从构造函数拿这一代的客户端**：store 在构造时建它的 service，传入这一代的客户端。没有模块级的带令牌客户端，也没有模块级的 service 实例；不需要令牌的公开操作用 `publicClient`。
+- **service 从构造函数拿这一代的客户端**：store 在构造时建它的 service，传入这一代的客户端。没有模块级的带令牌客户端，也没有用它的模块级 service 实例；只调公开操作的 service 用 `publicClient`，可以是模块级的（例如 `core/hooks/use-timezone.tsx` 的 `TimezoneService`）。
 - **store 只经自己的 `RootStore` 找兄弟 store**。`store-context.tsx` 导出的 `rootStore` 只给没有自己 `RootStore` 的代码做同步读取，不发请求。
 - **填充 stores 的 SWR 键带上 `loginId`**（例如 `["CURRENT_USER", loginId]`）：换了会话，新的一代取自己的数据。
-- **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收，由 `RootStore` 提供释放的方法，`store-context.tsx` 换代时调用。只观察本代对象的反应不用释放。
-- **`SessionChangedError` 不是认证失败**：它表示请求属于标签页已经离开的会话，请求没有发出，或者 401 之后没有续期、重发。调用方不退出、不跳转；后台加载忽略它，由新的一代重新取数；用户发起的操作被它截断时可以提示失败（操作确实没有做）。
+- **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收。M2 结束时 `RootStore` 还没有释放的方法：第一个接上这类 store 的 M 给 `RootStore` 加上它，由 `store-context.tsx` 在换代时调用，之后的 M 照做（要释放的反应列在各 M 的交接里）。只观察本代对象的反应不用释放。
+- **`SessionChangedError` 不是认证失败**：它表示请求属于标签页已经离开的会话：请求在发出之前被拦下；或者请求（或续期之后重发的副本）得到 401 时，标签页已经离开它的会话，于是不再续期、重发，也不结束标签页此刻的会话。它只出现在请求发出之前或一个 401 之后，所以操作确实没有做。调用方不退出、不跳转；后台加载忽略它，由新的一代重新取数；用户发起的操作被它截断时可以提示失败。
 - **页面级的状态从当前的 `RootStore` 派生**：界面语言、主题这类作用于整个页面的状态，由 `StoreWrapper` 读当前一代的资料来设置；store 不直接改全局状态，旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
 - **`@nerve/ui` 不依赖 `@nerve/i18n`**：组件的文字由调用方经 `t()` 以 props 传入。`@nerve/ui` 的 `package.json` 不声明 `@nerve/i18n`，pnpm 不把没有声明的包放进它的 `node_modules`，从 `@nerve/i18n` 导入的名字过不了 `@nerve/ui` 的类型检查。
 - 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/auth/api-client.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
@@ -358,6 +367,15 @@ spec 第 4 节 D2、D3、D4 和 2.4 的第 5、6 行。四处都在总体设计�
 ````new docs/v0/v0-design.md
 | 没有邮件服务时账户如何找回（目前只能由管理员用命令行重置） | 以后接入邮件服务时再议（v0 之后） |
 | 调高 argon2 参数（`argon2_memory_kib`、`argon2_iterations`）之后，登录耗时能区分休眠的账户和不存在的邮箱，直到每个账户重新登录一次（M2 设计 §16） | 是否加缓解由负责人以后决定；M8 的 argon2 实测提供数字（[M8 的交接](M8-open-release/handoffs/M2-closeout.md)第 2 节） |
+| 泄露的刷新令牌可以派生永不过期的 PAT，影响不以刷新令牌的 30 天为限（M2 设计 §16、8.5） | 恢复步骤已写在 README 的"部署"一节（撤销不认识的 PAT，或由管理员 `nerve users reset-password`）；创建 PAT 时重新输入密码、不允许用 PAT 创建 PAT 或给 PAT 的有效期设上限，是负责人以后可选的产品选项，v0 不采用 |
+````
+
+````old docs/v0/v0-design.md
+；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。
+````
+
+````new docs/v0/v0-design.md
+；不使用 River 自带的迁移命令（见 M2 的 [M0-P2-platform-notes](M2-auth/handoffs/M0-P2-platform-notes.md)）。升级 River 时，用新版本的 CLI 导出新增的版本（`--version N`），另写一份 goose 迁移，不改已发布的迁移文件（M2 设计 3.15）。
 ````
 
 - [ ] **Step 2：7.7 倒数第二条的探针**：`bash $M2TMP/closeout/probes/ui-i18n.sh .` 在 `web/packages/ui/src/index.ts` 末尾加一行 `export { useTranslation as probeUseTranslation } from "@nerve/i18n";`，跑 `pnpm -C web/packages/ui check:types`，再写回原文件。要用导入名字的写法：只有副作用的 `import "@nerve/i18n";` 解析不到时 TypeScript 不报错（原型第一次这样写，类型检查通过）。预期：
@@ -370,7 +388,7 @@ restored: identical
 
 - [ ] **Step 3：守卫**（固定节奏第 3 步）。
 
-- [ ] **Step 4：提交**（`docs(M2/closeout): the session rules of the stores, the contract files and the owner's argon2 question have a home`）
+- [ ] **Step 4：提交**（`docs(M2/closeout): the session rules of the stores, the contract files, River upgrades and the owner's two open options have a home`）
 
 ### Task 5: 给 M3、M4 的交接
 
@@ -390,7 +408,7 @@ created: 2026-09-28
 
 # M2 交给 M3：邀请与注册、登录后的落点、停用的端口、stores 按会话分代，以及 M2 改到却走不到的页面
 
-M2（账户认证）做完了注册、登录、续期、退出、个人设置、PAT 和 `nerve users` 命令，前端有了令牌管理器和按会话分代的 stores（[M2 设计](../../M2-auth/M2-design.md)）。M2 没有工作区的接口，下面这些由 M3 接着做。每一节来自 M2 设计 13.2 中接收者含 M3 的一行（多个 M 的行只取 M3 的部分）；为什么这样定，看链接的节，这里写做什么、代码在哪、M2 做到哪一步、怎样算完。
+M2（账户认证）做完了注册、登录、续期、退出、个人设置、PAT 和 `nerve users` 命令，前端有了令牌管理器和按会话分代的 stores（[M2 设计](../../M2-auth/M2-design.md)）。M2 没有工作区的接口，下面这些由 M3 接着做。每一节来自 M2 设计 13.2 中接收者含 M3 的一行（多个 M 的行只取 M3 的部分）；收尾重扫 M2 设计时另找到几项，放进相应的节：第 2 节的 `/api/users/me/settings/`，第 6 节的加锁顺序，第 8 节的 `Authorizer` 端口，第 11 节的 `owner` 类型和守卫的收紧。为什么这样定，看链接的节，这里写做什么、代码在哪、M2 做到哪一步、怎样算完。
 
 ## 1. 邀请：凭链接中的令牌接受；关闭注册时持有邀请的人仍可注册（交负责人确认）
 
@@ -405,17 +423,18 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 - **做什么**：在新接口上加回 M2 删掉的取数：`AuthenticationWrapper`（`web/apps/web/core/lib/wrappers/authentication-wrapper.tsx`）的落点数据（"上次的工作区"、工作区列表），新手引导页（`web/apps/web/app/(all)/onboarding/page.tsx`）的工作区和邀请。
 - **为什么**：M2 的规则是"M2 能到达的页面挂载时不请求 M3 以后的旧接口"（M2 设计 3.1）。所以完成引导的用户登录后直接去 `/create-workspace`，新手引导不再预取，`OnboardingRoot` 的 `invitations` 取默认的空数组。
 - **注意**：加回时，工作区取数的 SWR fetcher 要 `return`（或 `await`）`fetchWorkspaces()`（`web/apps/web/core/store/workspace/index.ts:141`）的 Promise。M2 删掉的原 fetcher（原在 `onboarding/page.tsx:33-37`）没有，失败会成为未处理的 Promise 拒绝。邀请页 `web/apps/web/app/(all)/invitations/page.tsx` 的同类缺陷 P5 已改：Promise 交给外层的 `.catch`，失败时提示（M2/P5 spec 第 3 节第 8 条）。SWR 键带上 `loginId`（第 3 节）。
+- **Plane 的 `/api/users/me/settings/` 还在**（M2 设计 7.5：工作区数据留给 M3）：`web/apps/web/core/services/user.service.ts:43` 的 `currentUserSettings` 仍调它，nerve 答 404；`web/apps/web/core/store/user/settings.store.ts` 的 `fetchCurrentUserSettings` 把回答存成 `IUserSettings`，工作区 store 的 `getWorkspaceRedirectionUrl`（`web/apps/web/core/store/workspace/index.ts:93-99`）按其中的 `last_workspace_slug`、`fallback_workspace_slug` 算落点。创建、加入、删除工作区和移出成员之后有四处 `await fetchCurrentUserSettings()`（`web/apps/web/core/components/` 下的 `onboarding/steps/workspace/{create,join-invites}.tsx`、`workspace/delete-workspace-form.tsx`、`workspace/settings/members-list-item.tsx`）。M3 让落点由 `profiles.last_workspace_id` 和工作区列表算出，删掉这个方法、`IUserSettings` 的工作区部分和这四处调用，或者给它们新接口；不改的话，工作区接上之后这些 `await` 因 404 抛出，例如新手引导建好工作区却报失败。
 - **守卫**：A3、A10 的页面测试用 `watchPage`（`e2e/fixtures/browser.ts`）断言这些页面挂载时没有旧接口请求（`oldApiRequests`）、没有失败的接口请求。加回的取数走 `/api/v0`，这些断言照旧通过；失败说明还在调旧地址。
-- **关闭条件**：完成引导的用户登录后落到上次的工作区，没有时按 Plane 的规则落到第一个工作区或 `/create-workspace`；新手引导的工作区、邀请两步用新接口取数；A3、A10 的断言不改仍通过；取数失败时页面没有未处理的拒绝（故事或单元测试）。
+- **关闭条件**：完成引导的用户登录后落到上次的工作区，没有时按 Plane 的规则落到第一个工作区或 `/create-workspace`；新手引导的工作区、邀请两步用新接口取数；A3、A10 的断言不改仍通过；取数失败时页面没有未处理的拒绝（故事或单元测试）；`currentUserSettings` 不再调 Plane 的地址（改接或删除），上面四处不再因它失败。
 
 ## 3. stores 按会话分代（规则在总体设计 7.7）
 
 - **做什么**：M3 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。规则只写在那里；下面是 M3 的范围，在 `d97c513` 上数出。
-  - **模块级的 service 实例**：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 共 37 处，M3 的领域 19 处（`WorkspaceService` 14、`ProjectService` 4、`ProjectMemberService` 1）。它们现在经 web 的 axios 基类（`web/apps/web/core/services/api.service.ts`，不带令牌）调 Plane 的旧地址，nerve 答 404。接上新接口时改为 store 构造时用这一代的客户端建。
+  - **模块级的 service 实例**：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 共 37 处，按调用的接口分，M3 的领域 10 处：`WorkspaceService` 8 处（`web/apps/web/app/(all)/invitations/page.tsx`、`web/apps/web/app/(all)/workspace-invitations/page.tsx`、`web/apps/web/core/components/account/auth-forms/auth-header.tsx`、`web/apps/web/core/components/onboarding/steps/team/root.tsx`、`web/apps/web/core/components/onboarding/steps/workspace/{create,join-invites}.tsx`、`web/apps/web/core/components/workspace/create-workspace-form.tsx`、`web/apps/web/core/store/user/permissions.store.ts`），`ProjectService` 1 处（`web/apps/web/core/components/project/form.tsx`），`ProjectMemberService` 1 处（`web/apps/web/core/services/project/project-member.service.ts`）。同是这两个类的另外 9 处调的是搜索、编辑器的 @提及 和最近访问，在 [M4](../../M4-issue-core/handoffs/M2-closeout.md) 第 12 节、[M7](../../M7-collaboration/handoffs/M2-closeout.md) 第 2 节。它们现在经 web 的 axios 基类（`web/apps/web/core/services/api.service.ts`，不带令牌）调 Plane 的旧地址，nerve 答 404。接上新接口时改为 store 构造时用这一代的客户端建。
   - **注册在沿用的 `router` 上的反应**：`web/apps/web/core/store/project/project_filter.store.ts:63` 的 `reaction`。它只做本地的同步更新、不发请求，但不随退役的一代释放，每换一次会话留下一代 stores 的内存。
   - **SWR 键**：工作区、项目、成员的 SWR 键带上 `loginId`。
 - **M2 做了什么**：P4 建立分代（`web/apps/web/core/lib/store-context.tsx`、`web/apps/web/core/store/root.store.ts`、`web/apps/web/core/lib/auth/api-client.ts` 的 `apiFor`），P5 的 PAT store（`web/apps/web/core/store/user/api-token.store.ts`）照做（M2/P4 spec 2.8、M2/P5 spec 2.4）。
-- **关闭条件**：M3 合并时，上面的 `git grep` 中 M3 领域的 19 处都已消失（或是只调公开操作的 `publicClient`）；`project_filter` 的反应随退役的一代释放，有单元测试（换代之后改路由，旧一代的反应不再运行）；M3 新加的 SWR 键带 `loginId`。
+- **关闭条件**：M3 合并时，上面的 `git grep` 中 M3 领域的 10 处都已消失（或是只调公开操作的 `publicClient`）；`project_filter` 的反应随退役的一代释放，有单元测试（换代之后改路由，旧一代的反应不再运行）；M3 新加的 SWR 键带 `loginId`。
 
 ## 4. `profiles.last_workspace_id` 的外键
 
@@ -434,9 +453,10 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 
 - **做什么**：给停用用例加上它声明的端口，在停用的同一个事务里调用：唯一管理员时拒绝；停用成员关系；删除发给这个邮箱的邀请。给 `deactivateMe`（`api/modules/identity.yaml`）声明对应的错误码。
 - **为什么**：M2 的停用只处理账户自己的数据（会话、新手引导，M2 设计 3.5）。唯一管理员的检查按 Plane 的本意做，修正它查询的缺陷（Plane 的检查从不拒绝，M2 设计决策点 3），登记差异清单第四节。
-- **代码在哪**：`server/internal/modules/identity/app/deactivate.go`：`Execute` 在账户行锁下调 `deactivate`，自助停用（`POST /api/v0/me/deactivate`）和 `nerve users deactivate` 共用。端口在 `identity/app` 声明，由 M3 的模块实现，`bootstrap` 接上（总体设计 6.2）。
+- **代码在哪**：`server/internal/modules/identity/app/deactivate.go`：自助停用（`POST /api/v0/me/deactivate`）走 `Execute`，`nerve users deactivate` 走 `ExecuteByEmail`，两者都在账户行锁下调同一个 `deactivate`；端口在 `deactivate` 里调用，两条路就都经过它。端口在 `identity/app` 声明，由 M3 的模块实现，`bootstrap` 接上（总体设计 6.2）。
+- **加锁顺序**：端口在账户行锁之内被调用。M2 的全局加锁顺序是 `users` → `profiles` → `auth_sessions` → `api_tokens`，停用按它依次写（M2 设计 3.5）；成员关系、邀请的写入排在这个顺序的哪里，由 M3 定下，写进 M3 设计（M2 设计 6.4 的停用一条："另按 M3 定下的顺序"）。
 - **注意**：`nerve users deactivate` 也走这个用例，而命令行的组合没有 River 客户端（`server/internal/bootstrap/users.go:22-26`）。端口的实现如果投递任务，先要有"只投递"的 River 客户端：见 [M4 的交接](../../M4-issue-core/handoffs/M2-closeout.md)第 1 节，那一项随之提前到 M3。
-- **关闭条件**：三件事在停用的事务里完成，唯一管理员时停用被拒绝，接口和命令两条路都有测试；`deactivateMe` 的错误码已声明，`apitest` 两个方向的核对通过；差异清单第四节"停用账户"一行更新。
+- **关闭条件**：三件事在停用的事务里完成，唯一管理员时停用被拒绝，接口和命令两条路都有测试；`deactivateMe` 的错误码已声明，`apitest` 两个方向的核对通过；差异清单第四节"停用账户"一行更新；M3 的写入在全局加锁顺序中的位置写进 M3 设计。
 
 ## 7. 可空的引用字段（M2 设计 3.2）
 
@@ -444,18 +464,19 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 - **为什么**：M5 才有文件存储。先返回 `null`，免得 M3 删掉字段、M5 再加回，前端改两次。只适用于本来允许为空的引用字段。
 - **关闭条件**：这些字段在 M3 的接口描述中可为 `null`；`IUserLite` 改用生成的类型，或已改为可空。
 
-## 8. sqlc 的模块边界与 `TestSQLCSchemaScope`
+## 8. 模块边界：`Authorizer` 端口、sqlc 与 `TestSQLCSchemaScope`
 
 - **做什么**：
   1. `access` 模块读成员表：在 `app` 层声明端口，还是作为 `TestSQLCSchemaScope` 中写明理由的例外（M2 设计 3.14）。
   2. `TestSQLCSchemaScope` 的所有者规则用正则识别 `ALTER TABLE`，漏掉带引号的标识符，以及别的模块的表上 `ALTER` 以外的 DDL（`CREATE INDEX … ON users`、`CREATE TRIGGER`、`DROP TABLE`）。M3 是第一个有跨模块外键的 M，补上这几种写法和它们的反例（M2/P1 评审 M5）。
-- **代码在哪**：`server/internal/archtest/sqlc_test.go`、`server/internal/archtest/sqlc_cases_test.go`、`server/sqlc.yaml`。
-- **关闭条件**：M3 设计写明第 1 件的选择；第 2 件的每种写法都有一个反例，规则漏掉它时测试失败。
+  3. `Authorizer` 端口由 M3 加入 `internal/shared`（M2 设计 3.3；总体设计 6.2 列了它）。M2 的 `shared` 有 `Actor`、领域错误、`TxManager` 和游标的封套（`server/internal/shared/`），权限检查的端口还没有。
+- **代码在哪**：`server/internal/archtest/sqlc_test.go`、`server/internal/archtest/sqlc_cases_test.go`、`server/sqlc.yaml`、`server/internal/shared/`。
+- **关闭条件**：M3 设计写明第 1 件的选择；第 2 件的每种写法都有一个反例，规则漏掉它时测试失败；`Authorizer` 在 `shared` 声明，由 M3 的模块实现，`shared` 仍只依赖标准库（架构测试规则 10）。
 
 ## 9. 物理删除与跨模块外键的关系图（M3 的部分）
 
 - **做什么**：M3 的每张新表照 M2 设计 3.13 搬 Django 模型的 `on_delete`，并在 M2 设计 4.7 的图上延伸，写明物理删除时每条外键的去向。
-- **为什么**：Plane `project.py:77-89` 的项目负责人是 `CASCADE`：物理删除一个账户会连带删除项目。M2 只停用、不删除账户；M3 写明允许物理删除的范围。M4、M6 各自延伸自己的表（它们的交接）。
+- **为什么**：Plane `project.py:77-89` 的项目负责人是 `CASCADE`：物理删除一个账户会连带删除项目。M2 只停用、不删除账户；M3 写明允许物理删除的范围。M4、M6、M7 各自延伸自己的表（它们的交接）。
 - **关闭条件**：M3 设计有延伸后的图，每条指向 `users` 的外键写明去向；项目负责人的 `CASCADE` 有结论（照搬，或改为 `SET NULL`、`RESTRICT` 并登记差异）。
 
 ## 10. CSP：表情选择器的数据从本站提供
@@ -471,7 +492,9 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 - `web/apps/web/core/services/user.service.ts` 中留下的 `leaveWorkspace`、`joinProject`、`leaveProject`（第 71–87 行）：改接新接口。`joinProject` 的关键词守卫例外见 [M1-P3 的交接](M1-P3-trim-platform.md)"项目成员"一节。
 - `IUserLite` 的 `is_bot`（`web/packages/types/src/users.ts:29`）：Nerve 不区分人和机器人（总体设计 0.2），删除。
 - 时区接口 `GET /api/v0/timezones`（公开操作，`web/apps/web/core/services/timezone.service.ts`）也供工作区和项目设置使用，不另建。
-- **关闭条件**：三步用新接口；这三个方法改用生成的客户端或删除；`is_bot` 删除；工作区、项目设置的时区选择用这个接口。
+- 工作区类型的 `owner`（`web/packages/types/src/workspace.ts:20`）：M2 删掉 `IUser` 时改为 `IUserLite`，M3 对接工作区时按接口再定（M2 设计 7.5）。
+- **守卫的收紧**：规则 `plane-user-urls`（`tools/keywords.json`）有意不禁止整个 `/api/users/me/`，因为 `joinProject`、工作区列表、邀请和 `/settings/` 这些 M3 的旧调用还在用它下面的地址（M2 设计 7.9）。M3 迁走 `/api/users/me/…` 下最后一个旧调用之后，把规则收紧为整个 `/api/users/me/`，`samples` 随之改。
+- **关闭条件**：三步用新接口；这三个方法改用生成的客户端或删除；`is_bot` 删除；工作区、项目设置的时区选择用这个接口；`owner` 的类型取自生成的类型；`plane-user-urls` 已收紧（或 M3 的 review 写明还有哪个旧调用留在 `/api/users/me/` 下、交给哪个 M）。
 
 ## 12. 页大小的规则移到 `shared`
 
@@ -515,7 +538,7 @@ created: 2026-09-28
 
 # M2 交给 M4：命令行的只投递 River 客户端、游标与请求体检查、清理任务、编辑器和下拉框
 
-M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命令和第一个 River 定时任务（[M2 设计](../../M2-auth/M2-design.md)）。下面这些是 M2 定下的约定第一次落到工作项上的地方，或 M2 改到而要由 M4 接上的代码。每一节来自 M2 设计 13.2 中接收者含 M4 的一行（多个 M 的行只取 M4 的部分），另有 M0-P6 交接剩下的一项（第 13 节）和收尾在 13.2 之外找到的两项（第 2 节的游标不签名、第 6 节的定时任务）。
+M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命令和第一个 River 定时任务（[M2 设计](../../M2-auth/M2-design.md)）。下面这些是 M2 定下的约定第一次落到工作项上的地方，或 M2 改到而要由 M4 接上的代码。每一节来自 M2 设计 13.2 中接收者含 M4 的一行（多个 M 的行只取 M4 的部分），另有 M0-P6 交接剩下的一项（第 13 节）和收尾在 13.2 之外找到的几项：第 2 节的游标不签名，第 4 节的生成器遇到不支持的写法（M2 设计 §16）和第一个 `date` 字段，第 6 节的定时任务，第 8 节的 `worker-src`、`frame-src`。
 
 ## 1. 命令行的"只投递"River 客户端（负责人：做好记录，以后别漏了）
 
@@ -524,7 +547,7 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - **为什么**：命令行的组合只有连接池和 `identity` 的管理用例，没有 River 客户端（`server/internal/bootstrap/users.go:22-26`，M2 设计 3.17）。服务用的客户端（`server/internal/platform/jobs/jobs.go:70` 的 `New`）配队列、启动 worker，命令行不能用它。用例在事务里用 `InsertTx` 投递（M2 设计 3.15）；命令行上没有客户端时，任务要么没投递，要么用例在运行中失败。M2 的命令都不投递任务，所以推迟（M2 设计 3.15、3.17、13.2）。
 - **可能早于 M4**：M3 给停用加端口（[M3 的交接](../../M3-workspace-project/handoffs/M2-closeout.md)第 6 节），`nerve users deactivate` 也走这个用例；端口的实现投递任务时，这一项提前到 M3。
 - **建议的守法**：投递任务的端口在用例的构造参数里必填，命令的组合漏了它，在构造时就失败，而不是运行到一半；`server/internal/bootstrap/users_test.go` 这样的组合测试覆盖每个命令。
-- **关闭条件**：M4 加入了这样的命令时，命令的组合有只投递的客户端，一个测试在测试库上运行这条命令，核对 `river_job` 多了这条任务、事务回滚时没有。M4 结束时仍没有这样的命令，M4 的 review 写明，并把本节原样写进下一个 M 的交接，本交接才能改为 `closed`。
+- **关闭条件**：M3 已为停用的端口加入这个客户端时，M4 的 review 核对它合这一节（没有队列、不调用 `Start`，组合测试覆盖每个命令）并写明；否则，M4 加入了这样的命令时，命令的组合有只投递的客户端，一个测试在测试库上运行这条命令，核对 `river_job` 多了这条任务、事务回滚时没有。M4 结束时仍没有这样的命令，M4 的 review 写明，并把本节原样写进下一个 M 的交接，本交接才能改为 `closed`。
 
 ## 2. 列表的游标
 
@@ -544,13 +567,14 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - **数的范围**：不限类型的节点（`{}`、开放对象、没有 `items` 的数组）不看数的范围，`1e400` 这类 float64 放不下的数仍然得到解码器笼统的 400，改为在边界上报出。
 - 两者都在第一个带数组或开放对象请求体的操作到来时处理（M2/P1 评审）；在那之前客户端不能依赖路径的顺序。
 - **生成器**（`server/tools/bodyshapegen`）遇到不支持的 schema 写法时失败并说明原因；遇到它的 M 带着测试扩展生成器，不放过（M2 设计 §16）。
+- **第一个 `format: date` 的字段**（工作项的开始、截止日期）：`bodyshape` 的格式检查器按生成的 Go 类型登记，现在只有 `time.Time` 和标准库的 `uuid.UUID`；M2 没有 `date` 字段，生成器遇到 `date` 就失败。M4 选定它的 Go 类型（不能是 `openapi_types.Date`：它所在的包导入 `github.com/google/uuid`），带着测试登记检查器（M2 设计 3.11）。
 - **草稿发布**复用同一个结构检查：发布时，草稿的 `payload` 按"创建工作项"的请求 schema 走 `bodyshape` 的校验（M2 设计 3.11），与创建工作项走同一条路（总体设计 5.4，差异清单第四节"草稿发布"）。
-- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400。
+- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试。
 
 ## 5. 60 天物理清理与删除关系图（M4 的部分）
 
 - **做什么**：60 天物理清理（总体设计 5.5）把软删除的 `api_tokens` 纳入（撤销 PAT 就是软删除，M2 设计 4.4）。`issue_activities` 对工作项、评论的外键是 `DO_NOTHING`（照搬时不写 `ON DELETE`），先删工作项会被它挡住：先删除或置空这些引用，或者登记为 `SET NULL` 的差异。
-- M4 的每张新表照 M2 设计 3.13 搬 `on_delete`，在 M2 设计 4.7 的图上延伸，写明物理删除时每条外键的去向（M3、M6 各自延伸自己的表）。
+- M4 的每张新表照 M2 设计 3.13 搬 `on_delete`，在 M2 设计 4.7 的图上延伸，写明物理删除时每条外键的去向（M3、M6、M7 各自延伸自己的表）。
 - **关闭条件**：清理任务的集成测试覆盖软删除超过 60 天的 PAT 和带操作动态的工作项；M4 设计有延伸的图。
 
 ## 6. 定时任务和事件订阅者
@@ -565,11 +589,12 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - 之后删除 e2e 对 `is-emoji-supported` 的 Chromium 警告（`willReadFrequently`）的预期 `EMOJI_CHECK_WARNING`（`e2e/fixtures/browser.ts`；S2 的深链接和个人设置的故事用它）。
 - **关闭条件**：`EMOJI_CHECK_WARNING` 和它的使用都删除，S2 和个人设置的故事仍断言控制台没有别的警告，并通过。
 
-## 8. CSP：编辑器 callout 的默认表情图
+## 8. CSP：编辑器 callout 的默认表情图；`worker-src`、`frame-src`
 
 - **做什么**：`web/packages/editor/src/extensions/callout/utils.ts:19` 的默认表情图来自 `cdn.jsdelivr.net/npm/emoji-datasource-apple`，被页面 CSP 的 `img-src 'self' data: blob:`（`server/internal/platform/webui/csp.go:40`）挡住。改为本站资源或原生表情；核对表情回应（它也用表情选择器，数据由 M3 改为本站提供，[M3 的交接](../../M3-workspace-project/handoffs/M2-closeout.md)第 10 节）。
 - **与 M8 的关系**：[M8 的 M1 收尾交接](../../M8-open-release/handoffs/M1-closeout.md)列了同一个请求；M4 改完之后，那一项对它只剩核对。
-- **关闭条件**：插入 callout、打开表情回应时没有 CSP 违规，页面不请求 `cdn.jsdelivr.net`。
+- **`worker-src`、`frame-src`**：页面的 CSP 没有写这两条，按 `default-src 'self'` 落回（M2/P4 评审第 4 节）。编辑器或它的扩展要用 `blob:` 的 worker（M4），收集箱或视图要嵌 iframe（M7，[M7 的交接](../../M7-collaboration/handoffs/M2-closeout.md)第 6 节）时，在 `server/internal/platform/webui/csp.go` 只加需要的来源，有测试。
+- **关闭条件**：插入 callout、打开表情回应时没有 CSP 违规，页面不请求 `cdn.jsdelivr.net`；M4 的 review 写明编辑器是否用 `blob:` 的 worker，用的话 `csp.go` 只为它加了 `worker-src` 的来源，有测试。
 
 ## 9. 命令面板的主题命令
 
@@ -596,11 +621,11 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 
 - **做什么**：M4 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M4 的范围（`d97c513` 上数出）：
   - **注册在沿用的 `router` 上的反应**：`IssueRootStore` 的 `autorun`（`web/apps/web/core/store/issue/root.store.ts:170`），随退役的一代释放。
-  - **模块级的 service 实例**：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中 M4 的 5 处（`IssueService` 2、`WorkItemVersionService` 2、`WorkspaceDraftService` 1）。
+  - **模块级的 service 实例**：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中按调用的接口属于 M4 的 13 处：`IssueService` 2、`WorkItemVersionService` 2、`WorkspaceDraftService` 1；搜索的 4 处，`ProjectService` 的 `projectIssuesSearch` 3 处（`web/apps/web/core/components/core/modals/existing-issues-list-modal.tsx`、`web/apps/web/core/components/issues/parent-issues-list-modal.tsx`、`web/apps/web/core/components/inbox/modals/select-duplicate.tsx`）和 `WorkspaceService` 的 `searchWorkspace` 1 处（`web/apps/web/core/components/power-k/ui/modal/search-menu.tsx`）；编辑器 @提及 的 `WorkspaceService.searchEntity` 4 处（`web/apps/web/core/components/editor/lite-text/editor.tsx`、`web/apps/web/core/components/editor/rich-text/description-input/root.tsx`、`web/apps/web/core/components/issues/issue-modal/components/description-editor.tsx`、`web/apps/web/core/components/inbox/modals/create-modal/issue-description.tsx`）。
   - **`store-context.tsx` 导出的 `rootStore` 的三处同步读取**：`web/apps/web/core/components/issues/issue-layouts/utils.tsx`，以及 `web/apps/web/core/store/command-palette.store.ts`、`web/apps/web/core/store/issue/issue.store.ts` 中只读、不发请求的两处。它们接上新接口之后仍只能同步读取；要发请求就改经自己的 `RootStore`。
   - **SWR 键**：工作项、列表、评论等的 SWR 键带上 `loginId`。
 - **M2 留下的调用**：`web/apps/web/core/services/user.service.ts:52` 的 `getUserProfileIssues` 调 Plane 的旧地址，改接新接口或删除。
-- **关闭条件**：`IssueRootStore` 的反应随退役的一代释放，有单元测试；上面的 `git grep` 中 M4 的 5 处都已消失；三处同步读取不发请求；`getUserProfileIssues` 改接或删除。
+- **关闭条件**：`IssueRootStore` 的反应随退役的一代释放，有单元测试；上面的 `git grep` 中 M4 的 13 处都已消失；三处同步读取不发请求；`getUserProfileIssues` 改接或删除。
 
 ## 13. e2e 的 `clock.ts`（M0-P6 交接剩下的一项）
 
@@ -613,8 +638,8 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 - [ ] **Step 2：路径**：`node $M2TMP/closeout/paths.mjs . docs/v0/M3-workspace-project/handoffs/M2-closeout.md docs/v0/M4-issue-core/handoffs/M2-closeout.md` → 退出码 1，输出（原型）：
 
   ```
-  docs/v0/M3-workspace-project/handoffs/M2-closeout.md: 59 paths, 0 missing
-  docs/v0/M4-issue-core/handoffs/M2-closeout.md: 45 paths, 1 missing
+  docs/v0/M3-workspace-project/handoffs/M2-closeout.md: 80 paths, 0 missing
+  docs/v0/M4-issue-core/handoffs/M2-closeout.md: 54 paths, 1 missing
     missing: e2e/fixtures/clock.ts
   ```
 
@@ -628,7 +653,7 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 
 ### Task 6: 给 M5–M8 的交接；已有交接中过时的两处
 
-spec 3.1、2.4。M2 设计 13.2 中接收者含 M5、M6、M7、M8 的每一行，拆成各自的部分；M0-P2 交接剩下的接口调用日志（M8）、M0-P6 交接剩下的 `storage.ts`（M5）和 `webhook.ts`（M8）；13.2 之外找到的遗留：§16 中写明"M8 实测"的四项、River 在数据库恢复之后的重新启动（M8）、`@nerve/services` 的整包删除和地址规范化的去处、守卫规则 `plane-user-assets` 的收窄（M5）。"周期下拉框的取数"按 spec 第 4 节 D5 放在 M6。
+spec 3.1、2.4。M2 设计 13.2 中接收者含 M5、M6、M7、M8 的每一行，拆成各自的部分；M0-P2 交接剩下的接口调用日志（M8）、M0-P6 交接剩下的 `storage.ts`（M5）和 `webhook.ts`（M8）；13.2 之外找到的遗留：§16 中写明"M8 实测"的四项、River 在数据库恢复之后的重新启动（M8）、`@nerve/services` 的整包删除和地址规范化的去处、守卫规则 `plane-user-assets` 的收窄（M5）；M7 的最近访问的接口放在它自己的模块文件、M7 的表在删除关系图上的延伸（M2 设计 3.12、3.14，收尾重扫 M2 设计找到）、CSP 的 `frame-src`（指向 M4 的交接）。"周期下拉框的取数"按 spec 第 4 节 D5 放在 M6。
 
 M1 收尾给 M3–M8 的交接都把 `eslint(no-unneeded-ternary)` 列为可以集中清掉的一类规则，M2/P5 已把它全仓清零（M2/P5 评审第 2 节第 4 行）；M1-P3 给 M5 的交接说 `EFileAssetType` 剩 8 种，M2/P4 删掉了其中的 `USER_AVATAR`、`USER_COVER`（`cb2487c9`）。这两处改成现在的事实。
 
@@ -658,7 +683,7 @@ M2（账户认证）的接口里，头像、封面是可为 `null` 的地址，M
 
 ## 2. 上传与按路由的中间件
 
-- **做什么**：`/api/v0` 的每个操作都经过模块级的 `Middlewares`：请求体上限 `server.max_body_bytes`（默认 1 MiB）和请求期限 `server.request_timeout`（默认 15 秒，`server/internal/platform/httpserver/api.go:42-43`），它们会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外（例如直传对象存储），并按 M2 设计 3.6 的整程序测试处理：写进接口描述，或在设计中说明（M2 设计控制者复核 m7）。
+- **做什么**：`/api/v0` 的每个操作都经过模块级的 `Middlewares`：请求体上限 `server.max_body_bytes`（默认 1 MiB）和请求期限 `server.request_timeout`（默认 15 秒；默认值在 `server/configs/config.yaml:15,17`，交给平台的字段在 `server/internal/platform/httpserver/api.go:42-43`），它们会让 `/api/v0` 下的上传失败。M5 在平台加按操作的放宽设置，或者把上传放在 `/api/v0` 之外（例如直传对象存储），并按 M2 设计 3.6 的整程序测试处理：写进接口描述，或在设计中说明（M2 设计控制者复核 m7）。
 - **`file_size_limit` 的执行**：名称 M2 已定（`api/modules/instance.yaml:106`，前端 `web/apps/web/core/hooks/use-file-size.ts` 读它），值来自配置；上传时由 M5 执行。
 - **CSP**：`img-src`、`connect-src`（`server/internal/platform/webui/csp.go:40,42`）加上存储的来源。只有对象存储这种本来就在外部的来源才加（M2 设计 8.3）。
 - **与 [M0 加固的交接](M0-hardening-http-timeouts.md)的关系**：那一项管连接上的读写时限（`http.ResponseController`），这一项管按路由的请求体上限和请求期限，两者都要放宽。
@@ -705,7 +730,7 @@ created: 2026-09-28
 
 ## 2. 物理删除与跨模块外键的关系图（M6 的部分）
 
-- **做什么**：M6 的每张新表照 M2 设计 3.13 搬 Django 模型的 `on_delete`，在 M2 设计 4.7 的图上延伸，写明物理删除时每条外键的去向（M3、M4 各自延伸自己的表）。
+- **做什么**：M6 的每张新表照 M2 设计 3.13 搬 Django 模型的 `on_delete`，在 M2 设计 4.7 的图上延伸，写明物理删除时每条外键的去向（M3、M4、M7 各自延伸自己的表）。
 - **为什么**：Plane `cycle.py:65-68` 的迭代负责人是 `CASCADE`：物理删除一个账户会连带删除迭代。M2 只停用、不删除账户。
 - **关闭条件**：M6 设计有延伸后的图；迭代负责人的 `CASCADE` 有结论（照搬，或改为 `SET NULL`、`RESTRICT` 并登记差异）。
 
@@ -750,9 +775,9 @@ to: M7
 created: 2026-09-28
 ---
 
-# M2 交给 M7：保存视图的游标、stores 按会话分代、收集箱和视图的下拉框
+# M2 交给 M7：保存视图的游标、stores 按会话分代、收集箱和视图的下拉框、删除关系图
 
-下面这些来自 [M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行（多个 M 的行只取 M7 的部分）。
+下面这些来自 [M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行（多个 M 的行只取 M7 的部分）。另有收尾找到的三项：第 2 节中最近访问的接口放在哪个文件（M2 设计 3.12），第 5 节的删除关系图（M2 设计 3.14 把它交给 M3、M4、M6、M7，13.2 那一行漏了 M7），第 6 节的 CSP（M2/P4 评审第 4 节）。
 
 ## 1. 保存视图的列表：每种排序一个游标载荷
 
@@ -763,8 +788,9 @@ created: 2026-09-28
 
 ## 2. stores 按会话分代（规则在总体设计 7.7）
 
-- **做什么**：M7 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M7 的范围（`d97c513` 上数出）：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中的 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 各 1 处。
-- **关闭条件**：这 2 处都已消失；M7 新加的 SWR 键带 `loginId`。
+- **做什么**：M7 接上新接口的 stores、services 和页面照 [总体设计 7.7](../../v0-design.md) 写。M7 的范围（`d97c513` 上数出）：`git grep -n -E '^(export )?const [A-Za-z]+ = new [A-Za-z]+Service\(' -- web/apps/web` 中的 `WorkspaceNotificationService`、`IntakeWorkItemVersionService` 各 1 处，以及最近访问的 `WorkspaceService.fetchWorkspaceRecents` 1 处（`web/apps/web/core/components/home/widgets/recents/index.tsx`）。
+- **最近访问的接口**：`/me/recent-visits` 这样的路径属于最近访问自己的模块文件，不放进 `api/modules/identity.yaml`（M2 设计 3.12 的组织规则：一个路径只属于一个模块文件）。
+- **关闭条件**：这 3 处都已消失；M7 新加的 SWR 键带 `loginId`；最近访问的操作在它自己的模块文件里。
 
 ## 3. 下拉框（M7 的部分）
 
@@ -780,7 +806,18 @@ created: 2026-09-28
 - P5 起 `copyTextToClipboard`（`web/packages/utils/src/string.ts`）复制失败时拒绝，纯 http 下也是。M7 的 4 处没有处理拒绝，失败时没有提示，只有一个未处理的 Promise 拒绝（路径在 `web/apps/web/core/components/` 下）：`inbox/content/inbox-issue-header.tsx`、`views/quick-actions.tsx`、`workspace/views/{quick-action,default-view-quick-action}.tsx`。
 - **关闭条件**：4 处都处理失败，经 `t()` 提示，像 `api-token/modal/generated-token-details.tsx`。
 
-来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。
+## 5. 物理删除与跨模块外键的关系图（M7 的部分）
+
+- **做什么**：M7 的每张新表（评论、通知、保存视图、收集箱等）照 M2 设计 3.13 搬 Django 模型的 `on_delete`，在 M2 设计 4.7 的图上延伸，写明物理删除时每条指向 `users` 和工作项的外键的去向（M3、M4、M6 各自延伸自己的表）。跨模块的联表见第 1 节。
+- **为什么**：M2 设计 3.14 把"跨模块的联表查询、物理删除时的外键链由各 M 的设计逐个写明"交给 M3、M4、M6、M7；13.2 的关系图一行只写了 M3、M4、M6。
+- **关闭条件**：M7 设计有延伸后的图，每条指向 `users`、工作项的外键写明去向。
+
+## 6. CSP 的 `frame-src`
+
+- 见 [M4 的交接](../../M4-issue-core/handoffs/M2-closeout.md)第 8 节：页面的 CSP 没有 `frame-src`，落回 `default-src 'self'`。
+- **关闭条件**：M7 的 review 写明收集箱或视图是否嵌入 iframe；嵌入的话，`server/internal/platform/webui/csp.go` 只为它加那个来源，有测试。
+
+来源：[M2 设计](../../M2-auth/M2-design.md) 13.2 中接收者含 M7 的各行、3.12、3.14；[M2/P4 评审](../../M2-auth/reviews/P4-web-auth-review.md)第 4 节；[M2 收尾 spec](../../M2-auth/specs/closeout.md) 第 3 节。
 ````
 
 ````file docs/v0/M8-open-release/handoffs/M2-closeout.md
@@ -907,17 +944,17 @@ M8 做 Go 进程的内存实测（总体设计 9.2：空闲时低于 50 MB）时
 - [ ] **Step 2：路径**：`node $M2TMP/closeout/paths.mjs . docs/v0/M5-files/handoffs/M2-closeout.md docs/v0/M6-cycles-modules/handoffs/M2-closeout.md docs/v0/M7-collaboration/handoffs/M2-closeout.md docs/v0/M8-open-release/handoffs/M2-closeout.md` → 退出码 1，输出（原型）：
 
   ```
-  docs/v0/M5-files/handoffs/M2-closeout.md: 20 paths, 1 missing
+  docs/v0/M5-files/handoffs/M2-closeout.md: 21 paths, 1 missing
     missing: e2e/fixtures/storage.ts
   docs/v0/M6-cycles-modules/handoffs/M2-closeout.md: 20 paths, 0 missing
-  docs/v0/M7-collaboration/handoffs/M2-closeout.md: 15 paths, 0 missing
+  docs/v0/M7-collaboration/handoffs/M2-closeout.md: 18 paths, 0 missing
   docs/v0/M8-open-release/handoffs/M2-closeout.md: 6 paths, 1 missing
     missing: e2e/fixtures/webhook.ts
   ```
 
   缺的两个是交接要接收 M 新建的 fixture（M5 第 5 节、M8 第 5 节），应当不存在；别的路径都存在。
 
-- [ ] **Step 3：13.2 的覆盖**：`node $M2TMP/closeout/rows.mjs . M5 M6 M7 M8` → `M5: 3 rows, 0 without a section`、`M6: 6 rows, 0 without a section`、`M7: 4 rows, 0 without a section`、`M8: 2 rows, 0 without a section`。
+- [ ] **Step 3：13.2 的覆盖**：`node $M2TMP/closeout/rows.mjs . M5 M6 M7 M8` → `M5: 3 rows, 0 without a section`、`M6: 6 rows, 0 without a section`、`M7: 5 rows, 0 without a section`（关系图一行加上了 M7，第 5 节）、`M8: 2 rows, 0 without a section`。
 
 - [ ] **Step 4：守卫**（固定节奏第 3 步）。
 
@@ -951,7 +988,7 @@ status: closed
 两条都在 M2/P1 完成，收尾在 `d97c513` 上核对仍然成立：
 
 1. **cgo**：`Makefile` 的 `SQLC` 是 `CGO_ENABLED=0 go tool -modfile=tools/go.mod sqlc`；`make gen-check` 重新生成 sqlc 的代码，没有差异。
-2. **PG 17 的解析器**：五个迁移（`server/migrations/sql/00001`–`00005`）都没有 `uuidv7()`（`git grep -n -i uuidv7 -- server/migrations/sql` 没有输出），sqlc 都能解析（`make gen-check`）。
+2. **PG 17 的解析器**：五个迁移（`server/migrations/sql/00001`–`00005`）都没有 `uuidv7()`（`git grep -n -i uuidv7 -- server/migrations/sql` 没有输出）；sqlc 解析 `identity` 的四个（`00001`–`00004`，`server/sqlc.yaml` 的 `schema`），`make gen-check` 没有差异。River 的 `00005` 是原样导出，不在 sqlc 的 `schema` 里。
 
 状态改为 `closed`。
 
@@ -1067,7 +1104,7 @@ status: closed
 
 两节都在 M2/P2、P4 完成，收尾在 `d97c513` 上核对：
 
-- **前端调用的接口**：未登录的页面只请求 `GET /api/v0/instance`（S2 的 `apiRequests`，随 `make e2e` 通过）；关键词规则 `plane-auth-urls`、`plane-user-urls` 挡住 Plane 的认证和实例地址（`node tools/keywords.mjs` 没有命中）。
+- **前端调用的接口**：未登录的页面只请求 `GET /api/v0/instance`（S2 的 `apiRequests`，随 `make e2e` 通过）；关键词规则 `plane-auth-urls`、`plane-user-urls` 挡住 Plane 的认证和实例地址（`node tools/keywords.mjs` 没有命中）；同源部署：web 的客户端都由 `createClient()` 建成、不设 `baseUrl`，axios 基类也不设基础地址（M2/P4 的处理结果）。
 - **安全响应头与 CSP**：`server/internal/bootstrap/headers_test.go` 的 `TestOnlyPagesHaveAContentSecurityPolicy` 随 `make test` 通过；S2 核对首页带 CSP、没有违规。分在两层的理由在 [M2/P4 评审](../reviews/P4-web-auth-review.md)第 6 节。
 
 状态改为 `closed`。
@@ -1156,7 +1193,7 @@ status: closed
 - **认证错误**：接口直接返回 problem，前端不读 `/?error_code=…`（关键词规则 `auth-error-code`，M2/P4）。
 - **修改登录邮箱**：负责人裁定为 B，`nerve users set-email`（M2/P3b，A16）。
 - **实例配置**：`InstanceInfo` 有 `signup_enabled`、`workspace_creation_enabled`、`file_size_limit`（`api/modules/instance.yaml:83`）；`is_self_managed` 连同新手引导的两步删除（关键词规则 `is-self-managed`，M2/P4）。
-- **不再读的用户字段、不再调用的地址**（原文要求收尾再核对一次）：`git grep -n -i -E 'is_password_autoset|last_login_medium|has_marketing_email_consent|billing_address|has_billing_address|property_change|state_change|issue_completed|[^_]mention|provider|notification|email-check|magic|forgot|reset-password|set-password|generate-code|change-email|instance-admin|is_instance_admin|google|github|gitlab|gitea|[^0]/auth/' d97c513 -- api` 没有输出（退出码 1）。接口描述共 15 个操作、12 个路径，都在 `/api/v0/auth/`、`/api/v0/me`、`/api/v0/api-tokens/{token_id}`、`/api/v0/instance`、`/api/v0/timezones` 下。
+- **不再读的用户字段、不再调用的地址**（原文要求收尾再核对一次）：`git grep -n -i -E 'is_password_autoset|last_login_medium|has_marketing_email_consent|billing_address|has_billing_address|property_change|state_change|issue_completed|comment|[^_]mention|provider|notification|email-check|magic|forgot|reset-password|set-password|generate-code|change-email|instance-admin|is_instance_admin|google|github|gitlab|gitea|[^0]/auth/' d97c513 -- api` 没有输出（退出码 1）。接口描述共 15 个操作、12 个路径，都在 `/api/v0/auth/`、`/api/v0/me`、`/api/v0/api-tokens/{token_id}`、`/api/v0/instance`、`/api/v0/timezones` 下。
 - **令牌的地址**：`/api/v0/me/api-tokens`、`/api/v0/api-tokens/{token_id}`，结尾都没有 `/`（M2/P3a）。
 
 状态改为 `closed`。
@@ -1205,7 +1242,7 @@ status: closed
 
 ## 处理结果（M2/收尾）
 
-三节都在 M2/P5 完成，收尾在 `d97c513` 上核对：`make lint-web` 通过，各包的 oxlint 警告数等于上限（web 452、ui 19、utils 12、i18n 0）；`eslint(no-unneeded-ternary)` 全仓 0 条；剩下的 24 行死成员和死 prop 都不是死代码，逐行的理由在 [M2/P5 spec](../specs/P5-web-account.md) 附录 A。状态改为 `closed`。
+三节都在 M2/P5 完成，收尾在 `d97c513` 上核对：`make lint-web` 通过，各包的 oxlint 警告数等于上限（web 452、ui 19、utils 12、i18n 0）；`eslint(no-unneeded-ternary)` 全仓 0 条警告（[M2/P5 评审](../reviews/P5-web-account-review.md)第 2 节第 4 行；Plane 原有的两处禁用注释在 `issue-layouts/utils.tsx`、`issue-layouts/quick-add/root.tsx`）；剩下的 24 行死成员和死 prop 都不是死代码，逐行的理由在 [M2/P5 spec](../specs/P5-web-account.md) 附录 A；主题下拉框在按钮旁展开，由 A9 的页面版本在英文、中文下各核对一次，随 `make e2e` 通过。状态改为 `closed`。
 
 来源：[M2 收尾 spec](../specs/closeout.md) 2.1。
 ````
@@ -1216,9 +1253,9 @@ status: closed
 
 - [ ] **Step 4：提交**（`docs(M2/closeout): the ten handoffs M2 received are closed`）
 
-### Task 8: M2 设计：13.2 指向交接，§16 的 argon2 一行指向总体设计
+### Task 8: M2 设计：13.2 指向交接，§16 中负责人的两个事项指向总体设计
 
-spec 2.7、第 4 节 D1、D4。13.2 保留它的行（设计的记录），每一行的接收者一格改为指向交接文件的链接；多个 M 的行链接到每个接收者；"周期下拉框的取数"一行写明收尾改由 M6 接（D5）；"其余 12 个下拉框"一行写明它也落到 M7。§16 第二个 argon2 行写明负责人的事项记在总体设计第 10 节（T4）。
+spec 2.7、第 4 节 D1、D4。13.2 保留它的行（设计的记录），每一行的接收者一格改为指向交接文件的链接；多个 M 的行链接到每个接收者；"周期下拉框的取数"一行写明收尾改由 M6 接（D5）；"其余 12 个下拉框"一行写明它也落到 M7；关系图一行加上 M7（M2 设计 3.14 把它交给了 M7，13.2 漏了）。§16 第二个 argon2 行和"泄露的刷新令牌可以派生永不过期的 PAT"一行写明负责人的事项记在总体设计第 10 节（T4）。
 
 **文件：** `docs/v0/M2-auth/M2-design.md`
 
@@ -1313,7 +1350,7 @@ spec 2.7、第 4 节 D1、D4。13.2 保留它的行（设计的记录），每�
 ````
 
 ````new docs/v0/M2-auth/M2-design.md
-| [M3](../M3-workspace-project/handoffs/M2-closeout.md)、[M4](../M4-issue-core/handoffs/M2-closeout.md)、[M6](../M6-cycles-modules/handoffs/M2-closeout.md) | **物理删除与跨模块外键的关系图**
+| [M3](../M3-workspace-project/handoffs/M2-closeout.md)、[M4](../M4-issue-core/handoffs/M2-closeout.md)、[M6](../M6-cycles-modules/handoffs/M2-closeout.md)、[M7](../M7-collaboration/handoffs/M2-closeout.md)（M7 由收尾加上：3.14 把跨模块的联表和外键链交给 M3、M4、M6、M7，[收尾 spec](specs/closeout.md) 2.4） | **物理删除与跨模块外键的关系图**
 ````
 
 ````old docs/v0/M2-auth/M2-design.md
@@ -1492,9 +1529,48 @@ spec 2.7、第 4 节 D1、D4。13.2 保留它的行（设计的记录），每�
 是否加缓解，留给负责人以后决定；收尾之后记在[总体设计第 10 节](../v0-design.md) |
 ````
 
+````old docs/v0/M2-auth/M2-design.md
+重新输入密码、限制派生是负责人以后可选的产品选项 |
+````
+
+````new docs/v0/M2-auth/M2-design.md
+重新输入密码、限制派生是负责人以后可选的产品选项；收尾之后记在[总体设计第 10 节](../v0-design.md) |
+````
+
 - [ ] **Step 2：每一行都有链接**：`node $M2TMP/closeout/rows.mjs . --design` → `13.2: 31 rows, 31 with a link to a handoff, 0 without`。
 
-- [ ] **Step 3：链接的目标都存在**：`node $M2TMP/closeout/paths.mjs . --links docs/v0/M2-auth/M2-design.md` → `… links, 0 missing`。
+- [ ] **Step 3：链接的目标都存在**：收尾改动或新建的每一份文档（计划除外：它的块里的链接相对于块要写的文件），`node $M2TMP/closeout/paths.mjs . --links docs/v0/M2-auth/M2-design.md docs/v0/M2-auth/specs/closeout.md docs/v0/v0-design.md docs/v0/M0-foundation/M0-design.md docs/v0/plane-diff.md docs/v0/M2-auth/handoffs/*.md docs/v0/M[3-8]-*/handoffs/M2-closeout.md docs/v0/M[3-8]-*/handoffs/M1-closeout.md docs/v0/M5-files/handoffs/M1-P3-trim-platform.md` → 退出码 0，每一行 `… links, 0 missing`（原型）：
+
+  ```
+  docs/v0/M2-auth/M2-design.md: 76 links, 0 missing
+  docs/v0/M2-auth/specs/closeout.md: 3 links, 0 missing
+  docs/v0/v0-design.md: 26 links, 0 missing
+  docs/v0/M0-foundation/M0-design.md: 32 links, 0 missing
+  docs/v0/plane-diff.md: 3 links, 0 missing
+  docs/v0/M2-auth/handoffs/M0-P1-sqlc-cgo.md: 4 links, 0 missing
+  docs/v0/M2-auth/handoffs/M0-P2-platform-notes.md: 7 links, 0 missing
+  docs/v0/M2-auth/handoffs/M0-P3-api-codegen-notes.md: 4 links, 0 missing
+  docs/v0/M2-auth/handoffs/M0-P4-schema-conventions.md: 5 links, 0 missing
+  docs/v0/M2-auth/handoffs/M0-P5-frontend-api-notes.md: 5 links, 0 missing
+  docs/v0/M2-auth/handoffs/M0-P6-e2e-notes.md: 11 links, 0 missing
+  docs/v0/M2-auth/handoffs/M1-P2-trim-content.md: 4 links, 0 missing
+  docs/v0/M2-auth/handoffs/M1-P3-trim-platform.md: 6 links, 0 missing
+  docs/v0/M2-auth/handoffs/M1-P4-router-native.md: 3 links, 0 missing
+  docs/v0/M2-auth/handoffs/M1-closeout.md: 13 links, 0 missing
+  docs/v0/M3-workspace-project/handoffs/M2-closeout.md: 9 links, 0 missing
+  docs/v0/M4-issue-core/handoffs/M2-closeout.md: 10 links, 0 missing
+  docs/v0/M5-files/handoffs/M2-closeout.md: 9 links, 0 missing
+  docs/v0/M6-cycles-modules/handoffs/M2-closeout.md: 5 links, 0 missing
+  docs/v0/M7-collaboration/handoffs/M2-closeout.md: 6 links, 0 missing
+  docs/v0/M8-open-release/handoffs/M2-closeout.md: 10 links, 0 missing
+  docs/v0/M3-workspace-project/handoffs/M1-closeout.md: 7 links, 0 missing
+  docs/v0/M4-issue-core/handoffs/M1-closeout.md: 7 links, 0 missing
+  docs/v0/M5-files/handoffs/M1-closeout.md: 10 links, 0 missing
+  docs/v0/M6-cycles-modules/handoffs/M1-closeout.md: 8 links, 0 missing
+  docs/v0/M7-collaboration/handoffs/M1-closeout.md: 7 links, 0 missing
+  docs/v0/M8-open-release/handoffs/M1-closeout.md: 11 links, 0 missing
+  docs/v0/M5-files/handoffs/M1-P3-trim-platform.md: 2 links, 0 missing
+  ```
 
 - [ ] **Step 4：守卫**（固定节奏第 3 步）。
 
@@ -1596,116 +1672,118 @@ plane-timezone-urls M2/P5
 
 ## 块的核对
 
-写计划时在 `$M2TMP/closeout/` 下做了三件事，结果记在这里；执行者开始前可以重跑第一件，得到同样的输出。
+写计划时在 `$M2TMP/closeout/` 下做了三件事，结果记在这里；执行者开始前可以重跑第一件，得到同样的输出。预检之后的修订都重做了一遍（原型换成新克隆的 `proto2`）。
 
 **1. 每个旧文本在 `d97c513` 上恰好一处，新文件都不存在。** `node $M2TMP/closeout/planapply.mjs docs/v0/M2-auth/plans/closeout.md check $M2TMP/closeout/head`（`head/` 是 `d97c513` 的归档解开的树）。"in order"是依次应用本计划的块时这个旧文本在当时的文件里出现的次数；收尾 review 的三个替换（`TR`）中前两个的旧文本由 Task 3、Task 0 写入，在 `d97c513` 上是 0 处、按顺序应用到它们时恰好一处。退出码 0：
 
 ```
-T0  old  docs/v0/M2-auth/M2-design.md (plan:109): at d97c513 1, in order 1
-T1  old  tools/keywords.json (plan:125): at d97c513 1, in order 1
-T2  old  e2e/stories/identity/a3-sign-in.spec.ts (plan:173): at d97c513 1, in order 1
-T2  old  e2e/stories/identity/a3-sign-in.spec.ts (plan:184): at d97c513 1, in order 1
-T3  old  docs/v0/v0-design.md (plan:245): at d97c513 1, in order 1
-T3  old  docs/v0/v0-design.md (plan:253): at d97c513 1, in order 1
-T3  old  docs/v0/M0-foundation/M0-design.md (plan:261): at d97c513 1, in order 1
-T3  old  docs/v0/M0-foundation/M0-design.md (plan:269): at d97c513 1, in order 1
-T3  old  docs/v0/M0-foundation/M0-design.md (plan:277): at d97c513 1, in order 1
-T3  old  docs/v0/plane-diff.md (plan:285): at d97c513 1, in order 1
-T4  old  docs/v0/v0-design.md (plan:318): at d97c513 1, in order 1
-T4  old  docs/v0/v0-design.md (plan:326): at d97c513 1, in order 1
-T4  old  docs/v0/v0-design.md (plan:346): at d97c513 1, in order 1
-T4  old  docs/v0/v0-design.md (plan:354): at d97c513 1, in order 1
+T0  old  docs/v0/M2-auth/M2-design.md (plan:111): at d97c513 1, in order 1
+T1  old  tools/keywords.json (plan:129): at d97c513 1, in order 1
+T2  old  e2e/stories/identity/a3-sign-in.spec.ts (plan:177): at d97c513 1, in order 1
+T2  old  e2e/stories/identity/a3-sign-in.spec.ts (plan:188): at d97c513 1, in order 1
+T3  old  docs/v0/v0-design.md (plan:251): at d97c513 1, in order 1
+T3  old  docs/v0/v0-design.md (plan:259): at d97c513 1, in order 1
+T3  old  docs/v0/M0-foundation/M0-design.md (plan:267): at d97c513 1, in order 1
+T3  old  docs/v0/M0-foundation/M0-design.md (plan:275): at d97c513 1, in order 1
+T3  old  docs/v0/M0-foundation/M0-design.md (plan:283): at d97c513 1, in order 1
+T3  old  docs/v0/plane-diff.md (plan:291): at d97c513 1, in order 1
+T4  old  docs/v0/v0-design.md (plan:327): at d97c513 1, in order 1
+T4  old  docs/v0/v0-design.md (plan:335): at d97c513 1, in order 1
+T4  old  docs/v0/v0-design.md (plan:355): at d97c513 1, in order 1
+T4  old  docs/v0/v0-design.md (plan:363): at d97c513 1, in order 1
+T4  old  docs/v0/v0-design.md (plan:373): at d97c513 1, in order 1
 T5  new  docs/v0/M3-workspace-project/handoffs/M2-closeout.md: absent at the base (ok)
 T5  new  docs/v0/M4-issue-core/handoffs/M2-closeout.md: absent at the base (ok)
 T6  new  docs/v0/M5-files/handoffs/M2-closeout.md: absent at the base (ok)
 T6  new  docs/v0/M6-cycles-modules/handoffs/M2-closeout.md: absent at the base (ok)
 T6  new  docs/v0/M7-collaboration/handoffs/M2-closeout.md: absent at the base (ok)
 T6  new  docs/v0/M8-open-release/handoffs/M2-closeout.md: absent at the base (ok)
-T6  old  docs/v0/M3-workspace-project/handoffs/M1-closeout.md (plan:843): at d97c513 1, in order 1
-T6  old  docs/v0/M4-issue-core/handoffs/M1-closeout.md (plan:851): at d97c513 1, in order 1
-T6  old  docs/v0/M5-files/handoffs/M1-closeout.md (plan:859): at d97c513 1, in order 1
-T6  old  docs/v0/M6-cycles-modules/handoffs/M1-closeout.md (plan:867): at d97c513 1, in order 1
-T6  old  docs/v0/M7-collaboration/handoffs/M1-closeout.md (plan:875): at d97c513 1, in order 1
-T6  old  docs/v0/M8-open-release/handoffs/M1-closeout.md (plan:883): at d97c513 1, in order 1
-T6  old  docs/v0/M5-files/handoffs/M1-P3-trim-platform.md (plan:891): at d97c513 1, in order 1
-T6  old  docs/v0/M5-files/handoffs/M1-P3-trim-platform.md (plan:899): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P1-sqlc-cgo.md (plan:934): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P1-sqlc-cgo.md (plan:942): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P2-platform-notes.md (plan:961): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P2-platform-notes.md (plan:969): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P3-api-codegen-notes.md (plan:994): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P3-api-codegen-notes.md (plan:1002): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P4-schema-conventions.md (plan:1024): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P4-schema-conventions.md (plan:1032): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P5-frontend-api-notes.md (plan:1051): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P5-frontend-api-notes.md (plan:1059): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P6-e2e-notes.md (plan:1078): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M0-P6-e2e-notes.md (plan:1086): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-P2-trim-content.md (plan:1114): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-P2-trim-content.md (plan:1122): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-P3-trim-platform.md (plan:1136): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-P3-trim-platform.md (plan:1144): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-P4-router-native.md (plan:1167): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-P4-router-native.md (plan:1175): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-closeout.md (plan:1189): at d97c513 1, in order 1
-T7  old  docs/v0/M2-auth/handoffs/M1-closeout.md (plan:1197): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1227): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1239): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1247): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1255): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1263): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1271): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1279): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1287): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1295): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1303): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1311): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1319): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1327): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1335): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1343): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1351): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1359): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1367): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1375): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1383): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1391): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1399): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1407): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1415): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1423): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1431): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1439): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1447): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1455): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1463): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1471): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1479): at d97c513 1, in order 1
-T8  old  docs/v0/M2-auth/M2-design.md (plan:1487): at d97c513 1, in order 1
-TR  old  docs/v0/v0-design.md (plan:1551): at d97c513 0, in order 1
-TR  old  docs/v0/M2-auth/M2-design.md (plan:1559): at d97c513 0, in order 1
-TR  old  docs/v0/M2-auth/M2-design.md (plan:1567): at d97c513 1, in order 1
-78 replacements, 6 new files; all ok
+T6  old  docs/v0/M3-workspace-project/handoffs/M1-closeout.md (plan:880): at d97c513 1, in order 1
+T6  old  docs/v0/M4-issue-core/handoffs/M1-closeout.md (plan:888): at d97c513 1, in order 1
+T6  old  docs/v0/M5-files/handoffs/M1-closeout.md (plan:896): at d97c513 1, in order 1
+T6  old  docs/v0/M6-cycles-modules/handoffs/M1-closeout.md (plan:904): at d97c513 1, in order 1
+T6  old  docs/v0/M7-collaboration/handoffs/M1-closeout.md (plan:912): at d97c513 1, in order 1
+T6  old  docs/v0/M8-open-release/handoffs/M1-closeout.md (plan:920): at d97c513 1, in order 1
+T6  old  docs/v0/M5-files/handoffs/M1-P3-trim-platform.md (plan:928): at d97c513 1, in order 1
+T6  old  docs/v0/M5-files/handoffs/M1-P3-trim-platform.md (plan:936): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P1-sqlc-cgo.md (plan:971): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P1-sqlc-cgo.md (plan:979): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P2-platform-notes.md (plan:998): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P2-platform-notes.md (plan:1006): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P3-api-codegen-notes.md (plan:1031): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P3-api-codegen-notes.md (plan:1039): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P4-schema-conventions.md (plan:1061): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P4-schema-conventions.md (plan:1069): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P5-frontend-api-notes.md (plan:1088): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P5-frontend-api-notes.md (plan:1096): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P6-e2e-notes.md (plan:1115): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M0-P6-e2e-notes.md (plan:1123): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-P2-trim-content.md (plan:1151): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-P2-trim-content.md (plan:1159): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-P3-trim-platform.md (plan:1173): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-P3-trim-platform.md (plan:1181): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-P4-router-native.md (plan:1204): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-P4-router-native.md (plan:1212): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-closeout.md (plan:1226): at d97c513 1, in order 1
+T7  old  docs/v0/M2-auth/handoffs/M1-closeout.md (plan:1234): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1264): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1276): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1284): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1292): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1300): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1308): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1316): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1324): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1332): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1340): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1348): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1356): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1364): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1372): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1380): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1388): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1396): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1404): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1412): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1420): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1428): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1436): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1444): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1452): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1460): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1468): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1476): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1484): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1492): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1500): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1508): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1516): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1524): at d97c513 1, in order 1
+T8  old  docs/v0/M2-auth/M2-design.md (plan:1532): at d97c513 1, in order 1
+TR  old  docs/v0/v0-design.md (plan:1627): at d97c513 0, in order 1
+TR  old  docs/v0/M2-auth/M2-design.md (plan:1635): at d97c513 0, in order 1
+TR  old  docs/v0/M2-auth/M2-design.md (plan:1643): at d97c513 1, in order 1
+80 replacements, 6 new files; all ok
 ```
 
-**2. 块应用出来的树就是原型的树。** `$M2TMP/closeout/head-d97c513.tar` 另解开一份到 `$M2TMP/closeout/replay`，依次 `planapply.mjs … apply $M2TMP/closeout/replay 0` 到 `8`，再与原型逐字节比较（`node $M2TMP/closeout/treediff.mjs replay proto`，不含 `node_modules`、`.git` 和构建产物）：
+**2. 块应用出来的树就是原型的树。** `$M2TMP/closeout/head-d97c513.tar` 另解开一份到 `$M2TMP/closeout/replay`，依次 `planapply.mjs … apply $M2TMP/closeout/replay 0` 到 `8`；原型 `proto2` 是本分支在 `11f773bd`（Task 0、Task 1 已提交）的克隆，依次应用了 `2` 到 `8`。两边都放进这一版的 spec 和本计划（`proto2` 带着的是 `7435bfb1` 提交的旧版），再逐字节比较（`node $M2TMP/closeout/treediff.mjs replay proto2`，不含 `node_modules`、`.git` 和构建产物）：
 
 ```
-2649 and 2649 files; 0 differences
+2651 and 2651 files; 0 differences
 ```
 
-与 `d97c513` 比较（`treediff.mjs head replay`）：23 个改（`M`）、6 个新（`B`），`2643 and 2649 files; 29 differences`，与"文件结构"的表相同。
+`replay` 放进 spec 和计划之前与 `d97c513` 比较（`treediff.mjs head replay`）：23 个改（`M`）、6 个新（`B`），`2643 and 2649 files; 29 differences`，与"文件结构"的表相同。
 
-**3. 原型的全部门禁**（Task 0–8 之后，`bash $M2TMP/closeout/gates.sh $M2TMP/closeout/proto final`）：
+**3. 原型的全部门禁**（`proto2`，Task 2–8 之后，`bash $M2TMP/closeout/gates.sh $M2TMP/closeout/proto2 final2`）：
 
 ```
-gen-check: exit 0 in 2s;
-lint-go: exit 0 in 1s; 2 × '0 issues.'
-test: exit 0 in 18s; 32 ok, 0 FAIL
-lint-web: exit 0 in 2s; keywords: 60 rules, 3 exceptions, no hits.;  Tasks: 54 successful, 54 total
-knip: exit 0 in 2s; pnpm --filter web exec react-router typegen pnpm exec knip --treat-config-hints-as-errors
-test-web: exit 0 in 0s;  Tasks: 16 successful, 16 total
+gen-check: exit 0 in 4s;
+lint-go: exit 0 in 8s; 2 × '0 issues.'
+test: exit 0 in 21s; 32 ok, 0 FAIL
+lint-web: exit 0 in 15s; keywords: 60 rules, 3 exceptions, no hits.;  Tasks: 54 successful, 54 total
+knip: exit 0 in 3s; pnpm --filter web exec react-router typegen pnpm exec knip --treat-config-hints-as-errors
+test-web: exit 0 in 6s;  Tasks: 16 successful, 16 total
 e2e: exit 0 in 14s;  48 passed (12.7s)
 ```
 
-`make lint-web` 的 turbo 取了 38 个缓存（共 54），`make test-web` 16 个都是缓存：Task 2 之后它们的输入没有变，守卫本身每次都跑。每个 Task 的检查结果与各 Task 写的预期相同（spec 附录 A.2）。
+`proto2` 是新克隆，turbo 的缓存大多不在：`make lint-web` 54 个任务中缓存 10 个，`make test-web` 16 个中缓存 10 个。每个 Task 的检查结果与各 Task 写的预期相同（spec 附录 A.2）。
