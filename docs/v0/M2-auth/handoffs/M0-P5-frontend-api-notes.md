@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M0/P5
 to: M2
 created: 2026-09-22
@@ -40,3 +40,14 @@ created: 2026-09-22
 全部处理完，状态改为 `done`。
 
 来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+两节都在 M2/P2、P4 完成，收尾在 `d97c513` 上核对：
+
+- **前端调用的接口**：未登录的页面只请求 `GET /api/v0/instance`（S2 的 `apiRequests`，随 `make e2e` 通过）；关键词规则 `plane-auth-urls`、`plane-user-urls` 挡住 Plane 的认证和实例地址（`node tools/keywords.mjs` 没有命中）；同源部署：web 的客户端都由 `createClient()` 建成、不设 `baseUrl`，axios 基类也不设基础地址（M2/P4 的处理结果）。
+- **安全响应头与 CSP**：`server/internal/bootstrap/headers_test.go` 的 `TestOnlyPagesHaveAContentSecurityPolicy` 随 `make test` 通过；S2 核对首页带 CSP、没有违规。分在两层的理由在 [M2/P4 评审](../reviews/P4-web-auth-review.md)第 6 节。
+
+状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

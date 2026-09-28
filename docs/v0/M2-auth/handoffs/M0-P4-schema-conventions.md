@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M0/P4
 to: M2
 created: 2026-09-22
@@ -33,3 +33,14 @@ created: 2026-09-22
 2. **主键与 ID**：照旧，没有默认值的 `id uuid`，由应用用 `uuid.NewV7()` 生成。
 
 来源：[M2/P1 spec](../specs/P1-platform-core.md) 2.10。
+
+## 处理结果（M2/收尾）
+
+两条在 M2/P1 定下，M2/P3a 的 `00004_identity_api_tokens.sql` 照做，收尾在 `d97c513` 上核对：
+
+1. **约定**：差异清单二·全局登记了全部约定；`server/migrations/schema_test.go` 核对约束名和 CHECK，随 `make test` 通过；五个迁移都没有 `DEFERRABLE` 和 `*_like` 索引（`git grep -n -i -E 'DEFERRABLE|_like' -- server/migrations/sql` 没有输出）。River 的表（`00005_river_main_v2_to_v7.sql`）是原样导出，名字随 River，不按这些约定（差异清单二·按表"River 的表"一行）。
+2. **主键与 ID**：照旧，没有默认值的 `id uuid`，由应用生成。
+
+状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

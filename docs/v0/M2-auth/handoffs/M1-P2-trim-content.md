@@ -1,5 +1,5 @@
 ---
-status: done
+status: closed
 from: M1/P2
 to: M2
 created: 2026-09-23
@@ -41,3 +41,9 @@ M2 合并时：`api/` 里用户资料或偏好的接口描述中，主题只有 
 全部处理完，状态改为 `done`。
 
 来源：[M2/P4 spec](../specs/P4-web-auth.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+关闭条件的两部分在 `d97c513` 上都成立：接口描述中的主题是枚举 `Theme`，只有五个值（`api/modules/identity.yaml`，没有 `custom`，也没有调色板字段）；前端没有 `IUserTheme`（`git grep -n IUserTheme -- web` 没有输出）。状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。

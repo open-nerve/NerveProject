@@ -1,5 +1,5 @@
 ---
-status: open
+status: closed
 from: M0/P2
 to: M2
 created: 2026-09-22
@@ -69,3 +69,20 @@ M2 第一次加入认证、事务、后台任务和真正的迁移文件，届�
 仍未处理，状态保持 `open`：第 2 条的接口调用日志（M8，挂在限流之后）。
 
 来源：[M2/P3b spec](../specs/P3b-jobs-and-admin.md) 第 7 节。
+
+## 处理结果（M2/收尾）
+
+逐条的结论：
+
+1. **TxManager**：M2/P1 完成。
+2. **按路由挂载**：认证（M2/P1）、失败闸门和限流（M2/P2）完成。接口调用日志不属于 M2，转交 M8：[M8 的交接](../../M8-open-release/handoffs/M2-closeout.md)第 1 节，挂在限流之后。
+3. **`RequestID`**：M2/P1 完成（`server/internal/platform/httpserver/middleware.go:62`）。
+4. **`LogValue`**：M2/P1 完成。
+5. **期限、River 与停机顺序**：请求期限在 M2/P1；River、停机顺序、连接池关闭的时限和 River 的迁移在 M2/P3b。停机最坏约 36 秒，部署文件的停止宽限期转交 M8：[M8 的交接](../../M8-open-release/handoffs/M2-closeout.md)第 3 节。
+6. **archtest**：M2/P1 完成（`server/internal/archtest/rules_test.go:40,42`）。M0 设计 3.7 的规则原文到收尾才同步，是 P1 的漏项（收尾 spec 2.2）。
+7. **迁移与就绪检查**：M2/P1 完成（README"部署"一节的"迁移"一条）。
+8. **三个小问题**：M2/P1 完成。
+
+全部有结论，状态改为 `closed`。
+
+来源：[M2 收尾 spec](../specs/closeout.md) 2.1。
