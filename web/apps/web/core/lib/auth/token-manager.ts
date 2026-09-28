@@ -11,7 +11,11 @@ import type { RefreshLock } from "./refresh-lock";
 // login_id is new at every sign-in and kept by refreshes, so a tab can tell another tab's refresh (same
 // login_id) from another tab's sign-in (a new one), which may be another account. An operation that changes
 // the session (a refresh, a sign-out, the end of a session) acts only on the session it was called for, and
-// every decision reads the record there now, never a copy: a record of another session is followed.
+// every decision reads the record there now, never a copy: a record of another session is followed. After
+// each request's await, and after the lock hands a failed first refresh back, the record is read again before
+// anything is written or decided: without navigator.locks, the lease is not atomic, and another tab may sign
+// in meanwhile (M2 design 7.1). A sign-in writes its new session's record without reading it: the last sign-in
+// wins.
 
 /** The localStorage key of the session's record. */
 export const AUTH_KEY = "nerve.auth";
@@ -145,7 +149,8 @@ export class TokenManager {
    * Signs the tab's session out: under the lock, so the refresh token handed over is the latest, logs out
    * with it (best effort) and removes the record (M2 design 7.1, review M7). When the record is another
    * session's by then (another tab signed in first), the tab follows it and logs nobody out: that sign-in
-   * replaced this session's refresh token, so the browser has nothing of it left to log out with.
+   * replaced this session's refresh token, so the browser has nothing of it left to log out with. The same
+   * holds when another tab signs in while the logout is out (the lease is not atomic): the new record stays.
    */
   async signOut(): Promise<void> {
     const loginId = this.#state.loginId;
@@ -156,8 +161,7 @@ export class TokenManager {
         return;
       }
       await this.#call("/api/v0/auth/logout", record.refresh_token);
-      this.deps.storage.removeItem(AUTH_KEY);
-      this.#signedOut();
+      this.#end(loginId);
     });
   }
 
@@ -167,16 +171,7 @@ export class TokenManager {
    * whether it ended that session: false when the record was no longer that session's.
    */
   async endSession(loginId: string | undefined): Promise<boolean> {
-    return this.deps.lock.run(async () => {
-      const record = this.#read();
-      if (!isRecordOf(record, loginId)) {
-        this.#switchTo(record);
-        return false;
-      }
-      this.deps.storage.removeItem(AUTH_KEY);
-      this.#signedOut();
-      return true;
-    });
+    return this.deps.lock.run(async () => this.#end(loginId));
   }
 
   /**
@@ -202,14 +197,24 @@ export class TokenManager {
     await this.#firstRefresh();
   }
 
-  /** The refresh that decides a starting or unavailable session; a passing failure makes it unavailable. */
+  /**
+   * The refresh that decides a starting or unavailable session; a passing failure makes it unavailable, while
+   * the record is still that session's. navigator.locks hands the failure back in a later task, after another
+   * tab's change of the record may have come in: the tab then follows the record.
+   */
   async #firstRefresh(): Promise<void> {
+    const loginId = this.#state.loginId;
     try {
       await this.#refresh();
     } catch (error) {
       if (error instanceof SessionChangedError) return;
       if (!(error instanceof SessionUnavailableError)) throw error;
-      this.#set({ status: "unavailable", loginId: this.#state.loginId, retryAt: error.retryAt });
+      const record = this.#read();
+      if (!isRecordOf(record, loginId)) {
+        this.#switchTo(record);
+        return;
+      }
+      this.#set({ status: "unavailable", loginId, retryAt: error.retryAt });
       this.#retryTimer = setTimeout(() => void this.retry(), error.retryAt - this.deps.now());
     }
   }
@@ -295,6 +300,21 @@ export class TokenManager {
     this.#access = { token: tokens.access_token, expiresAt: receivedAt + tokens.access_token_expires_in * 1000 };
     this.#failures = 0;
     this.#retryAt = 0;
+  }
+
+  /**
+   * Ends the session loginId, under the lock: removes the record and signs the tab out when the record is still
+   * that session's, else follows the record. Returns whether it ended that session.
+   */
+  #end(loginId: string | undefined): boolean {
+    const record = this.#read();
+    if (!isRecordOf(record, loginId)) {
+      this.#switchTo(record);
+      return false;
+    }
+    this.deps.storage.removeItem(AUTH_KEY);
+    this.#signedOut();
+    return true;
   }
 
   /** Follows another tab's change of the record, and stops the request that was meant for the old session. */

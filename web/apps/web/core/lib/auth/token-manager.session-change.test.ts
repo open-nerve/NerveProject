@@ -4,10 +4,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RecordingLock, SharedStorage } from "./fake-browser";
-import { FakeNerve, json, problem } from "./fake-nerve";
+import { RecordingLock, SharedStorage, gate } from "./fake-browser";
+import { FakeNerve, json, noContent, problem } from "./fake-nerve";
 import { track, until } from "./fake-time";
-import { leaseLock, webLock } from "./refresh-lock";
+import { LEASE_KEY, leaseLock, webLock } from "./refresh-lock";
 import { AUTH_KEY, SessionChangedError, SessionUnavailableError, TokenManager } from "./token-manager";
 
 // An operation that changes the session acts only on the session it was asked for (M2 design 7.1): a
@@ -17,7 +17,8 @@ import { AUTH_KEY, SessionChangedError, SessionUnavailableError, TokenManager } 
 // it is in already changes nothing, neither its access token nor its state, and a session it follows starts
 // without the back-off of the one it left. With both kinds of lock, as in token-manager.tabs.test.ts; where
 // the order matters, the storage events are held back and reach the tabs as A's task gets the lock, so it
-// does not rest on the fake's.
+// does not rest on the fake's. The same holds when the change comes while the operation awaits, after it
+// read the record: it reads the record again before it writes or decides anything (the last describe).
 
 const REFRESH = "/api/v0/auth/refresh";
 const LOGOUT = "/api/v0/auth/logout";
@@ -261,5 +262,79 @@ describe.each<Kind>(["navigator.locks", "the lease"])("with %s", (kind) => {
     nerve.calls[1]?.answer(json(200, nerve.tokens()));
     await until(() => a.tm.state.status === "signed-in", "X's session");
     expect(a.tm.state).toEqual({ status: "signed-in", loginId: X });
+  });
+});
+
+describe("after an await", () => {
+  it("keeps the sign-in another tab made while a sign-out's logout was out and the lease had run out", async () => {
+    const { storage, nerve, tab, tabA, stored } = browser("the lease");
+    const a = await tabA();
+    const out = track(a.tm.signOut());
+    await until(() => nerve.to(LOGOUT).length === 1, "A's logout");
+    expect(nerve.to(LOGOUT)[0]?.body).toEqual({ refresh_token: "rt-1" });
+
+    // A is frozen past its lease while the logout is out: it hears nothing, and to the other tabs its lease has
+    // run out. Fake time moves every tab at once, so the test runs A's lease out by hand; A's own 8 s timeout,
+    // which the freeze holds back as well, does not come into it. Tab B then signs in as Y, lease and all.
+    storage.hold();
+    storage.write(LEASE_KEY, JSON.stringify({ owner: "A", expires: Date.now() - 1 }));
+    const b = tab("B");
+    const signedIn = track(b.tm.signIn({ ...nerve.tokens(), refresh_token: "rt-y" }));
+    await until(() => signedIn.settled, "B's sign-in");
+    expect(stored()).toEqual({ refresh_token: "rt-y", login_id: Y });
+
+    // A thaws as nerve answers its logout, before it hears of B's sign-in: Y's record stays, and A follows it.
+    nerve.to(LOGOUT)[0]?.answer(noContent());
+    await until(() => out.settled, "A's sign-out");
+    storage.deliver();
+
+    expect(out.error).toBeUndefined();
+    expect(stored()).toEqual({ refresh_token: "rt-y", login_id: Y });
+    expect([a.tm.state, b.tm.state]).toEqual([
+      { status: "signed-in", loginId: Y },
+      { status: "signed-in", loginId: Y },
+    ]);
+    expect(a.changes).toEqual([`signed-in ${Y}`]);
+    expect(nerve.to(LOGOUT)).toHaveLength(1);
+  });
+
+  it("follows another tab's sign-in that came in before navigator.locks handed a failed first refresh back", async () => {
+    const storage = new SharedStorage();
+    storage.data.set(AUTH_KEY, JSON.stringify({ refresh_token: "rt-0", login_id: X }));
+    const nerve = new FakeNerve();
+    const locks = new RecordingLock();
+    const handBack = gate();
+    const view = storage.tab("A");
+    const a = new TokenManager({
+      storage: view,
+      // navigator.locks settles request() in a task of its own once the task is done, so another tab's storage
+      // event may come in first: this lock holds the settling back until the test lets it go.
+      lock: { run: (task) => locks.run(task).finally(() => handBack.promise) },
+      client: nerve.client(),
+      now: () => Date.now(),
+      randomHex: (bytes) => "a".repeat(bytes * 2),
+    });
+    view.onStorage((key) => {
+      if (key === AUTH_KEY) a.handleStorageChange();
+    });
+    const changes: string[] = [];
+    a.subscribe(() => changes.push(`${a.state.status} ${a.state.loginId ?? "-"}`));
+
+    // A's first refresh, as X, fails for a passing reason; another tab signs in as Y before the lock hands the
+    // failure back, and A follows Y.
+    const started = track(a.start());
+    await until(() => nerve.calls.length === 1, "A's first refresh");
+    nerve.calls[0]?.answer(problem(503, "server_busy"));
+    await until(() => !locks.held, "the refresh's end under the lock");
+    storage.write(AUTH_KEY, JSON.stringify({ refresh_token: "rt-y", login_id: Y }));
+    await until(() => a.state.loginId === Y, "A following Y");
+    handBack.open();
+    await until(() => started.settled, "A's start");
+
+    // X's failure leaves Y's session as it is: not unavailable, and no retry of it is due.
+    expect(a.state).toEqual({ status: "signed-in", loginId: Y });
+    expect(changes).toEqual([`starting ${X}`, `signed-in ${Y}`]);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(nerve.calls).toHaveLength(1);
   });
 });
