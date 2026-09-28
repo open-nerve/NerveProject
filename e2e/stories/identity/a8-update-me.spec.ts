@@ -1,7 +1,13 @@
 import { accountOf } from "../../fixtures/assert/identity";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { EMOJI_CHECK_WARNING, expectQuietConsole, watchPage } from "../../fixtures/browser";
-import { answerTo, expectListBesideButton, fieldBlock, registerOnboarded } from "../../fixtures/settings-pages";
+import {
+  answerTo,
+  expectListBesideButton,
+  fieldBlock,
+  holdAnswer,
+  registerOnboarded,
+} from "../../fixtures/settings-pages";
 import { expect, test } from "../../fixtures/test";
 
 // A8, changing the names and the time zone (M2 design 2).
@@ -48,8 +54,12 @@ test("A8 (page): the general page changes the names, the preferences page the ti
   expect(after).toMatchObject(change);
   expect(after.updated_at.getTime()).toBeGreaterThan(before.updated_at.getTime());
 
-  // After a reload, both pages show what nerve has.
+  // After a reload, both pages show what nerve has. While nerve's list of time zones loads, the button shows the
+  // account's zone by its name; then by its places.
+  const releaseList = await holdAnswer(page, "GET", "/api/v0/timezones");
   await page.reload();
+  await expect(page.getByRole("button", { name: "Asia/Shanghai", exact: true })).toBeVisible();
+  await releaseList();
   await expect(page.getByRole("button", { name: "Beijing" })).toBeVisible();
   await page.getByRole("button", { name: "Profile" }).click();
   await expect(page.locator("#first_name")).toHaveValue("Ada");

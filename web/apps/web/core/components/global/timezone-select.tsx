@@ -31,7 +31,8 @@ export const TimezoneSelect = observer(function TimezoneSelect(props: TTimezoneS
     <div>
       <CustomSearchSelect
         value={value}
-        label={value && selectedValue ? selectedValue(value) : t("select_a_timezone")}
+        // a zone the list lacks, or any zone while the list loads, shows by its name
+        label={value ? (selectedValue(value) ?? value) : t("select_a_timezone")}
         options={isDisabled || disabled ? [] : timezones}
         onChange={onChange}
         buttonClassName={cn(buttonClassName, "border border-subtle-1", {
