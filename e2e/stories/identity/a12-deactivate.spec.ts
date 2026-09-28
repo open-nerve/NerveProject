@@ -76,7 +76,7 @@ test("A12 (page): the general page deactivates the account once confirmed; the s
   });
 });
 
-test("A12 (page): a deactivation nerve fails says why; the account and the page's session stay", async ({
+test("A12 (page): a deactivation nerve fails says why, sent once however often Confirm is clicked; the account and the page's session stay", async ({
   api,
   db,
   signedInPage,
@@ -89,9 +89,14 @@ test("A12 (page): a deactivation nerve fails says why; the account and the page'
   const before = await accountStateOf(db, email);
   const held = await recordOf(page);
   expect(held, "the page's session").not.toBeNull();
-  // nerve fails the deactivation.
-  await page.route("**/api/v0/me/deactivate", (route) =>
-    route.fulfill({
+  // nerve fails the deactivation, once the test lets it answer.
+  let answer!: () => void;
+  const answerable = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  await page.route("**/api/v0/me/deactivate", async (route) => {
+    await answerable;
+    await route.fulfill({
       status: 500,
       contentType: "application/problem+json",
       body: JSON.stringify({
@@ -100,13 +105,20 @@ test("A12 (page): a deactivation nerve fails says why; the account and the page'
         status: 500,
         code: "internal_error",
       }),
-    })
-  );
+    });
+  });
 
+  // A double click on Confirm sends the deactivation once: from the first click, while the request is out, the
+  // button is disabled.
   await page.getByRole("button", { name: "Deactivate account" }).click();
-  const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", () =>
-    page.getByRole("button", { name: "Confirm" }).click()
+  const sent = page.waitForRequest(
+    (request) => request.method() === "POST" && new URL(request.url()).pathname === "/api/v0/me/deactivate",
+    { timeout: 10_000 }
   );
+  await page.getByRole("button", { name: "Confirm" }).dblclick();
+  await sent;
+  await expect(page.getByRole("button", { name: "Deactivating" })).toBeDisabled();
+  const refused = await answerTo(page, "POST", "/api/v0/me/deactivate", async () => answer());
   expect(refused.status()).toBe(500);
 
   // The toast says why, by the problem's code; the confirmation stays open, to confirm again or cancel; the page
@@ -117,6 +129,8 @@ test("A12 (page): a deactivation nerve fails says why; the account and the page'
   expect(await recordOf(page)).toEqual(held);
   expect(await accountStateOf(db, email)).toEqual(before);
 
+  // The page sent the one deactivation.
+  expect(watch.apiRequests.filter((request) => request === "POST /api/v0/me/deactivate")).toHaveLength(1);
   expect(watch.apiFailures).toEqual(["500 POST /api/v0/me/deactivate"]);
   expect(watch.oldApiRequests).toEqual([]);
   expect(watch.pageErrors).toEqual([]);

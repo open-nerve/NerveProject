@@ -83,7 +83,8 @@ export function DeactivateAccountModal(props: Props) {
         <Button variant="secondary" size="lg" onClick={handleClose}>
           {t("cancel")}
         </Button>
-        <Button variant="error-fill" size="lg" onClick={handleDeleteAccount}>
+        {/* Disabled while the request is out: a second click would send the deactivation again */}
+        <Button variant="error-fill" size="lg" onClick={handleDeleteAccount} loading={isDeactivating}>
           {isDeactivating ? t("deactivating") : t("confirm")}
         </Button>
       </div>
