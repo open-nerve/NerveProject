@@ -118,7 +118,11 @@ make          # 查看所有命令
   - `activate --email <邮箱>`：恢复账户，没有过期的 PAT **重新可用**，输出它们的个数。
 
   `set-email` 和 `activate` 都不是账户被盗后的恢复手段：怀疑账户被盗时，另外执行 `reset-password`。
-- **令牌泄露后的恢复**：刷新令牌存在浏览器的 localStorage 里，页面上的 XSS 能读出它，换来访问令牌后创建一个永不过期的 PAT（创建 PAT 不要求输入密码）。这个 PAT 不受退出、修改密码和会话 30 天期限的影响，还能再创建 PAT，所以泄露的影响不以 30 天为限（M2 设计 8.5）。怀疑泄露时：查看账户的 PAT 列表（个人设置的 api-tokens 页或 security 页，或 `GET /api/v0/me/api-tokens`），按创建时间和最后使用时间认出不认识的令牌，逐个撤销；或者由服务器管理员执行 `nerve users reset-password --email <邮箱>`，它结束该账户的全部会话、撤销全部 PAT。
+- **令牌泄露后的恢复**：刷新令牌存在浏览器的 localStorage 里，页面上的 XSS 能读出它，换来访问令牌后创建一个永不过期的 PAT（创建 PAT 不要求输入密码）。这个 PAT 不受退出、修改密码和会话 30 天期限的影响，还能再创建 PAT，所以泄露的影响不以 30 天为限（M2 设计 8.5）。怀疑泄露时，按这个顺序做：
+  1. **先退出、重新登录（或在另一个浏览器登录），在新的会话里修改密码**（个人设置的 security 页）：修改密码结束除当前会话以外的全部会话。被盗的刷新令牌多半就是这个浏览器会话的（XSS 读的是本页的 localStorage），在它里面改密码不会结束它；退出也不一定结束它（对方续期之后，本页的刷新令牌已是旧的一代，退出不改变什么）。从新会话改密码之后，被盗的会话和由它换来的访问令牌在下一个请求就失效，对方不能再用会话创建 PAT。
+  2. **再撤销不认识的 PAT**：在 api-tokens 页或 security 页的列表中（或 `GET /api/v0/me/api-tokens`），按创建时间和最后使用时间认出不认识的令牌，全部撤销，拿不准的也撤销；然后重新打开列表核对。PAT 能创建 PAT：撤销的同时，对方可能用还没撤销的 PAT 建了新的，列表里不再出现不认识的令牌才算完成。
+
+  只撤销 PAT、不先改密码是不够的：对方还握着会话，随时能再建一个 PAT。对方不断建新令牌、撤销跟不上，或者用户已无法登录时，请服务器管理员执行 `nerve users reset-password --email <邮箱>`：它在一个事务里设新密码、结束该账户的全部会话、撤销全部 PAT。
 - **令牌的密钥扫描**：个人访问令牌以 `nrv_pat_` 开头，刷新令牌以 `nrv_rt_` 开头，但前缀不会让代码托管平台自动识别它们。要让平台发现提交里泄露的令牌，在它的密钥扫描中加自定义规则，例如 GitHub 仓库或组织设置的 Secret scanning → Custom patterns（需要平台提供这项功能）：个人访问令牌 `nrv_pat_[A-Za-z0-9_-]{43}`，刷新令牌 `nrv_rt_[A-Za-z0-9_-]{91}`。
 - **迁移**：prod 默认不在启动时迁移（`database.auto_migrate: false`），先执行 `nerve migrate up`，再 `nerve serve`。
   - **迁移和服务分用两个数据库角色时**（表的所有者执行迁移，服务用另一个角色），服务的角色需要的权限全部写在 [`deploy/runtime-grants.sql`](deploy/runtime-grants.sql)：业务表的读写，River 的表和序列，`river_job` 的 `MAINTAIN`（River 每天 00:00 UTC 用 `REINDEX INDEX CONCURRENTLY` 重建它的索引，需要 PostgreSQL 17 起），`goose_db_version` 的读（`/readyz` 靠它判断迁移是否已完成）。按表给读写（DML），不给 `TRUNCATE`、`REFERENCES`、`TRIGGER` 和 DDL。函数和类型不在文件里：PostgreSQL 默认让 PUBLIC 执行函数、使用类型，River 的 `river_job_state_in_bitmask` 和 `river_job_state` 靠的就是它；迁移收回了 PUBLIC 的这些权限时，把它们加进文件。文件授权给组角色 `nerve_runtime`：先建一次组角色，服务登录用的角色加入它，例如 `CREATE ROLE nerve_runtime NOLOGIN;`、`CREATE ROLE nerve_app LOGIN PASSWORD '…' IN ROLE nerve_runtime;`。

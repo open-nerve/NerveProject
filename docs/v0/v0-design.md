@@ -198,8 +198,8 @@ GET   /api/v0/issues/{issue_id}/comments
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
 - `title` 固定为 HTTP 状态短语，即 Go 的 `http.StatusText(status)`（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
 - 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`rate_limited`（429，带 `Retry-After`）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
-- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
-- `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径，`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
+- **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、能有两种读法（同一个对象里同名的成员出现两次，名字按解码之后比较；字符串不是合法的 Unicode）、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题（能有两种读法的请求体只列出这两种问题；最多 16 个）；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
+- `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径，`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`duplicate`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
 - **错误码写进接口描述**：每个操作用扩展字段 `x-problem-codes` 列出它可能返回的码；所有操作都可能返回的平台码只写在 `api/openapi.yaml` 的顶层，声明了 `bearer` 的操作另外隐含 `unauthorized`。`apitest` 核对码的写法、测试中返回的码都已声明、每个声明的码都有测试返回过（M2 设计 3.11）。
 - 请求 ID 只出现在 `X-Request-Id` 响应头中，不放进响应体。
 
@@ -238,7 +238,7 @@ GET   /api/v0/issues/{issue_id}/comments
 - **令牌存放**：访问令牌存在内存；刷新令牌存在 localStorage 的 `nerve.auth` 记录中，记录还带 `login_id`：每次登录、注册新生成，续期不变。其他标签页从 `login_id` 看出别处登录了另一个会话（可能是另一个账户），丢掉内存中的访问令牌，以新会话续期、重新取账户；记录被删除就退出（M2 设计 7.1）。
 - **不以别的会话的身份发请求**：会话每次变化（本标签页或另一个标签页登录、退出，会话结束），页面的 stores 都按新会话重建，每一代 stores 的请求只属于它的会话。标签页已不在请求所属的会话时，请求以 `SessionChangedError` 结束：还没发出的不再发出，已发出而得到 401 的不续期、不重发。这个错误本身不结束会话，也不跳转（M2 设计 7.1、7.5）。
 - **防范 XSS**：HTML 在服务端清洗；配置严格的内容安全策略（CSP，只加在页面上，内联脚本按哈希放行，M2 设计 8.3）；刷新令牌每次使用后换新，并做重复使用检测。以后如需加强，只需把刷新令牌移进一个仅限续期接口使用的 HttpOnly Cookie，其他接口不受影响。
-- **多标签页续期**：用 `navigator.locks` 保证同一时间只有一个标签页在续期；没有它时（用 HTTP 部署，浏览器不在安全上下文中）用 localStorage 的租约。登录、注册、续期、退出、结束会话写 `nerve.auth` 都在这同一把锁或租约下；续期在锁内读出记录，写回之前再核对一次 `login_id`，变了就丢弃这次的结果，跟随新的记录（M2 设计 7.1）。
+- **多标签页续期**：用 `navigator.locks` 保证同一时间只有一个标签页在续期；没有它时（用 HTTP 部署，浏览器不在安全上下文中）用 localStorage 的租约。登录、注册、续期、退出、结束会话写 `nerve.auth` 都在这同一把锁或租约下；每个请求的 `await` 回来之后，以及锁把失败的第一次续期交回来之后，写、删记录或改标签页的状态之前都再读一次记录，它已不是这次操作的会话（`login_id` 变了，或者记录没了）就不写、不删，跟随新的记录：续期的写回、退出的删除、启动时进入"会话暂不可用"都是这样；登录写新会话的记录，按"最后登录为准"不重读（M2 设计 7.1）。
 - **401 处理**：先续期，再重发一次。只有续期得到 401、或者重发后仍是 401 才结束会话，跳转到登录页。续期超时（8 秒）、断网或得到 401 以外的错误（如 429、5xx）时，会话和记录都保留：启动时的第一次续期这样失败，页面显示"会话暂不可用"（标题是"暂时无法连接服务器"），按 `Retry-After` 或退避（1、2、4……最多 30 秒）自动重试，也可以手动重试；使用中的续期这样失败，需要它的请求失败，退避期间不再续期，也不自动重试；其中取账户的请求失败时，页面同样显示这个界面，由用户重试（M2 设计 7.1、7.4）。
 - **`<img src>` 没法带令牌**：
   - 编辑器图片：通过接口换取短期签名地址（Plane 编辑器本来就是异步获取图片地址的）。
@@ -590,7 +590,8 @@ packages/types         ← 实体类型（Issue、Project、State……）直接
 - **填充 stores 的 SWR 键带上 `loginId`**（例如 `["CURRENT_USER", loginId]`）：换了会话，新的一代取自己的数据。
 - **一代退役时释放它的反应**：注册在跨代沿用的对象（`router` 等）上的 `reaction`、`autorun` 不会随旧的一代回收。M2 结束时 `RootStore` 还没有释放的方法：第一个接上这类 store 的 M 给 `RootStore` 加上它，由 `store-context.tsx` 在换代时调用，之后的 M 照做（要释放的反应列在各 M 的交接里）。只观察本代对象的反应不用释放。
 - **`SessionChangedError` 不是认证失败**：它表示请求属于标签页已经离开的会话：请求在发出之前被拦下；或者请求（或续期之后重发的副本）得到 401 时，标签页已经离开它的会话，于是不再续期、重发，也不结束标签页此刻的会话。它只出现在请求发出之前或一个 401 之后，所以操作确实没有做。调用方不退出、不跳转；后台加载忽略它，由新的一代重新取数；用户发起的操作被它截断时可以提示失败。
-- **页面级的状态跟随当前的会话**：界面语言由 `StoreWrapper`（`core/lib/wrappers/store-wrapper.tsx`）按当前一代的资料设置，store 不设。主题在每个会话第一次取到资料时由 `StoreWrapper` 按资料设置一次，之后由改它的组件在 nerve 应答成功之后设置，设置之前先核对标签页仍在发出修改时的会话（`core/components/appearance/theme-switcher.tsx` 的 `inSession()`，M2/P5 spec 2.7）。store 不直接改全局状态；组件在一个 `await` 之后改页面级的状态时，都先核对会话没变。这样旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
+- **页面级的状态跟随当前的会话**：界面语言由 `StoreWrapper`（`core/lib/wrappers/store-wrapper.tsx`）按当前一代的资料设置，store 不设。主题同样由 `StoreWrapper` 按会话设置，别处不设：没有会话时（本标签页或别的标签页退出、账户停用、续期被拒）是默认的"跟随系统"，每个会话第一次取到资料时按资料设置一次；之后由改它的组件在 nerve 应答成功之后设置，设置之前先核对标签页仍在发出修改时的会话（`core/components/appearance/theme-switcher.tsx` 的 `inSession()`，M2/P5 spec 2.7）。store 不直接改全局状态；组件在一个 `await` 之后改页面级的状态时，都先核对会话没变。这样旧一代迟到的应答就改不到新会话的页面（M2/P5 spec 第 3 节第 16 条）。
+- **一个 store 的修改一个接一个发出**：前一个修改有了应答或失败之后才发出下一个（`core/lib/one-at-a-time.ts`），nerve 按做出的顺序应用有了应答的修改，最后的应答就是 nerve 保存的值；没有应答的失败（连接在请求到达之后断了）不在此列。只排队修改；取数不排队。不要用"丢弃较旧的应答"代替它：丢掉的只是应答，nerve 仍可能按另一种顺序写入（M2 设计 7.7，Codex 对 M2 的评审第 6 节）。这只在一个标签页之内成立。
 - **`@nerve/ui` 不依赖 `@nerve/i18n`**：组件的文字由调用方经 `t()` 以 props 传入。`@nerve/ui` 的 `package.json` 不声明 `@nerve/i18n`，pnpm 不把没有声明的包放进它的 `node_modules`，从 `@nerve/i18n` 导入的名字过不了 `@nerve/ui` 的类型检查。
 - 代码在 `web/apps/web/core/lib/store-context.tsx`、`core/store/root.store.ts`、`core/lib/auth/api-client.ts`、`core/lib/auth/auth-middleware.ts`（`SessionChangedError`）和 `core/lib/wrappers/store-wrapper.tsx`；照这些规则写的 store 可以看 `core/store/user/api-token.store.ts`；测试和变异见 M2/P4 spec 2.8、M2/P5 spec 2.4。
 

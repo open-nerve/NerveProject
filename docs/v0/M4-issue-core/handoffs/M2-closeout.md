@@ -32,14 +32,15 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 
 ## 4. 请求体检查的两处延伸和草稿发布
 
-- **路径的排序**：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前，`server/internal/platform/httpserver/bodyshape/bodyshape.go:169`），改为按数组下标的数值排序。
+- **路径的排序**：字段错误的路径现在按字典序排序（`tags[10]` 在 `tags[2]` 之前，`server/internal/platform/httpserver/bodyshape/bodyshape.go` 的 `Check` 末尾的 `slices.SortFunc`），改为按数组下标的数值排序。
 - **数的范围**：不限类型的节点（`{}`、开放对象、没有 `items` 的数组）不看数的范围，`1e400` 这类 float64 放不下的数仍然得到解码器笼统的 400，改为在边界上报出。
 - 两者都在第一个带数组或开放对象请求体的操作到来时处理（M2/P1 评审）；在那之前客户端不能依赖路径的顺序。
 - **生成器**（`server/tools/bodyshapegen`）遇到不支持的 schema 写法时失败并说明原因；遇到它的 M 带着测试扩展生成器，不放过（M2 设计 §16）。
-- **map 型对象**：契约的写法检查要求每个 object 组件 schema 设 `additionalProperties: false`（`server/internal/platform/httpserver/apitest/rules_test.go` 的 `closedObject`），`type: object, additionalProperties: {type: string}` 这样的 map 型 schema 会被判为违规（M0/P3 评审 C3，M0-P3 交接第 5 节；M2 没有用到）。第一个需要它的 M（可能早于 M4）给 `closedObject` 加一个例外分支和一个反例用例。
+- **map 型对象**：契约的写法检查要求每个 object schema 设 `additionalProperties: false`（`server/internal/platform/httpserver/apitest/rules_test.go` 的 `closedObject`；codex-fixes 起组件和内联的都查，它是 M2 设计 3.11 不变式②的前提），`type: object, additionalProperties: {type: string}` 这样的 map 型 schema 会被判为违规（M0/P3 评审 C3，M0-P3 交接第 5 节；M2 没有用到）。第一个需要它的 M（可能早于 M4）给 `closedObject` 加一个例外分支和一个反例用例，并在 3.11 的不变式②写明解码器怎样读 map 的键。
+- **结构检查的代价**（M2 设计 3.11，codex-fixes）：路径按段压栈、一个请求体最多报 16 个问题，`bodyshape` 的 `TestCheckCostsAboutTheBody` 守住。按表检查每层把对象的成员复制一次，代价是请求体乘 schema 的层数；M2 的请求体 schema 最深两层、不递归。第一个递归的请求体 schema 让它变成请求体乘请求体的深度：那时按表检查改为一遍读完，代价测试加上这种请求体。第一个数组或开放 map 的请求体 schema 到来时，代价测试同样加上它。
 - **第一个 `format: date` 的字段**（工作项的开始、截止日期）：`bodyshape` 的格式检查器按生成的 Go 类型登记，现在只有 `time.Time` 和标准库的 `uuid.UUID`；M2 没有 `date` 字段，生成器遇到 `date` 就失败。M4 选定它的 Go 类型（不能是 `openapi_types.Date`：它所在的包导入 `github.com/google/uuid`），带着测试登记检查器（M2 设计 3.11）。
 - **草稿发布**复用同一个结构检查：发布时，草稿的 `payload` 按"创建工作项"的请求 schema 走 `bodyshape` 的校验（M2 设计 3.11），与创建工作项走同一条路（总体设计 5.4，差异清单第四节"草稿发布"）。
-- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试；第一个 map 型 schema 出现时，`closedObject` 有例外分支和反例用例（或者本 M 的 review 写明没有用到）。
+- **关闭条件**：两处延伸各有单元测试（`tags[2]` 排在 `tags[10]` 之前；开放对象里的 `1e400` 得到带路径的 400）；同一个坏的请求体，草稿发布与创建工作项给出相同的 400；`date` 的检查器已登记，不合格的日期得到带路径的 400，有测试；第一个 map 型 schema 出现时，`closedObject` 有例外分支和反例用例（或者本 M 的 review 写明没有用到）；数组、开放 map 或递归的请求体 schema 出现时，`TestCheckCostsAboutTheBody` 有这种请求体，递归的由一遍读完的按表检查通过（或者本 M 的 review 写明没有用到）。
 
 ## 5. 60 天物理清理与删除关系图（M4 的部分）
 
@@ -51,7 +52,8 @@ M2（账户认证）做完了注册、登录、会话、PAT、`nerve users` 命�
 
 - **漏注册 worker 没有响亮的迹象**（M2/P3b 评审第 7 节；收尾评审对照 `river@v0.47.0` 更正）：runner 只在 River 的 `Start` 失败时像数据库不可达一样无限重试、每次一条 WARN "jobs did not start; trying again"（`server/internal/platform/jobs/jobs.go:136`），而 `Start` 因配置失败只发生在一个 worker 都没有的时候（`river@v0.47.0/client.go:1102-1104`）。`identity` 总是注册 `identity.cleanup_expired_sessions` 的 worker，所以 M4 的模块给定时任务漏了自己的 worker 时，River 照常启动，leader 照常投递（定时任务的投递不核对 worker，`river@v0.47.0/periodic_job.go:254-260`），执行时 River 记 ERROR "jobexecutor.JobExecutor: Unhandled job kind"（`river@v0.47.0/internal/jobexecutor/job_executor.go:215`）并重试到放弃；`bootstrap` 漏接整个 `jobs.Job` 时什么都不记。M4 是第一个加业务定时任务的 M（自动归档、60 天清理）：加一个测试，漏注册时失败（M2 的做法是 `bootstrap` 的测试等 `identity.cleanup_expired_sessions` 在 `river_job` 中 `completed`，`server/internal/bootstrap/jobs_test.go:45`，M2 设计 3.15），或者让 `platform/jobs` 在构造时拒绝 kind 没有 worker 的定时任务。
 - **事件订阅者的写法**：事务内投递用 `InsertTx(ctx, tx, …)`，回滚的事务不留任务（M2 设计 3.15 的 spike）；订阅者怎样写由第一个需要它的 M 定，就是 M4。
-- **关闭条件**：漏注册 worker 的变异让测试失败；事件订阅者的写法写进 M4 设计。
+- **服务角色的权限**（M2 codex-fixes，M2 设计 6.1）：M4 的迁移加了表、视图或序列，或者 River 升级（总体设计 5.2）加了它们，同一个提交把授权加进 `deploy/runtime-grants.sql`（函数和类型靠 PUBLIC 的默认权限，收回时同样要加）。`server/internal/bootstrap/runtime_role_test.go` 的 `TestTheGrantsFileCoversEveryRelationAndFunction` 在少了或多了时失败；`TestTheRuntimeRoleServesWithTheGrantsFile` 用恰好这些权限运行 nerve（就绪、River 的清理任务、River 的索引重建），M4 的第一个业务定时任务在它读写的表上照样要有权限。
+- **关闭条件**：漏注册 worker 的变异让测试失败；事件订阅者的写法写进 M4 设计；`deploy/runtime-grants.sql` 覆盖 M4 的表，上面两个测试通过。
 
 ## 7. 编辑器的代码分割
 
