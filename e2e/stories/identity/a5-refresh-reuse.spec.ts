@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { expectRevoked, sessionOf } from "../../fixtures/assert/identity";
 import { signInPath } from "../../fixtures/auth-pages";
-import { emailFor, recordOf, refresh, register } from "../../fixtures/auth";
+import { bearer, emailFor, recordOf, refresh, register } from "../../fixtures/auth";
 import { expectQuietConsole, watchPage } from "../../fixtures/browser";
 import { expect, test } from "../../fixtures/test";
 
@@ -16,20 +16,30 @@ test("A5 (page): when a copy of the page's refresh token was used, the page's ne
   db,
   signedInPage,
 }, testInfo) => {
-  const page = await signedInPage(await register(api, emailFor(testInfo)));
+  const tokens = await register(api, emailFor(testInfo));
+  // A theme the page shows once the profile arrives, and no longer without a session.
+  const themed = await api.PATCH("/api/v0/me/profile", {
+    body: { theme: "dark" },
+    headers: bearer(tokens.access_token),
+  });
+  expect(themed.response.status).toBe(200);
+  const page = await signedInPage(tokens);
   const watch = await watchPage(page);
   await page.goto("/onboarding");
   await expect(page.getByText("Create your profile.")).toBeVisible();
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", "dark");
 
   // Someone with a copy of the page's refresh token uses it first: nerve rotates the session to them.
   const held = (await recordOf(page))?.refresh_token ?? "";
   await refresh(api, held);
 
   // The page's next refresh, as it loads again, presents the retired token: nerve ends the session, and
-  // the page goes to the sign-in page, which comes back here.
+  // the page goes to the sign-in page, which comes back here, in the default theme.
   await page.reload();
   await expect(page).toHaveURL(signInPath("/onboarding"));
   await expect(page.getByRole("button", { name: "Go to workspace" })).toBeVisible();
+  await expect(html).toHaveAttribute("data-theme", "light");
   expect(await recordOf(page)).toBeNull();
   await expectRevoked(db, held, "reuse_detected");
   // The one request that failed is that refresh, which Chromium reports in the console as well; nothing

@@ -15,6 +15,10 @@ import { setLanguage } from "@nerve/i18n";
 import { useAppTheme } from "@/hooks/store/use-app-theme";
 import { useRouterParams } from "@/hooks/store/use-router-params";
 import { useUser, useUserProfile } from "@/hooks/store/user";
+import type { IUserStore } from "@/store/user";
+// lib
+import { useSession } from "@/lib/auth/use-session";
+import { sessionTheme } from "@/lib/wrappers/session-theme";
 
 type TStoreWrapper = {
   children: ReactNode;
@@ -29,12 +33,11 @@ function StoreWrapper(props: TStoreWrapper) {
   // store hooks
   const { setQuery } = useRouterParams();
   const { sidebarCollapsed, toggleSidebar } = useAppTheme();
-  const { data: currentUser } = useUser();
+  const user = useUser();
   const { data: userProfile } = useUserProfile();
-  // Track if we've initialized theme from server (one-time only)
-  const hasInitializedThemeRef = useRef(false);
-  // Track current user to reset on logout/login
-  const currentUserIdRef = useRef<string | undefined>(undefined);
+  const { status } = useSession();
+  // The session whose profile's theme the page has taken: once for each session (a new one has a new user store).
+  const themedBy = useRef<IUserStore | undefined>(undefined);
 
   /**
    * Sidebar collapsed fetching from local storage
@@ -46,33 +49,17 @@ function StoreWrapper(props: TStoreWrapper) {
   }, [sidebarCollapsed, setTheme, toggleSidebar]);
 
   /**
-   * Initial theme sync from server (one-time only)
-   *
-   * This effect runs ONCE per user session to load theme from server.
-   * After initial load, all theme changes are localStorage-driven (next-themes).
-   * This prevents a feedback loop where server updates trigger UI updates in a cycle.
+   * The page's theme follows the tab's session (v0 design 7.7), here and nowhere else (session-theme.ts): without a
+   * session (signed out in this tab or another, the account deactivated, a refresh refused), the default; with one,
+   * its profile's, once, when the profile first arrives. Later changes are applied by the component that makes them,
+   * once nerve holds them (theme-switcher.tsx). Until a new session's profile arrives, the page keeps the theme it
+   * shows.
    */
   useEffect(() => {
-    const userId = currentUser?.id;
-
-    // Reset initialization flag when user changes (logout/login)
-    // This handles both logout (userId becomes undefined) and login (userId changes)
-    if (userId !== currentUserIdRef.current) {
-      hasInitializedThemeRef.current = false;
-      currentUserIdRef.current = userId;
-    }
-
-    // Only initialize theme from server on FIRST load for this user
-    if (!userProfile?.theme || hasInitializedThemeRef.current) {
-      return; // Skip if already initialized or no profile data
-    }
-
-    // Apply theme from server profile (one-time only)
-    setTheme(userProfile.theme);
-
-    // Mark as initialized - prevents future syncs from server
-    hasInitializedThemeRef.current = true;
-  }, [currentUser?.id, userProfile?.theme, setTheme]);
+    const next = sessionTheme(status, user, userProfile?.theme, themedBy.current);
+    themedBy.current = next.themedBy;
+    if (next.theme) setTheme(next.theme);
+  }, [status, user, userProfile?.theme, setTheme]);
 
   /**
    * The page's language is the profile's of the tab's session now, as nerve answered it: the stores never set it.

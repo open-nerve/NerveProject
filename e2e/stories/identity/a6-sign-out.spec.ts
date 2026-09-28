@@ -55,13 +55,22 @@ async function expectNothingWentWrong(watched: [Page, PageWatch][]): Promise<voi
 
 test("A6 (page): signing out in one tab signs every tab out", async ({ api, db, context, signedInPage }, testInfo) => {
   const email = emailFor(testInfo);
-  const tabA = await signedInPage(await register(api, email));
+  const tokens = await register(api, email);
+  // A theme the tabs show once the profile arrives, and no longer without a session.
+  const themed = await api.PATCH("/api/v0/me/profile", {
+    body: { theme: "dark" },
+    headers: bearer(tokens.access_token),
+  });
+  expect(themed.response.status).toBe(200);
+  const tabA = await signedInPage(tokens);
   const watchA = await watchPage(tabA);
   const sentAccessToken = followAccessToken(tabA);
   await openOnboarding(tabA, email);
   const tabB = await context.newPage();
   const watchB = await watchPage(tabB);
   await openOnboarding(tabB, email);
+  await expect(tabA.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(tabB.locator("html")).toHaveAttribute("data-theme", "dark");
   const held = (await recordOf(tabA))?.refresh_token ?? "";
   // The access token tab A sent last works until the sign-out.
   const accessToken = sentAccessToken();
@@ -70,11 +79,12 @@ test("A6 (page): signing out in one tab signs every tab out", async ({ api, db, 
 
   await signOutThroughMenu(tabA, email);
 
-  // Both tabs are on the sign-in page, which comes back to where they were; the record is gone.
+  // Both tabs are on the sign-in page, which comes back to where they were, in the default theme; the record is gone.
   await Promise.all(
     [tabA, tabB].map(async (tab) => {
       await expect(tab).toHaveURL(signInPath("/onboarding"));
       await expect(tab.getByRole("button", { name: "Go to workspace" })).toBeVisible();
+      await expect(tab.locator("html")).toHaveAttribute("data-theme", "light");
     })
   );
   expect(await recordOf(tabB)).toBeNull();

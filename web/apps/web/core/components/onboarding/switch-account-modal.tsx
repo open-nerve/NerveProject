@@ -6,7 +6,6 @@
 
 import React, { useState } from "react";
 
-import { useTheme } from "next-themes";
 import { ArrowRightLeft } from "lucide-react";
 import { Dialog, Transition } from "@headlessui/react";
 // nerve imports
@@ -29,8 +28,6 @@ export function SwitchAccountModal(props: Props) {
   // store hooks
   const { data: userData, signOut } = useUser();
 
-  const { setTheme } = useTheme();
-
   const handleClose = () => {
     setSwitchingAccount(false);
     onClose();
@@ -41,7 +38,6 @@ export function SwitchAccountModal(props: Props) {
 
     try {
       await signOut();
-      setTheme("system");
       handleClose();
     } catch {
       setToast({
