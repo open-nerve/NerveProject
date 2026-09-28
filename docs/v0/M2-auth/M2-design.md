@@ -2139,7 +2139,7 @@ files:
 | P3b | jobs-and-admin | 已完成 | [spec](specs/P3b-jobs-and-admin.md) | [plan](plans/P3b-jobs-and-admin.md) | [review](reviews/P3b-jobs-and-admin-review.md) |
 | P4 | web-auth | 已完成 | [spec](specs/P4-web-auth.md) | [plan](plans/P4-web-auth.md) | [review](reviews/P4-web-auth-review.md) |
 | P5 | web-account | 已完成 | [spec](specs/P5-web-account.md) | [plan](plans/P5-web-account.md) | [review](reviews/P5-web-account-review.md) |
-| 收尾 | closeout | 未开始 | — | — | — |
+| 收尾 | closeout | 进行中 | [spec](specs/closeout.md) | [plan](plans/closeout.md) | — |
 
 ---
 
