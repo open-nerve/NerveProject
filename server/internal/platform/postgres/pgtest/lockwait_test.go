@@ -28,6 +28,80 @@ func TestWaitForLockWaitSeesOnlyItsOwnDatabase(t *testing.T) {
 	}
 }
 
+// WaitForLockWaitOn counts a wait for a row of its table only: not a wait
+// for another table's row, though the waiting transaction has read that
+// table; not a wait for an advisory lock; not a wait in another database.
+func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
+	t.Parallel()
+	rows, advisory := pgtest.NewDatabase(t), pgtest.NewDatabase(t)
+	for _, url := range []string{rows, advisory} {
+		for _, stmt := range []string{"CREATE TABLE a (id int PRIMARY KEY)", "CREATE TABLE b (id int PRIMARY KEY)", "INSERT INTO a VALUES (1)"} {
+			if _, err := connect(t, url).Exec(context.Background(), stmt); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	holdRowAndWait(t, rows)
+	holdAndWait(t, advisory)
+	rowsPool, advisoryPool := newPool(t, rows), newPool(t, advisory)
+
+	pgtest.WaitForLockWaitOn(t, rowsPool, "a", 10*time.Second)
+	for _, tt := range []struct {
+		name  string
+		pool  *pgxpool.Pool
+		table string
+	}{
+		{"another table, which the waiter read", rowsPool, "b"},
+		{"an advisory lock", advisoryPool, "a"},
+	} {
+		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
+		if want := "no statement waited for a row lock of " + tt.table + " within 300ms"; failed != want {
+			t.Errorf("%s: WaitForLockWaitOn failed with %q, want %q", tt.name, failed, want)
+		}
+	}
+}
+
+// holdRowAndWait makes a second connection to url wait for the row of a
+// that a first one holds FOR NO KEY UPDATE, after reading b in the same
+// transaction, until the test ends.
+func holdRowAndWait(t *testing.T, url string) {
+	t.Helper()
+	holder, waiter := connect(t, url), connect(t, url)
+	held, err := holder.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := held.Exec(context.Background(), "SELECT id FROM a WHERE id = 1 FOR NO KEY UPDATE"); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	done := make(chan error, 1)
+	go func() {
+		tx, err := waiter.Begin(ctx)
+		if err == nil {
+			_, err = tx.Exec(ctx, "SELECT count(*) FROM b")
+		}
+		if err == nil {
+			_, err = tx.Exec(ctx, "SELECT id FROM a WHERE id = 1 FOR NO KEY UPDATE")
+		}
+		if err == nil {
+			err = tx.Rollback(ctx)
+		}
+		done <- err
+	}()
+	// Runs before the connections close: the waiter gets the row, or its
+	// context ends the wait.
+	t.Cleanup(func() {
+		defer cancel()
+		if err := held.Rollback(context.Background()); err != nil {
+			t.Error(err)
+		}
+		if err := <-done; err != nil {
+			t.Errorf("the waiting connection: %v", err)
+		}
+	})
+}
+
 // holdAndWait makes a second connection to url wait for an advisory lock
 // that a first one holds, until the test ends.
 func holdAndWait(t *testing.T, url string) {

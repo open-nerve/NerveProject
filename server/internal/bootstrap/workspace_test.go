@@ -116,7 +116,9 @@ func TestAnAccountDeactivatedMeanwhileCannotCreateAWorkspace(t *testing.T) {
 		res.Body = io.NopCloser(bytes.NewReader(body))
 		answered <- answer{res, body, err}
 	}()
-	pgtest.WaitForLockWait(t, pool, 5*time.Second) // the creation waits on alice's row
+	// The creation waits on alice's row. The app runs River's jobs on the
+	// same database, so only a wait for a row of users counts.
+	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
 	if err := deactivation.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
