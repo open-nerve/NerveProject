@@ -83,22 +83,41 @@ func TestDecideAtTheWorkspaceLevel(t *testing.T) {
 	}
 }
 
-// A workspace-level rule reads no project: facts about one change nothing.
+// A workspace-level rule reads no project: facts about one change nothing,
+// neither the answer nor the Grant, whether the project is one the caller
+// could see or not.
 func TestTheWorkspaceLevelIgnoresTheProject(t *testing.T) {
-	rule := domain.Rule{Level: domain.LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}}
+	admins := domain.Rule{Level: domain.LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}}
 	p := &domain.Project{Public: true, Member: admin}
-	if _, err := domain.Decide(rule, domain.Facts{Workspace: member, Project: p}); outcomeOf(t, err) != forbidden {
+	if _, err := domain.Decide(admins, domain.Facts{Workspace: member, Project: p}); outcomeOf(t, err) != forbidden {
 		t.Errorf("a member who administers a project: %v, want forbidden", err)
+	}
+	every := domain.Rule{Level: domain.LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
+	for _, tt := range []struct {
+		name string
+		p    *domain.Project
+	}{
+		{"a private project he is not a member of", &domain.Project{}},
+		{"a public project he administers", &domain.Project{Public: true, Member: admin}},
+	} {
+		grant, err := domain.Decide(every, domain.Facts{Workspace: member, Project: tt.p})
+		if err != nil || grant != (shared.Grant{WorkspaceRole: shared.RoleMember}) {
+			t.Errorf("a member, %s: Decide() = %+v, %v; want the workspace role 15 alone", tt.name, grant, err)
+		}
 	}
 }
 
 // The columns of M3 design 9.2's project-level table, as the ports report
 // them: PA, PM and PG are project admin, member and guest (workspace member,
-// member, guest); PM+WA a project member who is the workspace's admin; WA-,
-// WM- and WG- a workspace admin, member and guest who are not project
-// members; P-before a workspace member who left a private project where he
-// was its admin; X a caller who is not an active workspace member, though
-// his project membership is still active.
+// member, guest); WM demoted to PG a workspace member whose project role is
+// guest (3.5), who counts as PG: the project role decides; PM+WA a project
+// member who is the workspace's admin; WA-, WM- and WG- a workspace admin,
+// member and guest who are not project members; P-before a workspace member
+// who left a private project where he was its admin, and P-before public
+// the same on a public project, who counts as WM- public (9.2's note); X a
+// caller who is not an active workspace member, though his project
+// membership is still active. A membership that is not active keeps the
+// role of its row, as in workspaceIdentities: only Active may count.
 var projectIdentities = []struct {
 	name   string
 	ws     domain.Membership
@@ -108,6 +127,7 @@ var projectIdentities = []struct {
 	{"PA", member, false, admin},
 	{"PM", member, false, member},
 	{"PG", guest, false, guest},
+	{"WM demoted to PG", member, false, guest},
 	{"PM+WA", admin, false, member},
 	{"WA- private", admin, false, none},
 	{"WM- public", member, true, none},
@@ -115,7 +135,8 @@ var projectIdentities = []struct {
 	{"WG- public", guest, true, none},
 	{"WG- private", guest, false, none},
 	{"P-before", member, false, domain.Membership{Active: false, Role: shared.RoleAdmin}},
-	{"X", none, true, admin},
+	{"P-before public", member, true, domain.Membership{Active: false, Role: shared.RoleAdmin}},
+	{"X", domain.Membership{Active: false, Role: shared.RoleMember}, true, admin},
 	// 10 lies between the roles and 25 above them: seeing is by set, never
 	// by order.
 	{"workspace role outside the three, public", domain.Membership{Active: true, Role: 10}, true, none},
@@ -134,15 +155,15 @@ func TestDecideAtTheProjectLevels(t *testing.T) {
 	}{
 		// updateProject, addProjectMembers, createState… (9.2)
 		{"project admins", domain.Rule{Level: domain.LevelProject, Roles: all[:1]},
-			[]outcome{ok, no, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, no, no, no, ok, no, no, hidden, hidden, hidden, hidden, no, hidden, hidden, hidden, no, no}},
 		{"project admins and members", domain.Rule{Level: domain.LevelProject, Roles: all[:2]},
-			[]outcome{ok, ok, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, ok, no, no, ok, no, no, hidden, hidden, hidden, hidden, no, hidden, hidden, hidden, no, no}},
 		// listStates, listLabels, getProjectPreferences… (9.2)
 		{"every project role", domain.Rule{Level: domain.LevelProject, Roles: all},
-			[]outcome{ok, ok, ok, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, ok, ok, ok, ok, no, no, hidden, hidden, hidden, hidden, no, hidden, hidden, hidden, no, no}},
 		// getProject (9.2)
 		{"seeing the project", domain.Rule{Level: domain.LevelVisible},
-			[]outcome{ok, ok, ok, ok, ok, ok, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, ok, ok, ok, ok, ok, ok, hidden, hidden, hidden, hidden, ok, hidden, hidden, hidden, no, no}},
 	}
 	for _, tt := range tests {
 		for i, id := range projectIdentities {
@@ -171,7 +192,8 @@ func TestDecideAtTheProjectLevels(t *testing.T) {
 // three sees no project it is not a member of, public or private (404, as
 // the unknown-role public identities); a caller who is an active member of
 // the project sees it and is refused (403, as the unknown-role project admin
-// and project member).
+// and project member), the workspace's admin too: being the workspace's
+// admin exempts no role from the three.
 func TestRolesOutsideTheThreeAreAllowedNothing(t *testing.T) {
 	// Every gap between the three, their edges and the smallint's ends.
 	unknown := []shared.Role{-32768, -1, 0, 1, 4, 6, 10, 14, 16, 17, 19, 21, 25, 100, 32767}
@@ -210,6 +232,9 @@ func TestRolesOutsideTheThreeAreAllowedNothing(t *testing.T) {
 		{"the project role of a workspace member", func(r shared.Role, public bool) domain.Facts {
 			return domain.Facts{Workspace: member, Project: &domain.Project{Public: public, Member: active(r)}}
 		}, "", forbidden},
+		{"the project role of the workspace's admin", func(r shared.Role, public bool) domain.Facts {
+			return domain.Facts{Workspace: admin, Project: &domain.Project{Public: public, Member: active(r)}}
+		}, "", forbidden},
 	}
 	for _, nr := range rules {
 		for _, pos := range positions {
@@ -233,27 +258,44 @@ func TestRolesOutsideTheThreeAreAllowedNothing(t *testing.T) {
 }
 
 // The Grant carries the roles the decision read, and ProjectAdmin for a
-// project member who is its admin or the workspace's.
+// project member who is its admin or the workspace's; a membership that is
+// not active gives no project role. It is the same Grant at every level that
+// allows the caller: LevelVisible, and for a project member LevelProject,
+// by his project role or as the workspace's admin.
 func TestTheGrantCarriesTheRoles(t *testing.T) {
 	visible := domain.Rule{Level: domain.LevelVisible}
+	everyRole := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
+	admins := domain.Rule{Level: domain.LevelProject, Roles: []shared.Role{shared.RoleAdmin}}
 	tests := []struct {
-		name string
-		ws   domain.Membership
-		p    domain.Project
-		want shared.Grant
+		name  string
+		ws    domain.Membership
+		p     domain.Project
+		rules []domain.Rule // each allows the caller
+		want  shared.Grant
 	}{
-		{"PA", member, domain.Project{Member: admin}, shared.Grant{WorkspaceRole: 15, ProjectRole: 20, ProjectAdmin: true}},
-		{"PM", member, domain.Project{Member: member}, shared.Grant{WorkspaceRole: 15, ProjectRole: 15}},
-		{"PG", guest, domain.Project{Member: guest}, shared.Grant{WorkspaceRole: 5, ProjectRole: 5}},
-		{"PM+WA", admin, domain.Project{Member: member}, shared.Grant{WorkspaceRole: 20, ProjectRole: 15, ProjectAdmin: true}},
-		{"WA-", admin, domain.Project{}, shared.Grant{WorkspaceRole: 20}},
-		{"WM- public", member, domain.Project{Public: true}, shared.Grant{WorkspaceRole: 15}},
+		{"PA", member, domain.Project{Member: admin}, []domain.Rule{visible, everyRole, admins},
+			shared.Grant{WorkspaceRole: 15, ProjectRole: 20, ProjectAdmin: true}},
+		{"PM", member, domain.Project{Member: member}, []domain.Rule{visible, everyRole},
+			shared.Grant{WorkspaceRole: 15, ProjectRole: 15}},
+		{"PG", guest, domain.Project{Member: guest}, []domain.Rule{visible, everyRole},
+			shared.Grant{WorkspaceRole: 5, ProjectRole: 5}},
+		// admins allows him as the workspace's admin, not by his project role.
+		{"PM+WA", admin, domain.Project{Member: member}, []domain.Rule{visible, everyRole, admins},
+			shared.Grant{WorkspaceRole: 20, ProjectRole: 15, ProjectAdmin: true}},
+		{"WA-", admin, domain.Project{}, []domain.Rule{visible},
+			shared.Grant{WorkspaceRole: 20}},
+		{"WM- public", member, domain.Project{Public: true}, []domain.Rule{visible},
+			shared.Grant{WorkspaceRole: 15}},
+		{"P-before public", member, domain.Project{Public: true, Member: domain.Membership{Active: false, Role: shared.RoleAdmin}}, []domain.Rule{visible},
+			shared.Grant{WorkspaceRole: 15}},
 	}
 	for _, tt := range tests {
-		p := tt.p
-		grant, err := domain.Decide(visible, domain.Facts{Workspace: tt.ws, Project: &p})
-		if err != nil || grant != tt.want {
-			t.Errorf("%s: Decide() = %+v, %v; want %+v", tt.name, grant, err, tt.want)
+		for _, rule := range tt.rules {
+			p := tt.p
+			grant, err := domain.Decide(rule, domain.Facts{Workspace: tt.ws, Project: &p})
+			if err != nil || grant != tt.want {
+				t.Errorf("%s, level %d, roles %v: Decide() = %+v, %v; want %+v", tt.name, rule.Level, rule.Roles, grant, err, tt.want)
+			}
 		}
 	}
 }

@@ -45,11 +45,13 @@ var rules = map[shared.Action]Rule{
 	"workspace.read": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
-// RuleFor returns a copy of the row of action, so a caller cannot change
-// the table; ok is false when the table has none.
+// RuleFor returns a copy of the row of action, every field of it and its
+// roles cloned, so a caller cannot change the table; ok is false when the
+// table has none.
 func RuleFor(action shared.Action) (Rule, bool) {
 	r, ok := rules[action]
-	return Rule{Level: r.Level, Roles: slices.Clone(r.Roles)}, ok
+	r.Roles = slices.Clone(r.Roles)
+	return r, ok
 }
 
 // RuleKeys lists the actions the table has a row for, sorted.
