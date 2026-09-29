@@ -16,6 +16,7 @@ import (
 
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -176,13 +177,13 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // prepareMatrix fills a database for the matrix. Through the API, an
 // account for each column, registered for its token. Through the workspace
 // store, the workspace acme with its admin, member, guest and the member
-// later removed; the workspace gone with its admin; and the workspace
-// other, whose admin was never a member of acme and where the removed
-// member is still active, so that a role read in the wrong workspace lets
-// either into acme. Through SQL, until the stores of P5 and P2 replace it:
-// the removed member's membership of acme ended, and gone's workspace row
-// alone soft-deleted. Everything that connected to the database is closed
-// when it returns, so that it can be copied.
+// later removed, and the admin's display settings there; the workspace gone
+// with its admin; and the workspace other, whose admin was never a member of
+// acme and where the removed member is still active, so that a role read in
+// the wrong workspace lets either into acme. Through SQL, until the stores
+// of P5 and P2 replace it: the removed member's membership of acme ended,
+// and gone's workspace row alone soft-deleted. Everything that connected to
+// the database is closed when it returns, so that it can be copied.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}}
@@ -206,6 +207,8 @@ func prepareMatrix(t *testing.T) matrixData {
 		seed.join(acme, callerMember, shared.RoleMember)
 		seed.join(acme, callerGuest, shared.RoleGuest)
 		seed.join(acme, callerRemoved, shared.RoleMember)
+		tabbed, three := "TABBED", 3
+		seed.preferences(acme, callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
 		gone := seed.workspace("gone", callerDeleted)
 		seed.join(gone, callerDeleted, shared.RoleAdmin)
 		other := seed.workspace("other", callerNever)
@@ -253,6 +256,15 @@ func (s matrixSeed) join(workspace uuid.UUID, c caller, role shared.Role) {
 	s.t.Helper()
 	if err := s.store.CreateMember(context.Background(), workspaceapp.MemberRow{
 		ID: uuid.NewV7(), WorkspaceID: workspace, MemberID: s.ids[c], Role: role, CreatedBy: s.ids[c], Now: s.now,
+	}); err != nil {
+		s.t.Fatal(err)
+	}
+}
+
+func (s matrixSeed) preferences(workspace uuid.UUID, c caller, p workspacedomain.PreferencesPatch) {
+	s.t.Helper()
+	if _, err := s.store.UpsertPreferences(context.Background(), workspaceapp.PreferencesRow{
+		ID: uuid.NewV7(), WorkspaceID: workspace, UserID: s.ids[c], Patch: p, Now: s.now,
 	}); err != nil {
 		s.t.Fatal(err)
 	}

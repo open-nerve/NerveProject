@@ -44,6 +44,9 @@ type Rule struct {
 var rules = map[shared.Action]Rule{
 	"workspace.read":   {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	"workspace.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
+	// One's own display settings: every active member (M3 design 9.2).
+	"workspace_preferences.read":   {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"workspace_preferences.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

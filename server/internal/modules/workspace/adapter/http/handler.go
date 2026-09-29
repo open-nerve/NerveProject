@@ -32,6 +32,16 @@ type UpdateWorkspaceUseCase interface {
 	Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error)
 }
 
+// GetPreferencesUseCase is app.GetWorkspacePreferences.
+type GetPreferencesUseCase interface {
+	Execute(ctx context.Context, slug string) (domain.Preferences, error)
+}
+
+// UpdatePreferencesUseCase is app.UpdateWorkspacePreferences.
+type UpdatePreferencesUseCase interface {
+	Execute(ctx context.Context, slug string, p domain.PreferencesPatch) (domain.Preferences, error)
+}
+
 // CheckSlugUseCase is app.CheckSlug.
 type CheckSlugUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.SlugReason, error)
@@ -39,11 +49,13 @@ type CheckSlugUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListWorkspaces  ListWorkspacesUseCase
-	CreateWorkspace CreateWorkspaceUseCase
-	GetWorkspace    GetWorkspaceUseCase
-	UpdateWorkspace UpdateWorkspaceUseCase
-	CheckSlug       CheckSlugUseCase
+	ListWorkspaces    ListWorkspacesUseCase
+	CreateWorkspace   CreateWorkspaceUseCase
+	GetWorkspace      GetWorkspaceUseCase
+	UpdateWorkspace   UpdateWorkspaceUseCase
+	CheckSlug         CheckSlugUseCase
+	GetPreferences    GetPreferencesUseCase
+	UpdatePreferences UpdatePreferencesUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

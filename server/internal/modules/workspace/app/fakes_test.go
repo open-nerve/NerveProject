@@ -80,7 +80,13 @@ type fakeWorkspaces struct {
 	slugErrs   map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
 	lockErrs   map[string]error    // by slug, for the locks
 	members    []app.MemberRow
+	prefs      map[prefsKey]domain.Preferences
+	prefsErr   error // for Preferences and UpsertPreferences
+	upserts    []app.PreferencesRow
 }
+
+// prefsKey is one (workspace, user) pair of fakeWorkspaces' preferences.
+type prefsKey struct{ workspace, user uuid.UUID }
 
 func (f *fakeWorkspaces) CreateWorkspace(ctx context.Context, w app.WorkspaceRow) (domain.Workspace, error) {
 	size := "<nil>"
@@ -173,6 +179,45 @@ func (f *fakeWorkspaces) UpdateWorkspace(ctx context.Context, id uuid.UUID, p do
 	}
 	w.UpdatedAt = now
 	return w, nil
+}
+
+func (f *fakeWorkspaces) ShareWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	f.log.add(ctx, "ShareWorkspaceBySlug %s", slug)
+	return f.lock(slug)
+}
+
+func (f *fakeWorkspaces) Preferences(ctx context.Context, workspaceID, userID uuid.UUID) (domain.Preferences, bool, error) {
+	f.log.add(ctx, "Preferences %s %s", workspaceID, userID)
+	if f.prefsErr != nil {
+		return domain.Preferences{}, false, fmt.Errorf("read workspace preferences: %w", f.prefsErr)
+	}
+	p, found := f.prefs[prefsKey{workspaceID, userID}]
+	return p, found, nil
+}
+
+// UpsertPreferences logs the row without its id, which the use case makes
+// anew each time; upserts keeps it whole.
+func (f *fakeWorkspaces) UpsertPreferences(ctx context.Context, r app.PreferencesRow) (domain.Preferences, error) {
+	var limit *string
+	if r.Patch.NavigationProjectLimit != nil {
+		limit = ptr(fmt.Sprint(*r.Patch.NavigationProjectLimit))
+	}
+	f.log.add(ctx, "UpsertPreferences %s %s mode=%s limit=%s at %s", r.WorkspaceID, r.UserID, show(r.Patch.NavigationControl), show(limit),
+		r.Now.Format(time.RFC3339Nano))
+	f.upserts = append(f.upserts, r)
+	if f.prefsErr != nil {
+		return domain.Preferences{}, fmt.Errorf("write workspace preferences: %w", f.prefsErr)
+	}
+	key := prefsKey{r.WorkspaceID, r.UserID}
+	p, found := f.prefs[key]
+	if !found {
+		p = domain.DefaultPreferences()
+	}
+	if f.prefs == nil {
+		f.prefs = map[prefsKey]domain.Preferences{}
+	}
+	f.prefs[key] = p.Apply(r.Patch)
+	return f.prefs[key], nil
 }
 
 // show is *s quoted, or <nil>.

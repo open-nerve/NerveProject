@@ -326,6 +326,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/me/workspaces/{slug}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the caller's display settings in a workspace
+         * @description The caller's own settings of the sidebar's project navigation in the workspace, for any active member. Until the caller first changes them they are the defaults, ACCORDION and 10, and reading them writes nothing. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+         */
+        get: operations["getWorkspacePreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's display settings in a workspace
+         * @description The fields given change and the others stay; the first change stores the caller's settings, the defaults with the change applied. The values are checked before the workspace is looked at (validation_failed). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+         */
+        patch: operations["updateWorkspacePreferences"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -638,6 +665,21 @@ export interface components {
              */
             reason?: "invalid" | "reserved" | "taken";
         };
+        /**
+         * @description How the sidebar shows the projects, as sections one under another or as tabs.
+         * @enum {string}
+         */
+        NavigationControlPreference: "ACCORDION" | "TABBED";
+        /** @description How many projects the sidebar shows before "more"; 0 shows them all. */
+        NavigationProjectLimit: number;
+        WorkspacePreferences: {
+            navigation_control_preference: components["schemas"]["NavigationControlPreference"];
+            navigation_project_limit: components["schemas"]["NavigationProjectLimit"];
+        };
+        WorkspacePreferencesUpdate: {
+            navigation_control_preference?: components["schemas"]["NavigationControlPreference"];
+            navigation_project_limit?: components["schemas"]["NavigationProjectLimit"];
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -698,6 +740,10 @@ export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
 export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
+export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
+export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
+export type WorkspacePreferences = components['schemas']['WorkspacePreferences'];
+export type WorkspacePreferencesUpdate = components['schemas']['WorkspacePreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -1167,6 +1213,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SlugAvailability"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getWorkspacePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's settings in the workspace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspacePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspacePreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's settings in the workspace, as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePreferences"];
                 };
             };
             default: components["responses"]["Problem"];

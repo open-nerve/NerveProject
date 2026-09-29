@@ -19,6 +19,24 @@ import (
 	externalRef0 "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apigen"
 )
 
+// Defines values for NavigationControlPreference.
+const (
+	NavigationControlPreferenceACCORDION NavigationControlPreference = "ACCORDION"
+	NavigationControlPreferenceTABBED    NavigationControlPreference = "TABBED"
+)
+
+// Valid indicates whether the value is a known member of the NavigationControlPreference enum.
+func (e NavigationControlPreference) Valid() bool {
+	switch e {
+	case NavigationControlPreferenceACCORDION:
+		return true
+	case NavigationControlPreferenceTABBED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OrganizationSize.
 const (
 	OrganizationSizeJustMyself OrganizationSize = "Just myself"
@@ -91,6 +109,12 @@ func (e WorkspaceRole) Valid() bool {
 	}
 }
 
+// NavigationControlPreference How the sidebar shows the projects, as sections one under another or as tabs.
+type NavigationControlPreference string
+
+// NavigationProjectLimit How many projects the sidebar shows before "more"; 0 shows them all.
+type NavigationProjectLimit = int
+
 // OrganizationSize The size of the organization, as the web app's form offers it.
 type OrganizationSize string
 
@@ -151,6 +175,24 @@ type WorkspaceList struct {
 	Data []Workspace `json:"data"`
 }
 
+// WorkspacePreferences defines model for WorkspacePreferences.
+type WorkspacePreferences struct {
+	// NavigationControlPreference How the sidebar shows the projects, as sections one under another or as tabs.
+	NavigationControlPreference NavigationControlPreference `json:"navigation_control_preference"`
+
+	// NavigationProjectLimit How many projects the sidebar shows before "more"; 0 shows them all.
+	NavigationProjectLimit NavigationProjectLimit `json:"navigation_project_limit"`
+}
+
+// WorkspacePreferencesUpdate defines model for WorkspacePreferencesUpdate.
+type WorkspacePreferencesUpdate struct {
+	// NavigationControlPreference How the sidebar shows the projects, as sections one under another or as tabs.
+	NavigationControlPreference *NavigationControlPreference `json:"navigation_control_preference,omitempty"`
+
+	// NavigationProjectLimit How many projects the sidebar shows before "more"; 0 shows them all.
+	NavigationProjectLimit *NavigationProjectLimit `json:"navigation_project_limit,omitempty"`
+}
+
 // WorkspaceRole A member's role in a workspace, 5 guest, 15 member, 20 admin.
 type WorkspaceRole int
 
@@ -172,6 +214,9 @@ type Slug = string
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// UpdateWorkspacePreferencesJSONRequestBody defines body for UpdateWorkspacePreferences for application/json ContentType.
+type UpdateWorkspacePreferencesJSONRequestBody = WorkspacePreferencesUpdate
+
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = WorkspaceCreate
 
@@ -180,6 +225,12 @@ type UpdateWorkspaceJSONRequestBody = WorkspaceUpdate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetWorkspacePreferences Read the caller's display settings in a workspace
+	// (GET /api/v0/me/workspaces/{slug}/preferences)
+	GetWorkspacePreferences(w http.ResponseWriter, r *http.Request, slug Slug)
+	// UpdateWorkspacePreferences Change the caller's display settings in a workspace
+	// (PATCH /api/v0/me/workspaces/{slug}/preferences)
+	UpdateWorkspacePreferences(w http.ResponseWriter, r *http.Request, slug Slug)
 	// CheckWorkspaceSlug Tell whether a slug can name a new workspace
 	// (GET /api/v0/workspace-slugs/{slug})
 	CheckWorkspaceSlug(w http.ResponseWriter, r *http.Request, slug Slug)
@@ -205,6 +256,58 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetWorkspacePreferences operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkspacePreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkspacePreferences(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWorkspacePreferences operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWorkspacePreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWorkspacePreferences(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CheckWorkspaceSlug operation middleware
 func (siw *ServerInterfaceWrapper) CheckWorkspaceSlug(w http.ResponseWriter, r *http.Request) {
@@ -437,6 +540,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.GetWorkspace)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.UpdateWorkspace)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.GetWorkspacePreferences)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.UpdateWorkspacePreferences)
 
 	return m
 }
@@ -449,6 +554,99 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type GetWorkspacePreferencesRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type GetWorkspacePreferencesResponseObject interface {
+	VisitGetWorkspacePreferencesResponse(w http.ResponseWriter) error
+}
+
+type GetWorkspacePreferences200JSONResponse WorkspacePreferences
+
+func (response GetWorkspacePreferences200JSONResponse) VisitGetWorkspacePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse) VisitGetWorkspacePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspacePreferencesRequestObject struct {
+	Slug Slug `json:"slug"`
+	Body *UpdateWorkspacePreferencesJSONRequestBody
+}
+
+type UpdateWorkspacePreferencesResponseObject interface {
+	VisitUpdateWorkspacePreferencesResponse(w http.ResponseWriter) error
+}
+
+type UpdateWorkspacePreferences200JSONResponse WorkspacePreferences
+
+func (response UpdateWorkspacePreferences200JSONResponse) VisitUpdateWorkspacePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateWorkspacePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type CheckWorkspaceSlugRequestObject struct {
@@ -683,6 +881,12 @@ func (response UpdateWorkspacedefaultApplicationProblemPlusJSONResponse) VisitUp
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetWorkspacePreferences Read the caller's display settings in a workspace
+	// (GET /api/v0/me/workspaces/{slug}/preferences)
+	GetWorkspacePreferences(ctx context.Context, request GetWorkspacePreferencesRequestObject) (GetWorkspacePreferencesResponseObject, error)
+	// UpdateWorkspacePreferences Change the caller's display settings in a workspace
+	// (PATCH /api/v0/me/workspaces/{slug}/preferences)
+	UpdateWorkspacePreferences(ctx context.Context, request UpdateWorkspacePreferencesRequestObject) (UpdateWorkspacePreferencesResponseObject, error)
 	// CheckWorkspaceSlug Tell whether a slug can name a new workspace
 	// (GET /api/v0/workspace-slugs/{slug})
 	CheckWorkspaceSlug(ctx context.Context, request CheckWorkspaceSlugRequestObject) (CheckWorkspaceSlugResponseObject, error)
@@ -737,6 +941,65 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetWorkspacePreferences operation middleware
+func (sh *strictHandler) GetWorkspacePreferences(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request GetWorkspacePreferencesRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWorkspacePreferences(ctx, request.(GetWorkspacePreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWorkspacePreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWorkspacePreferencesResponseObject); ok {
+		if err := validResponse.VisitGetWorkspacePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateWorkspacePreferences operation middleware
+func (sh *strictHandler) UpdateWorkspacePreferences(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request UpdateWorkspacePreferencesRequestObject
+
+	request.Slug = slug
+
+	var body UpdateWorkspacePreferencesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateWorkspacePreferences(ctx, request.(UpdateWorkspacePreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateWorkspacePreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateWorkspacePreferencesResponseObject); ok {
+		if err := validResponse.VisitUpdateWorkspacePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // CheckWorkspaceSlug operation middleware

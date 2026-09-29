@@ -462,6 +462,54 @@ paths:
                 $ref: '#/components/schemas/SlugAvailability'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/me/workspaces/{slug}/preferences:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: getWorkspacePreferences
+      tags:
+        - workspace
+      summary: Read the caller's display settings in a workspace
+      description: The caller's own settings of the sidebar's project navigation in the workspace, for any active member. Until the caller first changes them they are the defaults, ACCORDION and 10, and reading them writes nothing. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      responses:
+        '200':
+          description: The caller's settings in the workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateWorkspacePreferences
+      tags:
+        - workspace
+      summary: Change the caller's display settings in a workspace
+      description: The fields given change and the others stay; the first change stores the caller's settings, the defaults with the change applied. The values are checked before the workspace is looked at (validation_failed). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspacePreferencesUpdate'
+      responses:
+        '200':
+          description: The caller's settings in the workspace, as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearer:
@@ -1077,6 +1125,36 @@ components:
             - invalid
             - reserved
             - taken
+    NavigationControlPreference:
+      description: How the sidebar shows the projects, as sections one under another or as tabs.
+      type: string
+      enum:
+        - ACCORDION
+        - TABBED
+    NavigationProjectLimit:
+      description: How many projects the sidebar shows before "more"; 0 shows them all.
+      type: integer
+      minimum: 0
+      maximum: 2147483647
+    WorkspacePreferences:
+      type: object
+      additionalProperties: false
+      required:
+        - navigation_control_preference
+        - navigation_project_limit
+      properties:
+        navigation_control_preference:
+          $ref: '#/components/schemas/NavigationControlPreference'
+        navigation_project_limit:
+          $ref: '#/components/schemas/NavigationProjectLimit'
+    WorkspacePreferencesUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        navigation_control_preference:
+          $ref: '#/components/schemas/NavigationControlPreference'
+        navigation_project_limit:
+          $ref: '#/components/schemas/NavigationProjectLimit'
   responses:
     Problem:
       description: Error (RFC 9457 problem details).
