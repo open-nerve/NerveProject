@@ -9,7 +9,7 @@ import { nerveWorkspaces, nerveWorkspacesFails } from "../../fixtures/workspaces
 // workspaces come to be while creation is switched off. There is no page
 // version.
 
-test("W10: nerve workspaces create makes the account of the address the workspace's admin, creation switched off or not; a taken slug, an unknown or a deactivated account adds nothing", async ({
+test("W10: with creation switched off, nerve workspaces create makes the account of the address the admin and only member of the workspace; a taken slug, an unknown or a deactivated account adds nothing", async ({
   api,
   db,
 }, testInfo) => {
@@ -27,7 +27,8 @@ test("W10: nerve workspaces create makes the account of the address the workspac
   );
 
   expect(line).toBe(`created workspace ${slug} with admin ${email}\n`);
-  const id = await expectWorkspaceCreated(db, email, { name: "Acme", slug, organization_size: null, timezone: "UTC" });
+  const acme = { name: "Acme", slug, organization_size: null, timezone: "UTC" };
+  const id = await expectWorkspaceCreated(db, email, acme);
   await createWorkspace(api, (await register(api, emailFor(testInfo, "other"))).access_token, {
     name: "Other",
     slug: slugFor(testInfo, "other"),
@@ -54,4 +55,6 @@ test("W10: nerve workspaces create makes the account of the address the workspac
     "The account is deactivated."
   );
   await expectNoWorkspaceAdded(db, before);
+  // No refusal changed the workspace created first.
+  expect(await expectWorkspaceCreated(db, email, acme)).toBe(id);
 });

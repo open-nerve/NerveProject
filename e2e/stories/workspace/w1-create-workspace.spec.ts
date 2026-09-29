@@ -56,4 +56,6 @@ test("W1 (API): creating a workspace makes the caller its admin and only member;
   expect(refused.response.status).toBe(403);
   expect(refused.error?.code).toBe("workspace.creation_disabled");
   await expectNoWorkspaceAdded(db, before);
+  // No refusal changed the workspace created first.
+  expect(await expectWorkspaceCreated(db, email, body)).toBe(created.id);
 });
