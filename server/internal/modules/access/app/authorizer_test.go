@@ -16,7 +16,9 @@ type ctxKey struct{}
 type membership struct{ workspace, user uuid.UUID }
 
 // fakeRoles answers the role of each (workspace, user) it holds, and records
-// every call with the value of ctxKey in its context.
+// every call with the value of ctxKey in its context, "(none)" when the
+// context has none, so a context dropped on the way fails the call's
+// assertion rather than the fake.
 type fakeRoles struct {
 	roles map[membership]shared.Role
 	err   error
@@ -24,7 +26,11 @@ type fakeRoles struct {
 }
 
 func (f *fakeRoles) ActiveRole(ctx context.Context, workspaceID, userID uuid.UUID) (shared.Role, bool, error) {
-	f.calls = append(f.calls, workspaceID.String()+" "+userID.String()+" "+ctx.Value(ctxKey{}).(string))
+	value, ok := ctx.Value(ctxKey{}).(string)
+	if !ok {
+		value = "(none)"
+	}
+	f.calls = append(f.calls, workspaceID.String()+" "+userID.String()+" "+value)
 	if f.err != nil {
 		return 0, false, f.err
 	}
@@ -96,7 +102,7 @@ func TestAuthorizeRefusesAnActionWithoutARule(t *testing.T) {
 	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleAdmin}}
 	auth := app.NewAuthorizer(roles)
 	ctx := context.WithValue(context.Background(), ctxKey{}, "request")
-	grant, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "workspace.delete", shared.Target{WorkspaceID: w1})
+	grant, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "no.such.action", shared.Target{WorkspaceID: w1})
 	var se *shared.Error
 	if err == nil || errors.As(err, &se) || grant != (shared.Grant{}) {
 		t.Errorf("Authorize() = %+v, %v; want an internal error", grant, err)

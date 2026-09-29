@@ -114,16 +114,27 @@ var (
 // module creates (M2 design 3.14, M3 design 4.1). REFERENCES is not among
 // them: a foreign key to another module's table is allowed, since no query
 // can read across modules anyway. A DROP TABLE may name several tables.
+//
+// The rule reads these forms only. It does not see a table touched by a
+// policy (CREATE, ALTER or DROP POLICY … ON), COMMENT ON, TRUNCATE, a CREATE
+// TABLE … LIKE, INHERITS or PARTITION OF, a statement that names an index
+// without its table (ALTER INDEX, DROP INDEX), a data statement (INSERT,
+// UPDATE, DELETE) or a DO block; review catches those.
 var tableStatements = []struct {
 	verb string
 	re   *regexp.Regexp
+	// more: the regexp's second group is the ", t2, t3" after the first
+	// table, which DROP TABLE may name.
+	more bool
 }{
-	{"alters", regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?` + tableName)},
-	{"indexes", regexp.MustCompile(`(?i)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(?:` + ident +
+	{verb: "alters", re: regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?` + tableName)},
+	{verb: "indexes", re: regexp.MustCompile(`(?i)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(?:` + ident +
 		`\s+)?ON\s+(?:ONLY\s+)?` + tableName)},
-	{"puts a trigger on", regexp.MustCompile(`(?is)\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:CONSTRAINT\s+)?TRIGGER\s+` + ident +
+	{verb: "puts a trigger on", re: regexp.MustCompile(`(?is)\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:CONSTRAINT\s+)?TRIGGER\s+` + ident +
 		`\s.*?\bON\s+(?:ONLY\s+)?` + tableName)},
-	{"drops", regexp.MustCompile(`(?i)\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?` + tableName + `((?:\s*,\s*` + tableName + `)*)`)},
+	{verb: "alters a trigger on", re: regexp.MustCompile(`(?i)\bALTER\s+TRIGGER\s+` + ident + `\s+ON\s+` + tableName)},
+	{verb: "drops a trigger on", re: regexp.MustCompile(`(?i)\bDROP\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?` + ident + `\s+ON\s+` + tableName)},
+	{verb: "drops", re: regexp.MustCompile(`(?i)\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?` + tableName + `((?:\s*,\s*` + tableName + `)*)`), more: true},
 }
 
 // moreTables reads the ", t2, t3" after the first table of a DROP TABLE.
@@ -145,7 +156,7 @@ func touched(sql string) map[string][]string {
 	for _, st := range tableStatements {
 		for _, m := range st.re.FindAllStringSubmatch(sql, -1) {
 			names := []string{m[1]}
-			if len(m) > 2 {
+			if st.more {
 				for _, more := range moreTables.FindAllStringSubmatch(m[2], -1) {
 					names = append(names, more[1])
 				}
@@ -162,8 +173,9 @@ func touched(sql string) map[string][]string {
 
 // sqlcScopeViolations checks, in M2 design 3.14's words:
 //   - migration files are named <version>_<module>_<content>.sql;
-//   - the target of every ALTER TABLE, CREATE [UNIQUE] INDEX, CREATE TRIGGER
-//     and DROP TABLE, quoted or not, is created by the file name's module
+//   - the target of every ALTER TABLE, CREATE [UNIQUE] INDEX, CREATE, ALTER
+//     and DROP TRIGGER, and DROP TABLE, quoted or not, is created by the
+//     file name's module
 //     (M3 design 4.1), so a migration belongs to the module that owns the
 //     table it changes; a table renamed into existence belongs to the module
 //     that renames it;

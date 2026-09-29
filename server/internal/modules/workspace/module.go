@@ -80,8 +80,8 @@ func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
 	httpadapter.Register(router, api, m.uc)
 }
 
-// Actions lists the module's actions: bootstrap holds the union of every
-// module's equal to access's rule table (M3 design 3.4).
+// Actions lists the module's actions: bootstrap's test holds the union of
+// every module's actions equal to access's rule table (M3 design 3.4).
 func Actions() []shared.Action {
 	return domain.Actions()
 }

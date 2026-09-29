@@ -292,6 +292,9 @@ func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 			"workspaces_slug_key",
 		},
 	}
+	// Either case can run first: each soft-deletes rows of its own table
+	// only, and neither key reads the other table (a membership of a deleted
+	// workspace still holds its key).
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, tt.insert)

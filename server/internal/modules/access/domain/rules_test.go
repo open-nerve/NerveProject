@@ -70,7 +70,7 @@ func TestRuleForReturnsACopy(t *testing.T) {
 // An action the table has no row for is found by no lookup: the Authorizer
 // refuses it.
 func TestAnActionWithoutARowHasNoRule(t *testing.T) {
-	for _, action := range []shared.Action{"", "workspace.delete", "WORKSPACE.READ", "workspace.read "} {
+	for _, action := range []shared.Action{"", "no.such.action", "WORKSPACE.READ", "workspace.read "} {
 		if rule, ok := domain.RuleFor(action); ok {
 			t.Errorf("RuleFor(%q) = %+v, want none", action, rule)
 		}

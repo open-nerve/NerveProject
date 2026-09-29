@@ -16,9 +16,10 @@ import (
 // serverPaths are the top-level path segments the server answers itself,
 // beside the web app's pages: the first segment of every route the
 // composition root registers but the web UI's "/", and each top-level
-// directory of the web files below which the web UI answers a missing file
-// with 404 instead of the page.
-func serverPaths(t *testing.T, a *app, webFiles fs.FS) []string {
+// directory of dirs below which a's router answers a missing file with 404
+// instead of the page. dirs only names the directories to probe: the router
+// serves the web UI a was built with, testWebUI (buildApp).
+func serverPaths(t *testing.T, a *app, dirs fs.FS) []string {
 	t.Helper()
 	paths := map[string]bool{}
 	for _, pattern := range a.router.Patterns() {
@@ -30,7 +31,7 @@ func serverPaths(t *testing.T, a *app, webFiles fs.FS) []string {
 			paths[segment] = true
 		}
 	}
-	entries, err := fs.ReadDir(webFiles, ".")
+	entries, err := fs.ReadDir(dirs, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,6 +54,14 @@ func serverPaths(t *testing.T, a *app, webFiles fs.FS) []string {
 // would have its pages under /api/, which the API answers.
 func TestTheReservedServerSlugsAreTheServersTopLevelPaths(t *testing.T) {
 	a := buildApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
+	// The probes below tell the page from a 404, so the router must serve
+	// the page: a web UI that answers every path with 404 would count every
+	// directory as the server's.
+	rec := httptest.NewRecorder()
+	a.router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Code != http.StatusOK || rec.Body.String() != testIndexHTML {
+		t.Fatalf("GET / = %d %q, want 200 with the test web UI's page", rec.Code, rec.Body)
+	}
 	got := serverPaths(t, a, testWebUI)
 	if want := slices.Sorted(slices.Values(workspace.ReservedSlugs().Server)); !slices.Equal(got, want) {
 		t.Errorf("the server answers the top-level paths %q; the reserved list's server section is %q", got, want)

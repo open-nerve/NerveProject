@@ -10,8 +10,8 @@ import (
 // module, asset, creates assets, which references users and has an index;
 // identity's own later migration alters users to reference assets; River's
 // migration belongs to no entry, and alters an unlogged table it creates,
-// puts a trigger on its table, and renames a table and drops it, as its real
-// one does.
+// puts a trigger on its table and drops it, and renames a table and drops
+// it, as its real one does.
 func sqlcBase() ([]sqlcEntry, []migrationFile, []string) {
 	entries := []sqlcEntry{
 		{
@@ -30,6 +30,7 @@ func sqlcBase() ([]sqlcEntry, []migrationFile, []string) {
 		{"00005_river_main_v2_to_v7.sql", "-- +goose Up\nCREATE TABLE river_job (id bigint);\nCREATE UNLOGGED TABLE river_leader (name text);\n" +
 			"ALTER TABLE river_job ADD COLUMN x int;\nALTER TABLE river_leader ADD COLUMN y int;\n" +
 			"CREATE TRIGGER river_notify\n    AFTER INSERT ON river_job\n    FOR EACH ROW EXECUTE PROCEDURE river_job_notify();\n" +
+			"DROP TRIGGER river_notify ON river_job;\n" +
 			"CREATE TABLE river_migration (version bigint);\nALTER TABLE river_migration\n    RENAME TO river_migration_old;\n" +
 			"CREATE UNIQUE INDEX ON river_job USING btree(id);\nDROP TABLE river_migration_old;\n"},
 		{"00020_asset_assets.sql", "-- +goose Up\nCREATE TABLE IF NOT EXISTS assets (id uuid PRIMARY KEY, created_by_id uuid REFERENCES users);\n" +
@@ -129,7 +130,7 @@ func TestSQLCScopeReportsViolations(t *testing.T) {
 			m[2].sql = strings.Replace(m[2].sql, "DROP TABLE assets;", "DROP TABLE IF EXISTS assets, users CASCADE;", 1)
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql drops users, which module identity creates: the migration belongs to identity"},
-		{"DROP TABLE of an unknown table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+		{"a quoted name that differs from users only in case", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
 			m[2].sql += `DROP TABLE "Users";`
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql drops Users, which no migration creates"},
@@ -149,6 +150,18 @@ func TestSQLCScopeReportsViolations(t *testing.T) {
 			m[2].sql += "ALTER TABLE users RENAME TO people;"
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"DROP TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "DROP TRIGGER IF EXISTS assets_touch ON public.users CASCADE;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql drops a trigger on users, which module identity creates: the migration belongs to identity"},
+		{"DROP TRIGGER of a quoted name, without IF EXISTS", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += `DROP TRIGGER "assets_touch" ON "users";`
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql drops a trigger on users, which module identity creates: the migration belongs to identity"},
+		{"ALTER TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "ALTER TRIGGER assets_touch ON users RENAME TO assets_touch_email;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters a trigger on users, which module identity creates: the migration belongs to identity"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
