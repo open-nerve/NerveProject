@@ -25,3 +25,21 @@ WHERE w.slug = sqlc.arg(slug) AND w.deleted_at IS NULL;
 
 -- name: SlugTaken :one
 SELECT EXISTS (SELECT 1 FROM workspaces WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL);
+
+-- name: LockWorkspaceBySlug :one
+-- The parent lock of a write that changes the workspace row itself or a membership (M3 design 3.6 convention 2):
+-- FOR NO KEY UPDATE waits for another FOR NO KEY UPDATE and for FOR SHARE. After a wait, Postgres evaluates
+-- deleted_at IS NULL again on the row's newest version, so a workspace deleted meanwhile reads no row.
+SELECT id
+FROM workspaces
+WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
+FOR NO KEY UPDATE;
+
+-- name: ShareWorkspaceBySlug :one
+-- The parent lock of a write that adds or changes a row under the workspace (M3 design 3.6 convention 2): FOR SHARE
+-- does not wait for another FOR SHARE, and it holds off the workspace's deletion, which the FOR KEY SHARE of a
+-- foreign key check does not.
+SELECT id
+FROM workspaces
+WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
+FOR SHARE;

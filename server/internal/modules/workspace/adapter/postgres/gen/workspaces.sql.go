@@ -117,6 +117,40 @@ func (q *Queries) ListWorkspaces(ctx context.Context, userID uuid.UUID) ([]ListW
 	return items, nil
 }
 
+const lockWorkspaceBySlug = `-- name: LockWorkspaceBySlug :one
+SELECT id
+FROM workspaces
+WHERE slug = $1 AND deleted_at IS NULL
+FOR NO KEY UPDATE
+`
+
+// The parent lock of a write that changes the workspace row itself or a membership (M3 design 3.6 convention 2):
+// FOR NO KEY UPDATE waits for another FOR NO KEY UPDATE and for FOR SHARE. After a wait, Postgres evaluates
+// deleted_at IS NULL again on the row's newest version, so a workspace deleted meanwhile reads no row.
+func (q *Queries) LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockWorkspaceBySlug, slug)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const shareWorkspaceBySlug = `-- name: ShareWorkspaceBySlug :one
+SELECT id
+FROM workspaces
+WHERE slug = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+// The parent lock of a write that adds or changes a row under the workspace (M3 design 3.6 convention 2): FOR SHARE
+// does not wait for another FOR SHARE, and it holds off the workspace's deletion, which the FOR KEY SHARE of a
+// foreign key check does not.
+func (q *Queries) ShareWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, shareWorkspaceBySlug, slug)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const slugTaken = `-- name: SlugTaken :one
 SELECT EXISTS (SELECT 1 FROM workspaces WHERE slug = $1 AND deleted_at IS NULL)
 `
