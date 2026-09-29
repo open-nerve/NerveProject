@@ -197,6 +197,51 @@ func (q *Queries) LockUserForCredentials(ctx context.Context, id uuid.UUID) (Loc
 	return i, err
 }
 
+const shareAccount = `-- name: ShareAccount :one
+SELECT id, email, is_active
+FROM users
+WHERE id = $1
+FOR SHARE
+`
+
+type ShareAccountRow struct {
+	ID       uuid.UUID
+	Email    string
+	IsActive bool
+}
+
+// Accounts (M3 design 6.5): the first lock of a transaction that gives the account a workspace
+// membership (3.6 conventions 1 and 6). FOR SHARE conflicts with deactivation's FOR NO KEY UPDATE,
+// so the two run one after the other and is_active is read under the lock; two FOR SHARE do not
+// wait for each other.
+func (q *Queries) ShareAccount(ctx context.Context, id uuid.UUID) (ShareAccountRow, error) {
+	row := q.db.QueryRow(ctx, shareAccount, id)
+	var i ShareAccountRow
+	err := row.Scan(&i.ID, &i.Email, &i.IsActive)
+	return i, err
+}
+
+const shareAccountByEmail = `-- name: ShareAccountByEmail :one
+SELECT id, email, is_active
+FROM users
+WHERE email = $1
+FOR SHARE
+`
+
+type ShareAccountByEmailRow struct {
+	ID       uuid.UUID
+	Email    string
+	IsActive bool
+}
+
+// ShareAccount for the server administrator's commands, which name the account by its address.
+func (q *Queries) ShareAccountByEmail(ctx context.Context, email string) (ShareAccountByEmailRow, error) {
+	row := q.db.QueryRow(ctx, shareAccountByEmail, email)
+	var i ShareAccountByEmailRow
+	err := row.Scan(&i.ID, &i.Email, &i.IsActive)
+	return i, err
+}
+
 const updatePasswordHash = `-- name: UpdatePasswordHash :exec
 UPDATE users
 SET password = $1, updated_at = $2

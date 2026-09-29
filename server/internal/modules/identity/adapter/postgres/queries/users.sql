@@ -71,3 +71,20 @@ WHERE id = sqlc.arg(id);
 UPDATE users
 SET is_active = true, updated_at = sqlc.arg(now)
 WHERE id = sqlc.arg(id);
+
+-- name: ShareAccount :one
+-- Accounts (M3 design 6.5): the first lock of a transaction that gives the account a workspace
+-- membership (3.6 conventions 1 and 6). FOR SHARE conflicts with deactivation's FOR NO KEY UPDATE,
+-- so the two run one after the other and is_active is read under the lock; two FOR SHARE do not
+-- wait for each other.
+SELECT id, email, is_active
+FROM users
+WHERE id = sqlc.arg(id)
+FOR SHARE;
+
+-- name: ShareAccountByEmail :one
+-- ShareAccount for the server administrator's commands, which name the account by its address.
+SELECT id, email, is_active
+FROM users
+WHERE email = sqlc.arg(email)
+FOR SHARE;
