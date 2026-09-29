@@ -45,7 +45,7 @@ M3 合并时：
 
 ## 处理结果（M3/P1）
 
-- **保留的工作区地址，服务端一侧**（完成）：服务端的名单三段（M3 设计 3.10）；Plane 的产品词逐个有结论：都不保留，名单只收应用的顶层路由段和 `public/` 的顶层目录、服务端自己回答的顶层路径、四个预留的名字。`TestCheckSlug`（`server/internal/modules/workspace/domain/workspace_test.go`）核对产品词可以用作 slug。
+- **保留的工作区地址，服务端一侧**（完成）：服务端的名单三段（M3 设计 3.10）；Plane 的产品词逐个有结论：都不保留，名单只收应用的顶层路由段和 `public/` 的顶层目录、服务端自己回答的顶层路径、四个预留的名字。`TestCheckSlug`（`server/internal/modules/workspace/domain/workspace_test.go`）核对上面列出的 13 个产品词都可以用作 slug。
 
 仍未处理，状态保持 `open`：`RESTRICTED_URLS` 与后端同源（前端一侧，P8）；本文件的其余几条随 M3 设计 13.1 中各自的 Phase。
 

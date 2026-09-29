@@ -138,9 +138,9 @@ type JobsConfig struct {
 }
 
 // WorkspaceConfig configures workspaces. The instance API reports it to
-// clients; while CreationEnabled is off, POST /api/v0/workspaces answers
-// workspace.creation_disabled and `nerve workspaces create` still creates
-// (M3 design 3.11).
+// clients; while CreationEnabled is off, an authenticated, well-formed POST
+// /api/v0/workspaces answers workspace.creation_disabled and `nerve
+// workspaces create` still creates (M3 design 3.11).
 type WorkspaceConfig struct {
 	CreationEnabled bool `koanf:"creation_enabled"`
 }

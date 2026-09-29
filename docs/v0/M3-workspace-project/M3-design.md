@@ -1646,7 +1646,7 @@ modules/access/
 ### 11.4 `shared` 可以放两个模块必须一致的纯取值规则（3.13；负责人已批准，2026-09-29）
 - **问题**：总体设计 6.2 把 `shared` 定为跨边界的值和端口。M3 把邮箱规范化、网址检测、时区校验移进去，因为 `identity` 和 `workspace` 必须一致（邀请的邮箱要与账户的邮箱按同一规则比较）。
 - **做法**：照此做，并在 6.2 写明：`shared` 还可以放"两个以上模块必须一致的纯取值规则"，只用标准库，不放业务流程；只放真正共用的三条。
-  - 时区的校验用 `time.LoadLocation`，它读时区数据库，严格说不是不依赖环境的纯函数（Codex 4.2）。nerve 的二进制内嵌了时区数据库（`archtest` 的 `TestNerveBinaryEmbedsTheTimeZoneDatabase`），结果不随部署的机器变，所以它仍放在 `shared`，不为它建端口。
+  - 时区的校验用 `time.LoadLocation`，它读时区数据库，严格说不是不依赖环境的纯函数（Codex 4.2）。它先读主机的时区文件，主机没有这个名字的文件时才用 nerve 的二进制内嵌的时区数据库（`archtest` 的 `TestNerveBinaryEmbedsTheTimeZoneDatabase`），所以不同的机器可能对个别名字答得不同（大小写不敏感的文件系统上的 `asia/shanghai`，有这个文件的主机上的 `posixrules`）；同一个进程里一个名字的结果不变，3.13 要的只是这个，所以它仍放在 `shared`，不为它建端口。
 - **另一种做法**：`workspace` 经端口问 `identity`"这两个邮箱是否相同"，为纯函数建端口是过度设计。
 
 ### 11.5 标签只属于项目（3.16；负责人已批准，2026-09-29）

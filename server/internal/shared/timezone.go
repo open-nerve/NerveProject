@@ -7,11 +7,12 @@ import "time"
 // zone. Accounts, workspaces and projects share it (M3 design 3.13).
 //
 // It is the one rule here that reads outside the process: LoadLocation reads
-// the host's zone files first and Go's own tzdata after them, so under go
-// test one host may accept a name that another refuses ("asia/shanghai" on a
-// case-insensitive file system, spec P3a 3 item 10). The nerve binary embeds
-// the zone database (archtest's TestNerveBinaryEmbedsTheTimeZoneDatabase),
-// so a deployment's answer does not depend on the machine (M3 design 11.4).
+// the host's zone files first, and the zone database the nerve binary embeds
+// (archtest's TestNerveBinaryEmbedsTheTimeZoneDatabase) only for a name the
+// host has no file for. So one host may accept a name that another refuses:
+// "asia/shanghai" on a case-insensitive file system, "posixrules" where the
+// host has that file (spec P3a 3 item 10). Within one process the answer
+// for a name does not change (M3 design 11.4).
 func ValidTimezone(name string) bool {
 	if name == "" || name == "Local" {
 		return false

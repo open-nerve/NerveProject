@@ -130,9 +130,9 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 ## 处理结果（M3/P1）
 
 - **第 4 节 `profiles.last_workspace_id` 的外键**（完成）：不补外键，理由写在 M3 设计 3.14；没有代码改动。
-- **第 5 节 `workspace_creation_enabled` 的执行**（完成）：开关关闭时，`createWorkspace` 在做任何事之前答 403 `workspace.creation_disabled`（`server/internal/modules/workspace/app/create_workspace.go`），`api/modules/workspace.yaml` 声明这个码；用例测试、`workspace` 的 HTTP 测试、组合测试的两种开关值、权限矩阵中关闭开关的一行和 W1 都核对它。命令写进 M3 设计 3.11 并实现：`nerve workspaces create --slug --name --admin-email` 不看开关（W10）。
+- **第 5 节 `workspace_creation_enabled` 的执行**（完成）：开关关闭时，经过认证、格式正确的 `createWorkspace` 请求答 403 `workspace.creation_disabled`，用例在看请求的值之前先查开关（`server/internal/modules/workspace/app/create_workspace.go`），`api/modules/workspace.yaml` 声明这个码；用例测试、`workspace` 的 HTTP 测试、组合测试的两种开关值、权限矩阵中关闭开关的一行和 W1 都核对它。命令写进 M3 设计 3.11 并实现：`nerve workspaces create --slug --name --admin-email` 不看开关（W10）。
 - **第 7 节 可空的引用字段**（部分）：`Workspace.logo_url` 在接口中必有、可为 `null`，M5 之前总是 `null`（`api/modules/workspace.yaml`）；`cover_image_url`、`MemberUser.avatar_url` 随 P2、P4，`IUserLite` 随 P8；本节保持 `open`。
-- **第 8 节 模块边界**（完成）：第 1 件选端口：`access` 在 `app/ports.go` 声明 `WorkspaceRoles`，由 `workspace` 的存储实现，`bootstrap` 接上（M3 设计 6.5、6.6），不是 `TestSQLCSchemaScope` 的例外。第 2 件：`TestSQLCSchemaScope` 认出带引号的名字和 `public.` 前缀、`ALTER TABLE`、`CREATE [UNIQUE] INDEX`、`CREATE TRIGGER`、`DROP TABLE` 和改名，每种都有反例（`server/internal/archtest/sqlc_cases_test.go`），去掉任何一种的变异都让它失败。第 3 件：`Authorizer` 在 `server/internal/shared/authorize.go` 声明，由 `access` 实现，`shared` 仍只依赖标准库。`ProjectAccess` 在 P4 照同一写法。
+- **第 8 节 模块边界**（完成）：第 1 件选端口：`access` 在 `app/ports.go` 声明 `WorkspaceRoles`，由 `workspace` 的存储实现，`bootstrap` 接上（M3 设计 6.5、6.6），不是 `TestSQLCSchemaScope` 的例外。第 2 件：`TestSQLCSchemaScope` 认出带引号的名字和 `public.` 前缀、`ALTER TABLE`、`CREATE [UNIQUE] INDEX`、`CREATE TRIGGER`、`ALTER TRIGGER`、`DROP TRIGGER`、`DROP TABLE` 和改名，每种都有反例（`server/internal/archtest/sqlc_cases_test.go`），去掉任何一种的变异都让它失败。第 3 件：`Authorizer` 在 `server/internal/shared/authorize.go` 声明，由 `access` 实现，`shared` 仍只依赖标准库。`ProjectAccess` 在 P4 照同一写法。
 - **第 12 节 页大小的规则**：M3 的列表都是集合型的，不分页（M3 设计 3.12；P1 的 `listWorkspaces` 答 `{"data": [...]}`）。按关闭条件由 P1 的 review 写明，本节在 M3 收尾时原样写进 M4 的交接（M3 设计 13.2）。
 
 仍未处理，状态保持 `open`：第 1–3、6 节，第 7 节的其余部分，第 9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 P1 的 review 和 M3 的收尾。
