@@ -41,10 +41,15 @@ func mustParseReserved(text string) ReservedSlugs {
 
 // parseReserved reads the list: sections [app], [server] and [reserved],
 // one name per line under each; blank lines and lines starting with # are
-// comments.
+// comments. The list is strict, since nerve cannot start with a list that
+// does not parse, and a typo must not become a name: a line starting with [
+// is one of the three headers; a name is spelled as a slug, which leaves no
+// room for a comment after it; no section is empty; no name is listed twice,
+// in one section or in two.
 func parseReserved(text string) (ReservedSlugs, error) {
 	var r ReservedSlugs
 	var section *[]string
+	seen := map[string]bool{}
 	for i, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
 		switch line {
@@ -60,16 +65,33 @@ func parseReserved(text string) (ReservedSlugs, error) {
 			switch {
 			case strings.HasPrefix(line, "#"):
 				continue
+			case strings.HasPrefix(line, "["):
+				return ReservedSlugs{}, fmt.Errorf("line %d: %q is not [app], [server] or [reserved]", i+1, line)
 			case section == nil:
 				return ReservedSlugs{}, fmt.Errorf("line %d: %q is in no section", i+1, line)
+			case !spelledAsSlug(line):
+				return ReservedSlugs{}, fmt.Errorf("line %d: %q is not spelled as a slug", i+1, line)
+			case seen[line]:
+				return ReservedSlugs{}, fmt.Errorf("line %d: %q is listed twice", i+1, line)
 			}
+			seen[line] = true
 			*section = append(*section, line)
+		}
+	}
+	for _, s := range []struct {
+		header string
+		names  []string
+	}{{"[app]", r.App}, {"[server]", r.Server}, {"[reserved]", r.Reserved}} {
+		if len(s.names) == 0 {
+			return ReservedSlugs{}, fmt.Errorf("section %s is empty", s.header)
 		}
 	}
 	return r, nil
 }
 
-// isReserved reports whether slug is on the list, in any section.
+// isReserved reports whether slug is on the list, in any section. Its
+// callers pass a slug CheckSlug has found spelled as one, lower case, so an
+// exact match is the whole comparison.
 func isReserved(slug string) bool {
 	return slices.Contains(reserved.All(), slug)
 }

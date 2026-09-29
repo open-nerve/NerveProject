@@ -110,15 +110,19 @@ func TestExecuteStoresTheTimeZoneGiven(t *testing.T) {
 	}
 }
 
-// While creation is off, the API answers workspace.creation_disabled before
-// it looks at anything, the values included (Plane views/workspace/
-// base.py:83-96).
+// While creation is off, the use case answers workspace.creation_disabled
+// before it looks at anything, the values and the caller included (Plane
+// views/workspace/base.py:83-96); in the API, authentication and the body's
+// shape come first.
 func TestExecuteWhileCreationIsDisabled(t *testing.T) {
 	uc, f := newCreate(false)
 	for _, w := range []domain.NewWorkspace{{Name: "Acme", Slug: "acme"}, {Name: "", Slug: "API"}} {
 		if _, err := uc.Execute(as(alice), w); !errors.Is(err, domain.ErrCreationDisabled) {
 			t.Errorf("Execute(%+v) = %v, want workspace.creation_disabled", w, err)
 		}
+	}
+	if _, err := uc.Execute(context.Background(), domain.NewWorkspace{Name: "Acme", Slug: "acme"}); !errors.Is(err, domain.ErrCreationDisabled) {
+		t.Errorf("Execute() without an actor = %v, want workspace.creation_disabled", err)
 	}
 	if len(f.log.calls) != 0 || f.tx.calls != 0 {
 		t.Errorf("calls = %q in %d transactions, want none", f.log.calls, f.tx.calls)
@@ -179,6 +183,25 @@ func TestExecuteReturnsTheLocksError(t *testing.T) {
 	}
 	if len(f.log.calls) != 1 {
 		t.Errorf("calls = %q, want the lock only", f.log.calls)
+	}
+}
+
+// The admin membership's failure is the use case's, from inside the
+// transaction, after the lock and both inserts: no workspace is answered and
+// nothing is logged.
+func TestExecuteReturnsTheMembershipsError(t *testing.T) {
+	uc, f := newCreate(true)
+	failure := errors.New("connection reset")
+	f.workspaces.memberErr = failure
+	got, err := uc.Execute(as(alice), domain.NewWorkspace{Name: "Acme", Slug: "acme"})
+	if !errors.Is(err, failure) || got != (domain.Workspace{}) {
+		t.Errorf("Execute() = %+v, %v; want no workspace and %v", got, err, failure)
+	}
+	if len(f.log.calls) != 3 || !strings.HasPrefix(f.log.calls[2], "CreateMember ") || f.tx.calls != 1 {
+		t.Errorf("calls = %q in %d transactions, want the lock and both inserts in one", f.log.calls, f.tx.calls)
+	}
+	if f.logs.Len() != 0 {
+		t.Errorf("log = %q, want nothing", f.logs)
 	}
 }
 

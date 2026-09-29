@@ -2,6 +2,7 @@ package domain
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -40,8 +41,27 @@ func TestParseReserved(t *testing.T) {
 	if err != nil || !slices.Equal(got.App, want.App) || !slices.Equal(got.Server, want.Server) || !slices.Equal(got.Reserved, want.Reserved) {
 		t.Errorf("parseReserved() = %+v, %v; want %+v", got, err, want)
 	}
-	if _, err := parseReserved("api\n[server]\n"); err == nil || err.Error() != `line 1: "api" is in no section` {
-		t.Errorf("a name before every section: %v, want line 1 in no section", err)
+	// Each refusal, on a list that is otherwise whole.
+	const rest = "[app]\nsign-up\n[server]\napi\n[reserved]\nhelp\n"
+	for _, tt := range []struct{ name, text, want string }{
+		{"a name before every section", "api\n" + rest, `line 1: "api" is in no section`},
+		{"an unknown header", rest + "[apps]\nicons\n", `line 7: "[apps]" is not [app], [server] or [reserved]`},
+		{"a header in capitals", "[APP]\n" + rest, `line 1: "[APP]" is not [app], [server] or [reserved]`},
+		{"a name with a comment after it", rest + "docs # later\n", `line 7: "docs # later" is not spelled as a slug`},
+		{"a name in capitals", rest + "Docs\n", `line 7: "Docs" is not spelled as a slug`},
+		{"a name of 49 characters", rest + strings.Repeat("x", 49) + "\n", `line 7: "` + strings.Repeat("x", 49) + `" is not spelled as a slug`},
+		{"an empty section", "[app]\nsign-up\n[server]\n[reserved]\nhelp\n", "section [server] is empty"},
+		{"a missing section", "[app]\nsign-up\n[server]\napi\n", "section [reserved] is empty"},
+		{"a name twice in one section", rest + "help\n", `line 7: "help" is listed twice`},
+		{"a name in two sections", rest + "[app]\napi\n", `line 8: "api" is listed twice`},
+	} {
+		if _, err := parseReserved(tt.text); err == nil || err.Error() != tt.want {
+			t.Errorf("%s: parseReserved() = %v, want %q", tt.name, err, tt.want)
+		}
+	}
+	// A name of 48 characters is a slug: the limit is not one less.
+	if _, err := parseReserved(rest + strings.Repeat("x", 48) + "\n"); err != nil {
+		t.Errorf("a name of 48 characters: %v, want it listed", err)
 	}
 }
 

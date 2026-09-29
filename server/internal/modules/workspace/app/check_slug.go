@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // CheckSlug answers GET /api/v0/workspace-slugs/{slug}: whether a slug can
@@ -20,8 +21,13 @@ func NewCheckSlug(slugs SlugChecker) *CheckSlug {
 }
 
 // Execute returns why slug cannot be used, invalid, reserved or taken, or ""
-// when it can. Only a slug that could be used is looked up.
+// when it can; 401 unauthorized without a caller, since only a signed-in
+// caller may ask (M3 design 8.2). Only a slug that could be used is looked
+// up.
 func (u *CheckSlug) Execute(ctx context.Context, slug string) (domain.SlugReason, error) {
+	if _, err := shared.RequireActor(ctx); err != nil {
+		return "", err
+	}
 	if reason := domain.CheckSlug(slug); reason != "" {
 		return reason, nil
 	}

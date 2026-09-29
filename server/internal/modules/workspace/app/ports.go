@@ -33,9 +33,10 @@ type AccountState struct {
 // Accounts locks an account row FOR SHARE and returns the account's state;
 // found is false when there is no such account (M3 design 6.5). identity
 // implements it (identity.Provide). Call it as the transaction's first lock
-// and never later (M3 design 3.6 conventions 1 and 6): the lock keeps the
-// account from being deactivated until the transaction ends, and the state is
-// the one committed before it. An address is matched as given.
+// and never later (M3 design 3.6 conventions 1 and 6), and the transaction
+// takes no stronger lock of this row afterwards: the lock keeps the account
+// from being deactivated until the transaction ends, and the state is the
+// one committed before it. An address is matched as given.
 type Accounts interface {
 	ShareAccount(ctx context.Context, id uuid.UUID) (state AccountState, found bool, err error)
 	ShareAccountByEmail(ctx context.Context, email string) (state AccountState, found bool, err error)

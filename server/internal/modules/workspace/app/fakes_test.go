@@ -67,12 +67,14 @@ func (f *fakeAccounts) ShareAccountByEmail(ctx context.Context, email string) (a
 // fakeWorkspaces is the repositories: it logs every call with its
 // arguments, answers from the workspaces it holds, and fails a call with
 // the error set for it; a read fails for the argument its error is set
-// for, wrapped as the store wraps it.
+// for, wrapped as the store wraps it, so the use case must match with
+// errors.Is.
 type fakeWorkspaces struct {
 	log        *callLog
 	workspaces []domain.Workspace // by slug for WorkspaceBySlug and SlugTaken
 	lists      map[uuid.UUID][]domain.Workspace
 	createErr  error
+	memberErr  error               // for CreateMember, which then stores nothing
 	listErrs   map[uuid.UUID]error // by user, for ListWorkspaces
 	slugErrs   map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
 	members    []app.MemberRow
@@ -94,6 +96,9 @@ func (f *fakeWorkspaces) CreateWorkspace(ctx context.Context, w app.WorkspaceRow
 
 func (f *fakeWorkspaces) CreateMember(ctx context.Context, m app.MemberRow) error {
 	f.log.add(ctx, "CreateMember %s in %s as %d by %s at %s", m.MemberID, m.WorkspaceID, m.Role, m.CreatedBy, m.Now.Format(time.RFC3339Nano))
+	if f.memberErr != nil {
+		return fmt.Errorf("create workspace member: %w", f.memberErr)
+	}
 	f.members = append(f.members, m)
 	return nil
 }

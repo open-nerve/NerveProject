@@ -72,7 +72,7 @@ const (
 // is the repository's to say.
 func CheckSlug(slug string) SlugReason {
 	switch {
-	case utf8.RuneCountInString(slug) > maxSlugLength || !slugPattern.MatchString(slug):
+	case !spelledAsSlug(slug):
 		return SlugInvalid
 	case isReserved(slug):
 		return SlugReserved
@@ -80,10 +80,18 @@ func CheckSlug(slug string) SlugReason {
 	return ""
 }
 
+// spelledAsSlug reports whether s is 1–48 of a-z, 0-9, - and _: the slug's
+// spelling, which the reserved list's names have too.
+func spelledAsSlug(s string) bool {
+	return utf8.RuneCountInString(s) <= maxSlugLength && slugPattern.MatchString(s)
+}
+
 // CheckNewWorkspace checks w (M3 design 3.10, 3.13), as Plane's serializer
 // does (serializers/workspace.py:48-67) with the slug in lower case only:
 //   - a name of 1–80 characters, with a letter or a digit (Unicode), without
-//     a web address, and without NUL, which the database cannot store;
+//     a web address, and without NUL or invalid UTF-8, which the database
+//     cannot store (the API's body check refuses invalid UTF-8 first; the
+//     command line passes it here);
 //   - a slug of 1–48 lower-case letters, digits, - and _, not reserved;
 //   - an organization size of the web form's options;
 //   - a time zone that shared.ValidTimezone accepts.
@@ -119,6 +127,8 @@ func checkName(name string) *shared.FieldError {
 		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", maxNameLength)}
 	case strings.ContainsRune(name, 0):
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "must not contain a NUL character"}
+	case !utf8.ValidString(name):
+		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "must be valid UTF-8"}
 	case !strings.ContainsFunc(name, func(r rune) bool { return unicode.IsLetter(r) || unicode.IsNumber(r) }):
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "must contain a letter or a digit"}
 	case shared.ContainsURL(name):
@@ -129,14 +139,14 @@ func checkName(name string) *shared.FieldError {
 
 func checkSlug(slug string) *shared.FieldError {
 	field := "slug"
-	switch {
+	switch reason := CheckSlug(slug); {
 	case slug == "":
 		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
 	case utf8.RuneCountInString(slug) > maxSlugLength:
 		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", maxSlugLength)}
-	case CheckSlug(slug) == SlugInvalid:
+	case reason == SlugInvalid:
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "may hold only lower-case letters, digits, - and _"}
-	case CheckSlug(slug) == SlugReserved:
+	case reason == SlugReserved:
 		return &shared.FieldError{Field: field, Code: shared.FieldNotAllowed, Message: "is reserved"}
 	}
 	return nil

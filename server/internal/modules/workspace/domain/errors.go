@@ -9,7 +9,7 @@ var (
 	// ErrNotFound answers a workspace that does not exist, is deleted, or of
 	// which the caller is not an active member: the same 404 for all three
 	// (M3 design 8.2).
-	ErrNotFound = shared.NewError(shared.KindNotFound, "workspace.not_found", "The workspace does not exist.")
+	ErrNotFound = shared.NewError(shared.KindNotFound, "workspace.not_found", "The workspace does not exist, or you are not a member of it.")
 	// ErrCreationDisabled answers a creation while workspace.creation_enabled
 	// is false (M3 design 3.11).
 	ErrCreationDisabled = shared.NewError(shared.KindForbidden, "workspace.creation_disabled", "Creating workspaces is disabled on this instance.")

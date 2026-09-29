@@ -112,7 +112,7 @@ func TestCreateWorkspacePassesAnUnknownSizeToTheUseCase(t *testing.T) {
 	create := &fakeCreate{err: shared.Invalid(shared.FieldError{Field: "organization_size", Code: shared.FieldInvalidFormat, Message: "is not a known organization size"})}
 	h := newServer(t, fakes{create: create})
 	res, _ := do(t, h, request(http.MethodPost, "/api/v0/workspaces", "alice", `{"name":"Acme","slug":"acme","organization_size":"1000+"}`))
-	if res.StatusCode != http.StatusUnprocessableEntity || len(create.got) != 1 || *create.got[0].OrganizationSize != "1000+" {
+	if res.StatusCode != http.StatusUnprocessableEntity || len(create.got) != 1 || create.got[0].OrganizationSize == nil || *create.got[0].OrganizationSize != "1000+" {
 		t.Errorf("POST = %d, inputs %+v; want 422 from the use case", res.StatusCode, create.got)
 	}
 }
@@ -130,7 +130,7 @@ func TestGetWorkspace(t *testing.T) {
 		{"alice", "/api/v0/workspaces/acme", http.StatusOK, acmeJSON},
 		{"bob", "/api/v0/workspaces/beta", http.StatusOK, betaJSON},
 		{"bob", "/api/v0/workspaces/acme", http.StatusNotFound,
-			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist."}`},
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
 	}
 	for _, tt := range tests {
 		res, body := do(t, h, request(http.MethodGet, tt.path, tt.token, ""))

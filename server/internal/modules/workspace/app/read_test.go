@@ -87,7 +87,8 @@ func TestGetWorkspaceDecidesOnTheWorkspaceFound(t *testing.T) {
 
 // A workspace the caller cannot see and one that is not there are the same
 // workspace.not_found; a refusal that is not "not visible", or the store's
-// failure, is not turned into one.
+// failure, is not turned into one. A refusal carries no workspace, not even
+// the one the store found.
 func TestGetWorkspaceNotFound(t *testing.T) {
 	log := &callLog{}
 	failure := errors.New("connection reset")
@@ -112,8 +113,8 @@ func TestGetWorkspaceNotFound(t *testing.T) {
 	}
 	for _, tt := range tests {
 		log.calls = nil
-		if _, err := uc.Execute(as(tt.user), tt.slug); !errors.Is(err, tt.want) {
-			t.Errorf("%s: Execute() = %v, want %v", tt.name, err, tt.want)
+		if got, err := uc.Execute(as(tt.user), tt.slug); !errors.Is(err, tt.want) || got != (domain.Workspace{}) {
+			t.Errorf("%s: Execute() = %+v, %v; want no workspace and %v", tt.name, got, err, tt.want)
 		}
 		if len(log.calls) != tt.calls {
 			t.Errorf("%s: calls = %q, want %d", tt.name, log.calls, tt.calls)
@@ -132,7 +133,8 @@ func TestGetWorkspaceWithoutACaller(t *testing.T) {
 }
 
 // CheckSlug looks up only a slug that could be used; the lookup's failure
-// is the answer, never "free" or "taken".
+// is the answer, never "free" or "taken". Without a caller it is 401 and
+// looks up nothing, whatever the slug.
 func TestCheckSlug(t *testing.T) {
 	log := &callLog{}
 	failure := errors.New("connection reset")
@@ -153,12 +155,18 @@ func TestCheckSlug(t *testing.T) {
 	}
 	for _, tt := range tests {
 		log.calls = nil
-		got, err := uc.Execute(context.Background(), tt.slug)
+		got, err := uc.Execute(as(alice), tt.slug)
 		if !errors.Is(err, tt.err) || got != tt.want {
 			t.Errorf("Execute(%q) = %q, %v; want %q, %v", tt.slug, got, err, tt.want, tt.err)
 		}
 		if lookup := len(log.calls) > 0; lookup != tt.lookup || (lookup && log.calls[0] != "SlugTaken "+tt.slug+" outside tx") {
 			t.Errorf("Execute(%q): calls = %q, want a lookup: %v", tt.slug, log.calls, tt.lookup)
+		}
+	}
+	for _, slug := range []string{"free", "acme", "Acme"} {
+		log.calls = nil
+		if got, err := uc.Execute(context.Background(), slug); !errors.Is(err, shared.Unauthenticated()) || got != "" || len(log.calls) != 0 {
+			t.Errorf("Execute(%q) without an actor = %q, %v, calls %q; want 401 unauthorized and no lookup", slug, got, err, log.calls)
 		}
 	}
 }

@@ -51,6 +51,7 @@ func TestCheckNewWorkspaceReportsEveryField(t *testing.T) {
 		{"empty name", name(""), field("name", "too_short", "must not be empty")},
 		{"name of 81 characters", name(strings.Repeat("工", 81)), field("name", "too_long", "must be at most 80 characters")},
 		{"name with NUL", name("Ac\x00me"), field("name", "invalid_format", "must not contain a NUL character")},
+		{"name that is not UTF-8", name("Ac\xffme"), field("name", "invalid_format", "must be valid UTF-8")},
 		{"name of symbols only", name("-_________-"), field("name", "invalid_format", "must contain a letter or a digit")},
 		{"name of spaces only", name("   "), field("name", "invalid_format", "must contain a letter or a digit")},
 		{"name with a web address", name("Acme www.acme.io"), field("name", "contains_url", "must not contain a web address")},
@@ -60,6 +61,7 @@ func TestCheckNewWorkspaceReportsEveryField(t *testing.T) {
 		{"upper-case slug", slug("Acme"), field("slug", "invalid_format", "may hold only lower-case letters, digits, - and _")},
 		{"slug with a dot", slug("acme.io"), field("slug", "invalid_format", "may hold only lower-case letters, digits, - and _")},
 		{"slug with a space", slug("my team"), field("slug", "invalid_format", "may hold only lower-case letters, digits, - and _")},
+		{"slug with a trailing newline", slug("acme\n"), field("slug", "invalid_format", "may hold only lower-case letters, digits, - and _")},
 		{"slug with a non-ASCII letter", slug("équipe"), field("slug", "invalid_format", "may hold only lower-case letters, digits, - and _")},
 		{"slug of the app", slug("create-workspace"), field("slug", "not_allowed", "is reserved")},
 		{"slug of the app's public directory", slug("icons"), field("slug", "not_allowed", "is reserved")},
@@ -98,15 +100,23 @@ func TestCheckSlug(t *testing.T) {
 		strings.Repeat("x", 49):  SlugInvalid,
 		"Acme":                   SlugInvalid,
 		"acme/x":                 SlugInvalid,
+		"acme\n":                 SlugInvalid,
 		"sign-up":                SlugReserved,
 		"readyz":                 SlugReserved,
 		"static":                 SlugReserved,
 		"login":                  "", // not a route: /login is a workspace's address (M3 design 3.10)
-		"one":                    "", // Plane's product words are not reserved
 		"workspace-invitations2": "",
 	} {
 		if got := CheckSlug(slug); got != want {
 			t.Errorf("CheckSlug(%q) = %q, want %q", slug, got, want)
+		}
+	}
+	// Plane's product words that RESTRICTED_URLS still held after M1/P3 are
+	// not reserved (the M1/P3 handoff to M3): each can name a workspace.
+	for _, word := range []string{"one", "business", "pro", "license", "licenses", "initiatives", "initiative",
+		"workflow", "workflows", "story", "disco", "drive", "channels"} {
+		if got := CheckSlug(word); got != "" {
+			t.Errorf("CheckSlug(%q) = %q, want it usable", word, got)
 		}
 	}
 }
