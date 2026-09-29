@@ -16,8 +16,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
@@ -81,10 +83,22 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// time.Now, not the Clock: the monotonic reading keeps a step of the wall
 	// clock from filling or draining the buckets.
 	limiter := ratelimit.New(time.Now)
+	tx := postgres.NewTxManager(pool, cfg.Database.CommitTimeout)
 
+	// The modules in two steps (M3 design 6.6): first the adapters each
+	// offers the others, built from the pool alone; then the modules, each
+	// with every port it needs, so no construction waits on another.
+	identityPorts := identity.Provide(pool)
+	workspacePorts := workspace.Provide(pool)
+	authorizer := access.New(access.Deps{WorkspaceRoles: workspacePorts.WorkspaceRoles})
+	ws := workspace.New(workspace.Deps{
+		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
+		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
+		CreationEnabled: cfg.Workspace.CreationEnabled,
+	})
 	ident, err := identity.New(identity.Deps{
 		Pool:            pool,
-		Tx:              postgres.NewTxManager(pool, cfg.Database.CommitTimeout),
+		Tx:              tx,
 		Clock:           clock.System{},
 		Logger:          logger,
 		SignupPolicy:    signupSwitch(cfg.Auth.SignupEnabled),
@@ -148,6 +162,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// platform's /api/ fallback; an /api/v0/ sub-mux would shadow it.
 	ident.Register(a.router, api)
 	inst.Register(a.router, api)
+	ws.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	a.router.Handle("/", webui.Handler(webFiles))

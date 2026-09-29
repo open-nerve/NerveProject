@@ -39,6 +39,9 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "identity.refresh_token_invalid": "auth.errors.refresh_token_invalid",
   "identity.current_password_incorrect": "auth.errors.current_password_incorrect",
   "identity.api_token_not_found": "auth.errors.api_token_not_found",
+  "workspace.not_found": "auth.errors.workspace_not_found",
+  "workspace.creation_disabled": "auth.errors.workspace_creation_disabled",
+  "workspace.slug_taken": "auth.errors.workspace_slug_taken",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */
