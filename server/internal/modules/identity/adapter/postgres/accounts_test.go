@@ -151,60 +151,112 @@ func TestTheShareLockBlocksDeactivationNotAnotherShare(t *testing.T) {
 	}
 }
 
-// The other order (M3 design 3.6 convention 6): while deactivation holds the
-// row (its FOR NO KEY UPDATE taken, is_active set false, not committed), both
-// reads wait for its lock, then read the account as deactivation committed
-// it. WaitForLockWait sees the read waiting before the deactivation commits;
-// every wait has a 10s deadline, so the test fails, not hangs. Each read has
-// its own database, so the only lock wait there is its own.
-func TestTheShareWaitsForDeactivationAndReadsItsResult(t *testing.T) {
-	reads := map[string]func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) (app.AccountState, bool, error){
-		"ShareAccount": func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) (app.AccountState, bool, error) {
-			return s.ShareAccount(ctx, id)
-		},
-		"ShareAccountByEmail": func(ctx context.Context, s *postgresadapter.Store, _ uuid.UUID) (app.AccountState, bool, error) {
-			return s.ShareAccountByEmail(ctx, "alice@corp.com")
-		},
+// share is one of the two reads of Accounts: by id, or by alice's address.
+type share func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) (app.AccountState, bool, error)
+
+var (
+	shareByID share = func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) (app.AccountState, bool, error) {
+		return s.ShareAccount(ctx, id)
 	}
-	for name, read := range reads {
-		t.Run(name, func(t *testing.T) {
+	shareByEmail share = func(ctx context.Context, s *postgresadapter.Store, _ uuid.UUID) (app.AccountState, bool, error) {
+		return s.ShareAccountByEmail(ctx, "alice@corp.com")
+	}
+)
+
+// hold runs lock in a transaction of its own and keeps the transaction open
+// until end is called, which commits it and returns its error. The lock not
+// taken within 10s fails the test. The test's cleanup calls end too, so a
+// failure still ends the transaction: the pool's Close waits for its
+// connection.
+func hold(t *testing.T, tx *postgres.TxManager, lock func(ctx context.Context) error) (end func() error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	locked, release := make(chan struct{}), make(chan struct{})
+	held := make(chan error, 1)
+	go func() {
+		held <- tx.WithinTx(ctx, func(ctx context.Context) error {
+			if err := lock(ctx); err != nil {
+				return err
+			}
+			close(locked)
+			select {
+			case <-release:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		})
+	}()
+	var once sync.Once
+	var ended error
+	end = func() error {
+		once.Do(func() {
+			close(release)
+			select {
+			case ended = <-held:
+			case <-ctx.Done():
+				ended = errors.New("the transaction holding the row did not end within 10s")
+			}
+			cancel()
+		})
+		return ended
+	}
+	t.Cleanup(func() { _ = end() })
+	select {
+	case <-locked:
+	case err := <-held:
+		once.Do(cancel) // the transaction has ended: nothing to wait for
+		t.Fatalf("taking the lock: %v", err)
+	case <-ctx.Done():
+		t.Fatal("the lock was not taken within 10s")
+	}
+	return end
+}
+
+// The other order (M3 design 3.6 convention 6): while a transaction holds
+// the row with M2's lock and has changed it, not committed, a share waits
+// for the lock, then reads the account as that transaction committed it.
+// Deactivation (is_active set false) holds it for both reads; `nerve users
+// set-email` (a new address) for the read by id, so the address it answers
+// is the one read under the lock too. WaitForLockWait sees the read waiting
+// before the holder commits; every wait has a 10s deadline, so the test
+// fails, not hangs. Each case has its own database, so the only lock wait
+// there is its own.
+func TestTheShareWaitsForTheRowsLockAndReadsWhatWasCommitted(t *testing.T) {
+	deactivates := func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) error {
+		if _, err := s.LockForCredentials(ctx, id); err != nil {
+			return err
+		}
+		return s.DeactivateUser(ctx, id, now)
+	}
+	setsEmail := func(ctx context.Context, s *postgresadapter.Store, _ uuid.UUID) error {
+		id, err := s.LockAccount(ctx, "alice@corp.com")
+		if err != nil {
+			return err
+		}
+		return s.ChangeEmail(ctx, id, "alice@corp.org", now)
+	}
+	deactivated := app.AccountState{Email: "alice@corp.com", Active: false}
+	moved := app.AccountState{Email: "alice@corp.org", Active: true}
+	tests := []struct {
+		name string
+		hold func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) error
+		read share
+		want app.AccountState // and alice's id
+	}{
+		{"deactivation holds, ShareAccount", deactivates, shareByID, deactivated},
+		{"deactivation holds, ShareAccountByEmail", deactivates, shareByEmail, deactivated},
+		{"set-email holds, ShareAccount", setsEmail, shareByID, moved},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			s, pool := newStore(t)
 			u := newUser("alice@corp.com")
 			mustCreate(t, s, u)
 			tx := postgres.NewTxManager(pool, 2*time.Second)
+			commit := hold(t, tx, func(ctx context.Context) error { return tt.hold(ctx, s, u.ID) })
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			locked, release := make(chan struct{}), make(chan struct{})
-			// A failure below must still end the deactivation: the pool's
-			// Close in the cleanup waits for its connection.
-			var releaseOnce sync.Once
-			commit := func() { releaseOnce.Do(func() { close(release) }) }
-			defer commit()
-			deactivated := make(chan error, 1)
-			go func() {
-				deactivated <- tx.WithinTx(ctx, func(ctx context.Context) error {
-					if _, err := s.LockForCredentials(ctx, u.ID); err != nil {
-						return err
-					}
-					if err := s.DeactivateUser(ctx, u.ID, now); err != nil {
-						return err
-					}
-					close(locked)
-					select {
-					case <-release:
-						return nil
-					case <-ctx.Done():
-						return ctx.Err()
-					}
-				})
-			}()
-			select {
-			case <-locked:
-			case err := <-deactivated:
-				t.Fatalf("deactivating: %v", err)
-			case <-ctx.Done():
-				t.Fatal("the deactivation did not hold the row within 10s")
-			}
 
 			type answer struct {
 				state app.AccountState
@@ -216,30 +268,61 @@ func TestTheShareWaitsForDeactivationAndReadsItsResult(t *testing.T) {
 				var a answer
 				a.err = tx.WithinTx(ctx, func(ctx context.Context) error {
 					var err error
-					a.state, a.found, err = read(ctx, s, u.ID)
+					a.state, a.found, err = tt.read(ctx, s, u.ID)
 					return err
 				})
 				answered <- a
 			}()
 			pgtest.WaitForLockWait(t, pool, 5*time.Second)
-			commit()
+			if err := commit(); err != nil {
+				t.Fatalf("the holder: %v", err)
+			}
 
 			select {
-			case err := <-deactivated:
-				if err != nil {
-					t.Fatalf("the deactivation: %v", err)
-				}
-			case <-ctx.Done():
-				t.Fatal("the deactivation did not end within 10s")
-			}
-			select {
 			case a := <-answered:
-				want := app.AccountState{ID: u.ID, Email: "alice@corp.com", Active: false}
+				want := tt.want
+				want.ID = u.ID
 				if a.err != nil || !a.found || a.state != want {
-					t.Errorf("%s() after the deactivation = %+v, found %v, %v; want %+v, found", name, a.state, a.found, a.err, want)
+					t.Errorf("after the holder = %+v, found %v, %v; want %+v, found", a.state, a.found, a.err, want)
 				}
 			case <-ctx.Done():
 				t.Fatal("the read did not end within 10s")
+			}
+		})
+	}
+}
+
+// A share that fails answers its error, never "no such account", which
+// would become 401 or workspace.account_not_found instead of 500: while
+// deactivation's lock holds the row, a share under a lock_timeout gets
+// lock_not_available (55P03), and both reads return it.
+func TestAShareThatFailsReturnsTheError(t *testing.T) {
+	for name, read := range map[string]share{"ShareAccount": shareByID, "ShareAccountByEmail": shareByEmail} {
+		t.Run(name, func(t *testing.T) {
+			s, pool := newStore(t)
+			u := newUser("alice@corp.com")
+			mustCreate(t, s, u)
+			tx := postgres.NewTxManager(pool, 2*time.Second)
+			hold(t, tx, func(ctx context.Context) error {
+				_, err := s.LockForCredentials(ctx, u.ID)
+				return err
+			})
+
+			var state app.AccountState
+			var found bool
+			var shareErr error // the share's own answer, not the commit's
+			err := tx.WithinTx(context.Background(), func(ctx context.Context) error {
+				if _, err := postgres.DB(ctx, pool).Exec(ctx, "SET LOCAL lock_timeout = '100ms'"); err != nil {
+					return err
+				}
+				state, found, shareErr = read(ctx, s, u.ID)
+				return shareErr
+			})
+
+			var pgErr *pgconn.PgError
+			if !errors.As(shareErr, &pgErr) || pgErr.Code != "55P03" || found || state != (app.AccountState{}) {
+				t.Errorf("%s() while the row is locked = %+v, found %v, %v (the transaction: %v); want lock_not_available and nothing found",
+					name, state, found, shareErr, err)
 			}
 		})
 	}

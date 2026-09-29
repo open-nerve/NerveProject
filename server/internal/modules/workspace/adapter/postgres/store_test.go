@@ -236,7 +236,10 @@ func TestListWorkspaces(t *testing.T) {
 		}
 	}
 	// The columns are the stored ones.
-	got, _ := f.s.ListWorkspaces(context.Background(), f.alice)
+	got, err := f.s.ListWorkspaces(context.Background(), f.alice)
+	if err != nil || len(got) == 0 {
+		t.Fatalf("alice's ListWorkspaces() = %+v, %v; want acme first", got, err)
+	}
 	if w := got[0]; w.Name != "Acme" || w.Slug != "acme" || w.Timezone != "UTC" || w.OrganizationSize != nil || !w.CreatedAt.Equal(now) || !w.UpdatedAt.Equal(now) {
 		t.Errorf("ListWorkspaces()[0] = %+v, want acme as stored", w)
 	}
@@ -300,6 +303,33 @@ func TestActiveRole(t *testing.T) {
 		if err != nil || ok != (tt.want != 0) || role != tt.want {
 			t.Errorf("%s: ActiveRole() = %d, %v, %v; want %d", tt.name, role, ok, err, tt.want)
 		}
+	}
+}
+
+// A read that fails answers its error, never a plausible answer: not "not a
+// member", which the Authorizer would turn into workspace.not_found; not
+// "free", "none" or app.ErrNotFound. Each read runs on a cancelled context
+// against a workspace alice administers, so that the right answer is none
+// of the zero values.
+func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	w := newWorkspace(t, s, "Acme", "acme", alice)
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
+
+	if role, ok, err := s.ActiveRole(cancelled, w.ID, alice); !failed(err) || ok || role != 0 {
+		t.Errorf("ActiveRole() = %d, %v, %v; want context.Canceled, not a member", role, ok, err)
+	}
+	if taken, err := s.SlugTaken(cancelled, "acme"); !failed(err) || taken {
+		t.Errorf("SlugTaken() = %v, %v; want context.Canceled", taken, err)
+	}
+	if list, err := s.ListWorkspaces(cancelled, alice); !failed(err) || list != nil {
+		t.Errorf("ListWorkspaces() = %v, %v; want context.Canceled, no list", list, err)
+	}
+	if got, err := s.WorkspaceBySlug(cancelled, "acme"); !failed(err) || errors.Is(err, app.ErrNotFound) || !sameWorkspace(got, domain.Workspace{}) {
+		t.Errorf("WorkspaceBySlug() = %+v, %v; want context.Canceled, not app.ErrNotFound", got, err)
 	}
 }
 
