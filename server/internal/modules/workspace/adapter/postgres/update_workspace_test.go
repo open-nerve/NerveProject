@@ -14,7 +14,8 @@ import (
 
 // UpdateWorkspace changes the fields the patch sets and no other, of that
 // workspace only; it writes the updater and the clock's time, and answers
-// the row as stored with the number of active members.
+// the row as stored with the number of active members: not carol, whose
+// membership ended, nor dave, whose row is deleted though still active.
 func TestUpdateWorkspace(t *testing.T) {
 	size, other := "2-10", "500+"
 	tests := []struct {
@@ -48,6 +49,9 @@ func TestUpdateWorkspace(t *testing.T) {
 			join(t, s, acme.ID, bob, shared.RoleMember)
 			join(t, s, acme.ID, carol, shared.RoleGuest)
 			exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE member_id = $1", carol)
+			dave := newAccount(t, pool, "dave@corp.com")
+			join(t, s, acme.ID, dave, shared.RoleMember)
+			exec(t, pool, "UPDATE workspace_members SET deleted_at = $2 WHERE member_id = $1", dave, now)
 			beta := newWorkspace(t, s, "Beta", "beta", alice)
 			later := now.Add(time.Hour)
 
