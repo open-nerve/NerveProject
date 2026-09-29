@@ -77,6 +77,10 @@ func TestRawSQLViolationsAreReported(t *testing.T) {
 				file + ":5:2: calls ExecPrepared, which runs SQL outside sqlc's queries",
 				file + ":6:2: calls CopyTo, which runs SQL outside sqlc's queries",
 			}},
+		{"a table emptied and a merge, held for later", "package postgresadapter\n\n" +
+			"const (\n\twipe  = \"TRUNCATE workspace_members\"\n" +
+			"\tmerge = \"MERGE INTO users u USING workspace_members m ON u.id = m.member_id WHEN MATCHED THEN DO NOTHING\"\n)\n",
+			[]string{file + ":4:10: holds SQL outside sqlc's queries", file + ":5:10: holds SQL outside sqlc's queries"}},
 		{"a file that does not parse", "package postgresadapter\n\nfunc (\n",
 			[]string{file + " does not parse: " + file + ":3:8: expected ')', found 'EOF'"}},
 	}
@@ -100,6 +104,18 @@ func TestRawSQLInTheAppLayerIsReported(t *testing.T) {
 		file + ":3:14: holds SQL outside sqlc's queries",
 		file + ":5:54: calls Exec, which runs SQL outside sqlc's queries",
 	}
+	if got := rawSQLViolations(files); !slices.Equal(got, want) {
+		t.Errorf("violations =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// Only a gen directory is sqlc's: a file whose path merely contains "gen"
+// is checked like any other.
+func TestRawSQLInAPathContainingGenIsReported(t *testing.T) {
+	const file = "internal/modules/workspace/app/generate.go"
+	files := rawSQLBase()
+	files[file] = "package app\n\nconst purge = \"DELETE FROM workspace_members WHERE workspace_id = $1\"\n"
+	want := []string{file + ":3:15: holds SQL outside sqlc's queries"}
 	if got := rawSQLViolations(files); !slices.Equal(got, want) {
 		t.Errorf("violations =\n%q\nwant\n%q", got, want)
 	}
