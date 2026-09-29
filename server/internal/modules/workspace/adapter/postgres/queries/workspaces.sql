@@ -23,6 +23,21 @@ SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.up
 FROM workspaces w
 WHERE w.slug = sqlc.arg(slug) AND w.deleted_at IS NULL;
 
+-- name: UpdateWorkspace :one
+-- updateWorkspace, under the workspace's FOR NO KEY UPDATE: only the fields that are set change (M2 design 3.14).
+-- RETURNING gives the values as stored and the number of active members.
+UPDATE workspaces w
+SET name              = CASE WHEN sqlc.arg(set_name)::boolean THEN sqlc.arg(name)::text ELSE w.name END,
+    organization_size = CASE WHEN sqlc.arg(set_organization_size)::boolean THEN sqlc.arg(organization_size)::text
+                        ELSE w.organization_size END,
+    timezone          = CASE WHEN sqlc.arg(set_timezone)::boolean THEN sqlc.arg(timezone)::text ELSE w.timezone END,
+    updated_by_id     = sqlc.arg(updated_by),
+    updated_at        = sqlc.arg(now)
+WHERE w.id = sqlc.arg(id)
+RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+          (SELECT count(*) FROM workspace_members c
+           WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members;
+
 -- name: SlugTaken :one
 SELECT EXISTS (SELECT 1 FROM workspaces WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL);
 

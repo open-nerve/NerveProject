@@ -162,6 +162,71 @@ func (q *Queries) SlugTaken(ctx context.Context, slug string) (bool, error) {
 	return exists, err
 }
 
+const updateWorkspace = `-- name: UpdateWorkspace :one
+UPDATE workspaces w
+SET name              = CASE WHEN $1::boolean THEN $2::text ELSE w.name END,
+    organization_size = CASE WHEN $3::boolean THEN $4::text
+                        ELSE w.organization_size END,
+    timezone          = CASE WHEN $5::boolean THEN $6::text ELSE w.timezone END,
+    updated_by_id     = $7,
+    updated_at        = $8
+WHERE w.id = $9
+RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+          (SELECT count(*) FROM workspace_members c
+           WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
+`
+
+type UpdateWorkspaceParams struct {
+	SetName             bool
+	Name                string
+	SetOrganizationSize bool
+	OrganizationSize    string
+	SetTimezone         bool
+	Timezone            string
+	UpdatedBy           *uuid.UUID
+	Now                 time.Time
+	ID                  uuid.UUID
+}
+
+type UpdateWorkspaceRow struct {
+	ID               uuid.UUID
+	Name             string
+	Slug             string
+	OrganizationSize *string
+	Timezone         string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	TotalMembers     int64
+}
+
+// updateWorkspace, under the workspace's FOR NO KEY UPDATE: only the fields that are set change (M2 design 3.14).
+// RETURNING gives the values as stored and the number of active members.
+func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams) (UpdateWorkspaceRow, error) {
+	row := q.db.QueryRow(ctx, updateWorkspace,
+		arg.SetName,
+		arg.Name,
+		arg.SetOrganizationSize,
+		arg.OrganizationSize,
+		arg.SetTimezone,
+		arg.Timezone,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	var i UpdateWorkspaceRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.OrganizationSize,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TotalMembers,
+	)
+	return i, err
+}
+
 const workspaceBySlug = `-- name: WorkspaceBySlug :one
 SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
        (SELECT count(*) FROM workspace_members c

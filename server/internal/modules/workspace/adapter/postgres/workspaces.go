@@ -3,6 +3,7 @@ package postgresadapter
 import (
 	"context"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres/gen"
@@ -71,6 +72,35 @@ func (s *Store) WorkspaceBySlug(ctx context.Context, slug string) (domain.Worksp
 		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
 		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, nil
+}
+
+// UpdateWorkspace applies p to the workspace id, by the account by at now,
+// and returns it as stored with its number of active members, without a
+// role. The caller holds the workspace's lock, so the row is there; its
+// absence is an error, not app.ErrNotFound. The domain checked every value.
+func (s *Store) UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.WorkspacePatch, by uuid.UUID, now time.Time) (domain.Workspace, error) {
+	r, err := s.queries(ctx).UpdateWorkspace(ctx, gen.UpdateWorkspaceParams{
+		SetName: p.Name != nil, Name: deref(p.Name),
+		SetOrganizationSize: p.OrganizationSize != nil, OrganizationSize: deref(p.OrganizationSize),
+		SetTimezone: p.Timezone != nil, Timezone: deref(p.Timezone),
+		UpdatedBy: &by, Now: now, ID: id,
+	})
+	if err != nil {
+		return domain.Workspace{}, fmt.Errorf("update workspace: %w", err)
+	}
+	return domain.Workspace{
+		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
+		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+	}, nil
+}
+
+// deref is the value p points at, or the zero value for nil.
+func deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
 }
 
 // SlugTaken reports whether an undeleted workspace has slug.

@@ -32,6 +32,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   internal_error: "auth.errors.internal_error",
   validation_failed: "auth.errors.validation_failed",
   server_busy: "auth.errors.server_busy",
+  forbidden: "auth.errors.forbidden",
   "identity.signup_disabled": "auth.errors.signup_disabled",
   "identity.email_taken": "auth.errors.email_taken",
   "identity.invalid_credentials": "auth.errors.invalid_credentials",

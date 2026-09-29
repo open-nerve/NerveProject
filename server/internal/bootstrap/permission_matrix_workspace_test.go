@@ -45,6 +45,21 @@ func workspaceMatrixRows() []matrixRow {
 		// The workspace level.
 		{op: "getWorkspace", request: toWorkspace(http.MethodGet, "", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: readsItsRole},
+		{op: "updateWorkspace", write: true, request: toWorkspace(http.MethodPatch, "", `{"name":"Renamed"}`),
+			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: renamesIt},
+	}
+}
+
+// renamesIt: the admin's answer is acme renamed, with the admin's role.
+func renamesIt(t *testing.T, c caller, answer string) {
+	var w struct {
+		Slug string `json:"slug"`
+		Name string `json:"name"`
+		Role int    `json:"role"`
+	}
+	decodeAnswer(t, answer, &w)
+	if w.Slug != "acme" || w.Name != "Renamed" || w.Role != 20 {
+		t.Errorf("%s's update answers %+v, want acme named Renamed, role 20", c, w)
 	}
 }
 

@@ -71,12 +71,14 @@ func (f *fakeAccounts) ShareAccountByEmail(ctx context.Context, email string) (a
 // errors.Is.
 type fakeWorkspaces struct {
 	log        *callLog
-	workspaces []domain.Workspace // by slug for WorkspaceBySlug and SlugTaken
+	workspaces []domain.Workspace // by slug for WorkspaceBySlug, SlugTaken and the locks; by id for UpdateWorkspace
 	lists      map[uuid.UUID][]domain.Workspace
 	createErr  error
 	memberErr  error               // for CreateMember, which then stores nothing
+	updateErr  error               // for UpdateWorkspace
 	listErrs   map[uuid.UUID]error // by user, for ListWorkspaces
 	slugErrs   map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
+	lockErrs   map[string]error    // by slug, for the locks
 	members    []app.MemberRow
 }
 
@@ -129,6 +131,56 @@ func (f *fakeWorkspaces) SlugTaken(ctx context.Context, slug string) (bool, erro
 		return false, fmt.Errorf("check slug: %w", err)
 	}
 	return slices.ContainsFunc(f.workspaces, func(w domain.Workspace) bool { return w.Slug == slug }), nil
+}
+
+func (f *fakeWorkspaces) LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
+	f.log.add(ctx, "LockWorkspaceBySlug %s", slug)
+	return f.lock(slug)
+}
+
+// lock answers the id of the workspace with slug, app.ErrNotFound when it
+// holds none, and the error set for slug wrapped as the store wraps it.
+func (f *fakeWorkspaces) lock(slug string) (uuid.UUID, error) {
+	if err := f.lockErrs[slug]; err != nil {
+		return uuid.UUID{}, fmt.Errorf("lock the workspace row: %w", err)
+	}
+	i := slices.IndexFunc(f.workspaces, func(w domain.Workspace) bool { return w.Slug == slug })
+	if i < 0 {
+		return uuid.UUID{}, app.ErrNotFound
+	}
+	return f.workspaces[i].ID, nil
+}
+
+func (f *fakeWorkspaces) UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.WorkspacePatch, by uuid.UUID, now time.Time) (domain.Workspace, error) {
+	f.log.add(ctx, "UpdateWorkspace %s name=%s size=%s timezone=%s by %s at %s", id, show(p.Name), show(p.OrganizationSize), show(p.Timezone),
+		by, now.Format(time.RFC3339Nano))
+	if f.updateErr != nil {
+		return domain.Workspace{}, fmt.Errorf("update workspace: %w", f.updateErr)
+	}
+	i := slices.IndexFunc(f.workspaces, func(w domain.Workspace) bool { return w.ID == id })
+	if i < 0 {
+		return domain.Workspace{}, fmt.Errorf("update workspace %s: no such row", id)
+	}
+	w := f.workspaces[i]
+	if p.Name != nil {
+		w.Name = *p.Name
+	}
+	if p.OrganizationSize != nil {
+		w.OrganizationSize = p.OrganizationSize
+	}
+	if p.Timezone != nil {
+		w.Timezone = *p.Timezone
+	}
+	w.UpdatedAt = now
+	return w, nil
+}
+
+// show is *s quoted, or <nil>.
+func show(s *string) string {
+	if s == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("%q", *s)
 }
 
 // grantKey is one (user, workspace) pair of fakeAuthorizer.

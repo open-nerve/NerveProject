@@ -79,6 +79,36 @@ paths:
                 $ref: '#/components/schemas/Workspace'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateWorkspace
+      tags: [workspace]
+      summary: Change a workspace's name, organization size or time zone
+      description: >-
+        For the workspace's admins. The fields given change and the others
+        stay; the values follow createWorkspace's rules (validation_failed),
+        checked before the workspace is looked at. The slug never changes: a
+        body with slug is refused (bad_request). A workspace that does not
+        exist, is deleted, or of which the caller is not an active member
+        answers workspace.not_found; a member or a guest, forbidden. The role
+        is decided after the workspace row is locked, so a caller demoted
+        meanwhile is refused.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found, forbidden]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUpdate'
+      responses:
+        '200':
+          description: The workspace as changed, with the caller's role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -206,6 +236,19 @@ components:
           $ref: '#/components/schemas/OrganizationSize'
         timezone:
           description: An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given.
+          type: string
+    WorkspaceUpdate:
+      description: Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–80 characters, with a letter or a digit, without a web address.
+          type: string
+        organization_size:
+          $ref: '#/components/schemas/OrganizationSize'
+        timezone:
+          description: An IANA time zone name.
           type: string
     SlugAvailability:
       type: object

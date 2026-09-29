@@ -62,6 +62,7 @@ type fakes struct {
 	list   *fakeList
 	create *fakeCreate
 	get    *fakeGet
+	update *fakeUpdate
 	check  *fakeCheck
 }
 
@@ -103,6 +104,19 @@ func (f *fakeGet) Execute(ctx context.Context, slug string) (domain.Workspace, e
 	return w, nil
 }
 
+type fakeUpdate struct {
+	calls  []string // "caller slug"
+	got    []domain.WorkspacePatch
+	answer domain.Workspace
+	err    error
+}
+
+func (f *fakeUpdate) Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	f.got = append(f.got, p)
+	return f.answer, f.err
+}
+
 type fakeCheck struct {
 	calls   []string
 	reasons map[string]domain.SlugReason
@@ -141,11 +155,14 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.get == nil {
 		f.get = &fakeGet{}
 	}
+	if f.update == nil {
+		f.update = &fakeUpdate{}
+	}
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, CheckSlug: f.check,
+		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, CheckSlug: f.check,
 	})
 	return router
 }

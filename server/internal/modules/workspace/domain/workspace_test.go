@@ -91,6 +91,47 @@ func TestCheckNewWorkspaceReportsEveryField(t *testing.T) {
 	}
 }
 
+// A patch is checked by the rules of a new workspace, field by field: a
+// field left nil is not checked, so the empty patch passes.
+func TestCheckWorkspacePatch(t *testing.T) {
+	for _, p := range []WorkspacePatch{
+		{},
+		{Name: ptr("研发部")},
+		{Name: ptr(strings.Repeat("工", 80)), OrganizationSize: ptr("500+"), Timezone: ptr("Asia/Shanghai")},
+		{OrganizationSize: ptr("Just myself")},
+		{Timezone: ptr("UTC")},
+	} {
+		if err := CheckWorkspacePatch(p); err != nil {
+			t.Errorf("CheckWorkspacePatch(%+v) = %v, want nil", p, err)
+		}
+	}
+	tests := []struct {
+		name string
+		p    WorkspacePatch
+		want []shared.FieldError
+	}{
+		{"empty name", WorkspacePatch{Name: ptr("")}, []shared.FieldError{{Field: "name", Code: "too_short", Message: "must not be empty"}}},
+		{"name with a web address", WorkspacePatch{Name: ptr("acme.io"), Timezone: ptr("UTC")},
+			[]shared.FieldError{{Field: "name", Code: "contains_url", Message: "must not contain a web address"}}},
+		{"unknown organization size", WorkspacePatch{OrganizationSize: ptr("1000+")},
+			[]shared.FieldError{{Field: "organization_size", Code: "invalid_format", Message: "is not a known organization size"}}},
+		{"the host's zone", WorkspacePatch{Name: ptr("Acme"), Timezone: ptr("Local")},
+			[]shared.FieldError{{Field: "timezone", Code: "invalid_format", Message: "is not a known time zone"}}},
+		{"all at once", WorkspacePatch{Name: ptr("-"), OrganizationSize: ptr(""), Timezone: ptr("")}, []shared.FieldError{
+			{Field: "name", Code: "invalid_format", Message: "must contain a letter or a digit"},
+			{Field: "organization_size", Code: "invalid_format", Message: "is not a known organization size"},
+			{Field: "timezone", Code: "invalid_format", Message: "is not a known time zone"},
+		}},
+	}
+	for _, tt := range tests {
+		err := CheckWorkspacePatch(tt.p)
+		var se *shared.Error
+		if !errors.As(err, &se) || se.Code != shared.CodeValidationFailed || !slices.Equal(se.Fields, tt.want) {
+			t.Errorf("%s: CheckWorkspacePatch(%+v) = %#v, want validation_failed with %v", tt.name, tt.p, err, tt.want)
+		}
+	}
+}
+
 func TestCheckSlug(t *testing.T) {
 	for slug, want := range map[string]SlugReason{
 		"acme":                   "",

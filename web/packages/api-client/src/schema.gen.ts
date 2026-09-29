@@ -296,7 +296,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a workspace's name, organization size or time zone
+         * @description For the workspace's admins. The fields given change and the others stay; the values follow createWorkspace's rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.
+         */
+        patch: operations["updateWorkspace"];
         trace?: never;
     };
     "/api/v0/workspace-slugs/{slug}": {
@@ -618,6 +622,14 @@ export interface components {
             /** @description An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given. */
             timezone?: string;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null. */
+        WorkspaceUpdate: {
+            /** @description 1–80 characters, with a letter or a digit, without a web address. */
+            name?: string;
+            organization_size?: components["schemas"]["OrganizationSize"];
+            /** @description An IANA time zone name. */
+            timezone?: string;
+        };
         SlugAvailability: {
             available: boolean;
             /**
@@ -684,6 +696,7 @@ export type Workspace = components['schemas']['Workspace'];
 export type WorkspaceList = components['schemas']['WorkspaceList'];
 export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
+export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
@@ -1096,6 +1109,34 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The workspace, with the caller's role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceUpdate"];
+            };
+        };
+        responses: {
+            /** @description The workspace as changed, with the caller's role. */
             200: {
                 headers: {
                     [name: string]: unknown;

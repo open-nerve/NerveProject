@@ -95,8 +95,9 @@ func (c cell) String() string {
 }
 
 var (
-	cellOK      = cell{status: http.StatusOK}
-	cellCreated = cell{status: http.StatusCreated}
+	cellOK        = cell{status: http.StatusOK}
+	cellCreated   = cell{status: http.StatusCreated}
+	cellForbidden = cell{http.StatusForbidden, "forbidden"}
 )
 
 // matrixRow is an operation's row: the request each caller sends and the

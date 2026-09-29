@@ -27,6 +27,11 @@ type GetWorkspaceUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.Workspace, error)
 }
 
+// UpdateWorkspaceUseCase is app.UpdateWorkspace.
+type UpdateWorkspaceUseCase interface {
+	Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error)
+}
+
 // CheckSlugUseCase is app.CheckSlug.
 type CheckSlugUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.SlugReason, error)
@@ -37,6 +42,7 @@ type UseCases struct {
 	ListWorkspaces  ListWorkspacesUseCase
 	CreateWorkspace CreateWorkspaceUseCase
 	GetWorkspace    GetWorkspaceUseCase
+	UpdateWorkspace UpdateWorkspaceUseCase
 	CheckSlug       CheckSlugUseCase
 }
 
