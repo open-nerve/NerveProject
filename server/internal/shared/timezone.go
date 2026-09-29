@@ -11,8 +11,9 @@ import "time"
 // (archtest's TestNerveBinaryEmbedsTheTimeZoneDatabase) only for a name the
 // host has no file for. So one host may accept a name that another refuses:
 // "asia/shanghai" on a case-insensitive file system, "posixrules" where the
-// host has that file (spec P3a 3 item 10). Within one process the answer
-// for a name does not change (M3 design 11.4).
+// host has that file (spec P3a 3 item 10). Every module asks this one
+// function, so at any moment they agree on a name; the answer can change
+// when the host's zone files do (M3 design 11.4).
 func ValidTimezone(name string) bool {
 	if name == "" || name == "Local" {
 		return false

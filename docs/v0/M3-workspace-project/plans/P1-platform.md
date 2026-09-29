@@ -10,6 +10,8 @@
 
 **Spec:** `docs/v0/M3-workspace-project/specs/P1-platform.md`（上级：`docs/v0/M3-workspace-project/M3-design.md`）
 
+> **执行后的说明（2026-09-30）：** 下面的块是执行前的文字，保留原样。执行中补上的测试缺口和整分支修复改动了其中一些块（例如反例从 9 个到 14 个、项目级的身份从 14 种到 17 种、`matrixModules` 改为默认要求的 `matrixExempt`），生成物的 SHA 也不再等于块中固定的值。最终的实现与本计划的差异见 [评审记录](../reviews/P1-platform-review.md) 第 5 节，spec 已按执行的结果改正。
+
 ## Global Constraints
 
 - **Go 版本和依赖**：本 plan 不执行 `go get`，不加任何 Go 模块或 npm 包（M3 设计 6.1）。`server/go.mod` 和 `server/tools/go.mod` 保持 `go 1.27` 和 `toolchain go1.27.1`（golangci-lint 2.13.2 由 go1.27.0 构建，`go` 行更高就拒绝运行）。每个 Task 提交前执行 `grep -n "^go \|^toolchain" server/go.mod server/tools/go.mod`，四行必须是 `go 1.27` 和 `toolchain go1.27.1`；`git diff --stat 1f0e7ed7 -- server/go.mod server/go.sum server/tools pnpm-lock.yaml` 在本 plan 的任何时刻都没有输出。

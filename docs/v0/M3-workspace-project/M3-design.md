@@ -1646,7 +1646,7 @@ modules/access/
 ### 11.4 `shared` 可以放两个模块必须一致的纯取值规则（3.13；负责人已批准，2026-09-29）
 - **问题**：总体设计 6.2 把 `shared` 定为跨边界的值和端口。M3 把邮箱规范化、网址检测、时区校验移进去，因为 `identity` 和 `workspace` 必须一致（邀请的邮箱要与账户的邮箱按同一规则比较）。
 - **做法**：照此做，并在 6.2 写明：`shared` 还可以放"两个以上模块必须一致的纯取值规则"，只用标准库，不放业务流程；只放真正共用的三条。
-  - 时区的校验用 `time.LoadLocation`，它读时区数据库，严格说不是不依赖环境的纯函数（Codex 4.2）。它先读主机的时区文件，主机没有这个名字的文件时才用 nerve 的二进制内嵌的时区数据库（`archtest` 的 `TestNerveBinaryEmbedsTheTimeZoneDatabase`），所以不同的机器可能对个别名字答得不同（大小写不敏感的文件系统上的 `asia/shanghai`，有这个文件的主机上的 `posixrules`）；同一个进程里一个名字的结果不变，3.13 要的只是这个，所以它仍放在 `shared`，不为它建端口。
+  - 时区的校验用 `time.LoadLocation`，它读时区数据库，严格说不是不依赖环境的纯函数（Codex 4.2）。它先读主机的时区文件，主机没有这个名字的文件时才用 nerve 的二进制内嵌的时区数据库（`archtest` 的 `TestNerveBinaryEmbedsTheTimeZoneDatabase`），所以不同的机器可能对个别名字答得不同（大小写不敏感的文件系统上的 `asia/shanghai`，有这个文件的主机上的 `posixrules`）；主机的时区文件更新之后，同一个名字的回答也可能随之改变。3.13 要的只是各模块问同一个函数、同一时刻对一个名字的回答相同，这一点成立，所以它仍放在 `shared`，不为它建端口。
 - **另一种做法**：`workspace` 经端口问 `identity`"这两个邮箱是否相同"，为纯函数建端口是过度设计。
 
 ### 11.5 标签只属于项目（3.16；负责人已批准，2026-09-29）
@@ -1656,7 +1656,7 @@ modules/access/
 
 ### 11.6 模块的两段组合：`Provide` 与 `New`（6.6；负责人已批准，2026-09-29）
 - **问题**：模块之间的端口第一次成为双向的（`workspace` 与 `project` 互相要，`access` 与两者互相要，`identity` 与 `workspace` 互相要），组合根要能无环地建出它们。
-- **做法**：每个模块先由 `Provide(pool)` 建出只依赖连接池的适配器（唯一的例外是 `identity` 的凭证锁，理由在 6.6），再由 `New(Deps)` 建出全部用例，构造之后不再登记或注入任何东西。顺序：密钥 → 各模块的 `Provide` → `access.New` → `project.New` → `workspace.New`（收到 `project` 的连带）→ `identity.New`。第三稿按 Codex M-1 加的三个跨模块读取都是 `Provide` 的适配器，顺序不变（6.6）。以后的模块照做，写进总体设计 6.3 第 4 条"只在组合根接线"的说明（P1）。
+- **做法**：给别的模块提供只依赖连接池的适配器的模块，先由 `Provide(pool)` 建出这些适配器（唯一的例外是 `identity` 的凭证锁，理由在 6.6）；每个模块再由 `New(Deps)` 建出全部用例（`access` 的 `Authorizer`、`project` 的连带这类依赖别的端口的实现也在 `New` 中建出），构造之后不再登记或注入任何东西。顺序：密钥 → 各模块的 `Provide` → `access.New` → `project.New` → `workspace.New`（收到 `project` 的连带）→ `identity.New`。第三稿按 Codex M-1 加的三个跨模块读取都是 `Provide` 的适配器，顺序不变（6.6）。以后的模块照做，写进总体设计 6.3 第 4 条"只在组合根接线"的说明（P1）。
 - **另一种做法**：模块之间用 setter 事后注入（有半初始化的对象），或延迟求值的闭包（接线的顺序藏在运行时），都比两段组合难检查。
 
 ### 11.7 错误码前缀规则的修订和平台码 `forbidden`（3.4、5.3；负责人已批准，2026-09-29）
@@ -1994,7 +1994,7 @@ modules/access/
 | Phase | 内容 | 状态 |
 |---|---|---|
 | 设计 | 本文（第三稿，按聚焦复核修订） | 第一稿经独立评审、第二稿经 Codex 对抗性评审、第三稿经聚焦复核，都已落实（17.1–17.3）；决策点已裁定，架构问题已批准（2026-09-29） |
-| P1 `platform` | 权限框架、组合与建工作区（后端，15） | 进行中：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md) |
+| P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
 | P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 未开始 |
 | P3 `invitations` | 邀请与凭邀请注册（后端，14） | 未开始 |
 | P4 `projects` | 项目、项目成员的加入与两个连带（后端，16） | 未开始 |

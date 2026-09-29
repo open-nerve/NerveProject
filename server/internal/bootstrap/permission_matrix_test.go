@@ -37,8 +37,9 @@ import (
 // every operation but the account-level and the public ones). An entry that
 // no operation carries is reported, so a misspelled one fails. P3's public
 // getWorkspaceInvitation is tagged workspace: P3 gives the matrix a column
-// for a caller without a token, or exempts that operation here (spec P1 3
-// item 10).
+// for a caller without a token, or an exemption by operation. This list
+// exempts modules, and workspace on it would exempt all of its operations
+// (spec P1 3 item 10).
 var matrixExempt = []string{
 	// Account-level (M2): each operation acts on the caller's own account,
 	// sessions or tokens, and no workspace or project role decides it.
