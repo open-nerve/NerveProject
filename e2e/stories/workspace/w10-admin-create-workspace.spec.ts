@@ -1,4 +1,4 @@
-import { slugFor } from "../../fixtures/api";
+import { createWorkspace, slugFor } from "../../fixtures/api";
 import { countWorkspaces, expectNoWorkspaceAdded, expectWorkspaceCreated } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
@@ -28,6 +28,10 @@ test("W10: nerve workspaces create makes the account of the address the workspac
 
   expect(line).toBe(`created workspace ${slug} with admin ${email}\n`);
   const id = await expectWorkspaceCreated(db, email, { name: "Acme", slug, organization_size: null, timezone: "UTC" });
+  await createWorkspace(api, (await register(api, emailFor(testInfo, "other"))).access_token, {
+    name: "Other",
+    slug: slugFor(testInfo, "other"),
+  });
   // The account sees it through the API, as its admin and only member.
   const { data, response } = await api.GET("/api/v0/workspaces", { headers: bearer(pat) });
   expect(response.status).toBe(200);
