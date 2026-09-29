@@ -90,15 +90,21 @@ type WorkspaceFinder interface {
 	WorkspaceBySlug(ctx context.Context, slug string) (domain.Workspace, error)
 }
 
-// WorkspaceLocker takes the parent locks of the writes on a workspace (M3
-// design 3.6 convention 2), in the transaction ctx carries: each locks the
-// undeleted workspace with slug until the transaction ends and returns its
-// id; ErrNotFound when there is none, also when it was deleted while the
-// lock waited.
+// The parent locks of the writes on a workspace (M3 design 3.6 convention
+// 2), in the transaction ctx carries: each locks the undeleted workspace
+// with slug until the transaction ends and returns its id; ErrNotFound when
+// there is none, also when it was deleted while the lock waited.
+
+// WorkspaceLocker locks FOR NO KEY UPDATE: for a write of the workspace row
+// itself or of a membership.
 type WorkspaceLocker interface {
-	// LockWorkspaceBySlug locks FOR NO KEY UPDATE: for a write of the
-	// workspace row itself or of a membership.
 	LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error)
+}
+
+// WorkspaceSharer locks FOR SHARE: for a write that adds or changes a row
+// under the workspace.
+type WorkspaceSharer interface {
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error)
 }
 
 // WorkspaceUpdater changes a workspace row under its lock.
@@ -108,6 +114,34 @@ type WorkspaceUpdater interface {
 	// now, and returns it as stored with its number of active members,
 	// without a role.
 	UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.WorkspacePatch, by uuid.UUID, now time.Time) (domain.Workspace, error)
+}
+
+// PreferencesRow is a change of an account's display settings in a
+// workspace, and the id of the row if the change inserts one.
+type PreferencesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	UserID      uuid.UUID
+	Patch       domain.PreferencesPatch
+	Now         time.Time
+}
+
+// PreferencesReader reads an account's display settings in a workspace.
+type PreferencesReader interface {
+	WorkspaceFinder
+	// Preferences returns userID's settings in workspaceID; found is false
+	// while there is no undeleted row.
+	Preferences(ctx context.Context, workspaceID, userID uuid.UUID) (p domain.Preferences, found bool, err error)
+}
+
+// PreferencesWriter writes an account's display settings in a workspace
+// under the workspace's lock.
+type PreferencesWriter interface {
+	WorkspaceSharer
+	// UpsertPreferences applies r.Patch to the account's undeleted row, or
+	// inserts one with domain.DefaultPreferences and the patch applied, and
+	// returns the settings as stored.
+	UpsertPreferences(ctx context.Context, r PreferencesRow) (domain.Preferences, error)
 }
 
 // SlugChecker tells whether a slug is taken.

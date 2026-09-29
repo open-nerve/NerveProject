@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -12,12 +13,15 @@ import (
 // A read that fails answers its error, never a plausible answer: not "not a
 // member", which the Authorizer would turn into workspace.not_found; not
 // "free", "none" or app.ErrNotFound. Each read runs on a cancelled context
-// against a workspace alice administers, so that the right answer is none
-// of the zero values.
+// against a workspace alice administers and has display settings in, so
+// that the right answer is none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
 	w := newWorkspace(t, s, "Acme", "acme", alice)
+	tabbed := "TABBED"
+	upsert(t, s, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: w.ID, UserID: alice,
+		Patch: domain.PreferencesPatch{NavigationControl: &tabbed}, Now: now})
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
 	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
@@ -33,6 +37,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if got, err := s.WorkspaceBySlug(cancelled, "acme"); !failed(err) || errors.Is(err, app.ErrNotFound) || !sameWorkspace(got, domain.Workspace{}) {
 		t.Errorf("WorkspaceBySlug() = %+v, %v; want context.Canceled, not app.ErrNotFound", got, err)
+	}
+	if p, found, err := s.Preferences(cancelled, w.ID, alice); !failed(err) || found || p != (domain.Preferences{}) {
+		t.Errorf("Preferences() = %+v, %v, %v; want context.Canceled, not no row", p, found, err)
 	}
 }
 
@@ -50,5 +57,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if got, err := s.UpdateWorkspace(cancelled, w.ID, domain.WorkspacePatch{Name: ptr("Renamed")}, alice, now); !failed(err) ||
 		!sameWorkspace(got, domain.Workspace{}) {
 		t.Errorf("UpdateWorkspace() = %+v, %v; want context.Canceled", got, err)
+	}
+	if got, err := s.UpsertPreferences(cancelled, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: w.ID, UserID: alice, Now: now}); !failed(err) ||
+		got != (domain.Preferences{}) {
+		t.Errorf("UpsertPreferences() = %+v, %v; want context.Canceled", got, err)
 	}
 }
