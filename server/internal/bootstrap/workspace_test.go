@@ -18,9 +18,10 @@ import (
 // The workspace module as bootstrap wires it (M3 design 6.6), with
 // workspace.creation_enabled both ways (3.11). On: the caller creates a
 // workspace, through identity's account lock, and is its admin and only
-// member; his list holds it; he reads it, through the Authorizer, and
-// another account reads it as not found. Off: the API answers
-// workspace.creation_disabled and nothing is created.
+// member; his list holds it; he reads it, through the Authorizer, as its
+// admin (20). Another account, the admin of a workspace of his own, reads
+// it as not found: the role read is the caller's, in this workspace. Off:
+// the API answers workspace.creation_disabled and nothing is created.
 func TestCreatingAWorkspaceAsConfigured(t *testing.T) {
 	for _, enabled := range []bool{true, false} {
 		t.Run(fmt.Sprintf("creation_enabled %v", enabled), func(t *testing.T) {
@@ -30,13 +31,18 @@ func TestCreatingAWorkspaceAsConfigured(t *testing.T) {
 			base := startApp(t, cfg, migrations.FS())
 			alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
 			bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
+			if enabled {
+				if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", bob, `{"name":"Bob's","slug":"bobs"}`); status != http.StatusCreated {
+					t.Fatalf("bob's own workspace = %d %s, want 201", status, body)
+				}
+			}
 
 			created, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice, `{"name":"Acme","slug":"acme"}`)
 			_, list := call(t, contract, http.MethodGet, base+"/api/v0/workspaces", alice, "")
-			aliceReads, _ := call(t, contract, http.MethodGet, base+"/api/v0/workspaces/acme", alice, "")
+			aliceReads, aliceBody := call(t, contract, http.MethodGet, base+"/api/v0/workspaces/acme", alice, "")
 			bobReads, bobBody := call(t, contract, http.MethodGet, base+"/api/v0/workspaces/acme", bob, "")
 
-			var w struct {
+			var w, read struct {
 				Slug         string `json:"slug"`
 				Role         int    `json:"role"`
 				TotalMembers int    `json:"total_members"`
@@ -59,8 +65,11 @@ func TestCreatingAWorkspaceAsConfigured(t *testing.T) {
 			if err := json.Unmarshal([]byte(body), &w); err != nil || created != http.StatusCreated || w.Slug != "acme" || w.Role != 20 || w.TotalMembers != 1 {
 				t.Errorf("create = %d %s, want 201 with the caller its admin and only member", created, body)
 			}
-			if len(l.Data) != 1 || l.Data[0].Slug != "acme" || aliceReads != http.StatusOK {
-				t.Errorf("alice's list %s, her read %d; want acme, 200", list, aliceReads)
+			if len(l.Data) != 1 || l.Data[0].Slug != "acme" {
+				t.Errorf("alice's list %s, want acme alone", list)
+			}
+			if err := json.Unmarshal([]byte(aliceBody), &read); err != nil || aliceReads != http.StatusOK || read.Slug != "acme" || read.Role != 20 {
+				t.Errorf("alice's read = %d %s, want 200 with acme and her role 20", aliceReads, aliceBody)
 			}
 			if bobReads != http.StatusNotFound || problemCode(t, []byte(bobBody)) != "workspace.not_found" {
 				t.Errorf("bob's read = %d %s, want 404 workspace.not_found", bobReads, bobBody)

@@ -13,8 +13,13 @@ import (
 func TestWorkspacesCreateCommand(t *testing.T) {
 	environ, pool := usersDatabase(t)
 	environ = append(environ, "NERVE_WORKSPACE__CREATION_ENABLED=false")
-	if code, _, stderr := executeWithInput(context.Background(), environ, "Tr0ub4dor&3\n", "users", "create", "--email", "nia@corp.com"); code != 0 {
-		t.Fatalf("create the account = %d: %s", code, stderr)
+	for _, email := range []string{"nia@corp.com", "lee@corp.com"} {
+		if code, _, stderr := executeWithInput(context.Background(), environ, "Tr0ub4dor&3\n", "users", "create", "--email", email); code != 0 {
+			t.Fatalf("create the account of %s = %d: %s", email, code, stderr)
+		}
+	}
+	if code, _, stderr := execute(context.Background(), environ, "users", "deactivate", "--email", "lee@corp.com"); code != 0 {
+		t.Fatalf("deactivate lee = %d: %s", code, stderr)
 	}
 
 	code, stdout, stderr := execute(context.Background(), environ,
@@ -38,6 +43,8 @@ func TestWorkspacesCreateCommand(t *testing.T) {
 			"nerve: A workspace with this slug exists.\n"},
 		{"an unknown account", []string{"workspaces", "create", "--slug", "beta", "--name", "Beta", "--admin-email", "may@corp.com"},
 			"nerve: No account has this e-mail address.\n"},
+		{"a deactivated account", []string{"workspaces", "create", "--slug", "beta", "--name", "Beta", "--admin-email", "lee@corp.com"},
+			"nerve: The account is deactivated.\n"},
 		{"a reserved slug", []string{"workspaces", "create", "--slug", "settings", "--name", "Beta", "--admin-email", "nia@corp.com"},
 			"nerve: --slug is reserved\n"},
 		// Refused by the API's rules, not lower-cased (M3 design 3.11).

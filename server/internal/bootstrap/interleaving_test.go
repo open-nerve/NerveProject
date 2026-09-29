@@ -122,13 +122,16 @@ func (r race) creation(workspaces workspaceapp.WorkspaceCreator) *workspaceapp.C
 	})
 }
 
-func (r race) state(t *testing.T) (active bool, workspaces int) {
+// state is whether alice's account is active, and how many workspaces and
+// memberships there are.
+func (r race) state(t *testing.T) (active bool, workspaces, members int) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), "SELECT is_active, (SELECT count(*) FROM workspaces) FROM users WHERE id = $1", r.alice).
-		Scan(&active, &workspaces); err != nil {
+	if err := r.pool.QueryRow(context.Background(),
+		"SELECT is_active, (SELECT count(*) FROM workspaces), (SELECT count(*) FROM workspace_members) FROM users WHERE id = $1", r.alice).
+		Scan(&active, &workspaces, &members); err != nil {
 		t.Fatal(err)
 	}
-	return active, workspaces
+	return active, workspaces, members
 }
 
 // run starts fn and returns the channel of its result.
@@ -187,8 +190,8 @@ func TestDeactivationFirstRefusesTheWorkspace(t *testing.T) {
 	if err := result(t, ctx, created, "the creation"); !errors.Is(err, shared.Unauthenticated()) {
 		t.Errorf("the creation = %v, want 401 unauthorized", err)
 	}
-	if active, workspaces := r.state(t); active || workspaces != 0 {
-		t.Errorf("alice active %v, %d workspaces; want deactivated and none", active, workspaces)
+	if active, workspaces, members := r.state(t); active || workspaces != 0 || members != 0 {
+		t.Errorf("alice active %v, %d workspaces, %d memberships; want deactivated and none", active, workspaces, members)
 	}
 }
 
@@ -211,8 +214,9 @@ func TestCreationFirstHoldsOffTheDeactivation(t *testing.T) {
 		return err
 	})
 	pgtest.WaitForLockWait(t, r.pool, 5*time.Second)
-	if active, workspaces := r.state(t); !active || workspaces != 0 {
-		t.Errorf("while the creation holds the row: alice active %v, %d workspaces; want active and none committed", active, workspaces)
+	if active, workspaces, members := r.state(t); !active || workspaces != 0 || members != 0 {
+		t.Errorf("while the creation holds the row: alice active %v, %d workspaces, %d memberships; want active and none committed",
+			active, workspaces, members)
 	}
 	close(g.open)
 
@@ -222,7 +226,7 @@ func TestCreationFirstHoldsOffTheDeactivation(t *testing.T) {
 	if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
 		t.Errorf("the deactivation = %v, want it done", err)
 	}
-	if active, workspaces := r.state(t); active || workspaces != 1 {
-		t.Errorf("alice active %v, %d workspaces; want deactivated after one workspace", active, workspaces)
+	if active, workspaces, members := r.state(t); active || workspaces != 1 || members != 1 {
+		t.Errorf("alice active %v, %d workspaces, %d memberships; want deactivated after one workspace and its admin", active, workspaces, members)
 	}
 }
