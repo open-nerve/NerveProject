@@ -20,9 +20,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
-// The permission matrix (M3 design 9.2): each operation of the modules
-// below, called over HTTP on the wired app and a real database by each kind
-// of caller, its status and problem code asserted cell by cell. The data is
+// The permission matrix (M3 design 9.2): each operation of the contract but
+// the exempt modules' below, called over HTTP on the wired app and a real
+// database by each kind of caller, its status and problem code asserted cell
+// by cell. The data is
 // prepared once: the accounts through the API, the workspaces and
 // memberships through the workspace store, and the two states no store
 // writes yet through SQL (prepareMatrix). The cells that only read share
@@ -30,10 +31,21 @@ import (
 // (pgtest.NewDatabaseFrom), so no cell sees another's writes. A phase that
 // adds an operation adds its row, and what the row needs prepared.
 
-// matrixModules are the modules whose every operation has a row: their
-// operations are authorized in a workspace, or act on the caller's
-// workspaces. project adds itself with its operations.
-var matrixModules = []string{"workspace"}
+// matrixExempt are the modules whose operations have no row, each for its
+// reason. Every other operation of the contract has one, so a module that
+// adds operations is in the matrix unless it is added here (M3 design 9.2:
+// every operation but the account-level and the public ones). An entry that
+// no operation carries is reported, so a misspelled one fails. P3's public
+// getWorkspaceInvitation is tagged workspace: P3 gives the matrix a column
+// for a caller without a token, or exempts that operation here (spec P1 3
+// item 10).
+var matrixExempt = []string{
+	// Account-level (M2): each operation acts on the caller's own account,
+	// sessions or tokens, and no workspace or project role decides it.
+	"identity",
+	// Public: it describes this instance to anyone, with a token or without.
+	"instance",
+}
 
 // caller is a column: an account, and how it stands to the workspace a row
 // targets.

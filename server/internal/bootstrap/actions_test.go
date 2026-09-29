@@ -3,6 +3,8 @@ package bootstrap
 import (
 	"fmt"
 	"maps"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 
@@ -12,10 +14,94 @@ import (
 )
 
 // moduleActions are the actions each module declares (M3 design 3.4). A
-// module with actions adds its line here.
+// module with actions adds its line here; every module under
+// internal/modules has one, or is on actionlessModules.
 func moduleActions() map[string][]shared.Action {
 	return map[string][]shared.Action{
 		"workspace": workspace.Actions(),
+	}
+}
+
+// actionlessModules are the modules that declare no action, each for its
+// reason.
+var actionlessModules = []string{
+	// Account-level (M2): a caller acts on his own account only, and no rule
+	// decides it.
+	"identity",
+	// Public: it describes this instance to anyone.
+	"instance",
+	// It decides the other modules' actions, and has none of its own.
+	"access",
+}
+
+// moduleViolations reports where the module directories and the two lists
+// part: a module neither in moduleActions nor on actionlessModules, whose
+// actions would escape TestEveryActionHasARuleAndEveryRuleAnAction; a name
+// on either list with no directory, which a misspelling would be.
+func moduleViolations(dirs, listed, actionless []string) []string {
+	var found []string
+	for _, dir := range dirs {
+		if !slices.Contains(listed, dir) && !slices.Contains(actionless, dir) {
+			found = append(found, fmt.Sprintf("module %s is neither in moduleActions nor on actionlessModules", dir))
+		}
+	}
+	for _, name := range listed {
+		if !slices.Contains(dirs, name) {
+			found = append(found, fmt.Sprintf("moduleActions lists %s, which is no module", name))
+		}
+	}
+	for _, name := range actionless {
+		if !slices.Contains(dirs, name) {
+			found = append(found, fmt.Sprintf("actionlessModules lists %s, which is no module", name))
+		}
+	}
+	return found
+}
+
+// Every directory of internal/modules, read now, declares its actions in
+// moduleActions or is on actionlessModules, and each name on either list is
+// a module: a module added without its line fails here.
+func TestEveryModuleDeclaresItsActionsOrHasNone(t *testing.T) {
+	entries, err := os.ReadDir(filepath.Join("..", "modules"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dirs []string
+	for _, e := range entries {
+		if e.IsDir() {
+			dirs = append(dirs, e.Name())
+		}
+	}
+	if !slices.Contains(dirs, "workspace") {
+		t.Fatalf("the module directories %q lack workspace: the wrong directory was read", dirs)
+	}
+	for _, v := range moduleViolations(dirs, slices.Sorted(maps.Keys(moduleActions())), actionlessModules) {
+		t.Error(v)
+	}
+}
+
+// Each check of moduleViolations fails on its counterexample.
+func TestModuleViolationsCatchesEachGap(t *testing.T) {
+	dirs, listed, actionless := []string{"access", "identity", "workspace"}, []string{"workspace"}, []string{"access", "identity"}
+	if got := moduleViolations(dirs, listed, actionless); len(got) != 0 {
+		t.Fatalf("a matching layout: %q, want none", got)
+	}
+	tests := []struct {
+		name                     string
+		dirs, listed, actionless []string
+		want                     string
+	}{
+		{"a module on neither list", append(slices.Clone(dirs), "project"), listed, actionless,
+			"module project is neither in moduleActions nor on actionlessModules"},
+		{"a listed name with no directory", dirs, []string{"workspace", "project"}, actionless,
+			"moduleActions lists project, which is no module"},
+		{"an actionless name with no directory", dirs, listed, []string{"access", "identity", "instanse"},
+			"actionlessModules lists instanse, which is no module"},
+	}
+	for _, tt := range tests {
+		if got := moduleViolations(tt.dirs, tt.listed, tt.actionless); !slices.Equal(got, []string{tt.want}) {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
 	}
 }
 

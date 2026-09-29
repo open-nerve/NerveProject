@@ -11,12 +11,15 @@ import (
 )
 
 // matrixViolations reports where the matrix and the contract part: an
-// operation of matrixModules without a row; a row that names no operation;
-// a row without a cell for a column; a cell whose request is not the
-// operation its row names, so that no row tests another operation under
-// its name; a row that sends anything but GET without write, whose cells
-// could write on the copy the reading cells share.
-func matrixViolations(ops []apitest.Operation, rows []matrixRow) []string {
+// operation without a row, unless every tag it has is on exempt, so that a
+// new module's operations need rows without anyone listing the module; an
+// exempt module that no operation carries, which a misspelling would be; a
+// row that names no operation; a row without a cell for a column; a cell
+// whose request is not the operation its row names, so that no row tests
+// another operation under its name; a row that sends anything but GET
+// without write, whose cells could write on the copy the reading cells
+// share.
+func matrixViolations(ops []apitest.Operation, exempt []string, rows []matrixRow) []string {
 	var found []string
 	byID, inMatrix := map[string]apitest.Operation{}, map[string]bool{}
 	for _, op := range ops {
@@ -43,8 +46,14 @@ func matrixViolations(ops []apitest.Operation, rows []matrixRow) []string {
 		}
 	}
 	for _, op := range ops {
-		if slices.ContainsFunc(op.Tags, func(tag string) bool { return slices.Contains(matrixModules, tag) }) && !inMatrix[op.ID] {
-			found = append(found, fmt.Sprintf("operation %s of %s has no row", op.ID, strings.Join(op.Tags, ", ")))
+		exempted := len(op.Tags) > 0 && !slices.ContainsFunc(op.Tags, func(tag string) bool { return !slices.Contains(exempt, tag) })
+		if !exempted && !inMatrix[op.ID] {
+			found = append(found, fmt.Sprintf("operation %s, tagged %v, has no row", op.ID, op.Tags))
+		}
+	}
+	for _, module := range exempt {
+		if !slices.ContainsFunc(ops, func(op apitest.Operation) bool { return slices.Contains(op.Tags, module) }) {
+			found = append(found, fmt.Sprintf("the exempt module %s has no operation", module))
 		}
 	}
 	for _, r := range rows {
@@ -76,21 +85,23 @@ func pathOf(pattern, path string) bool {
 	return true
 }
 
-// Every operation of the matrix's modules has a row, each row names an
-// operation, has a cell for each column and sends that operation's request
-// from each, and a row that writes says so (M3 design 9.2): a new
-// operation without a row fails here, and so does a row that tests another
-// operation under its name.
+// Every operation but the exempt modules' has a row, each exempt module has
+// operations, each row names an operation, has a cell for each column and
+// sends that operation's request from each, and a row that writes says so
+// (M3 design 9.2): a new operation without a row fails here, whatever its
+// module, and so does a row that tests another operation under its name.
 func TestThePermissionMatrixCoversEveryOperation(t *testing.T) {
-	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixRows()) {
+	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows()) {
 		t.Error(v)
 	}
 }
 
-// Each check of matrixViolations fails on its counterexample.
+// Each check of matrixViolations fails on its counterexample. identity is
+// exempt unless a case says otherwise.
 func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	ops := []apitest.Operation{{ID: "getWorkspace", Tags: []string{"workspace"}, Method: http.MethodGet, Path: "/api/v0/workspaces/{slug}"},
 		{ID: "getMe", Tags: []string{"identity"}, Method: http.MethodGet, Path: "/api/v0/me"}}
+	exempt := []string{"identity"}
 	get := sameRequest(http.MethodGet, "/api/v0/workspaces/acme", "")
 	row := matrixRow{op: "getWorkspace", request: get, cells: every(cellOK)}
 	// guestSends is row, but the guest's cell sends method path.
@@ -107,7 +118,7 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	// A matching matrix; a query is no part of the path.
 	lists := apitest.Operation{ID: "listWorkspaces", Tags: []string{"workspace"}, Method: http.MethodGet, Path: "/api/v0/workspaces"}
 	paged := matrixRow{op: "listWorkspaces", request: sameRequest(http.MethodGet, "/api/v0/workspaces?page=2", ""), cells: every(cellOK)}
-	if got := matrixViolations(append(ops, lists), []matrixRow{row, paged}); len(got) != 0 {
+	if got := matrixViolations(append(ops, lists), exempt, []matrixRow{row, paged}); len(got) != 0 {
 		t.Fatalf("a matching matrix: %q, want none", got)
 	}
 	partial := row
@@ -126,7 +137,13 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 		want []string
 	}{
 		{"an operation without a row", append(ops, apitest.Operation{ID: "updateWorkspace", Tags: []string{"workspace"}}),
-			[]matrixRow{row}, []string{"operation updateWorkspace of workspace has no row"}},
+			[]matrixRow{row}, []string{"operation updateWorkspace, tagged [workspace], has no row"}},
+		{"an operation of a module no list names", append(ops, apitest.Operation{ID: "listProjects", Tags: []string{"project"}}),
+			[]matrixRow{row}, []string{"operation listProjects, tagged [project], has no row"}},
+		{"an operation without a tag", append(ops, apitest.Operation{ID: "getHealth"}),
+			[]matrixRow{row}, []string{"operation getHealth, tagged [], has no row"}},
+		{"an operation with an exempt tag and another", append(ops, apitest.Operation{ID: "getMyWorkspaces", Tags: []string{"identity", "workspace"}}),
+			[]matrixRow{row}, []string{"operation getMyWorkspaces, tagged [identity workspace], has no row"}},
 		{"a row of no operation", ops, []matrixRow{row, {op: "renameWorkspace", request: get, cells: every(cellOK)}},
 			[]string{"row renameWorkspace names no operation of the contract"}},
 		{"a row without a cell", ops, []matrixRow{partial}, []string{
@@ -148,7 +165,22 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 			[]string{"row createWorkspace sends POST without write: its cells could run on the reads' copy"}},
 	}
 	for _, tt := range tests {
-		if got := matrixViolations(tt.ops, tt.rows); !slices.Equal(got, tt.want) {
+		if got := matrixViolations(tt.ops, exempt, tt.rows); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
+	// An exempt entry that no operation carries: stale, or misspelled, when
+	// the module it meant has operations without rows besides.
+	for _, tt := range []struct {
+		name   string
+		exempt []string
+		want   []string
+	}{
+		{"a stale exempt entry", []string{"identity", "instance"}, []string{"the exempt module instance has no operation"}},
+		{"a misspelled exempt entry", []string{"identities"},
+			[]string{"operation getMe, tagged [identity], has no row", "the exempt module identities has no operation"}},
+	} {
+		if got := matrixViolations(ops, tt.exempt, []matrixRow{row}); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}
