@@ -14,6 +14,7 @@ import (
 	httpadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/http"
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -77,4 +78,16 @@ func New(d Deps) *Module {
 // Register mounts the module's API on router behind api's middlewares.
 func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
 	httpadapter.Register(router, api, m.uc)
+}
+
+// Actions lists the module's actions: bootstrap holds the union of every
+// module's equal to access's rule table (M3 design 3.4).
+func Actions() []shared.Action {
+	return domain.Actions()
+}
+
+// ReservedSlugs is the reserved list (M3 design 3.10): bootstrap holds its
+// server section equal to the top-level paths the server answers itself.
+func ReservedSlugs() domain.ReservedSlugs {
+	return domain.Reserved()
 }
