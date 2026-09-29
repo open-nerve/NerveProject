@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // ShareAccount and ShareAccountByEmail read the account's state: two
@@ -143,6 +146,100 @@ func TestTheShareLockBlocksDeactivationNotAnotherShare(t *testing.T) {
 			var pgErr *pgconn.PgError
 			if !errors.As(deactivation, &pgErr) || pgErr.Code != "55P03" {
 				t.Errorf("deactivation's lock: %v, want lock_not_available after waiting", deactivation)
+			}
+		})
+	}
+}
+
+// The other order (M3 design 3.6 convention 6): while deactivation holds the
+// row (its FOR NO KEY UPDATE taken, is_active set false, not committed), both
+// reads wait for its lock, then read the account as deactivation committed
+// it. WaitForLockWait sees the read waiting before the deactivation commits;
+// every wait has a 10s deadline, so the test fails, not hangs. Each read has
+// its own database, so the only lock wait there is its own.
+func TestTheShareWaitsForDeactivationAndReadsItsResult(t *testing.T) {
+	reads := map[string]func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) (app.AccountState, bool, error){
+		"ShareAccount": func(ctx context.Context, s *postgresadapter.Store, id uuid.UUID) (app.AccountState, bool, error) {
+			return s.ShareAccount(ctx, id)
+		},
+		"ShareAccountByEmail": func(ctx context.Context, s *postgresadapter.Store, _ uuid.UUID) (app.AccountState, bool, error) {
+			return s.ShareAccountByEmail(ctx, "alice@corp.com")
+		},
+	}
+	for name, read := range reads {
+		t.Run(name, func(t *testing.T) {
+			s, pool := newStore(t)
+			u := newUser("alice@corp.com")
+			mustCreate(t, s, u)
+			tx := postgres.NewTxManager(pool, 2*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			locked, release := make(chan struct{}), make(chan struct{})
+			// A failure below must still end the deactivation: the pool's
+			// Close in the cleanup waits for its connection.
+			var releaseOnce sync.Once
+			commit := func() { releaseOnce.Do(func() { close(release) }) }
+			defer commit()
+			deactivated := make(chan error, 1)
+			go func() {
+				deactivated <- tx.WithinTx(ctx, func(ctx context.Context) error {
+					if _, err := s.LockForCredentials(ctx, u.ID); err != nil {
+						return err
+					}
+					if err := s.DeactivateUser(ctx, u.ID, now); err != nil {
+						return err
+					}
+					close(locked)
+					select {
+					case <-release:
+						return nil
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				})
+			}()
+			select {
+			case <-locked:
+			case err := <-deactivated:
+				t.Fatalf("deactivating: %v", err)
+			case <-ctx.Done():
+				t.Fatal("the deactivation did not hold the row within 10s")
+			}
+
+			type answer struct {
+				state app.AccountState
+				found bool
+				err   error
+			}
+			answered := make(chan answer, 1)
+			go func() {
+				var a answer
+				a.err = tx.WithinTx(ctx, func(ctx context.Context) error {
+					var err error
+					a.state, a.found, err = read(ctx, s, u.ID)
+					return err
+				})
+				answered <- a
+			}()
+			pgtest.WaitForLockWait(t, pool, 5*time.Second)
+			commit()
+
+			select {
+			case err := <-deactivated:
+				if err != nil {
+					t.Fatalf("the deactivation: %v", err)
+				}
+			case <-ctx.Done():
+				t.Fatal("the deactivation did not end within 10s")
+			}
+			select {
+			case a := <-answered:
+				want := app.AccountState{ID: u.ID, Email: "alice@corp.com", Active: false}
+				if a.err != nil || !a.found || a.state != want {
+					t.Errorf("%s() after the deactivation = %+v, found %v, %v; want %+v, found", name, a.state, a.found, a.err, want)
+				}
+			case <-ctx.Done():
+				t.Fatal("the read did not end within 10s")
 			}
 		})
 	}
