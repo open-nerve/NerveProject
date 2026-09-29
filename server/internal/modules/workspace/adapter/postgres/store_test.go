@@ -54,8 +54,14 @@ func newAccount(t *testing.T, pool *pgxpool.Pool, email string) uuid.UUID {
 // admin, and returns it as stored.
 func newWorkspace(t *testing.T, s *postgresadapter.Store, name, slug string, admin uuid.UUID) domain.Workspace {
 	t.Helper()
+	return newWorkspaceWithID(t, s, uuid.NewV7(), name, slug, admin)
+}
+
+// newWorkspaceWithID is newWorkspace with the workspace's id given.
+func newWorkspaceWithID(t *testing.T, s *postgresadapter.Store, id uuid.UUID, name, slug string, admin uuid.UUID) domain.Workspace {
+	t.Helper()
 	w, err := s.CreateWorkspace(context.Background(), app.WorkspaceRow{
-		ID: uuid.NewV7(), Name: name, Slug: slug, Timezone: "UTC", CreatedBy: admin, Now: now,
+		ID: id, Name: name, Slug: slug, Timezone: "UTC", CreatedBy: admin, Now: now,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -150,8 +156,8 @@ func TestCreateMemberStoresTheRow(t *testing.T) {
 
 // fixture is three accounts and seven workspaces, in every state for alice:
 //   - beta (alice admin, bob member, carol removed), acme (bob admin, alice
-//     guest), beta2 (bob removed, alice member; the same name as beta, so the
-//     id breaks the tie);
+//     guest), beta2 (bob removed, alice member; the same name as beta, and a
+//     smaller id though created after it, so only the id breaks the tie);
 //   - gone (alice admin, deleted), left (alice removed), dropped (alice's
 //     row deleted), bobs (bob alone).
 type fixture struct {
@@ -166,13 +172,14 @@ func newFixture(t *testing.T) fixture {
 	s, pool := newStore(t)
 	f := fixture{s: s, pool: pool}
 	f.alice, f.bob, f.carol = newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	beta2ID := uuid.NewV7() // drawn before beta's: v7 ids increase
 	f.beta = newWorkspace(t, s, "Beta", "beta", f.alice)
 	join(t, s, f.beta.ID, f.bob, shared.RoleMember)
 	join(t, s, f.beta.ID, f.carol, shared.RoleMember)
 	exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2", f.beta.ID, f.carol)
 	f.acme = newWorkspace(t, s, "Acme", "acme", f.bob)
 	join(t, s, f.acme.ID, f.alice, shared.RoleGuest)
-	f.beta2 = newWorkspace(t, s, "Beta", "beta-2", f.bob)
+	f.beta2 = newWorkspaceWithID(t, s, beta2ID, "Beta", "beta-2", f.bob)
 	join(t, s, f.beta2.ID, f.alice, shared.RoleMember)
 	exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2", f.beta2.ID, f.bob)
 	f.gone = newWorkspace(t, s, "Gone", "gone", f.alice)
@@ -193,16 +200,17 @@ func newFixture(t *testing.T) fixture {
 // deleted membership (M3 design 3.12).
 func TestListWorkspaces(t *testing.T) {
 	f := newFixture(t)
-	type item struct {
-		id      uuid.UUID
-		role    shared.Role
-		members int
+	type item struct { // exported fields: fmt prints the ids as UUIDs
+		ID      uuid.UUID
+		Role    shared.Role
+		Members int
 	}
-	// beta and beta2 have the same name: the smaller id first.
-	betas := []item{{f.beta.ID, shared.RoleAdmin, 2}, {f.beta2.ID, shared.RoleMember, 1}}
-	if f.beta2.ID.Compare(f.beta.ID) < 0 {
-		betas[0], betas[1] = betas[1], betas[0]
+	// beta and beta2 have the same name: the smaller id first, beta2's, though
+	// beta was created first.
+	if f.beta2.ID.Compare(f.beta.ID) >= 0 {
+		t.Fatal("the fixture's beta2 must have the smaller id")
 	}
+	betas := []item{{f.beta2.ID, shared.RoleMember, 1}, {f.beta.ID, shared.RoleAdmin, 2}}
 	tests := []struct {
 		name string
 		user uuid.UUID
@@ -235,14 +243,19 @@ func TestListWorkspaces(t *testing.T) {
 }
 
 // WorkspaceBySlug finds an undeleted workspace, with its active members
-// counted.
+// counted: not beta's removed carol, not dropped's deleted row of alice.
 func TestWorkspaceBySlug(t *testing.T) {
 	f := newFixture(t)
-	got, err := f.s.WorkspaceBySlug(context.Background(), "beta")
-	want := f.beta
-	want.TotalMembers = 2
-	if err != nil || !sameWorkspace(got, want) {
-		t.Errorf("WorkspaceBySlug(beta) = %+v, %v; want %+v", got, err, want)
+	for _, tt := range []struct {
+		w       domain.Workspace
+		members int
+	}{{f.beta, 2}, {f.dropped, 1}} {
+		got, err := f.s.WorkspaceBySlug(context.Background(), tt.w.Slug)
+		want := tt.w
+		want.TotalMembers = tt.members
+		if err != nil || !sameWorkspace(got, want) {
+			t.Errorf("WorkspaceBySlug(%s) = %+v, %v; want %+v", tt.w.Slug, got, err, want)
+		}
 	}
 	for _, slug := range []string{"gone", "BETA", "bet", "nothing"} {
 		if _, err := f.s.WorkspaceBySlug(context.Background(), slug); !errors.Is(err, app.ErrNotFound) {
