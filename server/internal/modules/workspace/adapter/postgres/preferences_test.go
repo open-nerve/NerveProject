@@ -79,7 +79,7 @@ func TestUpsertPreferences(t *testing.T) {
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme, beta := newWorkspace(t, s, "Acme", "acme", alice), newWorkspace(t, s, "Beta", "beta", alice)
 	first := uuid.NewV7()
-	later, latest := now.Add(time.Hour), now.Add(2*time.Hour)
+	hour := func(n time.Duration) time.Time { return now.Add(n * time.Hour) }
 
 	steps := []struct {
 		r    app.PreferencesRow
@@ -88,9 +88,11 @@ func TestUpsertPreferences(t *testing.T) {
 	}{
 		{app.PreferencesRow{ID: first, WorkspaceID: acme.ID, UserID: alice, Patch: domain.PreferencesPatch{NavigationProjectLimit: ptr(3)}, Now: now},
 			prefs("ACCORDION", 3), now},
-		{app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme.ID, UserID: alice, Patch: domain.PreferencesPatch{NavigationControl: ptr("TABBED")}, Now: later},
-			prefs("TABBED", 3), later},
-		{app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme.ID, UserID: alice, Now: latest}, prefs("TABBED", 3), latest},
+		{app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme.ID, UserID: alice, Patch: domain.PreferencesPatch{NavigationControl: ptr("TABBED")}, Now: hour(1)},
+			prefs("TABBED", 3), hour(1)},
+		{app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme.ID, UserID: alice, Patch: domain.PreferencesPatch{NavigationProjectLimit: ptr(0)}, Now: hour(2)},
+			prefs("TABBED", 0), hour(2)},
+		{app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme.ID, UserID: alice, Now: hour(3)}, prefs("TABBED", 0), hour(3)},
 	}
 	for i, step := range steps {
 		if got := upsert(t, s, step.r); got != step.want {
@@ -111,8 +113,8 @@ func TestUpsertPreferences(t *testing.T) {
 	if got := upsert(t, s, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: beta.ID, UserID: alice, Now: now}); got != domain.DefaultPreferences() {
 		t.Errorf("alice's first change in beta = %+v, want the defaults", got)
 	}
-	if p, _, err := s.Preferences(context.Background(), acme.ID, alice); err != nil || p != prefs("TABBED", 3) {
-		t.Errorf("alice's settings in acme after bob's and beta's = %+v, %v; want TABBED, 3", p, err)
+	if p, _, err := s.Preferences(context.Background(), acme.ID, alice); err != nil || p != prefs("TABBED", 0) {
+		t.Errorf("alice's settings in acme after bob's and beta's = %+v, %v; want TABBED, 0", p, err)
 	}
 }
 
