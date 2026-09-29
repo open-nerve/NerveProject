@@ -115,7 +115,10 @@ var projectIdentities = []struct {
 	{"WG- private", guest, false, none},
 	{"P-before", member, false, domain.Membership{Active: false, Role: shared.RoleAdmin}},
 	{"X", none, true, admin},
+	// 10 lies between the roles and 25 above them: seeing is by set, never
+	// by order.
 	{"workspace role outside the three, public", domain.Membership{Active: true, Role: 10}, true, none},
+	{"workspace role above the three, public", domain.Membership{Active: true, Role: 25}, true, none},
 	{"project role outside the three", member, false, domain.Membership{Active: true, Role: 10}},
 	{"workspace role outside the three, project admin", domain.Membership{Active: true, Role: 10}, false, admin},
 }
@@ -130,15 +133,15 @@ func TestDecideAtTheProjectLevels(t *testing.T) {
 	}{
 		// updateProject, addProjectMembers, createState… (9.2)
 		{"project admins", domain.Rule{Level: domain.LevelProject, Roles: all[:1]},
-			[]outcome{ok, no, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, no, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 		{"project admins and members", domain.Rule{Level: domain.LevelProject, Roles: all[:2]},
-			[]outcome{ok, ok, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, ok, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 		// listStates, listLabels, getProjectPreferences… (9.2)
 		{"every project role", domain.Rule{Level: domain.LevelProject, Roles: all},
-			[]outcome{ok, ok, ok, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, ok, ok, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 		// getProject (9.2)
 		{"seeing the project", domain.Rule{Level: domain.LevelVisible},
-			[]outcome{ok, ok, ok, ok, ok, ok, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
+			[]outcome{ok, ok, ok, ok, ok, ok, hidden, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 	}
 	for _, tt := range tests {
 		for i, id := range projectIdentities {
