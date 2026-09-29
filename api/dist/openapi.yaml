@@ -370,7 +370,7 @@ paths:
       tags:
         - workspace
       summary: Create a workspace with the caller as its admin
-      description: Creates the workspace and makes the caller its admin and only member; nothing else is created with it. While the instance's workspace_creation_enabled is false, every request answers workspace.creation_disabled. The name has 1–80 characters with a letter or a digit and no web address; the slug has 1–48 lower-case letters, digits, - and _, and is neither reserved (not_allowed) nor another undeleted workspace's (workspace.slug_taken). An account deactivated meanwhile answers unauthorized.
+      description: Creates the workspace and makes the caller its admin and only member; nothing else is created with it. While the instance's workspace_creation_enabled is false, every request answers workspace.creation_disabled, and the server's administrator creates workspaces with `nerve workspaces create`. The name has 1–80 characters with a letter or a digit and no web address; the slug has 1–48 lower-case letters, digits, - and _, and is neither reserved (not_allowed) nor another undeleted workspace's (workspace.slug_taken). An account deactivated meanwhile answers unauthorized.
       security:
         - bearer: []
       x-problem-codes:

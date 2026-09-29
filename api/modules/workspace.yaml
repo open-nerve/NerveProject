@@ -33,7 +33,8 @@ paths:
         Creates the workspace and makes the caller its admin and only member;
         nothing else is created with it. While the instance's
         workspace_creation_enabled is false, every request answers
-        workspace.creation_disabled. The name has 1–80
+        workspace.creation_disabled, and the server's administrator creates
+        workspaces with `nerve workspaces create`. The name has 1–80
         characters with a letter or a digit and no web address; the slug has
         1–48 lower-case letters, digits, - and _, and is neither reserved
         (not_allowed) nor another undeleted workspace's

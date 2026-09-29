@@ -2,17 +2,14 @@ package bootstrap
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/logging"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
-	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // UserCommand is one `nerve users` command on the administrator's use
@@ -85,33 +82,4 @@ func ActivateUser(email string) UserCommand {
 		r, err := admin.Activate.Execute(ctx, email)
 		return fmt.Sprintf("activated %s: %d API tokens are usable again", r.Email, r.APITokens), err
 	}
-}
-
-// cliFieldName names a use case's field as the command line knows it; a
-// field it does not know keeps its own name.
-func cliFieldName(field string) string {
-	switch field {
-	case "email":
-		return "--email"
-	case "new_email":
-		return "--new-email"
-	case "password":
-		return "the password"
-	default:
-		return field
-	}
-}
-
-// commandError is err as one line for the administrator: the invalid
-// fields of a domain error, each as "<field> <problem>", or its detail.
-func commandError(err error) error {
-	var se *shared.Error
-	if !errors.As(err, &se) || len(se.Fields) == 0 {
-		return err
-	}
-	problems := make([]string, len(se.Fields))
-	for i, f := range se.Fields {
-		problems[i] = cliFieldName(f.Field) + " " + f.Message
-	}
-	return errors.New(strings.Join(problems, "; "))
 }
