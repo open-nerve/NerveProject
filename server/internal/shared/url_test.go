@@ -1,8 +1,10 @@
-package domain
+package shared_test
 
 import (
 	"strings"
 	"testing"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // The expectations are what Plane's contains_url answers for the same
@@ -67,8 +69,8 @@ func TestContainsURLAsPlane(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := containsURL(tt.s); got != tt.want {
-				t.Errorf("containsURL(%q) = %v, want %v", tt.s, got, tt.want)
+			if got := shared.ContainsURL(tt.s); got != tt.want {
+				t.Errorf("ContainsURL(%q) = %v, want %v", tt.s, got, tt.want)
 			}
 		})
 	}

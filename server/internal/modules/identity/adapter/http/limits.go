@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 	"github.com/open-nerve/NerveProject/server/internal/platform/ratelimit"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -74,6 +73,6 @@ func (h handler) allow(ctx context.Context, checks ...ratelimit.Check) error {
 // address, hashed so that the key's size does not depend on what the
 // client sends.
 func ipEmailKey(ipKey, email string) string {
-	sum := sha256.Sum256([]byte(domain.NormalizeEmail(email)))
+	sum := sha256.Sum256([]byte(shared.NormalizeEmail(email)))
 	return ipKey + " " + hex.EncodeToString(sum[:])
 }

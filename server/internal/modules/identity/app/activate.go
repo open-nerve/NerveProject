@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -43,7 +42,7 @@ type ActivateResult struct {
 // them, so they authenticate again; when the account may be compromised,
 // reset-password revokes them (M2 design 3.17).
 func (u *Activate) Execute(ctx context.Context, email string) (ActivateResult, error) {
-	email = domain.NormalizeEmail(email)
+	email = shared.NormalizeEmail(email)
 	now := u.d.Clock.Now()
 	result := ActivateResult{Email: email}
 	var id uuid.UUID

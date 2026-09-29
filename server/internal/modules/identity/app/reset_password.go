@@ -55,7 +55,7 @@ type ResetPasswordResult struct {
 // A login or a token creation that verified the old password holds or waits
 // for the same lock, and finds its credential revoked (interleavings 1-3).
 func (u *ResetPassword) Execute(ctx context.Context, email, password string) (ResetPasswordResult, error) {
-	email = domain.NormalizeEmail(email)
+	email = shared.NormalizeEmail(email)
 	if f := u.d.Rules.Check("password", password, email); f != nil {
 		return ResetPasswordResult{}, shared.Invalid(*f)
 	}
