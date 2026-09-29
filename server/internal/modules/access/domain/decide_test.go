@@ -2,6 +2,7 @@ package domain_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access/domain"
@@ -155,6 +156,77 @@ func TestDecideAtTheProjectLevels(t *testing.T) {
 			facts.Project = nil
 			if _, err := domain.Decide(tt.rule, facts); outcomeOf(t, err) != invisible {
 				t.Errorf("%s, %s, no project: Decide() = %v, want not visible", tt.name, id.name, err)
+			}
+		}
+	}
+}
+
+// A role outside the three is allowed nothing, whatever its value, at every
+// level and wherever the decision reads a role: roles are a set, never an
+// order. At the workspace level such a workspace role is refused (403), as
+// the tables' role outside the three; the workspace level reads no project
+// role. At the project levels, what the caller sees picks 404 or 403: a
+// caller who is not a member of the project sees it only as the workspace's
+// admin or, when it is public, as a workspace member, so a role outside the
+// three sees no project it is not a member of, public or private (404, as
+// the unknown-role public identities); a caller who is an active member of
+// the project sees it and is refused (403, as the unknown-role project admin
+// and project member).
+func TestRolesOutsideTheThreeAreAllowedNothing(t *testing.T) {
+	// Every gap between the three, their edges and the smallint's ends.
+	unknown := []shared.Role{-32768, -1, 0, 1, 4, 6, 10, 14, 16, 17, 19, 21, 25, 100, 32767}
+	all := []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}
+	type namedRule struct {
+		name string
+		rule domain.Rule
+	}
+	// Every row of the table, and a rule of each level with each set of
+	// roles the tables above use: the table has no project-level row yet.
+	var rules []namedRule
+	for _, action := range domain.RuleKeys() {
+		rule, _ := domain.RuleFor(action)
+		rules = append(rules, namedRule{string(action), rule})
+	}
+	for _, level := range []domain.Level{domain.LevelWorkspace, domain.LevelProject} {
+		for _, roles := range [][]shared.Role{all, all[:2], all[:1], nil} {
+			rules = append(rules, namedRule{fmt.Sprintf("level %d, roles %v", level, roles), domain.Rule{Level: level, Roles: roles}})
+		}
+	}
+	rules = append(rules, namedRule{"seeing the project", domain.Rule{Level: domain.LevelVisible}})
+
+	active := func(r shared.Role) domain.Membership { return domain.Membership{Active: true, Role: r} }
+	positions := []struct {
+		name        string
+		facts       func(r shared.Role, public bool) domain.Facts
+		atWorkspace outcome // "" when the workspace level reads no role there
+		atProject   outcome
+	}{
+		{"the workspace role of a caller not in the project", func(r shared.Role, public bool) domain.Facts {
+			return domain.Facts{Workspace: active(r), Project: &domain.Project{Public: public}}
+		}, forbidden, invisible},
+		{"the workspace role of the project's admin", func(r shared.Role, public bool) domain.Facts {
+			return domain.Facts{Workspace: active(r), Project: &domain.Project{Public: public, Member: admin}}
+		}, forbidden, forbidden},
+		{"the project role of a workspace member", func(r shared.Role, public bool) domain.Facts {
+			return domain.Facts{Workspace: member, Project: &domain.Project{Public: public, Member: active(r)}}
+		}, "", forbidden},
+	}
+	for _, nr := range rules {
+		for _, pos := range positions {
+			want := pos.atProject
+			if nr.rule.Level == domain.LevelWorkspace {
+				want = pos.atWorkspace
+			}
+			if want == "" {
+				continue
+			}
+			for _, r := range unknown {
+				for _, public := range []bool{false, true} {
+					_, err := domain.Decide(nr.rule, pos.facts(r, public))
+					if got := outcomeOf(t, err); got != want {
+						t.Errorf("%s, %s = %d, public %t: Decide() = %s, want %s", nr.name, pos.name, r, public, got, want)
+					}
+				}
 			}
 		}
 	}
