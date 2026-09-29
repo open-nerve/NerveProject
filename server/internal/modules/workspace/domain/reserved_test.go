@@ -47,9 +47,12 @@ func TestParseReserved(t *testing.T) {
 
 // Reserved returns a copy: a caller that changes it changes no answer.
 func TestReservedReturnsACopy(t *testing.T) {
+	want := Reserved().All()
 	r := Reserved()
-	r.Server[0] = "not-reserved"
-	if CheckSlug("not-reserved") != "" || CheckSlug("api") != SlugReserved {
-		t.Error("changing Reserved()'s result changed the list")
+	for _, section := range [][]string{r.App, r.Server, r.Reserved} {
+		section[0] = "not-reserved"
+	}
+	if got := Reserved().All(); !slices.Equal(got, want) || CheckSlug("not-reserved") != "" {
+		t.Errorf("changing Reserved()'s result changed the list: %q, want %q", got, want)
 	}
 }
