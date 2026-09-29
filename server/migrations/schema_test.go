@@ -64,14 +64,15 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 5 {
-		t.Fatalf("Up() = %d migrations, %v; want 5", len(up), err)
+	if err != nil || len(up) != 7 {
+		t.Fatalf("Up() = %d migrations, %v; want 7", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users"}},
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users",
+			"workspace_members", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
 	} {
@@ -89,21 +90,25 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 5 {
-		t.Errorf("Up() again = %d migrations, %v; want 5", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 7 {
+		t.Errorf("Up() again = %d migrations, %v; want 7", len(again), err)
 	}
 }
 
-// Constraint and index names are the stable names of M2 design 3.13: errors
-// are mapped by them, and later migrations drop them by name.
+// Constraint and index names are the stable names of M2 design 3.13 and M3
+// design 4 (an unconditional index <table>_<column>_idx under each CASCADE
+// foreign key to workspaces): errors are mapped by them, and later
+// migrations drop them by name.
 func TestConstraintAndIndexNames(t *testing.T) {
 	pool := newPool(t, pgtest.NewDatabase(t))
 	rows, err := pool.Query(context.Background(), `
 		SELECT conname || ' ' || contype::text || CASE WHEN contype = 'f' THEN ' ' || confdeltype::text ELSE '' END FROM pg_constraint
-		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass)
+		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
+				'workspaces'::regclass, 'workspace_members'::regclass)
 			AND contype <> 'n' -- PG 18 lists NOT NULL as constraints too
 		UNION ALL
-		SELECT indexname || ' i' FROM pg_indexes WHERE tablename IN ('users', 'profiles', 'auth_sessions', 'api_tokens')
+		SELECT indexname || ' i' FROM pg_indexes
+		WHERE tablename IN ('users', 'profiles', 'auth_sessions', 'api_tokens', 'workspaces', 'workspace_members')
 		ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)
@@ -153,6 +158,24 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"users_email_key u",
 		"users_pkey i",
 		"users_pkey p",
+		"workspace_members_created_by_id_fkey f n",
+		"workspace_members_member_id_fkey f c",
+		"workspace_members_member_id_idx i",
+		"workspace_members_pkey i",
+		"workspace_members_pkey p",
+		"workspace_members_role_check c",
+		"workspace_members_updated_by_id_fkey f n",
+		"workspace_members_workspace_id_fkey f c",
+		"workspace_members_workspace_id_idx i",
+		"workspace_members_workspace_id_member_id_key i",
+		"workspaces_created_by_id_fkey f n",
+		"workspaces_name_check c",
+		"workspaces_organization_size_check c",
+		"workspaces_pkey i",
+		"workspaces_pkey p",
+		"workspaces_slug_check c",
+		"workspaces_slug_key i",
+		"workspaces_updated_by_id_fkey f n",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("constraints and indexes =\n%q\nwant\n%q", got, want)
@@ -160,7 +183,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 }
 
 // The CHECKs accept what the domain writes and reject what bypasses it
-// (M2 design 4.2, 4.3, 4.5).
+// (M2 design 4.2, 4.3, 4.5; M3 design 4.2, 4.3).
 func TestChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -173,6 +196,9 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		"UPDATE profiles SET onboarding_step = onboarding_step || '{}'",
 		"UPDATE auth_sessions SET revoked_at = now(), revoke_reason = 'logout'",
 		"INSERT INTO api_tokens (id, user_id, token_hash, label) VALUES ('0199a2b4-0000-7000-8000-000000000004', " + user + ", sha256('t'), 'x')",
+		"INSERT INTO workspaces (id, name, slug, organization_size) VALUES ('0199a2b4-0000-7000-8000-000000000005', 'Acme', 'acme_1-2', '500+')",
+		"INSERT INTO workspace_members (id, workspace_id, member_id, role) VALUES ('0199a2b4-0000-7000-8000-000000000006', " +
+			"'0199a2b4-0000-7000-8000-000000000005', " + user + ", 20)",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -209,6 +235,13 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		{"a reason without revoked_at", "UPDATE auth_sessions SET revoked_at = NULL", "auth_sessions_revoked_consistent_check"},
 		{"token hash of a PAT not 32 bytes", "UPDATE api_tokens SET token_hash = '\\x00'", "api_tokens_token_hash_check"},
 		{"empty label", "UPDATE api_tokens SET label = ''", "api_tokens_label_check"},
+		{"empty workspace name", "UPDATE workspaces SET name = ''", "workspaces_name_check"},
+		{"upper-case slug", "UPDATE workspaces SET slug = 'Acme'", "workspaces_slug_check"},
+		{"slug with a dot", "UPDATE workspaces SET slug = 'acme.io'", "workspaces_slug_check"},
+		{"empty slug", "UPDATE workspaces SET slug = ''", "workspaces_slug_check"},
+		{"unknown organization size", "UPDATE workspaces SET organization_size = '1000+'", "workspaces_organization_size_check"},
+		{"role 10", "UPDATE workspace_members SET role = 10", "workspace_members_role_check"},
+		{"role 0", "UPDATE workspace_members SET role = 0", "workspace_members_role_check"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
