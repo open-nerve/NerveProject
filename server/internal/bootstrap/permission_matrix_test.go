@@ -24,8 +24,10 @@ import (
 // The permission matrix (M3 design 9.2): each operation of the modules
 // below, called over HTTP on the wired app and a real database by each kind
 // of caller, its status and problem code asserted cell by cell. The data is
-// prepared once, through the modules' stores; the cells that only read
-// share one copy of it, and each cell that writes gets a copy of its own
+// prepared once: the accounts through the API, the workspaces and
+// memberships through the workspace store, and the two states no store
+// writes yet through SQL (prepareMatrix). The cells that only read share
+// one copy of it, and each cell that writes gets a copy of its own
 // (pgtest.NewDatabaseFrom), so no cell sees another's writes. A phase that
 // adds an operation adds its row, and what the row needs prepared.
 
@@ -145,11 +147,16 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 	return cfg
 }
 
-// prepareMatrix fills a database for the matrix: an account for each
-// column, registered through the API for its token; the workspace acme with
-// its admin, member and guest, and the removed member's ended membership;
-// the deleted workspace gone with its admin. Everything that connected to
-// the database is closed when it returns, so that it can be copied.
+// prepareMatrix fills a database for the matrix. Through the API, an
+// account for each column, registered for its token. Through the workspace
+// store, the workspace acme with its admin, member, guest and the member
+// later removed; the workspace gone with its admin; and the workspace
+// other, whose admin was never a member of acme and where the removed
+// member is still active, so that a role read in the wrong workspace lets
+// either into acme. Through SQL, until the stores of P5 and P2 do it: the
+// removed member's membership of acme ended, gone deleted. Everything that
+// connected to the database is closed when it returns, so that it can be
+// copied.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}}
@@ -175,9 +182,13 @@ func prepareMatrix(t *testing.T) matrixData {
 		seed.join(acme, callerRemoved, shared.RoleMember)
 		gone := seed.workspace("gone", callerDeleted)
 		seed.join(gone, callerDeleted, shared.RoleAdmin)
-		// No store removes a member or deletes a workspace yet: SQL does
-		// what they will, until the phases that add them.
-		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE member_id = $1", ids[callerRemoved])
+		other := seed.workspace("other", callerNever)
+		seed.join(other, callerNever, shared.RoleAdmin)
+		seed.join(other, callerRemoved, shared.RoleMember)
+		// No store removes a member (P5) or deletes a workspace (P2) yet:
+		// SQL does what they will, until those phases replace it.
+		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2",
+			acme, ids[callerRemoved])
 		seed.exec(pool, "UPDATE workspaces SET deleted_at = now() WHERE id = $1", gone)
 	})
 	if !prepared {
@@ -186,7 +197,9 @@ func prepareMatrix(t *testing.T) matrixData {
 	return d
 }
 
-// matrixSeed writes the prepared data through the modules' stores.
+// matrixSeed writes the prepared workspaces and memberships through the
+// workspace store; exec runs the SQL that stands in for the stores P2 and
+// P5 add.
 type matrixSeed struct {
 	t     *testing.T
 	store *workspacepg.Store
@@ -245,7 +258,7 @@ func TestPermissionMatrix(t *testing.T) {
 					got.code = problemCode(t, []byte(answer))
 				}
 				if got != want {
-					t.Errorf("%s %s = %d %s, want %d %s", method, path, status, answer, want.status, want.code)
+					t.Errorf("%s %s = %d %s, want %d %s", method, path, status, strings.TrimSpace(answer), want.status, want.code)
 				}
 			})
 		}
