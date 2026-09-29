@@ -14,13 +14,13 @@ import (
 func TestGetWorkspacePreferences(t *testing.T) {
 	prefs := &fakePrefs{answer: domain.Preferences{NavigationControl: "TABBED", NavigationProjectLimit: 0}}
 	h := newServer(t, fakes{prefs: prefs})
-	for _, token := range []string{"alice", "bob"} {
-		res, body := do(t, h, request(http.MethodGet, "/api/v0/me/workspaces/acme/preferences", token, ""))
+	for _, c := range []struct{ token, slug string }{{"alice", "acme"}, {"bob", "beta"}} {
+		res, body := do(t, h, request(http.MethodGet, "/api/v0/me/workspaces/"+c.slug+"/preferences", c.token, ""))
 		if want := `{"navigation_control_preference":"TABBED","navigation_project_limit":0}` + "\n"; res.StatusCode != http.StatusOK || body != want {
-			t.Errorf("%s: GET = %d %s, want 200 %s", token, res.StatusCode, body, want)
+			t.Errorf("%s: GET = %d %s, want 200 %s", c.token, res.StatusCode, body, want)
 		}
 	}
-	if want := []string{"GET alice acme", "GET bob acme"}; !slices.Equal(prefs.calls, want) {
+	if want := []string{"GET alice acme", "GET bob beta"}; !slices.Equal(prefs.calls, want) {
 		t.Errorf("calls = %q, want %q", prefs.calls, want)
 	}
 }
