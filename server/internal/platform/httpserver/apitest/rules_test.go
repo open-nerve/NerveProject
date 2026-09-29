@@ -61,6 +61,29 @@ func TestRootListsEveryModulePath(t *testing.T) {
 	}
 }
 
+// The permission matrix (bootstrap) finds a module's operations by tag, so
+// every operation of api/modules/<m>.yaml carries exactly the tag <m>.
+func TestEveryOperationIsTaggedWithItsModule(t *testing.T) {
+	names, err := moduleNames()
+	if err != nil || len(names) == 0 {
+		t.Fatalf("module files = %q, %v; want at least one", names, err)
+	}
+	for _, name := range names {
+		doc, err := loadModule(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range slices.Sorted(maps.Keys(doc.Paths.Map())) {
+			ops := doc.Paths.Value(path).Operations()
+			for _, method := range slices.Sorted(maps.Keys(ops)) {
+				if tags := ops[method].Tags; !slices.Equal(tags, []string{name}) {
+					t.Errorf("%s %s in api/modules/%s.yaml: tags = %q, want [%q]", method, path, name, tags, name)
+				}
+			}
+		}
+	}
+}
+
 // authoringViolations reports where doc breaks the authoring rules of spec P3
 // 2.4 and M2 design 3.11–3.12, as M3 design 11.7 revises them; modules are
 // nerve's modules, those with a file in api/modules/. It takes the document

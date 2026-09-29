@@ -15,6 +15,8 @@ import (
 // Operation is one operation of the contract, as the whole-program tests of
 // bootstrap see it (M2 design 3.6, 3.11).
 type Operation struct {
+	ID     string // operationId
+	Tags   []string
 	Method string // upper case
 	Path   string
 	Public bool // security: []
@@ -103,7 +105,7 @@ func (c *Contract) Operations() []Operation {
 	var ops []Operation
 	for path, item := range c.doc.Paths.Map() {
 		for method, op := range item.Operations() {
-			o := Operation{Method: strings.ToUpper(method), Path: path, Public: !needsToken(op),
+			o := Operation{ID: op.OperationID, Tags: op.Tags, Method: strings.ToUpper(method), Path: path, Public: !needsToken(op),
 				params: slices.Concat(item.Parameters, op.Parameters)}
 			if rb := op.RequestBody; rb != nil && rb.Value != nil {
 				if media := rb.Value.Content.Get("application/json"); media != nil && media.Schema != nil {
