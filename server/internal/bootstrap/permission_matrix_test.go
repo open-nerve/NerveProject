@@ -2,9 +2,12 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 	"uuid"
@@ -23,13 +26,15 @@ import (
 // The permission matrix (M3 design 9.2): each operation of the contract but
 // the exempt modules' below, called over HTTP on the wired app and a real
 // database by each kind of caller, its status and problem code asserted cell
-// by cell. The data is
+// by cell, and where a row says so, what the answer holds. The data is
 // prepared once: the accounts through the API, the workspaces and
 // memberships through the workspace store, and the two states no store
 // writes yet through SQL (prepareMatrix). The cells that only read share
 // one copy of it, and each cell that writes gets a copy of its own
-// (pgtest.NewDatabaseFrom), so no cell sees another's writes. A phase that
-// adds an operation adds its row, and what the row needs prepared.
+// (pgtest.NewDatabaseFrom), so no cell sees another's writes. Each module's
+// rows are in a file of their own (permission_matrix_<module>_test.go): a
+// phase that adds an operation adds its row there, and what the row needs
+// prepared here.
 
 // matrixExempt are the modules whose operations have no row, each for its
 // reason. Every other operation of the contract has one, so a module that
@@ -90,10 +95,8 @@ func (c cell) String() string {
 }
 
 var (
-	cellOK                = cell{status: http.StatusOK}
-	cellCreated           = cell{status: http.StatusCreated}
-	cellWorkspaceNotFound = cell{http.StatusNotFound, "workspace.not_found"}
-	cellCreationDisabled  = cell{http.StatusForbidden, "workspace.creation_disabled"}
+	cellOK      = cell{status: http.StatusOK}
+	cellCreated = cell{status: http.StatusCreated}
 )
 
 // matrixRow is an operation's row: the request each caller sends and the
@@ -105,6 +108,9 @@ type matrixRow struct {
 	config  func(*config.Config)
 	request func(c caller) (method, path, body string)
 	cells   map[caller]cell
+	// check, when set, runs on each answer that is not a problem and is its
+	// cell's: what the answer holds for that caller.
+	check func(t *testing.T, c caller, answer string)
 }
 
 func (r matrixRow) name() string {
@@ -128,26 +134,24 @@ func sameRequest(method, path, body string) func(caller) (string, string, string
 	return func(caller) (string, string, string) { return method, path, body }
 }
 
-// matrixRows are the rows, a phase's operations added by that phase.
-func matrixRows() []matrixRow {
-	return []matrixRow{
-		// The account level: any valid credential (6.4).
-		{op: "listWorkspaces", request: sameRequest(http.MethodGet, "/api/v0/workspaces", ""), cells: every(cellOK)},
-		{op: "checkWorkspaceSlug", request: sameRequest(http.MethodGet, "/api/v0/workspace-slugs/acme", ""), cells: every(cellOK)},
-		{op: "createWorkspace", write: true, request: sameRequest(http.MethodPost, "/api/v0/workspaces", `{"name":"New","slug":"new"}`),
-			cells: every(cellCreated)},
-		{op: "createWorkspace", variant: "creation switched off", write: true,
-			config:  func(cfg *config.Config) { cfg.Workspace.CreationEnabled = false },
-			request: sameRequest(http.MethodPost, "/api/v0/workspaces", `{"name":"New","slug":"new"}`), cells: every(cellCreationDisabled)},
-		// The workspace level.
-		{op: "getWorkspace",
-			request: func(c caller) (string, string, string) {
-				return http.MethodGet, "/api/v0/workspaces/" + workspaceOf(c), ""
-			},
-			cells: map[caller]cell{callerAdmin: cellOK, callerMember: cellOK, callerGuest: cellOK,
-				callerNever: cellWorkspaceNotFound, callerRemoved: cellWorkspaceNotFound, callerDeleted: cellWorkspaceNotFound}},
+// decodeAnswer decodes a cell's answer into v for a row's check.
+func decodeAnswer(t *testing.T, answer string, v any) {
+	t.Helper()
+	if err := json.Unmarshal([]byte(answer), v); err != nil {
+		t.Fatalf("the answer %s: %v", answer, err)
 	}
 }
+
+// matrixRows are the rows, each module's from its file.
+func matrixRows() []matrixRow {
+	return slices.Concat(workspaceMatrixRows())
+}
+
+// matrixApps is how many writing cells may run an app at once. Each app's
+// pool opens up to testConfig's MaxConns (4) connections, besides the reads
+// app's and pgtest's admin pool (4 each), against the container's
+// max_connections of 100.
+const matrixApps = 8
 
 // matrixData is the prepared database, the signing key every app on a copy
 // of it shares, and each column's access token.
@@ -260,11 +264,20 @@ func (s matrixSeed) exec(pool *pgxpool.Pool, sql string, args ...any) {
 	}
 }
 
-// Each cell of the matrix, the writing ones in parallel on their copies.
+// Each cell of the matrix, the writing ones in parallel on their copies, at
+// most matrixApps of them with an app at once. Every answer a row's check is
+// for is checked, and counted: a harness that skipped the checks would fail.
 func TestPermissionMatrix(t *testing.T) {
 	d := prepareMatrix(t)
 	contract := apitest.Load(t)
 	reads := startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), nil), migrations.FS())
+	apps := make(chan struct{}, matrixApps)
+	var checked, toCheck atomic.Int64
+	t.Cleanup(func() {
+		if !t.Failed() && checked.Load() != toCheck.Load() {
+			t.Errorf("%d answers checked, want %d", checked.Load(), toCheck.Load())
+		}
+	})
 	for _, r := range matrixRows() {
 		for _, c := range workspaceColumns {
 			want, ok := r.cells[c]
@@ -272,16 +285,18 @@ func TestPermissionMatrix(t *testing.T) {
 				continue // TestThePermissionMatrixCoversEveryOperation reports it
 			}
 			t.Run(r.name()+"/"+string(c), func(t *testing.T) {
-				// Connections: at most -parallel cells (GOMAXPROCS by
-				// default) run at once, and each that starts an app of its
-				// own (a writing cell) opens a pool of up to testConfig's
-				// MaxConns (4), besides the reads app's pool and pgtest's
-				// admin pool (4 each), against the container's
-				// max_connections of 100. P2 bounds the cells that start an
-				// app with a semaphore.
 				t.Parallel()
+				// Counted in the cell: a -run of some cells expects only
+				// their checks.
+				if r.check != nil && want.code == "" {
+					toCheck.Add(1)
+				}
 				base := reads
 				if r.write || r.config != nil {
+					apps <- struct{}{}
+					// Registered before the app's: cleanups run last first,
+					// so the slot is freed once the app is closed.
+					t.Cleanup(func() { <-apps })
 					base = startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), r.config), migrations.FS())
 				}
 				method, path, body := r.request(c)
@@ -292,6 +307,11 @@ func TestPermissionMatrix(t *testing.T) {
 				}
 				if got != want {
 					t.Errorf("%s %s = %d %s, want %s", method, path, status, strings.TrimSpace(answer), want)
+					return
+				}
+				if r.check != nil && got.code == "" {
+					r.check(t, c, answer)
+					checked.Add(1)
 				}
 			})
 		}
