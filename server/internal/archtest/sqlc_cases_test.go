@@ -114,11 +114,11 @@ func TestSQLCScopeReportsViolations(t *testing.T) {
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
 		{"CREATE INDEX on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
-			m[2].sql += "CREATE INDEX assets_users_email_idx ON users (email);"
+			m[2].sql += "CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_users_email_idx ON users (email);"
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql indexes users, which module identity creates: the migration belongs to identity"},
 		{"CREATE UNIQUE INDEX without a name", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
-			m[2].sql += "CREATE UNIQUE INDEX CONCURRENTLY ON ONLY public.users (lower(email));"
+			m[2].sql += "CREATE UNIQUE INDEX ON ONLY public.users (lower(email));"
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql indexes users, which module identity creates: the migration belongs to identity"},
 		{"CREATE TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
@@ -130,9 +130,17 @@ func TestSQLCScopeReportsViolations(t *testing.T) {
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql drops users, which module identity creates: the migration belongs to identity"},
 		{"DROP TABLE of an unknown table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
-			m[2].sql += "DROP TABLE people;"
+			m[2].sql += `DROP TABLE "Users";`
 			return e, m, mods
-		}, "migration 00020_asset_assets.sql drops people, which no migration creates"},
+		}, "migration 00020_asset_assets.sql drops Users, which no migration creates"},
+		{"an unquoted name in capitals", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "ALTER TABLE USERS ADD COLUMN x int;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"CREATE CONSTRAINT TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "CREATE CONSTRAINT TRIGGER assets_check AFTER INSERT ON users FOR EACH ROW EXECUTE FUNCTION check_assets();"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql puts a trigger on users, which module identity creates: the migration belongs to identity"},
 		{"a quoted table created twice", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
 			m[2].sql += `CREATE TABLE "users" (id uuid);`
 			return e, m, mods
