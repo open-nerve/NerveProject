@@ -94,18 +94,79 @@ func readMigrations(t *testing.T, dir string) []migrationFile {
 	return out
 }
 
+// A table name as a migration writes it: unquoted (folded to lower case) or
+// quoted, in the schema public or without one. ident is any other name, e.g.
+// an index's or a trigger's.
+const (
+	ident     = `(?:"[^"]+"|[a-z_][a-z0-9_$]*)`
+	tableName = `(?:(?:public|"public")\.)?("[^"]+"|[a-z_][a-z0-9_]*)`
+)
+
 var (
 	migrationFileName = regexp.MustCompile(`^\d{5}_([a-z][a-z0-9]*)_[a-z0-9_]+\.sql$`)
 	sqlComment        = regexp.MustCompile(`--[^\n]*`)
-	createTable       = regexp.MustCompile(`(?i)\bCREATE\s+(?:UNLOGGED\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:public\.)?([a-z_][a-z0-9_]*)`)
-	alterTable        = regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:public\.)?([a-z_][a-z0-9_]*)`)
+	createTable       = regexp.MustCompile(`(?i)\bCREATE\s+(?:UNLOGGED\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?` + tableName)
+	renameTable       = regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?` + tableName + `\s+RENAME\s+TO\s+` + tableName)
 	moduleQueries     = regexp.MustCompile(`^internal/modules/([a-z][a-z0-9]*)/adapter/postgres/queries$`)
 )
 
+// The statements that act on a table, which must be one the migration's
+// module creates (M2 design 3.14, M3 design 4.1). REFERENCES is not among
+// them: a foreign key to another module's table is allowed, since no query
+// can read across modules anyway. A DROP TABLE may name several tables.
+var tableStatements = []struct {
+	verb string
+	re   *regexp.Regexp
+}{
+	{"alters", regexp.MustCompile(`(?i)\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?` + tableName)},
+	{"indexes", regexp.MustCompile(`(?i)\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(?:` + ident +
+		`\s+)?ON\s+(?:ONLY\s+)?` + tableName)},
+	{"puts a trigger on", regexp.MustCompile(`(?is)\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:CONSTRAINT\s+)?TRIGGER\s+` + ident +
+		`\s.*?\bON\s+(?:ONLY\s+)?` + tableName)},
+	{"drops", regexp.MustCompile(`(?i)\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?` + tableName + `((?:\s*,\s*` + tableName + `)*)`)},
+}
+
+// moreTables reads the ", t2, t3" after the first table of a DROP TABLE.
+var moreTables = regexp.MustCompile(`(?i)` + tableName)
+
+// table is a table name as PostgreSQL resolves it: a quoted name as written,
+// an unquoted one in lower case.
+func table(name string) string {
+	if unquoted, ok := strings.CutPrefix(name, `"`); ok {
+		return strings.TrimSuffix(unquoted, `"`)
+	}
+	return strings.ToLower(name)
+}
+
+// touched lists the tables each kind of statement in sql acts on, once each
+// per kind: Up and Down both act on them.
+func touched(sql string) map[string][]string {
+	out := map[string][]string{}
+	for _, st := range tableStatements {
+		for _, m := range st.re.FindAllStringSubmatch(sql, -1) {
+			names := []string{m[1]}
+			if len(m) > 2 {
+				for _, more := range moreTables.FindAllStringSubmatch(m[2], -1) {
+					names = append(names, more[1])
+				}
+			}
+			for _, n := range names {
+				if t := table(n); !slices.Contains(out[st.verb], t) {
+					out[st.verb] = append(out[st.verb], t)
+				}
+			}
+		}
+	}
+	return out
+}
+
 // sqlcScopeViolations checks, in M2 design 3.14's words:
 //   - migration files are named <version>_<module>_<content>.sql;
-//   - the target of every ALTER TABLE is created by the file name's module,
-//     so a migration belongs to the module that owns the table it changes;
+//   - the target of every ALTER TABLE, CREATE [UNIQUE] INDEX, CREATE TRIGGER
+//     and DROP TABLE, quoted or not, is created by the file name's module
+//     (M3 design 4.1), so a migration belongs to the module that owns the
+//     table it changes; a table renamed into existence belongs to the module
+//     that renames it;
 //   - each sqlc entry is a module's (queries in its adapter/postgres) and
 //     lists exactly that module's migrations: no other module's, and never
 //     River's, which no module queries;
@@ -125,13 +186,20 @@ func sqlcScopeViolations(entries []sqlcEntry, migrations []migrationFile, queryM
 		}
 		moduleOf[m.name] = match[1]
 		byModule[match[1]] = append(byModule[match[1]], "migrations/sql/"+m.name)
-		for _, c := range createTable.FindAllStringSubmatch(sqlComment.ReplaceAllString(m.sql, ""), -1) {
-			table := strings.ToLower(c[1])
-			if prev, ok := owner[table]; ok && prev != match[1] {
-				report("tables: %s is created by both %s and %s", table, prev, match[1])
+		sql := sqlComment.ReplaceAllString(m.sql, "")
+		var created []string
+		for _, c := range createTable.FindAllStringSubmatch(sql, -1) {
+			created = append(created, table(c[1]))
+		}
+		for _, r := range renameTable.FindAllStringSubmatch(sql, -1) {
+			created = append(created, table(r[2]))
+		}
+		for _, t := range created {
+			if prev, ok := owner[t]; ok && prev != match[1] {
+				report("tables: %s is created by both %s and %s", t, prev, match[1])
 				continue
 			}
-			owner[table] = match[1]
+			owner[t] = match[1]
 		}
 	}
 	for _, m := range migrations {
@@ -139,18 +207,15 @@ func sqlcScopeViolations(entries []sqlcEntry, migrations []migrationFile, queryM
 		if !ok {
 			continue
 		}
-		var altered []string // once per table: Up and Down both alter it
-		for _, a := range alterTable.FindAllStringSubmatch(sqlComment.ReplaceAllString(m.sql, ""), -1) {
-			if table := strings.ToLower(a[1]); !slices.Contains(altered, table) {
-				altered = append(altered, table)
-			}
-		}
-		for _, table := range altered {
-			switch tableOwner, known := owner[table]; {
-			case !known:
-				report("migration %s alters %s, which no migration creates", m.name, table)
-			case tableOwner != module:
-				report("migration %s alters %s, which module %s creates: the migration belongs to %s", m.name, table, tableOwner, tableOwner)
+		byVerb := touched(sqlComment.ReplaceAllString(m.sql, ""))
+		for _, st := range tableStatements {
+			for _, t := range byVerb[st.verb] {
+				switch tableOwner, known := owner[t]; {
+				case !known:
+					report("migration %s %s %s, which no migration creates", m.name, st.verb, t)
+				case tableOwner != module:
+					report("migration %s %s %s, which module %s creates: the migration belongs to %s", m.name, st.verb, t, tableOwner, tableOwner)
+				}
 			}
 		}
 	}
