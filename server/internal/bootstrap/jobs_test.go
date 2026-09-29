@@ -194,7 +194,9 @@ func TestRunStopsTheJobsAfterHTTP(t *testing.T) {
 		status, _ := login(t, base, "drain@example.com", "Tr0ub4dor&3")
 		answered <- status
 	}()
-	pgtest.WaitForLockWait(t, pool, 5*time.Second) // the login is in flight
+	// The login is in flight: it waits on drain's row. River runs its jobs
+	// on the same database, so only a wait for a row of users counts.
+	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
 
 	cancel()
 	waitForLog(`msg="http server shutting down"`)

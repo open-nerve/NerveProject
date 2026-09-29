@@ -30,20 +30,33 @@ func TestWaitForLockWaitSeesOnlyItsOwnDatabase(t *testing.T) {
 
 // WaitForLockWaitOn counts a wait for a row of its table only: not a wait
 // for another table's row, though the waiting transaction has read that
-// table; not a wait for an advisory lock; not a wait in another database.
+// table; not a wait for an advisory lock; not a wait in another database,
+// though a has the same OID there, as every migrated table has in every
+// test database.
 func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
 	t.Parallel()
-	rows, advisory := pgtest.NewDatabase(t), pgtest.NewDatabase(t)
-	for _, url := range []string{rows, advisory} {
-		for _, stmt := range []string{"CREATE TABLE a (id int PRIMARY KEY)", "CREATE TABLE b (id int PRIMARY KEY)", "INSERT INTO a VALUES (1)"} {
-			if _, err := connect(t, url).Exec(context.Background(), stmt); err != nil {
-				t.Fatal(err)
-			}
-		}
+	ctx := context.Background()
+	prepared := pgtest.NewDatabase(t)
+	setup := connect(t, prepared)
+	if _, err := setup.Exec(ctx, "CREATE TABLE a (id int PRIMARY KEY); CREATE TABLE b (id int PRIMARY KEY); INSERT INTO a VALUES (1)"); err != nil {
+		t.Fatal(err)
 	}
+	if err := setup.Close(ctx); err != nil { // nobody may be connected to the database copied
+		t.Fatal(err)
+	}
+	rows, advisory := pgtest.NewDatabaseFrom(t, prepared), pgtest.NewDatabaseFrom(t, prepared)
 	holdRowAndWait(t, rows)
 	holdAndWait(t, advisory)
 	rowsPool, advisoryPool := newPool(t, rows), newPool(t, advisory)
+	var oids [2]uint32
+	for i, pool := range []*pgxpool.Pool{rowsPool, advisoryPool} {
+		if err := pool.QueryRow(ctx, "SELECT 'a'::regclass::oid").Scan(&oids[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if oids[0] != oids[1] {
+		t.Fatalf("a has the OIDs %v in the two databases, want one", oids)
+	}
 
 	pgtest.WaitForLockWaitOn(t, rowsPool, "a", 10*time.Second)
 	for _, tt := range []struct {
@@ -52,7 +65,7 @@ func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
 		table string
 	}{
 		{"another table, which the waiter read", rowsPool, "b"},
-		{"an advisory lock", advisoryPool, "a"},
+		{"an advisory lock, in another database", advisoryPool, "a"},
 	} {
 		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
 		if want := "no statement waited for a row lock of " + tt.table + " within 300ms"; failed != want {
