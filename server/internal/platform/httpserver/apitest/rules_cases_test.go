@@ -64,13 +64,17 @@ components:
         - {required: [name]}
 `
 
-// ruleCasesOwners says which module file declares each path of the base.
-var ruleCasesOwners = map[string]string{"/api/v0/things": "things"}
+// ruleCasesModules are the modules of the cases: things declares the base's
+// path, and stuff is another module.
+var ruleCasesModules = []string{"stuff", "things"}
 
-// A module's own prefixed code passes.
+// A code prefixed with a module passes: the module's own, or another
+// module's, which refused (M3 design 11.7); and forbidden, the platform code
+// of the access module.
 func TestModuleCodesPass(t *testing.T) {
-	doc := parse(t, strings.Replace(ruleCasesBase, "x-problem-codes: [not_found]", "x-problem-codes: [things.taken, validation_failed]", 1))
-	if got := authoringViolations(doc, ruleCasesOwners); len(got) != 0 {
+	doc := parse(t, strings.Replace(ruleCasesBase, "x-problem-codes: [not_found]",
+		"x-problem-codes: [things.taken, stuff.not_found, forbidden, validation_failed]", 1))
+	if got := authoringViolations(doc, ruleCasesModules); len(got) != 0 {
 		t.Errorf("violations = %q, want none", got)
 	}
 }
@@ -79,7 +83,7 @@ func TestModuleCodesPass(t *testing.T) {
 // authoringViolations on a hand-built document, since the real contract
 // passes them all.
 func TestAuthoringRulesReportViolations(t *testing.T) {
-	if got := authoringViolations(parse(t, ruleCasesBase), ruleCasesOwners); len(got) != 0 {
+	if got := authoringViolations(parse(t, ruleCasesBase), ruleCasesModules); len(got) != 0 {
 		t.Fatalf("the base document breaks rules: %q", got)
 	}
 	const (
@@ -150,8 +154,8 @@ func TestAuthoringRulesReportViolations(t *testing.T) {
 			"GET /api/v0/things: x-problem-codes is not a list"},
 		{"code misspelled", "x-problem-codes: [not_found]", "x-problem-codes: [Things.Taken]",
 			`GET /api/v0/things: problem code "Things.Taken" is not spelled [module.]lower_snake`},
-		{"code of another module", "x-problem-codes: [not_found]", "x-problem-codes: [stuff.taken]",
-			`GET /api/v0/things: problem code "stuff.taken" is not prefixed with its module "things"`},
+		{"code of no module", "x-problem-codes: [not_found]", "x-problem-codes: [nowhere.taken]",
+			`GET /api/v0/things: problem code "nowhere.taken" is prefixed with "nowhere", which is not a module: want one of ["stuff" "things"]`},
 		{"unprefixed code that is not the platform's", "x-problem-codes: [not_found]", "x-problem-codes: [taken]",
 			`GET /api/v0/things: problem code "taken" has no module prefix and is not a platform code`},
 	}
@@ -161,7 +165,7 @@ func TestAuthoringRulesReportViolations(t *testing.T) {
 				t.Fatalf("the base document has no %q", tt.old)
 			}
 			doc := parse(t, strings.Replace(ruleCasesBase, tt.old, tt.new, 1))
-			if got := authoringViolations(doc, ruleCasesOwners); !slices.Equal(got, []string{tt.want}) {
+			if got := authoringViolations(doc, ruleCasesModules); !slices.Equal(got, []string{tt.want}) {
 				t.Errorf("violations = %q, want %q", got, tt.want)
 			}
 		})

@@ -22,14 +22,15 @@ import (
 // answer (M2 design 3.11).
 const problemCodesKey = "x-problem-codes"
 
-// platformCodes are the codes without a module prefix (M2 design 3.11).
+// platformCodes are the codes without a module prefix (M2 design 3.11), and
+// forbidden, the access module's refusal (M3 design 11.7).
 var platformCodes = []string{
-	"bad_request", "unauthorized", "not_found", "payload_too_large", "validation_failed",
+	"bad_request", "unauthorized", "forbidden", "not_found", "payload_too_large", "validation_failed",
 	"rate_limited", "internal_error", "not_ready", "server_busy",
 }
 
 // codePattern is the spelling of a code: a platform code, or a module's
-// code prefixed with the module, e.g. identity.email_taken.
+// code prefixed with a module, e.g. identity.email_taken.
 var codePattern = regexp.MustCompile(`^([a-z]+\.)?[a-z_]+$`)
 
 // problemCodes reads the x-problem-codes of ext: present reports whether the
