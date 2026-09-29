@@ -284,13 +284,21 @@ func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 	pool := newPool(t, pgtest.NewDatabase(t))
 	const (
 		user      = "'0199a2b4-0000-7000-8000-000000000001'"
+		other     = "'0199a2b4-0000-7000-8000-000000000002'"
 		workspace = "'0199a2b4-0000-7000-8000-000000000005'"
+		beta      = "'0199a2b4-0000-7000-8000-000000000006'"
 	)
 	for _, stmt := range []string{
 		"INSERT INTO users (id, email, password, display_name) VALUES (" + user + ", 'alice@corp.com', 'x', 'alice')",
+		"INSERT INTO users (id, email, password, display_name) VALUES (" + other + ", 'bob@corp.com', 'x', 'bob')",
 		"INSERT INTO workspaces (id, name, slug) VALUES (" + workspace + ", 'Acme', 'acme')",
+		"INSERT INTO workspaces (id, name, slug) VALUES (" + beta + ", 'Beta', 'beta')",
 		"INSERT INTO workspace_members (id, workspace_id, member_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
 		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
+		// Another account in the workspace and the account in another
+		// workspace hold keys of their own: a key short of a column refuses one.
+		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + other + ")",
+		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + beta + ", " + user + ")",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
