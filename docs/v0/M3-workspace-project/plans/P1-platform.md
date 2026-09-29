@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换（M3 设计 6.5、6.6）；平台包之间不互相导入；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/*.yaml` 不受约 400 行的限制。本 plan 的其余文件都在 400 行以内（最长的是 `permission_matrix_test.go`，321 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换（M3 设计 6.5、6.6）；平台包之间不互相导入；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/*.yaml` 不受约 400 行的限制。本 plan 的其余文件都在 400 行以内（最长的是 `apitest/rules_test.go`，365 行）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；迁移文件、`reserved_slugs.txt`、`server/configs/*.yaml` 的中文注释和中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -43,8 +43,10 @@
 | `server/migrations/schema_test.go`（修改） | 7 个迁移 up、down、再 up；约束和索引的名字；CHECK 的反例 | 1 |
 | `server/internal/archtest/sqlc_test.go`、`server/internal/archtest/sqlc_cases_test.go`（修改） | `TestSQLCSchemaScope` 的四种写法、带引号的名字、改名 | 2 |
 | `server/internal/shared/authorize.go`、`server/internal/shared/authorize_test.go` | `Role`、`Action`、`Target`、`Grant`、`Authorizer`、`ErrNotVisible` | 3 |
-| `server/internal/shared/error.go`、`server/internal/shared/error_test.go`（修改） | `CodeForbidden`、`Forbidden()`；包说明 | 3、4 |
-| `server/internal/platform/httpserver/apitest/problems.go`、`server/internal/platform/httpserver/apitest/rules_test.go`、`server/internal/platform/httpserver/apitest/rules_cases_test.go`（修改） | `forbidden` 是平台码；前缀是一个模块 | 3 |
+| `server/internal/shared/error.go`（修改） | `CodeForbidden`、`Forbidden()`；包说明 | 3、4 |
+| `server/internal/shared/error_test.go`（修改） | `TestConstructors` 加 `Forbidden()` | 3 |
+| `server/internal/platform/httpserver/apitest/problems.go`、`server/internal/platform/httpserver/apitest/rules_cases_test.go`（修改） | `forbidden` 是平台码；前缀是一个模块 | 3 |
+| `server/internal/platform/httpserver/apitest/rules_test.go`（修改） | 前缀规则；每个操作的标签是它的模块 | 3、15 |
 | `api/common.yaml`（修改） | `Problem.code` 的说明 | 3 |
 | `server/internal/platform/httpserver/apigen/components.gen.go`（生成） | | 3 |
 | `api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`（生成） | | 3、11、14 |
@@ -61,7 +63,8 @@
 | `server/internal/modules/workspace/adapter/postgres/queries/workspaces.sql`、`server/internal/modules/workspace/adapter/postgres/queries/members.sql`、`server/internal/modules/workspace/adapter/postgres/store.go`、`server/internal/modules/workspace/adapter/postgres/workspaces.go`、`server/internal/modules/workspace/adapter/postgres/roles.go`、`server/internal/modules/workspace/adapter/postgres/store_test.go` | 查询、存储、`ActiveRole` | 9 |
 | `server/internal/modules/workspace/adapter/postgres/gen/db.go`、`server/internal/modules/workspace/adapter/postgres/gen/models.go`、`server/internal/modules/workspace/adapter/postgres/gen/members.sql.go`、`server/internal/modules/workspace/adapter/postgres/gen/workspaces.sql.go`（生成） | | 9 |
 | `server/internal/modules/workspace/app/create_workspace.go`、`server/internal/modules/workspace/app/list_workspaces.go`、`server/internal/modules/workspace/app/get_workspace.go`、`server/internal/modules/workspace/app/check_slug.go`、`server/internal/modules/workspace/app/fakes_test.go`、`server/internal/modules/workspace/app/create_workspace_test.go`、`server/internal/modules/workspace/app/read_test.go` | 四个用例 | 10 |
-| `api/modules/workspace.yaml`；`api/openapi.yaml`（修改） | 接口描述 | 11、14 |
+| `api/modules/workspace.yaml` | 接口描述 | 11、14 |
+| `api/openapi.yaml`（修改） | `workspace` 标签和路径 | 11 |
 | `server/internal/modules/workspace/adapter/http/gen/oapi-codegen.yaml`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/workspaces.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/workspaces_test.go` | HTTP 一侧 | 11 |
 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go`（生成） | | 11 |
 | `server/internal/modules/workspace/module.go` | `Provide`、`New`、`Register`；`Actions`、`ReservedSlugs` | 11、12 |
@@ -342,7 +345,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Tests:**（`server/internal/archtest/sqlc_cases_test.go`）
 - `TestSQLCScopeOfTheBaseLayoutPasses`（不改名，基准布局扩大）：River 的迁移加上自己表上的触发器、改名再删除、不带名字的唯一索引，`asset` 的迁移加上引用 `users` 的外键、自己表上的索引和 Down 中删自己的表：都不报。
-- `TestSQLCScopeReportsViolations` 加 9 个反例，各报恰好一条：`ALTER TABLE of a quoted name`、`… in the schema public`（`ALTER TABLE IF EXISTS ONLY "public"."users"`）、`CREATE INDEX on another module's table`、`CREATE UNIQUE INDEX without a name`（`CONCURRENTLY … ON ONLY public.users`）、`CREATE TRIGGER on another module's table`（`CREATE OR REPLACE TRIGGER`，跨行）、`DROP TABLE of another module's table`（`DROP TABLE IF EXISTS assets, users CASCADE`）、`DROP TABLE of an unknown table`、`a quoted table created twice`、`a rename of another module's table`。
+- `TestSQLCScopeReportsViolations` 加 9 个反例，各报恰好一条：`ALTER TABLE of a quoted name`、`… in the schema public`（`ALTER TABLE IF EXISTS ONLY "public"."users"`）、`CREATE INDEX on another module's table`、`CREATE UNIQUE INDEX without a name`（`CONCURRENTLY … ON ONLY public.users`）、`CREATE TRIGGER on another module's table`（`CREATE OR REPLACE TRIGGER`，`ON users` 单独一行：规则去掉 `(?s)` 时失败）、`DROP TABLE of another module's table`（`DROP TABLE IF EXISTS assets, users CASCADE`）、`DROP TABLE of an unknown table`、`a quoted table created twice`、`a rename of another module's table`。
 
 - [ ] **Step 1: 四种写法**
 
@@ -574,7 +577,7 @@ func touched(sql string) map[string][]string {
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql indexes users, which module identity creates: the migration belongs to identity"},
 		{"CREATE TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
-			m[2].sql += "CREATE OR REPLACE TRIGGER assets_touch\n    AFTER UPDATE OF email ON users\n    FOR EACH ROW EXECUTE FUNCTION touch();"
+			m[2].sql += "CREATE OR REPLACE TRIGGER assets_touch\n    AFTER UPDATE OF email\n    ON users\n    FOR EACH ROW EXECUTE FUNCTION touch();"
 			return e, m, mods
 		}, "migration 00020_asset_assets.sql puts a trigger on users, which module identity creates: the migration belongs to identity"},
 		{"DROP TABLE of another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
@@ -1759,25 +1762,26 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.7，M3 设计 3.4、6.5）：
   - `domain.Level`（`LevelWorkspace`、`LevelProject`、`LevelVisible`）、`domain.Rule{Level; Roles []shared.Role}`；
-  - 规则表 `rules`，本 Phase 一行：`"workspace.read": {LevelWorkspace, [Admin, Member, Guest]}`；`RuleFor(action) (Rule, bool)`、`RuleKeys()`（排序）；
+  - 规则表 `rules`，本 Phase 一行：`"workspace.read": {LevelWorkspace, [Admin, Member, Guest]}`；`RuleFor(action) (Rule, bool)`（交回这一行的副本，`Roles` 用 `slices.Clone`：调用方写它改不了表）、`RuleKeys()`（排序）；
   - `domain.Membership{Active bool; Role shared.Role}`、`domain.Project{Public bool; Member Membership}`、`domain.Facts{Workspace Membership; Project *Project}`；
-  - `Decide(rule, facts) (shared.Grant, error)`：工作区级：不是有效成员 → `shared.ErrNotVisible`，角色不在集合中 → `shared.Forbidden()`；项目级和"看得到即可"按 M3 设计 3.4（工作区管理员、项目的有效成员、公开项目的工作区成员或管理员看得到；项目级要求是项目的有效成员，并且项目角色在集合中或是工作区管理员）；角色按集合比较；级别不认识 → 内部错误。
+  - `Decide(rule, facts) (shared.Grant, error)`：工作区级：不是有效成员 → `shared.ErrNotVisible`，角色不在集合中 → `shared.Forbidden()`；项目级和"看得到即可"按 M3 设计 3.4（工作区管理员、项目的有效成员、公开项目的工作区成员或管理员看得到；项目级要求是项目的有效成员，并且项目角色在集合中或是工作区管理员）；角色按集合比较；看得到之后，工作区角色或有效的项目角色不是三个值之一 → `shared.Forbidden()`（`knownRoles`，两个级别都一样，与工作区级一致）；级别不认识 → 内部错误。
 - 使用者：Task 6 的 `Authorizer`；Task 12 的完整性测试（`RuleKeys`）。
 
 **Tests:**
 - `decide_test.go`：
   - `TestDecideAtTheWorkspaceLevel`：4 组角色（全部、管理员和成员、管理员、没有）× 7 种身份（管理员、成员、访客、从来不是、已被移出、工作区已删除、角色 10）；允许时 `Grant` 只带工作区角色。
   - `TestTheWorkspaceLevelIgnoresTheProject`：项目的事实不改变工作区级的判定。
-  - `TestDecideAtTheProjectLevels`：4 条规则 × 13 种身份（M3 设计 9.2 项目级的各列、两个未知角色），另加每种身份没有项目时是 `ErrNotVisible`。
+  - `TestDecideAtTheProjectLevels`：4 条规则 × 14 种身份（M3 设计 9.2 项目级的各列；三个未知角色：公开项目上工作区角色 10 的非成员看不到，项目角色 10、工作区角色 10 的项目管理员在每个级别都是 403），另加每种身份没有项目时是 `ErrNotVisible`。
   - `TestTheGrantCarriesTheRoles`：`Grant` 带两级角色和 `ProjectAdmin`。
   - `TestARuleOfNoKnownLevelIsAnError`：不是 `ErrNotVisible`，也不是 403。
 - `rules_test.go`：
   - `TestEveryRuleDecidesItsCells`：`tableCells` 写死规则表每一行对 7 种身份的答案；规则表的键必须恰好是 `tableCells` 的键：删掉、放宽、收窄一行，或加一行而不写它的格子，都失败。
+  - `TestRuleForReturnsACopy`：调用方把交回的 `Roles` 全改成 10，再查同一行，角色不变。
   - `TestAnActionWithoutARowHasNoRule`。
 
 - [ ] **Step 1: 规则表和判定**
 
-`server/internal/modules/access/domain/rules.go`（新文件，57 行）：
+`server/internal/modules/access/domain/rules.go`（新文件，58 行）：
 
 ````file server/internal/modules/access/domain/rules.go
 // Package domain holds the access module's rules (M3 design 3.4, 6.4): the
@@ -1827,10 +1831,11 @@ var rules = map[shared.Action]Rule{
 	"workspace.read": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
-// RuleFor returns the row of action; ok is false when the table has none.
-func RuleFor(action shared.Action) (rule Rule, ok bool) {
-	rule, ok = rules[action]
-	return rule, ok
+// RuleFor returns a copy of the row of action, so a caller cannot change
+// the table; ok is false when the table has none.
+func RuleFor(action shared.Action) (Rule, bool) {
+	r, ok := rules[action]
+	return Rule{Level: r.Level, Roles: slices.Clone(r.Roles)}, ok
 }
 
 // RuleKeys lists the actions the table has a row for, sorted.
@@ -1839,7 +1844,7 @@ func RuleKeys() []shared.Action {
 }
 ````
 
-`server/internal/modules/access/domain/decide.go`（新文件，87 行）：
+`server/internal/modules/access/domain/decide.go`（新文件，95 行）：
 
 ````file server/internal/modules/access/domain/decide.go
 package domain
@@ -1901,10 +1906,18 @@ func decideWorkspace(rule Rule, ws Membership) (shared.Grant, error) {
 	return shared.Grant{WorkspaceRole: ws.Role}, nil
 }
 
+// knownRoles are the three roles; any other is allowed nothing.
+var knownRoles = []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}
+
 func decideProject(rule Rule, f Facts) (shared.Grant, error) {
 	ws, p := f.Workspace, f.Project
 	if !ws.Active || p == nil || !sees(ws.Role, *p) {
 		return shared.Grant{}, shared.ErrNotVisible
+	}
+	// A role outside the three, the workspace's or the project's, is allowed
+	// nothing, as at the workspace level.
+	if !slices.Contains(knownRoles, ws.Role) || (p.Member.Active && !slices.Contains(knownRoles, p.Member.Role)) {
+		return shared.Grant{}, shared.Forbidden()
 	}
 	grant := shared.Grant{WorkspaceRole: ws.Role}
 	if p.Member.Active {
@@ -1933,7 +1946,7 @@ func sees(wsRole shared.Role, p Project) bool {
 
 - [ ] **Step 2: 判定表的测试**
 
-`server/internal/modules/access/domain/decide_test.go`（新文件，196 行）：
+`server/internal/modules/access/domain/decide_test.go`（新文件，197 行）：
 
 ````file server/internal/modules/access/domain/decide_test.go
 package domain_test
@@ -2055,6 +2068,7 @@ var projectIdentities = []struct {
 	{"X", none, true, admin},
 	{"workspace role outside the three, public", domain.Membership{Active: true, Role: 10}, true, none},
 	{"project role outside the three", member, false, domain.Membership{Active: true, Role: 10}},
+	{"workspace role outside the three, project admin", domain.Membership{Active: true, Role: 10}, false, admin},
 }
 
 func TestDecideAtTheProjectLevels(t *testing.T) {
@@ -2067,15 +2081,15 @@ func TestDecideAtTheProjectLevels(t *testing.T) {
 	}{
 		// updateProject, addProjectMembers, createState… (9.2)
 		{"project admins", domain.Rule{Level: domain.LevelProject, Roles: all[:1]},
-			[]outcome{ok, no, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no}},
+			[]outcome{ok, no, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 		{"project admins and members", domain.Rule{Level: domain.LevelProject, Roles: all[:2]},
-			[]outcome{ok, ok, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no}},
+			[]outcome{ok, ok, no, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 		// listStates, listLabels, getProjectPreferences… (9.2)
 		{"every project role", domain.Rule{Level: domain.LevelProject, Roles: all},
-			[]outcome{ok, ok, ok, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no}},
+			[]outcome{ok, ok, ok, ok, no, no, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 		// getProject (9.2)
 		{"seeing the project", domain.Rule{Level: domain.LevelVisible},
-			[]outcome{ok, ok, ok, ok, ok, ok, hidden, hidden, hidden, hidden, hidden, hidden, ok}},
+			[]outcome{ok, ok, ok, ok, ok, ok, hidden, hidden, hidden, hidden, hidden, hidden, no, no}},
 	}
 	for _, tt := range tests {
 		for i, id := range projectIdentities {
@@ -2134,7 +2148,7 @@ func TestARuleOfNoKnownLevelIsAnError(t *testing.T) {
 }
 ````
 
-`server/internal/modules/access/domain/rules_test.go`（新文件，63 行）：
+`server/internal/modules/access/domain/rules_test.go`（新文件，78 行）：
 
 ````file server/internal/modules/access/domain/rules_test.go
 package domain_test
@@ -2191,6 +2205,21 @@ func TestEveryRuleDecidesItsCells(t *testing.T) {
 	}
 }
 
+// RuleFor hands out a copy: a caller that writes to the row's roles changes
+// no later decision.
+func TestRuleForReturnsACopy(t *testing.T) {
+	for _, action := range domain.RuleKeys() {
+		rule, _ := domain.RuleFor(action)
+		want := slices.Clone(rule.Roles)
+		for i := range rule.Roles {
+			rule.Roles[i] = 10
+		}
+		if again, _ := domain.RuleFor(action); !slices.Equal(again.Roles, want) {
+			t.Errorf("RuleFor(%q) after a caller's write: roles %v, want %v", action, again.Roles, want)
+		}
+	}
+}
+
 // An action the table has no row for is found by no lookup: the Authorizer
 // refuses it.
 func TestAnActionWithoutARowHasNoRule(t *testing.T) {
@@ -2228,7 +2257,7 @@ workspace.read, and each row's answer for every identity is pinned.
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done when:** 判定表的 5 个测试和规则表的 2 个测试通过；`access/domain` 只导入 `shared` 和标准库。
+**Done when:** 判定表的 5 个测试和规则表的 3 个测试通过；三个值以外的角色在三个级别都什么都不允许；`access/domain` 只导入 `shared` 和标准库。
 
 ---
 
@@ -7554,18 +7583,20 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/permission_matrix_test.go`
-- Modify: `server/internal/platform/httpserver/apitest/operations.go`、`server/internal/platform/httpserver/apitest/operations_test.go`、`server/internal/platform/postgres/pgtest/pgtest.go`、`server/internal/platform/postgres/pgtest/pgtest_test.go`
+- Modify: `server/internal/platform/httpserver/apitest/operations.go`、`server/internal/platform/httpserver/apitest/operations_test.go`、`server/internal/platform/httpserver/apitest/rules_test.go`、`server/internal/platform/postgres/pgtest/pgtest.go`、`server/internal/platform/postgres/pgtest/pgtest_test.go`
 
 **Interfaces:**
 - Produces（spec 2.17，M3 设计 9.2）：
   - `pgtest.NewDatabaseFrom(t, prepared string) string`：`CREATE DATABASE … TEMPLATE`，副本在测试结束时删除；复制时不能有连接连着 `prepared`；
   - `apitest.Operation` 加 `ID`（`operationId`）和 `Tags`；
+  - 规则：`api/modules/<m>.yaml` 的每个操作的标签恰好是 `[<m>]`（`TestEveryOperationIsTaggedWithItsModule`）：矩阵按标签找模块的操作，标签写错的操作不能悄悄漏掉它的行；
   - `permission_matrix_test.go`：列、准备数据、`matrixRows()`、`matrixModules`、`matrixViolations`（spec 2.17）。以后每个 Phase 给自己的操作加行、在 `matrixModules` 加模块。
 - 使用者：P2–P7 的矩阵行。
 
 **Tests:**
 - `pgtest_test.go`：`TestNewDatabaseFromCopiesThePreparedDatabase`（两个副本各自独立；写一个不影响另一个和源库）。
 - `operations_test.go`：`TestOperations` 核对 `ID` 和 `Tags`。
+- `rules_test.go`：`TestEveryOperationIsTaggedWithItsModule`（每个模块文件的每个操作的标签恰好是 `[<模块>]`）。
 - `permission_matrix_test.go`：`TestPermissionMatrix`（30 格；读的格子共用一个副本上的 app，写的 12 格各用一个副本、并行；每格断言状态码和 problem 的码，请求和响应都经契约核对）；`TestThePermissionMatrixCoversEveryOperation`；`TestMatrixViolationsCatchesEachGap`（缺行、行指向不存在的操作、行缺一列的格子）。
 
 - [ ] **Step 1: 测试工具**
@@ -7686,6 +7717,39 @@ func TestNewDatabaseFromCopiesThePreparedDatabase(t *testing.T) {
 	}
 	if ops[1].ID != "getThing" || !slices.Equal(ops[1].Tags, []string{"things"}) || ops[0].ID != "listThings" || ops[0].Tags != nil {
 		t.Errorf("IDs and tags = %q %q, %q %q; want each operation's", ops[0].ID, ops[0].Tags, ops[1].ID, ops[1].Tags)
+````
+
+`server/internal/platform/httpserver/apitest/rules_test.go`（修改，1 处）：
+
+````old server/internal/platform/httpserver/apitest/rules_test.go
+				owners[path], path)
+````
+
+````new server/internal/platform/httpserver/apitest/rules_test.go
+				owners[path], path)
+		}
+	}
+}
+
+// The permission matrix (bootstrap) finds a module's operations by tag, so
+// every operation of api/modules/<m>.yaml carries exactly the tag <m>.
+func TestEveryOperationIsTaggedWithItsModule(t *testing.T) {
+	names, err := moduleNames()
+	if err != nil || len(names) == 0 {
+		t.Fatalf("module files = %q, %v; want at least one", names, err)
+	}
+	for _, name := range names {
+		doc, err := loadModule(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range slices.Sorted(maps.Keys(doc.Paths.Map())) {
+			ops := doc.Paths.Value(path).Operations()
+			for _, method := range slices.Sorted(maps.Keys(ops)) {
+				if tags := ops[method].Tags; !slices.Equal(tags, []string{name}) {
+					t.Errorf("%s %s in api/modules/%s.yaml: tags = %q, want [%q]", method, path, name, tags, name)
+				}
+			}
 ````
 
 - [ ] **Step 2: 矩阵**
@@ -8036,19 +8100,20 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add server/internal/bootstrap/permission_matrix_test.go server/internal/platform/httpserver/apitest/operations.go server/internal/platform/httpserver/apitest/operations_test.go server/internal/platform/postgres/pgtest/pgtest.go server/internal/platform/postgres/pgtest/pgtest_test.go
+git add server/internal/bootstrap/permission_matrix_test.go server/internal/platform/httpserver/apitest/operations.go server/internal/platform/httpserver/apitest/operations_test.go server/internal/platform/httpserver/apitest/rules_test.go server/internal/platform/postgres/pgtest/pgtest.go server/internal/platform/postgres/pgtest/pgtest_test.go
 ```
 ```bash
 git commit -m "test(M3/P1): the permission matrix and its first rows
 
 Six callers against every operation of workspace, each cell's status and
 code; the writing cells run in parallel on copies of a prepared database.
-Every operation of the matrix's modules must have a row (M3 design 9.2).
+Every operation of the matrix's modules must have a row (M3 design 9.2),
+and every operation carries exactly the tag of its module file.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done when:** 30 格通过，耗时记下；完整性核对通过；三个反例各被发现。
+**Done when:** 30 格通过，耗时记下；完整性核对通过；三个反例各被发现；每个操作的标签是它的模块。
 
 ---
 
@@ -8543,10 +8608,11 @@ test("W10: nerve workspaces create makes the account of the address the workspac
 
 - **第 4 节 `profiles.last_workspace_id` 的外键**（完成）：不补外键，理由写在 M3 设计 3.14；没有代码改动。
 - **第 5 节 `workspace_creation_enabled` 的执行**（完成）：开关关闭时，`createWorkspace` 在做任何事之前答 403 `workspace.creation_disabled`（`server/internal/modules/workspace/app/create_workspace.go`），`api/modules/workspace.yaml` 声明这个码；用例测试、`workspace` 的 HTTP 测试、组合测试的两种开关值、权限矩阵中关闭开关的一行和 W1 都核对它。命令写进 M3 设计 3.11 并实现：`nerve workspaces create --slug --name --admin-email` 不看开关（W10）。
+- **第 7 节 可空的引用字段**（部分）：`Workspace.logo_url` 在接口中必有、可为 `null`，M5 之前总是 `null`（`api/modules/workspace.yaml`）；`cover_image_url`、`MemberUser.avatar_url` 随 P2、P4，`IUserLite` 随 P8；本节保持 `open`。
 - **第 8 节 模块边界**（完成）：第 1 件选端口：`access` 在 `app/ports.go` 声明 `WorkspaceRoles`，由 `workspace` 的存储实现，`bootstrap` 接上（M3 设计 6.5、6.6），不是 `TestSQLCSchemaScope` 的例外。第 2 件：`TestSQLCSchemaScope` 认出带引号的名字和 `public.` 前缀、`ALTER TABLE`、`CREATE [UNIQUE] INDEX`、`CREATE TRIGGER`、`DROP TABLE` 和改名，每种都有反例（`server/internal/archtest/sqlc_cases_test.go`），去掉任何一种的变异都让它失败。第 3 件：`Authorizer` 在 `server/internal/shared/authorize.go` 声明，由 `access` 实现，`shared` 仍只依赖标准库。`ProjectAccess` 在 P4 照同一写法。
 - **第 12 节 页大小的规则**：M3 的列表都是集合型的，不分页（M3 设计 3.12；P1 的 `listWorkspaces` 答 `{"data": [...]}`）。按关闭条件由 P1 的 review 写明，本节在 M3 收尾时原样写进 M4 的交接（M3 设计 13.2）。
 
-仍未处理，状态保持 `open`：第 1–3、6、7、9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 P1 的 review 和 M3 的收尾。
+仍未处理，状态保持 `open`：第 1–3、6 节，第 7 节的其余部分，第 9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 P1 的 review 和 M3 的收尾。
 
 来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。
 

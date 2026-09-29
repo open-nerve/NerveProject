@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P1 `platform` |
 | 日期 | 2026-09-29 |
-| 状态 | 进行中 |
+| 状态 | 进行中（已按 pre-flight 修订） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（W1、W10）、3.3、3.4、3.6（约定一、二、六）、3.10–3.13、3.20（P1 各行）、4.1–4.3、4.11（P1 各行）、5.1–5.3、6.1、6.2、6.4–6.6、8.2、8.3、8.7（P1 一行）、9.1–9.4、9.6、11.4、11.6、11.7、12（P1）、13.1 节；[v0 总体设计](../../v0-design.md) 3.4、3.5、6.2、6.3、6.5 节；[M2 设计](../../M2-auth/M2-design.md) 3.11、3.13、3.14、3.17 节 |
 | 前置交接 | [M2-closeout](../handoffs/M2-closeout.md) 第 4、5、8、12 节；[M1-P2](../handoffs/M1-P2-trim-content.md)、[M1-P3](../handoffs/M1-P3-trim-platform.md)、[M1-P4](../handoffs/M1-P4-router-native.md) 的保留名单（服务端一侧；本 Phase 的处理见第 7 节） |
 | 计划 | [P1 plan](../plans/P1-platform.md) |
@@ -36,6 +36,7 @@
 | `server/internal/archtest/sqlc_test.go`、`sqlc_cases_test.go` | 四种写法（带引号的名字、`CREATE [UNIQUE] INDEX`、`CREATE TRIGGER`、`DROP TABLE`）和改名 | 2 |
 | `server/internal/shared/authorize.go`、`authorize_test.go`、`error.go`、`error_test.go` | 权限的值和端口；`CodeForbidden`、`Forbidden()` | 3 |
 | `server/internal/platform/httpserver/apitest/problems.go`、`rules_test.go`、`rules_cases_test.go`；`api/common.yaml` | `forbidden` 是平台码；前缀是一个模块 | 3 |
+| `api/dist/openapi.yaml`、`server/internal/platform/httpserver/apigen/components.gen.go`、`web/packages/api-client/src/schema.gen.ts`（生成） | `forbidden` 与 `Problem.code` 的说明 | 3 |
 | `server/internal/shared/email.go`、`url.go`、`timezone.go` 及测试；`identity/domain/email.go`、`user.go`（修改）、`url.go`（删除）；`identity/app`、`identity/adapter/http` 的调用方 | 三条取值规则移到 `shared` | 4 |
 | `server/internal/modules/access/domain/rules.go`、`decide.go` 及测试 | 规则表、判定 | 5 |
 | `server/internal/modules/access/app/ports.go`、`authorizer.go` 及测试；`access/module.go` | `WorkspaceRoles`、`Authorizer`、`New`、`RuleKeys` | 6 |
@@ -50,7 +51,7 @@
 | `server/internal/modules/workspace/module.go`（修改）；`bootstrap/actions_test.go`、`reserved_test.go` | `Actions()`、`ReservedSlugs()`；两个 bootstrap 测试 | 12 |
 | `server/internal/bootstrap/interleaving_test.go` | 建工作区与 M2 的停用，两个顺序 | 13 |
 | `server/internal/modules/workspace/admin.go`；`bootstrap/workspaces.go`、`commands.go`、`users.go`；`cmd/nerve/workspaces.go`、`commands.go`；`archtest/composition_test.go`；`README.md`；`server/configs/config.yaml`、`platform/config/config.go`（注释）；`api/modules/workspace.yaml`（说明） | `nerve workspaces create` | 14 |
-| `server/internal/bootstrap/permission_matrix_test.go`；`platform/postgres/pgtest/pgtest.go`；`platform/httpserver/apitest/operations.go` | 矩阵的骨架；从已准备的库复制；操作的 id 和 tags | 15 |
+| `server/internal/bootstrap/permission_matrix_test.go`；`platform/postgres/pgtest/pgtest.go`；`platform/httpserver/apitest/operations.go`、`rules_test.go` | 矩阵的骨架；从已准备的库复制；操作的 id 和 tags；每个操作的标签是它的模块 | 15 |
 | `e2e/fixtures/api.ts`、`assert/workspace.ts`、`workspaces.ts`；`e2e/stories/workspace/w1-*.spec.ts`、`w10-*.spec.ts`；`docs/v0/v0-design.md`、`plane-diff.md`、`M2-auth/M2-design.md`；`docs/v0/M3-workspace-project/handoffs/` 的 `M2-closeout.md`、`M1-P2-trim-content.md`、`M1-P3-trim-platform.md`、`M1-P4-router-native.md` | W1、W10 的接口版本；3.20 的 P1 各行；交接的处理结果 | 16 |
 
 ### 2.2 依赖
@@ -105,7 +106,7 @@ CREATE INDEX workspace_members_workspace_id_idx ON workspace_members (workspace_
 
 - 表名的写法 `tableName = (?:(?:public|"public")\.)?("[^"]+"|[a-z_][a-z0-9_]*)`，带引号的名字按原样、不带的转小写（`table()`）。建表之外，`ALTER TABLE … RENAME TO t` 也让 `t` 属于改名的模块。
 - 作用于表的语句 `tableStatements`：`alters`（`ALTER TABLE [IF EXISTS] [ONLY] t`）、`indexes`（`CREATE [UNIQUE] INDEX [CONCURRENTLY] [IF NOT EXISTS] [名字] ON [ONLY] t`）、`puts a trigger on`（`CREATE [OR REPLACE] [CONSTRAINT] TRIGGER 名字 … ON [ONLY] t`）、`drops`（`DROP TABLE [IF EXISTS] t[, t2 …]`）。每种都报"which no migration creates"或"which module %s creates: the migration belongs to %s"。`REFERENCES` 不在其中：外键可以指向别的模块的表。
-- `sqlc_cases_test.go`：基准布局中 River 的迁移加上自己表上的触发器、改名再删除、不带名字的唯一索引（照它真实的迁移），`asset` 的迁移加上引用 `users` 的外键、自己表上的索引和删自己的表，这些都必须通过；`TestSQLCScopeReportsViolations` 加 9 个反例：带引号的 `ALTER TABLE`、`public` 下带引号的、别的模块的表上的 `CREATE INDEX`、不带名字的 `CREATE UNIQUE INDEX`、`CREATE TRIGGER`、`DROP TABLE IF EXISTS assets, users CASCADE`、删除不存在的表、同一个带引号的表建两次、改别的模块的表的名字。
+- `sqlc_cases_test.go`：基准布局中 River 的迁移加上自己表上的触发器、改名再删除、不带名字的唯一索引（照它真实的迁移），`asset` 的迁移加上引用 `users` 的外键、自己表上的索引和删自己的表，这些都必须通过；`TestSQLCScopeReportsViolations` 加 9 个反例：带引号的 `ALTER TABLE`、`public` 下带引号的、别的模块的表上的 `CREATE INDEX`、不带名字的 `CREATE UNIQUE INDEX`、`CREATE TRIGGER`（`ON users` 单独一行，规则去掉 `(?s)` 时失败）、`DROP TABLE IF EXISTS assets, users CASCADE`、删除不存在的表、同一个带引号的表建两次、改别的模块的表的名字。
 
 ### 2.5 `shared`（3.4、3.13、11.4、11.7）
 
@@ -135,15 +136,15 @@ func Forbidden() *Error // KindForbidden, CodeForbidden, "Your role does not all
 
 ### 2.7 `access`（3.4、6.4、6.5）
 
-- `domain/rules.go`：`Level`（`LevelWorkspace`、`LevelProject`、`LevelVisible`）、`Rule{Level; Roles []shared.Role}`、`rules`（本 Phase 一行：`"workspace.read": {LevelWorkspace, [Admin, Member, Guest]}`）、`RuleFor(action) (Rule, bool)`、`RuleKeys()`（排序）。
+- `domain/rules.go`：`Level`（`LevelWorkspace`、`LevelProject`、`LevelVisible`）、`Rule{Level; Roles []shared.Role}`、`rules`（本 Phase 一行：`"workspace.read": {LevelWorkspace, [Admin, Member, Guest]}`）、`RuleFor(action) (Rule, bool)`（交回这一行的副本，`Roles` 用 `slices.Clone`：调用方写它改不了表）、`RuleKeys()`（排序）。
 - `domain/decide.go`：`Membership{Active bool; Role shared.Role}`、`Project{Public bool; Member Membership}`、`Facts{Workspace Membership; Project *Project}`、`Decide(rule, facts) (shared.Grant, error)`：
   - 工作区级：不是有效成员 → `ErrNotVisible`；角色不在集合中 → `Forbidden()`；否则 `Grant{WorkspaceRole}`；
-  - 项目级、看得到即可：不是有效的工作区成员、没有项目、看不到 → `ErrNotVisible`；`sees` = 工作区管理员，或项目的有效成员，或项目公开而工作区角色是成员或管理员；看得到即可 → 允许；项目级 → 是项目的有效成员，并且项目角色在集合中或是工作区管理员 → 允许，否则 `Forbidden()`；`Grant` 带上两级角色和 `ProjectAdmin`；
+  - 项目级、看得到即可：不是有效的工作区成员、没有项目、看不到 → `ErrNotVisible`；`sees` = 工作区管理员，或项目的有效成员，或项目公开而工作区角色是成员或管理员；看得到之后，工作区角色或有效的项目角色不是三个值之一（`knownRoles`）→ `Forbidden()`，两个级别都一样；看得到即可 → 允许；项目级 → 是项目的有效成员，并且项目角色在集合中或是工作区管理员 → 允许，否则 `Forbidden()`；`Grant` 带上两级角色和 `ProjectAdmin`；
   - 角色按集合比较，从不按大小：三个值以外的角色什么都不允许；级别不认识 → 错误（500）。
   - 项目级在 P1 没有规则行使用，判定已按 3.4 写全并由表测试覆盖（第 3 节第 9 条）。
 - `app/ports.go`：`WorkspaceRoles.ActiveRole(ctx, workspaceID, userID) (role shared.Role, ok bool, err error)`。`app/authorizer.go`：`NewAuthorizer(roles)`；`Authorize` 先查规则，没有 → `fmt.Errorf("access: no rule for action %q")`，什么都不读；再每次调用都读角色（不缓存），端口的错误包一层返回；判定只用工作区的事实（`ProjectAccess` 随 P4 加入）。
 - `module.go`：`Deps{WorkspaceRoles}`、`New(Deps) shared.Authorizer`、`RuleKeys()`。
-- 测试：`TestDecideAtTheWorkspaceLevel`（四组角色 × 7 种身份：管理员、成员、访客、从来不是、已被移出、工作区已删除、角色 10；允许时 `Grant` 只带工作区角色）；`TestTheWorkspaceLevelIgnoresTheProject`；`TestDecideAtTheProjectLevels`（4 条规则 × 13 种身份，含 9.2 项目级的各列和两个未知角色，另加没有项目的一行）；`TestTheGrantCarriesTheRoles`；`TestARuleOfNoKnownLevelIsAnError`；`TestEveryRuleDecidesItsCells`（规则表的每一行对 9.2 的每种身份的答案写成 `tableCells`：删掉、放宽、收窄一行，或加一行而不写它的格子，都失败）；`TestAnActionWithoutARowHasNoRule`；`TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace`（两个用户 × 两个工作区，假端口按参数回答并记下调用和 ctx）；`TestAuthorizeReadsOnEveryCall`；`TestAuthorizeRefusesAnActionWithoutARule`（不是 `ErrNotVisible`、不是 403，端口没有被调用）；`TestAuthorizeReturnsThePortsError`。
+- 测试：`TestDecideAtTheWorkspaceLevel`（四组角色 × 7 种身份：管理员、成员、访客、从来不是、已被移出、工作区已删除、角色 10；允许时 `Grant` 只带工作区角色）；`TestTheWorkspaceLevelIgnoresTheProject`；`TestDecideAtTheProjectLevels`（4 条规则 × 14 种身份，含 9.2 项目级的各列和三个未知角色：公开项目上工作区角色 10 的非成员看不到，项目角色 10、工作区角色 10 的项目管理员在每个级别都是 403；另加没有项目的一行）；`TestTheGrantCarriesTheRoles`；`TestARuleOfNoKnownLevelIsAnError`；`TestEveryRuleDecidesItsCells`（规则表的每一行对 9.2 的每种身份的答案写成 `tableCells`：删掉、放宽、收窄一行，或加一行而不写它的格子，都失败）；`TestRuleForReturnsACopy`（调用方改写交回的 `Roles` 之后再查，角色不变）；`TestAnActionWithoutARowHasNoRule`；`TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace`（两个用户 × 两个工作区，假端口按参数回答并记下调用和 ctx）；`TestAuthorizeReadsOnEveryCall`；`TestAuthorizeRefusesAnActionWithoutARule`（不是 `ErrNotVisible`、不是 403，端口没有被调用）；`TestAuthorizeReturnsThePortsError`。
 
 ### 2.8 `workspace` 的领域（3.10、3.11、5.2、5.3）
 
@@ -224,6 +225,7 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 
 - `pgtest.NewDatabaseFrom(t, prepared) string`：`CREATE DATABASE … TEMPLATE <prepared>`，副本在测试结束时删除；复制时不能有连接连着 `prepared`。`TestNewDatabaseFromCopiesThePreparedDatabase`：两个副本各自独立，写一个不影响另一个和源库。
 - `apitest.Operation` 加 `ID`（`operationId`）和 `Tags`；`TestOperations` 核对。
+- 规则：`api/modules/<m>.yaml` 的每个操作的标签恰好是 `[<m>]`。矩阵按标签找一个模块的操作，标签写错（例如复制来的 `tags: [identity]`）的操作会悄悄漏掉它的行；`TestEveryOperationIsTaggedWithItsModule`（`apitest/rules_test.go`，Task 15）核对每个模块文件的每个操作。
 - `bootstrap/permission_matrix_test.go`：
   - 列（`caller`）：管理员、成员、访客、从来不是成员、已被移出、工作区已删除；最后一列的请求指向已删除的工作区 `gone`（它的管理员），其余指向 `acme`。
   - 准备（`prepareMatrix`，在子测试 `prepare` 里，结束时关掉它的 app 和连接池）：每列一个账户，经接口注册拿访问令牌（所有 app 用同一个密钥文件，令牌在每个副本上都有效）；工作区和成员关系经 `workspace` 的存储写入；移出和删除还没有存储，用 SQL（第 3 节第 10 条）。
@@ -262,15 +264,15 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 1. **任务的划分：16 个，不是 15 个**。设计的任务与 plan 的对应：1 → 1（sqlc 条目移到 9，见下条）；2 → 2；3、4 → 3（两者改同一组 `apitest` 文件，`forbidden` 进 `platformCodes` 和前缀规则一起测）；5 → 4；6 → 5；7 → 6；8 → 7（`actions.go`）和 12（完整性测试要 `workspace.Actions()`，在模块入口之后）；9 → 11（下面说明）；10 → 7（领域和名单）和 12（"服务端"一段的 Go 测试要组合根）；11 → 8（`identity.Provide`）、9（存储）、10（用例）；12 → 10、11（`checkWorkspaceSlug` 的用例和 handler 与另三个同一批）；13 → 14；14 → 15；15 → 16。另加 13（交错，第 5 条）。组合（设计的任务 9）与接口描述、HTTP 一侧放在同一个 Task：模块没有 HTTP 一侧时，组合根没有东西可接；只加接口描述而不注册路由，M2 的整程序测试（路由等于契约的操作）失败。最大的 Task 11 在 plan 中 1,275 行，在约 1,500 行的上限之内；plan 共 16 个 Task。
 2. **`server/sqlc.yaml` 的 `workspace` 条目在 Task 9，不在 Task 1**：sqlc 对没有查询的条目报错（`error parsing queries: no queries contained in paths …`，附录 A），`make gen` 在 Task 1 就会失败。`TestSQLCSchemaScope` 只要求"有查询的模块有条目"，Task 1 到 8 之间 `workspace` 没有查询，规则照旧成立。
 3. **保留名单的"应用"一段在 P1 含 `invitations`**：3.10 的名单是决策点 2 删掉 `/invitations` 页之后的状态（P8、P9）。这一页在 P1 仍在，名单不含它就会放行一个与现有页面冲突的 slug；删掉这一页的改动同时把它移出名单（文件的注释写明）。"应用"一段与路由表的核对（web vitest）随前端数据层在 P8 加入（9.5）。
-4. **前端的错误文案表在 Task 11 加三个码**：M2 设计 3.11、7.3 的 vitest 要求 `PROBLEM_MESSAGES` 的键恰好等于 `api/dist/openapi.yaml` 中的全部 `x-problem-codes`；`workspace.yaml` 一加上三个码，`make test-web` 就失败。所以后端的 Phase 也要改这张表和两份 `auth.json`（设计 12 节的 P1 没有前端的任务，这是设计的遗漏）。文案放在 `auth` 命名空间，与 M2 的码一起；P8 重写数据层时可以挪到别处。`forbidden` 在 P1 没有操作声明它，不进表（P2 第一次声明时加）。
+4. **前端的错误文案表在 Task 11 加三个码**：M2 设计 3.11、7.3 的 vitest 要求 `PROBLEM_MESSAGES` 的键恰好等于 `api/dist/openapi.yaml` 中的全部 `x-problem-codes`；`workspace.yaml` 一加上三个码，`make test-web` 就失败。所以后端的 Phase 也要改这张表和两份 `auth.json`（设计 12 节的 P1 没有前端的任务，这是设计的遗漏）。文案放在 `auth` 命名空间，与 M2 的码一起。`forbidden` 在 P1 没有操作声明它，不进表（P2 第一次声明时加）。**已裁定，写进设计**：M3 设计第 12 节约束 4（P2–P7 声明新码的任务在同一个任务里加文案并运行 `make test-web`），这张表和它的文案在 P8 任务 13 移到通用的位置。
 5. **P1 加了建工作区与 M2 停用的交错（Task 13）**：9.3 把交错 8 标为 P6（那时停用有了结束成员关系的端口）。约定六的"账户行最先 `FOR SHARE`、锁下要求有效"是 P1 的代码，P1 的变异（去掉锁、锁挪到事务外、在锁之前读 `is_active`）只有真实的争锁才能发现（附录 A）；P6 在同一个文件里补上成员关系的一半。
 6. **"服务端"一段的核对方式**：3.10 写"组合根在前端页面之外注册的顶层路径"。`assets` 不是组合根注册的路由，是 `webui` 对 `/assets/` 下缺失的文件答 404 而不是页面（M2/P4）。测试把"路由的第一段"和"缺失文件答 404 的前端顶层目录"合起来，等于名单的这一段；`platform` 的生产代码不变（6.1）。
-7. **两个只给命令行的错误码**：`workspace.account_not_found`、`workspace.account_deactivated`（3.11 的"没有这个账户、账户已停用"）。它们不在 5.3 的表里，不进任何 `x-problem-codes`；命令行打印它们的说明（照 M2/P3b 的 `identity.account_not_found`）。
+7. **两个只给命令行的错误码**：`workspace.account_not_found`、`workspace.account_deactivated`（3.11 的"没有这个账户、账户已停用"）。它们不在 5.3 的表里，不进任何 `x-problem-codes`；命令行打印它们的说明（照 M2/P3b 的 `identity.account_not_found`）。T16 的块不改 M3 设计；两个码由本 spec 的提交写进 M3 设计 3.11。
 8. **规则表之外的两种失败都是 500**：没有规则行的动作（`Authorize`）、级别不认识的规则（`Decide`）都是内部错误，不是 403 或 404：调用方无从补救，这是代码的缺陷，默认拒绝仍然成立。未知的角色什么都不允许（按集合比较）。
-9. **项目级的判定在 P1 写全**：设计 12 节任务 6 要三个级别；P1 没有项目级的规则行，`Authorizer` 也还不读项目（`ProjectAccess` 在 P4）。`Decide` 的项目级分支由表测试覆盖（13 种身份 × 4 条规则），P4 加规则行和端口时不改判定。
-10. **矩阵的准备数据**：9.2 写"用各模块的仓储写入"。账户经接口注册（为了拿到令牌，注册按 IP 的限流在 test 配置中很宽）；工作区和成员关系经 `workspace` 的存储；"已被移出""工作区已删除"两列的状态还没有存储能写（移出在 P5、删除在 P2），用两条 SQL，写明由那两个 Phase 换成存储。另外，矩阵要求 `workspace`（以后加 `project`）的**每个**操作都有一行，账户级的也要（9.2 只要求工作区级和项目级的）：账户级的三行在本 Phase 本来就有，这样新操作不会因为被归为"账户级"而漏掉。公开的 `getWorkspaceInvitation`（P3）需要在矩阵中另加一列"不带令牌"，或在 `matrixModules` 的核对中写明例外：P3 决定。
+9. **项目级的判定在 P1 写全**：设计 12 节任务 6 要三个级别；P1 没有项目级的规则行，`Authorizer` 也还不读项目（`ProjectAccess` 在 P4）。`Decide` 的项目级分支由表测试覆盖（14 种身份 × 4 条规则），P4 加规则行和端口时不改判定。pre-flight（M1）发现第一版的项目级放行三个值以外的角色（工作区角色 10 的项目管理员、看得到即可时的项目角色 10）；修订后在看得到之后先查 `knownRoles`，两个级别都失败关闭（附录 A 的两个变异）。
+10. **矩阵的准备数据**：9.2 写"用各模块的仓储写入"。账户经接口注册（为了拿到令牌，注册按 IP 的限流在 test 配置中很宽）；工作区和成员关系经 `workspace` 的存储；"已被移出""工作区已删除"两列的状态还没有存储能写（移出在 P5、删除在 P2），用两条 SQL，写明由那两个 Phase 换成存储。另外，矩阵要求 `workspace`（以后加 `project`）的**每个**操作都有一行，账户级的也要（9.2 只要求工作区级和项目级的）：账户级的三行在本 Phase 本来就有，这样新操作不会因为被归为"账户级"而漏掉。公开的 `getWorkspaceInvitation`（P3）需要在矩阵中另加一列"不带令牌"，或在 `matrixModules` 的核对中写明例外：P3 决定。矩阵按标签找一个模块的操作，标签由 `TestEveryOperationIsTaggedWithItsModule` 钉住（2.17，pre-flight L2），标签写错的操作不能绕过完整性核对。
 11. **差异清单"集合型的列表"一行不写"关联字段带 `_id`"**：4.11 这一行含"关联字段带 `_id`（5.2）"。P1 的 `Workspace` 没有关联字段，写上就是描述不存在的行为；由第一个带关联字段的资源（P2 的 `WorkspaceMember.workspace_id`）写上。
-12. **`platform` 的两处测试工具和一处注释**：`pgtest.NewDatabaseFrom`（9.2 要求）和 `apitest.Operation` 的 `ID`、`Tags`（矩阵的完整性要按操作名和模块核对）都是只给测试用的包；`platform/config/config.go` 中 `WorkspaceConfig` 的注释原来写"创建工作区在 M3 加入并执行它"，改为现在的行为。`platform` 的生产代码的行为不变（6.1）。
+12. **`platform` 的两处测试工具和一处注释**：`pgtest.NewDatabaseFrom`（9.2 要求）和 `apitest.Operation` 的 `ID`、`Tags`（矩阵的完整性要按操作名和模块核对）都是只给测试用的包；`pgtest`、`apitest` 只给测试用由架构测试保证（`testHelpersOnlyInTests`：它们只被测试导入）。`platform/config/config.go` 中 `WorkspaceConfig` 的注释原来写"创建工作区在 M3 加入并执行它"，改为现在的行为，只改注释、不改代码。`platform` 的生产代码的行为不变，在 6.1 之内（pre-flight Q1）。
 13. **"先锁父行，再判定"在 P1 没有可测的地方**：P1 唯一经过 `Authorizer` 的是读（`getWorkspace`，不开事务）；`createWorkspace` 是账户级的，不经过 `Authorizer`。缺陷类别"在父行的锁之前判定"的变异从 P2 的 `updateWorkspace` 起才有对象；`Authorizer` 的端口在 ctx 带的事务里读（`TestActiveRoleReadsInTheTransaction`），为那时做好准备。
 14. **命令与接口同一套校验（补充）**：`nerve workspaces create` 与接口共用 `CheckNewWorkspace`，大写的 slug 在命令行同样被拒绝（`--slug may hold only …`），不像 Plane 的前端那样先转成小写；保留的 slug 答 `--slug is reserved`。
 15. **建工作区的日志有测试看到（补充）**：设计没有写测试怎样看到 `workspace created` 的日志。用例测试断言成功时恰好一行（`by=api` 或 `by=cli`）、拒绝时没有；命令的测试另核对 `by=cli`（附录 A 的两个日志变异）。
@@ -293,6 +295,16 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 - 保留名单"应用"一段的 vitest 和删除 `RESTRICTED_URLS`（P8）。
 - `identity.LoadKeys` 和 `identity.New` 的新依赖（签名密钥先载入、`MembershipDeactivator`、`SignupInvitations`）：随用到它们的 Phase（P3、P6）。
 
+**留给后面的 Phase**（控制者对 pre-flight 的裁定；各 Phase 的 spec 接过去）：
+
+| Phase | 条目 |
+|---|---|
+| P2 | 矩阵中"工作区已删除"一列的准备数据从 SQL 改为经删除工作区的存储写入（第 3 节第 10 条）；"在父行的锁之前判定"的变异（第 3 节第 13 条）；差异清单"集合型的列表"一行写上"关联字段带 `_id`"（第 3 节第 11 条）；`forbidden` 随第一个声明它的操作进前端的文案表（设计第 12 节约束 4） |
+| P3 | 公开的 `getWorkspaceInvitation` 在矩阵中的一列"不带令牌"，或在 `matrixModules` 的核对中写明例外（第 3 节第 10 条） |
+| P5 | 矩阵中"已被移出"一列的准备数据从 SQL 改为经移出成员的存储写入（第 3 节第 10 条） |
+| P6 | 交错 8 的后一半：停用结束新的成员关系（2.15） |
+| P8 | 问题码的文案表 `PROBLEM_MESSAGES` 和它的文案移出 `authentication.helper.ts` 和 `auth` 命名空间（设计 P8 任务 13） |
+
 ## 6. 风险
 
 | 风险 | 应对 |
@@ -301,7 +313,7 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 | 并行的写格子各开一个 app 和它的连接池（测试配置最多 4 个连接），格子多时连接数可能超过测试容器的 `max_connections`（100） | `go test` 默认的并行度是 GOMAXPROCS；P1 有 12 个并行格子。格子多的 Phase 看到连接错误时，给写格子加一个并行度的上限 |
 | 保留名单的"服务端"一段靠探测前端文件判断 `assets` | 探测用一个不存在的文件名；前端改变缺失文件的回答时测试失败而不是悄悄通过（`icons/` 的对照） |
 | `reserved_slugs.txt` 解析失败时 nerve 启动即 panic | 文件嵌入二进制；`TestTheReservedListIsWellFormed` 在每次 `make test` 解析它 |
-| 前端文案放在 `auth` 命名空间 | 只是位置；P8 重写数据层时决定是否挪动（第 3 节第 4 条） |
+| 前端文案放在 `auth` 命名空间 | 只是位置；P8 任务 13 把表和文案移到通用的位置（设计第 12 节约束 4） |
 
 ## 7. 交接和关闭条件
 
@@ -309,6 +321,7 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 |---|---|---|
 | M2-closeout 第 4 节 | `last_workspace_id` 不补外键：理由在 M3 设计 3.14，P1 不改代码 | — |
 | M2-closeout 第 5 节 | 关闭时 403 `workspace.creation_disabled`，有测试（Task 10、11、15、16）；命令写进设计 3.11 并实现（Task 14） | — |
+| M2-closeout 第 7 节 | 接口一侧的一部分：`Workspace.logo_url` 必有、可为 `null`，M5 之前总是 `null`（Task 11） | `cover_image_url`、`MemberUser.avatar_url`（P2、P4）；`IUserLite`（P8）；本节保持 `open` |
 | M2-closeout 第 8 节 | 第 1 件：端口（`access/app/ports.go` 的 `WorkspaceRoles`，不是例外）；第 2 件：四种写法和反例（Task 2）；第 3 件：`Authorizer` 在 `shared`，`shared` 仍只依赖标准库（Task 3） | `ProjectAccess` 在 P4 照同一写法 |
 | M2-closeout 第 12 节 | P1 的列表是集合型的，不分页（3.12）；按关闭条件由 P1 的 review 写明 | 本节在 M3 收尾时原样写进 M4 的交接（13.2） |
 | M1-P2、M1-P3、M1-P4 的保留名单 | 服务端一侧：一份名单，三段，"服务端"一段有 Go 测试（Task 7、12）；Plane 的产品词去掉（3.10） | 前端一侧（删 `RESTRICTED_URLS`、vitest）：P8 |
@@ -335,9 +348,9 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 | 12 | 3 个测试 ok；lint；`make test` 38 `ok` |
 | 13 | 交错 `-count=5 -race` ok；lint；`make test` 38 `ok` |
 | 14 | `make gen`：19 个生成物相同，2 个 SHA-256 相同；3 个包 ok；lint；`make test` 38 `ok`；前端检查、`make knip`、`make test-web` 通过 |
-| 15 | `pgtest`、`apitest` ok；矩阵 `-count=3 -race` ok；`-v`：`TestPermissionMatrix` 1.29 秒（前一次完整复现 1.34 秒）、`prepare` 0.07 秒；lint；`make test` 38 `ok` |
+| 15 | `pgtest`、`apitest`（含 `TestEveryOperationIsTaggedWithItsModule`）ok；矩阵 `-count=3 -race` ok；`-v`：`TestPermissionMatrix` 1.32 秒（此前两次完整复现 1.34、1.29 秒）、`prepare` 0.07 秒；lint；`make test` 38 `ok` |
 | 16 | 12 个文件（含四份交接的处理结果）；lint；`make test` 38 `ok`；前端检查、`make knip`、`make test-web` 通过；`make e2e` 52 个通过 |
-| 结束 | 复现的树与原型、与 T16 快照逐文件相同（2,737 个文件，0 个差异）；已提交的副本上 `make gen-check` 和 `make lint-web`（关键词守卫 60 条规则、3 个例外，没有命中）通过；`planapply.mjs check` 从 `1f0e7ed7` 起 191 个块全部通过 |
+| 结束 | 复现的树与原型、与 T16 快照逐文件相同（2,737 个文件，0 个差异）；已提交的副本上 `make gen-check` 和 `make lint-web`（关键词守卫 60 条规则、3 个例外，没有命中）通过；`planapply.mjs check` 从 `1f0e7ed7` 起 192 个块全部通过 |
 
 | 核对 | 命令 | 结果 |
 |---|---|---|
@@ -347,7 +360,7 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 | 前端检查 | `make lint-web`（关键词守卫 60 条规则、3 个例外，没有命中；turbo 54 个任务）；`make knip`；`make test-web`（16 个任务） | 全部通过 |
 | 端到端 | `make e2e` | 52 个全部通过（M2 的 50 个、W1、W10） |
 | 迁移 | `TestMigrationsGoUpDownAndUpAgain`（7 个迁移） | up、down、再 up 通过 |
-| 矩阵 | `go test -count=5 -v -run 'TestPermissionMatrix$' ./internal/bootstrap/` | 每次 0.24–1.28 秒（两次完整复现中 1.34、1.29 秒），准备 0.06–0.07 秒；`-race -count=3` 通过 |
+| 矩阵 | `go test -count=5 -v -run 'TestPermissionMatrix$' ./internal/bootstrap/` | 每次 0.24–1.28 秒（三次完整复现中 1.34、1.29、1.32 秒），准备 0.06–0.07 秒；`-race -count=3` 通过 |
 | 复现 | plan 的 16 个 Task 依次在 `$M3TMP/p1replay` 执行 | 见上面的表 |
 
 **原型中定下的事实**：
@@ -357,7 +370,7 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 - **F3** S3（实例信息里的 `commit`）要求副本是 git 仓库：不是时 `commit` 是 `unknown`，S3 失败（M2 的各 Phase 相同）。原型在 Task 16 之后 `git init` 并提交（只在副本里，用 `--git-dir`、`--work-tree`），之后 52 个故事全部通过。
 - **F4** `pgtest.NewDatabaseFrom` 并行复制同一个模板：12 个写格子同时 `CREATE DATABASE … TEMPLATE`，没有冲突；准备数据的子测试结束时关掉它的 app 和连接池，复制时模板上没有连接。
 
-**变异核对**（`$M3TMP/p1tools/mutants.py`：改一处代码，跑点名的测试，恢复；期望这些测试失败，并且输出含点名的失败行）。42 个变异全部被发现（在原型的最终版本上一次跑完，之后原型与复现的树仍逐文件相同）：
+**变异核对**（`$M3TMP/p1tools/mutants.py`：改一处代码，跑点名的测试，恢复；期望这些测试失败，并且输出含点名的失败行）。47 个变异全部被发现（在按 pre-flight 修订之后的原型上一次跑完，之后原型与复现的树仍逐文件相同；其中 5 个是修订加的）：
 
 | 变异 | 被哪些测试发现 |
 |---|---|
@@ -403,19 +416,24 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 | 前缀规则放行不是模块的前缀 | `TestAuthoringRulesReportViolations` |
 | 日志的 `by` 恒为 `api`（命令行建的也写 `api`） | `TestExecuteForAdminCreatesForTheAccountOfTheAddress` |
 | 在事务里、写入成功之前记日志（被拒绝的也记） | `TestExecuteSlugTaken` |
+| 项目级不查工作区角色是否三个值之一（pre-flight M1） | `TestDecideAtTheProjectLevels`："project admins, workspace role outside the three, project admin: Decide() = ok, want 403" |
+| 项目级不查项目角色是否三个值之一（pre-flight M1） | `TestDecideAtTheProjectLevels`："seeing the project, project role outside the three: Decide() = ok, want 403" |
+| 触发器的规则去掉 `(?s)`（pre-flight L1） | `TestSQLCScopeReportsViolations/CREATE_TRIGGER_on_another_module's_table` |
+| `workspace.yaml` 的一个操作标成 `identity`（pre-flight L2） | `TestEveryOperationIsTaggedWithItsModule`：`GET /api/v0/workspaces in api/modules/workspace.yaml: tags = ["identity"], want ["workspace"]` |
+| `RuleFor` 交出表自己的 `Roles`（pre-flight L3） | `TestRuleForReturnsACopy` |
 
 **缺陷类别**（brief 列出的类别，对本 plan 逐类核对）：
 
 | 类别 | 核对了什么 | 结果 |
 |---|---|---|
-| 规则行删掉、放宽、收窄 | `tableCells` 对每行每种身份写死答案；矩阵在 HTTP 上再测一遍 | 三个变异都被发现 |
+| 规则行删掉、放宽、收窄 | `tableCells` 对每行每种身份写死答案；矩阵在 HTTP 上再测一遍；`RuleFor` 交出副本，调用方改不了表 | 四个变异都被发现 |
 | 在父行的锁之前判定 | P1 没有经过 `Authorizer` 的写（第 3 节第 13 条） | 不适用；端口在事务里读，为 P2 准备 |
 | 账户行没有锁、锁在事务之外 | 存储的锁测试（`55P03`）；用例的假事务；两个顺序的交错 | 四个变异都被发现 |
 | 在锁之前读 `is_active` | 交错"停用在先" | 被发现 |
 | 服务端缺保留名 | "服务端"一段的 Go 测试；三段的格式测试；领域和命令的测试 | 三个变异都被发现 |
-| `TestSQLCSchemaScope`、前缀规则被削弱 | 每种写法一个反例；"code of no module" | 六个变异都被发现 |
+| `TestSQLCSchemaScope`、前缀规则被削弱 | 每种写法一个反例（触发器的 `ON` 单独一行）；"code of no module"；每个操作的标签是它的模块 | 八个变异都被发现 |
 | 完整性测试漏掉未登记的动作 | `actionViolations` 三种不一致各有反例；矩阵的完整性同样 | 四个变异都被发现 |
-| 未知的动作、角色不按默认拒绝 | `Authorize` 的无规则；角色 10 在判定表中是一列 | 三个变异都被发现 |
+| 未知的动作、角色不按默认拒绝 | `Authorize` 的无规则；角色 10 在工作区级和项目级的判定表中都是列（项目级有工作区角色 10 和项目角色 10 两种） | 五个变异都被发现 |
 | 断言不可能失败（403 被 401 掩盖） | 矩阵每格断言状态码和码；令牌在每个副本上有效（同一个密钥），否则每格都是 401 而失败 | 矩阵的"恒开""恒关"变异按格失败，不是整体 401 |
 | 假实现忽略参数 | `fakeRoles`、`fakeAccounts`、`fakeWorkspaces`、`fakeIdentityAccounts` 按参数回答并记下参数；两个用户 × 两个工作区 | 参数对调的变异被发现 |
 | 只有一行 | 存储测试有三个账户、七个工作区；交错和命令都有第二个账户 | `WHERE` 的三个变异都被发现 |
@@ -425,6 +443,8 @@ SELECT id, email, is_active FROM users WHERE email = sqlc.arg(email) FOR SHARE;
 | 接线没人看 | 开关的两种值；`Accounts` 的转换；命令行的组合；建工作区的日志 | 开关、组合的变异被发现；核对时发现 `by=api` 的日志没有测试看到（用例测试丢弃日志），补上断言之后两个日志变异都被发现 |
 | 时间不是存下的值 | 存储按 `RETURNING` 回答，测试比较 UTC 和微秒；e2e 从数据库读时间比较 | 时钟本身给 UTC 微秒，"回显用例的时间"与存下的值相同，这个变异是等价的，不计 |
 | 码只在别的模块的测试包里返回（9.4） | `workspace` 的 HTTP 测试返回它声明的每个码；删掉一个的变异被 `apitest.Main` 发现 | 被发现 |
+
+**pre-flight**（控制者另派的 opus，`$M3TMP/p1-preflight/preflight.md`）：从 `1f0e7ed7` 独立复现 16 个 Task，结果等于原型；它自己的 25 个变异杀死 24 个，活下来的是触发器规则的 `(?s)`（L1）；本附录的 42 个变异全部再次被杀死。发现 High 0、Medium 1（M1：项目级放行三个值以外的角色）、Low 6，控制者全部接受。修订之后：原型改好，plan 从 `1f0e7ed7` 再完整复现一次（上面的表），树与原型逐文件相同，`make e2e` 52 个通过，47 个变异全部被发现；生成物的 SHA-256 一个都没有变。
 
 **没有证明的**：
 

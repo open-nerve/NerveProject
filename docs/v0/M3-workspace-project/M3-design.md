@@ -423,6 +423,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 - **`nerve workspaces create --slug <slug> --name <名称> --admin-email <邮箱>`**：
   - 依据：Plane 在关闭创建时，实例管理员仍能在管理后台建工作区，建出的工作区属于他自己（`license/api/views/workspace.py:71-99`，`owner=request.user`）。Nerve 没有实例管理员账户，它的职能由命令行承担（M2 设计 3.16、3.17），所以由 `--admin-email` 指定管理员。这是 Plane 行为的翻译，登记差异（4.11）。
   - 不受开关限制；建出的工作区与接口相同（规则、唯一性、管理员成员）。邮箱按注册的规则规范化；没有这个账户、账户已停用、slug 不可用时退出码 1，输出一句说明，数据库不变。账户行按 3.6 约定六最先以 `FOR SHARE` 锁住，`Accounts` 交回账户的状态，用例在锁下要求有效。
+  - 没有这个账户、账户已停用是只给命令行的两个码：`workspace.account_not_found`、`workspace.account_deactivated`。它们不进任何操作的 `x-problem-codes`（5.3 只列接口的码），命令行打印它们的说明，像 M2 的 `identity.account_not_found`（M3/P1 spec 第 3 节第 7 条）。
 - **`nerve workspaces reactivate-member --slug <slug> --email <邮箱>`**（照 Plane 的 `reactivate_workspace_member.py:13-90`）：
   - 最先以 `FOR SHARE` 锁住这个账户的行（约定六），取回它的状态；
   - 把这个人在这个工作区无效的成员关系恢复为有效，角色不变；
@@ -1677,6 +1678,7 @@ modules/access/
 1. **每个故事的前置数据在它加入时都能经接口准备**（总体设计 8.2），不写 SQL。第二个工作区成员只能由接受邀请产生，所以凡是断言"成员 403""访客看不到"的故事都排在邀请之后（第 2 节最后一列）。权限矩阵是 Go 测试，用仓储准备数据，每个 Phase 都能加它的行（9.2）。
 2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M2 的 P3 在设计里是一段，实施时超过了上限，由负责人批准拆成 P3a、P3b：设计时没有按任务数估每段的大小。M3 在这里按任务数分好，下面每段的任务列表就是 plan 的草稿。
 3. **评审敏感的内容不在同一段**（M2 的教训：两件都需要细审的事放在一起会互相稀释）：权限框架（P1）、加锁约定和连带（P2 起步，P4、P5 延伸）、邀请令牌（P3）、停用（P6）。
+4. **新的错误码随它的文案进来**：M2 的 vitest 要求 `PROBLEM_MESSAGES` 的键恰好等于契约的全部 `x-problem-codes`（M2 设计 3.11、7.3），后端的 Phase 也不例外（M3/P1 spec 第 3 节第 4 条）。P2–P7 中声明新错误码的任务，在同一个任务里把它加进 `PROBLEM_MESSAGES`（`web/apps/web/helpers/authentication.helper.ts`）和 `en`、`zh-CN` 两份 `auth.json`，并运行 `make test-web`。平台码 `forbidden` 随第一个声明它的操作（P2）进表。这张表和它的文案在 P8 移到通用的位置（P8 任务 13）。
 
 **顺序**：
 - **后端七段，前端四段**（先后端、后前端，M2 的做法：前端对接真实的接口）。
@@ -1841,7 +1843,7 @@ modules/access/
   10. 权限 store（`Workspace.role`、`Project.member_role`）。
   11. 设置 store 删除、落点函数、`AuthenticationWrapper`（3.14、7.4）。
   12. 两个包装层和 `TopNavigationRoot` 挂载时的取数：M3 的改调新 store，按权限启用（`ProjectAuthWrapper` 的子资源在确认是项目成员之后才取，7.1），M6、M7 的删除，首页"最近"小部件删除（3.1）。
-  13. service 按代建（10 处模块级实例消失）、修改经 `oneAtATime()` 的核对；`sessionGuard()` 移到 `core/lib/in-session.ts`（7.1）。
+  13. service 按代建（10 处模块级实例消失）、修改经 `oneAtATime()` 的核对；`sessionGuard()` 移到 `core/lib/in-session.ts`（7.1）；problem 码的文案表 `PROBLEM_MESSAGES` 和它的文案从 `authentication.helper.ts` 和 `auth` 命名空间移到通用的位置，核对它与契约的码一致的 vitest 随它移动（第 12 节约束 4）。
   14. 关键词规则和 `/user-properties/` 的例外（`until: "M4"`，7.10），`/projects/{id}/search-issues/` 是规则的不命中样例；旧 `ProjectService` 只留三个方法（7.3）。
   15. vitest（9.5 中 P8 的各项）。
   16. S2 的改写；3.20 中 P8 的行；review。
