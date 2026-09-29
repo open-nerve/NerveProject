@@ -72,7 +72,7 @@
 | `server/internal/modules/workspace/domain/preferences.go`、`server/internal/modules/workspace/domain/preferences_test.go` | 显示设置的值、默认值、校验 | 7 |
 | `server/internal/modules/workspace/adapter/postgres/queries/preferences.sql`、`server/internal/modules/workspace/adapter/postgres/preferences.go`、`server/internal/modules/workspace/adapter/postgres/preferences_test.go` | 显示设置的存储 | 7、9 |
 | `server/internal/modules/workspace/adapter/postgres/gen/preferences.sql.go`（生成） | | 7、9 |
-| `server/internal/modules/workspace/app/preferences.go`、`server/internal/modules/workspace/app/preferences_test.go`、`server/internal/modules/workspace/adapter/http/preferences.go`、`server/internal/modules/workspace/adapter/http/preferences_test.go` | 读、改显示设置的用例和 handler | 8 |
+| `server/internal/modules/workspace/app/get_preferences.go`、`server/internal/modules/workspace/app/update_preferences.go`、`server/internal/modules/workspace/app/preferences_test.go`、`server/internal/modules/workspace/adapter/http/preferences.go`、`server/internal/modules/workspace/adapter/http/preferences_test.go` | 读、改显示设置的用例（一个用例一个文件，M3 设计 6.2、6.3）和 handler | 8 |
 | `server/internal/modules/workspace/app/delete_workspace.go`、`server/internal/modules/workspace/app/delete_workspace_test.go`、`server/internal/modules/workspace/adapter/postgres/delete_workspace_test.go` | `deleteWorkspace` 和它的连带 | 9 |
 | `server/internal/modules/workspace/adapter/postgres/queries/members.sql`（修改） | 成员的查询 | 9、10、11 |
 | `server/internal/modules/workspace/adapter/postgres/gen/members.sql.go`（生成） | | 9、10、11 |
@@ -85,7 +85,7 @@
 | `server/internal/modules/workspace/app/update_member.go`、`server/internal/modules/workspace/app/update_member_test.go`、`server/internal/modules/workspace/domain/errors.go`（修改） | `updateWorkspaceMember`；两个新码 | 12 |
 | `server/internal/bootstrap/interleaving_roles_test.go` | 交错 2：两位管理员互相降级 | 13 |
 | `e2e/fixtures/api.ts`、`e2e/fixtures/assert/workspace.ts`（修改）；`e2e/stories/workspace/w8-navigation-preferences.spec.ts` | W8 的接口版本 | 14 |
-| `docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`（修改） | M3 设计 3.20 中 P2 的各行；交接的处理结果 | 15 |
+| `docs/v0/v0-design.md`、`docs/v0/plane-diff.md`、`docs/v0/M3-workspace-project/M3-design.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`（修改） | M3 设计 3.20 中 P2 的各行；M3 设计按 spec 第 3 节的裁定；交接的处理结果 | 15 |
 
 ---
 
@@ -376,16 +376,17 @@ Expected: 通过。
 - Create: `server/internal/archtest/rawsql_cases_test.go`、`server/internal/archtest/rawsql_test.go`
 
 **Interfaces:**
-- Produces（spec 2.4；P1 review 第 6 节，整分支评审 M7）：架构测试 `TestModulesRunSQLOnlyThroughSQLC`：`internal/modules` 下不是测试、不在 `gen` 包里的 Go 文件，不调用两个参数以上的 `Exec`、`Query`、`QueryRow`、`SendBatch`、`CopyFrom`、`Prepare`，也不含大写的 SQL 字符串（`SELECT … FROM`、`INSERT INTO`、`UPDATE … SET`、`DELETE FROM`、`TRUNCATE`、`MERGE INTO`）；解析失败的文件也报。找不到任何 `adapter/postgres/store.go` 时失败，不让"什么都没查"冒充通过。
+- Produces（spec 2.4；P1 review 第 6 节，整分支评审 M7）：架构测试 `TestModulesRunSQLOnlyThroughSQLC`：`internal/modules` 下不是测试、不在 `gen` 包里的 Go 文件，不调用两个参数以上的 `Exec`、`Query`、`QueryRow`、`SendBatch`、`CopyFrom`、`Prepare`（pgx）和 `ExecParams`、`ExecPrepared`、`CopyTo`（pgconn，经 `PgConn()` 可达），也不含大写的 SQL 字符串（`SELECT … FROM`、`INSERT INTO`、`UPDATE … SET`、`DELETE FROM`、`TRUNCATE`、`MERGE INTO`）；解析失败的文件也报。找不到任何 `adapter/postgres/store.go` 时失败，不让"什么都没查"冒充通过。规则找的是无意写下的 SQL，不是有意的规避：方法值（`run := tx.Query`）、由小写片段拼出的 SQL 不在它的范围内。
 - 使用者：以后每个 Phase 的存储（`TestSQLCSchemaScope` 只看得到 sqlc 的查询，直接经 pgx 执行的语句能读别的模块的表）。
 
 **Tests:**（`server/internal/archtest/rawsql_cases_test.go`）
 - `TestRawSQLOfTheBaseLayoutPasses`：照现有写法的模块不报：经 sqlc 查询的存储（注释里的 SQL 不算）、`r.URL.Query()` 这样没有参数的调用、小写的"select a workspace"文案、sqlc 生成的 `gen` 包、用 SQL 写夹具的测试文件。
-- `TestRawSQLViolationsAreReported`：八个反例各报它的每一处，行号、列号都对：在事务上 `Query` 一条 JOIN `users` 的语句（调用和字符串两处）、常量里的 `UPDATE` 经 `Exec`（两处）、SQL 从别处来的 `QueryRow`、排进批次的 `DELETE` 和 `SendBatch`（两处）、`CopyFrom`、`Prepare`、`app` 层的一个 `INSERT` 字符串、解析失败的文件。
+- `TestRawSQLViolationsAreReported`：八个反例各报它的每一处，行号、列号都对：在事务上 `Query` 一条 JOIN `users` 的语句（调用和字符串两处）、常量里的 `UPDATE` 经 `Exec`（两处）、SQL 从别处来的 `QueryRow`、排进批次的 `DELETE` 和 `SendBatch`（两处）、`CopyFrom`、`Prepare`、底层连接上的 `ExecParams`、`ExecPrepared`、`CopyTo`（三处）、解析失败的文件。
+- `TestRawSQLInTheAppLayerIsReported`：`app` 层的一个文件（不在 `adapter/postgres` 下）里的 `INSERT` 字符串和 `Exec` 调用各报一处：规则查整个 `internal/modules`，不只是存储。
 
 - [ ] **Step 1: 规则和反例**
 
-`server/internal/archtest/rawsql_test.go`（新文件，105 行）：
+`server/internal/archtest/rawsql_test.go`（新文件，111 行）：
 
 ````file server/internal/archtest/rawsql_test.go
 package archtest
@@ -445,11 +446,15 @@ func TestModulesRunSQLOnlyThroughSQLC(t *testing.T) {
 
 // statementMethods are the pgx methods that run SQL they are given: pgx's
 // Conn, Tx and Batch results, pgxpool's Pool and Conn, and
-// platform/postgres's Querier all have them. The call rule counts only
-// calls with at least two arguments, a context and the SQL (or the batch,
-// or the table): a method of one of these names that takes fewer, such as
-// url.URL.Query, runs no statement.
-var statementMethods = []string{"Exec", "Query", "QueryRow", "SendBatch", "CopyFrom", "Prepare"}
+// platform/postgres's Querier have the first six, and pgconn's PgConn,
+// which a pgx.Conn's PgConn() returns, the last three. The call rule counts
+// only calls with at least two arguments, a context and the SQL (or the
+// batch, the table or the statement's name): a method of one of these names
+// that takes fewer, such as url.URL.Query, runs no statement.
+var statementMethods = []string{
+	"Exec", "Query", "QueryRow", "SendBatch", "CopyFrom", "Prepare",
+	"ExecParams", "ExecPrepared", "CopyTo",
+}
 
 // sqlText matches a string literal that holds a statement: upper-case SQL,
 // as every query of this repository is written. Lower-case prose, such as a
@@ -461,7 +466,9 @@ var sqlText = regexp.MustCompile(`\b(?:SELECT\b[\s\S]*\bFROM|INSERT\s+INTO|UPDAT
 // relative to server/: in a file that is neither a test nor in a gen
 // package, no call of a statementMethods method with two arguments or more,
 // and no string literal that sqlText matches. A file that does not parse is
-// reported too, so that it cannot hide either.
+// reported too, so that it cannot hide either. The rule finds raw SQL
+// written by accident, not an evasion: a method value (run := tx.Query) and
+// SQL built from lower-case pieces are out of its reach.
 func rawSQLViolations(files map[string]string) []string {
 	var found []string
 	for _, path := range slices.Sorted(maps.Keys(files)) {
@@ -495,7 +502,7 @@ func rawSQLViolations(files map[string]string) []string {
 }
 ````
 
-`server/internal/archtest/rawsql_cases_test.go`（新文件，84 行）：
+`server/internal/archtest/rawsql_cases_test.go`（新文件，106 行）：
 
 ````file server/internal/archtest/rawsql_cases_test.go
 package archtest
@@ -568,9 +575,15 @@ func TestRawSQLViolationsAreReported(t *testing.T) {
 		{"a prepared statement", "package postgresadapter\n\n" +
 			"func (s *Store) Ready(ctx context.Context, c *pgx.Conn, q string) { c.Prepare(ctx, \"members\", q) }\n",
 			[]string{file + ":3:69: calls Prepare, which runs SQL outside sqlc's queries"}},
-		{"an insert in the app layer", "package app\n\n" +
-			"var insert = `INSERT INTO workspace_user_properties (id) VALUES ($1)`\n",
-			[]string{file + ":3:14: holds SQL outside sqlc's queries"}},
+		{"statements on the connection under pgx", "package postgresadapter\n\n" +
+			"func (s *Store) Raw(ctx context.Context, c *pgx.Conn, q string, w io.Writer) {\n" +
+			"\tc.PgConn().ExecParams(ctx, q, nil, nil, nil, nil)\n\tc.PgConn().ExecPrepared(ctx, \"members\", nil, nil, nil)\n" +
+			"\tc.PgConn().CopyTo(ctx, w, q)\n}\n",
+			[]string{
+				file + ":4:2: calls ExecParams, which runs SQL outside sqlc's queries",
+				file + ":5:2: calls ExecPrepared, which runs SQL outside sqlc's queries",
+				file + ":6:2: calls CopyTo, which runs SQL outside sqlc's queries",
+			}},
 		{"a file that does not parse", "package postgresadapter\n\nfunc (\n",
 			[]string{file + " does not parse: " + file + ":3:8: expected ')', found 'EOF'"}},
 	}
@@ -580,6 +593,22 @@ func TestRawSQLViolationsAreReported(t *testing.T) {
 		if got := rawSQLViolations(files); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: violations =\n%q\nwant\n%q", tt.name, got, tt.want)
 		}
+	}
+}
+
+// SQL outside the store is reported wherever it sits in a module, not only
+// under adapter/postgres: a literal and a call, in the app layer.
+func TestRawSQLInTheAppLayerIsReported(t *testing.T) {
+	const file = "internal/modules/workspace/app/preferences_sql.go"
+	files := rawSQLBase()
+	files[file] = "package app\n\nvar insert = `INSERT INTO workspace_user_properties (id) VALUES ($1)`\n\n" +
+		"func run(ctx context.Context, tx pgx.Tx, q string) { tx.Exec(ctx, q) }\n"
+	want := []string{
+		file + ":3:14: holds SQL outside sqlc's queries",
+		file + ":5:54: calls Exec, which runs SQL outside sqlc's queries",
+	}
+	if got := rawSQLViolations(files); !slices.Equal(got, want) {
+		t.Errorf("violations =\n%q\nwant\n%q", got, want)
 	}
 }
 ````
@@ -618,8 +647,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 规则不查 `Exec` | `TestRawSQLViolationsAreReported` |
 | 规则不认 `SELECT … FROM` | `TestRawSQLViolationsAreReported` |
 | 规则跳过所有 `adapter/` | `TestRawSQLViolationsAreReported` |
+| 规则只查 `adapter/postgres/` | `TestRawSQLInTheAppLayerIsReported` |
+| 规则不查 `ExecParams`、`ExecPrepared`、`CopyTo` 中的任何一个 | `TestRawSQLViolationsAreReported` |
 
-**Done when:** 基准写法通过，八个反例各报它的每一处，真实的仓库通过。
+**Done when:** 基准写法通过，表中八个反例和应用层的一个各报它的每一处，真实的仓库通过。
 
 ---
 
@@ -846,6 +877,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - `TestTheWorkspaceLocksFindOnlyAnUndeletedWorkspace`：找到的答 id；已删除的、不存在的、大小写不同的 slug：`app.ErrNotFound`。
 - `TestTheWorkspaceLocksSkipAWorkspaceDeletedWhileTheyWait`：一个事务删除工作区并持着行锁，锁在等（`WaitForLockWaitOn(…, "workspaces", …)` 确认），删除提交之后锁读到 0 行：`app.ErrNotFound`。
 - `TestAFailedWorkspaceLockIsAnErrorNotAnAnswer`：已取消的 ctx：`context.Canceled`，不是 `app.ErrNotFound`。
+- `TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks`：持有任何一把锁时，外键检查取的 `FOR KEY SHARE`（在工作区下插入一行时取）立即得到：约定二选 `FOR NO KEY UPDATE` 而不是 `FOR UPDATE`，就是为了不挡它（spec 2.6）。
 
 - [ ] **Step 1: 查询**
 
@@ -940,7 +972,7 @@ func lockedWorkspace(id uuid.UUID, err error) (uuid.UUID, error) {
 }
 ````
 
-`server/internal/modules/workspace/adapter/postgres/locks_test.go`（新文件，235 行）：
+`server/internal/modules/workspace/adapter/postgres/locks_test.go`（新文件，260 行）：
 
 ````file server/internal/modules/workspace/adapter/postgres/locks_test.go
 package postgresadapter_test
@@ -1086,6 +1118,31 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 	}
 }
 
+// A foreign key's check takes the workspace row FOR KEY SHARE when a row
+// under the workspace is inserted: none of the locks holds it off, as a FOR
+// UPDATE, stronger than convention 2 asks, would.
+func TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks(t *testing.T) {
+	for _, l := range locks {
+		t.Run(l.name, func(t *testing.T) {
+			s, pool := newStore(t)
+			alice := newAccount(t, pool, "alice@corp.com")
+			acme := newWorkspace(t, s, "Acme", "acme", alice)
+			tx := postgres.NewTxManager(pool, 2*time.Second)
+			hold(t, tx, func(ctx context.Context) error {
+				_, err := l.take(ctx, s, "acme")
+				return err
+			})
+			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+				_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR KEY SHARE", acme.ID)
+				return err
+			})
+			if err != nil {
+				t.Errorf("FOR KEY SHARE of acme while %s holds it: %v; want no wait", l.name, err)
+			}
+		})
+	}
+}
+
 // A lock finds the undeleted workspace with the slug and answers its id;
 // app.ErrNotFound for a deleted workspace, a slug no workspace has, or a
 // slug of another case.
@@ -1217,8 +1274,9 @@ Expected: 通过。
 | `ShareWorkspaceBySlug` 去掉 `deleted_at IS NULL` | 同上 |
 | `LockWorkspaceBySlug` 换成 `FOR SHARE` | `TestTheWorkspaceLocksConflictAsConvention2Says` |
 | `ShareWorkspaceBySlug` 换成 `FOR NO KEY UPDATE` | `TestTheWorkspaceLocksConflictAsConvention2Says` |
+| `LockWorkspaceBySlug` 换成 `FOR UPDATE` | `TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks` |
 
-**Done when:** 四个锁测试在真实数据库上通过，每种冲突都在 `lock_timeout` 之下确定地得到；生成物的 SHA-256 与表相同。
+**Done when:** 五个锁测试在真实数据库上通过，每种冲突都在 `lock_timeout` 之下确定地得到；生成物的 SHA-256 与表相同。
 
 ---
 
@@ -1232,7 +1290,7 @@ Expected: 通过。
 - Produces（spec 2.7，M3 设计 9.2；P1 review 第 6 节，整分支评审 M8）：
   - 行按模块分文件：`permission_matrix_workspace_test.go` 的 `workspaceMatrixRows()`；`matrixRows()` 把各模块的行接起来；P1 的 5 行和 `inWorkspace` 等辅助函数移过去；
   - `matrixApps = 8`：写格子（和带 `config` 的格子）各开一个 app，同时最多 8 个（每个 app 的连接池最多 4 个连接，容器的 `max_connections` 是 100）；
-  - `matrixRow.check func(t, c caller, answer string)`：格子的状态码和码对了、而且不是 problem 时核对答案的内容；`TestPermissionMatrix` 数一共核对了多少个答案，与应核对的格子数不等时失败（所以跳过核对的矩阵不能通过）；
+  - `matrixRow.check func(t, c caller, answer string)`：格子的状态码和码对了、而且不是 problem 时核对答案的内容；每个格子在自己里面数应核对的和核对了的答案，`TestPermissionMatrix` 在两者不等时失败（所以跳过核对的矩阵不能通过）；`-run` 只选部分格子时只数被选中的，按格子运行照样通过；
   - `decodeAnswer(t, answer, v)`；P1 的两行加上核对：`listWorkspaces`（每列列出的 slug）、`getWorkspace`（`acme` 和调用者自己的角色）。
 - 使用者：Task 6–12 的矩阵行。
 
@@ -1371,18 +1429,15 @@ const matrixApps = 8
 ````new server/internal/bootstrap/permission_matrix_test.go
 	reads := startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), nil), migrations.FS())
 	apps := make(chan struct{}, matrixApps)
-	var checked atomic.Int64
-	toCheck := 0
+	var checked, toCheck atomic.Int64
 	t.Cleanup(func() {
-		if !t.Failed() && checked.Load() != int64(toCheck) {
-			t.Errorf("%d answers checked, want %d", checked.Load(), toCheck)
+		if !t.Failed() && checked.Load() != toCheck.Load() {
+			t.Errorf("%d answers checked, want %d", checked.Load(), toCheck.Load())
 		}
 	})
 ````
 
 ````old server/internal/bootstrap/permission_matrix_test.go
-				continue // TestThePermissionMatrixCoversEveryOperation reports it
-			}
 			t.Run(r.name()+"/"+string(c), func(t *testing.T) {
 				// Connections: at most -parallel cells (GOMAXPROCS by
 				// default) run at once, and each that starts an app of its
@@ -1391,15 +1446,17 @@ const matrixApps = 8
 				// admin pool (4 each), against the container's
 				// max_connections of 100. P2 bounds the cells that start an
 				// app with a semaphore.
+				t.Parallel()
 ````
 
 ````new server/internal/bootstrap/permission_matrix_test.go
-				continue // TestThePermissionMatrixCoversEveryOperation reports it
-			}
-			if r.check != nil && want.code == "" {
-				toCheck++
-			}
 			t.Run(r.name()+"/"+string(c), func(t *testing.T) {
+				t.Parallel()
+				// Counted in the cell: a -run of some cells expects only
+				// their checks.
+				if r.check != nil && want.code == "" {
+					toCheck.Add(1)
+				}
 ````
 
 ````old server/internal/bootstrap/permission_matrix_test.go
@@ -1520,6 +1577,9 @@ func readsItsRole(t *testing.T, c caller, answer string) {
 Run: `go -C server test -count=1 -run 'TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap' ./internal/bootstrap/`
 Expected: `ok`。
 
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix/(prepare|getWorkspace)$' ./internal/bootstrap/`
+Expected: `ok`（只选部分格子时，只核对并计数被选中的格子）。
+
 Run: `make lint-go`
 Expected: 两段都是 `0 issues.`
 
@@ -1535,8 +1595,9 @@ git add server/internal/bootstrap/permission_matrix_test.go server/internal/boot
 git commit -m "test(M3/P2): the matrix's rows by module, bounded writes, checked answers
 
 Each module's rows are in a file of their own; at most eight writing cells
-run an app at once; a row can check what each answer holds, and the matrix
-counts the answers it checked, so a harness that skipped them fails.
+run an app at once; a row can check what each answer holds, and each cell
+counts the answers it checks, so a harness that skipped them fails and a
+-run of some cells still passes.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -1547,10 +1608,12 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 |---|---|
 | 从不运行行的核对（`if false && r.check != nil …`） | `TestPermissionMatrix`（"answers checked, want …"） |
 | 只对 problem 运行核对（`got.code != ""`） | `TestPermissionMatrix` |
+| 从不运行核对，只跑部分格子（`-run 'TestPermissionMatrix/(prepare\|getWorkspace)$'`） | `TestPermissionMatrix`（"answers checked, want …"） |
+| 应核对的格子在父循环里数，`-run` 没选中的也数 | `TestPermissionMatrix`（上面的部分运行） |
 
 写格子的并行上限不是正确性的性质：去掉它，格子数在默认并行度（GOMAXPROCS）之下仍通过，只是连接数没有上限（spec 第 6 节）。
 
-**Done when:** 矩阵的 30 格通过，两行的答案被核对并计数；行在自己模块的文件里。
+**Done when:** 矩阵的 30 格通过，两行的答案被核对并计数，只跑部分格子也通过；行在自己模块的文件里。
 
 ---
 
@@ -1563,7 +1626,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Interfaces:**
 - Produces（spec 2.8，M3 设计 3.4、3.6 约定二、5.1–5.3）：
-  - 接口描述：`updateWorkspace`（`PATCH /api/v0/workspaces/{slug}`，`WorkspaceUpdate{name?, organization_size?, timezone?}`，`additionalProperties: false`，带 `slug` 的请求体是 400 `bad_request`），200 答 `Workspace`；码 `[validation_failed, workspace.not_found, forbidden]`；
+  - 接口描述：`updateWorkspace`（`PATCH /api/v0/workspaces/{slug}`，`WorkspaceUpdate{name?, organization_size?, timezone?}`，`additionalProperties: false`，描述写明 `organization_size` 不能设为 `null`（spec 第 3 节第 9 条），带 `slug` 的请求体是 400 `bad_request`），200 答 `Workspace`；码 `[validation_failed, workspace.not_found, forbidden]`；
   - `domain.WorkspacePatch{Name, OrganizationSize, Timezone *string}`、`domain.CheckWorkspacePatch(p) error`：按建工作区的规则逐个检查设了的字段，全部问题一次 422（`CheckNewWorkspace` 与它共用 `checkOrganizationSize`、`checkTimezone`、`invalid`）；`domain.ActionUpdate = "workspace.update"`；
   - `access` 规则表加 `workspace.update`（管理员）；
   - `app.WorkspaceLocker{LockWorkspaceBySlug}`、`app.WorkspaceUpdater{WorkspaceLocker; UpdateWorkspace(ctx, id, p, by, now)}`；
@@ -1638,6 +1701,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
           description: An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given.
           type: string
     WorkspaceUpdate:
+      description: Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null.
       type: object
       additionalProperties: false
       properties:
@@ -1876,11 +1940,11 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `caf1a5bf50e4cafd71e62a723321e895974669c75a9b2b730af2250f799708cf` | 1123 | `api/dist/openapi.yaml` |
+| `91b7c7518af61773354fc9a40499eda1fb5adc5ee1f89d3a7d63f6c8a6604374` | 1124 | `api/dist/openapi.yaml` |
 | `cfd77ee2c644e0fa7f26b37328e20338b149431a9f670602cb674ba5c97ecd02` | 27 | `server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go` |
-| `d0e1c5af1a497350903628e6f54a2ab9c1f87d01d6761b2701b4332f9fb776c0` | 880 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
+| `b259703acd33ee369926e40cb611efbfad33bd7df8a5e1b648fefd7b95931267` | 880 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
 | `c56599c998f8495a25ddbcae992ed303acdc5df8fe03e546ae9388b6ec16908b` | 263 | `server/internal/modules/workspace/adapter/postgres/gen/workspaces.sql.go` |
-| `3b40d19d28553f3987c5a8e577d39ed6c35a4bc0ddbde68e11674371c9dcaf7f` | 1174 | `web/packages/api-client/src/schema.gen.ts` |
+| `b153d1d5028ad8b2863feec97aa5ef51808fead4faf4e00ae4b6cb7cdefb4c99` | 1175 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go server/internal/modules/workspace/adapter/postgres/gen/workspaces.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -3640,7 +3704,7 @@ Expected: 通过。
 ### Task 8: 读、改显示设置
 
 **Files:**
-- Create: `server/internal/modules/workspace/adapter/http/preferences.go`、`server/internal/modules/workspace/adapter/http/preferences_test.go`、`server/internal/modules/workspace/app/preferences.go`、`server/internal/modules/workspace/app/preferences_test.go`
+- Create: `server/internal/modules/workspace/adapter/http/preferences.go`、`server/internal/modules/workspace/adapter/http/preferences_test.go`、`server/internal/modules/workspace/app/get_preferences.go`、`server/internal/modules/workspace/app/preferences_test.go`、`server/internal/modules/workspace/app/update_preferences.go`
 - Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/app/fakes_test.go`、`server/internal/modules/workspace/domain/actions.go`、`server/internal/modules/workspace/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
@@ -3648,8 +3712,8 @@ Expected: 通过。
 - Produces（spec 2.9，M3 设计 3.18、5.1）：
   - 接口描述：`getWorkspacePreferences`（`GET /api/v0/me/workspaces/{slug}/preferences`，码 `[workspace.not_found]`）、`updateWorkspacePreferences`（`PATCH`，`WorkspacePreferencesUpdate`，码 `[validation_failed, workspace.not_found]`），都答 `WorkspacePreferences{navigation_control_preference, navigation_project_limit}`；`api/openapi.yaml` 加路径；
   - `domain.ActionPreferencesRead = "workspace_preferences.read"`、`ActionPreferencesUpdate = "workspace_preferences.update"`；规则表两行：任何有效成员；
-  - `app.NewGetWorkspacePreferences(reader, auth)`：不开事务：`WorkspaceBySlug` → `Authorize` → `Preferences`，没有行时答 `DefaultPreferences()`，不写库；
-  - `app.NewUpdateWorkspacePreferences(writer, auth, tx, clock)`：校验（事务之前）→ 一个事务：`lockAndDecide(ShareWorkspaceBySlug, workspace_preferences.update)` → `UpsertPreferences`（每次一个新的行 id，插入时用）；
+  - `app.NewGetWorkspacePreferences(reader, auth)`（`app/get_preferences.go`；一个用例一个文件，M3 设计 6.2、6.3）：不开事务：`WorkspaceBySlug` → `Authorize` → `Preferences`，没有行时答 `DefaultPreferences()`，不写库；
+  - `app.NewUpdateWorkspacePreferences(writer, auth, tx, clock)`（`app/update_preferences.go`）：校验（事务之前）→ 一个事务：`lockAndDecide(ShareWorkspaceBySlug, workspace_preferences.update)` → `UpsertPreferences`（每次一个新的行 id，插入时用）；
   - HTTP：两个 handler；`module.go` 接上。
 - 使用者：W8（Task 14）；P9 的 `ProjectNavigationDialog`。
 
@@ -3787,10 +3851,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `6a66063755d659529081b488a662a6eecffc01cdefd3fde8ebbc358182d6c473` | 1201 | `api/dist/openapi.yaml` |
+| `e8ee9d3095e3a671b0f9aa4c7c4851271de71a686b8b7e4bb60ed3b6bcced7ae` | 1202 | `api/dist/openapi.yaml` |
 | `9b86a0dd01d8741090362c5c663afc1ac3b3cbe987b93f46d8f7949766c5cc16` | 31 | `server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go` |
-| `1e9205c25b0dece9a141d02b6eb82aafbecb54c25eeae547a6fd1dfa2760cc96` | 1143 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
-| `3901f55a5779df2a9e8470f125fde533258c1573e7a9fa8f3241306469914a63` | 1272 | `web/packages/api-client/src/schema.gen.ts` |
+| `90192ec39cb5d46124153294fcc3c0c361fa5480e691e6020a26c710bb128516` | 1143 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
+| `11e6336d5dd793e7b4a62fba2015aa27e10828a11dce9e67fd404290dae8bcab` | 1273 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -3849,15 +3913,14 @@ Expected: 与上表相同。
 
 - [ ] **Step 4: 用例**
 
-`server/internal/modules/workspace/app/preferences.go`（新文件，97 行）：
+`server/internal/modules/workspace/app/get_preferences.go`（新文件，53 行）：
 
-````file server/internal/modules/workspace/app/preferences.go
+````file server/internal/modules/workspace/app/get_preferences.go
 package app
 
 import (
 	"context"
 	"errors"
-	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -3906,6 +3969,20 @@ func (u *GetWorkspacePreferences) Execute(ctx context.Context, slug string) (dom
 	}
 	return p, nil
 }
+````
+
+`server/internal/modules/workspace/app/update_preferences.go`（新文件，52 行）：
+
+````file server/internal/modules/workspace/app/update_preferences.go
+package app
+
+import (
+	"context"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
 
 // UpdateWorkspacePreferences changes the caller's display settings in a
 // workspace: PATCH /api/v0/me/workspaces/{slug}/preferences.
@@ -4641,7 +4718,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/preferences.go server/internal/modules/workspace/adapter/http/preferences_test.go server/internal/modules/workspace/app/fakes_test.go server/internal/modules/workspace/app/preferences.go server/internal/modules/workspace/app/preferences_test.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/module.go api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/preferences.go server/internal/modules/workspace/adapter/http/preferences_test.go server/internal/modules/workspace/app/fakes_test.go server/internal/modules/workspace/app/get_preferences.go server/internal/modules/workspace/app/preferences_test.go server/internal/modules/workspace/app/update_preferences.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/module.go api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P2): read and change one's display settings in a workspace
@@ -4691,7 +4768,7 @@ Expected: 通过。
 - 使用者：矩阵的"工作区已删除"一列改为经这个操作准备（P1 的移交，spec 第 3 节第 2 条表的第 1 行）；P3、P4、P7 的连带。
 
 **Tests:**
-- `app/delete_workspace_test.go`：`TestDeleteWorkspaceLocksThenDecidesThenCascades`（两个调用者、两个工作区；锁 → 判定 → 三步，都在一个事务里，同一个时刻、同一个删除者；日志恰好一行）；`TestDeleteWorkspaceRefusals`（不存在、看不到、`forbidden`、锁失败，三步中任何一步失败：之后的步骤不执行，事务以错误结束，不记日志，失败不是 404；没有调用者 401）。
+- `app/delete_workspace_test.go`：`TestDeleteWorkspaceLocksThenDecidesThenCascades`（两个调用者、两个工作区；锁 → 判定 → 三步，都在一个事务里，同一个时刻、同一个删除者；日志恰好一行；时钟每读一次走一微秒（`ticking`），每一步各读一次时钟的实现让三步的时间不同）；`TestDeleteWorkspaceRefusals`（不存在、看不到、`forbidden`、锁失败，三步中任何一步失败：之后的步骤不执行，事务以错误结束，不记日志，失败不是 404；没有调用者 401）。
 - `adapter/postgres/delete_workspace_test.go`（真实数据库）：
   - `TestDeletingAWorkspaceSoftDeletesItsRows`：三步在一个事务里：`acme`、它的三个成员关系（一个已结束）、两个成员的设置在同一时刻由 bob 删除；dave 的成员关系、carol 的设置在此之前已删除，时间不变；`beta` 的每一行不变；`is_active` 不变；slug 立即可以再用；
   - `TestAFailedDeletionLeavesTheWorkspace`：真实的用例、最后一步失败：工作区和两个成员都还在，没有删除的成员关系。
@@ -4842,12 +4919,12 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `d05e4b2dedb5b4a1ce55230254beb06e211b064fe90d9834c0ed67020803e263` | 1217 | `api/dist/openapi.yaml` |
-| `310d4770501d77927a24f363e297d888c1dc5fd48c91586869b2d5e8fb72d1f6` | 1242 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
+| `eb3ac0c4cac1945e333fcd37651bfc915cfca0bae79bcc44e974f9857ead9103` | 1218 | `api/dist/openapi.yaml` |
+| `582409720941bbc5857b64220a52ed3e388fd2a713d60cf6b605798b9b293b86` | 1242 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
 | `efc58c277da9e2e53e4c55d74ba29362a0ba18d8023e594a7d39ab3847dc474f` | 81 | `server/internal/modules/workspace/adapter/postgres/gen/members.sql.go` |
 | `f0a4aeb7e356ff84d554eab669c82bdd2176e340efe442c2978daa81c88e722d` | 108 | `server/internal/modules/workspace/adapter/postgres/gen/preferences.sql.go` |
 | `dac7e04ed88362447bdc0a6a022fe8423fa6ef34c1d571f595e80dd30c3f751b` | 282 | `server/internal/modules/workspace/adapter/postgres/gen/workspaces.sql.go` |
-| `5ecd58f05192c56b033ef938b6972e498aaa15bcd5cf3719a2dff53493d612d9` | 1298 | `web/packages/api-client/src/schema.gen.ts` |
+| `7c58d9a964bfe659cedf6196bd15e4239c0d3e813a6a89106c7eedfb1834344e` | 1299 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go server/internal/modules/workspace/adapter/postgres/gen/members.sql.go server/internal/modules/workspace/adapter/postgres/gen/preferences.sql.go server/internal/modules/workspace/adapter/postgres/gen/workspaces.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -5000,7 +5077,7 @@ func (f *fakeWorkspaces) deleteStep(ctx context.Context, step string, id, by uui
 // show is *s quoted, or <nil>.
 ````
 
-`server/internal/modules/workspace/app/delete_workspace_test.go`（新文件，120 行）：
+`server/internal/modules/workspace/app/delete_workspace_test.go`（新文件，130 行）：
 
 ````file server/internal/modules/workspace/app/delete_workspace_test.go
 package app_test
@@ -5037,7 +5114,17 @@ func newDelete() (*app.DeleteWorkspace, *deleteFixture) {
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleAdmin},
 		}}, logs: &strings.Builder{}}
-	return app.NewDeleteWorkspace(f.workspaces, f.auth, f.tx, clocktest.At(now), slog.New(slog.NewTextHandler(f.logs, nil))), f
+	return app.NewDeleteWorkspace(f.workspaces, f.auth, f.tx, ticking{clocktest.At(now)}, slog.New(slog.NewTextHandler(f.logs, nil))), f
+}
+
+// ticking moves a microsecond on each read: a deletion that read the clock
+// for each step would delete its rows at three moments.
+type ticking struct{ c *clocktest.Fixed }
+
+func (t ticking) Now() time.Time {
+	n := t.c.Now()
+	t.c.Advance(time.Microsecond)
+	return n
 }
 
 // cascadeCalls are the deletion's steps on w by user, in order.
@@ -5725,13 +5812,14 @@ Expected: 通过。
 |---|---|
 | 连带挪到事务之后、各步各自提交 | `TestDeleteWorkspaceLocksThenDecidesThenCascades`、`TestAFailedDeletionLeavesTheWorkspace` |
 | `cascade()` 少了成员一步 | `TestDeleteWorkspaceLocksThenDecidesThenCascades` |
+| 每一步各读一次时钟 | `TestDeleteWorkspaceLocksThenDecidesThenCascades` |
 | `cascade()` 少了显示设置一步 | `TestDeleteWorkspaceLocksThenDecidesThenCascades`、`TestAFailedDeletionLeavesTheWorkspace` |
 | `DeleteWorkspaceMembers` 不看 `workspace_id` | `TestDeletingAWorkspaceSoftDeletesItsRows`（`beta` 的行被删） |
 | `DeleteWorkspacePreferences` 不看 `workspace_id` | `TestDeletingAWorkspaceSoftDeletesItsRows` |
 | `DeleteWorkspaceMembers` 不看 `deleted_at IS NULL` | `TestDeletingAWorkspaceSoftDeletesItsRows`（dave 的时间被改） |
 | 在事务里、提交之前多记一行日志 | `TestDeleteWorkspaceLocksThenDecidesThenCascades` |
 | 三步中任何一步吞掉错误 | `TestAFailedWriteIsAnError` |
-| 矩阵的 `gone` 不删除 | `TestPermissionMatrix/…/workspace_deleted`（全部 10 行的这一列） |
+| 矩阵的 `gone` 不删除 | `TestPermissionMatrix/…/workspace_deleted`（这一列问到 `gone` 的每一格）、`TestPermissionMatrix/listWorkspaces/member` |
 
 **Done when:** 删除在一个事务里、同一时刻连带成员和显示设置；另一个工作区不受影响；矩阵的 6 格通过，"工作区已删除"一列经删除准备。
 
@@ -7133,11 +7221,11 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `b7ba0fd4bf56d0a289796fd2a17c45212ad5cd5585bce516f386624ba46e28f0` | 1308 | `api/dist/openapi.yaml` |
+| `58eb7f878d861743107acdb81fb0cd41d0ef26cd8c0f2f3a261ef2f9ca5775d1` | 1309 | `api/dist/openapi.yaml` |
 | `affa236712b8bd1a0b12f8f0f672585db78ab25c0af6400847d14be1e0fda65b` | 364 | `server/internal/modules/identity/adapter/postgres/gen/users.sql.go` |
-| `277b0091d14b50aa542b27f8dfc77bac703432a6dc176b8d1741e57457e39e56` | 1383 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
+| `7d5c6da911f52a86f8bef9da6cfa9fa18dfd22714e72acd27467383d27d8ee6d` | 1383 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
 | `91546b096a1dd60fb9a59bfe202f86d1975735563567fae01ef3c9d72fdd0e65` | 125 | `server/internal/modules/workspace/adapter/postgres/gen/members.sql.go` |
-| `858e8108545de06a2d3b73c4c90023e484655681d13d75b55680af7cce80028a` | 1378 | `web/packages/api-client/src/schema.gen.ts` |
+| `43916a7c62e3adef807565ff6368fcc7c14d0c95d13fcfdc8ce4b93065296e66` | 1379 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/identity/adapter/postgres/gen/users.sql.go server/internal/modules/workspace/adapter/http/gen/server.gen.go server/internal/modules/workspace/adapter/postgres/gen/members.sql.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -7219,7 +7307,7 @@ Expected: 通过。
 - 使用者：Task 12 的用例（按资源寻址的写：读成员关系得到工作区，锁住工作区，再读）。
 
 **Tests:**（真实数据库）
-- `locks_test.go`：锁的表加上第三把 `LockWorkspace`（`named` 带 slug 和 id）；`TestTheWorkspaceLocksConflictAsConvention2Says` 加 5 种组合（同一个工作区上，按 id 的锁与另两把的四种都互相等待；与另一个工作区的锁不等）；另三个锁测试对三把锁各跑一遍。
+- `locks_test.go`：锁的表加上第三把 `LockWorkspace`（`named` 带 slug 和 id）；`TestTheWorkspaceLocksConflictAsConvention2Says` 加 5 种组合（同一个工作区上，按 id 的锁与另两把的四种都互相等待；与另一个工作区的锁不等）；另四个锁测试（含 Task 4 的外键检查）对三把锁各跑一遍。
 - `update_member_test.go`：`TestMemberByID`（有效的、已结束的都读到；已删除的、不存在的：`app.ErrNotFound`）；`TestUpdateMemberRole`（只改那一行的角色、`updated_by_id`、`updated_at`，答存下的值；同一个人在另一个工作区的成员关系不变；没有这一行是错误，不是 `app.ErrNotFound`）。
 - `failures_test.go`：读的测试加 `MemberByID`，写的测试加 `UpdateMemberRole`。
 
@@ -7340,7 +7428,7 @@ func (s *Store) UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.
 // DeleteWorkspaceMembers soft-deletes the undeleted memberships of the
 ````
 
-`server/internal/modules/workspace/adapter/postgres/locks_test.go`（修改，18 处）：
+`server/internal/modules/workspace/adapter/postgres/locks_test.go`（修改，19 处）：
 
 ````old server/internal/modules/workspace/adapter/postgres/locks_test.go
 // lock is one of the store's parent locks of a workspace named by its slug
@@ -7452,6 +7540,14 @@ type named struct {
 
 ````new server/internal/modules/workspace/adapter/postgres/locks_test.go
 				got, err = tt.then.take(ctx, s, named{tt.slug, ids[tt.slug]})
+````
+
+````old server/internal/modules/workspace/adapter/postgres/locks_test.go
+				_, err := l.take(ctx, s, "acme")
+````
+
+````new server/internal/modules/workspace/adapter/postgres/locks_test.go
+				_, err := l.take(ctx, s, named{"acme", acme.ID})
 ````
 
 ````old server/internal/modules/workspace/adapter/postgres/locks_test.go
@@ -7681,6 +7777,7 @@ Expected: 通过。
 |---|---|
 | `LockWorkspace` 去掉 `deleted_at IS NULL` | `TestTheWorkspaceLocksFindOnlyAnUndeletedWorkspace`、`TestTheWorkspaceLocksSkipAWorkspaceDeletedWhileTheyWait/LockWorkspace` |
 | `LockWorkspace` 换成 `FOR SHARE` | `TestTheWorkspaceLocksConflictAsConvention2Says`（Task 13 起另有 `TestTwoAdminsDemotingEachOtherLeaveAnAdmin`） |
+| `LockWorkspace` 换成 `FOR UPDATE` | `TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks/LockWorkspace` |
 | `MemberByID` 把失败答成 `app.ErrNotFound` | `TestAFailedReadIsAnErrorNotAnAnswer` |
 | `UpdateMemberRole` 吞掉错误 | `TestAFailedWriteIsAnError`、`TestUpdateMemberRole` |
 
@@ -7930,10 +8027,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `8b33e05bda5cbf6bb144ae45690faa1912f77a6f8acb2003fc66c57153a9bc18` | 1353 | `api/dist/openapi.yaml` |
+| `76acfb45dab7fa9f65e381993a94f5188d3a53fb5a7ffd990d3cc9f0bd69cbb4` | 1354 | `api/dist/openapi.yaml` |
 | `a27c79bd359d63583e6dfa7814c78efc59a34c97bda48aa0cd18a900780f903d` | 34 | `server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go` |
-| `476f1cfde00fed8af63fe4b06e829f68f73a22939e8f884d4ba1ad616f13bd1e` | 1505 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
-| `332e98a0c767752e13cd22d5adbcfec605d8084b7f3c106a2cd310764b241452` | 1433 | `web/packages/api-client/src/schema.gen.ts` |
+| `f358df3267961b2d6405fc1bbdeb82c6b30dfe808b6e17eafd0e596031361f8b` | 1505 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
+| `0c38cd9f61b1b263bf6d000faeffee13acd13b17d26846853d4014fdfd209f0d` | 1434 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -9117,6 +9214,9 @@ Expected: 全部 `ok`。
 Run: `go -C server test -count=1 -run 'TestAMembershipEndedMeanwhileIsNotFound|TestAnAdminDemotedMeanwhileCannotUpdateTheWorkspace|TestPermissionMatrix|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestEveryActionHasARuleAndEveryRuleAnAction' ./internal/bootstrap/`
 Expected: `ok`。
 
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix/(prepare|getWorkspace)$' ./internal/bootstrap/`
+Expected: `ok`（只选部分格子时，只核对并计数被选中的格子）。
+
 Run: `go -C server test -count=1 -v -run 'TestPermissionMatrix$' ./internal/bootstrap/`
 Expected: `--- PASS: TestPermissionMatrix`；记下它和 `prepare` 子测试的耗时（原型和复现：72 格 0.21–1.60 秒，准备 0.05–0.07 秒，spec 附录 A；M3 设计 9.2 的预算是全部 20–30 秒）。
 
@@ -9592,13 +9692,15 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 15: 上级文档和交接
 
 **Files:**
-- Modify: `docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`、`docs/v0/plane-diff.md`、`docs/v0/v0-design.md`
+- Modify: `docs/v0/M3-workspace-project/M3-design.md`、`docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/plane-diff.md`、`docs/v0/v0-design.md`
 
 **Interfaces:**
 - Produces（spec 2.15，M3 设计 3.20 中 P2 的各行）：
   - `docs/v0/v0-design.md` 3.6：关联字段的名字带 `_id`；例外：工作区成员内嵌成员的公开资料（`MemberUser`）；4.2：加锁的全局顺序和六条约定，"先锁父行，再判定"从 M3/P2 起落地；
   - `docs/v0/plane-diff.md`：二·按表 `workspace_user_properties` 的五行；三：关联字段带 `_id`（P1 的移交，spec 第 3 节第 2 条表的第 3 行）、显示设置的路径；四：显示设置的 `GET` 不写库、删除工作区的连带；
-  - `docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`：追加"处理结果（M3/P2）"（侧边栏偏好的接口一侧、个人主页的数据来源），状态保持 `open`。
+  - `docs/v0/M3-workspace-project/M3-design.md`（spec 第 3 节的裁定）：3.6 约定二加一句：写用例只看请求的值的校验在事务之前，依赖行的检查在判定之后（第 3 条）；6.7 的第 5 步分成事务之前的值的校验（第 0 步）和判定之后的依赖行的检查；9.2 `listWorkspaceMembers` 的访客一格改为"`email` 都为 `null`"（第 6 条）；
+  - `docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`：追加"处理结果（M3/P2）"（侧边栏偏好的接口一侧、个人主页的数据来源），状态保持 `open`；
+  - `docs/v0/M3-workspace-project/handoffs/M2-closeout.md`：追加"处理结果（M3/P2）"（第 7 节中 `MemberUser.avatar_url` 的部分），状态保持 `open`。
 - 使用者：P3 起的各 Phase；P2 的 review。
 
 **Tests:** 关键词守卫（`make lint-web`）也查文档。
@@ -9668,6 +9770,53 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、显示设置在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用。邀请由 M3/P3、项目由 M3/P4、标签由 M3/P7 加入这个事务 |
 ````
 
+`docs/v0/M3-workspace-project/M3-design.md`（修改，5 处）：
+
+````old docs/v0/M3-workspace-project/M3-design.md
+  - 锁住之后才调用 `Authorize`。等锁的一方在对方提交之后读到已提交的角色（spike S1b）。第一稿先判定、后锁：两位管理员互相降级，各自的判定都在对方提交之前读到"管理员"，结果一个管理员都不剩（spike S1a）。
+````
+
+````new docs/v0/M3-workspace-project/M3-design.md
+  - 锁住之后才调用 `Authorize`。等锁的一方在对方提交之后读到已提交的角色（spike S1b）。第一稿先判定、后锁：两位管理员互相降级，各自的判定都在对方提交之前读到"管理员"，结果一个管理员都不剩（spike S1a）。
+  - 每个写用例（P2–P7）把检查分两处：只看请求的值的校验（名称、颜色、角色的取值、上限，不合规 422）在事务之前，不开事务、不取锁；依赖行的检查（目标的成员关系已结束、是自己的、一组中唯一的状态）在判定之后（6.7）。
+````
+
+````old docs/v0/M3-workspace-project/M3-design.md
+     → UpdateState.Execute(ctx, actor, stateID, in)：TxManager.WithinTx {
+````
+
+````new docs/v0/M3-workspace-project/M3-design.md
+     → UpdateState.Execute(ctx, actor, stateID, in)：
+         0. 值的校验：名称、颜色、group ≠ triage、sequence（不合规 → 422），在事务之前，只看请求
+       TxManager.WithinTx {
+````
+
+````old docs/v0/M3-workspace-project/M3-design.md
+         5. 领域校验：名称、颜色、group ≠ triage、sequence（不合规 → 422）；
+            改组而它是原组中唯一的状态 → 409 project.state_last_in_group
+````
+
+````new docs/v0/M3-workspace-project/M3-design.md
+         5. 依赖行的检查：改组而它是原组中唯一的状态 → 409 project.state_last_in_group，在判定之后
+````
+
+````old docs/v0/M3-workspace-project/M3-design.md
+  - 资源先读、锁父行、再重读：用例要从资源行知道它属于哪个项目。资源不存在与看不到得到同一个 404 和同一个码，不透露私密项目里有没有这个 id（8.2）。
+````
+
+````new docs/v0/M3-workspace-project/M3-design.md
+  - 资源先读、锁父行、再重读：用例要从资源行知道它属于哪个项目。资源不存在与看不到得到同一个 404 和同一个码，不透露私密项目里有没有这个 id（8.2）。
+  - 值的校验在事务之前，依赖行的检查在判定之后（3.6 约定二）：422 只看请求，对不存在的 id、没有权限的人答的都一样，不透露任何行，也不为明显错误的请求开事务、取锁；依赖行的检查放在判定之后，没有权限的人得不到目标的任何信息（8.2）。
+````
+
+````old docs/v0/M3-workspace-project/M3-design.md
+| `listWorkspaceMembers` | ✓ | ✓ | ✓，别人的 `email` 为 `null` | 404 | 404 | 404 |
+````
+
+````new docs/v0/M3-workspace-project/M3-design.md
+| `listWorkspaceMembers` | ✓ | ✓ | ✓，`email` 都为 `null` | 404 | 404 | 404 |
+````
+
 `docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md`（修改，1 处）：
 
 ````old docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md
@@ -9689,6 +9838,24 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ````
 
+`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`（修改，1 处）：
+
+````old docs/v0/M3-workspace-project/handoffs/M2-closeout.md
+来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。
+
+````
+
+````new docs/v0/M3-workspace-project/handoffs/M2-closeout.md
+来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。
+
+## 处理结果（M3/P2）
+
+- **第 7 节 可空的引用字段**（部分）：`MemberUser.avatar_url` 在接口中必有、可为 `null`，M5 之前总是 `null`（`api/modules/workspace.yaml`；`listWorkspaceMembers`、`updateWorkspaceMember` 的答复）；`cover_image_url` 随 P4，`IUserLite` 随 P8；本节保持 `open`。
+
+来源：[M3/P2 spec](../specs/P2-workspaces.md) 第 7 节。
+
+````
+
 - [ ] **Step 2: 检查**
 
 Run: `make lint-go`
@@ -9703,17 +9870,20 @@ Expected: 通过。
 - [ ] **Step 3: 提交**
 
 ```bash
-git add docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md docs/v0/plane-diff.md docs/v0/v0-design.md
+git add docs/v0/M3-workspace-project/M3-design.md docs/v0/M3-workspace-project/handoffs/M1-P2-trim-content.md docs/v0/M3-workspace-project/handoffs/M2-closeout.md docs/v0/plane-diff.md docs/v0/v0-design.md
 ```
 ```bash
-git commit -m "docs(M3/P2): the P2 rows of the design docs; the M1-P2 handoff's result
+git commit -m "docs(M3/P2): the P2 rows of the design docs; the handoffs' results
 
 v0-design gains the exception to 'relations are ids' (a membership embeds
 its member's public profile) and the lock order with its six conventions;
-plane-diff carries workspace_user_properties and P2's behaviour rows; the
-M1-P2 handoff records what P2 closes.
+plane-diff carries workspace_user_properties and P2's behaviour rows. The
+M3 design follows the rulings on the P2 spec: a write checks the request's
+values before its transaction and what depends on rows after the decision;
+a guest sees every member's email as null. The M1-P2 and M2-closeout
+handoffs record what P2 closes.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
 
-**Done when:** M3 设计 3.20 中 P2 的各行（总体设计 3.6、4.2，差异清单）写好；M1-P2 交接有"处理结果（M3/P2）"。
+**Done when:** M3 设计 3.20 中 P2 的各行（总体设计 3.6、4.2，差异清单）写好；M3 设计 3.6、6.7、9.2 按裁定改好；M1-P2、M2-closeout 交接有"处理结果（M3/P2）"。
