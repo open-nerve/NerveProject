@@ -18,7 +18,8 @@ var (
 )
 
 // ListWorkspaces is the caller's list, asked of the store for the caller:
-// two callers, two lists.
+// two callers, two lists. The store's failure is the answer, never an empty
+// list; without a caller it is 401 and the store is not asked.
 func TestListWorkspacesIsTheCallersList(t *testing.T) {
 	log := &callLog{}
 	aliceList := []domain.Workspace{acme, beta}
@@ -34,8 +35,14 @@ func TestListWorkspacesIsTheCallersList(t *testing.T) {
 			t.Errorf("%s: calls = %q, want %q", user.Email, log.calls, want)
 		}
 	}
-	if _, err := uc.Execute(context.Background()); err == nil {
-		t.Error("Execute() without an actor = nil, want an error")
+	failure := errors.New("connection reset")
+	store.listErrs = map[uuid.UUID]error{bob.ID: failure}
+	if got, err := uc.Execute(as(bob)); !errors.Is(err, failure) || got != nil {
+		t.Errorf("the store failing: Execute() = %v, %v; want the store's %v", got, err, failure)
+	}
+	log.calls = nil
+	if _, err := uc.Execute(context.Background()); !errors.Is(err, shared.Unauthenticated()) || len(log.calls) != 0 {
+		t.Errorf("Execute() without an actor = %v, calls %q; want 401 unauthorized and no call", err, log.calls)
 	}
 }
 
@@ -79,12 +86,12 @@ func TestGetWorkspaceDecidesOnTheWorkspaceFound(t *testing.T) {
 }
 
 // A workspace the caller cannot see and one that is not there are the same
-// workspace.not_found; a refusal that is not "not visible" is not turned
-// into one.
+// workspace.not_found; a refusal that is not "not visible", or the store's
+// failure, is not turned into one.
 func TestGetWorkspaceNotFound(t *testing.T) {
 	log := &callLog{}
 	failure := errors.New("connection reset")
-	store := &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta}}
+	store := &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta}, slugErrs: map[string]error{"gamma": failure}}
 	auth := &fakeAuthorizer{log: log, errs: map[grantKey]error{
 		{bob.ID, beta.ID}:   shared.Forbidden(),
 		{carol.ID, beta.ID}: failure,
@@ -101,6 +108,7 @@ func TestGetWorkspaceNotFound(t *testing.T) {
 		{"no such workspace", alice, "nothing", domain.ErrNotFound, 1},
 		{"forbidden", bob, "beta", shared.Forbidden(), 2},
 		{"the Authorizer failed", carol, "beta", failure, 2},
+		{"the store failed", alice, "gamma", failure, 1},
 	}
 	for _, tt := range tests {
 		log.calls = nil
@@ -113,27 +121,41 @@ func TestGetWorkspaceNotFound(t *testing.T) {
 	}
 }
 
-// CheckSlug looks up only a slug that could be used.
+// Without a caller, GetWorkspace is 401 and reads nothing: the use case
+// refuses on its own, whoever calls it.
+func TestGetWorkspaceWithoutACaller(t *testing.T) {
+	log := &callLog{}
+	uc := app.NewGetWorkspace(&fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme}}, &fakeAuthorizer{log: log})
+	if _, err := uc.Execute(context.Background(), "acme"); !errors.Is(err, shared.Unauthenticated()) || len(log.calls) != 0 {
+		t.Errorf("Execute() without an actor = %v, calls %q; want 401 unauthorized and no call", err, log.calls)
+	}
+}
+
+// CheckSlug looks up only a slug that could be used; the lookup's failure
+// is the answer, never "free" or "taken".
 func TestCheckSlug(t *testing.T) {
 	log := &callLog{}
-	uc := app.NewCheckSlug(&fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme}})
+	failure := errors.New("connection reset")
+	uc := app.NewCheckSlug(&fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme}, slugErrs: map[string]error{"gamma": failure}})
 	tests := []struct {
 		slug   string
 		want   domain.SlugReason
+		err    error
 		lookup bool
 	}{
-		{"free", "", true},
-		{"acme", domain.SlugTaken, true},
-		{"Acme", domain.SlugInvalid, false},
-		{"", domain.SlugInvalid, false},
-		{"settings", domain.SlugReserved, false},
-		{"assets", domain.SlugReserved, false},
+		{"free", "", nil, true},
+		{"acme", domain.SlugTaken, nil, true},
+		{"gamma", "", failure, true},
+		{"Acme", domain.SlugInvalid, nil, false},
+		{"", domain.SlugInvalid, nil, false},
+		{"settings", domain.SlugReserved, nil, false},
+		{"assets", domain.SlugReserved, nil, false},
 	}
 	for _, tt := range tests {
 		log.calls = nil
 		got, err := uc.Execute(context.Background(), tt.slug)
-		if err != nil || got != tt.want {
-			t.Errorf("Execute(%q) = %q, %v; want %q", tt.slug, got, err, tt.want)
+		if !errors.Is(err, tt.err) || got != tt.want {
+			t.Errorf("Execute(%q) = %q, %v; want %q, %v", tt.slug, got, err, tt.want, tt.err)
 		}
 		if lookup := len(log.calls) > 0; lookup != tt.lookup || (lookup && log.calls[0] != "SlugTaken "+tt.slug+" outside tx") {
 			t.Errorf("Execute(%q): calls = %q, want a lookup: %v", tt.slug, log.calls, tt.lookup)

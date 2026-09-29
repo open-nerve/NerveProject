@@ -182,10 +182,12 @@ func TestExecuteReturnsTheLocksError(t *testing.T) {
 	}
 }
 
+// Without a caller, Execute is 401 and calls nothing: the use case refuses
+// on its own, whoever calls it.
 func TestExecuteWithoutACaller(t *testing.T) {
 	uc, f := newCreate(true)
-	if _, err := uc.Execute(context.Background(), domain.NewWorkspace{Name: "Acme", Slug: "acme"}); err == nil {
-		t.Error("Execute() without an actor = nil, want an error")
+	if _, err := uc.Execute(context.Background(), domain.NewWorkspace{Name: "Acme", Slug: "acme"}); !errors.Is(err, shared.Unauthenticated()) {
+		t.Errorf("Execute() without an actor = %v, want 401 unauthorized", err)
 	}
 	if len(f.log.calls) != 0 {
 		t.Errorf("calls = %q, want none", f.log.calls)

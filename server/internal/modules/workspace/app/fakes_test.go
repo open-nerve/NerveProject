@@ -66,13 +66,15 @@ func (f *fakeAccounts) ShareAccountByEmail(ctx context.Context, email string) (a
 
 // fakeWorkspaces is the repositories: it logs every call with its
 // arguments, answers from the workspaces it holds, and fails a call with
-// the error set for it.
+// the error set for it; a read fails for the argument its error is set
+// for, wrapped as the store wraps it.
 type fakeWorkspaces struct {
 	log        *callLog
 	workspaces []domain.Workspace // by slug for WorkspaceBySlug and SlugTaken
 	lists      map[uuid.UUID][]domain.Workspace
 	createErr  error
-	listErr    error
+	listErrs   map[uuid.UUID]error // by user, for ListWorkspaces
+	slugErrs   map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
 	members    []app.MemberRow
 }
 
@@ -98,11 +100,17 @@ func (f *fakeWorkspaces) CreateMember(ctx context.Context, m app.MemberRow) erro
 
 func (f *fakeWorkspaces) ListWorkspaces(ctx context.Context, userID uuid.UUID) ([]domain.Workspace, error) {
 	f.log.add(ctx, "ListWorkspaces %s", userID)
-	return f.lists[userID], f.listErr
+	if err := f.listErrs[userID]; err != nil {
+		return nil, fmt.Errorf("list workspaces: %w", err)
+	}
+	return f.lists[userID], nil
 }
 
 func (f *fakeWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (domain.Workspace, error) {
 	f.log.add(ctx, "WorkspaceBySlug %s", slug)
+	if err := f.slugErrs[slug]; err != nil {
+		return domain.Workspace{}, fmt.Errorf("workspace by slug: %w", err)
+	}
 	i := slices.IndexFunc(f.workspaces, func(w domain.Workspace) bool { return w.Slug == slug })
 	if i < 0 {
 		return domain.Workspace{}, app.ErrNotFound
@@ -112,6 +120,9 @@ func (f *fakeWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (doma
 
 func (f *fakeWorkspaces) SlugTaken(ctx context.Context, slug string) (bool, error) {
 	f.log.add(ctx, "SlugTaken %s", slug)
+	if err := f.slugErrs[slug]; err != nil {
+		return false, fmt.Errorf("check slug: %w", err)
+	}
 	return slices.ContainsFunc(f.workspaces, func(w domain.Workspace) bool { return w.Slug == slug }), nil
 }
 
