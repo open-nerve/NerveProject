@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -54,6 +55,20 @@ func NewDatabase(t testing.TB) string {
 // for tests that bring their own schema, such as the migrator's.
 func NewEmptyDatabase(t testing.TB) string {
 	return newDatabase(t, "template0")
+}
+
+// NewDatabaseFrom returns the URL of a new database copied from prepared, a
+// database of this package that the test has filled, so that data prepared
+// once serves every case that writes (M3 design 9.2). Nobody may be
+// connected to prepared while it is copied: close its pools first. The copy
+// is dropped when the test ends.
+func NewDatabaseFrom(t testing.TB, prepared string) string {
+	t.Helper()
+	u, err := url.Parse(prepared)
+	if err != nil {
+		t.Fatalf("pgtest: %v", err)
+	}
+	return newDatabase(t, strings.TrimPrefix(u.Path, "/"))
 }
 
 func newDatabase(t testing.TB, template string) string {

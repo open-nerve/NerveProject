@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/logging"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/webui"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
@@ -127,4 +129,37 @@ func migrateStatus(ctx context.Context, m *postgres.Migrator, out io.Writer) err
 func writeLine(w io.Writer, line string) error {
 	_, err := io.WriteString(w, line+"\n")
 	return err
+}
+
+// cliFieldName names a use case's field as the administrator's commands
+// know it; a field it does not know keeps its own name.
+func cliFieldName(field string) string {
+	switch field {
+	case "email":
+		return "--email"
+	case "new_email":
+		return "--new-email"
+	case "password":
+		return "the password"
+	case "slug":
+		return "--slug"
+	case "name":
+		return "--name"
+	default:
+		return field
+	}
+}
+
+// commandError is err as one line for the administrator: the invalid
+// fields of a domain error, each as "<field> <problem>", or its detail.
+func commandError(err error) error {
+	var se *shared.Error
+	if !errors.As(err, &se) || len(se.Fields) == 0 {
+		return err
+	}
+	problems := make([]string, len(se.Fields))
+	for i, f := range se.Fields {
+		problems[i] = cliFieldName(f.Field) + " " + f.Message
+	}
+	return errors.New(strings.Join(problems, "; "))
 }

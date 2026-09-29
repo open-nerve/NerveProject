@@ -1,7 +1,7 @@
 // Package domain holds the identity module's rules (M2 design 6.2): pure
-// functions and values, with one exception: validTimezone calls
-// time.LoadLocation, which reads the host's zone files, so the names it
-// accepts depend on the host (spec P3a 3 item 10).
+// functions and values. The rules of e-mail addresses, web addresses and
+// time zones that other modules share are in internal/shared (M3 design
+// 3.13).
 package domain
 
 import (
@@ -54,7 +54,7 @@ func CheckUserPatch(p UserPatch) error {
 		}
 		if f := checkText(name.field, *name.value, false, maxNameLength); f != nil {
 			fields = append(fields, *f)
-		} else if containsURL(*name.value) {
+		} else if shared.ContainsURL(*name.value) {
 			fields = append(fields, shared.FieldError{Field: name.field, Code: shared.FieldContainsURL, Message: "must not contain a web address"})
 		}
 	}
@@ -63,7 +63,7 @@ func CheckUserPatch(p UserPatch) error {
 			fields = append(fields, *f)
 		}
 	}
-	if p.Timezone != nil && !validTimezone(*p.Timezone) {
+	if p.Timezone != nil && !shared.ValidTimezone(*p.Timezone) {
 		fields = append(fields, shared.FieldError{Field: "user_timezone", Code: shared.FieldInvalidFormat, Message: "is not a known time zone"})
 	}
 	if len(fields) > 0 {
@@ -72,25 +72,11 @@ func CheckUserPatch(p UserPatch) error {
 	return nil
 }
 
-// validTimezone reports whether time.LoadLocation loads name (M2 design
-// 4.2), except "" and "Local", which it takes for UTC and for the host's
-// zone. LoadLocation reads the host's zone files first and Go's own tzdata
-// after them, so one host may accept a name that another refuses:
-// "asia/shanghai" on a case-insensitive file system, "posixrules" where the
-// host has that file (spec P3a 3 item 10).
-func validTimezone(name string) bool {
-	if name == "" || name == "Local" {
-		return false
-	}
-	_, err := time.LoadLocation(name)
-	return err == nil
-}
-
 // NewAccount checks the e-mail address and the password of a new account
 // and returns the normalized address. Every problem is reported at once, as
 // one 422 validation_failed.
 func NewAccount(rules *PasswordRules, email, password string) (string, error) {
-	email = NormalizeEmail(email)
+	email = shared.NormalizeEmail(email)
 	var fields []shared.FieldError
 	if f := checkEmail("email", email); f != nil {
 		fields = append(fields, *f)
@@ -108,7 +94,7 @@ func NewAccount(rules *PasswordRules, email, password string) (string, error) {
 // registration and returns it normalized: `nerve users set-email` (M2
 // decision 1). A problem is 422 validation_failed on field.
 func NewEmail(field, email string) (string, error) {
-	email = NormalizeEmail(email)
+	email = shared.NormalizeEmail(email)
 	if f := checkEmail(field, email); f != nil {
 		return "", shared.Invalid(*f)
 	}
@@ -120,9 +106,9 @@ func checkEmail(field, email string) *shared.FieldError {
 	switch {
 	case email == "":
 		return &shared.FieldError{Field: field, Code: shared.FieldRequired, Message: "is required"}
-	case utf8.RuneCountInString(email) > MaxEmailLength:
+	case utf8.RuneCountInString(email) > shared.MaxEmailLength:
 		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: "must be at most 255 characters"}
-	case !ValidEmail(email):
+	case !shared.ValidEmail(email):
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "is not a valid e-mail address"}
 	}
 	return nil

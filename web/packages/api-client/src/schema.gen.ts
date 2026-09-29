@@ -252,6 +252,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's workspaces
+         * @description The workspaces of which the caller is an active member, each with the caller's role and the number of active members, by name and then by id. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaces"];
+        put?: never;
+        /**
+         * Create a workspace with the caller as its admin
+         * @description Creates the workspace and makes the caller its admin and only member; nothing else is created with it. While the instance's workspace_creation_enabled is false, an authenticated, well-formed request answers workspace.creation_disabled before its values are looked at, and the server's administrator creates workspaces with `nerve workspaces create`. The name has 1–80 characters with a letter or a digit and no web address, and a NUL character in it is refused (invalid_format); the slug has 1–48 lower-case letters, digits, - and _, and is neither reserved (not_allowed) nor another undeleted workspace's (workspace.slug_taken). An account deactivated meanwhile answers unauthorized.
+         */
+        post: operations["createWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a workspace
+         * @description A workspace that does not exist, is deleted, or of which the caller is not an active member answers the same workspace.not_found.
+         */
+        get: operations["getWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspace-slugs/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Tell whether a slug can name a new workspace
+         * @description Available, or why not: invalid (not 1–48 lower-case letters, digits, - and _), reserved (a path of this site, or held for one), or taken (an undeleted workspace has it). It tells nothing about the workspace that has it.
+         */
+        get: operations["checkWorkspaceSlug"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -279,7 +349,7 @@ export interface components {
         Problem: {
             /** @description HTTP status code. */
             status: number;
-            /** @description Stable error code. Platform codes have no prefix (bad_request, unauthorized, not_found, payload_too_large, validation_failed, rate_limited, server_busy, internal_error, not_ready); module codes are prefixed with the module, e.g. identity.email_taken. Each operation lists the codes it can answer in x-problem-codes. */
+            /** @description Stable error code. Platform codes have no prefix (bad_request, unauthorized, forbidden, not_found, payload_too_large, validation_failed, rate_limited, server_busy, internal_error, not_ready); module codes are prefixed with the module that refuses, e.g. identity.email_taken, whichever module's operation answers them. Each operation lists the codes it can answer in x-problem-codes. */
             code: string;
             /** @description HTTP status phrase, e.g. "Not Found". */
             title: string;
@@ -506,6 +576,56 @@ export interface components {
         TimezoneList: {
             data: components["schemas"]["Timezone"][];
         };
+        /**
+         * @description A member's role in a workspace, 5 guest, 15 member, 20 admin.
+         * @enum {integer}
+         */
+        WorkspaceRole: 5 | 15 | 20;
+        Workspace: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Lower case; it never changes. */
+            slug: string;
+            /** @description One of OrganizationSize's values; null when none was given. */
+            organization_size: string | null;
+            /** @description An IANA time zone name. */
+            timezone: string;
+            /** @description Null until uploads arrive (M5). */
+            logo_url: string | null;
+            role: components["schemas"]["WorkspaceRole"];
+            /** @description The number of active members. */
+            total_members: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        WorkspaceList: {
+            data: components["schemas"]["Workspace"][];
+        };
+        /**
+         * @description The size of the organization, as the web app's form offers it.
+         * @enum {string}
+         */
+        OrganizationSize: "Just myself" | "2-10" | "11-50" | "51-200" | "201-500" | "500+";
+        WorkspaceCreate: {
+            /** @description 1–80 characters, with a letter or a digit, without a web address. */
+            name: string;
+            /** @description 1–48 lower-case letters, digits, - and _; not reserved. */
+            slug: string;
+            organization_size?: components["schemas"]["OrganizationSize"];
+            /** @description An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given. */
+            timezone?: string;
+        };
+        SlugAvailability: {
+            available: boolean;
+            /**
+             * @description Why the slug is not available; absent when it is.
+             * @enum {string}
+             */
+            reason?: "invalid" | "reserved" | "taken";
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -527,6 +647,8 @@ export interface components {
         Limit: number;
         /** @description The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor. */
         Cursor: string;
+        /** @description A workspace's slug, as in the web app's address. */
+        Slug: string;
     };
     requestBodies: never;
     headers: never;
@@ -557,9 +679,16 @@ export type ApiTokenCreated = components['schemas']['ApiTokenCreated'];
 export type InstanceInfo = components['schemas']['InstanceInfo'];
 export type Timezone = components['schemas']['Timezone'];
 export type TimezoneList = components['schemas']['TimezoneList'];
+export type WorkspaceRole = components['schemas']['WorkspaceRole'];
+export type Workspace = components['schemas']['Workspace'];
+export type WorkspaceList = components['schemas']['WorkspaceList'];
+export type OrganizationSize = components['schemas']['OrganizationSize'];
+export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
+export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
+export type ParameterSlug = components['parameters']['Slug'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -903,6 +1032,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimezoneList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's workspaces. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceCreate"];
+            };
+        };
+        responses: {
+            /** @description The new workspace; the caller is its admin. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace, with the caller's role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    checkWorkspaceSlug: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the slug is available. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlugAvailability"];
                 };
             };
             default: components["responses"]["Problem"];

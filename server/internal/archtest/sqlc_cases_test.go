@@ -2,13 +2,16 @@ package archtest
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
 // The spike's layout (M2 design 3.14): identity creates users; a later
-// module, asset, creates assets; identity's own later migration alters
-// users to reference assets; River's migration belongs to no entry, and
-// alters an unlogged table it creates, as its real one does.
+// module, asset, creates assets, which references users and has an index;
+// identity's own later migration alters users to reference assets; River's
+// migration belongs to no entry, and alters an unlogged table it creates,
+// puts a trigger on its table and drops it, and renames a table and drops
+// it, as its real one does.
 func sqlcBase() ([]sqlcEntry, []migrationFile, []string) {
 	entries := []sqlcEntry{
 		{
@@ -25,8 +28,13 @@ func sqlcBase() ([]sqlcEntry, []migrationFile, []string) {
 	migrations := []migrationFile{
 		{"00001_identity_users.sql", "-- +goose Up\nCREATE TABLE users (id uuid PRIMARY KEY);\n-- +goose Down\nDROP TABLE users;\n"},
 		{"00005_river_main_v2_to_v7.sql", "-- +goose Up\nCREATE TABLE river_job (id bigint);\nCREATE UNLOGGED TABLE river_leader (name text);\n" +
-			"ALTER TABLE river_job ADD COLUMN x int;\nALTER TABLE river_leader ADD COLUMN y int;\n"},
-		{"00020_asset_assets.sql", "-- +goose Up\nCREATE TABLE IF NOT EXISTS assets (id uuid PRIMARY KEY);\n"},
+			"ALTER TABLE river_job ADD COLUMN x int;\nALTER TABLE river_leader ADD COLUMN y int;\n" +
+			"CREATE TRIGGER river_notify\n    AFTER INSERT ON river_job\n    FOR EACH ROW EXECUTE PROCEDURE river_job_notify();\n" +
+			"DROP TRIGGER river_notify ON river_job;\n" +
+			"CREATE TABLE river_migration (version bigint);\nALTER TABLE river_migration\n    RENAME TO river_migration_old;\n" +
+			"CREATE UNIQUE INDEX ON river_job USING btree(id);\nDROP TABLE river_migration_old;\n"},
+		{"00020_asset_assets.sql", "-- +goose Up\nCREATE TABLE IF NOT EXISTS assets (id uuid PRIMARY KEY, created_by_id uuid REFERENCES users);\n" +
+			"CREATE INDEX assets_created_by_id_idx ON assets (created_by_id);\n-- +goose Down\nDROP TABLE assets;\n"},
 		{"00021_identity_users_avatar_asset.sql", "-- +goose Up\n-- ALTER TABLE assets would be wrong; a comment is not SQL\n" +
 			"ALTER TABLE users ADD COLUMN avatar_asset_id uuid REFERENCES assets ON DELETE SET NULL;\n" +
 			"-- +goose Down\nALTER TABLE ONLY public.users DROP COLUMN avatar_asset_id;\n"},
@@ -97,6 +105,63 @@ func TestSQLCScopeReportsViolations(t *testing.T) {
 			m[2].sql += "CREATE TABLE users (id uuid);"
 			return e, m, mods
 		}, "tables: users is created by both identity and asset"},
+		// The four forms of M3 design 4.1, each on another module's table.
+		{"ALTER TABLE of a quoted name", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += `ALTER TABLE "users" ADD COLUMN asset_id uuid;`
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"ALTER TABLE of a quoted name in the schema public", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += `ALTER TABLE IF EXISTS ONLY "public"."users" DROP COLUMN x;`
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"CREATE INDEX on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "CREATE INDEX CONCURRENTLY IF NOT EXISTS assets_users_email_idx ON users (email);"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql indexes users, which module identity creates: the migration belongs to identity"},
+		{"CREATE UNIQUE INDEX without a name", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "CREATE UNIQUE INDEX ON ONLY public.users (lower(email));"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql indexes users, which module identity creates: the migration belongs to identity"},
+		{"CREATE TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "CREATE OR REPLACE TRIGGER assets_touch\n    AFTER UPDATE OF email\n    ON users\n    FOR EACH ROW EXECUTE FUNCTION touch();"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql puts a trigger on users, which module identity creates: the migration belongs to identity"},
+		{"DROP TABLE of another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql = strings.Replace(m[2].sql, "DROP TABLE assets;", "DROP TABLE IF EXISTS assets, users CASCADE;", 1)
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql drops users, which module identity creates: the migration belongs to identity"},
+		{"a quoted name that differs from users only in case", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += `DROP TABLE "Users";`
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql drops Users, which no migration creates"},
+		{"an unquoted name in capitals", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "ALTER TABLE USERS ADD COLUMN x int;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"CREATE CONSTRAINT TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "CREATE CONSTRAINT TRIGGER assets_check AFTER INSERT ON users FOR EACH ROW EXECUTE FUNCTION check_assets();"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql puts a trigger on users, which module identity creates: the migration belongs to identity"},
+		{"a quoted table created twice", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += `CREATE TABLE "users" (id uuid);`
+			return e, m, mods
+		}, "tables: users is created by both identity and asset"},
+		{"a rename of another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "ALTER TABLE users RENAME TO people;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters users, which module identity creates: the migration belongs to identity"},
+		{"DROP TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "DROP TRIGGER IF EXISTS assets_touch ON public.users CASCADE;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql drops a trigger on users, which module identity creates: the migration belongs to identity"},
+		{"DROP TRIGGER of a quoted name, without IF EXISTS", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += `DROP TRIGGER "assets_touch" ON "users";`
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql drops a trigger on users, which module identity creates: the migration belongs to identity"},
+		{"ALTER TRIGGER on another module's table", func(e []sqlcEntry, m []migrationFile, mods []string) ([]sqlcEntry, []migrationFile, []string) {
+			m[2].sql += "ALTER TRIGGER assets_touch ON users RENAME TO assets_touch_email;"
+			return e, m, mods
+		}, "migration 00020_asset_assets.sql alters a trigger on users, which module identity creates: the migration belongs to identity"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

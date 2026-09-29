@@ -51,7 +51,7 @@ type SetEmailResult struct {
 // The personal access tokens stay: changing the address is no recovery
 // from a leak; reset-password is (M2 design 3.17).
 func (u *SetEmail) Execute(ctx context.Context, email, newEmail string) (SetEmailResult, error) {
-	from := domain.NormalizeEmail(email)
+	from := shared.NormalizeEmail(email)
 	to, err := domain.NewEmail("new_email", newEmail)
 	if err != nil {
 		return SetEmailResult{}, err

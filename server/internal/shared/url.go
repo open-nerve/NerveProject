@@ -1,4 +1,4 @@
-package domain
+package shared
 
 import (
 	"regexp"
@@ -25,11 +25,11 @@ var urlPattern = regexp.MustCompile(`(?i)(?:` +
 	`|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)` +
 	`)`)
 
-// containsURL is Plane's contains_url (plane/apps/api/plane/utils/url.py:
-// 26-53), which it applies to first and last names: text of more than 1000
-// characters is not looked at, and each line only up to its 500th
-// character.
-func containsURL(s string) bool {
+// ContainsURL is Plane's contains_url (plane/apps/api/plane/utils/url.py:
+// 26-53), which it applies to first and last names and to workspace names
+// (M3 design 3.10, 3.13): text of more than 1000 characters is not looked
+// at, and each line only up to its 500th character.
+func ContainsURL(s string) bool {
 	if utf8.RuneCountInString(s) > 1000 {
 		return false
 	}

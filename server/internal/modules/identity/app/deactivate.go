@@ -73,7 +73,7 @@ type DeactivateResult struct {
 // administrator: it locks the account row by the address
 // (identity.account_not_found), then writes as deactivate does.
 func (u *Deactivate) ExecuteByEmail(ctx context.Context, email string) (DeactivateResult, error) {
-	email = domain.NormalizeEmail(email)
+	email = shared.NormalizeEmail(email)
 	now := u.d.Clock.Now()
 	result := DeactivateResult{Email: email}
 	var id uuid.UUID

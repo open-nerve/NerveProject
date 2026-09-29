@@ -11,6 +11,8 @@ tags:
     description: Accounts, sign-in and sessions.
   - name: instance
     description: What this instance runs.
+  - name: workspace
+    description: Workspaces and their members.
 paths:
   /api/v0/auth/register:
     post:
@@ -344,6 +346,95 @@ paths:
                 $ref: '#/components/schemas/TimezoneList'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces:
+    get:
+      operationId: listWorkspaces
+      tags:
+        - workspace
+      summary: List the caller's workspaces
+      description: 'The workspaces of which the caller is an active member, each with the caller''s role and the number of active members, by name and then by id. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes: []
+      responses:
+        '200':
+          description: The caller's workspaces.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createWorkspace
+      tags:
+        - workspace
+      summary: Create a workspace with the caller as its admin
+      description: Creates the workspace and makes the caller its admin and only member; nothing else is created with it. While the instance's workspace_creation_enabled is false, an authenticated, well-formed request answers workspace.creation_disabled before its values are looked at, and the server's administrator creates workspaces with `nerve workspaces create`. The name has 1–80 characters with a letter or a digit and no web address, and a NUL character in it is refused (invalid_format); the slug has 1–48 lower-case letters, digits, - and _, and is neither reserved (not_allowed) nor another undeleted workspace's (workspace.slug_taken). An account deactivated meanwhile answers unauthorized.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.creation_disabled
+        - validation_failed
+        - workspace.slug_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceCreate'
+      responses:
+        '201':
+          description: The new workspace; the caller is its admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: getWorkspace
+      tags:
+        - workspace
+      summary: Read a workspace
+      description: A workspace that does not exist, is deleted, or of which the caller is not an active member answers the same workspace.not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      responses:
+        '200':
+          description: The workspace, with the caller's role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspace-slugs/{slug}:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: checkWorkspaceSlug
+      tags:
+        - workspace
+      summary: Tell whether a slug can name a new workspace
+      description: 'Available, or why not: invalid (not 1–48 lower-case letters, digits, - and _), reserved (a path of this site, or held for one), or taken (an undeleted workspace has it). It tells nothing about the workspace that has it.'
+      security:
+        - bearer: []
+      x-problem-codes: []
+      responses:
+        '200':
+          description: Whether the slug is available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlugAvailability'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearer:
@@ -406,7 +497,7 @@ components:
           description: HTTP status code.
           type: integer
         code:
-          description: Stable error code. Platform codes have no prefix (bad_request, unauthorized, not_found, payload_too_large, validation_failed, rate_limited, server_busy, internal_error, not_ready); module codes are prefixed with the module, e.g. identity.email_taken. Each operation lists the codes it can answer in x-problem-codes.
+          description: Stable error code. Platform codes have no prefix (bad_request, unauthorized, forbidden, not_found, payload_too_large, validation_failed, rate_limited, server_busy, internal_error, not_ready); module codes are prefixed with the module that refuses, e.g. identity.email_taken, whichever module's operation answers them. Each operation lists the codes it can answer in x-problem-codes.
           type: string
         title:
           description: HTTP status phrase, e.g. "Not Found".
@@ -839,6 +930,113 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Timezone'
+    WorkspaceRole:
+      description: A member's role in a workspace, 5 guest, 15 member, 20 admin.
+      type: integer
+      enum:
+        - 5
+        - 15
+        - 20
+    Workspace:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - slug
+        - organization_size
+        - timezone
+        - logo_url
+        - role
+        - total_members
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          description: Lower case; it never changes.
+          type: string
+        organization_size:
+          description: One of OrganizationSize's values; null when none was given.
+          type:
+            - string
+            - 'null'
+        timezone:
+          description: An IANA time zone name.
+          type: string
+        logo_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        total_members:
+          description: The number of active members.
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    WorkspaceList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    OrganizationSize:
+      description: The size of the organization, as the web app's form offers it.
+      type: string
+      enum:
+        - Just myself
+        - 2-10
+        - 11-50
+        - 51-200
+        - 201-500
+        - 500+
+    WorkspaceCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - slug
+      properties:
+        name:
+          description: 1–80 characters, with a letter or a digit, without a web address.
+          type: string
+        slug:
+          description: 1–48 lower-case letters, digits, - and _; not reserved.
+          type: string
+        organization_size:
+          $ref: '#/components/schemas/OrganizationSize'
+        timezone:
+          description: An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given.
+          type: string
+    SlugAvailability:
+      type: object
+      additionalProperties: false
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
+        reason:
+          description: Why the slug is not available; absent when it is.
+          type: string
+          enum:
+            - invalid
+            - reserved
+            - taken
   responses:
     Problem:
       description: Error (RFC 9457 problem details).
@@ -870,6 +1068,13 @@ components:
       name: cursor
       in: query
       description: The next_cursor of the page before; absent for the first page. A cursor that does not decode, has an unknown version or a payload of another shape than this list's, or is not spelled as the server writes it is 400 bad_request on cursor.
+      schema:
+        type: string
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: A workspace's slug, as in the web app's address.
       schema:
         type: string
 x-problem-codes:

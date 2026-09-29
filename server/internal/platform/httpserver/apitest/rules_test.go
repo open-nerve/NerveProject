@@ -19,7 +19,11 @@ func TestContractFollowsAuthoringRules(t *testing.T) {
 	if c.doc.Paths.Len() == 0 {
 		t.Fatal("the contract has no paths")
 	}
-	for _, v := range authoringViolations(c.doc, pathOwners(t)) {
+	modules, err := moduleNames()
+	if err != nil || len(modules) == 0 {
+		t.Fatalf("module files = %q, %v; want at least one", modules, err)
+	}
+	for _, v := range authoringViolations(c.doc, modules) {
 		t.Error(v)
 	}
 }
@@ -57,13 +61,36 @@ func TestRootListsEveryModulePath(t *testing.T) {
 	}
 }
 
+// The permission matrix (bootstrap) finds a module's operations by tag, so
+// every operation of api/modules/<m>.yaml carries exactly the tag <m>.
+func TestEveryOperationIsTaggedWithItsModule(t *testing.T) {
+	names, err := moduleNames()
+	if err != nil || len(names) == 0 {
+		t.Fatalf("module files = %q, %v; want at least one", names, err)
+	}
+	for _, name := range names {
+		doc, err := loadModule(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, path := range slices.Sorted(maps.Keys(doc.Paths.Map())) {
+			ops := doc.Paths.Value(path).Operations()
+			for _, method := range slices.Sorted(maps.Keys(ops)) {
+				if tags := ops[method].Tags; !slices.Equal(tags, []string{name}) {
+					t.Errorf("%s %s in api/modules/%s.yaml: tags = %q, want [%q]", method, path, name, tags, name)
+				}
+			}
+		}
+	}
+}
+
 // authoringViolations reports where doc breaks the authoring rules of spec P3
-// 2.4 and M2 design 3.11–3.12; owners maps each path to the module file that
-// declares it. It takes the document so that each check is proven on
-// hand-built bad documents (rules_cases_test.go) as well as applied to the
-// real contract.
-func authoringViolations(doc *openapi3.T, owners map[string]string) []string {
-	r := &ruleCheck{doc: doc, owners: owners, lowerCamel: regexp.MustCompile(`^[a-z][A-Za-z0-9]*$`)}
+// 2.4 and M2 design 3.11–3.12, as M3 design 11.7 revises them; modules are
+// nerve's modules, those with a file in api/modules/. It takes the document
+// so that each check is proven on hand-built bad documents
+// (rules_cases_test.go) as well as applied to the real contract.
+func authoringViolations(doc *openapi3.T, modules []string) []string {
+	r := &ruleCheck{doc: doc, modules: modules, lowerCamel: regexp.MustCompile(`^[a-z][A-Za-z0-9]*$`)}
 	r.topCodes()
 	for _, path := range slices.Sorted(maps.Keys(doc.Paths.Map())) {
 		r.path(path, doc.Paths.Value(path))
@@ -81,7 +108,7 @@ func authoringViolations(doc *openapi3.T, owners map[string]string) []string {
 // mistranslates and, through closedObject, additionalProperties.
 type ruleCheck struct {
 	doc        *openapi3.T
-	owners     map[string]string
+	modules    []string
 	lowerCamel *regexp.Regexp
 	found      []string
 }
@@ -99,7 +126,7 @@ func (r *ruleCheck) path(path string, item *openapi3.PathItem) {
 	}
 	ops := item.Operations()
 	for _, method := range slices.Sorted(maps.Keys(ops)) {
-		r.operation(method+" "+path, r.owners[path], ops[method])
+		r.operation(method+" "+path, ops[method])
 	}
 }
 
@@ -139,10 +166,11 @@ func (r *ruleCheck) security(where string, op *openapi3.Operation) {
 }
 
 // problemCodes: every operation lists the codes it can answer beyond the
-// top-level ones (M2 design 3.11). A module's code is prefixed with the
-// module file that declares the path; a code without prefix is a platform
-// code.
-func (r *ruleCheck) problemCodes(where, owner string, op *openapi3.Operation) {
+// top-level ones (M2 design 3.11). A module's code is prefixed with a module
+// of nerve, the one that refuses, which need not be the file that declares
+// the path (M3 design 11.7): a project operation answers
+// workspace.not_found. A code without prefix is a platform code.
+func (r *ruleCheck) problemCodes(where string, op *openapi3.Operation) {
 	codes, present, err := problemCodes(op.Extensions)
 	switch {
 	case err != nil:
@@ -155,17 +183,17 @@ func (r *ruleCheck) problemCodes(where, owner string, op *openapi3.Operation) {
 		switch {
 		case !codePattern.MatchString(code):
 			r.report(where, "problem code %q is not spelled [module.]lower_snake", code)
-		case prefixed && prefix != owner:
-			r.report(where, "problem code %q is not prefixed with its module %q", code, owner)
+		case prefixed && !slices.Contains(r.modules, prefix):
+			r.report(where, "problem code %q is prefixed with %q, which is not a module: want one of %q", code, prefix, r.modules)
 		case !prefixed && !slices.Contains(platformCodes, code):
 			r.report(where, "problem code %q has no module prefix and is not a platform code", code)
 		}
 	}
 }
 
-func (r *ruleCheck) operation(where, owner string, op *openapi3.Operation) {
+func (r *ruleCheck) operation(where string, op *openapi3.Operation) {
 	r.security(where, op)
-	r.problemCodes(where, owner, op)
+	r.problemCodes(where, op)
 	if !r.lowerCamel.MatchString(op.OperationID) {
 		r.report(where, "operationId %q is not lower camelCase", op.OperationID)
 	}

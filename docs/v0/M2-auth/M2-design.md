@@ -471,7 +471,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   | `Invalid` | 422 | `validation_failed`，或模块码 |
   | `BadRequest` | 400 | `bad_request`（例如游标不合法，`errors[].field = cursor`） |
   | `Unauthenticated` | 401 | `unauthorized`，或模块码 |
-  | `Forbidden` | 403 | 模块码 |
+  | `Forbidden` | 403 | `forbidden`（M3 设计 3.4），或模块码 |
   | `NotFound` | 404 | `not_found`，或模块码 |
   | `Conflict` | 409 | 模块码 |
   | `RateLimited` | 429 | `rate_limited`，带 `Retry-After` |
@@ -556,7 +556,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
     - 所有操作都可能返回的四个码（`bad_request`、`payload_too_large`、`rate_limited`、`internal_error`）只写一次，放在 `api/openapi.yaml` 顶层的 `x-problem-codes`。
     - 声明了 `bearer` 的操作隐含 `unauthorized`。
   - `apitest` 核对三件事：
-    1. 写法：码的格式是 `^([a-z]+\.)?[a-z_]+$`；带前缀的码，前缀等于所在模块文件的名字；不带前缀的码必须是下面表中的平台码。
+    1. 写法：码的格式是 `^([a-z]+\.)?[a-z_]+$`；带前缀的码，前缀必须是 nerve 的一个模块（`api/modules/` 下有它的文件），不必是声明它的那个文件：码说明哪个领域拒绝了，同一个事实在各处用同一个码（M3 设计 11.7）；不带前缀的码必须是下面表中的平台码。
     2. `CheckResponse` 遇到 problem 时，核对它的码在这个操作允许的集合里（顶层、操作自己、`unauthorized`）。
     3. 一个模块的 handler 测试跑完时，这个模块每个操作声明的码都至少被一个测试返回过。声明了却从不返回的码，是写错了的契约。
   - 前端的"错误码 → 文案"表（7.3）由 vitest 核对：从 `api/dist/openapi.yaml` 读出全部码，表的键必须与之相等。
@@ -570,6 +570,7 @@ M2 是第一个做真实业务的里程碑，也是前端第一次对接新接�
   |---|---|---|
   | `bad_request` | 400 | 已有。请求体不是合法 JSON：`detail` 是通用的一句话。请求体的结构不合契约：`errors[{field, code}]`（见上）。参数的类型不符：字段路径取自绑定错误，不再带出 Go 的类型名（M0-P3 交接 2）。游标不合法 |
   | `unauthorized` | 401 | 新增。认证中间件，以及 `RequireActor` |
+  | `forbidden` | 403 | M3 新增。`access` 的拒绝：调用者看得到目标，他的角色不允许这个操作（M3 设计 3.4、11.7） |
   | `not_found` | 404 | 已有 |
   | `payload_too_large` | 413 | 新增。`http.MaxBytesError`；JSON 接口的请求体上限是 `server.max_body_bytes`（默认 1 MiB） |
   | `validation_failed` | 422 | 新增。取值校验 |

@@ -39,6 +39,39 @@ func TestDatabasesAreIsolated(t *testing.T) {
 	}
 }
 
+// A copy holds what the prepared database held, and each copy is its own:
+// a write to one reaches neither the other copy nor the prepared database.
+func TestNewDatabaseFromCopiesThePreparedDatabase(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	prepared := pgtest.NewDatabase(t)
+	conn, err := pgx.Connect(ctx, prepared)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	_, err = conn.Exec(ctx, "CREATE TABLE marks (name text); INSERT INTO marks VALUES ('prepared')")
+	_ = conn.Close(ctx) // nobody may be connected to the database copied
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := connect(t, pgtest.NewDatabaseFrom(t, prepared))
+	b := connect(t, pgtest.NewDatabaseFrom(t, prepared))
+	if _, err := a.Exec(ctx, "INSERT INTO marks VALUES ('a')"); err != nil {
+		t.Fatal(err)
+	}
+
+	marks := func(conn *pgx.Conn) string {
+		var names string
+		if err := conn.QueryRow(ctx, "SELECT string_agg(name, ',' ORDER BY name) FROM marks").Scan(&names); err != nil {
+			t.Fatal(err)
+		}
+		return names
+	}
+	if got := [3]string{marks(a), marks(b), marks(connect(t, prepared))}; got != [3]string{"a,prepared", "prepared", "prepared"} {
+		t.Errorf("marks in copy a, copy b, the prepared database = %q; want the write in a alone", got)
+	}
+}
+
 func TestEmptyDatabaseHasNoTables(t *testing.T) {
 	t.Parallel()
 	conn := connect(t, pgtest.NewEmptyDatabase(t))

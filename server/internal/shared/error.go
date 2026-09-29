@@ -1,9 +1,13 @@
 // Package shared is the shared kernel: the few values that cross module
 // boundaries (M2 design 3.3). Every module returns its errors as *Error, the
-// authentication puts the Actor in the context, and TxManager carries one
-// transaction through the repositories of several modules. It imports only
-// the standard library, and the platform does not import it: the platform
-// declares the small interfaces these types satisfy by structure.
+// authentication puts the Actor in the context, TxManager carries one
+// transaction through the repositories of several modules, and the
+// Authorizer decides what a caller may do in a workspace or a project (M3
+// design 3.4). It also holds the pure value rules that modules must apply
+// alike: e-mail addresses, web addresses in names, and time zones (M3 design
+// 3.13). It imports only the standard library, and the platform does not
+// import it: the platform declares the small interfaces these types satisfy
+// by structure.
 package shared
 
 import "time"
@@ -30,6 +34,7 @@ const (
 	CodeBadRequest       = "bad_request"
 	CodeValidationFailed = "validation_failed"
 	CodeUnauthorized     = "unauthorized"
+	CodeForbidden        = "forbidden"
 	CodeRateLimited      = "rate_limited"
 	CodeServerBusy       = "server_busy"
 )
@@ -122,6 +127,14 @@ func Invalid(fields ...FieldError) *Error {
 // Unauthenticated reports a request without a valid credential: 401 unauthorized.
 func Unauthenticated() *Error {
 	return &Error{Kind: KindUnauthenticated, Code: CodeUnauthorized, Detail: "Authentication is required."}
+}
+
+// Forbidden reports a caller who can see the target but whose role the rule
+// table does not allow the action: 403 forbidden (M3 design 3.4). The
+// access module's refusal crosses every module, so its code is a platform
+// code (M3 design 11.7).
+func Forbidden() *Error {
+	return &Error{Kind: KindForbidden, Code: CodeForbidden, Detail: "Your role does not allow this."}
 }
 
 // RateLimited reports a caller over one of a module's rate limits: 429

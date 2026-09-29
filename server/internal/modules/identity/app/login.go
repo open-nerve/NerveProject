@@ -62,7 +62,7 @@ type LoginInput struct {
 // again, or the password changed: the password is verified against the new
 // hash, and step 3 is done once more. A second change fails with 401.
 func (l *Login) Execute(ctx context.Context, in LoginInput) (Tokens, error) {
-	account, err := l.find(ctx, domain.NormalizeEmail(in.Email))
+	account, err := l.find(ctx, shared.NormalizeEmail(in.Email))
 	if errors.Is(err, ErrNotFound) {
 		if _, _, err := l.d.Hasher.Verify(ctx, in.Password, l.d.DummyHash); err != nil {
 			return Tokens{}, err
@@ -132,7 +132,7 @@ func (l *Login) Execute(ctx context.Context, in LoginInput) (Tokens, error) {
 // looked up, so the database never sees what it could not store (a NUL, a
 // byte that is not UTF-8).
 func (l *Login) find(ctx context.Context, email string) (LoginAccount, error) {
-	if !domain.ValidEmail(email) {
+	if !shared.ValidEmail(email) {
 		return LoginAccount{}, ErrNotFound
 	}
 	return l.d.Accounts.FindLoginAccount(ctx, email)

@@ -64,14 +64,15 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 5 {
-		t.Fatalf("Up() = %d migrations, %v; want 5", len(up), err)
+	if err != nil || len(up) != 7 {
+		t.Fatalf("Up() = %d migrations, %v; want 7", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
-		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users"}},
+		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users",
+			"workspace_members", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
 	} {
@@ -89,21 +90,29 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 5 {
-		t.Errorf("Up() again = %d migrations, %v; want 5", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 7 {
+		t.Errorf("Up() again = %d migrations, %v; want 7", len(again), err)
 	}
 }
 
-// Constraint and index names are the stable names of M2 design 3.13: errors
-// are mapped by them, and later migrations drop them by name.
+// Constraint and index names are the stable names of M2 design 3.13 and M3
+// design 4 (an unconditional index <table>_<column>_idx under each CASCADE
+// foreign key to workspaces): errors are mapped by them, and later
+// migrations drop them by name. Each index is pinned with what it is too,
+// unique and partial or not, so a partial unique key cannot turn into a
+// plain or a total one unseen.
 func TestConstraintAndIndexNames(t *testing.T) {
 	pool := newPool(t, pgtest.NewDatabase(t))
 	rows, err := pool.Query(context.Background(), `
 		SELECT conname || ' ' || contype::text || CASE WHEN contype = 'f' THEN ' ' || confdeltype::text ELSE '' END FROM pg_constraint
-		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass)
+		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
+				'workspaces'::regclass, 'workspace_members'::regclass)
 			AND contype <> 'n' -- PG 18 lists NOT NULL as constraints too
 		UNION ALL
-		SELECT indexname || ' i' FROM pg_indexes WHERE tablename IN ('users', 'profiles', 'auth_sessions', 'api_tokens')
+		SELECT c.relname || ' i' || CASE WHEN i.indisunique THEN 'u' ELSE '' END || CASE WHEN i.indpred IS NOT NULL THEN 'w' ELSE '' END
+		FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+		WHERE i.indrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
+				'workspaces'::regclass, 'workspace_members'::regclass)
 		ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)
@@ -117,21 +126,22 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		got = append(got, s)
 	}
 	// contype: p primary key, u unique, f foreign key (confdeltype c: ON
-	// DELETE CASCADE, n: ON DELETE SET NULL), c check.
+	// DELETE CASCADE, n: ON DELETE SET NULL), c check. An index is i, then
+	// u when it is unique and w when it is partial (has a WHERE).
 	want := []string{
 		"api_tokens_created_by_id_fkey f n",
 		"api_tokens_label_check c",
-		"api_tokens_pkey i",
+		"api_tokens_pkey iu",
 		"api_tokens_pkey p",
 		"api_tokens_token_hash_check c",
-		"api_tokens_token_hash_key i",
+		"api_tokens_token_hash_key iu",
 		"api_tokens_token_hash_key u",
 		"api_tokens_updated_by_id_fkey f n",
-		"api_tokens_user_id_created_at_idx i",
+		"api_tokens_user_id_created_at_idx iw",
 		"api_tokens_user_id_fkey f c",
 		"auth_sessions_expires_at_idx i",
 		"auth_sessions_generation_check c",
-		"auth_sessions_pkey i",
+		"auth_sessions_pkey iu",
 		"auth_sessions_pkey p",
 		"auth_sessions_revoke_reason_check c",
 		"auth_sessions_revoked_consistent_check c",
@@ -140,19 +150,37 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"auth_sessions_user_id_idx i",
 		"profiles_language_check c",
 		"profiles_onboarding_step_check c",
-		"profiles_pkey i",
+		"profiles_pkey iu",
 		"profiles_pkey p",
 		"profiles_start_of_the_week_check c",
 		"profiles_theme_check c",
 		"profiles_user_id_fkey f c",
-		"profiles_user_id_key i",
+		"profiles_user_id_key iu",
 		"profiles_user_id_key u",
 		"users_display_name_check c",
 		"users_email_check c",
-		"users_email_key i",
+		"users_email_key iu",
 		"users_email_key u",
-		"users_pkey i",
+		"users_pkey iu",
 		"users_pkey p",
+		"workspace_members_created_by_id_fkey f n",
+		"workspace_members_member_id_fkey f c",
+		"workspace_members_member_id_idx iw",
+		"workspace_members_pkey iu",
+		"workspace_members_pkey p",
+		"workspace_members_role_check c",
+		"workspace_members_updated_by_id_fkey f n",
+		"workspace_members_workspace_id_fkey f c",
+		"workspace_members_workspace_id_idx i",
+		"workspace_members_workspace_id_member_id_key iuw",
+		"workspaces_created_by_id_fkey f n",
+		"workspaces_name_check c",
+		"workspaces_organization_size_check c",
+		"workspaces_pkey iu",
+		"workspaces_pkey p",
+		"workspaces_slug_check c",
+		"workspaces_slug_key iuw",
+		"workspaces_updated_by_id_fkey f n",
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("constraints and indexes =\n%q\nwant\n%q", got, want)
@@ -160,7 +188,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 }
 
 // The CHECKs accept what the domain writes and reject what bypasses it
-// (M2 design 4.2, 4.3, 4.5).
+// (M2 design 4.2, 4.3, 4.5; M3 design 4.2, 4.3).
 func TestChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -173,6 +201,9 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		"UPDATE profiles SET onboarding_step = onboarding_step || '{}'",
 		"UPDATE auth_sessions SET revoked_at = now(), revoke_reason = 'logout'",
 		"INSERT INTO api_tokens (id, user_id, token_hash, label) VALUES ('0199a2b4-0000-7000-8000-000000000004', " + user + ", sha256('t'), 'x')",
+		"INSERT INTO workspaces (id, name, slug, organization_size) VALUES ('0199a2b4-0000-7000-8000-000000000005', 'Acme', 'acme_1-2', '500+')",
+		"INSERT INTO workspace_members (id, workspace_id, member_id, role) VALUES ('0199a2b4-0000-7000-8000-000000000006', " +
+			"'0199a2b4-0000-7000-8000-000000000005', " + user + ", 20)",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -209,6 +240,13 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		{"a reason without revoked_at", "UPDATE auth_sessions SET revoked_at = NULL", "auth_sessions_revoked_consistent_check"},
 		{"token hash of a PAT not 32 bytes", "UPDATE api_tokens SET token_hash = '\\x00'", "api_tokens_token_hash_check"},
 		{"empty label", "UPDATE api_tokens SET label = ''", "api_tokens_label_check"},
+		{"empty workspace name", "UPDATE workspaces SET name = ''", "workspaces_name_check"},
+		{"upper-case slug", "UPDATE workspaces SET slug = 'Acme'", "workspaces_slug_check"},
+		{"slug with a dot", "UPDATE workspaces SET slug = 'acme.io'", "workspaces_slug_check"},
+		{"empty slug", "UPDATE workspaces SET slug = ''", "workspaces_slug_check"},
+		{"unknown organization size", "UPDATE workspaces SET organization_size = '1000+'", "workspaces_organization_size_check"},
+		{"role 10", "UPDATE workspace_members SET role = 10", "workspace_members_role_check"},
+		{"role 0", "UPDATE workspace_members SET role = 0", "workspace_members_role_check"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -216,6 +254,59 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 			var pgErr *pgconn.PgError
 			if !errors.As(err, &pgErr) || pgErr.Code != "23514" || pgErr.ConstraintName != tt.constraint {
 				t.Errorf("%s = %v, want check_violation (23514) of %s", tt.stmt, err, tt.constraint)
+			}
+		})
+	}
+}
+
+// A partial unique key holds among undeleted rows only: a second undeleted
+// row with the key is refused, and soft-deleting the first frees the key
+// (M3 design 3.10, 4.2, 4.3).
+func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
+	ctx := context.Background()
+	pool := newPool(t, pgtest.NewDatabase(t))
+	const (
+		user      = "'0199a2b4-0000-7000-8000-000000000001'"
+		workspace = "'0199a2b4-0000-7000-8000-000000000005'"
+	)
+	for _, stmt := range []string{
+		"INSERT INTO users (id, email, password, display_name) VALUES (" + user + ", 'alice@corp.com', 'x', 'alice')",
+		"INSERT INTO workspaces (id, name, slug) VALUES (" + workspace + ", 'Acme', 'acme')",
+		"INSERT INTO workspace_members (id, workspace_id, member_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
+	} {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
+		}
+	}
+	tests := []struct{ name, insert, softDelete, index string }{
+		{
+			"an account's membership of a workspace",
+			"INSERT INTO workspace_members (id, workspace_id, member_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
+			"UPDATE workspace_members SET deleted_at = now()",
+			"workspace_members_workspace_id_member_id_key",
+		},
+		{
+			"a workspace's slug",
+			"INSERT INTO workspaces (id, name, slug) VALUES (gen_random_uuid(), 'Acme 2', 'acme')",
+			"UPDATE workspaces SET deleted_at = now()",
+			"workspaces_slug_key",
+		},
+	}
+	// Either case can run first: each soft-deletes rows of its own table
+	// only, and neither key reads the other table (a membership of a deleted
+	// workspace still holds its key).
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := pool.Exec(ctx, tt.insert)
+			var pgErr *pgconn.PgError
+			if !errors.As(err, &pgErr) || pgErr.Code != "23505" || pgErr.ConstraintName != tt.index {
+				t.Errorf("%s = %v, want unique_violation (23505) of %s", tt.insert, err, tt.index)
+			}
+			if _, err := pool.Exec(ctx, tt.softDelete); err != nil {
+				t.Fatalf("%s: %v", tt.softDelete, err)
+			}
+			if _, err := pool.Exec(ctx, tt.insert); err != nil {
+				t.Errorf("after %s, %s = %v; want the key free", tt.softDelete, tt.insert, err)
 			}
 		})
 	}
