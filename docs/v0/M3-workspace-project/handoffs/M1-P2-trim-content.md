@@ -30,3 +30,11 @@ M3 合并时：
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P2 评审记录](../../M1-frontend-trim/reviews/P2-trim-content-review.md)第 7 节。
+
+## 处理结果（M3/P1）
+
+- **保留的工作区地址，服务端一侧**（完成）：服务端的保留名单是 `server/internal/modules/workspace/domain/reserved_slugs.txt`，分"应用""服务端""预留"三段（M3 设计 3.10），本文件列出的已去掉的词都不在其中。建工作区和查 slug 都按它拒绝（422 `not_allowed`，`reason: reserved`）；"服务端"一段由 `bootstrap` 的 Go 测试核对。
+
+仍未处理，状态保持 `open`：保留名单的前端一侧（`RESTRICTED_URLS` 删除，前后端一份，有测试核对，P8）；项目字段、侧边栏偏好、个人主页，随 M3 设计 13.1 中各自的 Phase。
+
+来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。

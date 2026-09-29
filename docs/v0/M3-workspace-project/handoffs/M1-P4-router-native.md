@@ -27,3 +27,11 @@ M3 合并时：
 逐项的结论写进该 M 的 review，然后 `status` 改为 `closed`。
 
 来源：[M1/P4 评审记录](../../M1-frontend-trim/reviews/P4-router-native-review.md)第 7 节。
+
+## 处理结果（M3/P1）
+
+- **保留的工作区名，服务端一侧**（完成）：名单的"应用"一段是 `web/apps/web/app/routes/core.ts` 的顶层静态路由段加上 `web/apps/web/public/` 的顶层目录（M3 设计 3.10）；`login` 不是路由段，不保留（`TestCheckSlug`）。服务端自己回答的顶层路径是"服务端"一段，由 `bootstrap` 的 Go 测试核对。
+
+仍未处理，状态保持 `open`：前后端用同一份、有测试核对"应用"一段与路由表一致（P8）；离开项目的顺序（P10）。
+
+来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。

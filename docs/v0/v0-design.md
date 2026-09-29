@@ -179,6 +179,7 @@ GET   /api/v0/issues/{issue_id}/comments
 
 ### 3.4 分页与分组
 - **分页**：用游标。请求带 `?limit=50&cursor=...`，响应格式为 `{ "data": [...], "next_cursor": "..." }`，最后一页的 `next_cursor` 是 `null`。游标是不透明的字符串：封套（版本号加载荷，base64url 编码）由 `internal/shared` 定义，载荷由各个列表按自己的排序定义，例如 PAT 列表的载荷是这一页最后一行的 `(created_at, id)`（M2 设计 3.12）。解不开、版本不认识、载荷不合这个列表的格式、不是 `EncodeCursor` 原样写出的游标，都是 400 `bad_request`；游标不签名，改成另一个合格的位置照样可用，它只决定从哪里接着读。`limit` 超出 1–100 是 422 `validation_failed`。
+- **集合型的列表不分页**：页面要整个集合、大小由管理员的操作决定的列表（工作区、成员、邀请、项目、项目成员、状态、标签）一次返回全部，响应仍是 `{ "data": [...] }` 封套，没有 `limit`、`cursor`、`next_cursor`；每个列表写明顺序，同值时按 `id`（M3 设计 3.12）。以后要给其中一个分页，是接口的改动，调用方同时改。第一个是 M3/P1 的 `listWorkspaces`。
 - **分组**：作为列表接口的可选参数，由服务端完成：
   ```
   GET /api/v0/projects/{id}/issues?group_by=state_id&sub_group_by=priority&limit=50
@@ -197,7 +198,7 @@ GET   /api/v0/issues/{issue_id}/comments
   ```
 - 看不到的资源返回 **404**，不泄露它是否存在；能看到但没权限执行操作，返回 **403**。
 - `title` 固定为 HTTP 状态短语，即 Go 的 `http.StatusText(status)`（不带 `type` 时符合 RFC 9457 的语义），具体说明放在 `detail`，程序按 `code` 分支。
-- 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`rate_limited`（429，带 `Retry-After`）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
+- 平台自己的错误码不带模块前缀：`bad_request`（400）、`unauthorized`（401）、`forbidden`（403，`access` 的拒绝：看得到而角色不允许，M3 设计 3.4）、`not_found`（404）、`payload_too_large`（413）、`validation_failed`（422）、`rate_limited`（429，带 `Retry-After`）、`internal_error`（500）、`not_ready`（503，只用于 `/readyz`）、`server_busy`（503，带 `Retry-After`）；模块的错误码带模块前缀，例如 `identity.email_taken`（M2 设计 3.11）。
 - **结构在接口边界，取值在领域**（M2 设计 3.11）：请求体不是合法 JSON、能有两种读法（同一个对象里同名的成员出现两次，名字按解码之后比较；字符串不是合法的 Unicode）、有未声明的字段、不可为空的字段传了 `null`、缺少必填字段、生成为 Go 类型的格式（`date-time`、`uuid`）写错，一律 400 `bad_request`，`errors` 一次列出全部问题（能有两种读法的请求体只列出这两种问题；每个问题只报一次，最多 16 个，路径最长 256 字节）；长度、其余格式、枚举、取值范围和跨字段的规则由领域层校验，一次返回 422 `validation_failed`。
 - `errors` 的每一项是 `{field, code, message}`：`field` 是 JSON 路径（超过 256 字节的截短，以 `…` 结尾），`code` 取自一个封闭的集合（`required`、`invalid_format`、`too_short`、`too_long`、`out_of_range`、`not_allowed`、`duplicate`、`weak_password`、`common_password`、`must_be_future`、`contains_url`），前端按 `code` 显示文案。
 - **错误码写进接口描述**：每个操作用扩展字段 `x-problem-codes` 列出它可能返回的码；所有操作都可能返回的平台码只写在 `api/openapi.yaml` 的顶层，声明了 `bearer` 的操作另外隐含 `unauthorized`。`apitest` 核对码的写法、测试中返回的码都已声明、每个声明的码都有测试返回过（M2 设计 3.11）。
@@ -357,8 +358,10 @@ server/
     platform/               与业务无关的技术基础件：config、postgres（连接池、事务管理器）、
                             logging、httpserver（中间件、problem+json）、ratelimit、clock、idgen
     shared/                 共享内核，尽量小，只放值会跨越模块边界的东西（M2 设计 3.3）：Actor（当前账户）、
-                            领域错误与错误码、TxManager 端口、分页游标的封套；以后加入领域事件接口、
-                            Authorizer 端口。平台不导入它；时钟等其余端口由使用方的 app 层声明
+                            领域错误与错误码、TxManager 端口、分页游标的封套、Authorizer 端口和它的
+                            Role、Action、Target、Grant（M3 设计 3.4），两个以上模块共用的纯取值规则
+                            （邮箱、网址、时区，M3 设计 3.13）；以后加入领域事件接口。操作名常量不在这里，
+                            在各模块的 domain（actions.go）。平台不导入它；时钟等其余端口由使用方的 app 层声明
     modules/
       identity/             账户、会话、PAT、密码
       access/               成员角色查询与权限规则表（实现 Authorizer 端口）
@@ -384,7 +387,7 @@ modules/issue/
   adapter/
     postgres/        仓储实现（基于 sqlc）；列表引擎这类复杂读取写成专门的查询
     http/            handler：把 oapi-codegen 生成的请求类型转成用例的输入，再把结果转成响应
-  module.go          模块入口：New(依赖)；(*Module).Register(router, api) 把模块生成的路由挂到 bootstrap 的根路由上，
+  module.go          模块入口：Provide(pool) 返回给别的模块用的适配器（6.3 第 4 条）；New(依赖)；(*Module).Register(router, api) 把模块生成的路由挂到 bootstrap 的根路由上，
                      api（httpserver.API）提供错误映射和按路由的中间件；PublicOperations() 列出不需要令牌的操作；
                      其他模块或 bootstrap 要用的能力由访问方法导出，例如 Authenticator()（M2 设计 3.3、3.6）
 ```
@@ -399,6 +402,7 @@ modules/issue/
    - 通知、Webhook 等模块在 `bootstrap` 中注册为订阅者。
    - 订阅者在同一个事务内被调用，通常只做一件事：往 River 里投递任务。所以事务是原子的，同时各模块之间解耦。
 4. **只在组合根接线**：禁止全局可变状态，禁止 `init()` 副作用，禁止服务定位器。所有依赖都通过构造函数显式传入。
+   - 模块之间的端口可以是双向的，所以每个模块分两段构造（M3 设计 6.6）：`Provide(pool)` 只返回只依赖连接池、给别的模块用的适配器，不建用例；`New(Deps)` 建出全部用例和 HTTP 的一侧，`Deps` 是它要的全部端口，构造之后不再登记、不再注入任何东西。组合根先调各模块的 `Provide`，再按依赖的顺序调 `New`，没有构造的环。
 5. **不写大文件、不建大杂烩包**：
    - 一个文件只做一件事；超过约 400 行的文件在评审时必须说明理由或者拆分。接口描述按模块一个文件（3.1），不受这一条的限制（M2/P3a 评审）。
    - 禁止 `utils`、`common`、`helpers` 这类大杂烩包。
@@ -440,12 +444,14 @@ modules/issue/
   - 创建者本人可以修改或删除自己创建的对象。
   - 访客在项目没开 `guest_view_all_features` 时，只能看到自己创建的工作项。
   - 项目分公开和私密两种可见性。
-- **集中定义**：规则表放在 `modules/access` 中，各模块通过 `shared` 里的 `Authorizer` 端口调用：
+- **集中定义**（M3 设计 3.4）：规则表放在 `modules/access/domain/rules.go`，以操作名为键，每行是级别（工作区级、项目级、看得到即可）和允许的角色；表里没有的操作一律拒绝。各模块通过 `shared` 里的 `Authorizer` 端口调用；操作名常量在各模块的 `domain/actions.go`，`bootstrap` 的测试核对各模块的操作名恰好是规则表的键：
   ```go
-  "issue.update":  {Project: [Admin, Member], AllowCreator: true}
-  "issue.archive": {Project: [Admin, Member]}
-  "issue.delete":  {Project: [Admin],         AllowCreator: true}
+  "workspace.read": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}}
   ```
+  "创建者本人可以修改或删除自己创建的对象"由 M4 随第一条用到它的规则在规则表加入（`AllowCreator`）。
+- **看不到与不能做**：不是有效成员、看不到的项目，判定答 `shared.ErrNotVisible`，用例换成自己资源的 404；看得到而角色不允许，403 `forbidden`。
+- **相对的规则在用例中**：改自己的角色、目标的角色更高、唯一管理员这类要比较两个人的规则，由用例用判定交回的 `Grant` 和读到的目标判断。
+- **判定的时机**：写操作在事务中取得父行（工作区行、项目行）的锁之后判定；读操作不开事务，直接判定。每个请求都读角色，不缓存。
 - **归属查询**：Plane 在每张属于项目的表上都存了 `workspace_id` 和 `project_id`，查一次资源就能知道它的归属。
 - **测试**：用一张完整的"角色 × 操作"权限矩阵逐格测试。
 
