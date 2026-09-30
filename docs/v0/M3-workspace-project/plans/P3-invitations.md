@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换或直接接上（M3 设计 6.5、6.6）；模块的 SQL 只经 sqlc（`TestModulesRunSQLOnlyThroughSQLC`）；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/*.yaml` 不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内：最长的是 `workspace/app/fakes_test.go`（401 行，P2 的共用假实现，本 plan 加 10 行）和 `bootstrap/interleaving_answers_test.go`（398 行）；`apitest/operations.go` 因为对象的数组要长到 411 行，Task 3 把请求体用例移到 `bodycases.go`。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换或直接接上（M3 设计 6.5、6.6）；模块的 SQL 只经 sqlc（`TestModulesRunSQLOnlyThroughSQLC`）；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/*.yaml` 不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内：最长的是 `workspace/app/fakes_test.go`（401 行，P2 的共用假实现，本 plan 加 10 行）和 `bootstrap/interleaving_answers_test.go`（398 行）；`apitest/operations.go` 因为对象的数组要长到 411 行，Task 3 把请求体用例移到 `bodycases.go`；常量时间的核对和它的反例放进 `signing/constant_time_test.go`（Task 2，`signing_test.go` 否则超过 400 行）；矩阵的完整性核对解析包里的测试，放在 `bootstrap/package_tests_test.go`（Task 9）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；迁移文件的中文注释和中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -28,7 +28,7 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `1d2eaf7c` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/workspace.yaml`、`workspace/module.go`、`app/invitation_ports.go`、`app/fakes_invitations_test.go`、`adapter/http/handler.go`、`adapter/http/invitations.go`、`adapter/postgres/invitations.go`、`queries/invitations.sql`、`domain/invitation.go`、`access/domain/rules.go`、`bootstrap/app.go`、矩阵的四个文件、生成物）；每个过渡版本都在逐 Task 复现中运行过。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/workspace.yaml`、`workspace/module.go`、`app/invitation_ports.go`、`app/fakes_invitations_test.go`、`adapter/http/handler.go`、`adapter/http/invitations.go`、`adapter/postgres/invitations.go`、`queries/invitations.sql`、`domain/invitation.go`、`access/domain/rules.go`、`bootstrap/app.go`、`bootstrap/invitations_test.go`、矩阵的四个文件、生成物）；每个过渡版本都在逐 Task 复现中运行过。
 - **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式，和必须因此失败的测试。它们在原型上逐个跑过（`$M3TMP/p3tools/mutants.py`、`e2e_mutants.py`，spec 附录 A）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有。
 - **评审敏感**（M3 设计 12 节约束 3）：令牌和从邀请到成员关系的路径是一个账户得到访问权的地方。改动令牌、接受、注册的测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`
@@ -53,6 +53,7 @@
 | `server/internal/modules/workspace/adapter/postgres/failures_test.go`（修改） | 读写失败时答错误 | 1、5 |
 | `server/internal/modules/workspace/app/delete_workspace.go`、`server/internal/modules/workspace/app/delete_workspace_test.go`、`server/internal/modules/workspace/app/fakes_test.go`、`server/internal/modules/workspace/adapter/postgres/delete_workspace_test.go`、`server/internal/bootstrap/workspace_deletion_test.go`（修改） | 删除工作区连带邀请 | 1（`fakes_test.go` 另有 8） |
 | `server/internal/modules/identity/adapter/signing/keys.go`、`server/internal/modules/identity/adapter/signing/mac.go`、`server/internal/modules/identity/adapter/signing/signing_test.go`（修改） | 按用途派生的 MAC | 2 |
+| `server/internal/modules/identity/adapter/signing/constant_time_test.go` | `Verify` 的每个 `return` 都是 `hmac.Equal`、没有 `==`、`!=`；反例 | 2 |
 | `server/internal/modules/identity/keys.go`、`server/internal/modules/identity/keys_test.go` | `identity.LoadKeys`、`Keys.MAC` | 2 |
 | `server/internal/modules/identity/module.go`、`server/internal/modules/identity/interleavings_test.go`（修改） | `Deps.Keys`；`SignupInvitation` | 2、4、12 |
 | `server/internal/modules/workspace/domain/token.go`、`server/internal/modules/workspace/domain/token_test.go` | 令牌的消息、格式和解析 | 2 |
@@ -73,7 +74,8 @@
 | `server/internal/modules/workspace/module.go`（修改） | 接上用例；`InvitationMACPurpose`；`PublicOperations`、`SignupInvitations` | 5、6、8、9、11、12 |
 | `server/internal/bootstrap/invitation_mac_test.go` | 组合根要的用途是设计的 | 5 |
 | `server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`（修改）；`server/internal/bootstrap/permission_matrix_invitations_test.go` | 矩阵的邀请行、准备数据、公开操作的豁免和它的测试 | 5、6、8、9、11 |
-| `server/internal/bootstrap/permission_matrix_coverage_test.go`（修改） | 未知的路径参数；公开操作的豁免 | 9、11 |
+| `server/internal/bootstrap/permission_matrix_coverage_test.go`（修改） | 公开操作的豁免和它指名的测试；未知的路径参数 | 9、11 |
+| `server/internal/bootstrap/package_tests_test.go` | 包里的测试名（`go/parser`），给完整性核对 | 9 |
 | `server/internal/modules/workspace/app/create_invitations.go`、`server/internal/modules/workspace/app/create_invitations_test.go` | `createWorkspaceInvitations` | 6 |
 | `server/internal/modules/workspace/adapter/postgres/locks.go`、`server/internal/modules/workspace/adapter/postgres/locks_test.go`（修改）；`server/internal/modules/workspace/adapter/postgres/queries/workspaces.sql`（修改） | 按 id 的 `FOR SHARE`；`WorkspaceByID` | 7、10 |
 | `server/internal/modules/workspace/adapter/postgres/gen/workspaces.sql.go`（生成） | | 7、10 |
@@ -84,9 +86,11 @@
 | `server/internal/modules/workspace/domain/errors.go`（修改） | 三个新码 | 8、11 |
 | `web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`（修改） | 新码的文案 | 8、11 |
 | `server/internal/modules/workspace/app/get_invitation.go`、`server/internal/modules/workspace/app/get_invitation_test.go` | 公开的查看 | 9 |
-| `server/internal/bootstrap/invitations_test.go` | 访问日志；凭邀请注册 | 9、12 |
+| `server/internal/bootstrap/invitations_test.go` | 令牌不存库；访问日志；凭邀请注册 | 6、8、9、11、12 |
 | `server/internal/modules/workspace/adapter/postgres/queries/members.sql`（修改）；`server/internal/modules/workspace/adapter/postgres/responses.go`、`server/internal/modules/workspace/adapter/postgres/responses_test.go` | 回应要的存储 | 10 |
 | `server/internal/modules/workspace/adapter/postgres/gen/members.sql.go`（生成） | | 10 |
+| `server/internal/modules/identity/adapter/postgres/queries/users.sql`（修改） | `ShareAccount` 的注释写上忽略（P1 review 第 6 节） | 11 |
+| `server/internal/modules/identity/adapter/postgres/gen/users.sql.go`（生成） | | 11 |
 | `server/internal/modules/workspace/app/respond_invitation.go`、`server/internal/modules/workspace/app/accept_invitation.go`、`server/internal/modules/workspace/app/accept_invitation_test.go`、`server/internal/modules/workspace/app/decline_invitation.go`、`server/internal/modules/workspace/app/decline_invitation_test.go` | 接受、忽略 | 11 |
 | `api/modules/identity.yaml`（修改） | `RegisterRequest.invitation` | 12 |
 | `server/internal/modules/identity/adapter/http/gen/server.gen.go`、`server/internal/modules/identity/adapter/http/gen/bodyshape.gen.go`（生成） | | 12 |
@@ -1001,7 +1005,7 @@ Expected: 通过。
 ### Task 2: 签名密钥移到 `bootstrap`；按用途的 MAC；令牌的领域
 
 **Files:**
-- Create: `server/internal/modules/identity/keys.go`、`server/internal/modules/identity/keys_test.go`、`server/internal/modules/workspace/domain/token.go`、`server/internal/modules/workspace/domain/token_test.go`
+- Create: `server/internal/modules/identity/adapter/signing/constant_time_test.go`、`server/internal/modules/identity/keys.go`、`server/internal/modules/identity/keys_test.go`、`server/internal/modules/workspace/domain/token.go`、`server/internal/modules/workspace/domain/token_test.go`
 - Modify: `server/internal/bootstrap/app.go`、`server/internal/modules/identity/adapter/signing/keys.go`、`server/internal/modules/identity/adapter/signing/signing_test.go`、`server/internal/modules/identity/interleavings_test.go`、`server/internal/modules/identity/module.go`
 - Modify（完整内容）: `server/internal/modules/identity/adapter/signing/mac.go`
 
@@ -1010,7 +1014,8 @@ Expected: 通过。
 - 使用者：Task 5（`InvitationMACPurpose`、`invitationTokens`）；Task 5、9、13 的测试用 `identity.LoadKeys` 算令牌。
 
 **Tests:**
-- `signing_test.go`（M2 的刷新令牌 MAC 的测试改为按用途）：`TestMAC`（同一消息同一标签；改任何一个字节、换密钥都换标签）、`TestMACVerify`（自己的标签通过；随机的、最后一位翻转的、全零的不通过；改消息的任何一个字节不通过）；`TestMACKnownAnswers`（刷新令牌 `65cc085217dccf9e602799b8e64a4468` 与 M2 的代码相同；邀请 `92fab228187e6c034c4fa240218ce894`，都由 spec 附录 A 的 `kat.py` 按 RFC 5869 手算）；`TestMACsOfPurposesDiffer`；`TestMACVerifyComparesInConstantTime`（解析 `mac.go`：`Verify` 的最后一句是 `return hmac.Equal(…)`）。
+- `signing_test.go`（M2 的刷新令牌 MAC 的测试改为按用途）：`TestMAC`（同一消息同一标签；改任何一个字节、换密钥都换标签）、`TestMACVerify`（自己的标签通过；随机的、最后一位翻转的、全零的不通过；改消息的任何一个字节不通过）；`TestMACKnownAnswers`（刷新令牌 `65cc085217dccf9e602799b8e64a4468` 与 M2 的代码相同；邀请 `92fab228187e6c034c4fa240218ce894`，都由 spec 附录 A 的 `kat.py` 按 RFC 5869 手算）；`TestMACsOfPurposesDiffer`。
+- `signing/constant_time_test.go`：`TestMACVerifyComparesInConstantTime`（解析 `mac.go`：`Verify` 的每个 `return` 都是 `hmac.Equal(…)`，其中没有 `==`、`!=`）；`TestConstantTimeViolationsCatchesEachShortcut`（真实的写法没有问题；答 `==`、不同就先返回、`==` 在不会执行的分支里、没有 `return`，各被发现）。
 - `identity/keys_test.go`：`TestKeysMACIsThePurposes`（文件的密钥给已知答案；同一个文件相同，别的密钥不同）；`TestLoadKeysWithoutAFileWarns`（警告提到邀请链接）；`TestKeysMACRefusesTheRefreshTokensPurpose`。
 - `workspace/domain/token_test.go`：`TestTheTokenOfTheKnownAnswer`（`nrv_inv_kvqyKBh-bANMT6JAIYzolA`）；`TestInvitationMessagesDifferByEveryByteOfTheID`；`TestATokenParsesBackToItsTag`（30 个字符，没有 `+`、`/`、`=`）；`TestEveryBitOfATokenCounts`（逐位翻转：不能解析，或解析成别的标签；最后一个字符的四个填充位）；`TestParseTokenRefuses`。
 
@@ -1143,7 +1148,7 @@ func newKeys(private ed25519.PrivateKey) *Keys {
 	return &Keys{private: private, public: private.Public().(ed25519.PublicKey)}
 ````
 
-`server/internal/modules/identity/adapter/signing/signing_test.go`（修改，11 处）：
+`server/internal/modules/identity/adapter/signing/signing_test.go`（修改，10 处）：
 
 ````old server/internal/modules/identity/adapter/signing/signing_test.go
 	"encoding/base64"
@@ -1152,17 +1157,6 @@ func newKeys(private ed25519.PrivateKey) *Keys {
 ````new server/internal/modules/identity/adapter/signing/signing_test.go
 	"encoding/base64"
 	"encoding/hex"
-````
-
-````old server/internal/modules/identity/adapter/signing/signing_test.go
-	"errors"
-````
-
-````new server/internal/modules/identity/adapter/signing/signing_test.go
-	"errors"
-	"go/ast"
-	"go/parser"
-	"go/token"
 ````
 
 ````old server/internal/modules/identity/adapter/signing/signing_test.go
@@ -1300,10 +1294,26 @@ func TestMACsOfPurposesDiffer(t *testing.T) {
 	}
 }
 
+````
+
+`server/internal/modules/identity/adapter/signing/constant_time_test.go`（新文件，95 行）：
+
+````file server/internal/modules/identity/adapter/signing/constant_time_test.go
+package signing
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"testing"
+)
+
 // Verify answers hmac.Equal of the two tags and nothing else: a comparison
 // that stops at the first difference tells a forger, by its time, how much
 // of a tag is right (M2 design 3.9, M3 design 8.1). No test can time it, so
-// this one reads the code.
+// this one reads the code: every return of Verify returns hmac.Equal(…), and
+// nothing in it compares with == or !=, so no path answers before
+// hmac.Equal has compared every byte.
 func TestMACVerifyComparesInConstantTime(t *testing.T) {
 	file, err := parser.ParseFile(token.NewFileSet(), "mac.go", nil, 0)
 	if err != nil {
@@ -1318,9 +1328,56 @@ func TestMACVerifyComparesInConstantTime(t *testing.T) {
 	if verify == nil {
 		t.Fatal("mac.go has no method Verify")
 	}
-	last, _ := verify.Body.List[len(verify.Body.List)-1].(*ast.ReturnStmt)
-	if last == nil || len(last.Results) != 1 || !isCallOf(last.Results[0], "hmac", "Equal") {
-		t.Error("Verify does not end in return hmac.Equal(…)")
+	for _, v := range constantTimeViolations(verify.Body) {
+		t.Error(v)
+	}
+}
+
+// constantTimeViolations is what in body could answer before hmac.Equal
+// compares every byte: a return of anything but one hmac.Equal call, a
+// comparison with == or !=, and no return at all.
+func constantTimeViolations(body *ast.BlockStmt) []string {
+	var found []string
+	returns := 0
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch n := n.(type) {
+		case *ast.ReturnStmt:
+			returns++
+			if len(n.Results) != 1 || !isCallOf(n.Results[0], "hmac", "Equal") {
+				found = append(found, "Verify returns something other than hmac.Equal(…)")
+			}
+		case *ast.BinaryExpr:
+			if n.Op == token.EQL || n.Op == token.NEQ {
+				found = append(found, "Verify compares with "+n.Op.String())
+			}
+		}
+		return true
+	})
+	if returns == 0 {
+		found = append(found, "Verify has no return")
+	}
+	return found
+}
+
+// Each check of constantTimeViolations fails on its counterexample.
+func TestConstantTimeViolationsCatchesEachShortcut(t *testing.T) {
+	for _, tt := range []struct {
+		name, body string
+		want       int
+	}{
+		{"the real body", "want := m.Tag(message); return hmac.Equal(want[:], tag[:])", 0},
+		{"== answered", "want := m.Tag(message); return want == tag", 2},
+		{"an early return on a mismatch", "want := m.Tag(message); if want != tag { return false }; return hmac.Equal(want[:], tag[:])", 2},
+		{"== in a dead branch", "want := m.Tag(message); if ok := want == tag; true { return ok }; return hmac.Equal(want[:], tag[:])", 2},
+		{"no return", "for {}", 1},
+	} {
+		f, err := parser.ParseFile(token.NewFileSet(), "", "package p\nfunc (m *MAC) Verify(message []byte, tag [16]byte) bool {"+tt.body+"}", 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := constantTimeViolations(f.Decls[0].(*ast.FuncDecl).Body); len(got) != tt.want {
+			t.Errorf("%s: %q, want %d violations", tt.name, got, tt.want)
+		}
 	}
 }
 
@@ -1337,7 +1394,6 @@ func isCallOf(e ast.Expr, pkg, name string) bool {
 	x, ok := sel.X.(*ast.Ident)
 	return ok && x.Name == pkg && sel.Sel.Name == name
 }
-
 ````
 
 - [ ] **Step 2: `identity.Keys`**
@@ -1792,7 +1848,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add server/internal/bootstrap/app.go server/internal/modules/identity/adapter/signing/keys.go server/internal/modules/identity/adapter/signing/mac.go server/internal/modules/identity/adapter/signing/signing_test.go server/internal/modules/identity/interleavings_test.go server/internal/modules/identity/keys.go server/internal/modules/identity/keys_test.go server/internal/modules/identity/module.go server/internal/modules/workspace/domain/token.go server/internal/modules/workspace/domain/token_test.go
+git add server/internal/bootstrap/app.go server/internal/modules/identity/adapter/signing/constant_time_test.go server/internal/modules/identity/adapter/signing/keys.go server/internal/modules/identity/adapter/signing/mac.go server/internal/modules/identity/adapter/signing/signing_test.go server/internal/modules/identity/interleavings_test.go server/internal/modules/identity/keys.go server/internal/modules/identity/keys_test.go server/internal/modules/identity/module.go server/internal/modules/workspace/domain/token.go server/internal/modules/workspace/domain/token_test.go
 ```
 ```bash
 git commit -m "feat(M3/P3): the signing key loads in bootstrap and derives a MAC per purpose; the invitation token
@@ -1820,6 +1876,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 每个用途一个密钥 | `TestMACKnownAnswers`、`TestMACsOfPurposesDiffer`、`TestKeysMACIsThePurposes` |
 | HKDF 只做 extract（没有 info） | `TestMACKnownAnswers` |
 | `Verify` 用 `==` | `TestMACVerifyComparesInConstantTime` |
+| `Verify` 在 `hmac.Equal` 之前遇到不同就返回；`==` 放在一个不会执行的分支里（最后一句仍是 `hmac.Equal`） | `TestMACVerifyComparesInConstantTime` |
+| `constantTimeViolations` 不数 `return`、不看比较、不报没有 `return` | `TestConstantTimeViolationsCatchesEachShortcut` |
 | `Verify` 只比一半 | `TestMACVerify` |
 | `Keys.MAC` 给出刷新令牌的用途 | `TestKeysMACRefusesTheRefreshTokensPurpose` |
 
@@ -4253,7 +4311,7 @@ Expected: 通过。
 ### Task 6: `createWorkspaceInvitations`；`CallerLock` 接进 `workspace`
 
 **Files:**
-- Create: `server/internal/modules/workspace/app/create_invitations.go`、`server/internal/modules/workspace/app/create_invitations_test.go`、`server/internal/modules/workspace/domain/invitation_test.go`
+- Create: `server/internal/bootstrap/invitations_test.go`、`server/internal/modules/workspace/app/create_invitations.go`、`server/internal/modules/workspace/app/create_invitations_test.go`、`server/internal/modules/workspace/domain/invitation_test.go`
 - Modify: `api/modules/workspace.yaml`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/app/list_invitations_test.go`、`server/internal/modules/workspace/domain/actions.go`、`server/internal/modules/workspace/domain/invitation.go`、`server/internal/modules/workspace/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
@@ -4266,6 +4324,7 @@ Expected: 通过。
 - `app/create_invitations_test.go`：`TestCreateWorkspaceInvitationsLocksDecidesChecksThenInserts`（事务里：凭证锁、工作区 `FOR SHARE`、判定、有效成员的邮箱和邀请、按邮箱排序插入；回答按请求的顺序，是存下的行加令牌；别的工作区的邀请不占；两位管理员、两个工作区）；`TestCreatingInvitationsReadsTheClockBeforeItsTransaction`（时钟读一次，在事务的第一个调用之前）；`TestCreateWorkspaceInvitationsChecksTheBatchFirst`（只看请求的拒绝不开事务）；`TestCreateWorkspaceInvitationsRefusesMembersAndInvitedAddresses`（有效成员的 `not_allowed`、未删除的邀请（待接受或已忽略）的 `duplicate`，一个 422，什么都不插入；已结束的成员关系、别的工作区的邀请不拒绝）；`TestADuplicateFromTheUniqueKeyNamesTheRequestsIndex`（23505 的下标是请求中的，不是插入的顺序）；`TestCreateWorkspaceInvitationsRefusals`（撤销的凭证 401、404、`forbidden`、每个读和插入的失败原样，之后什么都不运行；没有调用者 401）。
 - `adapter/http/invitations_test.go`：`TestCreateWorkspaceInvitations`（批量原样交给用例，201）；`TestCreateWorkspaceInvitationsRefusals`（元素缺少角色在用例之前 400）。
 - 矩阵：`createWorkspaceInvitations` 三行（新邮箱 201；有效成员的邮箱、已邀请的邮箱 422；成员、访客 403；另三列 404），`invitesTheInvitee` 核对答案；`TestBodiesThatBreakTheStructureAnswer400` 自动加上 `invitations[]` 的用例（Task 3）。
+- `bootstrap/invitations_test.go`（新文件）：`TestTheInvitationTokenIsNeverStored`（组合出的 app、真实的库：管理员一批邀请两个邮箱，之后 `SELECT row_to_json(i)::text FROM workspace_member_invites i` 恰好两行，没有一行含回答中的任何一个令牌、去掉 `nrv_inv_` 的 22 个字符、标签的十六进制（`bytea` 列的写法）或标准 base64（另一种字母表的文本列）；`expectNoTokenStored`）。Task 8、11 在改角色、接受和忽略之后再核对。
 
 - [ ] **Step 1: 接口描述**
 
@@ -5384,7 +5443,7 @@ func TestCreateWorkspaceInvitationsRefusals(t *testing.T) {
 		CallerLock:      identityPorts.CredentialLock,
 ````
 
-- [ ] **Step 6: 矩阵**
+- [ ] **Step 6: 矩阵；令牌不存库**
 
 `server/internal/bootstrap/permission_matrix_workspace_test.go`（修改，2 处）：
 
@@ -5452,12 +5511,109 @@ func invitesTheInvitee(t *testing.T, c caller, answer string) {
 
 ````
 
+`server/internal/bootstrap/invitations_test.go`（新文件，92 行）：
+
+````file server/internal/bootstrap/invitations_test.go
+package bootstrap
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/hex"
+	"net/http"
+	"strings"
+	"testing"
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/migrations"
+)
+
+// The invitations on the wired app and a real database: what the matrix
+// and the modules' tests cannot see.
+
+// invitationLink is an invitation's id and its link's token.
+type invitationLink struct {
+	id    uuid.UUID
+	token string
+}
+
+// The server never stores an invitation's token: it computes it again from
+// the invitation's id whenever it answers or checks one (M3 design 3.8,
+// 8.1). After each step that does, the rows of workspace_member_invites,
+// one for each invitation, hold neither token in any form a column could
+// keep it (expectNoTokenStored).
+func TestTheInvitationTokenIsNeverStored(t *testing.T) {
+	url := pgtest.NewDatabase(t)
+	base, pool := startApp(t, testConfig(t, url, false), migrations.FS()), openPool(t, url)
+	contract := apitest.Load(t)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", admin, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("creating acme = %d %s", status, body)
+	}
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/invitations", admin,
+		`{"invitations":[{"email":"carol@example.com","role":15},{"email":"dave@example.com","role":5}]}`)
+	if status != http.StatusCreated {
+		t.Fatalf("inviting carol and dave = %d %s", status, body)
+	}
+	var list struct {
+		Data []struct {
+			ID    uuid.UUID `json:"id"`
+			Token string    `json:"token"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, body, &list)
+	links := make([]invitationLink, len(list.Data))
+	for i, inv := range list.Data {
+		links[i] = invitationLink{inv.ID, inv.Token}
+	}
+	expectNoTokenStored(t, pool, links)
+}
+
+// expectNoTokenStored fails unless workspace_member_invites has one row for
+// each of links, and no row, as row_to_json writes it, holds a link's token
+// whole, its 22 characters after nrv_inv_, or its tag in hex (a bytea
+// column) or in standard base64 (a text column of the other alphabet).
+func expectNoTokenStored(t *testing.T, pool *pgxpool.Pool, links []invitationLink) {
+	t.Helper()
+	rows, err := pool.Query(context.Background(), "SELECT row_to_json(i)::text FROM workspace_member_invites i")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stored) != len(links) {
+		t.Fatalf("workspace_member_invites has %d rows, want %d: %q", len(stored), len(links), stored)
+	}
+	for _, l := range links {
+		tag, ok := workspacedomain.ParseToken(l.token)
+		if !ok {
+			t.Fatalf("the token %q of %s does not parse", l.token, l.id)
+		}
+		for _, form := range []string{l.token, strings.TrimPrefix(l.token, "nrv_inv_"), hex.EncodeToString(tag[:]), base64.RawStdEncoding.EncodeToString(tag[:])} {
+			for _, row := range stored {
+				if strings.Contains(row, form) {
+					t.Errorf("a row holds the token of %s as %q: %s", l.id, form, row)
+				}
+			}
+		}
+	}
+}
+````
+
 - [ ] **Step 7: 测试、lint**
 
 Run: `go -C server test -count=1 ./internal/modules/workspace/... ./internal/modules/access/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestEveryActionHasARuleAndEveryRuleAnAction|TestBodiesThatBreakTheStructureAnswer400' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestEveryActionHasARuleAndEveryRuleAnAction|TestBodiesThatBreakTheStructureAnswer400|TestTheInvitationTokenIsNeverStored' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -5478,7 +5634,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/workspace.yaml server/internal/bootstrap/app.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/app/create_invitations.go server/internal/modules/workspace/app/create_invitations_test.go server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/list_invitations_test.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/domain/invitation.go server/internal/modules/workspace/domain/invitation_test.go server/internal/modules/workspace/module.go api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml server/internal/bootstrap/app.go server/internal/bootstrap/invitations_test.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/app/create_invitations.go server/internal/modules/workspace/app/create_invitations_test.go server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/list_invitations_test.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/domain/invitation.go server/internal/modules/workspace/domain/invitation_test.go server/internal/modules/workspace/module.go api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P3): invite a batch of addresses to a workspace, all or nothing
@@ -5490,7 +5646,8 @@ committed first leaves no invitation, shares the workspace, decides,
 refuses active members' and invited addresses through MemberProfiles and
 the store, and inserts in the order of the normalized addresses (M3
 design 3.6 convention 5, 3.8). A concurrent batch's address the unique
-key refuses gets the check's 422, on its index in the request.
+key refuses gets the check's 422, on its index in the request. No row
+holds a token in any form (M3 design 8.1).
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -5507,14 +5664,15 @@ Expected: 通过。
 | 已忽略的邀请不占邮箱 | `TestCreateWorkspaceInvitationsRefusesMembersAndInvitedAddresses` |
 | 不查有效成员的邮箱；把已结束的也算上 | `TestCreateWorkspaceInvitationsRefusesMembersAndInvitedAddresses` |
 | 不锁邀请人的账户 | `TestCreateWorkspaceInvitationsLocksDecidesChecksThenInserts`（Task 13 起另有 `TestInvitingAndResettingThePassword`） |
-| 工作区用 `FOR NO KEY UPDATE` | `TestCreateWorkspaceInvitationsLocksDecidesChecksThenInserts`（同上，`TestInvitingOverlappingBatches`） |
+| 工作区用 `FOR NO KEY UPDATE` | `TestCreateWorkspaceInvitationsLocksDecidesChecksThenInserts`（Task 13 起另有 `TestInvitingOverlappingBatches`） |
 | 在凭证锁之后读时钟 | `TestCreatingInvitationsReadsTheClockBeforeItsTransaction` |
 | 角色按大小（5 到 20） | `TestCheckInvitationsRefuses` |
 | 回答用例自己拼的行（时钟的时间），不是存下的 | `TestCreateWorkspaceInvitationsLocksDecidesChecksThenInserts` |
 | `workspace_invitation.create` 给成员 | `TestEveryRuleDecidesItsCells`、`TestPermissionMatrix` |
 | 生成的 bodyshape 让元素接受未声明的属性；元素不要求任何属性 | `TestBodiesThatBreakTheStructureAnswer400` |
+| 表里加 `token` 列，创建把令牌写进去（迁移、`InvitationRow`、用例、存储四处） | `TestTheInvitationTokenIsNeverStored`（Task 14 起另有 W4） |
 
-**Done when:** 批量的检查、用例、HTTP、矩阵（18 格）通过；23505 翻译为 422、下标是请求中的；前端检查通过。
+**Done when:** 批量的检查、用例、HTTP、矩阵（18 格）通过；23505 翻译为 422、下标是请求中的；没有一行存着令牌；前端检查通过。
 
 ---
 
@@ -6052,7 +6210,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/modules/workspace/app/delete_invitation.go`、`server/internal/modules/workspace/app/delete_invitation_test.go`、`server/internal/modules/workspace/app/invitation_lock.go`、`server/internal/modules/workspace/app/update_invitation.go`、`server/internal/modules/workspace/app/update_invitation_test.go`
-- Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/fakes_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/domain/actions.go`、`server/internal/modules/workspace/domain/errors.go`、`server/internal/modules/workspace/domain/invitation.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
+- Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/invitations_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/fakes_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/domain/actions.go`、`server/internal/modules/workspace/domain/errors.go`、`server/internal/modules/workspace/domain/invitation.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
@@ -6065,6 +6223,7 @@ Expected: 通过。
 - `app/clock_test.go`：`TestEachWriteReadsTheClockUnderItsLock` 加修改、删除两行。
 - `adapter/http/invitations_test.go`：`TestUpdateWorkspaceInvitation`、`TestUpdateWorkspaceInvitationRefusals`（请求体没有角色、id 不是 UUID 在用例之前 400）、`TestDeleteWorkspaceInvitation`（204 没有正文）。
 - 矩阵：修改、删除两行（管理员 200/204，成员、访客 403，另三列 404 `invitation_not_found`），`promotesTheNewcomer` 核对答案。
+- `bootstrap/invitations_test.go`：`TestTheInvitationTokenIsNeverStored` 在改角色（它又算出令牌）之后再核对一次。
 
 - [ ] **Step 1: 接口描述**
 
@@ -7137,7 +7296,7 @@ func TestDeleteWorkspaceInvitation(t *testing.T) {
 		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
 ````
 
-- [ ] **Step 5: 矩阵**
+- [ ] **Step 5: 矩阵；改角色之后令牌仍不存库**
 
 `server/internal/bootstrap/permission_matrix_workspace_test.go`（修改，1 处）：
 
@@ -7210,12 +7369,27 @@ func promotesTheNewcomer(t *testing.T, c caller, answer string) {
 }
 ````
 
+`server/internal/bootstrap/invitations_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/invitations_test.go
+	expectNoTokenStored(t, pool, links)
+````
+
+````new server/internal/bootstrap/invitations_test.go
+	expectNoTokenStored(t, pool, links)
+
+	if status, body := call(t, contract, http.MethodPatch, base+"/api/v0/workspace-invitations/"+links[0].id.String(), admin, `{"role":20}`); status != http.StatusOK {
+		t.Fatalf("changing carol's role = %d %s", status, body)
+	}
+	expectNoTokenStored(t, pool, links)
+````
+
 - [ ] **Step 6: 测试、lint**
 
 Run: `go -C server test -count=1 ./internal/modules/workspace/... ./internal/modules/access/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestEveryActionHasARuleAndEveryRuleAnAction' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestEveryActionHasARuleAndEveryRuleAnAction|TestTheInvitationTokenIsNeverStored' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -7236,7 +7410,7 @@ Expected: 通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/app/clock_test.go server/internal/modules/workspace/app/delete_invitation.go server/internal/modules/workspace/app/delete_invitation_test.go server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/fakes_test.go server/internal/modules/workspace/app/invitation_lock.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/update_invitation.go server/internal/modules/workspace/app/update_invitation_test.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/domain/errors.go server/internal/modules/workspace/domain/invitation.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/invitations_test.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/app/clock_test.go server/internal/modules/workspace/app/delete_invitation.go server/internal/modules/workspace/app/delete_invitation_test.go server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/fakes_test.go server/internal/modules/workspace/app/invitation_lock.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/update_invitation.go server/internal/modules/workspace/app/update_invitation_test.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/domain/errors.go server/internal/modules/workspace/domain/invitation.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P3): change an invitation's role and delete an invitation
@@ -7272,24 +7446,25 @@ Expected: 通过。
 
 ---
 
-### Task 9: 公开的 `getWorkspaceInvitation`；访问日志；矩阵的豁免和未知参数
+### Task 9: 公开的 `getWorkspaceInvitation`；日志里没有令牌；矩阵的豁免
 
 **Files:**
-- Create: `server/internal/bootstrap/invitations_test.go`、`server/internal/modules/workspace/app/get_invitation.go`、`server/internal/modules/workspace/app/get_invitation_test.go`
-- Modify: `api/modules/workspace.yaml`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/adapter/postgres/invitations.go`、`server/internal/modules/workspace/adapter/postgres/invitations_test.go`、`server/internal/modules/workspace/adapter/postgres/queries/invitations.sql`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/app/tokens.go`、`server/internal/modules/workspace/domain/invitation.go`、`server/internal/modules/workspace/module.go`
+- Create: `server/internal/bootstrap/package_tests_test.go`、`server/internal/modules/workspace/app/get_invitation.go`、`server/internal/modules/workspace/app/get_invitation_test.go`
+- Modify: `api/modules/workspace.yaml`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/invitations_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/adapter/postgres/invitations.go`、`server/internal/modules/workspace/adapter/postgres/invitations_test.go`、`server/internal/modules/workspace/adapter/postgres/queries/invitations.sql`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/app/tokens.go`、`server/internal/modules/workspace/domain/invitation.go`、`server/internal/modules/workspace/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`server/internal/modules/workspace/adapter/postgres/gen/invitations.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
-- Produces（spec 2.10、2.14，M3 设计 3.8、8.1、8.2）：接口 `GET /api/v0/workspace-invitations/{invitation_id}?token=…`（`security: []`，`token` 必填），200 `InvitationPreview`；`domain.InvitationPreview{ID, Role, Declined, WorkspaceName, WorkspaceSlug}`；`app.InvitationPreviewer`、`NewGetWorkspaceInvitation(invitations, mac)`；`invitationTokens.valid(id, token)`；存储 `InvitationPreview(ctx, id)`；`httpadapter.PublicOperations()`、`(*workspace.Module).PublicOperations()`，`bootstrap` 并进公开操作。矩阵：`matrixExemptions.public`（操作 → 代替它的测试）、`notTargets`（路径 → 理由），`targetViolation` 报告任何不认识的参数。
+- Produces（spec 2.10、2.14，M3 设计 3.8、8.1、8.2）：接口 `GET /api/v0/workspace-invitations/{invitation_id}?token=…`（`security: []`，`token` 必填），200 `InvitationPreview`；`domain.InvitationPreview{ID, Role, Declined, WorkspaceName, WorkspaceSlug}`；`app.InvitationPreviewer`、`NewGetWorkspaceInvitation(invitations, mac)`；`invitationTokens.valid(id, token)`；存储 `InvitationPreview(ctx, id)`；`httpadapter.PublicOperations()`、`(*workspace.Module).PublicOperations()`，`bootstrap` 并进公开操作。矩阵：`matrixExemptions.public`（操作 → 代替它的测试）；`matrixViolations(ops, exempt, rows, s, tests)` 要求豁免指名的测试在 `tests` 里；`packageTests(t)`、`testsOf(file)`（`package_tests_test.go`：包里 `_test.go` 文件中顶层的 `TestXxx(t *testing.T)`）。
 - 使用者：Task 11、12 用 `valid`；P9 的邀请页。
 
 **Tests:**
 - `app/get_invitation_test.go`：`TestGetWorkspaceInvitationShowsTheLinksInvitation`（角色、是否已忽略、工作区的名称和 slug；先 MAC 后读，不开事务，没有调用者；两个工作区，一份待接受、一份已忽略）；`TestGetWorkspaceInvitationRefusesAWrongTokenBeforeReading`（别的邀请的、别的密钥的、改一个字符的、每种格式不对的，都是 `invitation_not_found` 且什么都不读；格式不对的不交给 MAC）；`TestGetWorkspaceInvitationRefusals`（存储找不到时同一个 404；失败原样）。
 - `adapter/postgres/invitations_test.go`：`TestInvitationPreview`（已接受、已删除、工作区已删除、没有的 id 都是 `ErrNotFound`；失败是错误）。
 - `adapter/http/invitations_test.go`：`TestGetWorkspaceInvitation`（带不带 bearer、带无效的 bearer，路由都不读凭证）；`TestGetWorkspaceInvitationRefusals`（不带令牌、id 不是 UUID 在用例之前 400；回答不重复令牌）。
-- `bootstrap/invitations_test.go`：`TestTheInvitationLinksTokenIsNotLogged`（debug 级别；令牌对、改成大写、不带三个请求；三行访问日志的 `path` 不带查询；日志里没有 `token=`、令牌、令牌的 22 个字符、`nrv_inv_`）。
+- `bootstrap/invitations_test.go`：`TestTheInvitationLinksTokenIsNotLogged`（debug 级别；令牌对、改成大写、不带三个请求，然后把邀请的表改名、带对的令牌再请求一次，服务端失败 500；四行访问日志和那一行错误日志的 `path` 都不带查询；日志里没有 `token=`、令牌、令牌的 22 个字符、`nrv_inv_`）。`invite` 加进这个文件（Task 6 建的）。
 - `bootstrap/permission_matrix_invitations_test.go`：`TestTheInvitationLinkAnswersEveryCallerAlike`（代替这个操作的一行：好链接和四种坏链接，各以不带令牌和六列的令牌请求，每个调用者相同；四种坏链接逐字节相同）。
-- `bootstrap/permission_matrix_coverage_test.go`：`TestMatrixViolationsCatchesEachGap` 加反例：公开的操作既没有行也没有豁免；公开的豁免指名不存在的操作、需要令牌的操作、另有一行的操作；矩阵不认识的参数（每一列一条）；列为不是目标的路径不报告；列出而不是任何操作的路径被报告。
+- `bootstrap/permission_matrix_coverage_test.go`：`TestThePermissionMatrixCoversEveryOperation` 用 `packageTests(t)`；`TestMatrixViolationsCatchesEachGap` 加反例：公开的操作既没有行也没有豁免；公开的豁免指名不存在的操作、需要令牌的操作、另有一行的操作；豁免指名的测试不在包里（改名或删除之后）。
+- `bootstrap/package_tests_test.go`：`TestTestsOfFindsOnlyTheTestsGoTestRuns`（`TestRuns` 算；方法、两个参数、`*testing.B`、没有参数、`testing.T` 值、别的包的 `T`、不以 `Test` 开头的都不算）。
 
 - [ ] **Step 1: 接口描述、查询**
 
@@ -7988,31 +8163,24 @@ func (m *Module) PublicOperations() []string {
 	a.publicOperations = slices.Concat(ident.PublicOperations(), inst.PublicOperations(), ws.PublicOperations())
 ````
 
-- [ ] **Step 6: 访问日志、矩阵**
+- [ ] **Step 6: 日志、矩阵**
 
-`server/internal/bootstrap/invitations_test.go`（新文件，77 行）：
+`server/internal/bootstrap/invitations_test.go`（修改，3 处）：
 
-````file server/internal/bootstrap/invitations_test.go
-package bootstrap
+````old server/internal/bootstrap/invitations_test.go
+	"encoding/hex"
+````
 
-import (
+````new server/internal/bootstrap/invitations_test.go
+	"encoding/hex"
 	"log/slog"
-	"net/http"
-	"strings"
-	"testing"
-	"uuid"
+````
 
-	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-	"github.com/open-nerve/NerveProject/server/migrations"
-)
+````old server/internal/bootstrap/invitations_test.go
+	token string
+````
 
-// The invitations on the wired app and a real database: what the matrix
-// and the modules' tests cannot see.
-
-// invitationLink is an invitation's id and its link's token.
-type invitationLink struct {
-	id    uuid.UUID
+````new server/internal/bootstrap/invitations_test.go
 	token string
 }
 
@@ -8033,14 +8201,28 @@ func invite(t *testing.T, contract *apitest.Contract, base, admin, slug, email s
 	}
 	decodeAnswer(t, body, &list)
 	return invitationLink{list.Data[0].ID, list.Data[0].Token}
+````
+
+````old server/internal/bootstrap/invitations_test.go
+	}
 }
 
-// The link's token never reaches the logs, at any level (M3 design 8.1):
-// the access log has the path of the public view and no query, whether the
-// token is right, wrong or missing.
+````
+
+````new server/internal/bootstrap/invitations_test.go
+	}
+}
+
+// The link's token never reaches the logs, at any level (M3 design 8.1).
+// The access line of each request has the path of the public view and no
+// query, whether the token is right, wrong or missing, and so has the
+// error line of a request the server fails (its table renamed away: 500).
+// The recover middleware's panic line writes the path as both do; no
+// request here panics.
 func TestTheInvitationLinksTokenIsNotLogged(t *testing.T) {
 	var logs lockedBuffer
-	base := startAppLogging(t, testConfig(t, pgtest.NewDatabase(t), false), migrations.FS(),
+	url := pgtest.NewDatabase(t)
+	base := startAppLogging(t, testConfig(t, url, false), migrations.FS(),
 		slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
 	contract := apitest.Load(t)
 	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
@@ -8059,10 +8241,26 @@ func TestTheInvitationLinksTokenIsNotLogged(t *testing.T) {
 			t.Errorf("GET %s = %d %s, want %d", path+tt.query, res.StatusCode, body, tt.want)
 		}
 	}
+	if _, err := openPool(t, url).Exec(context.Background(), "ALTER TABLE workspace_member_invites RENAME TO held"); err != nil {
+		t.Fatal(err)
+	}
+	if res, body := send(t, newRequest(t, http.MethodGet, base+path+"?token="+token, "", nil)); res.StatusCode != http.StatusInternalServerError {
+		t.Errorf("GET %s with the right token and no table = %d %s, want 500", path, res.StatusCode, body)
+	}
 
 	got := logs.String()
-	if strings.Count(got, `msg="http request"`+" request_id=") == 0 || strings.Count(got, "path="+path+" ") != 3 {
-		t.Fatalf("the logs lack the three requests' access lines:\n%s", got)
+	access, failed := 0, 0
+	for _, line := range strings.Split(got, "\n") {
+		switch {
+		case !strings.Contains(line, " path="+path+" "):
+		case strings.Contains(line, `msg="http request"`):
+			access++
+		case strings.Contains(line, "level=ERROR"):
+			failed++
+		}
+	}
+	if access != 4 || failed != 1 {
+		t.Fatalf("the logs have %d access lines and %d error lines of the link, want 4 and 1:\n%s", access, failed, got)
 	}
 	for _, leak := range []string{"token=", token, token[len("nrv_inv_"):], "nrv_inv_"} {
 		if strings.Contains(got, leak) {
@@ -8070,6 +8268,7 @@ func TestTheInvitationLinksTokenIsNotLogged(t *testing.T) {
 		}
 	}
 }
+
 ````
 
 `server/internal/bootstrap/permission_matrix_test.go`（修改，1 处）：
@@ -8126,7 +8325,7 @@ type matrixExemptions struct {
 	public  map[string]string // operationId → the test that stands for its row
 ````
 
-`server/internal/bootstrap/permission_matrix_coverage_test.go`（修改，27 处）：
+`server/internal/bootstrap/permission_matrix_coverage_test.go`（修改，31 处）：
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
 	"fmt"
@@ -8149,7 +8348,8 @@ type matrixExemptions struct {
 // that a new module's operations need rows without anyone listing the
 // module, or it is on exempt.public; an exempt module that no operation
 // carries, which a misspelling would be; a public exemption that names no
-// operation, one that needs a token, or one that has a row; a row that
+// operation, one that needs a token, one that has a row, or one whose test
+// is none of tests (the names of the package's tests); a row that
 // names no operation; a row without a cell for a column; a cell
 ````
 
@@ -8158,7 +8358,7 @@ func matrixViolations(ops []apitest.Operation, exempt []string, rows []matrixRow
 ````
 
 ````new server/internal/bootstrap/permission_matrix_coverage_test.go
-func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []matrixRow, s seeded) []string {
+func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []matrixRow, s seeded, tests map[string]bool) []string {
 ````
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
@@ -8185,9 +8385,29 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 			found = append(found, fmt.Sprintf("operation %s is exempt as public, but needs a token", id))
 		case inMatrix[id]:
 			found = append(found, fmt.Sprintf("operation %s is exempt as public, and has a row", id))
+		case !tests[exempt.public[id]]:
+			found = append(found, fmt.Sprintf("the public exemption %s names %s, which no test of the package is", id, exempt.public[id]))
 		}
 	}
 	for _, module := range exempt.modules {
+````
+
+````old server/internal/bootstrap/permission_matrix_coverage_test.go
+// operation under its name, or a column's case in another workspace.
+````
+
+````new server/internal/bootstrap/permission_matrix_coverage_test.go
+// operation under its name, or a column's case in another workspace; the
+// test a public exemption names is one of the package's, so that renaming
+// or deleting it fails here too.
+````
+
+````old server/internal/bootstrap/permission_matrix_coverage_test.go
+	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), newSeeded().in(t)) {
+````
+
+````new server/internal/bootstrap/permission_matrix_coverage_test.go
+	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), newSeeded().in(t), packageTests(t)) {
 ````
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
@@ -8196,7 +8416,8 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 
 ````new server/internal/bootstrap/permission_matrix_coverage_test.go
 // exempt unless a case says otherwise, and so is the public
-// getWorkspaceInvitation, which each ops holds.
+// getWorkspaceInvitation, which each ops holds, for TestOfItsOwn, which
+// each case but one has among the package's tests.
 ````
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
@@ -8209,6 +8430,7 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 		{ID: "getWorkspaceInvitation", Tags: []string{"workspace"}, Method: http.MethodGet, Path: "/api/v0/workspace-invitations/{invitation_id}",
 			Public: true}}
 	exempt := matrixExemptions{modules: []string{"identity"}, public: map[string]string{"getWorkspaceInvitation": "TestOfItsOwn"}}
+	own := map[string]bool{"TestOfItsOwn": true}
 	// exemptPublic is exempt, but with the public exemptions public.
 	exemptPublic := func(public ...string) matrixExemptions {
 		e := matrixExemptions{modules: exempt.modules, public: map[string]string{}}
@@ -8220,6 +8442,14 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 	getInvitation := matrixRow{op: "getWorkspaceInvitation", cells: every(cellOK), request: func(c caller, s seeded) (string, string, string) {
 		return http.MethodGet, "/api/v0/workspace-invitations/" + s.invitation(workspaceOf(c), "newcomer@example.com").String() + "?token=t", ""
 	}}
+````
+
+````old server/internal/bootstrap/permission_matrix_coverage_test.go
+	if got := matrixViolations(append(ops, lists, membership), exempt, []matrixRow{row, paged, demotes}, s); len(got) != 0 {
+````
+
+````new server/internal/bootstrap/permission_matrix_coverage_test.go
+	if got := matrixViolations(append(ops, lists, membership), exempt, []matrixRow{row, paged, demotes}, s, own); len(got) != 0 {
 ````
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
@@ -8377,10 +8607,30 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
 		if got := matrixViolations(tt.ops, exempt, tt.rows, s); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
 ````
 
 ````new server/internal/bootstrap/permission_matrix_coverage_test.go
-		if got := matrixViolations(tt.ops, tt.exempt, tt.rows, s); !slices.Equal(got, tt.want) {
+		if got := matrixViolations(tt.ops, tt.exempt, tt.rows, s, own); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
+	// A public exemption whose test the package does not have: renamed or
+	// deleted, the operation would have neither a row nor its test.
+	if got := matrixViolations(ops, exempt, []matrixRow{row}, s, map[string]bool{}); !slices.Equal(got, []string{
+		"the public exemption getWorkspaceInvitation names TestOfItsOwn, which no test of the package is"}) {
+		t.Errorf("a public exemption of no test: %q", got)
+	}
+````
+
+````old server/internal/bootstrap/permission_matrix_coverage_test.go
+		matrixViolations(append(ops, membership), exempt, []matrixRow{deletedNames("acme", callerNever)}, newSeeded().in(tb))
+````
+
+````new server/internal/bootstrap/permission_matrix_coverage_test.go
+		matrixViolations(append(ops, membership), exempt, []matrixRow{deletedNames("acme", callerNever)}, newSeeded().in(tb), own)
 ````
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
@@ -8400,7 +8650,89 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 ````
 
 ````new server/internal/bootstrap/permission_matrix_coverage_test.go
-		if got := matrixViolations(ops, matrixExemptions{modules: tt.modules, public: exempt.public}, []matrixRow{row}, s); !slices.Equal(got, tt.want) {
+		if got := matrixViolations(ops, matrixExemptions{modules: tt.modules, public: exempt.public}, []matrixRow{row}, s, own); !slices.Equal(got, tt.want) {
+````
+
+`server/internal/bootstrap/package_tests_test.go`（新文件，77 行）：
+
+````file server/internal/bootstrap/package_tests_test.go
+package bootstrap
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"maps"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// packageTests are the names of this package's tests: the tests of each of
+// its _test.go files (testsOf). The matrix's completeness check wants the
+// test each public exemption names among them.
+func packageTests(t *testing.T) map[string]bool {
+	t.Helper()
+	paths, err := filepath.Glob("*_test.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fset, tests := token.NewFileSet(), map[string]bool{}
+	for _, path := range paths {
+		f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatal(err)
+		}
+		maps.Copy(tests, testsOf(f))
+	}
+	return tests
+}
+
+// testsOf are the tests go test runs of f: each function without a
+// receiver, named Test and more, whose one parameter is a *testing.T.
+func testsOf(f *ast.File) map[string]bool {
+	tests := map[string]bool{}
+	for _, d := range f.Decls {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok || fn.Recv != nil || !strings.HasPrefix(fn.Name.Name, "Test") || len(fn.Type.Params.List) != 1 ||
+			len(fn.Type.Params.List[0].Names) > 1 {
+			continue
+		}
+		star, ok := fn.Type.Params.List[0].Type.(*ast.StarExpr)
+		if !ok {
+			continue
+		}
+		sel, ok := star.X.(*ast.SelectorExpr)
+		if !ok {
+			continue
+		}
+		if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "testing" && sel.Sel.Name == "T" {
+			tests[fn.Name.Name] = true
+		}
+	}
+	return tests
+}
+
+// testsOf finds a test and none of what only looks like one.
+func TestTestsOfFindsOnlyTheTestsGoTestRuns(t *testing.T) {
+	f, err := parser.ParseFile(token.NewFileSet(), "", `package p
+func TestRuns(t *testing.T) {}
+func (s suite) TestMethod(t *testing.T) {}
+func TestTwo(t *testing.T, n int) {}
+func TestPair(t, u *testing.T) {}
+func TestBench(b *testing.B) {}
+func TestNothing() {}
+func TestValue(t testing.T) {}
+func TestOther(t *other.T) {}
+func helper(t *testing.T) {}
+`, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := testsOf(f), map[string]bool{"TestRuns": true}; !maps.Equal(got, want) {
+		t.Errorf("testsOf = %v, want %v", got, want)
+	}
+}
 ````
 
 `server/internal/bootstrap/permission_matrix_invitations_test.go`（修改，4 处）：
@@ -8547,7 +8879,7 @@ func TestTheInvitationLinkAnswersEveryCallerAlike(t *testing.T) {
 Run: `go -C server test -count=1 ./internal/modules/workspace/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestTheInvitationLinksTokenIsNotLogged|TestTheInvitationLinkAnswersEveryCallerAlike|TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestPublicOperationsAreTheContractsPublicOperations|TestParametersThatDoNotBindAnswer400' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestTheInvitationLinksTokenIsNotLogged|TestTheInvitationLinkAnswersEveryCallerAlike|TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestTestsOfFindsOnlyTheTestsGoTestRuns|TestPublicOperationsAreTheContractsPublicOperations|TestParametersThatDoNotBindAnswer400' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -8568,7 +8900,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/workspace.yaml server/internal/bootstrap/app.go server/internal/bootstrap/invitations_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/adapter/postgres/invitations.go server/internal/modules/workspace/adapter/postgres/invitations_test.go server/internal/modules/workspace/adapter/postgres/queries/invitations.sql server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/get_invitation.go server/internal/modules/workspace/app/get_invitation_test.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/tokens.go server/internal/modules/workspace/domain/invitation.go server/internal/modules/workspace/module.go api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go server/internal/modules/workspace/adapter/postgres/gen/invitations.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml server/internal/bootstrap/app.go server/internal/bootstrap/invitations_test.go server/internal/bootstrap/package_tests_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/adapter/postgres/invitations.go server/internal/modules/workspace/adapter/postgres/invitations_test.go server/internal/modules/workspace/adapter/postgres/queries/invitations.sql server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/get_invitation.go server/internal/modules/workspace/app/get_invitation_test.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/tokens.go server/internal/modules/workspace/domain/invitation.go server/internal/modules/workspace/module.go api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go server/internal/modules/workspace/adapter/postgres/gen/invitations.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P3): the invitation link's public view
@@ -8577,9 +8909,9 @@ GET /api/v0/workspace-invitations/{invitation_id}?token=: the role,
 whether it was declined, and the workspace's name and slug, never the
 address (decision 1). A wrong token reads nothing and is the one 404 of
 an invitation that does not exist (M3 design 8.2); the answer does not
-depend on the caller; the access log has the path alone. The matrix
-exempts the public operation for the test that stands for its row, and
-reports any path parameter it does not know.
+depend on the caller; the access and error logs have the path alone. The
+matrix exempts the public operation for the test that stands for its
+row, which must be one of the package's tests.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -8597,10 +8929,12 @@ Expected: 通过。
 | 消息不含 id（每个邀请同一个令牌） | `TestTheInvitationLinkAnswersEveryCallerAlike`（另有 Task 2 的测试） |
 | 组合根漏掉 `workspace` 的公开操作 | `TestPublicOperationsAreTheContractsPublicOperations`、`TestTheInvitationLinkAnswersEveryCallerAlike` |
 | 访问日志记查询参数 | `TestTheInvitationLinksTokenIsNotLogged` |
+| 错误日志记查询参数（`APIErrors.Write` 的 `path` 用 `RequestURI()`） | `TestTheInvitationLinksTokenIsNotLogged` |
 | 显示已接受或已删除的邀请；显示已删除工作区的邀请；从不说已忽略；读失败答 404 | `TestInvitationPreview` |
-| `targetViolation` 放过不认识的参数 | `TestMatrixViolationsCatchesEachGap` |
+| 豁免指名的测试不在包里也不报告 | `TestMatrixViolationsCatchesEachGap` |
+| `testsOf` 把方法、不以 `Test` 开头的函数也算作测试 | `TestTestsOfFindsOnlyTheTestsGoTestRuns` |
 
-**Done when:** 用例、存储、HTTP 通过；公开的查看对每个调用者相同、四种坏链接同一个 404；访问日志里没有令牌；矩阵的完整性核对通过。
+**Done when:** 用例、存储、HTTP 通过；公开的查看对每个调用者相同、四种坏链接同一个 404；访问日志和错误日志里没有令牌；矩阵的完整性核对通过，豁免指名的测试存在。
 
 ---
 
@@ -9039,15 +9373,15 @@ Expected: 通过。
 
 ---
 
-### Task 11: `acceptWorkspaceInvitation`、`declineWorkspaceInvitation`
+### Task 11: `acceptWorkspaceInvitation`、`declineWorkspaceInvitation`；矩阵的未知参数
 
 **Files:**
 - Create: `server/internal/modules/workspace/app/accept_invitation.go`、`server/internal/modules/workspace/app/accept_invitation_test.go`、`server/internal/modules/workspace/app/decline_invitation.go`、`server/internal/modules/workspace/app/decline_invitation_test.go`、`server/internal/modules/workspace/app/respond_invitation.go`
-- Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/app/list_invitations_test.go`、`server/internal/modules/workspace/domain/errors.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
-- Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
+- Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/invitations_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_invitations_test.go`、`server/internal/bootstrap/permission_matrix_seeded_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/identity/adapter/postgres/queries/users.sql`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/invitations.go`、`server/internal/modules/workspace/adapter/http/invitations_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_invitations_test.go`、`server/internal/modules/workspace/app/invitation_ports.go`、`server/internal/modules/workspace/app/list_invitations_test.go`、`server/internal/modules/workspace/domain/errors.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
+- Generate: `api/dist/openapi.yaml`、`server/internal/modules/identity/adapter/postgres/gen/users.sql.go`、`server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
-- Produces（spec 2.11，M3 设计 3.6 约定一、六，3.8，9.1）：接口 `POST /api/v0/workspace-invitations/{invitation_id}/accept`（200 `Workspace`）、`/decline`（204），`InvitationResponse{token}`；新码 `workspace.invitation_email_mismatch`（403）和它的文案；`app.InvitationAccepter`、`InvitationDecliner`；`responder{accounts, invitations, tokens}` 的 `checkToken`、`lock`（`app/respond_invitation.go`）；`AcceptInvitationDeps{Accounts, Invitations, Tx, Clock, MAC}`、`NewAcceptWorkspaceInvitation`、`NewDeclineWorkspaceInvitation(accounts, invitations, tx, clock, mac)`。矩阵：四行账户级的格子，`toOwnInvitation`、`toNewcomersInvitation`、`joinsAsAMember`；`notTargets` 加两条回应的路径。
+- Produces（spec 2.11，M3 设计 3.6 约定一、六，3.8，9.1）：接口 `POST /api/v0/workspace-invitations/{invitation_id}/accept`（200 `Workspace`）、`/decline`（204），`InvitationResponse{token}`；新码 `workspace.invitation_email_mismatch`（403）和它的文案；`app.InvitationAccepter`、`InvitationDecliner`；`responder{accounts, invitations, tokens}` 的 `checkToken`、`lock`（`app/respond_invitation.go`）；`AcceptInvitationDeps{Accounts, Invitations, Tx, Clock, MAC}`、`NewAcceptWorkspaceInvitation`、`NewDeclineWorkspaceInvitation(accounts, invitations, tx, clock, mac)`。矩阵：四行账户级的格子，`toOwnInvitation`、`toNewcomersInvitation`、`joinsAsAMember`；`matrixExemptions.notTargets`（路径 → 理由），`targetViolation` 报告任何不认识的参数，列出的是 `workspace-slugs/{slug}` 和两条回应的路径。`identity` 的 `ShareAccount` 的注释写上忽略（P1 review 第 6 节），`gen/users.sql.go` 随之重新生成。
 - 使用者：Task 13 的交错 3、12、19；Task 14；P4 在接受恢复成员关系之后加 `DemoteToGuest`（`Execute` 的注释写明位置）。
 
 **Tests:**
@@ -9055,9 +9389,10 @@ Expected: 通过。
 - `app/decline_invitation_test.go`：`TestDeclineWorkspaceInvitation`（账户 `FOR SHARE`、工作区 `FOR SHARE`、邀请的锁之后记下回应；有效成员的邀请照样；不读、不写成员关系）；`TestDeclineWorkspaceInvitationRefusals`。
 - `app/clock_test.go`：接受、忽略两行。
 - `adapter/http/invitations_test.go`：`TestAnsweringAWorkspaceInvitation`（路径的邀请和请求体的令牌交给用例；接受答工作区，忽略 204；请求体没有令牌或多一个字段在用例之前 400；回答不重复令牌）。
-- 矩阵：接受、忽略各两行（自己的：每一列 200/204；newcomer 的：每一列 403 `invitation_email_mismatch`），`joinsAsAMember` 核对答案；`-v` 记下矩阵的耗时。
+- 矩阵：接受、忽略各两行（自己的：每一列 200/204；newcomer 的：每一列 403 `invitation_email_mismatch`），`joinsAsAMember` 核对答案；`-v` 记下矩阵的耗时。`TestMatrixViolationsCatchesEachGap` 加反例：矩阵不认识的参数（每一列一条）；列为不是目标的路径不报告；列出而不是任何操作的路径被报告。
+- `bootstrap/invitations_test.go`：`answerInvitation`（从 Task 12 提前）；`TestTheInvitationTokenIsNeverStored` 在接受（邀请软删除）和忽略之后再核对一次，两行都还在。
 
-- [ ] **Step 1: 接口描述**
+- [ ] **Step 1: 接口描述；`ShareAccount` 的注释**
 
 `api/modules/workspace.yaml`（修改，2 处）：
 
@@ -9165,6 +9500,20 @@ Expected: 通过。
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspace-invitations~1{invitation_id}~1decline'
 ````
 
+`server/internal/modules/identity/adapter/postgres/queries/users.sql`（修改，1 处）：
+
+````old server/internal/modules/identity/adapter/postgres/queries/users.sql
+-- membership (3.6 conventions 1 and 6). FOR SHARE conflicts with deactivation's FOR NO KEY UPDATE,
+-- so the two run one after the other and is_active is read under the lock; two FOR SHARE do not
+-- wait for each other.
+````
+
+````new server/internal/modules/identity/adapter/postgres/queries/users.sql
+-- membership or answers an invitation to its address, declining too (3.6 conventions 1 and 6).
+-- FOR SHARE conflicts with deactivation's FOR NO KEY UPDATE, so the two run one after the other
+-- and is_active is read under the lock; two FOR SHARE do not wait for each other.
+````
+
 - [ ] **Step 2: 生成**
 
 Run: `make gen`
@@ -9173,11 +9522,12 @@ Expected: 成功：
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
 | `273050ec12d402f34dca33cb92ff6b58b153590df2060315c4c0124c60a53801` | 1667 | `api/dist/openapi.yaml` |
+| `bbb41b0785e0fe656d0b7460239bf075c6bba235dbe310e254fdd762a3f9132c` | 364 | `server/internal/modules/identity/adapter/postgres/gen/users.sql.go` |
 | `46950bd52d1bce8c7a3d232e49528dc29442cd43c5db5c7282988596e4d28488` | 45 | `server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go` |
 | `c5b7bb150b7ed6a926aa19ac0eb8ae09cf5d80fbc6fbb39adf1e0f7cabe118fa` | 2373 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
 | `d636544687557f7ed0503a2b7c073a651784f272e394b8f438570b4d37121a79` | 1791 | `web/packages/api-client/src/schema.gen.ts` |
 
-Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
+Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/identity/adapter/postgres/gen/users.sql.go server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
 
 - [ ] **Step 3: 新码和文案**
@@ -10092,7 +10442,7 @@ func TestAnsweringAWorkspaceInvitation(t *testing.T) {
 		DeclineInvitation: app.NewDeclineWorkspaceInvitation(d.Accounts, store, d.Tx, d.Clock, d.InvitationMAC),
 ````
 
-- [ ] **Step 6: 矩阵**
+- [ ] **Step 6: 矩阵；回应之后令牌仍不存库**
 
 `server/internal/bootstrap/permission_matrix_test.go`（修改，4 处）：
 
@@ -10277,12 +10627,12 @@ func invitationToken(t testing.TB, id uuid.UUID) string {
 `server/internal/bootstrap/permission_matrix_coverage_test.go`（修改，9 处）：
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
-// operation, one that needs a token, or one that has a row; a row that
+// is none of tests (the names of the package's tests); a row that
 // names no operation; a row without a cell for a column; a cell
 ````
 
 ````new server/internal/bootstrap/permission_matrix_coverage_test.go
-// operation, one that needs a token, or one that has a row; a not-target
+// is none of tests (the names of the package's tests); a not-target
 // path that is no operation's; a row that names no operation; a row without a cell for a column; a cell
 ````
 
@@ -10298,11 +10648,11 @@ func invitationToken(t testing.TB, id uuid.UUID) string {
 ````
 
 ````old server/internal/bootstrap/permission_matrix_coverage_test.go
-			found = append(found, fmt.Sprintf("operation %s is exempt as public, and has a row", id))
+			found = append(found, fmt.Sprintf("the public exemption %s names %s, which no test of the package is", id, exempt.public[id]))
 ````
 
 ````new server/internal/bootstrap/permission_matrix_coverage_test.go
-			found = append(found, fmt.Sprintf("operation %s is exempt as public, and has a row", id))
+			found = append(found, fmt.Sprintf("the public exemption %s names %s, which no test of the package is", id, exempt.public[id]))
 		}
 	}
 	for _, path := range slices.Sorted(maps.Keys(exempt.notTargets)) {
@@ -10383,12 +10733,53 @@ func invitationToken(t testing.TB, id uuid.UUID) string {
 			[]string{"the not-target path /api/v0/workspace-slugs/{slug} is no operation's"}},
 ````
 
+`server/internal/bootstrap/invitations_test.go`（修改，2 处）：
+
+````old server/internal/bootstrap/invitations_test.go
+}
+
+// The server never stores an invitation's token: it computes it again from
+````
+
+````new server/internal/bootstrap/invitations_test.go
+}
+
+// answerInvitation has the bearer accept or decline the invitation of
+// link, wanting status.
+func answerInvitation(t *testing.T, contract *apitest.Contract, base, bearer, answer string, link invitationLink, status int) {
+	t.Helper()
+	got, body := call(t, contract, http.MethodPost, base+"/api/v0/workspace-invitations/"+link.id.String()+"/"+answer, bearer,
+		`{"token":"`+link.token+`"}`)
+	if got != status {
+		t.Fatalf("%s %s = %d %s, want %d", answer, link.id, got, body, status)
+	}
+}
+
+// The server never stores an invitation's token: it computes it again from
+````
+
+````old server/internal/bootstrap/invitations_test.go
+		t.Fatalf("changing carol's role = %d %s", status, body)
+	}
+````
+
+````new server/internal/bootstrap/invitations_test.go
+		t.Fatalf("changing carol's role = %d %s", status, body)
+	}
+	expectNoTokenStored(t, pool, links)
+
+	carol := registerAccount(t, contract, base, "carol@example.com").AccessToken
+	answerInvitation(t, contract, base, carol, "accept", links[0], http.StatusOK)
+	dave := registerAccount(t, contract, base, "dave@example.com").AccessToken
+	answerInvitation(t, contract, base, dave, "decline", links[1], http.StatusNoContent)
+````
+
 - [ ] **Step 7: 测试、lint**
 
 Run: `go -C server test -count=1 ./internal/modules/workspace/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestTheInvitationLinkAnswersEveryCallerAlike|TestBodiesThatBreakTheStructureAnswer400' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEachGap|TestTheInvitationLinkAnswersEveryCallerAlike|TestBodiesThatBreakTheStructureAnswer400|TestTheInvitationTokenIsNeverStored' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `go -C server test -count=1 -v -run 'TestPermissionMatrix$' ./internal/bootstrap/`
@@ -10412,7 +10803,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/app/accept_invitation.go server/internal/modules/workspace/app/accept_invitation_test.go server/internal/modules/workspace/app/clock_test.go server/internal/modules/workspace/app/decline_invitation.go server/internal/modules/workspace/app/decline_invitation_test.go server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/list_invitations_test.go server/internal/modules/workspace/app/respond_invitation.go server/internal/modules/workspace/domain/errors.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/invitations_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_invitations_test.go server/internal/bootstrap/permission_matrix_seeded_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/identity/adapter/postgres/queries/users.sql server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/invitations.go server/internal/modules/workspace/adapter/http/invitations_test.go server/internal/modules/workspace/app/accept_invitation.go server/internal/modules/workspace/app/accept_invitation_test.go server/internal/modules/workspace/app/clock_test.go server/internal/modules/workspace/app/decline_invitation.go server/internal/modules/workspace/app/decline_invitation_test.go server/internal/modules/workspace/app/fakes_invitations_test.go server/internal/modules/workspace/app/invitation_ports.go server/internal/modules/workspace/app/list_invitations_test.go server/internal/modules/workspace/app/respond_invitation.go server/internal/modules/workspace/domain/errors.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/identity/adapter/postgres/gen/users.sql.go server/internal/modules/workspace/adapter/http/gen/bodyshape.gen.go server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P3): accept or decline an invitation by its link
@@ -10425,7 +10816,9 @@ KEY UPDATE to accept and FOR SHARE to decline; the invitation FOR UPDATE,
 read again (M3 design 3.6 conventions 1 and 6). Another address is 403
 workspace.invitation_email_mismatch and writes nothing. Accepting never
 changes an active membership; it restores an ended one with the
-invitation's role, or inserts one (M3 design 3.8, 9.1).
+invitation's role, or inserts one (M3 design 3.8, 9.1). The matrix
+reports any path parameter it does not know, unless its path is listed
+with a reason.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -10449,8 +10842,9 @@ Expected: 通过。
 | 接受、忽略在锁之前读时钟 | `TestEachWriteReadsTheClockUnderItsLock` |
 | 失败的读、锁答成邀请的 404 | `TestAcceptWorkspaceInvitationRefusals`、`TestUpdateWorkspaceInvitationRefusals`、`TestDeleteWorkspaceInvitationRefusals` |
 | HTTP 测试不答 `workspace.invitation_email_mismatch` | `apitest.Main`：`declares problem codes that no test answered` |
+| `targetViolation` 放过不认识的参数 | `TestMatrixViolationsCatchesEachGap` |
 
-**Done when:** 两个用例、HTTP、矩阵的 24 格通过；矩阵共 132 格，耗时记下；新码有文案，`make test-web` 通过。
+**Done when:** 两个用例、HTTP、矩阵的 24 格通过；矩阵共 132 格，耗时记下；不认识的路径参数被报告；回应之后没有一行存着令牌；新码有文案，`make test-web` 通过。
 
 ---
 
@@ -11124,33 +11518,21 @@ func (s signupSwitch) AllowSignup(context.Context) (bool, error) { return bool(s
 `server/internal/bootstrap/invitations_test.go`（修改，2 处）：
 
 ````old server/internal/bootstrap/invitations_test.go
-	"uuid"
-
+	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 ````
 
 ````new server/internal/bootstrap/invitations_test.go
-	"uuid"
-
+	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 ````
 
 ````old server/internal/bootstrap/invitations_test.go
-	return invitationLink{list.Data[0].ID, list.Data[0].Token}
+}
+
+// The link's token never reaches the logs, at any level (M3 design 8.1).
 ````
 
 ````new server/internal/bootstrap/invitations_test.go
-	return invitationLink{list.Data[0].ID, list.Data[0].Token}
-}
-
-// answerInvitation has the bearer accept or decline the invitation of
-// link, wanting status.
-func answerInvitation(t *testing.T, contract *apitest.Contract, base, bearer, answer string, link invitationLink, status int) {
-	t.Helper()
-	got, body := call(t, contract, http.MethodPost, base+"/api/v0/workspace-invitations/"+link.id.String()+"/"+answer, bearer,
-		`{"token":"`+link.token+`"}`)
-	if got != status {
-		t.Fatalf("%s %s = %d %s, want %d", answer, link.id, got, body, status)
-	}
 }
 
 // While sign-up is off, a registration goes on only with the link of a
@@ -11224,6 +11606,9 @@ func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 		strings.Contains(body, `"declined":true`) {
 		t.Errorf("carol's invitation after she registered = %d %s, want it pending", status, body)
 	}
+}
+
+// The link's token never reaches the logs, at any level (M3 design 8.1).
 ````
 
 - [ ] **Step 6: 测试、lint**
@@ -11295,12 +11680,12 @@ Expected: 通过。
 - Modify: `server/internal/bootstrap/interleaving_test.go`、`server/internal/platform/postgres/pgtest/lockwait.go`、`server/internal/platform/postgres/pgtest/lockwait_test.go`
 
 **Interfaces:**
-- Produces（spec 2.13，M3 设计 9.3；P2 review 第 6 节第 2、3 件）：`pgtest.WaitForKeyWaitOn(t, pool, table, limit)`：只数"写过 `table`、等另一个事务结束、没有 tuple 锁"的连接（`WaitForLockWait`、`WaitForLockWaitOn` 不变）。`interleaving_test.go` 的 `gate` 加 10 秒的期限（`newGate` 记下，`wait` 到期返回错误）。`interleaving_answers_test.go`：`answerRace`（`acme` 的管理员 alice、被邀请的 bob）、`testInvitationMAC`、`gatedAccepter`、`gatedDeleter`、`gatedEmails`、`gatedDeactivation`（按 3.9 在撤销会话之前取 `acme` 的 N）、`gatedDecliner`；`interleaving_invite_test.go`：`inviteRace`（加上第二位管理员 carol 和两人的会话）、`gatedInviter`（插入之后停下）、`gatedPasswords`（写哈希之前停下）。
+- Produces（spec 2.13，M3 设计 9.3；P2 review 第 6 节第 2、3 件）：`pgtest.WaitForKeyWaitOn(t, pool, table, limit)`：只数"写过 `table`、等另一个事务结束、没有 tuple 锁"的连接（`WaitForLockWait`、`WaitForLockWaitOn` 不变）。`interleaving_test.go` 的 `gate` 加 10 秒的期限（`newGate` 记下，`wait` 到期返回错误）。`interleaving_answers_test.go`：`answerRace`（`acme` 的管理员 alice、被邀请的 bob）、`testInvitationMAC`、`gatedAccepter`、`gatedDeleter`、`gatedEmails`、`gatedDeactivation`（按 3.9 在撤销会话之后取 `acme` 的 N）、`gatedDecliner`；`interleaving_invite_test.go`：`inviteRace`（加上第二位管理员 carol 和两人的会话）、`gatedInviter`（插入第一行之后停下，其余的在闸门打开之后插入）、`gatedPasswords`（写哈希之前停下）。
 - 使用者：P5 的交错 1、4、5、6，P6 的交错 7、19（换成真实的停用）。
 
 **Tests:**
 - `pgtest/lockwait_test.go`：`TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable`（正例：等同一个键的 `INSERT`，`WaitForLockWait` 证明它在等、`WaitForLockWaitOn` 看不到；反例各在自己的库里：写过这张表的事务等这张表的一行；只读过这张表的事务在另一张表上等键；写过这张表的事务等咨询锁）。
-- `TestAcceptingAndDeletingTheWorkspace`（交错 3，`WaitForLockWaitOn "workspaces"`）；`TestAcceptingAndChangingTheAddress`（交错 12，`"users"`）；`TestDecliningAndDeactivating`（交错 19，`"users"`）；`TestInvitingAndResettingThePassword`（交错 9，`"users"`）；`TestInvitingOverlappingBatches`（交错 18，`WaitForKeyWaitOn "workspace_member_invites"`；`[x, y]` 对 `[y, x]` 和 `[x]` 对 `[x]`，两个顺序；后到的一方 422、下标是它请求中的、什么都没插入；没有 40P01）。每个都两个顺序，结果见 spec 2.13。
+- `TestAcceptingAndDeletingTheWorkspace`（交错 3，`WaitForLockWaitOn "workspaces"`）；`TestAcceptingAndChangingTheAddress`（交错 12，`"users"`）；`TestDecliningAndDeactivating`（交错 19，`"users"`）；`TestInvitingAndResettingThePassword`（交错 9，`"users"`）；`TestInvitingOverlappingBatches`（交错 18，`WaitForKeyWaitOn "workspace_member_invites"`；`[x, y]` 对 `[y, x]` 和 `[x]` 对 `[x]`，两个顺序；先的一批插入 `x` 之后停下；后到的一方 422、下标是它请求中的、什么都没插入；没有 40P01，而按请求的顺序插入时后的一方先占 `y`，就会死锁）。每个都两个顺序，结果见 spec 2.13。
 
 - [ ] **Step 1: 探针**
 
@@ -11842,9 +12227,10 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 	}
 }
 
-// gatedDeactivation takes, before it revokes the sessions, the lock of acme
-// that P6's deactivation takes (M3 design 3.9: the account row, then each
-// workspace FOR NO KEY UPDATE), and stops there when it has a gate.
+// gatedDeactivation takes, after it revokes the sessions, the lock of acme
+// that P6's deactivation takes (M3 design 3.9: the account row, profiles,
+// auth_sessions, then each workspace FOR NO KEY UPDATE), and stops there
+// when it has a gate.
 type gatedDeactivation struct {
 	identityapp.SessionRevoker
 	pool *pgxpool.Pool
@@ -11853,15 +12239,14 @@ type gatedDeactivation struct {
 }
 
 func (d gatedDeactivation) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason identitydomain.RevokeReason, now time.Time) (int, error) {
-	if _, err := postgres.DB(ctx, d.pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", d.acme); err != nil {
-		return 0, err
+	revoked, err := d.SessionRevoker.RevokeSessions(ctx, userID, keep, reason, now)
+	if err == nil {
+		_, err = postgres.DB(ctx, d.pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", d.acme)
 	}
-	if d.gate != nil {
-		if err := d.gate.wait(ctx); err != nil {
-			return 0, err
-		}
+	if err == nil && d.gate != nil {
+		err = d.gate.wait(ctx)
 	}
-	return d.SessionRevoker.RevokeSessions(ctx, userID, keep, reason, now)
+	return revoked, err
 }
 
 // deactivateBob is `nerve users deactivate` of bob, over sessions.
@@ -11941,7 +12326,7 @@ func TestDecliningAndDeactivating(t *testing.T) {
 
 - [ ] **Step 4: 交错 9、18**
 
-`server/internal/bootstrap/interleaving_invite_test.go`（新文件，262 行）：
+`server/internal/bootstrap/interleaving_invite_test.go`（新文件，274 行）：
 
 ````file server/internal/bootstrap/interleaving_invite_test.go
 package bootstrap
@@ -12045,19 +12430,29 @@ func (r inviteRace) invited(t *testing.T) []string {
 	return got
 }
 
-// gatedInviter stops a creation after its inserts, holding the keys it
-// inserted, the workspace's FOR SHARE and the inviter's account row.
+// gatedInviter stops a creation after the first row it inserts, holding
+// that key, the workspace's FOR SHARE and the inviter's account row; the
+// rest follow when the gate opens. A later batch that inserted out of order
+// would hold a key the earlier still has to insert, and one of them would
+// be chosen as a deadlock's victim (40P01).
 type gatedInviter struct {
 	*workspacepg.Store
 	gate *gate
 }
 
 func (i gatedInviter) CreateInvitations(ctx context.Context, rows []workspaceapp.InvitationRow) ([]workspacedomain.Invitation, error) {
-	created, err := i.Store.CreateInvitations(ctx, rows)
+	first, err := i.Store.CreateInvitations(ctx, rows[:1])
 	if err != nil {
 		return nil, err
 	}
-	return created, i.gate.wait(ctx)
+	if err := i.gate.wait(ctx); err != nil {
+		return nil, err
+	}
+	rest, err := i.Store.CreateInvitations(ctx, rows[1:])
+	if err != nil {
+		return nil, err
+	}
+	return append(first, rest...), nil
 }
 
 // fixedHasher hashes password as "hashed:<password>".
@@ -12144,11 +12539,13 @@ func TestInvitingAndResettingThePassword(t *testing.T) {
 }
 
 // Interleaving 18: alice invites [x, y] and carol [y, x], each under acme's
-// FOR SHARE, inserting in the order of the addresses. The later waits on
-// the key the earlier inserted, not on a row, and once the earlier commits
-// is refused 422 duplicate on the address's index in its own request, with
-// nothing inserted: no deadlock (40P01), whichever goes first. The same for
-// one address in both.
+// FOR SHARE, inserting in the order of the addresses. The earlier stops
+// after x and inserts y when the gate opens; the later waits on x, the key
+// the earlier inserted, not on a row, and once the earlier commits is
+// refused 422 duplicate on the address's index in its own request, with
+// nothing inserted. Inserting in its request's order, the later would
+// first hold y, which the earlier still has to insert: a deadlock (40P01).
+// None, whichever goes first. The same for one address in both.
 func TestInvitingOverlappingBatches(t *testing.T) {
 	x, y := "xavier@example.com", "yvonne@example.com"
 	for _, tt := range []struct {
@@ -12236,7 +12633,10 @@ against deleting the workspace, inviting against a password reset,
 accepting against a change of address, overlapping batches, declining
 against a deactivation. pgtest.WaitForKeyWaitOn sees the one wait no row
 lock shows, an insert waiting on the key another transaction inserted;
-the gates of the interleavings fail at a deadline instead of hanging.
+the earlier batch stops after its first row, so that inserting out of
+order would deadlock; the deactivation's stand-in locks the workspace
+after revoking the sessions, in M3 design 3.9's order; the gates of the
+interleavings fail at a deadline instead of hanging.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -12252,7 +12652,8 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 账户在工作区和邀请之后锁 | `TestDecliningAndDeactivating` |
 | 忽略的锁在事务之前 | `TestDecliningAndDeactivating` |
 | 创建不锁邀请人的账户；在事务之外锁 | `TestInvitingAndResettingThePassword` |
-| 按请求的顺序插入；工作区用 N；23505 答 409；下标取排序后的位置；存储跳过被占的邮箱 | `TestInvitingOverlappingBatches` |
+| 按请求的顺序插入（不排序） | `TestInvitingOverlappingBatches`（alice 先、carol 先：`deadlock detected (SQLSTATE 40P01)`） |
+| 工作区用 N；23505 答 409；下标取排序后的位置；存储跳过被占的邮箱 | `TestInvitingOverlappingBatches` |
 | 插入在事务之外 | `TestInvitingOverlappingBatches`（闸门的期限之内失败，不挂住） |
 
 **Done when:** 五个交错两个顺序在真实数据库上 `-count=5 -race` 通过，没有 40P01；探针的正例、三个反例通过；上表的变异都让它们失败，最慢的在 35 秒之内。
@@ -13021,7 +13422,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 | 改坏 | 必须失败的故事 |
 |---|---|
-| 表里加一个 `token` 列 | W4（`expectInvitations` 核对 11 列恰好是设计的列） |
+| 表里加一个 `token` 列，空着（写进令牌的由 Task 6 的 `TestTheInvitationTokenIsNeverStored` 看到） | W4（`expectInvitations` 核对 11 列恰好是设计的列） |
 | `Preferences` 读工作区的第一行，不看账户（P2 的风险） | W8（第二个成员读到管理员的设置） |
 
 **Done when:** `make e2e` 57 个全部通过；两个变异各让它的故事单独运行时失败。
@@ -13034,7 +13435,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - Modify: `README.md`、`docs/v0/M3-workspace-project/handoffs/M2-closeout.md`、`docs/v0/plane-diff.md`、`docs/v0/v0-design.md`
 
 **Interfaces:**
-- Produces（spec 2.16，M3 设计 3.20、8.7）：总体设计 1.1（成员邀请、登录方式）、4.2（约定六的接受一段）；差异清单二·按表（`workspace_member_invites` 七行）、四（邀请的六行，删除工作区一行）；README 的"部署""安全"（邀请链接、注册、账户被盗之后的第三步）；M2 收尾交接"处理结果（M3/P3）"。
+- Produces（spec 2.16，M3 设计 3.20、8.7）：总体设计 1.1（成员邀请、登录方式）、4.2（约定六的接受一段）；差异清单二·按表（`workspace_member_invites` 七行）、四（邀请的六行，删除工作区一行；"邀请的链接"一行写明页面在 P9、`/invitations` 页和新手引导的一步由 P8–P11 删除）；README 的"部署""安全"（邀请链接、注册、账户被盗之后的第三步）；M2 收尾交接"处理结果（M3/P3）"（含第 1 节的"签发邀请令牌按账户行锁"：`CallerLock`、交错 9）。
 
 **Tests:** 关键词守卫（`make lint-web`）也查文档。
 
@@ -13092,7 +13493,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用。项目由 M3/P4、标签由 M3/P7 加入这个事务 |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（M3 设计决策点 4）；邀请的角色因此不高于邀请人（M3 设计 3.8） |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时，有任何一份未删除的邀请的邮箱就能注册 | 由签名密钥派生的 MAC（`nrv_inv_` 加 22 个字符），不存库，管理员列出时重新算出；公开的查看要令牌、不返回邮箱；关闭注册时要有效的令牌、且注册邮箱与邀请的相同（M3 设计 3.8、决策点 1） |
-| 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2） |
+| 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2）（页面：P9；`/invitations` 页和新手引导的一步由 P8–P11 删除） |
 | 重复的邀请 | 静默忽略 | 422 `duplicate`，整批不插入，`invitations[i]` 是它在请求中的下标；已忽略的邀请仍占着这个邮箱，删除之后才能再邀请（M3 设计 3.8） |
 | 接受邀请之后 | 服务端写 `last_workspace_id` | 前端写（M3 设计 3.14） |
 | 接受邀请时已有成员行 | 不分有效还是已离开，都把角色改为邀请的角色 | 已是有效成员：只消费邀请，成员关系和角色不变；以前的成员行：恢复，角色取邀请的（访客时项目角色的连带由 M3/P4 加入）（M3 设计 3.8） |
@@ -13147,7 +13548,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ## 处理结果（M3/P3）
 
-- **第 1 节 邀请与注册**（接口一侧完成）：负责人的裁定写在 M3 设计第 10 节（决策点 1、2、4）。接受、忽略要登录，请求体带链接的令牌（`nrv_inv_` 加 22 个字符，由签名密钥派生，不存库，`server/internal/modules/workspace/domain/token.go`）；不带令牌 400，令牌不对与邀请不存在同一个 404，邮箱不一致 403 `workspace.invitation_email_mismatch`，回答不含被邀请的邮箱。接受最先以 `FOR SHARE` 锁住调用者的账户行，锁下重读 `is_active` 和邮箱（`server/internal/modules/workspace/app/respond_invitation.go`）；已是有效成员时只消费邀请，成员关系和角色不变（`TestAcceptWorkspaceInvitation`，交错测试 12 `TestAcceptingAndChangingTheAddress`）。`auth.signup_enabled = false` 时，带有效邀请、邮箱相同的注册成功，不带的和邀请无效的各种情况都是 403 `identity.signup_disabled`（`server/internal/bootstrap/signup_policy.go`，`TestRegisteringWithAnInvitationWhileSignupIsOff`）。W5、W6 的接口版本核对这些。页面一侧（邀请页、注册页带着邀请回到邀请页，W5、W6 的页面版本）在 P9，本节保持 `open`。
+- **第 1 节 邀请与注册**（接口一侧完成）：负责人的裁定写在 M3 设计第 10 节（决策点 1、2、4）。接受、忽略要登录，请求体带链接的令牌（`nrv_inv_` 加 22 个字符，由签名密钥派生，不存库，`server/internal/modules/workspace/domain/token.go`）；不带令牌 400，令牌不对与邀请不存在同一个 404，邮箱不一致 403 `workspace.invitation_email_mismatch`，回答不含被邀请的邮箱。创建邀请最先以 `CallerLock` 锁住邀请人的账户行、在锁下复核凭证（`server/internal/modules/workspace/app/create_invitations.go`）；重置密码先提交的，创建 401、没有邀请（交错 9 `TestInvitingAndResettingThePassword`）。接受最先以 `FOR SHARE` 锁住调用者的账户行，锁下重读 `is_active` 和邮箱（`server/internal/modules/workspace/app/respond_invitation.go`）；已是有效成员时只消费邀请，成员关系和角色不变（`TestAcceptWorkspaceInvitation`，交错测试 12 `TestAcceptingAndChangingTheAddress`）。`auth.signup_enabled = false` 时，带有效邀请、邮箱相同的注册成功，不带的和邀请无效的各种情况都是 403 `identity.signup_disabled`（`server/internal/bootstrap/signup_policy.go`，`TestRegisteringWithAnInvitationWhileSignupIsOff`）。W5、W6 的接口版本核对这些。页面一侧（邀请页、注册页带着邀请回到邀请页，W5、W6 的页面版本）在 P9，本节保持 `open`。
 
 仍未处理，状态保持 `open`：第 1 节的页面一侧（P9）；第 2、3、6 节，第 7 节的其余部分，第 9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 M3 的收尾。
 
