@@ -1,8 +1,9 @@
 // Package workspace is the workspaces module (M3 design 3.3, 6.2):
-// workspaces and their members. It brings creating, listing, reading,
-// changing and deleting workspaces, checking a slug, listing the members
-// and changing their roles, and each member's display settings, and offers
-// the other modules its reads through ports.
+// workspaces, their members and their invitations. It brings creating,
+// listing, reading, changing and deleting workspaces, checking a slug,
+// listing the members and changing their roles, each member's display
+// settings, and the invitations, and offers the other modules its reads
+// through ports.
 package workspace
 
 import (
@@ -48,6 +49,11 @@ type AccountState = app.AccountState
 // converts identity's into it (M3 design 6.5).
 type PublicProfile = app.PublicProfile
 
+// InvitationMACPurpose is the purpose of the invitation MAC that bootstrap
+// asks identity's keys for: its key's HKDF info is "nerve
+// workspace-invitation mac v1" (M3 design 3.8).
+const InvitationMACPurpose = "workspace-invitation"
+
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
 	Pool       *pgxpool.Pool
@@ -59,6 +65,8 @@ type Deps struct {
 	Accounts app.Accounts
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.MemberProfiles
+	// InvitationMAC is identity's MAC of InvitationMACPurpose.
+	InvitationMAC app.InvitationMAC
 	// CreationEnabled is workspace.creation_enabled (M3 design 3.11).
 	CreationEnabled bool
 }
@@ -85,6 +93,7 @@ func New(d Deps) *Module {
 		CheckSlug:         app.NewCheckSlug(store),
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
 		UpdatePreferences: app.NewUpdateWorkspacePreferences(store, d.Authorizer, d.Tx, d.Clock),
+		ListInvitations:   app.NewListWorkspaceInvitations(store, d.Authorizer, d.InvitationMAC),
 	}}
 }
 

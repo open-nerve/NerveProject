@@ -102,6 +102,8 @@ func workspaceMatrixRows() []matrixRow {
 			cells: ofMember(cellOK, cellForbidden, cellForbidden), check: demotesTheMember},
 		{op: "updateWorkspaceMember", variant: "one's own", write: true, request: toMembership(ownMembership, `{"role":15}`),
 			cells: ofMember(cellOwnMembership, cellForbidden, cellForbidden)},
+		{op: "listWorkspaceInvitations", request: toWorkspace(http.MethodGet, "/invitations", ""),
+			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: listsTheInvitations},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),

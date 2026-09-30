@@ -50,6 +50,10 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if got, err := s.MemberByID(cancelled, bob.ID); !failed(err) || errors.Is(err, app.ErrNotFound) || got != (domain.Membership{}) {
 		t.Errorf("MemberByID() = %+v, %v; want context.Canceled, not app.ErrNotFound", got, err)
 	}
+	invite(t, s, w.ID, "carol@corp.com", shared.RoleGuest, alice)
+	if list, err := s.ListInvitations(cancelled, w.ID); !failed(err) || list != nil {
+		t.Errorf("ListInvitations() = %v, %v; want context.Canceled, no list", list, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would

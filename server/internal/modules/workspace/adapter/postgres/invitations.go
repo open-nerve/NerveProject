@@ -36,6 +36,20 @@ func (s *Store) CreateInvitations(ctx context.Context, rows []app.InvitationRow)
 	return out, nil
 }
 
+// ListInvitations returns the workspace's undeleted invitations, pending or
+// declined, newest first, then by id.
+func (s *Store) ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([]domain.Invitation, error) {
+	rows, err := s.queries(ctx).ListInvitations(ctx, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("list workspace invitations: %w", err)
+	}
+	out := make([]domain.Invitation, len(rows))
+	for i, r := range rows {
+		out[i] = invitation(r)
+	}
+	return out, nil
+}
+
 // DeleteWorkspaceInvitations soft-deletes the undeleted invitations of the
 // workspace, pending or declined, by the account by at now.
 func (s *Store) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {

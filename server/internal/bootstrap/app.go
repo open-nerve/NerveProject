@@ -63,8 +63,13 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
-	// The signing key first, before any module (M3 design 6.6 step 1).
+	// The signing key first, before any module, and the MACs derived from
+	// it for the other modules (M3 design 6.6 step 1).
 	keys, err := identity.LoadKeys(signingKey, logger)
+	if err != nil {
+		return nil, err
+	}
+	invitationMAC, err := keys.MAC(workspace.InvitationMACPurpose)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +105,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
+		InvitationMAC:   invitationMAC,
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{

@@ -1,6 +1,7 @@
 package postgresadapter_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"slices"
@@ -137,5 +138,44 @@ func TestCreateInvitationsRefusesAnAddressTaken(t *testing.T) {
 	}
 	if want := []string{"carol@corp.com", "dave@corp.com", "erin@corp.com", "frank@corp.com"}; !slices.Equal(pendingEmails(t, pool, acme.ID), want) {
 		t.Errorf("acme's invitations are %q, want %q", pendingEmails(t, pool, acme.ID), want)
+	}
+}
+
+// ListInvitations is the workspace's undeleted invitations, pending and
+// declined, newest first, then by id: an accepted or deleted invitation and
+// another workspace's are not in it.
+func TestListInvitations(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme, beta := newWorkspace(t, s, "Acme", "acme", alice), newWorkspace(t, s, "Beta", "beta", alice)
+	at := func(email string, created time.Time) domain.Invitation {
+		t.Helper()
+		got, err := s.CreateInvitations(context.Background(), []app.InvitationRow{
+			{ID: uuid.NewV7(), WorkspaceID: acme.ID, Email: email, Role: shared.RoleMember, CreatedBy: alice, Now: created},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got[0]
+	}
+	oldest := at("carol@corp.com", now.Add(-time.Hour))
+	declined := at("dave@corp.com", now)
+	sameTime := at("erin@corp.com", now)
+	newest := at("frank@corp.com", now.Add(time.Hour))
+	exec(t, pool, "UPDATE workspace_member_invites SET responded_at = $1 WHERE id = $2", now, declined.ID)
+	declined.RespondedAt = &now
+	for _, gone := range []string{"UPDATE workspace_member_invites SET accepted = true, responded_at = $1, deleted_at = $1 WHERE id = $2",
+		"UPDATE workspace_member_invites SET deleted_at = $1 WHERE id = $2"} {
+		exec(t, pool, gone, now, at("gina+"+uuid.NewV7().String()+"@corp.com", now.Add(2*time.Hour)).ID)
+	}
+	invite(t, s, beta.ID, "carol@corp.com", shared.RoleMember, alice)
+
+	got, err := s.ListInvitations(context.Background(), acme.ID)
+
+	sameTimes := []domain.Invitation{declined, sameTime}
+	slices.SortFunc(sameTimes, func(a, b domain.Invitation) int { return bytes.Compare(a.ID[:], b.ID[:]) })
+	want := append([]domain.Invitation{newest}, append(sameTimes, oldest)...)
+	if err != nil || !slices.EqualFunc(got, want, sameInvitation) {
+		t.Errorf("ListInvitations() = %+v, %v; want %+v", got, err, want)
 	}
 }

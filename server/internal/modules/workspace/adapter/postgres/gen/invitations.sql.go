@@ -74,3 +74,44 @@ func (q *Queries) DeleteWorkspaceInvitations(ctx context.Context, arg DeleteWork
 	_, err := q.db.Exec(ctx, deleteWorkspaceInvitations, arg.Now, arg.DeletedBy, arg.WorkspaceID)
 	return err
 }
+
+const listInvitations = `-- name: ListInvitations :many
+SELECT id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
+FROM workspace_member_invites
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY created_at DESC, id
+`
+
+// listWorkspaceInvitations: the workspace's undeleted invitations, pending or declined, newest first, then by id
+// (M3 design 3.12).
+func (q *Queries) ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([]WorkspaceMemberInvite, error) {
+	rows, err := q.db.Query(ctx, listInvitations, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WorkspaceMemberInvite
+	for rows.Next() {
+		var i WorkspaceMemberInvite
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Email,
+			&i.Role,
+			&i.Accepted,
+			&i.RespondedAt,
+			&i.CreatedByID,
+			&i.UpdatedByID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -51,6 +51,9 @@ var rules = map[shared.Action]Rule{
 	// One's own display settings: every active member (M3 design 9.2).
 	"workspace_preferences.read":   {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	"workspace_preferences.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// The invitations and their tokens: the workspace's admins alone (M3
+	// decision 4).
+	"workspace_invitation.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

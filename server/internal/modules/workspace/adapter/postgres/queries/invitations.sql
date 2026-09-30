@@ -6,6 +6,14 @@ VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(email), sqlc.arg(role),
         sqlc.arg(created_by), sqlc.arg(created_by), sqlc.arg(now), sqlc.arg(now))
 RETURNING id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at;
 
+-- name: ListInvitations :many
+-- listWorkspaceInvitations: the workspace's undeleted invitations, pending or declined, newest first, then by id
+-- (M3 design 3.12).
+SELECT id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
+FROM workspace_member_invites
+WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
+ORDER BY created_at DESC, id;
+
 -- name: DeleteWorkspaceInvitations :exec
 -- deleteWorkspace's cascade: every undeleted invitation of the workspace, pending or declined, one statement in scan
 -- order under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.

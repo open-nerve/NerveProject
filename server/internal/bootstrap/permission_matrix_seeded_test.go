@@ -33,21 +33,38 @@ var matrixMemberships = []struct {
 	{"other", callerNever, shared.RoleAdmin}, {"other", callerRemoved, shared.RoleMember},
 }
 
+// matrixInvitations are the invitations prepareMatrix seeds, each sent by
+// its workspace's admin: in acme and in gone, one to an address no account
+// has. gone's are deleted with it.
+var matrixInvitations = []struct {
+	slug, email string
+	role        shared.Role
+}{
+	{"acme", "newcomer@example.com", shared.RoleMember},
+	{"gone", "newcomer@example.com", shared.RoleMember},
+}
+
 // seeded are the ids of the rows prepareMatrix seeds that a request can
-// name: each membership, by the workspace's slug and the column. t is the
-// test that asks for them (in).
+// name: each membership, by the workspace's slug and the column, and each
+// invitation, by the workspace's slug and the address. t is the test that
+// asks for them (in).
 type seeded struct {
 	t           testing.TB
 	memberships map[string]uuid.UUID
+	invitations map[string]uuid.UUID
 }
 
-// newSeeded names an id for each of matrixMemberships before prepareMatrix
-// writes them, so that matrixViolations, without a database, sees the keys
-// and the workspaces the cells will.
+// newSeeded names an id for each of matrixMemberships and
+// matrixInvitations before prepareMatrix writes them, so that
+// matrixViolations, without a database, sees the keys and the workspaces
+// the cells will.
 func newSeeded() seeded {
-	s := seeded{memberships: map[string]uuid.UUID{}}
+	s := seeded{memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		s.memberships[m.slug+"/"+string(m.c)] = uuid.NewV7()
+	}
+	for _, i := range matrixInvitations {
+		s.invitations[i.slug+"/"+i.email] = uuid.NewV7()
 	}
 	return s
 }
@@ -70,13 +87,26 @@ func (s seeded) membership(slug string, c caller) uuid.UUID {
 	return id
 }
 
+// invitation is the id of the invitation of email to the workspace slug. A
+// key that was never seeded fails the test at once, as membership's does.
+func (s seeded) invitation(slug, email string) uuid.UUID {
+	id, ok := s.invitations[slug+"/"+email]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no invitation of %s to %s is seeded", email, slug)
+	}
+	return id
+}
+
 // workspaceOfRow is the slug of the workspace the seeded row id is under,
 // false for an id no seeded row has.
 func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
-	for key, seededID := range s.memberships {
-		if seededID == id {
-			slug, _, _ := strings.Cut(key, "/")
-			return slug, true
+	for _, rows := range []map[string]uuid.UUID{s.memberships, s.invitations} {
+		for key, seededID := range rows {
+			if seededID == id {
+				slug, _, _ := strings.Cut(key, "/")
+				return slug, true
+			}
 		}
 	}
 	return "", false
@@ -117,6 +147,21 @@ func (s matrixSeed) preferences(slug string, c caller, p workspacedomain.Prefere
 	s.t.Helper()
 	if _, err := s.store.UpsertPreferences(context.Background(), workspaceapp.PreferencesRow{
 		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], UserID: s.ids[c], Patch: p, Now: s.now,
+	}); err != nil {
+		s.t.Fatal(err)
+	}
+}
+
+// invite stores the invitation id of email to the workspace slug, by its
+// admin.
+func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
+	s.t.Helper()
+	admin := callerAdmin
+	if slug == "gone" {
+		admin = callerDeleted
+	}
+	if _, err := s.store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
+		{ID: id, WorkspaceID: s.workspaces[slug], Email: email, Role: role, CreatedBy: s.ids[admin], Now: s.now},
 	}); err != nil {
 		s.t.Fatal(err)
 	}

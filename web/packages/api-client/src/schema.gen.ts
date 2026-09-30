@@ -295,7 +295,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a workspace
-         * @description For the workspace's admins. The workspace, its memberships and the members' display settings are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+         * @description For the workspace's admins. The workspace, its invitations, its memberships and the members' display settings are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
          */
         delete: operations["deleteWorkspace"];
         options?: never;
@@ -322,6 +322,29 @@ export interface paths {
          * @description Every membership of the workspace, those that ended too (is_active false), in the order they began, then by id, each with the member's public profile. For any active member. The addresses are shown to admins and members; to a guest every address is null, his own too. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
          */
         get: operations["listWorkspaceMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a workspace's invitations
+         * @description The workspace's invitations, pending and declined, newest first, then by id, each with the token of its link: for the workspace's admins alone. An accepted invitation is no longer listed. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaceInvitations"];
         put?: never;
         post?: never;
         delete?: never;
@@ -737,6 +760,38 @@ export interface components {
         WorkspaceMemberList: {
             data: components["schemas"]["WorkspaceMember"][];
         };
+        /** @description An invitation of an address to the workspace, pending or declined (responded_at set). Only who may manage the workspace's invitations is given one, with the token of its link: /workspace-invitations?invitation_id={id}&token={token}. */
+        WorkspaceInvitation: {
+            /**
+             * Format: uuid
+             * @description The invitation's id, the link's invitation_id.
+             */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** @description The address invited, normalized. */
+            email: string;
+            role: components["schemas"]["WorkspaceRole"];
+            /** @description False; an invitation is deleted as it is accepted, and never listed again. */
+            accepted: boolean;
+            /**
+             * Format: date-time
+             * @description When the invitation was declined; null while it is pending.
+             */
+            responded_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: uuid
+             * @description The account that invited; null once that account is gone.
+             */
+            created_by_id: string | null;
+            /** @description nrv_inv_ and 22 base64url characters. The server does not store it: it computes it again from the invitation's id with a key derived from the instance's signing key, so a new signing key gives every invitation a new token and voids the old links. */
+            token: string;
+        };
+        WorkspaceInvitationList: {
+            data: components["schemas"]["WorkspaceInvitation"][];
+        };
         WorkspaceMemberUpdate: {
             role: components["schemas"]["WorkspaceRole"];
         };
@@ -825,6 +880,8 @@ export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
 export type MemberUser = components['schemas']['MemberUser'];
 export type WorkspaceMember = components['schemas']['WorkspaceMember'];
 export type WorkspaceMemberList = components['schemas']['WorkspaceMemberList'];
+export type WorkspaceInvitation = components['schemas']['WorkspaceInvitation'];
+export type WorkspaceInvitationList = components['schemas']['WorkspaceInvitationList'];
 export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
@@ -1322,6 +1379,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's invitations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceInvitationList"];
                 };
             };
             default: components["responses"]["Problem"];

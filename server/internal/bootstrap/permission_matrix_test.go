@@ -176,10 +176,10 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 
 // prepareMatrix fills a database for the matrix. Through the API, an
 // account for each column, registered for its token. Through the workspace
-// store, the workspaces and memberships of matrixMemberships, with the ids
-// newSeeded named, and acme's admin's display settings; other's admin and
-// removed member are there so that a role read in the wrong workspace lets
-// either into acme. Through the API, gone deleted by its admin, which
+// store, the workspaces, memberships and invitations of matrixMemberships
+// and matrixInvitations, with the ids newSeeded named, and acme's admin's
+// display settings; other's admin and removed member are there so that a
+// role read in the wrong workspace lets either into acme. Through the API, gone deleted by its admin, which
 // soft-deletes its memberships with it. Through SQL, until P5's store
 // replaces it, the removed member's membership of acme ended. Everything
 // that connected to the database is closed when it returns, so that it can
@@ -210,16 +210,19 @@ func prepareMatrix(t *testing.T) matrixData {
 			}
 			seed.join(s.membership(m.slug, m.c), m.slug, m.c, m.role)
 		}
+		for _, i := range matrixInvitations {
+			seed.invite(s.invitation(i.slug, i.email), i.slug, i.email, i.role)
+		}
 		tabbed, three := "TABBED", 3
 		seed.preferences("acme", callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
 		// No store removes a member yet (P5), so SQL stands in until that
 		// phase replaces it: it ends the removed member's membership of acme.
 		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
 		// The column's caller deletes gone as deleteWorkspace does it: its
-		// membership goes with the workspace row, so every cell of the column
-		// is asked about a workspace deleted the one way there is. A
-		// membership left active in a deleted workspace is ActiveRole's
-		// store test (P1).
+		// membership and invitations go with the workspace row, so every
+		// cell of the column is asked about a workspace deleted the one way
+		// there is. A membership left active in a deleted workspace is
+		// ActiveRole's store test (P1).
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}

@@ -22,8 +22,9 @@ type Invitation struct {
 	CreatedByID *uuid.UUID
 }
 
-// Responded reports whether the invitation has been answered: declined,
-// for an undeleted one (M3 design 3.8).
-func (i Invitation) Responded() bool {
-	return i.RespondedAt != nil
+// InvitationWithToken is an invitation and the token of its link, which
+// only who may manage the workspace's invitations is given (M3 design 5.2).
+type InvitationWithToken struct {
+	Invitation
+	Token string
 }
