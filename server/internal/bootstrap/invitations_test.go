@@ -119,8 +119,9 @@ func TestTheInvitationTokenIsNeverStored(t *testing.T) {
 // invitation to his address as an admin, seeded through the store, as the
 // change of an address or reactivate-member can leave one (the API refuses
 // to invite an active member's address). He stays the member he was, in
-// the membership he had, the answer says so, and the invitation is used
-// up: accepted and deleted.
+// the membership he had, its row as it was (not rewritten, even with his
+// own role: updated_at and updated_by_id too), the answer says so, and the
+// invitation is used up: accepted and deleted.
 func TestAnActiveMemberAcceptingAnInvitationKeepsHisMembership(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	cfg := testConfig(t, url, false)
@@ -145,11 +146,23 @@ func TestAnActiveMemberAcceptingAnInvitationKeepsHisMembership(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	membership := func() string {
+		t.Helper()
+		var row string
+		if err := pool.QueryRow(context.Background(), "SELECT row_to_json(m)::text FROM workspace_members m WHERE m.id = $1", bobs).Scan(&row); err != nil {
+			t.Fatal(err)
+		}
+		return row
+	}
+	before := membership()
 
 	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspace-invitations/"+stale.String()+"/accept", bob,
 		`{"token":"`+invitationToken(t, stale)+`"}`)
 	if status != http.StatusOK {
 		t.Fatalf("bob's acceptance of the admin invitation = %d %s, want 200", status, body)
+	}
+	if after := membership(); after != before {
+		t.Errorf("bob's acceptance rewrote his membership to\n%s\nfrom\n%s\nwant it unchanged", after, before)
 	}
 	var answer struct {
 		Slug string `json:"slug"`

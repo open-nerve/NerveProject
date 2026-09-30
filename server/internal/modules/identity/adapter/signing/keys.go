@@ -20,12 +20,14 @@ import (
 // No fmt verb, log handler or encoding/json shows the private key of Keys
 // or *Keys: Format prints the type alone. fmt calls no method on a value it
 // reaches through an unexported field; there it prints a pointer as an
-// address, and under a verb without a pointer form (%s, %q) what the
-// pointer points to, as %v prints it, one level deep. The private key is
-// behind a pointer, so a *Keys held in a field shows an address at most.
-// Only a Keys value copied into an unexported field would show the key,
-// under %s or %q; ParseKeys and EphemeralKeys give *Keys, and no code
-// copies one.
+// address under a verb with a pointer form (%v, %p, %b, %o, %d, %x, %X),
+// and under any other (%s, %q, %t, %c, %U, %e, %f, %g, %O, an unknown
+// verb) what the pointer points to, as %v prints it, one level deep. The
+// private key is behind a pointer, so a *Keys held in a field shows the
+// public key and addresses at most. Only a Keys value copied into an
+// unexported field would show the private key, under a verb without a
+// pointer form; ParseKeys and EphemeralKeys give *Keys, and no code copies
+// one.
 type Keys struct {
 	private *ed25519.PrivateKey
 	public  ed25519.PublicKey

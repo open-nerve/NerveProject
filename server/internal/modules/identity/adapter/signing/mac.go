@@ -23,8 +23,9 @@ const PurposeRefreshToken = "refresh-token"
 // encoding/json shows the key of a MAC or a *MAC, as for Keys: Format
 // prints the type alone, and the key is behind a pointer, so a *MAC held in
 // another value's unexported field shows an address at most. Only a MAC
-// value copied into an unexported field would show the key, under %s or
-// %q; (*Keys).MAC gives *MAC, and no code copies one.
+// value copied into an unexported field would show the key, under a verb
+// without a pointer form (%s, %q, %t and the others Keys names);
+// (*Keys).MAC gives *MAC, and no code copies one.
 type MAC struct {
 	key *[32]byte
 }

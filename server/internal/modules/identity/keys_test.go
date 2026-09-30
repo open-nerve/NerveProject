@@ -95,9 +95,11 @@ func TestKeysMACRefusesTheRefreshTokensPurpose(t *testing.T) {
 // in another value's field, exported and unexported, that value printed as
 // a value and a pointer. A field of type any holds a value as a field of
 // its type would: fmt looks through the interface to it, calls its methods
-// only when the field is exported, and so does encoding/json. The one form
+// only when the field is exported, and so does encoding/json. The one case
 // left out is the one signing.Keys and signing.MAC name: a value of theirs,
-// not a pointer, in an unexported field, which no code makes. And each
+// not a pointer, in an unexported field, which no code makes, printed
+// under a verb without a pointer form (%s, %q, and %w's error, which
+// prints it with %s); its other outputs are held to it too. And each
 // Format prints its type alone under every verb, for a value as for a
 // pointer.
 func TestKeysAndTheirMACsShowNoKey(t *testing.T) {
@@ -135,7 +137,7 @@ func TestKeysAndTheirMACsShowNoKey(t *testing.T) {
 			}
 		}
 	}
-	forms := map[string]any{}
+	forms, residual := map[string]any{}, map[string]bool{}
 	for name, value := range map[string]any{
 		"identity.Keys": *keys, "*identity.Keys": keys, "identity.MAC": mac,
 		"signing.Keys": *signingKeys, "*signing.Keys": signingKeys, "signing.MAC": *signingMAC, "*signing.MAC": signingMAC,
@@ -144,14 +146,19 @@ func TestKeysAndTheirMACsShowNoKey(t *testing.T) {
 		forms[name] = value
 		forms[name+" in an exported field"] = exported{value}
 		forms[name+" in an exported field, the holder by pointer"] = &exported{value}
-		if name == "signing.Keys" || name == "signing.MAC" {
-			continue
-		}
 		forms[name+" in an unexported field"] = unexported{value}
 		forms[name+" in an unexported field, the holder by pointer"] = &unexported{value}
+		if name == "signing.Keys" || name == "signing.MAC" {
+			residual[name+" in an unexported field"] = true
+			residual[name+" in an unexported field, the holder by pointer"] = true
+		}
 	}
+	withoutAPointerForm := map[string]bool{"%s": true, "%q": true, "%w": true}
 	for name, value := range forms {
 		for how, out := range outputsOf(value) {
+			if residual[name] && withoutAPointerForm[how] {
+				continue
+			}
 			for secret, b := range secrets {
 				if shows(out, b) {
 					t.Errorf("%s, %s: %q shows %s", name, how, out, secret)
@@ -188,13 +195,16 @@ func outputsOf(value any) map[string]string {
 }
 
 // shows finds a secret wherever fmt, a log handler or encoding/json writes
-// it, also when it begins a longer slice: a value holding the seed, and one
-// holding the seed and a byte more, show it in every output.
+// it, also when it begins a longer slice: a value holding the seed, one
+// holding the seed and a byte more, and one holding the seed in a byte
+// array, as the MAC's key is held, which JSON writes as numbers, not in
+// base64, show it in every output.
 func TestShowsFindsASecretInEveryOutput(t *testing.T) {
 	seed := seedOf(t, keyPEM)
 	for name, value := range map[string]any{
 		"the seed":              struct{ Key []byte }{seed},
 		"the seed and one more": struct{ Key []byte }{append(bytes.Clone(seed), 0xff)},
+		"the seed in an array":  struct{ Key [32]byte }{[32]byte(seed)},
 	} {
 		for how, out := range outputsOf(value) {
 			if !shows(out, seed) {
@@ -215,17 +225,19 @@ func seedOf(t *testing.T, keyPEM string) []byte {
 	return key.(ed25519.PrivateKey).Seed()
 }
 
-// shows reports whether out holds b the way fmt or a log handler writes
-// bytes, alone, in a field, or at the start of a longer slice: as they are,
-// in hex (%x, %X), as numbers (%v, %d), as Go syntax (%#v), quoted (%q) or
-// in base64 (JSON), whose whole groups of three bytes are the same whatever
-// follows them.
+// shows reports whether out holds b the way fmt, a log handler or
+// encoding/json writes bytes, alone, in a field, or at the start of a
+// longer slice or array: as they are, in hex (%x, %X), as numbers between
+// spaces (%v, %d) or between commas (JSON, for a byte array), as Go syntax
+// (%#v), quoted (%q) or in base64 (JSON, for a byte slice), whose whole
+// groups of three bytes are the same whatever follows them.
 func shows(out string, b []byte) bool {
 	for _, r := range []string{
 		string(b),
 		hex.EncodeToString(b),
 		strings.ToUpper(hex.EncodeToString(b)),
 		strings.Trim(fmt.Sprintf("%d", b), "[]"),
+		strings.ReplaceAll(strings.Trim(fmt.Sprintf("%d", b), "[]"), " ", ","),
 		strings.TrimSuffix(strings.TrimPrefix(fmt.Sprintf("%#v", b), "[]byte"), "}"),
 		strings.Trim(fmt.Sprintf("%q", b), `"`),
 		base64.StdEncoding.EncodeToString(b[:len(b)/3*3]),

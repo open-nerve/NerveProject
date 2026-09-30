@@ -61,7 +61,10 @@ func riversOwn(table string) bool {
 // test creates, a link's token written in any form expectNoTokenStored
 // looks for is found (tokensIn), and a row written changes registrationRows.
 // A token in one of River's tables is found too: registrationRows leaves
-// them out, the token's check does not.
+// them out, the token's check does not. The link is the one of
+// TestTheInvitationMACIsTheDesigns, under the tests' key: its tag differs
+// in the two base64 alphabets, so the tag in standard base64 is found by
+// that form alone, not by the token's own 22 characters.
 func TestTheRowChecksSeeEveryTable(t *testing.T) {
 	pool := openPool(t, pgtest.NewDatabase(t))
 	exec := func(sql string, args ...any) {
@@ -71,9 +74,13 @@ func TestTheRowChecksSeeEveryTable(t *testing.T) {
 		}
 	}
 	exec("CREATE TABLE scratch (note text, tag bytea)")
-	id := uuid.NewV7()
+	id := uuid.MustParse("0199a2b4-0000-7000-8000-000000000001")
 	link := invitationLink{id, invitationToken(t, id)}
 	tag, _ := workspacedomain.ParseToken(link.token)
+	standard := base64.RawStdEncoding.EncodeToString(tag[:])
+	if standard == strings.TrimPrefix(link.token, "nrv_inv_") {
+		t.Fatalf("the tag of %s is %s in both base64 alphabets: its standard form's row would find the token's own characters", id, standard)
+	}
 	before := registrationRows(t, pool)
 	if found := tokensIn(t, tableRows(t, pool, nil), []invitationLink{link}); len(found) != 0 {
 		t.Fatalf("before the token is written: %q, want nothing", found)
@@ -85,7 +92,7 @@ func TestTheRowChecksSeeEveryTable(t *testing.T) {
 		{"the token", "public.scratch", "INSERT INTO scratch (note) VALUES ($1)", link.token},
 		{"its 22 characters", "public.scratch", "INSERT INTO scratch (note) VALUES ($1)", strings.TrimPrefix(link.token, "nrv_inv_")},
 		{"its tag, a bytea", "public.scratch", "INSERT INTO scratch (tag) VALUES ($1)", tag[:]},
-		{"its tag in standard base64", "public.scratch", "INSERT INTO scratch (note) VALUES ($1)", base64.RawStdEncoding.EncodeToString(tag[:])},
+		{"its tag in standard base64", "public.scratch", "INSERT INTO scratch (note) VALUES ($1)", standard},
 		{"its tag in hex", "public.scratch", "INSERT INTO scratch (note) VALUES ($1)", hex.EncodeToString(tag[:])},
 		{"the token as a queue of River's", "public.river_queue", "INSERT INTO river_queue (name, updated_at) VALUES ($1, now())", link.token},
 	} {
