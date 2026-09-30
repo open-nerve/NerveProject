@@ -1998,7 +1998,7 @@ modules/access/
 |---|---|---|
 | 设计 | 本文（第三稿，按聚焦复核修订） | 第一稿经独立评审、第二稿经 Codex 对抗性评审、第三稿经聚焦复核，都已落实（17.1–17.3）；决策点已裁定，架构问题已批准（2026-09-29） |
 | P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
-| P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 进行中：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)（15 个 Task） |
+| P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 已完成：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)、[review](reviews/P2-workspaces-review.md)（执行时 15 个 Task） |
 | P3 `invitations` | 邀请与凭邀请注册（后端，14） | 未开始 |
 | P4 `projects` | 项目、项目成员的加入与两个连带（后端，16） | 未开始 |
 | P5 `memberships` | 结束成员关系与恢复（后端，15） | 未开始 |

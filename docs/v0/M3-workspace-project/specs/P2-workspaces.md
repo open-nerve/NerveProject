@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P2 `workspaces` |
 | 日期 | 2026-09-30 |
-| 状态 | 进行中 |
+| 状态 | 已完成（[评审记录](../reviews/P2-workspaces-review.md)） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（W8）、3.4、3.6（约定一、二、五）、3.12、3.14、3.18、3.20（P2 各行）、4.1、4.5、4.11（P2 各行）、4.12、5.1–5.3、6.5、6.6、8.2–8.4、9.1–9.4、9.6、11.2、11.3、12（P2 与约束 4）节；[v0 总体设计](../../v0-design.md) 3.6、4.2 节；[M2 设计](../../M2-auth/M2-design.md) 3.11、3.13、3.14 节 |
 | 前置交接 | [P1 review](../reviews/P1-platform-review.md) 第 6 节交给 P2 的 7 件（落点见第 3 节第 2 条）；[M1-P2](../handoffs/M1-P2-trim-content.md) 的侧边栏偏好；[M2 收尾交接](../handoffs/M2-closeout.md) 第 7 节的 `MemberUser.avatar_url` |
 | 计划 | [P2 plan](../plans/P2-workspaces.md) |
@@ -36,7 +36,7 @@
 | `server/internal/archtest/rawsql_test.go`、`rawsql_cases_test.go` | 模块只经 sqlc 执行 SQL | 2 |
 | `server/internal/platform/postgres/pgtest/lockwait.go` 及测试；`bootstrap/workspace_test.go` | `WaitForLockWaitOn`；P1 的整程序测试改用它 | 3 |
 | `workspace/adapter/postgres/locks.go`、`locks_test.go`；`queries/workspaces.sql` | 按 slug 的两把父行锁；外键检查不等它们 | 4 |
-| `server/internal/bootstrap/permission_matrix_test.go`、`permission_matrix_workspace_test.go` | 矩阵的形状 | 5 |
+| `server/internal/bootstrap/permission_matrix_test.go`、`permission_matrix_workspace_test.go`（整分支修复把 `seeded` 移到 `permission_matrix_seeded_test.go`） | 矩阵的形状 | 5 |
 | `workspace/domain/workspace.go`、`app/lock.go`、`app/update_workspace.go`、存储、HTTP、`api/modules/workspace.yaml`；`access/domain/rules.go`；`bootstrap/workspace_test.go`；前端文案 | `updateWorkspace`；`forbidden` 的文案 | 6 |
 | `workspace/domain/preferences.go`、`app/ports.go`、`adapter/postgres/preferences.go`、`queries/preferences.sql` | 显示设置的领域、端口、存储 | 7 |
 | `workspace/app/get_preferences.go`、`app/update_preferences.go`、`adapter/http/preferences.go`、接口描述 | 读、改显示设置 | 8 |
@@ -77,7 +77,7 @@ SELECT id FROM workspaces WHERE slug = $1 AND deleted_at IS NULL FOR SHARE;
 - 在 ctx 带的事务里执行，锁到事务结束；等锁期间工作区被删除时，Postgres 在提交的新版本上重新求值 `deleted_at IS NULL`，读到 0 行：`app.ErrNotFound`（原型的锁测试）。别的失败是错误，不是 `ErrNotFound`。
 - 选哪一把：改工作区行本身、改成员关系的写用 `FOR NO KEY UPDATE`（`updateWorkspace`、`deleteWorkspace`、`updateWorkspaceMember`）；在工作区下加、改行的写用 `FOR SHARE`（`updateWorkspacePreferences`：互不等待，但挡住删除，外键检查的 `FOR KEY SHARE` 挡不住）。
 - 强度不超过约定二要的：在工作区下插入一行时，外键检查取工作区行的 `FOR KEY SHARE`，`FOR NO KEY UPDATE`、`FOR SHARE` 都不挡它，`FOR UPDATE` 挡。`TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks` 对每把锁核对一次（pre-flight L2）。
-- 用例的固定步骤（`app/lock.go`）：`lockAndDecide(ctx, lock, auth, actor, slug, action)` 先锁再判定；`decide(ctx, auth, actor, action, workspaceID, notFound)` 把 `ErrNotVisible` 换成调用方的 404（`workspace.not_found` 或 `workspace.member_not_found`），别的拒绝和失败原样。按资源寻址的写（`updateWorkspaceMember`）：读资源行得到工作区 → 锁工作区 → 重读资源行 → 判定。
+- 用例的固定步骤（`app/lock.go`）：`lockAndDecide(ctx, lock, auth, actor, slug, action)` 先锁再判定；`decide(ctx, auth, actor, action, workspaceID, notFound)` 把 `ErrNotVisible` 换成调用方的 404（`workspace.not_found` 或 `workspace.member_not_found`），别的拒绝和失败原样。按资源寻址的写（`updateWorkspaceMember`）：读资源行得到工作区 → 锁工作区 → 重读资源行 → 判定。时钟在锁之后读（整分支修复 P15）：排在别的写后面的写，存下的 `updated_at`、`deleted_at` 不会早于它等的那一次。
 - 值的校验（名字、角色的值、上限）在事务之前：它只看请求，不透露工作区的任何事；目标的检查（成员关系已结束、是自己的）在判定之后：没有权限的人得不到目标的任何信息（第 3 节第 3 条；裁定 (d) 接受，M3 设计 6.7、3.6 约定二随 Task 15 写成同样的规则）。
 
 ### 2.7 矩阵的形状（9.2；P1 review 第 6 节，整分支评审 M8）
@@ -122,7 +122,7 @@ RETURNING navigation_control_preference, navigation_project_limit;
 
 - 接口：`DELETE /api/v0/workspaces/{slug}`，204；码 `[workspace.not_found, forbidden]`；规则 `workspace.delete`：管理员。
 - 一个事务：`lockAndDecide(LockWorkspaceBySlug)` → `cascade()` 的每一步，同一个 `now`（用例测试的时钟每读一次走一微秒，每一步各读时钟的实现让三步的时间不同；pre-flight L3）、同一个删除者：`DeleteWorkspace`（`UPDATE workspaces SET deleted_at, updated_at, updated_by_id WHERE id = $id AND deleted_at IS NULL`）、`DeleteWorkspaceMembers`、`DeleteWorkspacePreferences`（`… WHERE workspace_id = $id AND deleted_at IS NULL`，已删除的行保持原来的时间；一条语句按扫描顺序加锁，都在工作区的 `FOR NO KEY UPDATE` 之下，约定五）。提交之后记 INFO `workspace deleted`（`workspace_id`、`user_id`）。不清任何人的 `last_workspace_id`（3.14）。
-- `cascade()` 是连带的唯一列表，后面的 Phase 各加一步：P3 在工作区行之后加邀请，P4 在最后加项目（经 `ProjectCascade`，由 `WorkspaceDeleter` 以外的端口提供，3.3），P7 加标签。P4 的 `DeleteWorkspaceProjects` 同样带删除者（`by`）。
+- `cascade()` 是连带的唯一列表，后面的 Phase 各加一步：P3 在工作区行之后加邀请，P4 在最后加项目（经 `ProjectCascade`，由 `WorkspaceDeleter` 以外的端口提供，3.3）。P4 的 `DeleteWorkspaceProjects(ctx, workspaceID, by, now) error` 同样带删除者。标签只属于项目（11.5），由 `project` 模块的 `DeleteWorkspaceProjects` 在项目之下删除（3.6 的加锁表：项目 → 项目成员 → 项目显示设置 → 状态 → 标签），P7 在那里加，不在 `cascade()` 里（整分支修复 P22 改正了这里原来的"P7 加标签"）。整分支修复加了组合的删除测试：从目录找出引用 `workspaces` 的每张表，每张都要有准备的行，删除之后都不能留下未删除的（默认要求，新表不加准备的行就失败）。
 
 ### 2.11 `listWorkspaceMembers` 与 `MemberProfiles`（3.4、5.1、5.2、6.5、6.6、8.4）
 
@@ -226,7 +226,7 @@ RETURNING navigation_control_preference, navigation_project_limit;
 | P3 | `cascade()` 在工作区行之后加邀请的一步；交错 3（接受邀请与删除工作区）用 `WaitForLockWaitOn(…, "workspaces", …)`；有了邀请，W8 的接口版本可以加第二个成员，单独运行也看得到 `Preferences` 不看 `user_id`（第 6 节） |
 | P4 | `cascade()` 在最后加项目（`ProjectCascade`，带 `by`）；`updateWorkspaceMember` 降为访客时的项目连带（在写之后、读资料之前）；矩阵每行带自己的列、答案按身份的名字取（P1 review 第 6 节） |
 | P5 | 矩阵"已被移出"一列的 SQL 换成存储；交错 1 照交错 2 的写法 |
-| P7 | `cascade()` 加标签 |
+| P7 | 标签在 `project` 模块的 `DeleteWorkspaceProjects` 中随项目删除（不是 `cascade()` 的一步，见 2.10）；组合的删除测试从目录自动包含新表 |
 
 ## 6. 风险
 
@@ -234,7 +234,7 @@ RETURNING navigation_control_preference, navigation_project_limit;
 |---|---|
 | 矩阵长到约 400 格，时间超过 9.2 的预算（20–30 秒） | P2 的 72 格 0.2–1.6 秒（写的 42 格各一个副本和一个 app，最多 8 个同时）。P1 的风险"连接数超过 `max_connections`"由 `matrixApps` 处理；去掉它的变异在默认并行度下仍通过（它是资源的上限，不是正确性的性质） |
 | W8 单独运行看不到 `Preferences` 不看 `user_id`：P2 没有让第二个账户加入工作区的接口 | 存储测试（`TestPreferencesReadsTheAccountsOwnRow`）和矩阵的两格（成员、访客读到管理员的设置就失败）看得到；P3 之后可以在 W8 加第二个成员 |
-| `cascade()` 少一步只有用例测试（假实现记下每一步）看得到：少了成员一步，被删工作区的成员关系在今天的任何读里都看不到（`ActiveRole`、`ListWorkspaces` 都连着工作区） | 用例测试逐步核对参数和顺序；存储测试核对三步的效果；P3–P7 每加一步就在同一个测试里加一行 |
+| `cascade()` 少一步只有用例测试（假实现记下每一步）看得到：少了成员一步，被删工作区的成员关系在今天的任何读里都看不到（`ActiveRole`、`ListWorkspaces` 都连着工作区） | **已关闭**（整分支评审 I1）：组合的删除测试从目录找出引用 `workspaces` 的每张表，要求每张都有准备的行、删除之后没有未删除的；少任何一步都失败 |
 | `lockAndDecide` 的参数是锁的函数：选错锁（`FOR SHARE` 代替 `FOR NO KEY UPDATE`）编译通过；错了的代价是两个并发的修改死锁，一个答 500 | 用例测试的调用记录写着锁的名字；存储的锁测试钉住三把锁的冲突，外键检查的测试钉住它们不强于约定二 |
 | 访客自己的邮箱（第 3 节第 6 条）按 5.2 为 `null`，9.2 的字面原来不同 | 已裁定 (b)：接受；9.2 随 Task 15 改为同一个说法 |
 
@@ -318,7 +318,7 @@ M1-P2 交接追加"处理结果（M3/P2）"（Task 15），状态保持 `open`�
 | | 每一步各读一次时钟（修订轮） | `TestDeleteWorkspaceLocksThenDecidesThenCascades`（时钟每读一次走一微秒） |
 | | 成员、显示设置的一步不看 `workspace_id` | `TestDeletingAWorkspaceSoftDeletesItsRows` |
 | | 成员的一步不看 `deleted_at IS NULL` | `TestDeletingAWorkspaceSoftDeletesItsRows` |
-| | 矩阵的 `gone` 不删除 | `TestPermissionMatrix/*/workspace_deleted`（问到 `gone` 的 9 格）、`TestPermissionMatrix/listWorkspaces/member` |
+| | 矩阵的 `gone` 不删除 | `TestPermissionMatrix/*/workspace_deleted`（问到 `gone` 的 9 格，含 `listWorkspaces/workspace_deleted`；执行中核对，`listWorkspaces/member` 不失败） |
 | 邮箱与成员列表 | 访客看得到邮箱 | `TestSeesEmails`、`TestListWorkspaceMembersShowsAddressesByRole`、`TestPermissionMatrix/listWorkspaceMembers/guest` |
 | | 用例按管理员的角色给邮箱 | `TestListWorkspaceMembersShowsAddressesByRole`、`TestPermissionMatrix/listWorkspaceMembers/guest` |
 | | `ListMembers` 列出已删除的；只列有效的；不看工作区；只按 id 倒序 | `TestListMembers`（后两个另有矩阵的三格） |
@@ -368,7 +368,7 @@ M1-P2 交接追加"处理结果（M3/P2）"（Task 15），状态保持 `open`�
 | 闸门在争用区段之外 | 交错的闸门在持锁的事务里（判定之后、写入之前）；`WaitForLockWaitOn` 在放开闸门之前确认对方等在工作区行上 | 去掉锁、锁挪出事务、先判定、共享锁都让交错失败 |
 | 说明与代码不符 | 接口描述（400、401 在各码之前另有说明）、代码注释中的设计节号、文档 | 原型中改正：矩阵准备数据的注释（换行）、`organization_size` 的说法 |
 | 接线没人看 | `Profiles` 的转换和接线；删除的日志；`Logger` 传给删除 | 转换、日志的变异被发现 |
-| 时间不是存下的值 | 存储按 `RETURNING` 回答；P2 没有客户端送来的时间 | 时钟给 UTC 微秒，"答时钟的时间"与存下的值相同，这个变异是等价的，不计 |
+| 时间不是存下的值 | 存储按 `RETURNING` 回答；P2 没有客户端送来的时间 | 时钟给 UTC 微秒，"答时钟的时间"与存下的值相同，这个变异在真实数据库上是等价的；整分支修复 P16 让用例测试的假存储答一个与时钟不同的"存下的"时间，用例自己盖上时间的变异在用例测试中失败 |
 | 码只在别的模块的测试包里返回（9.4） | `workspace` 的 HTTP 测试返回它声明的每个码 | 删掉一个的变异被 `apitest.Main` 发现 |
 
 **没有证明的**：
