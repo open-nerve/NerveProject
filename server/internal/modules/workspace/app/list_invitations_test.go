@@ -64,14 +64,21 @@ func sameInvitations(a, b []domain.InvitationWithToken) bool {
 // The list is the workspace's invitations in the store's order, each with
 // the token the MAC gives its id, read without a transaction after the
 // decision on workspace_invitation.list for the caller. Two admins, two
-// workspaces.
+// workspaces; acme's two invitations in either order the store answers
+// them, so that a use case that sorted them would answer one of the two
+// wrong.
 func TestListWorkspaceInvitationsListsEachWithItsToken(t *testing.T) {
 	for _, tt := range []struct {
-		user app.AccountState
-		w    domain.Workspace
-		want []domain.Invitation
-	}{{alice, acme, []domain.Invitation{carolToAcme, daveToAcme}}, {bob, beta, []domain.Invitation{erinToBeta}}} {
+		user     app.AccountState
+		w        domain.Workspace
+		reversed bool // the store holds and answers its invitations in the reverse order
+		want     []domain.Invitation
+	}{{alice, acme, false, []domain.Invitation{carolToAcme, daveToAcme}}, {alice, acme, true, []domain.Invitation{daveToAcme, carolToAcme}},
+		{bob, beta, false, []domain.Invitation{erinToBeta}}} {
 		f := newInvitations()
+		if tt.reversed {
+			slices.Reverse(f.invitations.invitations)
+		}
 		got, err := app.NewListWorkspaceInvitations(f.invitations, f.auth, f.mac).Execute(as(tt.user), tt.w.Slug)
 		var want []domain.InvitationWithToken
 		for _, inv := range tt.want {
