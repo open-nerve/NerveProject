@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
+	"crypto/hkdf"
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -39,7 +42,8 @@ func writeFile(t *testing.T, content string) string {
 }
 
 // Registration and GET /me through the wired app and a real database; the
-// access token is signed with the key of auth.jwt.private_key_file.
+// access token is signed with the key of auth.jwt.private_key_file, and the
+// refresh token tagged with that key's refresh-token MAC.
 func TestRegisterThenGetMe(t *testing.T) {
 	contract := apitest.Load(t)
 	cfg := testConfig(t, pgtest.NewDatabase(t), false)
@@ -64,6 +68,9 @@ func TestRegisterThenGetMe(t *testing.T) {
 	}
 	if !strings.HasPrefix(tokens.RefreshToken, "nrv_rt_") {
 		t.Errorf("refresh token %q lacks the nrv_rt_ prefix", tokens.RefreshToken)
+	}
+	if !refreshTaggedBy(t, tokens.RefreshToken, testKeyPEM) {
+		t.Error("the refresh token is not tagged with the refresh-token MAC of auth.jwt.private_key_file")
 	}
 }
 
@@ -168,16 +175,22 @@ func createPAT(t *testing.T, contract *apitest.Contract, base, bearer string) pa
 	return created
 }
 
-// signedBy reports whether the JWT's EdDSA signature verifies with the
-// public half of the PKCS#8 key.
-func signedBy(t *testing.T, token, keyPEM string) bool {
+// privateKeyOf is the Ed25519 key of the PKCS#8 PEM keyPEM.
+func privateKeyOf(t *testing.T, keyPEM string) ed25519.PrivateKey {
 	t.Helper()
 	block, _ := pem.Decode([]byte(keyPEM))
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	public := key.(ed25519.PrivateKey).Public().(ed25519.PublicKey)
+	return key.(ed25519.PrivateKey)
+}
+
+// signedBy reports whether the JWT's EdDSA signature verifies with the
+// public half of the PKCS#8 key.
+func signedBy(t *testing.T, token, keyPEM string) bool {
+	t.Helper()
+	public := privateKeyOf(t, keyPEM).Public().(ed25519.PublicKey)
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		t.Fatalf("token %q is not a JWS", token)
@@ -187,6 +200,27 @@ func signedBy(t *testing.T, token, keyPEM string) bool {
 		t.Fatal(err)
 	}
 	return ed25519.Verify(public, []byte(parts[0]+"."+parts[1]), sig)
+}
+
+// refreshTaggedBy reports whether the refresh token's tag, its last 16
+// bytes, is the first 16 bytes of HMAC-SHA256 of its first 52 under
+// HKDF-SHA256(the PKCS#8 key's seed, info "nerve refresh-token mac v1"):
+// the refresh tokens' MAC of M2 design 3.4, so that the tokens issued
+// before M3 stay valid and no other purpose's key tags them.
+func refreshTaggedBy(t *testing.T, token, keyPEM string) bool {
+	t.Helper()
+	key, err := hkdf.Key(sha256.New, privateKeyOf(t, keyPEM).Seed(), nil, "nerve refresh-token mac v1", 32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, found := strings.CutPrefix(token, "nrv_rt_")
+	raw, err := base64.RawURLEncoding.DecodeString(encoded)
+	if !found || err != nil || len(raw) != 68 {
+		t.Fatalf("refresh token %q is not nrv_rt_ and 68 bytes of base64url", token)
+	}
+	mac := hmac.New(sha256.New, key)
+	mac.Write(raw[:52])
+	return hmac.Equal(mac.Sum(nil)[:16], raw[52:])
 }
 
 // A bad auth.jwt.private_key_file stops the app. The error names the key,
