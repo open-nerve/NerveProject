@@ -90,7 +90,7 @@ func New(d Deps) (*Module, error) {
 	}
 	rules := domain.NewPasswordRules()
 	store := postgresadapter.New(d.Pool)
-	lock := app.CredentialLock{Locker: store, Sessions: store, APITokens: store}
+	lock := credentialLock(store)
 	tokens := signing.NewAccessTokens(d.Keys.signing)
 	issuance := app.Issuance{
 		Tokens:     tokens,
