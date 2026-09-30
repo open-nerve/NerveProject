@@ -1028,7 +1028,7 @@ modules/project/
     list_labels.go  create_label.go  update_label.go  delete_label.go
   adapter/
     postgres/  http/        同 workspace
-  module.go                 Provide(pool)（ProjectAccess、ProjectMembershipCounts）；New(Deps)；Register；Actions()；Cascade()；NewCascade(CascadeDeps)（随第一个使用它的命令加入，见下）
+  module.go                 Provide(pool)（ProjectAccess；ProjectMembershipCounts 随第一个使用它的 P5 reactivate-member 加入）；New(Deps)；Register；Actions()；Cascade()；NewCascade(CascadeDeps)（随第一个使用它的命令加入，见下）
 ```
 - 一个用例一个文件（总体设计 6.1），每个预计 40–120 行；`domain` 的文件都在 400 行以内。按调用者过滤的列表（项目、工作区的状态）在适配器里写专门的查询（总体设计 6.3"明确不做的事"），它们与规则表一致由 9.3 的测试守住（3.4）。
 - `cascade.go` 的方法只用 `project` 自己的仓储，时间和操作者由调用方传入，事务取自调用方的 `ctx`；`New` 建出它，由 `Cascade()` 交出。
@@ -2019,7 +2019,7 @@ modules/access/
 | P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
 | P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 已完成：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)、[review](reviews/P2-workspaces-review.md)（执行时 15 个 Task） |
 | P3 `invitations` | 邀请与凭邀请注册（后端，14） | 已完成：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)、[评审](reviews/P3-invitations-review.md)（执行时 15 个 Task） |
-| P4a `projects` | 项目的建立、可见性与两个连带（后端，12）；设计中的 P4 由负责人裁定拆出（2026-10-01，第 12 节） | 未开始 |
+| P4a `projects` | 项目的建立、可见性与两个连带（后端，12）；设计中的 P4 由负责人裁定拆出（2026-10-01，第 12 节） | 进行中：[spec](specs/P4a-projects.md)、[plan](plans/P4a-projects.md)（15 个 Task） |
 | P4b `project-members` | 项目的管理、显示设置与成员的加入（后端，9）；同上，P4a 合并之后开始 | 未开始 |
 | P5 `memberships` | 结束成员关系与恢复（后端，15） | 未开始 |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |
