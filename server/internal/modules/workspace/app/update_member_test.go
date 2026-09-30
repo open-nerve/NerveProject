@@ -12,7 +12,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -21,7 +20,7 @@ import (
 func newUpdateMember() (*app.UpdateWorkspaceMember, *membersFixture, *fakeTx) {
 	f := newMembers()
 	tx := &fakeTx{}
-	return app.NewUpdateWorkspaceMember(f.workspaces, f.profiles, f.auth, tx, clocktest.At(now)), f, tx
+	return app.NewUpdateWorkspaceMember(f.workspaces, f.profiles, f.auth, tx, clockAt{at: clockNow}), f, tx
 }
 
 // lockedMemberCalls are the calls up to the decision on the membership m
@@ -49,7 +48,7 @@ func TestUpdateWorkspaceMemberLocksThenDecidesThenWrites(t *testing.T) {
 			t.Errorf("to %d: Execute() = %+v, %v; want %+v", role, got, err, withUser(want, true))
 		}
 		wantCalls := append(lockedMemberCalls(alice, bobInAcme),
-			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, role, alice.ID, now.Format(time.RFC3339Nano)),
+			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, role, alice.ID, clockNow.Format(time.RFC3339Nano)),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))
 		if !slices.Equal(f.log.calls, wantCalls) || tx.calls != 1 {
 			t.Errorf("to %d: calls = %q in %d transactions, want %q in one", role, f.log.calls, tx.calls, wantCalls)

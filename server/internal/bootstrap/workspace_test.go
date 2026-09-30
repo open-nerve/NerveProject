@@ -153,8 +153,8 @@ func sendInBackground(req *http.Request) <-chan answer {
 // row (M3 design 3.6 convention 2). A transaction holds the row FOR NO KEY
 // UPDATE and demotes alice, acme's admin, to member; her PATCH, authenticated,
 // waits on the row. Once the demotion commits she is refused forbidden and
-// the name stays: a decision taken before the lock would have read her
-// uncommitted role, admin, and renamed the workspace.
+// the name stays: a decision taken before the lock would have read her role
+// from before the uncommitted demotion, admin, and renamed the workspace.
 func TestAnAdminDemotedMeanwhileCannotUpdateTheWorkspace(t *testing.T) {
 	contract := apitest.Load(t)
 	base, pool := sessionApp(t)

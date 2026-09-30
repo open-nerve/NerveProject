@@ -101,6 +101,8 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 			shared.Forbidden(), lockedDecision(carol, acme, "LockWorkspaceBySlug", domain.ActionDelete)},
 		{"the lock failed", alice, "acme", func(f *deleteFixture) { f.workspaces.lockErrs = map[string]error{"acme": failure} }, failure,
 			[]string{"LockWorkspaceBySlug acme"}},
+		{"the Authorizer failed", alice, "acme", func(f *deleteFixture) { f.auth.errs = map[grantKey]error{{alice.ID, acme.ID}: failure} },
+			failure, decided},
 		{"the workspace row failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspace": failure} },
 			failure, append(slices.Clone(decided), steps[0])},
 		{"the members failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspaceMembers": failure} },

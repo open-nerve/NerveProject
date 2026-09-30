@@ -24,7 +24,8 @@ func NewUpdateWorkspacePreferences(preferences PreferencesWriter, auth shared.Au
 
 // Execute checks p, then in one transaction (M3 design 3.6): the workspace
 // row FOR SHARE, the decision, the caller's row changed or inserted
-// (M3 design 3.18).
+// (M3 design 3.18). The clock is read under the lock, as every write reads
+// it.
 func (u *UpdateWorkspacePreferences) Execute(ctx context.Context, slug string, p domain.PreferencesPatch) (domain.Preferences, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -33,7 +34,6 @@ func (u *UpdateWorkspacePreferences) Execute(ctx context.Context, slug string, p
 	if err := domain.CheckPreferencesPatch(p); err != nil {
 		return domain.Preferences{}, err
 	}
-	now := u.clock.Now()
 	var stored domain.Preferences
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
 		id, _, err := lockAndDecide(ctx, u.preferences.ShareWorkspaceBySlug, u.auth, actor, slug, domain.ActionPreferencesUpdate)
@@ -41,7 +41,7 @@ func (u *UpdateWorkspacePreferences) Execute(ctx context.Context, slug string, p
 			return err
 		}
 		stored, err = u.preferences.UpsertPreferences(ctx, PreferencesRow{
-			ID: uuid.NewV7(), WorkspaceID: id, UserID: actor.UserID, Patch: p, Now: now,
+			ID: uuid.NewV7(), WorkspaceID: id, UserID: actor.UserID, Patch: p, Now: u.clock.Now(),
 		})
 		return err
 	})

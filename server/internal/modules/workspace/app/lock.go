@@ -31,10 +31,11 @@ func lockAndDecide(ctx context.Context, lock func(ctx context.Context, slug stri
 	return id, grant, nil
 }
 
-// decide asks the Authorizer for action on the workspace for actor, who
-// reads the role committed before the workspace's lock was granted: a write
-// calls it under that lock. A workspace not visible to actor is notFound,
-// the 404 of what the caller named.
+// decide asks the Authorizer for action on the workspace for actor. A write
+// calls it under the workspace's lock, so the role it reads is the one
+// committed after the lock was granted (M3 design 6.7): a demotion or a
+// removal that committed while the write waited is seen. A workspace not
+// visible to actor is notFound, the 404 of what the caller named.
 func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, action shared.Action, workspaceID uuid.UUID,
 	notFound error) (shared.Grant, error) {
 	grant, err := auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: workspaceID})

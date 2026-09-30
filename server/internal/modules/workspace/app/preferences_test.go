@@ -10,7 +10,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -39,7 +38,7 @@ func newPrefs() *prefsFixture {
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleMember},
 		}}}
 	f.get = app.NewGetWorkspacePreferences(f.workspaces, f.auth)
-	f.update = app.NewUpdateWorkspacePreferences(f.workspaces, f.auth, f.tx, clocktest.At(now))
+	f.update = app.NewUpdateWorkspacePreferences(f.workspaces, f.auth, f.tx, clockAt{at: clockNow})
 	return f
 }
 
@@ -138,7 +137,7 @@ func TestUpdateWorkspacePreferencesLocksThenDecidesThenWrites(t *testing.T) {
 			t.Errorf("%s, %s: Execute() = %+v, %v; want %+v", tt.user.Email, tt.w.Slug, got, err, tt.want)
 		}
 		want := append(lockedDecision(tt.user, tt.w, "ShareWorkspaceBySlug", domain.ActionPreferencesUpdate),
-			"UpsertPreferences "+tt.w.ID.String()+" "+tt.user.ID.String()+" "+tt.call+" at "+now.Format(time.RFC3339Nano))
+			"UpsertPreferences "+tt.w.ID.String()+" "+tt.user.ID.String()+" "+tt.call+" at "+clockNow.Format(time.RFC3339Nano))
 		if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 {
 			t.Errorf("%s, %s: calls = %q in %d transactions, want %q in one", tt.user.Email, tt.w.Slug, f.log.calls, f.tx.calls, want)
 		}
@@ -149,8 +148,12 @@ func TestUpdateWorkspacePreferencesLocksThenDecidesThenWrites(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if ids := f.workspaces.upserts; ids[0].ID[6]>>4 != 7 || ids[0].ID == ids[1].ID {
-		t.Errorf("row ids %s, %s; want two different version 7 ids", ids[0].ID, ids[1].ID)
+	ids := f.workspaces.upserts
+	if len(ids) != 2 {
+		t.Fatalf("%d writes, want 2", len(ids))
+	}
+	if row := f.workspaces.prefIDs[prefsKey{beta.ID, bob.ID}]; ids[0].ID[6]>>4 != 7 || ids[1].ID[6]>>4 != 7 || ids[0].ID == ids[1].ID || row != ids[0].ID {
+		t.Errorf("row ids %s, %s, the row inserted %s; want two different version 7 ids, the first the inserted row's", ids[0].ID, ids[1].ID, row)
 	}
 }
 
@@ -180,7 +183,7 @@ func TestUpdateWorkspacePreferencesRefusals(t *testing.T) {
 			[]string{"ShareWorkspaceBySlug acme"}, 1},
 		{"the write failed", alice, "acme", limit, func(f *prefsFixture) { f.workspaces.prefsErr = failure }, failure,
 			append(lockedDecision(alice, acme, "ShareWorkspaceBySlug", domain.ActionPreferencesUpdate),
-				"UpsertPreferences "+acme.ID.String()+" "+alice.ID.String()+` mode=<nil> limit="5" at `+now.Format(time.RFC3339Nano)), 1},
+				"UpsertPreferences "+acme.ID.String()+" "+alice.ID.String()+` mode=<nil> limit="5" at `+clockNow.Format(time.RFC3339Nano)), 1},
 	}
 	for _, tt := range tests {
 		f := newPrefs()

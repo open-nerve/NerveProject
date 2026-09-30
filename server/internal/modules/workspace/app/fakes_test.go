@@ -9,11 +9,38 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-var now = clocktest.At(time.Date(2026, 9, 29, 10, 0, 0, 123456000, time.UTC)).Now()
+// The write use cases' clock stands at clockNow, finer than a stored time:
+// the fakes store a time as PostgreSQL's timestamptz does, to the
+// microsecond, and answer the row as stored, at now. A use case that
+// answered its own instant instead of the row as stored would answer
+// clockNow.
+var (
+	clockNow = time.Date(2026, 9, 29, 10, 0, 0, 123456789, time.UTC)
+	now      = stored(clockNow)
+)
+
+// stored is t as the database keeps it.
+func stored(t time.Time) time.Time {
+	return t.Truncate(time.Microsecond)
+}
+
+// clockAt stands at an instant, its nanoseconds kept, unlike
+// clocktest.Fixed. With a log, each read is logged as "Now" among the
+// fakes' calls, so a test sees when the use case reads it.
+type clockAt struct {
+	at  time.Time
+	log *callLog
+}
+
+func (c clockAt) Now() time.Time {
+	if c.log != nil {
+		c.log.calls = append(c.log.calls, "Now")
+	}
+	return c.at
+}
 
 // fakeTx runs fn in a context marked as inside the transaction; the fakes
 // record whether each call happened there. commitErr, when set, is the
@@ -93,7 +120,8 @@ type fakeWorkspaces struct {
 	roleErr     error                             // for UpdateMemberRole
 	onLock      func()                            // run by LockWorkspace once it has locked: what changed while it waited
 	prefs       map[prefsKey]domain.Preferences
-	prefsErr    error // for Preferences and UpsertPreferences
+	prefIDs     map[prefsKey]uuid.UUID // the id each row UpsertPreferences inserted took
+	prefsErr    error                  // for Preferences and UpsertPreferences
 	upserts     []app.PreferencesRow
 }
 
@@ -109,9 +137,8 @@ func (f *fakeWorkspaces) CreateWorkspace(ctx context.Context, w app.WorkspaceRow
 	if f.createErr != nil {
 		return domain.Workspace{}, f.createErr
 	}
-	// As stored: the database's clock has no nanoseconds either.
 	return domain.Workspace{ID: w.ID, Name: w.Name, Slug: w.Slug, OrganizationSize: w.OrganizationSize, Timezone: w.Timezone,
-		CreatedAt: w.Now, UpdatedAt: w.Now}, nil
+		CreatedAt: stored(w.Now), UpdatedAt: stored(w.Now)}, nil
 }
 
 func (f *fakeWorkspaces) CreateMember(ctx context.Context, m app.MemberRow) error {
@@ -189,7 +216,7 @@ func (f *fakeWorkspaces) UpdateWorkspace(ctx context.Context, id uuid.UUID, p do
 	if p.Timezone != nil {
 		w.Timezone = *p.Timezone
 	}
-	w.UpdatedAt = now
+	w.UpdatedAt = stored(now)
 	return w, nil
 }
 
@@ -208,7 +235,8 @@ func (f *fakeWorkspaces) Preferences(ctx context.Context, workspaceID, userID uu
 }
 
 // UpsertPreferences logs the row without its id, which the use case makes
-// anew each time; upserts keeps it whole.
+// anew each time; upserts keeps it whole. A row it inserts takes r's id and
+// keeps it through later changes, as the store's does (prefIDs).
 func (f *fakeWorkspaces) UpsertPreferences(ctx context.Context, r app.PreferencesRow) (domain.Preferences, error) {
 	var limit *string
 	if r.Patch.NavigationProjectLimit != nil {
@@ -224,6 +252,10 @@ func (f *fakeWorkspaces) UpsertPreferences(ctx context.Context, r app.Preference
 	p, found := f.prefs[key]
 	if !found {
 		p = domain.DefaultPreferences()
+		if f.prefIDs == nil {
+			f.prefIDs = map[prefsKey]uuid.UUID{}
+		}
+		f.prefIDs[key] = r.ID
 	}
 	if f.prefs == nil {
 		f.prefs = map[prefsKey]domain.Preferences{}

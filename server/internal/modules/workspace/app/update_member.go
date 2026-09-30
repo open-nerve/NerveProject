@@ -31,7 +31,8 @@ func NewUpdateWorkspaceMember(members MemberUpdater, profiles MemberProfiles, au
 // the membership read again under the lock, the decision on
 // workspace_member.update, then the checks on the target, which only a
 // caller allowed to change roles gets to see: an ended membership is
-// workspace.member_not_found, the caller's own workspace.own_membership.
+// workspace.member_not_found, the caller's own workspace.own_membership;
+// then the change, at the time the clock gives under the lock.
 // The answer carries the member's profile, read without a lock (M3 design
 // 3.6 convention 1) before the commit, so a failed read changes nothing.
 // Demoting to guest does not touch projects yet: P4 adds that cascade here.
@@ -43,7 +44,6 @@ func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role 
 	if err := domain.CheckMemberRole(role); err != nil {
 		return domain.Member{}, err
 	}
-	now := u.clock.Now()
 	var updated domain.Member
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
 		m, err := u.lockedMember(ctx, id)
@@ -60,7 +60,7 @@ func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role 
 		case m.MemberID == actor.UserID:
 			return domain.ErrOwnMembership
 		}
-		if m, err = u.members.UpdateMemberRole(ctx, m.ID, role, actor.UserID, now); err != nil {
+		if m, err = u.members.UpdateMemberRole(ctx, m.ID, role, actor.UserID, u.clock.Now()); err != nil {
 			return err
 		}
 		updated, err = u.withProfile(ctx, m, grant.WorkspaceRole)

@@ -10,7 +10,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -32,7 +31,7 @@ func newUpdate() (*app.UpdateWorkspace, *updateFixture) {
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleAdmin},
 		}}}
-	return app.NewUpdateWorkspace(f.workspaces, f.auth, f.tx, clocktest.At(now)), f
+	return app.NewUpdateWorkspace(f.workspaces, f.auth, f.tx, clockAt{at: clockNow}), f
 }
 
 // lockedDecision is the calls of the first two steps on w for user, in the
@@ -46,8 +45,9 @@ func lockedDecision(user app.AccountState, w domain.Workspace, lock string, acti
 
 // UpdateWorkspace locks the workspace FOR NO KEY UPDATE, then decides, then
 // writes, all in one transaction (M3 design 3.6): the patch is applied by
-// the caller at the clock's now, and the answer carries the caller's role.
-// Two callers, two workspaces.
+// the caller at the clock's time, and the answer is the row as stored, its
+// updated_at the store's, with the caller's role. Two callers, two
+// workspaces.
 func TestUpdateWorkspaceLocksThenDecidesThenWrites(t *testing.T) {
 	size := "11-50"
 	tests := []struct {
@@ -79,7 +79,7 @@ func TestUpdateWorkspaceLocksThenDecidesThenWrites(t *testing.T) {
 			t.Errorf("%s, %s: Execute() = %+v, %v; want %+v", tt.user.Email, tt.w.Slug, got, err, want)
 		}
 		wantCalls := append(lockedDecision(tt.user, tt.w, "LockWorkspaceBySlug", domain.ActionUpdate),
-			"UpdateWorkspace "+tt.w.ID.String()+" "+tt.call+" by "+tt.user.ID.String()+" at "+now.Format(time.RFC3339Nano))
+			"UpdateWorkspace "+tt.w.ID.String()+" "+tt.call+" by "+tt.user.ID.String()+" at "+clockNow.Format(time.RFC3339Nano))
 		if !slices.Equal(f.log.calls, wantCalls) || f.tx.calls != 1 {
 			t.Errorf("%s, %s: calls = %q in %d transactions, want %q in one", tt.user.Email, tt.w.Slug, f.log.calls, f.tx.calls, wantCalls)
 		}
@@ -115,7 +115,7 @@ func TestUpdateWorkspaceRefusals(t *testing.T) {
 			failure, lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionUpdate), 1},
 		{"the write failed", alice, "acme", rename, func(f *updateFixture) { f.workspaces.updateErr = failure }, failure,
 			append(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionUpdate),
-				"UpdateWorkspace "+acme.ID.String()+` name="Renamed" size=<nil> timezone=<nil> by `+alice.ID.String()+" at "+now.Format(time.RFC3339Nano)), 1},
+				"UpdateWorkspace "+acme.ID.String()+` name="Renamed" size=<nil> timezone=<nil> by `+alice.ID.String()+" at "+clockNow.Format(time.RFC3339Nano)), 1},
 	}
 	for _, tt := range tests {
 		uc, f := newUpdate()

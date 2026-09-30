@@ -39,19 +39,20 @@ func (u *DeleteWorkspace) cascade() []func(ctx context.Context, workspaceID, by 
 
 // Execute deletes the workspace in one transaction (M3 design 3.6): the
 // workspace row FOR NO KEY UPDATE, the decision on workspace.delete, then
-// the cascade. Nobody's last_workspace_id is cleared (M3 design 3.14).
+// the cascade, every step at the one moment the clock gives under the lock.
+// Nobody's last_workspace_id is cleared (M3 design 3.14).
 func (u *DeleteWorkspace) Execute(ctx context.Context, slug string) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return err
 	}
-	now := u.clock.Now()
 	var deleted uuid.UUID
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
 		id, _, err := lockAndDecide(ctx, u.workspaces.LockWorkspaceBySlug, u.auth, actor, slug, domain.ActionDelete)
 		if err != nil {
 			return err
 		}
+		now := u.clock.Now()
 		for _, step := range u.cascade() {
 			if err := step(ctx, id, actor.UserID, now); err != nil {
 				return err

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -145,10 +146,14 @@ func TestListWorkspaceMembersRefusals(t *testing.T) {
 			t.Errorf("%s: calls = %q, want %d", tt.name, f.log.calls, tt.calls)
 		}
 	}
+	// carol has no account: the error names her membership, and is no
+	// problem of the contract (so a 500), never a 404 or a 403.
 	f := newMembers()
 	f.profiles.profiles = profiles[1:]
-	if got, err := f.uc.Execute(as(alice), "acme"); err == nil || errors.Is(err, domain.ErrNotFound) || got != nil {
-		t.Errorf("a member without an account: Execute() = %+v, %v; want an error that is not a 404", got, err)
+	got, err := f.uc.Execute(as(alice), "acme")
+	var se *shared.Error
+	if err == nil || errors.As(err, &se) || !strings.Contains(err.Error(), carolInAcme.ID.String()) || got != nil {
+		t.Errorf("a member without an account: Execute() = %+v, %v; want an error naming %s that is no *shared.Error", got, err, carolInAcme.ID)
 	}
 	f = newMembers()
 	if _, err := f.uc.Execute(context.Background(), "acme"); !errors.Is(err, shared.Unauthenticated()) || len(f.log.calls) != 0 {
