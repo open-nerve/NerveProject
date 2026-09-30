@@ -165,8 +165,9 @@ func responseFailures(failure error, lockName string) []responseRefusal {
 }
 
 // Each refusal and failure is the answer, and nothing is written: see
-// responseRefusals and responseFailures; a failure of a write, or of the
-// answer's read, is itself too. Without a caller it is 401 and nothing is
+// responseRefusals and responseFailures; a failure of a write, erin's
+// restore among them, of the answer's read or of the commit is itself too,
+// and no workspace is answered. Without a caller it is 401 and nothing is
 // read.
 func TestAcceptWorkspaceInvitationRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
@@ -189,6 +190,15 @@ func TestAcceptWorkspaceInvitationRefusals(t *testing.T) {
 	} {
 		cases = append(cases, responseRefusal{step.name + " failed", frank, frankToAcme.ID, "", step.set, failure, step.calls})
 	}
+	erinToAcme := invitationTo(erin, acme, shared.RoleGuest)
+	cases = append(cases,
+		responseRefusal{"RestoreMember failed", erin, erinToAcme.ID, "", func(f *invitationsFixture) {
+			f.invitations.invitations = append(f.invitations.invitations, erinToAcme)
+			f.invitations.failing = map[string]error{"RestoreMember": failure}
+		}, failure, append(respondedCalls(erin, erinToAcme, "LockWorkspace"), "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
+			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at))},
+		responseRefusal{"the commit failed", frank, frankToAcme.ID, "", func(f *invitationsFixture) { f.tx.commitErr = failure }, failure,
+			append(slices.Clone(decided), created, accepted, "WorkspaceByID "+acme.ID.String())})
 	for _, tt := range cases {
 		f := responding(frankToAcme)
 		if tt.set != nil {

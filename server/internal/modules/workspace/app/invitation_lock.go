@@ -12,8 +12,9 @@ import (
 // reads the invitation for its workspace (readInvitation), locks the
 // workspace, then locks the invitation row FOR UPDATE and reads it again
 // (lockInvitation): its decisions and checks see what committed before, and
-// nothing changes the row until the write ends. Between the two, a response
-// locks the caller's account row (3.6 conventions 1 and 6).
+// nothing changes the row until the write ends. A response first locks the
+// caller's account row (3.6 conventions 1 and 6), then reads and locks as
+// above.
 
 // readInvitation reads the undeleted invitation id, without a lock;
 // domain.ErrInvitationNotFound when there is none.

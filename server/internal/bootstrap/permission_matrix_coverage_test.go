@@ -192,6 +192,15 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	checks := matrixRow{op: "checkWorkspaceSlug", request: sameRequest(http.MethodGet, "/api/v0/workspace-slugs/acme", ""), cells: every(cellOK)}
 	notTarget := exemptPublic("getWorkspaceInvitation")
 	notTarget.notTargets = map[string]string{checkSlug.Path: "a slug asked about"}
+	// accepts is a row that sends POST to a path answers lists as not a
+	// target, and does not say it writes: the listing spares its cells the
+	// target check only, never the check of a write.
+	accept := apitest.Operation{ID: "acceptWorkspaceInvitation", Tags: []string{"workspace"}, Method: http.MethodPost,
+		Path: "/api/v0/workspace-invitations/{invitation_id}/accept"}
+	accepts := matrixRow{op: accept.ID, request: sameRequest(http.MethodPost, "/api/v0/workspace-invitations/"+uuid.Nil().String()+"/accept",
+		`{"token":"t"}`), cells: every(cellOK)}
+	answers := exemptPublic("getWorkspaceInvitation")
+	answers.notTargets = map[string]string{accept.Path: "account level"}
 	var unknown []string
 	for _, c := range workspaceColumns {
 		unknown = append(unknown, fmt.Sprintf("row checkWorkspaceSlug, %s: {slug} is no target the matrix knows: "+
@@ -312,6 +321,8 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 		{"a write without write", append(ops, creates), exempt, []matrixRow{row,
 			{op: "createWorkspace", request: sameRequest(http.MethodPost, "/api/v0/workspaces", `{}`), cells: every(cellCreated)}},
 			[]string{"row createWorkspace sends POST without write: its cells could run on the reads' copy"}},
+		{"a write without write on a path listed as not a target", append(ops, accept), answers, []matrixRow{row, accepts},
+			[]string{"row acceptWorkspaceInvitation sends POST without write: its cells could run on the reads' copy"}},
 		{"a cell that targets another column's workspace", ops, exempt,
 			[]matrixRow{{op: "getWorkspace", request: sameRequest(http.MethodGet, "/api/v0/workspaces/acme", ""), cells: every(cellOK)}},
 			[]string{"row getWorkspace, workspace deleted: targets the workspace acme, not its column's gone"}},
