@@ -135,8 +135,9 @@ type matrixRow struct {
 	request func(c caller, s seeded) (method, path, body string)
 	cells   map[caller]cell
 	// check, when set, runs on each answer that is not a problem and is its
-	// cell's: what the answer holds for that caller.
-	check func(t *testing.T, c caller, answer string)
+	// cell's: what the answer holds for that caller, the seeded ids to
+	// compare its ids with.
+	check func(t *testing.T, c caller, s seeded, answer string)
 }
 
 func (r matrixRow) name() string {
@@ -205,12 +206,12 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // store, the workspaces, memberships and invitations of matrixMemberships
 // and matrixInvitations, with the ids newSeeded named, and acme's admin's
 // display settings; other's admin and removed member are there so that a
-// role read in the wrong workspace lets either into acme. Through the API, gone deleted by its admin, which
-// soft-deletes its memberships with it. Through SQL, until P5's store
-// replaces it, the removed member's membership of acme ended. Everything
-// that connected to the database is closed when it returns, so that it can
-// be copied. A -run that leaves out prepare fails here, not with a 401 in
-// every cell.
+// role read in the wrong workspace lets either into acme. Through the API,
+// gone deleted by its admin, which soft-deletes its memberships with it.
+// Through SQL, until P5's store replaces it, the removed member's
+// membership of acme ended. Everything that connected to the database is
+// closed when it returns, so that it can be copied. A -run that leaves out
+// prepare fails here, not with a 401 in every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -232,7 +233,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		s := d.seeded.in(t)
 		for _, m := range matrixMemberships {
 			if _, created := seed.workspaces[m.slug]; !created {
-				seed.workspace(m.slug, m.c)
+				seed.workspace(s.workspace(m.slug), m.slug, m.c)
 			}
 			seed.join(s.membership(m.slug, m.c), m.slug, m.c, m.role)
 		}
@@ -310,7 +311,7 @@ func TestPermissionMatrix(t *testing.T) {
 					return
 				}
 				if r.check != nil && got.code == "" {
-					r.check(t, c, answer)
+					r.check(t, c, d.seeded.in(t), answer)
 					checked.Add(1)
 				}
 			})

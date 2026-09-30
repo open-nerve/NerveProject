@@ -50,19 +50,20 @@ func TestMemberOf(t *testing.T) {
 	}
 }
 
-// memberAudit is a membership's state and audit columns.
+// memberAudit is a membership's state and audit columns; exported fields:
+// fmt prints the id as a UUID and the time as a time.
 type memberAudit struct {
-	role      shared.Role
-	active    bool
-	updatedBy uuid.UUID
-	updatedAt time.Time
+	Role      shared.Role
+	Active    bool
+	UpdatedBy uuid.UUID
+	UpdatedAt time.Time
 }
 
 func memberAuditOf(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) memberAudit {
 	t.Helper()
 	var a memberAudit
 	if err := pool.QueryRow(context.Background(), "SELECT role, is_active, updated_by_id, updated_at FROM workspace_members WHERE id = $1", id).
-		Scan(&a.role, &a.active, &a.updatedBy, &a.updatedAt); err != nil {
+		Scan(&a.Role, &a.Active, &a.UpdatedBy, &a.UpdatedAt); err != nil {
 		t.Fatal(err)
 	}
 	return a
@@ -89,12 +90,12 @@ func TestRestoreMember(t *testing.T) {
 		t.Fatalf("RestoreMember() = %v", err)
 	}
 
-	if got, want := memberAuditOf(t, pool, bobIn.ID), (memberAudit{shared.RoleGuest, true, bob, later}); got.role != want.role ||
-		got.active != want.active || got.updatedBy != want.updatedBy || !got.updatedAt.Equal(want.updatedAt) {
+	if got, want := memberAuditOf(t, pool, bobIn.ID), (memberAudit{shared.RoleGuest, true, bob, later}); got.Role != want.Role ||
+		got.Active != want.Active || got.UpdatedBy != want.UpdatedBy || !got.UpdatedAt.Equal(want.UpdatedAt) {
 		t.Errorf("bob's in acme: %+v, want %+v", got, want)
 	}
 	for _, m := range []domain.Membership{carolIn, bobInBeta, carolGone} {
-		if got := memberAuditOf(t, pool, m.ID); got.active || got.role != m.Role || got.updatedBy != alice || !got.updatedAt.Equal(now) {
+		if got := memberAuditOf(t, pool, m.ID); got.Active || got.Role != m.Role || got.UpdatedBy != alice || !got.UpdatedAt.Equal(now) {
 			t.Errorf("%s in %s: %+v; want it ended, unchanged", m.MemberID, m.WorkspaceID, got)
 		}
 	}
@@ -103,7 +104,7 @@ func TestRestoreMember(t *testing.T) {
 	if err := s.RestoreMember(context.Background(), carolIn.ID, shared.RoleAdmin, carol, later); err != nil {
 		t.Fatalf("RestoreMember() = %v", err)
 	}
-	if got := memberAuditOf(t, pool, carolIn.ID); got.role != shared.RoleAdmin || !got.active || got.updatedBy != carol {
+	if got := memberAuditOf(t, pool, carolIn.ID); got.Role != shared.RoleAdmin || !got.Active || got.UpdatedBy != carol {
 		t.Errorf("carol's in acme: %+v; want her active again, an admin, by her", got)
 	}
 	cancelled, cancel := context.WithCancel(context.Background())
@@ -183,8 +184,11 @@ func TestAnsweringAnInvitation(t *testing.T) {
 				{ID: uuid.NewV7(), WorkspaceID: acme.ID, Email: "carol@corp.com", Role: shared.RoleGuest, CreatedBy: alice, Now: later},
 			})
 			var dup *app.DuplicateInvitation
-			if tt.accepted == errors.As(err, &dup) {
-				t.Errorf("inviting carol@corp.com again = %v; want it free again only once accepted", err)
+			switch {
+			case tt.accepted && err != nil:
+				t.Errorf("inviting carol@corp.com again = %v; want it invited: accepted, the address is free again", err)
+			case !tt.accepted && (!errors.As(err, &dup) || dup.Email != "carol@corp.com"):
+				t.Errorf("inviting carol@corp.com again = %v; want *app.DuplicateInvitation of it: declined, it holds the address", err)
 			}
 			cancelled, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -219,7 +223,11 @@ func TestWorkspaceByID(t *testing.T) {
 	want := acme
 	want.Role, want.TotalMembers, want.OrganizationSize, want.UpdatedAt = 0, 2, &size, later
 	if err != nil || !sameWorkspace(got, want) || got.TotalMembers != 2 {
-		t.Errorf("WorkspaceByID(acme) = %+v, %v; want %+v with 2 members", got, err, want)
+		gotSize := "<nil>"
+		if got.OrganizationSize != nil {
+			gotSize = *got.OrganizationSize
+		}
+		t.Errorf("WorkspaceByID(acme) = %+v, size %q, %v; want %+v, size %q, with 2 members", got, gotSize, err, want, size)
 	}
 	// Read in the transaction that restored carol, it counts her; after its
 	// rollback, not.

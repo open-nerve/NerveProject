@@ -62,7 +62,7 @@ func WaitForLockWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit tim
 // another table, or from either of the two row waits PostgreSQL makes
 // without a tuple lock (WaitForLockWaitOn): use it where the waiting
 // transaction writes no other table with a unique key and neither of those
-// two waits can occur, for it upgrades no row lock it shares with another
+// two waits can occur: it upgrades no row lock it shares with another
 // transaction, and none of its foreign keys' checks follows a row's update
 // chain to a version that a live transaction has locked or deleted.
 func WaitForKeyWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit time.Duration) {

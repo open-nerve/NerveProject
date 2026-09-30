@@ -73,23 +73,8 @@ func newAnswerRace(t *testing.T) answerRace {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	r.invitation = invitationLink{id, workspacedomain.FormatToken(r.mac.Tag(workspacedomain.InvitationMessage(id)))}
+	r.invitation = invitationLink{id, invitationToken(t, id)}
 	return r
-}
-
-// testInvitationMAC is the invitation MAC of the tests' signing key, as
-// bootstrap derives it.
-func testInvitationMAC(t *testing.T) workspaceapp.InvitationMAC {
-	t.Helper()
-	keys, err := identity.LoadKeys([]byte(testKeyPEM), slog.New(slog.DiscardHandler))
-	if err != nil {
-		t.Fatal(err)
-	}
-	mac, err := keys.MAC(workspace.InvitationMACPurpose)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return mac
 }
 
 // join makes user a member of acme with role.
@@ -129,16 +114,15 @@ func (r answerRace) deleteAcme(ctx context.Context, workspaces workspaceapp.Work
 }
 
 // bobIn is bob's membership of acme as it stands: whether there is an
-// undeleted one, and whether it is active; and whether acme is deleted.
-func (r answerRace) bobIn(t *testing.T) (member, active, acmeDeleted bool) {
+// undeleted one; and whether acme is deleted.
+func (r answerRace) bobIn(t *testing.T) (member, acmeDeleted bool) {
 	t.Helper()
 	if err := r.pool.QueryRow(context.Background(), `SELECT
 		EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL),
-		EXISTS (SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL AND is_active),
-		(SELECT deleted_at IS NOT NULL FROM workspaces WHERE id = $1)`, r.acme, r.bob).Scan(&member, &active, &acmeDeleted); err != nil {
+		(SELECT deleted_at IS NOT NULL FROM workspaces WHERE id = $1)`, r.acme, r.bob).Scan(&member, &acmeDeleted); err != nil {
 		t.Fatal(err)
 	}
-	return member, active, acmeDeleted
+	return member, acmeDeleted
 }
 
 // answered is the invitation's state: accepted, answered, deleted.
@@ -221,7 +205,7 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 				t.Fatal(err)
 			}
 			wantGone := map[bool]int{true: 1, false: 0}[acceptFirst]
-			if member, _, acmeDeleted := r.bobIn(t); member || !acmeDeleted || gone != wantGone {
+			if member, acmeDeleted := r.bobIn(t); member || !acmeDeleted || gone != wantGone {
 				t.Errorf("bob a member %v, acme deleted %v, bob's memberships deleted with acme %d; want none left, acme deleted, %d",
 					member, acmeDeleted, gone, wantGone)
 			}
@@ -278,7 +262,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 			if err := result(t, ctx, changed, "the change"); err != nil {
 				t.Errorf("the change = %v, want it done", err)
 			}
-			member, _, _ := r.bobIn(t)
+			member, _ := r.bobIn(t)
 			acc, responded, deleted := r.answered(t)
 			if member != acceptFirst || acc != acceptFirst || responded != acceptFirst || deleted != acceptFirst {
 				t.Errorf("bob a member %v; the invitation accepted %v, answered %v, deleted %v; want all %v", member, acc, responded, deleted, acceptFirst)

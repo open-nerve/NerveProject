@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -161,7 +160,7 @@ func targetViolation(pattern, path string, c caller, s seeded) string {
 // test a public exemption names is one of the package's, so that renaming
 // or deleting it fails here too.
 func TestThePermissionMatrixCoversEveryOperation(t *testing.T) {
-	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), newSeeded().in(t), packageTests(t)) {
+	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), newSeeded().in(t), packageTests(t, ".")) {
 		t.Error(v)
 	}
 }
@@ -230,7 +229,23 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	membership := apitest.Operation{ID: "updateWorkspaceMember", Tags: []string{"workspace"}, Method: http.MethodPatch,
 		Path: "/api/v0/workspace-members/{workspace_member_id}"}
 	demotes := matrixRow{op: "updateWorkspaceMember", write: true, request: toMembership(anotherMember, `{"role":5}`), cells: every(cellOK)}
-	if got := matrixViolations(append(ops, lists, membership), exempt, []matrixRow{row, paged, demotes}, s, own); len(got) != 0 {
+	invitation := apitest.Operation{ID: "updateWorkspaceInvitation", Tags: []string{"workspace"}, Method: http.MethodPatch,
+		Path: "/api/v0/workspace-invitations/{invitation_id}"}
+	// promotes is a row of invitation; deletedPromotes, one whose deleted
+	// workspace's column names the invitation of email to slug.
+	promotes := matrixRow{op: invitation.ID, write: true, request: toInvitation(http.MethodPatch, "newcomer@example.com", `{"role":20}`),
+		cells: every(cellOK)}
+	deletedPromotes := func(slug, email string) matrixRow {
+		r := promotes
+		r.request = func(c caller, s seeded) (string, string, string) {
+			if c == callerDeleted {
+				return http.MethodPatch, "/api/v0/workspace-invitations/" + s.invitation(slug, email).String(), `{"role":20}`
+			}
+			return promotes.request(c, s)
+		}
+		return r
+	}
+	if got := matrixViolations(append(ops, lists, membership, invitation), exempt, []matrixRow{row, paged, demotes, promotes}, s, own); len(got) != 0 {
 		t.Fatalf("a matching matrix: %q, want none", got)
 	}
 	// deletedNames is demotes, but the deleted workspace's column names the
@@ -333,6 +348,9 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 				" is no row seeded under its column's workspace gone"}},
 		{"an id no seeded row has", append(ops, membership), exempt, []matrixRow{row, guestNames("/api/v0/workspace-members/" + uuid.Nil().String())},
 			[]string{"row updateWorkspaceMember, guest: {workspace_member_id} " + uuid.Nil().String() + " is no row seeded under its column's workspace acme"}},
+		{"an invitation of another column's workspace", append(ops, invitation), exempt, []matrixRow{row, deletedPromotes("acme", "newcomer@example.com")},
+			[]string{"row updateWorkspaceInvitation, workspace deleted: {invitation_id} " + s.invitation("acme", "newcomer@example.com").String() +
+				" is no row seeded under its column's workspace gone"}},
 	}
 	for _, tt := range tests {
 		if got := matrixViolations(tt.ops, tt.exempt, tt.rows, s, own); !slices.Equal(got, tt.want) {
@@ -353,6 +371,12 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	if want := "no membership of acme by never a member is seeded"; failed != want {
 		t.Errorf("a membership never seeded: failed with %q, want %q", failed, want)
 	}
+	failed = fatalOf(func(tb testing.TB) {
+		matrixViolations(append(ops, invitation), exempt, []matrixRow{deletedPromotes("gone", "nobody@example.com")}, newSeeded().in(tb), own)
+	})
+	if want := "no invitation of nobody@example.com to gone is seeded"; failed != want {
+		t.Errorf("an invitation never seeded: failed with %q, want %q", failed, want)
+	}
 	// An exempt entry that no operation carries: stale, or misspelled, when
 	// the module it meant has operations without rows besides.
 	for _, tt := range []struct {
@@ -368,30 +392,4 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}
-}
-
-// fatalOf runs f on a goroutine of its own with a testing.TB whose Fatalf
-// records the message and ends that goroutine, as testing.T's does, without
-// failing the test; it returns the message, "" when f did not fail.
-func fatalOf(f func(testing.TB)) string {
-	p := &fatalProbe{}
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		f(p)
-	}()
-	<-done
-	return p.message
-}
-
-type fatalProbe struct {
-	testing.TB
-	message string
-}
-
-func (*fatalProbe) Helper() {}
-
-func (p *fatalProbe) Fatalf(format string, args ...any) {
-	p.message = fmt.Sprintf(format, args...)
-	runtime.Goexit()
 }

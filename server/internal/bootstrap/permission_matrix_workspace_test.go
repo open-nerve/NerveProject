@@ -137,7 +137,7 @@ func workspaceMatrixRows() []matrixRow {
 
 // demotesTheMember: the admin's answer is the member's membership, now a
 // guest's, with the member's address.
-func demotesTheMember(t *testing.T, c caller, answer string) {
+func demotesTheMember(t *testing.T, c caller, _ seeded, answer string) {
 	var m struct {
 		Role   int `json:"role"`
 		Member struct {
@@ -153,7 +153,7 @@ func demotesTheMember(t *testing.T, c caller, answer string) {
 // listsTheMembers: acme's four memberships, the removed member's ended; the
 // admin and the member see every address, the guest none, his own neither
 // (M3 design 3.4, 9.2).
-func listsTheMembers(t *testing.T, c caller, answer string) {
+func listsTheMembers(t *testing.T, c caller, _ seeded, answer string) {
 	var list struct {
 		Data []struct {
 			IsActive bool `json:"is_active"`
@@ -202,8 +202,8 @@ type navigation struct {
 
 // preferencesAre: each caller reads and changes his own settings; the
 // admin's answer is admin, the member's and the guest's others.
-func preferencesAre(admin, others navigation) func(t *testing.T, c caller, answer string) {
-	return func(t *testing.T, c caller, answer string) {
+func preferencesAre(admin, others navigation) func(t *testing.T, c caller, s seeded, answer string) {
+	return func(t *testing.T, c caller, _ seeded, answer string) {
 		var got navigation
 		decodeAnswer(t, answer, &got)
 		want := others
@@ -217,7 +217,7 @@ func preferencesAre(admin, others navigation) func(t *testing.T, c caller, answe
 }
 
 // renamesIt: the admin's answer is acme renamed, with the admin's role.
-func renamesIt(t *testing.T, c caller, answer string) {
+func renamesIt(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug string `json:"slug"`
 		Name string `json:"name"`
@@ -233,7 +233,7 @@ func renamesIt(t *testing.T, c caller, answer string) {
 // member of, never acme for the callers it is not visible to, and not the
 // deleted gone. A column without a list stated here fails: it would pass by
 // listing nothing.
-func listsItsWorkspaces(t *testing.T, c caller, answer string) {
+func listsItsWorkspaces(t *testing.T, c caller, _ seeded, answer string) {
 	var list struct {
 		Data []struct {
 			Slug string `json:"slug"`
@@ -255,7 +255,7 @@ func listsItsWorkspaces(t *testing.T, c caller, answer string) {
 }
 
 // readsItsRole: the workspace read is acme with the caller's own role.
-func readsItsRole(t *testing.T, c caller, answer string) {
+func readsItsRole(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug string `json:"slug"`
 		Role int    `json:"role"`

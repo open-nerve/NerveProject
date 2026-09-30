@@ -63,7 +63,7 @@ func TestSignupInvitationsRefuseEveryOtherCase(t *testing.T) {
 			token = tokenOf(f.mac, daveToAcme.ID)
 		}
 		allowed, err := app.NewSignupInvitations(f.invitations, f.mac).Allows(context.Background(), tt.email, tt.id, token)
-		if allowed || !errors.Is(err, tt.err) || (tt.err == nil && err != nil) {
+		if allowed || !errors.Is(err, tt.err) {
 			t.Errorf("%s: Allows() = %v, %v; want false, %v", tt.name, allowed, err, tt.err)
 		}
 		want := []string{"Verify " + tt.id.String()}

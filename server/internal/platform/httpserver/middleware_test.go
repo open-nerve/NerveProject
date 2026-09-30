@@ -150,7 +150,9 @@ func TestPanicBecomes500Problem(t *testing.T) {
 	h := middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("boom")
 	}), logger)
-	req := httptest.NewRequest(http.MethodGet, "/explode", nil)
+	// A query can hold a secret (an invitation link's token): the panic line
+	// names the path alone (M3 design 8.1).
+	req := httptest.NewRequest(http.MethodGet, "/explode?token=x", nil)
 	req.Header.Set(HeaderRequestID, "req-1")
 
 	rec := serve(h, req)
@@ -167,8 +169,9 @@ func TestPanicBecomes500Problem(t *testing.T) {
 	}
 	entries := logs()
 	panicLog := findLog(entries, "panic serving request")
-	if panicLog == nil || panicLog["panic"] != "boom" || panicLog["request_id"] != "req-1" || panicLog["stack"] == "" {
-		t.Errorf("panic log = %v, want panic, request_id and stack", panicLog)
+	if panicLog == nil || panicLog["panic"] != "boom" || panicLog["request_id"] != "req-1" || panicLog["stack"] == "" ||
+		panicLog["path"] != "/explode" {
+		t.Errorf("panic log = %v, want panic, request_id, stack and the path without the query", panicLog)
 	}
 	access := findLog(entries, "http request")
 	if access == nil || access["status"] != float64(500) || access["request_id"] != "req-1" {

@@ -58,10 +58,12 @@ func TestUpdateWorkspaceInvitationLocksThenDecidesThenWrites(t *testing.T) {
 // Each refusal and failure is the answer, and no role is written. The
 // role's check comes first. An invitation not there, deleted meanwhile, of
 // a workspace deleted meanwhile or not visible is
-// workspace.invitation_not_found; a member's forbidden comes before any
-// check of the invitation; then a declined invitation, also declined while
-// the lock waited, is workspace.invitation_responded. A failure is itself,
-// never a 404.
+// workspace.invitation_not_found, and so, before any decision, is one of
+// another workspace when read again under the lock (M3 design 3.6
+// convention 2), though the caller is that one's admin too; a member's
+// forbidden comes before any check of the invitation; then a declined
+// invitation, also declined while the lock waited, is
+// workspace.invitation_responded. A failure is itself, never a 404.
 func TestUpdateWorkspaceInvitationRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	forbidBob := func(f *invitationsFixture) { f.auth.errs = map[grantKey]error{{bob.ID, acme.ID}: shared.Forbidden()} }
@@ -85,6 +87,12 @@ func TestUpdateWorkspaceInvitationRefusals(t *testing.T) {
 		{"deleted while the lock waited", alice, carolToAcme.ID, shared.RoleGuest,
 			func(f *invitationsFixture) {
 				f.invitations.onLock = func() { f.invitations.invitations = []domain.Invitation{daveToAcme, erinToBeta} }
+			},
+			domain.ErrInvitationNotFound, decided[:3]},
+		{"of beta when read again under the lock", alice, carolToAcme.ID, shared.RoleGuest,
+			func(f *invitationsFixture) {
+				f.auth.grants[grantKey{alice.ID, beta.ID}] = shared.Grant{WorkspaceRole: shared.RoleAdmin}
+				f.invitations.onLock = func() { f.invitations.invitations[0].WorkspaceID = beta.ID }
 			},
 			domain.ErrInvitationNotFound, decided[:3]},
 		{"not visible", carol, carolToAcme.ID, shared.RoleGuest, nil, domain.ErrInvitationNotFound,

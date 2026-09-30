@@ -55,6 +55,10 @@ const rawMark = "nerve_raw_value"
 //  11. an undeclared property in the item of the first array of objects
 //     (M3 design 5.2), which the valid body lists once;
 //  12. each required property of that item missing.
+//
+// Only a top-level property of type array whose items are objects gets 11
+// and 12: not a list that anyOf makes nullable, not a list nested in an
+// object, and nothing deeper inside an item.
 func (o Operation) BodyCases() []BodyCase {
 	s := o.body
 	valid := validValue(s).(map[string]any)

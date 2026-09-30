@@ -49,7 +49,7 @@ func TestSignupPolicy(t *testing.T) {
 	} {
 		invitations := tt.workspace
 		got, err := signupPolicy{enabled: tt.enabled, invitations: &invitations}.AllowSignup(context.Background(), "carol@corp.com", tt.invitation)
-		if got != tt.want || !errors.Is(err, tt.err) || (tt.err == nil && err != nil) {
+		if got != tt.want || !errors.Is(err, tt.err) {
 			t.Errorf("%s: AllowSignup() = %v, %v; want %v, %v", tt.name, got, err, tt.want, tt.err)
 		}
 		if !slices.Equal(invitations.asked, tt.asked) {

@@ -22,8 +22,7 @@ func withSession(user app.AccountState) context.Context {
 	return shared.WithActor(context.Background(), shared.Actor{UserID: user.ID, SessionID: session})
 }
 
-// create is CreateWorkspaceInvitations over f's fakes, its clock at
-// clockNow.
+// create is CreateWorkspaceInvitations over f's fakes and clock.
 func (f *invitationsFixture) create(clock app.Clock) *app.CreateWorkspaceInvitations {
 	return app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{Caller: f.caller, Invitations: f.invitations, Profiles: f.profiles,
 		Auth: f.auth, Tx: f.tx, Clock: clock, MAC: f.mac})

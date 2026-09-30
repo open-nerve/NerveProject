@@ -136,6 +136,7 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 		{noKeyUpdate, forShareByID, "acme", true},
 		{forShareByID, noKeyUpdate, "acme", true},
 		{forShareByID, noKeyUpdateByID, "acme", true},
+		{noKeyUpdateByID, forShareByID, "acme", true},
 		{forShare, forShareByID, "acme", false},
 		{forShareByID, forShare, "acme", false},
 		{noKeyUpdate, noKeyUpdate, "beta", false},

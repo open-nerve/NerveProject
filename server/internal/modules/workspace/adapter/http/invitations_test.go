@@ -240,7 +240,8 @@ const invitationNotFoundJSON = `{"status":404,"code":"workspace.invitation_not_f
 	`"detail":"The invitation does not exist, or its link is not valid."}`
 
 // DELETE hands the invitation of the path to the use case, for the caller,
-// and answers 204 without a body; its refusals are the contract's.
+// and answers 204 without a body; its refusals are the contract's, and an
+// id that is no UUID is refused before it.
 func TestDeleteWorkspaceInvitation(t *testing.T) {
 	inv := &fakeInvitations{}
 	h := newServer(t, fakes{invitations: inv})
@@ -263,6 +264,12 @@ func TestDeleteWorkspaceInvitation(t *testing.T) {
 		if res, body := do(t, h, request(http.MethodDelete, path, "bob", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
 			t.Errorf("DELETE refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
 		}
+	}
+	idle := &fakeInvitations{}
+	h = newServer(t, fakes{invitations: idle})
+	if res, _ := do(t, h, request(http.MethodDelete, "/api/v0/workspace-invitations/carol", "alice", "")); res.StatusCode != http.StatusBadRequest ||
+		len(idle.calls) != 0 {
+		t.Errorf("DELETE /api/v0/workspace-invitations/carol = %d, calls %q; want 400 and no call", res.StatusCode, idle.calls)
 	}
 }
 
@@ -315,8 +322,8 @@ func TestGetWorkspaceInvitationRefusals(t *testing.T) {
 // token of the body to their use case, for the caller: accepting answers
 // the workspace it gives, declining 204 without a body. Each refuses as
 // the contract declares; a body without its token, or with a field it does
-// not have, is refused before the use case, and no answer repeats the
-// token.
+// not have, and an id that is no UUID are refused before the use case, and
+// no answer repeats the token.
 func TestAnsweringAWorkspaceInvitation(t *testing.T) {
 	path := "/api/v0/workspace-invitations/" + carolInvited.ID.String()
 	body := `{"token":"` + carolInvited.Token + `"}`
@@ -351,10 +358,15 @@ func TestAnsweringAWorkspaceInvitation(t *testing.T) {
 		}
 		idle := &fakeInvitations{}
 		h = newServer(t, fakes{invitations: idle})
-		for _, bad := range []string{`{}`, `{"token":"` + carolInvited.Token + `","email":"carol@corp.com"}`} {
-			res, got := do(t, h, request(http.MethodPost, tt.path, "bob", bad))
+		for _, bad := range []struct{ path, body string }{
+			{tt.path, `{}`},
+			{tt.path, `{"token":"` + carolInvited.Token + `","email":"carol@corp.com"}`},
+			{"/api/v0/workspace-invitations/carol/" + tt.name, body},
+		} {
+			res, got := do(t, h, request(http.MethodPost, bad.path, "bob", bad.body))
 			if res.StatusCode != http.StatusBadRequest || strings.Contains(got, carolInvited.Token) || len(idle.calls) != 0 {
-				t.Errorf("%s with %s = %d %s, calls %q; want 400 without the token, and no call", tt.name, bad, res.StatusCode, got, idle.calls)
+				t.Errorf("POST %s with %s = %d %s, calls %q; want 400 without the token, and no call", bad.path, bad.body, res.StatusCode, got,
+					idle.calls)
 			}
 		}
 	}

@@ -2,25 +2,36 @@ package bootstrap
 
 import (
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"maps"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// packageTests are the names of this package's tests: the tests of each of
-// its _test.go files (testsOf). The matrix's completeness check wants the
-// test each public exemption names among them.
-func packageTests(t *testing.T) map[string]bool {
+// packageTests are the names of the tests go test runs in dir: the tests
+// of each of its _test.go files (testsOf) that the build includes, not
+// those its build constraints leave out (a //go:build line, or a GOOS or
+// GOARCH suffix of the name). The matrix's completeness check wants the
+// test each public exemption names among this package's.
+func packageTests(t *testing.T, dir string) map[string]bool {
 	t.Helper()
-	paths, err := filepath.Glob("*_test.go")
+	paths, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	fset, tests := token.NewFileSet(), map[string]bool{}
 	for _, path := range paths {
+		built, err := build.Default.MatchFile(dir, filepath.Base(path))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !built {
+			continue
+		}
 		f, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatal(err)
@@ -28,6 +39,24 @@ func packageTests(t *testing.T) map[string]bool {
 		maps.Copy(tests, testsOf(f))
 	}
 	return tests
+}
+
+// packageTests leaves out the tests of a file the build does not include:
+// of a directory with one file built and one a build constraint excludes,
+// only the first's test.
+func TestPackageTestsSkipsFilesTheBuildExcludes(t *testing.T) {
+	dir := t.TempDir()
+	for name, src := range map[string]string{
+		"built_test.go":    "package p\n\nimport \"testing\"\n\nfunc TestBuilt(t *testing.T) {}\n",
+		"excluded_test.go": "//go:build never\n\npackage p\n\nimport \"testing\"\n\nfunc TestExcluded(t *testing.T) {}\n",
+	} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(src), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, want := packageTests(t, dir), map[string]bool{"TestBuilt": true}; !maps.Equal(got, want) {
+		t.Errorf("packageTests = %v, want %v", got, want)
+	}
 }
 
 // testsOf are the tests go test runs of f: each function without a

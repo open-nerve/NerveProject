@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"log/slog"
 	"maps"
 	"net/http"
 	"slices"
@@ -9,9 +8,6 @@ import (
 	"testing"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
-	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
-	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/migrations"
@@ -47,7 +43,7 @@ func toNewcomersInvitation(answer string) func(caller, seeded) (string, string, 
 // invitation, where he is now an active member as the invitation's
 // member: one member more than it had (other: its admin and the removed
 // member; acme: its admin, member and guest).
-func joinsAsAMember(t *testing.T, c caller, answer string) {
+func joinsAsAMember(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug         string `json:"slug"`
 		Role         int    `json:"role"`
@@ -79,8 +75,9 @@ func toInvitation(method, email, body string) func(caller, seeded) (string, stri
 }
 
 // promotesTheNewcomer: the admin's answer is acme's invitation of
-// newcomer@example.com, now as an admin, with the token of its id.
-func promotesTheNewcomer(t *testing.T, c caller, answer string) {
+// newcomer@example.com, the one seeded, of acme, now as an admin, with the
+// token of its id.
+func promotesTheNewcomer(t *testing.T, c caller, s seeded, answer string) {
 	var inv struct {
 		ID          uuid.UUID `json:"id"`
 		WorkspaceID uuid.UUID `json:"workspace_id"`
@@ -89,30 +86,15 @@ func promotesTheNewcomer(t *testing.T, c caller, answer string) {
 		Token       string    `json:"token"`
 	}
 	decodeAnswer(t, answer, &inv)
-	if inv.Email != "newcomer@example.com" || inv.Role != 20 || inv.Token != invitationToken(t, inv.ID) {
-		t.Errorf("%s's change answers %+v, want newcomer@example.com's invitation as an admin, with its token", c, inv)
+	if inv.ID != s.invitation("acme", "newcomer@example.com") || inv.WorkspaceID != s.workspace("acme") || inv.Email != "newcomer@example.com" ||
+		inv.Role != 20 || inv.Token != invitationToken(t, inv.ID) {
+		t.Errorf("%s's change answers %+v, want acme's seeded invitation of newcomer@example.com as an admin, with its token", c, inv)
 	}
 }
 
-// invitationToken is the token of the invitation id under the matrix's
-// signing key, as the app wired on it computes it: identity's MAC of the
-// workspace module's purpose.
-func invitationToken(t testing.TB, id uuid.UUID) string {
-	t.Helper()
-	keys, err := identity.LoadKeys([]byte(testKeyPEM), slog.New(slog.DiscardHandler))
-	if err != nil {
-		t.Fatal(err)
-	}
-	mac, err := keys.MAC(workspace.InvitationMACPurpose)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return workspacedomain.FormatToken(mac.Tag(workspacedomain.InvitationMessage(id)))
-}
-
-// listsTheInvitations: the admin's list is acme's invitations, not gone's,
-// each with the token of its id.
-func listsTheInvitations(t *testing.T, c caller, answer string) {
+// listsTheInvitations: the admin's list is acme's invitations, each with
+// its seeded id, not gone's of the same address, and the token of its id.
+func listsTheInvitations(t *testing.T, c caller, s seeded, answer string) {
 	var list struct {
 		Data []struct {
 			ID    uuid.UUID `json:"id"`
@@ -124,6 +106,9 @@ func listsTheInvitations(t *testing.T, c caller, answer string) {
 	var got, want []string
 	for _, i := range list.Data {
 		got = append(got, i.Email)
+		if want := s.invitation("acme", i.Email); i.ID != want {
+			t.Errorf("%s: the invitation of %s is %s, want acme's seeded %s", c, i.Email, i.ID, want)
+		}
 		if i.Token != invitationToken(t, i.ID) {
 			t.Errorf("%s: the invitation of %s has the token %s, want its id's", c, i.Email, i.Token)
 		}
@@ -147,7 +132,7 @@ func inviting(email string) string {
 
 // invitesTheInvitee: the admin's answer is the one new invitation, of
 // invitee@example.com as a guest, with the token of its id.
-func invitesTheInvitee(t *testing.T, c caller, answer string) {
+func invitesTheInvitee(t *testing.T, c caller, _ seeded, answer string) {
 	var list struct {
 		Data []struct {
 			ID    uuid.UUID `json:"id"`
@@ -186,8 +171,10 @@ func wholeAnswerOf(res *http.Response, body []byte) wholeAnswer {
 
 // The public getWorkspaceInvitation has no row (matrixExempt): its route
 // reads no credential. This test stands for the row. Each link is asked
-// with no bearer token and with each column's, and every caller gets the
-// same answer: acme's invitation with its token, 200, without the address;
+// with no bearer token, with one that is no credential (a malformed
+// nrv_pat_, which every other route answers 401), and with each column's,
+// and every caller gets the same answer: acme's invitation with its token,
+// 200, without the address;
 // and one 404 workspace.invitation_not_found, the same byte for byte for a
 // character of the token changed, another invitation's token, gone's
 // invitation, deleted with gone, with its own token, and an id no
@@ -217,12 +204,17 @@ func TestTheInvitationLinkAnswersEveryCallerAlike(t *testing.T) {
 		{"gone's invitation", gone, invitationToken(t, gone), false},
 		{"no invitation", nobodys, invitationToken(t, nobodys), false},
 	}
-	callers := append([]caller{"nobody"}, workspaceColumns...)
+	bearers := maps.Clone(d.tokens)
+	bearers["an invalid bearer"] = "nrv_pat_malformed"
+	if status, body := call(t, contract, http.MethodGet, base+"/api/v0/workspaces", bearers["an invalid bearer"], ""); status != http.StatusUnauthorized {
+		t.Fatalf("the invalid bearer on listWorkspaces = %d %s, want 401", status, body)
+	}
+	callers := append([]caller{"nobody", "an invalid bearer"}, workspaceColumns...)
 	var notFound *wholeAnswer
 	for _, l := range links {
 		var first wholeAnswer
 		for i, c := range callers {
-			req := newRequest(t, http.MethodGet, base+"/api/v0/workspace-invitations/"+l.id.String()+"?token="+l.token, d.tokens[c], nil)
+			req := newRequest(t, http.MethodGet, base+"/api/v0/workspace-invitations/"+l.id.String()+"?token="+l.token, bearers[c], nil)
 			contract.CheckRequest(t, req)
 			res, body := send(t, req)
 			contract.CheckResponse(t, req, res)

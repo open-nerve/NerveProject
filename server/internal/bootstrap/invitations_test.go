@@ -4,19 +4,25 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
+	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
@@ -45,6 +51,9 @@ func invite(t *testing.T, contract *apitest.Contract, base, admin, slug, email s
 		t.Fatalf("inviting %s = %d %s", email, status, body)
 	}
 	decodeAnswer(t, body, &list)
+	if len(list.Data) != 1 {
+		t.Fatalf("inviting %s answers %d invitations, want 1: %s", email, len(list.Data), body)
+	}
 	return invitationLink{list.Data[0].ID, list.Data[0].Token}
 }
 
@@ -61,9 +70,9 @@ func answerInvitation(t *testing.T, contract *apitest.Contract, base, bearer, an
 
 // The server never stores an invitation's token: it computes it again from
 // the invitation's id whenever it answers or checks one (M3 design 3.8,
-// 8.1). After each step that does, the rows of workspace_member_invites,
-// one for each invitation, hold neither token in any form a column could
-// keep it (expectNoTokenStored).
+// 8.1). After each step that does, workspace_member_invites has one row for
+// each invitation, and no row of any table holds either token in any form
+// a column could keep it (expectNoTokenStored).
 func TestTheInvitationTokenIsNeverStored(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	base, pool := startApp(t, testConfig(t, url, false), migrations.FS()), openPool(t, url)
@@ -105,64 +114,127 @@ func TestTheInvitationTokenIsNeverStored(t *testing.T) {
 	expectNoTokenStored(t, pool, links)
 }
 
+// An invitation never changes an active membership (M3 design 3.8, I-2),
+// on the wired app and a real database: bob, acme's member, accepts an
+// invitation to his address as an admin, seeded through the store, as the
+// change of an address or reactivate-member can leave one (the API refuses
+// to invite an active member's address). He stays the member he was, in
+// the membership he had, the answer says so, and the invitation is used
+// up: accepted and deleted.
+func TestAnActiveMemberAcceptingAnInvitationKeepsHisMembership(t *testing.T) {
+	url := pgtest.NewDatabase(t)
+	cfg := testConfig(t, url, false)
+	cfg.Auth.JWT.PrivateKeyFile = writeFile(t, testKeyPEM)
+	base, pool := startApp(t, cfg, migrations.FS()), openPool(t, url)
+	contract := apitest.Load(t)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", admin, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("creating acme = %d %s", status, body)
+	}
+	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
+	answerInvitation(t, contract, base, bob, "accept", invite(t, contract, base, admin, "acme", "bob@example.com"), http.StatusOK)
+	var acme, acmeAdmin, bobs uuid.UUID
+	if err := pool.QueryRow(context.Background(), `SELECT w.id, w.created_by_id, m.id FROM workspaces w
+		JOIN workspace_members m ON m.workspace_id = w.id JOIN users u ON u.id = m.member_id
+		WHERE w.slug = 'acme' AND u.email = 'bob@example.com'`).Scan(&acme, &acmeAdmin, &bobs); err != nil {
+		t.Fatal(err)
+	}
+	stale := uuid.NewV7()
+	if _, err := workspacepg.New(pool).CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
+		{ID: stale, WorkspaceID: acme, Email: "bob@example.com", Role: shared.RoleAdmin, CreatedBy: acmeAdmin, Now: time.Now()},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspace-invitations/"+stale.String()+"/accept", bob,
+		`{"token":"`+invitationToken(t, stale)+`"}`)
+	if status != http.StatusOK {
+		t.Fatalf("bob's acceptance of the admin invitation = %d %s, want 200", status, body)
+	}
+	var answer struct {
+		Slug string `json:"slug"`
+		Role int    `json:"role"`
+	}
+	decodeAnswer(t, body, &answer)
+	var memberships, role int
+	var active, accepted, deleted bool
+	if err := pool.QueryRow(context.Background(), `SELECT
+		(SELECT count(*) FROM workspace_members WHERE workspace_id = $1 AND member_id = m.member_id AND deleted_at IS NULL),
+		m.role, m.is_active, i.accepted, i.deleted_at IS NOT NULL
+		FROM workspace_members m, workspace_member_invites i WHERE m.id = $2 AND i.id = $3`, acme, bobs, stale).
+		Scan(&memberships, &role, &active, &accepted, &deleted); err != nil {
+		t.Fatal(err)
+	}
+	if answer.Slug != "acme" || answer.Role != 15 || memberships != 1 || role != 15 || !active || !accepted || !deleted {
+		t.Errorf("bob's acceptance answers %+v; he has %d memberships of acme, his own of role %d, active %v; the invitation accepted %v, "+
+			"deleted %v; want acme as role 15, his one membership unchanged, the invitation accepted and deleted",
+			answer, memberships, role, active, accepted, deleted)
+	}
+}
+
 // expectNoTokenStored fails unless workspace_member_invites has one row for
-// each of links, and no row, as row_to_json writes it, holds a link's token
-// whole, its 22 characters after nrv_inv_, or its tag in hex (a bytea
-// column) or in standard base64 (a text column of the other alphabet).
+// each of links, and no row of any table (tableRows, River's too: a job's
+// arguments are a row) holds a link's token (tokensIn).
 func expectNoTokenStored(t *testing.T, pool *pgxpool.Pool, links []invitationLink) {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), "SELECT row_to_json(i)::text FROM workspace_member_invites i")
-	if err != nil {
+	var invitations int
+	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM workspace_member_invites").Scan(&invitations); err != nil {
 		t.Fatal(err)
 	}
-	stored, err := pgx.CollectRows(rows, pgx.RowTo[string])
-	if err != nil {
-		t.Fatal(err)
+	if invitations != len(links) {
+		t.Fatalf("workspace_member_invites has %d rows, want %d", invitations, len(links))
 	}
-	if len(stored) != len(links) {
-		t.Fatalf("workspace_member_invites has %d rows, want %d: %q", len(stored), len(links), stored)
+	for _, found := range tokensIn(t, tableRows(t, pool, nil), links) {
+		t.Error(found)
 	}
+}
+
+// tokensIn is where the rows of tables, by table, hold a link's token
+// whole, its 22 characters after nrv_inv_, or its tag in hex (a bytea
+// column, as row_to_json writes it) or in standard base64 (a text column
+// of the other alphabet).
+func tokensIn(t *testing.T, tables map[string]string, links []invitationLink) []string {
+	t.Helper()
+	var found []string
 	for _, l := range links {
 		tag, ok := workspacedomain.ParseToken(l.token)
 		if !ok {
 			t.Fatalf("the token %q of %s does not parse", l.token, l.id)
 		}
 		for _, form := range []string{l.token, strings.TrimPrefix(l.token, "nrv_inv_"), hex.EncodeToString(tag[:]), base64.RawStdEncoding.EncodeToString(tag[:])} {
-			for _, row := range stored {
-				if strings.Contains(row, form) {
-					t.Errorf("a row holds the token of %s as %q: %s", l.id, form, row)
+			for _, table := range slices.Sorted(maps.Keys(tables)) {
+				if strings.Contains(tables[table], form) {
+					found = append(found, fmt.Sprintf("%s holds the token of %s as %q: %s", table, l.id, form, tables[table]))
 				}
 			}
 		}
 	}
+	return found
 }
 
-// registrationRows is every row a registration or an invitation's answer
-// writes, whole, as row_to_json writes it.
+// registrationRows is every row of every table but River's own (tableRows,
+// riversOwn), by table, as one text: whatever table a registration or an
+// answer to an invitation wrote, its rows differ.
 func registrationRows(t *testing.T, pool *pgxpool.Pool) string {
 	t.Helper()
-	var rows string
-	err := pool.QueryRow(context.Background(), `SELECT concat_ws(E'\n',
-		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM users r),
-		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM profiles r),
-		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM auth_sessions r),
-		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM workspace_members r),
-		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM workspace_member_invites r))`).Scan(&rows)
-	if err != nil {
-		t.Fatal(err)
+	tables := tableRows(t, pool, riversOwn)
+	var rows strings.Builder
+	for _, table := range slices.Sorted(maps.Keys(tables)) {
+		rows.WriteString(table + ":\n" + tables[table] + "\n")
 	}
-	return rows
+	return rows.String()
 }
 
 // While sign-up is off, a registration goes on only with the link of a
 // pending invitation to its address, normalized (M3 design 3.8): on a
 // second app on the same database and key, with sign-up off. Every other
 // case answers the one 403 identity.signup_disabled, byte for byte, whatever
-// is wrong (8.2), and leaves every row as it was: no invitation, a token not
-// the invitation's, an id no invitation has, a deleted invitation, an
-// accepted one (its address has an account, and that is not what it says),
-// a declined one, another address. Registering does not accept the
-// invitation.
+// is wrong (8.2), and leaves every row of every table as it was
+// (registrationRows): no invitation, a token not the invitation's, the
+// invitation's token after a space (which nothing repairs), an id no
+// invitation has, a deleted invitation, an accepted one (its address has an
+// account, and that is not what it says), a declined one, another address.
+// Registering does not accept the invitation.
 func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 	url, keyFile := pgtest.NewDatabase(t), writeFile(t, testKeyPEM)
 	pool := openPool(t, url)
@@ -213,6 +285,7 @@ func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 	}
 	for _, tt := range []struct{ name, email, invitation string }{
 		{"a token not the invitation's", "carol@example.com", naming(invitationLink{links["carol"].id, links["gina"].token})},
+		{"the token after a space", "carol@example.com", naming(invitationLink{links["carol"].id, " " + links["carol"].token})},
 		{"an id no invitation has", "carol@example.com", naming(invitationLink{nobodys, invitationToken(t, nobodys)})},
 		{"a deleted invitation", "frank@example.com", naming(links["frank"])},
 		{"an accepted invitation", "erin@example.com", naming(links["erin"])},
@@ -240,8 +313,9 @@ func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 // The access line of each request has the path of the public view and no
 // query, whether the token is right, wrong or missing, and so has the
 // error line of a request the server fails (its table renamed away: 500).
-// The recover middleware's panic line writes the path as both do; no
-// request here panics.
+// The third line with a path, the recover middleware's panic line, is not
+// here, for no request here panics: httpserver's
+// TestPanicBecomes500Problem holds it to the path without the query.
 func TestTheInvitationLinksTokenIsNotLogged(t *testing.T) {
 	var logs lockedBuffer
 	url := pgtest.NewDatabase(t)

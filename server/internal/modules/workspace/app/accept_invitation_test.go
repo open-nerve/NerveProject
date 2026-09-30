@@ -109,7 +109,8 @@ func TestAcceptWorkspaceInvitation(t *testing.T) {
 // with the calls it makes (M3 design 3.8, 8.2): a wrong token reads nothing
 // and opens no transaction; an account deactivated or gone, read under its
 // lock, is 401 before the invitation is read; an invitation not there,
-// deleted meanwhile or of a workspace deleted meanwhile is
+// deleted meanwhile, of a workspace deleted meanwhile, or of another
+// workspace when read again under the lock (M3 design 3.6 convention 2) is
 // workspace.invitation_not_found; another address is
 // workspace.invitation_email_mismatch, also for a declined invitation; a
 // declined one, also declined meanwhile, workspace.invitation_responded.
@@ -129,6 +130,11 @@ func responseRefusals(lockName string) []responseRefusal {
 			func(f *invitationsFixture) { f.invitations.lockErrs = map[string]error{"acme": app.ErrNotFound} }, domain.ErrInvitationNotFound, decided[:4]},
 		{"deleted while the lock waited", frank, frankToAcme.ID, "",
 			func(f *invitationsFixture) { f.invitations.onLock = func() { f.invitations.invitations = nil } }, domain.ErrInvitationNotFound, decided},
+		{"of beta when read again under the lock", frank, frankToAcme.ID, "",
+			func(f *invitationsFixture) {
+				f.invitations.onLock = func() { f.invitations.invitations[len(f.invitations.invitations)-1].WorkspaceID = beta.ID }
+			},
+			domain.ErrInvitationNotFound, decided},
 		{"another address", alice, frankToAcme.ID, "", nil, domain.ErrInvitationEmailMismatch, respondedCalls(alice, frankToAcme, lockName)},
 		{"another address, declined", alice, daveToAcme.ID, "", nil, domain.ErrInvitationEmailMismatch, respondedCalls(alice, daveToAcme, lockName)},
 		{"declined", dave, daveToAcme.ID, "", nil, domain.ErrInvitationResponded, respondedCalls(dave, daveToAcme, lockName)},

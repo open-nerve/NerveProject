@@ -68,6 +68,7 @@ func TestGetWorkspaceInvitationRefusesAWrongTokenBeforeReading(t *testing.T) {
 		{"the prefix in upper case", "NRV_INV_" + strings.TrimPrefix(right, "nrv_inv_"), false},
 		{"one character short", right[:len(right)-1], false},
 		{"one character long", right + "A", false},
+		{"with a space after", right + " ", false},
 		{"padded", right + "==", false},
 		{"of the standard alphabet", strings.NewReplacer("-", "+", "_", "/").Replace(right) + "+", false},
 	}
