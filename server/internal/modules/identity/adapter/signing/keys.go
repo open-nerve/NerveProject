@@ -2,7 +2,7 @@
 // the access tokens and, through a key derived from it for each purpose,
 // tags the refresh tokens (M2 design 3.4) and the workspace invitations
 // (M3 design 3.8). The key never leaves this package, and printing or
-// logging Keys or a MAC shows no key (Keys, MAC say exactly how).
+// logging Keys or a MAC shows no key but in the one case Keys and MAC name.
 package signing
 
 import (
