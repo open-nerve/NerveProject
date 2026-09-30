@@ -253,3 +253,60 @@ func TestAMembershipEndedMeanwhileIsNotFound(t *testing.T) {
 		t.Errorf("change = %d %s, role %d; want 404 workspace.member_not_found and the role unchanged", a.res.StatusCode, a.body, role)
 	}
 }
+
+// The composed createWorkspaceInvitations takes the credential lock that
+// bootstrap wires from identity, first (M3 design 3.8, 6.6). A transaction
+// holds the admin's account row FOR NO KEY UPDATE and revokes his session,
+// as a password reset does; his POST, authenticated before the revocation
+// commits, waits on the row. Once it commits, the lock finds the session
+// revoked: 401, and nothing is invited. A lock that did not wait, or that
+// waited and did not check the credential again, would have invited carol.
+// Every wait has a deadline: the held transaction's statements, the probe
+// of the wait, and the answer; the transaction rolls back on any failure.
+func TestAPasswordResetMeanwhileLeavesNoInvitation(t *testing.T) {
+	contract := apitest.Load(t)
+	base, pool := sessionApp(t)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", admin, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("create = %d %s", status, body)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	reset, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = reset.Rollback(context.Background()) }()
+	for _, sql := range []string{
+		"SELECT id FROM users WHERE email = 'admin@example.com' FOR NO KEY UPDATE",
+		`UPDATE auth_sessions SET revoked_at = now(), revoke_reason = 'password_reset'
+			WHERE user_id = (SELECT id FROM users WHERE email = 'admin@example.com')`,
+	} {
+		if _, err := reset.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	req := newRequest(t, http.MethodPost, base+"/api/v0/workspaces/acme/invitations", admin, []byte(inviting("carol@example.com")))
+	contract.CheckRequest(t, req)
+	answered := sendInBackground(req)
+	// The app runs River's jobs on the same database: only a wait for a row
+	// of users counts.
+	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
+	if err := reset.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	a := receiveWithin(t, answered, 10*time.Second, "answer to the creation")
+	if a.err != nil {
+		t.Fatal(a.err)
+	}
+	contract.CheckResponse(t, req, a.res)
+	var invitations int
+	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM workspace_member_invites").Scan(&invitations); err != nil {
+		t.Fatal(err)
+	}
+	if a.res.StatusCode != http.StatusUnauthorized || problemCode(t, a.body) != "unauthorized" || invitations != 0 {
+		t.Errorf("creation = %d %s, %d invitations; want 401 unauthorized and none", a.res.StatusCode, a.body, invitations)
+	}
+}
