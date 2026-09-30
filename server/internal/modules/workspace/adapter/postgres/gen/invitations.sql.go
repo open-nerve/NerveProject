@@ -56,6 +56,25 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 	return i, err
 }
 
+const deleteInvitation = `-- name: DeleteInvitation :exec
+UPDATE workspace_member_invites
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE id = $3
+`
+
+type DeleteInvitationParams struct {
+	Now       time.Time
+	DeletedBy uuid.UUID
+	ID        uuid.UUID
+}
+
+// deleteWorkspaceInvitation, under the workspace's FOR SHARE and the invitation's FOR UPDATE: the address is free again
+// at once (the partial unique index).
+func (q *Queries) DeleteInvitation(ctx context.Context, arg DeleteInvitationParams) error {
+	_, err := q.db.Exec(ctx, deleteInvitation, arg.Now, arg.DeletedBy, arg.ID)
+	return err
+}
+
 const deleteWorkspaceInvitations = `-- name: DeleteWorkspaceInvitations :exec
 UPDATE workspace_member_invites
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
@@ -73,6 +92,32 @@ type DeleteWorkspaceInvitationsParams struct {
 func (q *Queries) DeleteWorkspaceInvitations(ctx context.Context, arg DeleteWorkspaceInvitationsParams) error {
 	_, err := q.db.Exec(ctx, deleteWorkspaceInvitations, arg.Now, arg.DeletedBy, arg.WorkspaceID)
 	return err
+}
+
+const invitationByID = `-- name: InvitationByID :one
+SELECT id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
+FROM workspace_member_invites
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+// A write on an invitation reads it before its workspace's lock, for the workspace (M3 design 3.6 convention 2).
+func (q *Queries) InvitationByID(ctx context.Context, id uuid.UUID) (WorkspaceMemberInvite, error) {
+	row := q.db.QueryRow(ctx, invitationByID, id)
+	var i WorkspaceMemberInvite
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.Accepted,
+		&i.RespondedAt,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
 
 const listInvitations = `-- name: ListInvitations :many
@@ -114,4 +159,72 @@ func (q *Queries) ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockInvitation = `-- name: LockInvitation :one
+SELECT id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
+FROM workspace_member_invites
+WHERE id = $1 AND deleted_at IS NULL
+FOR UPDATE
+`
+
+// Then, under the workspace's lock, the invitation row FOR UPDATE, read again: a response, a change or a deletion that
+// committed while the write waited is seen, and none commits before it ends. After a wait, Postgres evaluates
+// deleted_at IS NULL again on the row's newest version, so an invitation deleted meanwhile reads no row.
+func (q *Queries) LockInvitation(ctx context.Context, id uuid.UUID) (WorkspaceMemberInvite, error) {
+	row := q.db.QueryRow(ctx, lockInvitation, id)
+	var i WorkspaceMemberInvite
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.Accepted,
+		&i.RespondedAt,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const updateInvitationRole = `-- name: UpdateInvitationRole :one
+UPDATE workspace_member_invites
+SET role = $1, updated_by_id = $2, updated_at = $3
+WHERE id = $4
+RETURNING id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
+`
+
+type UpdateInvitationRoleParams struct {
+	Role      int16
+	UpdatedBy *uuid.UUID
+	Now       time.Time
+	ID        uuid.UUID
+}
+
+// updateWorkspaceInvitation, under the workspace's FOR SHARE and the invitation's FOR UPDATE.
+func (q *Queries) UpdateInvitationRole(ctx context.Context, arg UpdateInvitationRoleParams) (WorkspaceMemberInvite, error) {
+	row := q.db.QueryRow(ctx, updateInvitationRole,
+		arg.Role,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	var i WorkspaceMemberInvite
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Email,
+		&i.Role,
+		&i.Accepted,
+		&i.RespondedAt,
+		&i.CreatedByID,
+		&i.UpdatedByID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }

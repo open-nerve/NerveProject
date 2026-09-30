@@ -50,6 +50,47 @@ func (s *Store) ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([]d
 	return out, nil
 }
 
+// InvitationByID returns the undeleted invitation id; app.ErrNotFound when
+// there is none.
+func (s *Store) InvitationByID(ctx context.Context, id uuid.UUID) (domain.Invitation, error) {
+	r, err := s.queries(ctx).InvitationByID(ctx, id)
+	if err != nil {
+		return domain.Invitation{}, notFound(err)
+	}
+	return invitation(r), nil
+}
+
+// LockInvitation locks the undeleted invitation id FOR UPDATE until the
+// transaction ends and returns it; app.ErrNotFound when there is none, also
+// when it was deleted while the lock waited.
+func (s *Store) LockInvitation(ctx context.Context, id uuid.UUID) (domain.Invitation, error) {
+	r, err := s.queries(ctx).LockInvitation(ctx, id)
+	if err != nil {
+		return domain.Invitation{}, notFound(err)
+	}
+	return invitation(r), nil
+}
+
+// UpdateInvitationRole sets the role of the invitation id, by the account by
+// at now, and returns it as stored. The caller holds the invitation's lock:
+// its absence is an error.
+func (s *Store) UpdateInvitationRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Invitation, error) {
+	r, err := s.queries(ctx).UpdateInvitationRole(ctx, gen.UpdateInvitationRoleParams{ID: id, Role: int16(role), UpdatedBy: &by, Now: now})
+	if err != nil {
+		return domain.Invitation{}, fmt.Errorf("update workspace invitation: %w", err)
+	}
+	return invitation(r), nil
+}
+
+// DeleteInvitation soft-deletes the invitation id, by the account by at
+// now.
+func (s *Store) DeleteInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).DeleteInvitation(ctx, gen.DeleteInvitationParams{ID: id, DeletedBy: by, Now: now}); err != nil {
+		return fmt.Errorf("delete workspace invitation: %w", err)
+	}
+	return nil
+}
+
 // DeleteWorkspaceInvitations soft-deletes the undeleted invitations of the
 // workspace, pending or declined, by the account by at now.
 func (s *Store) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {

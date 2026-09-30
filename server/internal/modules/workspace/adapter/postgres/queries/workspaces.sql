@@ -74,3 +74,11 @@ SELECT id
 FROM workspaces
 WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
 FOR SHARE;
+
+-- name: ShareWorkspace :one
+-- ShareWorkspace takes ShareWorkspaceBySlug's lock by the workspace's id: for a write addressed by a row under the
+-- workspace that adds or changes a row under it (M3 design 3.6 convention 2).
+SELECT id
+FROM workspaces
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR SHARE;

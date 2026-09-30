@@ -19,8 +19,8 @@ import (
 
 // lock is one of the store's parent locks of a workspace (M3 design 3.6
 // convention 2), which names it by its slug or by its id: take answers the
-// workspace's id, the one the lock returned or, for LockWorkspace, which
-// returns none, the one it was given.
+// workspace's id, the one the lock returned or, for the id locks, which
+// return none, the one they were given.
 type lock struct {
 	name string
 	take func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error)
@@ -45,7 +45,13 @@ var (
 		}
 		return w.id, nil
 	}}
-	locks = []lock{noKeyUpdate, forShare, noKeyUpdateByID}
+	forShareByID = lock{"ShareWorkspace", func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error) {
+		if err := s.ShareWorkspace(ctx, w.id); err != nil {
+			return uuid.UUID{}, err
+		}
+		return w.id, nil
+	}}
+	locks = []lock{noKeyUpdate, forShare, noKeyUpdateByID, forShareByID}
 )
 
 // hold runs fn in a transaction of its own and keeps it open until end is
@@ -127,9 +133,15 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 		{noKeyUpdateByID, noKeyUpdate, "acme", true},
 		{forShare, noKeyUpdateByID, "acme", true},
 		{noKeyUpdateByID, forShare, "acme", true},
+		{noKeyUpdate, forShareByID, "acme", true},
+		{forShareByID, noKeyUpdate, "acme", true},
+		{forShareByID, noKeyUpdateByID, "acme", true},
+		{forShare, forShareByID, "acme", false},
+		{forShareByID, forShare, "acme", false},
 		{noKeyUpdate, noKeyUpdate, "beta", false},
 		{noKeyUpdate, forShare, "beta", false},
 		{noKeyUpdate, noKeyUpdateByID, "beta", false},
+		{noKeyUpdate, forShareByID, "beta", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.held.name+" held, "+tt.then.name+" of "+tt.slug, func(t *testing.T) {

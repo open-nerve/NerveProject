@@ -170,6 +170,22 @@ func (q *Queries) LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UU
 	return id, err
 }
 
+const shareWorkspace = `-- name: ShareWorkspace :one
+SELECT id
+FROM workspaces
+WHERE id = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+// ShareWorkspace takes ShareWorkspaceBySlug's lock by the workspace's id: for a write addressed by a row under the
+// workspace that adds or changes a row under it (M3 design 3.6 convention 2).
+func (q *Queries) ShareWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, shareWorkspace, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const shareWorkspaceBySlug = `-- name: ShareWorkspaceBySlug :one
 SELECT id
 FROM workspaces

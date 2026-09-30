@@ -13,8 +13,8 @@ import (
 
 // The parent locks of the writes on a workspace (M3 design 3.6 convention
 // 2). Each locks the undeleted workspace row until the transaction ctx
-// carries ends; the slug locks return the workspace's id, LockWorkspace,
-// which is given it, only an error. A workspace that is not there is
+// carries ends; the slug locks return the workspace's id, the id locks,
+// which are given it, only an error. A workspace that is not there is
 // app.ErrNotFound, also when it was deleted while the lock waited. Outside
 // a transaction the lock would end with its statement: call them inside
 // one.
@@ -39,6 +39,13 @@ func (s *Store) LockWorkspace(ctx context.Context, id uuid.UUID) error {
 func (s *Store) ShareWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
 	id, err := s.queries(ctx).ShareWorkspaceBySlug(ctx, slug)
 	return lockedWorkspace(id, err)
+}
+
+// ShareWorkspace locks the workspace id FOR SHARE: for a write addressed by
+// a row under the workspace that adds or changes rows under it.
+func (s *Store) ShareWorkspace(ctx context.Context, id uuid.UUID) error {
+	_, err := lockedWorkspace(s.queries(ctx).ShareWorkspace(ctx, id))
+	return err
 }
 
 func lockedWorkspace(id uuid.UUID, err error) (uuid.UUID, error) {
