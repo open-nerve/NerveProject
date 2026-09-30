@@ -52,15 +52,16 @@ func TestAFailedProfilesReadIsAnError(t *testing.T) {
 	}
 }
 
-// PublicProfiles takes no lock: it reads an account whose row a
-// deactivation holds FOR NO KEY UPDATE without waiting, as it was
+// PublicProfiles takes no lock: it reads an account whose row another
+// transaction holds FOR UPDATE, which every row lock waits for (a
+// deactivation's FOR NO KEY UPDATE among them), without waiting, as it was
 // committed (M3 design 3.6 convention 1).
 func TestPublicProfilesDoesNotWaitForTheRowsLock(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newUser("alice@corp.com")
 	mustCreate(t, s, alice)
 	end := hold(t, postgres.NewTxManager(pool, 5*time.Second), func(ctx context.Context) error {
-		_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE", alice.ID)
+		_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT 1 FROM users WHERE id = $1 FOR UPDATE", alice.ID)
 		if err != nil {
 			return err
 		}
