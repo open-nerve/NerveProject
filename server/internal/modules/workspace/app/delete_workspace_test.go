@@ -21,6 +21,7 @@ type deleteFixture struct {
 	log        *callLog
 	tx         *fakeTx
 	workspaces *fakeWorkspaces
+	projects   *fakeProjects
 	auth       *fakeAuthorizer
 	logs       *strings.Builder
 }
@@ -28,11 +29,11 @@ type deleteFixture struct {
 func newDelete() (*app.DeleteWorkspace, *deleteFixture) {
 	log := &callLog{}
 	f := &deleteFixture{log: log, tx: &fakeTx{}, workspaces: &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta}},
-		auth: &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{
+		projects: &fakeProjects{log: log}, auth: &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},
 			{bob.ID, beta.ID}:   {WorkspaceRole: shared.RoleAdmin},
 		}}, logs: &strings.Builder{}}
-	return app.NewDeleteWorkspace(f.workspaces, f.auth, f.tx, ticking{clocktest.At(now)}, slog.New(slog.NewTextHandler(f.logs, nil))), f
+	return app.NewDeleteWorkspace(f.workspaces, f.projects, f.auth, f.tx, ticking{clocktest.At(now)}, slog.New(slog.NewTextHandler(f.logs, nil))), f
 }
 
 // ticking moves a microsecond on each read: a deletion that read the clock
@@ -45,10 +46,12 @@ func (t ticking) Now() time.Time {
 	return n
 }
 
-// cascadeCalls are the deletion's steps on w by user, in order.
+// cascadeCalls are the deletion's steps on w by user, in order: the
+// workspace's own, then the projects', through the project module.
 func cascadeCalls(user app.AccountState, w domain.Workspace) []string {
 	var calls []string
-	for _, step := range []string{"DeleteWorkspace", "DeleteWorkspaceInvitations", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences"} {
+	for _, step := range []string{"DeleteWorkspace", "DeleteWorkspaceInvitations", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences",
+		"DeleteWorkspaceProjects"} {
 		calls = append(calls, step+" "+w.ID.String()+" by "+user.ID.String()+" at "+now.Format(time.RFC3339Nano))
 	}
 	return calls
@@ -56,8 +59,9 @@ func cascadeCalls(user app.AccountState, w domain.Workspace) []string {
 
 // DeleteWorkspace locks the workspace FOR NO KEY UPDATE, decides, then
 // soft-deletes the workspace, its invitations, its members and their
-// settings, by the caller at one moment, in one transaction (M3 design
-// 3.6), and logs it. Two callers, two workspaces.
+// settings, and last its projects through the project module, by the
+// caller at one moment, in one transaction (M3 design 3.6), and logs it.
+// Two callers, two workspaces.
 func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 	for _, tt := range []struct {
 		user app.AccountState
@@ -116,6 +120,9 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 			func(f *deleteFixture) {
 				f.workspaces.deleteErrs = map[string]error{"DeleteWorkspacePreferences": failure}
 			},
+			failure, append(slices.Clone(decided), steps[:4]...)},
+		{"the projects failed", alice, "acme",
+			func(f *deleteFixture) { f.projects.errs = map[string]error{"DeleteWorkspaceProjects": failure} },
 			failure, append(slices.Clone(decided), steps...)},
 		{"the commit failed", alice, "acme", func(f *deleteFixture) { f.tx.commitErr = failure }, failure,
 			append(slices.Clone(decided), steps...)},

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -19,6 +20,7 @@ import (
 func moduleActions() map[string][]shared.Action {
 	return map[string][]shared.Action{
 		"workspace": workspace.Actions(),
+		"project":   project.Actions(),
 	}
 }
 

@@ -295,7 +295,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a workspace
-         * @description For the workspace's admins. The workspace, its invitations, its memberships and the members' display settings are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+         * @description For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings and states are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
          */
         delete: operations["deleteWorkspace"];
         options?: never;

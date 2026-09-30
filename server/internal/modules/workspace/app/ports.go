@@ -176,6 +176,18 @@ type WorkspaceDeleter interface {
 	DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 }
 
+// ProjectCascade is what the workspace's writes ask of the projects (M3
+// design 3.3): the project module implements it (project.New's Cascade).
+// Each method runs in the transaction ctx carries, writes by and now into
+// the rows it changes, and returns a failure as itself, so the caller's
+// whole write rolls back.
+type ProjectCascade interface {
+	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
+	// rows under them, at the moment and by the account of the workspace's
+	// deletion: its last step.
+	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+}
+
 // PreferencesRow is a change of an account's display settings in a
 // workspace, and the id of the row if the change inserts one.
 type PreferencesRow struct {

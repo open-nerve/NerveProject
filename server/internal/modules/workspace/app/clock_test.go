@@ -42,7 +42,7 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			"UpsertPreferences "+beta.ID.String()+" "+bob.ID.String()+" mode=<nil> limit=<nil> at "+at)},
 		{"deleteWorkspace", func() ([]string, error) {
 			_, f := newDelete()
-			err := app.NewDeleteWorkspace(f.workspaces, f.auth, f.tx, clockAt{now, f.log}, slog.New(slog.DiscardHandler)).
+			err := app.NewDeleteWorkspace(f.workspaces, f.projects, f.auth, f.tx, clockAt{now, f.log}, slog.New(slog.DiscardHandler)).
 				Execute(as(alice), "acme")
 			return f.log.calls, err
 		}, slices.Concat(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionDelete), []string{"Now"}, cascadeCalls(alice, acme))},

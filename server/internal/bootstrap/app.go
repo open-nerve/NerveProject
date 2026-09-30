@@ -19,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -101,12 +102,15 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	identityPorts := identity.Provide(pool)
 	workspacePorts := workspace.Provide(pool)
 	authorizer := access.New(access.Deps{WorkspaceRoles: workspacePorts.WorkspaceRoles})
+	// project before workspace: workspace's writes take its cascade.
+	proj := project.New(project.Deps{Pool: pool})
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		InvitationMAC:   invitations,
 		CallerLock:      identityPorts.CredentialLock,
+		Projects:        proj.Cascade(),
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{

@@ -69,6 +69,8 @@ type Deps struct {
 	InvitationMAC app.InvitationMAC
 	// CallerLock is identity's credential lock (identity.Provide).
 	CallerLock app.CallerLock
+	// Projects is the project module's Cascade (project.New).
+	Projects app.ProjectCascade
 	// CreationEnabled is workspace.creation_enabled (M3 design 3.11).
 	CreationEnabled bool
 }
@@ -98,7 +100,7 @@ func New(d Deps) *Module {
 		}),
 		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
 		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
-		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Authorizer, d.Tx, d.Clock, d.Logger),
+		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Logger),
 		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
 		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Profiles, d.Authorizer, d.Tx, d.Clock),
 		CheckSlug:         app.NewCheckSlug(store),

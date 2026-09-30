@@ -115,7 +115,8 @@ paths:
       summary: Delete a workspace
       description: >-
         For the workspace's admins. The workspace, its invitations, its
-        memberships and the members' display settings are soft-deleted in one
+        memberships, the members' display settings, and its projects with
+        their memberships, display settings and states are soft-deleted in one
         transaction, at the same moment; the members' accounts stay. The slug
         can name a new workspace at once. Nobody's last_workspace_id is
         cleared. A workspace that does not exist, is deleted, or of which the

@@ -29,7 +29,7 @@ import (
 // table, and changes no row of another workspace. The tables come from
 // pg_constraint, not from a list kept here: a phase that adds a table under
 // workspaces fails this test until it seeds a row of it (seedWorkspace) and
-// the cascade deletes it (P4 the projects' tables through ProjectCascade).
+// the cascade deletes it: the projects' tables through ProjectCascade.
 
 // survivesItsWorkspace are the foreign keys to workspaces, as table.column,
 // whose rows must outlive the workspace's deletion, each with its reason.
@@ -124,8 +124,10 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 // token its admin, and seeds a row of each table under it: the admin's
 // membership, which the creation writes; the member's, and an invitation
 // the admin sent, through the workspace store; the admin's display
-// settings, through the API. A phase that adds a table under workspaces
-// seeds a row of it here. It returns the workspace's id.
+// settings, through the API; a project with the member's membership, his
+// display settings in it and a state (seedProject). A phase that adds a
+// table under workspaces seeds a row of it here. It returns the workspace's
+// id.
 func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
 	t.Helper()
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
@@ -151,7 +153,73 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 		`{"navigation_project_limit":3}`); status != http.StatusOK {
 		t.Fatalf("the settings in %s = %d %s, want 200", slug, status, body)
 	}
+	seedProject(t, pool, id, admin, member)
 	return id
+}
+
+// seedProject writes a project of the workspace id, created by admin,
+// with member's membership, his display settings in it and one state,
+// directly: the seed does not depend on which of the project module's
+// writes exist, nor on what they write besides.
+func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) {
+	t.Helper()
+	ctx, project := context.Background(), uuid.NewV7()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{"INSERT INTO projects (id, workspace_id, name, identifier, created_by_id) VALUES ($1, $2, 'Web', 'WEB', $3)", []any{project, id, admin}},
+		{"INSERT INTO project_members (id, workspace_id, project_id, member_id, role) VALUES ($1, $2, $3, $4, 15)",
+			[]any{uuid.NewV7(), id, project, member}},
+		{"INSERT INTO project_user_properties (id, workspace_id, project_id, user_id) VALUES ($1, $2, $3, $4)",
+			[]any{uuid.NewV7(), id, project, member}},
+		{`INSERT INTO states (id, workspace_id, project_id, name, color, "default") VALUES ($1, $2, $3, 'Backlog', '#60646C', true)`,
+			[]any{uuid.NewV7(), id, project}},
+	} {
+		if _, err := pool.Exec(ctx, stmt.sql, stmt.args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+// The projects' step runs in the deletion's transaction (M3 design 3.3,
+// 9.3): when it fails on the wired app, deleteWorkspace answers the failure
+// and no row changes, under either workspace, the projects' nor the
+// workspace's own. The states table, renamed while the request runs, fails
+// the last statement of the cascade.
+func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
+	contract := apitest.Load(t)
+	url := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, url, false), migrations.FS())
+	pool := openPool(t, url)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	registerAccount(t, contract, base, "member@example.com")
+	ids := []uuid.UUID{seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")}
+	rowsOf := func() []string {
+		var all []string
+		for _, k := range workspaceKeys(t, pool) {
+			for _, id := range ids {
+				all = append(all, k.String()+":\n"+k.rows(t, pool, id))
+			}
+		}
+		return all
+	}
+	before := rowsOf()
+	exec := func(sql string) {
+		t.Helper()
+		if _, err := pool.Exec(context.Background(), sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("ALTER TABLE states RENAME TO states_away")
+	status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, "")
+	exec("ALTER TABLE states_away RENAME TO states")
+	if status != http.StatusInternalServerError {
+		t.Fatalf("deleting the workspace with the states' step failing = %d %s, want 500", status, body)
+	}
+	if after := rowsOf(); !slices.Equal(after, before) {
+		t.Errorf("the rows after the failed deletion:\n%q\nwant\n%q", after, before)
+	}
 }
 
 // foreignKey is a column that references workspaces, table as SQL names it.
