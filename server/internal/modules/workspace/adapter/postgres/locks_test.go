@@ -19,7 +19,8 @@ import (
 
 // lock is one of the store's parent locks of a workspace (M3 design 3.6
 // convention 2), which names it by its slug or by its id: take answers the
-// id it locked.
+// workspace's id, the one the lock returned or, for LockWorkspace, which
+// returns none, the one it was given.
 type lock struct {
 	name string
 	take func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error)
@@ -161,7 +162,8 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 
 // A foreign key's check takes the workspace row FOR KEY SHARE when a row
 // under the workspace is inserted: none of the locks holds it off, as a FOR
-// UPDATE, stronger than convention 2 asks, would.
+// UPDATE, stronger than convention 2 asks, would. The statement locks acme's
+// row, one row, so it cannot pass by matching none.
 func TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks(t *testing.T) {
 	for _, l := range locks {
 		t.Run(l.name, func(t *testing.T) {
@@ -173,18 +175,20 @@ func TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks(t *testing.T) {
 				_, err := l.take(ctx, s, named{"acme", acme.ID})
 				return err
 			})
+			var locked int64
 			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
-				_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR KEY SHARE", acme.ID)
+				tag, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR KEY SHARE", acme.ID)
+				locked = tag.RowsAffected()
 				return err
 			})
-			if err != nil {
-				t.Errorf("FOR KEY SHARE of acme while %s holds it: %v; want no wait", l.name, err)
+			if err != nil || locked != 1 {
+				t.Errorf("FOR KEY SHARE of acme while %s holds it: %d rows, %v; want acme's row without a wait", l.name, locked, err)
 			}
 		})
 	}
 }
 
-// A lock finds the undeleted workspace it names and answers its id;
+// A lock finds the undeleted workspace it names, whose id take answers;
 // app.ErrNotFound for a deleted workspace, a slug or an id no workspace has,
 // or a slug of another case.
 func TestTheWorkspaceLocksFindOnlyAnUndeletedWorkspace(t *testing.T) {

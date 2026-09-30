@@ -109,11 +109,6 @@ type WorkspaceFinder interface {
 	WorkspaceBySlug(ctx context.Context, slug string) (domain.Workspace, error)
 }
 
-// The parent locks of the writes on a workspace (M3 design 3.6 convention
-// 2), in the transaction ctx carries: each locks the undeleted workspace
-// with slug until the transaction ends and returns its id; ErrNotFound when
-// there is none, also when it was deleted while the lock waited.
-
 // MemberLister reads a workspace and lists its memberships.
 type MemberLister interface {
 	WorkspaceFinder
@@ -137,6 +132,12 @@ type MemberUpdater interface {
 	UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Membership, error)
 }
 
+// WorkspaceLocker and WorkspaceSharer are the parent locks of the writes on
+// a workspace named by its slug (M3 design 3.6 convention 2), in the
+// transaction ctx carries: each locks the undeleted workspace with slug
+// until the transaction ends and returns its id; ErrNotFound when there is
+// none, also when it was deleted while the lock waited.
+//
 // WorkspaceLocker locks FOR NO KEY UPDATE: for a write of the workspace row
 // itself or of a membership.
 type WorkspaceLocker interface {

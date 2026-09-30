@@ -3,8 +3,8 @@ package app
 import "uuid"
 
 // PublicProfile is an account's public profile as another module reads it
-// through identity's MemberProfiles, without a lock and whatever the
-// account's state (M3 design 6.5).
+// through identity.PublicProfiles (workspace's MemberProfiles), without a
+// lock and whatever the account's state (M3 design 6.5).
 type PublicProfile struct {
 	ID          uuid.UUID
 	Email       string

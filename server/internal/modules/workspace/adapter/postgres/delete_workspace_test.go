@@ -135,10 +135,14 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 		Scan(&carolDeleted, &daveDeleted); err != nil || !carolDeleted.Equal(earlier) || !daveDeleted.Equal(earlier) {
 		t.Errorf("carol's settings deleted at %v, dave's membership at %v, %v; want %v, as before", carolDeleted, daveDeleted, err, earlier)
 	}
-	for id, d := range deletions(t, pool, `
+	betaRows := deletions(t, pool, `
 		SELECT id, deleted_at, updated_at, updated_by_id FROM workspaces WHERE id = $1
 		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_members WHERE workspace_id = $1
-		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_user_properties WHERE workspace_id = $1`, beta.ID) {
+		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_user_properties WHERE workspace_id = $1`, beta.ID)
+	if len(betaRows) != 4 {
+		t.Errorf("beta's rows: %d, want 4: the workspace, alice's and bob's memberships, alice's settings", len(betaRows))
+	}
+	for id, d := range betaRows {
 		if d.deletedAt != nil || !d.updatedAt.Equal(now) {
 			t.Errorf("beta's row %s: %+v, want it untouched", id, d)
 		}

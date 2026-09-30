@@ -100,19 +100,24 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 // foreign key to workspaces): errors are mapped by them, and later
 // migrations drop them by name. Each index is pinned with what it is too,
 // unique and partial or not, so a partial unique key cannot turn into a
-// plain or a total one unseen.
+// plain or a total one unseen. The tables are every table of the schema but
+// River's and goose's own, read from the catalog: a new table's constraints
+// and indexes fail here until they are in want.
 func TestConstraintAndIndexNames(t *testing.T) {
 	pool := newPool(t, pgtest.NewDatabase(t))
 	rows, err := pool.Query(context.Background(), `
+		WITH tables AS (
+			SELECT oid FROM pg_class
+			WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p')
+				AND relname NOT LIKE 'river\_%' AND relname <> 'goose_db_version'
+		)
 		SELECT conname || ' ' || contype::text || CASE WHEN contype = 'f' THEN ' ' || confdeltype::text ELSE '' END FROM pg_constraint
-		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
-				'workspaces'::regclass, 'workspace_members'::regclass, 'workspace_user_properties'::regclass)
+		WHERE conrelid IN (SELECT oid FROM tables)
 			AND contype <> 'n' -- PG 18 lists NOT NULL as constraints too
 		UNION ALL
 		SELECT c.relname || ' i' || CASE WHEN i.indisunique THEN 'u' ELSE '' END || CASE WHEN i.indpred IS NOT NULL THEN 'w' ELSE '' END
 		FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
-		WHERE i.indrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
-				'workspaces'::regclass, 'workspace_members'::regclass, 'workspace_user_properties'::regclass)
+		WHERE i.indrelid IN (SELECT oid FROM tables)
 		ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)

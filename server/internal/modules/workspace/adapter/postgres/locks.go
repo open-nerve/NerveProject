@@ -13,9 +13,11 @@ import (
 
 // The parent locks of the writes on a workspace (M3 design 3.6 convention
 // 2). Each locks the undeleted workspace row until the transaction ctx
-// carries ends and returns the workspace's id; app.ErrNotFound when there is
-// none, also when it was deleted while the lock waited. Outside a
-// transaction the lock would end with its statement: call them inside one.
+// carries ends; the slug locks return the workspace's id, LockWorkspace,
+// which is given it, only an error. A workspace that is not there is
+// app.ErrNotFound, also when it was deleted while the lock waited. Outside
+// a transaction the lock would end with its statement: call them inside
+// one.
 
 // LockWorkspaceBySlug locks the workspace with slug FOR NO KEY UPDATE: for
 // a write of the workspace row itself or of a membership.

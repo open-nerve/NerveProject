@@ -58,8 +58,9 @@ WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
 
 -- name: LockWorkspace :one
--- LockWorkspaceBySlug for a write addressed by a row under the workspace (M3 design 3.6 convention 2): the use case
--- read the row for the workspace's id, and reads it again under this lock.
+-- LockWorkspace takes LockWorkspaceBySlug's lock by the workspace's id: for a write addressed by a row under the
+-- workspace (M3 design 3.6 convention 2), whose use case read the row for the workspace's id and reads it again under
+-- this lock.
 SELECT id
 FROM workspaces
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL

@@ -69,8 +69,16 @@ func TestUpdateMemberRole(t *testing.T) {
 	if other, err := s.MemberByID(context.Background(), bobInBeta.ID); err != nil || other != bobInBeta {
 		t.Errorf("bob in beta: %+v, %v; want it unchanged", other, err)
 	}
-	if acmeAfter, err := s.ListMembers(context.Background(), acme.ID); err != nil || len(acmeAfter) != 2 || acmeAfter[0] != acmeBefore[0] {
-		t.Errorf("acme's members = %+v, %v; want alice's, the updater's, unchanged", acmeAfter, err)
+	if acmeAfter, err := s.ListMembers(context.Background(), acme.ID); err != nil || len(acmeAfter) != 2 || acmeAfter[0] != acmeBefore[0] ||
+		acmeAfter[1] != want {
+		t.Errorf("acme's members = %+v, %v; want alice's, the updater's, unchanged and bob's as answered", acmeAfter, err)
+	}
+	// The other rows keep their audit columns: only bob's in acme was
+	// written.
+	var others int
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM workspace_members
+		WHERE id <> $1 AND (updated_by_id IS DISTINCT FROM created_by_id OR updated_at <> created_at)`, bobIn.ID).Scan(&others); err != nil || others != 0 {
+		t.Errorf("other memberships with changed audit columns: %d, %v; want none", others, err)
 	}
 	if _, err := s.UpdateMemberRole(context.Background(), uuid.NewV7(), shared.RoleGuest, alice, later); err == nil || errors.Is(err, app.ErrNotFound) {
 		t.Errorf("UpdateMemberRole() of no row = %v, want an error that is not app.ErrNotFound", err)
