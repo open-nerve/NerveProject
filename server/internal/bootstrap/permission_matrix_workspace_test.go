@@ -205,7 +205,8 @@ func renamesIt(t *testing.T, c caller, answer string) {
 
 // listsItsWorkspaces: each caller's list is the workspaces it is an active
 // member of, never acme for the callers it is not visible to, and not the
-// deleted gone.
+// deleted gone. A column without a list stated here fails: it would pass by
+// listing nothing.
 func listsItsWorkspaces(t *testing.T, c caller, answer string) {
 	var list struct {
 		Data []struct {
@@ -213,8 +214,11 @@ func listsItsWorkspaces(t *testing.T, c caller, answer string) {
 		} `json:"data"`
 	}
 	decodeAnswer(t, answer, &list)
-	want := map[caller][]string{callerAdmin: {"acme"}, callerMember: {"acme"}, callerGuest: {"acme"},
+	want, stated := map[caller][]string{callerAdmin: {"acme"}, callerMember: {"acme"}, callerGuest: {"acme"},
 		callerNever: {"other"}, callerRemoved: {"other"}, callerDeleted: {}}[c]
+	if !stated {
+		t.Fatalf("no list stated for %s", c)
+	}
 	got := []string{}
 	for _, w := range list.Data {
 		got = append(got, w.Slug)

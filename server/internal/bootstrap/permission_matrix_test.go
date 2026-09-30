@@ -12,15 +12,11 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
-	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
@@ -35,7 +31,8 @@ import (
 // gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
 // another's writes. Each module's rows are in a file of their own
 // (permission_matrix_<module>_test.go): a phase that adds an operation adds
-// its row there, and what the row needs prepared here.
+// its row there, and what the row needs prepared here and in
+// permission_matrix_seeded_test.go.
 
 // matrixExempt are the modules whose operations have no row, each for its
 // reason. Every other operation of the contract has one, so a module that
@@ -137,18 +134,6 @@ func sameRequest(method, path, body string) func(caller, seeded) (string, string
 	return func(caller, seeded) (string, string, string) { return method, path, body }
 }
 
-// seeded are the ids of the rows prepareMatrix seeded that a request can
-// name: each membership, by the workspace's slug and the column.
-type seeded struct {
-	memberships map[string]uuid.UUID
-}
-
-// membership is the id of c's membership of the workspace slug; the zero id
-// when there is none, which no row has.
-func (s seeded) membership(slug string, c caller) uuid.UUID {
-	return s.memberships[slug+"/"+string(c)]
-}
-
 // decodeAnswer decodes a cell's answer into v for a row's check.
 func decodeAnswer(t *testing.T, answer string, v any) {
 	t.Helper()
@@ -162,10 +147,11 @@ func matrixRows() []matrixRow {
 	return slices.Concat(workspaceMatrixRows())
 }
 
-// matrixApps is how many writing cells may run an app at once. Each app's
-// pool opens up to testConfig's MaxConns (4) connections, besides the reads
-// app's and pgtest's admin pool (4 each), against the container's
-// max_connections of 100.
+// matrixApps is how many cells may run an app of their own at once: each
+// cell that writes, or whose row has a config, takes a slot while its app
+// runs. Each app's pool opens up to testConfig's MaxConns (4) connections,
+// besides the reads app's and pgtest's admin pool (4 each), against the
+// container's max_connections of 100.
 const matrixApps = 8
 
 // matrixData is the prepared database, the signing key every app on a copy
@@ -190,18 +176,18 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 
 // prepareMatrix fills a database for the matrix. Through the API, an
 // account for each column, registered for its token. Through the workspace
-// store, the workspace acme with its admin, member, guest and the member
-// later removed, and the admin's display settings there; the workspace gone
-// with its admin and the member; and the workspace other, whose admin was
-// never a member of acme and where the removed member is still active, so
-// that a role read in the wrong workspace lets either into acme. Through the
-// API, gone deleted by its admin, which soft-deletes its memberships with
-// it. Through SQL, until P5's store replaces it, the removed member's
-// membership of acme ended. Everything that connected to the database is
-// closed when it returns, so that it can be copied.
+// store, the workspaces and memberships of matrixMemberships, with the ids
+// newSeeded named, and acme's admin's display settings; other's admin and
+// removed member are there so that a role read in the wrong workspace lets
+// either into acme. Through the API, gone deleted by its admin, which
+// soft-deletes its memberships with it. Through SQL, until P5's store
+// replaces it, the removed member's membership of acme ended. Everything
+// that connected to the database is closed when it returns, so that it can
+// be copied. A -run that leaves out prepare fails here, not with a 401 in
+// every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
-	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}}
+	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
 	prepared := t.Run("prepare", func(t *testing.T) {
 		contract := apitest.Load(t)
 		base := startApp(t, d.config(t, d.url, nil), migrations.FS())
@@ -216,25 +202,19 @@ func prepareMatrix(t *testing.T) matrixData {
 			}
 			ids[c] = id
 		}
-		seed := matrixSeed{t: t, store: workspacepg.New(pool), ids: ids, now: time.Now(),
-			workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}}
-		seed.workspace("acme", callerAdmin)
-		seed.join("acme", callerAdmin, shared.RoleAdmin)
-		seed.join("acme", callerMember, shared.RoleMember)
-		seed.join("acme", callerGuest, shared.RoleGuest)
-		seed.join("acme", callerRemoved, shared.RoleMember)
+		seed := matrixSeed{t: t, store: workspacepg.New(pool), ids: ids, now: time.Now(), workspaces: map[string]uuid.UUID{}}
+		s := d.seeded.in(t)
+		for _, m := range matrixMemberships {
+			if _, created := seed.workspaces[m.slug]; !created {
+				seed.workspace(m.slug, m.c)
+			}
+			seed.join(s.membership(m.slug, m.c), m.slug, m.c, m.role)
+		}
 		tabbed, three := "TABBED", 3
 		seed.preferences("acme", callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
-		seed.workspace("gone", callerDeleted)
-		seed.join("gone", callerDeleted, shared.RoleAdmin)
-		seed.join("gone", callerMember, shared.RoleMember)
-		seed.workspace("other", callerNever)
-		seed.join("other", callerNever, shared.RoleAdmin)
-		seed.join("other", callerRemoved, shared.RoleMember)
-		d.seeded = seeded{memberships: seed.memberships}
 		// No store removes a member yet (P5), so SQL stands in until that
 		// phase replaces it: it ends the removed member's membership of acme.
-		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", d.seeded.membership("acme", callerRemoved))
+		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// membership goes with the workspace row, so every cell of the column
 		// is asked about a workspace deleted the one way there is. A
@@ -247,62 +227,17 @@ func prepareMatrix(t *testing.T) matrixData {
 	if !prepared {
 		t.FailNow()
 	}
+	if len(d.tokens) != len(workspaceColumns) {
+		t.Fatal("prepare did not run: a -run of some cells must select prepare too, e.g. -run 'TestPermissionMatrix/(prepare|getWorkspace)'")
+	}
 	return d
 }
 
-// matrixSeed writes the prepared workspaces, memberships and settings
-// through the workspace store, and keeps their ids by slug (and column);
-// exec runs the SQL that stands in for the store P5 adds.
-type matrixSeed struct {
-	t           *testing.T
-	store       *workspacepg.Store
-	ids         map[caller]uuid.UUID
-	now         time.Time
-	workspaces  map[string]uuid.UUID // by slug
-	memberships map[string]uuid.UUID // by slug/column, as seeded.membership reads them
-}
-
-func (s matrixSeed) workspace(slug string, admin caller) {
-	s.t.Helper()
-	w, err := s.store.CreateWorkspace(context.Background(), workspaceapp.WorkspaceRow{
-		ID: uuid.NewV7(), Name: slug, Slug: slug, Timezone: "UTC", CreatedBy: s.ids[admin], Now: s.now,
-	})
-	if err != nil {
-		s.t.Fatal(err)
-	}
-	s.workspaces[slug] = w.ID
-}
-
-func (s matrixSeed) join(slug string, c caller, role shared.Role) {
-	s.t.Helper()
-	id := uuid.NewV7()
-	if err := s.store.CreateMember(context.Background(), workspaceapp.MemberRow{
-		ID: id, WorkspaceID: s.workspaces[slug], MemberID: s.ids[c], Role: role, CreatedBy: s.ids[c], Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-	s.memberships[slug+"/"+string(c)] = id
-}
-
-func (s matrixSeed) preferences(slug string, c caller, p workspacedomain.PreferencesPatch) {
-	s.t.Helper()
-	if _, err := s.store.UpsertPreferences(context.Background(), workspaceapp.PreferencesRow{
-		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], UserID: s.ids[c], Patch: p, Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-}
-
-func (s matrixSeed) exec(pool *pgxpool.Pool, sql string, args ...any) {
-	s.t.Helper()
-	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
-		s.t.Fatal(err)
-	}
-}
-
-// Each cell of the matrix, the writing ones in parallel on their copies, at
-// most matrixApps of them with an app at once. Every answer a row's check is
-// for is checked, and counted: a harness that skipped the checks would fail.
+// Each cell of the matrix, in parallel: a reading cell on the reads' copy,
+// a cell with an app of its own (a writing cell, or one whose row has a
+// config) on its copy, at most matrixApps of those at once. Every answer a
+// row's check is for is checked, and counted: a harness that skipped the
+// checks would fail.
 func TestPermissionMatrix(t *testing.T) {
 	d := prepareMatrix(t)
 	contract := apitest.Load(t)
@@ -335,7 +270,7 @@ func TestPermissionMatrix(t *testing.T) {
 					t.Cleanup(func() { <-apps })
 					base = startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), r.config), migrations.FS())
 				}
-				method, path, body := r.request(c, d.seeded)
+				method, path, body := r.request(c, d.seeded.in(t))
 				status, answer := call(t, contract, method, base+path, d.tokens[c], body)
 				got := cell{status: status}
 				if status >= http.StatusBadRequest {

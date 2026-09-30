@@ -3,9 +3,11 @@ package bootstrap
 import (
 	"fmt"
 	"net/http"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
@@ -16,10 +18,12 @@ import (
 // exempt module that no operation carries, which a misspelling would be; a
 // row that names no operation; a row without a cell for a column; a cell
 // whose request is not the operation its row names, so that no row tests
-// another operation under its name; a row that sends anything but GET
-// without write, whose cells could write on the copy the reading cells
-// share.
-func matrixViolations(ops []apitest.Operation, exempt []string, rows []matrixRow) []string {
+// another operation under its name; a cell that does not target its
+// column's workspace (targetViolation), so that no column quietly tests
+// another's case; a row that sends anything but GET without write, whose
+// cells could write on the copy the reading cells share. The requests name
+// the rows of s.
+func matrixViolations(ops []apitest.Operation, exempt []string, rows []matrixRow, s seeded) []string {
 	var found []string
 	byID, inMatrix := map[string]apitest.Operation{}, map[string]bool{}
 	for _, op := range ops {
@@ -33,9 +37,15 @@ func matrixViolations(ops []apitest.Operation, exempt []string, rows []matrixRow
 			if _, ok := r.cells[c]; !ok {
 				found = append(found, fmt.Sprintf("row %s has no cell for %s", r.name(), c))
 			}
-			method, path, _ := r.request(c, seeded{})
-			if named && (method != op.Method || !pathOf(op.Path, path)) {
+			method, path, _ := r.request(c, s)
+			switch {
+			case !named:
+			case method != op.Method || !pathOf(op.Path, path):
 				found = append(found, fmt.Sprintf("row %s, %s: %s %s is not %s", r.name(), c, method, path, op.Pattern()))
+			default:
+				if v := targetViolation(op.Path, path, c, s); v != "" {
+					found = append(found, fmt.Sprintf("row %s, %s: %s", r.name(), c, v))
+				}
 			}
 			if method != http.MethodGet && !r.write && unsafe == "" {
 				unsafe = method
@@ -85,13 +95,41 @@ func pathOf(pattern, path string) bool {
 	return true
 }
 
+// targetViolation is what is wrong with where path, a path of pattern that
+// a cell of the column c sends, points; "" when nothing. A workspace named
+// by its slug ({slug} right after workspaces) must be workspaceOf(c), and a
+// row named by its id (a parameter ending in _id) must be a row of s under
+// workspaceOf(c): a cell of the deleted workspace's column that named acme
+// would get the 404 of a workspace its caller is not in, and pass whether
+// deleted workspaces are hidden or not.
+func targetViolation(pattern, path string, c caller, s seeded) string {
+	path, _, _ = strings.Cut(path, "?")
+	want, got := strings.Split(pattern, "/"), strings.Split(path, "/")
+	for i, segment := range want {
+		switch {
+		case segment == "{slug}" && i > 0 && want[i-1] == "workspaces":
+			if got[i] != workspaceOf(c) {
+				return fmt.Sprintf("targets the workspace %s, not its column's %s", got[i], workspaceOf(c))
+			}
+		case strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "_id}"):
+			id, err := uuid.Parse(got[i])
+			slug, isRow := s.workspaceOfRow(id)
+			if err != nil || !isRow || slug != workspaceOf(c) {
+				return fmt.Sprintf("%s %s is no row seeded under its column's workspace %s", segment, got[i], workspaceOf(c))
+			}
+		}
+	}
+	return ""
+}
+
 // Every operation but the exempt modules' has a row, each exempt module has
 // operations, each row names an operation, has a cell for each column and
-// sends that operation's request from each, and a row that writes says so
-// (M3 design 9.2): a new operation without a row fails here, whatever its
-// module, and so does a row that tests another operation under its name.
+// sends that operation's request from each, to the column's workspace, and
+// a row that writes says so (M3 design 9.2): a new operation without a row
+// fails here, whatever its module, and so does a row that tests another
+// operation under its name, or a column's case in another workspace.
 func TestThePermissionMatrixCoversEveryOperation(t *testing.T) {
-	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows()) {
+	for _, v := range matrixViolations(apitest.Load(t).Operations(), matrixExempt, matrixRows(), newSeeded().in(t)) {
 		t.Error(v)
 	}
 }
@@ -102,7 +140,8 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	ops := []apitest.Operation{{ID: "getWorkspace", Tags: []string{"workspace"}, Method: http.MethodGet, Path: "/api/v0/workspaces/{slug}"},
 		{ID: "getMe", Tags: []string{"identity"}, Method: http.MethodGet, Path: "/api/v0/me"}}
 	exempt := []string{"identity"}
-	get := sameRequest(http.MethodGet, "/api/v0/workspaces/acme", "")
+	s := newSeeded().in(t)
+	get := toWorkspace(http.MethodGet, "", "")
 	row := matrixRow{op: "getWorkspace", request: get, cells: every(cellOK)}
 	// guestSends is row, but the guest's cell sends method path.
 	guestSends := func(method, path string) matrixRow {
@@ -115,12 +154,47 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 		}
 		return r
 	}
-	// A matching matrix; a query is no part of the path.
+	// A matching matrix; a query is no part of the path; a membership named
+	// by its id, in each column's workspace.
 	lists := apitest.Operation{ID: "listWorkspaces", Tags: []string{"workspace"}, Method: http.MethodGet, Path: "/api/v0/workspaces"}
 	paged := matrixRow{op: "listWorkspaces", request: sameRequest(http.MethodGet, "/api/v0/workspaces?page=2", ""), cells: every(cellOK)}
-	if got := matrixViolations(append(ops, lists), exempt, []matrixRow{row, paged}); len(got) != 0 {
+	membership := apitest.Operation{ID: "updateWorkspaceMember", Tags: []string{"workspace"}, Method: http.MethodPatch,
+		Path: "/api/v0/workspace-members/{workspace_member_id}"}
+	demotes := matrixRow{op: "updateWorkspaceMember", write: true, request: toMembership(anotherMember, `{"role":5}`), cells: every(cellOK)}
+	if got := matrixViolations(append(ops, lists, membership), exempt, []matrixRow{row, paged, demotes}, s); len(got) != 0 {
 		t.Fatalf("a matching matrix: %q, want none", got)
 	}
+	// deletedNames is demotes, but the deleted workspace's column names the
+	// membership of who in slug.
+	deletedNames := func(slug string, who caller) matrixRow {
+		r := demotes
+		r.request = toMembership(func(c caller) (string, caller) {
+			if c == callerDeleted {
+				return slug, who
+			}
+			return anotherMember(c)
+		}, `{"role":5}`)
+		return r
+	}
+	// guestNames is demotes, but the guest's cell sends path.
+	guestNames := func(path string) matrixRow {
+		r := demotes
+		r.request = func(c caller, s seeded) (string, string, string) {
+			if c == callerGuest {
+				return http.MethodPatch, path, `{"role":5}`
+			}
+			return demotes.request(c, s)
+		}
+		return r
+	}
+	preferences := apitest.Operation{ID: "getWorkspacePreferences", Tags: []string{"workspace"}, Method: http.MethodGet,
+		Path: "/api/v0/me/workspaces/{slug}/preferences"}
+	otherPreferences := matrixRow{op: "getWorkspacePreferences", cells: every(cellOK), request: func(c caller, s seeded) (string, string, string) {
+		if c == callerGuest {
+			return http.MethodGet, "/api/v0/me/workspaces/other/preferences", ""
+		}
+		return toPreferences(http.MethodGet, "")(c, s)
+	}}
 	partial := row
 	partial.cells = map[caller]cell{callerAdmin: cellOK}
 	var mislabelled []string
@@ -163,11 +237,29 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 		{"a write without write", append(ops, creates), []matrixRow{row,
 			{op: "createWorkspace", request: sameRequest(http.MethodPost, "/api/v0/workspaces", `{}`), cells: every(cellCreated)}},
 			[]string{"row createWorkspace sends POST without write: its cells could run on the reads' copy"}},
+		{"a cell that targets another column's workspace", ops,
+			[]matrixRow{{op: "getWorkspace", request: sameRequest(http.MethodGet, "/api/v0/workspaces/acme", ""), cells: every(cellOK)}},
+			[]string{"row getWorkspace, workspace deleted: targets the workspace acme, not its column's gone"}},
+		{"a cell of one's settings in another column's workspace", append(ops, preferences), []matrixRow{row, otherPreferences},
+			[]string{"row getWorkspacePreferences, guest: targets the workspace other, not its column's acme"}},
+		{"a membership of another column's workspace", append(ops, membership), []matrixRow{row, deletedNames("acme", callerMember)},
+			[]string{"row updateWorkspaceMember, workspace deleted: {workspace_member_id} " + s.membership("acme", callerMember).String() +
+				" is no row seeded under its column's workspace gone"}},
+		{"an id no seeded row has", append(ops, membership), []matrixRow{row, guestNames("/api/v0/workspace-members/" + uuid.Nil().String())},
+			[]string{"row updateWorkspaceMember, guest: {workspace_member_id} " + uuid.Nil().String() + " is no row seeded under its column's workspace acme"}},
 	}
 	for _, tt := range tests {
-		if got := matrixViolations(tt.ops, exempt, tt.rows); !slices.Equal(got, tt.want) {
+		if got := matrixViolations(tt.ops, exempt, tt.rows, s); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
+	}
+	// A membership never seeded fails the test at once, and names it: its id
+	// would name no row, and an outsider's cell would pass on its 404.
+	failed := fatalOf(func(tb testing.TB) {
+		matrixViolations(append(ops, membership), exempt, []matrixRow{deletedNames("acme", callerNever)}, newSeeded().in(tb))
+	})
+	if want := "no membership of acme by never a member is seeded"; failed != want {
+		t.Errorf("a membership never seeded: failed with %q, want %q", failed, want)
 	}
 	// An exempt entry that no operation carries: stale, or misspelled, when
 	// the module it meant has operations without rows besides.
@@ -180,8 +272,34 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 		{"a misspelled exempt entry", []string{"identities"},
 			[]string{"operation getMe, tagged [identity], has no row", "the exempt module identities has no operation"}},
 	} {
-		if got := matrixViolations(ops, tt.exempt, []matrixRow{row}); !slices.Equal(got, tt.want) {
+		if got := matrixViolations(ops, tt.exempt, []matrixRow{row}, s); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}
+}
+
+// fatalOf runs f on a goroutine of its own with a testing.TB whose Fatalf
+// records the message and ends that goroutine, as testing.T's does, without
+// failing the test; it returns the message, "" when f did not fail.
+func fatalOf(f func(testing.TB)) string {
+	p := &fatalProbe{}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f(p)
+	}()
+	<-done
+	return p.message
+}
+
+type fatalProbe struct {
+	testing.TB
+	message string
+}
+
+func (*fatalProbe) Helper() {}
+
+func (p *fatalProbe) Fatalf(format string, args ...any) {
+	p.message = fmt.Sprintf(format, args...)
+	runtime.Goexit()
 }
