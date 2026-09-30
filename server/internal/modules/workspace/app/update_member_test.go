@@ -57,6 +57,22 @@ func TestUpdateWorkspaceMemberLocksThenDecidesThenWrites(t *testing.T) {
 	}
 }
 
+// The answer's address follows the caller's grant, not the member's role:
+// a grant that does not see addresses (a guest's, which the rule never
+// gives today) gets none.
+func TestUpdateWorkspaceMemberShowsTheAddressByTheCallersRole(t *testing.T) {
+	for role, seen := range map[shared.Role]bool{shared.RoleAdmin: true, shared.RoleMember: true, shared.RoleGuest: false} {
+		uc, f, _ := newUpdateMember()
+		f.auth.grants[grantKey{alice.ID, acme.ID}] = shared.Grant{WorkspaceRole: role}
+		got, err := uc.Execute(as(alice), bobInAcme.ID, shared.RoleGuest)
+		want := bobInAcme
+		want.Role = shared.RoleGuest
+		if err != nil || !sameMembers([]domain.Member{got}, []domain.Member{withUser(want, seen)}) {
+			t.Errorf("granted as %d: Execute() = %+v, %v; want %+v", role, got, err, withUser(want, seen))
+		}
+	}
+}
+
 // Each refusal and failure is the answer, and no role is written. The
 // role's check comes first. A membership that is not there, deleted
 // meanwhile, of a workspace not there or not visible is
@@ -106,6 +122,8 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 			[]string{"MemberByID " + bobInAcme.ID.String()}},
 		{"the lock failed", alice, bobInAcme.ID, shared.RoleGuest, func(f *membersFixture) { f.workspaces.lockErrs = map[string]error{"acme": failure} },
 			failure, decided[:2]},
+		{"the read under the lock failed", alice, bobInAcme.ID, shared.RoleGuest,
+			func(f *membersFixture) { f.workspaces.onLock = func() { f.workspaces.membersErr = failure } }, failure, decided[:3]},
 		{"the Authorizer failed", alice, bobInAcme.ID, shared.RoleGuest,
 			func(f *membersFixture) { f.auth.errs = map[grantKey]error{{alice.ID, acme.ID}: failure} }, failure, decided},
 	}
