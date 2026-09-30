@@ -80,6 +80,8 @@
 | `server/internal/platform/httpserver/apitest/main_callers_test.go` | 每个模块的 HTTP 测试经 `apitest.Main(m, "<模块>")` | 8 |
 | `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`（修改） | `projectWorkspaces`、`accessProjects` 两个转换 | 8–10 |
 | `server/internal/bootstrap/project_test.go` | 组合出的 app 上建项目 | 8 |
+| `server/internal/bootstrap/project_wiring_test.go` | `project.New` 接的时钟和事务：建项目的时刻在请求之内，状态插入失败时 500、什么都不留 | 8 |
+| `server/internal/bootstrap/project_access_test.go` | 真实的存储上 `Authorizer` 只认目标工作区的项目（第 8 条移交） | 9 |
 | `web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`（修改） | 新码的文案 | 8、9 |
 | `server/internal/modules/access/app/ports.go`、`server/internal/modules/access/app/authorizer.go`、`server/internal/modules/access/app/authorizer_test.go`、`server/internal/modules/access/module.go`（修改） | `ProjectAccess` 端口；判定读项目的事实 | 9 |
 | `server/internal/modules/project/adapter/postgres/queries/access.sql`、`server/internal/modules/project/adapter/postgres/access.go`、`server/internal/modules/project/adapter/postgres/access_test.go`、`server/internal/modules/project/app/access.go` | `ProjectFacts` | 9 |
@@ -2094,7 +2096,7 @@ Expected: 通过。
 **Tests:**
 - `domain/project_test.go`：`TestCheckNewProjectAcceptsValidProjects`（标识转成大写、不给网络时公开、各边界值）；`TestCheckNewProjectReportsEveryField`（每个字段的每种问题，一个 422 列出全部；名称全是空白、256 个字符、每个禁用字符、NUL；标识的空串、11 个字符、`-`、别的字母；说明的 NUL；网络 1；未知的时区；图标的 `in_use` 和五个文本的 NUL）；`TestCanLead`（管理员、成员可以，访客和三种以外的角色不可以）。
 - `domain/state_test.go`：`TestDefaultStates`；`domain/preferences_test.go`：`TestSortOrderFirst`。
-- `server/migrations/project_schema_test.go`：`TestProjectChecksRejectCounterexamples`（`logo_props` 的四个合法值和十个反例，含 Codex S5 的两个；名称、标识、网络、`archive_in`、`last_issue_sequence`、项目角色、显示设置、状态的反例和边界）；`TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`（五个部分唯一键：第二个未删除的行被拒绝，软删除第一行之后可以再用；别的工作区、项目、账户有自己的键）。
+- `server/migrations/project_schema_test.go`：`TestProjectChecksRejectCounterexamples`（`logo_props` 的四个合法值和十五个反例：M3 设计 4.6、9.3 的十个，含 Codex S5 的两个，另有那十个没有试到的每个条件一个：表情的键、`url`，图标是对象、`name`、`background_color`；名称、标识、网络、`archive_in`、`last_issue_sequence`、项目角色、显示设置、状态的反例和边界）；`TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`（五个部分唯一键：第二个未删除的行被拒绝，软删除第一行之后可以再用；别的工作区、项目、账户有自己的键）。
 
 - [ ] **Step 1: 领域**
 
@@ -2605,8 +2607,10 @@ import (
 
 // The project tables' CHECKs accept what the domain writes and reject what
 // bypasses it (M3 design 3.17, 3.19, 4.6–4.9). projects_logo_props_check
-// takes the four valid values and refuses the ten counterexamples of 4.6,
-// Codex S5's two among them.
+// takes the four valid values and refuses fifteen counterexamples: the ten
+// of 4.6, Codex S5's two among them, and one for each conjunct those ten
+// leave untried (the emoji's keys and url; the icon an object, its name
+// and background color).
 func TestProjectChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -2674,6 +2678,12 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		{"logo_props' emoji a string", `UPDATE projects SET logo_props = '{"emoji": "x"}'`, "projects_logo_props_check"},
 		{"logo_props' icon with an unknown key", `UPDATE projects SET logo_props = '{"icon": {"shape": "round"}}'`, "projects_logo_props_check"},
 		{"logo_props' icon color null", `UPDATE projects SET logo_props = '{"icon": {"color": null}}'`, "projects_logo_props_check"},
+		{"logo_props' emoji with an unknown key", `UPDATE projects SET logo_props = '{"emoji": {"shape": "x"}}'`, "projects_logo_props_check"},
+		{"logo_props' emoji url a number", `UPDATE projects SET logo_props = '{"emoji": {"url": 1}}'`, "projects_logo_props_check"},
+		{"logo_props' icon a string", `UPDATE projects SET logo_props = '{"icon": "x"}'`, "projects_logo_props_check"},
+		{"logo_props' icon name a number", `UPDATE projects SET logo_props = '{"icon": {"name": 1}}'`, "projects_logo_props_check"},
+		{"logo_props' icon background_color a number", `UPDATE projects SET logo_props = '{"icon": {"background_color": 1}}'`,
+			"projects_logo_props_check"},
 		{"logo_props an array", `UPDATE projects SET logo_props = '[]'`, "projects_logo_props_check"},
 		{"logo_props a string", `UPDATE projects SET logo_props = '"x"'`, "projects_logo_props_check"},
 		{"logo_props JSON null", `UPDATE projects SET logo_props = 'null'`, "projects_logo_props_check"},
@@ -2821,8 +2831,9 @@ Plane's forbidden characters, an identifier of 1-10 of A-Z, 0-9 and
 ÇŞĞİÖÜ once upper-cased, a network of 0 or 2, a known time zone, no NUL
 anywhere; every problem in one 422. CanLead is a set. The six default
 states and a new project's place in a sidebar are Plane's. The CHECKs
-take logo_props' four valid values and refuse its ten counterexamples
-(4.6), and each partial unique key holds among undeleted rows only.
+take logo_props' four valid values and refuse fifteen counterexamples,
+the ten of 4.6 among them and one for each conjunct those leave untried,
+and each partial unique key holds among undeleted rows only.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -2836,10 +2847,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | `CanLead` 按大小；访客可以领导 | `TestCanLead` |
 | 默认状态的颜色改了；Todo 也是默认 | `TestDefaultStates` |
 | 新项目排在别的之前 1000；没有别的位置时 0 | `TestSortOrderFirst` |
-| 名称的 CHECK 去掉禁用字符；禁止反斜杠；标识的 CHECK 接受 12 个；`logo_props` 的 `in_use` 任何字符串、`icon.color` 任何类型、外层任何键、任何 JSON | `TestProjectChecksRejectCounterexamples` |
+| 名称的 CHECK 去掉禁用字符；禁止反斜杠；标识的 CHECK 接受 12 个；`logo_props` 的 `in_use` 任何字符串、`icon.color` 任何类型、外层任何键、任何 JSON；表情任何键、`emoji.url`、`icon.name`、`icon.background_color` 任何类型、图标不是对象 | `TestProjectChecksRejectCounterexamples` |
 | 标识的唯一键也管已删除的；名称的唯一键不带工作区；默认状态的唯一键也管已删除的；状态名的唯一键不带项目 | `TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`（第一个另有 `TestConstraintAndIndexNames`） |
 
-**Done when:** 领域的每条规则由表驱动的测试核对，四张表的 CHECK 和五个部分唯一键由真实数据库上的反例核对。
+**Done when:** 领域的每条规则由表驱动的测试核对，四张表的 CHECK（`projects_logo_props_check` 的每个条件）和五个部分唯一键由真实数据库上的反例核对。
 
 ---
 
@@ -3736,7 +3747,7 @@ Expected: 通过。
 | 标识被占答成名称被占；不存图标；不存负责人 | `TestCreateProjectIdentifierOrNameTaken`；`TestCreateProjectKeepsTheLogo`、`TestCreateProjectStoresTheRow`；`TestCreateProjectStoresTheRow` |
 | 成员关系存成别的角色；每个状态都存成默认 | `TestCreateTheRowsUnderAProject` |
 | `CreateStates` 失败之后继续 | `TestCreateStatesStopsAtTheFirstFailure` |
-| `GetProject` 去掉 13 个谓词中的任何一个（成员列表的项目、有效、未删除；调用者的成员关系的项目、账户、有效、未删除；显示设置的项目、账户、未删除；项目的 id、未删除），成员列表的顺序只按时间、只按 id | `TestGetProject`（关键的五个在 id 升序、降序两个行序下都失败） |
+| `GetProject` 去掉 12 个谓词中的任何一个（成员列表的项目、有效、未删除；调用者的成员关系的项目、账户、有效、未删除；显示设置的项目、账户、未删除；项目的 id、未删除），成员列表的顺序只按时间、只按 id | `TestGetProject`（关键的五个在 id 升序、降序两个行序下都失败） |
 | `LowestSortOrder` 不看工作区、账户、`deleted_at`；不排序；倒序 | `TestLowestSortOrder` |
 
 **Done when:** 插入和读取的每个值、每个默认值、每个谓词由真实数据库上的测试核对，每个写的测试都有别的项目和别的账户的行。
@@ -6224,20 +6235,21 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ### Task 8: `createProject` 的接口：`project.yaml`、HTTP、注册与接线；每个模块的 HTTP 测试经 `apitest.Main`
 
 **Files:**
-- Create: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/project_test.go`、`server/internal/modules/project/adapter/http/gen/oapi-codegen.yaml`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/adapter/http/projects_test.go`、`server/internal/platform/httpserver/apitest/main_callers_test.go`
+- Create: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/project_test.go`、`server/internal/bootstrap/project_wiring_test.go`、`server/internal/modules/project/adapter/http/gen/oapi-codegen.yaml`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/adapter/http/projects_test.go`、`server/internal/platform/httpserver/apitest/main_callers_test.go`
 - Modify: `api/openapi.yaml`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/project/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
 - Produces（spec 2.8、2.13，M3 设计 5.1–5.3、6.6、9.4；P1 review 第 6 节 M6）：`POST /api/v0/workspaces/{slug}/projects`，`ProjectCreate{name, identifier, description?, network?, project_lead_id?, logo_props?, timezone?}`（`additionalProperties: false`，`LogoProps` 的三层都是封闭的结构），201 `Project`；码 `[validation_failed, workspace.not_found, forbidden, project.identifier_taken, project.name_taken]`；`Project` 的 23 个字段都是必有的，`cover_image_url` 总是 `null`，`member_ids` 是数组。新码 `project.identifier_taken`、`project.name_taken`（409）的文案。
 - `project.Deps{Pool, Tx, Clock, Authorizer, Workspaces, Members}`、`(*Module).Register`；`bootstrap/ports.go` 的 `projectWorkspaces`（把 `workspace.DirectoryEntry` 转成 `project.Workspace`）；`app.go` 把它和 `workspacePorts.WorkspaceMembers` 交给 `project.New`，注册 `proj.Register`。
-- `apitest`：`TestEveryModuleRunsItsHTTPTestsThroughMain` 对 `api/modules/` 下的每个模块解析它的 `adapter/http/*_test.go`，要求恰好一个 `TestMain`，函数体恰好是 `apitest.Main(m, "<模块>")`，用它自己的 `*testing.M`。
+- `apitest`：`TestEveryModuleRunsItsHTTPTestsThroughMain` 对 `api/modules/` 下的每个模块解析它的 `adapter/http/*_test.go`，要求有 `TestMain`，函数体恰好是 `apitest.Main(m, "<模块>")`，用它自己的 `*testing.M`。
 - 矩阵：`createProject` 两行（12 格）：`inWorkspace(201, 201, 403)` 和负责人不是成员时 `inWorkspace(422, 422, 403)`（约定三：访客照样是 403，得不到负责人的任何信息）。
 
 **Tests:**
 - `adapter/http/projects_test.go`：`TestCreateProjectAnswers201`（请求体的每个字段交给用例，不给的是 `nil` 或空；201 答每个字段，空的是 `null`、`[]`、`{}`）；`TestCreateProjectRefusals`（契约声明的每个码，含 `workspace.not_found`，9.4）；`TestCreateProjectHoldsTheLogoToItsStructure`（任何一层多出的键、类型不对的值在用例之前 400；类型对但不是两个值之一的 `in_use` 由领域拒绝）。`handler_test.go` 的 `TestMain` 经 `apitest.Main(m, "project")`。
-- `apitest/main_callers_test.go`：`TestEveryModuleRunsItsHTTPTestsThroughMain`、`TestMainViolationsCatchesEachGap`（没有 `TestMain`、别的模块名、函数体多做别的事、传别的 `*testing.M`，四个反例；照做的包通过）。
+- `apitest/main_callers_test.go`：`TestEveryModuleRunsItsHTTPTestsThroughMain`、`TestMainViolationsCatchesEachGap`（没有 `TestMain`、普通的 `TestMain`、别的模块名、函数体多做别的事、传别的 `*testing.M`，五个反例；照做的包通过）。
 - `bootstrap/project_test.go`：`TestCreatingAProject`（组合出的 app：alice 建上海时区的 `acme`，邀请 bob 加入，以他为负责人建项目；答案、四张表的行；同一个标识的别的大小写、同一个名称各答自己的 409，什么都不写）；`ports_test.go`：`TestProjectWorkspacesConvertsWorkspacesAnswer`。
+- `bootstrap/project_wiring_test.go`：`TestCreateProjectRunsOnTheWiredClockAndTransaction`（`project.New` 接的时钟和事务：项目的 `created_at` 在请求的前后之间；状态的每次插入都失败时建项目答 500，四张表的行数不变）。
 
 - [ ] **Step 1: 接口描述**
 
@@ -7475,6 +7487,76 @@ SELECT (SELECT string_agg(m.member_id || ' ' || m.role || ' ' || u.sort_order, '
 }
 ````
 
+`server/internal/bootstrap/project_wiring_test.go`（新文件，65 行）：
+
+````file server/internal/bootstrap/project_wiring_test.go
+package bootstrap
+
+import (
+	"context"
+	"net/http"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/migrations"
+)
+
+// createProject as bootstrap wires it (M3 design 3.6, 6.6): its rows carry
+// the time of the request, from the clock project.New takes; and it writes
+// in the one transaction of the TxManager project.New takes, so while every
+// insert of a state fails, a create answers 500 and leaves no project,
+// membership or display setting behind.
+func TestCreateProjectRunsOnTheWiredClockAndTransaction(t *testing.T) {
+	contract := apitest.Load(t)
+	dbURL := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, dbURL, false), migrations.FS())
+	pool := openPool(t, dbURL)
+	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice,
+		`{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("creating acme = %d %s", status, body)
+	}
+	before := time.Now().Truncate(time.Microsecond)
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Web","identifier":"WEB"}`)
+	after := time.Now()
+	if status != http.StatusCreated {
+		t.Fatalf("creating Web = %d %s", status, body)
+	}
+	var web struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, body, &web)
+	var createdAt time.Time
+	if err := pool.QueryRow(context.Background(), "SELECT created_at FROM projects WHERE id = $1", web.ID).Scan(&createdAt); err != nil {
+		t.Fatal(err)
+	}
+	if createdAt.Before(before) || createdAt.After(after) {
+		t.Errorf("Web was created at %v, want within the request, %v to %v", createdAt, before, after)
+	}
+
+	rows := func() string {
+		t.Helper()
+		var n string
+		if err := pool.QueryRow(context.Background(), `SELECT (SELECT count(*) FROM projects) || ' ' || (SELECT count(*) FROM project_members)
+			|| ' ' || (SELECT count(*) FROM project_user_properties) || ' ' || (SELECT count(*) FROM states)`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	want := rows()
+	if _, err := pool.Exec(context.Background(), "ALTER TABLE states ADD CONSTRAINT no_states CHECK (false) NOT VALID"); err != nil {
+		t.Fatal(err)
+	}
+	status, body = call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Ops","identifier":"OPS"}`)
+	if got := rows(); status != http.StatusInternalServerError || got != want {
+		t.Errorf("creating Ops while the states fail = %d %s, rows %s; want 500 and the rows as they were, %s", status, body, got, want)
+	}
+}
+````
+
 `server/internal/bootstrap/permission_matrix_project_test.go`（新文件，36 行）：
 
 ````file server/internal/bootstrap/permission_matrix_project_test.go
@@ -7565,7 +7647,7 @@ func createsItsProject(t *testing.T, c caller, _ seeded, answer string) {
 Run: `go -C server test -count=1 ./internal/modules/project/... ./internal/platform/httpserver/apitest/`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestCreatingAProject|TestProjectWorkspacesConvertsWorkspacesAnswer|TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestAPIRoutesAreTheContractsOperations|TestBodiesThatBreakTheStructureAnswer400' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestCreatingAProject|TestCreateProjectRunsOnTheWiredClockAndTransaction|TestProjectWorkspacesConvertsWorkspacesAnswer|TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestAPIRoutesAreTheContractsOperations|TestBodiesThatBreakTheStructureAnswer400' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -7586,7 +7668,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/app.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/bootstrap/project_test.go server/internal/modules/project/adapter/http/gen/oapi-codegen.yaml server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/http/projects_test.go server/internal/modules/project/module.go server/internal/platform/httpserver/apitest/main_callers_test.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/app.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/bootstrap/project_test.go server/internal/bootstrap/project_wiring_test.go server/internal/modules/project/adapter/http/gen/oapi-codegen.yaml server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/http/projects_test.go server/internal/modules/project/module.go server/internal/platform/httpserver/apitest/main_callers_test.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4a): POST /api/v0/workspaces/{slug}/projects; every module's HTTP tests run through apitest.Main
@@ -7615,18 +7697,19 @@ Expected: 通过。
 | 生成的 `bodyshape` 让 `logo_props`、`emoji`、`icon` 接受任何键；`icon.color` 接受 `null` | `TestCreateProjectHoldsTheLogoToItsStructure` |
 | 契约少 `project.name_taken`；模块文件声明一个没有测试回答的码；答案的 `project_lead_id` 不可为空 | `TestCreateProjectRefusals`；`apitest.Main`（`declares problem codes that no test answered`）；`TestCreateProjectAnswers201` |
 | 组合根不注册项目的路由；目录的锁转成不加锁的读；转换丢掉时区；`createProject` 不经 `Authorizer` | `TestAPIRoutesAreTheContractsOperations`、`TestCreatingAProject`；`TestProjectWorkspacesConvertsWorkspacesAnswer`；同前另有 `TestCreatingAProject`；`TestPermissionMatrix` |
+| `project.New` 的 `Tx` 换成不开事务的；`Clock` 换成固定的时刻（`mutants_j.py`） | `TestCreateProjectRunsOnTheWiredClockAndTransaction` |
 | 矩阵少项目的行 | `TestThePermissionMatrixCoversEveryOperation` |
 | 核对不看模块名、函数体、`*testing.M`；没有 `TestMain` 的包通过；不读真实的目录 | `TestMainViolationsCatchesEachGap`；最后一个 `TestEveryModuleRunsItsHTTPTestsThroughMain` |
 | `project` 的 HTTP 测试不经 `apitest.Main`（`guard_inplace.py`，在文件上改） | `TestEveryModuleRunsItsHTTPTestsThroughMain` |
 
-**Done when:** 组合出的 app 建项目、答案和四张表的行、两个 409 由测试核对；矩阵 144 格；`project` 的 `apitest.Main` 两个方向通过，每个模块的 HTTP 测试都经它；前端检查通过。
+**Done when:** 组合出的 app 建项目、答案和四张表的行、两个 409 由测试核对，`project.New` 接的时钟和事务也由组合出的测试核对；矩阵 144 格；`project` 的 `apitest.Main` 两个方向通过，每个模块的 HTTP 测试都经它；前端检查通过。
 
 ---
 
 ### Task 9: `ProjectAccess`（`project.Provide`）与 `getProject`
 
 **Files:**
-- Create: `server/internal/modules/project/adapter/postgres/access.go`、`server/internal/modules/project/adapter/postgres/access_test.go`、`server/internal/modules/project/adapter/postgres/queries/access.sql`、`server/internal/modules/project/app/access.go`、`server/internal/modules/project/app/get_project.go`、`server/internal/modules/project/app/get_project_test.go`
+- Create: `server/internal/bootstrap/project_access_test.go`、`server/internal/modules/project/adapter/postgres/access.go`、`server/internal/modules/project/adapter/postgres/access_test.go`、`server/internal/modules/project/adapter/postgres/queries/access.sql`、`server/internal/modules/project/app/access.go`、`server/internal/modules/project/app/get_project.go`、`server/internal/modules/project/app/get_project_test.go`
 - Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/app.go`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/access/app/authorizer.go`、`server/internal/modules/access/app/authorizer_test.go`、`server/internal/modules/access/app/ports.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/access/module.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/adapter/http/projects_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/errors.go`、`server/internal/modules/project/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`server/internal/modules/project/adapter/postgres/gen/access.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
@@ -7639,6 +7722,7 @@ Expected: 通过。
 - `access/app/authorizer_test.go`：`TestAuthorizeReadsTheTargetsProject`（带项目的目标读它的事实，为调用者、在调用者的 ctx 里；项目角色进 `Grant`；工作区管理员看得到他不在的私密项目；别的工作区的、找不到的项目谁都看不到）；P1 的四个测试照新的构造。
 - `project/adapter/postgres/access_test.go`：`TestProjectFacts`（公开项目的访客、私密项目的管理员、已归档项目的成员、已结束的、已删除的成员关系、没有成员关系、已删除的项目、没有项目）。
 - `app/get_project_test.go`：`TestGetProject`、`TestGetProjectRefuses`；`adapter/http/projects_test.go`：`TestGetProject`；`bootstrap/ports_test.go`：`TestAccessProjectsConvertsProjectsAnswer`。
+- `bootstrap/project_access_test.go`：`TestTheAuthorizerSeesNoProjectOfAnotherWorkspace`（`bootstrap` 接的 `Authorizer`，真实的存储：alice 是 `acme`、`beta` 的管理员、`acme` 的私密项目 Web 的管理员；经 `acme` 读 Web 得到她的项目管理员角色，经 `beta` 看不到它；第 8 条移交）。
 
 - [ ] **Step 1: 接口描述和查询**
 
@@ -8700,6 +8784,75 @@ func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
 	})
 ````
 
+`server/internal/bootstrap/project_access_test.go`（新文件，64 行）：
+
+````file server/internal/bootstrap/project_access_test.go
+package bootstrap
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"testing"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+	"github.com/open-nerve/NerveProject/server/migrations"
+)
+
+// The Authorizer takes a project's facts within the target's workspace only
+// (M3 design 3.4; carry 8), as bootstrap wires it on the real stores: alice
+// is the admin of acme and of beta, and the admin of acme's private project
+// Web. Through acme she reads Web as its admin; through beta, where every
+// project is hers to see, she does not see it.
+func TestTheAuthorizerSeesNoProjectOfAnotherWorkspace(t *testing.T) {
+	contract := apitest.Load(t)
+	dbURL := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, dbURL, false), migrations.FS())
+	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
+	for _, slug := range []string{"acme", "beta"} {
+		if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice,
+			`{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
+			t.Fatalf("creating %s = %d %s", slug, status, body)
+		}
+	}
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice,
+		`{"name":"Web","identifier":"WEB","network":0}`)
+	if status != http.StatusCreated {
+		t.Fatalf("creating Web = %d %s", status, body)
+	}
+	var web struct {
+		ID          uuid.UUID `json:"id"`
+		WorkspaceID uuid.UUID `json:"workspace_id"`
+	}
+	decodeAnswer(t, body, &web)
+	pool := openPool(t, dbURL)
+	var beta uuid.UUID
+	if err := pool.QueryRow(context.Background(), "SELECT id FROM workspaces WHERE slug = 'beta'").Scan(&beta); err != nil {
+		t.Fatal(err)
+	}
+	authorizer := access.New(access.Deps{
+		WorkspaceRoles: workspace.Provide(pool).WorkspaceRoles,
+		ProjectAccess:  accessProjects{projects: project.Provide(pool).ProjectAccess},
+	})
+	actor, read := shared.Actor{UserID: accountID(t, contract, base, alice)}, shared.Action("project.read")
+
+	g, err := authorizer.Authorize(context.Background(), actor, read, shared.Target{WorkspaceID: web.WorkspaceID, ProjectID: web.ID})
+	if err != nil || g.ProjectRole != shared.RoleAdmin {
+		t.Errorf("project.read on Web through acme = %+v, %v; want her grant as its admin", g, err)
+	}
+	g, err = authorizer.Authorize(context.Background(), actor, read, shared.Target{WorkspaceID: beta, ProjectID: web.ID})
+	if !errors.Is(err, shared.ErrNotVisible) {
+		t.Errorf("project.read on Web through beta = %+v, %v; want %v", g, err, shared.ErrNotVisible)
+	}
+}
+````
+
 `server/internal/bootstrap/permission_matrix_columns_test.go`（修改，6 处）：
 
 ````old server/internal/bootstrap/permission_matrix_columns_test.go
@@ -8865,7 +9018,7 @@ func readsItsProject(t *testing.T, c caller, s seeded, answer string) {
 Run: `go -C server test -count=1 ./internal/modules/access/... ./internal/modules/project/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestAccessProjectsConvertsProjectsAnswer|TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestEveryColumnCallsAsARegisteredAccount|TestEveryActionHasARuleAndEveryRuleAnAction' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestAccessProjectsConvertsProjectsAnswer|TestTheAuthorizerSeesNoProjectOfAnotherWorkspace|TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestEveryColumnCallsAsARegisteredAccount|TestEveryActionHasARuleAndEveryRuleAnAction' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -8886,7 +9039,7 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/app.go server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/modules/access/app/authorizer.go server/internal/modules/access/app/authorizer_test.go server/internal/modules/access/app/ports.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/access/module.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/http/projects_test.go server/internal/modules/project/adapter/postgres/access.go server/internal/modules/project/adapter/postgres/access_test.go server/internal/modules/project/adapter/postgres/queries/access.sql server/internal/modules/project/app/access.go server/internal/modules/project/app/get_project.go server/internal/modules/project/app/get_project_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/errors.go server/internal/modules/project/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/postgres/gen/access.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/app.go server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/bootstrap/project_access_test.go server/internal/modules/access/app/authorizer.go server/internal/modules/access/app/authorizer_test.go server/internal/modules/access/app/ports.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/access/module.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/http/projects_test.go server/internal/modules/project/adapter/postgres/access.go server/internal/modules/project/adapter/postgres/access_test.go server/internal/modules/project/adapter/postgres/queries/access.sql server/internal/modules/project/app/access.go server/internal/modules/project/app/get_project.go server/internal/modules/project/app/get_project_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/errors.go server/internal/modules/project/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/postgres/gen/access.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4a): GET /api/v0/projects/{project_id}; the Authorizer reads a target's project
@@ -8909,7 +9062,7 @@ Expected: 通过。
 
 | 改坏 | 必须失败的测试 |
 |---|---|
-| 读了项目的事实而不用于判定；别的工作区的项目也算；项目的成员关系从不算；每个项目都私密；为"谁都不是"读事实 | `TestAuthorizeReadsTheTargetsProject`、`TestPermissionMatrix`（按改法各一个或两个） |
+| 读了项目的事实而不用于判定；别的工作区的项目也算；项目的成员关系从不算；每个项目都私密；为"谁都不是"读事实 | `TestAuthorizeReadsTheTargetsProject`、`TestPermissionMatrix`（按改法各一个或两个；别的工作区的项目另有真实存储上的 `TestTheAuthorizerSeesNoProjectOfAnotherWorkspace`） |
 | 在调用者的事务之外读事实；工作区级的目标也读项目 | `TestAuthorizeReadsTheTargetsProject`；`TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace` |
 | 读事实的失败被吞掉 | `TestAuthorizeReturnsThePortsError` |
 | `project.read` 只给项目成员；判定时不要求有效的工作区成员关系 | `TestEveryRuleDecidesItsCells`、`TestPermissionMatrix`；`TestDecideAtTheProjectLevels`、`TestPermissionMatrix` |
@@ -8919,7 +9072,7 @@ Expected: 通过。
 | 转换丢掉调用者的成员关系；`Authorizer` 找不到任何项目 | `TestAccessProjectsConvertsProjectsAnswer`、`TestPermissionMatrix`；`TestPermissionMatrix` |
 | 已归档项目的列以 `acme` 的管理员调用；WM-私 指向公开项目；准备数据里 PA 是公开项目的成员、PG 不是它的成员、私密项目公开、以前的成员仍有效、已归档的项目没有归档 | `TestPermissionMatrix` |
 
-**Done when:** 判定读项目的事实只为带项目的目标，不跨工作区；`getProject` 的 13 格（矩阵共 157 格）和它的用例、存储、HTTP 测试通过；`project.Provide` 只交出 `ProjectAccess`；前端检查通过。
+**Done when:** 判定读项目的事实只为带项目的目标，不跨工作区（假实现上和真实的存储上各有测试）；`getProject` 的 13 格（矩阵共 157 格）和它的用例、存储、HTTP 测试通过；`project.Provide` 只交出 `ProjectAccess`；前端检查通过。
 
 ---
 
@@ -10875,7 +11028,7 @@ Expected: 通过。
 
 **Tests:**
 - `project/adapter/postgres/demote_test.go`：`TestDemotingAMemberToGuest`（锁按 id 顺序答 `acme` 的五个项目中他有未删除成员关系的三个，已归档的一个在内；锁到事务结束，`FOR SHARE` 要等、外键检查的 `FOR KEY SHARE` 不等，别的项目不锁；写让这三行成为访客，已结束的仍结束，时刻、账户是给的；他已是访客的行、alice 的行、他已删除的行、已删除项目的行、`beta` 的行每一列都不变）；`TestLockMemberProjectsLocksInIDOrder`（行在表里、在名称和标识的索引里的顺序都与 id 相反时仍按 id 取锁）。
-- `project/app/cascade_test.go`：`TestDemoteToGuest`（先锁再写，账户、时刻是调用者的；没有锁到就不写；失败原样返回，之后什么都不运行）。
+- `project/app/cascade_test.go`：`TestDemoteToGuest`（先锁再写，账户、时刻是调用者的，两步都在调用者的事务里：`fakeDemoter` 经 Task 7 的 `callLog` 记下在事务之外的调用；没有锁到就不写；失败原样返回，之后什么都不运行）。
 - `workspace/app`：`TestUpdateWorkspaceMemberLocksThenDecidesThenWrites` 对访客、成员、管理员三种新角色，只有访客调 `DemoteToGuest`，位置在改角色之后、读资料之前；`TestUpdateWorkspaceMemberFailsWithinTheTransaction` 加项目一步的失败；`TestEachWriteReadsTheClockUnderItsLock` 的改为访客用同一个时刻。
 - `bootstrap/demotion_test.go`：`TestDemotingToGuestDemotesInTheWorkspacesProjects`（组合出的 app：bob 是 `acme`、`beta` 的成员，各领导一个项目；项目一步失败时 alice 改他的角色答 500，什么都不变；之后成功：他是 `acme` 的访客、`acme` 项目的访客，由 alice 在改角色的时刻写入，`beta` 的一切不变）。
 
@@ -11035,37 +11188,39 @@ func (c *Cascade) DemoteToGuest(ctx context.Context, workspaceID, userID, by uui
 }
 
 // fakeDemoter is the memberships' repository: it records each call with its
-// arguments, answers LockMemberProjects with locked, and fails the call
-// named in fail.
+// arguments, and " outside tx" when it ran outside the caller's
+// transaction (callLog), answers LockMemberProjects with locked, and fails
+// the call named in fail.
 type fakeDemoter struct {
 	locked []uuid.UUID
-	calls  []string
+	log    callLog
 	fail   string
 }
 
-func (f *fakeDemoter) call(name, format string, args ...any) error {
-	f.calls = append(f.calls, name+" "+fmt.Sprintf(format, args...))
+func (f *fakeDemoter) call(ctx context.Context, name, format string, args ...any) error {
+	f.log.add(ctx, name+" "+format, args...)
 	if name == f.fail {
 		return errDisk
 	}
 	return nil
 }
 
-func (f *fakeDemoter) LockMemberProjects(_ context.Context, workspaceID, userID uuid.UUID) ([]uuid.UUID, error) {
-	if err := f.call("LockMemberProjects", "%s %s", workspaceID, userID); err != nil {
+func (f *fakeDemoter) LockMemberProjects(ctx context.Context, workspaceID, userID uuid.UUID) ([]uuid.UUID, error) {
+	if err := f.call(ctx, "LockMemberProjects", "%s %s", workspaceID, userID); err != nil {
 		return nil, err
 	}
 	return f.locked, nil
 }
 
-func (f *fakeDemoter) DemoteMemberships(_ context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
-	return f.call("DemoteMemberships", "%v %s by %s at %s", projectIDs, userID, by, now.Format(time.RFC3339Nano))
+func (f *fakeDemoter) DemoteMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
+	return f.call(ctx, "DemoteMemberships", "%v %s by %s at %s", projectIDs, userID, by, now.Format(time.RFC3339Nano))
 }
 
 // DemoteToGuest locks the account's projects in the workspace, then
 // demotes his memberships of the ones locked, by the caller's account at
-// the caller's moment; with none locked it writes nothing. A failing call
-// comes back as itself, and nothing runs after it.
+// the caller's moment, both in the caller's transaction; with none locked
+// it writes nothing. A failing call comes back as itself, and nothing runs
+// after it.
 func TestDemoteToGuest(t *testing.T) {
 	workspace, user, by := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	now := time.Date(2026, 10, 1, 10, 0, 0, 123456000, time.UTC)
@@ -11086,9 +11241,10 @@ func TestDemoteToGuest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		f := &fakeDemoter{locked: tt.locked, fail: tt.fail}
-		err := app.NewCascade(&fakeDeleter{}, f).DemoteToGuest(context.Background(), workspace, user, by, now)
-		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.calls, tt.want) {
-			t.Errorf("%s: DemoteToGuest() = %v, the calls\n%q\nwant %v,\n%q", tt.name, err, f.calls, tt.wantErr, tt.want)
+		inTx := context.WithValue(context.Background(), inTxKey{}, true)
+		err := app.NewCascade(&fakeDeleter{}, f).DemoteToGuest(inTx, workspace, user, by, now)
+		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.log.calls, tt.want) {
+			t.Errorf("%s: DemoteToGuest() = %v, the calls\n%q\nwant %v,\n%q", tt.name, err, f.log.calls, tt.wantErr, tt.want)
 		}
 	}
 }
@@ -11791,12 +11947,13 @@ Expected: 通过。
 | 写成员的角色；让已结束的恢复有效；改每个项目的、每个账户的、已删除的成员关系；重写访客的行；不写 `updated_at`；`updated_by_id` 写成员自己 | `TestDemotingAMemberToGuest`（角色、项目、时刻、账户另有 `TestDemotingToGuestDemotesInTheWorkspacesProjects`） |
 | 存储以工作区的 id 当成员锁；写由成员写 | `TestDemotingAMemberToGuest` |
 | 没有锁到项目也写；锁的失败被忽略；由成员写；锁了不写 | `TestDemoteToGuest`（最后一个另有 `TestDemotingToGuestDemotesInTheWorkspacesProjects`） |
+| `Cascade.DemoteToGuest` 的两步在调用者的事务之外（`mutants_j.py` 的 `pf07c`） | `TestDemoteToGuest` |
 | 改为访客时不调；每次改角色都调；项目一步的失败被忽略；为项目再读一次时钟；由成员写；把成员关系的 id 当账户；在改角色之前调；在读资料之后调 | `TestUpdateWorkspaceMemberLocksThenDecidesThenWrites`、`TestUpdateWorkspaceMemberFailsWithinTheTransaction`、`TestEachWriteReadsTheClockUnderItsLock`（按改法；第一、六个另有 `TestDemotingToGuestDemotesInTheWorkspacesProjects`） |
 | 项目的连带不接成员关系的存储；`updateWorkspaceMember` 不接项目的连带 | `TestDemotingToGuestDemotesInTheWorkspacesProjects` |
 
 存储把失败吞掉的变异（锁、写各一个）在真实数据库上等价：失败的语句让 Postgres 中止事务，之后的读和提交都失败，写不可能提交；错误原样返回由用例的测试（`TestDemoteToGuest`、`TestUpdateWorkspaceMemberFailsWithinTheTransaction`）和组合出的 app 的 500 核对（spec 第 3 节）。
 
-**Done when:** 降为访客的锁、锁的顺序、写到的行和不动的行由真实数据库核对；`updateWorkspaceMember` 的调用位置、时刻、账户由用例测试核对；组合出的 app 上项目一步失败时整个改角色回滚。
+**Done when:** 降为访客的锁、锁的顺序、写到的行和不动的行由真实数据库核对；连带的两步在调用者的事务里，`updateWorkspaceMember` 的调用位置、时刻、账户由用例测试核对；组合出的 app 上项目一步失败时整个改角色回滚。
 
 ---
 
@@ -12303,7 +12460,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 - 使用者：P4b 的 P2–P4、P8 的接口版本；P10 的 P1 的页面版本。
 
 **Tests:**
-- **P1 (API)**：成员以管理员为负责人建 Web（标识小写、带图标）：答案、四张表的行；标识的检查（之前可用、`WE-B` 不可用；之后 `Web` 不可用、`ops` 可用，陌生人自己工作区的 `web` 可用）；七种拒绝一起发出、每一种都不写（标识、名称被占，名称含 `-`、`.`，访客，负责人是访客、是陌生人：他是自己工作区的管理员也不行）；之后管理员建 Ops（他侧边栏的第一位 55535），成员以管理员为负责人建 Docs（成员 55535、管理员 45535），各按自己的位置。
+- **P1 (API)**：成员以管理员为负责人建 Web（标识小写、带图标）：答案、四张表的行；标识的检查（之前可用、`WE-B` 不可用；之后 `Web` 不可用、`ops` 可用，陌生人自己工作区的 `web` 可用）；七种拒绝一起发出、每一种都不写（标识、名称被占，名称含 `-`、`.`，访客，负责人是访客、是陌生人：他是自己工作区的管理员也不行）；之后管理员建私密的 Ops（他侧边栏的第一位 55535），成员以管理员为负责人建 Docs（成员 55535、管理员 45535），各按自己的位置；最后读以前的项目（裁定第 25 条）：管理员读 Ops（私密，他侧边栏中间的 55535）和 Docs（他是负责人不是创建者，45535），成员读 Ops 得 404 `project.not_found`。
 - **W3 (API)**：两个工作区各由管理员以成员为负责人建 Web，每个答案是这个工作区自己的项目（`workspace_id`、角色、位置、成员）；删除 `acme` 之后它的项目、项目成员、显示设置、状态与工作区在同一时刻删除（`expectWorkspaceDeleted` 从 `workspaceTables` 取表），`other` 的项目照 `expectProjectCreated` 不变。
 
 - [ ] **Step 1: fixture**
@@ -12532,7 +12689,7 @@ const workspaceTables = [
 
 - [ ] **Step 2: 故事**
 
-`e2e/stories/project/p1-create-project.spec.ts`（新文件，162 行）：
+`e2e/stories/project/p1-create-project.spec.ts`（新文件，189 行）：
 
 ````file e2e/stories/project/p1-create-project.spec.ts
 import {
@@ -12558,6 +12715,19 @@ async function availability(api: Api, token: string, slug: string, identifier: s
   });
   expect(response.status, `check ${identifier}: ${JSON.stringify(error)}`).toBe(200);
   return data;
+}
+
+/** The answer of GET /api/v0/projects/{project_id}: its status, and the project or the problem's code. */
+async function read(
+  api: Api,
+  token: string,
+  id: string
+): Promise<{ status: number; project?: unknown; code?: string }> {
+  const { data, error, response } = await api.GET("/api/v0/projects/{project_id}", {
+    params: { path: { project_id: id } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, project: data } : { status: response.status, code: error?.code };
 }
 
 /** The answer to a createProject whose field the rules do not allow. */
@@ -12669,8 +12839,10 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
 
   // A new project goes first in the sidebar of each of its admins (M3 design 3.18), each by his own places: the
   // admin's Ops before his Web; then the member's Docs, led by the admin, before the member's Web and the admin's Ops.
-  expect(await createProject(api, admin, slug, { name: "Ops", identifier: "ops" })).toMatchObject({
+  const ops = await createProject(api, admin, slug, { name: "Ops", identifier: "ops", network: 0 });
+  expect(ops).toMatchObject({
     identifier: "OPS",
+    network: 0,
     member_role: 20,
     sort_order: 55535,
     member_ids: [adminId],
@@ -12696,6 +12868,18 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
       { email: adminEmail, sort_order: 45535 },
     ])
   ).toBe(docs.id);
+
+  // An older project reads as its reader sees it (M3 design 3.19): the admin's private Ops, between his Web and his
+  // Docs in his sidebar; Docs, which the member created with the admin its lead; the member does not see Ops.
+  expect(await read(api, admin, ops.id)).toMatchObject({
+    status: 200,
+    project: { identifier: "OPS", network: 0, member_role: 20, sort_order: 55535, member_ids: [adminId] },
+  });
+  expect(await read(api, admin, docs.id)).toMatchObject({
+    status: 200,
+    project: { identifier: "DOCS", member_role: 20, sort_order: 45535, member_ids: [memberId, adminId] },
+  });
+  expect(await read(api, member, ops.id)).toEqual({ status: 404, code: "project.not_found" });
 });
 ````
 
@@ -12823,10 +13007,12 @@ git commit -m "test(M3/P4a): story P1's API version; W3 asserts the projects' ca
 
 P1: a member creates a project with the admin its lead; both are its
 admins, first in their sidebars, with the six states; each refusal
-writes nothing; each new project goes first in its admins' sidebars.
-W3: each workspace's project is its own, and deleting the workspace
-deletes its projects, memberships, display settings and states at its
-moment, the other workspace's untouched. Labels join both in P7.
+writes nothing; each new project goes first in its admins' sidebars;
+older projects read as each reader sees them, a private one not at all
+by a member who is not in it. W3: each workspace's project is its own,
+and deleting the workspace deletes its projects, memberships, display
+settings and states at its moment, the other workspace's untouched.
+Labels join both in P7.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -12841,8 +13027,10 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | `ShareMembers` 去掉 `workspace_id`（两个行序） | P1（陌生人是自己工作区的管理员） |
 | `LowestSortOrder` 去掉 `workspace_id`；去掉 `user_id` | W3；P1、W3 |
 | `IdentifierTaken` 去掉 `workspace_id`；去掉 `identifier` | P1 |
-| `GetProject` 的成员列表去掉项目；项目的 id（id 升序） | P1、W3 |
-| `GetProject` 的调用者成员关系、显示设置的四个连接谓词 | P1（各在一个行序，另一个行序由 `TestGetProject` 核对，spec 第 3 节） |
+| `GetProject` 的成员列表去掉项目 | P1、W3 |
+| `GetProject` 去掉项目的 id（两个行序） | P1（W3 在 id 升序） |
+| `GetProject` 的调用者成员关系、显示设置的四个连接谓词（两个行序） | P1（管理员读 Ops、Docs：他在三个项目里的位置各不相同，Docs 他不是创建者） |
+| `ProjectFacts` 去掉项目的 id、成员关系的项目、账户（两个行序） | P1（成员读私密的 Ops 得 404，管理员读得到） |
 | 删除的四条语句去掉 `workspace_id` | W3 |
 
 **Done when:** 58 个故事通过；P1、W3 单独运行时看得到上表的每个谓词；故事只断言本 Phase 已有的表（裁定 S4）。
@@ -12873,7 +13061,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | `projects` | `name`：新加 `CHECK (name <> '' AND name !~ '[&+,:;$^}{*=?@#\|''<>.()%!-]')` | Plane 的禁用字符只在序列化器中检查（`serializers/project.py:39-44`，M3 设计 3.19） |
 | `projects` | `identifier`：新加 `CHECK (identifier ~ '^[A-Z0-9ÇŞĞİÖÜ]{1,10}$')`，列类型仍是 `varchar(12)` | 见第四节"项目标识"（M3 设计 3.19） |
 | `projects` | `network`：`CHECK (network >= 0)` 收紧为 `CHECK (network IN (0, 2))`，新加 `DEFAULT 2`；`description`：新加 `DEFAULT ''`；`cycle_view`、`module_view`、`issue_views_view`、`intake_view`、`guest_view_all_features`：新加 `DEFAULT false`；`archive_in`：新加 `DEFAULT 0`、`CHECK (archive_in BETWEEN 0 AND 12)`；`timezone`：新加 `DEFAULT 'UTC'`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值、choices 和验证器（0 私密、2 公开） |
-| `projects` | `logo_props`：新加 `DEFAULT '{}'` 和 `projects_logo_props_check`：是对象，键只能是 `in_use`、`emoji`、`icon`，出现的每个键的值类型对，嵌套的 `emoji`、`icon` 两个对象也查到底 | 二·全局（对象型的 `jsonb` 列）；`{}` 表示没有图标（M3 设计 4.6） |
+| `projects` | `logo_props`：新加 `DEFAULT '{}'` 和 `projects_logo_props_check`：是对象，键只能是 `in_use`、`emoji`、`icon`，出现的每个键的值类型对，嵌套的 `emoji`、`icon` 两个对象也查到底；十五个反例各试一个条件，M3 设计 4.6 的十个在内（`TestProjectChecksRejectCounterexamples`） | 二·全局（对象型的 `jsonb` 列）；`{}` 表示没有图标（M3 设计 4.6） |
 | `projects` | **新增** `last_issue_sequence integer NOT NULL DEFAULT 0 CHECK (last_issue_sequence >= 0)`：工作项编号的计数列，M4 取号；M3 不读写它，它不进入接口 | 替代 `issue_sequences`（一 B；v0-design 5.3） |
 | `projects` | 两个部分唯一索引照搬，改名为 `projects_workspace_id_identifier_key`、`projects_workspace_id_name_key`（`ON (workspace_id, …) WHERE deleted_at IS NULL`；Plane 是 `project_unique_identifier_workspace_when_deleted_at_null`、`project_unique_name_workspace_when_deleted_at_null`，列的顺序相反）；新加不带条件的 `projects_workspace_id_idx ON (workspace_id)` | 按工作区列出项目用它们；物理级联要不带条件的索引（M3 设计 4） |
 ````
