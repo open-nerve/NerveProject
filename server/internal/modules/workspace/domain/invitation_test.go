@@ -40,12 +40,15 @@ func TestCheckInvitationsNormalizes(t *testing.T) {
 // Every problem the request alone shows is in one answer, each on its
 // invitation's index in the request: an invalid address, one listed again
 // after normalization (the later ones), a role outside the three, compared
-// by set. The limits of the batch come first, alone.
+// by set. The limits of the batch come first, alone: 101 invitations, the
+// last of an invalid address, are refused on the count only; 100, the most
+// M3 design 5.1 allows, are not.
 func TestCheckInvitationsRefuses(t *testing.T) {
-	many := make([]domain.NewInvitation, domain.MaxInvitations+1)
+	many := make([]domain.NewInvitation, 101)
 	for i := range many {
 		many[i] = domain.NewInvitation{Email: "someone" + strings.Repeat("x", i) + "@corp.com", Role: shared.RoleGuest}
 	}
+	many[100].Email = "not an address"
 	tests := []struct {
 		name  string
 		batch []domain.NewInvitation
@@ -71,8 +74,8 @@ func TestCheckInvitationsRefuses(t *testing.T) {
 			t.Errorf("%s: CheckInvitations() = %+v, %v (%q); want %q", tt.name, got, err, fieldsOf(err), tt.want)
 		}
 	}
-	if _, err := domain.CheckInvitations(many[:domain.MaxInvitations]); err != nil {
-		t.Errorf("CheckInvitations() of %d invitations = %v, want them allowed", domain.MaxInvitations, err)
+	if _, err := domain.CheckInvitations(many[:100]); err != nil {
+		t.Errorf("CheckInvitations() of 100 invitations = %v, want them allowed", err)
 	}
 }
 

@@ -98,16 +98,21 @@ func TestListWorkspaceInvitationsRefusals(t *testing.T) {
 
 // POST hands the batch to the use case as sent, the addresses as they are
 // and every role, for the caller and the slug of the path, and answers the
-// invitations it creates with 201.
+// invitations it creates with 201. Two callers, two workspaces.
 func TestCreateWorkspaceInvitations(t *testing.T) {
-	inv := &fakeInvitations{lists: map[string][]domain.InvitationWithToken{"acme": {carolInvited}}}
+	inv := &fakeInvitations{lists: map[string][]domain.InvitationWithToken{"acme": {carolInvited}, "beta": {daveDeclined}}}
 	h := newServer(t, fakes{invitations: inv})
-	res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/invitations", "alice",
-		`{"invitations":[{"email":" Carol@corp.com ","role":15},{"email":"dave","role":10}]}`))
-	if want := `{"data":[` + carolInvitedJSON + `]}`; res.StatusCode != http.StatusCreated || body != want+"\n" {
-		t.Errorf("POST = %d %s, want 201 %s", res.StatusCode, body, want)
+	for _, tt := range []struct{ token, slug, body, want string }{
+		{"alice", "acme", `{"invitations":[{"email":" Carol@corp.com ","role":15},{"email":"dave","role":10}]}`, `{"data":[` + carolInvitedJSON + `]}`},
+		{"bob", "beta", `{"invitations":[{"email":"dave@corp.com","role":5}]}`, `{"data":[` + daveDeclinedJSON + `]}`},
+	} {
+		res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/"+tt.slug+"/invitations", tt.token, tt.body))
+		if res.StatusCode != http.StatusCreated || body != tt.want+"\n" {
+			t.Errorf("%s POST to %s = %d %s, want 201 %s", tt.token, tt.slug, res.StatusCode, body, tt.want)
+		}
 	}
-	if want := []string{"create alice acme [{Email: Carol@corp.com  Role:15} {Email:dave Role:10}]"}; !slices.Equal(inv.calls, want) {
+	if want := []string{"create alice acme [{Email: Carol@corp.com  Role:15} {Email:dave Role:10}]",
+		"create bob beta [{Email:dave@corp.com Role:5}]"}; !slices.Equal(inv.calls, want) {
 		t.Errorf("calls = %q, want %q", inv.calls, want)
 	}
 }

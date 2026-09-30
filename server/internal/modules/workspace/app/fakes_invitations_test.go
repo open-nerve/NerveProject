@@ -22,7 +22,7 @@ type fakeCallerLock struct {
 }
 
 func (f *fakeCallerLock) LockCaller(ctx context.Context, actor shared.Actor, now time.Time) error {
-	f.log.add(ctx, "LockCaller %s session %s at %s", actor.UserID, actor.SessionID, now.Format(time.RFC3339Nano))
+	f.log.add(ctx, "LockCaller %s session %s token %s at %s", actor.UserID, actor.SessionID, actor.APITokenID, now.Format(time.RFC3339Nano))
 	return f.err
 }
 

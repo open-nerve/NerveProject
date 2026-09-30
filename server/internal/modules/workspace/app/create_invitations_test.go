@@ -34,7 +34,7 @@ func (f *invitationsFixture) create(clock app.Clock) *app.CreateWorkspaceInvitat
 // addresses, the invitations.
 func createCalls(user app.AccountState, w domain.Workspace, active ...uuid.UUID) []string {
 	return []string{
-		fmt.Sprintf("LockCaller %s session %s at %s", user.ID, session, clockNow.Format(time.RFC3339Nano)),
+		fmt.Sprintf("LockCaller %s session %s token %s at %s", user.ID, session, uuid.Nil(), clockNow.Format(time.RFC3339Nano)),
 		"ShareWorkspaceBySlug " + w.Slug,
 		"Authorize " + user.ID.String() + " workspace_invitation.create on " + w.ID.String() + "/" + uuid.Nil().String(),
 		"ListMembers " + w.ID.String(),
@@ -120,6 +120,21 @@ func TestCreatingInvitationsReadsTheClockBeforeItsTransaction(t *testing.T) {
 	}
 	if !slices.Equal(clock.reads, []int{0}) || f.tx.calls != 1 {
 		t.Errorf("the clock was read with %v transactions begun, of %d; want once, before the one", clock.reads, f.tx.calls)
+	}
+}
+
+// A caller with a personal access token is locked as that credential:
+// CallerLock checks his token, as it would his session (M2 design 3.5).
+func TestCreatingInvitationsLocksACallersPersonalAccessToken(t *testing.T) {
+	f := newInvitations()
+	token := uuid.NewV7()
+	ctx := shared.WithActor(context.Background(), shared.Actor{UserID: alice.ID, APITokenID: token})
+	if _, err := f.create(clockAt{at: clockNow}).Execute(ctx, "acme", []domain.NewInvitation{{Email: "zoe@corp.com", Role: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf("LockCaller %s session %s token %s at %s", alice.ID, uuid.Nil(), token, clockNow.Format(time.RFC3339Nano))
+	if f.log.calls[0] != want {
+		t.Errorf("the first call = %q, want %q", f.log.calls[0], want)
 	}
 }
 
