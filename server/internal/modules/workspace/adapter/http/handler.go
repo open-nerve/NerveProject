@@ -6,10 +6,12 @@ package httpadapter
 
 import (
 	"context"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ListWorkspacesUseCase is app.ListWorkspaces.
@@ -27,6 +29,36 @@ type GetWorkspaceUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.Workspace, error)
 }
 
+// UpdateWorkspaceUseCase is app.UpdateWorkspace.
+type UpdateWorkspaceUseCase interface {
+	Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error)
+}
+
+// DeleteWorkspaceUseCase is app.DeleteWorkspace.
+type DeleteWorkspaceUseCase interface {
+	Execute(ctx context.Context, slug string) error
+}
+
+// ListMembersUseCase is app.ListWorkspaceMembers.
+type ListMembersUseCase interface {
+	Execute(ctx context.Context, slug string) ([]domain.Member, error)
+}
+
+// UpdateMemberUseCase is app.UpdateWorkspaceMember.
+type UpdateMemberUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error)
+}
+
+// GetPreferencesUseCase is app.GetWorkspacePreferences.
+type GetPreferencesUseCase interface {
+	Execute(ctx context.Context, slug string) (domain.Preferences, error)
+}
+
+// UpdatePreferencesUseCase is app.UpdateWorkspacePreferences.
+type UpdatePreferencesUseCase interface {
+	Execute(ctx context.Context, slug string, p domain.PreferencesPatch) (domain.Preferences, error)
+}
+
 // CheckSlugUseCase is app.CheckSlug.
 type CheckSlugUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.SlugReason, error)
@@ -34,10 +66,16 @@ type CheckSlugUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListWorkspaces  ListWorkspacesUseCase
-	CreateWorkspace CreateWorkspaceUseCase
-	GetWorkspace    GetWorkspaceUseCase
-	CheckSlug       CheckSlugUseCase
+	ListWorkspaces    ListWorkspacesUseCase
+	CreateWorkspace   CreateWorkspaceUseCase
+	GetWorkspace      GetWorkspaceUseCase
+	UpdateWorkspace   UpdateWorkspaceUseCase
+	DeleteWorkspace   DeleteWorkspaceUseCase
+	ListMembers       ListMembersUseCase
+	UpdateMember      UpdateMemberUseCase
+	CheckSlug         CheckSlugUseCase
+	GetPreferences    GetPreferencesUseCase
+	UpdatePreferences UpdatePreferencesUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

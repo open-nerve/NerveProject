@@ -12,7 +12,6 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -35,7 +34,7 @@ func newCreate(enabled bool) (*app.CreateWorkspace, *createFixture) {
 	f := &createFixture{log: log, tx: &fakeTx{}, accounts: &fakeAccounts{log: log, accounts: []app.AccountState{alice, bob, carol}},
 		workspaces: &fakeWorkspaces{log: log}, logs: &strings.Builder{}}
 	return app.NewCreateWorkspace(app.CreateWorkspaceDeps{
-		Accounts: f.accounts, Workspaces: f.workspaces, Tx: f.tx, Clock: clocktest.At(now),
+		Accounts: f.accounts, Workspaces: f.workspaces, Tx: f.tx, Clock: clockAt{at: clockNow},
 		Logger: slog.New(slog.NewTextHandler(f.logs, nil)), Enabled: enabled,
 	}), f
 }
@@ -75,7 +74,7 @@ func TestExecuteCreatesTheWorkspaceWithTheCallerAsAdmin(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: Execute() = %v", user.Email, err)
 		}
-		at := now.Format(time.RFC3339Nano)
+		at := clockNow.Format(time.RFC3339Nano)
 		want := []string{
 			"ShareAccount " + user.ID.String(),
 			"CreateWorkspace " + got.ID.String() + ` "Acme" acme 11-50 UTC by ` + user.ID.String() + " at " + at,
@@ -105,7 +104,7 @@ func TestExecuteStoresTheTimeZoneGiven(t *testing.T) {
 	if err != nil || got.Timezone != zone || got.OrganizationSize != nil {
 		t.Fatalf("Execute() = %+v, %v; want the time zone %s and no size", got, err, zone)
 	}
-	if call := f.log.calls[1]; call != "CreateWorkspace "+got.ID.String()+` "研发部" rd <nil> Asia/Shanghai by `+alice.ID.String()+" at "+now.Format(time.RFC3339Nano) {
+	if call := f.log.calls[1]; call != "CreateWorkspace "+got.ID.String()+` "研发部" rd <nil> Asia/Shanghai by `+alice.ID.String()+" at "+clockNow.Format(time.RFC3339Nano) {
 		t.Errorf("CreateWorkspace call = %q", call)
 	}
 }
@@ -229,7 +228,7 @@ func TestExecuteForAdminCreatesForTheAccountOfTheAddress(t *testing.T) {
 		if err != nil || got.Role != shared.RoleAdmin || got.TotalMembers != 1 {
 			t.Fatalf("enabled %v: ExecuteForAdmin() = %+v, %v", enabled, got, err)
 		}
-		at := now.Format(time.RFC3339Nano)
+		at := clockNow.Format(time.RFC3339Nano)
 		want := []string{
 			"ShareAccountByEmail bob@corp.com",
 			"CreateWorkspace " + got.ID.String() + ` "Acme" acme <nil> UTC by ` + bob.ID.String() + " at " + at,

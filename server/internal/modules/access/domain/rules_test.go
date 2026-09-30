@@ -16,7 +16,13 @@ import (
 // project-level one per projectIdentities.
 var tableCells = map[shared.Action][]outcome{
 	// admin, member, guest, never a member, removed, workspace deleted, a role outside the three
-	"workspace.read": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"workspace.read":               {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"workspace.update":             {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace.delete":             {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_member.list":        {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"workspace_member.update":      {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_preferences.read":   {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"workspace_preferences.update": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 }
 
 // cells decides rule for each identity of its level.

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -99,24 +100,10 @@ func TestAnAccountDeactivatedMeanwhileCannotCreateAWorkspace(t *testing.T) {
 	}
 	req := newRequest(t, http.MethodPost, base+"/api/v0/workspaces", alice, []byte(`{"name":"Acme","slug":"acme"}`))
 	contract.CheckRequest(t, req)
-	type answer struct {
-		res  *http.Response
-		body []byte
-		err  error
-	}
-	answered := make(chan answer, 1)
-	go func() {
-		res, err := client.Do(req)
-		if err != nil {
-			answered <- answer{err: err}
-			return
-		}
-		body, err := io.ReadAll(res.Body)
-		_ = res.Body.Close()
-		res.Body = io.NopCloser(bytes.NewReader(body))
-		answered <- answer{res, body, err}
-	}()
-	pgtest.WaitForLockWait(t, pool, 5*time.Second) // the creation waits on alice's row
+	answered := sendInBackground(req)
+	// The creation waits on alice's row. The app runs River's jobs on the
+	// same database, so only a wait for a row of users counts.
+	pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
 	if err := deactivation.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -134,5 +121,135 @@ func TestAnAccountDeactivatedMeanwhileCannotCreateAWorkspace(t *testing.T) {
 		problemCode(t, a.body) != "unauthorized" || workspaces != 0 {
 		t.Errorf("create = %d %q %s, %d workspaces; want 401 with a plain Bearer challenge, none created",
 			a.res.StatusCode, a.res.Header.Get("WWW-Authenticate"), a.body, workspaces)
+	}
+}
+
+// answer is what a request sent in the background got.
+type answer struct {
+	res  *http.Response
+	body []byte
+	err  error
+}
+
+// sendInBackground sends req with the tests' client and hands over its
+// answer, the body read and put back.
+func sendInBackground(req *http.Request) <-chan answer {
+	answered := make(chan answer, 1)
+	go func() {
+		res, err := client.Do(req)
+		if err != nil {
+			answered <- answer{err: err}
+			return
+		}
+		body, err := io.ReadAll(res.Body)
+		_ = res.Body.Close()
+		res.Body = io.NopCloser(bytes.NewReader(body))
+		answered <- answer{res, body, err}
+	}()
+	return answered
+}
+
+// The composed updateWorkspace decides after it has locked the workspace
+// row (M3 design 3.6 convention 2). A transaction holds the row FOR NO KEY
+// UPDATE and demotes alice, acme's admin, to member; her PATCH, authenticated,
+// waits on the row. Once the demotion commits she is refused forbidden and
+// the name stays: a decision taken before the lock would have read her role
+// from before the uncommitted demotion, admin, and renamed the workspace.
+func TestAnAdminDemotedMeanwhileCannotUpdateTheWorkspace(t *testing.T) {
+	contract := apitest.Load(t)
+	base, pool := sessionApp(t)
+	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("create = %d %s", status, body)
+	}
+
+	demotion, err := pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = demotion.Rollback(context.Background()) }()
+	for _, sql := range []string{
+		"SELECT id FROM workspaces WHERE slug = 'acme' FOR NO KEY UPDATE",
+		"UPDATE workspace_members SET role = 15 WHERE member_id = (SELECT id FROM users WHERE email = 'alice@example.com')",
+	} {
+		if _, err := demotion.Exec(context.Background(), sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	req := newRequest(t, http.MethodPatch, base+"/api/v0/workspaces/acme", alice, []byte(`{"name":"Renamed"}`))
+	contract.CheckRequest(t, req)
+	answered := sendInBackground(req)
+	// The app runs River's jobs on the same database: only a wait for a row
+	// of workspaces counts.
+	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 5*time.Second)
+	if err := demotion.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	a := receiveWithin(t, answered, 10*time.Second, "answer to the update")
+	if a.err != nil {
+		t.Fatal(a.err)
+	}
+	contract.CheckResponse(t, req, a.res)
+	var name string
+	if err := pool.QueryRow(context.Background(), "SELECT name FROM workspaces WHERE slug = 'acme'").Scan(&name); err != nil {
+		t.Fatal(err)
+	}
+	if a.res.StatusCode != http.StatusForbidden || problemCode(t, a.body) != "forbidden" || name != "Acme" {
+		t.Errorf("update = %d %s, name %q; want 403 forbidden and the name unchanged", a.res.StatusCode, a.body, name)
+	}
+}
+
+// The composed updateWorkspaceMember reads the membership again once it
+// holds the workspace's lock (M3 design 3.6 convention 2). A transaction
+// holds acme's row FOR NO KEY UPDATE and ends bob's membership; alice's
+// PATCH has read it active and waits on the row. Once the end commits she
+// gets workspace.member_not_found and bob's role stays: a use case that
+// went on with the row read before the lock would have changed an ended
+// membership.
+func TestAMembershipEndedMeanwhileIsNotFound(t *testing.T) {
+	contract := apitest.Load(t)
+	base, pool := sessionApp(t)
+	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
+	registerAccount(t, contract, base, "bob@example.com")
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("create = %d %s", status, body)
+	}
+	bob := uuid.NewV7()
+	if _, err := pool.Exec(context.Background(), `INSERT INTO workspace_members (id, workspace_id, member_id, role)
+		SELECT $1, w.id, u.id, 15 FROM workspaces w, users u WHERE w.slug = 'acme' AND u.email = 'bob@example.com'`, bob); err != nil {
+		t.Fatal(err)
+	}
+
+	end, err := pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = end.Rollback(context.Background()) }()
+	if _, err := end.Exec(context.Background(), "SELECT id FROM workspaces WHERE slug = 'acme' FOR NO KEY UPDATE"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := end.Exec(context.Background(), "UPDATE workspace_members SET is_active = false WHERE id = $1", bob); err != nil {
+		t.Fatal(err)
+	}
+	req := newRequest(t, http.MethodPatch, base+"/api/v0/workspace-members/"+bob.String(), alice, []byte(`{"role":5}`))
+	contract.CheckRequest(t, req)
+	answered := sendInBackground(req)
+	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 5*time.Second)
+	if err := end.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	a := receiveWithin(t, answered, 10*time.Second, "answer to the change")
+	if a.err != nil {
+		t.Fatal(a.err)
+	}
+	contract.CheckResponse(t, req, a.res)
+	var role int
+	if err := pool.QueryRow(context.Background(), "SELECT role FROM workspace_members WHERE id = $1", bob).Scan(&role); err != nil {
+		t.Fatal(err)
+	}
+	if a.res.StatusCode != http.StatusNotFound || problemCode(t, a.body) != "workspace.member_not_found" || role != 15 {
+		t.Errorf("change = %d %s, role %d; want 404 workspace.member_not_found and the role unchanged", a.res.StatusCode, a.body, role)
 	}
 }

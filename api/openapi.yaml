@@ -51,8 +51,14 @@ paths:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces'
   /api/v0/workspaces/{slug}:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}'
+  /api/v0/workspaces/{slug}/members:
+    $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1members'
+  /api/v0/workspace-members/{workspace_member_id}:
+    $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspace-members~1{workspace_member_id}'
   /api/v0/workspace-slugs/{slug}:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspace-slugs~1{slug}'
+  /api/v0/me/workspaces/{slug}/preferences:
+    $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1me~1workspaces~1{slug}~1preferences'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

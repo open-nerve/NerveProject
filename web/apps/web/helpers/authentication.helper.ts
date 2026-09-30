@@ -32,6 +32,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   internal_error: "auth.errors.internal_error",
   validation_failed: "auth.errors.validation_failed",
   server_busy: "auth.errors.server_busy",
+  forbidden: "auth.errors.forbidden",
   "identity.signup_disabled": "auth.errors.signup_disabled",
   "identity.email_taken": "auth.errors.email_taken",
   "identity.invalid_credentials": "auth.errors.invalid_credentials",
@@ -42,6 +43,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "workspace.not_found": "auth.errors.workspace_not_found",
   "workspace.creation_disabled": "auth.errors.workspace_creation_disabled",
   "workspace.slug_taken": "auth.errors.workspace_slug_taken",
+  "workspace.member_not_found": "auth.errors.workspace_member_not_found",
+  "workspace.own_membership": "auth.errors.workspace_own_membership",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

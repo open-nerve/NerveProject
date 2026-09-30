@@ -1,0 +1,252 @@
+package bootstrap
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"maps"
+	"net/http"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
+	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+	"github.com/open-nerve/NerveProject/server/migrations"
+)
+
+// The cascade of deleteWorkspace against the catalog (M3 design 3.6, 4): a
+// workspace deleted through the wired app leaves no undeleted row under it,
+// in any table with a foreign key to workspaces, whichever module owns the
+// table, and changes no row of another workspace. The tables come from
+// pg_constraint, not from a list kept here: a phase that adds a table under
+// workspaces fails this test until it seeds a row of it (seedWorkspace) and
+// the cascade deletes it (P3 the invitations, P4 the projects' tables
+// through ProjectCascade).
+
+// survivesItsWorkspace are the foreign keys to workspaces, as table.column,
+// whose rows must outlive the workspace's deletion, each with its reason.
+// None today: profiles.last_workspace_id, which the deletion keeps (M3
+// design 3.14), has no foreign key. An entry that no foreign key matches is
+// reported.
+var survivesItsWorkspace = map[string]string{}
+
+// rowsUnder is what one foreign key to workspaces (the workspace row itself
+// as workspaces.id) held under the test's two workspaces, before and after
+// the deletion: the deleted workspace's undeleted rows, counted, and the
+// kept workspace's rows, as text.
+type rowsUnder struct {
+	key                         string // table.column
+	deletedBefore, deletedAfter int
+	keptBefore, keptAfter       string
+}
+
+// deletionViolations reports, for each foreign key: no row under either
+// workspace before the deletion, which would leave its checks nothing to
+// see; an undeleted row left under the deleted workspace, or, for a key on
+// exempt, a row deleted that must survive; a row of the kept workspace
+// changed. An exempt key that no foreign key matches is reported too.
+func deletionViolations(under []rowsUnder, exempt map[string]string) []string {
+	var found []string
+	for _, r := range under {
+		reason, survives := exempt[r.key]
+		switch {
+		case r.deletedBefore == 0:
+			found = append(found, fmt.Sprintf("%s: seed a row under the deleted workspace", r.key))
+		case survives && r.deletedAfter != r.deletedBefore:
+			found = append(found, fmt.Sprintf("%s: %d of %d rows deleted with the workspace, want them kept: %s",
+				r.key, r.deletedBefore-r.deletedAfter, r.deletedBefore, reason))
+		case !survives && r.deletedAfter != 0:
+			found = append(found, fmt.Sprintf("%s: %d rows left undeleted under the deleted workspace: the cascade misses the table",
+				r.key, r.deletedAfter))
+		}
+		switch {
+		case r.keptBefore == "":
+			found = append(found, fmt.Sprintf("%s: seed a row under the kept workspace", r.key))
+		case r.keptAfter != r.keptBefore:
+			found = append(found, fmt.Sprintf("%s: the kept workspace's rows changed:\n%s\nwant\n%s", r.key, r.keptAfter, r.keptBefore))
+		}
+	}
+	for _, key := range slices.Sorted(maps.Keys(exempt)) {
+		if !slices.ContainsFunc(under, func(r rowsUnder) bool { return r.key == key }) {
+			found = append(found, fmt.Sprintf("the exempt %s is no foreign key to workspaces", key))
+		}
+	}
+	return found
+}
+
+// Deleting a workspace through the API soft-deletes every row under it in
+// every table the catalog ties to workspaces, and the workspace row, and
+// changes nothing under another workspace; the deletion is logged once.
+func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
+	contract := apitest.Load(t)
+	url := pgtest.NewDatabase(t)
+	var logs lockedBuffer
+	base := startAppLogging(t, testConfig(t, url, false), migrations.FS(), slog.New(slog.NewTextHandler(&logs, nil)))
+	pool := openPool(t, url)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	registerAccount(t, contract, base, "member@example.com")
+	deleted, kept := seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")
+	keys := workspaceKeys(t, pool)
+	under := make([]rowsUnder, len(keys))
+	for i, k := range keys {
+		under[i] = rowsUnder{key: k.String(), deletedBefore: k.undeleted(t, pool, deleted), keptBefore: k.rows(t, pool, kept)}
+	}
+
+	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, ""); status != http.StatusNoContent {
+		t.Fatalf("deleting the workspace = %d %s, want 204", status, body)
+	}
+
+	for i, k := range keys {
+		under[i].deletedAfter, under[i].keptAfter = k.undeleted(t, pool, deleted), k.rows(t, pool, kept)
+	}
+	for _, v := range deletionViolations(under, survivesItsWorkspace) {
+		t.Error(v)
+	}
+	var adminID uuid.UUID
+	if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = 'admin@example.com'").Scan(&adminID); err != nil {
+		t.Fatal(err)
+	}
+	want := `msg="workspace deleted" workspace_id=` + deleted.String() + " user_id=" + adminID.String() + "\n"
+	if out := logs.String(); strings.Count(out, `msg="workspace deleted"`) != 1 || !strings.Contains(out, want) {
+		t.Errorf("the logs:\n%s\nwant one line %q", out, want)
+	}
+}
+
+// seedWorkspace creates the workspace slug through the API, the caller of
+// token its admin, and seeds a row of each table under it: the admin's
+// membership, which the creation writes; the member's, through the
+// workspace store; the admin's display settings, through the API. A phase
+// that adds a table under workspaces seeds a row of it here. It returns the
+// workspace's id.
+func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
+	t.Helper()
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
+		t.Fatalf("creating %s = %d %s, want 201", slug, status, body)
+	}
+	var id, member uuid.UUID
+	if err := pool.QueryRow(context.Background(), "SELECT (SELECT id FROM workspaces WHERE slug = $1), (SELECT id FROM users WHERE email = $2)",
+		slug, "member@example.com").Scan(&id, &member); err != nil {
+		t.Fatal(err)
+	}
+	if err := workspacepg.New(pool).CreateMember(context.Background(), workspaceapp.MemberRow{
+		ID: uuid.NewV7(), WorkspaceID: id, MemberID: member, Role: shared.RoleMember, CreatedBy: member, Now: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if status, body := call(t, contract, http.MethodPatch, base+"/api/v0/me/workspaces/"+slug+"/preferences", token,
+		`{"navigation_project_limit":3}`); status != http.StatusOK {
+		t.Fatalf("the settings in %s = %d %s, want 200", slug, status, body)
+	}
+	return id
+}
+
+// foreignKey is a column that references workspaces, table as SQL names it.
+type foreignKey struct{ table, column string }
+
+func (k foreignKey) String() string { return k.table + "." + k.column }
+
+// workspaceKeys are the workspace row itself, as workspaces.id, then every
+// foreign key to workspaces in the catalog.
+func workspaceKeys(t *testing.T, pool *pgxpool.Pool) []foreignKey {
+	t.Helper()
+	rows, err := pool.Query(context.Background(), `
+		SELECT c.conrelid::regclass::text, a.attname, cardinality(c.conkey)
+		FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+		WHERE c.contype = 'f' AND c.confrelid = 'workspaces'::regclass
+		ORDER BY 1, 2`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	keys := []foreignKey{{"workspaces", "id"}}
+	for rows.Next() {
+		var k foreignKey
+		var columns int
+		if err := rows.Scan(&k.table, &k.column, &columns); err != nil {
+			t.Fatal(err)
+		}
+		if columns != 1 {
+			t.Fatalf("%s references workspaces with %d columns: find its rows another way", k, columns)
+		}
+		keys = append(keys, k)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(keys) == 1 {
+		t.Fatal("no foreign key to workspaces in the catalog: the test would check the workspace row only")
+	}
+	return keys
+}
+
+// undeleted counts k's undeleted rows under the workspace id.
+func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) int {
+	t.Helper()
+	var n int
+	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
+		" = $1 AND deleted_at IS NULL", id).Scan(&n); err != nil {
+		t.Fatalf("%s: %v", k, err)
+	}
+	return n
+}
+
+// rows is k's rows under the workspace id, deleted ones too, each as text,
+// in order; "" when there is none.
+func (k foreignKey) rows(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
+	t.Helper()
+	var s string
+	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+k.table+
+		" r WHERE r."+pgx.Identifier{k.column}.Sanitize()+" = $1", id).Scan(&s); err != nil {
+		t.Fatalf("%s: %v", k, err)
+	}
+	return s
+}
+
+// Each check of deletionViolations fails on its counterexample.
+func TestDeletionViolationsCatchesEachGap(t *testing.T) {
+	// with is a complete cascade over the workspace row and one table, the
+	// table's rows changed by change.
+	with := func(change func(r *rowsUnder)) []rowsUnder {
+		r := rowsUnder{key: "widgets.workspace_id", deletedBefore: 2, keptBefore: "(a)", keptAfter: "(a)"}
+		change(&r)
+		return []rowsUnder{{key: "workspaces.id", deletedBefore: 1, keptBefore: "(w)", keptAfter: "(w)"}, r}
+	}
+	exempt := map[string]string{"widgets.workspace_id": "kept for the audit"}
+	tests := []struct {
+		name   string
+		under  []rowsUnder
+		exempt map[string]string
+		want   []string
+	}{
+		{"a complete cascade", with(func(*rowsUnder) {}), nil, nil},
+		{"an exempt table whose rows are kept", with(func(r *rowsUnder) { r.deletedAfter = 2 }), exempt, nil},
+		{"a table without a row under the deleted workspace", with(func(r *rowsUnder) { r.deletedBefore = 0 }), nil,
+			[]string{"widgets.workspace_id: seed a row under the deleted workspace"}},
+		{"a table without a row under the kept workspace", with(func(r *rowsUnder) { r.keptBefore, r.keptAfter = "", "" }), nil,
+			[]string{"widgets.workspace_id: seed a row under the kept workspace"}},
+		{"a table the cascade misses", with(func(r *rowsUnder) { r.deletedAfter = 2 }), nil,
+			[]string{"widgets.workspace_id: 2 rows left undeleted under the deleted workspace: the cascade misses the table"}},
+		{"a table the cascade misses in part", with(func(r *rowsUnder) { r.deletedAfter = 1 }), nil,
+			[]string{"widgets.workspace_id: 1 rows left undeleted under the deleted workspace: the cascade misses the table"}},
+		{"a row of the kept workspace changed", with(func(r *rowsUnder) { r.keptAfter = "(b)" }), nil,
+			[]string{"widgets.workspace_id: the kept workspace's rows changed:\n(b)\nwant\n(a)"}},
+		{"an exempt table whose rows are deleted", with(func(r *rowsUnder) { r.deletedAfter = 1 }), exempt,
+			[]string{"widgets.workspace_id: 1 of 2 rows deleted with the workspace, want them kept: kept for the audit"}},
+		{"a stale exempt entry", with(func(*rowsUnder) {}), map[string]string{"profiles.last_workspace_id": "the landing"},
+			[]string{"the exempt profiles.last_workspace_id is no foreign key to workspaces"}},
+	}
+	for _, tt := range tests {
+		if got := deletionViolations(tt.under, tt.exempt); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}

@@ -42,7 +42,15 @@ type Rule struct {
 // bootstrap's completeness test holds the keys equal to the modules'
 // Actions().
 var rules = map[shared.Action]Rule{
-	"workspace.read": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"workspace.read":        {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"workspace.update":      {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
+	"workspace.delete":      {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
+	"workspace_member.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// The relative rules (one's own role) are the use case's (M3 design 3.4).
+	"workspace_member.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
+	// One's own display settings: every active member (M3 design 9.2).
+	"workspace_preferences.read":   {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"workspace_preferences.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

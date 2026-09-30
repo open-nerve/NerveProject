@@ -293,10 +293,64 @@ export interface paths {
         get: operations["getWorkspace"];
         put?: never;
         post?: never;
+        /**
+         * Delete a workspace
+         * @description For the workspace's admins. The workspace, its memberships and the members' display settings are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+         */
+        delete: operations["deleteWorkspace"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a workspace's name, organization size or time zone
+         * @description For the workspace's admins. The fields given change and the others stay; the values follow createWorkspace's rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.
+         */
+        patch: operations["updateWorkspace"];
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a workspace's members
+         * @description Every membership of the workspace, those that ended too (is_active false), in the order they began, then by id, each with the member's public profile. For any active member. The addresses are shown to admins and members; to a guest every address is null, his own too. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaceMembers"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspace-members/{workspace_member_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A membership's id (WorkspaceMember.id), not the member's account id. */
+                workspace_member_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a member's role
+         * @description For the workspace's admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin.
+         */
+        patch: operations["updateWorkspaceMember"];
         trace?: never;
     };
     "/api/v0/workspace-slugs/{slug}": {
@@ -320,6 +374,33 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v0/me/workspaces/{slug}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the caller's display settings in a workspace
+         * @description The caller's own settings of the sidebar's project navigation in the workspace, for any active member. Until the caller first changes them they are the defaults, ACCORDION and 10, and reading them writes nothing. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+         */
+        get: operations["getWorkspacePreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's display settings in a workspace
+         * @description The fields given change and the others stay; the first change stores the caller's settings, the defaults with the change applied. The values are checked before the workspace is looked at (validation_failed). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+         */
+        patch: operations["updateWorkspacePreferences"];
         trace?: never;
     };
 }
@@ -618,6 +699,47 @@ export interface components {
             /** @description An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given. */
             timezone?: string;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null. */
+        WorkspaceUpdate: {
+            /** @description 1–80 characters, with a letter or a digit, without a web address. */
+            name?: string;
+            organization_size?: components["schemas"]["OrganizationSize"];
+            /** @description An IANA time zone name. */
+            timezone?: string;
+        };
+        /** @description A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2). */
+        MemberUser: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+            first_name: string;
+            last_name: string;
+            /** @description Null until uploads arrive (M5). */
+            avatar_url: string | null;
+            /** @description The member's address for a caller who is an admin or a member; null for a guest. */
+            email: string | null;
+        };
+        WorkspaceMember: {
+            /**
+             * Format: uuid
+             * @description The membership's id, which /workspace-members/{workspace_member_id} names.
+             */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            role: components["schemas"]["WorkspaceRole"];
+            /** @description False once the membership has ended. */
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            member: components["schemas"]["MemberUser"];
+        };
+        WorkspaceMemberList: {
+            data: components["schemas"]["WorkspaceMember"][];
+        };
+        WorkspaceMemberUpdate: {
+            role: components["schemas"]["WorkspaceRole"];
+        };
         SlugAvailability: {
             available: boolean;
             /**
@@ -625,6 +747,21 @@ export interface components {
              * @enum {string}
              */
             reason?: "invalid" | "reserved" | "taken";
+        };
+        /**
+         * @description How the sidebar shows the projects, as sections one under another or as tabs.
+         * @enum {string}
+         */
+        NavigationControlPreference: "ACCORDION" | "TABBED";
+        /** @description How many projects the sidebar shows before "more"; 0 shows them all. */
+        NavigationProjectLimit: number;
+        WorkspacePreferences: {
+            navigation_control_preference: components["schemas"]["NavigationControlPreference"];
+            navigation_project_limit: components["schemas"]["NavigationProjectLimit"];
+        };
+        WorkspacePreferencesUpdate: {
+            navigation_control_preference?: components["schemas"]["NavigationControlPreference"];
+            navigation_project_limit?: components["schemas"]["NavigationProjectLimit"];
         };
     };
     responses: {
@@ -684,7 +821,16 @@ export type Workspace = components['schemas']['Workspace'];
 export type WorkspaceList = components['schemas']['WorkspaceList'];
 export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
+export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
+export type MemberUser = components['schemas']['MemberUser'];
+export type WorkspaceMember = components['schemas']['WorkspaceMember'];
+export type WorkspaceMemberList = components['schemas']['WorkspaceMemberList'];
+export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
+export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
+export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
+export type WorkspacePreferences = components['schemas']['WorkspacePreferences'];
+export type WorkspacePreferencesUpdate = components['schemas']['WorkspacePreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -1107,6 +1253,108 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    deleteWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceUpdate"];
+            };
+        };
+        responses: {
+            /** @description The workspace as changed, with the caller's role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's memberships. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A membership's id (WorkspaceMember.id), not the member's account id. */
+                workspace_member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceMemberUpdate"];
+            };
+        };
+        responses: {
+            /** @description The membership with its new role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceMember"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     checkWorkspaceSlug: {
         parameters: {
             query?: never;
@@ -1126,6 +1374,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SlugAvailability"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getWorkspacePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's settings in the workspace. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspacePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspacePreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's settings in the workspace, as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePreferences"];
                 };
             };
             default: components["responses"]["Problem"];

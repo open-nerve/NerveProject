@@ -2,6 +2,7 @@ package httpadapter_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -62,7 +63,12 @@ type fakes struct {
 	list   *fakeList
 	create *fakeCreate
 	get    *fakeGet
+	update *fakeUpdate
+	del    *fakeDelete
+	member *fakeMembers
+	role   *fakeUpdateMember
 	check  *fakeCheck
+	prefs  *fakePrefs
 }
 
 type fakeList struct {
@@ -103,6 +109,75 @@ func (f *fakeGet) Execute(ctx context.Context, slug string) (domain.Workspace, e
 	return w, nil
 }
 
+type fakeUpdate struct {
+	calls  []string // "caller slug"
+	got    []domain.WorkspacePatch
+	answer domain.Workspace
+	err    error
+}
+
+func (f *fakeUpdate) Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	f.got = append(f.got, p)
+	return f.answer, f.err
+}
+
+type fakeDelete struct {
+	calls []string // "caller slug"
+	err   error
+}
+
+func (f *fakeDelete) Execute(ctx context.Context, slug string) error {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	return f.err
+}
+
+type fakeMembers struct {
+	calls []string // "caller slug"
+	lists map[string][]domain.Member
+	err   error
+}
+
+func (f *fakeMembers) Execute(ctx context.Context, slug string) ([]domain.Member, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	return f.lists[slug], f.err
+}
+
+type fakeUpdateMember struct {
+	calls  []string // "caller id role"
+	answer domain.Member
+	err    error
+}
+
+func (f *fakeUpdateMember) Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error) {
+	f.calls = append(f.calls, fmt.Sprintf("%s %s %d", caller(ctx), id, role))
+	return f.answer, f.err
+}
+
+// fakePrefs is both preference use cases: each call is recorded as
+// "caller slug", and a PATCH's patch; it answers what it is given.
+type fakePrefs struct {
+	calls   []string
+	patches []domain.PreferencesPatch
+	answer  domain.Preferences
+	err     error
+}
+
+type fakeGetPrefs struct{ *fakePrefs }
+
+func (f fakeGetPrefs) Execute(ctx context.Context, slug string) (domain.Preferences, error) {
+	f.calls = append(f.calls, "GET "+caller(ctx)+" "+slug)
+	return f.answer, f.err
+}
+
+type fakeUpdatePrefs struct{ *fakePrefs }
+
+func (f fakeUpdatePrefs) Execute(ctx context.Context, slug string, p domain.PreferencesPatch) (domain.Preferences, error) {
+	f.calls = append(f.calls, "PATCH "+caller(ctx)+" "+slug)
+	f.patches = append(f.patches, p)
+	return f.answer, f.err
+}
+
 type fakeCheck struct {
 	calls   []string
 	reasons map[string]domain.SlugReason
@@ -141,11 +216,27 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.get == nil {
 		f.get = &fakeGet{}
 	}
+	if f.update == nil {
+		f.update = &fakeUpdate{}
+	}
+	if f.del == nil {
+		f.del = &fakeDelete{}
+	}
+	if f.member == nil {
+		f.member = &fakeMembers{}
+	}
+	if f.role == nil {
+		f.role = &fakeUpdateMember{}
+	}
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
+	if f.prefs == nil {
+		f.prefs = &fakePrefs{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, CheckSlug: f.check,
+		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
+		ListMembers: f.member, UpdateMember: f.role, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
 	})
 	return router
 }

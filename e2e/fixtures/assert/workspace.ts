@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 
+import type { WorkspacePreferences } from "../api";
 import type { Database } from "../db";
 
 // Database assertions of the workspace stories. The page version and the
@@ -82,4 +83,34 @@ export async function countWorkspaces(db: Database): Promise<WorkspaceCounts> {
 /** W1, W10: a refused creation added no workspace and no membership. */
 export async function expectNoWorkspaceAdded(db: Database, before: WorkspaceCounts): Promise<void> {
   expect(await countWorkspaces(db)).toEqual(before);
+}
+
+/**
+ * W8: the settings rows of the account of email in the workspace of slug:
+ * none while want is null, else exactly one, undeleted, holding want and
+ * written by that account. Returns the row's id, or null.
+ */
+export async function expectPreferences(
+  db: Database,
+  slug: string,
+  email: string,
+  want: WorkspacePreferences | null
+): Promise<string | null> {
+  const rows = await db.query<{ id: string }>(
+    `SELECT p.id, p.navigation_control_preference, p.navigation_project_limit, p.deleted_at,
+            p.created_by_id = u.id AND p.updated_by_id = u.id AS written_by_the_account
+       FROM workspace_user_properties p
+       JOIN workspaces w ON w.id = p.workspace_id
+       JOIN users u ON u.id = p.user_id
+      WHERE w.slug = $1 AND u.email = $2`,
+    [slug, email]
+  );
+  if (want === null) {
+    expect(rows, `the settings of ${email} in ${slug}`).toEqual([]);
+    return null;
+  }
+  expect(rows, `the settings of ${email} in ${slug}`).toEqual([
+    { ...want, id: expect.any(String), deleted_at: null, written_by_the_account: true },
+  ]);
+  return rows[0]?.id ?? null;
 }

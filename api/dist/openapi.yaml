@@ -414,6 +414,108 @@ paths:
                 $ref: '#/components/schemas/Workspace'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateWorkspace
+      tags:
+        - workspace
+      summary: Change a workspace's name, organization size or time zone
+      description: 'For the workspace''s admins. The fields given change and the others stay; the values follow createWorkspace''s rules (validation_failed), checked before the workspace is looked at. The slug never changes: a body with slug is refused (bad_request). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. The role is decided after the workspace row is locked, so a caller demoted meanwhile is refused.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+        - forbidden
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUpdate'
+      responses:
+        '200':
+          description: The workspace as changed, with the caller's role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteWorkspace
+      tags:
+        - workspace
+      summary: Delete a workspace
+      description: For the workspace's admins. The workspace, its memberships and the members' display settings are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+        - forbidden
+      responses:
+        '204':
+          description: The workspace is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/members:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listWorkspaceMembers
+      tags:
+        - workspace
+      summary: List a workspace's members
+      description: 'Every membership of the workspace, those that ended too (is_active false), in the order they began, then by id, each with the member''s public profile. For any active member. The addresses are shown to admins and members; to a guest every address is null, his own too. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      responses:
+        '200':
+          description: The workspace's memberships.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspace-members/{workspace_member_id}:
+    parameters:
+      - name: workspace_member_id
+        in: path
+        required: true
+        description: A membership's id (WorkspaceMember.id), not the member's account id.
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateWorkspaceMember
+      tags:
+        - workspace
+      summary: Change a member's role
+      description: 'For the workspace''s admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.member_not_found
+        - forbidden
+        - workspace.own_membership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberUpdate'
+      responses:
+        '200':
+          description: The membership with its new role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -433,6 +535,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlugAvailability'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/workspaces/{slug}/preferences:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: getWorkspacePreferences
+      tags:
+        - workspace
+      summary: Read the caller's display settings in a workspace
+      description: The caller's own settings of the sidebar's project navigation in the workspace, for any active member. Until the caller first changes them they are the defaults, ACCORDION and 10, and reading them writes nothing. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      responses:
+        '200':
+          description: The caller's settings in the workspace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateWorkspacePreferences
+      tags:
+        - workspace
+      summary: Change the caller's display settings in a workspace
+      description: The fields given change and the others stay; the first change stores the caller's settings, the defaults with the change applied. The values are checked before the workspace is looked at (validation_failed). A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspacePreferencesUpdate'
+      responses:
+        '200':
+          description: The caller's settings in the workspace, as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspacePreferences'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -1022,6 +1172,96 @@ components:
         timezone:
           description: An IANA time zone name, e.g. from GET /api/v0/timezones; UTC when not given.
           type: string
+    WorkspaceUpdate:
+      description: Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–80 characters, with a letter or a digit, without a web address.
+          type: string
+        organization_size:
+          $ref: '#/components/schemas/OrganizationSize'
+        timezone:
+          description: An IANA time zone name.
+          type: string
+    MemberUser:
+      description: 'A member''s public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - display_name
+        - first_name
+        - last_name
+        - avatar_url
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        avatar_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        email:
+          description: The member's address for a caller who is an admin or a member; null for a guest.
+          type:
+            - string
+            - 'null'
+    WorkspaceMember:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - role
+        - is_active
+        - created_at
+        - member
+      properties:
+        id:
+          description: The membership's id, which /workspace-members/{workspace_member_id} names.
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        is_active:
+          description: False once the membership has ended.
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        member:
+          $ref: '#/components/schemas/MemberUser'
+    WorkspaceMemberList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
+    WorkspaceMemberUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - role
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
     SlugAvailability:
       type: object
       additionalProperties: false
@@ -1037,6 +1277,36 @@ components:
             - invalid
             - reserved
             - taken
+    NavigationControlPreference:
+      description: How the sidebar shows the projects, as sections one under another or as tabs.
+      type: string
+      enum:
+        - ACCORDION
+        - TABBED
+    NavigationProjectLimit:
+      description: How many projects the sidebar shows before "more"; 0 shows them all.
+      type: integer
+      minimum: 0
+      maximum: 2147483647
+    WorkspacePreferences:
+      type: object
+      additionalProperties: false
+      required:
+        - navigation_control_preference
+        - navigation_project_limit
+      properties:
+        navigation_control_preference:
+          $ref: '#/components/schemas/NavigationControlPreference'
+        navigation_project_limit:
+          $ref: '#/components/schemas/NavigationProjectLimit'
+    WorkspacePreferencesUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        navigation_control_preference:
+          $ref: '#/components/schemas/NavigationControlPreference'
+        navigation_project_limit:
+          $ref: '#/components/schemas/NavigationProjectLimit'
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

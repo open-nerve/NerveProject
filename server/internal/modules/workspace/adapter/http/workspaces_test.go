@@ -143,6 +143,106 @@ func TestGetWorkspace(t *testing.T) {
 	}
 }
 
+// The body becomes the patch, a field left out nil, for the caller and the
+// slug of the path; the answer is 200 with the workspace.
+func TestUpdateWorkspace(t *testing.T) {
+	update := &fakeUpdate{answer: acme}
+	h := newServer(t, fakes{update: update})
+	for _, tt := range []struct{ token, path, body string }{
+		{"alice", "/api/v0/workspaces/acme", `{"name":"Acme","organization_size":"2-10","timezone":"Asia/Shanghai"}`},
+		{"bob", "/api/v0/workspaces/beta", `{"timezone":"UTC"}`},
+		{"alice", "/api/v0/workspaces/acme", `{}`},
+	} {
+		res, body := do(t, h, request(http.MethodPatch, tt.path, tt.token, tt.body))
+		if res.StatusCode != http.StatusOK || body != acmeJSON+"\n" {
+			t.Errorf("%s PATCH %s %s = %d %s, want 200 %s", tt.token, tt.path, tt.body, res.StatusCode, body, acmeJSON)
+		}
+	}
+	zone, utc := "Asia/Shanghai", "UTC"
+	want := []domain.WorkspacePatch{{Name: &acme.Name, OrganizationSize: &size, Timezone: &zone}, {Timezone: &utc}, {}}
+	if len(update.got) != len(want) {
+		t.Fatalf("patches = %+v, want %+v", update.got, want)
+	}
+	for i := range want {
+		if !samePatch(update.got[i], want[i]) {
+			t.Errorf("patch %d = %+v, want %+v", i, update.got[i], want[i])
+		}
+	}
+	if calls := []string{"alice acme", "bob beta", "alice acme"}; !slices.Equal(update.calls, calls) {
+		t.Errorf("calls = %q, want %q", update.calls, calls)
+	}
+}
+
+func samePatch(a, b domain.WorkspacePatch) bool {
+	same := func(x, y *string) bool { return (x == nil) == (y == nil) && (x == nil || *x == *y) }
+	return same(a.Name, b.Name) && same(a.OrganizationSize, b.OrganizationSize) && same(a.Timezone, b.Timezone)
+}
+
+// The use case's refusals, as the contract declares them.
+func TestUpdateWorkspaceRefusals(t *testing.T) {
+	tests := []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"invalid values", shared.Invalid(shared.FieldError{Field: "name", Code: shared.FieldTooShort, Message: "must not be empty"}),
+			http.StatusUnprocessableEntity, `{"status":422,"code":"validation_failed","title":"Unprocessable Entity",` +
+				`"detail":"The request has invalid values.","errors":[{"field":"name","code":"too_short","message":"must not be empty"}]}`},
+		{"not visible", domain.ErrNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{"a member", shared.Forbidden(), http.StatusForbidden,
+			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+	}
+	for _, tt := range tests {
+		h := newServer(t, fakes{update: &fakeUpdate{err: tt.err}})
+		res, body := do(t, h, request(http.MethodPatch, "/api/v0/workspaces/acme", "alice", `{"name":""}`))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: PATCH = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
+// The slug never changes: a body that names it is refused before the use
+// case, like any field the contract does not have.
+func TestUpdateWorkspaceRefusesTheSlug(t *testing.T) {
+	update := &fakeUpdate{answer: acme}
+	h := newServer(t, fakes{update: update})
+	res, body := do(t, h, request(http.MethodPatch, "/api/v0/workspaces/acme", "alice", `{"name":"Acme","slug":"acme-2"}`))
+	if res.StatusCode != http.StatusBadRequest || len(update.calls) != 0 {
+		t.Errorf("PATCH with a slug = %d %s, calls %q; want 400 and no call", res.StatusCode, body, update.calls)
+	}
+}
+
+// DELETE asks the use case for the caller and the slug of the path, and
+// answers 204 without a body; its refusals as the contract declares them.
+func TestDeleteWorkspace(t *testing.T) {
+	del := &fakeDelete{}
+	h := newServer(t, fakes{del: del})
+	for _, tt := range []struct{ token, path string }{{"alice", "/api/v0/workspaces/acme"}, {"bob", "/api/v0/workspaces/beta"}} {
+		if res, body := do(t, h, request(http.MethodDelete, tt.path, tt.token, "")); res.StatusCode != http.StatusNoContent || body != "" {
+			t.Errorf("%s DELETE %s = %d %q, want 204 and no body", tt.token, tt.path, res.StatusCode, body)
+		}
+	}
+	if want := []string{"alice acme", "bob beta"}; !slices.Equal(del.calls, want) {
+		t.Errorf("calls = %q, want %q", del.calls, want)
+	}
+	for _, tt := range []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{domain.ErrNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+	} {
+		h := newServer(t, fakes{del: &fakeDelete{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodDelete, "/api/v0/workspaces/acme", "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("DELETE refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
 // The availability, and the reason when the slug is not available; the slug
 // of the path arrives unescaped.
 func TestCheckWorkspaceSlug(t *testing.T) {

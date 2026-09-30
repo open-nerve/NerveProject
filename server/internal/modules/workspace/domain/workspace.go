@@ -38,6 +38,15 @@ type NewWorkspace struct {
 	Timezone         *string
 }
 
+// WorkspacePatch is a partial update of a workspace (M3 design 5.1): a nil
+// field stays as it is. The slug is not in it: it never changes (M3 design
+// 3.10).
+type WorkspacePatch struct {
+	Name             *string
+	OrganizationSize *string
+	Timezone         *string
+}
+
 // DefaultTimezone is a new workspace's time zone when none is given, the
 // column's default (M3 design 4.2).
 const DefaultTimezone = "UTC"
@@ -99,21 +108,44 @@ func spelledAsSlug(s string) bool {
 // Every problem is reported at once, as one 422 validation_failed. Whether
 // the slug is taken is the database's to say.
 func CheckNewWorkspace(w NewWorkspace) error {
+	return invalid(checkName(w.Name), checkSlug(w.Slug), checkOrganizationSize(w.OrganizationSize), checkTimezone(w.Timezone))
+}
+
+// CheckWorkspacePatch checks the fields p sets by CheckNewWorkspace's
+// rules, every problem at once, as one 422 validation_failed.
+func CheckWorkspacePatch(p WorkspacePatch) error {
+	var name *shared.FieldError
+	if p.Name != nil {
+		name = checkName(*p.Name)
+	}
+	return invalid(name, checkOrganizationSize(p.OrganizationSize), checkTimezone(p.Timezone))
+}
+
+// invalid is the 422 of the problems found, in order, or nil when there is
+// none.
+func invalid(found ...*shared.FieldError) error {
 	var fields []shared.FieldError
-	if f := checkName(w.Name); f != nil {
-		fields = append(fields, *f)
-	}
-	if f := checkSlug(w.Slug); f != nil {
-		fields = append(fields, *f)
-	}
-	if w.OrganizationSize != nil && !slices.Contains(organizationSizes, *w.OrganizationSize) {
-		fields = append(fields, shared.FieldError{Field: "organization_size", Code: shared.FieldInvalidFormat, Message: "is not a known organization size"})
-	}
-	if w.Timezone != nil && !shared.ValidTimezone(*w.Timezone) {
-		fields = append(fields, shared.FieldError{Field: "timezone", Code: shared.FieldInvalidFormat, Message: "is not a known time zone"})
+	for _, f := range found {
+		if f != nil {
+			fields = append(fields, *f)
+		}
 	}
 	if len(fields) > 0 {
 		return shared.Invalid(fields...)
+	}
+	return nil
+}
+
+func checkOrganizationSize(size *string) *shared.FieldError {
+	if size != nil && !slices.Contains(organizationSizes, *size) {
+		return &shared.FieldError{Field: "organization_size", Code: shared.FieldInvalidFormat, Message: "is not a known organization size"}
+	}
+	return nil
+}
+
+func checkTimezone(zone *string) *shared.FieldError {
+	if zone != nil && !shared.ValidTimezone(*zone) {
+		return &shared.FieldError{Field: "timezone", Code: shared.FieldInvalidFormat, Message: "is not a known time zone"}
 	}
 	return nil
 }

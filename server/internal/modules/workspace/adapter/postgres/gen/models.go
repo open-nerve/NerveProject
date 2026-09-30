@@ -35,3 +35,16 @@ type WorkspaceMember struct {
 	UpdatedAt   time.Time
 	DeletedAt   *time.Time
 }
+
+type WorkspaceUserProperty struct {
+	ID                          uuid.UUID
+	WorkspaceID                 uuid.UUID
+	UserID                      uuid.UUID
+	NavigationProjectLimit      int32
+	NavigationControlPreference string
+	CreatedByID                 *uuid.UUID
+	UpdatedByID                 *uuid.UUID
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
+	DeletedAt                   *time.Time
+}

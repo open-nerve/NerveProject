@@ -10,14 +10,25 @@ import "github.com/open-nerve/NerveProject/server/internal/platform/httpserver/b
 func BodyShapes() *bodyshape.Table {
 	return &bodyshape.Table{
 		Nodes: []bodyshape.Node{
-			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 1, "organization_size": 2, "slug": 3, "timezone": 4}, Required: []string{"name", "slug"}},
+			/* 0 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"navigation_control_preference": 1, "navigation_project_limit": 2}},
 			/* 1 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 2 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 3 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
-			/* 4 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 2 */ {Types: bodyshape.Integer, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 3 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"role": 4}, Required: []string{"role"}},
+			/* 4 */ {Types: bodyshape.Integer, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 5 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 6, "organization_size": 7, "slug": 8, "timezone": 9}, Required: []string{"name", "slug"}},
+			/* 6 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 7 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 8 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 9 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 10 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 11, "organization_size": 7, "timezone": 12}},
+			/* 11 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 12 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 		},
 		Roots: map[string]int{
-			"POST /api/v0/workspaces": 0,
+			"PATCH /api/v0/me/workspaces/{slug}/preferences":        0,
+			"PATCH /api/v0/workspace-members/{workspace_member_id}": 3,
+			"PATCH /api/v0/workspaces/{slug}":                       10,
+			"POST /api/v0/workspaces":                               5,
 		},
 	}
 }

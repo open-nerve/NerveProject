@@ -64,6 +64,25 @@ type MemberRow struct {
 	Now         time.Time
 }
 
+// PublicProfile is an account's public profile as MemberProfiles reads it:
+// identity's value, converted in bootstrap/ports.go (M3 design 6.5).
+type PublicProfile struct {
+	ID          uuid.UUID
+	Email       string
+	FirstName   string
+	LastName    string
+	DisplayName string
+}
+
+// MemberProfiles reads the public profile of each account of ids that
+// exists, deactivated ones too, without a lock (M3 design 6.5): the way a
+// use case reads another account, also inside a transaction that holds a
+// workspace's lock (M3 design 3.6 convention 1). identity implements it
+// (identity.Provide).
+type MemberProfiles interface {
+	PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]PublicProfile, error)
+}
+
 // WorkspaceCreator inserts a workspace and its first member.
 type WorkspaceCreator interface {
 	// CreateWorkspace inserts w and returns it as stored, without a role and
@@ -88,6 +107,98 @@ type WorkspaceFinder interface {
 	// number of active members, without a role; ErrNotFound when there is
 	// none.
 	WorkspaceBySlug(ctx context.Context, slug string) (domain.Workspace, error)
+}
+
+// MemberLister reads a workspace and lists its memberships.
+type MemberLister interface {
+	WorkspaceFinder
+	// ListMembers returns the undeleted memberships of the workspace, active
+	// or not, by created_at, then id (M3 design 3.12).
+	ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error)
+}
+
+// MemberUpdater changes a membership's role under its workspace's lock (M3
+// design 3.6: read the row, lock the workspace, read the row again).
+type MemberUpdater interface {
+	// MemberByID returns the undeleted membership id, active or not;
+	// ErrNotFound when there is none.
+	MemberByID(ctx context.Context, id uuid.UUID) (domain.Membership, error)
+	// LockWorkspace locks the undeleted workspace id FOR NO KEY UPDATE until
+	// the transaction ends; ErrNotFound when there is none, also when it was
+	// deleted while the lock waited.
+	LockWorkspace(ctx context.Context, id uuid.UUID) error
+	// UpdateMemberRole sets the membership's role, by the account by at now,
+	// and returns it as stored.
+	UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Membership, error)
+}
+
+// WorkspaceLocker and WorkspaceSharer are the parent locks of the writes on
+// a workspace named by its slug (M3 design 3.6 convention 2), in the
+// transaction ctx carries: each locks the undeleted workspace with slug
+// until the transaction ends and returns its id; ErrNotFound when there is
+// none, also when it was deleted while the lock waited.
+//
+// WorkspaceLocker locks FOR NO KEY UPDATE: for a write of the workspace row
+// itself or of a membership.
+type WorkspaceLocker interface {
+	LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error)
+}
+
+// WorkspaceSharer locks FOR SHARE: for a write that adds or changes a row
+// under the workspace.
+type WorkspaceSharer interface {
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error)
+}
+
+// WorkspaceUpdater changes a workspace row under its lock.
+type WorkspaceUpdater interface {
+	WorkspaceLocker
+	// UpdateWorkspace applies p to the workspace id, by the account by at
+	// now, and returns it as stored with its number of active members,
+	// without a role.
+	UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.WorkspacePatch, by uuid.UUID, now time.Time) (domain.Workspace, error)
+}
+
+// WorkspaceDeleter soft-deletes a workspace and the rows under it, under its
+// lock. Each step sets deleted_at and updated_at to now and updated_by_id to
+// by, on the undeleted rows only.
+type WorkspaceDeleter interface {
+	WorkspaceLocker
+	// DeleteWorkspace soft-deletes the workspace row.
+	DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error
+	// DeleteWorkspaceMembers soft-deletes its memberships, active or not.
+	DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// DeleteWorkspacePreferences soft-deletes its members' display
+	// settings.
+	DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+}
+
+// PreferencesRow is a change of an account's display settings in a
+// workspace, and the id of the row if the change inserts one.
+type PreferencesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	UserID      uuid.UUID
+	Patch       domain.PreferencesPatch
+	Now         time.Time
+}
+
+// PreferencesReader reads an account's display settings in a workspace.
+type PreferencesReader interface {
+	WorkspaceFinder
+	// Preferences returns userID's settings in workspaceID; found is false
+	// while there is no undeleted row.
+	Preferences(ctx context.Context, workspaceID, userID uuid.UUID) (p domain.Preferences, found bool, err error)
+}
+
+// PreferencesWriter writes an account's display settings in a workspace
+// under the workspace's lock.
+type PreferencesWriter interface {
+	WorkspaceSharer
+	// UpsertPreferences applies r.Patch to the account's undeleted row, or
+	// inserts one with domain.DefaultPreferences and the patch applied, and
+	// returns the settings as stored.
+	UpsertPreferences(ctx context.Context, r PreferencesRow) (domain.Preferences, error)
 }
 
 // SlugChecker tells whether a slug is taken.

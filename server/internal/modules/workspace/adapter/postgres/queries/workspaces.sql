@@ -23,5 +23,54 @@ SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.up
 FROM workspaces w
 WHERE w.slug = sqlc.arg(slug) AND w.deleted_at IS NULL;
 
+-- name: UpdateWorkspace :one
+-- updateWorkspace, under the workspace's FOR NO KEY UPDATE: only the fields that are set change (M2 design 3.14).
+-- RETURNING gives the values as stored and the number of active members.
+UPDATE workspaces w
+SET name              = CASE WHEN sqlc.arg(set_name)::boolean THEN sqlc.arg(name)::text ELSE w.name END,
+    organization_size = CASE WHEN sqlc.arg(set_organization_size)::boolean THEN sqlc.arg(organization_size)::text
+                        ELSE w.organization_size END,
+    timezone          = CASE WHEN sqlc.arg(set_timezone)::boolean THEN sqlc.arg(timezone)::text ELSE w.timezone END,
+    updated_by_id     = sqlc.arg(updated_by),
+    updated_at        = sqlc.arg(now)
+WHERE w.id = sqlc.arg(id)
+RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+          (SELECT count(*) FROM workspace_members c
+           WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members;
+
+-- name: DeleteWorkspace :exec
+-- deleteWorkspace's first step, under the workspace's FOR NO KEY UPDATE: the slug is free again at once (the partial
+-- unique index). The rows under it are soft-deleted at the same moment by the steps that follow (M3 design 3.6).
+UPDATE workspaces
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
 -- name: SlugTaken :one
 SELECT EXISTS (SELECT 1 FROM workspaces WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL);
+
+-- name: LockWorkspaceBySlug :one
+-- The parent lock of a write that changes the workspace row itself or a membership (M3 design 3.6 convention 2):
+-- FOR NO KEY UPDATE waits for another FOR NO KEY UPDATE and for FOR SHARE. After a wait, Postgres evaluates
+-- deleted_at IS NULL again on the row's newest version, so a workspace deleted meanwhile reads no row.
+SELECT id
+FROM workspaces
+WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
+FOR NO KEY UPDATE;
+
+-- name: LockWorkspace :one
+-- LockWorkspace takes LockWorkspaceBySlug's lock by the workspace's id: for a write addressed by a row under the
+-- workspace (M3 design 3.6 convention 2), whose use case read the row for the workspace's id and reads it again under
+-- this lock.
+SELECT id
+FROM workspaces
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR NO KEY UPDATE;
+
+-- name: ShareWorkspaceBySlug :one
+-- The parent lock of a write that adds or changes a row under the workspace (M3 design 3.6 convention 2): FOR SHARE
+-- does not wait for another FOR SHARE, and it holds off the workspace's deletion, which the FOR KEY SHARE of a
+-- foreign key check does not.
+SELECT id
+FROM workspaces
+WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
+FOR SHARE;

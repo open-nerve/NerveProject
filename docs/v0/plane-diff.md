@@ -116,6 +116,11 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `workspace_members` | 部分唯一索引 `workspace_members_workspace_id_member_id_key ON (workspace_id, member_id) WHERE deleted_at IS NULL` 照搬；新加 `workspace_members_member_id_idx ON (member_id) WHERE deleted_at IS NULL` 和不带条件的 `workspace_members_workspace_id_idx ON (workspace_id)` | 我的工作区按账户查；物理级联要不带条件的索引（M3 设计 4） |
 | `workspace_members` | 删除 `view_props`、`default_props` | 遗留列 |
 | `workspace_members` | 删除 `issue_props`、`company_role`、`getting_started_checklist`、`tips`、`explored_features` | 前端不读不写；公司角色随 M2 删掉的新手引导步骤没有了写入方；后三项是 Plane 已砍功能的状态 |
+| `workspace_user_properties` | 14 列保留 10 列（M3/P2，`00008_workspace_workspace_user_properties.sql`） | M3 设计 4.5 |
+| `workspace_user_properties` | `workspace_id`、`user_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
+| `workspace_user_properties` | `navigation_project_limit`：新加 `DEFAULT 10`、`CHECK (navigation_project_limit >= 0)`；`navigation_control_preference`：新加 `DEFAULT 'ACCORDION'`、`CHECK (navigation_control_preference IN ('ACCORDION', 'TABBED'))`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值和 choices；0 表示显示全部项目 |
+| `workspace_user_properties` | 部分唯一索引照搬，改名为 `workspace_user_properties_workspace_id_user_id_key ON (workspace_id, user_id) WHERE deleted_at IS NULL`（Plane 叫 `workspace_user_properties_unique_workspace_user_when_deleted_at`）；新加不带条件的 `workspace_user_properties_workspace_id_idx ON (workspace_id)`；`user_id` 不单独建索引 | 显示设置的写入经这个索引 `ON CONFLICT`（M3 设计 3.18）；物理级联要不带条件的索引（M3 设计 4）；按账户查的都带着工作区 |
+| `workspace_user_properties` | 删除 `filters`、`display_filters`、`display_properties`、`rich_filters` | 工作项列表的筛选和显示列由它们的使用者 M4 按自己的格式加回（M3 设计 3.18） |
 | `projects` | 删除 `emoji`、`icon_prop`、旧的 `cover_image`、`description_text`、`description_html`（旧的 json 列）、`page_view`、`is_time_tracking_enabled`、`is_issue_type_enabled`、`estimate_id`、`close_in` | 遗留列或对应功能已砍掉（归档保留，`archive_in` 和 `archived_at` 保留） |
 | `projects` | **新增**工作项编号计数列（列名在 M3 建表时确定） | 替代 `issue_sequences` |
 | `project_members` | 删除 `view_props`、`default_props`、`preferences` | 和 `project_user_properties` 重复 |
@@ -147,6 +152,8 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 筛选 | JSON 筛选树和 25 种旧查询参数并存 | 普通查询参数 |
 | 分页 | `每页条数:页码:是否上一页` 形式的偏移游标 | 不透明游标 |
 | 集合型的列表（工作区、成员、项目等） | 一次返回全部，响应是裸数组 | 同样一次返回全部、不分页，响应是 `{"data": [...]}` 封套，每个列表写明顺序（M3 设计 3.12） |
+| 关联字段 | 名字不带 `_id`（`workspace`、`member`、`project_lead`），有的内嵌对象 | 只给 id，名字带 `_id`（`WorkspaceMember.workspace_id`）；唯一的例外是工作区成员内嵌成员的公开资料 `member`（`MemberUser`，v0-design 3.6；M3 设计 5.2） |
+| 工作区的显示设置的路径 | `/api/workspaces/{slug}/user-properties/`（与工作项的筛选合在一起） | `GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`，只有项目导航的两项（M3 设计 3.18）；没有 `/sidebar-preferences/` |
 | 迭代和模块归属 | 通过单独的接口设置 | 作为工作项字段，用 PATCH 修改 |
 | 错误 | `{"error": "..."}`、DRF 字段错误、认证错误码三种格式混用 | 统一使用 RFC 9457 |
 | 无权限 | 403 | 看不到的资源返回 404，看得到但没权限返回 403 |
@@ -194,4 +201,6 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 保留的工作区名 | 前后端各一份，服务端 45 个以上，含 Plane 的产品词 | 服务端一份（`workspace/domain/reserved_slugs.txt`）：本站用到的顶层路径段（应用的顶层路由段、`public/` 的顶层目录、服务端的 `api`、`assets`、`healthz`、`readyz`）加 4 个预留段（`admin`、`docs`、`help`、`static`）；前端的副本随 M3 的前端改造删除，改问 `GET /api/v0/workspace-slugs/{slug}`（M3 设计 3.10） |
 | 建工作区之后 | 投递 `workspace_seed`：建一个名为 "Plane" 的机器人账户做管理员，再建演示项目、状态、标签和工作项 | 什么都不投递，没有演示数据（M3 设计 3.11） |
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建工作区 | 服务器管理员用 `nerve workspaces create --slug --name --admin-email` 建，不受开关限制，`--admin-email` 的账户是它的管理员（M3 设计 3.11） |
+| 工作区的显示设置 | `GET` 时 `get_or_create`：读取就建行 | `GET` 不写库，没有行时返回默认值（`ACCORDION`、10）；第一次修改时经部分唯一索引 `INSERT … ON CONFLICT` 建行（M3 设计 3.18） |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、显示设置在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用。邀请由 M3/P3、项目由 M3/P4、标签由 M3/P7 加入这个事务 |
 | 时区 | 只接受 `pytz.common_timezones`；时区列表中负的非整点偏移多算一小时（例如马克萨斯群岛的 −09:30 写成 −10:30） | 接受 Go 的时区数据认得的任何 IANA 名称（`Local` 除外），程序内嵌时区数据；时区列表接口给的仍是同一份常用列表，偏移按请求时刻计算，写法正确（M2 设计 5.3） |

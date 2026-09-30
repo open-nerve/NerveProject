@@ -45,6 +45,28 @@ func (h handler) GetWorkspace(ctx context.Context, req gen.GetWorkspaceRequestOb
 	return gen.GetWorkspace200JSONResponse(workspace(w)), nil
 }
 
+// UpdateWorkspace serves PATCH /api/v0/workspaces/{slug}.
+func (h handler) UpdateWorkspace(ctx context.Context, req gen.UpdateWorkspaceRequestObject) (gen.UpdateWorkspaceResponseObject, error) {
+	p := domain.WorkspacePatch{Name: req.Body.Name, Timezone: req.Body.Timezone}
+	if size := req.Body.OrganizationSize; size != nil {
+		s := string(*size)
+		p.OrganizationSize = &s
+	}
+	w, err := h.uc.UpdateWorkspace.Execute(ctx, req.Slug, p)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateWorkspace200JSONResponse(workspace(w)), nil
+}
+
+// DeleteWorkspace serves DELETE /api/v0/workspaces/{slug}.
+func (h handler) DeleteWorkspace(ctx context.Context, req gen.DeleteWorkspaceRequestObject) (gen.DeleteWorkspaceResponseObject, error) {
+	if err := h.uc.DeleteWorkspace.Execute(ctx, req.Slug); err != nil {
+		return nil, err
+	}
+	return gen.DeleteWorkspace204Response{}, nil
+}
+
 // CheckWorkspaceSlug serves GET /api/v0/workspace-slugs/{slug}.
 func (h handler) CheckWorkspaceSlug(ctx context.Context, req gen.CheckWorkspaceSlugRequestObject) (gen.CheckWorkspaceSlugResponseObject, error) {
 	reason, err := h.uc.CheckSlug.Execute(ctx, req.Slug)

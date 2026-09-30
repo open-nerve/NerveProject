@@ -10,6 +10,8 @@ export type Api = ReturnType<typeof createClient>;
 
 export type Workspace = components["schemas"]["Workspace"];
 export type WorkspaceCreate = components["schemas"]["WorkspaceCreate"];
+export type WorkspacePreferences = components["schemas"]["WorkspacePreferences"];
+export type WorkspacePreferencesUpdate = components["schemas"]["WorkspacePreferencesUpdate"];
 
 /** Returns a client for the nerve at baseURL. */
 export function createApi(baseURL: string): Api {

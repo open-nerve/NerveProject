@@ -3,6 +3,7 @@ package postgresadapter
 import (
 	"context"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres/gen"
@@ -71,6 +72,92 @@ func (s *Store) WorkspaceBySlug(ctx context.Context, slug string) (domain.Worksp
 		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
 		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 	}, nil
+}
+
+// UpdateWorkspace applies p to the workspace id, by the account by at now,
+// and returns it as stored with its number of active members, without a
+// role. The caller holds the workspace's lock, so the row is there; its
+// absence is an error, not app.ErrNotFound. The domain checked every value.
+func (s *Store) UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.WorkspacePatch, by uuid.UUID, now time.Time) (domain.Workspace, error) {
+	r, err := s.queries(ctx).UpdateWorkspace(ctx, gen.UpdateWorkspaceParams{
+		SetName: p.Name != nil, Name: deref(p.Name),
+		SetOrganizationSize: p.OrganizationSize != nil, OrganizationSize: deref(p.OrganizationSize),
+		SetTimezone: p.Timezone != nil, Timezone: deref(p.Timezone),
+		UpdatedBy: &by, Now: now, ID: id,
+	})
+	if err != nil {
+		return domain.Workspace{}, fmt.Errorf("update workspace: %w", err)
+	}
+	return domain.Workspace{
+		ID: r.ID, Name: r.Name, Slug: r.Slug, OrganizationSize: r.OrganizationSize, Timezone: r.Timezone,
+		TotalMembers: int(r.TotalMembers), CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
+	}, nil
+}
+
+// DeleteWorkspace soft-deletes the workspace row id, by the account by at
+// now.
+func (s *Store) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).DeleteWorkspace(ctx, gen.DeleteWorkspaceParams{ID: id, DeletedBy: by, Now: now}); err != nil {
+		return fmt.Errorf("delete workspace: %w", err)
+	}
+	return nil
+}
+
+// ListMembers returns the undeleted memberships of the workspace, active or
+// not, by created_at, then id.
+func (s *Store) ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error) {
+	rows, err := s.queries(ctx).ListMembers(ctx, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("list workspace members: %w", err)
+	}
+	out := make([]domain.Membership, len(rows))
+	for i, r := range rows {
+		out[i] = domain.Membership{ID: r.ID, WorkspaceID: r.WorkspaceID, MemberID: r.MemberID, Role: shared.Role(r.Role),
+			IsActive: r.IsActive, CreatedAt: r.CreatedAt}
+	}
+	return out, nil
+}
+
+// MemberByID returns the undeleted membership id; app.ErrNotFound when
+// there is none.
+func (s *Store) MemberByID(ctx context.Context, id uuid.UUID) (domain.Membership, error) {
+	r, err := s.queries(ctx).MemberByID(ctx, id)
+	if err != nil {
+		return domain.Membership{}, notFound(err)
+	}
+	return domain.Membership{ID: r.ID, WorkspaceID: r.WorkspaceID, MemberID: r.MemberID, Role: shared.Role(r.Role),
+		IsActive: r.IsActive, CreatedAt: r.CreatedAt}, nil
+}
+
+// UpdateMemberRole sets the role of the membership id, by the account by at
+// now, and returns the membership as stored. The caller holds the
+// workspace's lock and read the row under it: its absence is an error.
+func (s *Store) UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Membership, error) {
+	r, err := s.queries(ctx).UpdateMemberRole(ctx, gen.UpdateMemberRoleParams{ID: id, Role: int16(role), UpdatedBy: &by, Now: now})
+	if err != nil {
+		return domain.Membership{}, fmt.Errorf("update workspace member: %w", err)
+	}
+	return domain.Membership{ID: r.ID, WorkspaceID: r.WorkspaceID, MemberID: r.MemberID, Role: shared.Role(r.Role),
+		IsActive: r.IsActive, CreatedAt: r.CreatedAt}, nil
+}
+
+// DeleteWorkspaceMembers soft-deletes the undeleted memberships of the
+// workspace, active or not, by the account by at now.
+func (s *Store) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	err := s.queries(ctx).DeleteWorkspaceMembers(ctx, gen.DeleteWorkspaceMembersParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
+	if err != nil {
+		return fmt.Errorf("delete workspace members: %w", err)
+	}
+	return nil
+}
+
+// deref is the value p points at, or the zero value for nil.
+func deref[T any](p *T) T {
+	var zero T
+	if p == nil {
+		return zero
+	}
+	return *p
 }
 
 // SlugTaken reports whether an undeleted workspace has slug.

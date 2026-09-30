@@ -64,15 +64,15 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 7 {
-		t.Fatalf("Up() = %d migrations, %v; want 7", len(up), err)
+	if err != nil || len(up) != 8 {
+		t.Fatalf("Up() = %d migrations, %v; want 8", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
 		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users",
-			"workspace_members", "workspaces"}},
+			"workspace_members", "workspace_user_properties", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
 	} {
@@ -90,8 +90,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 7 {
-		t.Errorf("Up() again = %d migrations, %v; want 7", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 8 {
+		t.Errorf("Up() again = %d migrations, %v; want 8", len(again), err)
 	}
 }
 
@@ -100,19 +100,24 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 // foreign key to workspaces): errors are mapped by them, and later
 // migrations drop them by name. Each index is pinned with what it is too,
 // unique and partial or not, so a partial unique key cannot turn into a
-// plain or a total one unseen.
+// plain or a total one unseen. The tables are every table of the schema but
+// River's and goose's own, read from the catalog: a new table's constraints
+// and indexes fail here until they are in want.
 func TestConstraintAndIndexNames(t *testing.T) {
 	pool := newPool(t, pgtest.NewDatabase(t))
 	rows, err := pool.Query(context.Background(), `
+		WITH tables AS (
+			SELECT oid FROM pg_class
+			WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p')
+				AND relname NOT LIKE 'river\_%' AND relname <> 'goose_db_version'
+		)
 		SELECT conname || ' ' || contype::text || CASE WHEN contype = 'f' THEN ' ' || confdeltype::text ELSE '' END FROM pg_constraint
-		WHERE conrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
-				'workspaces'::regclass, 'workspace_members'::regclass)
+		WHERE conrelid IN (SELECT oid FROM tables)
 			AND contype <> 'n' -- PG 18 lists NOT NULL as constraints too
 		UNION ALL
 		SELECT c.relname || ' i' || CASE WHEN i.indisunique THEN 'u' ELSE '' END || CASE WHEN i.indpred IS NOT NULL THEN 'w' ELSE '' END
 		FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
-		WHERE i.indrelid IN ('users'::regclass, 'profiles'::regclass, 'auth_sessions'::regclass, 'api_tokens'::regclass,
-				'workspaces'::regclass, 'workspace_members'::regclass)
+		WHERE i.indrelid IN (SELECT oid FROM tables)
 		ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)
@@ -173,6 +178,16 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"workspace_members_workspace_id_fkey f c",
 		"workspace_members_workspace_id_idx i",
 		"workspace_members_workspace_id_member_id_key iuw",
+		"workspace_user_properties_created_by_id_fkey f n",
+		"workspace_user_properties_navigation_control_preference_check c",
+		"workspace_user_properties_navigation_project_limit_check c",
+		"workspace_user_properties_pkey iu",
+		"workspace_user_properties_pkey p",
+		"workspace_user_properties_updated_by_id_fkey f n",
+		"workspace_user_properties_user_id_fkey f c",
+		"workspace_user_properties_workspace_id_fkey f c",
+		"workspace_user_properties_workspace_id_idx i",
+		"workspace_user_properties_workspace_id_user_id_key iuw",
 		"workspaces_created_by_id_fkey f n",
 		"workspaces_name_check c",
 		"workspaces_organization_size_check c",
@@ -188,7 +203,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 }
 
 // The CHECKs accept what the domain writes and reject what bypasses it
-// (M2 design 4.2, 4.3, 4.5; M3 design 4.2, 4.3).
+// (M2 design 4.2, 4.3, 4.5; M3 design 4.2, 4.3, 4.5).
 func TestChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -204,6 +219,8 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		"INSERT INTO workspaces (id, name, slug, organization_size) VALUES ('0199a2b4-0000-7000-8000-000000000005', 'Acme', 'acme_1-2', '500+')",
 		"INSERT INTO workspace_members (id, workspace_id, member_id, role) VALUES ('0199a2b4-0000-7000-8000-000000000006', " +
 			"'0199a2b4-0000-7000-8000-000000000005', " + user + ", 20)",
+		"INSERT INTO workspace_user_properties (id, workspace_id, user_id, navigation_project_limit, navigation_control_preference) " +
+			"VALUES ('0199a2b4-0000-7000-8000-000000000007', '0199a2b4-0000-7000-8000-000000000005', " + user + ", 0, 'TABBED')",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -247,6 +264,11 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 		{"unknown organization size", "UPDATE workspaces SET organization_size = '1000+'", "workspaces_organization_size_check"},
 		{"role 10", "UPDATE workspace_members SET role = 10", "workspace_members_role_check"},
 		{"role 0", "UPDATE workspace_members SET role = 0", "workspace_members_role_check"},
+		{"negative project limit", "UPDATE workspace_user_properties SET navigation_project_limit = -1", "workspace_user_properties_navigation_project_limit_check"},
+		{"unknown navigation control", "UPDATE workspace_user_properties SET navigation_control_preference = 'SIDEBAR'",
+			"workspace_user_properties_navigation_control_preference_check"},
+		{"lower-case navigation control", "UPDATE workspace_user_properties SET navigation_control_preference = 'tabbed'",
+			"workspace_user_properties_navigation_control_preference_check"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -261,18 +283,27 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 
 // A partial unique key holds among undeleted rows only: a second undeleted
 // row with the key is refused, and soft-deleting the first frees the key
-// (M3 design 3.10, 4.2, 4.3).
+// (M3 design 3.10, 4.2, 4.3, 4.5).
 func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
 	const (
 		user      = "'0199a2b4-0000-7000-8000-000000000001'"
+		other     = "'0199a2b4-0000-7000-8000-000000000002'"
 		workspace = "'0199a2b4-0000-7000-8000-000000000005'"
+		beta      = "'0199a2b4-0000-7000-8000-000000000006'"
 	)
 	for _, stmt := range []string{
 		"INSERT INTO users (id, email, password, display_name) VALUES (" + user + ", 'alice@corp.com', 'x', 'alice')",
+		"INSERT INTO users (id, email, password, display_name) VALUES (" + other + ", 'bob@corp.com', 'x', 'bob')",
 		"INSERT INTO workspaces (id, name, slug) VALUES (" + workspace + ", 'Acme', 'acme')",
+		"INSERT INTO workspaces (id, name, slug) VALUES (" + beta + ", 'Beta', 'beta')",
 		"INSERT INTO workspace_members (id, workspace_id, member_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
+		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
+		// Another account in the workspace and the account in another
+		// workspace hold keys of their own: a key short of a column refuses one.
+		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + other + ")",
+		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + beta + ", " + user + ")",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -286,15 +317,21 @@ func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 			"workspace_members_workspace_id_member_id_key",
 		},
 		{
+			"an account's preferences in a workspace",
+			"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
+			"UPDATE workspace_user_properties SET deleted_at = now()",
+			"workspace_user_properties_workspace_id_user_id_key",
+		},
+		{
 			"a workspace's slug",
 			"INSERT INTO workspaces (id, name, slug) VALUES (gen_random_uuid(), 'Acme 2', 'acme')",
 			"UPDATE workspaces SET deleted_at = now()",
 			"workspaces_slug_key",
 		},
 	}
-	// Either case can run first: each soft-deletes rows of its own table
-	// only, and neither key reads the other table (a membership of a deleted
-	// workspace still holds its key).
+	// Any case can run first: each soft-deletes rows of its own table only,
+	// and no key reads another table (a membership or a preferences row of a
+	// deleted workspace still holds its key).
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := pool.Exec(ctx, tt.insert)

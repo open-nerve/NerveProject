@@ -27,3 +27,21 @@ func (a workspaceAccounts) ShareAccountByEmail(ctx context.Context, email string
 	state, found, err := a.accounts.ShareAccountByEmail(ctx, email)
 	return workspace.AccountState(state), found, err
 }
+
+// workspaceProfiles is identity's PublicProfiles as workspace's
+// MemberProfiles: the same read, each profile converted.
+type workspaceProfiles struct {
+	profiles identity.PublicProfiles
+}
+
+func (p workspaceProfiles) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]workspace.PublicProfile, error) {
+	profiles, err := p.profiles.PublicProfiles(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]workspace.PublicProfile, len(profiles))
+	for i, profile := range profiles {
+		out[i] = workspace.PublicProfile(profile)
+	}
+	return out, nil
+}

@@ -88,3 +88,11 @@ SELECT id, email, is_active
 FROM users
 WHERE email = sqlc.arg(email)
 FOR SHARE;
+
+-- name: PublicProfiles :many
+-- MemberProfiles (M3 design 6.5): the public profile of each account of ids, deactivated ones too, by id. No lock: a
+-- transaction that holds a workspace's lock reads an address this way (3.6 convention 1).
+SELECT id, email, first_name, last_name, display_name
+FROM users
+WHERE id = ANY (sqlc.arg(ids)::uuid[])
+ORDER BY id;

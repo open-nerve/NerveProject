@@ -13,6 +13,13 @@ var (
 	// ErrCreationDisabled answers a creation while workspace.creation_enabled
 	// is false (M3 design 3.11).
 	ErrCreationDisabled = shared.NewError(shared.KindForbidden, "workspace.creation_disabled", "Creating workspaces is disabled on this instance.")
+	// ErrMemberNotFound answers a membership that does not exist, is deleted
+	// or has ended, or whose workspace the caller cannot see: the same 404
+	// for all (M3 design 5.3, 8.2).
+	ErrMemberNotFound = shared.NewError(shared.KindNotFound, "workspace.member_not_found", "The member does not exist, or you cannot see the workspace.")
+	// ErrOwnMembership answers a change of the caller's own membership (M3
+	// design 3.4, 5.3): nobody changes his own role.
+	ErrOwnMembership = shared.NewError(shared.KindConflict, "workspace.own_membership", "You cannot change your own membership.")
 	// ErrSlugTaken answers a creation with a slug an undeleted workspace has.
 	ErrSlugTaken = shared.NewError(shared.KindConflict, "workspace.slug_taken", "A workspace with this slug exists.")
 	// ErrAccountNotFound answers `nerve workspaces create` for an address no
