@@ -1,4 +1,4 @@
-import { createWorkspace, invite, inviteAndAccept, slugFor } from "../../fixtures/api";
+import { createWorkspace, invite, inviteAndAccept, slugFor, type InvitationCreate } from "../../fixtures/api";
 import { expectInvitations } from "../../fixtures/assert/workspace";
 import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
@@ -31,7 +31,7 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   const carol = emailFor(testInfo, "carol");
   const other = slugFor(testInfo, "other");
   await createWorkspace(api, franksToken, { name: "Other", slug: other });
-  await invite(api, franksToken, other, [{ email: carol, role: 5 }]);
+  const othersInvitations = await invite(api, franksToken, other, [{ email: carol, role: 5 }]);
 
   // A batch of two, the addresses as a person types them: stored normalized, pending, in the request's order.
   const dave = emailFor(testInfo, "dave");
@@ -43,7 +43,8 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
     [carol, 15, false, null],
     [dave, 5, false, null],
   ]);
-  const tokens = created.map((i) => i.token);
+  // Every link the story holds: no row stores any of them.
+  const tokens = [...othersInvitations, ...created].map((i) => i.token);
   await expectInvitations(
     db,
     slug,
@@ -80,17 +81,21 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   const erinEmail = emailFor(testInfo, "erin");
   const erin = (await register(api, erinEmail)).access_token;
   const [erinsInvitation] = await invite(api, admin, slug, [{ email: erinEmail, role: 15 }]);
+  if (!erinsInvitation) {
+    throw new Error("the invitation of erin was not created");
+  }
+  tokens.push(erinsInvitation.token);
   const declined = await api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
-    params: { path: { invitation_id: erinsInvitation?.id ?? "" } },
-    body: { token: erinsInvitation?.token ?? "" },
+    params: { path: { invitation_id: erinsInvitation.id } },
+    body: { token: erinsInvitation.token },
     headers: bearer(erin),
   });
   expect(declined.response.status).toBe(204);
 
   // Refused as a whole, each address at its index. A batch that repeats an address is refused as it is sent,
-  // before the workspace is read; then an active member's address, a pending and a declined invitation's. frank,
-  // a member of another workspace, is not refused.
-  const refuse = (invitations: { email: string; role: 5 | 15 }[]) =>
+  // before the workspace is read, alone: the active member's address in it is not looked at. Then an active member's
+  // address, a pending and a declined invitation's. frank, a member of another workspace, is not refused.
+  const refuse = (invitations: InvitationCreate[]) =>
     api.POST("/api/v0/workspaces/{slug}/invitations", {
       params: { path: { slug } },
       body: { invitations },
@@ -99,6 +104,7 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   const repeated = await refuse([
     { email: frank, role: 15 },
     { email: frank.toUpperCase(), role: 5 },
+    { email: memberEmail, role: 15 },
   ]);
   expect([repeated.response.status, repeated.error?.errors?.map((e) => [e.field, e.code])]).toEqual([
     422,

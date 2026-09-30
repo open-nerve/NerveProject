@@ -1,7 +1,7 @@
 import { accept, createApi, createWorkspace, invite, slugFor } from "../../fixtures/api";
-import { countIdentity, expectNothingAdded } from "../../fixtures/assert/identity";
+import { countIdentity, expectNothingAdded, expectRegistered } from "../../fixtures/assert/identity";
 import { expectInvitations, expectMembership } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, password, register } from "../../fixtures/auth";
+import { bearer, createPAT, emailFor, password, register, type RegisterInvitation } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
 // W6, sign up by an invitation while sign-up is off (M3 design 2, 3.8; decision 1). The page version comes with
@@ -44,8 +44,12 @@ test("W6 (API): with sign-up off, the address an invitation was sent to register
   });
   expect(deleted.response.status).toBe(204);
 
-  const signUp = (email: string, invitation?: { id: string; token: string }) =>
-    closed.POST("/api/v0/auth/register", { body: { email, password, invitation } });
+  const userAgent = "nerve-e2e/W6";
+  const signUp = (email: string, invitation?: RegisterInvitation) =>
+    closed.POST("/api/v0/auth/register", {
+      body: { email, password, invitation },
+      headers: { "User-Agent": userAgent },
+    });
   const changed = toCarol.token.slice(0, 10) + (toCarol.token[10] === "A" ? "B" : "A") + toCarol.token.slice(11);
   const before = await countIdentity(db);
   // Each is refused as sign-up being off. dave's address is taken: an invitation that let it through would
@@ -61,25 +65,52 @@ test("W6 (API): with sign-up off, the address an invitation was sent to register
   const answers = await Promise.all(
     Object.entries(refusals).map(async ([label, refused]) => {
       const r = await refused;
-      return [label, r.response.status, r.error?.code];
+      return { label, status: r.response.status, body: r.error };
     })
   );
-  expect(answers).toEqual(Object.keys(refusals).map((label) => [label, 403, "identity.signup_disabled"]));
+  expect(answers.map((a) => [a.label, a.status, a.body?.code])).toEqual(
+    Object.keys(refusals).map((label) => [label, 403, "identity.signup_disabled"])
+  );
+  // The whole answer is the same, sign-up being off: none says which check failed.
+  expect(answers.map((a) => a.body)).toEqual(answers.map(() => answers[0]?.body));
   await expectNothingAdded(db, before);
 
-  // carol registers with her link, the address as she types it; the invitation stays to be answered.
+  // carol registers with her link, the address as she types it: A1's account and session, the address
+  // normalized. The invitation stays to be answered.
   const registered = await signUp(` ${carolEmail.toUpperCase()} `, { id: toCarol.id, token: toCarol.token });
   expect(registered.response.status).toBe(201);
-  await expectInvitations(db, slug, adminEmail, [
-    { email: carolEmail, role: 15, accepted: false, responded: false, deleted: false },
+  await expectRegistered(db, {
+    email: carolEmail,
+    refreshToken: registered.data?.refresh_token ?? "",
+    userAgent,
+    ip: "127.0.0.1",
+  });
+  const tokens = [toCarol.token, toDave.token, toErin.token];
+  const dismissed = [
     { email: daveEmail, role: 15, accepted: false, responded: true, deleted: false },
     { email: erinEmail, role: 5, accepted: false, responded: false, deleted: true },
-  ]);
+  ];
+  await expectInvitations(
+    db,
+    slug,
+    adminEmail,
+    [{ email: carolEmail, role: 15, accepted: false, responded: false, deleted: false }, ...dismissed],
+    tokens
+  );
   await expectMembership(db, slug, carolEmail, null);
+
+  // She accepts it: a member, and the invitation accepted and deleted at the moment of the answer.
   expect(await accept(closed, registered.data?.access_token ?? "", toCarol)).toMatchObject({
     slug,
     role: 15,
     total_members: 2,
   });
   await expectMembership(db, slug, carolEmail, { role: 15, is_active: true });
+  await expectInvitations(
+    db,
+    slug,
+    adminEmail,
+    [{ email: carolEmail, role: 15, accepted: true, responded: true, deleted: true }, ...dismissed],
+    tokens
+  );
 });

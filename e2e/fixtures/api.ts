@@ -75,8 +75,8 @@ export async function accept(api: Api, token: string, invitation: WorkspaceInvit
 }
 
 /**
- * Makes the account of email, whose bearer token is memberToken, a member of the workspace of slug with role:
- * its admin, with adminToken, invites the address and the account accepts. The one way a workspace gets a
+ * Makes the account of member.email, whose bearer token is member.token, a member of the workspace of slug with
+ * role: its admin, with adminToken, invites the address and the account accepts. The one way a workspace gets a
  * second member (M3 design 12 constraint 1). Returns the workspace as the new member reads it.
  */
 export async function inviteAndAccept(

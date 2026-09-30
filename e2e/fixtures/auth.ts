@@ -7,6 +7,7 @@ import type { Api } from "./api";
 
 export type AuthTokens = components["schemas"]["AuthTokens"];
 export type ApiTokenCreated = components["schemas"]["ApiTokenCreated"];
+export type RegisterInvitation = components["schemas"]["RegisterInvitation"];
 
 /** The key of the token manager's record in localStorage (M2 design 7.1). */
 const authKey = "nerve.auth";
