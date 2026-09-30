@@ -27,6 +27,8 @@ test("W5 (API): the link shows the workspace and the role without the address; t
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
   const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  // Another workspace of the admin's comes first: the link and the acceptance must name Acme, not it.
+  await createWorkspace(api, admin, { name: "Other", slug: slugFor(testInfo, "other") });
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   const carolEmail = emailFor(testInfo, "carol");
@@ -95,10 +97,16 @@ test("W5 (API): the link shows the workspace and the role without the address; t
   expect((await answer(api, dave, "decline", toDave)).response.status).toBe(204);
   await expectMembership(db, slug, daveEmail, null);
   expect((await view(toDave.id, toDave.token)).data?.declined).toBe(true);
-  await expectInvitations(db, slug, adminEmail, [
-    { email: carolEmail, role: 5, accepted: true, responded: true, deleted: true },
-    { email: daveEmail, role: 15, accepted: false, responded: true, deleted: false },
-  ]);
+  await expectInvitations(
+    db,
+    slug,
+    adminEmail,
+    [
+      { email: carolEmail, role: 5, accepted: true, responded: true, deleted: true },
+      { email: daveEmail, role: 15, accepted: false, responded: true, deleted: false },
+    ],
+    [toCarol.token, toDave.token]
+  );
 
   // Answered already: carol's is gone, 404; dave's is declined, 409 for either answer.
   expect((await answer(api, carol, "accept", toCarol)).error?.code).toBe("workspace.invitation_not_found");

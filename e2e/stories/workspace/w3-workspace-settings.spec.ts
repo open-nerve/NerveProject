@@ -20,14 +20,33 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
   const memberEmail = emailFor(testInfo, "member");
   const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const declinerEmail = emailFor(testInfo, "decliner");
+  const decliner = (await register(api, declinerEmail)).access_token;
   const inviteeEmail = emailFor(testInfo, "invitee");
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
-  // Two workspaces alike, each with the member, an invitation and his settings; only the first is deleted.
-  const furnish = async (name: string, target: string) => {
+  // Two workspaces alike, each with the member, a pending and a declined invitation and the member's settings;
+  // only Acme is deleted. Other comes first, and the member is its admin: that role must not count in Acme.
+  const tokens: string[] = [];
+  const furnish = async (name: string, target: string, memberRole: 15 | 20) => {
     await createWorkspace(api, admin, { name, slug: target });
-    await inviteAndAccept(api, admin, target, { email: memberEmail, token: member }, 15);
-    await invite(api, admin, target, [{ email: inviteeEmail, role: 5 }]);
+    expect(await inviteAndAccept(api, admin, target, { email: memberEmail, token: member }, memberRole)).toMatchObject({
+      slug: target,
+      role: memberRole,
+      total_members: 2,
+    });
+    const created = await invite(api, admin, target, [
+      { email: inviteeEmail, role: 5 },
+      { email: declinerEmail, role: 15 },
+    ]);
+    tokens.push(...created.map((i) => i.token));
+    const [, toDecline] = created;
+    const declined = await api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
+      params: { path: { invitation_id: toDecline?.id ?? "" } },
+      body: { token: toDecline?.token ?? "" },
+      headers: bearer(decliner),
+    });
+    expect(declined.response.status).toBe(204);
     const settings = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
       params: { path: { slug: target } },
       body: { navigation_project_limit: 3 },
@@ -35,13 +54,27 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     });
     expect(settings.response.status).toBe(200);
   };
-  await furnish("Acme", slug);
-  await furnish("Other", other);
+  await furnish("Other", other, 20);
+  await furnish("Acme", slug, 15);
+  const readOther = async () => {
+    const read = await api.GET("/api/v0/workspaces/{slug}", {
+      params: { path: { slug: other } },
+      headers: bearer(admin),
+    });
+    expect([read.response.status, read.data]).toEqual([
+      200,
+      expect.objectContaining({ name: "Other", slug: other, role: 20, total_members: 2 }),
+    ]);
+  };
 
+  // A second admin changes it, so that the deletion must record its own author.
+  const coAdminEmail = emailFor(testInfo, "co-admin");
+  const coAdmin = (await createPAT(api, (await register(api, coAdminEmail)).access_token)).token;
+  await inviteAndAccept(api, admin, slug, { email: coAdminEmail, token: coAdmin }, 20);
   const renamed = await api.PATCH("/api/v0/workspaces/{slug}", {
     params: { path: { slug } },
     body: { name: "Acme Corp", organization_size: "11-50", timezone: "Europe/Berlin" },
-    headers: bearer(admin),
+    headers: bearer(coAdmin),
   });
   expect(renamed.response.status).toBe(200);
   expect(renamed.data).toMatchObject({
@@ -50,15 +83,18 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     organization_size: "11-50",
     timezone: "Europe/Berlin",
     role: 20,
-    total_members: 2,
+    total_members: 3,
   });
   expect(
     await db.query(
-      `SELECT w.name, w.organization_size, w.timezone, w.updated_by_id = u.id AS updated_by_the_admin
+      `SELECT w.name, w.organization_size, w.timezone, w.updated_by_id = u.id AS updated_by_the_co_admin
          FROM workspaces w JOIN users u ON u.email = $2 WHERE w.slug = $1`,
-      [slug, adminEmail]
+      [slug, coAdminEmail]
     )
-  ).toEqual([{ name: "Acme Corp", organization_size: "11-50", timezone: "Europe/Berlin", updated_by_the_admin: true }]);
+  ).toEqual([
+    { name: "Acme Corp", organization_size: "11-50", timezone: "Europe/Berlin", updated_by_the_co_admin: true },
+  ]);
+  await readOther();
 
   // A member may not change it; a slug in the body is refused before anything is looked at.
   const byMember = await api.PATCH("/api/v0/workspaces/{slug}", {
@@ -84,18 +120,27 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
   expect(deleted.response.status).toBe(204);
   await expectWorkspaceDeleted(db, slug, adminEmail);
-  // The invitation accepted before keeps the moment it was answered; the other workspace keeps everything.
-  const invitations = (withTheWorkspace: boolean) => [
-    { email: memberEmail, role: 15, accepted: true, responded: true, deleted: true },
+  // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
+  // one; the other workspace keeps everything.
+  const invitations = (memberRole: number, withTheWorkspace: boolean) => [
+    { email: memberEmail, role: memberRole, accepted: true, responded: true, deleted: true },
     { email: inviteeEmail, role: 5, accepted: false, responded: false, deleted: withTheWorkspace },
+    { email: declinerEmail, role: 15, accepted: false, responded: true, deleted: withTheWorkspace },
   ];
-  await expectInvitations(db, slug, adminEmail, invitations(true));
-  await expectInvitations(db, other, adminEmail, invitations(false));
-  await expectMembership(db, other, memberEmail, { role: 15, is_active: true });
+  await expectInvitations(
+    db,
+    slug,
+    adminEmail,
+    [...invitations(15, true), { email: coAdminEmail, role: 20, accepted: true, responded: true, deleted: true }],
+    tokens
+  );
+  await expectInvitations(db, other, adminEmail, invitations(20, false), tokens);
+  await expectMembership(db, other, memberEmail, { role: 20, is_active: true });
   await expectPreferences(db, other, memberEmail, {
     navigation_control_preference: "ACCORDION",
     navigation_project_limit: 3,
   });
+  await readOther();
   const gone = await Promise.all(
     [admin, member].map((token) =>
       api.GET("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(token) })

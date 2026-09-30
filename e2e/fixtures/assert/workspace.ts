@@ -212,33 +212,38 @@ export async function expectMembership(
 const workspaceTables = ["workspace_members", "workspace_member_invites", "workspace_user_properties"];
 
 /**
- * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment, every row
- * under it that was not deleted before: its memberships, invitations and display settings. Each table has
- * such a row; none is left undeleted.
+ * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by the
+ * same account, every row under it that was not deleted before: its memberships, invitations and display
+ * settings. Each table has such a row; none is left undeleted.
  */
 export async function expectWorkspaceDeleted(db: Database, slug: string, adminEmail: string): Promise<void> {
-  const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string }>(
+  const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string | null }>(
     `SELECT w.id, w.deleted_at, w.updated_by_id, (SELECT id FROM users WHERE email = $2) AS admin FROM workspaces w WHERE w.slug = $1`,
     [slug, adminEmail]
   );
   expect(w?.deleted_at, `${slug} deleted`).toBeInstanceOf(Date);
+  expect(w?.admin, `the account of ${adminEmail}`).toEqual(expect.any(String));
   expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const tables = await Promise.all(
-    workspaceTables.map((table) =>
-      db.query<{ with_it: boolean | null; undeleted_or_later: boolean }>(
-        `SELECT t.deleted_at = w.deleted_at AS with_it, t.deleted_at IS NULL OR t.deleted_at > w.deleted_at AS undeleted_or_later
+    workspaceTables.map(async (table) => {
+      const [counts] = await db.query<{ with_it: number; by_another: number; undeleted_or_later: number }>(
+        `SELECT count(*) FILTER (WHERE t.deleted_at = w.deleted_at)::int AS with_it,
+                count(*) FILTER (WHERE t.deleted_at = w.deleted_at
+                                   AND t.updated_by_id IS DISTINCT FROM w.updated_by_id)::int AS by_another,
+                count(*) FILTER (WHERE t.deleted_at IS NULL OR t.deleted_at > w.deleted_at)::int AS undeleted_or_later
            FROM ${table} t JOIN workspaces w ON w.id = t.workspace_id WHERE w.id = $1`,
         [w?.id]
-      )
-    )
+      );
+      return {
+        table,
+        deletedWithIt: (counts?.with_it ?? 0) > 0,
+        deletedByAnother: counts?.by_another,
+        undeletedOrLater: counts?.undeleted_or_later,
+      };
+    })
   );
-  expect(
-    tables.map((rows, i) => ({
-      table: workspaceTables[i],
-      deletedWithIt: rows.some((r) => r.with_it === true),
-      undeletedOrLater: rows.filter((r) => r.undeleted_or_later).length,
-    })),
-    `the rows under ${slug}`
-  ).toEqual(workspaceTables.map((table) => ({ table, deletedWithIt: true, undeletedOrLater: 0 })));
+  expect(tables, `the rows under ${slug}`).toEqual(
+    workspaceTables.map((table) => ({ table, deletedWithIt: true, deletedByAnother: 0, undeletedOrLater: 0 }))
+  );
 }
