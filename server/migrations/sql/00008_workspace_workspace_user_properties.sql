@@ -1,7 +1,7 @@
 -- workspace_user_properties：Plane 的 workspace_user_properties 表（14 列）按 M3 设计 4.5 保留 10 列。
 -- 一个账户在一个工作区的项目导航偏好（3.18）。第一次修改时建出（INSERT … ON CONFLICT），没有这一行时
 -- 接口答默认值，默认值与这里的 DEFAULT 相同；删除工作区时随之软删除。
--- 工作项列表的筛选和显示列（filters、display_filters、display_properties、rich_filters）由 M4、M7 按自己的格式加。
+-- 工作项列表的筛选和显示列（filters、display_filters、display_properties、rich_filters）由它们的使用者 M4 按自己的格式加回（M3 设计 3.18）。
 
 -- +goose Up
 CREATE TABLE workspace_user_properties (

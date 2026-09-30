@@ -109,7 +109,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | W8 | 项目导航偏好 | 在工作区侧边栏的"项目导航"对话框里改成标签页式、只显示 3 个项目；刷新后仍生效 | `workspace_user_properties` 新增一行（第一次修改时），两列是新值 | `GET`/`PATCH /api/v0/me/workspaces/{slug}/preferences`；没有这一行时 `GET` 返回默认值，数据库不变 | P2 / P9 |
 | W9 | 停用账户与成员关系（M2 交接第 6 节） | 在 general 页停用：这个人是某工作区唯一的管理员、那里还有别的成员时，弹窗里显示"先指定另一位管理员"，账户不变。指定之后再停用，回到登录页 | 被拒绝：数据库完全不变（`users`、`profiles`、会话、成员关系、邀请）。成功：A12 的断言，加上他全部的工作区、项目成员关系 `is_active = false`，发给他邮箱的全部邀请（含已忽略的）`deleted_at` 已填 | PAT 调用 `POST /api/v0/me/deactivate`：409 `workspace.sole_admin` 或 `project.sole_admin`；成功时同一组断言。`nerve users deactivate --email …` 同样被拒绝（退出码 1，输出说明）和成功 | P6 / P9 |
 | W10 | 管理员建工作区（3.11） | — | `nerve workspaces create --slug acme --name Acme --admin-email a@…`：同 W1 的 `workspaces`、`workspace_members`；输出一行。slug 被占用、邮箱没有账户、账户已停用：退出码 1，输出说明，数据库不变；`workspace.creation_enabled = false` 时命令照常可用 | 用接口核对：这个账户 `GET /api/v0/workspaces` 能看到它，`role = 20` | P1 / — |
-| W11 | 访客的边界（权限矩阵的页面抽样，9.2） | 访客登录：侧边栏只列出他加入的项目；打开工作区设置的成员页，看到"没有权限"；成员列表里别人的邮箱不显示；打开项目的状态设置，看到"没有权限" | 数据库不变 | 矩阵的全部格子在 9.2 由后端测试逐格覆盖；这个故事只用 PAT 抽样四格：访客 `GET` 邀请列表 403、`POST /states` 403、`GET` 私密项目 404、成员列表中 `member.email` 为 `null` | P7 / P11 |
+| W11 | 访客的边界（权限矩阵的页面抽样，9.2） | 访客登录：侧边栏只列出他加入的项目；打开工作区设置的成员页，看到"没有权限"；成员列表里的邮箱都不显示，他自己的也不显示；打开项目的状态设置，看到"没有权限" | 数据库不变 | 矩阵的全部格子在 9.2 由后端测试逐格覆盖；这个故事只用 PAT 抽样四格：访客 `GET` 邀请列表 403、`POST /states` 403、`GET` 私密项目 404、成员列表中 `member.email` 为 `null` | P7 / P11 |
 | W12 | 恢复被移出的成员（3.11） | — | 管理员移出成员 B（B 是工作区管理员，在一个项目里是项目管理员），再运行 `nerve workspaces reactivate-member --slug acme --email b@…`：`workspace_members` 那一行 `is_active` 恢复为真、角色不变；输出说明 B 的 1 个项目成员关系仍无效。B 的账户已停用时，输出另外提示 `nerve users activate`。已是有效成员：输出说明，退出码 0。工作区不存在、账户不存在、不是这个工作区的成员：退出码 1，数据库不变 | B 用 PAT `POST /api/v0/projects/{id}/join`：原来的项目成员行恢复，角色是 20（原来那一行的 20 与他的工作区角色 20 中较低的，3.5）。**旧邀请**（Codex S2）：B 被移出期间 A 给 B 发了一份访客邀请；恢复、加入项目之后 A 离开，B 成为唯一的管理员；B 接受那份旧邀请：200，回答的 `role` 是 20，邀请 `accepted = true` 并已软删除，`workspace_members.role` 仍是 20，项目角色仍是 20（3.8 规则：邀请从不改变有效的成员关系） | P5 / — |
 | P1 | 创建项目 | 成员在项目列表页建项目（名、标识、说明、公开、负责人、图标）；建好后项目出现在列表和侧边栏。标识已被占用、含非法字符：表单提示 | `projects` 新增一行：`identifier` 为大写，`timezone` 等于工作区的时区，`network = 2`，`last_issue_sequence = 0`；`project_members` 新增创建者（`role = 20`）和负责人（`role = 20`，与创建者不同时）；`project_user_properties` 为这两人各一行（`sort_order` 按 3.18）；`states` 新增 6 行，名称、颜色、`sequence`、`group` 照 Plane，`Backlog` 是默认 | `POST /api/v0/workspaces/{slug}/projects`，同一组断言；标识被占用 409 `project.identifier_taken`，名称被占用 409 `project.name_taken`，名称含 `-`、`.` 等 422（`name`，`not_allowed`）；访客 403；负责人是访客或不是成员 422（`project_lead_id`，`not_allowed`）。`GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}` | P4 / P10 |
 | P2 | 项目列表与可见性 | 管理员看到全部项目（含私密）；成员看到自己加入的和公开的；访客只看到自己加入的。成员直接打开一个没加入的公开项目的地址：显示"加入项目"，页面只请求项目详情，不请求它的显示设置、标签、成员、状态（`watchPage` 没有失败的请求，7.1）；点"加入"之后进入项目 | 加入：`project_members` 新增一行，角色等于他的工作区角色；`project_user_properties` 新增一行，`sort_order = 65535`（3.18） | `GET /api/v0/workspaces/{slug}/projects`（三种角色三组结果，默认不含已归档）；`POST /api/v0/projects/{id}/join`；成员加入私密项目、访客加入公开项目都是 404 `project.not_found` | P4 / P10 |
@@ -168,7 +168,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 - **跨模块只经端口**（总体设计 6.3 第 2 条），端口声明在调用方的 `app` 层：
   - `project` 问 `workspace`：按 slug 取工作区（目录），锁住若干人的工作区成员行并取回有效角色（约定三，3.6）。
   - `workspace` 让 `project` 做连带：端口 `ProjectCascade`，由 `project/app` 的用例实现，三个方法：
-    - `DeleteWorkspaceProjects(ctx, workspaceID, now)`：软删除这个工作区的项目及其下的行；
+    - `DeleteWorkspaceProjects(ctx, workspaceID, by, now) error`：软删除这个工作区的项目及其下的行（项目 → 项目成员 → 项目显示设置 → 状态 → 标签，3.6 的取锁表），删除者 `by` 与时刻 `now` 由工作区的连带传入，与工作区一侧的每一步相同；
     - `EndMemberships(ctx, workspaceIDs, userID, now) error`：在调用时列举他在这些工作区里有效的项目成员关系（不接收事先列好的项目，3.6 约定六），锁住那些项目、查唯一管理员（可能拒绝 `project.sole_admin`，3.7）、停用他的项目成员关系。移出、离开、停用账户都用它；
     - `DemoteToGuest(ctx, workspaceID, userID, now)`：把他在这个工作区的项目角色都改为访客（Plane `views/workspace/member.py:87-89`，含已离开的项目）。
   - `workspace` 问 `project`：他在这个工作区还有几个无效的项目成员关系（`ProjectMembershipCounts`，只读，`reactivate-member` 的提示）。
@@ -283,8 +283,8 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   | 创建工作区（接口、命令） | 管理员的账户行 S（锁下确认有效，约定六）→ 插入工作区 → 插入成员 |
   | 修改工作区 | 工作区 N → 判定 → 改 |
   | 删除工作区 | 工作区 N → 判定 → 软删除工作区 → 邀请 → 成员 → 显示设置 → `DeleteWorkspaceProjects`：项目 → 项目成员 → 项目显示设置 → 状态 → 标签（批量，约定五） |
-  | 改工作区成员的角色 | 工作区 N → 判定 → 目标成员行 → 改；改为访客时 `DemoteToGuest`：他在这个工作区的项目（N，`id` 升序）→ 项目成员（批量） |
-  | 移出成员、离开工作区 | 工作区 N → 判定 → 查唯一管理员（离开）→ 软删除这个工作区里发给他邮箱的待接受邀请（邮箱经 `MemberProfiles`，不加锁，约定一；3.8）→ 成员行 → `EndMemberships`：列举他在这个工作区有效的项目成员关系（新的语句，约定六）→ 那些项目（N，`id` 升序）→ 查唯一管理员 → 项目成员 |
+  | 改工作区成员的角色 | 读成员行（得到工作区）→ 工作区 N → 重读成员行 → 判定 → 目标的检查（已结束 404、自己 409）→ 改；改为访客时 `DemoteToGuest`：他在这个工作区的项目（N，`id` 升序）→ 项目成员（批量） |
+  | 移出成员、离开工作区 | 读成员行（移出按 id 指定成员关系；离开按 slug，没有这一步）→ 工作区 N → 重读成员行（移出）→ 判定 → 查唯一管理员（离开）→ 软删除这个工作区里发给他邮箱的待接受邀请（邮箱经 `MemberProfiles`，不加锁，约定一；3.8）→ 成员行 → `EndMemberships`：列举他在这个工作区有效的项目成员关系（新的语句，约定六）→ 那些项目（N，`id` 升序）→ 查唯一管理员 → 项目成员 |
   | `nerve workspaces reactivate-member` | 账户行 S（取回状态，停用的也允许，3.11）→ 工作区 N → 成员行（恢复，角色不变）→ 数他无效的项目成员关系（不加锁） |
   | 修改工作区的显示设置 | 工作区 S → 判定 → 插入或更新 |
   | 创建邀请 | 邀请人的账户行（N，复核凭证，3.8）→ 工作区 S → 判定 → 校验（"已是有效成员"：有效成员的 id 经 `MemberProfiles` 换成邮箱比较，不加锁，约定一）→ 按规范化后的邮箱排序插入邀请（约定五；唯一索引的冲突翻译为 422 `duplicate`，3.8） |
@@ -651,7 +651,7 @@ M3 对 M2 设计 3.13 的两处补充：
 | `created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` | 同 4.2 | — |
 
 - **索引**：`workspace_user_properties_workspace_id_user_id_key ON (workspace_id, user_id) WHERE deleted_at IS NULL`；`workspace_user_properties_workspace_id_idx ON (workspace_id)`（物理级联）。
-- **删除的列**：`filters`、`display_filters`、`display_properties`、`rich_filters`（M4 或 M7 按自己的格式加，3.18）。
+- **删除的列**：`filters`、`display_filters`、`display_properties`、`rich_filters`（它们的使用者 M4 按自己的格式加回，3.18；差异清单同）。
 
 ### 4.6 `projects`（Plane 36 列 → 23 列）
 | 列 | 类型与约束 | 与 Plane 的差异 |
@@ -1212,7 +1212,7 @@ modules/access/
 - **侧边栏**：工作区菜单切换工作区；"项目导航"对话框读写 `WorkspacePreferences`（W8）；收藏区在 M7 之前为空（3.1）。项目的顺序在 P10。
 - **工作区设置 general**：名称、规模、时区；slug 只读；图标上传删除（3.2）；删除工作区（输入名称确认）之后按落点规则去下一个工作区。
 - **工作区设置 members**：
-  - 成员列表：角色下拉只对管理员可用，不能改自己；访客看不到别人的邮箱（与 Plane 相同）；离开工作区，唯一的管理员时显示 409 的说明。
+  - 成员列表：角色下拉只对管理员可用，不能改自己；访客看不到任何人的邮箱，`email` 都为 `null`，他自己的也是（与 Plane 相同，9.2）；离开工作区，唯一的管理员时显示 409 的说明。
   - 邀请只对管理员显示，也只为管理员取（决策点 4，与 Plane 的页面相同；7.1）：邀请弹窗（批量，每行邮箱和角色，422 的字段错误落到对应的行）；邀请列表的每一行有复制链接、改角色、删除。
   - 已忽略的邀请在列表中标"已忽略"，只能删除；再邀请这个邮箱得到的 422 `duplicate` 落到那一行，说明"这个邮箱已有一份邀请，先删除它"（3.8）。
 - **停用账户**（M2 的 general 页）：409 `workspace.sole_admin`、`project.sole_admin` 在弹窗里显示"先指定另一位管理员"（W9）。
@@ -1359,7 +1359,7 @@ modules/access/
 - 请求体的结构检查（M2 设计 3.11）挡住越权的字段：`PATCH /workspaces/{slug}` 带 `slug`，`PATCH /projects/{id}` 带 `workspace_id`、`archived_at`，都是 400。数组里的对象同样检查（5.2）。
 
 ### 8.4 邮箱与个人信息
-- 成员列表：访客看不到别人的邮箱，管理员、成员看得到，与 Plane 相同（3.4）。
+- 成员列表：访客看不到任何人的邮箱，`email` 都为 `null`，他自己的也是；管理员、成员看得到每个人的，与 Plane 相同（3.4、9.2）。
 - 邀请列表只有管理员看得到（决策点 4），其中有被邀请的邮箱和可用的令牌。
 - 公开的查看邀请不显示被邀请的邮箱，邮箱不一致的拒绝也不说（决策点 1）。代价：用错账户打开链接的人不知道该用哪个邮箱，要问发链接的管理员。
 - `MemberUser` 只有公开的资料（显示名、名字、头像）和按角色给出的邮箱，没有时区、最后登录等。
@@ -1458,7 +1458,7 @@ modules/access/
 - **可见性一致**：对 9.2 的每种身份，`listProjects` 的结果等于对每个项目逐个判定 `project.read` 的结果；`listWorkspaceStates` 同理（3.4）。
 - **邀请从不改变有效的成员关系**（3.8，P5）：Codex S2 的顺序：A、B 是管理员，A 移出 B，之后给 B 发一份访客邀请，`reactivate-member` 恢复 B，B 加入一个项目，A 离开，B 接受那份旧邀请：B 仍是工作区管理员（工作区有一位管理员），项目角色仍是 20，邀请已消费。故事 W12 的接口版本走同一顺序。
 - **结束的成员关系不留下邀请**（3.8，P5）：复核 spike 9d 的顺序：A、B 是管理员，B 有效而有一份发给他的待接受访客邀请（上一条里 `reactivate-member` 之后的状态），A 移出 B；之后 B 用旧链接查看、接受都得到 404 `workspace.invitation_not_found`，他没有回到工作区，邀请的 `deleted_at` 等于移出的时刻。B 自己离开同样跑一次。一份已忽略的邀请不受影响。`EndMemberships` 以 `project.sole_admin` 拒绝时，邀请随之回滚、仍待接受。
-- **交错**（3.6 的 19 种，用 `pgtest.WaitForLockWait` 让一方确定地等在锁上；括号里是加入的 Phase）：
+- **交错**（3.6 的 19 种，用 `pgtest.WaitForLockWaitOn(t, pool, <被等的父行所在的表>, 时限)` 让一方确定地等在那张表的行锁上，例如 `workspaces`；组装好的应用在同一个库上跑 River，不看表的 `pgtest.WaitForLockWait` 会被别的等待提前满足，它只用在没有别的语句能等的库上，如 `ON CONFLICT` 等同一个键的插入；括号里是加入的 Phase）：
   1. 两位管理员同时离开工作区（P5）：一个成功，另一个等锁之后 409 `workspace.sole_admin`；项目一侧（`leaveProject`）同理。
   2. 两位管理员互相降级（P2）：先拿到工作区锁的一方成功；后到的一方判定时已是成员，403 `forbidden`；仍有一位管理员。
   3. 接受邀请与删除工作区（P3）：接受先拿到工作区锁，删除等待，之后连带删除新成员；删除先提交，接受锁工作区时读到 0 行，404。
