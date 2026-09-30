@@ -267,3 +267,16 @@ func TestExecuteForAdminRefuses(t *testing.T) {
 		}
 	}
 }
+
+// The lock's failure is the command's, before any write: never "no account".
+func TestExecuteForAdminReturnsTheLocksError(t *testing.T) {
+	uc, f := newCreate(true)
+	failure := errors.New("connection reset")
+	f.accounts.err = failure
+	if _, err := uc.ExecuteForAdmin(context.Background(), "bob@corp.com", domain.NewWorkspace{Name: "Acme", Slug: "acme"}); !errors.Is(err, failure) {
+		t.Errorf("ExecuteForAdmin() = %v, want %v", err, failure)
+	}
+	if len(f.log.calls) != 1 || len(f.workspaces.members) != 0 || f.logs.Len() != 0 {
+		t.Errorf("calls = %q, log %q; want the lock only, no write and no log", f.log.calls, f.logs)
+	}
+}
