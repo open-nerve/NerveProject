@@ -262,11 +262,23 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+// RegisterInvitation The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register.
+type RegisterInvitation struct {
+	// ID The link's invitation_id.
+	ID uuid.UUID `json:"id"`
+
+	// Token The link's token.
+	Token string `json:"token"`
+}
+
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
 	// Email The sign-in address; stored trimmed and in lower case.
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email string `json:"email"`
+
+	// Invitation The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register.
+	Invitation *RegisterInvitation `json:"invitation,omitempty"`
+	Password   string              `json:"password"`
 }
 
 // StartOfTheWeek The first day of the week, 0 Sunday to 6 Saturday.

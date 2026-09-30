@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/migrations"
@@ -133,6 +134,79 @@ func expectNoTokenStored(t *testing.T, pool *pgxpool.Pool, links []invitationLin
 				}
 			}
 		}
+	}
+}
+
+// While sign-up is off, a registration goes on only with the link of a
+// pending invitation to its address, normalized (M3 design 3.8): on a
+// second app on the same database and key, with sign-up off. Every other
+// case answers the one 403 identity.signup_disabled, byte for byte, whatever
+// is wrong (8.2): no invitation, a token not the invitation's, an id no
+// invitation has, a deleted invitation, an accepted one (its address has an
+// account, and that is not what it says), a declined one, another address.
+// Registering does not accept the invitation.
+func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
+	url, keyFile := pgtest.NewDatabase(t), writeFile(t, testKeyPEM)
+	configured := func(signup bool) config.Config {
+		cfg := testConfig(t, url, false)
+		cfg.Auth.JWT.PrivateKeyFile, cfg.Auth.SignupEnabled = keyFile, signup
+		return cfg
+	}
+	contract := apitest.Load(t)
+	open := startApp(t, configured(true), migrations.FS())
+	admin := registerAccount(t, contract, open, "admin@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, open+"/api/v0/workspaces", admin, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("creating acme = %d %s", status, body)
+	}
+	links := map[string]invitationLink{}
+	for _, name := range []string{"carol", "dave", "erin", "frank", "gina"} {
+		links[name] = invite(t, contract, open, admin, "acme", name+"@example.com")
+	}
+	dave := registerAccount(t, contract, open, "dave@example.com").AccessToken
+	answerInvitation(t, contract, open, dave, "decline", links["dave"], http.StatusNoContent)
+	erin := registerAccount(t, contract, open, "erin@example.com").AccessToken
+	answerInvitation(t, contract, open, erin, "accept", links["erin"], http.StatusOK)
+	if status, body := call(t, contract, http.MethodDelete, open+"/api/v0/workspace-invitations/"+links["frank"].id.String(), admin, ""); status != http.StatusNoContent {
+		t.Fatalf("deleting frank's invitation = %d %s", status, body)
+	}
+	closed := startApp(t, configured(false), migrations.FS())
+	register := func(email, invitation string) wholeAnswer {
+		t.Helper()
+		req := newRequest(t, http.MethodPost, closed+"/api/v0/auth/register", "",
+			[]byte(`{"email":"`+email+`","password":"Tr0ub4dor&3"`+invitation+`}`))
+		contract.CheckRequest(t, req)
+		res, body := send(t, req)
+		contract.CheckResponse(t, req, res)
+		return wholeAnswerOf(res, body)
+	}
+	naming := func(l invitationLink) string {
+		return `,"invitation":{"id":"` + l.id.String() + `","token":"` + l.token + `"}`
+	}
+	nobodys := uuid.NewV7()
+
+	refused := register("zoe@example.com", "")
+	if refused.status != http.StatusForbidden || problemCode(t, []byte(refused.body)) != "identity.signup_disabled" {
+		t.Fatalf("registering without an invitation = %+v, want 403 identity.signup_disabled", refused)
+	}
+	for _, tt := range []struct{ name, email, invitation string }{
+		{"a token not the invitation's", "carol@example.com", naming(invitationLink{links["carol"].id, links["gina"].token})},
+		{"an id no invitation has", "carol@example.com", naming(invitationLink{nobodys, invitationToken(t, nobodys)})},
+		{"a deleted invitation", "frank@example.com", naming(links["frank"])},
+		{"an accepted invitation", "erin@example.com", naming(links["erin"])},
+		{"a declined invitation", "dave@example.com", naming(links["dave"])},
+		{"another address", "zoe@example.com", naming(links["gina"])},
+	} {
+		if got := register(tt.email, tt.invitation); got != refused {
+			t.Errorf("registering with %s = %+v, want what one without an invitation gets: %+v", tt.name, got, refused)
+		}
+	}
+	if got := register(" Carol@Example.com ", naming(links["carol"])); got.status != http.StatusCreated {
+		t.Errorf("registering carol with her invitation = %+v, want 201", got)
+	}
+	carol := links["carol"]
+	if status, body := call(t, contract, http.MethodGet, closed+"/api/v0/workspace-invitations/"+carol.id.String()+"?token="+carol.token, "", ""); status != http.StatusOK ||
+		strings.Contains(body, `"declined":true`) {
+		t.Errorf("carol's invitation after she registered = %d %s, want it pending", status, body)
 	}
 }
 

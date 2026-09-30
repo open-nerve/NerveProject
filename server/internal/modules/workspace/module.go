@@ -75,14 +75,23 @@ type Deps struct {
 
 // Module is the wired workspace module.
 type Module struct {
-	uc httpadapter.UseCases
+	uc     httpadapter.UseCases
+	signup *app.SignupInvitations
+}
+
+// SignupInvitations checks the invitation a registration names while
+// sign-up is closed (M3 design 3.8): bootstrap's signup policy asks it.
+type SignupInvitations interface {
+	// Allows reports whether token is the link of the invitation id,
+	// pending, to email, normalized. Every other case is the same false.
+	Allows(ctx context.Context, email string, id uuid.UUID, token string) (bool, error)
 }
 
 // New wires the module's use cases and its HTTP side from d; nothing is
 // registered or injected after it (M3 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	return &Module{uc: httpadapter.UseCases{
+	return &Module{signup: app.NewSignupInvitations(store, d.InvitationMAC), uc: httpadapter.UseCases{
 		ListWorkspaces: app.NewListWorkspaces(store),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,
@@ -117,6 +126,12 @@ func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
 // PublicOperations are the module's routes that need no token.
 func (m *Module) PublicOperations() []string {
 	return httpadapter.PublicOperations()
+}
+
+// SignupInvitations is the check of a registration's invitation, for
+// identity's SignupPolicy (M3 design 6.6 step 6).
+func (m *Module) SignupInvitations() SignupInvitations {
+	return m.signup
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of

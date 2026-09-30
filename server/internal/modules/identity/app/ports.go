@@ -348,8 +348,18 @@ type RefreshTokenMAC interface {
 	Verify(message []byte, tag [16]byte) bool
 }
 
-// SignupPolicy decides whether registration is open (M2 design 3.9). From
-// bootstrap it is auth.signup_enabled; M3 extends it to invitations.
+// SignupInvitation is the invitation a registration names (M3 design 3.8):
+// its link's invitation id and token, as the request sent them.
+type SignupInvitation struct {
+	ID    uuid.UUID
+	Token string
+}
+
+// SignupPolicy decides whether a registration may go on (M2 design 3.9, M3
+// design 3.8): for email, normalized, and the invitation the request names,
+// nil when none. From bootstrap it is auth.signup_enabled and, while that
+// is off, workspace's check of the invitation. Every refusal is false: the
+// registration answers identity.signup_disabled, whatever the reason.
 type SignupPolicy interface {
-	AllowSignup(ctx context.Context) (bool, error)
+	AllowSignup(ctx context.Context, email string, invitation *SignupInvitation) (bool, error)
 }

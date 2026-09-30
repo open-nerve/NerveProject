@@ -213,6 +213,22 @@ func TestRegisterAnswers201WithTheTokens(t *testing.T) {
 	}
 }
 
+// The invitation a registration names reaches the use case as sent.
+func TestRegisterHandsOnTheInvitation(t *testing.T) {
+	register := &fakeRegister{}
+	req := registerRequest(`{"email":"alice@corp.com","password":"Tr0ub4dor&3",` +
+		`"invitation":{"id":"0199a2b4-0000-7000-8000-0000000000c1","token":"nrv_inv_kvqyKBh-bANMT6JAIYzolA"}}`)
+	apitest.Load(t).CheckRequest(t, req)
+
+	if res, body := do(t, newServer(t, fakes{register: register}), req); res.StatusCode != http.StatusCreated {
+		t.Fatalf("POST /auth/register = %d %s, want 201", res.StatusCode, body)
+	}
+	want := app.SignupInvitation{ID: uuid.MustParse("0199a2b4-0000-7000-8000-0000000000c1"), Token: "nrv_inv_kvqyKBh-bANMT6JAIYzolA"}
+	if register.got.Invitation == nil || *register.got.Invitation != want {
+		t.Errorf("use case got the invitation %+v, want %+v", register.got.Invitation, want)
+	}
+}
+
 // The handler exit: every error the use case returns becomes its problem.
 func TestRegisterProblems(t *testing.T) {
 	tests := []struct {

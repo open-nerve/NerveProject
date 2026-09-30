@@ -72,12 +72,17 @@ type InvitationPreviewer interface {
 	InvitationPreview(ctx context.Context, id uuid.UUID) (domain.InvitationPreview, error)
 }
 
-// InvitationLocker reads an invitation by its id, then locks it under its
-// workspace's lock (M3 design 3.6 convention 2).
-type InvitationLocker interface {
+// InvitationFinder reads an invitation by its id.
+type InvitationFinder interface {
 	// InvitationByID returns the undeleted invitation id; ErrNotFound when
 	// there is none.
 	InvitationByID(ctx context.Context, id uuid.UUID) (domain.Invitation, error)
+}
+
+// InvitationLocker reads an invitation by its id, then locks it under its
+// workspace's lock (M3 design 3.6 convention 2).
+type InvitationLocker interface {
+	InvitationFinder
 	// LockInvitation locks the undeleted invitation id FOR UPDATE until the
 	// transaction ends and returns it; ErrNotFound when there is none, also
 	// when it was deleted while the lock waited.

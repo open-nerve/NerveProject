@@ -15,7 +15,7 @@ export interface paths {
         put?: never;
         /**
          * Create an account and sign in
-         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, a well-formed request answers identity.signup_disabled before the address or the password is looked at, so the answer never depends on whether the address is registered. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password. Registrations have a rate limit of their own per client IP.
+         * @description Creates an account with its default profile and signs it in: the response holds a new session's tokens. While sign-up is off, a well-formed request answers identity.signup_disabled before the address or the password is looked at, so the answer never depends on whether the address is registered; unless it names an invitation whose link it holds, pending, to the address it registers (normalized). Every other invitation answers the same identity.signup_disabled, whatever is wrong with it. Registering does not accept the invitation. The password needs 8–128 characters with an upper-case letter, a lower-case letter, a digit and a special character, and must not be a common password. Registrations have a rate limit of their own per client IP.
          */
         post: operations["register"];
         delete?: never;
@@ -511,6 +511,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The invitation a registration names, from its link (/workspace-invitations?invitation_id=…&token=…): while sign-up is off, it lets the address it was sent to register. */
+        RegisterInvitation: {
+            /**
+             * Format: uuid
+             * @description The link's invitation_id.
+             */
+            id: string;
+            /** @description The link's token. */
+            token: string;
+        };
         RegisterRequest: {
             /**
              * Format: email
@@ -518,6 +528,7 @@ export interface components {
              */
             email: string;
             password: string;
+            invitation?: components["schemas"]["RegisterInvitation"];
         };
         /** @description One invalid field of a request. Clients show text looked up by `code`; `message` is an English explanation for developers. Must match httpserver.FieldError and the field codes of internal/shared. */
         FieldError: {
@@ -957,6 +968,7 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type RegisterInvitation = components['schemas']['RegisterInvitation'];
 export type RegisterRequest = components['schemas']['RegisterRequest'];
 export type FieldError = components['schemas']['FieldError'];
 export type Problem = components['schemas']['Problem'];

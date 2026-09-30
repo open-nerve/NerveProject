@@ -28,13 +28,19 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// SignupInvitation is the invitation a registration names, as SignupPolicy
+// is asked about it (M3 design 3.8).
+type SignupInvitation = app.SignupInvitation
+
 // Deps are what bootstrap builds for the module.
 type Deps struct {
 	Pool   *pgxpool.Pool
 	Tx     shared.TxManager
 	Clock  app.Clock
 	Logger *slog.Logger
-	// SignupPolicy is auth.signup_enabled (M2 decision 2).
+	// SignupPolicy is auth.signup_enabled (M2 decision 2) and, while that is
+	// off, the check of the invitation a registration names (M3 design
+	// 3.8).
 	SignupPolicy app.SignupPolicy
 	// Keys are the signing key, as LoadKeys loaded it.
 	Keys            *Keys

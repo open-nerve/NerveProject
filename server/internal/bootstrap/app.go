@@ -114,7 +114,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Tx:              tx,
 		Clock:           clock.System{},
 		Logger:          logger,
-		SignupPolicy:    signupSwitch(cfg.Auth.SignupEnabled),
+		SignupPolicy:    signupPolicy{enabled: cfg.Auth.SignupEnabled, invitations: ws.SignupInvitations()},
 		Keys:            keys,
 		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 		SessionTTL:      cfg.Auth.SessionTTL,
@@ -215,11 +215,6 @@ func passwordHashing(p config.PasswordConfig) identity.PasswordHashing {
 func bucket(limiter *ratelimit.Limiter, name string, c config.BucketConfig) *ratelimit.Bucket {
 	return limiter.Bucket(name, ratelimit.Rate{PerMinute: c.PerMinute, Burst: c.Burst})
 }
-
-// signupSwitch is auth.signup_enabled as identity's SignupPolicy.
-type signupSwitch bool
-
-func (s signupSwitch) AllowSignup(context.Context) (bool, error) { return bool(s), nil }
 
 // warnIfExposed warns once when a non-prod nerve listens beyond loopback:
 // most likely a deployment without NERVE_ENV=prod (M2 design 6.1).
