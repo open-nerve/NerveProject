@@ -64,6 +64,7 @@ type fakes struct {
 	get    *fakeGet
 	update *fakeUpdate
 	del    *fakeDelete
+	member *fakeMembers
 	check  *fakeCheck
 	prefs  *fakePrefs
 }
@@ -127,6 +128,17 @@ type fakeDelete struct {
 func (f *fakeDelete) Execute(ctx context.Context, slug string) error {
 	f.calls = append(f.calls, caller(ctx)+" "+slug)
 	return f.err
+}
+
+type fakeMembers struct {
+	calls []string // "caller slug"
+	lists map[string][]domain.Member
+	err   error
+}
+
+func (f *fakeMembers) Execute(ctx context.Context, slug string) ([]domain.Member, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	return f.lists[slug], f.err
 }
 
 // fakePrefs is both preference use cases: each call is recorded as
@@ -197,6 +209,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.del == nil {
 		f.del = &fakeDelete{}
 	}
+	if f.member == nil {
+		f.member = &fakeMembers{}
+	}
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
@@ -205,7 +220,7 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
 		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
-		GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
+		ListMembers: f.member, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
 	})
 	return router
 }

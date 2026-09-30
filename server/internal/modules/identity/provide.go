@@ -22,14 +22,25 @@ type Accounts interface {
 	ShareAccountByEmail(ctx context.Context, email string) (state app.AccountState, found bool, err error)
 }
 
+// PublicProfiles reads the public profile of each account of ids that
+// exists, deactivated ones too, by id, without a lock (M3 design 6.5): the
+// workspace module's MemberProfiles. A transaction that holds a lock of a
+// later table reads an account's address this way and never through
+// Accounts (M3 design 3.6 convention 1).
+type PublicProfiles interface {
+	PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]app.PublicProfile, error)
+}
+
 // Provided are the adapters identity offers the other modules. They depend
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
-	Accounts Accounts
+	Accounts       Accounts
+	PublicProfiles PublicProfiles
 }
 
 // Provide builds identity's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
-	return Provided{Accounts: postgresadapter.New(pool)}
+	store := postgresadapter.New(pool)
+	return Provided{Accounts: store, PublicProfiles: store}
 }

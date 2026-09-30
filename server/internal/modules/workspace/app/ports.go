@@ -64,6 +64,25 @@ type MemberRow struct {
 	Now         time.Time
 }
 
+// PublicProfile is an account's public profile as MemberProfiles reads it:
+// identity's value, converted in bootstrap/ports.go (M3 design 6.5).
+type PublicProfile struct {
+	ID          uuid.UUID
+	Email       string
+	FirstName   string
+	LastName    string
+	DisplayName string
+}
+
+// MemberProfiles reads the public profile of each account of ids that
+// exists, deactivated ones too, without a lock (M3 design 6.5): the way a
+// use case reads another account, also inside a transaction that holds a
+// workspace's lock (M3 design 3.6 convention 1). identity implements it
+// (identity.Provide).
+type MemberProfiles interface {
+	PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]PublicProfile, error)
+}
+
 // WorkspaceCreator inserts a workspace and its first member.
 type WorkspaceCreator interface {
 	// CreateWorkspace inserts w and returns it as stored, without a role and
@@ -94,6 +113,14 @@ type WorkspaceFinder interface {
 // 2), in the transaction ctx carries: each locks the undeleted workspace
 // with slug until the transaction ends and returns its id; ErrNotFound when
 // there is none, also when it was deleted while the lock waited.
+
+// MemberLister reads a workspace and lists its memberships.
+type MemberLister interface {
+	WorkspaceFinder
+	// ListMembers returns the undeleted memberships of the workspace, active
+	// or not, by created_at, then id (M3 design 3.12).
+	ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error)
+}
 
 // WorkspaceLocker locks FOR NO KEY UPDATE: for a write of the workspace row
 // itself or of a membership.

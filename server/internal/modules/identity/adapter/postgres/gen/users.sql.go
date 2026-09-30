@@ -197,6 +197,49 @@ func (q *Queries) LockUserForCredentials(ctx context.Context, id uuid.UUID) (Loc
 	return i, err
 }
 
+const publicProfiles = `-- name: PublicProfiles :many
+SELECT id, email, first_name, last_name, display_name
+FROM users
+WHERE id = ANY ($1::uuid[])
+ORDER BY id
+`
+
+type PublicProfilesRow struct {
+	ID          uuid.UUID
+	Email       string
+	FirstName   string
+	LastName    string
+	DisplayName string
+}
+
+// MemberProfiles (M3 design 6.5): the public profile of each account of ids, deactivated ones too, by id. No lock: a
+// transaction that holds a workspace's lock reads an address this way (3.6 convention 1).
+func (q *Queries) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]PublicProfilesRow, error) {
+	rows, err := q.db.Query(ctx, publicProfiles, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PublicProfilesRow
+	for rows.Next() {
+		var i PublicProfilesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.FirstName,
+			&i.LastName,
+			&i.DisplayName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const shareAccount = `-- name: ShareAccount :one
 SELECT id, email, is_active
 FROM users

@@ -51,6 +51,8 @@ paths:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces'
   /api/v0/workspaces/{slug}:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}'
+  /api/v0/workspaces/{slug}/members:
+    $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1members'
   /api/v0/workspace-slugs/{slug}:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspace-slugs~1{slug}'
   /api/v0/me/workspaces/{slug}/preferences:

@@ -457,6 +457,28 @@ paths:
           description: The workspace is deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/members:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listWorkspaceMembers
+      tags:
+        - workspace
+      summary: List a workspace's members
+      description: 'Every membership of the workspace, those that ended too (is_active false), in the order they began, then by id, each with the member''s public profile. For any active member. The addresses are shown to admins and members; to a guest every address is null, his own too. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      responses:
+        '200':
+          description: The workspace's memberships.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -1126,6 +1148,75 @@ components:
         timezone:
           description: An IANA time zone name.
           type: string
+    MemberUser:
+      description: 'A member''s public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - display_name
+        - first_name
+        - last_name
+        - avatar_url
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        avatar_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        email:
+          description: The member's address for a caller who is an admin or a member; null for a guest.
+          type:
+            - string
+            - 'null'
+    WorkspaceMember:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - role
+        - is_active
+        - created_at
+        - member
+      properties:
+        id:
+          description: The membership's id, which /workspace-members/{workspace_member_id} names.
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        is_active:
+          description: False once the membership has ended.
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        member:
+          $ref: '#/components/schemas/MemberUser'
+    WorkspaceMemberList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMember'
     SlugAvailability:
       type: object
       additionalProperties: false

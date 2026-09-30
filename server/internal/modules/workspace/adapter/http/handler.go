@@ -37,6 +37,11 @@ type DeleteWorkspaceUseCase interface {
 	Execute(ctx context.Context, slug string) error
 }
 
+// ListMembersUseCase is app.ListWorkspaceMembers.
+type ListMembersUseCase interface {
+	Execute(ctx context.Context, slug string) ([]domain.Member, error)
+}
+
 // GetPreferencesUseCase is app.GetWorkspacePreferences.
 type GetPreferencesUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.Preferences, error)
@@ -59,6 +64,7 @@ type UseCases struct {
 	GetWorkspace      GetWorkspaceUseCase
 	UpdateWorkspace   UpdateWorkspaceUseCase
 	DeleteWorkspace   DeleteWorkspaceUseCase
+	ListMembers       ListMembersUseCase
 	CheckSlug         CheckSlugUseCase
 	GetPreferences    GetPreferencesUseCase
 	UpdatePreferences UpdatePreferencesUseCase

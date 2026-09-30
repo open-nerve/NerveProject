@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"testing"
@@ -49,10 +50,48 @@ func workspaceMatrixRows() []matrixRow {
 			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: renamesIt},
 		{op: "deleteWorkspace", write: true, request: toWorkspace(http.MethodDelete, "", ""),
 			cells: inWorkspace(cellNoContent, cellForbidden, cellForbidden)},
+		{op: "listWorkspaceMembers", request: toWorkspace(http.MethodGet, "/members", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
+			check: listsTheMembers},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),
 			cells: inWorkspace(cellOK, cellOK, cellOK), check: preferencesAre(navigation{"TABBED", 5}, navigation{"ACCORDION", 5})},
+	}
+}
+
+// listsTheMembers: acme's four memberships, the removed member's ended; the
+// admin and the member see every address, the guest none, his own neither
+// (M3 design 3.4, 9.2).
+func listsTheMembers(t *testing.T, c caller, answer string) {
+	var list struct {
+		Data []struct {
+			IsActive bool `json:"is_active"`
+			Member   struct {
+				DisplayName string  `json:"display_name"`
+				Email       *string `json:"email"`
+			} `json:"member"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &list)
+	var got, want []string
+	for _, m := range list.Data {
+		email := "null"
+		if m.Member.Email != nil {
+			email = *m.Member.Email
+		}
+		got = append(got, fmt.Sprintf("%s %s active %v", m.Member.DisplayName, email, m.IsActive))
+	}
+	for _, name := range []string{"admin", "member", "guest", "removed"} {
+		email := name + "@example.com"
+		if c == callerGuest {
+			email = "null"
+		}
+		want = append(want, fmt.Sprintf("%s %s active %v", name, email, name != "removed"))
+	}
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Errorf("%s sees the members %q, want %q", c, got, want)
 	}
 }
 

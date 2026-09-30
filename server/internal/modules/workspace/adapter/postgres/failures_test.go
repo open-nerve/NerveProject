@@ -42,6 +42,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if p, found, err := s.Preferences(cancelled, w.ID, alice); !failed(err) || found || p != (domain.Preferences{}) {
 		t.Errorf("Preferences() = %+v, %v, %v; want context.Canceled, not no row", p, found, err)
 	}
+	if list, err := s.ListMembers(cancelled, w.ID); !failed(err) || list != nil {
+		t.Errorf("ListMembers() = %v, %v; want context.Canceled, no list", list, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would

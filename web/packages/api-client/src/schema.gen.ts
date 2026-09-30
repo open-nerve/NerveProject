@@ -307,6 +307,29 @@ export interface paths {
         patch: operations["updateWorkspace"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a workspace's members
+         * @description Every membership of the workspace, those that ended too (is_active false), in the order they began, then by id, each with the member's public profile. For any active member. The addresses are shown to admins and members; to a guest every address is null, his own too. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaceMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspace-slugs/{slug}": {
         parameters: {
             query?: never;
@@ -661,6 +684,36 @@ export interface components {
             /** @description An IANA time zone name. */
             timezone?: string;
         };
+        /** @description A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2). */
+        MemberUser: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+            first_name: string;
+            last_name: string;
+            /** @description Null until uploads arrive (M5). */
+            avatar_url: string | null;
+            /** @description The member's address for a caller who is an admin or a member; null for a guest. */
+            email: string | null;
+        };
+        WorkspaceMember: {
+            /**
+             * Format: uuid
+             * @description The membership's id, which /workspace-members/{workspace_member_id} names.
+             */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            role: components["schemas"]["WorkspaceRole"];
+            /** @description False once the membership has ended. */
+            is_active: boolean;
+            /** Format: date-time */
+            created_at: string;
+            member: components["schemas"]["MemberUser"];
+        };
+        WorkspaceMemberList: {
+            data: components["schemas"]["WorkspaceMember"][];
+        };
         SlugAvailability: {
             available: boolean;
             /**
@@ -743,6 +796,9 @@ export type WorkspaceList = components['schemas']['WorkspaceList'];
 export type OrganizationSize = components['schemas']['OrganizationSize'];
 export type WorkspaceCreate = components['schemas']['WorkspaceCreate'];
 export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
+export type MemberUser = components['schemas']['MemberUser'];
+export type WorkspaceMember = components['schemas']['WorkspaceMember'];
+export type WorkspaceMemberList = components['schemas']['WorkspaceMemberList'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
 export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
@@ -1215,6 +1271,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace's memberships. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceMemberList"];
                 };
             };
             default: components["responses"]["Problem"];

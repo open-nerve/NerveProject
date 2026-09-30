@@ -89,3 +89,51 @@ func TestWorkspaceAccountsConvertsIdentitysAnswer(t *testing.T) {
 		t.Errorf("ShareAccountByEmail() = %v, want %v", err, failure)
 	}
 }
+
+// fakeIdentityProfiles answers the profiles it holds of the ids asked for,
+// in the order it holds them, and records the ids.
+type fakeIdentityProfiles struct {
+	profiles []identityapp.PublicProfile
+	err      error
+	asked    [][]uuid.UUID
+}
+
+func (f *fakeIdentityProfiles) PublicProfiles(_ context.Context, ids []uuid.UUID) ([]identityapp.PublicProfile, error) {
+	f.asked = append(f.asked, ids)
+	var out []identityapp.PublicProfile
+	for _, p := range f.profiles {
+		if slices.Contains(ids, p.ID) {
+			out = append(out, p)
+		}
+	}
+	return out, f.err
+}
+
+// workspaceProfiles asks identity for the ids workspace asks for and hands
+// over each profile, every field converted, in identity's order; an error
+// as it came, without profiles.
+func TestWorkspaceProfilesConvertsIdentitysAnswer(t *testing.T) {
+	alice := identityapp.PublicProfile{ID: uuid.NewV7(), Email: "alice@corp.com", FirstName: "Alice", LastName: "Liddell", DisplayName: "al"}
+	bob := identityapp.PublicProfile{ID: uuid.NewV7(), Email: "bob@corp.com", DisplayName: "bob"}
+	fake := &fakeIdentityProfiles{profiles: []identityapp.PublicProfile{alice, bob}}
+	p := workspaceProfiles{profiles: fake}
+	ids := []uuid.UUID{bob.ID, uuid.NewV7(), alice.ID}
+
+	got, err := p.PublicProfiles(context.Background(), ids)
+
+	want := []workspace.PublicProfile{
+		{ID: alice.ID, Email: "alice@corp.com", FirstName: "Alice", LastName: "Liddell", DisplayName: "al"},
+		{ID: bob.ID, Email: "bob@corp.com", DisplayName: "bob"},
+	}
+	if err != nil || !slices.Equal(got, want) {
+		t.Errorf("PublicProfiles() = %+v, %v; want %+v", got, err, want)
+	}
+	if len(fake.asked) != 1 || !slices.Equal(fake.asked[0], ids) {
+		t.Errorf("identity was asked %v, want %v", fake.asked, ids)
+	}
+	failure := errors.New("connection reset")
+	fake.err = failure
+	if got, err := p.PublicProfiles(context.Background(), ids); !errors.Is(err, failure) || got != nil {
+		t.Errorf("PublicProfiles() = %+v, %v; want no profiles and %v", got, err, failure)
+	}
+}

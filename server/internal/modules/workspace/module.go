@@ -1,7 +1,8 @@
 // Package workspace is the workspaces module (M3 design 3.3, 6.2):
 // workspaces and their members. It brings creating, listing, reading,
-// changing and deleting workspaces, checking a slug, and each member's
-// display settings, and offers the other modules its reads through ports.
+// changing and deleting workspaces, checking a slug, listing the members,
+// and each member's display settings, and offers the other modules its
+// reads through ports.
 package workspace
 
 import (
@@ -43,6 +44,10 @@ func Provide(pool *pgxpool.Pool) Provided {
 // converts identity's into it (M3 design 6.5).
 type AccountState = app.AccountState
 
+// PublicProfile is the profile the MemberProfiles port hands over: bootstrap
+// converts identity's into it (M3 design 6.5).
+type PublicProfile = app.PublicProfile
+
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
 	Pool       *pgxpool.Pool
@@ -52,6 +57,8 @@ type Deps struct {
 	Authorizer shared.Authorizer
 	// Accounts is identity's Accounts, converted (bootstrap/ports.go).
 	Accounts app.Accounts
+	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
+	Profiles app.MemberProfiles
 	// CreationEnabled is workspace.creation_enabled (M3 design 3.11).
 	CreationEnabled bool
 }
@@ -73,6 +80,7 @@ func New(d Deps) *Module {
 		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
 		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
 		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Authorizer, d.Tx, d.Clock, d.Logger),
+		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
 		CheckSlug:         app.NewCheckSlug(store),
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
 		UpdatePreferences: app.NewUpdateWorkspacePreferences(store, d.Authorizer, d.Tx, d.Clock),

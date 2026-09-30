@@ -109,6 +109,19 @@ func (e WorkspaceRole) Valid() bool {
 	}
 }
 
+// MemberUser A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).
+type MemberUser struct {
+	// AvatarURL Null until uploads arrive (M5).
+	AvatarURL   nullable.Nullable[string] `json:"avatar_url"`
+	DisplayName string                    `json:"display_name"`
+
+	// Email The member's address for a caller who is an admin or a member; null for a guest.
+	Email     nullable.Nullable[string] `json:"email"`
+	FirstName string                    `json:"first_name"`
+	ID        uuid.UUID                 `json:"id"`
+	LastName  string                    `json:"last_name"`
+}
+
 // NavigationControlPreference How the sidebar shows the projects, as sections one under another or as tabs.
 type NavigationControlPreference string
 
@@ -173,6 +186,29 @@ type WorkspaceCreate struct {
 // WorkspaceList defines model for WorkspaceList.
 type WorkspaceList struct {
 	Data []Workspace `json:"data"`
+}
+
+// WorkspaceMember defines model for WorkspaceMember.
+type WorkspaceMember struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// ID The membership's id, which /workspace-members/{workspace_member_id} names.
+	ID uuid.UUID `json:"id"`
+
+	// IsActive False once the membership has ended.
+	IsActive bool `json:"is_active"`
+
+	// Member A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).
+	Member MemberUser `json:"member"`
+
+	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
+	Role        WorkspaceRole `json:"role"`
+	WorkspaceID uuid.UUID     `json:"workspace_id"`
+}
+
+// WorkspaceMemberList defines model for WorkspaceMemberList.
+type WorkspaceMemberList struct {
+	Data []WorkspaceMember `json:"data"`
 }
 
 // WorkspacePreferences defines model for WorkspacePreferences.
@@ -249,6 +285,9 @@ type ServerInterface interface {
 	// UpdateWorkspace Change a workspace's name, organization size or time zone
 	// (PATCH /api/v0/workspaces/{slug})
 	UpdateWorkspace(w http.ResponseWriter, r *http.Request, slug Slug)
+	// ListWorkspaceMembers List a workspace's members
+	// (GET /api/v0/workspaces/{slug}/members)
+	ListWorkspaceMembers(w http.ResponseWriter, r *http.Request, slug Slug)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -444,6 +483,32 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspace(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListWorkspaceMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListWorkspaceMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWorkspaceMembers(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -569,6 +634,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.DeleteWorkspace)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.GetWorkspace)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.UpdateWorkspace)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members", wrapper.ListWorkspaceMembers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.GetWorkspacePreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.UpdateWorkspacePreferences)
@@ -949,6 +1015,52 @@ func (response UpdateWorkspacedefaultApplicationProblemPlusJSONResponse) VisitUp
 	return err
 }
 
+type ListWorkspaceMembersRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type ListWorkspaceMembersResponseObject interface {
+	VisitListWorkspaceMembersResponse(w http.ResponseWriter) error
+}
+
+type ListWorkspaceMembers200JSONResponse WorkspaceMemberList
+
+func (response ListWorkspaceMembers200JSONResponse) VisitListWorkspaceMembersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWorkspaceMembersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListWorkspaceMembersdefaultApplicationProblemPlusJSONResponse) VisitListWorkspaceMembersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetWorkspacePreferences Read the caller's display settings in a workspace
@@ -975,6 +1087,9 @@ type StrictServerInterface interface {
 	// UpdateWorkspace Change a workspace's name, organization size or time zone
 	// (PATCH /api/v0/workspaces/{slug})
 	UpdateWorkspace(ctx context.Context, request UpdateWorkspaceRequestObject) (UpdateWorkspaceResponseObject, error)
+	// ListWorkspaceMembers List a workspace's members
+	// (GET /api/v0/workspaces/{slug}/members)
+	ListWorkspaceMembers(ctx context.Context, request ListWorkspaceMembersRequestObject) (ListWorkspaceMembersResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -1234,6 +1349,32 @@ func (sh *strictHandler) UpdateWorkspace(w http.ResponseWriter, r *http.Request,
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateWorkspaceResponseObject); ok {
 		if err := validResponse.VisitUpdateWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListWorkspaceMembers operation middleware
+func (sh *strictHandler) ListWorkspaceMembers(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request ListWorkspaceMembersRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWorkspaceMembers(ctx, request.(ListWorkspaceMembersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWorkspaceMembers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWorkspaceMembersResponseObject); ok {
+		if err := validResponse.VisitListWorkspaceMembersResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -94,6 +94,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
+		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{

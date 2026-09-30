@@ -103,6 +103,21 @@ func (s *Store) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.
 	return nil
 }
 
+// ListMembers returns the undeleted memberships of the workspace, active or
+// not, by created_at, then id.
+func (s *Store) ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error) {
+	rows, err := s.queries(ctx).ListMembers(ctx, workspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("list workspace members: %w", err)
+	}
+	out := make([]domain.Membership, len(rows))
+	for i, r := range rows {
+		out[i] = domain.Membership{ID: r.ID, WorkspaceID: r.WorkspaceID, MemberID: r.MemberID, Role: shared.Role(r.Role),
+			IsActive: r.IsActive, CreatedAt: r.CreatedAt}
+	}
+	return out, nil
+}
+
 // DeleteWorkspaceMembers soft-deletes the undeleted memberships of the
 // workspace, active or not, by the account by at now.
 func (s *Store) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {

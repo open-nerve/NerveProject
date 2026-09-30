@@ -77,20 +77,22 @@ func (f *fakeAccounts) ShareAccountByEmail(ctx context.Context, email string) (a
 // for, wrapped as the store wraps it, so the use case must match with
 // errors.Is.
 type fakeWorkspaces struct {
-	log        *callLog
-	workspaces []domain.Workspace // by slug for WorkspaceBySlug, SlugTaken and the locks; by id for UpdateWorkspace
-	lists      map[uuid.UUID][]domain.Workspace
-	createErr  error
-	memberErr  error               // for CreateMember, which then stores nothing
-	updateErr  error               // for UpdateWorkspace
-	deleteErrs map[string]error    // by step, e.g. "DeleteWorkspaceMembers"
-	listErrs   map[uuid.UUID]error // by user, for ListWorkspaces
-	slugErrs   map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
-	lockErrs   map[string]error    // by slug, for the locks
-	members    []app.MemberRow
-	prefs      map[prefsKey]domain.Preferences
-	prefsErr   error // for Preferences and UpsertPreferences
-	upserts    []app.PreferencesRow
+	log         *callLog
+	workspaces  []domain.Workspace // by slug for WorkspaceBySlug, SlugTaken and the locks; by id for UpdateWorkspace
+	lists       map[uuid.UUID][]domain.Workspace
+	createErr   error
+	memberErr   error               // for CreateMember, which then stores nothing
+	updateErr   error               // for UpdateWorkspace
+	deleteErrs  map[string]error    // by step, e.g. "DeleteWorkspaceMembers"
+	listErrs    map[uuid.UUID]error // by user, for ListWorkspaces
+	slugErrs    map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
+	lockErrs    map[string]error    // by slug, for the locks
+	members     []app.MemberRow
+	memberships map[uuid.UUID][]domain.Membership // by workspace, for ListMembers
+	membersErr  error                             // for ListMembers
+	prefs       map[prefsKey]domain.Preferences
+	prefsErr    error // for Preferences and UpsertPreferences
+	upserts     []app.PreferencesRow
 }
 
 // prefsKey is one (workspace, user) pair of fakeWorkspaces' preferences.
@@ -248,6 +250,36 @@ func (f *fakeWorkspaces) deleteStep(ctx context.Context, step string, id, by uui
 		return fmt.Errorf("%s: %w", step, err)
 	}
 	return nil
+}
+
+func (f *fakeWorkspaces) ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error) {
+	f.log.add(ctx, "ListMembers %s", workspaceID)
+	if f.membersErr != nil {
+		return nil, fmt.Errorf("list workspace members: %w", f.membersErr)
+	}
+	return f.memberships[workspaceID], nil
+}
+
+// fakeProfiles answers the profiles it holds of the ids asked for, in the
+// order it holds them, and logs each call with its ids.
+type fakeProfiles struct {
+	log      *callLog
+	profiles []app.PublicProfile
+	err      error
+}
+
+func (f *fakeProfiles) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]app.PublicProfile, error) {
+	f.log.add(ctx, "PublicProfiles %v", ids)
+	if f.err != nil {
+		return nil, fmt.Errorf("read public profiles: %w", f.err)
+	}
+	var out []app.PublicProfile
+	for _, p := range f.profiles {
+		if slices.Contains(ids, p.ID) {
+			out = append(out, p)
+		}
+	}
+	return out, nil
 }
 
 // show is *s quoted, or <nil>.

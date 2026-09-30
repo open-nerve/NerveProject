@@ -79,3 +79,47 @@ func (q *Queries) DeleteWorkspaceMembers(ctx context.Context, arg DeleteWorkspac
 	_, err := q.db.Exec(ctx, deleteWorkspaceMembers, arg.Now, arg.DeletedBy, arg.WorkspaceID)
 	return err
 }
+
+const listMembers = `-- name: ListMembers :many
+SELECT id, workspace_id, member_id, role, is_active, created_at
+FROM workspace_members
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY created_at, id
+`
+
+type ListMembersRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+	Role        int16
+	IsActive    bool
+	CreatedAt   time.Time
+}
+
+// listWorkspaceMembers: every undeleted membership, active or not, by the time it began (M3 design 3.12).
+func (q *Queries) ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]ListMembersRow, error) {
+	rows, err := q.db.Query(ctx, listMembers, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMembersRow
+	for rows.Next() {
+		var i ListMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.MemberID,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
