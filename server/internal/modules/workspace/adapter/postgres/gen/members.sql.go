@@ -123,3 +123,76 @@ func (q *Queries) ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]Lis
 	}
 	return items, nil
 }
+
+const memberByID = `-- name: MemberByID :one
+SELECT id, workspace_id, member_id, role, is_active, created_at
+FROM workspace_members
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+type MemberByIDRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+	Role        int16
+	IsActive    bool
+	CreatedAt   time.Time
+}
+
+// updateWorkspaceMember reads the membership before the workspace's lock, for the workspace, and again under it.
+func (q *Queries) MemberByID(ctx context.Context, id uuid.UUID) (MemberByIDRow, error) {
+	row := q.db.QueryRow(ctx, memberByID, id)
+	var i MemberByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MemberID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateMemberRole = `-- name: UpdateMemberRole :one
+UPDATE workspace_members
+SET role = $1, updated_by_id = $2, updated_at = $3
+WHERE id = $4
+RETURNING id, workspace_id, member_id, role, is_active, created_at
+`
+
+type UpdateMemberRoleParams struct {
+	Role      int16
+	UpdatedBy *uuid.UUID
+	Now       time.Time
+	ID        uuid.UUID
+}
+
+type UpdateMemberRoleRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+	Role        int16
+	IsActive    bool
+	CreatedAt   time.Time
+}
+
+// updateWorkspaceMember, under the workspace's FOR NO KEY UPDATE.
+func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRoleParams) (UpdateMemberRoleRow, error) {
+	row := q.db.QueryRow(ctx, updateMemberRole,
+		arg.Role,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	var i UpdateMemberRoleRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MemberID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}

@@ -118,6 +118,29 @@ func (s *Store) ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domai
 	return out, nil
 }
 
+// MemberByID returns the undeleted membership id; app.ErrNotFound when
+// there is none.
+func (s *Store) MemberByID(ctx context.Context, id uuid.UUID) (domain.Membership, error) {
+	r, err := s.queries(ctx).MemberByID(ctx, id)
+	if err != nil {
+		return domain.Membership{}, notFound(err)
+	}
+	return domain.Membership{ID: r.ID, WorkspaceID: r.WorkspaceID, MemberID: r.MemberID, Role: shared.Role(r.Role),
+		IsActive: r.IsActive, CreatedAt: r.CreatedAt}, nil
+}
+
+// UpdateMemberRole sets the role of the membership id, by the account by at
+// now, and returns the membership as stored. The caller holds the
+// workspace's lock and read the row under it: its absence is an error.
+func (s *Store) UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Membership, error) {
+	r, err := s.queries(ctx).UpdateMemberRole(ctx, gen.UpdateMemberRoleParams{ID: id, Role: int16(role), UpdatedBy: &by, Now: now})
+	if err != nil {
+		return domain.Membership{}, fmt.Errorf("update workspace member: %w", err)
+	}
+	return domain.Membership{ID: r.ID, WorkspaceID: r.WorkspaceID, MemberID: r.MemberID, Role: shared.Role(r.Role),
+		IsActive: r.IsActive, CreatedAt: r.CreatedAt}, nil
+}
+
 // DeleteWorkspaceMembers soft-deletes the undeleted memberships of the
 // workspace, active or not, by the account by at now.
 func (s *Store) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {

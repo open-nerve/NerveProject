@@ -57,6 +57,14 @@ FROM workspaces
 WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
 
+-- name: LockWorkspace :one
+-- LockWorkspaceBySlug for a write addressed by a row under the workspace (M3 design 3.6 convention 2): the use case
+-- read the row for the workspace's id, and reads it again under this lock.
+SELECT id
+FROM workspaces
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR NO KEY UPDATE;
+
 -- name: ShareWorkspaceBySlug :one
 -- The parent lock of a write that adds or changes a row under the workspace (M3 design 3.6 convention 2): FOR SHARE
 -- does not wait for another FOR SHARE, and it holds off the workspace's deletion, which the FOR KEY SHARE of a

@@ -10,6 +10,19 @@ FROM workspace_members
 WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
 ORDER BY created_at, id;
 
+-- name: MemberByID :one
+-- updateWorkspaceMember reads the membership before the workspace's lock, for the workspace, and again under it.
+SELECT id, workspace_id, member_id, role, is_active, created_at
+FROM workspace_members
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: UpdateMemberRole :one
+-- updateWorkspaceMember, under the workspace's FOR NO KEY UPDATE.
+UPDATE workspace_members
+SET role = sqlc.arg(role), updated_by_id = sqlc.arg(updated_by), updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id)
+RETURNING id, workspace_id, member_id, role, is_active, created_at;
+
 -- name: DeleteWorkspaceMembers :exec
 -- deleteWorkspace's cascade: every undeleted membership of the workspace, active or not, one statement in scan order
 -- under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.

@@ -17,21 +17,34 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
-// lock is one of the store's parent locks of a workspace named by its slug
-// (M3 design 3.6 convention 2).
+// lock is one of the store's parent locks of a workspace (M3 design 3.6
+// convention 2), which names it by its slug or by its id: take answers the
+// id it locked.
 type lock struct {
 	name string
-	take func(ctx context.Context, s *postgresadapter.Store, slug string) (uuid.UUID, error)
+	take func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error)
+}
+
+// named is how a lock names a workspace.
+type named struct {
+	slug string
+	id   uuid.UUID
 }
 
 var (
-	noKeyUpdate = lock{"LockWorkspaceBySlug", func(ctx context.Context, s *postgresadapter.Store, slug string) (uuid.UUID, error) {
-		return s.LockWorkspaceBySlug(ctx, slug)
+	noKeyUpdate = lock{"LockWorkspaceBySlug", func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error) {
+		return s.LockWorkspaceBySlug(ctx, w.slug)
 	}}
-	forShare = lock{"ShareWorkspaceBySlug", func(ctx context.Context, s *postgresadapter.Store, slug string) (uuid.UUID, error) {
-		return s.ShareWorkspaceBySlug(ctx, slug)
+	forShare = lock{"ShareWorkspaceBySlug", func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error) {
+		return s.ShareWorkspaceBySlug(ctx, w.slug)
 	}}
-	locks = []lock{noKeyUpdate, forShare}
+	noKeyUpdateByID = lock{"LockWorkspace", func(ctx context.Context, s *postgresadapter.Store, w named) (uuid.UUID, error) {
+		if err := s.LockWorkspace(ctx, w.id); err != nil {
+			return uuid.UUID{}, err
+		}
+		return w.id, nil
+	}}
+	locks = []lock{noKeyUpdate, forShare, noKeyUpdateByID}
 )
 
 // hold runs fn in a transaction of its own and keeps it open until end is
@@ -94,11 +107,11 @@ func withLockTimeout(tx *postgres.TxManager, pool *pgxpool.Pool, fn func(ctx con
 	})
 }
 
-// The two locks conflict as convention 2 wants: FOR NO KEY UPDATE waits for
-// either, FOR SHARE waits for FOR NO KEY UPDATE and not for another FOR
-// SHARE, and neither waits for a lock of another workspace. A lock that
-// waits ends with lock_not_available under a lock_timeout; one that does not
-// answers its workspace's id.
+// The locks conflict as convention 2 wants: FOR NO KEY UPDATE, by slug or
+// by id, waits for any of them, FOR SHARE waits for FOR NO KEY UPDATE and
+// not for another FOR SHARE, and none waits for a lock of another
+// workspace. A lock that waits ends with lock_not_available under a
+// lock_timeout; one that does not answers its workspace's id.
 func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 	tests := []struct {
 		held, then lock
@@ -109,8 +122,13 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 		{noKeyUpdate, forShare, "acme", true},
 		{forShare, noKeyUpdate, "acme", true},
 		{forShare, forShare, "acme", false},
+		{noKeyUpdate, noKeyUpdateByID, "acme", true},
+		{noKeyUpdateByID, noKeyUpdate, "acme", true},
+		{forShare, noKeyUpdateByID, "acme", true},
+		{noKeyUpdateByID, forShare, "acme", true},
 		{noKeyUpdate, noKeyUpdate, "beta", false},
 		{noKeyUpdate, forShare, "beta", false},
+		{noKeyUpdate, noKeyUpdateByID, "beta", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.held.name+" held, "+tt.then.name+" of "+tt.slug, func(t *testing.T) {
@@ -119,14 +137,14 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 			ids := map[string]uuid.UUID{"acme": newWorkspace(t, s, "Acme", "acme", alice).ID, "beta": newWorkspace(t, s, "Beta", "beta", alice).ID}
 			tx := postgres.NewTxManager(pool, 2*time.Second)
 			hold(t, tx, func(ctx context.Context) error {
-				_, err := tt.held.take(ctx, s, "acme")
+				_, err := tt.held.take(ctx, s, named{"acme", ids["acme"]})
 				return err
 			})
 
 			var got uuid.UUID
 			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
 				var err error
-				got, err = tt.then.take(ctx, s, tt.slug)
+				got, err = tt.then.take(ctx, s, named{tt.slug, ids[tt.slug]})
 				return err
 			})
 
@@ -152,7 +170,7 @@ func TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks(t *testing.T) {
 			acme := newWorkspace(t, s, "Acme", "acme", alice)
 			tx := postgres.NewTxManager(pool, 2*time.Second)
 			hold(t, tx, func(ctx context.Context) error {
-				_, err := l.take(ctx, s, "acme")
+				_, err := l.take(ctx, s, named{"acme", acme.ID})
 				return err
 			})
 			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
@@ -166,9 +184,9 @@ func TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks(t *testing.T) {
 	}
 }
 
-// A lock finds the undeleted workspace with the slug and answers its id;
-// app.ErrNotFound for a deleted workspace, a slug no workspace has, or a
-// slug of another case.
+// A lock finds the undeleted workspace it names and answers its id;
+// app.ErrNotFound for a deleted workspace, a slug or an id no workspace has,
+// or a slug of another case.
 func TestTheWorkspaceLocksFindOnlyAnUndeletedWorkspace(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -177,18 +195,24 @@ func TestTheWorkspaceLocksFindOnlyAnUndeletedWorkspace(t *testing.T) {
 	exec(t, pool, "UPDATE workspaces SET deleted_at = $2 WHERE id = $1", gone.ID, now)
 	tx := postgres.NewTxManager(pool, 2*time.Second)
 	for _, l := range locks {
-		for slug, want := range map[string]uuid.UUID{"acme": acme.ID, "beta": beta.ID, "gone": {}, "nothing": {}, "ACME": {}} {
+		for _, tt := range []struct {
+			w    named
+			want uuid.UUID
+		}{
+			{named{"acme", acme.ID}, acme.ID}, {named{"beta", beta.ID}, beta.ID}, {named{"gone", gone.ID}, uuid.UUID{}},
+			{named{"nothing", uuid.NewV7()}, uuid.UUID{}}, {named{"ACME", uuid.NewV7()}, uuid.UUID{}},
+		} {
 			var got uuid.UUID
 			err := tx.WithinTx(context.Background(), func(ctx context.Context) error {
 				var err error
-				got, err = l.take(ctx, s, slug)
+				got, err = l.take(ctx, s, tt.w)
 				return err
 			})
-			if want == (uuid.UUID{}) && (!errors.Is(err, app.ErrNotFound) || got != want) {
-				t.Errorf("%s(%q) = %s, %v; want app.ErrNotFound", l.name, slug, got, err)
+			if tt.want == (uuid.UUID{}) && (!errors.Is(err, app.ErrNotFound) || got != tt.want) {
+				t.Errorf("%s(%+v) = %s, %v; want app.ErrNotFound", l.name, tt.w, got, err)
 			}
-			if want != (uuid.UUID{}) && (err != nil || got != want) {
-				t.Errorf("%s(%q) = %s, %v; want %s", l.name, slug, got, err, want)
+			if tt.want != (uuid.UUID{}) && (err != nil || got != tt.want) {
+				t.Errorf("%s(%+v) = %s, %v; want %s", l.name, tt.w, got, err, tt.want)
 			}
 		}
 	}
@@ -223,7 +247,7 @@ func TestTheWorkspaceLocksSkipAWorkspaceDeletedWhileTheyWait(t *testing.T) {
 				var a answer
 				a.err = tx.WithinTx(ctx, func(ctx context.Context) error {
 					var err error
-					a.id, err = l.take(ctx, s, "acme")
+					a.id, err = l.take(ctx, s, named{"acme", acme.ID})
 					return err
 				})
 				answered <- a
@@ -249,11 +273,11 @@ func TestTheWorkspaceLocksSkipAWorkspaceDeletedWhileTheyWait(t *testing.T) {
 func TestAFailedWorkspaceLockIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
-	newWorkspace(t, s, "Acme", "acme", alice)
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
 	for _, l := range locks {
-		if id, err := l.take(cancelled, s, "acme"); !errors.Is(err, context.Canceled) || errors.Is(err, app.ErrNotFound) || id != (uuid.UUID{}) {
+		if id, err := l.take(cancelled, s, named{"acme", acme.ID}); !errors.Is(err, context.Canceled) || errors.Is(err, app.ErrNotFound) || id != (uuid.UUID{}) {
 			t.Errorf("%s() = %s, %v; want context.Canceled, not app.ErrNotFound", l.name, id, err)
 		}
 	}

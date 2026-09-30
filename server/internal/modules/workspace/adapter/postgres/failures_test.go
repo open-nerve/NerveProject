@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // A read that fails answers its error, never a plausible answer: not "not a
@@ -45,6 +46,10 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if list, err := s.ListMembers(cancelled, w.ID); !failed(err) || list != nil {
 		t.Errorf("ListMembers() = %v, %v; want context.Canceled, no list", list, err)
 	}
+	bob := joinAt(t, s, w.ID, newAccount(t, pool, "bob@corp.com"), shared.RoleMember, now)
+	if got, err := s.MemberByID(cancelled, bob.ID); !failed(err) || errors.Is(err, app.ErrNotFound) || got != (domain.Membership{}) {
+		t.Errorf("MemberByID() = %+v, %v; want context.Canceled, not app.ErrNotFound", got, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would
@@ -73,5 +78,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		if err := write(cancelled, w.ID, alice, now); !failed(err) {
 			t.Errorf("%s() = %v; want context.Canceled", name, err)
 		}
+	}
+	bob := joinAt(t, s, w.ID, newAccount(t, pool, "bob@corp.com"), shared.RoleMember, now)
+	if got, err := s.UpdateMemberRole(cancelled, bob.ID, shared.RoleGuest, alice, now); !failed(err) || got != (domain.Membership{}) {
+		t.Errorf("UpdateMemberRole() = %+v, %v; want context.Canceled", got, err)
 	}
 }

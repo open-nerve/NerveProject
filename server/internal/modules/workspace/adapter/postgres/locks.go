@@ -24,6 +24,14 @@ func (s *Store) LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID
 	return lockedWorkspace(id, err)
 }
 
+// LockWorkspace locks the workspace id FOR NO KEY UPDATE: for a write
+// addressed by a row under the workspace, which the use case reads again
+// under the lock.
+func (s *Store) LockWorkspace(ctx context.Context, id uuid.UUID) error {
+	_, err := lockedWorkspace(s.queries(ctx).LockWorkspace(ctx, id))
+	return err
+}
+
 // ShareWorkspaceBySlug locks the workspace with slug FOR SHARE: for a write
 // that adds or changes a row under the workspace.
 func (s *Store) ShareWorkspaceBySlug(ctx context.Context, slug string) (uuid.UUID, error) {
