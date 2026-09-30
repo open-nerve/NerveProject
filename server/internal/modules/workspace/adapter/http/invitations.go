@@ -35,6 +35,23 @@ func (h handler) CreateWorkspaceInvitations(ctx context.Context, req gen.CreateW
 	return gen.CreateWorkspaceInvitations201JSONResponse{Data: invitations(list)}, nil
 }
 
+// GetWorkspaceInvitation serves the public GET
+// /api/v0/workspace-invitations/{invitation_id}.
+func (h handler) GetWorkspaceInvitation(ctx context.Context, req gen.GetWorkspaceInvitationRequestObject) (gen.GetWorkspaceInvitationResponseObject, error) {
+	p, err := h.uc.GetInvitation.Execute(ctx, req.InvitationID, req.Params.Token)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetWorkspaceInvitation200JSONResponse{
+		ID:               p.ID,
+		Role:             gen.WorkspaceRole(p.Role),
+		Declined:         p.Declined,
+		WorkspaceName:    p.WorkspaceName,
+		WorkspaceSlug:    p.WorkspaceSlug,
+		WorkspaceLogoURL: nullable.NewNullNullable[string](), // M5
+	}, nil
+}
+
 // UpdateWorkspaceInvitation serves PATCH
 // /api/v0/workspace-invitations/{invitation_id}.
 func (h handler) UpdateWorkspaceInvitation(ctx context.Context, req gen.UpdateWorkspaceInvitationRequestObject) (gen.UpdateWorkspaceInvitationResponseObject, error) {

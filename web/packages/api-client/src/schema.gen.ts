@@ -390,7 +390,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Show an invitation to whoever holds its link
+         * @description Public: the link's token stands for a credential, and the answer is the same with a bearer token or without one. It shows the invitation's role, whether it was declined, and its workspace's name and slug; never the address invited. A token that is not the invitation's, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found. Requests are limited per client IP.
+         */
+        get: operations["getWorkspaceInvitation"];
         put?: never;
         post?: never;
         /**
@@ -835,6 +839,18 @@ export interface components {
         WorkspaceMemberUpdate: {
             role: components["schemas"]["WorkspaceRole"];
         };
+        /** @description What an invitation's link shows whoever holds it. The workspace's fields are flat: the holder cannot read the workspace itself. There is no address: the holder of a link does not learn which address to register with. */
+        InvitationPreview: {
+            /** Format: uuid */
+            id: string;
+            role: components["schemas"]["WorkspaceRole"];
+            /** @description True once the invitation was declined; it can no longer be answered. */
+            declined: boolean;
+            workspace_name: string;
+            workspace_slug: string;
+            /** @description Null until uploads arrive (M5). */
+            workspace_logo_url: string | null;
+        };
         WorkspaceInvitationUpdate: {
             role: components["schemas"]["WorkspaceRole"];
         };
@@ -930,6 +946,7 @@ export type WorkspaceInvitationList = components['schemas']['WorkspaceInvitation
 export type InvitationCreate = components['schemas']['InvitationCreate'];
 export type WorkspaceInvitationsCreate = components['schemas']['WorkspaceInvitationsCreate'];
 export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
+export type InvitationPreview = components['schemas']['InvitationPreview'];
 export type WorkspaceInvitationUpdate = components['schemas']['WorkspaceInvitationUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
@@ -1508,6 +1525,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceMember"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getWorkspaceInvitation: {
+        parameters: {
+            query: {
+                /** @description The token of the invitation's link (WorkspaceInvitation.token). */
+                token: string;
+            };
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invitation as its link shows it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreview"];
                 };
             };
             default: components["responses"]["Problem"];

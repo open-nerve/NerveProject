@@ -65,6 +65,13 @@ type InvitationCreator interface {
 	CreateInvitations(ctx context.Context, rows []InvitationRow) ([]domain.Invitation, error)
 }
 
+// InvitationPreviewer reads what an invitation's link shows.
+type InvitationPreviewer interface {
+	// InvitationPreview returns the undeleted invitation id of an undeleted
+	// workspace as its link shows it; ErrNotFound when there is none.
+	InvitationPreview(ctx context.Context, id uuid.UUID) (domain.InvitationPreview, error)
+}
+
 // InvitationLocker reads an invitation by its id, then locks it under its
 // workspace's lock (M3 design 3.6 convention 2).
 type InvitationLocker interface {

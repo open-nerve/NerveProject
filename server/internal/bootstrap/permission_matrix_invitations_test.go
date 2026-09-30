@@ -2,14 +2,19 @@ package bootstrap
 
 import (
 	"log/slog"
+	"maps"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
 // The invitations' part of the workspace module's rows (M3 design 9.2).
@@ -116,5 +121,99 @@ func invitesTheInvitee(t *testing.T, c caller, answer string) {
 	if len(list.Data) != 1 || list.Data[0].Email != "invitee@example.com" || list.Data[0].Role != 5 ||
 		list.Data[0].Token != invitationToken(t, list.Data[0].ID) {
 		t.Errorf("%s's invitation answers %+v, want invitee@example.com's, as a guest, with its token", c, list.Data)
+	}
+}
+
+// wholeAnswer is an answer as a caller could compare two: the status, the
+// body and every header but the two that differ by request (Date,
+// X-Request-Id).
+type wholeAnswer struct {
+	status  int
+	body    string
+	headers string
+}
+
+// wholeAnswerOf is res, whose body is body, as a wholeAnswer.
+func wholeAnswerOf(res *http.Response, body []byte) wholeAnswer {
+	header := res.Header.Clone()
+	header.Del("Date")
+	header.Del("X-Request-Id")
+	var lines []string
+	for _, name := range slices.Sorted(maps.Keys(header)) {
+		lines = append(lines, name+": "+strings.Join(header[name], ", "))
+	}
+	return wholeAnswer{res.StatusCode, string(body), strings.Join(lines, "\n")}
+}
+
+// The public getWorkspaceInvitation has no row (matrixExempt): its route
+// reads no credential. This test stands for the row. Each link is asked
+// with no bearer token and with each column's, and every caller gets the
+// same answer: acme's invitation with its token, 200, without the address;
+// and one 404 workspace.invitation_not_found, the same byte for byte for a
+// character of the token changed, another invitation's token, gone's
+// invitation, deleted with gone, with its own token, and an id no
+// invitation has (M3 design 8.2): nothing tells a wrong token from a
+// missing invitation.
+func TestTheInvitationLinkAnswersEveryCallerAlike(t *testing.T) {
+	d := prepareMatrix(t)
+	contract := apitest.Load(t)
+	base := startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), nil), migrations.FS())
+	s := d.seeded.in(t)
+	acme, gone, nobodys := s.invitation("acme", "newcomer@example.com"), s.invitation("gone", "newcomer@example.com"), uuid.NewV7()
+	right := invitationToken(t, acme)
+	changed := []byte(right)
+	changed[len("nrv_inv_")+10] = 'A'
+	if string(changed) == right {
+		changed[len("nrv_inv_")+10] = 'B'
+	}
+	links := []struct {
+		name  string
+		id    uuid.UUID
+		token string
+		shows bool // the link that shows its invitation; every other is the one 404
+	}{
+		{"acme's invitation", acme, right, true},
+		{"a character changed", acme, string(changed), false},
+		{"another invitation's token", acme, invitationToken(t, gone), false},
+		{"gone's invitation", gone, invitationToken(t, gone), false},
+		{"no invitation", nobodys, invitationToken(t, nobodys), false},
+	}
+	callers := append([]caller{"nobody"}, workspaceColumns...)
+	var notFound *wholeAnswer
+	for _, l := range links {
+		var first wholeAnswer
+		for i, c := range callers {
+			req := newRequest(t, http.MethodGet, base+"/api/v0/workspace-invitations/"+l.id.String()+"?token="+l.token, d.tokens[c], nil)
+			contract.CheckRequest(t, req)
+			res, body := send(t, req)
+			contract.CheckResponse(t, req, res)
+			got := wholeAnswerOf(res, body)
+			if i == 0 {
+				first = got
+			} else if got != first {
+				t.Errorf("%s asked by %s = %+v, want what %s got: %+v", l.name, c, got, callers[0], first)
+			}
+		}
+		switch {
+		case l.shows:
+			var p struct {
+				ID            uuid.UUID `json:"id"`
+				Role          int       `json:"role"`
+				Declined      bool      `json:"declined"`
+				WorkspaceSlug string    `json:"workspace_slug"`
+			}
+			decodeAnswer(t, first.body, &p)
+			if first.status != http.StatusOK || p.ID != acme || p.Role != 15 || p.Declined || p.WorkspaceSlug != "acme" ||
+				strings.Contains(first.body, "email") || strings.Contains(first.body, "newcomer") {
+				t.Errorf("%s = %d %s; want 200, acme's pending invitation as a member, without the address", l.name, first.status, first.body)
+			}
+		case notFound == nil:
+			if first.status != http.StatusNotFound || problemCode(t, []byte(first.body)) != "workspace.invitation_not_found" {
+				t.Errorf("%s = %d %s; want 404 workspace.invitation_not_found", l.name, first.status, first.body)
+			}
+			notFound = &first
+		case first != *notFound:
+			t.Errorf("%s = %+v; want the same answer as %s: %+v", l.name, first, links[1].name, *notFound)
+		}
 	}
 }

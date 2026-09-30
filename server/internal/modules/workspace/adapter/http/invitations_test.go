@@ -17,10 +17,18 @@ import (
 // fakeInvitations is the invitations' use cases: each records its call as
 // "<operation> <caller> <arguments>" and answers what it is given.
 type fakeInvitations struct {
-	calls []string
-	lists map[string][]domain.InvitationWithToken // by slug
-	one   domain.InvitationWithToken              // the answer of an update
-	err   error
+	calls   []string
+	lists   map[string][]domain.InvitationWithToken // by slug
+	one     domain.InvitationWithToken              // the answer of an update
+	preview domain.InvitationPreview                // the answer of a get
+	err     error
+}
+
+type fakeGetInvitation struct{ *fakeInvitations }
+
+func (f fakeGetInvitation) Execute(ctx context.Context, id uuid.UUID, token string) (domain.InvitationPreview, error) {
+	f.calls = append(f.calls, fmt.Sprintf("get %s %s %s", caller(ctx), id, token))
+	return f.preview, f.err
 }
 
 type fakeCreateInvitations struct{ *fakeInvitations }
@@ -239,6 +247,51 @@ func TestDeleteWorkspaceInvitation(t *testing.T) {
 		h := newServer(t, fakes{invitations: &fakeInvitations{err: tt.err}})
 		if res, body := do(t, h, request(http.MethodDelete, path, "bob", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
 			t.Errorf("DELETE refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
+// carolsLink is the path of carol's invitation's link, with its token.
+var carolsLink = "/api/v0/workspace-invitations/" + carolInvited.ID.String() + "?token=" + carolInvited.Token
+
+// The public GET hands the invitation of the path and the token of the
+// query to the use case and answers what it shows, without the address.
+// The route needs no bearer token and reads none: with one, even one that
+// is not valid, the use case is called by nobody all the same.
+func TestGetWorkspaceInvitation(t *testing.T) {
+	inv := &fakeInvitations{preview: domain.InvitationPreview{ID: carolInvited.ID, Role: shared.RoleMember, Declined: true,
+		WorkspaceName: "Acme", WorkspaceSlug: "acme"}}
+	h := newServer(t, fakes{invitations: inv})
+	want := `{"declined":true,"id":"0199a2b4-0000-7000-8000-0000000000c1","role":15,"workspace_logo_url":null,` +
+		`"workspace_name":"Acme","workspace_slug":"acme"}`
+	for _, token := range []string{"", "alice", "mallory"} {
+		if res, body := do(t, h, request(http.MethodGet, carolsLink, token, "")); res.StatusCode != http.StatusOK || body != want+"\n" {
+			t.Errorf("GET with the bearer %q = %d %s, want 200 %s", token, res.StatusCode, body, want)
+		}
+	}
+	call := "get nobody " + carolInvited.ID.String() + " " + carolInvited.Token
+	if want := []string{call, call, call}; !slices.Equal(inv.calls, want) {
+		t.Errorf("calls = %q, want %q", inv.calls, want)
+	}
+}
+
+// The use case's refusal, as the contract declares it; a link without its
+// token and an id that is no UUID are refused before it. No answer repeats
+// the token.
+func TestGetWorkspaceInvitationRefusals(t *testing.T) {
+	h := newServer(t, fakes{invitations: &fakeInvitations{err: domain.ErrInvitationNotFound}})
+	if res, body := do(t, h, request(http.MethodGet, carolsLink, "", "")); res.StatusCode != http.StatusNotFound || body != invitationNotFoundJSON+"\n" {
+		t.Errorf("GET refused = %d %s, want 404 %s", res.StatusCode, body, invitationNotFoundJSON)
+	}
+	inv := &fakeInvitations{}
+	h = newServer(t, fakes{invitations: inv})
+	for _, tt := range []struct{ path, field string }{
+		{"/api/v0/workspace-invitations/" + carolInvited.ID.String(), `"field":"token","code":"required"`},
+		{"/api/v0/workspace-invitations/carol?token=" + carolInvited.Token, `"field":"invitation_id","code":"invalid_format"`},
+	} {
+		res, body := do(t, h, request(http.MethodGet, tt.path, "", ""))
+		if res.StatusCode != http.StatusBadRequest || !strings.Contains(body, tt.field) || strings.Contains(body, carolInvited.Token) || len(inv.calls) != 0 {
+			t.Errorf("GET %s = %d %s, calls %q; want 400 on %s without the token, and no call", tt.path, res.StatusCode, body, inv.calls, tt.field)
 		}
 	}
 }

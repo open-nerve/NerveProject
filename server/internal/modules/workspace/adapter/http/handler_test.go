@@ -197,14 +197,15 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	router := httpserver.NewRouter(logger)
 	limit := ratelimit.New(time.Now).Bucket("test", ratelimit.Rate{PerMinute: 600, Burst: 100})
 	api, err := httpserver.NewAPI(httpserver.APIConfig{
-		Logger:         logger,
-		Authenticator:  fakeAuth{},
-		MaxBodyBytes:   1024,
-		RequestTimeout: 5 * time.Second,
-		IPv6PrefixLen:  64,
-		Anonymous:      limit,
-		Authenticated:  limit,
-		AuthFailure:    limit,
+		Logger:           logger,
+		Authenticator:    fakeAuth{},
+		PublicOperations: httpadapter.PublicOperations(),
+		MaxBodyBytes:     1024,
+		RequestTimeout:   5 * time.Second,
+		IPv6PrefixLen:    64,
+		Anonymous:        limit,
+		Authenticated:    limit,
+		AuthFailure:      limit,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -243,7 +244,8 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
 		ListMembers: f.member, UpdateMember: f.role, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
 		ListInvitations: fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
-		UpdateInvitation: fakeUpdateInvitation{f.invitations}, DeleteInvitation: fakeDeleteInvitation{f.invitations},
+		GetInvitation: fakeGetInvitation{f.invitations}, UpdateInvitation: fakeUpdateInvitation{f.invitations},
+		DeleteInvitation: fakeDeleteInvitation{f.invitations},
 	})
 	return router
 }

@@ -90,6 +90,22 @@ func (f *fakeInvitations) invitation(id uuid.UUID) (domain.Invitation, error) {
 	return f.invitations[i], nil
 }
 
+// InvitationPreview answers the invitation it holds with its workspace's
+// name and slug; app.ErrNotFound when it holds neither.
+func (f *fakeInvitations) InvitationPreview(ctx context.Context, id uuid.UUID) (domain.InvitationPreview, error) {
+	f.log.add(ctx, "InvitationPreview %s", id)
+	inv, err := f.invitation(id)
+	if err != nil {
+		return domain.InvitationPreview{}, err
+	}
+	i := slices.IndexFunc(f.workspaces, func(w domain.Workspace) bool { return w.ID == inv.WorkspaceID })
+	if i < 0 {
+		return domain.InvitationPreview{}, app.ErrNotFound
+	}
+	return domain.InvitationPreview{ID: inv.ID, Role: inv.Role, Declined: inv.Responded(), WorkspaceName: f.workspaces[i].Name,
+		WorkspaceSlug: f.workspaces[i].Slug}, nil
+}
+
 // ShareWorkspace answers as LockWorkspace does.
 func (f *fakeInvitations) ShareWorkspace(ctx context.Context, id uuid.UUID) error {
 	f.log.add(ctx, "ShareWorkspace %s", id)

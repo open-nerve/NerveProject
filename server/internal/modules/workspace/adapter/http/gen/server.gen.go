@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -116,6 +117,21 @@ type InvitationCreate struct {
 
 	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
 	Role WorkspaceRole `json:"role"`
+}
+
+// InvitationPreview What an invitation's link shows whoever holds it. The workspace's fields are flat: the holder cannot read the workspace itself. There is no address: the holder of a link does not learn which address to register with.
+type InvitationPreview struct {
+	// Declined True once the invitation was declined; it can no longer be answered.
+	Declined bool      `json:"declined"`
+	ID       uuid.UUID `json:"id"`
+
+	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
+	Role WorkspaceRole `json:"role"`
+
+	// WorkspaceLogoURL Null until uploads arrive (M5).
+	WorkspaceLogoURL nullable.Nullable[string] `json:"workspace_logo_url"`
+	WorkspaceName    string                    `json:"workspace_name"`
+	WorkspaceSlug    string                    `json:"workspace_slug"`
 }
 
 // MemberUser A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).
@@ -311,6 +327,12 @@ type Slug = string
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
 
+// GetWorkspaceInvitationParams defines parameters for GetWorkspaceInvitation.
+type GetWorkspaceInvitationParams struct {
+	// Token The token of the invitation's link (WorkspaceInvitation.token).
+	Token string `form:"token" json:"token"`
+}
+
 // UpdateWorkspacePreferencesJSONRequestBody defines body for UpdateWorkspacePreferences for application/json ContentType.
 type UpdateWorkspacePreferencesJSONRequestBody = WorkspacePreferencesUpdate
 
@@ -340,6 +362,9 @@ type ServerInterface interface {
 	// DeleteWorkspaceInvitation Delete an invitation
 	// (DELETE /api/v0/workspace-invitations/{invitation_id})
 	DeleteWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
+	// GetWorkspaceInvitation Show an invitation to whoever holds its link
+	// (GET /api/v0/workspace-invitations/{invitation_id})
+	GetWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID, params GetWorkspaceInvitationParams)
 	// UpdateWorkspaceInvitation Change an invitation's role
 	// (PATCH /api/v0/workspace-invitations/{invitation_id})
 	UpdateWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
@@ -453,6 +478,48 @@ func (siw *ServerInterfaceWrapper) DeleteWorkspaceInvitation(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteWorkspaceInvitation(w, r, invitationID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetWorkspaceInvitation operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationID InvitationID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", r.PathValue("invitation_id"), &invitationID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "invitation_id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetWorkspaceInvitationParams
+
+	// ------------- Required query parameter "token" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "token", r.URL.Query(), &params.Token, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "token"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkspaceInvitation(w, r, invitationID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -854,6 +921,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/invitations", wrapper.CreateWorkspaceInvitations)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspace-members/{workspace_member_id}", wrapper.UpdateWorkspaceMember)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.DeleteWorkspaceInvitation)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.GetWorkspaceInvitation)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.UpdateWorkspaceInvitation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.GetWorkspacePreferences)
@@ -988,6 +1056,53 @@ type DeleteWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response DeleteWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitDeleteWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkspaceInvitationRequestObject struct {
+	InvitationID InvitationID `json:"invitation_id"`
+	Params       GetWorkspaceInvitationParams
+}
+
+type GetWorkspaceInvitationResponseObject interface {
+	VisitGetWorkspaceInvitationResponse(w http.ResponseWriter) error
+}
+
+type GetWorkspaceInvitation200JSONResponse InvitationPreview
+
+func (response GetWorkspaceInvitation200JSONResponse) VisitGetWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitGetWorkspaceInvitationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1519,6 +1634,9 @@ type StrictServerInterface interface {
 	// DeleteWorkspaceInvitation Delete an invitation
 	// (DELETE /api/v0/workspace-invitations/{invitation_id})
 	DeleteWorkspaceInvitation(ctx context.Context, request DeleteWorkspaceInvitationRequestObject) (DeleteWorkspaceInvitationResponseObject, error)
+	// GetWorkspaceInvitation Show an invitation to whoever holds its link
+	// (GET /api/v0/workspace-invitations/{invitation_id})
+	GetWorkspaceInvitation(ctx context.Context, request GetWorkspaceInvitationRequestObject) (GetWorkspaceInvitationResponseObject, error)
 	// UpdateWorkspaceInvitation Change an invitation's role
 	// (PATCH /api/v0/workspace-invitations/{invitation_id})
 	UpdateWorkspaceInvitation(ctx context.Context, request UpdateWorkspaceInvitationRequestObject) (UpdateWorkspaceInvitationResponseObject, error)
@@ -1671,6 +1789,33 @@ func (sh *strictHandler) DeleteWorkspaceInvitation(w http.ResponseWriter, r *htt
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(DeleteWorkspaceInvitationResponseObject); ok {
 		if err := validResponse.VisitDeleteWorkspaceInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetWorkspaceInvitation operation middleware
+func (sh *strictHandler) GetWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID, params GetWorkspaceInvitationParams) {
+	var request GetWorkspaceInvitationRequestObject
+
+	request.InvitationID = invitationID
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetWorkspaceInvitation(ctx, request.(GetWorkspaceInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetWorkspaceInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetWorkspaceInvitationResponseObject); ok {
+		if err := validResponse.VisitGetWorkspaceInvitationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

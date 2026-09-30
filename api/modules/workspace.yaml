@@ -261,6 +261,36 @@ paths:
   /api/v0/workspace-invitations/{invitation_id}:
     parameters:
       - $ref: '#/components/parameters/InvitationID'
+    get:
+      operationId: getWorkspaceInvitation
+      tags: [workspace]
+      summary: Show an invitation to whoever holds its link
+      description: >-
+        Public: the link's token stands for a credential, and the answer is
+        the same with a bearer token or without one. It shows the
+        invitation's role, whether it was declined, and its workspace's name
+        and slug; never the address invited. A token that is not the
+        invitation's, and an invitation that does not exist, is deleted or
+        accepted, answer the same workspace.invitation_not_found. Requests
+        are limited per client IP.
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          description: The token of the invitation's link (WorkspaceInvitation.token).
+          schema:
+            type: string
+      x-problem-codes: [workspace.invitation_not_found]
+      responses:
+        '200':
+          description: The invitation as its link shows it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationPreview'
+        default:
+          $ref: '#/components/responses/Problem'
     patch:
       operationId: updateWorkspaceInvitation
       tags: [workspace]
@@ -657,6 +687,31 @@ components:
           type: string
         role:
           $ref: '#/components/schemas/WorkspaceRole'
+    InvitationPreview:
+      description: >-
+        What an invitation's link shows whoever holds it. The workspace's
+        fields are flat: the holder cannot read the workspace itself. There
+        is no address: the holder of a link does not learn which address to
+        register with.
+      type: object
+      additionalProperties: false
+      required: [id, role, declined, workspace_name, workspace_slug, workspace_logo_url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        declined:
+          description: True once the invitation was declined; it can no longer be answered.
+          type: boolean
+        workspace_name:
+          type: string
+        workspace_slug:
+          type: string
+        workspace_logo_url:
+          description: Null until uploads arrive (M5).
+          type: [string, 'null']
     WorkspaceInvitationUpdate:
       type: object
       additionalProperties: false

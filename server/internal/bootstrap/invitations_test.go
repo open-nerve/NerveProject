@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"log/slog"
 	"net/http"
 	"strings"
 	"testing"
@@ -25,6 +26,25 @@ import (
 type invitationLink struct {
 	id    uuid.UUID
 	token string
+}
+
+// invite has admin, with the bearer token, invite email to the workspace
+// slug as a member, and returns the invitation's link.
+func invite(t *testing.T, contract *apitest.Contract, base, admin, slug, email string) invitationLink {
+	t.Helper()
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/invitations", admin,
+		`{"invitations":[{"email":"`+email+`","role":15}]}`)
+	var list struct {
+		Data []struct {
+			ID    uuid.UUID `json:"id"`
+			Token string    `json:"token"`
+		} `json:"data"`
+	}
+	if status != http.StatusCreated {
+		t.Fatalf("inviting %s = %d %s", email, status, body)
+	}
+	decodeAnswer(t, body, &list)
+	return invitationLink{list.Data[0].ID, list.Data[0].Token}
 }
 
 // The server never stores an invitation's token: it computes it again from
@@ -95,6 +115,62 @@ func expectNoTokenStored(t *testing.T, pool *pgxpool.Pool, links []invitationLin
 					t.Errorf("a row holds the token of %s as %q: %s", l.id, form, row)
 				}
 			}
+		}
+	}
+}
+
+// The link's token never reaches the logs, at any level (M3 design 8.1).
+// The access line of each request has the path of the public view and no
+// query, whether the token is right, wrong or missing, and so has the
+// error line of a request the server fails (its table renamed away: 500).
+// The recover middleware's panic line writes the path as both do; no
+// request here panics.
+func TestTheInvitationLinksTokenIsNotLogged(t *testing.T) {
+	var logs lockedBuffer
+	url := pgtest.NewDatabase(t)
+	base := startAppLogging(t, testConfig(t, url, false), migrations.FS(),
+		slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	contract := apitest.Load(t)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", admin, `{"name":"Acme","slug":"acme"}`); status != http.StatusCreated {
+		t.Fatalf("creating acme = %d %s", status, body)
+	}
+	link := invite(t, contract, base, admin, "acme", "carol@example.com")
+	token, path := link.token, "/api/v0/workspace-invitations/"+link.id.String()
+
+	for _, tt := range []struct {
+		query string
+		want  int
+	}{{"?token=" + token, http.StatusOK}, {"?token=" + strings.ToUpper(token), http.StatusNotFound}, {"", http.StatusBadRequest}} {
+		req := newRequest(t, http.MethodGet, base+path+tt.query, "", nil)
+		if res, body := send(t, req); res.StatusCode != tt.want {
+			t.Errorf("GET %s = %d %s, want %d", path+tt.query, res.StatusCode, body, tt.want)
+		}
+	}
+	if _, err := openPool(t, url).Exec(context.Background(), "ALTER TABLE workspace_member_invites RENAME TO held"); err != nil {
+		t.Fatal(err)
+	}
+	if res, body := send(t, newRequest(t, http.MethodGet, base+path+"?token="+token, "", nil)); res.StatusCode != http.StatusInternalServerError {
+		t.Errorf("GET %s with the right token and no table = %d %s, want 500", path, res.StatusCode, body)
+	}
+
+	got := logs.String()
+	access, failed := 0, 0
+	for _, line := range strings.Split(got, "\n") {
+		switch {
+		case !strings.Contains(line, " path="+path+" "):
+		case strings.Contains(line, `msg="http request"`):
+			access++
+		case strings.Contains(line, "level=ERROR"):
+			failed++
+		}
+	}
+	if access != 4 || failed != 1 {
+		t.Fatalf("the logs have %d access lines and %d error lines of the link, want 4 and 1:\n%s", access, failed, got)
+	}
+	for _, leak := range []string{"token=", token, token[len("nrv_inv_"):], "nrv_inv_"} {
+		if strings.Contains(got, leak) {
+			t.Errorf("the logs hold %q:\n%s", leak, got)
 		}
 	}
 }

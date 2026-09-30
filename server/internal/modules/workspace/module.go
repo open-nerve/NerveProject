@@ -99,6 +99,7 @@ func New(d Deps) *Module {
 		CreateInvitations: app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{
 			Caller: d.CallerLock, Invitations: store, Profiles: d.Profiles, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
+		GetInvitation:    app.NewGetWorkspaceInvitation(store, d.InvitationMAC),
 		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
 		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
 	}}
@@ -107,6 +108,11 @@ func New(d Deps) *Module {
 // Register mounts the module's API on router behind api's middlewares.
 func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
 	httpadapter.Register(router, api, m.uc)
+}
+
+// PublicOperations are the module's routes that need no token.
+func (m *Module) PublicOperations() []string {
+	return httpadapter.PublicOperations()
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of

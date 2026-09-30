@@ -182,3 +182,45 @@ func TestListInvitations(t *testing.T) {
 		t.Errorf("ListInvitations() = %+v, %v; want %+v", got, err, want)
 	}
 }
+
+// InvitationPreview is the undeleted invitation of an undeleted workspace
+// as its link shows it, pending or declined, with its own workspace's name
+// and slug; app.ErrNotFound for an accepted or deleted invitation, one
+// whose workspace is deleted (here without its invitations, which the
+// deletion never leaves), and an id no row has. A failed read is its
+// error, never app.ErrNotFound.
+func TestInvitationPreview(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme, beta := newWorkspace(t, s, "Acme", "acme", alice), newWorkspace(t, s, "Beta", "beta", alice)
+	gone := newWorkspace(t, s, "Gone", "gone", alice)
+	pending := invite(t, s, acme.ID, "carol@corp.com", shared.RoleMember, alice)
+	declined := invite(t, s, beta.ID, "carol@corp.com", shared.RoleGuest, alice)
+	exec(t, pool, "UPDATE workspace_member_invites SET responded_at = $1 WHERE id = $2", now, declined.ID)
+	accepted := invite(t, s, acme.ID, "dave@corp.com", shared.RoleMember, alice)
+	exec(t, pool, "UPDATE workspace_member_invites SET accepted = true, responded_at = $1, deleted_at = $1 WHERE id = $2", now, accepted.ID)
+	deleted := invite(t, s, acme.ID, "erin@corp.com", shared.RoleMember, alice)
+	exec(t, pool, "UPDATE workspace_member_invites SET deleted_at = $1 WHERE id = $2", now, deleted.ID)
+	orphan := invite(t, s, gone.ID, "carol@corp.com", shared.RoleMember, alice)
+	exec(t, pool, "UPDATE workspaces SET deleted_at = $1 WHERE id = $2", now, gone.ID)
+
+	for _, want := range []domain.InvitationPreview{
+		{ID: pending.ID, Role: shared.RoleMember, WorkspaceName: "Acme", WorkspaceSlug: "acme"},
+		{ID: declined.ID, Role: shared.RoleGuest, Declined: true, WorkspaceName: "Beta", WorkspaceSlug: "beta"},
+	} {
+		if got, err := s.InvitationPreview(context.Background(), want.ID); err != nil || got != want {
+			t.Errorf("InvitationPreview(%s) = %+v, %v; want %+v", want.ID, got, err, want)
+		}
+	}
+	for _, id := range []uuid.UUID{accepted.ID, deleted.ID, orphan.ID, uuid.NewV7()} {
+		if got, err := s.InvitationPreview(context.Background(), id); !errors.Is(err, app.ErrNotFound) || got != (domain.InvitationPreview{}) {
+			t.Errorf("InvitationPreview(%s) = %+v, %v; want app.ErrNotFound", id, got, err)
+		}
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if got, err := s.InvitationPreview(cancelled, pending.ID); !errors.Is(err, context.Canceled) || errors.Is(err, app.ErrNotFound) ||
+		got != (domain.InvitationPreview{}) {
+		t.Errorf("InvitationPreview() on a cancelled context = %+v, %v; want context.Canceled, not app.ErrNotFound", got, err)
+	}
+}

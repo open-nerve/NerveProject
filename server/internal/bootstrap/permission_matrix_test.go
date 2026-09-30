@@ -34,21 +34,37 @@ import (
 // its row there, and what the row needs prepared here and in
 // permission_matrix_seeded_test.go.
 
-// matrixExempt are the modules whose operations have no row, each for its
-// reason. Every other operation of the contract has one, so a module that
-// adds operations is in the matrix unless it is added here (M3 design 9.2:
-// every operation but the account-level and the public ones). An entry that
-// no operation carries is reported, so a misspelled one fails. P3's public
-// getWorkspaceInvitation is tagged workspace: P3 gives the matrix a column
-// for a caller without a token, or an exemption by operation. This list
-// exempts modules, and workspace on it would exempt all of its operations
-// (spec P1 3 item 10).
-var matrixExempt = []string{
-	// Account-level (M2): each operation acts on the caller's own account,
-	// sessions or tokens, and no workspace or project role decides it.
-	"identity",
-	// Public: it describes this instance to anyone, with a token or without.
-	"instance",
+// matrixExempt is what has no row, each entry for its reason (M3 design
+// 9.2: every operation but the account-level and the public ones).
+var matrixExempt = matrixExemptions{
+	modules: []string{
+		// Account-level (M2): each operation acts on the caller's own
+		// account, sessions or tokens, and no workspace or project role
+		// decides it.
+		"identity",
+		// Public: it describes this instance to anyone, with a token or
+		// without.
+		"instance",
+	},
+	public: map[string]string{
+		// The link's token stands for a credential (M3 design 3.8).
+		"getWorkspaceInvitation": "TestTheInvitationLinkAnswersEveryCallerAlike",
+	},
+}
+
+// matrixExemptions are the operations without a row. modules exempts every
+// operation of a module: every other operation of the contract has a row,
+// so a module that adds operations is in the matrix unless it is listed,
+// and an entry that no operation carries is reported, so a misspelled one
+// fails. public exempts one public operation of a module the matrix
+// covers, by its operationId, naming the test that stands for its row: its
+// route runs no authentication (httpserver's PublicOperations), so every
+// column would call it as nobody and the cells could not tell the columns
+// apart. The test calls it with every column's token and without one, and
+// wants one answer. An operation that needs a token cannot be listed.
+type matrixExemptions struct {
+	modules []string
+	public  map[string]string // operationId → the test that stands for its row
 }
 
 // caller is a column: an account, and how it stands to the workspace a row

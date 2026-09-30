@@ -30,6 +30,17 @@ func (i Invitation) Responded() bool {
 	return i.RespondedAt != nil
 }
 
+// InvitationPreview is what an invitation's link shows whoever holds it (M3
+// design 3.8, 5.2): the invitation's role, whether it was declined, and its
+// workspace's name and slug. Never the address invited (decision 1).
+type InvitationPreview struct {
+	ID            uuid.UUID
+	Role          shared.Role
+	Declined      bool
+	WorkspaceName string
+	WorkspaceSlug string
+}
+
 // InvitationWithToken is an invitation and the token of its link, which
 // only who may manage the workspace's invitations is given (M3 design 5.2).
 type InvitationWithToken struct {

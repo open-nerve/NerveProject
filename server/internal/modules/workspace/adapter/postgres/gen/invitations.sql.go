@@ -120,6 +120,35 @@ func (q *Queries) InvitationByID(ctx context.Context, id uuid.UUID) (WorkspaceMe
 	return i, err
 }
 
+const invitationPreview = `-- name: InvitationPreview :one
+SELECT i.id, i.role, i.responded_at, w.name AS workspace_name, w.slug AS workspace_slug
+FROM workspace_member_invites i
+JOIN workspaces w ON w.id = i.workspace_id
+WHERE i.id = $1 AND i.deleted_at IS NULL AND w.deleted_at IS NULL
+`
+
+type InvitationPreviewRow struct {
+	ID            uuid.UUID
+	Role          int16
+	RespondedAt   *time.Time
+	WorkspaceName string
+	WorkspaceSlug string
+}
+
+// getWorkspaceInvitation: what the link shows, never the address (M3 design 3.8). One module's tables, so one JOIN.
+func (q *Queries) InvitationPreview(ctx context.Context, id uuid.UUID) (InvitationPreviewRow, error) {
+	row := q.db.QueryRow(ctx, invitationPreview, id)
+	var i InvitationPreviewRow
+	err := row.Scan(
+		&i.ID,
+		&i.Role,
+		&i.RespondedAt,
+		&i.WorkspaceName,
+		&i.WorkspaceSlug,
+	)
+	return i, err
+}
+
 const listInvitations = `-- name: ListInvitations :many
 SELECT id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
 FROM workspace_member_invites

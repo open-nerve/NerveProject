@@ -60,6 +60,17 @@ func (s *Store) InvitationByID(ctx context.Context, id uuid.UUID) (domain.Invita
 	return invitation(r), nil
 }
 
+// InvitationPreview returns the undeleted invitation id of an undeleted
+// workspace as its link shows it; app.ErrNotFound when there is none.
+func (s *Store) InvitationPreview(ctx context.Context, id uuid.UUID) (domain.InvitationPreview, error) {
+	r, err := s.queries(ctx).InvitationPreview(ctx, id)
+	if err != nil {
+		return domain.InvitationPreview{}, notFound(err)
+	}
+	return domain.InvitationPreview{ID: r.ID, Role: shared.Role(r.Role), Declined: r.RespondedAt != nil, WorkspaceName: r.WorkspaceName,
+		WorkspaceSlug: r.WorkspaceSlug}, nil
+}
+
 // LockInvitation locks the undeleted invitation id FOR UPDATE until the
 // transaction ends and returns it; app.ErrNotFound when there is none, also
 // when it was deleted while the lock waited.
