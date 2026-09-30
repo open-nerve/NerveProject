@@ -26,6 +26,11 @@ var (
 	// same 404 for all (M3 design 5.3, 8.2).
 	ErrInvitationNotFound = shared.NewError(shared.KindNotFound, "workspace.invitation_not_found",
 		"The invitation does not exist, or its link is not valid.")
+	// ErrInvitationEmailMismatch answers a response to an invitation by an
+	// account whose address, read under its lock, is not the invitation's;
+	// it does not say which address the invitation is for (M3 design 3.8).
+	ErrInvitationEmailMismatch = shared.NewError(shared.KindForbidden, "workspace.invitation_email_mismatch",
+		"The invitation was sent to another e-mail address.")
 	// ErrInvitationResponded answers a response to, or a change of, an
 	// invitation that has been declined (M3 design 3.8).
 	ErrInvitationResponded = shared.NewError(shared.KindConflict, "workspace.invitation_responded", "The invitation has been answered already.")

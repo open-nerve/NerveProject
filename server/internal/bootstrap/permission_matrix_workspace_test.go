@@ -90,6 +90,15 @@ func workspaceMatrixRows() []matrixRow {
 		{op: "createWorkspace", variant: "creation switched off", write: true,
 			config:  func(cfg *config.Config) { cfg.Workspace.CreationEnabled = false },
 			request: sameRequest(http.MethodPost, "/api/v0/workspaces", `{"name":"New","slug":"new"}`), cells: every(cellCreationDisabled)},
+		// The answers to an invitation: each column's own, and acme's
+		// newcomer's, to another address (M3 design 9.2).
+		{op: "acceptWorkspaceInvitation", variant: "one's own", write: true, request: toOwnInvitation("accept"), cells: every(cellOK),
+			check: joinsAsAMember},
+		{op: "acceptWorkspaceInvitation", variant: "another's", write: true, request: toNewcomersInvitation("accept"),
+			cells: every(cellEmailMismatch)},
+		{op: "declineWorkspaceInvitation", variant: "one's own", write: true, request: toOwnInvitation("decline"), cells: every(cellNoContent)},
+		{op: "declineWorkspaceInvitation", variant: "another's", write: true, request: toNewcomersInvitation("decline"),
+			cells: every(cellEmailMismatch)},
 		// The workspace level.
 		{op: "getWorkspace", request: toWorkspace(http.MethodGet, "", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: readsItsRole},

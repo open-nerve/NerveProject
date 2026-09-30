@@ -21,7 +21,22 @@ type fakeInvitations struct {
 	lists   map[string][]domain.InvitationWithToken // by slug
 	one     domain.InvitationWithToken              // the answer of an update
 	preview domain.InvitationPreview                // the answer of a get
+	joined  domain.Workspace                        // the answer of an acceptance
 	err     error
+}
+
+type fakeAcceptInvitation struct{ *fakeInvitations }
+
+func (f fakeAcceptInvitation) Execute(ctx context.Context, id uuid.UUID, token string) (domain.Workspace, error) {
+	f.calls = append(f.calls, fmt.Sprintf("accept %s %s %s", caller(ctx), id, token))
+	return f.joined, f.err
+}
+
+type fakeDeclineInvitation struct{ *fakeInvitations }
+
+func (f fakeDeclineInvitation) Execute(ctx context.Context, id uuid.UUID, token string) error {
+	f.calls = append(f.calls, fmt.Sprintf("decline %s %s %s", caller(ctx), id, token))
+	return f.err
 }
 
 type fakeGetInvitation struct{ *fakeInvitations }
@@ -292,6 +307,55 @@ func TestGetWorkspaceInvitationRefusals(t *testing.T) {
 		res, body := do(t, h, request(http.MethodGet, tt.path, "", ""))
 		if res.StatusCode != http.StatusBadRequest || !strings.Contains(body, tt.field) || strings.Contains(body, carolInvited.Token) || len(inv.calls) != 0 {
 			t.Errorf("GET %s = %d %s, calls %q; want 400 on %s without the token, and no call", tt.path, res.StatusCode, body, inv.calls, tt.field)
+		}
+	}
+}
+
+// The two answers to an invitation hand the invitation of the path and the
+// token of the body to their use case, for the caller: accepting answers
+// the workspace it gives, declining 204 without a body. Each refuses as
+// the contract declares; a body without its token, or with a field it does
+// not have, is refused before the use case, and no answer repeats the
+// token.
+func TestAnsweringAWorkspaceInvitation(t *testing.T) {
+	path := "/api/v0/workspace-invitations/" + carolInvited.ID.String()
+	body := `{"token":"` + carolInvited.Token + `"}`
+	for _, tt := range []struct {
+		name, path string
+		status     int
+		answer     string
+	}{{"accept", path + "/accept", http.StatusOK, acmeJSON + "\n"}, {"decline", path + "/decline", http.StatusNoContent, ""}} {
+		inv := &fakeInvitations{joined: acme}
+		h := newServer(t, fakes{invitations: inv})
+		if res, got := do(t, h, request(http.MethodPost, tt.path, "bob", body)); res.StatusCode != tt.status || got != tt.answer {
+			t.Errorf("POST %s = %d %q, want %d %q", tt.path, res.StatusCode, got, tt.status, tt.answer)
+		}
+		if want := []string{tt.name + " bob " + carolInvited.ID.String() + " " + carolInvited.Token}; !slices.Equal(inv.calls, want) {
+			t.Errorf("%s: calls = %q, want %q", tt.name, inv.calls, want)
+		}
+		for _, refusal := range []struct {
+			err    error
+			status int
+			want   string
+		}{
+			{domain.ErrInvitationNotFound, http.StatusNotFound, invitationNotFoundJSON},
+			{domain.ErrInvitationEmailMismatch, http.StatusForbidden, `{"status":403,"code":"workspace.invitation_email_mismatch",` +
+				`"title":"Forbidden","detail":"The invitation was sent to another e-mail address."}`},
+			{domain.ErrInvitationResponded, http.StatusConflict,
+				`{"status":409,"code":"workspace.invitation_responded","title":"Conflict","detail":"The invitation has been answered already."}`},
+		} {
+			h := newServer(t, fakes{invitations: &fakeInvitations{err: refusal.err}})
+			if res, got := do(t, h, request(http.MethodPost, tt.path, "bob", body)); res.StatusCode != refusal.status || got != refusal.want+"\n" {
+				t.Errorf("%s refused with %v = %d %s, want %d %s", tt.name, refusal.err, res.StatusCode, got, refusal.status, refusal.want)
+			}
+		}
+		idle := &fakeInvitations{}
+		h = newServer(t, fakes{invitations: idle})
+		for _, bad := range []string{`{}`, `{"token":"` + carolInvited.Token + `","email":"carol@corp.com"}`} {
+			res, got := do(t, h, request(http.MethodPost, tt.path, "bob", bad))
+			if res.StatusCode != http.StatusBadRequest || strings.Contains(got, carolInvited.Token) || len(idle.calls) != 0 {
+				t.Errorf("%s with %s = %d %s, calls %q; want 400 without the token, and no call", tt.name, bad, res.StatusCode, got, idle.calls)
+			}
 		}
 	}
 }

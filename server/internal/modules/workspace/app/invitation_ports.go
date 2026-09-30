@@ -107,6 +107,41 @@ type InvitationDeleter interface {
 	DeleteInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error
 }
 
+// InvitationAccepter accepts an invitation under its workspace's FOR NO KEY
+// UPDATE, the lock of a write of a membership.
+type InvitationAccepter interface {
+	InvitationLocker
+	// LockWorkspace locks the undeleted workspace id FOR NO KEY UPDATE until
+	// the transaction ends; ErrNotFound when there is none, also when it was
+	// deleted while the lock waited.
+	LockWorkspace(ctx context.Context, id uuid.UUID) error
+	// MemberOf returns userID's undeleted membership of the workspace,
+	// active or ended; found is false when he has none.
+	MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (m domain.Membership, found bool, err error)
+	// RestoreMember makes the ended membership id active again with role,
+	// by the account by at now.
+	RestoreMember(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) error
+	// CreateMember inserts m.
+	CreateMember(ctx context.Context, m MemberRow) error
+	// AcceptInvitation records the invitation as accepted by the account by
+	// at now, and deletes it.
+	AcceptInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error
+	// WorkspaceByID returns the undeleted workspace id and its number of
+	// active members, without a role.
+	WorkspaceByID(ctx context.Context, id uuid.UUID) (domain.Workspace, error)
+}
+
+// InvitationDecliner declines an invitation under its workspace's FOR
+// SHARE.
+type InvitationDecliner interface {
+	InvitationLocker
+	// ShareWorkspace is InvitationUpdater's.
+	ShareWorkspace(ctx context.Context, id uuid.UUID) error
+	// DeclineInvitation records the invitation as declined by the account
+	// by at now; it stays undeleted.
+	DeclineInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error
+}
+
 // DuplicateInvitation is a store's answer to an insert that the unique key
 // of (workspace, address) refused: an undeleted invitation of the
 // workspace, pending or declined, has Email (M3 design 3.8).

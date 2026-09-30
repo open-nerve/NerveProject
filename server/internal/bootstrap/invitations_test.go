@@ -47,6 +47,17 @@ func invite(t *testing.T, contract *apitest.Contract, base, admin, slug, email s
 	return invitationLink{list.Data[0].ID, list.Data[0].Token}
 }
 
+// answerInvitation has the bearer accept or decline the invitation of
+// link, wanting status.
+func answerInvitation(t *testing.T, contract *apitest.Contract, base, bearer, answer string, link invitationLink, status int) {
+	t.Helper()
+	got, body := call(t, contract, http.MethodPost, base+"/api/v0/workspace-invitations/"+link.id.String()+"/"+answer, bearer,
+		`{"token":"`+link.token+`"}`)
+	if got != status {
+		t.Fatalf("%s %s = %d %s, want %d", answer, link.id, got, body, status)
+	}
+}
+
 // The server never stores an invitation's token: it computes it again from
 // the invitation's id whenever it answers or checks one (M3 design 3.8,
 // 8.1). After each step that does, the rows of workspace_member_invites,
@@ -84,6 +95,12 @@ func TestTheInvitationTokenIsNeverStored(t *testing.T) {
 	if status, body := call(t, contract, http.MethodPatch, base+"/api/v0/workspace-invitations/"+links[0].id.String(), admin, `{"role":20}`); status != http.StatusOK {
 		t.Fatalf("changing carol's role = %d %s", status, body)
 	}
+	expectNoTokenStored(t, pool, links)
+
+	carol := registerAccount(t, contract, base, "carol@example.com").AccessToken
+	answerInvitation(t, contract, base, carol, "accept", links[0], http.StatusOK)
+	dave := registerAccount(t, contract, base, "dave@example.com").AccessToken
+	answerInvitation(t, contract, base, dave, "decline", links[1], http.StatusNoContent)
 	expectNoTokenStored(t, pool, links)
 }
 

@@ -65,6 +65,60 @@ type fakeInvitations struct {
 	taken       string // an address CreateInvitations finds taken, as the unique key would
 	readErr     error  // for InvitationByID and LockInvitation
 	writeErr    error  // for UpdateInvitationRole and DeleteInvitation
+	// failing fails the answers' steps by name: MemberOf, RestoreMember,
+	// AcceptInvitation, DeclineInvitation, WorkspaceByID.
+	failing map[string]error
+}
+
+// step logs a step of an answer to an invitation and fails it with the
+// error set for it, wrapped as the store wraps it.
+func (f *fakeInvitations) step(ctx context.Context, name, format string, args ...any) error {
+	f.log.add(ctx, name+" "+format, args...)
+	if err := f.failing[name]; err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	return nil
+}
+
+func (f *fakeInvitations) MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (domain.Membership, bool, error) {
+	if err := f.step(ctx, "MemberOf", "%s %s", workspaceID, userID); err != nil {
+		return domain.Membership{}, false, err
+	}
+	i := slices.IndexFunc(f.memberships[workspaceID], func(m domain.Membership) bool { return m.MemberID == userID })
+	if i < 0 {
+		return domain.Membership{}, false, nil
+	}
+	return f.memberships[workspaceID][i], true, nil
+}
+
+func (f *fakeInvitations) RestoreMember(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) error {
+	return f.step(ctx, "RestoreMember", "%s as %d by %s at %s", id, role, by, now.Format(time.RFC3339Nano))
+}
+
+// AcceptInvitation drops the invitation it holds: an accepted one is
+// deleted.
+func (f *fakeInvitations) AcceptInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	if err := f.step(ctx, "AcceptInvitation", "%s by %s at %s", id, by, now.Format(time.RFC3339Nano)); err != nil {
+		return err
+	}
+	f.invitations = slices.DeleteFunc(f.invitations, func(inv domain.Invitation) bool { return inv.ID == id })
+	return nil
+}
+
+func (f *fakeInvitations) DeclineInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	return f.step(ctx, "DeclineInvitation", "%s by %s at %s", id, by, now.Format(time.RFC3339Nano))
+}
+
+// WorkspaceByID answers the workspace it holds, as stored.
+func (f *fakeInvitations) WorkspaceByID(ctx context.Context, id uuid.UUID) (domain.Workspace, error) {
+	if err := f.step(ctx, "WorkspaceByID", "%s", id); err != nil {
+		return domain.Workspace{}, err
+	}
+	i := slices.IndexFunc(f.workspaces, func(w domain.Workspace) bool { return w.ID == id })
+	if i < 0 {
+		return domain.Workspace{}, fmt.Errorf("read workspace %s: no such row", id)
+	}
+	return f.workspaces[i], nil
 }
 
 func (f *fakeInvitations) InvitationByID(ctx context.Context, id uuid.UUID) (domain.Invitation, error) {

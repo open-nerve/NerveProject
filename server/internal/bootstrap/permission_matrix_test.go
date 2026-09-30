@@ -50,6 +50,12 @@ var matrixExempt = matrixExemptions{
 		// The link's token stands for a credential (M3 design 3.8).
 		"getWorkspaceInvitation": "TestTheInvitationLinkAnswersEveryCallerAlike",
 	},
+	notTargets: map[string]string{
+		"/api/v0/workspace-slugs/{slug}": "a slug asked about, not a workspace: the answer is the same for every caller",
+		"/api/v0/workspace-invitations/{invitation_id}/accept": "account level: each column answers an invitation to its own " +
+			"address (ownInvitation), or acme's newcomer's, whatever workspace its column targets",
+		"/api/v0/workspace-invitations/{invitation_id}/decline": "account level, as accept",
+	},
 }
 
 // matrixExemptions are the operations without a row. modules exempts every
@@ -62,9 +68,13 @@ var matrixExempt = matrixExemptions{
 // column would call it as nobody and the cells could not tell the columns
 // apart. The test calls it with every column's token and without one, and
 // wants one answer. An operation that needs a token cannot be listed.
+// notTargets are the paths whose parameters name nothing a column's cell
+// must aim at its workspace, each with its reason: targetViolation passes
+// them over, and reports any other parameter it does not know.
 type matrixExemptions struct {
-	modules []string
-	public  map[string]string // operationId → the test that stands for its row
+	modules    []string
+	public     map[string]string // operationId → the test that stands for its row
+	notTargets map[string]string // path → why its parameters are no column's target
 }
 
 // caller is a column: an account, and how it stands to the workspace a row
@@ -210,7 +220,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		pool := openPool(t, d.url)
 		ids := map[caller]uuid.UUID{}
 		for _, c := range workspaceColumns {
-			email := strings.ReplaceAll(string(c), " ", "-") + "@example.com"
+			email := emailOf(c)
 			d.tokens[c] = registerAccount(t, contract, base, email).AccessToken
 			var id uuid.UUID
 			if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = $1", email).Scan(&id); err != nil {

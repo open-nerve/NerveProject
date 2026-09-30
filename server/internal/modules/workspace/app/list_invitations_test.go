@@ -33,6 +33,7 @@ type invitationsFixture struct {
 	log         *callLog
 	tx          *fakeTx
 	caller      *fakeCallerLock
+	accounts    *fakeAccounts // responding's
 	invitations *fakeInvitations
 	profiles    *fakeProfiles
 	auth        *fakeAuthorizer

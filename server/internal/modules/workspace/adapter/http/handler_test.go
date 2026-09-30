@@ -245,7 +245,8 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		ListMembers: f.member, UpdateMember: f.role, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
 		ListInvitations: fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
 		GetInvitation: fakeGetInvitation{f.invitations}, UpdateInvitation: fakeUpdateInvitation{f.invitations},
-		DeleteInvitation: fakeDeleteInvitation{f.invitations},
+		DeleteInvitation: fakeDeleteInvitation{f.invitations}, AcceptInvitation: fakeAcceptInvitation{f.invitations},
+		DeclineInvitation: fakeDeclineInvitation{f.invitations},
 	})
 	return router
 }

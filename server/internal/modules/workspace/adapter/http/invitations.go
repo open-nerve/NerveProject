@@ -71,6 +71,25 @@ func (h handler) DeleteWorkspaceInvitation(ctx context.Context, req gen.DeleteWo
 	return gen.DeleteWorkspaceInvitation204Response{}, nil
 }
 
+// AcceptWorkspaceInvitation serves POST
+// /api/v0/workspace-invitations/{invitation_id}/accept.
+func (h handler) AcceptWorkspaceInvitation(ctx context.Context, req gen.AcceptWorkspaceInvitationRequestObject) (gen.AcceptWorkspaceInvitationResponseObject, error) {
+	w, err := h.uc.AcceptInvitation.Execute(ctx, req.InvitationID, req.Body.Token)
+	if err != nil {
+		return nil, err
+	}
+	return gen.AcceptWorkspaceInvitation200JSONResponse(workspace(w)), nil
+}
+
+// DeclineWorkspaceInvitation serves POST
+// /api/v0/workspace-invitations/{invitation_id}/decline.
+func (h handler) DeclineWorkspaceInvitation(ctx context.Context, req gen.DeclineWorkspaceInvitationRequestObject) (gen.DeclineWorkspaceInvitationResponseObject, error) {
+	if err := h.uc.DeclineInvitation.Execute(ctx, req.InvitationID, req.Body.Token); err != nil {
+		return nil, err
+	}
+	return gen.DeclineWorkspaceInvitation204Response{}, nil
+}
+
 // invitations is list as the API shows it.
 func invitations(list []domain.InvitationWithToken) []gen.WorkspaceInvitation {
 	out := make([]gen.WorkspaceInvitation, len(list))

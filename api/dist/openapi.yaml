@@ -638,6 +638,62 @@ paths:
           description: The invitation is deleted.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspace-invitations/{invitation_id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/InvitationID'
+    post:
+      operationId: acceptWorkspaceInvitation
+      tags:
+        - workspace
+      summary: Accept an invitation to one's own address
+      description: 'For the account the invitation was sent to: its address, as it is when the request runs, must be the invitation''s; another answers workspace.invitation_email_mismatch, which does not say whose, and nothing changes. The caller becomes a member with the invitation''s role, or a former member has his membership back with it; an active member stays as he is, his role too, and only the invitation is used. The invitation is then accepted and deleted: its link stops working. A token that is not the invitation''s, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found; a declined one, workspace.invitation_responded. An account deactivated meanwhile answers unauthorized. The answer is the workspace, with the caller''s role in it.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.invitation_not_found
+        - workspace.invitation_email_mismatch
+        - workspace.invitation_responded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationResponse'
+      responses:
+        '200':
+          description: The workspace the caller is a member of, with his role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspace-invitations/{invitation_id}/decline:
+    parameters:
+      - $ref: '#/components/parameters/InvitationID'
+    post:
+      operationId: declineWorkspaceInvitation
+      tags:
+        - workspace
+      summary: Decline an invitation to one's own address
+      description: 'For the account the invitation was sent to, as accepting it is, with the same answers. The invitation stays, declined: its link shows so, and it holds its address until an admin deletes it.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.invitation_not_found
+        - workspace.invitation_email_mismatch
+        - workspace.invitation_responded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationResponse'
+      responses:
+        '204':
+          description: The invitation is declined.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -1502,6 +1558,15 @@ components:
       properties:
         role:
           $ref: '#/components/schemas/WorkspaceRole'
+    InvitationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+      properties:
+        token:
+          description: The token of the invitation's link (WorkspaceInvitation.token).
+          type: string
     SlugAvailability:
       type: object
       additionalProperties: false

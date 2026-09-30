@@ -134,6 +134,12 @@ type InvitationPreview struct {
 	WorkspaceSlug    string                    `json:"workspace_slug"`
 }
 
+// InvitationResponse defines model for InvitationResponse.
+type InvitationResponse struct {
+	// Token The token of the invitation's link (WorkspaceInvitation.token).
+	Token string `json:"token"`
+}
+
 // MemberUser A member's public profile, embedded in the membership: the one way v0 shows other accounts (M3 design 5.2).
 type MemberUser struct {
 	// AvatarURL Null until uploads arrive (M5).
@@ -339,6 +345,12 @@ type UpdateWorkspacePreferencesJSONRequestBody = WorkspacePreferencesUpdate
 // UpdateWorkspaceInvitationJSONRequestBody defines body for UpdateWorkspaceInvitation for application/json ContentType.
 type UpdateWorkspaceInvitationJSONRequestBody = WorkspaceInvitationUpdate
 
+// AcceptWorkspaceInvitationJSONRequestBody defines body for AcceptWorkspaceInvitation for application/json ContentType.
+type AcceptWorkspaceInvitationJSONRequestBody = InvitationResponse
+
+// DeclineWorkspaceInvitationJSONRequestBody defines body for DeclineWorkspaceInvitation for application/json ContentType.
+type DeclineWorkspaceInvitationJSONRequestBody = InvitationResponse
+
 // UpdateWorkspaceMemberJSONRequestBody defines body for UpdateWorkspaceMember for application/json ContentType.
 type UpdateWorkspaceMemberJSONRequestBody = WorkspaceMemberUpdate
 
@@ -368,6 +380,12 @@ type ServerInterface interface {
 	// UpdateWorkspaceInvitation Change an invitation's role
 	// (PATCH /api/v0/workspace-invitations/{invitation_id})
 	UpdateWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
+	// AcceptWorkspaceInvitation Accept an invitation to one's own address
+	// (POST /api/v0/workspace-invitations/{invitation_id}/accept)
+	AcceptWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
+	// DeclineWorkspaceInvitation Decline an invitation to one's own address
+	// (POST /api/v0/workspace-invitations/{invitation_id}/decline)
+	DeclineWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
 	// UpdateWorkspaceMember Change a member's role
 	// (PATCH /api/v0/workspace-members/{workspace_member_id})
 	UpdateWorkspaceMember(w http.ResponseWriter, r *http.Request, workspaceMemberID uuid.UUID)
@@ -546,6 +564,58 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspaceInvitation(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateWorkspaceInvitation(w, r, invitationID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptWorkspaceInvitation operation middleware
+func (siw *ServerInterfaceWrapper) AcceptWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationID InvitationID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", r.PathValue("invitation_id"), &invitationID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "invitation_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptWorkspaceInvitation(w, r, invitationID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeclineWorkspaceInvitation operation middleware
+func (siw *ServerInterfaceWrapper) DeclineWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationID InvitationID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", r.PathValue("invitation_id"), &invitationID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "invitation_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclineWorkspaceInvitation(w, r, invitationID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -923,6 +993,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.DeleteWorkspaceInvitation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.GetWorkspaceInvitation)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.UpdateWorkspaceInvitation)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}/accept", wrapper.AcceptWorkspaceInvitation)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}/decline", wrapper.DeclineWorkspaceInvitation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.GetWorkspacePreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.UpdateWorkspacePreferences)
@@ -1150,6 +1222,94 @@ type UpdateWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitUpdateWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptWorkspaceInvitationRequestObject struct {
+	InvitationID InvitationID `json:"invitation_id"`
+	Body         *AcceptWorkspaceInvitationJSONRequestBody
+}
+
+type AcceptWorkspaceInvitationResponseObject interface {
+	VisitAcceptWorkspaceInvitationResponse(w http.ResponseWriter) error
+}
+
+type AcceptWorkspaceInvitation200JSONResponse Workspace
+
+func (response AcceptWorkspaceInvitation200JSONResponse) VisitAcceptWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AcceptWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response AcceptWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitAcceptWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeclineWorkspaceInvitationRequestObject struct {
+	InvitationID InvitationID `json:"invitation_id"`
+	Body         *DeclineWorkspaceInvitationJSONRequestBody
+}
+
+type DeclineWorkspaceInvitationResponseObject interface {
+	VisitDeclineWorkspaceInvitationResponse(w http.ResponseWriter) error
+}
+
+type DeclineWorkspaceInvitation204Response struct {
+}
+
+func (response DeclineWorkspaceInvitation204Response) VisitDeclineWorkspaceInvitationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeclineWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeclineWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitDeclineWorkspaceInvitationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1640,6 +1800,12 @@ type StrictServerInterface interface {
 	// UpdateWorkspaceInvitation Change an invitation's role
 	// (PATCH /api/v0/workspace-invitations/{invitation_id})
 	UpdateWorkspaceInvitation(ctx context.Context, request UpdateWorkspaceInvitationRequestObject) (UpdateWorkspaceInvitationResponseObject, error)
+	// AcceptWorkspaceInvitation Accept an invitation to one's own address
+	// (POST /api/v0/workspace-invitations/{invitation_id}/accept)
+	AcceptWorkspaceInvitation(ctx context.Context, request AcceptWorkspaceInvitationRequestObject) (AcceptWorkspaceInvitationResponseObject, error)
+	// DeclineWorkspaceInvitation Decline an invitation to one's own address
+	// (POST /api/v0/workspace-invitations/{invitation_id}/decline)
+	DeclineWorkspaceInvitation(ctx context.Context, request DeclineWorkspaceInvitationRequestObject) (DeclineWorkspaceInvitationResponseObject, error)
 	// UpdateWorkspaceMember Change a member's role
 	// (PATCH /api/v0/workspace-members/{workspace_member_id})
 	UpdateWorkspaceMember(ctx context.Context, request UpdateWorkspaceMemberRequestObject) (UpdateWorkspaceMemberResponseObject, error)
@@ -1849,6 +2015,72 @@ func (sh *strictHandler) UpdateWorkspaceInvitation(w http.ResponseWriter, r *htt
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateWorkspaceInvitationResponseObject); ok {
 		if err := validResponse.VisitUpdateWorkspaceInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AcceptWorkspaceInvitation operation middleware
+func (sh *strictHandler) AcceptWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID) {
+	var request AcceptWorkspaceInvitationRequestObject
+
+	request.InvitationID = invitationID
+
+	var body AcceptWorkspaceInvitationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AcceptWorkspaceInvitation(ctx, request.(AcceptWorkspaceInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AcceptWorkspaceInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AcceptWorkspaceInvitationResponseObject); ok {
+		if err := validResponse.VisitAcceptWorkspaceInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeclineWorkspaceInvitation operation middleware
+func (sh *strictHandler) DeclineWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID) {
+	var request DeclineWorkspaceInvitationRequestObject
+
+	request.InvitationID = invitationID
+
+	var body DeclineWorkspaceInvitationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeclineWorkspaceInvitation(ctx, request.(DeclineWorkspaceInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeclineWorkspaceInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeclineWorkspaceInvitationResponseObject); ok {
+		if err := validResponse.VisitDeclineWorkspaceInvitationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

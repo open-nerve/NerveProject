@@ -84,6 +84,16 @@ type DeleteInvitationUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// AcceptInvitationUseCase is app.AcceptWorkspaceInvitation.
+type AcceptInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, token string) (domain.Workspace, error)
+}
+
+// DeclineInvitationUseCase is app.DeclineWorkspaceInvitation.
+type DeclineInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, token string) error
+}
+
 // CheckSlugUseCase is app.CheckSlug.
 type CheckSlugUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.SlugReason, error)
@@ -106,6 +116,8 @@ type UseCases struct {
 	GetInvitation     GetInvitationUseCase
 	UpdateInvitation  UpdateInvitationUseCase
 	DeleteInvitation  DeleteInvitationUseCase
+	AcceptInvitation  AcceptInvitationUseCase
+	DeclineInvitation DeclineInvitationUseCase
 }
 
 // PublicOperations are the module's routes that need no token (M3 design

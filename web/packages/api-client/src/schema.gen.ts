@@ -411,6 +411,52 @@ export interface paths {
         patch: operations["updateWorkspaceInvitation"];
         trace?: never;
     };
+    "/api/v0/workspace-invitations/{invitation_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an invitation to one's own address
+         * @description For the account the invitation was sent to: its address, as it is when the request runs, must be the invitation's; another answers workspace.invitation_email_mismatch, which does not say whose, and nothing changes. The caller becomes a member with the invitation's role, or a former member has his membership back with it; an active member stays as he is, his role too, and only the invitation is used. The invitation is then accepted and deleted: its link stops working. A token that is not the invitation's, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found; a declined one, workspace.invitation_responded. An account deactivated meanwhile answers unauthorized. The answer is the workspace, with the caller's role in it.
+         */
+        post: operations["acceptWorkspaceInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspace-invitations/{invitation_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline an invitation to one's own address
+         * @description For the account the invitation was sent to, as accepting it is, with the same answers. The invitation stays, declined: its link shows so, and it holds its address until an admin deletes it.
+         */
+        post: operations["declineWorkspaceInvitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/workspace-slugs/{slug}": {
         parameters: {
             query?: never;
@@ -854,6 +900,10 @@ export interface components {
         WorkspaceInvitationUpdate: {
             role: components["schemas"]["WorkspaceRole"];
         };
+        InvitationResponse: {
+            /** @description The token of the invitation's link (WorkspaceInvitation.token). */
+            token: string;
+        };
         SlugAvailability: {
             available: boolean;
             /**
@@ -948,6 +998,7 @@ export type WorkspaceInvitationsCreate = components['schemas']['WorkspaceInvitat
 export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
 export type InvitationPreview = components['schemas']['InvitationPreview'];
 export type WorkspaceInvitationUpdate = components['schemas']['WorkspaceInvitationUpdate'];
+export type InvitationResponse = components['schemas']['InvitationResponse'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
 export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
@@ -1603,6 +1654,60 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkspaceInvitation"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    acceptWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationResponse"];
+            };
+        };
+        responses: {
+            /** @description The workspace the caller is a member of, with his role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    declineWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationResponse"];
+            };
+        };
+        responses: {
+            /** @description The invitation is declined. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

@@ -19,8 +19,8 @@ import (
 // module, or it is on exempt.public; an exempt module that no operation
 // carries, which a misspelling would be; a public exemption that names no
 // operation, one that needs a token, one that has a row, or one whose test
-// is none of tests (the names of the package's tests); a row that
-// names no operation; a row without a cell for a column; a cell
+// is none of tests (the names of the package's tests); a not-target
+// path that is no operation's; a row that names no operation; a row without a cell for a column; a cell
 // whose request is not the operation its row names, so that no row tests
 // another operation under its name; a cell that does not target its
 // column's workspace (targetViolation), so that no column quietly tests
@@ -47,6 +47,9 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 			case method != op.Method || !pathOf(op.Path, path):
 				found = append(found, fmt.Sprintf("row %s, %s: %s %s is not %s", r.name(), c, method, path, op.Pattern()))
 			default:
+				if _, listed := exempt.notTargets[op.Path]; listed {
+					break
+				}
 				if v := targetViolation(op.Path, path, c, s); v != "" {
 					found = append(found, fmt.Sprintf("row %s, %s: %s", r.name(), c, v))
 				}
@@ -76,6 +79,11 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 			found = append(found, fmt.Sprintf("operation %s is exempt as public, and has a row", id))
 		case !tests[exempt.public[id]]:
 			found = append(found, fmt.Sprintf("the public exemption %s names %s, which no test of the package is", id, exempt.public[id]))
+		}
+	}
+	for _, path := range slices.Sorted(maps.Keys(exempt.notTargets)) {
+		if !slices.ContainsFunc(ops, func(op apitest.Operation) bool { return op.Path == path }) {
+			found = append(found, fmt.Sprintf("the not-target path %s is no operation's", path))
 		}
 	}
 	for _, module := range exempt.modules {
@@ -118,22 +126,27 @@ func pathOf(pattern, path string) bool {
 // row named by its id (a parameter ending in _id) must be a row of s under
 // workspaceOf(c): a cell of the deleted workspace's column that named acme
 // would get the 404 of a workspace its caller is not in, and pass whether
-// deleted workspaces are hidden or not.
+// deleted workspaces are hidden or not. Any other parameter is reported: a
+// path whose parameters are no column's target is listed as such, with its
+// reason (matrixExemptions.notTargets), and not given here.
 func targetViolation(pattern, path string, c caller, s seeded) string {
 	path, _, _ = strings.Cut(path, "?")
 	want, got := strings.Split(pattern, "/"), strings.Split(path, "/")
 	for i, segment := range want {
 		switch {
+		case !strings.HasPrefix(segment, "{") || !strings.HasSuffix(segment, "}"):
 		case segment == "{slug}" && i > 0 && want[i-1] == "workspaces":
 			if got[i] != workspaceOf(c) {
 				return fmt.Sprintf("targets the workspace %s, not its column's %s", got[i], workspaceOf(c))
 			}
-		case strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "_id}"):
+		case strings.HasSuffix(segment, "_id}"):
 			id, err := uuid.Parse(got[i])
 			slug, isRow := s.workspaceOfRow(id)
 			if err != nil || !isRow || slug != workspaceOf(c) {
 				return fmt.Sprintf("%s %s is no row seeded under its column's workspace %s", segment, got[i], workspaceOf(c))
 			}
+		default:
+			return fmt.Sprintf("%s is no target the matrix knows: list %s as not a target, with its reason", segment, pattern)
 		}
 	}
 	return ""
@@ -171,6 +184,18 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 			e.public[id] = "TestOfItsOwn"
 		}
 		return e
+	}
+	// checkSlug is a row of checkWorkspaceSlug, whose {slug} is no
+	// workspace; notTarget is exempt with its path listed as not a target.
+	checkSlug := apitest.Operation{ID: "checkWorkspaceSlug", Tags: []string{"workspace"}, Method: http.MethodGet,
+		Path: "/api/v0/workspace-slugs/{slug}"}
+	checks := matrixRow{op: "checkWorkspaceSlug", request: sameRequest(http.MethodGet, "/api/v0/workspace-slugs/acme", ""), cells: every(cellOK)}
+	notTarget := exemptPublic("getWorkspaceInvitation")
+	notTarget.notTargets = map[string]string{checkSlug.Path: "a slug asked about"}
+	var unknown []string
+	for _, c := range workspaceColumns {
+		unknown = append(unknown, fmt.Sprintf("row checkWorkspaceSlug, %s: {slug} is no target the matrix knows: "+
+			"list /api/v0/workspace-slugs/{slug} as not a target, with its reason", c))
 	}
 	getInvitation := matrixRow{op: "getWorkspaceInvitation", cells: every(cellOK), request: func(c caller, s seeded) (string, string, string) {
 		return http.MethodGet, "/api/v0/workspace-invitations/" + s.invitation(workspaceOf(c), "newcomer@example.com").String() + "?token=t", ""
@@ -258,6 +283,10 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 			[]string{"operation deleteWorkspace is exempt as public, but needs a token"}},
 		{"a public exemption with a row", ops, exempt, []matrixRow{row, getInvitation},
 			[]string{"operation getWorkspaceInvitation is exempt as public, and has a row"}},
+		{"a parameter the matrix does not know", append(ops, checkSlug), exempt, []matrixRow{row, checks}, unknown},
+		{"a path listed as not a target", append(ops, checkSlug), notTarget, []matrixRow{row, checks}, nil},
+		{"a not-target path of no operation", ops, notTarget, []matrixRow{row},
+			[]string{"the not-target path /api/v0/workspace-slugs/{slug} is no operation's"}},
 		{"an operation of a module no list names", append(ops, apitest.Operation{ID: "listProjects", Tags: []string{"project"}}), exempt,
 			[]matrixRow{row}, []string{"operation listProjects, tagged [project], has no row"}},
 		{"an operation without a tag", append(ops, apitest.Operation{ID: "getHealth"}), exempt,

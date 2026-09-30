@@ -19,7 +19,46 @@ import (
 
 // The invitations' part of the workspace module's rows (M3 design 9.2).
 
-var cellInvitationNotFound = cell{http.StatusNotFound, "workspace.invitation_not_found"}
+var (
+	cellInvitationNotFound = cell{http.StatusNotFound, "workspace.invitation_not_found"}
+	cellEmailMismatch      = cell{http.StatusForbidden, "workspace.invitation_email_mismatch"}
+)
+
+// toOwnInvitation is the request of a row whose callers each answer, with
+// its token, the invitation to their own address (ownInvitation).
+func toOwnInvitation(answer string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		id := s.invitation(ownInvitation(c), emailOf(c))
+		return http.MethodPost, "/api/v0/workspace-invitations/" + id.String() + "/" + answer, `{"token":"` + invitationToken(s.t, id) + `"}`
+	}
+}
+
+// toNewcomersInvitation is the request of a row whose callers each answer,
+// with its token, acme's invitation of newcomer@example.com: another
+// address than any caller's.
+func toNewcomersInvitation(answer string) func(caller, seeded) (string, string, string) {
+	return func(_ caller, s seeded) (string, string, string) {
+		id := s.invitation("acme", "newcomer@example.com")
+		return http.MethodPost, "/api/v0/workspace-invitations/" + id.String() + "/" + answer, `{"token":"` + invitationToken(s.t, id) + `"}`
+	}
+}
+
+// joinsAsAMember: each caller's acceptance answers the workspace of his
+// invitation, where he is now an active member as the invitation's
+// member: one member more than it had (other: its admin and the removed
+// member; acme: its admin, member and guest).
+func joinsAsAMember(t *testing.T, c caller, answer string) {
+	var w struct {
+		Slug         string `json:"slug"`
+		Role         int    `json:"role"`
+		TotalMembers int    `json:"total_members"`
+	}
+	decodeAnswer(t, answer, &w)
+	want := map[string]int{"other": 3, "acme": 4}[ownInvitation(c)]
+	if w.Slug != ownInvitation(c) || w.Role != 15 || w.TotalMembers != want {
+		t.Errorf("%s's acceptance answers %+v, want %s with role 15 and %d members", c, w, ownInvitation(c), want)
+	}
+}
 
 // ofInvitation are the cells of a row that names an invitation: the answers
 // of the workspace's admin, member and guest, and
@@ -58,7 +97,7 @@ func promotesTheNewcomer(t *testing.T, c caller, answer string) {
 // invitationToken is the token of the invitation id under the matrix's
 // signing key, as the app wired on it computes it: identity's MAC of the
 // workspace module's purpose.
-func invitationToken(t *testing.T, id uuid.UUID) string {
+func invitationToken(t testing.TB, id uuid.UUID) string {
 	t.Helper()
 	keys, err := identity.LoadKeys([]byte(testKeyPEM), slog.New(slog.DiscardHandler))
 	if err != nil {

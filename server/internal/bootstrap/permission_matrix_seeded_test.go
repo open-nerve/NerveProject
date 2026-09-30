@@ -35,13 +35,40 @@ var matrixMemberships = []struct {
 
 // matrixInvitations are the invitations prepareMatrix seeds, each sent by
 // its workspace's admin: in acme and in gone, one to an address no account
-// has. gone's are deleted with it.
+// has; and one to each column's own address (ownInvitation), as a member.
+// gone's are deleted with it.
 var matrixInvitations = []struct {
 	slug, email string
 	role        shared.Role
 }{
 	{"acme", "newcomer@example.com", shared.RoleMember},
 	{"gone", "newcomer@example.com", shared.RoleMember},
+	{"other", emailOf(callerAdmin), shared.RoleMember},
+	{"other", emailOf(callerMember), shared.RoleMember},
+	{"other", emailOf(callerGuest), shared.RoleMember},
+	{"acme", emailOf(callerNever), shared.RoleMember},
+	{"acme", emailOf(callerRemoved), shared.RoleMember},
+	{"acme", emailOf(callerDeleted), shared.RoleMember},
+}
+
+// ownInvitation is the workspace of the invitation to c's own address: one
+// he is not an active member of, so accepting it makes him one. acme's
+// admin, member and guest are invited to other; the others to acme, where
+// the removed member's ended membership is restored. An active member's
+// address stays uninvited in acme, so that createWorkspaceInvitations'
+// row of an active member's address is refused as that, not as an
+// invited one.
+func ownInvitation(c caller) string {
+	switch c {
+	case callerAdmin, callerMember, callerGuest:
+		return "other"
+	}
+	return "acme"
+}
+
+// emailOf is the address of c's account.
+func emailOf(c caller) string {
+	return strings.ReplaceAll(string(c), " ", "-") + "@example.com"
 }
 
 // seeded are the ids of the rows prepareMatrix seeds that a request can
@@ -156,10 +183,7 @@ func (s matrixSeed) preferences(slug string, c caller, p workspacedomain.Prefere
 // admin.
 func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
 	s.t.Helper()
-	admin := callerAdmin
-	if slug == "gone" {
-		admin = callerDeleted
-	}
+	admin := map[string]caller{"acme": callerAdmin, "gone": callerDeleted, "other": callerNever}[slug]
 	if _, err := s.store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
 		{ID: id, WorkspaceID: s.workspaces[slug], Email: email, Role: role, CreatedBy: s.ids[admin], Now: s.now},
 	}); err != nil {
