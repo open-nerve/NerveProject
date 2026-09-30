@@ -52,8 +52,8 @@ func TestParseKeysReadsAnOpenSSLKey(t *testing.T) {
 	if len(k.private) != 64 || len(k.public) != 32 {
 		t.Errorf("key sizes = %d, %d; want 64, 32", len(k.private), len(k.public))
 	}
-	if m := testMAC(t, k, PurposeRefreshToken); len(m.key) != 32 || bytes.Equal(m.key, k.private.Seed()) {
-		t.Errorf("the MAC key is %d bytes, equal to the seed %v; want 32 bytes derived from it", len(m.key), bytes.Equal(m.key, k.private.Seed()))
+	if m := testMAC(t, k, PurposeRefreshToken); bytes.Equal(m.key[:], k.private.Seed()) {
+		t.Error("the MAC key equals the seed; want a key derived from it")
 	}
 }
 
@@ -84,7 +84,7 @@ func TestParseKeysRejects(t *testing.T) {
 
 func TestEphemeralKeysDiffer(t *testing.T) {
 	a, b := EphemeralKeys(), EphemeralKeys()
-	if bytes.Equal(a.private, b.private) || bytes.Equal(testMAC(t, a, PurposeRefreshToken).key, testMAC(t, b, PurposeRefreshToken).key) {
+	if bytes.Equal(a.private, b.private) || *testMAC(t, a, PurposeRefreshToken).key == *testMAC(t, b, PurposeRefreshToken).key {
 		t.Error("two ephemeral keys are equal")
 	}
 }
@@ -332,7 +332,7 @@ func TestMACsOfPurposesDiffer(t *testing.T) {
 	keys := testKeys(t)
 	refresh, invitation := testMAC(t, keys, PurposeRefreshToken), testMAC(t, keys, "workspace-invitation")
 	msg := bytes.Repeat([]byte{7}, 36)
-	if bytes.Equal(refresh.key, invitation.key) || refresh.Tag(msg) == invitation.Tag(msg) {
+	if *refresh.key == *invitation.key || refresh.Tag(msg) == invitation.Tag(msg) {
 		t.Error("the refresh-token and workspace-invitation MACs are the same")
 	}
 	if invitation.Verify(msg, refresh.Tag(msg)) || refresh.Verify(msg, invitation.Tag(msg)) {

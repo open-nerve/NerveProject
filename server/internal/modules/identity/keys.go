@@ -3,6 +3,7 @@ package identity
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/signing"
@@ -11,9 +12,16 @@ import (
 // Keys are the instance's signing key, loaded once, before any module is
 // built (M3 design 6.6 step 1). They never give the key out: identity.New
 // signs the access tokens and tags the refresh tokens with it, and MAC
-// gives another module a MAC of its own purpose.
+// gives another module a MAC of its own purpose. Nor does printing or
+// logging them: Format prints the type alone, and a value holding them in
+// an unexported field prints the signing key's pointer, an address.
 type Keys struct {
 	signing *signing.Keys
+}
+
+// Format prints the keys as their type alone, whatever the verb.
+func (k *Keys) Format(f fmt.State, _ rune) {
+	_, _ = io.WriteString(f, "identity.Keys(redacted)")
 }
 
 // LoadKeys loads the signing key from pemData, the content of
