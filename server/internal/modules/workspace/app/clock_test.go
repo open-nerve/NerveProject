@@ -13,8 +13,9 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Each write on a workspace reads the clock once, in its transaction, after
-// its lock and its decision, just before it writes (M3 design 3.6): a write
+// Each write on an existing workspace reads the clock once, in its
+// transaction, after its lock and its decision, just before it writes
+// (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
 // the one it waited for. The deletion's cascade uses that one read for
 // every step. The clock logs its read among the fakes' calls.

@@ -24,8 +24,8 @@ func NewUpdateWorkspacePreferences(preferences PreferencesWriter, auth shared.Au
 
 // Execute checks p, then in one transaction (M3 design 3.6): the workspace
 // row FOR SHARE, the decision, the caller's row changed or inserted
-// (M3 design 3.18). The clock is read under the lock, as every write reads
-// it.
+// (M3 design 3.18). The clock is read under the lock, as every write on an
+// existing workspace reads it (P2 spec 2.6).
 func (u *UpdateWorkspacePreferences) Execute(ctx context.Context, slug string, p domain.PreferencesPatch) (domain.Preferences, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
