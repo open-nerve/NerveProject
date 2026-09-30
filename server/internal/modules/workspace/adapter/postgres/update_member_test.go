@@ -38,14 +38,19 @@ func TestMemberByID(t *testing.T) {
 }
 
 // UpdateMemberRole sets the role of that membership only, with the updater
-// and the time, and answers it as stored; a missing row is an error, not
-// app.ErrNotFound.
+// and the time, and answers it as stored: another membership of the
+// workspace (the updater's) and the member's in another workspace stay as
+// they were. A missing row is an error, not app.ErrNotFound.
 func TestUpdateMemberRole(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme, beta := newWorkspace(t, s, "Acme", "acme", alice), newWorkspace(t, s, "Beta", "beta", alice)
 	bobIn := joinAt(t, s, acme.ID, bob, shared.RoleMember, now)
 	bobInBeta := joinAt(t, s, beta.ID, bob, shared.RoleMember, now)
+	acmeBefore, err := s.ListMembers(context.Background(), acme.ID)
+	if err != nil || len(acmeBefore) != 2 || acmeBefore[1] != bobIn {
+		t.Fatalf("acme's members = %+v, %v; want alice's and bob's", acmeBefore, err)
+	}
 	later := now.Add(time.Hour)
 
 	got, err := s.UpdateMemberRole(context.Background(), bobIn.ID, shared.RoleGuest, alice, later)
@@ -63,6 +68,9 @@ func TestUpdateMemberRole(t *testing.T) {
 	}
 	if other, err := s.MemberByID(context.Background(), bobInBeta.ID); err != nil || other != bobInBeta {
 		t.Errorf("bob in beta: %+v, %v; want it unchanged", other, err)
+	}
+	if acmeAfter, err := s.ListMembers(context.Background(), acme.ID); err != nil || len(acmeAfter) != 2 || acmeAfter[0] != acmeBefore[0] {
+		t.Errorf("acme's members = %+v, %v; want alice's, the updater's, unchanged", acmeAfter, err)
 	}
 	if _, err := s.UpdateMemberRole(context.Background(), uuid.NewV7(), shared.RoleGuest, alice, later); err == nil || errors.Is(err, app.ErrNotFound) {
 		t.Errorf("UpdateMemberRole() of no row = %v, want an error that is not app.ErrNotFound", err)
