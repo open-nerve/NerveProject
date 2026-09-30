@@ -16,7 +16,8 @@ GRANT USAGE ON SCHEMA public TO nerve_runtime;
 
 -- The modules' tables.
 GRANT SELECT, INSERT, UPDATE, DELETE ON users, profiles, auth_sessions, api_tokens TO nerve_runtime;
-GRANT SELECT, INSERT, UPDATE, DELETE ON workspaces, workspace_members, workspace_user_properties TO nerve_runtime;
+GRANT SELECT, INSERT, UPDATE, DELETE ON workspaces, workspace_members, workspace_user_properties, workspace_member_invites
+    TO nerve_runtime;
 
 -- River's tables and the sequences of their ids. River rebuilds the indexes of river_job every day with
 -- REINDEX INDEX CONCURRENTLY, which takes MAINTAIN on the table (PostgreSQL 17 and later).

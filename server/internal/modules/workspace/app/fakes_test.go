@@ -268,6 +268,10 @@ func (f *fakeWorkspaces) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, 
 	return f.deleteStep(ctx, "DeleteWorkspace", id, by, now)
 }
 
+func (f *fakeWorkspaces) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	return f.deleteStep(ctx, "DeleteWorkspaceInvitations", workspaceID, by, now)
+}
+
 func (f *fakeWorkspaces) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
 	return f.deleteStep(ctx, "DeleteWorkspaceMembers", workspaceID, by, now)
 }

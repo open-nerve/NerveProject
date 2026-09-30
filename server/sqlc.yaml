@@ -33,6 +33,7 @@ sql:
       - migrations/sql/00006_workspace_workspaces.sql
       - migrations/sql/00007_workspace_workspace_members.sql
       - migrations/sql/00008_workspace_workspace_user_properties.sql
+      - migrations/sql/00009_workspace_workspace_member_invites.sql
     queries: internal/modules/workspace/adapter/postgres/queries
     gen:
       go:

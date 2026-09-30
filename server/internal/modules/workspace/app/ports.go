@@ -166,6 +166,9 @@ type WorkspaceDeleter interface {
 	WorkspaceLocker
 	// DeleteWorkspace soft-deletes the workspace row.
 	DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error
+	// DeleteWorkspaceInvitations soft-deletes its invitations, pending or
+	// declined.
+	DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 	// DeleteWorkspaceMembers soft-deletes its memberships, active or not.
 	DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 	// DeleteWorkspacePreferences soft-deletes its members' display

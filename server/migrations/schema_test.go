@@ -64,15 +64,15 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 	t.Cleanup(func() { _ = m.Close() })
 
 	up, err := m.Up(ctx)
-	if err != nil || len(up) != 8 {
-		t.Fatalf("Up() = %d migrations, %v; want 8", len(up), err)
+	if err != nil || len(up) != 9 {
+		t.Fatalf("Up() = %d migrations, %v; want 9", len(up), err)
 	}
 	for _, want := range []struct {
 		query string
 		names []string
 	}{
 		{tablesQuery, []string{"api_tokens", "auth_sessions", "profiles", "river_job", "river_leader", "river_notification", "river_queue", "users",
-			"workspace_members", "workspace_user_properties", "workspaces"}},
+			"workspace_member_invites", "workspace_members", "workspace_user_properties", "workspaces"}},
 		{enumsQuery, []string{"river_job_state"}},
 		{functionsQuery, []string{"river_job_state_in_bitmask"}},
 	} {
@@ -90,8 +90,8 @@ func TestMigrationsGoUpDownAndUpAgain(t *testing.T) {
 			t.Errorf("after every Down, %s = %q, want none", query, got)
 		}
 	}
-	if again, err := m.Up(ctx); err != nil || len(again) != 8 {
-		t.Errorf("Up() again = %d migrations, %v; want 8", len(again), err)
+	if again, err := m.Up(ctx); err != nil || len(again) != 9 {
+		t.Errorf("Up() again = %d migrations, %v; want 9", len(again), err)
 	}
 }
 
@@ -168,6 +168,17 @@ func TestConstraintAndIndexNames(t *testing.T) {
 		"users_email_key u",
 		"users_pkey iu",
 		"users_pkey p",
+		"workspace_member_invites_created_by_id_fkey f n",
+		"workspace_member_invites_email_check c",
+		"workspace_member_invites_email_idx iw",
+		"workspace_member_invites_pkey iu",
+		"workspace_member_invites_pkey p",
+		"workspace_member_invites_responded_check c",
+		"workspace_member_invites_role_check c",
+		"workspace_member_invites_updated_by_id_fkey f n",
+		"workspace_member_invites_workspace_id_email_key iuw",
+		"workspace_member_invites_workspace_id_fkey f c",
+		"workspace_member_invites_workspace_id_idx i",
 		"workspace_members_created_by_id_fkey f n",
 		"workspace_members_member_id_fkey f c",
 		"workspace_members_member_id_idx iw",
@@ -203,7 +214,7 @@ func TestConstraintAndIndexNames(t *testing.T) {
 }
 
 // The CHECKs accept what the domain writes and reject what bypasses it
-// (M2 design 4.2, 4.3, 4.5; M3 design 4.2, 4.3, 4.5).
+// (M2 design 4.2, 4.3, 4.5; M3 design 4.2, 4.3, 4.4, 4.5).
 func TestChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -221,6 +232,13 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 			"'0199a2b4-0000-7000-8000-000000000005', " + user + ", 20)",
 		"INSERT INTO workspace_user_properties (id, workspace_id, user_id, navigation_project_limit, navigation_control_preference) " +
 			"VALUES ('0199a2b4-0000-7000-8000-000000000007', '0199a2b4-0000-7000-8000-000000000005', " + user + ", 0, 'TABBED')",
+		// An accepted invitation and a declined one, each with its response's
+		// time, and a pending one.
+		"INSERT INTO workspace_member_invites (id, workspace_id, email, role, accepted, responded_at) VALUES " +
+			"('0199a2b4-0000-7000-8000-000000000008', '0199a2b4-0000-7000-8000-000000000005', 'élodie@exämple.com', 20, true, now()), " +
+			"('0199a2b4-0000-7000-8000-000000000009', '0199a2b4-0000-7000-8000-000000000005', 'bob@corp.com', 5, false, now())",
+		"INSERT INTO workspace_member_invites (id, workspace_id, email) VALUES " +
+			"('0199a2b4-0000-7000-8000-00000000000a', '0199a2b4-0000-7000-8000-000000000005', 'carol@corp.com')",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -269,6 +287,22 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 			"workspace_user_properties_navigation_control_preference_check"},
 		{"lower-case navigation control", "UPDATE workspace_user_properties SET navigation_control_preference = 'tabbed'",
 			"workspace_user_properties_navigation_control_preference_check"},
+		{"an invitation's upper-case ASCII e-mail", "UPDATE workspace_member_invites SET email = 'Carol@corp.com' WHERE email = 'carol@corp.com'",
+			"workspace_member_invites_email_check"},
+		{"an invitation's upper-case non-ASCII e-mail", "UPDATE workspace_member_invites SET email = 'Élodie@exämple.com' WHERE role = 20",
+			"workspace_member_invites_email_check"},
+		{"an invitation's e-mail with a trailing tab", `UPDATE workspace_member_invites SET email = E'carol@corp.com\t' WHERE email = 'carol@corp.com'`,
+			"workspace_member_invites_email_check"},
+		{"an invitation's e-mail with an inner U+3000", `UPDATE workspace_member_invites SET email = U&'carol\3000@corp.com' WHERE email = 'carol@corp.com'`,
+			"workspace_member_invites_email_check"},
+		{"an invitation's empty e-mail", "UPDATE workspace_member_invites SET email = '' WHERE email = 'carol@corp.com'",
+			"workspace_member_invites_email_check"},
+		{"an invitation's role 10", "UPDATE workspace_member_invites SET role = 10 WHERE email = 'carol@corp.com'", "workspace_member_invites_role_check"},
+		{"an invitation's role 0", "UPDATE workspace_member_invites SET role = 0 WHERE email = 'carol@corp.com'", "workspace_member_invites_role_check"},
+		{"accepted without a response", "UPDATE workspace_member_invites SET accepted = true WHERE email = 'carol@corp.com'",
+			"workspace_member_invites_responded_check"},
+		{"an acceptance's time removed", "UPDATE workspace_member_invites SET responded_at = NULL WHERE accepted",
+			"workspace_member_invites_responded_check"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -283,7 +317,8 @@ func TestChecksRejectCounterexamples(t *testing.T) {
 
 // A partial unique key holds among undeleted rows only: a second undeleted
 // row with the key is refused, and soft-deleting the first frees the key
-// (M3 design 3.10, 4.2, 4.3, 4.5).
+// (M3 design 3.10, 4.2, 4.3, 4.4, 4.5). A declined invitation is an
+// undeleted row: it holds its address until it is deleted (M3 design 3.8).
 func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -304,6 +339,11 @@ func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 		// workspace hold keys of their own: a key short of a column refuses one.
 		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + other + ")",
 		"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + beta + ", " + user + ")",
+		// carol's invitation to the workspace, declined; another address in
+		// the workspace and carol in another workspace hold keys of their own.
+		"INSERT INTO workspace_member_invites (id, workspace_id, email, responded_at) VALUES (gen_random_uuid(), " + workspace + ", 'carol@corp.com', now())",
+		"INSERT INTO workspace_member_invites (id, workspace_id, email) VALUES (gen_random_uuid(), " + workspace + ", 'dave@corp.com')",
+		"INSERT INTO workspace_member_invites (id, workspace_id, email) VALUES (gen_random_uuid(), " + beta + ", 'carol@corp.com')",
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -321,6 +361,12 @@ func TestUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 			"INSERT INTO workspace_user_properties (id, workspace_id, user_id) VALUES (gen_random_uuid(), " + workspace + ", " + user + ")",
 			"UPDATE workspace_user_properties SET deleted_at = now()",
 			"workspace_user_properties_workspace_id_user_id_key",
+		},
+		{
+			"a declined invitation's address in a workspace",
+			"INSERT INTO workspace_member_invites (id, workspace_id, email) VALUES (gen_random_uuid(), " + workspace + ", 'carol@corp.com')",
+			"UPDATE workspace_member_invites SET deleted_at = now() WHERE workspace_id = " + workspace + " AND email = 'carol@corp.com'",
+			"workspace_member_invites_workspace_id_email_key",
 		},
 		{
 			"a workspace's slug",
