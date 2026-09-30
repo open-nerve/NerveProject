@@ -116,8 +116,9 @@ paths:
       description: >-
         For the workspace's admins. The workspace, its invitations, its
         memberships and the members' display settings are soft-deleted in one
-        transaction, at the same moment; the members' accounts stay. The slug can name a new
-        workspace at once. Nobody's last_workspace_id is cleared. A
+        transaction, at the same moment; the members' accounts stay. The slug
+        can name a new workspace at once. Nobody's last_workspace_id is
+        cleared. A
         workspace that does not exist, is deleted, or of which the caller is
         not an active member answers workspace.not_found; a member or a
         guest, forbidden.
@@ -193,7 +194,10 @@ paths:
         to the workspace, pending or declined, duplicate, also when another
         request invites it at the same time. The batch is refused as a whole,
         one validation_failed naming each invitations[i] of the request as
-        sent. A declined invitation holds its address until it is deleted.
+        sent; a batch that loses the race to another request, which commits
+        its addresses between this one's check and its insert, names only
+        the first of them in the order of the normalized addresses. A
+        declined invitation holds its address until it is deleted.
         The answer is the new invitations in the request's order, each with
         the token of its link. A workspace that does not exist, is deleted,
         or of which the caller is not an active member answers

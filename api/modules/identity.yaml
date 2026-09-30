@@ -14,12 +14,16 @@ paths:
         Creates an account with its default profile and signs it in: the
         response holds a new session's tokens. While sign-up is off, a
         well-formed request answers identity.signup_disabled before the
-        address or the password is looked at, so the answer never depends on
+        address is validated or looked up, so the answer never depends on
         whether the address is registered; unless it names an invitation
         whose link it holds, pending, to the address it registers
         (normalized). Every other invitation answers the same
-        identity.signup_disabled, whatever is wrong with it. Registering
-        does not accept the invitation. The password needs
+        identity.signup_disabled, whatever is wrong with it. Once sign-up is
+        allowed (it is on, or the request holds such a link), registration
+        answers as usual: validation_failed for a weak password,
+        identity.email_taken for an address already registered, and neither
+        creates an account. Registering does not accept the invitation. The
+        password needs
         8–128 characters with an upper-case letter, a lower-case letter, a
         digit and a special character, and must not be a common password.
         Registrations have a rate limit of their own per client IP.
