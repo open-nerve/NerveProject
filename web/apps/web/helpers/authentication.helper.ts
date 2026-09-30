@@ -43,6 +43,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "workspace.not_found": "auth.errors.workspace_not_found",
   "workspace.creation_disabled": "auth.errors.workspace_creation_disabled",
   "workspace.slug_taken": "auth.errors.workspace_slug_taken",
+  "workspace.member_not_found": "auth.errors.workspace_member_not_found",
+  "workspace.own_membership": "auth.errors.workspace_own_membership",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

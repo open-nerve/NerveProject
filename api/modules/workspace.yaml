@@ -153,6 +153,45 @@ paths:
                 $ref: '#/components/schemas/WorkspaceMemberList'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspace-members/{workspace_member_id}:
+    parameters:
+      - name: workspace_member_id
+        in: path
+        required: true
+        description: A membership's id (WorkspaceMember.id), not the member's account id.
+        schema:
+          type: string
+          format: uuid
+    patch:
+      operationId: updateWorkspaceMember
+      tags: [workspace]
+      summary: Change a member's role
+      description: >-
+        For the workspace's admins. The role is checked first
+        (validation_failed). A membership that does not exist, is deleted or
+        has ended, or whose workspace the caller cannot see, answers
+        workspace.member_not_found; a member or a guest, forbidden; the
+        caller's own membership, workspace.own_membership: nobody changes his
+        own role. The role is decided after the workspace row is locked, so
+        of two admins who demote each other at once only the first succeeds
+        and the workspace keeps an admin.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.member_not_found, forbidden, workspace.own_membership]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMemberUpdate'
+      responses:
+        '200':
+          description: The membership with its new role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMember'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -387,6 +426,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WorkspaceMember'
+    WorkspaceMemberUpdate:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
     WorkspaceUpdate:
       description: Changes the fields it names; a field left out keeps its value. organization_size cannot be set to null.
       type: object

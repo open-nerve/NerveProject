@@ -6,10 +6,12 @@ package httpadapter
 
 import (
 	"context"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ListWorkspacesUseCase is app.ListWorkspaces.
@@ -42,6 +44,11 @@ type ListMembersUseCase interface {
 	Execute(ctx context.Context, slug string) ([]domain.Member, error)
 }
 
+// UpdateMemberUseCase is app.UpdateWorkspaceMember.
+type UpdateMemberUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error)
+}
+
 // GetPreferencesUseCase is app.GetWorkspacePreferences.
 type GetPreferencesUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.Preferences, error)
@@ -65,6 +72,7 @@ type UseCases struct {
 	UpdateWorkspace   UpdateWorkspaceUseCase
 	DeleteWorkspace   DeleteWorkspaceUseCase
 	ListMembers       ListMembersUseCase
+	UpdateMember      UpdateMemberUseCase
 	CheckSlug         CheckSlugUseCase
 	GetPreferences    GetPreferencesUseCase
 	UpdatePreferences UpdatePreferencesUseCase

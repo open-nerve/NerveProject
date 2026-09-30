@@ -122,6 +122,21 @@ type MemberLister interface {
 	ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error)
 }
 
+// MemberUpdater changes a membership's role under its workspace's lock (M3
+// design 3.6: read the row, lock the workspace, read the row again).
+type MemberUpdater interface {
+	// MemberByID returns the undeleted membership id, active or not;
+	// ErrNotFound when there is none.
+	MemberByID(ctx context.Context, id uuid.UUID) (domain.Membership, error)
+	// LockWorkspace locks the undeleted workspace id FOR NO KEY UPDATE until
+	// the transaction ends; ErrNotFound when there is none, also when it was
+	// deleted while the lock waited.
+	LockWorkspace(ctx context.Context, id uuid.UUID) error
+	// UpdateMemberRole sets the membership's role, by the account by at now,
+	// and returns it as stored.
+	UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Membership, error)
+}
+
 // WorkspaceLocker locks FOR NO KEY UPDATE: for a write of the workspace row
 // itself or of a membership.
 type WorkspaceLocker interface {

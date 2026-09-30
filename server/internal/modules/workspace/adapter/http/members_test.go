@@ -33,6 +33,54 @@ const (
 		`"last_name":""},"role":5,"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 )
 
+// PATCH changes the role of the membership of the path for the caller and
+// answers the membership; the role is the use case's to check.
+func TestUpdateWorkspaceMember(t *testing.T) {
+	role := &fakeUpdateMember{answer: aliceMember}
+	h := newServer(t, fakes{role: role})
+	for _, body := range []string{`{"role":20}`, `{"role":10}`} {
+		res, got := do(t, h, request(http.MethodPatch, "/api/v0/workspace-members/"+aliceMember.ID.String(), "bob", body))
+		if res.StatusCode != http.StatusOK || got != aliceMemberJSON+"\n" {
+			t.Errorf("PATCH %s = %d %s, want 200 %s", body, res.StatusCode, got, aliceMemberJSON)
+		}
+	}
+	id := aliceMember.ID.String()
+	if want := []string{"bob " + id + " 20", "bob " + id + " 10"}; !slices.Equal(role.calls, want) {
+		t.Errorf("calls = %q, want %q", role.calls, want)
+	}
+}
+
+// The use case's refusals, as the contract declares them; a body without a
+// role is refused before it.
+func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
+	tests := []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{shared.Invalid(shared.FieldError{Field: "role", Code: shared.FieldInvalidFormat, Message: "is not 5, 15 or 20"}), http.StatusUnprocessableEntity,
+			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
+				`"errors":[{"field":"role","code":"invalid_format","message":"is not 5, 15 or 20"}]}`},
+		{domain.ErrMemberNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.member_not_found","title":"Not Found","detail":"The member does not exist, or you cannot see the workspace."}`},
+		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{domain.ErrOwnMembership, http.StatusConflict,
+			`{"status":409,"code":"workspace.own_membership","title":"Conflict","detail":"You cannot change your own membership."}`},
+	}
+	path := "/api/v0/workspace-members/" + bobMember.ID.String()
+	for _, tt := range tests {
+		h := newServer(t, fakes{role: &fakeUpdateMember{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodPatch, path, "alice", `{"role":5}`)); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("PATCH refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+	role := &fakeUpdateMember{}
+	h := newServer(t, fakes{role: role})
+	if res, _ := do(t, h, request(http.MethodPatch, path, "alice", `{}`)); res.StatusCode != http.StatusBadRequest || len(role.calls) != 0 {
+		t.Errorf("PATCH without a role = %d, calls %q; want 400 and no call", res.StatusCode, role.calls)
+	}
+}
+
 // The list is the use case's for the caller and the slug of the path: an
 // address shown, one null, the avatar null, an ended membership as it is.
 func TestListWorkspaceMembers(t *testing.T) {

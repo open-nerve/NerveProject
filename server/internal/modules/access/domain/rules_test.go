@@ -20,6 +20,7 @@ var tableCells = map[shared.Action][]outcome{
 	"workspace.update":             {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace.delete":             {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_member.list":        {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"workspace_member.update":      {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_preferences.read":   {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"workspace_preferences.update": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 }

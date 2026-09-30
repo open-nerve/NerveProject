@@ -33,7 +33,7 @@ func matrixViolations(ops []apitest.Operation, exempt []string, rows []matrixRow
 			if _, ok := r.cells[c]; !ok {
 				found = append(found, fmt.Sprintf("row %s has no cell for %s", r.name(), c))
 			}
-			method, path, _ := r.request(c)
+			method, path, _ := r.request(c, seeded{})
 			if named && (method != op.Method || !pathOf(op.Path, path)) {
 				found = append(found, fmt.Sprintf("row %s, %s: %s %s is not %s", r.name(), c, method, path, op.Pattern()))
 			}
@@ -107,11 +107,11 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	// guestSends is row, but the guest's cell sends method path.
 	guestSends := func(method, path string) matrixRow {
 		r := row
-		r.request = func(c caller) (string, string, string) {
+		r.request = func(c caller, s seeded) (string, string, string) {
 			if c == callerGuest {
 				return method, path, ""
 			}
-			return get(c)
+			return get(c, s)
 		}
 		return r
 	}

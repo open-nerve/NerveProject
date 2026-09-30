@@ -330,6 +330,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/workspace-members/{workspace_member_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A membership's id (WorkspaceMember.id), not the member's account id. */
+                workspace_member_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a member's role
+         * @description For the workspace's admins. The role is checked first (validation_failed). A membership that does not exist, is deleted or has ended, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden; the caller's own membership, workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin.
+         */
+        patch: operations["updateWorkspaceMember"];
+        trace?: never;
+    };
     "/api/v0/workspace-slugs/{slug}": {
         parameters: {
             query?: never;
@@ -714,6 +737,9 @@ export interface components {
         WorkspaceMemberList: {
             data: components["schemas"]["WorkspaceMember"][];
         };
+        WorkspaceMemberUpdate: {
+            role: components["schemas"]["WorkspaceRole"];
+        };
         SlugAvailability: {
             available: boolean;
             /**
@@ -799,6 +825,7 @@ export type WorkspaceUpdate = components['schemas']['WorkspaceUpdate'];
 export type MemberUser = components['schemas']['MemberUser'];
 export type WorkspaceMember = components['schemas']['WorkspaceMember'];
 export type WorkspaceMemberList = components['schemas']['WorkspaceMemberList'];
+export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
 export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
@@ -1295,6 +1322,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A membership's id (WorkspaceMember.id), not the member's account id. */
+                workspace_member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceMemberUpdate"];
+            };
+        };
+        responses: {
+            /** @description The membership with its new role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceMember"];
                 };
             };
             default: components["responses"]["Problem"];

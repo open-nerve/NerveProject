@@ -35,6 +35,18 @@ type Member struct {
 	User MemberUser
 }
 
+// roles are the three workspace roles (Plane's ROLE_CHOICES).
+var roles = []shared.Role{shared.RoleGuest, shared.RoleMember, shared.RoleAdmin}
+
+// CheckMemberRole checks that role is one of the three, as one 422
+// validation_failed.
+func CheckMemberRole(role shared.Role) error {
+	if !slices.Contains(roles, role) {
+		return shared.Invalid(shared.FieldError{Field: "role", Code: shared.FieldInvalidFormat, Message: "is not 5, 15 or 20"})
+	}
+	return nil
+}
+
 // emailReaders are the workspace roles that see the members' addresses:
 // admins and members, not guests (Plane views/workspace/member.py:50-54,
 // M3 design 3.4). Roles are compared by set, never by order.

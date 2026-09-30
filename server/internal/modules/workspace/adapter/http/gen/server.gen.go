@@ -211,6 +211,12 @@ type WorkspaceMemberList struct {
 	Data []WorkspaceMember `json:"data"`
 }
 
+// WorkspaceMemberUpdate defines model for WorkspaceMemberUpdate.
+type WorkspaceMemberUpdate struct {
+	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
+	Role WorkspaceRole `json:"role"`
+}
+
 // WorkspacePreferences defines model for WorkspacePreferences.
 type WorkspacePreferences struct {
 	// NavigationControlPreference How the sidebar shows the projects, as sections one under another or as tabs.
@@ -253,6 +259,9 @@ type Problem = externalRef0.Problem
 // UpdateWorkspacePreferencesJSONRequestBody defines body for UpdateWorkspacePreferences for application/json ContentType.
 type UpdateWorkspacePreferencesJSONRequestBody = WorkspacePreferencesUpdate
 
+// UpdateWorkspaceMemberJSONRequestBody defines body for UpdateWorkspaceMember for application/json ContentType.
+type UpdateWorkspaceMemberJSONRequestBody = WorkspaceMemberUpdate
+
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = WorkspaceCreate
 
@@ -267,6 +276,9 @@ type ServerInterface interface {
 	// UpdateWorkspacePreferences Change the caller's display settings in a workspace
 	// (PATCH /api/v0/me/workspaces/{slug}/preferences)
 	UpdateWorkspacePreferences(w http.ResponseWriter, r *http.Request, slug Slug)
+	// UpdateWorkspaceMember Change a member's role
+	// (PATCH /api/v0/workspace-members/{workspace_member_id})
+	UpdateWorkspaceMember(w http.ResponseWriter, r *http.Request, workspaceMemberID uuid.UUID)
 	// CheckWorkspaceSlug Tell whether a slug can name a new workspace
 	// (GET /api/v0/workspace-slugs/{slug})
 	CheckWorkspaceSlug(w http.ResponseWriter, r *http.Request, slug Slug)
@@ -342,6 +354,32 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspacePreferences(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateWorkspacePreferences(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWorkspaceMember operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWorkspaceMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspace_member_id" -------------
+	var workspaceMemberID uuid.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspace_member_id", r.PathValue("workspace_member_id"), &workspaceMemberID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspace_member_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWorkspaceMember(w, r, workspaceMemberID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -635,6 +673,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.GetWorkspace)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.UpdateWorkspace)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/members", wrapper.ListWorkspaceMembers)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspace-members/{workspace_member_id}", wrapper.UpdateWorkspaceMember)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.GetWorkspacePreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.UpdateWorkspacePreferences)
@@ -728,6 +767,53 @@ type UpdateWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse struct 
 }
 
 func (response UpdateWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateWorkspacePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspaceMemberRequestObject struct {
+	WorkspaceMemberID uuid.UUID `json:"workspace_member_id"`
+	Body              *UpdateWorkspaceMemberJSONRequestBody
+}
+
+type UpdateWorkspaceMemberResponseObject interface {
+	VisitUpdateWorkspaceMemberResponse(w http.ResponseWriter) error
+}
+
+type UpdateWorkspaceMember200JSONResponse WorkspaceMember
+
+func (response UpdateWorkspaceMember200JSONResponse) VisitUpdateWorkspaceMemberResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspaceMemberdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateWorkspaceMemberdefaultApplicationProblemPlusJSONResponse) VisitUpdateWorkspaceMemberResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1069,6 +1155,9 @@ type StrictServerInterface interface {
 	// UpdateWorkspacePreferences Change the caller's display settings in a workspace
 	// (PATCH /api/v0/me/workspaces/{slug}/preferences)
 	UpdateWorkspacePreferences(ctx context.Context, request UpdateWorkspacePreferencesRequestObject) (UpdateWorkspacePreferencesResponseObject, error)
+	// UpdateWorkspaceMember Change a member's role
+	// (PATCH /api/v0/workspace-members/{workspace_member_id})
+	UpdateWorkspaceMember(ctx context.Context, request UpdateWorkspaceMemberRequestObject) (UpdateWorkspaceMemberResponseObject, error)
 	// CheckWorkspaceSlug Tell whether a slug can name a new workspace
 	// (GET /api/v0/workspace-slugs/{slug})
 	CheckWorkspaceSlug(ctx context.Context, request CheckWorkspaceSlugRequestObject) (CheckWorkspaceSlugResponseObject, error)
@@ -1183,6 +1272,39 @@ func (sh *strictHandler) UpdateWorkspacePreferences(w http.ResponseWriter, r *ht
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateWorkspacePreferencesResponseObject); ok {
 		if err := validResponse.VisitUpdateWorkspacePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateWorkspaceMember operation middleware
+func (sh *strictHandler) UpdateWorkspaceMember(w http.ResponseWriter, r *http.Request, workspaceMemberID uuid.UUID) {
+	var request UpdateWorkspaceMemberRequestObject
+
+	request.WorkspaceMemberID = workspaceMemberID
+
+	var body UpdateWorkspaceMemberJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateWorkspaceMember(ctx, request.(UpdateWorkspaceMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateWorkspaceMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateWorkspaceMemberResponseObject); ok {
+		if err := validResponse.VisitUpdateWorkspaceMemberResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -71,11 +71,16 @@ func (u *ListWorkspaceMembers) Execute(ctx context.Context, slug string) ([]doma
 			// The foreign key keeps every member's account: its absence is a bug.
 			return nil, fmt.Errorf("workspace member %s: no account %s", m.ID, m.MemberID)
 		}
-		user := domain.MemberUser{ID: p.ID, DisplayName: p.DisplayName, FirstName: p.FirstName, LastName: p.LastName}
-		if seesEmails {
-			user.Email = &p.Email
-		}
-		out[i] = domain.Member{Membership: m, User: user}
+		out[i] = domain.Member{Membership: m, User: memberUser(p, seesEmails)}
 	}
 	return out, nil
+}
+
+// memberUser is p as a caller sees it: the address only when seesEmails.
+func memberUser(p PublicProfile, seesEmails bool) domain.MemberUser {
+	user := domain.MemberUser{ID: p.ID, DisplayName: p.DisplayName, FirstName: p.FirstName, LastName: p.LastName}
+	if seesEmails {
+		user.Email = &p.Email
+	}
+	return user
 }

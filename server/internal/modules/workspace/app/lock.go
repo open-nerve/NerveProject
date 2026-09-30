@@ -9,13 +9,12 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// lockAndDecide is the first two steps of every write on a workspace (M3
-// design 3.6 convention 2), in the transaction ctx carries: lock locks the
-// undeleted workspace with slug, then the Authorizer decides action on it
-// for actor and reads the role committed before the lock was granted. It
-// returns the workspace's id and the grant. A workspace that is not there,
-// deleted, or not visible to actor is domain.ErrNotFound; a role the rule
-// does not allow is the Authorizer's shared.Forbidden.
+// lockAndDecide is the first two steps of every write on a workspace named
+// by its slug (M3 design 3.6 convention 2), in the transaction ctx carries:
+// lock locks the undeleted workspace with slug, then decide. It returns the
+// workspace's id and the grant. A workspace that is not there, deleted, or
+// not visible to actor is domain.ErrNotFound; a role the rule does not
+// allow is the Authorizer's shared.Forbidden.
 func lockAndDecide(ctx context.Context, lock func(ctx context.Context, slug string) (uuid.UUID, error),
 	auth shared.Authorizer, actor shared.Actor, slug string, action shared.Action) (uuid.UUID, shared.Grant, error) {
 	id, err := lock(ctx, slug)
@@ -25,12 +24,25 @@ func lockAndDecide(ctx context.Context, lock func(ctx context.Context, slug stri
 	case err != nil:
 		return uuid.UUID{}, shared.Grant{}, err
 	}
-	grant, err := auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: id})
-	switch {
-	case errors.Is(err, shared.ErrNotVisible):
-		return uuid.UUID{}, shared.Grant{}, domain.ErrNotFound
-	case err != nil:
+	grant, err := decide(ctx, auth, actor, action, id, domain.ErrNotFound)
+	if err != nil {
 		return uuid.UUID{}, shared.Grant{}, err
 	}
 	return id, grant, nil
+}
+
+// decide asks the Authorizer for action on the workspace for actor, who
+// reads the role committed before the workspace's lock was granted: a write
+// calls it under that lock. A workspace not visible to actor is notFound,
+// the 404 of what the caller named.
+func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, action shared.Action, workspaceID uuid.UUID,
+	notFound error) (shared.Grant, error) {
+	grant, err := auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: workspaceID})
+	switch {
+	case errors.Is(err, shared.ErrNotVisible):
+		return shared.Grant{}, notFound
+	case err != nil:
+		return shared.Grant{}, err
+	}
+	return grant, nil
 }

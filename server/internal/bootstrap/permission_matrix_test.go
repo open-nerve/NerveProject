@@ -102,14 +102,14 @@ var (
 	cellForbidden = cell{http.StatusForbidden, "forbidden"}
 )
 
-// matrixRow is an operation's row: the request each caller sends and the
-// answer each gets.
+// matrixRow is an operation's row: the request each caller sends, which can
+// name a row prepareMatrix seeded, and the answer each gets.
 type matrixRow struct {
 	op      string // operationId
 	variant string // what sets the row apart from the operation's other rows
 	write   bool   // each cell on a copy of its own
 	config  func(*config.Config)
-	request func(c caller) (method, path, body string)
+	request func(c caller, s seeded) (method, path, body string)
 	cells   map[caller]cell
 	// check, when set, runs on each answer that is not a problem and is its
 	// cell's: what the answer holds for that caller.
@@ -133,8 +133,20 @@ func every(answer cell) map[caller]cell {
 }
 
 // sameRequest is the request of a row whose callers all send the same.
-func sameRequest(method, path, body string) func(caller) (string, string, string) {
-	return func(caller) (string, string, string) { return method, path, body }
+func sameRequest(method, path, body string) func(caller, seeded) (string, string, string) {
+	return func(caller, seeded) (string, string, string) { return method, path, body }
+}
+
+// seeded are the ids of the rows prepareMatrix seeded that a request can
+// name: each membership, by the workspace's slug and the column.
+type seeded struct {
+	memberships map[string]uuid.UUID
+}
+
+// membership is the id of c's membership of the workspace slug; the zero id
+// when there is none, which no row has.
+func (s seeded) membership(slug string, c caller) uuid.UUID {
+	return s.memberships[slug+"/"+string(c)]
 }
 
 // decodeAnswer decodes a cell's answer into v for a row's check.
@@ -157,11 +169,12 @@ func matrixRows() []matrixRow {
 const matrixApps = 8
 
 // matrixData is the prepared database, the signing key every app on a copy
-// of it shares, and each column's access token.
+// of it shares, each column's access token, and the seeded ids.
 type matrixData struct {
 	url     string
 	keyFile string
 	tokens  map[caller]string
+	seeded  seeded
 }
 
 // config is the configuration of an app on the database at url.
@@ -179,13 +192,13 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // account for each column, registered for its token. Through the workspace
 // store, the workspace acme with its admin, member, guest and the member
 // later removed, and the admin's display settings there; the workspace gone
-// with its admin; and the workspace other, whose admin was never a member of
-// acme and where the removed member is still active, so that a role read in
-// the wrong workspace lets either into acme. Through the API, gone deleted
-// by its admin, which soft-deletes its memberships with it. Through SQL,
-// until P5's store replaces it, the removed member's membership of acme
-// ended. Everything that connected to the database is closed when it
-// returns, so that it can be copied.
+// with its admin and the member; and the workspace other, whose admin was
+// never a member of acme and where the removed member is still active, so
+// that a role read in the wrong workspace lets either into acme. Through the
+// API, gone deleted by its admin, which soft-deletes its memberships with
+// it. Through SQL, until P5's store replaces it, the removed member's
+// membership of acme ended. Everything that connected to the database is
+// closed when it returns, so that it can be copied.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}}
@@ -203,23 +216,25 @@ func prepareMatrix(t *testing.T) matrixData {
 			}
 			ids[c] = id
 		}
-		seed := matrixSeed{t: t, store: workspacepg.New(pool), ids: ids, now: time.Now()}
-		acme := seed.workspace("acme", callerAdmin)
-		seed.join(acme, callerAdmin, shared.RoleAdmin)
-		seed.join(acme, callerMember, shared.RoleMember)
-		seed.join(acme, callerGuest, shared.RoleGuest)
-		seed.join(acme, callerRemoved, shared.RoleMember)
+		seed := matrixSeed{t: t, store: workspacepg.New(pool), ids: ids, now: time.Now(),
+			workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}}
+		seed.workspace("acme", callerAdmin)
+		seed.join("acme", callerAdmin, shared.RoleAdmin)
+		seed.join("acme", callerMember, shared.RoleMember)
+		seed.join("acme", callerGuest, shared.RoleGuest)
+		seed.join("acme", callerRemoved, shared.RoleMember)
 		tabbed, three := "TABBED", 3
-		seed.preferences(acme, callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
-		gone := seed.workspace("gone", callerDeleted)
-		seed.join(gone, callerDeleted, shared.RoleAdmin)
-		other := seed.workspace("other", callerNever)
-		seed.join(other, callerNever, shared.RoleAdmin)
-		seed.join(other, callerRemoved, shared.RoleMember)
+		seed.preferences("acme", callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
+		seed.workspace("gone", callerDeleted)
+		seed.join("gone", callerDeleted, shared.RoleAdmin)
+		seed.join("gone", callerMember, shared.RoleMember)
+		seed.workspace("other", callerNever)
+		seed.join("other", callerNever, shared.RoleAdmin)
+		seed.join("other", callerRemoved, shared.RoleMember)
+		d.seeded = seeded{memberships: seed.memberships}
 		// No store removes a member yet (P5), so SQL stands in until that
 		// phase replaces it: it ends the removed member's membership of acme.
-		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2",
-			acme, ids[callerRemoved])
+		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", d.seeded.membership("acme", callerRemoved))
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// membership goes with the workspace row, so every cell of the column
 		// is asked about a workspace deleted the one way there is. A
@@ -236,16 +251,18 @@ func prepareMatrix(t *testing.T) matrixData {
 }
 
 // matrixSeed writes the prepared workspaces, memberships and settings
-// through the workspace store; exec runs the SQL that stands in for the
-// store P5 adds.
+// through the workspace store, and keeps their ids by slug (and column);
+// exec runs the SQL that stands in for the store P5 adds.
 type matrixSeed struct {
-	t     *testing.T
-	store *workspacepg.Store
-	ids   map[caller]uuid.UUID
-	now   time.Time
+	t           *testing.T
+	store       *workspacepg.Store
+	ids         map[caller]uuid.UUID
+	now         time.Time
+	workspaces  map[string]uuid.UUID // by slug
+	memberships map[string]uuid.UUID // by slug/column, as seeded.membership reads them
 }
 
-func (s matrixSeed) workspace(slug string, admin caller) uuid.UUID {
+func (s matrixSeed) workspace(slug string, admin caller) {
 	s.t.Helper()
 	w, err := s.store.CreateWorkspace(context.Background(), workspaceapp.WorkspaceRow{
 		ID: uuid.NewV7(), Name: slug, Slug: slug, Timezone: "UTC", CreatedBy: s.ids[admin], Now: s.now,
@@ -253,22 +270,24 @@ func (s matrixSeed) workspace(slug string, admin caller) uuid.UUID {
 	if err != nil {
 		s.t.Fatal(err)
 	}
-	return w.ID
+	s.workspaces[slug] = w.ID
 }
 
-func (s matrixSeed) join(workspace uuid.UUID, c caller, role shared.Role) {
+func (s matrixSeed) join(slug string, c caller, role shared.Role) {
 	s.t.Helper()
+	id := uuid.NewV7()
 	if err := s.store.CreateMember(context.Background(), workspaceapp.MemberRow{
-		ID: uuid.NewV7(), WorkspaceID: workspace, MemberID: s.ids[c], Role: role, CreatedBy: s.ids[c], Now: s.now,
+		ID: id, WorkspaceID: s.workspaces[slug], MemberID: s.ids[c], Role: role, CreatedBy: s.ids[c], Now: s.now,
 	}); err != nil {
 		s.t.Fatal(err)
 	}
+	s.memberships[slug+"/"+string(c)] = id
 }
 
-func (s matrixSeed) preferences(workspace uuid.UUID, c caller, p workspacedomain.PreferencesPatch) {
+func (s matrixSeed) preferences(slug string, c caller, p workspacedomain.PreferencesPatch) {
 	s.t.Helper()
 	if _, err := s.store.UpsertPreferences(context.Background(), workspaceapp.PreferencesRow{
-		ID: uuid.NewV7(), WorkspaceID: workspace, UserID: s.ids[c], Patch: p, Now: s.now,
+		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], UserID: s.ids[c], Patch: p, Now: s.now,
 	}); err != nil {
 		s.t.Fatal(err)
 	}
@@ -316,7 +335,7 @@ func TestPermissionMatrix(t *testing.T) {
 					t.Cleanup(func() { <-apps })
 					base = startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), r.config), migrations.FS())
 				}
-				method, path, body := r.request(c)
+				method, path, body := r.request(c, d.seeded)
 				status, answer := call(t, contract, method, base+path, d.tokens[c], body)
 				got := cell{status: status}
 				if status >= http.StatusBadRequest {

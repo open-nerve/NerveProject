@@ -14,6 +14,8 @@ import (
 var (
 	cellWorkspaceNotFound = cell{http.StatusNotFound, "workspace.not_found"}
 	cellCreationDisabled  = cell{http.StatusForbidden, "workspace.creation_disabled"}
+	cellMemberNotFound    = cell{http.StatusNotFound, "workspace.member_not_found"}
+	cellOwnMembership     = cell{http.StatusConflict, "workspace.own_membership"}
 )
 
 // inWorkspace are the cells of a workspace-level row: the answer of the
@@ -26,10 +28,54 @@ func inWorkspace(admin, member, guest cell) map[caller]cell {
 
 // toWorkspace is the request of a row whose callers each send method to the
 // path under the workspace their column targets.
-func toWorkspace(method, path, body string) func(caller) (string, string, string) {
-	return func(c caller) (string, string, string) {
+func toWorkspace(method, path, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, _ seeded) (string, string, string) {
 		return method, "/api/v0/workspaces/" + workspaceOf(c) + path, body
 	}
+}
+
+// ofMember are the cells of a row that names a membership: the answers of
+// the workspace's admin, member and guest, and workspace.member_not_found
+// for the callers the workspace is not visible to.
+func ofMember(admin, member, guest cell) map[caller]cell {
+	return map[caller]cell{callerAdmin: admin, callerMember: member, callerGuest: guest,
+		callerNever: cellMemberNotFound, callerRemoved: cellMemberNotFound, callerDeleted: cellMemberNotFound}
+}
+
+// toMembership is the request of a row whose callers each PATCH body to the
+// membership target names for their column: a workspace's slug and whose
+// membership of it.
+func toMembership(target func(caller) (string, caller), body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		slug, who := target(c)
+		return http.MethodPatch, "/api/v0/workspace-members/" + s.membership(slug, who).String(), body
+	}
+}
+
+// anotherMember is, for each column, a membership of another account in the
+// workspace the column targets: the member's, or the guest's for the member
+// himself.
+func anotherMember(c caller) (string, caller) {
+	switch c {
+	case callerMember:
+		return "acme", callerGuest
+	case callerDeleted:
+		return "gone", callerMember
+	}
+	return "acme", callerMember
+}
+
+// ownMembership is, for each column, the caller's own membership of the
+// workspace the column targets: ended for the removed member, deleted with
+// gone. Never a member has none in acme: his cell names the member's.
+func ownMembership(c caller) (string, caller) {
+	switch c {
+	case callerNever:
+		return "acme", callerMember
+	case callerDeleted:
+		return "gone", callerDeleted
+	}
+	return "acme", c
 }
 
 func workspaceMatrixRows() []matrixRow {
@@ -52,10 +98,29 @@ func workspaceMatrixRows() []matrixRow {
 			cells: inWorkspace(cellNoContent, cellForbidden, cellForbidden)},
 		{op: "listWorkspaceMembers", request: toWorkspace(http.MethodGet, "/members", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: listsTheMembers},
+		{op: "updateWorkspaceMember", variant: "another member", write: true, request: toMembership(anotherMember, `{"role":5}`),
+			cells: ofMember(cellOK, cellForbidden, cellForbidden), check: demotesTheMember},
+		{op: "updateWorkspaceMember", variant: "one's own", write: true, request: toMembership(ownMembership, `{"role":15}`),
+			cells: ofMember(cellOwnMembership, cellForbidden, cellForbidden)},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),
 			cells: inWorkspace(cellOK, cellOK, cellOK), check: preferencesAre(navigation{"TABBED", 5}, navigation{"ACCORDION", 5})},
+	}
+}
+
+// demotesTheMember: the admin's answer is the member's membership, now a
+// guest's, with the member's address.
+func demotesTheMember(t *testing.T, c caller, answer string) {
+	var m struct {
+		Role   int `json:"role"`
+		Member struct {
+			Email string `json:"email"`
+		} `json:"member"`
+	}
+	decodeAnswer(t, answer, &m)
+	if m.Role != 5 || m.Member.Email != "member@example.com" {
+		t.Errorf("%s's change answers %+v, want the member as a guest", c, m)
 	}
 }
 
@@ -97,8 +162,8 @@ func listsTheMembers(t *testing.T, c caller, answer string) {
 
 // toPreferences is the request of a row whose callers each send method to
 // their own display settings in the workspace their column targets.
-func toPreferences(method, body string) func(caller) (string, string, string) {
-	return func(c caller) (string, string, string) {
+func toPreferences(method, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, _ seeded) (string, string, string) {
 		return method, "/api/v0/me/workspaces/" + workspaceOf(c) + "/preferences", body
 	}
 }

@@ -1,0 +1,158 @@
+package app_test
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// newUpdateMember is UpdateWorkspaceMember over membersFixture's fakes: in
+// acme alice is the admin, bob a member, carol's membership has ended.
+func newUpdateMember() (*app.UpdateWorkspaceMember, *membersFixture, *fakeTx) {
+	f := newMembers()
+	tx := &fakeTx{}
+	return app.NewUpdateWorkspaceMember(f.workspaces, f.profiles, f.auth, tx, clocktest.At(now)), f, tx
+}
+
+// lockedMemberCalls are the calls up to the decision on the membership m
+// for user: the read, the workspace's lock, the read again, the decision.
+func lockedMemberCalls(user app.AccountState, m domain.Membership) []string {
+	return []string{
+		"MemberByID " + m.ID.String(),
+		"LockWorkspace " + m.WorkspaceID.String(),
+		"MemberByID " + m.ID.String(),
+		"Authorize " + user.ID.String() + " workspace_member.update on " + m.WorkspaceID.String() + "/" + uuid.Nil().String(),
+	}
+}
+
+// UpdateWorkspaceMember reads the membership, locks its workspace FOR NO
+// KEY UPDATE, reads it again, decides, then writes the role and reads the
+// member's profile, all in one transaction (M3 design 3.6); the admin sees
+// the address.
+func TestUpdateWorkspaceMemberLocksThenDecidesThenWrites(t *testing.T) {
+	for _, role := range []shared.Role{shared.RoleGuest, shared.RoleAdmin} {
+		uc, f, tx := newUpdateMember()
+		got, err := uc.Execute(as(alice), bobInAcme.ID, role)
+		want := bobInAcme
+		want.Role = role
+		if err != nil || !sameMembers([]domain.Member{got}, []domain.Member{withUser(want, true)}) {
+			t.Errorf("to %d: Execute() = %+v, %v; want %+v", role, got, err, withUser(want, true))
+		}
+		wantCalls := append(lockedMemberCalls(alice, bobInAcme),
+			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, role, alice.ID, now.Format(time.RFC3339Nano)),
+			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))
+		if !slices.Equal(f.log.calls, wantCalls) || tx.calls != 1 {
+			t.Errorf("to %d: calls = %q in %d transactions, want %q in one", role, f.log.calls, tx.calls, wantCalls)
+		}
+	}
+}
+
+// Each refusal and failure is the answer, and no role is written. The
+// role's check comes first. A membership that is not there, deleted
+// meanwhile, of a workspace not there or not visible is
+// workspace.member_not_found; a member's forbidden comes before any check
+// of the target, so he learns nothing about it; then an ended membership
+// is workspace.member_not_found and the caller's own
+// workspace.own_membership; a failure is never a 404.
+func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
+	failure := errors.New("connection reset")
+	forbidBob := func(f *membersFixture) { f.auth.errs = map[grantKey]error{{bob.ID, acme.ID}: shared.Forbidden()} }
+	stranger := domain.Membership{ID: uuid.NewV7(), WorkspaceID: uuid.NewV7(), MemberID: bob.ID, Role: shared.RoleMember, IsActive: true}
+	decided := lockedMemberCalls(alice, bobInAcme)
+	tests := []struct {
+		name  string
+		user  app.AccountState
+		id    uuid.UUID
+		role  shared.Role
+		set   func(f *membersFixture)
+		want  error
+		calls []string
+	}{
+		{"a role outside the three", alice, bobInAcme.ID, 10, nil,
+			shared.Invalid(shared.FieldError{Field: "role", Code: shared.FieldInvalidFormat, Message: "is not 5, 15 or 20"}), nil},
+		{"no such membership", alice, stranger.ID, shared.RoleGuest, nil, domain.ErrMemberNotFound, []string{"MemberByID " + stranger.ID.String()}},
+		{"no such workspace", alice, stranger.ID, shared.RoleGuest,
+			func(f *membersFixture) {
+				f.workspaces.memberships[stranger.WorkspaceID] = []domain.Membership{stranger}
+			},
+			domain.ErrMemberNotFound, []string{"MemberByID " + stranger.ID.String(), "LockWorkspace " + stranger.WorkspaceID.String()}},
+		{"deleted while the lock waited", alice, bobInAcme.ID, shared.RoleGuest,
+			func(f *membersFixture) {
+				f.workspaces.onLock = func() { f.workspaces.memberships[acme.ID] = []domain.Membership{aliceInAcme, carolInAcme} }
+			},
+			domain.ErrMemberNotFound, decided[:3]},
+		{"not visible", carol, bobInAcme.ID, shared.RoleGuest, nil, domain.ErrMemberNotFound, lockedMemberCalls(carol, bobInAcme)},
+		{"a member", bob, aliceInAcme.ID, shared.RoleGuest, forbidBob, shared.Forbidden(), lockedMemberCalls(bob, aliceInAcme)},
+		{"a member, of an ended membership", bob, carolInAcme.ID, shared.RoleGuest, forbidBob, shared.Forbidden(), lockedMemberCalls(bob, carolInAcme)},
+		{"a member, of his own", bob, bobInAcme.ID, shared.RoleGuest, forbidBob, shared.Forbidden(), lockedMemberCalls(bob, bobInAcme)},
+		{"an ended membership", alice, carolInAcme.ID, shared.RoleMember, nil, domain.ErrMemberNotFound, lockedMemberCalls(alice, carolInAcme)},
+		{"ended while the lock waited", alice, bobInAcme.ID, shared.RoleGuest,
+			func(f *membersFixture) {
+				f.workspaces.onLock = func() { f.workspaces.memberships[acme.ID][1].IsActive = false }
+			},
+			domain.ErrMemberNotFound, decided},
+		{"his own", alice, aliceInAcme.ID, shared.RoleMember, nil, domain.ErrOwnMembership, lockedMemberCalls(alice, aliceInAcme)},
+		{"the read failed", alice, bobInAcme.ID, shared.RoleGuest, func(f *membersFixture) { f.workspaces.membersErr = failure }, failure,
+			[]string{"MemberByID " + bobInAcme.ID.String()}},
+		{"the lock failed", alice, bobInAcme.ID, shared.RoleGuest, func(f *membersFixture) { f.workspaces.lockErrs = map[string]error{"acme": failure} },
+			failure, decided[:2]},
+		{"the Authorizer failed", alice, bobInAcme.ID, shared.RoleGuest,
+			func(f *membersFixture) { f.auth.errs = map[grantKey]error{{alice.ID, acme.ID}: failure} }, failure, decided},
+	}
+	for _, tt := range tests {
+		uc, f, tx := newUpdateMember()
+		if tt.set != nil {
+			tt.set(f)
+		}
+		got, err := uc.Execute(as(tt.user), tt.id, tt.role)
+		if !errors.Is(err, tt.want) || got != (domain.Member{}) {
+			t.Errorf("%s: Execute() = %+v, %v; want no member and %v", tt.name, got, err, tt.want)
+		}
+		if tt.want == failure && errors.Is(err, domain.ErrMemberNotFound) {
+			t.Errorf("%s: Execute() = %v, which is also workspace.member_not_found", tt.name, err)
+		}
+		wantTx := 1
+		if tt.calls == nil {
+			wantTx = 0
+		}
+		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != wantTx {
+			t.Errorf("%s: calls = %q in %d transactions, want %q in %d", tt.name, f.log.calls, tx.calls, tt.calls, wantTx)
+		}
+	}
+}
+
+// A failed write, a failed read of the profile, and a member without an
+// account each fail the transaction, which the database then rolls back:
+// the answer is the error, never a member.
+func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
+	failure := errors.New("connection reset")
+	for name, set := range map[string]func(f *membersFixture){
+		"the write":            func(f *membersFixture) { f.workspaces.roleErr = failure },
+		"the profile":          func(f *membersFixture) { f.profiles.err = failure },
+		"a member without one": func(f *membersFixture) { f.profiles.profiles = profiles[:2] },
+	} {
+		uc, f, tx := newUpdateMember()
+		set(f)
+		got, err := uc.Execute(as(alice), bobInAcme.ID, shared.RoleGuest)
+		if err == nil || errors.Is(err, domain.ErrMemberNotFound) || got != (domain.Member{}) || tx.calls != 1 {
+			t.Errorf("%s failing: Execute() = %+v, %v in %d transactions; want an error that is not a 404", name, got, err, tx.calls)
+		}
+		if slices.ContainsFunc(f.log.calls, func(c string) bool { return strings.HasSuffix(c, " outside tx") }) {
+			t.Errorf("%s failing: calls %q, want all in the transaction", name, f.log.calls)
+		}
+	}
+	uc, f, _ := newUpdateMember()
+	if _, err := uc.Execute(context.Background(), bobInAcme.ID, shared.RoleGuest); !errors.Is(err, shared.Unauthenticated()) || len(f.log.calls) != 0 {
+		t.Errorf("Execute() without an actor = %v, calls %q; want 401 unauthorized and no call", err, f.log.calls)
+	}
+}
