@@ -26,10 +26,12 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
   // Two workspaces alike, each with the member, a pending and a declined invitation and the member's settings;
-  // only Acme is deleted. Other comes first, and the member is its admin: that role must not count in Acme.
+  // only Acme is deleted. Both exist before either is furnished, and the member is Other's admin and Acme's
+  // member: each answer, role and row must be the workspace's own, whichever row the database reads first.
+  await createWorkspace(api, admin, { name: "Other", slug: other });
+  await createWorkspace(api, admin, { name: "Acme", slug });
   const tokens: string[] = [];
-  const furnish = async (name: string, target: string, memberRole: 15 | 20) => {
-    await createWorkspace(api, admin, { name, slug: target });
+  const furnish = async (target: string, memberRole: 15 | 20) => {
     expect(await inviteAndAccept(api, admin, target, { email: memberEmail, token: member }, memberRole)).toMatchObject({
       slug: target,
       role: memberRole,
@@ -41,9 +43,12 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     ]);
     tokens.push(...created.map((i) => i.token));
     const [, toDecline] = created;
+    if (!toDecline) {
+      throw new Error(`the invitations to ${target} were not created`);
+    }
     const declined = await api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
-      params: { path: { invitation_id: toDecline?.id ?? "" } },
-      body: { token: toDecline?.token ?? "" },
+      params: { path: { invitation_id: toDecline.id } },
+      body: { token: toDecline.token },
       headers: bearer(decliner),
     });
     expect(declined.response.status).toBe(204);
@@ -54,12 +59,13 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
     });
     expect(settings.response.status).toBe(200);
   };
-  await furnish("Other", other, 20);
-  await furnish("Acme", slug, 15);
+  await furnish(other, 20);
+  await furnish(slug, 15);
+  // The member reads Other as its admin, whatever becomes of Acme.
   const readOther = async () => {
     const read = await api.GET("/api/v0/workspaces/{slug}", {
       params: { path: { slug: other } },
-      headers: bearer(admin),
+      headers: bearer(member),
     });
     expect([read.response.status, read.data]).toEqual([
       200,

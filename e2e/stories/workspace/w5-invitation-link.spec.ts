@@ -27,19 +27,24 @@ test("W5 (API): the link shows the workspace and the role without the address; t
 }, testInfo) => {
   const adminEmail = emailFor(testInfo, "admin");
   const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
-  // Another workspace of the admin's comes first: the link and the acceptance must name Acme, not it.
-  await createWorkspace(api, admin, { name: "Other", slug: slugFor(testInfo, "other") });
+  // The admin has another workspace, with an invitation of its own: each link and each acceptance must name its
+  // own workspace, whichever row the database reads first.
+  const other = slugFor(testInfo, "other");
+  await createWorkspace(api, admin, { name: "Other", slug: other });
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin, { name: "Acme", slug });
   const carolEmail = emailFor(testInfo, "carol");
   const carol = (await createPAT(api, (await register(api, carolEmail)).access_token)).token;
   const daveEmail = emailFor(testInfo, "dave");
   const dave = (await createPAT(api, (await register(api, daveEmail)).access_token)).token;
+  const erinEmail = emailFor(testInfo, "erin");
+  const erin = (await register(api, erinEmail)).access_token;
   const [toCarol, toDave] = await invite(api, admin, slug, [
     { email: carolEmail, role: 5 },
     { email: daveEmail, role: 15 },
   ]);
-  if (!toCarol || !toDave) {
+  const [toErin] = await invite(api, admin, other, [{ email: erinEmail, role: 15 }]);
+  if (!toCarol || !toDave || !toErin) {
     throw new Error("the invitations were not created");
   }
 
@@ -61,6 +66,14 @@ test("W5 (API): the link shows the workspace and the role without the address; t
     workspace_logo_url: null,
   });
   expect(JSON.stringify(shown.data)).not.toContain(carolEmail);
+  expect((await view(toErin.id, toErin.token)).data).toEqual({
+    id: toErin.id,
+    role: 15,
+    declined: false,
+    workspace_name: "Other",
+    workspace_slug: other,
+    workspace_logo_url: null,
+  });
   expect((await view(toCarol.id, toCarol.token, bearer(dave))).data).toEqual(shown.data);
   expect((await view(toCarol.id)).response.status).toBe(400);
   const changed = toCarol.token.slice(0, 10) + (toCarol.token[10] === "A" ? "B" : "A") + toCarol.token.slice(11);
@@ -93,6 +106,13 @@ test("W5 (API): the link shows the workspace and the role without the address; t
   expect(accepted.response.status).toBe(200);
   expect(accepted.data).toMatchObject({ slug, role: 5, total_members: 2 });
   await expectMembership(db, slug, carolEmail, { role: 5, is_active: true });
+  // erin accepts hers: the answer is Other.
+  const erinAccepted = await answer(api, erin, "accept", toErin);
+  expect([erinAccepted.response.status, erinAccepted.data]).toEqual([
+    200,
+    expect.objectContaining({ slug: other, role: 15, total_members: 2 }),
+  ]);
+  await expectMembership(db, other, erinEmail, { role: 15, is_active: true });
   // dave declines: no membership; the link shows it declined.
   expect((await answer(api, dave, "decline", toDave)).response.status).toBe(204);
   await expectMembership(db, slug, daveEmail, null);
@@ -105,7 +125,7 @@ test("W5 (API): the link shows the workspace and the role without the address; t
       { email: carolEmail, role: 5, accepted: true, responded: true, deleted: true },
       { email: daveEmail, role: 15, accepted: false, responded: true, deleted: false },
     ],
-    [toCarol.token, toDave.token]
+    [toCarol.token, toDave.token, toErin.token]
   );
 
   // Answered already: carol's is gone, 404; dave's is declined, 409 for either answer.
