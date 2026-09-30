@@ -37,9 +37,10 @@ type PublicProfiles interface {
 // takes it: LockCaller locks the caller's account row FOR NO KEY UPDATE
 // until the transaction ends, then checks under the lock that the account
 // is active and the caller's session or personal access token valid at now;
-// 401 unauthorized otherwise. It is the first lock of a transaction that
-// issues something with the caller's credential: creating invitations (M3
-// design 3.8), so that a password reset committed first leaves none.
+// 401 unauthorized otherwise; a failed read is returned as itself. It is
+// the first lock of a transaction that issues something with the caller's
+// credential: creating invitations (M3 design 3.8), so that a password
+// reset committed first leaves none.
 type CredentialLock interface {
 	LockCaller(ctx context.Context, actor shared.Actor, now time.Time) error
 }

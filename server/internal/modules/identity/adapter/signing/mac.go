@@ -19,10 +19,12 @@ const PurposeRefreshToken = "refresh-token"
 // for no other. It implements identity's app.RefreshTokenMAC and, through
 // identity.Keys, the workspace module's InvitationMAC.
 //
-// The MAC leaves this package, yet no fmt verb or log handler prints its
-// key: Format prints the type alone, and where fmt reaches the MAC without
-// Format, through another value's unexported field, it prints the MAC's
-// fields at most, and the key's is a pointer, which it prints as an address.
+// The MAC leaves this package, yet no fmt verb, log handler or
+// encoding/json shows the key of a MAC or a *MAC, as for Keys: Format
+// prints the type alone, and the key is behind a pointer, so a *MAC held in
+// another value's unexported field shows an address at most. Only a MAC
+// value copied into an unexported field would show the key, under %s or
+// %q; (*Keys).MAC gives *MAC, and no code copies one.
 type MAC struct {
 	key *[32]byte
 }
@@ -37,8 +39,9 @@ func (k *Keys) MAC(purpose string) (*MAC, error) {
 	return &MAC{key: (*[32]byte)(key)}, nil
 }
 
-// Format prints the MAC as its type alone, whatever the verb.
-func (m *MAC) Format(f fmt.State, _ rune) {
+// Format prints the MAC as its type alone, whatever the verb, for a MAC
+// and a *MAC.
+func (MAC) Format(f fmt.State, _ rune) {
 	_, _ = io.WriteString(f, "signing.MAC(redacted)")
 }
 

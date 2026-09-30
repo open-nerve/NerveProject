@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/signing"
 )
 
 // keyPEM is what `openssl genpkey -algorithm ed25519` writes: the key of
@@ -86,10 +88,18 @@ func TestKeysMACRefusesTheRefreshTokensPurpose(t *testing.T) {
 	}
 }
 
-// Neither the keys nor a MAC of theirs shows a key when printed or logged,
-// alone or held in an unexported field the way a module holds its MAC: the
-// signing key's seed and the MAC's key are in no fmt verb's output and no
-// log handler's.
+// Neither the keys nor a MAC of theirs shows a key when printed or logged:
+// the signing key's seed, which begins its private key, and the MAC's key
+// are in no output (outputsOf) of identity's Keys and MAC, or of signing's
+// Keys, MAC and AccessTokens, each as a value and a pointer, alone and held
+// in another value's field, exported and unexported, that value printed as
+// a value and a pointer. A field of type any holds a value as a field of
+// its type would: fmt looks through the interface to it, calls its methods
+// only when the field is exported, and so does encoding/json. The one form
+// left out is the one signing.Keys and signing.MAC name: a value of theirs,
+// not a pointer, in an unexported field, which no code makes. And each
+// Format prints its type alone under every verb, for a value as for a
+// pointer.
 func TestKeysAndTheirMACsShowNoKey(t *testing.T) {
 	keys, err := identity.LoadKeys([]byte(keyPEM), slog.New(slog.DiscardHandler))
 	if err != nil {
@@ -99,35 +109,96 @@ func TestKeysAndTheirMACsShowNoKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	signingKeys, err := signing.ParseKeys([]byte(keyPEM))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signingMAC, err := signingKeys.MAC("workspace-invitation")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tokens := signing.NewAccessTokens(signingKeys)
 	seed := seedOf(t, keyPEM)
 	macKey, err := hkdf.Key(sha256.New, seed, nil, "nerve workspace-invitation mac v1", 32)
 	if err != nil {
 		t.Fatal(err)
 	}
 	secrets := map[string][]byte{"the signing key's seed": seed, "the MAC's key": macKey}
-	holder := struct {
-		mac  identity.MAC
-		keys *identity.Keys
-	}{mac, keys}
-	handlers := map[string]func(io.Writer) slog.Handler{
-		"the text log": func(w io.Writer) slog.Handler { return slog.NewTextHandler(w, nil) },
-		"the JSON log": func(w io.Writer) slog.Handler { return slog.NewJSONHandler(w, nil) },
+	type exported struct{ Held any }
+	type unexported struct{ held any }
+	for name, value := range map[string]any{"identity.Keys": *keys, "*identity.Keys": keys, "signing.Keys": *signingKeys,
+		"*signing.Keys": signingKeys, "signing.MAC": *signingMAC, "*signing.MAC": signingMAC} {
+		want := strings.TrimPrefix(name, "*") + "(redacted)"
+		for _, verb := range verbs {
+			if got := fmt.Sprintf(verb, value); got != want {
+				t.Errorf("%s, %s: %q, want %q", name, verb, got, want)
+			}
+		}
 	}
-	for name, value := range map[string]any{"the MAC": mac, "the keys": keys, "a struct holding them": holder} {
-		outputs := map[string]string{}
-		for _, verb := range []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%d"} {
-			outputs[verb] = fmt.Sprintf(verb, value)
+	forms := map[string]any{}
+	for name, value := range map[string]any{
+		"identity.Keys": *keys, "*identity.Keys": keys, "identity.MAC": mac,
+		"signing.Keys": *signingKeys, "*signing.Keys": signingKeys, "signing.MAC": *signingMAC, "*signing.MAC": signingMAC,
+		"signing.AccessTokens": *tokens, "*signing.AccessTokens": tokens,
+	} {
+		forms[name] = value
+		forms[name+" in an exported field"] = exported{value}
+		forms[name+" in an exported field, the holder by pointer"] = &exported{value}
+		if name == "signing.Keys" || name == "signing.MAC" {
+			continue
 		}
-		for handler, newHandler := range handlers {
-			var logs bytes.Buffer
-			slog.New(newHandler(&logs)).Info("printed", "value", value)
-			outputs[handler] = logs.String()
-		}
-		for how, out := range outputs {
+		forms[name+" in an unexported field"] = unexported{value}
+		forms[name+" in an unexported field, the holder by pointer"] = &unexported{value}
+	}
+	for name, value := range forms {
+		for how, out := range outputsOf(value) {
 			for secret, b := range secrets {
 				if shows(out, b) {
 					t.Errorf("%s, %s: %q shows %s", name, how, out, secret)
 				}
+			}
+		}
+	}
+}
+
+// verbs are the fmt verbs a value is printed with: every one a byte slice
+// has a form of its own under.
+var verbs = []string{"%v", "%+v", "%#v", "%s", "%q", "%x", "%X", "%d"}
+
+// outputsOf is value as each of verbs prints it, as each log handler
+// writes it, as encoding/json encodes it, and in an error that %w wraps
+// (vet refuses %w of a value that is not an error).
+func outputsOf(value any) map[string]string {
+	outputs := map[string]string{}
+	for _, verb := range verbs {
+		outputs[verb] = fmt.Sprintf(verb, value)
+	}
+	for handler, newHandler := range map[string]func(io.Writer) slog.Handler{
+		"the text log": func(w io.Writer) slog.Handler { return slog.NewTextHandler(w, nil) },
+		"the JSON log": func(w io.Writer) slog.Handler { return slog.NewJSONHandler(w, nil) },
+	} {
+		var logs bytes.Buffer
+		slog.New(newHandler(&logs)).Info("printed", "value", value)
+		outputs[handler] = logs.String()
+	}
+	encoded, err := json.Marshal(value)
+	outputs["encoding/json"] = fmt.Sprint(string(encoded), " ", err)
+	outputs["%w"] = fmt.Errorf("wrapped: %w", fmt.Errorf("holding %s", value)).Error()
+	return outputs
+}
+
+// shows finds a secret wherever fmt, a log handler or encoding/json writes
+// it, also when it begins a longer slice: a value holding the seed, and one
+// holding the seed and a byte more, show it in every output.
+func TestShowsFindsASecretInEveryOutput(t *testing.T) {
+	seed := seedOf(t, keyPEM)
+	for name, value := range map[string]any{
+		"the seed":              struct{ Key []byte }{seed},
+		"the seed and one more": struct{ Key []byte }{append(bytes.Clone(seed), 0xff)},
+	} {
+		for how, out := range outputsOf(value) {
+			if !shows(out, seed) {
+				t.Errorf("%s, %s: shows(%q) = false", name, how, out)
 			}
 		}
 	}
@@ -145,17 +216,19 @@ func seedOf(t *testing.T, keyPEM string) []byte {
 }
 
 // shows reports whether out holds b the way fmt or a log handler writes
-// bytes, alone or in a field: as they are, in hex, as numbers (%v, %d), as
-// Go syntax (%#v), quoted (%q) or in base64 (JSON).
+// bytes, alone, in a field, or at the start of a longer slice: as they are,
+// in hex (%x, %X), as numbers (%v, %d), as Go syntax (%#v), quoted (%q) or
+// in base64 (JSON), whose whole groups of three bytes are the same whatever
+// follows them.
 func shows(out string, b []byte) bool {
 	for _, r := range []string{
 		string(b),
 		hex.EncodeToString(b),
 		strings.ToUpper(hex.EncodeToString(b)),
 		strings.Trim(fmt.Sprintf("%d", b), "[]"),
-		strings.TrimPrefix(fmt.Sprintf("%#v", b), "[]byte"),
+		strings.TrimSuffix(strings.TrimPrefix(fmt.Sprintf("%#v", b), "[]byte"), "}"),
 		strings.Trim(fmt.Sprintf("%q", b), `"`),
-		base64.StdEncoding.EncodeToString(b),
+		base64.StdEncoding.EncodeToString(b[:len(b)/3*3]),
 	} {
 		if strings.Contains(out, r) {
 			return true

@@ -13,14 +13,18 @@ import (
 // built (M3 design 6.6 step 1). They never give the key out: identity.New
 // signs the access tokens and tags the refresh tokens with it, and MAC
 // gives another module a MAC of its own purpose. Nor does printing or
-// logging them: Format prints the type alone, and a value holding them in
-// an unexported field prints the signing key's pointer, an address.
+// logging them, by any fmt verb, log handler or encoding/json, as Keys or
+// *Keys, alone or in any field of another value: Format prints the type
+// alone, and where fmt calls no method, through an unexported field, it
+// finds the signing keys behind a pointer and their private key behind
+// another, and shows the public key and addresses at most (signing.Keys).
 type Keys struct {
 	signing *signing.Keys
 }
 
-// Format prints the keys as their type alone, whatever the verb.
-func (k *Keys) Format(f fmt.State, _ rune) {
+// Format prints the keys as their type alone, whatever the verb, for Keys
+// and *Keys.
+func (Keys) Format(f fmt.State, _ rune) {
 	_, _ = io.WriteString(f, "identity.Keys(redacted)")
 }
 

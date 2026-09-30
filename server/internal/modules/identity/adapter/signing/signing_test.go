@@ -49,8 +49,8 @@ func testMAC(t *testing.T, keys *Keys, purpose string) *MAC {
 
 func TestParseKeysReadsAnOpenSSLKey(t *testing.T) {
 	k := testKeys(t)
-	if len(k.private) != 64 || len(k.public) != 32 {
-		t.Errorf("key sizes = %d, %d; want 64, 32", len(k.private), len(k.public))
+	if len(*k.private) != 64 || len(k.public) != 32 {
+		t.Errorf("key sizes = %d, %d; want 64, 32", len(*k.private), len(k.public))
 	}
 	if m := testMAC(t, k, PurposeRefreshToken); bytes.Equal(m.key[:], k.private.Seed()) {
 		t.Error("the MAC key equals the seed; want a key derived from it")
@@ -84,7 +84,7 @@ func TestParseKeysRejects(t *testing.T) {
 
 func TestEphemeralKeysDiffer(t *testing.T) {
 	a, b := EphemeralKeys(), EphemeralKeys()
-	if bytes.Equal(a.private, b.private) || *testMAC(t, a, PurposeRefreshToken).key == *testMAC(t, b, PurposeRefreshToken).key {
+	if bytes.Equal(*a.private, *b.private) || *testMAC(t, a, PurposeRefreshToken).key == *testMAC(t, b, PurposeRefreshToken).key {
 		t.Error("two ephemeral keys are equal")
 	}
 }
@@ -154,7 +154,7 @@ func TestAccessTokenVerifyRejects(t *testing.T) {
 	valid := issue(t, a, now.Add(time.Minute))
 	parts := strings.Split(valid, ".")
 	sign := func(c jwt.Claims) string {
-		s, err := jwt.NewWithClaims(jwt.SigningMethodEdDSA, c).SignedString(keys.private)
+		s, err := jwt.NewWithClaims(jwt.SigningMethodEdDSA, c).SignedString(*keys.private)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -225,9 +225,9 @@ func TestAccessTokenVerifyGivesOnlyFixedReasons(t *testing.T) {
 		{"alg none", b64(`{"alg":"none","typ":"JWT"}`) + "." + parts[1] + ".", errSignatureInvalid},
 		{"alg HS256", sign(jwt.SigningMethodHS256, []byte(keys.public), jwt.MapClaims{"sub": sub, "sid": sid, "exp": exp}), errSignatureInvalid},
 		{"alg unknown", b64(`{"alg":"`+marker+`","typ":"JWT"}`) + "." + parts[1] + "." + parts[2], errSignatureInvalid},
-		{"signed, sub is not a uuid", sign(jwt.SigningMethodEdDSA, keys.private, jwt.MapClaims{"sub": marker, "sid": sid, "exp": exp}), errClaimsInvalid},
-		{"signed, nbf in the future", sign(jwt.SigningMethodEdDSA, keys.private, jwt.MapClaims{"sub": sub, "sid": sid, "exp": exp, "nbf": exp}), errClaimsInvalid},
-		{"signed, no exp", sign(jwt.SigningMethodEdDSA, keys.private, jwt.MapClaims{"sub": sub, "sid": sid}), errClaimsInvalid},
+		{"signed, sub is not a uuid", sign(jwt.SigningMethodEdDSA, *keys.private, jwt.MapClaims{"sub": marker, "sid": sid, "exp": exp}), errClaimsInvalid},
+		{"signed, nbf in the future", sign(jwt.SigningMethodEdDSA, *keys.private, jwt.MapClaims{"sub": sub, "sid": sid, "exp": exp, "nbf": exp}), errClaimsInvalid},
+		{"signed, no exp", sign(jwt.SigningMethodEdDSA, *keys.private, jwt.MapClaims{"sub": sub, "sid": sid}), errClaimsInvalid},
 		{"expired", issue(t, a, now), app.ErrAccessTokenExpired},
 	}
 	for _, tt := range tests {

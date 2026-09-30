@@ -1,7 +1,8 @@
 // Package signing holds the instance's Ed25519 key (M2 design 3.7): it signs
 // the access tokens and, through a key derived from it for each purpose,
 // tags the refresh tokens (M2 design 3.4) and the workspace invitations
-// (M3 design 3.8). The key never leaves this package and is never logged.
+// (M3 design 3.8). The key never leaves this package, and printing or
+// logging Keys or a MAC shows no key (Keys, MAC say exactly how).
 package signing
 
 import (
@@ -10,13 +11,30 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 )
 
 // Keys are the signing key and its public half. Each purpose's MAC key is
 // derived from its seed (MAC).
+//
+// No fmt verb, log handler or encoding/json shows the private key of Keys
+// or *Keys: Format prints the type alone. fmt calls no method on a value it
+// reaches through an unexported field; there it prints a pointer as an
+// address, and under a verb without a pointer form (%s, %q) what the
+// pointer points to, as %v prints it, one level deep. The private key is
+// behind a pointer, so a *Keys held in a field shows an address at most.
+// Only a Keys value copied into an unexported field would show the key,
+// under %s or %q; ParseKeys and EphemeralKeys give *Keys, and no code
+// copies one.
 type Keys struct {
-	private ed25519.PrivateKey
+	private *ed25519.PrivateKey
 	public  ed25519.PublicKey
+}
+
+// Format prints the keys as their type alone, whatever the verb, for Keys
+// and *Keys.
+func (Keys) Format(f fmt.State, _ rune) {
+	_, _ = io.WriteString(f, "signing.Keys(redacted)")
 }
 
 // ParseKeys reads a PKCS#8 PEM Ed25519 private key, the format of
@@ -45,5 +63,5 @@ func EphemeralKeys() *Keys {
 }
 
 func newKeys(private ed25519.PrivateKey) *Keys {
-	return &Keys{private: private, public: private.Public().(ed25519.PublicKey)}
+	return &Keys{private: &private, public: private.Public().(ed25519.PublicKey)}
 }
