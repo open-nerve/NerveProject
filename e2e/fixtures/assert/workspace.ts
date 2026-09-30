@@ -114,3 +114,125 @@ export async function expectPreferences(
   ]);
   return rows[0]?.id ?? null;
 }
+
+/** An invitation as a story expects it in the database. */
+export interface InvitationRow {
+  email: string;
+  role: number;
+  accepted: boolean;
+  responded: boolean;
+  deleted: boolean;
+}
+
+/** The columns of workspace_member_invites (M3 design 4.4): no token among them, the server keeps none (3.8). */
+const invitationColumns = [
+  "accepted",
+  "created_at",
+  "created_by_id",
+  "deleted_at",
+  "email",
+  "id",
+  "responded_at",
+  "role",
+  "updated_at",
+  "updated_by_id",
+  "workspace_id",
+];
+
+/**
+ * W4, W5, W6: the invitations of the workspace of slug, deleted ones too, are want, in any order. The table
+ * holds no token: its rows have the columns of the design, and none holds any of tokens. Every one was made by
+ * the account of inviterEmail; an acceptance deletes the invitation at the moment of the answer.
+ */
+export async function expectInvitations(
+  db: Database,
+  slug: string,
+  inviterEmail: string,
+  want: InvitationRow[],
+  tokens: string[] = []
+): Promise<void> {
+  const rows = await db.query<
+    Record<string, unknown> & { email: string; accepted: boolean; responded_at: Date | null; deleted_at: Date | null }
+  >(
+    `SELECT i.* FROM workspace_member_invites i JOIN workspaces w ON w.id = i.workspace_id
+      WHERE w.slug = $1 ORDER BY i.email COLLATE "C"`,
+    [slug]
+  );
+  for (const row of rows) {
+    expect(Object.keys(row).toSorted(), "the columns of workspace_member_invites").toEqual(invitationColumns);
+    const values = new Set(Object.values(row).map(String));
+    expect(
+      tokens.filter((token) => values.has(token)),
+      `the invitation of ${row.email} holds no token`
+    ).toEqual([]);
+  }
+  expect(
+    rows.map((r) => ({
+      email: r.email,
+      role: r.role,
+      accepted: r.accepted,
+      responded: r.responded_at !== null,
+      deleted: r.deleted_at !== null,
+    })),
+    `the invitations of ${slug}`
+  ).toEqual(want.toSorted((a, b) => (a.email < b.email ? -1 : 1)));
+  const [inviter] = await db.query<{ id: string }>("SELECT id FROM users WHERE email = $1", [inviterEmail]);
+  expect(
+    rows.map((r) => r.created_by_id),
+    `the invitations of ${slug}, made by ${inviterEmail}`
+  ).toEqual(rows.map(() => inviter?.id));
+  const accepted = rows.filter((r) => r.accepted);
+  expect(
+    accepted.map((r) => r.deleted_at?.getTime()),
+    `the accepted invitations of ${slug}, deleted when answered`
+  ).toEqual(accepted.map((r) => r.responded_at?.getTime()));
+}
+
+/**
+ * W5, W6: the membership of the account of email in the workspace of slug: none while want is null, else one,
+ * undeleted, holding want.
+ */
+export async function expectMembership(
+  db: Database,
+  slug: string,
+  email: string,
+  want: { role: number; is_active: boolean } | null
+): Promise<void> {
+  const rows = await db.query(
+    `SELECT m.role, m.is_active FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id JOIN users u ON u.id = m.member_id
+      WHERE w.slug = $1 AND u.email = $2 AND m.deleted_at IS NULL`,
+    [slug, email]
+  );
+  expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
+}
+
+/** The tables whose rows belong to a workspace and are deleted with it (M3 design 4.12); P4 adds the projects'. */
+const workspaceTables = ["workspace_members", "workspace_member_invites", "workspace_user_properties"];
+
+/**
+ * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment, every row
+ * under it that was not deleted before: its memberships, invitations and display settings. Each table has
+ * such a row; none is left undeleted.
+ */
+export async function expectWorkspaceDeleted(db: Database, slug: string, adminEmail: string): Promise<void> {
+  const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string }>(
+    `SELECT w.id, w.deleted_at, w.updated_by_id, (SELECT id FROM users WHERE email = $2) AS admin FROM workspaces w WHERE w.slug = $1`,
+    [slug, adminEmail]
+  );
+  expect(w?.deleted_at, `${slug} deleted`).toBeInstanceOf(Date);
+  expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
+  const at = w?.deleted_at?.getTime() ?? 0;
+  const tables = await Promise.all(
+    workspaceTables.map((table) =>
+      db.query<{ deleted_at: Date | null }>(`SELECT deleted_at FROM ${table} WHERE workspace_id = $1`, [w?.id])
+    )
+  );
+  expect(
+    tables.map((rows, i) => ({
+      table: workspaceTables[i],
+      deletedWithIt: rows.some((r) => r.deleted_at?.getTime() === at),
+      undeletedOrLater: rows.filter((r) => r.deleted_at === null || r.deleted_at.getTime() > at).length,
+    })),
+    `the rows under ${slug}`
+  ).toEqual(workspaceTables.map((table) => ({ table, deletedWithIt: true, undeletedOrLater: 0 })));
+}
