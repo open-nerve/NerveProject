@@ -192,9 +192,10 @@ func TestTheAnswerToABrokenBodyStaysSmall(t *testing.T) {
 }
 
 // 5. Every path or query parameter whose Go type rejects some strings
-// answers a wrong value with 400 that names it (M2 design 3.11, M0-P3
-// handoff 2), before authentication: parameters bind first (3.6), so no
-// token is sent.
+// answers a wrong value with 400 that names it, and every required query
+// parameter answers its absence with 400 required (M2 design 3.11, M0-P3
+// handoff 2, M3 design 9.4), before authentication: parameters bind first
+// (3.6), so no token is sent.
 func TestParametersThatDoNotBindAnswer400(t *testing.T) {
 	contract := apitest.Load(t)
 	base := startApp(t, testConfig(t, unreachableDB, false), fstest.MapFS{})
@@ -215,7 +216,7 @@ func TestParametersThatDoNotBindAnswer400(t *testing.T) {
 				if err := json.Unmarshal(body, &p); err != nil {
 					t.Fatalf("decode %s: %v", body, err)
 				}
-				want := []apitest.FieldProblem{{Field: c.Field, Code: "invalid_format"}}
+				want := []apitest.FieldProblem{{Field: c.Field, Code: c.Code}}
 				if res.StatusCode != http.StatusBadRequest || p.Code != "bad_request" || !slices.Equal(p.Errors, want) {
 					t.Errorf("%s = %d %s, want 400 bad_request with %v", c.Target, res.StatusCode, body, want)
 				}
