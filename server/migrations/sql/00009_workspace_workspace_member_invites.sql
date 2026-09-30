@@ -23,7 +23,7 @@ CREATE TABLE workspace_member_invites (
 -- 一个工作区里一个邮箱至多一份未删除的邀请；已忽略的没有删除，仍占着这个邮箱（3.8）
 CREATE UNIQUE INDEX workspace_member_invites_workspace_id_email_key ON workspace_member_invites (workspace_id, email)
     WHERE deleted_at IS NULL;
--- 注册策略、停用按邮箱查（4.4）
+-- 停用按邮箱删除发给它的邀请（3.9，P6）；注册策略按邀请的 id 读，不用它（4.4）
 CREATE INDEX workspace_member_invites_email_idx ON workspace_member_invites (email) WHERE deleted_at IS NULL;
 -- 物理级联（M4 的 60 天清理）按它找子行（4 节开头）
 CREATE INDEX workspace_member_invites_workspace_id_idx ON workspace_member_invites (workspace_id);

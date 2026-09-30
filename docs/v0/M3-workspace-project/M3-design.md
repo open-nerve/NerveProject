@@ -636,7 +636,7 @@ M3 对 M2 设计 3.13 的两处补充：
 | `responded_at` | `timestamptz` | 照搬；`CONSTRAINT workspace_member_invites_responded_check CHECK (responded_at IS NOT NULL OR NOT accepted)` 新加 |
 | `created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` | 同 4.2 | — |
 
-- **索引**：`workspace_member_invites_workspace_id_email_key ON (workspace_id, email) WHERE deleted_at IS NULL`（照搬；已忽略的邀请没有删除，仍占着这个邮箱，3.8）；`workspace_member_invites_email_idx ON (email) WHERE deleted_at IS NULL`（注册策略、停用按邮箱查）；`workspace_member_invites_workspace_id_idx ON (workspace_id)`（物理级联）。
+- **索引**：`workspace_member_invites_workspace_id_email_key ON (workspace_id, email) WHERE deleted_at IS NULL`（照搬；已忽略的邀请没有删除，仍占着这个邮箱，3.8）；`workspace_member_invites_email_idx ON (email) WHERE deleted_at IS NULL`（停用按邮箱删除发给它的邀请，3.9；注册策略按邀请的 id 读，不按邮箱）；`workspace_member_invites_workspace_id_idx ON (workspace_id)`（物理级联）。
 - **删除的列**：`token`（不存令牌，3.8）；`message`（没有写入方）。
 - spike：`accepted = true` 而 `responded_at` 为空、邮箱含大写，都被 CHECK 拒绝。
 
