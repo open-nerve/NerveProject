@@ -49,8 +49,8 @@ func (m gatedMembers) UpdateMemberRole(ctx context.Context, id uuid.UUID, role s
 // ids of their accounts and memberships.
 type adminRace struct {
 	race
-	bob                  uuid.UUID
-	aliceIn, bobIn, acme uuid.UUID
+	bob            uuid.UUID
+	aliceIn, bobIn uuid.UUID
 }
 
 func newAdminRace(t *testing.T) adminRace {
@@ -69,7 +69,6 @@ func newAdminRace(t *testing.T) adminRace {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r.acme = w.ID
 	for id, user := range map[uuid.UUID]uuid.UUID{r.aliceIn: r.alice, r.bobIn: r.bob} {
 		if err := store.CreateMember(context.Background(), workspaceapp.MemberRow{
 			ID: id, WorkspaceID: w.ID, MemberID: user, Role: shared.RoleAdmin, CreatedBy: r.alice, Now: now,
