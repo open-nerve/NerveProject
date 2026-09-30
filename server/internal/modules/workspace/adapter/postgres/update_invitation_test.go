@@ -225,8 +225,8 @@ func TestUpdateInvitationRole(t *testing.T) {
 
 // DeleteInvitation soft-deletes that invitation only, with the deleter and
 // the time; its address is free again at once. Another invitation of the
-// workspace and one in another workspace stay. A failed write is its
-// error.
+// workspace and one in another workspace stay. A declined invitation is
+// deleted too, still declined, not accepted. A failed write is its error.
 func TestDeleteInvitation(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -249,6 +249,23 @@ func TestDeleteInvitation(t *testing.T) {
 	if got := pendingEmails(t, pool, beta.ID); !slices.Equal(got, []string{"carol@corp.com"}) {
 		t.Errorf("beta's invitations: %q; want carol's", got)
 	}
+	// A declined invitation is deleted all the same (spec 2.9), keeping its
+	// answer: its address is free again too.
+	declined := invite(t, s, acme.ID, "erin@corp.com", shared.RoleMember, alice)
+	exec(t, pool, "UPDATE workspace_member_invites SET responded_at = $1 WHERE id = $2", now, declined.ID)
+	if err := s.DeleteInvitation(context.Background(), declined.ID, bob, later); err != nil {
+		t.Fatalf("DeleteInvitation() of the declined one = %v", err)
+	}
+	var accepted bool
+	var responded, deleted *time.Time
+	if err := pool.QueryRow(context.Background(), "SELECT accepted, responded_at, deleted_at FROM workspace_member_invites WHERE id = $1", declined.ID).
+		Scan(&accepted, &responded, &deleted); err != nil {
+		t.Fatal(err)
+	}
+	if accepted || responded == nil || !responded.Equal(now) || deleted == nil || !deleted.Equal(later) {
+		t.Errorf("the declined one: accepted %v, responded %v, deleted %v; want declined at %v, deleted at %v", accepted, responded, deleted, now, later)
+	}
+	invite(t, s, acme.ID, "erin@corp.com", shared.RoleGuest, alice)
 	invite(t, s, acme.ID, "carol@corp.com", shared.RoleGuest, alice)
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
