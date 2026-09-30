@@ -117,9 +117,10 @@ paths:
         For the workspace's admins. The workspace, its memberships and the
         members' display settings are soft-deleted in one transaction, at the
         same moment; the members' accounts stay. The slug can name a new
-        workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is
-        deleted, or of which the caller is not an active member answers
-        workspace.not_found; a member or a guest, forbidden.
+        workspace at once. Nobody's last_workspace_id is cleared. A
+        workspace that does not exist, is deleted, or of which the caller is
+        not an active member answers workspace.not_found; a member or a
+        guest, forbidden.
       security: [{bearer: []}]
       x-problem-codes: [workspace.not_found, forbidden]
       responses:
