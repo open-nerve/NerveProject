@@ -41,20 +41,10 @@ func WaitForLockWait(t testing.TB, pool *pgxpool.Pool, limit time.Duration) {
 // parent-row locks of M3 design 3.6.
 func WaitForLockWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit time.Duration) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), limit)
-	defer cancel()
-	what := "a row lock of " + table
-	var relation *uint32
-	if err := pool.QueryRow(ctx, "SELECT to_regclass($1)::oid", table).Scan(&relation); err != nil {
-		failPoll(ctx, t, limit, what, err)
-	}
-	if relation == nil {
-		t.Fatalf("pgtest: no table %q", table)
-	}
-	waitFor(ctx, t, pool, limit, what, `
+	waitForOn(t, pool, table, limit, "a row lock of "+table, `
 		SELECT count(DISTINCT a.pid) FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
 		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock'
-			AND l.locktype = 'tuple' AND l.relation = $1`, *relation)
+			AND l.locktype = 'tuple' AND l.relation = $1`)
 }
 
 // WaitForKeyWaitOn returns once a backend connected to pool's database that
@@ -69,14 +59,30 @@ func WaitForLockWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit tim
 // does a wait of a transaction that has not written the table, nor one for
 // a lock of another kind, such as an advisory lock. By a transaction that
 // has written table, it cannot tell a key's wait on table from one on
-// another table, or from the two row waits PostgreSQL makes without a
-// tuple lock (WaitForLockWaitOn): use it where the waiting transaction
-// writes no other table with a unique key and upgrades no shared row lock.
+// another table, or from either of the two row waits PostgreSQL makes
+// without a tuple lock (WaitForLockWaitOn): use it where the waiting
+// transaction writes no other table with a unique key and neither of those
+// two waits can occur, for it upgrades no row lock it shares with another
+// transaction, and none of its foreign keys' checks follows a row's update
+// chain to a version that a live transaction has locked or deleted.
 func WaitForKeyWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit time.Duration) {
+	t.Helper()
+	waitForOn(t, pool, table, limit, "a key of "+table, `
+		SELECT count(*) FROM pg_stat_activity a
+		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock' AND a.wait_event = 'transactionid'
+			AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'relation' AND l.relation = $1
+				AND l.mode = 'RowExclusiveLock' AND l.granted)
+			AND NOT EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'tuple')`)
+}
+
+// waitForOn is waitFor for a probe of table: query counts with $1 the OID
+// of table in pool's database. A database without the table fails the test
+// at once, as a name that can never be waited on; the lookup, like each
+// poll, ends limit after the start.
+func waitForOn(t testing.TB, pool *pgxpool.Pool, table string, limit time.Duration, what, query string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), limit)
 	defer cancel()
-	what := "a key of " + table
 	var relation *uint32
 	if err := pool.QueryRow(ctx, "SELECT to_regclass($1)::oid", table).Scan(&relation); err != nil {
 		failPoll(ctx, t, limit, what, err)
@@ -84,12 +90,7 @@ func WaitForKeyWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit time
 	if relation == nil {
 		t.Fatalf("pgtest: no table %q", table)
 	}
-	waitFor(ctx, t, pool, limit, what, `
-		SELECT count(*) FROM pg_stat_activity a
-		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock' AND a.wait_event = 'transactionid'
-			AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'relation' AND l.relation = $1
-				AND l.mode = 'RowExclusiveLock' AND l.granted)
-			AND NOT EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'tuple')`, *relation)
+	waitFor(ctx, t, pool, limit, what, query, *relation)
 }
 
 // waitFor polls query, a count of the waiting backends, until it is
