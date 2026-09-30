@@ -181,11 +181,13 @@ export async function expectInvitations(
     rows.map((r) => r.created_by_id),
     `the invitations of ${slug}, made by ${inviterEmail}`
   ).toEqual(rows.map(() => inviter?.id));
-  const accepted = rows.filter((r) => r.accepted);
-  expect(
-    accepted.map((r) => r.deleted_at?.getTime()),
-    `the accepted invitations of ${slug}, deleted when answered`
-  ).toEqual(accepted.map((r) => r.responded_at?.getTime()));
+  // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
+  const answeredApart = await db.query<{ email: string }>(
+    `SELECT i.email FROM workspace_member_invites i JOIN workspaces w ON w.id = i.workspace_id
+      WHERE w.slug = $1 AND i.accepted AND i.deleted_at IS DISTINCT FROM i.responded_at`,
+    [slug]
+  );
+  expect(answeredApart, `the accepted invitations of ${slug}, deleted when answered`).toEqual([]);
 }
 
 /**
@@ -221,17 +223,21 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
   );
   expect(w?.deleted_at, `${slug} deleted`).toBeInstanceOf(Date);
   expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
-  const at = w?.deleted_at?.getTime() ?? 0;
+  // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const tables = await Promise.all(
     workspaceTables.map((table) =>
-      db.query<{ deleted_at: Date | null }>(`SELECT deleted_at FROM ${table} WHERE workspace_id = $1`, [w?.id])
+      db.query<{ with_it: boolean | null; undeleted_or_later: boolean }>(
+        `SELECT t.deleted_at = w.deleted_at AS with_it, t.deleted_at IS NULL OR t.deleted_at > w.deleted_at AS undeleted_or_later
+           FROM ${table} t JOIN workspaces w ON w.id = t.workspace_id WHERE w.id = $1`,
+        [w?.id]
+      )
     )
   );
   expect(
     tables.map((rows, i) => ({
       table: workspaceTables[i],
-      deletedWithIt: rows.some((r) => r.deleted_at?.getTime() === at),
-      undeletedOrLater: rows.filter((r) => r.deleted_at === null || r.deleted_at.getTime() > at).length,
+      deletedWithIt: rows.some((r) => r.with_it === true),
+      undeletedOrLater: rows.filter((r) => r.undeleted_or_later).length,
     })),
     `the rows under ${slug}`
   ).toEqual(workspaceTables.map((table) => ({ table, deletedWithIt: true, undeletedOrLater: 0 })));
