@@ -101,7 +101,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 |---|---|---|---|---|---|
 | W1 | 创建工作区 | 新用户完成资料步骤后在新手引导里建工作区（名、slug、规模），再到"邀请成员"一步点跳过，落到工作区首页；已完成引导的用户在 `/create-workspace` 再建一个。slug 已被占用、是保留名、含大写：表单在字段下方提示，不提交。`workspace.creation_enabled = false` 的独立 nerve：两个入口都显示"创建工作区已关闭" | `workspaces` 新增一行：slug 为小写，`created_by_id` 是当前账户；`workspace_members` 新增一行，`role = 20`、`is_active`；`profiles.last_workspace_id` 是新工作区（前端写入，3.14）。没有任何演示数据（3.11） | `POST /api/v0/workspaces`，同一组断言；slug 被占用 409 `workspace.slug_taken`，保留名 422（`slug`，`not_allowed`）；关闭时 403 `workspace.creation_disabled`，数据库不变。`GET /api/v0/workspace-slugs/{slug}` 三种回答（可用、被占用、保留） | P1 / P9 |
 | W2 | 登录后的落点 | 有两个工作区的账户：登录后落到上次的工作区；在 general 页删掉上次的工作区，再登录，落到另一个；在另一个工作区先把一位成员提升为管理员，再离开它，之后登录落到 `/create-workspace`。三次都没有失败的请求 | `profiles.last_workspace_id` 随切换工作区而变（工作区菜单切换一次）；删除、离开之后对应的行按 W3、W7 的断言 | `GET /api/v0/workspaces` 只返回仍是有效成员的工作区，含 `role`、`total_members`、`created_at`：删除之后少一个，离开之后再少一个。落点规则是前端的，接口版本只核对列表 | P5 / P9 |
-| W3 | 工作区设置 | 管理员在 general 页改名、规模、时区，刷新后仍是新值；成员打开同一页，表单不可编辑。管理员在 general 页删除工作区（输入名称确认），落到下一个工作区或 `/create-workspace`。会话切换：另建一个工作区再删除，测试在 `page.route` 里先经 `route.fetch()` 把删除的请求发到 nerve（此时会话未变，它成功），另一个标签页退出并以另一个账户登录之后，才经 `route.fulfill()` 把这个回答交给页面：原标签页不跳转、不提示（7.1、9.6） | `workspaces` 对应列和 `updated_by_id`；删除后工作区及其成员、邀请、显示设置、项目（和项目之下的行）的 `deleted_at` 在同一时刻写入 | `PATCH`、`DELETE /api/v0/workspaces/{slug}`；成员 403；删除之后原成员 `GET` 得到 404 `workspace.not_found`；slug 不能修改（请求体里带 `slug` 是 400）。P4 起断言加上项目的连带 | P3（P4 补连带）/ P9 |
+| W3 | 工作区设置 | 管理员在 general 页改名、规模、时区，刷新后仍是新值；成员打开同一页，表单不可编辑。管理员在 general 页删除工作区（输入名称确认），落到下一个工作区或 `/create-workspace`。会话切换：另建一个工作区再删除，测试在 `page.route` 里先经 `route.fetch()` 把删除的请求发到 nerve（此时会话未变，它成功），另一个标签页退出并以另一个账户登录之后，才经 `route.fulfill()` 把这个回答交给页面：原标签页不跳转、不提示（7.1、9.6） | `workspaces` 对应列和 `updated_by_id`；删除后工作区及其成员、邀请、显示设置、项目（和项目之下的行）的 `deleted_at` 在同一时刻写入 | `PATCH`、`DELETE /api/v0/workspaces/{slug}`；成员 403；删除之后原成员 `GET` 得到 404 `workspace.not_found`；slug 不能修改（请求体里带 `slug` 是 400）。P4a 起断言加上项目的连带 | P3（P4a 补连带）/ P9 |
 | W4 | 邀请成员 | 管理员在成员页邀请两个邮箱（一个成员、一个访客），列表出现两条待接受的邀请；改其中一条的角色；复制链接（剪贴板里是 `/workspace-invitations?invitation_id=…&token=…`）；删除另一条。邀请已是成员的邮箱、重复的邮箱：弹窗在对应行提示。一条被忽略的邀请在列表中显示"已忽略"，再邀请这个邮箱被拒绝，删掉它之后才能再邀请。成员打开同一页：只有成员列表，没有邀请的界面，页面也不请求邀请列表（`watchPage` 没有失败的请求，7.1） | `workspace_member_invites` 新增两行：邮箱已规范化、`role` 正确、`accepted = false`、`responded_at` 为空；表中没有令牌；删除的一行 `deleted_at` 已填 | `POST /api/v0/workspaces/{slug}/invitations`（批量）、`PATCH`/`DELETE /api/v0/workspace-invitations/{id}`，同一组断言；成员、访客 403（决策点 4）；已是成员 422（`invitations[i].email`，`not_allowed`），重复或已被忽略 422（`duplicate`） | P3 / P9 |
 | W5 | 凭链接接受或忽略邀请 | 已登录、邮箱一致的账户打开链接，看到工作区名和角色（看不到被邀请的邮箱，决策点 1），点"接受"，进入工作区。另一条邀请点"忽略"，页面说明已忽略。用另一个账户打开链接，点"接受"：得到 403 之后，页面说明"这份邀请发给了另一个邮箱"，不说是哪一个，接受和忽略按钮不再可用，提供退出登录（打开时页面无从知道邮箱是否一致：查看不含邮箱）。令牌被改动一位：页面说明链接无效 | 接受：`workspace_members` 新增一行，角色等于邀请的角色；邀请 `accepted = true`、`responded_at` 已填、`deleted_at` 已填。忽略：`accepted = false`、`responded_at` 已填、未删除。邮箱不一致：数据库不变 | `POST /api/v0/workspace-invitations/{id}/accept`、`/decline`，同一组断言；邮箱不一致 403 `workspace.invitation_email_mismatch`，回答里没有被邀请的邮箱；令牌不对、邀请不存在 404 `workspace.invitation_not_found`（两者相同）；已回应 409 `workspace.invitation_responded`。公开的 `GET /api/v0/workspace-invitations/{id}?token=…` 不带令牌是 400，回答里没有 `email` | P3 / P9 |
 | W6 | 注册关闭时凭邀请注册（决策点 1） | 注册关闭的独立 nerve（管理员经这个 nerve 建工作区、发邀请，3.8）：未登录打开邀请链接，页面提供"注册以接受"；注册页的标题是"加入 <工作区>"；注册后回到邀请页，接受，完成新手引导的资料一步就进入工作区。不带邀请直接打开注册页：显示"注册已关闭" | 新账户和资料照 A1；接受之后同 W5 | `POST /api/v0/auth/register` 带 `invitation {id, token}`：邮箱与邀请一致时 201；不带、令牌不对、邮箱不一致、邀请已回应或已删除时都是 403 `identity.signup_disabled`（同一句，不说明是哪一种） | P3 / P9 |
@@ -111,14 +111,14 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | W10 | 管理员建工作区（3.11） | — | `nerve workspaces create --slug acme --name Acme --admin-email a@…`：同 W1 的 `workspaces`、`workspace_members`；输出一行。slug 被占用、邮箱没有账户、账户已停用：退出码 1，输出说明，数据库不变；`workspace.creation_enabled = false` 时命令照常可用 | 用接口核对：这个账户 `GET /api/v0/workspaces` 能看到它，`role = 20` | P1 / — |
 | W11 | 访客的边界（权限矩阵的页面抽样，9.2） | 访客登录：侧边栏只列出他加入的项目；打开工作区设置的成员页，看到"没有权限"；成员列表里的邮箱都不显示，他自己的也不显示；打开项目的状态设置，看到"没有权限" | 数据库不变 | 矩阵的全部格子在 9.2 由后端测试逐格覆盖；这个故事只用 PAT 抽样四格：访客 `GET` 邀请列表 403、`POST /states` 403、`GET` 私密项目 404、成员列表中 `member.email` 为 `null` | P7 / P11 |
 | W12 | 恢复被移出的成员（3.11） | — | 管理员移出成员 B（B 是工作区管理员，在一个项目里是项目管理员），再运行 `nerve workspaces reactivate-member --slug acme --email b@…`：`workspace_members` 那一行 `is_active` 恢复为真、角色不变；输出说明 B 的 1 个项目成员关系仍无效。B 的账户已停用时，输出另外提示 `nerve users activate`。已是有效成员：输出说明，退出码 0。工作区不存在、账户不存在、不是这个工作区的成员：退出码 1，数据库不变 | B 用 PAT `POST /api/v0/projects/{id}/join`：原来的项目成员行恢复，角色是 20（原来那一行的 20 与他的工作区角色 20 中较低的，3.5）。**旧邀请**（Codex S2）：B 被移出期间 A 给 B 发了一份访客邀请；恢复、加入项目之后 A 离开，B 成为唯一的管理员；B 接受那份旧邀请：200，回答的 `role` 是 20，邀请 `accepted = true` 并已软删除，`workspace_members.role` 仍是 20，项目角色仍是 20（3.8 规则：邀请从不改变有效的成员关系） | P5 / — |
-| P1 | 创建项目 | 成员在项目列表页建项目（名、标识、说明、公开、负责人、图标）；建好后项目出现在列表和侧边栏。标识已被占用、含非法字符：表单提示 | `projects` 新增一行：`identifier` 为大写，`timezone` 等于工作区的时区，`network = 2`，`last_issue_sequence = 0`；`project_members` 新增创建者（`role = 20`）和负责人（`role = 20`，与创建者不同时）；`project_user_properties` 为这两人各一行（`sort_order` 按 3.18）；`states` 新增 6 行，名称、颜色、`sequence`、`group` 照 Plane，`Backlog` 是默认 | `POST /api/v0/workspaces/{slug}/projects`，同一组断言；标识被占用 409 `project.identifier_taken`，名称被占用 409 `project.name_taken`，名称含 `-`、`.` 等 422（`name`，`not_allowed`）；访客 403；负责人是访客或不是成员 422（`project_lead_id`，`not_allowed`）。`GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}` | P4 / P10 |
-| P2 | 项目列表与可见性 | 管理员看到全部项目（含私密）；成员看到自己加入的和公开的；访客只看到自己加入的。成员直接打开一个没加入的公开项目的地址：显示"加入项目"，页面只请求项目详情，不请求它的显示设置、标签、成员、状态（`watchPage` 没有失败的请求，7.1）；点"加入"之后进入项目 | 加入：`project_members` 新增一行，角色等于他的工作区角色；`project_user_properties` 新增一行，`sort_order = 65535`（3.18） | `GET /api/v0/workspaces/{slug}/projects`（三种角色三组结果，默认不含已归档）；`POST /api/v0/projects/{id}/join`；成员加入私密项目、访客加入公开项目都是 404 `project.not_found` | P4 / P10 |
-| P3 | 项目设置 | 项目管理员在 general 页改名、标识、说明、可见性、时区、图标；在 features 页开关迭代、模块、视图、收集箱；在 members 页设负责人和默认负责人（从项目中不是访客的成员里选），打开"访客可见全部"；在 automations 页设自动归档 3 个月。项目成员打开 general 页，表单不可编辑 | `projects` 对应列、`updated_by_id` | `PATCH /api/v0/projects/{id}`；项目成员 403；`archive_in = 13` 422；负责人、默认负责人是项目访客或不是项目成员 422（`project_lead_id`、`default_assignee_id`，`not_allowed`） | P4 / P10 |
-| P4 | 归档与恢复 | 管理员在设置页归档项目：它从侧边栏消失，出现在"已归档的项目"；在那里恢复，再归档，然后删除 | 归档：`archived_at` 已填；恢复：为空；删除：项目及其成员、显示设置、状态、标签的 `deleted_at` 在同一时刻写入 | `POST /archive`、`/unarchive`、`DELETE /api/v0/projects/{id}`；已归档的项目 `PATCH` 409 `project.archived`；`GET /projects?archived=true` 只返回已归档的 | P4 / P10 |
+| P1 | 创建项目 | 成员在项目列表页建项目（名、标识、说明、公开、负责人、图标）；建好后项目出现在列表和侧边栏。标识已被占用、含非法字符：表单提示 | `projects` 新增一行：`identifier` 为大写，`timezone` 等于工作区的时区，`network = 2`，`last_issue_sequence = 0`；`project_members` 新增创建者（`role = 20`）和负责人（`role = 20`，与创建者不同时）；`project_user_properties` 为这两人各一行（`sort_order` 按 3.18）；`states` 新增 6 行，名称、颜色、`sequence`、`group` 照 Plane，`Backlog` 是默认 | `POST /api/v0/workspaces/{slug}/projects`，同一组断言；标识被占用 409 `project.identifier_taken`，名称被占用 409 `project.name_taken`，名称含 `-`、`.` 等 422（`name`，`not_allowed`）；访客 403；负责人是访客或不是成员 422（`project_lead_id`，`not_allowed`）。`GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}` | P4a / P10 |
+| P2 | 项目列表与可见性 | 管理员看到全部项目（含私密）；成员看到自己加入的和公开的；访客只看到自己加入的。成员直接打开一个没加入的公开项目的地址：显示"加入项目"，页面只请求项目详情，不请求它的显示设置、标签、成员、状态（`watchPage` 没有失败的请求，7.1）；点"加入"之后进入项目 | 加入：`project_members` 新增一行，角色等于他的工作区角色；`project_user_properties` 新增一行，`sort_order = 65535`（3.18） | `GET /api/v0/workspaces/{slug}/projects`（三种角色三组结果，默认不含已归档）；`POST /api/v0/projects/{id}/join`；成员加入私密项目、访客加入公开项目都是 404 `project.not_found` | P4b / P10 |
+| P3 | 项目设置 | 项目管理员在 general 页改名、标识、说明、可见性、时区、图标；在 features 页开关迭代、模块、视图、收集箱；在 members 页设负责人和默认负责人（从项目中不是访客的成员里选），打开"访客可见全部"；在 automations 页设自动归档 3 个月。项目成员打开 general 页，表单不可编辑 | `projects` 对应列、`updated_by_id` | `PATCH /api/v0/projects/{id}`；项目成员 403；`archive_in = 13` 422；负责人、默认负责人是项目访客或不是项目成员 422（`project_lead_id`、`default_assignee_id`，`not_allowed`） | P4b / P10 |
+| P4 | 归档与恢复 | 管理员在设置页归档项目：它从侧边栏消失，出现在"已归档的项目"；在那里恢复，再归档，然后删除 | 归档：`archived_at` 已填；恢复：为空；删除：项目及其成员、显示设置、状态、标签的 `deleted_at` 在同一时刻写入 | `POST /archive`、`/unarchive`、`DELETE /api/v0/projects/{id}`；已归档的项目 `PATCH` 409 `project.archived`；`GET /projects?archived=true` 只返回已归档的 | P4b / P10 |
 | P5 | 项目成员 | 管理员从工作区成员中添加两人（一个成员、一个访客），把成员改为访客，移出访客。成员点"离开项目"：先等接口成功，再回到项目列表（M1-P4 交接）。唯一的管理员离开：提示 | 添加：`project_members`、`project_user_properties` 各新增两行；改角色；移出：`is_active = false`；离开同 | `POST /api/v0/projects/{id}/members`（批量）、`PATCH`/`DELETE /api/v0/project-members/{project_member_id}`、`POST /leave`；添加不是工作区成员的人、把工作区访客加为成员 422；工作区管理员加为管理员以外的角色 422；项目成员改别人的角色 403；项目管理员（不是工作区管理员）改另一位管理员的角色 403 `project.role_too_high`；唯一管理员离开 409 `project.sole_admin`。被移出的项目管理员（工作区成员）`POST /join` 公开项目：恢复原来那一行，角色是 15（原来那一行的 20 以他现在的工作区角色 15 为上限，3.5） | P5 / P10 |
 | P6 | 状态 | 管理员在状态设置里新建"Review"（进行中组），改颜色，拖到"In Progress"之前，设为默认；删除"In Progress"（进行中组还有"Review"，成功）。"Review"（默认）和"Backlog"（积压组唯一的状态）的删除按钮不可用，与 Plane 的页面相同 | `states` 对应列；新建的 `sequence` 等于非分诊状态的最大值加 15000（默认的 6 个之后是 70000）；拖动改 `sequence`；设为默认之后恰好一行 `default`；删除：`deleted_at` | `GET`/`POST /api/v0/projects/{id}/states`、`PATCH`/`DELETE /api/v0/states/{id}`、`POST /mark-default`；删除默认状态 409 `project.state_default`；删除一组中唯一的状态、把它改到别的组 409 `project.state_last_in_group`；`group = triage` 422；项目成员修改 403；已归档的项目 `GET /states` 返回空列表；`GET /api/v0/workspaces/{slug}/states` 不含分诊状态和已归档项目的状态 | P7 / P11 |
 | P7 | 标签 | 管理员建标签"Bug""Feature"，把"UI"拖进"Bug"之下，改名，调顺序，删除"Bug"（其下的"UI"一起删除）。建"bug"（大小写不同）：提示已存在 | `labels`：`parent_id`、`sort_order`；删除时父子两行的 `deleted_at` 在同一时刻写入 | `GET`/`POST /api/v0/projects/{id}/labels`、`PATCH`/`DELETE /api/v0/labels/{id}`；同名（不区分大小写）409 `project.label_name_taken`；三层、父标签在别的项目、自己做自己的父标签 422（`parent_id`，`not_allowed`） | P7 / P11 |
-| P8 | 项目的个人显示设置 | 在项目页头的标签页导航里把"模块"设为默认标签页、隐藏"视图"；在侧边栏把第三个项目拖到最前。刷新后仍生效 | `project_user_properties.preferences`、`sort_order` | `GET`/`PATCH /api/v0/me/projects/{id}/preferences`；未知的标签页 422 | P4 / P10 |
+| P8 | 项目的个人显示设置 | 在项目页头的标签页导航里把"模块"设为默认标签页、隐藏"视图"；在侧边栏把第三个项目拖到最前。刷新后仍生效 | `project_user_properties.preferences`、`sort_order` | `GET`/`PATCH /api/v0/me/projects/{id}/preferences`；未知的标签页 422 | P4b / P10 |
 | P9 | 访客看别人的个人主页（决策点 3） | 负责人裁定 A：访客打开别的成员的个人主页，看到用户卡片，工作项区域显示"没有权限"，不请求工作项列表 | 数据库不变 | 卡片的数据来自成员列表（W11 的接口版本已覆盖）；工作项列表的接口在 M4，由 M4 按矩阵的这一格测试（13.2） | — / P11 |
 
 **冒烟故事的更新**：
@@ -169,8 +169,9 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
   - `project` 问 `workspace`：按 slug 取工作区（目录），锁住若干人的工作区成员行并取回有效角色（约定三，3.6）。
   - `workspace` 让 `project` 做连带：端口 `ProjectCascade`，由 `project/app` 的用例实现，三个方法：
     - `DeleteWorkspaceProjects(ctx, workspaceID, by, now) error`：软删除这个工作区的项目及其下的行（项目 → 项目成员 → 项目显示设置 → 状态 → 标签，3.6 的取锁表），删除者 `by` 与时刻 `now` 由工作区的连带传入，与工作区一侧的每一步相同；
-    - `EndMemberships(ctx, workspaceIDs, userID, now) error`：在调用时列举他在这些工作区里有效的项目成员关系（不接收事先列好的项目，3.6 约定六），锁住那些项目、查唯一管理员（可能拒绝 `project.sole_admin`，3.7）、停用他的项目成员关系。移出、离开、停用账户都用它；
-    - `DemoteToGuest(ctx, workspaceID, userID, now)`：把他在这个工作区的项目角色都改为访客（Plane `views/workspace/member.py:87-89`，含已离开的项目）。
+    - `EndMemberships(ctx, workspaceIDs, userID, by, now) error`：在调用时列举他在这些工作区里有效的项目成员关系（不接收事先列好的项目，3.6 约定六），锁住那些项目、查唯一管理员（可能拒绝 `project.sole_admin`，3.7）、停用他的项目成员关系。移出、离开、停用账户都用它；`by` 是移出他的管理员、离开的本人、被停用的账户；
+    - `DemoteToGuest(ctx, workspaceID, userID, by, now) error`：把他在这个工作区的项目角色都改为访客（Plane `views/workspace/member.py:87-89`，含已离开的项目）；`by` 是改他角色的管理员（`updateWorkspaceMember`），或接受邀请的本人（接受恢复为访客时，3.8）。
+    - 三个方法都把 `by` 写进它们改的行的 `updated_by_id`、把 `now` 写进审计时间，与 M3 的其余写入相同；失败时原样返回错误，调用方的整个事务随之回滚。
   - `workspace` 问 `project`：他在这个工作区还有几个无效的项目成员关系（`ProjectMembershipCounts`，只读，`reactivate-member` 的提示）。
   - `workspace` 问 `identity`：按 id 或邮箱锁住账户行、取回它的状态（`Accounts`：是否存在、是否有效、邮箱），由用例决定怎样处理停用的账户；按 id 批量读公开资料，不加锁，停用的账户也返回（`MemberProfiles`：成员列表，以及事务中途要读的邮箱，3.6 约定一）。
   - 全部端口列在 6.5。
@@ -219,6 +220,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 - **改角色**（`:205-287`）：只有项目管理员，或同时是工作区管理员的项目成员（Plane 先拒绝不是管理员的人，`:234-238`："You do not have permission to update roles"）。然后，不是工作区管理员时：不能改自己的角色，不能改角色不低于自己的人，不能给出不低于自己的角色。所以项目管理员不能提拔别人为管理员、不能改另一位管理员，这两件只有工作区管理员能做。目标是工作区访客时，项目角色不能高于访客。
 - **移出**（`:290-321`，只许项目管理员）：不能移出自己（请用"离开"）；不能移出项目角色比自己高的人（这里 Plane 不给工作区管理员例外，照搬）。
 - **加入项目**（`views/project/invite.py:131-189`）：工作区的管理员和成员可以加入公开项目，私密项目只有工作区管理员能加入；新的成员关系的角色等于他的工作区角色；以前离开过的恢复那一行，角色取**原来那一行的角色与他现在的工作区角色中较低的一个**（`min`）。已是有效成员时什么都不做，返回项目。
+  - **检查的顺序**：用例按集合要求工作区角色是成员或管理员（`project.join` 的规则只要"看得到"，6.4），这一检查在"已是有效成员"之前：是项目成员的工作区访客加入得到 403（9.2 的 PG 一格）。反过来的顺序下这个检查挡不住任何人：看得到项目的工作区访客都已是它的有效成员。
   - Plane 恢复时只改 `is_active`，保留旧行的角色；新行取工作区角色（`views/project/invite.py:157-174`）。一位被移出的项目管理员只要还是工作区成员，就能自己加入公开项目、拿回管理员。
   - Nerve 以他现在的工作区角色为上限（3.6 约定六"恢复不比新授予给得更多，也不比原来那一行更多"）：被移出的项目管理员（原来 20）现在是工作区成员（15），回来是 15；被项目管理员降为访客（5，"改角色"一条）的工作区成员离开再加入，回来仍是 5，不能靠离开再加入给自己升级。前一半是 Nerve 加的上限，后一半与 Plane 相同；登记差异。
   - 第三稿取"他现在的工作区角色"，只做到前一半：被降为访客的人离开再加入就回到 15（复核 I1，spike 17）。
@@ -368,7 +370,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
     - 为什么：`reactivate-member`（3.11）和改邮箱都能留下"有效成员加一份发给他的待接受邀请"；上一条让这份邀请在他有效时无害，可他一旦被移出，旧链接就能让他自己回来（复核 spike 9d：B 以访客恢复，没有管理员的任何新动作）。只在文档里提醒管理员删除邀请，缺口仍在；在成员关系结束的地方删掉，缺口从根上关闭。
     - 已忽略的邀请不删：它不能再被接受（409），留在列表里是管理员看得到的记录。
     - Plane 移出、离开都不动邀请，登记差异。
-  - **恢复以前的成员关系**：他在这个工作区有无效的成员行时，接受恢复那一行（`is_active`），角色改为邀请的角色；邀请的角色是访客时，同一个事务里 `DemoteToGuest`（他在这个工作区的项目成员行，含无效的，都改为访客，P4 起）。
+  - **恢复以前的成员关系**：他在这个工作区有无效的成员行时，接受恢复那一行（`is_active`），角色改为邀请的角色；邀请的角色是访客时，同一个事务里 `DemoteToGuest`（他在这个工作区的项目成员行，含无效的，都改为访客，P4a 起）。
     - 为什么可以按邀请定角色：他原来不是有效成员，不在管理员的人数里，任何角色都不会减少管理员；他的项目成员关系仍无效，以后经添加、加入恢复时的角色按 3.6 约定六另定。
     - 访客时的 `DemoteToGuest` 让"工作区访客的项目角色都是访客"对无效的行也成立。它是承重的：加入恢复以前的项目行时角色以原来那一行为上限（3.5），没有这一步，他被改回成员之后加入，会带回做访客之前的高角色。
   - 没有成员行时新建。邀请记 `accepted = true`、`responded_at`，并软删除（Plane 删除它，`:208`）。
@@ -555,7 +557,8 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 | P3 | 总体设计 | 1.1 | 邀请"在系统内接受"改为"凭邀请链接接受，由工作区管理员复制链接交给对方；只有工作区管理员发出邀请"（决策点 2、4） |
 | P3 | 总体设计 | 1.1（登录方式） | "被邀请的邮箱始终可以注册"改为"注册关闭时，持有效邀请链接、且注册邮箱与邀请一致的人仍可注册；公开的查看不显示被邀请的邮箱"（决策点 1） |
 | P3 | 差异清单 | 二·按表、四 | `workspace_member_invites` 逐列（4.4）；4.11 中标 P3 的行（邀请的各行，含"接受不改变有效的成员关系"） |
-| P4 | 差异清单 | 二·按表、四 | `projects`、`project_members`、`project_user_properties`、`states` 逐列（4.6–4.9），`projects` 的计数列定名为 `last_issue_sequence`；4.11 中标 P4 的行 |
+| P4a | 差异清单 | 二·按表、四 | `projects`、`project_members`、`project_user_properties`、`states` 逐列（4.6–4.9），`projects` 的计数列定名为 `last_issue_sequence`；4.11 中标 P4a 的行（含标着"P4a"的一半的行） |
+| P4b | 差异清单 | 四 | 4.11 中标 P4b 的行（含标着"P4b"的一半的行） |
 | P5 | 差异清单 | 四 | 4.11 中标 P5 的行（唯一管理员的三处修正、恢复成员的命令、移出和离开删除发给他的待接受邀请） |
 | P6 | 差异清单 | 四 | "停用账户"一行（3.9） |
 | P7 | 总体设计 | 5.3 | "标签名在工作区内唯一"改为"标签名在项目内唯一（不分大小写）；没有工作区级标签"（3.16） |
@@ -587,14 +590,14 @@ M3 对 M2 设计 3.13 的两处补充：
 | `00007_workspace_workspace_members.sql` | `workspace_members` | P1 |
 | `00008_workspace_workspace_user_properties.sql` | `workspace_user_properties` | P2 |
 | `00009_workspace_workspace_member_invites.sql` | `workspace_member_invites` | P3 |
-| `00010_project_projects.sql` | `projects` | P4 |
-| `00011_project_project_members.sql` | `project_members` | P4 |
-| `00012_project_project_user_properties.sql` | `project_user_properties` | P4 |
-| `00013_project_states.sql` | `states` | P4 |
+| `00010_project_projects.sql` | `projects` | P4a |
+| `00011_project_project_members.sql` | `project_members` | P4a |
+| `00012_project_project_user_properties.sql` | `project_user_properties` | P4a |
+| `00013_project_states.sql` | `states` | P4a |
 | `00014_project_labels.sql` | `labels` | P7 |
 
-- `server/sqlc.yaml` 加 `workspace`（P1）、`project`（P4）两个条目，`schema:` 各列本模块的迁移（M2 设计 3.14）。`access` 没有表，没有条目。
-- 删除工作区的连带随表加入：P2 连带成员和显示设置，P3 加上邀请，P4 加上项目（经 `ProjectCascade`），P7 加上标签；降为访客的项目连带在 P4 随项目加入。
+- `server/sqlc.yaml` 加 `workspace`（P1）、`project`（P4a）两个条目，`schema:` 各列本模块的迁移（M2 设计 3.14）。`access` 没有表，没有条目。
+- 删除工作区的连带随表加入：P2 连带成员和显示设置，P3 加上邀请，P4a 加上项目（经 `ProjectCascade`），P7 加上标签；降为访客的项目连带在 P4a 随项目加入。
 - 每个建表的 Phase 同时把新表加进 `deploy/runtime-grants.sql`（M2 设计 6.1）。
 - **`TestSQLCSchemaScope` 的补充**（M2 交接第 8 节第 2 件，P1）：所有者规则现在只用正则认 `CREATE TABLE` 和 `ALTER TABLE`（`server/internal/archtest/sqlc_test.go`）。M3 是第一个有跨模块外键的 M，补上四种写法，每种一个反例，规则漏掉时测试失败：带引号的标识符（`ALTER TABLE "users"`）；别的模块的表上的 `CREATE [UNIQUE] INDEX … ON users`；`CREATE TRIGGER … ON users`；`DROP TABLE users`。`REFERENCES users` 仍然允许（M2 的 spike：跨模块外键照写，跨模块的读取写不出来）。
 
@@ -691,7 +694,7 @@ M3 对 M2 设计 3.13 的两处补充：
       ELSE false END)
   ELSE false END)
   ```
-  - 第三稿 spike（Postgres 18.6）：`{}`、只有 `emoji`、只有 `icon`、三个键都有的值通过；Codex S5 的 `{"unexpected": true}`、`{"in_use": 17, "emoji": []}`，以及 `{"in_use": "other"}`、`{"emoji": {"value": 1}}`、`{"emoji": "x"}`、`{"icon": {"shape": "round"}}`、`{"icon": {"color": null}}`、`[]`、`"x"`、`null` 都得到 `check_violation`（23514）。这些值在 P4 逐个变成仓储测试（9.3）。
+  - 第三稿 spike（Postgres 18.6）：`{}`、只有 `emoji`、只有 `icon`、三个键都有的值通过；Codex S5 的 `{"unexpected": true}`、`{"in_use": 17, "emoji": []}`，以及 `{"in_use": "other"}`、`{"emoji": {"value": 1}}`、`{"emoji": "x"}`、`{"icon": {"shape": "round"}}`、`{"icon": {"color": null}}`、`[]`、`"x"`、`null` 都得到 `check_violation`（23514）。这些值在 P4a 逐个变成仓储测试（9.3）。
   - 嵌套的 `->` 要加括号：`-` 的优先级高于 `->`，写成 `logo_props -> 'emoji' - array[…]` 时先算 `'emoji' - array[…]`，报 JSON 语法错误。
   - 第二稿只查对象类型，把内部的形状交给接口（Codex M-5）。接口的结构是封闭的，所以不是能经接口写进坏数据的漏洞，但它是 M2 约定没有登记的例外；本稿照约定写全。
 - **索引**：`projects_workspace_id_identifier_key ON (workspace_id, identifier) WHERE deleted_at IS NULL`；`projects_workspace_id_name_key ON (workspace_id, name) WHERE deleted_at IS NULL`（照搬；按工作区列出项目也用它）；`projects_workspace_id_idx ON (workspace_id)`（物理级联）。
@@ -764,27 +767,27 @@ M3 对 M2 设计 3.13 的两处补充：
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建 | `nerve workspaces create --admin-email` 指定管理员（3.11） | P1 |
 | 集合型的列表 | —（Plane 也一次返回全部） | 一次返回全部，`{data}` 封套；关联字段带 `_id`（差异清单第三节，3.12、5.2） | P1 |
 | 工作区的显示设置 | `GET` 时 `get_or_create` | `GET` 不写库，没有行时返回默认值；第一次修改时建（3.18） | P2 |
-| 删除工作区 | 清掉别人的 `last_workspace_id`；连带软删除由 Celery 异步完成 | 不清（落点规则让它无害）；连带软删除在同一个事务里（3.14，总体设计 5.5） | P2（P3、P4、P7 补全连带） |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；连带软删除由 Celery 异步完成 | 不清（落点规则让它无害）；连带软删除在同一个事务里（3.14，总体设计 5.5） | P2（P3、P4a、P7 补全连带） |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（决策点 4）；邀请的角色不高于邀请人（3.8） | P3 |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时有邀请的邮箱就能注册 | 由签名密钥派生的 MAC，不存库；查看要令牌、不返回邮箱；注册要有效令牌且邮箱一致（3.8、决策点 1） | P3 |
 | 重复的邀请 | 静默忽略 | 422 `duplicate`（3.8） | P3 |
 | 接受邀请之后 | 服务端写 `last_workspace_id` | 前端写（3.14） | P3 |
-| 接受邀请时已有成员行 | 不分有效还是已离开，都把角色改为邀请的角色（`views/workspace/invite.py:188-195`） | 已是有效成员：只消费邀请，成员关系和角色不变；以前的成员行：恢复，角色取邀请的，访客时连带项目角色（3.8） | P3（项目的连带 P4） |
-| 加入项目时恢复以前的成员行 | 只改 `is_active`，保留旧的角色（`views/project/invite.py:157-174`）：被移出的项目管理员自己加入就拿回管理员 | 角色取 `min(原来那一行的角色, 他现在的工作区角色)`：不比新加入给得更多（Nerve 加的上限，被移出的项目管理员回来是他的工作区角色），也不比原来那一行更多（与 Plane 相同，被降为访客的人离开再加入仍是访客）（3.5） | P4 |
-| 项目负责人、默认负责人 | `CASCADE`；负责人可以是任何账户 | `SET NULL`；创建时是工作区的有效管理员或成员，修改时是项目中不是访客的有效成员（3.15、3.19） | P4 |
-| 看得到而不是成员时取项目 | 409（公开）或 403（私密） | 200，`member_role` 为 `null`（3.19） | P4 |
-| 工作区访客取没加入的公开项目 | 409 | 404：看不到（3.19） | P4 |
-| 已归档的项目 | 取单个 404；列表与未归档的混在一起 | 取单个照常返回；列表默认不含，`?archived=true` 只含（3.19） | P4 |
-| 修改、删除项目 | 不是项目成员的工作区管理员也能 | 项目级规则（3.4） | P4 |
-| 归档、恢复项目 | 项目管理员和成员 | 项目管理员（3.4） | P4 |
-| 项目标识 | 最多 12 个字符，只禁一组符号 | 1–10 个，只能是大写字母、数字和 `ÇŞĞİÖÜ`（3.19） | P4 |
-| 添加已是有效成员的人为项目成员 | 顺手改他的角色 | 422 `duplicate`（3.5） | P4 |
+| 接受邀请时已有成员行 | 不分有效还是已离开，都把角色改为邀请的角色（`views/workspace/invite.py:188-195`） | 已是有效成员：只消费邀请，成员关系和角色不变；以前的成员行：恢复，角色取邀请的，访客时连带项目角色（3.8） | P3（项目的连带 P4a） |
+| 加入项目时恢复以前的成员行 | 只改 `is_active`，保留旧的角色（`views/project/invite.py:157-174`）：被移出的项目管理员自己加入就拿回管理员 | 角色取 `min(原来那一行的角色, 他现在的工作区角色)`：不比新加入给得更多（Nerve 加的上限，被移出的项目管理员回来是他的工作区角色），也不比原来那一行更多（与 Plane 相同，被降为访客的人离开再加入仍是访客）（3.5） | P4b |
+| 项目负责人、默认负责人 | `CASCADE`；负责人可以是任何账户 | `SET NULL`；创建时是工作区的有效管理员或成员，修改时是项目中不是访客的有效成员（3.15、3.19） | P4a（`SET NULL`、创建时的规则）、P4b（修改时的规则） |
+| 看得到而不是成员时取项目 | 409（公开）或 403（私密） | 200，`member_role` 为 `null`（3.19） | P4a |
+| 工作区访客取没加入的公开项目 | 409 | 404：看不到（3.19） | P4a |
+| 已归档的项目 | 取单个 404；列表与未归档的混在一起 | 取单个照常返回；列表默认不含，`?archived=true` 只含（3.19） | P4a |
+| 修改、删除项目 | 不是项目成员的工作区管理员也能 | 项目级规则（3.4） | P4b |
+| 归档、恢复项目 | 项目管理员和成员 | 项目管理员（3.4） | P4b |
+| 项目标识 | 最多 12 个字符，只禁一组符号 | 1–10 个，只能是大写字母、数字和 `ÇŞĞİÖÜ`（3.19） | P4a（修改时同一规则在 P4b） |
+| 添加已是有效成员的人为项目成员 | 顺手改他的角色 | 422 `duplicate`（3.5） | P4b |
 | 移出成员、离开工作区时的唯一管理员检查 | 移出：比较了错误的 id，查的又是"只有一个成员"的项目；离开：查"只有他一人的项目" | 3.7 规则 2 | P5 |
 | 恢复被移出的成员 | 管理命令 `reactivate_workspace_member`（位置参数） | `nerve workspaces reactivate-member --slug --email`，行为照搬（3.11） | P5 |
 | 移出成员、离开工作区时发给他的待接受邀请 | 不动：他凭旧链接就能回来 | 同一个事务里软删除这个工作区里发给他邮箱的待接受邀请，回来要新的邀请（3.8） | P5 |
 | 停用账户 | 唯一管理员的检查从不拒绝 | 3.7 规则 2；停用成员关系、删除发给这个邮箱的全部邀请在同一个事务里（3.9） | P6 |
 | 修改状态 | 项目的访客也能 | 项目管理员（3.4） | P7 |
-| 默认状态、分诊状态 | 在代码里维持唯一；`is_triage` 与 `group` 不一致 | 数据库保证各至多一个；只看 `group`（3.17） | P4、P7 |
+| 默认状态、分诊状态 | 在代码里维持唯一；`is_triage` 与 `group` 不一致 | 数据库保证各至多一个；只看 `group`（3.17） | P4a、P7 |
 | 一组中唯一的状态 | 服务端能删除、能改组（页面不让） | 409 `project.state_last_in_group`（3.17） | P7 |
 | 标签的名称 | 数据库区分大小写，序列化器不区分 | 数据库不分大小写（3.16） | P7 |
 | 标签的层级 | 服务端不检查 | 服务端执行页面的两层规则，并发下由项目行的锁保证（3.16） | P7 |
@@ -1025,10 +1028,11 @@ modules/project/
     list_labels.go  create_label.go  update_label.go  delete_label.go
   adapter/
     postgres/  http/        同 workspace
-  module.go                 Provide(pool)（ProjectAccess、ProjectMembershipCounts）；New(Deps)；NewCascade(CascadeDeps)；Register；Actions()；Cascade()
+  module.go                 Provide(pool)（ProjectAccess、ProjectMembershipCounts）；New(Deps)；Register；Actions()；Cascade()；NewCascade(CascadeDeps)（随第一个使用它的命令加入，见下）
 ```
 - 一个用例一个文件（总体设计 6.1），每个预计 40–120 行；`domain` 的文件都在 400 行以内。按调用者过滤的列表（项目、工作区的状态）在适配器里写专门的查询（总体设计 6.3"明确不做的事"），它们与规则表一致由 9.3 的测试守住（3.4）。
-- `NewCascade` 只建 `cascade.go` 的三个方法（它们只用 `project` 自己的仓储，时间由调用方传入，事务取自调用方的 `ctx`）；`New` 用它建出同一个实现，由 `Cascade()` 交出。命令行的组合只要连带，调用 `NewCascade`，不建 HTTP 的一侧（6.6）。
+- `cascade.go` 的方法只用 `project` 自己的仓储，时间和操作者由调用方传入，事务取自调用方的 `ctx`；`New` 建出它，由 `Cascade()` 交出。
+- `NewCascade` 只建这一个实现，给只要连带、不建 HTTP 一侧的命令行组合（6.6）。它随第一个调用连带的命令加入，按现在的规划是 P6 的 `nerve users deactivate`：没有使用者的构造不先写。在那之前 `project` 只有 `New` 和它的 `Cascade()`（P4a、P4b、P5 都不建 `NewCascade`）；有了 `NewCascade` 之后，`New` 用它建出同一个实现。
 
 ### 6.4 `access` 模块的结构
 ```
@@ -1057,7 +1061,7 @@ modules/access/
 | `ProjectAccess`（项目是否存在、所属工作区、可见性、调用者的有效项目角色） | `access/app` | `project/adapter/postgres`（`project.Provide`） | 同上；已删除的项目算不存在，已归档的照常 |
 | `WorkspaceDirectory`（按 slug 取工作区的 id 和时区） | `project/app` | `workspace/adapter/postgres`（`workspace.Provide`） | 集成测试 |
 | `WorkspaceMembers`（按 `id` 升序 `FOR SHARE` 锁住若干人的工作区成员行，返回是否有效和角色；约定三） | `project/app` | 同上 | 集成测试；交错测试 4、5、17（3.6） |
-| `ProjectCascade`（`DeleteWorkspaceProjects`、`EndMemberships`、`DemoteToGuest`，3.3；`EndMemberships` 在调用时列举项目，3.6 约定六） | `workspace/app` | `project/app` 的 `cascade.go`（`project.New` 的 `Cascade()`，或命令行的 `project.NewCascade`） | 用例测试；删除工作区、降为访客、移出的集成测试核对连带的行与工作区的写入在同一事务（连带失败时工作区的写入也回滚）；交错测试 1、4、5、6、13–15、17；跨工作区的 `EndMemberships` 按 `id` 升序锁项目、跳过上锁时已删除的项目（P6） |
+| `ProjectCascade`（`DeleteWorkspaceProjects`、`EndMemberships`、`DemoteToGuest`，3.3；`EndMemberships` 在调用时列举项目，3.6 约定六） | `workspace/app` | `project/app` 的 `cascade.go`（`project.New` 的 `Cascade()`，或命令行的 `project.NewCascade`，后者随第一个调用连带的命令加入，6.3） | 用例测试；删除工作区、降为访客、移出的集成测试核对连带的行与工作区的写入在同一事务（连带失败时工作区的写入也回滚）；交错测试 1、4、5、6、13–15、17；跨工作区的 `EndMemberships` 按 `id` 升序锁项目、跳过上锁时已删除的项目（P6） |
 | `ProjectMembershipCounts`（`CountInactive(ctx, workspaceID, userID) (int, error)`：他在这个工作区无效的项目成员关系个数，不加锁） | `workspace/app` | `project/adapter/postgres`（`project.Provide`） | 集成测试；W12 的输出 |
 | `Accounts`（按 id、按邮箱以 `FOR SHARE` 锁住账户行，交回 `AccountState{ID, Email, Active}`；没有这个账户时交回"不存在"。用例决定怎样对待停用的账户：建工作区、接受和忽略邀请要求有效，`reactivate-member` 允许，3.6 约定六。只作事务的第一把锁，约定一） | `workspace/app` | `identity`（`identity.Provide`，存储之上的薄实现；值在 `bootstrap/ports.go` 转换） | 集成测试（有效、停用、不存在三种）；交错测试 7、8、12、16、19 |
 | `MemberProfiles`（`PublicProfiles(ctx, ids) ([]PublicProfile, error)`：按 id 批量读显示名、名字、邮箱，不加锁，停用的账户也返回；`avatar_url` 在 M5 之前为空。成员列表用它；事务中途要读邮箱时也只用它，约定一） | `workspace/app` | `identity`（`identity.Provide`，一条查询；值在 `bootstrap/ports.go` 转换） | 集成测试（含停用的账户、不存在的 id）；`listWorkspaceMembers` 的用例测试核对访客看到的 `email` 为 `null` |
@@ -1086,8 +1090,9 @@ modules/access/
 - 第三稿加的三个读取（`PublicProfiles`、`Accounts` 交回的状态、`ProjectMembershipCounts`）都是第 2 步的适配器，只依赖连接池，顺序不变、仍然没有环（Codex M-1 的核对）。
 
 - **命令行的组合**（M2 设计 3.17 的最小组合）：
-  - `nerve users …`（`bootstrap.Users`）：连接池、`identity.NewAdmin`，加上停用要的 `workspace.NewAdmin`（它的 `Deactivator`）和 `project.NewCascade`。
-  - `nerve workspaces …`（`bootstrap.Workspaces`）：连接池、`identity.Provide` 的 `Accounts`、`project.Provide` 的 `ProjectMembershipCounts`、`workspace.NewAdmin`（建工作区、恢复成员）、`project.NewCascade`（`NewAdmin` 的依赖，与上一个组合相同）。
+  - `nerve users …`（`bootstrap.Users`）：连接池、`identity.NewAdmin`，加上停用要的 `workspace.NewAdmin`（它的 `Deactivator`）和 `project.NewCascade`（停用调 `EndMemberships`，P6）。
+  - `nerve workspaces …`（`bootstrap.Workspaces`）：连接池、`identity.Provide` 的 `Accounts`、`project.Provide` 的 `ProjectMembershipCounts`、`workspace.NewAdmin`（建工作区、恢复成员）。
+  - **一个组合只构造它的命令用得到的部分**：`project.NewCascade` 只在命令会调连带时构造。按现在的规划只有 `nerve users deactivate`（P6）调它；建工作区、`reactivate-member` 都不调连带（后者只读 `ProjectMembershipCounts`，3.11）。`nerve workspaces` 的组合要不要它，由 P5、P6 按 `workspace.NewAdmin` 实际建出的用例和它们的依赖决定，不按清单。
   - 两个组合都没有签名密钥、`Authorizer` 和 River（停用和建工作区都不投递任务，3.9、3.11）。
   - 组合测试（`archtest/composition_test.go`）从 `Users` 扩展到 `Workspaces`：从它们出发的静态调用不到达 `identity.New`、`workspace.New`、`project.New`、`access.New`、HTTP 服务、限流和任务队列，并且到达 `workspace.NewAdmin`（证明检查看到了组合）。
 - `bootstrap` 的整程序测试（M2 设计 3.11 的四个）照旧覆盖全部新操作：默认拒绝（每个非公开操作不带令牌 401）、请求体结构、参数绑定、错误码。
@@ -1393,7 +1398,7 @@ modules/access/
 - **领域规则**：slug（大小写、长度、字符、保留名）；工作区名称（字母或数字、网址）；项目名称的禁用字符、标识（大写、长度、`ÇŞĞİÖÜ`、`-`）；`archive_in`；`logo_props`（字段都可选、未知的键被拒绝）；负责人、默认负责人（创建、修改两套规则）；状态（组、`triage`、默认、一组至少一个、`sequence` 的算法）；标签（两层、自己做父、别的项目）；3.5 的相对规则（一张表：调用者的角色 × 目标的角色 × 新角色 × 是否工作区管理员）；唯一管理员的两条规则（3.7）；新成员的 `sort_order`（建项目、添加、加入）。
 - **邀请令牌**：格式（`nrv_inv_` 加 22 个字符）；往返；改一个字符不成立；另一个邀请的令牌不成立；换密钥不成立。
 - **接受邀请的用例**（P3，手写的假实现）：一张表覆盖他在这个工作区的三种状态：已是有效成员（邀请被消费，成员关系和角色不变，回答他不变的角色；邀请的角色高于、低于、等于他的角色各一行）、有无效的成员行（恢复，角色取邀请的）、没有成员行（新建）；账户在锁下读到已停用时 401；锁下的邮箱与邀请不一致时 403，数据库不变。忽略的用例同样按锁下的状态和邮箱回答 401、403。
-- **恢复时的角色**（P4，3.6 约定六"恢复不比新授予给得更多，也不比原来那一行更多"）：
+- **恢复时的角色**（P4b，最后一条中接受邀请的一半在 P4a；3.6 约定六"恢复不比新授予给得更多，也不比原来那一行更多"）：
   - 加入恢复以前的项目成员行时角色是 `min(原来那一行的角色, 他现在的工作区角色)`，一张表：
     | 原来那一行 | 工作区角色 | 恢复为 | 情形 |
     |---|---|---|---|
@@ -1401,7 +1406,7 @@ modules/access/
     | 20 | 15 | 15 | 被移出的项目管理员（故事 P5） |
     | 15 | 20 | 15 | 原来是项目成员的工作区管理员 |
     | 20 | 5 | 5 | 纯函数的一格；经接口，工作区访客加入是 404 |
-  - 添加恢复时取请求里的角色（管理员这一次的决定）；接受邀请恢复为访客时 `DemoteToGuest` 被调用。
+  - 添加恢复时取请求里的角色（管理员这一次的决定，P4b）；接受邀请恢复为访客时 `DemoteToGuest` 被调用（P4a）。
 - **保留名单**：三段都能解析、互不重复、都符合 slug 的规则；"预留"一段恰好是 3.10 声明的四个。
 
 ### 9.2 权限矩阵（逐格）
@@ -1453,7 +1458,7 @@ modules/access/
 - **决策点 3 的一格**：访客看别人的个人主页。按裁定 A，页面只显示用户卡片（数据来自 `listWorkspaceMembers`，上表已覆盖），工作项区域"没有权限"；工作项列表的接口在 M4，它在规则表加这一行时按裁定写（13.2）。页面一侧由 P9 故事覆盖。
 
 ### 9.3 集成测试（`pgtest`）
-- **仓储**：每条查询；CHECK 的反例（4.2–4.10 的 spike 逐条变成测试，含 4.6 `logo_props` 的全部反例：Codex S5 的 `{"unexpected": true}`、`{"in_use": 17, "emoji": []}` 等十个值得到 `check_violation`，四个合法的值通过，P4）；唯一约束冲突翻译为 409 的码，一个例外：邀请的 `workspace_member_invites_workspace_id_email_key` 翻译为 422 `invitations[i].email` 的 `duplicate`，`i` 是冲突的邮箱在请求里的下标，与事先校验的回答相同（3.8，P3）；审计列等于固定时钟；部分唯一索引下删除之后可以重用（slug、标识、名称、邀请的邮箱）；`ON CONFLICT … WHERE` 的显示设置只有一行；锁父行的语句带 `deleted_at IS NULL`，父行已软删除时读到 0 行。
+- **仓储**：每条查询；CHECK 的反例（4.2–4.10 的 spike 逐条变成测试，含 4.6 `logo_props` 的全部反例：Codex S5 的 `{"unexpected": true}`、`{"in_use": 17, "emoji": []}` 等十个值得到 `check_violation`，四个合法的值通过，P4a）；唯一约束冲突翻译为 409 的码，一个例外：邀请的 `workspace_member_invites_workspace_id_email_key` 翻译为 422 `invitations[i].email` 的 `duplicate`，`i` 是冲突的邮箱在请求里的下标，与事先校验的回答相同（3.8，P3）；审计列等于固定时钟；部分唯一索引下删除之后可以重用（slug、标识、名称、邀请的邮箱）；`ON CONFLICT … WHERE` 的显示设置只有一行；锁父行的语句带 `deleted_at IS NULL`，父行已软删除时读到 0 行。
 - **连带**：删除工作区、删除项目、删除父标签，被连带的行的 `deleted_at` 与父行相同（同一时刻）；`ProjectCascade` 失败时工作区一侧的写入也回滚。
 - **可见性一致**：对 9.2 的每种身份，`listProjects` 的结果等于对每个项目逐个判定 `project.read` 的结果；`listWorkspaceStates` 同理（3.4）。
 - **邀请从不改变有效的成员关系**（3.8，P5）：Codex S2 的顺序：A、B 是管理员，A 移出 B，之后给 B 发一份访客邀请，`reactivate-member` 恢复 B，B 加入一个项目，A 离开，B 接受那份旧邀请：B 仍是工作区管理员（工作区有一位管理员），项目角色仍是 20，邀请已消费。故事 W12 的接口版本走同一顺序。
@@ -1480,7 +1485,7 @@ modules/access/
   14. 停用与他加入项目（P6）：同上；停用在先时加入得到 404。同样另跑一次以前的项目成员行（加入恢复它）。
   15. 停用与以他为负责人建项目（P6）：建项目先锁住工作区（`FOR SHARE`），停用等工作区的锁，之后列举含新项目并停用他在那里的成员关系（创建者也是管理员，他不是唯一的）；停用先提交，建项目锁他的成员行时读到无效，422（`project_lead_id`，`not_allowed`）。
   16. 停用与恢复他的成员关系（P6）：`reactivate-member` 先锁住账户行，停用等待，之后列举含恢复的工作区并再次停用它；停用先提交，恢复照样进行（3.11 的例外），输出提示 `nerve users activate`。
-  17. 降为访客与他加入项目、与把他加为项目成员（P4；B 是工作区成员）：加入（添加）先锁住 B 的工作区成员行，降为访客改这一行时等它，之后 `DemoteToGuest` 的列举（改成员行之后的新语句）含新的项目成员行，项目角色是 5；降为访客先提交，加入等锁之后读到 B 是访客，404（访客看不到没加入的项目），以成员角色添加他 422（`members[i].role`，`not_allowed`）。加入、添加各跑两种顺序。
+  17. 降为访客与他加入项目、与把他加为项目成员（P4b；B 是工作区成员）：加入（添加）先锁住 B 的工作区成员行，降为访客改这一行时等它，之后 `DemoteToGuest` 的列举（改成员行之后的新语句）含新的项目成员行，项目角色是 5；降为访客先提交，加入等锁之后读到 B 是访客，404（访客看不到没加入的项目），以成员角色添加他 422（`members[i].role`，`not_allowed`）。加入、添加各跑两种顺序。
   18. 两位管理员创建重叠的两批邀请（P3）：A 请求 `[x, y]`、C 请求 `[y, x]`，都持工作区 S，各自按排序插入；C 等在唯一索引上，A 提交之后 C 得到 422 `invitations[1].email` 的 `duplicate`（`x` 在 C 的请求里的下标），C 的整批都没有插入；没有 40P01。另跑一次单个邮箱的竞争（两批都只有 `x`）：后到的一方 422，下标 0。
   19. 忽略邀请与停用（P3；B 是工作区 W 的有效成员，还有一份发给他的、W 的待接受邀请，即 `reactivate-member` 或改邮箱之后的状态）：忽略先锁住 B 的账户行，停用等待，之后照常停用；停用先锁住账户行，忽略等待，之后在锁下读到账户已停用，401。两种顺序都没有 40P01。P6 之前停用还不锁工作区，停用一方由测试的会话按 3.9 的顺序取锁（账户行 N，再 W 的 N）；P6 换成真实的停用再跑一次。
 - **停用的两条路**（M2 交接第 6 节，P6）：`deactivateMe` 和 `nerve users deactivate` 各测：唯一管理员时拒绝、数据库完全不变；成功时成员关系、项目成员关系、邀请（含已忽略的）都在同一事务里改好；跨两个工作区时项目按 `id` 升序加锁。另外两种情形（3.9）：
@@ -1493,7 +1498,7 @@ modules/access/
   - **规则：声明在模块 X 的操作上的码，在 X 自己的 HTTP 测试包里经 `CheckResponse` 返回过，即使产生它的是别的模块**。`apitest` 记下的"返回过的码"只在一个测试进程之内（`apitest/problems.go:92-106`），每个 HTTP 测试包的 `TestMain` 调 `apitest.Main` 只核对自己的进程；`bootstrap` 是另一个测试进程，它返回过的码补不了 X 的记录（Codex S7）。所以 X 的 HTTP 测试用它已有的假实现让用例返回那个错误，经 handler 透传：
     - `identity`：`deactivateMe` 的 `workspace.sole_admin`、`project.sole_admin`，用 `fakeDeactivate.err`（`identity/adapter/http/me_test.go:43`），P6；
     - `workspace`：`removeWorkspaceMember`、`leaveWorkspace` 的 `project.sole_admin`，P5；
-    - `project`：各操作的 `workspace.not_found`，P4。
+    - `project`：各操作的 `workspace.not_found`，P4a（声明它的 `listProjects`、`createProject`、`checkProjectIdentifier` 都在 P4a；`listWorkspaceStates` 的在 P7）。
   - `bootstrap` 的整程序测试另外在真实的组合上返回这些码（产生它的模块确实产生它），不代替上面的测试；
   - `platformCodes` 有 `forbidden`；带前缀的码，前缀必须是 `api/modules/` 下的一个模块，一个反例（不存在的前缀）核对规则会失败（11.7）；
   - `security` 的写法（只有 `getWorkspaceInvitation` 公开）；
@@ -1520,7 +1525,7 @@ modules/access/
 - 表情选择器的数据地址和版本（7.7，P10）。
 
 ### 9.6 端到端
-- **fixture**：`e2e/fixtures/api.ts` 加建工作区（P1）、邀请并接受（P3）、建项目和加项目成员（P4）、建状态和标签（P7）的帮助函数（生成的客户端，PAT）；`e2e/fixtures/assert/workspace.ts`、`assert/project.ts` 按表的断言函数，页面版本和接口版本共用；`e2e/fixtures/db.ts` 加九张表的读取。
+- **fixture**：`e2e/fixtures/api.ts` 加建工作区（P1）、邀请并接受（P3）、建项目（P4a）、加项目成员（P4b）、建状态和标签（P7）的帮助函数（生成的客户端，PAT）；`e2e/fixtures/assert/workspace.ts`、`assert/project.ts` 按表的断言函数，页面版本和接口版本共用；`e2e/fixtures/db.ts` 加九张表的读取。
 - **故事**：第 2 节的 21 个；S1、S2 的更新。每个故事的接口版本和页面版本在第 2 节标出的 Phase 加入。
 - **会话切换**（W3 的页面版本，P9）：在 `page.route` 里先经 `route.fetch()` 把删除工作区的请求发到 nerve，拿到成功的回答（此时会话还是原来的）；在同一个浏览器上下文的另一个标签页退出并以另一个账户登录之后，才经 `route.fulfill()` 把这个回答交给页面；断言原标签页没有跳转、没有提示（7.1）。
   - 不能在切换之后才放行请求：退出撤销了原会话，放行的请求得到 401，页面因为请求失败而不跳转，测试不依赖 `inSession()` 就会通过（复核 M6）。
@@ -1679,23 +1684,24 @@ modules/access/
 
 **约束**：
 1. **每个故事的前置数据在它加入时都能经接口准备**（总体设计 8.2），不写 SQL。第二个工作区成员只能由接受邀请产生，所以凡是断言"成员 403""访客看不到"的故事都排在邀请之后（第 2 节最后一列）。权限矩阵是 Go 测试，用仓储准备数据，每个 Phase 都能加它的行（9.2）。
-2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M2 的 P3 在设计里是一段，实施时超过了上限，由负责人批准拆成 P3a、P3b：设计时没有按任务数估每段的大小。M3 在这里按任务数分好，下面每段的任务列表就是 plan 的草稿。
-3. **评审敏感的内容不在同一段**（M2 的教训：两件都需要细审的事放在一起会互相稀释）：权限框架（P1）、加锁约定和连带（P2 起步，P4、P5 延伸）、邀请令牌（P3）、停用（P6）。
+2. **每段约 16 个任务以内，plan 不超过约 1,500 行**。M2 的 P3 在设计里是一段，实施时超过了上限，由负责人批准拆成 P3a、P3b：设计时没有按任务数估每段的大小。M3 在这里按任务数分好，下面每段的任务列表就是 plan 的草稿。设计里的 P4（16 个任务）同样在实施前超出了上限：P4 的架构子任务按 P1–P3 的 plan 实测的每个任务的行数逐个估出约 21–23 个任务、约 22,000–24,000 行，两个上限都超出；由负责人裁定（2026-10-01）拆成 P4a、P4b，与 M2 的 P3 相同。
+3. **评审敏感的内容不在同一段**（M2 的教训：两件都需要细审的事放在一起会互相稀释）：权限框架（P1）、加锁约定和连带（P2 起步，P4a、P4b、P5 延伸）、邀请令牌（P3）、停用（P6）。P4 拆分的边界把它的两件评审敏感的内容分开：第一次跨越模块的两个连带和"谁看得到项目"在 P4a，项目一侧的成员关系增长（约定三、六的添加和加入，`min`，目标的 422 在判定之后，交错测试 17）在 P4b。
 4. **新的错误码随它的文案进来**：M2 的 vitest 要求 `PROBLEM_MESSAGES` 的键恰好等于契约的全部 `x-problem-codes`（M2 设计 3.11、7.3），后端的 Phase 也不例外（M3/P1 spec 第 3 节第 4 条）。P2–P7 中声明新错误码的任务，在同一个任务里把它加进 `PROBLEM_MESSAGES`（`web/apps/web/helpers/authentication.helper.ts`）和 `en`、`zh-CN` 两份 `auth.json`，并运行 `make test-web`。平台码 `forbidden` 随第一个声明它的操作（P2）进表。这张表和它的文案在 P8 移到通用的位置（P8 任务 13）。
 
 **顺序**：
-- **后端七段，前端四段**（先后端、后前端，M2 的做法：前端对接真实的接口）。
+- **后端八段，前端四段**（先后端、后前端，M2 的做法：前端对接真实的接口）。后端原是七段，P4 在实施前拆成 P4a、P4b（约束 2）。
 - **P1 平台**带上建、列、看工作区三个操作和建工作区的命令，让它合并的是有故事验收（W1、W10）的接口，而不只是基础设施；这三个操作不改成员关系，不牵涉加锁约定。
 - **P2 工作区**让"先锁父行，再判定"第一次落地（修改、删除工作区，改成员角色）。
 - **P3 邀请**之后才有第二个成员。
-- **P4 项目**带上添加、加入项目成员，以及删除工作区和降为访客的连带：项目一出现，这两个连带就要成立，否则 P4 到 P5 之间的主干上会有"工作区访客是项目管理员"。
+- **P4a 项目**带上删除工作区和降为访客的连带：项目一出现（建项目让创建者和负责人成为项目管理员），这两个连带就要成立，否则 P4a 之后的主干上会有"工作区访客是项目管理员"。迁移与删除工作区的连带在同一个任务：组合的删除测试从目录读出每一条指向 `workspaces` 的外键，新表没有准备行、或连带漏掉它都失败，不为它加豁免。
+- **P4b 项目成员**在 P4a 之后、P5 之前：项目的修改、删除、归档、恢复和显示设置，项目成员的列出、添加、加入，以及交错测试 17（降为访客、加入、添加三者都在时才能写）。故事 P3 的"项目成员 403"要一个角色是 15 的项目成员，只有添加、加入产生它（建项目给 20，降为访客给 5），所以 P3 的故事也在 P4b。P5 的移出、离开和交错测试 4、5 要用到添加和加入。
 - **P5 成员关系**：移出、离开、改项目角色、唯一管理员、恢复成员的命令，共用 `EndMemberships`、3.7 的规则和交错测试 1、4、5、6。
 - **P6 停用**单独一段：它跨越工作区、有接口和命令两条路、改动 `identity`，是单独的评审敏感内容；与 P5 合在一起约 22 个任务。
-- **P7 状态和标签**最后：它们只依赖项目，状态的表在 P4 随默认状态建出。
+- **P7 状态和标签**最后：它们只依赖项目，状态的表在 P4a 随默认状态建出。
 - **P8 数据层**先于全部页面（3.1）：页面的故事加入时，挂载路径上已经没有旧接口。
-- **没有空实现**：连带随表加入（删除工作区的连带：P2 显示设置和成员，P3 邀请，P4 项目，P7 标签；降为访客的连带在 P4）。
+- **没有空实现**：连带随表加入（删除工作区的连带：P2 显示设置和成员，P3 邀请，P4a 项目，P7 标签；降为访客的连带在 P4a）。
 
-**规模**：148 个任务（后端 94、前端 54），每段 9–16 个。第三稿为 Codex 的发现加的测试让 P5、P6、P9 各多一个任务，其余加进已有的任务，每段仍在上限之内。第三稿的聚焦复核（17.3）加的规则和测试都并进已有的任务（P3、P4、P5、P6、P8、P9），各段的任务数不变。
+**规模**：153 个任务（后端 99、前端 54），每段 9–16 个。第三稿为 Codex 的发现加的测试让 P5、P6、P9 各多一个任务，其余加进已有的任务，每段仍在上限之内。第三稿的聚焦复核（17.3）加的规则和测试都并进已有的任务（P3、P4（拆分之后在 P4b）、P5、P6、P8、P9），各段的任务数不变。设计定稿时是 148 个（后端 94），P4 一段 16 个；P4 拆成 P4a（12 个）、P4b（9 个）之后后端多 5 个（约束 2）。
 
 ### P1 `platform`：权限框架、组合与建工作区（后端，15 个任务）
 - **目标**：权限框架、两段组合、矩阵测试的骨架定下；任何调用方都能建、列、看工作区，管理员能用命令建工作区。
@@ -1706,7 +1712,7 @@ modules/access/
   4. `apitest` 的前缀规则修订和反例（11.7）。
   5. 三条取值规则移到 `shared`（3.13）。
   6. `access` 的 domain：判定的纯函数（工作区级、项目级、看得到即可三个级别，事实是输入）、规则表（本 Phase 的行）、判定表测试。
-  7. `access` 的 app：`WorkspaceRoles` 端口、`Authorizer`（`ProjectAccess` 端口随 `project` 在 P4 加入）。
+  7. `access` 的 app：`WorkspaceRoles` 端口、`Authorizer`（`ProjectAccess` 端口随 `project` 在 P4a 加入）。
   8. 操作名：`workspace/domain/actions.go`，`bootstrap` 的完整性测试（3.4）。
   9. 两段组合：`identity.Provide`、`workspace.Provide`、`access.New`、`workspace.New` 的接线（6.6）。
   10. `workspace` 的 domain 和保留名单（三段，"服务端"一段的 Go 测试，3.10）。
@@ -1715,7 +1721,7 @@ modules/access/
   13. `nerve workspaces create` 和 `bootstrap.Workspaces` 的组合，组合测试扩展（6.6）。
   14. 矩阵测试的骨架（`pgtest` 从已准备的库复制）和本 Phase 的行；整程序测试覆盖新操作。
   15. 端到端：`api.ts` 的建工作区、`assert/workspace.ts`，W1、W10 的接口版本；3.20、8.7 中 P1 的行；review。
-- **关闭**：M2 交接第 4 节（3.14）、第 5 节（3.11）、第 8 节（端口而不是例外、`TestSQLCSchemaScope`、`Authorizer`；`ProjectAccess` 在 P4 照同一写法）、第 12 节（review 写明 M3 没有分页的列表）；M1-P2、M1-P3、M1-P4 的保留名单的服务端一侧（前端一侧在 P8）。
+- **关闭**：M2 交接第 4 节（3.14）、第 5 节（3.11）、第 8 节（端口而不是例外、`TestSQLCSchemaScope`、`Authorizer`；`ProjectAccess` 在 P4a 照同一写法）、第 12 节（review 写明 M3 没有分页的列表）；M1-P2、M1-P3、M1-P4 的保留名单的服务端一侧（前端一侧在 P8）。
 - **完成线**：W1、W10 的接口版本通过；本 Phase 的矩阵格子通过；判定表测试、完整性测试通过；`TestSQLCSchemaScope` 的四个反例和前缀规则的反例在规则漏掉时失败；架构测试通过。
 
 ### P2 `workspaces`：工作区的管理和加锁约定（后端，12 个任务）
@@ -1726,7 +1732,7 @@ modules/access/
   3. `updateWorkspace`。
   4. `deleteWorkspace`（连带成员、显示设置）。
   5. `listWorkspaceMembers`：`MemberProfiles` 端口（`identity.Provide` 的 `PublicProfiles`，不加锁，含停用的账户，在 `bootstrap/ports.go` 转换，6.5）；`MemberUser`，邮箱按角色。
-  6. `updateWorkspaceMember`（改自己 409；降为访客的项目连带随项目在 P4）。
+  6. `updateWorkspaceMember`（改自己 409；降为访客的项目连带随项目在 P4a）。
   7. `getWorkspacePreferences`、`updateWorkspacePreferences`（`ON CONFLICT`，3.18）。
   8. 交错测试 2：两位管理员互相降级。
   9. 矩阵：本 Phase 的行。
@@ -1756,27 +1762,40 @@ modules/access/
 - **关闭**：M2 交接第 1 节的接口一侧（页面一侧在 P9）。
 - **完成线**：上述故事通过；交错测试 3、9、12、18、19 通过，都没有 40P01；接受的用例测试覆盖已是有效成员、以前的成员行、没有成员行三种；邀请的唯一冲突翻译为 422（下标正确）的测试通过；数组请求体的用例通过。
 
-### P4 `projects`：项目、项目成员的加入与两个连带（后端，16 个任务）
-- **目标**：项目的建、列（按可见性）、看、改、删、归档、恢复，项目成员的列出、添加、加入，项目的显示设置；删除工作区和降为访客的连带。
+### P4a `projects`：项目的建立、可见性与两个连带（后端，12 个任务）
+- **拆分**（P4a、P4b 共用）：设计定稿时这里是一段 P4 `projects`（16 个任务）。实施之前按 P1–P3 的实测估出约 21–23 个任务，由负责人裁定（2026-10-01）拆成 P4a、P4b，依次合并：P4a → P4b → P5（第 12 节约束 2、约束 3 和"顺序"）。两段的任务列表同样是 plan 的草稿。两段里每个加操作的任务同时加它的操作名（`project/domain/actions.go`）、规则行、矩阵行，声明新码的任务同时加前端文案（约束 4）：操作名的完整性测试和矩阵的完整性核对要求契约的每个操作从它出现起就有这些。
+- **目标**：`project` 模块和项目的四张表出现；工作区的管理员和成员能建项目，调用者按可见性列出、查看项目，检查标识；删除工作区和降为访客的连带随项目一起成立（"顺序"）。
 - **任务**：
-  1. 迁移 `00010`–`00013`，`sqlc.yaml` 的 `project` 条目，grants；`projects_logo_props_check` 和它的十个反例、四个合法值的仓储测试（4.6，含 Codex S5 的值）。
-  2. `project` 的 domain：名称、标识、可见性、`archive_in`、`logo_props`、负责人、默认的 6 个状态、`sort_order`；`actions.go`。
-  3. `ProjectAccess`（`project.Provide`）、`access` 的项目级端口和规则行；`WorkspaceDirectory`、`WorkspaceMembers`（`workspace.Provide`）。
-  4. `createProject`（工作区 `FOR SHARE`、成员行 `FOR SHARE`、默认 6 个状态、创建者和负责人、显示设置）。
-  5. `listProjects`（可见性、`archived`、顺序）和可见性一致的测试（9.3）。
-  6. `getProject`、`checkProjectIdentifier`。
-  7. `updateProject`（负责人、默认负责人的规则，3.19）。
-  8. `deleteProject`、`archiveProject`、`unarchiveProject`。
-  9. `getProjectPreferences`、`updateProjectPreferences`。
-  10. `listProjectMembers`、`addProjectMembers`（目标的 422 在判定之后给出，3.6 约定三）。
-  11. `joinProject`（`sort_order = 65535`；恢复以前的行时角色取 `min(原来那一行的角色, 他现在的工作区角色)`，3.5，9.1 的四行表）。
-  12. `ProjectCascade` 端口和 `DeleteWorkspaceProjects`、`DemoteToGuest`（含接受邀请恢复为访客时的调用，3.8，它让加入的上限成立）；`project.New` 在 `workspace.New` 之前（6.6）；交错测试 17（降为访客与加入、添加，两种顺序）。
-  13. 矩阵：本 Phase 的项目级的行，含 `addProjectMembers` 无效目标的 PM、X 两格（9.2）；整程序测试；`project` 的 HTTP 测试返回各操作声明的 `workspace.not_found`（9.4）。
-  14. 端到端的 fixture：`api.ts` 的建项目、加项目成员，`assert/project.ts`。
-  15. 端到端：P1、P2、P3、P4、P8 的接口版本；W3 加上项目的连带。
-  16. 3.20 中 P4 的行；review。
+  1. 迁移 `00010`–`00013`，`sqlc.yaml` 的 `project` 条目，grants，表的名字和种类；`project` 的存储的插入；`ProjectCascade` 端口和 `DeleteWorkspaceProjects`（项目 → 项目成员 → 项目显示设置 → 状态；标签在 P7 加入）、`cascade()` 的最后一步；`project.New` 在 `workspace.New` 之前（6.6）；组合的删除测试在两个工作区下准备新表的行。迁移与这一连带在同一个任务（"顺序"）。
+  2. CHECK 的反例（`projects_logo_props_check` 的十个反例、四个合法值，含 Codex S5 的值，4.6；标识、名称、显示设置、状态）和部分唯一键的行为；`project` 的 domain：名称、标识、可见性、`archive_in`、`logo_props`、负责人、默认的 6 个状态、`sort_order`。
+  3. `ProjectAccess`（`project.Provide`）、`access` 的项目级端口；`WorkspaceDirectory`、`WorkspaceMembers`（`workspace.Provide`），`bootstrap/ports.go` 的转换。
+  4. 矩阵的形状：每行带自己的列（项目级十列）、答案按身份的名字取（P1 review 第 6 节）；项目级各列的账户和准备数据，`{project_id}` 的目标规则。
+  5. `createProject` 的用例（工作区 `FOR SHARE`、判定、创建者和负责人的工作区成员行 `FOR SHARE`、默认 6 个状态、显示设置，3.6 约定三）。
+  6. `api/modules/project.yaml`、`project` 的 HTTP 一侧和它在组合根的注册；`createProject` 的接口；每个模块的 HTTP 测试都调 `apitest.Main` 的核对（P1 review 第 6 节）。
+  7. `getProject`、`checkProjectIdentifier`；`project` 的 HTTP 测试返回各操作声明的 `workspace.not_found`（9.4）。
+  8. `listProjects`（可见性、`archived`、顺序）和可见性一致的测试（9.3）。
+  9. `workspace/app/fakes_test.go` 按用例拆开（P3 review 第 6 节）。
+  10. `DemoteToGuest`（`ProjectCascade` 的第二个方法）：`updateWorkspaceMember` 改为访客时，在写之后、读资料之前调用；接受邀请恢复为访客时，在 `RestoreMember` 之后、`AcceptInvitation` 之前、同一个事务里调用（3.8，它让加入的上限成立）；两处都有组合出的 app 上的测试，连带失败时整个写回滚。
+  11. 端到端：`api.ts` 的建项目、`assert/project.ts`；P1 的接口版本；W3 加上项目的连带。
+  12. 3.20 中 P4a 的行；review。
 - **关闭**：M2 交接第 7 节的接口一侧（`logo_url`、`cover_image_url`、`avatar_url` 可为 `null`；`IUserLite` 在 P8）、第 9 节（4.12）；M1-P2 项目字段；M1-P3 不再读的字段、地址（`project-identifiers` 不带结尾 `/`）。
-- **完成线**：上述故事通过；可见性一致测试、连带的回滚测试、`logo_props` 的 CHECK 反例、恢复时角色的四行表、交错测试 17 通过；`project` 的 `apitest.Main` 两个方向核对通过；本 Phase 的矩阵格子通过。
+- **完成线**：上述故事通过；可见性一致测试、`logo_props` 的 CHECK 反例、删除工作区和降为访客（两处调用）的连带在组合出的 app 上的回滚测试通过；`project` 的 `apitest.Main` 两个方向核对通过；本 Phase 的矩阵格子通过。
+
+### P4b `project-members`：项目的管理、显示设置与成员的加入（后端，9 个任务）
+- **拆分**：见 P4a 的同一条；P4b 在 P4a 合并之后开始。
+- **目标**：项目的修改、删除、归档、恢复，项目的显示设置，项目成员的列出、添加、加入；添加和加入这两条项目一侧的增长（3.6 约定三、六；建项目的一条在 P4a）与降为访客串行（交错测试 17）。
+- **任务**：
+  1. `updateProject`（负责人、默认负责人的规则，3.19；已归档的项目 409）。
+  2. `deleteProject`、`archiveProject`、`unarchiveProject`。
+  3. `getProjectPreferences`、`updateProjectPreferences`。
+  4. `listProjectMembers`；项目成员的存储（按 `id` 的锁、恢复以前的行、插入和显示设置）。
+  5. `addProjectMembers`（目标的工作区成员行 `FOR SHARE`，目标的 422 在判定之后给出，3.6 约定三；恢复以前的行时取请求的角色；`sort_order`，3.18）；矩阵含无效目标的 PM、X 两格（9.2）。
+  6. `joinProject`（工作区角色按集合要求成员或管理员，在"已是有效成员"之前检查，3.5；`sort_order = 65535`；恢复以前的行时角色取 `min(原来那一行的角色, 他现在的工作区角色)`，3.5，9.1 的四行表）。
+  7. 交错测试 17（降为访客与加入、添加，两种顺序）。
+  8. 端到端：`api.ts` 的加项目成员；P2、P3、P4、P8 的接口版本。
+  9. 3.20 中 P4b 的行；review。
+- **关闭**：M1-P3 项目成员（只有"从工作区成员中添加"；`joinProject` 的前端一侧在 P8）。
+- **完成线**：上述故事通过；恢复时角色的四行表、交错测试 17（加入、添加各两种顺序，`-count=5 -race`，没有 40P01）通过；本 Phase 的矩阵格子通过，含无效目标的两格。
 
 ### P5 `memberships`：结束成员关系与恢复（后端，15 个任务）
 - **目标**：移出、离开工作区和项目，改项目成员的角色，唯一管理员的两条规则，恢复成员的命令。
@@ -1931,9 +1950,9 @@ modules/access/
 | M2-closeout §4 `last_workspace_id` 的外键 | 3.14 | 不加，理由写在 3.14（本文满足；P1 的 review 复述） |
 | M2-closeout §5 `workspace_creation_enabled` | 3.11 | 关闭时 403 `workspace.creation_disabled`，有测试；提供 `nerve workspaces create`（P1） |
 | M2-closeout §6 停用的端口 | 3.6、3.7、3.9 | 三件事在停用的事务里；唯一管理员时拒绝；接口和命令两条路都有测试；`deactivateMe` 的码声明、两个方向核对（`identity` 自己的 HTTP 测试返回过它们，9.4）；差异清单"停用账户"一行；加锁顺序和成员关系集合的增长与收缩写在 3.6，每条增长路径与停用的交错测试（7、8、13–16）和忽略与停用的交错测试（19）通过（P6） |
-| M2-closeout §7 可空的引用字段 | 3.2、5.2、7.2 | `logo_url`、`cover_image_url`、`MemberUser.avatar_url` 可为 `null`（P1、P2、P4）；`IUserLite` 由 `MemberUser` 取代（P8） |
+| M2-closeout §7 可空的引用字段 | 3.2、5.2、7.2 | `logo_url`、`cover_image_url`、`MemberUser.avatar_url` 可为 `null`（P1、P2、P4a）；`IUserLite` 由 `MemberUser` 取代（P8） |
 | M2-closeout §8 模块边界 | 3.3、3.4、4.1 | 端口而不是例外（3.3）；`TestSQLCSchemaScope` 四种写法各一个反例；`Authorizer` 在 `shared`，规则 10 照旧（P1） |
-| M2-closeout §9 删除关系图 | 3.15、4.12 | 图写在 4.12，每条指向 `users` 的外键有去向；项目负责人改为 `SET NULL`，登记差异（P4） |
+| M2-closeout §9 删除关系图 | 3.15、4.12 | 图写在 4.12，每条指向 `users` 的外键有去向；项目负责人改为 `SET NULL`，登记差异（P4a） |
 | M2-closeout §10 表情选择器的数据 | 7.7、8.5 | 不请求 `cdn.jsdelivr.net`，没有 CSP 违规（故事 P1、P3 的 `watchPage`，C6）；CSP 不放开外部来源（P10） |
 | M2-closeout §11 M2 留下的调用和类型 | 7.2、7.3、7.4、7.10 | `leaveWorkspace`、`joinProject`、`leaveProject` 改用生成的客户端，`is_bot` 删除，`owner` 不再存在，`plane-user-urls` 收紧为整个 `/api/users/`（P8）；新手引导的三步：创建、邀请用新接口，加入一步随决策点 2 删除（P8、P9）；时区用 `GET /api/v0/timezones`（P9、P10） |
 | M2-closeout §12 页大小的规则 | 3.12 | M3 没有分页的列表：P1 的 review 写明，本节原样写进 M4 的交接（收尾，13.2） |
@@ -1941,14 +1960,14 @@ modules/access/
 | M2-closeout §14 下拉框和复制 | 7.7、9.7 C7、C8 | `CustomSearchSelect` 能用 Tab 到达、键盘打开；`member-options` 的列表在按钮旁；9 个和 4 个调用方核对；3 处复制处理失败（P10） |
 | M1-closeout 死成员和死 prop | 7.9 | `--rows M3` 的每一行消失或写进 review；按路径误归的 41 行写进 M4、M6、M7 的交接（P11、收尾） |
 | M1-closeout oxlint | 7.9 | 改到的文件 0 条；`promise(always-return)` 全仓清零；各包上限调低，review 写明（P8–P11） |
-| M1-P2 项目字段 | 4.6、5.2 | 接口没有 `close_in`、`default_state`、`page_view`、`estimate_id`（P4） |
+| M1-P2 项目字段 | 4.6、5.2 | 接口没有 `close_in`、`default_state`、`page_view`、`estimate_id`（P4a） |
 | M1-P2 侧边栏偏好 | 3.18、5.1 | 没有 `/sidebar-preferences/`；项目导航偏好经 `WorkspacePreferences`（P2） |
 | M1-P2 保留的工作区地址 | 3.10 | 与 M1-P3、M1-P4 的同一项一起关闭（P1、P8） |
 | M1-P2 个人主页 | 决策点 3；9.2 | 裁定写进矩阵（本文 9.2 的一格；页面在 P11 的 C10，接口的一行交给 M4） |
-| M1-P3 不再读的字段 | 4.6、5.2、3.19 | 项目接口没有 `anchor`、发布设置；Nerve 没有项目动态，不产生那几类记录（P4）。视图、收集箱的接口不在 M3，由 M7 的同名交接（`docs/v0/M7-collaboration/handoffs/M1-P3-trim-platform.md`）约束，M3 的 review 写明 |
-| M1-P3 项目成员 | 3.5、7.10 | 只有"从工作区成员中添加"（P4）；`joinProject` 改用新接口，`project-invitations` 的例外删除，`node tools/keywords.mjs` 通过（P8） |
+| M1-P3 不再读的字段 | 4.6、5.2、3.19 | 项目接口没有 `anchor`、发布设置；Nerve 没有项目动态，不产生那几类记录（P4a）。视图、收集箱的接口不在 M3，由 M7 的同名交接（`docs/v0/M7-collaboration/handoffs/M1-P3-trim-platform.md`）约束，M3 的 review 写明 |
+| M1-P3 项目成员 | 3.5、7.10 | 只有"从工作区成员中添加"（P4b）；`joinProject` 改用新接口，`project-invitations` 的例外删除，`node tools/keywords.mjs` 通过（P8） |
 | M1-P3 保留的工作区地址 | 3.10 | 与后端同源；产品词逐个有结论：全部去掉，另加四个预留段（3.10）（P1、P8） |
-| M1-P3 地址 | 5.1 | `project-identifiers` 等新地址都不带结尾 `/`（P4） |
+| M1-P3 地址 | 5.1 | `project-identifiers` 等新地址都不带结尾 `/`（P4a 起） |
 | M1-P4 保留的工作区名 | 3.10 | 名单"应用"一段正好是 `routes/core.ts` 的顶层静态路由段（加 `public/` 的顶层目录），前后端一份，vitest 和 Go 测试各守一段（P1、P8） |
 | M1-P4 离开项目的顺序 | 7.6 | 先等接口成功再跳转，vitest 和故事 P5（P10） |
 | M0-P3 分页的公共组件 | — | 已在 M2/P3a 完成（`status: done`）。M3 的列表不分页（3.12），不引用这些组件；收尾时状态改为 `closed` |
@@ -2000,7 +2019,8 @@ modules/access/
 | P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
 | P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 已完成：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)、[review](reviews/P2-workspaces-review.md)（执行时 15 个 Task） |
 | P3 `invitations` | 邀请与凭邀请注册（后端，14） | 已完成：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)、[评审](reviews/P3-invitations-review.md)（执行时 15 个 Task） |
-| P4 `projects` | 项目、项目成员的加入与两个连带（后端，16） | 未开始 |
+| P4a `projects` | 项目的建立、可见性与两个连带（后端，12）；设计中的 P4 由负责人裁定拆出（2026-10-01，第 12 节） | 未开始 |
+| P4b `project-members` | 项目的管理、显示设置与成员的加入（后端，9）；同上，P4a 合并之后开始 | 未开始 |
 | P5 `memberships` | 结束成员关系与恢复（后端，15） | 未开始 |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |
 | P7 `states-and-labels` | 状态与标签（后端，13） | 未开始 |
@@ -2013,7 +2033,7 @@ modules/access/
 ## 16. 风险
 | 风险 | 影响 | 应对 |
 |---|---|---|
-| M3 的规模约是 M2 的三倍（45 个操作，前端约 380 个文件） | 周期拉长；某个 Phase 超出规模上限 | 按任务数分成 11 段，每段 9–16 个任务（第 12 节）；某个 Phase 的 plan 仍超出约 1,500 行时，照 M2 拆分并请负责人批准 |
+| M3 的规模约是 M2 的三倍（45 个操作，前端约 380 个文件） | 周期拉长；某个 Phase 超出规模上限 | 按任务数分成 11 段，每段 9–16 个任务（第 12 节）；某个 Phase 的 plan 仍超出约 1,500 行时，照 M2 拆分并请负责人批准。已发生一次：P4 在实施前按 P1–P3 的实测估出约 21–23 个任务，负责人裁定（2026-10-01）拆成 P4a（12 个）、P4b（9 个），现在是 12 段（第 12 节约束 2） |
 | 前端的数据层（P8）一次改到的文件多（store 的使用方约 140 个） | plan 超出上限 | 已按领域分成 16 个任务；仍超出时拆成工作区一侧和项目一侧两段，两个包装层挂载时的取数留在第一段，页面的 Phase 仍在两段之后 |
 | 规则表与列表的 SQL 过滤走散 | 列表里出现看不到的项目，或漏掉看得到的 | 可见性一致的集成测试（9.3）；规则只在 `access/domain` 一处 |
 | 无人管理的工作区（唯一的成员被停用，或成员被误移出） | 数据留在库里，没有人能进入 | `nerve users activate` 和 `nerve workspaces reactivate-member`，与 Plane 的两个管理命令相同；README 写明（3.11、8.6） |
@@ -2077,7 +2097,7 @@ modules/access/
 - **I6**：评审给了两种做法（锁涉及的标签行，或锁项目行），选锁项目行，并扩展到状态的全部写入：默认状态、组的非空、标签的层级都是项目范围的不变式，锁归集合的拥有者（3.16）。
 - **I7**：停用在"写明例外"和"一次锁住全部"之间选后者，全局的 `id` 顺序没有例外（3.6）。
 - **I8**：端口名取 `ProjectCascade`，三个方法照评审。
-- **I2、I11**：评审的起点是五段，本稿是七段后端：停用单独一段（评审敏感，与成员关系合在一起约 22 个任务）；平台一段带上建、列、看工作区，使它合并的是有故事验收的接口；降为访客的连带随项目在 P4，不让主干在 P4、P5 之间出现"工作区访客是项目管理员"。
+- **I2、I11**：评审的起点是五段，本稿是七段后端：停用单独一段（评审敏感，与成员关系合在一起约 22 个任务）；平台一段带上建、列、看工作区，使它合并的是有故事验收的接口；降为访客的连带随项目在 P4（拆分之后在 P4a，第 12 节），不让主干上出现"工作区访客是项目管理员"。
 - **M10**：在"加索引"和"M4 的清理显式删除子行"之间选加索引，M4 只需照做（13.2）。
 - **M18**：`identity.Provide` 除了适配器还返回 `CredentialLock`：它是 M2 的协议步骤，只用 `identity` 的存储；放进 `identity.New` 会成环（6.6）。
 - **M22**：选"经第二个 nerve 创建邀请"，另外在 README 写明共用密钥文件。
@@ -2104,13 +2124,13 @@ modules/access/
 | 编号 | 问题 | 规则的落点 | 测试和 Phase |
 |---|---|---|---|
 | I-1 | 停用列举工作区之后，接受邀请还能让他的工作区集合变大；新工作区漏掉停用的锁、唯一管理员的检查和项目的连带，结果工作区没有管理员、项目里留着有效的成员关系（S1） | 3.6 约定六：工作区一侧的增长最先以 `FOR SHARE` 锁住账户行、在锁下重读 `is_active`；项目一侧的增长锁工作区成员行；收缩先改工作区成员行、在调用时列举项目；账户行只重读 `is_active` 和邮箱，不叫凭证复核。3.6 的取锁表、3.8、3.9、3.11、6.5 随之 | 交错测试 7（S1 的四种走法）、8、13–16（P6）；12（P3）；第 14 节的核对项 |
-| I-2 | 恢复成员之后接受旧的访客邀请，覆盖了有效成员的角色：工作区没有管理员，访客仍是项目管理员（S2） | 3.8"邀请从不改变有效的成员关系"：已是有效成员时只消费邀请；恢复以前的成员行时取邀请的角色，访客时 `DemoteToGuest`；3.6 约定六"恢复不比新授予给得更多，也不比原来那一行更多"（加入恢复时取 `min(原来那一行, 现在的工作区角色)`，3.5；后一半由 17.3 的 I1 补上）；3.7；3.11 说明 `reactivate-member` 不删旧邀请（移出、离开删除它，17.3 的 M3）；4.11 两行 | 9.1 接受的用例测试（P3）；9.3 S2 顺序的集成测试和 W12 的旧邀请一段（P5）；9.1 恢复时的角色（P4）；故事 P5 的重新加入（P5） |
+| I-2 | 恢复成员之后接受旧的访客邀请，覆盖了有效成员的角色：工作区没有管理员，访客仍是项目管理员（S2） | 3.8"邀请从不改变有效的成员关系"：已是有效成员时只消费邀请；恢复以前的成员行时取邀请的角色，访客时 `DemoteToGuest`；3.6 约定六"恢复不比新授予给得更多，也不比原来那一行更多"（加入恢复时取 `min(原来那一行, 现在的工作区角色)`，3.5；后一半由 17.3 的 I1 补上）；3.7；3.11 说明 `reactivate-member` 不删旧邀请（移出、离开删除它，17.3 的 M3）；4.11 两行 | 9.1 接受的用例测试（P3）；9.3 S2 顺序的集成测试和 W12 的旧邀请一段（P5）；9.1 恢复时的角色（P4b）；故事 P5 的重新加入（P5） |
 | I-3 | 若让成员邀请，邀请列表会把管理员邀请的令牌交给成员，成员注册、接受就是管理员（只在决策点 4 选 B 时成立） | 决策点 4 的"以后改的代价"写明读取范围的条件：列表、单个邀请、复制链接都要排除高于读者角色的邀请 | 决策点 4 裁定 A，风险不存在；9.2 的矩阵中成员对邀请的四个操作 403（P3） |
 | M-1 | 跨模块的读取没有覆盖成员列表的资料和恢复命令；`Accounts` 只锁有效账户，与恢复停用账户的命令矛盾 | 6.5 `MemberProfiles`（无锁批量读，含停用的账户）、`Accounts` 交回状态、`ProjectMembershipCounts`；值在 `bootstrap/ports.go` 转换，不跨模块 JOIN（S6）；6.6 的顺序不变 | 三个端口的集成测试（P1 `Accounts`、P2 `MemberProfiles`、P5 `ProjectMembershipCounts`）；W12（P5） |
-| M-2 | `bootstrap` 返回过的码补不了 `identity` 的 HTTP 测试进程的记录，`identity` 的 `apitest.Main` 会失败（S7） | 9.4 规则：声明在模块 X 的操作上的码，在 X 的 HTTP 测试包里经 `CheckResponse` 返回过；5.3 | `identity` 用 `fakeDeactivate.err` 的两条 409 透传测试（P6）；`workspace` 的 `project.sole_admin`（P5）；`project` 的 `workspace.not_found`（P4） |
+| M-2 | `bootstrap` 返回过的码补不了 `identity` 的 HTTP 测试进程的记录，`identity` 的 `apitest.Main` 会失败（S7） | 9.4 规则：声明在模块 X 的操作上的码，在 X 的 HTTP 测试包里经 `CheckResponse` 返回过；5.3 | `identity` 用 `fakeDeactivate.err` 的两条 409 透传测试（P6）；`workspace` 的 `project.sole_admin`（P5）；`project` 的 `workspace.not_found`（P4a） |
 | M-3 | 旧 `ProjectService` 缩到两个方法会丢掉 `projectIssuesSearch` 和它的三个调用方 | 7.3 旧 service 留三个方法及理由；7.10 例外 `until: "M4"`，`/search-issues/` 不需要例外；13.2（M4、M6、M7）；P11 的最终核对 | P8 的 `tsc`、`node tools/keywords.mjs`；P11 的第 6 个任务 |
 | M-4 | W5 要求打开链接时就认出账户不对，而查看里没有邮箱 | W5 改为点"接受"得到 403 之后说明、按钮不再可用、提供退出；与 7.4 一致 | W5 的页面版本（P9） |
-| M-5 | `logo_props` 的 CHECK 只查对象类型，不合 M2 设计 3.13 | 4.6 按 3.13 写全：键的集合、出现的每个键的类型、嵌套的 `emoji`、`icon`；第三稿 spike；3.19、5.2 | 9.3 的十个反例（含 S5 的值）和四个合法值（P4） |
+| M-5 | `logo_props` 的 CHECK 只查对象类型，不合 M2 设计 3.13 | 4.6 按 3.13 写全：键的集合、出现的每个键的类型、嵌套的 `emoji`、`icon`；第三稿 spike；3.19、5.2 | 9.3 的十个反例（含 S5 的值）和四个合法值（P4a） |
 | 4.3 第 1 条 | 页面按权限显示，却不按权限取数：成员页给成员取邀请，项目包装层给不是成员的人取子资源，都得到 403 | 7.1 规则"权限决定取数，不只决定显示"；7.3、7.5、7.6 | W4、P2 的页面版本（P9、P10）；9.5 的两个取数条件的 vitest（P8） |
 | 4.3 第 2 条 | 已发出的修改在换了账户之后迟到地成功，旧页面仍会跳转、提示 | 7.1 规则：`inSession()` 移到 `core/lib/in-session.ts`，组件在 `await` 之后先核对；3.20 的 P8 行 | 9.5 的 `sessionGuard` 和两个删除组件的 vitest（P8、P9、P10）；W3 的会话切换端到端（P9） |
 | 4.1 决策点 1 | 注册能用来试邮箱；(a) 改 (b) 之后留下已注册的账户 | 第 10 节决策点 1；3.8；8.2 | 写明的风险；`register_ip` 的限流沿用 M2 的测试 |
@@ -2134,12 +2154,12 @@ modules/access/
 
 | 编号 | 问题 | 规则的落点 | 测试和 Phase |
 |---|---|---|---|
-| I1 | 第三稿的"加入恢复时取现在的工作区角色"让被项目管理员降为访客的人离开再加入，自己升回工作区角色（spike 17） | 原则"恢复不比新授予给得更多，也不比原来那一行更多"：加入取 `min(原来那一行, 现在的工作区角色)`；添加取请求的角色、接受取邀请的角色不变；恢复为访客时的 `DemoteToGuest` 写明是承重的。3.5、3.6 约定六、3.8、3.11、4.11（两半都写）、W12、故事 P5、17.2 | 9.1 恢复时角色的四行表（P4 第 11 个任务） |
+| I1 | 第三稿的"加入恢复时取现在的工作区角色"让被项目管理员降为访客的人离开再加入，自己升回工作区角色（spike 17） | 原则"恢复不比新授予给得更多，也不比原来那一行更多"：加入取 `min(原来那一行, 现在的工作区角色)`；添加取请求的角色、接受取邀请的角色不变；恢复为访客时的 `DemoteToGuest` 写明是承重的。3.5、3.6 约定六、3.8、3.11、4.11（两半都写）、W12、故事 P5、17.2 | 9.1 恢复时角色的四行表（P4b 第 6 个任务；设计定稿时是 P4 第 11 个任务） |
 | I2 | 创建邀请只持工作区 S，两位管理员按相反的顺序邀请重叠的邮箱时在唯一索引上死锁；排序之后后到的一方得到原始的 23505，9.3 的通则会把它翻成 409（spike 14a、14b） | 3.6 全局顺序注明只排除行锁的环；约定五的后一半"只持父行的共享锁而批量插入时按唯一键的顺序插入"，写明为什么排序而不是 N；3.8 一批全有或全无、按规范化后的邮箱排序插入、23505 翻译为 422 `invitations[i].email` 的 `duplicate`；9.3 通则的例外；3.6 取锁表；11.2 | 交错测试 18（P3 第 11 个任务）；翻译和下标（P3 第 5 个任务） |
 | M1 | 忽略邀请怎样读邮箱没有写；在工作区的锁之后经 `Accounts` 读，与停用死锁（spike 16） | 3.6 约定一：`Accounts` 只作事务的第一把锁，中途读邮箱经不加锁的 `MemberProfiles`；忽略最先以 S 锁调用者的账户行；创建邀请的"已是有效成员"经 `MemberProfiles` 比较。3.3、3.6 取锁表、3.8、6.5 | 交错测试 19（P3 第 11 个任务；P6 第 5 个任务换成真实的停用再跑） |
-| M2 | 降为访客与加入、添加的串行，恢复以前的行与停用的串行，都没有点名的测试（spike 12a、12b、5a、5b） | 3.6、9.3 的交错清单；第 14 节 | 交错测试 17（P4 第 12 个任务）；7 另跑恢复以前的成员行（P6 第 5 个任务），13、14 另跑恢复以前的项目成员行（P6 第 6 个任务） |
+| M2 | 降为访客与加入、添加的串行，恢复以前的行与停用的串行，都没有点名的测试（spike 12a、12b、5a、5b） | 3.6、9.3 的交错清单；第 14 节 | 交错测试 17（P4b 第 7 个任务；定稿时是 P4 第 12 个任务）；7 另跑恢复以前的成员行（P6 第 5 个任务），13、14 另跑恢复以前的项目成员行（P6 第 6 个任务） |
 | M3 | 待接受的旧邀请让刚被移出的成员凭旧链接自己回来；3.11 的"旧邀请无害"只在他有效时成立（spike 9d） | 3.8"结束的成员关系不留下邀请"：移出、离开软删除这个工作区里发给他的待接受邀请（在已持有的工作区 N 之下、改成员行之前，邮箱经 `MemberProfiles`）；3.6 取锁表；3.11 改正，并写明 `reactivate-member` 为什么不需要改；4.11 和 3.20 的 P5 行 | 9.3 的 9d 顺序，移出、离开各一次（P5 第 14 个任务）；实现在 P5 第 2 个任务 |
-| M4 | 添加在判定之前锁并确认目标，实现可能把 422 给了该得 403、404 的人，而 422 与 404 之差透露项目 id 存在 | 3.6 约定三"锁目标行只为取锁的顺序；目标的 422 在判定之后给出"；取锁表 | 9.2 `addProjectMembers` 无效目标的 PM、X 两格（P4 第 13 个任务） |
+| M4 | 添加在判定之前锁并确认目标，实现可能把 422 给了该得 403、404 的人，而 422 与 404 之差透露项目 id 存在 | 3.6 约定三"锁目标行只为取锁的顺序；目标的 422 在判定之后给出"；取锁表 | 9.2 `addProjectMembers` 无效目标的 PM、X 两格（P4b 第 5 个任务；定稿时是 P4 第 13 个任务） |
 | M5 | 停用的邮箱从哪里来没有写，`LockedAccount` 没有邮箱；列举到而上锁时已删除的工作区会落进"0 行答 404"（spike 15） | 3.9：邮箱取自锁下的账户行（`LockedAccount` 加 `Email`）；上锁时已删除的工作区、项目跳过，不答 404。6.1、6.5、取锁表 | P6 第 7 个任务：spike 15 的情形，改邮箱先提交时删除发给新邮箱的邀请；实现在 P6 第 1–3 个任务 |
 | M6 | W3 的会话切换端到端在换账户之后才放行请求，请求得到 401，没有 `inSession()` 也会通过 | W3、7.1、9.6：`route.fetch()` 在换账户之前，`route.fulfill()` 在之后 | P9 第 11 个任务，变异核对：去掉 `inSession()` 时它失败 |
 | M7 | `is_favorite` 的删除清单漏了 `favorite.store.ts:284-287` 和 `favoriteProjectIds` getter，7.2、7.3、7.8 没提 | 3.2、7.2、7.3、7.8、13.2 的 M7 行 | P8 第 5 个任务；`tsc`、knip |
@@ -2154,4 +2174,4 @@ modules/access/
 - **M3**：选根上的修正（移出、离开删除待接受的邀请），不选只改文字；已忽略的邀请不删，它不能再被接受，留在列表里是管理员看得到的记录。
 - **交错测试 19 在 P3**：P3 时停用还不锁工作区，停用一方由测试的会话按 3.9 的顺序取锁，P6 换成真实的停用再跑。
 - **M5**：P6 第 7 个任务另加"改邮箱先提交"的一例，守住"邮箱取自锁下"。
-- **任务数**：全部并进已有的任务，各段的任务数不变（P3 14、P4 16、P5 15、P6 9，合计 148）。
+- **任务数**：全部并进已有的任务，各段的任务数不变（P3 14、P4 16、P5 15、P6 9，合计 148）。P4 之后在实施前拆成 P4a（12 个）、P4b（9 个），见第 12 节。
