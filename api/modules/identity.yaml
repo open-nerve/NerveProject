@@ -23,10 +23,10 @@ paths:
         answers as usual: validation_failed for a weak password,
         identity.email_taken for an address already registered, and neither
         creates an account. Registering does not accept the invitation. The
-        password needs
-        8–128 characters with an upper-case letter, a lower-case letter, a
-        digit and a special character, and must not be a common password.
-        Registrations have a rate limit of their own per client IP.
+        password needs 8–128 characters with an upper-case letter, a
+        lower-case letter, a digit and a special character, and must not be a
+        common password. Registrations have a rate limit of their own per
+        client IP.
       security: []
       x-problem-codes: [identity.signup_disabled, validation_failed, identity.email_taken, server_busy]
       requestBody:
