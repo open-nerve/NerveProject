@@ -63,6 +63,11 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
+	// The signing key first, before any module (M3 design 6.6 step 1).
+	keys, err := identity.LoadKeys(signingKey, logger)
+	if err != nil {
+		return nil, err
+	}
 	pool, err := postgres.NewPool(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
@@ -103,7 +108,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Clock:           clock.System{},
 		Logger:          logger,
 		SignupPolicy:    signupSwitch(cfg.Auth.SignupEnabled),
-		SigningKeyPEM:   signingKey,
+		Keys:            keys,
 		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 		SessionTTL:      cfg.Auth.SessionTTL,
 		RefreshDeadline: cfg.Auth.RefreshDeadline,

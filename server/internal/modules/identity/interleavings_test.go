@@ -142,9 +142,13 @@ func newAccount(t *testing.T, hash string) *account {
 
 func (a *account) login(h app.PasswordHasher, passwords app.PasswordHashWriter, sessions app.SessionCreator) *app.Login {
 	keys := signing.EphemeralKeys()
+	mac, err := keys.MAC(signing.PurposeRefreshToken)
+	if err != nil {
+		panic(err) // 32 bytes of HKDF-SHA256 never fail
+	}
 	return app.NewLogin(app.LoginDeps{
 		Accounts: a.store, Locker: a.store, Passwords: passwords, Sessions: sessions, Hasher: h, Tx: a.tx,
-		Issuance: app.Issuance{Tokens: signing.NewAccessTokens(keys), MAC: signing.NewRefreshTokenMAC(keys), AccessTTL: time.Minute, SessionTTL: time.Hour},
+		Issuance: app.Issuance{Tokens: signing.NewAccessTokens(keys), MAC: mac, AccessTTL: time.Minute, SessionTTL: time.Hour},
 		Clock:    clock.System{}, Logger: slog.New(slog.DiscardHandler), DummyHash: "hashed:dummy:0",
 	})
 }

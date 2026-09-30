@@ -36,9 +36,8 @@ type Deps struct {
 	Logger *slog.Logger
 	// SignupPolicy is auth.signup_enabled (M2 decision 2).
 	SignupPolicy app.SignupPolicy
-	// SigningKeyPEM is the content of auth.jwt.private_key_file; nil for
-	// none, then the key is ephemeral (dev and test only, M2 design 3.7).
-	SigningKeyPEM   []byte
+	// Keys are the signing key, as LoadKeys loaded it.
+	Keys            *Keys
 	AccessTokenTTL  time.Duration
 	SessionTTL      time.Duration
 	RefreshDeadline time.Duration // auth.refresh_deadline
@@ -76,10 +75,9 @@ type Module struct {
 	jobs          []jobs.Job
 }
 
-// New wires the module. A signing key that cannot be parsed is an error
-// that never quotes the key.
+// New wires the module.
 func New(d Deps) (*Module, error) {
-	keys, err := signingKeys(d)
+	refreshMAC, err := d.Keys.signing.MAC(signing.PurposeRefreshToken)
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +91,10 @@ func New(d Deps) (*Module, error) {
 	rules := domain.NewPasswordRules()
 	store := postgresadapter.New(d.Pool)
 	lock := app.CredentialLock{Locker: store, Sessions: store, APITokens: store}
-	tokens := signing.NewAccessTokens(keys)
+	tokens := signing.NewAccessTokens(d.Keys.signing)
 	issuance := app.Issuance{
 		Tokens:     tokens,
-		MAC:        signing.NewRefreshTokenMAC(keys),
+		MAC:        refreshMAC,
 		AccessTTL:  d.AccessTokenTTL,
 		SessionTTL: d.SessionTTL,
 	}
@@ -141,19 +139,6 @@ func New(d Deps) (*Module, error) {
 			riveradapter.CleanupJob(app.NewCleanupSessions(store, d.Clock, d.Logger), d.SessionCleanupInterval),
 		},
 	}, nil
-}
-
-func signingKeys(d Deps) (*signing.Keys, error) {
-	if d.SigningKeyPEM == nil {
-		d.Logger.Warn("auth.jwt.private_key_file is not set: signing with an ephemeral key; " +
-			"access tokens stop verifying at restart (dev and test only)")
-		return signing.EphemeralKeys(), nil
-	}
-	keys, err := signing.ParseKeys(d.SigningKeyPEM)
-	if err != nil {
-		return nil, fmt.Errorf("auth.jwt.private_key_file: %w", err)
-	}
-	return keys, nil
 }
 
 // PublicOperations are the module's routes that need no token.

@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"strconv"
@@ -36,13 +37,23 @@ func testKeys(t *testing.T) *Keys {
 	return k
 }
 
+// testMAC is keys' MAC of purpose.
+func testMAC(t *testing.T, keys *Keys, purpose string) *MAC {
+	t.Helper()
+	m, err := keys.MAC(purpose)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return m
+}
+
 func TestParseKeysReadsAnOpenSSLKey(t *testing.T) {
 	k := testKeys(t)
-	if len(k.private) != 64 || len(k.public) != 32 || len(k.mac) != 32 {
-		t.Errorf("key sizes = %d, %d, %d; want 64, 32, 32", len(k.private), len(k.public), len(k.mac))
+	if len(k.private) != 64 || len(k.public) != 32 {
+		t.Errorf("key sizes = %d, %d; want 64, 32", len(k.private), len(k.public))
 	}
-	if bytes.Equal(k.mac, k.private.Seed()) {
-		t.Error("the MAC key equals the seed, want a derived key")
+	if m := testMAC(t, k, PurposeRefreshToken); len(m.key) != 32 || bytes.Equal(m.key, k.private.Seed()) {
+		t.Errorf("the MAC key is %d bytes, equal to the seed %v; want 32 bytes derived from it", len(m.key), bytes.Equal(m.key, k.private.Seed()))
 	}
 }
 
@@ -73,7 +84,7 @@ func TestParseKeysRejects(t *testing.T) {
 
 func TestEphemeralKeysDiffer(t *testing.T) {
 	a, b := EphemeralKeys(), EphemeralKeys()
-	if bytes.Equal(a.private, b.private) || bytes.Equal(a.mac, b.mac) {
+	if bytes.Equal(a.private, b.private) || bytes.Equal(testMAC(t, a, PurposeRefreshToken).key, testMAC(t, b, PurposeRefreshToken).key) {
 		t.Error("two ephemeral keys are equal")
 	}
 }
@@ -237,9 +248,9 @@ func TestAccessTokenVerifyGivesOnlyFixedReasons(t *testing.T) {
 	}
 }
 
-func TestRefreshTokenMAC(t *testing.T) {
+func TestMAC(t *testing.T) {
 	keys := testKeys(t)
-	m := NewRefreshTokenMAC(keys)
+	m := testMAC(t, keys, PurposeRefreshToken)
 	msg := bytes.Repeat([]byte{7}, 52)
 	tag := m.Tag(msg)
 
@@ -253,13 +264,13 @@ func TestRefreshTokenMAC(t *testing.T) {
 			t.Errorf("changing byte %d keeps the tag", i)
 		}
 	}
-	if NewRefreshTokenMAC(EphemeralKeys()).Tag(msg) == tag {
+	if testMAC(t, EphemeralKeys(), PurposeRefreshToken).Tag(msg) == tag {
 		t.Error("another key gives the same tag")
 	}
 }
 
-func TestRefreshTokenMACVerify(t *testing.T) {
-	m := NewRefreshTokenMAC(testKeys(t))
+func TestMACVerify(t *testing.T) {
+	m := testMAC(t, testKeys(t), PurposeRefreshToken)
 	msg := bytes.Repeat([]byte{7}, 52)
 	tag := m.Tag(msg)
 	var random [16]byte
@@ -287,7 +298,44 @@ func TestRefreshTokenMACVerify(t *testing.T) {
 			t.Errorf("Verify() with byte %d of the message changed = true", i)
 		}
 	}
-	if NewRefreshTokenMAC(EphemeralKeys()).Verify(msg, tag) {
+	if testMAC(t, EphemeralKeys(), PurposeRefreshToken).Verify(msg, tag) {
 		t.Error("Verify() under another key = true")
+	}
+}
+
+// The MACs' keys are HKDF-SHA256 of testKeyPEM's seed with the info of M2
+// design 3.4 and M3 design 3.8, and a tag the first 16 bytes of
+// HMAC-SHA256: the answers below were computed from RFC 5869 by hand, not
+// by this package (spec P3, appendix). The refresh-token tag is the one the
+// code before M3 gave, so the refresh tokens a deployment issued stay
+// valid; the invitation's is the tag of "workspace-invitation" and the id
+// 0199a2b4-0000-7000-8000-000000000001.
+func TestMACKnownAnswers(t *testing.T) {
+	keys := testKeys(t)
+	id := [16]byte{0x01, 0x99, 0xa2, 0xb4, 0, 0, 0x70, 0, 0x80, 0, 0, 0, 0, 0, 0, 0x01}
+	for _, tt := range []struct {
+		purpose string
+		message []byte
+		want    string
+	}{
+		{PurposeRefreshToken, bytes.Repeat([]byte{7}, 52), "65cc085217dccf9e602799b8e64a4468"},
+		{"workspace-invitation", append([]byte("workspace-invitation"), id[:]...), "92fab228187e6c034c4fa240218ce894"},
+	} {
+		if tag := testMAC(t, keys, tt.purpose).Tag(tt.message); hex.EncodeToString(tag[:]) != tt.want {
+			t.Errorf("the %s tag = %x, want %s", tt.purpose, tag, tt.want)
+		}
+	}
+}
+
+// A tag made for one purpose is no tag of another: the keys differ.
+func TestMACsOfPurposesDiffer(t *testing.T) {
+	keys := testKeys(t)
+	refresh, invitation := testMAC(t, keys, PurposeRefreshToken), testMAC(t, keys, "workspace-invitation")
+	msg := bytes.Repeat([]byte{7}, 36)
+	if bytes.Equal(refresh.key, invitation.key) || refresh.Tag(msg) == invitation.Tag(msg) {
+		t.Error("the refresh-token and workspace-invitation MACs are the same")
+	}
+	if invitation.Verify(msg, refresh.Tag(msg)) || refresh.Verify(msg, invitation.Tag(msg)) {
+		t.Error("a tag of one purpose verifies for the other")
 	}
 }
