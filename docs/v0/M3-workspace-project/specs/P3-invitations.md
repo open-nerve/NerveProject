@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P3 `invitations` |
 | 日期 | 2026-09-30 |
-| 状态 | 进行中 |
+| 状态 | 已完成（[评审记录](../reviews/P3-invitations-review.md)） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（W3–W6、W8）、3.3、3.4、3.6（加锁顺序、加锁表、约定一至六）、3.8、3.9、3.12、3.13、3.14、3.20（P3 各行）、4.4、4.11（P3 各行）、4.12、5.1–5.4、6.5、6.6、6.7、8.1、8.2、8.4、8.7（P3 一行）、9.1–9.4、9.6、10（决策点 1、2、4）、11.1、11.2、12（P3 与约束 3、4）、13.1、17 节；[v0 总体设计](../../v0-design.md) 1.1、4.2 节；[M2 设计](../../M2-auth/M2-design.md) 3.4、3.5、3.7、3.9、3.11 节 |
 | 前置交接 | [M2 收尾交接](../handoffs/M2-closeout.md) 第 1 节的接口一侧；[P2 review](../reviews/P2-workspaces-review.md) 第 6 节交给 P3 的各件和 [P1 review](../reviews/P1-platform-review.md) 第 6 节的公开操作（落点见第 3 节第 2 条） |
 | 计划 | [P3 plan](../plans/P3-invitations.md) |
@@ -63,7 +63,7 @@ P3 是评审敏感的一段（M3 设计 12 节约束 3）：令牌和"从邀请�
 
 ### 2.3 迁移 `00009` 和删除的连带（4.4、4.12；P2 review 第 6 节）
 
-- `workspace_member_invites` 的 11 列照 4.4。约束和索引的名字与种类（`schema_test.go` 同时钉住两者）：`_pkey`（`p`、`iu`）、`_workspace_id_fkey`（`ON DELETE CASCADE`）、`_created_by_id_fkey`、`_updated_by_id_fkey`（`SET NULL`）、`_email_check`（与 `users.email` 相同，另加不能为空）、`_role_check`（`role IN (5, 15, 20)`）、`_responded_check`（`responded_at IS NOT NULL OR NOT accepted`）、`_workspace_id_email_key`（`UNIQUE … WHERE deleted_at IS NULL`，`iuw`）、`_email_idx`（`WHERE deleted_at IS NULL`，`iw`：注册策略、停用按邮箱查）、`_workspace_id_idx`（物理级联）。
+- `workspace_member_invites` 的 11 列照 4.4。约束和索引的名字与种类（`schema_test.go` 同时钉住两者）：`_pkey`（`p`、`iu`）、`_workspace_id_fkey`（`ON DELETE CASCADE`）、`_created_by_id_fkey`、`_updated_by_id_fkey`（`SET NULL`）、`_email_check`（与 `users.email` 相同，另加不能为空）、`_role_check`（`role IN (5, 15, 20)`）、`_responded_check`（`responded_at IS NOT NULL OR NOT accepted`）、`_workspace_id_email_key`（`UNIQUE … WHERE deleted_at IS NULL`，`iuw`）、`_email_idx`（`WHERE deleted_at IS NULL`，`iw`：P6 的停用按邮箱查发给该账户的邀请；注册策略按 id 读邀请，不用它）、`_workspace_id_idx`（物理级联）。
 - 反例（`TestChecksRejectCounterexamples`）：邮箱的大写（ASCII 与非 ASCII）、结尾的制表符、中间的 U+3000、空串；角色 10、0；`accepted` 而没有 `responded_at`；去掉接受的时间。部分唯一键的行为（`TestUniqueKeysHoldAmongUndeletedRowsOnly`）：已忽略的邀请是未删除的行，仍占着邮箱，删除之后才空出来。
 - 运行时角色的 `GRANT` 加上这张表。
 - **删除的连带**：`cascade()` 在工作区行之后加 `DeleteWorkspaceInvitations`（全局加锁顺序：工作区 → 邀请 → 成员 → 显示设置），同一个 `now`、同一个删除者：
@@ -182,7 +182,7 @@ WHERE i.id = $id AND i.deleted_at IS NULL AND w.deleted_at IS NULL;
   1. `checkToken`：令牌不对 404，**在事务之前、不读任何东西**；
   2. 一个事务：`Accounts.ShareAccount(调用者)`（`FOR SHARE`，事务的第一把锁；锁下读 `is_active` 和邮箱）：没有或已停用 401 `unauthorized`；
   3. `readInvitation` → 锁工作区（接受 `LockWorkspace` 即 `FOR NO KEY UPDATE`，成员关系的写；忽略 `ShareWorkspace` 即 `FOR SHARE`）→ `LockInvitation`（`FOR UPDATE`，重读）；
-  4. 锁下的邮箱不等于邀请的邮箱：403 `invitation_email_mismatch`（什么都不写）；已忽略：409 `invitation_responded`。邮箱的比较在"已回应"之前：别的邮箱不会得知邀请是否被回应过。
+  4. 锁下的邮箱不等于邀请的邮箱：403 `invitation_email_mismatch`（什么都不写）；已忽略：409 `invitation_responded`。邮箱的比较在"已回应"之前：邮箱不一致时什么都不写，只答 403，答给别的账户的就更少。这不是为了隐藏是否已忽略：公开的查看把 `declined` 显示给任何持链接的人。
 - 接受，锁之后读时钟，`MemberOf(工作区, 调用者)`：
   - 有效的成员关系：不改（角色、`is_active`），回答的 `role` 是他原来的角色；
   - 已结束的：`RestoreMember`（`is_active = true`，角色取邀请的；P4 在这里、同一个事务里加 `DemoteToGuest`，当角色是访客时）；
@@ -220,7 +220,7 @@ FROM workspaces w WHERE w.id = $id AND w.deleted_at IS NULL;
 
 ### 2.13 探针与交错 3、9、12、18、19（9.3；P2 review 第 6 节）
 
-- **`pgtest.WaitForKeyWaitOn(t, pool, table, limit)`**：只在有连接"在本事务里写过 `table`（持有它已授予的 `RowExclusiveLock`），在等另一个事务结束（`wait_event = 'transactionid'`），而且不持有任何 tuple 锁"时返回；表不存在时立即失败，到期失败。这是唯一索引检查的等待：插入与一个未结束的事务插入的键相同，等那个事务提交或回滚，没有行可锁。`WaitForLockWaitOn` 看不到它（没有 tuple 锁）。它分不清的，文档写明：同一个写过 `table` 的事务在别的表上等键，或者 Postgres 不取 tuple 锁的两种行等待（`WaitForLockWaitOn` 的文档所列）。只用在等待的事务不写别的带唯一键的表、不升级共享的行锁的地方。`TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable` 的正例：等同一个键的 `INSERT`（`WaitForLockWait` 证明它在等、`WaitForLockWaitOn` 看不到）；反例（各在自己的库里，都由 `WaitForLockWait` 证明确实在等）：写过这张表的事务等这张表的一行（有 tuple 锁）；只读过这张表的事务在另一张表上等键；写过这张表的事务等咨询锁。
+- **`pgtest.WaitForKeyWaitOn(t, pool, table, limit)`**：只在有连接"在本事务里写过 `table`（持有它已授予的 `RowExclusiveLock`），在等另一个事务结束（`wait_event = 'transactionid'`），而且不持有任何 tuple 锁"时返回；表不存在时立即失败，到期失败。这是唯一索引检查的等待：插入与一个未结束的事务插入的键相同，等那个事务提交或回滚，没有行可锁。`WaitForLockWaitOn` 看不到它（没有 tuple 锁）。它分不清的，文档写明：同一个写过 `table` 的事务在别的表上等键，或者 Postgres 不取 tuple 锁的两种行等待（`WaitForLockWaitOn` 的文档所列）：把与别的事务共享的行锁升级，外键检查的 `KEY SHARE` 沿一行的更新链走到一个活着的事务锁住或删除的版本。只用在这三种等待都不会发生的地方：等待的事务不写别的带唯一键的表、不升级与别的事务共享的行锁、它的外键检查不沿更新链走到那样的版本。`TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable` 的正例：等同一个键的 `INSERT`（`WaitForLockWait` 证明它在等、`WaitForLockWaitOn` 看不到）；反例（各在自己的库里，都由 `WaitForLockWait` 证明确实在等）：写过这张表的事务等这张表的一行（有 tuple 锁）；只读过这张表的事务在另一张表上等键；写过这张表的事务等咨询锁。
 - **每个交错用哪个探针、为什么别的等待满足不了它**：每个测试有自己的库（`pgtest.NewDatabase`），用例照 `bootstrap` 的接法手工组装，库上没有 River，只有两方在跑；先的一方停在闸门上（它的事务里、持着锁），探针确认后的一方等在设计说的那一处，然后打开闸门。
 
 | 交错 | 测试 | 先的一方停在 | 后的一方等在 | 探针 |
@@ -361,7 +361,7 @@ FROM workspaces w WHERE w.id = $id AND w.deleted_at IS NULL;
 
 | 风险 | 应对 |
 |---|---|
-| `WaitForKeyWaitOn` 分不清同一个事务在别的表上等键、以及不取 tuple 锁的两种行等待 | 文档写明；只用在交错 18，那里等待的一方只写邀请这一张带唯一键的表、不升级共享锁；四个削弱它的变异都被 `TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable` 发现 |
+| `WaitForKeyWaitOn` 分不清同一个事务在别的表上等键、以及不取 tuple 锁的两种行等待（共享锁的升级、外键检查沿更新链） | 文档写明；只用在交错 18，那里等待的一方只写邀请这一张带唯一键的表、不升级共享锁，它的外键（工作区、邀请者）指向的行在交错中没有被更新或删除；四个削弱它的变异都被 `TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable` 发现 |
 | 常量时间的比较测不出来 | `TestMACVerifyComparesInConstantTime` 解析 `mac.go`，要求 `Verify` 的每个 `return` 都是 `hmac.Equal(…)`、其中没有 `==`、`!=`（它的反例在 `TestConstantTimeViolationsCatchesEachShortcut`）；把比较挪进辅助函数的重构要同时改这个测试 |
 | 没有密钥文件的 nerve 各有自己的临时密钥：一个进程发的链接在别的进程上无效 | 部署要求全部进程共用一个密钥文件，写在 README（8.7）；W6 全部经第二个 nerve（9.6）；`LoadKeys` 的警告提到邀请链接 |
 | 令牌在链接的查询参数里，反向代理的访问日志会记下 | nerve 的访问日志只记路径（测试核对）；README 写明代理的日志要像密钥一样保管或不记查询参数 |

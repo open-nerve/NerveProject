@@ -1569,7 +1569,7 @@ modules/access/
 | B 只凭令牌 | 拿到链接的任何账户都能接受 | 对新受邀的人与 A+(a) 几乎相同；对已有账户的受邀者更弱 | 去掉邮箱比对，邀请的邮箱只是给管理员看的标签 |
 
 - **理由**：保留自助（管理员只发链接）；链接相当于 Plane 的邀请邮件；不显示邮箱让单独泄露的链接不够用。剩下的风险（链接和邮箱一起泄露、而受邀的人还没注册）由管理员删除邀请、重新邀请来处理（8.1）。Plane 在 GHSA-4vj8-p63v-8p24 之后也要求邮箱一致（`views/workspace/invite.py:161-174`）。
-- **(a) 带来的另一个口子**（Codex 4.1）：持有链接的人能拿注册去试被邀请的邮箱，对了就注册成功、错了被拒绝。每次尝试受按 IP 的注册限流约束（`ratelimit.register_ip`，每分钟 10 次、最多攒 5 次）；查看不显示邮箱只是少了直接的披露，并没有让邮箱变成第二个验证过的因素（3.8、8.2）。
+- **(a) 带来的另一个口子**（Codex 4.1）：持有链接的人能拿注册去试被邀请的邮箱：错了被拒绝；对了就走注册的常规检查，弱密码答 422，邮箱已注册答 409，否则注册成功。每次尝试受按 IP 的注册限流约束（`ratelimit.register_ip`，每分钟 10 次、最多攒 5 次）；查看不显示邮箱只是少了直接的披露，并没有让邮箱变成第二个验证过的因素（3.8、8.2）。
 - **以后改的代价**：各选项之间的代码改动都小。显示或不显示邮箱是查看的一个字段和拒绝的一句话；A → B 放宽安全边界，要重新评估。(a) → (b) 删掉 `SignupPolicy` 的邀请分支和注册页的邀请参数，但已经凭邀请注册的账户不会因此消失：改的时候要另外决定怎样对待这些存量账户（逐个核对，或者不处理）。
 
 ### 决策点 2：保留一条接受的路径还是两条（M1 设计 3.15）
@@ -1999,7 +1999,7 @@ modules/access/
 | 设计 | 本文（第三稿，按聚焦复核修订） | 第一稿经独立评审、第二稿经 Codex 对抗性评审、第三稿经聚焦复核，都已落实（17.1–17.3）；决策点已裁定，架构问题已批准（2026-09-29） |
 | P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
 | P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 已完成：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)、[review](reviews/P2-workspaces-review.md)（执行时 15 个 Task） |
-| P3 `invitations` | 邀请与凭邀请注册（后端，14） | 进行中：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)（15 个 Task） |
+| P3 `invitations` | 邀请与凭邀请注册（后端，14） | 已完成：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)、[评审](reviews/P3-invitations-review.md)（执行时 15 个 Task） |
 | P4 `projects` | 项目、项目成员的加入与两个连带（后端，16） | 未开始 |
 | P5 `memberships` | 结束成员关系与恢复（后端，15） | 未开始 |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |

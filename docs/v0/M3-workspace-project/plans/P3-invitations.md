@@ -10,6 +10,8 @@
 
 **Spec:** `docs/v0/M3-workspace-project/specs/P3-invitations.md`（上级：`docs/v0/M3-workspace-project/M3-design.md`）
 
+> **执行后的说明（2026-10-01）：** 下面的块是执行前的文字，保留原样。执行中的裁定（15 个 Task 中 12 个，几乎都是 plan 自己的测试缺口）、整分支修复和它的范围评审之后的一轮，改动了其中一些块（例如签名密钥和 MAC 在根上打码、锁下重读确认父行、安全检查从目录取全部表、组合出的 I-2 测试），生成物的 SHA 也不再等于块中固定的值。最终的实现与本计划的差异见 [评审记录](../reviews/P3-invitations-review.md) 第 5 节；spec 已按执行的结果改正。
+
 ## Global Constraints
 
 - **Go 版本和依赖**：本 plan 不执行 `go get`，不加任何 Go 模块或 npm 包。`server/go.mod` 和 `server/tools/go.mod` 保持 `go 1.27` 和 `toolchain go1.27.1`（golangci-lint 2.13.2 由 go1.27.0 构建，`go` 行更高就拒绝运行）。每个 Task 提交前执行 `grep -n "^go \|^toolchain" server/go.mod server/tools/go.mod`，四行必须是 `go 1.27` 和 `toolchain go1.27.1`；`git diff --stat 1d2eaf7c -- server/go.mod server/go.sum server/tools pnpm-lock.yaml` 在本 plan 的任何时刻都没有输出。
