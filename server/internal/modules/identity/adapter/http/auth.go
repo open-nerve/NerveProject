@@ -14,11 +14,16 @@ func (h handler) Register(ctx context.Context, req gen.RegisterRequestObject) (g
 	if err := h.limitRegister(ctx); err != nil {
 		return nil, err
 	}
+	var invitation *app.SignupInvitation
+	if inv := req.Body.Invitation; inv != nil {
+		invitation = &app.SignupInvitation{ID: inv.ID, Token: inv.Token}
+	}
 	tokens, err := h.uc.Register.Execute(ctx, app.RegisterInput{
-		Email:     req.Body.Email,
-		Password:  req.Body.Password,
-		UserAgent: meta.UserAgent,
-		IP:        meta.ClientIP,
+		Email:      req.Body.Email,
+		Password:   req.Body.Password,
+		Invitation: invitation,
+		UserAgent:  meta.UserAgent,
+		IP:         meta.ClientIP,
 	})
 	if err != nil {
 		return nil, err

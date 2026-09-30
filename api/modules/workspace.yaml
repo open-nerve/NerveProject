@@ -114,13 +114,13 @@ paths:
       tags: [workspace]
       summary: Delete a workspace
       description: >-
-        For the workspace's admins. The workspace, its memberships and the
-        members' display settings are soft-deleted in one transaction, at the
-        same moment; the members' accounts stay. The slug can name a new
-        workspace at once. Nobody's last_workspace_id is cleared. A
-        workspace that does not exist, is deleted, or of which the caller is
-        not an active member answers workspace.not_found; a member or a
-        guest, forbidden.
+        For the workspace's admins. The workspace, its invitations, its
+        memberships and the members' display settings are soft-deleted in one
+        transaction, at the same moment; the members' accounts stay. The slug
+        can name a new workspace at once. Nobody's last_workspace_id is
+        cleared. A workspace that does not exist, is deleted, or of which the
+        caller is not an active member answers workspace.not_found; a member
+        or a guest, forbidden.
       security: [{bearer: []}]
       x-problem-codes: [workspace.not_found, forbidden]
       responses:
@@ -152,6 +152,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkspaceMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listWorkspaceInvitations
+      tags: [workspace]
+      summary: List a workspace's invitations
+      description: >-
+        The workspace's invitations, pending and declined, newest first, then
+        by id, each with the token of its link: for the workspace's admins
+        alone. An accepted invitation is no longer listed. A workspace that
+        does not exist, is deleted, or of which the caller is not an active
+        member answers workspace.not_found; a member or a guest, forbidden.
+        The whole collection at once: collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden]
+      responses:
+        '200':
+          description: The workspace's invitations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createWorkspaceInvitations
+      tags: [workspace]
+      summary: Invite addresses to a workspace
+      description: >-
+        For the workspace's admins. Each address is normalized as at
+        registration (surrounding white space removed, lower case) and the
+        batch is checked first: 1–100 invitations, each address valid
+        (invalid_format) and listed once (duplicate), each role one of the
+        three (invalid_format). Then, the workspace looked at: an active
+        member's address is not_allowed, and an address with an invitation
+        to the workspace, pending or declined, duplicate, also when another
+        request invites it at the same time. The batch is refused as a whole,
+        one validation_failed naming each invitations[i] of the request as
+        sent; a batch that loses the race to another request, which commits
+        its addresses between this one's check and its insert, names only
+        the first of them in the order of the normalized addresses. A
+        declined invitation holds its address until it is deleted.
+        The answer is the new invitations in the request's order, each with
+        the token of its link. A workspace that does not exist, is deleted,
+        or of which the caller is not an active member answers
+        workspace.not_found; a member or a guest, forbidden. A credential
+        revoked meanwhile, by a password reset, answers unauthorized, and
+        nothing is invited.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found, forbidden]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceInvitationsCreate'
+      responses:
+        '201':
+          description: The new invitations, in the request's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationList'
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/workspace-members/{workspace_member_id}:
@@ -193,6 +259,147 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkspaceMember'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspace-invitations/{invitation_id}:
+    parameters:
+      - $ref: '#/components/parameters/InvitationID'
+    get:
+      operationId: getWorkspaceInvitation
+      tags: [workspace]
+      summary: Show an invitation to whoever holds its link
+      description: >-
+        Public: the link's token stands for a credential, and the answer is
+        the same with a bearer token or without one. It shows the
+        invitation's role, whether it was declined, and its workspace's name
+        and slug; never the address invited. A token that is not the
+        invitation's, and an invitation that does not exist, is deleted or
+        accepted, answer the same workspace.invitation_not_found. Requests
+        are limited per client IP.
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          description: The token of the invitation's link (WorkspaceInvitation.token).
+          schema:
+            type: string
+      x-problem-codes: [workspace.invitation_not_found]
+      responses:
+        '200':
+          description: The invitation as its link shows it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationPreview'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateWorkspaceInvitation
+      tags: [workspace]
+      summary: Change an invitation's role
+      description: >-
+        For the workspace's admins. The role is checked first
+        (validation_failed). An invitation that does not exist, is deleted
+        or accepted, or whose workspace the caller cannot see, answers
+        workspace.invitation_not_found; a member or a guest, forbidden,
+        whatever the invitation. To an admin, a declined invitation answers
+        workspace.invitation_responded: delete it, then invite the address
+        again. The link keeps its token.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.invitation_not_found, forbidden, workspace.invitation_responded]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceInvitationUpdate'
+      responses:
+        '200':
+          description: The invitation with its new role, and the token of its link.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitation'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteWorkspaceInvitation
+      tags: [workspace]
+      summary: Delete an invitation
+      description: >-
+        For the workspace's admins. The invitation, pending or declined, is
+        soft-deleted: its link stops working, and its address can be invited
+        again at once. An invitation that does not exist, is deleted or
+        accepted, or whose workspace the caller cannot see, answers
+        workspace.invitation_not_found; a member or a guest, forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.invitation_not_found, forbidden]
+      responses:
+        '204':
+          description: The invitation is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspace-invitations/{invitation_id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/InvitationID'
+    post:
+      operationId: acceptWorkspaceInvitation
+      tags: [workspace]
+      summary: Accept an invitation to one's own address
+      description: >-
+        For the account the invitation was sent to: its address, as it is
+        when the request runs, must be the invitation's; another answers
+        workspace.invitation_email_mismatch, which does not say whose, and
+        nothing changes. The caller becomes a member with the invitation's
+        role, or a former member has his membership back with it; an active
+        member stays as he is, his role too, and only the invitation is
+        used. The invitation is then accepted and deleted: its link stops
+        working. A token that is not the invitation's, and an invitation
+        that does not exist, is deleted or accepted, answer the same
+        workspace.invitation_not_found; a declined one,
+        workspace.invitation_responded. An account deactivated meanwhile
+        answers unauthorized. The answer is the workspace, with the caller's
+        role in it.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.invitation_not_found, workspace.invitation_email_mismatch, workspace.invitation_responded]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationResponse'
+      responses:
+        '200':
+          description: The workspace the caller is a member of, with his role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspace-invitations/{invitation_id}/decline:
+    parameters:
+      - $ref: '#/components/parameters/InvitationID'
+    post:
+      operationId: declineWorkspaceInvitation
+      tags: [workspace]
+      summary: Decline an invitation to one's own address
+      description: >-
+        For the account the invitation was sent to, as accepting it is, with
+        the same answers. The invitation stays, declined: its link shows
+        so, and it holds its address until an admin deletes it.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.invitation_not_found, workspace.invitation_email_mismatch, workspace.invitation_responded]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationResponse'
+      responses:
+        '204':
+          description: The invitation is declined.
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
@@ -284,6 +491,14 @@ components:
       description: A workspace's slug, as in the web app's address.
       schema:
         type: string
+    InvitationID:
+      name: invitation_id
+      in: path
+      required: true
+      description: An invitation's id (WorkspaceInvitation.id), the link's invitation_id.
+      schema:
+        type: string
+        format: uuid
   responses:
     Problem:
       description: Error (RFC 9457 problem details).
@@ -475,6 +690,118 @@ components:
           $ref: '#/components/schemas/NavigationControlPreference'
         navigation_project_limit:
           $ref: '#/components/schemas/NavigationProjectLimit'
+    WorkspaceInvitation:
+      description: >-
+        An invitation of an address to the workspace, pending or declined
+        (responded_at set). Only who may manage the workspace's invitations
+        is given one, with the token of its link:
+        /workspace-invitations?invitation_id={id}&token={token}.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, email, role, accepted, responded_at, created_at, created_by_id, token]
+      properties:
+        id:
+          description: The invitation's id, the link's invitation_id.
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        email:
+          description: The address invited, normalized.
+          type: string
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        accepted:
+          description: False; an invitation is deleted as it is accepted, and never listed again.
+          type: boolean
+        responded_at:
+          description: When the invitation was declined; null while it is pending.
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        created_by_id:
+          description: The account that invited; null once that account is gone.
+          type: [string, 'null']
+          format: uuid
+        token:
+          description: >-
+            nrv_inv_ and 22 base64url characters. The server does not store
+            it: it computes it again from the invitation's id with a key
+            derived from the instance's signing key, so a new signing key
+            gives every invitation a new token and voids the old links.
+          type: string
+    WorkspaceInvitationList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceInvitation'
+    InvitationCreate:
+      type: object
+      additionalProperties: false
+      required: [email, role]
+      properties:
+        email:
+          description: An e-mail address; it is normalized as at registration.
+          type: string
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+    InvitationPreview:
+      description: >-
+        What an invitation's link shows whoever holds it. The workspace's
+        fields are flat: the holder cannot read the workspace itself. There
+        is no address: the holder of a link does not learn which address to
+        register with.
+      type: object
+      additionalProperties: false
+      required: [id, role, declined, workspace_name, workspace_slug, workspace_logo_url]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+        declined:
+          description: True once the invitation was declined; it can no longer be answered.
+          type: boolean
+        workspace_name:
+          type: string
+        workspace_slug:
+          type: string
+        workspace_logo_url:
+          description: Null until uploads arrive (M5).
+          type: [string, 'null']
+    InvitationResponse:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          description: The token of the invitation's link (WorkspaceInvitation.token).
+          type: string
+    WorkspaceInvitationUpdate:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+    WorkspaceInvitationsCreate:
+      type: object
+      additionalProperties: false
+      required: [invitations]
+      properties:
+        invitations:
+          description: 1–100 invitations, created all together or not at all.
+          type: array
+          items:
+            $ref: '#/components/schemas/InvitationCreate'
     SlugAvailability:
       type: object
       additionalProperties: false

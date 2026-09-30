@@ -59,6 +59,41 @@ type UpdatePreferencesUseCase interface {
 	Execute(ctx context.Context, slug string, p domain.PreferencesPatch) (domain.Preferences, error)
 }
 
+// ListInvitationsUseCase is app.ListWorkspaceInvitations.
+type ListInvitationsUseCase interface {
+	Execute(ctx context.Context, slug string) ([]domain.InvitationWithToken, error)
+}
+
+// CreateInvitationsUseCase is app.CreateWorkspaceInvitations.
+type CreateInvitationsUseCase interface {
+	Execute(ctx context.Context, slug string, batch []domain.NewInvitation) ([]domain.InvitationWithToken, error)
+}
+
+// GetInvitationUseCase is app.GetWorkspaceInvitation.
+type GetInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, token string) (domain.InvitationPreview, error)
+}
+
+// UpdateInvitationUseCase is app.UpdateWorkspaceInvitation.
+type UpdateInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.InvitationWithToken, error)
+}
+
+// DeleteInvitationUseCase is app.DeleteWorkspaceInvitation.
+type DeleteInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// AcceptInvitationUseCase is app.AcceptWorkspaceInvitation.
+type AcceptInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, token string) (domain.Workspace, error)
+}
+
+// DeclineInvitationUseCase is app.DeclineWorkspaceInvitation.
+type DeclineInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, token string) error
+}
+
 // CheckSlugUseCase is app.CheckSlug.
 type CheckSlugUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.SlugReason, error)
@@ -76,11 +111,24 @@ type UseCases struct {
 	CheckSlug         CheckSlugUseCase
 	GetPreferences    GetPreferencesUseCase
 	UpdatePreferences UpdatePreferencesUseCase
+	ListInvitations   ListInvitationsUseCase
+	CreateInvitations CreateInvitationsUseCase
+	GetInvitation     GetInvitationUseCase
+	UpdateInvitation  UpdateInvitationUseCase
+	DeleteInvitation  DeleteInvitationUseCase
+	AcceptInvitation  AcceptInvitationUseCase
+	DeclineInvitation DeclineInvitationUseCase
+}
+
+// PublicOperations are the module's routes that need no token (M3 design
+// 3.8), as the generated code registers them.
+func PublicOperations() []string {
+	return []string{"GET /api/v0/workspace-invitations/{invitation_id}"}
 }
 
 // Register mounts the module's routes on router behind api's per-route
 // middlewares; api.Errors answers binding, decoding and handler errors.
-// Every operation needs a token.
+// Every operation but PublicOperations needs a token.
 func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
 	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, nil, gen.StrictHTTPServerOptions{
 		RequestErrorHandlerFunc:  api.Errors.BodyError,

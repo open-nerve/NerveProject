@@ -29,8 +29,7 @@ import (
 // table, and changes no row of another workspace. The tables come from
 // pg_constraint, not from a list kept here: a phase that adds a table under
 // workspaces fails this test until it seeds a row of it (seedWorkspace) and
-// the cascade deletes it (P3 the invitations, P4 the projects' tables
-// through ProjectCascade).
+// the cascade deletes it (P4 the projects' tables through ProjectCascade).
 
 // survivesItsWorkspace are the foreign keys to workspaces, as table.column,
 // whose rows must outlive the workspace's deletion, each with its reason.
@@ -123,22 +122,28 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 
 // seedWorkspace creates the workspace slug through the API, the caller of
 // token its admin, and seeds a row of each table under it: the admin's
-// membership, which the creation writes; the member's, through the
-// workspace store; the admin's display settings, through the API. A phase
-// that adds a table under workspaces seeds a row of it here. It returns the
-// workspace's id.
+// membership, which the creation writes; the member's, and an invitation
+// the admin sent, through the workspace store; the admin's display
+// settings, through the API. A phase that adds a table under workspaces
+// seeds a row of it here. It returns the workspace's id.
 func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
 	t.Helper()
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
 		t.Fatalf("creating %s = %d %s, want 201", slug, status, body)
 	}
-	var id, member uuid.UUID
-	if err := pool.QueryRow(context.Background(), "SELECT (SELECT id FROM workspaces WHERE slug = $1), (SELECT id FROM users WHERE email = $2)",
-		slug, "member@example.com").Scan(&id, &member); err != nil {
+	var id, member, admin uuid.UUID
+	if err := pool.QueryRow(context.Background(), `SELECT (SELECT id FROM workspaces WHERE slug = $1), (SELECT id FROM users WHERE email = $2),
+		(SELECT created_by_id FROM workspaces WHERE slug = $1)`, slug, "member@example.com").Scan(&id, &member, &admin); err != nil {
 		t.Fatal(err)
 	}
-	if err := workspacepg.New(pool).CreateMember(context.Background(), workspaceapp.MemberRow{
+	store := workspacepg.New(pool)
+	if err := store.CreateMember(context.Background(), workspaceapp.MemberRow{
 		ID: uuid.NewV7(), WorkspaceID: id, MemberID: member, Role: shared.RoleMember, CreatedBy: member, Now: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
+		{ID: uuid.NewV7(), WorkspaceID: id, Email: "invitee@example.com", Role: shared.RoleGuest, CreatedBy: admin, Now: time.Now()},
 	}); err != nil {
 		t.Fatal(err)
 	}

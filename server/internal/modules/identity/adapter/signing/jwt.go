@@ -49,7 +49,7 @@ func (a *AccessTokens) Issue(c app.AccessClaims) (string, error) {
 		RegisteredClaims: jwt.RegisteredClaims{Subject: c.UserID.String(), ExpiresAt: jwt.NewNumericDate(c.ExpiresAt)},
 		SessionID:        c.SessionID.String(),
 	})
-	return token.SignedString(a.keys.private)
+	return token.SignedString(*a.keys.private)
 }
 
 // Verify checks token at now: only EdDSA, strict base64url, exp required.

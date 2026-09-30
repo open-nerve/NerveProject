@@ -289,8 +289,8 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   | 修改工作区的显示设置 | 工作区 S → 判定 → 插入或更新 |
   | 创建邀请 | 邀请人的账户行（N，复核凭证，3.8）→ 工作区 S → 判定 → 校验（"已是有效成员"：有效成员的 id 经 `MemberProfiles` 换成邮箱比较，不加锁，约定一）→ 按规范化后的邮箱排序插入邀请（约定五；唯一索引的冲突翻译为 422 `duplicate`，3.8） |
   | 修改、删除邀请 | 读邀请 → 工作区 S → 重读邀请 → 判定 → 改 |
-  | 接受邀请 | 读邀请（不加锁，得到工作区）→ 接收账户的行 S（锁下重读 `is_active`、邮箱，约定六）→ 工作区 N → 邀请行 `FOR UPDATE`（确认未回应、未删除，核对令牌和锁下的邮箱）→ 已是有效成员：成员关系不变；否则插入或恢复成员（恢复为访客时 `DemoteToGuest`：他在这个工作区的项目 N → 项目成员）→ 记接受、软删除邀请 |
-  | 忽略邀请 | 读邀请（不加锁，得到工作区）→ 调用者的账户行 S（锁下读 `is_active`、邮箱，约定一）→ 工作区 S → 邀请行 `FOR UPDATE`（确认未回应、未删除，核对令牌和锁下的邮箱）→ 记回应 |
+  | 接受邀请 | 核对令牌（事务之前，不读库）→ 接收账户的行 S（锁下重读 `is_active`、邮箱，约定六；最先锁它，所以已停用的调用者在读到邀请的任何东西之前就得到 401）→ 读邀请（不加锁，得到工作区）→ 工作区 N → 邀请行 `FOR UPDATE`（确认未删除、仍属这个工作区，比较锁下的邮箱，再确认未回应）→ 已是有效成员：成员关系不变；否则插入或恢复成员（恢复为访客时 `DemoteToGuest`：他在这个工作区的项目 N → 项目成员）→ 记接受、软删除邀请 |
+  | 忽略邀请 | 核对令牌（事务之前，不读库）→ 调用者的账户行 S（锁下读 `is_active`、邮箱，约定一；同上，已停用的调用者先得到 401）→ 读邀请（不加锁，得到工作区）→ 工作区 S → 邀请行 `FOR UPDATE`（确认未删除、仍属这个工作区，比较锁下的邮箱，再确认未回应）→ 记回应 |
   | 停用账户（3.9） | `users` N（锁下读邮箱）→ `profiles` → `auth_sessions`（M2 的部分）→ 列举他有效成员关系所在的工作区 → 那些工作区（N，`id` 升序；锁时已删除的跳过）→ 查唯一管理员 → 发给他邮箱的全部邀请 → 他的工作区成员行 → `EndMemberships`：列举这些工作区里他有效的项目成员关系（新的语句）→ 那些项目（N，`id` 升序；锁时已删除的跳过）→ 查唯一管理员 → 项目成员 |
   | 创建项目 | 工作区 S → 判定 → 创建者、负责人的工作区成员行（S，`id` 升序）→ 插入项目 → 项目成员 → 项目显示设置 → 6 个状态 |
   | 修改、归档、恢复项目 | 项目 N → 判定 → 改 |
@@ -378,12 +378,12 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 - **注册**（决策点 1，(a)）：`SignupPolicy` 扩展为 `AllowSignup(ctx, email string, invitation *SignupInvitation) (bool, error)`，不另加端口（M2 设计评审 M16）。`auth.signup_enabled` 为真时照旧允许；为假时，只有带着有效邀请、而注册邮箱（规范化后）等于邀请邮箱时允许。
   - `bootstrap` 的实现组合配置开关和 `workspace` 提供的检查（6.5）。
   - `RegisterRequest` 加可选的 `invitation {id, token}`。邀请无效的各种情况都得到 403 `identity.signup_disabled`，与不带邀请相同，不透露是哪一种。
-  - 持有链接的人能用注册试邮箱：邮箱对了就注册成功，不对就被拒绝。这一次次尝试受按 IP 的注册限流约束（`ratelimit.register_ip`，每分钟 10 次），决策点 1 接受了这个风险（8.2）。
+  - 持有链接的人能用注册试邮箱：邮箱不对就被拒绝（403）；邮箱对了，注册策略放行，之后是注册平常的回答：密码合规、邮箱未注册就注册成功；密码不合规 422 `validation_failed`，邮箱已注册 409 `identity.email_taken`，这两种不建账户（所以试邮箱不一定留下账户，还能得知这个邮箱是否已注册）。这一次次尝试受按 IP 的注册限流约束（`ratelimit.register_ip`，每分钟 10 次），决策点 1 接受了这个风险（8.2）。
   - 注册不替用户接受邀请（Plane 也不）：注册页带着 `next_path` 回到邀请页，由用户点"接受"。`identity` 的注册因此不写 M3 的表。
   - Plane 关闭注册时认"这个邮箱有任何一份邀请"（`authentication/adapter/base.py:102-120`），不要令牌，登记差异。
 - **邀请的其余规则**：邀请已是有效成员的邮箱 422 `not_allowed`，已有未删除的邀请 422 `duplicate`（Plane 静默忽略，登记差异）；邮箱按注册的规则规范化和校验（3.13）；一次最多 100 个；没有有效期（与 Plane 相同）。
   - **"已是有效成员"的核对**：取这个工作区有效成员的 id，经不加锁的 `MemberProfiles` 换成邮箱，与规范化后的邮箱比较（3.6 约定一）；不经 `Accounts`，它只作事务的第一把锁。
-  - **一批全有或全无**：任何一个邮箱不合规，整批都不插入，回答列出每个不合规的 `invitations[i]`。
+  - **一批全有或全无**：任何一个邮箱不合规，整批都不插入，回答列出每个不合规的 `invitations[i]`。只看请求的问题（条数、邮箱格式、本批重复、角色）在事务之前先单独回答；依赖数据库的问题（已是有效成员、已有邀请）在锁和判定之后，一个 422 列出它们（6.7 第 0 步、3.6 约定二）。
   - **按规范化后的邮箱排序插入**（3.6 约定五）：两位管理员同时邀请重叠的邮箱时，后到的一方只等先到的一方，不会死锁（复核 spike 14a、14b）。
   - **并发的冲突与事先的校验同一个回答**：先到的一批提交之后，后到的一批插入同一个邮箱时 `workspace_member_invites_workspace_id_email_key` 报 23505；用例把它翻译为 422 `invitations[i].email` 的 `duplicate`，`i` 是这个邮箱在请求里的下标（9.3 的"唯一约束冲突翻译为 409"的例外），整批回滚。
 
@@ -553,7 +553,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 | P2 | 总体设计 | 4.2 | 加锁顺序延伸到 M3 的表和六条约定，包括"先锁父行，再判定"、成员关系集合的增长与收缩、`Accounts` 只作事务的第一把锁、共享锁之下的批量插入按唯一键排序（3.6、11.2）。约定六的接受邀请一段在 P3、停用一段在 P6 随实现核对 |
 | P2 | 差异清单 | 二·按表、四 | `workspace_user_properties` 逐列（4.5）；4.11 中标 P2 的行 |
 | P3 | 总体设计 | 1.1 | 邀请"在系统内接受"改为"凭邀请链接接受，由工作区管理员复制链接交给对方；只有工作区管理员发出邀请"（决策点 2、4） |
-| P3 | 总体设计 | 4.2 | "被邀请的邮箱始终可以注册"改为"注册关闭时，持有效邀请链接、且注册邮箱与邀请一致的人仍可注册；公开的查看不显示被邀请的邮箱"（决策点 1） |
+| P3 | 总体设计 | 1.1（登录方式） | "被邀请的邮箱始终可以注册"改为"注册关闭时，持有效邀请链接、且注册邮箱与邀请一致的人仍可注册；公开的查看不显示被邀请的邮箱"（决策点 1） |
 | P3 | 差异清单 | 二·按表、四 | `workspace_member_invites` 逐列（4.4）；4.11 中标 P3 的行（邀请的各行，含"接受不改变有效的成员关系"） |
 | P4 | 差异清单 | 二·按表、四 | `projects`、`project_members`、`project_user_properties`、`states` 逐列（4.6–4.9），`projects` 的计数列定名为 `last_issue_sequence`；4.11 中标 P4 的行 |
 | P5 | 差异清单 | 四 | 4.11 中标 P5 的行（唯一管理员的三处修正、恢复成员的命令、移出和离开删除发给他的待接受邀请） |
@@ -636,7 +636,7 @@ M3 对 M2 设计 3.13 的两处补充：
 | `responded_at` | `timestamptz` | 照搬；`CONSTRAINT workspace_member_invites_responded_check CHECK (responded_at IS NOT NULL OR NOT accepted)` 新加 |
 | `created_by_id`、`updated_by_id`、`created_at`、`updated_at`、`deleted_at` | 同 4.2 | — |
 
-- **索引**：`workspace_member_invites_workspace_id_email_key ON (workspace_id, email) WHERE deleted_at IS NULL`（照搬；已忽略的邀请没有删除，仍占着这个邮箱，3.8）；`workspace_member_invites_email_idx ON (email) WHERE deleted_at IS NULL`（注册策略、停用按邮箱查）；`workspace_member_invites_workspace_id_idx ON (workspace_id)`（物理级联）。
+- **索引**：`workspace_member_invites_workspace_id_email_key ON (workspace_id, email) WHERE deleted_at IS NULL`（照搬；已忽略的邀请没有删除，仍占着这个邮箱，3.8）；`workspace_member_invites_email_idx ON (email) WHERE deleted_at IS NULL`（停用按邮箱删除发给它的邀请，3.9；注册策略按邀请的 id 读，不按邮箱）；`workspace_member_invites_workspace_id_idx ON (workspace_id)`（物理级联）。
 - **删除的列**：`token`（不存令牌，3.8）；`message`（没有写入方）。
 - spike：`accepted = true` 而 `responded_at` 为空、邮箱含大写，都被 CHECK 拒绝。
 
@@ -925,7 +925,7 @@ labels
 | `workspace.member_not_found` | 404 | 成员不存在，或不在调用者看得到的工作区里 |
 | `workspace.own_membership` | 409 | 改自己的角色，或移出自己（请用"离开"）（Plane 400） |
 | `workspace.sole_admin` | 409 | 唯一的管理员离开；或连带结束、停用时，他是某个还有别的成员的工作区唯一的管理员（3.7） |
-| `workspace.invitation_not_found` | 404 | 邀请不存在、已删除、已接受，或令牌不对（公开的查看、接受、忽略都一样） |
+| `workspace.invitation_not_found` | 404 | 邀请不存在、已删除、已接受，或令牌不对（公开的查看、接受、忽略都一样）；或调用者看不到它的工作区（修改、删除） |
 | `workspace.invitation_email_mismatch` | 403 | 登录账户的邮箱不是邀请的邮箱；回答不含邀请的邮箱（3.8） |
 | `workspace.invitation_responded` | 409 | 邀请已被忽略，不能再接受、忽略或改角色 |
 | `project.not_found` | 404 | 项目不存在、已删除，或调用者看不到它（3.4） |
@@ -1076,7 +1076,7 @@ modules/access/
 - **`New(Deps)`** 建出全部用例和 HTTP 的一侧，`Deps` 里是它要的全部端口。构造之后不再登记、不再注入任何东西。
 
 `bootstrap` 按下面的顺序接线：
-1. **载入签名密钥**：`identity.LoadKeys(pem)`（原在 `identity.New` 里）。返回的值不导出密钥，只提供 `identity.New` 要的 JWT 和刷新令牌的 MAC，以及按用途派生的 MAC（3.8 的"密钥不离开 `signing`"照旧）。
+1. **载入签名密钥**：`identity.LoadKeys(pem)`（原在 `identity.New` 里）。返回的值不导出密钥，只提供 `identity.New` 要的 JWT 和刷新令牌的 MAC，以及按用途派生的 MAC（刷新令牌的用途除外：它只属于 `identity.New`；3.8 的"密钥不离开 `signing`"照旧）。
 2. **适配器**：`identity.Provide(pool)`（`Accounts`、`PublicProfiles`、`CredentialLock`）、`workspace.Provide(pool)`（`WorkspaceRoles`、`WorkspaceDirectory`、`WorkspaceMembers`）、`project.Provide(pool)`（`ProjectAccess`、`ProjectMembershipCounts`）。
 3. `access.New`（`WorkspaceRoles`、`ProjectAccess`）→ `Authorizer`。
 4. `project.New`（`Authorizer`、`WorkspaceDirectory`、`WorkspaceMembers`）→ 它的 `Cascade()`。
@@ -1350,7 +1350,7 @@ modules/access/
 | `GET /workspace-slugs/{slug}` | 被占用、保留、可用 | 需要登录；它回答的只是"这个名字能不能用"，Plane 的 slug 检查同样回答（`views/workspace/base.py:214-225`），创建表单需要它 |
 | 公开的查看邀请 | 邀请不存在、已删除、已接受、令牌不对：同一个 404 | 不带令牌 400；按 IP 限流（5.4）；回答里没有被邀请的邮箱 |
 | 接受、忽略 | 同上 404；令牌对而邮箱不一致 403 `workspace.invitation_email_mismatch` | 回答不含被邀请的邮箱；要试出邮箱，必须先拥有那个邮箱的账户 |
-| 注册时带邀请 | 各种无效都是 403 `identity.signup_disabled` | 与不带邀请相同（3.8）。持有链接的人能用注册试被邀请的邮箱（对了就注册成功），每次尝试受按 IP 的注册限流（`register_ip`）约束；决策点 1 接受这个风险 |
+| 注册时带邀请 | 各种无效都是 403 `identity.signup_disabled` | 与不带邀请相同（3.8）。持有链接的人能用注册试被邀请的邮箱（对了就按注册平常的规则回答：注册成功，或者 422 `validation_failed`、409 `identity.email_taken`，这两种不建账户），每次尝试受按 IP 的注册限流（`register_ip`）约束；决策点 1 接受这个风险 |
 
 ### 8.3 404 与 403 的边界
 - 看不到的一律 404，看得到而不能做的 403 `forbidden`（3.4）。规则只有一处（`access/domain/decide.go`），矩阵逐格测试（9.2）；列表的过滤与逐个判定一致（9.3）。
@@ -1458,7 +1458,7 @@ modules/access/
 - **可见性一致**：对 9.2 的每种身份，`listProjects` 的结果等于对每个项目逐个判定 `project.read` 的结果；`listWorkspaceStates` 同理（3.4）。
 - **邀请从不改变有效的成员关系**（3.8，P5）：Codex S2 的顺序：A、B 是管理员，A 移出 B，之后给 B 发一份访客邀请，`reactivate-member` 恢复 B，B 加入一个项目，A 离开，B 接受那份旧邀请：B 仍是工作区管理员（工作区有一位管理员），项目角色仍是 20，邀请已消费。故事 W12 的接口版本走同一顺序。
 - **结束的成员关系不留下邀请**（3.8，P5）：复核 spike 9d 的顺序：A、B 是管理员，B 有效而有一份发给他的待接受访客邀请（上一条里 `reactivate-member` 之后的状态），A 移出 B；之后 B 用旧链接查看、接受都得到 404 `workspace.invitation_not_found`，他没有回到工作区，邀请的 `deleted_at` 等于移出的时刻。B 自己离开同样跑一次。一份已忽略的邀请不受影响。`EndMemberships` 以 `project.sole_admin` 拒绝时，邀请随之回滚、仍待接受。
-- **交错**（3.6 的 19 种，用 `pgtest.WaitForLockWaitOn(t, pool, <被等的父行所在的表>, 时限)` 让一方确定地等在那张表的行锁上，例如 `workspaces`；组装好的应用在同一个库上跑 River，不看表的 `pgtest.WaitForLockWait` 会被别的等待提前满足，它只用在没有别的语句能等的库上，如 `ON CONFLICT` 等同一个键的插入；括号里是加入的 Phase）：
+- **交错**（3.6 的 19 种，用 `pgtest.WaitForLockWaitOn(t, pool, <被等的父行所在的表>, 时限)` 让一方确定地等在那张表的行锁上，例如 `workspaces`；等在一张表的唯一键上（插入的键与另一个未结束的事务插入的相同，没有行锁可等，如 `ON CONFLICT` 或唯一索引检查）用 `pgtest.WaitForKeyWaitOn(t, pool, <表>, 时限)`；组装好的应用在同一个库上跑 River，不看表的 `pgtest.WaitForLockWait` 会被别的等待提前满足，它只用在没有别的语句能等的库上；括号里是加入的 Phase）：
   1. 两位管理员同时离开工作区（P5）：一个成功，另一个等锁之后 409 `workspace.sole_admin`；项目一侧（`leaveProject`）同理。
   2. 两位管理员互相降级（P2）：先拿到工作区锁的一方成功；后到的一方判定时已是成员，403 `forbidden`；仍有一位管理员。
   3. 接受邀请与删除工作区（P3）：接受先拿到工作区锁，删除等待，之后连带删除新成员；删除先提交，接受锁工作区时读到 0 行，404。
@@ -1569,7 +1569,7 @@ modules/access/
 | B 只凭令牌 | 拿到链接的任何账户都能接受 | 对新受邀的人与 A+(a) 几乎相同；对已有账户的受邀者更弱 | 去掉邮箱比对，邀请的邮箱只是给管理员看的标签 |
 
 - **理由**：保留自助（管理员只发链接）；链接相当于 Plane 的邀请邮件；不显示邮箱让单独泄露的链接不够用。剩下的风险（链接和邮箱一起泄露、而受邀的人还没注册）由管理员删除邀请、重新邀请来处理（8.1）。Plane 在 GHSA-4vj8-p63v-8p24 之后也要求邮箱一致（`views/workspace/invite.py:161-174`）。
-- **(a) 带来的另一个口子**（Codex 4.1）：持有链接的人能拿注册去试被邀请的邮箱，对了就注册成功、错了被拒绝。每次尝试受按 IP 的注册限流约束（`ratelimit.register_ip`，每分钟 10 次、最多攒 5 次）；查看不显示邮箱只是少了直接的披露，并没有让邮箱变成第二个验证过的因素（3.8、8.2）。
+- **(a) 带来的另一个口子**（Codex 4.1）：持有链接的人能拿注册去试被邀请的邮箱：错了被拒绝；对了就走注册的常规检查，弱密码答 422，邮箱已注册答 409，否则注册成功。每次尝试受按 IP 的注册限流约束（`ratelimit.register_ip`，每分钟 10 次、最多攒 5 次）；查看不显示邮箱只是少了直接的披露，并没有让邮箱变成第二个验证过的因素（3.8、8.2）。
 - **以后改的代价**：各选项之间的代码改动都小。显示或不显示邮箱是查看的一个字段和拒绝的一句话；A → B 放宽安全边界，要重新评估。(a) → (b) 删掉 `SignupPolicy` 的邀请分支和注册页的邀请参数，但已经凭邀请注册的账户不会因此消失：改的时候要另外决定怎样对待这些存量账户（逐个核对，或者不处理）。
 
 ### 决策点 2：保留一条接受的路径还是两条（M1 设计 3.15）
@@ -1968,7 +1968,7 @@ modules/access/
 ### 13.2 M3 交给后续 M 的事项（收尾时写成交接）
 | 接收者 | 事项 |
 |---|---|
-| M4 | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue_calendar_view` 的反应和 `issue/root.store.ts` 的 `autorun` 的释放（7.1）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
+| M4 | **事件**：M3 没有领域事件，删除工作区、降为访客、结束成员关系的连带经 `ProjectCascade` 同步完成（3.3）。M4 随第一个异步订阅者引入事件（M2 设计 3.15、M4 的 M2 收尾交接第 6 节不变），届时可以把删除工作区的连带改挂到 `WorkspaceDeleted` 上，并为工作项加上删除项目、删除工作区的连带。但邀请的软删除必须留在删除工作区的事务里：注册时的邀请检查（`SignupInvitations`）只看邀请行、不看工作区，连带改为异步之后，从删除到任务运行之间，已删除工作区的邀请链接会让被邀请的邮箱在注册关闭时注册；所以要么邀请这一步保持同步，要么让这个检查也读工作区。**约定**：先锁父行再判定、加锁顺序、成员关系集合的增长与收缩（3.6 约定六，以后加入新的成员关系时照它写，恢复"不比新授予给得更多，也不比原来那一行更多"）、共享锁之下的批量插入按唯一键排序（约定五）、账户行只作第一把锁（约定一）；页面按权限取数、`await` 之后先核对会话（7.1）；声明在一个模块上的跨模块错误码由这个模块的 HTTP 测试返回（9.4）；规则表和操作名在各模块、完整性测试（3.4）；权限矩阵的写法（9.2）；错误码前缀规则的修订和 `forbidden`（11.7）；规则表的 `AllowCreator` 和 `guest_view_all_features` 对工作项的约束（3.4）。**数据**：删除状态前检查它的工作项、删除标签时处理 `issue_labels`；工作项编号取 `projects.last_issue_sequence`（4.6）；工作项的筛选和显示列加在 `workspace_user_properties`、`project_user_properties`（3.18），旧 `ProjectService` 的 `/user-properties/` 两个方法和关键词例外（`until: "M4"`）；旧 `ProjectService` 的 `projectIssuesSearch` 和它的三个调用方（M4 的选父工作项、M6 的添加已有工作项、M7 的收集箱查重）随 M4 的工作项搜索接口替换，之后删除旧 service（7.3）；60 天清理包括 M3 的表，指向 `workspaces`、`projects`、`labels.parent_id` 的外键已有不带条件的索引，工作项的表照做（4.12）；工作项引用状态、标签、项目的外键在 4.12 的图上延伸。**其他**：页大小的规则移到 `shared`、游标不签名的提醒（M2 交接第 12 节原样，3.12）；决策点 3 的规则行（个人主页的工作项列表）；`issue_calendar_view` 的反应和 `issue/root.store.ts` 的 `autorun` 的释放（7.1）；`workspace-draft-issues/base.ts` 的 16 行死成员；M3 页面上指向工作项页面的链接接上之后，这些页面进入 `watchPage` 的范围（3.1） |
 | M5 | `workspaces.logo_asset_id`、`projects.cover_image_asset_id` 的迁移归各自模块，图标和封面的上传控件从 Plane 的源码加回，`logo_url`、`cover_image_url`、`MemberUser.avatar_url` 有真值（3.2）；新建项目的封面值（M5 的 M1-closeout，M3 已删掉上传预设封面的一步） |
 | M6 | `ProjectAuthWrapper` 取迭代、模块（3.1，按 7.1 由权限启用）；`existing-issues-list-modal.tsx` 改用 M4 的工作项搜索（7.3）；`cycle_filter`、`module_filter` 的反应的释放（7.1）；`core/sidebar/progress-stats/` 的 8 行死成员；迭代、模块的外键在 4.12 的图上延伸 |
 | M7 | 侧边栏的收藏、未读通知数、首页的"最近"小部件、项目的视图和分诊状态的取数、项目侧边栏的 `intake_count`（3.1）；打开 `intake_view` 时建默认收集箱、分诊状态的接口（3.17）；跨项目的标签列表（3.16、7.3）；项目的收藏（`is_favorite`、卡片上的收藏按钮、建项目之后加入收藏、`favorite.store.ts` 的项目分支、`favoriteProjectIds` getter，3.2）和归档项目时的收藏处理；收集箱查重 `select-duplicate.tsx` 改用 M4 的工作项搜索（7.3）；`workspace-notifications.ts` 的 17 行死成员；工作区视图的筛选列（3.18） |
@@ -1999,7 +1999,7 @@ modules/access/
 | 设计 | 本文（第三稿，按聚焦复核修订） | 第一稿经独立评审、第二稿经 Codex 对抗性评审、第三稿经聚焦复核，都已落实（17.1–17.3）；决策点已裁定，架构问题已批准（2026-09-29） |
 | P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
 | P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 已完成：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)、[review](reviews/P2-workspaces-review.md)（执行时 15 个 Task） |
-| P3 `invitations` | 邀请与凭邀请注册（后端，14） | 未开始 |
+| P3 `invitations` | 邀请与凭邀请注册（后端，14） | 已完成：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)、[评审](reviews/P3-invitations-review.md)（执行时 15 个 Task） |
 | P4 `projects` | 项目、项目成员的加入与两个连带（后端，16） | 未开始 |
 | P5 `memberships` | 结束成员关系与恢复（后端，15） | 未开始 |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |

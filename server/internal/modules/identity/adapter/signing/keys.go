@@ -1,26 +1,42 @@
 // Package signing holds the instance's Ed25519 key (M2 design 3.7): it signs
-// the access tokens and, through a key derived from it, tags the refresh
-// tokens (3.4). The key never leaves this package and is never logged.
+// the access tokens and, through a key derived from it for each purpose,
+// tags the refresh tokens (M2 design 3.4) and the workspace invitations
+// (M3 design 3.8). The key never leaves this package, and printing or
+// logging Keys or a MAC shows no key but in the one case Keys and MAC name.
 package signing
 
 import (
 	"crypto/ed25519"
-	"crypto/hkdf"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 )
 
-// macInfo separates the MAC key from the signing key (HKDF info, M2 design 3.4).
-const macInfo = "nerve refresh-token mac v1"
-
-// Keys are the signing key and the MAC key derived from its seed.
+// Keys are the signing key and its public half. Each purpose's MAC key is
+// derived from its seed (MAC).
+//
+// No fmt verb, log handler or encoding/json shows the private key of Keys
+// or *Keys: Format prints the type alone. fmt calls no method on a value it
+// reaches through an unexported field; there it prints a pointer as an
+// address under a verb with a pointer form (%v, %p, %b, %o, %d, %x, %X),
+// and under any other (%s, %q, %t, %c, %U, %e, %f, %g, %O, an unknown
+// verb) what the pointer points to, as %v prints it, one level deep. The
+// private key is behind a pointer, so a *Keys held in a field shows the
+// public key and addresses at most. Only a Keys value copied into an
+// unexported field would show the private key, under a verb without a
+// pointer form; ParseKeys and EphemeralKeys give *Keys, and no code copies
+// one.
 type Keys struct {
-	private ed25519.PrivateKey
+	private *ed25519.PrivateKey
 	public  ed25519.PublicKey
-	mac     []byte
+}
+
+// Format prints the keys as their type alone, whatever the verb, for Keys
+// and *Keys.
+func (Keys) Format(f fmt.State, _ rune) {
+	_, _ = io.WriteString(f, "signing.Keys(redacted)")
 }
 
 // ParseKeys reads a PKCS#8 PEM Ed25519 private key, the format of
@@ -38,21 +54,16 @@ func ParseKeys(pemData []byte) (*Keys, error) {
 	if !ok {
 		return nil, fmt.Errorf("the key is %T, want an Ed25519 key", key)
 	}
-	return newKeys(private)
+	return newKeys(private), nil
 }
 
 // EphemeralKeys generates a key for this process only: dev and test without
 // auth.jwt.private_key_file (M2 design 3.7).
 func EphemeralKeys() *Keys {
 	_, private, _ := ed25519.GenerateKey(nil) // crypto/rand; never fails
-	k, _ := newKeys(private)                  // cannot fail for a generated key
-	return k
+	return newKeys(private)
 }
 
-func newKeys(private ed25519.PrivateKey) (*Keys, error) {
-	mac, err := hkdf.Key(sha256.New, private.Seed(), nil, macInfo, 32)
-	if err != nil {
-		return nil, fmt.Errorf("derive the MAC key: %w", err)
-	}
-	return &Keys{private: private, public: private.Public().(ed25519.PublicKey), mac: mac}, nil
+func newKeys(private ed25519.PrivateKey) *Keys {
+	return &Keys{private: &private, public: private.Public().(ed25519.PublicKey)}
 }

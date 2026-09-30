@@ -75,10 +75,12 @@ func TestUpdateWorkspaceMemberShowsTheAddressByTheCallersRole(t *testing.T) {
 // Each refusal and failure is the answer, and no role is written. The
 // role's check comes first. A membership that is not there or deleted
 // meanwhile, of a workspace not there, deleted meanwhile or not visible is
-// workspace.member_not_found; a member's forbidden comes before any check
-// of the target, so he learns nothing about it; then an ended membership
-// is workspace.member_not_found and the caller's own
-// workspace.own_membership; a failure is never a 404.
+// workspace.member_not_found, and so, before any decision, is one of
+// another workspace when read again under the lock (M3 design 3.6
+// convention 2), though the caller is that one's admin too; a member's
+// forbidden comes before any check of the target, so he learns nothing
+// about it; then an ended membership is workspace.member_not_found and the
+// caller's own workspace.own_membership; a failure is never a 404.
 func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	forbidBob := func(f *membersFixture) { f.auth.errs = map[grantKey]error{{bob.ID, acme.ID}: shared.Forbidden()} }
@@ -106,6 +108,12 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 		{"deleted while the lock waited", alice, bobInAcme.ID, shared.RoleGuest,
 			func(f *membersFixture) {
 				f.workspaces.onLock = func() { f.workspaces.memberships[acme.ID] = []domain.Membership{aliceInAcme, carolInAcme} }
+			},
+			domain.ErrMemberNotFound, decided[:3]},
+		{"of beta when read again under the lock", alice, bobInAcme.ID, shared.RoleGuest,
+			func(f *membersFixture) {
+				f.auth.grants[grantKey{alice.ID, beta.ID}] = shared.Grant{WorkspaceRole: shared.RoleAdmin}
+				f.workspaces.onLock = func() { f.workspaces.memberships[acme.ID][1].WorkspaceID = beta.ID }
 			},
 			domain.ErrMemberNotFound, decided[:3]},
 		{"not visible", carol, bobInAcme.ID, shared.RoleGuest, nil, domain.ErrMemberNotFound, lockedMemberCalls(carol, bobInAcme)},

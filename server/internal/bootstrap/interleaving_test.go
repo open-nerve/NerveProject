@@ -32,25 +32,37 @@ import (
 // waits on that row before the gate opens. Every wait has a deadline.
 
 // gate holds a transaction open: the first call of wait signals held and
-// waits until open is closed.
+// waits until open is closed, the caller's context ends, or 10 seconds
+// after the gate was made, whichever comes first. The gate's own deadline
+// is for a side that lost the test's context, such as a use case that runs
+// a statement on context.Background(): its wait would never end, and the
+// test's cleanup, closing the pool, would wait for its connection forever.
 type gate struct {
 	held, open chan struct{}
+	deadline   time.Time
 }
 
-func newGate() *gate { return &gate{held: make(chan struct{}), open: make(chan struct{})} }
+func newGate() *gate {
+	return &gate{held: make(chan struct{}), open: make(chan struct{}), deadline: time.Now().Add(10 * time.Second)}
+}
 
 func (g *gate) wait(ctx context.Context) error {
 	close(g.held)
+	expired := time.NewTimer(time.Until(g.deadline))
+	defer expired.Stop()
 	select {
 	case <-g.open:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-expired.C:
+		return errors.New("the gate was not opened within 10s")
 	}
 }
 
-// gatedSessions stops deactivation at its last write, holding the account
-// row's lock.
+// gatedSessions stops a use case before it revokes the sessions, holding
+// the account row: a deactivation at its last write, a change of address
+// after its write.
 type gatedSessions struct {
 	identityapp.SessionRevoker
 	gate *gate

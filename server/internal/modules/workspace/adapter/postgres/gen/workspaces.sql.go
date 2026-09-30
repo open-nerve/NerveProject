@@ -170,6 +170,22 @@ func (q *Queries) LockWorkspaceBySlug(ctx context.Context, slug string) (uuid.UU
 	return id, err
 }
 
+const shareWorkspace = `-- name: ShareWorkspace :one
+SELECT id
+FROM workspaces
+WHERE id = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+// ShareWorkspace takes ShareWorkspaceBySlug's lock by the workspace's id: for a write addressed by a row under the
+// workspace that adds or changes a row under it (M3 design 3.6 convention 2).
+func (q *Queries) ShareWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, shareWorkspace, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
+}
+
 const shareWorkspaceBySlug = `-- name: ShareWorkspaceBySlug :one
 SELECT id
 FROM workspaces
@@ -250,6 +266,42 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 		arg.ID,
 	)
 	var i UpdateWorkspaceRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.OrganizationSize,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TotalMembers,
+	)
+	return i, err
+}
+
+const workspaceByID = `-- name: WorkspaceByID :one
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+       (SELECT count(*) FROM workspace_members c
+        WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
+FROM workspaces w
+WHERE w.id = $1 AND w.deleted_at IS NULL
+`
+
+type WorkspaceByIDRow struct {
+	ID               uuid.UUID
+	Name             string
+	Slug             string
+	OrganizationSize *string
+	Timezone         string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	TotalMembers     int64
+}
+
+// acceptWorkspaceInvitation's answer, read in its transaction after the membership changed.
+func (q *Queries) WorkspaceByID(ctx context.Context, id uuid.UUID) (WorkspaceByIDRow, error) {
+	row := q.db.QueryRow(ctx, workspaceByID, id)
+	var i WorkspaceByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

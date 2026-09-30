@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
@@ -115,9 +116,17 @@ func (l *callLog) add(ctx context.Context, call string) {
 	l.calls = append(l.calls, call)
 }
 
+// fixedPolicy answers allow and err, and records what it was asked in
+// asked, when set.
 type fixedPolicy struct {
 	allow bool
 	err   error
+	asked *[]string
 }
 
-func (p fixedPolicy) AllowSignup(context.Context) (bool, error) { return p.allow, p.err }
+func (p fixedPolicy) AllowSignup(_ context.Context, email string, invitation *app.SignupInvitation) (bool, error) {
+	if p.asked != nil {
+		*p.asked = append(*p.asked, fmt.Sprintf("%s %+v", email, invitation))
+	}
+	return p.allow, p.err
+}

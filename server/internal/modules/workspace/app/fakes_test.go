@@ -268,6 +268,10 @@ func (f *fakeWorkspaces) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, 
 	return f.deleteStep(ctx, "DeleteWorkspace", id, by, now)
 }
 
+func (f *fakeWorkspaces) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	return f.deleteStep(ctx, "DeleteWorkspaceInvitations", workspaceID, by, now)
+}
+
 func (f *fakeWorkspaces) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
 	return f.deleteStep(ctx, "DeleteWorkspaceMembers", workspaceID, by, now)
 }
@@ -310,6 +314,12 @@ func (f *fakeWorkspaces) MemberByID(ctx context.Context, id uuid.UUID) (domain.M
 // LockWorkspace answers as the slug locks do, for the workspace with id.
 func (f *fakeWorkspaces) LockWorkspace(ctx context.Context, id uuid.UUID) error {
 	f.log.add(ctx, "LockWorkspace %s", id)
+	return f.lockByID(id)
+}
+
+// lockByID answers as lock does, for the workspace with id; once locked, it
+// runs onLock.
+func (f *fakeWorkspaces) lockByID(id uuid.UUID) error {
 	i := slices.IndexFunc(f.workspaces, func(w domain.Workspace) bool { return w.ID == id })
 	if i < 0 {
 		return app.ErrNotFound

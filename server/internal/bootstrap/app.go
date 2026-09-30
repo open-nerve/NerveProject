@@ -63,6 +63,16 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
+	// The signing key first, before any module, and the MACs derived from
+	// it for the other modules (M3 design 6.6 step 1).
+	keys, err := identity.LoadKeys(signingKey, logger)
+	if err != nil {
+		return nil, err
+	}
+	invitations, err := invitationMAC(keys)
+	if err != nil {
+		return nil, err
+	}
 	pool, err := postgres.NewPool(ctx, cfg.Database)
 	if err != nil {
 		return nil, err
@@ -95,6 +105,8 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
+		InvitationMAC:   invitations,
+		CallerLock:      identityPorts.CredentialLock,
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{
@@ -102,8 +114,8 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Tx:              tx,
 		Clock:           clock.System{},
 		Logger:          logger,
-		SignupPolicy:    signupSwitch(cfg.Auth.SignupEnabled),
-		SigningKeyPEM:   signingKey,
+		SignupPolicy:    signupPolicy{enabled: cfg.Auth.SignupEnabled, invitations: ws.SignupInvitations()},
+		Keys:            keys,
 		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 		SessionTTL:      cfg.Auth.SessionTTL,
 		RefreshDeadline: cfg.Auth.RefreshDeadline,
@@ -142,7 +154,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		httpserver.Check{Name: "database", Run: pool.Ping},
 		httpserver.Check{Name: "migrations", Run: migrator.CheckUpToDate},
 	)
-	a.publicOperations = slices.Concat(ident.PublicOperations(), inst.PublicOperations())
+	a.publicOperations = slices.Concat(ident.PublicOperations(), inst.PublicOperations(), ws.PublicOperations())
 	api, err := httpserver.NewAPI(httpserver.APIConfig{
 		Logger:           logger,
 		Authenticator:    ident.Authenticator(),
@@ -187,6 +199,13 @@ func readSigningKey(path string) ([]byte, error) {
 	return data, nil
 }
 
+// invitationMAC is the invitation MAC the workspace module takes: keys'
+// MAC of workspace.InvitationMACPurpose (M3 design 3.8, 6.6), the one place
+// the composition names the purpose.
+func invitationMAC(keys *identity.Keys) (identity.MAC, error) {
+	return keys.MAC(workspace.InvitationMACPurpose)
+}
+
 // passwordHashing is auth.password as identity takes it.
 func passwordHashing(p config.PasswordConfig) identity.PasswordHashing {
 	return identity.PasswordHashing{
@@ -203,11 +222,6 @@ func passwordHashing(p config.PasswordConfig) identity.PasswordHashing {
 func bucket(limiter *ratelimit.Limiter, name string, c config.BucketConfig) *ratelimit.Bucket {
 	return limiter.Bucket(name, ratelimit.Rate{PerMinute: c.PerMinute, Burst: c.Burst})
 }
-
-// signupSwitch is auth.signup_enabled as identity's SignupPolicy.
-type signupSwitch bool
-
-func (s signupSwitch) AllowSignup(context.Context) (bool, error) { return bool(s), nil }
 
 // warnIfExposed warns once when a non-prod nerve listens beyond loopback:
 // most likely a deployment without NERVE_ENV=prod (M2 design 6.1).

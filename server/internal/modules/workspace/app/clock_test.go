@@ -54,6 +54,34 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 		}, append(lockedMemberCalls(alice, bobInAcme), "Now",
 			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))},
+		{"updateWorkspaceInvitation", func() ([]string, error) {
+			f := newInvitations()
+			_, err := app.NewUpdateWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}, f.mac).
+				Execute(as(alice), carolToAcme.ID, shared.RoleGuest)
+			return f.log.calls, err
+		}, append(lockedInvitationCalls(alice, carolToAcme, domain.ActionInvitationUpdate), "Now",
+			fmt.Sprintf("UpdateInvitationRole %s to %d by %s at %s", carolToAcme.ID, shared.RoleGuest, alice.ID, at))},
+		{"deleteWorkspaceInvitation", func() ([]string, error) {
+			f := newInvitations()
+			err := app.NewDeleteWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}).Execute(as(alice), daveToAcme.ID)
+			return f.log.calls, err
+		}, append(lockedInvitationCalls(alice, daveToAcme, domain.ActionInvitationDelete), "Now",
+			fmt.Sprintf("DeleteInvitation %s by %s at %s", daveToAcme.ID, alice.ID, at))},
+		{"acceptWorkspaceInvitation", func() ([]string, error) {
+			f := responding(frankToAcme)
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations, Tx: f.tx,
+				Clock: clockAt{clockNow, f.log}, MAC: f.mac}).Execute(as(frank), frankToAcme.ID, tokenOf(f.mac, frankToAcme.ID))
+			return f.log.calls, err
+		}, append(respondedCalls(frank, frankToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
+			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", frank.ID, acme.ID, shared.RoleMember, frank.ID, at),
+			fmt.Sprintf("AcceptInvitation %s by %s at %s", frankToAcme.ID, frank.ID, at), "WorkspaceByID "+acme.ID.String())},
+		{"declineWorkspaceInvitation", func() ([]string, error) {
+			f := responding(frankToAcme)
+			err := app.NewDeclineWorkspaceInvitation(f.accounts, f.invitations, f.tx, clockAt{clockNow, f.log}, f.mac).
+				Execute(as(frank), frankToAcme.ID, tokenOf(f.mac, frankToAcme.ID))
+			return f.log.calls, err
+		}, append(respondedCalls(frank, frankToAcme, "ShareWorkspace"), "Now",
+			fmt.Sprintf("DeclineInvitation %s by %s at %s", frankToAcme.ID, frank.ID, at))},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

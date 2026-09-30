@@ -7,8 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/netip"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -140,6 +142,33 @@ func TestRegisterWhileSignupIsOff(t *testing.T) {
 
 		if !errors.Is(err, domain.ErrSignupDisabled) || f.hasher.calls != 0 || f.tx.calls != 0 {
 			t.Errorf("Execute(%q) = %v, hashes %d, transactions %d; want identity.signup_disabled and nothing else", in.Email, err, f.hasher.calls, f.tx.calls)
+		}
+	}
+}
+
+// The policy is asked about the address as registration normalizes it and
+// the invitation as the request named it, once, before anything else: a
+// refusal answers identity.signup_disabled for an invitation too, and an
+// allowed one registers the address.
+func TestRegisterAsksThePolicyAboutTheAddressAndTheInvitation(t *testing.T) {
+	invitation := &app.SignupInvitation{ID: uuid.NewV7(), Token: "nrv_inv_AAAAAAAAAAAAAAAAAAAAAA"}
+	for _, tt := range []struct {
+		invitation *app.SignupInvitation
+		allow      bool
+	}{{nil, true}, {invitation, true}, {invitation, false}} {
+		var asked []string
+		f := newRegister(fixedPolicy{allow: tt.allow, asked: &asked})
+		in := input
+		in.Invitation = tt.invitation
+
+		_, err := f.uc.Execute(context.Background(), in)
+
+		if want := []string{fmt.Sprintf("alice@corp.com %+v", tt.invitation)}; !slices.Equal(asked, want) {
+			t.Errorf("the policy was asked %q, want %q", asked, want)
+		}
+		registered := err == nil && len(f.store.users) == 1 && f.store.users[0].Email == "alice@corp.com"
+		if tt.allow != registered || (!tt.allow && (!errors.Is(err, domain.ErrSignupDisabled) || f.hasher.calls != 0)) {
+			t.Errorf("allowed %v with %+v: Execute() = %v, users %d, hashes %d", tt.allow, tt.invitation, err, len(f.store.users), f.hasher.calls)
 		}
 	}
 }

@@ -16,6 +16,7 @@ var (
 	cellCreationDisabled  = cell{http.StatusForbidden, "workspace.creation_disabled"}
 	cellMemberNotFound    = cell{http.StatusNotFound, "workspace.member_not_found"}
 	cellOwnMembership     = cell{http.StatusConflict, "workspace.own_membership"}
+	cellValidationFailed  = cell{http.StatusUnprocessableEntity, "validation_failed"}
 )
 
 // inWorkspace are the cells of a workspace-level row: the answer of the
@@ -89,6 +90,15 @@ func workspaceMatrixRows() []matrixRow {
 		{op: "createWorkspace", variant: "creation switched off", write: true,
 			config:  func(cfg *config.Config) { cfg.Workspace.CreationEnabled = false },
 			request: sameRequest(http.MethodPost, "/api/v0/workspaces", `{"name":"New","slug":"new"}`), cells: every(cellCreationDisabled)},
+		// The answers to an invitation: each column's own, and acme's
+		// newcomer's, to another address (M3 design 9.2).
+		{op: "acceptWorkspaceInvitation", variant: "one's own", write: true, request: toOwnInvitation("accept"), cells: every(cellOK),
+			check: joinsAsAMember},
+		{op: "acceptWorkspaceInvitation", variant: "another's", write: true, request: toNewcomersInvitation("accept"),
+			cells: every(cellEmailMismatch)},
+		{op: "declineWorkspaceInvitation", variant: "one's own", write: true, request: toOwnInvitation("decline"), cells: every(cellNoContent)},
+		{op: "declineWorkspaceInvitation", variant: "another's", write: true, request: toNewcomersInvitation("decline"),
+			cells: every(cellEmailMismatch)},
 		// The workspace level.
 		{op: "getWorkspace", request: toWorkspace(http.MethodGet, "", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: readsItsRole},
@@ -102,6 +112,22 @@ func workspaceMatrixRows() []matrixRow {
 			cells: ofMember(cellOK, cellForbidden, cellForbidden), check: demotesTheMember},
 		{op: "updateWorkspaceMember", variant: "one's own", write: true, request: toMembership(ownMembership, `{"role":15}`),
 			cells: ofMember(cellOwnMembership, cellForbidden, cellForbidden)},
+		{op: "listWorkspaceInvitations", request: toWorkspace(http.MethodGet, "/invitations", ""),
+			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: listsTheInvitations},
+		{op: "createWorkspaceInvitations", write: true, request: toWorkspace(http.MethodPost, "/invitations", inviting("invitee@example.com")),
+			cells: inWorkspace(cellCreated, cellForbidden, cellForbidden), check: invitesTheInvitee},
+		// The addresses the workspace refuses, read through the wired
+		// MemberProfiles and the store: an active member's, an invited one's.
+		{op: "createWorkspaceInvitations", variant: "an active member's address", write: true,
+			request: toWorkspace(http.MethodPost, "/invitations", inviting("member@example.com")),
+			cells:   inWorkspace(cellValidationFailed, cellForbidden, cellForbidden)},
+		{op: "createWorkspaceInvitations", variant: "an invited address", write: true,
+			request: toWorkspace(http.MethodPost, "/invitations", inviting("newcomer@example.com")),
+			cells:   inWorkspace(cellValidationFailed, cellForbidden, cellForbidden)},
+		{op: "updateWorkspaceInvitation", write: true, request: toInvitation(http.MethodPatch, "newcomer@example.com", `{"role":20}`),
+			cells: ofInvitation(cellOK, cellForbidden, cellForbidden), check: promotesTheNewcomer},
+		{op: "deleteWorkspaceInvitation", write: true, request: toInvitation(http.MethodDelete, "newcomer@example.com", ""),
+			cells: ofInvitation(cellNoContent, cellForbidden, cellForbidden)},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),
@@ -111,7 +137,7 @@ func workspaceMatrixRows() []matrixRow {
 
 // demotesTheMember: the admin's answer is the member's membership, now a
 // guest's, with the member's address.
-func demotesTheMember(t *testing.T, c caller, answer string) {
+func demotesTheMember(t *testing.T, c caller, _ seeded, answer string) {
 	var m struct {
 		Role   int `json:"role"`
 		Member struct {
@@ -127,7 +153,7 @@ func demotesTheMember(t *testing.T, c caller, answer string) {
 // listsTheMembers: acme's four memberships, the removed member's ended; the
 // admin and the member see every address, the guest none, his own neither
 // (M3 design 3.4, 9.2).
-func listsTheMembers(t *testing.T, c caller, answer string) {
+func listsTheMembers(t *testing.T, c caller, _ seeded, answer string) {
 	var list struct {
 		Data []struct {
 			IsActive bool `json:"is_active"`
@@ -176,8 +202,8 @@ type navigation struct {
 
 // preferencesAre: each caller reads and changes his own settings; the
 // admin's answer is admin, the member's and the guest's others.
-func preferencesAre(admin, others navigation) func(t *testing.T, c caller, answer string) {
-	return func(t *testing.T, c caller, answer string) {
+func preferencesAre(admin, others navigation) func(t *testing.T, c caller, s seeded, answer string) {
+	return func(t *testing.T, c caller, _ seeded, answer string) {
 		var got navigation
 		decodeAnswer(t, answer, &got)
 		want := others
@@ -191,7 +217,7 @@ func preferencesAre(admin, others navigation) func(t *testing.T, c caller, answe
 }
 
 // renamesIt: the admin's answer is acme renamed, with the admin's role.
-func renamesIt(t *testing.T, c caller, answer string) {
+func renamesIt(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug string `json:"slug"`
 		Name string `json:"name"`
@@ -207,7 +233,7 @@ func renamesIt(t *testing.T, c caller, answer string) {
 // member of, never acme for the callers it is not visible to, and not the
 // deleted gone. A column without a list stated here fails: it would pass by
 // listing nothing.
-func listsItsWorkspaces(t *testing.T, c caller, answer string) {
+func listsItsWorkspaces(t *testing.T, c caller, _ seeded, answer string) {
 	var list struct {
 		Data []struct {
 			Slug string `json:"slug"`
@@ -229,7 +255,7 @@ func listsItsWorkspaces(t *testing.T, c caller, answer string) {
 }
 
 // readsItsRole: the workspace read is acme with the caller's own role.
-func readsItsRole(t *testing.T, c caller, answer string) {
+func readsItsRole(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug string `json:"slug"`
 		Role int    `json:"role"`

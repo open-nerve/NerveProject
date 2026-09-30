@@ -1,5 +1,6 @@
 import {
   createWorkspace,
+  inviteAndAccept,
   slugFor,
   type Api,
   type WorkspacePreferences,
@@ -35,7 +36,7 @@ async function change(api: Api, token: string, slug: string, body: WorkspacePref
   return data;
 }
 
-test("W8 (API): the settings are the defaults and nothing is stored until the first change, which stores one row; later changes change it; each workspace has its own", async ({
+test("W8 (API): the settings are the defaults and nothing is stored until the first change, which stores one row; later changes change it; each member and each workspace has its own", async ({
   api,
   db,
 }, testInfo) => {
@@ -61,6 +62,13 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
     navigation_project_limit: 0,
   });
   expect(await expectPreferences(db, slug, email, { ...tabbed, navigation_project_limit: 0 })).toBe(row);
+
+  // Another member of the workspace reads the defaults, and nothing is stored for him.
+  const memberEmail = emailFor(testInfo, "member");
+  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  await inviteAndAccept(api, pat, slug, { email: memberEmail, token: member }, 15);
+  expect(await read(api, member, slug)).toEqual(defaults);
+  await expectPreferences(db, slug, memberEmail, null);
 
   // The other workspace keeps the defaults, and nothing is stored for it.
   expect(await read(api, pat, other)).toEqual(defaults);

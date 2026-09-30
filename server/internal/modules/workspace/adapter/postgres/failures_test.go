@@ -50,6 +50,10 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if got, err := s.MemberByID(cancelled, bob.ID); !failed(err) || errors.Is(err, app.ErrNotFound) || got != (domain.Membership{}) {
 		t.Errorf("MemberByID() = %+v, %v; want context.Canceled, not app.ErrNotFound", got, err)
 	}
+	invite(t, s, w.ID, "carol@corp.com", shared.RoleGuest, alice)
+	if list, err := s.ListInvitations(cancelled, w.ID); !failed(err) || list != nil {
+		t.Errorf("ListInvitations() = %v, %v; want context.Canceled, no list", list, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would
@@ -72,8 +76,8 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		t.Errorf("UpsertPreferences() = %+v, %v; want context.Canceled", got, err)
 	}
 	for name, write := range map[string]func(context.Context, uuid.UUID, uuid.UUID, time.Time) error{
-		"DeleteWorkspace": s.DeleteWorkspace, "DeleteWorkspaceMembers": s.DeleteWorkspaceMembers,
-		"DeleteWorkspacePreferences": s.DeleteWorkspacePreferences,
+		"DeleteWorkspace": s.DeleteWorkspace, "DeleteWorkspaceInvitations": s.DeleteWorkspaceInvitations,
+		"DeleteWorkspaceMembers": s.DeleteWorkspaceMembers, "DeleteWorkspacePreferences": s.DeleteWorkspacePreferences,
 	} {
 		if err := write(cancelled, w.ID, alice, now); !failed(err) {
 			t.Errorf("%s() = %v; want context.Canceled", name, err)
@@ -82,5 +86,11 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	bob := joinAt(t, s, w.ID, newAccount(t, pool, "bob@corp.com"), shared.RoleMember, now)
 	if got, err := s.UpdateMemberRole(cancelled, bob.ID, shared.RoleGuest, alice, now); !failed(err) || got != (domain.Membership{}) {
 		t.Errorf("UpdateMemberRole() = %+v, %v; want context.Canceled", got, err)
+	}
+	var dup *app.DuplicateInvitation
+	if got, err := s.CreateInvitations(cancelled, []app.InvitationRow{
+		{ID: uuid.NewV7(), WorkspaceID: w.ID, Email: "carol@corp.com", Role: shared.RoleGuest, CreatedBy: alice, Now: now},
+	}); !failed(err) || errors.As(err, &dup) || got != nil {
+		t.Errorf("CreateInvitations() = %+v, %v; want context.Canceled, not a duplicate", got, err)
 	}
 }

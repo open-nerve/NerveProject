@@ -36,6 +36,20 @@ type WorkspaceMember struct {
 	DeletedAt   *time.Time
 }
 
+type WorkspaceMemberInvite struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	Email       string
+	Role        int16
+	Accepted    bool
+	RespondedAt *time.Time
+	CreatedByID *uuid.UUID
+	UpdatedByID *uuid.UUID
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
+}
+
 type WorkspaceUserProperty struct {
 	ID                          uuid.UUID
 	WorkspaceID                 uuid.UUID

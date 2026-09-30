@@ -16,6 +16,20 @@ SELECT id, workspace_id, member_id, role, is_active, created_at
 FROM workspace_members
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
 
+-- name: MemberOf :one
+-- acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: the user's undeleted membership, active or
+-- ended; the partial unique index holds at most one.
+SELECT id, workspace_id, member_id, role, is_active, created_at
+FROM workspace_members
+WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL;
+
+-- name: RestoreMember :exec
+-- acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: an ended membership active again, with the
+-- invitation's role (M3 design 3.8).
+UPDATE workspace_members
+SET is_active = true, role = sqlc.arg(role), updated_by_id = sqlc.arg(restored_by), updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id);
+
 -- name: UpdateMemberRole :one
 -- updateWorkspaceMember, under the workspace's FOR NO KEY UPDATE.
 UPDATE workspace_members

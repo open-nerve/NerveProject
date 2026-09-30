@@ -144,3 +144,11 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 - **第 7 节 可空的引用字段**（部分）：`MemberUser.avatar_url` 在接口中必有、可为 `null`，M5 之前总是 `null`（`api/modules/workspace.yaml`；`listWorkspaceMembers`、`updateWorkspaceMember` 的答复）；`cover_image_url` 随 P4，`IUserLite` 随 P8；本节保持 `open`。
 
 来源：[M3/P2 spec](../specs/P2-workspaces.md) 第 7 节。
+
+## 处理结果（M3/P3）
+
+- **第 1 节 邀请与注册**（接口一侧完成）：负责人的裁定写在 M3 设计第 10 节（决策点 1、2、4）。接受、忽略要登录，请求体带链接的令牌（`nrv_inv_` 加 22 个字符，由签名密钥派生，不存库，`server/internal/modules/workspace/domain/token.go`）；令牌对、登录账户的邮箱与邀请的邮箱相同时接受成功（200；还不是有效成员的，按邀请的角色成为成员）；不带令牌 400，令牌不对与邀请不存在同一个 404，邮箱不一致 403 `workspace.invitation_email_mismatch`，回答不含被邀请的邮箱。创建邀请最先以 `CallerLock` 锁住邀请人的账户行、在锁下复核凭证（`server/internal/modules/workspace/app/create_invitations.go`）；重置密码先提交的，创建 401、没有邀请（交错 9 `TestInvitingAndResettingThePassword`）。接受最先以 `FOR SHARE` 锁住调用者的账户行，锁下重读 `is_active` 和邮箱（`server/internal/modules/workspace/app/respond_invitation.go`；交错 12 `TestAcceptingAndChangingTheAddress`）；已是有效成员时只消费邀请，成员关系和角色不变（`TestAcceptWorkspaceInvitation`）。`auth.signup_enabled = false` 时，带有效邀请、邮箱相同的注册成功，不带的和邀请无效的各种情况都是 403 `identity.signup_disabled`（`server/internal/bootstrap/signup_policy.go`，`TestRegisteringWithAnInvitationWhileSignupIsOff`）。W5、W6 的接口版本（`e2e/stories/workspace/w5-invitation-link.spec.ts`、`w6-sign-up-by-invitation.spec.ts`）核对这些。页面一侧（邀请页、注册页带着邀请回到邀请页，W5、W6 的页面版本）在 P9，本节保持 `open`。
+
+仍未处理，状态保持 `open`：第 1 节的页面一侧（P9）；第 2、3、6 节，第 7 节的其余部分，第 9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 M3 的收尾。
+
+来源：[M3/P3 spec](../specs/P3-invitations.md) 第 7 节。

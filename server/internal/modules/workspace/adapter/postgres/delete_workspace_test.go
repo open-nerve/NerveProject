@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -54,12 +55,13 @@ func (d deletion) deletedAtBy(when time.Time, by uuid.UUID) bool {
 	return d.deletedAt != nil && d.deletedAt.Equal(when) && d.updatedAt.Equal(when) && d.updatedBy != nil && *d.updatedBy == by
 }
 
-// The three steps, in one transaction, soft-delete the workspace, every
-// membership of it, active or not, and every member's settings in it, at
-// the same moment and by the same account; a membership and a settings row
-// deleted before keep their time, and another workspace keeps everything.
-// Running the steps again changes nothing, nobody's last_workspace_id is
-// cleared, and the slug is free again.
+// The four steps, in one transaction, soft-delete the workspace, every
+// invitation to it, pending or declined, every membership of it, active or
+// not, and every member's settings in it, at the same moment and by the
+// same account; an invitation, a membership and a settings row deleted
+// before keep their time, and another workspace keeps everything. Running
+// the steps again changes nothing, nobody's last_workspace_id is cleared,
+// and the slug is free again.
 func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
@@ -76,7 +78,13 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	} {
 		upsert(t, s, r)
 	}
+	invite(t, s, acme.ID, "erin@corp.com", shared.RoleMember, alice)
+	declined := invite(t, s, acme.ID, "frank@corp.com", shared.RoleGuest, alice)
+	accepted := invite(t, s, acme.ID, "gina@corp.com", shared.RoleGuest, alice)
+	invite(t, s, beta.ID, "erin@corp.com", shared.RoleMember, alice)
 	earlier := now.Add(-time.Hour)
+	exec(t, pool, "UPDATE workspace_member_invites SET responded_at = $1 WHERE id = $2", earlier, declined.ID)
+	exec(t, pool, "UPDATE workspace_member_invites SET accepted = true, responded_at = $1, deleted_at = $1 WHERE id = $2", earlier, accepted.ID)
 	exec(t, pool, "UPDATE workspace_user_properties SET deleted_at = $1 WHERE user_id = $2", earlier, carol)
 	exec(t, pool, "UPDATE workspace_members SET deleted_at = $1 WHERE member_id = $2", earlier, dave)
 	later := now.Add(time.Hour)
@@ -86,7 +94,7 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 		uuid.NewV7(), alice, acme.ID, uuid.NewV7(), bob)
 
 	steps := []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
-		s.DeleteWorkspace, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
+		s.DeleteWorkspace, s.DeleteWorkspaceInvitations, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
 	}
 	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
 		for _, step := range steps {
@@ -113,8 +121,10 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 			WHERE workspace_id = $1 AND member_id <> $2`, acme.ID, dave),
 		"settings": deletions(t, pool, `SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_user_properties
 			WHERE workspace_id = $1 AND user_id <> $2`, acme.ID, carol),
+		"invitations": deletions(t, pool, `SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_member_invites
+			WHERE workspace_id = $1 AND id <> $2`, acme.ID, accepted.ID),
 	} {
-		want := map[string]int{"acme": 1, "members": 3, "settings": 2}[what]
+		want := map[string]int{"acme": 1, "members": 3, "settings": 2, "invitations": 2}[what]
 		if len(rows) != want {
 			t.Errorf("%s: %d rows, want %d", what, len(rows), want)
 		}
@@ -129,18 +139,26 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 		WHERE workspace_id = $1 AND member_id <> $2`, acme.ID, dave).Scan(&active); err != nil || len(active) != 3 || active[0] || !active[1] || !active[2] {
 		t.Errorf("is_active of acme's members: %v, %v; want false, true, true as they were", active, err)
 	}
-	var carolDeleted, daveDeleted time.Time
+	var carolDeleted, daveDeleted, ginaDeleted time.Time
 	if err := pool.QueryRow(context.Background(), `SELECT (SELECT deleted_at FROM workspace_user_properties WHERE user_id = $1),
-		(SELECT deleted_at FROM workspace_members WHERE member_id = $2)`, carol, dave).
-		Scan(&carolDeleted, &daveDeleted); err != nil || !carolDeleted.Equal(earlier) || !daveDeleted.Equal(earlier) {
-		t.Errorf("carol's settings deleted at %v, dave's membership at %v, %v; want %v, as before", carolDeleted, daveDeleted, err, earlier)
+		(SELECT deleted_at FROM workspace_members WHERE member_id = $2), (SELECT deleted_at FROM workspace_member_invites WHERE id = $3)`,
+		carol, dave, accepted.ID).Scan(&carolDeleted, &daveDeleted, &ginaDeleted); err != nil || !carolDeleted.Equal(earlier) ||
+		!daveDeleted.Equal(earlier) || !ginaDeleted.Equal(earlier) {
+		t.Errorf("carol's settings deleted at %v, dave's membership at %v, gina's accepted invitation at %v, %v; want %v, as before",
+			carolDeleted, daveDeleted, ginaDeleted, err, earlier)
+	}
+	var respondedAt time.Time
+	if err := pool.QueryRow(context.Background(), "SELECT responded_at FROM workspace_member_invites WHERE id = $1", declined.ID).
+		Scan(&respondedAt); err != nil || !respondedAt.Equal(earlier) {
+		t.Errorf("frank's declined invitation responded at %v, %v; want %v, as before", respondedAt, err, earlier)
 	}
 	betaRows := deletions(t, pool, `
 		SELECT id, deleted_at, updated_at, updated_by_id FROM workspaces WHERE id = $1
 		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_members WHERE workspace_id = $1
-		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_user_properties WHERE workspace_id = $1`, beta.ID)
-	if len(betaRows) != 4 {
-		t.Errorf("beta's rows: %d, want 4: the workspace, alice's and bob's memberships, alice's settings", len(betaRows))
+		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_user_properties WHERE workspace_id = $1
+		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_member_invites WHERE workspace_id = $1`, beta.ID)
+	if len(betaRows) != 5 {
+		t.Errorf("beta's rows: %d, want 5: the workspace, alice's and bob's memberships, alice's settings, erin's invitation", len(betaRows))
 	}
 	for id, d := range betaRows {
 		if d.deletedAt != nil || !d.updatedAt.Equal(now) {
@@ -177,12 +195,14 @@ func (allowAll) Authorize(context.Context, shared.Actor, shared.Action, shared.T
 }
 
 // The use case's cascade is one transaction on the database: when its last
-// step fails, the workspace and its members are not deleted either.
+// step fails, the workspace, its invitations and its members are not
+// deleted either.
 func TestAFailedDeletionLeavesTheWorkspace(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme := newWorkspace(t, s, "Acme", "acme", alice)
 	join(t, s, acme.ID, bob, shared.RoleMember)
+	invite(t, s, acme.ID, "carol@corp.com", shared.RoleGuest, alice)
 	uc := app.NewDeleteWorkspace(failingSettings{s}, allowAll{}, postgres.NewTxManager(pool, 2*time.Second), clocktest.At(now),
 		slog.New(slog.DiscardHandler))
 
@@ -196,5 +216,8 @@ func TestAFailedDeletionLeavesTheWorkspace(t *testing.T) {
 	}
 	if got := deletions(t, pool, "SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_members WHERE deleted_at IS NOT NULL"); len(got) != 0 {
 		t.Errorf("deleted memberships after the failure: %+v, want none", got)
+	}
+	if got := pendingEmails(t, pool, acme.ID); !slices.Equal(got, []string{"carol@corp.com"}) {
+		t.Errorf("acme's invitations after the failure: %q, want carol's", got)
 	}
 }

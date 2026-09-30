@@ -48,16 +48,16 @@ func (t ticking) Now() time.Time {
 // cascadeCalls are the deletion's steps on w by user, in order.
 func cascadeCalls(user app.AccountState, w domain.Workspace) []string {
 	var calls []string
-	for _, step := range []string{"DeleteWorkspace", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences"} {
+	for _, step := range []string{"DeleteWorkspace", "DeleteWorkspaceInvitations", "DeleteWorkspaceMembers", "DeleteWorkspacePreferences"} {
 		calls = append(calls, step+" "+w.ID.String()+" by "+user.ID.String()+" at "+now.Format(time.RFC3339Nano))
 	}
 	return calls
 }
 
 // DeleteWorkspace locks the workspace FOR NO KEY UPDATE, decides, then
-// soft-deletes the workspace, its members and their settings, by the caller
-// at one moment, in one transaction (M3 design 3.6), and logs it. Two
-// callers, two workspaces.
+// soft-deletes the workspace, its invitations, its members and their
+// settings, by the caller at one moment, in one transaction (M3 design
+// 3.6), and logs it. Two callers, two workspaces.
 func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 	for _, tt := range []struct {
 		user app.AccountState
@@ -105,8 +105,13 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 			failure, decided},
 		{"the workspace row failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspace": failure} },
 			failure, append(slices.Clone(decided), steps[0])},
-		{"the members failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspaceMembers": failure} },
+		{"the invitations failed", alice, "acme",
+			func(f *deleteFixture) {
+				f.workspaces.deleteErrs = map[string]error{"DeleteWorkspaceInvitations": failure}
+			},
 			failure, append(slices.Clone(decided), steps[:2]...)},
+		{"the members failed", alice, "acme", func(f *deleteFixture) { f.workspaces.deleteErrs = map[string]error{"DeleteWorkspaceMembers": failure} },
+			failure, append(slices.Clone(decided), steps[:3]...)},
 		{"the settings failed", alice, "acme",
 			func(f *deleteFixture) {
 				f.workspaces.deleteErrs = map[string]error{"DeleteWorkspacePreferences": failure}

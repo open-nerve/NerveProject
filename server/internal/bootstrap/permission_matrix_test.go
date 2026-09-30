@@ -34,21 +34,47 @@ import (
 // its row there, and what the row needs prepared here and in
 // permission_matrix_seeded_test.go.
 
-// matrixExempt are the modules whose operations have no row, each for its
-// reason. Every other operation of the contract has one, so a module that
-// adds operations is in the matrix unless it is added here (M3 design 9.2:
-// every operation but the account-level and the public ones). An entry that
-// no operation carries is reported, so a misspelled one fails. P3's public
-// getWorkspaceInvitation is tagged workspace: P3 gives the matrix a column
-// for a caller without a token, or an exemption by operation. This list
-// exempts modules, and workspace on it would exempt all of its operations
-// (spec P1 3 item 10).
-var matrixExempt = []string{
-	// Account-level (M2): each operation acts on the caller's own account,
-	// sessions or tokens, and no workspace or project role decides it.
-	"identity",
-	// Public: it describes this instance to anyone, with a token or without.
-	"instance",
+// matrixExempt is what has no row, each entry for its reason (M3 design
+// 9.2: every operation but the account-level and the public ones).
+var matrixExempt = matrixExemptions{
+	modules: []string{
+		// Account-level (M2): each operation acts on the caller's own
+		// account, sessions or tokens, and no workspace or project role
+		// decides it.
+		"identity",
+		// Public: it describes this instance to anyone, with a token or
+		// without.
+		"instance",
+	},
+	public: map[string]string{
+		// The link's token stands for a credential (M3 design 3.8).
+		"getWorkspaceInvitation": "TestTheInvitationLinkAnswersEveryCallerAlike",
+	},
+	notTargets: map[string]string{
+		"/api/v0/workspace-slugs/{slug}": "a slug asked about, not a workspace: the answer is the same for every caller",
+		"/api/v0/workspace-invitations/{invitation_id}/accept": "account level: each column answers an invitation to its own " +
+			"address (ownInvitation), or acme's newcomer's, whatever workspace its column targets",
+		"/api/v0/workspace-invitations/{invitation_id}/decline": "account level, as accept",
+	},
+}
+
+// matrixExemptions are the operations without a row. modules exempts every
+// operation of a module: every other operation of the contract has a row,
+// so a module that adds operations is in the matrix unless it is listed,
+// and an entry that no operation carries is reported, so a misspelled one
+// fails. public exempts one public operation of a module the matrix
+// covers, by its operationId, naming the test that stands for its row: its
+// route runs no authentication (httpserver's PublicOperations), so every
+// column would call it as nobody and the cells could not tell the columns
+// apart. The test calls it with every column's token and without one, and
+// wants one answer. An operation that needs a token cannot be listed.
+// notTargets are the paths whose parameters name nothing a column's cell
+// must aim at its workspace, each with its reason: targetViolation passes
+// them over, and reports any other parameter it does not know.
+type matrixExemptions struct {
+	modules    []string
+	public     map[string]string // operationId → the test that stands for its row
+	notTargets map[string]string // path → why its parameters are no column's target
 }
 
 // caller is a column: an account, and how it stands to the workspace a row
@@ -109,8 +135,9 @@ type matrixRow struct {
 	request func(c caller, s seeded) (method, path, body string)
 	cells   map[caller]cell
 	// check, when set, runs on each answer that is not a problem and is its
-	// cell's: what the answer holds for that caller.
-	check func(t *testing.T, c caller, answer string)
+	// cell's: what the answer holds for that caller, the seeded ids to
+	// compare its ids with.
+	check func(t *testing.T, c caller, s seeded, answer string)
 }
 
 func (r matrixRow) name() string {
@@ -176,15 +203,15 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 
 // prepareMatrix fills a database for the matrix. Through the API, an
 // account for each column, registered for its token. Through the workspace
-// store, the workspaces and memberships of matrixMemberships, with the ids
-// newSeeded named, and acme's admin's display settings; other's admin and
-// removed member are there so that a role read in the wrong workspace lets
-// either into acme. Through the API, gone deleted by its admin, which
-// soft-deletes its memberships with it. Through SQL, until P5's store
-// replaces it, the removed member's membership of acme ended. Everything
-// that connected to the database is closed when it returns, so that it can
-// be copied. A -run that leaves out prepare fails here, not with a 401 in
-// every cell.
+// store, the workspaces, memberships and invitations of matrixMemberships
+// and matrixInvitations, with the ids newSeeded named, and acme's admin's
+// display settings; other's admin and removed member are there so that a
+// role read in the wrong workspace lets either into acme. Through the API,
+// gone deleted by its admin, which soft-deletes its memberships with it.
+// Through SQL, until P5's store replaces it, the removed member's
+// membership of acme ended. Everything that connected to the database is
+// closed when it returns, so that it can be copied. A -run that leaves out
+// prepare fails here, not with a 401 in every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -194,7 +221,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		pool := openPool(t, d.url)
 		ids := map[caller]uuid.UUID{}
 		for _, c := range workspaceColumns {
-			email := strings.ReplaceAll(string(c), " ", "-") + "@example.com"
+			email := emailOf(c)
 			d.tokens[c] = registerAccount(t, contract, base, email).AccessToken
 			var id uuid.UUID
 			if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = $1", email).Scan(&id); err != nil {
@@ -206,9 +233,12 @@ func prepareMatrix(t *testing.T) matrixData {
 		s := d.seeded.in(t)
 		for _, m := range matrixMemberships {
 			if _, created := seed.workspaces[m.slug]; !created {
-				seed.workspace(m.slug, m.c)
+				seed.workspace(s.workspace(m.slug), m.slug, m.c)
 			}
 			seed.join(s.membership(m.slug, m.c), m.slug, m.c, m.role)
+		}
+		for _, i := range matrixInvitations {
+			seed.invite(s.invitation(i.slug, i.email), i.slug, i.email, i.role)
 		}
 		tabbed, three := "TABBED", 3
 		seed.preferences("acme", callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
@@ -216,10 +246,10 @@ func prepareMatrix(t *testing.T) matrixData {
 		// phase replaces it: it ends the removed member's membership of acme.
 		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
 		// The column's caller deletes gone as deleteWorkspace does it: its
-		// membership goes with the workspace row, so every cell of the column
-		// is asked about a workspace deleted the one way there is. A
-		// membership left active in a deleted workspace is ActiveRole's
-		// store test (P1).
+		// membership and invitations go with the workspace row, so every
+		// cell of the column is asked about a workspace deleted the one way
+		// there is. A membership left active in a deleted workspace is
+		// ActiveRole's store test (P1).
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}
@@ -281,7 +311,7 @@ func TestPermissionMatrix(t *testing.T) {
 					return
 				}
 				if r.check != nil && got.code == "" {
-					r.check(t, c, answer)
+					r.check(t, c, d.seeded.in(t), answer)
 					checked.Add(1)
 				}
 			})

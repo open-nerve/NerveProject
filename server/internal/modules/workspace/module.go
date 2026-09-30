@@ -1,8 +1,9 @@
 // Package workspace is the workspaces module (M3 design 3.3, 6.2):
-// workspaces and their members. It brings creating, listing, reading,
-// changing and deleting workspaces, checking a slug, listing the members
-// and changing their roles, and each member's display settings, and offers
-// the other modules its reads through ports.
+// workspaces, their members and their invitations. It brings creating,
+// listing, reading, changing and deleting workspaces, checking a slug,
+// listing the members and changing their roles, each member's display
+// settings, and the invitations, and offers the other modules its reads
+// through ports.
 package workspace
 
 import (
@@ -48,6 +49,11 @@ type AccountState = app.AccountState
 // converts identity's into it (M3 design 6.5).
 type PublicProfile = app.PublicProfile
 
+// InvitationMACPurpose is the purpose of the invitation MAC that bootstrap
+// asks identity's keys for: its key's HKDF info is "nerve
+// workspace-invitation mac v1" (M3 design 3.8).
+const InvitationMACPurpose = "workspace-invitation"
+
 // Deps are what bootstrap gives the module (M3 design 6.6, step 5).
 type Deps struct {
 	Pool       *pgxpool.Pool
@@ -59,20 +65,33 @@ type Deps struct {
 	Accounts app.Accounts
 	// Profiles is identity's PublicProfiles, converted (bootstrap/ports.go).
 	Profiles app.MemberProfiles
+	// InvitationMAC is identity's MAC of InvitationMACPurpose.
+	InvitationMAC app.InvitationMAC
+	// CallerLock is identity's credential lock (identity.Provide).
+	CallerLock app.CallerLock
 	// CreationEnabled is workspace.creation_enabled (M3 design 3.11).
 	CreationEnabled bool
 }
 
 // Module is the wired workspace module.
 type Module struct {
-	uc httpadapter.UseCases
+	uc     httpadapter.UseCases
+	signup *app.SignupInvitations
+}
+
+// SignupInvitations checks the invitation a registration names while
+// sign-up is closed (M3 design 3.8): bootstrap's signup policy asks it.
+type SignupInvitations interface {
+	// Allows reports whether token is the link of the invitation id,
+	// pending, to email, normalized. Every other case is the same false.
+	Allows(ctx context.Context, email string, id uuid.UUID, token string) (bool, error)
 }
 
 // New wires the module's use cases and its HTTP side from d; nothing is
 // registered or injected after it (M3 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	return &Module{uc: httpadapter.UseCases{
+	return &Module{signup: app.NewSignupInvitations(store, d.InvitationMAC), uc: httpadapter.UseCases{
 		ListWorkspaces: app.NewListWorkspaces(store),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,
@@ -85,12 +104,34 @@ func New(d Deps) *Module {
 		CheckSlug:         app.NewCheckSlug(store),
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
 		UpdatePreferences: app.NewUpdateWorkspacePreferences(store, d.Authorizer, d.Tx, d.Clock),
+		ListInvitations:   app.NewListWorkspaceInvitations(store, d.Authorizer, d.InvitationMAC),
+		CreateInvitations: app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{
+			Caller: d.CallerLock, Invitations: store, Profiles: d.Profiles, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
+		}),
+		GetInvitation:    app.NewGetWorkspaceInvitation(store, d.InvitationMAC),
+		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
+		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
+		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{
+			Accounts: d.Accounts, Invitations: store, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
+		}),
+		DeclineInvitation: app.NewDeclineWorkspaceInvitation(d.Accounts, store, d.Tx, d.Clock, d.InvitationMAC),
 	}}
 }
 
 // Register mounts the module's API on router behind api's middlewares.
 func (m *Module) Register(router *httpserver.Router, api *httpserver.API) {
 	httpadapter.Register(router, api, m.uc)
+}
+
+// PublicOperations are the module's routes that need no token.
+func (m *Module) PublicOperations() []string {
+	return httpadapter.PublicOperations()
+}
+
+// SignupInvitations is the check of a registration's invitation, for
+// identity's SignupPolicy (M3 design 6.6 step 6).
+func (m *Module) SignupInvitations() SignupInvitations {
+	return m.signup
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of
