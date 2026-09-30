@@ -222,6 +222,46 @@ func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 	}
 }
 
+// Every statement of the deletion runs in its one transaction, the
+// cascade's last one too, which a failing step cannot show (M3 design 3.3,
+// 9.3): a deletion refused at its commit, after every statement ran,
+// changes no row under either workspace. A deferred constraint trigger on
+// workspaces refuses the commit.
+func TestADeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
+	contract := apitest.Load(t)
+	url := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, url, false), migrations.FS())
+	pool := openPool(t, url)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	registerAccount(t, contract, base, "member@example.com")
+	ids := []uuid.UUID{seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")}
+	rowsOf := func() []string {
+		var all []string
+		for _, k := range workspaceKeys(t, pool) {
+			for _, id := range ids {
+				all = append(all, k.String()+":\n"+k.rows(t, pool, id))
+			}
+		}
+		return all
+	}
+	before := rowsOf()
+	for _, sql := range []string{
+		`CREATE FUNCTION refuse_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'the commit is refused'; END $$`,
+		`CREATE CONSTRAINT TRIGGER refuse_commit AFTER UPDATE ON workspaces DEFERRABLE INITIALLY DEFERRED
+			FOR EACH ROW EXECUTE FUNCTION refuse_commit()`,
+	} {
+		if _, err := pool.Exec(context.Background(), sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, ""); status != http.StatusInternalServerError {
+		t.Fatalf("deleting the workspace with its commit refused = %d %s, want 500", status, body)
+	}
+	if after := rowsOf(); !slices.Equal(after, before) {
+		t.Errorf("the rows after the refused deletion:\n%q\nwant\n%q", after, before)
+	}
+}
+
 // foreignKey is a column that references workspaces, table as SQL names it.
 type foreignKey struct{ table, column string }
 
