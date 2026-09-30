@@ -57,6 +57,41 @@ func WaitForLockWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit tim
 			AND l.locktype = 'tuple' AND l.relation = $1`, *relation)
 }
 
+// WaitForKeyWaitOn returns once a backend connected to pool's database that
+// has written table in its transaction waits for another transaction to
+// end without holding a tuple lock, and fails the test when none has within
+// limit, or at once when the database has no such table. That is the wait
+// of a unique index's check: an INSERT whose key a live transaction has
+// inserted too waits for that transaction's transactionid until it commits
+// or rolls back, with no row to lock (M3 design 9.3, interleaving 18).
+// WaitForLockWaitOn does not see it, having no tuple lock to look for. A
+// wait for a row of the table holds its tuple lock and does not count; nor
+// does a wait of a transaction that has not written the table, nor one for
+// a lock of another kind, such as an advisory lock. By a transaction that
+// has written table, it cannot tell a key's wait on table from one on
+// another table, or from the two row waits PostgreSQL makes without a
+// tuple lock (WaitForLockWaitOn): use it where the waiting transaction
+// writes no other table with a unique key and upgrades no shared row lock.
+func WaitForKeyWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit time.Duration) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), limit)
+	defer cancel()
+	what := "a key of " + table
+	var relation *uint32
+	if err := pool.QueryRow(ctx, "SELECT to_regclass($1)::oid", table).Scan(&relation); err != nil {
+		failPoll(ctx, t, limit, what, err)
+	}
+	if relation == nil {
+		t.Fatalf("pgtest: no table %q", table)
+	}
+	waitFor(ctx, t, pool, limit, what, `
+		SELECT count(*) FROM pg_stat_activity a
+		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock' AND a.wait_event = 'transactionid'
+			AND EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'relation' AND l.relation = $1
+				AND l.mode = 'RowExclusiveLock' AND l.granted)
+			AND NOT EXISTS (SELECT 1 FROM pg_locks l WHERE l.pid = a.pid AND l.locktype = 'tuple')`, *relation)
+}
+
 // waitFor polls query, a count of the waiting backends, until it is
 // positive; what names the wait in the failure. ctx ends limit after the
 // start: every poll, its wait for a connection of the pool included, ends

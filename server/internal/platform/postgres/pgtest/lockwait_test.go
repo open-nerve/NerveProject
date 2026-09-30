@@ -77,6 +77,57 @@ func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
 	}
 }
 
+// WaitForKeyWaitOn sees an INSERT that waits for the transaction that
+// inserted the same key into its table: a wait WaitForLockWaitOn does not
+// see, having no tuple lock. It does not count a wait for a row of its
+// table, though the waiter has written the table; a key's wait on another
+// table by a transaction that has read its table; or a wait for an advisory
+// lock by a transaction that has written its table. Each case waits in a
+// database of its own, and WaitForLockWait proves it waits, so it fails for
+// the kind of its wait.
+func TestWaitForKeyWaitOnSeesOnlyAKeysWaitOnItsTable(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	prepared := pgtest.NewDatabase(t)
+	setup := connect(t, prepared)
+	if _, err := setup.Exec(ctx, "CREATE TABLE a (id int PRIMARY KEY, n int); CREATE TABLE b (id int PRIMARY KEY); INSERT INTO a VALUES (1, 0)"); err != nil {
+		t.Fatal(err)
+	}
+	if err := setup.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	key, row, other, advisory := pgtest.NewDatabaseFrom(t, prepared), pgtest.NewDatabaseFrom(t, prepared), pgtest.NewDatabaseFrom(t, prepared),
+		pgtest.NewDatabaseFrom(t, prepared)
+	holdAndWaitIn(t, key, "INSERT INTO a VALUES (2, 0)", "INSERT INTO a VALUES (2, 0)")
+	holdAndWaitIn(t, row, "UPDATE a SET n = 1 WHERE id = 1", "INSERT INTO a VALUES (3, 0); UPDATE a SET n = 2 WHERE id = 1")
+	holdAndWaitIn(t, other, "INSERT INTO b VALUES (2)", "SELECT count(*) FROM a; INSERT INTO b VALUES (2)")
+	holdAndWaitIn(t, advisory, "SELECT pg_advisory_xact_lock(1)", "INSERT INTO a VALUES (3, 0); SELECT pg_advisory_xact_lock(1)")
+
+	keyPool := newPool(t, key)
+	pgtest.WaitForKeyWaitOn(t, keyPool, "a", 10*time.Second)
+	if failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, keyPool, "a", 300*time.Millisecond) }); failed !=
+		"no statement waited for a row lock of a within 300ms" {
+		t.Errorf("WaitForLockWaitOn on a key's wait failed with %q, want it to fail at its deadline", failed)
+	}
+	for _, tt := range []struct{ name, url string }{
+		{"a row of the table, by a writer of it", row},
+		{"a key of another table, by a reader of it", other},
+		{"an advisory lock, by a writer of it", advisory},
+	} {
+		pool := newPool(t, tt.url)
+		pgtest.WaitForLockWait(t, pool, 10*time.Second)
+		if failed := fatalOf(func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "a", 300*time.Millisecond) }); failed !=
+			"no statement waited for a key of a within 300ms" {
+			t.Errorf("%s: WaitForKeyWaitOn failed with %q, want it to fail at its deadline", tt.name, failed)
+		}
+	}
+	start := time.Now()
+	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, keyPool, "workspace", 10*time.Second) })
+	if took := time.Since(start); failed != `pgtest: no table "workspace"` || took > 5*time.Second {
+		t.Errorf("WaitForKeyWaitOn(workspace) failed with %q after %v, want pgtest: no table \"workspace\" at once", failed, took)
+	}
+}
+
 // WaitForLockWaitOn fails at once for a table the database does not have: a
 // misspelled name can never be waited on, and must not wait out its
 // deadline.
@@ -119,6 +170,8 @@ func TestTheProbesFailAtTheirDeadlineOnAnExhaustedPool(t *testing.T) {
 			"no statement waited for a lock within 300ms"},
 		{"WaitForLockWaitOn", func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspaces", 300*time.Millisecond) },
 			"no statement waited for a row lock of workspaces within 300ms"},
+		{"WaitForKeyWaitOn", func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "workspaces", 300*time.Millisecond) },
+			"no statement waited for a key of workspaces within 300ms"},
 	} {
 		failed := make(chan string, 1)
 		go func() { failed <- fatalOf(tt.probe) }()
@@ -193,6 +246,45 @@ func holdAndWait(t *testing.T, url string) {
 	t.Cleanup(func() {
 		defer cancel()
 		if _, err := holder.Exec(context.Background(), "SELECT pg_advisory_unlock(1)"); err != nil {
+			t.Error(err)
+		}
+		if err := <-done; err != nil {
+			t.Errorf("the waiting connection: %v", err)
+		}
+	})
+}
+
+// holdAndWaitIn makes a second connection to url wait: a first one runs
+// held in a transaction it keeps open; the second runs waits in a
+// transaction of its own, whose last statement waits for the first, until
+// the test ends and the first rolls back.
+func holdAndWaitIn(t *testing.T, url, held, waits string) {
+	t.Helper()
+	holder, waiter := connect(t, url), connect(t, url)
+	tx, err := holder.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(context.Background(), held); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	done := make(chan error, 1)
+	go func() {
+		wtx, err := waiter.Begin(ctx)
+		if err == nil {
+			_, err = wtx.Exec(ctx, waits)
+		}
+		if err == nil {
+			err = wtx.Rollback(ctx)
+		}
+		done <- err
+	}()
+	// Runs before the connections close: the first rolls back, and the
+	// waiter goes on.
+	t.Cleanup(func() {
+		defer cancel()
+		if err := tx.Rollback(context.Background()); err != nil {
 			t.Error(err)
 		}
 		if err := <-done; err != nil {
