@@ -12,6 +12,24 @@ import (
 	"uuid"
 )
 
+const deleteWorkspacePreferences = `-- name: DeleteWorkspacePreferences :exec
+UPDATE workspace_user_properties
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE workspace_id = $3 AND deleted_at IS NULL
+`
+
+type DeleteWorkspacePreferencesParams struct {
+	Now         time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+}
+
+// deleteWorkspace's cascade: every member's display settings in the workspace (M3 design 3.6 convention 5).
+func (q *Queries) DeleteWorkspacePreferences(ctx context.Context, arg DeleteWorkspacePreferencesParams) error {
+	_, err := q.db.Exec(ctx, deleteWorkspacePreferences, arg.Now, arg.DeletedBy, arg.WorkspaceID)
+	return err
+}
+
 const preferences = `-- name: Preferences :one
 SELECT navigation_control_preference, navigation_project_limit
 FROM workspace_user_properties

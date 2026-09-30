@@ -3,6 +3,13 @@ INSERT INTO workspace_members (id, workspace_id, member_id, role, created_by_id,
 VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(member_id), sqlc.arg(role),
         sqlc.arg(created_by), sqlc.arg(created_by), sqlc.arg(now), sqlc.arg(now));
 
+-- name: DeleteWorkspaceMembers :exec
+-- deleteWorkspace's cascade: every undeleted membership of the workspace, active or not, one statement in scan order
+-- under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.
+UPDATE workspace_members
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+
 -- name: ActiveRole :one
 -- WorkspaceRoles (M3 design 6.5): the user's role when his membership is active, its row not deleted and
 -- the workspace not deleted. The partial unique index holds at most one undeleted row per pair.

@@ -63,6 +63,25 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 	return i, err
 }
 
+const deleteWorkspace = `-- name: DeleteWorkspace :exec
+UPDATE workspaces
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE id = $3 AND deleted_at IS NULL
+`
+
+type DeleteWorkspaceParams struct {
+	Now       time.Time
+	DeletedBy uuid.UUID
+	ID        uuid.UUID
+}
+
+// deleteWorkspace's first step, under the workspace's FOR NO KEY UPDATE: the slug is free again at once (the partial
+// unique index). The rows under it are soft-deleted at the same moment by the steps that follow (M3 design 3.6).
+func (q *Queries) DeleteWorkspace(ctx context.Context, arg DeleteWorkspaceParams) error {
+	_, err := q.db.Exec(ctx, deleteWorkspace, arg.Now, arg.DeletedBy, arg.ID)
+	return err
+}
+
 const listWorkspaces = `-- name: ListWorkspaces :many
 SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at, m.role,
        (SELECT count(*) FROM workspace_members c

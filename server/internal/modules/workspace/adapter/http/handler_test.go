@@ -63,6 +63,7 @@ type fakes struct {
 	create *fakeCreate
 	get    *fakeGet
 	update *fakeUpdate
+	del    *fakeDelete
 	check  *fakeCheck
 	prefs  *fakePrefs
 }
@@ -116,6 +117,16 @@ func (f *fakeUpdate) Execute(ctx context.Context, slug string, p domain.Workspac
 	f.calls = append(f.calls, caller(ctx)+" "+slug)
 	f.got = append(f.got, p)
 	return f.answer, f.err
+}
+
+type fakeDelete struct {
+	calls []string // "caller slug"
+	err   error
+}
+
+func (f *fakeDelete) Execute(ctx context.Context, slug string) error {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	return f.err
 }
 
 // fakePrefs is both preference use cases: each call is recorded as
@@ -183,6 +194,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.update == nil {
 		f.update = &fakeUpdate{}
 	}
+	if f.del == nil {
+		f.del = &fakeDelete{}
+	}
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
@@ -190,7 +204,7 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		f.prefs = &fakePrefs{}
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, CheckSlug: f.check,
+		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
 		GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
 	})
 	return router

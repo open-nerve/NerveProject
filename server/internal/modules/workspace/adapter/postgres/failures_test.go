@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -61,5 +62,13 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if got, err := s.UpsertPreferences(cancelled, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: w.ID, UserID: alice, Now: now}); !failed(err) ||
 		got != (domain.Preferences{}) {
 		t.Errorf("UpsertPreferences() = %+v, %v; want context.Canceled", got, err)
+	}
+	for name, write := range map[string]func(context.Context, uuid.UUID, uuid.UUID, time.Time) error{
+		"DeleteWorkspace": s.DeleteWorkspace, "DeleteWorkspaceMembers": s.DeleteWorkspaceMembers,
+		"DeleteWorkspacePreferences": s.DeleteWorkspacePreferences,
+	} {
+		if err := write(cancelled, w.ID, alice, now); !failed(err) {
+			t.Errorf("%s() = %v; want context.Canceled", name, err)
+		}
 	}
 }

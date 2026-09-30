@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +25,16 @@ func (s *Store) Preferences(ctx context.Context, workspaceID, userID uuid.UUID) 
 		return domain.Preferences{}, false, fmt.Errorf("read workspace preferences: %w", err)
 	}
 	return domain.Preferences{NavigationControl: r.NavigationControlPreference, NavigationProjectLimit: int(r.NavigationProjectLimit)}, true, nil
+}
+
+// DeleteWorkspacePreferences soft-deletes the undeleted display settings of
+// the workspace's members, by the account by at now.
+func (s *Store) DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	err := s.queries(ctx).DeleteWorkspacePreferences(ctx, gen.DeleteWorkspacePreferencesParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
+	if err != nil {
+		return fmt.Errorf("delete workspace preferences: %w", err)
+	}
+	return nil
 }
 
 // UpsertPreferences applies r.Patch to the account's undeleted row, or

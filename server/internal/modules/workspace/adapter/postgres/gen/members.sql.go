@@ -60,3 +60,22 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) erro
 	)
 	return err
 }
+
+const deleteWorkspaceMembers = `-- name: DeleteWorkspaceMembers :exec
+UPDATE workspace_members
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE workspace_id = $3 AND deleted_at IS NULL
+`
+
+type DeleteWorkspaceMembersParams struct {
+	Now         time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+}
+
+// deleteWorkspace's cascade: every undeleted membership of the workspace, active or not, one statement in scan order
+// under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.
+func (q *Queries) DeleteWorkspaceMembers(ctx context.Context, arg DeleteWorkspaceMembersParams) error {
+	_, err := q.db.Exec(ctx, deleteWorkspaceMembers, arg.Now, arg.DeletedBy, arg.WorkspaceID)
+	return err
+}

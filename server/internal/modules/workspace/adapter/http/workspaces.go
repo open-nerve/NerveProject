@@ -59,6 +59,14 @@ func (h handler) UpdateWorkspace(ctx context.Context, req gen.UpdateWorkspaceReq
 	return gen.UpdateWorkspace200JSONResponse(workspace(w)), nil
 }
 
+// DeleteWorkspace serves DELETE /api/v0/workspaces/{slug}.
+func (h handler) DeleteWorkspace(ctx context.Context, req gen.DeleteWorkspaceRequestObject) (gen.DeleteWorkspaceResponseObject, error) {
+	if err := h.uc.DeleteWorkspace.Execute(ctx, req.Slug); err != nil {
+		return nil, err
+	}
+	return gen.DeleteWorkspace204Response{}, nil
+}
+
 // CheckWorkspaceSlug serves GET /api/v0/workspace-slugs/{slug}.
 func (h handler) CheckWorkspaceSlug(ctx context.Context, req gen.CheckWorkspaceSlugRequestObject) (gen.CheckWorkspaceSlugResponseObject, error) {
 	reason, err := h.uc.CheckSlug.Execute(ctx, req.Slug)

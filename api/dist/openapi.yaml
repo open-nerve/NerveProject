@@ -441,6 +441,22 @@ paths:
                 $ref: '#/components/schemas/Workspace'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteWorkspace
+      tags:
+        - workspace
+      summary: Delete a workspace
+      description: For the workspace's admins. The workspace, its members and their display settings are soft-deleted in one transaction, at the same moment; the slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+        - forbidden
+      responses:
+        '204':
+          description: The workspace is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'

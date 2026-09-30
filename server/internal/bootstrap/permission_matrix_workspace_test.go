@@ -47,6 +47,8 @@ func workspaceMatrixRows() []matrixRow {
 			check: readsItsRole},
 		{op: "updateWorkspace", write: true, request: toWorkspace(http.MethodPatch, "", `{"name":"Renamed"}`),
 			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: renamesIt},
+		{op: "deleteWorkspace", write: true, request: toWorkspace(http.MethodDelete, "", ""),
+			cells: inWorkspace(cellNoContent, cellForbidden, cellForbidden)},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),

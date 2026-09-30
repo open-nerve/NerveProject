@@ -116,6 +116,20 @@ type WorkspaceUpdater interface {
 	UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.WorkspacePatch, by uuid.UUID, now time.Time) (domain.Workspace, error)
 }
 
+// WorkspaceDeleter soft-deletes a workspace and the rows under it, under its
+// lock. Each step sets deleted_at and updated_at to now and updated_by_id to
+// by, on the undeleted rows only.
+type WorkspaceDeleter interface {
+	WorkspaceLocker
+	// DeleteWorkspace soft-deletes the workspace row.
+	DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error
+	// DeleteWorkspaceMembers soft-deletes its memberships, active or not.
+	DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// DeleteWorkspacePreferences soft-deletes its members' display
+	// settings.
+	DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+}
+
 // PreferencesRow is a change of an account's display settings in a
 // workspace, and the id of the row if the change inserts one.
 type PreferencesRow struct {

@@ -293,7 +293,11 @@ export interface paths {
         get: operations["getWorkspace"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a workspace
+         * @description For the workspace's admins. The workspace, its members and their display settings are soft-deleted in one transaction, at the same moment; the slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+         */
+        delete: operations["deleteWorkspace"];
         options?: never;
         head?: never;
         /**
@@ -1162,6 +1166,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Workspace"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workspace is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

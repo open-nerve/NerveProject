@@ -76,6 +76,7 @@ type fakeWorkspaces struct {
 	createErr  error
 	memberErr  error               // for CreateMember, which then stores nothing
 	updateErr  error               // for UpdateWorkspace
+	deleteErrs map[string]error    // by step, e.g. "DeleteWorkspaceMembers"
 	listErrs   map[uuid.UUID]error // by user, for ListWorkspaces
 	slugErrs   map[string]error    // by slug, for WorkspaceBySlug and SlugTaken
 	lockErrs   map[string]error    // by slug, for the locks
@@ -218,6 +219,28 @@ func (f *fakeWorkspaces) UpsertPreferences(ctx context.Context, r app.Preference
 	}
 	f.prefs[key] = p.Apply(r.Patch)
 	return f.prefs[key], nil
+}
+
+func (f *fakeWorkspaces) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	return f.deleteStep(ctx, "DeleteWorkspace", id, by, now)
+}
+
+func (f *fakeWorkspaces) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	return f.deleteStep(ctx, "DeleteWorkspaceMembers", workspaceID, by, now)
+}
+
+func (f *fakeWorkspaces) DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	return f.deleteStep(ctx, "DeleteWorkspacePreferences", workspaceID, by, now)
+}
+
+// deleteStep logs a step of the deletion and fails it with the error set
+// for it, wrapped as the store wraps it.
+func (f *fakeWorkspaces) deleteStep(ctx context.Context, step string, id, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "%s %s by %s at %s", step, id, by, now.Format(time.RFC3339Nano))
+	if err := f.deleteErrs[step]; err != nil {
+		return fmt.Errorf("%s: %w", step, err)
+	}
+	return nil
 }
 
 // show is *s quoted, or <nil>.

@@ -38,6 +38,13 @@ RETURNING w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w
           (SELECT count(*) FROM workspace_members c
            WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members;
 
+-- name: DeleteWorkspace :exec
+-- deleteWorkspace's first step, under the workspace's FOR NO KEY UPDATE: the slug is free again at once (the partial
+-- unique index). The rows under it are soft-deleted at the same moment by the steps that follow (M3 design 3.6).
+UPDATE workspaces
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
 -- name: SlugTaken :one
 SELECT EXISTS (SELECT 1 FROM workspaces WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL);
 

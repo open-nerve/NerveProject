@@ -4,6 +4,12 @@ SELECT navigation_control_preference, navigation_project_limit
 FROM workspace_user_properties
 WHERE workspace_id = sqlc.arg(workspace_id) AND user_id = sqlc.arg(user_id) AND deleted_at IS NULL;
 
+-- name: DeleteWorkspacePreferences :exec
+-- deleteWorkspace's cascade: every member's display settings in the workspace (M3 design 3.6 convention 5).
+UPDATE workspace_user_properties
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+
 -- name: UpsertPreferences :one
 -- updateWorkspacePreferences, under the workspace's FOR SHARE (M3 design 3.18): the first change inserts the row with
 -- the values given, the defaults with the change applied; later ones change only the fields that are set. The

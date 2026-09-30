@@ -94,6 +94,25 @@ func (s *Store) UpdateWorkspace(ctx context.Context, id uuid.UUID, p domain.Work
 	}, nil
 }
 
+// DeleteWorkspace soft-deletes the workspace row id, by the account by at
+// now.
+func (s *Store) DeleteWorkspace(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).DeleteWorkspace(ctx, gen.DeleteWorkspaceParams{ID: id, DeletedBy: by, Now: now}); err != nil {
+		return fmt.Errorf("delete workspace: %w", err)
+	}
+	return nil
+}
+
+// DeleteWorkspaceMembers soft-deletes the undeleted memberships of the
+// workspace, active or not, by the account by at now.
+func (s *Store) DeleteWorkspaceMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	err := s.queries(ctx).DeleteWorkspaceMembers(ctx, gen.DeleteWorkspaceMembersParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
+	if err != nil {
+		return fmt.Errorf("delete workspace members: %w", err)
+	}
+	return nil
+}
+
 // deref is the value p points at, or the zero value for nil.
 func deref[T any](p *T) T {
 	var zero T

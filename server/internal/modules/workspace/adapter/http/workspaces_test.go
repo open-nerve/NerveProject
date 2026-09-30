@@ -214,6 +214,35 @@ func TestUpdateWorkspaceRefusesTheSlug(t *testing.T) {
 	}
 }
 
+// DELETE asks the use case for the caller and the slug of the path, and
+// answers 204 without a body; its refusals as the contract declares them.
+func TestDeleteWorkspace(t *testing.T) {
+	del := &fakeDelete{}
+	h := newServer(t, fakes{del: del})
+	for _, tt := range []struct{ token, path string }{{"alice", "/api/v0/workspaces/acme"}, {"bob", "/api/v0/workspaces/beta"}} {
+		if res, body := do(t, h, request(http.MethodDelete, tt.path, tt.token, "")); res.StatusCode != http.StatusNoContent || body != "" {
+			t.Errorf("%s DELETE %s = %d %q, want 204 and no body", tt.token, tt.path, res.StatusCode, body)
+		}
+	}
+	if want := []string{"alice acme", "bob beta"}; !slices.Equal(del.calls, want) {
+		t.Errorf("calls = %q, want %q", del.calls, want)
+	}
+	for _, tt := range []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{domain.ErrNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+	} {
+		h := newServer(t, fakes{del: &fakeDelete{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodDelete, "/api/v0/workspaces/acme", "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("DELETE refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
 // The availability, and the reason when the slug is not available; the slug
 // of the path arrives unescaped.
 func TestCheckWorkspaceSlug(t *testing.T) {

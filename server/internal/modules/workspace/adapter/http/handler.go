@@ -32,6 +32,11 @@ type UpdateWorkspaceUseCase interface {
 	Execute(ctx context.Context, slug string, p domain.WorkspacePatch) (domain.Workspace, error)
 }
 
+// DeleteWorkspaceUseCase is app.DeleteWorkspace.
+type DeleteWorkspaceUseCase interface {
+	Execute(ctx context.Context, slug string) error
+}
+
 // GetPreferencesUseCase is app.GetWorkspacePreferences.
 type GetPreferencesUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.Preferences, error)
@@ -53,6 +58,7 @@ type UseCases struct {
 	CreateWorkspace   CreateWorkspaceUseCase
 	GetWorkspace      GetWorkspaceUseCase
 	UpdateWorkspace   UpdateWorkspaceUseCase
+	DeleteWorkspace   DeleteWorkspaceUseCase
 	CheckSlug         CheckSlugUseCase
 	GetPreferences    GetPreferencesUseCase
 	UpdatePreferences UpdatePreferencesUseCase

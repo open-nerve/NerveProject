@@ -29,13 +29,13 @@ import (
 // database by each kind of caller, its status and problem code asserted cell
 // by cell, and where a row says so, what the answer holds. The data is
 // prepared once: the accounts through the API, the workspaces and
-// memberships through the workspace store, and the two states no store
-// writes yet through SQL (prepareMatrix). The cells that only read share
-// one copy of it, and each cell that writes gets a copy of its own
-// (pgtest.NewDatabaseFrom), so no cell sees another's writes. Each module's
-// rows are in a file of their own (permission_matrix_<module>_test.go): a
-// phase that adds an operation adds its row there, and what the row needs
-// prepared here.
+// memberships through the workspace store, the deleted workspace through
+// the API, and the state no store writes yet through SQL (prepareMatrix).
+// The cells that only read share one copy of it, and each cell that writes
+// gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
+// another's writes. Each module's rows are in a file of their own
+// (permission_matrix_<module>_test.go): a phase that adds an operation adds
+// its row there, and what the row needs prepared here.
 
 // matrixExempt are the modules whose operations have no row, each for its
 // reason. Every other operation of the contract has one, so a module that
@@ -98,6 +98,7 @@ func (c cell) String() string {
 var (
 	cellOK        = cell{status: http.StatusOK}
 	cellCreated   = cell{status: http.StatusCreated}
+	cellNoContent = cell{status: http.StatusNoContent}
 	cellForbidden = cell{http.StatusForbidden, "forbidden"}
 )
 
@@ -180,10 +181,11 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // later removed, and the admin's display settings there; the workspace gone
 // with its admin; and the workspace other, whose admin was never a member of
 // acme and where the removed member is still active, so that a role read in
-// the wrong workspace lets either into acme. Through SQL, until the stores
-// of P5 and P2 replace it: the removed member's membership of acme ended,
-// and gone's workspace row alone soft-deleted. Everything that connected to
-// the database is closed when it returns, so that it can be copied.
+// the wrong workspace lets either into acme. Through the API, gone deleted
+// by its admin, which soft-deletes its memberships with it. Through SQL,
+// until P5's store replaces it, the removed member's membership of acme
+// ended. Everything that connected to the database is closed when it
+// returns, so that it can be copied.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}}
@@ -214,16 +216,18 @@ func prepareMatrix(t *testing.T) matrixData {
 		other := seed.workspace("other", callerNever)
 		seed.join(other, callerNever, shared.RoleAdmin)
 		seed.join(other, callerRemoved, shared.RoleMember)
-		// No store removes a member (P5) or deletes a workspace (P2) yet, so
-		// SQL stands in until those phases replace it. The first statement
-		// ends the removed member's membership of acme. The second
-		// soft-deletes the workspace row of gone alone, which leaves its
-		// admin's membership active in a deleted workspace; P2's delete
-		// also soft-deletes the memberships, invitations and preferences,
-		// so replacing it changes the state this column is asked about.
+		// No store removes a member yet (P5), so SQL stands in until that
+		// phase replaces it: it ends the removed member's membership of acme.
 		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2",
 			acme, ids[callerRemoved])
-		seed.exec(pool, "UPDATE workspaces SET deleted_at = now() WHERE id = $1", gone)
+		// The column's caller deletes gone as deleteWorkspace does it: its
+		// membership goes with the workspace row, so every cell of the column
+		// is asked about a workspace deleted the one way there is. A
+		// membership left active in a deleted workspace is ActiveRole's
+		// store test (P1).
+		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
+			t.Fatalf("deleting gone = %d %s", status, body)
+		}
 	})
 	if !prepared {
 		t.FailNow()
@@ -231,9 +235,9 @@ func prepareMatrix(t *testing.T) matrixData {
 	return d
 }
 
-// matrixSeed writes the prepared workspaces and memberships through the
-// workspace store; exec runs the SQL that stands in for the stores P2 and
-// P5 add.
+// matrixSeed writes the prepared workspaces, memberships and settings
+// through the workspace store; exec runs the SQL that stands in for the
+// store P5 adds.
 type matrixSeed struct {
 	t     *testing.T
 	store *workspacepg.Store

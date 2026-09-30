@@ -240,6 +240,9 @@ type ServerInterface interface {
 	// CreateWorkspace Create a workspace with the caller as its admin
 	// (POST /api/v0/workspaces)
 	CreateWorkspace(w http.ResponseWriter, r *http.Request)
+	// DeleteWorkspace Delete a workspace
+	// (DELETE /api/v0/workspaces/{slug})
+	DeleteWorkspace(w http.ResponseWriter, r *http.Request, slug Slug)
 	// GetWorkspace Read a workspace
 	// (GET /api/v0/workspaces/{slug})
 	GetWorkspace(w http.ResponseWriter, r *http.Request, slug Slug)
@@ -354,6 +357,32 @@ func (siw *ServerInterfaceWrapper) CreateWorkspace(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateWorkspace(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteWorkspace operation middleware
+func (siw *ServerInterfaceWrapper) DeleteWorkspace(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteWorkspace(w, r, slug)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -537,6 +566,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces", wrapper.ListWorkspaces)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces", wrapper.CreateWorkspace)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.DeleteWorkspace)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.GetWorkspace)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspaces/{slug}", wrapper.UpdateWorkspace)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
@@ -786,6 +816,46 @@ func (response CreateWorkspacedefaultApplicationProblemPlusJSONResponse) VisitCr
 	return err
 }
 
+type DeleteWorkspaceRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type DeleteWorkspaceResponseObject interface {
+	VisitDeleteWorkspaceResponse(w http.ResponseWriter) error
+}
+
+type DeleteWorkspace204Response struct {
+}
+
+func (response DeleteWorkspace204Response) VisitDeleteWorkspaceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteWorkspacedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteWorkspacedefaultApplicationProblemPlusJSONResponse) VisitDeleteWorkspaceResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type GetWorkspaceRequestObject struct {
 	Slug Slug `json:"slug"`
 }
@@ -896,6 +966,9 @@ type StrictServerInterface interface {
 	// CreateWorkspace Create a workspace with the caller as its admin
 	// (POST /api/v0/workspaces)
 	CreateWorkspace(ctx context.Context, request CreateWorkspaceRequestObject) (CreateWorkspaceResponseObject, error)
+	// DeleteWorkspace Delete a workspace
+	// (DELETE /api/v0/workspaces/{slug})
+	DeleteWorkspace(ctx context.Context, request DeleteWorkspaceRequestObject) (DeleteWorkspaceResponseObject, error)
 	// GetWorkspace Read a workspace
 	// (GET /api/v0/workspaces/{slug})
 	GetWorkspace(ctx context.Context, request GetWorkspaceRequestObject) (GetWorkspaceResponseObject, error)
@@ -1076,6 +1149,32 @@ func (sh *strictHandler) CreateWorkspace(w http.ResponseWriter, r *http.Request)
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateWorkspaceResponseObject); ok {
 		if err := validResponse.VisitCreateWorkspaceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteWorkspace operation middleware
+func (sh *strictHandler) DeleteWorkspace(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request DeleteWorkspaceRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteWorkspace(ctx, request.(DeleteWorkspaceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteWorkspace")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteWorkspaceResponseObject); ok {
+		if err := validResponse.VisitDeleteWorkspaceResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
