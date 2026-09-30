@@ -69,7 +69,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	if err != nil {
 		return nil, err
 	}
-	invitationMAC, err := keys.MAC(workspace.InvitationMACPurpose)
+	invitations, err := invitationMAC(keys)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
-		InvitationMAC:   invitationMAC,
+		InvitationMAC:   invitations,
 		CallerLock:      identityPorts.CredentialLock,
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
@@ -197,6 +197,13 @@ func readSigningKey(path string) ([]byte, error) {
 		return nil, fmt.Errorf("auth.jwt.private_key_file: %w", err)
 	}
 	return data, nil
+}
+
+// invitationMAC is the invitation MAC the workspace module takes: keys'
+// MAC of workspace.InvitationMACPurpose (M3 design 3.8, 6.6), the one place
+// the composition names the purpose.
+func invitationMAC(keys *identity.Keys) (identity.MAC, error) {
+	return keys.MAC(workspace.InvitationMACPurpose)
 }
 
 // passwordHashing is auth.password as identity takes it.

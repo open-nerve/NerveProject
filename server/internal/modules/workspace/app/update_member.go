@@ -73,8 +73,9 @@ func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role 
 }
 
 // lockedMember reads the membership id, locks its workspace, and reads it
-// again under the lock: a membership or workspace deleted meanwhile is
-// domain.ErrMemberNotFound.
+// again under the lock, which must still be of the workspace locked (M3
+// design 3.6 convention 2): a membership or workspace deleted meanwhile,
+// or a membership no longer of that workspace, is domain.ErrMemberNotFound.
 func (u *UpdateWorkspaceMember) lockedMember(ctx context.Context, id uuid.UUID) (domain.Membership, error) {
 	m, err := u.members.MemberByID(ctx, id)
 	if err != nil {
@@ -83,11 +84,14 @@ func (u *UpdateWorkspaceMember) lockedMember(ctx context.Context, id uuid.UUID) 
 	if err := u.members.LockWorkspace(ctx, m.WorkspaceID); err != nil {
 		return domain.Membership{}, memberNotFound(err)
 	}
-	m, err = u.members.MemberByID(ctx, id)
+	locked, err := u.members.MemberByID(ctx, id)
 	if err != nil {
 		return domain.Membership{}, memberNotFound(err)
 	}
-	return m, nil
+	if locked.WorkspaceID != m.WorkspaceID {
+		return domain.Membership{}, domain.ErrMemberNotFound
+	}
+	return locked, nil
 }
 
 // memberNotFound turns ErrNotFound into domain.ErrMemberNotFound.

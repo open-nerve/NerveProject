@@ -48,8 +48,9 @@ type CreateInvitationParams struct {
 	Now         time.Time
 }
 
-// createWorkspaceInvitations inserts a batch one row a statement, in the order of the normalized addresses, under the
-// workspace's FOR SHARE (M3 design 3.6 convention 5). RETURNING gives the row as stored.
+// createWorkspaceInvitations inserts a batch one row a statement, in the order of the normalized addresses; the caller
+// holds the workspace's FOR SHARE (and the inviter's account row) (M3 design 3.6 convention 5). RETURNING gives the row
+// as stored.
 func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (WorkspaceMemberInvite, error) {
 	row := q.db.QueryRow(ctx, createInvitation,
 		arg.ID,

@@ -27,9 +27,11 @@ func readInvitation(ctx context.Context, invitations InvitationLocker, id uuid.U
 }
 
 // lockInvitation locks inv's workspace with lockWorkspace, then inv's row
-// FOR UPDATE, and returns the row read under the lock. A workspace deleted,
-// or an invitation deleted (by an acceptance too) while the locks waited,
-// is domain.ErrInvitationNotFound.
+// FOR UPDATE, and returns the row read under the lock, which must still be
+// of the workspace locked (M3 design 3.6 convention 2). A workspace
+// deleted, an invitation deleted (by an acceptance too) while the locks
+// waited, or one no longer of that workspace, is
+// domain.ErrInvitationNotFound.
 func lockInvitation(ctx context.Context, invitations InvitationLocker, lockWorkspace func(ctx context.Context, id uuid.UUID) error,
 	inv domain.Invitation) (domain.Invitation, error) {
 	if err := lockWorkspace(ctx, inv.WorkspaceID); err != nil {
@@ -38,6 +40,9 @@ func lockInvitation(ctx context.Context, invitations InvitationLocker, lockWorks
 	locked, err := invitations.LockInvitation(ctx, inv.ID)
 	if err != nil {
 		return domain.Invitation{}, invitationNotFound(err)
+	}
+	if locked.WorkspaceID != inv.WorkspaceID {
+		return domain.Invitation{}, domain.ErrInvitationNotFound
 	}
 	return locked, nil
 }
