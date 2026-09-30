@@ -197,6 +197,14 @@ func TestUpdateInvitationRole(t *testing.T) {
 	if a := auditOf(t, pool, carol.ID); a.updatedBy != bob || !a.updatedAt.Equal(later) || a.deletedAt != nil {
 		t.Errorf("carol's: %+v; want updated by bob at %v, not deleted", a, later)
 	}
+	// Then to another role: a role written whatever the one given is passes
+	// one of the two changes, not both.
+	if got, err := s.UpdateInvitationRole(context.Background(), carol.ID, shared.RoleGuest, bob, later); err != nil || got.Role != shared.RoleGuest {
+		t.Errorf("UpdateInvitationRole() to guest = %+v, %v; want guest", got, err)
+	}
+	if got, err := s.InvitationByID(context.Background(), carol.ID); err != nil || got.Role != shared.RoleGuest {
+		t.Errorf("carol's after the change to guest: %+v, %v; want guest", got, err)
+	}
 	for _, o := range others {
 		if got, err := s.InvitationByID(context.Background(), o.ID); err != nil || !sameInvitation(got, o) {
 			t.Errorf("%s in %s: %+v, %v; want it unchanged", o.Email, o.WorkspaceID, got, err)
