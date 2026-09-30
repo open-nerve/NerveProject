@@ -122,6 +122,16 @@ func TestCreateInvitationsRefusesAnAddressTaken(t *testing.T) {
 			t.Errorf("after the batch repeating %s, acme's invitations are %q, want %q", taken, pendingEmails(t, pool, acme.ID), want)
 		}
 	}
+	// Outside a transaction too, nothing after the taken address is
+	// inserted.
+	var dup *app.DuplicateInvitation
+	if got, err := s.CreateInvitations(context.Background(), []app.InvitationRow{row("carol@corp.com"), row("zoe@corp.com")}); !errors.As(err, &dup) ||
+		dup.Email != "carol@corp.com" || got != nil {
+		t.Errorf("a batch outside a transaction repeating carol@corp.com: %+v, %v; want *app.DuplicateInvitation of it", got, err)
+	}
+	if want := []string{"carol@corp.com", "dave@corp.com"}; !slices.Equal(pendingEmails(t, pool, acme.ID), want) {
+		t.Errorf("after the batch outside a transaction, acme's invitations are %q, want %q", pendingEmails(t, pool, acme.ID), want)
+	}
 	if _, err := s.CreateInvitations(context.Background(), []app.InvitationRow{row("erin@corp.com"), row("frank@corp.com")}); err != nil {
 		t.Errorf("addresses free in acme: %v", err)
 	}
