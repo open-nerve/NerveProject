@@ -30,8 +30,9 @@ func (a *account) rowLockedByAnother(t *testing.T) bool {
 
 // Provide's CredentialLock is M2's credential lock (M3 design 6.5, 6.6): a
 // valid session or personal access token takes it, and the account row stays
-// locked until the transaction ends; a revoked session, a revoked token, a
-// deactivated account and an unknown one are 401 unauthorized.
+// locked until the transaction ends; a session past its expiry at now, a
+// revoked session, a revoked token, a deactivated account and an unknown one
+// are 401 unauthorized; a failed read is its own error, not 401.
 func TestProvidedCredentialLockIsTheCredentialLock(t *testing.T) {
 	a := newAccount(t, "hashed:Tr0ub4dor&3:s")
 	lock := identity.Provide(a.pool).CredentialLock
@@ -54,6 +55,14 @@ func TestProvidedCredentialLockIsTheCredentialLock(t *testing.T) {
 		if err != nil || !held || a.rowLockedByAnother(t) {
 			t.Errorf("%s: LockCaller() = %v, row held %v; want the row locked until the transaction ended", name, err, held)
 		}
+	}
+	if err := lock.LockCaller(ctx, session, now.Add(time.Hour)); !errors.Is(err, shared.Unauthenticated()) {
+		t.Errorf("a session past its expiry: LockCaller() = %v, want 401 unauthorized", err)
+	}
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	if err := lock.LockCaller(cancelled, session, now); !errors.Is(err, context.Canceled) || errors.Is(err, shared.Unauthenticated()) {
+		t.Errorf("a failed read: LockCaller() = %v, want the store's error unchanged", err)
 	}
 
 	if _, err := a.store.RevokeAPIToken(ctx, pat.APITokenID, a.id, now); err != nil {
