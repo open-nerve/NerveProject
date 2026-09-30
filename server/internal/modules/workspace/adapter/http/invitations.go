@@ -9,6 +9,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ListWorkspaceInvitations serves GET /api/v0/workspaces/{slug}/invitations.
@@ -18,6 +19,20 @@ func (h handler) ListWorkspaceInvitations(ctx context.Context, req gen.ListWorks
 		return nil, err
 	}
 	return gen.ListWorkspaceInvitations200JSONResponse{Data: invitations(list)}, nil
+}
+
+// CreateWorkspaceInvitations serves POST
+// /api/v0/workspaces/{slug}/invitations.
+func (h handler) CreateWorkspaceInvitations(ctx context.Context, req gen.CreateWorkspaceInvitationsRequestObject) (gen.CreateWorkspaceInvitationsResponseObject, error) {
+	batch := make([]domain.NewInvitation, len(req.Body.Invitations))
+	for i, inv := range req.Body.Invitations {
+		batch[i] = domain.NewInvitation{Email: inv.Email, Role: shared.Role(inv.Role)}
+	}
+	list, err := h.uc.CreateInvitations.Execute(ctx, req.Slug, batch)
+	if err != nil {
+		return nil, err
+	}
+	return gen.CreateWorkspaceInvitations201JSONResponse{Data: invitations(list)}, nil
 }
 
 // invitations is list as the API shows it.

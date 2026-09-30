@@ -106,6 +106,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		InvitationMAC:   invitationMAC,
+		CallerLock:      identityPorts.CredentialLock,
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{

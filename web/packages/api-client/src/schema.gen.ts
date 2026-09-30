@@ -346,7 +346,11 @@ export interface paths {
          */
         get: operations["listWorkspaceInvitations"];
         put?: never;
-        post?: never;
+        /**
+         * Invite addresses to a workspace
+         * @description For the workspace's admins. Each address is normalized as at registration (surrounding white space removed, lower case) and the batch is checked first: 1–100 invitations, each address valid (invalid_format) and listed once (duplicate), each role one of the three (invalid_format). Then, the workspace looked at: an active member's address is not_allowed, and an address with an invitation to the workspace, pending or declined, duplicate, also when another request invites it at the same time. The batch is refused as a whole, one validation_failed naming each invitations[i] of the request as sent. A declined invitation holds its address until it is deleted. The answer is the new invitations in the request's order, each with the token of its link. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden. A credential revoked meanwhile, by a password reset, answers unauthorized, and nothing is invited.
+         */
+        post: operations["createWorkspaceInvitations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -792,6 +796,15 @@ export interface components {
         WorkspaceInvitationList: {
             data: components["schemas"]["WorkspaceInvitation"][];
         };
+        InvitationCreate: {
+            /** @description An e-mail address; it is normalized as at registration. */
+            email: string;
+            role: components["schemas"]["WorkspaceRole"];
+        };
+        WorkspaceInvitationsCreate: {
+            /** @description 1–100 invitations, created all together or not at all. */
+            invitations: components["schemas"]["InvitationCreate"][];
+        };
         WorkspaceMemberUpdate: {
             role: components["schemas"]["WorkspaceRole"];
         };
@@ -882,6 +895,8 @@ export type WorkspaceMember = components['schemas']['WorkspaceMember'];
 export type WorkspaceMemberList = components['schemas']['WorkspaceMemberList'];
 export type WorkspaceInvitation = components['schemas']['WorkspaceInvitation'];
 export type WorkspaceInvitationList = components['schemas']['WorkspaceInvitationList'];
+export type InvitationCreate = components['schemas']['InvitationCreate'];
+export type WorkspaceInvitationsCreate = components['schemas']['WorkspaceInvitationsCreate'];
 export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
@@ -1398,6 +1413,34 @@ export interface operations {
         responses: {
             /** @description The workspace's invitations. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceInvitationList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createWorkspaceInvitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceInvitationsCreate"];
+            };
+        };
+        responses: {
+            /** @description The new invitations, in the request's order. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -16,6 +16,7 @@ var (
 	cellCreationDisabled  = cell{http.StatusForbidden, "workspace.creation_disabled"}
 	cellMemberNotFound    = cell{http.StatusNotFound, "workspace.member_not_found"}
 	cellOwnMembership     = cell{http.StatusConflict, "workspace.own_membership"}
+	cellValidationFailed  = cell{http.StatusUnprocessableEntity, "validation_failed"}
 )
 
 // inWorkspace are the cells of a workspace-level row: the answer of the
@@ -104,6 +105,16 @@ func workspaceMatrixRows() []matrixRow {
 			cells: ofMember(cellOwnMembership, cellForbidden, cellForbidden)},
 		{op: "listWorkspaceInvitations", request: toWorkspace(http.MethodGet, "/invitations", ""),
 			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: listsTheInvitations},
+		{op: "createWorkspaceInvitations", write: true, request: toWorkspace(http.MethodPost, "/invitations", inviting("invitee@example.com")),
+			cells: inWorkspace(cellCreated, cellForbidden, cellForbidden), check: invitesTheInvitee},
+		// The addresses the workspace refuses, read through the wired
+		// MemberProfiles and the store: an active member's, an invited one's.
+		{op: "createWorkspaceInvitations", variant: "an active member's address", write: true,
+			request: toWorkspace(http.MethodPost, "/invitations", inviting("member@example.com")),
+			cells:   inWorkspace(cellValidationFailed, cellForbidden, cellForbidden)},
+		{op: "createWorkspaceInvitations", variant: "an invited address", write: true,
+			request: toWorkspace(http.MethodPost, "/invitations", inviting("newcomer@example.com")),
+			cells:   inWorkspace(cellValidationFailed, cellForbidden, cellForbidden)},
 		{op: "getWorkspacePreferences", request: toPreferences(http.MethodGet, ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: preferencesAre(navigation{"TABBED", 3}, navigation{"ACCORDION", 10})},
 		{op: "updateWorkspacePreferences", write: true, request: toPreferences(http.MethodPatch, `{"navigation_project_limit":5}`),

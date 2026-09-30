@@ -2,8 +2,10 @@ package httpadapter_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -18,6 +20,13 @@ type fakeInvitations struct {
 	calls []string
 	lists map[string][]domain.InvitationWithToken // by slug
 	err   error
+}
+
+type fakeCreateInvitations struct{ *fakeInvitations }
+
+func (f fakeCreateInvitations) Execute(ctx context.Context, slug string, batch []domain.NewInvitation) ([]domain.InvitationWithToken, error) {
+	f.calls = append(f.calls, fmt.Sprintf("create %s %s %+v", caller(ctx), slug, batch))
+	return f.lists[slug], f.err
 }
 
 type fakeListInvitations struct{ *fakeInvitations }
@@ -84,5 +93,52 @@ func TestListWorkspaceInvitationsRefusals(t *testing.T) {
 			body != tt.want+"\n" {
 			t.Errorf("GET refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
 		}
+	}
+}
+
+// POST hands the batch to the use case as sent, the addresses as they are
+// and every role, for the caller and the slug of the path, and answers the
+// invitations it creates with 201.
+func TestCreateWorkspaceInvitations(t *testing.T) {
+	inv := &fakeInvitations{lists: map[string][]domain.InvitationWithToken{"acme": {carolInvited}}}
+	h := newServer(t, fakes{invitations: inv})
+	res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/invitations", "alice",
+		`{"invitations":[{"email":" Carol@corp.com ","role":15},{"email":"dave","role":10}]}`))
+	if want := `{"data":[` + carolInvitedJSON + `]}`; res.StatusCode != http.StatusCreated || body != want+"\n" {
+		t.Errorf("POST = %d %s, want 201 %s", res.StatusCode, body, want)
+	}
+	if want := []string{"create alice acme [{Email: Carol@corp.com  Role:15} {Email:dave Role:10}]"}; !slices.Equal(inv.calls, want) {
+		t.Errorf("calls = %q, want %q", inv.calls, want)
+	}
+}
+
+// The use case's refusals, as the contract declares them; a body whose
+// invitation lacks a role is refused before it.
+func TestCreateWorkspaceInvitationsRefusals(t *testing.T) {
+	for _, tt := range []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{shared.Invalid(shared.FieldError{Field: "invitations[1].email", Code: shared.FieldDuplicate, Message: "has an invitation to the workspace already"}),
+			http.StatusUnprocessableEntity, `{"status":422,"code":"validation_failed","title":"Unprocessable Entity",` +
+				`"detail":"The request has invalid values.","errors":[{"field":"invitations[1].email","code":"duplicate",` +
+				`"message":"has an invitation to the workspace already"}]}`},
+		{domain.ErrNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+	} {
+		h := newServer(t, fakes{invitations: &fakeInvitations{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/invitations", "bob",
+			`{"invitations":[{"email":"carol@corp.com","role":5}]}`)); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("POST refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+	inv := &fakeInvitations{}
+	h := newServer(t, fakes{invitations: inv})
+	if res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/invitations", "alice",
+		`{"invitations":[{"email":"carol@corp.com"}]}`)); res.StatusCode != http.StatusBadRequest || len(inv.calls) != 0 ||
+		!strings.Contains(body, `"field":"invitations[0].role","code":"required"`) {
+		t.Errorf("POST without a role = %d %s, calls %q; want 400 on invitations[0].role and no call", res.StatusCode, body, inv.calls)
 	}
 }

@@ -24,11 +24,14 @@ const (
 	// ActionInvitationList is listing a workspace's invitations, with their
 	// tokens: listWorkspaceInvitations.
 	ActionInvitationList shared.Action = "workspace_invitation.list"
+	// ActionInvitationCreate is inviting addresses to a workspace:
+	// createWorkspaceInvitations.
+	ActionInvitationCreate shared.Action = "workspace_invitation.create"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
 	return []shared.Action{ActionRead, ActionUpdate, ActionDelete, ActionMemberList, ActionMemberUpdate, ActionPreferencesRead, ActionPreferencesUpdate,
-		ActionInvitationList}
+		ActionInvitationList, ActionInvitationCreate}
 }

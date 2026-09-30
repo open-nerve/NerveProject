@@ -242,7 +242,7 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	httpadapter.Register(router, api, httpadapter.UseCases{
 		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
 		ListMembers: f.member, UpdateMember: f.role, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
-		ListInvitations: fakeListInvitations{f.invitations},
+		ListInvitations: fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
 	})
 	return router
 }

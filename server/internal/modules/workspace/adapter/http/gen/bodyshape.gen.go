@@ -23,12 +23,17 @@ func BodyShapes() *bodyshape.Table {
 			/* 10 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"name": 11, "organization_size": 7, "timezone": 12}},
 			/* 11 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 			/* 12 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
+			/* 13 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"invitations": 14}, Required: []string{"invitations"}},
+			/* 14 */ {Types: bodyshape.Array, Extra: bodyshape.Open, Items: 15},
+			/* 15 */ {Types: bodyshape.Object, Extra: bodyshape.Closed, Items: bodyshape.Open, Props: map[string]int{"email": 16, "role": 4}, Required: []string{"email", "role"}},
+			/* 16 */ {Types: bodyshape.String, Extra: bodyshape.Open, Items: bodyshape.Open},
 		},
 		Roots: map[string]int{
 			"PATCH /api/v0/me/workspaces/{slug}/preferences":        0,
 			"PATCH /api/v0/workspace-members/{workspace_member_id}": 3,
 			"PATCH /api/v0/workspaces/{slug}":                       10,
 			"POST /api/v0/workspaces":                               5,
+			"POST /api/v0/workspaces/{slug}/invitations":            13,
 		},
 	}
 }

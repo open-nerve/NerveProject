@@ -5,10 +5,26 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"strings"
+	"time"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// fakeCallerLock logs each lock with the caller's credential and the time,
+// and answers err.
+type fakeCallerLock struct {
+	log *callLog
+	err error
+}
+
+func (f *fakeCallerLock) LockCaller(ctx context.Context, actor shared.Actor, now time.Time) error {
+	f.log.add(ctx, "LockCaller %s session %s at %s", actor.UserID, actor.SessionID, now.Format(time.RFC3339Nano))
+	return f.err
+}
 
 // fakeMAC tags a message with the first 16 bytes of HMAC-SHA256 under a key
 // of its own, as identity's does, and logs each Verify with the invitation
@@ -43,7 +59,9 @@ func tokenOf(mac fakeMAC, id uuid.UUID) string {
 type fakeInvitations struct {
 	*fakeWorkspaces
 	invitations []domain.Invitation
-	listErr     error // for ListInvitations
+	listErr     error  // for ListInvitations
+	createErr   error  // for CreateInvitations
+	taken       string // an address CreateInvitations finds taken, as the unique key would
 }
 
 func (f *fakeInvitations) ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([]domain.Invitation, error) {
@@ -57,5 +75,31 @@ func (f *fakeInvitations) ListInvitations(ctx context.Context, workspaceID uuid.
 			out = append(out, inv)
 		}
 	}
+	return out, nil
+}
+
+// CreateInvitations logs the rows' addresses in the order given, and their
+// workspace, inviter and time; it stores them and answers them as stored,
+// at the stored time, unless an address is taken.
+func (f *fakeInvitations) CreateInvitations(ctx context.Context, rows []app.InvitationRow) ([]domain.Invitation, error) {
+	var emails []string
+	for _, r := range rows {
+		emails = append(emails, fmt.Sprintf("%s as %d", r.Email, r.Role))
+	}
+	f.log.add(ctx, "CreateInvitations %s in %s by %s at %s", strings.Join(emails, ", "), rows[0].WorkspaceID, rows[0].CreatedBy,
+		rows[0].Now.Format(time.RFC3339Nano))
+	if f.createErr != nil {
+		return nil, fmt.Errorf("create workspace invitation: %w", f.createErr)
+	}
+	var out []domain.Invitation
+	for _, r := range rows {
+		if r.Email == f.taken {
+			return nil, &app.DuplicateInvitation{Email: r.Email}
+		}
+		by := r.CreatedBy
+		out = append(out, domain.Invitation{ID: r.ID, WorkspaceID: r.WorkspaceID, Email: r.Email, Role: r.Role, CreatedAt: stored(r.Now),
+			CreatedByID: &by})
+	}
+	f.invitations = append(f.invitations, out...)
 	return out, nil
 }

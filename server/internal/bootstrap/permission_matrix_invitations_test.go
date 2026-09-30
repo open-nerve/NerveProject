@@ -58,3 +58,26 @@ func listsTheInvitations(t *testing.T, c caller, answer string) {
 		t.Errorf("%s lists the invitations of %q, want %q", c, got, want)
 	}
 }
+
+// inviting is the body of a creation that invites email as a guest.
+func inviting(email string) string {
+	return `{"invitations":[{"email":"` + email + `","role":5}]}`
+}
+
+// invitesTheInvitee: the admin's answer is the one new invitation, of
+// invitee@example.com as a guest, with the token of its id.
+func invitesTheInvitee(t *testing.T, c caller, answer string) {
+	var list struct {
+		Data []struct {
+			ID    uuid.UUID `json:"id"`
+			Email string    `json:"email"`
+			Role  int       `json:"role"`
+			Token string    `json:"token"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &list)
+	if len(list.Data) != 1 || list.Data[0].Email != "invitee@example.com" || list.Data[0].Role != 5 ||
+		list.Data[0].Token != invitationToken(t, list.Data[0].ID) {
+		t.Errorf("%s's invitation answers %+v, want invitee@example.com's, as a guest, with its token", c, list.Data)
+	}
+}

@@ -19,6 +19,17 @@ type InvitationMAC interface {
 	Verify(message []byte, tag [16]byte) bool
 }
 
+// CallerLock is identity's credential lock (M2 design 3.5), which
+// identity.Provide offers (M3 design 6.5, 6.6): LockCaller locks the
+// caller's account row FOR NO KEY UPDATE until the transaction ends, then
+// checks under the lock that his account is active and his session or
+// personal access token valid at now; 401 unauthorized otherwise. It is the
+// first lock of a transaction that issues something with the caller's
+// credential (M3 design 3.6 convention 1, 3.8).
+type CallerLock interface {
+	LockCaller(ctx context.Context, actor shared.Actor, now time.Time) error
+}
+
 // InvitationLister reads a workspace and lists its invitations.
 type InvitationLister interface {
 	WorkspaceFinder
@@ -36,6 +47,22 @@ type InvitationRow struct {
 	Role        shared.Role
 	CreatedBy   uuid.UUID
 	Now         time.Time
+}
+
+// InvitationCreator inserts a batch of invitations under the workspace's
+// FOR SHARE, after it read what the batch must not repeat.
+type InvitationCreator interface {
+	WorkspaceSharer
+	// ListMembers returns the undeleted memberships of the workspace,
+	// active or not.
+	ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error)
+	// ListInvitations returns the workspace's undeleted invitations.
+	ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([]domain.Invitation, error)
+	// CreateInvitations inserts rows, one statement each, in the order
+	// given, and returns them as stored, in that order; the first row whose
+	// address an undeleted invitation of the workspace has is
+	// *DuplicateInvitation.
+	CreateInvitations(ctx context.Context, rows []InvitationRow) ([]domain.Invitation, error)
 }
 
 // DuplicateInvitation is a store's answer to an insert that the unique key

@@ -67,6 +67,8 @@ type Deps struct {
 	Profiles app.MemberProfiles
 	// InvitationMAC is identity's MAC of InvitationMACPurpose.
 	InvitationMAC app.InvitationMAC
+	// CallerLock is identity's credential lock (identity.Provide).
+	CallerLock app.CallerLock
 	// CreationEnabled is workspace.creation_enabled (M3 design 3.11).
 	CreationEnabled bool
 }
@@ -94,6 +96,9 @@ func New(d Deps) *Module {
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
 		UpdatePreferences: app.NewUpdateWorkspacePreferences(store, d.Authorizer, d.Tx, d.Clock),
 		ListInvitations:   app.NewListWorkspaceInvitations(store, d.Authorizer, d.InvitationMAC),
+		CreateInvitations: app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{
+			Caller: d.CallerLock, Invitations: store, Profiles: d.Profiles, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
+		}),
 	}}
 }
 

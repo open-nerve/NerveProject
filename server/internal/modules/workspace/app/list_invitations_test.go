@@ -25,21 +25,27 @@ var (
 )
 
 // invitationsFixture is the invitations' use cases over fakes sharing one
-// log: acme and beta with carolToAcme, daveToAcme and erinToBeta; alice is
-// acme's admin, bob acme's member and beta's admin.
+// log: acme and beta with carolToAcme, daveToAcme and erinToBeta; acme's
+// memberships alice's (admin), bob's (member) and carol's, ended; beta's
+// bob's (guest). The Authorizer gives alice admin in acme, bob member in
+// acme and admin in beta.
 type invitationsFixture struct {
 	log         *callLog
 	tx          *fakeTx
+	caller      *fakeCallerLock
 	invitations *fakeInvitations
+	profiles    *fakeProfiles
 	auth        *fakeAuthorizer
 	mac         fakeMAC
 }
 
 func newInvitations() *invitationsFixture {
 	log := &callLog{}
-	return &invitationsFixture{log: log, tx: &fakeTx{},
-		invitations: &fakeInvitations{fakeWorkspaces: &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta}},
+	return &invitationsFixture{log: log, tx: &fakeTx{}, caller: &fakeCallerLock{log: log},
+		invitations: &fakeInvitations{fakeWorkspaces: &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta},
+			memberships: map[uuid.UUID][]domain.Membership{acme.ID: {aliceInAcme, bobInAcme, carolInAcme}, beta.ID: {bobInBeta}}},
 			invitations: []domain.Invitation{carolToAcme, daveToAcme, erinToBeta}},
+		profiles: &fakeProfiles{log: log, profiles: profiles},
 		auth: &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},
 			{bob.ID, acme.ID}:   {WorkspaceRole: shared.RoleMember},
