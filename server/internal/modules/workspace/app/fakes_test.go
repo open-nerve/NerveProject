@@ -16,14 +16,21 @@ import (
 var now = clocktest.At(time.Date(2026, 9, 29, 10, 0, 0, 123456000, time.UTC)).Now()
 
 // fakeTx runs fn in a context marked as inside the transaction; the fakes
-// record whether each call happened there.
-type fakeTx struct{ calls int }
+// record whether each call happened there. commitErr, when set, is the
+// commit failing after fn succeeded.
+type fakeTx struct {
+	calls     int
+	commitErr error
+}
 
 type inTxKey struct{}
 
 func (f *fakeTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	f.calls++
-	return fn(context.WithValue(ctx, inTxKey{}, true))
+	if err := fn(context.WithValue(ctx, inTxKey{}, true)); err != nil {
+		return err
+	}
+	return f.commitErr
 }
 
 // callLog records the calls of the fakes that share it, in order, each with

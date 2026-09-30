@@ -58,7 +58,8 @@ func (d deletion) deletedAtBy(when time.Time, by uuid.UUID) bool {
 // membership of it, active or not, and every member's settings in it, at
 // the same moment and by the same account; a membership and a settings row
 // deleted before keep their time, and another workspace keeps everything.
-// The slug is free again.
+// Running the steps again changes nothing, nobody's last_workspace_id is
+// cleared, and the slug is free again.
 func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
@@ -79,11 +80,16 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	exec(t, pool, "UPDATE workspace_user_properties SET deleted_at = $1 WHERE user_id = $2", earlier, carol)
 	exec(t, pool, "UPDATE workspace_members SET deleted_at = $1 WHERE member_id = $2", earlier, dave)
 	later := now.Add(time.Hour)
+	// alice and bob last landed in acme: the deletion leaves it (M3 design
+	// 3.14), the landing rule skips a workspace the caller cannot list.
+	exec(t, pool, "INSERT INTO profiles (id, user_id, last_workspace_id) VALUES ($1, $2, $3), ($4, $5, $3)",
+		uuid.NewV7(), alice, acme.ID, uuid.NewV7(), bob)
 
+	steps := []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
+		s.DeleteWorkspace, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
+	}
 	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
-		for _, step := range []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
-			s.DeleteWorkspace, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
-		} {
+		for _, step := range steps {
 			if err := step(ctx, acme.ID, bob, later); err != nil {
 				return err
 			}
@@ -92,6 +98,13 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// Once more, by alice an hour later: nothing is left undeleted, so every
+	// row keeps bob's deletion.
+	for _, step := range steps {
+		if err := step(context.Background(), acme.ID, alice, later.Add(time.Hour)); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	for what, rows := range map[string]map[uuid.UUID]deletion{
@@ -129,6 +142,11 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 		if d.deletedAt != nil || !d.updatedAt.Equal(now) {
 			t.Errorf("beta's row %s: %+v, want it untouched", id, d)
 		}
+	}
+	var landing int
+	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM profiles WHERE last_workspace_id = $1", acme.ID).
+		Scan(&landing); err != nil || landing != 2 {
+		t.Errorf("profiles still landing in acme: %d, %v; want alice's and bob's, as before", landing, err)
 	}
 	if _, err := s.WorkspaceBySlug(context.Background(), "acme"); !errors.Is(err, app.ErrNotFound) {
 		t.Errorf("WorkspaceBySlug(acme) after the deletion: %v, want app.ErrNotFound", err)

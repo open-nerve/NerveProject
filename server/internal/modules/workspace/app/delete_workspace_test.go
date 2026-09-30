@@ -81,7 +81,8 @@ func TestDeleteWorkspaceLocksThenDecidesThenCascades(t *testing.T) {
 // Each refusal and failure is the answer: nothing is deleted after it, and
 // nothing is logged. A step that fails ends the cascade there, and its
 // transaction ends with the error, so the database rolls back the steps
-// before it; never a 404 for a failure.
+// before it; a commit that fails after every step logs nothing either, as
+// the log comes after the commit. Never a 404 for a failure.
 func TestDeleteWorkspaceRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	decided := lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionDelete)
@@ -109,6 +110,8 @@ func TestDeleteWorkspaceRefusals(t *testing.T) {
 				f.workspaces.deleteErrs = map[string]error{"DeleteWorkspacePreferences": failure}
 			},
 			failure, append(slices.Clone(decided), steps...)},
+		{"the commit failed", alice, "acme", func(f *deleteFixture) { f.tx.commitErr = failure }, failure,
+			append(slices.Clone(decided), steps...)},
 	}
 	for _, tt := range tests {
 		uc, f := newDelete()
