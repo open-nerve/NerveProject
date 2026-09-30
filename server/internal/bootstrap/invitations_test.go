@@ -137,16 +137,35 @@ func expectNoTokenStored(t *testing.T, pool *pgxpool.Pool, links []invitationLin
 	}
 }
 
+// registrationRows is every row a registration or an invitation's answer
+// writes, whole, as row_to_json writes it.
+func registrationRows(t *testing.T, pool *pgxpool.Pool) string {
+	t.Helper()
+	var rows string
+	err := pool.QueryRow(context.Background(), `SELECT concat_ws(E'\n',
+		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM users r),
+		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM profiles r),
+		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM auth_sessions r),
+		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM workspace_members r),
+		(SELECT string_agg(row_to_json(r)::text, E'\n' ORDER BY r.id) FROM workspace_member_invites r))`).Scan(&rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rows
+}
+
 // While sign-up is off, a registration goes on only with the link of a
 // pending invitation to its address, normalized (M3 design 3.8): on a
 // second app on the same database and key, with sign-up off. Every other
 // case answers the one 403 identity.signup_disabled, byte for byte, whatever
-// is wrong (8.2): no invitation, a token not the invitation's, an id no
-// invitation has, a deleted invitation, an accepted one (its address has an
-// account, and that is not what it says), a declined one, another address.
-// Registering does not accept the invitation.
+// is wrong (8.2), and leaves every row as it was: no invitation, a token not
+// the invitation's, an id no invitation has, a deleted invitation, an
+// accepted one (its address has an account, and that is not what it says),
+// a declined one, another address. Registering does not accept the
+// invitation.
 func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 	url, keyFile := pgtest.NewDatabase(t), writeFile(t, testKeyPEM)
+	pool := openPool(t, url)
 	configured := func(signup bool) config.Config {
 		cfg := testConfig(t, url, false)
 		cfg.Auth.JWT.PrivateKeyFile, cfg.Auth.SignupEnabled = keyFile, signup
@@ -183,10 +202,14 @@ func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 		return `,"invitation":{"id":"` + l.id.String() + `","token":"` + l.token + `"}`
 	}
 	nobodys := uuid.NewV7()
+	before := registrationRows(t, pool)
 
 	refused := register("zoe@example.com", "")
 	if refused.status != http.StatusForbidden || problemCode(t, []byte(refused.body)) != "identity.signup_disabled" {
 		t.Fatalf("registering without an invitation = %+v, want 403 identity.signup_disabled", refused)
+	}
+	if rows := registrationRows(t, pool); rows != before {
+		t.Errorf("registering without an invitation changed the rows to\n%s\nfrom\n%s", rows, before)
 	}
 	for _, tt := range []struct{ name, email, invitation string }{
 		{"a token not the invitation's", "carol@example.com", naming(invitationLink{links["carol"].id, links["gina"].token})},
@@ -198,6 +221,9 @@ func TestRegisteringWithAnInvitationWhileSignupIsOff(t *testing.T) {
 	} {
 		if got := register(tt.email, tt.invitation); got != refused {
 			t.Errorf("registering with %s = %+v, want what one without an invitation gets: %+v", tt.name, got, refused)
+		}
+		if rows := registrationRows(t, pool); rows != before {
+			t.Errorf("registering with %s changed the rows to\n%s\nfrom\n%s", tt.name, rows, before)
 		}
 	}
 	if got := register(" Carol@Example.com ", naming(links["carol"])); got.status != http.StatusCreated {
