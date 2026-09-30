@@ -209,7 +209,7 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 			if !acceptFirst {
 				wantAccept = workspacedomain.ErrInvitationNotFound
 			}
-			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) || (wantAccept == nil && err != nil) {
+			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) {
 				t.Errorf("the acceptance = %v, want %v", err, wantAccept)
 			}
 			if err := result(t, ctx, deleted, "the deletion"); err != nil {
@@ -230,20 +230,6 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 			}
 		})
 	}
-}
-
-// gatedEmails stops a change of address after its write, holding the
-// account row, before it revokes the sessions.
-type gatedEmails struct {
-	identityapp.SessionRevoker
-	gate *gate
-}
-
-func (s gatedEmails) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason identitydomain.RevokeReason, now time.Time) (int, error) {
-	if err := s.gate.wait(ctx); err != nil {
-		return 0, err
-	}
-	return s.SessionRevoker.RevokeSessions(ctx, userID, keep, reason, now)
 }
 
 // setBobsEmail is `nerve users set-email` of bob's address, over sessions.
@@ -275,7 +261,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 				held(t, ctx, g, accepted, "the acceptance")
 				changed = run(func() error { return r.setBobsEmail(ctx, users) })
 			} else {
-				changed = run(func() error { return r.setBobsEmail(ctx, gatedEmails{users, g}) })
+				changed = run(func() error { return r.setBobsEmail(ctx, gatedSessions{users, g}) })
 				held(t, ctx, g, changed, "the change")
 				accepted = run(func() error { return r.accept(ctx, store) })
 			}
@@ -286,7 +272,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 			if !acceptFirst {
 				wantAccept = workspacedomain.ErrInvitationEmailMismatch
 			}
-			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) || (wantAccept == nil && err != nil) {
+			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) {
 				t.Errorf("the acceptance = %v, want %v", err, wantAccept)
 			}
 			if err := result(t, ctx, changed, "the change"); err != nil {
@@ -378,7 +364,7 @@ func TestDecliningAndDeactivating(t *testing.T) {
 			if !declineFirst {
 				wantDecline = shared.Unauthenticated()
 			}
-			if err := result(t, ctx, declined, "the decline"); !errors.Is(err, wantDecline) || (wantDecline == nil && err != nil) {
+			if err := result(t, ctx, declined, "the decline"); !errors.Is(err, wantDecline) {
 				t.Errorf("the decline = %v, want %v", err, wantDecline)
 			}
 			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {

@@ -31,8 +31,9 @@ import (
 // (WaitForLockWaitOn "users"): the only row both lock. The later batch
 // waits on no row: it inserts a key the earlier one has inserted and waits
 // for that transaction to end, which WaitForKeyWaitOn sees and nothing else
-// in these tests does; its transaction writes no other table and upgrades
-// no row lock.
+// in these tests does; its transaction writes no other table, upgrades no
+// row lock, and checks its foreign keys against rows no live transaction
+// has updated.
 
 // inviteRace is answerRace with carol, acme's second admin, and a live
 // session of each admin, which the credential lock checks.
@@ -190,7 +191,7 @@ func TestInvitingAndResettingThePassword(t *testing.T) {
 			if !inviteFirst {
 				wantInvite = shared.Unauthenticated()
 			}
-			if err := result(t, ctx, invited, "the creation"); !errors.Is(err, wantInvite) || (wantInvite == nil && err != nil) {
+			if err := result(t, ctx, invited, "the creation"); !errors.Is(err, wantInvite) {
 				t.Errorf("the creation = %v, want %v", err, wantInvite)
 			}
 			if err := result(t, ctx, reset, "the reset"); err != nil {
@@ -208,24 +209,27 @@ func TestInvitingAndResettingThePassword(t *testing.T) {
 }
 
 // Interleaving 18: alice invites [x, y] and carol [y, x], each under acme's
-// FOR SHARE, inserting in the order of the addresses. The earlier stops
-// after x and inserts y when the gate opens; the later waits on x, the key
-// the earlier inserted, not on a row, and once the earlier commits is
-// refused 422 duplicate on the address's index in its own request, with
-// nothing inserted. Inserting in its request's order, the later would
-// first hold y, which the earlier still has to insert: a deadlock (40P01).
-// None, whichever goes first. The same for one address in both.
+// FOR SHARE, inserting in the order of the addresses. The later batch also
+// invites w, an address of its own that sorts first. The earlier stops
+// after x and inserts y when the gate opens; the later inserts w, then
+// waits on x, the key the earlier inserted, not on a row, and once the
+// earlier commits is refused 422 duplicate on x's index in its own
+// request, its whole batch rolled back: w is gone too. Inserting in its
+// request's order, the later would first hold y, which the earlier still
+// has to insert: a deadlock (40P01). None, whichever goes first. The same
+// for one address in both, in both orders.
 func TestInvitingOverlappingBatches(t *testing.T) {
-	x, y := "xavier@example.com", "yvonne@example.com"
+	w, x, y := "wendy@example.com", "xavier@example.com", "yvonne@example.com"
 	for _, tt := range []struct {
 		name         string
 		aliceFirst   bool
-		alice, carol []string
-		field        string // the later one's
+		alice, carol []string // the later one's has w, which the earlier's must not: its first row is x
+		field        string   // the later one's; x's place in the request is not its place in order
 	}{
-		{"alice first", true, []string{x, y}, []string{y, x}, "invitations[1].email"},
-		{"carol first", false, []string{x, y}, []string{y, x}, "invitations[0].email"},
+		{"alice first", true, []string{x, y}, []string{y, w, x}, "invitations[2].email"},
+		{"carol first", false, []string{x, y, w}, []string{y, x}, "invitations[0].email"},
 		{"one address, alice first", true, []string{x}, []string{x}, "invitations[0].email"},
+		{"one address, carol first", false, []string{x}, []string{x}, "invitations[0].email"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := newInviteRace(t)

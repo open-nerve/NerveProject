@@ -60,8 +60,9 @@ func (g *gate) wait(ctx context.Context) error {
 	}
 }
 
-// gatedSessions stops deactivation at its last write, holding the account
-// row's lock.
+// gatedSessions stops a use case before it revokes the sessions, holding
+// the account row: a deactivation at its last write, a change of address
+// after its write.
 type gatedSessions struct {
 	identityapp.SessionRevoker
 	gate *gate
