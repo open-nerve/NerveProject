@@ -74,8 +74,8 @@ func TestUpdateWorkspaceMemberShowsTheAddressByTheCallersRole(t *testing.T) {
 }
 
 // Each refusal and failure is the answer, and no role is written. The
-// role's check comes first. A membership that is not there, deleted
-// meanwhile, of a workspace not there or not visible is
+// role's check comes first. A membership that is not there or deleted
+// meanwhile, of a workspace not there, deleted meanwhile or not visible is
 // workspace.member_not_found; a member's forbidden comes before any check
 // of the target, so he learns nothing about it; then an ended membership
 // is workspace.member_not_found and the caller's own
@@ -102,6 +102,8 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 				f.workspaces.memberships[stranger.WorkspaceID] = []domain.Membership{stranger}
 			},
 			domain.ErrMemberNotFound, []string{"MemberByID " + stranger.ID.String(), "LockWorkspace " + stranger.WorkspaceID.String()}},
+		{"acme deleted while the lock waited", alice, bobInAcme.ID, shared.RoleGuest,
+			func(f *membersFixture) { f.workspaces.lockErrs = map[string]error{"acme": app.ErrNotFound} }, domain.ErrMemberNotFound, decided[:2]},
 		{"deleted while the lock waited", alice, bobInAcme.ID, shared.RoleGuest,
 			func(f *membersFixture) {
 				f.workspaces.onLock = func() { f.workspaces.memberships[acme.ID] = []domain.Membership{aliceInAcme, carolInAcme} }
@@ -151,22 +153,32 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 
 // A failed write, a failed read of the profile, and a member without an
 // account each fail the transaction, which the database then rolls back:
-// the answer is the error, never a member.
+// the answer is the error, never a member and never a problem of the
+// contract (so a 500); a failure is the one injected.
 func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 	failure := errors.New("connection reset")
-	for name, set := range map[string]func(f *membersFixture){
-		"the write":            func(f *membersFixture) { f.workspaces.roleErr = failure },
-		"the profile":          func(f *membersFixture) { f.profiles.err = failure },
-		"a member without one": func(f *membersFixture) { f.profiles.profiles = profiles[:2] },
-	} {
+	tests := []struct {
+		name string
+		set  func(f *membersFixture)
+		want error // the injected failure; nil for the use case's own error
+	}{
+		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure},
+		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure},
+		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil},
+	}
+	for _, tt := range tests {
 		uc, f, tx := newUpdateMember()
-		set(f)
+		tt.set(f)
 		got, err := uc.Execute(as(alice), bobInAcme.ID, shared.RoleGuest)
-		if err == nil || errors.Is(err, domain.ErrMemberNotFound) || got != (domain.Member{}) || tx.calls != 1 {
-			t.Errorf("%s failing: Execute() = %+v, %v in %d transactions; want an error that is not a 404", name, got, err, tx.calls)
+		var se *shared.Error
+		if err == nil || errors.As(err, &se) || got != (domain.Member{}) || tx.calls != 1 {
+			t.Errorf("%s failing: Execute() = %+v, %v in %d transactions; want an error that is no *shared.Error, in one", tt.name, got, err, tx.calls)
+		}
+		if tt.want != nil && !errors.Is(err, tt.want) {
+			t.Errorf("%s failing: Execute() = %v, want %v", tt.name, err, tt.want)
 		}
 		if slices.ContainsFunc(f.log.calls, func(c string) bool { return strings.HasSuffix(c, " outside tx") }) {
-			t.Errorf("%s failing: calls %q, want all in the transaction", name, f.log.calls)
+			t.Errorf("%s failing: calls %q, want all in the transaction", tt.name, f.log.calls)
 		}
 	}
 	uc, f, _ := newUpdateMember()
