@@ -138,3 +138,9 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 仍未处理，状态保持 `open`：第 1–3、6 节，第 7 节的其余部分，第 9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 P1 的 review 和 M3 的收尾。
 
 来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。
+
+## 处理结果（M3/P2）
+
+- **第 7 节 可空的引用字段**（部分）：`MemberUser.avatar_url` 在接口中必有、可为 `null`，M5 之前总是 `null`（`api/modules/workspace.yaml`；`listWorkspaceMembers`、`updateWorkspaceMember` 的答复）；`cover_image_url` 随 P4，`IUserLite` 随 P8；本节保持 `open`。
+
+来源：[M3/P2 spec](../specs/P2-workspaces.md) 第 7 节。

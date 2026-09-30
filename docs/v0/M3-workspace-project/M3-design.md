@@ -243,6 +243,7 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
     - 修改父行本身的写：改、删工作区；改、删、归档、恢复项目。
   - `FOR SHARE` 用于其余的写：往父行下面加行、改下面的行。
   - 锁住之后才调用 `Authorize`。等锁的一方在对方提交之后读到已提交的角色（spike S1b）。第一稿先判定、后锁：两位管理员互相降级，各自的判定都在对方提交之前读到"管理员"，结果一个管理员都不剩（spike S1a）。
+  - 每个写用例（P2–P7）把检查分两处：只看请求的值的校验（名称、颜色、角色的取值、上限，不合规 422）在事务之前，不开事务、不取锁；依赖行的检查（目标的成员关系已结束、是自己的、一组中唯一的状态）在判定之后（6.7）。
   - 按资源寻址的操作（`PATCH /states/{id}` 这一类）：读资源行得到父行 → 锁父行 → 重读资源行，确认仍存在、仍属于这个父行 → 判定。
   - 锁父行的语句带 `deleted_at IS NULL`：等锁之后 Postgres 按最新的版本重新求值条件，父行已被软删除时读到 0 行，用例答 404（第二稿 spike）。
   - 为什么外键不够：外键检查只取父行的 `FOR KEY SHARE`，它不挡软删除的 `UPDATE … SET deleted_at`（spike：一方持 `FOR KEY SHARE`，另一方软删除父行立即完成；持 `FOR SHARE` 时软删除等到超时；软删除持锁时 `FOR SHARE` 同样等待；两个 `FOR SHARE` 互不阻塞）。
@@ -1095,7 +1096,9 @@ modules/access/
 ```
 请求 → …（M2 设计 6.4 的固定链、路由、参数绑定、认证、限流、请求体结构）
      → handler：RequireActor；把 StateUpdate 转成用例的入参
-     → UpdateState.Execute(ctx, actor, stateID, in)：TxManager.WithinTx {
+     → UpdateState.Execute(ctx, actor, stateID, in)：
+         0. 值的校验：名称、颜色、group ≠ triage、sequence（不合规 → 422），在事务之前，只看请求
+       TxManager.WithinTx {
          1. states.Get(stateID)：未删除、不是分诊状态；没有 → 404 project.state_not_found
          2. projects.LockForNoKeyUpdate(state.ProjectID)          （约定二：状态的写入锁项目行，3.6、3.17）
               SELECT … WHERE id = $1 AND deleted_at IS NULL FOR NO KEY UPDATE
@@ -1108,8 +1111,7 @@ modules/access/
               → 看不到：shared.ErrNotVisible → 用例换成 404 project.state_not_found（与第 1 步不存在时相同）
               → 看得到、不是项目管理员、也不是同时是工作区管理员的项目成员：403 forbidden
               → 允许：Grant{WorkspaceRole, ProjectRole, ProjectAdmin}
-         5. 领域校验：名称、颜色、group ≠ triage、sequence（不合规 → 422）；
-            改组而它是原组中唯一的状态 → 409 project.state_last_in_group
+         5. 依赖行的检查：改组而它是原组中唯一的状态 → 409 project.state_last_in_group，在判定之后
          6. states.Update；唯一约束冲突 → 409 project.state_name_taken
        }
      → 200 State；或者 error → APIErrors → problem+json
@@ -1117,6 +1119,7 @@ modules/access/
 - **要点**：
   - 锁在判定之前（3.6 约定二）：第 4 步读到的角色是取锁之后已提交的，等锁期间被降级、被移出的调用者在这里被拒绝。第一稿把判定放在第 2 步、没有锁，评审的 spike 证明那样两位管理员能互相降级到一个不剩（3.6）。
   - 资源先读、锁父行、再重读：用例要从资源行知道它属于哪个项目。资源不存在与看不到得到同一个 404 和同一个码，不透露私密项目里有没有这个 id（8.2）。
+  - 值的校验在事务之前，依赖行的检查在判定之后（3.6 约定二）：422 只看请求，对不存在的 id、没有权限的人答的都一样，不透露任何行，也不为明显错误的请求开事务、取锁；依赖行的检查放在判定之后，没有权限的人得不到目标的任何信息（8.2）。
   - 判定每次都读（3.4），不缓存。
   - `Grant` 交回用例：需要比较两个人的用例（改项目成员的角色、移出）直接用它，不再查调用者的角色。
 - **列表**：`GET /workspaces/{slug}/projects` 先 `WorkspaceDirectory`（没有 → 404 `workspace.not_found`），再判定工作区级的 `project.list`（看不到 → 同一个 404），再由适配器的查询按 3.4 的可见性过滤（调用者的工作区角色从 `Grant` 取），`?archived` 决定只要未归档或只要已归档的。
@@ -1413,7 +1416,7 @@ modules/access/
 |---|---|---|---|---|---|---|
 | `getWorkspace` | ✓ | ✓ | ✓ | 404 | 404 | 404 |
 | `updateWorkspace`、`deleteWorkspace` | ✓ | 403 | 403 | 404 | 404 | 404 |
-| `listWorkspaceMembers` | ✓ | ✓ | ✓，别人的 `email` 为 `null` | 404 | 404 | 404 |
+| `listWorkspaceMembers` | ✓ | ✓ | ✓，`email` 都为 `null` | 404 | 404 | 404 |
 | `updateWorkspaceMember`、`removeWorkspaceMember`（目标是另一位成员） | ✓ | 403 | 403 | 404 | 404 | 404 |
 | 同上，目标是自己 | 409 `workspace.own_membership` | 403 | 403 | 404 | 404 | 404 |
 | `leaveWorkspace` | ✓（另有管理员时；唯一的 409） | ✓ | ✓ | 404 | 404 | 404 |
