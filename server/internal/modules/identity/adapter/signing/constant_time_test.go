@@ -13,9 +13,10 @@ import (
 // Verify answers crypto/hmac's Equal of the two tags and nothing else: a
 // comparison that stops at the first difference tells a forger, by its
 // time, how much of a tag is right (M2 design 3.9, M3 design 8.1). No test
-// can time it, so this one reads the code: Verify has no branch and no
-// comparison, so every path runs to its end, and every return answers
-// crypto/hmac's Equal, which compares every byte.
+// can time it, so this one reads the code: (*MAC).Verify is there, and every
+// method Verify of mac.go has no branch and no comparison, so every path
+// runs to its end, and every return answers crypto/hmac's Equal, which
+// compares every byte.
 func TestMACVerifyComparesInConstantTime(t *testing.T) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "mac.go", nil, 0)
@@ -27,42 +28,55 @@ func TestMACVerifyComparesInConstantTime(t *testing.T) {
 	}
 }
 
-// constantTimeViolations is what in file's method Verify could answer
-// before crypto/hmac's Equal compares every byte: a branching statement, a
-// comparison, a return of anything but one call of crypto/hmac's Equal, and
-// no return at all.
+// constantTimeViolations is what in file's methods Verify could answer
+// before crypto/hmac's Equal compares every byte, and a missing
+// (*MAC).Verify. Every method Verify is checked, whatever its receiver, so
+// that no other one stands in for (*MAC).Verify.
 func constantTimeViolations(fset *token.FileSet, file *ast.File) []string {
-	var verify *ast.FuncDecl
-	for _, d := range file.Decls {
-		if fn, ok := d.(*ast.FuncDecl); ok && fn.Name.Name == "Verify" && fn.Recv != nil {
-			verify = fn
-		}
-	}
-	if verify == nil {
-		return []string{"there is no method Verify"}
-	}
 	uses := identifierUses(fset, file)
 	var found []string
+	onMAC := false
+	for _, d := range file.Decls {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok || fn.Recv == nil || fn.Name.Name != "Verify" {
+			continue
+		}
+		receiver := types.ExprString(fn.Recv.List[0].Type)
+		onMAC = onMAC || receiver == "*MAC"
+		found = append(found, verifyViolations("("+receiver+").Verify", fn.Body, uses)...)
+	}
+	if !onMAC {
+		found = append(found, "there is no method (*MAC).Verify")
+	}
+	return found
+}
+
+// verifyViolations is what in body, the body of the method named method,
+// could answer before crypto/hmac's Equal compares every byte: a branching
+// statement, a comparison, a return of anything but one call of
+// crypto/hmac's Equal, and no return at all.
+func verifyViolations(method string, body *ast.BlockStmt, uses map[*ast.Ident]types.Object) []string {
+	var found []string
 	returns := 0
-	ast.Inspect(verify.Body, func(n ast.Node) bool {
+	ast.Inspect(body, func(n ast.Node) bool {
 		switch n := n.(type) {
 		case *ast.IfStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.ForStmt, *ast.RangeStmt, *ast.SelectStmt, *ast.BranchStmt:
-			found = append(found, fmt.Sprintf("Verify branches: %T", n))
+			found = append(found, fmt.Sprintf("%s branches: %T", method, n))
 		case *ast.BinaryExpr:
 			switch n.Op {
 			case token.EQL, token.NEQ, token.LSS, token.GTR, token.LEQ, token.GEQ:
-				found = append(found, "Verify compares with "+n.Op.String())
+				found = append(found, method+" compares with "+n.Op.String())
 			}
 		case *ast.ReturnStmt:
 			returns++
 			if len(n.Results) != 1 || !callsHMACEqual(n.Results[0], uses) {
-				found = append(found, "Verify returns something other than crypto/hmac's Equal(…)")
+				found = append(found, method+" returns something other than crypto/hmac's Equal(…)")
 			}
 		}
 		return true
 	})
 	if returns == 0 {
-		found = append(found, "Verify has no return")
+		found = append(found, method+" has no return")
 	}
 	return found
 }
@@ -152,8 +166,20 @@ func TestConstantTimeViolationsCatchesEachShortcut(t *testing.T) {
 			t.Errorf("%s: %q, want %d violations", tt.name, got, tt.want)
 		}
 	}
-	src := "package signing\nimport \"crypto/hmac\"\nfunc Verify(want, tag [16]byte) bool { return hmac.Equal(want[:], tag[:]) }"
-	if got := violationsOf(t, src); len(got) != 1 {
-		t.Errorf("a function Verify, not a method: %q, want 1 violation", got)
+	clean := " Verify(message []byte, tag [16]byte) bool { want := m.Tag(message); return hmac.Equal(want[:], tag[:]) }\n"
+	shortcut := " Verify(message []byte, tag [16]byte) bool { return m.Tag(message) == tag }\n"
+	for _, tt := range []struct {
+		name, funcs string
+		want        int
+	}{
+		{"a function Verify, not a method", "func" + clean, 1},
+		{"only another type's Verify", "func (m *other)" + clean, 1},
+		{"Verify on MAC, not *MAC", "func (m MAC)" + clean, 1},
+		{"a shortcut in (*MAC).Verify, another Verify after it", "func (m *MAC)" + shortcut + "func (m *other)" + clean, 2},
+		{"a shortcut in another Verify, after (*MAC).Verify", "func (m *MAC)" + clean + "func (m *other)" + shortcut, 2},
+	} {
+		if got := violationsOf(t, "package signing\nimport \"crypto/hmac\"\n"+tt.funcs); len(got) != tt.want {
+			t.Errorf("%s: %q, want %d violations", tt.name, got, tt.want)
+		}
 	}
 }

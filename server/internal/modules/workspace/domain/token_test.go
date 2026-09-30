@@ -85,32 +85,45 @@ func TestEveryBitOfATokenCounts(t *testing.T) {
 }
 
 // Anything but "nrv_inv_" and 22 base64url characters of 16 bytes is no
-// token.
+// token. Go's base64 decoder skips "\r" and "\n", even strict: the length
+// of the text refuses one added, and the length of the bytes two in place
+// of two characters.
 func TestParseTokenRefuses(t *testing.T) {
 	valid := domain.FormatToken(randomTag(t))
 	encoded := strings.TrimPrefix(valid, "nrv_inv_")
 	for name, token := range map[string]string{
-		"empty":                       "",
-		"the prefix alone":            "nrv_inv_",
-		"without the prefix":          encoded,
-		"another prefix":              "nrv_pat_" + encoded,
-		"an upper-case prefix":        "NRV_INV_" + encoded,
-		"one character short":         valid[:len(valid)-1],
-		"one character more":          valid + "A",
-		"padded":                      valid[:len(valid)-2] + "==",
-		"standard base64's +":         valid[:12] + "+" + valid[13:],
-		"standard base64's /":         valid[:12] + "/" + valid[13:],
-		"a new line inside":           valid[:12] + "\n" + valid[13:],
-		"a space inside":              valid[:12] + " " + valid[13:],
-		"padding bits set":            "nrv_inv_AAAAAAAAAAAAAAAAAAAAAB",
-		"a space before":              " " + valid,
-		"fifteen bytes":               "nrv_inv_" + base64.RawURLEncoding.EncodeToString(make([]byte, 15)),
-		"seventeen bytes":             "nrv_inv_" + base64.RawURLEncoding.EncodeToString(make([]byte, 17)),
-		"the token twice":             valid + valid,
-		"a multi-byte character last": valid[:len(valid)-1] + "é",
+		"empty":                              "",
+		"the prefix alone":                   "nrv_inv_",
+		"without the prefix":                 encoded,
+		"another prefix":                     "nrv_pat_" + encoded,
+		"an upper-case prefix":               "NRV_INV_" + encoded,
+		"one character short":                valid[:len(valid)-1],
+		"one character more":                 valid + "A",
+		"padded":                             valid[:len(valid)-2] + "==",
+		"standard base64's +":                valid[:12] + "+" + valid[13:],
+		"standard base64's /":                valid[:12] + "/" + valid[13:],
+		"a new line in place of a character": valid[:12] + "\n" + valid[13:],
+		"a new line inserted":                valid[:12] + "\n" + valid[12:],
+		"a carriage return appended":         valid + "\r",
+		"CRLF in place of two characters":    valid[:12] + "\r\n" + valid[14:],
+		"a space inside":                     valid[:12] + " " + valid[13:],
+		"padding bits set":                   "nrv_inv_AAAAAAAAAAAAAAAAAAAAAB",
+		"a space before":                     " " + valid,
+		"fifteen bytes":                      "nrv_inv_" + base64.RawURLEncoding.EncodeToString(make([]byte, 15)),
+		"seventeen bytes":                    "nrv_inv_" + base64.RawURLEncoding.EncodeToString(make([]byte, 17)),
+		"the token twice":                    valid + valid,
+		"a multi-byte character last":        valid[:len(valid)-1] + "é",
 	} {
-		if tag, ok := domain.ParseToken(token); ok {
-			t.Errorf("%s: ParseToken(%q) = %x, want no token", name, token, tag)
+		if tag, ok, panicked := parseToken(token); ok || panicked != nil {
+			t.Errorf("%s: ParseToken(%q) = %x, %v, panic %v; want no token", name, token, tag, ok, panicked)
 		}
 	}
+}
+
+// parseToken is domain.ParseToken, with a panic returned instead of ending
+// the test binary.
+func parseToken(token string) (tag [16]byte, ok bool, panicked any) {
+	defer func() { panicked = recover() }()
+	tag, ok = domain.ParseToken(token)
+	return tag, ok, nil
 }
