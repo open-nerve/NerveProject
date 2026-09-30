@@ -25,8 +25,15 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
     { email: guestEmail, role: 5, accepted: true, responded: true, deleted: true },
   ];
 
-  // A batch of two, the addresses as a person types them: stored normalized, pending, in the request's order.
+  // Another workspace, frank's: he is its active member and carol is invited there. Neither counts in Acme.
+  const frank = emailFor(testInfo, "frank");
+  const franksToken = (await register(api, frank)).access_token;
   const carol = emailFor(testInfo, "carol");
+  const other = slugFor(testInfo, "other");
+  await createWorkspace(api, franksToken, { name: "Other", slug: other });
+  await invite(api, franksToken, other, [{ email: carol, role: 5 }]);
+
+  // A batch of two, the addresses as a person types them: stored normalized, pending, in the request's order.
   const dave = emailFor(testInfo, "dave");
   const created = await invite(api, admin, slug, [
     { email: ` ${carol.toUpperCase()} `, role: 15 },
@@ -81,8 +88,8 @@ test("W4 (API): the admin invites a batch, changes a role and deletes an invitat
   expect(declined.response.status).toBe(204);
 
   // Refused as a whole, each address at its index. A batch that repeats an address is refused as it is sent,
-  // before the workspace is read; then an active member's address, a pending and a declined invitation's.
-  const frank = emailFor(testInfo, "frank");
+  // before the workspace is read; then an active member's address, a pending and a declined invitation's. frank,
+  // a member of another workspace, is not refused.
   const refuse = (invitations: { email: string; role: 5 | 15 }[]) =>
     api.POST("/api/v0/workspaces/{slug}/invitations", {
       params: { path: { slug } },
