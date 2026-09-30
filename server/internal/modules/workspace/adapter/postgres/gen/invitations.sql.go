@@ -12,6 +12,26 @@ import (
 	"uuid"
 )
 
+const acceptInvitation = `-- name: AcceptInvitation :exec
+UPDATE workspace_member_invites
+SET accepted = true, responded_at = $1::timestamptz, deleted_at = $1::timestamptz, updated_at = $1,
+    updated_by_id = $2::uuid
+WHERE id = $3
+`
+
+type AcceptInvitationParams struct {
+	Now        time.Time
+	AcceptedBy uuid.UUID
+	ID         uuid.UUID
+}
+
+// acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE and the invitation's FOR UPDATE: accepted, and
+// deleted at the same moment (M3 design 3.8).
+func (q *Queries) AcceptInvitation(ctx context.Context, arg AcceptInvitationParams) error {
+	_, err := q.db.Exec(ctx, acceptInvitation, arg.Now, arg.AcceptedBy, arg.ID)
+	return err
+}
+
 const createInvitation = `-- name: CreateInvitation :one
 INSERT INTO workspace_member_invites (id, workspace_id, email, role, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4,
@@ -54,6 +74,25 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const declineInvitation = `-- name: DeclineInvitation :exec
+UPDATE workspace_member_invites
+SET responded_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE id = $3
+`
+
+type DeclineInvitationParams struct {
+	Now        time.Time
+	DeclinedBy uuid.UUID
+	ID         uuid.UUID
+}
+
+// declineWorkspaceInvitation, under the workspace's FOR SHARE and the invitation's FOR UPDATE: it stays, and holds its
+// address (M3 design 3.8).
+func (q *Queries) DeclineInvitation(ctx context.Context, arg DeclineInvitationParams) error {
+	_, err := q.db.Exec(ctx, declineInvitation, arg.Now, arg.DeclinedBy, arg.ID)
+	return err
 }
 
 const deleteInvitation = `-- name: DeleteInvitation :exec

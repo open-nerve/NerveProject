@@ -154,6 +154,67 @@ func (q *Queries) MemberByID(ctx context.Context, id uuid.UUID) (MemberByIDRow, 
 	return i, err
 }
 
+const memberOf = `-- name: MemberOf :one
+SELECT id, workspace_id, member_id, role, is_active, created_at
+FROM workspace_members
+WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL
+`
+
+type MemberOfParams struct {
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+type MemberOfRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+	Role        int16
+	IsActive    bool
+	CreatedAt   time.Time
+}
+
+// acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: the user's undeleted membership, active or
+// ended; the partial unique index holds at most one.
+func (q *Queries) MemberOf(ctx context.Context, arg MemberOfParams) (MemberOfRow, error) {
+	row := q.db.QueryRow(ctx, memberOf, arg.WorkspaceID, arg.MemberID)
+	var i MemberOfRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.MemberID,
+		&i.Role,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const restoreMember = `-- name: RestoreMember :exec
+UPDATE workspace_members
+SET is_active = true, role = $1, updated_by_id = $2, updated_at = $3
+WHERE id = $4
+`
+
+type RestoreMemberParams struct {
+	Role       int16
+	RestoredBy *uuid.UUID
+	Now        time.Time
+	ID         uuid.UUID
+}
+
+// acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: an ended membership active again, with the
+// invitation's role (M3 design 3.8).
+func (q *Queries) RestoreMember(ctx context.Context, arg RestoreMemberParams) error {
+	_, err := q.db.Exec(ctx, restoreMember,
+		arg.Role,
+		arg.RestoredBy,
+		arg.Now,
+		arg.ID,
+	)
+	return err
+}
+
 const updateMemberRole = `-- name: UpdateMemberRole :one
 UPDATE workspace_members
 SET role = $1, updated_by_id = $2, updated_at = $3

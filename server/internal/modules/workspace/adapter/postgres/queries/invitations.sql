@@ -50,6 +50,21 @@ UPDATE workspace_member_invites
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE id = sqlc.arg(id);
 
+-- name: AcceptInvitation :exec
+-- acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE and the invitation's FOR UPDATE: accepted, and
+-- deleted at the same moment (M3 design 3.8).
+UPDATE workspace_member_invites
+SET accepted = true, responded_at = sqlc.arg(now)::timestamptz, deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now),
+    updated_by_id = sqlc.arg(accepted_by)::uuid
+WHERE id = sqlc.arg(id);
+
+-- name: DeclineInvitation :exec
+-- declineWorkspaceInvitation, under the workspace's FOR SHARE and the invitation's FOR UPDATE: it stays, and holds its
+-- address (M3 design 3.8).
+UPDATE workspace_member_invites
+SET responded_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(declined_by)::uuid
+WHERE id = sqlc.arg(id);
+
 -- name: DeleteWorkspaceInvitations :exec
 -- deleteWorkspace's cascade: every undeleted invitation of the workspace, pending or declined, one statement in scan
 -- order under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.

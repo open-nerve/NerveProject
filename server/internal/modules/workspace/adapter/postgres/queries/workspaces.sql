@@ -23,6 +23,14 @@ SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.up
 FROM workspaces w
 WHERE w.slug = sqlc.arg(slug) AND w.deleted_at IS NULL;
 
+-- name: WorkspaceByID :one
+-- acceptWorkspaceInvitation's answer, read in its transaction after the membership changed.
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+       (SELECT count(*) FROM workspace_members c
+        WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
+FROM workspaces w
+WHERE w.id = sqlc.arg(id) AND w.deleted_at IS NULL;
+
 -- name: UpdateWorkspace :one
 -- updateWorkspace, under the workspace's FOR NO KEY UPDATE: only the fields that are set change (M2 design 3.14).
 -- RETURNING gives the values as stored and the number of active members.

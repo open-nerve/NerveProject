@@ -279,6 +279,42 @@ func (q *Queries) UpdateWorkspace(ctx context.Context, arg UpdateWorkspaceParams
 	return i, err
 }
 
+const workspaceByID = `-- name: WorkspaceByID :one
+SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
+       (SELECT count(*) FROM workspace_members c
+        WHERE c.workspace_id = w.id AND c.is_active AND c.deleted_at IS NULL) AS total_members
+FROM workspaces w
+WHERE w.id = $1 AND w.deleted_at IS NULL
+`
+
+type WorkspaceByIDRow struct {
+	ID               uuid.UUID
+	Name             string
+	Slug             string
+	OrganizationSize *string
+	Timezone         string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	TotalMembers     int64
+}
+
+// acceptWorkspaceInvitation's answer, read in its transaction after the membership changed.
+func (q *Queries) WorkspaceByID(ctx context.Context, id uuid.UUID) (WorkspaceByIDRow, error) {
+	row := q.db.QueryRow(ctx, workspaceByID, id)
+	var i WorkspaceByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.OrganizationSize,
+		&i.Timezone,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.TotalMembers,
+	)
+	return i, err
+}
+
 const workspaceBySlug = `-- name: WorkspaceBySlug :one
 SELECT w.id, w.name, w.slug, w.organization_size, w.timezone, w.created_at, w.updated_at,
        (SELECT count(*) FROM workspace_members c
