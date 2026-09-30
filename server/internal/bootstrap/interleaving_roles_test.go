@@ -46,7 +46,8 @@ func (m gatedMembers) UpdateMemberRole(ctx context.Context, id uuid.UUID, role s
 }
 
 // adminRace is a database with acme, whose admins are alice and bob, and the
-// ids of their accounts and memberships.
+// ids of their accounts and memberships. bob's account has its default
+// profile, as alice's (newRace) and every account production creates.
 type adminRace struct {
 	race
 	bob            uuid.UUID
@@ -57,9 +58,13 @@ func newAdminRace(t *testing.T) adminRace {
 	t.Helper()
 	r := adminRace{race: newRace(t), bob: uuid.NewV7(), aliceIn: uuid.NewV7(), bobIn: uuid.NewV7()}
 	now := time.Now()
-	if err := identitypg.New(r.pool).CreateUser(context.Background(), identityapp.NewUser{
+	users := identitypg.New(r.pool)
+	if err := users.CreateUser(context.Background(), identityapp.NewUser{
 		ID: r.bob, Email: "bob@example.com", PasswordHash: "x", DisplayName: "bob", Now: now,
 	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := users.CreateDefaultProfile(context.Background(), uuid.NewV7(), r.bob, now); err != nil {
 		t.Fatal(err)
 	}
 	store := workspacepg.New(r.pool)

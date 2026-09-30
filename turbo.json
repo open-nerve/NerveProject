@@ -45,6 +45,11 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": []
+    },
+    "web#test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/api/dist/openapi.yaml"],
+      "outputs": []
     }
   }
 }

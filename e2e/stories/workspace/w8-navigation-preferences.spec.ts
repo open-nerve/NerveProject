@@ -66,12 +66,14 @@ test("W8 (API): the settings are the defaults and nothing is stored until the fi
   expect(await read(api, pat, other)).toEqual(defaults);
   await expectPreferences(db, other, email, null);
 
-  // Another account, not a member, reads nothing there.
-  const stranger = (await register(api, emailFor(testInfo, "stranger"))).access_token;
+  // Another account, not a member, reads nothing there, and nothing is stored for it.
+  const strangerEmail = emailFor(testInfo, "stranger");
+  const stranger = (await register(api, strangerEmail)).access_token;
   const refused = await api.GET("/api/v0/me/workspaces/{slug}/preferences", {
     params: { path: { slug } },
     headers: bearer(stranger),
   });
   expect(refused.response.status).toBe(404);
   expect(refused.error?.code).toBe("workspace.not_found");
+  await expectPreferences(db, slug, strangerEmail, null);
 });
