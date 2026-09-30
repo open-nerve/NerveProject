@@ -27,11 +27,17 @@ const (
 	// ActionInvitationCreate is inviting addresses to a workspace:
 	// createWorkspaceInvitations.
 	ActionInvitationCreate shared.Action = "workspace_invitation.create"
+	// ActionInvitationUpdate is changing an invitation's role:
+	// updateWorkspaceInvitation.
+	ActionInvitationUpdate shared.Action = "workspace_invitation.update"
+	// ActionInvitationDelete is deleting an invitation:
+	// deleteWorkspaceInvitation.
+	ActionInvitationDelete shared.Action = "workspace_invitation.delete"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 func Actions() []shared.Action {
 	return []shared.Action{ActionRead, ActionUpdate, ActionDelete, ActionMemberList, ActionMemberUpdate, ActionPreferencesRead, ActionPreferencesUpdate,
-		ActionInvitationList, ActionInvitationCreate}
+		ActionInvitationList, ActionInvitationCreate, ActionInvitationUpdate, ActionInvitationDelete}
 }

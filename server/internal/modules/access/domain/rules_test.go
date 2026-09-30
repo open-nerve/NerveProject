@@ -25,6 +25,8 @@ var tableCells = map[shared.Action][]outcome{
 	"workspace_preferences.update": {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
 	"workspace_invitation.list":    {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_invitation.create":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_invitation.update":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
+	"workspace_invitation.delete":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 }
 
 // cells decides rule for each identity of its level.

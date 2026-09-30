@@ -223,6 +223,12 @@ type WorkspaceInvitationList struct {
 	Data []WorkspaceInvitation `json:"data"`
 }
 
+// WorkspaceInvitationUpdate defines model for WorkspaceInvitationUpdate.
+type WorkspaceInvitationUpdate struct {
+	// Role A member's role in a workspace, 5 guest, 15 member, 20 admin.
+	Role WorkspaceRole `json:"role"`
+}
+
 // WorkspaceInvitationsCreate defines model for WorkspaceInvitationsCreate.
 type WorkspaceInvitationsCreate struct {
 	// Invitations 1–100 invitations, created all together or not at all.
@@ -296,6 +302,9 @@ type WorkspaceUpdate struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
+// InvitationID defines model for InvitationID.
+type InvitationID = uuid.UUID
+
 // Slug defines model for Slug.
 type Slug = string
 
@@ -304,6 +313,9 @@ type Problem = externalRef0.Problem
 
 // UpdateWorkspacePreferencesJSONRequestBody defines body for UpdateWorkspacePreferences for application/json ContentType.
 type UpdateWorkspacePreferencesJSONRequestBody = WorkspacePreferencesUpdate
+
+// UpdateWorkspaceInvitationJSONRequestBody defines body for UpdateWorkspaceInvitation for application/json ContentType.
+type UpdateWorkspaceInvitationJSONRequestBody = WorkspaceInvitationUpdate
 
 // UpdateWorkspaceMemberJSONRequestBody defines body for UpdateWorkspaceMember for application/json ContentType.
 type UpdateWorkspaceMemberJSONRequestBody = WorkspaceMemberUpdate
@@ -325,6 +337,12 @@ type ServerInterface interface {
 	// UpdateWorkspacePreferences Change the caller's display settings in a workspace
 	// (PATCH /api/v0/me/workspaces/{slug}/preferences)
 	UpdateWorkspacePreferences(w http.ResponseWriter, r *http.Request, slug Slug)
+	// DeleteWorkspaceInvitation Delete an invitation
+	// (DELETE /api/v0/workspace-invitations/{invitation_id})
+	DeleteWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
+	// UpdateWorkspaceInvitation Change an invitation's role
+	// (PATCH /api/v0/workspace-invitations/{invitation_id})
+	UpdateWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID)
 	// UpdateWorkspaceMember Change a member's role
 	// (PATCH /api/v0/workspace-members/{workspace_member_id})
 	UpdateWorkspaceMember(w http.ResponseWriter, r *http.Request, workspaceMemberID uuid.UUID)
@@ -409,6 +427,58 @@ func (siw *ServerInterfaceWrapper) UpdateWorkspacePreferences(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateWorkspacePreferences(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteWorkspaceInvitation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationID InvitationID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", r.PathValue("invitation_id"), &invitationID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "invitation_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteWorkspaceInvitation(w, r, invitationID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateWorkspaceInvitation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateWorkspaceInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "invitation_id" -------------
+	var invitationID InvitationID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "invitation_id", r.PathValue("invitation_id"), &invitationID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "invitation_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateWorkspaceInvitation(w, r, invitationID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -783,6 +853,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/invitations", wrapper.ListWorkspaceInvitations)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/invitations", wrapper.CreateWorkspaceInvitations)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspace-members/{workspace_member_id}", wrapper.UpdateWorkspaceMember)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.DeleteWorkspaceInvitation)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/workspace-invitations/{invitation_id}", wrapper.UpdateWorkspaceInvitation)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspace-slugs/{slug}", wrapper.CheckWorkspaceSlug)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.GetWorkspacePreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/workspaces/{slug}/preferences", wrapper.UpdateWorkspacePreferences)
@@ -876,6 +948,93 @@ type UpdateWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse struct 
 }
 
 func (response UpdateWorkspacePreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateWorkspacePreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteWorkspaceInvitationRequestObject struct {
+	InvitationID InvitationID `json:"invitation_id"`
+}
+
+type DeleteWorkspaceInvitationResponseObject interface {
+	VisitDeleteWorkspaceInvitationResponse(w http.ResponseWriter) error
+}
+
+type DeleteWorkspaceInvitation204Response struct {
+}
+
+func (response DeleteWorkspaceInvitation204Response) VisitDeleteWorkspaceInvitationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitDeleteWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspaceInvitationRequestObject struct {
+	InvitationID InvitationID `json:"invitation_id"`
+	Body         *UpdateWorkspaceInvitationJSONRequestBody
+}
+
+type UpdateWorkspaceInvitationResponseObject interface {
+	VisitUpdateWorkspaceInvitationResponse(w http.ResponseWriter) error
+}
+
+type UpdateWorkspaceInvitation200JSONResponse WorkspaceInvitation
+
+func (response UpdateWorkspaceInvitation200JSONResponse) VisitUpdateWorkspaceInvitationResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateWorkspaceInvitationdefaultApplicationProblemPlusJSONResponse) VisitUpdateWorkspaceInvitationResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1357,6 +1516,12 @@ type StrictServerInterface interface {
 	// UpdateWorkspacePreferences Change the caller's display settings in a workspace
 	// (PATCH /api/v0/me/workspaces/{slug}/preferences)
 	UpdateWorkspacePreferences(ctx context.Context, request UpdateWorkspacePreferencesRequestObject) (UpdateWorkspacePreferencesResponseObject, error)
+	// DeleteWorkspaceInvitation Delete an invitation
+	// (DELETE /api/v0/workspace-invitations/{invitation_id})
+	DeleteWorkspaceInvitation(ctx context.Context, request DeleteWorkspaceInvitationRequestObject) (DeleteWorkspaceInvitationResponseObject, error)
+	// UpdateWorkspaceInvitation Change an invitation's role
+	// (PATCH /api/v0/workspace-invitations/{invitation_id})
+	UpdateWorkspaceInvitation(ctx context.Context, request UpdateWorkspaceInvitationRequestObject) (UpdateWorkspaceInvitationResponseObject, error)
 	// UpdateWorkspaceMember Change a member's role
 	// (PATCH /api/v0/workspace-members/{workspace_member_id})
 	UpdateWorkspaceMember(ctx context.Context, request UpdateWorkspaceMemberRequestObject) (UpdateWorkspaceMemberResponseObject, error)
@@ -1480,6 +1645,65 @@ func (sh *strictHandler) UpdateWorkspacePreferences(w http.ResponseWriter, r *ht
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateWorkspacePreferencesResponseObject); ok {
 		if err := validResponse.VisitUpdateWorkspacePreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteWorkspaceInvitation operation middleware
+func (sh *strictHandler) DeleteWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID) {
+	var request DeleteWorkspaceInvitationRequestObject
+
+	request.InvitationID = invitationID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteWorkspaceInvitation(ctx, request.(DeleteWorkspaceInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteWorkspaceInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteWorkspaceInvitationResponseObject); ok {
+		if err := validResponse.VisitDeleteWorkspaceInvitationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateWorkspaceInvitation operation middleware
+func (sh *strictHandler) UpdateWorkspaceInvitation(w http.ResponseWriter, r *http.Request, invitationID InvitationID) {
+	var request UpdateWorkspaceInvitationRequestObject
+
+	request.InvitationID = invitationID
+
+	var body UpdateWorkspaceInvitationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateWorkspaceInvitation(ctx, request.(UpdateWorkspaceInvitationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateWorkspaceInvitation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateWorkspaceInvitationResponseObject); ok {
+		if err := validResponse.VisitUpdateWorkspaceInvitationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

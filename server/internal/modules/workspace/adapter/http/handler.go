@@ -69,6 +69,16 @@ type CreateInvitationsUseCase interface {
 	Execute(ctx context.Context, slug string, batch []domain.NewInvitation) ([]domain.InvitationWithToken, error)
 }
 
+// UpdateInvitationUseCase is app.UpdateWorkspaceInvitation.
+type UpdateInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.InvitationWithToken, error)
+}
+
+// DeleteInvitationUseCase is app.DeleteWorkspaceInvitation.
+type DeleteInvitationUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // CheckSlugUseCase is app.CheckSlug.
 type CheckSlugUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.SlugReason, error)
@@ -88,6 +98,8 @@ type UseCases struct {
 	UpdatePreferences UpdatePreferencesUseCase
 	ListInvitations   ListInvitationsUseCase
 	CreateInvitations CreateInvitationsUseCase
+	UpdateInvitation  UpdateInvitationUseCase
+	DeleteInvitation  DeleteInvitationUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

@@ -99,6 +99,8 @@ func New(d Deps) *Module {
 		CreateInvitations: app.NewCreateWorkspaceInvitations(app.CreateInvitationsDeps{
 			Caller: d.CallerLock, Invitations: store, Profiles: d.Profiles, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
+		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
+		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
 	}}
 }
 

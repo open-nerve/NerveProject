@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"log/slog"
+	"net/http"
 	"slices"
 	"testing"
 	"uuid"
@@ -12,6 +13,42 @@ import (
 )
 
 // The invitations' part of the workspace module's rows (M3 design 9.2).
+
+var cellInvitationNotFound = cell{http.StatusNotFound, "workspace.invitation_not_found"}
+
+// ofInvitation are the cells of a row that names an invitation: the answers
+// of the workspace's admin, member and guest, and
+// workspace.invitation_not_found for the callers the workspace is not
+// visible to.
+func ofInvitation(admin, member, guest cell) map[caller]cell {
+	return map[caller]cell{callerAdmin: admin, callerMember: member, callerGuest: guest,
+		callerNever: cellInvitationNotFound, callerRemoved: cellInvitationNotFound, callerDeleted: cellInvitationNotFound}
+}
+
+// toInvitation is the request of a row whose callers each send method and
+// body to the invitation of email seeded in the workspace their column
+// targets.
+func toInvitation(method, email, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/workspace-invitations/" + s.invitation(workspaceOf(c), email).String(), body
+	}
+}
+
+// promotesTheNewcomer: the admin's answer is acme's invitation of
+// newcomer@example.com, now as an admin, with the token of its id.
+func promotesTheNewcomer(t *testing.T, c caller, answer string) {
+	var inv struct {
+		ID          uuid.UUID `json:"id"`
+		WorkspaceID uuid.UUID `json:"workspace_id"`
+		Email       string    `json:"email"`
+		Role        int       `json:"role"`
+		Token       string    `json:"token"`
+	}
+	decodeAnswer(t, answer, &inv)
+	if inv.Email != "newcomer@example.com" || inv.Role != 20 || inv.Token != invitationToken(t, inv.ID) {
+		t.Errorf("%s's change answers %+v, want newcomer@example.com's invitation as an admin, with its token", c, inv)
+	}
+}
 
 // invitationToken is the token of the invitation id under the matrix's
 // signing key, as the app wired on it computes it: identity's MAC of the

@@ -65,6 +65,41 @@ type InvitationCreator interface {
 	CreateInvitations(ctx context.Context, rows []InvitationRow) ([]domain.Invitation, error)
 }
 
+// InvitationLocker reads an invitation by its id, then locks it under its
+// workspace's lock (M3 design 3.6 convention 2).
+type InvitationLocker interface {
+	// InvitationByID returns the undeleted invitation id; ErrNotFound when
+	// there is none.
+	InvitationByID(ctx context.Context, id uuid.UUID) (domain.Invitation, error)
+	// LockInvitation locks the undeleted invitation id FOR UPDATE until the
+	// transaction ends and returns it; ErrNotFound when there is none, also
+	// when it was deleted while the lock waited.
+	LockInvitation(ctx context.Context, id uuid.UUID) (domain.Invitation, error)
+}
+
+// InvitationUpdater changes an invitation's role under its workspace's FOR
+// SHARE.
+type InvitationUpdater interface {
+	InvitationLocker
+	// ShareWorkspace locks the undeleted workspace id FOR SHARE until the
+	// transaction ends; ErrNotFound when there is none, also when it was
+	// deleted while the lock waited.
+	ShareWorkspace(ctx context.Context, id uuid.UUID) error
+	// UpdateInvitationRole sets the invitation's role, by the account by at
+	// now, and returns it as stored.
+	UpdateInvitationRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Invitation, error)
+}
+
+// InvitationDeleter deletes an invitation under its workspace's FOR SHARE.
+type InvitationDeleter interface {
+	InvitationLocker
+	// ShareWorkspace is InvitationUpdater's.
+	ShareWorkspace(ctx context.Context, id uuid.UUID) error
+	// DeleteInvitation soft-deletes the invitation, by the account by at
+	// now.
+	DeleteInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error
+}
+
 // DuplicateInvitation is a store's answer to an insert that the unique key
 // of (workspace, address) refused: an undeleted invitation of the
 // workspace, pending or declined, has Email (M3 design 3.8).

@@ -52,9 +52,17 @@ func TestTheInvitationTokenIsNeverStored(t *testing.T) {
 		} `json:"data"`
 	}
 	decodeAnswer(t, body, &list)
+	if len(list.Data) != 2 {
+		t.Fatalf("inviting carol and dave answers %d invitations, want 2: %s", len(list.Data), body)
+	}
 	links := make([]invitationLink, len(list.Data))
 	for i, inv := range list.Data {
 		links[i] = invitationLink{inv.ID, inv.Token}
+	}
+	expectNoTokenStored(t, pool, links)
+
+	if status, body := call(t, contract, http.MethodPatch, base+"/api/v0/workspace-invitations/"+links[0].id.String(), admin, `{"role":20}`); status != http.StatusOK {
+		t.Fatalf("changing carol's role = %d %s", status, body)
 	}
 	expectNoTokenStored(t, pool, links)
 }

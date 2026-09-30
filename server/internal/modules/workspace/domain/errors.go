@@ -20,6 +20,15 @@ var (
 	// ErrOwnMembership answers a change of the caller's own membership (M3
 	// design 3.4, 5.3): nobody changes his own role.
 	ErrOwnMembership = shared.NewError(shared.KindConflict, "workspace.own_membership", "You cannot change your own membership.")
+	// ErrInvitationNotFound answers an invitation that does not exist or is
+	// deleted, as an accepted one is, or whose workspace the caller cannot
+	// see; for the invitee, also a token that is not the invitation's: the
+	// same 404 for all (M3 design 5.3, 8.2).
+	ErrInvitationNotFound = shared.NewError(shared.KindNotFound, "workspace.invitation_not_found",
+		"The invitation does not exist, or its link is not valid.")
+	// ErrInvitationResponded answers a response to, or a change of, an
+	// invitation that has been declined (M3 design 3.8).
+	ErrInvitationResponded = shared.NewError(shared.KindConflict, "workspace.invitation_responded", "The invitation has been answered already.")
 	// ErrSlugTaken answers a creation with a slug an undeleted workspace has.
 	ErrSlugTaken = shared.NewError(shared.KindConflict, "workspace.slug_taken", "A workspace with this slug exists.")
 	// ErrAccountNotFound answers `nerve workspaces create` for an address no

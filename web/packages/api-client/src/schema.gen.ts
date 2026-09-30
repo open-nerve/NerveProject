@@ -380,6 +380,33 @@ export interface paths {
         patch: operations["updateWorkspaceMember"];
         trace?: never;
     };
+    "/api/v0/workspace-invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete an invitation
+         * @description For the workspace's admins. The invitation, pending or declined, is soft-deleted: its link stops working, and its address can be invited again at once. An invitation that does not exist, is deleted or accepted, or whose workspace the caller cannot see, answers workspace.invitation_not_found; a member or a guest, forbidden.
+         */
+        delete: operations["deleteWorkspaceInvitation"];
+        options?: never;
+        head?: never;
+        /**
+         * Change an invitation's role
+         * @description For the workspace's admins. The role is checked first (validation_failed). An invitation that does not exist, is deleted or accepted, or whose workspace the caller cannot see, answers workspace.invitation_not_found; a member or a guest, forbidden, whatever the invitation. To an admin, a declined invitation answers workspace.invitation_responded: delete it, then invite the address again. The link keeps its token.
+         */
+        patch: operations["updateWorkspaceInvitation"];
+        trace?: never;
+    };
     "/api/v0/workspace-slugs/{slug}": {
         parameters: {
             query?: never;
@@ -808,6 +835,9 @@ export interface components {
         WorkspaceMemberUpdate: {
             role: components["schemas"]["WorkspaceRole"];
         };
+        WorkspaceInvitationUpdate: {
+            role: components["schemas"]["WorkspaceRole"];
+        };
         SlugAvailability: {
             available: boolean;
             /**
@@ -854,6 +884,8 @@ export interface components {
         Cursor: string;
         /** @description A workspace's slug, as in the web app's address. */
         Slug: string;
+        /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+        InvitationID: string;
     };
     requestBodies: never;
     headers: never;
@@ -898,6 +930,7 @@ export type WorkspaceInvitationList = components['schemas']['WorkspaceInvitation
 export type InvitationCreate = components['schemas']['InvitationCreate'];
 export type WorkspaceInvitationsCreate = components['schemas']['WorkspaceInvitationsCreate'];
 export type WorkspaceMemberUpdate = components['schemas']['WorkspaceMemberUpdate'];
+export type WorkspaceInvitationUpdate = components['schemas']['WorkspaceInvitationUpdate'];
 export type SlugAvailability = components['schemas']['SlugAvailability'];
 export type NavigationControlPreference = components['schemas']['NavigationControlPreference'];
 export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
@@ -907,6 +940,7 @@ export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
 export type ParameterSlug = components['parameters']['Slug'];
+export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -1474,6 +1508,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceMember"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invitation is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateWorkspaceInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
+                invitation_id: components["parameters"]["InvitationID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkspaceInvitationUpdate"];
+            };
+        };
+        responses: {
+            /** @description The invitation with its new role, and the token of its link. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceInvitation"];
                 };
             };
             default: components["responses"]["Problem"];

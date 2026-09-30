@@ -35,6 +35,25 @@ func (h handler) CreateWorkspaceInvitations(ctx context.Context, req gen.CreateW
 	return gen.CreateWorkspaceInvitations201JSONResponse{Data: invitations(list)}, nil
 }
 
+// UpdateWorkspaceInvitation serves PATCH
+// /api/v0/workspace-invitations/{invitation_id}.
+func (h handler) UpdateWorkspaceInvitation(ctx context.Context, req gen.UpdateWorkspaceInvitationRequestObject) (gen.UpdateWorkspaceInvitationResponseObject, error) {
+	inv, err := h.uc.UpdateInvitation.Execute(ctx, req.InvitationID, shared.Role(req.Body.Role))
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateWorkspaceInvitation200JSONResponse(invitation(inv)), nil
+}
+
+// DeleteWorkspaceInvitation serves DELETE
+// /api/v0/workspace-invitations/{invitation_id}.
+func (h handler) DeleteWorkspaceInvitation(ctx context.Context, req gen.DeleteWorkspaceInvitationRequestObject) (gen.DeleteWorkspaceInvitationResponseObject, error) {
+	if err := h.uc.DeleteInvitation.Execute(ctx, req.InvitationID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteWorkspaceInvitation204Response{}, nil
+}
+
 // invitations is list as the API shows it.
 func invitations(list []domain.InvitationWithToken) []gen.WorkspaceInvitation {
 	out := make([]gen.WorkspaceInvitation, len(list))

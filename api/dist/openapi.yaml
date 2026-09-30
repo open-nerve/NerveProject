@@ -566,6 +566,53 @@ paths:
                 $ref: '#/components/schemas/WorkspaceMember'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspace-invitations/{invitation_id}:
+    parameters:
+      - $ref: '#/components/parameters/InvitationID'
+    patch:
+      operationId: updateWorkspaceInvitation
+      tags:
+        - workspace
+      summary: Change an invitation's role
+      description: 'For the workspace''s admins. The role is checked first (validation_failed). An invitation that does not exist, is deleted or accepted, or whose workspace the caller cannot see, answers workspace.invitation_not_found; a member or a guest, forbidden, whatever the invitation. To an admin, a declined invitation answers workspace.invitation_responded: delete it, then invite the address again. The link keeps its token.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.invitation_not_found
+        - forbidden
+        - workspace.invitation_responded
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceInvitationUpdate'
+      responses:
+        '200':
+          description: The invitation with its new role, and the token of its link.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitation'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteWorkspaceInvitation
+      tags:
+        - workspace
+      summary: Delete an invitation
+      description: 'For the workspace''s admins. The invitation, pending or declined, is soft-deleted: its link stops working, and its address can be invited again at once. An invitation that does not exist, is deleted or accepted, or whose workspace the caller cannot see, answers workspace.invitation_not_found; a member or a guest, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.invitation_not_found
+        - forbidden
+      responses:
+        '204':
+          description: The invitation is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspace-slugs/{slug}:
     parameters:
       - $ref: '#/components/parameters/Slug'
@@ -1393,6 +1440,14 @@ components:
       properties:
         role:
           $ref: '#/components/schemas/WorkspaceRole'
+    WorkspaceInvitationUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - role
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
     SlugAvailability:
       type: object
       additionalProperties: false
@@ -1478,6 +1533,14 @@ components:
       description: A workspace's slug, as in the web app's address.
       schema:
         type: string
+    InvitationID:
+      name: invitation_id
+      in: path
+      required: true
+      description: An invitation's id (WorkspaceInvitation.id), the link's invitation_id.
+      schema:
+        type: string
+        format: uuid
 x-problem-codes:
   - bad_request
   - payload_too_large

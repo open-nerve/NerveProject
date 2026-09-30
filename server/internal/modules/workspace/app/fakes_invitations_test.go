@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"uuid"
@@ -62,6 +63,62 @@ type fakeInvitations struct {
 	listErr     error  // for ListInvitations
 	createErr   error  // for CreateInvitations
 	taken       string // an address CreateInvitations finds taken, as the unique key would
+	readErr     error  // for InvitationByID and LockInvitation
+	writeErr    error  // for UpdateInvitationRole and DeleteInvitation
+}
+
+func (f *fakeInvitations) InvitationByID(ctx context.Context, id uuid.UUID) (domain.Invitation, error) {
+	f.log.add(ctx, "InvitationByID %s", id)
+	return f.invitation(id)
+}
+
+func (f *fakeInvitations) LockInvitation(ctx context.Context, id uuid.UUID) (domain.Invitation, error) {
+	f.log.add(ctx, "LockInvitation %s", id)
+	return f.invitation(id)
+}
+
+// invitation answers the invitation id it holds, app.ErrNotFound when it
+// holds none, and readErr wrapped as the store wraps it.
+func (f *fakeInvitations) invitation(id uuid.UUID) (domain.Invitation, error) {
+	if f.readErr != nil {
+		return domain.Invitation{}, fmt.Errorf("read workspace invitation: %w", f.readErr)
+	}
+	i := slices.IndexFunc(f.invitations, func(inv domain.Invitation) bool { return inv.ID == id })
+	if i < 0 {
+		return domain.Invitation{}, app.ErrNotFound
+	}
+	return f.invitations[i], nil
+}
+
+// ShareWorkspace answers as LockWorkspace does.
+func (f *fakeInvitations) ShareWorkspace(ctx context.Context, id uuid.UUID) error {
+	f.log.add(ctx, "ShareWorkspace %s", id)
+	return f.lockByID(id)
+}
+
+// UpdateInvitationRole sets the role of the invitation it holds and answers
+// it as stored.
+func (f *fakeInvitations) UpdateInvitationRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Invitation, error) {
+	f.log.add(ctx, "UpdateInvitationRole %s to %d by %s at %s", id, role, by, now.Format(time.RFC3339Nano))
+	if f.writeErr != nil {
+		return domain.Invitation{}, fmt.Errorf("update workspace invitation: %w", f.writeErr)
+	}
+	i := slices.IndexFunc(f.invitations, func(inv domain.Invitation) bool { return inv.ID == id })
+	if i < 0 {
+		return domain.Invitation{}, fmt.Errorf("update workspace invitation %s: no such row", id)
+	}
+	f.invitations[i].Role = role
+	return f.invitations[i], nil
+}
+
+// DeleteInvitation drops the invitation it holds.
+func (f *fakeInvitations) DeleteInvitation(ctx context.Context, id, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "DeleteInvitation %s by %s at %s", id, by, now.Format(time.RFC3339Nano))
+	if f.writeErr != nil {
+		return fmt.Errorf("delete workspace invitation: %w", f.writeErr)
+	}
+	f.invitations = slices.DeleteFunc(f.invitations, func(inv domain.Invitation) bool { return inv.ID == id })
+	return nil
 }
 
 func (f *fakeInvitations) ListInvitations(ctx context.Context, workspaceID uuid.UUID) ([]domain.Invitation, error) {

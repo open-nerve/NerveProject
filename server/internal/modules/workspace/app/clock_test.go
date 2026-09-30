@@ -54,6 +54,19 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 		}, append(lockedMemberCalls(alice, bobInAcme), "Now",
 			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))},
+		{"updateWorkspaceInvitation", func() ([]string, error) {
+			f := newInvitations()
+			_, err := app.NewUpdateWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}, f.mac).
+				Execute(as(alice), carolToAcme.ID, shared.RoleGuest)
+			return f.log.calls, err
+		}, append(lockedInvitationCalls(alice, carolToAcme, domain.ActionInvitationUpdate), "Now",
+			fmt.Sprintf("UpdateInvitationRole %s to %d by %s at %s", carolToAcme.ID, shared.RoleGuest, alice.ID, at))},
+		{"deleteWorkspaceInvitation", func() ([]string, error) {
+			f := newInvitations()
+			err := app.NewDeleteWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}).Execute(as(alice), daveToAcme.ID)
+			return f.log.calls, err
+		}, append(lockedInvitationCalls(alice, daveToAcme, domain.ActionInvitationDelete), "Now",
+			fmt.Sprintf("DeleteInvitation %s by %s at %s", daveToAcme.ID, alice.ID, at))},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {
