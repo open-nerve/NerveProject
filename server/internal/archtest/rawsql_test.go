@@ -56,13 +56,13 @@ func TestModulesRunSQLOnlyThroughSQLC(t *testing.T) {
 // statementMethods are the pgx methods that run SQL they are given: pgx's
 // Conn, Tx and Batch results, pgxpool's Pool and Conn, and
 // platform/postgres's Querier have the first six, and pgconn's PgConn,
-// which a pgx.Conn's PgConn() returns, the last three. The call rule counts
+// which a pgx.Conn's PgConn() returns, the last four. The call rule counts
 // only calls with at least two arguments, a context and the SQL (or the
 // batch, the table or the statement's name): a method of one of these names
 // that takes fewer, such as url.URL.Query, runs no statement.
 var statementMethods = []string{
 	"Exec", "Query", "QueryRow", "SendBatch", "CopyFrom", "Prepare",
-	"ExecParams", "ExecPrepared", "CopyTo",
+	"ExecParams", "ExecPrepared", "CopyTo", "ExecBatch",
 }
 
 // sqlText matches a string literal that holds a statement: upper-case SQL,
@@ -72,16 +72,25 @@ var statementMethods = []string{
 var sqlText = regexp.MustCompile(`\b(?:SELECT\b[\s\S]*\bFROM|INSERT\s+INTO|UPDATE\s+\S+\s+SET|DELETE\s+FROM|TRUNCATE|MERGE\s+INTO)\b`)
 
 // rawSQLViolations checks the Go files of internal/modules, by path
-// relative to server/: in a file that is neither a test nor in a gen
-// package, no call of a statementMethods method with two arguments or more,
+// relative to server/: in a file that is neither a test nor generated (in
+// the gen directory right under adapter/<kind>/, where sqlc and oapi-codegen
+// write), no call of a statementMethods method with two arguments or more,
 // and no string literal that sqlText matches. A file that does not parse is
-// reported too, so that it cannot hide either. The rule finds raw SQL
-// written by accident, not an evasion: a method value (run := tx.Query) and
-// SQL built from lower-case pieces are out of its reach.
+// reported too, so that it cannot hide either.
+//
+// The rule finds raw SQL written by accident, not an evasion. Out of its
+// reach are: a statement that sqlText does not match, one without FROM
+// (SELECT 1, SELECT pg_advisory_xact_lock($1)), a CTE (WITH ...), DDL or LOCK
+// TABLE, when a wrapper of the pgx methods or a method with fewer than two
+// arguments runs it; a pgx.Batch's Queue(sql) with a variable argument; a
+// method value (run := tx.Query); SQL built from lower-case pieces. A port
+// method of an app file named like a statementMethods method and called
+// with two arguments or more is reported: name it after what it does
+// (MemberByID, not Query).
 func rawSQLViolations(files map[string]string) []string {
 	var found []string
 	for _, path := range slices.Sorted(maps.Keys(files)) {
-		if strings.HasSuffix(path, "_test.go") || slices.Contains(strings.Split(path, "/"), "gen") {
+		if strings.HasSuffix(path, "_test.go") || generated(path) {
 			continue
 		}
 		fset := token.NewFileSet()
@@ -108,4 +117,13 @@ func rawSQLViolations(files map[string]string) []string {
 		})
 	}
 	return found
+}
+
+// generated reports whether path, relative to server/, is in the gen
+// directory of a module's adapter (internal/modules/<module>/adapter/<kind>/gen/),
+// where sqlc and oapi-codegen write; a gen directory anywhere else is
+// checked like any other.
+func generated(path string) bool {
+	parts := strings.Split(path, "/")
+	return len(parts) > 6 && parts[0] == "internal" && parts[1] == "modules" && parts[3] == "adapter" && parts[5] == "gen"
 }

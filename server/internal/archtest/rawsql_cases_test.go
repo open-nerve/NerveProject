@@ -2,6 +2,7 @@ package archtest
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -81,8 +82,9 @@ func TestRawSQLViolationsAreReported(t *testing.T) {
 			"const (\n\twipe  = \"TRUNCATE workspace_members\"\n" +
 			"\tmerge = \"MERGE INTO users u USING workspace_members m ON u.id = m.member_id WHEN MATCHED THEN DO NOTHING\"\n)\n",
 			[]string{file + ":4:10: holds SQL outside sqlc's queries", file + ":5:10: holds SQL outside sqlc's queries"}},
-		{"a file that does not parse", "package postgresadapter\n\nfunc (\n",
-			[]string{file + " does not parse: " + file + ":3:8: expected ')', found 'EOF'"}},
+		{"a batch on the connection under pgx", "package postgresadapter\n\n" +
+			"func (s *Store) Many(ctx context.Context, c *pgx.Conn, b *pgconn.Batch) { c.PgConn().ExecBatch(ctx, b) }\n",
+			[]string{file + ":3:75: calls ExecBatch, which runs SQL outside sqlc's queries"}},
 	}
 	for _, tt := range tests {
 		files := rawSQLBase()
@@ -109,14 +111,30 @@ func TestRawSQLInTheAppLayerIsReported(t *testing.T) {
 	}
 }
 
-// Only a gen directory is sqlc's: a file whose path merely contains "gen"
-// is checked like any other.
+// Only the gen directory right under a module's adapter/<kind>/ is sqlc's
+// and oapi-codegen's: a file whose path merely contains "gen", and a gen
+// directory anywhere else, are checked like any other.
 func TestRawSQLInAPathContainingGenIsReported(t *testing.T) {
-	const file = "internal/modules/workspace/app/generate.go"
+	const purge = "const purge = \"DELETE FROM workspace_members WHERE workspace_id = $1\"\n"
+	for _, file := range []string{"internal/modules/workspace/app/generate.go", "internal/modules/workspace/app/gen/x.go",
+		"internal/modules/workspace/adapter/gen/x.go"} {
+		files := rawSQLBase()
+		files[file] = "package app\n\n" + purge
+		want := []string{file + ":3:15: holds SQL outside sqlc's queries"}
+		if got := rawSQLViolations(files); !slices.Equal(got, want) {
+			t.Errorf("violations =\n%q\nwant\n%q", got, want)
+		}
+	}
+}
+
+// A file that does not parse is reported, at the position go/parser gives,
+// whatever its message: it cannot hide raw SQL.
+func TestAFileThatDoesNotParseIsReported(t *testing.T) {
+	const file = "internal/modules/workspace/adapter/postgres/members.go"
 	files := rawSQLBase()
-	files[file] = "package app\n\nconst purge = \"DELETE FROM workspace_members WHERE workspace_id = $1\"\n"
-	want := []string{file + ":3:15: holds SQL outside sqlc's queries"}
-	if got := rawSQLViolations(files); !slices.Equal(got, want) {
-		t.Errorf("violations =\n%q\nwant\n%q", got, want)
+	files[file] = "package postgresadapter\n\nfunc (\n"
+	got := rawSQLViolations(files)
+	if prefix := file + " does not parse: " + file + ":3:8: "; len(got) != 1 || !strings.HasPrefix(got[0], prefix) {
+		t.Errorf("violations = %q, want one that starts %q", got, prefix)
 	}
 }

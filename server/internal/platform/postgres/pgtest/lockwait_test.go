@@ -59,6 +59,9 @@ func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
 	}
 
 	pgtest.WaitForLockWaitOn(t, rowsPool, "a", 10*time.Second)
+	// The advisory waiter waits too, so its case below fails for the kind
+	// of its wait, not for the lack of one.
+	pgtest.WaitForLockWait(t, advisoryPool, 10*time.Second)
 	for _, tt := range []struct {
 		name  string
 		pool  *pgxpool.Pool
@@ -70,6 +73,62 @@ func TestWaitForLockWaitOnSeesOnlyWaitsForItsTablesRows(t *testing.T) {
 		failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, tt.pool, tt.table, 300*time.Millisecond) })
 		if want := "no statement waited for a row lock of " + tt.table + " within 300ms"; failed != want {
 			t.Errorf("%s: WaitForLockWaitOn failed with %q, want %q", tt.name, failed, want)
+		}
+	}
+}
+
+// WaitForLockWaitOn fails at once for a table the database does not have: a
+// misspelled name can never be waited on, and must not wait out its
+// deadline.
+func TestWaitForLockWaitOnFailsAtOnceForNoSuchTable(t *testing.T) {
+	t.Parallel()
+	pool := newPool(t, pgtest.NewDatabase(t))
+	start := time.Now()
+	failed := fatalOf(func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspace", 10*time.Second) })
+	if took := time.Since(start); failed != `pgtest: no table "workspace"` || took > 5*time.Second {
+		t.Errorf("WaitForLockWaitOn(workspace) failed with %q after %v, want pgtest: no table \"workspace\" at once", failed, took)
+	}
+}
+
+// A probe whose pool has no connection free fails at its deadline, as a
+// wait that never came, rather than wait for a connection without end.
+func TestTheProbesFailAtTheirDeadlineOnAnExhaustedPool(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	config, err := pgxpool.ParseConfig(pgtest.NewDatabase(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	config.MaxConns = 1
+	pool, err := pgxpool.NewWithConfig(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	held, err := pool.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(held.Release) // runs before pool.Close
+	for _, tt := range []struct {
+		name  string
+		probe func(testing.TB)
+		want  string
+	}{
+		{"WaitForLockWait", func(tb testing.TB) { pgtest.WaitForLockWait(tb, pool, 300*time.Millisecond) },
+			"no statement waited for a lock within 300ms"},
+		{"WaitForLockWaitOn", func(tb testing.TB) { pgtest.WaitForLockWaitOn(tb, pool, "workspaces", 300*time.Millisecond) },
+			"no statement waited for a row lock of workspaces within 300ms"},
+	} {
+		failed := make(chan string, 1)
+		go func() { failed <- fatalOf(tt.probe) }()
+		select {
+		case got := <-failed:
+			if got != tt.want {
+				t.Errorf("%s failed with %q, want %q", tt.name, got, tt.want)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatalf("%s still waits for a connection after 10s, want it failed at its 300ms deadline", tt.name)
 		}
 	}
 }
