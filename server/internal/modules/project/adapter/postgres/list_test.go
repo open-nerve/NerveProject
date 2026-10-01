@@ -35,9 +35,10 @@ func TestListProjectsAnswersEachAsGetProjectDoes(t *testing.T) {
 
 // ListProjects: of the workspace's undeleted projects, the archived ones
 // or the others, those the visibility lets the user see besides those he
-// is an active member of, each as he sees it; by his place in his sidebar,
-// the projects he is not a member of last, then by name. The fixture's
-// projects are stored in another order than the answer's.
+// is an active member of, each as he sees it; by the project's place in
+// the user's sidebar, the projects without a place in it last, then by
+// name. The fixture's projects are stored in another order than the
+// answer's.
 func TestListProjects(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()

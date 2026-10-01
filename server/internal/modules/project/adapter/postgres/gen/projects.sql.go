@@ -201,9 +201,9 @@ type ListProjectsRow struct {
 }
 
 // listProjects (M3 design 3.4, 3.12, 3.19): the workspace's undeleted projects that the user sees, the archived ones or
-// the others, each as GetProject reads it (the same columns, so the rows convert); sees_all and sees_public are his
-// workspace role's domain.Visibility. By his place in his sidebar, the projects he is not a member of last, then by
-// name, which is unique among the workspace's undeleted projects.
+// the others, each as GetProject reads it (the same columns, so the rows convert); sees_all and sees_public are the
+// user's workspace role's domain.Visibility. By the project's place in the user's sidebar, the projects without a
+// place in it last, then by name, which is unique among the workspace's undeleted projects.
 func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error) {
 	rows, err := q.db.Query(ctx, listProjects,
 		arg.UserID,

@@ -12,7 +12,6 @@ import (
 )
 
 const directoryWorkspace = `-- name: DirectoryWorkspace :one
-
 SELECT id, timezone
 FROM workspaces
 WHERE slug = $1 AND deleted_at IS NULL
@@ -23,8 +22,8 @@ type DirectoryWorkspaceRow struct {
 	Timezone string
 }
 
-// What workspace.Provide offers the project module (M3 design 6.5).
-// WorkspaceDirectory: the undeleted workspace with the slug, read without a lock.
+// WorkspaceDirectory, which workspace.Provide offers the project module (M3 design 6.5): the undeleted workspace with
+// the slug, read without a lock.
 func (q *Queries) DirectoryWorkspace(ctx context.Context, slug string) (DirectoryWorkspaceRow, error) {
 	row := q.db.QueryRow(ctx, directoryWorkspace, slug)
 	var i DirectoryWorkspaceRow

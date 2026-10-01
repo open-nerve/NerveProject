@@ -159,7 +159,7 @@ type Project struct {
 	Network       ProjectNetwork               `json:"network"`
 	ProjectLeadID nullable.Nullable[uuid.UUID] `json:"project_lead_id"`
 
-	// SortOrder The project's place in the caller's sidebar, lowest first; null when he is not an active member.
+	// SortOrder The project's place in the caller's sidebar, lowest first; null when it has none there: the caller is not an active member of the project, or has no display settings in it.
 	SortOrder nullable.Nullable[float64] `json:"sort_order"`
 
 	// Timezone An IANA time zone name.
@@ -178,7 +178,7 @@ type ProjectCreate struct {
 	// LogoProps A project's icon, the web app's TLogoProps: every field optional, and {} no icon.
 	LogoProps *LogoProps `json:"logo_props,omitempty"`
 
-	// Name 1–255 characters, not all spaces, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
+	// Name 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
 	Name string `json:"name"`
 
 	// Network Who sees the project besides its members and the workspace's admins: 0 private, nobody; 2 public, the workspace's members too.

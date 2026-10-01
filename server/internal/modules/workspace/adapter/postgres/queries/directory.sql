@@ -1,7 +1,6 @@
--- What workspace.Provide offers the project module (M3 design 6.5).
-
 -- name: DirectoryWorkspace :one
--- WorkspaceDirectory: the undeleted workspace with the slug, read without a lock.
+-- WorkspaceDirectory, which workspace.Provide offers the project module (M3 design 6.5): the undeleted workspace with
+-- the slug, read without a lock.
 SELECT id, timezone
 FROM workspaces
 WHERE slug = sqlc.arg(slug) AND deleted_at IS NULL;

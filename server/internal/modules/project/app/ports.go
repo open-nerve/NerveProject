@@ -58,8 +58,8 @@ type ProjectReader interface {
 type ProjectLister interface {
 	// ListProjects lists workspaceID's undeleted projects that userID sees
 	// with v, the archived ones alone when archived is true and the others
-	// otherwise, each as he sees it: by his place in his sidebar, the
-	// projects he is not an active member of last, then by name (M3 design
+	// otherwise, each as userID sees it: by its place in userID's sidebar,
+	// the projects without a place in it last, then by name (M3 design
 	// 3.12).
 	ListProjects(ctx context.Context, workspaceID, userID uuid.UUID, v domain.Visibility, archived bool) ([]domain.Project, error)
 }

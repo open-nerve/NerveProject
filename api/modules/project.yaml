@@ -17,8 +17,8 @@ paths:
         every one, to its admins; to its members, the public ones and those
         they are members of; to its guests, those they are members of. The
         archived projects are left out, unless archived is true, which lists
-        them alone. By the caller's place of each in his sidebar, the
-        projects he is not a member of last, then by name. A workspace that
+        them alone. By each project's place in the caller's sidebar, the
+        projects without a place in it last, then by name. A workspace that
         does not exist, is deleted, or of which the caller is not an active
         member answers workspace.not_found. The whole collection at once:
         collections are not paginated.
@@ -49,7 +49,7 @@ paths:
         the caller, and the lead when one is given, as its admins, the
         project first in each one's sidebar, and with its six states:
         Backlog, the default, Todo, In Progress, Done, Cancelled and Triage.
-        The name has 1–255 characters, not all spaces, without NUL and
+        The name has 1–255 characters, not blank, without NUL and
         without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -; the
         identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the
         network is 0 or 2, public when not given; the time zone is an IANA
@@ -94,10 +94,10 @@ paths:
       description: >-
         For the workspace's admins and members, as createProject. The
         identifier is available when createProject would take it: once
-        upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and no undeleted project
-        of the workspace's. A workspace that does not exist, is deleted, or of
-        which the caller is not an active member answers workspace.not_found;
-        a guest, forbidden.
+        upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and held by no undeleted
+        project of the workspace, archived or not. A workspace that does not
+        exist, is deleted, or of which the caller is not an active member
+        answers workspace.not_found; a guest, forbidden.
       security: [{bearer: []}]
       x-problem-codes: [workspace.not_found, forbidden]
       responses:
@@ -295,7 +295,10 @@ components:
             - $ref: '#/components/schemas/ProjectRole'
             - type: 'null'
         sort_order:
-          description: The project's place in the caller's sidebar, lowest first; null when he is not an active member.
+          description: >-
+            The project's place in the caller's sidebar, lowest first; null when
+            it has none there: the caller is not an active member of the
+            project, or has no display settings in it.
           type: [number, 'null']
         member_ids:
           description: The accounts of the active members, in the order they joined, then by id.
@@ -332,7 +335,7 @@ components:
       properties:
         name:
           description: >-
-            1–255 characters, not all spaces, without any of
+            1–255 characters, not blank, without any of
             & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
           type: string
         identifier:

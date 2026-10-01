@@ -244,7 +244,9 @@ paths:
         workspace.own_membership: nobody changes his own role. The role is
         decided after the workspace row is locked, so of two admins who
         demote each other at once only the first succeeds and the workspace
-        keeps an admin.
+        keeps an admin. A change to guest also makes the member a guest in
+        every project of the workspace he has a membership of, ended ones
+        too, in the same transaction.
       security: [{bearer: []}]
       x-problem-codes: [validation_failed, workspace.member_not_found, forbidden, workspace.own_membership]
       requestBody:
@@ -361,7 +363,9 @@ paths:
         workspace.invitation_not_found; a declined one,
         workspace.invitation_responded. An account deactivated meanwhile
         answers unauthorized. The answer is the workspace, with the caller's
-        role in it.
+        role in it. A former member whose membership comes back as a guest is
+        also made a guest in every project of the workspace he has a
+        membership of, ended ones too, in the same transaction.
       security: [{bearer: []}]
       x-problem-codes: [workspace.invitation_not_found, workspace.invitation_email_mismatch, workspace.invitation_responded]
       requestBody:

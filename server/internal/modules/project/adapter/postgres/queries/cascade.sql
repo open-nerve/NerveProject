@@ -1,9 +1,7 @@
--- ProjectCascade's statements (M3 design 3.3, 3.6), each under the workspace's FOR NO KEY UPDATE, which the caller
--- took. The steps of deleting a workspace's projects are one statement each (convention 5): the rows of the workspace
--- not deleted before, at the moment and by the account of the workspace's deletion. Rows deleted before keep their
--- moment.
-
 -- name: DeleteWorkspaceProjects :exec
+-- The first step of deleting a workspace's projects (M3 design 3.3, 3.6), one statement (convention 5) under the
+-- workspace's FOR NO KEY UPDATE, which the caller took: the workspace's projects not deleted before, at the moment and
+-- by the account of the workspace's deletion. Projects deleted before keep their moment.
 UPDATE projects
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;

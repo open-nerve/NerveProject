@@ -375,7 +375,7 @@ export interface paths {
         head?: never;
         /**
          * Change a member's role
-         * @description For the workspace's admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin.
+         * @description For the workspace's admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin. A change to guest also makes the member a guest in every project of the workspace he has a membership of, ended ones too, in the same transaction.
          */
         patch: operations["updateWorkspaceMember"];
         trace?: never;
@@ -425,7 +425,7 @@ export interface paths {
         put?: never;
         /**
          * Accept an invitation to one's own address
-         * @description For the account the invitation was sent to: its address, as it is when the request runs, must be the invitation's; another answers workspace.invitation_email_mismatch, which does not say whose, and nothing changes. The caller becomes a member with the invitation's role, or a former member has his membership back with it; an active member stays as he is, his role too, and only the invitation is used. The invitation is then accepted and deleted: its link stops working. A token that is not the invitation's, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found; a declined one, workspace.invitation_responded. An account deactivated meanwhile answers unauthorized. The answer is the workspace, with the caller's role in it.
+         * @description For the account the invitation was sent to: its address, as it is when the request runs, must be the invitation's; another answers workspace.invitation_email_mismatch, which does not say whose, and nothing changes. The caller becomes a member with the invitation's role, or a former member has his membership back with it; an active member stays as he is, his role too, and only the invitation is used. The invitation is then accepted and deleted: its link stops working. A token that is not the invitation's, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found; a declined one, workspace.invitation_responded. An account deactivated meanwhile answers unauthorized. The answer is the workspace, with the caller's role in it. A former member whose membership comes back as a guest is also made a guest in every project of the workspace he has a membership of, ended ones too, in the same transaction.
          */
         post: operations["acceptWorkspaceInvitation"];
         delete?: never;
@@ -519,13 +519,13 @@ export interface paths {
         };
         /**
          * List a workspace's projects that the caller sees
-         * @description The workspace's projects that the caller sees, each as he sees it: every one, to its admins; to its members, the public ones and those they are members of; to its guests, those they are members of. The archived projects are left out, unless archived is true, which lists them alone. By the caller's place of each in his sidebar, the projects he is not a member of last, then by name. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         * @description The workspace's projects that the caller sees, each as he sees it: every one, to its admins; to its members, the public ones and those they are members of; to its guests, those they are members of. The archived projects are left out, unless archived is true, which lists them alone. By each project's place in the caller's sidebar, the projects without a place in it last, then by name. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
          */
         get: operations["listProjects"];
         put?: never;
         /**
          * Create a project in a workspace
-         * @description For the workspace's admins and members. The project is created with the caller, and the lead when one is given, as its admins, the project first in each one's sidebar, and with its six states: Backlog, the default, Todo, In Progress, Done, Cancelled and Triage. The name has 1–255 characters, not all spaces, without NUL and without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -; the identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the network is 0 or 2, public when not given; the time zone is an IANA name, the workspace's when not given (validation_failed). The values are checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden. The lead must be an active admin or member of the workspace (project_lead_id not_allowed), which is checked after the caller's role. Neither the name nor the identifier may be another undeleted project's of the workspace (project.name_taken, project.identifier_taken).
+         * @description For the workspace's admins and members. The project is created with the caller, and the lead when one is given, as its admins, the project first in each one's sidebar, and with its six states: Backlog, the default, Todo, In Progress, Done, Cancelled and Triage. The name has 1–255 characters, not blank, without NUL and without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -; the identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the network is 0 or 2, public when not given; the time zone is an IANA name, the workspace's when not given (validation_failed). The values are checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden. The lead must be an active admin or member of the workspace (project_lead_id not_allowed), which is checked after the caller's role. Neither the name nor the identifier may be another undeleted project's of the workspace (project.name_taken, project.identifier_taken).
          */
         post: operations["createProject"];
         delete?: never;
@@ -548,7 +548,7 @@ export interface paths {
         };
         /**
          * Check whether a project identifier is available in a workspace
-         * @description For the workspace's admins and members, as createProject. The identifier is available when createProject would take it: once upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and no undeleted project of the workspace's. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden.
+         * @description For the workspace's admins and members, as createProject. The identifier is available when createProject would take it: once upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and held by no undeleted project of the workspace, archived or not. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden.
          */
         get: operations["checkProjectIdentifier"];
         put?: never;
@@ -1086,7 +1086,7 @@ export interface components {
             cover_image_url: string | null;
             /** @description The caller's role in the project; null when he is not an active member. */
             member_role: components["schemas"]["ProjectRole"] | null;
-            /** @description The project's place in the caller's sidebar, lowest first; null when he is not an active member. */
+            /** @description The project's place in the caller's sidebar, lowest first; null when it has none there: the caller is not an active member of the project, or has no display settings in it. */
             sort_order: number | null;
             /** @description The accounts of the active members, in the order they joined, then by id. */
             member_ids: string[];
@@ -1099,7 +1099,7 @@ export interface components {
             data: components["schemas"]["Project"][];
         };
         ProjectCreate: {
-            /** @description 1–255 characters, not all spaces, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
+            /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
             name: string;
             /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
             identifier: string;

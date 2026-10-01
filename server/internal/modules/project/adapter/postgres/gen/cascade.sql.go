@@ -48,7 +48,6 @@ func (q *Queries) DeleteWorkspaceProjectPreferences(ctx context.Context, arg Del
 }
 
 const deleteWorkspaceProjects = `-- name: DeleteWorkspaceProjects :exec
-
 UPDATE projects
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
 WHERE workspace_id = $3 AND deleted_at IS NULL
@@ -60,10 +59,9 @@ type DeleteWorkspaceProjectsParams struct {
 	WorkspaceID uuid.UUID
 }
 
-// ProjectCascade's statements (M3 design 3.3, 3.6), each under the workspace's FOR NO KEY UPDATE, which the caller
-// took. The steps of deleting a workspace's projects are one statement each (convention 5): the rows of the workspace
-// not deleted before, at the moment and by the account of the workspace's deletion. Rows deleted before keep their
-// moment.
+// The first step of deleting a workspace's projects (M3 design 3.3, 3.6), one statement (convention 5) under the
+// workspace's FOR NO KEY UPDATE, which the caller took: the workspace's projects not deleted before, at the moment and
+// by the account of the workspace's deletion. Projects deleted before keep their moment.
 func (q *Queries) DeleteWorkspaceProjects(ctx context.Context, arg DeleteWorkspaceProjectsParams) error {
 	_, err := q.db.Exec(ctx, deleteWorkspaceProjects, arg.Now, arg.DeletedBy, arg.WorkspaceID)
 	return err
