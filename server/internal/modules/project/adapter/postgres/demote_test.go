@@ -50,8 +50,9 @@ func waits(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, lock string) boo
 // does not, and no other project is: not HR, where alice is a member and
 // bob's membership is deleted. The write makes bob's memberships of those a
 // guest's, at the moment and by the account given, the ended one still
-// ended; his guest's one, alice's, his deleted ones, his one of a deleted
-// project and his one in beta keep every column.
+// ended, and leaves their other columns as they were; his guest's one,
+// alice's, his deleted ones, his one of a deleted project and his one in
+// beta keep every column.
 func TestDemotingAMemberToGuest(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -75,11 +76,14 @@ func TestDemotingAMemberToGuest(t *testing.T) {
 	seedMember(t, pool, acme, hr, alice, 20, true)
 	seedMember(t, pool, acme, gone, bob, 20, true)
 	seedMember(t, pool, beta, betas, bob, 20, true)
+	// kept is every membership, a demoted one without the columns the write
+	// sets.
 	kept := func() string {
 		t.Helper()
 		var rows string
-		if err := pool.QueryRow(context.Background(), `SELECT string_agg(r::text, E'\n' ORDER BY r.id) FROM project_members r
-			WHERE NOT r.id = ANY ($1)`, slices.Collect(maps.Keys(demoted))).Scan(&rows); err != nil {
+		if err := pool.QueryRow(context.Background(), `SELECT string_agg(CASE WHEN r.id = ANY ($1)
+			THEN (to_jsonb(r) - 'role' - 'updated_at' - 'updated_by_id')::text ELSE r::text END, E'\n' ORDER BY r.id)
+			FROM project_members r`, slices.Collect(maps.Keys(demoted))).Scan(&rows); err != nil {
 			t.Fatal(err)
 		}
 		return rows
@@ -125,7 +129,7 @@ func TestDemotingAMemberToGuest(t *testing.T) {
 		}
 	}
 	if after := kept(); after != before {
-		t.Errorf("the other memberships:\n%s\nwant them as they were:\n%s", after, before)
+		t.Errorf("the memberships, the demoted ones without role, updated_at and updated_by_id:\n%s\nwant them as they were:\n%s", after, before)
 	}
 }
 

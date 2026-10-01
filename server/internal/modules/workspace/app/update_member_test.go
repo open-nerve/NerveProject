@@ -172,18 +172,20 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 // profile, and a member without an account each fail the transaction, which
 // the database then rolls back, the role's change with it:
 // the answer is the error, never a member and never a problem of the
-// contract (so a 500); a failure is the one injected.
+// contract (so a 500); a failure is the one injected, and nothing runs
+// after the failing call.
 func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 	failure := errors.New("connection reset")
 	tests := []struct {
 		name string
 		set  func(f *membersFixture)
-		want error // the injected failure; nil for the use case's own error
+		want error  // the injected failure; nil for the use case's own error
+		last string // the failing call, the last one
 	}{
-		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure},
-		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"DemoteToGuest": failure} }, failure},
-		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure},
-		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil},
+		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure, "UpdateMemberRole"},
+		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"DemoteToGuest": failure} }, failure, "DemoteToGuest"},
+		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure, "PublicProfiles"},
+		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil, "PublicProfiles"},
 	}
 	for _, tt := range tests {
 		uc, f, tx := newUpdateMember()
@@ -198,6 +200,9 @@ func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 		}
 		if slices.ContainsFunc(f.log.calls, func(c string) bool { return strings.HasSuffix(c, " outside tx") }) {
 			t.Errorf("%s failing: calls %q, want all in the transaction", tt.name, f.log.calls)
+		}
+		if n := len(f.log.calls); n == 0 || !strings.HasPrefix(f.log.calls[n-1], tt.last+" ") {
+			t.Errorf("%s failing: calls %q, want %s last", tt.name, f.log.calls, tt.last)
 		}
 	}
 	uc, f, _ := newUpdateMember()
