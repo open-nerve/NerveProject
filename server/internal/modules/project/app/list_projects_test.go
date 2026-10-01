@@ -70,21 +70,21 @@ func TestListProjects(t *testing.T) {
 func TestListProjectsRefuses(t *testing.T) {
 	failure := errors.New("connection reset")
 	tests := []struct {
-		name     string
-		ctx      context.Context
-		slug     string
-		dirErr   error
-		authErr  error
-		listErr  error
-		want     error
-		listRead bool
+		name    string
+		ctx     context.Context
+		slug    string
+		dirErr  error
+		authErr error
+		listErr error
+		want    error
+		calls   int // the fakes' calls, in order: the directory's, the decision, the list
 	}{
-		{"no workspace", as(alice), "gone", nil, nil, nil, domain.ErrWorkspaceNotFound, false},
-		{"a workspace he is not in", as(dave), "acme", nil, nil, nil, domain.ErrWorkspaceNotFound, false},
-		{"the directory failing", as(alice), "acme", failure, nil, nil, failure, false},
-		{"the decision failing", as(alice), "acme", nil, failure, nil, failure, false},
-		{"the list failing", as(alice), "acme", nil, nil, failure, failure, true},
-		{"no caller", context.Background(), "acme", nil, nil, nil, shared.Unauthenticated(), false},
+		{"no workspace", as(alice), "gone", nil, nil, nil, domain.ErrWorkspaceNotFound, 1},
+		{"a workspace he is not in", as(dave), "acme", nil, nil, nil, domain.ErrWorkspaceNotFound, 2},
+		{"the directory failing", as(alice), "acme", failure, nil, nil, failure, 1},
+		{"the decision failing", as(alice), "acme", nil, failure, nil, failure, 2},
+		{"the list failing", as(alice), "acme", nil, nil, failure, failure, 3},
+		{"no caller", context.Background(), "acme", nil, nil, nil, shared.Unauthenticated(), 0},
 	}
 	for _, tt := range tests {
 		uc, workspaces, projects, auth := newList()
@@ -93,9 +93,9 @@ func TestListProjectsRefuses(t *testing.T) {
 			auth.errs = map[grantKey]error{{alice, acme.ID}: tt.authErr}
 		}
 		got, err := uc.Execute(tt.ctx, tt.slug, false)
-		listed := slices.ContainsFunc(workspaces.log.calls, func(c string) bool { return len(c) > 12 && c[:12] == "ListProjects" })
-		if !errors.Is(err, tt.want) || got != nil || listed != tt.listRead {
-			t.Errorf("%s: Execute() = %+v, %v, calls %q; want nothing, %v", tt.name, got, err, workspaces.log.calls, tt.want)
+		if !errors.Is(err, tt.want) || got != nil || len(workspaces.log.calls) != tt.calls {
+			t.Errorf("%s: Execute() = %+v, %v, calls %q; want nothing, %v after %d calls", tt.name, got, err, workspaces.log.calls, tt.want,
+				tt.calls)
 		}
 	}
 }

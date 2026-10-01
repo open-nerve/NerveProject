@@ -298,6 +298,15 @@ func prepareMatrix(t *testing.T) matrixData {
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}
+		// other's project is the one no list of acme's may show: were it not
+		// there, undeleted in a workspace of its own, a list of every
+		// workspace's projects would pass the matrix and
+		// TestListingProjectsIsReadingEach alike.
+		if f, found, err := projects.store.ProjectFacts(context.Background(), s.project("other/project"), ids[callerNever]); err != nil ||
+			!found || f.WorkspaceID != s.workspace("other") {
+			t.Fatalf("other's project's facts = %+v, %v, %v; want it undeleted in other (%s), not acme (%s)", f, found, err,
+				s.workspace("other"), s.workspace("acme"))
+		}
 	})
 	if !prepared {
 		t.FailNow()

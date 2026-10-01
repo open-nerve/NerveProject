@@ -55,12 +55,15 @@ func TestListProjects(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// Alice is a member of mid (place -5) and zeta (10), both private, and
-	// of kilo (10), public, and was one of ended, whose membership ended;
-	// apple and pear are public, secret private; archived, deleted and
-	// beta's are not in this list. A name is unique in a workspace, so the
-	// id decides no order here.
-	zeta := newProject(t, s, acme, "Zeta", "ZETA", alice)
+	// Alice is a member of mid (place -5) and zeta (10), both private, of
+	// kilo (10), public, and of bare, private, whose display settings were
+	// deleted: hers, without a place. She was one of ended, whose
+	// membership ended, and of left, whose membership was deleted; apple
+	// and pear are public, secret private; archived, deleted and beta's are
+	// not in this list. A name is unique in a workspace, so the id decides
+	// no order here; zeta's identifier comes before kilo's, so that the
+	// name, not the identifier, decides their tie.
+	zeta := newProject(t, s, acme, "Zeta", "AZ", alice)
 	private(zeta)
 	join(zeta, alice, 10)
 	pear := newProject(t, s, acme, "Pear", "PEAR", alice)
@@ -76,6 +79,14 @@ func TestListProjects(t *testing.T) {
 	kilo := newProject(t, s, acme, "Kilo", "KILO", alice)
 	join(kilo, alice, 10)
 	apple := newProject(t, s, acme, "Apple", "APPLE", alice)
+	bare := newProject(t, s, acme, "Bare", "BARE", alice)
+	private(bare)
+	join(bare, alice, 2)
+	exec(t, pool, "UPDATE project_user_properties SET deleted_at = now() WHERE project_id = $1 AND user_id = $2", bare, alice)
+	left := newProject(t, s, acme, "Left", "LEFT", alice)
+	private(left)
+	join(left, alice, 3)
+	exec(t, pool, "UPDATE project_members SET deleted_at = now() WHERE project_id = $1 AND member_id = $2", left, alice)
 	archived := newProject(t, s, acme, "Old", "OLD", alice)
 	exec(t, pool, "UPDATE projects SET archived_at = now() WHERE id = $1", archived)
 	deleted := newProject(t, s, acme, "Gone", "GONE", alice)
@@ -89,9 +100,10 @@ func TestListProjects(t *testing.T) {
 		archived bool
 		want     []uuid.UUID
 	}{
-		{"everything", alice, domain.Visibility{All: true, Public: true}, false, []uuid.UUID{mid, kilo, zeta, apple, ended, pear, secret}},
-		{"the public ones", alice, domain.Visibility{Public: true}, false, []uuid.UUID{mid, kilo, zeta, apple, pear}},
-		{"hers alone", alice, domain.Visibility{}, false, []uuid.UUID{mid, kilo, zeta}},
+		{"everything", alice, domain.Visibility{All: true, Public: true}, false,
+			[]uuid.UUID{mid, kilo, zeta, apple, bare, ended, left, pear, secret}},
+		{"the public ones", alice, domain.Visibility{Public: true}, false, []uuid.UUID{mid, kilo, zeta, apple, bare, pear}},
+		{"hers alone", alice, domain.Visibility{}, false, []uuid.UUID{mid, kilo, zeta, bare}},
 		{"another's", bob, domain.Visibility{Public: true}, false, []uuid.UUID{apple, kilo, pear}},
 		{"the archived ones", alice, domain.Visibility{All: true, Public: true}, true, []uuid.UUID{archived}},
 	}
@@ -108,7 +120,7 @@ func TestListProjects(t *testing.T) {
 	// Each as the user sees it: his role and place in his own, none in the
 	// others; the members.
 	list, err := s.ListProjects(ctx, acme, alice, domain.Visibility{Public: true}, false)
-	if err != nil || len(list) != 5 || list[0].MemberRole == nil || *list[0].MemberRole != shared.RoleMember || list[0].SortOrder == nil ||
+	if err != nil || len(list) != 6 || list[0].MemberRole == nil || *list[0].MemberRole != shared.RoleMember || list[0].SortOrder == nil ||
 		*list[0].SortOrder != -5 || !slices.Equal(list[0].MemberIDs, []uuid.UUID{alice}) || list[3].MemberRole != nil || list[3].SortOrder != nil {
 		t.Errorf("ListProjects() = %+v, %v; want mid with her role and place, apple without", list, err)
 	}
