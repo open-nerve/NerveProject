@@ -241,7 +241,7 @@ func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
 
 // matrixSeed writes the prepared workspaces, memberships and settings
 // through the workspace store, and keeps the workspaces' ids by slug; exec
-// runs the SQL that stands in for the store P5 adds.
+// runs the SQL that stands in for the stores P4b and P5 add.
 type matrixSeed struct {
 	t          *testing.T
 	store      *workspacepg.Store
@@ -293,10 +293,17 @@ func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
 	}
 }
 
+// exec runs sql, which must change one row: a statement that matched none
+// would leave the seed as it was, and the cells that need the change would
+// test another case.
 func (s matrixSeed) exec(pool *pgxpool.Pool, sql string, args ...any) {
 	s.t.Helper()
-	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
+	tag, err := pool.Exec(context.Background(), sql, args...)
+	if err != nil {
 		s.t.Fatal(err)
+	}
+	if tag.RowsAffected() != 1 {
+		s.t.Fatalf("%s changed %d rows, want 1", sql, tag.RowsAffected())
 	}
 }
 

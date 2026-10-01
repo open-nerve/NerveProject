@@ -170,6 +170,19 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		{"a project row of PA's column alone", listed, []matrixRow{with(func(r *matrixRow) {
 			r.columns, r.cells = projectColumns[:1], map[caller]cell{callerProjectAdmin: cellOK}
 		}), checks}, []string{`row getProject has the columns ["project admin"], which are no table of the matrix`}},
+		// A project's operation in a workspace-level row: each of its six
+		// cells aims at its column's project, and the project level's own
+		// columns are never asked.
+		{"a project operation in a workspace-level row", listed, []matrixRow{with(func(r *matrixRow) {
+			r.columns, r.cells = nil, every(cellOK)
+		}), checks}, func() []string {
+			var want []string
+			for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
+				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (matrixTables): "+
+					"a project's row names its columns", c))
+			}
+			return want
+		}()},
 		{"a {slug} of another column's workspace beside a listed {identifier}", listed, []matrixRow{row, func() matrixRow {
 			r := checks
 			r.request = sameRequest(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/WEB", "")

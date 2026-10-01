@@ -173,8 +173,9 @@ func wholeAnswerOf(res *http.Response, body []byte) wholeAnswer {
 // The public getWorkspaceInvitation has no row (matrixExempt): its route
 // reads no credential. This test stands for the row. Each link is asked
 // with no bearer token, with one that is no credential (a malformed
-// nrv_pat_, which every other route answers 401), and with each column's,
-// and every caller gets the same answer: acme's invitation with its token,
+// nrv_pat_, which every other route answers 401), and with each account's
+// (matrixAccounts, every column's of either level), and every caller gets
+// the same answer: acme's invitation with its token,
 // 200, without the address;
 // and one 404 workspace.invitation_not_found, the same byte for byte for a
 // character of the token changed, another invitation's token, gone's
@@ -210,7 +211,7 @@ func TestTheInvitationLinkAnswersEveryCallerAlike(t *testing.T) {
 	if status, body := call(t, contract, http.MethodGet, base+"/api/v0/workspaces", bearers["an invalid bearer"], ""); status != http.StatusUnauthorized {
 		t.Fatalf("the invalid bearer on listWorkspaces = %d %s, want 401", status, body)
 	}
-	callers := append([]caller{"nobody", "an invalid bearer"}, workspaceColumns...)
+	callers := append([]caller{"nobody", "an invalid bearer"}, matrixAccounts...)
 	var notFound *wholeAnswer
 	for _, l := range links {
 		var first wholeAnswer
