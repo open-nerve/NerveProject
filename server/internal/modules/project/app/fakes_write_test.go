@@ -185,6 +185,33 @@ func (f *fakeStore) SetArchived(ctx context.Context, id uuid.UUID, archived bool
 	return nil
 }
 
+// deleting logs a step of a deletion: the workspace, the project, or every
+// project of the workspace ("*"), the account and the moment.
+func (f *fakeStore) deleting(ctx context.Context, step string, d app.Deletion) error {
+	project := "*"
+	if d.ProjectID != nil {
+		project = d.ProjectID.String()
+	}
+	f.log.add(ctx, "%s %s/%s by %s at %s", step, d.WorkspaceID, project, d.By, d.Now.Format(timeFormat))
+	return f.fail(step)
+}
+
+func (f *fakeStore) DeleteProjects(ctx context.Context, d app.Deletion) error {
+	return f.deleting(ctx, "DeleteProjects", d)
+}
+
+func (f *fakeStore) DeleteProjectMembers(ctx context.Context, d app.Deletion) error {
+	return f.deleting(ctx, "DeleteProjectMembers", d)
+}
+
+func (f *fakeStore) DeleteProjectPreferences(ctx context.Context, d app.Deletion) error {
+	return f.deleting(ctx, "DeleteProjectPreferences", d)
+}
+
+func (f *fakeStore) DeleteStates(ctx context.Context, d app.Deletion) error {
+	return f.deleting(ctx, "DeleteStates", d)
+}
+
 func (f *fakeStore) GetProject(ctx context.Context, id, userID uuid.UUID) (domain.Project, bool, error) {
 	f.log.add(ctx, "GetProject %s for %s", id, userID)
 	if err := f.fail("GetProject"); err != nil {

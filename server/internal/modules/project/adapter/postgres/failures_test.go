@@ -101,6 +101,12 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.SetArchived(cancelled, web, true, alice, now); !failed(err) {
 		t.Errorf("SetArchived() = %v; want context.Canceled", err)
 	}
+	for i, step := range []func(context.Context, app.Deletion) error{s.DeleteProjects, s.DeleteProjectMembers, s.DeleteProjectPreferences,
+		s.DeleteStates} {
+		if err := step(cancelled, app.Deletion{WorkspaceID: acme, ProjectID: &web, By: alice, Now: now}); !failed(err) {
+			t.Errorf("deletion step %d = %v; want context.Canceled", i, err)
+		}
+	}
 }
 
 // Only the two unique keys of a name and an identifier are a 409: another

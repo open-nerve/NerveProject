@@ -231,13 +231,23 @@ type MemberDemoter interface {
 	DemoteMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 
-// WorkspaceProjectsDeleter soft-deletes a workspace's projects and the rows
-// under them, one statement a table, in the order of M3 design 3.6. Each
-// sets deleted_at and updated_at to now and updated_by_id to by, on the
-// workspace's undeleted rows only; it runs in the transaction ctx carries.
-type WorkspaceProjectsDeleter interface {
-	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
-	DeleteWorkspaceProjectMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
-	DeleteWorkspaceProjectPreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
-	DeleteWorkspaceStates(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+// Deletion is what a deletion of projects deletes, and when and by whom:
+// the workspace's projects, or only the one ProjectID names, a project of
+// the workspace, when it is set.
+type Deletion struct {
+	WorkspaceID uuid.UUID
+	ProjectID   *uuid.UUID
+	By          uuid.UUID
+	Now         time.Time
+}
+
+// ProjectsDeleter soft-deletes the projects of a Deletion and the rows
+// under them, one statement a table. Each sets deleted_at and updated_at to
+// the deletion's moment and updated_by_id to its account, on undeleted rows
+// only; it runs in the transaction ctx carries.
+type ProjectsDeleter interface {
+	DeleteProjects(ctx context.Context, d Deletion) error
+	DeleteProjectMembers(ctx context.Context, d Deletion) error
+	DeleteProjectPreferences(ctx context.Context, d Deletion) error
+	DeleteStates(ctx context.Context, d Deletion) error
 }

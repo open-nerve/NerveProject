@@ -12,76 +12,105 @@ import (
 	"uuid"
 )
 
-const deleteWorkspaceProjectMembers = `-- name: DeleteWorkspaceProjectMembers :exec
+const deleteProjectMembers = `-- name: DeleteProjectMembers :exec
 UPDATE project_members
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE workspace_id = $3 AND deleted_at IS NULL
+WHERE workspace_id = $3 AND ($4::uuid IS NULL OR project_id = $4)
+  AND deleted_at IS NULL
 `
 
-type DeleteWorkspaceProjectMembersParams struct {
+type DeleteProjectMembersParams struct {
 	Now         time.Time
 	DeletedBy   uuid.UUID
 	WorkspaceID uuid.UUID
+	ProjectID   *uuid.UUID
 }
 
-// Active memberships and ended ones alike.
-func (q *Queries) DeleteWorkspaceProjectMembers(ctx context.Context, arg DeleteWorkspaceProjectMembersParams) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceProjectMembers, arg.Now, arg.DeletedBy, arg.WorkspaceID)
+// The memberships of those projects, active and ended ones alike.
+func (q *Queries) DeleteProjectMembers(ctx context.Context, arg DeleteProjectMembersParams) error {
+	_, err := q.db.Exec(ctx, deleteProjectMembers,
+		arg.Now,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.ProjectID,
+	)
 	return err
 }
 
-const deleteWorkspaceProjectPreferences = `-- name: DeleteWorkspaceProjectPreferences :exec
+const deleteProjectPreferences = `-- name: DeleteProjectPreferences :exec
 UPDATE project_user_properties
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE workspace_id = $3 AND deleted_at IS NULL
+WHERE workspace_id = $3 AND ($4::uuid IS NULL OR project_id = $4)
+  AND deleted_at IS NULL
 `
 
-type DeleteWorkspaceProjectPreferencesParams struct {
+type DeleteProjectPreferencesParams struct {
 	Now         time.Time
 	DeletedBy   uuid.UUID
 	WorkspaceID uuid.UUID
+	ProjectID   *uuid.UUID
 }
 
-func (q *Queries) DeleteWorkspaceProjectPreferences(ctx context.Context, arg DeleteWorkspaceProjectPreferencesParams) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceProjectPreferences, arg.Now, arg.DeletedBy, arg.WorkspaceID)
+func (q *Queries) DeleteProjectPreferences(ctx context.Context, arg DeleteProjectPreferencesParams) error {
+	_, err := q.db.Exec(ctx, deleteProjectPreferences,
+		arg.Now,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.ProjectID,
+	)
 	return err
 }
 
-const deleteWorkspaceProjects = `-- name: DeleteWorkspaceProjects :exec
+const deleteProjects = `-- name: DeleteProjects :exec
 UPDATE projects
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE workspace_id = $3 AND deleted_at IS NULL
+WHERE workspace_id = $3 AND ($4::uuid IS NULL OR id = $4)
+  AND deleted_at IS NULL
 `
 
-type DeleteWorkspaceProjectsParams struct {
+type DeleteProjectsParams struct {
 	Now         time.Time
 	DeletedBy   uuid.UUID
 	WorkspaceID uuid.UUID
+	ProjectID   *uuid.UUID
 }
 
-// The first step of deleting a workspace's projects (M3 design 3.3, 3.6), one statement (convention 5) under the
-// workspace's FOR NO KEY UPDATE, which the caller took: the workspace's projects not deleted before, at the moment and
-// by the account of the workspace's deletion. Projects deleted before keep their moment.
-func (q *Queries) DeleteWorkspaceProjects(ctx context.Context, arg DeleteWorkspaceProjectsParams) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceProjects, arg.Now, arg.DeletedBy, arg.WorkspaceID)
+// The first step of deleting projects (M3 design 3.3, 3.6), one statement (convention 5) under the parent's FOR NO KEY
+// UPDATE, which the caller took: the workspace's, when it deletes the workspace, and the project's, when it deletes
+// the project. The workspace's undeleted projects, archived ones too, or only the one project_id names when it is
+// given, at the moment and by the account of the deletion. Projects deleted before keep their moment.
+func (q *Queries) DeleteProjects(ctx context.Context, arg DeleteProjectsParams) error {
+	_, err := q.db.Exec(ctx, deleteProjects,
+		arg.Now,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.ProjectID,
+	)
 	return err
 }
 
-const deleteWorkspaceStates = `-- name: DeleteWorkspaceStates :exec
+const deleteStates = `-- name: DeleteStates :exec
 UPDATE states
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE workspace_id = $3 AND deleted_at IS NULL
+WHERE workspace_id = $3 AND ($4::uuid IS NULL OR project_id = $4)
+  AND deleted_at IS NULL
 `
 
-type DeleteWorkspaceStatesParams struct {
+type DeleteStatesParams struct {
 	Now         time.Time
 	DeletedBy   uuid.UUID
 	WorkspaceID uuid.UUID
+	ProjectID   *uuid.UUID
 }
 
 // The triage states too.
-func (q *Queries) DeleteWorkspaceStates(ctx context.Context, arg DeleteWorkspaceStatesParams) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceStates, arg.Now, arg.DeletedBy, arg.WorkspaceID)
+func (q *Queries) DeleteStates(ctx context.Context, arg DeleteStatesParams) error {
+	_, err := q.db.Exec(ctx, deleteStates,
+		arg.Now,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.ProjectID,
+	)
 	return err
 }
 

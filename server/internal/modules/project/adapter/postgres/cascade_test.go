@@ -9,11 +9,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
-// deletion is a row's audit columns, as the tests read them.
+// deletion is a row's audit columns, as the tests read them, and the
+// project the row is under.
 type deletion struct {
+	project   uuid.UUID
 	deletedAt *time.Time
 	updatedAt time.Time
 	updatedBy *uuid.UUID
@@ -43,9 +47,14 @@ func instant(t *time.Time) string {
 	return t.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 }
 
-// projectTables are the tables a workspace's deletion deletes the projects'
-// rows of, in its order.
-var projectTables = []string{"projects", "project_members", "project_user_properties", "states"}
+// projectTables are the tables a deletion of projects deletes the rows of,
+// in its order, each with its column of the project.
+var projectTables = []struct{ name, project string }{
+	{"projects", "id"}, {"project_members", "project_id"}, {"project_user_properties", "project_id"}, {"states", "project_id"},
+}
+
+// perProject is how many rows of each table seedProject writes.
+var perProject = map[string]int{"projects": 1, "project_members": 2, "project_user_properties": 2, "states": 2}
 
 // deletions reads the audit columns of the workspace's rows of each project
 // table, keyed by table then id.
@@ -54,18 +63,18 @@ func deletions(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID) map[string
 	out := map[string]map[uuid.UUID]deletion{}
 	for _, table := range projectTables {
 		rows, err := pool.Query(context.Background(),
-			"SELECT id, deleted_at, updated_at, updated_by_id FROM "+table+" WHERE workspace_id = $1", workspace)
+			"SELECT id, "+table.project+", deleted_at, updated_at, updated_by_id FROM "+table.name+" WHERE workspace_id = $1", workspace)
 		if err != nil {
 			t.Fatal(err)
 		}
-		out[table] = map[uuid.UUID]deletion{}
+		out[table.name] = map[uuid.UUID]deletion{}
 		for rows.Next() {
 			var id uuid.UUID
 			var d deletion
-			if err := rows.Scan(&id, &d.deletedAt, &d.updatedAt, &d.updatedBy); err != nil {
+			if err := rows.Scan(&id, &d.project, &d.deletedAt, &d.updatedAt, &d.updatedBy); err != nil {
 				t.Fatal(err)
 			}
-			out[table][id] = d
+			out[table.name][id] = d
 		}
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
@@ -97,91 +106,151 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, name str
 	return id
 }
 
-// seedProjects writes two projects of workspace (seedProject), the second
-// archived and bob's membership of it inactive.
-func seedProjects(t *testing.T, pool *pgxpool.Pool, workspace, alice, bob uuid.UUID) {
+// seedProjects writes three projects of workspace (seedProject) and
+// returns their ids: web; ops, archived, bob's membership of it inactive;
+// old, deleted at earlier with the rows under it.
+func seedProjects(t *testing.T, pool *pgxpool.Pool, workspace, alice, bob uuid.UUID, earlier time.Time) (web, ops, old uuid.UUID) {
 	t.Helper()
-	seedProject(t, pool, workspace, "Web", alice, bob)
-	ops := seedProject(t, pool, workspace, "Ops", alice, bob)
+	web = seedProject(t, pool, workspace, "Web", alice, bob)
+	ops = seedProject(t, pool, workspace, "Ops", alice, bob)
 	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", ops, now)
 	exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2", ops, bob)
+	old = seedProject(t, pool, workspace, "Old", alice, bob)
+	for _, table := range projectTables {
+		exec(t, pool, "UPDATE "+table.name+" SET deleted_at = $2 WHERE "+table.project+" = $1", old, earlier)
+	}
+	return web, ops, old
 }
 
-// The four steps, in one transaction, soft-delete the workspace's
-// projects, archived ones too, every membership of them, active or not,
-// every member's display settings in them and every state, the triage ones
-// too, at the same moment and by the same account; a row deleted before
-// keeps its time, and another workspace keeps everything. Running the
-// steps again changes nothing.
+// deleteAll runs the steps of d, in their order, in the transaction ctx
+// carries if any.
+func deleteAll(ctx context.Context, s *postgresadapter.Store, d app.Deletion) error {
+	for _, step := range []func(context.Context, app.Deletion) error{
+		s.DeleteProjects, s.DeleteProjectMembers, s.DeleteProjectPreferences, s.DeleteStates,
+	} {
+		if err := step(ctx, d); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkDeletions holds the workspace's rows of each project table to want,
+// each row's state by its project: "deleted" at later by bob; "before",
+// deleted at earlier and not changed since; "kept", neither deleted nor
+// changed. Each project of want has perProject's rows of each table, and
+// no row is under another.
+func checkDeletions(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, want map[uuid.UUID]string, later, earlier time.Time, bob uuid.UUID) {
+	t.Helper()
+	for table, rows := range deletions(t, pool, workspace) {
+		under := map[uuid.UUID]int{}
+		for id, d := range rows {
+			under[d.project]++
+			var ok bool
+			switch want[d.project] {
+			case "deleted":
+				ok = d.deletedAtBy(later, bob)
+			case "before":
+				ok = d.deletedAt != nil && d.deletedAt.Equal(earlier) && d.updatedAt.Equal(now)
+			case "kept":
+				ok = d.deletedAt == nil && d.updatedAt.Equal(now)
+			}
+			if !ok {
+				t.Errorf("%s %s of project %s: %s; want it %q (deleted: at %s by bob %s; before: deleted_at %s, updated_at %s; kept: "+
+					"deleted_at null, updated_at %s)", table, id, d.project, d, want[d.project], instant(&later), bob, instant(&earlier),
+					instant(&now), instant(&now))
+			}
+		}
+		for project, state := range want {
+			if under[project] != perProject[table] {
+				t.Errorf("%s: %d rows under the %s project %s, want %d", table, under[project], state, project, perProject[table])
+			}
+		}
+	}
+}
+
+// The four steps, on every project of a workspace, in one transaction,
+// soft-delete the workspace's projects, archived ones too, every membership
+// of them, active or not, every member's display settings in them and
+// every state, the triage ones too, at the same moment and by the same
+// account; a row deleted before keeps its time, and another workspace
+// keeps everything. Running the steps again changes nothing.
 func TestDeletingAWorkspaceSoftDeletesItsProjects(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
-	seedProjects(t, pool, acme, alice, bob)
-	seedProjects(t, pool, beta, alice, bob)
-	// A project of acme deleted before, with the rows under it.
 	earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
-	old := seedProject(t, pool, acme, "Old", alice, bob)
-	for _, table := range projectTables {
-		column := map[string]string{"projects": "id"}[table]
-		if column == "" {
-			column = "project_id"
-		}
-		exec(t, pool, "UPDATE "+table+" SET deleted_at = $2 WHERE "+column+" = $1", old, earlier)
-	}
-	steps := []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
-		s.DeleteWorkspaceProjects, s.DeleteWorkspaceProjectMembers, s.DeleteWorkspaceProjectPreferences, s.DeleteWorkspaceStates,
-	}
-	run := func(ctx context.Context, by uuid.UUID, at time.Time) error {
-		for _, step := range steps {
-			if err := step(ctx, acme, by, at); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
+	betaWeb, betaOps, betaOld := seedProjects(t, pool, beta, alice, bob, earlier)
+	web, ops, old := seedProjects(t, pool, acme, alice, bob, earlier)
 
 	if err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
-		return run(ctx, bob, later)
+		return deleteAll(ctx, s, app.Deletion{WorkspaceID: acme, By: bob, Now: later})
 	}); err != nil {
 		t.Fatal(err)
 	}
 	// Once more, by alice an hour later: nothing is left undeleted.
-	if err := run(context.Background(), alice, later.Add(time.Hour)); err != nil {
+	if err := deleteAll(context.Background(), s, app.Deletion{WorkspaceID: acme, By: alice, Now: later.Add(time.Hour)}); err != nil {
 		t.Fatal(err)
 	}
 
-	perProject := map[string]int{"projects": 1, "project_members": 2, "project_user_properties": 2, "states": 2}
-	for table, rows := range deletions(t, pool, acme) {
-		deleted, before := 0, 0
-		for id, d := range rows {
-			switch {
-			case d.deletedAtBy(later, bob):
-				deleted++
-			case d.deletedAt != nil && d.deletedAt.Equal(earlier) && d.updatedAt.Equal(now):
-				before++
-			default:
-				t.Errorf("acme's %s %s: %s; want deleted_at and updated_at %s by bob %s, or deleted_at %s and updated_at %s as before",
-					table, id, d, instant(&later), bob, instant(&earlier), instant(&now))
-			}
-		}
-		if deleted != 2*perProject[table] || before != perProject[table] {
-			t.Errorf("acme's %s: %d deleted by bob, %d deleted before; want %d, %d", table, deleted, before, 2*perProject[table], perProject[table])
-		}
-	}
+	checkDeletions(t, pool, acme, map[uuid.UUID]string{web: "deleted", ops: "deleted", old: "before"}, later, earlier, bob)
 	var active []bool
 	if err := pool.QueryRow(context.Background(), `SELECT array_agg(is_active ORDER BY is_active) FROM project_members
 		WHERE workspace_id = $1 AND deleted_at = $2`, acme, later).Scan(&active); err != nil || len(active) != 4 || active[0] || !active[1] {
 		t.Errorf("is_active of acme's deleted memberships: %v, %v; want one false, three true, as they were", active, err)
 	}
-	for table, rows := range deletions(t, pool, beta) {
-		if len(rows) != 2*perProject[table] {
-			t.Errorf("beta's %s: %d rows, want %d", table, len(rows), 2*perProject[table])
+	checkDeletions(t, pool, beta, map[uuid.UUID]string{betaWeb: "kept", betaOps: "kept", betaOld: "before"}, later, earlier, bob)
+}
+
+// unwritten is every row of each project table under workspace, as text,
+// without the three columns a deletion writes: what a deletion must leave.
+func unwritten(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID) string {
+	t.Helper()
+	var all string
+	for _, table := range projectTables {
+		var rows string
+		if err := pool.QueryRow(context.Background(), `SELECT coalesce(string_agg((to_jsonb(r) - 'deleted_at' - 'updated_at' - 'updated_by_id')::text,
+			E'\n' ORDER BY r.id), '') FROM `+table.name+` r WHERE r.workspace_id = $1`, workspace).Scan(&rows); err != nil {
+			t.Fatal(err)
 		}
-		for id, d := range rows {
-			if d.deletedAt != nil || !d.updatedAt.Equal(now) {
-				t.Errorf("beta's %s %s: %s; want it untouched: deleted_at null, updated_at %s", table, id, d, instant(&now))
+		all += table.name + ":\n" + rows + "\n"
+	}
+	return all
+}
+
+// The four steps, on one project, soft-delete it and the rows under it
+// alone, archived or not, first or last in its workspace, at the same
+// moment and by the same account, writing no other column: the workspace's
+// other project, its project deleted before and another workspace's
+// projects keep everything. Running the steps again changes nothing.
+func TestDeletingAProjectSoftDeletesItsRowsAlone(t *testing.T) {
+	for _, target := range []string{"Web", "Ops"} {
+		t.Run(target, func(t *testing.T) {
+			s, pool := newStore(t)
+			alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+			acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+			earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
+			web, ops, old := seedProjects(t, pool, acme, alice, bob, earlier)
+			betaWeb, betaOps, betaOld := seedProjects(t, pool, beta, alice, bob, earlier)
+			want := map[uuid.UUID]string{web: "kept", ops: "kept", old: "before"}
+			id := map[string]uuid.UUID{"Web": web, "Ops": ops}[target]
+			want[id] = "deleted"
+			before := unwritten(t, pool, acme)
+
+			if err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+				return deleteAll(ctx, s, app.Deletion{WorkspaceID: acme, ProjectID: &id, By: bob, Now: later})
+			}); err != nil {
+				t.Fatal(err)
 			}
-		}
+			if err := deleteAll(context.Background(), s, app.Deletion{WorkspaceID: acme, ProjectID: &id, By: alice, Now: later.Add(time.Hour)}); err != nil {
+				t.Fatal(err)
+			}
+
+			checkDeletions(t, pool, acme, want, later, earlier, bob)
+			checkDeletions(t, pool, beta, map[uuid.UUID]string{betaWeb: "kept", betaOps: "kept", betaOld: "before"}, later, earlier, bob)
+			if after := unwritten(t, pool, acme); after != before {
+				t.Errorf("acme's rows but the deletion's columns:\n%s\nwant\n%s", after, before)
+			}
+		})
 	}
 }
