@@ -59,6 +59,9 @@ var rules = map[shared.Action]Rule{
 	"workspace_invitation.create": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
 	"workspace_invitation.update": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
 	"workspace_invitation.delete": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin}},
+	// Every active member; each sees in the list what project.read lets
+	// him read (M3 design 3.4).
+	"project.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// The workspace's admins and members, not its guests (M3 design 9.2;
 	// Plane views/project/base.py:257).
 	"project.create": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},

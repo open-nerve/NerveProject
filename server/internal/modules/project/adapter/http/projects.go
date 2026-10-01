@@ -10,6 +10,20 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 )
 
+// ListProjects serves GET /api/v0/workspaces/{slug}/projects.
+func (h handler) ListProjects(ctx context.Context, req gen.ListProjectsRequestObject) (gen.ListProjectsResponseObject, error) {
+	archived := req.Params.Archived != nil && *req.Params.Archived
+	list, err := h.uc.ListProjects.Execute(ctx, req.Slug, archived)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.ListProjects200JSONResponse{Data: make([]gen.Project, len(list))}
+	for i, p := range list {
+		out.Data[i] = project(p)
+	}
+	return out, nil
+}
+
 // CreateProject serves POST /api/v0/workspaces/{slug}/projects.
 func (h handler) CreateProject(ctx context.Context, req gen.CreateProjectRequestObject) (gen.CreateProjectResponseObject, error) {
 	b := req.Body

@@ -54,6 +54,16 @@ type ProjectReader interface {
 	GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.Project, found bool, err error)
 }
 
+// ProjectLister is listProjects' repository.
+type ProjectLister interface {
+	// ListProjects lists workspaceID's undeleted projects that userID sees
+	// with v, the archived ones alone when archived is true and the others
+	// otherwise, each as he sees it: by his place in his sidebar, the
+	// projects he is not an active member of last, then by name (M3 design
+	// 3.12).
+	ListProjects(ctx context.Context, workspaceID, userID uuid.UUID, v domain.Visibility, archived bool) ([]domain.Project, error)
+}
+
 // IdentifierReader is checkProjectIdentifier's repository.
 type IdentifierReader interface {
 	// IdentifierTaken reports whether an undeleted project of workspaceID

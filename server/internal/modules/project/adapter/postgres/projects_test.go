@@ -9,6 +9,9 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -152,56 +155,78 @@ func TestIdentifierTaken(t *testing.T) {
 	}
 }
 
-// GetProject answers the caller's view (M3 design 3.19): his role and his
-// place in his sidebar only while his membership is active, and the active
-// members in the order they became members, then by the membership's id.
-// The fixture has each state once, next to the rows another predicate
+// webFixture is the workspace acme with its projects ops and web, which
+// has each state of a membership once, next to the rows another predicate
 // would let in: another project's rows of the same accounts, an inactive
 // and a deleted membership, a deleted display settings row; and rows that
 // lie in the table in another order than the answer's.
-func TestGetProject(t *testing.T) {
+type webFixture struct {
+	s                                                *postgresadapter.Store
+	pool                                             *pgxpool.Pool
+	acme, ops, web                                   uuid.UUID
+	alice, bob, carol, dave, erin, frank, gina, hank uuid.UUID
+}
+
+// newWebFixture stores webFixture's rows, alice's. ops first: its rows come
+// first in the tables, so a join that loses a predicate reads them before
+// web's; everyone but erin is its admin. In web: carol's membership is
+// stored first but began last; gina's began with dave's and has the
+// smaller id, stored after his; hank's began with theirs too, has the
+// largest id of the three and is stored last of them, so that neither the
+// table's order of the three nor its reverse is the answer's; alice's
+// began between theirs and carol's. bob's ended, frank's was deleted;
+// carol's display settings were deleted; erin was never a member.
+func newWebFixture(t *testing.T) webFixture {
+	t.Helper()
 	s, pool := newStore(t)
 	var ids []uuid.UUID
 	for _, email := range []string{"alice@corp.com", "bob@corp.com", "carol@corp.com", "dave@corp.com", "erin@corp.com", "frank@corp.com",
-		"gina@corp.com"} {
+		"gina@corp.com", "hank@corp.com"} {
 		ids = append(ids, newAccount(t, pool, email))
 	}
-	alice, bob, carol, dave, erin, frank, gina := ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], ids[6]
-	acme := newWorkspace(t, pool, "acme")
-	// ops first: its rows come first in the tables, so a join that loses a
-	// predicate reads them before web's.
-	ops := newProject(t, s, acme, "Ops", "OPS", alice)
-	web := newProject(t, s, acme, "Web", "WEB", alice)
+	f := webFixture{s: s, pool: pool, alice: ids[0], bob: ids[1], carol: ids[2], dave: ids[3], erin: ids[4], frank: ids[5], gina: ids[6],
+		hank: ids[7]}
+	f.acme = newWorkspace(t, pool, "acme")
+	f.ops = newProject(t, s, f.acme, "Ops", "OPS", f.alice)
+	f.web = newProject(t, s, f.acme, "Web", "WEB", f.alice)
 	member := func(id, project, user uuid.UUID, role shared.Role, at time.Time, sortOrder float64) {
 		t.Helper()
 		ctx := context.Background()
-		if err := s.CreateMember(ctx, app.MemberRow{ID: id, WorkspaceID: acme, ProjectID: project, MemberID: user, Role: role,
-			CreatedBy: alice, Now: at}); err != nil {
+		if err := s.CreateMember(ctx, app.MemberRow{ID: id, WorkspaceID: f.acme, ProjectID: project, MemberID: user, Role: role,
+			CreatedBy: f.alice, Now: at}); err != nil {
 			t.Fatal(err)
 		}
-		if err := s.CreatePreferences(ctx, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: project, UserID: user,
-			SortOrder: sortOrder, CreatedBy: alice, Now: at}); err != nil {
+		if err := s.CreatePreferences(ctx, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: f.acme, ProjectID: project, UserID: user,
+			SortOrder: sortOrder, CreatedBy: f.alice, Now: at}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, u := range []uuid.UUID{alice, bob, carol, dave, frank, gina} {
-		member(uuid.NewV7(), ops, u, shared.RoleAdmin, now, -1)
+	for _, u := range []uuid.UUID{f.alice, f.bob, f.carol, f.dave, f.frank, f.gina, f.hank} {
+		member(uuid.NewV7(), f.ops, u, shared.RoleAdmin, now, -1)
 	}
-	// In web: carol's membership is stored first but began last; gina's
-	// began with dave's and has the smaller id, stored after his; alice's
-	// began between. bob's ended, frank's was deleted; carol's display
-	// settings were deleted; erin was never a member.
 	ginasID := uuid.NewV7()
-	member(uuid.NewV7(), web, carol, shared.RoleGuest, now.Add(2*time.Minute), 30)
-	member(uuid.NewV7(), web, dave, shared.RoleMember, now, 40)
-	member(ginasID, web, gina, shared.RoleMember, now, 60)
-	member(uuid.NewV7(), web, alice, shared.RoleAdmin, now.Add(time.Minute), 10)
-	member(uuid.NewV7(), web, bob, shared.RoleMember, now, 20)
-	member(uuid.NewV7(), web, frank, shared.RoleMember, now, 50)
-	exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2", web, bob)
-	exec(t, pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", web, frank, now)
-	exec(t, pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", web, carol, now)
-	members := []uuid.UUID{gina, dave, alice, carol}
+	member(uuid.NewV7(), f.web, f.carol, shared.RoleGuest, now.Add(2*time.Minute), 30)
+	member(uuid.NewV7(), f.web, f.dave, shared.RoleMember, now, 40)
+	member(ginasID, f.web, f.gina, shared.RoleMember, now, 60)
+	member(uuid.NewV7(), f.web, f.hank, shared.RoleMember, now, 70)
+	member(uuid.NewV7(), f.web, f.alice, shared.RoleAdmin, now.Add(time.Minute), 10)
+	member(uuid.NewV7(), f.web, f.bob, shared.RoleMember, now, 20)
+	member(uuid.NewV7(), f.web, f.frank, shared.RoleMember, now, 50)
+	exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2", f.web, f.bob)
+	exec(t, pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", f.web, f.frank, now)
+	exec(t, pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", f.web, f.carol, now)
+	return f
+}
+
+// GetProject answers the caller's view (M3 design 3.19): his role and his
+// place in his sidebar only while his membership is active, and the active
+// members in the order they became members, then by the membership's id;
+// on webFixture's web.
+func TestGetProject(t *testing.T) {
+	f := newWebFixture(t)
+	s, pool, web := f.s, f.pool, f.web
+	alice, bob, carol, dave, erin, frank := f.alice, f.bob, f.carol, f.dave, f.erin, f.frank
+	members := []uuid.UUID{f.gina, dave, f.hank, alice, carol}
 	tests := []struct {
 		name      string
 		user      uuid.UUID

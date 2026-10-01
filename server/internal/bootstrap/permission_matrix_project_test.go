@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -31,6 +32,10 @@ func toProject(method, path, body string) func(caller, seeded) (string, string, 
 
 func projectMatrixRows() []matrixRow {
 	return []matrixRow{
+		{op: "listProjects", request: toWorkspace(http.MethodGet, "/projects", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
+			check: listsTheProjects(false)},
+		{op: "listProjects", variant: "archived", request: toWorkspace(http.MethodGet, "/projects?archived=true", ""),
+			cells: inWorkspace(cellOK, cellOK, cellOK), check: listsTheProjects(true)},
 		{op: "createProject", write: true, request: toWorkspace(http.MethodPost, "/projects", `{"name":"New","identifier":"new"}`),
 			cells: inWorkspace(cellCreated, cellCreated, cellForbidden), check: createsItsProject},
 		// A lead who is no member of the workspace is refused after the
@@ -82,6 +87,32 @@ func createsItsProject(t *testing.T, c caller, _ seeded, answer string) {
 	decodeAnswer(t, answer, &p)
 	if p.Identifier != "NEW" || p.MemberRole == nil || *p.MemberRole != 20 || len(p.MemberIDs) != 1 {
 		t.Errorf("%s creates %s; want NEW, with him its admin and only member", c, answer)
+	}
+}
+
+// listsTheProjects: acme's projects the column's caller sees, the archived
+// one alone or the others (9.2): every one to the admin, the public one to
+// the member, those he is a member of to the guest; by name, as every
+// place in a sidebar is the same.
+func listsTheProjects(archived bool) func(t *testing.T, c caller, _ seeded, answer string) {
+	return func(t *testing.T, c caller, _ seeded, answer string) {
+		var list struct {
+			Data []struct {
+				Name string `json:"name"`
+			} `json:"data"`
+		}
+		decodeAnswer(t, answer, &list)
+		var got []string
+		for _, p := range list.Data {
+			got = append(got, p.Name)
+		}
+		want := map[caller][]string{callerAdmin: {"Secret", "Web"}, callerMember: {"Web"}, callerGuest: {"Secret", "Web"}}[c]
+		if archived {
+			want = map[caller][]string{callerAdmin: {"Old"}, callerMember: {"Old"}}[c]
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("%s lists %q, want %q", c, got, want)
+		}
 	}
 }
 

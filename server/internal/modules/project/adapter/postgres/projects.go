@@ -61,11 +61,35 @@ func (s *Store) GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.
 	case err != nil:
 		return domain.Project{}, false, fmt.Errorf("read project %s: %w", id, err)
 	}
+	p, err = projectOf(r)
+	return p, err == nil, err
+}
+
+// ListProjects lists workspaceID's undeleted projects that userID sees
+// with v, the archived ones alone when archived is true and the others
+// otherwise, each as he sees it, in the order of M3 design 3.12.
+func (s *Store) ListProjects(ctx context.Context, workspaceID, userID uuid.UUID, v domain.Visibility, archived bool) ([]domain.Project, error) {
+	rows, err := s.queries(ctx).ListProjects(ctx, gen.ListProjectsParams{UserID: userID, WorkspaceID: workspaceID, Archived: archived,
+		SeesAll: v.All, SeesPublic: v.Public})
+	if err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	list := make([]domain.Project, len(rows))
+	for i, r := range rows {
+		if list[i], err = projectOf(gen.GetProjectRow(r)); err != nil {
+			return nil, err
+		}
+	}
+	return list, nil
+}
+
+// projectOf is the project a row of GetProject, or of ListProjects, holds.
+func projectOf(r gen.GetProjectRow) (domain.Project, error) {
 	var logo domain.LogoProps
 	if err := json.Unmarshal(r.LogoProps, &logo); err != nil {
-		return domain.Project{}, false, fmt.Errorf("read logo_props of project %s: %w", id, err)
+		return domain.Project{}, fmt.Errorf("read logo_props of project %s: %w", r.ID, err)
 	}
-	p = domain.Project{
+	p := domain.Project{
 		ID: r.ID, WorkspaceID: r.WorkspaceID, Name: r.Name, Description: r.Description, Identifier: r.Identifier,
 		Network: domain.Network(r.Network), LeadID: r.ProjectLeadID, DefaultAssigneeID: r.DefaultAssigneeID,
 		CycleView: r.CycleView, ModuleView: r.ModuleView, IssueViewsView: r.IssueViewsView, IntakeView: r.IntakeView,
@@ -76,5 +100,5 @@ func (s *Store) GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.
 		role := shared.Role(*r.MemberRole)
 		p.MemberRole = &role
 	}
-	return p, true, nil
+	return p, nil
 }

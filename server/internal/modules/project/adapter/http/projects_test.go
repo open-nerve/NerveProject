@@ -247,3 +247,31 @@ func TestCheckProjectIdentifier(t *testing.T) {
 		}
 	}
 }
+
+// The caller, the path's workspace and archived, false when absent, go to
+// the use case; the answer is its list, empty as [].
+func TestListProjects(t *testing.T) {
+	list := &fakeList{lists: map[string][]domain.Project{"alice": {web, bare}}}
+	h := newServer(t, fakes{list: list})
+	for _, tt := range []struct {
+		token, query string
+		want         string
+	}{
+		{"alice", "", `{"data":[` + webJSON + `,` + bareJSON + `]}`},
+		{"bob", "?archived=true", `{"data":[]}`},
+		{"bob", "?archived=false", `{"data":[]}`},
+	} {
+		res, body := do(t, h, request(http.MethodGet, "/api/v0/workspaces/acme/projects"+tt.query, tt.token, ""))
+		if res.StatusCode != http.StatusOK || body != tt.want+"\n" {
+			t.Errorf("%s GET %s = %d %s, want 200 %s", tt.token, tt.query, res.StatusCode, body, tt.want)
+		}
+	}
+	if want := []string{"alice acme false", "bob acme true", "bob acme false"}; !slices.Equal(list.calls, want) {
+		t.Errorf("calls = %q, want %q", list.calls, want)
+	}
+	h = newServer(t, fakes{list: &fakeList{err: domain.ErrWorkspaceNotFound}})
+	res, body := do(t, h, request(http.MethodGet, "/api/v0/workspaces/acme/projects", "alice", ""))
+	if want := `{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`; res.StatusCode != http.StatusNotFound || body != want+"\n" {
+		t.Errorf("GET = %d %s, want 404 %s", res.StatusCode, body, want)
+	}
+}

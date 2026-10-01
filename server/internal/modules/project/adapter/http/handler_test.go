@@ -2,6 +2,7 @@ package httpadapter_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -59,9 +60,21 @@ func caller(ctx context.Context) string {
 // fakes are the use cases behind a test server: each records who called it
 // with what, and answers what it is given.
 type fakes struct {
+	list   *fakeList
 	create *fakeCreate
 	get    *fakeGet
 	check  *fakeCheck
+}
+
+type fakeList struct {
+	calls []string // "caller slug archived"
+	lists map[string][]domain.Project
+	err   error
+}
+
+func (f *fakeList) Execute(ctx context.Context, slug string, archived bool) ([]domain.Project, error) {
+	f.calls = append(f.calls, fmt.Sprintf("%s %s %v", caller(ctx), slug, archived))
+	return f.lists[caller(ctx)], f.err
 }
 
 type fakeCreate struct {
@@ -124,6 +137,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if f.list == nil {
+		f.list = &fakeList{}
+	}
 	if f.create == nil {
 		f.create = &fakeCreate{}
 	}
@@ -133,7 +149,8 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
-	httpadapter.Register(router, api, httpadapter.UseCases{CreateProject: f.create, GetProject: f.get, CheckIdentifier: f.check})
+	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
+		CheckIdentifier: f.check})
 	return router
 }
 

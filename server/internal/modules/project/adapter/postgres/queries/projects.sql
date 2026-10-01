@@ -28,3 +28,24 @@ LEFT JOIN project_members m
 LEFT JOIN project_user_properties u
        ON u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL
 WHERE p.id = sqlc.arg(id) AND p.deleted_at IS NULL;
+
+-- name: ListProjects :many
+-- listProjects (M3 design 3.4, 3.12, 3.19): the workspace's undeleted projects that the user sees, the archived ones or
+-- the others, each as GetProject reads it (the same columns, so the rows convert); sees_all and sees_public are his
+-- workspace role's domain.Visibility. By his place in his sidebar, the projects he is not a member of last, then by
+-- name, which is unique among the workspace's undeleted projects.
+SELECT p.id, p.workspace_id, p.name, p.description, p.identifier, p.network, p.project_lead_id, p.default_assignee_id,
+       p.cycle_view, p.module_view, p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in,
+       p.archived_at, p.logo_props, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
+       ARRAY(SELECT a.member_id FROM project_members a
+             WHERE a.project_id = p.id AND a.is_active AND a.deleted_at IS NULL
+             ORDER BY a.created_at, a.id)::uuid[] AS member_ids
+FROM projects p
+LEFT JOIN project_members m
+       ON m.project_id = p.id AND m.member_id = sqlc.arg(user_id) AND m.is_active AND m.deleted_at IS NULL
+LEFT JOIN project_user_properties u
+       ON u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL
+WHERE p.workspace_id = sqlc.arg(workspace_id) AND p.deleted_at IS NULL
+  AND (p.archived_at IS NOT NULL) = sqlc.arg(archived)::boolean
+  AND (sqlc.arg(sees_all)::boolean OR m.id IS NOT NULL OR (sqlc.arg(sees_public)::boolean AND p.network = 2))
+ORDER BY u.sort_order NULLS LAST, p.name;

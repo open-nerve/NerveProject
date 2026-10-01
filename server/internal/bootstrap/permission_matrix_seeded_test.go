@@ -60,7 +60,8 @@ var matrixInvitations = []struct {
 
 // matrixProjects are the projects prepareMatrix seeds through the project
 // store, each by its workspace's admin: acme's public and private ones,
-// and one archived; gone's, deleted with it.
+// and one archived; gone's, deleted with it; other's, which no list of
+// acme's may show.
 var matrixProjects = []struct {
 	key, name, identifier string // key: the workspace's slug / which project
 	network               projectdomain.Network
@@ -69,6 +70,7 @@ var matrixProjects = []struct {
 	{"acme/private", "Secret", "SEC", projectdomain.NetworkPrivate},
 	{"acme/archived", "Old", "OLD", projectdomain.NetworkPublic},
 	{"gone/project", "Web", "WEB", projectdomain.NetworkPublic},
+	{"other/project", "Other", "OTH", projectdomain.NetworkPublic},
 }
 
 // matrixProjectMembers are the project memberships prepareMatrix seeds,
@@ -76,7 +78,7 @@ var matrixProjects = []struct {
 // the project level's members (projectColumns); the removed member, still
 // an active member of the public one, so that only his membership of acme
 // keeps him out; the member before in the private one, ended; the archived
-// project's admin; gone's admin in gone's project.
+// project's admin; each other workspace's admin in its project.
 var matrixProjectMembers = []struct {
 	key  string
 	c    caller
@@ -89,7 +91,7 @@ var matrixProjectMembers = []struct {
 	{"acme/private", callerGuest, shared.RoleGuest}, {"acme/private", callerMemberAndAdmin, shared.RoleMember},
 	{"acme/private", callerBefore, shared.RoleMember},
 	{"acme/archived", callerProjectAdmin, shared.RoleAdmin},
-	{"gone/project", callerDeleted, shared.RoleAdmin},
+	{"gone/project", callerDeleted, shared.RoleAdmin}, {"other/project", callerNever, shared.RoleAdmin},
 }
 
 // ownInvitation is the workspace of the invitation to c's own address: one

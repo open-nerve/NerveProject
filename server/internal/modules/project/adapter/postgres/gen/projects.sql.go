@@ -148,3 +148,107 @@ func (q *Queries) IdentifierTaken(ctx context.Context, arg IdentifierTakenParams
 	err := row.Scan(&exists)
 	return exists, err
 }
+
+const listProjects = `-- name: ListProjects :many
+SELECT p.id, p.workspace_id, p.name, p.description, p.identifier, p.network, p.project_lead_id, p.default_assignee_id,
+       p.cycle_view, p.module_view, p.issue_views_view, p.intake_view, p.guest_view_all_features, p.archive_in,
+       p.archived_at, p.logo_props, p.timezone, p.created_at, p.updated_at, m.role AS member_role, u.sort_order,
+       ARRAY(SELECT a.member_id FROM project_members a
+             WHERE a.project_id = p.id AND a.is_active AND a.deleted_at IS NULL
+             ORDER BY a.created_at, a.id)::uuid[] AS member_ids
+FROM projects p
+LEFT JOIN project_members m
+       ON m.project_id = p.id AND m.member_id = $1 AND m.is_active AND m.deleted_at IS NULL
+LEFT JOIN project_user_properties u
+       ON u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL
+WHERE p.workspace_id = $2 AND p.deleted_at IS NULL
+  AND (p.archived_at IS NOT NULL) = $3::boolean
+  AND ($4::boolean OR m.id IS NOT NULL OR ($5::boolean AND p.network = 2))
+ORDER BY u.sort_order NULLS LAST, p.name
+`
+
+type ListProjectsParams struct {
+	UserID      uuid.UUID
+	WorkspaceID uuid.UUID
+	Archived    bool
+	SeesAll     bool
+	SeesPublic  bool
+}
+
+type ListProjectsRow struct {
+	ID                   uuid.UUID
+	WorkspaceID          uuid.UUID
+	Name                 string
+	Description          string
+	Identifier           string
+	Network              int16
+	ProjectLeadID        *uuid.UUID
+	DefaultAssigneeID    *uuid.UUID
+	CycleView            bool
+	ModuleView           bool
+	IssueViewsView       bool
+	IntakeView           bool
+	GuestViewAllFeatures bool
+	ArchiveIn            int32
+	ArchivedAt           *time.Time
+	LogoProps            []byte
+	Timezone             string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	MemberRole           *int16
+	SortOrder            *float64
+	MemberIds            []uuid.UUID
+}
+
+// listProjects (M3 design 3.4, 3.12, 3.19): the workspace's undeleted projects that the user sees, the archived ones or
+// the others, each as GetProject reads it (the same columns, so the rows convert); sees_all and sees_public are his
+// workspace role's domain.Visibility. By his place in his sidebar, the projects he is not a member of last, then by
+// name, which is unique among the workspace's undeleted projects.
+func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]ListProjectsRow, error) {
+	rows, err := q.db.Query(ctx, listProjects,
+		arg.UserID,
+		arg.WorkspaceID,
+		arg.Archived,
+		arg.SeesAll,
+		arg.SeesPublic,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProjectsRow
+	for rows.Next() {
+		var i ListProjectsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Name,
+			&i.Description,
+			&i.Identifier,
+			&i.Network,
+			&i.ProjectLeadID,
+			&i.DefaultAssigneeID,
+			&i.CycleView,
+			&i.ModuleView,
+			&i.IssueViewsView,
+			&i.IntakeView,
+			&i.GuestViewAllFeatures,
+			&i.ArchiveIn,
+			&i.ArchivedAt,
+			&i.LogoProps,
+			&i.Timezone,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MemberRole,
+			&i.SortOrder,
+			&i.MemberIds,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

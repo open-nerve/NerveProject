@@ -517,7 +517,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a workspace's projects that the caller sees
+         * @description The workspace's projects that the caller sees, each as he sees it: every one, to its admins; to its members, the public ones and those they are members of; to its guests, those they are members of. The archived projects are left out, unless archived is true, which lists them alone. By the caller's place of each in his sidebar, the projects he is not a member of last, then by name. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listProjects"];
         put?: never;
         /**
          * Create a project in a workspace
@@ -1035,22 +1039,6 @@ export interface components {
             emoji?: components["schemas"]["LogoEmoji"];
             icon?: components["schemas"]["LogoIcon"];
         };
-        ProjectCreate: {
-            /** @description 1–255 characters, not all spaces, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
-            name: string;
-            /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
-            identifier: string;
-            description?: string;
-            network?: components["schemas"]["ProjectNetwork"];
-            /**
-             * Format: uuid
-             * @description An active admin or member of the workspace; he becomes an admin of the project.
-             */
-            project_lead_id?: string;
-            logo_props?: components["schemas"]["LogoProps"];
-            /** @description An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given. */
-            timezone?: string;
-        };
         /**
          * @description A member's role in a project, 5 guest, 15 member, 20 admin.
          * @enum {integer}
@@ -1106,6 +1094,25 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ProjectList: {
+            data: components["schemas"]["Project"][];
+        };
+        ProjectCreate: {
+            /** @description 1–255 characters, not all spaces, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
+            name: string;
+            /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
+            identifier: string;
+            description?: string;
+            network?: components["schemas"]["ProjectNetwork"];
+            /**
+             * Format: uuid
+             * @description An active admin or member of the workspace; he becomes an admin of the project.
+             */
+            project_lead_id?: string;
+            logo_props?: components["schemas"]["LogoProps"];
+            /** @description An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given. */
+            timezone?: string;
         };
         IdentifierAvailability: {
             available: boolean;
@@ -1194,9 +1201,10 @@ export type ProjectNetwork = components['schemas']['ProjectNetwork'];
 export type LogoEmoji = components['schemas']['LogoEmoji'];
 export type LogoIcon = components['schemas']['LogoIcon'];
 export type LogoProps = components['schemas']['LogoProps'];
-export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type ProjectRole = components['schemas']['ProjectRole'];
 export type Project = components['schemas']['Project'];
+export type ProjectList = components['schemas']['ProjectList'];
+export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type IdentifierAvailability = components['schemas']['IdentifierAvailability'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
@@ -1978,6 +1986,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspacePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjects: {
+        parameters: {
+            query?: {
+                /** @description true lists the archived projects alone; false, or no value, the others. */
+                archived?: boolean;
+            };
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The projects. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectList"];
                 };
             };
             default: components["responses"]["Problem"];

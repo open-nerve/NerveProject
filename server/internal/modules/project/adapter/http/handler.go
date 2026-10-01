@@ -13,6 +13,11 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
 )
 
+// ListProjectsUseCase is app.ListProjects.
+type ListProjectsUseCase interface {
+	Execute(ctx context.Context, slug string, archived bool) ([]domain.Project, error)
+}
+
 // CreateProjectUseCase is app.CreateProject.
 type CreateProjectUseCase interface {
 	Execute(ctx context.Context, slug string, in domain.NewProject) (domain.Project, error)
@@ -30,6 +35,7 @@ type CheckIdentifierUseCase interface {
 
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
+	ListProjects    ListProjectsUseCase
 	CreateProject   CreateProjectUseCase
 	GetProject      GetProjectUseCase
 	CheckIdentifier CheckIdentifierUseCase

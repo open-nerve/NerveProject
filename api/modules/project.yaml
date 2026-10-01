@@ -8,6 +8,38 @@ paths:
   /api/v0/workspaces/{slug}/projects:
     parameters:
       - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listProjects
+      tags: [project]
+      summary: List a workspace's projects that the caller sees
+      description: >-
+        The workspace's projects that the caller sees, each as he sees it:
+        every one, to its admins; to its members, the public ones and those
+        they are members of; to its guests, those they are members of. The
+        archived projects are left out, unless archived is true, which lists
+        them alone. By the caller's place of each in his sidebar, the
+        projects he is not a member of last, then by name. A workspace that
+        does not exist, is deleted, or of which the caller is not an active
+        member answers workspace.not_found. The whole collection at once:
+        collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found]
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived projects alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The projects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createProject
       tags: [project]
@@ -277,6 +309,15 @@ components:
         updated_at:
           type: string
           format: date-time
+    ProjectList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
     IdentifierAvailability:
       type: object
       additionalProperties: false
