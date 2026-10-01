@@ -3,10 +3,12 @@ package apitest
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"testing"
@@ -35,8 +37,11 @@ func adapterDir(module string) string {
 }
 
 // mainViolations reports what keeps the tests in dir from running through
-// Main for module: no TestMain in its _test.go files, or one whose body is
-// not the one call Main(m, "<module>") with its own *testing.M.
+// Main for module. It reads the _test.go files the build takes
+// (go/build.Default.MatchFile: a file its constraints leave out never runs),
+// and reports no TestMain function in them, or one whose file does not
+// import this package as apitest or whose body is not the one call
+// apitest.Main(m, "<module>") with its own *testing.M.
 func mainViolations(dir, module string) []string {
 	paths, err := filepath.Glob(filepath.Join(dir, "*_test.go"))
 	if err != nil {
@@ -45,6 +50,13 @@ func mainViolations(dir, module string) []string {
 	var found []string
 	mains := 0
 	for _, path := range paths {
+		built, err := build.Default.MatchFile(dir, filepath.Base(path))
+		if err != nil {
+			return []string{err.Error()}
+		}
+		if !built {
+			continue
+		}
 		f, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
 		if err != nil {
 			return []string{err.Error()}
@@ -52,7 +64,7 @@ func mainViolations(dir, module string) []string {
 		for _, d := range f.Decls {
 			if fn, ok := d.(*ast.FuncDecl); ok && fn.Recv == nil && fn.Name.Name == "TestMain" {
 				mains++
-				if !callsMain(fn, module) {
+				if !importsThisPackage(f) || !callsMain(fn, module) {
 					found = append(found, fmt.Sprintf("%s: TestMain is not apitest.Main(m, %q)", path, module))
 				}
 			}
@@ -62,6 +74,24 @@ func mainViolations(dir, module string) []string {
 		found = append(found, fmt.Sprintf("%s has no TestMain: write func TestMain(m *testing.M) { apitest.Main(m, %q) }", dir, module))
 	}
 	return found
+}
+
+// importsThisPackage reports whether f imports this package under the name
+// apitest, its own or given. Then apitest in f is this package: the name
+// of a file's import cannot also be declared in its package.
+func importsThisPackage(f *ast.File) bool {
+	for _, spec := range f.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err == nil && path == thisPackage() && (spec.Name == nil || spec.Name.Name == "apitest") {
+			return true
+		}
+	}
+	return false
+}
+
+// thisPackage is this package's import path, as the module names it.
+func thisPackage() string {
+	return reflect.TypeFor[Contract]().PkgPath()
 }
 
 // callsMain reports whether fn's body is the one statement
@@ -93,7 +123,7 @@ func callsMain(fn *ast.FuncDecl, module string) bool {
 // Each check of mainViolations fails on its counterexample, and a package
 // that runs through Main passes.
 func TestMainViolationsCatchesEachGap(t *testing.T) {
-	const head = "package p_test\n\nimport (\n\t\"os\"\n\t\"testing\"\n\n\t\"x/apitest\"\n)\n\nvar _ = os.Exit\n\n"
+	head := "package p_test\n\nimport (\n\t\"os\"\n\t\"testing\"\n\n\t\"" + thisPackage() + "\"\n)\n\nvar _ = os.Exit\n\n"
 	tests := []struct {
 		name  string
 		files map[string]string
@@ -112,6 +142,23 @@ func TestMainViolationsCatchesEachGap(t *testing.T) {
 			[]string{"DIR/handler_test.go: TestMain is not apitest.Main(m, \"project\")"}},
 		{"another M", map[string]string{"handler_test.go": head + "var other *testing.M\n\nfunc TestMain(m *testing.M) { apitest.Main(other, \"project\") }\n"},
 			[]string{"DIR/handler_test.go: TestMain is not apitest.Main(m, \"project\")"}},
+		{"another package's Main", map[string]string{"handler_test.go": head + "func TestMain(m *testing.M) { other.Main(m, \"project\") }\n"},
+			[]string{"DIR/handler_test.go: TestMain is not apitest.Main(m, \"project\")"}},
+		{"another function of apitest", map[string]string{"handler_test.go": head + "func TestMain(m *testing.M) { apitest.Run(m, \"project\") }\n"},
+			[]string{"DIR/handler_test.go: TestMain is not apitest.Main(m, \"project\")"}},
+		{"a method named TestMain only", map[string]string{"handler_test.go": head +
+			"type s struct{}\n\nfunc (s) TestMain(m *testing.M) { apitest.Main(m, \"project\") }\n"},
+			[]string{"DIR has no TestMain: write func TestMain(m *testing.M) { apitest.Main(m, \"project\") }"}},
+		{"another package as apitest, this one under another name", map[string]string{"handler_test.go": "package p_test\n\nimport (\n\t\"testing\"\n\n" +
+			"\tat \"" + thisPackage() + "\"\n\tapitest \"x/othertest\"\n)\n\nvar _ = at.Main\n\nfunc TestMain(m *testing.M) { apitest.Main(m, \"project\") }\n"},
+			[]string{"DIR/handler_test.go: TestMain is not apitest.Main(m, \"project\")"}},
+		{"apitest declared by a sibling file", map[string]string{
+			"handler_test.go": "package p_test\n\nimport \"testing\"\n\nfunc TestMain(m *testing.M) { apitest.Main(m, \"project\") }\n",
+			"vars_test.go":    "package p_test\n\nimport \"testing\"\n\nvar apitest struct{ Main func(*testing.M, string) }\n"},
+			[]string{"DIR/handler_test.go: TestMain is not apitest.Main(m, \"project\")"}},
+		{"a TestMain the build leaves out", map[string]string{"handler_test.go": "//go:build never\n\n" + head +
+			"func TestMain(m *testing.M) { apitest.Main(m, \"project\") }\n", "other_test.go": head + "func TestOther(t *testing.T) {}\n"},
+			[]string{"DIR has no TestMain: write func TestMain(m *testing.M) { apitest.Main(m, \"project\") }"}},
 	}
 	for _, tt := range tests {
 		dir := t.TempDir()
