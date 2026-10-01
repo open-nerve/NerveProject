@@ -80,6 +80,11 @@ func projectMatrixRows() []matrixRow {
 			cells: ofProject(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: archivesItsProject(false)},
 		{op: "unarchiveProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/unarchive", ""),
 			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: archivesItsProject(false)},
+		// As updateProject; an archived project is deleted as any other.
+		{op: "deleteProject", write: true, columns: projectColumns, request: toProject(http.MethodDelete, "", ""),
+			cells: ofProject(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		{op: "deleteProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodDelete, "", ""),
+			cells: map[caller]cell{callerArchivedAdmin: cellNoContent}},
 	}
 }
 

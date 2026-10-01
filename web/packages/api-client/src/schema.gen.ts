@@ -576,7 +576,11 @@ export interface paths {
         get: operations["getProject"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a project
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings and its states, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
+         */
+        delete: operations["deleteProject"];
         options?: never;
         head?: never;
         /**
@@ -2172,6 +2176,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Project"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

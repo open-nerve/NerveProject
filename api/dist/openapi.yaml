@@ -904,6 +904,22 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteProject
+      tags:
+        - project
+      summary: Delete a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings and its states, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '204':
+          description: The project is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/archive:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

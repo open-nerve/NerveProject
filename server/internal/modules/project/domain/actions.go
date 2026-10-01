@@ -22,6 +22,8 @@ const (
 	ActionArchive shared.Action = "project.archive"
 	// ActionUnarchive is unarchiving a project: unarchiveProject.
 	ActionUnarchive shared.Action = "project.unarchive"
+	// ActionDelete is deleting a project: deleteProject.
+	ActionDelete shared.Action = "project.delete"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -29,5 +31,5 @@ const (
 // Each operation adds its action here with its row.
 func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
-		ActionUnarchive}
+		ActionUnarchive, ActionDelete}
 }

@@ -97,6 +97,14 @@ func (h handler) UnarchiveProject(ctx context.Context, req gen.UnarchiveProjectR
 	return gen.UnarchiveProject200JSONResponse(project(p)), nil
 }
 
+// DeleteProject serves DELETE /api/v0/projects/{project_id}.
+func (h handler) DeleteProject(ctx context.Context, req gen.DeleteProjectRequestObject) (gen.DeleteProjectResponseObject, error) {
+	if err := h.uc.DeleteProject.Execute(ctx, req.ProjectID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteProject204Response{}, nil
+}
+
 // named reports whether the body names v, and its id: nil when it is null.
 func named(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
 	if !v.IsSpecified() {

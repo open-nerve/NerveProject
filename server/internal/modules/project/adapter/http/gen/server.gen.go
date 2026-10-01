@@ -258,6 +258,9 @@ type CreateProjectJSONRequestBody = ProjectCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// DeleteProject Delete a project
+	// (DELETE /api/v0/projects/{project_id})
+	DeleteProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// GetProject Read a project
 	// (GET /api/v0/projects/{project_id})
 	GetProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -289,6 +292,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DeleteProject operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetProject operation middleware
 func (siw *ServerInterfaceWrapper) GetProject(w http.ResponseWriter, r *http.Request) {
@@ -620,6 +649,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/projects", wrapper.ListProjects)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/projects", wrapper.CreateProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/project-identifiers/{identifier}", wrapper.CheckProjectIdentifier)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.DeleteProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.GetProject)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.UpdateProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/archive", wrapper.ArchiveProject)
@@ -636,6 +666,46 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type DeleteProjectRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type DeleteProjectResponseObject interface {
+	VisitDeleteProjectResponse(w http.ResponseWriter) error
+}
+
+type DeleteProject204Response struct {
+}
+
+func (response DeleteProject204Response) VisitDeleteProjectResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteProjectdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteProjectdefaultApplicationProblemPlusJSONResponse) VisitDeleteProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetProjectRequestObject struct {
@@ -966,6 +1036,9 @@ func (response CreateProjectdefaultApplicationProblemPlusJSONResponse) VisitCrea
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// DeleteProject Delete a project
+	// (DELETE /api/v0/projects/{project_id})
+	DeleteProject(ctx context.Context, request DeleteProjectRequestObject) (DeleteProjectResponseObject, error)
 	// GetProject Read a project
 	// (GET /api/v0/projects/{project_id})
 	GetProject(ctx context.Context, request GetProjectRequestObject) (GetProjectResponseObject, error)
@@ -1026,6 +1099,32 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// DeleteProject operation middleware
+func (sh *strictHandler) DeleteProject(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request DeleteProjectRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteProject(ctx, request.(DeleteProjectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteProject")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteProjectResponseObject); ok {
+		if err := validResponse.VisitDeleteProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetProject operation middleware

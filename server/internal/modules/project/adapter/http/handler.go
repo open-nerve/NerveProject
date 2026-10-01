@@ -44,6 +44,11 @@ type ArchiveProjectUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Project, error)
 }
 
+// DeleteProjectUseCase is app.DeleteProject.
+type DeleteProjectUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects     ListProjectsUseCase
@@ -53,6 +58,7 @@ type UseCases struct {
 	UpdateProject    UpdateProjectUseCase
 	ArchiveProject   ArchiveProjectUseCase
 	UnarchiveProject ArchiveProjectUseCase
+	DeleteProject    DeleteProjectUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

@@ -67,6 +67,7 @@ type fakes struct {
 	update    *fakeUpdate
 	archive   *fakeOnProject
 	unarchive *fakeOnProject
+	delete    *fakeDelete
 }
 
 type fakeList struct {
@@ -146,6 +147,16 @@ func (f *fakeOnProject) Execute(ctx context.Context, id uuid.UUID) (domain.Proje
 	return f.answer, f.err
 }
 
+type fakeDelete struct {
+	calls []string // "caller id"
+	err   error
+}
+
+func (f *fakeDelete) Execute(ctx context.Context, id uuid.UUID) error {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	return f.err
+}
+
 // newServer serves the module with f; a fake left nil is an idle one.
 func newServer(t *testing.T, f fakes) http.Handler {
 	t.Helper()
@@ -186,8 +197,11 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.unarchive == nil {
 		f.unarchive = &fakeOnProject{}
 	}
+	if f.delete == nil {
+		f.delete = &fakeDelete{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
-		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive})
+		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive, DeleteProject: f.delete})
 	return router
 }
 

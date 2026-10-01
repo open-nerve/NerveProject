@@ -72,9 +72,10 @@ var rules = map[shared.Action]Rule{
 	// The project's admins, and its members who are the workspace's admins
 	// (M3 design 3.4: a project-level rule, which Plane's pages hold).
 	"project.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
-	// As project.update (M3 design 3.4, §12 P4b).
+	// As project.update (M3 design 3.4, 9.2).
 	"project.archive":   {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	"project.unarchive": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	"project.delete":    {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its
