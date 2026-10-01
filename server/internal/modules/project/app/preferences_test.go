@@ -58,9 +58,8 @@ func TestGetProjectPreferences(t *testing.T) {
 }
 
 // Refusals, each in its place: no caller; a project not there, or not
-// visible: 404; a workspace admin who is not its member: the Authorizer's
-// 403. Every port's failure comes back as itself, after the calls before it
-// and none after.
+// visible: 404; a caller the Authorizer refuses: its 403. Every port's
+// failure comes back as itself, after the calls before it and none after.
 func TestGetProjectPreferencesRefuses(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -143,10 +142,11 @@ func TestUpdateProjectPreferences(t *testing.T) {
 }
 
 // Refusals, each in its place, and nothing changed: an unknown tab, and no
-// caller, before the transaction; a project not there, or not visible: 404;
-// a workspace admin who is not its member: 403. Every port's failure comes
-// back as itself, the commit's too, after the calls before it and none
-// after.
+// caller, before the transaction; a project not there, deleted while its
+// FOR SHARE waited, of another workspace by the time it is shared, or not
+// visible: 404; a caller the Authorizer refuses: its 403. Every port's
+// failure comes back as itself, the commit's too, after the calls before it
+// and none after.
 func TestUpdateProjectPreferencesRefuses(t *testing.T) {
 	in := domain.PreferencesPatch{SortOrder: ptr(1.0)}
 	all := changed(bob, webID, in)
@@ -163,6 +163,8 @@ func TestUpdateProjectPreferencesRefuses(t *testing.T) {
 			shared.Invalid(shared.FieldError{Field: "navigation.default_tab", Code: "invalid_format"}), nil},
 		{"no caller", context.Background(), webID, in, nil, shared.Unauthenticated(), nil},
 		{"no project", as(bob), uuid.Nil(), in, nil, domain.ErrNotFound, noProject},
+		{"moved to another workspace", as(bob), webID, in, nil, domain.ErrNotFound, append(lockedTo(webID), "ShareProject "+webID.String())},
+		{"deleted while its lock waited", as(bob), webID, in, nil, domain.ErrNotFound, append(lockedTo(webID), "ShareProject "+webID.String())},
 		{"not seen", as(erin), webID, in, nil, domain.ErrNotFound, changed(erin, webID, in)[:5]},
 		{"forbidden", as(alice), webID, in, nil, shared.Forbidden(), changed(alice, webID, in)[:5]},
 		{"the lock failing", as(bob), webID, in, func(f *writeFixture) { f.store.errs = map[string]error{"ShareProject": errDisk} }, errDisk, all[:4]},
@@ -176,6 +178,10 @@ func TestUpdateProjectPreferencesRefuses(t *testing.T) {
 			uc, f := newUpdatePreferences()
 			if tt.fail != nil {
 				tt.fail(f)
+			}
+			f.store.deleted = tt.name == "deleted while its lock waited"
+			if tt.name == "moved to another workspace" {
+				f.store.moved = uuid.NewV7()
 			}
 			got, err := uc.Execute(tt.ctx, tt.id, tt.in)
 			if !refusedAs(err, tt.want) || !reflect.DeepEqual(got, domain.Preferences{}) || !slices.Equal(f.log.calls, tt.calls) {

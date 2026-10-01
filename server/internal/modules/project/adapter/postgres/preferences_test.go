@@ -143,8 +143,9 @@ func TestPreferences(t *testing.T) {
 // UpsertPreferences inserts the account's row while he has no undeleted
 // one, the defaults with the change applied, made and last changed by him
 // at the moment given; with a row, it changes the fields the change gives,
-// the navigation whole, and the audit columns, to him and that moment even
-// when another account made the row, and leaves the rest. The
+// the navigation whole or the place alone, and the audit columns, to him
+// and that moment even when another account made the row, and leaves the
+// rest. The
 // answer is the row as stored. A navigation that hides nothing, its list
 // nil, is stored and answered as an empty list, never null (M3 design 4.8).
 // Every other row keeps every column: another account's in the project,
@@ -213,8 +214,18 @@ func TestUpsertPreferences(t *testing.T) {
 		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: -5.5}) {
 		t.Errorf("a change hiding nothing (nil) = %+v; want cycles, nothing hidden ([]), still at -5.5", got)
 	}
-	if got, want := row()["preferences"], `{"navigation": {"default_tab": "cycles", "hide_in_more_menu": []}}`; got != want {
+	hidden := row()
+	if got, want := hidden["preferences"], `{"navigation": {"default_tab": "cycles", "hide_in_more_menu": []}}`; got != want {
 		t.Errorf("the row after a change hiding nothing (nil): preferences %s, want %s", got, want)
+	}
+	// The place alone, as a reorder in the sidebar changes it: the navigation stays.
+	reordered := later.Add(3 * time.Hour)
+	if got := upsert(domain.PreferencesPatch{SortOrder: ptr(2.25)}, reordered); !reflect.DeepEqual(got,
+		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: 2.25}) {
+		t.Errorf("a change of the place alone = %+v; want cycles, nothing hidden, at 2.25", got)
+	}
+	if got, want := row(), changed(hidden, map[string]string{"sort_order": "2.25", "updated_at": stamp(reordered)}); !maps.Equal(got, want) {
+		t.Errorf("after a change of the place alone: %v\nwant %v", got, want)
 	}
 	if after := tableRows(t, pool, "project_user_properties", id); after != others {
 		t.Errorf("the other rows:\n%s\nwant\n%s", after, others)
