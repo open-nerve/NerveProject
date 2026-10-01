@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -172,20 +171,29 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 // profile, and a member without an account each fail the transaction, which
 // the database then rolls back, the role's change with it:
 // the answer is the error, never a member and never a problem of the
-// contract (so a 500); a failure is the one injected, and nothing runs
-// after the failing call.
+// contract (so a 500); a failure is the one injected. The calls are the
+// change's own, each once and in the transaction, up to the failing one:
+// nothing runs after it, and it is not tried again.
 func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 	failure := errors.New("connection reset")
+	at := clockNow.Format(time.RFC3339Nano)
+	calls := slices.Concat(lockedMemberCalls(alice, bobInAcme), []string{
+		fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
+		fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at),
+		fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}),
+	})
+	decided := len(lockedMemberCalls(alice, bobInAcme))
 	tests := []struct {
-		name string
-		set  func(f *membersFixture)
-		want error  // the injected failure; nil for the use case's own error
-		last string // the failing call, the last one
+		name  string
+		set   func(f *membersFixture)
+		want  error    // the injected failure; nil for the use case's own error
+		calls []string // up to the failing call, the last one
 	}{
-		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure, "UpdateMemberRole"},
-		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"DemoteToGuest": failure} }, failure, "DemoteToGuest"},
-		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure, "PublicProfiles"},
-		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil, "PublicProfiles"},
+		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure, calls[:decided+1]},
+		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"DemoteToGuest": failure} }, failure,
+			calls[:decided+2]},
+		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure, calls},
+		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil, calls},
 	}
 	for _, tt := range tests {
 		uc, f, tx := newUpdateMember()
@@ -198,11 +206,8 @@ func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 		if tt.want != nil && !errors.Is(err, tt.want) {
 			t.Errorf("%s failing: Execute() = %v, want %v", tt.name, err, tt.want)
 		}
-		if slices.ContainsFunc(f.log.calls, func(c string) bool { return strings.HasSuffix(c, " outside tx") }) {
-			t.Errorf("%s failing: calls %q, want all in the transaction", tt.name, f.log.calls)
-		}
-		if n := len(f.log.calls); n == 0 || !strings.HasPrefix(f.log.calls[n-1], tt.last+" ") {
-			t.Errorf("%s failing: calls %q, want %s last", tt.name, f.log.calls, tt.last)
+		if !slices.Equal(f.log.calls, tt.calls) {
+			t.Errorf("%s failing: calls\n%q\nwant\n%q", tt.name, f.log.calls, tt.calls)
 		}
 	}
 	uc, f, _ := newUpdateMember()

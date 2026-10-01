@@ -74,9 +74,10 @@ func TestCreateProjectStoresTheRow(t *testing.T) {
 	}
 }
 
-// The four values of logo_props the CHECK accepts (M3 design 4.6) come
-// back as they were stored: no icon, an emoji only, an icon only, every
-// key.
+// The four values of logo_props the CHECK accepts (M3 design 4.6), and the
+// web app's create body, come back as they were stored: no icon, an emoji
+// only, an icon only, every key, and an emoji in use
+// (core/components/projects/create/utils.ts:14-19).
 func TestCreateProjectKeepsTheLogo(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -87,6 +88,7 @@ func TestCreateProjectKeepsTheLogo(t *testing.T) {
 		{Icon: &domain.Icon{Name: ptr("home"), Color: ptr("#6d7b8a")}},
 		{InUse: ptr("icon"), Emoji: &domain.Emoji{Value: ptr("128640"), URL: ptr("https://example.com/e.png")},
 			Icon: &domain.Icon{Name: ptr("home"), Color: ptr("#6d7b8a"), BackgroundColor: ptr("#ffffff")}},
+		{InUse: ptr("emoji"), Emoji: &domain.Emoji{Value: ptr("128640")}},
 	} {
 		id, name := uuid.NewV7(), "P"+string(rune('A'+i))
 		err := s.CreateProject(context.Background(), app.ProjectRow{
@@ -264,7 +266,8 @@ func TestGetProject(t *testing.T) {
 // GetProject reads each column as stored, the ones a new project has at
 // their defaults too: five projects, each with another of the five views
 // on, so that a view read as another, or not at all, differs in one; each
-// with a default assignee, an archive_in and an updated_at of its own.
+// with bob as its default assignee, and an archive_in and an updated_at of
+// its own.
 func TestGetProjectReadsEveryColumn(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")

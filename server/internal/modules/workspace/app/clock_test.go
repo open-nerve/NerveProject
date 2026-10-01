@@ -72,8 +72,9 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			fmt.Sprintf("DeleteInvitation %s by %s at %s", daveToAcme.ID, alice.ID, at))},
 		{"acceptWorkspaceInvitation", func() ([]string, error) {
 			f := responding(frankToAcme)
-			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations, Tx: f.tx,
-				Clock: clockAt{clockNow, f.log}, MAC: f.mac}).Execute(as(frank), frankToAcme.ID, tokenOf(f.mac, frankToAcme.ID))
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations,
+				Projects: f.projects, Tx: f.tx, Clock: clockAt{clockNow, f.log}, MAC: f.mac}).
+				Execute(as(frank), frankToAcme.ID, tokenOf(f.mac, frankToAcme.ID))
 			return f.log.calls, err
 		}, append(respondedCalls(frank, frankToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
 			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", frank.ID, acme.ID, shared.RoleMember, frank.ID, at),

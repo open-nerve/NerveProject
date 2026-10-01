@@ -15,7 +15,7 @@ import (
 
 // The accounts and workspaces of createProject's tests: alice is acme's
 // member, bob its admin, carol its guest, dave not an active member; erin
-// is beta's admin.
+// is beta's admin, dave its member.
 var (
 	alice, bob, carol, dave, erin = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	acme                          = app.Workspace{ID: uuid.NewV7(), Timezone: "Asia/Shanghai"}
@@ -164,8 +164,9 @@ func TestCreateProjectStoresTheDefaultStates(t *testing.T) {
 // Refusals, each in its place, and nothing written:
 //   - the request's values, before the clock or the transaction;
 //   - a workspace not there, or not visible: 404 workspace.not_found,
-//     before the members' lock;
-//   - a guest: the Authorizer's 403, before the members' lock;
+//     before the members' lock, whatever lead the request names;
+//   - a guest: the Authorizer's 403, before the members' lock, a lead
+//     who is no member too;
 //   - a lead who is not an active admin or member of the workspace: 422,
 //     after the decision and the members' lock.
 func TestCreateProjectRefuses(t *testing.T) {
@@ -190,6 +191,8 @@ func TestCreateProjectRefuses(t *testing.T) {
 		{"a workspace he is not in", dave, "acme", domain.NewProject{Name: "Web", Identifier: "WEB"}, domain.ErrWorkspaceNotFound,
 			decided(dave, acme, "acme")},
 		{"a guest", carol, "acme", domain.NewProject{Name: "Web", Identifier: "WEB"}, shared.Forbidden(), decided(carol, acme, "acme")},
+		{"a guest naming a non-member lead", carol, "acme", leadIs(dave), shared.Forbidden(), decided(carol, acme, "acme")},
+		{"an outsider naming a lead", dave, "acme", leadIs(bob), domain.ErrWorkspaceNotFound, decided(dave, acme, "acme")},
 		{"a guest as the lead", alice, "acme", leadIs(carol), domain.LeadNotAllowed(),
 			append(decided(alice, acme, "acme"), fmt.Sprintf("ShareMembers %s %v", acme.ID, []uuid.UUID{alice, carol}))},
 		{"no active member as the lead", alice, "acme", leadIs(dave), domain.LeadNotAllowed(),
