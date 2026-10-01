@@ -22,3 +22,11 @@ func (f *fakeProjects) DeleteWorkspaceProjects(ctx context.Context, workspaceID,
 	}
 	return nil
 }
+
+func (f *fakeProjects) DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "DemoteToGuest %s %s by %s at %s", workspaceID, userID, by, now.Format(time.RFC3339Nano))
+	if err := f.errs["DemoteToGuest"]; err != nil {
+		return fmt.Errorf("demote the member's project memberships: %w", err)
+	}
+	return nil
+}

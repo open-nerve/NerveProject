@@ -14,6 +14,7 @@ import (
 // /api/v0/workspace-members/{workspace_member_id}.
 type UpdateWorkspaceMember struct {
 	members  MemberUpdater
+	projects ProjectCascade
 	profiles MemberProfiles
 	auth     shared.Authorizer
 	tx       shared.TxManager
@@ -21,9 +22,9 @@ type UpdateWorkspaceMember struct {
 }
 
 // NewUpdateWorkspaceMember returns the use case.
-func NewUpdateWorkspaceMember(members MemberUpdater, profiles MemberProfiles, auth shared.Authorizer, tx shared.TxManager,
-	clock Clock) *UpdateWorkspaceMember {
-	return &UpdateWorkspaceMember{members: members, profiles: profiles, auth: auth, tx: tx, clock: clock}
+func NewUpdateWorkspaceMember(members MemberUpdater, projects ProjectCascade, profiles MemberProfiles, auth shared.Authorizer,
+	tx shared.TxManager, clock Clock) *UpdateWorkspaceMember {
+	return &UpdateWorkspaceMember{members: members, projects: projects, profiles: profiles, auth: auth, tx: tx, clock: clock}
 }
 
 // Execute checks role, then in one transaction (M3 design 3.6): the
@@ -32,10 +33,12 @@ func NewUpdateWorkspaceMember(members MemberUpdater, profiles MemberProfiles, au
 // workspace_member.update, then the checks on the target, which only a
 // caller allowed to change roles gets to see: an ended membership is
 // workspace.member_not_found, the caller's own workspace.own_membership;
-// then the change, at the time the clock gives under the lock.
+// then the change, at the time the clock gives under the lock. A change to
+// guest then makes him a guest in each of the workspace's projects he has a
+// membership of, ended ones too (ProjectCascade.DemoteToGuest, M3 design
+// 3.3), at the same time; a failure there rolls the change back.
 // The answer carries the member's profile, read without a lock (M3 design
 // 3.6 convention 1) before the commit, so a failed read changes nothing.
-// Demoting to guest does not touch projects yet: P4 adds that cascade here.
 func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -60,8 +63,14 @@ func (u *UpdateWorkspaceMember) Execute(ctx context.Context, id uuid.UUID, role 
 		case m.MemberID == actor.UserID:
 			return domain.ErrOwnMembership
 		}
-		if m, err = u.members.UpdateMemberRole(ctx, m.ID, role, actor.UserID, u.clock.Now()); err != nil {
+		now := u.clock.Now()
+		if m, err = u.members.UpdateMemberRole(ctx, m.ID, role, actor.UserID, now); err != nil {
 			return err
+		}
+		if role == shared.RoleGuest {
+			if err := u.projects.DemoteToGuest(ctx, m.WorkspaceID, m.MemberID, actor.UserID, now); err != nil {
+				return err
+			}
 		}
 		updated, err = u.withProfile(ctx, m, grant.WorkspaceRole)
 		return err

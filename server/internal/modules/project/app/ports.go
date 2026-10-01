@@ -136,6 +136,20 @@ type StateRow struct {
 	Now         time.Time
 }
 
+// MemberDemoter makes an account a guest in a workspace's projects (M3
+// design 3.3, 3.6): his projects locked first, then his memberships of them
+// in one statement. Each method runs in the transaction ctx carries.
+type MemberDemoter interface {
+	// LockMemberProjects locks FOR NO KEY UPDATE, in id order, workspaceID's
+	// undeleted projects in which userID has an undeleted membership, active
+	// or not, and returns their ids.
+	LockMemberProjects(ctx context.Context, workspaceID, userID uuid.UUID) ([]uuid.UUID, error)
+	// DemoteMemberships sets role 5, updated_at now and updated_by_id by on
+	// userID's undeleted memberships of projectIDs, active or not, that are
+	// not a guest's already.
+	DemoteMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+}
+
 // WorkspaceProjectsDeleter soft-deletes a workspace's projects and the rows
 // under them, one statement a table, in the order of M3 design 3.6. Each
 // sets deleted_at and updated_at to now and updated_by_id to by, on the

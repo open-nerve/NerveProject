@@ -18,7 +18,8 @@ import (
 // (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
 // the one it waited for. The deletion's cascade uses that one read for
-// every step. The clock logs its read among the fakes' calls.
+// every step, and a change to guest for the projects' step. The clock logs
+// its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
 	tests := []struct {
@@ -48,11 +49,12 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 		}, slices.Concat(lockedDecision(alice, acme, "LockWorkspaceBySlug", domain.ActionDelete), []string{"Now"}, cascadeCalls(alice, acme))},
 		{"updateWorkspaceMember", func() ([]string, error) {
 			f := newMembers()
-			_, err := app.NewUpdateWorkspaceMember(f.workspaces, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).
+			_, err := app.NewUpdateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).
 				Execute(as(alice), bobInAcme.ID, shared.RoleGuest)
 			return f.log.calls, err
 		}, append(lockedMemberCalls(alice, bobInAcme), "Now",
 			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
+			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))},
 		{"updateWorkspaceInvitation", func() ([]string, error) {
 			f := newInvitations()

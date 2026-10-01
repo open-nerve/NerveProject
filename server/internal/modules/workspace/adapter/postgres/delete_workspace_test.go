@@ -187,12 +187,16 @@ func (failingSettings) DeleteWorkspacePreferences(context.Context, uuid.UUID, uu
 	return errDiskFull
 }
 
-// noProjects is the project module's cascade, the last step, which the
-// failure comes before.
+// noProjects is the project module's cascade: the deletion's last step,
+// which the failure comes before; a deletion demotes no one.
 type noProjects struct{}
 
 func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
 	return errors.New("the projects' step ran after the failed one")
+}
+
+func (noProjects) DemoteToGuest(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, time.Time) error {
+	return errors.New("a deletion demoted a member")
 }
 
 // allowAll allows every action, as the workspace's admin.

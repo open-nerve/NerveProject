@@ -11,6 +11,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -84,10 +85,11 @@ func newAdminRace(t *testing.T) adminRace {
 	return r
 }
 
-// change is updateWorkspaceMember over members, with identity's profiles and
-// the Authorizer as bootstrap wires them.
+// change is updateWorkspaceMember over members, with project's cascade,
+// identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.UpdateWorkspaceMember {
-	return workspaceapp.NewUpdateWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
+	return workspaceapp.NewUpdateWorkspaceMember(members, project.New(project.Deps{Pool: r.pool}).Cascade(),
+		workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
 		access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}),
 		postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now()))
 }

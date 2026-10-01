@@ -15,13 +15,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// membersFixture is ListWorkspaceMembers over fakes sharing one log. acme's
+// membersFixture is ListWorkspaceMembers over fakes sharing one log, with
+// the projects' cascade that UpdateWorkspaceMember takes besides. acme's
 // memberships: alice (admin), bob (member), carol's ended one (guest, her
 // account deactivated); beta's: bob alone. The Authorizer gives alice admin
 // in acme, bob member in acme and guest in beta.
 type membersFixture struct {
 	log        *callLog
 	workspaces *fakeWorkspaces
+	projects   *fakeProjects
 	profiles   *fakeProfiles
 	auth       *fakeAuthorizer
 	uc         *app.ListWorkspaceMembers
@@ -46,6 +48,7 @@ func newMembers() *membersFixture {
 		workspaces: &fakeWorkspaces{log: log, workspaces: []domain.Workspace{acme, beta}, memberships: map[uuid.UUID][]domain.Membership{
 			acme.ID: {aliceInAcme, bobInAcme, carolInAcme}, beta.ID: {bobInBeta},
 		}},
+		projects: &fakeProjects{log: log},
 		profiles: &fakeProfiles{log: log, profiles: profiles},
 		auth: &fakeAuthorizer{log: log, grants: map[grantKey]shared.Grant{
 			{alice.ID, acme.ID}: {WorkspaceRole: shared.RoleAdmin},

@@ -30,6 +30,9 @@ type Cascade interface {
 	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
 	// rows under them: deleteWorkspace's last step.
 	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// DemoteToGuest makes userID a guest in each of the workspace's projects
+	// he has a membership of, ended ones too.
+	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
 }
 
 // ProjectAccess reads a project for the access module's decision (M3
@@ -84,7 +87,7 @@ type Module struct {
 // before workspace, which takes its Cascade.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	return &Module{cascade: app.NewCascade(store), uc: httpadapter.UseCases{
+	return &Module{cascade: app.NewCascade(store, store), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),

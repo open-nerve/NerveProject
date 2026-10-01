@@ -15,11 +15,12 @@ import (
 // changes.
 type Cascade struct {
 	projects WorkspaceProjectsDeleter
+	members  MemberDemoter
 }
 
-// NewCascade returns the cascade over projects.
-func NewCascade(projects WorkspaceProjectsDeleter) *Cascade {
-	return &Cascade{projects: projects}
+// NewCascade returns the cascade over projects and members.
+func NewCascade(projects WorkspaceProjectsDeleter, members MemberDemoter) *Cascade {
+	return &Cascade{projects: projects, members: members}
 }
 
 // DeleteWorkspaceProjects soft-deletes the workspace's projects and the
@@ -33,6 +34,20 @@ func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by u
 		}
 	}
 	return nil
+}
+
+// DemoteToGuest makes userID a guest in each of the workspace's projects he
+// has a membership of, ended ones too (M3 design 3.3; Plane
+// views/workspace/member.py:87-89): under the caller's FOR NO KEY UPDATE of
+// the workspace, those projects FOR NO KEY UPDATE in id order, then his
+// memberships of them in one statement (convention 5), at now, by by. With
+// no such project there is nothing to write.
+func (c *Cascade) DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
+	projects, err := c.members.LockMemberProjects(ctx, workspaceID, userID)
+	if err != nil || len(projects) == 0 {
+		return err
+	}
+	return c.members.DemoteMemberships(ctx, projects, userID, by, now)
 }
 
 // deletion is what deleting a workspace deletes of the projects, in the

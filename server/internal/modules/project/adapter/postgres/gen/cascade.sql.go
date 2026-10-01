@@ -60,9 +60,10 @@ type DeleteWorkspaceProjectsParams struct {
 	WorkspaceID uuid.UUID
 }
 
-// The steps of deleting a workspace's projects (M3 design 3.3, 3.6), each one statement under the workspace's FOR NO
-// KEY UPDATE, which deleteWorkspace took (convention 5): the rows of the workspace not deleted before, at the moment
-// and by the account of the workspace's deletion. Rows deleted before keep their moment.
+// ProjectCascade's statements (M3 design 3.3, 3.6), each under the workspace's FOR NO KEY UPDATE, which the caller
+// took. The steps of deleting a workspace's projects are one statement each (convention 5): the rows of the workspace
+// not deleted before, at the moment and by the account of the workspace's deletion. Rows deleted before keep their
+// moment.
 func (q *Queries) DeleteWorkspaceProjects(ctx context.Context, arg DeleteWorkspaceProjectsParams) error {
 	_, err := q.db.Exec(ctx, deleteWorkspaceProjects, arg.Now, arg.DeletedBy, arg.WorkspaceID)
 	return err
@@ -84,4 +85,69 @@ type DeleteWorkspaceStatesParams struct {
 func (q *Queries) DeleteWorkspaceStates(ctx context.Context, arg DeleteWorkspaceStatesParams) error {
 	_, err := q.db.Exec(ctx, deleteWorkspaceStates, arg.Now, arg.DeletedBy, arg.WorkspaceID)
 	return err
+}
+
+const demoteMemberships = `-- name: DemoteMemberships :exec
+UPDATE project_members
+SET role = 5, updated_at = $1::timestamptz, updated_by_id = $2::uuid
+WHERE project_id = ANY ($3::uuid[]) AND member_id = $4 AND deleted_at IS NULL
+  AND role <> 5
+`
+
+type DemoteMembershipsParams struct {
+	Now        time.Time
+	UpdatedBy  uuid.UUID
+	ProjectIds []uuid.UUID
+	MemberID   uuid.UUID
+}
+
+// The second step, one statement under the projects' locks (convention 5): the account's undeleted memberships of the
+// projects, active or not, a guest's now, at the moment and by the account given; a guest's keeps its audit columns.
+func (q *Queries) DemoteMemberships(ctx context.Context, arg DemoteMembershipsParams) error {
+	_, err := q.db.Exec(ctx, demoteMemberships,
+		arg.Now,
+		arg.UpdatedBy,
+		arg.ProjectIds,
+		arg.MemberID,
+	)
+	return err
+}
+
+const lockMemberProjects = `-- name: LockMemberProjects :many
+SELECT p.id
+FROM projects p
+WHERE p.workspace_id = $1 AND p.deleted_at IS NULL
+  AND EXISTS (SELECT 1 FROM project_members m
+              WHERE m.project_id = p.id AND m.member_id = $2 AND m.deleted_at IS NULL)
+ORDER BY p.id
+FOR NO KEY UPDATE
+`
+
+type LockMemberProjectsParams struct {
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// The first step of making an account a guest in the workspace's projects, DemoteToGuest's: the workspace's undeleted
+// projects, archived ones too, in which he has an undeleted membership, active or not, FOR NO KEY UPDATE in id order.
+// The lock is taken as the sorted rows come, so the order is the ids'. After a wait, Postgres evaluates deleted_at IS
+// NULL again on the row's newest version: a project deleted meanwhile is left out.
+func (q *Queries) LockMemberProjects(ctx context.Context, arg LockMemberProjectsParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, lockMemberProjects, arg.WorkspaceID, arg.MemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

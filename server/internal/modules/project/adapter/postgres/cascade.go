@@ -54,3 +54,26 @@ func (s *Store) DeleteWorkspaceStates(ctx context.Context, workspaceID, by uuid.
 	}
 	return nil
 }
+
+// LockMemberProjects locks FOR NO KEY UPDATE, in id order, the workspace's
+// undeleted projects in which userID has an undeleted membership, active or
+// not, and returns their ids (app.MemberDemoter).
+func (s *Store) LockMemberProjects(ctx context.Context, workspaceID, userID uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).LockMemberProjects(ctx, gen.LockMemberProjectsParams{WorkspaceID: workspaceID, MemberID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("lock the member's projects: %w", err)
+	}
+	return ids, nil
+}
+
+// DemoteMemberships makes userID's undeleted memberships of projectIDs,
+// active or not, a guest's, at now, by the account by (app.MemberDemoter).
+func (s *Store) DemoteMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
+	err := s.queries(ctx).DemoteMemberships(ctx, gen.DemoteMembershipsParams{
+		ProjectIds: projectIDs, MemberID: userID, UpdatedBy: by, Now: now,
+	})
+	if err != nil {
+		return fmt.Errorf("demote the member's project memberships: %w", err)
+	}
+	return nil
+}

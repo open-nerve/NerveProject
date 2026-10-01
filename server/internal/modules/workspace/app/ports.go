@@ -186,6 +186,10 @@ type ProjectCascade interface {
 	// rows under them, at the moment and by the account of the workspace's
 	// deletion: its last step.
 	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+	// DemoteToGuest makes userID a guest in each of the workspace's projects
+	// he has a membership of, ended ones too, at the moment and by the
+	// account of the change of his workspace role to guest.
+	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
 }
 
 // PreferencesRow is a change of an account's display settings in a
