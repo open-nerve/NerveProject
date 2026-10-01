@@ -232,9 +232,9 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // role read in the wrong workspace lets either into acme. Through the
 // project store, the projects and project memberships of matrixProjects
 // and matrixProjectMembers. Through SQL, the states no store writes yet
-// (standIns, partingStates); then the checks that the rows the cells rest
-// on are there (preconditions). Through the API, gone deleted by its admin,
-// which soft-deletes its memberships and its project with it.
+// (standIns, partingStates). Through the API, gone deleted by its admin,
+// which soft-deletes its memberships and its project with it; then the
+// checks that the rows the cells rest on are there (preconditions).
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -277,7 +277,6 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		projects.standIns(pool, s)
 		projects.partingStates(pool)
-		projects.preconditions(s)
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so
 		// every cell of the column is asked about a workspace deleted the one
@@ -286,6 +285,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}
+		projects.preconditions(s)
 	})
 	if !prepared {
 		t.FailNow()
