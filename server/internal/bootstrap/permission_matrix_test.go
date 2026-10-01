@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"time"
 	"uuid"
 
+	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -25,8 +27,9 @@ import (
 // database by each kind of caller, its status and problem code asserted cell
 // by cell, and where a row says so, what the answer holds. The data is
 // prepared once: the accounts through the API, the workspaces and
-// memberships through the workspace store, the deleted workspace through
-// the API, and the state no store writes yet through SQL (prepareMatrix).
+// memberships through the workspace store, the projects and their
+// memberships through the project store, the deleted workspace through the
+// API, and the state no store writes yet through SQL (prepareMatrix).
 // The cells that only read share one copy of it, and each cell that writes
 // gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
 // another's writes. Each module's rows are in a file of their own
@@ -50,11 +53,11 @@ var matrixExempt = matrixExemptions{
 		// The link's token stands for a credential (M3 design 3.8).
 		"getWorkspaceInvitation": "TestTheInvitationLinkAnswersEveryCallerAlike",
 	},
-	notTargets: map[string]string{
-		"/api/v0/workspace-slugs/{slug}": "a slug asked about, not a workspace: the answer is the same for every caller",
-		"/api/v0/workspace-invitations/{invitation_id}/accept": "account level: each column answers an invitation to its own " +
-			"address (ownInvitation), or acme's newcomer's, whatever workspace its column targets",
-		"/api/v0/workspace-invitations/{invitation_id}/decline": "account level, as accept",
+	notTargets: map[notTarget]string{
+		{"/api/v0/workspace-slugs/{slug}", "{slug}"}: "a slug asked about, not a workspace: the answer is the same for every caller",
+		{"/api/v0/workspace-invitations/{invitation_id}/accept", "{invitation_id}"}: "account level: each column answers an invitation " +
+			"to its own address (ownInvitation), or acme's newcomer's, whatever workspace its column targets",
+		{"/api/v0/workspace-invitations/{invitation_id}/decline", "{invitation_id}"}: "account level, as accept",
 	},
 }
 
@@ -68,14 +71,18 @@ var matrixExempt = matrixExemptions{
 // column would call it as nobody and the cells could not tell the columns
 // apart. The test calls it with every column's token and without one, and
 // wants one answer. An operation that needs a token cannot be listed.
-// notTargets are the paths whose parameters name nothing a column's cell
-// must aim at its workspace, each with its reason: targetViolation passes
-// them over, and reports any other parameter it does not know.
+// notTargets are the parameters of paths that name nothing a column's cell
+// must aim at, each with its reason: targetViolation passes over the
+// parameter listed, still checks the path's other parameters, and reports
+// any parameter it does not know.
 type matrixExemptions struct {
 	modules    []string
-	public     map[string]string // operationId → the test that stands for its row
-	notTargets map[string]string // path → why its parameters are no column's target
+	public     map[string]string    // operationId → the test that stands for its row
+	notTargets map[notTarget]string // a path's parameter → why it is no column's target
 }
+
+// notTarget is a parameter of a path, both as the contract spells them.
+type notTarget struct{ path, param string }
 
 // caller is a column: an account, and how it stands to the workspace a row
 // targets.
@@ -126,12 +133,16 @@ var (
 )
 
 // matrixRow is an operation's row: the request each caller sends, which can
-// name a row prepareMatrix seeded, and the answer each gets.
+// name a row prepareMatrix seeded, and the answer each gets, by the name of
+// the caller's column.
 type matrixRow struct {
 	op      string // operationId
 	variant string // what sets the row apart from the operation's other rows
 	write   bool   // each cell on a copy of its own
 	config  func(*config.Config)
+	// columns are the row's columns: nil for the workspace level's
+	// (workspaceColumns), projectColumns for a row of the project level.
+	columns []caller
 	request func(c caller, s seeded) (method, path, body string)
 	cells   map[caller]cell
 	// check, when set, runs on each answer that is not a problem and is its
@@ -145,6 +156,15 @@ func (r matrixRow) name() string {
 		return r.op
 	}
 	return r.op + ", " + r.variant
+}
+
+// columnsOf are the columns r has cells for: its own, or the workspace
+// level's.
+func (r matrixRow) columnsOf() []caller {
+	if r.columns == nil {
+		return workspaceColumns
+	}
+	return r.columns
 }
 
 // every is the same answer in every workspace column.
@@ -182,7 +202,8 @@ func matrixRows() []matrixRow {
 const matrixApps = 8
 
 // matrixData is the prepared database, the signing key every app on a copy
-// of it shares, each column's access token, and the seeded ids.
+// of it shares, each account's access token (accountOf a column), and the
+// seeded ids.
 type matrixData struct {
 	url     string
 	keyFile string
@@ -201,17 +222,21 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 	return cfg
 }
 
-// prepareMatrix fills a database for the matrix. Through the API, an
-// account for each column, registered for its token. Through the workspace
-// store, the workspaces, memberships and invitations of matrixMemberships
-// and matrixInvitations, with the ids newSeeded named, and acme's admin's
+// prepareMatrix fills a database for the matrix. Through the API, each of
+// matrixAccounts, registered for its token. Through the workspace store,
+// the workspaces, memberships and invitations of matrixMemberships and
+// matrixInvitations, with the ids newSeeded named, and acme's admin's
 // display settings; other's admin and removed member are there so that a
-// role read in the wrong workspace lets either into acme. Through the API,
-// gone deleted by its admin, which soft-deletes its memberships with it.
-// Through SQL, until P5's store replaces it, the removed member's
-// membership of acme ended. Everything that connected to the database is
-// closed when it returns, so that it can be copied. A -run that leaves out
-// prepare fails here, not with a 401 in every cell.
+// role read in the wrong workspace lets either into acme. Through the
+// project store, the projects and project memberships of matrixProjects
+// and matrixProjectMembers. Through the API, gone deleted by its admin,
+// which soft-deletes its memberships and its project with it. Through SQL,
+// until the stores of P4b and P5 replace it, acme's archived project
+// archived, the member before's membership of the private project ended,
+// and the removed member's membership of acme ended. Everything that
+// connected to the database is closed when it returns, so that it can be
+// copied. A -run that leaves out prepare fails here, not with a 401 in
+// every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -220,7 +245,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		base := startApp(t, d.config(t, d.url, nil), migrations.FS())
 		pool := openPool(t, d.url)
 		ids := map[caller]uuid.UUID{}
-		for _, c := range workspaceColumns {
+		for _, c := range matrixAccounts {
 			email := emailOf(c)
 			d.tokens[c] = registerAccount(t, contract, base, email).AccessToken
 			var id uuid.UUID
@@ -242,13 +267,24 @@ func prepareMatrix(t *testing.T) matrixData {
 		}
 		tabbed, three := "TABBED", 3
 		seed.preferences("acme", callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
-		// No store removes a member yet (P5), so SQL stands in until that
-		// phase replaces it: it ends the removed member's membership of acme.
+		projects := projectSeed{matrixSeed: seed, store: projectpg.New(pool), projects: map[string]uuid.UUID{}}
+		for _, p := range matrixProjects {
+			projects.project(s.project(p.key), p.key, p.name, p.identifier, p.network)
+		}
+		for _, pm := range matrixProjectMembers {
+			projects.join(pm.key, pm.c, pm.role)
+		}
+		// No store archives a project (P4b), ends a project membership (P5)
+		// or removes a member (P5) yet, so SQL stands in until those phases
+		// replace it.
+		seed.exec(pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", s.project("acme/archived"), seed.now)
+		seed.exec(pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
+			s.project("acme/private"), ids[callerBefore])
 		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
 		// The column's caller deletes gone as deleteWorkspace does it: its
-		// membership and invitations go with the workspace row, so every
-		// cell of the column is asked about a workspace deleted the one way
-		// there is. A membership left active in a deleted workspace is
+		// memberships, invitations and project go with the workspace row, so
+		// every cell of the column is asked about a workspace deleted the one
+		// way there is. A membership left active in a deleted workspace is
 		// ActiveRole's store test (P1).
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
@@ -257,7 +293,7 @@ func prepareMatrix(t *testing.T) matrixData {
 	if !prepared {
 		t.FailNow()
 	}
-	if len(d.tokens) != len(workspaceColumns) {
+	if len(d.tokens) != len(matrixAccounts) {
 		t.Fatal("prepare did not run: a -run of some cells must select prepare too, e.g. -run 'TestPermissionMatrix/(prepare|getWorkspace)'")
 	}
 	return d
@@ -265,9 +301,12 @@ func prepareMatrix(t *testing.T) matrixData {
 
 // Each cell of the matrix, in parallel: a reading cell on the reads' copy,
 // a cell with an app of its own (a writing cell, or one whose row has a
-// config) on its copy, at most matrixApps of those at once. Every answer a
-// row's check is for is checked, and counted: a harness that skipped the
-// checks would fail.
+// config) on its copy, at most matrixApps of those at once. Every cell a
+// row has runs, of whichever level: a run over a list of columns would skip
+// the cells of the other level's in silence, and
+// TestThePermissionMatrixCoversEveryOperation holds a row's cells to its
+// own columns. Every answer a row's check is for is checked, and counted: a
+// harness that skipped the checks would fail.
 func TestPermissionMatrix(t *testing.T) {
 	d := prepareMatrix(t)
 	contract := apitest.Load(t)
@@ -280,11 +319,8 @@ func TestPermissionMatrix(t *testing.T) {
 		}
 	})
 	for _, r := range matrixRows() {
-		for _, c := range workspaceColumns {
-			want, ok := r.cells[c]
-			if !ok {
-				continue // TestThePermissionMatrixCoversEveryOperation reports it
-			}
+		for _, c := range slices.Sorted(maps.Keys(r.cells)) {
+			want := r.cells[c]
 			t.Run(r.name()+"/"+string(c), func(t *testing.T) {
 				t.Parallel()
 				// Counted in the cell: a -run of some cells expects only
@@ -301,7 +337,7 @@ func TestPermissionMatrix(t *testing.T) {
 					base = startApp(t, d.config(t, pgtest.NewDatabaseFrom(t, d.url), r.config), migrations.FS())
 				}
 				method, path, body := r.request(c, d.seeded.in(t))
-				status, answer := call(t, contract, method, base+path, d.tokens[c], body)
+				status, answer := call(t, contract, method, base+path, d.tokens[accountOf(c)], body)
 				got := cell{status: status}
 				if status >= http.StatusBadRequest {
 					got.code = problemCode(t, []byte(answer))

@@ -150,7 +150,7 @@ func demotesTheMember(t *testing.T, c caller, _ seeded, answer string) {
 	}
 }
 
-// listsTheMembers: acme's four memberships, the removed member's ended; the
+// listsTheMembers: acme's nine memberships, the removed member's ended; the
 // admin and the member see every address, the guest none, his own neither
 // (M3 design 3.4, 9.2).
 func listsTheMembers(t *testing.T, c caller, _ seeded, answer string) {
@@ -172,7 +172,8 @@ func listsTheMembers(t *testing.T, c caller, _ seeded, answer string) {
 		}
 		got = append(got, fmt.Sprintf("%s %s active %v", m.Member.DisplayName, email, m.IsActive))
 	}
-	for _, name := range []string{"admin", "member", "guest", "removed"} {
+	for _, name := range []string{"admin", "member", "guest", "removed", "project-admin", "project-member", "project-member-and-workspace-admin",
+		"workspace-guest-only", "project-member-before"} {
 		email := name + "@example.com"
 		if c == callerGuest {
 			email = "null"

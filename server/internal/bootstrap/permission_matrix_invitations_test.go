@@ -42,7 +42,8 @@ func toNewcomersInvitation(answer string) func(caller, seeded) (string, string, 
 // joinsAsAMember: each caller's acceptance answers the workspace of his
 // invitation, where he is now an active member as the invitation's
 // member: one member more than it had (other: its admin and the removed
-// member; acme: its admin, member and guest).
+// member; acme: its admin, member and guest, and the project level's five
+// accounts).
 func joinsAsAMember(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug         string `json:"slug"`
@@ -50,7 +51,7 @@ func joinsAsAMember(t *testing.T, c caller, _ seeded, answer string) {
 		TotalMembers int    `json:"total_members"`
 	}
 	decodeAnswer(t, answer, &w)
-	want := map[string]int{"other": 3, "acme": 4}[ownInvitation(c)]
+	want := map[string]int{"other": 3, "acme": 9}[ownInvitation(c)]
 	if w.Slug != ownInvitation(c) || w.Role != 15 || w.TotalMembers != want {
 		t.Errorf("%s's acceptance answers %+v, want %s with role 15 and %d members", c, w, ownInvitation(c), want)
 	}

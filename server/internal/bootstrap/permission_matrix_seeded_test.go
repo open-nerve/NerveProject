@@ -11,6 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
+	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
+	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -21,16 +24,18 @@ import (
 
 // matrixMemberships are the memberships prepareMatrix seeds, workspace by
 // workspace, each workspace's creator first: acme with its admin, member,
-// guest and the member later removed; gone with its admin and the member;
-// other, whose admin was never a member of acme and where the removed
-// member is still active.
+// guest and the member later removed, and the project level's own accounts
+// (matrixAccounts); gone with its admin and the member; other, whose admin
+// was never a member of acme and where the removed member is still active.
 var matrixMemberships = []struct {
 	slug string
 	c    caller
 	role shared.Role
 }{
 	{"acme", callerAdmin, shared.RoleAdmin}, {"acme", callerMember, shared.RoleMember}, {"acme", callerGuest, shared.RoleGuest},
-	{"acme", callerRemoved, shared.RoleMember},
+	{"acme", callerRemoved, shared.RoleMember}, {"acme", callerProjectAdmin, shared.RoleMember},
+	{"acme", callerProjectMember, shared.RoleMember}, {"acme", callerMemberAndAdmin, shared.RoleAdmin},
+	{"acme", callerGuestOnly, shared.RoleGuest}, {"acme", callerBefore, shared.RoleMember},
 	{"gone", callerDeleted, shared.RoleAdmin}, {"gone", callerMember, shared.RoleMember},
 	{"other", callerNever, shared.RoleAdmin}, {"other", callerRemoved, shared.RoleMember},
 }
@@ -51,6 +56,40 @@ var matrixInvitations = []struct {
 	{"acme", emailOf(callerNever), shared.RoleMember},
 	{"acme", emailOf(callerRemoved), shared.RoleMember},
 	{"acme", emailOf(callerDeleted), shared.RoleMember},
+}
+
+// matrixProjects are the projects prepareMatrix seeds through the project
+// store, each by its workspace's admin: acme's public and private ones,
+// and one archived; gone's, deleted with it.
+var matrixProjects = []struct {
+	key, name, identifier string // key: the workspace's slug / which project
+	network               projectdomain.Network
+}{
+	{"acme/public", "Web", "WEB", projectdomain.NetworkPublic},
+	{"acme/private", "Secret", "SEC", projectdomain.NetworkPrivate},
+	{"acme/archived", "Old", "OLD", projectdomain.NetworkPublic},
+	{"gone/project", "Web", "WEB", projectdomain.NetworkPublic},
+}
+
+// matrixProjectMembers are the project memberships prepareMatrix seeds,
+// each with its display settings: in acme's public and private projects,
+// the project level's members (projectColumns); the removed member, still
+// an active member of the public one, so that only his membership of acme
+// keeps him out; the member before in the private one, ended; the archived
+// project's admin; gone's admin in gone's project.
+var matrixProjectMembers = []struct {
+	key  string
+	c    caller
+	role shared.Role
+}{
+	{"acme/public", callerProjectAdmin, shared.RoleAdmin}, {"acme/public", callerProjectMember, shared.RoleMember},
+	{"acme/public", callerGuest, shared.RoleGuest}, {"acme/public", callerMemberAndAdmin, shared.RoleMember},
+	{"acme/public", callerRemoved, shared.RoleMember},
+	{"acme/private", callerProjectAdmin, shared.RoleAdmin}, {"acme/private", callerProjectMember, shared.RoleMember},
+	{"acme/private", callerGuest, shared.RoleGuest}, {"acme/private", callerMemberAndAdmin, shared.RoleMember},
+	{"acme/private", callerBefore, shared.RoleMember},
+	{"acme/archived", callerProjectAdmin, shared.RoleAdmin},
+	{"gone/project", callerDeleted, shared.RoleAdmin},
 }
 
 // ownInvitation is the workspace of the invitation to c's own address: one
@@ -75,21 +114,24 @@ func emailOf(c caller) string {
 
 // seeded are the ids of the rows prepareMatrix seeds that a request or a
 // check can name: each workspace, by its slug; each membership, by the
-// workspace's slug and the column; and each invitation, by the workspace's
-// slug and the address. t is the test that asks for them (in).
+// workspace's slug and the column; each invitation, by the workspace's
+// slug and the address; and each project, by its key. t is the test that
+// asks for them (in).
 type seeded struct {
 	t           testing.TB
 	workspaces  map[string]uuid.UUID
 	memberships map[string]uuid.UUID
 	invitations map[string]uuid.UUID
+	projects    map[string]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
-// matrixMemberships and each of matrixInvitations before prepareMatrix
-// writes them, so that matrixViolations, without a database, sees the keys
-// and the workspaces the cells will.
+// matrixMemberships, each of matrixInvitations and each of matrixProjects
+// before prepareMatrix writes them, so that matrixViolations, without a
+// database, sees the keys and the targets the cells will.
 func newSeeded() seeded {
-	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{}}
+	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
+		projects: map[string]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -98,6 +140,9 @@ func newSeeded() seeded {
 	}
 	for _, i := range matrixInvitations {
 		s.invitations[i.slug+"/"+i.email] = uuid.NewV7()
+	}
+	for _, p := range matrixProjects {
+		s.projects[p.key] = uuid.NewV7()
 	}
 	return s
 }
@@ -138,6 +183,17 @@ func (s seeded) invitation(slug, email string) uuid.UUID {
 	if !ok {
 		s.t.Helper()
 		s.t.Fatalf("no invitation of %s to %s is seeded", email, slug)
+	}
+	return id
+}
+
+// project is the id of the project key; one never seeded fails the test at
+// once, as membership's does.
+func (s seeded) project(key string) uuid.UUID {
+	id, ok := s.projects[key]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no project %s is seeded", key)
 	}
 	return id
 }
@@ -223,13 +279,15 @@ func (s matrixSeed) preferences(slug string, c caller, p workspacedomain.Prefere
 	}
 }
 
+// matrixAdmins are the creators of the prepared workspaces, their admins.
+var matrixAdmins = map[string]caller{"acme": callerAdmin, "gone": callerDeleted, "other": callerNever}
+
 // invite stores the invitation id of email to the workspace slug, by its
 // admin.
 func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
 	s.t.Helper()
-	admin := map[string]caller{"acme": callerAdmin, "gone": callerDeleted, "other": callerNever}[slug]
 	if _, err := s.store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
-		{ID: id, WorkspaceID: s.workspaces[slug], Email: email, Role: role, CreatedBy: s.ids[admin], Now: s.now},
+		{ID: id, WorkspaceID: s.workspaces[slug], Email: email, Role: role, CreatedBy: s.ids[matrixAdmins[slug]], Now: s.now},
 	}); err != nil {
 		s.t.Fatal(err)
 	}
@@ -238,6 +296,47 @@ func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
 func (s matrixSeed) exec(pool *pgxpool.Pool, sql string, args ...any) {
 	s.t.Helper()
 	if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
+		s.t.Fatal(err)
+	}
+}
+
+// projectSeed writes the prepared projects and their memberships through
+// the project store, each by its workspace's admin, and keeps the
+// projects' ids by key.
+type projectSeed struct {
+	matrixSeed
+	store    *projectpg.Store
+	projects map[string]uuid.UUID
+}
+
+// project stores the project id with key.
+func (s projectSeed) project(id uuid.UUID, key, name, identifier string, network projectdomain.Network) {
+	s.t.Helper()
+	slug, _, _ := strings.Cut(key, "/")
+	if err := s.store.CreateProject(context.Background(), projectapp.ProjectRow{
+		ID: id, WorkspaceID: s.workspaces[slug], Name: name, Identifier: identifier, Network: network, Timezone: "UTC",
+		CreatedBy: s.ids[matrixAdmins[slug]], Now: s.now,
+	}); err != nil {
+		s.t.Fatal(err)
+	}
+	s.projects[key] = id
+}
+
+// join makes c a member of the project key with role, and stores his
+// display settings in it.
+func (s projectSeed) join(key string, c caller, role shared.Role) {
+	s.t.Helper()
+	slug, _, _ := strings.Cut(key, "/")
+	ctx, by := context.Background(), s.ids[matrixAdmins[slug]]
+	if err := s.store.CreateMember(ctx, projectapp.MemberRow{
+		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[key], MemberID: s.ids[c], Role: role, CreatedBy: by, Now: s.now,
+	}); err != nil {
+		s.t.Fatal(err)
+	}
+	if err := s.store.CreatePreferences(ctx, projectapp.PreferencesRow{
+		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[key], UserID: s.ids[c], SortOrder: 65535, CreatedBy: by,
+		Now: s.now,
+	}); err != nil {
 		s.t.Fatal(err)
 	}
 }
