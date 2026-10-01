@@ -94,16 +94,23 @@ func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
 //     NOWAIT of it fails, a FOR SHARE NOWAIT succeeds).
 //
 // Once the other transaction ends, each write answers as it would alone.
+// Each row sends its own operation's request, its method and path as the
+// contract has them, so no write's row runs another write instead.
 func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
+	contract := apitest.Load(t)
 	ops := make([]string, len(projectWrites))
 	for i, w := range projectWrites {
 		ops[i] = w.op
+		if !slices.ContainsFunc(contract.Operations(), func(o apitest.Operation) bool {
+			return o.ID == w.op && o.Method == w.method && o.Path == fmt.Sprintf(w.path, "{project_id}")
+		}) {
+			t.Fatalf("%s's row sends %s %s, not the contract's %s", w.op, w.method, w.path, w.op)
+		}
 	}
 	if want := writesOnAProject(); !slices.Equal(slices.Sorted(slices.Values(ops)), want) {
 		t.Fatalf("the writes here are %q; the writes on a project are %q: each has its row, in projectWrites", slices.Sorted(slices.Values(ops)),
 			want)
 	}
-	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
 	base := startApp(t, testConfig(t, dbURL, false), migrations.FS())
 	pool := openPool(t, dbURL)
