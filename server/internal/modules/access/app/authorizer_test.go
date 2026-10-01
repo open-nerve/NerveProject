@@ -109,10 +109,12 @@ func TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace(t *testing.T) {
 }
 
 // Nothing is cached: a membership that ends between two calls is not
-// visible at the second.
+// visible at the second, a workspace's as a project's.
 func TestAuthorizeReadsOnEveryCall(t *testing.T) {
-	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleAdmin}}
-	auth := app.NewAuthorizer(roles, &fakeProjects{})
+	p := uuid.NewV7()
+	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleAdmin, {w1, b}: shared.RoleMember}}
+	projects := &fakeProjects{facts: map[projectKey]app.ProjectFacts{{p, b}: {WorkspaceID: w1, Member: true, Role: shared.RoleMember}}}
+	auth := app.NewAuthorizer(roles, projects)
 	ctx := context.WithValue(context.Background(), ctxKey{}, "request")
 	target := shared.Target{WorkspaceID: w1}
 	if _, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "workspace.read", target); err != nil {
@@ -121,6 +123,16 @@ func TestAuthorizeReadsOnEveryCall(t *testing.T) {
 	delete(roles.roles, membership{w1, a})
 	if _, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "workspace.read", target); !errors.Is(err, shared.ErrNotVisible) {
 		t.Errorf("Authorize() after the membership ended = %v, want ErrNotVisible", err)
+	}
+	// b, w1's member, sees the private project p while he is its member,
+	// and not once that membership has ended.
+	inProject := shared.Target{WorkspaceID: w1, ProjectID: p}
+	if _, err := auth.Authorize(ctx, shared.Actor{UserID: b}, "project.read", inProject); err != nil {
+		t.Fatalf("first Authorize() on the project = %v", err)
+	}
+	projects.facts[projectKey{p, b}] = app.ProjectFacts{WorkspaceID: w1}
+	if _, err := auth.Authorize(ctx, shared.Actor{UserID: b}, "project.read", inProject); !errors.Is(err, shared.ErrNotVisible) {
+		t.Errorf("Authorize() on the project after its membership ended = %v, want ErrNotVisible", err)
 	}
 }
 

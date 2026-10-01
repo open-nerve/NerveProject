@@ -17,7 +17,8 @@ import (
 )
 
 // The Authorizer takes a project's facts within the target's workspace only
-// (M3 design 3.4; carry 8), as bootstrap wires it on the real stores: alice
+// (M3 design 3.4; carry 8), on the real stores: the test builds its own,
+// wired as app.go wires it, from workspace's and project's Provide. alice
 // is the admin of acme and of beta, and the admin of acme's private project
 // Web. Through acme she reads Web as its admin; through beta, where every
 // project is hers to see, she does not see it.

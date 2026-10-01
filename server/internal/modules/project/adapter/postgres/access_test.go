@@ -2,21 +2,26 @@ package postgresadapter_test
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ProjectFacts reads the undeleted project, archived or not, and the user's
 // membership of it while it is active: a membership ended or deleted is
-// none, a project deleted is not found. Each case is one fact changed from
-// a project where the user is its member.
+// none, and so is an active membership of another project; a project
+// deleted is not found. Each case is one fact changed from a project where
+// the user is its member.
 func TestProjectFacts(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	carol := newAccount(t, pool, "carol@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	public := newProject(t, s, acme, "Web", "WEB", alice)
 	private := newProject(t, s, acme, "Secret", "SEC", alice)
@@ -29,7 +34,8 @@ func TestProjectFacts(t *testing.T) {
 		project, user uuid.UUID
 		role          shared.Role
 	}{{public, alice, shared.RoleGuest}, {private, alice, shared.RoleAdmin}, {archived, alice, shared.RoleMember},
-		{deleted, alice, shared.RoleAdmin}, {public, bob, shared.RoleAdmin}, {private, bob, shared.RoleMember}} {
+		{deleted, alice, shared.RoleAdmin}, {public, bob, shared.RoleAdmin}, {private, bob, shared.RoleMember},
+		{public, carol, shared.RoleAdmin}} {
 		if err := s.CreateMember(ctx, app.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: m.project, MemberID: m.user, Role: m.role,
 			CreatedBy: alice, Now: now}); err != nil {
 			t.Fatal(err)
@@ -50,6 +56,7 @@ func TestProjectFacts(t *testing.T) {
 		{"a membership ended", public, bob, app.AccessFacts{WorkspaceID: acme, Public: true}, true},
 		{"a membership deleted", private, bob, app.AccessFacts{WorkspaceID: acme}, true},
 		{"no membership", archived, bob, app.AccessFacts{WorkspaceID: acme, Public: true}, true},
+		{"another project's membership", private, carol, app.AccessFacts{WorkspaceID: acme}, true},
 		{"a project deleted", deleted, alice, app.AccessFacts{}, false},
 		{"no project", uuid.NewV7(), alice, app.AccessFacts{}, false},
 	}
@@ -58,5 +65,32 @@ func TestProjectFacts(t *testing.T) {
 		if err != nil || found != tt.found || got != tt.want {
 			t.Errorf("%s: ProjectFacts() = %+v, %v, %v; want %+v, %v", tt.name, got, found, err, tt.want, tt.found)
 		}
+	}
+}
+
+// ProjectFacts reads in the transaction ctx carries, as workspace's
+// ActiveRole does: it sees the membership the transaction wrote before
+// committing, and once that is rolled back, none.
+func TestProjectFactsReadsInTheTransaction(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web := newProject(t, s, acme, "Web", "WEB", alice)
+	var inside app.AccessFacts
+	var found bool
+	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+		if err := s.CreateMember(ctx, app.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, MemberID: bob,
+			Role: shared.RoleMember, CreatedBy: alice, Now: now}); err != nil {
+			return err
+		}
+		var err error
+		inside, found, err = s.ProjectFacts(ctx, web, bob)
+		return errors.Join(err, errors.New("roll back"))
+	})
+	if want := (app.AccessFacts{WorkspaceID: acme, Public: true, Member: true, Role: shared.RoleMember}); err == nil || !found || inside != want {
+		t.Errorf("in the transaction: %+v, %v, %v; want %+v, found", inside, found, err, want)
+	}
+	if f, found, err := s.ProjectFacts(context.Background(), web, bob); err != nil || !found || f.Member {
+		t.Errorf("after the rollback: %+v, %v, %v; want bob no member", f, found, err)
 	}
 }
