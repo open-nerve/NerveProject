@@ -142,7 +142,7 @@ func New(d Deps) *Module {
 		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
 		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
 		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{
-			Accounts: d.Accounts, Invitations: store, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
+			Accounts: d.Accounts, Invitations: store, Projects: d.Projects, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
 		DeclineInvitation: app.NewDeclineWorkspaceInvitation(d.Accounts, store, d.Tx, d.Clock, d.InvitationMAC),
 	}}

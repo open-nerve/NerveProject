@@ -188,7 +188,10 @@ type ProjectCascade interface {
 	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 	// DemoteToGuest makes userID a guest in each of the workspace's projects
 	// he has a membership of, ended ones too, at the moment and by the
-	// account of the change of his workspace role to guest.
+	// account of the change that made him the workspace's guest: an admin's
+	// change of his role (updateWorkspaceMember), or his own acceptance of
+	// an invitation as a guest that restores his ended membership
+	// (acceptWorkspaceInvitation).
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
 }
 

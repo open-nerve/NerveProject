@@ -18,10 +18,11 @@ import (
 // (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
 // the one it waited for. The deletion's cascade uses that one read for
-// every step, and a change to guest for the projects' step. The clock logs
-// its read among the fakes' calls.
+// every step, and a change to guest or a restoring as a guest for the
+// projects' step. The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
+	erinToAcme := invitationTo(erin, acme, shared.RoleGuest)
 	tests := []struct {
 		name string
 		run  func() (calls []string, err error)
@@ -77,6 +78,16 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 		}, append(respondedCalls(frank, frankToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+frank.ID.String(),
 			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", frank.ID, acme.ID, shared.RoleMember, frank.ID, at),
 			fmt.Sprintf("AcceptInvitation %s by %s at %s", frankToAcme.ID, frank.ID, at), "WorkspaceByID "+acme.ID.String())},
+		{"acceptWorkspaceInvitation, restoring a guest", func() ([]string, error) {
+			f := responding(erinToAcme)
+			_, err := app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations,
+				Projects: f.projects, Tx: f.tx, Clock: clockAt{clockNow, f.log}, MAC: f.mac}).
+				Execute(as(erin), erinToAcme.ID, tokenOf(f.mac, erinToAcme.ID))
+			return f.log.calls, err
+		}, append(respondedCalls(erin, erinToAcme, "LockWorkspace"), "Now", "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
+			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at),
+			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, erin.ID, erin.ID, at),
+			fmt.Sprintf("AcceptInvitation %s by %s at %s", erinToAcme.ID, erin.ID, at), "WorkspaceByID "+acme.ID.String())},
 		{"declineWorkspaceInvitation", func() ([]string, error) {
 			f := responding(frankToAcme)
 			err := app.NewDeclineWorkspaceInvitation(f.accounts, f.invitations, f.tx, clockAt{clockNow, f.log}, f.mac).
