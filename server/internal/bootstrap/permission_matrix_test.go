@@ -281,6 +281,13 @@ func prepareMatrix(t *testing.T) matrixData {
 		seed.exec(pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
 			s.project("acme/private"), ids[callerBefore])
 		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
+		// The removed member is still an active member of the project his
+		// column aims at, so that only his ended membership of acme keeps him
+		// out of it: his cell's 404 would not show which, were he none.
+		if f, found, err := projects.store.ProjectFacts(context.Background(), s.project(projectOf(callerRemoved)), ids[callerRemoved]); err != nil ||
+			!found || !f.Member {
+			t.Fatalf("the removed member's facts of %s = %+v, %v, %v; want him its active member", projectOf(callerRemoved), f, found, err)
+		}
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so
 		// every cell of the column is asked about a workspace deleted the one
