@@ -1,0 +1,74 @@
+package postgresadapter_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// A read that fails answers its error, never a plausible answer: not "no
+// such project", which getProject would answer as project.not_found; not
+// "no display settings", which createProject would take for an empty
+// sidebar. Each read runs on a cancelled context against a project alice
+// is a member of and has display settings in, so that the right answer is
+// none of the zero values.
+func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web := newProject(t, s, acme, "Web", "WEB", alice)
+	ctx := context.Background()
+	if err := s.CreateMember(ctx, app.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, MemberID: alice,
+		Role: shared.RoleAdmin, CreatedBy: alice, Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreatePreferences(ctx, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
+		SortOrder: 10, CreatedBy: alice, Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
+
+	if p, found, err := s.GetProject(cancelled, web, alice); !failed(err) || found || p.ID != (uuid.UUID{}) {
+		t.Errorf("GetProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
+	}
+	if lowest, err := s.LowestSortOrder(cancelled, acme, alice); !failed(err) || lowest != nil {
+		t.Errorf("LowestSortOrder() = %s, %v; want context.Canceled, not none", jsonOf(t, lowest), err)
+	}
+}
+
+// A write that fails answers its error, never nil, which a use case would
+// take for done; a project's, never a taken identifier or name. Each write
+// runs on a cancelled context, with values the database would take.
+func TestAFailedWriteIsAnError(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web := newProject(t, s, acme, "Web", "WEB", alice)
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
+
+	if err := s.CreateProject(cancelled, app.ProjectRow{ID: uuid.NewV7(), WorkspaceID: acme, Name: "Ops", Identifier: "OPS",
+		Timezone: "UTC", CreatedBy: alice, Now: now}); !failed(err) || errors.Is(err, domain.ErrIdentifierTaken) || errors.Is(err, domain.ErrNameTaken) {
+		t.Errorf("CreateProject() = %v; want context.Canceled", err)
+	}
+	if err := s.CreateMember(cancelled, app.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, MemberID: alice,
+		Role: shared.RoleAdmin, CreatedBy: alice, Now: now}); !failed(err) {
+		t.Errorf("CreateMember() = %v; want context.Canceled", err)
+	}
+	if err := s.CreatePreferences(cancelled, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
+		SortOrder: 10, CreatedBy: alice, Now: now}); !failed(err) {
+		t.Errorf("CreatePreferences() = %v; want context.Canceled", err)
+	}
+	if err := s.CreateStates(cancelled, []app.StateRow{{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, CreatedBy: alice, Now: now,
+		State: domain.NewState{Name: "Backlog", Color: "#60646C", Group: "backlog", Default: true}}}); !failed(err) {
+		t.Errorf("CreateStates() = %v; want context.Canceled", err)
+	}
+}

@@ -211,3 +211,29 @@ func TestGetProject(t *testing.T) {
 		}
 	}
 }
+
+// GetProject reads each column as stored, the ones a new project has at
+// their defaults too: five projects, each with another of the five views
+// on, so that a view read as another, or not at all, differs in one; each
+// with a default assignee, an archive_in and an updated_at of its own.
+func TestGetProjectReadsEveryColumn(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	views := []string{"cycle_view", "module_view", "issue_views_view", "intake_view", "guest_view_all_features"}
+	for i, view := range views {
+		name := "P" + string(rune('A'+i))
+		id, updated := newProject(t, s, acme, name, name, alice), now.Add(time.Duration(i+1)*time.Hour)
+		exec(t, pool, "UPDATE projects SET "+view+" = true, default_assignee_id = $2, archive_in = $3, updated_at = $4 WHERE id = $1",
+			id, bob, i+1, updated)
+
+		got, found, err := s.GetProject(context.Background(), id, alice)
+		on, want := []bool{got.CycleView, got.ModuleView, got.IssueViewsView, got.IntakeView, got.GuestViewAllFeatures}, make([]bool, len(views))
+		want[i] = true
+		if err != nil || !found || !slices.Equal(on, want) || jsonOf(t, got.DefaultAssigneeID) != jsonOf(t, bob) || got.ArchiveIn != i+1 ||
+			!got.CreatedAt.Equal(now) || !got.UpdatedAt.Equal(updated) {
+			t.Errorf("%s on: GetProject() = %+v, %v, %v; want the views %v, default assignee %s, archive_in %d, created %v, updated %v",
+				view, got, found, err, want, bob, i+1, now, updated)
+		}
+	}
+}

@@ -133,17 +133,20 @@ func TestCreateStatesStopsAtTheFirstFailure(t *testing.T) {
 // projects, over his undeleted display settings, those of a project he
 // left too; nil when he has none. Each row the query must pass over has a
 // lower place than the answer: another workspace's, another account's, a
-// deleted one.
+// deleted one. The answer is neither the first nor the last of alice's
+// undeleted rows in acme, so that a read that does not sort misses it
+// whichever way it reads the table.
 func TestLowestSortOrder(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
 	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
 	web, ops, old := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice), newProject(t, s, acme, "Old", "OLD", alice)
+	docs := newProject(t, s, acme, "Docs", "DOCS", alice)
 	other := newProject(t, s, beta, "Web", "WEB", alice)
 	for _, row := range []struct {
 		project, user uuid.UUID
 		sortOrder     float64
-	}{{web, alice, 100}, {ops, alice, 50}, {old, alice, -5}, {other, alice, -1000}, {web, bob, -2000}} {
+	}{{web, alice, 100}, {ops, alice, 50}, {old, alice, -5}, {docs, alice, 75}, {other, alice, -1000}, {web, bob, -2000}} {
 		workspace := acme
 		if row.project == other {
 			workspace = beta
