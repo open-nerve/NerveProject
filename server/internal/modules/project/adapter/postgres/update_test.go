@@ -307,3 +307,39 @@ func TestUpdateProjectBreakingAnotherConstraintIsInternal(t *testing.T) {
 		t.Errorf("archive_in 13: UpdateProject() = %v; want the violation of projects_archive_in_check, not a domain error", err)
 	}
 }
+
+// SetArchived archives the project at the moment given, by the account
+// given, and touches no other column: archived again, it takes the new
+// moment; unarchived, archived_at is null. Every other project keeps every
+// column: one of the same workspace, archived, one of another.
+func TestSetArchived(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
+	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", ops, now)
+	newProject(t, s, beta, "Web", "WEB", alice)
+	others := tableRows(t, pool, "projects", web)
+	stamp := func(at time.Time) string { return `"` + at.Format("2006-01-02T15:04:05.999999") + `+00:00"` }
+	for _, step := range []struct {
+		archived bool
+		by       uuid.UUID
+		at       time.Time
+	}{{true, bob, now.Add(time.Hour)}, {true, alice, now.Add(2 * time.Hour)}, {false, bob, now.Add(3 * time.Hour)}} {
+		before := columns(t, pool, "projects", web)
+		if err := s.SetArchived(context.Background(), web, step.archived, step.by, step.at); err != nil {
+			t.Fatal(err)
+		}
+		archivedAt := "null"
+		if step.archived {
+			archivedAt = stamp(step.at)
+		}
+		want := changed(before, map[string]string{"archived_at": archivedAt, "updated_at": stamp(step.at), "updated_by_id": `"` + step.by.String() + `"`})
+		if got := columns(t, pool, "projects", web); !maps.Equal(got, want) {
+			t.Errorf("archived %v by %s at %v: %v\nwant %v", step.archived, step.by, step.at, got, want)
+		}
+	}
+	if after := tableRows(t, pool, "projects", web); after != others {
+		t.Errorf("the other projects:\n%s\nwant\n%s", after, others)
+	}
+}

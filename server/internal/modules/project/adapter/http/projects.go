@@ -79,6 +79,24 @@ func (h handler) UpdateProject(ctx context.Context, req gen.UpdateProjectRequest
 	return gen.UpdateProject200JSONResponse(project(p)), nil
 }
 
+// ArchiveProject serves POST /api/v0/projects/{project_id}/archive.
+func (h handler) ArchiveProject(ctx context.Context, req gen.ArchiveProjectRequestObject) (gen.ArchiveProjectResponseObject, error) {
+	p, err := h.uc.ArchiveProject.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ArchiveProject200JSONResponse(project(p)), nil
+}
+
+// UnarchiveProject serves POST /api/v0/projects/{project_id}/unarchive.
+func (h handler) UnarchiveProject(ctx context.Context, req gen.UnarchiveProjectRequestObject) (gen.UnarchiveProjectResponseObject, error) {
+	p, err := h.uc.UnarchiveProject.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UnarchiveProject200JSONResponse(project(p)), nil
+}
+
 // named reports whether the body names v, and its id: nil when it is null.
 func named(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
 	if !v.IsSpecified() {

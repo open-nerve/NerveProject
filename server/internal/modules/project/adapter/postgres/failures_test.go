@@ -98,6 +98,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		errors.Is(err, domain.ErrIdentifierTaken) || errors.Is(err, domain.ErrNameTaken) {
 		t.Errorf("UpdateProject() = %v; want context.Canceled", err)
 	}
+	if err := s.SetArchived(cancelled, web, true, alice, now); !failed(err) {
+		t.Errorf("SetArchived() = %v; want context.Canceled", err)
+	}
 }
 
 // Only the two unique keys of a name and an identifier are a 409: another

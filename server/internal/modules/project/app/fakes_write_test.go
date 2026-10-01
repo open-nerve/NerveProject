@@ -176,6 +176,15 @@ func (f *fakeStore) UpdateProject(ctx context.Context, id uuid.UUID, p domain.Pr
 	return nil
 }
 
+func (f *fakeStore) SetArchived(ctx context.Context, id uuid.UUID, archived bool, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "SetArchived %s %v by %s at %s", id, archived, by, now.Format(timeFormat))
+	if err := f.fail("SetArchived"); err != nil {
+		return err
+	}
+	f.projects[id].archived, f.projects[id].updated = archived, now.Truncate(time.Microsecond)
+	return nil
+}
+
 func (f *fakeStore) GetProject(ctx context.Context, id, userID uuid.UUID) (domain.Project, bool, error) {
 	f.log.add(ctx, "GetProject %s for %s", id, userID)
 	if err := f.fail("GetProject"); err != nil {

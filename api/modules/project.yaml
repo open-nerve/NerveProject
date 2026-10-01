@@ -171,6 +171,57 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: archiveProject
+      tags: [project]
+      summary: Archive a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins. The project is archived as of the request: listProjects lists
+        it among the archived ones, and it cannot be changed until it is
+        unarchived. An archived project archived again takes the new time. A
+        project that does not exist, is deleted, or that the caller does not
+        see answers project.not_found; one he sees but may not archive,
+        forbidden. The role is decided after the project row is locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      responses:
+        '200':
+          description: The project as archived, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: unarchiveProject
+      tags: [project]
+      summary: Unarchive a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins. The project is no longer archived (archived_at null), and
+        can be changed again; one that is not archived stays so. A project
+        that does not exist, is deleted, or that the caller does not see
+        answers project.not_found; one he sees but may not unarchive,
+        forbidden. The role is decided after the project row is locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      responses:
+        '200':
+          description: The project as unarchived, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:

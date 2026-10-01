@@ -157,6 +157,15 @@ type ProjectUpdater interface {
 	UpdateProject(ctx context.Context, id uuid.UUID, p domain.ProjectPatch, by uuid.UUID, now time.Time) error
 }
 
+// ProjectArchiver is archiveProject's and unarchiveProject's repository.
+// Each method runs in the transaction ctx carries.
+type ProjectArchiver interface {
+	ProjectReader
+	// SetArchived archives the project id at now, or unarchives it, by the
+	// account by.
+	SetArchived(ctx context.Context, id uuid.UUID, archived bool, by uuid.UUID, now time.Time) error
+}
+
 // ProjectRow is a project to insert: checked values, its id, its creator
 // and the time of the use case's clock. Every column it does not name takes
 // its default.

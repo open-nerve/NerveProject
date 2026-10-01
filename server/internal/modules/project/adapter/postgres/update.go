@@ -58,3 +58,12 @@ func (s *Store) UpdateProject(ctx context.Context, id uuid.UUID, p domain.Projec
 	}
 	return taken(fmt.Sprintf("update project %s", id), s.queries(ctx).UpdateProject(ctx, arg))
 }
+
+// SetArchived archives the project id at now, or unarchives it, by the
+// account by (app.ProjectArchiver).
+func (s *Store) SetArchived(ctx context.Context, id uuid.UUID, archived bool, by uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).SetArchived(ctx, gen.SetArchivedParams{ID: id, Archived: archived, UpdatedBy: by, Now: now}); err != nil {
+		return fmt.Errorf("set project %s archived %v: %w", id, archived, err)
+	}
+	return nil
+}

@@ -129,6 +129,15 @@ func (s projectSeed) join(key string, c caller, role shared.Role) {
 	}
 }
 
+// archive archives the project key, by its workspace's admin.
+func (s projectSeed) archive(key string) {
+	s.t.Helper()
+	slug, _, _ := strings.Cut(key, "/")
+	if err := s.store.SetArchived(context.Background(), s.projects[key], true, s.ids[matrixAdmins[slug]], s.now); err != nil {
+		s.t.Fatal(err)
+	}
+}
+
 // partingStates puts memberships of matrixProjectMembers in the states in
 // which a list and reading could part (TestListingProjectsIsReadingEach):
 // WG-'s membership of acme's public project ended and of its private one
@@ -176,17 +185,16 @@ func (s projectSeed) partingStates(pool *pgxpool.Pool) {
 }
 
 // standIns writes, through SQL, the states no store writes yet, until the
-// phase that adds the store replaces it: acme's archived project archived
-// (P4b), the member before's membership of the private project ended (P5)
-// and the removed member's membership of acme ended (P5). exec fails a
-// statement that changes no row, and names it, which it checks first.
+// phase that adds the store replaces it: the member before's membership of
+// the private project ended (P5) and the removed member's membership of
+// acme ended (P5). exec fails a statement that changes no row, and names
+// it, which it checks first.
 func (s projectSeed) standIns(pool *pgxpool.Pool, sd seeded) {
 	s.t.Helper()
-	const none = "UPDATE projects SET archived_at = now() WHERE false"
+	const none = "UPDATE project_members SET is_active = false WHERE false"
 	if failed, want := fatalOf(func(tb testing.TB) { s.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
 		s.t.Errorf("exec of a statement that changes no row: failed with %q, want %q", failed, want)
 	}
-	s.exec(s.t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", s.projects["acme/archived"], s.now)
 	s.exec(s.t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
 		s.projects["acme/private"], s.ids[callerBefore])
 	s.exec(s.t, pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", sd.membership("acme", callerRemoved))

@@ -60,11 +60,13 @@ func caller(ctx context.Context) string {
 // fakes are the use cases behind a test server: each records who called it
 // with what, and answers what it is given.
 type fakes struct {
-	list   *fakeList
-	create *fakeCreate
-	get    *fakeGet
-	check  *fakeCheck
-	update *fakeUpdate
+	list      *fakeList
+	create    *fakeCreate
+	get       *fakeGet
+	check     *fakeCheck
+	update    *fakeUpdate
+	archive   *fakeOnProject
+	unarchive *fakeOnProject
 }
 
 type fakeList struct {
@@ -132,6 +134,18 @@ func (f *fakeUpdate) Execute(ctx context.Context, id uuid.UUID, p domain.Project
 	return f.answer, f.err
 }
 
+// fakeOnProject is a use case on a project that takes nothing more.
+type fakeOnProject struct {
+	calls  []string // "caller id"
+	answer domain.Project
+	err    error
+}
+
+func (f *fakeOnProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	return f.answer, f.err
+}
+
 // newServer serves the module with f; a fake left nil is an idle one.
 func newServer(t *testing.T, f fakes) http.Handler {
 	t.Helper()
@@ -166,8 +180,14 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.update == nil {
 		f.update = &fakeUpdate{}
 	}
+	if f.archive == nil {
+		f.archive = &fakeOnProject{}
+	}
+	if f.unarchive == nil {
+		f.unarchive = &fakeOnProject{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
-		CheckIdentifier: f.check, UpdateProject: f.update})
+		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive})
 	return router
 }
 

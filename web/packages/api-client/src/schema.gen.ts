@@ -586,6 +586,52 @@ export interface paths {
         patch: operations["updateProject"];
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a project
+         * @description For the project's admins, and its members who are the workspace's admins. The project is archived as of the request: listProjects lists it among the archived ones, and it cannot be changed until it is unarchived. An archived project archived again takes the new time. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not archive, forbidden. The role is decided after the project row is locked.
+         */
+        post: operations["archiveProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive a project
+         * @description For the project's admins, and its members who are the workspace's admins. The project is no longer archived (archived_at null), and can be changed again; one that is not archived stays so. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not unarchive, forbidden. The role is decided after the project row is locked.
+         */
+        post: operations["unarchiveProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2147,6 +2193,54 @@ export interface operations {
         };
         responses: {
             /** @description The project as changed, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project as archived, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project as unarchived, as the caller sees it. */
             200: {
                 headers: {
                     [name: string]: unknown;

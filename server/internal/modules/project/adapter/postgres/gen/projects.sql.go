@@ -290,6 +290,33 @@ func (q *Queries) ProjectWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID
 	return workspace_id, err
 }
 
+const setArchived = `-- name: SetArchived :exec
+UPDATE projects
+SET archived_at   = CASE WHEN $1::boolean THEN $2::timestamptz END,
+    updated_by_id = $3::uuid,
+    updated_at    = $2
+WHERE id = $4
+`
+
+type SetArchivedParams struct {
+	Archived  bool
+	Now       time.Time
+	UpdatedBy uuid.UUID
+	ID        uuid.UUID
+}
+
+// archiveProject and unarchiveProject, under the project's FOR NO KEY UPDATE (M3 design 3.19): archived_at becomes the
+// moment given, or null. Archiving an archived project stamps it again, as Plane's does (views/project/base.py:427-441).
+func (q *Queries) SetArchived(ctx context.Context, arg SetArchivedParams) error {
+	_, err := q.db.Exec(ctx, setArchived,
+		arg.Archived,
+		arg.Now,
+		arg.UpdatedBy,
+		arg.ID,
+	)
+	return err
+}
+
 const updateProject = `-- name: UpdateProject :exec
 UPDATE projects p
 SET name                    = coalesce($1::text, p.name),

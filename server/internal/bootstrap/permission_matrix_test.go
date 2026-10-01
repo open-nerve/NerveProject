@@ -231,7 +231,7 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // display settings; other's admin and removed member are there so that a
 // role read in the wrong workspace lets either into acme. Through the
 // project store, the projects and project memberships of matrixProjects
-// and matrixProjectMembers. Through SQL, the states no store writes yet
+// and matrixProjectMembers, and acme's archived project archived. Through SQL, the states no store writes yet
 // (standIns, partingStates). Through the API, gone deleted by its admin,
 // which soft-deletes its memberships and its project with it; then the
 // checks that the rows the cells rest on are there (preconditions).
@@ -275,6 +275,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		for _, pm := range matrixProjectMembers {
 			projects.join(pm.key, pm.c, pm.role)
 		}
+		projects.archive("acme/archived")
 		projects.standIns(pool, s)
 		projects.partingStates(pool)
 		// The column's caller deletes gone as deleteWorkspace does it: its

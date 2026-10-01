@@ -70,6 +70,36 @@ func projectMatrixRows() []matrixRow {
 			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
 		{op: "updateProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPatch, "", `{"name":"Renamed"}`),
 			cells: map[caller]cell{callerArchivedAdmin: cellProjectArchived}},
+		// As updateProject (M3 design 3.4); an archived project archives
+		// again, and an unarchived one unarchives.
+		{op: "archiveProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/archive", ""),
+			cells: ofProject(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: archivesItsProject(true)},
+		{op: "archiveProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/archive", ""),
+			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: archivesItsProject(true)},
+		{op: "unarchiveProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/unarchive", ""),
+			cells: ofProject(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: archivesItsProject(false)},
+		{op: "unarchiveProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/unarchive", ""),
+			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: archivesItsProject(false)},
+	}
+}
+
+// archivesItsProject: the column's project, with the caller's role in it,
+// archived when archived is true, as of its last change, and not archived
+// otherwise.
+func archivesItsProject(archived bool) func(t *testing.T, c caller, s seeded, answer string) {
+	return func(t *testing.T, c caller, s seeded, answer string) {
+		var p struct {
+			ID         uuid.UUID  `json:"id"`
+			MemberRole *int       `json:"member_role"`
+			ArchivedAt *time.Time `json:"archived_at"`
+			UpdatedAt  time.Time  `json:"updated_at"`
+		}
+		decodeAnswer(t, answer, &p)
+		if p.ID != s.project(projectOf(c)) || p.MemberRole == nil || *p.MemberRole != memberRoles[c] || (p.ArchivedAt != nil) != archived ||
+			(archived && !p.ArchivedAt.Equal(p.UpdatedAt)) {
+			t.Errorf("%s archives (%v) %s; want %s, his role %d, archived %v as of its change", c, archived, answer, projectOf(c), memberRoles[c],
+				archived)
+		}
 	}
 }
 

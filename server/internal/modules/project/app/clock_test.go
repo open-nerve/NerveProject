@@ -52,6 +52,16 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			_, err := uc.Execute(as(bob), webID, domain.ProjectPatch{SetLead: true, LeadID: &alice})
 			return f.log.calls, err
 		}, updated(domain.ProjectPatch{SetLead: true, LeadID: &alice}, alice)},
+		{"archiveProject", func() ([]string, error) {
+			uc, f := newArchive(true)
+			_, err := uc.Execute(as(bob), webID)
+			return f.log.calls, err
+		}, archived(webID, true)},
+		{"unarchiveProject", func() ([]string, error) {
+			uc, f := newArchive(false)
+			_, err := uc.Execute(as(bob), opsID)
+			return f.log.calls, err
+		}, archived(opsID, false)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

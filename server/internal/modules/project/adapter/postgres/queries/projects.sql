@@ -89,3 +89,12 @@ SET name                    = coalesce(sqlc.narg(name)::text, p.name),
     updated_by_id           = sqlc.arg(updated_by)::uuid,
     updated_at              = sqlc.arg(now)
 WHERE p.id = sqlc.arg(id);
+
+-- name: SetArchived :exec
+-- archiveProject and unarchiveProject, under the project's FOR NO KEY UPDATE (M3 design 3.19): archived_at becomes the
+-- moment given, or null. Archiving an archived project stamps it again, as Plane's does (views/project/base.py:427-441).
+UPDATE projects
+SET archived_at   = CASE WHEN sqlc.arg(archived)::boolean THEN sqlc.arg(now)::timestamptz END,
+    updated_by_id = sqlc.arg(updated_by)::uuid,
+    updated_at    = sqlc.arg(now)
+WHERE id = sqlc.arg(id);

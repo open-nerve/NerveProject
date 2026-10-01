@@ -18,11 +18,16 @@ const (
 	ActionCheckIdentifier shared.Action = "project_identifier.check"
 	// ActionUpdate is changing a project: updateProject.
 	ActionUpdate shared.Action = "project.update"
+	// ActionArchive is archiving a project: archiveProject.
+	ActionArchive shared.Action = "project.archive"
+	// ActionUnarchive is unarchiving a project: unarchiveProject.
+	ActionUnarchive shared.Action = "project.unarchive"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 // Each operation adds its action here with its row.
 func Actions() []shared.Action {
-	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate}
+	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
+		ActionUnarchive}
 }

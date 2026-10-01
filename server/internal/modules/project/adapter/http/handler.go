@@ -38,13 +38,21 @@ type UpdateProjectUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, p domain.ProjectPatch) (domain.Project, error)
 }
 
+// ArchiveProjectUseCase is app.ArchiveProject, which archives or
+// unarchives.
+type ArchiveProjectUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Project, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListProjects    ListProjectsUseCase
-	CreateProject   CreateProjectUseCase
-	GetProject      GetProjectUseCase
-	CheckIdentifier CheckIdentifierUseCase
-	UpdateProject   UpdateProjectUseCase
+	ListProjects     ListProjectsUseCase
+	CreateProject    CreateProjectUseCase
+	GetProject       GetProjectUseCase
+	CheckIdentifier  CheckIdentifierUseCase
+	UpdateProject    UpdateProjectUseCase
+	ArchiveProject   ArchiveProjectUseCase
+	UnarchiveProject ArchiveProjectUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route
