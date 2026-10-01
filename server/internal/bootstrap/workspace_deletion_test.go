@@ -182,11 +182,14 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) 
 	}
 }
 
-// The projects' step runs in the deletion's transaction (M3 design 3.3,
-// 9.3): when it fails on the wired app, deleteWorkspace answers the failure
-// and no row changes, under either workspace, the projects' nor the
+// A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):
+// when it fails on the wired app, deleteWorkspace answers the failure and
+// every row rolls back, under either workspace, the projects' and the
 // workspace's own. The states table, renamed while the request runs, fails
-// the last statement of the cascade.
+// the last statement of the cascade. It does not show that the statements
+// share the deletion's one transaction: the projects' statements in a
+// transaction of their own roll back here too, with the failing one.
+// TestADeletionRefusedAtItsCommitChangesNoRow shows that.
 func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 	contract := apitest.Load(t)
 	url := pgtest.NewDatabase(t)
@@ -222,11 +225,13 @@ func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 	}
 }
 
-// Every statement of the deletion runs in its one transaction, the
-// cascade's last one too, which a failing step cannot show (M3 design 3.3,
-// 9.3): a deletion refused at its commit, after every statement ran,
-// changes no row under either workspace. A deferred constraint trigger on
-// workspaces refuses the commit.
+// Every statement of the deletion runs in its one transaction (M3 design
+// 3.3, 9.3), the cascade's last one too: none outside any transaction, and
+// none in a transaction of its own, which would commit before the
+// deletion's. A failing step cannot show it; a deletion refused at its
+// commit, after every statement ran, changes no row under either
+// workspace. A deferred constraint trigger on workspaces refuses the
+// commit.
 func TestADeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 	contract := apitest.Load(t)
 	url := pgtest.NewDatabase(t)

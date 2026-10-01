@@ -2,6 +2,7 @@ package postgresadapter_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 	"uuid"
@@ -21,6 +22,25 @@ type deletion struct {
 // deletedAtBy reports whether d was deleted at when by by.
 func (d deletion) deletedAtBy(when time.Time, by uuid.UUID) bool {
 	return d.deletedAt != nil && d.deletedAt.Equal(when) && d.updatedAt.Equal(when) && d.updatedBy != nil && *d.updatedBy == by
+}
+
+// String is d as a failure prints it: the times in RFC 3339 to the
+// microsecond and the account's id, each null when the column is.
+func (d deletion) String() string {
+	by := "null"
+	if d.updatedBy != nil {
+		by = d.updatedBy.String()
+	}
+	return fmt.Sprintf("deleted_at %s, updated_at %s, updated_by %s", instant(d.deletedAt), instant(&d.updatedAt), by)
+}
+
+// instant is *t in RFC 3339 to the microsecond, as timestamptz keeps it, or
+// null.
+func instant(t *time.Time) string {
+	if t == nil {
+		return "null"
+	}
+	return t.UTC().Format("2006-01-02T15:04:05.000000Z07:00")
 }
 
 // projectTables are the tables a workspace's deletion deletes the projects'
@@ -141,7 +161,8 @@ func TestDeletingAWorkspaceSoftDeletesItsProjects(t *testing.T) {
 			case d.deletedAt != nil && d.deletedAt.Equal(earlier) && d.updatedAt.Equal(now):
 				before++
 			default:
-				t.Errorf("acme's %s %s: %+v, want deleted at %v by bob, or at %v as before", table, id, d, later, earlier)
+				t.Errorf("acme's %s %s: %s; want deleted_at and updated_at %s by bob %s, or deleted_at %s and updated_at %s as before",
+					table, id, d, instant(&later), bob, instant(&earlier), instant(&now))
 			}
 		}
 		if deleted != 2*perProject[table] || before != perProject[table] {
@@ -159,7 +180,7 @@ func TestDeletingAWorkspaceSoftDeletesItsProjects(t *testing.T) {
 		}
 		for id, d := range rows {
 			if d.deletedAt != nil || !d.updatedAt.Equal(now) {
-				t.Errorf("beta's %s %s: %+v, want it untouched", table, id, d)
+				t.Errorf("beta's %s %s: %s; want it untouched: deleted_at null, updated_at %s", table, id, d, instant(&now))
 			}
 		}
 	}
