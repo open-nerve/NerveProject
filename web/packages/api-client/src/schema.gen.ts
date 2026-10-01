@@ -507,6 +507,29 @@ export interface paths {
         patch: operations["updateWorkspacePreferences"];
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a project in a workspace
+         * @description For the workspace's admins and members. The project is created with the caller, and the lead when one is given, as its admins, the project first in each one's sidebar, and with its six states: Backlog, the default, Todo, In Progress, Done, Cancelled and Triage. The name has 1–255 characters, not all spaces, without NUL and without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -; the identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the network is 0 or 2, public when not given; the time zone is an IANA name, the workspace's when not given (validation_failed). The values are checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden. The lead must be an active admin or member of the workspace (project_lead_id not_allowed), which is checked after the caller's role. Neither the name nor the identifier may be another undeleted project's of the workspace (project.name_taken, project.identifier_taken).
+         */
+        post: operations["createProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -938,6 +961,104 @@ export interface components {
             navigation_control_preference?: components["schemas"]["NavigationControlPreference"];
             navigation_project_limit?: components["schemas"]["NavigationProjectLimit"];
         };
+        /**
+         * @description Who sees the project besides its members and the workspace's admins: 0 private, nobody; 2 public, the workspace's members too.
+         * @enum {integer}
+         */
+        ProjectNetwork: 0 | 2;
+        LogoEmoji: {
+            /** @description The emoji, as the web app's picker gives it. */
+            value?: string;
+            /** @description The address of a custom emoji. */
+            url?: string;
+        };
+        LogoIcon: {
+            name?: string;
+            color?: string;
+            background_color?: string;
+        };
+        /** @description A project's icon, the web app's TLogoProps: every field optional, and {} no icon. */
+        LogoProps: {
+            /**
+             * @description Which of the two icons the project shows.
+             * @enum {string}
+             */
+            in_use?: "emoji" | "icon";
+            emoji?: components["schemas"]["LogoEmoji"];
+            icon?: components["schemas"]["LogoIcon"];
+        };
+        ProjectCreate: {
+            /** @description 1–255 characters, not all spaces, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
+            name: string;
+            /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
+            identifier: string;
+            description?: string;
+            network?: components["schemas"]["ProjectNetwork"];
+            /**
+             * Format: uuid
+             * @description An active admin or member of the workspace; he becomes an admin of the project.
+             */
+            project_lead_id?: string;
+            logo_props?: components["schemas"]["LogoProps"];
+            /** @description An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given. */
+            timezone?: string;
+        };
+        /**
+         * @description A member's role in a project, 5 guest, 15 member, 20 admin.
+         * @enum {integer}
+         */
+        ProjectRole: 5 | 15 | 20;
+        /** @description A project, as the caller sees it: member_role and sort_order are his, null when he is not an active member. */
+        Project: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            name: string;
+            description: string;
+            /** @description Upper case; it prefixes the numbers of the project's work items. */
+            identifier: string;
+            network: components["schemas"]["ProjectNetwork"];
+            /** Format: uuid */
+            project_lead_id: string | null;
+            /**
+             * Format: uuid
+             * @description Whom a new work item is assigned to when nobody is given.
+             */
+            default_assignee_id: string | null;
+            /** @description Whether the project shows cycles. */
+            cycle_view: boolean;
+            /** @description Whether the project shows modules. */
+            module_view: boolean;
+            /** @description Whether the project shows views. */
+            issue_views_view: boolean;
+            /** @description Whether the project shows intake. */
+            intake_view: boolean;
+            /** @description Whether the project's guests see every work item, not only their own. */
+            guest_view_all_features: boolean;
+            /** @description After how many months a closed work item is archived, 0–12; 0 never. */
+            archive_in: number;
+            /**
+             * Format: date-time
+             * @description When the project was archived; null while it is not.
+             */
+            archived_at: string | null;
+            logo_props: components["schemas"]["LogoProps"];
+            /** @description An IANA time zone name. */
+            timezone: string;
+            /** @description Null until uploads arrive (M5). */
+            cover_image_url: string | null;
+            /** @description The caller's role in the project; null when he is not an active member. */
+            member_role: components["schemas"]["ProjectRole"] | null;
+            /** @description The project's place in the caller's sidebar, lowest first; null when he is not an active member. */
+            sort_order: number | null;
+            /** @description The accounts of the active members, in the order they joined, then by id. */
+            member_ids: string[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -1016,6 +1137,13 @@ export type NavigationControlPreference = components['schemas']['NavigationContr
 export type NavigationProjectLimit = components['schemas']['NavigationProjectLimit'];
 export type WorkspacePreferences = components['schemas']['WorkspacePreferences'];
 export type WorkspacePreferencesUpdate = components['schemas']['WorkspacePreferencesUpdate'];
+export type ProjectNetwork = components['schemas']['ProjectNetwork'];
+export type LogoEmoji = components['schemas']['LogoEmoji'];
+export type LogoIcon = components['schemas']['LogoIcon'];
+export type LogoProps = components['schemas']['LogoProps'];
+export type ProjectCreate = components['schemas']['ProjectCreate'];
+export type ProjectRole = components['schemas']['ProjectRole'];
+export type Project = components['schemas']['Project'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -1795,6 +1923,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspacePreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description The new project, as the caller, its admin, sees it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
                 };
             };
             default: components["responses"]["Problem"];

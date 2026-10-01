@@ -8,6 +8,7 @@ import (
 	"uuid"
 
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 )
 
@@ -135,5 +136,51 @@ func TestWorkspaceProfilesConvertsIdentitysAnswer(t *testing.T) {
 	fake.err = failure
 	if got, err := p.PublicProfiles(context.Background(), ids); !errors.Is(err, failure) || got != nil {
 		t.Errorf("PublicProfiles() = %+v, %v; want no profiles and %v", got, err, failure)
+	}
+}
+
+// fakeWorkspaceDirectory answers the workspaces it holds by slug, and
+// records what it was asked: "read" without a lock, "share" with one.
+type fakeWorkspaceDirectory struct {
+	workspaces map[string]workspace.DirectoryEntry
+	err        error
+	asked      []string
+}
+
+func (f *fakeWorkspaceDirectory) WorkspaceBySlug(_ context.Context, slug string) (workspace.DirectoryEntry, bool, error) {
+	f.asked = append(f.asked, "read "+slug)
+	w, found := f.workspaces[slug]
+	return w, found, f.err
+}
+
+func (f *fakeWorkspaceDirectory) ShareWorkspaceBySlug(_ context.Context, slug string) (workspace.DirectoryEntry, bool, error) {
+	f.asked = append(f.asked, "share "+slug)
+	w, found := f.workspaces[slug]
+	return w, found, f.err
+}
+
+// projectWorkspaces hands project workspace's answer to the same question,
+// through the same lock: the workspace converted, found and the error as
+// they came.
+func TestProjectWorkspacesConvertsWorkspacesAnswer(t *testing.T) {
+	acme := workspace.DirectoryEntry{ID: uuid.NewV7(), Timezone: "Asia/Shanghai"}
+	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme}}
+	d := projectWorkspaces{directory: fake}
+	ctx := context.Background()
+
+	w, found, err := d.ShareWorkspaceBySlug(ctx, "acme")
+	if want := (project.Workspace{ID: acme.ID, Timezone: "Asia/Shanghai"}); err != nil || !found || w != want {
+		t.Errorf("ShareWorkspaceBySlug(acme) = %+v, %v, %v; want %+v, found", w, found, err, want)
+	}
+	if w, found, err := d.ShareWorkspaceBySlug(ctx, "gone"); err != nil || found || w != (project.Workspace{}) {
+		t.Errorf("ShareWorkspaceBySlug(gone) = %+v, %v, %v; want not found", w, found, err)
+	}
+	if want := []string{"share acme", "share gone"}; !slices.Equal(fake.asked, want) {
+		t.Errorf("workspace was asked %q, want %q", fake.asked, want)
+	}
+	failure := errors.New("connection reset")
+	fake.err = failure
+	if _, _, err := d.ShareWorkspaceBySlug(ctx, "acme"); !errors.Is(err, failure) {
+		t.Errorf("ShareWorkspaceBySlug() = %v, want %v", err, failure)
 	}
 }

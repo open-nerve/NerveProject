@@ -13,6 +13,8 @@ tags:
     description: What this instance runs.
   - name: workspace
     description: Workspaces and their members.
+  - name: project
+    description: Projects, their members and their states.
 paths:
   /api/v0/auth/register:
     post:
@@ -761,6 +763,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkspacePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/projects:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    post:
+      operationId: createProject
+      tags:
+        - project
+      summary: Create a project in a workspace
+      description: 'For the workspace''s admins and members. The project is created with the caller, and the lead when one is given, as its admins, the project first in each one''s sidebar, and with its six states: Backlog, the default, Todo, In Progress, Done, Cancelled and Triage. The name has 1–255 characters, not all spaces, without NUL and without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -; the identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the network is 0 or 2, public when not given; the time zone is an IANA name, the workspace''s when not given (validation_failed). The values are checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden. The lead must be an active admin or member of the workspace (project_lead_id not_allowed), which is checked after the caller''s role. Neither the name nor the identifier may be another undeleted project''s of the workspace (project.name_taken, project.identifier_taken).'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+        - forbidden
+        - project.identifier_taken
+        - project.name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: The new project, as the caller, its admin, sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -1629,6 +1663,191 @@ components:
           $ref: '#/components/schemas/NavigationControlPreference'
         navigation_project_limit:
           $ref: '#/components/schemas/NavigationProjectLimit'
+    ProjectNetwork:
+      description: 'Who sees the project besides its members and the workspace''s admins: 0 private, nobody; 2 public, the workspace''s members too.'
+      type: integer
+      enum:
+        - 0
+        - 2
+    LogoEmoji:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          description: The emoji, as the web app's picker gives it.
+          type: string
+        url:
+          description: The address of a custom emoji.
+          type: string
+    LogoIcon:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        background_color:
+          type: string
+    LogoProps:
+      description: 'A project''s icon, the web app''s TLogoProps: every field optional, and {} no icon.'
+      type: object
+      additionalProperties: false
+      properties:
+        in_use:
+          description: Which of the two icons the project shows.
+          type: string
+          enum:
+            - emoji
+            - icon
+        emoji:
+          $ref: '#/components/schemas/LogoEmoji'
+        icon:
+          $ref: '#/components/schemas/LogoIcon'
+    ProjectCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - identifier
+      properties:
+        name:
+          description: '1–255 characters, not all spaces, without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -'
+          type: string
+        identifier:
+          description: 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
+          type: string
+        description:
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          description: An active admin or member of the workspace; he becomes an admin of the project.
+          type: string
+          format: uuid
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given.
+          type: string
+    ProjectRole:
+      description: A member's role in a project, 5 guest, 15 member, 20 admin.
+      type: integer
+      enum:
+        - 5
+        - 15
+        - 20
+    Project:
+      description: 'A project, as the caller sees it: member_role and sort_order are his, null when he is not an active member.'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - name
+        - description
+        - identifier
+        - network
+        - project_lead_id
+        - default_assignee_id
+        - cycle_view
+        - module_view
+        - issue_views_view
+        - intake_view
+        - guest_view_all_features
+        - archive_in
+        - archived_at
+        - logo_props
+        - timezone
+        - cover_image_url
+        - member_role
+        - sort_order
+        - member_ids
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        identifier:
+          description: Upper case; it prefixes the numbers of the project's work items.
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        default_assignee_id:
+          description: Whom a new work item is assigned to when nobody is given.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cycle_view:
+          description: Whether the project shows cycles.
+          type: boolean
+        module_view:
+          description: Whether the project shows modules.
+          type: boolean
+        issue_views_view:
+          description: Whether the project shows views.
+          type: boolean
+        intake_view:
+          description: Whether the project shows intake.
+          type: boolean
+        guest_view_all_features:
+          description: Whether the project's guests see every work item, not only their own.
+          type: boolean
+        archive_in:
+          description: After how many months a closed work item is archived, 0–12; 0 never.
+          type: integer
+        archived_at:
+          description: When the project was archived; null while it is not.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name.
+          type: string
+        cover_image_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        member_role:
+          description: The caller's role in the project; null when he is not an active member.
+          oneOf:
+            - $ref: '#/components/schemas/ProjectRole'
+            - type: 'null'
+        sort_order:
+          description: The project's place in the caller's sidebar, lowest first; null when he is not an active member.
+          type:
+            - number
+            - 'null'
+        member_ids:
+          description: The accounts of the active members, in the order they joined, then by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

@@ -103,7 +103,11 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	workspacePorts := workspace.Provide(pool)
 	authorizer := access.New(access.Deps{WorkspaceRoles: workspacePorts.WorkspaceRoles})
 	// project before workspace: workspace's writes take its cascade.
-	proj := project.New(project.Deps{Pool: pool})
+	proj := project.New(project.Deps{
+		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
+		Workspaces: projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Members:    workspacePorts.WorkspaceMembers,
+	})
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
@@ -180,6 +184,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	ident.Register(a.router, api)
 	inst.Register(a.router, api)
 	ws.Register(a.router, api)
+	proj.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	a.router.Handle("/", webui.Handler(webFiles))

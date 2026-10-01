@@ -5,6 +5,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 )
 
@@ -44,4 +45,15 @@ func (p workspaceProfiles) PublicProfiles(ctx context.Context, ids []uuid.UUID) 
 		out[i] = workspace.PublicProfile(profile)
 	}
 	return out, nil
+}
+
+// projectWorkspaces is workspace's WorkspaceDirectory as project's port:
+// the same reads and locks, each workspace converted.
+type projectWorkspaces struct {
+	directory workspace.WorkspaceDirectory
+}
+
+func (d projectWorkspaces) ShareWorkspaceBySlug(ctx context.Context, slug string) (project.Workspace, bool, error) {
+	w, found, err := d.directory.ShareWorkspaceBySlug(ctx, slug)
+	return project.Workspace(w), found, err
 }
