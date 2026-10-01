@@ -190,7 +190,8 @@ func TestShareMembersAnswersTheActiveMembersRoles(t *testing.T) {
 // ShareMembers locks FOR SHARE the undeleted memberships asked for in the
 // workspace, the ended one too, and no other row: an update of a locked row
 // waits; one of another account's, of the same account in another
-// workspace, or of a deleted row does not.
+// workspace, or of a deleted row does not, and updates its one row, so it
+// cannot pass by matching none.
 func TestShareMembersLocksTheRowsAskedFor(t *testing.T) {
 	s, pool := newStore(t)
 	d := postgresadapter.NewDirectory(pool)
@@ -219,14 +220,16 @@ func TestShareMembersLocksTheRowsAskedFor(t *testing.T) {
 		{"erin's deleted one", acme.ID, erin, false},
 		{"bob's in beta", beta.ID, bob, false},
 	} {
+		var updated int64
 		err := withLockTimeout(tx, pool, func(ctx context.Context) error {
-			_, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE workspace_id = $1 AND member_id = $2",
+			tag, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE workspace_id = $1 AND member_id = $2",
 				tt.workspace, tt.user)
+			updated = tag.RowsAffected()
 			return err
 		})
 		var pgErr *pgconn.PgError
-		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && err != nil) {
-			t.Errorf("%s: updating it = %v; want a wait %v", tt.name, err, tt.waits)
+		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && (err != nil || updated != 1)) {
+			t.Errorf("%s: updating it = %d rows, %v; want a wait %v, or else its one row", tt.name, updated, err, tt.waits)
 		}
 	}
 }
@@ -272,13 +275,15 @@ func TestShareMembersLocksInIDOrder(t *testing.T) {
 		{"bob's row (before carol's by id)", bobs, true},
 		{"dave's row (after carol's by id)", daves, false},
 	} {
+		var updated int64
 		err := withLockTimeout(tx, pool, func(ctx context.Context) error {
-			_, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE id = $1", tt.id)
+			tag, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE id = $1", tt.id)
+			updated = tag.RowsAffected()
 			return err
 		})
 		var pgErr *pgconn.PgError
-		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && err != nil) {
-			t.Errorf("updating %s while ShareMembers waits for carol's = %v; want a wait %v", tt.name, err, tt.waits)
+		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && (err != nil || updated != 1)) {
+			t.Errorf("updating %s while ShareMembers waits for carol's = %d rows, %v; want a wait %v, or else its one row", tt.name, updated, err, tt.waits)
 		}
 	}
 	if err := end(); err != nil {
