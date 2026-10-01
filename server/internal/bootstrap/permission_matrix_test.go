@@ -302,11 +302,11 @@ func prepareMatrix(t *testing.T) matrixData {
 // Each cell of the matrix, in parallel: a reading cell on the reads' copy,
 // a cell with an app of its own (a writing cell, or one whose row has a
 // config) on its copy, at most matrixApps of those at once. Every cell a
-// row has runs, of whichever level: a run over a list of columns would skip
-// the cells of the other level's in silence, and
-// TestThePermissionMatrixCoversEveryOperation holds a row's cells to its
-// own columns. Every answer a row's check is for is checked, and counted: a
-// harness that skipped the checks would fail.
+// row has runs, of whichever level, and is counted: a run over a list of
+// columns would skip the cells of the other level's in silence, and fails
+// here; TestThePermissionMatrixCoversEveryOperation holds a row's cells to
+// its own columns. Every answer a row's check is for is checked, and
+// counted: a harness that skipped the checks would fail.
 func TestPermissionMatrix(t *testing.T) {
 	d := prepareMatrix(t)
 	contract := apitest.Load(t)
@@ -318,9 +318,12 @@ func TestPermissionMatrix(t *testing.T) {
 			t.Errorf("%d answers checked, want %d", checked.Load(), toCheck.Load())
 		}
 	})
+	var launched, declared int
 	for _, r := range matrixRows() {
+		declared += len(r.cells)
 		for _, c := range slices.Sorted(maps.Keys(r.cells)) {
 			want := r.cells[c]
+			launched++
 			t.Run(r.name()+"/"+string(c), func(t *testing.T) {
 				t.Parallel()
 				// Counted in the cell: a -run of some cells expects only
@@ -352,5 +355,8 @@ func TestPermissionMatrix(t *testing.T) {
 				}
 			})
 		}
+	}
+	if launched != declared {
+		t.Errorf("%d cells run, want the rows' %d", launched, declared)
 	}
 }

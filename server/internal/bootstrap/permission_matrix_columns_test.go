@@ -112,6 +112,17 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		change(&r)
 		return r
 	}
+	// aimed is row, but the column at's cell aims at the project key.
+	aimed := func(at caller, key string) matrixRow {
+		return with(func(r *matrixRow) {
+			r.request = func(c caller, s seeded) (string, string, string) {
+				if c == at {
+					return http.MethodGet, "/api/v0/projects/" + s.project(key).String(), ""
+				}
+				return toProject(c, s)
+			}
+		})
+	}
 	identifiers := apitest.Operation{ID: "checkProjectIdentifier", Tags: []string{"project"}, Method: http.MethodGet,
 		Path: "/api/v0/workspaces/{slug}/project-identifiers/{identifier}"}
 	checks := matrixRow{op: identifiers.ID, request: toWorkspace(http.MethodGet, "/project-identifiers/WEB", ""), cells: every(cellOK)}
@@ -146,6 +157,19 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 			}
 		}), checks}, []string{fmt.Sprintf("row getProject, %s: {project_id} %s is not its column's project acme/private, %s",
 			callerMemberPrivate, public, private)}},
+		// The X columns answer alike wherever they aim; what they aim at is
+		// what they test: gone's project, deleted with it, hidden from its
+		// admin; the public project, which only his ended membership of acme
+		// keeps the removed member out of.
+		{"the deleted workspace's column at acme's project", listed, []matrixRow{aimed(callerDeleted, "acme/public"), checks},
+			[]string{fmt.Sprintf("row getProject, %s: {project_id} %s is not its column's project gone/project, %s", callerDeleted, public,
+				s.project("gone/project"))}},
+		{"the removed member's column at the private project", listed, []matrixRow{aimed(callerRemoved, "acme/private"), checks},
+			[]string{fmt.Sprintf("row getProject, %s: {project_id} %s is not its column's project acme/public, %s", callerRemoved, private,
+				public)}},
+		{"a project row of PA's column alone", listed, []matrixRow{with(func(r *matrixRow) {
+			r.columns, r.cells = projectColumns[:1], map[caller]cell{callerProjectAdmin: cellOK}
+		}), checks}, []string{`row getProject has the columns ["project admin"], which are no table of the matrix`}},
 		{"a {slug} of another column's workspace beside a listed {identifier}", listed, []matrixRow{row, func() matrixRow {
 			r := checks
 			r.request = sameRequest(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/WEB", "")
@@ -168,6 +192,11 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		if got := matrixViolations(ops, tt.exempt, tt.rows, s, nil); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
+	}
+	// A parameter passed over before another leaves that one checked too.
+	if v := targetViolation("/api/v0/project-identifiers/{identifier}/projects/{project_id}", "/api/v0/project-identifiers/WEB/projects/"+public,
+		callerMemberPrivate, s, func(param string) bool { return param == "{identifier}" }); v == "" {
+		t.Error("a {project_id} of another column's project after a parameter passed over: no violation")
 	}
 	// A project never seeded fails the test at once, and names it.
 	failed := fatalOf(func(tb testing.TB) {

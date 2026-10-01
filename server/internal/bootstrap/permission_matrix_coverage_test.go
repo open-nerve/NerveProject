@@ -12,6 +12,10 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
+// matrixTables are the columns a row may name besides the workspace level's
+// (nil): each table of M3 design 9.2, whole.
+var matrixTables = [][]caller{projectColumns}
+
 // matrixViolations reports where the matrix and the contract part: an
 // operation without a row, unless every tag it has is on exempt.modules, so
 // that a new module's operations need rows without anyone listing the
@@ -21,12 +25,13 @@ import (
 // is none of tests (the names of the package's tests); a not-target
 // parameter that no operation's path has; a row that names no operation; a
 // row without a cell for one of its columns, or with a cell for a column it
-// does not have; a cell whose request is not the operation its row names,
-// so that no row tests another operation under its name; a cell that does
-// not target its column's workspace or project (targetViolation), so that
-// no column quietly tests another's case; a row that sends anything but GET
-// without write, whose cells could write on the copy the reading cells
-// share. The requests name the rows of s.
+// does not have, or whose columns are no table of the matrix (matrixTables),
+// so that no row drops a column of its table; a cell whose request is not
+// the operation its row names, so that no row tests another operation under
+// its name; a cell that does not target its column's workspace or project
+// (targetViolation), so that no column quietly tests another's case; a row
+// that sends anything but GET without write, whose cells could write on the
+// copy the reading cells share. The requests name the rows of s.
 func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []matrixRow, s seeded, tests map[string]bool) []string {
 	var found []string
 	byID, inMatrix := map[string]apitest.Operation{}, map[string]bool{}
@@ -66,6 +71,9 @@ func matrixViolations(ops []apitest.Operation, exempt matrixExemptions, rows []m
 			if !slices.Contains(r.columnsOf(), c) {
 				found = append(found, fmt.Sprintf("row %s has a cell for %s, which is none of its columns", r.name(), c))
 			}
+		}
+		if r.columns != nil && !slices.ContainsFunc(matrixTables, func(table []caller) bool { return slices.Equal(table, r.columns) }) {
+			found = append(found, fmt.Sprintf("row %s has the columns %q, which are no table of the matrix", r.name(), r.columns))
 		}
 	}
 	for _, op := range ops {
@@ -298,6 +306,11 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 			[]string{"row acceptWorkspaceInvitation sends POST without write: its cells could run on the reads' copy"}},
 		{"a cell that targets another column's workspace", ops, exempt,
 			[]matrixRow{{op: "getWorkspace", request: sameRequest(http.MethodGet, "/api/v0/workspaces/acme", ""), cells: every(cellOK)}},
+			[]string{"row getWorkspace, workspace deleted: targets the workspace acme, not its column's gone"}},
+		// G3: a parameter is listed with its path; the same name on another
+		// path is still checked.
+		{"a cell that targets another column's workspace, beside a {slug} listed on another path", append(ops, checkSlug), slugListed,
+			[]matrixRow{{op: "getWorkspace", request: sameRequest(http.MethodGet, "/api/v0/workspaces/acme", ""), cells: every(cellOK)}, checks},
 			[]string{"row getWorkspace, workspace deleted: targets the workspace acme, not its column's gone"}},
 		{"a cell of one's settings in another column's workspace", append(ops, preferences), exempt, []matrixRow{row, otherPreferences},
 			[]string{"row getWorkspacePreferences, guest: targets the workspace other, not its column's acme"}},
