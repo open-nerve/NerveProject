@@ -232,42 +232,54 @@ func TestShareMembersLocksTheRowsAskedFor(t *testing.T) {
 }
 
 // ShareMembers takes its locks in the memberships' id order, whatever
-// order the rows lie in, in the table or in an index: bob's membership has
-// the smaller id, but lies after carol's in the table, and bob's account
-// has the greater id, so the (workspace_id, member_id) index lists carol's
-// first too. carol's row is held. ShareMembers waits for carol's holding
-// bob's, which an update of bob's row then waits for; in any other order it
-// would reach carol's first and wait holding nothing.
+// order the rows lie in, in the table or in an index. By id the
+// memberships are bob's, carol's, dave's; in the table carol's, bob's,
+// dave's; by account, as the (workspace_id, member_id) index lists them,
+// bob's, dave's, carol's. No order of the table or of an index, forwards
+// or backwards, is the ids'. carol's row, the middle one, is held.
+// ShareMembers waits for it holding bob's and not yet dave's: an update of
+// bob's row waits, one of dave's does not. In any other order it would
+// wait for carol's holding nothing, or holding dave's.
 func TestShareMembersLocksInIDOrder(t *testing.T) {
 	s, pool := newStore(t)
 	d := postgresadapter.NewDirectory(pool)
-	alice, carol, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "carol@corp.com"), newAccount(t, pool, "bob@corp.com")
+	alice := newAccount(t, pool, "alice@corp.com")
+	bob, dave, carol := newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "dave@corp.com"), newAccount(t, pool, "carol@corp.com")
 	acme := newWorkspace(t, s, "Acme", "acme", alice)
-	bobsID := uuid.NewV7() // drawn first: the smaller id
-	exec(t, pool, "INSERT INTO workspace_members (id, workspace_id, member_id, role) VALUES ($1, $2, $3, 15)", uuid.NewV7(), acme.ID, carol)
-	exec(t, pool, "INSERT INTO workspace_members (id, workspace_id, member_id, role) VALUES ($1, $2, $3, 15)", bobsID, acme.ID, bob)
+	bobs, carols, daves := uuid.NewV7(), uuid.NewV7(), uuid.NewV7() // drawn in the id order
+	for _, m := range []struct{ id, user uuid.UUID }{{carols, carol}, {bobs, bob}, {daves, dave}} {
+		exec(t, pool, "INSERT INTO workspace_members (id, workspace_id, member_id, role) VALUES ($1, $2, $3, 15)", m.id, acme.ID, m.user)
+	}
 	tx := postgres.NewTxManager(pool, 2*time.Second)
 	end := hold(t, tx, func(ctx context.Context) error {
-		_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspace_members WHERE member_id = $1 FOR NO KEY UPDATE", carol)
+		_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspace_members WHERE id = $1 FOR NO KEY UPDATE", carols)
 		return err
 	})
 	done := make(chan error, 1)
 	go func() {
 		done <- tx.WithinTx(context.Background(), func(ctx context.Context) error {
-			_, err := d.ShareMembers(ctx, acme.ID, []uuid.UUID{carol, bob})
+			_, err := d.ShareMembers(ctx, acme.ID, []uuid.UUID{carol, dave, bob})
 			return err
 		})
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "workspace_members", 10*time.Second)
 
-	err := withLockTimeout(tx, pool, func(ctx context.Context) error {
-		_, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE id = $1", bobsID)
-		return err
-	})
-
-	var pgErr *pgconn.PgError
-	if !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
-		t.Errorf("updating bob's row while ShareMembers waits for carol's = %v; want lock_not_available: bob's is locked first", err)
+	for _, tt := range []struct {
+		name  string
+		id    uuid.UUID
+		waits bool
+	}{
+		{"bob's row (before carol's by id)", bobs, true},
+		{"dave's row (after carol's by id)", daves, false},
+	} {
+		err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+			_, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE id = $1", tt.id)
+			return err
+		})
+		var pgErr *pgconn.PgError
+		if waited := errors.As(err, &pgErr) && pgErr.Code == "55P03"; waited != tt.waits || (!waited && err != nil) {
+			t.Errorf("updating %s while ShareMembers waits for carol's = %v; want a wait %v", tt.name, err, tt.waits)
+		}
 	}
 	if err := end(); err != nil {
 		t.Fatal(err)
@@ -279,5 +291,101 @@ func TestShareMembersLocksInIDOrder(t *testing.T) {
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("ShareMembers() did not end within 10s")
+	}
+}
+
+// ShareMembers' lock is convention 3's FOR SHARE: while one holds the rows,
+// a second ShareMembers, as two writes adding projects with the same admins
+// take, answers without a wait, and an update of a held row waits. (That
+// ShareMembers waits for an update is TestShareMembersLocksInIDOrder's.)
+// A wait ends with lock_not_available under a lock_timeout.
+func TestShareMembersLockIsForShare(t *testing.T) {
+	s, pool := newStore(t)
+	d := postgresadapter.NewDirectory(pool)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
+	join(t, s, acme.ID, bob, shared.RoleMember)
+	tx := postgres.NewTxManager(pool, 2*time.Second)
+	hold(t, tx, func(ctx context.Context) error {
+		_, err := d.ShareMembers(ctx, acme.ID, []uuid.UUID{alice, bob})
+		return err
+	})
+
+	var got map[uuid.UUID]shared.Role
+	err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+		var err error
+		got, err = d.ShareMembers(ctx, acme.ID, []uuid.UUID{alice, bob})
+		return err
+	})
+	want := map[uuid.UUID]shared.Role{alice: shared.RoleAdmin, bob: shared.RoleMember}
+	if err != nil || !maps.Equal(got, want) {
+		t.Errorf("ShareMembers() while another holds the rows = %v, %v; want %v without a wait", got, err, want)
+	}
+
+	err = withLockTimeout(tx, pool, func(ctx context.Context) error {
+		_, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE workspace_id = $1 AND member_id = $2",
+			acme.ID, bob)
+		return err
+	})
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
+		t.Errorf("updating bob's row while ShareMembers holds it = %v; want lock_not_available after waiting", err)
+	}
+}
+
+// The directory's read takes no lock: it answers a workspace whose row a
+// transaction holds FOR UPDATE, which every row lock waits for, without
+// waiting. The holder locks acme's row, one row, so it cannot pass by
+// holding none.
+func TestTheDirectorysReadTakesNoLock(t *testing.T) {
+	s, pool := newStore(t)
+	d := postgresadapter.NewDirectory(pool)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
+	tx := postgres.NewTxManager(pool, 2*time.Second)
+	hold(t, tx, func(ctx context.Context) error {
+		tag, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR UPDATE", acme.ID)
+		if err == nil && tag.RowsAffected() != 1 {
+			err = errors.New("acme's row is not held")
+		}
+		return err
+	})
+
+	var got app.DirectoryEntry
+	var found bool
+	err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+		var err error
+		got, found, err = d.WorkspaceBySlug(ctx, "acme")
+		return err
+	})
+
+	if want := (app.DirectoryEntry{ID: acme.ID, Timezone: "UTC"}); err != nil || !found || got != want {
+		t.Errorf("WorkspaceBySlug() while acme's row is held FOR UPDATE = %+v, %v, %v; want %+v without a wait", got, found, err, want)
+	}
+}
+
+// A directory call that fails answers its error, never an answer: not "no
+// such workspace", which a use case would turn into workspace.not_found,
+// and not "no active member", which would refuse a project's lead. Each
+// runs on a cancelled context against a workspace alice administers, so
+// that neither empty answer is right.
+func TestAFailedDirectoryCallIsAnErrorNotAnAnswer(t *testing.T) {
+	s, pool := newStore(t)
+	d := postgresadapter.NewDirectory(pool)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
+
+	for name, find := range map[string]func(context.Context, string) (app.DirectoryEntry, bool, error){
+		"WorkspaceBySlug": d.WorkspaceBySlug, "ShareWorkspaceBySlug": d.ShareWorkspaceBySlug,
+	} {
+		if got, found, err := find(cancelled, "acme"); !failed(err) || found || got != (app.DirectoryEntry{}) {
+			t.Errorf("%s() = %+v, %v, %v; want context.Canceled, not no workspace", name, got, found, err)
+		}
+	}
+	if roles, err := d.ShareMembers(cancelled, acme.ID, []uuid.UUID{alice}); !failed(err) || roles != nil {
+		t.Errorf("ShareMembers() = %v, %v; want context.Canceled, no roles", roles, err)
 	}
 }
