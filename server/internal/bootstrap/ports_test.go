@@ -161,28 +161,33 @@ func (f *fakeWorkspaceDirectory) ShareWorkspaceBySlug(_ context.Context, slug st
 }
 
 // projectWorkspaces hands project workspace's answer to the same question,
-// through the same lock: the workspace converted, found and the error as
-// they came.
+// through the same lock or without one: the workspace converted, found and
+// the error as they came.
 func TestProjectWorkspacesConvertsWorkspacesAnswer(t *testing.T) {
 	acme := workspace.DirectoryEntry{ID: uuid.NewV7(), Timezone: "Asia/Shanghai"}
 	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme}}
 	d := projectWorkspaces{directory: fake}
 	ctx := context.Background()
+	want := project.Workspace{ID: acme.ID, Timezone: "Asia/Shanghai"}
 
-	w, found, err := d.ShareWorkspaceBySlug(ctx, "acme")
-	if want := (project.Workspace{ID: acme.ID, Timezone: "Asia/Shanghai"}); err != nil || !found || w != want {
-		t.Errorf("ShareWorkspaceBySlug(acme) = %+v, %v, %v; want %+v, found", w, found, err, want)
-	}
-	if w, found, err := d.ShareWorkspaceBySlug(ctx, "gone"); err != nil || found || w != (project.Workspace{}) {
-		t.Errorf("ShareWorkspaceBySlug(gone) = %+v, %v, %v; want not found", w, found, err)
-	}
-	if want := []string{"share acme", "share gone"}; !slices.Equal(fake.asked, want) {
-		t.Errorf("workspace was asked %q, want %q", fake.asked, want)
-	}
-	failure := errors.New("connection reset")
-	fake.err = failure
-	if _, _, err := d.ShareWorkspaceBySlug(ctx, "acme"); !errors.Is(err, failure) {
-		t.Errorf("ShareWorkspaceBySlug() = %v, want %v", err, failure)
+	for name, find := range map[string]func(context.Context, string) (project.Workspace, bool, error){
+		"share": d.ShareWorkspaceBySlug, "read": d.WorkspaceBySlug,
+	} {
+		fake.asked, fake.err = nil, nil
+		if w, found, err := find(ctx, "acme"); err != nil || !found || w != want {
+			t.Errorf("%s acme = %+v, %v, %v; want %+v, found", name, w, found, err, want)
+		}
+		if w, found, err := find(ctx, "gone"); err != nil || found || w != (project.Workspace{}) {
+			t.Errorf("%s gone = %+v, %v, %v; want not found", name, w, found, err)
+		}
+		if want := []string{name + " acme", name + " gone"}; !slices.Equal(fake.asked, want) {
+			t.Errorf("workspace was asked %q, want %q", fake.asked, want)
+		}
+		failure := errors.New("connection reset")
+		fake.err = failure
+		if _, _, err := find(ctx, "acme"); !errors.Is(err, failure) {
+			t.Errorf("%s = %v, want %v", name, err, failure)
+		}
 	}
 }
 

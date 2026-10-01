@@ -76,6 +76,11 @@ func (e ProjectRole) Valid() bool {
 	}
 }
 
+// IdentifierAvailability defines model for IdentifierAvailability.
+type IdentifierAvailability struct {
+	Available bool `json:"available"`
+}
+
 // LogoEmoji defines model for LogoEmoji.
 type LogoEmoji struct {
 	// URL The address of a custom emoji.
@@ -208,6 +213,9 @@ type ServerInterface interface {
 	// GetProject Read a project
 	// (GET /api/v0/projects/{project_id})
 	GetProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
+	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
+	CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string)
 	// CreateProject Create a project in a workspace
 	// (POST /api/v0/workspaces/{slug}/projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, slug Slug)
@@ -239,6 +247,41 @@ func (siw *ServerInterfaceWrapper) GetProject(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckProjectIdentifier operation middleware
+func (siw *ServerInterfaceWrapper) CheckProjectIdentifier(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "identifier" -------------
+	var identifier string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "identifier", r.PathValue("identifier"), &identifier, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "identifier", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckProjectIdentifier(w, r, slug, identifier)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -395,6 +438,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/projects", wrapper.CreateProject)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/project-identifiers/{identifier}", wrapper.CheckProjectIdentifier)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.GetProject)
 
 	return m
@@ -439,6 +483,53 @@ type GetProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetProjectdefaultApplicationProblemPlusJSONResponse) VisitGetProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckProjectIdentifierRequestObject struct {
+	Slug       Slug   `json:"slug"`
+	Identifier string `json:"identifier"`
+}
+
+type CheckProjectIdentifierResponseObject interface {
+	VisitCheckProjectIdentifierResponse(w http.ResponseWriter) error
+}
+
+type CheckProjectIdentifier200JSONResponse IdentifierAvailability
+
+func (response CheckProjectIdentifier200JSONResponse) VisitCheckProjectIdentifierResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CheckProjectIdentifierdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CheckProjectIdentifierdefaultApplicationProblemPlusJSONResponse) VisitCheckProjectIdentifierResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -508,6 +599,9 @@ type StrictServerInterface interface {
 	// GetProject Read a project
 	// (GET /api/v0/projects/{project_id})
 	GetProject(ctx context.Context, request GetProjectRequestObject) (GetProjectResponseObject, error)
+	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
+	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
+	CheckProjectIdentifier(ctx context.Context, request CheckProjectIdentifierRequestObject) (CheckProjectIdentifierResponseObject, error)
 	// CreateProject Create a project in a workspace
 	// (POST /api/v0/workspaces/{slug}/projects)
 	CreateProject(ctx context.Context, request CreateProjectRequestObject) (CreateProjectResponseObject, error)
@@ -571,6 +665,33 @@ func (sh *strictHandler) GetProject(w http.ResponseWriter, r *http.Request, proj
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetProjectResponseObject); ok {
 		if err := validResponse.VisitGetProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckProjectIdentifier operation middleware
+func (sh *strictHandler) CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string) {
+	var request CheckProjectIdentifierRequestObject
+
+	request.Slug = slug
+	request.Identifier = identifier
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckProjectIdentifier(ctx, request.(CheckProjectIdentifierRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckProjectIdentifier")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckProjectIdentifierResponseObject); ok {
+		if err := validResponse.VisitCheckProjectIdentifierResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

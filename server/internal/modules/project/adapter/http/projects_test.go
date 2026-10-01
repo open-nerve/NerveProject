@@ -208,3 +208,40 @@ func TestGetProject(t *testing.T) {
 		t.Errorf("calls = %q, want %q", get.calls, want)
 	}
 }
+
+// The path's workspace and identifier, decoded, go to the use case for the
+// caller; the answer is its availability, and its refusals as the contract
+// declares them.
+func TestCheckProjectIdentifier(t *testing.T) {
+	check := &fakeCheck{available: map[string]bool{"NEW": true, "ÇAY": true}}
+	h := newServer(t, fakes{check: check})
+	for path, want := range map[string]string{
+		"/api/v0/workspaces/acme/project-identifiers/NEW":      `{"available":true}`,
+		"/api/v0/workspaces/acme/project-identifiers/WEB":      `{"available":false}`,
+		"/api/v0/workspaces/acme/project-identifiers/%C3%87AY": `{"available":true}`,
+	} {
+		res, body := do(t, h, request(http.MethodGet, path, "alice", ""))
+		if res.StatusCode != http.StatusOK || body != want+"\n" {
+			t.Errorf("GET %s = %d %s, want 200 %s", path, res.StatusCode, body, want)
+		}
+	}
+	if want := []string{"alice acme NEW", "alice acme WEB", "alice acme ÇAY"}; !slices.Equal(slices.Sorted(slices.Values(check.calls)),
+		slices.Sorted(slices.Values(want))) {
+		t.Errorf("calls = %q, want %q", check.calls, want)
+	}
+	for _, tt := range []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{domain.ErrWorkspaceNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+	} {
+		h := newServer(t, fakes{check: &fakeCheck{err: tt.err}})
+		res, body := do(t, h, request(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/NEW", "bob", ""))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("GET = %d %s, want %d %s", res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}

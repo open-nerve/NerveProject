@@ -28,6 +28,7 @@ var tableCells = map[shared.Action][]outcome{
 	"workspace_invitation.update":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_invitation.delete":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"project.create":               {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	"project_identifier.check":     {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
 	// PA, PM, PG, WM demoted to PG, PM+WA, WA- private, WM- public, WM- private, WG- public, WG- private, P-before,
 	// P-before public, X, workspace role outside the three public, above the three public, project role outside the
 	// three, workspace role outside the three project admin (projectIdentities)

@@ -28,6 +28,8 @@ type Workspace struct {
 // (workspace.Provide): the undeleted workspace a slug names; found is false
 // when there is none (M3 design 6.5).
 type WorkspaceDirectory interface {
+	// WorkspaceBySlug reads it without a lock: for a read.
+	WorkspaceBySlug(ctx context.Context, slug string) (w Workspace, found bool, err error)
 	// ShareWorkspaceBySlug also locks the workspace's row FOR SHARE until
 	// the transaction ctx carries ends: the parent lock of a write that adds
 	// a project (M3 design 3.6 convention 2). A workspace deleted while the
@@ -50,6 +52,13 @@ type ProjectReader interface {
 	// GetProject is the undeleted project id as userID sees it; found is
 	// false when there is none.
 	GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.Project, found bool, err error)
+}
+
+// IdentifierReader is checkProjectIdentifier's repository.
+type IdentifierReader interface {
+	// IdentifierTaken reports whether an undeleted project of workspaceID
+	// has identifier.
+	IdentifierTaken(ctx context.Context, workspaceID uuid.UUID, identifier string) (bool, error)
 }
 
 // ProjectCreator is createProject's repository. Each method runs in the

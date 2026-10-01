@@ -40,6 +40,16 @@ func (h handler) GetProject(ctx context.Context, req gen.GetProjectRequestObject
 	return gen.GetProject200JSONResponse(project(p)), nil
 }
 
+// CheckProjectIdentifier serves GET
+// /api/v0/workspaces/{slug}/project-identifiers/{identifier}.
+func (h handler) CheckProjectIdentifier(ctx context.Context, req gen.CheckProjectIdentifierRequestObject) (gen.CheckProjectIdentifierResponseObject, error) {
+	available, err := h.uc.CheckIdentifier.Execute(ctx, req.Slug, req.Identifier)
+	if err != nil {
+		return nil, err
+	}
+	return gen.CheckProjectIdentifier200JSONResponse{Available: available}, nil
+}
+
 // project is p as the API shows it.
 func project(p domain.Project) gen.Project {
 	out := gen.Project{

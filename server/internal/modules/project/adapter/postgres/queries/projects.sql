@@ -7,6 +7,11 @@ VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(name), sqlc.arg(descripti
         sqlc.narg(project_lead_id), sqlc.arg(logo_props), sqlc.arg(timezone), sqlc.arg(created_by), sqlc.arg(created_by),
         sqlc.arg(now), sqlc.arg(now));
 
+-- name: IdentifierTaken :one
+-- checkProjectIdentifier: whether an undeleted project of the workspace has the identifier.
+SELECT EXISTS (SELECT 1 FROM projects
+               WHERE workspace_id = sqlc.arg(workspace_id) AND identifier = sqlc.arg(identifier) AND deleted_at IS NULL);
+
 -- name: GetProject :one
 -- The undeleted project, archived or not, as the user sees it (M3 design 3.19, 5.2): his project role and his place in
 -- his sidebar while his membership is active, null otherwise; and the active members' accounts, in the order they

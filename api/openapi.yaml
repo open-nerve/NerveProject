@@ -71,6 +71,8 @@ paths:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1me~1workspaces~1{slug}~1preferences'
   /api/v0/workspaces/{slug}/projects:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1projects'
+  /api/v0/workspaces/{slug}/project-identifiers/{identifier}:
+    $ref: 'modules/project.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1project-identifiers~1{identifier}'
   /api/v0/projects/{project_id}:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}'
 components:

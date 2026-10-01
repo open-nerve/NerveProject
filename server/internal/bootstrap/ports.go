@@ -54,6 +54,11 @@ type projectWorkspaces struct {
 	directory workspace.WorkspaceDirectory
 }
 
+func (d projectWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (project.Workspace, bool, error) {
+	w, found, err := d.directory.WorkspaceBySlug(ctx, slug)
+	return project.Workspace(w), found, err
+}
+
 func (d projectWorkspaces) ShareWorkspaceBySlug(ctx context.Context, slug string) (project.Workspace, bool, error) {
 	w, found, err := d.directory.ShareWorkspaceBySlug(ctx, slug)
 	return project.Workspace(w), found, err

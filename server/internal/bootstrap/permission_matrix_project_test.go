@@ -39,6 +39,12 @@ func projectMatrixRows() []matrixRow {
 		{op: "createProject", variant: "a lead who is no member", write: true,
 			request: toWorkspace(http.MethodPost, "/projects", `{"name":"New","identifier":"NEW","project_lead_id":"`+uuid.Nil().String()+`"}`),
 			cells:   inWorkspace(cellValidationFailed, cellValidationFailed, cellForbidden)},
+		// acme has WEB, which the identifier asked about is in any case; gone
+		// has it too, deleted with gone.
+		{op: "checkProjectIdentifier", variant: "taken", request: toWorkspace(http.MethodGet, "/project-identifiers/web", ""),
+			cells: inWorkspace(cellOK, cellOK, cellForbidden), check: identifierAvailable(false)},
+		{op: "checkProjectIdentifier", variant: "free", request: toWorkspace(http.MethodGet, "/project-identifiers/NEW", ""),
+			cells: inWorkspace(cellOK, cellOK, cellForbidden), check: identifierAvailable(true)},
 		{op: "getProject", columns: projectColumns, request: toProject(http.MethodGet, "", ""),
 			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellOK, cellOK), check: readsItsProject},
 		{op: "getProject", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "", ""),
@@ -76,5 +82,18 @@ func createsItsProject(t *testing.T, c caller, _ seeded, answer string) {
 	decodeAnswer(t, answer, &p)
 	if p.Identifier != "NEW" || p.MemberRole == nil || *p.MemberRole != 20 || len(p.MemberIDs) != 1 {
 		t.Errorf("%s creates %s; want NEW, with him its admin and only member", c, answer)
+	}
+}
+
+// identifierAvailable: the answer is want.
+func identifierAvailable(want bool) func(t *testing.T, c caller, _ seeded, answer string) {
+	return func(t *testing.T, c caller, _ seeded, answer string) {
+		var a struct {
+			Available bool `json:"available"`
+		}
+		decodeAnswer(t, answer, &a)
+		if a.Available != want {
+			t.Errorf("%s is answered %s, want available %v", c, answer, want)
+		}
 	}
 }

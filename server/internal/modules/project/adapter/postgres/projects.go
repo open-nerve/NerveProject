@@ -39,6 +39,16 @@ func (s *Store) CreateProject(ctx context.Context, p app.ProjectRow) error {
 	return nil
 }
 
+// IdentifierTaken reports whether an undeleted project of workspaceID has
+// identifier.
+func (s *Store) IdentifierTaken(ctx context.Context, workspaceID uuid.UUID, identifier string) (bool, error) {
+	taken, err := s.queries(ctx).IdentifierTaken(ctx, gen.IdentifierTakenParams{WorkspaceID: workspaceID, Identifier: identifier})
+	if err != nil {
+		return false, fmt.Errorf("check identifier %q: %w", identifier, err)
+	}
+	return taken, nil
+}
+
 // GetProject returns the undeleted project id, archived or not, as userID
 // sees it: his role and his place in his sidebar while his membership is
 // active, and the active members' accounts. found is false when there is no

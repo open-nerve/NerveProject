@@ -89,6 +89,12 @@ func Identifier(s string) string {
 	return strings.ToUpper(s)
 }
 
+// ValidIdentifier reports whether s, upper-cased, is an identifier that
+// CheckNewProject accepts.
+func ValidIdentifier(s string) bool {
+	return checkIdentifier(Identifier(s)) == nil
+}
+
 // CheckNewProject checks p (M3 design 3.19) and returns it as it is stored:
 // the identifier in upper case, the network given or public.
 //   - a name of 1–255 characters, not blank, without NUL, which the

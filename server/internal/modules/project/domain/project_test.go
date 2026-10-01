@@ -118,6 +118,16 @@ func TestCheckNewProjectReportsEveryField(t *testing.T) {
 	}
 }
 
+// ValidIdentifier is CheckNewProject's rule on the identifier, in any case.
+func TestValidIdentifier(t *testing.T) {
+	for s, want := range map[string]bool{"WEB": true, "web": true, "çay1": true, "ABCDEFGHIJ": true, "": false, "ABCDEFGHIJK": false,
+		"WEB-2": false, "WE B": false, "Ä": false} {
+		if got := ValidIdentifier(s); got != want {
+			t.Errorf("ValidIdentifier(%q) = %v, want %v", s, got, want)
+		}
+	}
+}
+
 // Only a workspace's admins and members may lead a new project, not its
 // guests nor a role outside the three (M3 design 3.19).
 func TestCanLead(t *testing.T) {

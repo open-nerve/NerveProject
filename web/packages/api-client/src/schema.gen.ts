@@ -530,6 +530,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/workspaces/{slug}/project-identifiers/{identifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description An identifier asked about, in any case. */
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Check whether a project identifier is available in a workspace
+         * @description For the workspace's admins and members, as createProject. The identifier is available when createProject would take it: once upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and no undeleted project of the workspace's. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden.
+         */
+        get: operations["checkProjectIdentifier"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}": {
         parameters: {
             query?: never;
@@ -1082,6 +1107,9 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        IdentifierAvailability: {
+            available: boolean;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -1169,6 +1197,7 @@ export type LogoProps = components['schemas']['LogoProps'];
 export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type ProjectRole = components['schemas']['ProjectRole'];
 export type Project = components['schemas']['Project'];
+export type IdentifierAvailability = components['schemas']['IdentifierAvailability'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -1977,6 +2006,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    checkProjectIdentifier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+                /** @description An identifier asked about, in any case. */
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the identifier is available. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentifierAvailability"];
                 };
             };
             default: components["responses"]["Problem"];

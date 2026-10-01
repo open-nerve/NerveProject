@@ -797,6 +797,35 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/project-identifiers/{identifier}:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+      - name: identifier
+        in: path
+        required: true
+        description: An identifier asked about, in any case.
+        schema:
+          type: string
+    get:
+      operationId: checkProjectIdentifier
+      tags:
+        - project
+      summary: Check whether a project identifier is available in a workspace
+      description: 'For the workspace''s admins and members, as createProject. The identifier is available when createProject would take it: once upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and no undeleted project of the workspace''s. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+        - forbidden
+      responses:
+        '200':
+          description: Whether the identifier is available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierAvailability'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -1870,6 +1899,14 @@ components:
         updated_at:
           type: string
           format: date-time
+    IdentifierAvailability:
+      type: object
+      additionalProperties: false
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

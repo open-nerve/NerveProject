@@ -23,10 +23,16 @@ type GetProjectUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Project, error)
 }
 
+// CheckIdentifierUseCase is app.CheckProjectIdentifier.
+type CheckIdentifierUseCase interface {
+	Execute(ctx context.Context, slug, identifier string) (bool, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	CreateProject CreateProjectUseCase
-	GetProject    GetProjectUseCase
+	CreateProject   CreateProjectUseCase
+	GetProject      GetProjectUseCase
+	CheckIdentifier CheckIdentifierUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

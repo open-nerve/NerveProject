@@ -130,3 +130,21 @@ func (q *Queries) GetProject(ctx context.Context, arg GetProjectParams) (GetProj
 	)
 	return i, err
 }
+
+const identifierTaken = `-- name: IdentifierTaken :one
+SELECT EXISTS (SELECT 1 FROM projects
+               WHERE workspace_id = $1 AND identifier = $2 AND deleted_at IS NULL)
+`
+
+type IdentifierTakenParams struct {
+	WorkspaceID uuid.UUID
+	Identifier  string
+}
+
+// checkProjectIdentifier: whether an undeleted project of the workspace has the identifier.
+func (q *Queries) IdentifierTaken(ctx context.Context, arg IdentifierTakenParams) (bool, error) {
+	row := q.db.QueryRow(ctx, identifierTaken, arg.WorkspaceID, arg.Identifier)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}

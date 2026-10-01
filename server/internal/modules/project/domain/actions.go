@@ -11,11 +11,14 @@ const (
 	ActionCreate shared.Action = "project.create"
 	// ActionRead is reading a project: getProject.
 	ActionRead shared.Action = "project.read"
+	// ActionCheckIdentifier is asking whether an identifier is available
+	// in a workspace: checkProjectIdentifier.
+	ActionCheckIdentifier shared.Action = "project_identifier.check"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 // Each operation adds its action here with its row.
 func Actions() []shared.Action {
-	return []shared.Action{ActionCreate, ActionRead}
+	return []shared.Action{ActionCreate, ActionRead, ActionCheckIdentifier}
 }

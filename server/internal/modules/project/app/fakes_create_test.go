@@ -21,6 +21,15 @@ type fakeDirectory struct {
 	err        error
 }
 
+func (f *fakeDirectory) WorkspaceBySlug(ctx context.Context, slug string) (app.Workspace, bool, error) {
+	f.log.add(ctx, "WorkspaceBySlug %s", slug)
+	if f.err != nil {
+		return app.Workspace{}, false, f.err
+	}
+	w, ok := f.workspaces[slug]
+	return w, ok, nil
+}
+
 func (f *fakeDirectory) ShareWorkspaceBySlug(ctx context.Context, slug string) (app.Workspace, bool, error) {
 	f.log.add(ctx, "ShareWorkspaceBySlug %s", slug)
 	if f.err != nil {

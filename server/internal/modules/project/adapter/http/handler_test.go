@@ -61,6 +61,7 @@ func caller(ctx context.Context) string {
 type fakes struct {
 	create *fakeCreate
 	get    *fakeGet
+	check  *fakeCheck
 }
 
 type fakeCreate struct {
@@ -93,6 +94,17 @@ func (f *fakeGet) Execute(ctx context.Context, id uuid.UUID) (domain.Project, er
 	return p, nil
 }
 
+type fakeCheck struct {
+	calls     []string // "caller slug identifier"
+	available map[string]bool
+	err       error
+}
+
+func (f *fakeCheck) Execute(ctx context.Context, slug, identifier string) (bool, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+slug+" "+identifier)
+	return f.available[identifier], f.err
+}
+
 // newServer serves the module with f; a fake left nil is an idle one.
 func newServer(t *testing.T, f fakes) http.Handler {
 	t.Helper()
@@ -118,7 +130,10 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.get == nil {
 		f.get = &fakeGet{}
 	}
-	httpadapter.Register(router, api, httpadapter.UseCases{CreateProject: f.create, GetProject: f.get})
+	if f.check == nil {
+		f.check = &fakeCheck{}
+	}
+	httpadapter.Register(router, api, httpadapter.UseCases{CreateProject: f.create, GetProject: f.get, CheckIdentifier: f.check})
 	return router
 }
 

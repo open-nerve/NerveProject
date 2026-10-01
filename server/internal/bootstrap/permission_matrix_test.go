@@ -58,6 +58,8 @@ var matrixExempt = matrixExemptions{
 		{"/api/v0/workspace-invitations/{invitation_id}/accept", "{invitation_id}"}: "account level: each column answers an invitation " +
 			"to its own address (ownInvitation), or acme's newcomer's, whatever workspace its column targets",
 		{"/api/v0/workspace-invitations/{invitation_id}/decline", "{invitation_id}"}: "account level, as accept",
+		{"/api/v0/workspaces/{slug}/project-identifiers/{identifier}", "{identifier}"}: "an identifier asked about, not a row: " +
+			"its {slug} is still its column's workspace",
 	},
 }
 

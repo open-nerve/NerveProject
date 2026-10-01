@@ -64,6 +64,8 @@ var rules = map[shared.Action]Rule{
 	"project.create": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 	// Whoever sees the project (M3 design 3.4, 3.19).
 	"project.read": {Level: LevelVisible},
+	// Who may create a project (M3 design 9.2).
+	"project_identifier.check": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its
