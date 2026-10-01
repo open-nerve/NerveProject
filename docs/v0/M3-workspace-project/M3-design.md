@@ -2019,7 +2019,7 @@ modules/access/
 | P1 `platform` | 权限框架、组合与建工作区（后端，15） | 已完成：[spec](specs/P1-platform.md)、[plan](plans/P1-platform.md)、[review](reviews/P1-platform-review.md)（执行时 16 个 Task） |
 | P2 `workspaces` | 工作区的管理和加锁约定（后端，12） | 已完成：[spec](specs/P2-workspaces.md)、[plan](plans/P2-workspaces.md)、[review](reviews/P2-workspaces-review.md)（执行时 15 个 Task） |
 | P3 `invitations` | 邀请与凭邀请注册（后端，14） | 已完成：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)、[评审](reviews/P3-invitations-review.md)（执行时 15 个 Task） |
-| P4a `projects` | 项目的建立、可见性与两个连带（后端，12）；设计中的 P4 由负责人裁定拆出（2026-10-01，第 12 节） | 进行中：[spec](specs/P4a-projects.md)、[plan](plans/P4a-projects.md)（15 个 Task） |
+| P4a `projects` | 项目的建立、可见性与两个连带（后端，12）；设计中的 P4 由负责人裁定拆出（2026-10-01，第 12 节） | 已完成：[spec](specs/P4a-projects.md)、[plan](plans/P4a-projects.md)、[评审](reviews/P4a-projects-review.md)（执行时 15 个 Task） |
 | P4b `project-members` | 项目的管理、显示设置与成员的加入（后端，9）；同上，P4a 合并之后开始 | 未开始 |
 | P5 `memberships` | 结束成员关系与恢复（后端，15） | 未开始 |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |

@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P4a `projects` |
 | 日期 | 2026-10-01 |
-| 状态 | 进行中 |
+| 状态 | 已完成（[评审记录](../reviews/P4a-projects-review.md)） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（P1、W3）、3.3、3.4、3.6（加锁顺序、加锁表、约定一至五）、3.8（接受恢复为访客）、3.12、3.15、3.17、3.18、3.19、3.20（P4a 一行）、4.1、4.6–4.9、4.11（P4a 各行）、4.12、5.1–5.3、6.3、6.5、6.6、6.7、8.2、9.1（最后一条中接受的一半）、9.2、9.3、9.4、9.6、12（P4a 与约束 1–4）、13.1 节；[M2 设计](../../M2-auth/M2-design.md) 3.11–3.14 节 |
 | 前置交接 | [P3 review](../reviews/P3-invitations-review.md)、[P2 review](../reviews/P2-workspaces-review.md)、[P1 review](../reviews/P1-platform-review.md) 第 6 节交给 P4 的各件（落点见第 3 节第 2 条）；[M2 收尾交接](../handoffs/M2-closeout.md) 第 7 节的接口一侧、第 9 节；[M1-P2](../handoffs/M1-P2-trim-content.md) 的项目字段；[M1-P3](../handoffs/M1-P3-trim-platform.md) 不再读的字段、地址 |
 | 拆分与裁定 | 负责人裁定设计中的 P4 拆成 P4a、P4b（2026-10-01，M3 设计第 12 节约束 2）；控制者的裁定 S1–S5、G1–G4 已落实：S1、G1、G2、G4 在设计（`d0796853`）；G3 在 2.7；S2 在 2.9 和 M3 设计 6.3 的 `module.go` 一行（本 spec 的提交）；S3 在 2.3；S4 在 2.15；S5 在第 5 节 |
@@ -338,7 +338,7 @@ WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at 
 | M2 收尾交接第 7 节 可空的引用字段 | `Project.cover_image_url` 必有、可为 `null`（Task 8；"处理结果"在 Task 15） | `IUserLite`：P8；本节保持 `open` |
 | M2 收尾交接第 9 节 删除关系图 | 负责人、默认负责人 `SET NULL`（Task 2），登记在差异清单（Task 15） | — |
 | M1-P2 项目字段 | 接口和表里没有 `close_in`、`default_state`、`page_view`、`estimate_id`（Task 2、8） | 保留名单的前端一侧（P8）；个人主页的页面（P11，故事 P9 的页面版本和 C10） |
-| M1-P3 不再读的字段、地址 | 项目接口没有 `anchor`、发布设置；`project-identifiers` 不带结尾 `/`（Task 8、10） | 项目成员、`RESTRICTED_URLS` 与后端同源（前端一侧，P8）和其余各条 |
+| M1-P3 不再读的字段、地址 | 项目接口没有 `anchor`、发布设置；`project-identifiers` 不带结尾 `/`（Task 8、10） | 项目成员（只有"从工作区成员中添加"一种方式，P4b；`joinProject` 改用新接口、守卫的 `project-invitations` 例外删除，P8）；`RESTRICTED_URLS` 与后端同源（前端一侧，P8）；其余各条 |
 | P1、P2、P3 review 第 6 节（P4 的各件） | 落点见第 3 节第 2 条 | `joinProject` 按集合：P4b |
 
 **M3 设计 13.1 的关闭条件**（P4a 的各行），逐条核对：
