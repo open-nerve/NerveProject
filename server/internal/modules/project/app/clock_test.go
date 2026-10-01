@@ -64,7 +64,8 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 		}, archived(opsID, false)},
 		{"deleteProject", func() ([]string, error) {
 			uc, f := newDelete()
-			return f.log.calls, uc.Execute(as(bob), webID)
+			err := uc.Execute(as(bob), webID)
+			return f.log.calls, err
 		}, deleted(webID)},
 	}
 	for _, tt := range tests {

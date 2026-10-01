@@ -46,9 +46,13 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 // every table the catalog ties to projects, and the project row, each at
 // the project's deleted_at, a time within the request, and by the account
 // that deleted it, and changes nothing under the workspace's other project.
-// The deleted project is not found any more.
+// The deleted project is not found any more. Web is archived first: an
+// archived project is deleted as any other.
 func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/archive", alice, ""); status != http.StatusOK {
+		t.Fatalf("archiving Web = %d %s, want 200", status, body)
+	}
 	keys := keysTo(t, pool, "projects")
 	under, recorded := make([]rowsUnder, len(keys)), make([][]uuid.UUID, len(keys))
 	for i, k := range keys {
