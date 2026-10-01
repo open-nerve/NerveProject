@@ -9,6 +9,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -26,7 +27,7 @@ func (s *Store) CreateInvitations(ctx context.Context, rows []app.InvitationRow)
 			ID: r.ID, WorkspaceID: r.WorkspaceID, Email: r.Email, Role: int16(r.Role), CreatedBy: &r.CreatedBy, Now: r.Now,
 		})
 		switch {
-		case uniqueViolation(err, "workspace_member_invites_workspace_id_email_key"):
+		case postgres.UniqueViolation(err, "workspace_member_invites_workspace_id_email_key"):
 			return nil, &app.DuplicateInvitation{Email: r.Email}
 		case err != nil:
 			return nil, fmt.Errorf("create workspace invitation: %w", err)

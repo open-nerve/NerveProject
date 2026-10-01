@@ -9,6 +9,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -21,7 +22,7 @@ func (s *Store) CreateWorkspace(ctx context.Context, w app.WorkspaceRow) (domain
 		CreatedBy: &w.CreatedBy, Now: w.Now,
 	})
 	switch {
-	case uniqueViolation(err, "workspaces_slug_key"):
+	case postgres.UniqueViolation(err, "workspaces_slug_key"):
 		return domain.Workspace{}, domain.ErrSlugTaken
 	case err != nil:
 		return domain.Workspace{}, fmt.Errorf("create workspace: %w", err)

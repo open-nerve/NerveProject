@@ -9,6 +9,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 )
 
 // CreateUser inserts u. A taken address is domain.ErrEmailTaken. The domain
@@ -19,7 +20,7 @@ func (s *Store) CreateUser(ctx context.Context, u app.NewUser) error {
 		ID: u.ID, Email: u.Email, Password: u.PasswordHash, DisplayName: u.DisplayName, Now: u.Now,
 	})
 	switch {
-	case uniqueViolation(err, "users_email_key"):
+	case postgres.UniqueViolation(err, "users_email_key"):
 		return domain.ErrEmailTaken
 	case err != nil:
 		return fmt.Errorf("create user: %w", err)
@@ -123,7 +124,7 @@ func (s *Store) LockAccount(ctx context.Context, email string) (uuid.UUID, error
 func (s *Store) ChangeEmail(ctx context.Context, id uuid.UUID, email string, now time.Time) error {
 	err := s.queries(ctx).ChangeEmail(ctx, gen.ChangeEmailParams{Email: email, Now: now, ID: id})
 	switch {
-	case uniqueViolation(err, "users_email_key"):
+	case postgres.UniqueViolation(err, "users_email_key"):
 		return domain.ErrEmailTaken
 	case err != nil:
 		return fmt.Errorf("change email: %w", err)

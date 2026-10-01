@@ -12,6 +12,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -29,9 +30,9 @@ func (s *Store) CreateProject(ctx context.Context, p app.ProjectRow) error {
 		Network: int16(p.Network), ProjectLeadID: p.LeadID, LogoProps: logo, Timezone: p.Timezone, CreatedBy: &p.CreatedBy, Now: p.Now,
 	})
 	switch {
-	case uniqueViolation(err, "projects_workspace_id_identifier_key"):
+	case postgres.UniqueViolation(err, "projects_workspace_id_identifier_key"):
 		return domain.ErrIdentifierTaken
-	case uniqueViolation(err, "projects_workspace_id_name_key"):
+	case postgres.UniqueViolation(err, "projects_workspace_id_name_key"):
 		return domain.ErrNameTaken
 	case err != nil:
 		return fmt.Errorf("create project: %w", err)
