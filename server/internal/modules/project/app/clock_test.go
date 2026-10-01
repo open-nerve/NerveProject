@@ -34,3 +34,28 @@ func TestCreatingAProjectReadsTheClockBeforeItsTransaction(t *testing.T) {
 		}
 	}
 }
+
+// Each write that changes an existing row reads the clock once, in its
+// transaction, after its locks (its workspace's FOR SHARE first, then its
+// project's), its decision and its checks, just before it writes (P2 spec
+// 2.6, M3 design 3.3): a write that queued behind another on either lock
+// never stamps an earlier time than the one it waited for. The clock logs
+// its read among the fakes' calls.
+func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func() (calls []string, err error)
+		want []string
+	}{
+		{"updateProject", func() ([]string, error) {
+			uc, f := newUpdate()
+			_, err := uc.Execute(as(bob), webID, domain.ProjectPatch{SetLead: true, LeadID: &alice})
+			return f.log.calls, err
+		}, updated(domain.ProjectPatch{SetLead: true, LeadID: &alice}, alice)},
+	}
+	for _, tt := range tests {
+		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {
+			t.Errorf("%s: calls = %q, %v; want %q", tt.name, calls, err, tt.want)
+		}
+	}
+}

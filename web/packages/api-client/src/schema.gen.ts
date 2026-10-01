@@ -579,7 +579,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change a project
+         * @description For the project's admins, and its members who are the workspace's admins. The fields given change and the others stay; the values follow createProject's rules, and archive_in is 0–12 (validation_failed), checked before the project is looked at. An archived project cannot be changed (project.archived): unarchive it first. The lead and the default assignee, null to clear either, must be active members of the project who are not its guests (project_lead_id, default_assignee_id not_allowed), which is checked after the caller's role. Neither the name nor the identifier may be another undeleted project's of the workspace (project.name_taken, project.identifier_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the project row is locked, so a caller demoted meanwhile is refused.
+         */
+        patch: operations["updateProject"];
         trace?: never;
     };
 }
@@ -1117,6 +1121,35 @@ export interface components {
         IdentifierAvailability: {
             available: boolean;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them. */
+        ProjectUpdate: {
+            /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
+            name?: string;
+            /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
+            identifier?: string;
+            description?: string;
+            network?: components["schemas"]["ProjectNetwork"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null for none.
+             */
+            project_lead_id?: string | null;
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null for none.
+             */
+            default_assignee_id?: string | null;
+            cycle_view?: boolean;
+            module_view?: boolean;
+            issue_views_view?: boolean;
+            intake_view?: boolean;
+            guest_view_all_features?: boolean;
+            /** @description After how many months a closed work item is archived, 0–12; 0 never. */
+            archive_in?: number;
+            logo_props?: components["schemas"]["LogoProps"];
+            /** @description An IANA time zone name. */
+            timezone?: string;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -1206,6 +1239,7 @@ export type Project = components['schemas']['Project'];
 export type ProjectList = components['schemas']['ProjectList'];
 export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type IdentifierAvailability = components['schemas']['IdentifierAvailability'];
+export type ProjectUpdate = components['schemas']['ProjectUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -2085,6 +2119,34 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The project, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description The project as changed, as the caller sees it. */
             200: {
                 headers: {
                     [name: string]: unknown;

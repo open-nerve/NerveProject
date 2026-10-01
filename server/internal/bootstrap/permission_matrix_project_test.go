@@ -10,7 +10,10 @@ import (
 
 // The project module's rows of the permission matrix (M3 design 9.2).
 
-var cellProjectNotFound = cell{http.StatusNotFound, "project.not_found"}
+var (
+	cellProjectNotFound = cell{http.StatusNotFound, "project.not_found"}
+	cellProjectArchived = cell{http.StatusConflict, "project.archived"}
+)
 
 // ofProject are the cells of a project-level row: the answers of PA, PM,
 // PG, PM+WA, WA- and WM-公, and project.not_found for the columns that do
@@ -54,6 +57,38 @@ func projectMatrixRows() []matrixRow {
 			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellOK, cellOK), check: readsItsProject},
 		{op: "getProject", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "", ""),
 			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: readsItsProject},
+		// The project's admins, and its members who are the workspace's
+		// admins (M3 design 3.4): PM+WA is a member of the project and WA- is
+		// not, so the row parts the workspace's admin who joined from the one
+		// who did not.
+		{op: "updateProject", write: true, columns: projectColumns, request: toProject(http.MethodPatch, "", `{"name":"Renamed"}`),
+			cells: ofProject(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesItsProject},
+		// A lead who is no member of the project is refused after the
+		// decision: who may not change the project learns nothing of the lead.
+		{op: "updateProject", variant: "a lead who is no member", write: true, columns: projectColumns,
+			request: toProject(http.MethodPatch, "", `{"project_lead_id":"`+uuid.Nil().String()+`"}`),
+			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
+		{op: "updateProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPatch, "", `{"name":"Renamed"}`),
+			cells: map[caller]cell{callerArchivedAdmin: cellProjectArchived}},
+	}
+}
+
+// memberRoles are the project roles of the columns that are their
+// project's members.
+var memberRoles = map[caller]int{callerProjectAdmin: 20, callerProjectMember: 15, callerProjectGuest: 5, callerMemberAndAdmin: 15,
+	callerArchivedAdmin: 20}
+
+// renamesItsProject: the column's project, renamed, with the caller's role
+// in it.
+func renamesItsProject(t *testing.T, c caller, s seeded, answer string) {
+	var p struct {
+		ID         uuid.UUID `json:"id"`
+		Name       string    `json:"name"`
+		MemberRole *int      `json:"member_role"`
+	}
+	decodeAnswer(t, answer, &p)
+	if p.ID != s.project(projectOf(c)) || p.Name != "Renamed" || p.MemberRole == nil || *p.MemberRole != memberRoles[c] {
+		t.Errorf("%s renames %s; want %s renamed, his role %d", c, answer, projectOf(c), memberRoles[c])
 	}
 }
 
@@ -67,9 +102,7 @@ func readsItsProject(t *testing.T, c caller, s seeded, answer string) {
 		ArchivedAt *time.Time `json:"archived_at"`
 	}
 	decodeAnswer(t, answer, &p)
-	roles := map[caller]int{callerProjectAdmin: 20, callerProjectMember: 15, callerProjectGuest: 5, callerMemberAndAdmin: 15,
-		callerArchivedAdmin: 20}
-	role, member := roles[c]
+	role, member := memberRoles[c]
 	if p.ID != s.project(projectOf(c)) || (p.MemberRole != nil) != member || (member && *p.MemberRole != role) ||
 		(p.ArchivedAt != nil) != (c == callerArchivedAdmin) {
 		t.Errorf("%s reads %s; want %s, his role %d (0: none), archived only for the archived project", c, answer, projectOf(c), role)

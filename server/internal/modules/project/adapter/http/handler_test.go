@@ -64,6 +64,7 @@ type fakes struct {
 	create *fakeCreate
 	get    *fakeGet
 	check  *fakeCheck
+	update *fakeUpdate
 }
 
 type fakeList struct {
@@ -118,6 +119,19 @@ func (f *fakeCheck) Execute(ctx context.Context, slug, identifier string) (bool,
 	return f.available[identifier], f.err
 }
 
+type fakeUpdate struct {
+	calls  []string // "caller id"
+	got    []domain.ProjectPatch
+	answer domain.Project
+	err    error
+}
+
+func (f *fakeUpdate) Execute(ctx context.Context, id uuid.UUID, p domain.ProjectPatch) (domain.Project, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	f.got = append(f.got, p)
+	return f.answer, f.err
+}
+
 // newServer serves the module with f; a fake left nil is an idle one.
 func newServer(t *testing.T, f fakes) http.Handler {
 	t.Helper()
@@ -149,8 +163,11 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
+	if f.update == nil {
+		f.update = &fakeUpdate{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
-		CheckIdentifier: f.check})
+		CheckIdentifier: f.check, UpdateProject: f.update})
 	return router
 }
 

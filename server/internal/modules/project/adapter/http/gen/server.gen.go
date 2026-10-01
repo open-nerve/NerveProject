@@ -202,6 +202,39 @@ type ProjectNetwork int
 // ProjectRole A member's role in a project, 5 guest, 15 member, 20 admin.
 type ProjectRole int
 
+// ProjectUpdate Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
+type ProjectUpdate struct {
+	// ArchiveIn After how many months a closed work item is archived, 0–12; 0 never.
+	ArchiveIn *int  `json:"archive_in,omitempty"`
+	CycleView *bool `json:"cycle_view,omitempty"`
+
+	// DefaultAssigneeID An active member of the project who is not its guest; null for none.
+	DefaultAssigneeID    nullable.Nullable[uuid.UUID] `json:"default_assignee_id,omitempty"`
+	Description          *string                      `json:"description,omitempty"`
+	GuestViewAllFeatures *bool                        `json:"guest_view_all_features,omitempty"`
+
+	// Identifier 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
+	Identifier     *string `json:"identifier,omitempty"`
+	IntakeView     *bool   `json:"intake_view,omitempty"`
+	IssueViewsView *bool   `json:"issue_views_view,omitempty"`
+
+	// LogoProps A project's icon, the web app's TLogoProps: every field optional, and {} no icon.
+	LogoProps  *LogoProps `json:"logo_props,omitempty"`
+	ModuleView *bool      `json:"module_view,omitempty"`
+
+	// Name 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
+	Name *string `json:"name,omitempty"`
+
+	// Network Who sees the project besides its members and the workspace's admins: 0 private, nobody; 2 public, the workspace's members too.
+	Network *ProjectNetwork `json:"network,omitempty"`
+
+	// ProjectLeadID An active member of the project who is not its guest; null for none.
+	ProjectLeadID nullable.Nullable[uuid.UUID] `json:"project_lead_id,omitempty"`
+
+	// Timezone An IANA time zone name.
+	Timezone *string `json:"timezone,omitempty"`
+}
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -217,6 +250,9 @@ type ListProjectsParams struct {
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
+// UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
+type UpdateProjectJSONRequestBody = ProjectUpdate
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
 
@@ -225,6 +261,9 @@ type ServerInterface interface {
 	// GetProject Read a project
 	// (GET /api/v0/projects/{project_id})
 	GetProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// UpdateProject Change a project
+	// (PATCH /api/v0/projects/{project_id})
+	UpdateProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string)
@@ -262,6 +301,32 @@ func (siw *ServerInterfaceWrapper) GetProject(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProject operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProject(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -498,6 +563,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/workspaces/{slug}/projects", wrapper.CreateProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/project-identifiers/{identifier}", wrapper.CheckProjectIdentifier)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.GetProject)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.UpdateProject)
 
 	return m
 }
@@ -541,6 +607,53 @@ type GetProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response GetProjectdefaultApplicationProblemPlusJSONResponse) VisitGetProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProjectRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *UpdateProjectJSONRequestBody
+}
+
+type UpdateProjectResponseObject interface {
+	VisitUpdateProjectResponse(w http.ResponseWriter) error
+}
+
+type UpdateProject200JSONResponse Project
+
+func (response UpdateProject200JSONResponse) VisitUpdateProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProjectdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateProjectdefaultApplicationProblemPlusJSONResponse) VisitUpdateProjectResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -704,6 +817,9 @@ type StrictServerInterface interface {
 	// GetProject Read a project
 	// (GET /api/v0/projects/{project_id})
 	GetProject(ctx context.Context, request GetProjectRequestObject) (GetProjectResponseObject, error)
+	// UpdateProject Change a project
+	// (PATCH /api/v0/projects/{project_id})
+	UpdateProject(ctx context.Context, request UpdateProjectRequestObject) (UpdateProjectResponseObject, error)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(ctx context.Context, request CheckProjectIdentifierRequestObject) (CheckProjectIdentifierResponseObject, error)
@@ -773,6 +889,39 @@ func (sh *strictHandler) GetProject(w http.ResponseWriter, r *http.Request, proj
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetProjectResponseObject); ok {
 		if err := validResponse.VisitGetProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProject operation middleware
+func (sh *strictHandler) UpdateProject(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request UpdateProjectRequestObject
+
+	request.ProjectID = projectID
+
+	var body UpdateProjectJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProject(ctx, request.(UpdateProjectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProject")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProjectResponseObject); ok {
+		if err := validResponse.VisitUpdateProjectResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

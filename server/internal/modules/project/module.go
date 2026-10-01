@@ -1,7 +1,7 @@
 // Package project is the projects module (M3 design 3.3, 6.3): projects,
 // their members, their states and each member's display settings. It
-// brings listing, creating and reading projects and checking an identifier,
-// carries out the workspace module's cascades on the projects
+// brings listing, creating, reading and changing projects and checking an
+// identifier, carries out the workspace module's cascades on the projects
 // (ProjectCascade), and offers the access module its reads of a project
 // (ProjectAccess).
 package project
@@ -87,6 +87,7 @@ type Module struct {
 // before workspace, which takes its Cascade.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
+	locks := app.NewLocks(store, d.Workspaces, d.Authorizer)
 	return &Module{cascade: app.NewCascade(store, store), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
@@ -94,6 +95,7 @@ func New(d Deps) *Module {
 		ListProjects:    app.NewListProjects(d.Workspaces, store, d.Authorizer),
 		GetProject:      app.NewGetProject(store, d.Authorizer),
 		CheckIdentifier: app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
+		UpdateProject:   app.NewUpdateProject(store, locks, d.Tx, d.Clock),
 	}}
 }
 

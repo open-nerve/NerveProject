@@ -54,6 +54,42 @@ func (h handler) GetProject(ctx context.Context, req gen.GetProjectRequestObject
 	return gen.GetProject200JSONResponse(project(p)), nil
 }
 
+// UpdateProject serves PATCH /api/v0/projects/{project_id}: the fields the
+// body names go to the use case, project_lead_id and default_assignee_id
+// set when named, to none when null.
+func (h handler) UpdateProject(ctx context.Context, req gen.UpdateProjectRequestObject) (gen.UpdateProjectResponseObject, error) {
+	b := req.Body
+	in := domain.ProjectPatch{Name: b.Name, Description: b.Description, Identifier: b.Identifier, CycleView: b.CycleView,
+		ModuleView: b.ModuleView, IssueViewsView: b.IssueViewsView, IntakeView: b.IntakeView, GuestViewAllFeatures: b.GuestViewAllFeatures,
+		ArchiveIn: b.ArchiveIn, Timezone: b.Timezone}
+	if b.Network != nil {
+		n := domain.Network(*b.Network)
+		in.Network = &n
+	}
+	if b.LogoProps != nil {
+		logo := logoIn(*b.LogoProps)
+		in.LogoProps = &logo
+	}
+	in.SetLead, in.LeadID = named(b.ProjectLeadID)
+	in.SetDefaultAssignee, in.DefaultAssigneeID = named(b.DefaultAssigneeID)
+	p, err := h.uc.UpdateProject.Execute(ctx, req.ProjectID, in)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateProject200JSONResponse(project(p)), nil
+}
+
+// named reports whether the body names v, and its id: nil when it is null.
+func named(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
+	if !v.IsSpecified() {
+		return false, nil
+	}
+	if id, err := v.Get(); err == nil {
+		return true, &id
+	}
+	return true, nil
+}
+
 // CheckProjectIdentifier serves GET
 // /api/v0/workspaces/{slug}/project-identifiers/{identifier}.
 func (h handler) CheckProjectIdentifier(ctx context.Context, req gen.CheckProjectIdentifierRequestObject) (gen.CheckProjectIdentifierResponseObject, error) {

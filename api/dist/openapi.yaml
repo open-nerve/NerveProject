@@ -874,6 +874,36 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateProject
+      tags:
+        - project
+      summary: Change a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins. The fields given change and the others stay; the values follow createProject''s rules, and archive_in is 0–12 (validation_failed), checked before the project is looked at. An archived project cannot be changed (project.archived): unarchive it first. The lead and the default assignee, null to clear either, must be active members of the project who are not its guests (project_lead_id, default_assignee_id not_allowed), which is checked after the caller''s role. Neither the name nor the identifier may be another undeleted project''s of the workspace (project.name_taken, project.identifier_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the project row is locked, so a caller demoted meanwhile is refused.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+        - project.archived
+        - project.identifier_taken
+        - project.name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: The project as changed, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearer:
@@ -1943,6 +1973,51 @@ components:
       properties:
         available:
           type: boolean
+    ProjectUpdate:
+      description: Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: '1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -'
+          type: string
+        identifier:
+          description: 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
+          type: string
+        description:
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          description: An active member of the project who is not its guest; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        default_assignee_id:
+          description: An active member of the project who is not its guest; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cycle_view:
+          type: boolean
+        module_view:
+          type: boolean
+        issue_views_view:
+          type: boolean
+        intake_view:
+          type: boolean
+        guest_view_all_features:
+          type: boolean
+        archive_in:
+          description: After how many months a closed work item is archived, 0–12; 0 never.
+          type: integer
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name.
+          type: string
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

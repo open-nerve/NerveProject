@@ -35,6 +35,8 @@ var tableCells = map[shared.Action][]outcome{
 	// three, workspace role outside the three project admin (projectIdentities)
 	"project.read": {allowed, allowed, allowed, allowed, allowed, allowed, allowed, invisible, invisible, invisible, invisible, allowed,
 		invisible, invisible, invisible, forbidden, forbidden},
+	"project.update": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

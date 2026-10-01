@@ -122,6 +122,14 @@ type ProjectFinder interface {
 	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
 }
 
+// ProjectLocks is the project store's side of the locks of a write on a
+// project (Locks): the project's workspace, read first without a lock, and
+// the project's own lock.
+type ProjectLocks interface {
+	ProjectFinder
+	ProjectLocker
+}
+
 // Membership is an account's undeleted membership of a project, active or
 // ended.
 type Membership struct {
@@ -142,7 +150,6 @@ type MembershipReader interface {
 // transaction ctx carries.
 type ProjectUpdater interface {
 	ProjectReader
-	ProjectLocker
 	MembershipReader
 	// UpdateProject changes the fields p gives of the project id, by the
 	// account by at now. An identifier or a name another undeleted project of
