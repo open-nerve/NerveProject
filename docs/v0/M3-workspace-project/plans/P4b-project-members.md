@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 项目的修改、归档、恢复、删除，每个成员自己的项目显示设置，项目成员的列出、添加、加入；项目一侧的成员关系增长（添加、加入，含恢复以前的成员行）与降为访客的连带在真实数据库上串行（交错 17）。九个操作各带操作名、规则行和矩阵行（175 格，含添加无效目标的 PM、X 格）；项目级的写在锁之后、在事务的连接上判定；删除项目与删除工作区共用一处删除步骤，由目录驱动的组合测试核对；故事 P2、P3、P4、P8 的接口版本通过；差异清单中 P4b 的各行、M1-P3 交接的项目成员写好。
+**Goal:** 项目的修改、归档、恢复、删除，每个成员自己的项目显示设置，项目成员的列出、添加、加入；项目一侧的成员关系增长（添加、加入，含恢复以前的成员行）与降为访客的连带在真实数据库上串行（交错 17）。九个操作各带操作名、规则行和矩阵行（175 格，含添加无效目标的 PM、X 格）；每个项目级的写先取工作区行的 `FOR SHARE`、再锁项目（负责人 2026-10-02 的方案 E），在锁之后、在事务的连接上判定，删除工作区等它们提交、以自己的一个时刻删除它们写的行；删除项目与删除工作区共用一处删除步骤，由目录驱动的组合测试核对；故事 P2、P3、P4、P8 的接口版本通过；差异清单中 P4b 的各行、M1-P3 交接的项目成员写好。
 
-**Architecture:** 只动 `project` 模块、`access` 的规则表、`bootstrap` 的测试和 e2e，不加迁移、不加跨模块端口。`project`：domain（`ProjectPatch`、`CheckProjectPatch`、`CanAssign`、`Preferences`、`CheckPreferencesPatch`、`Member`、`CheckNewMembers`、`CanAdd`、`CheckTargets`、`CanJoin`、`JoinRole`、九个操作名）；app（九个用例；写的共同头两步 `lockAndDecide`，读的 `findAndDecide`；增长的一步 `growth`；删除的一处步骤 `deleteProjects`，`Cascade.DeleteWorkspaceProjects` 和 `deleteProject` 共用；按用例分的存储端口）；存储（`LockProject` `FOR NO KEY UPDATE`、`ShareProject` `FOR SHARE`、`ProjectWorkspace`、`UpdateProject`、`SetArchived`、`Memberships`、`ListMembers`、`RestoreMember`、`Preferences`、`UpsertPreferences`、`EnsurePreferences`；删除的四条语句带可选的项目）；HTTP（`api/modules/project.yaml` 的九个操作）。`access`：九条规则（`LevelProject` 的管理员、成员、访客集合，`project.join` 是 `LevelVisible`，工作区角色由用例按集合要求）。`bootstrap`：矩阵准备拆开、账户登记、成员的行；组合出的写、删除、显示设置、恢复角色的测试；交错 17、降级与删除项目、项目级的写与降级；写在事务的连接上。
+**Architecture:** 只动 `project` 模块、`access` 的规则表、`bootstrap` 和 e2e，`workspace` 模块只加一条查询和它的存储方法；不加迁移。跨模块端口只多一个方法：`WorkspaceDirectory` 的 `ShareWorkspaceByID`（按 id 取未删除的工作区行 `FOR SHARE`，与 P4a 的 `ShareWorkspaceBySlug` 同一个端口、同一种写法，`bootstrap` 照旧转换，不 JOIN、模块之间不导入）。`project`：domain（`ProjectPatch`、`CheckProjectPatch`、`CanAssign`、`Preferences`、`CheckPreferencesPatch`、`Member`、`CheckNewMembers`、`CanAdd`、`CheckTargets`、`CanJoin`、`JoinRole`、九个操作名）；app（九个用例；写的唯一一条加锁路径 `Locks.lockAndDecide`：不加锁读项目的工作区 → 工作区 `FOR SHARE` → 添加、加入的目标的工作区成员行 `FOR SHARE` → 项目 `FOR NO KEY UPDATE`（改设置 `FOR SHARE`），确认它还在那个工作区 → 判定，`project.New` 只建一个 `Locks`，写不持自己的 `Authorizer`；读的 `findAndDecide`；增长的一步 `growth`；删除的一处步骤 `deleteProjects`，`Cascade.DeleteWorkspaceProjects` 和 `deleteProject` 共用；按用例分的存储端口）；存储（`LockProject` `FOR NO KEY UPDATE`、`ShareProject` `FOR SHARE`、`ProjectWorkspace`、`UpdateProject`、`SetArchived`、`Memberships`、`ListMembers`、`RestoreMember`、`Preferences`、`UpsertPreferences`、`EnsurePreferences`；删除的四条语句带可选的项目）；HTTP（`api/modules/project.yaml` 的九个操作）。`access`：九条规则（`LevelProject` 的管理员、成员、访客集合，`project.join` 是 `LevelVisible`，工作区角色由用例按集合要求）。`bootstrap`：`ShareWorkspaceByID` 的转换；矩阵准备拆开、账户登记、成员的行；每个项目级的写先锁工作区（按矩阵中在项目一级写的行核对完整，一个新的写没有自己的行时失败）；组合出的写、删除、显示设置、恢复角色的测试；交错 17、降级与删除项目、项目级的写与降级、同一个项目上的两个写、同一个工作区里两个项目上的写；删除工作区与项目级的写、添加多个成员与删除工作区（预检的 M1）；写在事务的连接上。
 
 **Tech Stack:** Go 1.27.1、pgx v5.11.0、sqlc v1.31.1（`CGO_ENABLED=0`）、oapi-codegen v2.8.0、goose v3.28.0、River v0.47.0、golangci-lint 2.13.2、PostgreSQL 18.6（testcontainers）；Node 24、pnpm 11.10.0、Playwright 1.63.0。
 
@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换或直接接上（M3 设计 6.5、6.6），不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断（`CanAssign`、`CanAdd`、`CanJoin`、`JoinRole` 的顺序表），不按大小比较；不留没有使用者的代码（`project.NewCascade` 不建，裁定 G2）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（751 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内：最长的是 `bootstrap/interleaving_growth_test.go`（376 行）、`bootstrap/permission_matrix_test.go`（361 行）、`project/app/ports.go`（324 行）和 `bootstrap/workspace_deletion_test.go`（323 行）；P4a review 第 6 节点名的 `permission_matrix_seeded_test.go` 在 Task 1 拆成登记和写入（`permission_matrix_seed_test.go`），本 plan 结束时分别是 255 行和 260 行，`schema_test.go`、`directory_test.go`、`invitations_test.go` 本 plan 不改。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换或直接接上（M3 设计 6.5、6.6），不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断（`CanAssign`、`CanAdd`、`CanJoin`、`JoinRole` 的顺序表），不按大小比较；不留没有使用者的代码（`project.NewCascade` 不建，裁定 G2）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（751 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内：最长的是 `bootstrap/interleaving_growth_test.go`（398 行）、`bootstrap/permission_matrix_test.go`（361 行）、`project/app/ports.go`（334 行）和 `bootstrap/workspace_deletion_test.go`（323 行）；P4a review 第 6 节点名的 `permission_matrix_seeded_test.go` 在 Task 1 拆成登记和写入（`permission_matrix_seed_test.go`），本 plan 结束时分别是 255 行和 260 行，`schema_test.go`、`directory_test.go`（396 行）、`invitations_test.go` 本 plan 不改：工作区目录按 id 的锁的存储测试另起 `directory_share_test.go`。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -28,9 +28,9 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `e22e5080` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/project.yaml`、`api/openapi.yaml`、`project/module.go`、`app/ports.go`、`app/lock.go`、`app/fakes_write_test.go`、`app/clock_test.go`、`domain/actions.go`、`domain/member.go`、`adapter/http/handler.go`、`handler_test.go`、`projects.go`、`members.go`、`adapter/postgres/update.go`、`members.go`、`preferences.go`、`queries/*.sql`、`failures_test.go`、`access/domain/rules.go`、矩阵的文件、`bootstrap/project_writes_test.go`、生成物）；每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app 或模块；端到端：单独运行的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p4btools/mutants_s*.py`、`e2e_sweep1.py`、`e2e_mutants.py`，spec 附录 A）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有：这一行的变异从那个 Task 起才被发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
-- **评审敏感**（M3 设计 12 节约束 3）：项目一侧的成员关系增长（约定三、六的添加和加入）与降为访客的连带在交错 17 相遇；谁能修改、归档、删除、看成员、加入项目是安全性质。改动这些测试、锁、恢复时角色的测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/project.yaml`、`api/openapi.yaml`、`project/module.go`、`app/ports.go`、`app/lock.go`、`app/fakes_write_test.go`、`app/clock_test.go`、`domain/actions.go`、`domain/member.go`、`adapter/http/handler.go`、`handler_test.go`、`projects.go`、`members.go`、`adapter/postgres/update.go`、`members.go`、`preferences.go`、`queries/*.sql`、`failures_test.go`、`access/domain/rules.go`、矩阵的文件、`bootstrap/project_writes_test.go`、`bootstrap/project_write_locks_test.go`（每个写的 Task 加一行）、生成物）；每个过渡版本都在逐 Task 复现中运行过。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app 或模块；端到端：单独运行的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p4btools/mutants_s*.py`、方案 E 的 `mutants_E.py`、`mutants_reanchored.py`、`mutants_split.py`，预检的 `mutants_pf*.py`，`e2e_sweep1.py`、`e2e_mutants.py`，spec 附录 A）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有：这一行的变异从那个 Task 起才被发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
+- **评审敏感**（M3 设计 12 节约束 3）：项目一侧的成员关系增长（约定三、六的添加和加入）与降为访客的连带在交错 17 相遇；每个项目级的写先取工作区行的 `FOR SHARE`（约定二，方案 E），工作区一侧的每个连带因此等在工作区行上；谁能修改、归档、删除、看成员、加入项目是安全性质。改动这些测试、锁、恢复时角色的测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
 
@@ -44,24 +44,28 @@
 | `server/internal/bootstrap/permission_matrix_test.go`（修改） | `prepareMatrix` 调用拆出的写入；归档经存储；账户的 id 登记；成员的行接进矩阵 | 1、4、9、12 |
 | `server/internal/modules/project/domain/patch.go`、`server/internal/modules/project/domain/patch_test.go` | `ProjectPatch`、`CheckProjectPatch`（与建项目同一规则，`archive_in` 0–12）、`CanAssign` | 2 |
 | `server/internal/modules/project/domain/errors.go`（修改） | `ErrArchived`（409 `project.archived`）、`Unassignable` | 2 |
-| `server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/adapter/postgres/update_test.go` | `LockProject`、`UpdateProject`；`SetArchived`（Task 4）；`ShareProject`（Task 7） | 2、4、7 |
+| `server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/adapter/postgres/update_test.go` | `LockProject`、`UpdateProject`，`ProjectWorkspace` 的测试；`SetArchived`（Task 4）；`ShareProject`（Task 7） | 2、4、7 |
 | `server/internal/modules/project/adapter/postgres/members.go`、`server/internal/modules/project/adapter/postgres/members_test.go`、`server/internal/modules/project/adapter/postgres/queries/members.sql` | `Memberships`；`ListMembers`（Task 9）；`RestoreMember`（Task 10） | 2、9、10 |
-| `server/internal/modules/project/adapter/postgres/projects.go`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`（修改） | 唯一键冲突的翻译 `taken` 由建项目和修改共用；`LockProject`、`UpdateProject`、`SetArchived`、`ProjectWorkspace`、`ShareProject` 的查询 | 2、4、7 |
+| `server/internal/modules/project/adapter/postgres/projects.go`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`（修改） | 唯一键冲突的翻译 `taken` 由建项目和修改共用；`ProjectWorkspace`（不加锁读项目的工作区：每个写在加锁之前先读它）；`LockProject`、`ProjectWorkspace`、`UpdateProject`、`SetArchived`、`ShareProject` 的查询 | 2、4、7 |
 | `server/internal/modules/project/adapter/postgres/failures_test.go`（修改） | 每个新方法的失败原样返回，不答成"没有" | 2、4、5、7、9、10 |
-| `server/internal/modules/project/adapter/postgres/gen/projects.sql.go`、`server/internal/modules/project/adapter/postgres/gen/members.sql.go`、`server/internal/modules/project/adapter/postgres/gen/cascade.sql.go`、`server/internal/modules/project/adapter/postgres/gen/preferences.sql.go`（生成） | | 2、4、5、7、9、10 |
-| `server/internal/modules/project/app/ports.go`（修改） | 每个用例的存储端口：`ProjectLocker`、`MembershipReader`、`ProjectUpdater`、`ProjectArchiver`、`Deletion`、`ProjectsDeleter`、`ProjectDeleter`、`ProjectSharer`、`ProjectFinder`、`PreferencesReader`、`PreferencesWriter`、`MemberLister`、`MemberGrower`、`SortOrderReader`、`MemberAdder`、`MemberJoiner` | 2、4、5、6、7、9、10、11、13 |
+| `server/internal/modules/project/adapter/postgres/gen/projects.sql.go`、`server/internal/modules/project/adapter/postgres/gen/members.sql.go`、`server/internal/modules/project/adapter/postgres/gen/cascade.sql.go`、`server/internal/modules/project/adapter/postgres/gen/preferences.sql.go`、`server/internal/modules/workspace/adapter/postgres/gen/directory.sql.go`（生成） | | 2、4、5、7、9、10 |
+| `server/internal/modules/workspace/adapter/postgres/queries/directory.sql`、`server/internal/modules/workspace/adapter/postgres/directory.go`、`server/internal/modules/workspace/module.go`（修改）；`server/internal/modules/workspace/adapter/postgres/directory_share_test.go` | 工作区目录按 id 取未删除的工作区行 `FOR SHARE`（`ShareWorkspaceByID`）：项目级的写的第一把锁 | 2 |
+| `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`（修改） | `projectWorkspaces` 转换 `ShareWorkspaceByID` 的回答 | 2 |
+| `server/internal/modules/project/app/fakes_create_test.go`（修改） | 假目录也按 id 找工作区 | 2 |
+| `server/internal/modules/project/app/ports.go`（修改） | `WorkspaceDirectory` 的 `WorkspaceSharer`（按 id 取工作区行的 `FOR SHARE`）；每个用例的存储端口：`ProjectLocker`、`ProjectFinder`、`ProjectLocks`（Task 3）、`MembershipReader`、`ProjectUpdater`、`ProjectArchiver`、`Deletion`、`ProjectsDeleter`、`ProjectSharer`、`PreferencesReader`、`PreferencesWriter`、`MemberLister`、`MemberGrower`、`SortOrderReader`、`MemberAdder`、`MemberJoiner` | 2、3、4、5、7、9、10、11、13 |
 | `api/modules/project.yaml`；`api/openapi.yaml`（修改） | 九个操作和它们的结构 | 3、4、6、8、9、12、13（`openapi.yaml`：4、8、9、13） |
 | `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`、`web/packages/api-client/src/schema.gen.ts`（生成） | | 3、4、6、8、9、12、13（`bodyshape.gen.go`：3、8、12） |
 | `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`（修改） | 规则表的九行和它们的格子 | 3、4、6、7、9、11、13 |
 | `server/internal/modules/project/domain/actions.go`（修改） | 九个操作名 | 3、4、6、7、9、11、13 |
-| `server/internal/modules/project/app/lock.go` | 写的头两步 `lockAndDecide`、判定 `decide`、写的回答 `answer`；读的头两步 `findAndDecide`（Task 7） | 3、7 |
+| `server/internal/modules/project/app/lock.go` | 写的唯一一条加锁路径 `Locks`（`lockAndDecide`：不加锁读项目的工作区、工作区 `FOR SHARE`、项目的锁并确认它的工作区、判定）、判定 `decide`、写的回答 `answer`；改设置的 `FOR SHARE` 和读的头两步 `findAndDecide`（Task 7）；添加、加入的目标的工作区成员行（Task 11） | 3、7、11 |
 | `server/internal/modules/project/app/update_project.go`、`server/internal/modules/project/app/update_project_test.go` | `updateProject` | 3 |
-| `server/internal/modules/project/app/fakes_write_test.go` | 写的假存储（按方法名失败、记下事务之外的调用）和 web、ops 两个项目 | 3、4、5、7、11 |
-| `server/internal/modules/project/app/clock_test.go`（修改） | 每个改已有行的写在锁、判定、检查之后读一次时钟 | 3、4、6、7、11、13 |
+| `server/internal/modules/project/app/fakes_write_test.go` | 写的假存储（按方法名失败、记下事务之外的调用）和 web、ops 两个项目；工作区的锁（`fakeWorkspaces`） | 3、4、5、7、11 |
+| `server/internal/modules/project/app/clock_test.go`（修改） | 每个改已有行的写在它的锁（工作区的先）、判定、检查之后读一次时钟 | 3、4、6、7、11、13 |
 | `server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`（修改）；`server/internal/modules/project/adapter/http/update_test.go`、`server/internal/modules/project/adapter/http/archive_test.go`、`server/internal/modules/project/adapter/http/delete_test.go`、`server/internal/modules/project/adapter/http/join_test.go` | 用例的接口；项目的 handler 和它们的测试 | 3、4、6、8、9、12、13 |
-| `server/internal/modules/project/module.go`（修改） | 九个用例的接线 | 3、4、6、8、9、12、13 |
+| `server/internal/modules/project/module.go`（修改） | 九个用例的接线；七个写共用的一个 `Locks` | 3、4、6、8、9、11、12、13 |
 | `server/internal/bootstrap/permission_matrix_project_test.go`（修改） | 修改、归档、恢复、删除、显示设置的矩阵行 | 3、4、6、8、9、12 |
-| `server/internal/bootstrap/project_writes_test.go` | 组合出的每个写盖上请求的时刻和调用者；负责人、默认负责人是项目中不是访客的有效成员（Task 12） | 3、4、6、8、12 |
+| `server/internal/bootstrap/project_writes_test.go` | 组合出的每个写盖上请求的时刻和调用者；`createdProject`（Task 4）；负责人、默认负责人是项目中不是访客的有效成员（Task 12） | 3、4、8、12 |
+| `server/internal/bootstrap/project_write_locks_test.go` | 每个项目级的写先取工作区行的 `FOR SHARE`，在它的事务里、在目标和项目之前；写的行与矩阵中在项目一级写的行逐个对上（每个写的 Task 加一行） | 4、6、8、12、13 |
 | `web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`（修改） | `project.archived` 的文案 | 3 |
 | `server/internal/modules/project/app/archive_project.go`、`server/internal/modules/project/app/archive_project_test.go` | `archiveProject`、`unarchiveProject` | 4 |
 | `server/internal/modules/project/app/deletion.go`；`server/internal/modules/project/app/cascade.go`（完整内容）、`server/internal/modules/project/app/cascade_test.go`（修改） | 删除项目的一处步骤 `deleteProjects`，删除工作区的连带和删除项目共用（P7 在这里加标签） | 5 |
@@ -81,7 +85,8 @@
 | `server/internal/bootstrap/permission_matrix_members_test.go` | 成员的矩阵行：列出、添加（四个无效目标）、加入 | 12、13 |
 | `server/internal/modules/project/app/join_project.go`、`server/internal/modules/project/app/join_project_test.go` | `joinProject` | 13 |
 | `server/internal/bootstrap/project_members_test.go` | 恢复时的角色（9.1）；增长在一个事务里（Task 14） | 13、14 |
-| `server/internal/bootstrap/interleaving_growth_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/project_connection_test.go`；`server/internal/bootstrap/demotion_test.go`（修改） | 交错 17；降级与删除项目；项目级的写与降级；每个写在事务的连接上；`refusingCommits` 按表 | 14 |
+| `server/internal/bootstrap/interleaving_growth_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/project_connection_test.go`；`server/internal/bootstrap/demotion_test.go`（修改） | 交错 17；降级与删除项目；项目级的写与降级；同一个项目上的两个写；同一个工作区里两个项目上的写不互等；每个写在事务的连接上；`refusingCommits` 按表 | 14 |
+| `server/internal/bootstrap/interleaving_deletion_test.go` | 删除工作区等项目级的写提交，以自己的一个时刻删除它们写的行（预检的 L1）；添加多个成员与删除工作区串行，没有 40P01（预检的 M1） | 14 |
 | `server/internal/modules/project/adapter/postgres/demote_test.go`（修改） | `LockMemberProjects` 不锁等锁期间删除的项目 | 14 |
 | `e2e/fixtures/api.ts`、`e2e/fixtures/assert/project.ts`、`e2e/fixtures/assert/workspace.ts`（修改） | 加项目成员、`amidAnotherWorkspace`；`expectMember`、`expectProjectDeleted`，`expectProjectCreated` 读未删除的行；`deletedAlone` | 15 |
 | `e2e/stories/project/p2-visibility.spec.ts`、`e2e/stories/project/p3-project-settings.spec.ts`、`e2e/stories/project/p4-archive.spec.ts`、`e2e/stories/project/p8-project-preferences.spec.ts`；`e2e/stories/workspace/w3-workspace-settings.spec.ts`（修改） | P2、P3、P4、P8 的接口版本；W3 删除一个项目在工作区之前 | 15 |
@@ -627,25 +632,29 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 2: 修改项目的领域与存储；项目锁；成员关系的读
+### Task 2: 修改项目的领域与存储；项目锁；成员关系的读；工作区按 id 的锁
 
 **Files:**
-- Create: `server/internal/modules/project/adapter/postgres/members.go`、`server/internal/modules/project/adapter/postgres/members_test.go`、`server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/adapter/postgres/update_test.go`、`server/internal/modules/project/domain/patch.go`、`server/internal/modules/project/domain/patch_test.go`
-- Modify: `server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/projects.go`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/errors.go`
+- Create: `server/internal/modules/project/adapter/postgres/members.go`、`server/internal/modules/project/adapter/postgres/members_test.go`、`server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/adapter/postgres/update_test.go`、`server/internal/modules/project/domain/patch.go`、`server/internal/modules/project/domain/patch_test.go`、`server/internal/modules/workspace/adapter/postgres/directory_share_test.go`
+- Modify: `server/internal/bootstrap/ports.go`、`server/internal/bootstrap/ports_test.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/projects.go`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`、`server/internal/modules/project/app/fakes_create_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/errors.go`、`server/internal/modules/workspace/adapter/postgres/directory.go`、`server/internal/modules/workspace/adapter/postgres/queries/directory.sql`、`server/internal/modules/workspace/module.go`
 - Modify（完整内容）: `server/internal/modules/project/adapter/postgres/queries/members.sql`
-- Generate: `server/internal/modules/project/adapter/postgres/gen/members.sql.go`、`server/internal/modules/project/adapter/postgres/gen/projects.sql.go`
+- Generate: `server/internal/modules/project/adapter/postgres/gen/members.sql.go`、`server/internal/modules/project/adapter/postgres/gen/projects.sql.go`、`server/internal/modules/workspace/adapter/postgres/gen/directory.sql.go`
 
 **Interfaces:**
 - Produces（spec 2.3，M3 设计 3.6 约定二、3.19、5.2）：`domain.ProjectPatch`（每个可写的字段一个指针，负责人、默认负责人各带一个 `Set…` 标志，`null` 清空）；`domain.CheckProjectPatch(ProjectPatch) (ProjectPatch, error)`：给出的字段照 `CheckNewProject` 的规则逐字段核对（名称、标识转大写、说明、网络、时区、图标），`archive_in` 0–`MaxArchiveIn`（12），全部问题一个 422；`domain.CanAssign(role)`：项目的管理员、成员，按集合；`domain.ErrArchived`（409 `project.archived`）；`domain.Unassignable(field)`。
-- `app.LockedProject{WorkspaceID, Archived}`；`app.ProjectLocker.LockProject(ctx, id) (LockedProject, found, error)`：`FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，等锁之后重新求值；`app.Membership{ID, Role, Active}`、`app.MembershipReader.Memberships(ctx, projectID, userIDs)`：未删除的成员关系（有效、已结束），按账户；`app.ProjectUpdater`。
+- `app.LockedProject{WorkspaceID, Archived}`；`app.ProjectLocker.LockProject(ctx, id) (LockedProject, found, error)`：`FOR NO KEY UPDATE`，带 `deleted_at IS NULL`，等锁之后重新求值；`app.ProjectFinder.ProjectWorkspace(ctx, id) (workspaceID, found, error)`：未删除的项目的工作区，不加锁（每个写在加锁之前先读它，M3 设计 3.6 约定二；Task 7、9 的读也用它）；`app.Membership{ID, Role, Active}`、`app.MembershipReader.Memberships(ctx, projectID, userIDs)`：未删除的成员关系（有效、已结束），按账户；`app.ProjectUpdater`。
 - 存储：`LockProject`、`UpdateProject`（没给的字段 `coalesce` 保留，负责人、默认负责人按标志写，`updated_by_id`、`updated_at`）、`Memberships`；建项目和修改共用 `taken`：两个部分唯一键的冲突是 `ErrIdentifierTaken`、`ErrNameTaken`，别的错误原样包装。
-- 使用者：Task 3 的 `updateProject`；`LockProject` 由 Task 4、6、11、13 的写共用，`Memberships` 由 Task 11、13 共用。
+- 工作区按 id 的锁（方案 E，M3 设计 3.6 约定二、6.5）：`workspace` 的查询 `ShareDirectoryWorkspaceByID`（`WHERE id = $1 AND deleted_at IS NULL FOR SHARE`，等锁之后重新求值）、`Directory.ShareWorkspaceByID(ctx, id) (DirectoryEntry, found, error)`，与 P4a 的 `ShareWorkspaceBySlug` 并列；`app.WorkspaceDirectory` 嵌入 `app.WorkspaceSharer.ShareWorkspaceByID(ctx, id) (Workspace, found, error)`；`bootstrap` 的 `projectWorkspaces` 照旧转换回答。`workspace` 模块只多这条查询和它的方法。
+- 使用者：Task 3 的 `Locks`（`ProjectWorkspace` → `ShareWorkspaceByID` → `LockProject`）；`LockProject` 由 Task 4、6、11、13 的写共用，`Memberships` 由 Task 11、13 共用。
 
 **Tests:**
 - `domain/patch_test.go`：`TestCheckProjectPatchAcceptsValidPatches`（空的；`çay1` 存成 `ÇAY1`、`archive_in` 0；每个字段都给、设负责人、清空默认负责人、`archive_in` 12 的：标识转大写，别的照原样）；`TestCheckProjectPatchReportsEveryField`（`archive_in` −1、13、120 各一个 `out_of_range`；七个字段同时出错按字段顺序一个 422）；`TestThePatchChecksAsCreateDoes`（名称、标识、时区、网络、说明、图标的 33 个值，交给 `CheckNewProject` 和 `CheckProjectPatch` 得到同样的字段错误，或都通过：修改与建项目同一规则，M3 设计 3.19）；`TestCanAssign`（20、15 可以；5、0、10、16、25 不可以）。
 - `adapter/postgres/update_test.go`：`TestLockProject`（未删除的项目读到工作区和是否归档，已删除的、不存在的找不到；持锁时 Web 的 `FOR SHARE` 等待、`FOR KEY SHARE` 不等，别的项目不被锁；事务结束后放开）；`TestTheProjectLockSeesADeletionItWaitedFor`（另一个事务软删除 Web 未提交，`LockProject` 等它（`pgtest.WaitForLockWaitOn`），提交之后找不到）；`TestUpdateProject`（每个字段都有一次没给而保留与默认、与别的项目都不同的值；空的修改只改审计列；清空负责人、默认负责人；别的项目每一列不变）；`TestUpdateProjectIdentifierOrNameTaken`（同工作区未删除的项目（已归档的也算）的标识、名称各答自己的 409，什么都不变；自己的、别的工作区的、已删除的可用）；`TestUpdateProjectBreakingAnotherConstraintIsInternal`（`archive_in` 13 是 `projects_archive_in_check` 的违反，不是领域错误）。
 - `adapter/postgres/members_test.go`：`TestMemberships`（问到的账户各得他在这个项目未删除的成员关系，有效的、已结束的；不是别的项目的、不是已删除的、不是没问到的账户的；行序让两种物理顺序都不能互相顶替）。
-- `failures_test.go`：`LockProject`、`Memberships`、`UpdateProject` 的失败是 `context.Canceled`，不答成"没有"、不答成名称或标识被占。
+- `adapter/postgres/update_test.go` 另有 `TestProjectWorkspace`（未删除的项目的工作区，已归档的也找到；已删除的、不存在的找不到；读的事务开着时 Web 的 `FOR UPDATE` 不等：不加锁）。
+- `failures_test.go`：`LockProject`、`ProjectWorkspace`、`Memberships`、`UpdateProject` 的失败是 `context.Canceled`，不答成"没有"、不答成名称或标识被占。
+- `workspace/adapter/postgres/directory_share_test.go`（新文件：`directory_test.go` 已 396 行）：`TestShareWorkspaceByIDFindsTheUndeletedWorkspace`（两个工作区各得自己的 id 和时区，已删除的、不存在的找不到；失败是错误，不是"没有"）；`TestTheDirectorysLockByIDIsForShare`（持锁时工作区的 `FOR NO KEY UPDATE` 等待、`FOR SHARE` 不等，别的工作区不被锁；它自己等 `FOR NO KEY UPDATE`）；`TestTheDirectorysLockByIDSeesADeletionItWaitedFor`。
+- `bootstrap/ports_test.go`：`TestProjectWorkspacesConvertsWorkspacesAnswer` 加"按 id 取锁"一路：转换后的工作区、`found` 和错误照原样。
 
 - [ ] **Step 1: 领域**
 
@@ -950,6 +959,13 @@ FROM projects
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL
 FOR NO KEY UPDATE;
 
+-- name: ProjectWorkspace :one
+-- The workspace of the undeleted project, archived or not, without a lock: what a read decides on (M3 design 6.4), and
+-- what a write on the project reads first, to lock the workspace before the project (3.6 convention 2).
+SELECT workspace_id
+FROM projects
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
 -- name: UpdateProject :exec
 -- updateProject, under the project's FOR NO KEY UPDATE (M3 design 5.2): a field left out, null here, keeps its value;
 -- the lead and the default assignee change when their flags are set, to null too.
@@ -976,6 +992,30 @@ WHERE p.id = sqlc.arg(id);
 
 ````
 
+`server/internal/modules/workspace/adapter/postgres/queries/directory.sql`（修改，1 处）：
+
+````old server/internal/modules/workspace/adapter/postgres/queries/directory.sql
+FOR SHARE;
+
+-- name: ShareMembers :many
+````
+````new server/internal/modules/workspace/adapter/postgres/queries/directory.sql
+FOR SHARE;
+
+-- name: ShareDirectoryWorkspaceByID :one
+-- WorkspaceDirectory's lock by id: the first lock of every write on a project of the workspace (M3 design 3.6
+-- convention 2), as ShareWorkspaceByID takes it. FOR SHARE waits for the workspace's FOR NO KEY UPDATE, under which
+-- every cascade over its projects runs, and makes it wait; it does not wait for another write on a project. After a
+-- wait, Postgres evaluates deleted_at IS NULL again on the row's newest version, so a workspace deleted meanwhile
+-- reads no row.
+SELECT id, timezone
+FROM workspaces
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR SHARE;
+
+-- name: ShareMembers :many
+````
+
 - [ ] **Step 3: 生成**
 
 Run: `make gen-go`
@@ -984,21 +1024,50 @@ Expected: 成功：
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
 | `647dff7a51d6e3bc1bb864cccb913010b9beb7102b53bae27eb5bd3a44a6545d` | 87 | `server/internal/modules/project/adapter/postgres/gen/members.sql.go` |
-| `46adf729c6eff4fc6cbfa3f3a10f9848eb064cf730b240f76b6e5b66e9ce7f99` | 348 | `server/internal/modules/project/adapter/postgres/gen/projects.sql.go` |
+| `00d39cf9fa264e66922356d252d4069de91a91e5e4a312687e01e983229417bc` | 363 | `server/internal/modules/project/adapter/postgres/gen/projects.sql.go` |
+| `bb1fe74df1c3ea4454eced2ec7d1218c596dc8a4e8f2cdb11b92ab1c919c13ff` | 119 | `server/internal/modules/workspace/adapter/postgres/gen/directory.sql.go` |
 
-Run: `shasum -a 256 server/internal/modules/project/adapter/postgres/gen/members.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go`
+Run: `shasum -a 256 server/internal/modules/project/adapter/postgres/gen/members.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go server/internal/modules/workspace/adapter/postgres/gen/directory.sql.go`
 Expected: 与上表相同。
 
 - [ ] **Step 4: 端口和存储**
 
-`server/internal/modules/project/app/ports.go`（修改，1 处）：
+`server/internal/modules/project/app/ports.go`（修改，3 处）：
 
 ````old server/internal/modules/project/app/ports.go
-}
-
-// ProjectRow is a project to insert: checked values, its id, its creator
+// (workspace.Provide): the undeleted workspace a slug names; found is false
+// when there is none (M3 design 6.5).
 ````
 ````new server/internal/modules/project/app/ports.go
+// (workspace.Provide): the undeleted workspace a slug names, or an id
+// names; found is false when there is none (M3 design 6.5).
+````
+
+````old server/internal/modules/project/app/ports.go
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (w Workspace, found bool, err error)
+````
+````new server/internal/modules/project/app/ports.go
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (w Workspace, found bool, err error)
+	WorkspaceSharer
+}
+
+// WorkspaceSharer takes the first lock of a write on a project (M3 design
+// 3.6 convention 2).
+type WorkspaceSharer interface {
+	// ShareWorkspaceByID locks the undeleted workspace id's row FOR SHARE
+	// until the transaction ctx carries ends. Every cascade over the
+	// workspace's projects runs under the row's FOR NO KEY UPDATE, which
+	// this waits for and holds off; another write on a project of the
+	// workspace does not wait for it. A workspace deleted while the lock
+	// waited is not found.
+	ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (w Workspace, found bool, err error)
+````
+
+````old server/internal/modules/project/app/ports.go
+	CreateStates(ctx context.Context, rows []StateRow) error
+````
+````new server/internal/modules/project/app/ports.go
+	CreateStates(ctx context.Context, rows []StateRow) error
 }
 
 // LockedProject is a project as its lock reads it.
@@ -1014,6 +1083,15 @@ type ProjectLocker interface {
 	// transaction ctx carries ends; found is false when there is none, a
 	// project deleted while the lock waited too.
 	LockProject(ctx context.Context, id uuid.UUID) (p LockedProject, found bool, err error)
+}
+
+// ProjectFinder finds the workspace of a project: what a read decides on,
+// and what a write on the project reads first, to lock the workspace
+// before the project (M3 design 3.6 convention 2).
+type ProjectFinder interface {
+	// ProjectWorkspace is the workspace of the undeleted project id, read
+	// without a lock; found is false when there is none.
+	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
 }
 
 // Membership is an account's undeleted membership of a project, active or
@@ -1042,12 +1120,9 @@ type ProjectUpdater interface {
 	// account by at now. An identifier or a name another undeleted project of
 	// the workspace has is domain.ErrIdentifierTaken or domain.ErrNameTaken.
 	UpdateProject(ctx context.Context, id uuid.UUID, p domain.ProjectPatch, by uuid.UUID, now time.Time) error
-}
-
-// ProjectRow is a project to insert: checked values, its id, its creator
 ````
 
-`server/internal/modules/project/adapter/postgres/projects.go`（修改，2 处）：
+`server/internal/modules/project/adapter/postgres/projects.go`（修改，3 处）：
 
 ````old server/internal/modules/project/adapter/postgres/projects.go
 	})
@@ -1070,6 +1145,27 @@ func taken(write string, err error) error {
 ````new server/internal/modules/project/adapter/postgres/projects.go
 	case err != nil:
 		return fmt.Errorf("%s: %w", write, err)
+````
+
+````old server/internal/modules/project/adapter/postgres/projects.go
+	return taken, nil
+````
+````new server/internal/modules/project/adapter/postgres/projects.go
+	return taken, nil
+}
+
+// ProjectWorkspace is the workspace of the undeleted project id, archived
+// or not, read without a lock; found is false when there is none
+// (app.ProjectFinder).
+func (s *Store) ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error) {
+	workspaceID, err = s.queries(ctx).ProjectWorkspace(ctx, id)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return uuid.UUID{}, false, nil
+	case err != nil:
+		return uuid.UUID{}, false, fmt.Errorf("find project %s: %w", id, err)
+	}
+	return workspaceID, true, nil
 ````
 
 `server/internal/modules/project/adapter/postgres/update.go`（新文件，60 行）：
@@ -1167,7 +1263,7 @@ func (s *Store) Memberships(ctx context.Context, projectID uuid.UUID, userIDs []
 }
 ````
 
-`server/internal/modules/project/adapter/postgres/update_test.go`（新文件，241 行）：
+`server/internal/modules/project/adapter/postgres/update_test.go`（新文件，275 行）：
 
 ````file server/internal/modules/project/adapter/postgres/update_test.go
 package postgresadapter_test
@@ -1295,6 +1391,40 @@ func TestTheProjectLockSeesADeletionItWaitedFor(t *testing.T) {
 		}
 	case <-ctx.Done():
 		t.Fatal("LockProject did not end within 10s")
+	}
+}
+
+// ProjectWorkspace reads the undeleted project's workspace, archived or
+// not, and takes no lock: while the read's transaction is open, a FOR
+// UPDATE of the project does not wait. A deleted project, and no project,
+// are not found. Every write on a project reads it first, to lock the
+// workspace before the project (M3 design 3.6 convention 2).
+func TestProjectWorkspace(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+	web, ops, old := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, beta, "Ops", "OPS", alice), newProject(t, s, acme, "Old", "OLD", alice)
+	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", ops, now)
+	exec(t, pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", old, now)
+	for _, tt := range []struct {
+		id, workspace uuid.UUID
+		found         bool
+	}{{web, acme, true}, {ops, beta, true}, {old, uuid.UUID{}, false}, {uuid.NewV7(), uuid.UUID{}, false}} {
+		if got, found, err := s.ProjectWorkspace(context.Background(), tt.id); err != nil || found != tt.found || got != tt.workspace {
+			t.Errorf("ProjectWorkspace(%s) = %s, %v, %v; want %s, %v", tt.id, got, found, err, tt.workspace, tt.found)
+		}
+	}
+	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+		if _, _, err := s.ProjectWorkspace(ctx, web); err != nil {
+			return err
+		}
+		if waits(t, pool, web, "FOR UPDATE") {
+			t.Error("while the read's transaction is open, a FOR UPDATE of web waits; want no lock taken")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -1480,6 +1610,9 @@ func TestMemberships(t *testing.T) {
 	if p, found, err := s.LockProject(cancelled, web); !failed(err) || found || p != (app.LockedProject{}) {
 		t.Errorf("LockProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
 	}
+	if w, found, err := s.ProjectWorkspace(cancelled, web); !failed(err) || found || w != (uuid.UUID{}) {
+		t.Errorf("ProjectWorkspace() = %s, %v, %v; want context.Canceled, not no project", w, found, err)
+	}
 	if m, err := s.Memberships(cancelled, web, []uuid.UUID{alice}); !failed(err) || m != nil {
 		t.Errorf("Memberships() = %v, %v; want context.Canceled, not none", m, err)
 	}
@@ -1498,10 +1631,346 @@ func TestMemberships(t *testing.T) {
 	}
 ````
 
-- [ ] **Step 5: 测试、lint**
+- [ ] **Step 5: 工作区按 id 的锁**
 
-Run: `go -C server test -count=1 ./internal/modules/project/...`
+`server/internal/modules/workspace/adapter/postgres/directory.go`（修改，2 处）：
+
+````old server/internal/modules/workspace/adapter/postgres/directory.go
+// 6.5): WorkspaceDirectory, the undeleted workspace a slug names, and
+````
+````new server/internal/modules/workspace/adapter/postgres/directory.go
+// 6.5): WorkspaceDirectory, the undeleted workspace a slug names, or its
+// row locked by its id for a write on a project of it, and
+````
+
+````old server/internal/modules/workspace/adapter/postgres/directory.go
+	r, err := d.store.queries(ctx).ShareDirectoryWorkspace(ctx, slug)
+````
+````new server/internal/modules/workspace/adapter/postgres/directory.go
+	r, err := d.store.queries(ctx).ShareDirectoryWorkspace(ctx, slug)
+	return directoryEntry(r.ID, r.Timezone, err)
+}
+
+// ShareWorkspaceByID returns the undeleted workspace id and locks its row
+// FOR SHARE until the transaction ctx carries ends: the first lock of every
+// write on a project of it (M3 design 3.6 convention 2). found is false
+// when there is none, also when it was deleted while the lock waited.
+func (d *Directory) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (w app.DirectoryEntry, found bool, err error) {
+	r, err := d.store.queries(ctx).ShareDirectoryWorkspaceByID(ctx, id)
+````
+
+`server/internal/modules/workspace/adapter/postgres/directory_share_test.go`（新文件，157 行）：
+
+````file server/internal/modules/workspace/adapter/postgres/directory_share_test.go
+package postgresadapter_test
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/jackc/pgx/v5/pgconn"
+
+	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+)
+
+// The directory's lock by id, the first lock of every write on a project
+// (M3 design 3.6 convention 2), finds the undeleted workspace with the id,
+// with its id and its time zone: each of two workspaces its own, so a lock
+// that read the first row whatever its id would answer one for the other;
+// not a deleted one, not an id no workspace has. A failing call answers its
+// error, not "no such workspace", which the write would turn into a 404.
+func TestShareWorkspaceByIDFindsTheUndeletedWorkspace(t *testing.T) {
+	s, pool := newStore(t)
+	d := postgresadapter.NewDirectory(pool)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
+	beta := newWorkspace(t, s, "Beta", "beta", alice)
+	gone := newWorkspace(t, s, "Gone", "gone", alice)
+	exec(t, pool, "UPDATE workspaces SET timezone = 'Asia/Shanghai' WHERE id = $1", beta.ID)
+	exec(t, pool, "UPDATE workspaces SET deleted_at = $2 WHERE id = $1", gone.ID, now)
+	tx := postgres.NewTxManager(pool, 2*time.Second)
+	err := tx.WithinTx(context.Background(), func(ctx context.Context) error {
+		for id, want := range map[uuid.UUID]app.DirectoryEntry{acme.ID: {ID: acme.ID, Timezone: "UTC"}, beta.ID: {ID: beta.ID, Timezone: "Asia/Shanghai"}} {
+			if got, found, err := d.ShareWorkspaceByID(ctx, id); err != nil || !found || got != want {
+				t.Errorf("ShareWorkspaceByID(%s) = %+v, %v, %v; want %+v", id, got, found, err, want)
+			}
+		}
+		for _, id := range []uuid.UUID{gone.ID, uuid.NewV7()} {
+			if got, found, err := d.ShareWorkspaceByID(ctx, id); err != nil || found || got != (app.DirectoryEntry{}) {
+				t.Errorf("ShareWorkspaceByID(%s) = %+v, %v, %v; want not found", id, got, found, err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if got, found, err := d.ShareWorkspaceByID(cancelled, acme.ID); !errors.Is(err, context.Canceled) || found || got != (app.DirectoryEntry{}) {
+		t.Errorf("ShareWorkspaceByID() = %+v, %v, %v; want context.Canceled, not no workspace", got, found, err)
+	}
+}
+
+// The lock by id is convention 2's FOR SHARE: it waits for the workspace's
+// FOR NO KEY UPDATE, which every cascade over the workspace's projects runs
+// under, and makes it wait; it does not wait for another FOR SHARE, which
+// another write on a project of the workspace holds; and it locks no other
+// workspace. A lock that waits ends with lock_not_available under a
+// lock_timeout.
+func TestTheDirectorysLockByIDIsForShare(t *testing.T) {
+	const directory = "Directory.ShareWorkspaceByID"
+	tests := []struct {
+		held, then string
+		slug       string // then's
+		waits      bool
+	}{
+		{directory, noKeyUpdateByID.name, "acme", true},
+		{noKeyUpdateByID.name, directory, "acme", true},
+		{directory, forShareByID.name, "acme", false},
+		{forShareByID.name, directory, "acme", false},
+		{directory, noKeyUpdateByID.name, "beta", false},
+		{noKeyUpdateByID.name, directory, "beta", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.held+" held, "+tt.then+" of "+tt.slug, func(t *testing.T) {
+			s, pool := newStore(t)
+			d := postgresadapter.NewDirectory(pool)
+			locks := map[string]lock{noKeyUpdateByID.name: noKeyUpdateByID, forShareByID.name: forShareByID, directory: {directory,
+				func(ctx context.Context, _ *postgresadapter.Store, w named) (uuid.UUID, error) {
+					e, found, err := d.ShareWorkspaceByID(ctx, w.id)
+					if err == nil && !found {
+						err = app.ErrNotFound
+					}
+					return e.ID, err
+				}}}
+			alice := newAccount(t, pool, "alice@corp.com")
+			ids := map[string]uuid.UUID{"acme": newWorkspace(t, s, "Acme", "acme", alice).ID, "beta": newWorkspace(t, s, "Beta", "beta", alice).ID}
+			tx := postgres.NewTxManager(pool, 2*time.Second)
+			hold(t, tx, func(ctx context.Context) error {
+				_, err := locks[tt.held].take(ctx, s, named{"acme", ids["acme"]})
+				return err
+			})
+
+			var got uuid.UUID
+			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+				var err error
+				got, err = locks[tt.then].take(ctx, s, named{tt.slug, ids[tt.slug]})
+				return err
+			})
+
+			var pgErr *pgconn.PgError
+			switch {
+			case tt.waits && (!errors.As(err, &pgErr) || pgErr.Code != "55P03"):
+				t.Errorf("%s() = %s, %v; want lock_not_available after waiting", tt.then, got, err)
+			case !tt.waits && (err != nil || got != ids[tt.slug]):
+				t.Errorf("%s() = %s, %v; want %s's id %s without waiting", tt.then, got, err, tt.slug, ids[tt.slug])
+			}
+		})
+	}
+}
+
+// A workspace deleted while the lock by id waits is not found: the
+// statement has deleted_at IS NULL, which Postgres evaluates again on the
+// row's newest version after the wait.
+func TestTheDirectorysLockByIDSeesADeletionItWaitedFor(t *testing.T) {
+	s, pool := newStore(t)
+	d := postgresadapter.NewDirectory(pool)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
+	tx := postgres.NewTxManager(pool, 2*time.Second)
+	end := hold(t, tx, func(ctx context.Context) error {
+		if err := s.LockWorkspace(ctx, acme.ID); err != nil {
+			return err
+		}
+		return s.DeleteWorkspace(ctx, acme.ID, alice, now)
+	})
+	type answer struct {
+		w     app.DirectoryEntry
+		found bool
+		err   error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		var a answer
+		a.err = tx.WithinTx(context.Background(), func(ctx context.Context) error {
+			var err error
+			a.w, a.found, err = d.ShareWorkspaceByID(ctx, acme.ID)
+			return err
+		})
+		done <- a
+	}()
+	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 10*time.Second)
+	if err := end(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case a := <-done:
+		if a.err != nil || a.found {
+			t.Errorf("ShareWorkspaceByID() after the deletion = %+v, %v, %v; want not found", a.w, a.found, a.err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("ShareWorkspaceByID() did not end within 10s")
+	}
+}
+````
+
+`server/internal/modules/workspace/module.go`（修改，2 处）：
+
+````old server/internal/modules/workspace/module.go
+// project module (M3 design 6.5); found is false when there is none.
+````
+````new server/internal/modules/workspace/module.go
+// project module, or locks one by its id (M3 design 6.5); found is false
+// when there is none.
+````
+
+````old server/internal/modules/workspace/module.go
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)
+````
+````new server/internal/modules/workspace/module.go
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)
+	// ShareWorkspaceByID locks the undeleted workspace id's row FOR SHARE
+	// until the transaction ctx carries ends: the first lock of every write
+	// on a project of it (M3 design 3.6 convention 2). A workspace deleted
+	// while the lock waited is not found.
+	ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (w DirectoryEntry, found bool, err error)
+````
+
+`server/internal/bootstrap/ports.go`（修改，1 处）：
+
+````old server/internal/bootstrap/ports.go
+}
+
+// accessProjects is project's ProjectAccess as access's port: the same read,
+````
+````new server/internal/bootstrap/ports.go
+}
+
+func (d projectWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (project.Workspace, bool, error) {
+	w, found, err := d.directory.ShareWorkspaceByID(ctx, id)
+	return project.Workspace(w), found, err
+}
+
+// accessProjects is project's ProjectAccess as access's port: the same read,
+````
+
+`server/internal/bootstrap/ports_test.go`（修改，5 处）：
+
+````old server/internal/bootstrap/ports_test.go
+// fakeWorkspaceDirectory answers the workspaces it holds by slug, and
+// records what it was asked: "read" without a lock, "share" with one.
+````
+````new server/internal/bootstrap/ports_test.go
+// fakeWorkspaceDirectory answers the workspaces it holds by slug, or by the
+// id names gives a slug, and records what it was asked: "read" without a
+// lock, "share" with one, "share by id" by the id's name.
+````
+
+````old server/internal/bootstrap/ports_test.go
+	workspaces map[string]workspace.DirectoryEntry
+````
+````new server/internal/bootstrap/ports_test.go
+	workspaces map[string]workspace.DirectoryEntry
+	names      map[uuid.UUID]string
+````
+
+````old server/internal/bootstrap/ports_test.go
+}
+
+// projectWorkspaces hands project workspace's answer to the same question,
+// through the same lock or without one: the workspace converted, found and
+// the error as they came.
+````
+````new server/internal/bootstrap/ports_test.go
+}
+
+func (f *fakeWorkspaceDirectory) ShareWorkspaceByID(_ context.Context, id uuid.UUID) (workspace.DirectoryEntry, bool, error) {
+	f.asked = append(f.asked, "share by id "+f.names[id])
+	w, found := f.workspaces[f.names[id]]
+	return w, found, f.err
+}
+
+// projectWorkspaces hands project workspace's answer to the same question,
+// through the same lock or without one, by slug or by id: the workspace
+// converted, found and the error as they came.
+````
+
+````old server/internal/bootstrap/ports_test.go
+	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme}}
+````
+````new server/internal/bootstrap/ports_test.go
+	ids := map[string]uuid.UUID{"acme": acme.ID, "gone": uuid.NewV7()}
+	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme},
+		names: map[uuid.UUID]string{ids["acme"]: "acme", ids["gone"]: "gone"}}
+````
+
+````old server/internal/bootstrap/ports_test.go
+		"share": d.ShareWorkspaceBySlug, "read": d.WorkspaceBySlug,
+````
+````new server/internal/bootstrap/ports_test.go
+		"share": d.ShareWorkspaceBySlug, "read": d.WorkspaceBySlug,
+		"share by id": func(ctx context.Context, slug string) (project.Workspace, bool, error) {
+			return d.ShareWorkspaceByID(ctx, ids[slug])
+		},
+````
+
+`server/internal/modules/project/app/fakes_create_test.go`（修改，2 处）：
+
+````old server/internal/modules/project/app/fakes_create_test.go
+// fakeDirectory finds the workspaces it holds by slug, logs each call and
+// fails with err.
+````
+````new server/internal/modules/project/app/fakes_create_test.go
+// fakeDirectory finds the workspaces it holds by slug, or by id, logs each
+// call and fails with err.
+````
+
+````old server/internal/modules/project/app/fakes_create_test.go
+		return app.Workspace{}, false, f.err
+	}
+	w, ok := f.workspaces[slug]
+	return w, ok, nil
+}
+
+// fakeMembers answers the active members' roles it holds by workspace,
+````
+````new server/internal/modules/project/app/fakes_create_test.go
+		return app.Workspace{}, false, f.err
+	}
+	w, ok := f.workspaces[slug]
+	return w, ok, nil
+}
+
+func (f *fakeDirectory) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (app.Workspace, bool, error) {
+	f.log.add(ctx, "ShareWorkspaceByID %s", id)
+	if f.err != nil {
+		return app.Workspace{}, false, f.err
+	}
+	for _, w := range f.workspaces {
+		if w.ID == id {
+			return w, true, nil
+		}
+	}
+	return app.Workspace{}, false, nil
+}
+
+// fakeMembers answers the active members' roles it holds by workspace,
+````
+
+- [ ] **Step 6: 测试、lint**
+
+Run: `go -C server test -count=1 ./internal/modules/project/... ./internal/modules/workspace/...`
 Expected: 全部 `ok`。
+
+Run: `go -C server test -count=1 -run 'TestProjectWorkspacesConvertsWorkspacesAnswer' ./internal/bootstrap/`
+Expected: `ok`。
 
 Run: `make lint-go`
 Expected: 两段都是 `0 issues.`
@@ -1509,10 +1978,10 @@ Expected: 两段都是 `0 issues.`
 Run: `make test`
 Expected: 全部 `ok`，没有 `FAIL`。
 
-- [ ] **Step 6: 提交**
+- [ ] **Step 7: 提交**
 
 ```bash
-git add server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/members.go server/internal/modules/project/adapter/postgres/members_test.go server/internal/modules/project/adapter/postgres/projects.go server/internal/modules/project/adapter/postgres/queries/members.sql server/internal/modules/project/adapter/postgres/queries/projects.sql server/internal/modules/project/adapter/postgres/update.go server/internal/modules/project/adapter/postgres/update_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/errors.go server/internal/modules/project/domain/patch.go server/internal/modules/project/domain/patch_test.go server/internal/modules/project/adapter/postgres/gen/members.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go
+git add server/internal/bootstrap/ports.go server/internal/bootstrap/ports_test.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/members.go server/internal/modules/project/adapter/postgres/members_test.go server/internal/modules/project/adapter/postgres/projects.go server/internal/modules/project/adapter/postgres/queries/members.sql server/internal/modules/project/adapter/postgres/queries/projects.sql server/internal/modules/project/adapter/postgres/update.go server/internal/modules/project/adapter/postgres/update_test.go server/internal/modules/project/app/fakes_create_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/errors.go server/internal/modules/project/domain/patch.go server/internal/modules/project/domain/patch_test.go server/internal/modules/workspace/adapter/postgres/directory.go server/internal/modules/workspace/adapter/postgres/directory_share_test.go server/internal/modules/workspace/adapter/postgres/queries/directory.sql server/internal/modules/workspace/module.go server/internal/modules/project/adapter/postgres/gen/members.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go server/internal/modules/workspace/adapter/postgres/gen/directory.sql.go
 ```
 ```bash
 git commit -m "feat(M3/P4b): the project patch, the project lock and the memberships read
@@ -1521,8 +1990,11 @@ CheckProjectPatch holds each field an update gives to createProject's
 rule, and archive_in to 0-12; CanAssign names the roles a lead or a
 default assignee may have. The store locks an undeleted project FOR NO
 KEY UPDATE, evaluating deleted_at again after a wait, changes the fields
-a patch gives, and reads accounts' undeleted memberships of a project.
-createProject and the update share the unique keys' translation.
+a patch gives, and reads accounts' undeleted memberships of a project
+and, without a lock, a project's workspace. createProject and the update
+share the unique keys' translation. The workspace directory locks an
+undeleted workspace by its id FOR SHARE: the first lock of every write
+on a project (M3 design 3.6 convention 2), converted by bootstrap.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -1535,8 +2007,10 @@ Expected: 通过。
 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|
 | `LockProject` 去掉项目的 id（按 id 升序、降序两个行序） | `TestLockProject`；Task 15 起单独运行的故事：升序 P2、P3、P4、P8、W3，降序 P2、P3、P4 | 存储；端到端 |
-| `LockProject` 去掉 `deleted_at IS NULL` | `TestLockProject`；与 `ProjectFacts` 的 `p.deleted_at` 一起去掉时 P4（Task 15 起，spec 第 3 节第 6 条） | 存储；端到端 |
-| `LockProject` 取 `FOR SHARE`、`FOR UPDATE`、不加锁 | `TestLockProject`；不加锁另有 `TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 存储；组合 |
+| `LockProject` 去掉 `deleted_at IS NULL` | `TestLockProject`；与 `ProjectWorkspace` 的 `deleted_at`、`ProjectFacts` 的 `p.deleted_at` 一起去掉时 P4（Task 15 起；方案 E 之下写先经 `ProjectWorkspace`，spec 第 3 节第 6 条） | 存储；端到端 |
+| `LockProject` 取 `FOR SHARE` | `TestLockProject`；`TestTwoWritesOnAProjectSerialize`（Task 14 起：两个写都持有 Web，各自的修改等对方，40P01） | 存储；组合 |
+| `LockProject` 取 `FOR UPDATE` | `TestLockProject`（多挡外键检查的 `FOR KEY SHARE`；组合一层看不到，spec 第 3 节第 7 条） | 存储 |
+| `LockProject` 不加锁 | `TestLockProject`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起：等 Ops 的写不在 `projects` 上等）、`TestTwoWritesOnAProjectSerialize`（Task 14 起） | 存储；组合 |
 | `LockProject` 不读已归档的项目 | `TestLockProject`；`TestPermissionMatrix`（Task 3 起，已归档项目的列）；P4（Task 15 起） | 存储；组合；端到端 |
 | `UpdateProject` 改每个项目（去掉 id） | `TestUpdateProject`；P3（Task 15 起） | 存储；端到端 |
 | `UpdateProject` 也写 `created_at`、`created_by_id`；没给的名称、`archive_in`、`logo_props`、`cycle_view`、时区不保留原值；不看标志就写负责人、默认负责人 | `TestUpdateProject` | 存储 |
@@ -1546,9 +2020,19 @@ Expected: 通过。
 | `archive_in` 收 13、收 −1；标识不按规则查；名称不按规则查 | `TestCheckProjectPatchReportsEveryField`（后两个另有 `TestThePatchChecksAsCreateDoes`）；收 13 另有 P3（Task 15 起，答 500 而不是 422）；其余只在单元一层：数据库的 CHECK 和列的类型拒绝这些值，答 500 | 单元；端到端 |
 | 标识不转大写 | `TestCheckProjectPatchAcceptsValidPatches`、`TestThePatchChecksAsCreateDoes`；P3（Task 15 起） | 单元；端到端 |
 | `CanAssign` 收项目的访客 | `TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests`（Task 12 起）；P3（Task 15 起） | 组合；端到端 |
-| `LockProject`、`UpdateProject`、`Memberships` 经连接池、在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
+| `ProjectWorkspace` 去掉项目的 id（两个行序） | `TestProjectWorkspace`；Task 15 起单独运行的故事：两个行序都是 P2、P3、P4、P8 | 存储；端到端 |
+| `ProjectWorkspace` 去掉 `deleted_at IS NULL` | `TestProjectWorkspace`；与 `ProjectFacts` 的 `p.deleted_at` 一起去掉时 P4（Task 15 起，spec 第 3 节第 6 条） | 存储；端到端 |
+| `ProjectWorkspace` 取项目的 `FOR SHARE`（在工作区之前锁了项目） | `TestProjectWorkspace`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起：等工作区时已持有项目） | 存储；组合 |
+| `ShareWorkspaceByID` 取 `FOR KEY SHARE`（连带的 `FOR NO KEY UPDATE` 不等它）、不加锁 | `TestTheDirectorysLockByIDIsForShare`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（Task 14 起） | 存储；组合 |
+| `ShareWorkspaceByID` 取 `FOR NO KEY UPDATE`、`FOR UPDATE`（同一个工作区的写互等） | `TestTheDirectorysLockByIDIsForShare`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）、`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`（Task 14 起） | 存储；组合 |
+| `ShareWorkspaceByID` 去掉工作区的 id（两个行序：锁住每个未删除的工作区，答第一行的） | `TestShareWorkspaceByIDFindsTheUndeletedWorkspace`、`TestTheDirectorysLockByIDIsForShare`（别的工作区被锁；`Locks` 只看找到与否，组合一层和故事看不到，spec 第 3 节第 15 条） | 存储 |
+| `ShareWorkspaceByID` 去掉 `deleted_at IS NULL` | `TestShareWorkspaceByIDFindsTheUndeletedWorkspace`、`TestTheDirectorysLockByIDSeesADeletionItWaitedFor`（组合一层由项目锁的 `deleted_at` 和连带遮住，spec 第 3 节第 15 条） | 存储 |
+| `ShareWorkspaceByID` 经连接池、在写的事务之外 | `TestTheDirectorysLockByIDIsForShare`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 存储；组合 |
+| `bootstrap` 的 `ShareWorkspaceByID` 不问目录就答找到 | `TestProjectWorkspacesConvertsWorkspacesAnswer`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（Task 14 起） | 单元；组合 |
+| `bootstrap` 的 `ShareWorkspaceByID` 在写的事务之外问目录 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
+| `LockProject`、`ProjectWorkspace`、`UpdateProject`、`Memberships` 经连接池、在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
 
-**Done when:** 领域的三个测试、存储的六个测试通过；修改的每个字段与建项目同一规则；项目锁在等锁之后看得到删除。
+**Done when:** 领域的三个测试、存储的七个测试、工作区目录的三个测试通过；修改的每个字段与建项目同一规则；项目锁和工作区按 id 的锁在等锁之后看得到删除；`ProjectWorkspace` 不加锁。
 
 ---
 
@@ -1556,19 +2040,19 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/update_test.go`、`server/internal/modules/project/app/fakes_write_test.go`、`server/internal/modules/project/app/lock.go`、`server/internal/modules/project/app/update_project.go`、`server/internal/modules/project/app/update_project_test.go`
-- Modify: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
+- Modify: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
 - Produces（spec 2.4，M3 设计 3.4、3.6、3.19、5.2）：`PATCH /api/v0/projects/{project_id}`，`ProjectUpdate`（`additionalProperties: false`，只有 `project_lead_id`、`default_assignee_id` 可为 `null`），200 `Project`；码 `[validation_failed, project.not_found, forbidden, project.archived, project.identifier_taken, project.name_taken]`；新码 `project.archived`（409）进 `PROBLEM_MESSAGES` 和两份 `auth.json`（约束 4）。
 - 操作名 `project.update`，规则 `{Level: LevelProject, Roles: [RoleAdmin]}`：项目管理员，和是工作区管理员的项目成员（`ProjectAdmin`），不是成员的工作区管理员不行（M3 设计 3.4）。
-- `app.NewUpdateProject(projects ProjectUpdater, auth, tx, clock)`：`CheckProjectPatch`（事务之前）→ 一个事务：`lockAndDecide`（`LockProject` → 没有 404 → `decide`：看不到换成 `project.not_found`）→ 已归档 409 → `checkAssignees`（判定之后：给出的负责人、默认负责人各在 `Memberships` 里是有效的、`CanAssign` 的成员，否则一个 422 列出每个字段）→ 锁下读时钟 → `UpdateProject` → `answer`（在事务里经 `GetProject` 读回存下的行）。
-- `app/lock.go`：`lockAndDecide(ctx, lock, auth, actor, id, action) (LockedProject, Grant, error)`、`decide`、`answer`，Task 4、6、7、11、13 共用。
+- `app.NewUpdateProject(projects ProjectUpdater, locks Locks, tx, clock)`：`CheckProjectPatch`（事务之前）→ 一个事务：`locks.lockAndDecide(actor, write{project: id, action: project.update})`（下一条）→ 已归档 409 → `checkAssignees`（判定之后：给出的负责人、默认负责人各在 `Memberships` 里是有效的、`CanAssign` 的成员，否则一个 422 列出每个字段）→ 锁下读时钟 → `UpdateProject` → `answer`（在事务里经 `GetProject` 读回存下的行）。
+- `app/lock.go`（M3 设计 3.6 约定二，方案 E）：`Locks{projects ProjectLocks, workspaces WorkspaceSharer, auth}`、`NewLocks(projects, workspaces, auth)`：项目级的写取锁和判定的唯一一条路径。`(Locks).lockAndDecide(ctx, actor, write{project, action}) (held{project LockedProject, grant}, error)`，在 `ctx` 带的事务里：`ProjectWorkspace`（不加锁；没有是 404）→ `ShareWorkspaceByID`（工作区行 `FOR SHARE`，写的第一把锁；等待期间被删除是 404）→ `LockProject`（没有，或锁读到的工作区不是先读的那个，是 404）→ `decide`（在全部锁之下；看不到换成 `project.not_found`）。`decide`、`answer`（在事务里经 `GetProject` 读回存下的行）。写不持自己的 `Authorizer`，只经 `Locks` 判定；`project.New` 只建一个 `Locks` 给每个写。Task 4、6、7（`share`：改设置的 `FOR SHARE`）、11（`targets`：目标的工作区成员行）、13 共用。`app.ProjectLocks`（`ProjectFinder` + `ProjectLocker`）；`ProjectUpdater` 不再嵌入 `ProjectLocker`。
 - 使用者：Task 15 的 P3、P4。
 
 **Tests:**
-- `app/update_project_test.go`（假实现 `fakes_write_test.go`：web 的管理员 bob、成员 alice、访客 carol、已结束的 dave；ops 已归档）：`TestUpdateProject`（三种修改的完整调用记录：锁、判定、负责人的成员关系（只在给了负责人时）、时钟、改、读回；标识转大写；回答是存下的行）；`TestUpdateProjectRefuses`（`archive_in` 13、没有调用者在事务之前；没有的项目在锁、看不到在判定、项目成员的 403 都在检查负责人之前，带一个无效的负责人也一样；已归档 409 在判定之后；负责人是访客、已结束、不是成员，默认负责人是访客，两者同时：一个 422 列出每个字段）；`TestUpdateProjectReturnsEachFailure`（锁、判定、成员关系、改、读回、提交各失败：原样返回，之前的调用都在、之后的都没有；读回找不到是内部错误，不是 404）；`TestUpdateProjectAnswersTheStoresConflicts`。
-- `app/clock_test.go`：`TestEachWriteReadsTheClockUnderItsLock`（新：每个改已有行的写在锁、判定、检查之后读一次时钟；此后每个写的 Task 加一行）。
+- `app/update_project_test.go`（假实现 `fakes_write_test.go`：web 的管理员 bob、成员 alice、访客 carol、已结束的 dave；ops 已归档；`fakeWorkspaces` 锁 acme 的行，`gone` 时找不到；`fakeStore.moved` 让项目的锁读到另一个工作区；`lockedTo`、`lockedDecision`、`noProject` 是调用记录的开头）：`TestUpdateProject`（三种修改的完整调用记录：项目的工作区、工作区的锁、项目的锁、判定、负责人的成员关系（只在给了负责人时）、时钟、改、读回；标识转大写；回答是存下的行）；`TestUpdateProjectRefuses`（`archive_in` 13、没有调用者在事务之前；没有的项目在读它的工作区时、工作区等待期间被删除在工作区的锁、项目已不在那个工作区在项目的锁、看不到在判定、项目成员的 403 都在检查负责人之前，带一个无效的负责人也一样；已归档 409 在判定之后；负责人是访客、已结束、不是成员，默认负责人是访客，两者同时：一个 422 列出每个字段）；`TestUpdateProjectReturnsEachFailure`（项目的工作区、工作区的锁、项目的锁、判定、成员关系、改、读回、提交各失败：原样返回，之前的调用都在、之后的都没有；读回找不到是内部错误，不是 404）；`TestUpdateProjectAnswersTheStoresConflicts`。
+- `app/clock_test.go`：`TestEachWriteReadsTheClockUnderItsLock`（新：每个改已有行的写在它的锁（工作区的 `FOR SHARE` 在先，然后项目的）、判定、检查之后读一次时钟，排在别的写之后的写不会盖上更早的时刻；此后每个写的 Task 加一行）。
 - `adapter/http/update_test.go`：`TestUpdateProjectPassesThePatch`（每个字段照写传给用例，负责人给出、`null`、没给三种）；`TestUpdateProjectHoldsTheBodyToItsStructure`（不能写的字段、别的类型、只有负责人可为 `null`：400，用例没被调用）；`TestUpdateProjectRefusals`（六种拒绝照契约）。
 - `access/domain/rules_test.go`：`project.update` 的 17 格。
 - `bootstrap`：矩阵三行（`ofProject(200, 403, 403, 200, 403, 403)`，答案核对改名、调用者的角色；负责人不是成员时 `ofProject(422, 403, 403, 422, 403, 403)`：不能改的人得不到负责人的任何信息；已归档项目 1 格 409）；`TestTheWritesOnAProjectStampTheirRequest`（新：经 API 的写在请求之内盖上 `project.New` 的时钟，由调用者写入；此后每个写的 Task 加一行）。
@@ -1733,7 +2217,36 @@ Expected: 与上表相同。
 
 - [ ] **Step 3: 用例**
 
-`server/internal/modules/project/app/lock.go`（新文件，64 行）：
+`server/internal/modules/project/app/ports.go`（修改，2 处）：
+
+````old server/internal/modules/project/app/ports.go
+}
+
+// Membership is an account's undeleted membership of a project, active or
+````
+````new server/internal/modules/project/app/ports.go
+}
+
+// ProjectLocks is the project store's side of the locks of a write on a
+// project (Locks): the project's workspace, read first without a lock, and
+// the project's own lock.
+type ProjectLocks interface {
+	ProjectFinder
+	ProjectLocker
+}
+
+// Membership is an account's undeleted membership of a project, active or
+````
+
+````old server/internal/modules/project/app/ports.go
+	ProjectReader
+	ProjectLocker
+````
+````new server/internal/modules/project/app/ports.go
+	ProjectReader
+````
+
+`server/internal/modules/project/app/lock.go`（新文件，110 行）：
 
 ````file server/internal/modules/project/app/lock.go
 package app
@@ -1747,33 +2260,79 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// lockAndDecide is the first two steps of every write on a project named by
-// its id (M3 design 3.6 convention 2), in the transaction ctx carries: lock
-// locks the undeleted project id, then decide decides action on it, in its
-// workspace. It returns the project as locked and the grant. A project that
-// is not there, deleted while the lock waited, or not visible to actor is
-// domain.ErrNotFound; a role the rule does not allow is the Authorizer's
-// shared.Forbidden.
-func lockAndDecide(ctx context.Context, lock func(ctx context.Context, id uuid.UUID) (LockedProject, bool, error), auth shared.Authorizer,
-	actor shared.Actor, id uuid.UUID, action shared.Action) (LockedProject, shared.Grant, error) {
-	p, found, err := lock(ctx, id)
+// Locks is the one way a write on a project named by its id takes its
+// locks and its decision (M3 design 3.6 convention 2), in the transaction
+// ctx carries: the project's workspace, read without a lock; the
+// workspace's row FOR SHARE, the write's first lock; the project's row FOR
+// NO KEY UPDATE, still undeleted and of that workspace; then the decision,
+// under them all. Every cascade over the workspace's projects runs under
+// the workspace's FOR NO KEY UPDATE and reads its time after it (3.3):
+// while a write holds the workspace FOR SHARE, no cascade touches the rows
+// it writes. project.New builds one Locks for every write: a write holds
+// no Authorizer of its own, so it decides only under these locks.
+type Locks struct {
+	projects   ProjectLocks
+	workspaces WorkspaceSharer
+	auth       shared.Authorizer
+}
+
+// NewLocks returns the locks over the project store, the workspace
+// module's directory and the Authorizer.
+func NewLocks(projects ProjectLocks, workspaces WorkspaceSharer, auth shared.Authorizer) Locks {
+	return Locks{projects: projects, workspaces: workspaces, auth: auth}
+}
+
+// write is a write on a project, as Locks takes its locks.
+type write struct {
+	project uuid.UUID
+	action  shared.Action
+}
+
+// held is a write's locks taken and its decision made: the project as its
+// lock read it and the caller's grant.
+type held struct {
+	project LockedProject
+	grant   shared.Grant
+}
+
+// lockAndDecide takes w's locks and decides w's action on the project, in
+// the order of Locks. A project that is not there, deleted while a lock
+// waited, or not visible to actor is domain.ErrNotFound, and so is one
+// whose workspace was deleted while its lock waited; a role the rule does
+// not allow is the Authorizer's shared.Forbidden.
+func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (held, error) {
+	workspaceID, found, err := l.projects.ProjectWorkspace(ctx, w.project)
 	switch {
 	case err != nil:
-		return LockedProject{}, shared.Grant{}, err
+		return held{}, err
 	case !found:
-		return LockedProject{}, shared.Grant{}, domain.ErrNotFound
+		return held{}, domain.ErrNotFound
 	}
-	grant, err := decide(ctx, auth, actor, action, p.WorkspaceID, id)
-	if err != nil {
-		return LockedProject{}, shared.Grant{}, err
+	_, found, err = l.workspaces.ShareWorkspaceByID(ctx, workspaceID)
+	switch {
+	case err != nil:
+		return held{}, err
+	case !found:
+		return held{}, domain.ErrNotFound
 	}
-	return p, grant, nil
+	var h held
+	h.project, found, err = l.projects.LockProject(ctx, w.project)
+	switch {
+	case err != nil:
+		return held{}, err
+	case !found, h.project.WorkspaceID != workspaceID:
+		return held{}, domain.ErrNotFound
+	}
+	if h.grant, err = decide(ctx, l.auth, actor, w.action, workspaceID, w.project); err != nil {
+		return held{}, err
+	}
+	return h, nil
 }
 
 // decide asks the Authorizer for action on the project id of the workspace
-// for actor. A write calls it under the project's lock, so the facts it
-// reads are the ones committed after the lock was granted (M3 design 6.7):
-// a demotion or a removal that committed while the write waited is seen. A
+// for actor. A write calls it under its locks, so the facts it reads are
+// the ones committed after the locks were granted (M3 design 6.7): a
+// demotion or a removal that committed while the write waited is seen. A
 // project not visible to actor is domain.ErrNotFound, the 404 of what the
 // caller named.
 func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, action shared.Action, workspaceID, id uuid.UUID) (shared.Grant, error) {
@@ -1802,7 +2361,7 @@ func answer(ctx context.Context, projects ProjectReader, id, userID uuid.UUID) (
 }
 ````
 
-`server/internal/modules/project/app/update_project.go`（新文件，101 行）：
+`server/internal/modules/project/app/update_project.go`（新文件，102 行）：
 
 ````file server/internal/modules/project/app/update_project.go
 package app
@@ -1819,24 +2378,25 @@ import (
 // design 3.19).
 type UpdateProject struct {
 	projects ProjectUpdater
-	auth     shared.Authorizer
+	locks    Locks
 	tx       shared.TxManager
 	clock    Clock
 }
 
 // NewUpdateProject returns the use case.
-func NewUpdateProject(projects ProjectUpdater, auth shared.Authorizer, tx shared.TxManager, clock Clock) *UpdateProject {
-	return &UpdateProject{projects: projects, auth: auth, tx: tx, clock: clock}
+func NewUpdateProject(projects ProjectUpdater, locks Locks, tx shared.TxManager, clock Clock) *UpdateProject {
+	return &UpdateProject{projects: projects, locks: locks, tx: tx, clock: clock}
 }
 
 // Execute checks p (domain.CheckProjectPatch), then, in one transaction, in
-// the order of M3 design 3.6: the project FOR NO KEY UPDATE; the decision
-// on project.update; an archived project refused (409 project.archived,
+// the order of M3 design 3.6: the project's locks (Locks: its workspace FOR
+// SHARE, then the project FOR NO KEY UPDATE) and the decision on
+// project.update; an archived project refused (409 project.archived,
 // 3.19); the lead and the default assignee p names checked, after the
 // decision, so that a caller who may not change the project learns nothing
 // of them (422 not_allowed unless an active member of the project who is
-// not its guest, 3.19); the change, at the clock read under the lock, so a
-// change that waited for another is not stamped earlier than it. The
+// not its guest, 3.19); the change, at the clock read under the locks, so
+// a change that waited for another is not stamped earlier than it. The
 // answer is the project as stored, as the caller sees it.
 func (u *UpdateProject) Execute(ctx context.Context, id uuid.UUID, p domain.ProjectPatch) (domain.Project, error) {
 	actor, err := shared.RequireActor(ctx)
@@ -1848,11 +2408,11 @@ func (u *UpdateProject) Execute(ctx context.Context, id uuid.UUID, p domain.Proj
 	}
 	var updated domain.Project
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		locked, _, err := lockAndDecide(ctx, u.projects.LockProject, u.auth, actor, id, domain.ActionUpdate)
+		h, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionUpdate})
 		switch {
 		case err != nil:
 			return err
-		case locked.Archived:
+		case h.project.Archived:
 			return domain.ErrArchived
 		}
 		if err := u.checkAssignees(ctx, id, p); err != nil {
@@ -1908,7 +2468,7 @@ func (u *UpdateProject) checkAssignees(ctx context.Context, id uuid.UUID, p doma
 }
 ````
 
-`server/internal/modules/project/app/fakes_write_test.go`（新文件，142 行）：
+`server/internal/modules/project/app/fakes_write_test.go`（新文件，196 行）：
 
 ````file server/internal/modules/project/app/fakes_write_test.go
 package app_test
@@ -1942,18 +2502,19 @@ var webID, opsID = uuid.NewV7(), uuid.NewV7()
 
 // writeFixture is a write use case's fakes, sharing one log.
 type writeFixture struct {
-	log   *callLog
-	tx    *fakeTx
-	store *fakeStore
-	auth  *fakeAuthorizer
+	log        *callLog
+	tx         *fakeTx
+	store      *fakeStore
+	workspaces *fakeWorkspaces
+	auth       *fakeAuthorizer
 }
 
-// newWrites is writeFixture with web and ops as stored at now, and the
-// Authorizer's answers: bob's grant in acme, the project's admin; alice's
-// 403, a project member; any other caller sees nothing.
+// newWrites is writeFixture with web and ops as stored at now, acme's row
+// to lock, and the Authorizer's answers: bob's grant in acme, the project's
+// admin; alice's 403, a project member; any other caller sees nothing.
 func newWrites() *writeFixture {
 	log := &callLog{}
-	return &writeFixture{log: log, tx: &fakeTx{log: log},
+	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log},
 		store: &fakeStore{log: log, projects: map[uuid.UUID]*fakeProject{
 			webID: {workspace: acme.ID, updated: now, members: map[uuid.UUID]app.Membership{
 				bob:   {ID: uuid.NewV7(), Role: shared.RoleAdmin, Active: true},
@@ -1971,22 +2532,60 @@ func newWrites() *writeFixture {
 	}
 }
 
-// lockedDecision are the calls of a write on project by user before its
-// checks: the transaction, the project's lock, the decision on action.
-func lockedDecision(user, project uuid.UUID, action shared.Action) []string {
-	return []string{"Begin", "LockProject " + project.String(), fmt.Sprintf("Authorize %s %s on %s/%s", user, action, acme.ID, project)}
+// locks is Locks over the fixture's fakes.
+func (f *writeFixture) locks() app.Locks {
+	return app.NewLocks(f.store, f.workspaces, f.auth)
 }
+
+// fakeWorkspaces is the workspace module's lock of a workspace's row by its
+// id: it logs each call, finds acme unless gone, and fails with err.
+type fakeWorkspaces struct {
+	log  *callLog
+	gone bool
+	err  error
+}
+
+func (f *fakeWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (app.Workspace, bool, error) {
+	f.log.add(ctx, "ShareWorkspaceByID %s", id)
+	if f.err != nil {
+		return app.Workspace{}, false, f.err
+	}
+	if f.gone || id != acme.ID {
+		return app.Workspace{}, false, nil
+	}
+	return acme, true, nil
+}
+
+// lockedTo are the calls of Locks on project before its own lock: the
+// transaction, the project's workspace, acme's row FOR SHARE.
+func lockedTo(project uuid.UUID) []string {
+	return []string{"Begin", "ProjectWorkspace " + project.String(), "ShareWorkspaceByID " + acme.ID.String()}
+}
+
+// lockedDecision are the calls of a write on project by user before its
+// checks: its locks (the workspace's, the project's FOR NO KEY UPDATE) and
+// the decision on action.
+func lockedDecision(user, project uuid.UUID, action shared.Action) []string {
+	return append(lockedTo(project), "LockProject "+project.String(), fmt.Sprintf("Authorize %s %s on %s/%s", user, action, acme.ID, project))
+}
+
+// noProject are the calls of a write on a project that is not there: the
+// transaction, the project's workspace, which finds none.
+var noProject = []string{"Begin", "ProjectWorkspace " + uuid.Nil().String()}
 
 // fakeStore is the project store of the writes on a project: it logs each
 // call with its arguments, holds the projects by id, writes what it is
 // given into them and answers GetProject from them, the time as stored (to
 // the microsecond). errs fails a method by its name, after logging the
-// call; missing makes GetProject find nothing.
+// call; missing makes GetProject find nothing; moved, when set, is the
+// workspace each project's lock reads, as if the project had moved there
+// since ProjectWorkspace read it.
 type fakeStore struct {
 	log      *callLog
 	projects map[uuid.UUID]*fakeProject
 	errs     map[string]error
 	missing  bool
+	moved    uuid.UUID
 }
 
 func (f *fakeStore) fail(name string) error {
@@ -2005,7 +2604,22 @@ func (f *fakeStore) LockProject(ctx context.Context, id uuid.UUID) (app.LockedPr
 	if !ok {
 		return app.LockedProject{}, false, nil
 	}
+	if f.moved != (uuid.UUID{}) {
+		return app.LockedProject{WorkspaceID: f.moved, Archived: p.archived}, true, nil
+	}
 	return app.LockedProject{WorkspaceID: p.workspace, Archived: p.archived}, true, nil
+}
+
+func (f *fakeStore) ProjectWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
+	f.log.add(ctx, "ProjectWorkspace %s", id)
+	if err := f.fail("ProjectWorkspace"); err != nil {
+		return uuid.UUID{}, false, err
+	}
+	p, ok := f.projects[id]
+	if !ok {
+		return uuid.UUID{}, false, nil
+	}
+	return p.workspace, true, nil
 }
 
 func (f *fakeStore) Memberships(ctx context.Context, projectID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]app.Membership, error) {
@@ -2055,7 +2669,7 @@ func (f *fakeStore) GetProject(ctx context.Context, id, userID uuid.UUID) (domai
 }
 ````
 
-`server/internal/modules/project/app/update_project_test.go`（新文件，182 行）：
+`server/internal/modules/project/app/update_project_test.go`（新文件，193 行）：
 
 ````file server/internal/modules/project/app/update_project_test.go
 package app_test
@@ -2077,11 +2691,11 @@ import (
 // newUpdate is UpdateProject over newWrites' fakes, its clock logged.
 func newUpdate() (*app.UpdateProject, *writeFixture) {
 	f := newWrites()
-	return app.NewUpdateProject(f.store, f.auth, f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUpdateProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
 }
 
 // updated are the calls of bob's update of web with p, which names the
-// accounts assignees as its lead and default assignee: the lock, the
+// accounts assignees as its lead and default assignee: the locks, the
 // decision, the assignees' memberships when it names any, the clock, the
 // change, the answer.
 func updated(p domain.ProjectPatch, assignees ...uuid.UUID) []string {
@@ -2134,8 +2748,10 @@ func TestUpdateProject(t *testing.T) {
 
 // Refusals, each in its place, and nothing changed:
 //   - the request's values, and no caller, before the transaction;
-//   - a project not there, or not visible: 404, before the decision or
-//     after it, whatever the patch names;
+//   - a project not there, its workspace deleted while its lock waited, the
+//     project of another workspace by the time it is locked, or not
+//     visible: 404, before the decision or after it, whatever the patch
+//     names;
 //   - a project member: the Authorizer's 403, an invalid lead too;
 //   - an archived project: 409, after the decision, before the assignees;
 //   - a lead or a default assignee who is not an active member of the
@@ -2164,7 +2780,10 @@ func TestUpdateProjectRefuses(t *testing.T) {
 		{"archive_in 13", as(bob), webID, domain.ProjectPatch{ArchiveIn: ptr(13)},
 			shared.Invalid(shared.FieldError{Field: "archive_in", Code: "out_of_range"}), nil},
 		{"no caller", context.Background(), webID, domain.ProjectPatch{}, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), domain.ProjectPatch{}, domain.ErrNotFound, []string{"Begin", "LockProject " + uuid.Nil().String()}},
+		{"no project", as(bob), uuid.Nil(), domain.ProjectPatch{}, domain.ErrNotFound, noProject},
+		{"the workspace gone", as(bob), webID, leads(&dave, nil), domain.ErrNotFound, lockedTo(webID)},
+		{"moved to another workspace", as(bob), webID, leads(&dave, nil), domain.ErrNotFound,
+			append(lockedTo(webID), "LockProject "+webID.String())},
 		{"not seen", as(erin), webID, leads(&dave, nil), domain.ErrNotFound, decided(erin, webID)},
 		{"a project member", as(alice), webID, leads(&dave, nil), shared.Forbidden(), decided(alice, webID)},
 		{"archived", as(bob), opsID, leads(&dave, nil), domain.ErrArchived, decided(bob, opsID)},
@@ -2182,6 +2801,10 @@ func TestUpdateProjectRefuses(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdate()
+			f.workspaces.gone = tt.name == "the workspace gone"
+			if tt.name == "moved to another workspace" {
+				f.store.moved = uuid.NewV7()
+			}
 
 			got, err := uc.Execute(tt.ctx, tt.project, tt.in)
 
@@ -2204,12 +2827,14 @@ func TestUpdateProjectReturnsEachFailure(t *testing.T) {
 		fail  func(f *writeFixture)
 		calls int // how many of all's ran
 	}{
-		{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": failure} }, 2},
-		{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: failure} }, 3},
-		{"the memberships", func(f *writeFixture) { f.store.errs = map[string]error{"Memberships": failure} }, 4},
-		{"the change", func(f *writeFixture) { f.store.errs = map[string]error{"UpdateProject": failure} }, 6},
-		{"the answer", func(f *writeFixture) { f.store.errs = map[string]error{"GetProject": failure} }, 7},
-		{"the commit", func(f *writeFixture) { f.tx.commitErr = failure }, 7},
+		{"the project's workspace", func(f *writeFixture) { f.store.errs = map[string]error{"ProjectWorkspace": failure} }, 2},
+		{"the workspace's lock", func(f *writeFixture) { f.workspaces.err = failure }, 3},
+		{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": failure} }, 4},
+		{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: failure} }, 5},
+		{"the memberships", func(f *writeFixture) { f.store.errs = map[string]error{"Memberships": failure} }, 6},
+		{"the change", func(f *writeFixture) { f.store.errs = map[string]error{"UpdateProject": failure} }, 8},
+		{"the answer", func(f *writeFixture) { f.store.errs = map[string]error{"GetProject": failure} }, 9},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = failure }, 9},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2254,10 +2879,11 @@ func TestUpdateProjectAnswersTheStoresConflicts(t *testing.T) {
 }
 
 // Each write that changes an existing row reads the clock once, in its
-// transaction, after its lock, its decision and its checks, just before it
-// writes (P2 spec 2.6): a write that queued behind another on the project's
-// lock never stamps an earlier time than the one it waited for. The clock
-// logs its read among the fakes' calls.
+// transaction, after its locks (its workspace's FOR SHARE first, then its
+// project's), its decision and its checks, just before it writes (P2 spec
+// 2.6, M3 design 3.3): a write that queued behind another on either lock
+// never stamps an earlier time than the one it waited for. The clock logs
+// its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	tests := []struct {
 		name string
@@ -2509,7 +3135,7 @@ func TestUpdateProjectRefusals(t *testing.T) {
 }
 ````
 
-`server/internal/modules/project/module.go`（修改，2 处）：
+`server/internal/modules/project/module.go`（修改，3 处）：
 
 ````old server/internal/modules/project/module.go
 // brings listing, creating and reading projects and checking an identifier,
@@ -2521,11 +3147,19 @@ func TestUpdateProjectRefusals(t *testing.T) {
 ````
 
 ````old server/internal/modules/project/module.go
+	store := postgresadapter.New(d.Pool)
+````
+````new server/internal/modules/project/module.go
+	store := postgresadapter.New(d.Pool)
+	locks := app.NewLocks(store, d.Workspaces, d.Authorizer)
+````
+
+````old server/internal/modules/project/module.go
 		CheckIdentifier: app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
 ````
 ````new server/internal/modules/project/module.go
 		CheckIdentifier: app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:   app.NewUpdateProject(store, d.Authorizer, d.Tx, d.Clock),
+		UpdateProject:   app.NewUpdateProject(store, locks, d.Tx, d.Clock),
 ````
 
 - [ ] **Step 5: 新码的文案**
@@ -2724,18 +3358,21 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/project.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/http/update_test.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/lock.go server/internal/modules/project/app/update_project.go server/internal/modules/project/app/update_project_test.go server/internal/modules/project/domain/actions.go server/internal/modules/project/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/http/update_test.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/lock.go server/internal/modules/project/app/ports.go server/internal/modules/project/app/update_project.go server/internal/modules/project/app/update_project_test.go server/internal/modules/project/domain/actions.go server/internal/modules/project/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4b): updateProject
 
 PATCH /api/v0/projects/{project_id}, for the project's admins and its
 members who are the workspace's admins. The patch is checked before the
-transaction; then the project is locked FOR NO KEY UPDATE, the role
-decided, an archived project refused (409 project.archived), and a lead
-or default assignee who is not an active member of the project, or is its
-guest, refused after the decision (422), so who may not change the
-project learns nothing of them. The clock is read under the lock.
+transaction; then Locks, the one path every write on a project takes,
+reads the project's workspace without a lock, locks the workspace's row
+FOR SHARE and the project FOR NO KEY UPDATE, and decides under both
+(M3 design 3.6 convention 2); an archived project is refused (409
+project.archived), and a lead or default assignee who is not an active
+member of the project, or is its guest, refused after the decision
+(422), so who may not change the project learns nothing of them. The
+clock is read under the locks.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -2754,35 +3391,45 @@ Expected: 通过。
 | 已结束的成员可以作负责人 | `TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests`（Task 12 起） | 组合 |
 | 负责人在判定之前检查 | `TestPermissionMatrix`（负责人不是成员的行：不能改项目的列答 422 而不是 403、404） | 组合 |
 | 没有调用者时也读 | `TestUpdateProjectRefuses` | 单元 |
-| 锁、判定、成员关系、改、读回、提交的失败被吞掉；改重试一次；`Authorizer` 的失败被吞掉、答成 403 | `TestUpdateProjectReturnsEachFailure`（`lockAndDecide` 的两个另有 `TestArchiveProjectReturnsEachFailure`、`TestDeleteProjectReturnsEachFailure`，Task 4、6 起；`decide` 的两个另有 `TestListProjectMembersRefuses`，Task 9 起） | 单元 |
+| 项目的工作区、工作区的锁、项目的锁、判定、成员关系、改、读回、提交的失败被吞掉；改重试一次；`Authorizer` 的失败被吞掉、答成 403 | `TestUpdateProjectReturnsEachFailure`（`Locks` 的另有 `TestArchiveProjectReturnsEachFailure`、`TestDeleteProjectReturnsEachFailure`，Task 4、6 起；`decide` 的两个另有 `TestListProjectMembersRefuses`，Task 9 起） | 单元 |
 | handler 吞掉用例的失败 | `TestUpdateProjectRefusals` | 单元 |
 | 契约不声明 `project.archived` | `TestPermissionMatrix`、`TestUpdateProjectRefusals`（两者都按契约核对答案） | 组合；单元 |
-| 每个项目锁在写的事务之外取 | `TestAProjectWriteAndADemotionSerialize`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
-| 修改先判定后锁项目 | `TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 组合 |
+| 每个项目锁在写的事务之外取 | `TestTwoWritesOnAProjectSerialize`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
+| 修改先判定后锁 | `TestUpdateProject`；`TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 单元；组合 |
+| `Locks` 不锁工作区 | `TestUpdateProject`、`TestEachWriteReadsTheClockUnderItsLock`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）；三个交错测试、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（Task 14 起：删除工作区 40P01） | 单元；组合 |
+| 工作区在项目之后锁 | `TestUpdateProject`、`TestEachWriteReadsTheClockUnderItsLock`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起：等工作区时已持有项目） | 单元；组合 |
+| 只有修改不锁工作区 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）；`TestAProjectWriteAndADemotionSerialize`、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（Task 14 起） | 组合 |
+| 工作区的锁的失败答成找到 | `TestUpdateProjectReturnsEachFailure`（添加、加入的另有，Task 11、13 起） | 单元 |
+| 等待期间被删除的工作区答成找到；项目的锁读到的工作区不与先读的核对 | `TestUpdateProjectRefuses`（组合一层看不到：删除工作区在同一个事务里删除它的项目，项目的锁随之找不到；没有写能把项目移到别的工作区，spec 第 3 节第 10 条） | 单元 |
+| 修改在锁之前读时钟 | `TestEachWriteReadsTheClockUnderItsLock`、`TestUpdateProject`（组合一层只核对时刻在请求之内，预检认可的类别） | 单元 |
+| `project.New` 的 `Locks` 接一个不加锁的工作区端口 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 4 起）；`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（Task 14 起） | 组合 |
 | `project.New` 的接线 | 见 Task 8 的表 | 组合 |
 
-**Done when:** 矩阵三行（25 格）通过；修改在锁之后判定、在判定之后检查负责人；`project.archived` 的文案在前端；`apitest.Main` 两个方向通过。
+**Done when:** 矩阵三行（25 格）通过；修改经 `Locks` 先锁工作区、再锁项目，在锁之后判定、在判定之后检查负责人；`project.archived` 的文案在前端；`apitest.Main` 两个方向通过。
 
 ---
 
 ### Task 4: `archiveProject`、`unarchiveProject`
 
 **Files:**
-- Create: `server/internal/modules/project/adapter/http/archive_test.go`、`server/internal/modules/project/app/archive_project.go`、`server/internal/modules/project/app/archive_project_test.go`
+- Create: `server/internal/bootstrap/project_write_locks_test.go`、`server/internal/modules/project/adapter/http/archive_test.go`、`server/internal/modules/project/app/archive_project.go`、`server/internal/modules/project/app/archive_project_test.go`
 - Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`、`server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/adapter/postgres/update_test.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/fakes_write_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`server/internal/modules/project/adapter/postgres/gen/projects.sql.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
 - Produces（spec 2.5，M3 设计 3.4、3.19）：`POST /api/v0/projects/{project_id}/archive`、`/unarchive`，200 `Project`；码 `[project.not_found, forbidden]`；操作名 `project.archive`、`project.unarchive`，规则同 `project.update`。
-- `app.NewArchiveProject`、`app.NewUnarchiveProject(projects ProjectArchiver, auth, tx, clock)`：一个事务：`lockAndDecide` → 锁下读时钟 → `SetArchived(id, archive, by, now)` → `answer`。已归档的再归档取新的时刻，未归档的恢复照样成功（Plane `views/project/base.py:427-441`）。
+- `app.NewArchiveProject`、`app.NewUnarchiveProject(projects ProjectArchiver, locks Locks, tx, clock)`：一个事务：`locks.lockAndDecide`（工作区 `FOR SHARE` → 项目 `FOR NO KEY UPDATE` → 判定，Task 3）→ 锁下读时钟 → `SetArchived(id, archive, by, now)` → `answer`。已归档的再归档取新的时刻，未归档的恢复照样成功（Plane `views/project/base.py:427-441`）。
 - 存储：`SetArchived`：`archived_at` 是给的时刻或 `null`，`updated_by_id`、`updated_at`；别的列不动。
+- `ProjectArchiver` 不嵌入 `ProjectLocker`（锁在 `Locks` 里）。
 - 矩阵：`projectSeed.archive` 经存储归档 `acme/archived`，`standIns` 不再用 SQL 归档（Task 1 留下的替身由第一个存储替换）。
+- `bootstrap/project_writes_test.go` 的 `createdProject(t, contract, base, token, slug, name, identifier)`：经接口建项目，取回它的 id（`TestTheWritesOnAProjectStampTheirRequest` 改用它）。
 
 **Tests:**
 - `app/archive_project_test.go`：`TestArchiveProject`（归档 web、再归档 ops、恢复 ops、恢复未归档的 web：完整的调用记录和回答）；`TestArchiveProjectRefuses`（两个动作各四种：没有调用者、没有的项目、看不到、项目成员）；`TestArchiveProjectReturnsEachFailure`（锁、判定、写、读回、提交；读回找不到是内部错误）。
 - `adapter/postgres/update_test.go`：`TestSetArchived`（归档、再归档取新时刻、恢复为 `null`，每次恰好改三列，别的项目每一列不变）。
 - `adapter/http/archive_test.go`：`TestArchiveAndUnarchiveProject`（各自的路由只调各自的用例；两种拒绝）。
 - `bootstrap`：矩阵四行（两个动作各 12 格加已归档 1 格，答案核对归档的时刻等于最后修改的时刻）；`TestTheWritesOnAProjectStampTheirRequest` 加归档、再归档、恢复三行。
+- `bootstrap/project_write_locks_test.go`（新，M3 设计 3.6 约定二，方案 E）：`TestEachWriteOnAProjectSharesItsWorkspaceFirst`：经组合出的 app，alice 在 acme 的 Web、Ops 上把每个项目级的写各执行一次（修改、归档、恢复三行；此后每个写的 Task 加一行）。Web：另一个事务持有 acme 行的 `FOR NO KEY UPDATE`（每个连带都这样持有），写在 `workspaces` 上等（`pgtest.WaitForLockWaitOn`），等待期间不持有 Web（`FOR UPDATE NOWAIT` 成功）。Ops：另一个事务持有 Ops 行的 `FOR NO KEY UPDATE`，写在 `projects` 上等，等待期间在自己的事务里持有 acme 的 `FOR SHARE`、不更强（`FOR NO KEY UPDATE NOWAIT` 失败、`FOR SHARE NOWAIT` 成功：同一个工作区的别的写照样能取）。放开之后各自照常回答（按契约核对）。`projectWrites` 的操作与矩阵中写在项目一级（`projectColumns`）的行逐个对上：契约里一个新的项目级的写没有自己的行，测试在连数据库之前失败（P5、P7 的写由此必须加行）。
 
 - [ ] **Step 1: 接口描述**
 
@@ -2888,7 +3535,7 @@ Expected: 成功：
 |---|---|---|
 | `97546a6ad9a74bfaf1fd5e7030bab297ec9897b0826764272227208be28e3357` | 2127 | `api/dist/openapi.yaml` |
 | `ed988d7ba1e3a08b32d674a5b3b0279e2861d47f297de58834d66b1562cc283a` | 1227 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `bda4b2efa662923cbd65310783cf894b9a951d064b4bf4dce3767b157672cc83` | 375 | `server/internal/modules/project/adapter/postgres/gen/projects.sql.go` |
+| `a985f81e44c6f48f9b1ab351ea9eb0ffee529cf9f62808138c75398ce2433e8f` | 390 | `server/internal/modules/project/adapter/postgres/gen/projects.sql.go` |
 | `2eccb5e7299e4b96f3759083958565cf9b4819d6c505570ef56338c8df5d3590` | 2255 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go web/packages/api-client/src/schema.gen.ts`
@@ -2910,7 +3557,6 @@ Expected: 与上表相同。
 // Each method runs in the transaction ctx carries.
 type ProjectArchiver interface {
 	ProjectReader
-	ProjectLocker
 	// SetArchived archives the project id at now, or unarchives it, by the
 	// account by.
 	SetArchived(ctx context.Context, id uuid.UUID, archived bool, by uuid.UUID, now time.Time) error
@@ -3054,7 +3700,7 @@ func TestSetArchived(t *testing.T) {
 		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
 ````
 
-`server/internal/modules/project/app/archive_project.go`（新文件，61 行）：
+`server/internal/modules/project/app/archive_project.go`（新文件，62 行）：
 
 ````file server/internal/modules/project/app/archive_project.go
 package app
@@ -3072,27 +3718,28 @@ import (
 // 3.19).
 type ArchiveProject struct {
 	projects ProjectArchiver
-	auth     shared.Authorizer
+	locks    Locks
 	tx       shared.TxManager
 	clock    Clock
 	archive  bool
 }
 
 // NewArchiveProject returns the use case that archives.
-func NewArchiveProject(projects ProjectArchiver, auth shared.Authorizer, tx shared.TxManager, clock Clock) *ArchiveProject {
-	return &ArchiveProject{projects: projects, auth: auth, tx: tx, clock: clock, archive: true}
+func NewArchiveProject(projects ProjectArchiver, locks Locks, tx shared.TxManager, clock Clock) *ArchiveProject {
+	return &ArchiveProject{projects: projects, locks: locks, tx: tx, clock: clock, archive: true}
 }
 
 // NewUnarchiveProject returns the use case that unarchives.
-func NewUnarchiveProject(projects ProjectArchiver, auth shared.Authorizer, tx shared.TxManager, clock Clock) *ArchiveProject {
-	return &ArchiveProject{projects: projects, auth: auth, tx: tx, clock: clock}
+func NewUnarchiveProject(projects ProjectArchiver, locks Locks, tx shared.TxManager, clock Clock) *ArchiveProject {
+	return &ArchiveProject{projects: projects, locks: locks, tx: tx, clock: clock}
 }
 
-// Execute, in one transaction (M3 design 3.6): the project FOR NO KEY
-// UPDATE; the decision on project.archive or project.unarchive; archived_at
-// set to the clock's time read under the lock, or cleared. An archived
-// project archived again takes the new time, as Plane's does. The answer is
-// the project as stored, as the caller sees it.
+// Execute, in one transaction (M3 design 3.6): the project's locks (Locks:
+// its workspace FOR SHARE, then the project FOR NO KEY UPDATE) and the
+// decision on project.archive or project.unarchive; archived_at set to the
+// clock's time read under the locks, or cleared. An archived project
+// archived again takes the new time, as Plane's does. The answer is the
+// project as stored, as the caller sees it.
 func (u *ArchiveProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -3104,7 +3751,7 @@ func (u *ArchiveProject) Execute(ctx context.Context, id uuid.UUID) (domain.Proj
 	}
 	var stored domain.Project
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		if _, _, err := lockAndDecide(ctx, u.projects.LockProject, u.auth, actor, id, action); err != nil {
+		if _, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: action}); err != nil {
 			return err
 		}
 		if err := u.projects.SetArchived(ctx, id, u.archive, actor.UserID, u.clock.Now()); err != nil {
@@ -3165,13 +3812,13 @@ import (
 func newArchive(archive bool) (*app.ArchiveProject, *writeFixture) {
 	f := newWrites()
 	if archive {
-		return app.NewArchiveProject(f.store, f.auth, f.tx, clockAt{clockNow, f.log}), f
+		return app.NewArchiveProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
 	}
-	return app.NewUnarchiveProject(f.store, f.auth, f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUnarchiveProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
 }
 
 // archived are the calls of bob's archive of project, or unarchive: the
-// lock, the decision, the clock, the change, the answer.
+// locks, the decision, the clock, the change, the answer.
 func archived(project uuid.UUID, archive bool) []string {
 	action := domain.ActionUnarchive
 	if archive {
@@ -3183,7 +3830,7 @@ func archived(project uuid.UUID, archive bool) []string {
 }
 
 // ArchiveProject, in one transaction and in the order of M3 design 3.6,
-// locks the project, decides, reads the clock and archives it, by the
+// takes the project's locks, decides, reads the clock and archives it, by the
 // caller; UnarchiveProject the same, and clears the time. An archived
 // project archives again, and an unarchived one unarchives: each is the
 // same change, as Plane's. The answer is the project read back as stored.
@@ -3232,7 +3879,7 @@ func TestArchiveProjectRefuses(t *testing.T) {
 			calls   []string
 		}{
 			{"no caller", context.Background(), webID, shared.Unauthenticated(), nil},
-			{"no project", as(bob), uuid.Nil(), domain.ErrNotFound, []string{"Begin", "LockProject " + uuid.Nil().String()}},
+			{"no project", as(bob), uuid.Nil(), domain.ErrNotFound, noProject},
 			{"not seen", as(erin), webID, domain.ErrNotFound, lockedDecision(erin, webID, action)},
 			{"a project member", as(alice), webID, shared.Forbidden(), lockedDecision(alice, webID, action)},
 		}
@@ -3262,11 +3909,11 @@ func TestArchiveProjectReturnsEachFailure(t *testing.T) {
 			fail  func(f *writeFixture)
 			calls int // how many of all's ran
 		}{
-			{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": failure} }, 2},
-			{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: failure} }, 3},
-			{"the change", func(f *writeFixture) { f.store.errs = map[string]error{"SetArchived": failure} }, 5},
-			{"the answer", func(f *writeFixture) { f.store.errs = map[string]error{"GetProject": failure} }, 6},
-			{"the commit", func(f *writeFixture) { f.tx.commitErr = failure }, 6},
+			{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": failure} }, 4},
+			{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: failure} }, 5},
+			{"the change", func(f *writeFixture) { f.store.errs = map[string]error{"SetArchived": failure} }, 7},
+			{"the answer", func(f *writeFixture) { f.store.errs = map[string]error{"GetProject": failure} }, 8},
+			{"the commit", func(f *writeFixture) { f.tx.commitErr = failure }, 8},
 		}
 		for _, tt := range tests {
 			t.Run(fmt.Sprintf("archive %v, %s", archive, tt.name), func(t *testing.T) {
@@ -3503,15 +4150,15 @@ func TestArchiveAndUnarchiveProject(t *testing.T) {
 		ListProjects:    app.NewListProjects(d.Workspaces, store, d.Authorizer),
 		GetProject:      app.NewGetProject(store, d.Authorizer),
 		CheckIdentifier: app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:   app.NewUpdateProject(store, d.Authorizer, d.Tx, d.Clock),
+		UpdateProject:   app.NewUpdateProject(store, locks, d.Tx, d.Clock),
 ````
 ````new server/internal/modules/project/module.go
 		ListProjects:     app.NewListProjects(d.Workspaces, store, d.Authorizer),
 		GetProject:       app.NewGetProject(store, d.Authorizer),
 		CheckIdentifier:  app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:    app.NewUpdateProject(store, d.Authorizer, d.Tx, d.Clock),
-		ArchiveProject:   app.NewArchiveProject(store, d.Authorizer, d.Tx, d.Clock),
-		UnarchiveProject: app.NewUnarchiveProject(store, d.Authorizer, d.Tx, d.Clock),
+		UpdateProject:    app.NewUpdateProject(store, locks, d.Tx, d.Clock),
+		ArchiveProject:   app.NewArchiveProject(store, locks, d.Tx, d.Clock),
+		UnarchiveProject: app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
 ````
 
 - [ ] **Step 6: 矩阵和组合出的测试**
@@ -3624,7 +4271,21 @@ func archivesItsProject(archived bool) func(t *testing.T, c caller, s seeded, an
 		}
 ````
 
-`server/internal/bootstrap/project_writes_test.go`（修改，2 处）：
+`server/internal/bootstrap/project_writes_test.go`（修改，5 处）：
+
+````old server/internal/bootstrap/project_writes_test.go
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Web","identifier":"WEB"}`)
+	if status != http.StatusCreated {
+		t.Fatalf("creating Web = %d %s", status, body)
+	}
+	var web struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, body, &web)
+````
+````new server/internal/bootstrap/project_writes_test.go
+	web := createdProject(t, contract, base, alice, "acme", "Web", "WEB")
+````
 
 ````old server/internal/bootstrap/project_writes_test.go
 		stamps                   string // the rows written: their updated_at, and whether alice wrote them
@@ -3634,17 +4295,215 @@ func archivesItsProject(archived bool) func(t *testing.T, c caller, s seeded, an
 ````
 
 ````old server/internal/bootstrap/project_writes_test.go
+		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.ID.String(), `{"name":"Site"}`, http.StatusOK,
 			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1"},
 ````
 ````new server/internal/bootstrap/project_writes_test.go
+		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, http.StatusOK,
 			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1"},
-		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.ID.String() + "/archive", "", http.StatusOK,
+		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
 			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1"},
 		// Archived again, it takes the new time.
-		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.ID.String() + "/archive", "", http.StatusOK,
+		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
 			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1"},
-		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.ID.String() + "/unarchive", "", http.StatusOK,
+		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", http.StatusOK,
 			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1"},
+````
+
+````old server/internal/bootstrap/project_writes_test.go
+		rows, err := pool.Query(context.Background(), w.stamps, web.ID, aliceID)
+````
+````new server/internal/bootstrap/project_writes_test.go
+		rows, err := pool.Query(context.Background(), w.stamps, web, aliceID)
+````
+
+````old server/internal/bootstrap/project_writes_test.go
+	}
+}
+
+````
+````new server/internal/bootstrap/project_writes_test.go
+	}
+}
+
+// createdProject creates the project name with identifier in the workspace
+// slug through the API, by the caller of token, and returns its id.
+func createdProject(t *testing.T, contract *apitest.Contract, base, token, slug, name, identifier string) uuid.UUID {
+	t.Helper()
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/projects", token,
+		`{"name":"`+name+`","identifier":"`+identifier+`"}`)
+	if status != http.StatusCreated {
+		t.Fatalf("creating %s in %s = %d %s", name, slug, status, body)
+	}
+	var p struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, body, &p)
+	return p.ID
+}
+
+````
+
+`server/internal/bootstrap/project_write_locks_test.go`（新文件，157 行）：
+
+````file server/internal/bootstrap/project_write_locks_test.go
+package bootstrap
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/migrations"
+)
+
+// projectWrite is a write on a project as
+// TestEachWriteOnAProjectSharesItsWorkspaceFirst sends it, by its
+// operationId: the request on the project, by alice.
+type projectWrite struct {
+	op, method, path, body string // path: %s the project's id
+	want                   int
+}
+
+// projectWrites are the writes on a project, in the order they run on
+// Web, then on Ops.
+var projectWrites = []projectWrite{
+	{op: "updateProject", method: http.MethodPatch, path: "/api/v0/projects/%s", body: `{"description":"Changed"}`, want: http.StatusOK},
+	{op: "archiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/archive", want: http.StatusOK},
+	{op: "unarchiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/unarchive", want: http.StatusOK},
+}
+
+// writesOnAProject are the operations whose matrix rows write and have the
+// project level's columns: every write on a project of the contract.
+func writesOnAProject() []string {
+	var ops []string
+	for _, r := range matrixRows() {
+		if r.write && slices.Equal(r.columns, projectColumns) && !slices.Contains(ops, r.op) {
+			ops = append(ops, r.op)
+		}
+	}
+	return slices.Sorted(slices.Values(ops))
+}
+
+// holding begins a transaction on pool that runs sql with args, and keeps
+// it open until the test rolls it back, or ends.
+func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
+	t.Helper()
+	tx, err := pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
+	if tag, err := tx.Exec(context.Background(), sql, args...); err != nil || tag.RowsAffected() != 1 {
+		t.Fatalf("%s: %v, %v; want one row held", sql, tag, err)
+	}
+	return tx
+}
+
+// heldBy reports whether a transaction holds the one row sql locks NOWAIT:
+// it answers lock_not_available (55P03) at once while one does.
+func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
+	t.Helper()
+	tag, err := pool.Exec(context.Background(), sql, args...)
+	var pgErr *pgconn.PgError
+	switch {
+	case errors.As(err, &pgErr) && pgErr.Code == "55P03":
+		return true
+	case err != nil || tag.RowsAffected() != 1:
+		t.Fatalf("%s: %v, %v; want one row", sql, tag, err)
+	}
+	return false
+}
+
+// Every write on a project takes its workspace's row FOR SHARE first, in
+// its transaction, before any other lock (M3 design 3.6 convention 2, the
+// lock table), as bootstrap wires it: alice, acme's admin, writes on her
+// projects Web and Ops, each write once on each. Every write on a project
+// of the contract has its row here: the matrix's rows that write at the
+// project level are the list.
+//   - The workspace first: another transaction holds acme's row FOR NO KEY
+//     UPDATE, as every cascade over its projects does (3.3). The write on
+//     Web waits for that row, and meanwhile does not hold Web's row: a FOR
+//     UPDATE NOWAIT of it succeeds.
+//   - In its transaction, FOR SHARE, before its project: another
+//     transaction holds Ops's row FOR NO KEY UPDATE. The write on Ops waits
+//     for it, and meanwhile holds acme's row at FOR SHARE, no stronger,
+//     which another write on a project of acme shares (a FOR NO KEY UPDATE
+//     NOWAIT of it fails, a FOR SHARE NOWAIT succeeds).
+//
+// Once the other transaction ends, each write answers as it would alone.
+func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
+	ops := make([]string, len(projectWrites))
+	for i, w := range projectWrites {
+		ops[i] = w.op
+	}
+	if want := writesOnAProject(); !slices.Equal(slices.Sorted(slices.Values(ops)), want) {
+		t.Fatalf("the writes here are %q; the writes on a project are %q: each has its row, in projectWrites", slices.Sorted(slices.Values(ops)),
+			want)
+	}
+	contract := apitest.Load(t)
+	dbURL := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, dbURL, false), migrations.FS())
+	pool := openPool(t, dbURL)
+	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
+	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", alice, `{"name":"Acme","slug":"acme"}`)
+	if status != http.StatusCreated {
+		t.Fatalf("creating acme = %d %s", status, body)
+	}
+	var acme struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, body, &acme)
+	projects := [2]uuid.UUID{createdProject(t, contract, base, alice, "acme", "Web", "WEB"),
+		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
+	for _, w := range projectWrites {
+		for phase, project := range projects {
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(w.body))
+			contract.CheckRequest(t, req)
+			var other pgx.Tx
+			if phase == 0 {
+				other = holding(t, pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", acme.ID)
+			} else {
+				other = holding(t, pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", project)
+			}
+			answered := sendInBackground(req)
+			if phase == 0 {
+				pgtest.WaitForLockWaitOn(t, pool, "workspaces", 10*time.Second)
+				if heldBy(t, pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", project) {
+					t.Errorf("%s holds its project while it waits for its workspace", w.op)
+				}
+			} else {
+				pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
+				if !heldBy(t, pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE NOWAIT", acme.ID) ||
+					heldBy(t, pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR SHARE NOWAIT", acme.ID) {
+					t.Errorf("%s does not hold its workspace FOR SHARE in its transaction while it waits for its project", w.op)
+				}
+			}
+			if err := other.Rollback(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			a := receiveWithin(t, answered, 10*time.Second, "the answer to "+w.op)
+			if a.err != nil {
+				t.Fatal(a.err)
+			}
+			contract.CheckResponse(t, req, a.res)
+			if a.res.StatusCode != w.want {
+				t.Errorf("%s on %s = %d %s, want %d", w.op, []string{"Web", "Ops"}[phase], a.res.StatusCode, a.body, w.want)
+			}
+		}
+	}
+}
 ````
 
 - [ ] **Step 7: 测试、lint、前端检查**
@@ -3652,7 +4511,7 @@ func archivesItsProject(archived bool) func(t *testing.T, c caller, s seeded, an
 Run: `go -C server test -count=1 ./internal/modules/project/... ./internal/modules/access/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryColumnCallsAsARegisteredAccount|TestEveryActionHasARuleAndEveryRuleAnAction|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestTheWritesOnAProjectStampTheirRequest' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryColumnCallsAsARegisteredAccount|TestEveryActionHasARuleAndEveryRuleAnAction|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestTheWritesOnAProjectStampTheirRequest|TestEachWriteOnAProjectSharesItsWorkspaceFirst' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -3673,16 +4532,21 @@ Expected: 通过。
 - [ ] **Step 8: 提交**
 
 ```bash
-git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/archive_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/queries/projects.sql server/internal/modules/project/adapter/postgres/update.go server/internal/modules/project/adapter/postgres/update_test.go server/internal/modules/project/app/archive_project.go server/internal/modules/project/app/archive_project_test.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/archive_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/queries/projects.sql server/internal/modules/project/adapter/postgres/update.go server/internal/modules/project/adapter/postgres/update_test.go server/internal/modules/project/app/archive_project.go server/internal/modules/project/app/archive_project_test.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4b): archiveProject and unarchiveProject
 
 POST .../archive and .../unarchive, for whoever may change the project.
-Each locks the project FOR NO KEY UPDATE, decides, reads the clock under
-the lock and sets archived_at to it, or clears it; archiving an archived
-project stamps it again, as Plane's does. The matrix archives its
-archived project through the store, no longer through SQL.
+Each takes Locks' path (the workspace FOR SHARE, then the project FOR NO
+KEY UPDATE), decides, reads the clock under the locks and sets
+archived_at to it, or clears it; archiving an archived project stamps it
+again, as Plane's does. The matrix archives its archived project through
+the store, no longer through SQL. A composed test holds the workspace,
+then the project, from another transaction, and finds each write on a
+project waiting on the workspace's row first, holding nothing, then
+holding the workspace FOR SHARE in its transaction; its writes are the
+matrix's writes at the project level, one row each.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -3700,11 +4564,13 @@ Expected: 通过。
 | 没有调用者时也读 | `TestArchiveProjectRefuses` | 单元 |
 | 锁和判定、写、读回、提交的失败被吞掉；写重试一次 | `TestArchiveProjectReturnsEachFailure` | 单元 |
 | handler 吞掉两个用例的失败 | `TestArchiveAndUnarchiveProject` | 单元 |
-| 归档先判定后锁 | `TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 组合 |
+| 归档先判定后锁 | `TestArchiveProject`；`TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 单元；组合 |
+| 只有归档、只有恢复不锁工作区（各一个） | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`；`TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 组合 |
+| 测试改坏：第一段的探测等在 `projects`、第二段的等在 `workspaces` | `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 自己失败（等待在指名的表上，探测超时）：探测不会被别的等待满足 | 组合 |
 | `SetArchived` 在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
 | `project.New` 的接线（归档和恢复接反等） | 见 Task 8 的表 | 组合 |
 
-**Done when:** 矩阵四行（26 格）通过；归档、再归档、恢复由调用者在请求之内写入；矩阵不再用 SQL 归档。
+**Done when:** 矩阵四行（26 格）通过；归档、再归档、恢复由调用者在请求之内写入；矩阵不再用 SQL 归档；修改、归档、恢复在组合出的 app 上先锁工作区（`TestEachWriteOnAProjectSharesItsWorkspaceFirst`）。
 
 ---
 
@@ -4818,19 +5684,19 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/project_deletion_test.go`、`server/internal/modules/project/adapter/http/delete_test.go`、`server/internal/modules/project/app/delete_project.go`、`server/internal/modules/project/app/delete_project_test.go`
-- Modify: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/module.go`
+- Modify: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
 - Produces（spec 2.6，M3 设计 3.3、3.6、3.19）：`DELETE /api/v0/projects/{project_id}`，204；码 `[project.not_found, forbidden]`；操作名 `project.delete`，规则同 `project.update`；已归档的项目照样删除。
-- `app.NewDeleteProject(projects ProjectDeleter, auth, tx, clock)`：一个事务：`lockAndDecide` → 锁下读时钟 → `deleteProjects(Deletion{WorkspaceID: 锁读到的工作区, ProjectID: &id, By: 调用者, Now})`。删除用锁读到的工作区（M3 设计 3.6 约定二：锁下的重读确认父行）。
-- `bootstrap/project_writes_test.go` 的 `createdProject`（经 API 建项目，答 id），Task 8、12、13、14 共用。
+- `app.NewDeleteProject(projects ProjectsDeleter, locks Locks, tx, clock)`：一个事务：`locks.lockAndDecide`（工作区 `FOR SHARE` → 项目 `FOR NO KEY UPDATE` → 判定）→ 锁下读时钟 → `deleteProjects(Deletion{WorkspaceID: 锁读到的工作区, ProjectID: &id, By: 调用者, Now})`。删除用锁读到的工作区（M3 设计 3.6 约定二：锁下的重读确认父行）。用例只要 `ProjectsDeleter`：不另设删除项目的端口。
 
 **Tests:**
 - `app/delete_project_test.go`：`TestDeleteProject`（web、已归档的 ops：锁、判定、时钟、四步，只有这个项目）；`TestDeleteProjectRefuses`（没有调用者、没有、看不到、项目成员）；`TestDeleteProjectReturnsEachFailure`（锁、判定、四步各一、提交）。
 - `adapter/http/delete_test.go`：`TestDeleteProject`（204、没有正文；两种拒绝）。
 - `bootstrap/project_deletion_test.go`：`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`（`keysTo("projects")` 读出每张表；经 API 删除 Web：每个外键下删除之前未删除的行都删除了，`deleted_at` 是项目的、`updated_by_id` 是删除者；Ops 的行一行不变；Web 的 `deleted_at` 在请求之内；读 Web 得 404）；`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`（`states` 上的延迟约束触发器拒绝提交：500，两个项目下的每一行不变；`states` 是最后一步的表，一步单独提交就会留下删除的行）。
 - 矩阵两行（12 格 `ofProject(204, 403, 403, 204, 403, 403)`；已归档 1 格 204）。
+- `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 加删除一行（最后一行：两个项目都删除之后不再有别的写）。
 
 - [ ] **Step 1: 接口描述**
 
@@ -4936,27 +5802,7 @@ Expected: 与上表相同。
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 ````
 
-`server/internal/modules/project/app/ports.go`（修改，1 处）：
-
-````old server/internal/modules/project/app/ports.go
-	DeleteStates(ctx context.Context, d Deletion) error
-}
-
-````
-````new server/internal/modules/project/app/ports.go
-	DeleteStates(ctx context.Context, d Deletion) error
-}
-
-// ProjectDeleter is deleteProject's repository. Each method runs in the
-// transaction ctx carries.
-type ProjectDeleter interface {
-	ProjectLocker
-	ProjectsDeleter
-}
-
-````
-
-`server/internal/modules/project/app/delete_project.go`（新文件，42 行）：
+`server/internal/modules/project/app/delete_project.go`（新文件，43 行）：
 
 ````file server/internal/modules/project/app/delete_project.go
 package app
@@ -4972,33 +5818,34 @@ import (
 // DeleteProject deletes a project: DELETE /api/v0/projects/{project_id}
 // (M3 design 3.3, 3.6).
 type DeleteProject struct {
-	projects ProjectDeleter
-	auth     shared.Authorizer
+	projects ProjectsDeleter
+	locks    Locks
 	tx       shared.TxManager
 	clock    Clock
 }
 
 // NewDeleteProject returns the use case.
-func NewDeleteProject(projects ProjectDeleter, auth shared.Authorizer, tx shared.TxManager, clock Clock) *DeleteProject {
-	return &DeleteProject{projects: projects, auth: auth, tx: tx, clock: clock}
+func NewDeleteProject(projects ProjectsDeleter, locks Locks, tx shared.TxManager, clock Clock) *DeleteProject {
+	return &DeleteProject{projects: projects, locks: locks, tx: tx, clock: clock}
 }
 
-// Execute, in one transaction (M3 design 3.6): the project FOR NO KEY
-// UPDATE; the decision on project.delete; the clock read under the lock;
-// then the project and the rows under it soft-deleted, each at that one
-// moment, by the caller (deleteProjects). An archived project is deleted
-// as any other.
+// Execute, in one transaction (M3 design 3.6): the project's locks (Locks:
+// its workspace FOR SHARE, then the project FOR NO KEY UPDATE) and the
+// decision on project.delete; the clock read under the locks; then the
+// project and the rows under it soft-deleted, each at that one moment, by
+// the caller (deleteProjects). An archived project is deleted as any
+// other.
 func (u *DeleteProject) Execute(ctx context.Context, id uuid.UUID) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
 		return err
 	}
 	return u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		locked, _, err := lockAndDecide(ctx, u.projects.LockProject, u.auth, actor, id, domain.ActionDelete)
+		h, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionDelete})
 		if err != nil {
 			return err
 		}
-		return deleteProjects(ctx, u.projects, Deletion{WorkspaceID: locked.WorkspaceID, ProjectID: &id, By: actor.UserID, Now: u.clock.Now()})
+		return deleteProjects(ctx, u.projects, Deletion{WorkspaceID: h.project.WorkspaceID, ProjectID: &id, By: actor.UserID, Now: u.clock.Now()})
 	})
 }
 ````
@@ -5023,10 +5870,10 @@ import (
 // newDelete is DeleteProject over newWrites' fakes, its clock logged.
 func newDelete() (*app.DeleteProject, *writeFixture) {
 	f := newWrites()
-	return app.NewDeleteProject(f.store, f.auth, f.tx, clockAt{clockNow, f.log}), f
+	return app.NewDeleteProject(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
 }
 
-// deleted are the calls of bob's deletion of project: the lock, the
+// deleted are the calls of bob's deletion of project: the locks, the
 // decision, the clock, the four steps on that project alone.
 func deleted(project uuid.UUID) []string {
 	return slices.Concat(lockedDecision(bob, project, domain.ActionDelete), []string{"Now"},
@@ -5034,7 +5881,7 @@ func deleted(project uuid.UUID) []string {
 }
 
 // DeleteProject, in one transaction and in the order of M3 design 3.6,
-// locks the project, decides, reads the clock, then runs the steps a
+// takes the project's locks, decides, reads the clock, then runs the steps a
 // workspace's deletion runs, on the project alone, of the workspace its
 // lock read, by the caller at that one moment. An archived project is
 // deleted as any other.
@@ -5059,7 +5906,7 @@ func TestDeleteProjectRefuses(t *testing.T) {
 		calls []string
 	}{
 		{"no caller", context.Background(), webID, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), domain.ErrNotFound, []string{"Begin", "LockProject " + uuid.Nil().String()}},
+		{"no project", as(bob), uuid.Nil(), domain.ErrNotFound, noProject},
 		{"not seen", as(erin), webID, domain.ErrNotFound, lockedDecision(erin, webID, domain.ActionDelete)},
 		{"a project member", as(alice), webID, shared.Forbidden(), lockedDecision(alice, webID, domain.ActionDelete)},
 	}
@@ -5082,13 +5929,13 @@ func TestDeleteProjectReturnsEachFailure(t *testing.T) {
 		fail  func(f *writeFixture)
 		calls int // how many of all's ran
 	}{
-		{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": errDisk} }, 2},
-		{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: errDisk} }, 3},
-		{"the projects", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjects": errDisk} }, 5},
-		{"the members", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectMembers": errDisk} }, 6},
-		{"the display settings", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectPreferences": errDisk} }, 7},
-		{"the states", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteStates": errDisk} }, 8},
-		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 8},
+		{"the lock", func(f *writeFixture) { f.store.errs = map[string]error{"LockProject": errDisk} }, 4},
+		{"the decision", func(f *writeFixture) { f.auth.errs = map[grantKey]error{{bob, acme.ID}: errDisk} }, 5},
+		{"the projects", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjects": errDisk} }, 7},
+		{"the members", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectMembers": errDisk} }, 8},
+		{"the display settings", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteProjectPreferences": errDisk} }, 9},
+		{"the states", func(f *writeFixture) { f.store.errs = map[string]error{"DeleteStates": errDisk} }, 10},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 10},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -5270,11 +6117,11 @@ func TestDeleteProject(t *testing.T) {
 ````
 
 ````old server/internal/modules/project/module.go
-		UnarchiveProject: app.NewUnarchiveProject(store, d.Authorizer, d.Tx, d.Clock),
+		UnarchiveProject: app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
 ````
 ````new server/internal/modules/project/module.go
-		UnarchiveProject: app.NewUnarchiveProject(store, d.Authorizer, d.Tx, d.Clock),
-		DeleteProject:    app.NewDeleteProject(store, d.Authorizer, d.Tx, d.Clock),
+		UnarchiveProject: app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:    app.NewDeleteProject(store, locks, d.Tx, d.Clock),
 ````
 
 - [ ] **Step 4: 矩阵和组合出的测试**
@@ -5291,84 +6138,6 @@ func TestDeleteProject(t *testing.T) {
 			cells: ofProject(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
 		{op: "deleteProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodDelete, "", ""),
 			cells: map[caller]cell{callerArchivedAdmin: cellNoContent}},
-````
-
-`server/internal/bootstrap/project_writes_test.go`（修改，7 处）：
-
-````old server/internal/bootstrap/project_writes_test.go
-	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice, `{"name":"Web","identifier":"WEB"}`)
-	if status != http.StatusCreated {
-		t.Fatalf("creating Web = %d %s", status, body)
-	}
-	var web struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, body, &web)
-````
-````new server/internal/bootstrap/project_writes_test.go
-	web := createdProject(t, contract, base, alice, "acme", "Web", "WEB")
-````
-
-````old server/internal/bootstrap/project_writes_test.go
-		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.ID.String(), `{"name":"Site"}`, http.StatusOK,
-````
-````new server/internal/bootstrap/project_writes_test.go
-		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, http.StatusOK,
-````
-
-````old server/internal/bootstrap/project_writes_test.go
-		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.ID.String() + "/archive", "", http.StatusOK,
-````
-````new server/internal/bootstrap/project_writes_test.go
-		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
-````
-
-````old server/internal/bootstrap/project_writes_test.go
-		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.ID.String() + "/archive", "", http.StatusOK,
-````
-````new server/internal/bootstrap/project_writes_test.go
-		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
-````
-
-````old server/internal/bootstrap/project_writes_test.go
-		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.ID.String() + "/unarchive", "", http.StatusOK,
-````
-````new server/internal/bootstrap/project_writes_test.go
-		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", http.StatusOK,
-````
-
-````old server/internal/bootstrap/project_writes_test.go
-		rows, err := pool.Query(context.Background(), w.stamps, web.ID, aliceID)
-````
-````new server/internal/bootstrap/project_writes_test.go
-		rows, err := pool.Query(context.Background(), w.stamps, web, aliceID)
-````
-
-````old server/internal/bootstrap/project_writes_test.go
-	}
-}
-
-````
-````new server/internal/bootstrap/project_writes_test.go
-	}
-}
-
-// createdProject creates the project name with identifier in the workspace
-// slug through the API, by the caller of token, and returns its id.
-func createdProject(t *testing.T, contract *apitest.Contract, base, token, slug, name, identifier string) uuid.UUID {
-	t.Helper()
-	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/projects", token,
-		`{"name":"`+name+`","identifier":"`+identifier+`"}`)
-	if status != http.StatusCreated {
-		t.Fatalf("creating %s in %s = %d %s", name, slug, status, body)
-	}
-	var p struct {
-		ID uuid.UUID `json:"id"`
-	}
-	decodeAnswer(t, body, &p)
-	return p.ID
-}
-
 ````
 
 `server/internal/bootstrap/project_deletion_test.go`（新文件，118 行）：
@@ -5494,12 +6263,22 @@ func TestAProjectDeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 }
 ````
 
+`server/internal/bootstrap/project_write_locks_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	{op: "unarchiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/unarchive", want: http.StatusOK},
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	{op: "unarchiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/unarchive", want: http.StatusOK},
+	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
+````
+
 - [ ] **Step 5: 测试、lint、前端检查**
 
 Run: `go -C server test -count=1 ./internal/modules/project/... ./internal/modules/access/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryActionHasARuleAndEveryRuleAnAction|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestDeletingAProjectLeavesNoUndeletedRowUnderIt|TestAProjectDeletionRefusedAtItsCommitChangesNoRow|TestTheWritesOnAProjectStampTheirRequest' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryActionHasARuleAndEveryRuleAnAction|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestDeletingAProjectLeavesNoUndeletedRowUnderIt|TestAProjectDeletionRefusedAtItsCommitChangesNoRow|TestTheWritesOnAProjectStampTheirRequest|TestEachWriteOnAProjectSharesItsWorkspaceFirst' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -5520,15 +6299,16 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/project.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/project_deletion_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/delete_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/delete_project.go server/internal/modules/project/app/delete_project_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/project_deletion_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/delete_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/delete_project.go server/internal/modules/project/app/delete_project_test.go server/internal/modules/project/domain/actions.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4b): deleteProject
 
 DELETE /api/v0/projects/{project_id}, for whoever may change the project,
-archived or not. It locks the project FOR NO KEY UPDATE, decides, reads
-the clock under the lock and runs the steps a workspace's deletion runs,
-on the project alone, in the workspace its lock read. The composed test
+archived or not. It takes Locks' path (the workspace FOR SHARE, then the
+project FOR NO KEY UPDATE), decides, reads the clock under the locks and
+runs the steps a workspace's deletion runs, on the project alone, in the
+workspace its lock read. The composed test
 reads the tables under projects from the catalog, as the workspace's
 does, and a commit refused after the last step changes no row.
 
@@ -5546,6 +6326,8 @@ Expected: 通过。
 | 删除用别的工作区（调用者的 id）而不是锁读到的 | `TestDeletingAProjectLeavesNoUndeletedRowUnderIt` | 组合 |
 | 没有调用者时也读 | `TestDeleteProjectRefuses` | 单元 |
 | 锁和判定、四步、提交的失败被吞掉 | `TestDeleteProjectReturnsEachFailure` | 单元 |
+| 只有删除不锁工作区 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`；`TestADemotionAndAProjectsDeletionSerialize`（Task 14 起） | 组合 |
+| 测试改坏：`projectWrites` 少了删除的一行 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 自己失败（与矩阵的写对不上，"each has its row, in projectWrites"） | 组合 |
 | handler 吞掉用例的失败 | `TestDeleteProject`（HTTP） | 单元 |
 | `project.New` 的接线 | 见 Task 8 的表 | 组合 |
 
@@ -5557,18 +6339,18 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/modules/project/adapter/postgres/preferences.go`、`server/internal/modules/project/adapter/postgres/preferences_test.go`、`server/internal/modules/project/app/fakes_preferences_test.go`、`server/internal/modules/project/app/get_preferences.go`、`server/internal/modules/project/app/preferences_test.go`、`server/internal/modules/project/app/update_preferences.go`
-- Modify: `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/projects.go`、`server/internal/modules/project/adapter/postgres/queries/preferences.sql`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`、`server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/fakes_write_test.go`、`server/internal/modules/project/app/lock.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/preferences.go`、`server/internal/modules/project/domain/preferences_test.go`
+- Modify: `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/postgres/failures_test.go`、`server/internal/modules/project/adapter/postgres/queries/preferences.sql`、`server/internal/modules/project/adapter/postgres/queries/projects.sql`、`server/internal/modules/project/adapter/postgres/update.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/fakes_write_test.go`、`server/internal/modules/project/app/lock.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/preferences.go`、`server/internal/modules/project/domain/preferences_test.go`
 - Generate: `server/internal/modules/project/adapter/postgres/gen/preferences.sql.go`、`server/internal/modules/project/adapter/postgres/gen/projects.sql.go`
 
 **Interfaces:**
 - Produces（spec 2.7，M3 设计 3.18、4.8、5.2）：`domain.Navigation{DefaultTab, HideInMoreMenu}`、`Preferences{Navigation, SortOrder}`、`PreferencesPatch`（`nil` 不变，导航整个替换）、`DefaultPreferences()`（列的默认值：`work_items`、什么都不藏、65535）、`(Preferences).Apply`、`CheckPreferencesPatch`：默认标签页是五个之一，藏起的是 `work_items` 之外的四个之一且只出现一次，全部问题一个 422，按位置命名字段。
-- 端口：`ProjectSharer.ShareProject`（`FOR SHARE`，带 `deleted_at IS NULL`）、`ProjectFinder.ProjectWorkspace`（不加锁）、`PreferencesReader`、`PreferencesChange`、`PreferencesWriter`；`app/lock.go` 加 `findAndDecide`（读：找到工作区 → 判定，不开事务）。
-- `app.NewGetProjectPreferences(preferences, auth)`：`findAndDecide(project_preferences.read)` → `Preferences`，没有行时答默认值，不写（M3 设计 3.18）。`app.NewUpdateProjectPreferences(preferences, auth, tx, clock)`：`CheckPreferencesPatch`（事务之前）→ 一个事务：`lockAndDecide(ShareProject, project_preferences.update)` → 锁下读时钟 → `UpsertPreferences`（有未删除的行就改给出的字段和审计列，没有就以默认值加上修改插入，冲突的目标是部分唯一键）。已归档项目的设置照改（3.19）。
+- 端口：`ProjectSharer.ShareProject`（`FOR SHARE`，带 `deleted_at IS NULL`），进 `ProjectLocks`；`PreferencesReader`（嵌入 Task 2 的 `ProjectFinder`）、`PreferencesChange`、`PreferencesWriter`（只有 `UpsertPreferences`：锁在 `Locks` 里）。`app/lock.go`：`write` 加 `share`（为真时项目取 `FOR SHARE`：改项目之下的行、不改项目行和成员关系的写），加 `findAndDecide`（读：找到工作区 → 判定，不开事务）。
+- `app.NewGetProjectPreferences(preferences, auth)`：`findAndDecide(project_preferences.read)` → `Preferences`，没有行时答默认值，不写（M3 设计 3.18）。`app.NewUpdateProjectPreferences(preferences PreferencesWriter, locks Locks, tx, clock)`：`CheckPreferencesPatch`（事务之前）→ 一个事务：`locks.lockAndDecide(write{project, project_preferences.update, share: true})`（工作区 `FOR SHARE` → 项目 `FOR SHARE` → 判定）→ 锁下读时钟 → `UpsertPreferences`（有未删除的行就改给出的字段和审计列，没有就以默认值加上修改插入，冲突的目标是部分唯一键）。已归档项目的设置照改（3.19）。
 - 规则：`project_preferences.read`、`project_preferences.update`：项目的有效成员（三种角色），各自的设置。
 
 **Tests:**
 - `domain/preferences_test.go`：`TestPreferencesApply`；`TestCheckPreferencesPatchAcceptsEveryTab`；`TestCheckPreferencesPatchReportsEveryTab`（未知的默认标签页、藏起 `work_items`、未知的、重复的、大小写不同的：一个 422 按位置）。
-- `adapter/postgres/preferences_test.go`：`TestShareProjectAndProjectWorkspace`（`ShareProject` 持锁时 `FOR NO KEY UPDATE` 等待、另一个 `FOR SHARE` 不等、别的项目不被锁；已删除、不存在的找不到；`ProjectWorkspace` 同样的工作区，已归档的也读）；`TestPreferences`（全默认值的行读成 `DefaultPreferences`；别的账户、别的项目、已删除的行都不读）；`TestUpsertPreferences`（第一次插入：默认值加修改，由他在那一刻建；行由别人建、最后由别人改时，下一次修改的审计列是他和那一刻；导航整个替换；空的修改不变；别的行（别人的、别的项目的、他已删除的）每一列不变）。
+- `adapter/postgres/preferences_test.go`：`TestShareProject`（`ShareProject` 持锁时 `FOR NO KEY UPDATE` 等待、另一个 `FOR SHARE` 不等、别的项目不被锁；已删除、不存在的找不到；已归档的也读）；`TestPreferences`（全默认值的行读成 `DefaultPreferences`；别的账户、别的项目、已删除的行都不读）；`TestUpsertPreferences`（第一次插入：默认值加修改，由他在那一刻建；行由别人建、最后由别人改时，下一次修改的审计列是他和那一刻；导航整个替换；空的修改不变；别的行（别人的、别的项目的、他已删除的）每一列不变）。
 - `app/preferences_test.go`：`TestGetProjectPreferences`（bob 的设置、carol 没有时的默认值；不在事务里）；`TestGetProjectPreferencesRefuses`（没有调用者、没有、看不到、不是成员的 403；三个端口的失败各自原样返回，之后的不调用）；`TestUpdateProjectPreferences`（改 bob 的导航、从默认值建 carol 的位置、已归档项目里的）；`TestUpdateProjectPreferencesRefuses`（未知的标签页、没有调用者在事务之前；没有、看不到、403；锁、判定、写、提交的失败；被拒时设置不变）。
 
 - [ ] **Step 1: 领域**
@@ -5802,13 +6584,6 @@ WHERE id = sqlc.arg(id);
 ````new server/internal/modules/project/adapter/postgres/queries/projects.sql
 WHERE id = sqlc.arg(id);
 
--- name: ProjectWorkspace :one
--- The workspace of the undeleted project, archived or not, without a lock: what a read decides on (M3 design 6.4), and
--- what a write that locks workspace members first reads before its locks (3.6 convention 3).
-SELECT workspace_id
-FROM projects
-WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
-
 -- name: ShareProject :one
 -- The parent lock of a write under the project that leaves the project row and its memberships as they are (M3 design
 -- 3.6): FOR SHARE waits for FOR NO KEY UPDATE, not for another FOR SHARE. After a wait, Postgres evaluates deleted_at
@@ -5826,20 +6601,21 @@ Expected: 成功：
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
 | `71e551a9b14f2ec62f3d4ca19a786a749899da0cc23a955062858bc0271ac0bd` | 140 | `server/internal/modules/project/adapter/postgres/gen/preferences.sql.go` |
-| `4656da30df3aad8ae6492b483aa4896261663a3681f217655e66844b03989f41` | 412 | `server/internal/modules/project/adapter/postgres/gen/projects.sql.go` |
+| `aa8b87285bcc5a4e9ebf09b16b79741cb17662a22ee81e19478ab7f93f50cb60` | 412 | `server/internal/modules/project/adapter/postgres/gen/projects.sql.go` |
 
 Run: `shasum -a 256 server/internal/modules/project/adapter/postgres/gen/preferences.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go`
 Expected: 与上表相同。
 
 - [ ] **Step 3: 端口和存储**
 
-`server/internal/modules/project/app/ports.go`（修改，1 处）：
+`server/internal/modules/project/app/ports.go`（修改，2 处）：
 
 ````old server/internal/modules/project/app/ports.go
-	LockProject(ctx context.Context, id uuid.UUID) (p LockedProject, found bool, err error)
+}
+
+// ProjectFinder finds the workspace of a project: what a read decides on,
 ````
 ````new server/internal/modules/project/app/ports.go
-	LockProject(ctx context.Context, id uuid.UUID) (p LockedProject, found bool, err error)
 }
 
 // ProjectSharer takes the parent lock of a write under a project that
@@ -5852,12 +6628,14 @@ type ProjectSharer interface {
 }
 
 // ProjectFinder finds the workspace of a project: what a read decides on,
-// and what a write that locks workspace members before the project reads
-// first.
-type ProjectFinder interface {
-	// ProjectWorkspace is the workspace of the undeleted project id, read
-	// without a lock; found is false when there is none.
-	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
+````
+
+````old server/internal/modules/project/app/ports.go
+	ProjectLocker
+````
+````new server/internal/modules/project/app/ports.go
+	ProjectLocker
+	ProjectSharer
 }
 
 // PreferencesReader is getProjectPreferences' repository.
@@ -5879,41 +6657,13 @@ type PreferencesChange struct {
 	Now         time.Time
 }
 
-// PreferencesWriter is updateProjectPreferences' repository. Each method
-// runs in the transaction ctx carries.
+// PreferencesWriter is updateProjectPreferences' repository. It runs in the
+// transaction ctx carries.
 type PreferencesWriter interface {
-	ProjectSharer
 	// UpsertPreferences applies c.Patch to the account's undeleted row, or
 	// inserts one with domain.DefaultPreferences and the patch applied, by
 	// the account at c.Now, and returns the settings as stored.
 	UpsertPreferences(ctx context.Context, c PreferencesChange) (domain.Preferences, error)
-````
-
-`server/internal/modules/project/adapter/postgres/projects.go`（修改，1 处）：
-
-````old server/internal/modules/project/adapter/postgres/projects.go
-}
-
-// GetProject returns the undeleted project id, archived or not, as userID
-````
-````new server/internal/modules/project/adapter/postgres/projects.go
-}
-
-// ProjectWorkspace is the workspace of the undeleted project id, archived
-// or not, read without a lock; found is false when there is none
-// (app.ProjectFinder).
-func (s *Store) ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error) {
-	workspaceID, err = s.queries(ctx).ProjectWorkspace(ctx, id)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return uuid.UUID{}, false, nil
-	case err != nil:
-		return uuid.UUID{}, false, fmt.Errorf("find project %s: %w", id, err)
-	}
-	return workspaceID, true, nil
-}
-
-// GetProject returns the undeleted project id, archived or not, as userID
 ````
 
 `server/internal/modules/project/adapter/postgres/update.go`（修改，1 处）：
@@ -6023,7 +6773,7 @@ func preferences(stored []byte, sortOrder float64) (domain.Preferences, error) {
 }
 ````
 
-`server/internal/modules/project/adapter/postgres/preferences_test.go`（新文件，166 行）：
+`server/internal/modules/project/adapter/postgres/preferences_test.go`（新文件，162 行）：
 
 ````file server/internal/modules/project/adapter/postgres/preferences_test.go
 package postgresadapter_test
@@ -6046,9 +6796,8 @@ import (
 // ShareProject reads the undeleted project's workspace and whether it is
 // archived, and holds it FOR SHARE until the transaction ends: a FOR NO KEY
 // UPDATE of it waits, another FOR SHARE does not, and no other project is
-// held. A deleted project, and no project, are not found. ProjectWorkspace
-// reads the same workspace, archived or not, without a lock.
-func TestShareProjectAndProjectWorkspace(t *testing.T) {
+// held. A deleted project, and no project, are not found.
+func TestShareProject(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
@@ -6063,9 +6812,6 @@ func TestShareProjectAndProjectWorkspace(t *testing.T) {
 		{old, app.LockedProject{}, false}, {uuid.NewV7(), app.LockedProject{}, false}} {
 		if got, found, err := s.ShareProject(context.Background(), tt.id); err != nil || found != tt.found || got != tt.want {
 			t.Errorf("ShareProject(%s) = %+v, %v, %v; want %+v, %v", tt.id, got, found, err, tt.want, tt.found)
-		}
-		if got, found, err := s.ProjectWorkspace(context.Background(), tt.id); err != nil || found != tt.found || got != tt.want.WorkspaceID {
-			t.Errorf("ProjectWorkspace(%s) = %s, %v, %v; want %s, %v", tt.id, got, found, err, tt.want.WorkspaceID, tt.found)
 		}
 	}
 	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
@@ -6206,9 +6952,6 @@ func TestUpsertPreferences(t *testing.T) {
 	if p, found, err := s.ShareProject(cancelled, web); !failed(err) || found || p != (app.LockedProject{}) {
 		t.Errorf("ShareProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
 	}
-	if w, found, err := s.ProjectWorkspace(cancelled, web); !failed(err) || found || w != (uuid.UUID{}) {
-		t.Errorf("ProjectWorkspace() = %s, %v, %v; want context.Canceled, not no project", w, found, err)
-	}
 	if p, found, err := s.Preferences(cancelled, web, alice); !failed(err) || found {
 		t.Errorf("Preferences() = %+v, %v, %v; want context.Canceled, not none", p, found, err)
 	}
@@ -6268,14 +7011,56 @@ func TestUpsertPreferences(t *testing.T) {
 		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
 ````
 
-`server/internal/modules/project/app/lock.go`（修改，1 处）：
+`server/internal/modules/project/app/lock.go`（修改，4 处）：
 
 ````old server/internal/modules/project/app/lock.go
-}
-
-// decide asks the Authorizer for action on the project id of the workspace
+// workspace's row FOR SHARE, the write's first lock; the project's row FOR
+// NO KEY UPDATE, still undeleted and of that workspace; then the decision,
+// under them all. Every cascade over the workspace's projects runs under
+// the workspace's FOR NO KEY UPDATE and reads its time after it (3.3):
+// while a write holds the workspace FOR SHARE, no cascade touches the rows
+// it writes. project.New builds one Locks for every write: a write holds
+// no Authorizer of its own, so it decides only under these locks.
 ````
 ````new server/internal/modules/project/app/lock.go
+// workspace's row FOR SHARE, the write's first lock; the project's row, FOR
+// NO KEY UPDATE, or FOR SHARE for a write under the project that leaves
+// the row and its memberships as they are, still undeleted and of that
+// workspace; then the decision, under them all. Every cascade over the
+// workspace's projects runs under the workspace's FOR NO KEY UPDATE and
+// reads its time after it (3.3): while a write holds the workspace FOR
+// SHARE, no cascade touches the rows it writes. project.New builds one
+// Locks for every write: a write holds no Authorizer of its own, so it
+// decides only under these locks.
+````
+
+````old server/internal/modules/project/app/lock.go
+	action  shared.Action
+````
+````new server/internal/modules/project/app/lock.go
+	action  shared.Action
+	// share locks the project FOR SHARE, for a write under the project that
+	// leaves the project row and its memberships as they are; otherwise it
+	// is locked FOR NO KEY UPDATE.
+	share bool
+````
+
+````old server/internal/modules/project/app/lock.go
+	h.project, found, err = l.projects.LockProject(ctx, w.project)
+````
+````new server/internal/modules/project/app/lock.go
+	lock := l.projects.LockProject
+	if w.share {
+		lock = l.projects.ShareProject
+	}
+	h.project, found, err = lock(ctx, w.project)
+````
+
+````old server/internal/modules/project/app/lock.go
+	return h, nil
+````
+````new server/internal/modules/project/app/lock.go
+	return h, nil
 }
 
 // findAndDecide is the first two steps of a read under a project named by
@@ -6294,9 +7079,6 @@ func findAndDecide(ctx context.Context, projects ProjectFinder, auth shared.Auth
 	}
 	_, err = decide(ctx, auth, actor, action, workspaceID, id)
 	return err
-}
-
-// decide asks the Authorizer for action on the project id of the workspace
 ````
 
 `server/internal/modules/project/app/get_preferences.go`（新文件，44 行）：
@@ -6348,7 +7130,7 @@ func (u *GetProjectPreferences) Execute(ctx context.Context, projectID uuid.UUID
 }
 ````
 
-`server/internal/modules/project/app/update_preferences.go`（新文件，53 行）：
+`server/internal/modules/project/app/update_preferences.go`（新文件，54 行）：
 
 ````file server/internal/modules/project/app/update_preferences.go
 package app
@@ -6365,19 +7147,20 @@ import (
 // project: PATCH /api/v0/me/projects/{project_id}/preferences.
 type UpdateProjectPreferences struct {
 	preferences PreferencesWriter
-	auth        shared.Authorizer
+	locks       Locks
 	tx          shared.TxManager
 	clock       Clock
 }
 
 // NewUpdateProjectPreferences returns the use case.
-func NewUpdateProjectPreferences(preferences PreferencesWriter, auth shared.Authorizer, tx shared.TxManager, clock Clock) *UpdateProjectPreferences {
-	return &UpdateProjectPreferences{preferences: preferences, auth: auth, tx: tx, clock: clock}
+func NewUpdateProjectPreferences(preferences PreferencesWriter, locks Locks, tx shared.TxManager, clock Clock) *UpdateProjectPreferences {
+	return &UpdateProjectPreferences{preferences: preferences, locks: locks, tx: tx, clock: clock}
 }
 
-// Execute checks p, then in one transaction (M3 design 3.6): the project
-// FOR SHARE, the decision on project_preferences.update, the clock read
-// under the lock, the caller's row changed or inserted (3.18). An archived
+// Execute checks p, then in one transaction (M3 design 3.6): the project's
+// locks (Locks: its workspace FOR SHARE, then the project FOR SHARE) and
+// the decision on project_preferences.update, the clock read under the
+// locks, the caller's row changed or inserted (3.18). An archived
 // project's settings change as any other's (3.19). The answer is the
 // settings as stored.
 func (u *UpdateProjectPreferences) Execute(ctx context.Context, projectID uuid.UUID, p domain.PreferencesPatch) (domain.Preferences, error) {
@@ -6390,12 +7173,12 @@ func (u *UpdateProjectPreferences) Execute(ctx context.Context, projectID uuid.U
 	}
 	var stored domain.Preferences
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		locked, _, err := lockAndDecide(ctx, u.preferences.ShareProject, u.auth, actor, projectID, domain.ActionPreferencesUpdate)
+		h, err := u.locks.lockAndDecide(ctx, actor, write{project: projectID, action: domain.ActionPreferencesUpdate, share: true})
 		if err != nil {
 			return err
 		}
 		stored, err = u.preferences.UpsertPreferences(ctx, PreferencesChange{
-			ID: uuid.NewV7(), WorkspaceID: locked.WorkspaceID, ProjectID: projectID, UserID: actor.UserID, Patch: p, Now: u.clock.Now(),
+			ID: uuid.NewV7(), WorkspaceID: h.project.WorkspaceID, ProjectID: projectID, UserID: actor.UserID, Patch: p, Now: u.clock.Now(),
 		})
 		return err
 	})
@@ -6471,18 +7254,6 @@ func (f *fakeStore) LockProject(ctx context.Context, id uuid.UUID) (app.LockedPr
 
 func (f *fakeStore) ShareProject(ctx context.Context, id uuid.UUID) (app.LockedProject, bool, error) {
 	return f.lock(ctx, "ShareProject", id)
-}
-
-func (f *fakeStore) ProjectWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
-	f.log.add(ctx, "ProjectWorkspace %s", id)
-	if err := f.fail("ProjectWorkspace"); err != nil {
-		return uuid.UUID{}, false, err
-	}
-	p, ok := f.projects[id]
-	if !ok {
-		return uuid.UUID{}, false, nil
-	}
-	return p.workspace, true, nil
 ````
 
 `server/internal/modules/project/app/fakes_preferences_test.go`（新文件，41 行）：
@@ -6635,21 +7406,21 @@ func TestGetProjectPreferencesRefuses(t *testing.T) {
 // fakes, its clock logged.
 func newUpdatePreferences() (*app.UpdateProjectPreferences, *writeFixture) {
 	f := newPreferences()
-	return app.NewUpdateProjectPreferences(f.store, f.auth, f.tx, clockAt{clockNow, f.log}), f
+	return app.NewUpdateProjectPreferences(f.store, f.locks(), f.tx, clockAt{clockNow, f.log}), f
 }
 
 // changed are the calls of user's change p of his display settings in
-// project: the transaction, the project FOR SHARE, the decision, the clock,
-// the change.
+// project: the transaction, the project's workspace, its lock, the project
+// FOR SHARE, the decision, the clock, the change.
 func changed(user, project uuid.UUID, p domain.PreferencesPatch) []string {
 	patch, _ := json.Marshal(p)
-	return []string{"Begin", "ShareProject " + project.String(),
+	return append(lockedTo(project), "ShareProject "+project.String(),
 		fmt.Sprintf("Authorize %s %s on %s/%s", user, domain.ActionPreferencesUpdate, acme.ID, project), "Now",
-		fmt.Sprintf("UpsertPreferences %s/%s for %s %s at %s", acme.ID, project, user, patch, clockNow.Format(timeFormat))}
+		fmt.Sprintf("UpsertPreferences %s/%s for %s %s at %s", acme.ID, project, user, patch, clockNow.Format(timeFormat)))
 }
 
 // UpdateProjectPreferences checks the change, then, in one transaction,
-// takes the project FOR SHARE, decides, reads the clock and changes the
+// takes the project's locks, the project FOR SHARE, decides, reads the clock and changes the
 // caller's settings, or makes them from the defaults while he has none; an
 // archived project's change too. The answer is the settings as stored.
 func TestUpdateProjectPreferences(t *testing.T) {
@@ -6698,11 +7469,11 @@ func TestUpdateProjectPreferencesRefuses(t *testing.T) {
 		{"an unknown tab", as(bob), webID, domain.PreferencesPatch{Navigation: &domain.Navigation{DefaultTab: "pages"}}, nil,
 			shared.Invalid(shared.FieldError{Field: "navigation.default_tab", Code: "invalid_format"}), nil},
 		{"no caller", context.Background(), webID, in, nil, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), in, nil, domain.ErrNotFound, []string{"Begin", "ShareProject " + uuid.Nil().String()}},
-		{"not seen", as(erin), webID, in, nil, domain.ErrNotFound, changed(erin, webID, in)[:3]},
-		{"forbidden", as(alice), webID, in, nil, shared.Forbidden(), changed(alice, webID, in)[:3]},
-		{"the lock failing", as(bob), webID, in, func(f *writeFixture) { f.store.errs = map[string]error{"ShareProject": errDisk} }, errDisk, all[:2]},
-		{"the decision failing", as(bob), webID, in, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk, all[:3]},
+		{"no project", as(bob), uuid.Nil(), in, nil, domain.ErrNotFound, noProject},
+		{"not seen", as(erin), webID, in, nil, domain.ErrNotFound, changed(erin, webID, in)[:5]},
+		{"forbidden", as(alice), webID, in, nil, shared.Forbidden(), changed(alice, webID, in)[:5]},
+		{"the lock failing", as(bob), webID, in, func(f *writeFixture) { f.store.errs = map[string]error{"ShareProject": errDisk} }, errDisk, all[:4]},
+		{"the decision failing", as(bob), webID, in, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk, all[:5]},
 		{"the change failing", as(bob), webID, in, func(f *writeFixture) { f.store.errs = map[string]error{"UpsertPreferences": errDisk} }, errDisk,
 			all},
 		{"the commit failing", as(bob), webID, in, func(f *writeFixture) { f.tx.commitErr = errDisk }, errDisk, all},
@@ -6756,7 +7527,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/preferences.go server/internal/modules/project/adapter/postgres/preferences_test.go server/internal/modules/project/adapter/postgres/projects.go server/internal/modules/project/adapter/postgres/queries/preferences.sql server/internal/modules/project/adapter/postgres/queries/projects.sql server/internal/modules/project/adapter/postgres/update.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_preferences_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/get_preferences.go server/internal/modules/project/app/lock.go server/internal/modules/project/app/ports.go server/internal/modules/project/app/preferences_test.go server/internal/modules/project/app/update_preferences.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/preferences.go server/internal/modules/project/domain/preferences_test.go server/internal/modules/project/adapter/postgres/gen/preferences.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go
+git add server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/postgres/failures_test.go server/internal/modules/project/adapter/postgres/preferences.go server/internal/modules/project/adapter/postgres/preferences_test.go server/internal/modules/project/adapter/postgres/queries/preferences.sql server/internal/modules/project/adapter/postgres/queries/projects.sql server/internal/modules/project/adapter/postgres/update.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_preferences_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/get_preferences.go server/internal/modules/project/app/lock.go server/internal/modules/project/app/ports.go server/internal/modules/project/app/preferences_test.go server/internal/modules/project/app/update_preferences.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/preferences.go server/internal/modules/project/domain/preferences_test.go server/internal/modules/project/adapter/postgres/gen/preferences.sql.go server/internal/modules/project/adapter/postgres/gen/projects.sql.go
 ```
 ```bash
 git commit -m "feat(M3/P4b): a member's display settings in a project: domain, store, use cases
@@ -6765,8 +7536,9 @@ The tab bar's tabs are the web app's five, the work items never hidden;
 a patch replaces the navigation whole and is checked before the
 transaction. Reading the settings decides on the project without a
 transaction and answers the columns' defaults while the member has none;
-changing them takes the project FOR SHARE, decides, and inserts or
-updates the member's own row at the clock read under the lock.
+changing them takes Locks' path with the project FOR SHARE (the
+workspace FOR SHARE first), decides, and inserts or updates the member's
+own row at the clock read under the locks.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -6778,10 +7550,10 @@ Expected: 通过。
 
 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|
-| `ShareProject`、`ProjectWorkspace` 去掉项目的 id（两个行序） | `TestShareProjectAndProjectWorkspace`；Task 15 起单独运行的故事：`ShareProject` 两个行序都是 P8，`ProjectWorkspace` 升序 P2、P3、P4、P8，降序 P3、P8 | 存储；端到端 |
-| `ShareProject`、`ProjectWorkspace` 去掉 `deleted_at IS NULL` | `TestShareProjectAndProjectWorkspace`；与 `ProjectFacts` 的 `p.deleted_at` 一起去掉时 P4（Task 15 起，spec 第 3 节第 6 条） | 存储；端到端 |
-| `ShareProject` 取 `FOR KEY SHARE`、不加锁 | `TestShareProjectAndProjectWorkspace`；`TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 存储；组合 |
-| `ShareProject` 不读已归档的项目 | `TestShareProjectAndProjectWorkspace`；`TestPermissionMatrix`（Task 8 起） | 存储；组合 |
+| `ShareProject` 去掉项目的 id（两个行序） | `TestShareProject`；Task 15 起单独运行的故事：两个行序都是 P8 | 存储；端到端 |
+| `ShareProject` 去掉 `deleted_at IS NULL` | `TestShareProject`；与 `ProjectWorkspace` 的 `deleted_at`、`ProjectFacts` 的 `p.deleted_at` 一起去掉时 P4（Task 15 起；方案 E 之下写先经 `ProjectWorkspace`，spec 第 3 节第 6 条） | 存储；端到端 |
+| `ShareProject` 取 `FOR KEY SHARE`、不加锁 | `TestShareProject`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 8 起：等 Ops 的改设置不在 `projects` 上等） | 存储；组合 |
+| `ShareProject` 不读已归档的项目 | `TestShareProject`；`TestPermissionMatrix`（Task 8 起） | 存储；组合 |
 | `Preferences` 读别的项目的、别的账户的（两个行序） | `TestPreferences`；P8（Task 15 起） | 存储；端到端 |
 | `Preferences` 读已删除的（两个行序） | `TestPreferences`（故事看不到：spec 第 3 节第 6 条） | 存储 |
 | `UpsertPreferences` 的冲突目标没有 `WHERE deleted_at IS NULL`；不看标志就写导航、位置；修改时写 `created_at`；不改 `updated_by_id` | `TestUpsertPreferences`；第一个另有 P8（Task 15 起） | 存储；端到端 |
@@ -6789,10 +7561,10 @@ Expected: 通过。
 | 两条规则给看得到项目的每个人；不给项目的访客 | `TestPermissionMatrix`（Task 8 起） | 组合 |
 | 读的是别人（谁都不是）的设置；改的是别人的设置 | `TestEachMemberHasHisOwnDisplaySettings`（Task 8 起）；前者另有 P8 | 组合；端到端 |
 | 没有调用者时也读（两个用例） | `TestGetProjectPreferencesRefuses`、`TestUpdateProjectPreferencesRefuses` | 单元 |
-| `findAndDecide` 吞掉工作区的失败；读的判定、读的失败被吞掉、读的失败答成默认值；改的锁和判定、写、提交的失败被吞掉 | `TestGetProjectPreferencesRefuses`、`TestUpdateProjectPreferencesRefuses`（`findAndDecide` 另有 `TestListProjectMembersRefuses`，Task 9 起） | 单元 |
-| `ShareProject`、`ProjectWorkspace`、`UpsertPreferences` 在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
+| `findAndDecide` 吞掉工作区的失败；读的判定、读的失败被吞掉、读的失败答成默认值；改的锁和判定（`Locks`）、写、提交的失败被吞掉 | `TestGetProjectPreferencesRefuses`、`TestUpdateProjectPreferencesRefuses`（`findAndDecide` 另有 `TestListProjectMembersRefuses`，Task 9 起） | 单元 |
+| `ShareProject`、`UpsertPreferences` 在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 14 起） | 组合 |
 
-**Done when:** 领域、存储、用例的测试通过；读不写、不开事务；改在项目的 `FOR SHARE` 之下、锁之后读时钟。
+**Done when:** 领域、存储、用例的测试通过；读不写、不开事务；改经 `Locks` 先取工作区、再取项目的 `FOR SHARE`，锁之后读时钟。
 
 ---
 
@@ -6800,7 +7572,7 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/project_preferences_test.go`、`server/internal/modules/project/adapter/http/preferences.go`、`server/internal/modules/project/adapter/http/preferences_test.go`
-- Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/module.go`
+- Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
@@ -6810,7 +7582,7 @@ Expected: 通过。
 **Tests:**
 - `adapter/http/preferences_test.go`：`TestGetProjectPreferences`（设置照写，藏起的为空时是 `[]`）；`TestUpdateProjectPreferencesPassesTheChange`（导航整个、未知的标签页也传、没给的 `nil`）；`TestUpdateProjectPreferencesHoldsTheBodyToItsStructure`（九种结构错误 400）；`TestProjectPreferencesRefusals`（两个动作的 404、403，未知标签页的 422）。
 - `bootstrap/project_preferences_test.go`：`TestEachMemberHasHisOwnDisplaySettings`（alice 改她在 Web 的设置，bob 在 Web 的（3）和她在 Ops 的照旧；每人读回自己的）。
-- 矩阵三行（读、改各 12 格 `ofProject(200, 200, 200, 200, 403, 403)`，改的已归档 1 格 200；答案核对标签页和位置）；`TestTheWritesOnAProjectStampTheirRequest` 加改设置一行。
+- 矩阵三行（读、改各 12 格 `ofProject(200, 200, 200, 200, 403, 403)`，改的已归档 1 格 200；答案核对标签页和位置）；`TestTheWritesOnAProjectStampTheirRequest` 加改设置一行；`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 加改设置一行（在删除之前：工作区 `FOR SHARE` 在先，项目的 `FOR SHARE` 也让第二段的写在 `projects` 上等）。
 
 - [ ] **Step 1: 接口描述**
 
@@ -7276,21 +8048,21 @@ func TestProjectPreferencesRefusals(t *testing.T) {
 		ListProjects:     app.NewListProjects(d.Workspaces, store, d.Authorizer),
 		GetProject:       app.NewGetProject(store, d.Authorizer),
 		CheckIdentifier:  app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:    app.NewUpdateProject(store, d.Authorizer, d.Tx, d.Clock),
-		ArchiveProject:   app.NewArchiveProject(store, d.Authorizer, d.Tx, d.Clock),
-		UnarchiveProject: app.NewUnarchiveProject(store, d.Authorizer, d.Tx, d.Clock),
-		DeleteProject:    app.NewDeleteProject(store, d.Authorizer, d.Tx, d.Clock),
+		UpdateProject:    app.NewUpdateProject(store, locks, d.Tx, d.Clock),
+		ArchiveProject:   app.NewArchiveProject(store, locks, d.Tx, d.Clock),
+		UnarchiveProject: app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:    app.NewDeleteProject(store, locks, d.Tx, d.Clock),
 ````
 ````new server/internal/modules/project/module.go
 		ListProjects:      app.NewListProjects(d.Workspaces, store, d.Authorizer),
 		GetProject:        app.NewGetProject(store, d.Authorizer),
 		CheckIdentifier:   app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:     app.NewUpdateProject(store, d.Authorizer, d.Tx, d.Clock),
-		ArchiveProject:    app.NewArchiveProject(store, d.Authorizer, d.Tx, d.Clock),
-		UnarchiveProject:  app.NewUnarchiveProject(store, d.Authorizer, d.Tx, d.Clock),
-		DeleteProject:     app.NewDeleteProject(store, d.Authorizer, d.Tx, d.Clock),
+		UpdateProject:     app.NewUpdateProject(store, locks, d.Tx, d.Clock),
+		ArchiveProject:    app.NewArchiveProject(store, locks, d.Tx, d.Clock),
+		UnarchiveProject:  app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:     app.NewDeleteProject(store, locks, d.Tx, d.Clock),
 		GetPreferences:    app.NewGetProjectPreferences(store, d.Authorizer),
-		UpdatePreferences: app.NewUpdateProjectPreferences(store, d.Authorizer, d.Tx, d.Clock),
+		UpdatePreferences: app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 ````
 
 - [ ] **Step 3: 矩阵和组合出的测试**
@@ -7440,12 +8212,23 @@ func TestEachMemberHasHisOwnDisplaySettings(t *testing.T) {
 }
 ````
 
+`server/internal/bootstrap/project_write_locks_test.go`（修改，1 处）：
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	{op: "unarchiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/unarchive", want: http.StatusOK},
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	{op: "unarchiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/unarchive", want: http.StatusOK},
+	{op: "updateProjectPreferences", method: http.MethodPatch, path: "/api/v0/me/projects/%s/preferences", body: `{"sort_order":1}`,
+		want: http.StatusOK},
+````
+
 - [ ] **Step 4: 测试、lint、前端检查**
 
 Run: `go -C server test -count=1 ./internal/modules/project/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestBodiesThatBreakTheStructureAnswer400|TestEachMemberHasHisOwnDisplaySettings|TestTheWritesOnAProjectStampTheirRequest' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestBodiesThatBreakTheStructureAnswer400|TestEachMemberHasHisOwnDisplaySettings|TestTheWritesOnAProjectStampTheirRequest|TestEachWriteOnAProjectSharesItsWorkspaceFirst' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -7466,7 +8249,7 @@ Expected: 通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/project_preferences_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/preferences.go server/internal/modules/project/adapter/http/preferences_test.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/project_preferences_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/preferences.go server/internal/modules/project/adapter/http/preferences_test.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4b): the display settings' operations
@@ -7491,7 +8274,8 @@ Expected: 通过。
 | `project.New` 给删除不开事务的事务管理器 | `TestAProjectDeletionRefusedAtItsCommitChangesNoRow`；`TestADemotionAndAProjectsDeletionSerialize`（Task 14 起） | 组合 |
 | `project.New` 给修改、归档、恢复、改设置固定在 2000 年的时钟 | `TestTheWritesOnAProjectStampTheirRequest` | 组合 |
 | `project.New` 给删除固定在 2000 年的时钟 | `TestDeletingAProjectLeavesNoUndeletedRowUnderIt` | 组合 |
-| `project.New` 给六个用例（修改、归档、恢复、删除、读设置、改设置）各一个谁都当作管理员放行的 `Authorizer` | `TestPermissionMatrix` | 组合 |
+| `project.New` 给六个用例（修改、归档、恢复、删除、读设置、改设置）各一个谁都当作管理员放行的 `Authorizer`（写的经它们自己的 `Locks`） | `TestPermissionMatrix` | 组合 |
+| 只有改设置不锁工作区 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`；`TestAProjectWriteAndADemotionSerialize`（Task 14 起） | 组合 |
 | `project.New` 把归档和恢复接反 | `TestPermissionMatrix`、`TestTheWritesOnAProjectStampTheirRequest` | 组合 |
 
 清扫 4 的接线变异按本 Task 的 `project.New` 写成（Task 3–8 的六个用例都已接上），所以列在这里；Task 3、4、6 的接线在各自的 Task 里同样由这些测试核对。
@@ -7691,10 +8475,10 @@ type Member struct {
 `server/internal/modules/project/app/ports.go`（修改，1 处）：
 
 ````old server/internal/modules/project/app/ports.go
-	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
+	ProjectSharer
 ````
 ````new server/internal/modules/project/app/ports.go
-	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
+	ProjectSharer
 }
 
 // MemberLister is listProjectMembers' repository.
@@ -8181,10 +8965,10 @@ func TestListProjectMembers(t *testing.T) {
 ````
 
 ````old server/internal/modules/project/module.go
-		UpdatePreferences: app.NewUpdateProjectPreferences(store, d.Authorizer, d.Tx, d.Clock),
+		UpdatePreferences: app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 ````
 ````new server/internal/modules/project/module.go
-		UpdatePreferences: app.NewUpdateProjectPreferences(store, d.Authorizer, d.Tx, d.Clock),
+		UpdatePreferences: app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 		ListMembers:       app.NewListProjectMembers(store, d.Authorizer),
 ````
 
@@ -8380,7 +9164,7 @@ Expected: 通过。
 
 **Interfaces:**
 - Produces（spec 2.9，M3 设计 3.5、3.6 约定六、3.18、9.1）：`domain.NewMember{MemberID, Role}`、`MaxNewMembers = 100`、`CheckNewMembers([]NewMember) error`（1–100 个、角色是三种之一、每个账户只出现一次；全部问题一个 422，按位置）；`CanAdd(workspaceRole, role)`：工作区管理员只能作项目管理员，工作区访客只能作访客，工作区成员三种都可以（Plane `views/project/member.py:69-83`），按集合；`JoinRole(ended *Role, workspaceRole) Role`：新的成员关系取工作区角色，已结束的取它原来的角色与工作区角色中较低的一个，顺序按 `roleOrder`（访客、成员、管理员），不按数字。
-- 端口：`app.MemberGrower`（`ProjectFinder`、`ProjectLocker`、`MembershipReader`、`CreateMember`、`RestoreMember`、`EnsurePreferences`）；存储：`RestoreMember(id, role, by, now)`：已结束的成员关系恢复为有效、取给的角色，`updated_by_id`、`updated_at`，id 和 `created_at` 保留；`EnsurePreferences(row)`：他在这个项目没有未删除的显示设置时插入（位置是给的，导航取列的默认值），有就不动（冲突目标是部分唯一键，已删除的不算）。
+- 端口：`app.MemberGrower`（`MembershipReader`、`CreateMember`、`RestoreMember`、`EnsurePreferences`；锁在 `Locks` 里）；存储：`RestoreMember(id, role, by, now)`：已结束的成员关系恢复为有效、取给的角色，`updated_by_id`、`updated_at`，id 和 `created_at` 保留；`EnsurePreferences(row)`：他在这个项目没有未删除的显示设置时插入（位置是给的，导航取列的默认值），有就不动（冲突目标是部分唯一键，已删除的不算）。
 - 使用者：Task 11 的添加、Task 13 的加入（`growth`）。
 
 **Tests:**
@@ -8667,8 +9451,6 @@ func show(r *shared.Role) string {
 // Each method runs in the transaction ctx carries, under the project's
 // FOR NO KEY UPDATE.
 type MemberGrower interface {
-	ProjectFinder
-	ProjectLocker
 	MembershipReader
 	CreateMember(ctx context.Context, m MemberRow) error
 	// RestoreMember makes the ended membership id active again with role,
@@ -8914,18 +9696,19 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/modules/project/app/add_members.go`、`server/internal/modules/project/app/add_members_test.go`、`server/internal/modules/project/app/fakes_growth_test.go`、`server/internal/modules/project/app/growth.go`
-- Modify: `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/fakes_write_test.go`、`server/internal/modules/project/app/list_members_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/member.go`、`server/internal/modules/project/domain/member_test.go`
+- Modify: `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/fakes_write_test.go`、`server/internal/modules/project/app/list_members_test.go`、`server/internal/modules/project/app/lock.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/member.go`、`server/internal/modules/project/domain/member_test.go`、`server/internal/modules/project/module.go`
 
 **Interfaces:**
 - Produces（spec 2.9，M3 设计 3.5、3.6 约定三和六、3.18、9.2）：`domain.Target{NewMember, WorkspaceRole *Role, Member bool}`、`CheckTargets([]Target) error`：每个目标对照锁下读到的：是工作区的有效成员（否则 `members[i].member_id` `not_allowed`）、还不是项目的有效成员（否则 `duplicate`）、角色是他的工作区角色允许的（`CanAdd`，否则 `members[i].role` `not_allowed`）；一个 422 按位置。
 - `app/growth.go`：`growth`（一个账户成为项目成员：已结束的成员关系以 `growth.role` 恢复，否则新建；然后显示设置，已有的不动）与 `endedOf`，Task 13 共用。
-- `app.AddMembersDeps{Members WorkspaceMembers, Projects MemberAdder, Auth, Tx, Clock}`、`app.NewAddProjectMembers(d)`：`CheckNewMembers`（事务之前）→ 一个事务，按 M3 设计 3.6 的顺序：`ProjectWorkspace`（不加锁）→ `ShareMembers`（目标在工作区的成员关系 `FOR SHARE`，按 id 的顺序，在项目之前）→ `lockAndDecide(project_member.add)` → `Memberships` → `CheckTargets`（判定之后：不能添加的人得不到目标的任何信息）→ 时钟 → 每个目标按请求的顺序：`LowestSortOrder`、`growth.apply`（恢复时取请求的角色，显示设置在他侧边栏的最前，`SortOrderFirst`）→ 回答经 `ListMembers` 读回，按请求的顺序。整批要么都写，要么都不写。
+- `app/lock.go`：`Locks` 加 `members WorkspaceMembers`（`NewLocks(projects, workspaces, members, auth)`，`project.New` 传 `d.Members`）；`write` 加 `targets`（写使之成为项目成员的账户），`held` 加 `roles`（他们在工作区的有效角色）：有目标的写在工作区 `FOR SHARE` 之后、项目之前经 `ShareMembers` 锁他们在工作区的成员关系（`FOR SHARE`，按 id 的顺序，M3 设计 3.6 约定三），锁之下读到的角色随 `held` 返回。
+- `app.AddMembersDeps{Locks, Projects MemberAdder, Tx, Clock}`、`app.NewAddProjectMembers(d)`：`CheckNewMembers`（事务之前）→ 一个事务：`Locks.lockAndDecide(write{project, project_member.add, targets})`（不加锁读项目的工作区 → 工作区 `FOR SHARE` → 目标在工作区的成员关系 → 项目 `FOR NO KEY UPDATE` → 判定）→ `Memberships` → `CheckTargets`（判定之后：不能添加的人得不到目标的任何信息）→ 时钟 → 每个目标按请求的顺序：`LowestSortOrder`、`growth.apply`（恢复时取请求的角色，显示设置在他侧边栏的最前，`SortOrderFirst`）→ 回答经 `ListMembers` 读回，按请求的顺序。整批要么都写，要么都不写。
 - `app.SortOrderReader` 从 `ProjectCreator` 拆出（`LowestSortOrder`），`MemberAdder` = `MemberGrower` + `MemberLister` + `SortOrderReader`。
 - 操作名 `project_member.add`，规则同 `project.update`（项目管理员，和是工作区管理员的项目成员）。
 
 **Tests:**
 - `domain/member_test.go`：`TestCheckTargets`（不是工作区成员、已是项目成员、工作区角色不允许的角色：各按位置一个 422，已是成员的不看角色；别的通过）。`TestCanAdd` 随之扩充。
-- `app/add_members_test.go`（假实现 `fakes_growth_test.go`）：`TestAddProjectMembers`（完整的调用记录：工作区、目标的锁、项目的锁、判定、成员关系、时钟，再逐个目标：最低位置、恢复（dave，以前是成员，现在作管理员）或新建、显示设置在他最低位置之前 10000，没有时取默认值；回答按请求的顺序，恢复的保留 id）；`TestAddProjectMembersRefuses`（请求的值、没有调用者在事务之前；没有的项目在找工作区时 404；看不到、成员的 403 在判定，无论目标如何（矩阵的 PM、X 格）；判定之后每个目标的拒绝一个 422：erin 不是工作区成员，alice 已是项目成员，工作区管理员 gina 作成员，工作区访客 ivy 作成员；hank 作管理员通过；什么都不写）；`TestAddProjectMembersReturnsEachFailure`（每个端口、提交的失败原样返回，之前的调用都在、之后的都没有；写完读不到的成员关系是内部错误）；`TestAddProjectMembersToAnArchivedProject`。
+- `app/add_members_test.go`（假实现 `fakes_growth_test.go`：`newGrowth` 是 `newWrites` 加上工作区成员的角色，`fakeMembers` 进 `writeFixture`）：`TestAddProjectMembers`（完整的调用记录：项目的工作区、工作区的锁、目标的锁、项目的锁、判定、成员关系、时钟，再逐个目标：最低位置、恢复（dave，以前是成员，现在作管理员）或新建、显示设置在他最低位置之前 10000，没有时取默认值；回答按请求的顺序，恢复的保留 id）；`TestAddProjectMembersRefuses`（请求的值、没有调用者在事务之前；没有的项目在找工作区时 404；看不到、成员的 403 在判定，无论目标如何（矩阵的 PM、X 格）；判定之后每个目标的拒绝一个 422：erin 不是工作区成员，alice 已是项目成员，工作区管理员 gina 作成员，工作区访客 ivy 作成员；hank 作管理员通过；什么都不写）；`TestAddProjectMembersReturnsEachFailure`（每个端口、提交的失败原样返回，之前的调用都在、之后的都没有；写完读不到的成员关系是内部错误）；`TestAddProjectMembersToAnArchivedProject`。
 - `app/clock_test.go`：`TestEachWriteReadsTheClockUnderItsLock` 加添加一行。
 
 - [ ] **Step 1: 领域**
@@ -9112,6 +9895,98 @@ type MemberAdder interface {
 // ProjectArchiver is archiveProject's and unarchiveProject's repository.
 ````
 
+`server/internal/modules/project/app/lock.go`（修改，7 处）：
+
+````old server/internal/modules/project/app/lock.go
+// workspace's row FOR SHARE, the write's first lock; the project's row, FOR
+// NO KEY UPDATE, or FOR SHARE for a write under the project that leaves
+// the row and its memberships as they are, still undeleted and of that
+// workspace; then the decision, under them all. Every cascade over the
+// workspace's projects runs under the workspace's FOR NO KEY UPDATE and
+// reads its time after it (3.3): while a write holds the workspace FOR
+// SHARE, no cascade touches the rows it writes. project.New builds one
+// Locks for every write: a write holds no Authorizer of its own, so it
+// decides only under these locks.
+````
+````new server/internal/modules/project/app/lock.go
+// workspace's row FOR SHARE, the write's first lock; the memberships of the
+// workspace of the accounts the write makes members of the project, FOR
+// SHARE in id order (convention 3); the project's row, FOR NO KEY UPDATE,
+// or FOR SHARE for a write under the project that leaves the row and its
+// memberships as they are, still undeleted and of that workspace; then the
+// decision, under them all. Every cascade over the workspace's projects
+// runs under the workspace's FOR NO KEY UPDATE and reads its time after it
+// (3.3): while a write holds the workspace FOR SHARE, no cascade touches
+// the rows it writes. project.New builds one Locks for every write: a
+// write holds no Authorizer of its own, so it decides only under these
+// locks.
+````
+
+````old server/internal/modules/project/app/lock.go
+	workspaces WorkspaceSharer
+````
+````new server/internal/modules/project/app/lock.go
+	workspaces WorkspaceSharer
+	members    WorkspaceMembers
+````
+
+````old server/internal/modules/project/app/lock.go
+// module's directory and the Authorizer.
+func NewLocks(projects ProjectLocks, workspaces WorkspaceSharer, auth shared.Authorizer) Locks {
+	return Locks{projects: projects, workspaces: workspaces, auth: auth}
+````
+````new server/internal/modules/project/app/lock.go
+// module's directory and members' lock, and the Authorizer.
+func NewLocks(projects ProjectLocks, workspaces WorkspaceSharer, members WorkspaceMembers, auth shared.Authorizer) Locks {
+	return Locks{projects: projects, workspaces: workspaces, members: members, auth: auth}
+````
+
+````old server/internal/modules/project/app/lock.go
+	share bool
+````
+````new server/internal/modules/project/app/lock.go
+	share bool
+	// targets are the accounts the write makes members of the project.
+	targets []uuid.UUID
+````
+
+````old server/internal/modules/project/app/lock.go
+// lock read it and the caller's grant.
+````
+````new server/internal/modules/project/app/lock.go
+// lock read it, the caller's grant, and the active roles in the workspace
+// of the write's targets, by account.
+````
+
+````old server/internal/modules/project/app/lock.go
+	grant   shared.Grant
+````
+````new server/internal/modules/project/app/lock.go
+	grant   shared.Grant
+	roles   map[uuid.UUID]shared.Role
+````
+
+````old server/internal/modules/project/app/lock.go
+	var h held
+````
+````new server/internal/modules/project/app/lock.go
+	var h held
+	if len(w.targets) > 0 {
+		if h.roles, err = l.members.ShareMembers(ctx, workspaceID, w.targets); err != nil {
+			return held{}, err
+		}
+	}
+````
+
+`server/internal/modules/project/module.go`（修改，1 处）：
+
+````old server/internal/modules/project/module.go
+	locks := app.NewLocks(store, d.Workspaces, d.Authorizer)
+````
+````new server/internal/modules/project/module.go
+	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
+````
+
 `server/internal/modules/project/app/growth.go`（新文件，47 行）：
 
 ````file server/internal/modules/project/app/growth.go
@@ -9164,7 +10039,7 @@ func endedOf(memberships map[uuid.UUID]Membership, user uuid.UUID) *Membership {
 }
 ````
 
-`server/internal/modules/project/app/add_members.go`（新文件，126 行）：
+`server/internal/modules/project/app/add_members.go`（新文件，114 行）：
 
 ````file server/internal/modules/project/app/add_members.go
 package app
@@ -9180,9 +10055,8 @@ import (
 
 // AddMembersDeps are addProjectMembers' ports.
 type AddMembersDeps struct {
-	Members  WorkspaceMembers
+	Locks    Locks
 	Projects MemberAdder
-	Auth     shared.Authorizer
 	Tx       shared.TxManager
 	Clock    Clock
 }
@@ -9199,16 +10073,16 @@ func NewAddProjectMembers(d AddMembersDeps) *AddProjectMembers {
 }
 
 // Execute checks the request, then in one transaction, in the order of M3
-// design 3.6: the project's workspace, read without a lock; the targets'
-// memberships of it FOR SHARE, which come before the project in the lock
-// order (convention 3); the project FOR NO KEY UPDATE; the decision on
-// project_member.add; the targets' memberships of the project; the targets'
-// check (domain.CheckTargets), after the decision, so that who may not add
-// learns nothing of them; the clock; then each target, in the request's
-// order: an ended membership restored with the role asked for, as the
-// admin decides it now, or a new one; his display settings unless he has
-// them, before his other projects in his sidebar (3.18). The answer is the
-// targets' memberships as stored, in the request's order.
+// design 3.6: the project's locks (Locks: its workspace FOR SHARE; the
+// targets' memberships of the workspace FOR SHARE, which come before the
+// project in the lock order, convention 3; the project FOR NO KEY UPDATE)
+// and the decision on project_member.add; the targets' memberships of the
+// project; the targets' check (domain.CheckTargets), after the decision, so
+// that who may not add learns nothing of them; the clock; then each target,
+// in the request's order: an ended membership restored with the role asked
+// for, as the admin decides it now, or a new one; his display settings
+// unless he has them, before his other projects in his sidebar (3.18). The
+// answer is the targets' memberships as stored, in the request's order.
 func (u *AddProjectMembers) Execute(ctx context.Context, projectID uuid.UUID, in []domain.NewMember) ([]domain.Member, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -9223,18 +10097,7 @@ func (u *AddProjectMembers) Execute(ctx context.Context, projectID uuid.UUID, in
 	}
 	var added []domain.Member
 	err = u.d.Tx.WithinTx(ctx, func(ctx context.Context) error {
-		workspaceID, found, err := u.d.Projects.ProjectWorkspace(ctx, projectID)
-		switch {
-		case err != nil:
-			return err
-		case !found:
-			return domain.ErrNotFound
-		}
-		roles, err := u.d.Members.ShareMembers(ctx, workspaceID, ids)
-		if err != nil {
-			return err
-		}
-		project, _, err := lockAndDecide(ctx, u.d.Projects.LockProject, u.d.Auth, actor, projectID, domain.ActionMemberAdd)
+		h, err := u.d.Locks.lockAndDecide(ctx, actor, write{project: projectID, action: domain.ActionMemberAdd, targets: ids})
 		if err != nil {
 			return err
 		}
@@ -9245,7 +10108,7 @@ func (u *AddProjectMembers) Execute(ctx context.Context, projectID uuid.UUID, in
 		targets := make([]domain.Target, len(in))
 		for i, m := range in {
 			targets[i] = domain.Target{NewMember: m, Member: memberships[m.MemberID].Active}
-			if role, ok := roles[m.MemberID]; ok {
+			if role, ok := h.roles[m.MemberID]; ok {
 				targets[i].WorkspaceRole = &role
 			}
 		}
@@ -9254,11 +10117,11 @@ func (u *AddProjectMembers) Execute(ctx context.Context, projectID uuid.UUID, in
 		}
 		now := u.d.Clock.Now()
 		for _, m := range in {
-			lowest, err := u.d.Projects.LowestSortOrder(ctx, project.WorkspaceID, m.MemberID)
+			lowest, err := u.d.Projects.LowestSortOrder(ctx, h.project.WorkspaceID, m.MemberID)
 			if err != nil {
 				return err
 			}
-			if err := (growth{workspaceID: project.WorkspaceID, projectID: projectID, user: m.MemberID, ended: endedOf(memberships, m.MemberID),
+			if err := (growth{workspaceID: h.project.WorkspaceID, projectID: projectID, user: m.MemberID, ended: endedOf(memberships, m.MemberID),
 				role: m.Role, sortOrder: domain.SortOrderFirst(lowest), by: actor.UserID, now: now}).apply(ctx, u.d.Projects); err != nil {
 				return err
 			}
@@ -9295,7 +10158,7 @@ func storedMembers(ctx context.Context, members MemberLister, projectID uuid.UUI
 }
 ````
 
-`server/internal/modules/project/app/fakes_growth_test.go`（新文件，91 行）：
+`server/internal/modules/project/app/fakes_growth_test.go`（新文件，87 行）：
 
 ````file server/internal/modules/project/app/fakes_growth_test.go
 package app_test
@@ -9359,24 +10222,20 @@ func (f *fakeStore) LowestSortOrder(ctx context.Context, workspaceID, userID uui
 	return f.lowest[userID], f.fail("LowestSortOrder")
 }
 
-// growthFixture is newWrites with the workspace's members (fakeMembers) in
+var gina, hank, ivy = uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+
+// newGrowth is newWrites with the workspace's members (fakeMembers) in
 // acme, by account: bob, alice and dave members, carol a guest; gina an
 // admin, hank a member and ivy a guest, of no project; erin none. hank's
 // least place in his sidebar is -5.
-type growthFixture struct {
-	*writeFixture
-	members *fakeMembers
-}
-
-var gina, hank, ivy = uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
-
-func newGrowth() *growthFixture {
+func newGrowth() *writeFixture {
 	f := newWrites()
 	f.store.lowest = map[uuid.UUID]*float64{hank: ptr(-5.0)}
-	return &growthFixture{writeFixture: f, members: &fakeMembers{log: f.log, roles: map[uuid.UUID]map[uuid.UUID]shared.Role{acme.ID: {
+	f.members.roles = map[uuid.UUID]map[uuid.UUID]shared.Role{acme.ID: {
 		bob: shared.RoleMember, alice: shared.RoleMember, dave: shared.RoleMember, carol: shared.RoleGuest,
 		gina: shared.RoleAdmin, hank: shared.RoleMember, ivy: shared.RoleGuest,
-	}}}}
+	}}
+	return f
 }
 
 // grown are the calls of one account's growth, by by: his membership,
@@ -9391,15 +10250,50 @@ func grown(user uuid.UUID, ended *app.Membership, role shared.Role, sortOrder fl
 }
 ````
 
-`server/internal/modules/project/app/fakes_write_test.go`（修改，2 处）：
+`server/internal/modules/project/app/fakes_write_test.go`（修改，6 处）：
 
 ````old server/internal/modules/project/app/fakes_write_test.go
-// call; missing makes GetProject find nothing.
+	workspaces *fakeWorkspaces
+````
+````new server/internal/modules/project/app/fakes_write_test.go
+	workspaces *fakeWorkspaces
+	members    *fakeMembers
+````
+
+````old server/internal/modules/project/app/fakes_write_test.go
+// to lock, and the Authorizer's answers: bob's grant in acme, the project's
+// admin; alice's 403, a project member; any other caller sees nothing.
+````
+````new server/internal/modules/project/app/fakes_write_test.go
+// to lock, no workspace member to lock, and the Authorizer's answers: bob's
+// grant in acme, the project's admin; alice's 403, a project member; any
+// other caller sees nothing.
+````
+
+````old server/internal/modules/project/app/fakes_write_test.go
+	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log},
+````
+````new server/internal/modules/project/app/fakes_write_test.go
+	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log}, members: &fakeMembers{log: log},
+````
+
+````old server/internal/modules/project/app/fakes_write_test.go
+	return app.NewLocks(f.store, f.workspaces, f.auth)
+````
+````new server/internal/modules/project/app/fakes_write_test.go
+	return app.NewLocks(f.store, f.workspaces, f.members, f.auth)
+````
+
+````old server/internal/modules/project/app/fakes_write_test.go
+// call; missing makes GetProject find nothing; moved, when set, is the
+// workspace each project's lock reads, as if the project had moved there
+// since ProjectWorkspace read it.
 ````
 ````new server/internal/modules/project/app/fakes_write_test.go
 // call; missing makes GetProject and ListMembers find nothing, as if the
-// writes were lost; lowest is each account's
-// least place in his sidebar.
+// writes were lost; lowest is each account's least place in his sidebar;
+// moved, when set, is the workspace each project's lock reads, as if the
+// project had moved there since ProjectWorkspace read it.
 ````
 
 ````old server/internal/modules/project/app/fakes_write_test.go
@@ -9431,28 +10325,27 @@ import (
 )
 
 // newAdd is AddProjectMembers over newGrowth's fakes, its clock logged.
-func newAdd() (*app.AddProjectMembers, *growthFixture) {
+func newAdd() (*app.AddProjectMembers, *writeFixture) {
 	f := newGrowth()
-	return app.NewAddProjectMembers(app.AddMembersDeps{Members: f.members, Projects: f.store, Auth: f.auth, Tx: f.tx,
-		Clock: clockAt{clockNow, f.log}}), f
+	return app.NewAddProjectMembers(app.AddMembersDeps{Locks: f.locks(), Projects: f.store, Tx: f.tx, Clock: clockAt{clockNow, f.log}}), f
 }
 
 // beforeTargets are the calls of user's addition of the accounts of in to
 // project, before the targets' check: the transaction, the project's
-// workspace, the targets' workspace memberships FOR SHARE, the project's
-// lock, the decision, the targets' memberships of the project.
+// workspace, its lock, the targets' workspace memberships FOR SHARE, the
+// project's lock, the decision, the targets' memberships of the project.
 func beforeTargets(user, project uuid.UUID, in []domain.NewMember) []string {
 	ids := make([]uuid.UUID, len(in))
 	for i, m := range in {
 		ids[i] = m.MemberID
 	}
-	return []string{"Begin", "ProjectWorkspace " + project.String(), fmt.Sprintf("ShareMembers %s %v", acme.ID, ids), "LockProject " + project.String(),
-		fmt.Sprintf("Authorize %s %s on %s/%s", user, domain.ActionMemberAdd, acme.ID, project), fmt.Sprintf("Memberships %s %v", project, ids)}
+	return append(lockedTo(project), fmt.Sprintf("ShareMembers %s %v", acme.ID, ids), "LockProject "+project.String(),
+		fmt.Sprintf("Authorize %s %s on %s/%s", user, domain.ActionMemberAdd, acme.ID, project), fmt.Sprintf("Memberships %s %v", project, ids))
 }
 
 // AddProjectMembers, in one transaction and in the order of M3 design 3.6,
-// reads the project's workspace, locks the targets' memberships of it and
-// the project, decides, reads the targets' memberships of the project,
+// reads the project's workspace, locks it, the targets' memberships of it
+// and the project, decides, reads the targets' memberships of the project,
 // checks them, reads the clock, then for each target in the request's
 // order reads his least place, restores his ended membership with the role
 // asked for (dave, once a member, now an admin) or makes one, and makes
@@ -9511,9 +10404,9 @@ func TestAddProjectMembersRefuses(t *testing.T) {
 	}{
 		{"none", as(bob), webID, nil, shared.Invalid(shared.FieldError{Field: "members", Code: "too_short"}), nil},
 		{"no caller", context.Background(), webID, erins, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), erins, domain.ErrNotFound, []string{"Begin", "ProjectWorkspace " + uuid.Nil().String()}},
-		{"not seen, an invalid target", as(erin), webID, erins, domain.ErrNotFound, beforeTargets(erin, webID, erins)[:5]},
-		{"a project member, an invalid target", as(alice), webID, erins, shared.Forbidden(), beforeTargets(alice, webID, erins)[:5]},
+		{"no project", as(bob), uuid.Nil(), erins, domain.ErrNotFound, noProject},
+		{"not seen, an invalid target", as(erin), webID, erins, domain.ErrNotFound, beforeTargets(erin, webID, erins)[:6]},
+		{"a project member, an invalid target", as(alice), webID, erins, shared.Forbidden(), beforeTargets(alice, webID, erins)[:6]},
 		{"the targets", as(bob), webID, mixed, shared.Invalid(
 			shared.FieldError{Field: "members[0].member_id", Code: "not_allowed"}, shared.FieldError{Field: "members[1].member_id", Code: "duplicate"},
 			shared.FieldError{Field: "members[2].role", Code: "not_allowed"}, shared.FieldError{Field: "members[3].role", Code: "not_allowed"}),
@@ -9548,25 +10441,26 @@ func TestAddProjectMembersToAnArchivedProject(t *testing.T) {
 // its write is an internal error.
 func TestAddProjectMembersReturnsEachFailure(t *testing.T) {
 	in := []domain.NewMember{{MemberID: hank, Role: shared.RoleMember}, {MemberID: dave, Role: shared.RoleMember}}
-	fail := func(method string) func(f *growthFixture) {
-		return func(f *growthFixture) { f.store.errs = map[string]error{method: errDisk} }
+	fail := func(method string) func(f *writeFixture) {
+		return func(f *writeFixture) { f.store.errs = map[string]error{method: errDisk} }
 	}
 	tests := []struct {
 		name  string
-		fail  func(f *growthFixture)
+		fail  func(f *writeFixture)
 		calls int // how many of the calls ran
 	}{
 		{"the project's workspace", fail("ProjectWorkspace"), 2},
-		{"the targets' lock", func(f *growthFixture) { f.members.err = errDisk }, 3},
-		{"the project's lock", fail("LockProject"), 4},
-		{"the decision", func(f *growthFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, 5},
-		{"the memberships", fail("Memberships"), 6},
-		{"the least place", fail("LowestSortOrder"), 8},
-		{"a new membership", fail("CreateMember"), 9},
-		{"the display settings", fail("EnsurePreferences"), 10},
-		{"a restored membership", fail("RestoreMember"), 12},
-		{"the answer", fail("ListMembers"), 14},
-		{"the commit", func(f *growthFixture) { f.tx.commitErr = errDisk }, 14},
+		{"the workspace's lock", func(f *writeFixture) { f.workspaces.err = errDisk }, 3},
+		{"the targets' lock", func(f *writeFixture) { f.members.err = errDisk }, 4},
+		{"the project's lock", fail("LockProject"), 5},
+		{"the decision", func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, 6},
+		{"the memberships", fail("Memberships"), 7},
+		{"the least place", fail("LowestSortOrder"), 9},
+		{"a new membership", fail("CreateMember"), 10},
+		{"the display settings", fail("EnsurePreferences"), 11},
+		{"a restored membership", fail("RestoreMember"), 13},
+		{"the answer", fail("ListMembers"), 15},
+		{"the commit", func(f *writeFixture) { f.tx.commitErr = errDisk }, 15},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -9644,14 +10538,15 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/app/add_members.go server/internal/modules/project/app/add_members_test.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_growth_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/growth.go server/internal/modules/project/app/list_members_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/member.go server/internal/modules/project/domain/member_test.go
+git add server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/app/add_members.go server/internal/modules/project/app/add_members_test.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/fakes_growth_test.go server/internal/modules/project/app/fakes_write_test.go server/internal/modules/project/app/growth.go server/internal/modules/project/app/list_members_test.go server/internal/modules/project/app/lock.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/member.go server/internal/modules/project/domain/member_test.go server/internal/modules/project/module.go
 ```
 ```bash
 git commit -m "feat(M3/P4b): addProjectMembers' use case, and the growth's one step
 
 Adding workspace members to a project checks the request, then in one
-transaction locks the targets' workspace memberships FOR SHARE, then the
-project FOR NO KEY UPDATE, decides, and checks each target after the
+transaction takes Locks' path with targets: the workspace FOR SHARE, the
+targets' workspace memberships FOR SHARE in id order, then the project
+FOR NO KEY UPDATE; it decides, and checks each target after the
 decision: an active member of the workspace, not of the project yet,
 with a role his workspace role allows. Each is then restored with the
 role asked for, or made a member, with display settings before his other
@@ -9670,14 +10565,17 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 一个目标被拒时别的照写：逐个检查、逐个写 | `TestPermissionMatrix`（Task 12 起） | 组合 |
 | 恢复时不取请求的角色 | `TestARestoredMembershipGivesNoMoreThanItHad`（Task 13 起）；P3（Task 15 起） | 组合；端到端 |
 | 显示设置放在默认位置，不在他别的项目之前 | `TestAddProjectMembers`；P3（Task 15 起） | 单元；端到端 |
-| 先锁项目、后锁目标在工作区的成员关系 | `TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
+| 先锁项目、后锁目标在工作区的成员关系（添加、加入共用的路径） | `TestAddProjectMembers`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 12 起：等 Ops 时不持有目标在工作区的成员关系）；`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 单元；组合 |
+| 工作区在目标之后锁 | `TestAddProjectMembers`；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 12 起：等 acme 时已持有目标的成员关系）；`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 单元；组合 |
+| 只锁第一个目标在工作区的成员关系 | `TestAddProjectMembers`；`TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests`（Task 12 起） | 单元；组合 |
 | 没有调用者时也读 | `TestAddProjectMembersRefuses` | 单元 |
-| 工作区、目标的锁、项目的锁和判定、成员关系、最低位置、写、读回、回答、提交的失败被吞掉；目标的锁重试一次 | `TestAddProjectMembersReturnsEachFailure` | 单元 |
+| 项目的工作区、工作区的锁、目标的锁、项目的锁和判定、成员关系、最低位置、写、读回、回答、提交的失败被吞掉；工作区的锁的失败答成找到；目标的锁重试一次 | `TestAddProjectMembersReturnsEachFailure` | 单元 |
+| 请求里同一个账户出现两次被放过 | `TestCheckNewMembersReportsEveryProblem`（只在领域一层：放过之后第二次插入撞上部分唯一键，答 500，不是错的成功） | 单元 |
 | `growth` 的恢复、新建、显示设置的失败被吞掉 | `TestAddProjectMembersReturnsEachFailure`；`TestJoinProjectReturnsEachFailure`（Task 13 起） | 单元 |
 
 添加一类的安全性质（目标、重复、判定之前、部分写入）由 Task 12 的矩阵变体行在组合出的 app 上核对：这几行的变异从 Task 12 起才被发现。
 
-**Done when:** 用例的四个测试和 `TestCheckTargets` 通过；目标在判定之后检查；锁的顺序是目标在工作区的成员关系、然后项目。
+**Done when:** 用例的四个测试和 `TestCheckTargets` 通过；目标在判定之后检查；锁的顺序是工作区、目标在工作区的成员关系、然后项目，都经 `Locks`。
 
 ---
 
@@ -9685,7 +10583,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/modules/project/adapter/http/add_test.go`
-- Modify: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/project_preferences_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/members.go`、`server/internal/modules/project/module.go`
+- Modify: `api/modules/project.yaml`、`server/internal/bootstrap/permission_matrix_project_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/project_preferences_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/bootstrap/project_writes_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/members.go`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
@@ -9696,6 +10594,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 **Tests:**
 - `adapter/http/add_test.go`：`TestAddProjectMembersPassesTheMembers`（成员按顺序传给用例，三种以外的角色也传；201 带用例答的列表）；`TestAddProjectMembersHoldsTheBodyToItsStructure`（九种结构错误 400，用例没被调用）；`TestAddProjectMembersRefusals`。
 - `bootstrap/project_writes_test.go`：`TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests`（新，组合出的 app 上：alice 把 carol 加为访客，bob 的成员关系已结束（SQL 代替 P5 的移出），dave 是 acme 的成员、不是 Web 的成员，三人作负责人、默认负责人各被拒，422 指名字段 `not_allowed`，项目不变；成员 erin 两者都可以）；`TestTheWritesOnAProjectStampTheirRequest` 加添加一行。
+- `bootstrap/project_write_locks_test.go`：`projectWrite` 加 `targets`（写使之成为项目成员的账户，一段一个）；添加一行（在 Web 上加 bob、在 Ops 上加 carol，两人经 `inWorkspaceOf` 成为 acme 的成员）。第一段另核对等 acme 时不持有目标在 acme 的成员关系（`FOR UPDATE NOWAIT` 成功），第二段另核对等 Ops 时已持有它（`FOR UPDATE NOWAIT` 答 55P03）：目标在工作区之后、项目之前。
 - 矩阵：六行 61 格。
 
 - [ ] **Step 1: 接口描述**
@@ -9996,9 +10895,7 @@ func TestAddProjectMembersRefusals(t *testing.T) {
 ````
 ````new server/internal/modules/project/module.go
 		ListMembers:       app.NewListProjectMembers(store, d.Authorizer),
-		AddMembers: app.NewAddProjectMembers(app.AddMembersDeps{
-			Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
-		}),
+		AddMembers:        app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
 ````
 
 - [ ] **Step 3: 矩阵的成员行**
@@ -10396,12 +11293,133 @@ func TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests(t *testing.T
 	ctx, now := context.Background(), time.Now()
 ````
 
+`server/internal/bootstrap/project_write_locks_test.go`（修改，10 处）：
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	"slices"
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	"slices"
+	"strings"
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	op, method, path, body string // path: %s the project's id
+	want                   int
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	op, method, path, body string // path: %s the project's id; body: %s the target's id
+	want                   int
+	// targets are the accounts the write makes members of the project, one
+	// a phase: acme's members, none of the project's.
+	targets [2]string
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+		want: http.StatusOK},
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+		want: http.StatusOK},
+	{op: "addProjectMembers", method: http.MethodPost, path: "/api/v0/projects/%s/members", body: `{"members":[{"member_id":"%s","role":15}]}`,
+		want: http.StatusCreated, targets: [2]string{"bob", "carol"}},
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+// projects Web and Ops, each write once on each. Every write on a project
+// of the contract has its row here: the matrix's rows that write at the
+// project level are the list.
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+// projects Web and Ops, each write once on each, and a write's targets are
+// made members of them. Every write on a project of the contract has its
+// row here: the matrix's rows that write at the project level are the
+// list.
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+//     Web waits for that row, and meanwhile does not hold Web's row: a FOR
+//     UPDATE NOWAIT of it succeeds.
+//   - In its transaction, FOR SHARE, before its project: another
+//     transaction holds Ops's row FOR NO KEY UPDATE. The write on Ops waits
+//     for it, and meanwhile holds acme's row at FOR SHARE, no stronger,
+//     which another write on a project of acme shares (a FOR NO KEY UPDATE
+//     NOWAIT of it fails, a FOR SHARE NOWAIT succeeds).
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+//     Web waits for that row, and meanwhile holds neither Web's row nor its
+//     target's membership of acme: a FOR UPDATE NOWAIT of each succeeds.
+//   - In its transaction, FOR SHARE, before its target and its project:
+//     another transaction holds Ops's row FOR NO KEY UPDATE. The write on
+//     Ops waits for it, and meanwhile holds acme's row at FOR SHARE, no
+//     stronger, which another write on a project of acme shares (a FOR NO
+//     KEY UPDATE NOWAIT of it fails, a FOR SHARE NOWAIT succeeds), and its
+//     target's membership of acme (a FOR UPDATE NOWAIT fails, 55P03).
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
+	ids, aliceID := map[string]uuid.UUID{}, accountID(t, contract, base, alice)
+	for _, w := range projectWrites {
+		for _, name := range w.targets {
+			if name != "" {
+				ids[name] = accountID(t, contract, base, registerAccount(t, contract, base, name+"@example.com").AccessToken)
+				inWorkspaceOf(t, pool, projects[0], ids[name], aliceID, shared.RoleMember)
+			}
+		}
+	}
+	membership := "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL FOR UPDATE NOWAIT"
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(w.body))
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+			target, body := w.targets[phase], w.body
+			if strings.Contains(body, "%s") {
+				body = fmt.Sprintf(body, ids[target])
+			}
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(body))
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+					t.Errorf("%s holds its project while it waits for its workspace", w.op)
+				}
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+					t.Errorf("%s holds its project while it waits for its workspace", w.op)
+				}
+				if target != "" && heldBy(t, pool, membership, acme.ID, ids[target]) {
+					t.Errorf("%s holds %s's membership of acme while it waits for its workspace", w.op, target)
+				}
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+					t.Errorf("%s does not hold its workspace FOR SHARE in its transaction while it waits for its project", w.op)
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+					t.Errorf("%s does not hold its workspace FOR SHARE in its transaction while it waits for its project", w.op)
+				}
+				if target != "" && !heldBy(t, pool, membership, acme.ID, ids[target]) {
+					t.Errorf("%s does not hold %s's membership of acme while it waits for its project", w.op, target)
+````
+
 - [ ] **Step 5: 测试、lint、前端检查**
 
 Run: `go -C server test -count=1 ./internal/modules/project/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryColumnCallsAsARegisteredAccount|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestBodiesThatBreakTheStructureAnswer400|TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests|TestEachMemberHasHisOwnDisplaySettings|TestTheWritesOnAProjectStampTheirRequest' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryColumnCallsAsARegisteredAccount|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestBodiesThatBreakTheStructureAnswer400|TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests|TestEachMemberHasHisOwnDisplaySettings|TestTheWritesOnAProjectStampTheirRequest|TestEachWriteOnAProjectSharesItsWorkspaceFirst' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -10422,7 +11440,7 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/project.yaml server/internal/bootstrap/permission_matrix_members_test.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/project_preferences_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/project/adapter/http/add_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/members.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml server/internal/bootstrap/permission_matrix_members_test.go server/internal/bootstrap/permission_matrix_project_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/project_preferences_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/bootstrap/project_writes_test.go server/internal/modules/project/adapter/http/add_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/members.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/bodyshape.gen.go server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4b): addProjectMembers' operation; the members' rows of the matrix
@@ -10447,8 +11465,9 @@ Expected: 通过。
 | 契约声明 200 而不是答的 201 | `TestPermissionMatrix`（答案按契约核对） | 组合 |
 | `project.New` 给添加不开事务的事务管理器 | `TestAGrowthRefusedAtItsCommitLeavesNoRow`、`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
 | `project.New` 给添加固定在 2000 年的时钟 | `TestTheWritesOnAProjectStampTheirRequest` | 组合 |
-| `project.New` 给添加谁都当作管理员放行的 `Authorizer` | `TestPermissionMatrix` | 组合 |
-| `project.New` 给添加一个什么都不锁、答谁都是工作区成员的成员端口 | `TestPermissionMatrix`；`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
+| `project.New` 给添加谁都当作管理员放行的 `Authorizer`（经它自己的 `Locks`） | `TestPermissionMatrix` | 组合 |
+| `project.New` 给添加一个 `Locks`，它的成员端口什么都不锁、答谁都是工作区成员 | `TestPermissionMatrix`；`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
+| 只有添加不锁工作区 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`；`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
 | 矩阵的准备：WA- 是 acme 的成员；PM 不是公开项目的成员；WG- 是成员；WM-公 是访客；X 是成员；WM-公 已是公开项目、已归档项目的成员；WA- 已是公开项目的成员 | `TestPermissionMatrix`（`targets` 的前提先失败） | 组合 |
 | handler 吞掉用例的失败 | `TestAddProjectMembersRefusals` | 单元 |
 
@@ -10460,19 +11479,20 @@ Expected: 通过。
 
 **Files:**
 - Create: `server/internal/bootstrap/project_members_test.go`、`server/internal/modules/project/adapter/http/join_test.go`、`server/internal/modules/project/app/join_project.go`、`server/internal/modules/project/app/join_project_test.go`
-- Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/member.go`、`server/internal/modules/project/domain/member_test.go`、`server/internal/modules/project/module.go`
+- Modify: `api/modules/project.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/project/adapter/http/handler.go`、`server/internal/modules/project/adapter/http/handler_test.go`、`server/internal/modules/project/adapter/http/projects.go`、`server/internal/modules/project/app/clock_test.go`、`server/internal/modules/project/app/ports.go`、`server/internal/modules/project/domain/actions.go`、`server/internal/modules/project/domain/member.go`、`server/internal/modules/project/domain/member_test.go`、`server/internal/modules/project/module.go`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
 - Produces（spec 2.10，M3 设计 3.5、3.6 约定三和六、3.18、9.1）：`POST /api/v0/projects/{project_id}/join`，200 `Project`；码 `[project.not_found, forbidden]`；操作名 `project.join`，规则 `{Level: LevelVisible}`：看得到项目的人；工作区角色由用例按集合要求。
 - `domain.CanJoin(workspaceRole)`：工作区的管理员、成员（Plane `views/project/invite.py:131-189`），按集合。
-- `app.MemberJoiner`（`MemberGrower` + `ProjectReader`）；`app.NewJoinProject(members WorkspaceMembers, projects MemberJoiner, auth, tx, clock)`：一个事务：`ProjectWorkspace`（不加锁）→ `ShareMembers`（他在工作区的成员关系 `FOR SHARE`）→ `lockAndDecide(project.join)` → `CanJoin`，否则 403，在读他的项目成员关系之前（G4：工作区访客即使是项目成员也一样被拒）→ `Memberships`：已是有效成员的什么都不写 → 时钟 → `growth.apply`（`JoinRole`；显示设置在 65535，`DefaultSortOrder`）→ `answer`。
+- `app.MemberJoiner`（`MemberGrower` + `ProjectReader`）；`app.NewJoinProject(locks Locks, projects MemberJoiner, tx, clock)`：一个事务：`locks.lockAndDecide(write{project, project.join, targets: [调用者]})`（不加锁读项目的工作区 → 工作区 `FOR SHARE` → 他在工作区的成员关系 `FOR SHARE` → 项目 `FOR NO KEY UPDATE` → 判定）→ `CanJoin`（判定的 `Grant` 里他的工作区角色），否则 403，在读他的项目成员关系之前（G4：工作区访客即使是项目成员也一样被拒）→ `Memberships`：已是有效成员的什么都不写 → 时钟 → `growth.apply`（`JoinRole`；显示设置在 65535，`DefaultSortOrder`）→ `answer`。
 - 矩阵：加入两行（`ofProject(200, 200, 403, 200, 200, 200)`，答案核对角色和 65535：已是成员的照旧，WA- 以 20、WM-公 以 15 加入；已归档 1 格 200）；`targets` 加上 WA- 不是公开项目的成员。
 
 **Tests:**
 - `domain/member_test.go`：`TestCanJoin`（工作区的管理员、成员可以；访客，和三种以外介于其间或高于它们的角色不可以）。
 - `app/join_project_test.go`：`TestJoinProject`（完整的调用记录；新的成员关系取工作区角色，已结束的取较低的一个，按 9.1 的表；显示设置在 65535；回答是他看到的项目和他的角色）；`TestJoinProjectLeavesAnActiveMemberAsHeIs`；`TestJoinProjectJoinsAnArchivedProject`；`TestJoinProjectRefuses`（没有调用者在事务之前；没有的项目在找工作区时；看不到在判定；工作区访客 carol 是项目成员，在判定之后、读成员关系之前 403；高于三种的工作区角色也一样：按集合）；`TestJoinProjectReturnsEachFailure`（每个端口、提交的失败；hank 新加入，dave 恢复为成员）。
 - `adapter/http/join_test.go`：`TestJoinProject`（只调加入的用例，200；拒绝照契约）。
+- `bootstrap/project_write_locks_test.go`：`projectWrite` 加 `byTarget`（目标自己发出写：加入）；加入一行（dave 加入 Web、erin 加入 Ops，各自的 token），核对同添加。
 - `bootstrap/project_members_test.go`：`TestARestoredMembershipGivesNoMoreThanItHad`（新，组合出的 app 上：bob 加入 Web 得到新的成员关系、他在请求的时刻、65535；然后每次以 SQL 代替 P5 的移出、以某个角色结束他的成员关系，他再加入或 alice 添加他：同一行恢复为 9.1 表那一行的角色，由调用者在那次请求的时刻，建立的时刻不变；最后一行之前经接口改他的工作区角色）。
 
 - [ ] **Step 1: 接口描述**
@@ -10655,7 +11675,7 @@ type MemberJoiner interface {
 // ProjectArchiver is archiveProject's and unarchiveProject's repository.
 ````
 
-`server/internal/modules/project/app/join_project.go`（新文件，86 行）：
+`server/internal/modules/project/app/join_project.go`（新文件，75 行）：
 
 ````file server/internal/modules/project/app/join_project.go
 package app
@@ -10671,31 +11691,30 @@ import (
 // JoinProject makes the caller a member of a project he sees: POST
 // /api/v0/projects/{project_id}/join (M3 design 3.5).
 type JoinProject struct {
-	members  WorkspaceMembers
+	locks    Locks
 	projects MemberJoiner
-	auth     shared.Authorizer
 	tx       shared.TxManager
 	clock    Clock
 }
 
 // NewJoinProject returns the use case.
-func NewJoinProject(members WorkspaceMembers, projects MemberJoiner, auth shared.Authorizer, tx shared.TxManager, clock Clock) *JoinProject {
-	return &JoinProject{members: members, projects: projects, auth: auth, tx: tx, clock: clock}
+func NewJoinProject(locks Locks, projects MemberJoiner, tx shared.TxManager, clock Clock) *JoinProject {
+	return &JoinProject{locks: locks, projects: projects, tx: tx, clock: clock}
 }
 
 // Execute, in one transaction, in the order of M3 design 3.6: the
-// project's workspace, read without a lock; the caller's membership of it
-// FOR SHARE, which comes before the project in the lock order (convention
-// 3); the project FOR NO KEY UPDATE; the decision on project.join, which
-// asks only that he see it; his workspace role, admin or member by set,
-// else forbidden, before his membership of the project is looked at, so
-// that a workspace guest who is its member is refused as any guest (3.5);
-// his membership of the project. An active member is left as he is.
-// Otherwise the clock, then his ended membership restored with the lesser
-// of its role and his workspace role (domain.JoinRole, convention 6), or a
-// new one with his workspace role; his display settings at the default
-// place unless he has them (3.18). The answer is the project as he sees
-// it.
+// project's locks (Locks: its workspace FOR SHARE; the caller's membership
+// of the workspace FOR SHARE, which comes before the project in the lock
+// order, convention 3; the project FOR NO KEY UPDATE) and the decision on
+// project.join, which asks only that he see it; his workspace role, admin
+// or member by set, else forbidden, before his membership of the project
+// is looked at, so that a workspace guest who is its member is refused as
+// any guest (3.5); his membership of the project. An active member is
+// left as he is. Otherwise the clock, then his ended membership restored
+// with the lesser of its role and his workspace role (domain.JoinRole,
+// convention 6), or a new one with his workspace role; his display
+// settings at the default place unless he has them (3.18). The answer is
+// the project as he sees it.
 func (u *JoinProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -10703,21 +11722,11 @@ func (u *JoinProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project
 	}
 	var joined domain.Project
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		workspaceID, found, err := u.projects.ProjectWorkspace(ctx, id)
-		switch {
-		case err != nil:
-			return err
-		case !found:
-			return domain.ErrNotFound
-		}
-		if _, err := u.members.ShareMembers(ctx, workspaceID, []uuid.UUID{actor.UserID}); err != nil {
-			return err
-		}
-		project, grant, err := lockAndDecide(ctx, u.projects.LockProject, u.auth, actor, id, domain.ActionJoin)
+		h, err := u.locks.lockAndDecide(ctx, actor, write{project: id, action: domain.ActionJoin, targets: []uuid.UUID{actor.UserID}})
 		if err != nil {
 			return err
 		}
-		if !domain.CanJoin(grant.WorkspaceRole) {
+		if !domain.CanJoin(h.grant.WorkspaceRole) {
 			return shared.Forbidden()
 		}
 		memberships, err := u.projects.Memberships(ctx, id, []uuid.UUID{actor.UserID})
@@ -10730,8 +11739,8 @@ func (u *JoinProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project
 			if ended != nil {
 				was = &ended.Role
 			}
-			if err := (growth{workspaceID: project.WorkspaceID, projectID: id, user: actor.UserID, ended: ended,
-				role: domain.JoinRole(was, grant.WorkspaceRole), sortOrder: domain.DefaultSortOrder, by: actor.UserID,
+			if err := (growth{workspaceID: h.project.WorkspaceID, projectID: id, user: actor.UserID, ended: ended,
+				role: domain.JoinRole(was, h.grant.WorkspaceRole), sortOrder: domain.DefaultSortOrder, by: actor.UserID,
 				now: u.clock.Now()}).apply(ctx, u.projects); err != nil {
 				return err
 			}
@@ -10746,7 +11755,7 @@ func (u *JoinProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project
 }
 ````
 
-`server/internal/modules/project/app/join_project_test.go`（新文件，201 行）：
+`server/internal/modules/project/app/join_project_test.go`（新文件，202 行）：
 
 ````file server/internal/modules/project/app/join_project_test.go
 package app_test
@@ -10768,26 +11777,26 @@ import (
 // newJoin is JoinProject over newGrowth's fakes, its clock logged, each
 // caller deciding as his roles in acme: gina its admin, hank and dave its
 // members, carol its guest and Web's.
-func newJoin() (*app.JoinProject, *growthFixture) {
+func newJoin() (*app.JoinProject, *writeFixture) {
 	f := newGrowth()
 	for user, g := range map[uuid.UUID]shared.Grant{gina: {WorkspaceRole: shared.RoleAdmin}, hank: {WorkspaceRole: shared.RoleMember},
 		dave: {WorkspaceRole: shared.RoleMember}, carol: {WorkspaceRole: shared.RoleGuest, ProjectRole: shared.RoleGuest}} {
 		f.auth.grants[grantKey{user, acme.ID}] = g
 	}
-	return app.NewJoinProject(f.members, f.store, f.auth, f.tx, clockAt{clockNow, f.log}), f
+	return app.NewJoinProject(f.locks(), f.store, f.tx, clockAt{clockNow, f.log}), f
 }
 
 // beforeJoin are the calls of user's joining project before it writes:
-// the transaction, the project's workspace, his workspace membership FOR
-// SHARE, the project's lock, the decision, his membership of the project.
+// the transaction, the project's workspace, its lock, his workspace
+// membership FOR SHARE, the project's lock, the decision, his membership
+// of the project.
 func beforeJoin(user, project uuid.UUID) []string {
-	return []string{"Begin", "ProjectWorkspace " + project.String(), fmt.Sprintf("ShareMembers %s [%s]", acme.ID, user),
-		"LockProject " + project.String(), fmt.Sprintf("Authorize %s %s on %s/%s", user, domain.ActionJoin, acme.ID, project),
-		fmt.Sprintf("Memberships %s [%s]", project, user)}
+	return append(lockedTo(project), fmt.Sprintf("ShareMembers %s [%s]", acme.ID, user), "LockProject "+project.String(),
+		fmt.Sprintf("Authorize %s %s on %s/%s", user, domain.ActionJoin, acme.ID, project), fmt.Sprintf("Memberships %s [%s]", project, user))
 }
 
 // JoinProject, in one transaction and in the order of M3 design 3.6, reads
-// the project's workspace, locks the caller's membership of it and the
+// the project's workspace, locks it, the caller's membership of it and the
 // project, decides, reads his membership of the project and the clock,
 // then makes his membership with his workspace role, or restores his ended
 // one with the lesser of its role and his workspace role, by the order of
@@ -10860,17 +11869,17 @@ func TestJoinProjectRefuses(t *testing.T) {
 		name  string
 		ctx   context.Context
 		id    uuid.UUID
-		setup func(f *growthFixture)
+		setup func(f *writeFixture)
 		want  error
 		calls []string
 	}{
 		{"no caller", context.Background(), webID, nil, shared.Unauthenticated(), nil},
-		{"no project", as(hank), uuid.Nil(), nil, domain.ErrNotFound, []string{"Begin", "ProjectWorkspace " + uuid.Nil().String()}},
-		{"not seen", as(erin), webID, nil, domain.ErrNotFound, beforeJoin(erin, webID)[:5]},
-		{"a workspace guest, the project's member", as(carol), webID, nil, shared.Forbidden(), beforeJoin(carol, webID)[:5]},
-		{"a workspace role above the three", as(erin), webID, func(f *growthFixture) {
+		{"no project", as(hank), uuid.Nil(), nil, domain.ErrNotFound, noProject},
+		{"not seen", as(erin), webID, nil, domain.ErrNotFound, beforeJoin(erin, webID)[:6]},
+		{"a workspace guest, the project's member", as(carol), webID, nil, shared.Forbidden(), beforeJoin(carol, webID)[:6]},
+		{"a workspace role above the three", as(erin), webID, func(f *writeFixture) {
 			f.auth.grants[grantKey{erin, acme.ID}] = shared.Grant{WorkspaceRole: 25}
-		}, shared.Forbidden(), beforeJoin(erin, webID)[:5]},
+		}, shared.Forbidden(), beforeJoin(erin, webID)[:6]},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -10904,7 +11913,7 @@ func TestJoinProjectJoinsAnArchivedProject(t *testing.T) {
 // the write is an internal error. hank, a workspace member, joins anew;
 // dave, one too, restores his ended membership as a member's.
 func TestJoinProjectReturnsEachFailure(t *testing.T) {
-	all := func(f *growthFixture, user uuid.UUID) []string {
+	all := func(f *writeFixture, user uuid.UUID) []string {
 		var ended *app.Membership
 		if m, ok := f.store.projects[webID].members[user]; ok {
 			ended = &m
@@ -10912,25 +11921,26 @@ func TestJoinProjectReturnsEachFailure(t *testing.T) {
 		return slices.Concat(beforeJoin(user, webID), []string{"Now"}, grown(user, ended, shared.RoleMember, 65535, user),
 			[]string{fmt.Sprintf("GetProject %s for %s", webID, user)})
 	}
-	fail := func(method string) func(f *growthFixture) {
-		return func(f *growthFixture) { f.store.errs = map[string]error{method: errDisk} }
+	fail := func(method string) func(f *writeFixture) {
+		return func(f *writeFixture) { f.store.errs = map[string]error{method: errDisk} }
 	}
 	tests := []struct {
 		name  string
 		user  uuid.UUID
-		fail  func(f *growthFixture)
+		fail  func(f *writeFixture)
 		calls int // how many of the calls ran
 	}{
 		{"the project's workspace", hank, fail("ProjectWorkspace"), 2},
-		{"his membership's lock", hank, func(f *growthFixture) { f.members.err = errDisk }, 3},
-		{"the project's lock", hank, fail("LockProject"), 4},
-		{"the decision", hank, func(f *growthFixture) { f.auth.errs[grantKey{hank, acme.ID}] = errDisk }, 5},
-		{"his membership", hank, fail("Memberships"), 6},
-		{"a new membership", hank, fail("CreateMember"), 8},
-		{"the display settings", hank, fail("EnsurePreferences"), 9},
-		{"a restored membership", dave, fail("RestoreMember"), 8},
-		{"the answer", hank, fail("GetProject"), 10},
-		{"the commit", hank, func(f *growthFixture) { f.tx.commitErr = errDisk }, 10},
+		{"the workspace's lock", hank, func(f *writeFixture) { f.workspaces.err = errDisk }, 3},
+		{"his membership's lock", hank, func(f *writeFixture) { f.members.err = errDisk }, 4},
+		{"the project's lock", hank, fail("LockProject"), 5},
+		{"the decision", hank, func(f *writeFixture) { f.auth.errs[grantKey{hank, acme.ID}] = errDisk }, 6},
+		{"his membership", hank, fail("Memberships"), 7},
+		{"a new membership", hank, fail("CreateMember"), 9},
+		{"the display settings", hank, fail("EnsurePreferences"), 10},
+		{"a restored membership", dave, fail("RestoreMember"), 9},
+		{"the answer", hank, fail("GetProject"), 11},
+		{"the commit", hank, func(f *writeFixture) { f.tx.commitErr = errDisk }, 11},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -11105,13 +12115,11 @@ func TestJoinProject(t *testing.T) {
 ````
 
 ````old server/internal/modules/project/module.go
-			Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
-		}),
+		AddMembers:        app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
 ````
 ````new server/internal/modules/project/module.go
-			Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
-		}),
-		JoinProject: app.NewJoinProject(d.Members, store, d.Authorizer, d.Tx, d.Clock),
+		AddMembers:        app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
+		JoinProject:       app.NewJoinProject(locks, store, d.Tx, d.Clock),
 ````
 
 - [ ] **Step 5: 矩阵和组合出的测试**
@@ -11319,12 +12327,71 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 }
 ````
 
+`server/internal/bootstrap/project_write_locks_test.go`（修改，7 处）：
+
+````old server/internal/bootstrap/project_write_locks_test.go
+// operationId: the request on the project, by alice.
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+// operationId: the request on the project, by alice unless byTarget.
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	targets [2]string
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	targets [2]string
+	// byTarget is set when the target sends the write: a joining.
+	byTarget bool
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+		want: http.StatusCreated, targets: [2]string{"bob", "carol"}},
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+		want: http.StatusCreated, targets: [2]string{"bob", "carol"}},
+	{op: "joinProject", method: http.MethodPost, path: "/api/v0/projects/%s/join", want: http.StatusOK, targets: [2]string{"dave", "erin"},
+		byTarget: true},
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+	ids, aliceID := map[string]uuid.UUID{}, accountID(t, contract, base, alice)
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+	tokens, ids, aliceID := map[string]string{}, map[string]uuid.UUID{}, accountID(t, contract, base, alice)
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+				ids[name] = accountID(t, contract, base, registerAccount(t, contract, base, name+"@example.com").AccessToken)
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+				tokens[name] = registerAccount(t, contract, base, name+"@example.com").AccessToken
+				ids[name] = accountID(t, contract, base, tokens[name])
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+			target, body := w.targets[phase], w.body
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+			target, token, body := w.targets[phase], alice, w.body
+````
+
+````old server/internal/bootstrap/project_write_locks_test.go
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(body))
+````
+````new server/internal/bootstrap/project_write_locks_test.go
+			if w.byTarget {
+				token = tokens[target]
+			}
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), token, []byte(body))
+````
+
 - [ ] **Step 6: 测试、lint、前端检查**
 
 Run: `go -C server test -count=1 ./internal/modules/project/... ./internal/modules/access/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryColumnCallsAsARegisteredAccount|TestEveryActionHasARuleAndEveryRuleAnAction|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestARestoredMembershipGivesNoMoreThanItHad' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestEveryColumnCallsAsARegisteredAccount|TestEveryActionHasARuleAndEveryRuleAnAction|TestAPIRoutesAreTheContractsOperations|TestOperationsThatNeedATokenAnswer401WithoutOne|TestARestoredMembershipGivesNoMoreThanItHad|TestEachWriteOnAProjectSharesItsWorkspaceFirst' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -11345,15 +12412,15 @@ Expected: 通过。
 - [ ] **Step 7: 提交**
 
 ```bash
-git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_members_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/project_members_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/join_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/join_project.go server/internal/modules/project/app/join_project_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/member.go server/internal/modules/project/domain/member_test.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/project.yaml api/openapi.yaml server/internal/bootstrap/permission_matrix_members_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/project_members_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/project/adapter/http/handler.go server/internal/modules/project/adapter/http/handler_test.go server/internal/modules/project/adapter/http/join_test.go server/internal/modules/project/adapter/http/projects.go server/internal/modules/project/app/clock_test.go server/internal/modules/project/app/join_project.go server/internal/modules/project/app/join_project_test.go server/internal/modules/project/app/ports.go server/internal/modules/project/domain/actions.go server/internal/modules/project/domain/member.go server/internal/modules/project/domain/member_test.go server/internal/modules/project/module.go api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P4b): joinProject
 
 POST /api/v0/projects/{project_id}/join, for the workspace's admins and
-members who see the project. In one transaction it locks the caller's
-workspace membership FOR SHARE, then the project FOR NO KEY UPDATE,
-decides, refuses a workspace guest by set before his membership of the
+members who see the project. In one transaction it takes Locks' path
+with the caller as its target: the workspace FOR SHARE, his workspace
+membership FOR SHARE, then the project FOR NO KEY UPDATE; it decides, refuses a workspace guest by set before his membership of the
 project is read, and makes him a member with his workspace role, or
 restores his ended membership with the lesser of its role and that one,
 his display settings at 65535. An active member is left as he is.
@@ -11375,35 +12442,42 @@ Expected: 通过。
 | 工作区角色在"已是有效成员"之后查：是项目成员的工作区访客加入 | `TestPermissionMatrix`（PG 一格）；P2（Task 15 起） | 组合；端到端 |
 | 加入的显示设置不在 65535 | `TestARestoredMembershipGivesNoMoreThanItHad`；P2（Task 15 起） | 组合；端到端 |
 | 契约不声明工作区访客得到的 `forbidden` | `TestPermissionMatrix`、`TestJoinProject`（HTTP，`apitest.Main`） | 组合；单元 |
-| 先锁项目、后锁他在工作区的成员关系；不锁他在工作区的成员关系 | `TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起）；后者另有用例的 `TestJoinProject`（调用记录） | 组合；单元 |
+| 不锁他在工作区的成员关系（`write` 没有 `targets`） | `TestJoinProject`（调用记录）；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（等 Ops 时不持有 erin 在 acme 的成员关系）；`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 单元；组合 |
+| 只有加入不锁工作区 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`；`TestADemotionAndTheProjectSidesGrowthSerialize`、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（Task 14 起） | 组合 |
 | `project.New` 给加入不开事务的事务管理器 | `TestAGrowthRefusedAtItsCommitLeavesNoRow`、`TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
 | `project.New` 给加入固定在 2000 年的时钟 | `TestARestoredMembershipGivesNoMoreThanItHad` | 组合 |
-| `project.New` 给加入谁都当作管理员放行的 `Authorizer` | `TestPermissionMatrix` | 组合 |
-| `project.New` 给加入一个什么都不锁、答谁都是工作区成员的成员端口 | `TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
+| `project.New` 给加入谁都当作管理员放行的 `Authorizer`（经它自己的 `Locks`） | `TestPermissionMatrix` | 组合 |
+| `project.New` 给加入一个 `Locks`，它的成员端口什么都不锁、答谁都是工作区成员 | `TestADemotionAndTheProjectSidesGrowthSerialize`（Task 14 起） | 组合 |
 | 没有调用者时也读 | `TestJoinProjectRefuses` | 单元 |
-| 工作区、他的成员关系的锁、项目的锁和判定、成员关系、写、回答、提交的失败被吞掉；找工作区的失败答成 404；他的锁重试一次 | `TestJoinProjectReturnsEachFailure` | 单元 |
+| 项目的工作区、工作区的锁、他的成员关系的锁、项目的锁和判定、成员关系、写、回答、提交的失败被吞掉；找工作区的失败答成 404；工作区的锁的失败答成找到；他的锁重试一次 | `TestJoinProjectReturnsEachFailure` | 单元 |
+| 增长用不加锁读到的工作区、不用锁确认过的 | 没有测试能发现：`Locks` 在项目的锁之下确认工作区，没有写能把项目移到别的工作区，两者总相同（等价变异，spec 第 3 节第 10 条；确认本身由 `TestUpdateProjectRefuses` 的"moved"发现） | — |
 | handler 吞掉用例的失败 | `TestJoinProject`（HTTP） | 单元 |
 
-**Done when:** 矩阵两行（13 格）通过；加入的角色按 9.1 的表、按集合和顺序表；工作区访客在读成员关系之前被拒。
+**Done when:** 矩阵两行（13 格）通过；加入的角色按 9.1 的表、按集合和顺序表；工作区访客在读成员关系之前被拒；七个项目级的写都在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 里。
 
 ---
 
-### Task 14: 交错 17；降级与项目级的写、与删除项目；写在事务的连接上
+### Task 14: 交错 17；降级与项目级的写、与删除项目；删除工作区与项目级的写；写在事务的连接上
 
 **Files:**
-- Create: `server/internal/bootstrap/interleaving_growth_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/project_connection_test.go`
+- Create: `server/internal/bootstrap/interleaving_deletion_test.go`、`server/internal/bootstrap/interleaving_growth_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`、`server/internal/bootstrap/project_connection_test.go`
 - Modify: `server/internal/bootstrap/demotion_test.go`、`server/internal/bootstrap/project_deletion_test.go`、`server/internal/bootstrap/project_members_test.go`、`server/internal/modules/project/adapter/postgres/demote_test.go`
 
 **Interfaces:** 只有测试。
-- `bootstrap/interleaving_growth_test.go`：`growthRace`（acme：管理员 alice、成员 bob；alice 的公开项目 Web，bob 在其中的成员关系按需已结束，SQL 代替 P5 的移出）；`gatedShares`（工作区的 `WorkspaceMembers`，目标的成员关系 `FOR SHARE` 之后在 gate 等待：增长在锁项目之前停下）；`demotedHolding`（降级在写了成员关系之后、项目一步之前停下）；`webFree`（`FOR UPDATE NOWAIT` 探测 Web 没有被持有）。等待由 `pgtest.WaitForLockWaitOn` 证明在哪张表上：增长先时降级等 `workspace_members`，删除先时降级等 `projects`。
-- `bootstrap/interleaving_writes_test.go`：`gatedAuthorizer`（判定之后、在写的事务里、锁之后在 gate 等待）；四个写（修改、归档、恢复、改设置）各两个顺序，探测 `projects`。
+- `bootstrap/interleaving_growth_test.go`：`growthRace`（acme：管理员 alice、成员 bob；alice 的公开项目 Web，bob 在其中的成员关系按需已结束，SQL 代替 P5 的移出）；`gatedShares`（工作区的 `WorkspaceMembers`：工作区和目标的成员关系都已 `FOR SHARE` 之后在 gate 等待，增长在锁项目之前停下）；`demotedHolding`（降级在写了成员关系之后、项目一步之前停下）；`webFree`（`FOR UPDATE NOWAIT` 探测 Web 没有被持有）；`membershipTimes`。等待由 `pgtest.WaitForLockWaitOn` 证明在哪张表上（M3 设计 3.6 约定二，方案 E）：每个交错的第二方都等在 `workspaces`（工作区一侧的连带持有工作区行的 `FOR NO KEY UPDATE`，项目级的写持有它的 `FOR SHARE`），只有同一个项目上的两个写等在 `projects`。
+- `bootstrap/interleaving_writes_test.go`：`gatedAuthorizer`（判定之后、在写的事务里、锁之后在 gate 等待）；`bobAdministersWeb`（bob 是 Web 的管理员，Ops 是 acme 的另一个项目）；四个写（修改、归档、恢复、改设置）各两个顺序，探测 `workspaces`；两个写在同一个项目上，探测 `projects`；两个项目上的写不互等。
+- `bootstrap/interleaving_deletion_test.go`：`deleteAcme`（alice 经工作区的用例删除 acme，连带照 `bootstrap` 接上，系统的时钟）；`deletedWithAcme`（每一行都由删除在它的一个时刻、由 alice 最后写入，且不早于建立）；`answeredOrWaiting`。
 - `bootstrap/project_connection_test.go`：`project.New` 和 `Authorizer` 照 `bootstrap` 接在只有一个连接的池上，请求 3 秒截止，每次等待 5 秒看门狗。
 - `demotion_test.go`：`refusingCommits(t, pool, table)`：延迟的约束触发器，拒绝插入或修改了 `table` 的事务的提交（P4a 只拒绝 `workspace_members` 的修改）；`TestAProjectDeletionRefusedAtItsCommitChangesNoRow` 改用它。
 
 **Tests:**
-- `TestADemotionAndTheProjectSidesGrowthSerialize`（交错 17，八个子测试：加入、添加 × 新的、已结束的成员关系 × 两个顺序）：增长先：它持有 bob 在 acme 的成员关系 `FOR SHARE`、在锁 Web 之前等待；降级等他的成员关系，不持有任何项目（P4a 的 F-M2 顺序：先锁项目的降级会持有 Web，增长锁 Web 时形成环，40P01）；增长提交之后，降级的项目一步找到他在 Web 的成员关系并改为访客。降级先：增长等他的成员关系，然后读到他是 acme 的访客：加入答 404，添加作成员答 422 `members[0].role`；已结束的成员关系由降级改为访客的。两个顺序中，第二方等待时 `webFree`：每一方都先取成员关系的行、后取项目。
-- `TestADemotionAndAProjectsDeletionSerialize`（两个顺序）：删除先持有 Web、在判定之后等待；降级的项目一步等它，然后把已删除的 Web 留在外面，他的成员关系照删除时的成员角色删除。降级先：删除等它，然后删除他已改为访客的成员关系。
-- `TestAProjectWriteAndADemotionSerialize`（四个写 × 两个顺序）：bob 是 Web 的管理员，alice 把他改为 acme 的访客。写先：持有 Web（`FOR NO KEY UPDATE`，改设置是 `FOR SHARE`），判定之后等待；降级等 Web，然后把他改为 Web 的访客。降级先：他的写等 Web，然后按降级提交的事实判定：访客不能修改、归档、恢复（403），可以改自己的设置。
+- `TestADemotionAndTheProjectSidesGrowthSerialize`（交错 17，八个子测试：加入、添加 × 新的、已结束的成员关系 × 两个顺序）：增长先：它持有 acme 和 bob 在 acme 的成员关系 `FOR SHARE`、在锁 Web 之前等待；降级等 acme 的行，什么都不持有；增长提交之后，降级的项目一步找到他在 Web 的成员关系并改为访客，时刻在降级持有 acme 之后读（gate 放开之后，M3 设计 3.3）。降级先：它持有 acme 的 `FOR NO KEY UPDATE` 和写过的成员关系行；增长等 acme 的行，然后读到他是 acme 的访客：加入答 404，添加作成员答 422 `members[0].role`；已结束的成员关系由降级改为访客的。两个顺序中，第二方等待时 `webFree`（P4a 的 F-M2 顺序：增长先取成员关系、后取 Web，降级先写成员关系、后取他的项目）；他在 Web 的成员关系最后写入的时刻不早于建立的时刻（预检的 L1：方案 E 之前增长先时这里倒退）。
+- `TestADemotionAndAProjectsDeletionSerialize`（两个顺序）：删除先持有 acme `FOR SHARE` 和 Web，在判定之后等待；降级等 acme 的行，然后它的项目一步找到 Web 已删除、把它留在外面，他的成员关系照删除时的成员角色删除。降级先：它持有 acme 和（项目一步锁住的）Web；删除等 acme 的行，然后删除他已改为访客的成员关系。
+- `TestAProjectWriteAndADemotionSerialize`（四个写 × 两个顺序）：bob 是 Web 的管理员，alice 把他改为 acme 的访客。写先：持有 acme `FOR SHARE` 和 Web（`FOR NO KEY UPDATE`，改设置是 `FOR SHARE`），判定之后等待；降级等 acme 的行，然后把他改为 Web 的访客。降级先：他的写等 acme 的行，然后按降级提交的事实判定：访客不能修改、归档、恢复（403），可以改自己的设置。
+- `TestTwoWritesOnAProjectSerialize`（预检的 L2）：bob 归档 Web，判定之后等待；他对 Web 的修改与之共享 acme、等 Web 的行（探测 `projects`）；归档提交之后修改按已归档判定，答 409 `project.archived`。`FOR SHARE` 的项目锁下两者都持有 Web、各自的修改等对方（40P01）。
+- `TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`：bob 归档 Web、判定之后等待，持有 acme 和 Web；alice 同时修改 Ops，5 秒之内答 200。工作区的锁比 `FOR SHARE` 强时她的修改等归档。
+- `TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（`interleaving_deletion_test.go`，预检的 L1、F-M3 的两个窗口）：bob 修改 Web，或 bob 加入 Web（新建成员关系和显示设置），判定之后等待，持有 acme `FOR SHARE`；alice 删除 acme，等 acme 的行（探测 `workspaces`）。写提交之后，Web 和写写下的每一行都在删除的一个时刻、由 alice 删除和最后写入，且不早于建立；Web 的删除时刻不早于修改答复里的 `updated_at`。
+- `TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（`interleaving_deletion_test.go`，预检的 M1）：carol、dave 是 acme 的成员，carol 的成员关系 id 较小（添加按 id 先锁她），dave 的行在表里在前（删除工作区的成员关系一步先遇到他）。carol 加入 Ops、判定之后等待，持有 acme 和她的成员关系；alice 删除 acme，等 acme 的行；alice 把 carol、dave 添加进 Web：与加入共享 acme 和两人的成员关系，在删除等待时答 201。加入提交之后删除完成，三条新的成员关系在它的一个时刻删除；没有 40P01。添加若不先取 acme 的 `FOR SHARE`，删除会持有 acme、改了 dave 的行再等 carol 的，添加持有 carol 的、等 dave 的：环，40P01（测试让添加的那一次死锁检查在加入结束之前过去，由删除发现它）。
 - `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（P4a 的 L3、brief 移交第 1 条的 `az-project-outside-tx`）：一个连接的池上 alice 建 Ops、修改 Web、归档、恢复、改设置、添加 bob（恢复他已结束的成员关系），carol 新加入，alice 删除两个项目；经池而不是事务发出的语句会等第二个连接、请求在截止时失败。
 - `TestAGrowthRefusedAtItsCommitLeavesNoRow`（`project_members_test.go`）：bob 先不是 Web 的成员，再是没有显示设置的已结束成员；每次先拒绝成员关系的提交、再拒绝显示设置的提交，alice 的添加和他的加入答 500，成员关系和显示设置都不变；放开之后他加入。
 - `TestLockMemberProjectsLeavesOutAProjectDeletedWhileItWaited`（`adapter/postgres/demote_test.go`）：另一个事务持有 Web `FOR NO KEY UPDATE` 并软删除它；`LockMemberProjects` 等它，提交之后重新求值 `deleted_at`，只返回 Ops。
@@ -11561,7 +12635,7 @@ func TestAGrowthRefusedAtItsCommitLeavesNoRow(t *testing.T) {
 
 - [ ] **Step 2: 交错**
 
-`server/internal/bootstrap/interleaving_growth_test.go`（新文件，376 行）：
+`server/internal/bootstrap/interleaving_growth_test.go`（新文件，398 行）：
 
 ````file server/internal/bootstrap/interleaving_growth_test.go
 package bootstrap
@@ -11577,6 +12651,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -11592,7 +12667,7 @@ import (
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
@@ -11680,8 +12755,9 @@ func authorizerOn(pool *pgxpool.Pool) shared.Authorizer {
 }
 
 // gatedShares is workspace's WorkspaceMembers; with a gate, the growth
-// waits at it once its targets' memberships of the workspace are held FOR
-// SHARE, before it locks the project (M3 design 3.6 convention 3).
+// waits at it once its workspace and its targets' memberships of it are
+// held FOR SHARE, before it locks the project (M3 design 3.6 conventions 2
+// and 3).
 type gatedShares struct {
 	projectapp.WorkspaceMembers
 	gate *gate
@@ -11722,10 +12798,10 @@ func (r growthRace) join(t *testing.T) {
 }
 
 // demote is alice's change of bob's role in acme to guest, over members
-// and cascade.
+// and cascade, on the system's clock: its time is read when it reads it.
 func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdater, cascade workspaceapp.ProjectCascade) error {
 	_, err := workspaceapp.NewUpdateWorkspaceMember(members, cascade, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now())).
+		r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), r.bobIn, shared.RoleGuest)
 	return err
 }
@@ -11775,23 +12851,27 @@ func (m demotedHolding) UpdateMemberRole(ctx context.Context, id uuid.UUID, role
 }
 
 // A demotion to guest and the project side's growth, bob's joining Web or
-// alice's adding him to it, serialize on bob's membership of acme (M3
-// design 3.6 conventions 3 and 6, 9.3's interleaving 17), in both orders,
-// for a new membership of Web and for his ended one. The growth first: it
-// holds his membership of acme FOR SHARE and waits at its gate before it
-// locks Web; the demotion waits for his membership's row, holding no
-// project (P4a's F-M2 schedule: a demotion that locked his projects first
-// would hold Web, which he has a membership of when it is ended, and the
-// growth's lock of Web would close a cycle, 40P01). Once the growth has
-// committed, the demotion's step over his projects, a statement run after
-// its write of his membership, finds his membership of Web and makes it a
-// guest's. The demotion first: it holds his membership's row after its
-// write; the growth waits for it, then reads him a guest of acme: his
-// joining is refused as one who does not see Web (404), alice's adding him
-// as a member as a role a guest may not have (422 members[0].role); an
+// alice's adding him to it, serialize on acme's row (M3 design 3.6
+// conventions 2, 3 and 6, 9.3's interleaving 17), in both orders, for a
+// new membership of Web and for his ended one. The growth first: it holds
+// acme FOR SHARE and his membership of acme FOR SHARE, and waits at its
+// gate before it locks Web; the demotion waits for acme's row, holding
+// nothing. Once the growth has committed, the demotion's step over his
+// projects, a statement run after its write of his membership, finds his
+// membership of Web and makes it a guest's, at the demotion's time, read
+// once it held acme: after the gate opened (design 3.3). The demotion
+// first: it holds acme FOR NO KEY UPDATE and his membership's row after its
+// write; the growth waits for acme's row, then reads him a guest of acme:
+// his joining is refused as one who does not see Web (404), alice's adding
+// him as a member as a role a guest may not have (422 members[0].role); an
 // ended membership is a guest's, by the demotion. In either order, while
-// the second side waits for bob's membership of acme, no transaction holds
-// Web (FOR UPDATE NOWAIT): each side takes that row before the project.
+// the second side waits for acme's row, no transaction holds Web (FOR
+// UPDATE NOWAIT): the growth takes his membership of acme before Web, and
+// the demotion his membership before his projects (P4a's F-M2 order: a
+// growth that locked Web first would hold it at its gate; a demotion that
+// locked his projects first would hold Web, of which he has an ended
+// membership). His membership of Web, once there, was last written no
+// earlier than it was made.
 func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, add := range []bool{false, true} {
@@ -11827,10 +12907,11 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						grow := r.growth(t, add, nil)
 						grew = run(func() error { req, rec = grow(); return nil })
 					}
-					pgtest.WaitForLockWaitOn(t, r.pool, "workspace_members", 5*time.Second)
+					pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
 					if !r.webFree(t) {
-						t.Error("Web is held while the second side waits for bob's membership of acme; want it locked after that row")
+						t.Error("Web is held while the second side waits for acme's row; want it locked after that row")
 					}
+					opened := time.Now()
 					close(g.open)
 
 					demotion := result(t, ctx, demoted, "the demotion")
@@ -11846,10 +12927,24 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						t.Errorf("the demotion = %v, the growth = %d %s, bob %s; want the demotion done, the growth %s, bob %s", demotion, rec.Code,
 							rec.Body, got, map[bool]string{true: "done", false: "refused"}[growthFirst], want)
 					}
+					if made, written := r.membershipTimes(t); written.Before(made) || (growthFirst && written.Before(opened)) {
+						t.Errorf("bob's membership of Web made at %v, last written at %v, the gate opened at %v; want it written last by the "+
+							"demotion, at a time read once it held acme", made, written, opened)
+					}
 				})
 			}
 		}
 	}
+}
+
+// membershipTimes are bob's membership of Web's created_at and updated_at.
+func (r growthRace) membershipTimes(t *testing.T) (made, written time.Time) {
+	t.Helper()
+	if err := r.pool.QueryRow(context.Background(), "SELECT created_at, updated_at FROM project_members WHERE project_id = $1 AND member_id = $2",
+		r.web, r.bob).Scan(&made, &written); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal(err)
+	}
+	return made, written
 }
 
 // refusedAsAGuest reports whether rec is the growth's refusal of bob as
@@ -11888,12 +12983,13 @@ func (d gatedDemoter) DemoteMemberships(ctx context.Context, projectIDs []uuid.U
 }
 
 // A demotion to guest and the deletion of a project its member is in
-// serialize on the project's row, in both orders (M3 design 3.6): bob is a
-// member of Web. The deletion first holds Web FOR NO KEY UPDATE, and waits
-// after its decision; the demotion's step over his projects waits for it,
-// then leaves Web out, deleted meanwhile, so his membership is deleted as
-// it was, a member's. The demotion first holds Web after locking it; the
-// deletion waits for it, then deletes his membership, a guest's by then.
+// serialize on acme's row, in both orders (M3 design 3.6): bob is a member
+// of Web. The deletion first holds acme FOR SHARE and Web FOR NO KEY
+// UPDATE, and waits after its decision; the demotion waits for acme's row,
+// then its step over his projects finds Web deleted and leaves it out, so
+// his membership is deleted as it was, a member's. The demotion first holds
+// acme and, after locking it, Web; the deletion waits for acme's row, then
+// deletes his membership, a guest's by then.
 func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, deletionFirst := range []bool{true, false} {
@@ -11927,7 +13023,7 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 			firstDone := run(first)
 			held(t, ctx, g, firstDone, "the first")
 			secondDone := run(second)
-			pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
+			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
 			close(g.open)
 
 			want := map[bool]string{true: "5, Web 15 deleted", false: "5, Web 5 deleted"}[deletionFirst]
@@ -11942,18 +13038,21 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 }
 ````
 
-`server/internal/bootstrap/interleaving_writes_test.go`（新文件，138 行）：
+`server/internal/bootstrap/interleaving_writes_test.go`（新文件，257 行）：
 
 ````file server/internal/bootstrap/interleaving_writes_test.go
 package bootstrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+	"uuid"
 
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -11965,11 +13064,14 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// A write on a project decides under the project's lock, which it holds
-// until it commits (M3 design 3.6 convention 2, 6.7): against a demotion
-// to guest, whose step over the projects locks them FOR NO KEY UPDATE. The
-// writes run as bootstrap wires them (project.New), behind the API, so the
-// lock is the one of the transaction project.New is given.
+// A write on a project decides under its locks, its workspace's FOR SHARE
+// and its project's, which it holds until it commits (M3 design 3.6
+// convention 2, 6.7): against a demotion to guest, which holds the
+// workspace FOR NO KEY UPDATE; against another write on the project, which
+// holds the project; and beside a write on another project of the
+// workspace, which shares the workspace. The writes run as bootstrap wires
+// them (project.New), behind the API, so the locks are the ones of the
+// transaction project.New is given.
 
 // gatedAuthorizer is an Authorizer whose decision on action, once made,
 // waits at the gate: inside the write's transaction, after its lock.
@@ -11991,13 +13093,14 @@ func (a gatedAuthorizer) Authorize(ctx context.Context, actor shared.Actor, acti
 
 // Bob, acme's member, is the admin of Web; alice makes him acme's guest
 // while he changes Web, archives it, unarchives it, or changes his display
-// settings in it, in both orders. His write first: it holds Web, FOR NO KEY
-// UPDATE or, for his settings, FOR SHARE, and waits after its decision;
-// the demotion's step over his projects waits for Web, then makes him
-// Web's guest. The demotion first: it holds Web after locking it; his
-// write waits for Web, then decides on what the demotion committed: Web's
-// guest may not change, archive or unarchive it (403 forbidden), and may
-// change his own settings.
+// settings in it, in both orders. His write first: it holds acme FOR SHARE
+// and Web, FOR NO KEY UPDATE or, for his settings, FOR SHARE, and waits
+// after its decision; the demotion waits for acme's row, then makes him
+// Web's guest. The demotion first: it holds acme FOR NO KEY UPDATE and, by
+// its step over his projects, Web; his write waits for acme's row, then
+// decides on what the demotion committed: Web's guest may not change,
+// archive or unarchive it (403 forbidden), and may change his own
+// settings.
 func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 	writes := []struct {
 		name, method, path, body string
@@ -12059,7 +13162,7 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 					held(t, ctx, g, demoted, "the demotion")
 					wrote = run(write)
 				}
-				pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
+				pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
 				close(g.open)
 
 				demotion := result(t, ctx, demoted, "the demotion")
@@ -12081,6 +13184,390 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// bobAdministersWeb is a growthRace in which bob, acme's member, has joined
+// Web and is its admin (SQL stands in for P5's role change), and Ops is
+// another project of acme, of which alice is the admin.
+func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
+	t.Helper()
+	r = newGrowthRace(t, false)
+	r.join(t)
+	if _, err := r.pool.Exec(context.Background(), "UPDATE project_members SET role = 20 WHERE project_id = $1 AND member_id = $2", r.web,
+		r.bob); err != nil {
+		t.Fatal(err)
+	}
+	ops = uuid.NewV7()
+	var acme uuid.UUID
+	if err := r.pool.QueryRow(context.Background(), "SELECT workspace_id FROM projects WHERE id = $1", r.web).Scan(&acme); err != nil {
+		t.Fatal(err)
+	}
+	store := projectpg.New(r.pool)
+	if err := errors.Join(store.CreateProject(context.Background(), projectapp.ProjectRow{ID: ops, WorkspaceID: acme, Name: "Ops", Identifier: "OPS",
+		Network: projectdomain.NetworkPublic, Timezone: "UTC", CreatedBy: r.alice, Now: time.Now()}),
+		store.CreateMember(context.Background(), projectapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops, MemberID: r.alice,
+			Role: shared.RoleAdmin, CreatedBy: r.alice, Now: time.Now()})); err != nil {
+		t.Fatal(err)
+	}
+	return r, ops
+}
+
+// Two writes on one project serialize on its row (M3 design 3.6 convention
+// 2: a write that changes the project row holds it FOR NO KEY UPDATE): bob
+// archives Web and waits after his decision, holding acme FOR SHARE and
+// Web; his change of Web takes acme's row beside it and waits for Web's.
+// Once the archive commits, the change decides on Web archived and answers
+// 409 project.archived. Under FOR SHARE both would hold Web, and each one's
+// UPDATE would wait for the other (40P01).
+func TestTwoWritesOnAProjectSerialize(t *testing.T) {
+	contract := apitest.Load(t)
+	r, _ := bobAdministersWeb(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	g := newGate()
+	gated := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionArchive, gate: g},
+		workspace.Provide(r.pool).WorkspaceMembers)
+	route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+	web := "/api/v0/projects/" + r.web.String()
+	var archiveReq, updateReq *http.Request
+	var archiveRec, updateRec *httptest.ResponseRecorder
+	archived := run(func() error {
+		archiveReq, archiveRec = gated.send(http.MethodPost, web+"/archive", r.bob, "")
+		return nil
+	})
+	held(t, ctx, g, archived, "the archive")
+	updated := run(func() error {
+		updateReq, updateRec = route.send(http.MethodPatch, web, r.bob, `{"name":"Site"}`)
+		return nil
+	})
+	pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
+	close(g.open)
+
+	if err := errors.Join(result(t, ctx, archived, "the archive"), result(t, ctx, updated, "the change")); err != nil {
+		t.Fatal(err)
+	}
+	contract.CheckResponse(t, archiveReq, archiveRec.Result())
+	contract.CheckResponse(t, updateReq, updateRec.Result())
+	if archiveRec.Code != http.StatusOK || updateRec.Code != http.StatusConflict || !strings.Contains(updateRec.Body.String(), `"project.archived"`) {
+		t.Errorf("the archive = %d %s, the change = %d %s; want 200 and 409 project.archived", archiveRec.Code, archiveRec.Body, updateRec.Code,
+			updateRec.Body)
+	}
+}
+
+// Writes on two projects of one workspace do not wait for each other: each
+// holds the workspace FOR SHARE, which the other shares (M3 design 3.6
+// convention 2). Bob archives Web and waits after his decision, holding
+// acme and Web; meanwhile alice changes Ops, and her change answers 200.
+// Under a stronger lock of the workspace her change would wait for the
+// archive.
+func TestWritesOnTwoProjectsOfAWorkspaceDoNotWait(t *testing.T) {
+	contract := apitest.Load(t)
+	r, ops := bobAdministersWeb(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	g := newGate()
+	gated := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionArchive, gate: g},
+		workspace.Provide(r.pool).WorkspaceMembers)
+	route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+	archived := run(func() error {
+		gated.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/archive", r.bob, "")
+		return nil
+	})
+	held(t, ctx, g, archived, "the archive")
+	type answer struct {
+		req *http.Request
+		rec *httptest.ResponseRecorder
+	}
+	changed := make(chan answer, 1)
+	go func() {
+		req, rec := route.send(http.MethodPatch, "/api/v0/projects/"+ops.String(), r.alice, `{"name":"Site"}`)
+		changed <- answer{req, rec}
+	}()
+	select {
+	case a := <-changed:
+		contract.CheckResponse(t, a.req, a.rec.Result())
+		if a.rec.Code != http.StatusOK {
+			t.Errorf("alice's change of Ops while the archive holds acme = %d %s, want 200", a.rec.Code, a.rec.Body)
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("alice's change of Ops did not answer within 5s while the archive of Web held acme: it waited for it")
+	}
+	close(g.open)
+	if err := result(t, ctx, archived, "the archive"); err != nil {
+		t.Fatal(err)
+	}
+}
+````
+
+`server/internal/bootstrap/interleaving_deletion_test.go`（新文件，267 行）：
+
+````file server/internal/bootstrap/interleaving_deletion_test.go
+package bootstrap
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
+	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
+	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// A workspace's deletion against the writes on its projects, on a real
+// database: the writes through the project module as bootstrap wires it,
+// behind the API, the deletion through workspace's use case with project's
+// cascade as bootstrap wires it, each on the system's clock. Every write on
+// a project holds its workspace FOR SHARE (M3 design 3.6 convention 2); the
+// deletion holds it FOR NO KEY UPDATE and reads its time once it does, so
+// it waits for the writes in flight and writes one time, after theirs, into
+// every row it deletes (3.3). Every wait has a deadline.
+
+// deleteAcme is alice's deletion of acme, on the system's clock.
+func (r growthRace) deleteAcme(ctx context.Context) error {
+	return workspaceapp.NewDeleteWorkspace(workspacepg.New(r.pool), project.New(project.Deps{Pool: r.pool}).Cascade(), r.authorizer(),
+		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}, slog.New(slog.DiscardHandler)).
+		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
+}
+
+// deletedWithAcme counts the rows statement reads, as deleted_at,
+// updated_at, updated_by_id and created_at, and fails the test for each
+// that acme's deletion did not write last: deleted and last written at the
+// deletion's time, by alice, and not before it was made.
+func (r growthRace) deletedWithAcme(t *testing.T, statement string, args ...any) int {
+	t.Helper()
+	ctx := context.Background()
+	var acme *time.Time
+	if err := r.pool.QueryRow(ctx, "SELECT deleted_at FROM workspaces WHERE slug = 'acme'").Scan(&acme); err != nil || acme == nil {
+		t.Fatalf("acme's deletion time: %v, %v", acme, err)
+	}
+	rows, err := r.pool.Query(ctx, statement, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	n := 0
+	for ; rows.Next(); n++ {
+		var deleted *time.Time
+		var written, made time.Time
+		var by uuid.UUID
+		if err := rows.Scan(&deleted, &written, &by, &made); err != nil {
+			t.Fatal(err)
+		}
+		if deleted == nil || !deleted.Equal(*acme) || !written.Equal(*acme) || by != r.alice || deleted.Before(made) {
+			t.Errorf("row %d: deleted at %v, written last at %v by %v, made at %v; want deleted and written last at acme's deletion's time %v, "+
+				"by alice, not before it was made", n, deleted, written, by, made, *acme)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// A workspace's deletion waits for the writes on its projects in flight and
+// deletes their rows at its one time, after theirs (pre-flight L1): bob,
+// Web's admin, changes Web; or bob, acme's member, joins it, which makes
+// his membership of it and his display settings in it. His write waits
+// after its decision, holding acme FOR SHARE; alice's deletion of acme
+// waits for acme's row. Once his write commits, the deletion deletes Web
+// and the rows under it: Web, and each row his write made, deleted and last
+// written at acme's deletion's time, by alice, and not before it was made;
+// Web's time no earlier than his change's, which his answer gives. A
+// deletion that went past acme's row would wait for Web's, or for his
+// membership of acme, with a time read before his write committed.
+func TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects(t *testing.T) {
+	contract := apitest.Load(t)
+	for _, w := range []struct {
+		name, method, path, body string
+		action                   shared.Action
+		rows                     string // the rows the write wrote, by $1 Web's id and $2 bob's
+		want                     int
+	}{
+		{"updateProject", http.MethodPatch, "", `{"name":"Site"}`, projectdomain.ActionUpdate,
+			"SELECT deleted_at, updated_at, updated_by_id, created_at FROM projects WHERE id = $1 AND $2::uuid IS NOT NULL", 1},
+		{"joinProject", http.MethodPost, "/join", "", projectdomain.ActionJoin, `
+			SELECT deleted_at, updated_at, updated_by_id, created_at FROM project_members WHERE project_id = $1 AND member_id = $2
+			UNION ALL
+			SELECT deleted_at, updated_at, updated_by_id, created_at FROM project_user_properties WHERE project_id = $1 AND user_id = $2`, 2},
+	} {
+		t.Run(w.name, func(t *testing.T) {
+			var r growthRace
+			if w.action == projectdomain.ActionUpdate {
+				r, _ = bobAdministersWeb(t)
+			} else {
+				r = newGrowthRace(t, false)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			g := newGate()
+			route := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: w.action, gate: g},
+				workspace.Provide(r.pool).WorkspaceMembers)
+			var req *http.Request
+			var rec *httptest.ResponseRecorder
+			wrote := run(func() error {
+				req, rec = route.send(w.method, "/api/v0/projects/"+r.web.String()+w.path, r.bob, w.body)
+				return nil
+			})
+			held(t, ctx, g, wrote, "bob's write")
+			deleted := run(func() error { return r.deleteAcme(ctx) })
+			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
+			close(g.open)
+
+			if err := errors.Join(result(t, ctx, wrote, "bob's write"), result(t, ctx, deleted, "the deletion")); err != nil {
+				t.Fatal(err)
+			}
+			contract.CheckResponse(t, req, rec.Result())
+			if rec.Code != http.StatusOK {
+				t.Fatalf("bob's write = %d %s, want 200", rec.Code, rec.Body)
+			}
+			if n := r.deletedWithAcme(t, w.rows, r.web, r.bob); n != w.want {
+				t.Errorf("%d rows of bob's write, want %d", n, w.want)
+			}
+			if w.action != projectdomain.ActionUpdate {
+				return
+			}
+			var changed struct {
+				UpdatedAt time.Time `json:"updated_at"`
+			}
+			var deletedAt time.Time
+			if err := errors.Join(json.Unmarshal(rec.Body.Bytes(), &changed),
+				r.pool.QueryRow(context.Background(), "SELECT deleted_at FROM projects WHERE id = $1", r.web).Scan(&deletedAt)); err != nil {
+				t.Fatal(err)
+			}
+			if deletedAt.Before(changed.UpdatedAt) {
+				t.Errorf("Web deleted at %v, before bob's change at %v", deletedAt, changed.UpdatedAt)
+			}
+		})
+	}
+}
+
+// answeredOrWaiting returns true once done yields, or false once n backends
+// of pool's database wait for a lock; it fails the test when neither has
+// happened within 5s. It suits a database on which only the test's sides
+// can wait.
+func answeredOrWaiting(t *testing.T, pool *pgxpool.Pool, n int, done <-chan error) bool {
+	t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Fatal(err)
+			}
+			return true
+		default:
+		}
+		var waiting int
+		if err := pool.QueryRow(context.Background(),
+			"SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'").Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting >= n {
+			return false
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no answer, and %d backends waiting, within 5s; want an answer or %d waiting", waiting, n)
+		}
+	}
+}
+
+// Adding several members to a project and deleting its workspace serialize
+// on the workspace's row, with no 40P01, in the schedule of the P4b
+// pre-flight's M1: carol and dave are acme's members; carol's membership
+// has the lesser id, so the adding's lock of its targets (in id order)
+// meets hers first; dave's row comes first in the table and in member_id
+// order, so the deletion's update of acme's memberships meets his first.
+// Carol joins Ops and waits after her decision, holding acme and her
+// membership of it FOR SHARE (her own growth elsewhere, convention 3).
+// Alice's deletion of acme waits for acme's row. Alice adds carol and dave
+// to Web: the adding shares acme's row, and both memberships, with the
+// joining, and answers 201 while the deletion waits. Once the joining
+// commits, the deletion deletes the three new memberships at its one time.
+// Without the workspace's share, the deletion would hold acme, update
+// dave's membership and wait for carol's; the adding would share carol's
+// and wait for dave's; once the joining ended, the deletion would wait for
+// the adding: a cycle, 40P01. The test lets the adding's one deadlock check
+// pass before the joining ends, so that the deletion is the one to find it.
+func TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize(t *testing.T) {
+	contract := apitest.Load(t)
+	r, ops := bobAdministersWeb(t)
+	ctx, now := context.Background(), time.Now()
+	dave, carol := uuid.NewV7(), uuid.NewV7()
+	carolIn, daveIn := uuid.NewV7(), uuid.NewV7()
+	var acme uuid.UUID
+	if err := r.pool.QueryRow(ctx, "SELECT id FROM workspaces WHERE slug = 'acme'").Scan(&acme); err != nil {
+		t.Fatal(err)
+	}
+	users := identitypg.New(r.pool)
+	for _, m := range []struct{ id, user uuid.UUID }{{daveIn, dave}, {carolIn, carol}} {
+		if err := errors.Join(users.CreateUser(ctx, identityapp.NewUser{ID: m.user, Email: m.user.String() + "@example.com", PasswordHash: "x",
+			DisplayName: "x", Now: now}), users.CreateDefaultProfile(ctx, uuid.NewV7(), m.user, now),
+			workspacepg.New(r.pool).CreateMember(ctx, workspaceapp.MemberRow{ID: m.id, WorkspaceID: acme, MemberID: m.user, Role: shared.RoleMember,
+				CreatedBy: r.alice, Now: now})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if carolIn.String() >= daveIn.String() || dave.String() >= carol.String() {
+		t.Fatal("carol's membership's id is not the lesser, or dave's account's is not")
+	}
+	tctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	g := newGate()
+	joining := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionJoin, gate: g},
+		workspace.Provide(r.pool).WorkspaceMembers)
+	adding := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
+	var joinRec, addRec *httptest.ResponseRecorder
+	var addReq *http.Request
+	joined := run(func() error {
+		_, joinRec = joining.send(http.MethodPost, "/api/v0/projects/"+ops.String()+"/join", carol, "")
+		return nil
+	})
+	held(t, tctx, g, joined, "carol's joining")
+	deleted := run(func() error { return r.deleteAcme(tctx) })
+	pgtest.WaitForLockWait(t, r.pool, 5*time.Second)
+	added := run(func() error {
+		addReq, addRec = adding.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/members", r.alice,
+			`{"members":[{"member_id":"`+carol.String()+`","role":15},{"member_id":"`+dave.String()+`","role":15}]}`)
+		return nil
+	})
+	answered := answeredOrWaiting(t, r.pool, 2, added)
+	if !answered {
+		time.Sleep(1200 * time.Millisecond) // past the adding's one deadlock check (deadlock_timeout, 1s)
+	}
+	close(g.open)
+
+	errs := []error{result(t, tctx, joined, "carol's joining"), result(t, tctx, deleted, "the deletion")}
+	if !answered {
+		errs = append(errs, result(t, tctx, added, "the adding"))
+	}
+	if err := errors.Join(errs...); err != nil {
+		t.Fatal(err)
+	}
+	contract.CheckResponse(t, addReq, addRec.Result())
+	if joinRec.Code != http.StatusOK || addRec.Code != http.StatusCreated {
+		t.Errorf("carol's joining = %d %s, the adding = %d %s; want 200 and 201", joinRec.Code, joinRec.Body, addRec.Code, addRec.Body)
+	}
+	if n := r.deletedWithAcme(t, "SELECT deleted_at, updated_at, updated_by_id, created_at FROM project_members WHERE member_id = ANY ($1::uuid[])",
+		[]uuid.UUID{carol, dave}); n != 3 {
+		t.Errorf("%d memberships of carol's and dave's, want 3: hers of Ops and Web, his of Web", n)
 	}
 }
 ````
@@ -12339,8 +13826,8 @@ Expected: `ok`。
 Run: `go -C server test -count=1 -run 'TestTheWritesOnAProjectRunOnTheirTransactionsConnection|TestAGrowthRefusedAtItsCommitLeavesNoRow|TestAProjectDeletionRefusedAtItsCommitChangesNoRow|TestDemotingToGuestDemotesInTheWorkspacesProjects|TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects' ./internal/bootstrap/`
 Expected: `ok`。
 
-Run: `go -C server test -count=5 -race -run 'TestADemotionAndTheProjectSidesGrowthSerialize$|TestADemotionAndAProjectsDeletionSerialize$|TestAProjectWriteAndADemotionSerialize$' ./internal/bootstrap/`
-Expected: `ok`；输出中没有 `40P01`（原型：15 个顶层 PASS，约 17 秒）。
+Run: `go -C server test -count=5 -race -run 'TestADemotionAndTheProjectSidesGrowthSerialize$|TestADemotionAndAProjectsDeletionSerialize$|TestAProjectWriteAndADemotionSerialize$|TestTwoWritesOnAProjectSerialize$|TestWritesOnTwoProjectsOfAWorkspaceDoNotWait$|TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects$|TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize$|TestEachWriteOnAProjectSharesItsWorkspaceFirst$' ./internal/bootstrap/`
+Expected: `ok`；输出中没有 `40P01`（原型：25 秒，40 个顶层 PASS、100 个子测试，没有 40P01、没有 DATA RACE）。
 
 Run: `make lint-go`
 Expected: 两段都是 `0 issues.`
@@ -12351,18 +13838,24 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add server/internal/bootstrap/demotion_test.go server/internal/bootstrap/interleaving_growth_test.go server/internal/bootstrap/interleaving_writes_test.go server/internal/bootstrap/project_connection_test.go server/internal/bootstrap/project_deletion_test.go server/internal/bootstrap/project_members_test.go server/internal/modules/project/adapter/postgres/demote_test.go
+git add server/internal/bootstrap/demotion_test.go server/internal/bootstrap/interleaving_deletion_test.go server/internal/bootstrap/interleaving_growth_test.go server/internal/bootstrap/interleaving_writes_test.go server/internal/bootstrap/project_connection_test.go server/internal/bootstrap/project_deletion_test.go server/internal/bootstrap/project_members_test.go server/internal/modules/project/adapter/postgres/demote_test.go
 ```
 ```bash
 git commit -m "test(M3/P4b): interleaving 17, the project writes against a demotion, one connection
 
-On a real database, as bootstrap wires the project module: the project
-side's growth and a demotion to guest serialize on the account's
-workspace membership in both orders, no transaction holding the project
-while the second side waits; a demotion and a project's deletion, and
-each write on a project and a demotion, serialize on the project's row.
-On a pool of one connection every write runs each statement on its
-transaction's connection; a growth refused at its commit leaves no row.
+On a real database, as bootstrap wires the project module, every
+cascade over a workspace's projects meets the writes on its projects at
+the workspace's row (M3 design 3.6 convention 2): the project side's
+growth and a demotion to guest, a demotion and a project's deletion, each
+write on a project and a demotion serialize there in both orders, no
+transaction holding the project while the second side waits; a
+workspace's deletion waits for the writes in flight and deletes their
+rows at its one time (pre-flight L1); adding several members and
+deleting the workspace serialize with no 40P01 (pre-flight M1). Two
+writes on one project serialize on its row; writes on two projects of a
+workspace do not wait. On a pool of one connection every write runs each
+statement on its transaction's connection; a growth refused at its
+commit leaves no row.
 
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 ```
@@ -12374,13 +13867,19 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 | 写的回答（`GetProject`）、`CreateMember`、`LowestSortOrder`、`ShareMembers`（目标在工作区的成员关系）、`ActiveRole`（判定读的工作区角色）各经连接池、在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection` | 组合 |
 | `ProjectFacts`（判定读的项目事实）经连接池、在事务之外（`az-project-outside-tx`） | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`、P4a 的 `TestProjectFactsReadsInTheTransaction` | 组合；存储 |
 | 降级先锁他的项目、再写他的成员关系（P4a 的 F-M2） | `TestADemotionAndTheProjectSidesGrowthSerialize` | 组合 |
-| 降级的 `LockMemberProjects` 取 `FOR SHARE` | `TestAProjectWriteAndADemotionSerialize` | 组合 |
+| 降级的 `LockMemberProjects` 取 `FOR SHARE` | P4a 的 `TestLockMemberProjectsLocksInIDOrder`、`TestDemotingAMemberToGuest`（存储；方案 E 之下组合一层看不到：每个项目级的写先等降级持有的工作区行，不再在项目行上与它相遇，spec 第 3 节第 15 条） | 存储 |
+| `Locks` 不锁工作区，在 M1 的排程里 | `TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（删除工作区答 40P01） | 组合 |
+| 删除工作区在它的事务和锁之前读时钟 | `TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（Web 的删除时刻早于修改的） | 组合 |
+| 降级在它的事务和锁之前读时钟 | `TestADemotionAndTheProjectSidesGrowthSerialize`（成员关系的最后写入早于 gate 放开） | 组合 |
+| 测试改坏：交错 17、删除项目的交错、写的交错、删除工作区的交错的探测等在方案 E 之前的表（`workspace_members`、`projects`），两个写的探测等在 `workspaces` | 各自的测试自己失败（等待在指名的表上，探测超时）：每个探测不会被别的等待满足 | 组合 |
+| 测试改坏：交错 17 的 gate 移到 `ShareMembers` 之前 | 不失败，等价：方案 E 之下增长在 gate 之前已持有 acme 的 `FOR SHARE`，第二方照样等在 `workspaces` | — |
+| 测试改坏：交错 17 去掉 `webFree`，同时加入先锁项目 | 不失败：方案 E 之下第二方等在 acme 上，两种顺序都不形成环；先锁项目由 `TestJoinProject`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（Task 13）发现，`webFree` 是交错 17 里唯一核对它的地方 | — |
 | `LockMemberProjects` 留下等锁时被删除的项目 | `TestLockMemberProjectsLeavesOutAProjectDeletedWhileItWaited` | 存储 |
 | 交错 17 的 bob 是 acme 的管理员；写的交错中 bob 是 Web 的成员而不是管理员；恢复的那一次 Web 事先没有归档 | 各自的测试 | 组合 |
 
-前面各 Task 表中标着"（Task 14 起）"的变异（事务之外、先判定后锁、锁的顺序、不开事务的事务管理器、什么都不锁的成员端口）从本 Task 起由这些测试发现。
+前面各 Task 表中标着"（Task 14 起）"的变异（事务之外、先判定后锁、锁的顺序、不锁工作区、不开事务的事务管理器、什么都不锁的成员端口）从本 Task 起由这些测试发现。
 
-**Done when:** 交错的三个测试 `-count=5 -race` 通过、没有 40P01；一个连接的池上每个写都完成；提交被拒的增长、删除一行不留。
+**Done when:** 七个交错测试和 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` `-count=5 -race` 通过、没有 40P01；删除工作区以它的一个时刻删除项目级的写写下的行；一个连接的池上每个写都完成；提交被拒的增长、删除一行不留。
 
 ---
 
@@ -13266,20 +14765,20 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 |---|---|
 | `LockProject` 去掉项目的 id | 升序 P2、P3、P4、P8、W3；降序 P2、P3、P4 |
 | `ShareProject` 去掉项目的 id（两个行序） | P8 |
-| `ProjectWorkspace` 去掉项目的 id | 升序 P2、P3、P4、P8；降序 P3、P8 |
+| `ProjectWorkspace` 去掉项目的 id（两个行序） | P2、P3、P4、P8 |
 | `UpdateProject`、`SetArchived` 去掉项目的 id | P3；P4 |
 | `Memberships`、`ListMembers` 读别的项目的 | P3 |
 | `Preferences` 读别的项目的、别的账户的（两个行序）；`UpsertPreferences` 的冲突目标没有条件 | P8 |
 | `EnsurePreferences` 的冲突目标没有条件 | P2、P3、P4、P8 |
 | 删除的四条语句各去掉项目 | P4、W3 |
 | 删除的四条语句各去掉工作区、各去掉 `deleted_at IS NULL` | W3 |
-| `LockProject`、`ShareProject`、`ProjectWorkspace` 各去掉 `deleted_at IS NULL`，同时 `ProjectFacts` 去掉 `p.deleted_at` | P4（每一个单独去掉时由另一个遮住，spec 第 3 节第 6 条） |
+| `ProjectWorkspace` 去掉 `deleted_at IS NULL`，同时 `ProjectFacts` 去掉 `p.deleted_at`；`LockProject`、`ShareProject` 各去掉 `deleted_at IS NULL`，同时 `ProjectWorkspace`、`ProjectFacts` 各去掉自己的 | P4（单独去掉、或锁的只与 `ProjectFacts` 的一起去掉时由别的遮住：方案 E 之下写先经 `ProjectWorkspace`，spec 第 3 节第 6 条） |
 | 状态在另一个时刻删除；`LockProject` 不读已归档的项目；已归档的项目照改 | P4 |
 | 工作区访客加入公开项目；工作区角色在"已是有效成员"之后查；加入的位置不在 65535；规则给工作区的每个有效成员 | P2 |
 | 添加的位置在默认值；添加时不取请求的角色；负责人可以是访客；`archive_in` 收 13；标识不转大写 | P3 |
 | 读的是谁都不是的设置；未知的标签页、藏起 work_items 被接受 | P8 |
 
-故事看不到的谓词（`Memberships` 的账户、已删除，`ListMembers` 的已结束、已删除，`RestoreMember` 的 id，`Preferences` 的已删除，`ProjectFacts` 的 `m.deleted_at`、`p.deleted_at` 单独去掉）由存储测试发现；只有 P5 的移出或删除项目写得出这些行（spec 第 3 节第 6 条）。
+故事看不到的谓词（`Memberships` 的账户、已删除，`ListMembers` 的已结束、已删除，`RestoreMember` 的 id，`Preferences` 的已删除，`ProjectFacts` 的 `m.deleted_at`、`p.deleted_at` 单独去掉）由存储测试发现；只有 P5 的移出或删除项目写得出这些行（spec 第 3 节第 6 条）。工作区按 id 的锁的 id（两个行序）、`deleted_at IS NULL` 故事也看不到：`Locks` 只看找到与否，故事里没有已删除的工作区上的写（spec 第 3 节第 15 条），由 Task 2 的存储测试发现。
 
 **Done when:** 62 个故事全部通过；P4 删除项目之后每个操作都答 404；W3 中项目的四张表有单独删除的行。
 
