@@ -13,6 +13,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // ShareProject reads the undeleted project's workspace and whether it is
@@ -47,6 +48,54 @@ func TestShareProject(t *testing.T) {
 	})
 	if err != nil || waits(t, pool, web, "FOR NO KEY UPDATE") {
 		t.Errorf("after the transaction: %v; want web free", err)
+	}
+}
+
+// A project deleted while ShareProject waited for its lock is not found, as
+// with LockProject: after the wait, Postgres evaluates deleted_at IS NULL
+// again on the row's newest version (M3 design 3.6). Another transaction
+// soft-deletes Web, as deleteProject does under its FOR NO KEY UPDATE;
+// ShareProject waits for it, and once the deletion commits finds no
+// project.
+func TestTheProjectShareSeesADeletionItWaitedFor(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	web := newProject(t, s, newWorkspace(t, pool, "acme"), "Web", "WEB", alice)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := tx.Exec(ctx, "UPDATE projects SET deleted_at = $2 WHERE id = $1", web, now); err != nil {
+		t.Fatal(err)
+	}
+	type answer struct {
+		found bool
+		err   error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		var a answer
+		a.err = postgres.NewTxManager(pool, 5*time.Second).WithinTx(ctx, func(ctx context.Context) error {
+			var err error
+			_, a.found, err = s.ShareProject(ctx, web)
+			return err
+		})
+		done <- a
+	}()
+	pgtest.WaitForLockWaitOn(t, pool, "projects", 5*time.Second)
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case a := <-done:
+		if a.err != nil || a.found {
+			t.Errorf("ShareProject after the deletion committed = found %v, %v; want not found", a.found, a.err)
+		}
+	case <-ctx.Done():
+		t.Fatal("ShareProject did not end within 10s")
 	}
 }
 
@@ -96,8 +145,10 @@ func TestPreferences(t *testing.T) {
 // at the moment given; with a row, it changes the fields the change gives,
 // the navigation whole, and the audit columns, to him and that moment even
 // when another account made the row, and leaves the rest. The
-// answer is the row as stored. Every other row keeps every column: another
-// account's, another project's, his deleted one.
+// answer is the row as stored. A navigation that hides nothing, its list
+// nil, is stored and answered as an empty list, never null (M3 design 4.8).
+// Every other row keeps every column: another account's in the project,
+// his in another project, his deleted one.
 func TestUpsertPreferences(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -106,6 +157,7 @@ func TestUpsertPreferences(t *testing.T) {
 	deleted := preferencesRow(t, pool, acme, web, bob)
 	exec(t, pool, "UPDATE project_user_properties SET deleted_at = $2 WHERE id = $1", deleted, now)
 	preferencesRow(t, pool, acme, ops, bob)
+	preferencesRow(t, pool, acme, web, alice)
 	others := tableRows(t, pool, "project_user_properties", uuid.Nil())
 	upsert := func(p domain.PreferencesPatch, at time.Time) domain.Preferences {
 		t.Helper()
@@ -155,6 +207,14 @@ func TestUpsertPreferences(t *testing.T) {
 	}
 	if got := upsert(domain.PreferencesPatch{}, later.Add(time.Hour)); !reflect.DeepEqual(got, domain.Preferences{Navigation: views, SortOrder: -5.5}) {
 		t.Errorf("an empty change = %+v; want the settings as they were", got)
+	}
+	cycles := domain.Navigation{DefaultTab: "cycles"}
+	if got := upsert(domain.PreferencesPatch{Navigation: &cycles}, later.Add(2*time.Hour)); !reflect.DeepEqual(got,
+		domain.Preferences{Navigation: domain.Navigation{DefaultTab: "cycles", HideInMoreMenu: []string{}}, SortOrder: -5.5}) {
+		t.Errorf("a change hiding nothing (nil) = %+v; want cycles, nothing hidden ([]), still at -5.5", got)
+	}
+	if got, want := row()["preferences"], `{"navigation": {"default_tab": "cycles", "hide_in_more_menu": []}}`; got != want {
+		t.Errorf("the row after a change hiding nothing (nil): preferences %s, want %s", got, want)
 	}
 	if after := tableRows(t, pool, "project_user_properties", id); after != others {
 		t.Errorf("the other rows:\n%s\nwant\n%s", after, others)
