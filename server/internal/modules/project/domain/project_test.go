@@ -2,9 +2,11 @@ package domain
 
 import (
 	"errors"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -12,14 +14,15 @@ import (
 func ptr[T any](v T) *T { return &v }
 
 // CheckNewProject accepts these and returns each as it is stored: the
-// identifier in upper case, the network given or public.
+// identifier in upper case, the network given or public, every other field
+// as given.
 func TestCheckNewProjectAcceptsValidProjects(t *testing.T) {
 	tests := []struct {
 		p          NewProject
 		identifier string
 		network    Network
 	}{
-		{NewProject{Name: "Web", Identifier: "WEB"}, "WEB", NetworkPublic},
+		{NewProject{Name: "Web", Identifier: "WEB", LeadID: ptr(uuid.MustParse("0199a2b4-0000-7000-8000-000000000001"))}, "WEB", NetworkPublic},
 		{NewProject{Name: "w", Identifier: "w"}, "W", NetworkPublic},
 		{NewProject{Name: strings.Repeat("项", 255), Identifier: "abcdefghij"}, "ABCDEFGHIJ", NetworkPublic},
 		{NewProject{Name: "研发 Web_2 [beta] \\ /", Identifier: "çşğiöü09", Network: ptr(NetworkPrivate), Timezone: ptr("Asia/Shanghai"),
@@ -30,8 +33,7 @@ func TestCheckNewProjectAcceptsValidProjects(t *testing.T) {
 		got, err := CheckNewProject(tt.p)
 		want := tt.p
 		want.Identifier, want.Network = tt.identifier, &tt.network
-		if err != nil || got.Identifier != want.Identifier || *got.Network != *want.Network || got.Name != want.Name ||
-			got.Description != want.Description || got.Timezone != want.Timezone {
+		if err != nil || !reflect.DeepEqual(got, want) {
 			t.Errorf("CheckNewProject(%+v) = %+v, %v; want %+v", tt.p, got, err, want)
 		}
 	}

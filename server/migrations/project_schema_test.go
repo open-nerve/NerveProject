@@ -72,10 +72,10 @@ var projectNames = []string{
 
 // The project tables' CHECKs accept what the domain writes and reject what
 // bypasses it (M3 design 3.17, 3.19, 4.6–4.9). projects_logo_props_check
-// takes the four valid values and refuses fifteen counterexamples: the ten
-// of 4.6, Codex S5's two among them, and one for each conjunct those ten
-// leave untried (the emoji's keys and url; the icon an object, its name
-// and background color).
+// takes five valid values, the four of 4.6 and the web app's create body,
+// and refuses fifteen counterexamples: the ten of 4.6, Codex S5's two among
+// them, and one for each conjunct those ten leave untried (the emoji's keys
+// and url; the icon an object, its name and background color).
 func TestProjectChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -98,15 +98,17 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		}
 	}
 	// What the domain writes, and the edges of each rule, all accepted: the
-	// four logo_props values of 4.6, a name with a backslash (the CHECK's
-	// \| is the bar, not a backslash), the upper-case letters of the
-	// identifier's set.
+	// four logo_props values of 4.6 and the web app's create body, an emoji
+	// in use (core/components/projects/create/utils.ts:14-19); a name with a
+	// backslash (the CHECK's \| is the bar, not a backslash); the upper-case
+	// letters of the identifier's set; every state group.
 	for _, stmt := range []string{
 		"UPDATE projects SET logo_props = '{}'",
 		`UPDATE projects SET logo_props = '{"emoji": {"value": "128640"}}'`,
 		`UPDATE projects SET logo_props = '{"icon": {"name": "home", "color": "#6d7b8a"}}'`,
 		`UPDATE projects SET logo_props = '{"in_use": "icon", "emoji": {"value": "128640", "url": "https://example.com/e.png"}, ` +
 			`"icon": {"name": "home", "color": "#6d7b8a", "background_color": "#ffffff"}}'`,
+		`UPDATE projects SET logo_props = '{"in_use": "emoji", "emoji": {"value": "128640"}}'`,
 		`UPDATE projects SET name = E'研发 Web_2 [beta] \\ /'`,
 		"UPDATE projects SET identifier = 'ÇŞĞİÖÜ0129'",
 		"UPDATE projects SET identifier = 'A'",
@@ -115,6 +117,9 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		"UPDATE project_members SET role = 20",
 		"UPDATE project_members SET role = 15",
 		`UPDATE project_user_properties SET preferences = '{"navigation": {"default_tab": "cycles", "hide_in_more_menu": ["intake"]}}'`,
+		`UPDATE states SET "group" = 'unstarted'`,
+		`UPDATE states SET "group" = 'started'`,
+		`UPDATE states SET "group" = 'completed'`,
 		`UPDATE states SET "group" = 'triage'`,
 		`UPDATE states SET "group" = 'cancelled'`,
 	} {
@@ -131,6 +136,7 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		{"identifier with -", "UPDATE projects SET identifier = 'WEB-2'", "projects_identifier_check"},
 		{"identifier with a space", "UPDATE projects SET identifier = 'WEB 2'", "projects_identifier_check"},
 		{"identifier with another letter", "UPDATE projects SET identifier = 'ÉQUIPE'", "projects_identifier_check"},
+		{"identifier with a trailing newline", "UPDATE projects SET identifier = E'WEB\\n'", "projects_identifier_check"},
 		{"network 1", "UPDATE projects SET network = 1", "projects_network_check"},
 		{"network -1", "UPDATE projects SET network = -1", "projects_network_check"},
 		{"archive_in 13", "UPDATE projects SET archive_in = 13", "projects_archive_in_check"},
@@ -193,7 +199,9 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 // a second undeleted row with the key is refused, and soft-deleting the
 // first frees the key (M3 design 3.17, 3.19, 4.6–4.9). Another workspace,
 // project or account holds keys of its own: a key short of a column
-// refuses one of the seeds.
+// refuses one of the seeds. A project's or a state's name that differs
+// from another in case only is another name, as in Plane (3.17, 3.19): a
+// key that folds case refuses one of the seeds too.
 func TestProjectUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -222,13 +230,16 @@ func TestProjectUniqueKeysHoldAmongUndeletedRowsOnly(t *testing.T) {
 		project(web, acme, "Web", "WEB"), project(ops, acme, "Ops", "OPS"),
 		// Another workspace holds the same name and identifier.
 		project(other, beta, "Web", "WEB"),
+		// web's name in lower case is another name.
+		project("gen_random_uuid()", acme, "web", "WEBL"),
 		// alice in web; bob in web and alice in ops hold keys of their own.
 		member("project_members", "member_id", web, alice), member("project_members", "member_id", web, bob),
 		member("project_members", "member_id", ops, alice),
 		member("project_user_properties", "user_id", web, alice), member("project_user_properties", "user_id", web, bob),
 		member("project_user_properties", "user_id", ops, alice),
-		// web's default, triage and Todo; ops has its own.
+		// web's default, triage, Todo and todo, another name; ops has its own.
 		state(web, "Backlog", "backlog", true), state(web, "Triage", "triage", false), state(web, "Todo", "unstarted", false),
+		state(web, "todo", "unstarted", false),
 		state(ops, "Backlog", "backlog", true), state(ops, "Triage", "triage", false), state(ops, "Todo", "unstarted", false),
 	} {
 		if _, err := pool.Exec(ctx, stmt); err != nil {
