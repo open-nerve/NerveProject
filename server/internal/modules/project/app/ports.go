@@ -57,7 +57,8 @@ type ProjectReader interface {
 // IdentifierReader is checkProjectIdentifier's repository.
 type IdentifierReader interface {
 	// IdentifierTaken reports whether an undeleted project of workspaceID
-	// has identifier.
+	// has identifier, compared as stored, in upper case: the caller
+	// upper-cases it.
 	IdentifierTaken(ctx context.Context, workspaceID uuid.UUID, identifier string) (bool, error)
 }
 

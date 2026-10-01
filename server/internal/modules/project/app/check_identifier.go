@@ -22,9 +22,9 @@ func NewCheckProjectIdentifier(workspaces WorkspaceDirectory, projects Identifie
 	return &CheckProjectIdentifier{workspaces: workspaces, projects: projects, auth: auth}
 }
 
-// Execute finds the workspace slug, decides project_identifier.check in it,
-// then answers whether createProject would take identifier: valid once
-// upper-cased (domain.ValidIdentifier), and no undeleted project of the
+// Execute finds the workspace slug names, decides project_identifier.check
+// in it, then answers whether createProject would take identifier: valid
+// once upper-cased (domain.ValidIdentifier), and no undeleted project of the
 // workspace's. A workspace not there, or not visible to the caller, is
 // domain.ErrWorkspaceNotFound. A read opens no transaction (M3 design 6.7).
 func (u *CheckProjectIdentifier) Execute(ctx context.Context, slug, identifier string) (bool, error) {

@@ -210,23 +210,25 @@ func TestGetProject(t *testing.T) {
 }
 
 // The path's workspace and identifier, decoded, go to the use case for the
-// caller; the answer is its availability, and its refusals as the contract
-// declares them.
+// caller, the identifier as it is written: its case and its spaces, outer
+// and inner, are the use case's to judge. The answer is its availability,
+// and its refusals as the contract declares them.
 func TestCheckProjectIdentifier(t *testing.T) {
 	check := &fakeCheck{available: map[string]bool{"NEW": true, "ÇAY": true}}
 	h := newServer(t, fakes{check: check})
 	for path, want := range map[string]string{
-		"/api/v0/workspaces/acme/project-identifiers/NEW":      `{"available":true}`,
-		"/api/v0/workspaces/acme/project-identifiers/WEB":      `{"available":false}`,
-		"/api/v0/workspaces/acme/project-identifiers/%C3%87AY": `{"available":true}`,
+		"/api/v0/workspaces/acme/project-identifiers/NEW":       `{"available":true}`,
+		"/api/v0/workspaces/acme/project-identifiers/WEB":       `{"available":false}`,
+		"/api/v0/workspaces/acme/project-identifiers/%C3%87AY":  `{"available":true}`,
+		"/api/v0/workspaces/acme/project-identifiers/%20we%20b": `{"available":false}`,
 	} {
 		res, body := do(t, h, request(http.MethodGet, path, "alice", ""))
 		if res.StatusCode != http.StatusOK || body != want+"\n" {
 			t.Errorf("GET %s = %d %s, want 200 %s", path, res.StatusCode, body, want)
 		}
 	}
-	if want := []string{"alice acme NEW", "alice acme WEB", "alice acme ÇAY"}; !slices.Equal(slices.Sorted(slices.Values(check.calls)),
-		slices.Sorted(slices.Values(want))) {
+	if want := []string{"alice acme NEW", "alice acme WEB", "alice acme ÇAY", "alice acme " + " we b"}; !slices.Equal(
+		slices.Sorted(slices.Values(check.calls)), slices.Sorted(slices.Values(want))) {
 		t.Errorf("calls = %q, want %q", check.calls, want)
 	}
 	for _, tt := range []struct {

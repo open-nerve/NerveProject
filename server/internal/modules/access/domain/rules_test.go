@@ -69,6 +69,17 @@ func TestEveryRuleDecidesItsCells(t *testing.T) {
 	}
 }
 
+// Asking whether an identifier is free is for whoever may create a project
+// with it (spec §3 item 13): the two rows are one rule, the roles as a set.
+func TestTheIdentifierCheckIsCreatesRule(t *testing.T) {
+	check, okCheck := domain.RuleFor("project_identifier.check")
+	create, okCreate := domain.RuleFor("project.create")
+	if !okCheck || !okCreate || check.Level != create.Level ||
+		!slices.Equal(slices.Sorted(slices.Values(check.Roles)), slices.Sorted(slices.Values(create.Roles))) {
+		t.Errorf("project_identifier.check = %+v, %v; want project.create's %+v, %v", check, okCheck, create, okCreate)
+	}
+}
+
 // RuleFor hands out a copy: a caller that writes to the row's roles changes
 // no later decision.
 func TestRuleForReturnsACopy(t *testing.T) {

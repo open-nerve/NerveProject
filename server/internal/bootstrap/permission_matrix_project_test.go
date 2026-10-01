@@ -39,8 +39,8 @@ func projectMatrixRows() []matrixRow {
 		{op: "createProject", variant: "a lead who is no member", write: true,
 			request: toWorkspace(http.MethodPost, "/projects", `{"name":"New","identifier":"NEW","project_lead_id":"`+uuid.Nil().String()+`"}`),
 			cells:   inWorkspace(cellValidationFailed, cellValidationFailed, cellForbidden)},
-		// acme has WEB, which the identifier asked about is in any case; gone
-		// has it too, deleted with gone.
+		// acme has WEB, and web is WEB in any case; gone has it too, deleted
+		// with gone.
 		{op: "checkProjectIdentifier", variant: "taken", request: toWorkspace(http.MethodGet, "/project-identifiers/web", ""),
 			cells: inWorkspace(cellOK, cellOK, cellForbidden), check: identifierAvailable(false)},
 		{op: "checkProjectIdentifier", variant: "free", request: toWorkspace(http.MethodGet, "/project-identifiers/NEW", ""),

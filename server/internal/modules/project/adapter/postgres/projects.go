@@ -40,7 +40,7 @@ func (s *Store) CreateProject(ctx context.Context, p app.ProjectRow) error {
 }
 
 // IdentifierTaken reports whether an undeleted project of workspaceID has
-// identifier.
+// identifier, compared as stored, in upper case: the caller upper-cases it.
 func (s *Store) IdentifierTaken(ctx context.Context, workspaceID uuid.UUID, identifier string) (bool, error) {
 	taken, err := s.queries(ctx).IdentifierTaken(ctx, gen.IdentifierTakenParams{WorkspaceID: workspaceID, Identifier: identifier})
 	if err != nil {
