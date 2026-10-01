@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -159,6 +160,9 @@ func TestMainViolationsCatchesEachGap(t *testing.T) {
 		{"a TestMain the build leaves out", map[string]string{"handler_test.go": "//go:build never\n\n" + head +
 			"func TestMain(m *testing.M) { apitest.Main(m, \"project\") }\n", "other_test.go": head + "func TestOther(t *testing.T) {}\n"},
 			[]string{"DIR has no TestMain: write func TestMain(m *testing.M) { apitest.Main(m, \"project\") }"}},
+		{"a constraint that does not parse", map[string]string{"broken_test.go": "//go:build (\n\n" + head,
+			"handler_test.go": head + "func TestMain(m *testing.M) { apitest.Main(m, \"project\") }\n"},
+			[]string{"broken_test.go: parsing //go:build line: missing close paren"}},
 	}
 	for _, tt := range tests {
 		dir := t.TempDir()
@@ -169,7 +173,10 @@ func TestMainViolationsCatchesEachGap(t *testing.T) {
 		}
 		var want []string
 		for _, w := range tt.want {
-			want = append(want, filepath.Clean(dir)+w[len("DIR"):])
+			if rest, inDir := strings.CutPrefix(w, "DIR"); inDir {
+				w = filepath.Clean(dir) + rest
+			}
+			want = append(want, w)
 		}
 		if got := mainViolations(dir, "project"); !slices.Equal(got, want) {
 			t.Errorf("%s: %q, want %q", tt.name, got, want)

@@ -298,17 +298,17 @@ func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
 	}
 }
 
-// exec runs sql, which must change one row: a statement that matched none
-// would leave the seed as it was, and the cells that need the change would
-// test another case.
-func (s matrixSeed) exec(pool *pgxpool.Pool, sql string, args ...any) {
-	s.t.Helper()
+// exec runs sql for the test tb, which sql must change one row of: a
+// statement that matched none would leave the seed as it was, and the
+// cells that need the change would test another case.
+func (s matrixSeed) exec(tb testing.TB, pool *pgxpool.Pool, sql string, args ...any) {
+	tb.Helper()
 	tag, err := pool.Exec(context.Background(), sql, args...)
 	if err != nil {
-		s.t.Fatal(err)
+		tb.Fatal(err)
 	}
 	if tag.RowsAffected() != 1 {
-		s.t.Fatalf("%s changed %d rows, want 1", sql, tag.RowsAffected())
+		tb.Fatalf("%s changed %d rows, want 1", sql, tag.RowsAffected())
 	}
 }
 
@@ -367,16 +367,18 @@ func (s projectSeed) join(key string, c caller, role shared.Role) {
 func (s projectSeed) partingStates(pool *pgxpool.Pool) {
 	s.t.Helper()
 	public, private := s.projects["acme/public"], s.projects["acme/private"]
-	s.exec(pool, "UPDATE project_members SET is_active = false, updated_at = $3 WHERE project_id = $1 AND member_id = $2",
+	s.exec(s.t, pool, "UPDATE project_members SET is_active = false, updated_at = $3 WHERE project_id = $1 AND member_id = $2",
 		public, s.ids[callerGuestOnly], s.now)
 	for _, c := range []caller{callerGuestOnly, callerMember} {
-		s.exec(pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", private, s.ids[c], s.now)
+		s.exec(s.t, pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", private, s.ids[c], s.now)
 	}
-	s.exec(pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", private,
+	s.exec(s.t, pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", private,
 		s.ids[callerProjectMember], s.now)
 	// A deleted membership with a live one beside it would be no deleted
-	// state at all: the live one is what the list and reading would see.
-	deleted := "m.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM project_members o " +
+	// state at all: the live one is what the list and reading would see. The
+	// row stays active, as cascade.sql leaves it, so only its deleted_at
+	// keeps it out.
+	deleted := "m.is_active AND m.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM project_members o " +
 		"WHERE o.project_id = m.project_id AND o.member_id = m.member_id AND o.deleted_at IS NULL)"
 	for _, st := range []struct {
 		project uuid.UUID

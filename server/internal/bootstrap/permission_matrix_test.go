@@ -280,10 +280,15 @@ func prepareMatrix(t *testing.T) matrixData {
 		// No store archives a project (P4b), ends a project membership (P5)
 		// or removes a member (P5) yet, so SQL stands in until those phases
 		// replace it.
-		seed.exec(pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", s.project("acme/archived"), seed.now)
-		seed.exec(pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
+		seed.exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", s.project("acme/archived"), seed.now)
+		seed.exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
 			s.project("acme/private"), ids[callerBefore])
-		seed.exec(pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
+		seed.exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
+		// exec fails a statement that changes no row, and names it.
+		const none = "UPDATE projects SET archived_at = now() WHERE false"
+		if failed, want := fatalOf(func(tb testing.TB) { seed.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
+			t.Errorf("exec of a statement that changes no row: failed with %q, want %q", failed, want)
+		}
 		projects.partingStates(pool)
 		// The removed member is still an active member of the project his
 		// column aims at, so that only his ended membership of acme keeps him

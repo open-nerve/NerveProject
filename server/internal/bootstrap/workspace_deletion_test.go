@@ -23,13 +23,16 @@ import (
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
-// The cascade of deleteWorkspace against the catalog (M3 design 3.6, 4): a
-// workspace deleted through the wired app leaves no undeleted row under it,
-// in any table with a foreign key to workspaces, whichever module owns the
-// table, and changes no row of another workspace. The tables come from
+// The cascade of deleteWorkspace against the catalog (M3 design 3.3, 3.6,
+// 4): a workspace deleted through the wired app leaves no undeleted row
+// under it, in any table with a foreign key to workspaces, whichever module
+// owns the table; deletes each at the workspace's instant, by its deleter;
+// and changes no row of another workspace. The tables come from
 // pg_constraint, not from a list kept here: a phase that adds a table under
 // workspaces fails this test until it seeds a row of it (seedWorkspace) and
-// the cascade deletes it: the projects' tables through ProjectCascade.
+// the cascade deletes it: the projects' tables through ProjectCascade. A
+// table under workspaces only through another table, such as projects,
+// fails it too (workspaceKeys).
 
 // survivesItsWorkspace are the foreign keys to workspaces, as table.column,
 // whose rows must outlive the workspace's deletion, each with its reason.
@@ -83,8 +86,11 @@ func deletionViolations(under []rowsUnder, exempt map[string]string) []string {
 }
 
 // Deleting a workspace through the API soft-deletes every row under it in
-// every table the catalog ties to workspaces, and the workspace row, and
+// every table the catalog ties to workspaces, and the workspace row, each
+// at the workspace's deleted_at and by the account that deleted it, and
 // changes nothing under another workspace; the deletion is logged once.
+// Rows deleted before keep their own instant: they are not among the rows
+// recorded before the deletion.
 func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract := apitest.Load(t)
 	url := pgtest.NewDatabase(t)
@@ -95,9 +101,10 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	registerAccount(t, contract, base, "member@example.com")
 	deleted, kept := seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")
 	keys := workspaceKeys(t, pool)
-	under := make([]rowsUnder, len(keys))
+	under, recorded := make([]rowsUnder, len(keys)), make([][]uuid.UUID, len(keys))
 	for i, k := range keys {
-		under[i] = rowsUnder{key: k.String(), deletedBefore: k.undeleted(t, pool, deleted), keptBefore: k.rows(t, pool, kept)}
+		recorded[i] = k.undeleted(t, pool, deleted)
+		under[i] = rowsUnder{key: k.String(), deletedBefore: len(recorded[i]), keptBefore: k.rows(t, pool, kept)}
 	}
 
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, ""); status != http.StatusNoContent {
@@ -105,7 +112,7 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 
 	for i, k := range keys {
-		under[i].deletedAfter, under[i].keptAfter = k.undeleted(t, pool, deleted), k.rows(t, pool, kept)
+		under[i].deletedAfter, under[i].keptAfter = len(k.undeleted(t, pool, deleted)), k.rows(t, pool, kept)
 	}
 	for _, v := range deletionViolations(under, survivesItsWorkspace) {
 		t.Error(v)
@@ -113,6 +120,13 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	var adminID uuid.UUID
 	if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = 'admin@example.com'").Scan(&adminID); err != nil {
 		t.Fatal(err)
+	}
+	for i, k := range keys {
+		if _, survives := survivesItsWorkspace[k.String()]; !survives {
+			if rows := k.unstamped(t, pool, recorded[i], deleted, adminID); rows != "" {
+				t.Errorf("%s: rows not deleted at the workspace's deleted_at by its deleter %s:\n%s", k, adminID, rows)
+			}
+		}
 	}
 	want := `msg="workspace deleted" workspace_id=` + deleted.String() + " user_id=" + adminID.String() + "\n"
 	if out := logs.String(); strings.Count(out, `msg="workspace deleted"`) != 1 || !strings.Contains(out, want) {
@@ -273,8 +287,11 @@ type foreignKey struct{ table, column string }
 func (k foreignKey) String() string { return k.table + "." + k.column }
 
 // workspaceKeys are the workspace row itself, as workspaces.id, then every
-// foreign key to workspaces in the catalog.
-func workspaceKeys(t *testing.T, pool *pgxpool.Pool) []foreignKey {
+// foreign key to workspaces in the catalog. A table under workspaces only
+// through others' foreign keys, followed from workspaces however far, fails
+// the test, named with the tables it hangs from: no check here would see
+// its rows, nor would a cascade that deletes by workspace_id.
+func workspaceKeys(t testing.TB, pool *pgxpool.Pool) []foreignKey {
 	t.Helper()
 	rows, err := pool.Query(context.Background(), `
 		SELECT c.conrelid::regclass::text, a.attname, cardinality(c.conkey)
@@ -303,18 +320,57 @@ func workspaceKeys(t *testing.T, pool *pgxpool.Pool) []foreignKey {
 	if len(keys) == 1 {
 		t.Fatal("no foreign key to workspaces in the catalog: the test would check the workspace row only")
 	}
+	rows, err = pool.Query(context.Background(), `
+		WITH RECURSIVE under (tab, via) AS (
+			SELECT conrelid, confrelid FROM pg_constraint WHERE contype = 'f' AND confrelid = 'workspaces'::regclass
+			UNION
+			SELECT c.conrelid, c.confrelid FROM pg_constraint c JOIN under u ON c.confrelid = u.tab WHERE c.contype = 'f')
+		SELECT tab::regclass::text || ' (through ' || string_agg(DISTINCT via::regclass::text, ', ' ORDER BY via::regclass::text) || ')'
+		FROM under
+		WHERE NOT EXISTS (SELECT 1 FROM pg_constraint w WHERE w.contype = 'f' AND w.conrelid = under.tab AND w.confrelid = 'workspaces'::regclass)
+		GROUP BY tab ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unkeyed, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(unkeyed) > 0 {
+		t.Fatalf("%s: under workspaces with no foreign key to workspaces of its own, so no check here sees its rows: "+
+			"add workspace_id, or extend the guard", strings.Join(unkeyed, "; "))
+	}
 	return keys
 }
 
-// undeleted counts k's undeleted rows under the workspace id.
-func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) int {
+// undeleted are the ids of k's undeleted rows under the workspace id.
+func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) []uuid.UUID {
 	t.Helper()
-	var n int
-	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-		" = $1 AND deleted_at IS NULL", id).Scan(&n); err != nil {
+	rows, err := pool.Query(context.Background(), "SELECT id FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
+		" = $1 AND deleted_at IS NULL ORDER BY id", id)
+	if err != nil {
 		t.Fatalf("%s: %v", k, err)
 	}
-	return n
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		t.Fatalf("%s: %v", k, err)
+	}
+	return ids
+}
+
+// unstamped is those of k's rows ids that the deletion of the workspace id
+// did not stamp, each as text: a deleted_at other than the workspace's, or
+// an updated_by_id other than by. Every table under a workspace has both
+// columns.
+func (k foreignKey) unstamped(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID, id, by uuid.UUID) string {
+	t.Helper()
+	var s string
+	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+k.table+
+		" r WHERE r.id = ANY ($1) AND (r.deleted_at IS DISTINCT FROM (SELECT deleted_at FROM workspaces WHERE id = $2)"+
+		" OR r.updated_by_id IS DISTINCT FROM $3)", ids, id, by).Scan(&s); err != nil {
+		t.Fatalf("%s: %v", k, err)
+	}
+	return s
 }
 
 // rows is k's rows under the workspace id, deleted ones too, each as text,
@@ -327,6 +383,26 @@ func (k foreignKey) rows(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string 
 		t.Fatalf("%s: %v", k, err)
 	}
 	return s
+}
+
+// workspaceKeys fails on a table under workspaces through projects only,
+// and on one under that one, and names both with the tables they hang
+// from: the deletion's checks would see neither's rows.
+func TestWorkspaceKeysRefuseATableWithoutItsWorkspace(t *testing.T) {
+	pool := openPool(t, pgtest.NewDatabase(t))
+	for _, sql := range []string{
+		"CREATE TABLE widgets (id uuid PRIMARY KEY, project_id uuid NOT NULL REFERENCES projects, deleted_at timestamptz)",
+		"CREATE TABLE gadgets (id uuid PRIMARY KEY, widget_id uuid NOT NULL REFERENCES widgets, deleted_at timestamptz)",
+	} {
+		if _, err := pool.Exec(context.Background(), sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := "gadgets (through widgets); widgets (through projects): under workspaces with no foreign key to workspaces of its own, " +
+		"so no check here sees its rows: add workspace_id, or extend the guard"
+	if failed := fatalOf(func(tb testing.TB) { workspaceKeys(tb, pool) }); failed != want {
+		t.Errorf("workspaceKeys with widgets and gadgets: failed with %q, want %q", failed, want)
+	}
 }
 
 // Each check of deletionViolations fails on its counterexample.

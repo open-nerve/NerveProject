@@ -8,6 +8,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -90,36 +91,64 @@ func refusingCommits(t *testing.T, pool *pgxpool.Pool) (restore func()) {
 	return restore
 }
 
-// sendHoldingTheMembership sends req, which demotes member to guest in
-// acme's project, while another transaction holds his membership of that
-// project FOR UPDATE, and answers what req got once that transaction has
-// rolled back. As req's write waits for the row, the project must be held
-// FOR NO KEY UPDATE, so that a FOR SHARE of it NOWAIT fails with
-// lock_not_available (55P03): a lock taken outside req's transaction would
-// no longer be held.
-func sendHoldingTheMembership(t *testing.T, contract *apitest.Contract, pool *pgxpool.Pool, req *http.Request, member uuid.UUID) (int, string) {
+// sendHoldingTheMemberships sends req, which makes member a guest in
+// acme's projects, while other transactions hold his membership of acme
+// FOR SHARE, as P4b's add and join will, and then his membership of acme's
+// project FOR UPDATE, and answers what req got once both have rolled back.
+// req takes M3 design 3.6's global order, workspace_members before
+// projects: while it waits for his membership of acme, it has locked none
+// of his projects in acme yet, so a FOR SHARE NOWAIT of each succeeds,
+// where a demotion run before the membership's write would hold them FOR
+// NO KEY UPDATE; nor has it written his project membership, which is held
+// NOWAIT. Then, as req's write of his project membership waits for
+// that row, the project must be held FOR NO KEY UPDATE, so that a FOR SHARE
+// of it NOWAIT fails with lock_not_available (55P03): a lock taken outside
+// req's transaction would no longer be held.
+func sendHoldingTheMemberships(t *testing.T, contract *apitest.Contract, pool *pgxpool.Pool, req *http.Request, member uuid.UUID) (int, string) {
 	t.Helper()
-	hold, err := pool.Begin(context.Background())
-	if err != nil {
-		t.Fatal(err)
+	ctx := context.Background()
+	hold := func(sql string) pgx.Tx {
+		t.Helper()
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = tx.Rollback(ctx) })
+		if _, err := tx.Exec(ctx, sql, member); err != nil {
+			t.Fatal(err)
+		}
+		return tx
 	}
-	t.Cleanup(func() { _ = hold.Rollback(context.Background()) })
-	if _, err := hold.Exec(context.Background(), `SELECT 1 FROM project_members m JOIN workspaces w ON w.id = m.workspace_id
-		WHERE w.slug = 'acme' AND m.member_id = $1 FOR UPDATE OF m`, member); err != nil {
-		t.Fatal(err)
+	release := func(tx pgx.Tx) {
+		t.Helper()
+		if err := tx.Rollback(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
+	membership := hold(`SELECT 1 FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+		WHERE w.slug = 'acme' AND m.member_id = $1 FOR SHARE OF m`)
 	contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
+	pgtest.WaitForLockWaitOn(t, pool, "workspace_members", 10*time.Second)
+	var free int
+	err := pool.QueryRow(ctx, `SELECT count(*) FROM (SELECT p.id FROM projects p JOIN workspaces w ON w.id = p.workspace_id
+		WHERE w.slug = 'acme' AND EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = p.id AND m.member_id = $1)
+		FOR SHARE OF p NOWAIT) s`, member).Scan(&free)
+	if err != nil || free == 0 {
+		t.Errorf("a FOR SHARE NOWAIT of his projects in acme while %s %s waits for his membership of acme = %d, %v; "+
+			"want each locked at once, and one at least", req.Method, req.URL.Path, free, err)
+	}
+	projectMembership := hold(`SELECT 1 FROM project_members m JOIN workspaces w ON w.id = m.workspace_id
+		WHERE w.slug = 'acme' AND m.member_id = $1 FOR UPDATE OF m NOWAIT`)
+	release(membership)
 	pgtest.WaitForLockWaitOn(t, pool, "project_members", 10*time.Second)
-	_, err = pool.Exec(context.Background(), `SELECT 1 FROM projects p JOIN workspaces w ON w.id = p.workspace_id
+	_, err = pool.Exec(ctx, `SELECT 1 FROM projects p JOIN workspaces w ON w.id = p.workspace_id
 		WHERE w.slug = 'acme' FOR SHARE OF p NOWAIT`)
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
 		t.Errorf("a FOR SHARE of acme's project while %s %s waits = %v; want lock_not_available (55P03)", req.Method, req.URL.Path, err)
 	}
-	if err := hold.Rollback(context.Background()); err != nil {
-		t.Fatal(err)
-	}
+	release(projectMembership)
 	a := receiveWithin(t, answered, 10*time.Second, "answer to "+req.Method+" "+req.URL.Path)
 	if a.err != nil {
 		t.Fatal(a.err)
@@ -136,13 +165,15 @@ func sendHoldingTheMembership(t *testing.T, contract *apitest.Contract, pool *pg
 // show that the step shares the change's transaction; a change refused at
 // its commit, after every statement ran, also changes nothing, which a step
 // that wrote in a transaction of its own would have outlived. Then the
-// change runs while another transaction holds bob's membership of acme's
-// project: as its write waits for that row, acme's project is held FOR NO
-// KEY UPDATE, so a FOR SHARE of it waits, which a lock taken outside the
-// change's transaction would no longer be. Once the row is free, he is
-// acme's guest and a guest in acme's project, by alice at the time of his
-// workspace role's change, and still beta's member and the admin of its
-// project.
+// change runs while another transaction holds bob's membership of acme FOR
+// SHARE: as the change waits for that row, it has locked no project yet (M3
+// design 3.6's order). Once that row is free, while another transaction
+// holds his membership of acme's project: as the change's write waits for
+// that row, acme's project is held FOR NO KEY UPDATE, so a FOR SHARE of it
+// waits, which a lock taken outside the change's transaction would no
+// longer be. Once that row is free too, he is acme's guest and a guest in
+// acme's project, by alice at the time of his workspace role's change, and
+// still beta's member and the admin of its project.
 func TestDemotingToGuestDemotesInTheWorkspacesProjects(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -180,7 +211,7 @@ func TestDemotingToGuestDemotesInTheWorkspacesProjects(t *testing.T) {
 		t.Errorf("the change refused at its commit = %d %s, roles %s; want 500 and %s", status, body, got, before)
 	}
 
-	status, body = sendHoldingTheMembership(t, contract, pool,
+	status, body = sendHoldingTheMemberships(t, contract, pool,
 		newRequest(t, http.MethodPatch, base+"/api/v0/workspace-members/"+membership.String(), alice, []byte(`{"role":5}`)), bobID)
 	if got, want := rolesOf(t, pool, bobID, aliceID), "acme 5, project 5; beta 15, project 20 | true"; status != http.StatusOK || got != want {
 		t.Errorf("the change = %d %s, roles %s; want 200 and %s", status, body, got, want)
@@ -197,11 +228,14 @@ func TestDemotingToGuestDemotesInTheWorkspacesProjects(t *testing.T) {
 // refused at its commit, after every statement ran (its restoring updates
 // his membership of acme), which a step that wrote in a transaction of its
 // own would have outlived. Then he accepts while another transaction holds
-// his membership of Web: as the step's write waits for that row, Web is
-// held FOR NO KEY UPDATE, so a FOR SHARE of it waits, which a lock taken
-// outside the acceptance's transaction would no longer be. Once the row is
-// free, he is acme's guest again and a guest in Web, still ended there, by
-// himself at the time of the restoring, and the invitation is consumed.
+// his membership of acme FOR SHARE: as the restoring waits for that row,
+// no project is locked yet (M3 design 3.6's order). Once that row is free,
+// while another transaction holds his membership of Web: as the step's
+// write waits for that row, Web is held FOR NO KEY UPDATE, so a FOR SHARE
+// of it waits, which a lock taken outside the acceptance's transaction
+// would no longer be. Once that row is free too, he is acme's guest again
+// and a guest in Web, still ended there, by himself at the time of the
+// restoring, and the invitation is consumed.
 func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -217,9 +251,9 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 		}
 	}
 	link := inviteAs(t, contract, base, alice, "acme", "bob@example.com", shared.RoleGuest)
-	url, token := base+"/api/v0/workspace-invitations/"+link.id.String()+"/accept", `{"token":"`+link.token+`"}`
+	url, reqBody := base+"/api/v0/workspace-invitations/"+link.id.String()+"/accept", `{"token":"`+link.token+`"}`
 	accept := func() (int, string) {
-		return call(t, contract, http.MethodPost, url, bob, token)
+		return call(t, contract, http.MethodPost, url, bob, reqBody)
 	}
 	pending := func() bool {
 		t.Helper()
@@ -251,7 +285,7 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 		t.Errorf("the acceptance refused at its commit = %d %s, roles %s; want 500, %s and the invitation pending", status, body, got, before)
 	}
 
-	status, body = sendHoldingTheMembership(t, contract, pool, newRequest(t, http.MethodPost, url, bob, []byte(token)), bobID)
+	status, body = sendHoldingTheMemberships(t, contract, pool, newRequest(t, http.MethodPost, url, bob, []byte(reqBody)), bobID)
 	if got, want := rolesOf(t, pool, bobID, bobID), "acme 5, project 5 ended | true"; status != http.StatusOK || got != want || pending() {
 		t.Errorf("the acceptance = %d %s, roles %s; want 200, %s and the invitation consumed", status, body, got, want)
 	}
