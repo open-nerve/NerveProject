@@ -1,10 +1,12 @@
 package httpadapter_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -20,7 +22,7 @@ var (
 		GuestViewAllFeatures: true, ArchiveIn: 3, ArchivedAt: &created,
 		LogoProps: domain.LogoProps{InUse: ptr("icon"), Emoji: &domain.Emoji{Value: ptr("128640"), URL: ptr("https://example.com/e.png")},
 			Icon: &domain.Icon{Name: ptr("home"), Color: ptr("#ffffff"), BackgroundColor: ptr("#000000")}},
-		Timezone: "Asia/Shanghai", CreatedAt: created, UpdatedAt: created, MemberRole: ptr(shared.RoleAdmin), SortOrder: ptr(-9900.5),
+		Timezone: "Asia/Shanghai", CreatedAt: created, UpdatedAt: created.Add(time.Hour), MemberRole: ptr(shared.RoleAdmin), SortOrder: ptr(-9900.5),
 		MemberIDs: []uuid.UUID{aliceID, bobID}}
 	// bare is a project with every optional field empty, as a caller who is
 	// not its member sees it.
@@ -35,7 +37,7 @@ const (
 		`"logo_props":{"emoji":{"url":"https://example.com/e.png","value":"128640"},"icon":{"background_color":"#000000","color":"#ffffff","name":"home"},"in_use":"icon"},` +
 		`"member_ids":["0199a2b4-0000-7000-8000-000000000001","0199a2b4-0000-7000-8000-000000000002"],"member_role":20,"module_view":true,` +
 		`"name":"Web","network":0,"project_lead_id":"0199a2b4-0000-7000-8000-000000000002","sort_order":-9900.5,"timezone":"Asia/Shanghai",` +
-		`"updated_at":"2026-10-01T10:00:00.123456Z","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
+		`"updated_at":"2026-10-01T11:00:00.123456Z","workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
 	bareJSON = `{"archive_in":0,"archived_at":null,"cover_image_url":null,"created_at":"2026-10-01T10:00:00.123456Z","cycle_view":false,` +
 		`"default_assignee_id":null,"description":"","guest_view_all_features":false,"id":"0199a2b4-0000-7000-8000-0000000000a1",` +
 		`"identifier":"WEB","intake_view":false,"issue_views_view":false,"logo_props":{},"member_ids":[],"member_role":null,"module_view":false,` +
@@ -65,18 +67,63 @@ func TestCreateProjectAnswers201(t *testing.T) {
 	if res.StatusCode != http.StatusCreated || body != bareJSON+"\n" {
 		t.Errorf("POST without the optional fields = %d %s, want 201 %s", res.StatusCode, body, bareJSON)
 	}
+	if res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/projects", "alice",
+		`{"name":"Web","identifier":"WEB","network":2}`)); res.StatusCode != http.StatusCreated {
+		t.Errorf("POST with network 2 = %d %s, want 201", res.StatusCode, body)
+	}
 
-	private := domain.NetworkPrivate
+	private, public := domain.NetworkPrivate, domain.NetworkPublic
 	want := []domain.NewProject{
 		{Name: "Web", Identifier: "web", Description: "The app", Network: &private, LeadID: &bobID, Timezone: ptr("Asia/Shanghai"),
 			LogoProps: web.LogoProps},
 		{Name: "Web", Identifier: "WEB"},
+		{Name: "Web", Identifier: "WEB", Network: &public},
 	}
 	if !reflect.DeepEqual(create.got, want) {
 		t.Errorf("inputs = %+v, want %+v", create.got, want)
 	}
-	if want := []string{"alice acme", "bob beta"}; !slices.Equal(create.calls, want) {
+	if want := []string{"alice acme", "bob beta", "alice acme"}; !slices.Equal(create.calls, want) {
 		t.Errorf("calls = %q, want %q", create.calls, want)
+	}
+}
+
+// Each switch of the answer is its own field's, and member_role the
+// caller's role as it is: bare with one switch on answers that key alone
+// true, and each role answers its own number.
+func TestCreateProjectAnswersEachSwitchAndRoleAsItIs(t *testing.T) {
+	answer := func(p domain.Project) map[string]any {
+		t.Helper()
+		h := newServer(t, fakes{create: &fakeCreate{answer: p}})
+		_, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/projects", "alice", `{"name":"Web","identifier":"WEB"}`))
+		var got map[string]any
+		if err := json.Unmarshal([]byte(body), &got); err != nil {
+			t.Fatalf("POST answered %s: %v", body, err)
+		}
+		return got
+	}
+	switches := []string{"cycle_view", "module_view", "issue_views_view", "intake_view", "guest_view_all_features"}
+	for i, on := range []func(*domain.Project){
+		func(p *domain.Project) { p.CycleView = true },
+		func(p *domain.Project) { p.ModuleView = true },
+		func(p *domain.Project) { p.IssueViewsView = true },
+		func(p *domain.Project) { p.IntakeView = true },
+		func(p *domain.Project) { p.GuestViewAllFeatures = true },
+	} {
+		p := bare
+		on(&p)
+		got := answer(p)
+		for j, key := range switches {
+			if got[key] != (i == j) {
+				t.Errorf("with %s alone on, the answer's %s is %v", switches[i], key, got[key])
+			}
+		}
+	}
+	for _, role := range []shared.Role{shared.RoleGuest, shared.RoleMember, shared.RoleAdmin} {
+		p := bare
+		p.MemberRole = &role
+		if got := answer(p)["member_role"]; got != float64(role) {
+			t.Errorf("with the role %d, the answer's member_role is %v", role, got)
+		}
 	}
 }
 

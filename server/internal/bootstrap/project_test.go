@@ -21,7 +21,8 @@ import (
 // them its members, in acme's time zone; the rows it wrote are there, each
 // of them its admin with his display settings, and the six states, Backlog
 // the default. Another project with its identifier, in any case, or its
-// name answers the code of each and writes nothing.
+// name answers the code of each, and one led by carol, beta's admin but
+// no member of acme, 422; each writes nothing.
 func TestCreatingAProject(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -70,6 +71,15 @@ func TestCreatingAProject(t *testing.T) {
 			problemCode(t, []byte(body)) != tt.code {
 			t.Errorf("POST %s = %d %s, want 409 %s", tt.body, status, body, tt.code)
 		}
+	}
+	carol := registerAccount(t, contract, base, "carol@example.com").AccessToken
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", carol, `{"name":"Beta","slug":"beta"}`); status != http.StatusCreated {
+		t.Fatalf("creating beta = %d %s", status, body)
+	}
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/acme/projects", alice,
+		`{"name":"Ops","identifier":"OPS","project_lead_id":"`+accountID(t, contract, base, carol).String()+`"}`); status != http.StatusUnprocessableEntity ||
+		problemCode(t, []byte(body)) != "validation_failed" {
+		t.Errorf("a lead from another workspace = %d %s, want 422 validation_failed", status, body)
 	}
 	if got := projectRows(t, pool, p.ID); got != want {
 		t.Errorf("after the refusals the rows are %s, want %s", got, want)
