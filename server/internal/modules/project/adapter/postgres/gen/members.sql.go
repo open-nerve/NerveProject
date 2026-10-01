@@ -40,3 +40,48 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) erro
 	)
 	return err
 }
+
+const memberships = `-- name: Memberships :many
+SELECT id, member_id, role, is_active
+FROM project_members
+WHERE project_id = $1 AND member_id = ANY ($2::uuid[]) AND deleted_at IS NULL
+`
+
+type MembershipsParams struct {
+	ProjectID uuid.UUID
+	MemberIds []uuid.UUID
+}
+
+type MembershipsRow struct {
+	ID       uuid.UUID
+	MemberID uuid.UUID
+	Role     int16
+	IsActive bool
+}
+
+// The accounts' undeleted memberships of the project, active and ended (M3 design 3.5, 3.19): under the project's
+// FOR NO KEY UPDATE, which every change of its memberships takes, they stay as read until the transaction ends.
+func (q *Queries) Memberships(ctx context.Context, arg MembershipsParams) ([]MembershipsRow, error) {
+	rows, err := q.db.Query(ctx, memberships, arg.ProjectID, arg.MemberIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MembershipsRow
+	for rows.Next() {
+		var i MembershipsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MemberID,
+			&i.Role,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

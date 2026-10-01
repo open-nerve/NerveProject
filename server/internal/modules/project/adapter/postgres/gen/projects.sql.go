@@ -252,3 +252,112 @@ func (q *Queries) ListProjects(ctx context.Context, arg ListProjectsParams) ([]L
 	}
 	return items, nil
 }
+
+const lockProject = `-- name: LockProject :one
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived
+FROM projects
+WHERE id = $1 AND deleted_at IS NULL
+FOR NO KEY UPDATE
+`
+
+type LockProjectRow struct {
+	WorkspaceID uuid.UUID
+	Archived    bool
+}
+
+// The parent lock of a write that changes the project row or its memberships (M3 design 3.6 convention 2): FOR NO KEY
+// UPDATE waits for another FOR NO KEY UPDATE and for FOR SHARE, not for a foreign key's FOR KEY SHARE. After a wait,
+// Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile reads no row.
+func (q *Queries) LockProject(ctx context.Context, id uuid.UUID) (LockProjectRow, error) {
+	row := q.db.QueryRow(ctx, lockProject, id)
+	var i LockProjectRow
+	err := row.Scan(&i.WorkspaceID, &i.Archived)
+	return i, err
+}
+
+const projectWorkspace = `-- name: ProjectWorkspace :one
+SELECT workspace_id
+FROM projects
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+// The workspace of the undeleted project, archived or not, without a lock: what a read decides on (M3 design 6.4), and
+// what a write on the project reads first, to lock the workspace before the project (3.6 convention 2).
+func (q *Queries) ProjectWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, projectWorkspace, id)
+	var workspace_id uuid.UUID
+	err := row.Scan(&workspace_id)
+	return workspace_id, err
+}
+
+const updateProject = `-- name: UpdateProject :exec
+UPDATE projects p
+SET name                    = coalesce($1::text, p.name),
+    description             = coalesce($2::text, p.description),
+    identifier              = coalesce($3::text, p.identifier),
+    network                 = coalesce($4::smallint, p.network),
+    project_lead_id         = CASE WHEN $5::boolean THEN $6::uuid
+                                   ELSE p.project_lead_id END,
+    default_assignee_id     = CASE WHEN $7::boolean THEN $8::uuid
+                                   ELSE p.default_assignee_id END,
+    cycle_view              = coalesce($9::boolean, p.cycle_view),
+    module_view             = coalesce($10::boolean, p.module_view),
+    issue_views_view        = coalesce($11::boolean, p.issue_views_view),
+    intake_view             = coalesce($12::boolean, p.intake_view),
+    guest_view_all_features = coalesce($13::boolean, p.guest_view_all_features),
+    archive_in              = coalesce($14::integer, p.archive_in),
+    logo_props              = coalesce($15::jsonb, p.logo_props),
+    timezone                = coalesce($16::text, p.timezone),
+    updated_by_id           = $17::uuid,
+    updated_at              = $18
+WHERE p.id = $19
+`
+
+type UpdateProjectParams struct {
+	Name                 *string
+	Description          *string
+	Identifier           *string
+	Network              *int16
+	SetLead              bool
+	ProjectLeadID        *uuid.UUID
+	SetDefaultAssignee   bool
+	DefaultAssigneeID    *uuid.UUID
+	CycleView            *bool
+	ModuleView           *bool
+	IssueViewsView       *bool
+	IntakeView           *bool
+	GuestViewAllFeatures *bool
+	ArchiveIn            *int32
+	LogoProps            []byte
+	Timezone             *string
+	UpdatedBy            uuid.UUID
+	Now                  time.Time
+	ID                   uuid.UUID
+}
+
+// updateProject, under the project's FOR NO KEY UPDATE (M3 design 5.2): a field left out, null here, keeps its value;
+// the lead and the default assignee change when their flags are set, to null too.
+func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) error {
+	_, err := q.db.Exec(ctx, updateProject,
+		arg.Name,
+		arg.Description,
+		arg.Identifier,
+		arg.Network,
+		arg.SetLead,
+		arg.ProjectLeadID,
+		arg.SetDefaultAssignee,
+		arg.DefaultAssigneeID,
+		arg.CycleView,
+		arg.ModuleView,
+		arg.IssueViewsView,
+		arg.IntakeView,
+		arg.GuestViewAllFeatures,
+		arg.ArchiveIn,
+		arg.LogoProps,
+		arg.Timezone,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	return err
+}

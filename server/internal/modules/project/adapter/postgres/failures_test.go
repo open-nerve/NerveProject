@@ -55,6 +55,15 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if list, err := s.ListProjects(cancelled, acme, alice, domain.Visibility{}, false); !failed(err) || list != nil {
 		t.Errorf("ListProjects() = %+v, %v; want context.Canceled, not an empty list", list, err)
 	}
+	if p, found, err := s.LockProject(cancelled, web); !failed(err) || found || p != (app.LockedProject{}) {
+		t.Errorf("LockProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
+	}
+	if w, found, err := s.ProjectWorkspace(cancelled, web); !failed(err) || found || w != (uuid.UUID{}) {
+		t.Errorf("ProjectWorkspace() = %s, %v, %v; want context.Canceled, not no project", w, found, err)
+	}
+	if m, err := s.Memberships(cancelled, web, []uuid.UUID{alice}); !failed(err) || m != nil {
+		t.Errorf("Memberships() = %v, %v; want context.Canceled, not none", m, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would
@@ -84,6 +93,10 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.CreateStates(cancelled, []app.StateRow{{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, CreatedBy: alice, Now: now,
 		State: domain.NewState{Name: "Backlog", Color: "#60646C", Group: "backlog", Default: true}}}); !failed(err) {
 		t.Errorf("CreateStates() = %v; want context.Canceled", err)
+	}
+	if err := s.UpdateProject(cancelled, web, domain.ProjectPatch{Identifier: ptr("WEB")}, alice, now); !failed(err) ||
+		errors.Is(err, domain.ErrIdentifierTaken) || errors.Is(err, domain.ErrNameTaken) {
+		t.Errorf("UpdateProject() = %v; want context.Canceled", err)
 	}
 }
 

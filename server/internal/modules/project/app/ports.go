@@ -25,8 +25,8 @@ type Workspace struct {
 }
 
 // WorkspaceDirectory is the workspace module's directory
-// (workspace.Provide): the undeleted workspace a slug names; found is false
-// when there is none (M3 design 6.5).
+// (workspace.Provide): the undeleted workspace a slug names, or an id
+// names; found is false when there is none (M3 design 6.5).
 type WorkspaceDirectory interface {
 	// WorkspaceBySlug reads it without a lock: for a read.
 	WorkspaceBySlug(ctx context.Context, slug string) (w Workspace, found bool, err error)
@@ -35,6 +35,19 @@ type WorkspaceDirectory interface {
 	// a project (M3 design 3.6 convention 2). A workspace deleted while the
 	// lock waited is not found.
 	ShareWorkspaceBySlug(ctx context.Context, slug string) (w Workspace, found bool, err error)
+	WorkspaceSharer
+}
+
+// WorkspaceSharer takes the first lock of a write on a project (M3 design
+// 3.6 convention 2).
+type WorkspaceSharer interface {
+	// ShareWorkspaceByID locks the undeleted workspace id's row FOR SHARE
+	// until the transaction ctx carries ends. Every cascade over the
+	// workspace's projects runs under the row's FOR NO KEY UPDATE, which
+	// this waits for and holds off; another write on a project of the
+	// workspace does not wait for it. A workspace deleted while the lock
+	// waited is not found.
+	ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (w Workspace, found bool, err error)
 }
 
 // WorkspaceMembers is the workspace module's lock of the memberships a
@@ -83,6 +96,58 @@ type ProjectCreator interface {
 	LowestSortOrder(ctx context.Context, workspaceID, userID uuid.UUID) (*float64, error)
 	CreatePreferences(ctx context.Context, p PreferencesRow) error
 	CreateStates(ctx context.Context, rows []StateRow) error
+}
+
+// LockedProject is a project as its lock reads it.
+type LockedProject struct {
+	WorkspaceID uuid.UUID
+	Archived    bool
+}
+
+// ProjectLocker takes the parent lock of a write on a project (M3 design
+// 3.6 convention 2).
+type ProjectLocker interface {
+	// LockProject locks the undeleted project id FOR NO KEY UPDATE until the
+	// transaction ctx carries ends; found is false when there is none, a
+	// project deleted while the lock waited too.
+	LockProject(ctx context.Context, id uuid.UUID) (p LockedProject, found bool, err error)
+}
+
+// ProjectFinder finds the workspace of a project: what a read decides on,
+// and what a write on the project reads first, to lock the workspace
+// before the project (M3 design 3.6 convention 2).
+type ProjectFinder interface {
+	// ProjectWorkspace is the workspace of the undeleted project id, read
+	// without a lock; found is false when there is none.
+	ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error)
+}
+
+// Membership is an account's undeleted membership of a project, active or
+// ended.
+type Membership struct {
+	ID     uuid.UUID
+	Role   shared.Role
+	Active bool
+}
+
+// MembershipReader reads an account's membership of a project.
+type MembershipReader interface {
+	// Memberships are userIDs' undeleted memberships of projectID, active or
+	// ended, by account; an account without one is not in it. Under the
+	// project's FOR NO KEY UPDATE they stay as read.
+	Memberships(ctx context.Context, projectID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]Membership, error)
+}
+
+// ProjectUpdater is updateProject's repository. Each method runs in the
+// transaction ctx carries.
+type ProjectUpdater interface {
+	ProjectReader
+	ProjectLocker
+	MembershipReader
+	// UpdateProject changes the fields p gives of the project id, by the
+	// account by at now. An identifier or a name another undeleted project of
+	// the workspace has is domain.ErrIdentifierTaken or domain.ErrNameTaken.
+	UpdateProject(ctx context.Context, id uuid.UUID, p domain.ProjectPatch, by uuid.UUID, now time.Time) error
 }
 
 // ProjectRow is a project to insert: checked values, its id, its creator

@@ -29,13 +29,20 @@ func (s *Store) CreateProject(ctx context.Context, p app.ProjectRow) error {
 		ID: p.ID, WorkspaceID: p.WorkspaceID, Name: p.Name, Description: p.Description, Identifier: p.Identifier,
 		Network: int16(p.Network), ProjectLeadID: p.LeadID, LogoProps: logo, Timezone: p.Timezone, CreatedBy: &p.CreatedBy, Now: p.Now,
 	})
+	return taken("create project", err)
+}
+
+// taken is err, a write's of a project, as an identifier or a name another
+// undeleted project of the workspace has: domain.ErrIdentifierTaken or
+// domain.ErrNameTaken; any other error is the write's, nil is nil.
+func taken(write string, err error) error {
 	switch {
 	case postgres.UniqueViolation(err, "projects_workspace_id_identifier_key"):
 		return domain.ErrIdentifierTaken
 	case postgres.UniqueViolation(err, "projects_workspace_id_name_key"):
 		return domain.ErrNameTaken
 	case err != nil:
-		return fmt.Errorf("create project: %w", err)
+		return fmt.Errorf("%s: %w", write, err)
 	}
 	return nil
 }
@@ -48,6 +55,20 @@ func (s *Store) IdentifierTaken(ctx context.Context, workspaceID uuid.UUID, iden
 		return false, fmt.Errorf("check identifier %q: %w", identifier, err)
 	}
 	return taken, nil
+}
+
+// ProjectWorkspace is the workspace of the undeleted project id, archived
+// or not, read without a lock; found is false when there is none
+// (app.ProjectFinder).
+func (s *Store) ProjectWorkspace(ctx context.Context, id uuid.UUID) (workspaceID uuid.UUID, found bool, err error) {
+	workspaceID, err = s.queries(ctx).ProjectWorkspace(ctx, id)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return uuid.UUID{}, false, nil
+	case err != nil:
+		return uuid.UUID{}, false, fmt.Errorf("find project %s: %w", id, err)
+	}
+	return workspaceID, true, nil
 }
 
 // GetProject returns the undeleted project id, archived or not, as userID

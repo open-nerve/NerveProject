@@ -17,6 +17,8 @@ var (
 	// ErrNotFound answers a project that does not exist, is deleted, or that
 	// the caller does not see (M3 design 3.4, 8.2).
 	ErrNotFound = shared.NewError(shared.KindNotFound, "project.not_found", "The project does not exist, or you cannot see it.")
+	// ErrArchived answers a change of an archived project (M3 design 3.19).
+	ErrArchived = shared.NewError(shared.KindConflict, "project.archived", "The project is archived; unarchive it to change it.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member
@@ -24,4 +26,11 @@ var (
 func LeadNotAllowed() error {
 	return shared.Invalid(shared.FieldError{Field: "project_lead_id", Code: shared.FieldNotAllowed,
 		Message: "must be an active admin or member of the workspace"})
+}
+
+// Unassignable is the problem of field, the lead or the default assignee
+// of an update, naming an account that is not an active member of the
+// project, or is its guest (M3 design 3.19).
+func Unassignable(field string) shared.FieldError {
+	return shared.FieldError{Field: field, Code: shared.FieldNotAllowed, Message: "must be an active member of the project who is not its guest"}
 }
