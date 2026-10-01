@@ -127,9 +127,33 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `workspace_member_invites` | `role`：`CHECK (role >= 0)` 收紧为 `CHECK (role IN (5, 15, 20))`，新加 `DEFAULT 5`；`accepted`：新加 `DEFAULT false`；新加 `workspace_member_invites_responded_check CHECK (responded_at IS NOT NULL OR NOT accepted)`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 只有三种角色（M3 设计 3.4）；接受的邀请一定有回应的时刻 |
 | `workspace_member_invites` | 部分唯一索引改为 `workspace_member_invites_workspace_id_email_key ON (workspace_id, email) WHERE deleted_at IS NULL`（Plane 是 `workspace_member_invite_unique_email_workspace_when_deleted_at_ ON (email, workspace_id)`）；新加 `workspace_member_invites_email_idx ON (email) WHERE deleted_at IS NULL`；`workspace_id` 的索引改为 `workspace_member_invites_workspace_id_idx` | 已忽略的邀请没有删除，仍占着它的邮箱（M3 设计 3.8）；停用按邮箱删除发给它的邀请（M3/P6；注册按邀请的 id 读，不按邮箱）；物理级联要不带条件的索引（M3 设计 4） |
 | `workspace_member_invites` | 删除 `token`、`message` | 不存令牌：链接里的令牌是由签名密钥派生的 MAC 从邀请的 id 算出的，数据库泄露时待接受的链接不泄露（M3 设计 3.8、8.1）；`message` 没有写入方 |
+| `projects` | 36 列保留 22 列，另加 `last_issue_sequence`（见下），共 23 列（M3/P4a，`00010_project_projects.sql`） | M3 设计 4.6 |
+| `projects` | `workspace_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
+| `projects` | `project_lead_id`、`default_assignee_id`：模型的 `CASCADE` 改为 `ON DELETE SET NULL` | 物理删除一个账户不连带删除他负责的项目（M3 设计 3.15，删除关系图见 M3 设计 4.12） |
+| `projects` | `name`：新加 `CHECK (name <> '' AND name !~ '[&+,:;$^}{*=?@#\|''<>.()%!-]')` | Plane 的禁用字符只在序列化器中检查（`serializers/project.py:39-44`，M3 设计 3.19） |
+| `projects` | `identifier`：新加 `CHECK (identifier ~ '^[A-Z0-9ÇŞĞİÖÜ]{1,10}$')`，列类型仍是 `varchar(12)` | 见第四节"项目标识"（M3 设计 3.19） |
+| `projects` | `network`：`CHECK (network >= 0)` 收紧为 `CHECK (network IN (0, 2))`，新加 `DEFAULT 2`；`description`：新加 `DEFAULT ''`；`cycle_view`、`module_view`、`issue_views_view`、`intake_view`、`guest_view_all_features`：新加 `DEFAULT false`；`archive_in`：新加 `DEFAULT 0`、`CHECK (archive_in BETWEEN 0 AND 12)`；`timezone`：新加 `DEFAULT 'UTC'`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值、choices 和验证器（0 私密、2 公开） |
+| `projects` | `logo_props`：新加 `DEFAULT '{}'` 和 `projects_logo_props_check`：是对象，键只能是 `in_use`、`emoji`、`icon`，出现的每个键的值类型对，嵌套的 `emoji`、`icon` 两个对象也查到底；二十个反例都得到 `check_violation`，M3 设计 4.6 的十个在内，CHECK 的每个条件都有反例；五个合法值通过：4.6 的四个，和网页建项目时发的 `in_use` 为 `emoji` 的值（`TestProjectChecksRejectCounterexamples`） | 二·全局（对象型的 `jsonb` 列）；`{}` 表示没有图标（M3 设计 4.6） |
+| `projects` | **新增** `last_issue_sequence integer NOT NULL DEFAULT 0 CHECK (last_issue_sequence >= 0)`：工作项编号的计数列，M4 取号；M3 不读写它，它不进入接口 | 替代 `issue_sequences`（一 B；v0-design 5.3） |
+| `projects` | 两个部分唯一索引照搬，改名为 `projects_workspace_id_identifier_key`、`projects_workspace_id_name_key`（`ON (workspace_id, …) WHERE deleted_at IS NULL`；Plane 是 `project_unique_identifier_workspace_when_deleted_at_null`、`project_unique_name_workspace_when_deleted_at_null`，列的顺序相反）；新加不带条件的 `projects_workspace_id_idx ON (workspace_id)` | 按工作区列出项目用它们；物理级联要不带条件的索引（M3 设计 4） |
 | `projects` | 删除 `emoji`、`icon_prop`、旧的 `cover_image`、`description_text`、`description_html`（旧的 json 列）、`page_view`、`is_time_tracking_enabled`、`is_issue_type_enabled`、`estimate_id`、`close_in` | 遗留列或对应功能已砍掉（归档保留，`archive_in` 和 `archived_at` 保留） |
-| `projects` | **新增**工作项编号计数列（列名在 M3 建表时确定） | 替代 `issue_sequences` |
+| `projects` | 删除 `default_state_id`；`cover_image_asset_id` 暂不建，由 M5 随文件存储加入 | 新工作项的默认状态来自 `states."default"`（M1/P2 的交接）；在 M5 之前接口的 `cover_image_url` 是 `null` |
+| `project_members` | 16 列保留 11 列（M3/P4a，`00011_project_project_members.sql`） | M3 设计 4.7 |
+| `project_members` | `workspace_id`、`project_id`：加上 `ON DELETE CASCADE`；`member_id`：改为 `NOT NULL`（Plane 可为空），加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`）；没有成员的成员关系没有意义，Plane 也从不写入空值 |
+| `project_members` | `role`：`CHECK (role >= 0)` 收紧为 `CHECK (role IN (5, 15, 20))`，新加 `DEFAULT 5`；`is_active`：新加 `DEFAULT true`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 只有三种角色（M3 设计 3.4）；模型的默认值 |
+| `project_members` | 部分唯一索引照搬，改名为 `project_members_project_id_member_id_key ON (project_id, member_id) WHERE deleted_at IS NULL`（Plane 是 `project_member_unique_project_member_when_deleted_at_null`）；新加 `project_members_member_id_idx ON (member_id) WHERE deleted_at IS NULL`，不带条件的 `project_members_workspace_id_idx`、`project_members_project_id_idx` | 降为访客、结束成员关系按账户查；物理级联要不带条件的索引（M3 设计 4） |
 | `project_members` | 删除 `view_props`、`default_props`、`preferences` | 和 `project_user_properties` 重复 |
+| `project_members` | 删除 `sort_order`、`comment` | 侧边栏的顺序在 `project_user_properties.sort_order`，前端不读这一列；`comment` 没有写入方 |
+| `project_user_properties` | 15 列保留 11 列（M3/P4a，`00012_project_project_user_properties.sql`） | M3 设计 4.8 |
+| `project_user_properties` | `workspace_id`、`project_id`、`user_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
+| `project_user_properties` | `preferences`：新加默认值 `{"navigation": {"default_tab": "work_items", "hide_in_more_menu": []}}` 和 CHECK（外层恰好一个键 `navigation`，它恰好有字符串 `default_tab` 和数组 `hide_in_more_menu`）；`sort_order`：新加 `DEFAULT 65535`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值，去掉 `pages`（文档页已砍）；二·全局（对象型的 `jsonb` 列） |
+| `project_user_properties` | 部分唯一索引照搬，改名为 `project_user_properties_project_id_user_id_key ON (project_id, user_id) WHERE deleted_at IS NULL`（Plane 是 `project_user_property_unique_user_project_when_deleted_at_null ON (user_id, project_id)`）；新加不带条件的 `project_user_properties_workspace_id_idx`、`project_user_properties_project_id_idx` | 物理级联要不带条件的索引（M3 设计 4） |
+| `project_user_properties` | 删除 `filters`、`display_filters`、`display_properties`、`rich_filters` | 工作项列表的筛选和显示列由它们的使用者 M4 按自己的格式加回（M3 设计 3.18） |
+| `states` | 18 列保留 14 列（M3/P4a，`00013_project_states.sql`） | M3 设计 4.9 |
+| `states` | `workspace_id`、`project_id`：加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`） |
+| `states` | `name`：新加 `CHECK (name <> '')`；`"group"`：新加 `DEFAULT 'backlog'` 和 `CHECK ("group" IN ('backlog', 'unstarted', 'started', 'completed', 'cancelled', 'triage'))`；`description`：新加 `DEFAULT ''`；`sequence`：新加 `DEFAULT 65535`；`"default"`：新加 `DEFAULT false`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值和 `StateGroup` |
+| `states` | 部分唯一索引照搬，改名为 `states_project_id_name_key ON (project_id, name) WHERE deleted_at IS NULL`（Plane 是 `state_unique_name_project_when_deleted_at_null ON (name, project_id)`）；新加 `states_project_id_default_key ON (project_id) WHERE "default" AND deleted_at IS NULL`、`states_project_id_triage_key ON (project_id) WHERE "group" = 'triage' AND deleted_at IS NULL`，不带条件的 `states_workspace_id_idx`、`states_project_id_idx` | 见第四节"默认状态、分诊状态"（M3 设计 3.17）；物理级联要不带条件的索引（M3 设计 4） |
+| `states` | 删除 `slug`、`is_triage` | `slug` 没有读取者；分诊状态只由 `"group" = 'triage'` 识别（M3 设计 3.17） |
 | `issues` | 删除 `point`、`is_draft`、`estimate_point_id`、`type_id`、`description_binary` | 遗留列或对应功能已砍掉 |
 | `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | `issues` | **新增**唯一约束 `(project_id, sequence_id)` | Plane 只靠咨询锁保证编号不重复 |
@@ -208,11 +232,17 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 建工作区之后 | 投递 `workspace_seed`：建一个名为 "Plane" 的机器人账户做管理员，再建演示项目、状态、标签和工作项 | 什么都不投递，没有演示数据（M3 设计 3.11） |
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建工作区 | 服务器管理员用 `nerve workspaces create --slug --name --admin-email` 建，不受开关限制，`--admin-email` 的账户是它的管理员（M3 设计 3.11） |
 | 工作区的显示设置 | `GET` 时 `get_or_create`：读取就建行 | `GET` 不写库，没有行时返回默认值（`ACCORDION`、10）；第一次修改时经部分唯一索引 `INSERT … ON CONFLICT` 建行（M3 设计 3.18） |
-| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用。项目由 M3/P4、标签由 M3/P7 加入这个事务 |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态，在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用。标签由 M3/P7 加入这个事务 |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（M3 设计决策点 4）；邀请的角色因此不高于邀请人（M3 设计 3.8） |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时，有任何一份未删除的邀请的邮箱就能注册 | 由签名密钥派生的 MAC（`nrv_inv_` 加 22 个字符），不存库，管理员列出时重新算出；公开的查看要令牌、不返回邮箱；关闭注册时要有效的令牌、且注册邮箱与邀请的相同（M3 设计 3.8、决策点 1） |
 | 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2）（页面：P9；`/invitations` 页和新手引导的一步由 P8–P11 删除） |
 | 重复的邀请 | 静默忽略 | 422 `duplicate`，整批不插入，`invitations[i]` 是它在请求中的下标；已忽略的邀请仍占着这个邮箱，删除之后才能再邀请（M3 设计 3.8） |
 | 接受邀请之后 | 服务端写 `last_workspace_id` | 服务端不写；前端写（M3 设计 3.14；页面：P9） |
-| 接受邀请时已有成员行 | 不分有效还是已离开，都把角色改为邀请的角色 | 已是有效成员：只消费邀请，成员关系和角色不变；以前的成员行：恢复，角色取邀请的（访客时项目角色的连带由 M3/P4 加入）（M3 设计 3.8） |
+| 接受邀请时已有成员行 | 不分有效还是已离开，都把角色改为邀请的角色 | 已是有效成员：只消费邀请，成员关系和角色不变；以前的成员行：恢复，角色取邀请的；取的是访客时，同一个事务里他在这个工作区的项目角色都改为访客，含已离开的项目（M3 设计 3.8） |
+| 项目负责人、默认负责人 | 外键 `CASCADE`；负责人可以是任何账户 | `ON DELETE SET NULL`；创建项目时，负责人须是工作区的有效管理员或成员，否则 422（`project_lead_id`，`not_allowed`），他与创建者都成为项目管理员（M3 设计 3.15、3.19）。修改项目时的规则由 M3/P4b 加入 |
+| 看得到而不是成员时取项目 | 409（公开项目）或 403（私密项目） | 200，`member_role`、`sort_order` 为 `null`（M3 设计 3.19） |
+| 工作区访客取没加入的公开项目 | 409 | 404 `project.not_found`：看不到（M3 设计 3.19） |
+| 已归档的项目 | 取单个 404；列表里与未归档的混在一起 | 取单个照常返回；列表默认不含，`?archived=true` 只列它们（M3 设计 3.19） |
+| 项目标识 | 最多 12 个字符，只禁一组符号 | 转成大写后 1–10 个，只能是 `A-Z`、`0-9` 和 `ÇŞĞİÖÜ`（M3 设计 3.19）；修改项目时同一规则由 M3/P4b 加入 |
+| 默认状态、分诊状态 | 在代码里维持唯一；`is_triage` 可以与 `group` 不一致 | 数据库保证每个项目各至多一个（部分唯一索引）；分诊状态只看 `group`（M3 设计 3.17） |
 | 时区 | 只接受 `pytz.common_timezones`；时区列表中负的非整点偏移多算一小时（例如马克萨斯群岛的 −09:30 写成 −10:30） | 接受 Go 的时区数据认得的任何 IANA 名称（`Local` 除外），程序内嵌时区数据；时区列表接口给的仍是同一份常用列表，偏移按请求时刻计算，写法正确（M2 设计 5.3） |
