@@ -5,7 +5,9 @@ package postgresadapter
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres/gen"
@@ -25,4 +27,10 @@ func New(pool *pgxpool.Pool) *Store {
 // queries runs in the context's transaction when there is one.
 func (s *Store) queries(ctx context.Context) *gen.Queries {
 	return gen.New(postgres.DB(ctx, s.pool))
+}
+
+// uniqueViolation reports whether err broke the unique constraint name.
+func uniqueViolation(err error, constraint string) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == constraint
 }

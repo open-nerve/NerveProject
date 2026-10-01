@@ -4,11 +4,42 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// Project is a project as a caller sees it (M3 design 5.2): its columns,
+// and the caller's view of it.
+type Project struct {
+	ID                   uuid.UUID
+	WorkspaceID          uuid.UUID
+	Name                 string
+	Description          string
+	Identifier           string
+	Network              Network
+	LeadID               *uuid.UUID
+	DefaultAssigneeID    *uuid.UUID
+	CycleView            bool
+	ModuleView           bool
+	IssueViewsView       bool
+	IntakeView           bool
+	GuestViewAllFeatures bool
+	ArchiveIn            int
+	ArchivedAt           *time.Time
+	LogoProps            LogoProps
+	Timezone             string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	// The caller's view (M3 design 3.19): his project role and his place in
+	// his sidebar, nil unless his membership is active; and the accounts of
+	// the active members, in the order they became members.
+	MemberRole *shared.Role
+	SortOrder  *float64
+	MemberIDs  []uuid.UUID
+}
 
 // Network is who of the workspace sees a project besides its members (M3
 // design 3.4, 4.6).
