@@ -374,14 +374,18 @@ func (s projectSeed) partingStates(pool *pgxpool.Pool) {
 	}
 	s.exec(pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", private,
 		s.ids[callerProjectMember], s.now)
+	// A deleted membership with a live one beside it would be no deleted
+	// state at all: the live one is what the list and reading would see.
+	deleted := "m.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM project_members o " +
+		"WHERE o.project_id = m.project_id AND o.member_id = m.member_id AND o.deleted_at IS NULL)"
 	for _, st := range []struct {
 		project uuid.UUID
 		c       caller
 		holds   string // of m, his membership of the project
 	}{
 		{public, callerGuestOnly, "NOT m.is_active AND m.deleted_at IS NULL"},
-		{private, callerGuestOnly, "m.deleted_at IS NOT NULL"},
-		{private, callerMember, "m.deleted_at IS NOT NULL"},
+		{private, callerGuestOnly, deleted},
+		{private, callerMember, deleted},
 		{private, callerProjectMember, "m.is_active AND m.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM project_user_properties u " +
 			"WHERE u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL)"},
 	} {

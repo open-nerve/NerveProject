@@ -234,11 +234,12 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // and matrixProjectMembers. Through the API, gone deleted by its admin,
 // which soft-deletes its memberships and its project with it. Through SQL,
 // until the stores of P4b and P5 replace it, acme's archived project
-// archived, the member before's membership of the private project ended,
-// and the removed member's membership of acme ended. Everything that
-// connected to the database is closed when it returns, so that it can be
-// copied. A -run that leaves out prepare fails here, not with a 401 in
-// every cell.
+// archived, the member before's membership of the private project ended
+// and the removed member's membership of acme ended; and partingStates'
+// ended and deleted project memberships and deleted display settings.
+// Everything that connected to the database is closed when it returns, so
+// that it can be copied. A -run that leaves out prepare fails here, not
+// with a 401 in every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
