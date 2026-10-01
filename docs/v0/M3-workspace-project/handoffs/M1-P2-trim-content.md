@@ -52,6 +52,6 @@ M3 合并时：
 
 - **项目字段**（完成）：项目的接口（`api/modules/project.yaml` 的 `Project`、`ProjectCreate`）没有 `close_in`、`default_state`、`page_view`、`estimate_id`，表里也没有这几列（`server/migrations/sql/00010_project_projects.sql`；差异清单二·按表）。新工作项的默认状态来自 `states."default"`，每个项目至多一个（`states_project_id_default_key`）；项目的"自动化"只剩 `archive_in`。
 
-仍未处理，状态保持 `open`：保留名单的前端一侧（P8）；个人主页的页面（P9）。
+仍未处理，状态保持 `open`：保留名单的前端一侧（P8）；个人主页的页面（P11，故事 P9 的页面版本和 C10）。
 
 来源：[M3/P4a spec](../specs/P4a-projects.md) 第 7 节。
