@@ -16,10 +16,11 @@ import (
 // A read that fails answers its error, never a plausible answer: not "no
 // such project", which getProject would answer as project.not_found and
 // the Authorizer would take for a project no one sees; not "no display
-// settings", which createProject would take for an empty sidebar. Each
-// read runs on a cancelled context against a project alice is a member of
-// and has display settings in, so that the right answer is none of the
-// zero values.
+// settings", which createProject would take for an empty sidebar; not "no
+// project has the identifier", which checkProjectIdentifier would answer
+// as available. Each read runs on a cancelled context against a project
+// alice is a member of and has display settings in, so that the right
+// answer is none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -46,6 +47,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if lowest, err := s.LowestSortOrder(cancelled, acme, alice); !failed(err) || lowest != nil {
 		t.Errorf("LowestSortOrder() = %s, %v; want context.Canceled, not none", jsonOf(t, lowest), err)
+	}
+	if taken, err := s.IdentifierTaken(cancelled, acme, "WEB"); !failed(err) || taken {
+		t.Errorf("IdentifierTaken() = %v, %v; want context.Canceled, not available", taken, err)
 	}
 }
 

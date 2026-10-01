@@ -128,22 +128,24 @@ func TestCreateProjectIdentifierOrNameTaken(t *testing.T) {
 	}
 }
 
-// IdentifierTaken: the workspace's undeleted projects' identifiers, as
-// stored, in upper case; another workspace's and a deleted project's do not
-// count.
+// IdentifierTaken: the workspace's undeleted projects' identifiers,
+// archived or not, as stored, in upper case; another workspace's and a
+// deleted project's do not count.
 func TestIdentifierTaken(t *testing.T) {
 	s, pool := newStore(t)
 	ctx := context.Background()
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
 	newProject(t, s, acme, "Web", "WEB", alice)
+	old := newProject(t, s, acme, "Old", "OLD", alice)
+	exec(t, pool, "UPDATE projects SET archived_at = now() WHERE id = $1", old)
 	gone := newProject(t, s, acme, "Gone", "GONE", alice)
 	exec(t, pool, "UPDATE projects SET deleted_at = now() WHERE id = $1", gone)
 	newProject(t, s, beta, "Ops", "OPS", alice)
 	for _, tt := range []struct {
 		identifier string
 		want       bool
-	}{{"WEB", true}, {"web", false}, {"GONE", false}, {"OPS", false}, {"NEW", false}} {
+	}{{"WEB", true}, {"OLD", true}, {"web", false}, {"GONE", false}, {"OPS", false}, {"NEW", false}} {
 		if got, err := s.IdentifierTaken(ctx, acme, tt.identifier); err != nil || got != tt.want {
 			t.Errorf("IdentifierTaken(acme, %s) = %v, %v; want %v", tt.identifier, got, err, tt.want)
 		}

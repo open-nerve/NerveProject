@@ -71,32 +71,36 @@ func TestCheckProjectIdentifier(t *testing.T) {
 
 // A workspace not there, or not visible, is workspace.not_found; a guest
 // is refused; every failure comes back as itself; without a caller nothing
-// is read. None of them asks about the identifier.
+// is read. None but the store's own failure asks about the identifier.
 func TestCheckProjectIdentifierRefuses(t *testing.T) {
 	failure := errors.New("connection reset")
 	tests := []struct {
-		name       string
-		ctx        context.Context
-		slug       string
-		dirErr     error
-		storeErr   error
-		want       error
-		identifier bool // the store was asked
+		name      string
+		ctx       context.Context
+		slug      string
+		dirErr    error
+		decideErr error // the Authorizer's answer to alice
+		storeErr  error
+		want      error
+		calls     int // the fakes' calls, in order: the directory's, the decision, the store's
 	}{
-		{"no workspace", as(alice), "gone", nil, nil, domain.ErrWorkspaceNotFound, false},
-		{"a workspace he is not in", as(dave), "acme", nil, nil, domain.ErrWorkspaceNotFound, false},
-		{"a guest", as(carol), "acme", nil, nil, shared.Forbidden(), false},
-		{"the directory failing", as(alice), "acme", failure, nil, failure, false},
-		{"the store failing", as(alice), "acme", nil, failure, failure, true},
-		{"no caller", context.Background(), "acme", nil, nil, shared.Unauthenticated(), false},
+		{"no workspace", as(alice), "gone", nil, nil, nil, domain.ErrWorkspaceNotFound, 1},
+		{"a workspace he is not in", as(dave), "acme", nil, nil, nil, domain.ErrWorkspaceNotFound, 2},
+		{"a guest", as(carol), "acme", nil, nil, nil, shared.Forbidden(), 2},
+		{"the directory failing", as(alice), "acme", failure, nil, nil, failure, 1},
+		{"the decision failing", as(alice), "acme", nil, failure, nil, failure, 2},
+		{"the store failing", as(alice), "acme", nil, nil, failure, failure, 3},
+		{"no caller", context.Background(), "acme", nil, nil, nil, shared.Unauthenticated(), 0},
 	}
 	for _, tt := range tests {
-		uc, workspaces, projects, _ := newCheck()
+		uc, workspaces, projects, auth := newCheck()
 		workspaces.err, projects.err = tt.dirErr, tt.storeErr
+		if tt.decideErr != nil {
+			auth.errs[grantKey{alice, acme.ID}] = tt.decideErr
+		}
 		got, err := uc.Execute(tt.ctx, tt.slug, "NEW")
-		asked := slices.ContainsFunc(workspaces.log.calls, func(c string) bool { return c == fmt.Sprintf("IdentifierTaken %s NEW outside tx", acme.ID) })
-		if !errors.Is(err, tt.want) || got || asked != tt.identifier {
-			t.Errorf("%s: Execute() = %v, %v, calls %q; want false, %v", tt.name, got, err, workspaces.log.calls, tt.want)
+		if !errors.Is(err, tt.want) || got || len(workspaces.log.calls) != tt.calls {
+			t.Errorf("%s: Execute() = %v, %v, calls %q; want false, %v after %d calls", tt.name, got, err, workspaces.log.calls, tt.want, tt.calls)
 		}
 	}
 }
