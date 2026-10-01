@@ -1,7 +1,8 @@
 // Package postgresadapter is the workspace module's repository adapter: sqlc
 // queries (queries/, generated into gen/) over the transaction that the
 // context carries, or the pool. It also implements the reads that other
-// modules make of workspaces through ports (M3 design 6.5): WorkspaceRoles.
+// modules make of workspaces through ports (M3 design 6.5): WorkspaceRoles,
+// and the Directory's WorkspaceDirectory and WorkspaceMembers.
 package postgresadapter
 
 import (
