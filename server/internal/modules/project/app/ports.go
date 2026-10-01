@@ -12,6 +12,54 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// Clock is the use cases' time.
+type Clock interface {
+	Now() time.Time
+}
+
+// Workspace is a workspace as WorkspaceDirectory finds it: bootstrap
+// converts the workspace module's answer into it (M3 design 6.5).
+type Workspace struct {
+	ID       uuid.UUID
+	Timezone string
+}
+
+// WorkspaceDirectory is the workspace module's directory
+// (workspace.Provide): the undeleted workspace a slug names; found is false
+// when there is none (M3 design 6.5).
+type WorkspaceDirectory interface {
+	// ShareWorkspaceBySlug also locks the workspace's row FOR SHARE until
+	// the transaction ctx carries ends: the parent lock of a write that adds
+	// a project (M3 design 3.6 convention 2). A workspace deleted while the
+	// lock waited is not found.
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (w Workspace, found bool, err error)
+}
+
+// WorkspaceMembers is the workspace module's lock of the memberships a
+// write makes project members from (workspace.Provide; M3 design 3.6
+// convention 3).
+type WorkspaceMembers interface {
+	// ShareMembers locks userIDs' undeleted memberships of workspaceID,
+	// active or not, FOR SHARE in id order until the transaction ctx
+	// carries ends, and returns the roles of the active ones by account.
+	ShareMembers(ctx context.Context, workspaceID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
+// ProjectCreator is createProject's repository. Each method runs in the
+// transaction ctx carries.
+type ProjectCreator interface {
+	CreateProject(ctx context.Context, p ProjectRow) error
+	CreateMember(ctx context.Context, m MemberRow) error
+	// LowestSortOrder is the least place of userID's in his sidebar among
+	// workspaceID's projects, nil when he has none.
+	LowestSortOrder(ctx context.Context, workspaceID, userID uuid.UUID) (*float64, error)
+	CreatePreferences(ctx context.Context, p PreferencesRow) error
+	CreateStates(ctx context.Context, rows []StateRow) error
+	// GetProject is the undeleted project id as userID sees it; found is
+	// false when there is none.
+	GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.Project, found bool, err error)
+}
+
 // ProjectRow is a project to insert: checked values, its id, its creator
 // and the time of the use case's clock. Every column it does not name takes
 // its default.
