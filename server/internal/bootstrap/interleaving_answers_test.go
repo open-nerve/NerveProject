@@ -15,6 +15,7 @@ import (
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	identitydomain "github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -93,10 +94,15 @@ func (r answerRace) accounts() workspaceapp.Accounts {
 	return workspaceAccounts{accounts: identity.Provide(r.pool).Accounts}
 }
 
+// projects is project's cascade as bootstrap wires it.
+func (r answerRace) projects() workspaceapp.ProjectCascade {
+	return project.New(project.Deps{Pool: r.pool}).Cascade()
+}
+
 // accept is bob's acceptance of his invitation, over invitations.
 func (r answerRace) accept(ctx context.Context, invitations workspaceapp.InvitationAccepter) error {
 	_, err := workspaceapp.NewAcceptWorkspaceInvitation(workspaceapp.AcceptInvitationDeps{
-		Accounts: r.accounts(), Invitations: invitations, Tx: r.tx(), Clock: clocktest.At(time.Now()), MAC: r.mac,
+		Accounts: r.accounts(), Invitations: invitations, Projects: r.projects(), Tx: r.tx(), Clock: clocktest.At(time.Now()), MAC: r.mac,
 	}).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.bob}), r.invitation.id, r.invitation.token)
 	return err
 }
@@ -109,8 +115,9 @@ func (r answerRace) decline(ctx context.Context, invitations workspaceapp.Invita
 
 // deleteAcme is alice's deletion of acme, over workspaces.
 func (r answerRace) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
-	return workspaceapp.NewDeleteWorkspace(workspaces, access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}),
-		r.tx(), clocktest.At(time.Now()), slog.New(slog.DiscardHandler)).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
+	return workspaceapp.NewDeleteWorkspace(workspaces, r.projects(),
+		access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}), r.tx(), clocktest.At(time.Now()),
+		slog.New(slog.DiscardHandler)).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }
 
 // bobIn is bob's membership of acme as it stands: whether there is an

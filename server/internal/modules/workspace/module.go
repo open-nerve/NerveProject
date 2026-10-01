@@ -29,16 +29,44 @@ type WorkspaceRoles interface {
 	ActiveRole(ctx context.Context, workspaceID, userID uuid.UUID) (role shared.Role, ok bool, err error)
 }
 
+// WorkspaceDirectory finds an undeleted workspace by its slug for the
+// project module (M3 design 6.5); found is false when there is none.
+type WorkspaceDirectory interface {
+	// WorkspaceBySlug reads it without a lock.
+	WorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)
+	// ShareWorkspaceBySlug locks its row FOR SHARE until the transaction
+	// ctx carries ends: the parent lock of a write that adds a project
+	// (M3 design 3.6 convention 2). A workspace deleted while the lock
+	// waited is not found.
+	ShareWorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)
+}
+
+// WorkspaceMembers locks the memberships that a write of the project
+// module makes project members from (M3 design 3.6 convention 3).
+type WorkspaceMembers interface {
+	// ShareMembers locks userIDs' undeleted memberships of workspaceID,
+	// active or not, FOR SHARE in id order until the transaction ctx
+	// carries ends, and returns the roles of the active ones by account.
+	ShareMembers(ctx context.Context, workspaceID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]shared.Role, error)
+}
+
+// DirectoryEntry is the workspace WorkspaceDirectory finds: bootstrap
+// converts it into project's value (M3 design 6.5).
+type DirectoryEntry = app.DirectoryEntry
+
 // Provided are the adapters workspace offers the other modules. They depend
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
-	WorkspaceRoles WorkspaceRoles
+	WorkspaceRoles     WorkspaceRoles
+	WorkspaceDirectory WorkspaceDirectory
+	WorkspaceMembers   WorkspaceMembers
 }
 
 // Provide builds workspace's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
-	return Provided{WorkspaceRoles: postgresadapter.New(pool)}
+	directory := postgresadapter.NewDirectory(pool)
+	return Provided{WorkspaceRoles: postgresadapter.New(pool), WorkspaceDirectory: directory, WorkspaceMembers: directory}
 }
 
 // AccountState is the account state the Accounts port hands over: bootstrap
@@ -69,6 +97,8 @@ type Deps struct {
 	InvitationMAC app.InvitationMAC
 	// CallerLock is identity's credential lock (identity.Provide).
 	CallerLock app.CallerLock
+	// Projects is the project module's Cascade (project.New).
+	Projects app.ProjectCascade
 	// CreationEnabled is workspace.creation_enabled (M3 design 3.11).
 	CreationEnabled bool
 }
@@ -98,9 +128,9 @@ func New(d Deps) *Module {
 		}),
 		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
 		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
-		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Authorizer, d.Tx, d.Clock, d.Logger),
+		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Logger),
 		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
-		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Profiles, d.Authorizer, d.Tx, d.Clock),
+		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Projects, d.Profiles, d.Authorizer, d.Tx, d.Clock),
 		CheckSlug:         app.NewCheckSlug(store),
 		GetPreferences:    app.NewGetWorkspacePreferences(store, d.Authorizer),
 		UpdatePreferences: app.NewUpdateWorkspacePreferences(store, d.Authorizer, d.Tx, d.Clock),
@@ -112,7 +142,7 @@ func New(d Deps) *Module {
 		UpdateInvitation: app.NewUpdateWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock, d.InvitationMAC),
 		DeleteInvitation: app.NewDeleteWorkspaceInvitation(store, d.Authorizer, d.Tx, d.Clock),
 		AcceptInvitation: app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{
-			Accounts: d.Accounts, Invitations: store, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
+			Accounts: d.Accounts, Invitations: store, Projects: d.Projects, Tx: d.Tx, Clock: d.Clock, MAC: d.InvitationMAC,
 		}),
 		DeclineInvitation: app.NewDeclineWorkspaceInvitation(d.Accounts, store, d.Tx, d.Clock, d.InvitationMAC),
 	}}

@@ -19,6 +19,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/instance"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
@@ -100,13 +101,24 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// with every port it needs, so no construction waits on another.
 	identityPorts := identity.Provide(pool)
 	workspacePorts := workspace.Provide(pool)
-	authorizer := access.New(access.Deps{WorkspaceRoles: workspacePorts.WorkspaceRoles})
+	projectPorts := project.Provide(pool)
+	authorizer := access.New(access.Deps{
+		WorkspaceRoles: workspacePorts.WorkspaceRoles,
+		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
+	})
+	// project before workspace: workspace's writes take its cascade.
+	proj := project.New(project.Deps{
+		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,
+		Workspaces: projectWorkspaces{directory: workspacePorts.WorkspaceDirectory},
+		Members:    workspacePorts.WorkspaceMembers,
+	})
 	ws := workspace.New(workspace.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Logger: logger, Authorizer: authorizer,
 		Accounts:        workspaceAccounts{accounts: identityPorts.Accounts},
 		Profiles:        workspaceProfiles{profiles: identityPorts.PublicProfiles},
 		InvitationMAC:   invitations,
 		CallerLock:      identityPorts.CredentialLock,
+		Projects:        proj.Cascade(),
 		CreationEnabled: cfg.Workspace.CreationEnabled,
 	})
 	ident, err := identity.New(identity.Deps{
@@ -176,6 +188,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	ident.Register(a.router, api)
 	inst.Register(a.router, api)
 	ws.Register(a.router, api)
+	proj.Register(a.router, api)
 	// The web UI takes every path no other pattern claims. It must be the
 	// method-less "/": "GET /" and the method-less "/api/" would conflict.
 	a.router.Handle("/", webui.Handler(webFiles))

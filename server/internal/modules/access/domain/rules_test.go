@@ -27,6 +27,14 @@ var tableCells = map[shared.Action][]outcome{
 	"workspace_invitation.create":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_invitation.update":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
 	"workspace_invitation.delete":  {allowed, forbidden, forbidden, invisible, invisible, invisible, forbidden},
+	"project.list":                 {allowed, allowed, allowed, invisible, invisible, invisible, forbidden},
+	"project.create":               {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	"project_identifier.check":     {allowed, allowed, forbidden, invisible, invisible, invisible, forbidden},
+	// PA, PM, PG, WM demoted to PG, PM+WA, WA- private, WM- public, WM- private, WG- public, WG- private, P-before,
+	// P-before public, X, workspace role outside the three public, above the three public, project role outside the
+	// three, workspace role outside the three project admin (projectIdentities)
+	"project.read": {allowed, allowed, allowed, allowed, allowed, allowed, allowed, invisible, invisible, invisible, invisible, allowed,
+		invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.
@@ -59,6 +67,17 @@ func TestEveryRuleDecidesItsCells(t *testing.T) {
 		if got := cells(t, rule); !slices.Equal(got, tableCells[action]) {
 			t.Errorf("%s decides %q, want %q", action, got, tableCells[action])
 		}
+	}
+}
+
+// Asking whether an identifier is free is for whoever may create a project
+// with it (spec §3 item 13): the two rows are one rule, the roles as a set.
+func TestTheIdentifierCheckIsCreatesRule(t *testing.T) {
+	check, okCheck := domain.RuleFor("project_identifier.check")
+	create, okCreate := domain.RuleFor("project.create")
+	if !okCheck || !okCreate || check.Level != create.Level ||
+		!slices.Equal(slices.Sorted(slices.Values(check.Roles)), slices.Sorted(slices.Values(create.Roles))) {
+		t.Errorf("project_identifier.check = %+v, %v; want project.create's %+v, %v", check, okCheck, create, okCreate)
 	}
 }
 

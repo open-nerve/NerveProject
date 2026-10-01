@@ -107,6 +107,16 @@ export function bearer(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
+/** The id of the account of the bearer token given. */
+export async function accountId(api: Api, token: string): Promise<string> {
+  const { data, error, response } = await api.GET("/api/v0/me", { headers: bearer(token) });
+  expect(response.status, `read the account: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error("GET /api/v0/me answered 200 without the account");
+  }
+  return data.id;
+}
+
 /** Creates a personal access token with the bearer token given, and returns it with its token. */
 export async function createPAT(
   api: Api,

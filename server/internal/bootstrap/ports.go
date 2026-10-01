@@ -4,7 +4,9 @@ import (
 	"context"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 )
 
@@ -44,4 +46,31 @@ func (p workspaceProfiles) PublicProfiles(ctx context.Context, ids []uuid.UUID) 
 		out[i] = workspace.PublicProfile(profile)
 	}
 	return out, nil
+}
+
+// projectWorkspaces is workspace's WorkspaceDirectory as project's port:
+// the same reads and locks, each workspace converted.
+type projectWorkspaces struct {
+	directory workspace.WorkspaceDirectory
+}
+
+func (d projectWorkspaces) WorkspaceBySlug(ctx context.Context, slug string) (project.Workspace, bool, error) {
+	w, found, err := d.directory.WorkspaceBySlug(ctx, slug)
+	return project.Workspace(w), found, err
+}
+
+func (d projectWorkspaces) ShareWorkspaceBySlug(ctx context.Context, slug string) (project.Workspace, bool, error) {
+	w, found, err := d.directory.ShareWorkspaceBySlug(ctx, slug)
+	return project.Workspace(w), found, err
+}
+
+// accessProjects is project's ProjectAccess as access's port: the same read,
+// the facts converted.
+type accessProjects struct {
+	projects project.ProjectAccess
+}
+
+func (a accessProjects) ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (access.ProjectFacts, bool, error) {
+	f, found, err := a.projects.ProjectFacts(ctx, projectID, userID)
+	return access.ProjectFacts(f), found, err
 }

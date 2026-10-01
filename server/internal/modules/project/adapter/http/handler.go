@@ -1,0 +1,66 @@
+// Package httpadapter serves the project module's API: it implements the
+// strict server that oapi-codegen generates from api/modules/project.yaml
+// into the gen package, and translates between the generated types and the
+// use cases.
+package httpadapter
+
+import (
+	"context"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/http/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+)
+
+// ListProjectsUseCase is app.ListProjects.
+type ListProjectsUseCase interface {
+	Execute(ctx context.Context, slug string, archived bool) ([]domain.Project, error)
+}
+
+// CreateProjectUseCase is app.CreateProject.
+type CreateProjectUseCase interface {
+	Execute(ctx context.Context, slug string, in domain.NewProject) (domain.Project, error)
+}
+
+// GetProjectUseCase is app.GetProject.
+type GetProjectUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Project, error)
+}
+
+// CheckIdentifierUseCase is app.CheckProjectIdentifier.
+type CheckIdentifierUseCase interface {
+	Execute(ctx context.Context, slug, identifier string) (bool, error)
+}
+
+// UseCases are the use cases behind the module's operations.
+type UseCases struct {
+	ListProjects    ListProjectsUseCase
+	CreateProject   CreateProjectUseCase
+	GetProject      GetProjectUseCase
+	CheckIdentifier CheckIdentifierUseCase
+}
+
+// Register mounts the module's routes on router behind api's per-route
+// middlewares; api.Errors answers binding, decoding and handler errors.
+// Every operation needs a token.
+func Register(router *httpserver.Router, api *httpserver.API, uc UseCases) {
+	strict := gen.NewStrictHandlerWithOptions(handler{uc: uc}, nil, gen.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc:  api.Errors.BodyError,
+		ResponseErrorHandlerFunc: api.Errors.Write,
+	})
+	var middlewares []gen.MiddlewareFunc
+	for _, m := range api.Middlewares(gen.BodyShapes()) {
+		middlewares = append(middlewares, m)
+	}
+	gen.HandlerWithOptions(strict, gen.StdHTTPServerOptions{
+		BaseRouter:       router,
+		Middlewares:      middlewares,
+		ErrorHandlerFunc: api.Errors.BadRequest,
+	})
+}
+
+// handler implements gen.StrictServerInterface.
+type handler struct {
+	uc UseCases
+}

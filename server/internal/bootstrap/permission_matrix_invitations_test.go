@@ -42,7 +42,8 @@ func toNewcomersInvitation(answer string) func(caller, seeded) (string, string, 
 // joinsAsAMember: each caller's acceptance answers the workspace of his
 // invitation, where he is now an active member as the invitation's
 // member: one member more than it had (other: its admin and the removed
-// member; acme: its admin, member and guest).
+// member; acme: its admin, member and guest, and the project level's five
+// accounts).
 func joinsAsAMember(t *testing.T, c caller, _ seeded, answer string) {
 	var w struct {
 		Slug         string `json:"slug"`
@@ -50,7 +51,7 @@ func joinsAsAMember(t *testing.T, c caller, _ seeded, answer string) {
 		TotalMembers int    `json:"total_members"`
 	}
 	decodeAnswer(t, answer, &w)
-	want := map[string]int{"other": 3, "acme": 4}[ownInvitation(c)]
+	want := map[string]int{"other": 3, "acme": 9}[ownInvitation(c)]
 	if w.Slug != ownInvitation(c) || w.Role != 15 || w.TotalMembers != want {
 		t.Errorf("%s's acceptance answers %+v, want %s with role 15 and %d members", c, w, ownInvitation(c), want)
 	}
@@ -172,8 +173,9 @@ func wholeAnswerOf(res *http.Response, body []byte) wholeAnswer {
 // The public getWorkspaceInvitation has no row (matrixExempt): its route
 // reads no credential. This test stands for the row. Each link is asked
 // with no bearer token, with one that is no credential (a malformed
-// nrv_pat_, which every other route answers 401), and with each column's,
-// and every caller gets the same answer: acme's invitation with its token,
+// nrv_pat_, which every other route answers 401), and with each account's
+// (matrixAccounts, every column's of either level), and every caller gets
+// the same answer: acme's invitation with its token,
 // 200, without the address;
 // and one 404 workspace.invitation_not_found, the same byte for byte for a
 // character of the token changed, another invitation's token, gone's
@@ -209,7 +211,7 @@ func TestTheInvitationLinkAnswersEveryCallerAlike(t *testing.T) {
 	if status, body := call(t, contract, http.MethodGet, base+"/api/v0/workspaces", bearers["an invalid bearer"], ""); status != http.StatusUnauthorized {
 		t.Fatalf("the invalid bearer on listWorkspaces = %d %s, want 401", status, body)
 	}
-	callers := append([]caller{"nobody", "an invalid bearer"}, workspaceColumns...)
+	callers := append([]caller{"nobody", "an invalid bearer"}, matrixAccounts...)
 	var notFound *wholeAnswer
 	for _, l := range links {
 		var first wholeAnswer

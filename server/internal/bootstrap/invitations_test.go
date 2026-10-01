@@ -39,8 +39,14 @@ type invitationLink struct {
 // slug as a member, and returns the invitation's link.
 func invite(t *testing.T, contract *apitest.Contract, base, admin, slug, email string) invitationLink {
 	t.Helper()
+	return inviteAs(t, contract, base, admin, slug, email, shared.RoleMember)
+}
+
+// inviteAs is invite with the invitation's role.
+func inviteAs(t *testing.T, contract *apitest.Contract, base, admin, slug, email string, role shared.Role) invitationLink {
+	t.Helper()
 	status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces/"+slug+"/invitations", admin,
-		`{"invitations":[{"email":"`+email+`","role":15}]}`)
+		fmt.Sprintf(`{"invitations":[{"email":%q,"role":%d}]}`, email, role))
 	var list struct {
 		Data []struct {
 			ID    uuid.UUID `json:"id"`

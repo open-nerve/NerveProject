@@ -208,13 +208,27 @@ export async function expectMembership(
   expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
 }
 
-/** The tables whose rows belong to a workspace and are deleted with it (M3 design 4.12); P4 adds the projects'. */
-const workspaceTables = ["workspace_members", "workspace_member_invites", "workspace_user_properties"];
+/**
+ * The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7 adds the labels.
+ * deletedAlone tells whether a row of the table can be deleted on its own before the workspace, keeping that
+ * moment: an invitation can, when it is accepted or deleted (M3 design 3.8); no row of the other tables can yet.
+ */
+const workspaceTables: { table: string; deletedAlone: boolean }[] = [
+  { table: "workspace_members", deletedAlone: false },
+  { table: "workspace_member_invites", deletedAlone: true },
+  { table: "workspace_user_properties", deletedAlone: false },
+  { table: "projects", deletedAlone: false },
+  { table: "project_members", deletedAlone: false },
+  { table: "project_user_properties", deletedAlone: false },
+  { table: "states", deletedAlone: false },
+];
 
 /**
  * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before: its memberships, invitations and display
- * settings. Each table has such a row; none is left undeleted.
+ * settings, its projects, their memberships, their members' display settings and their states. Each table has
+ * such a row; none is left undeleted; and only a table whose rows can be deleted alone has rows deleted earlier
+ * than the workspace, so every row of the others carries the workspace's moment.
  */
 export async function expectWorkspaceDeleted(db: Database, slug: string, adminEmail: string): Promise<void> {
   const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string | null }>(
@@ -226,12 +240,18 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
   expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const tables = await Promise.all(
-    workspaceTables.map(async (table) => {
-      const [counts] = await db.query<{ with_it: number; by_another: number; undeleted_or_later: number }>(
+    workspaceTables.map(async ({ table }) => {
+      const [counts] = await db.query<{
+        with_it: number;
+        by_another: number;
+        undeleted_or_later: number;
+        earlier: number;
+      }>(
         `SELECT count(*) FILTER (WHERE t.deleted_at = w.deleted_at)::int AS with_it,
                 count(*) FILTER (WHERE t.deleted_at = w.deleted_at
                                    AND t.updated_by_id IS DISTINCT FROM w.updated_by_id)::int AS by_another,
-                count(*) FILTER (WHERE t.deleted_at IS NULL OR t.deleted_at > w.deleted_at)::int AS undeleted_or_later
+                count(*) FILTER (WHERE t.deleted_at IS NULL OR t.deleted_at > w.deleted_at)::int AS undeleted_or_later,
+                count(*) FILTER (WHERE t.deleted_at < w.deleted_at)::int AS earlier
            FROM ${table} t JOIN workspaces w ON w.id = t.workspace_id WHERE w.id = $1`,
         [w?.id]
       );
@@ -240,10 +260,17 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
         deletedWithIt: (counts?.with_it ?? 0) > 0,
         deletedByAnother: counts?.by_another,
         undeletedOrLater: counts?.undeleted_or_later,
+        deletedEarlier: counts?.earlier,
       };
     })
   );
   expect(tables, `the rows under ${slug}`).toEqual(
-    workspaceTables.map((table) => ({ table, deletedWithIt: true, deletedByAnother: 0, undeletedOrLater: 0 }))
+    workspaceTables.map(({ table, deletedAlone }) => ({
+      table,
+      deletedWithIt: true,
+      deletedByAnother: 0,
+      undeletedOrLater: 0,
+      deletedEarlier: deletedAlone ? expect.any(Number) : 0,
+    }))
   );
 }

@@ -1,0 +1,63 @@
+package app
+
+import (
+	"context"
+	"time"
+	"uuid"
+)
+
+// Cascade is what the workspace module's writes ask of the projects,
+// workspace's ProjectCascade port (M3 design 3.3). Each method uses
+// project's own repositories only, in the transaction ctx carries, which
+// the caller began and holds its workspace's lock in: a failure comes back
+// as itself and the caller's whole transaction rolls back. The caller gives
+// who acts and the moment, which each method writes into the rows it
+// changes.
+type Cascade struct {
+	projects WorkspaceProjectsDeleter
+	members  MemberDemoter
+}
+
+// NewCascade returns the cascade over projects and members.
+func NewCascade(projects WorkspaceProjectsDeleter, members MemberDemoter) *Cascade {
+	return &Cascade{projects: projects, members: members}
+}
+
+// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
+// rows under them (M3 design 3.6): the last step of deleteWorkspace's
+// cascade, under its FOR NO KEY UPDATE of the workspace, each step one
+// statement (convention 5). Every step runs, in order, at by and now.
+func (c *Cascade) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	for _, step := range c.deletion() {
+		if err := step(ctx, workspaceID, by, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DemoteToGuest makes userID a guest in each of the workspace's projects he
+// has a membership of, ended ones too (M3 design 3.3; Plane
+// views/workspace/member.py:87-89): under the caller's FOR NO KEY UPDATE of
+// the workspace, those projects FOR NO KEY UPDATE in id order, then his
+// memberships of them in one statement (convention 5), at now, by by. With
+// no such project there is nothing to write.
+func (c *Cascade) DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
+	projects, err := c.members.LockMemberProjects(ctx, workspaceID, userID)
+	if err != nil || len(projects) == 0 {
+		return err
+	}
+	return c.members.DemoteMemberships(ctx, projects, userID, by, now)
+}
+
+// deletion is what deleting a workspace deletes of the projects, in the
+// global order of M3 design 3.6: the projects, their memberships, the
+// members' display settings, the states. P7 adds the labels at the end.
+func (c *Cascade) deletion() []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
+	return []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error{
+		c.projects.DeleteWorkspaceProjects,
+		c.projects.DeleteWorkspaceProjectMembers,
+		c.projects.DeleteWorkspaceProjectPreferences,
+		c.projects.DeleteWorkspaceStates,
+	}
+}

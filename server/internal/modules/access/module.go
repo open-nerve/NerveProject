@@ -14,11 +14,18 @@ import (
 // the other modules' Provide (M3 design 6.6).
 type Deps struct {
 	WorkspaceRoles app.WorkspaceRoles
+	// ProjectAccess is project's ProjectAccess, converted
+	// (bootstrap/ports.go).
+	ProjectAccess app.ProjectAccess
 }
+
+// ProjectFacts are the facts the ProjectAccess port hands over: bootstrap
+// converts project's into them (M3 design 6.5).
+type ProjectFacts = app.ProjectFacts
 
 // New returns the Authorizer (M3 design 6.6, step 3).
 func New(d Deps) shared.Authorizer {
-	return app.NewAuthorizer(d.WorkspaceRoles)
+	return app.NewAuthorizer(d.WorkspaceRoles, d.ProjectAccess)
 }
 
 // RuleKeys lists the actions the rule table has a row for; bootstrap's test

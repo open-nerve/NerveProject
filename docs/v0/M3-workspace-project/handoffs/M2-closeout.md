@@ -152,3 +152,12 @@ M2（账户认证）做完了注册、登录、续期、退出、个人设置、
 仍未处理，状态保持 `open`：第 1 节的页面一侧（P9）；第 2、3、6 节，第 7 节的其余部分，第 9–11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 M3 的收尾。
 
 来源：[M3/P3 spec](../specs/P3-invitations.md) 第 7 节。
+
+## 处理结果（M3/P4a）
+
+- **第 7 节 可空的引用字段**（部分）：`Project.cover_image_url` 在接口中必有、可为 `null`，M5 之前总是 `null`（`api/modules/project.yaml`；`listProjects`、`createProject`、`getProject` 的答复）；`IUserLite` 随 P8，本节保持 `open`。
+- **第 9 节 物理删除与跨模块外键的关系图**（完成）：图在 M3 设计 4.12，每条指向 `users` 的外键写明去向；项目负责人、默认负责人由 Plane 的 `CASCADE` 改为 `ON DELETE SET NULL`（`server/migrations/sql/00010_project_projects.sql`），登记在差异清单二·按表的 `projects` 各行和第四节"项目负责人、默认负责人"。
+
+仍未处理，状态保持 `open`：第 1 节的页面一侧（P9）；第 2、3、6 节，第 7 节的其余部分，第 10、11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 M3 的收尾。
+
+来源：[M3/P4a spec](../specs/P4a-projects.md) 第 7 节。

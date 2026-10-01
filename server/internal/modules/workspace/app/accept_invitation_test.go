@@ -32,19 +32,20 @@ func invitationTo(user app.AccountState, w domain.Workspace, role shared.Role) d
 }
 
 // responding is invitationsFixture holding inv too, erin's ended membership
-// of acme, and the accounts: alice, bob, carol (deactivated), dave, erin
-// and frank.
+// of acme, the accounts: alice, bob, carol (deactivated), dave, erin and
+// frank, and the projects' cascade.
 func responding(inv ...domain.Invitation) *invitationsFixture {
 	f := newInvitations()
 	f.invitations.invitations = append(f.invitations.invitations, inv...)
 	f.invitations.memberships[acme.ID] = append(f.invitations.memberships[acme.ID], erinInAcme)
 	f.accounts = &fakeAccounts{log: f.log, accounts: []app.AccountState{alice, bob, carol, dave, erin, frank}}
+	f.projects = &fakeProjects{log: f.log}
 	return f
 }
 
 func (f *invitationsFixture) accept() *app.AcceptWorkspaceInvitation {
-	return app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations, Tx: f.tx,
-		Clock: clockAt{at: clockNow}, MAC: f.mac})
+	return app.NewAcceptWorkspaceInvitation(app.AcceptInvitationDeps{Accounts: f.accounts, Invitations: f.invitations, Projects: f.projects,
+		Tx: f.tx, Clock: clockAt{at: clockNow}, MAC: f.mac})
 }
 
 // respondedCalls are the calls up to the answer to inv by user: the token,
@@ -58,30 +59,44 @@ func respondedCalls(user app.AccountState, inv domain.Invitation, lockName strin
 // Accepting never changes an active membership (M3 design 3.8, 9.1): bob,
 // acme's member and beta's guest, keeps his role whatever the invitation's,
 // higher, lower or the same, and only the invitation is consumed; erin's
-// ended membership is restored with the invitation's role; frank is
-// inserted with it. Each in one transaction, after the account's, the
-// workspace's and the invitation's locks; the answer is the workspace with
-// the caller's role as it now is, and the invitation is gone.
+// ended membership is restored with the invitation's role, and restored as
+// a guest's she is made a guest in acme's projects too, by herself at the
+// same time; frank is inserted with it, a guest's too without a project to
+// demote in. Each in one transaction, after the account's, the workspace's
+// and the invitation's locks; the answer is the workspace with the
+// caller's role as it now is, and the invitation is gone.
 func TestAcceptWorkspaceInvitation(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
+	restored := func(role shared.Role) string {
+		return fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, role, erin.ID, at)
+	}
+	created := func(user app.AccountState, w domain.Workspace, role shared.Role) string {
+		return fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", user.ID, w.ID, role, user.ID, at)
+	}
 	tests := []struct {
-		name  string
-		user  app.AccountState
-		inv   domain.Invitation
-		w     domain.Workspace
-		role  shared.Role // the answer's
-		write string      // the membership's, "" for none
+		name   string
+		user   app.AccountState
+		inv    domain.Invitation
+		w      domain.Workspace
+		role   shared.Role // the answer's
+		writes []string    // the membership's and the projects'
 	}{
-		{"an active member, invited higher", bob, invitationTo(bob, acme, shared.RoleAdmin), acme, shared.RoleMember, ""},
-		{"an active member, invited lower", bob, invitationTo(bob, acme, shared.RoleGuest), acme, shared.RoleMember, ""},
-		{"an active member, invited the same", bob, invitationTo(bob, acme, shared.RoleMember), acme, shared.RoleMember, ""},
-		{"an active guest of another workspace, invited higher", bob, invitationTo(bob, beta, shared.RoleAdmin), beta, shared.RoleGuest, ""},
+		{"an active member, invited higher", bob, invitationTo(bob, acme, shared.RoleAdmin), acme, shared.RoleMember, nil},
+		{"an active member, invited lower", bob, invitationTo(bob, acme, shared.RoleGuest), acme, shared.RoleMember, nil},
+		{"an active member, invited the same", bob, invitationTo(bob, acme, shared.RoleMember), acme, shared.RoleMember, nil},
+		{"an active guest of another workspace, invited higher", bob, invitationTo(bob, beta, shared.RoleAdmin), beta, shared.RoleGuest, nil},
 		{"a former admin, invited as a guest", erin, invitationTo(erin, acme, shared.RoleGuest), acme, shared.RoleGuest,
-			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at)},
+			[]string{restored(shared.RoleGuest), fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, erin.ID, erin.ID, at)}},
+		{"a former admin, invited as a member", erin, invitationTo(erin, acme, shared.RoleMember), acme, shared.RoleMember,
+			[]string{restored(shared.RoleMember)}},
+		{"a former admin, invited as an admin", erin, invitationTo(erin, acme, shared.RoleAdmin), acme, shared.RoleAdmin,
+			[]string{restored(shared.RoleAdmin)}},
 		{"a former member elsewhere, new here", erin, invitationTo(erin, beta, shared.RoleMember), beta, shared.RoleMember,
-			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", erin.ID, beta.ID, shared.RoleMember, erin.ID, at)},
+			[]string{created(erin, beta, shared.RoleMember)}},
 		{"never a member", frank, invitationTo(frank, acme, shared.RoleAdmin), acme, shared.RoleAdmin,
-			fmt.Sprintf("CreateMember %s in %s as %d by %s at %s", frank.ID, acme.ID, shared.RoleAdmin, frank.ID, at)},
+			[]string{created(frank, acme, shared.RoleAdmin)}},
+		{"never a member, invited as a guest", frank, invitationTo(frank, acme, shared.RoleGuest), acme, shared.RoleGuest,
+			[]string{created(frank, acme, shared.RoleGuest)}},
 	}
 	for _, tt := range tests {
 		f := responding(tt.inv)
@@ -91,11 +106,8 @@ func TestAcceptWorkspaceInvitation(t *testing.T) {
 		if err != nil || got != want {
 			t.Errorf("%s: Execute() = %+v, %v; want %+v", tt.name, got, err, want)
 		}
-		wantCalls := append(respondedCalls(tt.user, tt.inv, "LockWorkspace"), "MemberOf "+tt.w.ID.String()+" "+tt.user.ID.String())
-		if tt.write != "" {
-			wantCalls = append(wantCalls, tt.write)
-		}
-		wantCalls = append(wantCalls, fmt.Sprintf("AcceptInvitation %s by %s at %s", tt.inv.ID, tt.user.ID, at), "WorkspaceByID "+tt.w.ID.String())
+		wantCalls := slices.Concat(respondedCalls(tt.user, tt.inv, "LockWorkspace"), []string{"MemberOf " + tt.w.ID.String() + " " + tt.user.ID.String()},
+			tt.writes, []string{fmt.Sprintf("AcceptInvitation %s by %s at %s", tt.inv.ID, tt.user.ID, at), "WorkspaceByID " + tt.w.ID.String()})
 		if !slices.Equal(f.log.calls, wantCalls) || f.tx.calls != 1 {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in one", tt.name, f.log.calls, f.tx.calls, wantCalls)
 		}
@@ -172,9 +184,9 @@ func responseFailures(failure error, lockName string) []responseRefusal {
 
 // Each refusal and failure is the answer, and nothing is written: see
 // responseRefusals and responseFailures; a failure of a write, erin's
-// restore among them, of the answer's read or of the commit is itself too,
-// and no workspace is answered. Without a caller it is 401 and nothing is
-// read.
+// restore and her projects' step among them, of the answer's read or of the
+// commit is itself too, and no workspace is answered. Without a caller it
+// is 401 and nothing is read.
 func TestAcceptWorkspaceInvitationRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	cases := append(responseRefusals("LockWorkspace"), responseFailures(failure, "LockWorkspace")...)
@@ -203,6 +215,12 @@ func TestAcceptWorkspaceInvitationRefusals(t *testing.T) {
 			f.invitations.failing = map[string]error{"RestoreMember": failure}
 		}, failure, append(respondedCalls(erin, erinToAcme, "LockWorkspace"), "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
 			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at))},
+		responseRefusal{"DemoteToGuest failed", erin, erinToAcme.ID, "", func(f *invitationsFixture) {
+			f.invitations.invitations = append(f.invitations.invitations, erinToAcme)
+			f.projects.errs = map[string]error{"DemoteToGuest": failure}
+		}, failure, append(respondedCalls(erin, erinToAcme, "LockWorkspace"), "MemberOf "+acme.ID.String()+" "+erin.ID.String(),
+			fmt.Sprintf("RestoreMember %s as %d by %s at %s", erinInAcme.ID, shared.RoleGuest, erin.ID, at),
+			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, erin.ID, erin.ID, at))},
 		responseRefusal{"the commit failed", frank, frankToAcme.ID, "", func(f *invitationsFixture) { f.tx.commitErr = failure }, failure,
 			append(slices.Clone(decided), created, accepted, "WorkspaceByID "+acme.ID.String())})
 	for _, tt := range cases {

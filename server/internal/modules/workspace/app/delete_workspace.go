@@ -13,6 +13,7 @@ import (
 // DeleteWorkspace deletes a workspace: DELETE /api/v0/workspaces/{slug}.
 type DeleteWorkspace struct {
 	workspaces WorkspaceDeleter
+	projects   ProjectCascade
 	auth       shared.Authorizer
 	tx         shared.TxManager
 	clock      Clock
@@ -20,20 +21,22 @@ type DeleteWorkspace struct {
 }
 
 // NewDeleteWorkspace returns the use case.
-func NewDeleteWorkspace(workspaces WorkspaceDeleter, auth shared.Authorizer, tx shared.TxManager, clock Clock, logger *slog.Logger) *DeleteWorkspace {
-	return &DeleteWorkspace{workspaces: workspaces, auth: auth, tx: tx, clock: clock, logger: logger}
+func NewDeleteWorkspace(workspaces WorkspaceDeleter, projects ProjectCascade, auth shared.Authorizer, tx shared.TxManager, clock Clock,
+	logger *slog.Logger) *DeleteWorkspace {
+	return &DeleteWorkspace{workspaces: workspaces, projects: projects, auth: auth, tx: tx, clock: clock, logger: logger}
 }
 
 // cascade is what deleting a workspace soft-deletes, in the order of M3
 // design 3.6: the workspace row, then the rows under it, each step one
-// statement at the same moment. P4 adds the projects at the end, through
-// ProjectCascade (M3 design 3.3).
+// statement at the same moment, and last the projects and the rows under
+// them, through ProjectCascade (M3 design 3.3).
 func (u *DeleteWorkspace) cascade() []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
 	return []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error{
 		u.workspaces.DeleteWorkspace,
 		u.workspaces.DeleteWorkspaceInvitations,
 		u.workspaces.DeleteWorkspaceMembers,
 		u.workspaces.DeleteWorkspacePreferences,
+		u.projects.DeleteWorkspaceProjects,
 	}
 }
 

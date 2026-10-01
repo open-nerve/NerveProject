@@ -12,7 +12,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
@@ -23,13 +22,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
-// The cascade of deleteWorkspace against the catalog (M3 design 3.6, 4): a
-// workspace deleted through the wired app leaves no undeleted row under it,
-// in any table with a foreign key to workspaces, whichever module owns the
-// table, and changes no row of another workspace. The tables come from
+// The cascade of deleteWorkspace against the catalog (M3 design 3.3, 3.6,
+// 4): a workspace deleted through the wired app leaves no undeleted row
+// under it, in any table with a foreign key to workspaces, whichever module
+// owns the table; deletes each at the workspace's instant, by its deleter;
+// and changes no row of another workspace. The tables come from
 // pg_constraint, not from a list kept here: a phase that adds a table under
 // workspaces fails this test until it seeds a row of it (seedWorkspace) and
-// the cascade deletes it (P4 the projects' tables through ProjectCascade).
+// the cascade deletes it: the projects' tables through ProjectCascade. A
+// table under workspaces only through another table, such as projects,
+// fails it too. This file holds the tests and the seed; the reading of the
+// catalog and of each key's rows is in workspace_deletion_catalog_test.go.
 
 // survivesItsWorkspace are the foreign keys to workspaces, as table.column,
 // whose rows must outlive the workspace's deletion, each with its reason.
@@ -83,8 +86,11 @@ func deletionViolations(under []rowsUnder, exempt map[string]string) []string {
 }
 
 // Deleting a workspace through the API soft-deletes every row under it in
-// every table the catalog ties to workspaces, and the workspace row, and
+// every table the catalog ties to workspaces, and the workspace row, each
+// at the workspace's deleted_at and by the account that deleted it, and
 // changes nothing under another workspace; the deletion is logged once.
+// Rows deleted before keep their own instant: they are not among the rows
+// recorded before the deletion.
 func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract := apitest.Load(t)
 	url := pgtest.NewDatabase(t)
@@ -95,9 +101,10 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	registerAccount(t, contract, base, "member@example.com")
 	deleted, kept := seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")
 	keys := workspaceKeys(t, pool)
-	under := make([]rowsUnder, len(keys))
+	under, recorded := make([]rowsUnder, len(keys)), make([][]uuid.UUID, len(keys))
 	for i, k := range keys {
-		under[i] = rowsUnder{key: k.String(), deletedBefore: k.undeleted(t, pool, deleted), keptBefore: k.rows(t, pool, kept)}
+		recorded[i] = k.undeleted(t, pool, deleted)
+		under[i] = rowsUnder{key: k.String(), deletedBefore: len(recorded[i]), keptBefore: k.rows(t, pool, kept)}
 	}
 
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, ""); status != http.StatusNoContent {
@@ -105,7 +112,7 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 
 	for i, k := range keys {
-		under[i].deletedAfter, under[i].keptAfter = k.undeleted(t, pool, deleted), k.rows(t, pool, kept)
+		under[i].deletedAfter, under[i].keptAfter = len(k.undeleted(t, pool, deleted)), k.rows(t, pool, kept)
 	}
 	for _, v := range deletionViolations(under, survivesItsWorkspace) {
 		t.Error(v)
@@ -113,6 +120,13 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	var adminID uuid.UUID
 	if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = 'admin@example.com'").Scan(&adminID); err != nil {
 		t.Fatal(err)
+	}
+	for i, k := range keys {
+		if _, survives := survivesItsWorkspace[k.String()]; !survives {
+			if rows := k.unstamped(t, pool, recorded[i], deleted, adminID); rows != "" {
+				t.Errorf("%s: rows not deleted at the workspace's deleted_at by its deleter %s:\n%s", k, adminID, rows)
+			}
+		}
 	}
 	want := `msg="workspace deleted" workspace_id=` + deleted.String() + " user_id=" + adminID.String() + "\n"
 	if out := logs.String(); strings.Count(out, `msg="workspace deleted"`) != 1 || !strings.Contains(out, want) {
@@ -124,8 +138,10 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 // token its admin, and seeds a row of each table under it: the admin's
 // membership, which the creation writes; the member's, and an invitation
 // the admin sent, through the workspace store; the admin's display
-// settings, through the API. A phase that adds a table under workspaces
-// seeds a row of it here. It returns the workspace's id.
+// settings, through the API; a project with the member's membership, his
+// display settings in it and a state (seedProject). A phase that adds a
+// table under workspaces seeds a row of it here. It returns the workspace's
+// id.
 func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
 	t.Helper()
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
@@ -151,69 +167,118 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 		`{"navigation_project_limit":3}`); status != http.StatusOK {
 		t.Fatalf("the settings in %s = %d %s, want 200", slug, status, body)
 	}
+	seedProject(t, pool, id, admin, member)
 	return id
 }
 
-// foreignKey is a column that references workspaces, table as SQL names it.
-type foreignKey struct{ table, column string }
-
-func (k foreignKey) String() string { return k.table + "." + k.column }
-
-// workspaceKeys are the workspace row itself, as workspaces.id, then every
-// foreign key to workspaces in the catalog.
-func workspaceKeys(t *testing.T, pool *pgxpool.Pool) []foreignKey {
+// seedProject writes a project of the workspace id, created by admin,
+// with member's membership, his display settings in it and one state,
+// directly: the seed does not depend on which of the project module's
+// writes exist, nor on what they write besides.
+func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), `
-		SELECT c.conrelid::regclass::text, a.attname, cardinality(c.conkey)
-		FROM pg_constraint c JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
-		WHERE c.contype = 'f' AND c.confrelid = 'workspaces'::regclass
-		ORDER BY 1, 2`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	keys := []foreignKey{{"workspaces", "id"}}
-	for rows.Next() {
-		var k foreignKey
-		var columns int
-		if err := rows.Scan(&k.table, &k.column, &columns); err != nil {
+	ctx, project := context.Background(), uuid.NewV7()
+	for _, stmt := range []struct {
+		sql  string
+		args []any
+	}{
+		{"INSERT INTO projects (id, workspace_id, name, identifier, created_by_id) VALUES ($1, $2, 'Web', 'WEB', $3)", []any{project, id, admin}},
+		{"INSERT INTO project_members (id, workspace_id, project_id, member_id, role) VALUES ($1, $2, $3, $4, 15)",
+			[]any{uuid.NewV7(), id, project, member}},
+		{"INSERT INTO project_user_properties (id, workspace_id, project_id, user_id) VALUES ($1, $2, $3, $4)",
+			[]any{uuid.NewV7(), id, project, member}},
+		{`INSERT INTO states (id, workspace_id, project_id, name, color, "default") VALUES ($1, $2, $3, 'Backlog', '#60646C', true)`,
+			[]any{uuid.NewV7(), id, project}},
+	} {
+		if _, err := pool.Exec(ctx, stmt.sql, stmt.args...); err != nil {
 			t.Fatal(err)
 		}
-		if columns != 1 {
-			t.Fatalf("%s references workspaces with %d columns: find its rows another way", k, columns)
+	}
+}
+
+// A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):
+// when it fails on the wired app, deleteWorkspace answers the failure and
+// every row rolls back, under either workspace, the projects' and the
+// workspace's own. The states table, renamed while the request runs, fails
+// the last statement of the cascade. It does not show that the statements
+// share the deletion's one transaction: the projects' statements in a
+// transaction of their own roll back here too, with the failing one.
+// TestADeletionRefusedAtItsCommitChangesNoRow shows that.
+func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
+	contract := apitest.Load(t)
+	url := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, url, false), migrations.FS())
+	pool := openPool(t, url)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	registerAccount(t, contract, base, "member@example.com")
+	ids := []uuid.UUID{seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")}
+	rowsOf := func() []string {
+		var all []string
+		for _, k := range workspaceKeys(t, pool) {
+			for _, id := range ids {
+				all = append(all, k.String()+":\n"+k.rows(t, pool, id))
+			}
 		}
-		keys = append(keys, k)
+		return all
 	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
+	before := rowsOf()
+	exec := func(sql string) {
+		t.Helper()
+		if _, err := pool.Exec(context.Background(), sql); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if len(keys) == 1 {
-		t.Fatal("no foreign key to workspaces in the catalog: the test would check the workspace row only")
+	exec("ALTER TABLE states RENAME TO states_away")
+	status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, "")
+	exec("ALTER TABLE states_away RENAME TO states")
+	if status != http.StatusInternalServerError {
+		t.Fatalf("deleting the workspace with the states' step failing = %d %s, want 500", status, body)
 	}
-	return keys
+	if after := rowsOf(); !slices.Equal(after, before) {
+		t.Errorf("the rows after the failed deletion:\n%q\nwant\n%q", after, before)
+	}
 }
 
-// undeleted counts k's undeleted rows under the workspace id.
-func (k foreignKey) undeleted(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) int {
-	t.Helper()
-	var n int
-	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-		" = $1 AND deleted_at IS NULL", id).Scan(&n); err != nil {
-		t.Fatalf("%s: %v", k, err)
+// Every statement of the deletion runs in its one transaction (M3 design
+// 3.3, 9.3), the cascade's last one too: none outside any transaction, and
+// none in a transaction of its own, which would commit before the
+// deletion's. A failing step cannot show it; a deletion refused at its
+// commit, after every statement ran, changes no row under either
+// workspace. A deferred constraint trigger on workspaces refuses the
+// commit.
+func TestADeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
+	contract := apitest.Load(t)
+	url := pgtest.NewDatabase(t)
+	base := startApp(t, testConfig(t, url, false), migrations.FS())
+	pool := openPool(t, url)
+	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
+	registerAccount(t, contract, base, "member@example.com")
+	ids := []uuid.UUID{seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")}
+	rowsOf := func() []string {
+		var all []string
+		for _, k := range workspaceKeys(t, pool) {
+			for _, id := range ids {
+				all = append(all, k.String()+":\n"+k.rows(t, pool, id))
+			}
+		}
+		return all
 	}
-	return n
-}
-
-// rows is k's rows under the workspace id, deleted ones too, each as text,
-// in order; "" when there is none.
-func (k foreignKey) rows(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
-	t.Helper()
-	var s string
-	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+k.table+
-		" r WHERE r."+pgx.Identifier{k.column}.Sanitize()+" = $1", id).Scan(&s); err != nil {
-		t.Fatalf("%s: %v", k, err)
+	before := rowsOf()
+	for _, sql := range []string{
+		`CREATE FUNCTION refuse_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'the commit is refused'; END $$`,
+		`CREATE CONSTRAINT TRIGGER refuse_commit AFTER UPDATE ON workspaces DEFERRABLE INITIALLY DEFERRED
+			FOR EACH ROW EXECUTE FUNCTION refuse_commit()`,
+	} {
+		if _, err := pool.Exec(context.Background(), sql); err != nil {
+			t.Fatal(err)
+		}
 	}
-	return s
+	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, ""); status != http.StatusInternalServerError {
+		t.Fatalf("deleting the workspace with its commit refused = %d %s, want 500", status, body)
+	}
+	if after := rowsOf(); !slices.Equal(after, before) {
+		t.Errorf("the rows after the refused deletion:\n%q\nwant\n%q", after, before)
+	}
 }
 
 // Each check of deletionViolations fails on its counterexample.

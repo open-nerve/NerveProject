@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -20,7 +19,7 @@ import (
 func newUpdateMember() (*app.UpdateWorkspaceMember, *membersFixture, *fakeTx) {
 	f := newMembers()
 	tx := &fakeTx{}
-	return app.NewUpdateWorkspaceMember(f.workspaces, f.profiles, f.auth, tx, clockAt{at: clockNow}), f, tx
+	return app.NewUpdateWorkspaceMember(f.workspaces, f.projects, f.profiles, f.auth, tx, clockAt{at: clockNow}), f, tx
 }
 
 // lockedMemberCalls are the calls up to the decision on the membership m
@@ -36,22 +35,32 @@ func lockedMemberCalls(user app.AccountState, m domain.Membership) []string {
 
 // UpdateWorkspaceMember reads the membership, locks its workspace FOR NO
 // KEY UPDATE, reads it again, decides, then writes the role and reads the
-// member's profile, all in one transaction (M3 design 3.6); the admin sees
-// the address.
+// member's profile, all in one transaction (M3 design 3.6); a change to
+// guest makes him a guest in acme's projects in between, by alice at the
+// role's time (M3 design 3.3), a change to another role leaves them. The
+// admin sees the address.
 func TestUpdateWorkspaceMemberLocksThenDecidesThenWrites(t *testing.T) {
-	for _, role := range []shared.Role{shared.RoleGuest, shared.RoleAdmin} {
+	at := clockNow.Format(time.RFC3339Nano)
+	for _, tt := range []struct {
+		role    shared.Role
+		cascade []string
+	}{
+		{shared.RoleGuest, []string{fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at)}},
+		{shared.RoleMember, nil},
+		{shared.RoleAdmin, nil},
+	} {
 		uc, f, tx := newUpdateMember()
-		got, err := uc.Execute(as(alice), bobInAcme.ID, role)
+		got, err := uc.Execute(as(alice), bobInAcme.ID, tt.role)
 		want := bobInAcme
-		want.Role = role
+		want.Role = tt.role
 		if err != nil || !sameMembers([]domain.Member{got}, []domain.Member{withUser(want, true)}) {
-			t.Errorf("to %d: Execute() = %+v, %v; want %+v", role, got, err, withUser(want, true))
+			t.Errorf("to %d: Execute() = %+v, %v; want %+v", tt.role, got, err, withUser(want, true))
 		}
-		wantCalls := append(lockedMemberCalls(alice, bobInAcme),
-			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, role, alice.ID, clockNow.Format(time.RFC3339Nano)),
-			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))
+		wantCalls := slices.Concat(lockedMemberCalls(alice, bobInAcme),
+			[]string{fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, tt.role, alice.ID, at)}, tt.cascade,
+			[]string{fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID})})
 		if !slices.Equal(f.log.calls, wantCalls) || tx.calls != 1 {
-			t.Errorf("to %d: calls = %q in %d transactions, want %q in one", role, f.log.calls, tx.calls, wantCalls)
+			t.Errorf("to %d: calls = %q in %d transactions, want %q in one", tt.role, f.log.calls, tx.calls, wantCalls)
 		}
 	}
 }
@@ -158,20 +167,33 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 	}
 }
 
-// A failed write, a failed read of the profile, and a member without an
-// account each fail the transaction, which the database then rolls back:
+// A failed write, a failed step of the projects, a failed read of the
+// profile, and a member without an account each fail the transaction, which
+// the database then rolls back, the role's change with it:
 // the answer is the error, never a member and never a problem of the
-// contract (so a 500); a failure is the one injected.
+// contract (so a 500); a failure is the one injected. The calls are the
+// change's own, each once and in the transaction, up to the failing one:
+// nothing runs after it, and it is not tried again.
 func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 	failure := errors.New("connection reset")
+	at := clockNow.Format(time.RFC3339Nano)
+	calls := slices.Concat(lockedMemberCalls(alice, bobInAcme), []string{
+		fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
+		fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at),
+		fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}),
+	})
+	decided := len(lockedMemberCalls(alice, bobInAcme))
 	tests := []struct {
-		name string
-		set  func(f *membersFixture)
-		want error // the injected failure; nil for the use case's own error
+		name  string
+		set   func(f *membersFixture)
+		want  error    // the injected failure; nil for the use case's own error
+		calls []string // up to the failing call, the last one
 	}{
-		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure},
-		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure},
-		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil},
+		{"the write", func(f *membersFixture) { f.workspaces.roleErr = failure }, failure, calls[:decided+1]},
+		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"DemoteToGuest": failure} }, failure,
+			calls[:decided+2]},
+		{"the profile", func(f *membersFixture) { f.profiles.err = failure }, failure, calls},
+		{"a member without one", func(f *membersFixture) { f.profiles.profiles = profiles[:2] }, nil, calls},
 	}
 	for _, tt := range tests {
 		uc, f, tx := newUpdateMember()
@@ -184,8 +206,8 @@ func TestUpdateWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 		if tt.want != nil && !errors.Is(err, tt.want) {
 			t.Errorf("%s failing: Execute() = %v, want %v", tt.name, err, tt.want)
 		}
-		if slices.ContainsFunc(f.log.calls, func(c string) bool { return strings.HasSuffix(c, " outside tx") }) {
-			t.Errorf("%s failing: calls %q, want all in the transaction", tt.name, f.log.calls)
+		if !slices.Equal(f.log.calls, tt.calls) {
+			t.Errorf("%s failing: calls\n%q\nwant\n%q", tt.name, f.log.calls, tt.calls)
 		}
 	}
 	uc, f, _ := newUpdateMember()

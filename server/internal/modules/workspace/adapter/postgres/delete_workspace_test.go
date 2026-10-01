@@ -187,6 +187,18 @@ func (failingSettings) DeleteWorkspacePreferences(context.Context, uuid.UUID, uu
 	return errDiskFull
 }
 
+// noProjects is the project module's cascade: the deletion's last step,
+// which the failure comes before; a deletion demotes no one.
+type noProjects struct{}
+
+func (noProjects) DeleteWorkspaceProjects(context.Context, uuid.UUID, uuid.UUID, time.Time) error {
+	return errors.New("the projects' step ran after the failed one")
+}
+
+func (noProjects) DemoteToGuest(context.Context, uuid.UUID, uuid.UUID, uuid.UUID, time.Time) error {
+	return errors.New("a deletion demoted a member")
+}
+
 // allowAll allows every action, as the workspace's admin.
 type allowAll struct{}
 
@@ -194,16 +206,16 @@ func (allowAll) Authorize(context.Context, shared.Actor, shared.Action, shared.T
 	return shared.Grant{WorkspaceRole: shared.RoleAdmin}, nil
 }
 
-// The use case's cascade is one transaction on the database: when its last
-// step fails, the workspace, its invitations and its members are not
-// deleted either.
+// The use case's cascade is one transaction on the database: when its
+// last step of the workspace's own fails, the workspace, its invitations
+// and its members are not deleted either.
 func TestAFailedDeletionLeavesTheWorkspace(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme := newWorkspace(t, s, "Acme", "acme", alice)
 	join(t, s, acme.ID, bob, shared.RoleMember)
 	invite(t, s, acme.ID, "carol@corp.com", shared.RoleGuest, alice)
-	uc := app.NewDeleteWorkspace(failingSettings{s}, allowAll{}, postgres.NewTxManager(pool, 2*time.Second), clocktest.At(now),
+	uc := app.NewDeleteWorkspace(failingSettings{s}, noProjects{}, allowAll{}, postgres.NewTxManager(pool, 2*time.Second), clocktest.At(now),
 		slog.New(slog.DiscardHandler))
 
 	err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: alice}), "acme")

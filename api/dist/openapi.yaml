@@ -13,6 +13,8 @@ tags:
     description: What this instance runs.
   - name: workspace
     description: Workspaces and their members.
+  - name: project
+    description: Projects, their members and their states.
 paths:
   /api/v0/auth/register:
     post:
@@ -446,7 +448,7 @@ paths:
       tags:
         - workspace
       summary: Delete a workspace
-      description: For the workspace's admins. The workspace, its invitations, its memberships and the members' display settings are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
+      description: For the workspace's admins. The workspace, its invitations, its memberships, the members' display settings, and its projects with their memberships, display settings and states are soft-deleted in one transaction, at the same moment; the members' accounts stay. The slug can name a new workspace at once. Nobody's last_workspace_id is cleared. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a member or a guest, forbidden.
       security:
         - bearer: []
       x-problem-codes:
@@ -543,7 +545,7 @@ paths:
       tags:
         - workspace
       summary: Change a member's role
-      description: 'For the workspace''s admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin.'
+      description: 'For the workspace''s admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: nobody changes his own role. The role is decided after the workspace row is locked, so of two admins who demote each other at once only the first succeeds and the workspace keeps an admin. A change to guest also makes the member a guest in every project of the workspace he has a membership of, ended ones too, in the same transaction.'
       security:
         - bearer: []
       x-problem-codes:
@@ -646,7 +648,7 @@ paths:
       tags:
         - workspace
       summary: Accept an invitation to one's own address
-      description: 'For the account the invitation was sent to: its address, as it is when the request runs, must be the invitation''s; another answers workspace.invitation_email_mismatch, which does not say whose, and nothing changes. The caller becomes a member with the invitation''s role, or a former member has his membership back with it; an active member stays as he is, his role too, and only the invitation is used. The invitation is then accepted and deleted: its link stops working. A token that is not the invitation''s, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found; a declined one, workspace.invitation_responded. An account deactivated meanwhile answers unauthorized. The answer is the workspace, with the caller''s role in it.'
+      description: 'For the account the invitation was sent to: its address, as it is when the request runs, must be the invitation''s; another answers workspace.invitation_email_mismatch, which does not say whose, and nothing changes. The caller becomes a member with the invitation''s role, or a former member has his membership back with it; an active member stays as he is, his role too, and only the invitation is used. The invitation is then accepted and deleted: its link stops working. A token that is not the invitation''s, and an invitation that does not exist, is deleted or accepted, answer the same workspace.invitation_not_found; a declined one, workspace.invitation_responded. An account deactivated meanwhile answers unauthorized. The answer is the workspace, with the caller''s role in it. A former member whose membership comes back as a guest is also made a guest in every project of the workspace he has a membership of, ended ones too, in the same transaction.'
       security:
         - bearer: []
       x-problem-codes:
@@ -761,6 +763,115 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkspacePreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/projects:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listProjects
+      tags:
+        - project
+      summary: List a workspace's projects that the caller sees
+      description: 'The workspace''s projects that the caller sees, each as he sees it: every one, to its admins; to its members, the public ones and those they are members of; to its guests, those they are members of. The archived projects are left out, unless archived is true, which lists them alone. By each project''s place in the caller''s sidebar, the projects without a place in it last, then by name. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived projects alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The projects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createProject
+      tags:
+        - project
+      summary: Create a project in a workspace
+      description: 'For the workspace''s admins and members. The project is created with the caller, and the lead when one is given, as its admins, the project first in each one''s sidebar, and with its six states: Backlog, the default, Todo, In Progress, Done, Cancelled and Triage. The name has 1–255 characters, not blank, without NUL and without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -; the identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the network is 0 or 2, public when not given; the time zone is an IANA name, the workspace''s when not given (validation_failed). The values are checked before the workspace is looked at. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden. The lead must be an active admin or member of the workspace (project_lead_id not_allowed), which is checked after the caller''s role. Neither the name nor the identifier may be another undeleted project''s of the workspace (project.name_taken, project.identifier_taken).'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - workspace.not_found
+        - forbidden
+        - project.identifier_taken
+        - project.name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: The new project, as the caller, its admin, sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/project-identifiers/{identifier}:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+      - name: identifier
+        in: path
+        required: true
+        description: An identifier asked about, in any case.
+        schema:
+          type: string
+    get:
+      operationId: checkProjectIdentifier
+      tags:
+        - project
+      summary: Check whether a project identifier is available in a workspace
+      description: 'For the workspace''s admins and members, as createProject. The identifier is available when createProject would take it: once upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and held by no undeleted project of the workspace, archived or not. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found; a guest, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+        - forbidden
+      responses:
+        '200':
+          description: Whether the identifier is available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierAvailability'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: getProject
+      tags:
+        - project
+      summary: Read a project
+      description: 'For whoever sees the project: its active members, the workspace''s admins, and for a public project the workspace''s members too; a caller who is not its member reads it with member_role and sort_order null. An archived project is read as any other, with its archived_at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; so does one whose workspace he is not an active member of.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+      responses:
+        '200':
+          description: The project, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
 components:
@@ -1629,6 +1740,209 @@ components:
           $ref: '#/components/schemas/NavigationControlPreference'
         navigation_project_limit:
           $ref: '#/components/schemas/NavigationProjectLimit'
+    ProjectNetwork:
+      description: 'Who sees the project besides its members and the workspace''s admins: 0 private, nobody; 2 public, the workspace''s members too.'
+      type: integer
+      enum:
+        - 0
+        - 2
+    LogoEmoji:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          description: The emoji, as the web app's picker gives it.
+          type: string
+        url:
+          description: The address of a custom emoji.
+          type: string
+    LogoIcon:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        background_color:
+          type: string
+    LogoProps:
+      description: 'A project''s icon, the web app''s TLogoProps: every field optional, and {} no icon.'
+      type: object
+      additionalProperties: false
+      properties:
+        in_use:
+          description: Which of the two icons the project shows.
+          type: string
+          enum:
+            - emoji
+            - icon
+        emoji:
+          $ref: '#/components/schemas/LogoEmoji'
+        icon:
+          $ref: '#/components/schemas/LogoIcon'
+    ProjectRole:
+      description: A member's role in a project, 5 guest, 15 member, 20 admin.
+      type: integer
+      enum:
+        - 5
+        - 15
+        - 20
+    Project:
+      description: 'A project, as the caller sees it: member_role and sort_order are his, null when he is not an active member.'
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - workspace_id
+        - name
+        - description
+        - identifier
+        - network
+        - project_lead_id
+        - default_assignee_id
+        - cycle_view
+        - module_view
+        - issue_views_view
+        - intake_view
+        - guest_view_all_features
+        - archive_in
+        - archived_at
+        - logo_props
+        - timezone
+        - cover_image_url
+        - member_role
+        - sort_order
+        - member_ids
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        identifier:
+          description: Upper case; it prefixes the numbers of the project's work items.
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          type:
+            - string
+            - 'null'
+          format: uuid
+        default_assignee_id:
+          description: Whom a new work item is assigned to when nobody is given.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cycle_view:
+          description: Whether the project shows cycles.
+          type: boolean
+        module_view:
+          description: Whether the project shows modules.
+          type: boolean
+        issue_views_view:
+          description: Whether the project shows views.
+          type: boolean
+        intake_view:
+          description: Whether the project shows intake.
+          type: boolean
+        guest_view_all_features:
+          description: Whether the project's guests see every work item, not only their own.
+          type: boolean
+        archive_in:
+          description: After how many months a closed work item is archived, 0–12; 0 never.
+          type: integer
+        archived_at:
+          description: When the project was archived; null while it is not.
+          type:
+            - string
+            - 'null'
+          format: date-time
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name.
+          type: string
+        cover_image_url:
+          description: Null until uploads arrive (M5).
+          type:
+            - string
+            - 'null'
+        member_role:
+          description: The caller's role in the project; null when he is not an active member.
+          oneOf:
+            - $ref: '#/components/schemas/ProjectRole'
+            - type: 'null'
+        sort_order:
+          description: 'The project''s place in the caller''s sidebar, lowest first; null when it has none there: the caller is not an active member of the project, or has no display settings in it.'
+          type:
+            - number
+            - 'null'
+        member_ids:
+          description: The accounts of the active members, in the order they joined, then by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProjectList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    ProjectCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - identifier
+      properties:
+        name:
+          description: '1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -'
+          type: string
+        identifier:
+          description: 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
+          type: string
+        description:
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          description: An active admin or member of the workspace; he becomes an admin of the project.
+          type: string
+          format: uuid
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given.
+          type: string
+    IdentifierAvailability:
+      type: object
+      additionalProperties: false
+      required:
+        - available
+      properties:
+        available:
+          type: boolean
   responses:
     Problem:
       description: Error (RFC 9457 problem details).
@@ -1674,6 +1988,14 @@ components:
       in: path
       required: true
       description: An invitation's id (WorkspaceInvitation.id), the link's invitation_id.
+      schema:
+        type: string
+        format: uuid
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      description: A project's id (Project.id).
       schema:
         type: string
         format: uuid

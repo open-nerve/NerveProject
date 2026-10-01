@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -12,6 +13,7 @@ import (
 type AcceptInvitationDeps struct {
 	Accounts    Accounts
 	Invitations InvitationAccepter
+	Projects    ProjectCascade
 	Tx          shared.TxManager
 	Clock       Clock
 	MAC         InvitationMAC
@@ -21,6 +23,7 @@ type AcceptInvitationDeps struct {
 // his address: POST /api/v0/workspace-invitations/{invitation_id}/accept.
 type AcceptWorkspaceInvitation struct {
 	invitations InvitationAccepter
+	projects    ProjectCascade
 	tx          shared.TxManager
 	clock       Clock
 	responder   responder
@@ -28,7 +31,7 @@ type AcceptWorkspaceInvitation struct {
 
 // NewAcceptWorkspaceInvitation returns the use case.
 func NewAcceptWorkspaceInvitation(d AcceptInvitationDeps) *AcceptWorkspaceInvitation {
-	return &AcceptWorkspaceInvitation{invitations: d.Invitations, tx: d.Tx, clock: d.Clock,
+	return &AcceptWorkspaceInvitation{invitations: d.Invitations, projects: d.Projects, tx: d.Tx, clock: d.Clock,
 		responder: responder{accounts: d.Accounts, invitations: d.Invitations, tokens: invitationTokens{mac: d.MAC}}}
 }
 
@@ -36,11 +39,10 @@ func NewAcceptWorkspaceInvitation(d AcceptInvitationDeps) *AcceptWorkspaceInvita
 // of a write of a membership (M3 design 3.6), then reads the clock and
 // writes (M3 design 3.8). An invitation never changes an active
 // membership: an active member's invitation is consumed, his role kept. A
-// former member's row is restored with the invitation's role; P4 adds, when
-// that role is a guest's, DemoteToGuest of his project memberships here, in
-// the same transaction. Anyone else is inserted with it. Then the
-// invitation is accepted, and deleted. The answer is the workspace with the
-// caller's role as it now is.
+// former member's row is restored with the invitation's role (restore).
+// Anyone else is inserted with it. Then the invitation is accepted, and
+// deleted. The answer is the workspace with the caller's role as it now
+// is.
 func (u *AcceptWorkspaceInvitation) Execute(ctx context.Context, id uuid.UUID, token string) (domain.Workspace, error) {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {
@@ -65,7 +67,7 @@ func (u *AcceptWorkspaceInvitation) Execute(ctx context.Context, id uuid.UUID, t
 		case member && m.IsActive:
 			role = m.Role
 		case member:
-			err = u.invitations.RestoreMember(ctx, m.ID, inv.Role, account.ID, now)
+			err = u.restore(ctx, m, inv.Role, now)
 		default:
 			err = u.invitations.CreateMember(ctx, MemberRow{ID: uuid.NewV7(), WorkspaceID: inv.WorkspaceID, MemberID: account.ID, Role: inv.Role,
 				CreatedBy: account.ID, Now: now})
@@ -86,4 +88,21 @@ func (u *AcceptWorkspaceInvitation) Execute(ctx context.Context, id uuid.UUID, t
 		return domain.Workspace{}, err
 	}
 	return joined, nil
+}
+
+// restore makes the ended membership m active again with role, by its
+// member at now. Restored as a guest, he is made a guest in each of the
+// workspace's projects he has a membership of, ended ones too
+// (ProjectCascade.DemoteToGuest, M3 design 3.8), in the same transaction:
+// joining a project again restores his membership there at no more than
+// its role before, so without it a former guest made a member later would
+// get back the project roles he had before he was a guest.
+func (u *AcceptWorkspaceInvitation) restore(ctx context.Context, m domain.Membership, role shared.Role, now time.Time) error {
+	if err := u.invitations.RestoreMember(ctx, m.ID, role, m.MemberID, now); err != nil {
+		return err
+	}
+	if role != shared.RoleGuest {
+		return nil
+	}
+	return u.projects.DemoteToGuest(ctx, m.WorkspaceID, m.MemberID, m.MemberID, now)
 }

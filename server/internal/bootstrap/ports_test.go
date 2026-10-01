@@ -7,7 +7,9 @@ import (
 	"testing"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 )
 
@@ -135,5 +137,96 @@ func TestWorkspaceProfilesConvertsIdentitysAnswer(t *testing.T) {
 	fake.err = failure
 	if got, err := p.PublicProfiles(context.Background(), ids); !errors.Is(err, failure) || got != nil {
 		t.Errorf("PublicProfiles() = %+v, %v; want no profiles and %v", got, err, failure)
+	}
+}
+
+// fakeWorkspaceDirectory answers the workspaces it holds by slug, and
+// records what it was asked: "read" without a lock, "share" with one.
+type fakeWorkspaceDirectory struct {
+	workspaces map[string]workspace.DirectoryEntry
+	err        error
+	asked      []string
+}
+
+func (f *fakeWorkspaceDirectory) WorkspaceBySlug(_ context.Context, slug string) (workspace.DirectoryEntry, bool, error) {
+	f.asked = append(f.asked, "read "+slug)
+	w, found := f.workspaces[slug]
+	return w, found, f.err
+}
+
+func (f *fakeWorkspaceDirectory) ShareWorkspaceBySlug(_ context.Context, slug string) (workspace.DirectoryEntry, bool, error) {
+	f.asked = append(f.asked, "share "+slug)
+	w, found := f.workspaces[slug]
+	return w, found, f.err
+}
+
+// projectWorkspaces hands project workspace's answer to the same question,
+// through the same lock or without one: the workspace converted, found and
+// the error as they came.
+func TestProjectWorkspacesConvertsWorkspacesAnswer(t *testing.T) {
+	acme := workspace.DirectoryEntry{ID: uuid.NewV7(), Timezone: "Asia/Shanghai"}
+	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme}}
+	d := projectWorkspaces{directory: fake}
+	ctx := context.Background()
+	want := project.Workspace{ID: acme.ID, Timezone: "Asia/Shanghai"}
+
+	for name, find := range map[string]func(context.Context, string) (project.Workspace, bool, error){
+		"share": d.ShareWorkspaceBySlug, "read": d.WorkspaceBySlug,
+	} {
+		fake.asked, fake.err = nil, nil
+		if w, found, err := find(ctx, "acme"); err != nil || !found || w != want {
+			t.Errorf("%s acme = %+v, %v, %v; want %+v, found", name, w, found, err, want)
+		}
+		if w, found, err := find(ctx, "gone"); err != nil || found || w != (project.Workspace{}) {
+			t.Errorf("%s gone = %+v, %v, %v; want not found", name, w, found, err)
+		}
+		if want := []string{name + " acme", name + " gone"}; !slices.Equal(fake.asked, want) {
+			t.Errorf("workspace was asked %q, want %q", fake.asked, want)
+		}
+		failure := errors.New("connection reset")
+		fake.err = failure
+		if _, _, err := find(ctx, "acme"); !errors.Is(err, failure) {
+			t.Errorf("%s = %v, want %v", name, err, failure)
+		}
+	}
+}
+
+// fakeProjectAccess answers the facts it holds by project, and records what
+// it was asked.
+type fakeProjectAccess struct {
+	facts map[uuid.UUID]project.AccessFacts
+	err   error
+	asked []string
+}
+
+func (f *fakeProjectAccess) ProjectFacts(_ context.Context, projectID, userID uuid.UUID) (project.AccessFacts, bool, error) {
+	f.asked = append(f.asked, projectID.String()+" "+userID.String())
+	p, found := f.facts[projectID]
+	return p, found, f.err
+}
+
+// accessProjects hands access project's answer to the same question: the
+// facts converted, found and the error as they came.
+func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
+	web, acme, alice := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	fake := &fakeProjectAccess{facts: map[uuid.UUID]project.AccessFacts{web: {WorkspaceID: acme, Public: true, Member: true, Role: 15}}}
+	a := accessProjects{projects: fake}
+	ctx := context.Background()
+
+	f, found, err := a.ProjectFacts(ctx, web, alice)
+	if want := (access.ProjectFacts{WorkspaceID: acme, Public: true, Member: true, Role: 15}); err != nil || !found || f != want {
+		t.Errorf("ProjectFacts(web) = %+v, %v, %v; want %+v, found", f, found, err, want)
+	}
+	gone := uuid.NewV7()
+	if f, found, err := a.ProjectFacts(ctx, gone, alice); err != nil || found || f != (access.ProjectFacts{}) {
+		t.Errorf("ProjectFacts(gone) = %+v, %v, %v; want not found", f, found, err)
+	}
+	if want := []string{web.String() + " " + alice.String(), gone.String() + " " + alice.String()}; !slices.Equal(fake.asked, want) {
+		t.Errorf("project was asked %q, want %q", fake.asked, want)
+	}
+	failure := errors.New("connection reset")
+	fake.err = failure
+	if _, _, err := a.ProjectFacts(ctx, web, alice); !errors.Is(err, failure) {
+		t.Errorf("ProjectFacts() = %v, want %v", err, failure)
 	}
 }

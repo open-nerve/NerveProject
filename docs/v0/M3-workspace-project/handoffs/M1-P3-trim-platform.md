@@ -50,3 +50,12 @@ M3 合并时：
 仍未处理，状态保持 `open`：`RESTRICTED_URLS` 与后端同源（前端一侧，P8）；本文件的其余几条随 M3 设计 13.1 中各自的 Phase。
 
 来源：[M3/P1 spec](../specs/P1-platform.md) 第 7 节。
+
+## 处理结果（M3/P4a）
+
+- **不再读的字段**（项目一侧完成）：项目的接口没有 `anchor` 和发布设置（`api/modules/project.yaml`）；Nerve 没有项目动态，不产生本文件列出的几类记录。视图、收集箱的接口不在 M3，由 M7 的同名交接（`docs/v0/M7-collaboration/handoffs/M1-P3-trim-platform.md`）约束，M3 的 review 写明。
+- **地址**（`project-identifiers` 一条完成）：检查标识是 `GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}`，不带结尾 `/`（`api/modules/project.yaml`）；页面改调它随项目的页面（P10）。
+
+仍未处理，状态保持 `open`：项目成员（只有"从工作区成员中添加"一种方式，P4b；`joinProject` 改用新接口、守卫的 `project-invitations` 例外删除，P8）；`RESTRICTED_URLS` 与后端同源（前端一侧，P8）；本文件的其余几条，随 M3 设计 13.1 中各自的 Phase。
+
+来源：[M3/P4a spec](../specs/P4a-projects.md) 第 7 节。

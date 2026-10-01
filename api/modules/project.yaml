@@ -1,0 +1,356 @@
+# project 模块的接口（M3 设计 5.1、5.2）。生成的 Go 代码在
+# server/internal/modules/project/adapter/http/gen（make gen-go）。
+openapi: 3.1.0
+info:
+  title: Nerve project API
+  version: v0
+paths:
+  /api/v0/workspaces/{slug}/projects:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listProjects
+      tags: [project]
+      summary: List a workspace's projects that the caller sees
+      description: >-
+        The workspace's projects that the caller sees, each as he sees it:
+        every one, to its admins; to its members, the public ones and those
+        they are members of; to its guests, those they are members of. The
+        archived projects are left out, unless archived is true, which lists
+        them alone. By each project's place in the caller's sidebar, the
+        projects without a place in it last, then by name. A workspace that
+        does not exist, is deleted, or of which the caller is not an active
+        member answers workspace.not_found. The whole collection at once:
+        collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found]
+      parameters:
+        - name: archived
+          in: query
+          required: false
+          description: true lists the archived projects alone; false, or no value, the others.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: The projects.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createProject
+      tags: [project]
+      summary: Create a project in a workspace
+      description: >-
+        For the workspace's admins and members. The project is created with
+        the caller, and the lead when one is given, as its admins, the
+        project first in each one's sidebar, and with its six states:
+        Backlog, the default, Todo, In Progress, Done, Cancelled and Triage.
+        The name has 1–255 characters, not blank, without NUL and
+        without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -; the
+        identifier, upper-cased, has 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ; the
+        network is 0 or 2, public when not given; the time zone is an IANA
+        name, the workspace's when not given (validation_failed). The values
+        are checked before the workspace is looked at. A workspace that does
+        not exist, is deleted, or of which the caller is not an active member
+        answers workspace.not_found; a guest, forbidden. The lead must be an
+        active admin or member of the workspace (project_lead_id
+        not_allowed), which is checked after the caller's role. Neither the
+        name nor the identifier may be another undeleted project's of the
+        workspace (project.name_taken, project.identifier_taken).
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, workspace.not_found, forbidden, project.identifier_taken, project.name_taken]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: The new project, as the caller, its admin, sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/project-identifiers/{identifier}:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+      - name: identifier
+        in: path
+        required: true
+        description: An identifier asked about, in any case.
+        schema:
+          type: string
+    get:
+      operationId: checkProjectIdentifier
+      tags: [project]
+      summary: Check whether a project identifier is available in a workspace
+      description: >-
+        For the workspace's admins and members, as createProject. The
+        identifier is available when createProject would take it: once
+        upper-cased, 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, and held by no undeleted
+        project of the workspace, archived or not. A workspace that does not
+        exist, is deleted, or of which the caller is not an active member
+        answers workspace.not_found; a guest, forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found, forbidden]
+      responses:
+        '200':
+          description: Whether the identifier is available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdentifierAvailability'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: getProject
+      tags: [project]
+      summary: Read a project
+      description: >-
+        For whoever sees the project: its active members, the workspace's
+        admins, and for a public project the workspace's members too; a
+        caller who is not its member reads it with member_role and sort_order
+        null. An archived project is read as any other, with its archived_at.
+        A project that does not exist, is deleted, or that the caller does
+        not see answers project.not_found; so does one whose workspace he is
+        not an active member of.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found]
+      responses:
+        '200':
+          description: The project, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: A workspace's slug, as in the web app's address.
+      schema:
+        type: string
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Problem:
+      description: Error (RFC 9457 problem details).
+      headers:
+        Retry-After:
+          description: >-
+            Whole seconds to wait before trying again, rounded up; sent with
+            rate_limited and server_busy.
+          schema:
+            type: integer
+            minimum: 1
+        WWW-Authenticate:
+          description: >-
+            Sent with every 401 (RFC 9110 15.5.2): Bearer error="invalid_token"
+            (RFC 6750 3) when the bearer token sent is refused before the
+            operation runs, being invalid or expired; plain Bearer for every
+            other 401, including a credential that the operation finds revoked
+            while it runs.
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '../common.yaml#/components/schemas/Problem'
+  schemas:
+    ProjectRole:
+      description: A member's role in a project, 5 guest, 15 member, 20 admin.
+      type: integer
+      enum: [5, 15, 20]
+    ProjectNetwork:
+      description: >-
+        Who sees the project besides its members and the workspace's admins:
+        0 private, nobody; 2 public, the workspace's members too.
+      type: integer
+      enum: [0, 2]
+    LogoProps:
+      description: >-
+        A project's icon, the web app's TLogoProps: every field optional, and
+        {} no icon.
+      type: object
+      additionalProperties: false
+      properties:
+        in_use:
+          description: Which of the two icons the project shows.
+          type: string
+          enum: [emoji, icon]
+        emoji:
+          $ref: '#/components/schemas/LogoEmoji'
+        icon:
+          $ref: '#/components/schemas/LogoIcon'
+    LogoEmoji:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          description: The emoji, as the web app's picker gives it.
+          type: string
+        url:
+          description: The address of a custom emoji.
+          type: string
+    LogoIcon:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        background_color:
+          type: string
+    Project:
+      description: >-
+        A project, as the caller sees it: member_role and sort_order are his,
+        null when he is not an active member.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, name, description, identifier, network, project_lead_id, default_assignee_id, cycle_view, module_view,
+        issue_views_view, intake_view, guest_view_all_features, archive_in, archived_at, logo_props, timezone, cover_image_url, member_role,
+        sort_order, member_ids, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        identifier:
+          description: Upper case; it prefixes the numbers of the project's work items.
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          type: [string, 'null']
+          format: uuid
+        default_assignee_id:
+          description: Whom a new work item is assigned to when nobody is given.
+          type: [string, 'null']
+          format: uuid
+        cycle_view:
+          description: Whether the project shows cycles.
+          type: boolean
+        module_view:
+          description: Whether the project shows modules.
+          type: boolean
+        issue_views_view:
+          description: Whether the project shows views.
+          type: boolean
+        intake_view:
+          description: Whether the project shows intake.
+          type: boolean
+        guest_view_all_features:
+          description: Whether the project's guests see every work item, not only their own.
+          type: boolean
+        archive_in:
+          description: After how many months a closed work item is archived, 0–12; 0 never.
+          type: integer
+        archived_at:
+          description: When the project was archived; null while it is not.
+          type: [string, 'null']
+          format: date-time
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name.
+          type: string
+        cover_image_url:
+          description: Null until uploads arrive (M5).
+          type: [string, 'null']
+        member_role:
+          description: The caller's role in the project; null when he is not an active member.
+          oneOf:
+            - $ref: '#/components/schemas/ProjectRole'
+            - type: 'null'
+        sort_order:
+          description: >-
+            The project's place in the caller's sidebar, lowest first; null when
+            it has none there: the caller is not an active member of the
+            project, or has no display settings in it.
+          type: [number, 'null']
+        member_ids:
+          description: The accounts of the active members, in the order they joined, then by id.
+          type: array
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProjectList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+    IdentifierAvailability:
+      type: object
+      additionalProperties: false
+      required: [available]
+      properties:
+        available:
+          type: boolean
+    ProjectCreate:
+      type: object
+      additionalProperties: false
+      required: [name, identifier]
+      properties:
+        name:
+          description: >-
+            1–255 characters, not blank, without any of
+            & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -
+          type: string
+        identifier:
+          description: 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
+          type: string
+        description:
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          description: An active admin or member of the workspace; he becomes an admin of the project.
+          type: string
+          format: uuid
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name, e.g. from GET /api/v0/timezones; the workspace's when not given.
+          type: string

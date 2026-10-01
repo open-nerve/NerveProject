@@ -34,6 +34,7 @@ type invitationsFixture struct {
 	tx          *fakeTx
 	caller      *fakeCallerLock
 	accounts    *fakeAccounts // responding's
+	projects    *fakeProjects // responding's
 	invitations *fakeInvitations
 	profiles    *fakeProfiles
 	auth        *fakeAuthorizer

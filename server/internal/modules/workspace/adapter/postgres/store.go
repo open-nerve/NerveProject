@@ -1,7 +1,8 @@
 // Package postgresadapter is the workspace module's repository adapter: sqlc
 // queries (queries/, generated into gen/) over the transaction that the
 // context carries, or the pool. It also implements the reads that other
-// modules make of workspaces through ports (M3 design 6.5): WorkspaceRoles.
+// modules make of workspaces through ports (M3 design 6.5): WorkspaceRoles,
+// and the Directory's WorkspaceDirectory and WorkspaceMembers.
 package postgresadapter
 
 import (
@@ -9,7 +10,6 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres/gen"
@@ -30,12 +30,6 @@ func New(pool *pgxpool.Pool) *Store {
 // queries runs in the context's transaction when there is one.
 func (s *Store) queries(ctx context.Context) *gen.Queries {
 	return gen.New(postgres.DB(ctx, s.pool))
-}
-
-// uniqueViolation reports whether err broke the unique constraint name.
-func uniqueViolation(err error, constraint string) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == constraint
 }
 
 // notFound turns pgx.ErrNoRows into app.ErrNotFound.
