@@ -221,6 +221,39 @@ func TestUpdateProject(t *testing.T) {
 		map[string]string{"project_lead_id": "null"})); !maps.Equal(got, want) {
 		t.Errorf("the lead cleared: %v\nwant %v", got, want)
 	}
+
+	// The five switches, which the steps above give together and keep together, each given alone: on while every other
+	// is off, it changes its own column alone; then left out with the others, each keeps its own value, not another's.
+	switches := []struct {
+		column string
+		set    func(p *domain.ProjectPatch, on *bool)
+	}{
+		{"cycle_view", func(p *domain.ProjectPatch, on *bool) { p.CycleView = on }},
+		{"module_view", func(p *domain.ProjectPatch, on *bool) { p.ModuleView = on }},
+		{"issue_views_view", func(p *domain.ProjectPatch, on *bool) { p.IssueViewsView = on }},
+		{"intake_view", func(p *domain.ProjectPatch, on *bool) { p.IntakeView = on }},
+		{"guest_view_all_features", func(p *domain.ProjectPatch, on *bool) { p.GuestViewAllFeatures = on }},
+	}
+	var off domain.ProjectPatch
+	for _, s := range switches {
+		s.set(&off, ptr(false))
+	}
+	for _, s := range switches {
+		update(off, carol, later)
+		var alone domain.ProjectPatch
+		s.set(&alone, ptr(true))
+		before = columns(t, pool, "projects", web)
+		update(alone, bob, later)
+		if got, want := columns(t, pool, "projects", web), changed(before, changed(audit(bob, later),
+			map[string]string{s.column: "true"})); !maps.Equal(got, want) {
+			t.Errorf("%s alone: %v\nwant %v", s.column, got, want)
+		}
+		before = columns(t, pool, "projects", web)
+		update(domain.ProjectPatch{}, alice, later)
+		if got, want := columns(t, pool, "projects", web), changed(before, audit(alice, later)); !maps.Equal(got, want) {
+			t.Errorf("%s on, the others off, none given: %v\nwant %v", s.column, got, want)
+		}
+	}
 	if after := tableRows(t, pool, "projects", web); after != others {
 		t.Errorf("the other projects:\n%s\nwant\n%s", after, others)
 	}
