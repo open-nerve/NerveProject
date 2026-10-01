@@ -67,6 +67,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := uc.Execute(as(bob), webID)
 			return f.log.calls, err
 		}, deleted(webID)},
+		{"updateProjectPreferences", func() ([]string, error) {
+			uc, f := newUpdatePreferences()
+			_, err := uc.Execute(as(bob), webID, domain.PreferencesPatch{SortOrder: ptr(1.0)})
+			return f.log.calls, err
+		}, changed(bob, webID, domain.PreferencesPatch{SortOrder: ptr(1.0)})},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

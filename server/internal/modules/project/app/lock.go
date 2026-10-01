@@ -12,13 +12,15 @@ import (
 // Locks is the one way a write on a project named by its id takes its
 // locks and its decision (M3 design 3.6 convention 2), in the transaction
 // ctx carries: the project's workspace, read without a lock; the
-// workspace's row FOR SHARE, the write's first lock; the project's row FOR
-// NO KEY UPDATE, still undeleted and of that workspace; then the decision,
-// under them all. Every cascade over the workspace's projects runs under
-// the workspace's FOR NO KEY UPDATE and reads its time after it (3.3):
-// while a write holds the workspace FOR SHARE, no cascade touches the rows
-// it writes. project.New builds one Locks for every write: a write holds
-// no Authorizer of its own, so it decides only under these locks.
+// workspace's row FOR SHARE, the write's first lock; the project's row, FOR
+// NO KEY UPDATE, or FOR SHARE for a write under the project that leaves
+// the row and its memberships as they are, still undeleted and of that
+// workspace; then the decision, under them all. Every cascade over the
+// workspace's projects runs under the workspace's FOR NO KEY UPDATE and
+// reads its time after it (3.3): while a write holds the workspace FOR
+// SHARE, no cascade touches the rows it writes. project.New builds one
+// Locks for every write: a write holds no Authorizer of its own, so it
+// decides only under these locks.
 type Locks struct {
 	projects   ProjectLocks
 	workspaces WorkspaceSharer
@@ -35,6 +37,10 @@ func NewLocks(projects ProjectLocks, workspaces WorkspaceSharer, auth shared.Aut
 type write struct {
 	project uuid.UUID
 	action  shared.Action
+	// share locks the project FOR SHARE, for a write under the project that
+	// leaves the project row and its memberships as they are; otherwise it
+	// is locked FOR NO KEY UPDATE.
+	share bool
 }
 
 // held is a write's locks taken and its decision made: the project as its
@@ -65,7 +71,11 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 		return held{}, domain.ErrNotFound
 	}
 	var h held
-	h.project, found, err = l.projects.LockProject(ctx, w.project)
+	lock := l.projects.LockProject
+	if w.share {
+		lock = l.projects.ShareProject
+	}
+	h.project, found, err = lock(ctx, w.project)
 	switch {
 	case err != nil:
 		return held{}, err
@@ -76,6 +86,24 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 		return held{}, err
 	}
 	return h, nil
+}
+
+// findAndDecide is the first two steps of a read under a project named by
+// its id (M3 design 6.4), without a transaction: projects finds the
+// undeleted project's workspace, then decide decides action on it. A
+// project that is not there, or not visible to actor, is domain.ErrNotFound;
+// a role the rule does not allow is the Authorizer's shared.Forbidden.
+func findAndDecide(ctx context.Context, projects ProjectFinder, auth shared.Authorizer, actor shared.Actor, id uuid.UUID,
+	action shared.Action) error {
+	workspaceID, found, err := projects.ProjectWorkspace(ctx, id)
+	switch {
+	case err != nil:
+		return err
+	case !found:
+		return domain.ErrNotFound
+	}
+	_, err = decide(ctx, auth, actor, action, workspaceID, id)
+	return err
 }
 
 // decide asks the Authorizer for action on the project id of the workspace

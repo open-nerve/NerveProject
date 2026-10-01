@@ -76,6 +76,9 @@ var rules = map[shared.Action]Rule{
 	"project.archive":   {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	"project.unarchive": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	"project.delete":    {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// Every active member of the project, his own settings (M3 design 9.2).
+	"project_preferences.read":   {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"project_preferences.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

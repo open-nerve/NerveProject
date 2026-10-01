@@ -317,6 +317,28 @@ func (q *Queries) SetArchived(ctx context.Context, arg SetArchivedParams) error 
 	return err
 }
 
+const shareProject = `-- name: ShareProject :one
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived
+FROM projects
+WHERE id = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+type ShareProjectRow struct {
+	WorkspaceID uuid.UUID
+	Archived    bool
+}
+
+// The parent lock of a write under the project that leaves the project row and its memberships as they are (M3 design
+// 3.6): FOR SHARE waits for FOR NO KEY UPDATE, not for another FOR SHARE. After a wait, Postgres evaluates deleted_at
+// IS NULL again on the row's newest version, so a project deleted meanwhile reads no row.
+func (q *Queries) ShareProject(ctx context.Context, id uuid.UUID) (ShareProjectRow, error) {
+	row := q.db.QueryRow(ctx, shareProject, id)
+	var i ShareProjectRow
+	err := row.Scan(&i.WorkspaceID, &i.Archived)
+	return i, err
+}
+
 const updateProject = `-- name: UpdateProject :exec
 UPDATE projects p
 SET name                    = coalesce($1::text, p.name),

@@ -101,6 +101,16 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.SetArchived(cancelled, web, true, alice, now); !failed(err) {
 		t.Errorf("SetArchived() = %v; want context.Canceled", err)
 	}
+	if p, found, err := s.ShareProject(cancelled, web); !failed(err) || found || p != (app.LockedProject{}) {
+		t.Errorf("ShareProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
+	}
+	if p, found, err := s.Preferences(cancelled, web, alice); !failed(err) || found {
+		t.Errorf("Preferences() = %+v, %v, %v; want context.Canceled, not none", p, found, err)
+	}
+	if _, err := s.UpsertPreferences(cancelled, app.PreferencesChange{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
+		Now: now}); !failed(err) {
+		t.Errorf("UpsertPreferences() = %v; want context.Canceled", err)
+	}
 	for i, step := range []func(context.Context, app.Deletion) error{s.DeleteProjects, s.DeleteProjectMembers, s.DeleteProjectPreferences,
 		s.DeleteStates} {
 		if err := step(cancelled, app.Deletion{WorkspaceID: acme, ProjectID: &web, By: alice, Now: now}); !failed(err) {

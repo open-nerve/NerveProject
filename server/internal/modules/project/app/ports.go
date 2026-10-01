@@ -113,6 +113,15 @@ type ProjectLocker interface {
 	LockProject(ctx context.Context, id uuid.UUID) (p LockedProject, found bool, err error)
 }
 
+// ProjectSharer takes the parent lock of a write under a project that
+// leaves the project row and its memberships as they are (M3 design 3.6).
+type ProjectSharer interface {
+	// ShareProject locks the undeleted project id FOR SHARE until the
+	// transaction ctx carries ends; found is false when there is none, a
+	// project deleted while the lock waited too.
+	ShareProject(ctx context.Context, id uuid.UUID) (p LockedProject, found bool, err error)
+}
+
 // ProjectFinder finds the workspace of a project: what a read decides on,
 // and what a write on the project reads first, to lock the workspace
 // before the project (M3 design 3.6 convention 2).
@@ -128,6 +137,35 @@ type ProjectFinder interface {
 type ProjectLocks interface {
 	ProjectFinder
 	ProjectLocker
+	ProjectSharer
+}
+
+// PreferencesReader is getProjectPreferences' repository.
+type PreferencesReader interface {
+	ProjectFinder
+	// Preferences are userID's display settings in projectID; found is false
+	// while he has no undeleted row of them.
+	Preferences(ctx context.Context, projectID, userID uuid.UUID) (p domain.Preferences, found bool, err error)
+}
+
+// PreferencesChange is a change of an account's display settings in a
+// project, and the id of the row if the change inserts one.
+type PreferencesChange struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	Patch       domain.PreferencesPatch
+	Now         time.Time
+}
+
+// PreferencesWriter is updateProjectPreferences' repository. It runs in the
+// transaction ctx carries.
+type PreferencesWriter interface {
+	// UpsertPreferences applies c.Patch to the account's undeleted row, or
+	// inserts one with domain.DefaultPreferences and the patch applied, by
+	// the account at c.Now, and returns the settings as stored.
+	UpsertPreferences(ctx context.Context, c PreferencesChange) (domain.Preferences, error)
 }
 
 // Membership is an account's undeleted membership of a project, active or

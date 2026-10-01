@@ -30,6 +30,21 @@ func (s *Store) LockProject(ctx context.Context, id uuid.UUID) (p app.LockedProj
 	return app.LockedProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived}, true, nil
 }
 
+// ShareProject locks the undeleted project id FOR SHARE until the
+// transaction ctx carries ends, and reads its workspace and whether it is
+// archived; found is false when there is none, a project deleted while the
+// lock waited too (app.ProjectSharer).
+func (s *Store) ShareProject(ctx context.Context, id uuid.UUID) (p app.LockedProject, found bool, err error) {
+	r, err := s.queries(ctx).ShareProject(ctx, id)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return app.LockedProject{}, false, nil
+	case err != nil:
+		return app.LockedProject{}, false, fmt.Errorf("share project %s: %w", id, err)
+	}
+	return app.LockedProject{WorkspaceID: r.WorkspaceID, Archived: r.Archived}, true, nil
+}
+
 // UpdateProject changes the fields p gives of the project id, by the
 // account by at now; the others keep their values. An identifier or a name
 // another undeleted project of the workspace has is domain.ErrIdentifierTaken

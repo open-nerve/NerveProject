@@ -64,3 +64,77 @@ func (q *Queries) LowestSortOrder(ctx context.Context, arg LowestSortOrderParams
 	err := row.Scan(&sort_order)
 	return sort_order, err
 }
+
+const preferences = `-- name: Preferences :one
+SELECT preferences, sort_order
+FROM project_user_properties
+WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL
+`
+
+type PreferencesParams struct {
+	ProjectID uuid.UUID
+	UserID    uuid.UUID
+}
+
+type PreferencesRow struct {
+	Preferences []byte
+	SortOrder   float64
+}
+
+// getProjectPreferences: the account's undeleted display settings in the project, if any (M3 design 3.18).
+func (q *Queries) Preferences(ctx context.Context, arg PreferencesParams) (PreferencesRow, error) {
+	row := q.db.QueryRow(ctx, preferences, arg.ProjectID, arg.UserID)
+	var i PreferencesRow
+	err := row.Scan(&i.Preferences, &i.SortOrder)
+	return i, err
+}
+
+const upsertPreferences = `-- name: UpsertPreferences :one
+INSERT INTO project_user_properties AS p (id, workspace_id, project_id, user_id, preferences, sort_order, created_by_id,
+                                           updated_by_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6,
+        $4, $4, $7, $7)
+ON CONFLICT (project_id, user_id) WHERE deleted_at IS NULL DO UPDATE
+SET preferences   = CASE WHEN $8::boolean THEN EXCLUDED.preferences ELSE p.preferences END,
+    sort_order    = CASE WHEN $9::boolean THEN EXCLUDED.sort_order ELSE p.sort_order END,
+    updated_by_id = EXCLUDED.updated_by_id,
+    updated_at    = EXCLUDED.updated_at
+RETURNING preferences, sort_order
+`
+
+type UpsertPreferencesParams struct {
+	ID            uuid.UUID
+	WorkspaceID   uuid.UUID
+	ProjectID     uuid.UUID
+	UserID        uuid.UUID
+	Preferences   []byte
+	SortOrder     float64
+	Now           time.Time
+	SetNavigation bool
+	SetSortOrder  bool
+}
+
+type UpsertPreferencesRow struct {
+	Preferences []byte
+	SortOrder   float64
+}
+
+// updateProjectPreferences, under the project's FOR SHARE (M3 design 3.6, 3.18): an account without an undeleted row
+// gets one, with the values given, the defaults with the change applied; one with a row has the fields that are set
+// changed, the navigation whole. The conflict target is the partial unique index, so a deleted row does not count.
+func (q *Queries) UpsertPreferences(ctx context.Context, arg UpsertPreferencesParams) (UpsertPreferencesRow, error) {
+	row := q.db.QueryRow(ctx, upsertPreferences,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.UserID,
+		arg.Preferences,
+		arg.SortOrder,
+		arg.Now,
+		arg.SetNavigation,
+		arg.SetSortOrder,
+	)
+	var i UpsertPreferencesRow
+	err := row.Scan(&i.Preferences, &i.SortOrder)
+	return i, err
+}

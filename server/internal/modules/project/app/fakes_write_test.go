@@ -13,19 +13,23 @@ import (
 )
 
 // fakeProject is a project as fakeStore holds it: its workspace, whether it
-// is archived, its memberships by account, and when it was last written,
-// as stored.
+// is archived, its memberships and its members' display settings by
+// account, and when it was last written, as stored.
 type fakeProject struct {
 	workspace uuid.UUID
 	archived  bool
 	members   map[uuid.UUID]app.Membership
+	prefs     map[uuid.UUID]domain.Preferences
 	updated   time.Time
 }
 
 // The projects of the writes' tests: acme's web, whose admin is bob, whose
 // member is alice and whose guest is carol, dave's membership ended; acme's
-// ops, archived, whose admin is bob.
+// ops, archived, whose admin is bob. Bob has display settings in web
+// (bobsTabs), the others none.
 var webID, opsID = uuid.NewV7(), uuid.NewV7()
+
+var bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views"}}, SortOrder: 10}
 
 // writeFixture is a write use case's fakes, sharing one log.
 type writeFixture struct {
@@ -48,7 +52,7 @@ func newWrites() *writeFixture {
 				alice: {ID: uuid.NewV7(), Role: shared.RoleMember, Active: true},
 				carol: {ID: uuid.NewV7(), Role: shared.RoleGuest, Active: true},
 				dave:  {ID: uuid.NewV7(), Role: shared.RoleMember},
-			}},
+			}, prefs: map[uuid.UUID]domain.Preferences{bob: bobsTabs}},
 			opsID: {workspace: acme.ID, archived: true, updated: now, members: map[uuid.UUID]app.Membership{
 				bob: {ID: uuid.NewV7(), Role: shared.RoleAdmin, Active: true},
 			}},
@@ -123,9 +127,10 @@ func (f *fakeStore) fail(name string) error {
 	return nil
 }
 
-func (f *fakeStore) LockProject(ctx context.Context, id uuid.UUID) (app.LockedProject, bool, error) {
-	f.log.add(ctx, "LockProject %s", id)
-	if err := f.fail("LockProject"); err != nil {
+// lock is LockProject and ShareProject, named by method.
+func (f *fakeStore) lock(ctx context.Context, method string, id uuid.UUID) (app.LockedProject, bool, error) {
+	f.log.add(ctx, "%s %s", method, id)
+	if err := f.fail(method); err != nil {
 		return app.LockedProject{}, false, err
 	}
 	p, ok := f.projects[id]
@@ -136,6 +141,14 @@ func (f *fakeStore) LockProject(ctx context.Context, id uuid.UUID) (app.LockedPr
 		return app.LockedProject{WorkspaceID: f.moved, Archived: p.archived}, true, nil
 	}
 	return app.LockedProject{WorkspaceID: p.workspace, Archived: p.archived}, true, nil
+}
+
+func (f *fakeStore) LockProject(ctx context.Context, id uuid.UUID) (app.LockedProject, bool, error) {
+	return f.lock(ctx, "LockProject", id)
+}
+
+func (f *fakeStore) ShareProject(ctx context.Context, id uuid.UUID) (app.LockedProject, bool, error) {
+	return f.lock(ctx, "ShareProject", id)
 }
 
 func (f *fakeStore) ProjectWorkspace(ctx context.Context, id uuid.UUID) (uuid.UUID, bool, error) {
