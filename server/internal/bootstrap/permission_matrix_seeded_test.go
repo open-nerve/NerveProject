@@ -77,8 +77,10 @@ var matrixProjects = []struct {
 // each with its display settings: in acme's public and private projects,
 // the project level's members (projectColumns); the removed member, still
 // an active member of the public one, so that only his membership of acme
-// keeps him out; the member before in the private one, ended; the archived
-// project's admin; each other workspace's admin in its project.
+// keeps him out; the member before in the private one, ended; WG- in both,
+// and the member in the private one, for partingStates to end or delete;
+// the archived project's admin; each other workspace's admin in its
+// project.
 var matrixProjectMembers = []struct {
 	key  string
 	c    caller
@@ -86,10 +88,11 @@ var matrixProjectMembers = []struct {
 }{
 	{"acme/public", callerProjectAdmin, shared.RoleAdmin}, {"acme/public", callerProjectMember, shared.RoleMember},
 	{"acme/public", callerGuest, shared.RoleGuest}, {"acme/public", callerMemberAndAdmin, shared.RoleMember},
-	{"acme/public", callerRemoved, shared.RoleMember},
+	{"acme/public", callerRemoved, shared.RoleMember}, {"acme/public", callerGuestOnly, shared.RoleGuest},
 	{"acme/private", callerProjectAdmin, shared.RoleAdmin}, {"acme/private", callerProjectMember, shared.RoleMember},
 	{"acme/private", callerGuest, shared.RoleGuest}, {"acme/private", callerMemberAndAdmin, shared.RoleMember},
-	{"acme/private", callerBefore, shared.RoleMember},
+	{"acme/private", callerBefore, shared.RoleMember}, {"acme/private", callerGuestOnly, shared.RoleGuest},
+	{"acme/private", callerMember, shared.RoleMember},
 	{"acme/archived", callerProjectAdmin, shared.RoleAdmin},
 	{"gone/project", callerDeleted, shared.RoleAdmin}, {"other/project", callerNever, shared.RoleAdmin},
 }
@@ -347,5 +350,45 @@ func (s projectSeed) join(key string, c caller, role shared.Role) {
 		Now: s.now,
 	}); err != nil {
 		s.t.Fatal(err)
+	}
+}
+
+// partingStates puts memberships of matrixProjectMembers in the states in
+// which a list and reading could part (TestListingProjectsIsReadingEach):
+// WG-'s membership of acme's public project ended and of its private one
+// deleted, the member's of the private one deleted, and PM's display
+// settings in it deleted while his membership stays active. SQL stands in
+// for the store that will end a membership (P5), and makes the two
+// deleted states that only a deleted project or workspace makes today,
+// which the list must still read as reading does. Each state is then read
+// back: one missing would let a list that counts an ended or a deleted
+// membership, or takes display settings for a membership, agree with
+// reading for every account.
+func (s projectSeed) partingStates(pool *pgxpool.Pool) {
+	s.t.Helper()
+	public, private := s.projects["acme/public"], s.projects["acme/private"]
+	s.exec(pool, "UPDATE project_members SET is_active = false, updated_at = $3 WHERE project_id = $1 AND member_id = $2",
+		public, s.ids[callerGuestOnly], s.now)
+	for _, c := range []caller{callerGuestOnly, callerMember} {
+		s.exec(pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", private, s.ids[c], s.now)
+	}
+	s.exec(pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", private,
+		s.ids[callerProjectMember], s.now)
+	for _, st := range []struct {
+		project uuid.UUID
+		c       caller
+		holds   string // of m, his membership of the project
+	}{
+		{public, callerGuestOnly, "NOT m.is_active AND m.deleted_at IS NULL"},
+		{private, callerGuestOnly, "m.deleted_at IS NOT NULL"},
+		{private, callerMember, "m.deleted_at IS NOT NULL"},
+		{private, callerProjectMember, "m.is_active AND m.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM project_user_properties u " +
+			"WHERE u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL)"},
+	} {
+		var holds bool
+		if err := pool.QueryRow(context.Background(), "SELECT EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = $1 AND "+
+			"m.member_id = $2 AND "+st.holds+")", st.project, s.ids[st.c]).Scan(&holds); err != nil || !holds {
+			s.t.Fatalf("%s's membership of %s: %v, %v; want %s", st.c, st.project, holds, err, st.holds)
+		}
 	}
 }
