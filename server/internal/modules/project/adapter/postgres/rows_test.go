@@ -80,7 +80,8 @@ func TestCreateTheRowsUnderAProject(t *testing.T) {
 			updated_at = $2, deleted_at IS NULL) FROM project_user_properties WHERE id = $4),
 		(SELECT string_agg(concat_ws(' ', workspace_id, project_id, name, description = '', color, sequence, "group", "default",
 			created_by_id, updated_by_id, created_at = $2, updated_at = $2, deleted_at IS NULL), ' / ' ORDER BY sequence)
-			FROM states WHERE project_id = $1))`, web, now, member, prefs).Scan(&got); err != nil {
+			FROM states WHERE project_id = $1 AND id = ANY($5::uuid[])))`, web, now, member, prefs,
+		[]uuid.UUID{states[0].ID, states[1].ID}).Scan(&got); err != nil {
 		t.Fatal(err)
 	}
 	under := func(s string) string { return acme.String() + " " + web.String() + " " + s }
@@ -106,18 +107,19 @@ func TestCreateTheRowsUnderAProject(t *testing.T) {
 }
 
 // CreateStates stops at the first state that fails, and names it: a
-// second default state breaks states_project_id_default_key.
+// second default state breaks states_project_id_default_key. Three, after
+// it, is not a default: a loop that went on would store it.
 func TestCreateStatesStopsAtTheFirstFailure(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	web := newProject(t, s, acme, "Web", "WEB", alice)
-	row := func(name string) app.StateRow {
+	row := func(name string, isDefault bool) app.StateRow {
 		return app.StateRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, CreatedBy: alice, Now: now,
-			State: domain.NewState{Name: name, Color: "#60646C", Group: "backlog", Default: true}}
+			State: domain.NewState{Name: name, Color: "#60646C", Group: "backlog", Default: isDefault}}
 	}
 
-	err := s.CreateStates(context.Background(), []app.StateRow{row("One"), row("Two"), row("Three")})
+	err := s.CreateStates(context.Background(), []app.StateRow{row("One", true), row("Two", true), row("Three", false)})
 
 	var names []string
 	if err := pool.QueryRow(context.Background(), "SELECT coalesce(array_agg(name ORDER BY name), '{}') FROM states").Scan(&names); err != nil {
@@ -156,8 +158,13 @@ func TestLowestSortOrder(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	// ops stands for a project alice left: its display settings stay
-	// undeleted. old's were deleted.
+	// alice left ops: her membership there ended, and its display settings
+	// stay undeleted and count. old's were deleted.
+	if err := s.CreateMember(context.Background(), app.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops, MemberID: alice,
+		Role: shared.RoleMember, CreatedBy: alice, Now: now}); err != nil {
+		t.Fatal(err)
+	}
+	exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2", ops, alice)
 	exec(t, pool, "UPDATE project_user_properties SET deleted_at = $2 WHERE project_id = $1", old, now)
 
 	for _, tt := range []struct {

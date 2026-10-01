@@ -6,6 +6,8 @@ import (
 	"testing"
 	"uuid"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -70,5 +72,32 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.CreateStates(cancelled, []app.StateRow{{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, CreatedBy: alice, Now: now,
 		State: domain.NewState{Name: "Backlog", Color: "#60646C", Group: "backlog", Default: true}}}); !failed(err) {
 		t.Errorf("CreateStates() = %v; want context.Canceled", err)
+	}
+}
+
+// Only the two unique keys of a name and an identifier are a 409: another
+// unique key (a duplicate id) and a CHECK the domain should have kept (a
+// lower-case identifier) are each an internal error, never a domain error.
+func TestCreateProjectBreakingAnotherConstraintIsInternal(t *testing.T) {
+	s, pool := newStore(t)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web := newProject(t, s, acme, "Web", "WEB", alice)
+	for _, tt := range []struct {
+		name       string
+		id         uuid.UUID
+		identifier string
+		constraint string
+	}{
+		{"a duplicate id", web, "OPS", "projects_pkey"},
+		{"a lower-case identifier", uuid.NewV7(), "ops", "projects_identifier_check"},
+	} {
+		err := s.CreateProject(context.Background(), app.ProjectRow{ID: tt.id, WorkspaceID: acme, Name: "Ops", Identifier: tt.identifier,
+			Timezone: "UTC", CreatedBy: alice, Now: now})
+		var se *shared.Error
+		var pgErr *pgconn.PgError
+		if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != tt.constraint {
+			t.Errorf("%s: CreateProject() = %v; want the violation of %s, not a domain error", tt.name, err, tt.constraint)
+		}
 	}
 }
