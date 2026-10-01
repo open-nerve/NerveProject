@@ -42,6 +42,8 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1"},
 		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", http.StatusOK,
 			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1"},
+		{"updateProjectPreferences", http.MethodPatch, "/api/v0/me/projects/" + web.String() + "/preferences", `{"sort_order":5}`, http.StatusOK,
+			"SELECT updated_at, updated_by_id = $2 FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL"},
 	} {
 		before := time.Now().Truncate(time.Microsecond)
 		status, body := call(t, contract, w.method, base+w.path, alice, w.body)

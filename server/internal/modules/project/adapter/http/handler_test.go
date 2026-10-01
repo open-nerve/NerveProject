@@ -68,6 +68,7 @@ type fakes struct {
 	archive   *fakeOnProject
 	unarchive *fakeOnProject
 	delete    *fakeDelete
+	prefs     *fakePreferences
 }
 
 type fakeList struct {
@@ -200,8 +201,12 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.delete == nil {
 		f.delete = &fakeDelete{}
 	}
+	if f.prefs == nil {
+		f.prefs = &fakePreferences{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
-		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive, DeleteProject: f.delete})
+		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive, DeleteProject: f.delete,
+		GetPreferences: f.prefs, UpdatePreferences: fakeUpdatePreferences{f.prefs}})
 	return router
 }
 

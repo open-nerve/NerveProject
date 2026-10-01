@@ -49,16 +49,28 @@ type DeleteProjectUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) error
 }
 
+// GetPreferencesUseCase is app.GetProjectPreferences.
+type GetPreferencesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID) (domain.Preferences, error)
+}
+
+// UpdatePreferencesUseCase is app.UpdateProjectPreferences.
+type UpdatePreferencesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, p domain.PreferencesPatch) (domain.Preferences, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListProjects     ListProjectsUseCase
-	CreateProject    CreateProjectUseCase
-	GetProject       GetProjectUseCase
-	CheckIdentifier  CheckIdentifierUseCase
-	UpdateProject    UpdateProjectUseCase
-	ArchiveProject   ArchiveProjectUseCase
-	UnarchiveProject ArchiveProjectUseCase
-	DeleteProject    DeleteProjectUseCase
+	ListProjects      ListProjectsUseCase
+	CreateProject     CreateProjectUseCase
+	GetProject        GetProjectUseCase
+	CheckIdentifier   CheckIdentifierUseCase
+	UpdateProject     UpdateProjectUseCase
+	ArchiveProject    ArchiveProjectUseCase
+	UnarchiveProject  ArchiveProjectUseCase
+	DeleteProject     DeleteProjectUseCase
+	GetPreferences    GetPreferencesUseCase
+	UpdatePreferences UpdatePreferencesUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

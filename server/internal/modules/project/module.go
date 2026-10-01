@@ -1,7 +1,8 @@
 // Package project is the projects module (M3 design 3.3, 6.3): projects,
 // their members, their states and each member's display settings. It
 // brings listing, creating, reading, changing, archiving and deleting
-// projects and checking an identifier, carries out the workspace module's cascades on the projects
+// projects, checking an identifier and each member's display settings,
+// carries out the workspace module's cascades on the projects
 // (ProjectCascade), and offers the access module its reads of a project
 // (ProjectAccess).
 package project
@@ -92,13 +93,15 @@ func New(d Deps) *Module {
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),
-		ListProjects:     app.NewListProjects(d.Workspaces, store, d.Authorizer),
-		GetProject:       app.NewGetProject(store, d.Authorizer),
-		CheckIdentifier:  app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:    app.NewUpdateProject(store, locks, d.Tx, d.Clock),
-		ArchiveProject:   app.NewArchiveProject(store, locks, d.Tx, d.Clock),
-		UnarchiveProject: app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
-		DeleteProject:    app.NewDeleteProject(store, locks, d.Tx, d.Clock),
+		ListProjects:      app.NewListProjects(d.Workspaces, store, d.Authorizer),
+		GetProject:        app.NewGetProject(store, d.Authorizer),
+		CheckIdentifier:   app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
+		UpdateProject:     app.NewUpdateProject(store, locks, d.Tx, d.Clock),
+		ArchiveProject:    app.NewArchiveProject(store, locks, d.Tx, d.Clock),
+		UnarchiveProject:  app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:     app.NewDeleteProject(store, locks, d.Tx, d.Clock),
+		GetPreferences:    app.NewGetProjectPreferences(store, d.Authorizer),
+		UpdatePreferences: app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 	}}
 }
 

@@ -636,6 +636,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/me/projects/{project_id}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the caller's display settings in a project
+         * @description The caller's own settings in the project, for its active members: the tab bar of its header and its place in his sidebar. While he has none stored they are the defaults, work_items with nothing hidden and 65535, and reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         */
+        get: operations["getProjectPreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's display settings in a project
+         * @description For the project's active members, their own settings. The fields given change and the others stay; navigation is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         */
+        patch: operations["updateProjectPreferences"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1200,6 +1227,28 @@ export interface components {
             /** @description An IANA time zone name. */
             timezone?: string;
         };
+        /**
+         * @description A tab of a project's header.
+         * @enum {string}
+         */
+        ProjectTab: "work_items" | "cycles" | "modules" | "views" | "intake";
+        /** @description The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items. */
+        ProjectNavigation: {
+            default_tab: components["schemas"]["ProjectTab"];
+            hide_in_more_menu: components["schemas"]["ProjectTab"][];
+        };
+        /** @description The caller's display settings in a project. */
+        ProjectPreferences: {
+            navigation: components["schemas"]["ProjectNavigation"];
+            /** @description The project's place in the caller's sidebar, lowest first. */
+            sort_order: number;
+        };
+        /** @description Changes the fields it names; a field left out keeps its value, and navigation replaces the tab bar whole. */
+        ProjectPreferencesUpdate: {
+            navigation?: components["schemas"]["ProjectNavigation"];
+            /** @description The project's place in the caller's sidebar, lowest first. */
+            sort_order?: number;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -1290,6 +1339,10 @@ export type ProjectList = components['schemas']['ProjectList'];
 export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type IdentifierAvailability = components['schemas']['IdentifierAvailability'];
 export type ProjectUpdate = components['schemas']['ProjectUpdate'];
+export type ProjectTab = components['schemas']['ProjectTab'];
+export type ProjectNavigation = components['schemas']['ProjectNavigation'];
+export type ProjectPreferences = components['schemas']['ProjectPreferences'];
+export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -2273,6 +2326,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProjectPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's settings in the project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProjectPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectPreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's settings as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPreferences"];
                 };
             };
             default: components["responses"]["Problem"];

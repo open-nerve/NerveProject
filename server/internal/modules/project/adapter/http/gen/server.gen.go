@@ -77,6 +77,33 @@ func (e ProjectRole) Valid() bool {
 	}
 }
 
+// Defines values for ProjectTab.
+const (
+	ProjectTabCycles    ProjectTab = "cycles"
+	ProjectTabIntake    ProjectTab = "intake"
+	ProjectTabModules   ProjectTab = "modules"
+	ProjectTabViews     ProjectTab = "views"
+	ProjectTabWorkItems ProjectTab = "work_items"
+)
+
+// Valid indicates whether the value is a known member of the ProjectTab enum.
+func (e ProjectTab) Valid() bool {
+	switch e {
+	case ProjectTabCycles:
+		return true
+	case ProjectTabIntake:
+		return true
+	case ProjectTabModules:
+		return true
+	case ProjectTabViews:
+		return true
+	case ProjectTabWorkItems:
+		return true
+	default:
+		return false
+	}
+}
+
 // IdentifierAvailability defines model for IdentifierAvailability.
 type IdentifierAvailability struct {
 	Available bool `json:"available"`
@@ -196,11 +223,39 @@ type ProjectList struct {
 	Data []Project `json:"data"`
 }
 
+// ProjectNavigation The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items.
+type ProjectNavigation struct {
+	// DefaultTab A tab of a project's header.
+	DefaultTab     ProjectTab   `json:"default_tab"`
+	HideInMoreMenu []ProjectTab `json:"hide_in_more_menu"`
+}
+
 // ProjectNetwork Who sees the project besides its members and the workspace's admins: 0 private, nobody; 2 public, the workspace's members too.
 type ProjectNetwork int
 
+// ProjectPreferences The caller's display settings in a project.
+type ProjectPreferences struct {
+	// Navigation The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items.
+	Navigation ProjectNavigation `json:"navigation"`
+
+	// SortOrder The project's place in the caller's sidebar, lowest first.
+	SortOrder float64 `json:"sort_order"`
+}
+
+// ProjectPreferencesUpdate Changes the fields it names; a field left out keeps its value, and navigation replaces the tab bar whole.
+type ProjectPreferencesUpdate struct {
+	// Navigation The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items.
+	Navigation *ProjectNavigation `json:"navigation,omitempty"`
+
+	// SortOrder The project's place in the caller's sidebar, lowest first.
+	SortOrder *float64 `json:"sort_order,omitempty"`
+}
+
 // ProjectRole A member's role in a project, 5 guest, 15 member, 20 admin.
 type ProjectRole int
+
+// ProjectTab A tab of a project's header.
+type ProjectTab string
 
 // ProjectUpdate Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
 type ProjectUpdate struct {
@@ -250,6 +305,9 @@ type ListProjectsParams struct {
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
 
+// UpdateProjectPreferencesJSONRequestBody defines body for UpdateProjectPreferences for application/json ContentType.
+type UpdateProjectPreferencesJSONRequestBody = ProjectPreferencesUpdate
+
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = ProjectUpdate
 
@@ -258,6 +316,12 @@ type CreateProjectJSONRequestBody = ProjectCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// GetProjectPreferences Read the caller's display settings in a project
+	// (GET /api/v0/me/projects/{project_id}/preferences)
+	GetProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// UpdateProjectPreferences Change the caller's display settings in a project
+	// (PATCH /api/v0/me/projects/{project_id}/preferences)
+	UpdateProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// DeleteProject Delete a project
 	// (DELETE /api/v0/projects/{project_id})
 	DeleteProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -292,6 +356,58 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetProjectPreferences operation middleware
+func (siw *ServerInterfaceWrapper) GetProjectPreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetProjectPreferences(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateProjectPreferences operation middleware
+func (siw *ServerInterfaceWrapper) UpdateProjectPreferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateProjectPreferences(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteProject operation middleware
 func (siw *ServerInterfaceWrapper) DeleteProject(w http.ResponseWriter, r *http.Request) {
@@ -654,6 +770,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.UpdateProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/archive", wrapper.ArchiveProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/unarchive", wrapper.UnarchiveProject)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
 	return m
 }
@@ -666,6 +784,99 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type GetProjectPreferencesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type GetProjectPreferencesResponseObject interface {
+	VisitGetProjectPreferencesResponse(w http.ResponseWriter) error
+}
+
+type GetProjectPreferences200JSONResponse ProjectPreferences
+
+func (response GetProjectPreferences200JSONResponse) VisitGetProjectPreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetProjectPreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response GetProjectPreferencesdefaultApplicationProblemPlusJSONResponse) VisitGetProjectPreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProjectPreferencesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *UpdateProjectPreferencesJSONRequestBody
+}
+
+type UpdateProjectPreferencesResponseObject interface {
+	VisitUpdateProjectPreferencesResponse(w http.ResponseWriter) error
+}
+
+type UpdateProjectPreferences200JSONResponse ProjectPreferences
+
+func (response UpdateProjectPreferences200JSONResponse) VisitUpdateProjectPreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateProjectPreferencesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateProjectPreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateProjectPreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type DeleteProjectRequestObject struct {
@@ -1036,6 +1247,12 @@ func (response CreateProjectdefaultApplicationProblemPlusJSONResponse) VisitCrea
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// GetProjectPreferences Read the caller's display settings in a project
+	// (GET /api/v0/me/projects/{project_id}/preferences)
+	GetProjectPreferences(ctx context.Context, request GetProjectPreferencesRequestObject) (GetProjectPreferencesResponseObject, error)
+	// UpdateProjectPreferences Change the caller's display settings in a project
+	// (PATCH /api/v0/me/projects/{project_id}/preferences)
+	UpdateProjectPreferences(ctx context.Context, request UpdateProjectPreferencesRequestObject) (UpdateProjectPreferencesResponseObject, error)
 	// DeleteProject Delete a project
 	// (DELETE /api/v0/projects/{project_id})
 	DeleteProject(ctx context.Context, request DeleteProjectRequestObject) (DeleteProjectResponseObject, error)
@@ -1099,6 +1316,65 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetProjectPreferences operation middleware
+func (sh *strictHandler) GetProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request GetProjectPreferencesRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetProjectPreferences(ctx, request.(GetProjectPreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetProjectPreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetProjectPreferencesResponseObject); ok {
+		if err := validResponse.VisitGetProjectPreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateProjectPreferences operation middleware
+func (sh *strictHandler) UpdateProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request UpdateProjectPreferencesRequestObject
+
+	request.ProjectID = projectID
+
+	var body UpdateProjectPreferencesJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateProjectPreferences(ctx, request.(UpdateProjectPreferencesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateProjectPreferences")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateProjectPreferencesResponseObject); ok {
+		if err := validResponse.VisitUpdateProjectPreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteProject operation middleware

@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"encoding/json"
 	"net/http"
 	"slices"
 	"testing"
@@ -85,6 +86,44 @@ func projectMatrixRows() []matrixRow {
 			cells: ofProject(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
 		{op: "deleteProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodDelete, "", ""),
 			cells: map[caller]cell{callerArchivedAdmin: cellNoContent}},
+		// Every active member of the project, his own settings (M3 design
+		// 9.2): PM+WA as its member, and not WA-, who is none.
+		{op: "getProjectPreferences", columns: projectColumns, request: toProjectPreferences(http.MethodGet, ""),
+			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: readsPreferences("work_items", "[]")},
+		{op: "updateProjectPreferences", write: true, columns: projectColumns,
+			request: toProjectPreferences(http.MethodPatch, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["views"]}}`),
+			cells:   ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: readsPreferences("cycles", `["views"]`)},
+		// An archived project's settings change as any other's (M3 design
+		// 3.19).
+		{op: "updateProjectPreferences", variant: "archived", write: true, columns: archivedColumns,
+			request: toProjectPreferences(http.MethodPatch, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["views"]}}`),
+			cells:   map[caller]cell{callerArchivedAdmin: cellOK}, check: readsPreferences("cycles", `["views"]`)},
+	}
+}
+
+// toProjectPreferences is the request of a row whose callers each send method to
+// their display settings in the project their column targets.
+func toProjectPreferences(method, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/me/projects/" + s.project(projectOf(c)).String() + "/preferences", body
+	}
+}
+
+// readsPreferences: the settings with the default tab tab and the hidden
+// tabs hidden, as JSON, at the place every seeded member has, the default.
+func readsPreferences(tab, hidden string) func(t *testing.T, c caller, _ seeded, answer string) {
+	return func(t *testing.T, c caller, _ seeded, answer string) {
+		var p struct {
+			Navigation struct {
+				DefaultTab     string          `json:"default_tab"`
+				HideInMoreMenu json.RawMessage `json:"hide_in_more_menu"`
+			} `json:"navigation"`
+			SortOrder float64 `json:"sort_order"`
+		}
+		decodeAnswer(t, answer, &p)
+		if p.Navigation.DefaultTab != tab || string(p.Navigation.HideInMoreMenu) != hidden || p.SortOrder != 65535 {
+			t.Errorf("%s reads %s; want %s, %s hidden, at 65535", c, answer, tab, hidden)
+		}
 	}
 }
 
