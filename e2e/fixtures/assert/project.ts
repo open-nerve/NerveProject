@@ -40,9 +40,9 @@ const newStates = [
 /**
  * P1, W3: the project of p.identifier in the workspace of slug holds p, is neither archived nor deleted, has no
  * work item numbered yet (last_issue_sequence 0) and is led by the account of leadEmail, or by no one when it is
- * null. Its members are members, each an active admin (role 20) with his display settings in it at his place; its
- * states are the six of a new project. The account of creatorEmail wrote every row, at the project's creation, and
- * none has changed since. Returns the project's id.
+ * null. Its members are exactly `members`, each an active admin (role 20) with his display settings in it at his
+ * place; its states are the six of a new project. Every row is in the project's workspace; the account of
+ * creatorEmail wrote every row, at the project's creation, and none has changed since. Returns the project's id.
  */
 export async function expectProjectCreated(
   db: Database,
@@ -78,10 +78,12 @@ export async function expectProjectCreated(
   expect(
     await db.query(
       `SELECT u.email, m.role, m.is_active, s.sort_order,
-              m.created_by_id = p.created_by_id AND m.updated_by_id = p.created_by_id AND m.created_at = p.created_at
-                AND m.updated_at = p.created_at AND m.deleted_at IS NULL
-              AND s.created_by_id = p.created_by_id AND s.updated_by_id = p.created_by_id AND s.created_at = p.created_at
-                AND s.updated_at = p.created_at AND s.deleted_at IS NULL AS with_the_project
+              m.workspace_id = p.workspace_id AND m.created_by_id = p.created_by_id
+                AND m.updated_by_id = p.created_by_id AND m.created_at = p.created_at AND m.updated_at = p.created_at
+                AND m.deleted_at IS NULL
+              AND s.workspace_id = p.workspace_id AND s.created_by_id = p.created_by_id
+                AND s.updated_by_id = p.created_by_id AND s.created_at = p.created_at AND s.updated_at = p.created_at
+                AND s.deleted_at IS NULL AS with_the_project
          FROM project_members m
          JOIN projects p ON p.id = m.project_id
          JOIN users u ON u.id = m.member_id
@@ -98,8 +100,9 @@ export async function expectProjectCreated(
   expect(
     await db.query(
       `SELECT s.name, s.color, s.sequence, s."group", s."default",
-              s.created_by_id = p.created_by_id AND s.updated_by_id = p.created_by_id AND s.created_at = p.created_at
-                AND s.updated_at = p.created_at AND s.deleted_at IS NULL AS with_the_project
+              s.workspace_id = p.workspace_id AND s.created_by_id = p.created_by_id
+                AND s.updated_by_id = p.created_by_id AND s.created_at = p.created_at AND s.updated_at = p.created_at
+                AND s.deleted_at IS NULL AS with_the_project
          FROM states s JOIN projects p ON p.id = s.project_id
         WHERE s.project_id = $1 ORDER BY s.sequence`,
       [id]

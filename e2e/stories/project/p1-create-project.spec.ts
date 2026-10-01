@@ -143,8 +143,9 @@ test("P1 (API): a member creates a project with the admin its lead, both its adm
   // No refusal changed the project created first.
   expect(await expectProjectCreated(db, slug, web, memberEmail, adminEmail, members)).toBe(created.id);
 
-  // A new project goes first in the sidebar of each of its admins (M3 design 3.18), each by his own places: the
-  // admin's Ops before his Web; then the member's Docs, led by the admin, before the member's Web and the admin's Ops.
+  // A new project goes first in the sidebar of each of its admins (M3 design 3.18), each sidebar by its account's own
+  // places. Ops, which the admin creates, goes before Web in the admin's sidebar. Docs, which the member creates with
+  // the admin its lead, goes before Web in the member's sidebar and before Ops in the admin's sidebar.
   const ops = await createProject(api, admin, slug, { name: "Ops", identifier: "ops", network: 0 });
   expect(ops).toMatchObject({
     identifier: "OPS",
