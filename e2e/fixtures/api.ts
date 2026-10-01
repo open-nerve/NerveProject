@@ -14,6 +14,8 @@ export type WorkspacePreferences = components["schemas"]["WorkspacePreferences"]
 export type WorkspacePreferencesUpdate = components["schemas"]["WorkspacePreferencesUpdate"];
 export type WorkspaceInvitation = components["schemas"]["WorkspaceInvitation"];
 export type InvitationCreate = components["schemas"]["InvitationCreate"];
+export type Project = components["schemas"]["Project"];
+export type ProjectCreate = components["schemas"]["ProjectCreate"];
 
 /** Returns a client for the nerve at baseURL. */
 export function createApi(baseURL: string): Api {
@@ -91,4 +93,18 @@ export async function inviteAndAccept(
     throw new Error(`invite ${member.email} to ${slug} answered no invitation`);
   }
   return accept(api, member.token, invitation);
+}
+
+/** Creates a project in the workspace of slug with the bearer token given, an admin's or a member's, and returns it. */
+export async function createProject(api: Api, token: string, slug: string, body: ProjectCreate): Promise<Project> {
+  const { data, error, response } = await api.POST("/api/v0/workspaces/{slug}/projects", {
+    params: { path: { slug } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `create the project ${body.identifier} in ${slug}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) {
+    throw new Error(`createProject ${body.identifier} answered 201 without the project`);
+  }
+  return data;
 }

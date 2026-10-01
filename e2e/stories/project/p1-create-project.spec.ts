@@ -1,0 +1,201 @@
+import {
+  createProject,
+  createWorkspace,
+  inviteAndAccept,
+  slugFor,
+  type Api,
+  type ProjectCreate,
+} from "../../fixtures/api";
+import { countProjects, expectProjectCreated } from "../../fixtures/assert/project";
+import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { expect, test } from "../../fixtures/test";
+
+// P1, create a project (M3 design 2, 3.17, 3.18). The page version comes
+// with the projects' pages (P10).
+
+/** The answer of GET /api/v0/workspaces/{slug}/project-identifiers/{identifier}. */
+async function availability(api: Api, token: string, slug: string, identifier: string): Promise<unknown> {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/project-identifiers/{identifier}", {
+    params: { path: { slug, identifier } },
+    headers: bearer(token),
+  });
+  expect(response.status, `check ${identifier}: ${JSON.stringify(error)}`).toBe(200);
+  return data;
+}
+
+/** The answer of GET /api/v0/projects/{project_id}: its status, and the project or the problem's code. */
+async function read(
+  api: Api,
+  token: string,
+  id: string
+): Promise<{ status: number; project?: unknown; code?: string }> {
+  const { data, error, response } = await api.GET("/api/v0/projects/{project_id}", {
+    params: { path: { project_id: id } },
+    headers: bearer(token),
+  });
+  return data ? { status: response.status, project: data } : { status: response.status, code: error?.code };
+}
+
+/** The answer to a createProject whose field the rules do not allow. */
+function notAllowed(field: string) {
+  return { status: 422, code: "validation_failed", errors: [{ field, code: "not_allowed" }] };
+}
+
+test("P1 (API): a member creates a project with the admin its lead, both its admins, first in their sidebars, with its six states; a taken identifier or name, a name with a forbidden character, a guest, or a lead who is a guest or no member adds nothing", async ({
+  api,
+  db,
+}, testInfo) => {
+  const adminEmail = emailFor(testInfo, "admin");
+  const admin = (await createPAT(api, (await register(api, adminEmail)).access_token)).token;
+  const memberEmail = emailFor(testInfo, "member");
+  const member = (await createPAT(api, (await register(api, memberEmail)).access_token)).token;
+  const guestEmail = emailFor(testInfo, "guest");
+  const guest = (await createPAT(api, (await register(api, guestEmail)).access_token)).token;
+  const stranger = (await register(api, emailFor(testInfo, "stranger"))).access_token;
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin, { name: "Acme", slug, timezone: "Asia/Shanghai" });
+  // The stranger admins a workspace of his own: his role there makes him no lead of Acme's, and each workspace
+  // answers for its own identifiers.
+  const strangers = slugFor(testInfo, "stranger");
+  await createWorkspace(api, stranger, { name: "Stranger", slug: strangers });
+  await inviteAndAccept(api, admin, slug, { email: memberEmail, token: member }, 15);
+  await inviteAndAccept(api, admin, slug, { email: guestEmail, token: guest }, 5);
+  const [adminId, memberId, guestId, strangerId] = await Promise.all(
+    [admin, member, guest, stranger].map((token) => accountId(api, token))
+  );
+  expect(await availability(api, member, slug, "web")).toEqual({ available: true });
+  expect(await availability(api, member, slug, "WE-B")).toEqual({ available: false });
+
+  const logo = { in_use: "emoji", emoji: { value: "128640" } } as const;
+  const created = await createProject(api, member, slug, {
+    name: "Web",
+    identifier: "web",
+    description: "The site",
+    network: 2,
+    project_lead_id: adminId,
+    logo_props: logo,
+  });
+
+  const web = {
+    name: "Web",
+    identifier: "WEB",
+    description: "The site",
+    network: 2,
+    timezone: "Asia/Shanghai",
+    logo_props: logo,
+  };
+  expect(created).toMatchObject({
+    ...web,
+    project_lead_id: adminId,
+    archived_at: null,
+    member_role: 20,
+    sort_order: 65535,
+    member_ids: [memberId, adminId],
+  });
+  const members = [
+    { email: memberEmail, sort_order: 65535 },
+    { email: adminEmail, sort_order: 65535 },
+  ];
+  expect(await expectProjectCreated(db, slug, web, memberEmail, adminEmail, members)).toBe(created.id);
+  expect(await availability(api, admin, slug, "Web")).toEqual({ available: false });
+  expect(await availability(api, member, slug, "ops")).toEqual({ available: true });
+  expect(await availability(api, stranger, strangers, "web")).toEqual({ available: true });
+
+  const before = await countProjects(db);
+  // Each refused, all at once: none writes.
+  const refusals: { token: string; body: ProjectCreate; want: { status: number; code: string } }[] = [
+    {
+      token: member,
+      body: { name: "Web 2", identifier: "Web" },
+      want: { status: 409, code: "project.identifier_taken" },
+    },
+    { token: member, body: { name: "Web", identifier: "WEB2" }, want: { status: 409, code: "project.name_taken" } },
+    { token: member, body: { name: "Web-2", identifier: "WEB2" }, want: notAllowed("name") },
+    { token: member, body: { name: "Web.2", identifier: "WEB2" }, want: notAllowed("name") },
+    { token: guest, body: { name: "Mine", identifier: "MINE" }, want: { status: 403, code: "forbidden" } },
+    {
+      token: member,
+      body: { name: "Ops", identifier: "OPS", project_lead_id: guestId },
+      want: notAllowed("project_lead_id"),
+    },
+    {
+      token: member,
+      body: { name: "Ops", identifier: "OPS", project_lead_id: strangerId },
+      want: notAllowed("project_lead_id"),
+    },
+  ];
+  const answers = await Promise.all(
+    refusals.map(async ({ token, body }) => {
+      const { error, response } = await api.POST("/api/v0/workspaces/{slug}/projects", {
+        params: { path: { slug } },
+        body,
+        headers: bearer(token),
+      });
+      return {
+        status: response.status,
+        code: error?.code,
+        errors: error?.errors?.map((e) => ({ field: e.field, code: e.code })),
+      };
+    })
+  );
+  expect(answers, "the refusals").toEqual(refusals.map((r) => r.want));
+  expect(await countProjects(db)).toEqual(before);
+  // No refusal changed the project created first.
+  expect(await expectProjectCreated(db, slug, web, memberEmail, adminEmail, members)).toBe(created.id);
+
+  // A new project goes first in the sidebar of each of its admins (M3 design 3.18), each by his own places: the
+  // admin's Ops before his Web; then the member's Docs, led by the admin, before the member's Web and the admin's Ops.
+  const ops = await createProject(api, admin, slug, { name: "Ops", identifier: "ops", network: 0 });
+  expect(ops).toMatchObject({
+    identifier: "OPS",
+    network: 0,
+    member_role: 20,
+    sort_order: 55535,
+    member_ids: [adminId],
+  });
+  // Ops, given no lead, is led by no one.
+  const opsRow = {
+    name: "Ops",
+    identifier: "OPS",
+    description: "",
+    network: 0,
+    timezone: "Asia/Shanghai",
+    logo_props: {},
+  };
+  expect(
+    await expectProjectCreated(db, slug, opsRow, adminEmail, null, [{ email: adminEmail, sort_order: 55535 }])
+  ).toBe(ops.id);
+  const docs = await createProject(api, member, slug, { name: "Docs", identifier: "docs", project_lead_id: adminId });
+  expect(docs).toMatchObject({
+    identifier: "DOCS",
+    member_role: 20,
+    sort_order: 55535,
+    member_ids: [memberId, adminId],
+  });
+  const docsRow = {
+    name: "Docs",
+    identifier: "DOCS",
+    description: "",
+    network: 2,
+    timezone: "Asia/Shanghai",
+    logo_props: {},
+  };
+  expect(
+    await expectProjectCreated(db, slug, docsRow, memberEmail, adminEmail, [
+      { email: memberEmail, sort_order: 55535 },
+      { email: adminEmail, sort_order: 45535 },
+    ])
+  ).toBe(docs.id);
+
+  // An older project reads as its reader sees it (M3 design 3.19): the admin's private Ops, between his Web and his
+  // Docs in his sidebar; Docs, which the member created with the admin its lead; the member does not see Ops.
+  expect(await read(api, admin, ops.id)).toMatchObject({
+    status: 200,
+    project: { identifier: "OPS", network: 0, member_role: 20, sort_order: 55535, member_ids: [adminId] },
+  });
+  expect(await read(api, admin, docs.id)).toMatchObject({
+    status: 200,
+    project: { identifier: "DOCS", member_role: 20, sort_order: 45535, member_ids: [memberId, adminId] },
+  });
+  expect(await read(api, member, ops.id)).toEqual({ status: 404, code: "project.not_found" });
+});

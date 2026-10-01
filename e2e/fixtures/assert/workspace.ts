@@ -208,13 +208,22 @@ export async function expectMembership(
   expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
 }
 
-/** The tables whose rows belong to a workspace and are deleted with it (M3 design 4.12); P4 adds the projects'. */
-const workspaceTables = ["workspace_members", "workspace_member_invites", "workspace_user_properties"];
+/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7 adds the labels. */
+const workspaceTables = [
+  "workspace_members",
+  "workspace_member_invites",
+  "workspace_user_properties",
+  "projects",
+  "project_members",
+  "project_user_properties",
+  "states",
+];
 
 /**
  * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before: its memberships, invitations and display
- * settings. Each table has such a row; none is left undeleted.
+ * settings, its projects, their memberships, their members' display settings and their states. Each table has
+ * such a row; none is left undeleted.
  */
 export async function expectWorkspaceDeleted(db: Database, slug: string, adminEmail: string): Promise<void> {
   const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string | null }>(

@@ -1,18 +1,18 @@
-import { createWorkspace, invite, inviteAndAccept, slugFor } from "../../fixtures/api";
+import { createProject, createWorkspace, invite, inviteAndAccept, slugFor, type Workspace } from "../../fixtures/api";
+import { expectProjectCreated } from "../../fixtures/assert/project";
 import {
   expectInvitations,
   expectMembership,
   expectPreferences,
   expectWorkspaceDeleted,
 } from "../../fixtures/assert/workspace";
-import { bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
 // W3, the workspace's settings (M3 design 2). The page version, with the
-// session switch of 7.1, comes with the general page (P9); P4 adds the
-// projects to the deletion's assertions.
+// session switch of 7.1, comes with the general page (P9).
 
-test("W3 (API): the admin changes the workspace and deletes it with its members, invitations and settings at one moment; a member may do neither, and the slug never changes", async ({
+test("W3 (API): the admin changes the workspace and deletes it with its members, invitations, settings and projects at one moment; a member may do neither, and the slug never changes", async ({
   api,
   db,
 }, testInfo) => {
@@ -25,13 +25,16 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   const inviteeEmail = emailFor(testInfo, "invitee");
   const slug = slugFor(testInfo);
   const other = slugFor(testInfo, "other");
-  // Two workspaces alike, each with the member, a pending and a declined invitation and the member's settings;
-  // only Acme is deleted. Both exist before either is furnished, and the member is Other's admin and Acme's
-  // member: each answer, role and row must be the workspace's own, whichever row the database reads first.
-  await createWorkspace(api, admin, { name: "Other", slug: other });
-  await createWorkspace(api, admin, { name: "Acme", slug });
+  // Two workspaces alike, each with the member, a pending and a declined invitation, the member's settings and a
+  // project the admin created with the member its lead; only Acme is deleted. Both exist before either is
+  // furnished, and the member is Other's admin and Acme's member: each answer, role and row must be the
+  // workspace's own, whichever row the database reads first.
+  const [adminId, memberId] = await Promise.all([admin, member].map((token) => accountId(api, token)));
+  const web = { name: "Web", identifier: "WEB", description: "", network: 2, timezone: "UTC", logo_props: {} };
+  const otherWorkspace = await createWorkspace(api, admin, { name: "Other", slug: other });
+  const acme = await createWorkspace(api, admin, { name: "Acme", slug });
   const tokens: string[] = [];
-  const furnish = async (target: string, memberRole: 15 | 20) => {
+  const furnish = async ({ slug: target, id }: Workspace, memberRole: 15 | 20) => {
     expect(await inviteAndAccept(api, admin, target, { email: memberEmail, token: member }, memberRole)).toMatchObject({
       slug: target,
       role: memberRole,
@@ -58,9 +61,19 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
       headers: bearer(member),
     });
     expect(settings.response.status).toBe(200);
+    // The answer is the workspace's own new project as its creator sees it, first in both admins' sidebars.
+    expect(
+      await createProject(api, admin, target, { name: "Web", identifier: "web", project_lead_id: memberId })
+    ).toMatchObject({
+      workspace_id: id,
+      identifier: "WEB",
+      member_role: 20,
+      sort_order: 65535,
+      member_ids: [adminId, memberId],
+    });
   };
-  await furnish(other, 20);
-  await furnish(slug, 15);
+  await furnish(otherWorkspace, 20);
+  await furnish(acme, 15);
   // The member reads Other as its admin, whatever becomes of Acme.
   const readOther = async () => {
     const read = await api.GET("/api/v0/workspaces/{slug}", {
@@ -142,6 +155,10 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   );
   await expectInvitations(db, other, adminEmail, invitations(20, false), tokens);
   await expectMembership(db, other, memberEmail, { role: 20, is_active: true });
+  await expectProjectCreated(db, other, web, adminEmail, memberEmail, [
+    { email: adminEmail, sort_order: 65535 },
+    { email: memberEmail, sort_order: 65535 },
+  ]);
   await expectPreferences(db, other, memberEmail, {
     navigation_control_preference: "ACCORDION",
     navigation_project_limit: 3,
