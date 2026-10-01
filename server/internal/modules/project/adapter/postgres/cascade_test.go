@@ -219,10 +219,11 @@ func unwritten(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID) string {
 }
 
 // The four steps, on one project, soft-delete it and the rows under it
-// alone, archived or not, first or last in its workspace, at the same
-// moment and by the same account, writing no other column: the workspace's
-// other project, its project deleted before and another workspace's
-// projects keep everything. Running the steps again changes nothing.
+// alone, archived or not, the first project of its workspace or the last
+// undeleted one, at the same moment and by the same account, writing no
+// other column: the workspace's other project, its project deleted before
+// and another workspace's projects keep everything. Running the steps again
+// changes nothing.
 func TestDeletingAProjectSoftDeletesItsRowsAlone(t *testing.T) {
 	for _, target := range []string{"Web", "Ops"} {
 		t.Run(target, func(t *testing.T) {
@@ -252,5 +253,30 @@ func TestDeletingAProjectSoftDeletesItsRowsAlone(t *testing.T) {
 				t.Errorf("acme's rows but the deletion's columns:\n%s\nwant\n%s", after, before)
 			}
 		})
+	}
+}
+
+// The four steps, on a project of another workspace than the deletion's,
+// change nothing: the workspace bounds a project's deletion too, so
+// neither workspace loses a row, the named project included.
+func TestDeletingAnotherWorkspacesProjectChangesNothing(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+	earlier, later := now.Add(-time.Hour), now.Add(time.Hour)
+	web, ops, old := seedProjects(t, pool, acme, alice, bob, earlier)
+	betaWeb, betaOps, betaOld := seedProjects(t, pool, beta, alice, bob, earlier)
+	before := unwritten(t, pool, acme) + unwritten(t, pool, beta)
+
+	if err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+		return deleteAll(ctx, s, app.Deletion{WorkspaceID: acme, ProjectID: &betaWeb, By: bob, Now: later})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	checkDeletions(t, pool, acme, map[uuid.UUID]string{web: "kept", ops: "kept", old: "before"}, later, earlier, bob)
+	checkDeletions(t, pool, beta, map[uuid.UUID]string{betaWeb: "kept", betaOps: "kept", betaOld: "before"}, later, earlier, bob)
+	if after := unwritten(t, pool, acme) + unwritten(t, pool, beta); after != before {
+		t.Errorf("acme's and beta's rows but the deletion's columns:\n%s\nwant\n%s", after, before)
 	}
 }
