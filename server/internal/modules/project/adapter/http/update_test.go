@@ -26,6 +26,7 @@ func TestUpdateProjectPassesThePatch(t *testing.T) {
 			`"guest_view_all_features":true,"archive_in":13,"logo_props":{"in_use":"emoji"},"timezone":"Asia/Shanghai"}`},
 		{"bob", `{}`},
 		{"bob", `{"project_lead_id":null,"default_assignee_id":"0199a2b4-0000-7000-8000-000000000001"}`},
+		{"bob", `{"cycle_view":false,"intake_view":true,"guest_view_all_features":true}`},
 	} {
 		if res, body := do(t, h, request(http.MethodPatch, path, tt.token, tt.body)); res.StatusCode != http.StatusOK || body != webJSON+"\n" {
 			t.Errorf("PATCH %s = %d %s, want 200 %s", tt.body, res.StatusCode, body, webJSON)
@@ -38,11 +39,12 @@ func TestUpdateProjectPassesThePatch(t *testing.T) {
 			GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(13), LogoProps: &domain.LogoProps{InUse: ptr("emoji")}, Timezone: ptr("Asia/Shanghai")},
 		{},
 		{SetLead: true, SetDefaultAssignee: true, DefaultAssigneeID: &aliceID},
+		{CycleView: ptr(false), IntakeView: ptr(true), GuestViewAllFeatures: ptr(true)},
 	}
 	if !reflect.DeepEqual(update.got, want) {
 		t.Errorf("inputs = %+v, want %+v", update.got, want)
 	}
-	if want := []string{"alice " + webID.String(), "bob " + webID.String(), "bob " + webID.String()}; !slices.Equal(update.calls, want) {
+	if want := []string{"alice " + webID.String(), "bob " + webID.String(), "bob " + webID.String(), "bob " + webID.String()}; !slices.Equal(update.calls, want) {
 		t.Errorf("calls = %q, want %q", update.calls, want)
 	}
 }

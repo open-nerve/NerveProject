@@ -113,6 +113,7 @@ type fakeStore struct {
 	errs     map[string]error
 	missing  bool
 	moved    uuid.UUID
+	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
 }
 
 func (f *fakeStore) fail(name string) error {
@@ -128,7 +129,7 @@ func (f *fakeStore) LockProject(ctx context.Context, id uuid.UUID) (app.LockedPr
 		return app.LockedProject{}, false, err
 	}
 	p, ok := f.projects[id]
-	if !ok {
+	if !ok || f.deleted {
 		return app.LockedProject{}, false, nil
 	}
 	if f.moved != (uuid.UUID{}) {

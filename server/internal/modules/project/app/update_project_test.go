@@ -75,9 +75,9 @@ func TestUpdateProject(t *testing.T) {
 // Refusals, each in its place, and nothing changed:
 //   - the request's values, and no caller, before the transaction;
 //   - a project not there, its workspace deleted while its lock waited, the
-//     project of another workspace by the time it is locked, or not
-//     visible: 404, before the decision or after it, whatever the patch
-//     names;
+//     project deleted while its own lock waited (never 403), the project of
+//     another workspace by the time it is locked, or not visible: 404,
+//     before the decision or after it, whatever the patch names;
 //   - a project member: the Authorizer's 403, an invalid lead too;
 //   - an archived project: 409, after the decision, before the assignees;
 //   - a lead or a default assignee who is not an active member of the
@@ -110,6 +110,8 @@ func TestUpdateProjectRefuses(t *testing.T) {
 		{"the workspace gone", as(bob), webID, leads(&dave, nil), domain.ErrNotFound, lockedTo(webID)},
 		{"moved to another workspace", as(bob), webID, leads(&dave, nil), domain.ErrNotFound,
 			append(lockedTo(webID), "LockProject "+webID.String())},
+		{"deleted while its lock waited", as(bob), webID, leads(&dave, nil), domain.ErrNotFound,
+			append(lockedTo(webID), "LockProject "+webID.String())},
 		{"not seen", as(erin), webID, leads(&dave, nil), domain.ErrNotFound, decided(erin, webID)},
 		{"a project member", as(alice), webID, leads(&dave, nil), shared.Forbidden(), decided(alice, webID)},
 		{"archived", as(bob), opsID, leads(&dave, nil), domain.ErrArchived, decided(bob, opsID)},
@@ -128,6 +130,7 @@ func TestUpdateProjectRefuses(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdate()
 			f.workspaces.gone = tt.name == "the workspace gone"
+			f.store.deleted = tt.name == "deleted while its lock waited"
 			if tt.name == "moved to another workspace" {
 				f.store.moved = uuid.NewV7()
 			}
