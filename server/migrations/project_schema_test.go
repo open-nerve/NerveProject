@@ -73,9 +73,11 @@ var projectNames = []string{
 // The project tables' CHECKs accept what the domain writes and reject what
 // bypasses it (M3 design 3.17, 3.19, 4.6–4.9). projects_logo_props_check
 // takes five valid values, the four of 4.6 and the web app's create body,
-// and refuses fifteen counterexamples: the ten of 4.6, Codex S5's two among
-// them, and one for each conjunct those ten leave untried (the emoji's keys
-// and url; the icon an object, its name and background color).
+// and refuses twenty counterexamples: the ten of 4.6, Codex S5's two among
+// them; one for each conjunct those ten leave untried (the emoji's keys and
+// url; the icon an object, its name and background color); and a second
+// wrong type for each of the five texts, so that none of their checks
+// weakened to "not that one type" passes.
 func TestProjectChecksRejectCounterexamples(t *testing.T) {
 	ctx := context.Background()
 	pool := newPool(t, pgtest.NewDatabase(t))
@@ -154,6 +156,13 @@ func TestProjectChecksRejectCounterexamples(t *testing.T) {
 		{"logo_props' icon a string", `UPDATE projects SET logo_props = '{"icon": "x"}'`, "projects_logo_props_check"},
 		{"logo_props' icon name a number", `UPDATE projects SET logo_props = '{"icon": {"name": 1}}'`, "projects_logo_props_check"},
 		{"logo_props' icon background_color a number", `UPDATE projects SET logo_props = '{"icon": {"background_color": 1}}'`,
+			"projects_logo_props_check"},
+		// Each text's second wrong type.
+		{"logo_props' emoji value a boolean", `UPDATE projects SET logo_props = '{"emoji": {"value": true}}'`, "projects_logo_props_check"},
+		{"logo_props' emoji url null", `UPDATE projects SET logo_props = '{"emoji": {"url": null}}'`, "projects_logo_props_check"},
+		{"logo_props' icon name an array", `UPDATE projects SET logo_props = '{"icon": {"name": []}}'`, "projects_logo_props_check"},
+		{"logo_props' icon color a number", `UPDATE projects SET logo_props = '{"icon": {"color": 1}}'`, "projects_logo_props_check"},
+		{"logo_props' icon background_color an object", `UPDATE projects SET logo_props = '{"icon": {"background_color": {}}}'`,
 			"projects_logo_props_check"},
 		{"logo_props an array", `UPDATE projects SET logo_props = '[]'`, "projects_logo_props_check"},
 		{"logo_props a string", `UPDATE projects SET logo_props = '"x"'`, "projects_logo_props_check"},

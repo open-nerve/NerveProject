@@ -41,18 +41,23 @@ func checkLogoProps(l LogoProps) []*shared.FieldError {
 	if l.InUse != nil && *l.InUse != LogoEmoji && *l.InUse != LogoIcon {
 		found = append(found, &shared.FieldError{Field: "logo_props.in_use", Code: shared.FieldInvalidFormat, Message: "must be emoji or icon"})
 	}
-	texts := map[string]*string{}
+	// The texts of the emoji and the icon given, in the order their
+	// problems are reported.
+	type text struct {
+		field string
+		value *string
+	}
+	var texts []text
 	if l.Emoji != nil {
-		texts["logo_props.emoji.value"], texts["logo_props.emoji.url"] = l.Emoji.Value, l.Emoji.URL
+		texts = append(texts, text{"logo_props.emoji.value", l.Emoji.Value}, text{"logo_props.emoji.url", l.Emoji.URL})
 	}
 	if l.Icon != nil {
-		texts["logo_props.icon.name"], texts["logo_props.icon.color"] = l.Icon.Name, l.Icon.Color
-		texts["logo_props.icon.background_color"] = l.Icon.BackgroundColor
+		texts = append(texts, text{"logo_props.icon.name", l.Icon.Name}, text{"logo_props.icon.color", l.Icon.Color},
+			text{"logo_props.icon.background_color", l.Icon.BackgroundColor})
 	}
-	for _, field := range []string{"logo_props.emoji.value", "logo_props.emoji.url", "logo_props.icon.name", "logo_props.icon.color",
-		"logo_props.icon.background_color"} {
-		if s := texts[field]; s != nil {
-			found = append(found, checkText(field, *s))
+	for _, t := range texts {
+		if t.value != nil {
+			found = append(found, checkText(t.field, *t.value))
 		}
 	}
 	return found

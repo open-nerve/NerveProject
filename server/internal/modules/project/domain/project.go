@@ -67,9 +67,11 @@ func Identifier(s string) string {
 //   - a description without NUL; a network of 0 or 2; a time zone that
 //     shared.ValidTimezone accepts; logo_props by checkLogoProps.
 //
-// Every problem is reported at once, as one 422 validation_failed. Whether
-// the name or the identifier is taken is the database's to say; whether the
-// lead may lead, the use case's, under its locks (M3 design 3.6).
+// Every field with a problem is reported at once, in one 422
+// validation_failed, with one problem per field: the first of its checks
+// that fails. Whether the name or the identifier is taken is the
+// database's to say; whether the lead may lead, the use case's, under its
+// locks (M3 design 3.6).
 func CheckNewProject(p NewProject) (NewProject, error) {
 	p.Identifier = Identifier(p.Identifier)
 	if p.Network == nil {
@@ -115,7 +117,7 @@ func checkName(name string) *shared.FieldError {
 		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", maxNameLength)}
 	case strings.ContainsAny(name, forbiddenNameCharacters):
 		return &shared.FieldError{Field: field, Code: shared.FieldNotAllowed,
-			Message: "must not contain any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -"}
+			Message: "must not contain any of " + strings.Join(strings.Split(forbiddenNameCharacters, ""), " ")}
 	}
 	return checkText(field, name)
 }
@@ -145,7 +147,7 @@ func checkText(field, s string) *shared.FieldError {
 
 func checkNetwork(n Network) *shared.FieldError {
 	if n != NetworkPrivate && n != NetworkPublic {
-		return &shared.FieldError{Field: "network", Code: shared.FieldInvalidFormat, Message: "must be 0, private, or 2, public"}
+		return &shared.FieldError{Field: "network", Code: shared.FieldInvalidFormat, Message: "must be 0 (private) or 2 (public)"}
 	}
 	return nil
 }
