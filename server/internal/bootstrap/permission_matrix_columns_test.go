@@ -27,12 +27,18 @@ const (
 	callerMemberPrivate  caller = "workspace member only, private"     // WM-私: the workspace's member
 	callerGuestOnly      caller = "workspace guest only"               // WG-
 	callerBefore         caller = "project member before"              // P-前: ended in the private project
+	// callerArchivedAdmin is PA on acme's archived project: the column of
+	// 9.2's small table of the archived project.
+	callerArchivedAdmin caller = "archived project admin"
 )
 
 // projectColumns are the columns of the project level, in the order of
 // 9.2's table, X as its three accounts.
 var projectColumns = []caller{callerProjectAdmin, callerProjectMember, callerProjectGuest, callerMemberAndAdmin, callerAdminOnly,
 	callerMemberPublic, callerMemberPrivate, callerGuestOnly, callerBefore, callerNever, callerRemoved, callerDeleted}
+
+// archivedColumns are the columns of the archived project's table (9.2).
+var archivedColumns = []caller{callerArchivedAdmin}
 
 // matrixAccounts are the accounts prepareMatrix registers: each workspace
 // column's, and each project column's that is none of those (M3 design
@@ -45,6 +51,8 @@ var matrixAccounts = append(slices.Clone(workspaceColumns), callerProjectAdmin, 
 // account.
 func accountOf(c caller) caller {
 	switch c {
+	case callerArchivedAdmin:
+		return callerProjectAdmin
 	case callerProjectGuest:
 		return callerGuest
 	case callerAdminOnly:
@@ -56,13 +64,16 @@ func accountOf(c caller) caller {
 }
 
 // projectOf is the key of the project a project column's cells target:
-// acme's private project for the columns about it, gone's for the deleted
-// workspace's, acme's public one for every other; PA, PM, PG and PM+WA
-// answer alike in both, WG- too (9.2).
+// acme's private project for the columns about it, its archived one for
+// the archived project's, gone's for the deleted workspace's, acme's public
+// one for every other; PA, PM, PG and PM+WA answer alike in both, WG- too
+// (9.2).
 func projectOf(c caller) string {
 	switch c {
 	case callerMemberPrivate, callerBefore:
 		return "acme/private"
+	case callerArchivedAdmin:
+		return "acme/archived"
 	case callerDeleted:
 		return "gone/project"
 	}
@@ -74,7 +85,7 @@ func projectOf(c caller) string {
 // call with no token, and its cells answer 401 whatever the rule.
 func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	var used []caller
-	for _, c := range slices.Concat(workspaceColumns, projectColumns) {
+	for _, c := range slices.Concat(workspaceColumns, projectColumns, archivedColumns) {
 		if !slices.Contains(matrixAccounts, accountOf(c)) {
 			t.Errorf("column %s calls as %s, which prepareMatrix does not register", c, accountOf(c))
 		}

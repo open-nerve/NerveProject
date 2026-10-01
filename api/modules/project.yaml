@@ -46,6 +46,32 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: getProject
+      tags: [project]
+      summary: Read a project
+      description: >-
+        For whoever sees the project: its active members, the workspace's
+        admins, and for a public project the workspace's members too; a
+        caller who is not its member reads it with member_role and sort_order
+        null. An archived project is read as any other, with its archived_at.
+        A project that does not exist, is deleted, or that the caller does
+        not see answers project.not_found; so does one whose workspace he is
+        not an active member of.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found]
+      responses:
+        '200':
+          description: The project, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   # 与 api/openapi.yaml 的相同：打包时丢掉模块文件的 securitySchemes，oapi-codegen 读这一份（M0-P3 交接 3）
   securitySchemes:
@@ -60,6 +86,14 @@ components:
       description: A workspace's slug, as in the web app's address.
       schema:
         type: string
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

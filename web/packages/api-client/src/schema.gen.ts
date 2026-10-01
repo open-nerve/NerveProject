@@ -530,6 +530,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a project
+         * @description For whoever sees the project: its active members, the workspace's admins, and for a public project the workspace's members too; a caller who is not its member reads it with member_role and sort_order null. An archived project is read as any other, with its archived_at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; so does one whose workspace he is not an active member of.
+         */
+        get: operations["getProject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1084,6 +1107,8 @@ export interface components {
         Slug: string;
         /** @description An invitation's id (WorkspaceInvitation.id), the link's invitation_id. */
         InvitationID: string;
+        /** @description A project's id (Project.id). */
+        ProjectID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1149,6 +1174,7 @@ export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
 export type ParameterSlug = components['parameters']['Slug'];
 export type ParameterInvitationId = components['parameters']['InvitationID'];
+export type ParameterProjectId = components['parameters']['ProjectID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -1946,6 +1972,30 @@ export interface operations {
         responses: {
             /** @description The new project, as the caller, its admin, sees it. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project, as the caller sees it. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -9,11 +9,13 @@ import "github.com/open-nerve/NerveProject/server/internal/shared"
 const (
 	// ActionCreate is creating a project in a workspace: createProject.
 	ActionCreate shared.Action = "project.create"
+	// ActionRead is reading a project: getProject.
+	ActionRead shared.Action = "project.read"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 // Each operation adds its action here with its row.
 func Actions() []shared.Action {
-	return []shared.Action{ActionCreate}
+	return []shared.Action{ActionCreate, ActionRead}
 }

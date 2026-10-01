@@ -14,7 +14,7 @@ import (
 
 // matrixTables are the columns a row may name besides the workspace level's
 // (nil): each table of M3 design 9.2, whole.
-var matrixTables = [][]caller{projectColumns}
+var matrixTables = [][]caller{projectColumns, archivedColumns}
 
 // matrixViolations reports where the matrix and the contract part: an
 // operation without a row, unless every tag it has is on exempt.modules, so

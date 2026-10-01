@@ -62,6 +62,8 @@ var rules = map[shared.Action]Rule{
 	// The workspace's admins and members, not its guests (M3 design 9.2;
 	// Plane views/project/base.py:257).
 	"project.create": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// Whoever sees the project (M3 design 3.4, 3.19).
+	"project.read": {Level: LevelVisible},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

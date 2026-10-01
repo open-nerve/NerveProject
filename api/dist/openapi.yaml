@@ -797,6 +797,28 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: getProject
+      tags:
+        - project
+      summary: Read a project
+      description: 'For whoever sees the project: its active members, the workspace''s admins, and for a public project the workspace''s members too; a caller who is not its member reads it with member_role and sort_order null. An archived project is read as any other, with its archived_at. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; so does one whose workspace he is not an active member of.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+      responses:
+        '200':
+          description: The project, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearer:
@@ -1893,6 +1915,14 @@ components:
       in: path
       required: true
       description: An invitation's id (WorkspaceInvitation.id), the link's invitation_id.
+      schema:
+        type: string
+        format: uuid
+    ProjectID:
+      name: project_id
+      in: path
+      required: true
+      description: A project's id (Project.id).
       schema:
         type: string
         format: uuid

@@ -182,3 +182,29 @@ func TestCreateProjectHoldsTheLogoToItsStructure(t *testing.T) {
 		t.Errorf("in_use other: POST = %d, inputs %+v; want it passed to the use case", res.StatusCode, create.got)
 	}
 }
+
+// The path's id goes to the use case for the caller; a project it does not
+// find, or the caller does not see, is project.not_found.
+func TestGetProject(t *testing.T) {
+	get := &fakeGet{projects: map[string]domain.Project{"alice " + webID.String(): web, "bob " + webID.String(): bare}}
+	h := newServer(t, fakes{get: get})
+	tests := []struct {
+		token, id string
+		status    int
+		want      string
+	}{
+		{"alice", webID.String(), http.StatusOK, webJSON},
+		{"bob", webID.String(), http.StatusOK, bareJSON},
+		{"alice", acmeID.String(), http.StatusNotFound,
+			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
+	}
+	for _, tt := range tests {
+		res, body := do(t, h, request(http.MethodGet, "/api/v0/projects/"+tt.id, tt.token, ""))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s GET %s = %d %s, want %d %s", tt.token, tt.id, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+	if want := []string{"alice " + webID.String(), "bob " + webID.String(), "alice " + acmeID.String()}; !slices.Equal(get.calls, want) {
+		t.Errorf("calls = %q, want %q", get.calls, want)
+	}
+}

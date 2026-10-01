@@ -60,6 +60,7 @@ func caller(ctx context.Context) string {
 // with what, and answers what it is given.
 type fakes struct {
 	create *fakeCreate
+	get    *fakeGet
 }
 
 type fakeCreate struct {
@@ -73,6 +74,23 @@ func (f *fakeCreate) Execute(ctx context.Context, slug string, in domain.NewProj
 	f.calls = append(f.calls, caller(ctx)+" "+slug)
 	f.got = append(f.got, in)
 	return f.answer, f.err
+}
+
+type fakeGet struct {
+	calls    []string // "caller id"
+	projects map[string]domain.Project
+}
+
+// Execute answers the project the caller's key names, project.not_found
+// for any other.
+func (f *fakeGet) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
+	key := caller(ctx) + " " + id.String()
+	f.calls = append(f.calls, key)
+	p, ok := f.projects[key]
+	if !ok {
+		return domain.Project{}, domain.ErrNotFound
+	}
+	return p, nil
 }
 
 // newServer serves the module with f; a fake left nil is an idle one.
@@ -97,7 +115,10 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.create == nil {
 		f.create = &fakeCreate{}
 	}
-	httpadapter.Register(router, api, httpadapter.UseCases{CreateProject: f.create})
+	if f.get == nil {
+		f.get = &fakeGet{}
+	}
+	httpadapter.Register(router, api, httpadapter.UseCases{CreateProject: f.create, GetProject: f.get})
 	return router
 }
 

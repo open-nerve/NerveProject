@@ -6,6 +6,7 @@ package httpadapter
 
 import (
 	"context"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -17,9 +18,15 @@ type CreateProjectUseCase interface {
 	Execute(ctx context.Context, slug string, in domain.NewProject) (domain.Project, error)
 }
 
+// GetProjectUseCase is app.GetProject.
+type GetProjectUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) (domain.Project, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	CreateProject CreateProjectUseCase
+	GetProject    GetProjectUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

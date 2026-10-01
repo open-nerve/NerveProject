@@ -38,6 +38,30 @@ func (f *fakeRoles) ActiveRole(ctx context.Context, workspaceID, userID uuid.UUI
 	return role, ok, nil
 }
 
+// projectKey is one (project, user) pair of fakeProjects.
+type projectKey struct{ project, user uuid.UUID }
+
+// fakeProjects answers the facts of each (project, user) pair it holds, and
+// records every call as fakeRoles does.
+type fakeProjects struct {
+	facts map[projectKey]app.ProjectFacts
+	err   error
+	calls []string
+}
+
+func (f *fakeProjects) ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (app.ProjectFacts, bool, error) {
+	value, ok := ctx.Value(ctxKey{}).(string)
+	if !ok {
+		value = "(none)"
+	}
+	f.calls = append(f.calls, projectID.String()+" "+userID.String()+" "+value)
+	if f.err != nil {
+		return app.ProjectFacts{}, false, f.err
+	}
+	p, ok := f.facts[projectKey{projectID, userID}]
+	return p, ok, nil
+}
+
 var (
 	w1, w2 = uuid.NewV7(), uuid.NewV7()
 	a, b   = uuid.NewV7(), uuid.NewV7()
@@ -50,7 +74,8 @@ func TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace(t *testing.T) {
 	roles := &fakeRoles{roles: map[membership]shared.Role{
 		{w1, a}: shared.RoleAdmin, {w2, a}: shared.RoleGuest, {w1, b}: shared.RoleMember,
 	}}
-	auth := app.NewAuthorizer(roles)
+	projects := &fakeProjects{}
+	auth := app.NewAuthorizer(roles, projects)
 	tests := []struct {
 		user, workspace uuid.UUID
 		want            shared.Role // 0: not visible
@@ -68,6 +93,9 @@ func TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace(t *testing.T) {
 		if len(roles.calls) != 1 || roles.calls[0] != want {
 			t.Errorf("ActiveRole calls = %q, want [%q]", roles.calls, want)
 		}
+		if len(projects.calls) != 0 {
+			t.Errorf("a workspace-level target read the projects %q, want none", projects.calls)
+		}
 		if tt.want == 0 {
 			if !errors.Is(err, shared.ErrNotVisible) {
 				t.Errorf("user %s in %s: Authorize() = %+v, %v; want ErrNotVisible", tt.user, tt.workspace, grant, err)
@@ -84,7 +112,7 @@ func TestAuthorizeReadsTheCallersRoleInTheTargetsWorkspace(t *testing.T) {
 // visible at the second.
 func TestAuthorizeReadsOnEveryCall(t *testing.T) {
 	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleAdmin}}
-	auth := app.NewAuthorizer(roles)
+	auth := app.NewAuthorizer(roles, &fakeProjects{})
 	ctx := context.WithValue(context.Background(), ctxKey{}, "request")
 	target := shared.Target{WorkspaceID: w1}
 	if _, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "workspace.read", target); err != nil {
@@ -100,24 +128,71 @@ func TestAuthorizeReadsOnEveryCall(t *testing.T) {
 // a refusal the caller could act on: an internal error.
 func TestAuthorizeRefusesAnActionWithoutARule(t *testing.T) {
 	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleAdmin}}
-	auth := app.NewAuthorizer(roles)
+	projects := &fakeProjects{}
+	auth := app.NewAuthorizer(roles, projects)
 	ctx := context.WithValue(context.Background(), ctxKey{}, "request")
-	grant, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "no.such.action", shared.Target{WorkspaceID: w1})
+	grant, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "no.such.action", shared.Target{WorkspaceID: w1, ProjectID: uuid.NewV7()})
 	var se *shared.Error
 	if err == nil || errors.As(err, &se) || grant != (shared.Grant{}) {
 		t.Errorf("Authorize() = %+v, %v; want an internal error", grant, err)
 	}
-	if len(roles.calls) != 0 {
-		t.Errorf("ActiveRole calls = %q, want none", roles.calls)
+	if len(roles.calls)+len(projects.calls) != 0 {
+		t.Errorf("ActiveRole calls = %q, ProjectFacts calls %q; want none", roles.calls, projects.calls)
 	}
 }
 
-// The port's failure is Authorize's.
+// Each port's failure is Authorize's.
 func TestAuthorizeReturnsThePortsError(t *testing.T) {
 	failure := errors.New("connection reset")
-	auth := app.NewAuthorizer(&fakeRoles{err: failure})
 	ctx := context.WithValue(context.Background(), ctxKey{}, "request")
+	auth := app.NewAuthorizer(&fakeRoles{err: failure}, &fakeProjects{})
 	if _, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "workspace.read", shared.Target{WorkspaceID: w1}); !errors.Is(err, failure) {
-		t.Errorf("Authorize() = %v, want %v", err, failure)
+		t.Errorf("Authorize() with the roles failing = %v, want %v", err, failure)
+	}
+	auth = app.NewAuthorizer(&fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleAdmin}}, &fakeProjects{err: failure})
+	if _, err := auth.Authorize(ctx, shared.Actor{UserID: a}, "project.read", shared.Target{WorkspaceID: w1, ProjectID: uuid.NewV7()}); !errors.Is(err, failure) {
+		t.Errorf("Authorize() with the projects failing = %v, want %v", err, failure)
+	}
+}
+
+// A target that names a project has the project's facts read too, for the
+// caller and in the caller's context, and the decision takes them: the
+// caller's project role is in the Grant, a workspace admin sees a private
+// project he is not in. A project of another workspace than the target's,
+// or one not found, is seen by no one: its facts do not count.
+func TestAuthorizeReadsTheTargetsProject(t *testing.T) {
+	p1, p2, gone := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	roles := &fakeRoles{roles: map[membership]shared.Role{{w1, a}: shared.RoleMember, {w1, b}: shared.RoleAdmin}}
+	projects := &fakeProjects{facts: map[projectKey]app.ProjectFacts{
+		{p1, a}: {WorkspaceID: w1, Member: true, Role: shared.RoleGuest},
+		{p1, b}: {WorkspaceID: w1},
+		{p2, a}: {WorkspaceID: w2, Public: true, Member: true, Role: shared.RoleAdmin},
+	}}
+	auth := app.NewAuthorizer(roles, projects)
+	tests := []struct {
+		user, project uuid.UUID
+		want          *shared.Grant // nil: not visible
+	}{
+		{a, p1, &shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: shared.RoleGuest}},
+		{b, p1, &shared.Grant{WorkspaceRole: shared.RoleAdmin}},
+		{a, p2, nil},
+		{a, gone, nil},
+	}
+	for _, tt := range tests {
+		projects.calls = nil
+		ctx := context.WithValue(context.Background(), ctxKey{}, "tx")
+		grant, err := auth.Authorize(ctx, shared.Actor{UserID: tt.user}, "project.read", shared.Target{WorkspaceID: w1, ProjectID: tt.project})
+		if want := tt.project.String() + " " + tt.user.String() + " tx"; len(projects.calls) != 1 || projects.calls[0] != want {
+			t.Errorf("ProjectFacts calls = %q, want [%q]", projects.calls, want)
+		}
+		if tt.want == nil {
+			if !errors.Is(err, shared.ErrNotVisible) {
+				t.Errorf("user %s, project %s: Authorize() = %+v, %v; want ErrNotVisible", tt.user, tt.project, grant, err)
+			}
+			continue
+		}
+		if err != nil || grant != *tt.want {
+			t.Errorf("user %s, project %s: Authorize() = %+v, %v; want %+v", tt.user, tt.project, grant, err, *tt.want)
+		}
 	}
 }

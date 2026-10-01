@@ -3,10 +3,31 @@ package bootstrap
 import (
 	"net/http"
 	"testing"
+	"time"
 	"uuid"
 )
 
 // The project module's rows of the permission matrix (M3 design 9.2).
+
+var cellProjectNotFound = cell{http.StatusNotFound, "project.not_found"}
+
+// ofProject are the cells of a project-level row: the answers of PA, PM,
+// PG, PM+WA, WA- and WM-公, and project.not_found for the columns that do
+// not see their project: WM-私, WG-, P-前 and X.
+func ofProject(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
+		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: cellProjectNotFound, callerGuestOnly: cellProjectNotFound,
+		callerBefore: cellProjectNotFound, callerNever: cellProjectNotFound, callerRemoved: cellProjectNotFound,
+		callerDeleted: cellProjectNotFound}
+}
+
+// toProject is the request of a row whose callers each send method to the
+// path under the project their column targets.
+func toProject(method, path, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/projects/" + s.project(projectOf(c)).String() + path, body
+	}
+}
 
 func projectMatrixRows() []matrixRow {
 	return []matrixRow{
@@ -18,6 +39,29 @@ func projectMatrixRows() []matrixRow {
 		{op: "createProject", variant: "a lead who is no member", write: true,
 			request: toWorkspace(http.MethodPost, "/projects", `{"name":"New","identifier":"NEW","project_lead_id":"`+uuid.Nil().String()+`"}`),
 			cells:   inWorkspace(cellValidationFailed, cellValidationFailed, cellForbidden)},
+		{op: "getProject", columns: projectColumns, request: toProject(http.MethodGet, "", ""),
+			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellOK, cellOK), check: readsItsProject},
+		{op: "getProject", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "", ""),
+			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: readsItsProject},
+	}
+}
+
+// readsItsProject: the column's project, with the caller's role in it, null
+// for who is not its member, and its archived_at, set for the archived one
+// alone.
+func readsItsProject(t *testing.T, c caller, s seeded, answer string) {
+	var p struct {
+		ID         uuid.UUID  `json:"id"`
+		MemberRole *int       `json:"member_role"`
+		ArchivedAt *time.Time `json:"archived_at"`
+	}
+	decodeAnswer(t, answer, &p)
+	roles := map[caller]int{callerProjectAdmin: 20, callerProjectMember: 15, callerProjectGuest: 5, callerMemberAndAdmin: 15,
+		callerArchivedAdmin: 20}
+	role, member := roles[c]
+	if p.ID != s.project(projectOf(c)) || (p.MemberRole != nil) != member || (member && *p.MemberRole != role) ||
+		(p.ArchivedAt != nil) != (c == callerArchivedAdmin) {
+		t.Errorf("%s reads %s; want %s, his role %d (0: none), archived only for the archived project", c, answer, projectOf(c), role)
 	}
 }
 

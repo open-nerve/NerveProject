@@ -71,6 +71,8 @@ paths:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1me~1workspaces~1{slug}~1preferences'
   /api/v0/workspaces/{slug}/projects:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1projects'
+  /api/v0/projects/{project_id}:
+    $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}'
 components:
   # 模块文件的 securitySchemes 在打包时被丢掉，操作引用的 scheme 写在这里（M0-P3 交接 3）
   securitySchemes:

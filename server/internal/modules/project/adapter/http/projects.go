@@ -31,6 +31,15 @@ func (h handler) CreateProject(ctx context.Context, req gen.CreateProjectRequest
 	return gen.CreateProject201JSONResponse(project(p)), nil
 }
 
+// GetProject serves GET /api/v0/projects/{project_id}.
+func (h handler) GetProject(ctx context.Context, req gen.GetProjectRequestObject) (gen.GetProjectResponseObject, error) {
+	p, err := h.uc.GetProject.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.GetProject200JSONResponse(project(p)), nil
+}
+
 // project is p as the API shows it.
 func project(p domain.Project) gen.Project {
 	out := gen.Project{

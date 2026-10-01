@@ -7,6 +7,7 @@ import (
 	"testing"
 	"uuid"
 
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -182,5 +183,45 @@ func TestProjectWorkspacesConvertsWorkspacesAnswer(t *testing.T) {
 	fake.err = failure
 	if _, _, err := d.ShareWorkspaceBySlug(ctx, "acme"); !errors.Is(err, failure) {
 		t.Errorf("ShareWorkspaceBySlug() = %v, want %v", err, failure)
+	}
+}
+
+// fakeProjectAccess answers the facts it holds by project, and records what
+// it was asked.
+type fakeProjectAccess struct {
+	facts map[uuid.UUID]project.AccessFacts
+	err   error
+	asked []string
+}
+
+func (f *fakeProjectAccess) ProjectFacts(_ context.Context, projectID, userID uuid.UUID) (project.AccessFacts, bool, error) {
+	f.asked = append(f.asked, projectID.String()+" "+userID.String())
+	p, found := f.facts[projectID]
+	return p, found, f.err
+}
+
+// accessProjects hands access project's answer to the same question: the
+// facts converted, found and the error as they came.
+func TestAccessProjectsConvertsProjectsAnswer(t *testing.T) {
+	web, acme, alice := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	fake := &fakeProjectAccess{facts: map[uuid.UUID]project.AccessFacts{web: {WorkspaceID: acme, Public: true, Member: true, Role: 15}}}
+	a := accessProjects{projects: fake}
+	ctx := context.Background()
+
+	f, found, err := a.ProjectFacts(ctx, web, alice)
+	if want := (access.ProjectFacts{WorkspaceID: acme, Public: true, Member: true, Role: 15}); err != nil || !found || f != want {
+		t.Errorf("ProjectFacts(web) = %+v, %v, %v; want %+v, found", f, found, err, want)
+	}
+	gone := uuid.NewV7()
+	if f, found, err := a.ProjectFacts(ctx, gone, alice); err != nil || found || f != (access.ProjectFacts{}) {
+		t.Errorf("ProjectFacts(gone) = %+v, %v, %v; want not found", f, found, err)
+	}
+	if want := []string{web.String() + " " + alice.String(), gone.String() + " " + alice.String()}; !slices.Equal(fake.asked, want) {
+		t.Errorf("project was asked %q, want %q", fake.asked, want)
+	}
+	failure := errors.New("connection reset")
+	fake.err = failure
+	if _, _, err := a.ProjectFacts(ctx, web, alice); !errors.Is(err, failure) {
+		t.Errorf("ProjectFacts() = %v, want %v", err, failure)
 	}
 }

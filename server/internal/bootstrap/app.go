@@ -101,7 +101,11 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 	// with every port it needs, so no construction waits on another.
 	identityPorts := identity.Provide(pool)
 	workspacePorts := workspace.Provide(pool)
-	authorizer := access.New(access.Deps{WorkspaceRoles: workspacePorts.WorkspaceRoles})
+	projectPorts := project.Provide(pool)
+	authorizer := access.New(access.Deps{
+		WorkspaceRoles: workspacePorts.WorkspaceRoles,
+		ProjectAccess:  accessProjects{projects: projectPorts.ProjectAccess},
+	})
 	// project before workspace: workspace's writes take its cascade.
 	proj := project.New(project.Deps{
 		Pool: pool, Tx: tx, Clock: clock.System{}, Authorizer: authorizer,

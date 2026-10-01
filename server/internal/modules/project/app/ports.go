@@ -45,9 +45,17 @@ type WorkspaceMembers interface {
 	ShareMembers(ctx context.Context, workspaceID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]shared.Role, error)
 }
 
+// ProjectReader reads a project as a user sees it.
+type ProjectReader interface {
+	// GetProject is the undeleted project id as userID sees it; found is
+	// false when there is none.
+	GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.Project, found bool, err error)
+}
+
 // ProjectCreator is createProject's repository. Each method runs in the
 // transaction ctx carries.
 type ProjectCreator interface {
+	ProjectReader
 	CreateProject(ctx context.Context, p ProjectRow) error
 	CreateMember(ctx context.Context, m MemberRow) error
 	// LowestSortOrder is the least place of userID's in his sidebar among
@@ -55,9 +63,6 @@ type ProjectCreator interface {
 	LowestSortOrder(ctx context.Context, workspaceID, userID uuid.UUID) (*float64, error)
 	CreatePreferences(ctx context.Context, p PreferencesRow) error
 	CreateStates(ctx context.Context, rows []StateRow) error
-	// GetProject is the undeleted project id as userID sees it; found is
-	// false when there is none.
-	GetProject(ctx context.Context, id, userID uuid.UUID) (p domain.Project, found bool, err error)
 }
 
 // ProjectRow is a project to insert: checked values, its id, its creator

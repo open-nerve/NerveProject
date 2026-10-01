@@ -1,7 +1,8 @@
 // Package project is the projects module (M3 design 3.3, 6.3): projects,
 // their members, their states and each member's display settings. It
-// brings creating projects, and carries out the workspace module's cascades
-// on the projects (ProjectCascade).
+// brings creating and reading projects, carries out the workspace module's
+// cascades on the projects (ProjectCascade), and offers the access module
+// its reads of a project (ProjectAccess).
 package project
 
 import (
@@ -28,6 +29,30 @@ type Cascade interface {
 	// DeleteWorkspaceProjects soft-deletes the workspace's projects and the
 	// rows under them: deleteWorkspace's last step.
 	DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
+}
+
+// ProjectAccess reads a project for the access module's decision (M3
+// design 6.5): the facts of the undeleted project projectID, archived or
+// not, for userID; found is false for a project that does not exist or is
+// deleted. It reads in the transaction ctx carries.
+type ProjectAccess interface {
+	ProjectFacts(ctx context.Context, projectID, userID uuid.UUID) (f AccessFacts, found bool, err error)
+}
+
+// AccessFacts are the facts ProjectAccess hands over: bootstrap converts
+// them into access's value (M3 design 6.5).
+type AccessFacts = app.AccessFacts
+
+// Provided are the adapters project offers the other modules. They depend
+// on the pool alone, so bootstrap builds them before any module (M3 design
+// 6.6, step 2).
+type Provided struct {
+	ProjectAccess ProjectAccess
+}
+
+// Provide builds project's adapters for the other modules.
+func Provide(pool *pgxpool.Pool) Provided {
+	return Provided{ProjectAccess: postgresadapter.New(pool)}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:
@@ -62,6 +87,7 @@ func New(d Deps) *Module {
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),
+		GetProject: app.NewGetProject(store, d.Authorizer),
 	}}
 }
 
