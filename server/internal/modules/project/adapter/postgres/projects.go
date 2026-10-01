@@ -50,11 +50,11 @@ func taken(write string, err error) error {
 // IdentifierTaken reports whether an undeleted project of workspaceID has
 // identifier, compared as stored, in upper case: the caller upper-cases it.
 func (s *Store) IdentifierTaken(ctx context.Context, workspaceID uuid.UUID, identifier string) (bool, error) {
-	taken, err := s.queries(ctx).IdentifierTaken(ctx, gen.IdentifierTakenParams{WorkspaceID: workspaceID, Identifier: identifier})
+	inUse, err := s.queries(ctx).IdentifierTaken(ctx, gen.IdentifierTakenParams{WorkspaceID: workspaceID, Identifier: identifier})
 	if err != nil {
 		return false, fmt.Errorf("check identifier %q: %w", identifier, err)
 	}
-	return taken, nil
+	return inUse, nil
 }
 
 // ProjectWorkspace is the workspace of the undeleted project id, archived

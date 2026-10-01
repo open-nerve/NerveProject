@@ -197,14 +197,15 @@ func TestUpdateProject(t *testing.T) {
 
 	before = columns(t, pool, "projects", web)
 	update(domain.ProjectPatch{Name: ptr("研发 Web"), Description: ptr("The app"), Identifier: ptr("WEBÇ"), Network: ptr(domain.NetworkPrivate),
-		SetLead: true, LeadID: &carol, CycleView: ptr(true), ModuleView: ptr(true), IssueViewsView: ptr(true), IntakeView: ptr(true),
-		GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(12), LogoProps: &domain.LogoProps{InUse: ptr("icon"), Icon: &domain.Icon{Name: ptr("home")}},
-		Timezone: ptr("Asia/Shanghai")}, bob, later.Add(time.Hour))
+		SetLead: true, LeadID: &carol, SetDefaultAssignee: true, DefaultAssigneeID: &alice, CycleView: ptr(true), ModuleView: ptr(true),
+		IssueViewsView: ptr(true), IntakeView: ptr(true), GuestViewAllFeatures: ptr(true), ArchiveIn: ptr(12),
+		LogoProps: &domain.LogoProps{InUse: ptr("icon"), Icon: &domain.Icon{Name: ptr("home")}}, Timezone: ptr("Asia/Shanghai")}, bob, later.Add(time.Hour))
 	want := changed(before, audit(bob, later.Add(time.Hour)))
+	// The default assignee changes from bob to alice, the lead from alice to carol: neither can stand for the other.
 	maps.Copy(want, map[string]string{"name": `"研发 Web"`, "description": `"The app"`, "identifier": `"WEBÇ"`, "network": "0",
-		"project_lead_id": `"` + carol.String() + `"`, "cycle_view": "true", "module_view": "true", "issue_views_view": "true",
-		"intake_view": "true", "guest_view_all_features": "true", "archive_in": "12", "logo_props": `{"icon": {"name": "home"}, "in_use": "icon"}`,
-		"timezone": `"Asia/Shanghai"`})
+		"project_lead_id": `"` + carol.String() + `"`, "default_assignee_id": `"` + alice.String() + `"`, "cycle_view": "true",
+		"module_view": "true", "issue_views_view": "true", "intake_view": "true", "guest_view_all_features": "true", "archive_in": "12",
+		"logo_props": `{"icon": {"name": "home"}, "in_use": "icon"}`, "timezone": `"Asia/Shanghai"`})
 	if got := columns(t, pool, "projects", web); !maps.Equal(got, want) {
 		t.Errorf("every field: %v\nwant %v", got, want)
 	}
