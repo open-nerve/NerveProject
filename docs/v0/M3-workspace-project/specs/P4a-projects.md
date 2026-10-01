@@ -19,7 +19,7 @@ P4a 是评审敏感的一段（M3 设计 12 节约束 3）：两个连带第一�
 
 按 M3 设计 12 节 P4a：`project` 模块和项目的四张表出现；工作区的管理员和成员能建项目，调用者按可见性列出、查看项目，检查标识；删除工作区和降为访客的连带随项目一起成立。具体是：
 
-- 迁移 `00010`–`00013`（`projects`、`project_members`、`project_user_properties`、`states`），它们的运行时权限和 `sqlc.yaml` 的 `project` 条目；四张表的名字、种类、CHECK 的反例（含 `projects_logo_props_check` 的十五个反例、四个合法值；M3 设计 4.6、9.3 的十个反例在其中）和部分唯一键的行为（4.6–4.9）；
+- 迁移 `00010`–`00013`（`projects`、`project_members`、`project_user_properties`、`states`），它们的运行时权限和 `sqlc.yaml` 的 `project` 条目；四张表的名字、种类、CHECK 的反例（含 `projects_logo_props_check` 的二十个反例、五个合法值；M3 设计 4.6、9.3 的十个反例在其中）和部分唯一键的行为（4.6–4.9）；
 - 新模块 `project`：domain（名称、标识、网络、图标、负责人、默认的 6 个状态、侧边栏的位置、可见性、操作名）；四个操作 `createProject`、`getProject`、`checkProjectIdentifier`、`listProjects`；`Cascade` 的 `DeleteWorkspaceProjects`、`DemoteToGuest`；
 - 跨模块的端口：`project.Provide` 的 `ProjectAccess`（只有它，裁定 S2），`access` 的项目级端口；`workspace.Provide` 的 `WorkspaceDirectory`、`WorkspaceMembers`；`workspace` 的 `ProjectCascade`；`project.New` 在 `workspace.New` 之前（6.6）；
 - 两个连带：删除工作区的 `cascade()` 的最后一步；`updateWorkspaceMember` 改为访客、接受邀请恢复为访客时 `DemoteToGuest`（3.3、3.8），两处都有组合出的 app 上的回滚测试；
@@ -76,14 +76,14 @@ WHERE workspace_id = $workspace_id AND deleted_at IS NULL;
 
   已归档的项目、已结束的成员关系、分诊状态一起删除；此前删除的行保持原来的时间。存储在调用者的事务里执行（`postgres.DB(ctx, pool)`），失败原样返回，删除整个回滚。
 - **骨架**：`project.New(Deps)`、`(*Module).Cascade()`、`project.Actions()`；`bootstrap` 在 `workspace.New` 之前建 `project.New`，把它的 `Cascade()` 交给 `workspace.Deps.Projects`（6.6）。`project.NewCascade` 不建（裁定 G2）；`project/app.NewCascade` 是 `New` 用的应用层构造（第 3 节第 21 条）。
-- **裁定 S3**：`project` 在建出它的目录的这个 Task 进 `moduleActions`，`Actions()` 先是空的：`TestEveryModuleDeclaresItsActionsOrHasNone` 和 `TestEveryActionHasARuleAndEveryRuleAnAction` 照原样通过，没有豁免；从 Task 7 起每个操作带上它的操作名。"不列 `project`"的变异由这两个测试发现。
+- **裁定 S3**：`project` 在建出它的目录的这个 Task 进 `moduleActions`，`Actions()` 先是空的：`TestEveryModuleDeclaresItsActionsOrHasNone` 和 `TestEveryActionHasARuleAndEveryRuleAnAction` 照原样通过，没有豁免；从 Task 7 起每个操作带上它的操作名。"不列 `project`"的变异由 `TestEveryModuleDeclaresItsActionsOrHasNone` 和 `TestEveryActionHasARuleAndEveryRuleAnAction`（Task 7 起）发现。
 - **组合的删除测试**（第 9 条移交）：`TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt` 从目录读出四张新表，两个工作区都准备了它们的行，没有加豁免；`TestAFailedProjectsStepRollsTheDeletionBack` 在组合出的 app 上让 `states` 表在请求中改名，最后一条语句失败：500，两个工作区的每一行都不变（完成线"删除工作区的连带回滚测试"）。
 
 ### 2.4 领域与 CHECK 的反例（Task 3；3.17–3.19、4.6）
 
 - `CheckNewProject(NewProject) (NewProject, error)`：名称 1–255 个字符、不全是空白、没有 NUL、没有 `& + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! -`（`not_allowed`）；标识转成大写后 1–10 个 `A-Z0-9ÇŞĞİÖÜ`；说明没有 NUL；网络 0 或 2，不给时 2；时区经 `shared.ValidTimezone`；`logo_props` 的 `in_use` 是 `emoji` 或 `icon`、五个文本没有 NUL（键和类型由契约守住，第 3 节第 12 条）。全部问题一个 422 `validation_failed`。名称、标识是否被占由数据库说，负责人由用例在锁下判断。
 - `CanLead(role)`：管理员或成员，按集合；`DefaultStates()`：Plane 的六个（Backlog 是默认，Triage 是分诊）；`SortOrderFirst(lowest)`：`lowest - 10000`，没有时 `65535`（3.18，Plane `ProjectMember.save`）。
-- `TestProjectChecksRejectCounterexamples`：`logo_props` 的四个合法值（`{}`、只有表情、只有图标、三个键都有）通过，十五个反例都得到 `check_violation`：M3 设计 4.6、9.3 的十个（含 Codex S5 的 `{"unexpected": true}`、`{"in_use": 17, "emoji": []}`），另有那十个没有试到的每个条件一个（表情多出的键、`url` 不是字符串，图标不是对象、`name`、`background_color` 不是字符串；pre-flight M2），CHECK 的每个条件由此都有反例；另有名称（空串、每个禁用字符；反斜杠和中文可以）、标识（小写、空串、11 个、`-`、空格、别的字母；`ÇŞĞİÖÜ0129` 和一个字母可以）、网络、`archive_in`、`last_issue_sequence`、项目角色、显示设置、状态的名称和组的反例和边界。`TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`：每个部分唯一键下第二个未删除的行被拒绝，软删除第一行之后可以再用；别的工作区、项目、账户有自己的键。
+- `TestProjectChecksRejectCounterexamples`：`logo_props` 的五个合法值（`{}`、只有表情、只有图标、三个键都有，和网页建项目时发的 `in_use` 为 `emoji` 的值）通过，二十个反例都得到 `check_violation`：M3 设计 4.6、9.3 的十个（含 Codex S5 的 `{"unexpected": true}`、`{"in_use": 17, "emoji": []}`），另有那十个没有试到的每个条件一个（表情多出的键、`url` 不是字符串，图标不是对象、`name`、`background_color` 不是字符串；pre-flight M2），CHECK 的每个条件由此都有反例，再有每个文本键的第二个错误类型各一个（表情的 `value`、`url`，图标的 `name`、`color`、`background_color`；Task 3 的修正轮）；另有名称（空串、每个禁用字符；反斜杠和中文可以）、标识（小写、空串、11 个、`-`、空格、别的字母；`ÇŞĞİÖÜ0129` 和一个字母可以）、网络、`archive_in`、`last_issue_sequence`、项目角色、显示设置、状态的名称和组的反例和边界。`TestProjectUniqueKeysHoldAmongUndeletedRowsOnly`：每个部分唯一键下第二个未删除的行被拒绝，软删除第一行之后可以再用；别的工作区、项目、账户有自己的键。
 
 ### 2.5 存储：插入与读（Task 4）
 
@@ -114,9 +114,9 @@ WHERE p.id = $id AND p.deleted_at IS NULL;
 
 ### 2.7 矩阵的形状（Task 6；9.2；P1 review M8，P2 re-review Minor 2，裁定 G3）
 
-- `matrixRow.columns`：`nil` 是工作区级的六列；项目级的行用 `projectColumns`：PA、PM、PG、PM+WA、WA-、WM-公、WM-私、WG-、P-前 和 X 的三个账户（从来不是成员、已被移出、工作区已删除），共 12 列；已归档项目的一列 `archivedColumns`。一行的每个格子都运行；完整性核对要求一行恰好有它每一列的格子、没有别的列的格子。
-- 账户：`matrixAccounts` 11 个（9.2），`accountOf(c)` 让同一个账户在两个级别下各有自己的名字（PG 是工作区的访客、WA- 是它的管理员、WM-公/私 是它的成员、已归档项目的列是 PA）；`TestEveryColumnCallsAsARegisteredAccount` 要求每一列的账户都已注册、每个账户都是某一列的。
-- 项目：`matrixProjects`（`acme` 的公开、私密、已归档，`gone` 的，`other` 的）和 `matrixProjectMembers` 在准备之前定名，经项目的存储写入；`projectOf(c)` 是一列指向的项目，`targetViolation` 要求 `{project_id}` 是它。
+- `matrixRow.columns`：`nil` 是工作区级的六列；项目级的行用 `projectColumns`：PA、PM、PG、PM+WA、WA-、WM-公、WM-私、WG-、P-前 和 X 的三个账户（从来不是成员、已被移出、工作区已删除），共 12 列；已归档项目的一列 `archivedColumns`（Task 9 起）。一行的每个格子都运行；完整性核对要求一行恰好有它每一列的格子、没有别的列的格子。
+- 账户：`matrixAccounts` 11 个（9.2），`accountOf(c)` 让同一个账户在两个级别下各有自己的名字（PG 是工作区的访客、WA- 是它的管理员、WM-公/私 是它的成员、已归档项目的列（Task 9 起）是 PA）；`TestEveryColumnCallsAsARegisteredAccount` 要求每一列的账户都已注册、每个账户都是某一列的。
+- 项目：`matrixProjects`（`acme` 的公开、私密、已归档，`gone` 的，Task 11 起还有 `other` 的）和 `matrixProjectMembers` 在准备之前定名，经项目的存储写入；`projectOf(c)` 是一列指向的项目，`targetViolation` 要求 `{project_id}` 是它。
 - **`notTargets` 按参数列出**（裁定 G3）：键是 `notTarget{path, param}`；`targetViolation(pattern, path, c, s, passOver)` 只跳过列出的参数，同一路径上别的参数照常核对。反例（`TestMatrixViolationsCatchesEachColumnGap`）：`checkProjectIdentifier` 列出 `{identifier}` 之后，已删除工作区那一列的 `{slug}` 指向 `acme` 仍然报告；"列出的参数放过整条路径"的变异由它发现。P3 的三个列出（`workspace-slugs/{slug}`、`accept`、`decline` 的 `{invitation_id}`）照新写法。
 
 ### 2.8 `createProject`（Task 7、8；3.6、3.17–3.19、5.1）
@@ -187,7 +187,7 @@ SET role = 5, updated_at = $now, updated_by_id = $updated_by
 WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at IS NULL AND role <> 5;
 ```
 
-  没有锁到项目时不写（第 20 条）。两步都在调用者的事务里：`TestDemoteToGuest` 在事务里调用它，`fakeDemoter` 经 `callLog` 记下在事务之外的调用（pre-flight H1）。`FOR NO KEY UPDATE` 让 P4b 的加入、添加（`FOR SHARE` 项目）等它，外键检查的 `FOR KEY SHARE` 不等（`TestDemotingAMemberToGuest`）；按 id 的顺序由 `TestLockMemberProjectsLocksInIDOrder` 证明（行在表里、在名称和标识的索引里的顺序都与 id 相反）。
+  没有锁到项目时不写（第 20 条）。两步都在调用者的事务里：`TestDemoteToGuest` 在事务里调用它，`fakeDemoter` 经 `callLog` 记下在事务之外的调用（pre-flight H1）。`FOR NO KEY UPDATE` 与 P4b 的加入、添加对项目取的 `FOR NO KEY UPDATE`（M3 设计 3.6）互相等待，外键检查的 `FOR KEY SHARE` 不等（`TestDemotingAMemberToGuest`）；按 id 的顺序由 `TestLockMemberProjectsLocksInIDOrder` 证明（行在表里、在名称和标识的索引里的顺序都与 id 相反）。
 - **`updateWorkspaceMember`**：锁之后读一次时钟 → `UpdateMemberRole` → 新角色是访客时 `DemoteToGuest(工作区, 成员, 管理员, 同一个时刻)` → 读资料（P2 review 第 6 节的位置）。
 - **接受邀请**：`switch` 中恢复已结束的成员关系改由 `restore(ctx, m, role, now)`：`RestoreMember` 之后、`AcceptInvitation` 之前、同一个事务里，邀请的角色是访客时 `DemoteToGuest(工作区, 他, 他自己, 同一个时刻)`（第 22 条）；有效成员（不改成员关系）和新成员（没有项目成员关系）不调。它让 P4b 加入时 `min(原角色, 现在的工作区角色)` 的上限成立（3.8）。
 - 组合出的 app（第 2 条移交、完成线）：`TestDemotingToGuestDemotesInTheWorkspacesProjects`（bob 是 `acme`、`beta` 的成员，各领导一个项目；给项目成员表加一个 `CHECK (role <> 5) NOT VALID` 让项目一步失败，alice 改他的角色答 500、什么都不变；去掉之后成功：他是 `acme` 和它的项目的访客，由 alice 在改角色的时刻写入，`beta` 不变）；`TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects`（bob 领导过 Web，照 P5 的离开结束了两个成员关系；以访客再被邀请；失败时接受答 500、邀请仍待接受；成功时他是访客、Web 的成员关系成为访客且仍结束，由他自己写入，邀请已消费）。
@@ -221,7 +221,7 @@ WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at 
 
 | 文档 | 位置 | 内容 |
 |---|---|---|
-| 差异清单 | 二·按表 | `projects`（共 11 行）、`project_members`（共 6 行）、`project_user_properties`（5 行）、`states`（5 行）逐列：保留的列数、外键、默认值、CHECK、部分唯一键、删除的列；`logo_props` 一行写明十五个反例各试一个条件，M3 设计 4.6 的十个在内；原来的"新增计数列（列名在 M3 建表时确定）"一行定名为 `last_issue_sequence`，原来的两行删除的列保留 |
+| 差异清单 | 二·按表 | `projects`（共 11 行）、`project_members`（共 6 行）、`project_user_properties`（5 行）、`states`（5 行）逐列：保留的列数、外键、默认值、CHECK、部分唯一键、删除的列；`logo_props` 一行写明二十个反例（M3 设计 4.6 的十个在内，CHECK 的每个条件都有反例）和五个合法值；原来的"新增计数列（列名在 M3 建表时确定）"一行定名为 `last_issue_sequence`，原来的两行删除的列保留 |
 | 差异清单 | 四 | "删除工作区"一行加上项目；"接受邀请时已有成员行"写上访客的连带；4.11 中标 P4a 的行（负责人、默认负责人的 `SET NULL` 和创建时的规则，看得到而不是成员时取项目，工作区访客取没加入的公开项目，已归档的项目，项目标识，默认状态、分诊状态） |
 | M2 收尾交接 | 文末 | "处理结果（M3/P4a）"：第 7 节的 `cover_image_url`（部分），第 9 节（完成） |
 | M1-P2 交接 | 文末 | "处理结果（M3/P4a）"：项目字段（完成） |
@@ -286,7 +286,7 @@ WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at 
    | H1 `Cascade.DemoteToGuest` 的两步可以在调用者的事务之外，每个测试照样通过 | `fakeDemoter` 经 Task 7 的 `callLog` 记下在事务之外的调用；`TestDemoteToGuest` 在事务里调用它（2.12） | 12 | `pf07c` 被 `TestDemoteToGuest` 发现 |
    | H2 `project.New` 的 `Tx`、`Clock` 换成不开事务的、固定时刻的，整套测试和两个故事照样通过 | `bootstrap/project_wiring_test.go` 的 `TestCreateProjectRunsOnTheWiredClockAndTransaction`（2.8）；Task 8 因此 1,474 行 | 8 | `wire-project-no-tx`、`wire-project-fixed-clock` 被它发现；pre-flight 的第三个接线变异（成员的端口答每个账户都是管理员）被 `TestPermissionMatrix` 发现；清扫 4 由 10 个到 13 个 |
    | M1 第 8 条移交（`ProjectFacts` 属于目标的工作区）只由假实现守着 | `bootstrap/project_access_test.go` 的 `TestTheAuthorizerSeesNoProjectOfAnotherWorkspace`，真实的存储（2.9） | 9 | `pf03`（与 `az-other-workspace` 是同一个变异）另被它发现 |
-   | M2 `projects_logo_props_check` 的五个条件没有反例 | 五个反例，共十五个，M3 设计 4.6、9.3 的十个在内（2.4）；本 spec 和差异清单写十五个 | 3、15 | `c4`–`c8` 各被自己的子测试发现 |
+   | M2 `projects_logo_props_check` 的五个条件没有反例 | 五个反例，共十五个，M3 设计 4.6、9.3 的十个在内（2.4）；Task 3 的修正轮再加五个，共二十个，本 spec 和差异清单写二十个 | 3、15 | `c4`–`c8` 各被自己的子测试发现 |
    | M3 第 25 条的原写法够不到裁定的意图 | P1 的 Ops 私密，管理员读 Ops 和 Docs，成员读 Ops 得 404（2.15，第 25 条） | 14 | P1 单独运行：`GetProject` 的 10 个、`ProjectFacts` 的 6 个两序变异全部被发现 |
    | L1 Task 4 的变异表写"13 个谓词"，列出 12 个 | 改为 12 个 | 4 | — |
    | L2 清扫 1 的清单少 `ListProjects` 的三项：`m.id IS NOT NULL`、`sees_public` 的条件、排序的 `p.name` | 加进 `mutants_j.py` | — | `c1`–`c3` 被 `TestListProjects` 发现（原有的测试）；清扫 1 的 Go 变异由 74 个到 77 个 |
@@ -297,7 +297,7 @@ WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at 
 ## 4. 验收标准（完成线，M3 设计 12 节 P4a）
 
 - [ ] P1 的接口版本、加了项目连带的 W3 通过，此前的每个故事仍然通过（`make e2e` 共 58 个：此前的 57 个，加上 P1）。
-- [ ] 可见性一致的测试（`TestListingProjectsIsReadingEach`）通过；`logo_props` 的十五个反例（M3 设计 4.6、9.3 的十个在内）、四个合法值和别的 CHECK 反例通过。
+- [ ] 可见性一致的测试（`TestListingProjectsIsReadingEach`）通过；`logo_props` 的二十个反例（M3 设计 4.6、9.3 的十个在内）、五个合法值和别的 CHECK 反例通过。
 - [ ] 删除工作区（`TestAFailedProjectsStepRollsTheDeletionBack`）和降为访客的两处调用（`TestDemotingToGuestDemotesInTheWorkspacesProjects`、`TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects`）在组合出的 app 上连带失败时整个写回滚。
 - [ ] 组合出的 app 上 `project.New` 的事务和时钟（`TestCreateProjectRunsOnTheWiredClockAndTransaction`）、真实存储上判定不认别的工作区的项目（`TestTheAuthorizerSeesNoProjectOfAnotherWorkspace`）通过；`DemoteToGuest` 的两步在调用者的事务里（`TestDemoteToGuest`）。
 - [ ] `project` 的 `apitest.Main` 两个方向通过；每个模块的 HTTP 测试都经 `apitest.Main`（`TestEveryModuleRunsItsHTTPTestsThroughMain`）。
@@ -315,7 +315,7 @@ WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at 
 
 | Phase | 条目 |
 |---|---|
-| P4b | `archive_in`、默认负责人、修改时负责人的规则（第 5 条）；PM+WA 一列在修改、添加、归档行里区分工作区管理员（第 19 条）；`joinProject` 按集合要求工作区角色，在"已是有效成员"之前（第 2 条移交 5，G4）；故事清扫：删除项目让"已删除"的谓词可以准备（第 25 条，含 `ProjectFacts` 的 `p.deleted_at`、`m.deleted_at`：`getProject` 里前者被 `GetProject` 先挡住，项目级的写看得到它），P2–P4、P8 单独运行时看得到各自查询的谓词；项目级的写在事务里判定（pre-flight L3）：`ProjectFacts` 经 `postgres.DB(ctx, pool)` 在调用者的事务里读，要有组合出的测试让它在事务之外读时失败（例如交错 17 里降为访客之后的写看得到降级），接过 `az-project-outside-tx`（P4a 只有假实现守着，P4a 没有在事务里的项目级判定）；交错 17 用 `LockMemberProjects` 的锁（`FOR NO KEY UPDATE`，与加入、添加的 `FOR SHARE` 互等）；降为访客与删除项目的交错（`LockMemberProjects` 在等待之后重新求值 `deleted_at`，P4a 只有 Postgres 的语义和目录一侧的测试） |
+| P4b | `archive_in`、默认负责人、修改时负责人的规则（第 5 条）；PM+WA 一列在修改、添加、归档行里区分工作区管理员（第 19 条）；`joinProject` 按集合要求工作区角色，在"已是有效成员"之前（第 2 条移交 5，G4）；故事清扫：删除项目让"已删除"的谓词可以准备（第 25 条，含 `ProjectFacts` 的 `p.deleted_at`、`m.deleted_at`：`getProject` 里前者被 `GetProject` 先挡住，项目级的写看得到它），P2–P4、P8 单独运行时看得到各自查询的谓词；项目级的写在事务里判定（pre-flight L3）：`ProjectFacts` 经 `postgres.DB(ctx, pool)` 在调用者的事务里读，要有组合出的测试让它在事务之外读时失败（例如交错 17 里降为访客之后的写看得到降级），接过 `az-project-outside-tx`（P4a 只有假实现守着，P4a 没有在事务里的项目级判定）；交错 17 用 `LockMemberProjects` 的锁（`FOR NO KEY UPDATE`，与加入、添加对项目取的 `FOR NO KEY UPDATE` 互等，M3 设计 3.6）；降为访客与删除项目的交错（`LockMemberProjects` 在等待之后重新求值 `deleted_at`，P4a 只有 Postgres 的语义和目录一侧的测试） |
 | P5 | `ProjectCascade.EndMemberships` 是第三个方法（`by` 按 G1）；`ProjectMembershipCounts` 随 `reactivate-member` 加入 `project.Provide`（S2）；离开、移出让"已结束"的谓词可以由故事准备（第 25 条，含 `ProjectFacts` 的 `m.is_active`）；S5：`nerve workspaces` 是否建 `project.NewCascade` 由 `workspace.NewAdmin` 实际建什么决定，要连带而不调用时按用途拆开构造 |
 | P6 | `project.NewCascade(CascadeDeps)` 随 `nerve users deactivate` 加入（G2），`New` 改用它建同一个实现；S5 同上 |
 | P7 | 标签加进 `DeleteWorkspaceProjects`（`deletion()` 的最后一步）；W3 和故事 P4 的断言加上标签（S4） |
@@ -337,7 +337,7 @@ WHERE project_id = ANY ($project_ids) AND member_id = $member_id AND deleted_at 
 |---|---|---|
 | M2 收尾交接第 7 节 可空的引用字段 | `Project.cover_image_url` 必有、可为 `null`（Task 8；"处理结果"在 Task 15） | `IUserLite`：P8；本节保持 `open` |
 | M2 收尾交接第 9 节 删除关系图 | 负责人、默认负责人 `SET NULL`（Task 2），登记在差异清单（Task 15） | — |
-| M1-P2 项目字段 | 接口和表里没有 `close_in`、`default_state`、`page_view`、`estimate_id`（Task 2、8） | 保留名单的前端一侧（P8）；个人主页的页面（P9） |
+| M1-P2 项目字段 | 接口和表里没有 `close_in`、`default_state`、`page_view`、`estimate_id`（Task 2、8） | 保留名单的前端一侧（P8）；个人主页的页面（P11，故事 P9 的页面版本和 C10） |
 | M1-P3 不再读的字段、地址 | 项目接口没有 `anchor`、发布设置；`project-identifiers` 不带结尾 `/`（Task 8、10） | 项目成员、`RESTRICTED_URLS` 与后端同源（前端一侧，P8）和其余各条 |
 | P1、P2、P3 review 第 6 节（P4 的各件） | 落点见第 3 节第 2 条 | `joinProject` 按集合：P4b |
 
@@ -408,7 +408,7 @@ P4a 的条件都有落点，没有放不下的。
 | 3 每个写不动的行和列 | 每个写的测试都有别的项目、别的成员、别的工作区，处在不同的状态，核对恰好改了哪些行和列：59 个变异（少写、多写一列，改错行，HTTP 的每个字段） | 全部被发现 |
 | 4 组合根的每个接线 | 每个接进组合根的端口换成空的或错的：13 个（删除的连带、降级的存储、两处降级的接线、目录的转换、事实的转换、`Authorizer` 找不到项目、路由的注册、操作名、`moduleActions`；修订轮加上 `project.New` 的事务、时钟和成员的端口，pre-flight H2） | 全部被组合出的 app 上的测试发现（事务、时钟由 `TestCreateProjectRunsOnTheWiredClockAndTransaction`，成员的端口由矩阵）；组合的顺序反过来（pre-flight 的 `pf13`）编译不过，6.6 的顺序由编译器守着 |
 | 5 每个安全性质在真实的系统上 | 谁看得到、能做什么的每条规则，每个连带：29 个变异（规则表、判定、用例跳过判定、看不到泄露、可见性）；另有矩阵（真实数据库、组合出的 app）、可见性一致、两处降级和删除的回滚测试；修订轮加上第 8 条移交在真实存储上的测试（M1）和降级在调用者事务里的核对（H1） | 全部被发现。只由假实现守着的留一个：`ProjectFacts` 在事务之外读（L3），P4a 里没有在事务里的项目级判定，移交 P4b（第 5 节） |
-| 6 每一句说明 | 契约的每段描述、P4a 的代码注释和查询注释、迁移注释、差异清单和交接的每一行，逐句对照代码或测试；3 个契约变异 | 一句不符（`projects`"保留 23 列"，第 26 条），已改正；3 个变异被发现；修订轮：`Cascade` 的"每个方法在 ctx 带着的事务里"对 `DemoteToGuest` 由 `TestDemoteToGuest` 守着（H1），差异清单的"查到底"由十五个反例守着（M2） |
+| 6 每一句说明 | 契约的每段描述、P4a 的代码注释和查询注释、迁移注释、差异清单和交接的每一行，逐句对照代码或测试；3 个契约变异 | 一句不符（`projects`"保留 23 列"，第 26 条），已改正；3 个变异被发现；修订轮：`Cascade` 的"每个方法在 ctx 带着的事务里"对 `DemoteToGuest` 由 `TestDemoteToGuest` 守着（H1），差异清单的"查到底"由十五个反例守着（M2；Task 3 的修正轮之后是二十个，M3 设计 4.6 的十个在内） |
 | 7 反例里没有随机 | P4a 新加、修改的测试和故事里没有 `math/rand`、`Math.random`；id 由 `uuid.NewV7()` 按生成的顺序递增，顺序相关的测试按固定的顺序生成；`time.Now()` 只用来给准备的行盖时刻，没有断言依赖它的值；`gen_random_uuid()` 只给没有断言比较的准备行作 id | 没有发现 |
 
 七类之外，brief 的 P4 缺陷类别（连带、可见性、标识、`logo_props`、负责人；加入和添加在 P4b）和 P1–P3 的类别（锁、目录只钉名字、测试工具被削弱、按大小比较角色、精确的错误……）按下面的类别表列出。`mutants_*.py` 每一条的类别标记（Go 323 个，修订轮之前 311 个）：`sweep1` 77、`sweep2` 22、`sweep3` 59、`sweep4` 13、`sweep5` 29、`sweep6` 3；`p4`（P4 自己的顺序、连带、回答）30、`dom`（领域的规则）27、`check`（CHECK、部分唯一键、生成的请求体结构）20、`lock`（锁的强度、顺序、只读不锁）16、`harness`（矩阵、`apitest` 的核对被削弱）27；另有 `mutants_rev.py` 的 10 个（`sweep1`）和就地改文件的 1 个（`harness`）。

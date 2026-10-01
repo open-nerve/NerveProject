@@ -42,9 +42,9 @@ M3 合并时：
 ## 处理结果（M3/P2）
 
 - **侧边栏偏好**（接口一侧完成）：没有 `/sidebar-preferences/`。项目导航偏好是 `GET`、`PATCH /api/v0/me/workspaces/{slug}/preferences`，结构 `WorkspacePreferences {navigation_control_preference, navigation_project_limit}`，任何有效成员读写自己的；没有这一行时 `GET` 返回默认值（`ACCORDION`、10），不写库，第一次修改时建行（M3 设计 3.18）。W8 的接口版本核对这两件。`ProjectNavigationDialog` 改调它在 P9（W8 的页面版本）。
-- **访客能否查看别人的个人主页**（权限矩阵一侧完成）：能。卡片的数据来自 `listWorkspaceMembers`，它在权限矩阵中有了行：管理员、成员、访客都得到 200，含已结束的成员关系（被移出或已离开，`is_active: false`），卡片据此显示"不是成员"；访客看到的邮箱都是 `null`，他自己的也是（M3 设计 9.2）。个人主页的页面在 P9。
+- **访客能否查看别人的个人主页**（权限矩阵一侧完成）：能。卡片的数据来自 `listWorkspaceMembers`，它在权限矩阵中有了行：管理员、成员、访客都得到 200，含已结束的成员关系（被移出或已离开，`is_active: false`），卡片据此显示"不是成员"；访客看到的邮箱都是 `null`，他自己的也是（M3 设计 9.2）。个人主页的页面在 P11（故事 P9 的页面版本和 C10）。
 
-仍未处理，状态保持 `open`：保留名单的前端一侧（P8）；项目字段（P4）；个人主页的页面（P9）。
+仍未处理，状态保持 `open`：保留名单的前端一侧（P8）；项目字段（P4）；个人主页的页面（P11，故事 P9 的页面版本和 C10）。
 
 来源：[M3/P2 spec](../specs/P2-workspaces.md) 第 7 节。
 
