@@ -231,12 +231,10 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // display settings; other's admin and removed member are there so that a
 // role read in the wrong workspace lets either into acme. Through the
 // project store, the projects and project memberships of matrixProjects
-// and matrixProjectMembers. Through the API, gone deleted by its admin,
-// which soft-deletes its memberships and its project with it. Through SQL,
-// until the stores of P4b and P5 replace it, acme's archived project
-// archived, the member before's membership of the private project ended
-// and the removed member's membership of acme ended; and partingStates'
-// ended and deleted project memberships and deleted display settings.
+// and matrixProjectMembers. Through SQL, the states no store writes yet
+// (standIns, partingStates); then the checks that the rows the cells rest
+// on are there (preconditions). Through the API, gone deleted by its admin,
+// which soft-deletes its memberships and its project with it.
 // Everything that connected to the database is closed when it returns, so
 // that it can be copied. A -run that leaves out prepare fails here, not
 // with a 401 in every cell.
@@ -277,26 +275,9 @@ func prepareMatrix(t *testing.T) matrixData {
 		for _, pm := range matrixProjectMembers {
 			projects.join(pm.key, pm.c, pm.role)
 		}
-		// No store archives a project (P4b), ends a project membership (P5)
-		// or removes a member (P5) yet, so SQL stands in until those phases
-		// replace it.
-		seed.exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", s.project("acme/archived"), seed.now)
-		seed.exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
-			s.project("acme/private"), ids[callerBefore])
-		seed.exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
-		// exec fails a statement that changes no row, and names it.
-		const none = "UPDATE projects SET archived_at = now() WHERE false"
-		if failed, want := fatalOf(func(tb testing.TB) { seed.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
-			t.Errorf("exec of a statement that changes no row: failed with %q, want %q", failed, want)
-		}
+		projects.standIns(pool, s)
 		projects.partingStates(pool)
-		// The removed member is still an active member of the project his
-		// column aims at, so that only his ended membership of acme keeps him
-		// out of it: his cell's 404 would not show which, were he none.
-		if f, found, err := projects.store.ProjectFacts(context.Background(), s.project(projectOf(callerRemoved)), ids[callerRemoved]); err != nil ||
-			!found || !f.Member {
-			t.Fatalf("the removed member's facts of %s = %+v, %v, %v; want him its active member", projectOf(callerRemoved), f, found, err)
-		}
+		projects.preconditions(s)
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so
 		// every cell of the column is asked about a workspace deleted the one
@@ -304,15 +285,6 @@ func prepareMatrix(t *testing.T) matrixData {
 		// ActiveRole's store test (P1).
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
-		}
-		// other's project is the one no list of acme's may show: were it not
-		// there, undeleted in a workspace of its own, a list of every
-		// workspace's projects would pass the matrix and
-		// TestListingProjectsIsReadingEach alike.
-		if f, found, err := projects.store.ProjectFacts(context.Background(), s.project("other/project"), ids[callerNever]); err != nil ||
-			!found || f.WorkspaceID != s.workspace("other") {
-			t.Fatalf("other's project's facts = %+v, %v, %v; want it undeleted in other (%s), not acme (%s)", f, found, err,
-				s.workspace("other"), s.workspace("acme"))
 		}
 	})
 	if !prepared {
