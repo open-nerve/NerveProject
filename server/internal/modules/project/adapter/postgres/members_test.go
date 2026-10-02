@@ -140,3 +140,33 @@ func TestRestoreMember(t *testing.T) {
 		}
 	}
 }
+
+// CountInactive counts the account's ended undeleted memberships of the
+// workspace's projects: bob's of Web and of Ops in acme, 2; not his active
+// one of Docs, nor his ended one of Old, deleted, nor his ended one of
+// beta's project, which beta's count is; not carol's ended one of Web,
+// which hers is. alice has none.
+func TestCountInactive(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
+	docs, old := newProject(t, s, acme, "Docs", "DOC", alice), newProject(t, s, acme, "Old", "OLD", alice)
+	betas := newProject(t, s, beta, "Web", "WEB", alice)
+	seedMember(t, pool, acme, web, bob, 20, false)
+	seedMember(t, pool, acme, ops, bob, 15, false)
+	seedMember(t, pool, acme, docs, bob, 15, true)
+	exec(t, pool, "UPDATE project_members SET deleted_at = $2 WHERE id = $1", seedMember(t, pool, acme, old, bob, 15, false), now)
+	seedMember(t, pool, beta, betas, bob, 15, false)
+	seedMember(t, pool, acme, web, carol, 5, false)
+	seedMember(t, pool, acme, web, alice, 20, true)
+	for _, tt := range []struct {
+		name            string
+		workspace, user uuid.UUID
+		want            int
+	}{{"bob in acme", acme, bob, 2}, {"bob in beta", beta, bob, 1}, {"carol in acme", acme, carol, 1}, {"alice in acme", acme, alice, 0}} {
+		if got, err := s.CountInactive(context.Background(), tt.workspace, tt.user); err != nil || got != tt.want {
+			t.Errorf("CountInactive() of %s = %d, %v; want %d", tt.name, got, err, tt.want)
+		}
+	}
+}

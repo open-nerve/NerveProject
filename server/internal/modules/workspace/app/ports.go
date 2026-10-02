@@ -238,6 +238,27 @@ type ProjectCascade interface {
 	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 
+// ProjectMembershipCounts counts an account's memberships of a workspace's
+// projects (M3 design 6.5): the project module implements it
+// (project.Provide).
+type ProjectMembershipCounts interface {
+	// CountInactive is the number of userID's ended, undeleted memberships
+	// of the workspace's projects, read without a lock.
+	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
+}
+
+// MemberReactivator restores an account's ended membership of a workspace
+// named by its slug, under the workspace's lock (M3 design 3.11).
+type MemberReactivator interface {
+	WorkspaceLocker
+	// MemberOf returns userID's undeleted membership of the workspace,
+	// active or ended; found is false when there is none.
+	MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (m domain.Membership, found bool, err error)
+	// ReactivateMember makes userID's undeleted membership of the
+	// workspace active again, its role kept, at now.
+	ReactivateMember(ctx context.Context, workspaceID, userID uuid.UUID, now time.Time) error
+}
+
 // PreferencesRow is a change of an account's display settings in a
 // workspace, and the id of the row if the change inserts one.
 type PreferencesRow struct {

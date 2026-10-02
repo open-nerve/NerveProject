@@ -20,6 +20,8 @@ import (
 // the one it waited for. The deletion's cascade uses that one read for
 // every step, a change to guest or a restoring as a guest for the
 // projects' step, and a removal and a leaving for each step of the ending.
+// reactivate-member, which decides nothing, reads it after the workspace's
+// lock and the membership's read.
 // The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
@@ -69,6 +71,12 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := app.NewLeaveWorkspace(f.workspaces, f.profiles, f.projects, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).Execute(as(bob), "acme")
 			return f.log.calls, err
 		}, slices.Concat(leavingCalls(bob, acme), []string{"Now"}, endingCalls(acme.ID, bob, bob.ID))},
+		{"reactivate-member", func() ([]string, error) {
+			uc, f := newReactivate()
+			_, err := uc.Execute(t.Context(), "acme", carol.Email)
+			return f.log.calls, err
+		}, append(reactivationCalls(carol, acme), "Now", "ReactivateMember "+acme.ID.String()+" "+carol.ID.String()+" at "+at,
+			"CountInactive "+acme.ID.String()+" "+carol.ID.String())},
 		{"updateWorkspaceInvitation", func() ([]string, error) {
 			f := newInvitations()
 			_, err := app.NewUpdateWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}, f.mac).

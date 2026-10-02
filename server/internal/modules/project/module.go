@@ -4,7 +4,9 @@
 // projects, checking an identifier, listing, adding and joining the
 // members, each member's display settings, carries out the workspace
 // module's cascades on the projects (ProjectCascade), and offers the
-// access module its reads of a project (ProjectAccess).
+// access module its reads of a project (ProjectAccess) and the workspace
+// module its count of an account's ended project memberships
+// (ProjectMembershipCounts).
 package project
 
 import (
@@ -53,16 +55,26 @@ type ProjectAccess interface {
 // them into access's value (M3 design 6.5).
 type AccessFacts = app.AccessFacts
 
+// ProjectMembershipCounts counts an account's memberships of a workspace's
+// projects, for the workspace module's reactivate-member (M3 design 3.11,
+// 6.5): CountInactive is the number of userID's ended, undeleted
+// memberships of the workspace's projects, read without a lock.
+type ProjectMembershipCounts interface {
+	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
+}
+
 // Provided are the adapters project offers the other modules. They depend
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
-	ProjectAccess ProjectAccess
+	ProjectAccess           ProjectAccess
+	ProjectMembershipCounts ProjectMembershipCounts
 }
 
 // Provide builds project's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
-	return Provided{ProjectAccess: postgresadapter.New(pool)}
+	store := postgresadapter.New(pool)
+	return Provided{ProjectAccess: store, ProjectMembershipCounts: store}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:

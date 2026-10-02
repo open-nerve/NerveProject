@@ -67,3 +67,11 @@ WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) 
 SELECT EXISTS (SELECT 1 FROM workspace_members
                WHERE workspace_id = sqlc.arg(workspace_id) AND member_id <> sqlc.arg(member_id) AND role = 20 AND is_active
                  AND deleted_at IS NULL);
+
+-- name: ReactivateMember :execrows
+-- reactivate-member, under the workspace's FOR NO KEY UPDATE (M3 design 3.11): the user's ended membership active
+-- again, its role kept. As Plane's command, it writes is_active and updated_at alone: no account of the instance asks
+-- for it, so updated_by_id stays whose it was.
+UPDATE workspace_members
+SET is_active = true, updated_at = sqlc.arg(now)
+WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL;

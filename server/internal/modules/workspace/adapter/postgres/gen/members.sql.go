@@ -239,6 +239,29 @@ func (q *Queries) MemberOf(ctx context.Context, arg MemberOfParams) (MemberOfRow
 	return i, err
 }
 
+const reactivateMember = `-- name: ReactivateMember :execrows
+UPDATE workspace_members
+SET is_active = true, updated_at = $1
+WHERE workspace_id = $2 AND member_id = $3 AND deleted_at IS NULL
+`
+
+type ReactivateMemberParams struct {
+	Now         time.Time
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// reactivate-member, under the workspace's FOR NO KEY UPDATE (M3 design 3.11): the user's ended membership active
+// again, its role kept. As Plane's command, it writes is_active and updated_at alone: no account of the instance asks
+// for it, so updated_by_id stays whose it was.
+func (q *Queries) ReactivateMember(ctx context.Context, arg ReactivateMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reactivateMember, arg.Now, arg.WorkspaceID, arg.MemberID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const restoreMember = `-- name: RestoreMember :exec
 UPDATE workspace_members
 SET is_active = true, role = $1, updated_by_id = $2, updated_at = $3

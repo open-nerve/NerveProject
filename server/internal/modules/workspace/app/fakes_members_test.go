@@ -108,3 +108,31 @@ func (f *fakeWorkspaces) HasOtherAdmin(ctx context.Context, workspaceID, userID 
 		return m.MemberID != userID && m.Role == shared.RoleAdmin && m.IsActive
 	}), nil
 }
+
+// The reactivation's repositories (app.MemberReactivator), besides the
+// slug's lock.
+
+func (f *fakeWorkspaces) MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (domain.Membership, bool, error) {
+	f.log.add(ctx, "MemberOf %s %s", workspaceID, userID)
+	if f.membersErr != nil {
+		return domain.Membership{}, false, fmt.Errorf("read workspace member: %w", f.membersErr)
+	}
+	list := f.memberships[workspaceID]
+	if i := slices.IndexFunc(list, func(m domain.Membership) bool { return m.MemberID == userID }); i >= 0 {
+		return list[i], true, nil
+	}
+	return domain.Membership{}, false, nil
+}
+
+func (f *fakeWorkspaces) ReactivateMember(ctx context.Context, workspaceID, userID uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "ReactivateMember %s %s at %s", workspaceID, userID, now.Format(time.RFC3339Nano))
+	if f.restoreErr != nil {
+		return fmt.Errorf("reactivate workspace member: %w", f.restoreErr)
+	}
+	list := f.memberships[workspaceID]
+	if i := slices.IndexFunc(list, func(m domain.Membership) bool { return m.MemberID == userID }); i >= 0 {
+		list[i].IsActive = true
+		return nil
+	}
+	return fmt.Errorf("reactivate workspace member %s of %s: no such row", userID, workspaceID)
+}

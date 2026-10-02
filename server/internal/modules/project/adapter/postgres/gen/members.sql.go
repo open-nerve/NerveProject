@@ -12,6 +12,26 @@ import (
 	"uuid"
 )
 
+const countInactiveMemberships = `-- name: CountInactiveMemberships :one
+SELECT count(*)
+FROM project_members
+WHERE workspace_id = $1 AND member_id = $2 AND NOT is_active AND deleted_at IS NULL
+`
+
+type CountInactiveMembershipsParams struct {
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// ProjectMembershipCounts, for reactivate-member's report (M3 design 3.11, 6.5): the account's ended undeleted
+// memberships of the workspace's projects, read without a lock. A deleted project's memberships are deleted with it.
+func (q *Queries) CountInactiveMemberships(ctx context.Context, arg CountInactiveMembershipsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countInactiveMemberships, arg.WorkspaceID, arg.MemberID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createMember = `-- name: CreateMember :exec
 INSERT INTO project_members (id, workspace_id, project_id, member_id, role, created_by_id, updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6,

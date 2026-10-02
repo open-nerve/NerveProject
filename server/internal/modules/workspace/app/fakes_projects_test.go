@@ -38,3 +38,20 @@ func (f *fakeProjects) EndMemberships(ctx context.Context, workspaceIDs []uuid.U
 	}
 	return nil
 }
+
+// fakeCounts is the project module's ProjectMembershipCounts: it logs each
+// call and answers the count it holds, or fails with its error, wrapped as
+// the module wraps it.
+type fakeCounts struct {
+	log *callLog
+	n   int
+	err error
+}
+
+func (f *fakeCounts) CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error) {
+	f.log.add(ctx, "CountInactive %s %s", workspaceID, userID)
+	if f.err != nil {
+		return 0, fmt.Errorf("count the ended project memberships: %w", f.err)
+	}
+	return f.n, nil
+}
