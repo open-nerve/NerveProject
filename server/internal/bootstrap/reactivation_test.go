@@ -109,7 +109,7 @@ func memberStates(t *testing.T, pool *pgxpool.Pool) string {
 // ended, as the line says; the reactivation is logged once. Run again, it
 // says the membership is active and changes nothing. carol's, her account
 // deactivated, is reactivated all the same, and the line says what is
-// next.
+// next; run again, it says so after the membership is reported active.
 func TestWorkspacesReactivateMember(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	pool := endedMembers(t, url)
@@ -143,6 +143,11 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 	if want := "reactivated carol@corp.com in acme as guest; project memberships still ended: 1, each restored when the member joins or is " +
 		"added to its project; the account is deactivated: run nerve users activate --email carol@corp.com next\n"; err != nil || out != want {
 		t.Errorf("reactivate-member of carol = %q, %v; want %q", out, err, want)
+	}
+	out, _, err = runWorkspaces(t, url, ReactivateMember("acme", "carol@corp.com"))
+	if want := "carol@corp.com is an active member of acme already; nothing changed; the account is deactivated: run nerve users activate " +
+		"--email carol@corp.com next\n"; err != nil || out != want {
+		t.Errorf("reactivate-member of carol again = %q, %v; want %q", out, err, want)
 	}
 }
 

@@ -137,7 +137,10 @@ func TestAReactivationFindsWhatChangedMeanwhile(t *testing.T) {
 // acme's row holding his account FOR SHARE, no stronger, no weaker, and
 // nothing else; then for his membership, holding his account and acme's
 // row FOR NO KEY UPDATE. Then it reactivates him, at a moment no earlier
-// than acme's release: it read the clock under acme's lock (3.3).
+// than acme's release: it read the clock under acme's lock (3.3). The
+// holder's FOR SHARE masks a FOR SHARE taken on his membership before
+// acme's row; such a lock shows up only as the wait for his membership
+// never being seen, PostgreSQL taking no tuple lock for the upgrade.
 func TestEachLockOfAReactivationIsItsStrength(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	pool := endedMembers(t, url)
