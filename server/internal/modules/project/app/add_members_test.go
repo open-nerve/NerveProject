@@ -119,11 +119,17 @@ func TestAddProjectMembersRefuses(t *testing.T) {
 }
 
 // An archived project's members are added as any other's (M3 design 3.19).
+// hank's ended membership of ops, an admin's, is restored with the role
+// asked for, a guest's, keeping its id: the grantor decides (convention 6),
+// down as well as up (TestAddProjectMembers restores dave up).
 func TestAddProjectMembersToAnArchivedProject(t *testing.T) {
 	uc, f := newAdd()
+	hanks := app.Membership{ID: uuid.NewV7(), Role: shared.RoleAdmin}
+	f.store.projects[opsID].members[hank] = hanks
 	got, err := uc.Execute(as(bob), opsID, []domain.NewMember{{MemberID: hank, Role: shared.RoleGuest}})
-	if err != nil || len(got) != 1 || got[0].MemberID != hank || got[0].ProjectID != opsID || !f.store.projects[opsID].members[hank].Active {
-		t.Errorf("Execute() on ops = %+v, %v; want hank its guest", got, err)
+	if err != nil || len(got) != 1 || got[0].ID != hanks.ID || got[0].MemberID != hank || got[0].ProjectID != opsID || got[0].Role != shared.RoleGuest ||
+		f.store.projects[opsID].members[hank] != (app.Membership{ID: hanks.ID, Role: shared.RoleGuest, Active: true}) {
+		t.Errorf("Execute() on ops = %+v, %v; want hank's ended membership %s restored as its guest", got, err, hanks.ID)
 	}
 }
 
