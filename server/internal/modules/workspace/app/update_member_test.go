@@ -158,15 +158,7 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) || got != (domain.Member{}) {
 			t.Errorf("%s: Execute() = %+v, %v; want no member and %v", tt.name, got, err, tt.want)
 		}
-		// The problem the API answers is the first *shared.Error in the
-		// chain: the refusal wanted, or none for a failure (a 500).
-		var se *shared.Error
-		switch {
-		case tt.want == failure && errors.As(err, &se):
-			t.Errorf("%s: Execute() = %v, which is also %s", tt.name, err, se.Code)
-		case tt.want != failure && (!errors.As(err, &se) || !se.Is(tt.want)):
-			t.Errorf("%s: Execute() = %v, answered as another problem; want %v", tt.name, err, tt.want)
-		}
+		answeredAs(t, tt.name, err, tt.want)
 		wantTx := 1
 		if tt.calls == nil {
 			wantTx = 0

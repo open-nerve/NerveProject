@@ -2,7 +2,9 @@ package app_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"testing"
 	"time"
 	"uuid"
 
@@ -40,10 +42,12 @@ func (c clockAt) Now() time.Time {
 }
 
 // fakeTx runs fn in a context marked as inside the transaction; the fakes
-// record whether each call happened there. commitErr, when set, is the
-// commit failing after fn succeeded.
+// record whether each call happened there. returned is what fn returned:
+// the error the transaction rolls back on, nil when it commits. commitErr,
+// when set, is the commit failing after fn succeeded.
 type fakeTx struct {
 	calls     int
+	returned  error
 	commitErr error
 }
 
@@ -51,10 +55,21 @@ type inTxKey struct{}
 
 func (f *fakeTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	f.calls++
-	if err := fn(context.WithValue(ctx, inTxKey{}, true)); err != nil {
-		return err
+	if f.returned = fn(context.WithValue(ctx, inTxKey{}, true)); f.returned != nil {
+		return f.returned
 	}
 	return f.commitErr
+}
+
+// answered reports whether err, a use case's answer, came out of the
+// transaction as itself: what fn returned, which the transaction rolled
+// back on; with commitErr set, the commit's failure, fn having returned
+// nil. A failure the use case carried out past a commit is neither.
+func (f *fakeTx) answered(err error) bool {
+	if f.commitErr != nil {
+		return f.returned == nil && err == f.commitErr
+	}
+	return f.returned != nil && err == f.returned
 }
 
 // callLog records the calls of the fakes that share it, in order, each with
@@ -67,6 +82,21 @@ func (l *callLog) add(ctx context.Context, format string, args ...any) {
 		call += " outside tx"
 	}
 	l.calls = append(l.calls, call)
+}
+
+// answeredAs fails the test unless the problem the API answers for err,
+// the first *shared.Error in its chain, is want, a refusal of the contract;
+// or, when want is a failure, no *shared.Error, there is none: a 500. name
+// names the case.
+func answeredAs(t *testing.T, name string, err, want error) {
+	t.Helper()
+	var se, refusal *shared.Error
+	switch {
+	case !errors.As(want, &refusal) && errors.As(err, &se):
+		t.Errorf("%s: Execute() = %v, which is also %s", name, err, se.Code)
+	case refusal != nil && (!errors.As(err, &se) || !se.Is(want)):
+		t.Errorf("%s: Execute() = %v, answered as another problem; want %v", name, err, want)
+	}
 }
 
 // show is *s quoted, or <nil>.

@@ -32,8 +32,9 @@ func NewLeaveWorkspace(workspaces WorkspaceLeaver, profiles MemberProfiles, proj
 // only member (3.7 rule 1); then the clock, read under the lock (3.3), and
 // the ending, by himself: the workspace's pending invitation to his
 // address, his membership, then his memberships of its projects
-// (membershipEnd). Were he the only admin of a project with other members,
-// project.sole_admin (3.7 rule 2), and the whole leaving rolls back.
+// (membershipEnd). Were he the only active admin of a project with other
+// active members, project.sole_admin (3.7 rule 2), and the whole leaving
+// rolls back.
 func (u *LeaveWorkspace) Execute(ctx context.Context, slug string) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

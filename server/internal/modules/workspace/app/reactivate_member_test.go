@@ -95,8 +95,10 @@ func TestReactivateMemberLeavesAnActiveMembership(t *testing.T) {
 }
 
 // Each refusal and each failure is the answer, and nothing is logged;
-// nothing is reactivated before a refusal, and a failure after the write
-// reaches the transaction as itself: no account of the address is
+// nothing is reactivated before a refusal. Each but the commit's failure
+// is what the transaction's function returned, so that the transaction
+// rolls back on it, a failure after the write too; the commit's failure
+// comes once the function returned nil: no account of the address is
 // workspace.account_not_found, a workspace not there, or deleted while the
 // lock waited, workspace.slug_not_found, an account with no membership of
 // it workspace.never_a_member, each as itself and as no other problem; a
@@ -141,15 +143,11 @@ func TestReactivateMemberRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) || got != (app.Reactivation{}) {
 			t.Errorf("%s: Execute() = %+v, %v; want %v", tt.name, got, err, tt.want)
 		}
-		// The refusal is the first *shared.Error in the chain, the one
-		// wanted; a failure has none.
-		var se *shared.Error
-		switch {
-		case tt.want == failure && errors.As(err, &se):
-			t.Errorf("%s: Execute() = %v, which is also %s", tt.name, err, se.Code)
-		case tt.want != failure && (!errors.As(err, &se) || !se.Is(tt.want)):
-			t.Errorf("%s: Execute() = %v, answered as another problem; want %v", tt.name, err, tt.want)
+		if !f.tx.answered(err) {
+			t.Errorf("%s: Execute() = %v, the transaction's function returned %v, its commit failing with %v; want the answer to come out "+
+				"of the transaction as itself", tt.name, err, f.tx.returned, f.tx.commitErr)
 		}
+		answeredAs(t, tt.name, err, tt.want)
 		if !slices.Equal(f.log.calls, tt.calls) || f.tx.calls != 1 || f.logs.Len() != 0 {
 			t.Errorf("%s: calls = %q in %d transactions, logs %q; want %q in one, no log", tt.name, f.log.calls, f.tx.calls, f.logs, tt.calls)
 		}
