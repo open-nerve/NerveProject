@@ -225,7 +225,7 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 }
 
 // prepareMatrix fills a database for the matrix. Through the API, each of
-// matrixAccounts, registered for its token. Through the workspace store,
+// matrixAccounts, registered for its token and its id. Through the workspace store,
 // the workspaces, memberships and invitations of matrixMemberships and
 // matrixInvitations, with the ids newSeeded named, and acme's admin's
 // display settings; other's admin and removed member are there so that a
@@ -254,6 +254,7 @@ func prepareMatrix(t *testing.T) matrixData {
 				t.Fatal(err)
 			}
 			ids[c] = id
+			d.seeded.accounts[c] = id
 		}
 		seed := matrixSeed{t: t, store: workspacepg.New(pool), ids: ids, now: time.Now(), workspaces: map[string]uuid.UUID{}}
 		s := d.seeded.in(t)

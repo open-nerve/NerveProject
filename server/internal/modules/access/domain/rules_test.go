@@ -47,6 +47,8 @@ var tableCells = map[shared.Action][]outcome{
 		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
 	"project_preferences.update": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible,
 		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project_member.list": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

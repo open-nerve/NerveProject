@@ -966,6 +966,29 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/members:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listProjectMembers
+      tags:
+        - project
+      summary: List a project's members
+      description: 'For the project''s active members: its active members, each with his role in it, in the order they became members. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project's active members.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -2130,6 +2153,44 @@ components:
         timezone:
           description: An IANA time zone name.
           type: string
+    ProjectMember:
+      description: An active membership of a project.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - project_id
+        - member_id
+        - role
+        - created_at
+      properties:
+        id:
+          description: The membership's id.
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        member_id:
+          description: The member's account.
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/ProjectRole'
+        created_at:
+          description: When the membership was made; one restored keeps its time.
+          type: string
+          format: date-time
+    ProjectMemberList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
     ProjectTab:
       description: A tab of a project's header.
       type: string

@@ -29,6 +29,8 @@ const (
 	ActionPreferencesRead shared.Action = "project_preferences.read"
 	// ActionPreferencesUpdate is changing them: updateProjectPreferences.
 	ActionPreferencesUpdate shared.Action = "project_preferences.update"
+	// ActionMemberList is listing a project's members: listProjectMembers.
+	ActionMemberList shared.Action = "project_member.list"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -36,5 +38,6 @@ const (
 // Each operation adds its action here with its row.
 func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
-		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate}
+		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
+		ActionMemberList}
 }

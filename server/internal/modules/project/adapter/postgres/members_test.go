@@ -4,9 +4,11 @@ import (
 	"context"
 	"maps"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -46,5 +48,45 @@ func TestMemberships(t *testing.T) {
 	}
 	if got, err := s.Memberships(context.Background(), web, nil); err != nil || len(got) != 0 {
 		t.Errorf("Memberships() of nobody = %v, %v; want none", got, err)
+	}
+}
+
+// ListMembers lists the project's active undeleted memberships alone, by
+// the time they were made, then by id: erin's, made last but stored first,
+// comes last; alice's and bob's, made at the same time, by their ids. Not
+// carol's, ended; not dave's, deleted; not frank's of another project.
+func TestListMembers(t *testing.T) {
+	s, pool := newStore(t)
+	var ids []uuid.UUID
+	for _, email := range []string{"alice@corp.com", "bob@corp.com", "carol@corp.com", "dave@corp.com", "erin@corp.com", "frank@corp.com"} {
+		ids = append(ids, newAccount(t, pool, email))
+	}
+	alice, bob, carol, dave, erin, frank := ids[0], ids[1], ids[2], ids[3], ids[4], ids[5]
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
+	erins := seedMember(t, pool, acme, web, erin, 5, true)
+	exec(t, pool, "UPDATE project_members SET created_at = $2 WHERE id = $1", erins, now.Add(time.Hour))
+	seedMember(t, pool, acme, web, carol, 15, false)
+	bobs, alices := seedMember(t, pool, acme, web, bob, 15, true), seedMember(t, pool, acme, web, alice, 20, true)
+	exec(t, pool, "UPDATE project_members SET deleted_at = $2 WHERE id = $1", seedMember(t, pool, acme, web, dave, 15, true), now)
+	seedMember(t, pool, acme, ops, frank, 20, true)
+	first, second := domain.Member{ID: bobs, ProjectID: web, MemberID: bob, Role: shared.RoleMember, CreatedAt: now},
+		domain.Member{ID: alices, ProjectID: web, MemberID: alice, Role: shared.RoleAdmin, CreatedAt: now}
+	if alices.String() < bobs.String() {
+		first, second = second, first
+	}
+	want := []domain.Member{first, second, {ID: erins, ProjectID: web, MemberID: erin, Role: shared.RoleGuest, CreatedAt: now.Add(time.Hour)}}
+	got, err := s.ListMembers(context.Background(), web)
+	if err != nil || len(got) != len(want) {
+		t.Fatalf("ListMembers() = %+v, %v; want %+v", got, err, want)
+	}
+	for i := range want {
+		if got[i].ID != want[i].ID || got[i].ProjectID != want[i].ProjectID || got[i].MemberID != want[i].MemberID || got[i].Role != want[i].Role ||
+			!got[i].CreatedAt.Equal(want[i].CreatedAt) {
+			t.Errorf("ListMembers()[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+	if got, err := s.ListMembers(context.Background(), uuid.NewV7()); err != nil || len(got) != 0 {
+		t.Errorf("ListMembers() of no project = %v, %v; want none", got, err)
 	}
 }

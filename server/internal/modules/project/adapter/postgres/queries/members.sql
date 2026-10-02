@@ -9,3 +9,13 @@ VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(mem
 SELECT id, member_id, role, is_active
 FROM project_members
 WHERE project_id = sqlc.arg(project_id) AND member_id = ANY (sqlc.arg(member_ids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: ListMembers :many
+-- listProjectMembers (M3 design 3.12, 5.2): the project's active undeleted memberships, in the order they were made,
+-- then by id. It reads project_members alone: an active member of a project stays an active member of its workspace,
+-- for every growth locks his workspace membership and every shrinking ends his project memberships (3.6 conventions 3
+-- and 6).
+SELECT id, project_id, member_id, role, created_at
+FROM project_members
+WHERE project_id = sqlc.arg(project_id) AND is_active AND deleted_at IS NULL
+ORDER BY created_at, id;

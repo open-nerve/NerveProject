@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"uuid"
@@ -112,14 +113,16 @@ func emailOf(c caller) string {
 // seeded are the ids of the rows prepareMatrix seeds that a request or a
 // check can name: each workspace, by its slug; each membership, by the
 // workspace's slug and the column; each invitation, by the workspace's
-// slug and the address; and each project, by its key. t is the test that
-// asks for them (in).
+// slug and the address; each project, by its key; and each account, by
+// its column, which prepareMatrix registers. t is the test that asks for
+// them (in).
 type seeded struct {
 	t           testing.TB
 	workspaces  map[string]uuid.UUID
 	memberships map[string]uuid.UUID
 	invitations map[string]uuid.UUID
 	projects    map[string]uuid.UUID
+	accounts    map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
@@ -128,7 +131,7 @@ type seeded struct {
 // database, sees the keys and the targets the cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
-		projects: map[string]uuid.UUID{}}
+		projects: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -193,6 +196,18 @@ func (s seeded) project(key string) uuid.UUID {
 		s.t.Fatalf("no project %s is seeded", key)
 	}
 	return id
+}
+
+// account is the id of the account of matrixAccounts c, which prepareMatrix
+// registers; uuid.Nil until then, when nothing is registered, so that a
+// request built without a database names an account still (matrixViolations).
+// An account that is no column's fails the test at once.
+func (s seeded) account(c caller) uuid.UUID {
+	if !slices.Contains(matrixAccounts, c) {
+		s.t.Helper()
+		s.t.Fatalf("no account %s is registered", c)
+	}
+	return s.accounts[c]
 }
 
 // fatalOf runs f on a goroutine of its own with a testing.TB whose Fatalf

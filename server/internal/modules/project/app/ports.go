@@ -140,6 +140,14 @@ type ProjectLocks interface {
 	ProjectSharer
 }
 
+// MemberLister is listProjectMembers' repository.
+type MemberLister interface {
+	ProjectFinder
+	// ListMembers lists projectID's active memberships, in the order they
+	// were made, then by id.
+	ListMembers(ctx context.Context, projectID uuid.UUID) ([]domain.Member, error)
+}
+
 // PreferencesReader is getProjectPreferences' repository.
 type PreferencesReader interface {
 	ProjectFinder

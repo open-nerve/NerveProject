@@ -59,6 +59,11 @@ type UpdatePreferencesUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID, p domain.PreferencesPatch) (domain.Preferences, error)
 }
 
+// ListMembersUseCase is app.ListProjectMembers.
+type ListMembersUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID) ([]domain.Member, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects      ListProjectsUseCase
@@ -71,6 +76,7 @@ type UseCases struct {
 	DeleteProject     DeleteProjectUseCase
 	GetPreferences    GetPreferencesUseCase
 	UpdatePreferences UpdatePreferencesUseCase
+	ListMembers       ListMembersUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

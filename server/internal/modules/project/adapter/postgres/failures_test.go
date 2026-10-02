@@ -101,6 +101,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.SetArchived(cancelled, web, true, alice, now); !failed(err) {
 		t.Errorf("SetArchived() = %v; want context.Canceled", err)
 	}
+	if m, err := s.ListMembers(cancelled, web); !failed(err) || m != nil {
+		t.Errorf("ListMembers() = %v, %v; want context.Canceled, not none", m, err)
+	}
 	if p, found, err := s.ShareProject(cancelled, web); !failed(err) || found || p != (app.LockedProject{}) {
 		t.Errorf("ShareProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
 	}

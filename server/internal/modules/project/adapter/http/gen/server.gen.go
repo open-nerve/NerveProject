@@ -223,6 +223,27 @@ type ProjectList struct {
 	Data []Project `json:"data"`
 }
 
+// ProjectMember An active membership of a project.
+type ProjectMember struct {
+	// CreatedAt When the membership was made; one restored keeps its time.
+	CreatedAt time.Time `json:"created_at"`
+
+	// ID The membership's id.
+	ID uuid.UUID `json:"id"`
+
+	// MemberID The member's account.
+	MemberID  uuid.UUID `json:"member_id"`
+	ProjectID uuid.UUID `json:"project_id"`
+
+	// Role A member's role in a project, 5 guest, 15 member, 20 admin.
+	Role ProjectRole `json:"role"`
+}
+
+// ProjectMemberList defines model for ProjectMemberList.
+type ProjectMemberList struct {
+	Data []ProjectMember `json:"data"`
+}
+
 // ProjectNavigation The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items.
 type ProjectNavigation struct {
 	// DefaultTab A tab of a project's header.
@@ -334,6 +355,9 @@ type ServerInterface interface {
 	// ArchiveProject Archive a project
 	// (POST /api/v0/projects/{project_id}/archive)
 	ArchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListProjectMembers List a project's members
+	// (GET /api/v0/projects/{project_id}/members)
+	ListProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -504,6 +528,32 @@ func (siw *ServerInterfaceWrapper) ArchiveProject(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProjectMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListProjectMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProjectMembers(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -770,6 +820,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.UpdateProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/archive", wrapper.ArchiveProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/unarchive", wrapper.UnarchiveProject)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1058,6 +1109,52 @@ func (response ArchiveProjectdefaultApplicationProblemPlusJSONResponse) VisitArc
 	return err
 }
 
+type ListProjectMembersRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type ListProjectMembersResponseObject interface {
+	VisitListProjectMembersResponse(w http.ResponseWriter) error
+}
+
+type ListProjectMembers200JSONResponse ProjectMemberList
+
+func (response ListProjectMembers200JSONResponse) VisitListProjectMembersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListProjectMembersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListProjectMembersdefaultApplicationProblemPlusJSONResponse) VisitListProjectMembersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveProjectRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 }
@@ -1265,6 +1362,9 @@ type StrictServerInterface interface {
 	// ArchiveProject Archive a project
 	// (POST /api/v0/projects/{project_id}/archive)
 	ArchiveProject(ctx context.Context, request ArchiveProjectRequestObject) (ArchiveProjectResponseObject, error)
+	// ListProjectMembers List a project's members
+	// (GET /api/v0/projects/{project_id}/members)
+	ListProjectMembers(ctx context.Context, request ListProjectMembersRequestObject) (ListProjectMembersResponseObject, error)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(ctx context.Context, request UnarchiveProjectRequestObject) (UnarchiveProjectResponseObject, error)
@@ -1481,6 +1581,32 @@ func (sh *strictHandler) ArchiveProject(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveProjectResponseObject); ok {
 		if err := validResponse.VisitArchiveProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListProjectMembers operation middleware
+func (sh *strictHandler) ListProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request ListProjectMembersRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListProjectMembers(ctx, request.(ListProjectMembersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListProjectMembers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListProjectMembersResponseObject); ok {
+		if err := validResponse.VisitListProjectMembersResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

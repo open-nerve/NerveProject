@@ -636,6 +636,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a project's members
+         * @description For the project's active members: its active members, each with his role in it, in the order they became members. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         */
+        get: operations["listProjectMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1227,6 +1250,30 @@ export interface components {
             /** @description An IANA time zone name. */
             timezone?: string;
         };
+        /** @description An active membership of a project. */
+        ProjectMember: {
+            /**
+             * Format: uuid
+             * @description The membership's id.
+             */
+            id: string;
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: uuid
+             * @description The member's account.
+             */
+            member_id: string;
+            role: components["schemas"]["ProjectRole"];
+            /**
+             * Format: date-time
+             * @description When the membership was made; one restored keeps its time.
+             */
+            created_at: string;
+        };
+        ProjectMemberList: {
+            data: components["schemas"]["ProjectMember"][];
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1339,6 +1386,8 @@ export type ProjectList = components['schemas']['ProjectList'];
 export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type IdentifierAvailability = components['schemas']['IdentifierAvailability'];
 export type ProjectUpdate = components['schemas']['ProjectUpdate'];
+export type ProjectMember = components['schemas']['ProjectMember'];
+export type ProjectMemberList = components['schemas']['ProjectMemberList'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -2326,6 +2375,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's active members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberList"];
                 };
             };
             default: components["responses"]["Problem"];
