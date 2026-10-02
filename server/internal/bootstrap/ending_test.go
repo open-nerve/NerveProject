@@ -10,6 +10,7 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
@@ -185,18 +186,34 @@ func (w endingWorld) membership(t *testing.T, name string) uuid.UUID {
 	return id
 }
 
+// joinsOps has alice join Ops, as its admin, so that bob is no longer its
+// only admin and the ending of his membership can go through.
+func (w endingWorld) joinsOps(t *testing.T) {
+	t.Helper()
+	if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/projects/"+w.ops.String()+"/join", w.tokens["alice"],
+		""); status != http.StatusOK {
+		t.Fatalf("alice's joining Ops = %d %s", status, body)
+	}
+}
+
 // leave is name's leaving of the workspace slug: its status and body.
 func (w endingWorld) leave(t *testing.T, slug, name string) (int, string) {
 	t.Helper()
 	return call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces/"+slug+"/leave", w.tokens[name], "")
 }
 
+// querier is what rowJSON reads through: a pool, or a transaction, which
+// sees its own writes.
+type querier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 // rowJSON is the row id of table as JSON, its columns by name; nil when
 // there is none.
-func rowJSON(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) map[string]any {
+func rowJSON(t *testing.T, q querier, table string, id uuid.UUID) map[string]any {
 	t.Helper()
 	var text []byte
-	if err := pool.QueryRow(context.Background(), "SELECT coalesce((SELECT row_to_json(r) FROM "+table+" r WHERE r.id = $1)::text, 'null')", id).
+	if err := q.QueryRow(context.Background(), "SELECT coalesce((SELECT row_to_json(r) FROM "+table+" r WHERE r.id = $1)::text, 'null')", id).
 		Scan(&text); err != nil {
 		t.Fatal(err)
 	}
@@ -254,6 +271,8 @@ type ending struct {
 	// sent with.
 	request func(w endingWorld, t *testing.T, name string) (method, path, token string)
 	by      func(name string) string // the account it writes as
+	// notFound is the code of its 404: the membership's, or the workspace's.
+	notFound string
 }
 
 // end sends e's request on w's app: its status and body.
@@ -266,10 +285,10 @@ func (e ending) end(w endingWorld, t *testing.T, name string) (int, string) {
 var endings = []ending{
 	{name: "removal", request: func(w endingWorld, t *testing.T, name string) (string, string, string) {
 		return http.MethodDelete, "/api/v0/workspace-members/" + w.membership(t, name).String(), w.tokens["alice"]
-	}, by: func(string) string { return "alice" }},
+	}, by: func(string) string { return "alice" }, notFound: "workspace.member_not_found"},
 	{name: "leaving", request: func(w endingWorld, _ *testing.T, name string) (string, string, string) {
 		return http.MethodPost, "/api/v0/workspaces/acme/leave", w.tokens[name]
-	}, by: func(name string) string { return name }},
+	}, by: func(name string) string { return name }, notFound: "workspace.not_found"},
 }
 
 // A removal and a leaving each end a membership and leave no invitation,
@@ -305,10 +324,7 @@ func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
 			if after := tableRows(t, w.pool, riversOwn); !maps.Equal(after, before) {
 				t.Errorf("the tables after the refused ending changed:\n%v\nwant them as they were:\n%v", after, before)
 			}
-			if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/projects/"+w.ops.String()+"/join", w.tokens["alice"],
-				""); status != http.StatusOK {
-				t.Fatalf("alice's joining Ops = %d %s", status, body)
-			}
+			w.joinsOps(t)
 			before = tableRows(t, w.pool, riversOwn)
 			for _, table := range []string{"workspace_member_invites", "workspace_members", "project_members"} {
 				restore := refusingCommits(t, w.pool, table)

@@ -40,18 +40,16 @@ func (tokenIsAccount) Authenticate(ctx context.Context, token string) (context.C
 	return shared.WithActor(ctx, shared.Actor{UserID: id, SessionID: uuid.NewV7()}), "account:" + token, nil
 }
 
-// projectRoute is the project module as bootstrap wires it (project.New),
-// on pool, with auth as its Authorizer and members as its WorkspaceMembers,
+// moduleRoute is a module as bootstrap wires it, on a pool of the test's,
 // mounted behind an API whose bearer token is an account's id and whose
 // requests end after 3 seconds.
-type projectRoute struct {
+type moduleRoute struct {
 	router http.Handler
 }
 
-func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) projectRoute {
+// newRoute mounts the routes register registers so.
+func newRoute(t *testing.T, register func(*httpserver.Router, *httpserver.API)) moduleRoute {
 	t.Helper()
-	module := project.New(project.Deps{Pool: pool, Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Authorizer: auth,
-		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members})
 	logger := slog.New(slog.DiscardHandler)
 	router := httpserver.NewRouter(logger)
 	limit := ratelimit.New(time.Now).Bucket("test", ratelimit.Rate{PerMinute: 600, Burst: 100})
@@ -60,14 +58,22 @@ func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, m
 	if err != nil {
 		t.Fatal(err)
 	}
-	module.Register(router, api)
-	return projectRoute{router: router}
+	register(router, api)
+	return moduleRoute{router: router}
+}
+
+// newProjectRoute is the project module (project.New) on pool, with auth as
+// its Authorizer and members as its WorkspaceMembers.
+func newProjectRoute(t *testing.T, pool *pgxpool.Pool, auth shared.Authorizer, members projectapp.WorkspaceMembers) moduleRoute {
+	t.Helper()
+	return newRoute(t, project.New(project.Deps{Pool: pool, Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clock.System{}, Authorizer: auth,
+		Workspaces: projectWorkspaces{directory: workspace.Provide(pool).WorkspaceDirectory}, Members: members}).Register)
 }
 
 // send sends method path as caller, with body when it is not empty, and
 // returns the request and its answer. It touches no test, so another
 // goroutine may send it.
-func (p projectRoute) send(method, path string, caller uuid.UUID, body string) (*http.Request, *httptest.ResponseRecorder) {
+func (p moduleRoute) send(method, path string, caller uuid.UUID, body string) (*http.Request, *httptest.ResponseRecorder) {
 	var b io.Reader
 	if body != "" {
 		b = strings.NewReader(body)
@@ -80,6 +86,56 @@ func (p projectRoute) send(method, path string, caller uuid.UUID, body string) (
 	rec := httptest.NewRecorder()
 	p.router.ServeHTTP(rec, req)
 	return req, rec
+}
+
+// answerWithin sends method path as caller, with body when it is not empty,
+// checks the answer against contract and that it is want, and returns its
+// body. A route on a pool of one connection answers within 5 seconds, or a
+// statement waits for a second connection without the request's deadline:
+// the test fails.
+func (p moduleRoute) answerWithin(t *testing.T, contract *apitest.Contract, method, path string, caller uuid.UUID, body string, want int) string {
+	t.Helper()
+	type answer struct {
+		req *http.Request
+		rec *httptest.ResponseRecorder
+	}
+	done := make(chan answer, 1)
+	go func() {
+		req, rec := p.send(method, path, caller, body)
+		done <- answer{req, rec}
+	}()
+	var a answer
+	select {
+	case a = <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("%s %s did not answer within 5s: a statement waits for the pool's one connection without the request's deadline", method, path)
+	}
+	contract.CheckResponse(t, a.req, a.rec.Result())
+	if a.rec.Code != want {
+		t.Fatalf("%s %s = %d %s, want %d", method, path, a.rec.Code, a.rec.Body, want)
+	}
+	return a.rec.Body.String()
+}
+
+// poolOfOne is a pool of one connection to url's database. A statement on a
+// context without a deadline would wait for its connection for ever, and so
+// would closing the pool: the closing has a deadline of its own.
+func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
+	t.Helper()
+	one, err := postgres.NewPool(context.Background(), config.DatabaseConfig{URL: url, MaxConns: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		closed := make(chan struct{})
+		go func() { one.Close(); close(closed) }()
+		select {
+		case <-closed:
+		case <-time.After(5 * time.Second):
+			t.Error("the pool of one connection did not close within 5s: a transaction still holds its connection")
+		}
+	})
+	return one
 }
 
 // Each write on a project runs every statement on its transaction's
@@ -109,47 +165,12 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		Role: shared.RoleMember, CreatedBy: r.alice, Now: now}); err != nil {
 		t.Fatal(err)
 	}
-	one, err := postgres.NewPool(ctx, config.DatabaseConfig{URL: r.pool.Config().ConnString(), MaxConns: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	// A statement on a context without the request's deadline would wait for the connection for ever, and so would
-	// closing the pool: each has a deadline of its own.
-	t.Cleanup(func() {
-		closed := make(chan struct{})
-		go func() { one.Close(); close(closed) }()
-		select {
-		case <-closed:
-		case <-time.After(5 * time.Second):
-			t.Error("the pool of one connection did not close within 5s: a transaction still holds its connection")
-		}
-	})
+	one := poolOfOne(t, r.pool.Config().ConnString())
 	route := newProjectRoute(t, one, authorizerOn(one), workspace.Provide(one).WorkspaceMembers)
 	contract := apitest.Load(t)
 	send := func(method, path string, caller uuid.UUID, body string, want int) string {
 		t.Helper()
-		type answer struct {
-			req *http.Request
-			rec *httptest.ResponseRecorder
-		}
-		done := make(chan answer, 1)
-		go func() {
-			req, rec := route.send(method, path, caller, body)
-			done <- answer{req, rec}
-		}()
-		var a answer
-		select {
-		case a = <-done:
-		case <-time.After(5 * time.Second):
-			t.Fatalf("%s %s did not answer within 5s: a statement waits for the pool's one connection without the request's deadline", method,
-				path)
-		}
-		req, rec := a.req, a.rec
-		contract.CheckResponse(t, req, rec.Result())
-		if rec.Code != want {
-			t.Fatalf("%s %s = %d %s, want %d", method, path, rec.Code, rec.Body, want)
-		}
-		return rec.Body.String()
+		return route.answerWithin(t, contract, method, path, caller, body, want)
 	}
 
 	var created struct {
