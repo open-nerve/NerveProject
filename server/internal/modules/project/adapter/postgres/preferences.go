@@ -65,6 +65,19 @@ func (s *Store) UpsertPreferences(ctx context.Context, c app.PreferencesChange) 
 	return preferences(r.Preferences, r.SortOrder)
 }
 
+// EnsurePreferences inserts p unless its account has undeleted display
+// settings in its project already, which stay as they are
+// (app.MemberGrower).
+func (s *Store) EnsurePreferences(ctx context.Context, p app.PreferencesRow) error {
+	err := s.queries(ctx).EnsurePreferences(ctx, gen.EnsurePreferencesParams{
+		ID: p.ID, WorkspaceID: p.WorkspaceID, ProjectID: p.ProjectID, UserID: p.UserID, SortOrder: p.SortOrder, CreatedBy: &p.CreatedBy, Now: p.Now,
+	})
+	if err != nil {
+		return fmt.Errorf("ensure project preferences: %w", err)
+	}
+	return nil
+}
+
 // preferences are the settings a row holds.
 func preferences(stored []byte, sortOrder float64) (domain.Preferences, error) {
 	var n navigationJSON

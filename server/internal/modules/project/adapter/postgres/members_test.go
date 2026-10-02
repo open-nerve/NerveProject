@@ -98,3 +98,33 @@ func TestListMembers(t *testing.T) {
 		t.Errorf("ListMembers() of no project = %v, %v; want none", got, err)
 	}
 }
+
+// RestoreMember makes the ended membership active again with the role
+// given, at the moment and by the account given, and changes no other
+// column of it, its id and created_at kept; every other membership keeps
+// every column.
+func TestRestoreMember(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
+	seedMember(t, pool, acme, ops, bob, 20, false)
+	ended := seedMember(t, pool, acme, web, bob, 20, false)
+	seedMember(t, pool, acme, web, alice, 15, true)
+	others := tableRows(t, pool, "project_members", ended)
+	before := columns(t, pool, "project_members", ended)
+	later := now.Add(time.Hour)
+
+	if err := s.RestoreMember(context.Background(), ended, shared.RoleGuest, alice, later); err != nil {
+		t.Fatal(err)
+	}
+
+	want := changed(before, map[string]string{"is_active": "true", "role": "5", "updated_by_id": `"` + alice.String() + `"`,
+		"updated_at": `"` + later.Format("2006-01-02T15:04:05.999999") + `+00:00"`})
+	if got := columns(t, pool, "project_members", ended); !maps.Equal(got, want) {
+		t.Errorf("the restored membership: %v\nwant %v", got, want)
+	}
+	if after := tableRows(t, pool, "project_members", ended); after != others {
+		t.Errorf("the other memberships:\n%s\nwant\n%s", after, others)
+	}
+}

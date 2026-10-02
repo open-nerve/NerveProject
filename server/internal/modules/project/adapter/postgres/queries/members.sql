@@ -19,3 +19,11 @@ SELECT id, project_id, member_id, role, created_at
 FROM project_members
 WHERE project_id = sqlc.arg(project_id) AND is_active AND deleted_at IS NULL
 ORDER BY created_at, id;
+
+-- name: RestoreMember :exec
+-- addProjectMembers and joinProject, under the project's FOR NO KEY UPDATE (M3 design 3.6 convention 6): an ended
+-- membership active again, with the role the use case gives, at the moment and by the account given; it keeps its id
+-- and its created_at.
+UPDATE project_members
+SET is_active = true, role = sqlc.arg(role), updated_by_id = sqlc.arg(updated_by)::uuid, updated_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id);

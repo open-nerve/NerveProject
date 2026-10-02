@@ -101,6 +101,13 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.SetArchived(cancelled, web, true, alice, now); !failed(err) {
 		t.Errorf("SetArchived() = %v; want context.Canceled", err)
 	}
+	if err := s.RestoreMember(cancelled, uuid.NewV7(), shared.RoleMember, alice, now); !failed(err) {
+		t.Errorf("RestoreMember() = %v; want context.Canceled", err)
+	}
+	if err := s.EnsurePreferences(cancelled, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
+		SortOrder: 1, CreatedBy: alice, Now: now}); !failed(err) {
+		t.Errorf("EnsurePreferences() = %v; want context.Canceled", err)
+	}
 	if m, err := s.ListMembers(cancelled, web); !failed(err) || m != nil {
 		t.Errorf("ListMembers() = %v, %v; want context.Canceled, not none", m, err)
 	}

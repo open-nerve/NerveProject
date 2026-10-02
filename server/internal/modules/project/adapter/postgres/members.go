@@ -3,6 +3,7 @@ package postgresadapter
 import (
 	"context"
 	"fmt"
+	"time"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres/gen"
@@ -23,6 +24,16 @@ func (s *Store) Memberships(ctx context.Context, projectID uuid.UUID, userIDs []
 		out[r.MemberID] = app.Membership{ID: r.ID, Role: shared.Role(r.Role), Active: r.IsActive}
 	}
 	return out, nil
+}
+
+// RestoreMember makes the ended membership id active again with role, by
+// the account by at now; it keeps its id and created_at
+// (app.MemberGrower).
+func (s *Store) RestoreMember(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).RestoreMember(ctx, gen.RestoreMemberParams{ID: id, Role: int16(role), UpdatedBy: by, Now: now}); err != nil {
+		return fmt.Errorf("restore project membership %s: %w", id, err)
+	}
+	return nil
 }
 
 // ListMembers lists projectID's active memberships, in the order they were

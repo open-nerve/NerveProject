@@ -43,6 +43,40 @@ func (q *Queries) CreatePreferences(ctx context.Context, arg CreatePreferencesPa
 	return err
 }
 
+const ensurePreferences = `-- name: EnsurePreferences :exec
+INSERT INTO project_user_properties (id, workspace_id, project_id, user_id, sort_order, created_by_id, updated_by_id, created_at,
+                                     updated_at)
+VALUES ($1, $2, $3, $4, $5, $6,
+        $6, $7, $7)
+ON CONFLICT (project_id, user_id) WHERE deleted_at IS NULL DO NOTHING
+`
+
+type EnsurePreferencesParams struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	UserID      uuid.UUID
+	SortOrder   float64
+	CreatedBy   *uuid.UUID
+	Now         time.Time
+}
+
+// addProjectMembers and joinProject (M3 design 3.18): the account's display settings in the project, made with the
+// place given unless he has undeleted ones there already, which a restored membership keeps as they are. The conflict
+// target is the partial unique index, so a deleted row does not count.
+func (q *Queries) EnsurePreferences(ctx context.Context, arg EnsurePreferencesParams) error {
+	_, err := q.db.Exec(ctx, ensurePreferences,
+		arg.ID,
+		arg.WorkspaceID,
+		arg.ProjectID,
+		arg.UserID,
+		arg.SortOrder,
+		arg.CreatedBy,
+		arg.Now,
+	)
+	return err
+}
+
 const lowestSortOrder = `-- name: LowestSortOrder :one
 SELECT sort_order
 FROM project_user_properties

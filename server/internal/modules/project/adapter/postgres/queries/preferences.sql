@@ -34,3 +34,13 @@ SET preferences   = CASE WHEN sqlc.arg(set_navigation)::boolean THEN EXCLUDED.pr
     updated_by_id = EXCLUDED.updated_by_id,
     updated_at    = EXCLUDED.updated_at
 RETURNING preferences, sort_order;
+
+-- name: EnsurePreferences :exec
+-- addProjectMembers and joinProject (M3 design 3.18): the account's display settings in the project, made with the
+-- place given unless he has undeleted ones there already, which a restored membership keeps as they are. The conflict
+-- target is the partial unique index, so a deleted row does not count.
+INSERT INTO project_user_properties (id, workspace_id, project_id, user_id, sort_order, created_by_id, updated_by_id, created_at,
+                                     updated_at)
+VALUES (sqlc.arg(id), sqlc.arg(workspace_id), sqlc.arg(project_id), sqlc.arg(user_id), sqlc.arg(sort_order), sqlc.arg(created_by),
+        sqlc.arg(created_by), sqlc.arg(now), sqlc.arg(now))
+ON CONFLICT (project_id, user_id) WHERE deleted_at IS NULL DO NOTHING;

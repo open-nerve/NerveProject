@@ -130,3 +130,29 @@ func (q *Queries) Memberships(ctx context.Context, arg MembershipsParams) ([]Mem
 	}
 	return items, nil
 }
+
+const restoreMember = `-- name: RestoreMember :exec
+UPDATE project_members
+SET is_active = true, role = $1, updated_by_id = $2::uuid, updated_at = $3
+WHERE id = $4
+`
+
+type RestoreMemberParams struct {
+	Role      int16
+	UpdatedBy uuid.UUID
+	Now       time.Time
+	ID        uuid.UUID
+}
+
+// addProjectMembers and joinProject, under the project's FOR NO KEY UPDATE (M3 design 3.6 convention 6): an ended
+// membership active again, with the role the use case gives, at the moment and by the account given; it keeps its id
+// and its created_at.
+func (q *Queries) RestoreMember(ctx context.Context, arg RestoreMemberParams) error {
+	_, err := q.db.Exec(ctx, restoreMember,
+		arg.Role,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	return err
+}

@@ -203,6 +203,22 @@ type ProjectUpdater interface {
 	UpdateProject(ctx context.Context, id uuid.UUID, p domain.ProjectPatch, by uuid.UUID, now time.Time) error
 }
 
+// MemberGrower writes a project's new and restored memberships, each with
+// its member's display settings (M3 design 3.6 convention 6, 3.18): the
+// project side's growth, which addProjectMembers and joinProject share.
+// Each method runs in the transaction ctx carries, under the project's
+// FOR NO KEY UPDATE.
+type MemberGrower interface {
+	MembershipReader
+	CreateMember(ctx context.Context, m MemberRow) error
+	// RestoreMember makes the ended membership id active again with role,
+	// by the account by at now.
+	RestoreMember(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) error
+	// EnsurePreferences inserts p unless its account has undeleted display
+	// settings in its project already, which stay as they are.
+	EnsurePreferences(ctx context.Context, p PreferencesRow) error
+}
+
 // ProjectArchiver is archiveProject's and unarchiveProject's repository.
 // Each method runs in the transaction ctx carries.
 type ProjectArchiver interface {
