@@ -50,6 +50,13 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   await inviteAndAccept(api, alice, second, { email: bobEmail, token: bob }, 15);
   const ops = await createProject(api, bob, second, { name: "Ops", identifier: "OPS" });
   await addProjectMembers(api, bob, ops.id, [{ member_id: await accountId(api, alice), role: 20 }]);
+  // Second changes once, so that the time listed can be told from its last change's.
+  const changed = await api.PATCH("/api/v0/workspaces/{slug}", {
+    params: { path: { slug: second } },
+    body: { timezone: "Europe/Berlin" },
+    headers: bearer(alice),
+  });
+  expect([changed.response.status, changed.data?.updated_at === secondWorkspace.created_at]).toEqual([200, false]);
 
   const listed = async (token: string) => {
     const { data, response } = await api.GET("/api/v0/workspaces", { headers: bearer(token) });
@@ -62,6 +69,7 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
     }));
   };
   expect(await listed(alice)).toEqual([entry(firstWorkspace, 20, 1), entry(secondWorkspace, 20, 2)]);
+  expect(await listed(bob), "bob's, Second's member's").toEqual([entry(secondWorkspace, 15, 2)]);
 
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", {
     params: { path: { slug: first } },

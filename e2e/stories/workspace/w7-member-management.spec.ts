@@ -95,6 +95,9 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
         WHERE w.slug = $1 AND u.email = $2 AND m.deleted_at IS NULL ORDER BY p.identifier COLLATE "C"`,
       [slug, email]
     );
+  expect(await projectRoles(erin.email), "erin's membership of Docs, an admin's, ended by her leaving").toEqual([
+    { identifier: "DOCS", role: 20, is_active: false, by: erin.email },
+  ]);
 
   // Nobody changes or removes his own membership; the only admin cannot leave, though Other has an admin.
   const own = await membership(adminId);
@@ -136,8 +139,8 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
     { identifier: "WEB", role: 5, is_active: true, by: adminEmail },
   ]);
 
-  // carol, Docs's only admin beside dave, cannot be removed until the admin joins Docs; then her memberships end,
-  // their rows kept, and no invitation but a pending one to her address in acme is touched: none is.
+  // carol, Docs's only active admin, dave its member, cannot be removed until the admin joins Docs; then her
+  // memberships end, their rows kept, and no invitation but a pending one to her address in acme is touched: none is.
   const carolsMembership = await membership(carol.id);
   const remove = () =>
     api.DELETE("/api/v0/workspace-members/{workspace_member_id}", {
