@@ -36,9 +36,10 @@ import (
 // it waits for the writes in flight and writes one time, after theirs, into
 // every row it deletes (3.3). Every wait has a deadline.
 
-// deleteAcme is alice's deletion of acme, on the system's clock.
-func (r growthRace) deleteAcme(ctx context.Context) error {
-	return workspaceapp.NewDeleteWorkspace(workspacepg.New(r.pool), project.New(project.Deps{Pool: r.pool}).Cascade(), r.authorizer(),
+// deleteAcme is alice's deletion of acme over workspaces, on the system's
+// clock.
+func (r growthRace) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
+	return workspaceapp.NewDeleteWorkspace(workspaces, project.New(project.Deps{Pool: r.pool}).Cascade(), r.authorizer(),
 		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}, slog.New(slog.DiscardHandler)).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }
@@ -123,7 +124,7 @@ func TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects(t *testing.T) {
 				return nil
 			})
 			held(t, ctx, g, wrote, "bob's write")
-			deleted := run(func() error { return r.deleteAcme(ctx) })
+			deleted := run(func() error { return r.deleteAcme(ctx, workspacepg.New(r.pool)) })
 			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
 			close(g.open)
 
@@ -236,7 +237,7 @@ func TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize(t *testing.T) {
 		return nil
 	})
 	held(t, tctx, g, joined, "carol's joining")
-	deleted := run(func() error { return r.deleteAcme(tctx) })
+	deleted := run(func() error { return r.deleteAcme(tctx, workspacepg.New(r.pool)) })
 	pgtest.WaitForLockWait(t, r.pool, 5*time.Second)
 	added := run(func() error {
 		addReq, addRec = adding.send(http.MethodPost, "/api/v0/projects/"+r.web.String()+"/members", r.alice,
@@ -255,6 +256,10 @@ func TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize(t *testing.T) {
 	}
 	if err := errors.Join(errs...); err != nil {
 		t.Fatal(err)
+	}
+	if !answered {
+		t.Error("the adding did not answer while the deletion waited: it waited for a lock the joining or the deletion held, where it " +
+			"shares acme and both memberships with the joining")
 	}
 	contract.CheckResponse(t, addReq, addRec.Result())
 	if joinRec.Code != http.StatusOK || addRec.Code != http.StatusCreated {

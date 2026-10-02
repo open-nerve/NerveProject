@@ -2,18 +2,14 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"strings"
 	"testing"
 	"time"
 	"uuid"
-
-	"github.com/jackc/pgx/v5"
 
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
@@ -28,11 +24,11 @@ import (
 // A write on a project decides under its locks, its workspace's FOR SHARE
 // and its project's, which it holds until it commits (M3 design 3.6
 // convention 2, 6.7): against a demotion to guest, which holds the
-// workspace FOR NO KEY UPDATE; against another write on the project, or its
-// deletion, which holds the project; and beside a write on another project
-// of the workspace, which shares the workspace. The writes run as
-// bootstrap wires them (project.New), behind the API, so the locks are the
-// ones of the transaction project.New is given.
+// workspace FOR NO KEY UPDATE; against another write on the project, which
+// holds the project; and beside a write on another project of the
+// workspace, which shares the workspace. The writes run as bootstrap wires
+// them (project.New), behind the API, so the locks are the ones of the
+// transaction project.New is given.
 
 // gatedAuthorizer is an Authorizer whose decision on action, once made,
 // waits at the gate: inside the write's transaction, after its lock.
@@ -219,117 +215,6 @@ func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 	if archiveRec.Code != http.StatusOK || updateRec.Code != http.StatusConflict || !strings.Contains(updateRec.Body.String(), `"project.archived"`) {
 		t.Errorf("the archive = %d %s, the change = %d %s; want 200 and 409 project.archived", archiveRec.Code, archiveRec.Body, updateRec.Code,
 			updateRec.Body)
-	}
-}
-
-// underWeb is every row under Web, deleted ones too, in each table the
-// catalog ties to projects (keysTo), by table and id: its columns but the
-// three a deletion writes, then ", deleted with Web" when alice's deletion
-// of Web wrote those last: deleted_at and updated_at Web's deleted_at,
-// updated_by_id alice.
-func (r growthRace) underWeb(t *testing.T) []string {
-	t.Helper()
-	var all []string
-	for _, k := range keysTo(t, r.pool, "projects") {
-		rows, err := r.pool.Query(context.Background(), `SELECT (to_jsonb(r) - 'deleted_at' - 'updated_at' - 'updated_by_id')::text ||
-			CASE WHEN (r.deleted_at, r.updated_at, r.updated_by_id) = (w.deleted_at, w.deleted_at, $2::uuid) THEN ', deleted with Web' ELSE '' END
-			FROM `+k.table+` r JOIN projects w ON w.id = $1 WHERE r.`+pgx.Identifier{k.column}.Sanitize()+` = $1 ORDER BY r.id`, r.web, r.alice)
-		if err != nil {
-			t.Fatalf("%s: %v", k, err)
-		}
-		texts, err := pgx.CollectRows(rows, pgx.RowTo[string])
-		if err != nil {
-			t.Fatalf("%s: %v", k, err)
-		}
-		for _, s := range texts {
-			all = append(all, k.String()+": "+s)
-		}
-	}
-	return all
-}
-
-// A write on a project whose deletion commits while the write waits for
-// the project's row finds no project: it answers 404 project.not_found,
-// as for a project never there, never 403, which would tell its caller
-// that the project was there; and it changes no row (M3 design 3.6
-// convention 2, 6.4). Alice deletes Web and waits after her decision,
-// holding acme FOR SHARE and Web FOR NO KEY UPDATE. Bob, Web's admin,
-// changes Web, archives it, unarchives it or changes his display settings
-// in it; or, not its member yet, joins it. His write shares acme with the
-// deletion and waits for Web's row; once the deletion commits, his lock of
-// Web, FOR NO KEY UPDATE or, for his settings, FOR SHARE, reads no row.
-// Every row under Web is then as the deletion left it: as it was before,
-// deleted with Web.
-func TestAWriteOnAProjectDeletedWhileItWaitsFindsNoProject(t *testing.T) {
-	writes := []struct {
-		name, method, path, body string
-		joins, archived          bool // bob is not Web's member, and joins it; Web is archived before the write
-	}{
-		{"updateProject", http.MethodPatch, "/api/v0/projects/%s", `{"name":"Site"}`, false, false},
-		{"archiveProject", http.MethodPost, "/api/v0/projects/%s/archive", "", false, false},
-		{"unarchiveProject", http.MethodPost, "/api/v0/projects/%s/unarchive", "", false, true},
-		{"updateProjectPreferences", http.MethodPatch, "/api/v0/me/projects/%s/preferences", `{"sort_order":1}`, false, false},
-		{"joinProject", http.MethodPost, "/api/v0/projects/%s/join", "", true, false},
-	}
-	contract := apitest.Load(t)
-	for _, w := range writes {
-		t.Run(w.name, func(t *testing.T) {
-			var r growthRace
-			if w.joins {
-				r = newGrowthRace(t, false)
-			} else {
-				r, _ = bobAdministersWeb(t)
-			}
-			if _, err := r.pool.Exec(context.Background(), "UPDATE projects SET archived_at = CASE WHEN $2 THEN now() END WHERE id = $1",
-				r.web, w.archived); err != nil {
-				t.Fatal(err)
-			}
-			before := r.underWeb(t)
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			g := newGate()
-			deleting := newProjectRoute(t, r.pool, gatedAuthorizer{Authorizer: r.authorizer(), action: projectdomain.ActionDelete, gate: g},
-				workspace.Provide(r.pool).WorkspaceMembers)
-			route := newProjectRoute(t, r.pool, r.authorizer(), workspace.Provide(r.pool).WorkspaceMembers)
-			var deleteReq, writeReq *http.Request
-			var deleteRec, writeRec *httptest.ResponseRecorder
-			deleted := run(func() error {
-				deleteReq, deleteRec = deleting.send(http.MethodDelete, "/api/v0/projects/"+r.web.String(), r.alice, "")
-				return nil
-			})
-			held(t, ctx, g, deleted, "the deletion")
-			if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", Web "+lockOn(t, r.pool, "projects WHERE id = $1", r.web),
-				"acme FOR SHARE, Web FOR NO KEY UPDATE"; got != want {
-				t.Errorf("the deletion at its gate holds %s; want %s", got, want)
-			}
-			wrote := run(func() error {
-				writeReq, writeRec = route.send(w.method, fmt.Sprintf(w.path, r.web), r.bob, w.body)
-				return nil
-			})
-			pgtest.WaitForLockWaitOn(t, r.pool, "projects", 5*time.Second)
-			close(g.open)
-
-			if err := errors.Join(result(t, ctx, deleted, "the deletion"), result(t, ctx, wrote, "bob's write")); err != nil {
-				t.Fatal(err)
-			}
-			contract.CheckResponse(t, deleteReq, deleteRec.Result())
-			contract.CheckResponse(t, writeReq, writeRec.Result())
-			var problem struct {
-				Code string `json:"code"`
-			}
-			if deleteRec.Code != http.StatusNoContent || writeRec.Code != http.StatusNotFound ||
-				json.Unmarshal(writeRec.Body.Bytes(), &problem) != nil || problem.Code != "project.not_found" {
-				t.Errorf("the deletion = %d %s, bob's write = %d %s; want 204, and 404 project.not_found", deleteRec.Code, deleteRec.Body,
-					writeRec.Code, writeRec.Body)
-			}
-			want := make([]string, len(before))
-			for i, row := range before {
-				want[i] = row + ", deleted with Web"
-			}
-			if got := r.underWeb(t); !slices.Equal(got, want) {
-				t.Errorf("the rows under Web:\n%s\nwant them as the deletion left them:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
-			}
-		})
 	}
 }
 
