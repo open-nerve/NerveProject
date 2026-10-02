@@ -28,8 +28,8 @@
   - ````` ````delete <路径> ````` 删除这个文件（块是空的）。
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `b5e826b3` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
-- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/workspace.yaml`、`workspace/module.go`、`workspace/app/ports.go`、`fakes_members_test.go`、`fakes_projects_test.go`、`fakes_workspaces_test.go`、`clock_test.go`、`workspace/domain/actions.go`、`errors.go`、`adapter/http/handler.go`、`handler_test.go`、`members.go`、`members_test.go`、`queries/members.sql`、`project/module.go`、`access/domain/rules.go`、`rules_test.go`、矩阵的文件、前端文案、`bootstrap/interleaving_growth_test.go`、`interleaving_writes_test.go`、生成物）；`bootstrap/removal_test.go` 是 Task 4 的过渡文件，Task 5 把它换成同时测移出和离开的 `ending_test.go`（spec 第 3 节第 7 条）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app、模块或命令；端到端：单独运行的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p5tools/mutants_s1.py`、`mutants_p5a.py`、`mutants_probes.py`、`mutants_seed.py`、`mutants_fixture.py`、`mutants_extra.py`、`mutants_review.py`，`e2e_sweep1.py`、`e2e_code.py`、`e2e_actor.py`，spec 附录 A）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有：这一行的变异从那个 Task 起才被发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
+- **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/workspace.yaml`、`workspace/module.go`、`workspace/app/ports.go`、`fakes_members_test.go`、`fakes_projects_test.go`、`fakes_workspaces_test.go`、`clock_test.go`、`workspace/domain/actions.go`、`errors.go`、`adapter/http/handler.go`、`handler_test.go`、`members.go`、`members_test.go`、`queries/members.sql`、`project/module.go`、`access/domain/rules.go`、`rules_test.go`、矩阵的文件、前端文案、`bootstrap/interleaving_growth_test.go`、`interleaving_writes_test.go`、`bootstrap/ending_test.go`、生成物）。`ending_test.go` 在 Task 4 就是最终的表形（`ending{name, request, by}`，只有移出一行），Task 5 加入离开（spec 第 3 节第 7 条）。每个过渡版本都在逐 Task 复现中运行过。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app、模块或命令；端到端：单独运行的故事）。它们在最终的原型上逐个跑过（`$M3TMP/p5tools/mutants_s1.py`、`mutants_p5a.py`、`mutants_probes.py`、`mutants_seed.py`、`mutants_fixture.py`、`mutants_extra.py`、`mutants_review.py`、`mutants_amend.py`，`e2e_sweep1.py`、`e2e_code.py`、`e2e_actor.py`，spec 附录 A）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有：这一行的变异从那个 Task 起才被发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
 - **评审敏感**（M3 设计 12 节约束 3）：结束的连带跨两个模块（`EndMemberships`、规则 2 的项目集合、邀请的一步、交错 1、4、5、6），恢复在账户行的 `FOR SHARE` 之下进行（约定六的唯一例外）；谁能移出、离开、恢复是安全性质，唯一管理员的两条规则也是。改动这些测试、锁、规则之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
@@ -60,11 +60,10 @@
 | `server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/members.go`、`server/internal/modules/workspace/adapter/http/members_test.go`、`server/internal/modules/workspace/module.go`（修改） | 两个 handler，它们答 `project.sole_admin`（9.4）；接线 | 4、5 |
 | `web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`（修改） | `project.sole_admin`、`workspace.sole_admin`（Task 5）的文案 | 4、5 |
 | `server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`（修改） | `toMembership`；移出的三个变体、离开的两行 | 4、5 |
-| `server/internal/bootstrap/removal_test.go`（Task 4 新建，Task 5 删除） | 组合出的移出（过渡版本） | 4、5 |
 | `server/internal/modules/workspace/app/leave_workspace.go`、`server/internal/modules/workspace/app/leave_workspace_test.go`；`server/internal/modules/workspace/domain/errors.go`（修改） | `leaveWorkspace`；`ErrSoleAdmin`（409 `workspace.sole_admin`）；命令行的两个码（Task 7） | 5、7（`errors.go`） |
-| `server/internal/bootstrap/ending_test.go` | 组合出的移出和离开：结束、不留邀请、一个时刻、写者；唯一管理员不能离开；`bystanders` 的前提 | 5、6 |
+| `server/internal/bootstrap/ending_test.go` | 组合出的移出（Task 4）和离开（Task 5）：结束、不留邀请、一个时刻、写者；规则 2 的三半（另一个有效成员、他之外、有效的管理员）；唯一管理员不能离开；`bystanders`、`soleAdmins` 的前提 | 4、5、6 |
 | `server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`（修改） | 唯一管理员的一张表（`soleAdminColumns`）和它的前提；被移出的成员改由存储写出（Task 11） | 5、11（`targets`：5） |
-| `server/internal/bootstrap/project_write_locks_test.go`（修改） | 写在项目一级的完整性核对只数项目表的列，不把离开工作区的唯一管理员一行当作项目级的写 | 5 |
+| `server/internal/bootstrap/project_write_locks_test.go`（修改） | 写在项目一级的完整性核对只数项目表（`projectTables`）的列：不把离开工作区的唯一管理员一行当作项目级的写；`projectTables` 之外的列组也不算，直到列进去（P5b 的交接） | 5 |
 | `server/internal/bootstrap/ending_races_test.go`、`server/internal/bootstrap/ending_connection_test.go` | 等锁时目标、调用者、工作区被结束或删除（404，一行不改）；每把锁的强度和顺序；每条语句在事务的连接上 | 6 |
 | `server/internal/bootstrap/project_connection_test.go`、`server/internal/bootstrap/interleaving_not_found_test.go`（修改） | `moduleRoute`：项目模块和工作区模块共用的一个只有一个连接的路由 | 6 |
 | `server/internal/modules/project/adapter/postgres/queries/members.sql`、`server/internal/modules/project/adapter/postgres/members.go`、`server/internal/modules/project/adapter/postgres/members_test.go`（修改） | `CountInactive` | 7 |
@@ -1249,14 +1248,14 @@ Expected: 通过。
 | `LockActiveMemberProjects` 去掉 `p.deleted_at IS NULL` | `TestEndingAMembersProjectMemberships`、`TestLockActiveMemberProjectsLeavesOutAProjectDeletedWhileItWaited` | 存储 |
 | 按行序而不是 id 顺序锁 | `TestLockActiveMemberProjectsLocksInIDOrder` | 存储 |
 | 锁成 `FOR SHARE`、`FOR UPDATE`；不加锁 | `TestEndingAMembersProjectMemberships`；`TestEachLockOfAnEndingIsItsStrength`（Task 6 起） | 存储；组合 |
-| `SoleAdmin` 去掉项目、成员、角色；另一个管理员的项目、成员、角色、有效、存在；另一个成员的项目、成员、有效、存在 | `TestSoleAdmin`；W12（项目），W7、W12（成员），W7（角色、另一个管理员的五条），W12（另一个成员的四条）（Task 13、14 起） | 存储；端到端 |
+| `SoleAdmin` 去掉项目、成员、角色；另一个管理员的项目、成员、角色、有效、存在；另一个成员的项目、成员、有效、存在 | `TestSoleAdmin`；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（另一个管理员的有效：409 一步的 erin；另一个成员的成员、存在：204 一步的 Solo；Task 4 起）；W12（项目），W7、W12（成员），W7（角色、另一个管理员的五条），W12（另一个成员的四条）（Task 13、14 起） | 存储；组合；端到端 |
 | `SoleAdmin` 去掉他的有效、已删除，另一个管理员的已删除，另一个成员的已删除 | `TestSoleAdmin`（故事看不到的理由见 spec 第 3 节第 9 条） | 存储 |
 | `EndMemberships` 去掉项目、成员 | `TestEndingAMembersProjectMemberships`；W12（项目），W7、W12（成员） | 存储；端到端 |
 | `EndMemberships` 去掉 `is_active`、`deleted_at IS NULL`；也改角色；不写结束者 | `TestEndingAMembersProjectMemberships`；W2、W7、W12 的写者（不写结束者，Task 13、14 起） | 存储；端到端 |
-| 唯一管理员时照样结束 | `TestEndMemberships`；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 5 起）；W7（Task 13 起） | 单元；组合；端到端 |
+| 唯一管理员时照样结束 | `TestEndMemberships`；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4 起）；W7（Task 13 起） | 单元；组合；端到端 |
 | 锁、查询、写的失败被吞掉；一个都没锁到也问、也写 | `TestEndMemberships` | 单元 |
 | 锁住的项目按 id 排序之后再问、再写（清扫 16） | `TestEndMemberships`（假的锁按 second、first、third 回答，不是任何排序） | 单元 |
-| `project.New` 的连带的第三个参数换成什么都不结束的 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 5 起） | 组合 |
+| `project.New` 的连带的第三个参数换成什么都不结束的 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4 起） | 组合 |
 | 三条语句经连接池执行 | `TestTheEndingsRunOnTheirTransactionsConnection`（Task 6 起） | 组合 |
 
 **Done when:** 连带的第三个方法和三条语句通过存储和单元测试；锁的顺序在真实数据库上看得到。
@@ -1980,7 +1979,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | 在工作区的锁之前按第一次读到的成员关系判定 | `TestRemoveWorkspaceMemberLocksThenDecidesThenEnds`、`TestRemoveWorkspaceMemberRefusals`；`TestAnEndingFindsWhatEndedMeanwhile`（alice 的成员关系结束，Task 6 起） | 单元；组合 |
 | 时钟在工作区的锁之前读 | `TestEachWriteReadsTheClockUnderItsLock`；`TestEachLockOfAnEndingIsItsStrength`（Task 6 起） | 单元；组合 |
 | 结束一步：成员关系在邀请之前；项目在两者之前 | `TestRemoveWorkspaceMemberLocksThenDecidesThenEnds`（前一条）；`TestEachLockOfAnEndingIsItsStrength`（Task 6 起） | 单元；组合 |
-| 结束一步跳过邀请；跳过项目 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4、5 起）；`TestAnEndedMembershipLeavesNoInvitation`（邀请，Task 12 起） | 组合 |
+| 结束一步跳过邀请；跳过项目 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4 起）；`TestAnEndedMembershipLeavesNoInvitation`（邀请，Task 12 起） | 组合 |
 | 读成员行和锁的失败被忽略；读地址、删邀请、结束成员关系、项目一步的失败被吞掉；删邀请调两次；拿到别的账户的地址 | `TestRemoveWorkspaceMemberRefusals`、`TestRemoveWorkspaceMemberFailsWithinTheTransaction`、`TestRemoveWorkspaceMemberLocksThenDecidesThenEnds` | 单元 |
 
 **Done when:** 移出的用例和结束一步通过单元测试；改角色的用例照旧通过。
@@ -1990,7 +1989,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 4: `removeWorkspaceMember` 的接口与组合
 
 **Files:**
-- Create: `server/internal/bootstrap/removal_test.go`
+- Create: `server/internal/bootstrap/ending_test.go`
 - Modify: `api/modules/workspace.yaml`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/members.go`、`server/internal/modules/workspace/adapter/http/members_test.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
@@ -1998,11 +1997,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces（spec 2.6，M3 设计 5.1、9.2、9.4）：`DELETE /api/v0/workspace-members/{workspace_member_id}`，204 无正文；码 `[workspace.member_not_found, forbidden, workspace.own_membership, project.sole_admin]`。`project.sole_admin` 是 `project` 模块的码，由工作区的操作声明：`workspace` 的 HTTP 测试为它答 409（9.4，M-2）。`PROBLEM_MESSAGES` 和两份 `auth.json` 加 `project.sole_admin` 的文案。
 - `httpadapter.RemoveMemberUseCase`；`workspace.New` 的 `RemoveMember: app.NewRemoveWorkspaceMember(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock)`。
 - 矩阵：`toMembership(method, target, body)`（改角色的行改用它，移出也用）；`endedMembership(c)`：每一列的目标工作区里一个已结束的成员关系（acme 的被移出的成员的；已删除的工作区那一列是 gone 的成员的，随 gone 删除）。移出三个变体：另一个成员 `ofMember(204, 403, 403)`；自己的 `ofMember(409 own_membership, 403, 403)`；已结束的 `ofMember(404 member_not_found, 403, 403)`；每个变体 6 格。
-- `bootstrap/removal_test.go`（过渡版本，Task 5 换成 `ending_test.go`）：`endingWorld` 的准备和 `bystanders` 的前提。
+- `bootstrap/ending_test.go`，最终的表形，只有移出一行：`endingWorld`（erin 曾是 Ops 的管理员，alice 移出她时她在 Ops 的成员关系随之结束；Solo 是 bob 的、只有他一个成员）和 `bystanders`、`soleAdmins` 的前提；`ending{name, request, by}`、`endings`；`rowJSON`、`rowsBut`、`uuidTexts`、`projectMemberships`。Task 5 加离开的一行、`leave` 和 `TestTheOnlyAdminCannotLeave`（spec 第 3 节第 7 条）。
 
 **Tests:**
 - `adapter/http/members_test.go`：`TestRemoveWorkspaceMember`（路径的成员关系交给用例，204 无正文）；`TestRemoveWorkspaceMemberRefusals`（用例的每个拒绝照契约答，`project.sole_admin` 原样是 409）。
-- `bootstrap/removal_test.go`：`TestARemovalEndsTheMembershipsAndLeavesNoInvitation`（bob 是 Ops 唯一的管理员、carol 是它的成员：移出 409 `project.sole_admin`，任何表的任何行不变，发给他的待接受邀请仍待接受；alice 加入 Ops 之后，提交时被拒，对它写的每张表各一次，500 且一行不变；然后 204：他在 acme、Web、Ops 的成员关系结束，行留着、角色不变，acme 里发给他的待接受邀请删除，都由 alice、在不早于请求的一个时刻；他在 beta 的成员关系、beta 里发给他的邀请和其余每张表的每一行不变；结束 dave 的成员关系不动他已拒绝的邀请）。
+- `bootstrap/ending_test.go`：`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（这时只对移出：bob 是 Ops 唯一的有效管理员、carol 是它的成员，erin 已结束的管理员成员关系不算：移出 409 `project.sole_admin`，任何表的任何行不变，发给他的待接受邀请仍待接受；alice 加入 Ops 之后，提交时被拒，对它写的每张表各一次，500 且一行不变；然后 204，只有他一个成员的 Solo 不拒绝：他在 acme、Web、Ops、Solo 的成员关系结束，行留着、角色不变，acme 里发给他的待接受邀请删除，都由 alice、在不早于请求的一个时刻，这些行之前都由 dave 写过；他在 beta 的成员关系、beta 里发给他的邀请和其余每张表的每一行不变；结束 dave 的成员关系不动他已拒绝的邀请）。
 - 矩阵：移出三行（18 格）；`TestMatrixViolationsCatchesEachGap` 的改角色一行改用 `toMembership`。
 
 - [ ] **Step 1: 接口描述**
@@ -2031,8 +2030,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         address is deleted, so that he needs a new one to come back; a
         declined one stays. His membership ends, its row kept, and so do his
         memberships of the workspace's projects, all at the same moment, in
-        one transaction. Were he the only admin of a project of the workspace
-        that has other members, project.sole_admin, and nothing changes.
+        one transaction. Were he the only active admin of a project of the
+        workspace that has other active members, project.sole_admin, and
+        nothing changes.
       security: [{bearer: []}]
       x-problem-codes: [workspace.member_not_found, forbidden, workspace.own_membership, project.sole_admin]
       responses:
@@ -2045,9 +2045,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `239c909d2cce562c6ae94dd172e1e7d6712990a1ba6fef32185997d94973eaae` | 2392 | `api/dist/openapi.yaml` |
+| `e5a3953ce1bb155786e541dff085e995b8b0e85d9a0fee3c730b06c0281253a6` | 2392 | `api/dist/openapi.yaml` |
 | `7186f287c82972e4c733eacbe767d82fc83c12d3d26692af484d6cef7afec0b8` | 2472 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
-| `c71b8e839d8ccada04fadfae95d1a41025017e467c93ec02d0e48fada364970c` | 2578 | `web/packages/api-client/src/schema.gen.ts` |
+| `14f21f9ac65b6860c11abb66700b4442952b80ee1dce5894763406d838b49adc` | 2578 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -2359,9 +2359,9 @@ func endedMembership(c caller) (string, caller) {
 		r.request = toMembership(http.MethodPatch, func(c caller) (string, caller) {
 ````
 
-`server/internal/bootstrap/removal_test.go`（新文件，293 行）：
+`server/internal/bootstrap/ending_test.go`（新文件，346 行）：
 
-````file server/internal/bootstrap/removal_test.go
+````file server/internal/bootstrap/ending_test.go
 package bootstrap
 
 import (
@@ -2385,22 +2385,23 @@ import (
 )
 
 // endingWorld is the wired app on a database of its own: acme, alice its
-// admin; bob, carol and dave its members, each by accepting alice's
+// admin; bob, carol, dave and erin its members, each by accepting alice's
 // invitation; Web, alice's, led by bob, so both are its admins, and carol
 // its member by joining; Ops, bob's, his alone to administer, carol its
-// member by his adding; beta, alice its admin, bob its member. Then,
-// through the workspace store, the invitations no operation makes, 3.8
-// refusing to invite an active member: one pending to bob's address in
-// acme, stored as carol's, so that a claim of who deleted it can fail, and
-// one in beta; one pending to carol's in acme; one to dave's in acme that
-// he declined.
+// member by his adding, and erin, whom he added as its admin, her
+// membership of it ended by alice's removal of her from acme; Solo, bob's,
+// he its only member; beta, alice its admin, bob its member. Then, through
+// the workspace store, the invitations no operation makes, 3.8 refusing to
+// invite an active member: one pending to bob's address in acme, and one in
+// beta; one pending to carol's in acme; one to dave's in acme that he
+// declined.
 type endingWorld struct {
 	contract       *apitest.Contract
 	base           string
 	pool           *pgxpool.Pool
 	tokens         map[string]string    // access tokens, by name
 	ids            map[string]uuid.UUID // accounts, by name
-	web, ops       uuid.UUID
+	web, ops, solo uuid.UUID
 	bobsInvitation uuid.UUID // the pending one to bob's address in acme
 	davesDeclined  uuid.UUID
 }
@@ -2411,7 +2412,7 @@ func newEndingWorld(t *testing.T) endingWorld {
 	dbURL := pgtest.NewDatabase(t)
 	w := endingWorld{contract: contract, base: startApp(t, testConfig(t, dbURL, false), migrations.FS()), pool: openPool(t, dbURL),
 		tokens: map[string]string{}, ids: map[string]uuid.UUID{}}
-	for _, name := range []string{"alice", "bob", "carol", "dave"} {
+	for _, name := range []string{"alice", "bob", "carol", "dave", "erin"} {
 		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken
 		w.ids[name] = accountID(t, contract, w.base, w.tokens[name])
 	}
@@ -2421,7 +2422,8 @@ func newEndingWorld(t *testing.T) endingWorld {
 			t.Fatalf("creating %s = %d %s", slug, status, body)
 		}
 	}
-	for _, m := range []struct{ slug, name string }{{"acme", "bob"}, {"acme", "carol"}, {"acme", "dave"}, {"beta", "bob"}} {
+	for _, m := range []struct{ slug, name string }{{"acme", "bob"}, {"acme", "carol"}, {"acme", "dave"}, {"acme", "erin"},
+		{"beta", "bob"}} {
 		answerInvitation(t, contract, w.base, w.tokens[m.name], "accept", invite(t, contract, w.base, w.tokens["alice"], m.slug, m.name+"@example.com"),
 			http.StatusOK)
 	}
@@ -2435,25 +2437,29 @@ func newEndingWorld(t *testing.T) endingWorld {
 	}
 	decodeAnswer(t, body, &web)
 	w.web, w.ops = web.ID, createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Ops", "OPS")
+	w.solo = createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Solo", "SOLO")
 	for _, step := range []struct{ token, path, body string }{
 		{w.tokens["carol"], "/api/v0/projects/" + w.web.String() + "/join", ""},
-		{w.tokens["bob"], "/api/v0/projects/" + w.ops.String() + "/members", `{"members":[{"member_id":"` + w.ids["carol"].String() + `","role":15}]}`},
+		{w.tokens["bob"], "/api/v0/projects/" + w.ops.String() + "/members", `{"members":[{"member_id":"` + w.ids["carol"].String() +
+			`","role":15},{"member_id":"` + w.ids["erin"].String() + `","role":20}]}`},
 	} {
 		if status, body := call(t, contract, http.MethodPost, w.base+step.path, step.token, step.body); status != http.StatusOK &&
 			status != http.StatusCreated {
 			t.Fatalf("POST %s = %d %s", step.path, status, body)
 		}
 	}
+	if status, body := call(t, contract, http.MethodDelete, w.base+"/api/v0/workspace-members/"+w.membership(t, "erin").String(),
+		w.tokens["alice"], ""); status != http.StatusNoContent {
+		t.Fatalf("alice's removal of erin = %d %s", status, body)
+	}
 	store, ctx := workspacepg.New(w.pool), context.Background()
 	for _, inv := range []struct {
 		slug, name string
-		by         string
 		id         *uuid.UUID
-	}{{"acme", "bob", "carol", &w.bobsInvitation}, {"beta", "bob", "alice", nil}, {"acme", "carol", "alice", nil},
-		{"acme", "dave", "alice", &w.davesDeclined}} {
+	}{{"acme", "bob", &w.bobsInvitation}, {"beta", "bob", nil}, {"acme", "carol", nil}, {"acme", "dave", &w.davesDeclined}} {
 		id := uuid.NewV7()
 		if _, err := store.CreateInvitations(ctx, []workspaceapp.InvitationRow{{ID: id, WorkspaceID: w.workspace(t, inv.slug),
-			Email: inv.name + "@example.com", Role: shared.RoleGuest, CreatedBy: w.ids[inv.by], Now: time.Now()}}); err != nil {
+			Email: inv.name + "@example.com", Role: shared.RoleGuest, CreatedBy: w.ids["alice"], Now: time.Now()}}); err != nil {
 			t.Fatal(err)
 		}
 		if inv.id != nil {
@@ -2464,6 +2470,7 @@ func newEndingWorld(t *testing.T) endingWorld {
 		t.Fatal(err)
 	}
 	w.bystanders(t)
+	w.soleAdmins(t)
 	return w
 }
 
@@ -2490,6 +2497,26 @@ func (w endingWorld) bystanders(t *testing.T) {
 	}
 }
 
+// soleAdmins checks the project memberships that decide 3.7 rule 2 for
+// bob: in Ops he is the only active admin beside carol, a member, and erin,
+// an admin whose membership has ended; in Solo he is the only member. Were
+// one missing, a rule 2 that counted an ended admin as another, or refused
+// a project with no other member, would pass.
+func (w endingWorld) soleAdmins(t *testing.T) {
+	t.Helper()
+	var got string
+	if err := w.pool.QueryRow(context.Background(), `SELECT string_agg(p.name || ' ' || u.email || ' ' || m.role::text ||
+		CASE WHEN m.is_active THEN ' active' ELSE ' ended' END, ', ' ORDER BY p.name, u.email)
+		FROM project_members m JOIN projects p ON p.id = m.project_id JOIN users u ON u.id = m.member_id
+		WHERE m.project_id IN ($1, $2) AND m.deleted_at IS NULL`, w.ops, w.solo).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if want := "Ops bob@example.com 20 active, Ops carol@example.com 15 active, Ops erin@example.com 20 ended, " +
+		"Solo bob@example.com 20 active"; got != want {
+		t.Fatalf("the memberships of Ops and Solo: %s; want %s", got, want)
+	}
+}
+
 // workspace is the id of the workspace slug.
 func (w endingWorld) workspace(t *testing.T, slug string) uuid.UUID {
 	t.Helper()
@@ -2509,12 +2536,6 @@ func (w endingWorld) membership(t *testing.T, name string) uuid.UUID {
 		t.Fatal(err)
 	}
 	return id
-}
-
-// remove is alice's removal of name from acme: its status and body.
-func (w endingWorld) remove(t *testing.T, name string) (int, string) {
-	t.Helper()
-	return call(t, w.contract, http.MethodDelete, w.base+"/api/v0/workspace-members/"+w.membership(t, name).String(), w.tokens["alice"], "")
 }
 
 // rowJSON is the row id of table as JSON, its columns by name; nil when
@@ -2572,87 +2593,119 @@ func projectMemberships(t *testing.T, pool *pgxpool.Pool, user uuid.UUID, projec
 	return ids
 }
 
+// An ending of name's membership of acme on the wired app: alice's removal
+// of him.
+type ending struct {
+	name string
+	// request is the ending's method, its path, and the access token it is
+	// sent with.
+	request func(w endingWorld, t *testing.T, name string) (method, path, token string)
+	by      func(name string) string // the account it writes as
+}
+
+// end sends e's request on w's app: its status and body.
+func (e ending) end(w endingWorld, t *testing.T, name string) (int, string) {
+	t.Helper()
+	method, path, token := e.request(w, t, name)
+	return call(t, w.contract, method, w.base+path, token, "")
+}
+
+var endings = []ending{
+	{name: "removal", request: func(w endingWorld, t *testing.T, name string) (string, string, string) {
+		return http.MethodDelete, "/api/v0/workspace-members/" + w.membership(t, name).String(), w.tokens["alice"]
+	}, by: func(string) string { return "alice" }},
+}
+
 // A removal ends a membership and leaves no invitation, in one transaction
 // at one moment (M3 design 3.6, 3.7 rule 2, 3.8, 9.3), on the wired app.
-//   - bob is Ops's only admin and carol its member: alice's removal of him
-//     is 409 project.sole_admin, and no row of any table changes, the
-//     pending invitation to his address, which the removal deletes before
-//     the projects' step refuses, still pending.
-//   - Once alice, acme's admin, has joined Ops, as its admin, the removal
+//   - bob is Ops's only active admin and carol its member, erin's ended
+//     membership as its admin counting for nothing: the ending of his
+//     membership is 409 project.sole_admin, and no row of any table
+//     changes, the pending invitation to his address, which the ending
+//     deletes before the projects' step refuses, still pending.
+//   - Once alice, acme's admin, has joined Ops, as its admin, the ending
 //     refused at its commit, after every statement ran, for each table it
 //     writes, is 500, and no row changes: no step wrote in a transaction of
 //     its own.
-//   - Then it is 204: bob's membership of acme, of Web and of Ops ended,
+//   - Then it is 204, Solo, of which he is the only member, refusing
+//     nothing: bob's membership of acme, of Web, of Ops and of Solo ended,
 //     each row kept with its role; the pending invitation to his address in
-//     acme deleted; each by alice, at one moment no earlier than the
-//     request. His membership of beta, the invitation to him there, and
-//     every other row of every table are as they were.
-//   - Removing dave leaves his declined invitation as it was.
-func TestARemovalEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
-	w := newEndingWorld(t)
-	before := tableRows(t, w.pool, riversOwn)
-	if status, body := w.remove(t, "bob"); status != http.StatusConflict || problemCode(t, []byte(body)) != "project.sole_admin" {
-		t.Fatalf("removing bob, Ops's only admin = %d %s, want 409 project.sole_admin", status, body)
-	}
-	if after := tableRows(t, w.pool, riversOwn); !maps.Equal(after, before) {
-		t.Errorf("the tables after the refused removal changed:\n%v\nwant them as they were:\n%v", after, before)
-	}
-	if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/projects/"+w.ops.String()+"/join", w.tokens["alice"], ""); status != http.StatusOK {
-		t.Fatalf("alice's joining Ops = %d %s", status, body)
-	}
-	before = tableRows(t, w.pool, riversOwn)
-	for _, table := range []string{"workspace_member_invites", "workspace_members", "project_members"} {
-		restore := refusingCommits(t, w.pool, table)
-		status, body := w.remove(t, "bob")
-		restore()
-		if after := tableRows(t, w.pool, riversOwn); status != http.StatusInternalServerError || !maps.Equal(after, before) {
-			t.Errorf("the removal refused at its commit for %s = %d %s; want 500 and every table as it was", table, status, body)
-		}
-	}
-	written := slices.Concat([]uuid.UUID{w.membership(t, "bob"), w.bobsInvitation}, projectMemberships(t, w.pool, w.ids["bob"], w.web, w.ops))
-	tables := []string{"workspace_members", "workspace_member_invites", "project_members", "project_members"}
-	rowsBefore := make([]map[string]any, len(written))
-	for i, id := range written {
-		rowsBefore[i] = rowJSON(t, w.pool, tables[i], id)
-	}
-	if by := []any{rowsBefore[0]["updated_by_id"], rowsBefore[1]["updated_by_id"], rowsBefore[3]["updated_by_id"]}; !slices.Equal(by,
-		[]any{w.ids["bob"].String(), w.ids["carol"].String(), w.ids["bob"].String()}) {
-		t.Fatalf("bob's membership of acme, the invitation to him, his membership of Ops last written by %v; want bob, carol, bob: "+
-			"a claim of alice's writing must be able to fail", by)
-	}
-	others := rowsBut(t, w.pool, written)
-	started := time.Now()
+//     acme deleted; each by the ender, at one moment no earlier than the
+//     request. Each of those rows was last written by dave before, so that
+//     the claim of the ender's writing can fail. His membership of beta,
+//     the invitation to him there, and every other row of every table are
+//     as they were.
+//   - Ending dave's membership leaves his declined invitation as it was.
+func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
+	for _, e := range endings {
+		t.Run(e.name, func(t *testing.T) {
+			w := newEndingWorld(t)
+			before := tableRows(t, w.pool, riversOwn)
+			if status, body := e.end(w, t, "bob"); status != http.StatusConflict || problemCode(t, []byte(body)) != "project.sole_admin" {
+				t.Fatalf("ending bob's membership, Ops's only admin = %d %s, want 409 project.sole_admin", status, body)
+			}
+			if after := tableRows(t, w.pool, riversOwn); !maps.Equal(after, before) {
+				t.Errorf("the tables after the refused ending changed:\n%v\nwant them as they were:\n%v", after, before)
+			}
+			if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/projects/"+w.ops.String()+"/join", w.tokens["alice"],
+				""); status != http.StatusOK {
+				t.Fatalf("alice's joining Ops = %d %s", status, body)
+			}
+			before = tableRows(t, w.pool, riversOwn)
+			for _, table := range []string{"workspace_member_invites", "workspace_members", "project_members"} {
+				restore := refusingCommits(t, w.pool, table)
+				status, body := e.end(w, t, "bob")
+				restore()
+				if after := tableRows(t, w.pool, riversOwn); status != http.StatusInternalServerError || !maps.Equal(after, before) {
+					t.Errorf("the ending refused at its commit for %s = %d %s; want 500 and every table as it was", table, status, body)
+				}
+			}
+			written := slices.Concat([]uuid.UUID{w.membership(t, "bob"), w.bobsInvitation},
+				projectMemberships(t, w.pool, w.ids["bob"], w.web, w.ops, w.solo))
+			tables := []string{"workspace_members", "workspace_member_invites", "project_members", "project_members", "project_members"}
+			rowsBefore := make([]map[string]any, len(written))
+			for i, id := range written {
+				if tag, err := w.pool.Exec(context.Background(), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id,
+					w.ids["dave"]); err != nil || tag.RowsAffected() != 1 {
+					t.Fatalf("%s %s last written by dave: %v, %v", tables[i], id, tag, err)
+				}
+				rowsBefore[i] = rowJSON(t, w.pool, tables[i], id)
+			}
+			others := rowsBut(t, w.pool, written)
+			started := time.Now()
 
-	if status, body := w.remove(t, "bob"); status != http.StatusNoContent {
-		t.Fatalf("removing bob = %d %s, want 204", status, body)
-	}
+			if status, body := e.end(w, t, "bob"); status != http.StatusNoContent {
+				t.Fatalf("ending bob's membership = %d %s, want 204", status, body)
+			}
 
-	moment, _ := rowJSON(t, w.pool, "workspace_member_invites", w.bobsInvitation)["deleted_at"].(string)
-	if at, err := time.Parse(time.RFC3339Nano, moment); err != nil || at.Before(started.Truncate(time.Microsecond)) {
-		t.Errorf("the invitation deleted at %q (%v); want a moment no earlier than the request, %v", moment, err, started)
-	}
-	for i, id := range written {
-		after := rowJSON(t, w.pool, tables[i], id)
-		want := maps.Clone(rowsBefore[i])
-		want["updated_at"], want["updated_by_id"] = moment, w.ids["alice"].String()
-		if tables[i] == "workspace_member_invites" {
-			want["deleted_at"] = moment
-		} else {
-			want["is_active"] = false
-		}
-		if !maps.Equal(after, want) {
-			t.Errorf("%s %s after the removal:\n%v\nwant\n%v", tables[i], id, after, want)
-		}
-	}
-	if after := rowsBut(t, w.pool, written); !maps.Equal(after, others) {
-		t.Errorf("every other row after the removal:\n%v\nwant them as they were:\n%v", after, others)
-	}
-	declined := rowJSON(t, w.pool, "workspace_member_invites", w.davesDeclined)
-	if status, body := w.remove(t, "dave"); status != http.StatusNoContent {
-		t.Fatalf("removing dave = %d %s, want 204", status, body)
-	}
-	if after := rowJSON(t, w.pool, "workspace_member_invites", w.davesDeclined); !maps.Equal(after, declined) {
-		t.Errorf("dave's declined invitation after his removal:\n%v\nwant it as it was:\n%v", after, declined)
+			moment, _ := rowJSON(t, w.pool, "workspace_member_invites", w.bobsInvitation)["deleted_at"].(string)
+			if at, err := time.Parse(time.RFC3339Nano, moment); err != nil || at.Before(started.Truncate(time.Microsecond)) {
+				t.Errorf("the invitation deleted at %q (%v); want a moment no earlier than the request, %v", moment, err, started)
+			}
+			for i, id := range written {
+				after := rowJSON(t, w.pool, tables[i], id)
+				want := maps.Clone(rowsBefore[i])
+				want["updated_at"], want["updated_by_id"] = moment, w.ids[e.by("bob")].String()
+				if tables[i] == "workspace_member_invites" {
+					want["deleted_at"] = moment
+				} else {
+					want["is_active"] = false
+				}
+				if !maps.Equal(after, want) {
+					t.Errorf("%s %s after the ending:\n%v\nwant\n%v", tables[i], id, after, want)
+				}
+			}
+			if after := rowsBut(t, w.pool, written); !maps.Equal(after, others) {
+				t.Errorf("every other row after the ending:\n%v\nwant them as they were:\n%v", after, others)
+			}
+			declined := rowJSON(t, w.pool, "workspace_member_invites", w.davesDeclined)
+			if status, body := e.end(w, t, "dave"); status != http.StatusNoContent {
+				t.Fatalf("ending dave's membership = %d %s, want 204", status, body)
+			}
+			if after := rowJSON(t, w.pool, "workspace_member_invites", w.davesDeclined); !maps.Equal(after, declined) {
+				t.Errorf("dave's declined invitation after the ending:\n%v\nwant it as it was:\n%v", after, declined)
+			}
+		})
 	}
 }
 ````
@@ -2662,7 +2715,7 @@ func TestARemovalEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
 Run: `go -C server test -count=1 ./internal/modules/workspace/...`
 Expected: 全部 `ok`。
 
-Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestARemovalEndsTheMembershipsAndLeavesNoInvitation|TestAPIRoutesAreTheContractsOperations' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -run 'TestPermissionMatrix$|TestThePermissionMatrixCoversEveryOperation|TestMatrixViolationsCatchesEach|TestAnEndingEndsTheMembershipsAndLeavesNoInvitation|TestAPIRoutesAreTheContractsOperations' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -2683,7 +2736,7 @@ Expected: 通过。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add api/modules/workspace.yaml server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/bootstrap/removal_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/members.go server/internal/modules/workspace/adapter/http/members_test.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml server/internal/bootstrap/ending_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/members.go server/internal/modules/workspace/adapter/http/members_test.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P5a): removeWorkspaceMember
@@ -2705,8 +2758,12 @@ Expected: 通过。
 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|
 | handler 吞掉用例的失败；把 `project.sole_admin` 答成别的 | `TestRemoveWorkspaceMember`、`TestRemoveWorkspaceMemberRefusals`（HTTP） | 单元 |
-| `workspace.New` 的移出不带项目的连带、不开事务、用停在 2001 年的时钟 | `TestARemovalEndsTheMembershipsAndLeavesNoInvitation`；Task 5 起 `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation` | 组合 |
+| `workspace.New` 的移出不带项目的连带、不开事务、用停在 2001 年的时钟 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation` | 组合 |
 | 规则给成员；不判定 | `TestPermissionMatrix` | 组合 |
+| 规则 2：只有他一个成员的项目也拒绝（`SoleAdmin` 去掉"另有有效成员"）；"另一个成员"可以是他自己 | `TestSoleAdmin`（Task 2）；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（204 一步：Solo） | 存储；组合 |
+| 规则 2：已结束的管理员算作另一位管理员 | `TestSoleAdmin`（Task 2）；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（409 一步：erin）；W7（Task 13 起） | 存储；组合；端到端 |
+| 结束一步跳过邀请 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`；`TestAnEndedMembershipLeavesNoInvitation`（Task 12 起） | 组合 |
+| `endingWorld` 少了 beta 的邀请、carol 的邀请、bob 在 beta 的成员关系，或 dave 的邀请没有拒绝；少了 Solo、erin 在 Ops 的管理员成员关系，或 erin 的没有结束 | 用它的每个测试（`bystanders`、`soleAdmins` 的前提） | 组合 |
 
 **Done when:** 移出的三行矩阵（18 格）通过；`workspace` 的 `apitest.Main` 两个方向核对通过；组合出的移出拒绝时一行不改。
 
@@ -2715,23 +2772,22 @@ Expected: 通过。
 ### Task 5: `leaveWorkspace`；组合出的结束改为移出和离开共用
 
 **Files:**
-- Create: `server/internal/bootstrap/ending_test.go`、`server/internal/modules/workspace/app/leave_workspace.go`、`server/internal/modules/workspace/app/leave_workspace_test.go`
-- Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/members.go`、`server/internal/modules/workspace/adapter/http/members_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_members_test.go`、`server/internal/modules/workspace/app/fakes_workspaces_test.go`、`server/internal/modules/workspace/app/ports.go`、`server/internal/modules/workspace/domain/actions.go`、`server/internal/modules/workspace/domain/errors.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
-- Delete: `server/internal/bootstrap/removal_test.go`
+- Create: `server/internal/modules/workspace/app/leave_workspace.go`、`server/internal/modules/workspace/app/leave_workspace_test.go`
+- Modify: `api/modules/workspace.yaml`、`api/openapi.yaml`、`server/internal/bootstrap/ending_test.go`、`server/internal/bootstrap/permission_matrix_columns_test.go`、`server/internal/bootstrap/permission_matrix_coverage_test.go`、`server/internal/bootstrap/permission_matrix_seed_test.go`、`server/internal/bootstrap/permission_matrix_targets_test.go`、`server/internal/bootstrap/permission_matrix_test.go`、`server/internal/bootstrap/permission_matrix_workspace_test.go`、`server/internal/bootstrap/project_write_locks_test.go`、`server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`、`server/internal/modules/workspace/adapter/http/handler.go`、`server/internal/modules/workspace/adapter/http/handler_test.go`、`server/internal/modules/workspace/adapter/http/members.go`、`server/internal/modules/workspace/adapter/http/members_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_members_test.go`、`server/internal/modules/workspace/app/fakes_workspaces_test.go`、`server/internal/modules/workspace/app/ports.go`、`server/internal/modules/workspace/domain/actions.go`、`server/internal/modules/workspace/domain/errors.go`、`server/internal/modules/workspace/module.go`、`web/apps/web/helpers/authentication.helper.ts`、`web/packages/i18n/src/locales/en/auth.json`、`web/packages/i18n/src/locales/zh-CN/auth.json`
 - Generate: `api/dist/openapi.yaml`、`server/internal/modules/workspace/adapter/http/gen/server.gen.go`、`web/packages/api-client/src/schema.gen.ts`
 
 **Interfaces:**
 - Produces（spec 2.7，M3 设计 3.7 规则 1、5.1、9.2）：`POST /api/v0/workspaces/{slug}/leave`，204 无正文；码 `[workspace.not_found, workspace.sole_admin, project.sole_admin]`。操作名 `workspace.leave`，规则 `{Level: LevelWorkspace, Roles: [admin, member, guest]}`：每个有效成员都可以离开。`workspace/domain.ErrSoleAdmin`（409 `workspace.sole_admin`，他是唯一的成员时也是）；文案进 `PROBLEM_MESSAGES` 和两份 `auth.json`。
 - `LeaveWorkspace`，`NewLeaveWorkspace(workspaces WorkspaceLeaver, profiles, projects, auth, tx, clock)`，`Execute(ctx, slug)`：一个事务里工作区 `FOR NO KEY UPDATE`（按 slug）→ 判定 → 他是管理员时 `HasOtherAdmin`，没有则 `ErrSoleAdmin` → 读时钟 → `membershipEnd.run`，由他自己。`WorkspaceLeaver` = `LockWorkspaceBySlug` + `HasOtherAdmin` + `MembershipEnder`。
 - 矩阵：唯一管理员的一张表 `soleAdminColumns = [callerSoleAdmin]`：other 的管理员（从来不是 acme 成员的那个账户），other 里还有被移出的成员作它的成员；离开两行：`inWorkspace(204, 204, 204)`（6 格；acme 的管理员旁边有 PM+WA）和"唯一管理员"一格 409 `workspace.sole_admin`。`projectTables` 之外的列（唯一管理员的表）里放项目的操作是一个缺口（`TestMatrixViolationsCatchesEachColumnGap`）；`preconditions` 核对 other 的管理员是它唯一的有效管理员、acme 的管理员有另一位、被移出的成员是 other 的有效成员。
-- 写在项目一级的完整性核对（`writesOnAProject`）只数项目表的列：离开工作区的唯一管理员一行不是项目级的写（`TestWritesOnAProjectAreEachShape` 多它一例）。
-- `bootstrap/ending_test.go` 取代 `removal_test.go`：`ending{name, request, by}`，`endings` 是移出和离开。
+- 写在项目一级的完整性核对（`writesOnAProject`）只数项目表（`projectTables`）的列：离开工作区的唯一管理员一行不是项目级的写；按资源寻址的写，它的行列出项目表的列才算，一个自己的列组列进 `projectTables` 之前不算，所以项目一级的新表要列进去，不能放在 `matrixTables` 里唯一管理员的表旁边（规则 (b) 的说明照这个定义写，P5b 的交接，spec 第 5 节）。`TestWritesOnAProjectAreEachShape` 多两例：离开工作区的唯一管理员一行，和 `projectTables` 之外的一个自己的列组。
+- `bootstrap/ending_test.go`（Task 4 建的）加离开：`endingWorld.leave`，`endings` 的离开一行（由他自己写），`TestTheOnlyAdminCannotLeave`；两个测试的说明加上离开。
 
 **Tests:**
 - `app/leave_workspace_test.go`：`TestLeaveWorkspaceLocksDecidesThenEnds`（锁、判定、结束他自己的成员关系，由他自己、在时钟的一个时刻；成员和访客不再多问；管理员在工作区另有有效管理员时离开）；`TestLeaveWorkspaceRefusals`（不存在、等锁期间删除、他不是有效成员的工作区是 `workspace.not_found`；acme 唯一的有效管理员是 `workspace.sole_admin`，旁边有成员或只有他自己，在判定之后才问；失败从来不是 404；问另一个管理员失败原样返回）；`TestLeaveWorkspaceFailsWithinTheTransaction`（同移出）。
 - `adapter/http/members_test.go`：`TestLeaveWorkspace`、`TestLeaveWorkspaceRefusals`（`project.sole_admin` 原样）。
-- `bootstrap/ending_test.go`：`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4 的测试，对移出和离开各一次；写者另由 dave 先写过每一行，"由结束者写"可以不成立）；`TestTheOnlyAdminCannotLeave`（alice 在只有她一人的 solo 和有成员的 acme 都是 409 `workspace.sole_admin`，任何行不变；carol 也成为 acme 的管理员之后 alice 离开）。
-- 矩阵：离开两行（7 格）；`TestEveryColumnCallsAsARegisteredAccount`、`TestMatrixViolationsCatchesEachColumnGap`、`TestWritesOnAProjectAreEachShape` 各多一例。
+- `bootstrap/ending_test.go`：`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4 的测试，现在对移出和离开各一次）；`TestTheOnlyAdminCannotLeave`（alice 在只有她一人的 solo 和有成员的 acme 都是 409 `workspace.sole_admin`，任何行不变；carol 也成为 acme 的管理员之后 alice 离开）。
+- 矩阵：离开两行（7 格）；`TestEveryColumnCallsAsARegisteredAccount`、`TestMatrixViolationsCatchesEachColumnGap` 各多一例，`TestWritesOnAProjectAreEachShape` 多两例。
 
 - [ ] **Step 1: 接口描述**
 
@@ -2760,8 +2816,9 @@ Expected: 通过。
         his address is deleted, so that he needs a new one to come back; a
         declined one stays. His membership ends, its row kept, and so do his
         memberships of the workspace's projects, all at the same moment, in
-        one transaction. Were he the only admin of a project of the workspace
-        that has other members, project.sole_admin, and nothing changes.
+        one transaction. Were he the only active admin of a project of the
+        workspace that has other active members, project.sole_admin, and
+        nothing changes.
       security: [{bearer: []}]
       x-problem-codes: [workspace.not_found, workspace.sole_admin, project.sole_admin]
       responses:
@@ -2785,9 +2842,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `b76e499e3dc8f5205dc423a27d5a2a4a61657a9191c1dbf2a5cd89ec3a317807` | 2412 | `api/dist/openapi.yaml` |
+| `dfdc52cba9687dc50b5f28e6cc83ab10acfdc378a5bfb5bdaac150f733faec45` | 2412 | `api/dist/openapi.yaml` |
 | `9abf666781db6e1be2189f52003606fba911730388537f330812dad8d6a8b829` | 2571 | `server/internal/modules/workspace/adapter/http/gen/server.gen.go` |
-| `cfeef9c77c34f5e1703dc59c88544a12a0fdfbd031abe451b33d114a57ebc7df` | 2623 | `web/packages/api-client/src/schema.gen.ts` |
+| `c2938219307a7c2299c1ea633410d2c5626066077c5bf2f486951a4132161aa7` | 2623 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -3553,10 +3610,12 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 ````new server/internal/bootstrap/project_write_locks_test.go
 // level (a column of a project table, projectTables, that is no column of
 // the workspace level). The second takes in a write on a project addressed
-// by a row under it (P5's /project-members/{project_member_id}, P7's
-// /states/{state_id}), and one whose rows ask a column set of their own (a
-// self-only leaveProject); not a workspace's write that the only admin's
-// table asks (leaveWorkspace).
+// by a row under it (P5b's /project-members/{project_member_id}, P7's
+// /states/{state_id}) whose row names a project table's columns; a column
+// set of a row's own counts only once it is listed in projectTables, so a
+// new table of the project level goes there, not beside the only admin's
+// in matrixTables; not a workspace's write that the only admin's table
+// asks (leaveWorkspace).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	ofTheProjectLevel := func(c caller) bool {
 		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
@@ -3571,11 +3630,15 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 ````
 
 ````old server/internal/bootstrap/project_write_locks_test.go
+// under the project whose rows ask a project-level column set of their
 // own; not a read of a project, nor a write at the workspace level.
 ````
 ````new server/internal/bootstrap/project_write_locks_test.go
-// own; not a read of a project, nor a write at the workspace level, also
-// when the only admin's table asks it.
+// under the project whose rows name a project table's columns. Not one so
+// addressed whose rows name a column set that projectTables does not list
+// (a self-only one, until it is listed there), nor a read of a project,
+// nor a write at the workspace level, also when the only admin's table
+// asks it.
 ````
 
 ````old server/internal/bootstrap/project_write_locks_test.go
@@ -3583,6 +3646,7 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 ````
 ````new server/internal/bootstrap/project_write_locks_test.go
 		{ID: "updateProjectMember", Method: http.MethodPatch, Path: "/api/v0/project-members/{project_member_id}"},
+		{ID: "leaveProjectSelf", Method: http.MethodPost, Path: "/api/v0/project-members/{project_member_id}/leave"},
 		{ID: "leaveWorkspace", Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/leave"},
 ````
 
@@ -3591,161 +3655,18 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 ````
 ````new server/internal/bootstrap/project_write_locks_test.go
 		{op: "updateProjectMember", write: true, columns: []caller{callerProjectAdmin, callerProjectMember}},
+		{op: "leaveProjectSelf", write: true, columns: []caller{"a project's member, himself"}},
 		{op: "leaveWorkspace", write: true, columns: soleAdminColumns},
 ````
 
-`server/internal/bootstrap/removal_test.go`（删除）：
+`server/internal/bootstrap/ending_test.go`（修改，5 处）：
 
-````delete server/internal/bootstrap/removal_test.go
+````old server/internal/bootstrap/ending_test.go
+}
+
+// rowJSON is the row id of table as JSON, its columns by name; nil when
 ````
-
-`server/internal/bootstrap/ending_test.go`（新文件，351 行）：
-
-````file server/internal/bootstrap/ending_test.go
-package bootstrap
-
-import (
-	"context"
-	"encoding/json"
-	"maps"
-	"net/http"
-	"slices"
-	"testing"
-	"time"
-	"uuid"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
-	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
-	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-	"github.com/open-nerve/NerveProject/server/internal/shared"
-	"github.com/open-nerve/NerveProject/server/migrations"
-)
-
-// endingWorld is the wired app on a database of its own: acme, alice its
-// admin; bob, carol and dave its members, each by accepting alice's
-// invitation; Web, alice's, led by bob, so both are its admins, and carol
-// its member by joining; Ops, bob's, his alone to administer, carol its
-// member by his adding; beta, alice its admin, bob its member. Then,
-// through the workspace store, the invitations no operation makes, 3.8
-// refusing to invite an active member: one pending to bob's address in
-// acme, and one in beta; one pending to carol's in acme; one to dave's in
-// acme that he declined.
-type endingWorld struct {
-	contract       *apitest.Contract
-	base           string
-	pool           *pgxpool.Pool
-	tokens         map[string]string    // access tokens, by name
-	ids            map[string]uuid.UUID // accounts, by name
-	web, ops       uuid.UUID
-	bobsInvitation uuid.UUID // the pending one to bob's address in acme
-	davesDeclined  uuid.UUID
-}
-
-func newEndingWorld(t *testing.T) endingWorld {
-	t.Helper()
-	contract := apitest.Load(t)
-	dbURL := pgtest.NewDatabase(t)
-	w := endingWorld{contract: contract, base: startApp(t, testConfig(t, dbURL, false), migrations.FS()), pool: openPool(t, dbURL),
-		tokens: map[string]string{}, ids: map[string]uuid.UUID{}}
-	for _, name := range []string{"alice", "bob", "carol", "dave"} {
-		w.tokens[name] = registerAccount(t, contract, w.base, name+"@example.com").AccessToken
-		w.ids[name] = accountID(t, contract, w.base, w.tokens[name])
-	}
-	for _, slug := range []string{"acme", "beta"} {
-		if status, body := call(t, contract, http.MethodPost, w.base+"/api/v0/workspaces", w.tokens["alice"],
-			`{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
-			t.Fatalf("creating %s = %d %s", slug, status, body)
-		}
-	}
-	for _, m := range []struct{ slug, name string }{{"acme", "bob"}, {"acme", "carol"}, {"acme", "dave"}, {"beta", "bob"}} {
-		answerInvitation(t, contract, w.base, w.tokens[m.name], "accept", invite(t, contract, w.base, w.tokens["alice"], m.slug, m.name+"@example.com"),
-			http.StatusOK)
-	}
-	status, body := call(t, contract, http.MethodPost, w.base+"/api/v0/workspaces/acme/projects", w.tokens["alice"],
-		`{"name":"Web","identifier":"WEB","project_lead_id":"`+w.ids["bob"].String()+`"}`)
-	var web struct {
-		ID uuid.UUID `json:"id"`
-	}
-	if status != http.StatusCreated {
-		t.Fatalf("creating Web = %d %s", status, body)
-	}
-	decodeAnswer(t, body, &web)
-	w.web, w.ops = web.ID, createdProject(t, contract, w.base, w.tokens["bob"], "acme", "Ops", "OPS")
-	for _, step := range []struct{ token, path, body string }{
-		{w.tokens["carol"], "/api/v0/projects/" + w.web.String() + "/join", ""},
-		{w.tokens["bob"], "/api/v0/projects/" + w.ops.String() + "/members", `{"members":[{"member_id":"` + w.ids["carol"].String() + `","role":15}]}`},
-	} {
-		if status, body := call(t, contract, http.MethodPost, w.base+step.path, step.token, step.body); status != http.StatusOK &&
-			status != http.StatusCreated {
-			t.Fatalf("POST %s = %d %s", step.path, status, body)
-		}
-	}
-	store, ctx := workspacepg.New(w.pool), context.Background()
-	for _, inv := range []struct {
-		slug, name string
-		id         *uuid.UUID
-	}{{"acme", "bob", &w.bobsInvitation}, {"beta", "bob", nil}, {"acme", "carol", nil}, {"acme", "dave", &w.davesDeclined}} {
-		id := uuid.NewV7()
-		if _, err := store.CreateInvitations(ctx, []workspaceapp.InvitationRow{{ID: id, WorkspaceID: w.workspace(t, inv.slug),
-			Email: inv.name + "@example.com", Role: shared.RoleGuest, CreatedBy: w.ids["alice"], Now: time.Now()}}); err != nil {
-			t.Fatal(err)
-		}
-		if inv.id != nil {
-			*inv.id = id
-		}
-	}
-	if err := store.DeclineInvitation(ctx, w.davesDeclined, w.ids["dave"], time.Now()); err != nil {
-		t.Fatal(err)
-	}
-	w.bystanders(t)
-	return w
-}
-
-// bystanders checks the rows an ending of bob's membership of acme must
-// leave as they were, each read by what makes it the one it is: his active
-// membership of beta; the pending invitations to his address in beta and
-// to carol's in acme; the one to dave's in acme, declined. Were one
-// missing, an ending that also wrote it would pass.
-func (w endingWorld) bystanders(t *testing.T) {
-	t.Helper()
-	var got string
-	if err := w.pool.QueryRow(context.Background(), `SELECT concat_ws(', ',
-		(SELECT 'bob in beta' FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
-			WHERE w.slug = 'beta' AND m.member_id = $1 AND m.is_active AND m.deleted_at IS NULL),
-		(SELECT string_agg(w.slug || ' ' || i.email || CASE WHEN i.responded_at IS NULL THEN ' pending' WHEN i.accepted THEN ' accepted'
-			ELSE ' declined' END, ', ' ORDER BY w.slug, i.email)
-			FROM workspace_member_invites i JOIN workspaces w ON w.id = i.workspace_id WHERE i.deleted_at IS NULL))`, w.ids["bob"]).
-		Scan(&got); err != nil {
-		t.Fatal(err)
-	}
-	if want := "bob in beta, acme bob@example.com pending, acme carol@example.com pending, acme dave@example.com declined, " +
-		"beta bob@example.com pending"; got != want {
-		t.Fatalf("the rows an ending leaves: %s; want %s", got, want)
-	}
-}
-
-// workspace is the id of the workspace slug.
-func (w endingWorld) workspace(t *testing.T, slug string) uuid.UUID {
-	t.Helper()
-	var id uuid.UUID
-	if err := w.pool.QueryRow(context.Background(), "SELECT id FROM workspaces WHERE slug = $1 AND deleted_at IS NULL", slug).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	return id
-}
-
-// membership is the id of name's membership of acme.
-func (w endingWorld) membership(t *testing.T, name string) uuid.UUID {
-	t.Helper()
-	var id uuid.UUID
-	if err := w.pool.QueryRow(context.Background(), `SELECT m.id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
-		WHERE w.slug = 'acme' AND m.member_id = $1 AND m.deleted_at IS NULL`, w.ids[name]).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
-	return id
+````new server/internal/bootstrap/ending_test.go
 }
 
 // leave is name's leaving of the workspace slug: its status and body.
@@ -3755,173 +3676,42 @@ func (w endingWorld) leave(t *testing.T, slug, name string) (int, string) {
 }
 
 // rowJSON is the row id of table as JSON, its columns by name; nil when
-// there is none.
-func rowJSON(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) map[string]any {
-	t.Helper()
-	var text []byte
-	if err := pool.QueryRow(context.Background(), "SELECT coalesce((SELECT row_to_json(r) FROM "+table+" r WHERE r.id = $1)::text, 'null')", id).
-		Scan(&text); err != nil {
-		t.Fatal(err)
-	}
-	var row map[string]any
-	if err := json.Unmarshal(text, &row); err != nil {
-		t.Fatal(err)
-	}
-	return row
-}
+````
 
-// rowsBut is every table's rows as tableRows has them, River's left out,
-// but the rows whose ids are in ids.
-func rowsBut(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID) map[string]string {
-	t.Helper()
-	all := map[string]string{}
-	for table := range tableRows(t, pool, riversOwn) {
-		var text string
-		if err := pool.QueryRow(context.Background(), `SELECT coalesce(string_agg(t, E'\n' ORDER BY t), '') FROM (SELECT row_to_json(r)::text AS t
-			FROM `+table+` r WHERE NOT to_jsonb(r) ? 'id' OR (to_jsonb(r)->>'id') <> ALL ($1::text[])) s`, uuidTexts(ids)).Scan(&text); err != nil {
-			t.Fatalf("%s: %v", table, err)
-		}
-		all[table] = text
-	}
-	return all
-}
-
-// uuidTexts are ids as text.
-func uuidTexts(ids []uuid.UUID) []string {
-	out := make([]string, len(ids))
-	for i, id := range ids {
-		out[i] = id.String()
-	}
-	return out
-}
-
-// projectMemberships are the ids of user's memberships of the projects, in
-// the order of projects.
-func projectMemberships(t *testing.T, pool *pgxpool.Pool, user uuid.UUID, projects ...uuid.UUID) []uuid.UUID {
-	t.Helper()
-	ids := make([]uuid.UUID, len(projects))
-	for i, p := range projects {
-		if err := pool.QueryRow(context.Background(), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
-			p, user).Scan(&ids[i]); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return ids
-}
-
-// An ending of name's membership of acme on the wired app: alice's removal
+````old server/internal/bootstrap/ending_test.go
+// of him.
+````
+````new server/internal/bootstrap/ending_test.go
 // of him, or his leaving.
-type ending struct {
-	name string
-	// request is the ending's method, its path, and the access token it is
-	// sent with.
-	request func(w endingWorld, t *testing.T, name string) (method, path, token string)
-	by      func(name string) string // the account it writes as
-}
+````
 
-// end sends e's request on w's app: its status and body.
-func (e ending) end(w endingWorld, t *testing.T, name string) (int, string) {
-	t.Helper()
-	method, path, token := e.request(w, t, name)
-	return call(t, w.contract, method, w.base+path, token, "")
-}
-
-var endings = []ending{
-	{name: "removal", request: func(w endingWorld, t *testing.T, name string) (string, string, string) {
-		return http.MethodDelete, "/api/v0/workspace-members/" + w.membership(t, name).String(), w.tokens["alice"]
+````old server/internal/bootstrap/ending_test.go
+	}, by: func(string) string { return "alice" }},
+````
+````new server/internal/bootstrap/ending_test.go
 	}, by: func(string) string { return "alice" }},
 	{name: "leaving", request: func(w endingWorld, _ *testing.T, name string) (string, string, string) {
 		return http.MethodPost, "/api/v0/workspaces/acme/leave", w.tokens[name]
 	}, by: func(name string) string { return name }},
-}
+````
 
+````old server/internal/bootstrap/ending_test.go
+// A removal ends a membership and leaves no invitation, in one transaction
+// at one moment (M3 design 3.6, 3.7 rule 2, 3.8, 9.3), on the wired app.
+````
+````new server/internal/bootstrap/ending_test.go
 // A removal and a leaving each end a membership and leave no invitation,
 // in one transaction at one moment (M3 design 3.6, 3.7 rule 2, 3.8, 9.3),
 // on the wired app.
-//   - bob is Ops's only admin and carol its member: the ending of his
-//     membership is 409 project.sole_admin, and no row of any table
-//     changes, the pending invitation to his address, which the ending
-//     deletes before the projects' step refuses, still pending.
-//   - Once alice, acme's admin, has joined Ops, as its admin, the ending
-//     refused at its commit, after every statement ran, for each table it
-//     writes, is 500, and no row changes: no step wrote in a transaction of
-//     its own.
-//   - Then it is 204: bob's membership of acme, of Web and of Ops ended,
-//     each row kept with its role; the pending invitation to his address in
-//     acme deleted; each by the ender, at one moment no earlier than the
-//     request. Each of those rows was last written by dave before, so that
-//     the claim of the ender's writing can fail. His membership of beta,
-//     the invitation to him there, and every other row of every table are
-//     as they were.
-//   - Ending dave's membership leaves his declined invitation as it was.
-func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
-	for _, e := range endings {
-		t.Run(e.name, func(t *testing.T) {
-			w := newEndingWorld(t)
-			before := tableRows(t, w.pool, riversOwn)
-			if status, body := e.end(w, t, "bob"); status != http.StatusConflict || problemCode(t, []byte(body)) != "project.sole_admin" {
-				t.Fatalf("ending bob's membership, Ops's only admin = %d %s, want 409 project.sole_admin", status, body)
-			}
-			if after := tableRows(t, w.pool, riversOwn); !maps.Equal(after, before) {
-				t.Errorf("the tables after the refused ending changed:\n%v\nwant them as they were:\n%v", after, before)
-			}
-			if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/projects/"+w.ops.String()+"/join", w.tokens["alice"],
-				""); status != http.StatusOK {
-				t.Fatalf("alice's joining Ops = %d %s", status, body)
-			}
-			before = tableRows(t, w.pool, riversOwn)
-			for _, table := range []string{"workspace_member_invites", "workspace_members", "project_members"} {
-				restore := refusingCommits(t, w.pool, table)
-				status, body := e.end(w, t, "bob")
-				restore()
-				if after := tableRows(t, w.pool, riversOwn); status != http.StatusInternalServerError || !maps.Equal(after, before) {
-					t.Errorf("the ending refused at its commit for %s = %d %s; want 500 and every table as it was", table, status, body)
-				}
-			}
-			written := slices.Concat([]uuid.UUID{w.membership(t, "bob"), w.bobsInvitation}, projectMemberships(t, w.pool, w.ids["bob"], w.web, w.ops))
-			tables := []string{"workspace_members", "workspace_member_invites", "project_members", "project_members"}
-			rowsBefore := make([]map[string]any, len(written))
-			for i, id := range written {
-				if tag, err := w.pool.Exec(context.Background(), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id,
-					w.ids["dave"]); err != nil || tag.RowsAffected() != 1 {
-					t.Fatalf("%s %s last written by dave: %v, %v", tables[i], id, tag, err)
-				}
-				rowsBefore[i] = rowJSON(t, w.pool, tables[i], id)
-			}
-			others := rowsBut(t, w.pool, written)
-			started := time.Now()
+````
 
-			if status, body := e.end(w, t, "bob"); status != http.StatusNoContent {
-				t.Fatalf("ending bob's membership = %d %s, want 204", status, body)
-			}
+````old server/internal/bootstrap/ending_test.go
+		})
+	}
+}
 
-			moment, _ := rowJSON(t, w.pool, "workspace_member_invites", w.bobsInvitation)["deleted_at"].(string)
-			if at, err := time.Parse(time.RFC3339Nano, moment); err != nil || at.Before(started.Truncate(time.Microsecond)) {
-				t.Errorf("the invitation deleted at %q (%v); want a moment no earlier than the request, %v", moment, err, started)
-			}
-			for i, id := range written {
-				after := rowJSON(t, w.pool, tables[i], id)
-				want := maps.Clone(rowsBefore[i])
-				want["updated_at"], want["updated_by_id"] = moment, w.ids[e.by("bob")].String()
-				if tables[i] == "workspace_member_invites" {
-					want["deleted_at"] = moment
-				} else {
-					want["is_active"] = false
-				}
-				if !maps.Equal(after, want) {
-					t.Errorf("%s %s after the ending:\n%v\nwant\n%v", tables[i], id, after, want)
-				}
-			}
-			if after := rowsBut(t, w.pool, written); !maps.Equal(after, others) {
-				t.Errorf("every other row after the ending:\n%v\nwant them as they were:\n%v", after, others)
-			}
-			declined := rowJSON(t, w.pool, "workspace_member_invites", w.davesDeclined)
-			if status, body := e.end(w, t, "dave"); status != http.StatusNoContent {
-				t.Fatalf("ending dave's membership = %d %s, want 204", status, body)
-			}
-			if after := rowJSON(t, w.pool, "workspace_member_invites", w.davesDeclined); !maps.Equal(after, declined) {
-				t.Errorf("dave's declined invitation after the ending:\n%v\nwant it as it was:\n%v", after, declined)
-			}
+````
+````new server/internal/bootstrap/ending_test.go
 		})
 	}
 }
@@ -3953,6 +3743,7 @@ func TestTheOnlyAdminCannotLeave(t *testing.T) {
 		t.Errorf("alice's leaving acme, carol its admin too = %d %s, want 204", status, body)
 	}
 }
+
 ````
 
 - [ ] **Step 5: 测试、lint、前端检查**
@@ -3981,7 +3772,7 @@ Expected: 通过。
 - [ ] **Step 6: 提交**
 
 ```bash
-git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/ending_test.go server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/bootstrap/removal_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/members.go server/internal/modules/workspace/adapter/http/members_test.go server/internal/modules/workspace/app/clock_test.go server/internal/modules/workspace/app/fakes_members_test.go server/internal/modules/workspace/app/fakes_workspaces_test.go server/internal/modules/workspace/app/leave_workspace.go server/internal/modules/workspace/app/leave_workspace_test.go server/internal/modules/workspace/app/ports.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/domain/errors.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
+git add api/modules/workspace.yaml api/openapi.yaml server/internal/bootstrap/ending_test.go server/internal/bootstrap/permission_matrix_columns_test.go server/internal/bootstrap/permission_matrix_coverage_test.go server/internal/bootstrap/permission_matrix_seed_test.go server/internal/bootstrap/permission_matrix_targets_test.go server/internal/bootstrap/permission_matrix_test.go server/internal/bootstrap/permission_matrix_workspace_test.go server/internal/bootstrap/project_write_locks_test.go server/internal/modules/access/domain/rules.go server/internal/modules/access/domain/rules_test.go server/internal/modules/workspace/adapter/http/handler.go server/internal/modules/workspace/adapter/http/handler_test.go server/internal/modules/workspace/adapter/http/members.go server/internal/modules/workspace/adapter/http/members_test.go server/internal/modules/workspace/app/clock_test.go server/internal/modules/workspace/app/fakes_members_test.go server/internal/modules/workspace/app/fakes_workspaces_test.go server/internal/modules/workspace/app/leave_workspace.go server/internal/modules/workspace/app/leave_workspace_test.go server/internal/modules/workspace/app/ports.go server/internal/modules/workspace/domain/actions.go server/internal/modules/workspace/domain/errors.go server/internal/modules/workspace/module.go web/apps/web/helpers/authentication.helper.ts web/packages/i18n/src/locales/en/auth.json web/packages/i18n/src/locales/zh-CN/auth.json api/dist/openapi.yaml server/internal/modules/workspace/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts
 ```
 ```bash
 git commit -m "feat(M3/P5a): leaveWorkspace; the only admin cannot leave
@@ -3989,9 +3780,9 @@ git commit -m "feat(M3/P5a): leaveWorkspace; the only admin cannot leave
 POST /api/v0/workspaces/{slug}/leave ends the caller's own membership
 under the workspace's FOR NO KEY UPDATE; a workspace's only active
 admin is refused with workspace.sole_admin, also when he is alone (M3
-design 3.7 rule 1). The matrix gains the only admin's table. The
-wired app's ending test runs for the removal and the leaving, each row
-it claims the ender wrote last written by another before.
+design 3.7 rule 1). The matrix gains the only admin's table; a write on
+a project is one whose rows name a project table's columns. The wired
+app's ending test runs for the leaving too.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -4011,7 +3802,8 @@ Expected: 通过。
 | 时钟在锁之前读 | `TestEachWriteReadsTheClockUnderItsLock`；`TestEachLockOfAnEndingIsItsStrength`（Task 6 起） | 单元；组合 |
 | `workspace.New` 的离开不带项目的连带、不开事务、用停在 2001 年的时钟 | `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation` | 组合 |
 | 矩阵的种子：other 再有一位管理员；被移出的成员不在 other；PM+WA 不是 acme 的管理员 | `TestPermissionMatrix/prepare`（前提） | 组合 |
-| `endingWorld` 少了 beta 的邀请、carol 的邀请、bob 在 beta 的成员关系，或 dave 的邀请没有拒绝 | 用它的每个测试（`bystanders` 的前提） | 组合 |
+| `writesOnAProject` 的规则 (b) 改回 P4b 的"任何不是工作区一级的列" | `TestWritesOnAProjectAreEachShape`（离开工作区、`projectTables` 之外的列组都被算进去）、`TestEachWriteOnAProjectSharesItsWorkspaceFirst` | 组合 |
+| `projectWrites` 少了 P4b 的任何一行 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（完整性核对） | 组合 |
 
 **Done when:** 离开的两行矩阵（7 格）通过；规则 1 在组合出的 app 上有正反例；组合出的结束对移出和离开都通过。
 
@@ -8107,11 +7899,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `docs/v0/plane-diff.md` 第四节 P5a 的三行（4.11、3.20）：唯一管理员的检查、恢复被移出的成员、移出和离开时的待接受邀请。
 
 **Tests:**
-- W12：B 是 acme 的第二位管理员，管理 Ops 和 Old；carol 加入 Ops 后离开 acme。B 在 Other 是成员、在那里管理 Lab，carol 是 Lab 的成员；Spare 有一个发给 B 的待接受邀请。A 移出 B：他在 acme、Old、Ops 的成员关系结束（之前由他自己写），他在 Other、Lab 的和 Spare 的邀请不变；A 不能离开。A 加入 Old 并删除它；carol、B 离开 Other；B 的账户被停用；A 以访客邀请他回来（旧邀请）。不存在的工作区、没有账户的地址、从来不是成员的账户：退出码 1，`workspace_members` 不变。命令（地址大写）恢复 B 在 acme 的行，仍是管理员，`updated_by_id` 仍是 A，Ops 仍结束，输出说 1 个、下一步是 `nerve users activate`；B 激活之后再跑一次：已是有效，什么都不改。B 加入 Ops：同一行、管理员、由他；carol 在 Ops 的行不变。A 离开；B 接受旧邀请：角色 20，成员数 1，邀请已接受并在回答时删除。B 邀请 carol、她拒绝；命令恢复 carol；B 再移出她：已拒绝的邀请不变。
+- W12：B 是 acme 的第二位管理员，管理 Ops 和 Old；carol 加入 Ops 后离开 acme。B 在 Other 是成员、在那里管理 Lab，carol 是 Lab 的成员；Spare 有一个发给 B 的待接受邀请。A 移出 B：他在 acme、Old、Ops 的成员关系结束（之前由他自己写），他在 Other、Lab 的和 Spare 的邀请不变；A 不能离开。A 加入 Old 并删除它；carol、B 离开 Other；B 的账户被停用；A 以访客邀请他回来（旧邀请）。不存在的工作区、没有账户的地址、从来不是成员的账户：退出码 1，三张表（`workspace_members`、`project_members`、`workspace_member_invites`）不变。命令（地址大写）恢复 B 在 acme 的行，仍是管理员，`updated_by_id` 仍是 A，Ops 仍结束，输出说 1 个、下一步是 `nerve users activate`；B 激活之后再跑一次：已是有效，什么都不改。B 加入 Ops：同一行、管理员、由他；carol 在 Ops 的行不变。A 离开；B 接受旧邀请：角色 20，成员数 1，邀请已接受并在回答时删除。B 邀请 carol、她拒绝；命令恢复 carol；B 再移出她：已拒绝的邀请不变。
 
 - [ ] **Step 1: 故事**
 
-`e2e/stories/workspace/w12-reactivate-member.spec.ts`（新文件，213 行）：
+`e2e/stories/workspace/w12-reactivate-member.spec.ts`（新文件，217 行）：
 
 ````file e2e/stories/workspace/w12-reactivate-member.spec.ts
 import {
@@ -8207,8 +7999,12 @@ test("W12: nerve workspaces reactivate-member restores a removed admin's members
   };
   const opsMembership = (await bs()).project?.id;
   const carolsOps = await projectRow(ops.id, carolEmail);
-  // The one table the command writes.
-  const memberships = () => db.query("SELECT * FROM workspace_members ORDER BY id");
+  // The tables a reactivation could write: it writes the first alone.
+  const memberships = async () => ({
+    workspace: await db.query("SELECT * FROM workspace_members ORDER BY id"),
+    projects: await db.query("SELECT * FROM project_members ORDER BY id"),
+    invitations: await db.query("SELECT * FROM workspace_member_invites ORDER BY id"),
+  });
 
   // A removes B: his memberships of acme end, their rows kept, and nothing of his elsewhere changes. He wrote each of
   // them last, so that A's writing them shows.
@@ -8259,7 +8055,7 @@ test("W12: nerve workspaces reactivate-member restores a removed admin's members
     reactivate(slug, strangerEmail),
     "The account has never been a member of this workspace."
   );
-  expect(await memberships(), "the memberships after the refusals").toEqual(before);
+  expect(await memberships(), "the three tables after the refusals").toEqual(before);
 
   // The command restores B's row of acme alone, with its role, though his account is deactivated, and says what is
   // next: his membership of Ops is the one of acme's projects still ended, Old's deleted.
@@ -8277,7 +8073,7 @@ test("W12: nerve workspaces reactivate-member restores a removed admin's members
   expect(await nerveWorkspaces(db, reactivate(slug, bEmail))).toBe(
     `${bEmail} is an active member of ${slug} already; nothing changed\n`
   );
-  expect(await memberships(), "the memberships after the second run").toEqual(reactivated);
+  expect(await memberships(), "the three tables after the second run").toEqual(reactivated);
 
   // B joins Ops: his old row, an admin's, the lower of its role and his workspace role (3.5); carol's stays ended.
   expect(await join(ops.id, b), "B joins Ops").toBe(200);
