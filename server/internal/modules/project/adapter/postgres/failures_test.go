@@ -19,12 +19,17 @@ import (
 // settings", which createProject would take for an empty sidebar; not "no
 // project has the identifier", which checkProjectIdentifier would answer
 // as available; not an empty list, which listProjects would answer as a
-// workspace without projects. Each read runs on a cancelled context
-// against a project alice is a member of and has display settings in, so
-// that the right answer is none of the zero values.
+// workspace without projects; not "no project of his", which an ending or
+// a demotion would take for nothing to do, nor "not the only admin", which
+// would let an ending end memberships rule 2 keeps, nor "no ended
+// membership", which reactivate-member would report as none of the
+// member's project memberships still ended. Each read runs on a cancelled
+// context against a project alice is the only admin of, beside bob, a
+// member, and has display settings in, bob's membership of another project
+// ended, so that the right answer is none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
-	alice := newAccount(t, pool, "alice@corp.com")
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	web := newProject(t, s, acme, "Web", "WEB", alice)
 	ctx := context.Background()
@@ -32,9 +37,14 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 		Role: shared.RoleAdmin, CreatedBy: alice, Now: now}); err != nil {
 		t.Fatal(err)
 	}
+	seedMember(t, pool, acme, web, bob, 15, true)
+	seedMember(t, pool, acme, newProject(t, s, acme, "Ops", "OPS", alice), bob, 15, false)
 	if err := s.CreatePreferences(ctx, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
 		SortOrder: 10, CreatedBy: alice, Now: now}); err != nil {
 		t.Fatal(err)
+	}
+	if n, err := s.CountInactive(ctx, acme, bob); err != nil || n != 1 {
+		t.Fatalf("CountInactive() of bob = %d, %v; want his ended membership of Ops, 1", n, err)
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
@@ -63,6 +73,18 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if m, err := s.Memberships(cancelled, web, []uuid.UUID{alice}); !failed(err) || m != nil {
 		t.Errorf("Memberships() = %v, %v; want context.Canceled, not none", m, err)
+	}
+	if ids, err := s.LockActiveMemberProjects(cancelled, []uuid.UUID{acme}, alice); !failed(err) || ids != nil {
+		t.Errorf("LockActiveMemberProjects() = %v, %v; want context.Canceled, not no project", ids, err)
+	}
+	if sole, err := s.SoleAdmin(cancelled, []uuid.UUID{web}, alice); !failed(err) || sole {
+		t.Errorf("SoleAdmin() = %v, %v; want context.Canceled, not an answer", sole, err)
+	}
+	if ids, err := s.LockMemberProjects(cancelled, acme, alice); !failed(err) || ids != nil {
+		t.Errorf("LockMemberProjects() = %v, %v; want context.Canceled, not no project", ids, err)
+	}
+	if n, err := s.CountInactive(cancelled, acme, bob); !failed(err) || n != 0 {
+		t.Errorf("CountInactive() = %d, %v; want context.Canceled, not a count", n, err)
 	}
 }
 
@@ -103,6 +125,12 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	}
 	if err := s.RestoreMember(cancelled, uuid.NewV7(), shared.RoleMember, alice, now); !failed(err) {
 		t.Errorf("RestoreMember() = %v; want context.Canceled", err)
+	}
+	if err := s.EndMemberships(cancelled, []uuid.UUID{web}, alice, alice, now); !failed(err) {
+		t.Errorf("EndMemberships() = %v; want context.Canceled", err)
+	}
+	if err := s.DemoteMemberships(cancelled, []uuid.UUID{web}, alice, alice, now); !failed(err) {
+		t.Errorf("DemoteMemberships() = %v; want context.Canceled", err)
 	}
 	if err := s.EnsurePreferences(cancelled, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
 		SortOrder: 1, CreatedBy: alice, Now: now}); !failed(err) {

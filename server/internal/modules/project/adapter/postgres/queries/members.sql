@@ -27,3 +27,10 @@ ORDER BY created_at, id;
 UPDATE project_members
 SET is_active = true, role = sqlc.arg(role), updated_by_id = sqlc.arg(updated_by)::uuid, updated_at = sqlc.arg(now)
 WHERE id = sqlc.arg(id);
+
+-- name: CountInactiveMemberships :one
+-- ProjectMembershipCounts, for reactivate-member's report (M3 design 3.11, 6.5): the account's ended undeleted
+-- memberships of the workspace's projects, read without a lock. A deleted project's memberships are deleted with it.
+SELECT count(*)
+FROM project_members
+WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND NOT is_active AND deleted_at IS NULL;

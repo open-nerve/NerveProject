@@ -103,11 +103,24 @@ const (
 // 9.2's table.
 var workspaceColumns = []caller{callerAdmin, callerMember, callerGuest, callerNever, callerRemoved, callerDeleted}
 
+// callerSoleAdmin is the column of a workspace's only active admin, for the
+// cells of 9.2 that acme, with two admins, cannot give (P4a review §6):
+// other's admin, the account never a member of acme, beside other's member,
+// the removed member.
+const callerSoleAdmin caller = "the only admin of other"
+
+// soleAdminColumns are the columns of the only admin's table: his alone.
+var soleAdminColumns = []caller{callerSoleAdmin}
+
 // workspaceOf is the slug of the workspace a column's cells target: the
-// prepared workspace, or the deleted one its caller was the admin of.
+// prepared workspace; the deleted one its caller was the admin of; other,
+// for its only admin.
 func workspaceOf(c caller) string {
-	if c == callerDeleted {
+	switch c {
+	case callerDeleted:
 		return "gone"
+	case callerSoleAdmin:
+		return "other"
 	}
 	return "acme"
 }
@@ -229,19 +242,20 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 
 // prepareMatrix fills a database for the matrix. Through the API, each of
 // matrixAccounts, registered for its token and its id. Through the
-// workspace store, the workspaces, memberships and invitations of
-// matrixMemberships and matrixInvitations, with the ids newSeeded named,
-// and acme's admin's display settings; other's admin and removed member
-// are there so that a role read in the wrong workspace lets either into
-// acme. Through the project store, the projects and project memberships of
-// matrixProjects and matrixProjectMembers, and acme's archived project
-// archived. Through SQL, the states no store writes yet (standIns,
-// partingStates). Through the API, gone deleted by its admin, which
-// soft-deletes its memberships and its project with it; then the checks
-// that the rows the cells rest on are there (preconditions). Everything
-// that connected to the database is closed when it returns, so that it can
-// be copied. A -run that leaves out prepare fails here, not with a 401 in
-// every cell.
+// workspace store, the workspaces and memberships of matrixMemberships,
+// with the ids newSeeded named, and acme's admin's display settings;
+// other's admin and removed member are there so that a role read in the
+// wrong workspace lets either into acme. Through the project store, the
+// projects and project memberships of matrixProjects and
+// matrixProjectMembers, and acme's archived project archived. Through both
+// stores, the removed member's removal; then, through the workspace store,
+// the invitations of matrixInvitations. Through SQL, the states no store
+// writes yet (standIns, partingStates). Through the API, gone deleted by
+// its admin, which soft-deletes its memberships and its project with it;
+// then the checks that the rows the cells rest on are there
+// (preconditions). Everything that connected to the database is closed
+// when it returns, so that it can be copied. A -run that leaves out
+// prepare fails here, not with a 401 in every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -267,9 +281,6 @@ func prepareMatrix(t *testing.T) matrixData {
 			}
 			seed.join(s.membership(m.slug, m.c), m.slug, m.c, m.role)
 		}
-		for _, i := range matrixInvitations {
-			seed.invite(s.invitation(i.slug, i.email), i.slug, i.email, i.role)
-		}
 		tabbed, three := "TABBED", 3
 		seed.preferences("acme", callerAdmin, workspacedomain.PreferencesPatch{NavigationControl: &tabbed, NavigationProjectLimit: &three})
 		projects := projectSeed{matrixSeed: seed, store: projectpg.New(pool), projects: map[string]uuid.UUID{}}
@@ -280,7 +291,11 @@ func prepareMatrix(t *testing.T) matrixData {
 			projects.join(pm.key, pm.c, pm.role)
 		}
 		projects.archive("acme/archived")
-		projects.standIns(pool, s)
+		projects.removal(s)
+		for _, i := range matrixInvitations {
+			seed.invite(s.invitation(i.slug, i.email), i.slug, i.email, i.role)
+		}
+		projects.standIns(pool)
 		projects.partingStates(pool)
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so

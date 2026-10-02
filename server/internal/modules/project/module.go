@@ -4,7 +4,9 @@
 // projects, checking an identifier, listing, adding and joining the
 // members, each member's display settings, carries out the workspace
 // module's cascades on the projects (ProjectCascade), and offers the
-// access module its reads of a project (ProjectAccess).
+// access module its reads of a project (ProjectAccess) and the workspace
+// module its count of an account's ended project memberships
+// (ProjectMembershipCounts).
 package project
 
 import (
@@ -34,6 +36,11 @@ type Cascade interface {
 	// DemoteToGuest makes userID a guest in each of the workspace's projects
 	// he has a membership of, ended ones too.
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
+	// EndMemberships ends userID's active memberships of the workspaces'
+	// projects, found when it is called; project.sole_admin, and nothing
+	// ended, when he is the only active admin of one that has other active
+	// members.
+	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 
 // ProjectAccess reads a project for the access module's decision (M3
@@ -48,16 +55,26 @@ type ProjectAccess interface {
 // them into access's value (M3 design 6.5).
 type AccessFacts = app.AccessFacts
 
+// ProjectMembershipCounts counts an account's memberships of a workspace's
+// projects, for the workspace module's reactivate-member (M3 design 3.11,
+// 6.5): CountInactive is the number of userID's ended, undeleted
+// memberships of the workspace's projects, read without a lock.
+type ProjectMembershipCounts interface {
+	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
+}
+
 // Provided are the adapters project offers the other modules. They depend
 // on the pool alone, so bootstrap builds them before any module (M3 design
 // 6.6, step 2).
 type Provided struct {
-	ProjectAccess ProjectAccess
+	ProjectAccess           ProjectAccess
+	ProjectMembershipCounts ProjectMembershipCounts
 }
 
 // Provide builds project's adapters for the other modules.
 func Provide(pool *pgxpool.Pool) Provided {
-	return Provided{ProjectAccess: postgresadapter.New(pool)}
+	store := postgresadapter.New(pool)
+	return Provided{ProjectAccess: store, ProjectMembershipCounts: store}
 }
 
 // Workspace is a workspace as the WorkspaceDirectory port hands it over:
@@ -89,7 +106,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
-	return &Module{cascade: app.NewCascade(store, store), uc: httpadapter.UseCases{
+	return &Module{cascade: app.NewCascade(store, store, store), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),

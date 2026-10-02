@@ -199,6 +199,10 @@ func (noProjects) DemoteToGuest(context.Context, uuid.UUID, uuid.UUID, uuid.UUID
 	return errors.New("a deletion demoted a member")
 }
 
+func (noProjects) EndMemberships(context.Context, []uuid.UUID, uuid.UUID, uuid.UUID, time.Time) error {
+	return errors.New("a deletion ended a member's project memberships")
+}
+
 // allowAll allows every action, as the workspace's admin.
 type allowAll struct{}
 

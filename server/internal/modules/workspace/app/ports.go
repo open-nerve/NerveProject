@@ -117,9 +117,10 @@ type MemberLister interface {
 	ListMembers(ctx context.Context, workspaceID uuid.UUID) ([]domain.Membership, error)
 }
 
-// MemberUpdater changes a membership's role under its workspace's lock (M3
-// design 3.6: read the row, lock the workspace, read the row again).
-type MemberUpdater interface {
+// MemberLocker reads a membership and locks its workspace: the first steps
+// of a write on a membership named by its id (M3 design 3.6: read the row,
+// lock the workspace, read the row again).
+type MemberLocker interface {
 	// MemberByID returns the undeleted membership id, active or not;
 	// ErrNotFound when there is none.
 	MemberByID(ctx context.Context, id uuid.UUID) (domain.Membership, error)
@@ -127,9 +128,43 @@ type MemberUpdater interface {
 	// the transaction ends; ErrNotFound when there is none, also when it was
 	// deleted while the lock waited.
 	LockWorkspace(ctx context.Context, id uuid.UUID) error
+}
+
+// MemberUpdater changes a membership's role under its workspace's lock.
+type MemberUpdater interface {
+	MemberLocker
 	// UpdateMemberRole sets the membership's role, by the account by at now,
 	// and returns it as stored.
 	UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Membership, error)
+}
+
+// MembershipEnder ends a membership of a workspace under the workspace's
+// FOR NO KEY UPDATE (M3 design 3.6, 3.8), in the transaction ctx carries.
+type MembershipEnder interface {
+	// DeletePendingInvitations soft-deletes the workspace's pending
+	// invitation to email, if there is one, by the account by at now; a
+	// declined one stays.
+	DeletePendingInvitations(ctx context.Context, workspaceID uuid.UUID, email string, by uuid.UUID, now time.Time) error
+	// EndMember ends userID's active, undeleted membership of the
+	// workspace, by the account by at now; the row stays.
+	EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
+}
+
+// WorkspaceLeaver ends the caller's own membership of a workspace named by
+// its slug, under the workspace's lock.
+type WorkspaceLeaver interface {
+	WorkspaceLocker
+	MembershipEnder
+	// HasOtherAdmin reports whether the workspace has an active admin other
+	// than userID.
+	HasOtherAdmin(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error)
+}
+
+// MemberRemover removes a membership named by its id under its workspace's
+// lock.
+type MemberRemover interface {
+	MemberLocker
+	MembershipEnder
 }
 
 // WorkspaceLocker and WorkspaceSharer are the parent locks of the writes on
@@ -193,6 +228,35 @@ type ProjectCascade interface {
 	// an invitation as a guest that restores his ended membership
 	// (acceptWorkspaceInvitation).
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
+	// EndMemberships ends userID's active memberships of the workspaces'
+	// projects, which it finds when it is called, at the moment and by the
+	// account of the ending of his membership of those workspaces: an
+	// admin's removal of him (removeWorkspaceMember), or his own leaving
+	// (leaveWorkspace). It refuses with project.sole_admin, and ends none,
+	// when he is the only active admin of one of them that has other active
+	// members (M3 design 3.7 rule 2).
+	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+}
+
+// ProjectMembershipCounts counts an account's memberships of a workspace's
+// projects (M3 design 6.5): the project module implements it
+// (project.Provide).
+type ProjectMembershipCounts interface {
+	// CountInactive is the number of userID's ended, undeleted memberships
+	// of the workspace's projects, read without a lock.
+	CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error)
+}
+
+// MemberReactivator restores an account's ended membership of a workspace
+// named by its slug, under the workspace's lock (M3 design 3.11).
+type MemberReactivator interface {
+	WorkspaceLocker
+	// MemberOf returns userID's undeleted membership of the workspace,
+	// active or ended; found is false when there is none.
+	MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (m domain.Membership, found bool, err error)
+	// ReactivateMember makes userID's ended, undeleted membership of the
+	// workspace active again, its role kept, at now.
+	ReactivateMember(ctx context.Context, workspaceID, userID uuid.UUID, now time.Time) error
 }
 
 // PreferencesRow is a change of an account's display settings in a

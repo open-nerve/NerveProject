@@ -49,3 +49,14 @@ func (s *Store) ListMembers(ctx context.Context, projectID uuid.UUID) ([]domain.
 	}
 	return out, nil
 }
+
+// CountInactive is the number of userID's ended, undeleted memberships of
+// the workspace's projects, read without a lock
+// (project.ProjectMembershipCounts).
+func (s *Store) CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error) {
+	n, err := s.queries(ctx).CountInactiveMemberships(ctx, gen.CountInactiveMembershipsParams{WorkspaceID: workspaceID, MemberID: userID})
+	if err != nil {
+		return 0, fmt.Errorf("count the ended project memberships of %s in workspace %s: %w", userID, workspaceID, err)
+	}
+	return int(n), nil
+}

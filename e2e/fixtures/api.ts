@@ -13,6 +13,7 @@ export type WorkspaceCreate = components["schemas"]["WorkspaceCreate"];
 export type WorkspacePreferences = components["schemas"]["WorkspacePreferences"];
 export type WorkspacePreferencesUpdate = components["schemas"]["WorkspacePreferencesUpdate"];
 export type WorkspaceInvitation = components["schemas"]["WorkspaceInvitation"];
+export type WorkspaceMember = components["schemas"]["WorkspaceMember"];
 export type InvitationCreate = components["schemas"]["InvitationCreate"];
 export type Project = components["schemas"]["Project"];
 export type ProjectCreate = components["schemas"]["ProjectCreate"];
@@ -98,6 +99,28 @@ export async function inviteAndAccept(
     throw new Error(`invite ${member.email} to ${slug} answered no invitation`);
   }
   return accept(api, member.token, invitation);
+}
+
+/** Lists the memberships of the workspace of slug, ended ones too, with the bearer token given, a member's. */
+export async function listMembers(api: Api, token: string, slug: string): Promise<WorkspaceMember[]> {
+  const { data, error, response } = await api.GET("/api/v0/workspaces/{slug}/members", {
+    params: { path: { slug } },
+    headers: bearer(token),
+  });
+  expect(response.status, `list the members of ${slug}: ${JSON.stringify(error)}`).toBe(200);
+  if (!data) {
+    throw new Error(`listMembers of ${slug} answered 200 without the members`);
+  }
+  return data.data;
+}
+
+/** The id of the membership of the account of memberId in the workspace of slug, as the caller of token lists it. */
+export async function membershipOf(api: Api, token: string, slug: string, memberId: string): Promise<string> {
+  const membership = (await listMembers(api, token, slug)).find((m) => m.member.id === memberId);
+  if (!membership) {
+    throw new Error(`no membership of ${memberId} in ${slug}`);
+  }
+  return membership.id;
 }
 
 /** Creates a project in the workspace of slug with the bearer token given, an admin's or a member's, and returns it. */

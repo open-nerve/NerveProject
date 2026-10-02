@@ -9,12 +9,10 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	identitydomain "github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
-	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -71,7 +69,7 @@ func (r inviteRace) invite(ctx context.Context, admin, session uuid.UUID, invita
 	}
 	_, err := workspaceapp.NewCreateWorkspaceInvitations(workspaceapp.CreateInvitationsDeps{
 		Caller: identity.Provide(r.pool).CredentialLock, Invitations: invitations, Profiles: workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		Auth: access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}), Tx: r.tx(), Clock: clocktest.At(time.Now()), MAC: r.mac,
+		Auth: authorizerOn(r.pool), Tx: r.tx(), Clock: clocktest.At(time.Now()), MAC: r.mac,
 	}).Execute(shared.WithActor(ctx, shared.Actor{UserID: admin, SessionID: session}), "acme", batch)
 	return err
 }

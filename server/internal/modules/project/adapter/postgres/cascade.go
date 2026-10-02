@@ -79,3 +79,34 @@ func (s *Store) DemoteMemberships(ctx context.Context, projectIDs []uuid.UUID, u
 	}
 	return nil
 }
+
+// LockActiveMemberProjects locks FOR NO KEY UPDATE, in id order, the
+// workspaces' undeleted projects in which userID has an active membership,
+// and returns their ids (app.MembershipEnder).
+func (s *Store) LockActiveMemberProjects(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error) {
+	ids, err := s.queries(ctx).LockActiveMemberProjects(ctx, gen.LockActiveMemberProjectsParams{WorkspaceIds: workspaceIDs, MemberID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("lock the member's active projects: %w", err)
+	}
+	return ids, nil
+}
+
+// SoleAdmin reports whether userID is the only active admin of one of
+// projectIDs that has another active member (app.MembershipEnder).
+func (s *Store) SoleAdmin(ctx context.Context, projectIDs []uuid.UUID, userID uuid.UUID) (bool, error) {
+	sole, err := s.queries(ctx).SoleAdmin(ctx, gen.SoleAdminParams{ProjectIds: projectIDs, MemberID: userID})
+	if err != nil {
+		return false, fmt.Errorf("look for a project he is the only admin of: %w", err)
+	}
+	return sole, nil
+}
+
+// EndMemberships ends userID's active memberships of projectIDs, at now, by
+// the account by (app.MembershipEnder).
+func (s *Store) EndMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
+	err := s.queries(ctx).EndMemberships(ctx, gen.EndMembershipsParams{ProjectIds: projectIDs, MemberID: userID, EndedBy: by, Now: now})
+	if err != nil {
+		return fmt.Errorf("end the member's project memberships: %w", err)
+	}
+	return nil
+}

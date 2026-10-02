@@ -60,7 +60,7 @@ func accountOf(c caller) caller {
 	switch c {
 	case callerArchivedAdmin:
 		return callerProjectAdmin
-	case callerArchivedNever:
+	case callerArchivedNever, callerSoleAdmin:
 		return callerNever
 	case callerProjectGuest:
 		return callerGuest
@@ -91,10 +91,12 @@ func projectOf(c caller) string {
 
 // Every account of a column is registered, and every account registered is
 // some column's: a column whose account prepareMatrix did not register would
-// call with no token, and its cells answer 401 whatever the rule.
+// call with no token, and its cells answer 401 whatever the rule. The
+// columns are the workspace level's and those of every table a row may
+// name (matrixTables), so that a new table's are checked once it is listed.
 func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	var used []caller
-	for _, c := range slices.Concat(workspaceColumns, projectColumns, archivedColumns) {
+	for _, c := range slices.Concat(workspaceColumns, slices.Concat(matrixTables...)) {
 		if !slices.Contains(matrixAccounts, accountOf(c)) {
 			t.Errorf("column %s calls as %s, which prepareMatrix does not register", c, accountOf(c))
 		}
@@ -120,6 +122,21 @@ func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	for _, a := range matrixAccounts {
 		if id := s.account(a); id != uuid.Nil() {
 			t.Errorf("the account %s before prepareMatrix registers it = %s, want uuid.Nil", a, id)
+		}
+	}
+}
+
+// Each table of matrixTables is of one level: the project level
+// (projectTables), whose rows writesOnAProject takes for writes on a
+// project, or the workspace level (workspaceLevelTables), whose rows it
+// does not. A table appended to matrixTables alone, of neither level, fails
+// here, and so does one listed at both: either would leave its rows'
+// writes classed by accident.
+func TestEachMatrixTableIsOfOneLevel(t *testing.T) {
+	for _, table := range matrixTables {
+		same := func(other []caller) bool { return slices.Equal(other, table) }
+		if project, workspace := slices.ContainsFunc(projectTables, same), slices.ContainsFunc(workspaceLevelTables, same); project == workspace {
+			t.Errorf("the table %q: of the project level %v, of the workspace level %v; want it of one", table, project, workspace)
 		}
 	}
 }
@@ -193,8 +210,8 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 			callerMemberPrivate, public, private)}},
 		// The X columns answer alike wherever they aim; what they aim at is
 		// what they test: gone's project, deleted with it, hidden from its
-		// admin; the public project, which only his ended membership of acme
-		// keeps the removed member out of.
+		// admin; the public project, which any member of acme sees, and the
+		// removed member, his memberships of acme and of it ended, does not.
 		{"the deleted workspace's column at acme's project", listed, []matrixRow{aimed(callerDeleted, "acme/public"), checks},
 			[]string{fmt.Sprintf("row getProject, %s: {project_id} %s is not its column's project gone/project, %s", callerDeleted, public,
 				s.project("gone/project"))}},
@@ -212,11 +229,17 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		}), checks}, func() []string {
 			var want []string
 			for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (matrixTables): "+
+				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
 					"a project's row names its columns", c))
 			}
 			return want
 		}()},
+		// The only admin's table is a table a row may name, and no project
+		// table: a project's operation in it is the same gap.
+		{"a project operation in the only admin's row", listed, []matrixRow{with(func(r *matrixRow) {
+			r.columns, r.cells = soleAdminColumns, map[caller]cell{callerSoleAdmin: cellOK}
+		}), checks}, []string{fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
+			"a project's row names its columns", callerSoleAdmin)}},
 		{"a {slug} of another column's workspace beside a listed {identifier}", listed, []matrixRow{row, func() matrixRow {
 			r := checks
 			r.request = sameRequest(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/WEB", "")

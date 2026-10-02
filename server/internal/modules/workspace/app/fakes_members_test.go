@@ -71,3 +71,68 @@ func (f *fakeWorkspaces) UpdateMemberRole(ctx context.Context, id uuid.UUID, rol
 	}
 	return domain.Membership{}, fmt.Errorf("update workspace member %s: no such row", id)
 }
+
+// The ending's statements (app.MembershipEnder): each logs its call and
+// fails with the error set for it; EndMember also ends the membership the
+// fake holds, as the store ends the row.
+
+func (f *fakeWorkspaces) DeletePendingInvitations(ctx context.Context, workspaceID uuid.UUID, email string, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "DeletePendingInvitations %s %s by %s at %s", workspaceID, email, by, now.Format(time.RFC3339Nano))
+	if err := f.endErrs["DeletePendingInvitations"]; err != nil {
+		return fmt.Errorf("delete the pending invitations: %w", err)
+	}
+	return nil
+}
+
+func (f *fakeWorkspaces) EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "EndMember %s %s by %s at %s", workspaceID, userID, by, now.Format(time.RFC3339Nano))
+	if err := f.endErrs["EndMember"]; err != nil {
+		return fmt.Errorf("end workspace member: %w", err)
+	}
+	list := f.memberships[workspaceID]
+	if i := slices.IndexFunc(list, func(m domain.Membership) bool { return m.MemberID == userID }); i >= 0 {
+		list[i].IsActive = false
+		return nil
+	}
+	return fmt.Errorf("end workspace member %s of %s: no such row", userID, workspaceID)
+}
+
+// HasOtherAdmin answers whether the workspace's memberships it holds have
+// an active admin other than userID.
+func (f *fakeWorkspaces) HasOtherAdmin(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
+	f.log.add(ctx, "HasOtherAdmin %s %s", workspaceID, userID)
+	if err := f.endErrs["HasOtherAdmin"]; err != nil {
+		return false, fmt.Errorf("look for another admin: %w", err)
+	}
+	return slices.ContainsFunc(f.memberships[workspaceID], func(m domain.Membership) bool {
+		return m.MemberID != userID && m.Role == shared.RoleAdmin && m.IsActive
+	}), nil
+}
+
+// The reactivation's repositories (app.MemberReactivator), besides the
+// slug's lock.
+
+func (f *fakeWorkspaces) MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (domain.Membership, bool, error) {
+	f.log.add(ctx, "MemberOf %s %s", workspaceID, userID)
+	if f.membersErr != nil {
+		return domain.Membership{}, false, fmt.Errorf("read workspace member: %w", f.membersErr)
+	}
+	list := f.memberships[workspaceID]
+	if i := slices.IndexFunc(list, func(m domain.Membership) bool { return m.MemberID == userID }); i >= 0 {
+		return list[i], true, nil
+	}
+	return domain.Membership{}, false, nil
+}
+
+func (f *fakeWorkspaces) ReactivateMember(ctx context.Context, workspaceID, userID uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "ReactivateMember %s %s at %s", workspaceID, userID, now.Format(time.RFC3339Nano))
+	if f.restoreErr != nil {
+		return fmt.Errorf("reactivate workspace member: %w", f.restoreErr)
+	}
+	list := f.memberships[workspaceID]
+	if i := slices.IndexFunc(list, func(m domain.Membership) bool { return m.MemberID == userID }); i >= 0 {
+		list[i].IsActive = true
+		return nil
+	}
+	return fmt.Errorf("reactivate workspace member %s of %s: no such row", userID, workspaceID)
+}

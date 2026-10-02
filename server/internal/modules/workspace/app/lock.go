@@ -31,6 +31,37 @@ func lockAndDecide(ctx context.Context, lock func(ctx context.Context, slug stri
 	return id, grant, nil
 }
 
+// lockedMember reads the membership id, locks its workspace FOR NO KEY
+// UPDATE, and reads it again under the lock, which must still be of the
+// workspace locked (M3 design 3.6 convention 2): a membership or workspace
+// deleted meanwhile, or a membership no longer of that workspace, is
+// domain.ErrMemberNotFound.
+func lockedMember(ctx context.Context, members MemberLocker, id uuid.UUID) (domain.Membership, error) {
+	m, err := members.MemberByID(ctx, id)
+	if err != nil {
+		return domain.Membership{}, memberNotFound(err)
+	}
+	if err := members.LockWorkspace(ctx, m.WorkspaceID); err != nil {
+		return domain.Membership{}, memberNotFound(err)
+	}
+	locked, err := members.MemberByID(ctx, id)
+	if err != nil {
+		return domain.Membership{}, memberNotFound(err)
+	}
+	if locked.WorkspaceID != m.WorkspaceID {
+		return domain.Membership{}, domain.ErrMemberNotFound
+	}
+	return locked, nil
+}
+
+// memberNotFound turns ErrNotFound into domain.ErrMemberNotFound.
+func memberNotFound(err error) error {
+	if errors.Is(err, ErrNotFound) {
+		return domain.ErrMemberNotFound
+	}
+	return err
+}
+
 // decide asks the Authorizer for action on the workspace for actor. A write
 // calls it under the workspace's lock, so the role it reads is the one
 // committed after the lock was granted (M3 design 6.7): a demotion or a

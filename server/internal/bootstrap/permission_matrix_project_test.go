@@ -55,7 +55,7 @@ func projectMatrixRows() []matrixRow {
 		{op: "createProject", variant: "a lead who is no member", write: true,
 			request: toWorkspace(http.MethodPost, "/projects", `{"name":"New","identifier":"NEW","project_lead_id":"`+uuid.Nil().String()+`"}`),
 			cells:   inWorkspace(cellValidationFailed, cellValidationFailed, cellForbidden)},
-		// The removed member, whose membership of acme the stand-in ended, is
+		// The removed member, whose membership of acme the removal ended, is
 		// refused as a lead as one who never had any.
 		{op: "createProject", variant: "a lead whose membership ended", write: true,
 			request: func(c caller, s seeded) (string, string, string) {

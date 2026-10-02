@@ -45,10 +45,10 @@ func createdLog(workspace uuid.UUID, admin app.AccountState, by string) string {
 	return `level=INFO msg="workspace created" workspace_id=` + workspace.String() + " user_id=" + admin.ID.String() + " by=" + by + "\n"
 }
 
-// logged is the log without each line's time.
-func logged(f *createFixture) string {
+// logged is a use case's log without each line's time.
+func logged(logs *strings.Builder) string {
 	var out strings.Builder
-	for line := range strings.Lines(f.logs.String()) {
+	for line := range strings.Lines(logs.String()) {
 		_, rest, _ := strings.Cut(line, " ")
 		out.WriteString(rest)
 	}
@@ -90,7 +90,7 @@ func TestExecuteCreatesTheWorkspaceWithTheCallerAsAdmin(t *testing.T) {
 		if m := f.workspaces.members; len(m) != 1 || m[0].ID == uuid.Nil() || m[0].ID == got.ID {
 			t.Errorf("%s: members = %+v, want one with its own id", user.Email, m)
 		}
-		if line, want := logged(f), createdLog(got.ID, user, "api"); line != want {
+		if line, want := logged(f.logs), createdLog(got.ID, user, "api"); line != want {
 			t.Errorf("%s: log = %q, want %q", user.Email, line, want)
 		}
 	}
@@ -237,7 +237,7 @@ func TestExecuteForAdminCreatesForTheAccountOfTheAddress(t *testing.T) {
 		if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 {
 			t.Errorf("enabled %v: calls = %q in %d transactions, want %q in one", enabled, f.log.calls, f.tx.calls, want)
 		}
-		if line, want := logged(f), createdLog(got.ID, bob, "cli"); line != want {
+		if line, want := logged(f.logs), createdLog(got.ID, bob, "cli"); line != want {
 			t.Errorf("enabled %v: log = %q, want %q", enabled, line, want)
 		}
 	}

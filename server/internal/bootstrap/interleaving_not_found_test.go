@@ -93,7 +93,7 @@ func (w webWrite) race(t *testing.T) growthRace {
 }
 
 // send sends w as bob on r's Web through route.
-func (w webWrite) send(route projectRoute, r growthRace) (*http.Request, *httptest.ResponseRecorder) {
+func (w webWrite) send(route moduleRoute, r growthRace) (*http.Request, *httptest.ResponseRecorder) {
 	return route.send(w.method, fmt.Sprintf(w.path, r.web), r.bob, w.body)
 }
 

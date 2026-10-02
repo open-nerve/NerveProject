@@ -69,10 +69,68 @@ func TestWorkspacesCreateCommand(t *testing.T) {
 	}
 }
 
+// `nerve workspaces reactivate-member` makes an ended membership active
+// again, its role kept, and prints one line; a refused one exits 1 with
+// that one line alone on stderr and nothing on stdout (M3 design 3.11).
+// That a refusal changes nothing is bootstrap's
+// TestWorkspacesReactivateMemberErrors.
+func TestWorkspacesReactivateMemberCommand(t *testing.T) {
+	environ, pool := usersDatabase(t)
+	for _, email := range []string{"nia@corp.com", "lee@corp.com"} {
+		if code, _, stderr := executeWithInput(context.Background(), environ, "Tr0ub4dor&3\n", "users", "create", "--email", email); code != 0 {
+			t.Fatalf("create the account of %s = %d: %s", email, code, stderr)
+		}
+	}
+	if code, _, stderr := execute(context.Background(), environ,
+		"workspaces", "create", "--slug", "acme", "--name", "Acme", "--admin-email", "nia@corp.com"); code != 0 {
+		t.Fatalf("create acme = %d: %s", code, stderr)
+	}
+	// lee's ended membership: a fixture, which the store test and the
+	// bootstrap test make as a removal does.
+	if _, err := pool.Exec(context.Background(), `INSERT INTO workspace_members (id, workspace_id, member_id, role, is_active)
+		SELECT gen_random_uuid(), w.id, u.id, 15, false FROM workspaces w, users u WHERE w.slug = 'acme' AND u.email = 'lee@corp.com'`); err != nil {
+		t.Fatal(err)
+	}
+
+	code, stdout, stderr := execute(context.Background(), environ, "workspaces", "reactivate-member", "--slug", "acme", "--email", "LEE@corp.com")
+
+	if want := "reactivated lee@corp.com in acme as member; project memberships still ended: 0, each restored when the member joins or is " +
+		"added to its project\n"; code != 0 || stdout != want {
+		t.Fatalf("nerve workspaces reactivate-member = %d %q (stderr %q), want 0 and %q", code, stdout, stderr, want)
+	}
+	var active bool
+	var role int
+	if err := pool.QueryRow(context.Background(), `SELECT m.is_active, m.role FROM workspace_members m JOIN users u ON u.id = m.member_id
+		WHERE u.email = 'lee@corp.com'`).Scan(&active, &role); err != nil || !active || role != 15 {
+		t.Errorf("lee's membership: active %v, role %d (%v); want active, a member's still (15)", active, role, err)
+	}
+
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"an unknown account", []string{"workspaces", "reactivate-member", "--slug", "acme", "--email", "may@corp.com"},
+			"nerve: No account has this e-mail address.\n"},
+		{"an unknown workspace", []string{"workspaces", "reactivate-member", "--slug", "beta", "--email", "lee@corp.com"},
+			"nerve: No workspace has this slug.\n"},
+		{"no email", []string{"workspaces", "reactivate-member", "--slug", "acme"}, "nerve: required flag(s) \"email\" not set\n"},
+		{"no slug and no email", []string{"workspaces", "reactivate-member"}, "nerve: required flag(s) \"email\", \"slug\" not set\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, stdout, stderr := execute(context.Background(), environ, tt.args...)
+			if code != 1 || stdout != "" || stderr != tt.want {
+				t.Errorf("nerve %s = %d, stdout %q, stderr %q; want 1 and %q", strings.Join(tt.args, " "), code, stdout, stderr, tt.want)
+			}
+		})
+	}
+}
+
 func TestBareWorkspacesPrintsHelp(t *testing.T) {
 	code, stdout, stderr := execute(context.Background(), nil, "workspaces")
 
-	if code != 0 || !strings.Contains(stdout, "create") || stderr != "" {
+	if code != 0 || !strings.Contains(stdout, "create") || !strings.Contains(stdout, "reactivate-member") || stderr != "" {
 		t.Errorf("nerve workspaces = %d, stdout %q, stderr %q; want 0 and the help", code, stdout, stderr)
 	}
 }

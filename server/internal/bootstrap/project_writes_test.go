@@ -80,8 +80,8 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 				"WHERE project_id = $1 AND member_id <> $2 UNION ALL SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND " +
 				"updated_at = created_at FROM project_user_properties WHERE project_id = $1 AND user_id <> $2", 0, 2},
 		// Carol's ended membership, made and last written by bob an hour
-		// before (P5's removal ends one; SQL stands in), restored, and her
-		// display settings made: two rows.
+		// before (P5b's removal of a project member ends one; SQL stands
+		// in), restored, and her display settings made: two rows.
 		{"addProjectMembers, a membership restored", http.MethodPost, "/api/v0/projects/" + web.String() + "/members",
 			`{"members":[{"member_id":"` + carol + `","role":15}]}`, http.StatusCreated,
 			"INSERT INTO project_members (id, workspace_id, project_id, member_id, role, is_active, created_by_id, updated_by_id, created_at, " +
@@ -186,11 +186,11 @@ func inWorkspaceOf(t *testing.T, pool *pgxpool.Pool, project, user, by uuid.UUID
 
 // A project's lead and default assignee are active members of it who are
 // not its guests (M3 design 3.19), on the wired app. Of alice's Web, carol,
-// whom she adds as a guest, bob, whose membership ended (P5's removal ends
-// one; SQL stands in), and dave, acme's member and none of Web's, are each
-// refused as lead and as default assignee: 422 naming the field
-// not_allowed, and the project as it was. erin, its member, is taken as
-// both.
+// whom she adds as a guest, bob, whose membership ended (P5b's removal of a
+// project member ends one; SQL stands in), and dave, acme's member and none
+// of Web's, are each refused as lead and as default assignee: 422 naming
+// the field not_allowed, and the project as it was. erin, its member, is
+// taken as both.
 func TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)

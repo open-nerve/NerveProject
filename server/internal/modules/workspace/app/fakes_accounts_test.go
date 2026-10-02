@@ -36,10 +36,12 @@ func (f *fakeAccounts) ShareAccountByEmail(ctx context.Context, email string) (a
 }
 
 // fakeProfiles answers the profiles it holds of the ids asked for, in the
-// order it holds them, and logs each call with its ids.
+// order it holds them, and logs each call with its ids. With slipped set,
+// it answers those whatever the ids, as a store that slipped would.
 type fakeProfiles struct {
 	log      *callLog
 	profiles []app.PublicProfile
+	slipped  []app.PublicProfile
 	err      error
 }
 
@@ -47,6 +49,9 @@ func (f *fakeProfiles) PublicProfiles(ctx context.Context, ids []uuid.UUID) ([]a
 	f.log.add(ctx, "PublicProfiles %v", ids)
 	if f.err != nil {
 		return nil, fmt.Errorf("read public profiles: %w", f.err)
+	}
+	if f.slipped != nil {
+		return f.slipped, nil
 	}
 	var out []app.PublicProfile
 	for _, p := range f.profiles {

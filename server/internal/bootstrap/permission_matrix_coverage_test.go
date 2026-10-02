@@ -12,9 +12,20 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
+// projectTables are the tables of the project level (M3 design 9.2), each
+// whole: a row that names a project names one of them.
+var projectTables = [][]caller{projectColumns, archivedColumns}
+
+// workspaceLevelTables are the tables of the workspace level besides its
+// own columns (nil), each whole: the only admin's. A row of one is no write
+// on a project (writesOnAProject).
+var workspaceLevelTables = [][]caller{soleAdminColumns}
+
 // matrixTables are the columns a row may name besides the workspace level's
-// (nil): each table of M3 design 9.2, whole.
-var matrixTables = [][]caller{projectColumns, archivedColumns}
+// (nil): each table of the project level, then each other table of the
+// workspace level. A new table goes into one of the two lists, never into
+// this one alone (TestEachMatrixTableIsOfOneLevel).
+var matrixTables = slices.Concat(projectTables, workspaceLevelTables)
 
 // matrixViolations reports where the matrix and the contract part: an
 // operation without a row, unless every tag it has is on exempt.modules, so
@@ -194,7 +205,8 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	paged := matrixRow{op: "listWorkspaces", request: sameRequest(http.MethodGet, "/api/v0/workspaces?page=2", ""), cells: every(cellOK)}
 	membership := apitest.Operation{ID: "updateWorkspaceMember", Tags: []string{"workspace"}, Method: http.MethodPatch,
 		Path: "/api/v0/workspace-members/{workspace_member_id}"}
-	demotes := matrixRow{op: "updateWorkspaceMember", write: true, request: toMembership(anotherMember, `{"role":5}`), cells: every(cellOK)}
+	demotes := matrixRow{op: "updateWorkspaceMember", write: true, request: toMembership(http.MethodPatch, anotherMember, `{"role":5}`),
+		cells: every(cellOK)}
 	invitation := apitest.Operation{ID: "updateWorkspaceInvitation", Tags: []string{"workspace"}, Method: http.MethodPatch,
 		Path: "/api/v0/workspace-invitations/{invitation_id}"}
 	// promotes is a row of invitation; deletedPromotes, one whose deleted
@@ -218,7 +230,7 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	// membership of who in slug.
 	deletedNames := func(slug string, who caller) matrixRow {
 		r := demotes
-		r.request = toMembership(func(c caller) (string, caller) {
+		r.request = toMembership(http.MethodPatch, func(c caller) (string, caller) {
 			if c == callerDeleted {
 				return slug, who
 			}

@@ -1,6 +1,7 @@
 import { createProject, createWorkspace, invite, inviteAndAccept, slugFor, type Workspace } from "../../fixtures/api";
 import { expectProjectCreated, expectProjectDeleted } from "../../fixtures/assert/project";
 import {
+  deletedAloneTables,
   expectInvitations,
   expectMembership,
   expectPreferences,
@@ -163,7 +164,7 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
 
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
   expect(deleted.response.status).toBe(204);
-  await expectWorkspaceDeleted(db, slug, adminEmail);
+  await expectWorkspaceDeleted(db, slug, adminEmail, deletedAloneTables);
   // Old and every row under it keep its deletion: its moment and its author, the admin.
   await expectProjectDeleted(db, old.id, adminEmail);
   // The invitations accepted before keep the moment they were answered; the declined one goes with the pending

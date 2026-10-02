@@ -30,3 +30,28 @@ func (f *fakeProjects) DemoteToGuest(ctx context.Context, workspaceID, userID, b
 	}
 	return nil
 }
+
+func (f *fakeProjects) EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "EndMemberships %v %s by %s at %s", workspaceIDs, userID, by, now.Format(time.RFC3339Nano))
+	if err := f.errs["EndMemberships"]; err != nil {
+		return fmt.Errorf("end the member's project memberships: %w", err)
+	}
+	return nil
+}
+
+// fakeCounts is the project module's ProjectMembershipCounts: it logs each
+// call and answers the count it holds, or fails with its error, wrapped as
+// the module wraps it.
+type fakeCounts struct {
+	log *callLog
+	n   int
+	err error
+}
+
+func (f *fakeCounts) CountInactive(ctx context.Context, workspaceID, userID uuid.UUID) (int, error) {
+	f.log.add(ctx, "CountInactive %s %s", workspaceID, userID)
+	if f.err != nil {
+		return 0, fmt.Errorf("count the ended project memberships: %w", f.err)
+	}
+	return f.n, nil
+}

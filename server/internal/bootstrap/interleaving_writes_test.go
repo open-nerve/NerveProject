@@ -117,10 +117,12 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 						r.web), "acme FOR SHARE, Web "+w.lock; got != want {
 						t.Errorf("the write at its gate holds %s; want %s", got, want)
 					}
-					demoted = run(func() error { return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store)) })
+					demoted = run(func() error {
+						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, store, store))
+					})
 				} else {
 					demoted = run(func() error {
-						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, gatedDemoter{store, g}))
+						return r.demote(ctx, workspacepg.New(r.pool), projectapp.NewCascade(store, gatedDemoter{store, g}, store))
 					})
 					held(t, ctx, g, demoted, "the demotion")
 					wrote = run(write)
@@ -151,7 +153,7 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 }
 
 // bobAdministersWeb is a growthRace in which bob, acme's member, has joined
-// Web and is its admin (SQL stands in for P5's role change), and Ops is
+// Web and is its admin (SQL stands in for P5b's role change), and Ops is
 // another project of acme, of which alice is the admin.
 func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 	t.Helper()

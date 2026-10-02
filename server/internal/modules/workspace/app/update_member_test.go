@@ -88,8 +88,9 @@ func TestUpdateWorkspaceMemberShowsTheAddressByTheCallersRole(t *testing.T) {
 // another workspace when read again under the lock (M3 design 3.6
 // convention 2), though the caller is that one's admin too; a member's
 // forbidden comes before any check of the target, so he learns nothing
-// about it; then an ended membership is workspace.member_not_found and the
-// caller's own workspace.own_membership; a failure is never a 404.
+// about it; then an ended membership is workspace.member_not_found, also
+// when it is the caller's own, and the caller's own active one
+// workspace.own_membership; a failure is never a 404.
 func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	forbidBob := func(f *membersFixture) { f.auth.errs = map[grantKey]error{{bob.ID, acme.ID}: shared.Forbidden()} }
@@ -136,6 +137,9 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 			},
 			domain.ErrMemberNotFound, decided},
 		{"his own", alice, aliceInAcme.ID, shared.RoleMember, nil, domain.ErrOwnMembership, lockedMemberCalls(alice, aliceInAcme)},
+		{"his own, ended", alice, aliceInAcme.ID, shared.RoleMember,
+			func(f *membersFixture) { f.workspaces.memberships[acme.ID][0].IsActive = false }, domain.ErrMemberNotFound,
+			lockedMemberCalls(alice, aliceInAcme)},
 		{"the read failed", alice, bobInAcme.ID, shared.RoleGuest, func(f *membersFixture) { f.workspaces.membersErr = failure }, failure,
 			[]string{"MemberByID " + bobInAcme.ID.String()}},
 		{"the lock failed", alice, bobInAcme.ID, shared.RoleGuest, func(f *membersFixture) { f.workspaces.lockErrs = map[string]error{"acme": failure} },
@@ -154,9 +158,7 @@ func TestUpdateWorkspaceMemberRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) || got != (domain.Member{}) {
 			t.Errorf("%s: Execute() = %+v, %v; want no member and %v", tt.name, got, err, tt.want)
 		}
-		if tt.want == failure && errors.Is(err, domain.ErrMemberNotFound) {
-			t.Errorf("%s: Execute() = %v, which is also workspace.member_not_found", tt.name, err)
-		}
+		answeredAs(t, tt.name, err, tt.want)
 		wantTx := 1
 		if tt.calls == nil {
 			wantTx = 0

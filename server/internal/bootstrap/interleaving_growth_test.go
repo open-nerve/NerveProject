@@ -46,8 +46,8 @@ import (
 
 // growthRace is a database with acme, whose admin is alice and whose
 // member is bob, and alice's public project Web, of which bob has an ended
-// membership as a member when ended is set: P5's removal ends one, and SQL
-// stands in for it.
+// membership as a member when ended is set: P5b's removal of a project
+// member ends one, and SQL stands in for it.
 type growthRace struct {
 	race
 	bob, bobIn, web uuid.UUID
@@ -166,12 +166,14 @@ func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdat
 	return err
 }
 
-// standing is bob's role in acme, then his membership of Web: its role,
-// "ended" when it is, "deleted" when Web is; "none" when he has none.
+// standing is bob's role in acme, "ended" when his membership is, then his
+// membership of Web: its role, "ended" when it is, "deleted" when Web is;
+// "none" when he has none.
 func (r growthRace) standing(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT role::text FROM workspace_members WHERE id = $1) || ', Web ' ||
+	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END
+		FROM workspace_members WHERE id = $1) || ', Web ' ||
 		coalesce((SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END || CASE WHEN deleted_at IS NULL THEN '' ELSE ' deleted' END
 		          FROM project_members WHERE project_id = $2 AND member_id = $3), 'none')`, r.bobIn, r.web, r.bob).Scan(&s); err != nil {
 		t.Fatal(err)
@@ -181,9 +183,10 @@ func (r growthRace) standing(t *testing.T) string {
 
 // webFree reports whether no transaction holds Web's row: a FOR UPDATE
 // NOWAIT of it answers lock_not_available (55P03) at once while one does.
+// Its wait for a connection of the pool ends soon.
 func (r growthRace) webFree(t *testing.T) bool {
 	t.Helper()
-	_, err := r.pool.Exec(context.Background(), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
+	_, err := r.pool.Exec(soon(t), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
 		return false
@@ -366,11 +369,11 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g, store := newGate(), projectpg.New(r.pool)
-			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store)
+			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store, store)
 			if deletionFirst {
 				auth = gatedAuthorizer{Authorizer: auth, action: projectdomain.ActionDelete, gate: g}
 			} else {
-				cascade = projectapp.NewCascade(store, gatedDemoter{store, g})
+				cascade = projectapp.NewCascade(store, gatedDemoter{store, g}, store)
 			}
 			route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool).WorkspaceMembers)
 			var req *http.Request

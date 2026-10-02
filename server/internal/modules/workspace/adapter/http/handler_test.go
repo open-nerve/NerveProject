@@ -65,8 +65,10 @@ type fakes struct {
 	get    *fakeGet
 	update *fakeUpdate
 	del    *fakeDelete
+	leave  *fakeLeave
 	member *fakeMembers
 	role   *fakeUpdateMember
+	remove *fakeRemoveMember
 	check  *fakeCheck
 	prefs  *fakePrefs
 	// invitations are the invitations' use cases (invitations_test.go).
@@ -134,6 +136,16 @@ func (f *fakeDelete) Execute(ctx context.Context, slug string) error {
 	return f.err
 }
 
+type fakeLeave struct {
+	calls []string // "caller slug"
+	err   error
+}
+
+func (f *fakeLeave) Execute(ctx context.Context, slug string) error {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	return f.err
+}
+
 type fakeMembers struct {
 	calls []string // "caller slug"
 	lists map[string][]domain.Member
@@ -154,6 +166,16 @@ type fakeUpdateMember struct {
 func (f *fakeUpdateMember) Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error) {
 	f.calls = append(f.calls, fmt.Sprintf("%s %s %d", caller(ctx), id, role))
 	return f.answer, f.err
+}
+
+type fakeRemoveMember struct {
+	calls []string // "caller id"
+	err   error
+}
+
+func (f *fakeRemoveMember) Execute(ctx context.Context, id uuid.UUID) error {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	return f.err
 }
 
 // fakePrefs is both preference use cases: each call is recorded as
@@ -225,11 +247,17 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.del == nil {
 		f.del = &fakeDelete{}
 	}
+	if f.leave == nil {
+		f.leave = &fakeLeave{}
+	}
 	if f.member == nil {
 		f.member = &fakeMembers{}
 	}
 	if f.role == nil {
 		f.role = &fakeUpdateMember{}
+	}
+	if f.remove == nil {
+		f.remove = &fakeRemoveMember{}
 	}
 	if f.check == nil {
 		f.check = &fakeCheck{}
@@ -241,9 +269,11 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		f.invitations = &fakeInvitations{}
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
-		ListMembers: f.member, UpdateMember: f.role, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
-		ListInvitations: fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
+		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, Leave: f.leave,
+		CheckSlug:   f.check,
+		ListMembers: f.member, UpdateMember: f.role, RemoveMember: f.remove, GetPreferences: fakeGetPrefs{f.prefs},
+		UpdatePreferences: fakeUpdatePrefs{f.prefs},
+		ListInvitations:   fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
 		GetInvitation: fakeGetInvitation{f.invitations}, UpdateInvitation: fakeUpdateInvitation{f.invitations},
 		DeleteInvitation: fakeDeleteInvitation{f.invitations}, AcceptInvitation: fakeAcceptInvitation{f.invitations},
 		DeclineInvitation: fakeDeclineInvitation{f.invitations},

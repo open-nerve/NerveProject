@@ -45,6 +45,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "workspace.slug_taken": "auth.errors.workspace_slug_taken",
   "workspace.member_not_found": "auth.errors.workspace_member_not_found",
   "workspace.own_membership": "auth.errors.workspace_own_membership",
+  "workspace.sole_admin": "auth.errors.workspace_sole_admin",
   "workspace.invitation_not_found": "auth.errors.workspace_invitation_not_found",
   "workspace.invitation_responded": "auth.errors.workspace_invitation_responded",
   "workspace.invitation_email_mismatch": "auth.errors.workspace_invitation_email_mismatch",
@@ -52,6 +53,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.name_taken": "auth.errors.project_name_taken",
   "project.not_found": "auth.errors.project_not_found",
   "project.archived": "auth.errors.project_archived",
+  "project.sole_admin": "auth.errors.project_sole_admin",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

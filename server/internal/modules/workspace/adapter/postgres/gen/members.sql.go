@@ -80,6 +80,56 @@ func (q *Queries) DeleteWorkspaceMembers(ctx context.Context, arg DeleteWorkspac
 	return err
 }
 
+const endMember = `-- name: EndMember :execrows
+UPDATE workspace_members
+SET is_active = false, updated_at = $1, updated_by_id = $2::uuid
+WHERE workspace_id = $3 AND member_id = $4 AND deleted_at IS NULL AND is_active
+`
+
+type EndMemberParams struct {
+	Now         time.Time
+	EndedBy     uuid.UUID
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's active
+// membership of the workspace ends, the row stays (4.3). The partial unique index holds at most one undeleted row per
+// pair, so a deleted one, which keeps its columns, is the only other row the pair can name. An ended one is not ended
+// again: its ender and moment stay.
+func (q *Queries) EndMember(ctx context.Context, arg EndMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, endMember,
+		arg.Now,
+		arg.EndedBy,
+		arg.WorkspaceID,
+		arg.MemberID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const hasOtherAdmin = `-- name: HasOtherAdmin :one
+SELECT EXISTS (SELECT 1 FROM workspace_members
+               WHERE workspace_id = $1 AND member_id <> $2 AND role = 20 AND is_active
+                 AND deleted_at IS NULL)
+`
+
+type HasOtherAdminParams struct {
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// leaveWorkspace, under the workspace's FOR NO KEY UPDATE, which every change of an admin's membership takes too: whether
+// an active admin of the workspace other than the user is left (M3 design 3.7 rule 1).
+func (q *Queries) HasOtherAdmin(ctx context.Context, arg HasOtherAdminParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasOtherAdmin, arg.WorkspaceID, arg.MemberID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listMembers = `-- name: ListMembers :many
 SELECT id, workspace_id, member_id, role, is_active, created_at
 FROM workspace_members
@@ -174,8 +224,8 @@ type MemberOfRow struct {
 	CreatedAt   time.Time
 }
 
-// acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: the user's undeleted membership, active or
-// ended; the partial unique index holds at most one.
+// acceptWorkspaceInvitation and reactivate-member, under the workspace's FOR NO KEY UPDATE: the user's undeleted
+// membership, active or ended; the partial unique index holds at most one.
 func (q *Queries) MemberOf(ctx context.Context, arg MemberOfParams) (MemberOfRow, error) {
 	row := q.db.QueryRow(ctx, memberOf, arg.WorkspaceID, arg.MemberID)
 	var i MemberOfRow
@@ -188,6 +238,30 @@ func (q *Queries) MemberOf(ctx context.Context, arg MemberOfParams) (MemberOfRow
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const reactivateMember = `-- name: ReactivateMember :execrows
+UPDATE workspace_members
+SET is_active = true, updated_at = $1
+WHERE workspace_id = $2 AND member_id = $3 AND deleted_at IS NULL
+  AND NOT is_active
+`
+
+type ReactivateMemberParams struct {
+	Now         time.Time
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// reactivate-member, under the workspace's FOR NO KEY UPDATE (M3 design 3.11): the user's ended membership active
+// again, its role kept. As Plane's command, it writes is_active and updated_at alone: no account of the instance asks
+// for it, so updated_by_id stays whose it was. An active one is not written.
+func (q *Queries) ReactivateMember(ctx context.Context, arg ReactivateMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, reactivateMember, arg.Now, arg.WorkspaceID, arg.MemberID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const restoreMember = `-- name: RestoreMember :exec
