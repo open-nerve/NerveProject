@@ -27,11 +27,20 @@ func sessionApp(t *testing.T) (string, *pgxpool.Pool) {
 	return base, openPool(t, url)
 }
 
-// openPool opens a pool on the database at url, for the assertions, and
-// closes it when the test ends.
+// openPool opens a pool of up to 8 connections on the database at url, for
+// the assertions, and closes it when the test ends. Its size is set, not
+// pgxpool's default, the greater of 4 and the machine's CPUs: a test that
+// holds transactions open and probes beside them, as
+// TestEachLockOfAnEndingIsItsStrength holds four and probes with a fifth,
+// has the same room on a runner of 4 CPUs or fewer as on a workstation.
 func openPool(t *testing.T, url string) *pgxpool.Pool {
 	t.Helper()
-	pool, err := pgxpool.New(context.Background(), url)
+	cfg, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.MaxConns = 8
+	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
