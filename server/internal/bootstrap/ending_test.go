@@ -369,13 +369,32 @@ func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
 
 // A workspace's only active admin cannot leave it (M3 design 3.7 rule 1,
 // 9.3): alice is refused 409 workspace.sole_admin in solo, where she is
-// alone, and in acme, beside its members, and no row of any table changes;
-// once carol is acme's admin too, alice leaves it.
+// alone, and in acme, beside its members and dave, an admin of it whose
+// membership alice's removal ended, and no row of any table changes; once
+// carol is acme's admin too, alice leaves it.
 func TestTheOnlyAdminCannotLeave(t *testing.T) {
 	w := newEndingWorld(t)
 	if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces", w.tokens["alice"],
 		`{"name":"solo","slug":"solo"}`); status != http.StatusCreated {
 		t.Fatalf("creating solo = %d %s", status, body)
+	}
+	for _, step := range []struct {
+		method, body string
+		want         int
+	}{{http.MethodPatch, `{"role":20}`, http.StatusOK}, {http.MethodDelete, "", http.StatusNoContent}} {
+		if status, body := call(t, w.contract, step.method, w.base+"/api/v0/workspace-members/"+w.membership(t, "dave").String(),
+			w.tokens["alice"], step.body); status != step.want {
+			t.Fatalf("alice's %s of dave's membership of acme = %d %s, want %d", step.method, status, body, step.want)
+		}
+	}
+	// dave is an admin of acme whose membership ended: were he missing, a
+	// rule 1 that counted an ended admin as another would pass.
+	var role int
+	var active bool
+	if err := w.pool.QueryRow(context.Background(), `SELECT m.role, m.is_active FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+		WHERE w.slug = 'acme' AND m.member_id = $1 AND m.deleted_at IS NULL`, w.ids["dave"]).Scan(&role, &active); err != nil ||
+		role != int(shared.RoleAdmin) || active {
+		t.Fatalf("dave's membership of acme: role %d, active %v, %v; want an admin's, ended", role, active, err)
 	}
 	before := tableRows(t, w.pool, riversOwn)
 	for _, slug := range []string{"solo", "acme"} {
