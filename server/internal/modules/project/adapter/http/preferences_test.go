@@ -13,8 +13,8 @@ import (
 )
 
 // fakePreferences is both use cases of the display settings: each call is
-// recorded as "caller id", a change with what it got; both answer answer,
-// or err.
+// recorded as "get <caller> <project>" or "update <caller> <project>", a
+// change with what it got too; both answer answer, or err.
 type fakePreferences struct {
 	calls  []string
 	got    []domain.PreferencesPatch
@@ -43,15 +43,17 @@ var (
 
 // GET goes to the reading use case for the caller and the path's project;
 // the answer is 200 with the settings it answers, an empty hidden list as
-// [] too.
+// [] too, a nil one as well.
 func TestGetProjectPreferences(t *testing.T) {
 	path := "/api/v0/me/projects/" + webID.String() + "/preferences"
+	defaults := `{"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":65535}`
 	for _, tt := range []struct {
 		answer domain.Preferences
 		want   string
 	}{
 		{bobsTabs, tabsJSON},
-		{domain.DefaultPreferences(), `{"navigation":{"default_tab":"work_items","hide_in_more_menu":[]},"sort_order":65535}`},
+		{domain.DefaultPreferences(), defaults},
+		{domain.Preferences{Navigation: domain.Navigation{DefaultTab: "work_items"}, SortOrder: 65535}, defaults},
 	} {
 		prefs := &fakePreferences{answer: tt.answer}
 		h := newServer(t, fakes{prefs: prefs})
@@ -90,7 +92,7 @@ func TestUpdateProjectPreferencesPassesTheChange(t *testing.T) {
 	if !reflect.DeepEqual(prefs.got, want) {
 		t.Errorf("inputs = %+v, want %+v", prefs.got, want)
 	}
-	if len(prefs.calls) != 4 || prefs.calls[0] != "update alice "+webID.String() {
+	if u := "update alice " + webID.String(); !slices.Equal(prefs.calls, []string{u, u, u, u}) {
 		t.Errorf("calls = %q, want four updates by alice of web", prefs.calls)
 	}
 }
