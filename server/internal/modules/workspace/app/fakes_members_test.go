@@ -71,3 +71,28 @@ func (f *fakeWorkspaces) UpdateMemberRole(ctx context.Context, id uuid.UUID, rol
 	}
 	return domain.Membership{}, fmt.Errorf("update workspace member %s: no such row", id)
 }
+
+// The ending's statements (app.MembershipEnder): each logs its call, fails
+// with the error set for it, and changes what the fake holds as the store
+// changes its rows.
+
+func (f *fakeWorkspaces) DeletePendingInvitations(ctx context.Context, workspaceID uuid.UUID, email string, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "DeletePendingInvitations %s %s by %s at %s", workspaceID, email, by, now.Format(time.RFC3339Nano))
+	if err := f.endErrs["DeletePendingInvitations"]; err != nil {
+		return fmt.Errorf("delete the pending invitations: %w", err)
+	}
+	return nil
+}
+
+func (f *fakeWorkspaces) EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "EndMember %s %s by %s at %s", workspaceID, userID, by, now.Format(time.RFC3339Nano))
+	if err := f.endErrs["EndMember"]; err != nil {
+		return fmt.Errorf("end workspace member: %w", err)
+	}
+	list := f.memberships[workspaceID]
+	if i := slices.IndexFunc(list, func(m domain.Membership) bool { return m.MemberID == userID }); i >= 0 {
+		list[i].IsActive = false
+		return nil
+	}
+	return fmt.Errorf("end workspace member %s of %s: no such row", userID, workspaceID)
+}

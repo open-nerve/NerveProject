@@ -18,8 +18,9 @@ import (
 // (P2 spec 2.6): a write
 // that queued behind another on the lock never stamps an earlier time than
 // the one it waited for. The deletion's cascade uses that one read for
-// every step, and a change to guest or a restoring as a guest for the
-// projects' step. The clock logs its read among the fakes' calls.
+// every step, a change to guest or a restoring as a guest for the
+// projects' step, and a removal for each step of the ending. The clock
+// logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
 	erinToAcme := invitationTo(erin, acme, shared.RoleGuest)
@@ -57,6 +58,12 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			fmt.Sprintf("UpdateMemberRole %s to %d by %s at %s", bobInAcme.ID, shared.RoleGuest, alice.ID, at),
 			fmt.Sprintf("DemoteToGuest %s %s by %s at %s", acme.ID, bob.ID, alice.ID, at),
 			fmt.Sprintf("PublicProfiles %v", []uuid.UUID{bob.ID}))},
+		{"removeWorkspaceMember", func() ([]string, error) {
+			f := newMembers()
+			err := app.NewRemoveWorkspaceMember(f.workspaces, f.profiles, f.projects, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).
+				Execute(as(alice), bobInAcme.ID)
+			return f.log.calls, err
+		}, slices.Concat(removalCalls(alice, bobInAcme), []string{"Now"}, endingCalls(acme.ID, bob, alice.ID))},
 		{"updateWorkspaceInvitation", func() ([]string, error) {
 			f := newInvitations()
 			_, err := app.NewUpdateWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}, f.mac).

@@ -30,3 +30,11 @@ func (f *fakeProjects) DemoteToGuest(ctx context.Context, workspaceID, userID, b
 	}
 	return nil
 }
+
+func (f *fakeProjects) EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "EndMemberships %v %s by %s at %s", workspaceIDs, userID, by, now.Format(time.RFC3339Nano))
+	if err := f.errs["EndMemberships"]; err != nil {
+		return fmt.Errorf("end the member's project memberships: %w", err)
+	}
+	return nil
+}
