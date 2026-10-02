@@ -180,9 +180,14 @@ func TestLeaveWorkspace(t *testing.T) {
 }
 
 // The use case's refusals, as the contract declares them: the project
-// module's project.sole_admin comes through as it is (M3 design 9.4).
+// module's project.sole_admin comes through as it is, a 409 of the
+// workspace's operation (M3 design 9.4); and its failure, a 500, never a
+// 204 or another problem.
 func TestLeaveWorkspaceRefusals(t *testing.T) {
-	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin", "The member is the only admin of a project.")
+	// The project module's ErrSoleAdmin, which this module does not import:
+	// its kind, code and detail.
+	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
+		"Ending the membership would leave a project that has other members without an admin; make another of its members an admin first.")
 	tests := []struct {
 		err    error
 		status int
@@ -193,7 +198,10 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 		{domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"workspace.sole_admin","title":"Conflict",` +
 			`"detail":"The workspace would be left without an admin; make another member an admin first."}`},
 		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
-			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The member is the only admin of a project."}`},
+			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"Ending the membership would leave a project that has ` +
+				`other members without an admin; make another of its members an admin first."}`},
+		{errors.New("the database is gone"), http.StatusInternalServerError,
+			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	}
 	for _, tt := range tests {
 		h := newServer(t, fakes{leave: &fakeLeave{err: tt.err}})

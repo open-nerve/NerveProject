@@ -70,7 +70,8 @@ func TestLeaveWorkspaceLocksDecidesThenEnds(t *testing.T) {
 // deleted while the lock waited, or of which the caller is not an active
 // member is workspace.not_found; acme's only active admin is
 // workspace.sole_admin, beside a member or alone (M3 design 3.7 rule 1),
-// asked after the decision; a failure is never a 404.
+// asked after the decision; a failure is never a 404, nor any other
+// problem. The clock logs its reads among the calls: no refusal reads it.
 func TestLeaveWorkspaceRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	tests := []struct {
@@ -98,7 +99,9 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 			append(leavingCalls(alice, acme), otherAdmin(alice, acme))},
 	}
 	for _, tt := range tests {
-		uc, f, tx := newLeave()
+		f := newMembers()
+		tx := &fakeTx{}
+		uc := app.NewLeaveWorkspace(f.workspaces, f.profiles, f.projects, f.auth, tx, clockAt{clockNow, f.log})
 		if tt.set != nil {
 			tt.set(f)
 		}
@@ -106,8 +109,14 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) {
 			t.Errorf("%s: Execute() = %v; want %v", tt.name, err, tt.want)
 		}
-		if tt.want == failure && errors.Is(err, domain.ErrNotFound) {
-			t.Errorf("%s: Execute() = %v, which is also workspace.not_found", tt.name, err)
+		// The problem the API answers is the first *shared.Error in the
+		// chain: the refusal wanted, or none for a failure (a 500).
+		var se *shared.Error
+		switch {
+		case tt.want == failure && errors.As(err, &se):
+			t.Errorf("%s: Execute() = %v, which is also %s", tt.name, err, se.Code)
+		case tt.want != failure && (!errors.As(err, &se) || !se.Is(tt.want)):
+			t.Errorf("%s: Execute() = %v, answered as another problem; want %v", tt.name, err, tt.want)
 		}
 		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != 1 {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in one", tt.name, f.log.calls, tx.calls, tt.calls)
@@ -119,12 +128,14 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 	}
 }
 
-// A failed read of the leaver's address, a member without an account, a
-// failed step of the ending, the projects' refusal of the only admin of a
-// project with other members, and a refused commit each fail the
-// transaction: the answer is the error as it came, project.sole_admin
-// itself (M3 design 3.7 rule 2); the calls are the leaving's own, each
-// once, up to the failing one: nothing runs after it.
+// A failed read of the leaver's address, a member without an account or
+// another account's profile answered for his (whose pending invitations
+// would go), a failed step of the ending, the projects' refusal of the only
+// admin of a project with other members, and a refused commit each fail
+// the transaction: the answer is the error as it came, and no other
+// problem, project.sole_admin itself (M3 design 3.7 rule 2); the calls are
+// the leaving's own, each once, up to the failing one: nothing runs after
+// it.
 func TestLeaveWorkspaceFailsWithinTheTransaction(t *testing.T) {
 	failure := errors.New("connection reset")
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin", "Ending the membership would leave a project without an admin.")
@@ -138,6 +149,8 @@ func TestLeaveWorkspaceFailsWithinTheTransaction(t *testing.T) {
 	}{
 		{"the address", func(f *membersFixture, _ *fakeTx) { f.profiles.err = failure }, failure, calls[:decided+1]},
 		{"a member without an account", func(f *membersFixture, _ *fakeTx) { f.profiles.profiles = profiles[:2] }, nil, calls[:decided+1]},
+		{"another account's profile for his", func(f *membersFixture, _ *fakeTx) { f.profiles.slipped = profiles[:1] }, nil,
+			calls[:decided+1]},
 		{"the invitations", func(f *membersFixture, _ *fakeTx) {
 			f.workspaces.endErrs = map[string]error{"DeletePendingInvitations": failure}
 		},
@@ -160,6 +173,11 @@ func TestLeaveWorkspaceFailsWithinTheTransaction(t *testing.T) {
 			t.Errorf("%s failing: Execute() = %v; want an error that is no *shared.Error", tt.name, err)
 		case tt.want != nil && !errors.Is(err, tt.want):
 			t.Errorf("%s failing: Execute() = %v, want %v", tt.name, err, tt.want)
+		}
+		// The problem the API answers is the first *shared.Error in the
+		// chain: the one injected, or none for a failure (a 500).
+		if tt.want != nil && errors.As(err, &se) && error(se) != tt.want {
+			t.Errorf("%s failing: Execute() = %v, answered as %s; want %v and no other problem", tt.name, err, se.Code, tt.want)
 		}
 		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != 1 {
 			t.Errorf("%s failing: calls\n%q\nin %d transactions; want\n%q\nin one", tt.name, f.log.calls, tx.calls, tt.calls)
