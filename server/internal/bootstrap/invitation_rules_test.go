@@ -63,6 +63,15 @@ func newAdminsWorld(t *testing.T) adminsWorld {
 		!strings.HasPrefix(out, "reactivated bob@example.com in acme as admin;") {
 		t.Fatalf("reactivate-member of bob = %q, %v", out, err)
 	}
+	// The invitation is a guest's, pending: were it an admin's, an
+	// acceptance that gave an active member the invitation's role would
+	// pass S2.
+	var role int
+	var pending bool
+	if err := w.pool.QueryRow(context.Background(), `SELECT role, responded_at IS NULL AND deleted_at IS NULL FROM workspace_member_invites
+		WHERE id = $1`, w.invitation.id).Scan(&role, &pending); err != nil || role != int(shared.RoleGuest) || !pending {
+		t.Fatalf("the invitation to bob: role %d, pending %v (%v); want a guest's, pending", role, pending, err)
+	}
 	return w
 }
 
@@ -125,6 +134,12 @@ func TestAnInvitationNeverChangesAnActiveMembership(t *testing.T) {
 	}
 	if got, want := w.bobs(t), "Web 20 true; acme 20 true"; got != want {
 		t.Fatalf("bob's memberships before his acceptance: %s, want %s", got, want)
+	}
+	var admins string
+	if err := w.pool.QueryRow(context.Background(), `SELECT string_agg(u.email, ', ' ORDER BY u.email) FROM workspace_members m
+		JOIN workspaces s ON s.id = m.workspace_id JOIN users u ON u.id = m.member_id WHERE s.slug = 'acme' AND m.role = 20 AND m.is_active`).
+		Scan(&admins); err != nil || admins != "bob@example.com" {
+		t.Fatalf("acme's active admins before bob's acceptance: %s (%v); want bob@example.com alone", admins, err)
 	}
 
 	status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspace-invitations/"+w.invitation.id.String()+"/accept",
