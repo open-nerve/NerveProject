@@ -35,15 +35,16 @@ func withBobLeadingWeb(t *testing.T, contract *apitest.Contract, base, alice, bo
 }
 
 // rolesOf are member's roles in each workspace and in its project, each
-// marked when ended, and whether his membership of acme's project was last
-// written by the account by when his membership of acme was.
+// marked when ended, and whether his memberships of acme and of acme's
+// project were both last written by the account by, at one moment.
 func rolesOf(t *testing.T, pool *pgxpool.Pool, member, by uuid.UUID) string {
 	t.Helper()
 	var roles string
 	if err := pool.QueryRow(context.Background(), `
 SELECT string_agg(w.slug || ' ' || wm.role || CASE WHEN wm.is_active THEN '' ELSE ' ended' END
                   || ', project ' || pm.role || CASE WHEN pm.is_active THEN '' ELSE ' ended' END, '; ' ORDER BY w.slug)
-       || ' | ' || bool_and(w.slug <> 'acme' OR (pm.updated_by_id = $2 AND pm.updated_at = wm.updated_at))
+       || ' | ' || bool_and(w.slug <> 'acme'
+                            OR (wm.updated_by_id = $2 AND pm.updated_by_id = $2 AND pm.updated_at = wm.updated_at))
 FROM workspace_members wm
 JOIN workspaces w ON w.id = wm.workspace_id
 JOIN project_members pm ON pm.workspace_id = wm.workspace_id AND pm.member_id = wm.member_id
@@ -221,22 +222,23 @@ func TestDemotingToGuestDemotesInTheWorkspacesProjects(t *testing.T) {
 // Accepting an invitation as a guest that restores an ended membership
 // makes its member a guest in the workspace's projects in the same
 // transaction (M3 design 3.8, 9.3), on the wired app: bob led acme's
-// project Web, so was its admin, beside alice, its creator, who has
-// removed him from acme, which ended his memberships of acme and of Web,
-// at one moment, by her. She invites him again, as a guest. While the
-// projects' step fails, his acceptance answers 500 and changes nothing,
-// the invitation still pending. So does an acceptance
-// refused at its commit, after every statement ran (its restoring updates
-// his membership of acme), which a step that wrote in a transaction of its
-// own would have outlived. Then he accepts while another transaction holds
-// his membership of acme FOR SHARE: as the restoring waits for that row,
-// no project is locked yet (M3 design 3.6's order). Once that row is free,
-// while another transaction holds his membership of Web: as the step's
-// write waits for that row, Web is held FOR NO KEY UPDATE, so a FOR SHARE
-// of it waits, which a lock taken outside the acceptance's transaction
-// would no longer be. Once that row is free too, he is acme's guest again
-// and a guest in Web, still ended there, by himself at the time of the
-// restoring, and the invitation is consumed.
+// project Web, so was its admin, beside alice, its creator. He is the last
+// writer of both his memberships, of acme and of Web (SQL makes him so),
+// and alice has removed him from acme, which ended both, at one moment, by
+// her. She invites him again, as a guest. While the projects' step fails,
+// his acceptance answers 500 and changes nothing, the invitation still
+// pending. So does an acceptance refused at its commit, after every
+// statement ran (its restoring updates his membership of acme), which a
+// step that wrote in a transaction of its own would have outlived. Then he
+// accepts while another transaction holds his membership of acme FOR
+// SHARE: as the restoring waits for that row, no project is locked yet (M3
+// design 3.6's order). Once that row is free, while another transaction
+// holds his membership of Web: as the step's write waits for that row, Web
+// is held FOR NO KEY UPDATE, so a FOR SHARE of it waits, which a lock taken
+// outside the acceptance's transaction would no longer be. Once that row
+// is free too, he is acme's guest again and a guest in Web, still ended
+// there, both his memberships by himself at the time of the restoring, and
+// the invitation is consumed.
 func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -246,6 +248,15 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
 	aliceID, bobID := accountID(t, contract, base, alice), accountID(t, contract, base, bob)
 	withBobLeadingWeb(t, contract, base, alice, bob, bobID, "acme")
+	// bob is made the last writer of both his memberships, so that "by
+	// alice" after her removal can fail for either: his acceptance wrote his
+	// membership of acme, but her creation of Web wrote his membership of it.
+	for _, table := range []string{"workspace_members", "project_members"} {
+		if tag, err := pool.Exec(context.Background(), "UPDATE "+table+" SET updated_by_id = $1 WHERE member_id = $1", bobID); err != nil ||
+			tag.RowsAffected() != 1 {
+			t.Fatalf("bob's row of %s last written by him: %v, %v", table, tag, err)
+		}
+	}
 	var membership uuid.UUID
 	if err := pool.QueryRow(context.Background(), "SELECT id FROM workspace_members WHERE member_id = $1", bobID).Scan(&membership); err != nil {
 		t.Fatal(err)
@@ -269,20 +280,16 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 		}
 		return pending
 	}
-	// alice's removal wrote both his rows, at one moment: his membership of
-	// Web last by her when his membership of acme was, so not by him.
-	if got, want := rolesOf(t, pool, bobID, aliceID), "acme 15 ended, project 20 ended | true"; got != want {
-		t.Fatalf("bob's roles before, by alice = %s, want %s", got, want)
-	}
-	before := rolesOf(t, pool, bobID, bobID)
-	if want := "acme 15 ended, project 20 ended | false"; before != want {
-		t.Fatalf("bob's roles before = %s, want %s", before, want)
+	// alice's removal wrote both his rows, at one moment, so neither is his.
+	before := rolesOf(t, pool, bobID, aliceID)
+	if want := "acme 15 ended, project 20 ended | true"; before != want {
+		t.Fatalf("bob's roles before, by alice = %s, want %s", before, want)
 	}
 
 	restore := failingDemotions(t, pool)
 	status, body := accept()
 	restore()
-	if got := rolesOf(t, pool, bobID, bobID); status != http.StatusInternalServerError || got != before || !pending() {
+	if got := rolesOf(t, pool, bobID, aliceID); status != http.StatusInternalServerError || got != before || !pending() {
 		t.Errorf("the acceptance with the projects' step failing = %d %s, roles %s; want 500, %s and the invitation pending", status, body, got,
 			before)
 	}
@@ -290,7 +297,7 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 	restore = refusingCommits(t, pool, "workspace_members")
 	status, body = accept()
 	restore()
-	if got := rolesOf(t, pool, bobID, bobID); status != http.StatusInternalServerError || got != before || !pending() {
+	if got := rolesOf(t, pool, bobID, aliceID); status != http.StatusInternalServerError || got != before || !pending() {
 		t.Errorf("the acceptance refused at its commit = %d %s, roles %s; want 500, %s and the invitation pending", status, body, got, before)
 	}
 

@@ -189,9 +189,8 @@ func inWorkspaceOf(t *testing.T, pool *pgxpool.Pool, project, user, by uuid.UUID
 // whom she adds as a guest, bob, whose membership ended (P5b's removal of a
 // project member ends one; SQL stands in), and dave, acme's member and none
 // of Web's, are each refused as lead and as default assignee: 422 naming
-// the field
-// not_allowed, and the project as it was. erin, its member, is taken as
-// both.
+// the field not_allowed, and the project as it was. erin, its member, is
+// taken as both.
 func TestTheLeadAndTheDefaultAssigneeAreActiveMembersWhoAreNoGuests(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)

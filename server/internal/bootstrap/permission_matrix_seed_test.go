@@ -25,7 +25,8 @@ import (
 
 // matrixSeed writes the prepared workspaces, memberships and settings
 // through the workspace store, and keeps the workspaces' ids by slug; exec
-// runs the SQL that stands in for the stores P5b adds.
+// runs the SQL that stands in for the stores P5b adds, and makes the
+// states no store makes alone (partingStates).
 type matrixSeed struct {
 	t          *testing.T
 	store      *workspacepg.Store

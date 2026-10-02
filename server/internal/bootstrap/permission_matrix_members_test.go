@@ -27,10 +27,9 @@ func memberMatrixRows() []matrixRow {
 		// and who may not his 403 or 404 as with a valid target, learning
 		// nothing of it. X's account is no member of acme; the removed
 		// member's memberships of acme and of the public project ended (the
-		// removal); WG-'s is its guest, asked for
-		// as a member, and WA-'s its admin, asked for as a member (M3 design
-		// 3.5: each joins with his own role alone); PM's is the project's
-		// active member.
+		// removal); WG-'s is its guest, asked for as a member, and WA-'s its
+		// admin, asked for as a member (M3 design 3.5: each joins with his
+		// own role alone); PM's is the project's active member.
 		{op: "addProjectMembers", variant: "a target who is no member of the workspace", write: true, columns: projectColumns,
 			request: addsToProject(callerNever, 15),
 			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
