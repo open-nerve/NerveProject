@@ -137,9 +137,11 @@ func TestEndingAMembersProjectMemberships(t *testing.T) {
 // 2): each case is a project of its own, asked about alone but where it
 // says, in one workspace where the other cases' projects have admins and
 // members, so that a check of another project's members or admins answers
-// otherwise. Plane's checks got this set wrong: the workspace membership's
-// id compared with a project member's account, the projects of one member
-// only, those where he is alone.
+// otherwise; where it says, beside a project asked about that has another
+// admin and other members, so that a check of the set asked about, not of
+// each of its projects, answers otherwise too. Plane's checks got this set
+// wrong: the workspace membership's id compared with a project member's
+// account, the projects of one member only, those where he is alone.
 func TestSoleAdmin(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
@@ -166,6 +168,7 @@ func TestSoleAdmin(t *testing.T) {
 	}
 	alone := project(false, member{bob, 20, true})
 	withAMember := project(false, member{bob, 20, true}, member{carol, 15, true})
+	twoAdmins := project(false, member{bob, 20, true}, member{alice, 20, true}, member{carol, 15, true})
 	tests := []struct {
 		name     string
 		projects []uuid.UUID
@@ -176,7 +179,7 @@ func TestSoleAdmin(t *testing.T) {
 		{"the only admin, alone", []uuid.UUID{alone}, false},
 		{"the only admin, the other's membership ended", []uuid.UUID{project(false, member{bob, 20, true}, member{carol, 15, false})}, false},
 		{"the only admin, the other's membership deleted", []uuid.UUID{project(true, member{bob, 20, true}, member{carol, 15, true})}, false},
-		{"one of two active admins", []uuid.UUID{project(false, member{bob, 20, true}, member{alice, 20, true}, member{carol, 15, true})}, false},
+		{"one of two active admins", []uuid.UUID{twoAdmins}, false},
 		{"the other admin's membership ended", []uuid.UUID{project(false, member{bob, 20, true}, member{alice, 20, false},
 			member{carol, 15, true})}, true},
 		{"the other admin's membership deleted", []uuid.UUID{project(true, member{bob, 20, true}, member{carol, 15, true},
@@ -189,6 +192,8 @@ func TestSoleAdmin(t *testing.T) {
 		{"a member of the project asked about, the only admin of another", []uuid.UUID{project(false, member{bob, 15, true},
 			member{alice, 20, true})}, false},
 		{"the only admin of one of two asked about", []uuid.UUID{alone, withAMember}, true},
+		{"the only admin of one, another asked about having another admin", []uuid.UUID{withAMember, twoAdmins}, true},
+		{"alone in one, another asked about having other members", []uuid.UUID{alone, twoAdmins}, false},
 		{"none asked about", nil, false},
 	}
 	for _, tt := range tests {

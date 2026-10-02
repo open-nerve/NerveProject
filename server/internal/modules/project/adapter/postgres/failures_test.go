@@ -19,12 +19,12 @@ import (
 // settings", which createProject would take for an empty sidebar; not "no
 // project has the identifier", which checkProjectIdentifier would answer
 // as available; not an empty list, which listProjects would answer as a
-// workspace without projects; not "no project of his", which an ending
-// would take for nothing to end, nor "not the only admin", which would
-// let it end memberships rule 2 keeps. Each read runs on a cancelled
-// context against a project alice is the only admin of, beside bob, a
-// member, and has display settings in, so that the right answer is none
-// of the zero values.
+// workspace without projects; not "no project of his", which an ending or
+// a demotion would take for nothing to do, nor "not the only admin", which
+// would let an ending end memberships rule 2 keeps. Each read runs on a
+// cancelled context against a project alice is the only admin of, beside
+// bob, a member, and has display settings in, so that the right answer is
+// none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
