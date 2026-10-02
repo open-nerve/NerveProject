@@ -366,11 +366,11 @@ func TestADemotionAndAProjectsDeletionSerialize(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g, store := newGate(), projectpg.New(r.pool)
-			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store)
+			auth, cascade := r.authorizer(), projectapp.NewCascade(store, store, store)
 			if deletionFirst {
 				auth = gatedAuthorizer{Authorizer: auth, action: projectdomain.ActionDelete, gate: g}
 			} else {
-				cascade = projectapp.NewCascade(store, gatedDemoter{store, g})
+				cascade = projectapp.NewCascade(store, gatedDemoter{store, g}, store)
 			}
 			route := newProjectRoute(t, r.pool, auth, workspace.Provide(r.pool).WorkspaceMembers)
 			var req *http.Request

@@ -34,6 +34,11 @@ type Cascade interface {
 	// DemoteToGuest makes userID a guest in each of the workspace's projects
 	// he has a membership of, ended ones too.
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
+	// EndMemberships ends userID's active memberships of the workspaces'
+	// projects, found when it is called; project.sole_admin, and nothing
+	// ended, when he is the only active admin of one that has other active
+	// members.
+	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 
 // ProjectAccess reads a project for the access module's decision (M3
@@ -89,7 +94,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
-	return &Module{cascade: app.NewCascade(store, store), uc: httpadapter.UseCases{
+	return &Module{cascade: app.NewCascade(store, store, store), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),

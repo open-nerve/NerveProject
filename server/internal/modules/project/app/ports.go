@@ -312,6 +312,23 @@ type MemberDemoter interface {
 	DemoteMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 
+// MembershipEnder ends an account's memberships of workspaces' projects (M3
+// design 3.6 convention 6, 3.7 rule 2): his projects locked first, then
+// the check of their admins, then his memberships of them in one
+// statement. Each method runs in the transaction ctx carries.
+type MembershipEnder interface {
+	// LockActiveMemberProjects locks FOR NO KEY UPDATE, in id order, the
+	// undeleted projects of workspaceIDs in which userID has an active
+	// membership, and returns their ids.
+	LockActiveMemberProjects(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID) ([]uuid.UUID, error)
+	// SoleAdmin reports whether userID is the only active admin of one of
+	// projectIDs that has another active member.
+	SoleAdmin(ctx context.Context, projectIDs []uuid.UUID, userID uuid.UUID) (bool, error)
+	// EndMemberships sets is_active false, updated_at now and updated_by_id
+	// by on userID's active, undeleted memberships of projectIDs.
+	EndMemberships(ctx context.Context, projectIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+}
+
 // Deletion is what a deletion of projects deletes, and when and by whom:
 // the workspace's projects, or only the one ProjectID names, a project of
 // the workspace, when it is set.

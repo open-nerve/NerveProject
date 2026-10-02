@@ -19,6 +19,12 @@ var (
 	ErrNotFound = shared.NewError(shared.KindNotFound, "project.not_found", "The project does not exist, or you cannot see it.")
 	// ErrArchived answers a change of an archived project (M3 design 3.19).
 	ErrArchived = shared.NewError(shared.KindConflict, "project.archived", "The project is archived; unarchive it to change it.")
+	// ErrSoleAdmin answers an ending of an account's project memberships
+	// that would leave a project with other active members without an
+	// active admin: he is its only one (M3 design 3.7 rule 2). The
+	// workspace's removal and leaving declare it too (M3 design 5.1).
+	ErrSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
+		"Ending the membership would leave a project that has other members without an admin; make another of its members an admin first.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member

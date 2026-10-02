@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 )
 
 // Cascade is what the workspace module's writes ask of the projects,
@@ -16,11 +18,12 @@ import (
 type Cascade struct {
 	projects ProjectsDeleter
 	members  MemberDemoter
+	enders   MembershipEnder
 }
 
-// NewCascade returns the cascade over projects and members.
-func NewCascade(projects ProjectsDeleter, members MemberDemoter) *Cascade {
-	return &Cascade{projects: projects, members: members}
+// NewCascade returns the cascade over projects, members and enders.
+func NewCascade(projects ProjectsDeleter, members MemberDemoter, enders MembershipEnder) *Cascade {
+	return &Cascade{projects: projects, members: members, enders: enders}
 }
 
 // DeleteWorkspaceProjects soft-deletes the workspace's projects and the
@@ -44,4 +47,28 @@ func (c *Cascade) DemoteToGuest(ctx context.Context, workspaceID, userID, by uui
 		return err
 	}
 	return c.members.DemoteMemberships(ctx, projects, userID, by, now)
+}
+
+// EndMemberships ends userID's active memberships of the workspaces'
+// projects (M3 design 3.6 convention 6, 3.7 rule 2), under the caller's FOR
+// NO KEY UPDATE of each workspace, once the caller has ended his membership
+// of it: the projects, found now, not given (a growth that committed before
+// the caller's lock is among them), locked FOR NO KEY UPDATE in id order;
+// then, were he the only active admin of one that has another active
+// member, domain.ErrSoleAdmin, nothing written; else his memberships of
+// them ended in one statement (convention 5), at now, by by. With no such
+// project there is nothing to write.
+func (c *Cascade) EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
+	projects, err := c.enders.LockActiveMemberProjects(ctx, workspaceIDs, userID)
+	if err != nil || len(projects) == 0 {
+		return err
+	}
+	sole, err := c.enders.SoleAdmin(ctx, projects, userID)
+	switch {
+	case err != nil:
+		return err
+	case sole:
+		return domain.ErrSoleAdmin
+	}
+	return c.enders.EndMemberships(ctx, projects, userID, by, now)
 }
