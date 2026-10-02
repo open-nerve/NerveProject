@@ -93,6 +93,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	if err := s.EndMember(cancelled, w.ID, bob.MemberID, alice, now); !failed(err) {
 		t.Errorf("EndMember() = %v; want context.Canceled", err)
 	}
+	if err := s.ReactivateMember(cancelled, w.ID, bob.MemberID, now); !failed(err) {
+		t.Errorf("ReactivateMember() = %v; want context.Canceled, not no membership", err)
+	}
 	if err := s.DeletePendingInvitations(cancelled, w.ID, "carol@corp.com", alice, now); !failed(err) {
 		t.Errorf("DeletePendingInvitations() = %v; want context.Canceled", err)
 	}

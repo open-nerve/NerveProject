@@ -98,7 +98,9 @@ func TestReactivateMemberLeavesAnActiveMembership(t *testing.T) {
 // nothing logged: no account of the address is workspace.account_not_found,
 // a workspace not there, or deleted while the lock waited,
 // workspace.slug_not_found, an account with no membership of it
-// workspace.never_a_member; a failure is never one of those.
+// workspace.never_a_member, each as itself and as no other problem; a
+// failure is no problem at all. The clock logs its reads among the calls:
+// no refusal reads it.
 func TestReactivateMemberRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	at := clockNow.Format(time.RFC3339Nano)
@@ -138,9 +140,14 @@ func TestReactivateMemberRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) || got != (app.Reactivation{}) {
 			t.Errorf("%s: Execute() = %+v, %v; want %v", tt.name, got, err, tt.want)
 		}
-		if tt.want == failure && (errors.Is(err, domain.ErrAccountNotFound) || errors.Is(err, domain.ErrSlugNotFound) ||
-			errors.Is(err, domain.ErrNeverAMember)) {
-			t.Errorf("%s: Execute() = %v, which is also a refusal", tt.name, err)
+		// The refusal is the first *shared.Error in the chain, the one
+		// wanted; a failure has none.
+		var se *shared.Error
+		switch {
+		case tt.want == failure && errors.As(err, &se):
+			t.Errorf("%s: Execute() = %v, which is also %s", tt.name, err, se.Code)
+		case tt.want != failure && (!errors.As(err, &se) || !se.Is(tt.want)):
+			t.Errorf("%s: Execute() = %v, answered as another problem; want %v", tt.name, err, tt.want)
 		}
 		if !slices.Equal(f.log.calls, tt.calls) || f.tx.calls != 1 || f.logs.Len() != 0 {
 			t.Errorf("%s: calls = %q in %d transactions, logs %q; want %q in one, no log", tt.name, f.log.calls, f.tx.calls, f.logs, tt.calls)

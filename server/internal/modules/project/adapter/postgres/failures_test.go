@@ -21,10 +21,12 @@ import (
 // as available; not an empty list, which listProjects would answer as a
 // workspace without projects; not "no project of his", which an ending or
 // a demotion would take for nothing to do, nor "not the only admin", which
-// would let an ending end memberships rule 2 keeps. Each read runs on a
-// cancelled context against a project alice is the only admin of, beside
-// bob, a member, and has display settings in, so that the right answer is
-// none of the zero values.
+// would let an ending end memberships rule 2 keeps, nor "no ended
+// membership", which reactivate-member would report as none of the
+// member's project memberships still ended. Each read runs on a cancelled
+// context against a project alice is the only admin of, beside bob, a
+// member, and has display settings in, bob's membership of another project
+// ended, so that the right answer is none of the zero values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -36,9 +38,13 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	seedMember(t, pool, acme, web, bob, 15, true)
+	seedMember(t, pool, acme, newProject(t, s, acme, "Ops", "OPS", alice), bob, 15, false)
 	if err := s.CreatePreferences(ctx, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
 		SortOrder: 10, CreatedBy: alice, Now: now}); err != nil {
 		t.Fatal(err)
+	}
+	if n, err := s.CountInactive(ctx, acme, bob); err != nil || n != 1 {
+		t.Fatalf("CountInactive() of bob = %d, %v; want his ended membership of Ops, 1", n, err)
 	}
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
@@ -76,6 +82,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 	if ids, err := s.LockMemberProjects(cancelled, acme, alice); !failed(err) || ids != nil {
 		t.Errorf("LockMemberProjects() = %v, %v; want context.Canceled, not no project", ids, err)
+	}
+	if n, err := s.CountInactive(cancelled, acme, bob); !failed(err) || n != 0 {
+		t.Errorf("CountInactive() = %d, %v; want context.Canceled, not a count", n, err)
 	}
 }
 
