@@ -83,7 +83,7 @@ func (q *Queries) DeleteWorkspaceMembers(ctx context.Context, arg DeleteWorkspac
 const endMember = `-- name: EndMember :execrows
 UPDATE workspace_members
 SET is_active = false, updated_at = $1, updated_by_id = $2::uuid
-WHERE workspace_id = $3 AND member_id = $4 AND deleted_at IS NULL
+WHERE workspace_id = $3 AND member_id = $4 AND deleted_at IS NULL AND is_active
 `
 
 type EndMemberParams struct {
@@ -93,9 +93,10 @@ type EndMemberParams struct {
 	MemberID    uuid.UUID
 }
 
-// removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's
+// removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's active
 // membership of the workspace ends, the row stays (4.3). The partial unique index holds at most one undeleted row per
-// pair, so a deleted one, which keeps its columns, is the only other row the pair can name.
+// pair, so a deleted one, which keeps its columns, is the only other row the pair can name. An ended one is not ended
+// again: its ender and moment stay.
 func (q *Queries) EndMember(ctx context.Context, arg EndMemberParams) (int64, error) {
 	result, err := q.db.Exec(ctx, endMember,
 		arg.Now,
@@ -243,6 +244,7 @@ const reactivateMember = `-- name: ReactivateMember :execrows
 UPDATE workspace_members
 SET is_active = true, updated_at = $1
 WHERE workspace_id = $2 AND member_id = $3 AND deleted_at IS NULL
+  AND NOT is_active
 `
 
 type ReactivateMemberParams struct {
@@ -253,7 +255,7 @@ type ReactivateMemberParams struct {
 
 // reactivate-member, under the workspace's FOR NO KEY UPDATE (M3 design 3.11): the user's ended membership active
 // again, its role kept. As Plane's command, it writes is_active and updated_at alone: no account of the instance asks
-// for it, so updated_by_id stays whose it was.
+// for it, so updated_by_id stays whose it was. An active one is not written.
 func (q *Queries) ReactivateMember(ctx context.Context, arg ReactivateMemberParams) (int64, error) {
 	result, err := q.db.Exec(ctx, reactivateMember, arg.Now, arg.WorkspaceID, arg.MemberID)
 	if err != nil {

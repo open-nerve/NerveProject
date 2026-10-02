@@ -54,12 +54,13 @@ WHERE m.workspace_id = sqlc.arg(workspace_id) AND m.member_id = sqlc.arg(user_id
   AND m.is_active AND m.deleted_at IS NULL AND w.deleted_at IS NULL;
 
 -- name: EndMember :execrows
--- removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's
+-- removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's active
 -- membership of the workspace ends, the row stays (4.3). The partial unique index holds at most one undeleted row per
--- pair, so a deleted one, which keeps its columns, is the only other row the pair can name.
+-- pair, so a deleted one, which keeps its columns, is the only other row the pair can name. An ended one is not ended
+-- again: its ender and moment stay.
 UPDATE workspace_members
 SET is_active = false, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(ended_by)::uuid
-WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL;
+WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL AND is_active;
 
 -- name: HasOtherAdmin :one
 -- leaveWorkspace, under the workspace's FOR NO KEY UPDATE, which every change of an admin's membership takes too: whether
@@ -71,7 +72,8 @@ SELECT EXISTS (SELECT 1 FROM workspace_members
 -- name: ReactivateMember :execrows
 -- reactivate-member, under the workspace's FOR NO KEY UPDATE (M3 design 3.11): the user's ended membership active
 -- again, its role kept. As Plane's command, it writes is_active and updated_at alone: no account of the instance asks
--- for it, so updated_by_id stays whose it was.
+-- for it, so updated_by_id stays whose it was. An active one is not written.
 UPDATE workspace_members
 SET is_active = true, updated_at = sqlc.arg(now)
-WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL;
+WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL
+  AND NOT is_active;

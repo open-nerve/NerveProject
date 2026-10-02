@@ -12,17 +12,18 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// ReactivateMember makes the user's undeleted membership of the workspace
-// active again at the time given, its role kept, and writes nothing else:
-// updated_by_id stays alice's, who ended it (M3 design 3.11). bob's
-// deleted membership of acme, stored before his live one or after it, his
-// ended membership of beta and carol's ended one of acme keep every column,
-// and his reactivated one its other columns. carol's, a guest's,
+// ReactivateMember makes the user's ended, undeleted membership of the
+// workspace active again at the time given, its role kept, and writes
+// nothing else: updated_by_id stays alice's, who ended it (M3 design 3.11).
+// bob's deleted membership of acme, stored before his live one or after it,
+// his ended membership of beta and carol's ended one of acme keep every
+// column, and his reactivated one its other columns. carol's, a guest's,
 // reactivated next, keeps her role and her other columns, as every other
 // row keeps each of its own: no reactivation makes its member an admin,
-// which bob, one already, can't show. A pair with no undeleted
+// which bob, one already, can't show. A pair with no ended, undeleted
 // membership is an error that is not app.ErrNotFound, and changes nothing:
-// carol's in beta, of which there is none, and bob's in gamma, deleted.
+// carol's in beta, of which there is none, bob's in gamma, deleted, and
+// bob's in acme, active by then, whose moment stays.
 func TestReactivateMember(t *testing.T) {
 	for _, deletedFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("the deleted membership stored first %v", deletedFirst), func(t *testing.T) {
@@ -80,7 +81,7 @@ func TestReactivateMember(t *testing.T) {
 			for _, pair := range []struct {
 				name            string
 				workspace, user uuid.UUID
-			}{{"carol in beta", beta.ID, carol}, {"bob in gamma", gamma.ID, bob}} {
+			}{{"carol in beta", beta.ID, carol}, {"bob in gamma", gamma.ID, bob}, {"bob in acme, active", acme.ID, bob}} {
 				if err := s.ReactivateMember(context.Background(), pair.workspace, pair.user, later.Add(time.Hour)); err == nil ||
 					errors.Is(err, app.ErrNotFound) {
 					t.Errorf("ReactivateMember() of %s = %v, want an error that is not app.ErrNotFound", pair.name, err)

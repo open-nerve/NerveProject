@@ -35,17 +35,18 @@ func (s *Store) DeletePendingInvitations(ctx context.Context, workspaceID uuid.U
 	return nil
 }
 
-// EndMember ends userID's membership of the workspace, by the account by at
-// now; the row stays. The caller read the membership active under the
-// workspace's lock: a pair without exactly one undeleted membership is an
-// error, not app.ErrNotFound.
+// EndMember ends userID's active membership of the workspace, by the
+// account by at now; the row stays. The caller read the membership active
+// under the workspace's lock: a pair without exactly one active, undeleted
+// membership, an ended one too, is an error, not app.ErrNotFound, and
+// writes nothing.
 func (s *Store) EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
 	ended, err := s.queries(ctx).EndMember(ctx, gen.EndMemberParams{WorkspaceID: workspaceID, MemberID: userID, EndedBy: by, Now: now})
 	switch {
 	case err != nil:
 		return fmt.Errorf("end workspace member: %w", err)
 	case ended != 1:
-		return fmt.Errorf("end workspace member %s of %s: %d undeleted memberships", userID, workspaceID, ended)
+		return fmt.Errorf("end workspace member %s of %s: %d active undeleted memberships", userID, workspaceID, ended)
 	}
 	return nil
 }

@@ -145,8 +145,8 @@ type MembershipEnder interface {
 	// invitation to email, if there is one, by the account by at now; a
 	// declined one stays.
 	DeletePendingInvitations(ctx context.Context, workspaceID uuid.UUID, email string, by uuid.UUID, now time.Time) error
-	// EndMember ends userID's undeleted membership of the workspace, by the
-	// account by at now; the row stays.
+	// EndMember ends userID's active, undeleted membership of the
+	// workspace, by the account by at now; the row stays.
 	EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
 }
 
@@ -254,7 +254,7 @@ type MemberReactivator interface {
 	// MemberOf returns userID's undeleted membership of the workspace,
 	// active or ended; found is false when there is none.
 	MemberOf(ctx context.Context, workspaceID, userID uuid.UUID) (m domain.Membership, found bool, err error)
-	// ReactivateMember makes userID's undeleted membership of the
+	// ReactivateMember makes userID's ended, undeleted membership of the
 	// workspace active again, its role kept, at now.
 	ReactivateMember(ctx context.Context, workspaceID, userID uuid.UUID, now time.Time) error
 }

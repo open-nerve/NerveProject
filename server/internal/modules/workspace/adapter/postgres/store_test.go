@@ -235,27 +235,41 @@ func TestListWorkspaces(t *testing.T) {
 			t.Errorf("%s: ListWorkspaces() = %v, want %v", tt.name, items, tt.want)
 		}
 	}
-	// The columns are the stored ones.
+	// The columns are the stored ones: acme, changed through the store an
+	// hour after it was made, has a creation time and a last change's that
+	// are two.
+	later := now.Add(time.Hour)
+	if _, err := f.s.UpdateWorkspace(context.Background(), f.acme.ID, domain.WorkspacePatch{}, f.bob, later); err != nil {
+		t.Fatal(err)
+	}
 	got, err := f.s.ListWorkspaces(context.Background(), f.alice)
 	if err != nil || len(got) == 0 {
 		t.Fatalf("alice's ListWorkspaces() = %+v, %v; want acme first", got, err)
 	}
-	if w := got[0]; w.Name != "Acme" || w.Slug != "acme" || w.Timezone != "UTC" || w.OrganizationSize != nil || !w.CreatedAt.Equal(now) || !w.UpdatedAt.Equal(now) {
-		t.Errorf("ListWorkspaces()[0] = %+v, want acme as stored", w)
+	if w := got[0]; w.Name != "Acme" || w.Slug != "acme" || w.Timezone != "UTC" || w.OrganizationSize != nil || !w.CreatedAt.Equal(now) ||
+		!w.UpdatedAt.Equal(later) {
+		t.Errorf("ListWorkspaces()[0] = %+v, want acme as stored, made at %v, changed at %v", w, now, later)
 	}
 }
 
-// WorkspaceBySlug finds an undeleted workspace, with its active members
-// counted: not beta's removed carol, not dropped's deleted row of alice.
+// WorkspaceBySlug finds an undeleted workspace as stored, with its active
+// members counted: not beta's removed carol, not dropped's deleted row of
+// alice. beta, changed through the store an hour after it was made, has a
+// creation time and a last change's that are two.
 func TestWorkspaceBySlug(t *testing.T) {
 	f := newFixture(t)
+	later := now.Add(time.Hour)
+	if _, err := f.s.UpdateWorkspace(context.Background(), f.beta.ID, domain.WorkspacePatch{}, f.alice, later); err != nil {
+		t.Fatal(err)
+	}
 	for _, tt := range []struct {
 		w       domain.Workspace
 		members int
-	}{{f.beta, 2}, {f.dropped, 1}} {
+		changed time.Time
+	}{{f.beta, 2, later}, {f.dropped, 1, now}} {
 		got, err := f.s.WorkspaceBySlug(context.Background(), tt.w.Slug)
 		want := tt.w
-		want.TotalMembers = tt.members
+		want.TotalMembers, want.UpdatedAt = tt.members, tt.changed
 		if err != nil || !sameWorkspace(got, want) {
 			t.Errorf("WorkspaceBySlug(%s) = %+v, %v; want %+v", tt.w.Slug, got, err, want)
 		}

@@ -56,14 +56,15 @@ func at(t *testing.T, pool *pgxpool.Pool, tm time.Time) string {
 	return s
 }
 
-// EndMember ends the user's undeleted membership of the workspace, by the
-// account and at the time given, and changes nothing else (M3 design 3.6,
-// 4.3). bob's membership of acme was last written by himself. His deleted
-// membership of acme, stored before his live one or after it, his
-// membership of beta and carol's of acme keep every column, and his ended
-// one its other columns. A pair with no undeleted membership is an error
-// that is not app.ErrNotFound, and changes nothing: carol's in beta, of
-// which there is none, and bob's in gamma, deleted.
+// EndMember ends the user's active, undeleted membership of the workspace,
+// by the account and at the time given, and changes nothing else (M3
+// design 3.6, 4.3). bob's membership of acme was last written by himself.
+// His deleted membership of acme, stored before his live one or after it,
+// his membership of beta and carol's of acme keep every column, and his
+// ended one its other columns. A pair with no active, undeleted membership
+// is an error that is not app.ErrNotFound, and changes nothing: carol's in
+// beta, of which there is none, bob's in gamma, deleted, and bob's in
+// acme, ended by then, whose ender and moment stay.
 func TestEndMember(t *testing.T) {
 	for _, deletedFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("the deleted membership stored first %v", deletedFirst), func(t *testing.T) {
@@ -105,7 +106,7 @@ func TestEndMember(t *testing.T) {
 			for _, pair := range []struct {
 				name            string
 				workspace, user uuid.UUID
-			}{{"carol in beta", beta.ID, carol}, {"bob in gamma", gamma.ID, bob}} {
+			}{{"carol in beta", beta.ID, carol}, {"bob in gamma", gamma.ID, bob}, {"bob in acme, ended", acme.ID, bob}} {
 				if err := s.EndMember(context.Background(), pair.workspace, pair.user, alice, later.Add(time.Hour)); err == nil ||
 					errors.Is(err, app.ErrNotFound) {
 					t.Errorf("EndMember() of %s = %v, want an error that is not app.ErrNotFound", pair.name, err)
@@ -180,6 +181,9 @@ func TestDeletePendingInvitations(t *testing.T) {
 // than the user (M3 design 3.7 rule 1): alice is the admin of each
 // workspace; bob, in each case, stands to it as the case says. Only an
 // active, undeleted admin's membership of that workspace is another admin.
+// The user asked about is alice, but where the case asks about bob, an
+// active member: alice is another admin then, the user left out by who he
+// is, not as one admin of a count.
 func TestHasOtherAdmin(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -189,26 +193,28 @@ func TestHasOtherAdmin(t *testing.T) {
 	tests := []struct {
 		name string
 		bob  func(workspace uuid.UUID)
+		user uuid.UUID // asked about
 		want bool
 	}{
-		{"an active admin", func(w uuid.UUID) { join(t, s, w, bob, shared.RoleAdmin) }, true},
-		{"an active member", func(w uuid.UUID) { join(t, s, w, bob, shared.RoleMember) }, false},
+		{"an active admin", func(w uuid.UUID) { join(t, s, w, bob, shared.RoleAdmin) }, alice, true},
+		{"an active member", func(w uuid.UUID) { join(t, s, w, bob, shared.RoleMember) }, alice, false},
+		{"an active member, asked about", func(w uuid.UUID) { join(t, s, w, bob, shared.RoleMember) }, bob, true},
 		{"an admin whose membership ended", func(w uuid.UUID) {
 			join(t, s, w, bob, shared.RoleAdmin)
 			set("UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2")(w)
-		}, false},
+		}, alice, false},
 		{"an admin whose membership is deleted", func(w uuid.UUID) {
 			join(t, s, w, bob, shared.RoleAdmin)
 			set("UPDATE workspace_members SET deleted_at = now() WHERE workspace_id = $1 AND member_id = $2")(w)
-		}, false},
+		}, alice, false},
 		{"an admin of another workspace", func(uuid.UUID) { join(t, s, newWorkspace(t, s, "Other", "other", alice).ID, bob, shared.RoleAdmin) },
-			false},
-		{"none: alice is alone", func(uuid.UUID) {}, false},
+			alice, false},
+		{"none: alice is alone", func(uuid.UUID) {}, alice, false},
 	}
 	for i, tt := range tests {
 		w := newWorkspace(t, s, "Acme", fmt.Sprintf("acme-%d", i), alice)
 		tt.bob(w.ID)
-		if got, err := s.HasOtherAdmin(context.Background(), w.ID, alice); err != nil || got != tt.want {
+		if got, err := s.HasOtherAdmin(context.Background(), w.ID, tt.user); err != nil || got != tt.want {
 			t.Errorf("bob %s: HasOtherAdmin() = %v, %v; want %v", tt.name, got, err, tt.want)
 		}
 	}
