@@ -72,9 +72,9 @@ func (f *fakeWorkspaces) UpdateMemberRole(ctx context.Context, id uuid.UUID, rol
 	return domain.Membership{}, fmt.Errorf("update workspace member %s: no such row", id)
 }
 
-// The ending's statements (app.MembershipEnder): each logs its call, fails
-// with the error set for it, and changes what the fake holds as the store
-// changes its rows.
+// The ending's statements (app.MembershipEnder): each logs its call and
+// fails with the error set for it; EndMember also ends the membership the
+// fake holds, as the store ends the row.
 
 func (f *fakeWorkspaces) DeletePendingInvitations(ctx context.Context, workspaceID uuid.UUID, email string, by uuid.UUID, now time.Time) error {
 	f.log.add(ctx, "DeletePendingInvitations %s %s by %s at %s", workspaceID, email, by, now.Format(time.RFC3339Nano))

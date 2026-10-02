@@ -34,9 +34,9 @@ func NewRemoveWorkspaceMember(members MemberRemover, profiles MemberProfiles, pr
 // own workspace.own_membership (he leaves through leaveWorkspace); then the
 // clock, read under the lock (3.3), and the ending: the workspace's pending
 // invitation to his address, his membership, then his memberships of its
-// projects (membershipEnd). Were he the only admin of a project with other
-// members, project.sole_admin (3.7 rule 2), and the whole removal rolls
-// back.
+// projects (membershipEnd). Were he the only active admin of a project
+// with other active members, project.sole_admin (3.7 rule 2), and the
+// whole removal rolls back.
 func (u *RemoveWorkspaceMember) Execute(ctx context.Context, id uuid.UUID) error {
 	actor, err := shared.RequireActor(ctx)
 	if err != nil {

@@ -24,17 +24,18 @@ type membershipEnd struct {
 // membership's row, as the global order has the invitations before the
 // members; his membership ended, the row kept; then his memberships of the
 // workspace's projects ended (ProjectCascade.EndMemberships), which refuses
-// with project.sole_admin when he is the only admin of a project with other
-// members (3.7 rule 2). A failure comes back as itself and nothing runs
-// after it; the caller's transaction rolls back, the invitation's deletion
-// with it.
+// with project.sole_admin when he is the only active admin of a project
+// with other active members (3.7 rule 2). A failure comes back as itself
+// and nothing runs after it; the caller's transaction rolls back, the
+// invitation's deletion with it.
 func (e membershipEnd) run(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
 	profiles, err := e.profiles.PublicProfiles(ctx, []uuid.UUID{userID})
 	if err != nil {
 		return err
 	}
-	if len(profiles) != 1 {
-		// The foreign key keeps every member's account: its absence is a bug.
+	if len(profiles) != 1 || profiles[0].ID != userID {
+		// The foreign key keeps every member's account: its absence is a bug,
+		// and another account's address would delete its invitations.
 		return fmt.Errorf("end the membership of %s in %s: no account", userID, workspaceID)
 	}
 	if err := e.members.DeletePendingInvitations(ctx, workspaceID, profiles[0].Email, by, now); err != nil {

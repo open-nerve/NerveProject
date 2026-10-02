@@ -59,8 +59,8 @@ func TestRemoveWorkspaceMemberLocksThenDecidesThenEnds(t *testing.T) {
 	if err != nil || !slices.Equal(f.log.calls, want) || tx.calls != 1 {
 		t.Errorf("Execute() = %v, calls\n%q\nin %d transactions; want nil,\n%q\nin one", err, f.log.calls, tx.calls, want)
 	}
-	if m, _ := f.workspaces.MemberByID(context.Background(), bobInAcme.ID); m.IsActive {
-		t.Errorf("bob's membership of acme after the removal: %+v, want it ended", m)
+	if m, err := f.workspaces.MemberByID(context.Background(), bobInAcme.ID); err != nil || m.IsActive {
+		t.Errorf("bob's membership of acme after the removal: %+v, %v; want it ended", m, err)
 	}
 }
 
@@ -73,7 +73,8 @@ func TestRemoveWorkspaceMemberLocksThenDecidesThenEnds(t *testing.T) {
 // nothing about it; then, in updateWorkspaceMember's order, an ended
 // membership is workspace.member_not_found, also when it is the caller's
 // own, and the caller's own active one workspace.own_membership; a failure
-// is never a 404.
+// is never a 404. The clock logs its reads among the calls: no refusal
+// reads it.
 func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 	failure := errors.New("connection reset")
 	forbidBob := func(f *membersFixture) { f.auth.errs = map[grantKey]error{{bob.ID, acme.ID}: shared.Forbidden()} }
@@ -130,7 +131,9 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 			func(f *membersFixture) { f.auth.errs = map[grantKey]error{{alice.ID, acme.ID}: failure} }, failure, decided},
 	}
 	for _, tt := range tests {
-		uc, f, tx := newRemoveMember()
+		f := newMembers()
+		tx := &fakeTx{}
+		uc := app.NewRemoveWorkspaceMember(f.workspaces, f.profiles, f.projects, f.auth, tx, clockAt{clockNow, f.log})
 		if tt.set != nil {
 			tt.set(f)
 		}
@@ -138,9 +141,14 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) {
 			t.Errorf("%s: Execute() = %v; want %v", tt.name, err, tt.want)
 		}
+		// The problem the API answers is the first *shared.Error in the
+		// chain: the refusal wanted, or none for a failure (a 500).
 		var se *shared.Error
-		if tt.want == failure && errors.As(err, &se) {
+		switch {
+		case tt.want == failure && errors.As(err, &se):
 			t.Errorf("%s: Execute() = %v, which is also %s", tt.name, err, se.Code)
+		case tt.want != failure && (!errors.As(err, &se) || !se.Is(tt.want)):
+			t.Errorf("%s: Execute() = %v, answered as another problem; want %v", tt.name, err, tt.want)
 		}
 		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != 1 {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in one", tt.name, f.log.calls, tx.calls, tt.calls)
@@ -152,14 +160,15 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 	}
 }
 
-// A failed read of the member's address, a member without an account, a
-// failed step of the ending, the projects' refusal of the only admin of a
-// project with other members, and a refused commit each fail the
-// transaction, which the database then rolls back, the steps before with
-// it: the answer is the error as it came, and project.sole_admin is itself,
-// the 409 of the contract (M3 design 3.7 rule 2); the calls are the
-// removal's own, each once and in the transaction, up to the failing one:
-// nothing runs after it, and it is not tried again.
+// A failed read of the member's address, a member without an account or
+// another account's profile answered for his (whose pending invitations
+// would go), a failed step of the ending, the projects' refusal of the only
+// active admin of a project with other active members, and a refused
+// commit each fail the transaction, which the database then rolls back,
+// the steps before with it: the answer is the error as it came, and
+// project.sole_admin is itself, the 409 of the contract (M3 design 3.7 rule
+// 2); the calls are the removal's own, each once and in the transaction,
+// up to the failing one: nothing runs after it, and it is not tried again.
 func TestRemoveWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 	failure := errors.New("connection reset")
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin", "Ending the membership would leave a project without an admin.")
@@ -173,6 +182,8 @@ func TestRemoveWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 	}{
 		{"the address", func(f *membersFixture, _ *fakeTx) { f.profiles.err = failure }, failure, calls[:decided+1]},
 		{"a member without an account", func(f *membersFixture, _ *fakeTx) { f.profiles.profiles = profiles[:2] }, nil, calls[:decided+1]},
+		{"another account's profile for his", func(f *membersFixture, _ *fakeTx) { f.profiles.slipped = profiles[:1] }, nil,
+			calls[:decided+1]},
 		{"the invitations", func(f *membersFixture, _ *fakeTx) {
 			f.workspaces.endErrs = map[string]error{"DeletePendingInvitations": failure}
 		},
