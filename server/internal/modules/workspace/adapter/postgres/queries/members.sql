@@ -52,3 +52,18 @@ FROM workspace_members m
 JOIN workspaces w ON w.id = m.workspace_id
 WHERE m.workspace_id = sqlc.arg(workspace_id) AND m.member_id = sqlc.arg(user_id)
   AND m.is_active AND m.deleted_at IS NULL AND w.deleted_at IS NULL;
+
+-- name: EndMember :execrows
+-- removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's
+-- membership of the workspace ends, the row stays (4.3). The partial unique index holds at most one undeleted row per
+-- pair, so a deleted one, which keeps its columns, is the only other row the pair can name.
+UPDATE workspace_members
+SET is_active = false, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(ended_by)::uuid
+WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL;
+
+-- name: HasOtherAdmin :one
+-- leaveWorkspace, under the workspace's FOR NO KEY UPDATE, which every change of an admin's membership takes too: whether
+-- an active admin of the workspace other than the user is left (M3 design 3.7 rule 1).
+SELECT EXISTS (SELECT 1 FROM workspace_members
+               WHERE workspace_id = sqlc.arg(workspace_id) AND member_id <> sqlc.arg(member_id) AND role = 20 AND is_active
+                 AND deleted_at IS NULL);

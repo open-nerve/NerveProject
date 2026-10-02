@@ -115,6 +115,32 @@ func (q *Queries) DeleteInvitation(ctx context.Context, arg DeleteInvitationPara
 	return err
 }
 
+const deletePendingInvitations = `-- name: DeletePendingInvitations :exec
+UPDATE workspace_member_invites
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE workspace_id = $3 AND email = $4 AND responded_at IS NULL AND deleted_at IS NULL
+`
+
+type DeletePendingInvitationsParams struct {
+	Now         time.Time
+	DeletedBy   uuid.UUID
+	WorkspaceID uuid.UUID
+	Email       string
+}
+
+// An ended membership leaves no invitation (M3 design 3.8): removeWorkspaceMember and leaveWorkspace, under the
+// workspace's FOR NO KEY UPDATE and before the membership's row, soft-delete the workspace's pending invitation to the
+// address, if any; a declined one stays, and so does a deleted one's moment.
+func (q *Queries) DeletePendingInvitations(ctx context.Context, arg DeletePendingInvitationsParams) error {
+	_, err := q.db.Exec(ctx, deletePendingInvitations,
+		arg.Now,
+		arg.DeletedBy,
+		arg.WorkspaceID,
+		arg.Email,
+	)
+	return err
+}
+
 const deleteWorkspaceInvitations = `-- name: DeleteWorkspaceInvitations :exec
 UPDATE workspace_member_invites
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid

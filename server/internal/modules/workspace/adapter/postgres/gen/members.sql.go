@@ -80,6 +80,55 @@ func (q *Queries) DeleteWorkspaceMembers(ctx context.Context, arg DeleteWorkspac
 	return err
 }
 
+const endMember = `-- name: EndMember :execrows
+UPDATE workspace_members
+SET is_active = false, updated_at = $1, updated_by_id = $2::uuid
+WHERE workspace_id = $3 AND member_id = $4 AND deleted_at IS NULL
+`
+
+type EndMemberParams struct {
+	Now         time.Time
+	EndedBy     uuid.UUID
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// removeWorkspaceMember and leaveWorkspace, under the workspace's FOR NO KEY UPDATE (M3 design 3.6): the user's
+// membership of the workspace ends, the row stays (4.3). The partial unique index holds at most one undeleted row per
+// pair, so a deleted one, which keeps its columns, is the only other row the pair can name.
+func (q *Queries) EndMember(ctx context.Context, arg EndMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, endMember,
+		arg.Now,
+		arg.EndedBy,
+		arg.WorkspaceID,
+		arg.MemberID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const hasOtherAdmin = `-- name: HasOtherAdmin :one
+SELECT EXISTS (SELECT 1 FROM workspace_members
+               WHERE workspace_id = $1 AND member_id <> $2 AND role = 20 AND is_active
+                 AND deleted_at IS NULL)
+`
+
+type HasOtherAdminParams struct {
+	WorkspaceID uuid.UUID
+	MemberID    uuid.UUID
+}
+
+// leaveWorkspace, under the workspace's FOR NO KEY UPDATE, which every change of an admin's membership takes too: whether
+// an active admin of the workspace other than the user is left (M3 design 3.7 rule 1).
+func (q *Queries) HasOtherAdmin(ctx context.Context, arg HasOtherAdminParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasOtherAdmin, arg.WorkspaceID, arg.MemberID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listMembers = `-- name: ListMembers :many
 SELECT id, workspace_id, member_id, role, is_active, created_at
 FROM workspace_members

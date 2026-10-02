@@ -72,3 +72,11 @@ WHERE id = sqlc.arg(id);
 UPDATE workspace_member_invites
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+
+-- name: DeletePendingInvitations :exec
+-- An ended membership leaves no invitation (M3 design 3.8): removeWorkspaceMember and leaveWorkspace, under the
+-- workspace's FOR NO KEY UPDATE and before the membership's row, soft-delete the workspace's pending invitation to the
+-- address, if any; a declined one stays, and so does a deleted one's moment.
+UPDATE workspace_member_invites
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE workspace_id = sqlc.arg(workspace_id) AND email = sqlc.arg(email) AND responded_at IS NULL AND deleted_at IS NULL;
