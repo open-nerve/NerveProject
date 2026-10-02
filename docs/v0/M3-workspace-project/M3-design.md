@@ -105,7 +105,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
 | W4 | 邀请成员 | 管理员在成员页邀请两个邮箱（一个成员、一个访客），列表出现两条待接受的邀请；改其中一条的角色；复制链接（剪贴板里是 `/workspace-invitations?invitation_id=…&token=…`）；删除另一条。邀请已是成员的邮箱、重复的邮箱：弹窗在对应行提示。一条被忽略的邀请在列表中显示"已忽略"，再邀请这个邮箱被拒绝，删掉它之后才能再邀请。成员打开同一页：只有成员列表，没有邀请的界面，页面也不请求邀请列表（`watchPage` 没有失败的请求，7.1） | `workspace_member_invites` 新增两行：邮箱已规范化、`role` 正确、`accepted = false`、`responded_at` 为空；表中没有令牌；删除的一行 `deleted_at` 已填 | `POST /api/v0/workspaces/{slug}/invitations`（批量）、`PATCH`/`DELETE /api/v0/workspace-invitations/{id}`，同一组断言；成员、访客 403（决策点 4）；已是成员 422（`invitations[i].email`，`not_allowed`），重复或已被忽略 422（`duplicate`） | P3 / P9 |
 | W5 | 凭链接接受或忽略邀请 | 已登录、邮箱一致的账户打开链接，看到工作区名和角色（看不到被邀请的邮箱，决策点 1），点"接受"，进入工作区。另一条邀请点"忽略"，页面说明已忽略。用另一个账户打开链接，点"接受"：得到 403 之后，页面说明"这份邀请发给了另一个邮箱"，不说是哪一个，接受和忽略按钮不再可用，提供退出登录（打开时页面无从知道邮箱是否一致：查看不含邮箱）。令牌被改动一位：页面说明链接无效 | 接受：`workspace_members` 新增一行，角色等于邀请的角色；邀请 `accepted = true`、`responded_at` 已填、`deleted_at` 已填。忽略：`accepted = false`、`responded_at` 已填、未删除。邮箱不一致：数据库不变 | `POST /api/v0/workspace-invitations/{id}/accept`、`/decline`，同一组断言；邮箱不一致 403 `workspace.invitation_email_mismatch`，回答里没有被邀请的邮箱；令牌不对、邀请不存在 404 `workspace.invitation_not_found`（两者相同）；已回应 409 `workspace.invitation_responded`。公开的 `GET /api/v0/workspace-invitations/{id}?token=…` 不带令牌是 400，回答里没有 `email` | P3 / P9 |
 | W6 | 注册关闭时凭邀请注册（决策点 1） | 注册关闭的独立 nerve（管理员经这个 nerve 建工作区、发邀请，3.8）：未登录打开邀请链接，页面提供"注册以接受"；注册页的标题是"加入 <工作区>"；注册后回到邀请页，接受，完成新手引导的资料一步就进入工作区。不带邀请直接打开注册页：显示"注册已关闭" | 新账户和资料照 A1；接受之后同 W5 | `POST /api/v0/auth/register` 带 `invitation {id, token}`：邮箱与邀请一致时 201；不带、令牌不对、邮箱不一致、邀请已回应或已删除时都是 403 `identity.signup_disabled`（同一句，不说明是哪一种） | P3 / P9 |
-| W7 | 成员管理 | 管理员把一个成员改为访客（这个人在两个项目里是成员、管理员），把另一个成员移出。管理员不能改自己的角色（没有入口），不能移出自己。唯一的管理员点"离开工作区"：提示先指定另一位管理员。被移出的成员凭新的邀请再次接受 | 改为访客：`workspace_members.role = 5`，这个人在本工作区全部项目中的 `project_members.role` 都是 5（含已离开的项目）。移出：`workspace_members.is_active = false`，他在本工作区的项目成员关系全部 `is_active = false`，行不删除。再次接受：原来那一行 `is_active` 恢复为真、角色改为邀请的角色 | `PATCH`、`DELETE /api/v0/workspace-members/{workspace_member_id}`、`POST /api/v0/workspaces/{slug}/leave`；改自己、移出自己 409 `workspace.own_membership`；唯一管理员离开 409 `workspace.sole_admin`；移出某个项目唯一的管理员（那个项目还有别的成员）409 `project.sole_admin` | P5a / P9 |
+| W7 | 成员管理 | 管理员把一个成员改为访客（这个人在两个项目里是成员、管理员），把另一个成员移出。管理员不能改自己的角色（没有入口），不能移出自己。唯一的管理员点"离开工作区"：提示先指定另一位管理员。被移出的成员凭新的邀请再次接受 | 改为访客：`workspace_members.role = 5`，这个人在本工作区全部项目中的 `project_members.role` 都是 5（含已离开的项目；这一半由 P5b 的故事展示，P5a spec 第 3 节第 13 条）。移出：`workspace_members.is_active = false`，他在本工作区的项目成员关系全部 `is_active = false`，行不删除。再次接受：原来那一行 `is_active` 恢复为真、角色改为邀请的角色 | `PATCH`、`DELETE /api/v0/workspace-members/{workspace_member_id}`、`POST /api/v0/workspaces/{slug}/leave`；改自己、移出自己 409 `workspace.own_membership`；唯一管理员离开 409 `workspace.sole_admin`；移出某个项目唯一的管理员（那个项目还有别的成员）409 `project.sole_admin` | P5a / P9 |
 | W8 | 项目导航偏好 | 在工作区侧边栏的"项目导航"对话框里改成标签页式、只显示 3 个项目；刷新后仍生效 | `workspace_user_properties` 新增一行（第一次修改时），两列是新值 | `GET`/`PATCH /api/v0/me/workspaces/{slug}/preferences`；没有这一行时 `GET` 返回默认值，数据库不变 | P2 / P9 |
 | W9 | 停用账户与成员关系（M2 交接第 6 节） | 在 general 页停用：这个人是某工作区唯一的管理员、那里还有别的成员时，弹窗里显示"先指定另一位管理员"，账户不变。指定之后再停用，回到登录页 | 被拒绝：数据库完全不变（`users`、`profiles`、会话、成员关系、邀请）。成功：A12 的断言，加上他全部的工作区、项目成员关系 `is_active = false`，发给他邮箱的全部邀请（含已忽略的）`deleted_at` 已填 | PAT 调用 `POST /api/v0/me/deactivate`：409 `workspace.sole_admin` 或 `project.sole_admin`；成功时同一组断言。`nerve users deactivate --email …` 同样被拒绝（退出码 1，输出说明）和成功 | P6 / P9 |
 | W10 | 管理员建工作区（3.11） | — | `nerve workspaces create --slug acme --name Acme --admin-email a@…`：同 W1 的 `workspaces`、`workspace_members`；输出一行。slug 被占用、邮箱没有账户、账户已停用：退出码 1，输出说明，数据库不变；`workspace.creation_enabled = false` 时命令照常可用 | 用接口核对：这个账户 `GET /api/v0/workspaces` 能看到它，`role = 20` | P1 / — |
@@ -1395,7 +1395,7 @@ modules/access/
 |---|---|---|
 | P1 | 部署 | `nerve workspaces create`；`workspace.creation_enabled = false` 时用它建工作区 |
 | P3 | 部署、安全 | 邀请链接由签名密钥派生：同一部署的全部 nerve 进程用同一个密钥文件；换钥之后要重新复制链接；没有配置密钥的 dev、test 重启之后链接失效；让一个泄露的链接失效：删除邀请、重新邀请；账户被盗之后核对待接受的邀请 |
-| P5a | 部署 | `nerve workspaces reactivate-member`：恢复被移出的成员，项目成员关系仍无效，由他经接口加入项目恢复；它取工作区的锁，同一工作区里项目级的写连续重叠时一直等待（命令没有请求期限），中断之后什么都不改，可以重试（17.4） |
+| P5a | 部署 | `nerve workspaces reactivate-member`：恢复被移出的成员，项目成员关系仍无效，由他经接口加入项目（3.5 允许的）或被有权添加项目成员的人添加时恢复；它取工作区的锁，同一工作区里项目级的写连续重叠时一直等待（命令没有请求期限），中断之后什么都不改，可以重试（17.4） |
 | P6 | 部署 | 停用会结束他的全部成员关系；`nerve users activate` 只恢复账户，成员关系按工作区用 `reactivate-member` 恢复 |
 
 - "前端"一节的改写在 P9（3.20）。
@@ -1847,7 +1847,7 @@ modules/access/
   - 三个写各在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 有一行，随它的接口加入。
   6. 三个写等锁时项目成员被结束、删除或不再属于这个项目，或项目、工作区被删除的组合测试（404，不是 403，一行不改）和锁的强度；交错测试 1 的项目一侧（两位项目管理员同时离开）。
   7. 矩阵：剩下的项目一级的成员关系的行，P-前 的身份改由存储写出（9.2）。
-  8. 端到端：P5 的接口版本（含被移出的项目管理员重新加入得到 15）。
+  8. 端到端：P5 的接口版本（含被移出的项目管理员重新加入得到 15）；W7 降级的"含已离开的项目"：成员先离开一个项目，再被降为访客，那一行也成为访客的（P5a review 第 6 节）。
   9. review（3.20、8.7 没有 P5b 的行）。
 - **完成线**：P5 通过；交错测试 1 的项目一侧两种顺序通过；每个项目级的写最先锁工作区行的测试对三个写各有一行（含资源行的探测），少一行时完整性核对失败；相对规则的表和它在组合出的 app 上的情形通过；`project` 的 `apitest.Main` 两个方向核对通过；本 Phase 的矩阵格子通过。
 
@@ -2055,7 +2055,7 @@ modules/access/
 | P3 `invitations` | 邀请与凭邀请注册（后端，14） | 已完成：[spec](specs/P3-invitations.md)、[plan](plans/P3-invitations.md)、[评审](reviews/P3-invitations-review.md)（执行时 15 个 Task） |
 | P4a `projects` | 项目的建立、可见性与两个连带（后端，12）；设计中的 P4 由负责人裁定拆出（2026-10-01，第 12 节） | 已完成：[spec](specs/P4a-projects.md)、[plan](plans/P4a-projects.md)、[评审](reviews/P4a-projects-review.md)（执行时 15 个 Task） |
 | P4b `project-members` | 项目的管理、显示设置与成员的加入（后端，9）；同上，P4a 合并之后开始 | 已完成：[spec](specs/P4b-project-members.md)、[plan](plans/P4b-project-members.md)、[评审](reviews/P4b-project-members-review.md)（执行时 16 个 Task） |
-| P5a `memberships` | 结束与恢复工作区的成员关系（后端，15）；设计中的 P5 由负责人裁定拆出（2026-10-02，第 12 节） | 进行中：[spec](specs/P5a-memberships.md)、[plan](plans/P5a-memberships.md) |
+| P5a `memberships` | 结束与恢复工作区的成员关系（后端，15）；设计中的 P5 由负责人裁定拆出（2026-10-02，第 12 节） | 已完成：[spec](specs/P5a-memberships.md)、[plan](plans/P5a-memberships.md)、[评审](reviews/P5a-memberships-review.md)（执行时 14 个 Task） |
 | P5b `project-memberships` | 项目成员的角色、移出与离开（后端，9）；同上，P5a 合并之后开始 | 未开始 |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |
 | P7 `states-and-labels` | 状态与标签（后端，13） | 未开始 |

@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换或直接接上（M3 设计 6.5、6.6），不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断（规则表、`role = 20` 只出现在"管理员"这一个集合的查询里），不按大小比较；不留没有使用者的代码（`project.NewCascade` 不建，裁定 G2；`nerve workspaces` 的组合不建项目的连带）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/workspace.yaml`（869 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内：最长的是 `bootstrap/interleaving_growth_test.go`（404 行，P4b 留下 402 行，本 plan 只改两处构造和一句注释）、`bootstrap/permission_matrix_test.go`（388 行）、`e2e/fixtures/assert/workspace.ts`（378 行）、`bootstrap/permission_matrix_coverage_test.go`（371 行）、`bootstrap/ending_test.go`（367 行）和 `project/app/ports.go`（351 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，值在 `bootstrap` 中转换或直接接上（M3 设计 6.5、6.6），不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断（规则表、`role = 20` 只出现在"管理员"这一个集合的查询里），不按大小比较；不留没有使用者的代码（`project.NewCascade` 不建，裁定 G2；`nerve workspaces` 的组合不建项目的连带）。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/workspace.yaml`（869 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内：最长的是 `bootstrap/interleaving_growth_test.go`（404 行，P4b 留下 402 行，本 plan 只改两处构造和一句注释）、`bootstrap/permission_matrix_test.go`（388 行）、`e2e/fixtures/assert/workspace.ts`（378 行）、`bootstrap/permission_matrix_coverage_test.go`（371 行）、`bootstrap/ending_test.go`（这里原写 367 行，修订之后原型是 400 行；执行中长到约 431 行，修复轮把结束的夹具和它的前提分到 `bootstrap/ending_world_test.go`，之后两个文件 245 行、201 行）和 `project/app/ports.go`（351 行）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -502,7 +502,7 @@ Expected: 通过。
 - 接线：`project.New` 的 `NewCascade(store, store, store)`；交错测试里自建的连带同样多一个参数。
 
 **Tests:**
-- `adapter/postgres/end_test.go`：`TestEndingAMembersProjectMemberships`（锁按 id 顺序返回 acme 和 gamma 里他有有效成员关系的未删除项目，已归档的也在；事务结束之前每个都持 `FOR NO KEY UPDATE`：`FOR SHARE` 等它，外键的 `FOR KEY SHARE` 不等；别的项目都不锁：他的成员关系已结束的 Docs，他的已删除而 alice 的有效的 HR，只有 alice 的 Free，已删除的 Gone，没有问到的 beta 的 Web。写结束他在这些项目的成员关系，各留角色，其余列不变；他在 Web 已删除的成员关系（两个行序）、alice 的、他已结束的、他在 Gone 和 beta 的一列不动；问到空的项目集合时什么都不写）；`TestSoleAdmin`（每个情形是自己的一个项目，在同一个工作区里，别的情形的项目各有管理员和成员，查错了项目的成员或管理员就答错：Plane 把这个集合查错过三种：工作区成员关系的 id 比项目成员的账户，只看一个成员的项目，只看他一个人的项目；含"他是成员、旁边还有一个成员、没有管理员"的一例）；`TestLockActiveMemberProjectsLocksInIDOrder`（Web 的 id 较小，但在表里、在名字和标识的索引里都排在 Alpha 之后；Alpha 被别的事务持有时，`LockActiveMemberProjects` 持着 Web 等它，`FOR SHARE` 于是等 Web；别的顺序会先到 Alpha、什么都不持地等）；`TestLockActiveMemberProjectsLeavesOutAProjectDeletedWhileItWaited`（等锁期间被删除的项目不在结果里）。
+- `adapter/postgres/end_test.go`：`TestEndingAMembersProjectMemberships`（锁按 id 顺序返回 acme 和 gamma 里他有有效成员关系的未删除项目，已归档的也在；事务结束之前每个都持 `FOR NO KEY UPDATE`：`FOR SHARE` 等它，外键的 `FOR KEY SHARE` 不等；别的项目都不锁：他的成员关系已结束的 Docs，他的已删除而 alice 的有效的 HR，只有 alice 的 Free，已删除的 Gone，没有问到的 beta 的 Web。写结束他在这些项目的成员关系，各留角色，其余列不变；他在 Web 已删除的成员关系（两个行序）、alice 的、他已结束的、他在 Gone 和 beta 的一列不动；问到他已结束的 Docs 时什么都不写）；`TestSoleAdmin`（每个情形是自己的一个项目，在同一个工作区里，别的情形的项目各有管理员和成员，查错了项目的成员或管理员就答错：Plane 把这个集合查错过三种：工作区成员关系的 id 比项目成员的账户，只看一个成员的项目，只看他一个人的项目；含"他是成员、旁边还有一个成员、没有管理员"的一例）；`TestLockActiveMemberProjectsLocksInIDOrder`（Web 的 id 较小，但在表里、在名字和标识的索引里都排在 Alpha 之后；Alpha 被别的事务持有时，`LockActiveMemberProjects` 持着 Web 等它，`FOR SHARE` 于是等 Web；别的顺序会先到 Alpha、什么都不持地等）；`TestLockActiveMemberProjectsLeavesOutAProjectDeletedWhileItWaited`（等锁期间被删除的项目不在结果里）。
 - `app/cascade_test.go`：`TestEndMemberships`（锁 → 查唯一管理员 → 结束，参数原样传下，锁返回的项目照原样往下传，顺序不是任何一种排序；唯一管理员时 `project.sole_admin`，不写；一个都没锁到时不问、不写；每个调用的失败原样返回，之后的不调用；全部在调用者的事务里）。`TestDeleteWorkspaceProjects`、`TestDemoteToGuest` 只多一个构造参数。
 
 - [ ] **Step 1: 查询**
@@ -1250,6 +1250,7 @@ Expected: 通过。
 | 锁成 `FOR SHARE`、`FOR UPDATE`；不加锁 | `TestEndingAMembersProjectMemberships`；`TestEachLockOfAnEndingIsItsStrength`（Task 6 起） | 存储；组合 |
 | `SoleAdmin` 去掉项目、成员、角色；另一个管理员的项目、成员、角色、有效、存在；另一个成员的项目、成员、有效、存在 | `TestSoleAdmin`；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（另一个管理员的有效：409 一步的 erin；另一个成员的成员、存在：204 一步的 Solo；Task 4 起）；W12（项目），W7、W12（成员），W7（角色、另一个管理员的五条），W12（另一个成员的四条）（Task 13、14 起） | 存储；组合；端到端 |
 | `SoleAdmin` 去掉他的有效、已删除，另一个管理员的已删除，另一个成员的已删除 | `TestSoleAdmin`（故事看不到的理由见 spec 第 3 节第 9 条） | 存储 |
+| `SoleAdmin` 另一个管理员、另一个成员的相关换成集合一级（`a.project_id = ANY($1)`、`o.project_id = ANY($1)`；执行中 T2-d 补上） | `TestSoleAdmin`（各只由 T2-d 加的情形发现） | 存储 |
 | `EndMemberships` 去掉项目、成员 | `TestEndingAMembersProjectMemberships`；W12（项目），W7、W12（成员） | 存储；端到端 |
 | `EndMemberships` 去掉 `is_active`、`deleted_at IS NULL`；也改角色；不写结束者 | `TestEndingAMembersProjectMemberships`；W2、W7、W12 的写者（不写结束者，Task 13、14 起） | 存储；端到端 |
 | 唯一管理员时照样结束 | `TestEndMemberships`；`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`（Task 4 起）；W7（Task 13 起） | 单元；组合；端到端 |

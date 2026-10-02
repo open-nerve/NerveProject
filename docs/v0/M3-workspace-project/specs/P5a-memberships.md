@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P5a `memberships` |
 | 日期 | 2026-10-02 |
-| 状态 | 第 3 节已由控制者裁定；裁定和预检的发现（L1–L7）已改入（2026-10-02） |
+| 状态 | 已完成（[评审记录](../reviews/P5a-memberships-review.md)）：第 3 节已由控制者裁定；裁定和预检的发现（L1–L7）已改入（2026-10-02）；执行中的改动按评审记录第 3–5 节改入（2026-10-03） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（W2、W7、W12）、3.3、3.6（加锁表，约定一、二、五、六，方案 E 的代价）、3.7、3.8、3.11、3.20（P5a 一行）、4.11（P5a 各行）、5.1、5.3、6.5、6.6、8.7、9.2、9.3（交错 1、4、5、6，S2，9d）、9.4、12（P5a 与约束 1–4）、13.1、17.2–17.4 节 |
 | 前置交接 | [P4b spec](P4b-project-members.md) 第 5 节 P5 一行，[P4b review](../reviews/P4b-project-members-review.md) 第 6、7 节，P4a、P3、P2、P1 的 spec 第 5 节与 review 第 6 节中 P5 的条目（落点见第 3 节第 2 条） |
 | 裁定 | 负责人（2026-10-02）：设计中的 P5 拆成 P5a、P5b，依次合并（第 12 节）；退路 A'（恢复的一半移到 P5b）预先批准，本 spec 没有用到（第 3 节第 1 条）；G1 取 (a)：管理命令没有请求期限，等到操作者中断（17.4，README 照 8.7）；G2：移出的检查顺序是重读 → 判定 → 已结束 404 → 自己 409 → 时钟 → 结束一步 |
@@ -189,17 +189,17 @@ WHERE workspace_id = $workspace_id AND member_id = $member_id AND deleted_at IS 
 - `bootstrap.Workspaces` 的组合多 `project.Provide(pool).ProjectMembershipCounts`；`bootstrap.ReactivateMember(slug, email)` 的输出：
 
   ```
-  reactivated <email> in <slug> as <admin|member|guest>; project memberships still ended: <n>, each restored when the member joins its project
+  reactivated <email> in <slug> as <admin|member|guest>; project memberships still ended: <n>, each restored when the member joins or is added to its project
   <email> is an active member of <slug> already; nothing changed
   ```
 
-  账户已停用时行末加 `; the account is deactivated: run nerve users activate --email <email> next`。退出码 1：stderr 一行（码的说明），stdout 为空。
+  "加入或被添加"：访客不能加入，成员只能加入公开项目（3.5），有权添加项目成员的人添加他同样恢复（执行中 T7-b 改正）。账户已停用时行末加 `; the account is deactivated: run nerve users activate --email <email> next`。退出码 1：stderr 一行（码的说明），stdout 为空。
 - 命令没有请求期限（G1 (a)，17.4）：`TestAnInterruptedReactivationChangesNothing` 证明等锁时中断回滚、什么都不改，之后重跑成功；README 照 8.7 写明。
 - 真实数据库上：`TestWorkspacesReactivateMember`、`TestWorkspacesReactivateMemberErrors`（每个退出码 1 的情形和提交时被拒：每张表不变）、`TestAReactivationFindsWhatChangedMeanwhile`、`TestEachLockOfAReactivationIsItsStrength`、`TestTheReactivationRunsOnItsTransactionsConnection`；命令行：`TestWorkspacesReactivateMemberCommand`。
 
 ### 2.11 交错 1、4、5、6（Task 9、10；3.6 约定二、三、六，3.7 规则 1，9.3）
 
-每个交错两种顺序；第一方停在一个 gate（`endedHolding`：结束一步写完成员关系之后、项目一步之前；P4b 的 `gatedShares`：增长或建项目取完他的成员行之后；P4b 的 `gatedDeleter`：删除工作区判定之后），第二方在工作区行上等，由 `pgtest.WaitForLockWaitOn(…, "workspaces", 5*time.Second)` 证明，然后 gate 放开。每个等待都有期限。
+每个交错两种顺序；第一方停在一个 gate（`endedHolding`：结束一步写完成员关系之后、项目一步之前；P4b 的 `gatedShares`：增长或建项目取完他的成员行之后；P4b 的 `gatedDeleter`：删除工作区判定之后），第二方在工作区行上等，由 `pgtest.WaitForLockWaitOn(…, "workspaces", 5*time.Second)` 证明，然后 gate 放开。每个等待都有期限。交错 1 另有第二个 gate（`otherFoundHolding`：离开问过另一位管理员之后、结束之前），先在一个事务里问、再在另一个事务里结束的离开在这里失败（执行中 T6-b）。
 
 | 交错 | 测试 | 第一方 → 第二方 | 结果 |
 |---|---|---|---|
@@ -216,9 +216,9 @@ WHERE workspace_id = $workspace_id AND member_id = $member_id AND deleted_at IS 
 | 移出的 `LockWorkspace` 不加锁 | 交错 4 的 8 个、5 的 2 个、6 的 2 个 | 探针失败（移出先时第一方也不再持工作区行） |
 | 增长的 `ShareDirectoryWorkspaceByID` 不加锁 | 交错 4 的 8 个 | 增长先：`lockOn` 看不到 acme 的 `FOR SHARE`；移出先：探针失败 |
 | 建项目的 `ShareDirectoryWorkspace` 不加锁 | 交错 5 的 2 个 | 建先：`lockOn`；移出先：探针失败 |
-| 删除工作区的 `LockWorkspaceBySlug` 不加锁 | 交错 6 的 2 个 | 删除先：探针失败；移出先：删除改写 acme 的行同样等在 acme 上，探针得到满足，由结果发现（acme 被删除） |
+| 删除工作区的 `LockWorkspaceBySlug` 不加锁 | 交错 6 的 2 个 | 两种顺序都是探针失败（移出先时，删除改写 acme 的行同样等在 acme 上；`waitsAtAWrite` 拒绝已持 `workspaces` 的 `RowExclusiveLock` 的等待者，这个等待满足不了探针，执行中 T10-a） |
 
-最后一行是唯一一个能被另一个等待满足的探针：那个等待在同一行上（删除的 `UPDATE`），结果仍然看得到缺锁。
+最后一行原是唯一一个能被另一个等待满足的探针（删除的 `UPDATE` 在同一行上等），plan 只由结果发现它（acme 被删除）；执行中加了 `waitsAtAWrite`（T10-a），每个探针现在只由它所说的锁的等待满足。
 
 ### 2.12 矩阵（Task 4、5、11；9.2）
 
@@ -285,21 +285,21 @@ WHERE workspace_id = $workspace_id AND member_id = $member_id AND deleted_at IS 
    每一个都由存储测试在两个行序下发现。安全性质的变异里现有的故事都没有展示的只有一个，结束一步跳过邀请（`s5-end-invitations`）：每个故事结束成员关系时，那个工作区都没有发给他的待接受邀请（W7 那一封已被撤回，W12 的旧邀请在移出之后才发）。能展示它的状态只有 9d 那一种：他有效，带着一份在他被移出期间发的待接受邀请；W12 的 B 用这份邀请展示 S2，9d 由组合的测试展示。预检设想的那一步（carol 拒绝之后，B 再给她一份新的待接受邀请，然后恢复、移出她）不成立：3.8 说已拒绝的邀请仍占着这个邮箱，部分唯一索引 `workspace_member_invites (workspace_id, email) WHERE deleted_at IS NULL` 让再邀请得到 422 `duplicate`，已拒绝的与新的待接受邀请不能并存。它由组合的 `TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`、`TestAnEndedMembershipLeavesNoInvitation` 发现（`pf-end-noinv`）。**已接受。**
 10. **G2 的顺序在组合一层看不到**：已结束 404 和自己 409 只对通过判定的调用者可见，而通过 `workspace_member.remove` 判定的调用者是有效的管理员，"自己的"就是有效的：两个检查不相交。单元测试（假的 `Authorizer` 放行）核对 G2 的顺序；矩阵核对每个检查本身。**说明。**
 11. **结束的时刻由调用者读**：3.3 要移出、离开在工作区 N 之后读时刻，`EndMemberships` 在 `now` 上写；一个改变一个时刻（P4b 第 7 节）因此对连带成立：工作区一级的写持 N，项目级的写都先取工作区的 S（方案 E），连带写下的时刻不早于任何进行中的项目级的写。**说明。**
-12. **`deletedAlone` 成为参数**（P4b review 第 6 节 P26）：移出、离开软删除邀请，故事可以先单独删除一个工作区里的邀请；`expectWorkspaceDeleted(db, slug, adminEmail, deletedAlone)` 由故事说它单独删除过哪些表的行（W3 传 `deletedAloneTables`，W2 删除 First 时传空的）。**建议接受。**
+12. **`deletedAlone` 成为参数**（P4b review 第 6 节 P26）：移出、离开软删除邀请，故事可以先单独删除一个工作区里的邀请；`expectWorkspaceDeleted(db, slug, adminEmail, deletedAlone)` 由故事说它单独删除过哪些表的行（W3 传 `deletedAloneTables`；W2 删除 First 时传 `["workspace_member_invites"]`：bob 经邀请加入 First，他接受的邀请随接受单独删除，执行中 T13-e 为"由 alice 删除"可以失败而加）。**建议接受。**
 13. **故事为清扫多加的步骤**（设计第 2 节的 W2、W7、W12 照旧都在）：W2 里 Ops 是 bob 的、alice 由他添加为管理员，bob 成为管理员之后把她的角色原样设一次（清扫 14：她离开之前她的行由别人写过）；W7 加了 Other（bob 是别处的管理员，`HasOtherAdmin` 的工作区）、Docs（carol 的项目，dave 是成员；erin 是另一位管理员、离开了 acme：规则 2 的另一个管理员须有效）、发给 eve 的邀请、Other 发给 carol 的邀请和被撤回的邀请（不动的邀请），bob、carol 自己加入 Web；W12 加了 Other、Lab、Spare（他在别处的行和邀请不动）、Old（结束之后删除的项目不计数）、carol 离开 acme（只恢复 B 的行）和 carol 被拒绝的邀请（3.8 已拒绝的不动）。设计第 2 节 W7 的降级"含已离开的项目"：工作区成员关系有效而项目成员关系已结束，只能由 P5b 的离开项目写出，P5a 里没有这样的行；W7 经 carol 以访客身份接受邀请展示已结束的项目成员关系也降为访客。PATCH 降级走同一个 P4a 的 `DemoteMemberships`（有效的和已结束的都改），它对已离开的项目的展示留给 P5b（第 5 节）。**建议接受。**
 14. **P5a 改了 P4b 的降级测试的来历**（`TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects`）：已结束的成员关系原来由 SQL 替身写，现在经接口由 alice 移出 bob：替身换成真实的写，"由他自己写"的接受之前那两行由 alice 写（清扫 14）。**说明。**
 
 ## 4. 验收标准（完成线，M3 设计 12 节 P5a）
 
-- [ ] W2、W7、W12 的接口版本通过，此前的每个故事仍然通过（`make e2e` 共 65 个：此前的 62 个，加三个）。
-- [ ] 交错 1 的工作区一侧、4、5、6，两种顺序，`-count=5 -race` 通过，没有 40P01（原型：70 个子测试，12–14 秒）。
-- [ ] S2 顺序和 9d 顺序（移出、离开各一次）的集成测试通过。
-- [ ] 离开的规则 1（`TestTheOnlyAdminCannotLeave`：solo、acme 的 409，第二位管理员之后 204）和连带结束的规则 2（`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`：唯一管理员的 409，另有管理员之后 204）在组合出的 app 上各有正反例。
-- [ ] `reactivate-member` 在真实数据库上通过；退出码 1 的每种情形（没有账户、没有工作区、已删除的工作区、从来不是成员）和提交时被拒，每张表不变。
-- [ ] `workspace` 的 `apitest.Main` 两个方向核对通过（含 `project.sole_admin`）。
-- [ ] 本 Phase 的矩阵格子（25 个）通过；共 415 格，耗时记下；完整性核对通过。
-- [ ] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。
-- [ ] 3.20、8.7 中 P5a 的行写好。
+- [x] W2、W7、W12 的接口版本通过，此前的每个故事仍然通过（`make e2e` 共 65 个：此前的 62 个，加三个）。
+- [x] 交错 1 的工作区一侧、4、5、6，两种顺序，`-count=5 -race` 通过，没有 40P01（原型：70 个子测试，12–14 秒）。
+- [x] S2 顺序和 9d 顺序（移出、离开各一次）的集成测试通过。
+- [x] 离开的规则 1（`TestTheOnlyAdminCannotLeave`：solo、acme 的 409，第二位管理员之后 204）和连带结束的规则 2（`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation`：唯一管理员的 409，另有管理员之后 204）在组合出的 app 上各有正反例。
+- [x] `reactivate-member` 在真实数据库上通过；退出码 1 的每种情形（没有账户、没有工作区、已删除的工作区、从来不是成员）和提交时被拒，每张表不变。
+- [x] `workspace` 的 `apitest.Main` 两个方向核对通过（含 `project.sole_admin`）。
+- [x] 本 Phase 的矩阵格子（25 个）通过；共 415 格，耗时记下；完整性核对通过。（执行之后 415 格，1.64 秒，见评审记录第 2 节。）
+- [x] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。
+- [x] 3.20、8.7 中 P5a 的行写好。
 
 ## 5. 不在 P5a 范围内
 
@@ -309,8 +309,8 @@ WHERE workspace_id = $workspace_id AND member_id = $member_id AND deleted_at IS 
 
 | Phase | 条目 |
 |---|---|
-| P5b | 矩阵的 P-前替身（`standIns` 剩下的一条：以前的成员在私有项目的成员关系结束）和 `partingStates` 换成 P5b 的移出项目成员、离开项目写出；唯一管理员的表若要项目一侧的格子（`leaveProject` 的唯一项目管理员），另建项目的一张表，或在这张表里给出项目一级的列并让完整性核对（只数 `projectTables` 的列，第 3 节第 6 条）照旧成立；改项目成员的角色、移出项目成员、离开项目是第一批按资源寻址的项目级的写：`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 要能接资源路径、第一步探测资源行（P4b review 第 6 节）；交错 1 的项目一侧照 `TestTwoAdminsLeavingLeaveAnAdmin` 的写法（`endedHolding` 停在结束之后）；`Memberships` 的账户由故事 P5 一次添加几个账户发现（第 3 节第 9 条）；P5b 的写持项目的 N 期间 P5a 的连带等在项目行上（`LockActiveMemberProjects`），反过来项目级的写先取工作区的 S、等工作区一级的 N：两者不成环，P5b 的交错要两种顺序都证明；每一张项目一级的新矩阵表都要列进 `projectTables`，否则 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 的规则 (b) 看不到它的写（规则 (a) 只认路径里的 `{project_id}`；第 3 节第 6 条）；设计第 2 节 W7 的"降级含已离开的项目"：成员先离开一个项目（`leaveProject`），再被 PATCH 降为访客，那一行也成为访客的（第 3 节第 13 条），由 P5b 的故事展示 |
-| P6 | `EndMemberships` 照约定六跨几个工作区调用一次（`workspaceIDs` 已是切片）：停用按 id 顺序锁住他所在的每个工作区的 N 之后调用，时刻在这些锁之后读；`TestLockActiveMemberProjectsLocksInIDOrder` 的顺序对跨工作区的结果同样成立（查询按项目 id 排序，不按工作区）；规则 2 跨工作区（他在任何一个工作区是"还有别的有效成员"的项目唯一的管理员都拒绝）还要核对工作区一级的唯一管理员（3.7 规则 2 的工作区部分：P5a 的移出、离开不需要它，规则 1 只管离开）；`project.NewCascade` 随 `nerve users deactivate` 加入；停用之后 `reactivate-member` 照样恢复（交错 16）；`nerve users deactivate` 同样没有请求期限（17.4 G1 (a)），README 照 8.7 写明 |
+| P5b | 矩阵的 P-前替身（`standIns` 剩下的一条：以前的成员在私有项目的成员关系结束）和 `partingStates` 换成 P5b 的移出项目成员、离开项目写出；唯一管理员的表若要项目一侧的格子（`leaveProject` 的唯一项目管理员），另建项目的一张表，或在这张表里给出项目一级的列并让完整性核对（只数 `projectTables` 的列，第 3 节第 6 条）照旧成立；改项目成员的角色、移出项目成员、离开项目是第一批按资源寻址的项目级的写：`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 要能接资源路径、第一步探测资源行（P4b review 第 6 节）；交错 1 的项目一侧照 `TestTwoAdminsLeavingLeaveAnAdmin` 的写法（`endedHolding` 停在结束之后）；`Memberships` 的账户由故事 P5 一次添加几个账户发现（第 3 节第 9 条）；P5b 的写持项目的 N 期间 P5a 的连带等在项目行上（`LockActiveMemberProjects`），反过来项目级的写先取工作区的 S、等工作区一级的 N：两者不成环，P5b 的交错要两种顺序都证明；每一张新矩阵表都要放进 `projectTables` 或 `workspaceLevelTables` 之一（不在其中一份、或两份都在时测试失败，P5a 修复轮 m2），项目一级的放进 `projectTables`，否则 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 的规则 (b) 看不到它的写（规则 (a) 只认路径里的 `{project_id}`；第 3 节第 6 条）；`project.ErrSoleAdmin` 的说明只说规则 2，`leaveProject`（规则 1，只有他一人也拒绝）同样答 `project.sole_admin`：为两条规则措辞或给它自己的码，补救的说法（"先让另一位成员成为管理员"）有了 `updateProjectMember` 才做得到，一并核对（P5a review 第 6 节）；交错 1 的项目一侧照样在问过另一位管理员之后另有一个 gate，探针只认锁的等待（`waitsAtAWrite`）；设计第 2 节 W7 的"降级含已离开的项目"：成员先离开一个项目（`leaveProject`），再被 PATCH 降为访客，那一行也成为访客的（第 3 节第 13 条），由 P5b 的故事展示 |
+| P6 | `EndMemberships` 照约定六跨几个工作区调用一次（`workspaceIDs` 已是切片）：停用按 id 顺序锁住他所在的每个工作区的 N 之后调用，时刻在这些锁之后读；`TestLockActiveMemberProjectsLocksInIDOrder` 的顺序对跨工作区的结果同样成立（查询按项目 id 排序，不按工作区）；规则 2 跨工作区（他在任何一个工作区是"还有别的有效成员"的项目唯一的管理员都拒绝）还要核对工作区一级的唯一管理员（3.7 规则 2 的工作区部分：P5a 的移出、离开不需要它，规则 1 只管离开）；`project.NewCascade` 随 `nerve users deactivate` 加入；停用之后 `reactivate-member` 照样恢复（交错 16）；`nerve users deactivate` 同样没有请求期限（17.4 G1 (a)），README 照 8.7 写明；停用的账户行锁保持 `FOR NO KEY UPDATE`：结束经 `updated_by_id` 的外键在工作区 N 之后取结束者 `users` 行的 `FOR KEY SHARE`，`FOR UPDATE` 或同一个事务里改地址会与这个账户的离开、移出成环；停用不复用 `membershipEnd`（停用连已拒绝的邀请一起删除，3.6 的表）；`EndMember` 要求有效、`ReactivateMember` 要求无效，调用者照旧在工作区 N 下读到状态（P5a review 第 6 节） |
 | P7 | 状态、标签的写是项目级的写，经 P4b 的 `Locks`；连带不改它们（结束成员关系不碰状态和标签） |
 | 后来 | 结束的成员关系的显示设置（`workspace_user_properties`、`project_user_properties`）留着，恢复之后照旧（Plane 相同，第 7 节） |
 
@@ -328,7 +328,7 @@ WHERE workspace_id = $workspace_id AND member_id = $member_id AND deleted_at IS 
 ## 7. 已知的限制、交接和关闭条件
 
 - **结束的成员关系的显示设置留着**：移出、离开不删除他在工作区、项目的显示设置；恢复、重新加入之后照旧（与 Plane 相同）。
-- **恢复只恢复工作区的成员关系**：项目成员关系仍结束，他经接口加入项目时恢复（P4b 的 `RestoreMember`，角色取原来那一行与工作区角色中较低的，3.5）；命令输出还有几个。恢复出来的工作区成员关系计入管理员的人数，账户停用时他还不能登录（3.11）。
+- **恢复只恢复工作区的成员关系**：项目成员关系仍结束，他经接口加入项目（3.5 允许的：工作区管理员任何项目，成员公开项目，访客不能加入）或被有权添加项目成员的人添加时恢复（P4b 的 `RestoreMember`；加入时角色取原来那一行与工作区角色中较低的，3.5；执行中 T7-b 改正）；命令输出还有几个。恢复出来的工作区成员关系计入管理员的人数，账户停用时他还不能登录（3.11）。
 - **恢复不写 `updated_by_id`**：恢复之后 `updated_at` 是恢复的时刻，`updated_by_id` 仍是结束这一成员关系的账户（移出他的管理员、离开的本人；P6 起也可以是被停用的账户本人）：恢复不写 `updated_by_id`（第 3 节第 4 条）。
 - **一个旧邀请在恢复之后可能还在**：移出之后才发的邀请不随恢复删除；他有效时接受它只消费邀请（S2），他再被移出时它被删除（3.11，`TestAnEndedMembershipLeavesNoInvitation`）。
 - **调用者的账户在等锁期间被停用**：停用的连带在 P6；P5a 的竞争测试覆盖等锁期间成员关系结束、工作区删除。
@@ -409,5 +409,7 @@ WHERE workspace_id = $workspace_id AND member_id = $member_id AND deleted_at IS 
 | P5a 自己的：交错的探针 | `p-removal-nolock`、`p-growth-noshare`、`p-creation-noshare`、`p-slug-share`、`p-slug-nolock`（每个探针的反例：去掉被探的锁，或换成别的等待） | 5/5 | `TestARemovalAndTheProjectSidesGrowthSerialize`、`TestARemovalAndTheRemovedMembersProjectSerialize`、`TestARemovalAndTheRemovedAdminsDeletionSerialize`、`TestTwoAdminsLeavingLeaveAnAdmin` | 组合（`-race`） |
 
 P5a 自己的条目在上表中的位置：规则 1 是 `s5-leave-rule1`、`s5-leave-ask-none`、矩阵的唯一管理员一格和交错 1（`p-slug-*`）；规则 2 的项目集合是 `sa-*` 16 个（Plane 查错的三种：项目 id 是 `sa-project`，"只有一个成员"是 `sa-o-exists`，"只有他"是 `sa-a-member`、`sa-o-member`）、`s5-cas-sole` 和在组合一层的 `pf-sa-*`；`EndMemberships` 在调用时列举是交错 4 的增长先（`p-growth-noshare`），按 id 锁 N 是 `lamp-order`、`lamp-*`、`s13-lamp-*`，结束不删除是 `ems-*`、`s3-ems-*`，一个时刻、由调用者是 `s3-ems-by`、`s4-*-clock`、`s12-*-clock`，邀请一步是 `dpi-*`、`s9-end-member-first`、`s5-end-invitations`，唯一管理员的拒绝连邀请一起回滚是 `s4-*-tx`；恢复的账户 S 是 `s13-account-*`，停用的账户、已有效的是 `s5-re-*`，计数是 `s4-*-counts`、`ci-*`；S2 是 `x-accept-active`；矩阵的"被移出的成员"是 `s10-*`。相对角色的规则、`leaveProject`、项目一侧的交错 1 是 P5b 的。
+
+**执行中的改动**（2026-10-03）：上面是原型上的记录。执行中补上的测试和它们发现的变异记在评审记录第 3 节；改动本附录的两处：交错 1 在问过另一位管理员之后另有一个 gate，分成两个事务的离开在 `TestTwoAdminsLeavingLeaveAnAdmin` 失败（T6-b，`interleaving_endings_test.go` 由此比 plan 长）；交错 6 的探针只认锁的等待（`waitsAtAWrite`），删除工作区的 `LockWorkspaceBySlug` 不加锁在移出先时也由探针发现（T10-a，`interleaving_removal_test.go` 由此比 plan 长）。
 
 P1–P4b 交来的类别：在父行的锁之前判定是 `r-rm-decide-first`（离开经 P2 的 `lockAndDecide`，顺序由 P2 证明）；锁的强度、锁在事务之外是清扫 13、`s4-*-tx`、`s8-lockws`；规则表的行放宽是 `s5-rule-*`；"其余的行不变"不在空集上是清扫 3 的第二个工作区、成员、项目和清扫 10 的 `f-*`；`errors.Is` 对准确切的问题、不能失败的断言是清扫 2、14；按资源寻址的项目级的写被完整性核对看到是裁定 6 的 `pf-r6-*`；一行一个账户看不到少了的 `WHERE` 是清扫 1；矩阵的格子对准它那一列的目标由 P4b 的 `matrixViolations` 核对；P5a 没有新的表和索引；挂住的测试都有期限（`answerWithin` 5 秒，`WaitForLockWaitOn` 5 秒）；`project.sole_admin` 声明在工作区的两个操作上，由 `workspace` 的 `apitest.Main` 两个方向核对。
