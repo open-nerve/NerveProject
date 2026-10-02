@@ -232,22 +232,25 @@ func TestUpsertPreferences(t *testing.T) {
 	}
 }
 
-// EnsurePreferences inserts the account's display settings at the place
-// given, made by the account given at the moment given, the navigation the
-// column's default, while he has no undeleted ones in the project, a
-// deleted one not counting; undeleted ones stay as they are, and so does
-// every other row. Only the partial unique key's conflict is let pass: an
-// id another row has is an error, and writes nothing.
+// EnsurePreferences inserts the account's display settings, the row with
+// the id, workspace, project and place given, made by the account given at
+// the moment given, the navigation the column's default, while he has no
+// undeleted ones in the project, a deleted one not counting; undeleted ones
+// stay as they are, and so does every other row: his in another workspace
+// too, beta's, which a wrong workspace could name without breaking the
+// foreign key. Only the partial unique key's conflict is let pass: an id
+// another row has is an error, and writes nothing.
 func TestEnsurePreferences(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
-	acme := newWorkspace(t, pool, "acme")
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
 	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
 	bobs := preferencesRow(t, pool, acme, web, bob)
 	exec(t, pool, `UPDATE project_user_properties SET preferences = '{"navigation": {"default_tab": "views", "hide_in_more_menu": []}}',
 		sort_order = 7 WHERE id = $1`, bobs)
 	exec(t, pool, "UPDATE project_user_properties SET deleted_at = $2 WHERE id = $1", preferencesRow(t, pool, acme, web, carol), now)
 	preferencesRow(t, pool, acme, ops, carol)
+	preferencesRow(t, pool, beta, newProject(t, s, beta, "Web", "WEB", alice), carol)
 	ensure := func(user uuid.UUID, at time.Time) uuid.UUID {
 		t.Helper()
 		id := uuid.NewV7()
@@ -265,13 +268,12 @@ func TestEnsurePreferences(t *testing.T) {
 	}
 	carols := ensure(carol, now.Add(time.Hour))
 	stamp := `"` + now.Add(time.Hour).Format("2006-01-02T15:04:05.999999") + `+00:00"`
-	got := columns(t, pool, "project_user_properties", carols)
-	for k, want := range map[string]string{"sort_order": "-3", "project_id": `"` + web.String() + `"`, "user_id": `"` + carol.String() + `"`,
-		"created_by_id": `"` + alice.String() + `"`, "updated_by_id": `"` + alice.String() + `"`, "created_at": stamp, "updated_at": stamp,
-		"deleted_at": "null", "preferences": `{"navigation": {"default_tab": "work_items", "hide_in_more_menu": []}}`} {
-		if got[k] != want {
-			t.Errorf("carol's new settings' %s = %s, want %s", k, got[k], want)
-		}
+	want := map[string]string{"id": `"` + carols.String() + `"`, "workspace_id": `"` + acme.String() + `"`, "project_id": `"` + web.String() + `"`,
+		"user_id": `"` + carol.String() + `"`, "preferences": `{"navigation": {"default_tab": "work_items", "hide_in_more_menu": []}}`,
+		"sort_order": "-3", "created_by_id": `"` + alice.String() + `"`, "updated_by_id": `"` + alice.String() + `"`, "created_at": stamp,
+		"updated_at": stamp, "deleted_at": "null"}
+	if got := columns(t, pool, "project_user_properties", carols); !maps.Equal(got, want) {
+		t.Errorf("carol's new settings: %v\nwant %v", got, want)
 	}
 	if after := tableRows(t, pool, "project_user_properties", carols); after != before {
 		t.Errorf("the other rows after carol's:\n%s\nwant\n%s", after, before)
