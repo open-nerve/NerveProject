@@ -244,7 +244,7 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 	pool := openPool(t, dbURL)
 	alice := registerAccount(t, contract, base, "alice@example.com").AccessToken
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
-	bobID := accountID(t, contract, base, bob)
+	aliceID, bobID := accountID(t, contract, base, alice), accountID(t, contract, base, bob)
 	withBobLeadingWeb(t, contract, base, alice, bob, bobID, "acme")
 	var membership uuid.UUID
 	if err := pool.QueryRow(context.Background(), "SELECT id FROM workspace_members WHERE member_id = $1", bobID).Scan(&membership); err != nil {
@@ -268,6 +268,11 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 			t.Fatal(err)
 		}
 		return pending
+	}
+	// alice's removal wrote both his rows, at one moment: his membership of
+	// Web last by her when his membership of acme was, so not by him.
+	if got, want := rolesOf(t, pool, bobID, aliceID), "acme 15 ended, project 20 ended | true"; got != want {
+		t.Fatalf("bob's roles before, by alice = %s, want %s", got, want)
 	}
 	before := rolesOf(t, pool, bobID, bobID)
 	if want := "acme 15 ended, project 20 ended | false"; before != want {
