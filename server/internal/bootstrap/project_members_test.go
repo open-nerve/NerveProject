@@ -38,11 +38,12 @@ func membershipOf(t *testing.T, pool *pgxpool.Pool, project, user uuid.UUID) mem
 // the admin asks for (M3 design 3.5, 3.6 convention 6, 9.1's table), on
 // the wired app. bob, acme's member, joins alice's public project Web: a
 // new membership as a member, by him at the time of his request, his
-// display settings at 65535. Then, each time, his membership is ended with
-// a role, as P5's removal will end it (SQL stands in), and he joins again,
-// or alice adds him: the same row is active again with the role of 9.1's
-// row, by the caller at the time of that request, still made when it was.
-// His workspace role is changed through the API before the last row.
+// display settings at 65535. Joining again, an active member, he is left
+// as he is: nothing is written. Then, each time, his membership is ended
+// with a role, as P5's removal will end it (SQL stands in), and he joins
+// again, or alice adds him: the same row is active again with the role of
+// 9.1's row, by the caller at the time of that request, still made when it
+// was. His workspace role is changed through the API before the last row.
 func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, _ := twoProjects(t)
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
@@ -77,6 +78,22 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 		first.at.After(time.Now()) || prefs.sortOrder != 65535 || prefs.by != bobID || prefs.at != first.at {
 		t.Fatalf("bob's new membership %+v, display settings %+v; want him an active member and at 65535, both by him within the request",
 			first, prefs)
+	}
+	// stored is bob's membership of Web and his display settings there, every
+	// column of each row: a second row of either fails the statement.
+	stored := func() string {
+		t.Helper()
+		var rows string
+		if err := pool.QueryRow(context.Background(), `SELECT (SELECT m::text FROM project_members m WHERE m.project_id = $1 AND m.member_id = $2)
+			|| ' | ' || (SELECT u::text FROM project_user_properties u WHERE u.project_id = $1 AND u.user_id = $2)`, web, bobID).Scan(&rows); err != nil {
+			t.Fatal(err)
+		}
+		return rows
+	}
+	was := stored()
+	join(shared.RoleMember)
+	if got := stored(); got != was {
+		t.Fatalf("bob's rows after he joins again, an active member:\n%s\nwant them as they were:\n%s", got, was)
 	}
 
 	for _, tt := range []struct {

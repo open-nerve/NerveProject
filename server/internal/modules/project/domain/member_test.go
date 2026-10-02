@@ -110,7 +110,7 @@ func TestCheckTargets(t *testing.T) {
 // outside the three, between them or above them, may not.
 func TestCanJoin(t *testing.T) {
 	for role, want := range map[shared.Role]bool{shared.RoleAdmin: true, shared.RoleMember: true, shared.RoleGuest: false, 0: false, 10: false,
-		25: false} {
+		17: false, 25: false} {
 		if got := CanJoin(role); got != want {
 			t.Errorf("CanJoin(%d) = %v, want %v", role, got, want)
 		}
