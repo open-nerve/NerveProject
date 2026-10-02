@@ -159,6 +159,20 @@ func (r adminRace) acmeAndAlice(t *testing.T) string {
 	return s
 }
 
+// waitsAtAWrite reports whether a backend that waits for a lock holds
+// RowExclusiveLock on acme's table: an UPDATE of it takes that lock before
+// it waits for a row; a locking read takes RowShareLock.
+func (r adminRace) waitsAtAWrite(t *testing.T) bool {
+	t.Helper()
+	var written bool
+	if err := r.pool.QueryRow(context.Background(), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
+		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock' AND l.locktype = 'relation'
+			AND l.relation = 'workspaces'::regclass AND l.mode = 'RowExclusiveLock' AND l.granted)`).Scan(&written); err != nil {
+		t.Fatal(err)
+	}
+	return written
+}
+
 // Interleaving 6: bob's removal of alice, acme's other admin, and her
 // deleting acme serialize on acme's row (M3 design 3.6 convention 2). The
 // deletion first: it holds acme FOR NO KEY UPDATE after its decision
@@ -166,8 +180,12 @@ func (r adminRace) acmeAndAlice(t *testing.T) string {
 // acme's row, then locks no row, acme being deleted: 404
 // workspace.member_not_found. Her membership is deleted with acme. The
 // removal first: it holds acme and her ended membership's row; the
-// deletion waits for acme's row, then decides once she is no member: 404
-// workspace.not_found. acme stays, her membership ended.
+// deletion waits for acme's row at its lock, then decides once she is no
+// member: 404 workspace.not_found. acme stays, her membership ended. In
+// either order the second side waits at a lock of acme's row, not at a
+// write of acme's table (waitsAtAWrite): a deletion that decided without
+// its lock would wait for acme's row at its write of it, which
+// WaitForLockWaitOn counts too.
 func TestARemovalAndTheRemovedAdminsDeletionSerialize(t *testing.T) {
 	for _, deletionFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("deletion first %v", deletionFirst), func(t *testing.T) {
@@ -186,6 +204,9 @@ func TestARemovalAndTheRemovedAdminsDeletionSerialize(t *testing.T) {
 				deleted = run(func() error { return r.deleteAcme(ctx, workspacepg.New(r.pool)) })
 			}
 			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
+			if r.waitsAtAWrite(t) {
+				t.Error("the second side waits for acme's row at its write of acme; want it waiting at its lock of acme")
+			}
 			if got := r.acmeAndAlice(t); got != "acme, alice active" {
 				t.Errorf("while the first holds acme: %s, want acme, alice active", got)
 			}
