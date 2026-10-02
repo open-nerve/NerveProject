@@ -4,10 +4,10 @@
 |---|---|
 | Phase | M3/P4b `project-members` |
 | 日期 | 2026-10-01；修订 2026-10-02（方案 E 和预检） |
-| 状态 | 进行中：第 3 节第 1–12 条已裁定（2026-10-01）；第 13 条由负责人定为方案 E（2026-10-02）；第 14–17 条待控制者裁定 |
+| 状态 | 已完成（[评审记录](../reviews/P4b-project-members-review.md)）：第 3 节第 1–12 条已裁定（2026-10-01）；第 13 条由负责人定为方案 E（2026-10-02）；第 14–17 条由控制者裁定接受（2026-10-02） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（P2、P3、P4、P8）、3.3、3.4、3.5、3.6（约定二、三、五、六，加锁表）、3.12、3.18、3.19、3.20（P4b 一行）、4.11（P4b 各行）、5.1–5.3、6.4、6.7、9.1（恢复时的角色）、9.2、9.3（交错 17）、9.6、12（P4b 与约束 1–4）、13.1 节 |
 | 前置交接 | [P4a spec](P4a-projects.md) 第 5 节 P4b 一行，[P4a review](../reviews/P4a-projects-review.md) 第 6 节（落点见第 3 节第 2 条）；[M1-P3](../handoffs/M1-P3-trim-platform.md) 的项目成员 |
-| 裁定 | 负责人（2026-10-01）：第 3 节第 1–12 条照建议。负责人（2026-10-02，M3 设计 17.4）：方案 E，每个项目级的写最先取它的工作区行的 `FOR SHARE`（第 3 节第 13 条）；P4a 的 F-M3、预检的 M1 和 L1 由此关闭，设计 3.3 的"一个改变一个时刻"对每一列都成立（第 7 节） |
+| 裁定 | 负责人（2026-10-01）：第 3 节第 1–12 条照建议。负责人（2026-10-02，M3 设计 17.4）：方案 E，每个项目级的写最先取它的工作区行的 `FOR SHARE`（第 3 节第 13 条）；P4a 的 F-M3、预检的 M1 和 L1 由此关闭，设计 3.3 的"一个改变一个时刻"对连带改写的每一列都成立（第 7 节） |
 | 计划 | [P4b plan](../plans/P4b-project-members.md) |
 
 本 spec 只写 M3 设计交给 P4b 决定的东西：名字、签名、SQL、测试名，以及原型证明了什么。规则本身以 M3 设计为准，这里引用节号，不重述。P4b 依赖 P4a（`e22e5080` 的 `main`）。
@@ -18,7 +18,7 @@ P4b 是评审敏感的一段（M3 设计 12 节约束 3）：项目一侧的成�
 
 按 M3 设计 12 节 P4b：项目的修改、删除、归档、恢复，每个成员自己的项目显示设置，项目成员的列出、添加、加入；添加和加入这两条项目一侧的增长与降为访客串行（交错 17）。具体是：
 
-- 九个操作：`updateProject`、`archiveProject`、`unarchiveProject`、`deleteProject`、`getProjectPreferences`、`updateProjectPreferences`、`listProjectMembers`、`addProjectMembers`、`joinProject`，各带操作名、规则行、矩阵行（共 175 格，含添加无效目标的 PM、X 格）；
+- 九个操作：`updateProject`、`archiveProject`、`unarchiveProject`、`deleteProject`、`getProjectPreferences`、`updateProjectPreferences`、`listProjectMembers`、`addProjectMembers`、`joinProject`，各带操作名、规则行、矩阵行（共 175 格，含添加无效目标的 PM、X 格；执行时的修复轮另加已归档项目的两列和"成员关系已结束"的两个变体，矩阵共 390 格）；
 - 写的唯一一条加锁路径（`Locks`，第 3 节第 14 条）：不加锁读项目的工作区；工作区行 `FOR SHARE`，写的第一把锁（方案 E）；添加、加入再取目标的工作区成员行；然后锁项目（`FOR NO KEY UPDATE`，改显示设置是 `FOR SHARE`）并确认它还在那个工作区；在全部锁之下、在事务的连接上判定；锁之后读时钟；
 - 删除项目与删除工作区共用一处删除步骤（`deleteProjects`），由目录驱动的组合测试核对每张项目之下的表；
 - 增长的一步（`growth`）由添加、加入共用：恢复以前的成员行时添加取请求的角色，加入取原来那一行与工作区角色中较低的一个（9.1 的表）；
@@ -84,7 +84,7 @@ WHERE id = $id AND deleted_at IS NULL
 FOR SHARE;
 ```
 
-  `workspace` 的 `Directory.ShareWorkspaceByID` 与 P4a 的 `ShareWorkspaceBySlug` 并列；`project` 的 `WorkspaceDirectory` 嵌入 `WorkspaceSharer.ShareWorkspaceByID`，`bootstrap` 的 `projectWorkspaces` 转换回答（`TestProjectWorkspacesConvertsWorkspacesAnswer`）。存储测试在新文件 `directory_share_test.go`（`directory_test.go` 已 396 行）：`TestShareWorkspaceByIDFindsTheUndeletedWorkspace`（两个工作区各得自己的，已删除的、不存在的找不到，失败是错误）、`TestTheDirectorysLockByIDIsForShare`（持锁时工作区的 `FOR NO KEY UPDATE` 等待、另一个 `FOR SHARE` 不等，别的工作区不被锁）、`TestTheDirectorysLockByIDSeesADeletionItWaitedFor`。
+  `workspace` 的 `Directory.ShareWorkspaceByID` 与 P4a 的 `ShareWorkspaceBySlug` 并列；`project` 的 `WorkspaceDirectory` 嵌入 `WorkspaceSharer.ShareWorkspaceByID`，`bootstrap` 的 `projectWorkspaces` 转换回答（`TestProjectWorkspacesConvertsWorkspacesAnswer`）。存储测试在新文件 `directory_share_test.go`（`directory_test.go` 已 396 行）：`TestShareWorkspaceByIDFindsTheUndeletedWorkspace`（两个工作区各得自己的，已删除的、不存在的找不到，失败是错误）、`TestTheDirectorysLockIsForShare/byID`（持锁时工作区的 `FOR NO KEY UPDATE` 等待、另一个 `FOR SHARE` 不等，别的工作区不被锁）、`TestTheDirectorysLockSeesADeletionItWaitedFor/byID`。执行时（T2-c）按 slug、按 id 的两份锁测试合成一份：P4a 按 slug 的两个测试从 `directory_test.go` 挪进 `directory_share_test.go`，每个测试跑 `bySlug`、`byID` 两个子测试，`directory_test.go` 余 296 行。
 
 ### 2.4 `updateProject`（Task 3；3.4、3.6、3.19、5.2）
 
@@ -113,9 +113,9 @@ WHERE workspace_id = $workspace_id AND ($project_id::uuid IS NULL OR id = $proje
 ```
 
 - `DELETE /api/v0/projects/{project_id}`，204；码 `[project.not_found, forbidden]`；规则同 `project.update`；已归档的照样删除。用例（`NewDeleteProject(ProjectsDeleter, Locks, tx, clock)`，不另设删除项目的端口）：`Locks` → 锁下读时钟 → `deleteProjects(Deletion{锁读到的工作区, &id, 调用者, now})`。
-- 目录驱动的核对（移交第 7、8 条，P4a 的 F-M1）：`bootstrap/workspace_deletion_catalog_test.go` 的 `keysTo(t, pool, parent)` 是父表本身（`<父表>.id`）和目录中指向它的每个外键；只经别的表挂在父表下、自己没有指向父表的外键的表让测试失败，并说明它经哪张表挂在下面（`TestKeysRefuseATableWithoutItsParent`，对 `workspaces`、`projects` 两个父表）。`TestDeletingAProjectLeavesNoUndeletedRowUnderIt` 经 `keysTo("projects")` 读出每张表，经接口删除 Web：每个外键下删除之前未删除的行都在项目的时刻、由删除者删除，Ops 的每一行不变；`TestAProjectDeletionRefusedAtItsCommitChangesNoRow` 让 `states`（最后一步的表）的延迟约束触发器拒绝提交，两个项目下的每一行都不变。工作区删除的三个组合测试经 `keysTo("workspaces")` 照旧通过，没有加豁免。
+- 目录驱动的核对（移交第 7、8 条，P4a 的 F-M1）：`bootstrap/workspace_deletion_catalog_test.go` 的 `keysTo(t, pool, parent)` 是父表本身（`<父表>.id`）和目录中指向它的每个外键；只经别的表挂在父表下、自己没有指向父表的外键的表让测试失败，并说明它经哪张表挂在下面（`TestKeysRefuseATableWithoutItsParent`，对 `workspaces`、`projects` 两个父表）。`TestDeletingAProjectLeavesNoUndeletedRowUnderIt` 经 `keysTo("projects")` 读出每张表，经接口删除 Web：每个外键下删除之前未删除的行都在项目的时刻、由删除者删除，Ops 的每一行不变；`TestAProjectDeletionRefusedAtItsCommitChangesNoRow` 对 `keysTo("projects")` 的每张表各跑一次，让那张表的延迟约束触发器拒绝提交，两个项目下的每一行都不变（执行时 T6-a、T14：只拒绝最后一步的 `states` 时，在事务之外执行的最后一步拒绝的是它自己的提交，测试照样通过）。工作区删除的三个组合测试经 `keysTo("workspaces")` 照旧通过，没有加豁免。
 - 存储：`TestDeletingAProjectSoftDeletesItsRowsAlone`（Web、Ops 各一次：已归档、在工作区第一个或最后一个；只动它和它下面的行，同一个时刻、同一个账户，除了三列什么都不写；同工作区的另一个项目、此前删除的项目、别的工作区的项目一行不动；再跑一次什么都不变）。
-- 剩下的手写清单：存储测试的 `projectTables`（`adapter/postgres/cascade_test.go`）和 e2e 的 `workspaceTables`；新表漏在它们里面时，组合的目录测试和 e2e 的 `expectProjectDeleted`（也读目录）先失败（第 5 节 P7 一行）。
+- 剩下的手写清单：存储测试的 `projectTables`（`adapter/postgres/cascade_test.go`，执行时并进了每张表的行数，没有准备行的表失败）、`seedProject`、`deleteAll`，`failures_test.go` 的取消上下文的步骤，`delete_project_test.go` 的每步失败行，e2e 的 `workspaceTables`；单元测试 `app/cascade_test.go` 的失败行由 `deletionSteps` 推出。新表漏在它们里面时，组合的目录测试和 e2e 的 `expectProjectDeleted`（也读目录）先失败（第 5 节 P7 一行）。
 
 ### 2.7 项目的显示设置（Task 7、8；3.18、4.8、5.2）
 
@@ -154,7 +154,7 @@ ORDER BY created_at, id;
 
 ### 2.9 `addProjectMembers`（Task 10–12；3.5、3.6 约定三和六、3.18、9.2）
 
-- 领域：`NewMember{MemberID, Role}`；`CheckNewMembers`（1–`MaxNewMembers`（100）个，角色是三种之一，同一个账户只出现一次：事务之前的 422，第 3 节第 9 条）；`CanAdd(workspaceRole, role)`：`addable` 表（工作区管理员只能作管理员、工作区访客只能作访客、工作区成员三种都可以，Plane `views/project/member.py:69-83`，3.5），按集合；`Target{NewMember, WorkspaceRole *Role, Member bool}`、`CheckTargets`：不是工作区的有效成员 `members[i].member_id` `not_allowed`，已是项目的有效成员 `duplicate`，角色不合规 `members[i].role` `not_allowed`，一个 422 按位置。
+- 领域：`NewMember{MemberID, Role}`；`CheckNewMembers`（1–`MaxNewMembers`（100）个，角色是三种之一，同一个账户只出现一次：事务之前的 422，第 3 节第 9 条；个数不在范围内时只报个数、立即返回，重复按集合找，执行时由整分支评审的 M2 改定）；`CanAdd(workspaceRole, role)`：`addable` 表（工作区管理员只能作管理员、工作区访客只能作访客、工作区成员三种都可以，Plane `views/project/member.py:69-83`，3.5），按集合；`Target{NewMember, WorkspaceRole *Role, Member bool}`、`CheckTargets`：不是工作区的有效成员 `members[i].member_id` `not_allowed`，已是项目的有效成员 `duplicate`，角色不合规 `members[i].role` `not_allowed`，一个 422 按位置。
 - 存储：`RestoreMember(id, role, by, now)`（已结束的恢复为有效、取给的角色，保留 id 和 `created_at`）；`EnsurePreferences(row)`（`ON CONFLICT (project_id, user_id) WHERE deleted_at IS NULL DO NOTHING`：已有的设置不动，恢复的成员关系保留它们）。
 - `app/growth.go`：`growth{workspaceID, projectID, user, ended *Membership, role, sortOrder, by, now}.apply(ctx, MemberGrower)`：有已结束的成员关系就以 `role` 恢复，否则 `CreateMember`；然后 `EnsurePreferences`。添加、加入共用。
 - 用例（`NewAddProjectMembers(AddMembersDeps{Locks, Projects, Tx, Clock})`）：`RequireActor` → `CheckNewMembers` → 事务，按 3.6 的加锁表经 `Locks`（`targets`）：`ProjectWorkspace`（不加锁，第 3 节第 10 条）→ 工作区 `FOR SHARE` → `ShareMembers`（目标的工作区成员行 `FOR SHARE`，id 升序，约定三）→ 项目 `FOR NO KEY UPDATE` → 判定（`project_member.add`）→ `Memberships` → `CheckTargets`（判定之后）→ 锁下读时钟 → 每个目标按请求的顺序：`LowestSortOrder`、`growth.apply`（恢复时取请求的角色，9.1；显示设置在 `SortOrderFirst`，3.18）→ 回答经 `ListMembers` 读回、按请求的顺序（201，第 3 节第 9 条）。整批在一个事务里：一个目标被拒，什么都不写。
@@ -264,7 +264,7 @@ ORDER BY created_at, id;
    - 加锁的性质只在存储一层发现的：`LockProject` 取 `FOR UPDATE`（`TestLockProject`：多挡外键检查的 `FOR KEY SHARE`，经接口分不出）；`LockMemberProjects` 留下等锁时删除的项目（`TestLockMemberProjectsLeavesOutAProjectDeletedWhileItWaited`）；方案 E 之下另有三个，见第 15 条。都在真实数据库上，不是缺口。`LockProject` 取 `FOR SHARE` 现在也由组合一层的 `TestTwoWritesOnAProjectSerialize` 发现（预检的 L2：两个写都持有 Web，各自的修改等对方，40P01）。
    **建议接受。**
 8. **再归档取新的时刻，恢复未归档的照样成功**：3.19 没有写。照 Plane（`views/project/base.py:427-441`：归档就是写当前时刻）；同一个请求重复发出时答复一致。**建议接受。**
-9. **添加的回答和请求里的重复**：添加答 201 `ProjectMemberList`，按请求的顺序，经 `ListMembers` 在事务里读回（恢复的成员关系保留 id 和建立的时刻）。请求里同一个账户出现两次是事务之前的 422（`members[i].member_id` `duplicate`，"is listed before"），与"已是有效成员"同一个码、不同的说明。**建议接受。**
+9. **添加的回答和请求里的重复**：添加答 201 `ProjectMemberList`，按请求的顺序，经 `ListMembers` 在事务里读回（恢复的成员关系保留 id 和建立的时刻）。请求里同一个账户出现两次是事务之前的 422（`members[i].member_id` `duplicate`，"is listed before"），与"已是有效成员"同一个码、不同的说明。**建议接受。**执行时（T11-b）发现它不只是领域的事：漏掉这个检查时，恢复的路径按 id 恢复同一行两次、答一个错的 201，所以它由用例的拒绝行和组合测试 `TestAnAddThatNamesAnAccountTwiceWritesNothing` 守着。
 10. **每个项目级的写先不加锁读项目的工作区**（方案 E 之后本条覆盖七个写，`Locks` 的第一步）：3.6 加锁表的第一步是工作区行（第 13 条），而请求只给项目的 id；`ProjectWorkspace` 不加锁读出工作区，`Locks` 再按表的顺序加锁：工作区 `FOR SHARE`，添加、加入的目标的工作区成员行，项目。项目的锁读到的工作区必须是先读到的那个，否则 404（`TestUpdateProjectRefuses` 的"moved to another workspace"）；锁之后各处用锁读到的那个（删除的 `Deletion`、显示设置的行、增长的成员关系和 `LowestSortOrder`）。没有写能把项目移到别的工作区，所以这个确认在组合一层不会失败：把增长换成不加锁读到的工作区是**等价变异**（`pf-join-unlocked-workspace-2`，组合一层存活，单元一层由"moved"发现）。"锁之后用锁读到的那个"因此是评审的事实，不是测试的事实：预检逐处核对过代码，本轮在原型上照样核对（`join_project.go`、`add_members.go` 用 `h.project.WorkspaceID`，`delete_project.go` 用它作 `Deletion` 的工作区，`update_preferences.go` 用它作显示设置的行；只有 `ShareWorkspaceByID` 和 `ShareMembers` 用先读的 id，不可避免）。没有的项目在第一步答 404，与看不到的 404 相同，不泄露什么。**建议接受。**
 11. **小的结构调整**（说明）：`SortOrderReader`（`LowestSortOrder`）从 `ProjectCreator` 拆出，`MemberAdder` 只要它；`refusingCommits` 按表（P4a 只拒绝 `workspace_members` 的修改），两个 P4a 的测试照旧用 `workspace_members`；`TestTheWritesOnAProjectStampTheirRequest` 的写一个接一个跑在同一个项目上。
 12. **原型中加强的测试，写 spec 时补的变异**（说明）：清扫中发现变异存活的地方，测试在原型中加强，并从带来它的 Task 起改进每一份快照（`amend.py`）：`amidAnotherWorkspace`（故事的谓词在两个行序下都看得到）、一个连接的池的测试、负责人和默认负责人的组合测试、矩阵添加的变体行和 `targets` 的前提、`update_test.go` 的 `cycle_view` 夹具、显示设置读到别的账户的测试、删除的 `unwritten`。写本 spec 的附录时发现修改和显示设置的领域规则、两个唯一键的 409、已归档项目被锁找到、删除的同一时刻没有自己的变异，补了 11 个（`mutants_s12.py`），全部被原有的测试发现，其中 6 个另由故事发现（附录 A）。
@@ -273,19 +273,19 @@ ORDER BY created_at, id;
     - **考虑过的**：A 不改，把窗口写成连带请求的期限；B 连带写 `GREATEST(updated_at, $now)`（L1 的 `deleted_at < created_at` 和 M1 另要修）；C 连带在自己的全部锁之后读时刻（一个连带的各行不再是一个时刻，W3 要改写）；E。负责人选 E；M1 的另一种修法（工作区的存储按 id 顺序批量锁成员行的 `LockWorkspaceMembers`）和 B 的 `GREATEST` 都不做。
     - **做法**：一条路径（第 14 条）。工作区按 id 的锁是 `WorkspaceDirectory` 上与 `ShareWorkspaceBySlug` 并列的 `ShareWorkspaceByID`（`deleted_at IS NULL`，`FOR SHARE`），`bootstrap` 照旧转换；`workspace` 模块只多这条查询和它的方法。每个写的顺序：不加锁读项目的工作区（第 10 条）→ 工作区 S → 添加、加入的目标的工作区成员行 S（id 升序，约定三、六照旧）→ 项目 N（改设置 S），确认工作区 → 判定 → 检查 → 时钟 → 写。没有 S 到 N 的升级：同一个写里工作区行只取一次 S。
     - **它让什么成立，由哪个测试守着**（层见附录 A）：
-      - 每个写先锁工作区，在自己的事务里，在目标和项目之前，强度是 `FOR SHARE`：`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（组合，Task 4 起每个写一行）；存储一层 `TestTheDirectorysLockByIDIsForShare`。
+      - 每个写先锁工作区，在自己的事务里，在目标和项目之前，强度是 `FOR SHARE`：`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（组合，Task 4 起每个写一行）；存储一层 `TestTheDirectorysLockIsForShare/byID`。
       - 不比 `FOR SHARE` 弱（`FOR KEY SHARE` 时连带的 N 不等它）：上一条两个测试和 `TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`；不比它强（同一个工作区的写互等）：`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`。
       - 在调用者的事务里：`TestEachWriteOnAProjectSharesItsWorkspaceFirst`（锁在写等项目时仍被持有）、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`；接线不能是空的：`TestProjectWorkspacesConvertsWorkspacesAnswer` 和上面的组合测试。
       - M1 关闭：`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（第 16 条）。
       - F-M3 的两个窗口关闭（L1 在内）：交错 17 的每个子测试核对他在 Web 的成员关系最后写入不早于建立（增长先时也不早于 gate 放开：降级的时刻在它持有 acme 之后读）；`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects` 的修改一路核对 Web 的 `updated_at`、`deleted_at` 是删除的一个时刻、不早于修改答复的 `updated_at`、`updated_by_id` 是 alice，加入一路核对他新建的成员关系和显示设置 `deleted_at = updated_at` 是那个时刻、不早于 `created_at`。去掉相应的写的工作区锁，这些测试各自失败（`E-skip-updateProject`、`E-skip-joinProject`、`E-share-none`，附录 A）。
       - 连带在工作区的锁之后读时刻：`E-wsdelete-clock-early`、`E-demote-clock-early`（把时刻挪到锁之前）由上面两个测试发现。
       - 时钟在全部锁之后：`TestEachWriteReadsTheClockUnderItsLock`（调用记录里工作区的锁在时钟之前）。
-    - **代价**：同一个工作区里，项目级的写与工作区一级的写（改成员的角色、移出、删除工作区、接受邀请）互相排队；项目级的写之间 S 与 S 不冲突。预检的反例复现在 E 之下：原型的 `deadlock-demo-3E.sh`（预检的 `deadlock-demo-3.sh` 换成 E 的语句）在 E 下没有 40P01，去掉添加的工作区锁时 40P01。
-14. **一条加锁路径，和它的完整性核对**（brief："一处，不是七个调用点"）：`app.Locks`（`lock.go`）是项目级的写取锁和判定的唯一一条路径，写的用例只持 `Locks`、不持 `Authorizer`，所以一个写不经它就无法判定；`project.New` 只建一个 `Locks`。写用 `write{project, action, share, targets}` 说明自己要什么：改项目之下的行、不改项目行和成员关系的写 `share`，让账户成为项目成员的写给 `targets`。`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 的写的列表与矩阵中写在项目一级的行逐个对上（不是手写的清单，P4a 的 F-M1 的教训）：契约里一个新的项目级的写有矩阵行（`TestThePermissionMatrixCoversEveryOperation` 要求）而没有这里的行，测试在连数据库之前失败。**P5、P7 怎样继承**：3.6 的加锁表上，P5 的改项目成员的角色、移出项目成员、离开项目和 P7 的状态、标签的写都是"工作区 S → 项目 N → …"：它们的用例只拿到 `Locks`，以 `write{project, action}` 取锁（不给 `targets`：它们不让人成为项目成员；不给 `share`：它们改项目之下的成员关系或项目自己的行），重读、检查在 `lockAndDecide` 之后；它们的操作进矩阵时，完整性核对要求它们在 `projectWrites` 各有一行，否则失败。**建议接受。**
+    - **代价**（执行时整分支评审的 I2 改正，负责人 2026-10-02 确认，M3 设计 17.4）：两边不对称。工作区一级的写（修改、删除工作区，改成员的角色，接受邀请；以后移出、离开、恢复成员、停用）取工作区行的 `FOR NO KEY UPDATE`；只有共享锁持有这一行时，PostgreSQL 让新的 `FOR SHARE` 立即取得，不排在等待中的它之后，所以连续重叠的项目级的写可以让它一直等到请求期限（默认 15 秒），到期失败、回滚、可以重试；先锁后判定，被拒绝的请求也先取这把 S。按每个账户每分钟 1,200 次的限速和每个写几毫秒的持锁，风险低，代码不改。项目级的写之间 S 与 S 不冲突。约定二覆盖项目管理类的写（P4b、P5、P7）；M4 的工作项写入不默认沿用，由 M4 的设计决定。预检的反例复现在 E 之下：原型的 `deadlock-demo-3E.sh`（预检的 `deadlock-demo-3.sh` 换成 E 的语句）在 E 下没有 40P01，去掉添加的工作区锁时 40P01。
+14. **一条加锁路径，和它的完整性核对**（brief："一处，不是七个调用点"）：`app.Locks`（`lock.go`）是项目级的写取锁和判定的唯一一条路径，写的用例只持 `Locks`、不持 `Authorizer`，所以一个写不经它就无法判定；`project.New` 只建一个 `Locks`。写用 `write{project, action, share, targets}` 说明自己要什么：改项目之下的行、不改项目行和成员关系的写 `share`，让账户成为项目成员的写给 `targets`。`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 的写的列表与矩阵中写在项目一级的行逐个对上（不是手写的清单，P4a 的 F-M1 的教训）：契约里一个新的项目级的写有矩阵行（`TestThePermissionMatrixCoversEveryOperation` 要求）而没有这里的行，测试在连数据库之前失败。执行时的修复轮（P8，整分支评审改定范围）把"项目级的写"认作两者之一：路径带 `{project_id}` 的非 GET 操作，或矩阵里有某行的列含项目一级调用者的非 GET 操作；原来只认列恰好是 `projectColumns` 的行，会漏掉列不同的写（例如只对本人的离开）和 P5、P7 按资源寻址的写。**P5、P7 怎样继承**：3.6 的加锁表上，P5 的改项目成员的角色、移出项目成员、离开项目和 P7 的状态、标签的写都是"工作区 S → 项目 N → …"：它们的用例只拿到 `Locks`，以 `write{project, action}` 取锁（不给 `targets`：它们不让人成为项目成员；不给 `share`：它们改项目之下的成员关系或项目自己的行），重读、检查在 `lockAndDecide` 之后；它们的操作进矩阵时，完整性核对要求它们在 `projectWrites` 各有一行，否则失败。**建议接受。**
 15. **方案 E 改变了发现的层**（brief 的层的规则；附录 A 逐条）：
     - 升到组合一层：`LockProject` 取 `FOR SHARE`（`lo-lock-share`、`pf-lockproject-share`，`TestTwoWritesOnAProjectSerialize`）。
     - 从交错 17、写的交错移到 `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（仍在组合一层）：增长先锁项目、加入不锁他的成员关系（`lo-add-project-first`、`lo-join-project-first`、`lo-join-no-share`、`pf-add-project-first`、`pf-join-no-share`），`ShareProject` 取 `FOR KEY SHARE`、不加锁（`lo-share-*`），`LockProject` 不加锁（`lo-lock-none`，另有 `TestTwoWritesOnAProjectSerialize`）。方案 E 之下第二方都等在工作区行上，交错 17 和写的交错看不到项目行上的顺序；它们仍由交错 17 发现的是增长与降级之间的事（`w-*-no-shares`、降级先锁项目，`webFree`）。
-    - 降到存储一层：降级的 `LockMemberProjects` 取 `FOR SHARE`（`lo-member-projects-share`，P4a 的 `TestLockMemberProjectsLocksInIDOrder`、`TestDemotingAMemberToGuest`）：每个项目级的写先等降级持有的工作区行，降级的项目锁不再与任何写相遇；它挡的只剩将来不经工作区锁的写，P5、P7 的写都经 `Locks`。工作区按 id 的锁去掉 `deleted_at IS NULL`（`E-deleted-found`，存储的两个测试）：组合一层由项目锁的 `deleted_at` 和连带遮住（删除工作区在同一个事务里删除它的项目）。去掉工作区的 id（`E-id-fwd`、`E-id-rev`，两个行序）：`Locks` 只看找到与否、不用它答的工作区，组合一层和故事看到的只有多锁了别的工作区，由 `TestShareWorkspaceByIDFindsTheUndeletedWorkspace`、`TestTheDirectorysLockByIDIsForShare`（别的工作区被锁）发现。
+    - 降到存储一层：降级的 `LockMemberProjects` 取 `FOR SHARE`（`lo-member-projects-share`，P4a 的 `TestLockMemberProjectsLocksInIDOrder`、`TestDemotingAMemberToGuest`）：每个项目级的写先等降级持有的工作区行，降级的项目锁不再与任何写相遇；它挡的只剩将来不经工作区锁的写，P5、P7 的写都经 `Locks`。工作区按 id 的锁去掉 `deleted_at IS NULL`（`E-deleted-found`，存储的两个测试）：组合一层由项目锁的 `deleted_at` 和连带遮住（删除工作区在同一个事务里删除它的项目）。去掉工作区的 id（`E-id-fwd`、`E-id-rev`，两个行序）：`Locks` 只看找到与否、不用它答的工作区，组合一层和故事看到的只有多锁了别的工作区，由 `TestShareWorkspaceByIDFindsTheUndeletedWorkspace`、`TestTheDirectorysLockIsForShare/byID`（别的工作区被锁）发现。
     - 只在单元一层：等待期间被删除的工作区答成找到、项目的锁读到的工作区不核对（`E-share-gone-dropped`、`E-confirm-dropped`，`TestUpdateProjectRefuses`）：同上的遮挡，和没有写能移动项目（第 10 条）。
     - 等价：交错 17 的 gate 移到 `ShareMembers` 之前（`tm-gate-before-share`）：增长在 gate 之前已持有 acme，第二方照样等在 `workspaces`；交错 17 去掉 `webFree` 同时加入先锁项目（`tm-webfree-dropped`）：两种顺序都不成环，先锁项目由 `TestJoinProject`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst` 发现，`webFree` 是交错 17 里唯一核对它的地方。连接池上的接线（`postgres.DB` 从 `ctx` 取事务）与正确的接线等价；接在写的事务之外（`E-wire-outside-tx`）被发现。
     - 只有添加不锁工作区（`E-skip-addProjectMembers`）不能单独复现 M1：M1 的排程里加入自己的工作区锁让删除等在 acme，添加照样走完；由 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 和交错 17 发现。方案 E 之下没有哪个真实的写只持工作区成员行的 S 而不持工作区的 S，M1 只剩纯时序才能碰到。
@@ -296,16 +296,16 @@ ORDER BY created_at, id;
 
 ## 4. 验收标准（完成线，M3 设计 12 节 P4b）
 
-- [ ] P2、P3、P4、P8 的接口版本通过，此前的每个故事仍然通过（`make e2e` 共 62 个：此前的 58 个，加上四个）。
-- [ ] 恢复时角色的表（`TestJoinRole` 的四行、`TestARestoredMembershipGivesNoMoreThanItHad` 经接口的三行和添加的一行）通过。
-- [ ] 交错 17（加入、添加各两种顺序，新的和已结束的成员关系）、降级与删除项目、项目级的写与降级、同一个项目上的两个写、同一个工作区里两个项目上的写、删除工作区与项目级的写、添加多个成员与删除工作区，连同每个写先锁工作区的测试，`-count=5 -race` 通过，没有 40P01。
-- [ ] 每个项目级的写最先取工作区行的 `FOR SHARE`，在自己的事务里、在目标和项目之前（`TestEachWriteOnAProjectSharesItsWorkspaceFirst`，写的行与矩阵中在项目一级写的行对上）；删除工作区以它的一个时刻删除进行中的写写下的行，交错 17 的成员关系最后写入不早于建立（M3 设计 3.3 的一个改变一个时刻）。
-- [ ] 本 Phase 的矩阵格子（175 个）通过，含添加无效目标的 PM、X 格；共 356 格，耗时记下；完整性核对通过。
-- [ ] 每个项目级的写在事务的连接上（`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`）；增长和删除被拒于提交时一行不留（`TestAGrowthRefusedAtItsCommitLeavesNoRow`、`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`）。
-- [ ] 删除项目由目录驱动的组合测试核对（`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`），删除工作区的三个组合测试不加豁免照旧通过。
-- [ ] `project` 的 `apitest.Main` 两个方向通过（新码 `project.archived`）。
-- [ ] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。
-- [ ] 3.20 中 P4b 的一行写好；M1-P3 交接有"处理结果（M3/P4b）"。
+- [x] P2、P3、P4、P8 的接口版本通过，此前的每个故事仍然通过（`make e2e` 共 62 个：此前的 58 个，加上四个）。
+- [x] 恢复时角色的表（`TestJoinRole` 的四行、`TestARestoredMembershipGivesNoMoreThanItHad` 经接口的三行和添加的一行）通过。
+- [x] 交错 17（加入、添加各两种顺序，新的和已结束的成员关系）、降级与删除项目、项目级的写与降级、同一个项目上的两个写、同一个工作区里两个项目上的写、删除工作区与项目级的写、添加多个成员与删除工作区，连同每个写先锁工作区的测试，`-count=5 -race` 通过，没有 40P01。
+- [x] 每个项目级的写最先取工作区行的 `FOR SHARE`，在自己的事务里、在目标和项目之前（`TestEachWriteOnAProjectSharesItsWorkspaceFirst`，写的行与矩阵中在项目一级写的行对上）；删除工作区以它的一个时刻删除进行中的写写下的行，交错 17 的成员关系最后写入不早于建立（M3 设计 3.3 的一个改变一个时刻）。
+- [x] 本 Phase 的矩阵格子（175 个）通过，含添加无效目标的 PM、X 格；共 356 格，耗时记下；完整性核对通过。（执行之后共 390 格，约 1.3 秒，见评审记录第 2 节。）
+- [x] 每个项目级的写在事务的连接上（`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`）；增长和删除被拒于提交时一行不留（`TestAGrowthRefusedAtItsCommitLeavesNoRow`、`TestAProjectDeletionRefusedAtItsCommitChangesNoRow`）。
+- [x] 删除项目由目录驱动的组合测试核对（`TestDeletingAProjectLeavesNoUndeletedRowUnderIt`），删除工作区的三个组合测试不加豁免照旧通过。
+- [x] `project` 的 `apitest.Main` 两个方向通过（新码 `project.archived`）。
+- [x] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。
+- [x] 3.20 中 P4b 的一行写好；M1-P3 交接有"处理结果（M3/P4b）"。
 
 ## 5. 不在 P4b 范围内
 
@@ -315,17 +315,17 @@ ORDER BY created_at, id;
 
 | Phase | 条目 |
 |---|---|
-| P5 | 移出、离开写好之后，矩阵的 `standIns` 中"以前的成员""被移出的成员"两条替身换成存储，`listsTheProjectMembers` 不再有被移出的成员（第 3 节第 4 条）；`EndMemberships` 改项目成员关系之前取那些项目的 `FOR NO KEY UPDATE`（3.6 的加锁表；`Memberships` 在项目锁下读到的才是写时的），在移出、离开工作区的工作区 N 之后读时刻（3.3）；改项目成员的角色、移出项目成员、离开项目经 P4b 的 `Locks`（工作区 S → 项目 N → 判定，3.6 的加锁表，方案 E，第 3 节第 14 条），它们的操作进矩阵时在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 各加一行（完整性核对要求）；交错 4、5 照设计 9.3 的方案 E 写法，第二方等在工作区行上；故事清扫接过"已结束"的谓词：`ListMembers` 的 `is_active`、`RestoreMember` 的 id（重新加入恢复以前的成员行）、`ProjectFacts` 的 `m.is_active`，`Memberships` 的账户（一次添加多个账户）；交错 1、4、5、6 用 P4b 的添加、加入（`growth`）；`refusingCommits(t, pool, table)` 可以按表拒绝提交；一个改变一个时刻（第 7 节）对 `EndMemberships` 同样成立，前提是它的时刻在工作区的锁之后读 |
+| P5 | 移出、离开写好之后，矩阵的 `standIns` 中"以前的成员""被移出的成员"两条替身换成存储，`listsTheProjectMembers` 不再有被移出的成员（第 3 节第 4 条）；`EndMemberships` 改项目成员关系之前取那些项目的 `FOR NO KEY UPDATE`（3.6 的加锁表；`Memberships` 在项目锁下读到的才是写时的），在移出、离开工作区的工作区 N 之后读时刻（3.3）；改项目成员的角色、移出项目成员、离开项目经 P4b 的 `Locks`（工作区 S → 项目 N → 判定，3.6 的加锁表，方案 E，第 3 节第 14 条），它们的操作进矩阵时在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 各加一行（完整性核对要求：路径带 `{project_id}`，或矩阵里有某行的列含项目一级的调用者，执行时的修复轮改定）；它们按资源寻址（`/project-members/{id}`），测试的 `projectWrite.path` 要能接资源路径，第一步还要探测写自己的资源行（`FOR UPDATE NOWAIT`），否则先锁资源行的写会通过；交错 4、5 照设计 9.3 的方案 E 写法，第二方等在工作区行上；故事清扫接过"已结束"的谓词：`ListMembers` 的 `is_active`、`RestoreMember` 的 id（重新加入恢复以前的成员行）、`ProjectFacts` 的 `m.is_active`，`Memberships` 的账户（一次添加多个账户）；交错 1、4、5、6 用 P4b 的添加、加入（`growth`）；`refusingCommits(t, pool, table)` 可以按表拒绝提交；一个改变一个时刻（第 7 节）对 `EndMemberships` 同样成立，前提是它的时刻在工作区的锁之后读 |
 | P6 | 交错 13、14 另跑恢复以前的项目成员行（`growth` 的 `RestoreMember`）；`project.NewCascade` 随 `nerve users deactivate` 加入（G2）；停用按 id 顺序锁住几个工作区的 N 之后才调 `EndMemberships`，它的时刻在这些锁之后读（3.3；交错 13 照设计 9.3 的方案 E 写法：增长、项目级的写等在工作区行上） |
-| P7 | 状态和标签的写经 P4b 的 `Locks`（工作区 S → 项目 N，3.6 的加锁表，方案 E），各在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 加一行；标签加进 `deleteProjects`（`app/deletion.go`，最后一步）和 `ProjectsDeleter`；组合的目录测试（`keysTo`）和 e2e 的 `expectProjectDeleted` 读目录，标签表没有准备行、没有被删除时它们失败；两处手写清单要加上标签：存储测试的 `projectTables`、e2e 的 `workspaceTables`；P4、W3 的故事建一个标签 |
-| M4 | P2 留下的（P2 review 第 6 节，T11 C2）：物理删除账户时 `workspace_members.member_id` 的 `ON DELETE CASCADE` 不经工作区的锁删除成员关系。方案 E 不改变这个旁路：级联不取工作区锁。它改变的是修法的范围：M4 的清理若先按 id 顺序取账户所在工作区的 `FOR NO KEY UPDATE`，这把锁也挡住这些工作区里每个项目级的写（它们先取工作区的 S），与它们不再交错。不取时，删除账户与进行中的添加、加入可能成环（删除持有账户行、级联等目标的工作区成员行；增长持有那一行的 S，插入成员关系时外键要账户行的 `FOR KEY SHARE`）：M4 要先取工作区锁，或用测试证明不成环 |
+| P7 | 状态和标签的写经 P4b 的 `Locks`（工作区 S → 项目 N，3.6 的加锁表，方案 E），各在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 加一行；标签加进 `deleteProjects`（`app/deletion.go`，最后一步）和 `ProjectsDeleter`；组合的目录测试（`keysTo`）和 e2e 的 `expectProjectDeleted` 读目录，标签表没有准备行、没有被删除时它们失败；手写清单要加上标签：存储测试的 `projectTables`、`seedProject`、`deleteAll`，`failures_test.go` 的取消上下文的步骤，`delete_project_test.go` 的每步失败行，e2e 的 `workspaceTables`（第 2.6 节）；`keysTo` 不排除父表自己，父表引用它下面的表（Plane 的 `projects.default_state_id → states`）时会把父表报成没有键的表，需要时加 `AND tab <> $1::text::regclass` 和一个反例；按资源寻址的写（`/states/{id}`、`/labels/{id}`）在每个写先锁工作区的测试里要能接资源路径，第一步还要探测写自己的资源行；先删除状态或标签再删除项目的故事要让 `expectProjectDeleted` 只数删除之前未删除的行；P4、W3 的故事建一个标签（详见 review 第 6 节） |
+| M4 | 方案 E 的范围（执行时整分支评审的 I2，负责人 2026-10-02）：工作项的写是否最先取工作区行的 `FOR SHARE` 由 M4 的设计决定，不默认沿用约定二；取的话要说明工作区一级的写在高频的工作项写入下怎样不被饿死（第 3 节第 13 条的代价）。P2 留下的（P2 review 第 6 节，T11 C2）：物理删除账户时 `workspace_members.member_id` 的 `ON DELETE CASCADE` 不经工作区的锁删除成员关系。方案 E 不改变这个旁路：级联不取工作区锁。它改变的是修法的范围：M4 的清理若先按 id 顺序取账户所在工作区的 `FOR NO KEY UPDATE`，这把锁也挡住这些工作区里每个项目级的写（它们先取工作区的 S），与它们不再交错。不取时，删除账户与进行中的添加、加入可能成环（删除持有账户行、级联等目标的工作区成员行；增长持有那一行的 S，插入成员关系时外键要账户行的 `FOR KEY SHARE`）：M4 要先取工作区锁，或用测试证明不成环 |
 
 ## 6. 风险
 
 | 风险 | 应对 |
 |---|---|
 | 项目级的写与工作区一级的连带在工作区行上相遇（方案 E）；一个新的写绕过它 | 一条路径 `Locks`，写不持自己的 `Authorizer`；每个写先锁工作区由组合测试逐个核对，写的列表与矩阵对上（第 3 节第 14 条）；七个交错测试在真实数据库上两个顺序都跑，锁的强度、顺序、在事务里、接线、先判定后锁的变异都被发现 |
-| 同一个工作区里，项目级的写与工作区一级的写（改成员的角色、移出、删除工作区、接受邀请）互相排队（方案 E 的代价） | 两边都是短事务；项目级的写之间 S 与 S 不冲突（`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`） |
+| 同一个工作区里，连续重叠的项目级的写让工作区一级的写（修改、删除工作区，改成员的角色，接受邀请；以后移出、离开、恢复成员、停用）一直等到请求期限（方案 E 的代价，不对称：新的 `FOR SHARE` 越过等待中的 `FOR NO KEY UPDATE`） | 两边都是短事务，每个账户限速，按目前的负载占用远不到一半；到期失败、回滚、可以重试；项目级的写之间 S 与 S 不冲突（`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`）；M4 的工作项写入不默认沿用约定二（第 3 节第 13 条） |
 | 增长与降级的加锁顺序（P4a 的 F-M2） | 交错 17 的探测证明第二方等待时两方都还没有锁项目；增长先锁项目由 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 发现，降级先锁项目由交错 17 发现（第 3 节第 15 条） |
 | 删除项目与删除工作区漏掉对方的表 | 一处 `deleteProjects`；两个父表的组合测试都读目录；`keysTo` 拒绝只经别的表挂在下面的表 |
 | 故事看不到的谓词（第 3 节第 6 条） | 存储测试在两个行序下都看得到；互相遮住的由 P4 一起发现（`ProjectWorkspace` 与 `ProjectFacts` 的一对；方案 E 之下锁的两个要与它们三个一起去掉）；P5 的故事清扫接过"已结束"的那些 |
@@ -334,7 +334,8 @@ ORDER BY created_at, id;
 
 ## 7. 已知的限制、交接和关闭条件
 
-- **一个改变一个时刻，对每一列都成立**（M3 设计 3.3，方案 E，第 3 节第 13 条）：每个项目级的写在工作区行的 `FOR SHARE` 之下写，工作区一级的每个连带（降为访客、删除工作区）持工作区行的 `FOR NO KEY UPDATE`、在它之后读时刻；连带读时刻时，它要改的项目一侧的行上没有进行中的写，所以 `updated_at` 不倒退，`deleted_at`、`updated_at` 不早于 `created_at`。测试：交错 17 的每个子测试（成员关系最后写入不早于建立，增长先时也不早于 gate 放开）、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（修改：Web 的 `updated_at`、`deleted_at` 是删除的一个时刻，不早于修改的，`updated_by_id` 是删除者；加入：新建的成员关系和显示设置在那个时刻删除，不早于建立）、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（新的成员关系在删除的一个时刻删除）；去掉写的工作区锁、或把连带的时刻挪到锁之前，它们失败（附录 A）。**P4a review 第 7 节的 F-M3 由 P4b 关闭**（P4b 的 review 照录）；本 spec 原来写在这里的窗口（连带读时刻之后等锁的总时间）和预检的 L1 不再存在。以后的连带照 3.3 在它的工作区锁之后读时刻（P5 的 `EndMemberships`、P6 的停用，第 5 节）。
+- **一个改变一个时刻，对连带改写的每一列都成立**（M3 设计 3.3，方案 E，第 3 节第 13 条）：每个项目级的写在工作区行的 `FOR SHARE` 之下写，工作区一级的每个连带（降为访客、删除工作区）持工作区行的 `FOR NO KEY UPDATE`、在它之后读时刻；连带读时刻时，它要改的项目一侧的行上没有进行中的写，所以 `updated_at` 不倒退，`deleted_at`、`updated_at` 不早于 `created_at`。测试：交错 17 的每个子测试（成员关系最后写入不早于建立，增长先时也不早于 gate 放开）、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`（修改：Web 的 `updated_at`、`deleted_at` 是删除的一个时刻，不早于修改的，`updated_by_id` 是删除者；加入：新建的成员关系和显示设置在那个时刻删除，不早于建立）、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`（新的成员关系在删除的一个时刻删除）；去掉写的工作区锁、或把连带的时刻挪到锁之前，它们失败（附录 A）。**P4a review 第 7 节的 F-M3 由 P4b 关闭**（P4b 的 review 照录）；本 spec 原来写在这里的窗口（连带读时刻之后等锁的总时间）和预检的 L1 不再存在。以后的连带照 3.3 在它的工作区锁之后读时刻（P5 的 `EndMemberships`、P6 的停用，第 5 节）。
+- **两个只持共享锁的写之间不保证时刻的先后**（执行时整分支评审的 M1）：同一个账户并发改自己在同一个项目的显示设置时，两个写都持项目的 `FOR SHARE`、各自在锁之后读时刻，到 `UPSERT` 里才相遇：后提交的可以带较早的时刻，新建的行可以 `updated_at` 早于 `created_at`。只涉及调用者自己那一行的审计列，留下的值是后提交的；P2 的工作区显示设置同样。要严格的先后时，在读时刻之前锁住调用者自己的成员关系行。
 - **矩阵里被移出的成员仍在成员列表里**：他的工作区成员关系由 SQL 替身结束，项目成员关系留着有效；P5 的移出结束两者（第 3 节第 4 条）。
 - **`getProjectPreferences` 的读和判定是两次查询**：不开事务（6.7 的读），答案是一时的。
 
@@ -388,7 +389,7 @@ ORDER BY created_at, id;
 **原型中定下的事实**：
 
 - **F1** 等锁之后 Postgres 在行的最新版本上重新求值 `WHERE` 的条件：`LockProject`、`ShareProject`、`LockMemberProjects` 等待期间被删除的项目读不到（`TestTheProjectLockSeesADeletionItWaitedFor`、`TestLockMemberProjectsLeavesOutAProjectDeletedWhileItWaited`）。
-- **F2** `FOR NO KEY UPDATE` 与 `FOR SHARE`、另一个 `FOR NO KEY UPDATE` 冲突，与外键检查的 `FOR KEY SHARE` 不冲突；两个 `FOR SHARE` 不冲突（`TestLockProject`、`TestShareProject` 用 `NOWAIT` 核对，工作区按 id 的锁由 `TestTheDirectorysLockByIDIsForShare` 核对）：改设置之间不互等，修改与改设置互等；同一个工作区里项目级的写之间不互等，它们与工作区一级的写互等。
+- **F2** `FOR NO KEY UPDATE` 与 `FOR SHARE`、另一个 `FOR NO KEY UPDATE` 冲突，与外键检查的 `FOR KEY SHARE` 不冲突；两个 `FOR SHARE` 不冲突（`TestLockProject`、`TestShareProject` 用 `NOWAIT` 核对，工作区按 id 的锁由 `TestTheDirectorysLockIsForShare/byID` 核对）：改设置之间不互等，修改与改设置互等；同一个工作区里项目级的写之间不互等，它们与工作区一级的写互等，但不对称：新的 `FOR SHARE` 越过等待中的 `FOR NO KEY UPDATE`（第 3 节第 13 条）。
 - **F3** `ON CONFLICT (project_id, user_id)` 不带部分唯一键的条件时，Postgres 推断不出那个部分唯一索引，每次插入都报错：`ups-target`、`ens-target` 因此连故事都发现（`EnsurePreferences` 在每次添加、加入里）。
 - **F4** 原型不是 git 仓库时 S3（实例信息里的 `commit`）失败（P3 附录 A 的 F8）；复现在 `make e2e` 之前把副本初始化为仓库并提交。
 - **F5** 一条语句锁几行时逐行等待（`LockMemberProjects` 按 id 顺序，`DeleteProjects` 按扫描的顺序）：方案 E 之前，连带读了时刻之后可以逐个等几个项目级的写（P4a 的 F-M3 的窗口），删除工作区逐行改成员行时与添加逐行锁的目标成环（预检的 M1）；方案 E 之下这些写都先等在工作区行上（第 7 节、第 3 节第 16 条）。
@@ -411,7 +412,7 @@ ORDER BY created_at, id;
 | 9 每个加锁顺序在真实的系统上 | 锁的强度（`LockProject`、`ShareProject`、`LockMemberProjects`）、先判定后锁（修改、归档）、项目锁在事务之外、增长先锁项目（添加、加入）、加入不锁他的工作区成员行、降级先锁项目（F-M2）、`LockMemberProjects` 留下等锁时删除的项目：14 个 | 全部被发现（方案 E 之后的层，第 3 节第 15 条）：2 个只在组合一层（降级先锁项目、项目锁在事务之外），5 个在组合和单元两层（增长先锁项目、加入不锁他的成员关系、先判定后锁），4 个在组合和存储两层（`ShareProject` 取 `FOR KEY SHARE`、不加锁，`LockProject` 取 `FOR SHARE`、不加锁），3 个只在存储一层（`LockProject` 取 `FOR UPDATE`；`LockMemberProjects` 取 `FOR SHARE`、留下等锁时删除的项目，第 3 节第 7、15 条） |
 | 10 承重的准备行都有前提 | 矩阵的准备（`targets`、`preconditions`）和交错测试的准备中，每一行改成会让变异通过的状态：11 个 | 全部被前提或测试发现（组合） |
 | 11 每条拒绝的路径 | 没有调用者时不读（每个用例一个，8 个）；负责人在判定之前检查（1 个）：9 个；添加的目标在判定之前检查（`a-targets-first`）在 P4b 自己的类别里，矩阵的四个变体行给 PM、X 等格 | 全部被发现：8 个在用例一层（第 3 节第 7 条），1 个在矩阵 |
-| 方案 E（第 3 节第 13–16 条） | `mutants_E.py` 36 个：一条路径（不锁工作区，另在 M1 的排程上；工作区在目标之后、在项目之后；目标在项目之后；锁的错误被吞；等待期间删除的工作区答成找到；项目锁读到的工作区不核对）8 个，七个写各自不锁工作区 7 个，查询（`FOR KEY SHARE`、`FOR NO KEY UPDATE`、`FOR UPDATE`、不加锁、去掉 `deleted_at IS NULL`、去掉 id 的两个行序、经池）8 个，接线（`bootstrap` 不问目录、在事务之外问；`project.New` 的 `Locks` 接在不加锁的工作区端口上）3 个，连带在锁之前读时刻 2 个，测试变异（每个探测改指方案 E 之前或之外的表、完整性核对少一行）8 个；`mutants_split.py` 10 个（`ProjectWorkspace` 移到 Task 2、`TestShareProjectAndProjectWorkspace` 拆开之后的清扫 1 的 6 个和 `ShareProject` 的 3 个、`ProjectWorkspace` 加锁 1 个）；预检的 `mutants_pf.py`、`mutants_pf2.py` 24 个 | `mutants_E.py` 全部被发现：30 个在组合一层（其中 4 个另在单元一层、5 个另在存储一层），3 个只在存储一层（`deleted_at`、id 的两个行序），3 个只在单元一层（错误被吞、等待期间删除、工作区不核对）；`mutants_split.py` 全部被发现，6 个只在存储一层，4 个另在组合一层；预检的 17 个在每一层被发现，3 个只在低一层（`pf-list-order-id` 存储、`pf-update-clock-before-lock` 单元、`pf-add-duplicate-unchecked` 领域，预检已按它们的类别接受），`tm-gate-before-share`、`tm-webfree-dropped` 和 `pf-join-unlocked-workspace-2` 是等价的（第 3 节第 10、15 条），`pf-join-unlocked-workspace` 由 `pf2` 的写法代替 |
+| 方案 E（第 3 节第 13–16 条） | `mutants_E.py` 36 个：一条路径（不锁工作区，另在 M1 的排程上；工作区在目标之后、在项目之后；目标在项目之后；锁的错误被吞；等待期间删除的工作区答成找到；项目锁读到的工作区不核对）8 个，七个写各自不锁工作区 7 个，查询（`FOR KEY SHARE`、`FOR NO KEY UPDATE`、`FOR UPDATE`、不加锁、去掉 `deleted_at IS NULL`、去掉 id 的两个行序、经池）8 个，接线（`bootstrap` 不问目录、在事务之外问；`project.New` 的 `Locks` 接在不加锁的工作区端口上）3 个，连带在锁之前读时刻 2 个，测试变异（每个探测改指方案 E 之前或之外的表、完整性核对少一行）8 个；`mutants_split.py` 10 个（`ProjectWorkspace` 移到 Task 2、`TestShareProjectAndProjectWorkspace` 拆开之后的清扫 1 的 6 个和 `ShareProject` 的 3 个、`ProjectWorkspace` 加锁 1 个）；预检的 `mutants_pf.py`、`mutants_pf2.py` 24 个 | `mutants_E.py` 全部被发现：30 个在组合一层（其中 4 个另在单元一层、5 个另在存储一层），3 个只在存储一层（`deleted_at`、id 的两个行序），3 个只在单元一层（错误被吞、等待期间删除、工作区不核对）；`mutants_split.py` 全部被发现，6 个只在存储一层，4 个另在组合一层；预检的 17 个在每一层被发现，3 个只在低一层（`pf-list-order-id` 存储、`pf-update-clock-before-lock` 单元、`pf-add-duplicate-unchecked` 领域，预检已按它们的类别接受；执行时 T11-b、T12 把后者升到用例和组合一层，见第 3 节第 9 条），`tm-gate-before-share`、`tm-webfree-dropped` 和 `pf-join-unlocked-workspace-2` 是等价的（第 3 节第 10、15 条），`pf-join-unlocked-workspace` 由 `pf2` 的写法代替 |
 | 写 spec 时补的 | 修改的领域规则（`archive_in` 两端、标识不转大写、标识和名称不按规则查）、两个唯一键的 409 互换、显示设置的两条规则、项目的锁和 `ShareProject` 找不到已归档的项目、状态在另一个时刻删除：11 个（`mutants_s12.py`，第 3 节第 12 条） | 全部被发现；其中 6 个另各让它的故事单独运行（`e2e_mutants.py`）失败 |
 
 **按缺陷类别**（brief 的 P4b 类别；"层"是变异被发现的层）：
@@ -427,7 +428,7 @@ ORDER BY created_at, id;
 | 成员列表 | 列已结束、已删除的；别的项目的；看不到的人得到 404 以外的 | `TestListMembers`；P3；`TestPermissionMatrix` | 存储；端到端；组合 |
 | 交错 17 | 添加、加入各对降级，两个顺序；探测（`WaitForLockWaitOn` 指名 `workspaces`，`webFree` 的 `NOWAIT`）；他的成员关系最后写入不早于建立（L1）；没有挂起：每次等待有期限 | 2.12 的表 | 组合 |
 | 父锁、强度、事务 | `Authorize` 在父锁之前；父锁没有 `deleted_at IS NULL`；强度错；锁在事务之外 | 清扫 8、9；`TestLockProject`、`TestTheProjectLockSeesADeletionItWaitedFor`、`TestShareProject`、`TestProjectWorkspace`；`TestTwoWritesOnAProjectSerialize` | 组合；存储 |
-| 工作区的锁（方案 E） | 一个写或全部写不锁工作区；锁在目标或项目之后；`FOR KEY SHARE`、`FOR NO KEY UPDATE`、`FOR UPDATE`、不加锁；经池；没有 `deleted_at IS NULL`；接线是空的、在事务之外；连带在锁之前读时刻；探测指名方案 E 之前的表 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`、`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`、交错 17、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`、`TestProjectWorkspacesConvertsWorkspacesAnswer`；`TestTheDirectorysLockByIDIsForShare`、`TestShareWorkspaceByIDFindsTheUndeletedWorkspace`、`TestTheDirectorysLockByIDSeesADeletionItWaitedFor`；`TestUpdateProjectRefuses` 等用例测试 | 组合；存储；单元（第 3 节第 15 条） |
+| 工作区的锁（方案 E） | 一个写或全部写不锁工作区；锁在目标或项目之后；`FOR KEY SHARE`、`FOR NO KEY UPDATE`、`FOR UPDATE`、不加锁；经池；没有 `deleted_at IS NULL`；接线是空的、在事务之外；连带在锁之前读时刻；探测指名方案 E 之前的表 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`、`TestWritesOnTwoProjectsOfAWorkspaceDoNotWait`、`TestAWorkspacesDeletionWaitsForTheWritesOnItsProjects`、`TestAddingSeveralMembersAndDeletingTheWorkspaceSerialize`、交错 17、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`、`TestProjectWorkspacesConvertsWorkspacesAnswer`；`TestTheDirectorysLockIsForShare/byID`、`TestShareWorkspaceByIDFindsTheUndeletedWorkspace`、`TestTheDirectorysLockSeesADeletionItWaitedFor/byID`；`TestUpdateProjectRefuses` 等用例测试 | 组合；存储；单元（第 3 节第 15 条） |
 | 规则表加行而没有格子、放宽 | 九条规则各放宽、收紧；每条新规则带它的格子 | `TestPermissionMatrix`；`TestEveryRuleDecidesItsCells` 要求每条规则的格子 | 组合；单元 |
 | 精确的错误 | 看不到答 403；`Authorizer` 的失败答 403；加入时找工作区的失败答 404 | `TestPermissionMatrix`；各用例的 `ReturnsEachFailure`（`errors.Is` 比较具体的错误；写完读不到是内部错误，不是 404） | 组合；单元 |
 | 码只在别的模块的测试包里返回（9.4） | 没有新变异：`project` 的 HTTP 测试回答 `project.archived` 和每个新操作声明的码，`apitest.Main` 两个方向通过；契约少声明一个码的 3 个变异见清扫 6 | `apitest.Main` | 单元 |
