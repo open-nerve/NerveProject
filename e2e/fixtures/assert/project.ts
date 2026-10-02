@@ -171,7 +171,7 @@ export async function expectMember(
 }
 
 /**
- * P4: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
+ * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it: of each table whose foreign key names projects (the catalog's list, so a table a
  * later phase adds is read too), by its project_id. Each table has such a row, and none is left undeleted.
  */

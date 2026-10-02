@@ -72,6 +72,16 @@ async function archiving(db: Database, id: string): Promise<unknown> {
   return row;
 }
 
+/** The account of email's undeleted display settings in the project: his place, and who wrote them last. */
+async function settings(db: Database, id: string, email: string): Promise<unknown[]> {
+  return db.query(
+    `SELECT s.sort_order, b.email AS by
+       FROM project_user_properties s JOIN users u ON u.id = s.user_id JOIN users b ON b.id = s.updated_by_id
+      WHERE s.project_id = $1 AND u.email = $2 AND s.deleted_at IS NULL`,
+    [id, email]
+  );
+}
+
 test("P4 (API): the admin archives a project, which leaves the list for the archived ones and cannot be changed; unarchives it and archives it again; then deletes it with its members, settings and states at one moment, after which it is not found and its identifier is free", async ({
   api,
   db,
@@ -114,6 +124,15 @@ test("P4 (API): the admin archives a project, which leaves the list for the arch
   expect(await listed(api, admin, slug)).toEqual(["Web", "Ops"]);
   expect(await listed(api, admin, slug, true)).toEqual([]);
   expect(await act(api, admin, web.id, "archive")).toEqual(expect.any(String));
+  // The member drags the archived Web in his sidebar, as in any project (M3 design 3.19): his display settings in it
+  // are now his own writing, which the deletion must write again as the admin's.
+  const dragged = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
+    params: { path: { project_id: web.id } },
+    body: { sort_order: 25535 },
+    headers: bearer(member),
+  });
+  expect(dragged.response.status, `the member drags Web: ${JSON.stringify(dragged.error)}`).toBe(200);
+  expect(await settings(db, web.id, memberEmail)).toEqual([{ sort_order: 25535, by: memberEmail }]);
 
   // An archived project is deleted as any other.
   const deleted = await api.DELETE("/api/v0/projects/{project_id}", {
