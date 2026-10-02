@@ -7,12 +7,10 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
-	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -90,14 +88,13 @@ func newAdminRace(t *testing.T) adminRace {
 func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.UpdateWorkspaceMember {
 	return workspaceapp.NewUpdateWorkspaceMember(members, project.New(project.Deps{Pool: r.pool}).Cascade(),
 		workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}),
-		postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now()))
+		authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now()))
 }
 
 // roles are alice's and bob's roles in acme.
 func (r adminRace) roles(t *testing.T) (alice, bob shared.Role) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(),
+	if err := r.pool.QueryRow(soon(t),
 		"SELECT (SELECT role FROM workspace_members WHERE id = $1), (SELECT role FROM workspace_members WHERE id = $2)", r.aliceIn, r.bobIn).
 		Scan(&alice, &bob); err != nil {
 		t.Fatal(err)

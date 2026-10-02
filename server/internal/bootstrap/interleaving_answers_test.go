@@ -10,13 +10,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	identitydomain "github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
-	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -115,8 +113,7 @@ func (r answerRace) decline(ctx context.Context, invitations workspaceapp.Invita
 
 // deleteAcme is alice's deletion of acme, over workspaces.
 func (r answerRace) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
-	return workspaceapp.NewDeleteWorkspace(workspaces, r.projects(),
-		access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}), r.tx(), clocktest.At(time.Now()),
+	return workspaceapp.NewDeleteWorkspace(workspaces, r.projects(), authorizerOn(r.pool), r.tx(), clocktest.At(time.Now()),
 		slog.New(slog.DiscardHandler)).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }
 

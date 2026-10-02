@@ -74,7 +74,7 @@ func (r adminRace) leave(ctx context.Context, user uuid.UUID, workspaces workspa
 // active is whether alice's and bob's memberships of acme are active.
 func (r adminRace) active(t *testing.T) (alice, bob bool) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), "SELECT (SELECT is_active FROM workspace_members WHERE id = $1), "+
+	if err := r.pool.QueryRow(soon(t), "SELECT (SELECT is_active FROM workspace_members WHERE id = $1), "+
 		"(SELECT is_active FROM workspace_members WHERE id = $2)", r.aliceIn, r.bobIn).Scan(&alice, &bob); err != nil {
 		t.Fatal(err)
 	}
