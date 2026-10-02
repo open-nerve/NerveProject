@@ -49,6 +49,21 @@ func (m endedHolding) EndMember(ctx context.Context, workspaceID, userID, by uui
 	return m.gate.wait(ctx)
 }
 
+// otherFoundHolding stops a leaving once it has found another admin of the
+// workspace, holding the workspace's row, before it ends anything.
+type otherFoundHolding struct {
+	*workspacepg.Store
+	gate *gate
+}
+
+func (m otherFoundHolding) HasOtherAdmin(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
+	other, err := m.Store.HasOtherAdmin(ctx, workspaceID, userID)
+	if err != nil {
+		return false, err
+	}
+	return other, m.gate.wait(ctx)
+}
+
 // leave is user's leaving of acme, over workspaces, with project's cascade,
 // identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) leave(ctx context.Context, user uuid.UUID, workspaces workspaceapp.WorkspaceLeaver) error {
@@ -70,41 +85,56 @@ func (r adminRace) active(t *testing.T) (alice, bob bool) {
 
 // Interleaving 1, the workspace's side: acme's two admins, alice and bob,
 // leave it at once (M3 design 3.6, 3.7 rule 1). The first holds acme FOR NO
-// KEY UPDATE and, past his check of another admin, has ended his
-// membership at his gate; the second waits for acme's row. Once the first
-// has committed, the second finds no other active admin: 409
-// workspace.sole_admin. The first one's membership is ended, the second's
-// active: acme keeps an admin.
+// KEY UPDATE and waits at his gate: once he has found the other admin,
+// before he ends anything; or once he has ended his membership. The second
+// waits for acme's row. Once the first has committed, the second finds no
+// other active admin: 409 workspace.sole_admin. The first one's membership
+// is ended, the second's active: acme keeps an admin. Held at his check,
+// the first shows that he asks rule 1 under the lock his ending holds: a
+// leaving that let acme go between the two would let the second find him
+// still active, and both would leave.
 func TestTwoAdminsLeavingLeaveAnAdmin(t *testing.T) {
-	for _, aliceFirst := range []bool{true, false} {
-		t.Run(fmt.Sprintf("alice first %v", aliceFirst), func(t *testing.T) {
-			r := newAdminRace(t)
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			first, second := r.alice, r.bob
-			if !aliceFirst {
-				first, second = second, first
-			}
-			g := newGate()
-			left := run(func() error { return r.leave(ctx, first, endedHolding{workspacepg.New(r.pool), g}) })
-			held(t, ctx, g, left, "the first leaving")
-			refused := run(func() error { return r.leave(ctx, second, workspacepg.New(r.pool)) })
-			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
-			if alice, bob := r.active(t); !alice || !bob {
-				t.Errorf("while the first holds the lock: alice active %v, bob active %v; want both", alice, bob)
-			}
-			close(g.open)
+	for _, at := range []struct {
+		name    string
+		holding func(store *workspacepg.Store, g *gate) workspaceapp.WorkspaceLeaver
+	}{
+		{"at his check", func(store *workspacepg.Store, g *gate) workspaceapp.WorkspaceLeaver {
+			return otherFoundHolding{store, g}
+		}},
+		{"past his membership's end", func(store *workspacepg.Store, g *gate) workspaceapp.WorkspaceLeaver {
+			return endedHolding{store, g}
+		}},
+	} {
+		for _, aliceFirst := range []bool{true, false} {
+			t.Run(fmt.Sprintf("%s, alice first %v", at.name, aliceFirst), func(t *testing.T) {
+				r := newAdminRace(t)
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				first, second := r.alice, r.bob
+				if !aliceFirst {
+					first, second = second, first
+				}
+				g := newGate()
+				left := run(func() error { return r.leave(ctx, first, at.holding(workspacepg.New(r.pool), g)) })
+				held(t, ctx, g, left, "the first leaving")
+				refused := run(func() error { return r.leave(ctx, second, workspacepg.New(r.pool)) })
+				pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
+				if alice, bob := r.active(t); !alice || !bob {
+					t.Errorf("while the first holds the lock: alice active %v, bob active %v; want both", alice, bob)
+				}
+				close(g.open)
 
-			if err := result(t, ctx, left, "the first leaving"); err != nil {
-				t.Errorf("the first leaving = %v, want it done", err)
-			}
-			if err := result(t, ctx, refused, "the second leaving"); !errors.Is(err, workspacedomain.ErrSoleAdmin) {
-				t.Errorf("the second leaving = %v, want 409 workspace.sole_admin", err)
-			}
-			if alice, bob := r.active(t); alice != !aliceFirst || bob != aliceFirst {
-				t.Errorf("alice active %v, bob active %v; want the first one's membership ended, the second's active", alice, bob)
-			}
-		})
+				if err := result(t, ctx, left, "the first leaving"); err != nil {
+					t.Errorf("the first leaving = %v, want it done", err)
+				}
+				if err := result(t, ctx, refused, "the second leaving"); !errors.Is(err, workspacedomain.ErrSoleAdmin) {
+					t.Errorf("the second leaving = %v, want 409 workspace.sole_admin", err)
+				}
+				if alice, bob := r.active(t); alice != !aliceFirst || bob != aliceFirst {
+					t.Errorf("alice active %v, bob active %v; want the first one's membership ended, the second's active", alice, bob)
+				}
+			})
+		}
 	}
 }
 
