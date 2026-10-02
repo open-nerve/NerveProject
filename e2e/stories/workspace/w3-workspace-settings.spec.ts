@@ -136,6 +136,15 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   expect(memberDeletes.response.status).toBe(403);
   expect(memberDeletes.error?.code).toBe("forbidden");
 
+  // A project deleted before the workspace keeps its moment, and so do its rows: Old, with the member its lead, so
+  // that each project table has a row of it.
+  const old = await createProject(api, admin, slug, { name: "Old", identifier: "OLD", project_lead_id: memberId });
+  const oldDeleted = await api.DELETE("/api/v0/projects/{project_id}", {
+    params: { path: { project_id: old.id } },
+    headers: bearer(admin),
+  });
+  expect(oldDeleted.response.status).toBe(204);
+
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
   expect(deleted.response.status).toBe(204);
   await expectWorkspaceDeleted(db, slug, adminEmail);
