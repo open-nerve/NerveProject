@@ -208,30 +208,43 @@ export async function expectMembership(
   expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
 }
 
+/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7 adds the labels. */
+const workspaceTables = [
+  "workspace_members",
+  "workspace_member_invites",
+  "workspace_user_properties",
+  "projects",
+  "project_members",
+  "project_user_properties",
+  "states",
+] as const;
+
 /**
- * The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7 adds the labels.
- * deletedAlone tells whether W3 deletes rows of the table on their own before the workspace, which keep that
- * moment: an invitation, when it is accepted or deleted (M3 design 3.8); a project, its memberships, its members'
- * display settings and its states, when the project is deleted (P4b). No row of the other tables is deleted alone.
+ * The tables whose rows a story can delete on their own before their workspace, which keep that moment: an
+ * invitation, when it is accepted or deleted, or its address's membership ends (M3 design 3.8); a project, its
+ * memberships, its members' display settings and its states, when the project is deleted (P4b).
  */
-const workspaceTables: { table: string; deletedAlone: boolean }[] = [
-  { table: "workspace_members", deletedAlone: false },
-  { table: "workspace_member_invites", deletedAlone: true },
-  { table: "workspace_user_properties", deletedAlone: false },
-  { table: "projects", deletedAlone: true },
-  { table: "project_members", deletedAlone: true },
-  { table: "project_user_properties", deletedAlone: true },
-  { table: "states", deletedAlone: true },
+export const deletedAloneTables: (typeof workspaceTables)[number][] = [
+  "workspace_member_invites",
+  "projects",
+  "project_members",
+  "project_user_properties",
+  "states",
 ];
 
 /**
- * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by the
- * same account, every row under it that was not deleted before: its memberships, invitations and display
+ * W2, W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by
+ * the same account, every row under it that was not deleted before: its memberships, invitations and display
  * settings, its projects, their memberships, their members' display settings and their states. Each table has
- * such a row; none is left undeleted; a table whose rows W3 deletes alone has rows deleted earlier, which kept
- * their moment, and every row of the others carries the workspace's.
+ * such a row; none is left undeleted; each table of deletedAlone, whose rows the story deleted alone, has rows
+ * deleted earlier, which kept their moment, and every row of the others carries the workspace's.
  */
-export async function expectWorkspaceDeleted(db: Database, slug: string, adminEmail: string): Promise<void> {
+export async function expectWorkspaceDeleted(
+  db: Database,
+  slug: string,
+  adminEmail: string,
+  deletedAlone: (typeof workspaceTables)[number][]
+): Promise<void> {
   const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string | null }>(
     `SELECT w.id, w.deleted_at, w.updated_by_id, (SELECT id FROM users WHERE email = $2) AS admin FROM workspaces w WHERE w.slug = $1`,
     [slug, adminEmail]
@@ -241,7 +254,7 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
   expect(w?.updated_by_id, `${slug} deleted by ${adminEmail}`).toBe(w?.admin);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
   const tables = await Promise.all(
-    workspaceTables.map(async ({ table }) => {
+    workspaceTables.map(async (table) => {
       const [counts] = await db.query<{
         with_it: number;
         by_another: number;
@@ -266,12 +279,100 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
     })
   );
   expect(tables, `the rows under ${slug}`).toEqual(
-    workspaceTables.map(({ table, deletedAlone }) => ({
+    workspaceTables.map((table) => ({
       table,
       deletedWithIt: true,
       deletedByAnother: 0,
       undeletedOrLater: 0,
-      deletedEarlier: deletedAlone,
+      deletedEarlier: deletedAlone.includes(table),
     }))
   );
+}
+
+/**
+ * W2, W7, W12: the membership of the account of email in the workspace of slug has ended, by the account of byEmail:
+ * its row kept, inactive, with its role; his memberships of the projects of projects (identifiers), each active
+ * before, ended with it, at the same moment and by the same account, each row kept with its role; he has no other
+ * membership of the workspace's projects that is active; and no invitation to his address in the workspace is
+ * pending (M3 design 3.6, 3.8).
+ */
+export async function expectMembershipEnded(
+  db: Database,
+  slug: string,
+  email: string,
+  byEmail: string,
+  role: number,
+  projects: { identifier: string; role: number }[]
+): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT m.role, m.is_active, m.deleted_at, b.email AS by
+         FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+         JOIN users u ON u.id = m.member_id JOIN users b ON b.id = m.updated_by_id
+        WHERE w.slug = $1 AND u.email = $2`,
+      [slug, email]
+    ),
+    `the membership of ${email} in ${slug}`
+  ).toEqual([{ role, is_active: false, deleted_at: null, by: byEmail }]);
+  // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
+  expect(
+    await db.query(
+      `SELECT p.identifier, pm.role, pm.is_active, pm.deleted_at, b.email AS by, pm.updated_at = m.updated_at AS with_it
+         FROM project_members pm JOIN projects p ON p.id = pm.project_id
+         JOIN workspace_members m ON m.workspace_id = pm.workspace_id AND m.member_id = pm.member_id
+         JOIN workspaces w ON w.id = m.workspace_id JOIN users u ON u.id = m.member_id JOIN users b ON b.id = pm.updated_by_id
+        WHERE w.slug = $1 AND u.email = $2 AND (pm.is_active OR pm.updated_at = m.updated_at)
+        ORDER BY p.identifier COLLATE "C"`,
+      [slug, email]
+    ),
+    `the memberships of ${email} of the projects of ${slug}, active or ended with it`
+  ).toEqual(
+    projects
+      .toSorted((a, b) => (a.identifier < b.identifier ? -1 : 1))
+      .map((p) => ({
+        identifier: p.identifier,
+        role: p.role,
+        is_active: false,
+        deleted_at: null,
+        by: byEmail,
+        with_it: true,
+      }))
+  );
+  expect(
+    await db.query(
+      `SELECT i.email FROM workspace_member_invites i JOIN workspaces w ON w.id = i.workspace_id
+        WHERE w.slug = $1 AND i.email = $2 AND i.responded_at IS NULL AND i.deleted_at IS NULL`,
+      [slug, email]
+    ),
+    `the pending invitations to ${email} in ${slug}`
+  ).toEqual([]);
+}
+
+/**
+ * W2, W7, W12, before an ending: who wrote last the membership of the account of email in the workspace of slug
+ * ("workspace") and each of his active memberships of its projects (by identifier), each the account of an address in
+ * writers, so that a claim of the ending's writing them can fail.
+ */
+export async function expectWrittenLastBy(
+  db: Database,
+  slug: string,
+  email: string,
+  writers: Record<string, string>
+): Promise<void> {
+  const rows = await db.query<{ of: string; by: string }>(
+    `SELECT 'workspace' AS of, b.email AS by
+       FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+       JOIN users u ON u.id = m.member_id JOIN users b ON b.id = m.updated_by_id
+      WHERE w.slug = $1 AND u.email = $2 AND m.deleted_at IS NULL
+     UNION ALL
+     SELECT p.identifier, b.email
+       FROM project_members pm JOIN projects p ON p.id = pm.project_id JOIN workspaces w ON w.id = p.workspace_id
+       JOIN users u ON u.id = pm.member_id JOIN users b ON b.id = pm.updated_by_id
+      WHERE w.slug = $1 AND u.email = $2 AND pm.is_active AND pm.deleted_at IS NULL`,
+    [slug, email]
+  );
+  expect(
+    Object.fromEntries(rows.map((r) => [r.of, r.by])),
+    `who wrote last the memberships of ${email} in ${slug}`
+  ).toEqual(writers);
 }
