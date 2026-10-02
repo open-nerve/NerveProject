@@ -2,7 +2,7 @@
 // their members, their states and each member's display settings. It
 // brings listing, creating, reading, changing, archiving and deleting
 // projects, checking an identifier, listing, adding and joining the
-// members and each member's display settings, carries out the workspace
+// members, each member's display settings, carries out the workspace
 // module's cascades on the projects (ProjectCascade), and offers the
 // access module its reads of a project (ProjectAccess).
 package project

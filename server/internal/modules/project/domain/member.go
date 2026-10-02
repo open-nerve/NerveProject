@@ -30,29 +30,33 @@ type NewMember struct {
 // MaxNewMembers is the most members one request adds (M3 design 5.1).
 const MaxNewMembers = 100
 
-// projectRoles are the three roles a member of a project can have.
-var projectRoles = []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}
+// roleOrder is the three roles a member of a project can have, from the
+// least to the most.
+var roleOrder = []shared.Role{shared.RoleGuest, shared.RoleMember, shared.RoleAdmin}
 
 // CheckNewMembers checks what the request alone tells: 1 to MaxNewMembers
-// members, each role one of the three, each account named once. Every
-// problem is reported at once, as one 422 validation_failed; whether each
-// account may be added is the use case's, under its locks (M3 design 3.6
-// convention 3).
+// members, each role one of the three, each account named once. A count
+// out of range is the one problem reported: no member of a list too long
+// is looked at. Otherwise every problem is reported at once, as one 422
+// validation_failed; whether each account may be added is the use case's,
+// under its locks (M3 design 3.6 convention 3).
 func CheckNewMembers(members []NewMember) error {
-	var found []*shared.FieldError
 	switch {
 	case len(members) == 0:
-		found = append(found, &shared.FieldError{Field: "members", Code: shared.FieldTooShort, Message: "must name a member"})
+		return shared.Invalid(shared.FieldError{Field: "members", Code: shared.FieldTooShort, Message: "must name a member"})
 	case len(members) > MaxNewMembers:
-		found = append(found, &shared.FieldError{Field: "members", Code: shared.FieldTooLong,
+		return shared.Invalid(shared.FieldError{Field: "members", Code: shared.FieldTooLong,
 			Message: fmt.Sprintf("must name at most %d members", MaxNewMembers)})
 	}
+	var found []*shared.FieldError
+	named := make(map[uuid.UUID]bool, len(members))
 	for i, m := range members {
-		if slices.ContainsFunc(members[:i], func(o NewMember) bool { return o.MemberID == m.MemberID }) {
+		if named[m.MemberID] {
 			found = append(found, &shared.FieldError{Field: fmt.Sprintf("members[%d].member_id", i), Code: shared.FieldDuplicate,
 				Message: "is listed before"})
 		}
-		if !slices.Contains(projectRoles, m.Role) {
+		named[m.MemberID] = true
+		if !slices.Contains(roleOrder, m.Role) {
 			found = append(found, &shared.FieldError{Field: fmt.Sprintf("members[%d].role", i), Code: shared.FieldInvalidFormat,
 				Message: "is not 5, 15 or 20"})
 		}
@@ -66,7 +70,7 @@ func CheckNewMembers(members []NewMember) error {
 // workspace guest as a guest alone, a workspace member as any of the three.
 var addable = map[shared.Role][]shared.Role{
 	shared.RoleAdmin:  {shared.RoleAdmin},
-	shared.RoleMember: projectRoles,
+	shared.RoleMember: roleOrder,
 	shared.RoleGuest:  {shared.RoleGuest},
 }
 
@@ -120,9 +124,6 @@ var joiners = []shared.Role{shared.RoleAdmin, shared.RoleMember}
 func CanJoin(workspaceRole shared.Role) bool {
 	return slices.Contains(joiners, workspaceRole)
 }
-
-// roleOrder is the project roles from the least to the most.
-var roleOrder = []shared.Role{shared.RoleGuest, shared.RoleMember, shared.RoleAdmin}
 
 // JoinRole is the project role of an account who joins a project, of
 // workspace role workspaceRole (M3 design 3.5, 3.6 convention 6): his

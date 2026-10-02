@@ -116,13 +116,14 @@ func (h handler) DeleteProject(ctx context.Context, req gen.DeleteProjectRequest
 
 // named reports whether the body names v, and its id: nil when it is null.
 func named(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
-	if !v.IsSpecified() {
+	switch {
+	case !v.IsSpecified():
 		return false, nil
+	case v.IsNull():
+		return true, nil
 	}
-	if id, err := v.Get(); err == nil {
-		return true, &id
-	}
-	return true, nil
+	id := v.MustGet()
+	return true, &id
 }
 
 // CheckProjectIdentifier serves GET

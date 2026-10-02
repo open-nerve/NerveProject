@@ -25,24 +25,24 @@ func TestCheckNewMembersAccepts(t *testing.T) {
 
 // None, a hundred and one, a role outside the three, an account named
 // twice: each refused, all of them in one 422 that names each by its place
-// in the request, the members' problems of a list too long as well.
+// in the request. A count out of range is reported alone: the members of a
+// list too long are not looked at.
 func TestCheckNewMembersReportsEveryProblem(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
 	many := make([]NewMember, MaxNewMembers+1)
 	for i := range many {
 		many[i] = NewMember{MemberID: uuid.NewV7(), Role: shared.RoleMember}
 	}
+	tooLong := []shared.FieldError{{Field: "members", Code: "too_long", Message: "must name at most 100 members"}}
 	tests := []struct {
 		name string
 		in   []NewMember
 		want []shared.FieldError
 	}{
 		{"none", nil, []shared.FieldError{{Field: "members", Code: "too_short", Message: "must name a member"}}},
-		{"a hundred and one", many, []shared.FieldError{{Field: "members", Code: "too_long", Message: "must name at most 100 members"}}},
-		{"a hundred and one, the last a repeat of no role", append(append([]NewMember{}, many[:MaxNewMembers]...), NewMember{MemberID: many[0].MemberID}),
-			[]shared.FieldError{{Field: "members", Code: "too_long", Message: "must name at most 100 members"},
-				{Field: "members[100].member_id", Code: "duplicate", Message: "is listed before"},
-				{Field: "members[100].role", Code: "invalid_format", Message: "is not 5, 15 or 20"}}},
+		{"a hundred and one", many, tooLong},
+		{"a hundred and one members with problems: only members too_long",
+			append([]NewMember{many[0], many[0], {MemberID: uuid.NewV7()}}, many[3:]...), tooLong},
 		{"roles and repeats", []NewMember{{MemberID: a, Role: 10}, {MemberID: b, Role: shared.RoleAdmin}, {MemberID: a, Role: shared.RoleGuest},
 			{MemberID: b, Role: 0}}, []shared.FieldError{
 			{Field: "members[0].role", Code: "invalid_format", Message: "is not 5, 15 or 20"},

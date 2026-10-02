@@ -121,7 +121,8 @@ func findAndDecide(ctx context.Context, projects ProjectFinder, auth shared.Auth
 // decide asks the Authorizer for action on the project id of the workspace
 // for actor. A write calls it under its locks, so the facts it reads are
 // the ones committed after the locks were granted (M3 design 6.7): a
-// demotion or a removal that committed while the write waited is seen. A
+// demotion or a removal that committed while the write waited is seen; a
+// read calls it after the read that names the project's workspace. A
 // project not visible to actor is domain.ErrNotFound, the 404 of what the
 // caller named.
 func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, action shared.Action, workspaceID, id uuid.UUID) (shared.Grant, error) {
