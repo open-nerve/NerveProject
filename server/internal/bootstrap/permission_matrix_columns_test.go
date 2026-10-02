@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"testing"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
@@ -98,6 +99,20 @@ func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	}
 	if len(matrixAccounts) != 11 {
 		t.Errorf("%d accounts, want 9.2's 11", len(matrixAccounts))
+	}
+	// account names a registered account: PG's column, whose account is the
+	// workspace's guest, is none, and fails the test at once; an account is
+	// uuid.Nil until prepareMatrix registers its id, so that a request built
+	// without a database names one still (matrixViolations).
+	if failed, want := fatalOf(func(tb testing.TB) { newSeeded().in(tb).account(callerProjectGuest) }),
+		"no account project guest is registered"; failed != want {
+		t.Errorf("the account of PG's column itself: failed with %q, want %q", failed, want)
+	}
+	s := newSeeded().in(t)
+	for _, a := range matrixAccounts {
+		if id := s.account(a); id != uuid.Nil() {
+			t.Errorf("the account %s before prepareMatrix registers it = %s, want uuid.Nil", a, id)
+		}
 	}
 }
 

@@ -53,29 +53,37 @@ func TestMemberships(t *testing.T) {
 
 // ListMembers lists the project's active undeleted memberships alone, by
 // the time they were made, then by id: erin's, made last but stored first,
-// comes last; alice's and bob's, made at the same time, by their ids. Not
-// carol's, ended; not dave's, deleted; not frank's of another project.
+// comes last; bob's, gina's and alice's were made at one moment, gina's
+// stored first, bob's with the smallest id and alice's the largest, so that
+// neither the table's order of the three, nor its reverse, nor their
+// accounts' order is the answer's. Not carol's, ended; not dave's, deleted;
+// not frank's of another project.
 func TestListMembers(t *testing.T) {
 	s, pool := newStore(t)
 	var ids []uuid.UUID
-	for _, email := range []string{"alice@corp.com", "bob@corp.com", "carol@corp.com", "dave@corp.com", "erin@corp.com", "frank@corp.com"} {
+	for _, email := range []string{"alice@corp.com", "bob@corp.com", "carol@corp.com", "dave@corp.com", "erin@corp.com", "frank@corp.com",
+		"gina@corp.com"} {
 		ids = append(ids, newAccount(t, pool, email))
 	}
-	alice, bob, carol, dave, erin, frank := ids[0], ids[1], ids[2], ids[3], ids[4], ids[5]
+	alice, bob, carol, dave, erin, frank, gina := ids[0], ids[1], ids[2], ids[3], ids[4], ids[5], ids[6]
 	acme := newWorkspace(t, pool, "acme")
 	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
 	erins := seedMember(t, pool, acme, web, erin, 5, true)
 	exec(t, pool, "UPDATE project_members SET created_at = $2 WHERE id = $1", erins, now.Add(time.Hour))
 	seedMember(t, pool, acme, web, carol, 15, false)
-	bobs, alices := seedMember(t, pool, acme, web, bob, 15, true), seedMember(t, pool, acme, web, alice, 20, true)
+	bobs, ginas, alices := uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+	want := []domain.Member{{ID: bobs, ProjectID: web, MemberID: bob, Role: shared.RoleMember, CreatedAt: now},
+		{ID: ginas, ProjectID: web, MemberID: gina, Role: shared.RoleGuest, CreatedAt: now},
+		{ID: alices, ProjectID: web, MemberID: alice, Role: shared.RoleAdmin, CreatedAt: now},
+		{ID: erins, ProjectID: web, MemberID: erin, Role: shared.RoleGuest, CreatedAt: now.Add(time.Hour)}}
+	for _, m := range []domain.Member{want[1], want[0], want[2]} {
+		if err := s.CreateMember(context.Background(), app.MemberRow{ID: m.ID, WorkspaceID: acme, ProjectID: web, MemberID: m.MemberID,
+			Role: m.Role, CreatedBy: alice, Now: now}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	exec(t, pool, "UPDATE project_members SET deleted_at = $2 WHERE id = $1", seedMember(t, pool, acme, web, dave, 15, true), now)
 	seedMember(t, pool, acme, ops, frank, 20, true)
-	first, second := domain.Member{ID: bobs, ProjectID: web, MemberID: bob, Role: shared.RoleMember, CreatedAt: now},
-		domain.Member{ID: alices, ProjectID: web, MemberID: alice, Role: shared.RoleAdmin, CreatedAt: now}
-	if alices.String() < bobs.String() {
-		first, second = second, first
-	}
-	want := []domain.Member{first, second, {ID: erins, ProjectID: web, MemberID: erin, Role: shared.RoleGuest, CreatedAt: now.Add(time.Hour)}}
 	got, err := s.ListMembers(context.Background(), web)
 	if err != nil || len(got) != len(want) {
 		t.Fatalf("ListMembers() = %+v, %v; want %+v", got, err, want)
