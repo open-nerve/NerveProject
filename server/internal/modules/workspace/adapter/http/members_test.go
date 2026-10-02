@@ -1,6 +1,7 @@
 package httpadapter_test
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -124,7 +125,8 @@ func TestRemoveWorkspaceMember(t *testing.T) {
 
 // The use case's refusals, as the contract declares them: the project
 // module's project.sole_admin comes through as it is, a 409 of the
-// workspace's operation (M3 design 9.4).
+// workspace's operation (M3 design 9.4); and its failure, a 500, never a
+// 204 or another problem.
 func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin", "The member is the only admin of a project.")
 	tests := []struct {
@@ -139,6 +141,8 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 			`{"status":409,"code":"workspace.own_membership","title":"Conflict","detail":"You cannot change your own membership."}`},
 		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
 			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The member is the only admin of a project."}`},
+		{errors.New("the database is gone"), http.StatusInternalServerError,
+			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	}
 	for _, tt := range tests {
 		h := newServer(t, fakes{remove: &fakeRemoveMember{err: tt.err}})
