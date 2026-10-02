@@ -370,7 +370,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Remove a member
+         * @description For the workspace's admins. A membership that does not exist or is deleted, or whose workspace the caller cannot see, answers workspace.member_not_found; a member or a guest, forbidden, whatever the membership. To a caller who may remove members, a membership that has ended answers workspace.member_not_found, and his own workspace.own_membership: one leaves a workspace through leaveWorkspace. The workspace's pending invitation to the member's address is deleted, so that he needs a new one to come back; a declined one stays. His membership ends, its row kept, and so do his memberships of the workspace's projects, all at the same moment, in one transaction. Were he the only active admin of a project of the workspace that has other active members, project.sole_admin, and nothing changes.
+         */
+        delete: operations["removeWorkspaceMember"];
         options?: never;
         head?: never;
         /**
@@ -1979,6 +1983,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["WorkspaceInvitationList"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeWorkspaceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A membership's id (WorkspaceMember.id), not the member's account id. */
+                workspace_member_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The membership has ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

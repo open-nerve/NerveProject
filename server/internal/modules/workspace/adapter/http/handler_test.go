@@ -67,6 +67,7 @@ type fakes struct {
 	del    *fakeDelete
 	member *fakeMembers
 	role   *fakeUpdateMember
+	remove *fakeRemoveMember
 	check  *fakeCheck
 	prefs  *fakePrefs
 	// invitations are the invitations' use cases (invitations_test.go).
@@ -156,6 +157,16 @@ func (f *fakeUpdateMember) Execute(ctx context.Context, id uuid.UUID, role share
 	return f.answer, f.err
 }
 
+type fakeRemoveMember struct {
+	calls []string // "caller id"
+	err   error
+}
+
+func (f *fakeRemoveMember) Execute(ctx context.Context, id uuid.UUID) error {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	return f.err
+}
+
 // fakePrefs is both preference use cases: each call is recorded as
 // "caller slug", and a PATCH's patch; it answers what it is given.
 type fakePrefs struct {
@@ -231,6 +242,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.role == nil {
 		f.role = &fakeUpdateMember{}
 	}
+	if f.remove == nil {
+		f.remove = &fakeRemoveMember{}
+	}
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
@@ -242,8 +256,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
 		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
-		ListMembers: f.member, UpdateMember: f.role, GetPreferences: fakeGetPrefs{f.prefs}, UpdatePreferences: fakeUpdatePrefs{f.prefs},
-		ListInvitations: fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
+		ListMembers: f.member, UpdateMember: f.role, RemoveMember: f.remove, GetPreferences: fakeGetPrefs{f.prefs},
+		UpdatePreferences: fakeUpdatePrefs{f.prefs},
+		ListInvitations:   fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},
 		GetInvitation: fakeGetInvitation{f.invitations}, UpdateInvitation: fakeUpdateInvitation{f.invitations},
 		DeleteInvitation: fakeDeleteInvitation{f.invitations}, AcceptInvitation: fakeAcceptInvitation{f.invitations},
 		DeclineInvitation: fakeDeclineInvitation{f.invitations},

@@ -32,6 +32,14 @@ func (h handler) UpdateWorkspaceMember(ctx context.Context, req gen.UpdateWorksp
 	return gen.UpdateWorkspaceMember200JSONResponse(member(m)), nil
 }
 
+// RemoveWorkspaceMember serves DELETE /api/v0/workspace-members/{workspace_member_id}.
+func (h handler) RemoveWorkspaceMember(ctx context.Context, req gen.RemoveWorkspaceMemberRequestObject) (gen.RemoveWorkspaceMemberResponseObject, error) {
+	if err := h.uc.RemoveMember.Execute(ctx, req.WorkspaceMemberID); err != nil {
+		return nil, err
+	}
+	return gen.RemoveWorkspaceMember204Response{}, nil
+}
+
 // member is m as the API shows it.
 func member(m domain.Member) gen.WorkspaceMember {
 	// Required and nullable: the zero Nullable is "unspecified" and would

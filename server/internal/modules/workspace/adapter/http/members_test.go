@@ -1,6 +1,7 @@
 package httpadapter_test
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"testing"
@@ -102,5 +103,54 @@ func TestListWorkspaceMembers(t *testing.T) {
 	res, body := do(t, h, request(http.MethodGet, "/api/v0/workspaces/acme/members", "bob", ""))
 	if want := `{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`; res.StatusCode != http.StatusNotFound || body != want+"\n" {
 		t.Errorf("GET refused = %d %s, want 404 %s", res.StatusCode, body, want)
+	}
+}
+
+// DELETE removes the membership of the path for the caller and answers 204
+// with no body.
+func TestRemoveWorkspaceMember(t *testing.T) {
+	remove := &fakeRemoveMember{}
+	h := newServer(t, fakes{remove: remove})
+	for _, token := range []string{"alice", "bob"} {
+		if res, body := do(t, h, request(http.MethodDelete, "/api/v0/workspace-members/"+bobMember.ID.String(), token, "")); res.StatusCode != http.StatusNoContent ||
+			body != "" {
+			t.Errorf("%s's DELETE = %d %q, want 204 and no body", token, res.StatusCode, body)
+		}
+	}
+	if want := []string{"alice " + bobMember.ID.String(), "bob " + bobMember.ID.String()}; !slices.Equal(remove.calls, want) {
+		t.Errorf("calls = %q, want %q", remove.calls, want)
+	}
+}
+
+// The use case's refusals, as the contract declares them: the project
+// module's project.sole_admin comes through as it is, a 409 of the
+// workspace's operation (M3 design 9.4).
+func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
+	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin", "The member is the only admin of a project.")
+	tests := []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{domain.ErrMemberNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.member_not_found","title":"Not Found","detail":"The member does not exist, or you cannot see the workspace."}`},
+		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{domain.ErrOwnMembership, http.StatusConflict,
+			`{"status":409,"code":"workspace.own_membership","title":"Conflict","detail":"You cannot change your own membership."}`},
+		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
+			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The member is the only admin of a project."}`},
+	}
+	for _, tt := range tests {
+		h := newServer(t, fakes{remove: &fakeRemoveMember{err: tt.err}})
+		res, body := do(t, h, request(http.MethodDelete, "/api/v0/workspace-members/"+bobMember.ID.String(), "alice", ""))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("DELETE refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+	remove := &fakeRemoveMember{}
+	h := newServer(t, fakes{remove: remove})
+	if res, _ := do(t, h, request(http.MethodDelete, "/api/v0/workspace-members/not-a-uuid", "alice", "")); res.StatusCode != http.StatusBadRequest ||
+		len(remove.calls) != 0 {
+		t.Errorf("DELETE of no membership id = %d, calls %q; want 400 and no call", res.StatusCode, remove.calls)
 	}
 }

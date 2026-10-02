@@ -43,13 +43,13 @@ func ofMember(admin, member, guest cell) map[caller]cell {
 		callerNever: cellMemberNotFound, callerRemoved: cellMemberNotFound, callerDeleted: cellMemberNotFound}
 }
 
-// toMembership is the request of a row whose callers each PATCH body to the
-// membership target names for their column: a workspace's slug and whose
-// membership of it.
-func toMembership(target func(caller) (string, caller), body string) func(caller, seeded) (string, string, string) {
+// toMembership is the request of a row whose callers each send method,
+// with body, to the membership target names for their column: a
+// workspace's slug and whose membership of it.
+func toMembership(method string, target func(caller) (string, caller), body string) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
 		slug, who := target(c)
-		return http.MethodPatch, "/api/v0/workspace-members/" + s.membership(slug, who).String(), body
+		return method, "/api/v0/workspace-members/" + s.membership(slug, who).String(), body
 	}
 }
 
@@ -64,6 +64,16 @@ func anotherMember(c caller) (string, caller) {
 		return "gone", callerMember
 	}
 	return "acme", callerMember
+}
+
+// endedMembership is, for each column, an ended membership of the
+// workspace the column targets: the removed member's of acme; for the
+// deleted workspace's column, the member's of gone, deleted with it.
+func endedMembership(c caller) (string, caller) {
+	if c == callerDeleted {
+		return "gone", callerMember
+	}
+	return "acme", callerRemoved
 }
 
 // ownMembership is, for each column, the caller's own membership of the
@@ -108,10 +118,20 @@ func workspaceMatrixRows() []matrixRow {
 			cells: inWorkspace(cellNoContent, cellForbidden, cellForbidden)},
 		{op: "listWorkspaceMembers", request: toWorkspace(http.MethodGet, "/members", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: listsTheMembers},
-		{op: "updateWorkspaceMember", variant: "another member", write: true, request: toMembership(anotherMember, `{"role":5}`),
+		{op: "updateWorkspaceMember", variant: "another member", write: true, request: toMembership(http.MethodPatch, anotherMember, `{"role":5}`),
 			cells: ofMember(cellOK, cellForbidden, cellForbidden), check: demotesTheMember},
-		{op: "updateWorkspaceMember", variant: "one's own", write: true, request: toMembership(ownMembership, `{"role":15}`),
+		{op: "updateWorkspaceMember", variant: "one's own", write: true, request: toMembership(http.MethodPatch, ownMembership, `{"role":15}`),
 			cells: ofMember(cellOwnMembership, cellForbidden, cellForbidden)},
+		// The admins remove another member (M3 design 9.2); to them alone an
+		// ended membership is not found, and their own is the 409 of one's
+		// own membership (3.4): a member or a guest is refused before any
+		// check of the target.
+		{op: "removeWorkspaceMember", variant: "another member", write: true, request: toMembership(http.MethodDelete, anotherMember, ""),
+			cells: ofMember(cellNoContent, cellForbidden, cellForbidden)},
+		{op: "removeWorkspaceMember", variant: "one's own", write: true, request: toMembership(http.MethodDelete, ownMembership, ""),
+			cells: ofMember(cellOwnMembership, cellForbidden, cellForbidden)},
+		{op: "removeWorkspaceMember", variant: "an ended membership", write: true, request: toMembership(http.MethodDelete, endedMembership, ""),
+			cells: ofMember(cellMemberNotFound, cellForbidden, cellForbidden)},
 		{op: "listWorkspaceInvitations", request: toWorkspace(http.MethodGet, "/invitations", ""),
 			cells: inWorkspace(cellOK, cellForbidden, cellForbidden), check: listsTheInvitations},
 		{op: "createWorkspaceInvitations", write: true, request: toWorkspace(http.MethodPost, "/invitations", inviting("invitee@example.com")),

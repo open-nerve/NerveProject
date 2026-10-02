@@ -194,7 +194,8 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	paged := matrixRow{op: "listWorkspaces", request: sameRequest(http.MethodGet, "/api/v0/workspaces?page=2", ""), cells: every(cellOK)}
 	membership := apitest.Operation{ID: "updateWorkspaceMember", Tags: []string{"workspace"}, Method: http.MethodPatch,
 		Path: "/api/v0/workspace-members/{workspace_member_id}"}
-	demotes := matrixRow{op: "updateWorkspaceMember", write: true, request: toMembership(anotherMember, `{"role":5}`), cells: every(cellOK)}
+	demotes := matrixRow{op: "updateWorkspaceMember", write: true, request: toMembership(http.MethodPatch, anotherMember, `{"role":5}`),
+		cells: every(cellOK)}
 	invitation := apitest.Operation{ID: "updateWorkspaceInvitation", Tags: []string{"workspace"}, Method: http.MethodPatch,
 		Path: "/api/v0/workspace-invitations/{invitation_id}"}
 	// promotes is a row of invitation; deletedPromotes, one whose deleted
@@ -218,7 +219,7 @@ func TestMatrixViolationsCatchesEachGap(t *testing.T) {
 	// membership of who in slug.
 	deletedNames := func(slug string, who caller) matrixRow {
 		r := demotes
-		r.request = toMembership(func(c caller) (string, caller) {
+		r.request = toMembership(http.MethodPatch, func(c caller) (string, caller) {
 			if c == callerDeleted {
 				return slug, who
 			}

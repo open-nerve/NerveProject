@@ -49,6 +49,11 @@ type UpdateMemberUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error)
 }
 
+// RemoveMemberUseCase is app.RemoveWorkspaceMember.
+type RemoveMemberUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // GetPreferencesUseCase is app.GetWorkspacePreferences.
 type GetPreferencesUseCase interface {
 	Execute(ctx context.Context, slug string) (domain.Preferences, error)
@@ -108,6 +113,7 @@ type UseCases struct {
 	DeleteWorkspace   DeleteWorkspaceUseCase
 	ListMembers       ListMembersUseCase
 	UpdateMember      UpdateMemberUseCase
+	RemoveMember      RemoveMemberUseCase
 	CheckSlug         CheckSlugUseCase
 	GetPreferences    GetPreferencesUseCase
 	UpdatePreferences UpdatePreferencesUseCase
