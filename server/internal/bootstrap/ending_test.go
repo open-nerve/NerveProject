@@ -24,10 +24,11 @@ import (
 // admin; bob, carol, dave and erin its members, each by accepting alice's
 // invitation; Web, alice's, led by bob, so both are its admins, and carol
 // its member by joining; Ops, bob's, his alone to administer, carol its
-// member by his adding, and erin, whom he added as its admin, her
-// membership of it ended by alice's removal of her from acme; Solo, bob's,
-// he its only member; beta, alice its admin, bob and carol its members;
-// Lab, beta's, bob's, his alone to administer, carol its member by joining.
+// member by his adding, and erin, whom he added as its admin; Solo, bob's,
+// erin its member by his adding; erin's memberships of Ops and Solo ended
+// by alice's removal of her from acme, so that bob is Solo's only active
+// member; beta, alice its admin, bob and carol its members; Lab, beta's,
+// bob's, his alone to administer, carol its member by joining.
 // Then, through the workspace store, the invitations no operation makes,
 // 3.8 refusing to invite an active member: one pending to bob's address in
 // acme, and one in beta; one pending to carol's in acme; one to dave's in
@@ -82,6 +83,8 @@ func newEndingWorld(t *testing.T) endingWorld {
 		{w.tokens["carol"], "/api/v0/projects/" + w.lab.String() + "/join", ""},
 		{w.tokens["bob"], "/api/v0/projects/" + w.ops.String() + "/members", `{"members":[{"member_id":"` + w.ids["carol"].String() +
 			`","role":15},{"member_id":"` + w.ids["erin"].String() + `","role":20}]}`},
+		{w.tokens["bob"], "/api/v0/projects/" + w.solo.String() + "/members", `{"members":[{"member_id":"` + w.ids["erin"].String() +
+			`","role":15}]}`},
 	} {
 		if status, body := call(t, contract, http.MethodPost, w.base+step.path, step.token, step.body); status != http.StatusOK &&
 			status != http.StatusCreated {
@@ -139,10 +142,12 @@ func (w endingWorld) bystanders(t *testing.T) {
 
 // soleAdmins checks the project memberships that decide 3.7 rule 2 for
 // bob: in Ops he is the only active admin beside carol, a member, and erin,
-// an admin whose membership has ended; in Solo he is the only member; in
-// Lab, beta's, the only admin beside carol, a member. Were one missing, a
-// rule 2 that counted an ended admin as another, refused a project with no
-// other member, or judged another workspace's projects, would pass.
+// an admin whose membership has ended; in Solo he is the only active
+// member, erin's membership as its member ended; in Lab, beta's, the only
+// admin beside carol, a member. Were one missing, a rule 2 that counted an
+// ended admin as another, counted an ended member as another, refused a
+// project with no other member, or judged another workspace's projects,
+// would pass.
 func (w endingWorld) soleAdmins(t *testing.T) {
 	t.Helper()
 	var got string
@@ -153,7 +158,8 @@ func (w endingWorld) soleAdmins(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want := "Lab bob@example.com 20 active, Lab carol@example.com 15 active, Ops bob@example.com 20 active, " +
-		"Ops carol@example.com 15 active, Ops erin@example.com 20 ended, Solo bob@example.com 20 active"; got != want {
+		"Ops carol@example.com 15 active, Ops erin@example.com 20 ended, Solo bob@example.com 20 active, " +
+		"Solo erin@example.com 15 ended"; got != want {
 		t.Fatalf("the memberships of Ops, Solo and Lab: %s; want %s", got, want)
 	}
 }
@@ -263,12 +269,12 @@ var endings = []ending{
 //     membership as its admin counting for nothing: the ending of his
 //     membership is 409 project.sole_admin, and no row of any table
 //     changes, the pending invitation to his address, which the ending
-//     deletes before the projects' step refuses, still pending.
+//     would have deleted, still pending.
 //   - Once alice, acme's admin, has joined Ops, as its admin, the ending
 //     refused at its commit, after every statement ran, for each table it
 //     writes, is 500, and no row changes: no step wrote in a transaction of
 //     its own.
-//   - Then it is 204, Solo, of which he is the only member, refusing
+//   - Then it is 204, Solo, of which he is the only active member, refusing
 //     nothing, nor Lab, beta's, of which he is the only admin: bob's
 //     membership of acme, of Web, of Ops and of Solo ended, each row kept
 //     with its role; the pending invitation to his address in acme deleted;
