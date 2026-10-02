@@ -3,7 +3,6 @@ package app_test
 import (
 	"context"
 	"fmt"
-	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -15,8 +14,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// ListMembers is the project's active memberships, in the reverse of their
-// accounts' order: an order of the store's that no sort by account gives.
+// ListMembers is the project's active memberships, in storeOrder: an order
+// of the store's that no sort by account gives.
 func (f *fakeStore) ListMembers(ctx context.Context, projectID uuid.UUID) ([]domain.Member, error) {
 	f.log.add(ctx, "ListMembers %s", projectID)
 	if err := f.fail("ListMembers"); err != nil {
@@ -27,13 +26,32 @@ func (f *fakeStore) ListMembers(ctx context.Context, projectID uuid.UUID) ([]dom
 		return out, nil
 	}
 	members := f.projects[projectID].members
-	for _, user := range slices.SortedFunc(maps.Keys(members), byAccountReversed) {
-		if m := members[user]; m.Active {
-			out = append(out, domain.Member{ID: m.ID, ProjectID: projectID, MemberID: user, Role: m.Role, CreatedAt: now})
+	var active []uuid.UUID
+	for user, m := range members {
+		if m.Active {
+			active = append(active, user)
 		}
+	}
+	for _, user := range storeOrder(active) {
+		m := members[user]
+		out = append(out, domain.Member{ID: m.ID, ProjectID: projectID, MemberID: user, Role: m.Role, CreatedAt: now})
 	}
 	return out, nil
 }
+
+// storeOrder is accounts by their ids, the first moved last: of three or
+// more, an order that neither an ascending nor a descending sort by
+// account gives.
+func storeOrder(accounts []uuid.UUID) []uuid.UUID {
+	sorted := slices.SortedFunc(slices.Values(accounts), byAccount)
+	if len(sorted) == 0 {
+		return nil
+	}
+	return slices.Concat(sorted[1:], sorted[:1])
+}
+
+// byAccount orders accounts by their ids.
+func byAccount(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) }
 
 // listed are the calls of user's list of project's members: the project's
 // workspace, the decision, the list; none in a transaction.
@@ -43,19 +61,20 @@ func listed(user, project uuid.UUID) []string {
 		fmt.Sprintf("ListMembers %s outside tx", project)}
 }
 
-// byAccountReversed orders accounts the reverse of their ids' order.
-func byAccountReversed(a, b uuid.UUID) int { return strings.Compare(b.String(), a.String()) }
-
 // ListProjectMembers decides project_member.list on the project, then
-// answers the store's list as it is, in the store's order, which is not
-// the accounts': web's three active members, not dave, whose membership
-// ended. A read opens no transaction.
+// answers the store's list as it is, in the store's order, which is no
+// sort by account, ascending or descending: web's three active members,
+// not dave, whose membership ended. A read opens no transaction.
 func TestListProjectMembers(t *testing.T) {
+	order := storeOrder([]uuid.UUID{alice, bob, carol})
+	if slices.IsSortedFunc(order, byAccount) || slices.IsSortedFunc(order, func(a, b uuid.UUID) int { return byAccount(b, a) }) {
+		t.Fatalf("the store's order %v is a sort by account: a use case that sorted would pass", order)
+	}
 	f := newWrites()
 	got, err := app.NewListProjectMembers(f.store, f.auth).Execute(as(bob), webID)
 	members := f.store.projects[webID].members
 	var want []domain.Member
-	for _, user := range slices.SortedFunc(slices.Values([]uuid.UUID{alice, bob, carol}), byAccountReversed) {
+	for _, user := range order {
 		want = append(want, domain.Member{ID: members[user].ID, ProjectID: webID, MemberID: user, Role: members[user].Role, CreatedAt: now})
 	}
 	if err != nil || !reflect.DeepEqual(got, want) || !slices.Equal(f.log.calls, listed(bob, webID)) {

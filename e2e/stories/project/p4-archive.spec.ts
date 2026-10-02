@@ -71,7 +71,7 @@ async function archiving(db: Database, id: string): Promise<unknown> {
   return row;
 }
 
-test("P4 (API): the admin archives a project, which leaves the list for the archived ones and cannot be changed; unarchives it and archives it again; then deletes it with its members, settings and states at one moment, after which it is not found and its identifier is free", async ({
+test("P4 (API): the admin archives a project, which leaves the list for the archived ones and whose fields cannot be updated (409) until it is unarchived; unarchives it and archives it again; then deletes it with its members, settings and states at one moment, after which it is not found and its identifier is free", async ({
   api,
   db,
 }, testInfo) => {

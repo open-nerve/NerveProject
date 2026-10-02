@@ -150,38 +150,44 @@ func TestUpdateProjectPreferences(t *testing.T) {
 func TestUpdateProjectPreferencesRefuses(t *testing.T) {
 	in := domain.PreferencesPatch{SortOrder: ptr(1.0)}
 	all := changed(bob, webID, in)
+	moved := func(f *writeFixture) { f.store.moved = uuid.NewV7() }
+	deleted := func(f *writeFixture) { f.store.deleted = true }
 	tests := []struct {
 		name  string
 		ctx   context.Context
 		id    uuid.UUID
 		in    domain.PreferencesPatch
-		fail  func(f *writeFixture)
+		setup func(f *writeFixture) // the project's state, when not as newWrites has it
+		fail  func(f *writeFixture) // a port's failure
 		want  error
 		calls []string
 	}{
-		{"an unknown tab", as(bob), webID, domain.PreferencesPatch{Navigation: &domain.Navigation{DefaultTab: "pages"}}, nil,
+		{"an unknown tab", as(bob), webID, domain.PreferencesPatch{Navigation: &domain.Navigation{DefaultTab: "pages"}}, nil, nil,
 			shared.Invalid(shared.FieldError{Field: "navigation.default_tab", Code: "invalid_format"}), nil},
-		{"no caller", context.Background(), webID, in, nil, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), in, nil, domain.ErrNotFound, noProject},
-		{"moved to another workspace", as(bob), webID, in, nil, domain.ErrNotFound, append(lockedTo(webID), "ShareProject "+webID.String())},
-		{"deleted while its lock waited", as(bob), webID, in, nil, domain.ErrNotFound, append(lockedTo(webID), "ShareProject "+webID.String())},
-		{"not seen", as(erin), webID, in, nil, domain.ErrNotFound, changed(erin, webID, in)[:5]},
-		{"forbidden", as(alice), webID, in, nil, shared.Forbidden(), changed(alice, webID, in)[:5]},
-		{"the lock failing", as(bob), webID, in, func(f *writeFixture) { f.store.errs = map[string]error{"ShareProject": errDisk} }, errDisk, all[:4]},
-		{"the decision failing", as(bob), webID, in, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk, all[:5]},
-		{"the change failing", as(bob), webID, in, func(f *writeFixture) { f.store.errs = map[string]error{"UpsertPreferences": errDisk} }, errDisk,
-			all},
-		{"the commit failing", as(bob), webID, in, func(f *writeFixture) { f.tx.commitErr = errDisk }, errDisk, all},
+		{"no caller", context.Background(), webID, in, nil, nil, shared.Unauthenticated(), nil},
+		{"no project", as(bob), uuid.Nil(), in, nil, nil, domain.ErrNotFound, noProject},
+		{"moved to another workspace", as(bob), webID, in, moved, nil, domain.ErrNotFound,
+			append(lockedTo(webID), "ShareProject "+webID.String())},
+		{"deleted while its lock waited", as(bob), webID, in, deleted, nil, domain.ErrNotFound,
+			append(lockedTo(webID), "ShareProject "+webID.String())},
+		{"not seen", as(erin), webID, in, nil, nil, domain.ErrNotFound, changed(erin, webID, in)[:5]},
+		{"forbidden", as(alice), webID, in, nil, nil, shared.Forbidden(), changed(alice, webID, in)[:5]},
+		{"the lock failing", as(bob), webID, in, nil, func(f *writeFixture) { f.store.errs = map[string]error{"ShareProject": errDisk} }, errDisk,
+			all[:4]},
+		{"the decision failing", as(bob), webID, in, nil, func(f *writeFixture) { f.auth.errs[grantKey{bob, acme.ID}] = errDisk }, errDisk,
+			all[:5]},
+		{"the change failing", as(bob), webID, in, nil, func(f *writeFixture) { f.store.errs = map[string]error{"UpsertPreferences": errDisk} },
+			errDisk, all},
+		{"the commit failing", as(bob), webID, in, nil, func(f *writeFixture) { f.tx.commitErr = errDisk }, errDisk, all},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdatePreferences()
+			if tt.setup != nil {
+				tt.setup(f)
+			}
 			if tt.fail != nil {
 				tt.fail(f)
-			}
-			f.store.deleted = tt.name == "deleted while its lock waited"
-			if tt.name == "moved to another workspace" {
-				f.store.moved = uuid.NewV7()
 			}
 			got, err := uc.Execute(tt.ctx, tt.id, tt.in)
 			if !refusedAs(err, tt.want) || !reflect.DeepEqual(got, domain.Preferences{}) || !slices.Equal(f.log.calls, tt.calls) {
