@@ -28,9 +28,15 @@ const (
 	callerMemberPrivate  caller = "workspace member only, private"     // WM-私: the workspace's member
 	callerGuestOnly      caller = "workspace guest only"               // WG-
 	callerBefore         caller = "project member before"              // P-前: ended in the private project
-	// callerArchivedAdmin is PA on acme's archived project: the column of
-	// 9.2's small table of the archived project.
-	callerArchivedAdmin caller = "archived project admin"
+	// The columns of 9.2's small table of acme's archived project, which is
+	// public: PA on it; X, never a member of acme; and the workspace's
+	// member, who sees it and is none of its members. The two that are not
+	// PA show that its 409 project.archived comes after the decision: an
+	// account that does not see the project, or may not change it, learns
+	// nothing of its state.
+	callerArchivedAdmin  caller = "archived project admin"
+	callerArchivedNever  caller = "never a member, archived"
+	callerArchivedMember caller = "workspace member only, archived"
 )
 
 // projectColumns are the columns of the project level, in the order of
@@ -39,7 +45,7 @@ var projectColumns = []caller{callerProjectAdmin, callerProjectMember, callerPro
 	callerMemberPublic, callerMemberPrivate, callerGuestOnly, callerBefore, callerNever, callerRemoved, callerDeleted}
 
 // archivedColumns are the columns of the archived project's table (9.2).
-var archivedColumns = []caller{callerArchivedAdmin}
+var archivedColumns = []caller{callerArchivedAdmin, callerArchivedNever, callerArchivedMember}
 
 // matrixAccounts are the accounts prepareMatrix registers: each workspace
 // column's, and each project column's that is none of those (M3 design
@@ -54,11 +60,13 @@ func accountOf(c caller) caller {
 	switch c {
 	case callerArchivedAdmin:
 		return callerProjectAdmin
+	case callerArchivedNever:
+		return callerNever
 	case callerProjectGuest:
 		return callerGuest
 	case callerAdminOnly:
 		return callerAdmin
-	case callerMemberPublic, callerMemberPrivate:
+	case callerMemberPublic, callerMemberPrivate, callerArchivedMember:
 		return callerMember
 	}
 	return c
@@ -73,7 +81,7 @@ func projectOf(c caller) string {
 	switch c {
 	case callerMemberPrivate, callerBefore:
 		return "acme/private"
-	case callerArchivedAdmin:
+	case callerArchivedAdmin, callerArchivedNever, callerArchivedMember:
 		return "acme/archived"
 	case callerDeleted:
 		return "gone/project"

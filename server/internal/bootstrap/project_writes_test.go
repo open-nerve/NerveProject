@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
@@ -24,7 +26,10 @@ import (
 // its caller (M3 design 3.6): alice, acme's admin, writes on her project
 // Web, one write after another; the statement of each reads the rows it
 // wrote, by $1 Web's id and $2 alice's, and finds each one the write
-// writes. Bob, whom she adds, is acme's member.
+// writes. Bob and carol, whom she adds, are acme's members. Each row the
+// write writes again is first made bob's, as last written by him, and
+// checked so: a write that kept its row's writer would pass for alice's
+// otherwise, she having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -38,55 +43,113 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	web := createdProject(t, contract, base, alice, "acme", "Web", "WEB")
 	bobID := accountID(t, contract, base, registerAccount(t, contract, base, "bob@example.com").AccessToken)
 	inWorkspaceOf(t, pool, web, bobID, aliceID, shared.RoleMember)
+	carolID := accountID(t, contract, base, registerAccount(t, contract, base, "carol@example.com").AccessToken)
+	inWorkspaceOf(t, pool, web, carolID, aliceID, shared.RoleMember)
+	carol := carolID.String()
+	// bobs makes bob, $3, the last writer of the one row of table that where
+	// picks by $1 Web's id and $2 alice's, which alice wrote last.
+	bobs := func(table, where string) string {
+		return "UPDATE " + table + " SET updated_by_id = $3 WHERE " + where + " AND updated_by_id = $2"
+	}
 	for _, w := range []struct {
 		name, method, path, body string
 		status                   int
-		stamps                   string // the rows written: the time each took, and whether alice wrote it as the write does
-		rows                     int    // how many rows stamps reads: each one the write writes
+		// seed, when set, writes the rows the write writes again, by $1 Web's
+		// id, $2 alice's and $3 bob's: one row, none of alice's writing.
+		seed   string
+		stamps string // the rows written: the time each took, and whether alice wrote it as the write does
+		seeded int    // how many rows stamps reads before the write: none of them alice's
+		rows   int    // how many rows stamps reads after it: each one the write writes
 	}{
-		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, http.StatusOK,
-			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1", 1},
-		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
-			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1},
+		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, http.StatusOK, bobs("projects", "id = $1"),
+			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1", 1, 1},
+		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK, bobs("projects", "id = $1"),
+			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1, 1},
 		// Archived again, it takes the new time.
-		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
-			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1},
-		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", http.StatusOK,
-			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1},
+		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK, bobs("projects", "id = $1"),
+			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1, 1},
+		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", http.StatusOK, bobs("projects", "id = $1"),
+			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1, 1},
 		{"updateProjectPreferences", http.MethodPatch, "/api/v0/me/projects/" + web.String() + "/preferences", `{"sort_order":5}`, http.StatusOK,
-			"SELECT updated_at, updated_by_id = $2 FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL", 1},
+			bobs("project_user_properties", "project_id = $1 AND user_id = $2 AND deleted_at IS NULL"),
+			"SELECT updated_at, updated_by_id = $2 FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL", 1, 1},
 		// Bob's membership and his display settings, made: two rows.
 		{"addProjectMembers", http.MethodPost, "/api/v0/projects/" + web.String() + "/members",
-			`{"members":[{"member_id":"` + bobID.String() + `","role":15}]}`, http.StatusCreated,
+			`{"members":[{"member_id":"` + bobID.String() + `","role":15}]}`, http.StatusCreated, "",
 			"SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at FROM project_members " +
 				"WHERE project_id = $1 AND member_id <> $2 UNION ALL SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND " +
-				"updated_at = created_at FROM project_user_properties WHERE project_id = $1 AND user_id <> $2", 2},
+				"updated_at = created_at FROM project_user_properties WHERE project_id = $1 AND user_id <> $2", 0, 2},
+		// Carol's ended membership, made and last written by bob an hour
+		// before (P5's removal ends one; SQL stands in), restored, and her
+		// display settings made: two rows.
+		{"addProjectMembers, a membership restored", http.MethodPost, "/api/v0/projects/" + web.String() + "/members",
+			`{"members":[{"member_id":"` + carol + `","role":15}]}`, http.StatusCreated,
+			"INSERT INTO project_members (id, workspace_id, project_id, member_id, role, is_active, created_by_id, updated_by_id, created_at, " +
+				"updated_at) SELECT '" + uuid.NewV7().String() + "', workspace_id, id, '" + carol + "', 15, false, $3, $3, " +
+				"now() - interval '1 hour', now() - interval '1 hour' FROM projects WHERE id = $1 AND created_by_id = $2",
+			"SELECT updated_at, updated_by_id = $2 AND created_at < updated_at FROM project_members WHERE project_id = $1 AND member_id = '" +
+				carol + "' UNION ALL SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at " +
+				"FROM project_user_properties WHERE project_id = $1 AND user_id = '" + carol + "'", 1, 2},
 	} {
+		if w.seed != "" {
+			if tag, err := pool.Exec(context.Background(), w.seed, web, aliceID, bobID); err != nil || tag.RowsAffected() != 1 {
+				t.Fatalf("%s's seed: %v, %v; want one row written", w.name, tag, err)
+			}
+		}
+		if seeded := stampsOf(t, pool, w.stamps, web, aliceID); len(seeded) != w.seeded || slices.ContainsFunc(seeded, func(s stamp) bool { return s.hers }) {
+			t.Fatalf("%s's rows before it: %v; want %d, none of alice's writing", w.name, seeded, w.seeded)
+		}
 		before := time.Now().Truncate(time.Microsecond)
 		status, body := call(t, contract, w.method, base+w.path, alice, w.body)
 		after := time.Now()
 		if status != w.status {
 			t.Fatalf("%s = %d %s, want %d", w.name, status, body, w.status)
 		}
-		rows, err := pool.Query(context.Background(), w.stamps, web, aliceID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		n := 0
-		for rows.Next() {
-			var at time.Time
-			var hers bool
-			if err := rows.Scan(&at, &hers); err != nil {
-				t.Fatal(err)
-			}
-			if n++; at.Before(before) || at.After(after) || !hers {
-				t.Errorf("%s wrote a row at %v, by alice %v; want within the request, %v to %v, by alice", w.name, at, hers, before, after)
+		written := stampsOf(t, pool, w.stamps, web, aliceID)
+		for _, s := range written {
+			if s.at == nil || s.at.Before(before) || s.at.After(after) || !s.hers {
+				t.Errorf("%s wrote a row %s; want within the request, %v to %v, by alice", w.name, s, before, after)
 			}
 		}
-		if err := rows.Err(); err != nil || n != w.rows {
-			t.Errorf("%s: %d rows written, %v; want %d", w.name, n, err, w.rows)
+		if len(written) != w.rows {
+			t.Errorf("%s: %d rows written; want %d", w.name, len(written), w.rows)
 		}
 	}
+}
+
+// stamp is a row a write writes, as TestTheWritesOnAProjectStampTheirRequest
+// reads it: the time it took, nil for none (an archived_at before the
+// archive), and whether alice wrote it as the write does.
+type stamp struct {
+	at   *time.Time
+	hers bool
+}
+
+// String is s as a failure prints it.
+func (s stamp) String() string {
+	at := "no time"
+	if s.at != nil {
+		at = s.at.String()
+	}
+	return fmt.Sprintf("at %s, by alice %v", at, s.hers)
+}
+
+// stampsOf reads the stamps the statement sql selects, by $1 web and $2
+// alice.
+func stampsOf(t *testing.T, pool *pgxpool.Pool, sql string, web, alice uuid.UUID) []stamp {
+	t.Helper()
+	rows, err := pool.Query(context.Background(), sql, web, alice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (stamp, error) {
+		var s stamp
+		return s, row.Scan(&s.at, &s.hers)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return stamps
 }
 
 // createdProject creates the project name with identifier in the workspace

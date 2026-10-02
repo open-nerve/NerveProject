@@ -114,8 +114,8 @@ func emailOf(c caller) string {
 // check can name: each workspace, by its slug; each membership, by the
 // workspace's slug and the column; each invitation, by the workspace's
 // slug and the address; each project, by its key; and each account, by
-// its column, which prepareMatrix registers. t is the test that asks for
-// them (in).
+// its name in matrixAccounts, which prepareMatrix registers. t is the test
+// that asks for them (in).
 type seeded struct {
 	t           testing.TB
 	workspaces  map[string]uuid.UUID
@@ -201,7 +201,9 @@ func (s seeded) project(key string) uuid.UUID {
 // account is the id of the account of matrixAccounts c, which prepareMatrix
 // registers; uuid.Nil until then, when nothing is registered, so that a
 // request built without a database names an account still (matrixViolations).
-// An account that is no column's fails the test at once.
+// A caller that is no registered account fails the test at once: a column
+// that calls as another's account (PG's, as the workspace's guest) is
+// named by that account (accountOf).
 func (s seeded) account(c caller) uuid.UUID {
 	if !slices.Contains(matrixAccounts, c) {
 		s.t.Helper()

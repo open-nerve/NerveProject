@@ -51,36 +51,37 @@ type rowsUnder struct {
 	keptBefore, keptAfter       string
 }
 
-// deletionViolations reports, for each foreign key to the parent's table
-// (parent: "workspace" or "project"): no row under either parent row before
-// the deletion, which would leave its checks nothing to see; an undeleted
-// row left under the deleted one, or, for a key on exempt, a row deleted
-// that must survive; a row of the kept one changed. An exempt key that no
-// foreign key matches is reported too.
+// deletionViolations reports, for each foreign key to parent, the parent's
+// table ("workspaces" or "projects", as keysTo takes it): no row under
+// either parent row before the deletion, which would leave its checks
+// nothing to see; an undeleted row left under the deleted one, or, for a
+// key on exempt, a row deleted that must survive; a row of the kept one
+// changed. An exempt key that no foreign key matches is reported too.
 func deletionViolations(parent string, under []rowsUnder, exempt map[string]string) []string {
 	var found []string
+	row := rowOf(parent)
 	for _, r := range under {
 		reason, survives := exempt[r.key]
 		switch {
 		case r.deletedBefore == 0:
-			found = append(found, fmt.Sprintf("%s: seed a row under the deleted %s", r.key, parent))
+			found = append(found, fmt.Sprintf("%s: seed a row under the deleted %s", r.key, row))
 		case survives && r.deletedAfter != r.deletedBefore:
 			found = append(found, fmt.Sprintf("%s: %d of %d rows deleted with the %s, want them kept: %s",
-				r.key, r.deletedBefore-r.deletedAfter, r.deletedBefore, parent, reason))
+				r.key, r.deletedBefore-r.deletedAfter, r.deletedBefore, row, reason))
 		case !survives && r.deletedAfter != 0:
 			found = append(found, fmt.Sprintf("%s: %d rows left undeleted under the deleted %s: the cascade misses the table",
-				r.key, r.deletedAfter, parent))
+				r.key, r.deletedAfter, row))
 		}
 		switch {
 		case r.keptBefore == "":
-			found = append(found, fmt.Sprintf("%s: seed a row under the kept %s", r.key, parent))
+			found = append(found, fmt.Sprintf("%s: seed a row under the kept %s", r.key, row))
 		case r.keptAfter != r.keptBefore:
-			found = append(found, fmt.Sprintf("%s: the kept %s's rows changed:\n%s\nwant\n%s", r.key, parent, r.keptAfter, r.keptBefore))
+			found = append(found, fmt.Sprintf("%s: the kept %s's rows changed:\n%s\nwant\n%s", r.key, row, r.keptAfter, r.keptBefore))
 		}
 	}
 	for _, key := range slices.Sorted(maps.Keys(exempt)) {
 		if !slices.ContainsFunc(under, func(r rowsUnder) bool { return r.key == key }) {
-			found = append(found, fmt.Sprintf("the exempt %s is no foreign key to %ss", key, parent))
+			found = append(found, fmt.Sprintf("the exempt %s is no foreign key to %s", key, parent))
 		}
 	}
 	return found
@@ -115,7 +116,7 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	for i, k := range keys {
 		under[i].deletedAfter, under[i].keptAfter = len(k.undeleted(t, pool, deleted)), k.rows(t, pool, kept)
 	}
-	for _, v := range deletionViolations("workspace", under, survivesItsWorkspace) {
+	for _, v := range deletionViolations("workspaces", under, survivesItsWorkspace) {
 		t.Error(v)
 	}
 	var adminID uuid.UUID
@@ -316,7 +317,7 @@ func TestDeletionViolationsCatchesEachGap(t *testing.T) {
 			[]string{"the exempt profiles.last_workspace_id is no foreign key to workspaces"}},
 	}
 	for _, tt := range tests {
-		if got := deletionViolations("workspace", tt.under, tt.exempt); !slices.Equal(got, tt.want) {
+		if got := deletionViolations("workspaces", tt.under, tt.exempt); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}

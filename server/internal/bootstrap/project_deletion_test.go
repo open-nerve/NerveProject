@@ -8,10 +8,12 @@ import (
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
@@ -47,21 +49,35 @@ func twoProjects(t *testing.T) (contract *apitest.Contract, base string, pool *p
 // the project's deleted_at, a time within the request, and by the account
 // that deleted it, and changes nothing under the workspace's other project.
 // The deleted project is not found any more. Web is archived first: an
-// archived project is deleted as any other.
+// archived project is deleted as any other. Its deleter is dave, acme's
+// admin, whom alice adds as Web's admin: no row under Web is of his
+// writing before, so a deletion that kept a row's writer would show.
 func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/archive", alice, ""); status != http.StatusOK {
 		t.Fatalf("archiving Web = %d %s, want 200", status, body)
+	}
+	dave := registerAccount(t, contract, base, "dave@example.com").AccessToken
+	daveID := accountID(t, contract, base, dave)
+	inWorkspaceOf(t, pool, web, daveID, aliceID, shared.RoleAdmin)
+	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/members", alice,
+		`{"members":[{"member_id":"`+daveID.String()+`","role":20}]}`); status != http.StatusCreated {
+		t.Fatalf("adding dave to Web = %d %s, want 201", status, body)
 	}
 	keys := keysTo(t, pool, "projects")
 	under, recorded := make([]rowsUnder, len(keys)), make([][]uuid.UUID, len(keys))
 	for i, k := range keys {
 		recorded[i] = k.undeleted(t, pool, web)
 		under[i] = rowsUnder{key: k.String(), deletedBefore: len(recorded[i]), keptBefore: k.rows(t, pool, ops)}
+		var his int
+		if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
+			" = $1 AND updated_by_id = $2", web, daveID).Scan(&his); err != nil || his != 0 {
+			t.Fatalf("%s: %d rows under Web last written by dave, %v; want none", k, his, err)
+		}
 	}
 
 	before := time.Now().Truncate(time.Microsecond)
-	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), alice, ""); status != http.StatusNoContent {
+	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), dave, ""); status != http.StatusNoContent {
 		t.Fatalf("deleting Web = %d %s, want 204", status, body)
 	}
 	after := time.Now()
@@ -69,12 +85,12 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	for i, k := range keys {
 		under[i].deletedAfter, under[i].keptAfter = len(k.undeleted(t, pool, web)), k.rows(t, pool, ops)
 	}
-	for _, v := range deletionViolations("project", under, nil) {
+	for _, v := range deletionViolations("projects", under, nil) {
 		t.Error(v)
 	}
 	for i, k := range keys {
-		if rows := k.unstamped(t, pool, recorded[i], web, aliceID); rows != "" {
-			t.Errorf("%s: rows not deleted at the project's deleted_at by its deleter %s:\n%s", k, aliceID, rows)
+		if rows := k.unstamped(t, pool, recorded[i], web, daveID); rows != "" {
+			t.Errorf("%s: rows not deleted at the project's deleted_at by its deleter %s:\n%s", k, daveID, rows)
 		}
 	}
 	var at time.Time

@@ -228,19 +228,20 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 }
 
 // prepareMatrix fills a database for the matrix. Through the API, each of
-// matrixAccounts, registered for its token and its id. Through the workspace store,
-// the workspaces, memberships and invitations of matrixMemberships and
-// matrixInvitations, with the ids newSeeded named, and acme's admin's
-// display settings; other's admin and removed member are there so that a
-// role read in the wrong workspace lets either into acme. Through the
-// project store, the projects and project memberships of matrixProjects
-// and matrixProjectMembers, and acme's archived project archived. Through SQL, the states no store writes yet
-// (standIns, partingStates). Through the API, gone deleted by its admin,
-// which soft-deletes its memberships and its project with it; then the
-// checks that the rows the cells rest on are there (preconditions).
-// Everything that connected to the database is closed when it returns, so
-// that it can be copied. A -run that leaves out prepare fails here, not
-// with a 401 in every cell.
+// matrixAccounts, registered for its token and its id. Through the
+// workspace store, the workspaces, memberships and invitations of
+// matrixMemberships and matrixInvitations, with the ids newSeeded named,
+// and acme's admin's display settings; other's admin and removed member
+// are there so that a role read in the wrong workspace lets either into
+// acme. Through the project store, the projects and project memberships of
+// matrixProjects and matrixProjectMembers, and acme's archived project
+// archived. Through SQL, the states no store writes yet (standIns,
+// partingStates). Through the API, gone deleted by its admin, which
+// soft-deletes its memberships and its project with it; then the checks
+// that the rows the cells rest on are there (preconditions). Everything
+// that connected to the database is closed when it returns, so that it can
+// be copied. A -run that leaves out prepare fails here, not with a 401 in
+// every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -248,7 +249,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		contract := apitest.Load(t)
 		base := startApp(t, d.config(t, d.url, nil), migrations.FS())
 		pool := openPool(t, d.url)
-		ids := map[caller]uuid.UUID{}
+		ids := d.seeded.accounts
 		for _, c := range matrixAccounts {
 			email := emailOf(c)
 			d.tokens[c] = registerAccount(t, contract, base, email).AccessToken
@@ -257,7 +258,6 @@ func prepareMatrix(t *testing.T) matrixData {
 				t.Fatal(err)
 			}
 			ids[c] = id
-			d.seeded.accounts[c] = id
 		}
 		seed := matrixSeed{t: t, store: workspacepg.New(pool), ids: ids, now: time.Now(), workspaces: map[string]uuid.UUID{}}
 		s := d.seeded.in(t)

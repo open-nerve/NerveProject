@@ -181,8 +181,10 @@ func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 // archives Web and waits after his decision, holding acme FOR SHARE and
 // Web; his change of Web takes acme's row beside it and waits for Web's.
 // Once the archive commits, the change decides on Web archived and answers
-// 409 project.archived. Under FOR SHARE both would hold Web, and each one's
-// UPDATE would wait for the other (40P01).
+// 409 project.archived. Under a FOR SHARE lock of Web the change would take
+// Web beside the archive and wait only at its UPDATE, which upgrades a lock
+// it shares: PostgreSQL takes no tuple lock for that wait, so the probe of
+// a wait on projects times out, and the test fails there, not at a 40P01.
 func TestTwoWritesOnAProjectSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	r, _ := bobAdministersWeb(t)

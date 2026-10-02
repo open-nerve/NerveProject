@@ -26,6 +26,13 @@ func ofProject(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
 		callerDeleted: cellProjectNotFound}
 }
 
+// ofArchived are the cells of a row of the archived project's table: the
+// answers of PA and of the workspace's member, who sees the project, and
+// project.not_found for X, who does not.
+func ofArchived(pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellProjectNotFound}
+}
+
 // toProject is the request of a row whose callers each send method to the
 // path under the project their column targets.
 func toProject(method, path, body string) func(caller, seeded) (string, string, string) {
@@ -48,6 +55,14 @@ func projectMatrixRows() []matrixRow {
 		{op: "createProject", variant: "a lead who is no member", write: true,
 			request: toWorkspace(http.MethodPost, "/projects", `{"name":"New","identifier":"NEW","project_lead_id":"`+uuid.Nil().String()+`"}`),
 			cells:   inWorkspace(cellValidationFailed, cellValidationFailed, cellForbidden)},
+		// The removed member, whose membership of acme the stand-in ended, is
+		// refused as a lead as one who never had any.
+		{op: "createProject", variant: "a lead whose membership ended", write: true,
+			request: func(c caller, s seeded) (string, string, string) {
+				return toWorkspace(http.MethodPost, "/projects",
+					`{"name":"New","identifier":"NEW","project_lead_id":"`+s.account(callerRemoved).String()+`"}`)(c, s)
+			},
+			cells: inWorkspace(cellValidationFailed, cellValidationFailed, cellForbidden), refusal: "project_lead_id not_allowed"},
 		// acme has WEB, and web is WEB in any case; gone has it too, deleted
 		// with gone.
 		{op: "checkProjectIdentifier", variant: "taken", request: toWorkspace(http.MethodGet, "/project-identifiers/web", ""),
@@ -57,7 +72,7 @@ func projectMatrixRows() []matrixRow {
 		{op: "getProject", columns: projectColumns, request: toProject(http.MethodGet, "", ""),
 			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellOK, cellOK), check: readsItsProject},
 		{op: "getProject", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "", ""),
-			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: readsItsProject},
+			cells: ofArchived(cellOK, cellOK), check: readsItsProject},
 		// The project's admins, and its members who are the workspace's
 		// admins (M3 design 3.4): PM+WA is a member of the project and WA- is
 		// not, so the row parts the workspace's admin who joined from the one
@@ -69,23 +84,26 @@ func projectMatrixRows() []matrixRow {
 		{op: "updateProject", variant: "a lead who is no member", write: true, columns: projectColumns,
 			request: toProject(http.MethodPatch, "", `{"project_lead_id":"`+uuid.Nil().String()+`"}`),
 			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
+		// The archived project's 409 comes after the decision (M3 design 3.6
+		// convention 2): who does not see it gets 404, who may not change it
+		// 403, as on any project, and neither learns it is archived.
 		{op: "updateProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPatch, "", `{"name":"Renamed"}`),
-			cells: map[caller]cell{callerArchivedAdmin: cellProjectArchived}},
+			cells: ofArchived(cellProjectArchived, cellForbidden)},
 		// As updateProject (M3 design 3.4); an archived project archives
 		// again, and an unarchived one unarchives.
 		{op: "archiveProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/archive", ""),
 			cells: ofProject(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: archivesItsProject(true)},
 		{op: "archiveProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/archive", ""),
-			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: archivesItsProject(true)},
+			cells: ofArchived(cellOK, cellForbidden), check: archivesItsProject(true)},
 		{op: "unarchiveProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/unarchive", ""),
 			cells: ofProject(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: archivesItsProject(false)},
 		{op: "unarchiveProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/unarchive", ""),
-			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: archivesItsProject(false)},
+			cells: ofArchived(cellOK, cellForbidden), check: archivesItsProject(false)},
 		// As updateProject; an archived project is deleted as any other.
 		{op: "deleteProject", write: true, columns: projectColumns, request: toProject(http.MethodDelete, "", ""),
 			cells: ofProject(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
 		{op: "deleteProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodDelete, "", ""),
-			cells: map[caller]cell{callerArchivedAdmin: cellNoContent}},
+			cells: ofArchived(cellNoContent, cellForbidden)},
 		// Every active member of the project, his own settings (M3 design
 		// 9.2): PM+WA as its member, and not WA-, who is none.
 		{op: "getProjectPreferences", columns: projectColumns, request: toProjectPreferences(http.MethodGet, ""),
@@ -97,7 +115,7 @@ func projectMatrixRows() []matrixRow {
 		// 3.19).
 		{op: "updateProjectPreferences", variant: "archived", write: true, columns: archivedColumns,
 			request: toProjectPreferences(http.MethodPatch, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["views"]}}`),
-			cells:   map[caller]cell{callerArchivedAdmin: cellOK}, check: readsPreferences("cycles", `["views"]`)},
+			cells:   ofArchived(cellOK, cellForbidden), check: readsPreferences("cycles", `["views"]`)},
 	}
 }
 
@@ -178,7 +196,7 @@ func readsItsProject(t *testing.T, c caller, s seeded, answer string) {
 	decodeAnswer(t, answer, &p)
 	role, member := memberRoles[c]
 	if p.ID != s.project(projectOf(c)) || (p.MemberRole != nil) != member || (member && *p.MemberRole != role) ||
-		(p.ArchivedAt != nil) != (c == callerArchivedAdmin) {
+		(p.ArchivedAt != nil) != (projectOf(c) == "acme/archived") {
 		t.Errorf("%s reads %s; want %s, his role %d (0: none), archived only for the archived project", c, answer, projectOf(c), role)
 	}
 }

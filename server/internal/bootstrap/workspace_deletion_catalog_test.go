@@ -24,6 +24,11 @@ type foreignKey struct{ parent, table, column string }
 
 func (k foreignKey) String() string { return k.table + "." + k.column }
 
+// rowOf is one row of the parent table, as the guards' messages name it:
+// "workspace" for workspaces, "project" for projects. A parent is spelt as
+// its table everywhere else.
+func rowOf(parent string) string { return strings.TrimSuffix(parent, "s") }
+
 // keysTo are the parent row itself, as <parent>.id, then every foreign key
 // to parent in the catalog. A table under parent only through others'
 // foreign keys, followed from parent however far, fails the test, named
@@ -76,7 +81,7 @@ func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 	}
 	if len(unkeyed) > 0 {
 		t.Fatalf("%s: under %s with no foreign key to %s of its own, so no check here sees its rows: add %s_id, or extend the guard",
-			strings.Join(unkeyed, "; "), parent, parent, strings.TrimSuffix(parent, "s"))
+			strings.Join(unkeyed, "; "), parent, parent, rowOf(parent))
 	}
 	return keys
 }
