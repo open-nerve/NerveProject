@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -38,11 +37,7 @@ func (u *GetProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project,
 	case !found:
 		return domain.Project{}, domain.ErrNotFound
 	}
-	_, err = u.auth.Authorize(ctx, actor, domain.ActionRead, shared.Target{WorkspaceID: p.WorkspaceID, ProjectID: p.ID})
-	switch {
-	case errors.Is(err, shared.ErrNotVisible):
-		return domain.Project{}, domain.ErrNotFound
-	case err != nil:
+	if _, err = decide(ctx, u.auth, actor, domain.ActionRead, p.WorkspaceID, p.ID); err != nil {
 		return domain.Project{}, err
 	}
 	return p, nil

@@ -1,26 +1,19 @@
 package bootstrap
 
 import (
-	"context"
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
-	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
-	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	projectdomain "github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
-	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
-	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
-	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// The rows prepareMatrix seeds, and how a row's request names them.
+// The rows prepareMatrix seeds, and how a row's request names them; the
+// writers that seed them are in permission_matrix_seed_test.go.
 
 // matrixMemberships are the memberships prepareMatrix seeds, workspace by
 // workspace, each workspace's creator first: acme with its admin, member,
@@ -120,14 +113,16 @@ func emailOf(c caller) string {
 // seeded are the ids of the rows prepareMatrix seeds that a request or a
 // check can name: each workspace, by its slug; each membership, by the
 // workspace's slug and the column; each invitation, by the workspace's
-// slug and the address; and each project, by its key. t is the test that
-// asks for them (in).
+// slug and the address; each project, by its key; and each account, by
+// its name in matrixAccounts, which prepareMatrix registers. t is the test
+// that asks for them (in).
 type seeded struct {
 	t           testing.TB
 	workspaces  map[string]uuid.UUID
 	memberships map[string]uuid.UUID
 	invitations map[string]uuid.UUID
 	projects    map[string]uuid.UUID
+	accounts    map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
@@ -136,7 +131,7 @@ type seeded struct {
 // database, sees the keys and the targets the cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
-		projects: map[string]uuid.UUID{}}
+		projects: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -203,6 +198,20 @@ func (s seeded) project(key string) uuid.UUID {
 	return id
 }
 
+// account is the id of the account of matrixAccounts c, which prepareMatrix
+// registers; uuid.Nil until then, when nothing is registered, so that a
+// request built without a database names an account still (matrixViolations).
+// A caller that is no registered account fails the test at once: a column
+// that calls as another's account (PG's, as the workspace's guest) is
+// named by that account (accountOf).
+func (s seeded) account(c caller) uuid.UUID {
+	if !slices.Contains(matrixAccounts, c) {
+		s.t.Helper()
+		s.t.Fatalf("no account %s is registered", c)
+	}
+	return s.accounts[c]
+}
+
 // fatalOf runs f on a goroutine of its own with a testing.TB whose Fatalf
 // records the message and ends that goroutine, as testing.T's does, without
 // failing the test; it returns the message, "" when f did not fail: how a
@@ -244,157 +253,5 @@ func (s seeded) workspaceOfRow(id uuid.UUID) (string, bool) {
 	return "", false
 }
 
-// matrixSeed writes the prepared workspaces, memberships and settings
-// through the workspace store, and keeps the workspaces' ids by slug; exec
-// runs the SQL that stands in for the stores P4b and P5 add.
-type matrixSeed struct {
-	t          *testing.T
-	store      *workspacepg.Store
-	ids        map[caller]uuid.UUID
-	now        time.Time
-	workspaces map[string]uuid.UUID // by slug
-}
-
-func (s matrixSeed) workspace(id uuid.UUID, slug string, admin caller) {
-	s.t.Helper()
-	w, err := s.store.CreateWorkspace(context.Background(), workspaceapp.WorkspaceRow{
-		ID: id, Name: slug, Slug: slug, Timezone: "UTC", CreatedBy: s.ids[admin], Now: s.now,
-	})
-	if err != nil {
-		s.t.Fatal(err)
-	}
-	s.workspaces[slug] = w.ID
-}
-
-func (s matrixSeed) join(id uuid.UUID, slug string, c caller, role shared.Role) {
-	s.t.Helper()
-	if err := s.store.CreateMember(context.Background(), workspaceapp.MemberRow{
-		ID: id, WorkspaceID: s.workspaces[slug], MemberID: s.ids[c], Role: role, CreatedBy: s.ids[c], Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-}
-
-func (s matrixSeed) preferences(slug string, c caller, p workspacedomain.PreferencesPatch) {
-	s.t.Helper()
-	if _, err := s.store.UpsertPreferences(context.Background(), workspaceapp.PreferencesRow{
-		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], UserID: s.ids[c], Patch: p, Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-}
-
 // matrixAdmins are the creators of the prepared workspaces, their admins.
 var matrixAdmins = map[string]caller{"acme": callerAdmin, "gone": callerDeleted, "other": callerNever}
-
-// invite stores the invitation id of email to the workspace slug, by its
-// admin.
-func (s matrixSeed) invite(id uuid.UUID, slug, email string, role shared.Role) {
-	s.t.Helper()
-	if _, err := s.store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
-		{ID: id, WorkspaceID: s.workspaces[slug], Email: email, Role: role, CreatedBy: s.ids[matrixAdmins[slug]], Now: s.now},
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-}
-
-// exec runs sql for the test tb, which sql must change one row of: a
-// statement that matched none would leave the seed as it was, and the
-// cells that need the change would test another case.
-func (s matrixSeed) exec(tb testing.TB, pool *pgxpool.Pool, sql string, args ...any) {
-	tb.Helper()
-	tag, err := pool.Exec(context.Background(), sql, args...)
-	if err != nil {
-		tb.Fatal(err)
-	}
-	if tag.RowsAffected() != 1 {
-		tb.Fatalf("%s changed %d rows, want 1", sql, tag.RowsAffected())
-	}
-}
-
-// projectSeed writes the prepared projects and their memberships through
-// the project store, each by its workspace's admin, and keeps the
-// projects' ids by key.
-type projectSeed struct {
-	matrixSeed
-	store    *projectpg.Store
-	projects map[string]uuid.UUID
-}
-
-// project stores the project id with key.
-func (s projectSeed) project(id uuid.UUID, key, name, identifier string, network projectdomain.Network) {
-	s.t.Helper()
-	slug, _, _ := strings.Cut(key, "/")
-	if err := s.store.CreateProject(context.Background(), projectapp.ProjectRow{
-		ID: id, WorkspaceID: s.workspaces[slug], Name: name, Identifier: identifier, Network: network, Timezone: "UTC",
-		CreatedBy: s.ids[matrixAdmins[slug]], Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-	s.projects[key] = id
-}
-
-// join makes c a member of the project key with role, and stores his
-// display settings in it.
-func (s projectSeed) join(key string, c caller, role shared.Role) {
-	s.t.Helper()
-	slug, _, _ := strings.Cut(key, "/")
-	ctx, by := context.Background(), s.ids[matrixAdmins[slug]]
-	if err := s.store.CreateMember(ctx, projectapp.MemberRow{
-		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[key], MemberID: s.ids[c], Role: role, CreatedBy: by, Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-	if err := s.store.CreatePreferences(ctx, projectapp.PreferencesRow{
-		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[key], UserID: s.ids[c], SortOrder: 65535, CreatedBy: by,
-		Now: s.now,
-	}); err != nil {
-		s.t.Fatal(err)
-	}
-}
-
-// partingStates puts memberships of matrixProjectMembers in the states in
-// which a list and reading could part (TestListingProjectsIsReadingEach):
-// WG-'s membership of acme's public project ended and of its private one
-// deleted, the member's of the private one deleted, and PM's display
-// settings in it deleted while his membership stays active. SQL stands in
-// for the store that will end a membership (P5), and makes the two
-// deleted states that only a deleted project or workspace makes today,
-// which the list must still read as reading does. Each state is then read
-// back: one missing would let a list that counts an ended or a deleted
-// membership, or takes display settings for a membership, agree with
-// reading for every account.
-func (s projectSeed) partingStates(pool *pgxpool.Pool) {
-	s.t.Helper()
-	public, private := s.projects["acme/public"], s.projects["acme/private"]
-	s.exec(s.t, pool, "UPDATE project_members SET is_active = false, updated_at = $3 WHERE project_id = $1 AND member_id = $2",
-		public, s.ids[callerGuestOnly], s.now)
-	for _, c := range []caller{callerGuestOnly, callerMember} {
-		s.exec(s.t, pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", private, s.ids[c], s.now)
-	}
-	s.exec(s.t, pool, "UPDATE project_user_properties SET deleted_at = $3 WHERE project_id = $1 AND user_id = $2", private,
-		s.ids[callerProjectMember], s.now)
-	// A deleted membership with a live one beside it would be no deleted
-	// state at all: the live one is what the list and reading would see. The
-	// row stays active, as cascade.sql leaves it, so only its deleted_at
-	// keeps it out.
-	deleted := "m.is_active AND m.deleted_at IS NOT NULL AND NOT EXISTS (SELECT 1 FROM project_members o " +
-		"WHERE o.project_id = m.project_id AND o.member_id = m.member_id AND o.deleted_at IS NULL)"
-	for _, st := range []struct {
-		project uuid.UUID
-		c       caller
-		holds   string // of m, his membership of the project
-	}{
-		{public, callerGuestOnly, "NOT m.is_active AND m.deleted_at IS NULL"},
-		{private, callerGuestOnly, deleted},
-		{private, callerMember, deleted},
-		{private, callerProjectMember, "m.is_active AND m.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM project_user_properties u " +
-			"WHERE u.project_id = m.project_id AND u.user_id = m.member_id AND u.deleted_at IS NULL)"},
-	} {
-		var holds bool
-		if err := pool.QueryRow(context.Background(), "SELECT EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = $1 AND "+
-			"m.member_id = $2 AND "+st.holds+")", st.project, s.ids[st.c]).Scan(&holds); err != nil || !holds {
-			s.t.Fatalf("%s's membership of %s: %v, %v; want %s", st.c, st.project, holds, err, st.holds)
-		}
-	}
-}

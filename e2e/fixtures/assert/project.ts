@@ -38,11 +38,12 @@ const newStates = [
 ];
 
 /**
- * P1, W3: the project of p.identifier in the workspace of slug holds p, is neither archived nor deleted, has no
- * work item numbered yet (last_issue_sequence 0) and is led by the account of leadEmail, or by no one when it is
- * null. Its members are exactly `members`, each an active admin (role 20) with his display settings in it at his
- * place; its states are the six of a new project. Every row is in the project's workspace; the account of
- * creatorEmail wrote every row, at the project's creation, and none has changed since. Returns the project's id.
+ * P1, P4, W3: the undeleted project of p.identifier in the workspace of slug holds p, is not archived, has no work
+ * item numbered yet (last_issue_sequence 0) and is led by the account of leadEmail, or by no one when it is null. A
+ * deleted project's identifier is free again (M3 design 4.6), so a deleted project of it is not read. Its members are
+ * exactly `members`, each an active admin (role 20) with his display settings in it at his place; its states are the
+ * six of a new project. Every row is in the project's workspace; the account of creatorEmail wrote every row, at the
+ * project's creation, and none has changed since. Returns the project's id.
  */
 export async function expectProjectCreated(
   db: Database,
@@ -54,13 +55,13 @@ export async function expectProjectCreated(
 ): Promise<string> {
   const [project] = await db.query<{ id: string }>(
     `SELECT p.id, p.name, p.identifier, p.description, p.network, p.timezone, p.logo_props, p.last_issue_sequence,
-            p.archived_at, p.deleted_at, l.email AS lead, c.email AS creator,
+            p.archived_at, l.email AS lead, c.email AS creator,
             p.updated_by_id = p.created_by_id AND p.updated_at = p.created_at AS unchanged
        FROM projects p
        JOIN workspaces w ON w.id = p.workspace_id
        JOIN users c ON c.id = p.created_by_id
        LEFT JOIN users l ON l.id = p.project_lead_id
-      WHERE w.slug = $1 AND p.identifier = $2`,
+      WHERE w.slug = $1 AND p.identifier = $2 AND p.deleted_at IS NULL`,
     [slug, p.identifier]
   );
   expect(project, `the project ${p.identifier} of ${slug}`).toEqual({
@@ -68,7 +69,6 @@ export async function expectProjectCreated(
     id: expect.any(String),
     last_issue_sequence: 0,
     archived_at: null,
-    deleted_at: null,
     lead: leadEmail,
     creator: creatorEmail,
     unchanged: true,
@@ -131,4 +131,78 @@ export async function countProjects(db: Database): Promise<ProjectCounts> {
     throw new Error("the counts query returned no row");
   }
   return counts;
+}
+
+/** A membership of a project as expectMember reads it. */
+export interface Membership {
+  role: number;
+  is_active: boolean;
+  /** His place in his sidebar; null when he has no display settings in the project. */
+  sort_order: number | null;
+  /** The address of the account that wrote the membership last, and his display settings in the project, if any. */
+  by: string;
+}
+
+/**
+ * P2, P3, P4: the account of email's undeleted membership of the project of projectId is want, or he has none when
+ * want is null. The membership and his display settings in the project are rows of the project's workspace, both
+ * written last by the account of want.by, and the settings were written with the membership, when he became a member,
+ * or before it.
+ */
+export async function expectMember(
+  db: Database,
+  projectId: string,
+  email: string,
+  want: Membership | null
+): Promise<void> {
+  const rows = await db.query(
+    `SELECT m.role, m.is_active, s.sort_order, b.email AS by, sb.email AS settings_by,
+            m.workspace_id = p.workspace_id AND (s.id IS NULL OR (s.workspace_id = p.workspace_id AND s.created_at <= m.updated_at))
+              AS in_its_workspace
+       FROM project_members m
+       JOIN projects p ON p.id = m.project_id
+       JOIN users u ON u.id = m.member_id
+       JOIN users b ON b.id = m.updated_by_id
+       LEFT JOIN project_user_properties s ON s.project_id = m.project_id AND s.user_id = m.member_id AND s.deleted_at IS NULL
+       LEFT JOIN users sb ON sb.id = s.updated_by_id
+      WHERE m.project_id = $1 AND u.email = $2 AND m.deleted_at IS NULL`,
+    [projectId, email]
+  );
+  expect(rows, `the membership of ${email} in ${projectId}`).toEqual(
+    want === null ? [] : [{ ...want, settings_by: want.sort_order === null ? null : want.by, in_its_workspace: true }]
+  );
+}
+
+/**
+ * P4, W3: the project of projectId is deleted by the account of adminEmail, and with it, at the same moment and by the
+ * same account, every row under it: of each table whose foreign key names projects (the catalog's list, so a table a
+ * later phase adds is read too), by its project_id. Each table has such a row, and none is left undeleted.
+ */
+export async function expectProjectDeleted(db: Database, projectId: string, adminEmail: string): Promise<void> {
+  const [project] = await db.query(
+    `SELECT p.deleted_at IS NOT NULL AS deleted, u.email AS by FROM projects p JOIN users u ON u.id = p.updated_by_id WHERE p.id = $1`,
+    [projectId]
+  );
+  expect(project, `the project ${projectId}`).toEqual({ deleted: true, by: adminEmail });
+  const tables = await db.query<{ name: string }>(
+    `SELECT DISTINCT c.conrelid::regclass::text AS name FROM pg_constraint c
+      WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass ORDER BY 1`
+  );
+  expect(tables.length, "the tables under projects").toBeGreaterThan(0);
+  // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.
+  const rows = await Promise.all(
+    tables.map(async ({ name }) => {
+      const [counts] = await db.query<{ with_it: number; other: number }>(
+        `SELECT count(*) FILTER (WHERE t.deleted_at = p.deleted_at AND t.updated_by_id = p.updated_by_id)::int AS with_it,
+                count(*) FILTER (WHERE t.deleted_at IS DISTINCT FROM p.deleted_at
+                                    OR t.updated_by_id IS DISTINCT FROM p.updated_by_id)::int AS other
+           FROM ${name} t JOIN projects p ON p.id = t.project_id WHERE p.id = $1`,
+        [projectId]
+      );
+      return { table: name, deletedWithIt: (counts?.with_it ?? 0) > 0, other: counts?.other };
+    })
+  );
+  expect(rows, `the rows under ${projectId}`).toEqual(
+    tables.map(({ name }) => ({ table: name, deletedWithIt: true, other: 0 }))
+  );
 }

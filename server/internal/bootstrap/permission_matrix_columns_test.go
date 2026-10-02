@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"testing"
+	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
@@ -27,9 +28,15 @@ const (
 	callerMemberPrivate  caller = "workspace member only, private"     // WM-私: the workspace's member
 	callerGuestOnly      caller = "workspace guest only"               // WG-
 	callerBefore         caller = "project member before"              // P-前: ended in the private project
-	// callerArchivedAdmin is PA on acme's archived project: the column of
-	// 9.2's small table of the archived project.
-	callerArchivedAdmin caller = "archived project admin"
+	// The columns of 9.2's small table of acme's archived project, which is
+	// public: PA on it; X, never a member of acme; and the workspace's
+	// member, who sees it and is none of its members. The two that are not
+	// PA show that its 409 project.archived comes after the decision: an
+	// account that does not see the project, or may not change it, learns
+	// nothing of its state.
+	callerArchivedAdmin  caller = "archived project admin"
+	callerArchivedNever  caller = "never a member, archived"
+	callerArchivedMember caller = "workspace member only, archived"
 )
 
 // projectColumns are the columns of the project level, in the order of
@@ -38,7 +45,7 @@ var projectColumns = []caller{callerProjectAdmin, callerProjectMember, callerPro
 	callerMemberPublic, callerMemberPrivate, callerGuestOnly, callerBefore, callerNever, callerRemoved, callerDeleted}
 
 // archivedColumns are the columns of the archived project's table (9.2).
-var archivedColumns = []caller{callerArchivedAdmin}
+var archivedColumns = []caller{callerArchivedAdmin, callerArchivedNever, callerArchivedMember}
 
 // matrixAccounts are the accounts prepareMatrix registers: each workspace
 // column's, and each project column's that is none of those (M3 design
@@ -53,11 +60,13 @@ func accountOf(c caller) caller {
 	switch c {
 	case callerArchivedAdmin:
 		return callerProjectAdmin
+	case callerArchivedNever:
+		return callerNever
 	case callerProjectGuest:
 		return callerGuest
 	case callerAdminOnly:
 		return callerAdmin
-	case callerMemberPublic, callerMemberPrivate:
+	case callerMemberPublic, callerMemberPrivate, callerArchivedMember:
 		return callerMember
 	}
 	return c
@@ -72,7 +81,7 @@ func projectOf(c caller) string {
 	switch c {
 	case callerMemberPrivate, callerBefore:
 		return "acme/private"
-	case callerArchivedAdmin:
+	case callerArchivedAdmin, callerArchivedNever, callerArchivedMember:
 		return "acme/archived"
 	case callerDeleted:
 		return "gone/project"
@@ -98,6 +107,20 @@ func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	}
 	if len(matrixAccounts) != 11 {
 		t.Errorf("%d accounts, want 9.2's 11", len(matrixAccounts))
+	}
+	// account names a registered account: PG's column, whose account is the
+	// workspace's guest, is none, and fails the test at once; an account is
+	// uuid.Nil until prepareMatrix registers its id, so that a request built
+	// without a database names one still (matrixViolations).
+	if failed, want := fatalOf(func(tb testing.TB) { newSeeded().in(tb).account(callerProjectGuest) }),
+		"no account project guest is registered"; failed != want {
+		t.Errorf("the account of PG's column itself: failed with %q, want %q", failed, want)
+	}
+	s := newSeeded().in(t)
+	for _, a := range matrixAccounts {
+		if id := s.account(a); id != uuid.Nil() {
+			t.Errorf("the account %s before prepareMatrix registers it = %s, want uuid.Nil", a, id)
+		}
 	}
 }
 

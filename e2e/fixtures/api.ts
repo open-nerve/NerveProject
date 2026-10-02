@@ -16,6 +16,11 @@ export type WorkspaceInvitation = components["schemas"]["WorkspaceInvitation"];
 export type InvitationCreate = components["schemas"]["InvitationCreate"];
 export type Project = components["schemas"]["Project"];
 export type ProjectCreate = components["schemas"]["ProjectCreate"];
+export type ProjectUpdate = components["schemas"]["ProjectUpdate"];
+export type ProjectMember = components["schemas"]["ProjectMember"];
+export type ProjectMemberNew = components["schemas"]["ProjectMemberNew"];
+export type ProjectPreferences = components["schemas"]["ProjectPreferences"];
+export type ProjectPreferencesUpdate = components["schemas"]["ProjectPreferencesUpdate"];
 
 /** Returns a client for the nerve at baseURL. */
 export function createApi(baseURL: string): Api {
@@ -107,4 +112,48 @@ export async function createProject(api: Api, token: string, slug: string, body:
     throw new Error(`createProject ${body.identifier} answered 201 without the project`);
   }
   return data;
+}
+
+/**
+ * Adds the accounts of members, each an active member of the project's workspace, to the project of projectId with
+ * the bearer token given, an admin's of the project, and returns their memberships in that order. The one way a
+ * project gets a member with a role of the admin's choice (M3 design 3.5).
+ */
+export async function addProjectMembers(
+  api: Api,
+  token: string,
+  projectId: string,
+  members: ProjectMemberNew[]
+): Promise<ProjectMember[]> {
+  const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/members", {
+    params: { path: { project_id: projectId } },
+    body: { members },
+    headers: bearer(token),
+  });
+  expect(response.status, `add members to ${projectId}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) {
+    throw new Error(`addProjectMembers to ${projectId} answered 201 without the members`);
+  }
+  return data.data;
+}
+
+/**
+ * Runs make, which makes a story's projects, between two projects of another workspace of the caller of token, one
+ * made before them and one after: a query that loses its project's id and reads the first row in id order, either
+ * way, reads a project of another workspace, never one make made: First, or an earlier test's project in the worker's
+ * database, ascending; Last descending, until the story makes another project. A project of another workspace is not
+ * found. Returns what make returns.
+ */
+export async function amidAnotherWorkspace<T>(
+  api: Api,
+  token: string,
+  testInfo: TestInfo,
+  make: () => Promise<T>
+): Promise<T> {
+  const slug = slugFor(testInfo, "elsewhere");
+  await createWorkspace(api, token, { name: "Elsewhere", slug });
+  await createProject(api, token, slug, { name: "First", identifier: "FIRST" });
+  const made = await make();
+  await createProject(api, token, slug, { name: "Last", identifier: "LAST" });
+  return made;
 }

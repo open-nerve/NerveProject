@@ -64,6 +64,11 @@ func (d projectWorkspaces) ShareWorkspaceBySlug(ctx context.Context, slug string
 	return project.Workspace(w), found, err
 }
 
+func (d projectWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (project.Workspace, bool, error) {
+	w, found, err := d.directory.ShareWorkspaceByID(ctx, id)
+	return project.Workspace(w), found, err
+}
+
 // accessProjects is project's ProjectAccess as access's port: the same read,
 // the facts converted.
 type accessProjects struct {

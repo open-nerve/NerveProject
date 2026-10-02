@@ -7,50 +7,52 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres/gen"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 )
 
-// The steps of deleting a workspace's projects (app.WorkspaceProjectsDeleter):
-// each soft-deletes the workspace's undeleted rows of one table, at now, by
-// the account by, in one statement.
+// The steps of deleting projects (app.ProjectsDeleter): each soft-deletes
+// the undeleted rows of one table under the workspace's projects, or under
+// the one project the deletion names, at its moment, by its account, in one
+// statement.
 
-// DeleteWorkspaceProjects soft-deletes the workspace's projects, archived
-// ones too.
-func (s *Store) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	err := s.queries(ctx).DeleteWorkspaceProjects(ctx, gen.DeleteWorkspaceProjectsParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
+// DeleteProjects soft-deletes the projects, archived ones too.
+func (s *Store) DeleteProjects(ctx context.Context, d app.Deletion) error {
+	err := s.queries(ctx).DeleteProjects(ctx, gen.DeleteProjectsParams{WorkspaceID: d.WorkspaceID, ProjectID: d.ProjectID, DeletedBy: d.By, Now: d.Now})
 	if err != nil {
-		return fmt.Errorf("delete the workspace's projects: %w", err)
+		return fmt.Errorf("delete the projects: %w", err)
 	}
 	return nil
 }
 
-// DeleteWorkspaceProjectMembers soft-deletes the memberships of the
-// workspace's projects, active or not.
-func (s *Store) DeleteWorkspaceProjectMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	err := s.queries(ctx).DeleteWorkspaceProjectMembers(ctx, gen.DeleteWorkspaceProjectMembersParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
-	if err != nil {
-		return fmt.Errorf("delete the workspace's project members: %w", err)
-	}
-	return nil
-}
-
-// DeleteWorkspaceProjectPreferences soft-deletes the display settings in
-// the workspace's projects.
-func (s *Store) DeleteWorkspaceProjectPreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	err := s.queries(ctx).DeleteWorkspaceProjectPreferences(ctx, gen.DeleteWorkspaceProjectPreferencesParams{
-		WorkspaceID: workspaceID, DeletedBy: by, Now: now,
+// DeleteProjectMembers soft-deletes the projects' memberships, active or
+// not.
+func (s *Store) DeleteProjectMembers(ctx context.Context, d app.Deletion) error {
+	err := s.queries(ctx).DeleteProjectMembers(ctx, gen.DeleteProjectMembersParams{
+		WorkspaceID: d.WorkspaceID, ProjectID: d.ProjectID, DeletedBy: d.By, Now: d.Now,
 	})
 	if err != nil {
-		return fmt.Errorf("delete the workspace's project preferences: %w", err)
+		return fmt.Errorf("delete the project members: %w", err)
 	}
 	return nil
 }
 
-// DeleteWorkspaceStates soft-deletes the states of the workspace's
-// projects, the triage states too.
-func (s *Store) DeleteWorkspaceStates(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	err := s.queries(ctx).DeleteWorkspaceStates(ctx, gen.DeleteWorkspaceStatesParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
+// DeleteProjectPreferences soft-deletes the display settings in the
+// projects.
+func (s *Store) DeleteProjectPreferences(ctx context.Context, d app.Deletion) error {
+	err := s.queries(ctx).DeleteProjectPreferences(ctx, gen.DeleteProjectPreferencesParams{
+		WorkspaceID: d.WorkspaceID, ProjectID: d.ProjectID, DeletedBy: d.By, Now: d.Now,
+	})
 	if err != nil {
-		return fmt.Errorf("delete the workspace's states: %w", err)
+		return fmt.Errorf("delete the project preferences: %w", err)
+	}
+	return nil
+}
+
+// DeleteStates soft-deletes the projects' states, the triage states too.
+func (s *Store) DeleteStates(ctx context.Context, d app.Deletion) error {
+	err := s.queries(ctx).DeleteStates(ctx, gen.DeleteStatesParams{WorkspaceID: d.WorkspaceID, ProjectID: d.ProjectID, DeletedBy: d.By, Now: d.Now})
+	if err != nil {
+		return fmt.Errorf("delete the states: %w", err)
 	}
 	return nil
 }

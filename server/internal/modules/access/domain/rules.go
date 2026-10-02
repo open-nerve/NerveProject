@@ -69,6 +69,25 @@ var rules = map[shared.Action]Rule{
 	"project.read": {Level: LevelVisible},
 	// As project.create (spec §3 item 13).
 	"project_identifier.check": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// The project's admins, and its members who are the workspace's admins
+	// (M3 design 3.4: a project-level rule, which Plane's pages hold).
+	"project.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// As project.update (M3 design 3.4, 9.2).
+	"project.archive":   {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	"project.unarchive": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	"project.delete":    {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// Every active member of the project, his own settings (M3 design 9.2).
+	"project_preferences.read":   {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	"project_preferences.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// Every active member of the project (M3 design 9.2).
+	"project_member.list": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// The project's admins, and its members who are the workspace's admins
+	// (M3 design 3.5, 9.2; Plane views/project/member.py:46).
+	"project_member.add": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// Whoever sees the project; the use case asks the workspace's admins
+	// and members of him, by set, before it looks at his membership (M3
+	// design 3.5, 6.4).
+	"project.join": {Level: LevelVisible},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

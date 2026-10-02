@@ -54,6 +54,78 @@ func (h handler) GetProject(ctx context.Context, req gen.GetProjectRequestObject
 	return gen.GetProject200JSONResponse(project(p)), nil
 }
 
+// UpdateProject serves PATCH /api/v0/projects/{project_id}: the fields the
+// body names go to the use case, project_lead_id and default_assignee_id
+// set when named, to none when null.
+func (h handler) UpdateProject(ctx context.Context, req gen.UpdateProjectRequestObject) (gen.UpdateProjectResponseObject, error) {
+	b := req.Body
+	in := domain.ProjectPatch{Name: b.Name, Description: b.Description, Identifier: b.Identifier, CycleView: b.CycleView,
+		ModuleView: b.ModuleView, IssueViewsView: b.IssueViewsView, IntakeView: b.IntakeView, GuestViewAllFeatures: b.GuestViewAllFeatures,
+		ArchiveIn: b.ArchiveIn, Timezone: b.Timezone}
+	if b.Network != nil {
+		n := domain.Network(*b.Network)
+		in.Network = &n
+	}
+	if b.LogoProps != nil {
+		logo := logoIn(*b.LogoProps)
+		in.LogoProps = &logo
+	}
+	in.SetLead, in.LeadID = named(b.ProjectLeadID)
+	in.SetDefaultAssignee, in.DefaultAssigneeID = named(b.DefaultAssigneeID)
+	p, err := h.uc.UpdateProject.Execute(ctx, req.ProjectID, in)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateProject200JSONResponse(project(p)), nil
+}
+
+// ArchiveProject serves POST /api/v0/projects/{project_id}/archive.
+func (h handler) ArchiveProject(ctx context.Context, req gen.ArchiveProjectRequestObject) (gen.ArchiveProjectResponseObject, error) {
+	p, err := h.uc.ArchiveProject.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ArchiveProject200JSONResponse(project(p)), nil
+}
+
+// UnarchiveProject serves POST /api/v0/projects/{project_id}/unarchive.
+func (h handler) UnarchiveProject(ctx context.Context, req gen.UnarchiveProjectRequestObject) (gen.UnarchiveProjectResponseObject, error) {
+	p, err := h.uc.UnarchiveProject.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.UnarchiveProject200JSONResponse(project(p)), nil
+}
+
+// JoinProject serves POST /api/v0/projects/{project_id}/join.
+func (h handler) JoinProject(ctx context.Context, req gen.JoinProjectRequestObject) (gen.JoinProjectResponseObject, error) {
+	p, err := h.uc.JoinProject.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.JoinProject200JSONResponse(project(p)), nil
+}
+
+// DeleteProject serves DELETE /api/v0/projects/{project_id}.
+func (h handler) DeleteProject(ctx context.Context, req gen.DeleteProjectRequestObject) (gen.DeleteProjectResponseObject, error) {
+	if err := h.uc.DeleteProject.Execute(ctx, req.ProjectID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteProject204Response{}, nil
+}
+
+// named reports whether the body names v, and its id: nil when it is null.
+func named(v nullable.Nullable[uuid.UUID]) (bool, *uuid.UUID) {
+	switch {
+	case !v.IsSpecified():
+		return false, nil
+	case v.IsNull():
+		return true, nil
+	}
+	id := v.MustGet()
+	return true, &id
+}
+
 // CheckProjectIdentifier serves GET
 // /api/v0/workspaces/{slug}/project-identifiers/{identifier}.
 func (h handler) CheckProjectIdentifier(ctx context.Context, req gen.CheckProjectIdentifierRequestObject) (gen.CheckProjectIdentifierResponseObject, error) {

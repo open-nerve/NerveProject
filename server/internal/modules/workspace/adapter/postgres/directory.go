@@ -15,7 +15,8 @@ import (
 )
 
 // Directory is what workspace.Provide offers the project module (M3 design
-// 6.5): WorkspaceDirectory, the undeleted workspace a slug names, and
+// 6.5): WorkspaceDirectory, the undeleted workspace a slug names, or its
+// row locked by its id for a write on a project of it, and
 // WorkspaceMembers, the memberships a project write makes members from,
 // locked (3.6 convention 3). It reads the store's tables under names of its
 // own: the store's WorkspaceBySlug and ShareWorkspaceBySlug answer the
@@ -43,6 +44,15 @@ func (d *Directory) WorkspaceBySlug(ctx context.Context, slug string) (w app.Dir
 // lock waited.
 func (d *Directory) ShareWorkspaceBySlug(ctx context.Context, slug string) (w app.DirectoryEntry, found bool, err error) {
 	r, err := d.store.queries(ctx).ShareDirectoryWorkspace(ctx, slug)
+	return directoryEntry(r.ID, r.Timezone, err)
+}
+
+// ShareWorkspaceByID returns the undeleted workspace id and locks its row
+// FOR SHARE until the transaction ctx carries ends: the first lock of every
+// write on a project of it (M3 design 3.6 convention 2). found is false
+// when there is none, also when it was deleted while the lock waited.
+func (d *Directory) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (w app.DirectoryEntry, found bool, err error) {
+	r, err := d.store.queries(ctx).ShareDirectoryWorkspaceByID(ctx, id)
 	return directoryEntry(r.ID, r.Timezone, err)
 }
 

@@ -1,5 +1,5 @@
 import { createProject, createWorkspace, invite, inviteAndAccept, slugFor, type Workspace } from "../../fixtures/api";
-import { expectProjectCreated } from "../../fixtures/assert/project";
+import { expectProjectCreated, expectProjectDeleted } from "../../fixtures/assert/project";
 import {
   expectInvitations,
   expectMembership,
@@ -136,9 +136,36 @@ test("W3 (API): the admin changes the workspace and deletes it with its members,
   expect(memberDeletes.response.status).toBe(403);
   expect(memberDeletes.error?.code).toBe("forbidden");
 
+  // A project deleted before the workspace keeps its moment, and so do its rows: Old, with the member its lead, so
+  // that each project table has a row of it.
+  const old = await createProject(api, admin, slug, { name: "Old", identifier: "OLD", project_lead_id: memberId });
+  // The member moves Old in his sidebar: his display settings in it are his own writing, which Old's deletion must
+  // write again as the admin's.
+  const moved = await api.PATCH("/api/v0/me/projects/{project_id}/preferences", {
+    params: { path: { project_id: old.id } },
+    body: { sort_order: 75535 },
+    headers: bearer(member),
+  });
+  expect(moved.response.status).toBe(200);
+  expect(
+    await db.query(
+      `SELECT s.sort_order, b.email AS by
+         FROM project_user_properties s JOIN users u ON u.id = s.user_id JOIN users b ON b.id = s.updated_by_id
+        WHERE s.project_id = $1 AND u.email = $2 AND s.deleted_at IS NULL`,
+      [old.id, memberEmail]
+    )
+  ).toEqual([{ sort_order: 75535, by: memberEmail }]);
+  const oldDeleted = await api.DELETE("/api/v0/projects/{project_id}", {
+    params: { path: { project_id: old.id } },
+    headers: bearer(admin),
+  });
+  expect(oldDeleted.response.status).toBe(204);
+
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(admin) });
   expect(deleted.response.status).toBe(204);
   await expectWorkspaceDeleted(db, slug, adminEmail);
+  // Old and every row under it keep its deletion: its moment and its author, the admin.
+  await expectProjectDeleted(db, old.id, adminEmail);
   // The invitations accepted before keep the moment they were answered; the declined one goes with the pending
   // one; the other workspace keeps everything.
   const invitations = (memberRole: number, withTheWorkspace: boolean) => [

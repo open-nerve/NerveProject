@@ -16,11 +16,32 @@ const (
 	// ActionCheckIdentifier is asking whether an identifier is available
 	// in a workspace: checkProjectIdentifier.
 	ActionCheckIdentifier shared.Action = "project_identifier.check"
+	// ActionUpdate is changing a project: updateProject.
+	ActionUpdate shared.Action = "project.update"
+	// ActionArchive is archiving a project: archiveProject.
+	ActionArchive shared.Action = "project.archive"
+	// ActionUnarchive is unarchiving a project: unarchiveProject.
+	ActionUnarchive shared.Action = "project.unarchive"
+	// ActionDelete is deleting a project: deleteProject.
+	ActionDelete shared.Action = "project.delete"
+	// ActionPreferencesRead is reading one's display settings in a project:
+	// getProjectPreferences.
+	ActionPreferencesRead shared.Action = "project_preferences.read"
+	// ActionPreferencesUpdate is changing them: updateProjectPreferences.
+	ActionPreferencesUpdate shared.Action = "project_preferences.update"
+	// ActionMemberList is listing a project's members: listProjectMembers.
+	ActionMemberList shared.Action = "project_member.list"
+	// ActionMemberAdd is adding members to a project: addProjectMembers.
+	ActionMemberAdd shared.Action = "project_member.add"
+	// ActionJoin is joining a project: joinProject.
+	ActionJoin shared.Action = "project.join"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
 // every module's Actions equal to the rule table's keys (M3 design 3.4).
 // Each operation adds its action here with its row.
 func Actions() []shared.Action {
-	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier}
+	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
+		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
+		ActionMemberList, ActionMemberAdd, ActionJoin}
 }

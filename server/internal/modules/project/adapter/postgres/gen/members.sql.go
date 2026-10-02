@@ -40,3 +40,119 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) erro
 	)
 	return err
 }
+
+const listMembers = `-- name: ListMembers :many
+SELECT id, project_id, member_id, role, created_at
+FROM project_members
+WHERE project_id = $1 AND is_active AND deleted_at IS NULL
+ORDER BY created_at, id
+`
+
+type ListMembersRow struct {
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	MemberID  uuid.UUID
+	Role      int16
+	CreatedAt time.Time
+}
+
+// listProjectMembers (M3 design 3.12, 5.2): the project's active undeleted memberships, in the order they were made,
+// then by id. It reads project_members alone: an active member of a project stays an active member of its workspace,
+// for every growth locks his workspace membership and every shrinking ends his project memberships (3.6 conventions 3
+// and 6).
+func (q *Queries) ListMembers(ctx context.Context, projectID uuid.UUID) ([]ListMembersRow, error) {
+	rows, err := q.db.Query(ctx, listMembers, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMembersRow
+	for rows.Next() {
+		var i ListMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.MemberID,
+			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const memberships = `-- name: Memberships :many
+SELECT id, member_id, role, is_active
+FROM project_members
+WHERE project_id = $1 AND member_id = ANY ($2::uuid[]) AND deleted_at IS NULL
+`
+
+type MembershipsParams struct {
+	ProjectID uuid.UUID
+	MemberIds []uuid.UUID
+}
+
+type MembershipsRow struct {
+	ID       uuid.UUID
+	MemberID uuid.UUID
+	Role     int16
+	IsActive bool
+}
+
+// The accounts' undeleted memberships of the project, active and ended (M3 design 3.5, 3.19): under the project's
+// FOR NO KEY UPDATE, which every change of its memberships takes, they stay as read until the transaction ends.
+func (q *Queries) Memberships(ctx context.Context, arg MembershipsParams) ([]MembershipsRow, error) {
+	rows, err := q.db.Query(ctx, memberships, arg.ProjectID, arg.MemberIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []MembershipsRow
+	for rows.Next() {
+		var i MembershipsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MemberID,
+			&i.Role,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const restoreMember = `-- name: RestoreMember :exec
+UPDATE project_members
+SET is_active = true, role = $1, updated_by_id = $2::uuid, updated_at = $3
+WHERE id = $4
+`
+
+type RestoreMemberParams struct {
+	Role      int16
+	UpdatedBy uuid.UUID
+	Now       time.Time
+	ID        uuid.UUID
+}
+
+// addProjectMembers and joinProject, under the project's FOR NO KEY UPDATE (M3 design 3.6 convention 6): an ended
+// membership active again, with the role the use case gives, at the moment and by the account given; it keeps its id
+// and its created_at.
+func (q *Queries) RestoreMember(ctx context.Context, arg RestoreMemberParams) error {
+	_, err := q.db.Exec(ctx, restoreMember,
+		arg.Role,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	return err
+}

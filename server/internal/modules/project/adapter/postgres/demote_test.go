@@ -183,3 +183,56 @@ func TestLockMemberProjectsLocksInIDOrder(t *testing.T) {
 		t.Fatal("LockMemberProjects() did not end within 10s")
 	}
 }
+
+// A project deleted while LockMemberProjects waits for its row is left out
+// (M3 design 3.6, P4a spec 2.12): another transaction holds Web FOR NO KEY
+// UPDATE, as deleteProject does, and soft-deletes it; LockMemberProjects,
+// which found Web undeleted, waits for it; once the deletion commits, it
+// evaluates deleted_at again on the row's newest version and returns Ops
+// alone.
+func TestLockMemberProjectsLeavesOutAProjectDeletedWhileItWaited(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	acme := newWorkspace(t, pool, "acme")
+	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
+	for _, p := range []uuid.UUID{web, ops} {
+		seedMember(t, pool, acme, p, bob, 15, true)
+	}
+	deletion, err := pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = deletion.Rollback(context.Background()) }()
+	if _, err := deletion.Exec(context.Background(), "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", web); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := deletion.Exec(context.Background(), "UPDATE projects SET deleted_at = now() WHERE id = $1", web); err != nil {
+		t.Fatal(err)
+	}
+	type locked struct {
+		ids []uuid.UUID
+		err error
+	}
+	done := make(chan locked, 1)
+	go func() {
+		var l locked
+		l.err = postgres.NewTxManager(pool, 10*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
+			var err error
+			l.ids, err = s.LockMemberProjects(ctx, acme, bob)
+			return err
+		})
+		done <- l
+	}()
+	pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
+	if err := deletion.Commit(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case l := <-done:
+		if l.err != nil || !slices.Equal(l.ids, []uuid.UUID{ops}) {
+			t.Errorf("LockMemberProjects() = %v, %v; want Ops (%s) alone, Web (%s) deleted while it waited", l.ids, l.err, ops, web)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("LockMemberProjects() did not end within 10s")
+	}
+}

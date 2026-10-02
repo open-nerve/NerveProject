@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -12,67 +13,41 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 )
 
-// fakeDeleter is the projects' repository: it records each step with its
-// arguments, and " outside tx" when it ran outside the caller's
-// transaction (callLog), and fails the step named in fail.
-type fakeDeleter struct {
-	log  callLog
-	fail string
-}
-
 var errDisk = errors.New("disk full")
 
-func (f *fakeDeleter) step(ctx context.Context, name string, workspaceID, by uuid.UUID, now time.Time) error {
-	f.log.add(ctx, "%s %s by %s at %s", name, workspaceID, by, now.Format(time.RFC3339Nano))
-	if name == f.fail {
-		return errDisk
+// deletionSteps are the steps of a deletion of project of workspace, "*"
+// for every project of it, by by at at, in the order of M3 design 3.6.
+func deletionSteps(workspace uuid.UUID, project string, by uuid.UUID, at time.Time) []string {
+	var steps []string
+	for _, name := range []string{"DeleteProjects", "DeleteProjectMembers", "DeleteProjectPreferences", "DeleteStates"} {
+		steps = append(steps, fmt.Sprintf("%s %s/%s by %s at %s", name, workspace, project, by, at.Format(timeFormat)))
 	}
-	return nil
-}
-
-func (f *fakeDeleter) DeleteWorkspaceProjects(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return f.step(ctx, "DeleteWorkspaceProjects", workspaceID, by, now)
-}
-
-func (f *fakeDeleter) DeleteWorkspaceProjectMembers(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return f.step(ctx, "DeleteWorkspaceProjectMembers", workspaceID, by, now)
-}
-
-func (f *fakeDeleter) DeleteWorkspaceProjectPreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return f.step(ctx, "DeleteWorkspaceProjectPreferences", workspaceID, by, now)
-}
-
-func (f *fakeDeleter) DeleteWorkspaceStates(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	return f.step(ctx, "DeleteWorkspaceStates", workspaceID, by, now)
+	return steps
 }
 
 // DeleteWorkspaceProjects runs the four steps in the order of M3 design
-// 3.6, each with the caller's workspace, account and moment, in the
-// caller's transaction; a failing step comes back as itself and the steps
-// after it do not run.
+// 3.6, each on every project of the caller's workspace, with the caller's
+// account and moment, in the caller's transaction; a failing step comes
+// back as itself and the steps after it do not run. Each step fails in
+// turn, one row each of deletionSteps.
 func TestDeleteWorkspaceProjects(t *testing.T) {
 	workspace, by := uuid.NewV7(), uuid.NewV7()
-	now := time.Date(2026, 10, 1, 10, 0, 0, 123456000, time.UTC)
-	var steps []string
-	for _, name := range []string{"DeleteWorkspaceProjects", "DeleteWorkspaceProjectMembers", "DeleteWorkspaceProjectPreferences",
-		"DeleteWorkspaceStates"} {
-		steps = append(steps, fmt.Sprintf("%s %s by %s at %s", name, workspace, by, now.Format(time.RFC3339Nano)))
-	}
-	tests := []struct {
+	steps := deletionSteps(workspace, "*", by, clockNow)
+	type run struct {
 		fail    string
 		wantErr error
 		want    []string
-	}{
-		{"", nil, steps},
-		{"DeleteWorkspaceProjects", errDisk, steps[:1]},
-		{"DeleteWorkspaceProjectMembers", errDisk, steps[:2]},
-		{"DeleteWorkspaceProjectPreferences", errDisk, steps[:3]},
-		{"DeleteWorkspaceStates", errDisk, steps},
+	}
+	tests := []run{{"", nil, steps}}
+	for i, step := range steps {
+		name, _, _ := strings.Cut(step, " ")
+		tests = append(tests, run{name, errDisk, steps[:i+1]})
 	}
 	for _, tt := range tests {
-		f := &fakeDeleter{fail: tt.fail}
+		f := newWrites()
+		f.store.errs = map[string]error{tt.fail: errDisk}
 		inTx := context.WithValue(context.Background(), inTxKey{}, true)
-		err := app.NewCascade(f, &fakeDemoter{}).DeleteWorkspaceProjects(inTx, workspace, by, now)
+		err := app.NewCascade(f.store, &fakeDemoter{}).DeleteWorkspaceProjects(inTx, workspace, by, clockNow)
 		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.log.calls, tt.want) {
 			t.Errorf("failing %q: DeleteWorkspaceProjects() = %v, the steps\n%q\nwant %v,\n%q", tt.fail, err, f.log.calls, tt.wantErr, tt.want)
 		}
@@ -134,7 +109,7 @@ func TestDemoteToGuest(t *testing.T) {
 	for _, tt := range tests {
 		f := &fakeDemoter{locked: tt.locked, fail: tt.fail}
 		inTx := context.WithValue(context.Background(), inTxKey{}, true)
-		err := app.NewCascade(&fakeDeleter{}, f).DemoteToGuest(inTx, workspace, user, by, now)
+		err := app.NewCascade(newWrites().store, f).DemoteToGuest(inTx, workspace, user, by, now)
 		if !errors.Is(err, tt.wantErr) || (tt.wantErr == nil) != (err == nil) || !slices.Equal(f.log.calls, tt.want) {
 			t.Errorf("%s: DemoteToGuest() = %v, the calls\n%q\nwant %v,\n%q", tt.name, err, f.log.calls, tt.wantErr, tt.want)
 		}

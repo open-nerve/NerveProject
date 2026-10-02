@@ -30,7 +30,8 @@ type WorkspaceRoles interface {
 }
 
 // WorkspaceDirectory finds an undeleted workspace by its slug for the
-// project module (M3 design 6.5); found is false when there is none.
+// project module, or locks one by its id (M3 design 6.5); found is false
+// when there is none.
 type WorkspaceDirectory interface {
 	// WorkspaceBySlug reads it without a lock.
 	WorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)
@@ -39,6 +40,11 @@ type WorkspaceDirectory interface {
 	// (M3 design 3.6 convention 2). A workspace deleted while the lock
 	// waited is not found.
 	ShareWorkspaceBySlug(ctx context.Context, slug string) (w DirectoryEntry, found bool, err error)
+	// ShareWorkspaceByID locks the undeleted workspace id's row FOR SHARE
+	// until the transaction ctx carries ends: the first lock of every write
+	// on a project of it (M3 design 3.6 convention 2). A workspace deleted
+	// while the lock waited is not found.
+	ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (w DirectoryEntry, found bool, err error)
 }
 
 // WorkspaceMembers locks the memberships that a write of the project

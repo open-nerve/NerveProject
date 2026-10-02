@@ -59,3 +59,11 @@ M3 合并时：
 仍未处理，状态保持 `open`：项目成员（只有"从工作区成员中添加"一种方式，P4b；`joinProject` 改用新接口、守卫的 `project-invitations` 例外删除，P8）；`RESTRICTED_URLS` 与后端同源（前端一侧，P8）；本文件的其余几条，随 M3 设计 13.1 中各自的 Phase。
 
 来源：[M3/P4a spec](../specs/P4a-projects.md) 第 7 节。
+
+## 处理结果（M3/P4b）
+
+- **项目成员**（接口一侧完成）：只有一种方式：`addProjectMembers`（`POST /api/v0/projects/{project_id}/members`）从工作区的有效成员中添加，没有按邮件把人加进项目的接口；工作区的成员、管理员自己加入看得到的项目是 `joinProject`（`POST /api/v0/projects/{project_id}/join`，`api/modules/project.yaml`）。新接口的路径和说明都不含守卫 `project-invitations` 的字样，`schema.gen.ts` 里没有新的命中。
+
+仍未处理，状态保持 `open`：`joinProject` 的页面改调新接口、守卫的 `project-invitations` 例外删除（P8）；`RESTRICTED_URLS` 与后端同源（前端一侧，P8）。
+
+来源：[M3/P4b spec](../specs/P4b-project-members.md) 第 7 节。

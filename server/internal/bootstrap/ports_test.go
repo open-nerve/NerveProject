@@ -140,10 +140,12 @@ func TestWorkspaceProfilesConvertsIdentitysAnswer(t *testing.T) {
 	}
 }
 
-// fakeWorkspaceDirectory answers the workspaces it holds by slug, and
-// records what it was asked: "read" without a lock, "share" with one.
+// fakeWorkspaceDirectory answers the workspaces it holds by slug, or by the
+// id names gives a slug, and records what it was asked: "read" without a
+// lock, "share" with one, "share by id" by the id's name.
 type fakeWorkspaceDirectory struct {
 	workspaces map[string]workspace.DirectoryEntry
+	names      map[uuid.UUID]string
 	err        error
 	asked      []string
 }
@@ -160,18 +162,29 @@ func (f *fakeWorkspaceDirectory) ShareWorkspaceBySlug(_ context.Context, slug st
 	return w, found, f.err
 }
 
+func (f *fakeWorkspaceDirectory) ShareWorkspaceByID(_ context.Context, id uuid.UUID) (workspace.DirectoryEntry, bool, error) {
+	f.asked = append(f.asked, "share by id "+f.names[id])
+	w, found := f.workspaces[f.names[id]]
+	return w, found, f.err
+}
+
 // projectWorkspaces hands project workspace's answer to the same question,
-// through the same lock or without one: the workspace converted, found and
-// the error as they came.
+// through the same lock or without one, by slug or by id: the workspace
+// converted, found and the error as they came.
 func TestProjectWorkspacesConvertsWorkspacesAnswer(t *testing.T) {
 	acme := workspace.DirectoryEntry{ID: uuid.NewV7(), Timezone: "Asia/Shanghai"}
-	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme}}
+	ids := map[string]uuid.UUID{"acme": acme.ID, "gone": uuid.NewV7()}
+	fake := &fakeWorkspaceDirectory{workspaces: map[string]workspace.DirectoryEntry{"acme": acme},
+		names: map[uuid.UUID]string{ids["acme"]: "acme", ids["gone"]: "gone"}}
 	d := projectWorkspaces{directory: fake}
 	ctx := context.Background()
 	want := project.Workspace{ID: acme.ID, Timezone: "Asia/Shanghai"}
 
 	for name, find := range map[string]func(context.Context, string) (project.Workspace, bool, error){
 		"share": d.ShareWorkspaceBySlug, "read": d.WorkspaceBySlug,
+		"share by id": func(ctx context.Context, slug string) (project.Workspace, bool, error) {
+			return d.ShareWorkspaceByID(ctx, ids[slug])
+		},
 	} {
 		fake.asked, fake.err = nil, nil
 		if w, found, err := find(ctx, "acme"); err != nil || !found || w != want {

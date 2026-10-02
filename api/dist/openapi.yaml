@@ -874,6 +874,221 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateProject
+      tags:
+        - project
+      summary: Change a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins. The fields given change and the others stay; the values follow createProject''s rules, and archive_in is 0–12 (validation_failed), checked before the project is looked at. An archived project cannot be changed (project.archived): unarchive it first. The lead and the default assignee, null to clear either, must be active members of the project who are not its guests (project_lead_id, default_assignee_id not_allowed), which is checked after the caller''s role. Neither the name nor the identifier may be another undeleted project''s of the workspace (project.name_taken, project.identifier_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the project row is locked, so a caller demoted meanwhile is refused.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+        - project.archived
+        - project.identifier_taken
+        - project.name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: The project as changed, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteProject
+      tags:
+        - project
+      summary: Delete a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project is deleted as any other. The project is deleted with its memberships, its members'' display settings and its states, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '204':
+          description: The project is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: archiveProject
+      tags:
+        - project
+      summary: Archive a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins. The project is archived as of the request: listProjects lists it among the archived ones, and until it is unarchived updateProject alone refuses it (project.archived); deleting it, changing one''s display settings in it, adding members to it and joining it work as on any project. An archived project archived again takes the new time. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not archive, forbidden. The role is decided after the project row is locked.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project as archived, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: unarchiveProject
+      tags:
+        - project
+      summary: Unarchive a project
+      description: For the project's admins, and its members who are the workspace's admins. The project is no longer archived (archived_at null), and can be changed again; one that is not archived stays so. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not unarchive, forbidden. The role is decided after the project row is locked.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project as unarchived, as the caller sees it.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/join:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: joinProject
+      tags:
+        - project
+      summary: Join a project
+      description: 'For the workspace''s admins and members who see the project: its admins join any project, its members a public one. The caller becomes its member with his workspace role; one who was its member before has his membership back, with the lesser of the role it had and his workspace role. He is given display settings in the project unless he has them. One who is an active member already is left as he is. An archived project is joined as any other. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; a workspace guest who sees it, as its member, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project as the caller sees it, now its member.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/members:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listProjectMembers
+      tags:
+        - project
+      summary: List a project's members
+      description: 'For the project''s active members: its active members, each with his role in it, in the order they became members. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project's active members.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: addProjectMembers
+      tags:
+        - project
+      summary: Add workspace members to a project
+      description: 'For the project''s admins, and its members who are the workspace''s admins. Adds 1–100 accounts, each an active member of the workspace, with the role given: a workspace admin as an admin (20), a workspace guest as a guest (5), a workspace member as any of the three. One who was a member of the project before has his membership back, with the role given. Each is given display settings in the project, the project first in his sidebar, unless he has them. Refused from the request alone, before the project is looked at (validation_failed): no account, or more than 100 (members too_short, too_long; more than 100 is the one problem named), an account named twice (members[i].member_id duplicate), and a role not one of the three (members[i].role invalid_format). Then, after the caller''s role, so that who may not add learns nothing of the accounts, refused each by its place in members (validation_failed): an account that is not an active member of the workspace (member_id not_allowed), one that is an active member of the project already (member_id duplicate), and a role his workspace role does not allow (role not_allowed). An archived project''s members are added as any other''s. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not add to, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMembersAdd'
+      responses:
+        '201':
+          description: The accounts' memberships, in the request's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/me/projects/{project_id}/preferences:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: getProjectPreferences
+      tags:
+        - project
+      summary: Read the caller's display settings in a project
+      description: 'The caller''s own settings in the project, for its active members: the tab bar of its header and its place in his sidebar. While he has none stored they are the defaults, work_items with nothing hidden and 65535, and reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The caller's settings in the project.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectPreferences'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateProjectPreferences
+      tags:
+        - project
+      summary: Change the caller's display settings in a project
+      description: For the project's active members, their own settings. The fields given change and the others stay; navigation is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.not_found
+        - forbidden
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectPreferencesUpdate'
+      responses:
+        '200':
+          description: The caller's settings as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectPreferences'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearer:
@@ -1943,6 +2158,159 @@ components:
       properties:
         available:
           type: boolean
+    ProjectUpdate:
+      description: Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: '1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | '' < > . ( ) % ! -'
+          type: string
+        identifier:
+          description: 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased.
+          type: string
+        description:
+          type: string
+        network:
+          $ref: '#/components/schemas/ProjectNetwork'
+        project_lead_id:
+          description: An active member of the project who is not its guest; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        default_assignee_id:
+          description: An active member of the project who is not its guest; null for none.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        cycle_view:
+          type: boolean
+        module_view:
+          type: boolean
+        issue_views_view:
+          type: boolean
+        intake_view:
+          type: boolean
+        guest_view_all_features:
+          type: boolean
+        archive_in:
+          description: After how many months a closed work item is archived, 0–12; 0 never.
+          type: integer
+        logo_props:
+          $ref: '#/components/schemas/LogoProps'
+        timezone:
+          description: An IANA time zone name.
+          type: string
+    ProjectMember:
+      description: An active membership of a project.
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - project_id
+        - member_id
+        - role
+        - created_at
+      properties:
+        id:
+          description: The membership's id.
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        member_id:
+          description: The member's account.
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/ProjectRole'
+        created_at:
+          description: When the membership was made; one restored keeps its time.
+          type: string
+          format: date-time
+    ProjectMemberList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+    ProjectMemberNew:
+      type: object
+      additionalProperties: false
+      required:
+        - member_id
+        - role
+      properties:
+        member_id:
+          description: An active member of the workspace.
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/ProjectRole'
+    ProjectMembersAdd:
+      type: object
+      additionalProperties: false
+      required:
+        - members
+      properties:
+        members:
+          description: 1–100 accounts, each named once.
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMemberNew'
+    ProjectTab:
+      description: A tab of a project's header.
+      type: string
+      enum:
+        - work_items
+        - cycles
+        - modules
+        - views
+        - intake
+    ProjectNavigation:
+      description: 'The tab bar of a project''s header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items.'
+      type: object
+      additionalProperties: false
+      required:
+        - default_tab
+        - hide_in_more_menu
+      properties:
+        default_tab:
+          $ref: '#/components/schemas/ProjectTab'
+        hide_in_more_menu:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectTab'
+    ProjectPreferences:
+      description: The caller's display settings in a project.
+      type: object
+      additionalProperties: false
+      required:
+        - navigation
+        - sort_order
+      properties:
+        navigation:
+          $ref: '#/components/schemas/ProjectNavigation'
+        sort_order:
+          description: The project's place in the caller's sidebar, lowest first.
+          type: number
+    ProjectPreferencesUpdate:
+      description: Changes the fields it names; a field left out keeps its value, and navigation replaces the tab bar whole.
+      type: object
+      additionalProperties: false
+      properties:
+        navigation:
+          $ref: '#/components/schemas/ProjectNavigation'
+        sort_order:
+          description: The project's place in the caller's sidebar, lowest first.
+          type: number
   responses:
     Problem:
       description: Error (RFC 9457 problem details).

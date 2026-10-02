@@ -53,6 +53,30 @@ func (q *Queries) ShareDirectoryWorkspace(ctx context.Context, slug string) (Sha
 	return i, err
 }
 
+const shareDirectoryWorkspaceByID = `-- name: ShareDirectoryWorkspaceByID :one
+SELECT id, timezone
+FROM workspaces
+WHERE id = $1 AND deleted_at IS NULL
+FOR SHARE
+`
+
+type ShareDirectoryWorkspaceByIDRow struct {
+	ID       uuid.UUID
+	Timezone string
+}
+
+// WorkspaceDirectory's lock by id: the first lock of every write on a project of the workspace (M3 design 3.6
+// convention 2), as ShareWorkspaceByID takes it. FOR SHARE waits for the workspace's FOR NO KEY UPDATE, under which
+// every cascade over its projects runs, and makes it wait; it does not wait for another write on a project. After a
+// wait, Postgres evaluates deleted_at IS NULL again on the row's newest version, so a workspace deleted meanwhile
+// reads no row.
+func (q *Queries) ShareDirectoryWorkspaceByID(ctx context.Context, id uuid.UUID) (ShareDirectoryWorkspaceByIDRow, error) {
+	row := q.db.QueryRow(ctx, shareDirectoryWorkspaceByID, id)
+	var i ShareDirectoryWorkspaceByIDRow
+	err := row.Scan(&i.ID, &i.Timezone)
+	return i, err
+}
+
 const shareMembers = `-- name: ShareMembers :many
 SELECT member_id, role, is_active
 FROM workspace_members

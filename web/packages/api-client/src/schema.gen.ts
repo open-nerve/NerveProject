@@ -576,10 +576,141 @@ export interface paths {
         get: operations["getProject"];
         put?: never;
         post?: never;
+        /**
+         * Delete a project
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project is deleted as any other. The project is deleted with its memberships, its members' display settings and its states, all at one moment: it is no longer read, listed or changed, and its name and identifier are free again in the workspace. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not delete, forbidden. The role is decided after the project row is locked.
+         */
+        delete: operations["deleteProject"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a project
+         * @description For the project's admins, and its members who are the workspace's admins. The fields given change and the others stay; the values follow createProject's rules, and archive_in is 0–12 (validation_failed), checked before the project is looked at. An archived project cannot be changed (project.archived): unarchive it first. The lead and the default assignee, null to clear either, must be active members of the project who are not its guests (project_lead_id, default_assignee_id not_allowed), which is checked after the caller's role. Neither the name nor the identifier may be another undeleted project's of the workspace (project.name_taken, project.identifier_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the project row is locked, so a caller demoted meanwhile is refused.
+         */
+        patch: operations["updateProject"];
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a project
+         * @description For the project's admins, and its members who are the workspace's admins. The project is archived as of the request: listProjects lists it among the archived ones, and until it is unarchived updateProject alone refuses it (project.archived); deleting it, changing one's display settings in it, adding members to it and joining it work as on any project. An archived project archived again takes the new time. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not archive, forbidden. The role is decided after the project row is locked.
+         */
+        post: operations["archiveProject"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive a project
+         * @description For the project's admins, and its members who are the workspace's admins. The project is no longer archived (archived_at null), and can be changed again; one that is not archived stays so. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not unarchive, forbidden. The role is decided after the project row is locked.
+         */
+        post: operations["unarchiveProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join a project
+         * @description For the workspace's admins and members who see the project: its admins join any project, its members a public one. The caller becomes its member with his workspace role; one who was its member before has his membership back, with the lesser of the role it had and his workspace role. He is given display settings in the project unless he has them. One who is an active member already is left as he is. An archived project is joined as any other. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; a workspace guest who sees it, as its member, forbidden.
+         */
+        post: operations["joinProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/projects/{project_id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a project's members
+         * @description For the project's active members: its active members, each with his role in it, in the order they became members. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         */
+        get: operations["listProjectMembers"];
+        put?: never;
+        /**
+         * Add workspace members to a project
+         * @description For the project's admins, and its members who are the workspace's admins. Adds 1–100 accounts, each an active member of the workspace, with the role given: a workspace admin as an admin (20), a workspace guest as a guest (5), a workspace member as any of the three. One who was a member of the project before has his membership back, with the role given. Each is given display settings in the project, the project first in his sidebar, unless he has them. Refused from the request alone, before the project is looked at (validation_failed): no account, or more than 100 (members too_short, too_long; more than 100 is the one problem named), an account named twice (members[i].member_id duplicate), and a role not one of the three (members[i].role invalid_format). Then, after the caller's role, so that who may not add learns nothing of the accounts, refused each by its place in members (validation_failed): an account that is not an active member of the workspace (member_id not_allowed), one that is an active member of the project already (member_id duplicate), and a role his workspace role does not allow (role not_allowed). An archived project's members are added as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not add to, forbidden.
+         */
+        post: operations["addProjectMembers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/me/projects/{project_id}/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Read the caller's display settings in a project
+         * @description The caller's own settings in the project, for its active members: the tab bar of its header and its place in his sidebar. While he has none stored they are the defaults, work_items with nothing hidden and 65535, and reading them writes nothing. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         */
+        get: operations["getProjectPreferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change the caller's display settings in a project
+         * @description For the project's active members, their own settings. The fields given change and the others stay; navigation is replaced whole, and the first change stores the caller's settings, the defaults with the change applied. A tab the web app does not have, work_items hidden, and a tab hidden twice are refused (validation_failed), before the project is looked at. An archived project's settings change as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden.
+         */
+        patch: operations["updateProjectPreferences"];
         trace?: never;
     };
 }
@@ -1117,6 +1248,93 @@ export interface components {
         IdentifierAvailability: {
             available: boolean;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. Only project_lead_id and default_assignee_id can be null, which clears them. */
+        ProjectUpdate: {
+            /** @description 1–255 characters, not blank, without any of & + , : ; $ ^ } { * = ? @ # | ' < > . ( ) % ! - */
+            name?: string;
+            /** @description 1–10 of A-Z, 0-9 and ÇŞĞİÖÜ, once upper-cased. */
+            identifier?: string;
+            description?: string;
+            network?: components["schemas"]["ProjectNetwork"];
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null for none.
+             */
+            project_lead_id?: string | null;
+            /**
+             * Format: uuid
+             * @description An active member of the project who is not its guest; null for none.
+             */
+            default_assignee_id?: string | null;
+            cycle_view?: boolean;
+            module_view?: boolean;
+            issue_views_view?: boolean;
+            intake_view?: boolean;
+            guest_view_all_features?: boolean;
+            /** @description After how many months a closed work item is archived, 0–12; 0 never. */
+            archive_in?: number;
+            logo_props?: components["schemas"]["LogoProps"];
+            /** @description An IANA time zone name. */
+            timezone?: string;
+        };
+        /** @description An active membership of a project. */
+        ProjectMember: {
+            /**
+             * Format: uuid
+             * @description The membership's id.
+             */
+            id: string;
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: uuid
+             * @description The member's account.
+             */
+            member_id: string;
+            role: components["schemas"]["ProjectRole"];
+            /**
+             * Format: date-time
+             * @description When the membership was made; one restored keeps its time.
+             */
+            created_at: string;
+        };
+        ProjectMemberList: {
+            data: components["schemas"]["ProjectMember"][];
+        };
+        ProjectMemberNew: {
+            /**
+             * Format: uuid
+             * @description An active member of the workspace.
+             */
+            member_id: string;
+            role: components["schemas"]["ProjectRole"];
+        };
+        ProjectMembersAdd: {
+            /** @description 1–100 accounts, each named once. */
+            members: components["schemas"]["ProjectMemberNew"][];
+        };
+        /**
+         * @description A tab of a project's header.
+         * @enum {string}
+         */
+        ProjectTab: "work_items" | "cycles" | "modules" | "views" | "intake";
+        /** @description The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items. */
+        ProjectNavigation: {
+            default_tab: components["schemas"]["ProjectTab"];
+            hide_in_more_menu: components["schemas"]["ProjectTab"][];
+        };
+        /** @description The caller's display settings in a project. */
+        ProjectPreferences: {
+            navigation: components["schemas"]["ProjectNavigation"];
+            /** @description The project's place in the caller's sidebar, lowest first. */
+            sort_order: number;
+        };
+        /** @description Changes the fields it names; a field left out keeps its value, and navigation replaces the tab bar whole. */
+        ProjectPreferencesUpdate: {
+            navigation?: components["schemas"]["ProjectNavigation"];
+            /** @description The project's place in the caller's sidebar, lowest first. */
+            sort_order?: number;
+        };
     };
     responses: {
         /** @description Error (RFC 9457 problem details). */
@@ -1206,6 +1424,15 @@ export type Project = components['schemas']['Project'];
 export type ProjectList = components['schemas']['ProjectList'];
 export type ProjectCreate = components['schemas']['ProjectCreate'];
 export type IdentifierAvailability = components['schemas']['IdentifierAvailability'];
+export type ProjectUpdate = components['schemas']['ProjectUpdate'];
+export type ProjectMember = components['schemas']['ProjectMember'];
+export type ProjectMemberList = components['schemas']['ProjectMemberList'];
+export type ProjectMemberNew = components['schemas']['ProjectMemberNew'];
+export type ProjectMembersAdd = components['schemas']['ProjectMembersAdd'];
+export type ProjectTab = components['schemas']['ProjectTab'];
+export type ProjectNavigation = components['schemas']['ProjectNavigation'];
+export type ProjectPreferences = components['schemas']['ProjectPreferences'];
+export type ProjectPreferencesUpdate = components['schemas']['ProjectPreferencesUpdate'];
 export type ResponseProblem = components['responses']['Problem'];
 export type ParameterLimit = components['parameters']['Limit'];
 export type ParameterCursor = components['parameters']['Cursor'];
@@ -2091,6 +2318,232 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description The project as changed, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    archiveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project as archived, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unarchiveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project as unarchived, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    joinProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project as the caller sees it, now its member. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's active members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectMembersAdd"];
+            };
+        };
+        responses: {
+            /** @description The accounts' memberships, in the request's order. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getProjectPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's settings in the project. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPreferences"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProjectPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectPreferencesUpdate"];
+            };
+        };
+        responses: {
+            /** @description The caller's settings as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPreferences"];
                 };
             };
             default: components["responses"]["Problem"];

@@ -13,8 +13,8 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// fakeDirectory finds the workspaces it holds by slug, logs each call and
-// fails with err.
+// fakeDirectory finds the workspaces it holds by slug, or by id, logs each
+// call and fails with err.
 type fakeDirectory struct {
 	log        *callLog
 	workspaces map[string]app.Workspace
@@ -37,6 +37,19 @@ func (f *fakeDirectory) ShareWorkspaceBySlug(ctx context.Context, slug string) (
 	}
 	w, ok := f.workspaces[slug]
 	return w, ok, nil
+}
+
+func (f *fakeDirectory) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (app.Workspace, bool, error) {
+	f.log.add(ctx, "ShareWorkspaceByID %s", id)
+	if f.err != nil {
+		return app.Workspace{}, false, f.err
+	}
+	for _, w := range f.workspaces {
+		if w.ID == id {
+			return w, true, nil
+		}
+	}
+	return app.Workspace{}, false, nil
 }
 
 // fakeMembers answers the active members' roles it holds by workspace,

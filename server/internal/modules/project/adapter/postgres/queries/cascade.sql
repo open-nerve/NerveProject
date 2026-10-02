@@ -1,27 +1,32 @@
--- name: DeleteWorkspaceProjects :exec
--- The first step of deleting a workspace's projects (M3 design 3.3, 3.6), one statement (convention 5) under the
--- workspace's FOR NO KEY UPDATE, which the caller took: the workspace's projects not deleted before, at the moment and
--- by the account of the workspace's deletion. Projects deleted before keep their moment.
+-- name: DeleteProjects :exec
+-- The first step of deleting projects (M3 design 3.3, 3.6), one statement (convention 5) under the parent's FOR NO KEY
+-- UPDATE, which the caller took: the workspace's, when it deletes the workspace, and the project's, when it deletes
+-- the project. The workspace's undeleted projects, archived ones too, or only the one project_id names when it is
+-- given, at the moment and by the account of the deletion. Projects deleted before keep their moment.
 UPDATE projects
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+WHERE workspace_id = sqlc.arg(workspace_id) AND (sqlc.narg(project_id)::uuid IS NULL OR id = sqlc.narg(project_id))
+  AND deleted_at IS NULL;
 
--- name: DeleteWorkspaceProjectMembers :exec
--- Active memberships and ended ones alike.
+-- name: DeleteProjectMembers :exec
+-- The memberships of those projects, active and ended ones alike.
 UPDATE project_members
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+WHERE workspace_id = sqlc.arg(workspace_id) AND (sqlc.narg(project_id)::uuid IS NULL OR project_id = sqlc.narg(project_id))
+  AND deleted_at IS NULL;
 
--- name: DeleteWorkspaceProjectPreferences :exec
+-- name: DeleteProjectPreferences :exec
 UPDATE project_user_properties
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+WHERE workspace_id = sqlc.arg(workspace_id) AND (sqlc.narg(project_id)::uuid IS NULL OR project_id = sqlc.narg(project_id))
+  AND deleted_at IS NULL;
 
--- name: DeleteWorkspaceStates :exec
+-- name: DeleteStates :exec
 -- The triage states too.
 UPDATE states
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+WHERE workspace_id = sqlc.arg(workspace_id) AND (sqlc.narg(project_id)::uuid IS NULL OR project_id = sqlc.narg(project_id))
+  AND deleted_at IS NULL;
 
 -- name: LockMemberProjects :many
 -- The first step of making an account a guest in the workspace's projects, DemoteToGuest's: the workspace's undeleted

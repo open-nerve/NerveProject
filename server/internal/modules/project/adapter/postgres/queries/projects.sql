@@ -49,3 +49,61 @@ WHERE p.workspace_id = sqlc.arg(workspace_id) AND p.deleted_at IS NULL
   AND (p.archived_at IS NOT NULL) = sqlc.arg(archived)::boolean
   AND (sqlc.arg(sees_all)::boolean OR m.id IS NOT NULL OR (sqlc.arg(sees_public)::boolean AND p.network = 2))
 ORDER BY u.sort_order NULLS LAST, p.name;
+
+-- name: LockProject :one
+-- The parent lock of a write that changes the project row or its memberships (M3 design 3.6 convention 2): FOR NO KEY
+-- UPDATE waits for another FOR NO KEY UPDATE and for FOR SHARE, not for a foreign key's FOR KEY SHARE. After a wait,
+-- Postgres evaluates deleted_at IS NULL again on the row's newest version, so a project deleted meanwhile reads no row.
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived
+FROM projects
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR NO KEY UPDATE;
+
+-- name: ProjectWorkspace :one
+-- The workspace of the undeleted project, archived or not, without a lock: what a read decides on (M3 design 6.4), and
+-- what a write on the project reads first, to lock the workspace before the project (3.6 convention 2).
+SELECT workspace_id
+FROM projects
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: UpdateProject :exec
+-- updateProject, under the project's FOR NO KEY UPDATE (M3 design 5.2): a field left out, null here, keeps its value;
+-- the lead and the default assignee change when their flags are set, to null too.
+UPDATE projects p
+SET name                    = coalesce(sqlc.narg(name)::text, p.name),
+    description             = coalesce(sqlc.narg(description)::text, p.description),
+    identifier              = coalesce(sqlc.narg(identifier)::text, p.identifier),
+    network                 = coalesce(sqlc.narg(network)::smallint, p.network),
+    project_lead_id         = CASE WHEN sqlc.arg(set_lead)::boolean THEN sqlc.narg(project_lead_id)::uuid
+                                   ELSE p.project_lead_id END,
+    default_assignee_id     = CASE WHEN sqlc.arg(set_default_assignee)::boolean THEN sqlc.narg(default_assignee_id)::uuid
+                                   ELSE p.default_assignee_id END,
+    cycle_view              = coalesce(sqlc.narg(cycle_view)::boolean, p.cycle_view),
+    module_view             = coalesce(sqlc.narg(module_view)::boolean, p.module_view),
+    issue_views_view        = coalesce(sqlc.narg(issue_views_view)::boolean, p.issue_views_view),
+    intake_view             = coalesce(sqlc.narg(intake_view)::boolean, p.intake_view),
+    guest_view_all_features = coalesce(sqlc.narg(guest_view_all_features)::boolean, p.guest_view_all_features),
+    archive_in              = coalesce(sqlc.narg(archive_in)::integer, p.archive_in),
+    logo_props              = coalesce(sqlc.narg(logo_props)::jsonb, p.logo_props),
+    timezone                = coalesce(sqlc.narg(timezone)::text, p.timezone),
+    updated_by_id           = sqlc.arg(updated_by)::uuid,
+    updated_at              = sqlc.arg(now)
+WHERE p.id = sqlc.arg(id);
+
+-- name: SetArchived :exec
+-- archiveProject and unarchiveProject, under the project's FOR NO KEY UPDATE (M3 design 3.19): archived_at becomes the
+-- moment given, or null. Archiving an archived project stamps it again, as Plane's does (views/project/base.py:427-441).
+UPDATE projects
+SET archived_at   = CASE WHEN sqlc.arg(archived)::boolean THEN sqlc.arg(now)::timestamptz END,
+    updated_by_id = sqlc.arg(updated_by)::uuid,
+    updated_at    = sqlc.arg(now)
+WHERE id = sqlc.arg(id);
+
+-- name: ShareProject :one
+-- The parent lock of a write under the project that leaves the project row and its memberships as they are (M3 design
+-- 3.6): FOR SHARE waits for FOR NO KEY UPDATE, not for another FOR SHARE. After a wait, Postgres evaluates deleted_at
+-- IS NULL again on the row's newest version, so a project deleted meanwhile reads no row.
+SELECT workspace_id, (archived_at IS NOT NULL)::boolean AS archived
+FROM projects
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL
+FOR SHARE;

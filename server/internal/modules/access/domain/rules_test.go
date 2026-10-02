@@ -35,6 +35,25 @@ var tableCells = map[shared.Action][]outcome{
 	// three, workspace role outside the three project admin (projectIdentities)
 	"project.read": {allowed, allowed, allowed, allowed, allowed, allowed, allowed, invisible, invisible, invisible, invisible, allowed,
 		invisible, invisible, invisible, forbidden, forbidden},
+	"project.update": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project.archive": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project.unarchive": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible,
+		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project.delete": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project_preferences.read": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible,
+		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project_preferences.update": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible,
+		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project_member.list": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"project_member.add": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As project.read: the guest's 403 is the use case's (M3 design 3.5).
+	"project.join": {allowed, allowed, allowed, allowed, allowed, allowed, allowed, invisible, invisible, invisible, invisible, allowed,
+		invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

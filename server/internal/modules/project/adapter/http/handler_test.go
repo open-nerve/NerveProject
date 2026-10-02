@@ -60,10 +60,18 @@ func caller(ctx context.Context) string {
 // fakes are the use cases behind a test server: each records who called it
 // with what, and answers what it is given.
 type fakes struct {
-	list   *fakeList
-	create *fakeCreate
-	get    *fakeGet
-	check  *fakeCheck
+	list      *fakeList
+	create    *fakeCreate
+	get       *fakeGet
+	check     *fakeCheck
+	update    *fakeUpdate
+	archive   *fakeOnProject
+	unarchive *fakeOnProject
+	delete    *fakeDelete
+	prefs     *fakePreferences
+	members   *fakeMembers
+	add       *fakeAdd
+	join      *fakeOnProject
 }
 
 type fakeList struct {
@@ -118,6 +126,41 @@ func (f *fakeCheck) Execute(ctx context.Context, slug, identifier string) (bool,
 	return f.available[identifier], f.err
 }
 
+type fakeUpdate struct {
+	calls  []string // "caller id"
+	got    []domain.ProjectPatch
+	answer domain.Project
+	err    error
+}
+
+func (f *fakeUpdate) Execute(ctx context.Context, id uuid.UUID, p domain.ProjectPatch) (domain.Project, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	f.got = append(f.got, p)
+	return f.answer, f.err
+}
+
+// fakeOnProject is a use case on a project that takes nothing more.
+type fakeOnProject struct {
+	calls  []string // "caller id"
+	answer domain.Project
+	err    error
+}
+
+func (f *fakeOnProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	return f.answer, f.err
+}
+
+type fakeDelete struct {
+	calls []string // "caller id"
+	err   error
+}
+
+func (f *fakeDelete) Execute(ctx context.Context, id uuid.UUID) error {
+	f.calls = append(f.calls, caller(ctx)+" "+id.String())
+	return f.err
+}
+
 // newServer serves the module with f; a fake left nil is an idle one.
 func newServer(t *testing.T, f fakes) http.Handler {
 	t.Helper()
@@ -149,8 +192,34 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.check == nil {
 		f.check = &fakeCheck{}
 	}
+	if f.update == nil {
+		f.update = &fakeUpdate{}
+	}
+	if f.archive == nil {
+		f.archive = &fakeOnProject{}
+	}
+	if f.unarchive == nil {
+		f.unarchive = &fakeOnProject{}
+	}
+	if f.delete == nil {
+		f.delete = &fakeDelete{}
+	}
+	if f.prefs == nil {
+		f.prefs = &fakePreferences{}
+	}
+	if f.members == nil {
+		f.members = &fakeMembers{}
+	}
+	if f.add == nil {
+		f.add = &fakeAdd{}
+	}
+	if f.join == nil {
+		f.join = &fakeOnProject{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
-		CheckIdentifier: f.check})
+		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive, DeleteProject: f.delete,
+		GetPreferences: f.prefs, UpdatePreferences: fakeUpdatePreferences{f.prefs}, ListMembers: f.members, AddMembers: f.add,
+		JoinProject: f.join})
 	return router
 }
 

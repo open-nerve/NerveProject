@@ -151,6 +151,9 @@ type matrixRow struct {
 	// cell's: what the answer holds for that caller, the seeded ids to
 	// compare its ids with.
 	check func(t *testing.T, c caller, s seeded, answer string)
+	// refusal, when set, is the one error each 422 cell of the row holds, as
+	// "field code": the refusal the row names, not another.
+	refusal string
 }
 
 func (r matrixRow) name() string {
@@ -193,7 +196,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
-	return slices.Concat(workspaceMatrixRows(), projectMatrixRows())
+	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -225,21 +228,20 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 }
 
 // prepareMatrix fills a database for the matrix. Through the API, each of
-// matrixAccounts, registered for its token. Through the workspace store,
-// the workspaces, memberships and invitations of matrixMemberships and
-// matrixInvitations, with the ids newSeeded named, and acme's admin's
-// display settings; other's admin and removed member are there so that a
-// role read in the wrong workspace lets either into acme. Through the
-// project store, the projects and project memberships of matrixProjects
-// and matrixProjectMembers. Through the API, gone deleted by its admin,
-// which soft-deletes its memberships and its project with it. Through SQL,
-// until the stores of P4b and P5 replace it, acme's archived project
-// archived, the member before's membership of the private project ended
-// and the removed member's membership of acme ended; and partingStates'
-// ended and deleted project memberships and deleted display settings.
-// Everything that connected to the database is closed when it returns, so
-// that it can be copied. A -run that leaves out prepare fails here, not
-// with a 401 in every cell.
+// matrixAccounts, registered for its token and its id. Through the
+// workspace store, the workspaces, memberships and invitations of
+// matrixMemberships and matrixInvitations, with the ids newSeeded named,
+// and acme's admin's display settings; other's admin and removed member
+// are there so that a role read in the wrong workspace lets either into
+// acme. Through the project store, the projects and project memberships of
+// matrixProjects and matrixProjectMembers, and acme's archived project
+// archived. Through SQL, the states no store writes yet (standIns,
+// partingStates). Through the API, gone deleted by its admin, which
+// soft-deletes its memberships and its project with it; then the checks
+// that the rows the cells rest on are there (preconditions). Everything
+// that connected to the database is closed when it returns, so that it can
+// be copied. A -run that leaves out prepare fails here, not with a 401 in
+// every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -247,7 +249,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		contract := apitest.Load(t)
 		base := startApp(t, d.config(t, d.url, nil), migrations.FS())
 		pool := openPool(t, d.url)
-		ids := map[caller]uuid.UUID{}
+		ids := d.seeded.accounts
 		for _, c := range matrixAccounts {
 			email := emailOf(c)
 			d.tokens[c] = registerAccount(t, contract, base, email).AccessToken
@@ -277,26 +279,9 @@ func prepareMatrix(t *testing.T) matrixData {
 		for _, pm := range matrixProjectMembers {
 			projects.join(pm.key, pm.c, pm.role)
 		}
-		// No store archives a project (P4b), ends a project membership (P5)
-		// or removes a member (P5) yet, so SQL stands in until those phases
-		// replace it.
-		seed.exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", s.project("acme/archived"), seed.now)
-		seed.exec(t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
-			s.project("acme/private"), ids[callerBefore])
-		seed.exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", s.membership("acme", callerRemoved))
-		// exec fails a statement that changes no row, and names it.
-		const none = "UPDATE projects SET archived_at = now() WHERE false"
-		if failed, want := fatalOf(func(tb testing.TB) { seed.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
-			t.Errorf("exec of a statement that changes no row: failed with %q, want %q", failed, want)
-		}
+		projects.archive("acme/archived")
+		projects.standIns(pool, s)
 		projects.partingStates(pool)
-		// The removed member is still an active member of the project his
-		// column aims at, so that only his ended membership of acme keeps him
-		// out of it: his cell's 404 would not show which, were he none.
-		if f, found, err := projects.store.ProjectFacts(context.Background(), s.project(projectOf(callerRemoved)), ids[callerRemoved]); err != nil ||
-			!found || !f.Member {
-			t.Fatalf("the removed member's facts of %s = %+v, %v, %v; want him its active member", projectOf(callerRemoved), f, found, err)
-		}
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so
 		// every cell of the column is asked about a workspace deleted the one
@@ -305,15 +290,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/gone", d.tokens[callerDeleted], ""); status != http.StatusNoContent {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}
-		// other's project is the one no list of acme's may show: were it not
-		// there, undeleted in a workspace of its own, a list of every
-		// workspace's projects would pass the matrix and
-		// TestListingProjectsIsReadingEach alike.
-		if f, found, err := projects.store.ProjectFacts(context.Background(), s.project("other/project"), ids[callerNever]); err != nil ||
-			!found || f.WorkspaceID != s.workspace("other") {
-			t.Fatalf("other's project's facts = %+v, %v, %v; want it undeleted in other (%s), not acme (%s)", f, found, err,
-				s.workspace("other"), s.workspace("acme"))
-		}
+		projects.preconditions(s)
 	})
 	if !prepared {
 		t.FailNow()
@@ -373,6 +350,15 @@ func TestPermissionMatrix(t *testing.T) {
 				if got != want {
 					t.Errorf("%s %s = %d %s, want %s", method, path, status, strings.TrimSpace(answer), want)
 					return
+				}
+				if r.refusal != "" && got == cellValidationFailed {
+					var problem struct {
+						Errors []struct{ Field, Code string }
+					}
+					decodeAnswer(t, answer, &problem)
+					if len(problem.Errors) != 1 || problem.Errors[0].Field+" "+problem.Errors[0].Code != r.refusal {
+						t.Errorf("%s %s = %s, want its one error %s", method, path, strings.TrimSpace(answer), r.refusal)
+					}
 				}
 				if r.check != nil && got.code == "" {
 					r.check(t, c, d.seeded.in(t), answer)

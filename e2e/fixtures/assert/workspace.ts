@@ -210,25 +210,26 @@ export async function expectMembership(
 
 /**
  * The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7 adds the labels.
- * deletedAlone tells whether a row of the table can be deleted on its own before the workspace, keeping that
- * moment: an invitation can, when it is accepted or deleted (M3 design 3.8); no row of the other tables can yet.
+ * deletedAlone tells whether W3 deletes rows of the table on their own before the workspace, which keep that
+ * moment: an invitation, when it is accepted or deleted (M3 design 3.8); a project, its memberships, its members'
+ * display settings and its states, when the project is deleted (P4b). No row of the other tables is deleted alone.
  */
 const workspaceTables: { table: string; deletedAlone: boolean }[] = [
   { table: "workspace_members", deletedAlone: false },
   { table: "workspace_member_invites", deletedAlone: true },
   { table: "workspace_user_properties", deletedAlone: false },
-  { table: "projects", deletedAlone: false },
-  { table: "project_members", deletedAlone: false },
-  { table: "project_user_properties", deletedAlone: false },
-  { table: "states", deletedAlone: false },
+  { table: "projects", deletedAlone: true },
+  { table: "project_members", deletedAlone: true },
+  { table: "project_user_properties", deletedAlone: true },
+  { table: "states", deletedAlone: true },
 ];
 
 /**
  * W3: the workspace of slug is deleted by the account of adminEmail, and with it, at the same moment and by the
  * same account, every row under it that was not deleted before: its memberships, invitations and display
  * settings, its projects, their memberships, their members' display settings and their states. Each table has
- * such a row; none is left undeleted; and only a table whose rows can be deleted alone has rows deleted earlier
- * than the workspace, so every row of the others carries the workspace's moment.
+ * such a row; none is left undeleted; a table whose rows W3 deletes alone has rows deleted earlier, which kept
+ * their moment, and every row of the others carries the workspace's.
  */
 export async function expectWorkspaceDeleted(db: Database, slug: string, adminEmail: string): Promise<void> {
   const [w] = await db.query<{ id: string; deleted_at: Date | null; updated_by_id: string; admin: string | null }>(
@@ -260,7 +261,7 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
         deletedWithIt: (counts?.with_it ?? 0) > 0,
         deletedByAnother: counts?.by_another,
         undeletedOrLater: counts?.undeleted_or_later,
-        deletedEarlier: counts?.earlier,
+        deletedEarlier: (counts?.earlier ?? 0) > 0,
       };
     })
   );
@@ -270,7 +271,7 @@ export async function expectWorkspaceDeleted(db: Database, slug: string, adminEm
       deletedWithIt: true,
       deletedByAnother: 0,
       undeletedOrLater: 0,
-      deletedEarlier: deletedAlone ? expect.any(Number) : 0,
+      deletedEarlier: deletedAlone,
     }))
   );
 }
