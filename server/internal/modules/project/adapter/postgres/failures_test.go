@@ -121,10 +121,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		Now: now}); !failed(err) {
 		t.Errorf("UpsertPreferences() = %v; want context.Canceled", err)
 	}
-	for i, step := range []func(context.Context, app.Deletion) error{s.DeleteProjects, s.DeleteProjectMembers, s.DeleteProjectPreferences,
-		s.DeleteStates} {
-		if err := step(cancelled, app.Deletion{WorkspaceID: acme, ProjectID: &web, By: alice, Now: now}); !failed(err) {
-			t.Errorf("deletion step %d = %v; want context.Canceled", i, err)
+	for _, step := range deletionSteps(s) {
+		if err := step.run(cancelled, app.Deletion{WorkspaceID: acme, ProjectID: &web, By: alice, Now: now}); !failed(err) {
+			t.Errorf("%s() = %v; want context.Canceled", step.name, err)
 		}
 	}
 }

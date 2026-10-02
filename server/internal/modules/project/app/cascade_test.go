@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -27,20 +28,20 @@ func deletionSteps(workspace uuid.UUID, project string, by uuid.UUID, at time.Ti
 // DeleteWorkspaceProjects runs the four steps in the order of M3 design
 // 3.6, each on every project of the caller's workspace, with the caller's
 // account and moment, in the caller's transaction; a failing step comes
-// back as itself and the steps after it do not run.
+// back as itself and the steps after it do not run. Each step fails in
+// turn, one row each of deletionSteps.
 func TestDeleteWorkspaceProjects(t *testing.T) {
 	workspace, by := uuid.NewV7(), uuid.NewV7()
 	steps := deletionSteps(workspace, "*", by, clockNow)
-	tests := []struct {
+	type run struct {
 		fail    string
 		wantErr error
 		want    []string
-	}{
-		{"", nil, steps},
-		{"DeleteProjects", errDisk, steps[:1]},
-		{"DeleteProjectMembers", errDisk, steps[:2]},
-		{"DeleteProjectPreferences", errDisk, steps[:3]},
-		{"DeleteStates", errDisk, steps},
+	}
+	tests := []run{{"", nil, steps}}
+	for i, step := range steps {
+		name, _, _ := strings.Cut(step, " ")
+		tests = append(tests, run{name, errDisk, steps[:i+1]})
 	}
 	for _, tt := range tests {
 		f := newWrites()

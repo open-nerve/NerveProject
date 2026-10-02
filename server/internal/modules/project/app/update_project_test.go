@@ -95,44 +95,48 @@ func TestUpdateProjectRefuses(t *testing.T) {
 		}
 		return shared.Invalid(problems...)
 	}
+	gone := func(f *writeFixture) { f.workspaces.gone = true }
+	moved := func(f *writeFixture) { f.store.moved = uuid.NewV7() }
+	deleted := func(f *writeFixture) { f.store.deleted = true }
 	tests := []struct {
 		name    string
 		ctx     context.Context
 		project uuid.UUID
 		in      domain.ProjectPatch
+		setup   func(f *writeFixture)
 		want    error
 		calls   []string
 	}{
-		{"archive_in 13", as(bob), webID, domain.ProjectPatch{ArchiveIn: ptr(13)},
+		{"archive_in 13", as(bob), webID, domain.ProjectPatch{ArchiveIn: ptr(13)}, nil,
 			shared.Invalid(shared.FieldError{Field: "archive_in", Code: "out_of_range"}), nil},
-		{"no caller", context.Background(), webID, domain.ProjectPatch{}, shared.Unauthenticated(), nil},
-		{"no project", as(bob), uuid.Nil(), domain.ProjectPatch{}, domain.ErrNotFound, noProject},
-		{"the workspace gone", as(bob), webID, leads(&dave, nil), domain.ErrNotFound, lockedTo(webID)},
-		{"moved to another workspace", as(bob), webID, leads(&dave, nil), domain.ErrNotFound,
+		{"no caller", context.Background(), webID, domain.ProjectPatch{}, nil, shared.Unauthenticated(), nil},
+		{"no project", as(bob), uuid.Nil(), domain.ProjectPatch{}, nil, domain.ErrNotFound, noProject},
+		{"the workspace gone", as(bob), webID, leads(&dave, nil), gone, domain.ErrNotFound, lockedTo(webID)},
+		{"moved to another workspace", as(bob), webID, leads(&dave, nil), moved, domain.ErrNotFound,
 			append(lockedTo(webID), "LockProject "+webID.String())},
-		{"deleted while its lock waited", as(bob), webID, leads(&dave, nil), domain.ErrNotFound,
+		{"deleted while its lock waited", as(bob), webID, leads(&dave, nil), deleted, domain.ErrNotFound,
 			append(lockedTo(webID), "LockProject "+webID.String())},
-		{"not seen", as(erin), webID, leads(&dave, nil), domain.ErrNotFound, decided(erin, webID)},
-		{"a project member", as(alice), webID, leads(&dave, nil), shared.Forbidden(), decided(alice, webID)},
-		{"archived", as(bob), opsID, leads(&dave, nil), domain.ErrArchived, decided(bob, opsID)},
-		{"a guest as the lead", as(bob), webID, leads(&carol, nil), unassignable("project_lead_id"), append(decided(bob, webID), memberships(carol))},
-		{"an ended member as the lead", as(bob), webID, leads(&dave, nil), unassignable("project_lead_id"),
-			append(decided(bob, webID), memberships(dave))},
-		{"no member as the lead", as(bob), webID, leads(&erin, nil), unassignable("project_lead_id"), append(decided(bob, webID), memberships(erin))},
-		{"a guest as the default assignee", as(bob), webID, leads(nil, &carol), unassignable("default_assignee_id"),
+		{"not seen", as(erin), webID, leads(&dave, nil), nil, domain.ErrNotFound, decided(erin, webID)},
+		{"a project member", as(alice), webID, leads(&dave, nil), nil, shared.Forbidden(), decided(alice, webID)},
+		{"archived", as(bob), opsID, leads(&dave, nil), nil, domain.ErrArchived, decided(bob, opsID)},
+		{"a guest as the lead", as(bob), webID, leads(&carol, nil), nil, unassignable("project_lead_id"),
 			append(decided(bob, webID), memberships(carol))},
-		{"both", as(bob), webID, leads(&erin, &dave), unassignable("project_lead_id", "default_assignee_id"),
+		{"an ended member as the lead", as(bob), webID, leads(&dave, nil), nil, unassignable("project_lead_id"),
+			append(decided(bob, webID), memberships(dave))},
+		{"no member as the lead", as(bob), webID, leads(&erin, nil), nil, unassignable("project_lead_id"),
+			append(decided(bob, webID), memberships(erin))},
+		{"a guest as the default assignee", as(bob), webID, leads(nil, &carol), nil, unassignable("default_assignee_id"),
+			append(decided(bob, webID), memberships(carol))},
+		{"both", as(bob), webID, leads(&erin, &dave), nil, unassignable("project_lead_id", "default_assignee_id"),
 			append(decided(bob, webID), memberships(erin, dave))},
-		{"a member lead, a guest default assignee", as(bob), webID, leads(&alice, &carol), unassignable("default_assignee_id"),
+		{"a member lead, a guest default assignee", as(bob), webID, leads(&alice, &carol), nil, unassignable("default_assignee_id"),
 			append(decided(bob, webID), memberships(alice, carol))},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdate()
-			f.workspaces.gone = tt.name == "the workspace gone"
-			f.store.deleted = tt.name == "deleted while its lock waited"
-			if tt.name == "moved to another workspace" {
-				f.store.moved = uuid.NewV7()
+			if tt.setup != nil {
+				tt.setup(f)
 			}
 
 			got, err := uc.Execute(tt.ctx, tt.project, tt.in)

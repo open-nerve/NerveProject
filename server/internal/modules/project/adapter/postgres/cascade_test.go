@@ -3,6 +3,7 @@ package postgresadapter_test
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 	"uuid"
@@ -48,13 +49,15 @@ func instant(t *time.Time) string {
 }
 
 // projectTables are the tables a deletion of projects deletes the rows of,
-// in its order, each with its column of the project.
-var projectTables = []struct{ name, project string }{
-	{"projects", "id"}, {"project_members", "project_id"}, {"project_user_properties", "project_id"}, {"states", "project_id"},
+// in its order, each with its column of the project and how many rows of
+// it seedProject writes under each project. A table here without a row
+// under a project fails checkDeletions: seed it.
+var projectTables = []struct {
+	name, project string
+	perProject    int
+}{
+	{"projects", "id", 1}, {"project_members", "project_id", 2}, {"project_user_properties", "project_id", 2}, {"states", "project_id", 2},
 }
-
-// perProject is how many rows of each table seedProject writes.
-var perProject = map[string]int{"projects": 1, "project_members": 2, "project_user_properties": 2, "states": 2}
 
 // deletions reads the audit columns of the workspace's rows of each project
 // table, keyed by table then id.
@@ -122,13 +125,33 @@ func seedProjects(t *testing.T, pool *pgxpool.Pool, workspace, alice, bob uuid.U
 	return web, ops, old
 }
 
-// deleteAll runs the steps of d, in their order, in the transaction ctx
+// deletionStep is a step of a deletion of projects, by its name.
+type deletionStep struct {
+	name string
+	run  func(context.Context, app.Deletion) error
+}
+
+// deletionSteps are s's steps of a deletion of projects: every method of
+// app.ProjectsDeleter, in the order of their names, so that a step added
+// to the port is run here without a list to extend. Each step is one
+// statement that reads no row another step writes, so their order does
+// not change what they write; the use cases' order is app's to test.
+func deletionSteps(s *postgresadapter.Store) []deletionStep {
+	port := reflect.TypeFor[app.ProjectsDeleter]()
+	deleter := reflect.ValueOf(app.ProjectsDeleter(s))
+	steps := make([]deletionStep, port.NumMethod())
+	for i := range steps {
+		name := port.Method(i).Name
+		steps[i] = deletionStep{name, deleter.MethodByName(name).Interface().(func(context.Context, app.Deletion) error)}
+	}
+	return steps
+}
+
+// deleteAll runs every step of d (deletionSteps), in the transaction ctx
 // carries if any.
 func deleteAll(ctx context.Context, s *postgresadapter.Store, d app.Deletion) error {
-	for _, step := range []func(context.Context, app.Deletion) error{
-		s.DeleteProjects, s.DeleteProjectMembers, s.DeleteProjectPreferences, s.DeleteStates,
-	} {
-		if err := step(ctx, d); err != nil {
+	for _, step := range deletionSteps(s) {
+		if err := step.run(ctx, d); err != nil {
 			return err
 		}
 	}
@@ -138,13 +161,14 @@ func deleteAll(ctx context.Context, s *postgresadapter.Store, d app.Deletion) er
 // checkDeletions holds the workspace's rows of each project table to want,
 // each row's state by its project: "deleted" at later by bob; "before",
 // deleted at earlier and not changed since; "kept", neither deleted nor
-// changed. Each project of want has perProject's rows of each table, and
-// no row is under another.
+// changed. Each project of want has the table's perProject rows, at least
+// one, and no row is under another.
 func checkDeletions(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, want map[uuid.UUID]string, later, earlier time.Time, bob uuid.UUID) {
 	t.Helper()
-	for table, rows := range deletions(t, pool, workspace) {
+	read := deletions(t, pool, workspace)
+	for _, table := range projectTables {
 		under := map[uuid.UUID]int{}
-		for id, d := range rows {
+		for id, d := range read[table.name] {
 			under[d.project]++
 			var ok bool
 			switch want[d.project] {
@@ -157,13 +181,17 @@ func checkDeletions(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, want 
 			}
 			if !ok {
 				t.Errorf("%s %s of project %s: %s; want it %q (deleted: at %s by bob %s; before: deleted_at %s, updated_at %s; kept: "+
-					"deleted_at null, updated_at %s)", table, id, d.project, d, want[d.project], instant(&later), bob, instant(&earlier),
+					"deleted_at null, updated_at %s)", table.name, id, d.project, d, want[d.project], instant(&later), bob, instant(&earlier),
 					instant(&now), instant(&now))
 			}
 		}
 		for project, state := range want {
-			if under[project] != perProject[table] {
-				t.Errorf("%s: %d rows under the %s project %s, want %d", table, under[project], state, project, perProject[table])
+			switch {
+			case under[project] == 0:
+				t.Errorf("%s: no row under the %s project %s, so nothing of the table is checked: seed one (seedProject)", table.name, state,
+					project)
+			case under[project] != table.perProject:
+				t.Errorf("%s: %d rows under the %s project %s, want %d", table.name, under[project], state, project, table.perProject)
 			}
 		}
 	}
