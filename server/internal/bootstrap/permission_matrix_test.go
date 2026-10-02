@@ -151,6 +151,9 @@ type matrixRow struct {
 	// cell's: what the answer holds for that caller, the seeded ids to
 	// compare its ids with.
 	check func(t *testing.T, c caller, s seeded, answer string)
+	// refusal, when set, is the one error each 422 cell of the row holds, as
+	// "field code": the refusal the row names, not another.
+	refusal string
 }
 
 func (r matrixRow) name() string {
@@ -347,6 +350,15 @@ func TestPermissionMatrix(t *testing.T) {
 				if got != want {
 					t.Errorf("%s %s = %d %s, want %s", method, path, status, strings.TrimSpace(answer), want)
 					return
+				}
+				if r.refusal != "" && got == cellValidationFailed {
+					var problem struct {
+						Errors []struct{ Field, Code string }
+					}
+					decodeAnswer(t, answer, &problem)
+					if len(problem.Errors) != 1 || problem.Errors[0].Field+" "+problem.Errors[0].Code != r.refusal {
+						t.Errorf("%s %s = %s, want its one error %s", method, path, strings.TrimSpace(answer), r.refusal)
+					}
 				}
 				if r.check != nil && got.code == "" {
 					r.check(t, c, d.seeded.in(t), answer)

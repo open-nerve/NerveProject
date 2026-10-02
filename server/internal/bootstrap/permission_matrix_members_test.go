@@ -21,23 +21,28 @@ func memberMatrixRows() []matrixRow {
 		{op: "addProjectMembers", write: true, columns: projectColumns, request: addsToProject(callerMember, 15),
 			cells: ofProject(cellCreated, cellForbidden, cellForbidden, cellCreated, cellForbidden, cellForbidden), check: addsTheMember(callerMember, 15)},
 		// A target refused after the decision (M3 design 3.6 convention 3,
-		// 9.2): who may add gets the 422, and who may not his 403 or 404 as
-		// with a valid target, learning nothing of it. X's account is no
-		// member of acme; WG-'s is its guest, asked for as a member, and
-		// WA-'s its admin, asked for as a member (M3 design 3.5: each joins
-		// with his own role alone); PM's is the project's active member.
+		// 9.2): who may add gets the 422 of the row's refusal, and no other,
+		// and who may not his 403 or 404 as with a valid target, learning
+		// nothing of it. X's account is no member of acme; WG-'s is its
+		// guest, asked for as a member, and WA-'s its admin, asked for as a
+		// member (M3 design 3.5: each joins with his own role alone); PM's is
+		// the project's active member.
 		{op: "addProjectMembers", variant: "a target who is no member of the workspace", write: true, columns: projectColumns,
 			request: addsToProject(callerNever, 15),
-			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
+			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "members[0].member_id not_allowed"},
 		{op: "addProjectMembers", variant: "a workspace guest as a member", write: true, columns: projectColumns,
 			request: addsToProject(callerGuestOnly, 15),
-			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
+			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "members[0].role not_allowed"},
 		{op: "addProjectMembers", variant: "a workspace admin as a member", write: true, columns: projectColumns,
 			request: addsToProject(callerAdmin, 15),
-			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
+			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "members[0].role not_allowed"},
 		{op: "addProjectMembers", variant: "an active member of the project", write: true, columns: projectColumns,
 			request: addsToProject(callerProjectMember, 15),
-			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden)},
+			cells:   ofProject(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "members[0].member_id duplicate"},
 		// An archived project's members are added as any other's (M3 design
 		// 3.19).
 		{op: "addProjectMembers", variant: "archived", write: true, columns: archivedColumns, request: addsToProject(callerMember, 15),

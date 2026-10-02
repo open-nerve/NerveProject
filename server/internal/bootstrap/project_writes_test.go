@@ -23,8 +23,8 @@ import (
 // with the time of its request, from the clock project.New takes, and with
 // its caller (M3 design 3.6): alice, acme's admin, writes on her project
 // Web, one write after another; the statement of each reads the rows it
-// wrote, by $1 Web's id and $2 alice's. Bob, whom she adds, is acme's
-// member.
+// wrote, by $1 Web's id and $2 alice's, and finds each one the write
+// writes. Bob, whom she adds, is acme's member.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -42,24 +42,25 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		name, method, path, body string
 		status                   int
 		stamps                   string // the rows written: the time each took, and whether alice wrote it as the write does
+		rows                     int    // how many rows stamps reads: each one the write writes
 	}{
 		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, http.StatusOK,
-			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1"},
+			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1", 1},
 		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
-			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1"},
+			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1},
 		// Archived again, it takes the new time.
 		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", http.StatusOK,
-			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1"},
+			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1},
 		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", http.StatusOK,
-			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1"},
+			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1},
 		{"updateProjectPreferences", http.MethodPatch, "/api/v0/me/projects/" + web.String() + "/preferences", `{"sort_order":5}`, http.StatusOK,
-			"SELECT updated_at, updated_by_id = $2 FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL"},
-		// Bob's membership and his display settings, made.
+			"SELECT updated_at, updated_by_id = $2 FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL", 1},
+		// Bob's membership and his display settings, made: two rows.
 		{"addProjectMembers", http.MethodPost, "/api/v0/projects/" + web.String() + "/members",
 			`{"members":[{"member_id":"` + bobID.String() + `","role":15}]}`, http.StatusCreated,
 			"SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at FROM project_members " +
 				"WHERE project_id = $1 AND member_id <> $2 UNION ALL SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND " +
-				"updated_at = created_at FROM project_user_properties WHERE project_id = $1 AND user_id <> $2"},
+				"updated_at = created_at FROM project_user_properties WHERE project_id = $1 AND user_id <> $2", 2},
 	} {
 		before := time.Now().Truncate(time.Microsecond)
 		status, body := call(t, contract, w.method, base+w.path, alice, w.body)
@@ -82,8 +83,8 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 				t.Errorf("%s wrote a row at %v, by alice %v; want within the request, %v to %v, by alice", w.name, at, hers, before, after)
 			}
 		}
-		if err := rows.Err(); err != nil || n == 0 {
-			t.Errorf("%s: %d rows written, %v; want one at least", w.name, n, err)
+		if err := rows.Err(); err != nil || n != w.rows {
+			t.Errorf("%s: %d rows written, %v; want %d", w.name, n, err, w.rows)
 		}
 	}
 }
