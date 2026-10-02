@@ -1,0 +1,220 @@
+package bootstrap
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/modules/access"
+	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
+	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
+	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
+	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
+	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
+	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
+// The interleavings 1 (its workspace side) and 4 of M3 design 9.3, on a
+// real database, in both orders: an ending of a workspace membership, a
+// leaving or a removal, through workspace's use case with project's
+// cascade, identity's profiles and the Authorizer as bootstrap wires them,
+// against another leaving, or against the project side's growth through
+// the project module behind the API. A gate inside the first side's
+// transaction holds it open at a lock the second side needs;
+// pgtest.WaitForLockWaitOn proves that the second side waits on that
+// table's row before the gate opens. Every wait has a deadline.
+
+// endedHolding stops an ending after its write of the membership, holding
+// the workspace's row and the membership's, before the projects' step.
+type endedHolding struct {
+	*workspacepg.Store
+	gate *gate
+}
+
+func (m endedHolding) EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error {
+	if err := m.Store.EndMember(ctx, workspaceID, userID, by, now); err != nil {
+		return err
+	}
+	return m.gate.wait(ctx)
+}
+
+// leave is user's leaving of acme, over workspaces, with project's cascade,
+// identity's profiles and the Authorizer as bootstrap wires them.
+func (r adminRace) leave(ctx context.Context, user uuid.UUID, workspaces workspaceapp.WorkspaceLeaver) error {
+	return workspaceapp.NewLeaveWorkspace(workspaces, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
+		project.New(project.Deps{Pool: r.pool}).Cascade(), access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}),
+		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		Execute(shared.WithActor(ctx, shared.Actor{UserID: user}), "acme")
+}
+
+// active is whether alice's and bob's memberships of acme are active.
+func (r adminRace) active(t *testing.T) (alice, bob bool) {
+	t.Helper()
+	if err := r.pool.QueryRow(context.Background(), "SELECT (SELECT is_active FROM workspace_members WHERE id = $1), "+
+		"(SELECT is_active FROM workspace_members WHERE id = $2)", r.aliceIn, r.bobIn).Scan(&alice, &bob); err != nil {
+		t.Fatal(err)
+	}
+	return alice, bob
+}
+
+// Interleaving 1, the workspace's side: acme's two admins, alice and bob,
+// leave it at once (M3 design 3.6, 3.7 rule 1). The first holds acme FOR NO
+// KEY UPDATE and, past his check of another admin, has ended his
+// membership at his gate; the second waits for acme's row. Once the first
+// has committed, the second finds no other active admin: 409
+// workspace.sole_admin. The first one's membership is ended, the second's
+// active: acme keeps an admin.
+func TestTwoAdminsLeavingLeaveAnAdmin(t *testing.T) {
+	for _, aliceFirst := range []bool{true, false} {
+		t.Run(fmt.Sprintf("alice first %v", aliceFirst), func(t *testing.T) {
+			r := newAdminRace(t)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			first, second := r.alice, r.bob
+			if !aliceFirst {
+				first, second = second, first
+			}
+			g := newGate()
+			left := run(func() error { return r.leave(ctx, first, endedHolding{workspacepg.New(r.pool), g}) })
+			held(t, ctx, g, left, "the first leaving")
+			refused := run(func() error { return r.leave(ctx, second, workspacepg.New(r.pool)) })
+			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
+			if alice, bob := r.active(t); !alice || !bob {
+				t.Errorf("while the first holds the lock: alice active %v, bob active %v; want both", alice, bob)
+			}
+			close(g.open)
+
+			if err := result(t, ctx, left, "the first leaving"); err != nil {
+				t.Errorf("the first leaving = %v, want it done", err)
+			}
+			if err := result(t, ctx, refused, "the second leaving"); !errors.Is(err, workspacedomain.ErrSoleAdmin) {
+				t.Errorf("the second leaving = %v, want 409 workspace.sole_admin", err)
+			}
+			if alice, bob := r.active(t); alice != !aliceFirst || bob != aliceFirst {
+				t.Errorf("alice active %v, bob active %v; want the first one's membership ended, the second's active", alice, bob)
+			}
+		})
+	}
+}
+
+// remove is alice's removal of bob from acme, over members, with project's
+// cascade, identity's profiles and the Authorizer as bootstrap wires them,
+// on the system's clock: its time is read when it reads it.
+func (r growthRace) remove(ctx context.Context, members workspaceapp.MemberRemover) error {
+	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
+		project.New(project.Deps{Pool: r.pool}).Cascade(), r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), r.bobIn)
+}
+
+// Interleaving 4: alice's removal of bob from acme and the project side's
+// growth, alice's adding him to Web or his joining it, serialize on acme's
+// row (M3 design 3.6 conventions 2, 3 and 6), in both orders, for a new
+// membership of Web and for his ended one. The growth first: it holds acme
+// and his membership of acme FOR SHARE, no stronger (lockOn), and waits at
+// its gate before it locks Web; the removal waits for acme's row, holding
+// nothing. Once the growth has committed, the removal's step over his
+// projects, a statement run after its write of his membership, finds his
+// membership of Web and ends it, at the removal's time, read once it held
+// acme: after the gate opened (3.3). The removal first: it holds acme FOR
+// NO KEY UPDATE and his membership's row after its write; the growth waits
+// for acme's row, then reads his membership ended: alice's adding him is
+// refused as one who is no active member of acme (422
+// members[0].member_id not_allowed), his joining as one who does not see
+// Web (404); his membership of Web is as it was. In either order, while
+// the second side waits for acme's row, no transaction holds Web (FOR
+// UPDATE NOWAIT): the growth takes his membership of acme before Web, and
+// the removal his membership before his projects.
+func TestARemovalAndTheProjectSidesGrowthSerialize(t *testing.T) {
+	contract := apitest.Load(t)
+	for _, add := range []bool{true, false} {
+		for _, ended := range []bool{false, true} {
+			for _, growthFirst := range []bool{true, false} {
+				name := fmt.Sprintf("%s, ended %v, growth first %v", map[bool]string{true: "add", false: "join"}[add], ended, growthFirst)
+				t.Run(name, func(t *testing.T) {
+					r := newGrowthRace(t, ended)
+					before := map[bool]string{false: "15, Web none", true: "15, Web 15 ended"}[ended]
+					if got := r.standing(t); got != before {
+						t.Fatalf("before: %s, want %s", got, before)
+					}
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+					g := newGate()
+					var req *http.Request
+					var rec *httptest.ResponseRecorder
+					var grew, removed <-chan error
+					if growthFirst {
+						grow := r.growth(t, add, g)
+						grew = run(func() error { req, rec = grow(); return nil })
+						held(t, ctx, g, grew, "the growth")
+						if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
+							"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
+							t.Errorf("the growth at its gate holds %s; want %s", got, want)
+						}
+						removed = run(func() error { return r.remove(ctx, workspacepg.New(r.pool)) })
+					} else {
+						removed = run(func() error { return r.remove(ctx, endedHolding{workspacepg.New(r.pool), g}) })
+						held(t, ctx, g, removed, "the removal")
+						grow := r.growth(t, add, nil)
+						grew = run(func() error { req, rec = grow(); return nil })
+					}
+					pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
+					if !r.webFree(t) {
+						t.Error("Web is held while the second side waits for acme's row; want it locked after that row")
+					}
+					opened := time.Now()
+					close(g.open)
+
+					removal := result(t, ctx, removed, "the removal")
+					if err := result(t, ctx, grew, "the growth"); err != nil {
+						t.Fatal(err)
+					}
+					contract.CheckResponse(t, req, rec.Result())
+					want, grown := "15 ended, Web 15 ended", rec.Code == map[bool]int{false: http.StatusOK, true: http.StatusCreated}[add]
+					if !growthFirst {
+						want, grown = "15 ended, "+before[len("15, "):], refusedAsNoMember(rec, add)
+					}
+					if got := r.standing(t); removal != nil || !grown || got != want {
+						t.Errorf("the removal = %v, the growth = %d %s, bob %s; want the removal done, the growth %s, bob %s", removal, rec.Code,
+							rec.Body, got, map[bool]string{true: "done", false: "refused"}[growthFirst], want)
+					}
+					if made, written := r.membershipTimes(t); growthFirst && (written.Before(made) || written.Before(opened)) {
+						t.Errorf("bob's membership of Web made at %v, last written at %v, the gate opened at %v; want it ended last by the "+
+							"removal, at a time read once it held acme", made, written, opened)
+					}
+				})
+			}
+		}
+	}
+}
+
+// refusedAsNoMember reports whether rec is the growth's refusal of bob as
+// no active member of acme: alice's adding him, 422 members[0].member_id
+// not_allowed alone; his joining, 404 project.not_found.
+func refusedAsNoMember(rec *httptest.ResponseRecorder, add bool) bool {
+	if !add {
+		return refusedAsAGuest(rec, false)
+	}
+	var problem struct {
+		Code   string `json:"code"`
+		Errors []struct {
+			Field string `json:"field"`
+			Code  string `json:"code"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
+		return false
+	}
+	return rec.Code == http.StatusUnprocessableEntity && problem.Code == "validation_failed" && len(problem.Errors) == 1 &&
+		problem.Errors[0].Field == "members[0].member_id" && problem.Errors[0].Code == "not_allowed"
+}

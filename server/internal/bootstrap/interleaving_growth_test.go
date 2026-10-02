@@ -166,12 +166,14 @@ func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdat
 	return err
 }
 
-// standing is bob's role in acme, then his membership of Web: its role,
-// "ended" when it is, "deleted" when Web is; "none" when he has none.
+// standing is bob's role in acme, "ended" when his membership is, then his
+// membership of Web: its role, "ended" when it is, "deleted" when Web is;
+// "none" when he has none.
 func (r growthRace) standing(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT role::text FROM workspace_members WHERE id = $1) || ', Web ' ||
+	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END
+		FROM workspace_members WHERE id = $1) || ', Web ' ||
 		coalesce((SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END || CASE WHEN deleted_at IS NULL THEN '' ELSE ' deleted' END
 		          FROM project_members WHERE project_id = $2 AND member_id = $3), 'none')`, r.bobIn, r.web, r.bob).Scan(&s); err != nil {
 		t.Fatal(err)
