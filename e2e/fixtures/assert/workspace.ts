@@ -291,10 +291,10 @@ export async function expectWorkspaceDeleted(
 
 /**
  * W2, W7, W12: the membership of the account of email in the workspace of slug has ended, by the account of byEmail:
- * its row kept, inactive, with its role; his memberships of the projects of projects (identifiers), each active
- * before, ended with it, at the same moment and by the same account, each row kept with its role; he has no other
- * membership of the workspace's projects that is active; and no invitation to his address in the workspace is
- * pending (M3 design 3.6, 3.8).
+ * its row kept, inactive, with its role; his memberships of the projects of projects (identifiers; each active
+ * before, as the caller shows), ended with it, at the same moment and by the same account, each row kept with its
+ * role; he has no other membership of the workspace's projects that is active; and no invitation to his address in
+ * the workspace is pending (M3 design 3.6, 3.8).
  */
 export async function expectMembershipEnded(
   db: Database,

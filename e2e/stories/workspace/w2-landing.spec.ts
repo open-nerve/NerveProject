@@ -34,9 +34,11 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   const bobId = await accountId(api, bob);
   const first = slugFor(testInfo, "first");
   const second = slugFor(testInfo, "second");
-  // First holds a row of each table its deletion writes: alice's membership, a pending invitation, her display
-  // settings, and her project Web with its own rows.
+  // First holds a row of each table its deletion writes: alice's membership and bob's, which he wrote, so that the
+  // deletion's writing it shows; a pending invitation (bob's, accepted, was deleted alone); her display settings; and
+  // her project Web with its own rows.
   const firstWorkspace = await createWorkspace(api, alice, { name: "First", slug: first });
+  await inviteAndAccept(api, alice, first, { email: bobEmail, token: bob }, 15);
   await invite(api, alice, first, [{ email: emailFor(testInfo, "invitee"), role: 15 }]);
   const settings = await api.PATCH("/api/v0/me/workspaces/{slug}/preferences", {
     params: { path: { slug: first } },
@@ -68,16 +70,18 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
       created_at: w.created_at,
     }));
   };
-  expect(await listed(alice)).toEqual([entry(firstWorkspace, 20, 1), entry(secondWorkspace, 20, 2)]);
-  expect(await listed(bob), "bob's, Second's member's").toEqual([entry(secondWorkspace, 15, 2)]);
+  expect(await listed(alice)).toEqual([entry(firstWorkspace, 20, 2), entry(secondWorkspace, 20, 2)]);
+  expect(await listed(bob), "bob's, a member's").toEqual([entry(firstWorkspace, 15, 2), entry(secondWorkspace, 15, 2)]);
 
+  await expectWrittenLastBy(db, first, bobEmail, { workspace: bobEmail });
   const deleted = await api.DELETE("/api/v0/workspaces/{slug}", {
     params: { path: { slug: first } },
     headers: bearer(alice),
   });
   expect(deleted.response.status).toBe(204);
-  await expectWorkspaceDeleted(db, first, aliceEmail, []);
+  await expectWorkspaceDeleted(db, first, aliceEmail, ["workspace_member_invites"]);
   expect(await listed(alice)).toEqual([entry(secondWorkspace, 20, 2)]);
+  expect(await listed(bob)).toEqual([entry(secondWorkspace, 15, 2)]);
 
   // Second's only admin cannot leave it; once bob is its admin too, she leaves.
   const alone = await api.POST("/api/v0/workspaces/{slug}/leave", {

@@ -78,6 +78,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
     "bob and carol join Web, carol Ops, dave Docs"
   ).toEqual([200, 200, 200, 200]);
   await addProjectMembers(api, carol.token, docs.id, [{ member_id: erin.id, role: 20 }]);
+  await expectWrittenLastBy(db, slug, erin.email, { workspace: erin.email, DOCS: carol.email });
   const erinLeaves = await api.POST("/api/v0/workspaces/{slug}/leave", {
     params: { path: { slug } },
     headers: bearer(erin.token),
@@ -127,6 +128,10 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   // bob becomes a guest, and a guest in each of his projects: Ops is left without an admin. He wrote each of those
   // rows last, so that the admin's writing them shows.
   await expectWrittenLastBy(db, slug, bob.email, { workspace: bob.email, OPS: bob.email, WEB: bob.email });
+  expect(await projectRoles(bob.email), "bob's memberships of the projects, Ops's admin's").toEqual([
+    { identifier: "OPS", role: 20, is_active: true, by: bob.email },
+    { identifier: "WEB", role: 15, is_active: true, by: bob.email },
+  ]);
   const demoted = await api.PATCH("/api/v0/workspace-members/{workspace_member_id}", {
     params: { path: { workspace_member_id: await membership(bob.id) } },
     body: { role: 5 },
@@ -134,6 +139,7 @@ test("W7 (API): the admin makes a member a guest in every project, removes anoth
   });
   expect(demoted.response.status).toBe(200);
   await expectMembership(db, slug, bob.email, { role: 5, is_active: true });
+  await expectWrittenLastBy(db, slug, bob.email, { workspace: adminEmail, OPS: adminEmail, WEB: adminEmail });
   expect(await projectRoles(bob.email), "bob's memberships of the projects").toEqual([
     { identifier: "OPS", role: 5, is_active: true, by: adminEmail },
     { identifier: "WEB", role: 5, is_active: true, by: adminEmail },
