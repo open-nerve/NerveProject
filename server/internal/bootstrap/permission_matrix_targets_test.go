@@ -35,8 +35,9 @@ func pathOf(pattern, path string) bool {
 // a cell of the column c sends, points; "" when nothing. A workspace named
 // by its slug ({slug} right after workspaces) must be workspaceOf(c). A
 // project named by its id ({project_id}) must be projectOf(c)'s, and c a
-// column of a project table (matrixTables): a project's operation in a
-// workspace-level row would leave the project level's own columns unasked.
+// column of a project table (projectTables): a project's operation in a
+// workspace-level row, or the only admin's, would leave the project level's
+// own columns unasked.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and
@@ -52,8 +53,8 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 		case !strings.HasPrefix(segment, "{") || !strings.HasSuffix(segment, "}"):
 		case passOver(segment):
 		case segment == "{project_id}":
-			if !slices.ContainsFunc(matrixTables, func(table []caller) bool { return slices.Contains(table, c) }) {
-				return "{project_id} from a column of no project table (matrixTables): a project's row names its columns"
+			if !slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) }) {
+				return "{project_id} from a column of no project table (projectTables): a project's row names its columns"
 			}
 			if id := s.project(projectOf(c)).String(); got[i] != id {
 				return fmt.Sprintf("{project_id} %s is not its column's project %s, %s", got[i], projectOf(c), id)

@@ -150,6 +150,16 @@ type MembershipEnder interface {
 	EndMember(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
 }
 
+// WorkspaceLeaver ends the caller's own membership of a workspace named by
+// its slug, under the workspace's lock.
+type WorkspaceLeaver interface {
+	WorkspaceLocker
+	MembershipEnder
+	// HasOtherAdmin reports whether the workspace has an active admin other
+	// than userID.
+	HasOtherAdmin(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error)
+}
+
 // MemberRemover removes a membership named by its id under its workspace's
 // lock.
 type MemberRemover interface {

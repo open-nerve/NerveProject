@@ -32,7 +32,7 @@ type fakeWorkspaces struct {
 	memberships map[uuid.UUID][]domain.Membership // by workspace, for ListMembers and MemberByID
 	membersErr  error                             // for ListMembers and MemberByID
 	roleErr     error                             // for UpdateMemberRole
-	endErrs     map[string]error                  // by method, for DeletePendingInvitations and EndMember
+	endErrs     map[string]error                  // by method, for HasOtherAdmin, DeletePendingInvitations and EndMember
 	onLock      func()                            // run by LockWorkspace once it has locked: what changed while it waited
 	prefs       map[prefsKey]domain.Preferences
 	prefIDs     map[prefsKey]uuid.UUID // the id each row UpsertPreferences inserted took

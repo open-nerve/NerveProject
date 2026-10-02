@@ -103,11 +103,24 @@ const (
 // 9.2's table.
 var workspaceColumns = []caller{callerAdmin, callerMember, callerGuest, callerNever, callerRemoved, callerDeleted}
 
+// callerSoleAdmin is the column of a workspace's only active admin, for the
+// cells of 9.2 that acme, with two admins, cannot give (P4a review §6):
+// other's admin, the account never a member of acme, beside other's member,
+// the removed member.
+const callerSoleAdmin caller = "the only admin of other"
+
+// soleAdminColumns are the columns of the only admin's table: his alone.
+var soleAdminColumns = []caller{callerSoleAdmin}
+
 // workspaceOf is the slug of the workspace a column's cells target: the
-// prepared workspace, or the deleted one its caller was the admin of.
+// prepared workspace; the deleted one its caller was the admin of; other,
+// for its only admin.
 func workspaceOf(c caller) string {
-	if c == callerDeleted {
+	switch c {
+	case callerDeleted:
 		return "gone"
+	case callerSoleAdmin:
+		return "other"
 	}
 	return "acme"
 }

@@ -65,6 +65,7 @@ type fakes struct {
 	get    *fakeGet
 	update *fakeUpdate
 	del    *fakeDelete
+	leave  *fakeLeave
 	member *fakeMembers
 	role   *fakeUpdateMember
 	remove *fakeRemoveMember
@@ -131,6 +132,16 @@ type fakeDelete struct {
 }
 
 func (f *fakeDelete) Execute(ctx context.Context, slug string) error {
+	f.calls = append(f.calls, caller(ctx)+" "+slug)
+	return f.err
+}
+
+type fakeLeave struct {
+	calls []string // "caller slug"
+	err   error
+}
+
+func (f *fakeLeave) Execute(ctx context.Context, slug string) error {
 	f.calls = append(f.calls, caller(ctx)+" "+slug)
 	return f.err
 }
@@ -236,6 +247,9 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.del == nil {
 		f.del = &fakeDelete{}
 	}
+	if f.leave == nil {
+		f.leave = &fakeLeave{}
+	}
 	if f.member == nil {
 		f.member = &fakeMembers{}
 	}
@@ -255,7 +269,8 @@ func newServer(t *testing.T, f fakes) http.Handler {
 		f.invitations = &fakeInvitations{}
 	}
 	httpadapter.Register(router, api, httpadapter.UseCases{
-		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, CheckSlug: f.check,
+		ListWorkspaces: f.list, CreateWorkspace: f.create, GetWorkspace: f.get, UpdateWorkspace: f.update, DeleteWorkspace: f.del, Leave: f.leave,
+		CheckSlug:   f.check,
 		ListMembers: f.member, UpdateMember: f.role, RemoveMember: f.remove, GetPreferences: fakeGetPrefs{f.prefs},
 		UpdatePreferences: fakeUpdatePrefs{f.prefs},
 		ListInvitations:   fakeListInvitations{f.invitations}, CreateInvitations: fakeCreateInvitations{f.invitations},

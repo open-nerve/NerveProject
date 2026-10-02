@@ -23,6 +23,14 @@ func (h handler) ListWorkspaceMembers(ctx context.Context, req gen.ListWorkspace
 	return out, nil
 }
 
+// LeaveWorkspace serves POST /api/v0/workspaces/{slug}/leave.
+func (h handler) LeaveWorkspace(ctx context.Context, req gen.LeaveWorkspaceRequestObject) (gen.LeaveWorkspaceResponseObject, error) {
+	if err := h.uc.Leave.Execute(ctx, req.Slug); err != nil {
+		return nil, err
+	}
+	return gen.LeaveWorkspace204Response{}, nil
+}
+
 // UpdateWorkspaceMember serves PATCH /api/v0/workspace-members/{workspace_member_id}.
 func (h handler) UpdateWorkspaceMember(ctx context.Context, req gen.UpdateWorkspaceMemberRequestObject) (gen.UpdateWorkspaceMemberResponseObject, error) {
 	m, err := h.uc.UpdateMember.Execute(ctx, req.WorkspaceMemberID, shared.Role(req.Body.Role))

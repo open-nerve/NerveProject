@@ -20,6 +20,10 @@ var (
 	// ErrOwnMembership answers a change of the caller's own membership (M3
 	// design 3.4, 5.3): nobody changes his own role.
 	ErrOwnMembership = shared.NewError(shared.KindConflict, "workspace.own_membership", "You cannot change your own membership.")
+	// ErrSoleAdmin answers the leaving of a workspace's only active admin,
+	// also when he is its only member (M3 design 3.7 rule 1).
+	ErrSoleAdmin = shared.NewError(shared.KindConflict, "workspace.sole_admin",
+		"The workspace would be left without an admin; make another member an admin first.")
 	// ErrInvitationNotFound answers an invitation that does not exist or is
 	// deleted, as an accepted one is, or whose workspace the caller cannot
 	// see; for the invitee, also a token that is not the invitation's: the

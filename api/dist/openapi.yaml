@@ -481,6 +481,26 @@ paths:
                 $ref: '#/components/schemas/WorkspaceMemberList'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/leave:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    post:
+      operationId: leaveWorkspace
+      tags:
+        - workspace
+      summary: Leave a workspace
+      description: 'Every active member leaves a workspace himself. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. Its only active admin is refused workspace.sole_admin, also when he is its only member: he makes another member an admin first. The workspace''s pending invitation to his address is deleted, so that he needs a new one to come back; a declined one stays. His membership ends, its row kept, and so do his memberships of the workspace''s projects, all at the same moment, in one transaction. Were he the only active admin of a project of the workspace that has other active members, project.sole_admin, and nothing changes.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - workspace.not_found
+        - workspace.sole_admin
+        - project.sole_admin
+      responses:
+        '204':
+          description: The caller's membership has ended.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/workspaces/{slug}/invitations:
     parameters:
       - $ref: '#/components/parameters/Slug'

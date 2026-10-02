@@ -55,6 +55,8 @@ paths:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}'
   /api/v0/workspaces/{slug}/members:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1members'
+  /api/v0/workspaces/{slug}/leave:
+    $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1leave'
   /api/v0/workspaces/{slug}/invitations:
     $ref: 'modules/workspace.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1invitations'
   /api/v0/workspace-members/{workspace_member_id}:

@@ -19,8 +19,8 @@ import (
 // that queued behind another on the lock never stamps an earlier time than
 // the one it waited for. The deletion's cascade uses that one read for
 // every step, a change to guest or a restoring as a guest for the
-// projects' step, and a removal for each step of the ending. The clock
-// logs its read among the fakes' calls.
+// projects' step, and a removal and a leaving for each step of the ending.
+// The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
 	erinToAcme := invitationTo(erin, acme, shared.RoleGuest)
@@ -64,6 +64,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 				Execute(as(alice), bobInAcme.ID)
 			return f.log.calls, err
 		}, slices.Concat(removalCalls(alice, bobInAcme), []string{"Now"}, endingCalls(acme.ID, bob, alice.ID))},
+		{"leaveWorkspace", func() ([]string, error) {
+			f := newMembers()
+			err := app.NewLeaveWorkspace(f.workspaces, f.profiles, f.projects, f.auth, &fakeTx{}, clockAt{clockNow, f.log}).Execute(as(bob), "acme")
+			return f.log.calls, err
+		}, slices.Concat(leavingCalls(bob, acme), []string{"Now"}, endingCalls(acme.ID, bob, bob.ID))},
 		{"updateWorkspaceInvitation", func() ([]string, error) {
 			f := newInvitations()
 			_, err := app.NewUpdateWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}, f.mac).

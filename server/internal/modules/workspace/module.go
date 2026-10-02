@@ -1,7 +1,7 @@
 // Package workspace is the workspaces module (M3 design 3.3, 6.2):
 // workspaces, their members and their invitations. It brings creating,
-// listing, reading, changing and deleting workspaces, checking a slug,
-// listing the members, changing their roles and removing them, each
+// listing, reading, changing, deleting and leaving workspaces, checking a
+// slug, listing the members, changing their roles and removing them, each
 // member's display settings, and the invitations, and offers the other
 // modules its reads through ports.
 package workspace
@@ -135,6 +135,7 @@ func New(d Deps) *Module {
 		GetWorkspace:      app.NewGetWorkspace(store, d.Authorizer),
 		UpdateWorkspace:   app.NewUpdateWorkspace(store, d.Authorizer, d.Tx, d.Clock),
 		DeleteWorkspace:   app.NewDeleteWorkspace(store, d.Projects, d.Authorizer, d.Tx, d.Clock, d.Logger),
+		Leave:             app.NewLeaveWorkspace(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),
 		ListMembers:       app.NewListWorkspaceMembers(store, d.Profiles, d.Authorizer),
 		UpdateMember:      app.NewUpdateWorkspaceMember(store, d.Projects, d.Profiles, d.Authorizer, d.Tx, d.Clock),
 		RemoveMember:      app.NewRemoveWorkspaceMember(store, d.Profiles, d.Projects, d.Authorizer, d.Tx, d.Clock),

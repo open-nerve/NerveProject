@@ -39,6 +39,11 @@ type DeleteWorkspaceUseCase interface {
 	Execute(ctx context.Context, slug string) error
 }
 
+// LeaveUseCase is app.LeaveWorkspace.
+type LeaveUseCase interface {
+	Execute(ctx context.Context, slug string) error
+}
+
 // ListMembersUseCase is app.ListWorkspaceMembers.
 type ListMembersUseCase interface {
 	Execute(ctx context.Context, slug string) ([]domain.Member, error)
@@ -111,6 +116,7 @@ type UseCases struct {
 	GetWorkspace      GetWorkspaceUseCase
 	UpdateWorkspace   UpdateWorkspaceUseCase
 	DeleteWorkspace   DeleteWorkspaceUseCase
+	Leave             LeaveUseCase
 	ListMembers       ListMembersUseCase
 	UpdateMember      UpdateMemberUseCase
 	RemoveMember      RemoveMemberUseCase

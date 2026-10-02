@@ -17,6 +17,7 @@ var (
 	cellMemberNotFound    = cell{http.StatusNotFound, "workspace.member_not_found"}
 	cellOwnMembership     = cell{http.StatusConflict, "workspace.own_membership"}
 	cellValidationFailed  = cell{http.StatusUnprocessableEntity, "validation_failed"}
+	cellSoleAdmin         = cell{http.StatusConflict, "workspace.sole_admin"}
 )
 
 // inWorkspace are the cells of a workspace-level row: the answer of the
@@ -118,6 +119,13 @@ func workspaceMatrixRows() []matrixRow {
 			cells: inWorkspace(cellNoContent, cellForbidden, cellForbidden)},
 		{op: "listWorkspaceMembers", request: toWorkspace(http.MethodGet, "/members", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
 			check: listsTheMembers},
+		// Every active member leaves; acme's admin beside PM+WA, its other
+		// admin (M3 design 9.2). other's only admin is refused, beside its
+		// member, as he would be alone (3.7 rule 1).
+		{op: "leaveWorkspace", write: true, request: toWorkspace(http.MethodPost, "/leave", ""),
+			cells: inWorkspace(cellNoContent, cellNoContent, cellNoContent)},
+		{op: "leaveWorkspace", variant: "the only admin", write: true, columns: soleAdminColumns, request: toWorkspace(http.MethodPost, "/leave", ""),
+			cells: map[caller]cell{callerSoleAdmin: cellSoleAdmin}},
 		{op: "updateWorkspaceMember", variant: "another member", write: true, request: toMembership(http.MethodPatch, anotherMember, `{"role":5}`),
 			cells: ofMember(cellOK, cellForbidden, cellForbidden), check: demotesTheMember},
 		{op: "updateWorkspaceMember", variant: "one's own", write: true, request: toMembership(http.MethodPatch, ownMembership, `{"role":15}`),

@@ -12,9 +12,13 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 )
 
+// projectTables are the tables of the project level (M3 design 9.2), each
+// whole: a row that names a project names one of them.
+var projectTables = [][]caller{projectColumns, archivedColumns}
+
 // matrixTables are the columns a row may name besides the workspace level's
-// (nil): each table of M3 design 9.2, whole.
-var matrixTables = [][]caller{projectColumns, archivedColumns}
+// (nil): each table of the project level, and the only admin's.
+var matrixTables = append(slices.Clone(projectTables), soleAdminColumns)
 
 // matrixViolations reports where the matrix and the contract part: an
 // operation without a row, unless every tag it has is on exempt.modules, so

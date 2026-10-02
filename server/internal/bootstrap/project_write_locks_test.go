@@ -54,14 +54,21 @@ var projectWrites = []projectWrite{
 // writesOnAProject are the writes on a project among ops, by operationId:
 // every operation but GET whose path names a project by its id
 // ({project_id}), or that has a row among rows with a column of the project
-// level (one of no workspace's, any table of them). The second takes in a
-// write on a project addressed by a row under it (P5's
-// /project-members/{project_member_id}, P7's /states/{state_id}), and one
-// whose rows ask a column set of their own (a self-only leaveProject).
+// level (a column of a project table, projectTables, that is no column of
+// the workspace level). The second takes in a write on a project addressed
+// by a row under it (P5b's /project-members/{project_member_id}, P7's
+// /states/{state_id}) whose row names a project table's columns; a column
+// set of a row's own counts only once it is listed in projectTables, so a
+// new table of the project level goes there, not beside the only admin's
+// in matrixTables; not a workspace's write that the only admin's table
+// asks (leaveWorkspace).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
+	ofTheProjectLevel := func(c caller) bool {
+		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
+	}
 	projectLevel := map[string]bool{}
 	for _, r := range rows {
-		if slices.ContainsFunc(r.columns, func(c caller) bool { return !slices.Contains(workspaceColumns, c) }) {
+		if slices.ContainsFunc(r.columns, ofTheProjectLevel) {
 			projectLevel[r.op] = true
 		}
 	}
@@ -76,19 +83,26 @@ func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 
 // Each shape of a write on a project is one, and nothing else is: a write
 // whose path names the project, whatever its rows; one addressed by a row
-// under the project whose rows ask a project-level column set of their
-// own; not a read of a project, nor a write at the workspace level.
+// under the project whose rows name a project table's columns. Not one so
+// addressed whose rows name a column set that projectTables does not list
+// (a self-only one, until it is listed there), nor a read of a project,
+// nor a write at the workspace level, also when the only admin's table
+// asks it.
 func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	ops := []apitest.Operation{
 		{ID: "getProject", Method: http.MethodGet, Path: "/api/v0/projects/{project_id}"},
 		{ID: "createProject", Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/projects"},
 		{ID: "leaveProject", Method: http.MethodPost, Path: "/api/v0/projects/{project_id}/leave"},
 		{ID: "updateProjectMember", Method: http.MethodPatch, Path: "/api/v0/project-members/{project_member_id}"},
+		{ID: "leaveProjectSelf", Method: http.MethodPost, Path: "/api/v0/project-members/{project_member_id}/leave"},
+		{ID: "leaveWorkspace", Method: http.MethodPost, Path: "/api/v0/workspaces/{slug}/leave"},
 	}
 	rows := []matrixRow{
 		{op: "getProject", columns: projectColumns},
 		{op: "createProject", write: true},
 		{op: "updateProjectMember", write: true, columns: []caller{callerProjectAdmin, callerProjectMember}},
+		{op: "leaveProjectSelf", write: true, columns: []caller{"a project's member, himself"}},
+		{op: "leaveWorkspace", write: true, columns: soleAdminColumns},
 	}
 	if got, want := writesOnAProject(ops, rows), []string{"leaveProject", "updateProjectMember"}; !slices.Equal(got, want) {
 		t.Errorf("writesOnAProject() = %q, want %q", got, want)

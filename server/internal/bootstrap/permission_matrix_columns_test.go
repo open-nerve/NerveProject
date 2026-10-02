@@ -60,7 +60,7 @@ func accountOf(c caller) caller {
 	switch c {
 	case callerArchivedAdmin:
 		return callerProjectAdmin
-	case callerArchivedNever:
+	case callerArchivedNever, callerSoleAdmin:
 		return callerNever
 	case callerProjectGuest:
 		return callerGuest
@@ -94,7 +94,7 @@ func projectOf(c caller) string {
 // call with no token, and its cells answer 401 whatever the rule.
 func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	var used []caller
-	for _, c := range slices.Concat(workspaceColumns, projectColumns, archivedColumns) {
+	for _, c := range slices.Concat(workspaceColumns, projectColumns, archivedColumns, soleAdminColumns) {
 		if !slices.Contains(matrixAccounts, accountOf(c)) {
 			t.Errorf("column %s calls as %s, which prepareMatrix does not register", c, accountOf(c))
 		}
@@ -212,11 +212,17 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 		}), checks}, func() []string {
 			var want []string
 			for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (matrixTables): "+
+				want = append(want, fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
 					"a project's row names its columns", c))
 			}
 			return want
 		}()},
+		// The only admin's table is a table a row may name, and no project
+		// table: a project's operation in it is the same gap.
+		{"a project operation in the only admin's row", listed, []matrixRow{with(func(r *matrixRow) {
+			r.columns, r.cells = soleAdminColumns, map[caller]cell{callerSoleAdmin: cellOK}
+		}), checks}, []string{fmt.Sprintf("row getProject, %s: {project_id} from a column of no project table (projectTables): "+
+			"a project's row names its columns", callerSoleAdmin)}},
 		{"a {slug} of another column's workspace beside a listed {identifier}", listed, []matrixRow{row, func() matrixRow {
 			r := checks
 			r.request = sameRequest(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/WEB", "")

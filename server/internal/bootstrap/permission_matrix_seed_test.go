@@ -211,6 +211,26 @@ func (s projectSeed) preconditions(sd seeded) {
 	if f, found, err := s.store.ProjectFacts(ctx, s.projects[projectOf(callerRemoved)], s.ids[callerRemoved]); err != nil || !found || !f.Member {
 		s.t.Fatalf("the removed member's facts of %s = %+v, %v, %v; want him its active member", projectOf(callerRemoved), f, found, err)
 	}
+	// other's admin is its only active admin, beside its active member, so
+	// that his leaving's 409 is the rule's (3.7 rule 1); acme's admin has
+	// another, PM+WA, so that his leaving's 204 is no other case.
+	for _, tt := range []struct {
+		slug  string
+		c     caller
+		other bool
+	}{{"other", callerNever, false}, {"acme", callerAdmin, true}} {
+		role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace(tt.slug), s.ids[tt.c])
+		if err != nil || !active || role != shared.RoleAdmin {
+			s.t.Fatalf("%s's role in %s = %d, %v, %v; want its active admin", tt.c, tt.slug, role, active, err)
+		}
+		if other, err := s.matrixSeed.store.HasOtherAdmin(ctx, sd.workspace(tt.slug), s.ids[tt.c]); err != nil || other != tt.other {
+			s.t.Fatalf("another admin of %s than %s: %v, %v; want %v", tt.slug, tt.c, other, err, tt.other)
+		}
+	}
+	if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("other"), s.ids[callerRemoved]); err != nil || !active ||
+		role != shared.RoleMember {
+		s.t.Fatalf("the removed member's role in other = %d, %v, %v; want its active member", role, active, err)
+	}
 	// other's project is the one no list of acme's may show: were it not
 	// there, undeleted in a workspace of its own, a list of every
 	// workspace's projects would pass the matrix and

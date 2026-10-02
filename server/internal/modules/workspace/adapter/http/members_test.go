@@ -162,3 +162,44 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 		t.Errorf("DELETE of no membership id = %d, calls %q; want 400 and no call", res.StatusCode, remove.calls)
 	}
 }
+
+// POST …/leave ends the caller's own membership of the workspace of the
+// path and answers 204 with no body.
+func TestLeaveWorkspace(t *testing.T) {
+	leave := &fakeLeave{}
+	h := newServer(t, fakes{leave: leave})
+	for _, tt := range []struct{ token, slug string }{{"alice", "acme"}, {"bob", "beta"}} {
+		if res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/"+tt.slug+"/leave", tt.token, "")); res.StatusCode != http.StatusNoContent ||
+			body != "" {
+			t.Errorf("%s's leaving %s = %d %q, want 204 and no body", tt.token, tt.slug, res.StatusCode, body)
+		}
+	}
+	if want := []string{"alice acme", "bob beta"}; !slices.Equal(leave.calls, want) {
+		t.Errorf("calls = %q, want %q", leave.calls, want)
+	}
+}
+
+// The use case's refusals, as the contract declares them: the project
+// module's project.sole_admin comes through as it is (M3 design 9.4).
+func TestLeaveWorkspaceRefusals(t *testing.T) {
+	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin", "The member is the only admin of a project.")
+	tests := []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{domain.ErrNotFound, http.StatusNotFound,
+			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"workspace.sole_admin","title":"Conflict",` +
+			`"detail":"The workspace would be left without an admin; make another member an admin first."}`},
+		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
+			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The member is the only admin of a project."}`},
+	}
+	for _, tt := range tests {
+		h := newServer(t, fakes{leave: &fakeLeave{err: tt.err}})
+		res, body := do(t, h, request(http.MethodPost, "/api/v0/workspaces/acme/leave", "alice", ""))
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("leaving refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}

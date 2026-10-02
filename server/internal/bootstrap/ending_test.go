@@ -185,6 +185,12 @@ func (w endingWorld) membership(t *testing.T, name string) uuid.UUID {
 	return id
 }
 
+// leave is name's leaving of the workspace slug: its status and body.
+func (w endingWorld) leave(t *testing.T, slug, name string) (int, string) {
+	t.Helper()
+	return call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces/"+slug+"/leave", w.tokens[name], "")
+}
+
 // rowJSON is the row id of table as JSON, its columns by name; nil when
 // there is none.
 func rowJSON(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) map[string]any {
@@ -241,7 +247,7 @@ func projectMemberships(t *testing.T, pool *pgxpool.Pool, user uuid.UUID, projec
 }
 
 // An ending of name's membership of acme on the wired app: alice's removal
-// of him.
+// of him, or his leaving.
 type ending struct {
 	name string
 	// request is the ending's method, its path, and the access token it is
@@ -261,10 +267,14 @@ var endings = []ending{
 	{name: "removal", request: func(w endingWorld, t *testing.T, name string) (string, string, string) {
 		return http.MethodDelete, "/api/v0/workspace-members/" + w.membership(t, name).String(), w.tokens["alice"]
 	}, by: func(string) string { return "alice" }},
+	{name: "leaving", request: func(w endingWorld, _ *testing.T, name string) (string, string, string) {
+		return http.MethodPost, "/api/v0/workspaces/acme/leave", w.tokens[name]
+	}, by: func(name string) string { return name }},
 }
 
-// A removal ends a membership and leaves no invitation, in one transaction
-// at one moment (M3 design 3.6, 3.7 rule 2, 3.8, 9.3), on the wired app.
+// A removal and a leaving each end a membership and leave no invitation,
+// in one transaction at one moment (M3 design 3.6, 3.7 rule 2, 3.8, 9.3),
+// on the wired app.
 //   - bob is Ops's only active admin and carol its member, erin's ended
 //     membership as its admin counting for nothing: the ending of his
 //     membership is 409 project.sole_admin, and no row of any table
@@ -354,5 +364,33 @@ func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
 				t.Errorf("dave's declined invitation after the ending:\n%v\nwant it as it was:\n%v", after, declined)
 			}
 		})
+	}
+}
+
+// A workspace's only active admin cannot leave it (M3 design 3.7 rule 1,
+// 9.3): alice is refused 409 workspace.sole_admin in solo, where she is
+// alone, and in acme, beside its members, and no row of any table changes;
+// once carol is acme's admin too, alice leaves it.
+func TestTheOnlyAdminCannotLeave(t *testing.T) {
+	w := newEndingWorld(t)
+	if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces", w.tokens["alice"],
+		`{"name":"solo","slug":"solo"}`); status != http.StatusCreated {
+		t.Fatalf("creating solo = %d %s", status, body)
+	}
+	before := tableRows(t, w.pool, riversOwn)
+	for _, slug := range []string{"solo", "acme"} {
+		if status, body := w.leave(t, slug, "alice"); status != http.StatusConflict || problemCode(t, []byte(body)) != "workspace.sole_admin" {
+			t.Errorf("alice's leaving %s, its only admin = %d %s, want 409 workspace.sole_admin", slug, status, body)
+		}
+	}
+	if after := tableRows(t, w.pool, riversOwn); !maps.Equal(after, before) {
+		t.Errorf("the tables after the refused leavings changed:\n%v\nwant them as they were:\n%v", after, before)
+	}
+	if status, body := call(t, w.contract, http.MethodPatch, w.base+"/api/v0/workspace-members/"+w.membership(t, "carol").String(),
+		w.tokens["alice"], `{"role":20}`); status != http.StatusOK {
+		t.Fatalf("carol made acme's admin = %d %s", status, body)
+	}
+	if status, body := w.leave(t, "acme", "alice"); status != http.StatusNoContent {
+		t.Errorf("alice's leaving acme, carol its admin too = %d %s, want 204", status, body)
 	}
 }

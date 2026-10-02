@@ -96,3 +96,15 @@ func (f *fakeWorkspaces) EndMember(ctx context.Context, workspaceID, userID, by 
 	}
 	return fmt.Errorf("end workspace member %s of %s: no such row", userID, workspaceID)
 }
+
+// HasOtherAdmin answers whether the workspace's memberships it holds have
+// an active admin other than userID.
+func (f *fakeWorkspaces) HasOtherAdmin(ctx context.Context, workspaceID, userID uuid.UUID) (bool, error) {
+	f.log.add(ctx, "HasOtherAdmin %s %s", workspaceID, userID)
+	if err := f.endErrs["HasOtherAdmin"]; err != nil {
+		return false, fmt.Errorf("look for another admin: %w", err)
+	}
+	return slices.ContainsFunc(f.memberships[workspaceID], func(m domain.Membership) bool {
+		return m.MemberID != userID && m.Role == shared.RoleAdmin && m.IsActive
+	}), nil
+}
