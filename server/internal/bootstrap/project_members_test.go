@@ -97,9 +97,10 @@ func TestAnArchivedProjectIsJoinedAsAnyOther(t *testing.T) {
 // his display settings at 65535, the joiners' place, not before his other
 // projects as an add or a creation puts it (3.18). Joining again, an active
 // member, he is left as he is: nothing is written. Then, each time, his
-// membership is ended with a role, as P5's removal will end it (SQL stands
-// in), and he joins again, or alice adds him with a role: the same row is
-// active again with the role of 9.1's row, by the caller at the time of
+// membership is ended with a role, as P5b's removal of a project member
+// will end it (SQL stands in), and he joins again, or alice adds him with
+// a role: the same row is active again with the role of 9.1's row, by the
+// caller at the time of
 // that request, still made when it was. alice's adds take the role she
 // asks for, below the ended one and above it. His workspace role is
 // changed through the API before the last row.
@@ -207,8 +208,9 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 // after every statement ran, leaves no row, which a statement run in a
 // transaction of its own would have outlived. bob, acme's member, is first
 // no member of alice's Web, then an ended one without display settings
-// there (P5's removal ends it; SQL stands in): each time, with the commits
-// of memberships refused, then those of display settings, which the growth
+// there (P5b's removal of a project member ends it; SQL stands in): each
+// time, with the commits of memberships refused, then those of display
+// settings, which the growth
 // writes last, alice's adding him and his joining answer 500 and change no
 // membership and no display settings. Once commits are allowed again, he
 // joins.

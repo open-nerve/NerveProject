@@ -46,8 +46,8 @@ import (
 
 // growthRace is a database with acme, whose admin is alice and whose
 // member is bob, and alice's public project Web, of which bob has an ended
-// membership as a member when ended is set: P5's removal ends one, and SQL
-// stands in for it.
+// membership as a member when ended is set: P5b's removal of a project
+// member ends one, and SQL stands in for it.
 type growthRace struct {
 	race
 	bob, bobIn, web uuid.UUID

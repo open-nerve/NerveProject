@@ -25,7 +25,7 @@ import (
 
 // matrixSeed writes the prepared workspaces, memberships and settings
 // through the workspace store, and keeps the workspaces' ids by slug; exec
-// runs the SQL that stands in for the stores P4b and P5 add.
+// runs the SQL that stands in for the stores P5b adds.
 type matrixSeed struct {
 	t          *testing.T
 	store      *workspacepg.Store
@@ -143,7 +143,7 @@ func (s projectSeed) archive(key string) {
 // WG-'s membership of acme's public project ended and of its private one
 // deleted, the member's of the private one deleted, and PM's display
 // settings in it deleted while his membership stays active. SQL stands in
-// for the store that will end a membership (P5), and makes the two
+// for the store that will end one project membership (P5b), and makes the two
 // deleted states that only a deleted project or workspace makes today,
 // which the list must still read as reading does. Each state is then read
 // back: one missing would let a list that counts an ended or a deleted
@@ -184,12 +184,34 @@ func (s projectSeed) partingStates(pool *pgxpool.Pool) {
 	}
 }
 
+// removal ends the removed member's membership of acme, then his active
+// memberships of acme's projects, found when they are ended, through the
+// stores, as removeWorkspaceMember's statements end them (M3 design 3.6's
+// lock table, convention 6): by acme's admin, at one moment. Its other
+// statement, the pending invitations', is left out: prepareMatrix makes
+// the invitation to his address after it, as one sent once he was removed
+// (3.8).
+func (s projectSeed) removal(sd seeded) {
+	s.t.Helper()
+	ctx, acme, removed, by := context.Background(), sd.workspace("acme"), s.ids[callerRemoved], s.ids[matrixAdmins["acme"]]
+	if err := s.matrixSeed.store.EndMember(ctx, acme, removed, by, s.now); err != nil {
+		s.t.Fatal(err)
+	}
+	projects, err := s.store.LockActiveMemberProjects(ctx, []uuid.UUID{acme}, removed)
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	if err := s.store.EndMemberships(ctx, projects, removed, by, s.now); err != nil {
+		s.t.Fatal(err)
+	}
+}
+
 // standIns writes, through SQL, the states no store writes yet, until the
 // phase that adds the store replaces it: the member before's membership of
-// the private project ended (P5) and the removed member's membership of
-// acme ended (P5). exec fails a statement that changes no row, and names
-// it, which it checks first.
-func (s projectSeed) standIns(pool *pgxpool.Pool, sd seeded) {
+// the private project ended (P5b, whose removal of a project member ends
+// one). exec fails a statement that changes no row, and names it, which it
+// checks first.
+func (s projectSeed) standIns(pool *pgxpool.Pool) {
 	s.t.Helper()
 	const none = "UPDATE project_members SET is_active = false WHERE false"
 	if failed, want := fatalOf(func(tb testing.TB) { s.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
@@ -197,7 +219,6 @@ func (s projectSeed) standIns(pool *pgxpool.Pool, sd seeded) {
 	}
 	s.exec(s.t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
 		s.projects["acme/private"], s.ids[callerBefore])
-	s.exec(s.t, pool, "UPDATE workspace_members SET is_active = false WHERE id = $1", sd.membership("acme", callerRemoved))
 }
 
 // preconditions checks the seeded rows that a cell's answer rests on and
@@ -205,11 +226,15 @@ func (s projectSeed) standIns(pool *pgxpool.Pool, sd seeded) {
 func (s projectSeed) preconditions(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
-	// The removed member is still an active member of the project his
-	// column aims at, so that only his ended membership of acme keeps him
-	// out of it: his cell's 404 would not show which, were he none.
-	if f, found, err := s.store.ProjectFacts(ctx, s.projects[projectOf(callerRemoved)], s.ids[callerRemoved]); err != nil || !found || !f.Member {
-		s.t.Fatalf("the removed member's facts of %s = %+v, %v, %v; want him its active member", projectOf(callerRemoved), f, found, err)
+	// The removed member's membership of the project his column aims at,
+	// public, is ended, as the removal left it, not deleted: his cell's 404
+	// is a removed member's, which a member of acme would not get there.
+	public, removed := s.projects[projectOf(callerRemoved)], s.ids[callerRemoved]
+	if f, found, err := s.store.ProjectFacts(ctx, public, removed); err != nil || !found || f.Member {
+		s.t.Fatalf("the removed member's facts of %s = %+v, %v, %v; want him no active member of it", projectOf(callerRemoved), f, found, err)
+	}
+	if ms, err := s.store.Memberships(ctx, public, []uuid.UUID{removed}); err != nil || len(ms) != 1 || ms[removed].Active {
+		s.t.Fatalf("the removed member's memberships of %s = %+v, %v; want his ended one", projectOf(callerRemoved), ms, err)
 	}
 	// other's admin is its only active admin, beside its active member, so
 	// that his leaving's 409 is the rule's (3.7 rule 1); acme's admin has
@@ -247,7 +272,7 @@ func (s projectSeed) preconditions(sd seeded) {
 // (permission_matrix_members_test.go): the workspace's member an active
 // member of acme and of neither project his row adds him to, so that its
 // 201 is an addition; X's account and the removed member no active members
-// of acme (the removed member's membership ended: standIns), WG-'s its
+// of acme (the removed member's membership ended: removal), WG-'s its
 // active guest, WA-'s its active admin and PM's an active member of acme's
 // public project, so that each 422 is the refusal its row names. The
 // workspace's member, WM-公, and its admin, WA-, are no active members of

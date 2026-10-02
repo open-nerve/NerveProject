@@ -193,8 +193,8 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 			callerMemberPrivate, public, private)}},
 		// The X columns answer alike wherever they aim; what they aim at is
 		// what they test: gone's project, deleted with it, hidden from its
-		// admin; the public project, which only his ended membership of acme
-		// keeps the removed member out of.
+		// admin; the public project, which any member of acme sees, and the
+		// removed member, his memberships of acme and of it ended, does not.
 		{"the deleted workspace's column at acme's project", listed, []matrixRow{aimed(callerDeleted, "acme/public"), checks},
 			[]string{fmt.Sprintf("row getProject, %s: {project_id} %s is not its column's project gone/project, %s", callerDeleted, public,
 				s.project("gone/project"))}},

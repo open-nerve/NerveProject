@@ -153,7 +153,7 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 }
 
 // bobAdministersWeb is a growthRace in which bob, acme's member, has joined
-// Web and is its admin (SQL stands in for P5's role change), and Ops is
+// Web and is its admin (SQL stands in for P5b's role change), and Ops is
 // another project of acme, of which alice is the admin.
 func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 	t.Helper()

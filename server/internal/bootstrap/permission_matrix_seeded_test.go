@@ -68,9 +68,9 @@ var matrixProjects = []struct {
 
 // matrixProjectMembers are the project memberships prepareMatrix seeds,
 // each with its display settings: in acme's public and private projects,
-// the project level's members (projectColumns); the removed member, still
-// an active member of the public one, so that only his membership of acme
-// keeps him out; the member before in the private one, ended; WG- in both,
+// the project level's members (projectColumns); the removed member in the
+// public one, whose membership of it his removal ends; the member before
+// in the private one, ended; WG- in both,
 // and the member in the private one, for partingStates to end or delete;
 // the archived project's admin; each other workspace's admin in its
 // project.

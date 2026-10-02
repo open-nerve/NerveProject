@@ -221,10 +221,11 @@ func TestDemotingToGuestDemotesInTheWorkspacesProjects(t *testing.T) {
 // Accepting an invitation as a guest that restores an ended membership
 // makes its member a guest in the workspace's projects in the same
 // transaction (M3 design 3.8, 9.3), on the wired app: bob led acme's
-// project Web, so was its admin, and has left acme and Web, both his
-// memberships ended as P5's leave ends them. alice invites him again, as a
-// guest. While the projects' step fails, his acceptance answers 500 and
-// changes nothing, the invitation still pending. So does an acceptance
+// project Web, so was its admin, beside alice, its creator, who has
+// removed him from acme, which ended his memberships of acme and of Web,
+// at one moment, by her. She invites him again, as a guest. While the
+// projects' step fails, his acceptance answers 500 and changes nothing,
+// the invitation still pending. So does an acceptance
 // refused at its commit, after every statement ran (its restoring updates
 // his membership of acme), which a step that wrote in a transaction of its
 // own would have outlived. Then he accepts while another transaction holds
@@ -245,10 +246,13 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
 	bobID := accountID(t, contract, base, bob)
 	withBobLeadingWeb(t, contract, base, alice, bob, bobID, "acme")
-	for _, table := range []string{"workspace_members", "project_members"} {
-		if _, err := pool.Exec(context.Background(), "UPDATE "+table+" SET is_active = false WHERE member_id = $1", bobID); err != nil {
-			t.Fatal(err)
-		}
+	var membership uuid.UUID
+	if err := pool.QueryRow(context.Background(), "SELECT id FROM workspace_members WHERE member_id = $1", bobID).Scan(&membership); err != nil {
+		t.Fatal(err)
+	}
+	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspace-members/"+membership.String(), alice, ""); status !=
+		http.StatusNoContent {
+		t.Fatalf("alice's removal of bob = %d %s", status, body)
 	}
 	link := inviteAs(t, contract, base, alice, "acme", "bob@example.com", shared.RoleGuest)
 	url, reqBody := base+"/api/v0/workspace-invitations/"+link.id.String()+"/accept", `{"token":"`+link.token+`"}`

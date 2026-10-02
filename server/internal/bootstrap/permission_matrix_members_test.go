@@ -26,8 +26,8 @@ func memberMatrixRows() []matrixRow {
 		// 9.2): who may add gets the 422 of the row's refusal, and no other,
 		// and who may not his 403 or 404 as with a valid target, learning
 		// nothing of it. X's account is no member of acme; the removed
-		// member's membership of acme ended, his membership of the public
-		// project still active (the stand-in); WG-'s is its guest, asked for
+		// member's memberships of acme and of the public project ended (the
+		// removal); WG-'s is its guest, asked for
 		// as a member, and WA-'s its admin, asked for as a member (M3 design
 		// 3.5: each joins with his own role alone); PM's is the project's
 		// active member.
@@ -118,12 +118,10 @@ func addsTheMember(target caller, role int) func(t *testing.T, c caller, s seede
 
 // listsTheProjectMembers: acme's public project's active members, each
 // with his role, in the order prepareMatrix made them: PA, PM, the
-// workspace's guest (PG's account), PM+WA and the removed member, whose
-// membership of the project the stand-in left active (the list reads
-// project_members alone, spec P4b §3 item 4): he stays listed until P5's
-// removal ends his memberships of acme's projects with his membership of
-// acme, and P5 drops him from here. Not WG-, whose membership
-// partingStates ended.
+// workspace's guest (PG's account) and PM+WA. Not the removed member,
+// whose membership of the project his removal ended with his membership
+// of acme (the list reads project_members alone, spec P4b §3 item 4); not
+// WG-, whose membership partingStates ended.
 func listsTheProjectMembers(t *testing.T, c caller, s seeded, answer string) {
 	var list struct {
 		Data []struct {
@@ -136,7 +134,7 @@ func listsTheProjectMembers(t *testing.T, c caller, s seeded, answer string) {
 	want := []struct {
 		c    caller
 		role int
-	}{{callerProjectAdmin, 20}, {callerProjectMember, 15}, {callerGuest, 5}, {callerMemberAndAdmin, 15}, {callerRemoved, 15}}
+	}{{callerProjectAdmin, 20}, {callerProjectMember, 15}, {callerGuest, 5}, {callerMemberAndAdmin, 15}}
 	ok := len(list.Data) == len(want)
 	for i := 0; ok && i < len(want); i++ {
 		m := list.Data[i]
