@@ -88,7 +88,7 @@ type Module struct {
 // before workspace, which takes its Cascade.
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	locks := app.NewLocks(store, d.Workspaces, d.Authorizer)
+	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
 	return &Module{cascade: app.NewCascade(store, store), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,

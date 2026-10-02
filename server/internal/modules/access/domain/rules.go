@@ -81,6 +81,9 @@ var rules = map[shared.Action]Rule{
 	"project_preferences.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// Every active member of the project (M3 design 9.2).
 	"project_member.list": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// The project's admins, and its members who are the workspace's admins
+	// (M3 design 3.5, 9.2; Plane views/project/member.py:46).
+	"project_member.add": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

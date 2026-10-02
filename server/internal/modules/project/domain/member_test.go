@@ -77,6 +77,35 @@ func TestCanAdd(t *testing.T) {
 	}
 }
 
+// Each target is held to what was read of him: no workspace role, a
+// member already, a role his workspace role does not allow; each refused
+// by his place, in one 422, a member's role not looked at; the others
+// pass.
+func TestCheckTargets(t *testing.T) {
+	role := func(r shared.Role) *shared.Role { return &r }
+	target := func(r shared.Role, ws *shared.Role, member bool) Target {
+		return Target{NewMember: NewMember{MemberID: uuid.NewV7(), Role: r}, WorkspaceRole: ws, Member: member}
+	}
+	if err := CheckTargets([]Target{target(shared.RoleAdmin, role(shared.RoleAdmin), false), target(shared.RoleGuest, role(shared.RoleMember), false),
+		target(shared.RoleGuest, role(shared.RoleGuest), false)}); err != nil {
+		t.Errorf("CheckTargets() of allowed targets = %v, want nil", err)
+	}
+	roleProblem := "is not one his workspace role allows: a workspace admin joins as an admin, a guest as a guest"
+	want := []shared.FieldError{
+		{Field: "members[0].member_id", Code: "not_allowed", Message: "must be an active member of the workspace"},
+		{Field: "members[1].member_id", Code: "duplicate", Message: "is an active member of the project already"},
+		{Field: "members[2].role", Code: "not_allowed", Message: roleProblem},
+		{Field: "members[4].role", Code: "not_allowed", Message: roleProblem},
+	}
+	err := CheckTargets([]Target{target(shared.RoleMember, nil, false), target(shared.RoleAdmin, role(shared.RoleGuest), true),
+		target(shared.RoleMember, role(shared.RoleAdmin), false), target(shared.RoleAdmin, role(shared.RoleMember), false),
+		target(shared.RoleMember, role(shared.RoleGuest), false)})
+	var e *shared.Error
+	if !errors.As(err, &e) || e.Code != "validation_failed" || !reflect.DeepEqual(e.Fields, want) {
+		t.Errorf("CheckTargets() = %v; want validation_failed with %+v", err, want)
+	}
+}
+
 // A new membership takes the workspace role; an ended one the lesser of
 // its role and the workspace role (M3 design 9.1's table, and the two
 // equal cases). The lesser is roleOrder's, not the numbers': a role outside

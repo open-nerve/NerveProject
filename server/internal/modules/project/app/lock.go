@@ -12,25 +12,28 @@ import (
 // Locks is the one way a write on a project named by its id takes its
 // locks and its decision (M3 design 3.6 convention 2), in the transaction
 // ctx carries: the project's workspace, read without a lock; the
-// workspace's row FOR SHARE, the write's first lock; the project's row, FOR
-// NO KEY UPDATE, or FOR SHARE for a write under the project that leaves
-// the row and its memberships as they are, still undeleted and of that
-// workspace; then the decision, under them all. Every cascade over the
-// workspace's projects runs under the workspace's FOR NO KEY UPDATE and
-// reads its time after it (3.3): while a write holds the workspace FOR
-// SHARE, no cascade touches the rows it writes. project.New builds one
-// Locks for every write: a write holds no Authorizer of its own, so it
-// decides only under these locks.
+// workspace's row FOR SHARE, the write's first lock; the memberships of the
+// workspace of the accounts the write makes members of the project, FOR
+// SHARE in id order (convention 3); the project's row, FOR NO KEY UPDATE,
+// or FOR SHARE for a write under the project that leaves the row and its
+// memberships as they are, still undeleted and of that workspace; then the
+// decision, under them all. Every cascade over the workspace's projects
+// runs under the workspace's FOR NO KEY UPDATE and reads its time after it
+// (3.3): while a write holds the workspace FOR SHARE, no cascade touches
+// the rows it writes. project.New builds one Locks for every write: a
+// write holds no Authorizer of its own, so it decides only under these
+// locks.
 type Locks struct {
 	projects   ProjectLocks
 	workspaces WorkspaceSharer
+	members    WorkspaceMembers
 	auth       shared.Authorizer
 }
 
 // NewLocks returns the locks over the project store, the workspace
-// module's directory and the Authorizer.
-func NewLocks(projects ProjectLocks, workspaces WorkspaceSharer, auth shared.Authorizer) Locks {
-	return Locks{projects: projects, workspaces: workspaces, auth: auth}
+// module's directory and members' lock, and the Authorizer.
+func NewLocks(projects ProjectLocks, workspaces WorkspaceSharer, members WorkspaceMembers, auth shared.Authorizer) Locks {
+	return Locks{projects: projects, workspaces: workspaces, members: members, auth: auth}
 }
 
 // write is a write on a project, as Locks takes its locks.
@@ -41,13 +44,17 @@ type write struct {
 	// leaves the project row and its memberships as they are; otherwise it
 	// is locked FOR NO KEY UPDATE.
 	share bool
+	// targets are the accounts the write makes members of the project.
+	targets []uuid.UUID
 }
 
 // held is a write's locks taken and its decision made: the project as its
-// lock read it and the caller's grant.
+// lock read it, the caller's grant, and the active roles in the workspace
+// of the write's targets, by account.
 type held struct {
 	project LockedProject
 	grant   shared.Grant
+	roles   map[uuid.UUID]shared.Role
 }
 
 // lockAndDecide takes w's locks and decides w's action on the project, in
@@ -71,6 +78,11 @@ func (l Locks) lockAndDecide(ctx context.Context, actor shared.Actor, w write) (
 		return held{}, domain.ErrNotFound
 	}
 	var h held
+	if len(w.targets) > 0 {
+		if h.roles, err = l.members.ShareMembers(ctx, workspaceID, w.targets); err != nil {
+			return held{}, err
+		}
+	}
 	lock := l.projects.LockProject
 	if w.share {
 		lock = l.projects.ShareProject

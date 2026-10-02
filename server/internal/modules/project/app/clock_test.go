@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // createProject only inserts, so it reads the clock once, before its
@@ -72,6 +73,13 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			_, err := uc.Execute(as(bob), webID, domain.PreferencesPatch{SortOrder: ptr(1.0)})
 			return f.log.calls, err
 		}, changed(bob, webID, domain.PreferencesPatch{SortOrder: ptr(1.0)})},
+		{"addProjectMembers", func() ([]string, error) {
+			uc, f := newAdd()
+			_, err := uc.Execute(as(bob), webID, []domain.NewMember{{MemberID: ivy, Role: shared.RoleGuest}})
+			return f.log.calls, err
+		}, slices.Concat(beforeTargets(bob, webID, []domain.NewMember{{MemberID: ivy, Role: shared.RoleGuest}}), []string{"Now",
+			"LowestSortOrder " + acme.ID.String() + " " + ivy.String()}, grown(ivy, nil, shared.RoleGuest, 65535, bob),
+			[]string{"ListMembers " + webID.String()})},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

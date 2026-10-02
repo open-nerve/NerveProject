@@ -22,6 +22,9 @@ func (f *fakeStore) ListMembers(ctx context.Context, projectID uuid.UUID) ([]dom
 		return nil, err
 	}
 	var out []domain.Member
+	if f.missing {
+		return out, nil
+	}
 	members := f.projects[projectID].members
 	for _, user := range slices.SortedFunc(maps.Keys(members), func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) }) {
 		if m := members[user]; m.Active {

@@ -89,13 +89,19 @@ type IdentifierReader interface {
 // transaction ctx carries.
 type ProjectCreator interface {
 	ProjectReader
+	SortOrderReader
 	CreateProject(ctx context.Context, p ProjectRow) error
 	CreateMember(ctx context.Context, m MemberRow) error
+	CreatePreferences(ctx context.Context, p PreferencesRow) error
+	CreateStates(ctx context.Context, rows []StateRow) error
+}
+
+// SortOrderReader reads an account's places in his sidebar, for the place
+// of a project he is made a member of (domain.SortOrderFirst).
+type SortOrderReader interface {
 	// LowestSortOrder is the least place of userID's in his sidebar among
 	// workspaceID's projects, nil when he has none.
 	LowestSortOrder(ctx context.Context, workspaceID, userID uuid.UUID) (*float64, error)
-	CreatePreferences(ctx context.Context, p PreferencesRow) error
-	CreateStates(ctx context.Context, rows []StateRow) error
 }
 
 // LockedProject is a project as its lock reads it.
@@ -217,6 +223,13 @@ type MemberGrower interface {
 	// EnsurePreferences inserts p unless its account has undeleted display
 	// settings in its project already, which stay as they are.
 	EnsurePreferences(ctx context.Context, p PreferencesRow) error
+}
+
+// MemberAdder is addProjectMembers' repository.
+type MemberAdder interface {
+	MemberGrower
+	MemberLister
+	SortOrderReader
 }
 
 // ProjectArchiver is archiveProject's and unarchiveProject's repository.

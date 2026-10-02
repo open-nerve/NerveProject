@@ -77,6 +77,38 @@ func CanAdd(workspaceRole, role shared.Role) bool {
 	return slices.Contains(addable[workspaceRole], role)
 }
 
+// Target is an account a request adds to a project, as the use case reads
+// him under its locks: his role in the workspace, nil while he is not its
+// active member, and whether he is an active member of the project.
+type Target struct {
+	NewMember
+	WorkspaceRole *shared.Role
+	Member        bool
+}
+
+// CheckTargets checks each account to add against what the use case read
+// under its locks, after the decision (M3 design 3.5, 3.6 convention 3):
+// an active member of the workspace, not an active member of the project
+// already, added with a role his workspace role allows (CanAdd). One 422
+// names each one refused, by his place in the request.
+func CheckTargets(targets []Target) error {
+	var found []*shared.FieldError
+	for i, t := range targets {
+		switch {
+		case t.WorkspaceRole == nil:
+			found = append(found, &shared.FieldError{Field: fmt.Sprintf("members[%d].member_id", i), Code: shared.FieldNotAllowed,
+				Message: "must be an active member of the workspace"})
+		case t.Member:
+			found = append(found, &shared.FieldError{Field: fmt.Sprintf("members[%d].member_id", i), Code: shared.FieldDuplicate,
+				Message: "is an active member of the project already"})
+		case !CanAdd(*t.WorkspaceRole, t.Role):
+			found = append(found, &shared.FieldError{Field: fmt.Sprintf("members[%d].role", i), Code: shared.FieldNotAllowed,
+				Message: "is not one his workspace role allows: a workspace admin joins as an admin, a guest as a guest"})
+		}
+	}
+	return invalid(found...)
+}
+
 // roleOrder is the project roles from the least to the most.
 var roleOrder = []shared.Role{shared.RoleGuest, shared.RoleMember, shared.RoleAdmin}
 

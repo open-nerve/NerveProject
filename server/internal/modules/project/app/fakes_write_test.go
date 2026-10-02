@@ -37,15 +37,17 @@ type writeFixture struct {
 	tx         *fakeTx
 	store      *fakeStore
 	workspaces *fakeWorkspaces
+	members    *fakeMembers
 	auth       *fakeAuthorizer
 }
 
 // newWrites is writeFixture with web and ops as stored at now, acme's row
-// to lock, and the Authorizer's answers: bob's grant in acme, the project's
-// admin; alice's 403, a project member; any other caller sees nothing.
+// to lock, no workspace member to lock, and the Authorizer's answers: bob's
+// grant in acme, the project's admin; alice's 403, a project member; any
+// other caller sees nothing.
 func newWrites() *writeFixture {
 	log := &callLog{}
-	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log},
+	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log}, members: &fakeMembers{log: log},
 		store: &fakeStore{log: log, projects: map[uuid.UUID]*fakeProject{
 			webID: {workspace: acme.ID, updated: now, members: map[uuid.UUID]app.Membership{
 				bob:   {ID: uuid.NewV7(), Role: shared.RoleAdmin, Active: true},
@@ -65,7 +67,7 @@ func newWrites() *writeFixture {
 
 // locks is Locks over the fixture's fakes.
 func (f *writeFixture) locks() app.Locks {
-	return app.NewLocks(f.store, f.workspaces, f.auth)
+	return app.NewLocks(f.store, f.workspaces, f.members, f.auth)
 }
 
 // fakeWorkspaces is the workspace module's lock of a workspace's row by its
@@ -108,14 +110,16 @@ var noProject = []string{"Begin", "ProjectWorkspace " + uuid.Nil().String()}
 // call with its arguments, holds the projects by id, writes what it is
 // given into them and answers GetProject from them, the time as stored (to
 // the microsecond). errs fails a method by its name, after logging the
-// call; missing makes GetProject find nothing; moved, when set, is the
-// workspace each project's lock reads, as if the project had moved there
-// since ProjectWorkspace read it.
+// call; missing makes GetProject and ListMembers find nothing, as if the
+// writes were lost; lowest is each account's least place in his sidebar;
+// moved, when set, is the workspace each project's lock reads, as if the
+// project had moved there since ProjectWorkspace read it.
 type fakeStore struct {
 	log      *callLog
 	projects map[uuid.UUID]*fakeProject
 	errs     map[string]error
 	missing  bool
+	lowest   map[uuid.UUID]*float64
 	moved    uuid.UUID
 	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
 }
