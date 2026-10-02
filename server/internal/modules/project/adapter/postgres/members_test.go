@@ -102,29 +102,41 @@ func TestListMembers(t *testing.T) {
 // RestoreMember makes the ended membership active again with the role
 // given, at the moment and by the account given, and changes no other
 // column of it, its id and created_at kept; every other membership keeps
-// every column.
+// every column. bob's, an admin's, is restored as a guest's; then carol's,
+// a guest's, as an admin's: the role given, whether below or above the
+// ended one. An ended membership is stored before bob's (his in Ops) and
+// one after it (carol's), so that neither the first nor the last ended row
+// is the one restored.
 func TestRestoreMember(t *testing.T) {
 	s, pool := newStore(t)
-	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
+	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
 	acme := newWorkspace(t, pool, "acme")
 	web, ops := newProject(t, s, acme, "Web", "WEB", alice), newProject(t, s, acme, "Ops", "OPS", alice)
 	seedMember(t, pool, acme, ops, bob, 20, false)
-	ended := seedMember(t, pool, acme, web, bob, 20, false)
+	bobs := seedMember(t, pool, acme, web, bob, 20, false)
 	seedMember(t, pool, acme, web, alice, 15, true)
-	others := tableRows(t, pool, "project_members", ended)
-	before := columns(t, pool, "project_members", ended)
-	later := now.Add(time.Hour)
+	carols := seedMember(t, pool, acme, web, carol, 5, false)
+	for i, tt := range []struct {
+		ended uuid.UUID
+		role  shared.Role
+		want  string
+		by    uuid.UUID
+	}{{bobs, shared.RoleGuest, "5", alice}, {carols, shared.RoleAdmin, "20", bob}} {
+		others := tableRows(t, pool, "project_members", tt.ended)
+		before := columns(t, pool, "project_members", tt.ended)
+		later := now.Add(time.Duration(i+1) * time.Hour)
 
-	if err := s.RestoreMember(context.Background(), ended, shared.RoleGuest, alice, later); err != nil {
-		t.Fatal(err)
-	}
+		if err := s.RestoreMember(context.Background(), tt.ended, tt.role, tt.by, later); err != nil {
+			t.Fatal(err)
+		}
 
-	want := changed(before, map[string]string{"is_active": "true", "role": "5", "updated_by_id": `"` + alice.String() + `"`,
-		"updated_at": `"` + later.Format("2006-01-02T15:04:05.999999") + `+00:00"`})
-	if got := columns(t, pool, "project_members", ended); !maps.Equal(got, want) {
-		t.Errorf("the restored membership: %v\nwant %v", got, want)
-	}
-	if after := tableRows(t, pool, "project_members", ended); after != others {
-		t.Errorf("the other memberships:\n%s\nwant\n%s", after, others)
+		want := changed(before, map[string]string{"is_active": "true", "role": tt.want, "updated_by_id": `"` + tt.by.String() + `"`,
+			"updated_at": `"` + later.Format("2006-01-02T15:04:05.999999") + `+00:00"`})
+		if got := columns(t, pool, "project_members", tt.ended); !maps.Equal(got, want) {
+			t.Errorf("the restored membership %d: %v\nwant %v", i, got, want)
+		}
+		if after := tableRows(t, pool, "project_members", tt.ended); after != others {
+			t.Errorf("the other memberships after %d:\n%s\nwant\n%s", i, after, others)
+		}
 	}
 }

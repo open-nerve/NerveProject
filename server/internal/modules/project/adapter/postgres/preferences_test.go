@@ -236,7 +236,8 @@ func TestUpsertPreferences(t *testing.T) {
 // given, made by the account given at the moment given, the navigation the
 // column's default, while he has no undeleted ones in the project, a
 // deleted one not counting; undeleted ones stay as they are, and so does
-// every other row.
+// every other row. Only the partial unique key's conflict is let pass: an
+// id another row has is an error, and writes nothing.
 func TestEnsurePreferences(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
@@ -274,5 +275,14 @@ func TestEnsurePreferences(t *testing.T) {
 	}
 	if after := tableRows(t, pool, "project_user_properties", carols); after != before {
 		t.Errorf("the other rows after carol's:\n%s\nwant\n%s", after, before)
+	}
+	// bob has no settings in Ops, so only the id conflicts.
+	all := tableRows(t, pool, "project_user_properties", uuid.Nil())
+	if err := s.EnsurePreferences(context.Background(), app.PreferencesRow{ID: bobs, WorkspaceID: acme, ProjectID: ops, UserID: bob, SortOrder: -3,
+		CreatedBy: alice, Now: now}); err == nil {
+		t.Error("EnsurePreferences() under another row's id = nil; want the primary key's violation")
+	}
+	if after := tableRows(t, pool, "project_user_properties", uuid.Nil()); after != all {
+		t.Errorf("the rows after an insert under another row's id:\n%s\nwant\n%s", after, all)
 	}
 }

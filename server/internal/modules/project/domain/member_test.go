@@ -25,7 +25,7 @@ func TestCheckNewMembersAccepts(t *testing.T) {
 
 // None, a hundred and one, a role outside the three, an account named
 // twice: each refused, all of them in one 422 that names each by its place
-// in the request.
+// in the request, the members' problems of a list too long as well.
 func TestCheckNewMembersReportsEveryProblem(t *testing.T) {
 	a, b := uuid.NewV7(), uuid.NewV7()
 	many := make([]NewMember, MaxNewMembers+1)
@@ -39,6 +39,10 @@ func TestCheckNewMembersReportsEveryProblem(t *testing.T) {
 	}{
 		{"none", nil, []shared.FieldError{{Field: "members", Code: "too_short", Message: "must name a member"}}},
 		{"a hundred and one", many, []shared.FieldError{{Field: "members", Code: "too_long", Message: "must name at most 100 members"}}},
+		{"a hundred and one, the last a repeat of no role", append(append([]NewMember{}, many[:MaxNewMembers]...), NewMember{MemberID: many[0].MemberID}),
+			[]shared.FieldError{{Field: "members", Code: "too_long", Message: "must name at most 100 members"},
+				{Field: "members[100].member_id", Code: "duplicate", Message: "is listed before"},
+				{Field: "members[100].role", Code: "invalid_format", Message: "is not 5, 15 or 20"}}},
 		{"roles and repeats", []NewMember{{MemberID: a, Role: 10}, {MemberID: b, Role: shared.RoleAdmin}, {MemberID: a, Role: shared.RoleGuest},
 			{MemberID: b, Role: 0}}, []shared.FieldError{
 			{Field: "members[0].role", Code: "invalid_format", Message: "is not 5, 15 or 20"},
@@ -75,7 +79,9 @@ func TestCanAdd(t *testing.T) {
 
 // A new membership takes the workspace role; an ended one the lesser of
 // its role and the workspace role (M3 design 9.1's table, and the two
-// equal cases).
+// equal cases). The lesser is roleOrder's, not the numbers': a role outside
+// the three is below each of them, where by the numbers 25 would keep the
+// ended admin's.
 func TestJoinRole(t *testing.T) {
 	role := func(r shared.Role) *shared.Role { return &r }
 	for _, tt := range []struct {
@@ -91,6 +97,7 @@ func TestJoinRole(t *testing.T) {
 		{role(shared.RoleAdmin), shared.RoleGuest, shared.RoleGuest},
 		{role(shared.RoleMember), shared.RoleMember, shared.RoleMember},
 		{role(shared.RoleAdmin), shared.RoleAdmin, shared.RoleAdmin},
+		{role(shared.RoleAdmin), 25, 25},
 	} {
 		if got := JoinRole(tt.ended, tt.workspace); got != tt.want {
 			t.Errorf("JoinRole(%s, %d) = %d, want %d", show(tt.ended), tt.workspace, got, tt.want)
