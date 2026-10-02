@@ -138,8 +138,9 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 		if !errors.Is(err, tt.want) {
 			t.Errorf("%s: Execute() = %v; want %v", tt.name, err, tt.want)
 		}
-		if tt.want == failure && errors.Is(err, domain.ErrMemberNotFound) {
-			t.Errorf("%s: Execute() = %v, which is also workspace.member_not_found", tt.name, err)
+		var se *shared.Error
+		if tt.want == failure && errors.As(err, &se) {
+			t.Errorf("%s: Execute() = %v, which is also %s", tt.name, err, se.Code)
 		}
 		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != 1 {
 			t.Errorf("%s: calls = %q in %d transactions, want %q in one", tt.name, f.log.calls, tx.calls, tt.calls)
@@ -194,6 +195,11 @@ func TestRemoveWorkspaceMemberFailsWithinTheTransaction(t *testing.T) {
 			t.Errorf("%s failing: Execute() = %v; want an error that is no *shared.Error", tt.name, err)
 		case tt.want != nil && !errors.Is(err, tt.want):
 			t.Errorf("%s failing: Execute() = %v, want %v", tt.name, err, tt.want)
+		}
+		// The problem the API answers is the first *shared.Error in the
+		// chain: the one injected, or none for a failure (a 500).
+		if tt.want != nil && errors.As(err, &se) && error(se) != tt.want {
+			t.Errorf("%s failing: Execute() = %v, answered as %s; want %v and no other problem", tt.name, err, se.Code, tt.want)
 		}
 		if !slices.Equal(f.log.calls, tt.calls) || tx.calls != 1 {
 			t.Errorf("%s failing: calls\n%q\nin %d transactions; want\n%q\nin one", tt.name, f.log.calls, tx.calls, tt.calls)
