@@ -139,8 +139,10 @@ export async function addProjectMembers(
 
 /**
  * Runs make, which makes a story's projects, between two projects of another workspace of the caller of token, one
- * made before them and one after: a query that loses its project's id reads one of those two, whichever row the
- * database reads first, and a project of another workspace is not found. Returns what make returns.
+ * made before them and one after: a query that loses its project's id and reads the first row in id order, either
+ * way, reads a project of another workspace, never one make made: First, or an earlier test's project in the worker's
+ * database, ascending; Last descending, until the story makes another project. A project of another workspace is not
+ * found. Returns what make returns.
  */
 export async function amidAnotherWorkspace<T>(
   api: Api,

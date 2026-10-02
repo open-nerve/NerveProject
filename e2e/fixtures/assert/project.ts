@@ -40,9 +40,10 @@ const newStates = [
 /**
  * P1, P4, W3: the undeleted project of p.identifier in the workspace of slug holds p, is not archived, has no work
  * item numbered yet (last_issue_sequence 0) and is led by the account of leadEmail, or by no one when it is null. A
- * deleted project's identifier is free again (M3 design 4.6), so a deleted project of it is not read. Its members are exactly `members`, each an active admin (role 20) with his display settings in it at his
- * place; its states are the six of a new project. Every row is in the project's workspace; the account of
- * creatorEmail wrote every row, at the project's creation, and none has changed since. Returns the project's id.
+ * deleted project's identifier is free again (M3 design 4.6), so a deleted project of it is not read. Its members are
+ * exactly `members`, each an active admin (role 20) with his display settings in it at his place; its states are the
+ * six of a new project. Every row is in the project's workspace; the account of creatorEmail wrote every row, at the
+ * project's creation, and none has changed since. Returns the project's id.
  */
 export async function expectProjectCreated(
   db: Database,
@@ -138,14 +139,15 @@ export interface Membership {
   is_active: boolean;
   /** His place in his sidebar; null when he has no display settings in the project. */
   sort_order: number | null;
-  /** The address of the account that wrote the membership last. */
+  /** The address of the account that wrote the membership last, and his display settings in the project, if any. */
   by: string;
 }
 
 /**
- * P2, P3: the account of email's undeleted membership of the project of projectId is want, or he has none when want
- * is null. The membership and his display settings in the project are rows of the project's workspace, and the
- * settings were written with the membership, when he became a member, or before it.
+ * P2, P3, P4: the account of email's undeleted membership of the project of projectId is want, or he has none when
+ * want is null. The membership and his display settings in the project are rows of the project's workspace, both
+ * written last by the account of want.by, and the settings were written with the membership, when he became a member,
+ * or before it.
  */
 export async function expectMember(
   db: Database,
@@ -154,7 +156,7 @@ export async function expectMember(
   want: Membership | null
 ): Promise<void> {
   const rows = await db.query(
-    `SELECT m.role, m.is_active, s.sort_order, b.email AS by,
+    `SELECT m.role, m.is_active, s.sort_order, b.email AS by, sb.email AS settings_by,
             m.workspace_id = p.workspace_id AND (s.id IS NULL OR (s.workspace_id = p.workspace_id AND s.created_at <= m.updated_at))
               AS in_its_workspace
        FROM project_members m
@@ -162,11 +164,12 @@ export async function expectMember(
        JOIN users u ON u.id = m.member_id
        JOIN users b ON b.id = m.updated_by_id
        LEFT JOIN project_user_properties s ON s.project_id = m.project_id AND s.user_id = m.member_id AND s.deleted_at IS NULL
+       LEFT JOIN users sb ON sb.id = s.updated_by_id
       WHERE m.project_id = $1 AND u.email = $2 AND m.deleted_at IS NULL`,
     [projectId, email]
   );
   expect(rows, `the membership of ${email} in ${projectId}`).toEqual(
-    want === null ? [] : [{ ...want, in_its_workspace: true }]
+    want === null ? [] : [{ ...want, settings_by: want.sort_order === null ? null : want.by, in_its_workspace: true }]
   );
 }
 

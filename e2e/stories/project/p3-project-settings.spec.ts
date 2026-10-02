@@ -102,6 +102,17 @@ test("P3 (API): the project's admin adds a member and a guest, whom the member l
     { member_id: memberId, role: 15 },
     { member_id: guestId, role: 5 },
   ]);
+  // Web's member may not add to it: refused, nothing written.
+  const addedByMember = await api.POST("/api/v0/projects/{project_id}/members", {
+    params: { path: { project_id: web.id } },
+    body: { members: [{ member_id: otherId, role: 15 }] },
+    headers: bearer(member),
+  });
+  expect({ status: addedByMember.response.status, code: addedByMember.error?.code }).toEqual({
+    status: 403,
+    code: "forbidden",
+  });
+  await expectMember(db, web.id, otherEmail, null);
 
   const logo = { in_use: "icon", icon: { name: "rocket", color: "#46A758" } } as const;
   const settings = {
