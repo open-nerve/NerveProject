@@ -11,10 +11,8 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
-	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
@@ -49,8 +47,9 @@ func (m endedHolding) EndMember(ctx context.Context, workspaceID, userID, by uui
 	return m.gate.wait(ctx)
 }
 
-// otherFoundHolding stops a leaving once it has found another admin of the
-// workspace, holding the workspace's row, before it ends anything.
+// otherFoundHolding stops a leaving once it has asked whether the
+// workspace has another admin, holding the workspace's row, before it ends
+// anything.
 type otherFoundHolding struct {
 	*workspacepg.Store
 	gate *gate
@@ -68,8 +67,7 @@ func (m otherFoundHolding) HasOtherAdmin(ctx context.Context, workspaceID, userI
 // identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) leave(ctx context.Context, user uuid.UUID, workspaces workspaceapp.WorkspaceLeaver) error {
 	return workspaceapp.NewLeaveWorkspace(workspaces, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.New(project.Deps{Pool: r.pool}).Cascade(), access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}),
-		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		project.New(project.Deps{Pool: r.pool}).Cascade(), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: user}), "acme")
 }
 
@@ -147,24 +145,41 @@ func (r growthRace) remove(ctx context.Context, members workspaceapp.MemberRemov
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), r.bobIn)
 }
 
+// lastWritten is when, and by whom, bob's membership of acme and his
+// membership of the project named project were last written, each as
+// "<updated_at> by <account>": the same when one statement of the removal's
+// transaction wrote each, at its one moment, as alice.
+func (r growthRace) lastWritten(t *testing.T, project string) (acme, of string) {
+	t.Helper()
+	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT updated_at::text || ' by ' || updated_by_id FROM workspace_members WHERE id = $1),
+		(SELECT m.updated_at::text || ' by ' || m.updated_by_id FROM project_members m JOIN projects p ON p.id = m.project_id
+		 WHERE p.name = $2 AND m.member_id = $3)`, r.bobIn, project, r.bob).Scan(&acme, &of); err != nil {
+		t.Fatal(err)
+	}
+	return acme, of
+}
+
 // Interleaving 4: alice's removal of bob from acme and the project side's
 // growth, alice's adding him to Web or his joining it, serialize on acme's
 // row (M3 design 3.6 conventions 2, 3 and 6), in both orders, for a new
 // membership of Web and for his ended one. The growth first: it holds acme
 // and his membership of acme FOR SHARE, no stronger (lockOn), and waits at
-// its gate before it locks Web; the removal waits for acme's row, holding
-// nothing. Once the growth has committed, the removal's step over his
-// projects, a statement run after its write of his membership, finds his
-// membership of Web and ends it, at the removal's time, read once it held
-// acme: after the gate opened (3.3). The removal first: it holds acme FOR
-// NO KEY UPDATE and his membership's row after its write; the growth waits
-// for acme's row, then reads his membership ended: alice's adding him is
-// refused as one who is no active member of acme (422
-// members[0].member_id not_allowed), his joining as one who does not see
-// Web (404); his membership of Web is as it was. In either order, while
+// its gate before it locks Web; the removal waits for acme's row. Once the
+// growth has committed, the removal's step over his projects, a statement
+// run after its write of his membership, finds his membership of Web and
+// ends it as alice, at the moment it wrote his membership of acme, read
+// once it held acme: after the gate opened (3.3). In the joining's cells
+// bob wrote it last before, so that alice's writing shows. The removal
+// first: it holds acme FOR NO KEY UPDATE and his membership's row after its
+// write; the growth waits for acme's row, then reads his membership ended:
+// alice's adding him is refused as one who is no active member of acme
+// (422 members[0].member_id not_allowed), his joining as one who does not
+// see Web (404); his membership of Web is as it was. In either order, while
 // the second side waits for acme's row, no transaction holds Web (FOR
-// UPDATE NOWAIT): the growth takes his membership of acme before Web, and
-// the removal his membership before his projects.
+// UPDATE NOWAIT): the growth locks Web after acme, and the removal, at its
+// gate, has locked none of his projects, having no active membership of
+// one. The order of the removal's own locks is
+// TestEachLockOfAnEndingIsItsStrength's.
 func TestARemovalAndTheProjectSidesGrowthSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, add := range []bool{true, false} {
@@ -218,9 +233,14 @@ func TestARemovalAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						t.Errorf("the removal = %v, the growth = %d %s, bob %s; want the removal done, the growth %s, bob %s", removal, rec.Code,
 							rec.Body, got, map[bool]string{true: "done", false: "refused"}[growthFirst], want)
 					}
-					if made, written := r.membershipTimes(t); growthFirst && (written.Before(made) || written.Before(opened)) {
-						t.Errorf("bob's membership of Web made at %v, last written at %v, the gate opened at %v; want it ended last by the "+
-							"removal, at a time read once it held acme", made, written, opened)
+					if growthFirst {
+						made, written := r.membershipTimes(t)
+						acme, web := r.lastWritten(t, "Web")
+						if written.Before(made) || written.Before(opened) || web != acme {
+							t.Errorf("bob's membership of Web made at %v, last written at %v, the gate opened at %v; written %s, his membership of "+
+								"acme %s; want Web's ended last by the removal, as it wrote acme's, at a time read once it held acme", made, written,
+								opened, web, acme)
+						}
 					}
 				})
 			}

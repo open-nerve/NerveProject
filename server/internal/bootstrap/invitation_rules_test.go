@@ -95,13 +95,15 @@ func (w adminsWorld) joins(t *testing.T, name string, project uuid.UUID) {
 	}
 }
 
-// bobs is bob's membership of acme and of each project he has one of, each
-// as its name, its role and whether it is active, in byte order.
+// bobs is bob's membership of each workspace and of each project he has
+// one of, each as the workspace's slug or the project's name, its role and
+// whether it is active, in byte order.
 func (w adminsWorld) bobs(t *testing.T) string {
 	t.Helper()
 	var s string
 	if err := w.pool.QueryRow(context.Background(), `SELECT string_agg(r, '; ' ORDER BY r COLLATE "C") FROM (
-		SELECT 'acme ' || role || ' ' || is_active AS r FROM workspace_members WHERE member_id = $1
+		SELECT s.slug || ' ' || m.role || ' ' || m.is_active AS r FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
+		WHERE m.member_id = $1
 		UNION ALL SELECT p.name || ' ' || m.role || ' ' || m.is_active FROM project_members m JOIN projects p ON p.id = m.project_id
 		WHERE m.member_id = $1) s`, w.ids["bob"]).Scan(&s); err != nil {
 		t.Fatal(err)
@@ -117,6 +119,20 @@ func (w adminsWorld) look(t *testing.T) (int, string) {
 		"")
 }
 
+// accept is bob's acceptance of the invitation through its link: its
+// status and body.
+func (w adminsWorld) accept(t *testing.T) (int, string) {
+	t.Helper()
+	return call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspace-invitations/"+w.invitation.id.String()+"/accept", w.tokens["bob"],
+		`{"token":"`+w.invitation.token+`"}`)
+}
+
+// leave is name's leaving of acme: its status and body.
+func (w adminsWorld) leave(t *testing.T, name string) (int, string) {
+	t.Helper()
+	return call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces/acme/leave", w.tokens[name], "")
+}
+
 // An invitation never changes an active membership (M3 design 3.8, 9.3),
 // in Codex's S2 order: once reactivate-member has restored bob, an admin,
 // he joins Web, its admin as acme's; alice leaves acme, which has bob as
@@ -128,8 +144,7 @@ func (w adminsWorld) look(t *testing.T) (int, string) {
 func TestAnInvitationNeverChangesAnActiveMembership(t *testing.T) {
 	w := newAdminsWorld(t)
 	w.joins(t, "bob", w.web)
-	if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces/acme/leave", w.tokens["alice"], ""); status !=
-		http.StatusNoContent {
+	if status, body := w.leave(t, "alice"); status != http.StatusNoContent {
 		t.Fatalf("alice's leaving acme = %d %s", status, body)
 	}
 	if got, want := w.bobs(t), "Web 20 true; acme 20 true"; got != want {
@@ -142,8 +157,7 @@ func TestAnInvitationNeverChangesAnActiveMembership(t *testing.T) {
 		t.Fatalf("acme's active admins before bob's acceptance: %s (%v); want bob@example.com alone", admins, err)
 	}
 
-	status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspace-invitations/"+w.invitation.id.String()+"/accept",
-		w.tokens["bob"], `{"token":"`+w.invitation.token+`"}`)
+	status, body := w.accept(t)
 
 	var answer struct {
 		Slug string      `json:"slug"`
@@ -171,20 +185,18 @@ func TestAnInvitationNeverChangesAnActiveMembership(t *testing.T) {
 // leaving: once reactivate-member has restored him, bob is active with the
 // guest's invitation pending. He administers Ops, his own, and carol is
 // its member: the ending is 409 project.sole_admin, and the invitation
-// stays pending, its link answering 200. Once alice has joined Ops, the
-// ending is 204; then the link answers 404 workspace.invitation_not_found
-// to a look and to bob's acceptance, he has not come back, and the
-// invitation was deleted at the ending's moment, his membership's
-// updated_at.
+// stays pending, its link answering 200, not declined. Once alice has
+// joined Ops, the ending is 204; then the link answers 404
+// workspace.invitation_not_found to a look and to bob's acceptance, he has
+// not come back, and the invitation was deleted at the ending's moment,
+// his membership's updated_at.
 func TestAnEndedMembershipLeavesNoInvitation(t *testing.T) {
 	for _, e := range []struct {
 		name string
 		end  func(w adminsWorld, t *testing.T) (int, string)
 	}{
 		{"removal", adminsWorld.remove},
-		{"leaving", func(w adminsWorld, t *testing.T) (int, string) {
-			return call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces/acme/leave", w.tokens["bob"], "")
-		}},
+		{"leaving", func(w adminsWorld, t *testing.T) (int, string) { return w.leave(t, "bob") }},
 	} {
 		t.Run(e.name, func(t *testing.T) {
 			w := newAdminsWorld(t)
@@ -193,8 +205,15 @@ func TestAnEndedMembershipLeavesNoInvitation(t *testing.T) {
 			if status, body := e.end(w, t); status != http.StatusConflict || problemCode(t, []byte(body)) != "project.sole_admin" {
 				t.Fatalf("the ending, bob Ops's only admin = %d %s, want 409 project.sole_admin", status, body)
 			}
-			if status, body := w.look(t); status != http.StatusOK {
-				t.Errorf("a look at the invitation after the refused ending = %d %s, want 200: still pending", status, body)
+			var look struct {
+				Declined *bool `json:"declined"`
+			}
+			status, body := w.look(t)
+			if status == http.StatusOK {
+				decodeAnswer(t, body, &look)
+			}
+			if status != http.StatusOK || look.Declined == nil || *look.Declined {
+				t.Errorf("a look at the invitation after the refused ending = %d %s, want 200, not declined: still pending", status, body)
 			}
 			w.joins(t, "alice", ops)
 			if status, body := e.end(w, t); status != http.StatusNoContent {
@@ -204,8 +223,7 @@ func TestAnEndedMembershipLeavesNoInvitation(t *testing.T) {
 			if status, body := w.look(t); status != http.StatusNotFound || problemCode(t, []byte(body)) != "workspace.invitation_not_found" {
 				t.Errorf("a look at the invitation = %d %s, want 404 workspace.invitation_not_found", status, body)
 			}
-			status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspace-invitations/"+w.invitation.id.String()+"/accept",
-				w.tokens["bob"], `{"token":"`+w.invitation.token+`"}`)
+			status, body = w.accept(t)
 			if status != http.StatusNotFound || problemCode(t, []byte(body)) != "workspace.invitation_not_found" {
 				t.Errorf("bob's acceptance = %d %s, want 404 workspace.invitation_not_found", status, body)
 			}

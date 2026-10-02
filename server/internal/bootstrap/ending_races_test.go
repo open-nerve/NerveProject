@@ -139,6 +139,12 @@ func TestEachLockOfAnEndingIsItsStrength(t *testing.T) {
 			// Each step lets go of one holder and names the table the
 			// ending then waits on, and its locks: acme's is the holder's
 			// until the first step; the FOR SHARE ones are the holders'.
+			// A lock the ending took on a row held FOR SHARE before it
+			// had acme's would hide behind the holder's at the first step,
+			// and show only as the next step's probe timing out: its
+			// upgrade of a row lock it shares with the holder waits
+			// without a tuple lock, which pgtest.WaitForLockWaitOn does
+			// not see.
 			for _, step := range []struct {
 				release pgx.Tx
 				waitsOn string

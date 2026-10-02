@@ -36,10 +36,11 @@ import (
 // it waits for the writes in flight and writes one time, after theirs, into
 // every row it deletes (3.3). Every wait has a deadline.
 
-// deleteAcme is alice's deletion of acme over workspaces, on the system's
+// deleteAcme is alice's deletion of acme over workspaces, with project's
+// cascade and the Authorizer as bootstrap wires them, on the system's
 // clock.
-func (r growthRace) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
-	return workspaceapp.NewDeleteWorkspace(workspaces, project.New(project.Deps{Pool: r.pool}).Cascade(), r.authorizer(),
+func (r race) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
+	return workspaceapp.NewDeleteWorkspace(workspaces, project.New(project.Deps{Pool: r.pool}).Cascade(), authorizerOn(r.pool),
 		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}, slog.New(slog.DiscardHandler)).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }

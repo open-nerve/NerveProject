@@ -16,9 +16,16 @@ import (
 // whole: a row that names a project names one of them.
 var projectTables = [][]caller{projectColumns, archivedColumns}
 
+// workspaceLevelTables are the tables of the workspace level besides its
+// own columns (nil), each whole: the only admin's. A row of one is no write
+// on a project (writesOnAProject).
+var workspaceLevelTables = [][]caller{soleAdminColumns}
+
 // matrixTables are the columns a row may name besides the workspace level's
-// (nil): each table of the project level, and the only admin's.
-var matrixTables = append(slices.Clone(projectTables), soleAdminColumns)
+// (nil): each table of the project level, then each other table of the
+// workspace level. A new table goes into one of the two lists, never into
+// this one alone (TestEachMatrixTableIsOfOneLevel).
+var matrixTables = slices.Concat(projectTables, workspaceLevelTables)
 
 // matrixViolations reports where the matrix and the contract part: an
 // operation without a row, unless every tag it has is on exempt.modules, so

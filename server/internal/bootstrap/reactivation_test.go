@@ -24,7 +24,8 @@ import (
 // admin of each; through the stores, bob acme's admin and carol its guest,
 // bob the admin of Web and Ops, carol Web's guest; then bob's and carol's
 // memberships of acme and of its projects ended by alice at one moment, as
-// a removal ends them (M3 design 3.6, 3.7); gone deleted; carol's account
+// a removal ends them (M3 design 3.6, 3.7); alice's invitation of bob to
+// acme, sent then, which he declined; gone deleted; carol's account
 // deactivated. dave was never a member of acme.
 func endedMembers(t *testing.T, url string) *pgxpool.Pool {
 	t.Helper()
@@ -78,6 +79,22 @@ func endedMembers(t *testing.T, url string) *pgxpool.Pool {
 			t.Fatal(err)
 		}
 	}
+	invitation := uuid.NewV7()
+	if _, err := workspaces.CreateInvitations(ctx, []workspaceapp.InvitationRow{{ID: invitation, WorkspaceID: acme, Email: "bob@corp.com",
+		Role: shared.RoleMember, CreatedBy: ids["alice"], Now: now}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := workspaces.DeclineInvitation(ctx, invitation, ids["bob"], now); err != nil {
+		t.Fatal(err)
+	}
+	// The invitation is declined, unaccepted and undeleted: were it pending
+	// or deleted, a reactivation that deleted the member's declined
+	// invitations, which M3 design 3.11 leaves alone, would pass.
+	var declined bool
+	if err := pool.QueryRow(ctx, `SELECT responded_at IS NOT NULL AND NOT accepted AND deleted_at IS NULL FROM workspace_member_invites
+		WHERE id = $1`, invitation).Scan(&declined); err != nil || !declined {
+		t.Fatalf("bob's invitation to acme: declined %v (%v); want it declined, unaccepted and undeleted", declined, err)
+	}
 	if err := workspaces.DeleteWorkspace(ctx, gone, ids["alice"], now); err != nil {
 		t.Fatal(err)
 	}
@@ -106,11 +123,12 @@ func memberStates(t *testing.T, pool *pgxpool.Pool) string {
 // `nerve workspaces reactivate-member` runs on the minimal composition (M3
 // design 3.11, 6.6), the address normalized: bob's membership of acme is
 // active again, an admin's still, and his memberships of Web and Ops stay
-// ended, as the line says; the reactivation is logged once. Run again, it
-// says the membership is active and changes nothing. carol's, her account
-// deactivated, is reactivated all the same, a guest's still, and the line
-// says what is next; run again, it says so after the membership is
-// reported active.
+// ended, as the line says; every other row of every table, his declined
+// invitation to acme among them, is as it was; the reactivation is logged
+// once. Run again, it says the membership is active and changes nothing.
+// carol's, her account deactivated, is reactivated all the same, a guest's
+// still, every other row as it was, and the line says what is next; run
+// again, it says so after the membership is reported active.
 func TestWorkspacesReactivateMember(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	pool := endedMembers(t, url)
@@ -118,6 +136,17 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 		"bob@corp.com Web 20 false", "bob@corp.com acme 20 false", "carol@corp.com Web 5 false", "carol@corp.com acme 5 false"}, "\n"); got != want {
 		t.Fatalf("the memberships before:\n%s\nwant\n%s", got, want)
 	}
+	membership := func(email string) uuid.UUID {
+		t.Helper()
+		var id uuid.UUID
+		if err := pool.QueryRow(context.Background(), `SELECT m.id FROM workspace_members m JOIN users u ON u.id = m.member_id
+			JOIN workspaces w ON w.id = m.workspace_id WHERE w.slug = 'acme' AND u.email = $1 AND m.deleted_at IS NULL`, email).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	bobs, carols := membership("bob@corp.com"), membership("carol@corp.com")
+	others := rowsBut(t, pool, []uuid.UUID{bobs})
 
 	out, logs, err := runWorkspaces(t, url, ReactivateMember("acme", " Bob@Corp.COM "))
 
@@ -132,6 +161,9 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 		"bob@corp.com Web 20 false", "bob@corp.com acme 20 true", "carol@corp.com Web 5 false", "carol@corp.com acme 5 false"}, "\n"); got != want {
 		t.Errorf("the memberships after:\n%s\nwant\n%s", got, want)
 	}
+	if after := rowsBut(t, pool, []uuid.UUID{bobs}); !maps.Equal(after, others) {
+		t.Errorf("every other row after bob's reactivation:\n%v\nwant them as they were:\n%v", after, others)
+	}
 	before := tableRows(t, pool, riversOwn)
 	if out, _, err := runWorkspaces(t, url, ReactivateMember("acme", "bob@corp.com")); err != nil ||
 		out != "bob@corp.com is an active member of acme already; nothing changed\n" {
@@ -140,6 +172,7 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 	if after := tableRows(t, pool, riversOwn); !maps.Equal(after, before) {
 		t.Errorf("the tables after reactivating an active membership changed:\n%v\nwant them as they were:\n%v", after, before)
 	}
+	others = rowsBut(t, pool, []uuid.UUID{carols})
 	out, _, err = runWorkspaces(t, url, ReactivateMember("acme", "carol@corp.com"))
 	if want := "reactivated carol@corp.com in acme as guest; project memberships still ended: 1, each restored when the member joins or is " +
 		"added to its project; the account is deactivated: run nerve users activate --email carol@corp.com next\n"; err != nil || out != want {
@@ -148,6 +181,9 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 	if got, want := memberStates(t, pool), strings.Join([]string{"alice@corp.com acme 20 true", "bob@corp.com Ops 20 false",
 		"bob@corp.com Web 20 false", "bob@corp.com acme 20 true", "carol@corp.com Web 5 false", "carol@corp.com acme 5 true"}, "\n"); got != want {
 		t.Errorf("the memberships after carol's:\n%s\nwant\n%s", got, want)
+	}
+	if after := rowsBut(t, pool, []uuid.UUID{carols}); !maps.Equal(after, others) {
+		t.Errorf("every other row after carol's reactivation:\n%v\nwant them as they were:\n%v", after, others)
 	}
 	out, _, err = runWorkspaces(t, url, ReactivateMember("acme", "carol@corp.com"))
 	if want := "carol@corp.com is an active member of acme already; nothing changed; the account is deactivated: run nerve users activate " +

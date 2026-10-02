@@ -59,9 +59,10 @@ var projectWrites = []projectWrite{
 // by a row under it (P5b's /project-members/{project_member_id}, P7's
 // /states/{state_id}) whose row names a project table's columns; a column
 // set of a row's own counts only once it is listed in projectTables, so a
-// new table of the project level goes there, not beside the only admin's
-// in matrixTables; not a workspace's write that the only admin's table
-// asks (leaveWorkspace).
+// new table of the project level goes there, one of the workspace level in
+// workspaceLevelTables, and neither into matrixTables alone
+// (TestEachMatrixTableIsOfOneLevel); not a workspace's write that the only
+// admin's table asks (leaveWorkspace).
 func writesOnAProject(ops []apitest.Operation, rows []matrixRow) []string {
 	ofTheProjectLevel := func(c caller) bool {
 		return !slices.Contains(workspaceColumns, c) && slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
@@ -109,12 +110,24 @@ func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	}
 }
 
+// soon is a context that ends 5 s from now, or with the test: for a read
+// that runs while transactions the test holds are open, whose wait for a
+// connection of the pool, were the holders to take them all, would have no
+// end otherwise. Past it, the read fails the test at its deadline.
+func soon(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
 // holding begins a transaction on pool that takes the one row lock sql
 // states, with args, NOWAIT, and keeps it open until the test rolls it
-// back, or ends. A lock another transaction left fails the test at once.
+// back, or ends. A lock another transaction left fails the test at once,
+// and so does a pool the holders before it took (soon).
 func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
 	t.Helper()
-	tx, err := pool.Begin(context.Background())
+	tx, err := pool.Begin(soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,11 +140,11 @@ func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
 
 // heldBy reports whether a transaction holds the one row the lock sql
 // states, with args, NOWAIT: it answers lock_not_available (55P03) at once
-// while one does.
+// while one does. Its wait for a connection of the pool ends soon.
 func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
 	t.Helper()
 	sql += " NOWAIT"
-	tag, err := pool.Exec(context.Background(), sql, args...)
+	tag, err := pool.Exec(soon(t), sql, args...)
 	var pgErr *pgconn.PgError
 	switch {
 	case errors.As(err, &pgErr) && pgErr.Code == "55P03":

@@ -91,10 +91,12 @@ func projectOf(c caller) string {
 
 // Every account of a column is registered, and every account registered is
 // some column's: a column whose account prepareMatrix did not register would
-// call with no token, and its cells answer 401 whatever the rule.
+// call with no token, and its cells answer 401 whatever the rule. The
+// columns are the workspace level's and those of every table a row may
+// name (matrixTables), so that a new table's are checked once it is listed.
 func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	var used []caller
-	for _, c := range slices.Concat(workspaceColumns, projectColumns, archivedColumns, soleAdminColumns) {
+	for _, c := range slices.Concat(workspaceColumns, slices.Concat(matrixTables...)) {
 		if !slices.Contains(matrixAccounts, accountOf(c)) {
 			t.Errorf("column %s calls as %s, which prepareMatrix does not register", c, accountOf(c))
 		}
@@ -120,6 +122,21 @@ func TestEveryColumnCallsAsARegisteredAccount(t *testing.T) {
 	for _, a := range matrixAccounts {
 		if id := s.account(a); id != uuid.Nil() {
 			t.Errorf("the account %s before prepareMatrix registers it = %s, want uuid.Nil", a, id)
+		}
+	}
+}
+
+// Each table of matrixTables is of one level: the project level
+// (projectTables), whose rows writesOnAProject takes for writes on a
+// project, or the workspace level (workspaceLevelTables), whose rows it
+// does not. A table appended to matrixTables alone, of neither level, fails
+// here, and so does one listed at both: either would leave its rows'
+// writes classed by accident.
+func TestEachMatrixTableIsOfOneLevel(t *testing.T) {
+	for _, table := range matrixTables {
+		same := func(other []caller) bool { return slices.Equal(other, table) }
+		if project, workspace := slices.ContainsFunc(projectTables, same), slices.ContainsFunc(workspaceLevelTables, same); project == workspace {
+			t.Errorf("the table %q: of the project level %v, of the workspace level %v; want it of one", table, project, workspace)
 		}
 	}
 }

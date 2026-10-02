@@ -5,13 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/open-nerve/NerveProject/server/internal/modules/access"
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
@@ -62,10 +60,11 @@ func (r growthRace) opsWritten(t *testing.T) time.Time {
 // acme FOR SHARE (lockOn), and waits at its gate before it inserts Ops;
 // the removal waits for acme's row. Once the creation has committed, 201,
 // the removal's step over his projects finds his membership of Ops, Ops's
-// admin and only member, and ends it at the removal's time, read once it
-// held acme. The removal first: it holds acme and his ended membership's
-// row; the creation waits for acme's row, then decides once he is no
-// member: 404 workspace.not_found, and there is no Ops.
+// admin and only member, which he wrote, and ends it as alice, at the
+// moment it wrote his membership of acme, read once it held acme. The
+// removal first: it holds acme and his ended membership's row; the
+// creation waits for acme's row, then decides once he is no member: 404
+// workspace.not_found, and there is no Ops.
 func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, creationFirst := range []bool{true, false} {
@@ -119,21 +118,14 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 					rec.Body, got, map[bool]string{true: "201", false: "404 workspace.not_found"}[creationFirst], want)
 			}
 			if creationFirst {
-				if written := r.opsWritten(t); written.Before(opened) {
-					t.Errorf("bob's membership of Ops last written at %v, the gate opened at %v; want it ended by the removal, at a time read "+
-						"once it held acme", written, opened)
+				acme, ops := r.lastWritten(t, "Ops")
+				if written := r.opsWritten(t); written.Before(opened) || ops != acme {
+					t.Errorf("bob's membership of Ops last written at %v, the gate opened at %v; written %s, his membership of acme %s; want it "+
+						"ended by the removal, as it wrote acme's, at a time read once it held acme", written, opened, ops, acme)
 				}
 			}
 		})
 	}
-}
-
-// deleteAcme is alice's deletion of acme, over workspaces, with project's
-// cascade and the Authorizer as bootstrap wires them.
-func (r adminRace) deleteAcme(ctx context.Context, workspaces workspaceapp.WorkspaceDeleter) error {
-	return workspaceapp.NewDeleteWorkspace(workspaces, project.New(project.Deps{Pool: r.pool}).Cascade(),
-		access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}), postgres.NewTxManager(r.pool, 2*time.Second),
-		clock.System{}, slog.New(slog.DiscardHandler)).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), "acme")
 }
 
 // removeAlice is bob's removal of alice from acme, over members, with
@@ -141,8 +133,7 @@ func (r adminRace) deleteAcme(ctx context.Context, workspaces workspaceapp.Works
 // wires them.
 func (r adminRace) removeAlice(ctx context.Context, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.New(project.Deps{Pool: r.pool}).Cascade(), access.New(access.Deps{WorkspaceRoles: workspace.Provide(r.pool).WorkspaceRoles}),
-		postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		project.New(project.Deps{Pool: r.pool}).Cascade(), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.bob}), r.aliceIn)
 }
 
@@ -177,15 +168,16 @@ func (r adminRace) waitsAtAWrite(t *testing.T) bool {
 // deleting acme serialize on acme's row (M3 design 3.6 convention 2). The
 // deletion first: it holds acme FOR NO KEY UPDATE after its decision
 // (gatedDeleter); the removal, which has read her membership, waits for
-// acme's row, then locks no row, acme being deleted: 404
-// workspace.member_not_found. Her membership is deleted with acme. The
-// removal first: it holds acme and her ended membership's row; the
-// deletion waits for acme's row at its lock, then decides once she is no
-// member: 404 workspace.not_found. acme stays, her membership ended. In
-// either order the second side waits at a lock of acme's row, not at a
-// write of acme's table (waitsAtAWrite): a deletion that decided without
-// its lock would wait for acme's row at its write of it, which
-// WaitForLockWaitOn counts too.
+// acme's row, then finds acme deleted: 404 workspace.member_not_found;
+// that its lock then takes no row is the store's
+// TestTheWorkspaceLocksSkipAWorkspaceDeletedWhileTheyWait. Her membership
+// is deleted with acme. The removal first: it holds acme and her ended
+// membership's row; the deletion waits for acme's row at its lock, then
+// decides once she is no member: 404 workspace.not_found. acme stays, her
+// membership ended. In either order the second side waits at a lock of
+// acme's row, not at a write of acme's table (waitsAtAWrite): a deletion
+// that decided without its lock would wait for acme's row at its write of
+// it, which WaitForLockWaitOn counts too.
 func TestARemovalAndTheRemovedAdminsDeletionSerialize(t *testing.T) {
 	for _, deletionFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("deletion first %v", deletionFirst), func(t *testing.T) {
