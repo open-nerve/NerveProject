@@ -35,8 +35,8 @@ test("W2 (API): an account's workspaces are those it is an active member of, wit
   const first = slugFor(testInfo, "first");
   const second = slugFor(testInfo, "second");
   // First holds a row of each table its deletion writes: alice's membership and bob's, which he wrote, so that the
-  // deletion's writing it shows; a pending invitation (bob's, accepted, was deleted alone); her display settings; and
-  // her project Web with its own rows.
+  // deletion's writing it shows; the invitee's pending invitation (bob's own was deleted when he accepted it, before
+  // the workspace); her display settings; and her project Web with its own rows.
   const firstWorkspace = await createWorkspace(api, alice, { name: "First", slug: first });
   await inviteAndAccept(api, alice, first, { email: bobEmail, token: bob }, 15);
   await invite(api, alice, first, [{ email: emailFor(testInfo, "invitee"), role: 15 }]);

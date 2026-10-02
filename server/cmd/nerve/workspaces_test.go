@@ -71,8 +71,9 @@ func TestWorkspacesCreateCommand(t *testing.T) {
 
 // `nerve workspaces reactivate-member` makes an ended membership active
 // again, its role kept, and prints one line; a refused one exits 1 with
-// that one line alone on stderr and nothing on stdout (M3 design 3.11). That a refusal changes nothing is
-// bootstrap's TestWorkspacesReactivateMemberErrors.
+// that one line alone on stderr and nothing on stdout (M3 design 3.11).
+// That a refusal changes nothing is bootstrap's
+// TestWorkspacesReactivateMemberErrors.
 func TestWorkspacesReactivateMemberCommand(t *testing.T) {
 	environ, pool := usersDatabase(t)
 	for _, email := range []string{"nia@corp.com", "lee@corp.com"} {

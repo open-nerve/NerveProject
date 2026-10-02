@@ -208,10 +208,16 @@ test("W12: nerve workspaces reactivate-member restores a removed admin's members
   const declinedRow = () =>
     db.query("SELECT to_jsonb(i) AS row FROM workspace_member_invites i WHERE i.id = $1", [declined.id]);
   const kept = await declinedRow();
+  // It is declined, unaccepted and undeleted: were it pending or deleted, a reactivation that deleted declined
+  // invitations would leave it as it was.
+  expect(kept, "the declined invitation to carol, before her reactivation").toMatchObject([
+    { row: { accepted: false, deleted_at: null, responded_at: expect.any(String) } },
+  ]);
   expect(await nerveWorkspaces(db, reactivate(slug, carolEmail))).toBe(
     `reactivated ${carolEmail} in ${slug} as member; project memberships still ended: 1, each restored when the member joins or is added to its project\n`
   );
   expect(await declinedRow(), "the declined invitation to carol, she reactivated").toEqual(kept);
+  await expectMembership(db, slug, carolEmail, { role: 15, is_active: true });
   const removedAgain = await api.DELETE("/api/v0/workspace-members/{workspace_member_id}", {
     params: { path: { workspace_member_id: await membershipOf(api, b, slug, await accountId(api, carol)) } },
     headers: bearer(b),
