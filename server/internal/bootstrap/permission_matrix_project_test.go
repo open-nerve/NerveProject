@@ -93,8 +93,6 @@ func projectMatrixRows() []matrixRow {
 		{op: "updateProjectPreferences", write: true, columns: projectColumns,
 			request: toProjectPreferences(http.MethodPatch, `{"navigation":{"default_tab":"cycles","hide_in_more_menu":["views"]}}`),
 			cells:   ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: readsPreferences("cycles", `["views"]`)},
-		{op: "listProjectMembers", columns: projectColumns, request: toProject(http.MethodGet, "/members", ""),
-			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: listsTheProjectMembers},
 		// An archived project's settings change as any other's (M3 design
 		// 3.19).
 		{op: "updateProjectPreferences", variant: "archived", write: true, columns: archivedColumns,
@@ -103,37 +101,8 @@ func projectMatrixRows() []matrixRow {
 	}
 }
 
-// listsTheProjectMembers: acme's public project's active members, each
-// with his role, in the order prepareMatrix made them: PA, PM, the
-// workspace's guest (PG's account), PM+WA and the removed member, whose
-// membership of the project the stand-in left active (the list reads
-// project_members alone, M3 design 5.2); not WG-, whose membership
-// partingStates ended.
-func listsTheProjectMembers(t *testing.T, c caller, s seeded, answer string) {
-	var list struct {
-		Data []struct {
-			ProjectID uuid.UUID `json:"project_id"`
-			MemberID  uuid.UUID `json:"member_id"`
-			Role      int       `json:"role"`
-		} `json:"data"`
-	}
-	decodeAnswer(t, answer, &list)
-	want := []struct {
-		c    caller
-		role int
-	}{{callerProjectAdmin, 20}, {callerProjectMember, 15}, {callerGuest, 5}, {callerMemberAndAdmin, 15}, {callerRemoved, 15}}
-	ok := len(list.Data) == len(want)
-	for i := 0; ok && i < len(want); i++ {
-		m := list.Data[i]
-		ok = m.ProjectID == s.project("acme/public") && m.MemberID == s.account(want[i].c) && m.Role == want[i].role
-	}
-	if !ok {
-		t.Errorf("%s lists %s; want %+v of acme/public, in that order", c, answer, want)
-	}
-}
-
-// toProjectPreferences is the request of a row whose callers each send method to
-// their display settings in the project their column targets.
+// toProjectPreferences is the request of a row whose callers each send
+// method to their display settings in the project their column targets.
 func toProjectPreferences(method, body string) func(caller, seeded) (string, string, string) {
 	return func(c caller, s seeded) (string, string, string) {
 		return method, "/api/v0/me/projects/" + s.project(projectOf(c)).String() + "/preferences", body

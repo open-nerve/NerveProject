@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 	"github.com/open-nerve/NerveProject/server/migrations"
 )
 
@@ -23,8 +25,11 @@ import (
 // TestEachWriteOnAProjectSharesItsWorkspaceFirst sends it, by its
 // operationId: the request on the project, by alice.
 type projectWrite struct {
-	op, method, path, body string // path: %s the project's id
+	op, method, path, body string // path: %s the project's id; body: %s the target's id
 	want                   int
+	// targets are the accounts the write makes members of the project, one
+	// a phase: acme's members, none of the project's.
+	targets [2]string
 }
 
 // projectWrites are the writes on a project, in the order they run on
@@ -35,6 +40,8 @@ var projectWrites = []projectWrite{
 	{op: "unarchiveProject", method: http.MethodPost, path: "/api/v0/projects/%s/unarchive", want: http.StatusOK},
 	{op: "updateProjectPreferences", method: http.MethodPatch, path: "/api/v0/me/projects/%s/preferences", body: `{"sort_order":1}`,
 		want: http.StatusOK},
+	{op: "addProjectMembers", method: http.MethodPost, path: "/api/v0/projects/%s/members", body: `{"members":[{"member_id":"%s","role":15}]}`,
+		want: http.StatusCreated, targets: [2]string{"bob", "carol"}},
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
 
@@ -83,18 +90,20 @@ func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
 // Every write on a project takes its workspace's row FOR SHARE first, in
 // its transaction, before any other lock (M3 design 3.6 convention 2, the
 // lock table), as bootstrap wires it: alice, acme's admin, writes on her
-// projects Web and Ops, each write once on each. Every write on a project
-// of the contract has its row here: the matrix's rows that write at the
-// project level are the list.
+// projects Web and Ops, each write once on each, and a write's targets are
+// made members of them. Every write on a project of the contract has its
+// row here: the matrix's rows that write at the project level are the
+// list.
 //   - The workspace first: another transaction holds acme's row FOR NO KEY
 //     UPDATE, as every cascade over its projects does (3.3). The write on
-//     Web waits for that row, and meanwhile does not hold Web's row: a FOR
-//     UPDATE NOWAIT of it succeeds.
-//   - In its transaction, FOR SHARE, before its project: another
-//     transaction holds Ops's row FOR NO KEY UPDATE. The write on Ops waits
-//     for it, and meanwhile holds acme's row at FOR SHARE, no stronger,
-//     which another write on a project of acme shares (a FOR NO KEY UPDATE
-//     NOWAIT of it fails, a FOR SHARE NOWAIT succeeds).
+//     Web waits for that row, and meanwhile holds neither Web's row nor its
+//     target's membership of acme: a FOR UPDATE NOWAIT of each succeeds.
+//   - In its transaction, FOR SHARE, before its target and its project:
+//     another transaction holds Ops's row FOR NO KEY UPDATE. The write on
+//     Ops waits for it, and meanwhile holds acme's row at FOR SHARE, no
+//     stronger, which another write on a project of acme shares (a FOR NO
+//     KEY UPDATE NOWAIT of it fails, a FOR SHARE NOWAIT succeeds), and its
+//     target's membership of acme (a FOR UPDATE NOWAIT fails, 55P03).
 //
 // Once the other transaction ends, each write answers as it would alone.
 // Each row sends its own operation's request, its method and path as the
@@ -128,9 +137,23 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 	decodeAnswer(t, body, &acme)
 	projects := [2]uuid.UUID{createdProject(t, contract, base, alice, "acme", "Web", "WEB"),
 		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
+	ids, aliceID := map[string]uuid.UUID{}, accountID(t, contract, base, alice)
+	for _, w := range projectWrites {
+		for _, name := range w.targets {
+			if name != "" {
+				ids[name] = accountID(t, contract, base, registerAccount(t, contract, base, name+"@example.com").AccessToken)
+				inWorkspaceOf(t, pool, projects[0], ids[name], aliceID, shared.RoleMember)
+			}
+		}
+	}
+	membership := "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL FOR UPDATE NOWAIT"
 	for _, w := range projectWrites {
 		for phase, project := range projects {
-			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(w.body))
+			target, body := w.targets[phase], w.body
+			if strings.Contains(body, "%s") {
+				body = fmt.Sprintf(body, ids[target])
+			}
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(body))
 			contract.CheckRequest(t, req)
 			var other pgx.Tx
 			if phase == 0 {
@@ -144,11 +167,17 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 				if heldBy(t, pool, "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", project) {
 					t.Errorf("%s holds its project while it waits for its workspace", w.op)
 				}
+				if target != "" && heldBy(t, pool, membership, acme.ID, ids[target]) {
+					t.Errorf("%s holds %s's membership of acme while it waits for its workspace", w.op, target)
+				}
 			} else {
 				pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
 				if !heldBy(t, pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE NOWAIT", acme.ID) ||
 					heldBy(t, pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR SHARE NOWAIT", acme.ID) {
 					t.Errorf("%s does not hold its workspace FOR SHARE in its transaction while it waits for its project", w.op)
+				}
+				if target != "" && !heldBy(t, pool, membership, acme.ID, ids[target]) {
+					t.Errorf("%s does not hold %s's membership of acme while it waits for its project", w.op, target)
 				}
 			}
 			if err := other.Rollback(context.Background()); err != nil {

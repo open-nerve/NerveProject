@@ -244,6 +244,21 @@ type ProjectMemberList struct {
 	Data []ProjectMember `json:"data"`
 }
 
+// ProjectMemberNew defines model for ProjectMemberNew.
+type ProjectMemberNew struct {
+	// MemberID An active member of the workspace.
+	MemberID uuid.UUID `json:"member_id"`
+
+	// Role A member's role in a project, 5 guest, 15 member, 20 admin.
+	Role ProjectRole `json:"role"`
+}
+
+// ProjectMembersAdd defines model for ProjectMembersAdd.
+type ProjectMembersAdd struct {
+	// Members 1–100 accounts, each named once.
+	Members []ProjectMemberNew `json:"members"`
+}
+
 // ProjectNavigation The tab bar of a project's header, as the caller has it: the tab the project opens on, and the tabs moved under "more", each once and never work_items.
 type ProjectNavigation struct {
 	// DefaultTab A tab of a project's header.
@@ -332,6 +347,9 @@ type UpdateProjectPreferencesJSONRequestBody = ProjectPreferencesUpdate
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = ProjectUpdate
 
+// AddProjectMembersJSONRequestBody defines body for AddProjectMembers for application/json ContentType.
+type AddProjectMembersJSONRequestBody = ProjectMembersAdd
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
 
@@ -358,6 +376,9 @@ type ServerInterface interface {
 	// ListProjectMembers List a project's members
 	// (GET /api/v0/projects/{project_id}/members)
 	ListProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// AddProjectMembers Add workspace members to a project
+	// (POST /api/v0/projects/{project_id}/members)
+	AddProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -554,6 +575,32 @@ func (siw *ServerInterfaceWrapper) ListProjectMembers(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProjectMembers(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddProjectMembers operation middleware
+func (siw *ServerInterfaceWrapper) AddProjectMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddProjectMembers(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -821,6 +868,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/archive", wrapper.ArchiveProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/unarchive", wrapper.UnarchiveProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.ListProjectMembers)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1155,6 +1203,53 @@ func (response ListProjectMembersdefaultApplicationProblemPlusJSONResponse) Visi
 	return err
 }
 
+type AddProjectMembersRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *AddProjectMembersJSONRequestBody
+}
+
+type AddProjectMembersResponseObject interface {
+	VisitAddProjectMembersResponse(w http.ResponseWriter) error
+}
+
+type AddProjectMembers201JSONResponse ProjectMemberList
+
+func (response AddProjectMembers201JSONResponse) VisitAddProjectMembersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type AddProjectMembersdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response AddProjectMembersdefaultApplicationProblemPlusJSONResponse) VisitAddProjectMembersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveProjectRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 }
@@ -1365,6 +1460,9 @@ type StrictServerInterface interface {
 	// ListProjectMembers List a project's members
 	// (GET /api/v0/projects/{project_id}/members)
 	ListProjectMembers(ctx context.Context, request ListProjectMembersRequestObject) (ListProjectMembersResponseObject, error)
+	// AddProjectMembers Add workspace members to a project
+	// (POST /api/v0/projects/{project_id}/members)
+	AddProjectMembers(ctx context.Context, request AddProjectMembersRequestObject) (AddProjectMembersResponseObject, error)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(ctx context.Context, request UnarchiveProjectRequestObject) (UnarchiveProjectResponseObject, error)
@@ -1607,6 +1705,39 @@ func (sh *strictHandler) ListProjectMembers(w http.ResponseWriter, r *http.Reque
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ListProjectMembersResponseObject); ok {
 		if err := validResponse.VisitListProjectMembersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddProjectMembers operation middleware
+func (sh *strictHandler) AddProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request AddProjectMembersRequestObject
+
+	request.ProjectID = projectID
+
+	var body AddProjectMembersJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddProjectMembers(ctx, request.(AddProjectMembersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddProjectMembers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddProjectMembersResponseObject); ok {
+		if err := validResponse.VisitAddProjectMembersResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

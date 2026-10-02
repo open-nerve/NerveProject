@@ -652,7 +652,11 @@ export interface paths {
          */
         get: operations["listProjectMembers"];
         put?: never;
-        post?: never;
+        /**
+         * Add workspace members to a project
+         * @description For the project's admins, and its members who are the workspace's admins. Adds 1–100 accounts, each an active member of the workspace, with the role given: a workspace admin as an admin (20), a workspace guest as a guest (5), a workspace member as any of the three. One who was a member of the project before has his membership back, with the role given. Each is given display settings in the project, the project first in his sidebar, unless he has them. Refused, each by its place in members (validation_failed): an account that is not an active member of the workspace (member_id not_allowed), one that is a member of the project already, or named twice (member_id duplicate), and a role his workspace role does not allow (role not_allowed); the accounts are checked after the caller's role, so who may not add learns nothing of them. An archived project's members are added as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not add to, forbidden.
+         */
+        post: operations["addProjectMembers"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1274,6 +1278,18 @@ export interface components {
         ProjectMemberList: {
             data: components["schemas"]["ProjectMember"][];
         };
+        ProjectMemberNew: {
+            /**
+             * Format: uuid
+             * @description An active member of the workspace.
+             */
+            member_id: string;
+            role: components["schemas"]["ProjectRole"];
+        };
+        ProjectMembersAdd: {
+            /** @description 1–100 accounts, each named once. */
+            members: components["schemas"]["ProjectMemberNew"][];
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1388,6 +1404,8 @@ export type IdentifierAvailability = components['schemas']['IdentifierAvailabili
 export type ProjectUpdate = components['schemas']['ProjectUpdate'];
 export type ProjectMember = components['schemas']['ProjectMember'];
 export type ProjectMemberList = components['schemas']['ProjectMemberList'];
+export type ProjectMemberNew = components['schemas']['ProjectMemberNew'];
+export type ProjectMembersAdd = components['schemas']['ProjectMembersAdd'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -2394,6 +2412,34 @@ export interface operations {
         responses: {
             /** @description The project's active members. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    addProjectMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectMembersAdd"];
+            };
+        };
+        responses: {
+            /** @description The accounts' memberships, in the request's order. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -266,6 +266,44 @@ paths:
                 $ref: '#/components/schemas/ProjectMemberList'
         default:
           $ref: '#/components/responses/Problem'
+    post:
+      operationId: addProjectMembers
+      tags: [project]
+      summary: Add workspace members to a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins. Adds 1–100 accounts, each an active member of the workspace,
+        with the role given: a workspace admin as an admin (20), a workspace
+        guest as a guest (5), a workspace member as any of the three. One
+        who was a member of the project before has his membership back, with
+        the role given. Each is given display settings in the project, the
+        project first in his sidebar, unless he has them. Refused, each by
+        its place in members (validation_failed): an account that is not an
+        active member of the workspace (member_id not_allowed), one that is
+        a member of the project already, or named twice (member_id
+        duplicate), and a role his workspace role does not allow (role
+        not_allowed); the accounts are checked after the caller's role, so
+        who may not add learns nothing of them. An archived project's
+        members are added as any other's. A project that does not exist, is
+        deleted, or that the caller does not see answers project.not_found;
+        one he sees but may not add to, forbidden.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMembersAdd'
+      responses:
+        '201':
+          description: The accounts' memberships, in the request's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -661,3 +699,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectMember'
+    ProjectMembersAdd:
+      type: object
+      additionalProperties: false
+      required: [members]
+      properties:
+        members:
+          description: 1–100 accounts, each named once.
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMemberNew'
+    ProjectMemberNew:
+      type: object
+      additionalProperties: false
+      required: [member_id, role]
+      properties:
+        member_id:
+          description: An active member of the workspace.
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/ProjectRole'

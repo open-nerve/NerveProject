@@ -220,4 +220,34 @@ func (s projectSeed) preconditions(sd seeded) {
 		s.t.Fatalf("other's project's facts = %+v, %v, %v; want it undeleted in other (%s), not acme (%s)", f, found, err,
 			sd.workspace("other"), sd.workspace("acme"))
 	}
+	s.targets(sd)
+}
+
+// targets checks the accounts addProjectMembers' rows add
+// (permission_matrix_members_test.go): the workspace's member an active
+// member of acme and of neither project his row adds him to, so that its
+// 201 is an addition; X's account no active member of acme, WG-'s its
+// active guest, WA-'s its active admin and PM's an active member of acme's
+// public project, so that each 422 is the refusal its row names.
+func (s projectSeed) targets(sd seeded) {
+	s.t.Helper()
+	ctx := context.Background()
+	for _, tt := range []struct {
+		c      caller
+		role   shared.Role
+		active bool
+	}{{callerMember, shared.RoleMember, true}, {callerNever, 0, false}, {callerGuestOnly, shared.RoleGuest, true}, {callerAdmin, shared.RoleAdmin, true}} {
+		if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("acme"), s.ids[tt.c]); err != nil || active != tt.active ||
+			active && role != tt.role {
+			s.t.Fatalf("%s's role in acme = %d, %v, %v; want %d, %v", tt.c, role, active, err, tt.role, tt.active)
+		}
+	}
+	for _, key := range []string{"acme/public", "acme/archived"} {
+		if f, found, err := s.store.ProjectFacts(ctx, s.projects[key], s.ids[callerMember]); err != nil || !found || f.Member {
+			s.t.Fatalf("the member's facts of %s = %+v, %v, %v; want him no active member of it", key, f, found, err)
+		}
+	}
+	if f, found, err := s.store.ProjectFacts(ctx, s.projects["acme/public"], s.ids[callerProjectMember]); err != nil || !found || !f.Member {
+		s.t.Fatalf("%s's facts of acme/public = %+v, %v, %v; want him its active member", callerProjectMember, f, found, err)
+	}
 }

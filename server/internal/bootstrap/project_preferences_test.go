@@ -10,8 +10,6 @@ import (
 
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	projectapp "github.com/open-nerve/NerveProject/server/internal/modules/project/app"
-	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
-	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -26,15 +24,8 @@ func TestEachMemberHasHisOwnDisplaySettings(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
 	bobID := accountID(t, contract, base, bob)
-	var acme uuid.UUID
-	if err := pool.QueryRow(context.Background(), "SELECT workspace_id FROM projects WHERE id = $1", web).Scan(&acme); err != nil {
-		t.Fatal(err)
-	}
+	acme := inWorkspaceOf(t, pool, web, bobID, aliceID, shared.RoleMember)
 	ctx, now := context.Background(), time.Now()
-	if err := workspacepg.New(pool).CreateMember(ctx, workspaceapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, MemberID: bobID,
-		Role: shared.RoleMember, CreatedBy: aliceID, Now: now}); err != nil {
-		t.Fatal(err)
-	}
 	projects := projectpg.New(pool)
 	if err := projects.CreateMember(ctx, projectapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, MemberID: bobID,
 		Role: shared.RoleMember, CreatedBy: aliceID, Now: now}); err != nil {
