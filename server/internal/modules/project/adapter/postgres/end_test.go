@@ -134,14 +134,15 @@ func TestEndingAMembersProjectMemberships(t *testing.T) {
 
 // SoleAdmin reports whether bob is the only active admin of one of the
 // projects asked about that has another active member (M3 design 3.7 rule
-// 2): each case is a project of its own, asked about alone but where it
-// says, in one workspace where the other cases' projects have admins and
-// members, so that a check of another project's members or admins answers
-// otherwise; where it says, beside a project asked about that has another
-// admin and other members, so that a check of the set asked about, not of
-// each of its projects, answers otherwise too. Plane's checks got this set
-// wrong: the workspace membership's id compared with a project member's
-// account, the projects of one member only, those where he is alone.
+// 2). Every project is acme's, so that a check of another project's members
+// or admins, which the other cases' projects have, answers otherwise. Most
+// cases ask about one project, in the state the case names; three ask about
+// two of those projects at once, one of them with another admin or other
+// members, so that a check of the set asked about, not of each of its
+// projects, answers otherwise too; one asks about none. Plane's checks got
+// this set wrong: the workspace membership's id compared with a project
+// member's account, the projects of one member only, those where he is
+// alone.
 func TestSoleAdmin(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
