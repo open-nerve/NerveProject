@@ -636,6 +636,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/join": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Join a project
+         * @description For the workspace's admins and members who see the project: its admins join any project, its members a public one. The caller becomes its member with his workspace role; one who was its member before has his membership back, with the lesser of the role it had and his workspace role. He is given display settings in the project unless he has them. One who is an active member already is left as he is. An archived project is joined as any other. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; a workspace guest who sees it, as its member, forbidden.
+         */
+        post: operations["joinProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}/members": {
         parameters: {
             query?: never;
@@ -2387,6 +2410,30 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description The project as unarchived, as the caller sees it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Project"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    joinProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project as the caller sees it, now its member. */
             200: {
                 headers: {
                     [name: string]: unknown;

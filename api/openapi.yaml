@@ -79,6 +79,8 @@ paths:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1archive'
   /api/v0/projects/{project_id}/unarchive:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1unarchive'
+  /api/v0/projects/{project_id}/join:
+    $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1join'
   /api/v0/projects/{project_id}/members:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1members'
   /api/v0/me/projects/{project_id}/preferences:

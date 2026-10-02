@@ -109,6 +109,18 @@ func CheckTargets(targets []Target) error {
 	return invalid(found...)
 }
 
+// joiners are the workspace roles that may join a project they see (M3
+// design 3.5; Plane views/project/invite.py:131-189): the workspace's
+// admins and members, not its guests.
+var joiners = []shared.Role{shared.RoleAdmin, shared.RoleMember}
+
+// CanJoin reports whether an active member of the workspace of workspace
+// role workspaceRole may join a project he sees. The set is named, not a
+// bound.
+func CanJoin(workspaceRole shared.Role) bool {
+	return slices.Contains(joiners, workspaceRole)
+}
+
 // roleOrder is the project roles from the least to the most.
 var roleOrder = []shared.Role{shared.RoleGuest, shared.RoleMember, shared.RoleAdmin}
 

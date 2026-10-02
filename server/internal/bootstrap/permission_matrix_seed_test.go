@@ -228,7 +228,15 @@ func (s projectSeed) preconditions(sd seeded) {
 // member of acme and of neither project his row adds him to, so that its
 // 201 is an addition; X's account no active member of acme, WG-'s its
 // active guest, WA-'s its active admin and PM's an active member of acme's
-// public project, so that each 422 is the refusal its row names.
+// public project, so that each 422 is the refusal its row names. The
+// workspace's member, WM-公, and its admin, WA-, are no active members of
+// acme's public project either, so that joinProject's row makes each a
+// member with his workspace role, and the add of WA- as a member is refused
+// for his role, not as a duplicate. Nor has either an ended membership of
+// a project his rows add him to or he joins: the store's Memberships of him
+// there are none, so that the add's 201 and the join's 200 make a new
+// membership and restore no ended one, whose role 9.1's table would decide,
+// and which, ended as an admin's, would answer as a new one.
 func (s projectSeed) targets(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
@@ -242,9 +250,15 @@ func (s projectSeed) targets(sd seeded) {
 			s.t.Fatalf("%s's role in acme = %d, %v, %v; want %d, %v", tt.c, role, active, err, tt.role, tt.active)
 		}
 	}
-	for _, key := range []string{"acme/public", "acme/archived"} {
-		if f, found, err := s.store.ProjectFacts(ctx, s.projects[key], s.ids[callerMember]); err != nil || !found || f.Member {
-			s.t.Fatalf("the member's facts of %s = %+v, %v, %v; want him no active member of it", key, f, found, err)
+	for _, tt := range []struct {
+		key string
+		c   caller
+	}{{"acme/public", callerMember}, {"acme/archived", callerMember}, {"acme/public", callerAdmin}} {
+		if f, found, err := s.store.ProjectFacts(ctx, s.projects[tt.key], s.ids[tt.c]); err != nil || !found || f.Member {
+			s.t.Fatalf("%s's facts of %s = %+v, %v, %v; want him no active member of it", tt.c, tt.key, f, found, err)
+		}
+		if ms, err := s.store.Memberships(ctx, s.projects[tt.key], []uuid.UUID{s.ids[tt.c]}); err != nil || len(ms) != 0 {
+			s.t.Fatalf("%s's memberships of %s = %+v, %v; want none, ended or active", tt.c, tt.key, ms, err)
 		}
 	}
 	if f, found, err := s.store.ProjectFacts(ctx, s.projects["acme/public"], s.ids[callerProjectMember]); err != nil || !found || !f.Member {

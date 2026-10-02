@@ -373,6 +373,9 @@ type ServerInterface interface {
 	// ArchiveProject Archive a project
 	// (POST /api/v0/projects/{project_id}/archive)
 	ArchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// JoinProject Join a project
+	// (POST /api/v0/projects/{project_id}/join)
+	JoinProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// ListProjectMembers List a project's members
 	// (GET /api/v0/projects/{project_id}/members)
 	ListProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -549,6 +552,32 @@ func (siw *ServerInterfaceWrapper) ArchiveProject(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ArchiveProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// JoinProject operation middleware
+func (siw *ServerInterfaceWrapper) JoinProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.JoinProject(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -867,6 +896,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/projects/{project_id}", wrapper.UpdateProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/archive", wrapper.ArchiveProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/unarchive", wrapper.UnarchiveProject)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/join", wrapper.JoinProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
@@ -1140,6 +1170,52 @@ type ArchiveProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ArchiveProjectdefaultApplicationProblemPlusJSONResponse) VisitArchiveProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type JoinProjectRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type JoinProjectResponseObject interface {
+	VisitJoinProjectResponse(w http.ResponseWriter) error
+}
+
+type JoinProject200JSONResponse Project
+
+func (response JoinProject200JSONResponse) VisitJoinProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type JoinProjectdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response JoinProjectdefaultApplicationProblemPlusJSONResponse) VisitJoinProjectResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1457,6 +1533,9 @@ type StrictServerInterface interface {
 	// ArchiveProject Archive a project
 	// (POST /api/v0/projects/{project_id}/archive)
 	ArchiveProject(ctx context.Context, request ArchiveProjectRequestObject) (ArchiveProjectResponseObject, error)
+	// JoinProject Join a project
+	// (POST /api/v0/projects/{project_id}/join)
+	JoinProject(ctx context.Context, request JoinProjectRequestObject) (JoinProjectResponseObject, error)
 	// ListProjectMembers List a project's members
 	// (GET /api/v0/projects/{project_id}/members)
 	ListProjectMembers(ctx context.Context, request ListProjectMembersRequestObject) (ListProjectMembersResponseObject, error)
@@ -1679,6 +1758,32 @@ func (sh *strictHandler) ArchiveProject(w http.ResponseWriter, r *http.Request, 
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ArchiveProjectResponseObject); ok {
 		if err := validResponse.VisitArchiveProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// JoinProject operation middleware
+func (sh *strictHandler) JoinProject(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request JoinProjectRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.JoinProject(ctx, request.(JoinProjectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "JoinProject")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(JoinProjectResponseObject); ok {
+		if err := validResponse.VisitJoinProjectResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

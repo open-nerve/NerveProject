@@ -80,6 +80,12 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 		}, slices.Concat(beforeTargets(bob, webID, []domain.NewMember{{MemberID: ivy, Role: shared.RoleGuest}}), []string{"Now",
 			"LowestSortOrder " + acme.ID.String() + " " + ivy.String()}, grown(ivy, nil, shared.RoleGuest, 65535, bob),
 			[]string{"ListMembers " + webID.String()})},
+		{"joinProject", func() ([]string, error) {
+			uc, f := newJoin()
+			_, err := uc.Execute(as(hank), webID)
+			return f.log.calls, err
+		}, slices.Concat(beforeJoin(hank, webID), []string{"Now"}, grown(hank, nil, shared.RoleMember, 65535, hank),
+			[]string{"GetProject " + webID.String() + " for " + hank.String()})},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

@@ -232,6 +232,12 @@ type MemberAdder interface {
 	SortOrderReader
 }
 
+// MemberJoiner is joinProject's repository.
+type MemberJoiner interface {
+	MemberGrower
+	ProjectReader
+}
+
 // ProjectArchiver is archiveProject's and unarchiveProject's repository.
 // Each method runs in the transaction ctx carries.
 type ProjectArchiver interface {

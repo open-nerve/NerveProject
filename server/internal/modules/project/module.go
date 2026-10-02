@@ -1,10 +1,10 @@
 // Package project is the projects module (M3 design 3.3, 6.3): projects,
 // their members, their states and each member's display settings. It
 // brings listing, creating, reading, changing, archiving and deleting
-// projects, checking an identifier, listing and adding the members and
-// each member's display settings, carries out the workspace module's cascades on the projects
-// (ProjectCascade), and offers the access module its reads of a project
-// (ProjectAccess).
+// projects, checking an identifier, listing, adding and joining the
+// members and each member's display settings, carries out the workspace
+// module's cascades on the projects (ProjectCascade), and offers the
+// access module its reads of a project (ProjectAccess).
 package project
 
 import (
@@ -104,6 +104,7 @@ func New(d Deps) *Module {
 		UpdatePreferences: app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
 		ListMembers:       app.NewListProjectMembers(store, d.Authorizer),
 		AddMembers:        app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
+		JoinProject:       app.NewJoinProject(locks, store, d.Tx, d.Clock),
 	}}
 }
 

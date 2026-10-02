@@ -23,13 +23,15 @@ import (
 
 // projectWrite is a write on a project as
 // TestEachWriteOnAProjectSharesItsWorkspaceFirst sends it, by its
-// operationId: the request on the project, by alice.
+// operationId: the request on the project, by alice unless byTarget.
 type projectWrite struct {
 	op, method, path, body string // path: %s the project's id; body: %s the target's id
 	want                   int
 	// targets are the accounts the write makes members of the project, one
 	// a phase: acme's members, none of the project's.
 	targets [2]string
+	// byTarget is set when the target sends the write: a joining.
+	byTarget bool
 }
 
 // projectWrites are the writes on a project, in the order they run on
@@ -42,6 +44,8 @@ var projectWrites = []projectWrite{
 		want: http.StatusOK},
 	{op: "addProjectMembers", method: http.MethodPost, path: "/api/v0/projects/%s/members", body: `{"members":[{"member_id":"%s","role":15}]}`,
 		want: http.StatusCreated, targets: [2]string{"bob", "carol"}},
+	{op: "joinProject", method: http.MethodPost, path: "/api/v0/projects/%s/join", want: http.StatusOK, targets: [2]string{"dave", "erin"},
+		byTarget: true},
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
 
@@ -137,11 +141,12 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 	decodeAnswer(t, body, &acme)
 	projects := [2]uuid.UUID{createdProject(t, contract, base, alice, "acme", "Web", "WEB"),
 		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
-	ids, aliceID := map[string]uuid.UUID{}, accountID(t, contract, base, alice)
+	tokens, ids, aliceID := map[string]string{}, map[string]uuid.UUID{}, accountID(t, contract, base, alice)
 	for _, w := range projectWrites {
 		for _, name := range w.targets {
 			if name != "" {
-				ids[name] = accountID(t, contract, base, registerAccount(t, contract, base, name+"@example.com").AccessToken)
+				tokens[name] = registerAccount(t, contract, base, name+"@example.com").AccessToken
+				ids[name] = accountID(t, contract, base, tokens[name])
 				inWorkspaceOf(t, pool, projects[0], ids[name], aliceID, shared.RoleMember)
 			}
 		}
@@ -149,11 +154,14 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 	membership := "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL FOR UPDATE NOWAIT"
 	for _, w := range projectWrites {
 		for phase, project := range projects {
-			target, body := w.targets[phase], w.body
+			target, token, body := w.targets[phase], alice, w.body
 			if strings.Contains(body, "%s") {
 				body = fmt.Sprintf(body, ids[target])
 			}
-			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), alice, []byte(body))
+			if w.byTarget {
+				token = tokens[target]
+			}
+			req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), token, []byte(body))
 			contract.CheckRequest(t, req)
 			var other pgx.Tx
 			if phase == 0 {

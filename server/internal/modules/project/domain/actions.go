@@ -33,6 +33,8 @@ const (
 	ActionMemberList shared.Action = "project_member.list"
 	// ActionMemberAdd is adding members to a project: addProjectMembers.
 	ActionMemberAdd shared.Action = "project_member.add"
+	// ActionJoin is joining a project: joinProject.
+	ActionJoin shared.Action = "project.join"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -41,5 +43,5 @@ const (
 func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
-		ActionMemberList, ActionMemberAdd}
+		ActionMemberList, ActionMemberAdd, ActionJoin}
 }

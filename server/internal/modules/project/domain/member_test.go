@@ -106,6 +106,17 @@ func TestCheckTargets(t *testing.T) {
 	}
 }
 
+// The workspace's admins and members may join; its guests, and a role
+// outside the three, between them or above them, may not.
+func TestCanJoin(t *testing.T) {
+	for role, want := range map[shared.Role]bool{shared.RoleAdmin: true, shared.RoleMember: true, shared.RoleGuest: false, 0: false, 10: false,
+		25: false} {
+		if got := CanJoin(role); got != want {
+			t.Errorf("CanJoin(%d) = %v, want %v", role, got, want)
+		}
+	}
+}
+
 // A new membership takes the workspace role; an ended one the lesser of
 // its role and the workspace role (M3 design 9.1's table, and the two
 // equal cases). The lesser is roleOrder's, not the numbers': a role outside

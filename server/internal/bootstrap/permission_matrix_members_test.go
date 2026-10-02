@@ -8,8 +8,8 @@ import (
 )
 
 // The project members' rows of the permission matrix (M3 design 9.2):
-// listing and adding them. prepareMatrix's preconditions hold the targets
-// the rows add to what the rows say of them.
+// listing, adding and joining. prepareMatrix's preconditions hold the
+// accounts the rows add, and the joiners, to what the rows say of them.
 
 func memberMatrixRows() []matrixRow {
 	return []matrixRow{
@@ -47,6 +47,33 @@ func memberMatrixRows() []matrixRow {
 		// 3.19).
 		{op: "addProjectMembers", variant: "archived", write: true, columns: archivedColumns, request: addsToProject(callerMember, 15),
 			cells: map[caller]cell{callerArchivedAdmin: cellCreated}, check: addsTheMember(callerMember, 15)},
+		// Whoever sees the project but a workspace guest, its member too
+		// (M3 design 3.5): an active member is left as he is; the
+		// workspace's admin and member, of no project, join with their
+		// workspace roles.
+		{op: "joinProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/join", ""),
+			cells: ofProject(cellOK, cellOK, cellForbidden, cellOK, cellOK, cellOK), check: joinsAs},
+		{op: "joinProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/join", ""),
+			cells: map[caller]cell{callerArchivedAdmin: cellOK}, check: joinsAs},
+	}
+}
+
+// joinsAs: the column's project as the caller sees it, his role in it and
+// its place in his sidebar: PA's 20 and PM's and PM+WA's 15, the archived
+// project's admin's 20, as they were; WA-'s 20 and WM-公's 15, their
+// workspace roles; each at 65535, the joiners' place (M3 design 3.18) and
+// the seeded members'.
+func joinsAs(t *testing.T, c caller, s seeded, answer string) {
+	var p struct {
+		ID         uuid.UUID `json:"id"`
+		MemberRole *int      `json:"member_role"`
+		SortOrder  float64   `json:"sort_order"`
+	}
+	decodeAnswer(t, answer, &p)
+	want := map[caller]int{callerProjectAdmin: 20, callerProjectMember: 15, callerMemberAndAdmin: 15, callerArchivedAdmin: 20,
+		callerAdminOnly: 20, callerMemberPublic: 15}[c]
+	if p.ID != s.project(projectOf(c)) || p.MemberRole == nil || *p.MemberRole != want || p.SortOrder != 65535 {
+		t.Errorf("%s joins %s; want %s, his role %d, at 65535", c, answer, projectOf(c), want)
 	}
 }
 
