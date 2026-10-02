@@ -15,7 +15,7 @@ func newWorkspacesCommand(load configLoader) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
 	}
-	workspaces.AddCommand(createWorkspaceCommand(load))
+	workspaces.AddCommand(createWorkspaceCommand(load), reactivateMemberCommand(load))
 	return workspaces
 }
 
@@ -42,5 +42,29 @@ func createWorkspaceCommand(load configLoader) *cobra.Command {
 	_ = cmd.MarkFlagRequired("slug") // the flags exist
 	_ = cmd.MarkFlagRequired("name")
 	_ = cmd.MarkFlagRequired("admin-email")
+	return cmd
+}
+
+// reactivateMemberCommand is `nerve workspaces reactivate-member`: an ended
+// membership active again, its role kept; each of the member's project
+// memberships stays ended until he joins its project or is added to it.
+func reactivateMemberCommand(load configLoader) *cobra.Command {
+	var slug, email string
+	cmd := &cobra.Command{
+		Use:   "reactivate-member --slug <slug> --email <address>",
+		Short: "Make an account's ended membership of a workspace active again, its role kept; its project memberships stay ended",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cfg, err := load()
+			if err != nil {
+				return err
+			}
+			return bootstrap.Workspaces(cmd.Context(), cfg, cmd.ErrOrStderr(), cmd.OutOrStdout(), bootstrap.ReactivateMember(slug, email))
+		},
+	}
+	cmd.Flags().StringVar(&slug, "slug", "", "the workspace's slug, its address")
+	cmd.Flags().StringVar(&email, "email", "", "the e-mail address of the member's account")
+	_ = cmd.MarkFlagRequired("slug") // the flags exist
+	_ = cmd.MarkFlagRequired("email")
 	return cmd
 }
