@@ -17,8 +17,8 @@ FROM workspace_members
 WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
 
 -- name: MemberOf :one
--- acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: the user's undeleted membership, active or
--- ended; the partial unique index holds at most one.
+-- acceptWorkspaceInvitation and reactivate-member, under the workspace's FOR NO KEY UPDATE: the user's undeleted
+-- membership, active or ended; the partial unique index holds at most one.
 SELECT id, workspace_id, member_id, role, is_active, created_at
 FROM workspace_members
 WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND deleted_at IS NULL;

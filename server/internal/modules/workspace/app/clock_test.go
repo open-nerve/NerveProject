@@ -20,8 +20,8 @@ import (
 // the one it waited for. The deletion's cascade uses that one read for
 // every step, a change to guest or a restoring as a guest for the
 // projects' step, and a removal and a leaving for each step of the ending.
-// reactivate-member, which decides nothing, reads it after the workspace's
-// lock and the membership's read.
+// reactivate-member, which checks no permission, reads it after the
+// workspace's lock and the membership's read.
 // The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)

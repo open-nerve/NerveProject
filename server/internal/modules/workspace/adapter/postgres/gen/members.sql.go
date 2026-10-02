@@ -223,8 +223,8 @@ type MemberOfRow struct {
 	CreatedAt   time.Time
 }
 
-// acceptWorkspaceInvitation, under the workspace's FOR NO KEY UPDATE: the user's undeleted membership, active or
-// ended; the partial unique index holds at most one.
+// acceptWorkspaceInvitation and reactivate-member, under the workspace's FOR NO KEY UPDATE: the user's undeleted
+// membership, active or ended; the partial unique index holds at most one.
 func (q *Queries) MemberOf(ctx context.Context, arg MemberOfParams) (MemberOfRow, error) {
 	row := q.db.QueryRow(ctx, memberOf, arg.WorkspaceID, arg.MemberID)
 	var i MemberOfRow

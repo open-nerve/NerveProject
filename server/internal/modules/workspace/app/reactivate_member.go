@@ -17,8 +17,10 @@ type Reactivation struct {
 	// AlreadyActive is set when the membership was active: nothing changed.
 	AlreadyActive bool
 	// EndedProjectMemberships is the number of the member's ended
-	// memberships of the workspace's projects: he restores each by joining
-	// its project (M3 design 3.5, 3.11).
+	// memberships of the workspace's projects, which stay ended: each comes
+	// back when he joins its project, which a workspace admin may do for
+	// any project and a member for a public one, or when a project admin
+	// adds him again (M3 design 3.5, 3.11).
 	EndedProjectMemberships int
 	// AccountActive is false for a deactivated account, which the command
 	// reactivates all the same: `nerve users activate` is the next step.

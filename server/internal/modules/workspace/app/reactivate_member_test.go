@@ -94,11 +94,12 @@ func TestReactivateMemberLeavesAnActiveMembership(t *testing.T) {
 	}
 }
 
-// Each refusal and each failure is the answer, nothing is reactivated and
-// nothing logged: no account of the address is workspace.account_not_found,
-// a workspace not there, or deleted while the lock waited,
-// workspace.slug_not_found, an account with no membership of it
-// workspace.never_a_member, each as itself and as no other problem; a
+// Each refusal and each failure is the answer, and nothing is logged;
+// nothing is reactivated before a refusal, and a failure after the write
+// reaches the transaction as itself: no account of the address is
+// workspace.account_not_found, a workspace not there, or deleted while the
+// lock waited, workspace.slug_not_found, an account with no membership of
+// it workspace.never_a_member, each as itself and as no other problem; a
 // failure is no problem at all. The clock logs its reads among the calls:
 // no refusal reads it.
 func TestReactivateMemberRefusals(t *testing.T) {
