@@ -108,8 +108,9 @@ func memberStates(t *testing.T, pool *pgxpool.Pool) string {
 // active again, an admin's still, and his memberships of Web and Ops stay
 // ended, as the line says; the reactivation is logged once. Run again, it
 // says the membership is active and changes nothing. carol's, her account
-// deactivated, is reactivated all the same, and the line says what is
-// next; run again, it says so after the membership is reported active.
+// deactivated, is reactivated all the same, a guest's still, and the line
+// says what is next; run again, it says so after the membership is
+// reported active.
 func TestWorkspacesReactivateMember(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	pool := endedMembers(t, url)
@@ -144,6 +145,10 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 		"added to its project; the account is deactivated: run nerve users activate --email carol@corp.com next\n"; err != nil || out != want {
 		t.Errorf("reactivate-member of carol = %q, %v; want %q", out, err, want)
 	}
+	if got, want := memberStates(t, pool), strings.Join([]string{"alice@corp.com acme 20 true", "bob@corp.com Ops 20 false",
+		"bob@corp.com Web 20 false", "bob@corp.com acme 20 true", "carol@corp.com Web 5 false", "carol@corp.com acme 5 true"}, "\n"); got != want {
+		t.Errorf("the memberships after carol's:\n%s\nwant\n%s", got, want)
+	}
 	out, _, err = runWorkspaces(t, url, ReactivateMember("acme", "carol@corp.com"))
 	if want := "carol@corp.com is an active member of acme already; nothing changed; the account is deactivated: run nerve users activate " +
 		"--email carol@corp.com next\n"; err != nil || out != want {
@@ -154,8 +159,10 @@ func TestWorkspacesReactivateMember(t *testing.T) {
 // A refused reactivation prints no line, says why in one line, and leaves
 // every table as it was (M3 design 3.11): no such account, no such
 // workspace, a deleted one, an account never its member; and a
-// reactivation refused at its commit, after every statement ran, so that
-// no step wrote in a transaction of its own.
+// reactivation refused at its commit, after every statement ran: the
+// commit's failure is the answer, with no line and nothing written. That
+// every statement runs in the one transaction is
+// TestTheReactivationRunsOnItsTransactionsConnection.
 func TestWorkspacesReactivateMemberErrors(t *testing.T) {
 	url := pgtest.NewDatabase(t)
 	pool := endedMembers(t, url)

@@ -17,7 +17,10 @@ import (
 // updated_by_id stays alice's, who ended it (M3 design 3.11). bob's
 // deleted membership of acme, stored before his live one or after it, his
 // ended membership of beta and carol's ended one of acme keep every column,
-// and his reactivated one its other columns. A pair with no undeleted
+// and his reactivated one its other columns. carol's, a guest's,
+// reactivated next, keeps her role and her other columns, as every other
+// row keeps each of its own: no reactivation makes its member an admin,
+// which bob, one already, can't show. A pair with no undeleted
 // membership is an error that is not app.ErrNotFound, and changes nothing:
 // carol's in beta, of which there is none, and bob's in gamma, deleted.
 func TestReactivateMember(t *testing.T) {
@@ -39,7 +42,7 @@ func TestReactivateMember(t *testing.T) {
 			if !deletedFirst {
 				deleted(acme.ID)
 			}
-			joinAt(t, s, acme.ID, carol, shared.RoleGuest, now)
+			carolIn := joinAt(t, s, acme.ID, carol, shared.RoleGuest, now)
 			joinAt(t, s, beta.ID, bob, shared.RoleMember, now)
 			deleted(gamma.ID)
 			for _, w := range []uuid.UUID{acme.ID, beta.ID} {
@@ -62,6 +65,16 @@ func TestReactivateMember(t *testing.T) {
 			}
 			if after := tableRows(t, pool, "workspace_members", []uuid.UUID{bobIn.ID}, "is_active", "updated_at"); after != before {
 				t.Errorf("the memberships, bob's in acme without the columns written:\n%s\nwant them as they were:\n%s", after, before)
+			}
+			before = tableRows(t, pool, "workspace_members", []uuid.UUID{carolIn.ID}, "is_active", "updated_at")
+			if err := s.ReactivateMember(context.Background(), acme.ID, carol, later); err != nil {
+				t.Fatal(err)
+			}
+			if got, want := stamp(t, pool, "workspace_members", carolIn.ID), fmt.Sprintf("active at %s by %s", at(t, pool, later), alice); got != want {
+				t.Errorf("carol's membership of acme: %s, want %s", got, want)
+			}
+			if after := tableRows(t, pool, "workspace_members", []uuid.UUID{carolIn.ID}, "is_active", "updated_at"); after != before {
+				t.Errorf("the memberships, carol's in acme without the columns written:\n%s\nwant them as they were:\n%s", after, before)
 			}
 			before = tableRows(t, pool, "workspace_members", nil)
 			for _, pair := range []struct {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
@@ -39,6 +40,11 @@ func reactivatingBob(ctx context.Context, t *testing.T, url string, maxConns int
 	t.Helper()
 	cfg := testConfig(t, url, false)
 	cfg.Database.MaxConns = maxConns
+	return reactivatingBobWith(ctx, cfg)
+}
+
+// reactivatingBobWith is reactivatingBob on the configuration cfg.
+func reactivatingBobWith(ctx context.Context, cfg config.Config) <-chan commandRun {
 	done := make(chan commandRun, 1)
 	go func() {
 		var out, logs bytes.Buffer
@@ -70,9 +76,10 @@ func idsOf(t *testing.T, pool *pgxpool.Pool) endedIDs {
 // this slug.", and nothing changes; bob's membership made active again
 // meanwhile, as accepting an invitation restores it, is reported active,
 // and nothing changes; bob's account deactivated while it waits for his
-// account's row is reactivated all the same, his membership with it, and
-// the line says what is next. The row the other changed is as it left it,
-// bob's membership as the case says, every other row as it was.
+// account's row: his membership is reactivated all the same; his account
+// stays deactivated, and the line says what is next. The row the other
+// changed is as it left it, bob's membership as the case says (as it was,
+// every column, when it stays ended), every other row as it was.
 func TestAReactivationFindsWhatChangedMeanwhile(t *testing.T) {
 	for _, tt := range []struct {
 		name, holds, waitsOn, change string
@@ -98,6 +105,7 @@ func TestAReactivationFindsWhatChangedMeanwhile(t *testing.T) {
 			ids := idsOf(t, pool)
 			table, id := tt.table, tt.row(ids)
 			others := rowsBut(t, pool, []uuid.UUID{id, ids.bobs})
+			bobs := rowJSON(t, pool, "workspace_members", ids.bobs)
 			other := holding(t, pool, tt.holds, ids.acme, ids.bob)
 			if tag, err := other.Exec(context.Background(), tt.change, ids.acme, ids.bob); err != nil || tag.RowsAffected() != 1 {
 				t.Fatalf("%s: %v, %v; want one row changed", tt.change, tag, err)
@@ -118,8 +126,12 @@ func TestAReactivationFindsWhatChangedMeanwhile(t *testing.T) {
 			if after := rowJSON(t, pool, table, id); !maps.Equal(after, changed) {
 				t.Errorf("%s %s after it:\n%v\nwant it as the other transaction left it:\n%v", table, id, after, changed)
 			}
-			if active := rowJSON(t, pool, "workspace_members", ids.bobs)["is_active"]; active != tt.active {
-				t.Errorf("bob's membership of acme after it: active %v, want %v", active, tt.active)
+			after := rowJSON(t, pool, "workspace_members", ids.bobs)
+			if after["is_active"] != tt.active {
+				t.Errorf("bob's membership of acme after it: active %v, want %v", after["is_active"], tt.active)
+			}
+			if !tt.active && !maps.Equal(after, bobs) {
+				t.Errorf("bob's membership of acme after it:\n%v\nwant it as it was:\n%v", after, bobs)
 			}
 			if after := rowsBut(t, pool, []uuid.UUID{id, ids.bobs}); !maps.Equal(after, others) {
 				t.Errorf("every other row after it:\n%v\nwant them as they were:\n%v", after, others)
@@ -182,7 +194,8 @@ func TestEachLockOfAReactivationIsItsStrength(t *testing.T) {
 }
 
 // The command has no deadline of its own: while acme's row is held it
-// waits, and an interruption, its context's end as SIGINT or SIGTERM ends
+// waits, still after twice the request timeout its configuration gives the
+// server, and an interruption, its context's end as SIGINT or SIGTERM ends
 // it (cmd/nerve), rolls it back: it fails, and no row changes. Run again
 // once the row is free, it reactivates bob (README, M3 design 17.4).
 func TestAnInterruptedReactivationChangesNothing(t *testing.T) {
@@ -192,8 +205,15 @@ func TestAnInterruptedReactivationChangesNothing(t *testing.T) {
 	holdsAcme := holding(t, pool, "SELECT 1 FROM workspaces WHERE slug = 'acme' FOR NO KEY UPDATE")
 	ctx, interrupt := context.WithCancel(context.Background())
 	defer interrupt()
-	done := reactivatingBob(ctx, t, url, 4)
+	cfg := testConfig(t, url, false)
+	cfg.Server.RequestTimeout = 200 * time.Millisecond
+	done := reactivatingBobWith(ctx, cfg)
 	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 5*time.Second)
+	select {
+	case run := <-done:
+		t.Fatalf("reactivate-member ended while acme's row was held = %q, %v; want it waiting until interrupted", run.out, run.err)
+	case <-time.After(2 * cfg.Server.RequestTimeout):
+	}
 	interrupt()
 
 	if run := receiveWithin(t, done, 10*time.Second, "reactivate-member's end"); run.err == nil || run.out != "" {

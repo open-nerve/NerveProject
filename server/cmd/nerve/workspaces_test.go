@@ -70,8 +70,8 @@ func TestWorkspacesCreateCommand(t *testing.T) {
 }
 
 // `nerve workspaces reactivate-member` makes an ended membership active
-// again and prints one line; a refused one exits 1 with one line on stderr
-// and nothing on stdout (M3 design 3.11). That a refusal changes nothing is
+// again, its role kept, and prints one line; a refused one exits 1 with
+// that one line alone on stderr and nothing on stdout (M3 design 3.11). That a refusal changes nothing is
 // bootstrap's TestWorkspacesReactivateMemberErrors.
 func TestWorkspacesReactivateMemberCommand(t *testing.T) {
 	environ, pool := usersDatabase(t)
@@ -98,9 +98,10 @@ func TestWorkspacesReactivateMemberCommand(t *testing.T) {
 		t.Fatalf("nerve workspaces reactivate-member = %d %q (stderr %q), want 0 and %q", code, stdout, stderr, want)
 	}
 	var active bool
-	if err := pool.QueryRow(context.Background(), `SELECT m.is_active FROM workspace_members m JOIN users u ON u.id = m.member_id
-		WHERE u.email = 'lee@corp.com'`).Scan(&active); err != nil || !active {
-		t.Errorf("lee's membership active = %v (%v), want true", active, err)
+	var role int
+	if err := pool.QueryRow(context.Background(), `SELECT m.is_active, m.role FROM workspace_members m JOIN users u ON u.id = m.member_id
+		WHERE u.email = 'lee@corp.com'`).Scan(&active, &role); err != nil || !active || role != 15 {
+		t.Errorf("lee's membership: active %v, role %d (%v); want active, a member's still (15)", active, role, err)
 	}
 
 	tests := []struct {
@@ -118,7 +119,7 @@ func TestWorkspacesReactivateMemberCommand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			code, stdout, stderr := execute(context.Background(), environ, tt.args...)
-			if code != 1 || stdout != "" || !strings.HasSuffix(stderr, tt.want) {
+			if code != 1 || stdout != "" || stderr != tt.want {
 				t.Errorf("nerve %s = %d, stdout %q, stderr %q; want 1 and %q", strings.Join(tt.args, " "), code, stdout, stderr, tt.want)
 			}
 		})
