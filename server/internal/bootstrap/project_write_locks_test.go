@@ -91,6 +91,23 @@ func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
 	return false
 }
 
+// lockOn is the strongest row lock other transactions hold on the one row
+// of from, a table and its WHERE clause over args: FOR UPDATE when a FOR
+// KEY SHARE NOWAIT of it fails (heldBy), FOR NO KEY UPDATE when a FOR
+// SHARE NOWAIT does, FOR SHARE when a FOR NO KEY UPDATE NOWAIT does, FOR
+// KEY SHARE when a FOR UPDATE NOWAIT does, and "no lock" when none fails.
+// Each lock it takes ends with its statement.
+func lockOn(t *testing.T, pool *pgxpool.Pool, from string, args ...any) string {
+	t.Helper()
+	modes := []string{"FOR KEY SHARE", "FOR SHARE", "FOR NO KEY UPDATE", "FOR UPDATE"}
+	for i, mode := range modes {
+		if heldBy(t, pool, "SELECT 1 FROM "+from+" "+mode+" NOWAIT", args...) {
+			return modes[len(modes)-1-i]
+		}
+	}
+	return "no lock"
+}
+
 // Every write on a project takes its workspace's row FOR SHARE first, in
 // its transaction, before any other lock (M3 design 3.6 convention 2, the
 // lock table), as bootstrap wires it: alice, acme's admin, writes on her

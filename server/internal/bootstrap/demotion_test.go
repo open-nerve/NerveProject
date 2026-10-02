@@ -68,11 +68,11 @@ func failingDemotions(t *testing.T, pool *pgxpool.Pool) (restore func()) {
 	return func() { exec("ALTER TABLE project_members DROP CONSTRAINT no_guests") }
 }
 
-// refusingCommits makes the commit of every transaction that updated a
-// workspace membership fail, until restore runs, or the test ends: a
+// refusingCommits makes the commit of every transaction that inserted or
+// updated a row of table fail, until restore runs, or the test ends: a
 // deferred constraint trigger, which runs at the commit, after every
 // statement.
-func refusingCommits(t *testing.T, pool *pgxpool.Pool) (restore func()) {
+func refusingCommits(t *testing.T, pool *pgxpool.Pool, table string) (restore func()) {
 	t.Helper()
 	exec := func(sql string) {
 		t.Helper()
@@ -81,10 +81,10 @@ func refusingCommits(t *testing.T, pool *pgxpool.Pool) (restore func()) {
 		}
 	}
 	exec(`CREATE FUNCTION refuse_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'the commit is refused'; END $$`)
-	exec(`CREATE CONSTRAINT TRIGGER refuse_commit AFTER UPDATE ON workspace_members DEFERRABLE INITIALLY DEFERRED
+	exec(`CREATE CONSTRAINT TRIGGER refuse_commit AFTER INSERT OR UPDATE ON ` + table + ` DEFERRABLE INITIALLY DEFERRED
 		FOR EACH ROW EXECUTE FUNCTION refuse_commit()`)
 	restore = func() {
-		exec("DROP TRIGGER IF EXISTS refuse_commit ON workspace_members")
+		exec("DROP TRIGGER IF EXISTS refuse_commit ON " + table)
 		exec("DROP FUNCTION IF EXISTS refuse_commit()")
 	}
 	t.Cleanup(restore)
@@ -204,7 +204,7 @@ func TestDemotingToGuestDemotesInTheWorkspacesProjects(t *testing.T) {
 		t.Errorf("the change with the projects' step failing = %d %s, roles %s; want 500 and %s", status, body, got, before)
 	}
 
-	restore = refusingCommits(t, pool)
+	restore = refusingCommits(t, pool, "workspace_members")
 	status, body = patch()
 	restore()
 	if got := rolesOf(t, pool, bobID, aliceID); status != http.StatusInternalServerError || got != before {
@@ -278,7 +278,7 @@ func TestAcceptingAsAGuestAgainDemotesInTheWorkspacesProjects(t *testing.T) {
 			before)
 	}
 
-	restore = refusingCommits(t, pool)
+	restore = refusingCommits(t, pool, "workspace_members")
 	status, body = accept()
 	restore()
 	if got := rolesOf(t, pool, bobID, bobID); status != http.StatusInternalServerError || got != before || !pending() {

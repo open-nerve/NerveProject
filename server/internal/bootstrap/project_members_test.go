@@ -201,3 +201,68 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 		}
 	}
 }
+
+// The project side's growth is one transaction (M3 design 3.6), the one
+// of the TxManager project.New is given: a growth refused at its commit,
+// after every statement ran, leaves no row, which a statement run in a
+// transaction of its own would have outlived. bob, acme's member, is first
+// no member of alice's Web, then an ended one without display settings
+// there (P5's removal ends it; SQL stands in): each time, with the commits
+// of memberships refused, then those of display settings, which the growth
+// writes last, alice's adding him and his joining answer 500 and change no
+// membership and no display settings. Once commits are allowed again, he
+// joins.
+func TestAGrowthRefusedAtItsCommitLeavesNoRow(t *testing.T) {
+	contract, base, pool, alice, aliceID, web, _ := twoProjects(t)
+	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
+	bobID := accountID(t, contract, base, bob)
+	inWorkspaceOf(t, pool, web, bobID, aliceID, shared.RoleMember)
+	rows := func() string {
+		t.Helper()
+		var s string
+		if err := pool.QueryRow(context.Background(), `SELECT
+			coalesce((SELECT string_agg(role || ' ' || is_active || ' ' || updated_at, ', ') FROM project_members
+			          WHERE project_id = $1 AND member_id = $2), 'no membership') || '; ' ||
+			coalesce((SELECT string_agg(sort_order::text, ', ') FROM project_user_properties WHERE project_id = $1 AND user_id = $2),
+			         'no settings')`, web, bobID).Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	add := func() (int, string) {
+		return call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/members", alice,
+			`{"members":[{"member_id":"`+bobID.String()+`","role":15}]}`)
+	}
+	join := func() (int, string) {
+		return call(t, contract, http.MethodPost, base+"/api/v0/projects/"+web.String()+"/join", bob, "")
+	}
+	grow := []struct {
+		name string
+		send func() (int, string)
+	}{{"alice's adding", add}, {"bob's joining", join}}
+	for _, ended := range []bool{false, true} {
+		if ended {
+			if _, err := pool.Exec(context.Background(), `INSERT INTO project_members (id, workspace_id, project_id, member_id, role,
+				is_active, created_by_id, updated_by_id) SELECT $1, workspace_id, id, $2, 15, false, $3, $3 FROM projects WHERE id = $4`,
+				uuid.NewV7(), bobID, aliceID, web); err != nil {
+				t.Fatal(err)
+			}
+		}
+		before := rows()
+		for _, table := range []string{"project_members", "project_user_properties"} {
+			restore := refusingCommits(t, pool, table)
+			for _, g := range grow {
+				if status, body := g.send(); status != http.StatusInternalServerError {
+					t.Errorf("%s, ended %v, with the commits of %s refused = %d %s, want 500", g.name, ended, table, status, body)
+				}
+				if got := rows(); got != before {
+					t.Errorf("%s, ended %v, refused at its commit of %s: bob's rows %s, want %s", g.name, ended, table, got, before)
+				}
+			}
+			restore()
+		}
+	}
+	if status, body := join(); status != http.StatusOK {
+		t.Errorf("bob's joining once commits are allowed = %d %s, want 200", status, body)
+	}
+}

@@ -89,14 +89,18 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 
 // Every statement of the deletion runs in its one transaction (M3 design
 // 3.3, 9.3): a deletion refused at its commit, after every statement ran,
-// changes no row under either project. A deferred constraint trigger on
-// states refuses it: the last step's table, so a step that committed on
-// its own, before it, would leave its rows deleted.
+// changes no row under either project. A deferred constraint trigger
+// refuses the commits that wrote one table under projects, each table the
+// catalog ties to projects in turn: a step that ran in a transaction of
+// its own commits its rows deleted unless it wrote that table, so it is
+// seen while another table's commit is refused, wherever it comes in the
+// deletion.
 func TestAProjectDeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 	contract, base, pool, alice, _, web, ops := twoProjects(t)
+	keys := keysTo(t, pool, "projects")
 	rowsOf := func() []string {
 		var all []string
-		for _, k := range keysTo(t, pool, "projects") {
+		for _, k := range keys {
 			for _, id := range []uuid.UUID{web, ops} {
 				all = append(all, k.String()+":\n"+k.rows(t, pool, id))
 			}
@@ -104,19 +108,14 @@ func TestAProjectDeletionRefusedAtItsCommitChangesNoRow(t *testing.T) {
 		return all
 	}
 	before := rowsOf()
-	for _, sql := range []string{
-		`CREATE FUNCTION refuse_commit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'the commit is refused'; END $$`,
-		`CREATE CONSTRAINT TRIGGER refuse_commit AFTER UPDATE ON states DEFERRABLE INITIALLY DEFERRED
-			FOR EACH ROW EXECUTE FUNCTION refuse_commit()`,
-	} {
-		if _, err := pool.Exec(context.Background(), sql); err != nil {
-			t.Fatal(err)
+	for _, k := range keys {
+		restore := refusingCommits(t, pool, k.table)
+		if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), alice, ""); status != http.StatusInternalServerError {
+			t.Errorf("deleting Web with the commits of %s refused = %d %s, want 500", k.table, status, body)
 		}
-	}
-	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), alice, ""); status != http.StatusInternalServerError {
-		t.Fatalf("deleting Web with its commit refused = %d %s, want 500", status, body)
-	}
-	if after := rowsOf(); !slices.Equal(after, before) {
-		t.Errorf("the rows after the refused deletion:\n%q\nwant\n%q", after, before)
+		if after := rowsOf(); !slices.Equal(after, before) {
+			t.Fatalf("the rows after the deletion refused at its commit of %s:\n%q\nwant\n%q", k.table, after, before)
+		}
+		restore()
 	}
 }
