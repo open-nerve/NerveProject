@@ -103,7 +103,7 @@ func CheckTargets(targets []Target) error {
 				Message: "is an active member of the project already"})
 		case !CanAdd(*t.WorkspaceRole, t.Role):
 			found = append(found, &shared.FieldError{Field: fmt.Sprintf("members[%d].role", i), Code: shared.FieldNotAllowed,
-				Message: "is not one his workspace role allows: a workspace admin joins as an admin, a guest as a guest"})
+				Message: "is not one his workspace role allows: a workspace admin is added as an admin, a guest as a guest"})
 		}
 	}
 	return invalid(found...)

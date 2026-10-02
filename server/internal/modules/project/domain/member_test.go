@@ -90,7 +90,7 @@ func TestCheckTargets(t *testing.T) {
 		target(shared.RoleGuest, role(shared.RoleGuest), false)}); err != nil {
 		t.Errorf("CheckTargets() of allowed targets = %v, want nil", err)
 	}
-	roleProblem := "is not one his workspace role allows: a workspace admin joins as an admin, a guest as a guest"
+	roleProblem := "is not one his workspace role allows: a workspace admin is added as an admin, a guest as a guest"
 	want := []shared.FieldError{
 		{Field: "members[0].member_id", Code: "not_allowed", Message: "must be an active member of the workspace"},
 		{Field: "members[1].member_id", Code: "duplicate", Message: "is an active member of the project already"},

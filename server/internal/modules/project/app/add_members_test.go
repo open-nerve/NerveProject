@@ -73,14 +73,15 @@ func TestAddProjectMembers(t *testing.T) {
 	}
 }
 
-// Refusals, each in its place, and nothing written: the request's values,
-// and no caller, before the transaction; a project not there: 404 at its
-// workspace; one not visible, or a member's 403, at the decision, whatever
-// the targets (the matrix's PM and X cells, M3 design 9.2); each target
-// refused after the decision, all of them in one 422 by their places: erin
-// is no member of the workspace, alice is a member of the project already,
-// gina, a workspace admin, is asked for as a member, ivy, a workspace
-// guest, as a member; hank as an admin passes.
+// Refusals, each in its place, and nothing written: the request's values
+// (no member; dave named twice, whose ended membership RestoreMember, by
+// its id, would restore twice), and no caller, before the transaction; a
+// project not there: 404 at its workspace; one not visible, or a member's
+// 403, at the decision, whatever the targets (the matrix's PM and X cells,
+// M3 design 9.2); each target refused after the decision, all of them in
+// one 422 by their places: erin is no member of the workspace, alice is a
+// member of the project already, gina, a workspace admin, is asked for as
+// a member, ivy, a workspace guest, as a member; hank as an admin passes.
 func TestAddProjectMembersRefuses(t *testing.T) {
 	erins := []domain.NewMember{{MemberID: erin, Role: shared.RoleMember}}
 	mixed := []domain.NewMember{{MemberID: erin, Role: shared.RoleMember}, {MemberID: alice, Role: shared.RoleMember},
@@ -94,6 +95,8 @@ func TestAddProjectMembersRefuses(t *testing.T) {
 		calls []string
 	}{
 		{"none", as(bob), webID, nil, shared.Invalid(shared.FieldError{Field: "members", Code: "too_short"}), nil},
+		{"a repeated account", as(bob), webID, []domain.NewMember{{MemberID: dave, Role: shared.RoleMember}, {MemberID: dave, Role: shared.RoleAdmin}},
+			shared.Invalid(shared.FieldError{Field: "members[1].member_id", Code: "duplicate"}), nil},
 		{"no caller", context.Background(), webID, erins, shared.Unauthenticated(), nil},
 		{"no project", as(bob), uuid.Nil(), erins, domain.ErrNotFound, noProject},
 		{"not seen, an invalid target", as(erin), webID, erins, domain.ErrNotFound, beforeTargets(erin, webID, erins)[:6]},
