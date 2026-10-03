@@ -53,9 +53,11 @@ func TestRemoveProjectMember(t *testing.T) {
 // meanwhile, and a caller who does not see the project, each
 // project.member_not_found; a project member, the Authorizer's 403. Then,
 // to a caller who may remove members, after the decision: an ended
-// membership, 404; his own, 409, the workspace's admin's too; a higher
-// role, 403 project.role_too_high, from the workspace's admin too. A
-// membership answered for another id is the write's own error.
+// membership, 404, before any other check, and so when it ended while the
+// locks waited, an admin's to the workspace's admin, or his own; his own,
+// 409, the workspace's admin's too; a higher role, 403
+// project.role_too_high, from the workspace's admin too. A membership
+// answered for another id is the write's own error.
 func TestRemoveProjectMemberRefuses(t *testing.T) {
 	locked := func(f *writeFixture, caller, user uuid.UUID) []string {
 		return memberLocked(f.memberOf(webID, user), user, webID, caller, domain.ActionMemberRemove, false)
@@ -84,6 +86,10 @@ func TestRemoveProjectMemberRefuses(t *testing.T) {
 		{"a caller who does not see web", erin, alice, nil, domain.ErrMemberNotFound, locked},
 		{"a project member", alice, carol, nil, shared.Forbidden(), locked},
 		{"an ended membership", bob, dave, nil, domain.ErrMemberNotFound, locked},
+		{"an admin's membership ended while the locks waited, by the workspace's admin", gina, frank,
+			func(f *writeFixture) { f.store.reread.ended = true }, domain.ErrMemberNotFound, locked},
+		{"his own membership ended while the locks waited", bob, bob, func(f *writeFixture) { f.store.reread.ended = true },
+			domain.ErrMemberNotFound, locked},
 		{"his own", bob, bob, nil, domain.ErrOwnMembership, locked},
 		{"the workspace's admin's own", gina, gina, nil, domain.ErrOwnMembership, locked},
 		{"an admin, by the workspace's admin who is a project member", gina, bob, nil, domain.ErrRoleTooHigh, locked},

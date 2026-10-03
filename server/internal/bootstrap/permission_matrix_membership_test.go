@@ -121,8 +121,8 @@ func membershipMatrixRows() []matrixRow {
 		// PM+WA, a member, removes a member, of his own role.
 		{op: "removeProjectMember", write: true, columns: projectColumns, request: toProjectMembership(http.MethodDelete, "", projectMemberOf),
 			cells: ofMembership(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
-		// Nobody removes his own membership, the workspace's admin neither:
-		// he leaves the project (M3 design 3.5).
+		// Nobody removes his own membership, the workspace's admin neither
+		// (M3 design 3.5).
 		{op: "removeProjectMember", variant: "one's own membership", write: true, columns: projectColumns,
 			request: toProjectMembership(http.MethodDelete, "", ownMembershipOf),
 			cells:   ofMembership(cellProjectOwnMembership, cellForbidden, cellForbidden, cellProjectOwnMembership, cellForbidden, cellForbidden)},
