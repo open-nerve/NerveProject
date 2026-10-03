@@ -68,9 +68,9 @@ func CheckRoleChange(c RoleChange) error {
 // CheckRemoval checks a removal of a project membership of role, the
 // caller's own when own is set, after the decision let the caller remove
 // members (M3 design 3.5): nobody removes his own membership
-// (ErrOwnMembership: he leaves the project), nor one whose role is above
-// his own project role, callerRole (ErrRoleTooHigh), the workspace's admins
-// neither (Plane views/project/member.py:290-321 gives them no exception).
+// (ErrOwnMembership), nor one whose role is above his own project role,
+// callerRole (ErrRoleTooHigh), the workspace's admins neither (Plane
+// views/project/member.py:290-321 gives them no exception).
 func CheckRemoval(callerRole shared.Role, own bool, role shared.Role) error {
 	switch {
 	case own:

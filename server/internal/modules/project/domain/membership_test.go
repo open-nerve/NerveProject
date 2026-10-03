@@ -62,7 +62,8 @@ func sameProblem(err, want error) bool {
 // his own, so a project admin changes no admin and makes none, and a
 // project member changes a guest to a guest at most. The workspace's
 // admin, whatever his project role: his own, an admin's, to admin. For
-// everyone: a workspace guest is a guest. Below is by roleOrder: a project
+// everyone, after that rule: a workspace guest is a guest, so one whom the
+// rule refuses is answered by the rule. Below is by roleOrder: a project
 // role outside the three has nothing below it, and a role between them
 // (10, below 20 by the numbers) is below nothing it is not in roleOrder
 // before.
@@ -95,6 +96,7 @@ func TestCheckRoleChange(t *testing.T) {
 		{"a workspace admin who is a project guest changes an admin", RoleChange{adminAsGuest, false, admin, member, guest}, nil},
 		{"a workspace admin makes another workspace admin a member", RoleChange{bothAdmin, false, admin, admin, member}, nil},
 		{"a project admin makes a workspace guest a member", RoleChange{projectAdmin, false, guest, guest, member}, guestOnly},
+		{"a project admin makes a workspace guest an admin", RoleChange{projectAdmin, false, guest, guest, admin}, ErrRoleTooHigh},
 		{"a workspace admin makes a workspace guest a member", RoleChange{adminAsMember, false, guest, guest, member}, guestOnly},
 		{"a workspace admin makes a workspace guest an admin", RoleChange{bothAdmin, false, guest, guest, admin}, guestOnly},
 		{"a workspace admin keeps a workspace guest a guest", RoleChange{bothAdmin, false, guest, guest, guest}, nil},
