@@ -2057,7 +2057,7 @@ modules/access/
 | P4b `project-members` | 项目的管理、显示设置与成员的加入（后端，9）；同上，P4a 合并之后开始 | 已完成：[spec](specs/P4b-project-members.md)、[plan](plans/P4b-project-members.md)、[评审](reviews/P4b-project-members-review.md)（执行时 16 个 Task） |
 | P5a `memberships` | 结束与恢复工作区的成员关系（后端，15）；设计中的 P5 由负责人裁定拆出（2026-10-02，第 12 节） | 已完成：[spec](specs/P5a-memberships.md)、[plan](plans/P5a-memberships.md)、[评审](reviews/P5a-memberships-review.md)（执行时 14 个 Task） |
 | P5b `project-memberships` | 项目成员的角色、移出与离开（后端，9）；同上，P5a 合并之后开始 | 已完成：[spec](specs/P5b-project-memberships.md)、[plan](plans/P5b-project-memberships.md)、[评审](reviews/P5b-project-memberships-review.md)（执行时 11 个 Task） |
-| P6 `deactivation` | 停用账户与成员关系（后端，9） | 未开始 |
+| P6 `deactivation` | 停用账户与成员关系（后端，9） | 进行中：[spec](specs/P6-deactivation.md)、[plan](plans/P6-deactivation.md) |
 | P7 `states-and-labels` | 状态与标签（后端，13） | 未开始 |
 | P8 `web-data-layer` | 前端的数据层（16） | 未开始 |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 未开始 |
