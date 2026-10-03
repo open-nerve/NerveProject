@@ -111,14 +111,14 @@ func (s projectSeed) project(id uuid.UUID, key, name, identifier string, network
 	s.projects[key] = id
 }
 
-// join makes c a member of the project key with role, and stores his
-// display settings in it.
-func (s projectSeed) join(key string, c caller, role shared.Role) {
+// join makes c a member of the project key with role, the membership id,
+// and stores his display settings in it.
+func (s projectSeed) join(id uuid.UUID, key string, c caller, role shared.Role) {
 	s.t.Helper()
 	slug, _, _ := strings.Cut(key, "/")
 	ctx, by := context.Background(), s.ids[matrixAdmins[slug]]
 	if err := s.store.CreateMember(ctx, projectapp.MemberRow{
-		ID: uuid.NewV7(), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[key], MemberID: s.ids[c], Role: role, CreatedBy: by, Now: s.now,
+		ID: id, WorkspaceID: s.workspaces[slug], ProjectID: s.projects[key], MemberID: s.ids[c], Role: role, CreatedBy: by, Now: s.now,
 	}); err != nil {
 		s.t.Fatal(err)
 	}
@@ -267,6 +267,7 @@ func (s projectSeed) preconditions(sd seeded) {
 			sd.workspace("other"), sd.workspace("acme"))
 	}
 	s.targets(sd)
+	s.memberships(sd)
 }
 
 // targets checks the accounts addProjectMembers' rows add

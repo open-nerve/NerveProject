@@ -53,6 +53,9 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.name_taken": "auth.errors.project_name_taken",
   "project.not_found": "auth.errors.project_not_found",
   "project.archived": "auth.errors.project_archived",
+  "project.member_not_found": "auth.errors.project_member_not_found",
+  "project.own_membership": "auth.errors.project_own_membership",
+  "project.role_too_high": "auth.errors.project_role_too_high",
   "project.sole_admin": "auth.errors.project_sole_admin",
 };
 

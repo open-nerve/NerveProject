@@ -46,5 +46,5 @@ const (
 func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
-		ActionMemberList, ActionMemberAdd, ActionJoin}
+		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate}
 }

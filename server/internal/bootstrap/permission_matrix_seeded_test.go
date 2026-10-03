@@ -72,7 +72,8 @@ var matrixProjects = []struct {
 // public one, whose membership of it his removal ends; the member before
 // in the private one, ended; WG- in both, and the member in the private
 // one, for partingStates to end or delete; the archived project's admin;
-// each other workspace's admin in its project.
+// each other workspace's admin in its project, and gone's member in gone's,
+// a member of the project the X columns' writes on a membership name there.
 var matrixProjectMembers = []struct {
 	key  string
 	c    caller
@@ -86,7 +87,8 @@ var matrixProjectMembers = []struct {
 	{"acme/private", callerBefore, shared.RoleMember}, {"acme/private", callerGuestOnly, shared.RoleGuest},
 	{"acme/private", callerMember, shared.RoleMember},
 	{"acme/archived", callerProjectAdmin, shared.RoleAdmin},
-	{"gone/project", callerDeleted, shared.RoleAdmin}, {"other/project", callerNever, shared.RoleAdmin},
+	{"gone/project", callerDeleted, shared.RoleAdmin}, {"gone/project", callerMember, shared.RoleMember},
+	{"other/project", callerNever, shared.RoleAdmin},
 }
 
 // ownInvitation is the workspace of the invitation to c's own address: one
@@ -112,25 +114,28 @@ func emailOf(c caller) string {
 // seeded are the ids of the rows prepareMatrix seeds that a request or a
 // check can name: each workspace, by its slug; each membership, by the
 // workspace's slug and the column; each invitation, by the workspace's
-// slug and the address; each project, by its key; and each account, by
-// its name in matrixAccounts, which prepareMatrix registers. t is the test
-// that asks for them (in).
+// slug and the address; each project, by its key; each project membership,
+// by the project's key and the column; and each account, by its name in
+// matrixAccounts, which prepareMatrix registers. t is the test that asks
+// for them (in).
 type seeded struct {
-	t           testing.TB
-	workspaces  map[string]uuid.UUID
-	memberships map[string]uuid.UUID
-	invitations map[string]uuid.UUID
-	projects    map[string]uuid.UUID
-	accounts    map[caller]uuid.UUID
+	t              testing.TB
+	workspaces     map[string]uuid.UUID
+	memberships    map[string]uuid.UUID
+	invitations    map[string]uuid.UUID
+	projects       map[string]uuid.UUID
+	projectMembers map[string]uuid.UUID
+	accounts       map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
-// matrixMemberships, each of matrixInvitations and each of matrixProjects
-// before prepareMatrix writes them, so that matrixViolations, without a
-// database, sees the keys and the targets the cells will.
+// matrixMemberships, each of matrixInvitations, each of matrixProjects and
+// each of matrixProjectMembers before prepareMatrix writes them, so that
+// matrixViolations, without a database, sees the keys and the targets the
+// cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
-		projects: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
+		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -142,6 +147,9 @@ func newSeeded() seeded {
 	}
 	for _, p := range matrixProjects {
 		s.projects[p.key] = uuid.NewV7()
+	}
+	for _, pm := range matrixProjectMembers {
+		s.projectMembers[pm.key+"|"+string(pm.c)] = uuid.NewV7()
 	}
 	return s
 }
@@ -195,6 +203,29 @@ func (s seeded) project(key string) uuid.UUID {
 		s.t.Fatalf("no project %s is seeded", key)
 	}
 	return id
+}
+
+// projectMember is the id of c's membership of the project key; one never
+// seeded fails the test at once, as membership's does.
+func (s seeded) projectMember(key string, c caller) uuid.UUID {
+	id, ok := s.projectMembers[key+"|"+string(c)]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no membership of %s by %s is seeded", key, c)
+	}
+	return id
+}
+
+// projectOfMember is the key of the project of the seeded project
+// membership id, false for an id no seeded project membership has.
+func (s seeded) projectOfMember(id uuid.UUID) (string, bool) {
+	for key, seededID := range s.projectMembers {
+		if seededID == id {
+			project, _, _ := strings.Cut(key, "|")
+			return project, true
+		}
+	}
+	return "", false
 }
 
 // account is the id of the account of matrixAccounts c, which prepareMatrix

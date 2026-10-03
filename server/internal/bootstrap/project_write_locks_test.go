@@ -23,15 +23,33 @@ import (
 
 // projectWrite is a write on a project as
 // TestEachWriteOnAProjectSharesItsWorkspaceFirst sends it, by its
-// operationId: the request on the project, by alice unless byTarget.
+// operationId: the request on the project, or on a membership of it, by
+// alice unless by names another sender.
 type projectWrite struct {
-	op, method, path, body string // path: %s the project's id; body: %s the target's id
+	// path: %s the project's id, or the membership's for a path of one
+	// (/api/v0/project-members/); body: %s the target's id.
+	op, method, path, body string
 	want                   int
-	// targets are the accounts the write makes members of the project, one
-	// a phase: acme's members, none of the project's.
+	// targets are the accounts, one a phase, whose membership of the
+	// workspace the write locks: acme's members, whom it makes members of
+	// the project, or whose role in it it changes.
 	targets [2]string
-	// byTarget is set when the target sends the write: a joining.
-	byTarget bool
+	// by are the accounts, one a phase, that send the write: alice when
+	// empty.
+	by [2]string
+	// member are the accounts, one a phase, whose membership of the project
+	// the write changes: a path of a membership names it, and its row is
+	// probed as the project's is.
+	member [2]string
+}
+
+// param is the parameter w's path names: a membership's id for a path of
+// one, else the project's.
+func (w projectWrite) param() string {
+	if strings.HasPrefix(w.path, "/api/v0/project-members/") {
+		return "{project_member_id}"
+	}
+	return "{project_id}"
 }
 
 // projectWrites are the writes on a project, in the order they run on
@@ -46,7 +64,10 @@ var projectWrites = []projectWrite{
 	{op: "addProjectMembers", method: http.MethodPost, path: "/api/v0/projects/%s/members", body: `{"members":[{"member_id":"%s","role":15}]}`,
 		want: http.StatusCreated, targets: [2]string{"bob", "carol"}},
 	{op: "joinProject", method: http.MethodPost, path: "/api/v0/projects/%s/join", want: http.StatusOK, targets: [2]string{"dave", "erin"},
-		byTarget: true},
+		by: [2]string{"dave", "erin"}},
+	// The members added before, bob in Web and carol in Ops, made guests.
+	{op: "updateProjectMember", method: http.MethodPatch, path: "/api/v0/project-members/%s", body: `{"role":5}`, want: http.StatusOK,
+		targets: [2]string{"bob", "carol"}, member: [2]string{"bob", "carol"}},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
@@ -175,21 +196,25 @@ func lockOn(t *testing.T, pool *pgxpool.Pool, from string, args ...any) string {
 // Every write on a project takes its workspace's row FOR SHARE first, in
 // its transaction, before any other lock (M3 design 3.6 convention 2, the
 // lock table), as bootstrap wires it: alice, acme's admin, writes on her
-// projects Web and Ops, each write once on each, and a write's targets are
-// made members of them. Every write on a project of the contract has its
-// row here: every operation but GET whose path names a project, or that a
-// matrix row asks of a project-level column (writesOnAProject), is the
-// list, which a write without a row here fails before any database.
+// projects Web and Ops, each write once on each; a write's targets are made
+// members of them or their roles changed, and a write on a membership names
+// it by its id, or by its project and its sender. Every write on a project
+// of the contract has its row here: every operation but GET whose path
+// names a project, or that a matrix row asks of a project-level column
+// (writesOnAProject), is the list, which a write without a row here fails
+// before any database.
 //   - The workspace first: another transaction holds acme's row FOR NO KEY
 //     UPDATE, as every cascade over its projects does (3.3). The write on
-//     Web waits for that row, and meanwhile holds neither Web's row nor its
-//     target's membership of acme: a FOR UPDATE NOWAIT of each succeeds.
+//     Web waits for that row, and meanwhile holds neither Web's row, nor
+//     its target's membership of acme, nor the membership of Web it
+//     changes: a FOR UPDATE NOWAIT of each succeeds.
 //   - In its transaction, FOR SHARE, before its target and its project:
 //     another transaction holds Ops's row FOR NO KEY UPDATE. The write on
 //     Ops waits for it, and meanwhile holds acme's row at FOR SHARE, no
 //     stronger, which another write on a project of acme shares (lockOn),
 //     and its target's membership of acme (a FOR UPDATE NOWAIT fails,
-//     55P03).
+//     55P03), but not the membership of Ops it changes, which comes after
+//     the project.
 //
 // Once the other transaction ends, each write answers as it would alone.
 // Each row sends its own operation's request, its method and path as the
@@ -203,7 +228,7 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 	for i, w := range projectWrites {
 		ops[i] = w.op
 		if !slices.ContainsFunc(contract.Operations(), func(o apitest.Operation) bool {
-			return o.ID == w.op && o.Method == w.method && o.Path == fmt.Sprintf(w.path, "{project_id}")
+			return o.ID == w.op && o.Method == w.method && o.Path == fmt.Sprintf(w.path, w.param())
 		}) {
 			t.Fatalf("%s's row sends %s %s, not the contract's %s", w.op, w.method, w.path, w.op)
 		}
@@ -228,8 +253,8 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
 	tokens, ids, aliceID := map[string]string{}, map[string]uuid.UUID{}, accountID(t, contract, base, alice)
 	for _, w := range projectWrites {
-		for _, name := range w.targets {
-			if name != "" {
+		for _, name := range slices.Concat(w.targets[:], w.by[:], w.member[:]) {
+			if _, registered := tokens[name]; name != "" && !registered {
 				tokens[name] = registerAccount(t, contract, base, name+"@example.com").AccessToken
 				ids[name] = accountID(t, contract, base, tokens[name])
 				inWorkspaceOf(t, pool, projects[0], ids[name], aliceID, shared.RoleMember)
@@ -237,18 +262,31 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 		}
 	}
 	membership := "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL FOR UPDATE"
+	memberRow := "SELECT 1 FROM project_members WHERE id = $1 FOR UPDATE"
 	for _, w := range projectWrites {
 		for phase, project := range projects {
 			on := []string{"Web", "Ops"}[phase]
 			if !t.Run(w.op+" on "+on, func(t *testing.T) {
-				target, token, body := w.targets[phase], alice, w.body
+				target, member, token, body, named := w.targets[phase], w.member[phase], alice, w.body, project
 				if strings.Contains(body, "%s") {
 					body = fmt.Sprintf(body, ids[target])
 				}
-				if w.byTarget {
-					token = tokens[target]
+				if by := w.by[phase]; by != "" {
+					token = tokens[by]
 				}
-				req := newRequest(t, w.method, base+fmt.Sprintf(w.path, project), token, []byte(body))
+				// The membership the write changes, its row probed, and named
+				// by a path of one.
+				var row uuid.UUID
+				if member != "" {
+					if err := pool.QueryRow(soon(t), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
+						project, ids[member]).Scan(&row); err != nil {
+						t.Fatalf("%s's membership of %s: %v", member, on, err)
+					}
+					if w.param() == "{project_member_id}" {
+						named = row
+					}
+				}
+				req := newRequest(t, w.method, base+fmt.Sprintf(w.path, named), token, []byte(body))
 				contract.CheckRequest(t, req)
 				var other pgx.Tx
 				if phase == 0 {
@@ -265,6 +303,9 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 					if target != "" && heldBy(t, pool, membership, acme.ID, ids[target]) {
 						t.Errorf("%s holds %s's membership of acme while it waits for its workspace", w.op, target)
 					}
+					if member != "" && heldBy(t, pool, memberRow, row) {
+						t.Errorf("%s holds %s's membership of %s while it waits for its workspace", w.op, member, on)
+					}
 				} else {
 					pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
 					switch lock := lockOn(t, pool, "workspaces WHERE id = $1", acme.ID); lock {
@@ -276,6 +317,9 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 					}
 					if target != "" && !heldBy(t, pool, membership, acme.ID, ids[target]) {
 						t.Errorf("%s does not hold %s's membership of acme while it waits for its project", w.op, target)
+					}
+					if member != "" && heldBy(t, pool, memberRow, row) {
+						t.Errorf("%s holds %s's membership of %s before its project", w.op, member, on)
 					}
 				}
 				if err := other.Rollback(context.Background()); err != nil {

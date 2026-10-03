@@ -209,7 +209,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
-	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows())
+	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -288,7 +288,7 @@ func prepareMatrix(t *testing.T) matrixData {
 			projects.project(s.project(p.key), p.key, p.name, p.identifier, p.network)
 		}
 		for _, pm := range matrixProjectMembers {
-			projects.join(pm.key, pm.c, pm.role)
+			projects.join(s.projectMember(pm.key, pm.c), pm.key, pm.c, pm.role)
 		}
 		projects.archive("acme/archived")
 		projects.removal(s)

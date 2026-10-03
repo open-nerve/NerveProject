@@ -1077,6 +1077,38 @@ paths:
                 $ref: '#/components/schemas/ProjectMemberList'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/project-members/{project_member_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectMemberID'
+    patch:
+      operationId: updateProjectMember
+      tags:
+        - project
+      summary: Change a project member's role
+      description: 'For the project''s admins, and its members who are the workspace''s admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not change roles in it, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers project.member_not_found. One who is not a workspace admin cannot change his own role (project.own_membership), nor the role of a member whose role is not below his own, nor give a role that is not below his own (project.role_too_high): a project admin who is not a workspace admin makes nobody an admin and changes no admin''s role. A workspace guest''s role stays a guest''s, whoever changes it (validation_failed, role not_allowed). The role is decided after the workspace and project rows are locked.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.member_not_found
+        - forbidden
+        - project.own_membership
+        - project.role_too_high
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberUpdate'
+      responses:
+        '200':
+          description: The membership with its new role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -2253,7 +2285,7 @@ components:
         - created_at
       properties:
         id:
-          description: The membership's id.
+          description: The membership's id, which /project-members/{project_member_id} names.
           type: string
           format: uuid
         project_id:
@@ -2303,6 +2335,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProjectMemberNew'
+    ProjectMemberUpdate:
+      type: object
+      additionalProperties: false
+      required:
+        - role
+      properties:
+        role:
+          $ref: '#/components/schemas/ProjectRole'
     ProjectTab:
       description: A tab of a project's header.
       type: string
@@ -2402,6 +2442,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    ProjectMemberID:
+      name: project_member_id
+      in: path
+      required: true
+      description: A project membership's id (ProjectMember.id), not the member's account id.
       schema:
         type: string
         format: uuid
