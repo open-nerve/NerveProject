@@ -34,6 +34,13 @@ func ofMembership(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
 		callerDeleted: cellProjectMemberNotFound}
 }
 
+// ofArchivedMembership are the cells of a row of a write on a membership of
+// the archived project: the answers of PA and of the workspace's member,
+// who sees the project, and project.member_not_found for X, who does not.
+func ofArchivedMembership(pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellProjectMemberNotFound}
+}
+
 // aMembership names, for a column, the membership of its project a row's
 // cell names: the project's key, and the column whose membership it is.
 type aMembership func(c caller) (key string, member caller)
@@ -118,6 +125,11 @@ func membershipMatrixRows() []matrixRow {
 			request: toProjectMembership(http.MethodPatch, `{"role":15}`, workspaceGuestOf),
 			cells:   ofMembership(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "role not_allowed"},
+		// An archived project's members have their roles changed as any
+		// other's (M3 design 3.19): PA makes PM, its member, a guest.
+		{op: "updateProjectMember", variant: "archived", write: true, columns: archivedColumns,
+			request: toProjectMembership(http.MethodPatch, `{"role":5}`, projectMemberOf), cells: ofArchivedMembership(cellOK, cellForbidden),
+			check: changesTheRole(projectMemberOf, 5)},
 		// As updateProjectMember (M3 design 3.5, 9.2): PM's membership ends;
 		// PM+WA, a member, removes a member, of his own role.
 		{op: "removeProjectMember", write: true, columns: projectColumns, request: toProjectMembership(http.MethodDelete, "", projectMemberOf),
@@ -136,11 +148,19 @@ func membershipMatrixRows() []matrixRow {
 		{op: "removeProjectMember", variant: "an admin's membership", write: true, columns: projectColumns,
 			request: toProjectMembership(http.MethodDelete, "", adminOf),
 			cells:   ofMembership(cellProjectOwnMembership, cellForbidden, cellForbidden, cellRoleTooHigh, cellForbidden, cellForbidden)},
+		// An archived project's members are removed as any other's (M3
+		// design 3.19): PA removes PM.
+		{op: "removeProjectMember", variant: "archived", write: true, columns: archivedColumns,
+			request: toProjectMembership(http.MethodDelete, "", projectMemberOf), cells: ofArchivedMembership(cellNoContent, cellForbidden)},
 		// Every active member of the project, his own (M3 design 9.2): PA,
 		// the only active admin of each project, is refused (3.7 rule 1);
 		// PM+WA, a member who is the workspace's admin, leaves as a member.
 		{op: "leaveProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/leave", ""),
 			cells: ofProject(cellProjectSoleAdmin, cellNoContent, cellNoContent, cellNoContent, cellForbidden, cellForbidden)},
+		// An archived project is left as any other (M3 design 3.19): PA
+		// leaves it, PM+WA its other admin.
+		{op: "leaveProject", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/leave", ""),
+			cells: ofArchived(cellNoContent, cellForbidden)},
 	}
 }
 
@@ -170,6 +190,7 @@ func (s projectSeed) memberships(sd seeded) {
 		found, active bool
 	}{
 		{"acme/public", callerProjectMember, shared.RoleMember, true, true}, {"acme/private", callerProjectMember, shared.RoleMember, true, true},
+		{"acme/archived", callerProjectMember, shared.RoleMember, true, true},
 		{"acme/public", callerProjectAdmin, shared.RoleAdmin, true, true}, {"acme/private", callerProjectAdmin, shared.RoleAdmin, true, true},
 		{"acme/public", callerMemberAndAdmin, shared.RoleMember, true, true},
 		{"acme/public", callerGuest, shared.RoleGuest, true, true}, {"acme/private", callerGuest, shared.RoleGuest, true, true},

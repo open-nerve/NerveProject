@@ -72,9 +72,11 @@ var matrixProjects = []struct {
 // public one, whose membership of it his removal ends; the member before
 // in the private one, whose removal from it ends his (endings); WG- in
 // both, who leaves the public one (endings), and the member in the
-// private one, for partingStates to delete; the archived project's admin;
-// each other workspace's admin in its project, and gone's member in gone's,
-// a member of the project the X columns' writes on a membership name there.
+// private one, for partingStates to delete; the archived project's admin,
+// PM, a member whose role he changes and whom he removes, and PM+WA, its
+// other admin, so that he may leave it; each other workspace's admin in its
+// project, and gone's member in gone's, a member of the project the X
+// columns' writes on a membership name there.
 var matrixProjectMembers = []struct {
 	key  string
 	c    caller
@@ -87,7 +89,8 @@ var matrixProjectMembers = []struct {
 	{"acme/private", callerGuest, shared.RoleGuest}, {"acme/private", callerMemberAndAdmin, shared.RoleMember},
 	{"acme/private", callerBefore, shared.RoleMember}, {"acme/private", callerGuestOnly, shared.RoleGuest},
 	{"acme/private", callerMember, shared.RoleMember},
-	{"acme/archived", callerProjectAdmin, shared.RoleAdmin},
+	{"acme/archived", callerProjectAdmin, shared.RoleAdmin}, {"acme/archived", callerProjectMember, shared.RoleMember},
+	{"acme/archived", callerMemberAndAdmin, shared.RoleAdmin},
 	{"gone/project", callerDeleted, shared.RoleAdmin}, {"gone/project", callerMember, shared.RoleMember},
 	{"other/project", callerNever, shared.RoleAdmin},
 }

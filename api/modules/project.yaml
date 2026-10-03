@@ -291,8 +291,8 @@ paths:
         deleted. A member who is a workspace admin but no admin of the
         project leaves as any member. His membership ends, its row and its
         role kept, at the moment of the request; his display settings in
-        the project stay. The role is decided after the workspace and
-        project rows are locked.
+        the project stay. An archived project is left as any other. The role
+        is decided after the workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.not_found, forbidden, project.sole_admin]
       responses:
@@ -385,8 +385,9 @@ paths:
         that is not below his own (project.role_too_high): a project admin
         who is not a workspace admin makes nobody an admin and changes no
         admin's role. A workspace guest's role stays a guest's, whoever
-        changes it (validation_failed, role not_allowed). The role is
-        decided after the workspace and project rows are locked.
+        changes it (validation_failed, role not_allowed). An archived
+        project's members have their roles changed as any other's. The role
+        is decided after the workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [validation_failed, project.member_not_found, forbidden, project.own_membership, project.role_too_high]
       requestBody:
@@ -419,8 +420,9 @@ paths:
         whose role in the project is above his own, project.role_too_high,
         the workspace's admins included. The membership ends, its row and
         its role kept, at the moment of the request, by the caller; the
-        member's display settings in the project stay. The role is decided
-        after the workspace and project rows are locked.
+        member's display settings in the project stay. An archived project's
+        members are removed as any other's. The role is decided after the
+        workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.member_not_found, forbidden, project.own_membership, project.role_too_high]
       responses:

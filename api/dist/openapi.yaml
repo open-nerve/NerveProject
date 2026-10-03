@@ -1035,7 +1035,7 @@ paths:
       tags:
         - project
       summary: Leave a project
-      description: 'Every active member of the project leaves it himself. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. Its only active admin is refused project.sole_admin, also when he is its only member: the project gets another admin first, or is deleted. A member who is a workspace admin but no admin of the project leaves as any member. His membership ends, its row and its role kept, at the moment of the request; his display settings in the project stay. The role is decided after the workspace and project rows are locked.'
+      description: 'Every active member of the project leaves it himself. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. Its only active admin is refused project.sole_admin, also when he is its only member: the project gets another admin first, or is deleted. A member who is a workspace admin but no admin of the project leaves as any member. His membership ends, its row and its role kept, at the moment of the request; his display settings in the project stay. An archived project is left as any other. The role is decided after the workspace and project rows are locked.'
       security:
         - bearer: []
       x-problem-codes:
@@ -1105,7 +1105,7 @@ paths:
       tags:
         - project
       summary: Change a project member's role
-      description: 'For the project''s admins, and its members who are the workspace''s admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not change roles in it, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers project.member_not_found. One who is not a workspace admin cannot change his own role (project.own_membership), nor the role of a member whose role is not below his own, nor give a role that is not below his own (project.role_too_high): a project admin who is not a workspace admin makes nobody an admin and changes no admin''s role. A workspace guest''s role stays a guest''s, whoever changes it (validation_failed, role not_allowed). The role is decided after the workspace and project rows are locked.'
+      description: 'For the project''s admins, and its members who are the workspace''s admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not change roles in it, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers project.member_not_found. One who is not a workspace admin cannot change his own role (project.own_membership), nor the role of a member whose role is not below his own, nor give a role that is not below his own (project.role_too_high): a project admin who is not a workspace admin makes nobody an admin and changes no admin''s role. A workspace guest''s role stays a guest''s, whoever changes it (validation_failed, role not_allowed). An archived project''s members have their roles changed as any other''s. The role is decided after the workspace and project rows are locked.'
       security:
         - bearer: []
       x-problem-codes:
@@ -1134,7 +1134,7 @@ paths:
       tags:
         - project
       summary: Remove a member from a project
-      description: For the project's admins, and its members who are the workspace's admins. A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not remove its members, forbidden, whatever the membership. To a caller who may remove members, a membership that has ended answers project.member_not_found; his own, project.own_membership; and one whose role in the project is above his own, project.role_too_high, the workspace's admins included. The membership ends, its row and its role kept, at the moment of the request, by the caller; the member's display settings in the project stay. The role is decided after the workspace and project rows are locked.
+      description: For the project's admins, and its members who are the workspace's admins. A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not remove its members, forbidden, whatever the membership. To a caller who may remove members, a membership that has ended answers project.member_not_found; his own, project.own_membership; and one whose role in the project is above his own, project.role_too_high, the workspace's admins included. The membership ends, its row and its role kept, at the moment of the request, by the caller; the member's display settings in the project stay. An archived project's members are removed as any other's. The role is decided after the workspace and project rows are locked.
       security:
         - bearer: []
       x-problem-codes:
