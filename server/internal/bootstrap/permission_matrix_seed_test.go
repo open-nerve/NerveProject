@@ -140,15 +140,16 @@ func (s projectSeed) archive(key string) {
 
 // endings ends, through the project store, the project memberships that
 // P5b's writes end, as their statement ends one (EndMember), at the seed's
-// moment: the member before's of the private project, removed by acme's
-// admin (removeProjectMember), and WG-'s of the public one, which he left
+// moment: the member before's of the private project, removed by its
+// admin, PA (removeProjectMember; acme's admin, a member of no project of
+// acme, may not), and WG-'s of the public one, which he left
 // (leaveProject).
 func (s projectSeed) endings() {
 	s.t.Helper()
 	for _, e := range []struct {
 		key   string
 		c, by caller
-	}{{"acme/private", callerBefore, matrixAdmins["acme"]}, {"acme/public", callerGuestOnly, callerGuestOnly}} {
+	}{{"acme/private", callerBefore, callerProjectAdmin}, {"acme/public", callerGuestOnly, callerGuestOnly}} {
 		if err := s.store.EndMember(context.Background(), s.projects[e.key], s.ids[e.c], s.ids[e.by], s.now); err != nil {
 			s.t.Fatal(err)
 		}

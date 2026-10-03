@@ -250,10 +250,10 @@ func TestAGrowthRefusedAtItsCommitLeavesNoRow(t *testing.T) {
 	}{{"alice's adding", add}, {"bob's joining", join}}
 	for _, ended := range []bool{false, true} {
 		if ended {
-			if _, err := pool.Exec(context.Background(), `INSERT INTO project_members (id, workspace_id, project_id, member_id, role,
+			if tag, err := pool.Exec(context.Background(), `INSERT INTO project_members (id, workspace_id, project_id, member_id, role,
 				is_active, created_by_id, updated_by_id) SELECT $1, workspace_id, id, $2, 15, false, $3, $3 FROM projects WHERE id = $4`,
-				uuid.NewV7(), bobID, aliceID, web); err != nil {
-				t.Fatal(err)
+				uuid.NewV7(), bobID, aliceID, web); err != nil || tag.RowsAffected() != 1 {
+				t.Fatalf("bob's ended membership of Web: %v, %v; want one row", tag, err)
 			}
 		}
 		before := rows()
