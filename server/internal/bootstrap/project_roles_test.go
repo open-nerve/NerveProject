@@ -1,17 +1,21 @@
 package bootstrap
 
 import (
+	"fmt"
 	"maps"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 	"uuid"
 )
 
 // M3 design 3.5's rule for a change of a project role on the wired app,
 // each half with its counterexample, one change after another on
 // memberWorld; each refusal changes no row, and each change the target's
-// role alone, by its caller:
+// role alone, by its caller within the request. Before each change, the
+// target's last writer is checked to be an account other than its caller
+// (alice, who added it, or bob, for carol's promotion by gina):
 //   - the rule's roles: carol, Web's member, may change no role there,
 //     not even a guest's to a guest's, which the relative rule would let
 //     her; as Ops's admin, she makes bob, its member, a guest;
@@ -48,7 +52,12 @@ func TestTheRelativeRuleOnTheComposedApp(t *testing.T) {
 	} {
 		id := w.membership(t, step.project, step.member)
 		target, others := rowJSON(t, w.pool, "project_members", id), rowsBut(t, w.pool, []uuid.UUID{id})
+		if step.code == "" && target["updated_by_id"] == w.ids[step.by].String() {
+			t.Fatalf("%s: the target's membership was last written by %s before it; want another writer", step.name, step.by)
+		}
+		start := time.Now().Truncate(time.Microsecond)
 		status, body := w.change(t, step.by, step.project, step.member, step.role)
+		end := time.Now()
 		if status != step.status || step.code != "" && problemCode(t, []byte(body)) != step.code {
 			t.Fatalf("%s = %d %s, want %d %s", step.name, status, body, step.status, step.code)
 		}
@@ -65,8 +74,11 @@ func TestTheRelativeRuleOnTheComposedApp(t *testing.T) {
 			}
 			continue
 		}
-		if after["role"] != float64(step.role) || after["updated_by_id"] != w.ids[step.by].String() || after["updated_at"] == target["updated_at"] {
-			t.Errorf("%s: the target's membership %v; want role %d, written now by %s", step.name, after, step.role, step.by)
+		written, err := time.Parse(time.RFC3339, fmt.Sprint(after["updated_at"]))
+		if err != nil || after["role"] != float64(step.role) || after["updated_by_id"] != w.ids[step.by].String() || written.Before(start) ||
+			written.After(end) {
+			t.Errorf("%s: the target's membership %v; want role %d, written by %s within the request, %v to %v", step.name, after, step.role,
+				step.by, start, end)
 		}
 		for _, column := range []string{"role", "updated_by_id", "updated_at"} {
 			delete(after, column)
