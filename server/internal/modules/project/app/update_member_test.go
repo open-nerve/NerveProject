@@ -64,12 +64,14 @@ func TestUpdateProjectMember(t *testing.T) {
 // project or membership moved meanwhile, and a caller who does not see the
 // project, each project.member_not_found, the last after the decision; a
 // project member, the Authorizer's 403. Then, to a caller who may change
-// roles, after the decision: an ended membership, 404; his own, 409; an
+// roles, after the decision: an ended membership, 404, before any other
+// check, and so when it ended while the locks waited; his own, 409; an
 // admin's role and a role of admin, from a project admin who is no
 // workspace admin, 403 project.role_too_high; a workspace guest made more
 // than a guest, 422, from anyone. A member who is no active member of the
 // workspace, or whose role is answered for another account, and a
-// membership answered for another id, are the write's own error.
+// membership answered for another id, by either read, are the write's
+// own error.
 func TestUpdateProjectMemberRefuses(t *testing.T) {
 	guestOnly := shared.Invalid(shared.FieldError{Field: "role", Code: shared.FieldNotAllowed, Message: "must be 5: the member is a guest of the workspace"})
 	locked := func(f *writeFixture, caller, user uuid.UUID) []string {
@@ -108,6 +110,11 @@ func TestUpdateProjectMemberRefuses(t *testing.T) {
 		{"a caller who does not see web", erin, alice, shared.RoleGuest, nil, domain.ErrMemberNotFound, locked},
 		{"a project member", alice, carol, shared.RoleGuest, nil, shared.Forbidden(), locked},
 		{"an ended membership", bob, dave, shared.RoleGuest, nil, domain.ErrMemberNotFound, locked},
+		{"an ended membership made an admin", bob, dave, shared.RoleAdmin, nil, domain.ErrMemberNotFound, locked},
+		{"an ended membership of one who left the workspace", bob, dave, shared.RoleGuest,
+			func(f *writeFixture) { delete(f.members.roles[acme.ID], dave) }, domain.ErrMemberNotFound, locked},
+		{"the membership ended while the locks waited", bob, alice, shared.RoleGuest, func(f *writeFixture) { f.store.reread.ended = true },
+			domain.ErrMemberNotFound, locked},
 		{"his own", bob, bob, shared.RoleMember, nil, domain.ErrOwnMembership, locked},
 		{"another admin", bob, frank, shared.RoleMember, nil, domain.ErrRoleTooHigh, locked},
 		{"a member made an admin while the locks waited", bob, alice, shared.RoleGuest,
@@ -121,6 +128,8 @@ func TestUpdateProjectMemberRefuses(t *testing.T) {
 			func(f *writeFixture) { f.members.answersFor = carol }, nil, locked},
 		{"a membership answered for another id", bob, alice, shared.RoleGuest, func(f *writeFixture) { f.store.answersAs = uuid.NewV7() },
 			nil, upTo(2)},
+		{"the membership read again for another id", bob, alice, shared.RoleGuest, func(f *writeFixture) { f.store.reread.id = uuid.NewV7() },
+			nil, upTo(6)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdateMember()
