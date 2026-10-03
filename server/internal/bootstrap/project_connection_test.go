@@ -140,15 +140,17 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 
 // Each write on a project runs every statement on its transaction's
 // connection (M3 design 3.6 convention 2, 6.7; P4a's L3): its locks, its
-// reads, the facts its decision reads (ProjectFacts and the workspace
-// roles), its writes and its answer. The project module and the Authorizer
-// are wired as bootstrap wires them, on a pool of one connection: a
-// statement sent through the pool rather than the transaction would wait
-// for a second connection that never comes, and its request fail at the
-// request's deadline. alice, acme's admin, creates Ops, changes Web,
-// archives and unarchives it, changes her display settings in it and adds
-// bob, whose ended membership she restores; carol joins it anew; alice
-// deletes both projects.
+// reads, the membership it names among them, the facts its decision reads
+// (ProjectFacts and the workspace roles), the other admins a leaving reads,
+// its writes and its answer. The project module and the Authorizer are
+// wired as bootstrap wires them, on a pool of one connection: a statement
+// sent through the pool rather than the transaction would wait for a second
+// connection that never comes, and its request fail at the request's
+// deadline. alice, acme's admin, creates Ops, changes Web, archives and
+// unarchives it, changes her display settings in it and adds bob, whose
+// ended membership she restores; carol joins it anew; alice makes carol an
+// admin of Web and removes bob; carol, an admin, leaves it; alice deletes
+// both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -185,6 +187,10 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	send(http.MethodPatch, "/api/v0/me/projects/"+r.web.String()+"/preferences", r.alice, `{"sort_order":1}`, http.StatusOK)
 	send(http.MethodPost, web+"/members", r.alice, `{"members":[{"member_id":"`+r.bob.String()+`","role":15}]}`, http.StatusCreated)
 	send(http.MethodPost, web+"/join", carol, "", http.StatusOK)
+	send(http.MethodPatch, "/api/v0/project-members/"+projectMemberships(t, r.pool, carol, r.web)[0].String(), r.alice, `{"role":20}`,
+		http.StatusOK)
+	send(http.MethodDelete, "/api/v0/project-members/"+projectMemberships(t, r.pool, r.bob, r.web)[0].String(), r.alice, "", http.StatusNoContent)
+	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)
 }

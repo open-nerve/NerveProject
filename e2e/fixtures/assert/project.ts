@@ -133,6 +133,18 @@ export async function countProjects(db: Database): Promise<ProjectCounts> {
   return counts;
 }
 
+/**
+ * What expectMember and expectMembers read a membership (m) from: its project (p), its member's account (u), the
+ * account that wrote it last (b), and his undeleted display settings in the project (s), if any, with the account that
+ * wrote them last (sb).
+ */
+const membershipsWithSettings = `project_members m
+       JOIN projects p ON p.id = m.project_id
+       JOIN users u ON u.id = m.member_id
+       JOIN users b ON b.id = m.updated_by_id
+       LEFT JOIN project_user_properties s ON s.project_id = m.project_id AND s.user_id = m.member_id AND s.deleted_at IS NULL
+       LEFT JOIN users sb ON sb.id = s.updated_by_id`;
+
 /** A membership of a project as expectMember reads it. */
 export interface Membership {
   role: number;
@@ -159,12 +171,7 @@ export async function expectMember(
     `SELECT m.role, m.is_active, s.sort_order, b.email AS by, sb.email AS settings_by,
             m.workspace_id = p.workspace_id AND (s.id IS NULL OR (s.workspace_id = p.workspace_id AND s.created_at <= m.updated_at))
               AS in_its_workspace
-       FROM project_members m
-       JOIN projects p ON p.id = m.project_id
-       JOIN users u ON u.id = m.member_id
-       JOIN users b ON b.id = m.updated_by_id
-       LEFT JOIN project_user_properties s ON s.project_id = m.project_id AND s.user_id = m.member_id AND s.deleted_at IS NULL
-       LEFT JOIN users sb ON sb.id = s.updated_by_id
+       FROM ${membershipsWithSettings}
       WHERE m.project_id = $1 AND u.email = $2 AND m.deleted_at IS NULL`,
     [projectId, email]
   );
@@ -205,4 +212,52 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
   expect(rows, `the rows under ${projectId}`).toEqual(
     tables.map(({ name }) => ({ table: name, deletedWithIt: true, other: 0 }))
   );
+}
+
+/** A membership of a project as expectMembers reads it, its member by address. */
+export interface MemberRow {
+  email: string;
+  role: number;
+  is_active: boolean;
+  /** The address of the account that wrote the membership last. */
+  by: string;
+  /** His place in his sidebar, and who wrote his display settings in the project last. */
+  sort_order: number;
+  settings_by: string;
+}
+
+/**
+ * P5: the undeleted memberships of the project of projectId, ended ones too, are exactly want, in their members'
+ * addresses' order, each beside his undeleted display settings in the project: an ended membership keeps them. The
+ * project has no other undeleted display settings, so that settings written without a membership show. Every row is
+ * of the project's workspace.
+ */
+export async function expectMembers(db: Database, projectId: string, want: MemberRow[]): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT u.email, m.role, m.is_active, b.email AS by, s.sort_order, sb.email AS settings_by,
+              m.workspace_id = p.workspace_id AND s.workspace_id = p.workspace_id AS in_its_workspace
+         FROM ${membershipsWithSettings}
+        WHERE m.project_id = $1 AND m.deleted_at IS NULL ORDER BY u.email COLLATE "C"`,
+      [projectId]
+    ),
+    `the memberships of ${projectId}`
+  ).toEqual(
+    want
+      .toSorted((a, b) => (a.email < b.email ? -1 : 1))
+      .map(({ email, role, is_active, by, sort_order, settings_by }) => ({
+        email,
+        role,
+        is_active,
+        by,
+        sort_order,
+        settings_by,
+        in_its_workspace: true,
+      }))
+  );
+  const [settings] = await db.query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM project_user_properties WHERE project_id = $1 AND deleted_at IS NULL`,
+    [projectId]
+  );
+  expect(settings?.count, `the display settings in ${projectId}`).toBe(want.length);
 }

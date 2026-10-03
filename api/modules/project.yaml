@@ -275,6 +275,31 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/leave:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: leaveProject
+      tags: [project]
+      summary: Leave a project
+      description: >-
+        Every active member of the project leaves it himself. A project that
+        does not exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but is not a member of, forbidden.
+        Its only active admin is refused project.sole_admin, also when he is
+        its only member: the project gets another admin first, or is
+        deleted. A member who is a workspace admin but no admin of the
+        project leaves as any member. His membership ends, its row and its
+        role kept, at the moment of the request; his display settings in
+        the project stay. An archived project is left as any other. The role
+        is decided after the workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden, project.sole_admin]
+      responses:
+        '204':
+          description: The caller's membership has ended.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/members:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -338,6 +363,75 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProjectMemberList'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/project-members/{project_member_id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectMemberID'
+    patch:
+      operationId: updateProjectMember
+      tags: [project]
+      summary: Change a project member's role
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins. The role is checked first (validation_failed). A membership
+        that does not exist or is deleted, or whose project the caller does
+        not see, answers project.member_not_found; a caller who sees the
+        project but may not change roles in it, forbidden, whatever the
+        membership. To a caller who may change roles, a membership that has
+        ended answers project.member_not_found. One who is not a workspace
+        admin cannot change his own role (project.own_membership), nor the
+        role of a member whose role is not below his own, nor give a role
+        that is not below his own (project.role_too_high): through this
+        operation a project admin who is not a workspace admin makes nobody
+        an admin and changes no admin's role. The rule is this operation's
+        alone: addProjectMembers has none, so he can still add a workspace
+        member as an admin, or remove a member whose role is not above his
+        own and add him back with any role his workspace role allows. A
+        workspace guest's role stays a guest's, whoever changes it
+        (validation_failed, role not_allowed). An archived project's members
+        have their roles changed as any other's. The role is decided after
+        the workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.member_not_found, forbidden, project.own_membership, project.role_too_high]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberUpdate'
+      responses:
+        '200':
+          description: The membership with its new role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: removeProjectMember
+      tags: [project]
+      summary: Remove a member from a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins. A membership that does not exist or is deleted, or whose
+        project the caller does not see, answers project.member_not_found; a
+        caller who sees the project but may not remove its members,
+        forbidden, whatever the membership. To a caller who may remove
+        members, a membership that has ended answers
+        project.member_not_found; his own, project.own_membership; and one
+        whose role in the project is above his own, project.role_too_high,
+        the workspace's admins included. The membership ends, its row and
+        its role kept, at the moment of the request, by the caller; the
+        member's display settings in the project stay. An archived project's
+        members are removed as any other's. The role is decided after the
+        workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.member_not_found, forbidden, project.own_membership, project.role_too_high]
+      responses:
+        '204':
+          description: The membership has ended.
         default:
           $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
@@ -415,6 +509,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    ProjectMemberID:
+      name: project_member_id
+      in: path
+      required: true
+      description: A project membership's id (ProjectMember.id), not the member's account id.
       schema:
         type: string
         format: uuid
@@ -710,7 +812,7 @@ components:
       required: [id, project_id, member_id, role, created_at]
       properties:
         id:
-          description: The membership's id.
+          description: The membership's id, which /project-members/{project_member_id} names.
           type: string
           format: uuid
         project_id:
@@ -754,5 +856,12 @@ components:
           description: An active member of the workspace.
           type: string
           format: uuid
+        role:
+          $ref: '#/components/schemas/ProjectRole'
+    ProjectMemberUpdate:
+      type: object
+      additionalProperties: false
+      required: [role]
+      properties:
         role:
           $ref: '#/components/schemas/ProjectRole'

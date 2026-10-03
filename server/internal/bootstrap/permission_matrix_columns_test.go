@@ -263,6 +263,49 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}
+	// A membership a path names by its id ({project_member_id}) is one
+	// seeded in the column's project, from a column of a project table.
+	membership := apitest.Operation{ID: "updateProjectMember", Tags: []string{"project"}, Method: http.MethodPatch,
+		Path: "/api/v0/project-members/{project_member_id}"}
+	changes := matrixRow{op: membership.ID, write: true, columns: projectColumns, cells: cells,
+		request: toProjectMembership(http.MethodPatch, `{"role":5}`, projectMemberOf)}
+	// privateNames is changes, but WM-私's cell names id.
+	privateNames := func(id uuid.UUID) matrixRow {
+		r := changes
+		r.request = func(c caller, s seeded) (string, string, string) {
+			if c == callerMemberPrivate {
+				return http.MethodPatch, "/api/v0/project-members/" + id.String(), `{"role":5}`
+			}
+			return changes.request(c, s)
+		}
+		return r
+	}
+	inWorkspaceRow := changes
+	inWorkspaceRow.columns, inWorkspaceRow.cells = nil, every(cellOK)
+	var noTable []string
+	for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
+		noTable = append(noTable, fmt.Sprintf("row updateProjectMember, %s: {project_member_id} from a column of no project table (projectTables): "+
+			"a project's row names its columns", c))
+	}
+	publicPM := s.projectMember("acme/public", callerProjectMember)
+	for _, tt := range []struct {
+		name string
+		row  matrixRow
+		want []string
+	}{
+		{"memberships of their columns' projects", changes, nil},
+		{"a membership of another column's project", privateNames(publicPM), []string{fmt.Sprintf(
+			"row updateProjectMember, %s: {project_member_id} %s is no membership seeded in its column's project acme/private", callerMemberPrivate,
+			publicPM)}},
+		{"an id no seeded membership has", privateNames(uuid.Nil()), []string{fmt.Sprintf(
+			"row updateProjectMember, %s: {project_member_id} %s is no membership seeded in its column's project acme/private", callerMemberPrivate,
+			uuid.Nil())}},
+		{"a membership in a workspace-level row", inWorkspaceRow, noTable},
+	} {
+		if got := matrixViolations(append(ops, membership), listed, []matrixRow{row, checks, tt.row}, s, nil); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		}
+	}
 	// A parameter passed over before another leaves that one checked too.
 	if v := targetViolation("/api/v0/project-identifiers/{identifier}/projects/{project_id}", "/api/v0/project-identifiers/WEB/projects/"+public,
 		callerMemberPrivate, s, func(param string) bool { return param == "{identifier}" }); v == "" {
@@ -278,5 +321,10 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 	})
 	if want := "no project acme/nothing is seeded"; failed != want {
 		t.Errorf("a project never seeded: failed with %q, want %q", failed, want)
+	}
+	// So does a project membership never seeded.
+	failed = fatalOf(func(tb testing.TB) { newSeeded().in(tb).projectMember("acme/public", callerNever) })
+	if want := "no membership of acme/public by never a member is seeded"; failed != want {
+		t.Errorf("a project membership never seeded: failed with %q, want %q", failed, want)
 	}
 }

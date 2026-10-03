@@ -32,11 +32,44 @@ func (h handler) AddProjectMembers(ctx context.Context, req gen.AddProjectMember
 	return gen.AddProjectMembers201JSONResponse(members(list)), nil
 }
 
+// UpdateProjectMember serves PATCH
+// /api/v0/project-members/{project_member_id}: the role goes to the use
+// case as given, one outside the three too, which the domain refuses (422).
+func (h handler) UpdateProjectMember(ctx context.Context, req gen.UpdateProjectMemberRequestObject) (gen.UpdateProjectMemberResponseObject, error) {
+	m, err := h.uc.UpdateMember.Execute(ctx, req.ProjectMemberID, shared.Role(req.Body.Role))
+	if err != nil {
+		return nil, err
+	}
+	return gen.UpdateProjectMember200JSONResponse(member(m)), nil
+}
+
+// RemoveProjectMember serves DELETE
+// /api/v0/project-members/{project_member_id}.
+func (h handler) RemoveProjectMember(ctx context.Context, req gen.RemoveProjectMemberRequestObject) (gen.RemoveProjectMemberResponseObject, error) {
+	if err := h.uc.RemoveMember.Execute(ctx, req.ProjectMemberID); err != nil {
+		return nil, err
+	}
+	return gen.RemoveProjectMember204Response{}, nil
+}
+
+// LeaveProject serves POST /api/v0/projects/{project_id}/leave.
+func (h handler) LeaveProject(ctx context.Context, req gen.LeaveProjectRequestObject) (gen.LeaveProjectResponseObject, error) {
+	if err := h.uc.LeaveProject.Execute(ctx, req.ProjectID); err != nil {
+		return nil, err
+	}
+	return gen.LeaveProject204Response{}, nil
+}
+
 // members is list as the API shows it: data an array, never null.
 func members(list []domain.Member) gen.ProjectMemberList {
 	out := gen.ProjectMemberList{Data: make([]gen.ProjectMember, len(list))}
 	for i, m := range list {
-		out.Data[i] = gen.ProjectMember{ID: m.ID, ProjectID: m.ProjectID, MemberID: m.MemberID, Role: gen.ProjectRole(m.Role), CreatedAt: m.CreatedAt}
+		out.Data[i] = member(m)
 	}
 	return out
+}
+
+// member is m as the API shows it.
+func member(m domain.Member) gen.ProjectMember {
+	return gen.ProjectMember{ID: m.ID, ProjectID: m.ProjectID, MemberID: m.MemberID, Role: gen.ProjectRole(m.Role), CreatedAt: m.CreatedAt}
 }

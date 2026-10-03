@@ -16,8 +16,8 @@ import (
 // The list and the decision agree (M3 design 3.4, 9.3): for every account
 // of the matrix, of each kind of 9.2, acme's projects that listProjects
 // lists, archived or not, are exactly those that getProject lets him read
-// in the same state, partingStates' among them: a guest's ended and
-// deleted memberships, a member's deleted one, an active one without
+// in the same state, partingStates' among them: a guest's ended (endings)
+// and deleted memberships, a member's deleted one, an active one without
 // display settings. The list applies the visibility in its query
 // (domain.Visibility), the decision in access's rule: here the two cannot
 // part. Neither side is empty for every account, nor full.

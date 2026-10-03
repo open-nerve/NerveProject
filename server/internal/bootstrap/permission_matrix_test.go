@@ -29,7 +29,7 @@ import (
 // prepared once: the accounts through the API, the workspaces and
 // memberships through the workspace store, the projects and their
 // memberships through the project store, the deleted workspace through the
-// API, and the state no store writes yet through SQL (prepareMatrix).
+// API, and the states no store makes alone through SQL (prepareMatrix).
 // The cells that only read share one copy of it, and each cell that writes
 // gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
 // another's writes. Each module's rows are in a file of their own
@@ -209,7 +209,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
-	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows())
+	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -249,8 +249,9 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // projects and project memberships of matrixProjects and
 // matrixProjectMembers, and acme's archived project archived. Through both
 // stores, the removed member's removal; then, through the workspace store,
-// the invitations of matrixInvitations. Through SQL, the states no store
-// writes yet (standIns, partingStates). Through the API, gone deleted by
+// the invitations of matrixInvitations. Through the project store, the
+// memberships P5b's writes end (endings); through SQL, the states no store
+// makes alone (partingStates). Through the API, gone deleted by
 // its admin, which soft-deletes its memberships and its project with it;
 // then the checks that the rows the cells rest on are there
 // (preconditions). Everything that connected to the database is closed
@@ -288,14 +289,14 @@ func prepareMatrix(t *testing.T) matrixData {
 			projects.project(s.project(p.key), p.key, p.name, p.identifier, p.network)
 		}
 		for _, pm := range matrixProjectMembers {
-			projects.join(pm.key, pm.c, pm.role)
+			projects.join(s.projectMember(pm.key, pm.c), pm.key, pm.c, pm.role)
 		}
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
 			seed.invite(s.invitation(i.slug, i.email), i.slug, i.email, i.role)
 		}
-		projects.standIns(pool)
+		projects.endings()
 		projects.partingStates(pool)
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so
@@ -366,14 +367,8 @@ func TestPermissionMatrix(t *testing.T) {
 					t.Errorf("%s %s = %d %s, want %s", method, path, status, strings.TrimSpace(answer), want)
 					return
 				}
-				if r.refusal != "" && got == cellValidationFailed {
-					var problem struct {
-						Errors []struct{ Field, Code string }
-					}
-					decodeAnswer(t, answer, &problem)
-					if len(problem.Errors) != 1 || problem.Errors[0].Field+" "+problem.Errors[0].Code != r.refusal {
-						t.Errorf("%s %s = %s, want its one error %s", method, path, strings.TrimSpace(answer), r.refusal)
-					}
+				if r.refusal != "" && got == cellValidationFailed && oneError(t, []byte(answer)) != r.refusal {
+					t.Errorf("%s %s = %s, want its one error %s", method, path, strings.TrimSpace(answer), r.refusal)
 				}
 				if r.check != nil && got.code == "" {
 					r.check(t, c, d.seeded.in(t), answer)

@@ -56,6 +56,16 @@ var tableCells = map[shared.Action][]outcome{
 	// As project.read: the guest's 403 is the use case's (M3 design 3.5).
 	"project.join": {allowed, allowed, allowed, allowed, allowed, allowed, allowed, invisible, invisible, invisible, invisible, allowed,
 		invisible, invisible, invisible, forbidden, forbidden},
+	// As project_member.add: the relative rules are the use case's (M3
+	// design 3.5).
+	"project_member.update": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible,
+		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As project_member.update.
+	"project_member.remove": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible,
+		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As project_member.list: every active member of the project.
+	"project.leave": {allowed, allowed, allowed, allowed, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

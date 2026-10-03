@@ -86,6 +86,21 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			return f.log.calls, err
 		}, slices.Concat(beforeJoin(hank, webID), []string{"Now"}, grown(hank, nil, shared.RoleMember, 65535, hank),
 			[]string{"GetProject " + webID.String() + " for " + hank.String()})},
+		{"updateProjectMember", func() ([]string, error) {
+			uc, f := newUpdateMember()
+			_, err := uc.Execute(as(bob), aliceInWeb, shared.RoleGuest)
+			return f.log.calls, err
+		}, roleChanged(newMemberWrites(), bob, alice, shared.RoleGuest)},
+		{"removeProjectMember", func() ([]string, error) {
+			uc, f := newRemoveMember()
+			err := uc.Execute(as(bob), aliceInWeb)
+			return f.log.calls, err
+		}, removed(bob, alice)},
+		{"leaveProject", func() ([]string, error) {
+			uc, f := newLeave()
+			err := uc.Execute(as(bob), webID)
+			return f.log.calls, err
+		}, left(bob, webID, true)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

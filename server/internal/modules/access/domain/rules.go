@@ -94,6 +94,17 @@ var rules = map[shared.Action]Rule{
 	// and members of him, by set, before it looks at his membership (M3
 	// design 3.5, 6.4).
 	"project.join": {Level: LevelVisible},
+	// The project's admins, and its members who are the workspace's admins
+	// (M3 design 3.5, 9.2; Plane views/project/member.py:234-238); the
+	// relative rules are the use case's (3.5).
+	"project_member.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// As project_member.update (M3 design 3.5, 9.2; Plane
+	// views/project/member.py:290); one's own membership and a higher
+	// role are the use case's (3.5).
+	"project_member.remove": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// One's own membership: every active member of the project; the only
+	// admin's 409 is the use case's (M3 design 3.7 rule 1, 9.2).
+	"project.leave": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

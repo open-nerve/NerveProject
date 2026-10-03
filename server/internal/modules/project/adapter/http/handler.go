@@ -11,6 +11,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/http/gen"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // ListProjectsUseCase is app.ListProjects.
@@ -74,6 +75,21 @@ type JoinProjectUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID) (domain.Project, error)
 }
 
+// UpdateMemberUseCase is app.UpdateProjectMember.
+type UpdateMemberUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error)
+}
+
+// RemoveMemberUseCase is app.RemoveProjectMember.
+type RemoveMemberUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// LeaveProjectUseCase is app.LeaveProject.
+type LeaveProjectUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects      ListProjectsUseCase
@@ -89,6 +105,9 @@ type UseCases struct {
 	ListMembers       ListMembersUseCase
 	AddMembers        AddMembersUseCase
 	JoinProject       JoinProjectUseCase
+	UpdateMember      UpdateMemberUseCase
+	RemoveMember      RemoveMemberUseCase
+	LeaveProject      LeaveProjectUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

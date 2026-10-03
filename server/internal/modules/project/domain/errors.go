@@ -19,12 +19,34 @@ var (
 	ErrNotFound = shared.NewError(shared.KindNotFound, "project.not_found", "The project does not exist, or you cannot see it.")
 	// ErrArchived answers a change of an archived project (M3 design 3.19).
 	ErrArchived = shared.NewError(shared.KindConflict, "project.archived", "The project is archived; unarchive it to change it.")
-	// ErrSoleAdmin answers an ending of an account's project memberships
-	// that would leave a project with other active members without an
-	// active admin: he is its only one (M3 design 3.7 rule 2). The
-	// workspace's removal and leaving declare it too (M3 design 5.1).
+	// ErrMemberNotFound answers a project membership that does not exist, is
+	// deleted or has ended, or whose project the caller does not see: the
+	// same 404 for all (M3 design 5.3, 8.2).
+	ErrMemberNotFound = shared.NewError(shared.KindNotFound, "project.member_not_found",
+		"The project member does not exist, or you cannot see the project.")
+	// ErrOwnMembership answers a removal of the caller's own project
+	// membership, and a change of his own project role by one who is not the
+	// workspace's admin (M3 design 3.5, 5.3). It names no remedy: leaving,
+	// which ends one's own membership, refuses a project's only admin too.
+	ErrOwnMembership = shared.NewError(shared.KindConflict, "project.own_membership",
+		"You cannot remove your own membership of the project, nor change your own role in it unless you are a workspace admin.")
+	// ErrRoleTooHigh answers M3 design 3.5's relative rule: a change of the
+	// role of a member whose role is not below the caller's, or to a role
+	// not below his, by one who is not the workspace's admin; a removal of a
+	// member whose role is above the caller's, by anyone.
+	ErrRoleTooHigh = shared.NewError(shared.KindForbidden, "project.role_too_high",
+		"The role is too high for you. Unless you are a workspace admin, you change only members whose project role is below yours, to roles "+
+			"below yours. You remove only members whose project role is not above yours.")
+	// ErrSoleAdmin answers the leaving of a project's only active admin,
+	// also when he is its only member (M3 design 3.7 rule 1), and an ending
+	// of an account's project memberships that would leave a project with
+	// other active members without an active admin: he is its only one
+	// (rule 2). The workspace's removal and leaving declare it too (M3
+	// design 5.1). Each who gets it can have the project given another
+	// admin, through a workspace admin if no one else, or delete it.
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
-		"Ending the membership would leave a project that has other members without an admin; make another of its members an admin first.")
+		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
+			"other active members. Give the project another admin first, or delete it.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member

@@ -311,3 +311,17 @@ func problemCode(t *testing.T, body []byte) string {
 	}
 	return p.Code
 }
+
+// oneError is the one error of a problem body, as "field code"; "" when
+// the body holds none or more than one, which no refusal matches.
+func oneError(t *testing.T, body []byte) string {
+	t.Helper()
+	var p httpserver.Problem
+	if err := json.Unmarshal(body, &p); err != nil {
+		t.Fatalf("decode problem %s: %v", body, err)
+	}
+	if len(p.Errors) != 1 {
+		return ""
+	}
+	return p.Errors[0].Field + " " + p.Errors[0].Code
+}

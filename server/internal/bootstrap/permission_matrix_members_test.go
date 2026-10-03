@@ -120,7 +120,7 @@ func addsTheMember(target caller, role int) func(t *testing.T, c caller, s seede
 // workspace's guest (PG's account) and PM+WA. Not the removed member,
 // whose membership of the project his removal ended with his membership
 // of acme (the list reads project_members alone, spec P4b §3 item 4); not
-// WG-, whose membership partingStates ended.
+// WG-, who left it (endings).
 func listsTheProjectMembers(t *testing.T, c caller, s seeded, answer string) {
 	var list struct {
 		Data []struct {

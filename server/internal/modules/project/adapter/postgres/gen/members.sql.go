@@ -61,6 +61,54 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) erro
 	return err
 }
 
+const endMember = `-- name: EndMember :execrows
+UPDATE project_members
+SET is_active = false, updated_at = $1, updated_by_id = $2::uuid
+WHERE project_id = $3 AND member_id = $4 AND is_active AND deleted_at IS NULL
+`
+
+type EndMemberParams struct {
+	Now       time.Time
+	EndedBy   uuid.UUID
+	ProjectID uuid.UUID
+	MemberID  uuid.UUID
+}
+
+// removeProjectMember and leaveProject, under the project's FOR NO KEY UPDATE (M3 design 3.5, 3.7): the account's
+// active membership of the project ends, at the moment and by the account given; the row stays, its role too.
+func (q *Queries) EndMember(ctx context.Context, arg EndMemberParams) (int64, error) {
+	result, err := q.db.Exec(ctx, endMember,
+		arg.Now,
+		arg.EndedBy,
+		arg.ProjectID,
+		arg.MemberID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const hasOtherAdmin = `-- name: HasOtherAdmin :one
+SELECT EXISTS (SELECT 1 FROM project_members
+               WHERE project_id = $1 AND member_id <> $2 AND role = 20 AND is_active
+                 AND deleted_at IS NULL)
+`
+
+type HasOtherAdminParams struct {
+	ProjectID uuid.UUID
+	MemberID  uuid.UUID
+}
+
+// leaveProject, under the project's FOR NO KEY UPDATE (M3 design 3.7 rule 1): whether the project has an active admin
+// other than the account.
+func (q *Queries) HasOtherAdmin(ctx context.Context, arg HasOtherAdminParams) (bool, error) {
+	row := q.db.QueryRow(ctx, hasOtherAdmin, arg.ProjectID, arg.MemberID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listMembers = `-- name: ListMembers :many
 SELECT id, project_id, member_id, role, created_at
 FROM project_members
@@ -104,6 +152,37 @@ func (q *Queries) ListMembers(ctx context.Context, projectID uuid.UUID) ([]ListM
 		return nil, err
 	}
 	return items, nil
+}
+
+const memberByID = `-- name: MemberByID :one
+SELECT id, workspace_id, project_id, member_id, role, is_active
+FROM project_members
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+type MemberByIDRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	MemberID    uuid.UUID
+	Role        int16
+	IsActive    bool
+}
+
+// A write on a project membership named by its id (M3 design 3.6 convention 2): the undeleted membership, active or
+// ended, read first without a lock for its project and the project's workspace, then again under their locks.
+func (q *Queries) MemberByID(ctx context.Context, id uuid.UUID) (MemberByIDRow, error) {
+	row := q.db.QueryRow(ctx, memberByID, id)
+	var i MemberByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.MemberID,
+		&i.Role,
+		&i.IsActive,
+	)
+	return i, err
 }
 
 const memberships = `-- name: Memberships :many
@@ -175,4 +254,46 @@ func (q *Queries) RestoreMember(ctx context.Context, arg RestoreMemberParams) er
 		arg.ID,
 	)
 	return err
+}
+
+const updateMemberRole = `-- name: UpdateMemberRole :one
+UPDATE project_members
+SET role = $1, updated_at = $2, updated_by_id = $3::uuid
+WHERE id = $4 AND is_active AND deleted_at IS NULL
+RETURNING id, project_id, member_id, role, created_at
+`
+
+type UpdateMemberRoleParams struct {
+	Role      int16
+	Now       time.Time
+	UpdatedBy uuid.UUID
+	ID        uuid.UUID
+}
+
+type UpdateMemberRoleRow struct {
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+	MemberID  uuid.UUID
+	Role      int16
+	CreatedAt time.Time
+}
+
+// updateProjectMember, under the project's FOR NO KEY UPDATE (M3 design 3.5, 3.6): the active membership's new role,
+// at the moment and by the account given. An ended or deleted one is not written.
+func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRoleParams) (UpdateMemberRoleRow, error) {
+	row := q.db.QueryRow(ctx, updateMemberRole,
+		arg.Role,
+		arg.Now,
+		arg.UpdatedBy,
+		arg.ID,
+	)
+	var i UpdateMemberRoleRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.MemberID,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
 }

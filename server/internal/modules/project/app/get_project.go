@@ -37,7 +37,7 @@ func (u *GetProject) Execute(ctx context.Context, id uuid.UUID) (domain.Project,
 	case !found:
 		return domain.Project{}, domain.ErrNotFound
 	}
-	if _, err = decide(ctx, u.auth, actor, domain.ActionRead, p.WorkspaceID, p.ID); err != nil {
+	if _, err = decide(ctx, u.auth, actor, domain.ActionRead, p.WorkspaceID, p.ID, domain.ErrNotFound); err != nil {
 		return domain.Project{}, err
 	}
 	return p, nil

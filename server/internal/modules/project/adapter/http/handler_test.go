@@ -60,18 +60,21 @@ func caller(ctx context.Context) string {
 // fakes are the use cases behind a test server: each records who called it
 // with what, and answers what it is given.
 type fakes struct {
-	list      *fakeList
-	create    *fakeCreate
-	get       *fakeGet
-	check     *fakeCheck
-	update    *fakeUpdate
-	archive   *fakeOnProject
-	unarchive *fakeOnProject
-	delete    *fakeDelete
-	prefs     *fakePreferences
-	members   *fakeMembers
-	add       *fakeAdd
-	join      *fakeOnProject
+	list         *fakeList
+	create       *fakeCreate
+	get          *fakeGet
+	check        *fakeCheck
+	update       *fakeUpdate
+	archive      *fakeOnProject
+	unarchive    *fakeOnProject
+	delete       *fakeDelete
+	prefs        *fakePreferences
+	members      *fakeMembers
+	add          *fakeAdd
+	join         *fakeOnProject
+	updateMember *fakeUpdateMember
+	removeMember *fakeDelete
+	leave        *fakeDelete
 }
 
 type fakeList struct {
@@ -216,10 +219,19 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.join == nil {
 		f.join = &fakeOnProject{}
 	}
+	if f.updateMember == nil {
+		f.updateMember = &fakeUpdateMember{}
+	}
+	if f.removeMember == nil {
+		f.removeMember = &fakeDelete{}
+	}
+	if f.leave == nil {
+		f.leave = &fakeDelete{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
 		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive, DeleteProject: f.delete,
 		GetPreferences: f.prefs, UpdatePreferences: fakeUpdatePreferences{f.prefs}, ListMembers: f.members, AddMembers: f.add,
-		JoinProject: f.join})
+		JoinProject: f.join, UpdateMember: f.updateMember, RemoveMember: f.removeMember, LeaveProject: f.leave})
 	return router
 }
 

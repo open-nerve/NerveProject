@@ -686,6 +686,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a project
+         * @description Every active member of the project leaves it himself. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. Its only active admin is refused project.sole_admin, also when he is its only member: the project gets another admin first, or is deleted. A member who is a workspace admin but no admin of the project leaves as any member. His membership ends, its row and its role kept, at the moment of the request; his display settings in the project stay. An archived project is left as any other. The role is decided after the workspace and project rows are locked.
+         */
+        post: operations["leaveProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/projects/{project_id}/members": {
         parameters: {
             query?: never;
@@ -711,6 +734,33 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v0/project-members/{project_member_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project membership's id (ProjectMember.id), not the member's account id. */
+                project_member_id: components["parameters"]["ProjectMemberID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a member from a project
+         * @description For the project's admins, and its members who are the workspace's admins. A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not remove its members, forbidden, whatever the membership. To a caller who may remove members, a membership that has ended answers project.member_not_found; his own, project.own_membership; and one whose role in the project is above his own, project.role_too_high, the workspace's admins included. The membership ends, its row and its role kept, at the moment of the request, by the caller; the member's display settings in the project stay. An archived project's members are removed as any other's. The role is decided after the workspace and project rows are locked.
+         */
+        delete: operations["removeProjectMember"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a project member's role
+         * @description For the project's admins, and its members who are the workspace's admins. The role is checked first (validation_failed). A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not change roles in it, forbidden, whatever the membership. To a caller who may change roles, a membership that has ended answers project.member_not_found. One who is not a workspace admin cannot change his own role (project.own_membership), nor the role of a member whose role is not below his own, nor give a role that is not below his own (project.role_too_high): through this operation a project admin who is not a workspace admin makes nobody an admin and changes no admin's role. The rule is this operation's alone: addProjectMembers has none, so he can still add a workspace member as an admin, or remove a member whose role is not above his own and add him back with any role his workspace role allows. A workspace guest's role stays a guest's, whoever changes it (validation_failed, role not_allowed). An archived project's members have their roles changed as any other's. The role is decided after the workspace and project rows are locked.
+         */
+        patch: operations["updateProjectMember"];
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -1308,7 +1358,7 @@ export interface components {
         ProjectMember: {
             /**
              * Format: uuid
-             * @description The membership's id.
+             * @description The membership's id, which /project-members/{project_member_id} names.
              */
             id: string;
             /** Format: uuid */
@@ -1339,6 +1389,9 @@ export interface components {
         ProjectMembersAdd: {
             /** @description 1–100 accounts, each named once. */
             members: components["schemas"]["ProjectMemberNew"][];
+        };
+        ProjectMemberUpdate: {
+            role: components["schemas"]["ProjectRole"];
         };
         /**
          * @description A tab of a project's header.
@@ -1389,6 +1442,8 @@ export interface components {
         InvitationID: string;
         /** @description A project's id (Project.id). */
         ProjectID: string;
+        /** @description A project membership's id (ProjectMember.id), not the member's account id. */
+        ProjectMemberID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1456,6 +1511,7 @@ export type ProjectMember = components['schemas']['ProjectMember'];
 export type ProjectMemberList = components['schemas']['ProjectMemberList'];
 export type ProjectMemberNew = components['schemas']['ProjectMemberNew'];
 export type ProjectMembersAdd = components['schemas']['ProjectMembersAdd'];
+export type ProjectMemberUpdate = components['schemas']['ProjectMemberUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -1466,6 +1522,7 @@ export type ParameterCursor = components['parameters']['Cursor'];
 export type ParameterSlug = components['parameters']['Slug'];
 export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type ParameterProjectId = components['parameters']['ProjectID'];
+export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -2516,6 +2573,28 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    leaveProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's membership has ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     listProjectMembers: {
         parameters: {
             query?: never;
@@ -2563,6 +2642,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectMemberList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeProjectMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project membership's id (ProjectMember.id), not the member's account id. */
+                project_member_id: components["parameters"]["ProjectMemberID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The membership has ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateProjectMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project membership's id (ProjectMember.id), not the member's account id. */
+                project_member_id: components["parameters"]["ProjectMemberID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectMemberUpdate"];
+            };
+        };
+        responses: {
+            /** @description The membership with its new role. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectMember"];
                 };
             };
             default: components["responses"]["Problem"];

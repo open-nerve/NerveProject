@@ -34,3 +34,32 @@ WHERE id = sqlc.arg(id);
 SELECT count(*)
 FROM project_members
 WHERE workspace_id = sqlc.arg(workspace_id) AND member_id = sqlc.arg(member_id) AND NOT is_active AND deleted_at IS NULL;
+
+-- name: MemberByID :one
+-- A write on a project membership named by its id (M3 design 3.6 convention 2): the undeleted membership, active or
+-- ended, read first without a lock for its project and the project's workspace, then again under their locks.
+SELECT id, workspace_id, project_id, member_id, role, is_active
+FROM project_members
+WHERE id = sqlc.arg(id) AND deleted_at IS NULL;
+
+-- name: UpdateMemberRole :one
+-- updateProjectMember, under the project's FOR NO KEY UPDATE (M3 design 3.5, 3.6): the active membership's new role,
+-- at the moment and by the account given. An ended or deleted one is not written.
+UPDATE project_members
+SET role = sqlc.arg(role), updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(updated_by)::uuid
+WHERE id = sqlc.arg(id) AND is_active AND deleted_at IS NULL
+RETURNING id, project_id, member_id, role, created_at;
+
+-- name: EndMember :execrows
+-- removeProjectMember and leaveProject, under the project's FOR NO KEY UPDATE (M3 design 3.5, 3.7): the account's
+-- active membership of the project ends, at the moment and by the account given; the row stays, its role too.
+UPDATE project_members
+SET is_active = false, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(ended_by)::uuid
+WHERE project_id = sqlc.arg(project_id) AND member_id = sqlc.arg(member_id) AND is_active AND deleted_at IS NULL;
+
+-- name: HasOtherAdmin :one
+-- leaveProject, under the project's FOR NO KEY UPDATE (M3 design 3.7 rule 1): whether the project has an active admin
+-- other than the account.
+SELECT EXISTS (SELECT 1 FROM project_members
+               WHERE project_id = sqlc.arg(project_id) AND member_id <> sqlc.arg(member_id) AND role = 20 AND is_active
+                 AND deleted_at IS NULL);
