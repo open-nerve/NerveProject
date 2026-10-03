@@ -43,6 +43,15 @@ func (h handler) UpdateProjectMember(ctx context.Context, req gen.UpdateProjectM
 	return gen.UpdateProjectMember200JSONResponse(member(m)), nil
 }
 
+// RemoveProjectMember serves DELETE
+// /api/v0/project-members/{project_member_id}.
+func (h handler) RemoveProjectMember(ctx context.Context, req gen.RemoveProjectMemberRequestObject) (gen.RemoveProjectMemberResponseObject, error) {
+	if err := h.uc.RemoveMember.Execute(ctx, req.ProjectMemberID); err != nil {
+		return nil, err
+	}
+	return gen.RemoveProjectMember204Response{}, nil
+}
+
 // members is list as the API shows it: data an array, never null.
 func members(list []domain.Member) gen.ProjectMemberList {
 	out := gen.ProjectMemberList{Data: make([]gen.ProjectMember, len(list))}

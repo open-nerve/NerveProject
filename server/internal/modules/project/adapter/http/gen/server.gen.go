@@ -373,6 +373,9 @@ type ServerInterface interface {
 	// UpdateProjectPreferences Change the caller's display settings in a project
 	// (PATCH /api/v0/me/projects/{project_id}/preferences)
 	UpdateProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// RemoveProjectMember Remove a member from a project
+	// (DELETE /api/v0/project-members/{project_member_id})
+	RemoveProjectMember(w http.ResponseWriter, r *http.Request, projectMemberID ProjectMemberID)
 	// UpdateProjectMember Change a project member's role
 	// (PATCH /api/v0/project-members/{project_member_id})
 	UpdateProjectMember(w http.ResponseWriter, r *http.Request, projectMemberID ProjectMemberID)
@@ -463,6 +466,32 @@ func (siw *ServerInterfaceWrapper) UpdateProjectPreferences(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProjectPreferences(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveProjectMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveProjectMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_member_id" -------------
+	var projectMemberID ProjectMemberID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_member_id", r.PathValue("project_member_id"), &projectMemberID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_member_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveProjectMember(w, r, projectMemberID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -940,6 +969,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/join", wrapper.JoinProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.UpdateProjectMember)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
@@ -1033,6 +1063,46 @@ type UpdateProjectPreferencesdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateProjectPreferencesdefaultApplicationProblemPlusJSONResponse) VisitUpdateProjectPreferencesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type RemoveProjectMemberRequestObject struct {
+	ProjectMemberID ProjectMemberID `json:"project_member_id"`
+}
+
+type RemoveProjectMemberResponseObject interface {
+	VisitRemoveProjectMemberResponse(w http.ResponseWriter) error
+}
+
+type RemoveProjectMember204Response struct {
+}
+
+func (response RemoveProjectMember204Response) VisitRemoveProjectMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveProjectMemberdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response RemoveProjectMemberdefaultApplicationProblemPlusJSONResponse) VisitRemoveProjectMemberResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1610,6 +1680,9 @@ type StrictServerInterface interface {
 	// UpdateProjectPreferences Change the caller's display settings in a project
 	// (PATCH /api/v0/me/projects/{project_id}/preferences)
 	UpdateProjectPreferences(ctx context.Context, request UpdateProjectPreferencesRequestObject) (UpdateProjectPreferencesResponseObject, error)
+	// RemoveProjectMember Remove a member from a project
+	// (DELETE /api/v0/project-members/{project_member_id})
+	RemoveProjectMember(ctx context.Context, request RemoveProjectMemberRequestObject) (RemoveProjectMemberResponseObject, error)
 	// UpdateProjectMember Change a project member's role
 	// (PATCH /api/v0/project-members/{project_member_id})
 	UpdateProjectMember(ctx context.Context, request UpdateProjectMemberRequestObject) (UpdateProjectMemberResponseObject, error)
@@ -1739,6 +1812,32 @@ func (sh *strictHandler) UpdateProjectPreferences(w http.ResponseWriter, r *http
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateProjectPreferencesResponseObject); ok {
 		if err := validResponse.VisitUpdateProjectPreferencesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveProjectMember operation middleware
+func (sh *strictHandler) RemoveProjectMember(w http.ResponseWriter, r *http.Request, projectMemberID ProjectMemberID) {
+	var request RemoveProjectMemberRequestObject
+
+	request.ProjectMemberID = projectMemberID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveProjectMember(ctx, request.(RemoveProjectMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveProjectMember")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveProjectMemberResponseObject); ok {
+		if err := validResponse.VisitRemoveProjectMemberResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

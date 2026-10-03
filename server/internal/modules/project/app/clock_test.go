@@ -91,6 +91,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			_, err := uc.Execute(as(bob), aliceInWeb, shared.RoleGuest)
 			return f.log.calls, err
 		}, roleChanged(newMemberWrites(), bob, alice, shared.RoleGuest)},
+		{"removeProjectMember", func() ([]string, error) {
+			uc, f := newRemoveMember()
+			err := uc.Execute(as(bob), aliceInWeb)
+			return f.log.calls, err
+		}, removed(bob, alice)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

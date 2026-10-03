@@ -110,3 +110,35 @@ func TestUpdateProjectMemberRefusals(t *testing.T) {
 		}
 	}
 }
+
+// DELETE goes to the use case for the caller and the path's membership,
+// and answers 204 with no body; the use case's refusals, as the contract
+// declares them, and its failure.
+func TestRemoveProjectMember(t *testing.T) {
+	remove := &fakeDelete{}
+	h := newServer(t, fakes{removeMember: remove})
+	path := "/api/v0/project-members/" + bobInWeb.ID.String()
+	if res, body := do(t, h, request(http.MethodDelete, path, "alice", "")); res.StatusCode != http.StatusNoContent || body != "" {
+		t.Errorf("DELETE = %d %q, want 204 and no body", res.StatusCode, body)
+	}
+	if want := []string{"alice " + bobInWeb.ID.String()}; !slices.Equal(remove.calls, want) {
+		t.Errorf("calls = %q, want %q", remove.calls, want)
+	}
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"no membership", domain.ErrMemberNotFound, http.StatusNotFound, memberNotFoundJSON},
+		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
+		{"his own", domain.ErrOwnMembership, http.StatusConflict, ownMembershipJSON},
+		{"a higher role", domain.ErrRoleTooHigh, http.StatusForbidden, roleTooHighJSON},
+		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
+	} {
+		h := newServer(t, fakes{removeMember: &fakeDelete{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodDelete, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: DELETE = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}

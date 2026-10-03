@@ -80,6 +80,11 @@ type UpdateMemberUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, role shared.Role) (domain.Member, error)
 }
 
+// RemoveMemberUseCase is app.RemoveProjectMember.
+type RemoveMemberUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects      ListProjectsUseCase
@@ -96,6 +101,7 @@ type UseCases struct {
 	AddMembers        AddMembersUseCase
 	JoinProject       JoinProjectUseCase
 	UpdateMember      UpdateMemberUseCase
+	RemoveMember      RemoveMemberUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

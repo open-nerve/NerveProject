@@ -10,14 +10,16 @@ import (
 )
 
 // The rows of the permission matrix of the writes on one project
-// membership (M3 design 9.2): changing a member's role. Each names the
-// membership by its id (/project-members/{project_member_id}), in its
-// column's project; prepareMatrix's preconditions hold each membership a
-// row names to the state the row says.
+// membership (M3 design 9.2): changing a member's role, removing a member.
+// Each names the membership by its id
+// (/project-members/{project_member_id}), in its column's project;
+// prepareMatrix's preconditions hold each membership a row names to the
+// state the row says.
 
 var (
 	cellProjectMemberNotFound = cell{http.StatusNotFound, "project.member_not_found"}
 	cellProjectOwnMembership  = cell{http.StatusConflict, "project.own_membership"}
+	cellRoleTooHigh           = cell{http.StatusForbidden, "project.role_too_high"}
 )
 
 // ofMembership are the cells of a row of a write on a project membership:
@@ -115,15 +117,42 @@ func membershipMatrixRows() []matrixRow {
 			request: toProjectMembership(http.MethodPatch, `{"role":15}`, workspaceGuestOf),
 			cells:   ofMembership(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "role not_allowed"},
+		// As updateProjectMember (M3 design 3.5, 9.2): PM's membership ends;
+		// PM+WA, a member, removes a member, of his own role.
+		{op: "removeProjectMember", write: true, columns: projectColumns, request: toProjectMembership(http.MethodDelete, "", projectMemberOf),
+			cells: ofMembership(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		// Nobody removes his own membership, the workspace's admin neither:
+		// he leaves the project (M3 design 3.5).
+		{op: "removeProjectMember", variant: "one's own membership", write: true, columns: projectColumns,
+			request: toProjectMembership(http.MethodDelete, "", ownMembershipOf),
+			cells:   ofMembership(cellProjectOwnMembership, cellForbidden, cellForbidden, cellProjectOwnMembership, cellForbidden, cellForbidden)},
+		{op: "removeProjectMember", variant: "an ended membership", write: true, columns: projectColumns,
+			request: toProjectMembership(http.MethodDelete, "", endedMembershipOf),
+			cells:   ofMembership(cellProjectMemberNotFound, cellForbidden, cellForbidden, cellProjectMemberNotFound, cellForbidden, cellForbidden)},
+		// The admin's membership: PA's own (409); PM+WA, a member, may not
+		// remove a role above his own, though he is the workspace's admin
+		// (M3 design 3.5: no exception here).
+		{op: "removeProjectMember", variant: "an admin's membership", write: true, columns: projectColumns,
+			request: toProjectMembership(http.MethodDelete, "", adminOf),
+			cells:   ofMembership(cellProjectOwnMembership, cellForbidden, cellForbidden, cellRoleTooHigh, cellForbidden, cellForbidden)},
 	}
+}
+
+// adminOf: PA's membership of the column's project, an admin's; in gone's
+// project, gone's admin's.
+func adminOf(c caller) (string, caller) {
+	if key := projectOf(c); key != "gone/project" {
+		return key, callerProjectAdmin
+	}
+	return "gone/project", callerDeleted
 }
 
 // memberships checks the project memberships the rows of the writes on one
 // name (membershipMatrixRows), each in the state its row says: PM's, PA's,
 // PM+WA's and the workspace guest's (PG's account) active, of their roles;
 // the removed member's of the public project and the member before's of
-// the private one ended, not deleted; gone's member's of gone's project
-// deleted with gone. The workspace guest is acme's active guest, so that a
+// the private one ended, not deleted; gone's member's and admin's of gone's
+// project deleted with gone. The workspace guest is acme's active guest, so that a
 // role's 422 is his workspace role's.
 func (s projectSeed) memberships(sd seeded) {
 	s.t.Helper()
@@ -135,10 +164,11 @@ func (s projectSeed) memberships(sd seeded) {
 		found, active bool
 	}{
 		{"acme/public", callerProjectMember, shared.RoleMember, true, true}, {"acme/private", callerProjectMember, shared.RoleMember, true, true},
-		{"acme/public", callerProjectAdmin, shared.RoleAdmin, true, true}, {"acme/public", callerMemberAndAdmin, shared.RoleMember, true, true},
+		{"acme/public", callerProjectAdmin, shared.RoleAdmin, true, true}, {"acme/private", callerProjectAdmin, shared.RoleAdmin, true, true},
+		{"acme/public", callerMemberAndAdmin, shared.RoleMember, true, true},
 		{"acme/public", callerGuest, shared.RoleGuest, true, true}, {"acme/private", callerGuest, shared.RoleGuest, true, true},
 		{"acme/public", callerRemoved, shared.RoleMember, true, false}, {"acme/private", callerBefore, shared.RoleMember, true, false},
-		{"gone/project", callerMember, 0, false, false},
+		{"gone/project", callerMember, 0, false, false}, {"gone/project", callerDeleted, 0, false, false},
 	} {
 		m, found, err := s.store.MemberByID(ctx, sd.projectMember(tt.key, tt.c))
 		if err != nil || found != tt.found || found && (m.ProjectID != sd.project(tt.key) || m.MemberID != s.ids[tt.c] || m.Role != tt.role ||

@@ -726,7 +726,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Remove a member from a project
+         * @description For the project's admins, and its members who are the workspace's admins. A membership that does not exist or is deleted, or whose project the caller does not see, answers project.member_not_found; a caller who sees the project but may not remove its members, forbidden, whatever the membership. To a caller who may remove members, a membership that has ended answers project.member_not_found; his own, project.own_membership; and one whose role in the project is above his own, project.role_too_high, the workspace's admins included. The membership ends, its row and its role kept, at the moment of the request, by the caller; the member's display settings in the project stay. The role is decided after the workspace and project rows are locked.
+         */
+        delete: operations["removeProjectMember"];
         options?: never;
         head?: never;
         /**
@@ -2594,6 +2598,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProjectMemberList"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    removeProjectMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project membership's id (ProjectMember.id), not the member's account id. */
+                project_member_id: components["parameters"]["ProjectMemberID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The membership has ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

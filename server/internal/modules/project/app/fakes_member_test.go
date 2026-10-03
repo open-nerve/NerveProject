@@ -101,6 +101,21 @@ func (f *fakeStore) UpdateMemberRole(ctx context.Context, id uuid.UUID, role sha
 	return answer, nil
 }
 
+func (f *fakeStore) EndMember(ctx context.Context, projectID, userID, by uuid.UUID, now time.Time) error {
+	f.log.add(ctx, "EndMember %s of %s by %s at %s", userID, projectID, by, now.Format(timeFormat))
+	if err := f.fail("EndMember"); err != nil {
+		return err
+	}
+	if p, ok := f.projects[projectID]; ok {
+		if m, member := p.members[userID]; member && m.Active {
+			m.Active = false
+			p.members[userID] = m
+			return nil
+		}
+	}
+	return fmt.Errorf("EndMember: %s has no active membership of %s", userID, projectID)
+}
+
 // frank is a project admin in newMemberWrites; the memberships it adds,
 // by id, the same in every fixture.
 var (

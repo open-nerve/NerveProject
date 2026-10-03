@@ -60,6 +60,9 @@ var tableCells = map[shared.Action][]outcome{
 	// design 3.5).
 	"project_member.update": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible,
 		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	// As project_member.update.
+	"project_member.remove": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible,
+		invisible, forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

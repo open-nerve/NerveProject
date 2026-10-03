@@ -379,6 +379,31 @@ paths:
                 $ref: '#/components/schemas/ProjectMember'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: removeProjectMember
+      tags: [project]
+      summary: Remove a member from a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins. A membership that does not exist or is deleted, or whose
+        project the caller does not see, answers project.member_not_found; a
+        caller who sees the project but may not remove its members,
+        forbidden, whatever the membership. To a caller who may remove
+        members, a membership that has ended answers
+        project.member_not_found; his own, project.own_membership; and one
+        whose role in the
+        project is above his own, project.role_too_high, the workspace's
+        admins included. The membership ends, its row and its role kept, at
+        the moment of the request, by the caller; the member's display
+        settings in the project stay. The role is decided after the
+        workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.member_not_found, forbidden, project.own_membership, project.role_too_high]
+      responses:
+        '204':
+          description: The membership has ended.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
