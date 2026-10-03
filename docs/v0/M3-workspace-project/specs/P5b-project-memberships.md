@@ -4,7 +4,7 @@
 |---|---|
 | Phase | M3/P5b `project-memberships` |
 | 日期 | 2026-10-03 |
-| 状态 | 第 3 节已由控制者裁定（2026-10-03）；裁定和预检的发现（M-1、L-2–L-6）已改入（2026-10-03） |
+| 状态 | 已完成（[评审记录](../reviews/P5b-project-memberships-review.md)）：第 3 节已由控制者裁定（2026-10-03）；裁定和预检的发现（M-1、L-2–L-6）已改入（2026-10-03）；执行中的改动按评审记录第 3–5 节改入（2026-10-03） |
 | 上级文档 | [M3 设计文档](../M3-design.md) 第 2（P5、W7）、3.3、3.4、3.5、3.6（约定二、三、六，加锁表，方案 E 的代价）、3.7、4.3、5.1、5.3、6.7、8.2、9.2、9.3（交错 1）、9.4、9.6、12（P5b 与约束 1–4）、13.1、17.4 节 |
 | 前置交接 | [P5a spec](P5a-memberships.md) 第 5 节 P5b 一行，[P5a review](../reviews/P5a-memberships-review.md) 第 6 节，[P4b review](../reviews/P4b-project-members-review.md) 第 6 节中由 P5a 转给 P5b 的条目（P5a spec 第 3 节第 2 条；落点见第 3 节第 2 条） |
 | 计划 | [P5b plan](../plans/P5b-project-memberships.md) |
@@ -17,7 +17,7 @@ P5b 是评审敏感的一段（M3 设计 12 节约束 3）：它加了第一批�
 
 按 M3 设计 12 节 P5b：改项目成员的角色、移出项目成员、离开项目，第一批按资源寻址的项目级的写。具体是：
 
-- 三个操作：`updateProjectMember`（`PATCH /api/v0/project-members/{project_member_id}`）、`removeProjectMember`（`DELETE` 同一路径）、`leaveProject`（`POST /api/v0/projects/{project_id}/leave`），各带操作名、规则行、矩阵行（共 108 格，矩阵共 523 格），各在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 有一行；三个新码 `project.member_not_found`、`project.own_membership`、`project.role_too_high`；
+- 三个操作：`updateProjectMember`（`PATCH /api/v0/project-members/{project_member_id}`）、`removeProjectMember`（`DELETE` 同一路径）、`leaveProject`（`POST /api/v0/projects/{project_id}/leave`），各带操作名、规则行、矩阵行（共 108 格，矩阵共 523 格；执行中修复轮 P6 给三个写各加一行归档项目的，共 117 格，矩阵共 532 格），各在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 有一行；三个新码 `project.member_not_found`、`project.own_membership`、`project.role_too_high`；
 - `Locks.lockMemberAndDecide`：按成员关系 id 寻址的写的取锁路径（3.6 约定二、加锁表），与按项目 id 的路径共用锁的部分；等锁期间成员关系结束、删除、不再属于这个项目，调用者自己的成员关系结束，项目或工作区删除，都答 404、从不是 403，一行不改；
 - 3.5 的相对规则（`CheckRoleChange`、`CheckRemoval`，按 `roleOrder` 的集合）；
 - 3.7 规则 1 的项目一侧：项目唯一的有效管理员不能离开，哪怕只有他一人；`project.sole_admin` 的说明为规则 1、2 两条措辞，补救对每个收到它的调用者都成立；
@@ -29,7 +29,7 @@ P5b 是评审敏感的一段（M3 设计 12 节约束 3）：它加了第一批�
 
 ### 2.1 文件总览
 
-路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 59 个手写的文件（新建 22 个、修改 37 个）、5 个生成物；没有迁移，没有跨模块的端口，不改 `identity`、`workspace` 的产品代码（`workspace` 只改一个 HTTP 测试里 `project.sole_admin` 的文字）。
+路径相对于仓库根目录（`server/internal/` 省略）。"Task"是 plan 中负责它的任务（plan 有完整的文件表）。本 Phase 59 个手写的文件（新建 22 个、修改 37 个）、5 个生成物；没有迁移，没有跨模块的端口，不改 `identity`、`workspace` 的产品代码（`workspace` 只改一个 HTTP 测试里 `project.sole_admin` 的文字）。执行之后是 61 个手写的文件（修改 39 个）：修复轮另改 `bootstrap/contract_test.go`（P10 的 `oneError`）和 `workspace/app/remove_member_test.go`（P13：`project.sole_admin` 的替身照抄新的文字）。
 
 | 路径 | 内容 | Task |
 |---|---|---|
@@ -115,7 +115,7 @@ type MemberLeaver interface {
 
 - `CheckMemberRole(role) error`：三个角色之一，否则 422 `role` `invalid_format`（"is not 5, 15 or 20"）。只看请求的值，在事务之前（3.6 约定二"只看请求的值的校验在事务之前"）。
 - `RoleChange{Caller shared.Grant, Own bool, From, WorkspaceRole, To shared.Role}`；`CheckRoleChange(c)`：
-  1. 调用者不是工作区管理员时：自己的 409 `project.own_membership`；`From` 不在 `rolesBelow(调用者的项目角色)` 里、或 `To` 不在其中，403 `project.role_too_high`。所以项目管理员（不是工作区管理员）不能改另一位管理员、不能提拔任何人为管理员；项目成员（只有同时是工作区管理员时才过得了判定，见 2.7）在这里不会出现，单元测试照样核对他只能把访客保持为访客。
+  1. 调用者不是工作区管理员时：自己的 409 `project.own_membership`；`From` 不在 `rolesBelow(调用者的项目角色)` 里、或 `To` 不在其中，403 `project.role_too_high`。所以项目管理员（不是工作区管理员）经改角色不能改另一位管理员、不能提拔任何人为管理员（添加不看相对规则，他仍可以给出管理员，第 7 节）；项目成员（只有同时是工作区管理员时才过得了判定，见 2.7）在这里不会出现，单元测试照样核对他只能把访客保持为访客。
   2. 对每个调用者：`To` 不在 `assignable[WorkspaceRole]` 里 422 `role` `not_allowed`（"must be 5: the member is a guest of the workspace"）：工作区访客只能是访客（Plane `views/project/member.py:257-261`）。
 - `CheckRemoval(callerRole, own, role)`：自己的 409 `project.own_membership`（工作区管理员也是："请用离开"）；`role` 不在 `rolesUpTo(callerRole)` 里 403 `project.role_too_high`（工作区管理员同样没有例外，3.5；Plane `:313`）。同级的可以移出：项目管理员移出另一位管理员（故事 P5）。
 - `rolesBelow`、`rolesUpTo` 按 `roleOrder` 里的位置取集合：三者之外的角色下面什么都没有，也不在任何角色下面。按数值比较的实现在 10、25 这两个情形失败（`TestCheckRoleChange`、`TestCheckRemoval`）。
@@ -125,9 +125,9 @@ type MemberLeaver interface {
   |---|---|---|
   | `project.member_not_found` | 404 | The project member does not exist, or you cannot see the project. |
   | `project.own_membership` | 409 | You cannot remove your own membership of the project, nor change your own role in it unless you are a workspace admin. |
-  | `project.role_too_high` | 403 | The role is too high for you: unless you are a workspace admin, you change only a member whose project role is below yours, to a role below yours; and you remove only a member whose project role is not above yours. |
+  | `project.role_too_high` | 403 | The role is too high for you. Unless you are a workspace admin, you change only members whose project role is below yours, to roles below yours. You remove only members whose project role is not above yours. |
 
-  每句对每个收到它的调用者都成立（清扫 30）：404 给看不到项目的人、成员关系不存在或已删除或已结束（已结束只对过了判定的人）；409 给移出自己的任何人和改自己角色的非工作区管理员（改自己的工作区管理员从不收到它）；403 的两半各说一种写，"unless you are a workspace admin"只在改角色一半。`project.own_membership` 不给补救：离开是结束自己的成员关系的路，但它同样拒绝唯一的管理员，"请用离开"对唯一的管理员不成立（第 3 节第 7 条）。
+  每句对每个收到它的调用者都成立（清扫 30）：404 给看不到项目的人、成员关系不存在或已删除或已结束（已结束只对过了判定的人）；409 给移出自己的任何人和改自己角色的非工作区管理员（改自己的工作区管理员从不收到它）；403 的两句各说一种写，"Unless you are a workspace admin"只在改角色一句（修复轮 P4 把原来的一句拆成两句：原来的"unless"读来也管移出，而收到移出的 403 的有同时是工作区管理员的项目成员；服务器的说明与 en 的文字逐字相同）。`project.own_membership` 不给补救：离开是结束自己的成员关系的路，但它同样拒绝唯一的管理员，"请用离开"对唯一的管理员不成立（第 3 节第 7 条）。
 
 ### 2.6 按成员关系 id 寻址的取锁路径；`updateProjectMember` 的用例（Task 3；3.3、3.5、3.6 约定二、三和加锁表、6.7）
 
@@ -165,7 +165,7 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 | Ops（acme，alice 的） | alice、carol | bob | |
 | Lab（beta，bob 的） | bob | carol | |
 
-`TestTheRelativeRuleOnTheComposedApp` 一步接一步，3.5 的每一半各有成立的情形和反例（清扫 24），每一步的拒绝一行不改，每一次改只写目标的角色、由调用者、在请求的时刻（目标之前由 alice 写），其余的列不动：规则的角色（carol 是 Web 的成员：连把访客保持为访客也 403；她是 Ops 的管理员：改 bob）；自己的（bob 是 beta 的工作区管理员，在 acme 不是：409）；另一位管理员、提拔（403 `project.role_too_high`）；工作区访客的上限（bob、gina 各 422）；工作区管理员的例外（gina 降 dave、提拔 carol、提拔自己）。"角色不变"在非管理员的行上核对（清扫 26）。
+`TestTheRelativeRuleOnTheComposedApp` 一步接一步，3.5 的每一半各有成立的情形和反例（清扫 24），每一步的拒绝一行不改，每一次改只写目标的角色、由调用者、在请求的时刻（目标之前由另一个账户写，每一步之前核对：多数是建它的 alice，carol 的最后两次改之前是 bob、dave；写下的时刻在请求之内；执行中 T5-a），其余的列不动：规则的角色（carol 是 Web 的成员：连把访客保持为访客也 403；她是 Ops 的管理员：改 bob）；自己的（bob 是 beta 的工作区管理员，在 acme 不是：409）；另一位管理员、提拔（403 `project.role_too_high`）；工作区访客的上限（bob、gina 各 422）；工作区管理员的例外（gina 降 dave、提拔 carol、提拔自己、降 alice）；上限放行的一侧（bob 把 erin 保持为访客）；不是工作区管理员的提拔（dave 把 carol 改回成员，低于他自己）。gina 降 alice、bob 保持 erin、dave 改回 carol 这三步是执行中 T5-b 加的。"角色不变"在非管理员的行上核对（清扫 26）。
 
 ### 2.9 `removeProjectMember`（Task 6；3.3、3.5、5.1、9.2）
 
@@ -186,13 +186,13 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 
   > The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. Give the project another admin first, or delete it.
 
-  收到它的有三种调用者，补救对每一个都成立（清扫 30）：离开项目的唯一管理员（他可以添加一位管理员，或请工作区管理员加入：工作区管理员加入任何项目都以管理员加入，3.5；或删除项目）；移出工作区成员的工作区管理员（他自己可以加入那个项目成为管理员，或作为项目成员提拔别人，3.5 的例外）；离开工作区的唯一项目管理员（同第一种）。`workspace` 的 HTTP 测试（它声明这个码而不导入 `project`，9.4）和两份 `auth.json` 同改。原来的"make another of its members an admin first"对不是工作区管理员的项目管理员不成立：相对规则不许他提拔任何人为管理员。
+  收到它的有三种调用者，补救对每一个都成立（清扫 30）：离开项目的唯一管理员（他可以添加一位管理员，或请工作区管理员加入：工作区管理员加入任何项目都以管理员加入，3.5；或删除项目）；移出工作区成员的工作区管理员（他自己可以加入那个项目成为管理员，或作为项目成员提拔别人，3.5 的例外）；离开工作区的唯一项目管理员（同第一种）。`workspace` 的 HTTP 测试（它声明这个码而不导入 `project`，9.4）和两份 `auth.json` 同改。原来的"make another of its members an admin first"对不是工作区管理员的项目管理员不成立：相对规则不许他经改角色提拔任何人为管理员（他只能经添加给出管理员，第 7 节）。
 
 ### 2.11 竞争、锁的强度、事务的连接、时刻和写者（Task 8；brief 清扫 8、9、12、13、14、24、29）
 
 全部在组合出的 app 上（`memberWorld`，`membershipWrites`：bob 改 gina 的角色、移出她，dave 离开 Web）：
 
-- `TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`：另一个事务持 Web 的 `FOR NO KEY UPDATE`（或 acme 的，删除 acme 时）并改一行；写已过认证、不加锁读过它指的成员关系，等在 Web（或 acme）的行上（`WaitForLockWaitOn`）；另一个提交之后都是 404、从不是泄露存在的 403，另一个改的行是它留下的样子，其余每行不变。Web 是私有的（`newPrivateWorld`），调用者的成员关系结束之后他看不到它：
+- `TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`：另一个事务持 Web 的 `FOR NO KEY UPDATE`（或 acme 的，删除 acme 时）并改一行；写已过认证、不加锁读过它指的成员关系，等在 Web（或 acme）的行上（`WaitForLockWaitOn`）；另一个提交之后都是 404、从不是泄露存在的 403，另一个改的行是它留下的样子，其余每行不变。Web 是私有的（`newPrivateWorld`），调用者的成员关系结束之后他看不到它（表的最后一行是修复轮 P26 另加的测试，答 422）：
 
   | 写 | 等待期间 | 回答 |
   |---|---|---|
@@ -202,6 +202,7 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
   | 改角色、移出、离开 | 调用者自己的成员关系结束 | 404 `project.member_not_found`、离开 `project.not_found`（看不到） |
   | 改角色、移出、离开 | Web 删除 | 同上（项目锁读不到行） |
   | 改角色、移出、离开 | acme 删除 | 同上（工作区锁读不到行） |
+  | 改角色（bob 把 carol 改为成员） | 另一个事务持 acme 的 `FOR NO KEY UPDATE`，用 SQL 把 carol 改为 acme 的访客、她在 Web 和 Ops 的行改为 5（降级所做的） | 422 `role` `not_allowed`，只此一个错误：上限读的是锁下的工作区角色；三行是另一个留下的样子，其余每行不变（`TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks`，`project_membership_role_race_test.go`；在锁之前读目标的工作区角色的变异只在这里失败） |
 
 - `TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`（`bootstrap/project_membership_role_race_test.go`，预检 M-1、L-6）：另一个事务持 Web 的 `FOR NO KEY UPDATE`，把写指的成员关系改为管理员或删除；写在 Web 的行上等，另一个提交之后：bob（Web 的管理员，不是工作区管理员）改 carol 的角色、gina（Web 的成员、acme 的管理员）移出 carol，各 403 `project.role_too_high`（相对规则用锁下重读到的角色，不用锁之前读到的）；carol（Web 的成员，无权改、移出）改、移出 gina 已删除的成员关系，各 404 `project.member_not_found`（重读在判定之前：删除的答 404，不是她的 403）；那一行是另一个留下的样子，其余每行不变。等锁时被提拔的目标不会被一个按旧角色判定的写降级或移出。
 - `TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`：别的事务持 acme（`FOR NO KEY UPDATE`）、Web 和写改的那一行（`FOR SHARE`），逐个放开；每一步用 `lockOn`（P4b 的 `NOWAIT` 阶梯）读出各行最强的锁：
@@ -212,7 +213,7 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
   | `projects` | acme `FOR SHARE`；改角色时 gina 在 acme 的成员关系 `FOR SHARE`，不更强；移出、离开不锁它 |
   | `project_members` | 再加 Web `FOR NO KEY UPDATE`；Ops（gina、dave 都不是成员）没有锁 |
 
-  然后它照单独时回答；写下的时刻不早于 Web 被放开（时钟在锁之后读，3.3）。成员关系的行本身只由写的 `UPDATE` 锁（`FOR NO KEY UPDATE` 的行锁），不在判定之前。
+  然后它照单独时回答；写下的时刻不早于 Web 被放开（时钟在锁之后读，3.3）。成员关系的行本身只由写的 `UPDATE` 锁（`FOR NO KEY UPDATE` 的行锁），不在判定之前。修复轮 P18 钉住这一句：写下的时刻还要早于别的事务放开那一行成员关系，判定和读时钟之前取它的 `FOR NO KEY UPDATE` 会把时刻推到放开之后（`x-reread-locked` 由此失败，原来在每一层都活下来；`FOR SHARE` 的变体在第三步的探针失败）。
 - `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（P4b）加三个写：alice 把 carol 改为 Web 的管理员、移出 bob，carol 离开；池只有一个连接，任何一条语句经连接池就等一个不来的连接。
 - `TestTheWritesOnAProjectStampTheirRequest`（P4b）加三行，各由 alice、在请求之内的一个时刻写；每行之前由 bob 写（清扫 14）。
 - 每个等待都有期限（`soon(t)`、`receiveWithin`、`WaitForLockWaitOn` 的 5 秒；清扫 29）；池的大小照 `openPool`。
@@ -227,30 +228,31 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 | 离开 ↔ P5a 的移出（同一个成员） | `TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize` | carol 离开 Ops ↔ gina 把 carol 移出 acme | 离开先：她在 Ops 的由她自己结束，移出结束其余的；移出先：全部由 gina 结束，离开 404 `project.not_found` |
 | 离开 ↔ P5a 的移出（另一位管理员） | 同上 | alice 离开 Ops ↔ gina 把 carol 移出 acme | 离开先：移出在 Ops 的锁下看到 carol 是唯一的管理员（bob 是成员），409（规则 2）；移出先：离开在 Ops 的锁下找不到另一位有效管理员，409（规则 1）；Ops 留一位管理员 |
 
-停在问过之后的 gate 证明规则 1 在结束它的同一把锁下问：先在一个事务里问、再在另一个事务里结束的离开在这里失败（两位都离开，P5a T6-b 的写法）。
+停在问过之后、结束之前的 gate 证明规则 1 在结束它的同一把锁下问：先在一个事务里问、再在另一个事务里结束的离开在这里失败（第二位不在 Ops 的行上等，探针失败），在锁之前问的离开也在这里失败（两位都离开，P5a T6-b 的写法）。这个 gate 在 `EndMember` 的开头，问过、持着锁、写之前（执行中 T9-a：plan 把它放在 `HasOtherAdmin` 的末尾，那里还在问的事务里，分成两个事务的离开在那里从不失败）。
 
 **P5b 的写与 P5a 的结束不成环**（P5a spec 第 5 节）：P5b 的三个写最先取工作区的 S，P5a 的移出、离开最先取工作区的 N（停用在 P6，同样先取工作区的 N）；两者在工作区行上串行，谁先拿到它，谁就在另一方取任何别的锁之前做完。P5a 的连带在工作区 N 之下按 id 锁项目，这时没有 P5b 的写持有或等待这个工作区里的项目行（约定五）。反过来，P5b 的写持项目 N 时，它已持工作区 S，P5a 的写等在工作区行上，不会先持项目再等工作区。上表后两行在真实数据库上两种顺序都证明它，`-count=5 -race` 没有 40P01。规则 2 在项目 N 之下查（P5a 的 `SoleAdmin`），所以它看得到先提交的 P5b 的写改了谁是管理员（上表最后一行的离开先）。
 
 ### 2.13 矩阵与完整性核对（Task 4、6、7；9.2）
 
-- 改角色四行、移出四行（各 12 格）、离开一行（12 格），共 108 格；矩阵共 523 格。每一格指向它这一列的项目里种下的成员关系（`toProjectMembership`、`aMembership`），目标核对拒绝别的列的项目的、没有种下的、工作区一级的表里的（`TestMatrixViolationsCatchesEachColumnGap` 的四个情形）。
-- 前提（`projectSeed.memberships`）：每个被指到的成员关系的状态和角色（PM、PA、PM+WA、工作区访客的有效，被移出的成员、P-前的已结束未删除，gone 的成员、管理员的随 gone 删除）；工作区访客是 acme 的有效访客；PA 在 acme 的公开、私有项目里没有另一位管理员（离开的 409 是规则 1 的）。
+- 改角色四行、移出四行（各 12 格）、离开一行（12 格），共 108 格；矩阵共 523 格（执行中修复轮 P6 给三个写各加一行归档项目的，`archivedColumns`，各 3 格：设计 3.19 只拒绝修改归档的项目本身；本 Phase 共 117 格，矩阵共 532 格）。每一格指向它这一列的项目里种下的成员关系（`toProjectMembership`、`aMembership`），目标核对拒绝别的列的项目的、没有种下的、工作区一级的表里的（`TestMatrixViolationsCatchesEachColumnGap` 的四个情形）。
+- 前提（`projectSeed.memberships`）：每个被指到的成员关系的状态和角色（PM、PA、PM+WA、工作区访客的有效，被移出的成员、P-前的已结束未删除，gone 的成员、管理员的随 gone 删除）；工作区访客是 acme 的有效访客；PA 在他这一列被要求离开的项目（`projectOf`，acme 的公开项目）里没有另一位管理员（离开的 409 是规则 1 的；修复轮 P14 去掉了私有项目一半，它不守任何格子）；PM 在归档项目的成员关系有效、15（修复轮 P6；PM+WA 是那里的第二位管理员，PA 离开得了）。
 - 唯一管理员的项目一侧是离开一行的 PA 格子（409 `project.sole_admin`），在项目表的列上；不另建表（第 3 节第 5 条）。`projectTables`、`workspaceLevelTables` 不变，`TestEachMatrixTableIsOfOneLevel` 照旧通过。
 - 完整性核对（`writesOnAProject`）：离开的路径有 `{project_id}`（规则 (a)）；改角色、移出的路径没有，它们的矩阵行的列是项目表的（规则 (b)）：P5b 的这两个写是第二种形状的第一批。三行各去掉一行都被发现（附录 A，`pf-row-*`）。
 - `TestEachWriteOnAProjectSharesItsWorkspaceFirst`：`projectWrite.param()` 接资源路径；`by`、`member` 两列；第一步除了项目的行、目标在工作区的成员关系，还用 `FOR UPDATE NOWAIT` 探测写改的成员关系的行（P4b review 第 6 节：先锁资源行再锁工作区的写在这里失败，`s9-member-row-first`）；第二步核对它在项目之后才锁。
 
 ### 2.14 替身换成 P5b 的写（Task 10；9.2；P5a spec 第 5 节）
 
-- 矩阵：`projectSeed.endings()` 经项目的存储 `EndMember` 结束 P-前在私有项目的成员关系（由 acme 的管理员：移出）和 WG- 在公开项目的（由他自己：离开），在种子的时刻。`standIns` 删除。
+- 矩阵：`projectSeed.endings()` 经项目的存储 `EndMember` 结束 P-前在私有项目的成员关系（由那个项目的管理员 PA：移出；执行中 T10-c 改正：plan 写的 acme 的管理员不是那个项目的成员，`project_member.remove` 是项目级的，矩阵自己那一行拒绝他）和 WG- 在公开项目的（由他自己：离开），在种子的时刻。`standIns` 删除。
 - 留下的 SQL，每一处都写明为什么没有写会留下那个状态：
   - `partingStates`：两种已删除的成员关系（WG- 在私有项目的、成员在私有项目的：已删除的成员关系只随已删除的项目、工作区出现，列表须照样跟读取一致）、PM 在私有项目的显示设置删除而成员关系有效；
-  - `project_writes_test.go` 的"恢复"一行和 `project_members_test.go` 的提交时被拒：之前没有显示设置的已结束成员关系（移出、离开都留着显示设置）。
-- 改由 P5b 的写：负责人、默认指派人的测试里 bob 由 alice 经接口移出；恢复的测试由 alice 经接口改角色、移出；`newGrowthRace(ended)` 用 `EndMember`；`bobAdministersWeb` 用 `UpdateMemberRole`。
+  - `project_writes_test.go` 的"恢复"一行和 `project_members_test.go` 的提交时被拒：之前没有显示设置的已结束成员关系（移出、离开都留着显示设置）；后者种下的 INSERT 要求恰好一行（执行中 T10-d）。
+  - Task 8 的竞争测试（含修复轮 P26 的）在持着锁的另一个事务里用 SQL 做 P5b 的写会做的改动：那个事务要在探针期间一直持着行锁，真实的写不在产品代码里加钩子就做不到（修复轮 P23 写进两个文件的说明）。
+- 改由 P5b 的写：负责人、默认指派人的测试里 bob 由 alice 经接口移出；恢复的测试由 alice 经接口改角色、移出；`newGrowthRace(ended)` 用 `EndMember`；`bobAdministersWeb` 用 `UpdateMemberRole`，`TestAProjectWriteAndADemotionSerialize` 原来没有说明的 SQL 替身也改用它（执行中 T10-a）。
 - 添加的"成员关系已结束"的变体、建项目的负责人变体（P4b M4）照旧以被移出的成员为目标，各只答一个错误（矩阵的格子核对整个错误列表）。
 
 ### 2.15 端到端（Task 11；第 2 节 P5、W7，9.6）
 
-- 夹具：`MemberRow`、`expectMembers(db, projectId, want)`：项目未删除的成员关系（已结束的也在），按地址排序，每行带最后写它的账户、他未删除的显示设置和写它的账户，每行都属于项目的工作区。
+- 夹具：`MemberRow`、`expectMembers(db, projectId, want)`：项目未删除的成员关系（已结束的也在），按地址排序，每行带最后写它的账户、他未删除的显示设置和写它的账户，每行都属于项目的工作区；项目未删除的显示设置的行数等于成员关系的行数（执行中 T11-d），`expectMember` 与它共用同一段 SQL（T11-c）。
 - 故事 P5（API）照设计第 2 节的接口一列，为清扫加了几步（第 3 节第 10 条）：添加的三个 422；一次添加两人（成员、访客）；唯一管理员离开 409，项目成员改别人的角色 403；项目管理员（不是工作区管理员）改另一位管理员 403 `project.role_too_high`；把成员改为访客、移出访客；成员离开，他在另一个项目的成员关系不动，降为工作区访客之后已结束的那一行也成为访客的（W7 的一半）；项目管理员移出另一位项目管理员（工作区成员），他加入公开项目：原来那一行回来，15。设计说"管理员……把成员改为访客，移出访客"：故事里是另一位项目管理员 pam 做这两步，这样行的写者（之前由管理员写）可以失败（清扫 14）。
 - 页面版本（成员点"离开项目"先等接口成功再回到项目列表，M1-P4 交接）在 P10。
 
@@ -274,7 +276,7 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
    | 同上：交错 1 的项目一侧 | Task 9（2.12） |
    | 同上：`Memberships` 的账户由故事 P5 一次添加几个账户 | Task 11：P5 一次添加两人、再一次添加三人；这个谓词在每个调用者之下等价（P5a 第 3 节第 9 条），故事照样看不到，附录 A 的 `x-memberships-account` 记下 |
    | 同上：P5b 的写与 P5a 的连带不成环，两种顺序 | Task 9（2.12 的论证和后两行） |
-   | 同上：新矩阵表放进 `projectTables` 或 `workspaceLevelTables` | P5b 没有新表：九行都在 `projectColumns` 上，它已在 `projectTables` 里（2.13） |
+   | 同上：新矩阵表放进 `projectTables` 或 `workspaceLevelTables` | P5b 没有新表：九行都在 `projectColumns` 上，修复轮 P6 的三行在 `archivedColumns` 上，两张都已在 `projectTables` 里（2.13） |
    | 同上：`project.ErrSoleAdmin` 的说明和补救 | Task 7（2.10；第 7 条） |
    | 同上、P5a review 第 6 节 m5：W7 的"降级含已离开的项目" | Task 11：tom 离开 Web 之后被降为访客，已结束的那一行也成为访客的；`s15-demote-skips-ended` 让 P5 和 W7 都失败 |
    | P5a review 第 6 节：交错 1 的项目一侧在问过之后另有一个 gate、探针只认锁的等待、每个等待有期限 | Task 9：`projectOtherFoundHolding`；两方都不写被探的表；`soon(t)`、`receiveWithin` |
@@ -288,15 +290,15 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 
 3. **改角色锁住成员在工作区的成员关系（`FOR SHARE`）**：3.6 的加锁表"改项目成员的角色、移出项目成员"一行是"工作区 S → 项目 N → 重读项目成员 → 判定 → 改"，没有这一把锁。改角色要读成员的工作区角色（访客的上限，3.5）。方案 E 之下，工作区 S 已经挡住每一个改 `workspace_members` 的写（改角色、移出、离开、接受、恢复、停用都先取工作区的 N），所以不加锁读也读得到一致的值；P5b 仍经 `Locks` 的 `targets` 取它：这是添加、加入已用的路径（约定三的 `ShareMembers`，回答 `h.roles`），不需要新的端口，锁在全局顺序里（`workspace_members` 在 `workspaces` 之后、`projects` 之前），`TestEachLockOfAWriteOnAProjectMembershipIsItsStrength` 钉住它只在改角色时取、不更强。代价是一行共享锁。另一种写法：给 `Locks` 加一个不加锁读工作区角色的端口（`WorkspaceMembers` 多一个方法），加锁表照原样。**已接受。** 设计 3.6 的加锁表这一行已在修订一轮改为"工作区 S →（改角色）成员的工作区成员行 S → 项目 N → 重读项目成员 → 判定 → 改"，并写明理由：工作区访客的上限（3.5）读成员的工作区角色，移出不读它、不锁（设计提交 `0818c806`，P5b 一节的目标和第一个任务同改）。
 4. **按成员关系 id 的写，看不到项目时答 `project.member_not_found`**：3.6 说按资源 id 的写"没有时答资源的 404"；看不到项目也是资源的 404（8.2：不泄露存在），所以 `decide` 多一个 `notFound` 参数，按项目 id 的写照旧 `project.not_found`。P4b 的 `lockAndDecide` 的锁部分提成 `lock`，两条路径共用；它的行为和调用顺序不变（P4b 的单元测试和组合测试照旧通过）。**说明。**
-5. **唯一管理员的项目一侧不另建表**：P5a spec 第 3 节第 6 条留给 P5b 两种做法：另建项目的一张表，或在项目表里给出格子。离开一行在 `projectColumns` 上，PA 一格是 409 `project.sole_admin`：矩阵的 PA 是每个项目唯一的有效管理员（前提核对），所以这一格就是规则 1；规则 1 的其余情形（只有他一人、另一位已结束、规则看项目角色）在组合的 `TestLeavingAProject`。不建新表，`projectTables` 和完整性核对照旧成立。**已接受。**
-6. **离开的规则 1 看项目角色，不看 `ProjectAdmin`**：同时是工作区管理员的项目成员在判定里是"项目管理员"（`ProjectAdmin` 为真，3.4），但他不是项目的管理员，离开时不问另一位管理员；他离开之后项目仍有它的管理员。反过来，被降为访客的前管理员不再算管理员。`TestLeavingAProject` 的 gina 一步和最后两步各是一个反例（`s24-leave-rule1-workspace-admin`）。**说明。**
+5. **唯一管理员的项目一侧不另建表**：P5a spec 第 3 节第 6 条留给 P5b 两种做法：另建项目的一张表，或在项目表里给出格子。离开一行在 `projectColumns` 上，PA 一格是 409 `project.sole_admin`：矩阵的 PA 是这一格指的项目（`projectOf`，acme 的公开项目）唯一的有效管理员（前提核对），所以这一格就是规则 1（修复轮 P6 加的归档项目一行里 PM+WA 是第二位管理员，PA 离开是 204，规则 1 放行的一侧）；规则 1 的其余情形（只有他一人、另一位已结束、规则看项目角色）在组合的 `TestLeavingAProject`。不建新表，`projectTables` 和完整性核对照旧成立。**已接受。**
+6. **离开的规则 1 看项目角色，不看 `ProjectAdmin`**：同时是工作区管理员的项目成员在判定里是"项目管理员"（`ProjectAdmin` 为真，3.4），但他不是项目的管理员，离开时不问另一位管理员；他离开之后项目仍有它的管理员。反过来，被降为访客的前管理员不再算管理员。`TestLeavingAProject` 的 gina 一步（同时是工作区管理员的项目成员离开没有管理员的 Web）是前一半的反例（`s24-leave-rule1-workspace-admin`）；最后一步（alice 被降为工作区访客之后，以 Web 的访客离开它）展示后一半（修复轮 P15 改了故事的顺序之后）。**说明。**
 7. **两个码的说法**：
-   - `project.sole_admin` 照 P5a review 第 6 节为两条规则措辞，不给离开自己的码：两条规则说的是同一件事（项目会没有管理员），补救相同（先给项目另一位管理员，或删除它），对三种收到它的调用者都成立（2.10）。原来的"先让另一位成员成为管理员"对不是工作区管理员的项目管理员不成立：相对规则不许他提拔任何人为管理员。补救里没有"请工作区管理员"：给项目另一位管理员的路有几条（添加一位管理员、工作区管理员加入或提拔），文字不替调用者选。
+   - `project.sole_admin` 照 P5a review 第 6 节为两条规则措辞，不给离开自己的码：两条规则说的是同一件事（项目会没有管理员），补救相同（先给项目另一位管理员，或删除它），对三种收到它的调用者都成立（2.10）。原来的"先让另一位成员成为管理员"对不是工作区管理员的项目管理员不成立：相对规则不许他经改角色提拔任何人为管理员（他只能经添加给出管理员，第 7 节）。补救里没有"请工作区管理员"：给项目另一位管理员的路有几条（添加一位管理员、工作区管理员加入或提拔），文字不替调用者选。
    - `project.own_membership` 不给补救：移出自己的人该去离开，但离开同样拒绝唯一的管理员，"请用离开"对他不成立；改自己角色的非工作区管理员没有别的路。`removeProjectMember` 的描述同样不给它补救（预检 L-4：原来的"one leaves a project through leaveProject"已删去）。**已接受。**
 8. **故事看不到的谓词**（清扫 1 的故事一半，附录 A）：
    - 四条查询的 `deleted_at IS NULL`：项目成员关系只随项目、工作区删除（4.3），已删除的项目在锁里读不到，故事里没有一个已删除而项目未删除的成员行。`MemberByID` 的这一条另由组合的竞争测试（等锁期间删除成员关系）和矩阵（gone 的成员关系）发现。
    - `UpdateMemberRole`、`EndMember` 的 `is_active`：用例在锁下先读到有效才写（改角色、移出的已结束 404；离开的判定要求有效成员），这个谓词在组合一层等价。
-   - `HasOtherAdmin` 的 `is_active`：组合的 `TestLeavingAProject` 发现（carol 已结束的管理员成员关系），故事里没有已结束的管理员而项目只剩一位的时刻。
+   - `HasOtherAdmin` 的 `is_active`：组合的 `TestLeavingAProject` 发现（Web 上 bob、dave 已结束的管理员成员关系；修复轮 P15 之前是 carol 在 Ops 的），故事里没有已结束的管理员而项目只剩一位的时刻。
    - `Memberships`（P4b）的账户：每个调用者都按问到的账户取结果（第 2 条）。
 
    每一个都由存储测试在两个行序下发现。安全性质的变异里故事看不到的，每个都由矩阵或组合测试发现：
@@ -314,20 +316,20 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
    - 契约多声明一个从不回答的码（`s18-remove-code-unused-module`）：由 `project/adapter/http` 包的 `apitest.Main` 在包的测试结束时发现，这一核对本来就在单元一层。**说明。**
 9. **共用的测试逻辑写一次**（brief"不重复测试逻辑"）：`memberWorld`（Task 5）是改角色、移出、离开、竞争、交错的同一个世界；`memberEnding.check`（Task 6）是移出和离开的每一步的同一个核对；`outcome.check`、`memberLocked`（Task 3）是三个用例的单元测试共用的；`membershipWrites`（Task 8）是两个组合测试共用的三个写。**说明。**
 10. **故事为清扫多加的步骤**（设计第 2 节的 P5 照旧都在）：改角色、移出由另一位项目管理员 pam 做（行之前由管理员写，清扫 14）；Ops 是 acme 的另一个项目，tom 是成员、wanda 是另一位管理员（`EndMember`、`HasOtherAdmin` 的项目谓词在故事里看得到，清扫 1、20）；添加的三个 422 各一次，wanda（工作区管理员）以成员添加是设计列的"工作区管理员加为管理员以外的角色"；离开和降级之间、移出和重新加入之间各读一次成员关系（清扫 27）；重新加入之后成员列表里是他原来的 id。设计第 2 节 P5 的"成员点'离开项目'"在接口一列是 tom 的离开。**已接受。**
-11. **一个项目可以没有管理员**：3.7 说同时是工作区管理员的项目成员可以把唯一的项目管理员改成成员，"这时项目由工作区管理员管理"；P5b 照做（`TestTheRelativeRuleOnTheComposedApp` 的 gina 降 dave 时 Web 还有 bob，`TestLeavingAProject` 的降级让两个项目都没有管理员）。工作区访客的降级同样可以（P5a 第 7 节）。这样的项目里，工作区管理员加入就是管理员（3.5：加入的角色是工作区角色）。**说明。**
+11. **一个项目可以没有管理员**：3.7 说同时是工作区管理员的项目成员可以把唯一的项目管理员改成成员，"这时项目由工作区管理员管理"；P5b 照做（`TestTheRelativeRuleOnTheComposedApp` 的 gina 降 dave 时 Web 还有 bob，`TestLeavingAProject` 的降级让 Web 没有管理员；修复轮 P15 之后 Ops 留着 carol，她是那里唯一的管理员，离开被拒）。工作区访客的降级同样可以（P5a 第 7 节）。这样的项目里，工作区管理员加入就是管理员（3.5：加入的角色是工作区角色）。**说明。**
 12. **plane-diff 不加行**（2.16）。**说明。**
 
 ## 4. 验收标准（完成线，M3 设计 12 节 P5b）
 
-- [ ] P5 的接口版本通过，此前的每个故事仍然通过（`make e2e` 共 66 个：此前的 65 个，加 P5）。
-- [ ] 交错 1 的项目一侧两种顺序通过，离开与 P5a 的移出两种顺序通过，`-count=5 -race`，没有 40P01。
-- [ ] `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 对三个写各有一行（含资源行的探测）；少一行时完整性核对失败。
-- [ ] 相对规则的表（`TestCheckRoleChange`、`TestCheckRemoval`）和它在组合出的 app 上的情形（`TestTheRelativeRuleOnTheComposedApp`、`TestRemovingAProjectMember`）通过。
-- [ ] 规则 1 的项目一侧在组合出的 app 上有正反例（`TestLeavingAProject`）。
-- [ ] 三个写的竞争（404 不是 403，一行不改）、改角色和移出按锁下重读到的角色判定、锁的强度在组合一层通过。
-- [ ] `project` 的 `apitest.Main` 两个方向核对通过。
-- [ ] 本 Phase 的矩阵格子（108 个）通过；共 523 格，耗时记下。
-- [ ] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。
+- [x] P5 的接口版本通过，此前的每个故事仍然通过（`make e2e` 共 66 个：此前的 65 个，加 P5）。（执行之后 66 个全部通过，S3 在内，修复轮之后照旧；见评审记录第 2 节。）
+- [x] 交错 1 的项目一侧两种顺序通过，离开与 P5a 的移出两种顺序通过，`-count=5 -race`，没有 40P01。（60 次通过；执行中 T9-a 移过第一个 gate；整分支评审 195 次、修复轮 27/27，都没有 40P01；见评审记录第 2 节。）
+- [x] `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 对三个写各有一行（含资源行的探测）；少一行时完整性核对失败。（`s9-member-row-first`、`pf-row-*` 都失败；见评审记录第 2 节。）
+- [x] 相对规则的表（`TestCheckRoleChange`、`TestCheckRemoval`）和它在组合出的 app 上的情形（`TestTheRelativeRuleOnTheComposedApp`、`TestRemovingAProjectMember`）通过。（执行中补上的行和步骤见评审记录第 3 节 T2、T5、T6。）
+- [x] 规则 1 的项目一侧在组合出的 app 上有正反例（`TestLeavingAProject`）。（修复轮 P15 另加了不是工作区管理员的 carol 被拒的一步；见评审记录第 2 节。）
+- [x] 三个写的竞争（404 不是 403，一行不改）、改角色和移出按锁下重读到的角色判定、锁的强度在组合一层通过。（修复轮 P18、P26 另钉住成员关系的行只由写锁、改角色等锁时目标被降级；见评审记录第 2 节。）
+- [x] `project` 的 `apitest.Main` 两个方向核对通过。（见评审记录第 2 节。）
+- [x] 本 Phase 的矩阵格子（108 个）通过；共 523 格，耗时记下。（执行之后：修复轮 P6 给三个写各加一行归档项目的，本 Phase 117 格，共 532 格，全部通过；执行中没有另记耗时，原型上是 1.47 秒（附录 A）；见评审记录第 2 节。）
+- [x] `make lint`、`make test`、`make gen-check`、`make knip`、`make test-web`、`make e2e` 通过。（修复轮之后全部再跑一遍；见评审记录第 2 节。）
 
 ## 5. 不在 P5b 范围内
 
@@ -338,9 +340,9 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 | Phase | 条目 |
 |---|---|
 | P6 | 停用结束他的项目成员关系经 P5a 的 `EndMemberships`（规则 2），不经 P5b 的 `EndMember`；P5b 的三个写最先取工作区的 S，停用按 id 顺序取他所在的每个工作区的 N，两者在工作区行上串行（2.12 的论证照样成立），交错 13–15 的写法照 `TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`（第二方等工作区行，两方都不写 `workspaces`，探针只由那一把锁的等待满足）；`project.sole_admin` 的文字（2.10）要对停用的调用者（服务器管理员的命令）同样成立："给项目另一位管理员，或删除它"，命令的输出照 8.7 写下一步，P6 核对（清扫 30） |
-| P7 | 状态、标签的写是项目级的写，经 `Locks`；按资源寻址的（`PATCH /states/{id}`、标签）照 `lockMemberAndDecide` 的写法另加一个分支：不加锁读资源行 → 工作区 S → 项目 N → 锁下重读、确认仍属这个项目 → 判定，`decide` 的 `notFound` 是资源自己的 404；每个写在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 有一行，资源路径照 `param()` 加一种，第一步探测资源行；竞争和锁的强度照 `TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`、`TestEachLockOfAWriteOnAProjectMembershipIsItsStrength` |
+| P7 | 状态、标签的写是项目级的写，经 `Locks`；按资源寻址的（`PATCH /states/{id}`、标签）走同一条路：不加锁读资源行 → 工作区 S → 项目 N → 锁下重读、确认仍属这个项目 → 判定，`decide` 的 `notFound` 是资源自己的 404；这时把 `lockMemberAndDecide` 里按资源寻址的这一段从 `MemberFinder`、`ProjectMembership`、`held.member` 上提出来共用（例如接一个回答工作区、项目和有没有的读，加资源自己的 404，用例经自己的端口重读自己的行），不另加一份副本（P5b review 第 4 节 m1）；`lock` 丢掉 `ShareWorkspaceByID` 回答的工作区、只用有没有，是共用路径上唯一不核对键的端口回答（P4b 起），提出来时一并核对（P5b review 第 6 节）；每个写在 `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 有一行，资源路径照 `param()` 加一种，第一步探测资源行；竞争和锁的强度照 `TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`、`TestEachLockOfAWriteOnAProjectMembershipIsItsStrength` |
 | P8 | 三个新码在 `PROBLEM_MESSAGES` 里（Task 4），随它搬迁 |
-| P10 | P5 的页面版本：成员页的改角色、移出，"离开项目"先等接口成功再回到项目列表（M1-P4 交接）；页面只给调用者能做的操作（相对规则：不是工作区管理员的项目管理员看不到"设为管理员"，也看不到改另一位管理员的入口），接口的 403、409、422 照 `PROBLEM_MESSAGES` 提示 |
+| P10 | P5 的页面版本：成员页的改角色、移出，"离开项目"先等接口成功再回到项目列表（M1-P4 交接）；页面只给调用者能做的操作（相对规则：不是工作区管理员的项目管理员看不到"设为管理员"，也看不到改另一位管理员的入口），接口的 403、409、422 照 `PROBLEM_MESSAGES` 提示；隐藏这两个入口只是不给接口拒绝的操作，不是保护：他仍可以经添加给出管理员，或移出再添加改另一位管理员的角色（第 7 节，P5b review 第 6 节） |
 | 后来 | 结束的成员关系的显示设置留着，重新加入之后照旧（与 Plane 相同，第 7 节） |
 
 ## 6. 风险
@@ -361,14 +363,15 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 - **被移出、离开的人可以自己回来**：工作区成员可以加入公开项目，原来那一行以 `min(原来的角色, 工作区角色)` 回来（3.5）；私有项目只有工作区管理员能加入。移出不是封禁（与 Plane 相同）。
 - **两位项目管理员同时移出对方**：两者在同一个项目的 N 上串行，后到的在锁下重读之后判定，它的调用者已被移出：私有项目答 404 `project.member_not_found`（他看不到项目，与 `TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile` 的"调用者自己的成员关系结束"同一条路），公开项目答 403 `forbidden`（他看得到项目，不再能移出成员）；两种都一行不改。
 - **停用的账户仍算另一位管理员**（P5a review 第 7 节同一条）：P6 之前停用不结束他的项目成员关系，`HasOtherAdmin` 把停用账户的有效管理员成员关系算作"另一位有效管理员"，唯一还能登录的管理员可以离开；P6 的停用经 `EndMemberships` 结束它们之后，不再有这种状态。
+- **相对规则只约束改角色**（P5b review 第 4 节 I1，负责人取 (a)）：不是工作区管理员的项目管理员经 `updateProjectMember` 提拔不了别人为管理员、改不了另一位管理员（403 `project.role_too_high`）；`addProjectMembers`（P4b）不看相对规则：他可以直接把一位工作区成员添加为管理员，也可以先移出一位不比他高的成员（同级的可以移出）、再把那人添加回来，以前那一行恢复为这次给出的、那人的工作区角色允许的任何角色（3.5）。与 Plane 相同（`views/project/member.py:46-154` 的添加没有相对规则）。P10 的页面隐藏"设为管理员"不是保护（第 5 节 P10 一行）。
 - **方案 E 的代价**（17.4）：见第 6 节。
 
 | 交接 | P5b 处理的条目 | 留下的条目 |
 |---|---|---|
-| P5a spec 第 5 节、review 第 6 节的 P5b 一行 | 第 3 节第 2 条 | 无 |
-| P4b review 第 6 节中经 P5a 转来的条目 | 第 3 节第 2 条 | 无 |
+| P5a spec 第 5 节、review 第 6 节的 P5b 一行 | 第 3 节第 2 条（执行之后都已落地，整分支评审逐条核对） | 无 |
+| P4b review 第 6 节中经 P5a 转来的条目 | 第 3 节第 2 条（执行之后都已落地，整分支评审逐条核对） | 无 |
 
-**M3 设计 13.1 的关闭条件**：13.1 没有落在 P5b 的一项（"M2-closeout §13 P5 改到"是 M2 的 P5 页面，在 P9；"M1-P4 离开项目的顺序"是页面的行为，在 P10）。`docs/v0/M3-workspace-project/handoffs/` 里没有交给 P5b 的条目。P5b 的条件都有落点，没有放不下的。
+**M3 设计 13.1 的关闭条件**：13.1 没有落在 P5b 的一项（"M2-closeout §13 P5 改到"是 M2 的 P5 页面，在 P9；"M1-P4 离开项目的顺序"是页面的行为，在 P10）。`docs/v0/M3-workspace-project/handoffs/` 里没有交给 P5b 的条目。P5b 的条件都有落点，没有放不下的。执行之后不变：交给后面的 Phase 的条目在第 5 节，评审记录第 6 节照录。
 
 ## 附录 A：原型验证记录（2026-10-03）
 
@@ -412,7 +415,7 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 | 22 端口的回答对得上所问 | `MemberByID` 回答别的 id、`UpdateMemberRole` 回答别的成员关系；2 个 | 2/2 | 单元（组合一层的真实存储不答错 id，第 3 节第 8 条） |
 | 23 组合的夹具跨第二个工作区、第二个项目 | `memberWorld`：acme、beta 两个工作区，Web、Ops、Lab 三个项目，bob、carol 在一处是管理员、在另一处是成员；矩阵照 P4b 的 acme、other；故事 P5 的 Web、Ops | 清扫 1、20 的跨范围变异（项目、工作区的项目）都在组合一层被发现（`s1-em-project`、`s1-hoa-project`、`s20-*`） | 组合 |
 | 24 每条规则的每一半在组合一层有反例 | 相对规则（不约束、工作区管理员的例外、`From`、`To`、自己的、访客的上限和它读的角色）、移出（高于自己的、只许低于自己的、自己的、以管理员来判、看不到自己的、已结束的）、改角色（看不到自己的、已结束的）、目标的角色取锁之前的读（预检 M-1）、规则 1（不问、每个人都问、看 `ProjectAdmin`、只有他一人）；20 个 | 20/20，每个都在组合出的 app 上被发现（目标的角色原来哪一层都没有发现：没有一个竞争改目标的角色，单元的假实现也答不出别的角色；修订之后由 Task 3、6 的拒绝表各一行和新的组合测试发现），`s24-hoa-alone-allowed` 另在存储一层；故事一半 4/8，另 4 个故事看不到（第 3 节第 8 条） | 单元；存储（1 个）；组合；端到端（4 个） |
-| 25 判定和执行在同一把锁下 | 离开先在一个事务里问另一位管理员，再在另一个事务里结束；1 个 | 1/1 | 组合（`TestTwoProjectAdminsLeavingLeaveAnAdmin` 问过之后的 gate：两位都离开）；单元 |
+| 25 判定和执行在同一把锁下 | 离开先在一个事务里问另一位管理员，再在另一个事务里结束；1 个 | 1/1 | 组合（`TestTwoProjectAdminsLeavingLeaveAnAdmin` 问过之后、结束之前的 gate：第二位不在 Ops 的行上等，探针失败；在锁之前问的 `t7-check-before-lock` 在这里两位都离开；执行中 T9-a 移过这个 gate）；单元 |
 | 26 "不变"用一个变异不会碰巧得出的值 | 改角色写 20（目标是成员、改成访客）；结束写成员的角色（见清扫 3）；结束写列的默认（访客的）、15、20（预检 L-3，`TestEndMember` 被结束的行随行序是访客的或管理员的）；4 个加清扫 3 的 1 个 | 5/5 | 存储；组合；端到端 |
 | 27 故事里的"不动"、"留着"在动作之前读、之后核对 | P5 的 4 处：被移出的 gus 的行和显示设置、tom 在 Ops 的成员关系、被拒绝的添加和改角色、ray 回来的那一行 | 每处之前、之后各一次 `expectMembers`（Ops 的两次读是清扫中加的） | 端到端 |
 | 28 只在端到端被发现的性质另有 Go 的测试 | 全部 113 个变异 | 没有一个只在端到端被发现 | — |
@@ -456,5 +459,7 @@ func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, act
 | 完整性核对 | `pf-row-{updateProjectMember,removeProjectMember,leaveProject}` | 3/3 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst` | 组合 |
 
 P5b 自己的条目在上表中的位置：取锁路径的顺序和强度是清扫 9、13，资源行的探测和完整性核对的第二种形状是 `s9-member-row-first`、`pf-row-*`，每个竞争答 404 不答 403 是清扫 12、`s24-{upd,rem}-ended-taken`、`s2-leave-refusal-swallowed`；相对规则按集合是 `set-*`，每一半是 `s24-{no-relative-rule,no-wa-exception,from-unchecked,to-unchecked,own-unchecked,guest-cap-gone,guest-cap-callers-built}`，它用的是锁下重读到的目标角色是 `pf-stale-target-role`，判定在重读之后是 `pf-decide-before-reread`；移出不删除、一个时刻、由调用者是 `s3-em-*`、`s4-remove-*`、`s14-rem-by-member`，重新加入回到 15 是 `TestRemovingAProjectMember` 的最后一步和 P5 里 ray 的重新加入；离开的规则 1 看项目角色是 `s24-leave-rule1-workspace-admin`，唯一管理员是 `s24-leave-no-rule1-built`、`s24-hoa-alone-allowed`、`s1-hoa-*`、`s20-hoa-*`，判定和结束在一把锁下是 `s25-*`、`s13-leave-share`；W7 的降级是 `s15-*`。
+
+**执行中的改动**（2026-10-03）：上面是原型上的记录。执行中补上的测试和它们发现的变异记在评审记录第 3 节；改动本附录的几处：清扫 25 的 gate 从 `HasOtherAdmin` 的末尾移到 `EndMember` 的开头（T9-a）：plan 的位置还在问的事务里，`s25-leave-check-then-end` 在那里从不失败（0/30），移过来之后在两个 gate、两种先后都由探针失败，`t7-check-before-lock` 由结果失败（两位都离开）；修复轮 P18 给锁的强度测试加了时刻的上界，在判定之前锁住成员关系的行（`x-reread-locked`）原来每一层都活下来，现在在组合一层失败；修复轮 P26 加了 `TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks`（2.11 表的最后一行），在锁之前读目标的工作区角色的变异只在它失败；只对同时是工作区管理员的项目管理员问规则 1 的变异（`t7-rule1-only-wa`）原来只在矩阵和单元一层失败，修复轮 P15 之后也在 `TestLeavingAProject` 失败；修复轮 P6 给三个写各加一行归档项目的格子（各 3 格），本 Phase 117 格，矩阵共 532 格，拒绝归档项目的变异各在它那一行失败；整分支评审另跑的 11 个跨 Task 的变异 10 个在组合一层失败，`fm-ended-after-own`（移出先查自己的、后查已结束的）在组合一层等价：过了判定的调用者在这个项目有有效的成员关系。竞争和交错：整分支评审以 `-count=5 -race` 跑上面的 7 个测试 195 次，修复轮以 `-count=3 -race` 跑 9 个（加 P26 的和 T10-a 改过的 `TestAProjectWriteAndADemotionSerialize`）27 次，都没有 40P01。
 
 P1–P5a 交来的类别：在父行的锁之前判定是 `s12-*-decide-before-locks`；锁在事务之外是 `s4-*-no-tx`、`s8-*`；规则表的行放宽是 `s5-*`；"其余的行不变"不在空集上是清扫 3 的另一个项目、成员、工作区；`errors.Is` 对准确切的问题是清扫 21；按资源寻址的项目级的写被完整性核对看到是 `pf-row-*`；一行一个账户看不到少了的 `WHERE` 是清扫 1；P5b 没有新的表和索引；挂住的测试都有期限（清扫 29）；`project.sole_admin` 在工作区的两个操作上仍由 `workspace` 的 `apitest.Main` 两个方向核对。
