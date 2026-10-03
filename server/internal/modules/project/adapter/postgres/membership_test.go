@@ -107,8 +107,8 @@ func TestMemberByID(t *testing.T) {
 // row every column: his memberships of Ops and of beta's Site, his deleted
 // one of Web, stored before his live one or after it, carol's of Web. His
 // ended membership of Docs, and his deleted one of Web, are each an error,
-// and not written. Every membership was made by another account
-// (madeByAnother).
+// and not written. Every membership was made and last written by another
+// account (madeByAnother).
 func TestUpdateMemberRole(t *testing.T) {
 	for _, deletedFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("his deleted membership of Web stored first %v", deletedFirst), func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestUpdateMemberRole(t *testing.T) {
 // with nothing active left to end, it is an error and writes nothing; so
 // is asking about Docs, where his membership ended, and about Gone, where
 // his only membership is deleted, though active. Every membership was made
-// by another account (madeByAnother).
+// and last written by another account (madeByAnother).
 func TestEndMember(t *testing.T) {
 	for _, deletedFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("his deleted membership of Web stored first %v", deletedFirst), func(t *testing.T) {
