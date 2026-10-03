@@ -29,7 +29,7 @@
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `ebfd2237` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
 - **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`api/modules/project.yaml`、`api/openapi.yaml`、`project/domain/actions.go`、`errors.go`、`project/app/ports.go`、`lock.go`、`fakes_member_test.go`、`clock_test.go`、`project/adapter/http/handler.go`、`handler_test.go`、`members.go`、`member_writes_test.go`、`project/module.go`、`access/domain/rules.go`、`rules_test.go`、前端文案、矩阵的文件、`bootstrap/project_write_locks_test.go`、`bootstrap/project_writes_test.go`、生成物）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app 或模块；端到端：单独运行的故事 P5、W7）。它们在最终的原型上逐个跑过（`$M3TMP/p5btools/mutants_p5b.py`、`mutants_p5b_more.py`，由 `mutlevels.py` 在每一层各跑一次，spec 附录 A）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有：这一行的变异从那个 Task 起才被发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app 或模块；端到端：单独运行的故事 P5、W7）。它们在最终的原型上逐个跑过（`$M3TMP/p5btools/mutants_p5b.py`、`mutants_p5b_more.py`、`mutants_p5b_extra.py`，预检之后的 `mutants_p5b_amend.py`，由 `mutlevels.py` 在每一层各跑一次，spec 附录 A：113 个，112 个被发现，1 个等价）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有：这一行的变异从那个 Task 起才被发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
 - **评审敏感**（M3 设计 12 节约束 3）：第一批按资源寻址的项目级的写（`Locks` 的新分支：重读确认项目、判定在锁之后、404 不是 403），3.5 的相对规则，项目一侧的规则 1 和交错 1，P5b 的写与 P5a 的结束不成环。谁能改角色、移出、离开是安全性质，唯一管理员的规则也是。改动这些测试、锁、规则之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
@@ -65,6 +65,7 @@
 | `server/internal/modules/workspace/adapter/http/members_test.go`（修改） | `project.sole_admin` 的新说法 | 7 |
 | `server/internal/bootstrap/project_leaving_test.go` | 组合出的离开：规则 1，只有他一人也拒绝；已结束的管理员不算；规则看项目角色 | 7 |
 | `server/internal/bootstrap/project_membership_races_test.go` | 等锁期间成员关系结束、删除、移到别的项目，调用者自己的结束，项目、工作区删除：404、一行不改；每把锁的顺序和强度 | 8 |
+| `server/internal/bootstrap/project_membership_role_race_test.go` | 等锁期间成员关系被提拔为管理员、被删除：改角色、移出按锁下重读到的角色和成员关系判定（403 `project.role_too_high`；404 不是 403） | 8 |
 | `server/internal/bootstrap/project_connection_test.go`、`server/internal/bootstrap/project_writes_test.go`（修改） | 三个写在事务的连接上；写入的时刻和写者；替身的注释（Task 10） | 8、10（`project_writes_test.go`） |
 | `server/internal/bootstrap/interleaving_leaving_test.go` | 交错 1 的项目一侧；离开与 P5a 的移出两种顺序 | 9 |
 | `server/internal/bootstrap/permission_matrix_members_test.go`、`server/internal/bootstrap/project_visibility_test.go`、`server/internal/bootstrap/project_members_test.go`、`server/internal/bootstrap/interleaving_growth_test.go`、`server/internal/bootstrap/interleaving_writes_test.go`（修改） | 替身换成 P5b 的写（接口或存储的语句）；只有写不出的状态留在 SQL，说明为什么 | 10 |
@@ -90,7 +91,7 @@
 **Tests:**（`adapter/postgres/membership_test.go`；存储测试的共同写法：被写的行除了写的列一列不动，其余每一行每一列不动，`membershipRows` 比较前后）
 - `TestMemberByID`：alice 在 acme 的 Web 的有效的、bob 在 beta 的 Site 的已结束的成员关系各按 id 读出它自己（读第一行的实现对其中一个答错）；bob 在 Web 已删除的、没有的 id 都是 `found` 为假。
 - `TestUpdateMemberRole`：bob 在 Web 的有效成员关系改为访客，由给的账户、在给的时刻，回答存下的行（id、项目、成员、新角色、建立时刻）；他在 Ops、beta 的 Site 的，他在 Web 已删除的（存在有效的之前或之后，两个行序），carol 在 Web 的，每一列不动；他在 Docs 已结束的、在 Web 已删除的各是一个错误，什么都不写。
-- `TestEndMember`：bob 在 Web 的有效成员关系（访客的）结束，由给的账户、在给的时刻，角色仍是访客的（把角色写成成员的、默认的结束在这里失败，清扫 26）；旁边的行同上，每一列不动；再结束一次（已没有有效的）、结束他在 Docs（已结束）、Gone（只有一行已删除、仍是有效的）的，各是一个错误，什么都不写。
+- `TestEndMember`：bob 在 Web 的有效成员关系结束，由给的账户、在给的时刻，角色不变：他已删除的那一行先存时它是访客的，后存时是管理员的（把角色写成列的默认（访客的）、成员的、管理员的结束各在一种行序下失败，清扫 26）；旁边的行同上，每一列不动；再结束一次（已没有有效的）、结束他在 Docs（已结束）、Gone（只有一行已删除、仍是有效的）的，各是一个错误，什么都不写。
 - `TestHasOtherAdmin`：每个情形一个 acme 的项目，另有一个项目有 bob 以外的有效管理员（只问别的项目的实现答错），bob 在问他时是那里的有效管理员（把他算进去的实现答错）：另一位有效管理员（bob 是管理员或成员）为真；只有他、另一个有效成员、另一个有效访客、另一位管理员已结束、已删除、没有成员为假。
 - `adapter/postgres/failures_test.go`：`TestAFailedReadIsAnErrorNotAnAnswer` 加 `MemberByID`（不是"没有这个成员关系"）、`HasOtherAdmin`（不是"没有别的管理员"）；`TestAFailedWriteIsAnError` 加 `UpdateMemberRole`、`EndMember`（清扫 19）。
 
@@ -285,7 +286,7 @@ func (s *Store) HasOtherAdmin(ctx context.Context, projectID, userID uuid.UUID) 
 }
 ````
 
-`server/internal/modules/project/adapter/postgres/membership_test.go`（新文件，247 行）：
+`server/internal/modules/project/adapter/postgres/membership_test.go`（新文件，253 行）：
 
 ````file server/internal/modules/project/adapter/postgres/membership_test.go
 package postgresadapter_test
@@ -429,8 +430,10 @@ func TestUpdateMemberRole(t *testing.T) {
 }
 
 // EndMember ends bob's active membership of Web, at the moment and by the
-// account given; its role stays, a guest's, which an ending that wrote a
-// member's, the default, would change. The row keeps its other
+// account given; its role stays: a guest's when his deleted membership is
+// stored first, which an ending that wrote a member's or an admin's would
+// change, and an admin's when it is stored after, which an ending that
+// wrote the column's default, a guest's, would. The row keeps its other
 // columns, and every other row every column: his memberships of Ops and of
 // beta's Site, his deleted one of Web, active as a deletion leaves it,
 // stored before his live one or after it, and carol's of Web. Asked again,
@@ -450,7 +453,11 @@ func TestEndMember(t *testing.T) {
 			if deletedFirst {
 				deleted(web)
 			}
-			bobs := seedMember(t, pool, acme, web, bob, 5, true)
+			role := 5
+			if !deletedFirst {
+				role = 20
+			}
+			bobs := seedMember(t, pool, acme, web, bob, role, true)
 			if !deletedFirst {
 				deleted(web)
 			}
@@ -465,7 +472,7 @@ func TestEndMember(t *testing.T) {
 			if err := s.EndMember(context.Background(), web, bob, alice, later); err != nil {
 				t.Fatalf("EndMember() = %v", err)
 			}
-			if got, want := written(t, pool, bobs), "role 5, active false, at "+later.UTC().Format(time.RFC3339Nano)+" by "+alice.String(); got != want {
+			if got, want := written(t, pool, bobs), fmt.Sprintf("role %d, active false, at ", role)+later.UTC().Format(time.RFC3339Nano)+" by "+alice.String(); got != want {
 				t.Errorf("bob's membership of Web: %s; want %s", got, want)
 			}
 			if after := membershipRows(t, pool, bobs, "is_active", "updated_at", "updated_by_id"); after != before {
@@ -639,7 +646,7 @@ Expected: 通过。
 | `HasOtherAdmin` 去掉有效 | `TestHasOtherAdmin`；`TestLeavingAProject`（已结束的管理员一步） | 存储；组合 |
 | `HasOtherAdmin` 去掉 `deleted_at IS NULL` | `TestHasOtherAdmin`（同 `MemberByID`） | 存储 |
 | `HasOtherAdmin` 在项目没有别的有效成员时也答"有"（只有他一人照样离开） | `TestHasOtherAdmin`；`TestLeavingAProject`（只有他一人的一步）（故事看不到：故事里唯一管理员的项目有别的成员） | 存储；组合 |
-| `EndMember` 把角色写成成员的；`UpdateMemberRole` 写 `created_at`；把角色写成 20（只在管理员上看不出，清扫 26） | `TestEndMember`、`TestUpdateMemberRole`；`TestARestoredMembershipGivesNoMoreThanItHad`、`TestRemovingAProjectMember`、`TestLeavingAProject`、`TestTheRelativeRuleOnTheComposedApp`（Task 5–7 起）；P5（写角色的两个） | 存储；组合；端到端 |
+| `EndMember` 把角色写成访客（列的默认）、成员的、20；`UpdateMemberRole` 写 `created_at`；把角色写成 20（只在管理员上看不出，清扫 26） | `TestEndMember`、`TestUpdateMemberRole`；`TestARestoredMembershipGivesNoMoreThanItHad`、`TestRemovingAProjectMember`、`TestLeavingAProject`、`TestTheRelativeRuleOnTheComposedApp`（Task 5–7 起）；P5（写角色的两个） | 存储；组合；端到端 |
 | 不写写者（保留原来的 `updated_by_id`）；`EndMember` 保留原来的时刻 | `TestEndMember`、`TestUpdateMemberRole`；`TestTheWritesOnAProjectStampTheirRequest`（Task 8 起）、`TestRemovingAProjectMember`、`TestLeavingAProject`（`EndMember` 的两个）；P5（不写写者） | 存储；组合；端到端 |
 | 一个方法的失败答成"没有"、被吞掉；`EndMember` 不核对行数 | `TestAFailedReadIsAnErrorNotAnAnswer`、`TestAFailedWriteIsAnError`；`TestEndMember`（行数：用例在锁下读到有效才结束，组合一层等价） | 存储 |
 | `MemberByID`、`UpdateMemberRole`、`EndMember`、`HasOtherAdmin` 经连接池、在事务之外执行 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 8 起） | 组合 |
@@ -1006,7 +1013,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - 单元测试的假对象：`fakeStore.MemberByID`、`UpdateMemberRole`；`memberReads`（锁下重读失败、删除、移到别的项目）；`answersAs`、`changedAs`、`fakeMembers.answersFor`（回答别的 id、别的账户，清扫 22）；固定的成员关系 id（`bobInWeb`、`aliceInWeb`…）；`newMemberWrites`（gina：工作区管理员、项目成员；frank：另一位管理员；ivy：工作区访客）；`memberLocked`（取锁到判定的调用记录）；`outcome.check`（第一个 `*shared.Error` 是期望的那个，失败原样返回，事务的函数原样返回它：`fakeTx.answered`，清扫 21）。
 
 **Tests:**
-- `update_member_test.go`：`TestUpdateProjectMember`（5 个调用者和目标：项目管理员 bob 改成员为访客、保持工作区访客为访客；工作区管理员 gina 改自己为管理员、降另一位管理员、提拔成员；调用顺序是取锁、判定、读时钟、改，由调用者在那个时刻）；`TestUpdateProjectMemberRefuses`（19 个情形，每个在它的位置、目标不变：没有调用者、三者之外的角色在事务之前；没有成员关系、工作区或项目在等锁时删除、项目移到别的工作区、成员关系删除或移到 ops、看不到项目，各 404；项目成员 403；判定之后：已结束 404、自己的 409、另一位管理员和提拔为管理员 403 `project.role_too_high`、工作区访客改为成员 422（工作区管理员改也是）；他不是工作区的有效成员、角色回答成别的账户的、成员关系回答成别的 id 的，是写自己的错误）；`TestUpdateProjectMemberReturnsEachFailure`（9 个：读、工作区锁、成员在工作区的成员关系、项目锁、锁下重读、判定、改、改的回答是别的成员关系、提交；每个之后的调用都没有执行）。
+- `update_member_test.go`：`TestUpdateProjectMember`（5 个调用者和目标：项目管理员 bob 改成员为访客、保持工作区访客为访客；工作区管理员 gina 改自己为管理员、降另一位管理员、提拔成员；调用顺序是取锁、判定、读时钟、改，由调用者在那个时刻）；`TestUpdateProjectMemberRefuses`（20 个情形，每个在它的位置、目标不变：没有调用者、三者之外的角色在事务之前；没有成员关系、工作区或项目在等锁时删除、项目移到别的工作区、成员关系删除或移到 ops、看不到项目，各 404；项目成员 403；判定之后：已结束 404、自己的 409、另一位管理员、提拔为管理员、锁下重读到的管理员（等锁时被提拔）403 `project.role_too_high`、工作区访客改为成员 422（工作区管理员改也是）；他不是工作区的有效成员、角色回答成别的账户的、成员关系回答成别的 id 的，是写自己的错误）；`TestUpdateProjectMemberReturnsEachFailure`（9 个：读、工作区锁、成员在工作区的成员关系、项目锁、锁下重读、判定、改、改的回答是别的成员关系、提交；每个之后的调用都没有执行）。
 - `clock_test.go`：`TestEachWriteReadsTheClockUnderItsLock` 加 `updateProjectMember` 一行。
 
 - [ ] **Step 1: 操作名和取锁路径**
@@ -1451,7 +1458,7 @@ var bobInWeb, aliceInWeb, carolInWeb, daveInWeb, bobInOps = uuid.NewV7(), uuid.N
 			out[key] = role
 ````
 
-`server/internal/modules/project/app/fakes_member_test.go`（新文件，166 行）：
+`server/internal/modules/project/app/fakes_member_test.go`（新文件，171 行）：
 
 ````file server/internal/modules/project/app/fakes_member_test.go
 package app_test
@@ -1491,12 +1498,14 @@ func (f *fakeStore) membership(id uuid.UUID) (project, user uuid.UUID, m app.Mem
 }
 
 // memberReads is how a membership read again under the locks answers: err
-// fails it, gone finds none, as if it was deleted meanwhile, and project,
-// when set, is the project it is found in, as if it had moved there.
+// fails it, gone finds none, as if it was deleted meanwhile, project,
+// when set, is the project it is found in, as if it had moved there, and
+// role, when set, its role, as if it had been changed meanwhile.
 type memberReads struct {
 	err     error
 	gone    bool
 	project uuid.UUID
+	role    shared.Role
 }
 
 func (f *fakeStore) MemberByID(ctx context.Context, id uuid.UUID) (app.ProjectMembership, bool, error) {
@@ -1517,6 +1526,9 @@ func (f *fakeStore) MemberByID(ctx context.Context, id uuid.UUID) (app.ProjectMe
 		Active: m.Active}
 	if again && f.reread.project != (uuid.UUID{}) {
 		out.ProjectID = f.reread.project
+	}
+	if again && f.reread.role != 0 {
+		out.Role = f.reread.role
 	}
 	if f.answersAs != (uuid.UUID{}) {
 		out.ID = f.answersAs
@@ -1622,7 +1634,7 @@ func (tt outcome) check(t *testing.T, err error, f *writeFixture) {
 }
 ````
 
-`server/internal/modules/project/app/update_member_test.go`（新文件，173 行）：
+`server/internal/modules/project/app/update_member_test.go`（新文件，175 行）：
 
 ````file server/internal/modules/project/app/update_member_test.go
 package app_test
@@ -1737,6 +1749,8 @@ func TestUpdateProjectMemberRefuses(t *testing.T) {
 		{"an ended membership", bob, dave, shared.RoleGuest, nil, domain.ErrMemberNotFound, locked},
 		{"his own", bob, bob, shared.RoleMember, nil, domain.ErrOwnMembership, locked},
 		{"another admin", bob, frank, shared.RoleMember, nil, domain.ErrRoleTooHigh, locked},
+		{"a member made an admin while the locks waited", bob, alice, shared.RoleGuest,
+			func(f *writeFixture) { f.store.reread.role = shared.RoleAdmin }, domain.ErrRoleTooHigh, locked},
 		{"a member made an admin", bob, alice, shared.RoleAdmin, nil, domain.ErrRoleTooHigh, locked},
 		{"a workspace guest made a member", bob, ivy, shared.RoleMember, nil, guestOnly, locked},
 		{"a workspace guest made an admin by the workspace's admin", gina, ivy, shared.RoleAdmin, nil, guestOnly, locked},
@@ -1851,6 +1865,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|
 | 在锁之前判定 | `TestUpdateProjectMemberRefuses`、`TestUpdateProjectMemberReturnsEachFailure`；`TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`（Task 8 起，调用者的成员关系结束的情形） | 单元；组合 |
 | 不在锁下重读；重读挪到锁之前；重读之后不核对项目 | `TestUpdateProjectMemberRefuses`；`TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`（成员关系结束、删除、移到 Ops）（故事看不到：故事是顺序的，两次读相同） | 单元；组合 |
+| 相对规则用锁之前读到的角色（`h.member.Role = m.Role`）；重读挪到判定之后 | `TestUpdateProjectMemberRefuses`；`TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`（Task 8 起） | 单元；组合 |
 | 已结束的成员关系照样改 | `TestUpdateProjectMemberRefuses`；`TestPermissionMatrix`（Task 4 起，已结束的一行）、`TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile` | 单元；组合 |
 | 等锁时删除的工作区不算 404 | `TestUpdateProjectMemberRefuses`、`TestLeaveProjectRefuses`（组合一层等价：删除工作区在同一个事务里删除它的项目，项目的锁随即读不到行，同样 404；spec 第 3 节第 8 条） | 单元 |
 | 项目在工作区之前锁；成员关系的第一次读带 `FOR UPDATE`；成员在工作区的成员关系在项目之后锁 | `TestUpdateProjectMemberRefuses`（调用顺序）；`TestEachWriteOnAProjectSharesItsWorkspaceFirst`、`TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`（Task 4、8 起） | 单元；组合 |
@@ -3360,7 +3375,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `TestEachWriteOnAProjectSharesItsWorkspaceFirst` 加移出一行：之前加入的 dave（Web）、erin（Ops）被移出。
 
 **Tests:**
-- `remove_member_test.go`：`TestRemoveProjectMember`（项目管理员 bob 移出成员 alice、访客 carol、另一位管理员 frank；工作区管理员 gina（项目成员）移出成员 alice、访客 ivy；调用顺序，结束时角色和 id 不变）；`TestRemoveProjectMemberRefuses`（15 个情形，同改角色的取锁一半；判定之后：已结束 404，自己的 409（工作区管理员的也是），gina 移出管理员 bob 403 `project.role_too_high`；回答别的 id 的成员关系是写自己的错误）；`TestRemoveProjectMemberReturnsEachFailure`（7 个）。
+- `remove_member_test.go`：`TestRemoveProjectMember`（项目管理员 bob 移出成员 alice、访客 carol、另一位管理员 frank；工作区管理员 gina（项目成员）移出成员 alice、访客 ivy；调用顺序，结束时角色和 id 不变）；`TestRemoveProjectMemberRefuses`（15 个情形，同改角色的取锁一半；判定之后：已结束 404，自己的 409（工作区管理员的也是），gina 移出管理员 bob、移出锁下重读到的管理员 alice（等锁时被提拔）各 403 `project.role_too_high`；回答别的 id 的成员关系是写自己的错误）；`TestRemoveProjectMemberReturnsEachFailure`（7 个）。
 - `clock_test.go` 加 `removeProjectMember` 一行。
 - `adapter/http/member_writes_test.go`：`TestRemoveProjectMember`（204 无正文；每个拒绝照契约答，失败 500）。
 - `rules_test.go` 的 `project_member.remove` 一行。
@@ -3389,8 +3404,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         caller who sees the project but may not remove its members,
         forbidden, whatever the membership. To a caller who may remove
         members, a membership that has ended answers
-        project.member_not_found; his own, project.own_membership: one
-        leaves a project through leaveProject; and one whose role in the
+        project.member_not_found; his own, project.own_membership; and one
+        whose role in the
         project is above his own, project.role_too_high, the workspace's
         admins included. The membership ends, its row and its role kept, at
         the moment of the request, by the caller; the member's display
@@ -3408,9 +3423,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `33b14cf03418a5896c84129af4f338ff3e47362182144dd42f21c63aa1916cf5` | 2478 | `api/dist/openapi.yaml` |
+| `64edf735e0cdb360e0eb2b5ea42d983fe3d2c26713dc94ec1c2fe3a0c5e7ed51` | 2478 | `api/dist/openapi.yaml` |
 | `2c9a42319c3d54935f8f2e786d89a9a6a6050c0f948124ee96dbb074d0e4d699` | 2188 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `6fe0450ced5de21468b35d7eaed3ce69ae5ced87ce3bfab0dc810db3db801ba4` | 2707 | `web/packages/api-client/src/schema.gen.ts` |
+| `7c5284d237c60e40b76b924491728fb16b73b5b2178c2c2ec40f2aed0c6f5318` | 2707 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -3550,7 +3565,7 @@ func (f *fakeStore) EndMember(ctx context.Context, projectID, userID, by uuid.UU
 // frank is a project admin in newMemberWrites; the memberships it adds,
 ````
 
-`server/internal/modules/project/app/remove_member_test.go`（新文件，136 行）：
+`server/internal/modules/project/app/remove_member_test.go`（新文件，138 行）：
 
 ````file server/internal/modules/project/app/remove_member_test.go
 package app_test
@@ -3642,6 +3657,8 @@ func TestRemoveProjectMemberRefuses(t *testing.T) {
 		{"his own", bob, bob, nil, domain.ErrOwnMembership, locked},
 		{"the workspace's admin's own", gina, gina, nil, domain.ErrOwnMembership, locked},
 		{"an admin, by the workspace's admin who is a project member", gina, bob, nil, domain.ErrRoleTooHigh, locked},
+		{"a member made an admin while the locks waited, by the workspace's admin", gina, alice,
+			func(f *writeFixture) { f.store.reread.role = shared.RoleAdmin }, domain.ErrRoleTooHigh, locked},
 		{"a membership answered for another id", bob, alice, func(f *writeFixture) { f.store.answersAs = uuid.NewV7() }, nil, upTo(2)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -4135,6 +4152,7 @@ Expected: 通过。
 | 结束的失败被吞掉 | `TestRemoveProjectMemberReturnsEachFailure` | 单元 |
 | 移出以调用者是管理员来判（`CheckRemoval(RoleAdmin, …)`） | `TestRemoveProjectMemberRefuses`；`TestRemovingAProjectMember`、`TestPermissionMatrix`（PM+WA 移出 PA） | 单元；组合 |
 | 移出看不到自己的成员关系 | `TestRemoveProjectMemberRefuses`；`TestRemovingAProjectMember`、`TestPermissionMatrix` | 单元；组合 |
+| 相对规则用锁之前读到的角色（`h.member.Role = m.Role`）；重读挪到判定之后 | `TestRemoveProjectMemberRefuses`；`TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`（Task 8 起） | 单元；组合 |
 | 写成被移出的人自己结束的 | `TestRemoveProjectMember`；`TestRemovingAProjectMember`；P5 | 单元；组合；端到端 |
 | `project.New` 的移出不结束任何行；用停在 2001 年的时钟 | `TestRemovingAProjectMember`（`memberEnding` 的时刻）；`TestTheWritesOnAProjectStampTheirRequest`、`TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`（Task 8 起） | 组合 |
 | 去掉 `projectWrites` 的移出一行 | `TestEachWriteOnAProjectSharesItsWorkspaceFirst`（完整性核对的第二种形状） | 组合 |
@@ -4234,9 +4252,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `643636b91bd7af2e44a3cd21c44549f2afd3e7b841716581cef24cc309285d30` | 2498 | `api/dist/openapi.yaml` |
+| `ab12a4bc5b39fbc1d2f6950fc7b1f9919f7a8e72a6bee8c51f3f1fb1b3b3eff5` | 2498 | `api/dist/openapi.yaml` |
 | `8c5a9d64a449bc3d1e888e53b58f519739af4079bc5d6b2f79a1730a12bcd9a9` | 2287 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `63f55e4b63983f637b082db04e4b2fc1db253fce53780fc796cfd53682d2563b` | 2752 | `web/packages/api-client/src/schema.gen.ts` |
+| `dafea3376dfa1e2c87d2b688cfe6d79de610d9e687d5d962aa21e5640c00e006` | 2752 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml server/internal/modules/project/adapter/http/gen/server.gen.go web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -5014,7 +5032,7 @@ Expected: 通过。
 ### Task 8: 三个写的竞争、锁的强度、事务的连接、时刻和写者（组合）
 
 **Files:**
-- Create: `server/internal/bootstrap/project_membership_races_test.go`
+- Create: `server/internal/bootstrap/project_membership_races_test.go`、`server/internal/bootstrap/project_membership_role_race_test.go`
 - Modify: `server/internal/bootstrap/project_connection_test.go`、`server/internal/bootstrap/project_writes_test.go`
 
 **Interfaces:** 没有新的产品代码。组合一层的测试（spec 2.11，brief 清扫 8、9、12、13、14、29）：
@@ -5031,6 +5049,7 @@ Expected: 通过。
   | 改角色、移出、离开 | 调用者自己的成员关系结束（Web 私有：他看不到它） | 404（离开：`project.not_found`） |
   | 改角色、移出、离开 | Web 删除；acme 删除 | 同上 |
 
+- `TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`：另一个事务持 Web 的 `FOR NO KEY UPDATE`，把写指的成员关系改为管理员或删除；写在 Web 的行上等，另一个提交之后：bob（Web 的管理员，不是工作区管理员）改 carol 的角色、gina（Web 的成员、acme 的管理员）移出 carol，各 403 `project.role_too_high`（相对规则用锁下重读到的角色）；carol（Web 的成员，无权改、移出）改、移出 gina 已删除的成员关系，各 404 `project.member_not_found`（重读在判定之前，L-6）；那一行是另一个留下的样子，其余每行不变。
 - `TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`（三个写各一个子测试）：别的事务持 acme 的 `FOR NO KEY UPDATE`，Web 的行和写改的那一行成员关系的 `FOR SHARE`，逐个放开；每一步用 `lockOn` 读出各行最强的锁：
 
   | 写等的表 | 那时持有 |
@@ -5294,6 +5313,92 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 }
 ````
 
+`server/internal/bootstrap/project_membership_role_race_test.go`（新文件，81 行）：
+
+````file server/internal/bootstrap/project_membership_role_race_test.go
+package bootstrap
+
+import (
+	"maps"
+	"net/http"
+	"reflect"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+)
+
+// A write on a project membership decides on the membership as it reads it
+// under its locks (M3 design 3.5, 3.6 convention 2), on the wired app:
+// another transaction holds Web FOR NO KEY UPDATE, as a write on it does,
+// and changes the membership the write names, which the write has read
+// before its locks and waits for Web's row. Once the other commits:
+//   - carol, Web's member, made its admin: bob, Web's admin and no
+//     workspace admin, may not change an admin's role, and gina, Web's
+//     member and acme's admin, may not remove one above her own role: each
+//     403 project.role_too_high, the relative rule reading the role under
+//     the locks, not the one read before them;
+//   - gina's membership deleted: carol, Web's member, who may change no
+//     role and remove nobody, gets the membership's 404, not her 403: the
+//     membership is read again before the decision.
+//
+// The membership is as the other left it, and every other row as it was.
+func TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks(t *testing.T) {
+	const madeAdmin, deleted = "UPDATE project_members SET role = 20 WHERE id = $1", "UPDATE project_members SET deleted_at = now() WHERE id = $1"
+	for _, tt := range []struct {
+		name, by, member, method, body, sql string
+		status                              int
+		code                                string
+	}{
+		{"bob's change of carol's role, carol made an admin", "bob", "carol", http.MethodPatch, `{"role":5}`, madeAdmin, http.StatusForbidden,
+			"project.role_too_high"},
+		{"gina's removal of carol, carol made an admin", "gina", "carol", http.MethodDelete, "", madeAdmin, http.StatusForbidden,
+			"project.role_too_high"},
+		{"carol's change of gina's role, gina's membership deleted", "carol", "gina", http.MethodPatch, `{"role":5}`, deleted,
+			http.StatusNotFound, "project.member_not_found"},
+		{"carol's removal of gina, gina's membership deleted", "carol", "gina", http.MethodDelete, "", deleted, http.StatusNotFound,
+			"project.member_not_found"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			w := newMemberWorld(t)
+			id := w.membership(t, w.web, tt.member)
+			others := rowsBut(t, w.pool, []uuid.UUID{id})
+			other := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
+			if tag, err := other.Exec(soon(t), tt.sql, id); err != nil || tag.RowsAffected() != 1 {
+				t.Fatalf("%s: %v, %v; want one row changed", tt.sql, tag, err)
+			}
+			changed := rowJSON(t, other, "project_members", id)
+			var body []byte
+			if tt.body != "" {
+				body = []byte(tt.body)
+			}
+			req := newRequest(t, tt.method, w.base+"/api/v0/project-members/"+id.String(), w.tokens[tt.by], body)
+			w.contract.CheckRequest(t, req)
+			answered := sendInBackground(req)
+			pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
+			if err := other.Commit(soon(t)); err != nil {
+				t.Fatal(err)
+			}
+			a := receiveWithin(t, answered, 10*time.Second, "the answer to "+tt.name)
+			if a.err != nil {
+				t.Fatal(a.err)
+			}
+			w.contract.CheckResponse(t, req, a.res)
+			if a.res.StatusCode != tt.status || problemCode(t, a.body) != tt.code {
+				t.Errorf("%s = %d %s, want %d %s", tt.name, a.res.StatusCode, a.body, tt.status, tt.code)
+			}
+			if after := rowJSON(t, w.pool, "project_members", id); !reflect.DeepEqual(after, changed) {
+				t.Errorf("the membership after the write:\n%v\nwant it as the other left it:\n%v", after, changed)
+			}
+			if after := rowsBut(t, w.pool, []uuid.UUID{id}); !maps.Equal(after, others) {
+				t.Errorf("every other row after the write:\n%v\nwant them as they were:\n%v", after, others)
+			}
+		})
+	}
+}
+````
+
 - [ ] **Step 2: 连接和时刻**
 
 `server/internal/bootstrap/project_connection_test.go`（修改，2 处）：
@@ -5454,7 +5559,7 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 
 - [ ] **Step 3: 测试和 lint**
 
-Run: `go -C server test -count=1 -race -run 'TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile$|TestEachLockOfAWriteOnAProjectMembershipIsItsStrength$|TestTheWritesOnAProjectRunOnTheirTransactionsConnection$|TestTheWritesOnAProjectStampTheirRequest$' ./internal/bootstrap/`
+Run: `go -C server test -count=1 -race -run 'TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile$|TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks$|TestEachLockOfAWriteOnAProjectMembershipIsItsStrength$|TestTheWritesOnAProjectRunOnTheirTransactionsConnection$|TestTheWritesOnAProjectStampTheirRequest$' ./internal/bootstrap/`
 Expected: `ok`。
 
 Run: `make lint-go`
@@ -5466,7 +5571,7 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add server/internal/bootstrap/project_connection_test.go server/internal/bootstrap/project_membership_races_test.go server/internal/bootstrap/project_writes_test.go
+git add server/internal/bootstrap/project_connection_test.go server/internal/bootstrap/project_membership_races_test.go server/internal/bootstrap/project_membership_role_race_test.go server/internal/bootstrap/project_writes_test.go
 ```
 ```bash
 git commit -m "test(M3/P5b): the writes on a project membership against what changes while they wait, their locks, their connection and their stamps
@@ -5474,21 +5579,23 @@ git commit -m "test(M3/P5b): the writes on a project membership against what cha
 On the wired app, a change of role, a removal and a leaving that wait
 for a lock while the membership, the caller's own, the project or the
 workspace ends, is deleted or moves, answer 404, never a revealing 403,
-and change no row. Each takes the workspace FOR SHARE, the member's
-workspace membership FOR SHARE for a role change alone, then the
-project FOR NO KEY UPDATE, holding nothing before; runs on its
-transaction's connection; and stamps its row with the caller and a
-moment of its request, read under the locks.
+and change no row; a change of role and a removal decide on the
+membership as read again under the locks, its role included. Each takes
+the workspace FOR SHARE, the member's workspace membership FOR SHARE
+for a role change alone, then the project FOR NO KEY UPDATE, holding
+nothing before; runs on its transaction's connection; and stamps its
+row with the caller and a moment of its request, read under the locks.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A，清扫 4、8、9、12、13、25）：
+**变异**（spec 附录 A，清扫 4、8、9、12、13、24、25）：
 
 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|
 | 在锁之前判定（改角色、移出；离开） | `TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile`（调用者的成员关系结束：403 而不是 404）；离开另由 `TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`（Task 9 起） | 组合 |
 | 不在锁下重读；重读挪到锁之前；重读之后不核对项目；已结束的照样改、照样移出 | 同上（gina 的成员关系结束、删除、移到 Ops） | 组合 |
+| 相对规则用锁之前读到的角色；重读挪到判定之后 | `TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks` | 组合 |
 | 项目在工作区之前锁；成员关系的第一次读带 `FOR UPDATE`；成员在工作区的成员关系在项目之后锁 | `TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst` | 组合 |
 | 写成员关系时项目锁成 `FOR SHARE`；离开时项目锁成 `FOR SHARE`；改角色不锁成员在工作区的成员关系 | `TestEachLockOfAWriteOnAProjectMembershipIsItsStrength` | 组合 |
 | 写不取工作区的 S | `TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`、`TestEachWriteOnAProjectSharesItsWorkspaceFirst`；交错（Task 9 起）；单元一层由 P4b 起每个用例的调用记录 | 单元；组合 |
@@ -5496,7 +5603,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `project.New` 的改角色、离开不开事务 | `TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`（没有事务就不持锁） | 组合 |
 | `project.New` 的改角色、移出用停在 2001 年的时钟；不写写者 | `TestTheWritesOnAProjectStampTheirRequest`；`TestEachLockOfAWriteOnAProjectMembershipIsItsStrength`（时刻） | 组合 |
 
-**Done when:** 三个写的每个竞争情形 404、一行不改；每把锁在组合一层钉住顺序和强度；每条语句在事务的连接上；每个写的时刻和写者。
+**Done when:** 三个写的每个竞争情形 404、一行不改；改角色、移出按锁下重读到的成员关系判定（它的角色变了照新的拒绝，删除了 404 不是 403）；每把锁在组合一层钉住顺序和强度；每条语句在事务的连接上；每个写的时刻和写者。
 
 ---
 
