@@ -130,6 +130,7 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
   });
   let members = [row(admin, 20, true, admin)];
   let opsMembers = [row(admin, 20, true, admin, 55535), row(wanda, 20, true, admin)];
+  await expectMembers(db, web.id, members);
   await expectMembers(db, ops.id, opsMembers);
 
   // Refused, each adding nothing: olga, no member of acme; gus, its guest, as a member; wanda, its admin, as a member.
