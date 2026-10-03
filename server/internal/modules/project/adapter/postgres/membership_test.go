@@ -83,9 +83,13 @@ func TestMemberByID(t *testing.T) {
 	}
 }
 
-// UpdateMemberRole gives bob's active membership of Web the role given, a
-// guest's, at the moment and by the account given, and answers it as
-// stored: its id, project, member, new role and the time it was made. The
+// UpdateMemberRole gives bob's active membership of Web the role given, at
+// the moment and by the account given, and answers it as stored: its id,
+// project, member, new role and the time it was made. The role given is a
+// guest's, his a member's, when his deleted membership is stored first,
+// which a change that wrote a member's or an admin's would miss, and a
+// member's, his an admin's, when it is stored after, which a change that
+// wrote the column's default, a guest's, or kept his role would. The
 // row keeps its other columns, and every other row every column: his
 // memberships of Ops and of beta's Site, his deleted one of Web, stored
 // before his live one or after it, carol's of Web. His ended membership of
@@ -104,7 +108,11 @@ func TestUpdateMemberRole(t *testing.T) {
 			if deletedFirst {
 				deleteOne()
 			}
-			bobs := seedMember(t, pool, acme, web, bob, 15, true)
+			from, to := 15, shared.RoleGuest
+			if !deletedFirst {
+				from, to = 20, shared.RoleMember
+			}
+			bobs := seedMember(t, pool, acme, web, bob, from, true)
 			if !deletedFirst {
 				deleteOne()
 			}
@@ -115,11 +123,11 @@ func TestUpdateMemberRole(t *testing.T) {
 			before := membershipRows(t, pool, bobs, "role", "updated_at", "updated_by_id")
 			later := now.Add(time.Hour)
 
-			m, err := s.UpdateMemberRole(context.Background(), bobs, shared.RoleGuest, alice, later)
-			if want := (domain.Member{ID: bobs, ProjectID: web, MemberID: bob, Role: shared.RoleGuest, CreatedAt: now}); err != nil || m != want {
+			m, err := s.UpdateMemberRole(context.Background(), bobs, to, alice, later)
+			if want := (domain.Member{ID: bobs, ProjectID: web, MemberID: bob, Role: to, CreatedAt: now}); err != nil || m != want {
 				t.Errorf("UpdateMemberRole() = %+v, %v; want %+v", m, err, want)
 			}
-			if got, want := written(t, pool, bobs), "role 5, active true, at "+later.UTC().Format(time.RFC3339Nano)+" by "+alice.String(); got != want {
+			if got, want := written(t, pool, bobs), fmt.Sprintf("role %d, active true, at ", to)+later.UTC().Format(time.RFC3339Nano)+" by "+alice.String(); got != want {
 				t.Errorf("bob's membership of Web: %s; want %s", got, want)
 			}
 			if after := membershipRows(t, pool, bobs, "role", "updated_at", "updated_by_id"); after != before {
