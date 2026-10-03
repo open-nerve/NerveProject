@@ -99,8 +99,9 @@ func TestAnArchivedProjectIsJoinedAsAnyOther(t *testing.T) {
 // member, he is left as he is: nothing is written. Then, each time, alice
 // changes his role and removes him, which ends his membership with that
 // role, and he joins again, or alice adds him with a role: the same row is
-// active again with the role of 9.1's row, by the caller at the time of
-// that request, still made when it was. alice's adds take the role she
+// active again with the role of 9.1's row, at the time of that request,
+// still made when it was, and by its caller, which only his joins show: an
+// add's caller, alice, removed him last. alice's adds take the role she
 // asks for, below the ended one and above it. His workspace role is
 // changed through the API before the last row.
 func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
@@ -190,6 +191,10 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 			}
 		}
 		before := time.Now().Truncate(time.Microsecond)
+		// by is the caller, whom the restored row must name. An add row
+		// cannot tell that from a restore that kept the row's last writer:
+		// alice removed bob last. The join rows, bob's, show it, and
+		// TestTheWritesOnAProjectStampTheirRequest shows it for an add.
 		by := bobID
 		if tt.add != 0 {
 			by = aliceID

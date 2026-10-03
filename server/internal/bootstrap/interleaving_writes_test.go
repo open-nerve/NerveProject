@@ -82,12 +82,7 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 	for _, w := range writes {
 		for _, writeFirst := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s, the write first %v", w.name, writeFirst), func(t *testing.T) {
-				r := newGrowthRace(t, false)
-				r.join(t)
-				if _, err := r.pool.Exec(context.Background(), "UPDATE project_members SET role = 20 WHERE project_id = $1 AND member_id = $2",
-					r.web, r.bob); err != nil {
-					t.Fatal(err)
-				}
+				r, _ := bobAdministersWeb(t)
 				if _, err := r.pool.Exec(context.Background(), "UPDATE projects SET archived_at = CASE WHEN $2 THEN now() END WHERE id = $1",
 					r.web, w.archived); err != nil {
 					t.Fatal(err)

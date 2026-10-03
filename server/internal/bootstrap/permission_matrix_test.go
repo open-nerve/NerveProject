@@ -29,7 +29,7 @@ import (
 // prepared once: the accounts through the API, the workspaces and
 // memberships through the workspace store, the projects and their
 // memberships through the project store, the deleted workspace through the
-// API, and the state no store writes yet through SQL (prepareMatrix).
+// API, and the states no store makes alone through SQL (prepareMatrix).
 // The cells that only read share one copy of it, and each cell that writes
 // gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
 // another's writes. Each module's rows are in a file of their own
