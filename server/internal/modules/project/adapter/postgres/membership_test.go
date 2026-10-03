@@ -52,10 +52,20 @@ func written(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
 	return fmt.Sprintf("role %d, active %v, at %s by %s", role, active, at.UTC().Format(time.RFC3339Nano), by)
 }
 
+// madeByAnother makes every membership stored so far created by an account
+// that is none of their members, nor the writer of any write: seedMember
+// and seedDeleted write the member as the creator, so that a query reading
+// created_by_id where it means member_id would answer the same.
+func madeByAnother(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	exec(t, pool, "UPDATE project_members SET created_by_id = $1", newAccount(t, pool, "maker@corp.com"))
+}
+
 // MemberByID reads the undeleted membership the id names, active or ended,
 // with its workspace, project, member and role: not another membership,
 // which a read of whichever row lies first would answer for one of the two
-// asked about; not a deleted one, which is none, nor an id of none.
+// asked about; not a deleted one, which is none, nor an id of none. Every
+// membership was made by another account (madeByAnother).
 func TestMemberByID(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -64,6 +74,7 @@ func TestMemberByID(t *testing.T) {
 	alices := seedMember(t, pool, acme, web, alice, 20, true)
 	bobs := seedMember(t, pool, beta, site, bob, 5, false)
 	deleted := seedDeleted(t, pool, acme, web, bob, 15)
+	madeByAnother(t, pool)
 	for _, tt := range []struct {
 		name  string
 		id    uuid.UUID
@@ -85,15 +96,18 @@ func TestMemberByID(t *testing.T) {
 
 // UpdateMemberRole gives bob's active membership of Web the role given, at
 // the moment and by the account given, and answers it as stored: its id,
-// project, member, new role and the time it was made. The role given is a
-// guest's, his a member's, when his deleted membership is stored first,
-// which a change that wrote a member's or an admin's would miss, and a
-// member's, his an admin's, when it is stored after, which a change that
-// wrote the column's default, a guest's, or kept his role would. The
-// row keeps its other columns, and every other row every column: his
-// memberships of Ops and of beta's Site, his deleted one of Web, stored
-// before his live one or after it, carol's of Web. His ended membership of
-// Docs, and his deleted one of Web, are each an error, and not written.
+// project, member, new role and the time it was made. It demotes him from
+// a member to a guest when his deleted membership is stored first, which a
+// change that wrote a member's or an admin's, kept his role or took the
+// greater of the two would get wrong, and promotes him from a guest to a
+// member when it is stored after, which a change that wrote the column's
+// default, a guest's, or an admin's, kept his role or took the lesser of
+// the two would get wrong. The row keeps its other columns, and every other
+// row every column: his memberships of Ops and of beta's Site, his deleted
+// one of Web, stored before his live one or after it, carol's of Web. His
+// ended membership of Docs, and his deleted one of Web, are each an error,
+// and not written. Every membership was made by another account
+// (madeByAnother).
 func TestUpdateMemberRole(t *testing.T) {
 	for _, deletedFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("his deleted membership of Web stored first %v", deletedFirst), func(t *testing.T) {
@@ -110,7 +124,7 @@ func TestUpdateMemberRole(t *testing.T) {
 			}
 			from, to := 15, shared.RoleGuest
 			if !deletedFirst {
-				from, to = 20, shared.RoleMember
+				from, to = 5, shared.RoleMember
 			}
 			bobs := seedMember(t, pool, acme, web, bob, from, true)
 			if !deletedFirst {
@@ -120,6 +134,7 @@ func TestUpdateMemberRole(t *testing.T) {
 			seedMember(t, pool, beta, site, bob, 15, true)
 			seedMember(t, pool, acme, web, carol, 15, true)
 			ended := seedMember(t, pool, acme, docs, bob, 15, false)
+			madeByAnother(t, pool)
 			before := membershipRows(t, pool, bobs, "role", "updated_at", "updated_by_id")
 			later := now.Add(time.Hour)
 
@@ -156,7 +171,8 @@ func TestUpdateMemberRole(t *testing.T) {
 // stored before his live one or after it, and carol's of Web. Asked again,
 // with nothing active left to end, it is an error and writes nothing; so
 // is asking about Docs, where his membership ended, and about Gone, where
-// his only membership is deleted, though active.
+// his only membership is deleted, though active. Every membership was made
+// by another account (madeByAnother).
 func TestEndMember(t *testing.T) {
 	for _, deletedFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("his deleted membership of Web stored first %v", deletedFirst), func(t *testing.T) {
@@ -183,6 +199,7 @@ func TestEndMember(t *testing.T) {
 			seedMember(t, pool, acme, web, carol, 15, true)
 			seedMember(t, pool, acme, docs, bob, 15, false)
 			deleted(gone)
+			madeByAnother(t, pool)
 			before := membershipRows(t, pool, bobs, "is_active", "updated_at", "updated_by_id")
 			later := now.Add(time.Hour)
 
@@ -214,7 +231,10 @@ func TestEndMember(t *testing.T) {
 // and in each case one other project has an active admin other than bob,
 // so that a check of another project answers otherwise; bob is an active
 // admin of the projects where he is asked about as one, so that a check
-// that counts him answers otherwise.
+// that counts him answers otherwise. The other active admin is stored
+// after bob and before him, so that a check of whichever admin lies last or
+// first answers otherwise; every membership was made by another account
+// (madeByAnother).
 func TestHasOtherAdmin(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
@@ -240,12 +260,13 @@ func TestHasOtherAdmin(t *testing.T) {
 		return p
 	}
 	project(false, member{alice, 20, true}, member{bob, 20, true})
-	for _, tt := range []struct {
+	cases := []struct {
 		name    string
 		project uuid.UUID
 		want    bool
 	}{
 		{"another active admin", project(false, member{bob, 20, true}, member{alice, 20, true}), true},
+		{"another active admin stored first", project(false, member{alice, 20, true}, member{bob, 20, true}), true},
 		{"another active admin, bob a member", project(false, member{bob, 15, true}, member{alice, 20, true}), true},
 		{"bob alone", project(false, member{bob, 20, true}), false},
 		{"another active member", project(false, member{bob, 20, true}, member{carol, 15, true}), false},
@@ -253,7 +274,9 @@ func TestHasOtherAdmin(t *testing.T) {
 		{"the other admin's membership ended", project(false, member{bob, 20, true}, member{alice, 20, false}), false},
 		{"the other admin's membership deleted", project(true, member{bob, 20, true}, member{alice, 20, true}), false},
 		{"no member", project(false), false},
-	} {
+	}
+	madeByAnother(t, pool)
+	for _, tt := range cases {
 		if got, err := s.HasOtherAdmin(context.Background(), tt.project, bob); err != nil || got != tt.want {
 			t.Errorf("%s: HasOtherAdmin() = %v, %v; want %v", tt.name, got, err, tt.want)
 		}
