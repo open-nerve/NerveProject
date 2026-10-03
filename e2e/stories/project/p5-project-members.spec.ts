@@ -185,9 +185,11 @@ test("P5 (API): the admin adds a member and a guest at once, and cannot leave, t
     throw new Error("the add answered no membership of ray");
   }
   members = [...members, row(pam, 20, true, admin), row(ray, 20, true, admin), row(tom, 15, true, admin)];
+  await expectMembers(db, web.id, members);
   // tom is Ops's member too.
   await addProjectMembers(api, admin.token, ops.id, [{ member_id: tom.id, role: 15 }]);
   opsMembers = [...opsMembers, row(tom, 15, true, admin, 55535)];
+  await expectMembers(db, ops.id, opsMembers);
   expect(await change(pam.token, rays, 15), "pam's change of ray, an admin").toEqual({
     status: 403,
     code: "project.role_too_high",
