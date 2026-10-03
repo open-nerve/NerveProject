@@ -30,20 +30,20 @@ import (
 // each with the Authorizer as bootstrap wires them, and gated as
 // interleaving_endings_test.go gates. Every wait has a deadline.
 
-// projectOtherFoundHolding stops a leaving of a project once it has asked
-// whether the project has another admin, holding the workspace FOR SHARE
-// and the project FOR NO KEY UPDATE, before it ends anything.
+// projectOtherFoundHolding stops a leaving of a project between its check
+// and its ending: once it has asked whether the project has another admin
+// and holds its locks, the workspace FOR SHARE and the project FOR NO KEY
+// UPDATE, before its write of the membership.
 type projectOtherFoundHolding struct {
 	*projectpg.Store
 	gate *gate
 }
 
-func (m projectOtherFoundHolding) HasOtherAdmin(ctx context.Context, projectID, userID uuid.UUID) (bool, error) {
-	other, err := m.Store.HasOtherAdmin(ctx, projectID, userID)
-	if err != nil {
-		return false, err
+func (m projectOtherFoundHolding) EndMember(ctx context.Context, projectID, userID, by uuid.UUID, now time.Time) error {
+	if err := m.gate.wait(ctx); err != nil {
+		return err
 	}
-	return other, m.gate.wait(ctx)
+	return m.Store.EndMember(ctx, projectID, userID, by, now)
 }
 
 // projectEndedHolding stops a leaving of a project after its write of the
@@ -67,7 +67,7 @@ type leaving struct {
 }
 
 var leavings = []leaving{
-	{"at the check", func(store *projectpg.Store, g *gate) projectapp.MemberLeaver {
+	{"before the membership's end", func(store *projectpg.Store, g *gate) projectapp.MemberLeaver {
 		return projectOtherFoundHolding{store, g}
 	}},
 	{"past the membership's end", func(store *projectpg.Store, g *gate) projectapp.MemberLeaver {
@@ -86,16 +86,10 @@ func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[name]}), project)
 }
 
-// removeFromAcme is by's removal of name from acme, over members, with
-// project's cascade, identity's profiles and the Authorizer as bootstrap
-// wires them.
-func (w memberWorld) removeFromAcme(t *testing.T, ctx context.Context, by, name string, members workspaceapp.MemberRemover) error {
-	t.Helper()
-	var id uuid.UUID
-	if err := w.pool.QueryRow(soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
-		WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids[name]).Scan(&id); err != nil {
-		t.Fatal(err)
-	}
+// removeFromAcme is by's removal of the membership of acme id, over
+// members, with project's cascade, identity's profiles and the Authorizer
+// as bootstrap wires them. It takes no test, so it runs on any goroutine.
+func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(w.pool).PublicProfiles},
 		project.New(project.Deps{Pool: w.pool}).Cascade(), authorizerOn(w.pool), postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[by]}), id)
@@ -136,10 +130,11 @@ const (
 // row: neither writes a row of projects, so only that lock's wait satisfies
 // the probe. Once the first has committed, the second finds no other active
 // admin: 409 project.sole_admin. The first one's membership is ended, the
-// second's active: Ops keeps an admin. Held at his check, the first shows
-// that he asks rule 1 under the lock his ending holds: a leaving that let
-// Ops go between the two would let the second find him still active, and
-// both would leave.
+// second's active: Ops keeps an admin. Held between his check and his
+// ending, the first shows that he asks rule 1 under the lock his ending
+// holds: a leaving that let Ops go between the two would leave the second
+// nothing to wait for, and one that asked before its lock would let the
+// second find him still active, so that both leave.
 func TestTwoProjectAdminsLeavingLeaveAnAdmin(t *testing.T) {
 	for _, l := range leavings {
 		for _, aliceFirst := range []bool{true, false} {
@@ -164,8 +159,8 @@ func TestTwoProjectAdminsLeavingLeaveAnAdmin(t *testing.T) {
 				if err := result(t, ctx, left, "the first leaving"); err != nil {
 					t.Errorf("the first leaving = %v, want it done", err)
 				}
-				if err := result(t, ctx, refused, "the second leaving"); !errors.Is(err, projectdomain.ErrSoleAdmin) {
-					t.Errorf("the second leaving = %v, want 409 project.sole_admin", err)
+				if err := result(t, ctx, refused, "the second leaving"); !sameOutcome(err, projectdomain.ErrSoleAdmin) {
+					t.Errorf("the second leaving = %v, want 409 project.sole_admin as its first problem", err)
 				}
 				if got := w.standing(t); got != want {
 					t.Errorf("after both: %s; want %s", got, want)
@@ -207,17 +202,16 @@ func TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				g := newGate()
+				carol := w.acmeMembership(t, "carol")
 				var left, removed <-chan error
 				want := tt.leaveFirst
 				if at.holding != nil {
 					left = run(func() error { return w.leaveProject(ctx, tt.leaver, w.ops, at.holding(projectpg.New(w.pool), g)) })
 					held(t, ctx, g, left, "the leaving")
-					removed = run(func() error { return w.removeFromAcme(t, ctx, "gina", "carol", workspacepg.New(w.pool)) })
+					removed = run(func() error { return w.removeFromAcme(ctx, "gina", carol, workspacepg.New(w.pool)) })
 				} else {
 					want = tt.removeFirst
-					removed = run(func() error {
-						return w.removeFromAcme(t, ctx, "gina", "carol", endedHolding{workspacepg.New(w.pool), g})
-					})
+					removed = run(func() error { return w.removeFromAcme(ctx, "gina", carol, endedHolding{workspacepg.New(w.pool), g}) })
 					held(t, ctx, g, removed, "the removal")
 					left = run(func() error { return w.leaveProject(ctx, tt.leaver, w.ops, projectpg.New(w.pool)) })
 				}

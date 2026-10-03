@@ -74,11 +74,7 @@ func newMemberWorld(t *testing.T) memberWorld {
 			t.Fatalf("%s's adding %s = %d %s", add.by, add.members, status, body)
 		}
 	}
-	var gina uuid.UUID
-	if err := w.pool.QueryRow(soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
-		WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids["gina"]).Scan(&gina); err != nil {
-		t.Fatal(err)
-	}
+	gina := w.acmeMembership(t, "gina")
 	if status, body := call(t, contract, http.MethodPatch, w.base+"/api/v0/workspace-members/"+gina.String(), w.tokens["alice"],
 		`{"role":20}`); status != http.StatusOK {
 		t.Fatalf("alice's making gina acme's admin = %d %s", status, body)
@@ -125,6 +121,18 @@ func (w memberWorld) standing(t *testing.T) string {
 func (w memberWorld) membership(t *testing.T, project uuid.UUID, name string) uuid.UUID {
 	t.Helper()
 	return projectMemberships(t, w.pool, w.ids[name], project)[0]
+}
+
+// acmeMembership is the id of name's membership of acme. It fails the test
+// on the test's goroutine, so call it there.
+func (w memberWorld) acmeMembership(t *testing.T, name string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := w.pool.QueryRow(soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
+		WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids[name]).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
 }
 
 // change is by's change of name's role in project to role: its status and
