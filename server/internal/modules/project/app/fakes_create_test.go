@@ -54,10 +54,12 @@ func (f *fakeDirectory) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (a
 
 // fakeMembers answers the active members' roles it holds by workspace,
 // only of the accounts asked for; it logs each call and fails with err.
+// answersFor, when set, is the account it answers each role for.
 type fakeMembers struct {
-	log   *callLog
-	roles map[uuid.UUID]map[uuid.UUID]shared.Role // workspace → account → role
-	err   error
+	log        *callLog
+	roles      map[uuid.UUID]map[uuid.UUID]shared.Role // workspace → account → role
+	err        error
+	answersFor uuid.UUID
 }
 
 func (f *fakeMembers) ShareMembers(ctx context.Context, workspaceID uuid.UUID, userIDs []uuid.UUID) (map[uuid.UUID]shared.Role, error) {
@@ -68,7 +70,11 @@ func (f *fakeMembers) ShareMembers(ctx context.Context, workspaceID uuid.UUID, u
 	out := map[uuid.UUID]shared.Role{}
 	for _, id := range userIDs {
 		if role, ok := f.roles[workspaceID][id]; ok {
-			out[id] = role
+			key := id
+			if f.answersFor != (uuid.UUID{}) {
+				key = f.answersFor
+			}
+			out[key] = role
 		}
 	}
 	return out, nil

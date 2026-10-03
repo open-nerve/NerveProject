@@ -35,6 +35,9 @@ const (
 	ActionMemberAdd shared.Action = "project_member.add"
 	// ActionJoin is joining a project: joinProject.
 	ActionJoin shared.Action = "project.join"
+	// ActionMemberUpdate is changing a project member's role:
+	// updateProjectMember.
+	ActionMemberUpdate shared.Action = "project_member.update"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of

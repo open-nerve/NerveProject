@@ -34,10 +34,11 @@ func (c clockAt) Now() time.Time {
 
 // fakeTx runs fn in a context marked as inside the transaction; the fakes
 // record whether each call happened there. commitErr, when set, is the
-// commit failing after fn succeeded.
+// commit failing after fn succeeded; returned is what fn returned.
 type fakeTx struct {
 	log       *callLog
 	commitErr error
+	returned  error
 }
 
 type inTxKey struct{}
@@ -46,10 +47,21 @@ func (f *fakeTx) WithinTx(ctx context.Context, fn func(ctx context.Context) erro
 	if f.log != nil {
 		f.log.calls = append(f.log.calls, "Begin")
 	}
-	if err := fn(context.WithValue(ctx, inTxKey{}, true)); err != nil {
-		return err
+	if f.returned = fn(context.WithValue(ctx, inTxKey{}, true)); f.returned != nil {
+		return f.returned
 	}
 	return f.commitErr
+}
+
+// answered reports whether err, a use case's answer, came out of the
+// transaction as itself: what fn returned, which the transaction rolled
+// back on; with commitErr set, the commit's failure, fn having returned
+// nil.
+func (f *fakeTx) answered(err error) bool {
+	if f.commitErr != nil {
+		return f.returned == nil && err == f.commitErr
+	}
+	return f.returned != nil && err == f.returned
 }
 
 // callLog records the calls of the fakes that share it, in order, each with

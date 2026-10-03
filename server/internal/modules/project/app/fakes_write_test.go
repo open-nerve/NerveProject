@@ -29,6 +29,9 @@ type fakeProject struct {
 // (bobsTabs), the others none.
 var webID, opsID = uuid.NewV7(), uuid.NewV7()
 
+// The memberships of web and ops, by id, the same in every fixture.
+var bobInWeb, aliceInWeb, carolInWeb, daveInWeb, bobInOps = uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
+
 var bobsTabs = domain.Preferences{Navigation: domain.Navigation{DefaultTab: "modules", HideInMoreMenu: []string{"views"}}, SortOrder: 10}
 
 // writeFixture is a write use case's fakes, sharing one log.
@@ -50,13 +53,13 @@ func newWrites() *writeFixture {
 	return &writeFixture{log: log, tx: &fakeTx{log: log}, workspaces: &fakeWorkspaces{log: log}, members: &fakeMembers{log: log},
 		store: &fakeStore{log: log, projects: map[uuid.UUID]*fakeProject{
 			webID: {workspace: acme.ID, updated: now, members: map[uuid.UUID]app.Membership{
-				bob:   {ID: uuid.NewV7(), Role: shared.RoleAdmin, Active: true},
-				alice: {ID: uuid.NewV7(), Role: shared.RoleMember, Active: true},
-				carol: {ID: uuid.NewV7(), Role: shared.RoleGuest, Active: true},
-				dave:  {ID: uuid.NewV7(), Role: shared.RoleMember},
+				bob:   {ID: bobInWeb, Role: shared.RoleAdmin, Active: true},
+				alice: {ID: aliceInWeb, Role: shared.RoleMember, Active: true},
+				carol: {ID: carolInWeb, Role: shared.RoleGuest, Active: true},
+				dave:  {ID: daveInWeb, Role: shared.RoleMember},
 			}, prefs: map[uuid.UUID]domain.Preferences{bob: bobsTabs}},
 			opsID: {workspace: acme.ID, archived: true, updated: now, members: map[uuid.UUID]app.Membership{
-				bob: {ID: uuid.NewV7(), Role: shared.RoleAdmin, Active: true},
+				bob: {ID: bobInOps, Role: shared.RoleAdmin, Active: true},
 			}},
 		}},
 		auth: &fakeAuthorizer{log: log,
@@ -122,6 +125,14 @@ type fakeStore struct {
 	lowest   map[uuid.UUID]*float64
 	moved    uuid.UUID
 	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
+	// The reads of a membership by its id (fakes_member_test.go): how many
+	// ran, how the second one answers, and answersAs, when set, the id each
+	// answers for the one asked; changedAs, when set, is the id
+	// UpdateMemberRole answers for the one it changed.
+	memberReadCount int
+	reread          memberReads
+	answersAs       uuid.UUID
+	changedAs       uuid.UUID
 }
 
 func (f *fakeStore) fail(name string) error {
