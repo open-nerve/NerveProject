@@ -19,14 +19,17 @@ func (w memberWorld) leave(t *testing.T, name string, project uuid.UUID) (int, s
 //     alone too;
 //   - carol and erin, Web's member and guest, leave it; bob and dave, two
 //     of its three admins, leave it; alice, its only admin now, cannot,
-//     gina its member;
-//   - carol, an admin of Ops, leaves it; alice, its other admin, cannot:
-//     carol's ended membership, an admin's, does not count;
+//     gina its member: bob's and dave's ended memberships, admins', do not
+//     count;
 //   - gina makes alice acme's guest, and so Web's and Ops' guest (3.3):
-//     neither has an admin now. gina, Web's member and acme's admin, leaves
-//     it as a member; bob, Ops' member, leaves it; alice, its guest now and
-//     its only member, leaves it. The rule is the project role's, not the
-//     workspace's.
+//     carol, Ops' admin and acme's member, is its only admin now, and
+//     cannot leave it, bob its member. bob and alice, refused above, are
+//     workspace admins, of beta and of acme, and carol is none: rule 1
+//     holds for a project admin of either kind;
+//   - Web has no admin now: gina, its member and acme's admin, leaves it as
+//     a member; bob, Ops' member, leaves it, carol its admin; alice, Web's
+//     guest now and its only member, leaves it, though she could not as its
+//     only admin. The rule is the project role's, not the workspace's.
 func TestLeavingAProject(t *testing.T) {
 	w := newMemberWorld(t)
 	step := func(name, member string, project uuid.UUID, status int, code string) {
@@ -40,23 +43,17 @@ func TestLeavingAProject(t *testing.T) {
 	step("erin leaves Web, its guest", "erin", w.web, http.StatusNoContent, "")
 	step("bob leaves Web, an admin; alice and dave its others", "bob", w.web, http.StatusNoContent, "")
 	step("dave leaves Web, an admin; alice its other", "dave", w.web, http.StatusNoContent, "")
-	step("alice leaves Web, its only admin; gina its member", "alice", w.web, http.StatusConflict, "project.sole_admin")
-	step("carol leaves Ops, an admin; alice its other", "carol", w.ops, http.StatusNoContent, "")
-	step("alice leaves Ops, its only active admin; bob its member", "alice", w.ops, http.StatusConflict, "project.sole_admin")
-	var alices uuid.UUID
-	if err := w.pool.QueryRow(soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
-		WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids["alice"]).Scan(&alices); err != nil {
-		t.Fatal(err)
-	}
-	if status, body := call(t, w.contract, http.MethodPatch, w.base+"/api/v0/workspace-members/"+alices.String(), w.tokens["gina"],
-		`{"role":5}`); status != http.StatusOK {
+	step("alice leaves Web, its only active admin; gina its member", "alice", w.web, http.StatusConflict, "project.sole_admin")
+	if status, body := call(t, w.contract, http.MethodPatch, w.base+"/api/v0/workspace-members/"+w.acmeMembership(t, "alice").String(),
+		w.tokens["gina"], `{"role":5}`); status != http.StatusOK {
 		t.Fatalf("gina's making alice acme's guest = %d %s", status, body)
 	}
+	step("carol leaves Ops, its only admin now and acme's member; bob its member", "carol", w.ops, http.StatusConflict, "project.sole_admin")
 	step("gina leaves Web, its member and acme's admin; alice its guest now", "gina", w.web, http.StatusNoContent, "")
-	step("bob leaves Ops, its member; alice its guest now", "bob", w.ops, http.StatusNoContent, "")
-	step("alice leaves Ops, its guest now and only member", "alice", w.ops, http.StatusNoContent, "")
+	step("bob leaves Ops, its member; carol its admin", "bob", w.ops, http.StatusNoContent, "")
+	step("alice leaves Web, its guest now and only member", "alice", w.web, http.StatusNoContent, "")
 	if got, want := w.standing(t), "acme: alice 5, bob 15, carol 15, dave 15, erin 5, gina 20; beta: bob 20, carol 15; Lab: bob 20; "+
-		"Web: alice 5"; got != want {
+		"Ops: alice 5, carol 20"; got != want {
 		t.Errorf("the world after the leavings: %s; want %s", got, want)
 	}
 }

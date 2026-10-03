@@ -178,8 +178,8 @@ func adminOf(c caller) (string, caller) {
 // PM+WA's and the workspace guest's (PG's account) active, of their roles;
 // the removed member's of the public project and the member before's of
 // the private one ended, not deleted; gone's member's and admin's of gone's
-// project deleted with gone. The workspace guest is acme's active guest, so that a
-// role's 422 is his workspace role's.
+// project deleted with gone. The workspace guest is acme's active guest, so
+// that a role's 422 is his workspace role's.
 func (s projectSeed) memberships(sd seeded) {
 	s.t.Helper()
 	ctx := context.Background()
@@ -208,12 +208,12 @@ func (s projectSeed) memberships(sd seeded) {
 		role != shared.RoleGuest {
 		s.t.Fatalf("%s's role in acme = %d, %v, %v; want its active guest", callerGuest, role, active, err)
 	}
-	// PA is the only active admin of each project he is asked to leave,
-	// beside its other members, so that his 409 is 3.7 rule 1's.
-	for _, key := range []string{"acme/public", "acme/private"} {
-		if other, err := s.store.HasOtherAdmin(ctx, sd.project(key), s.ids[callerProjectAdmin]); err != nil || other {
-			s.t.Fatalf("another admin of %s than PA: %v, %v; want none", key, other, err)
-		}
+	// PA is the only active admin of the project his column asks him to
+	// leave (projectOf), beside its other members, so that his 409 is 3.7
+	// rule 1's.
+	key := projectOf(callerProjectAdmin)
+	if other, err := s.store.HasOtherAdmin(ctx, sd.project(key), s.ids[callerProjectAdmin]); err != nil || other {
+		s.t.Fatalf("another admin of %s than PA: %v, %v; want none", key, other, err)
 	}
 }
 

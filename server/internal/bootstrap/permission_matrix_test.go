@@ -367,14 +367,8 @@ func TestPermissionMatrix(t *testing.T) {
 					t.Errorf("%s %s = %d %s, want %s", method, path, status, strings.TrimSpace(answer), want)
 					return
 				}
-				if r.refusal != "" && got == cellValidationFailed {
-					var problem struct {
-						Errors []struct{ Field, Code string }
-					}
-					decodeAnswer(t, answer, &problem)
-					if len(problem.Errors) != 1 || problem.Errors[0].Field+" "+problem.Errors[0].Code != r.refusal {
-						t.Errorf("%s %s = %s, want its one error %s", method, path, strings.TrimSpace(answer), r.refusal)
-					}
+				if r.refusal != "" && got == cellValidationFailed && oneError(t, []byte(answer)) != r.refusal {
+					t.Errorf("%s %s = %s, want its one error %s", method, path, strings.TrimSpace(answer), r.refusal)
 				}
 				if r.check != nil && got.code == "" {
 					r.check(t, c, d.seeded.in(t), answer)

@@ -77,11 +77,14 @@ func newPrivateWorld(t *testing.T) memberWorld {
 // convention 2, 8.2). The other transaction holds Web FOR NO KEY UPDATE, as
 // a write on it does, and ends, deletes or moves to Ops the membership the
 // write changes, or ends the caller's own membership, or deletes Web; or it
-// holds acme FOR NO KEY UPDATE, as a cascade does, and deletes acme. The
-// write has passed authentication, read the membership it names unlocked,
-// and waits for that row. Once the other commits, the write is 404; the row
-// the other changed is as it left it, and every other row as it was. Web is
-// private: bob or dave, his membership ended, does not see it.
+// holds acme FOR NO KEY UPDATE, as a cascade does, and deletes acme. SQL
+// makes each change inside the other transaction, which must hold its lock
+// open across the probe: a real write cannot without a hook in product
+// code. The write has passed authentication and its read without a lock,
+// of the membership it names or, leaving, of Web's workspace, and waits for
+// the row the other holds. Once the other commits, the write is 404; the
+// row the other changed is as it left it, and every other row as it was.
+// Web is private: bob or dave, his membership ended, does not see it.
 func TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile(t *testing.T) {
 	type change struct {
 		name, holds, table, sql string // holds: the table of the row the other transaction locks first, acme's or Web's
@@ -165,15 +168,24 @@ func TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile(t *testing.T) {
 // lock table, conventions 2 and 3). Other transactions hold acme's row FOR
 // NO KEY UPDATE and, FOR SHARE, Web's row and the membership of Web the
 // write changes, which the write waits for in turn; they let go one at a
-// time, and lockOn reads each row's strongest lock then. The write waits
-// for acme's row, holding nothing; then for Web's, holding acme's FOR
-// SHARE and, for a change of a role, the member's membership of acme FOR
-// SHARE (convention 3), no stronger; then for the membership of Web, holding
-// Web FOR NO KEY UPDATE too; never the member's membership of acme for a
-// removal or a leaving, nor Ops, alice's other project of acme, of which
-// gina and dave are no members. Then it answers as alone, and the moment it
-// wrote is no earlier than Web's release: it read the clock under Web's
-// lock (3.3).
+// time, and lockOn reads each row's strongest lock then:
+//   - waiting for acme's row, the write holds neither the member's
+//     membership of acme nor Ops, and nothing of Web or of the membership
+//     of Web that conflicts with the others' shares, or it would wait
+//     there; a share of either, hidden under the others', is
+//     TestEachWriteOnAProjectSharesItsWorkspaceFirst's to see;
+//   - waiting for Web's row, it holds acme's FOR SHARE and, for a change of
+//     a role, the member's membership of acme FOR SHARE (convention 3), no
+//     stronger; that membership not at all for a removal or a leaving;
+//   - waiting for the membership of Web, it holds Web FOR NO KEY UPDATE too,
+//     and still not Ops, alice's other project of acme, of which gina and
+//     dave are no members.
+//
+// Then it answers as alone. The moment it wrote is no earlier than Web's
+// release, as it read the clock under Web's lock (3.3), and earlier than
+// the membership's release: it read the clock before it waited for the
+// membership, whose row only its write's UPDATE locks; nothing before the
+// decision and the clock does, not the read of it under the locks either.
 func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 	for _, m := range membershipWrites {
 		t.Run(m.op, func(t *testing.T) {
@@ -200,7 +212,7 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 			holdsWeb := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR SHARE", w.web)
 			holdsAcme := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", acme)
 			req, answered := m.sent(t, w)
-			var released time.Time
+			var releasedWeb time.Time
 			for _, step := range []struct {
 				release pgx.Tx
 				waitsOn string
@@ -212,7 +224,7 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 			} {
 				if step.release != nil {
 					if step.release == holdsWeb {
-						released = time.Now()
+						releasedWeb = time.Now()
 					}
 					if err := step.release.Rollback(context.Background()); err != nil {
 						t.Fatal(err)
@@ -223,6 +235,7 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 					t.Errorf("%s waiting on %s: %s; want %s", m.op, step.waitsOn, got, step.want)
 				}
 			}
+			releasedInWeb := time.Now()
 			if err := holdsInWeb.Rollback(context.Background()); err != nil {
 				t.Fatal(err)
 			}
@@ -236,8 +249,10 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 				t.Errorf("%s = %d %s, want %d", m.op, a.res.StatusCode, a.body, m.status)
 			}
 			moment, _ := rowJSON(t, w.pool, "project_members", inWeb)["updated_at"].(string)
-			if at, err := time.Parse(time.RFC3339Nano, moment); err != nil || at.Before(released.Truncate(time.Microsecond)) {
-				t.Errorf("%s's moment %q (%v); want one no earlier than Web's release, %v", m.op, moment, err, released)
+			if at, err := time.Parse(time.RFC3339Nano, moment); err != nil || at.Before(releasedWeb.Truncate(time.Microsecond)) ||
+				!at.Before(releasedInWeb) {
+				t.Errorf("%s's moment %q (%v); want one no earlier than Web's release, %v, and earlier than the membership's, %v", m.op, moment,
+					err, releasedWeb, releasedInWeb)
 			}
 		})
 	}

@@ -33,6 +33,10 @@ type memberWorld struct {
 	web, ops, lab uuid.UUID
 }
 
+// worldStanding is memberWorld's standing as newMemberWorld makes it.
+const worldStanding = "acme: alice 20, bob 15, carol 15, dave 15, erin 5, gina 20; beta: bob 20, carol 15; Lab: bob 20, carol 15; " +
+	"Ops: alice 20, bob 15, carol 20; Web: alice 20, bob 20, carol 15, dave 20, erin 5, gina 15"
+
 func newMemberWorld(t *testing.T) memberWorld {
 	t.Helper()
 	contract := apitest.Load(t)
@@ -79,9 +83,8 @@ func newMemberWorld(t *testing.T) memberWorld {
 		`{"role":20}`); status != http.StatusOK {
 		t.Fatalf("alice's making gina acme's admin = %d %s", status, body)
 	}
-	if got, want := w.standing(t), "acme: alice 20, bob 15, carol 15, dave 15, erin 5, gina 20; beta: bob 20, carol 15; "+
-		"Lab: bob 20, carol 15; Ops: alice 20, bob 15, carol 20; Web: alice 20, bob 20, carol 15, dave 20, erin 5, gina 15"; got != want {
-		t.Fatalf("the world: %s; want %s", got, want)
+	if got := w.standing(t); got != worldStanding {
+		t.Fatalf("the world: %s; want %s", got, worldStanding)
 	}
 	return w
 }
@@ -100,18 +103,20 @@ func (w memberWorld) added(namesAndRoles ...any) string {
 }
 
 // standing is every active membership of the world, the workspaces' and
-// the projects', each workspace and project by name with its members' roles
-// in name order: "acme: alice 20, bob 15; Web: …".
+// the projects', the workspaces first, then the projects, each by name with
+// its members' roles in name order: "acme: alice 20, bob 15; Web: …". The
+// names are ordered byte by byte (COLLATE "C"), whatever the database's
+// collation.
 func (w memberWorld) standing(t *testing.T) string {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT string_agg(place || ': ' || members, '; ' ORDER BY place) FROM (
-		SELECT place, string_agg(name || ' ' || role, ', ' ORDER BY name) AS members FROM (
-			SELECT s.slug AS place, split_part(u.email, '@', 1) AS name, m.role FROM workspace_members m
+	if err := w.pool.QueryRow(soon(t), `SELECT string_agg(place || ': ' || members, '; ' ORDER BY kind, place COLLATE "C") FROM (
+		SELECT kind, place, string_agg(name || ' ' || role, ', ' ORDER BY name COLLATE "C") AS members FROM (
+			SELECT 0 AS kind, s.slug AS place, split_part(u.email, '@', 1) AS name, m.role FROM workspace_members m
 				JOIN workspaces s ON s.id = m.workspace_id JOIN users u ON u.id = m.member_id WHERE m.is_active AND m.deleted_at IS NULL
-			UNION ALL SELECT p.name, split_part(u.email, '@', 1), m.role FROM project_members m
+			UNION ALL SELECT 1, p.name, split_part(u.email, '@', 1), m.role FROM project_members m
 				JOIN projects p ON p.id = m.project_id JOIN users u ON u.id = m.member_id WHERE m.is_active AND m.deleted_at IS NULL) a
-		GROUP BY place) b`).Scan(&got); err != nil {
+		GROUP BY kind, place) b`).Scan(&got); err != nil {
 		t.Fatal(err)
 	}
 	return got

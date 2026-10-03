@@ -95,25 +95,23 @@ func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[by]}), id)
 }
 
-// opsEndedBy is the name of who ended name's membership of Ops last, or
+// endedBy is the name of who ended name's membership of project last, or
 // "active" while it is.
-func (w memberWorld) opsEndedBy(t *testing.T, name string) string {
+func (w memberWorld) endedBy(t *testing.T, project uuid.UUID, name string) string {
 	t.Helper()
 	var by string
 	if err := w.pool.QueryRow(soon(t), `SELECT CASE WHEN m.is_active THEN 'active' ELSE split_part(u.email, '@', 1) END
-		FROM project_members m JOIN users u ON u.id = m.updated_by_id WHERE m.project_id = $1 AND m.member_id = $2`, w.ops, w.ids[name]).
+		FROM project_members m JOIN users u ON u.id = m.updated_by_id WHERE m.project_id = $1 AND m.member_id = $2`, project, w.ids[name]).
 		Scan(&by); err != nil {
 		t.Fatal(err)
 	}
 	return by
 }
 
-// The world's standing, as memberWorld makes it, then with carol's
-// memberships of acme and of its projects ended, and with alice's or
-// carol's membership of Ops ended.
+// The world's standing (worldStanding) with carol's memberships of acme and
+// of its projects ended, and with alice's or carol's membership of Ops
+// ended.
 const (
-	worldStanding = "acme: alice 20, bob 15, carol 15, dave 15, erin 5, gina 20; beta: bob 20, carol 15; Lab: bob 20, carol 15; " +
-		"Ops: alice 20, bob 15, carol 20; Web: alice 20, bob 20, carol 15, dave 20, erin 5, gina 15"
 	carolOutOfAcme = "acme: alice 20, bob 15, dave 15, erin 5, gina 20; beta: bob 20, carol 15; Lab: bob 20, carol 15; " +
 		"Ops: alice 20, bob 15; Web: alice 20, bob 20, dave 20, erin 5, gina 15"
 	aliceOutOfOps = "acme: alice 20, bob 15, carol 15, dave 15, erin 5, gina 20; beta: bob 20, carol 15; Lab: bob 20, carol 15; " +
@@ -192,9 +190,10 @@ func TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize(t *testing.T) {
 		leaver                  string
 		leaveFirst, removeFirst serialized // by which side came first
 	}{
-		{"carol", serialized{nil, nil, carolOutOfAcme, "carol"}, serialized{projectdomain.ErrNotFound, nil, carolOutOfAcme, "gina"}},
-		{"alice", serialized{nil, projectdomain.ErrSoleAdmin, aliceOutOfOps, "active"},
-			serialized{projectdomain.ErrSoleAdmin, nil, carolOutOfAcme, "gina"}},
+		{"carol", serialized{nil, nil, carolOutOfAcme, "carol", "gina"},
+			serialized{projectdomain.ErrNotFound, nil, carolOutOfAcme, "gina", "gina"}},
+		{"alice", serialized{nil, projectdomain.ErrSoleAdmin, aliceOutOfOps, "active", "active"},
+			serialized{projectdomain.ErrSoleAdmin, nil, carolOutOfAcme, "gina", "gina"}},
 	} {
 		for _, at := range slices.Concat(leavings, []leaving{{name: "the removal first"}}) {
 			t.Run(tt.leaver+" leaves, "+at.name, func(t *testing.T) {
@@ -225,8 +224,10 @@ func TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize(t *testing.T) {
 				if !sameOutcome(leave, want.leave) || !sameOutcome(removal, want.remove) {
 					t.Errorf("the leaving = %v, the removal = %v; want %v, %v", leave, removal, want.leave, want.remove)
 				}
-				if got, ops := w.standing(t), w.opsEndedBy(t, "carol"); got != want.standing || ops != want.ops {
-					t.Errorf("after both: %s, carol's membership of Ops %s; want %s, %s", got, ops, want.standing, want.ops)
+				got, ops, web := w.standing(t), w.endedBy(t, w.ops, "carol"), w.endedBy(t, w.web, "carol")
+				if got != want.standing || ops != want.ops || web != want.web {
+					t.Errorf("after both: %s, carol's membership of Ops %s, of Web %s; want %s, %s, %s", got, ops, web, want.standing, want.ops,
+						want.web)
 				}
 			})
 		}
@@ -235,10 +236,11 @@ func TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize(t *testing.T) {
 
 // serialized is how a leaving of Ops and a removal from acme end: the
 // leaving's and the removal's errors, the world after them, and who ended
-// carol's membership of Ops ("active" while it is).
+// carol's memberships of Ops and of Web ("active" while each is). alice
+// made both, so that their ender shows.
 type serialized struct {
-	leave, remove error
-	standing, ops string
+	leave, remove      error
+	standing, ops, web string
 }
 
 // sameOutcome is whether err is want: nil for nil, else an error whose

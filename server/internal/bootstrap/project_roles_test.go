@@ -67,13 +67,8 @@ func TestTheRelativeRuleOnTheComposedApp(t *testing.T) {
 		if status != step.status || step.code != "" && problemCode(t, []byte(body)) != step.code {
 			t.Fatalf("%s = %d %s, want %d %s", step.name, status, body, step.status, step.code)
 		}
-		if step.code == "validation_failed" {
-			var problem struct {
-				Errors []struct{ Field, Code string }
-			}
-			if decodeAnswer(t, body, &problem); len(problem.Errors) != 1 || problem.Errors[0].Field+" "+problem.Errors[0].Code != "role not_allowed" {
-				t.Errorf("%s = %s, want its one error role not_allowed", step.name, body)
-			}
+		if step.code == "validation_failed" && oneError(t, []byte(body)) != "role not_allowed" {
+			t.Errorf("%s = %s, want its one error role not_allowed", step.name, body)
 		}
 		if after := rowsBut(t, w.pool, []uuid.UUID{id}); !maps.Equal(after, others) {
 			t.Errorf("%s changed rows besides the target's:\n%v\nwant them as they were:\n%v", step.name, after, others)
