@@ -174,6 +174,7 @@ M3 是第一个有多个业务模块、第一次跨模块协作的里程碑，�
     - 三个方法都把 `by` 写进它们改的行的 `updated_by_id`、把 `now` 写进审计时间，与 M3 的其余写入相同；失败时原样返回错误，调用方的整个事务随之回滚。
     - **一个改变一个时刻，对连带改写的每一列都成立**（负责人 2026-10-02 的裁定，17.4）：调用方在持有工作区的 `FOR NO KEY UPDATE` 之后才读 `now`（删除工作区、改成员的角色、接受邀请都是这样），而每个项目级的写最先以 `FOR SHARE` 锁住它的工作区行、在全部锁之后读自己的时刻（3.6 约定二）。两把锁互斥：连带读 `now` 时，在它要改的行上没有还未提交的项目级的写，先到的写都已提交、时刻不晚于 `now`，后到的写等连带提交、时刻晚于 `now`。所以连带写下的 `updated_at` 不早于行上原有的，`deleted_at`、`updated_at` 也不早于 `created_at`。这是连带与项目级的写之间的保证；两个只持共享锁的写在同一行上相遇时不成立：同一个账户并发改自己的显示设置，两个写都持项目（或工作区）的 S、各自在锁之后读时刻，到 `UPSERT` 里才相遇，后提交的可以带较早的时刻（P4b review 第 7 节，只涉及调用者自己那一行的审计列）。
     - **以后的连带照做**：调用方在取得它的全部工作区锁之后才读 `now`。P6 的停用先按 `id` 升序锁住他的工作区（N），之后读 `now`、调用 `EndMemberships`；P5a 的移出、离开在工作区 N 之后读。
+    - **停用有两个时刻，在一个事务里**（负责人 2026-10-04 的裁定，P6 spec 第 3 节第 1 条）：账户、新手引导、会话的时刻照 M2 由 `identity` 在事务之前读；邀请和成员关系的时刻由 `workspace` 的 `Deactivator` 在最后一把工作区锁之后读（3.9），不早于前者：两者都读系统时钟，后者在前者之后读（墙钟不回拨时）。只有后者是连带的时刻，上一条的保证对它成立。
   - `workspace` 问 `project`：他在这个工作区还有几个无效的项目成员关系（`ProjectMembershipCounts`，只读，`reactivate-member` 的提示）。
   - `workspace` 问 `identity`：按 id 或邮箱锁住账户行、取回它的状态（`Accounts`：是否存在、是否有效、邮箱），由用例决定怎样处理停用的账户；按 id 批量读公开资料，不加锁，停用的账户也返回（`MemberProfiles`：成员列表，以及事务中途要读的邮箱，3.6 约定一）。
   - 全部端口列在 6.5。
@@ -347,7 +348,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
    - 三处都改为规则 2，登记差异。
 - **改角色不需要检查**：按 3.6 约定二，改工作区成员角色的人在取得工作区锁之后仍被判定为管理员，而且不能改自己的角色（`workspace.own_membership`）。所以改完之后至少还有他这一位管理员（spike S1b：互相降级时后到的一方被拒绝）。项目里，同时是工作区管理员的项目成员可以把唯一的项目管理员改成成员，这时项目由工作区管理员管理，与 Plane 相同。
 - **接受邀请不会减少管理员**：邀请从不改变有效的成员关系（3.8）；恢复以前的成员关系时他原来不是有效成员，不在管理员的人数里。第二稿让接受覆盖有效成员的角色，Codex 的 S2 由此绕过了本节的保证（恢复成员 → 另一位管理员离开 → 他接受旧的访客邀请：工作区没有管理员，访客却是项目管理员）。
-- **只有一人的工作区在他停用之后**没有有效成员。恢复的办法与 Plane 相同：`nerve users activate` 恢复账户，`nerve workspaces reactivate-member` 恢复成员关系（3.11）。
+- **只有一人的工作区在他停用之后**没有有效成员，也没有人能经邀请进来：停用在同一个事务里删除这样的工作区的待接受邀请（3.9 的第五条语句）。不删的话，他（或别的已离开的管理员）发出的邀请被接受之后，工作区有有效成员而没有有效管理员，没有人能再邀请、移出、改角色（P6 预检 M1，Plane 相同）。恢复的办法与 Plane 相同：`nerve users activate` 恢复账户，`nerve workspaces reactivate-member` 恢复成员关系（3.11）。
 
 ### 3.8 邀请：令牌、接受与注册（M2 交接第 1 节；决策点 1、2、4 已裁定）
 - **只有链接一条路**（决策点 2，A）：管理员在成员页邀请若干邮箱、各带角色；邀请列表的每一行有"复制链接"。v0 不发邮件，管理员自己把链接交给对方。"系统内接受"（`/invitations` 页、新手引导的"加入工作区"一步、按邮箱批量接受）删除（7.8）。
@@ -398,12 +399,14 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
   - **并发的冲突与事先的校验同一个回答**：先到的一批提交之后，后到的一批插入同一个邮箱时 `workspace_member_invites_workspace_id_email_key` 报 23505；用例把它翻译为 422 `invitations[i].email` 的 `duplicate`，`i` 是这个邮箱在请求里的下标（9.3 的"唯一约束冲突翻译为 409"的例外），整批回滚。
 
 ### 3.9 停用账户的端口（M2 交接第 6 节）
-- `identity/app` 声明端口 `MembershipDeactivator.DeactivateMemberships(ctx, userID, email, now) error`，由 `workspace` 模块实现，`bootstrap` 接上。`deactivate`（`identity/app/deactivate.go`）在撤销会话之后调用它：自助停用（`Execute`）和 `nerve users deactivate`（`ExecuteByEmail`）都经过这里。它返回错误时整个停用回滚。
+- `identity/app` 声明端口 `MembershipDeactivator.DeactivateMemberships(ctx, userID, email) error`，由 `workspace` 模块实现，`bootstrap` 接上。`deactivate`（`identity/app/deactivate.go`）在撤销会话之后调用它：自助停用（`Execute`）和 `nerve users deactivate`（`ExecuteByEmail`）都经过这里。它返回错误时整个停用回滚。
+  - 端口不带 `now`（负责人 2026-10-04 的裁定）：实现在锁住他的全部工作区之后读时刻（3.3），邀请和成员关系都用它；账户、新手引导、会话照 M2 用事务之前读的时刻。一个停用因此在一个事务里有两个时刻，后者不早于前者（3.3）。`identity` 不取工作区的锁，把它的时刻传下去，成员关系就带着锁之前的时刻：停用等工作区的锁时提交的增长会显得比结束它的停用晚。
 - **邮箱取自锁下的账户行**：M2 的 `CredentialLock` 返回的 `LockedAccount` 只有 `{PasswordHash, Active}`（`identity/app/ports.go:95`），P6 给它加上 `Email`；`deactivate` 把锁下读到的邮箱传给 `DeactivateMemberships`（`ExecuteByEmail` 按邮箱锁住那一行，锁下的邮箱就是它）。不用事务之前读到的邮箱：其间提交的改邮箱会让停用删掉发给旧邮箱的邀请、留下发给新邮箱的（复核 M5）。
 - 实现按 3.6 的顺序，在 `deactivate` 已经锁住的账户行之下（约定六：列举之后他的工作区集合不会再变大）：
   - 列举他全部有效成员关系所在的工作区，按 `id` 升序锁住，按 3.7 规则 2 检查（`workspace.sole_admin`）；
   - **列举到而上锁时已不存在的工作区、项目跳过**：锁的语句带 `deleted_at IS NULL`，少返回的行就是其间被删除的，那里的成员关系已随删除结束。不答 404：约定二"读到 0 行答 404"只用于调用方点名的父行，`workspace.not_found` 也不是 `deactivateMe` 的码（复核 spike 15）；
   - 软删除发给这个邮箱的**全部**邀请，已忽略的也删（Plane `views/user/base.py:313`）；
+  - 软删除锁住的工作区中、他停用之后没有别的有效成员的那些工作区的**待接受**邀请（负责人 2026-10-04 的裁定，P6 预检 M1）：只有他一人的工作区在他停用之后没有有效成员，也没有人能经一份邀请进来（3.7、3.8）。在工作区的 N 之下，按全局顺序在改成员行之前；"别的"不算他自己，所以在他的成员关系结束之前判断。已忽略的不删（不能再被接受，3.8 留着它的理由同样成立）。创建邀请持工作区的 S、接受持 N，这组工作区和它们的邀请在停用持锁时不会变。Plane 不删，登记差异；
   - 停用他的工作区成员关系；
   - 调 `ProjectCascade.EndMemberships`，传入这些工作区：它在调用时列举他在其中有效的项目成员关系（此前提交的添加、加入、建项目都在其中），一次按 `id` 升序锁住那些项目、检查（`project.sole_admin`）、停用项目成员关系。
 - `deactivateMe` 的 `x-problem-codes` 加上 `workspace.sole_admin`、`project.sole_admin`（409，前缀规则按 11.7 修订）；命令打印问题的说明，退出码 1。
@@ -440,6 +443,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
   - 把这个人在这个工作区无效的成员关系恢复为有效，角色不变；
   - 输出说明他在这个工作区还有几个项目成员关系仍无效（移出和停用都连带结束了它们；个数经 `ProjectMembershipCounts` 读取，6.5）；账户已停用时照样恢复（照 Plane，约定六唯一的例外），另外提示下一步运行 `nerve users activate`：在这两步之间，这个成员关系计入管理员的人数，而他还不能登录。这一状态下项目一侧的增长照常允许（它只看工作区成员行，约定六）：管理员可以把他加为项目成员、指定为负责人，直到 `nerve users activate` 或再次停用；认证拒绝这个账户，这些成员关系在那之前不给账户持有人任何东西；
   - 已是有效成员时输出说明、退出码 0；工作区不存在、账户不存在、从来不是这个工作区的成员时退出码 1，数据库不变。
+  - **它不看工作区有没有有效的管理员**（已知的限制，负责人 2026-10-04 的裁定）：恢复一个以前的非管理员成员到停用清空的工作区（3.7），工作区就有有效成员而没有有效管理员；在 `nerve users activate` 之前恢复一个停用的管理员，他计入管理员的人数而还不能登录（上一条）。两者都是服务器管理员自己的操作，命令不替他判断；要让工作区有人管理，先恢复以前的管理员（P6 spec 第 3 节第 8 条）。
   - 不需要删除邀请：移出、停用已经删掉了结束之前发给他的待接受邀请（3.8"结束的成员关系不留下邀请"），恢复之后最多还剩一份在移出或停用之后发出的邀请；他有效时它不改变成员关系（3.8），他下一次被移出时它被删除。第三稿说这份邀请"无害"，只在他仍是有效成员时成立：他被移出之后，旧链接能让他自己回来（复核 M3），这由 3.8 的规则在成员关系结束的地方关闭。
   - 不照搬 Plane 的 `create_project_member.py`：恢复出来的工作区管理员可以经接口加入任何项目，加入会恢复原来的项目成员行，角色取原来那一行与他的工作区角色中较低的（3.5）。
 - 两个命令的组合与 `nerve users` 相同：连接池、`workspace` 的管理用例、`identity` 提供的 `Accounts`、`project` 提供的 `ProjectMembershipCounts`（6.5）；没有 River 客户端。
@@ -1010,7 +1014,8 @@ modules/workspace/
     postgres/               仓储；对外提供的读取和锁（6.5）；queries/*.sql；gen/（sqlc）
     http/                   handler，按资源分文件；公开操作的清单；gen/
   module.go                 Provide(pool)；New(Deps)；Register；PublicOperations()；Actions()；Deactivator()；SignupInvitations()
-  admin.go                  NewAdmin(AdminDeps)：命令行的建工作区、恢复成员和停用
+  deactivator.go            NewDeactivator(DeactivatorDeps)：停用的成员关系一步，命令行和 New 共用
+  admin.go                  NewAdmin(AdminDeps)：命令行的建工作区、恢复成员
 ```
 
 ### 6.3 `project` 模块的结构
@@ -1098,11 +1103,11 @@ modules/access/
 - 第三稿加的三个读取（`PublicProfiles`、`Accounts` 交回的状态、`ProjectMembershipCounts`）都是第 2 步的适配器，只依赖连接池，顺序不变、仍然没有环（Codex M-1 的核对）。
 
 - **命令行的组合**（M2 设计 3.17 的最小组合）：
-  - `nerve users …`（`bootstrap.Users`）：连接池、`identity.NewAdmin`，加上停用要的 `workspace.NewAdmin`（它的 `Deactivator`）和 `project.NewCascade`（停用调 `EndMemberships`，P6）。
+  - `nerve users …`（`bootstrap.Users`）：连接池、`identity.NewAdmin`，加上停用要的 `workspace.NewDeactivator` 和 `project.NewCascade`（停用调 `EndMemberships`，P6；负责人 2026-10-04 的裁定）。`workspace.New` 经同一个 `NewDeactivator` 建出自己的 `Deactivator()`。
   - `nerve workspaces …`（`bootstrap.Workspaces`）：连接池、`identity.Provide` 的 `Accounts`、`project.Provide` 的 `ProjectMembershipCounts`、`workspace.NewAdmin`（建工作区、恢复成员）。
   - **一个组合只构造它的命令用得到的部分**：`project.NewCascade` 只在命令会调连带时构造。按现在的规划只有 `nerve users deactivate`（P6）调它；建工作区、`reactivate-member` 都不调连带（后者只读 `ProjectMembershipCounts`，3.11）。`nerve workspaces` 的组合要不要它，由 P5a、P6 按 `workspace.NewAdmin` 实际建出的用例和它们的依赖决定，不按清单。
   - 两个组合都没有签名密钥、`Authorizer` 和 River（停用和建工作区都不投递任务，3.9、3.11）。
-  - 组合测试（`archtest/composition_test.go`）从 `Users` 扩展到 `Workspaces`：从它们出发的静态调用不到达 `identity.New`、`workspace.New`、`project.New`、`access.New`、HTTP 服务、限流和任务队列，并且到达 `workspace.NewAdmin`（证明检查看到了组合）。
+  - 组合测试（`archtest/composition_test.go`）从 `Users` 扩展到 `Workspaces`：从它们出发的静态调用不到达 `identity.New`、`workspace.New`、`project.New`、`access.New`、HTTP 服务、限流和任务队列，并且各自到达它的命令用的构造（证明检查看到了组合）：`Users` 到达 `workspace.NewDeactivator`、`project.NewCascade`，不到达 `workspace.NewAdmin`；`Workspaces` 到达 `workspace.NewAdmin`，不到达 `project.NewCascade`。
 - `bootstrap` 的整程序测试（M2 设计 3.11 的四个）照旧覆盖全部新操作：默认拒绝（每个非公开操作不带令牌 401）、请求体结构、参数绑定、错误码。
 
 ### 6.7 一个写请求的权限判定：`PATCH /api/v0/states/{state_id}`
@@ -1485,7 +1490,7 @@ modules/access/
   7. 停用与接受邀请（P6；Codex S1，B 原来不在工作区 W，A 是 W 的管理员，W 有项目 P）：
      - (a) 接受先锁住 B 的账户行，停用等待；接受提交之后停用的列举含 W，B 在 W 的成员关系被停用。
      - (b) 在 (a) 的接受提交之后、停用拿到 W 的锁之前，B 的另一个事务锁住 W、把 A 改为成员（S1 的第 5 步）：停用等 W 的锁，之后 B 是 W 唯一的管理员而 W 还有别的成员，409 `workspace.sole_admin`，数据库不变。
-     - (c) 同样的位置，B 的另一个事务锁住自己的工作区成员行、加入 P（S1 的第 6 步）：停用改成员行时等它，之后 `EndMemberships` 的列举含 P，B 在 P 的成员关系被停用；W 仍有管理员 A。
+     - (c) 同样的位置，B 的另一个事务锁住 W（S）和自己的工作区成员行、加入 P（S1 的第 6 步）：停用锁工作区时等它（方案 E，17.4；与 13、14 相同），之后 `EndMemberships` 的列举含 P，B 在 P 的成员关系被停用；W 仍有管理员 A。
      - (d) 停用先锁住账户行：接受等待，之后在锁下读到账户已停用，401，没有新的成员关系。
      - (e) B 在 W 有以前的（无效的）成员行，(a) 和 (d) 各再跑一次：接受恢复那一行而不是插入，结果相同（恢复与插入一样串行在账户行上）。
   8. 停用与创建工作区（P6）：创建先锁住账户行，停用等待，之后停用新的成员关系（他是那里唯一的成员，允许）；停用先提交，创建被拒绝（接口 401，命令行退出码 1），没有新工作区。
@@ -1855,7 +1860,7 @@ modules/access/
 - **目标**：停用账户在同一个事务里结束他的全部成员关系、删除发给他邮箱的全部邀请；唯一管理员时拒绝；约定六的每一条增长路径都与停用串行。
 - **任务**：
   1. `identity` 的 `MembershipDeactivator` 端口，`LockedAccount` 加 `Email`、`deactivate` 传入锁下的邮箱，`deactivateMe` 的两个码；`identity` 的 HTTP 测试经 `fakeDeactivate.err` 返回这两个码（3.9、9.4）。
-  2. `workspace` 的 `Deactivator`：在已锁的账户行之下列举并锁他的全部工作区（上锁时已删除的跳过）、查唯一管理员、删除全部邀请、停用成员行、一次调用 `EndMemberships`（3.6 约定六、3.9）；时刻在锁住他的全部工作区之后读（3.3）。
+  2. `workspace` 的 `Deactivator`：在已锁的账户行之下列举并锁他的全部工作区（上锁时已删除的跳过）、查唯一管理员、删除发给他的全部邀请和他留下的空工作区的待接受邀请、停用成员行、一次调用 `EndMemberships`（3.6 约定六、3.9）；时刻在锁住他的全部工作区之后读（3.3）。
   3. 跨工作区的 `EndMemberships`：在调用时列举，按 `id` 升序一次锁住全部项目，上锁时已删除的跳过（3.6、3.9）。
   4. `nerve users` 的组合加上停用的部分，组合测试（6.6）。
   5. 交错测试 7（停用与接受邀请，Codex S1 的四种走法，另跑恢复以前的成员行）、8（停用与创建工作区）；19 换成真实的停用再跑一次。
