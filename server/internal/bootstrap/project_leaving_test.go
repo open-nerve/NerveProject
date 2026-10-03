@@ -25,8 +25,8 @@ func (w memberWorld) leave(t *testing.T, name string, project uuid.UUID) (int, s
 //   - gina makes alice acme's guest, and so Web's and Ops' guest (3.3):
 //     neither has an admin now. gina, Web's member and acme's admin, leaves
 //     it as a member; bob, Ops' member, leaves it; alice, its guest now and
-//     its only member, leaves it. The rule is the project role's, read
-//     under the locks, not the workspace's.
+//     its only member, leaves it. The rule is the project role's, not the
+//     workspace's.
 func TestLeavingAProject(t *testing.T) {
 	w := newMemberWorld(t)
 	step := func(name, member string, project uuid.UUID, status int, code string) {
