@@ -2,6 +2,7 @@ package httpadapter_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -35,9 +36,9 @@ const (
 	forbiddenJSON     = `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`
 	ownMembershipJSON = `{"status":409,"code":"project.own_membership","title":"Conflict","detail":"You cannot remove your own membership ` +
 		`of the project, nor change your own role in it unless you are a workspace admin."}`
-	roleTooHighJSON = `{"status":403,"code":"project.role_too_high","title":"Forbidden","detail":"The role is too high for you: unless you ` +
-		`are a workspace admin, you change only a member whose project role is below yours, to a role below yours; and you remove only a ` +
-		`member whose project role is not above yours."}`
+	roleTooHighJSON = `{"status":403,"code":"project.role_too_high","title":"Forbidden","detail":"The role is too high for you. Unless you ` +
+		`are a workspace admin, you change only members whose project role is below yours, to roles below yours. You remove only members ` +
+		`whose project role is not above yours."}`
 	internalErrorJSON = `{"status":500,"code":"internal_error","title":"Internal Server Error"}`
 )
 
@@ -70,9 +71,10 @@ func TestUpdateProjectMemberHoldsTheBodyToItsStructure(t *testing.T) {
 	update := &fakeUpdateMember{}
 	h := newServer(t, fakes{updateMember: update})
 	for _, body := range []string{`{}`, `{"role":null}`, `{"role":"5"}`, `{"role":5,"member_id":"0199a2b4-0000-7000-8000-000000000002"}`} {
-		if res, got := do(t, h, request(http.MethodPatch, "/api/v0/project-members/"+bobInWeb.ID.String(), "alice", body)); res.StatusCode !=
-			http.StatusBadRequest {
-			t.Errorf("PATCH %s = %d %s, want 400", body, res.StatusCode, got)
+		res, got := do(t, h, request(http.MethodPatch, "/api/v0/project-members/"+bobInWeb.ID.String(), "alice", body))
+		var problem struct{ Code string }
+		if err := json.Unmarshal([]byte(got), &problem); err != nil || res.StatusCode != http.StatusBadRequest || problem.Code != "bad_request" {
+			t.Errorf("PATCH %s = %d %s, want 400 bad_request", body, res.StatusCode, got)
 		}
 	}
 	if len(update.calls) != 0 {

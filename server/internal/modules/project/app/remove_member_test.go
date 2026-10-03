@@ -54,10 +54,14 @@ func TestRemoveProjectMember(t *testing.T) {
 // project.member_not_found; a project member, the Authorizer's 403. Then,
 // to a caller who may remove members, after the decision: an ended
 // membership, 404, before any other check, and so when it ended while the
-// locks waited, an admin's to the workspace's admin, or his own; his own,
-// 409, the workspace's admin's too; a higher role, 403
-// project.role_too_high, from the workspace's admin too. A membership
-// answered for another id is the write's own error.
+// locks waited, an admin's to the workspace's admin; his own, 409, the
+// workspace's admin's too; a higher role, 403 project.role_too_high, from
+// the workspace's admin too. A membership answered for another id is the
+// write's own error. The row of his own membership ended while the locks
+// waited pins only the order of the two checks, ended before own: on the
+// wired app it cannot occur, as a caller who passes the decision has an
+// active membership of the project, which the Authorizer reads under the
+// same locks.
 func TestRemoveProjectMemberRefuses(t *testing.T) {
 	locked := func(f *writeFixture, caller, user uuid.UUID) []string {
 		return memberLocked(f.memberOf(webID, user), user, webID, caller, domain.ActionMemberRemove, false)

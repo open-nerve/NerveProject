@@ -35,8 +35,8 @@ var (
 	// not below his, by one who is not the workspace's admin; a removal of a
 	// member whose role is above the caller's, by anyone.
 	ErrRoleTooHigh = shared.NewError(shared.KindForbidden, "project.role_too_high",
-		"The role is too high for you: unless you are a workspace admin, you change only a member whose project role is below yours, to a role "+
-			"below yours; and you remove only a member whose project role is not above yours.")
+		"The role is too high for you. Unless you are a workspace admin, you change only members whose project role is below yours, to roles "+
+			"below yours. You remove only members whose project role is not above yours.")
 	// ErrSoleAdmin answers the leaving of a project's only active admin,
 	// also when he is its only member (M3 design 3.7 rule 1), and an ending
 	// of an account's project memberships that would leave a project with

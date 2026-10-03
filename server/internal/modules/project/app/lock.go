@@ -158,11 +158,11 @@ func (l Locks) lock(ctx context.Context, workspaceID uuid.UUID, w write, notFoun
 			return held{}, err
 		}
 	}
-	lock := l.projects.LockProject
+	take := l.projects.LockProject
 	if w.share {
-		lock = l.projects.ShareProject
+		take = l.projects.ShareProject
 	}
-	h.project, found, err = lock(ctx, w.project)
+	h.project, found, err = take(ctx, w.project)
 	switch {
 	case err != nil:
 		return held{}, err
