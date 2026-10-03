@@ -34,6 +34,9 @@ var (
 	adminAsMember  = shared.Grant{WorkspaceRole: shared.RoleAdmin, ProjectRole: shared.RoleMember, ProjectAdmin: true}
 	adminAsGuest   = shared.Grant{WorkspaceRole: shared.RoleAdmin, ProjectRole: shared.RoleGuest, ProjectAdmin: true}
 	unknownProject = shared.Grant{WorkspaceRole: shared.RoleMember, ProjectRole: 25}
+	// unknownWorkspace is a project admin of a workspace role outside the
+	// three, which no membership has (the column's CHECK).
+	unknownWorkspace = shared.Grant{WorkspaceRole: 25, ProjectRole: shared.RoleAdmin, ProjectAdmin: true}
 )
 
 // guestOnly is the 422 of a workspace guest given a role other than a
@@ -66,7 +69,10 @@ func sameProblem(err, want error) bool {
 // rule refuses is answered by the rule. Below is by roleOrder: a project
 // role outside the three has nothing below it, and a role between them
 // (10, below 20 by the numbers) is below nothing it is not in roleOrder
-// before.
+// before. The workspace roles are by set too, and fail closed: a caller of
+// a workspace role outside the three is no workspace admin, and a member
+// of one is capped, with the cap's one text. No membership has such a role
+// (the column's CHECK); the rows hold the sets, not a case that happens.
 func TestCheckRoleChange(t *testing.T) {
 	member, guest, admin := shared.RoleMember, shared.RoleGuest, shared.RoleAdmin
 	for _, tt := range []struct {
@@ -74,32 +80,62 @@ func TestCheckRoleChange(t *testing.T) {
 		c    RoleChange
 		want error
 	}{
-		{"a project admin makes a member a guest", RoleChange{projectAdmin, false, member, member, guest}, nil},
-		{"a project admin makes a guest a member", RoleChange{projectAdmin, false, guest, member, member}, nil},
-		{"a project admin keeps a member a member", RoleChange{projectAdmin, false, member, member, member}, nil},
-		{"a project admin, his own role, to a member's", RoleChange{projectAdmin, true, admin, member, member}, ErrOwnMembership},
-		{"a project admin, his own role, kept", RoleChange{projectAdmin, true, admin, member, admin}, ErrOwnMembership},
-		{"a project admin changes another admin", RoleChange{projectAdmin, false, admin, member, member}, ErrRoleTooHigh},
-		{"a project admin makes a member an admin", RoleChange{projectAdmin, false, member, member, admin}, ErrRoleTooHigh},
-		{"a project admin makes a guest an admin", RoleChange{projectAdmin, false, guest, member, admin}, ErrRoleTooHigh},
-		{"a project member keeps a guest a guest", RoleChange{projectMember, false, guest, member, guest}, nil},
-		{"a project member makes a member a guest", RoleChange{projectMember, false, member, member, guest}, ErrRoleTooHigh},
-		{"a project member makes a guest a member", RoleChange{projectMember, false, guest, member, member}, ErrRoleTooHigh},
-		{"a project member, his own role", RoleChange{projectMember, true, member, member, guest}, ErrOwnMembership},
-		{"a project role outside the three", RoleChange{unknownProject, false, guest, member, guest}, ErrRoleTooHigh},
-		{"a project admin, from a role between the three", RoleChange{projectAdmin, false, 10, member, guest}, ErrRoleTooHigh},
-		{"a project admin, to a role between the three", RoleChange{projectAdmin, false, guest, member, 10}, ErrRoleTooHigh},
-		{"a workspace admin, his own role, to an admin's", RoleChange{adminAsMember, true, member, admin, admin}, nil},
-		{"a workspace admin and project admin, his own role, to a guest's", RoleChange{bothAdmin, true, admin, admin, guest}, nil},
-		{"a workspace admin makes the admin a member", RoleChange{adminAsMember, false, admin, member, member}, nil},
-		{"a workspace admin makes a member an admin", RoleChange{adminAsMember, false, member, member, admin}, nil},
-		{"a workspace admin who is a project guest changes an admin", RoleChange{adminAsGuest, false, admin, member, guest}, nil},
-		{"a workspace admin makes another workspace admin a member", RoleChange{bothAdmin, false, admin, admin, member}, nil},
-		{"a project admin makes a workspace guest a member", RoleChange{projectAdmin, false, guest, guest, member}, guestOnly},
-		{"a project admin makes a workspace guest an admin", RoleChange{projectAdmin, false, guest, guest, admin}, ErrRoleTooHigh},
-		{"a workspace admin makes a workspace guest a member", RoleChange{adminAsMember, false, guest, guest, member}, guestOnly},
-		{"a workspace admin makes a workspace guest an admin", RoleChange{bothAdmin, false, guest, guest, admin}, guestOnly},
-		{"a workspace admin keeps a workspace guest a guest", RoleChange{bothAdmin, false, guest, guest, guest}, nil},
+		{"a project admin makes a member a guest",
+			RoleChange{Caller: projectAdmin, Own: false, From: member, WorkspaceRole: member, To: guest}, nil},
+		{"a project admin makes a guest a member",
+			RoleChange{Caller: projectAdmin, Own: false, From: guest, WorkspaceRole: member, To: member}, nil},
+		{"a project admin keeps a member a member",
+			RoleChange{Caller: projectAdmin, Own: false, From: member, WorkspaceRole: member, To: member}, nil},
+		{"a project admin, his own role, to a member's",
+			RoleChange{Caller: projectAdmin, Own: true, From: admin, WorkspaceRole: member, To: member}, ErrOwnMembership},
+		{"a project admin, his own role, kept",
+			RoleChange{Caller: projectAdmin, Own: true, From: admin, WorkspaceRole: member, To: admin}, ErrOwnMembership},
+		{"a project admin changes another admin",
+			RoleChange{Caller: projectAdmin, Own: false, From: admin, WorkspaceRole: member, To: member}, ErrRoleTooHigh},
+		{"a project admin makes a member an admin",
+			RoleChange{Caller: projectAdmin, Own: false, From: member, WorkspaceRole: member, To: admin}, ErrRoleTooHigh},
+		{"a project admin makes a guest an admin",
+			RoleChange{Caller: projectAdmin, Own: false, From: guest, WorkspaceRole: member, To: admin}, ErrRoleTooHigh},
+		{"a project member keeps a guest a guest",
+			RoleChange{Caller: projectMember, Own: false, From: guest, WorkspaceRole: member, To: guest}, nil},
+		{"a project member makes a member a guest",
+			RoleChange{Caller: projectMember, Own: false, From: member, WorkspaceRole: member, To: guest}, ErrRoleTooHigh},
+		{"a project member makes a guest a member",
+			RoleChange{Caller: projectMember, Own: false, From: guest, WorkspaceRole: member, To: member}, ErrRoleTooHigh},
+		{"a project member, his own role",
+			RoleChange{Caller: projectMember, Own: true, From: member, WorkspaceRole: member, To: guest}, ErrOwnMembership},
+		{"a project role outside the three",
+			RoleChange{Caller: unknownProject, Own: false, From: guest, WorkspaceRole: member, To: guest}, ErrRoleTooHigh},
+		{"a project admin, from a role between the three",
+			RoleChange{Caller: projectAdmin, Own: false, From: 10, WorkspaceRole: member, To: guest}, ErrRoleTooHigh},
+		{"a project admin, to a role between the three",
+			RoleChange{Caller: projectAdmin, Own: false, From: guest, WorkspaceRole: member, To: 10}, ErrRoleTooHigh},
+		{"a workspace role outside the three is no workspace admin",
+			RoleChange{Caller: unknownWorkspace, Own: false, From: admin, WorkspaceRole: member, To: member}, ErrRoleTooHigh},
+		{"a workspace admin, his own role, to an admin's",
+			RoleChange{Caller: adminAsMember, Own: true, From: member, WorkspaceRole: admin, To: admin}, nil},
+		{"a workspace admin and project admin, his own role, to a guest's",
+			RoleChange{Caller: bothAdmin, Own: true, From: admin, WorkspaceRole: admin, To: guest}, nil},
+		{"a workspace admin makes the admin a member",
+			RoleChange{Caller: adminAsMember, Own: false, From: admin, WorkspaceRole: member, To: member}, nil},
+		{"a workspace admin makes a member an admin",
+			RoleChange{Caller: adminAsMember, Own: false, From: member, WorkspaceRole: member, To: admin}, nil},
+		{"a workspace admin who is a project guest changes an admin",
+			RoleChange{Caller: adminAsGuest, Own: false, From: admin, WorkspaceRole: member, To: guest}, nil},
+		{"a workspace admin makes another workspace admin a member",
+			RoleChange{Caller: bothAdmin, Own: false, From: admin, WorkspaceRole: admin, To: member}, nil},
+		{"a project admin makes a workspace guest a member",
+			RoleChange{Caller: projectAdmin, Own: false, From: guest, WorkspaceRole: guest, To: member}, guestOnly},
+		{"a project admin makes a workspace guest an admin",
+			RoleChange{Caller: projectAdmin, Own: false, From: guest, WorkspaceRole: guest, To: admin}, ErrRoleTooHigh},
+		{"a workspace admin makes a workspace guest a member",
+			RoleChange{Caller: adminAsMember, Own: false, From: guest, WorkspaceRole: guest, To: member}, guestOnly},
+		{"a workspace admin makes a workspace guest an admin",
+			RoleChange{Caller: bothAdmin, Own: false, From: guest, WorkspaceRole: guest, To: admin}, guestOnly},
+		{"a workspace admin keeps a workspace guest a guest",
+			RoleChange{Caller: bothAdmin, Own: false, From: guest, WorkspaceRole: guest, To: guest}, nil},
+		{"the cap fails closed for a member whose workspace role is outside the three, which no membership has",
+			RoleChange{Caller: bothAdmin, Own: false, From: guest, WorkspaceRole: 10, To: member}, guestOnly},
 	} {
 		if err := CheckRoleChange(tt.c); !sameProblem(err, tt.want) {
 			t.Errorf("%s: CheckRoleChange(%+v) = %v, want %v", tt.name, tt.c, err, tt.want)
