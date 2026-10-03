@@ -96,13 +96,13 @@ func TestAnArchivedProjectIsJoinedAsAnyOther(t *testing.T) {
 // new membership as a member, by him at the time of his request, his
 // display settings at 65535, the joiners' place, not before his other
 // projects as an add or a creation puts it (3.18). Joining again, an active
-// member, he is left as he is: nothing is written. Then, each time, his
-// membership is ended with a role, as P5b's removal of a project member
-// will end it (SQL stands in), and he joins again, or alice adds him with a
-// role: the same row is active again with the role of 9.1's row, by the
-// caller at the time of that request, still made when it was. alice's adds
-// take the role she asks for, below the ended one and above it. His
-// workspace role is changed through the API before the last row.
+// member, he is left as he is: nothing is written. Then, each time, alice
+// changes his role and removes him, which ends his membership with that
+// role, and he joins again, or alice adds him with a role: the same row is
+// active again with the role of 9.1's row, by the caller at the time of
+// that request, still made when it was. alice's adds take the role she
+// asks for, below the ended one and above it. His workspace role is
+// changed through the API before the last row.
 func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, ops := twoProjects(t)
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken
@@ -171,9 +171,12 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 		{"a guest before is added as a member", shared.RoleGuest, shared.RoleMember, shared.RoleMember, shared.RoleMember},
 		{"a member before, now a workspace admin, joins", shared.RoleMember, shared.RoleAdmin, 0, shared.RoleMember},
 	} {
-		if tag, err := pool.Exec(context.Background(), "UPDATE project_members SET role = $3, is_active = false WHERE project_id = $1 AND member_id = $2",
-			web, bobID, tt.was); err != nil || tag.RowsAffected() != 1 {
-			t.Fatalf("%s: ending bob's membership = %v, %v", tt.name, tag, err)
+		membership := base + "/api/v0/project-members/" + first.id.String()
+		if status, body := call(t, contract, http.MethodPatch, membership, alice, fmt.Sprintf(`{"role":%d}`, tt.was)); status != http.StatusOK {
+			t.Fatalf("%s: alice's making bob %d = %d %s", tt.name, tt.was, status, body)
+		}
+		if status, body := call(t, contract, http.MethodDelete, membership, alice, ""); status != http.StatusNoContent {
+			t.Fatalf("%s: alice's removing bob = %d %s", tt.name, status, body)
 		}
 		if tt.workspace != shared.RoleMember {
 			var id uuid.UUID
@@ -207,11 +210,11 @@ func TestARestoredMembershipGivesNoMoreThanItHad(t *testing.T) {
 // after every statement ran, leaves no row, which a statement run in a
 // transaction of its own would have outlived. bob, acme's member, is first
 // no member of alice's Web, then an ended one without display settings
-// there (P5b's removal of a project member ends it; SQL stands in): each
-// time, with the commits of memberships refused, then those of display
-// settings, which the growth writes last, alice's adding him and his
-// joining answer 500 and change no membership and no display settings.
-// Once commits are allowed again, he joins.
+// there, which no write leaves (a removal keeps them; SQL makes it), so
+// that the growth writes both: each time, with the commits of memberships
+// refused, then those of display settings, which the growth writes last,
+// alice's adding him and his joining answer 500 and change no membership
+// and no display settings. Once commits are allowed again, he joins.
 func TestAGrowthRefusedAtItsCommitLeavesNoRow(t *testing.T) {
 	contract, base, pool, alice, aliceID, web, _ := twoProjects(t)
 	bob := registerAccount(t, contract, base, "bob@example.com").AccessToken

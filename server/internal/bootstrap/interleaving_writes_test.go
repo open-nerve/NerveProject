@@ -153,14 +153,16 @@ func TestAProjectWriteAndADemotionSerialize(t *testing.T) {
 }
 
 // bobAdministersWeb is a growthRace in which bob, acme's member, has joined
-// Web and is its admin (SQL stands in for P5b's role change), and Ops is
-// another project of acme, of which alice is the admin.
+// Web and alice has made him its admin, through the project store's
+// statement (UpdateMemberRole), and Ops is another project of acme, of
+// which alice is the admin.
 func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 	t.Helper()
 	r = newGrowthRace(t, false)
 	r.join(t)
-	if _, err := r.pool.Exec(context.Background(), "UPDATE project_members SET role = 20 WHERE project_id = $1 AND member_id = $2", r.web,
-		r.bob); err != nil {
+	store := projectpg.New(r.pool)
+	if _, err := store.UpdateMemberRole(context.Background(), projectMemberships(t, r.pool, r.bob, r.web)[0], shared.RoleAdmin, r.alice,
+		time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	ops = uuid.NewV7()
@@ -168,7 +170,6 @@ func bobAdministersWeb(t *testing.T) (r growthRace, ops uuid.UUID) {
 	if err := r.pool.QueryRow(context.Background(), "SELECT workspace_id FROM projects WHERE id = $1", r.web).Scan(&acme); err != nil {
 		t.Fatal(err)
 	}
-	store := projectpg.New(r.pool)
 	if err := errors.Join(store.CreateProject(context.Background(), projectapp.ProjectRow{ID: ops, WorkspaceID: acme, Name: "Ops", Identifier: "OPS",
 		Network: projectdomain.NetworkPublic, Timezone: "UTC", CreatedBy: r.alice, Now: time.Now()}),
 		store.CreateMember(context.Background(), projectapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: ops, MemberID: r.alice,

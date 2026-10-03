@@ -249,8 +249,9 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // projects and project memberships of matrixProjects and
 // matrixProjectMembers, and acme's archived project archived. Through both
 // stores, the removed member's removal; then, through the workspace store,
-// the invitations of matrixInvitations. Through SQL, the states no store
-// writes yet (standIns, partingStates). Through the API, gone deleted by
+// the invitations of matrixInvitations. Through the project store, the
+// memberships P5b's writes end (endings); through SQL, the states no store
+// makes alone (partingStates). Through the API, gone deleted by
 // its admin, which soft-deletes its memberships and its project with it;
 // then the checks that the rows the cells rest on are there
 // (preconditions). Everything that connected to the database is closed
@@ -295,7 +296,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		for _, i := range matrixInvitations {
 			seed.invite(s.invitation(i.slug, i.email), i.slug, i.email, i.role)
 		}
-		projects.standIns(pool)
+		projects.endings()
 		projects.partingStates(pool)
 		// The column's caller deletes gone as deleteWorkspace does it: its
 		// memberships, invitations and project go with the workspace row, so

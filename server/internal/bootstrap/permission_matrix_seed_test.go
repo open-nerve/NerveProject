@@ -19,14 +19,13 @@ import (
 )
 
 // The writers of prepareMatrix's rows (permission_matrix_seeded_test.go):
-// the workspace store's and the project store's, the SQL that stands in
-// for the stores later phases add, and the checks that the rows the cells
-// rest on are there.
+// the workspace store's and the project store's, the SQL that makes the
+// states no store makes alone, and the checks that the rows the cells rest
+// on are there.
 
 // matrixSeed writes the prepared workspaces, memberships and settings
 // through the workspace store, and keeps the workspaces' ids by slug; exec
-// runs the SQL that stands in for the stores P5b adds, and makes the
-// states no store makes alone (partingStates).
+// runs the SQL that makes the states no store makes alone (partingStates).
 type matrixSeed struct {
 	t          *testing.T
 	store      *workspacepg.Store
@@ -139,22 +138,43 @@ func (s projectSeed) archive(key string) {
 	}
 }
 
+// endings ends, through the project store, the project memberships that
+// P5b's writes end, as their statement ends one (EndMember), at the seed's
+// moment: the member before's of the private project, removed by acme's
+// admin (removeProjectMember), and WG-'s of the public one, which he left
+// (leaveProject).
+func (s projectSeed) endings() {
+	s.t.Helper()
+	for _, e := range []struct {
+		key   string
+		c, by caller
+	}{{"acme/private", callerBefore, matrixAdmins["acme"]}, {"acme/public", callerGuestOnly, callerGuestOnly}} {
+		if err := s.store.EndMember(context.Background(), s.projects[e.key], s.ids[e.c], s.ids[e.by], s.now); err != nil {
+			s.t.Fatal(err)
+		}
+	}
+}
+
 // partingStates puts memberships of matrixProjectMembers in the states in
-// which a list and reading could part (TestListingProjectsIsReadingEach):
-// WG-'s membership of acme's public project ended and of its private one
-// deleted, the member's of the private one deleted, and PM's display
-// settings in it deleted while his membership stays active. SQL stands in
-// for the store that will end one project membership (P5b), and makes the two
-// deleted states that only a deleted project or workspace makes today,
-// which the list must still read as reading does. Each state is then read
-// back: one missing would let a list that counts an ended or a deleted
+// which a list and reading could part (TestListingProjectsIsReadingEach),
+// beside WG-'s membership of acme's public project, which he left
+// (endings): his membership of its private one deleted, the member's
+// deleted too, and PM's display settings in it deleted while his membership
+// stays active. SQL makes these, which no store makes alone: the two
+// deleted states only a deleted project or workspace makes, which the list
+// must still read as reading does, and display settings gone from a live
+// membership; exec fails a statement that changes no row, and names it,
+// which it checks first. Each state is then read back, the ended one too:
+// one missing would let a list that counts an ended or a deleted
 // membership, or takes display settings for a membership, agree with
 // reading for every account.
 func (s projectSeed) partingStates(pool *pgxpool.Pool) {
 	s.t.Helper()
+	const none = "UPDATE project_members SET is_active = false WHERE false"
+	if failed, want := fatalOf(func(tb testing.TB) { s.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
+		s.t.Errorf("exec of a statement that changes no row: failed with %q, want %q", failed, want)
+	}
 	public, private := s.projects["acme/public"], s.projects["acme/private"]
-	s.exec(s.t, pool, "UPDATE project_members SET is_active = false, updated_at = $3 WHERE project_id = $1 AND member_id = $2",
-		public, s.ids[callerGuestOnly], s.now)
 	for _, c := range []caller{callerGuestOnly, callerMember} {
 		s.exec(s.t, pool, "UPDATE project_members SET deleted_at = $3 WHERE project_id = $1 AND member_id = $2", private, s.ids[c], s.now)
 	}
@@ -205,21 +225,6 @@ func (s projectSeed) removal(sd seeded) {
 	if err := s.store.EndMemberships(ctx, projects, removed, by, s.now); err != nil {
 		s.t.Fatal(err)
 	}
-}
-
-// standIns writes, through SQL, the states no store writes yet, until the
-// phase that adds the store replaces it: the member before's membership of
-// the private project ended (P5b, whose removal of a project member ends
-// one). exec fails a statement that changes no row, and names it, which it
-// checks first.
-func (s projectSeed) standIns(pool *pgxpool.Pool) {
-	s.t.Helper()
-	const none = "UPDATE project_members SET is_active = false WHERE false"
-	if failed, want := fatalOf(func(tb testing.TB) { s.exec(tb, pool, none) }), none+" changed 0 rows, want 1"; failed != want {
-		s.t.Errorf("exec of a statement that changes no row: failed with %q, want %q", failed, want)
-	}
-	s.exec(s.t, pool, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2",
-		s.projects["acme/private"], s.ids[callerBefore])
 }
 
 // preconditions checks the seeded rows that a cell's answer rests on and

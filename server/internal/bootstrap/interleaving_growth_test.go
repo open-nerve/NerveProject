@@ -46,8 +46,8 @@ import (
 
 // growthRace is a database with acme, whose admin is alice and whose
 // member is bob, and alice's public project Web, of which bob has an ended
-// membership as a member when ended is set: P5b's removal of a project
-// member ends one, and SQL stands in for it.
+// membership as a member when ended is set: alice's removal of him ended
+// it, through the project store's statement (EndMember).
 type growthRace struct {
 	race
 	bob, bobIn, web uuid.UUID
@@ -95,9 +95,8 @@ func newGrowthRace(t *testing.T, ended bool) growthRace {
 		}
 	}
 	if ended {
-		if tag, err := r.pool.Exec(ctx, "UPDATE project_members SET is_active = false WHERE project_id = $1 AND member_id = $2", r.web, r.bob); err != nil ||
-			tag.RowsAffected() != 1 {
-			t.Fatalf("ending bob's membership of Web: %v, %v", tag, err)
+		if err := projects.EndMember(ctx, r.web, r.bob, r.alice, now); err != nil {
+			t.Fatalf("ending bob's membership of Web: %v", err)
 		}
 	}
 	return r

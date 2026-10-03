@@ -70,8 +70,9 @@ var matrixProjects = []struct {
 // each with its display settings: in acme's public and private projects,
 // the project level's members (projectColumns); the removed member in the
 // public one, whose membership of it his removal ends; the member before
-// in the private one, ended; WG- in both, and the member in the private
-// one, for partingStates to end or delete; the archived project's admin;
+// in the private one, whose removal from it ends his (endings); WG- in
+// both, who leaves the public one (endings), and the member in the
+// private one, for partingStates to delete; the archived project's admin;
 // each other workspace's admin in its project, and gone's member in gone's,
 // a member of the project the X columns' writes on a membership name there.
 var matrixProjectMembers = []struct {
