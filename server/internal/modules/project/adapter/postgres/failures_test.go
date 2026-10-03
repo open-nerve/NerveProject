@@ -23,10 +23,13 @@ import (
 // a demotion would take for nothing to do, nor "not the only admin", which
 // would let an ending end memberships rule 2 keeps, nor "no ended
 // membership", which reactivate-member would report as none of the
-// member's project memberships still ended. Each read runs on a cancelled
-// context against a project alice is the only admin of, beside bob, a
-// member, and has display settings in, bob's membership of another project
-// ended, so that the right answer is none of the zero values.
+// member's project memberships still ended, nor "no such membership", which
+// a write on it would answer as project.member_not_found, nor "no other
+// admin", which leaveProject would answer as project.sole_admin. Each read
+// runs on a cancelled context against a project alice is the only admin of,
+// beside bob, a member, and has display settings in, bob's membership of
+// another project ended, so that the right answer is none of the zero
+// values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -37,7 +40,7 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 		Role: shared.RoleAdmin, CreatedBy: alice, Now: now}); err != nil {
 		t.Fatal(err)
 	}
-	seedMember(t, pool, acme, web, bob, 15, true)
+	bobs := seedMember(t, pool, acme, web, bob, 15, true)
 	seedMember(t, pool, acme, newProject(t, s, acme, "Ops", "OPS", alice), bob, 15, false)
 	if err := s.CreatePreferences(ctx, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, UserID: alice,
 		SortOrder: 10, CreatedBy: alice, Now: now}); err != nil {
@@ -86,6 +89,12 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if n, err := s.CountInactive(cancelled, acme, bob); !failed(err) || n != 0 {
 		t.Errorf("CountInactive() = %d, %v; want context.Canceled, not a count", n, err)
 	}
+	if m, found, err := s.MemberByID(cancelled, bobs); !failed(err) || found || m != (app.ProjectMembership{}) {
+		t.Errorf("MemberByID() = %+v, %v, %v; want context.Canceled, not no membership", m, found, err)
+	}
+	if other, err := s.HasOtherAdmin(cancelled, web, bob); !failed(err) || other {
+		t.Errorf("HasOtherAdmin() = %v, %v; want context.Canceled, not an answer", other, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would
@@ -128,6 +137,12 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	}
 	if err := s.EndMemberships(cancelled, []uuid.UUID{web}, alice, alice, now); !failed(err) {
 		t.Errorf("EndMemberships() = %v; want context.Canceled", err)
+	}
+	if m, err := s.UpdateMemberRole(cancelled, uuid.NewV7(), shared.RoleMember, alice, now); !failed(err) || m != (domain.Member{}) {
+		t.Errorf("UpdateMemberRole() = %+v, %v; want context.Canceled", m, err)
+	}
+	if err := s.EndMember(cancelled, web, alice, alice, now); !failed(err) {
+		t.Errorf("EndMember() = %v; want context.Canceled", err)
 	}
 	if err := s.DemoteMemberships(cancelled, []uuid.UUID{web}, alice, alice, now); !failed(err) {
 		t.Errorf("DemoteMemberships() = %v; want context.Canceled", err)
