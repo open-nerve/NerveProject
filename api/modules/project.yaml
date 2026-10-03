@@ -382,12 +382,16 @@ paths:
         ended answers project.member_not_found. One who is not a workspace
         admin cannot change his own role (project.own_membership), nor the
         role of a member whose role is not below his own, nor give a role
-        that is not below his own (project.role_too_high): a project admin
-        who is not a workspace admin makes nobody an admin and changes no
-        admin's role. A workspace guest's role stays a guest's, whoever
-        changes it (validation_failed, role not_allowed). An archived
-        project's members have their roles changed as any other's. The role
-        is decided after the workspace and project rows are locked.
+        that is not below his own (project.role_too_high): through this
+        operation a project admin who is not a workspace admin makes nobody
+        an admin and changes no admin's role. The rule is this operation's
+        alone: addProjectMembers has none, so he can still add a workspace
+        member as an admin, or remove a member whose role is not above his
+        own and add him back with any role his workspace role allows. A
+        workspace guest's role stays a guest's, whoever changes it
+        (validation_failed, role not_allowed). An archived project's members
+        have their roles changed as any other's. The role is decided after
+        the workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [validation_failed, project.member_not_found, forbidden, project.own_membership, project.role_too_high]
       requestBody:

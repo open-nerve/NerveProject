@@ -44,7 +44,9 @@ type RoleChange struct {
 // neither his own role (ErrOwnMembership), nor the role of a member whose
 // role is not below his own, nor gives a role that is not below his own
 // (ErrRoleTooHigh): a project admin promotes nobody to admin and changes no
-// other admin. Then, for every caller, a workspace guest's role stays a
+// other admin by a change of role. The rule is the change's alone: adding
+// members has none (3.5, as in Plane), so it is no boundary on who becomes
+// an admin. Then, for every caller, a workspace guest's role stays a
 // guest's (422 role not_allowed). Below is roleOrder's, never the
 // numbers': a role outside the three has no role below it and is below
 // none.
