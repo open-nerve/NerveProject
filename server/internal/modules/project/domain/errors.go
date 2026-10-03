@@ -37,12 +37,16 @@ var (
 	ErrRoleTooHigh = shared.NewError(shared.KindForbidden, "project.role_too_high",
 		"The role is too high for you: unless you are a workspace admin, you change only a member whose project role is below yours, to a role "+
 			"below yours; and you remove only a member whose project role is not above yours.")
-	// ErrSoleAdmin answers an ending of an account's project memberships
-	// that would leave a project with other active members without an
-	// active admin: he is its only one (M3 design 3.7 rule 2). The
-	// workspace's removal and leaving declare it too (M3 design 5.1).
+	// ErrSoleAdmin answers the leaving of a project's only active admin,
+	// also when he is its only member (M3 design 3.7 rule 1), and an ending
+	// of an account's project memberships that would leave a project with
+	// other active members without an active admin: he is its only one
+	// (rule 2). The workspace's removal and leaving declare it too (M3
+	// design 5.1). Each who gets it can have the project given another
+	// admin, through a workspace admin if no one else, or delete it.
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
-		"Ending the membership would leave a project that has other members without an admin; make another of its members an admin first.")
+		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
+			"other active members. Give the project another admin first, or delete it.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member

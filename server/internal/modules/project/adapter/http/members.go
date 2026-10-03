@@ -52,6 +52,14 @@ func (h handler) RemoveProjectMember(ctx context.Context, req gen.RemoveProjectM
 	return gen.RemoveProjectMember204Response{}, nil
 }
 
+// LeaveProject serves POST /api/v0/projects/{project_id}/leave.
+func (h handler) LeaveProject(ctx context.Context, req gen.LeaveProjectRequestObject) (gen.LeaveProjectResponseObject, error) {
+	if err := h.uc.LeaveProject.Execute(ctx, req.ProjectID); err != nil {
+		return nil, err
+	}
+	return gen.LeaveProject204Response{}, nil
+}
+
 // members is list as the API shows it: data an array, never null.
 func members(list []domain.Member) gen.ProjectMemberList {
 	out := gen.ProjectMemberList{Data: make([]gen.ProjectMember, len(list))}

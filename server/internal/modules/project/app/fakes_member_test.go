@@ -116,6 +116,19 @@ func (f *fakeStore) EndMember(ctx context.Context, projectID, userID, by uuid.UU
 	return fmt.Errorf("EndMember: %s has no active membership of %s", userID, projectID)
 }
 
+func (f *fakeStore) HasOtherAdmin(ctx context.Context, projectID, userID uuid.UUID) (bool, error) {
+	f.log.add(ctx, "HasOtherAdmin %s but %s", projectID, userID)
+	if err := f.fail("HasOtherAdmin"); err != nil {
+		return false, err
+	}
+	for user, m := range f.projects[projectID].members {
+		if user != userID && m.Role == shared.RoleAdmin && m.Active {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // frank is a project admin in newMemberWrites; the memberships it adds,
 // by id, the same in every fixture.
 var (

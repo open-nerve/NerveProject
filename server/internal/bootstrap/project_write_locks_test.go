@@ -71,6 +71,9 @@ var projectWrites = []projectWrite{
 	// The joiners before, dave in Web and erin in Ops, removed.
 	{op: "removeProjectMember", method: http.MethodDelete, path: "/api/v0/project-members/%s", want: http.StatusNoContent,
 		member: [2]string{"dave", "erin"}},
+	// bob and carol, guests now, leave.
+	{op: "leaveProject", method: http.MethodPost, path: "/api/v0/projects/%s/leave", want: http.StatusNoContent, by: [2]string{"bob", "carol"},
+		member: [2]string{"bob", "carol"}},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }

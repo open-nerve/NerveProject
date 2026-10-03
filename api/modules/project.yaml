@@ -275,6 +275,31 @@ paths:
                 $ref: '#/components/schemas/Project'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/leave:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: leaveProject
+      tags: [project]
+      summary: Leave a project
+      description: >-
+        Every active member of the project leaves it himself. A project that
+        does not exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but is not a member of, forbidden.
+        Its only active admin is refused project.sole_admin, also when he is
+        its only member: the project gets another admin first, or is
+        deleted. A member who is a workspace admin but no admin of the
+        project leaves as any member. His membership ends, its row and its
+        role kept, at the moment of the request; his display settings in
+        the project stay. The role is decided after the workspace and
+        project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden, project.sole_admin]
+      responses:
+        '204':
+          description: The caller's membership has ended.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/projects/{project_id}/members:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

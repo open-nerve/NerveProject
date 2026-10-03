@@ -102,6 +102,9 @@ var rules = map[shared.Action]Rule{
 	// views/project/member.py:290); one's own membership and a higher
 	// role are the use case's (3.5).
 	"project_member.remove": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	// One's own membership: every active member of the project; the only
+	// admin's 409 is the use case's (M3 design 3.7 rule 1, 9.2).
+	"project.leave": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

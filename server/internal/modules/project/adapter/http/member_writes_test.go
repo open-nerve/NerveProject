@@ -142,3 +142,37 @@ func TestRemoveProjectMember(t *testing.T) {
 		}
 	}
 }
+
+// POST /projects/{project_id}/leave is the use case's 204, with no body, for
+// the caller and the project of the path; each refusal the contract
+// declares for it is its problem, a failure a 500.
+func TestLeaveProject(t *testing.T) {
+	leave := &fakeDelete{}
+	h := newServer(t, fakes{leave: leave})
+	path := "/api/v0/projects/" + webID.String() + "/leave"
+	if res, body := do(t, h, request(http.MethodPost, path, "alice", "")); res.StatusCode != http.StatusNoContent || body != "" {
+		t.Errorf("POST = %d %q, want 204 and no body", res.StatusCode, body)
+	}
+	if want := []string{"alice " + webID.String()}; !slices.Equal(leave.calls, want) {
+		t.Errorf("calls = %q, want %q", leave.calls, want)
+	}
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"no project", domain.ErrNotFound, http.StatusNotFound,
+			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
+		{"not its member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
+		{"its only admin", domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"project.sole_admin","title":"Conflict",` +
+			`"detail":"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while ` +
+			`it has other active members. Give the project another admin first, or delete it."}`},
+		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
+	} {
+		h := newServer(t, fakes{leave: &fakeDelete{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodPost, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: POST = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}

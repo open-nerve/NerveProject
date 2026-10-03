@@ -96,6 +96,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := uc.Execute(as(bob), aliceInWeb)
 			return f.log.calls, err
 		}, removed(bob, alice)},
+		{"leaveProject", func() ([]string, error) {
+			uc, f := newLeave()
+			err := uc.Execute(as(bob), webID)
+			return f.log.calls, err
+		}, left(bob, webID, true)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

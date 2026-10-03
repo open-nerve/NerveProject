@@ -41,6 +41,8 @@ const (
 	// ActionMemberRemove is removing a member from a project:
 	// removeProjectMember.
 	ActionMemberRemove shared.Action = "project_member.remove"
+	// ActionLeave is leaving a project: leaveProject.
+	ActionLeave shared.Action = "project.leave"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -49,5 +51,5 @@ const (
 func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
-		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove}
+		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave}
 }

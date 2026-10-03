@@ -10,16 +10,17 @@ import (
 )
 
 // The rows of the permission matrix of the writes on one project
-// membership (M3 design 9.2): changing a member's role, removing a member.
-// Each names the membership by its id
-// (/project-members/{project_member_id}), in its column's project;
-// prepareMatrix's preconditions hold each membership a row names to the
-// state the row says.
+// membership (M3 design 9.2): changing a member's role, removing a member,
+// each naming the membership by its id
+// (/project-members/{project_member_id}) in its column's project; and
+// leaving, one's own. prepareMatrix's preconditions hold each membership a
+// row names to the state the row says.
 
 var (
 	cellProjectMemberNotFound = cell{http.StatusNotFound, "project.member_not_found"}
 	cellProjectOwnMembership  = cell{http.StatusConflict, "project.own_membership"}
 	cellRoleTooHigh           = cell{http.StatusForbidden, "project.role_too_high"}
+	cellProjectSoleAdmin      = cell{http.StatusConflict, "project.sole_admin"}
 )
 
 // ofMembership are the cells of a row of a write on a project membership:
@@ -135,6 +136,11 @@ func membershipMatrixRows() []matrixRow {
 		{op: "removeProjectMember", variant: "an admin's membership", write: true, columns: projectColumns,
 			request: toProjectMembership(http.MethodDelete, "", adminOf),
 			cells:   ofMembership(cellProjectOwnMembership, cellForbidden, cellForbidden, cellRoleTooHigh, cellForbidden, cellForbidden)},
+		// Every active member of the project, his own (M3 design 9.2): PA,
+		// the only active admin of each project, is refused (3.7 rule 1);
+		// PM+WA, a member who is the workspace's admin, leaves as a member.
+		{op: "leaveProject", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/leave", ""),
+			cells: ofProject(cellProjectSoleAdmin, cellNoContent, cellNoContent, cellNoContent, cellForbidden, cellForbidden)},
 	}
 }
 
@@ -180,6 +186,13 @@ func (s projectSeed) memberships(sd seeded) {
 	if role, active, err := s.matrixSeed.store.ActiveRole(ctx, sd.workspace("acme"), s.ids[callerGuest]); err != nil || !active ||
 		role != shared.RoleGuest {
 		s.t.Fatalf("%s's role in acme = %d, %v, %v; want its active guest", callerGuest, role, active, err)
+	}
+	// PA is the only active admin of each project he is asked to leave,
+	// beside its other members, so that his 409 is 3.7 rule 1's.
+	for _, key := range []string{"acme/public", "acme/private"} {
+		if other, err := s.store.HasOtherAdmin(ctx, sd.project(key), s.ids[callerProjectAdmin]); err != nil || other {
+			s.t.Fatalf("another admin of %s than PA: %v, %v; want none", key, other, err)
+		}
 	}
 }
 

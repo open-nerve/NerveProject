@@ -394,6 +394,9 @@ type ServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// LeaveProject Leave a project
+	// (POST /api/v0/projects/{project_id}/leave)
+	LeaveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// ListProjectMembers List a project's members
 	// (GET /api/v0/projects/{project_id}/members)
 	ListProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -648,6 +651,32 @@ func (siw *ServerInterfaceWrapper) JoinProject(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.JoinProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LeaveProject operation middleware
+func (siw *ServerInterfaceWrapper) LeaveProject(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LeaveProject(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -967,6 +996,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/archive", wrapper.ArchiveProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/unarchive", wrapper.UnarchiveProject)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/join", wrapper.JoinProject)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/leave", wrapper.LeaveProject)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.ListProjectMembers)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
@@ -1392,6 +1422,46 @@ func (response JoinProjectdefaultApplicationProblemPlusJSONResponse) VisitJoinPr
 	return err
 }
 
+type LeaveProjectRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type LeaveProjectResponseObject interface {
+	VisitLeaveProjectResponse(w http.ResponseWriter) error
+}
+
+type LeaveProject204Response struct {
+}
+
+func (response LeaveProject204Response) VisitLeaveProjectResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LeaveProjectdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response LeaveProjectdefaultApplicationProblemPlusJSONResponse) VisitLeaveProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListProjectMembersRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 }
@@ -1701,6 +1771,9 @@ type StrictServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(ctx context.Context, request JoinProjectRequestObject) (JoinProjectResponseObject, error)
+	// LeaveProject Leave a project
+	// (POST /api/v0/projects/{project_id}/leave)
+	LeaveProject(ctx context.Context, request LeaveProjectRequestObject) (LeaveProjectResponseObject, error)
 	// ListProjectMembers List a project's members
 	// (GET /api/v0/projects/{project_id}/members)
 	ListProjectMembers(ctx context.Context, request ListProjectMembersRequestObject) (ListProjectMembersResponseObject, error)
@@ -2008,6 +2081,32 @@ func (sh *strictHandler) JoinProject(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(JoinProjectResponseObject); ok {
 		if err := validResponse.VisitJoinProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LeaveProject operation middleware
+func (sh *strictHandler) LeaveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request LeaveProjectRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LeaveProject(ctx, request.(LeaveProjectRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LeaveProject")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LeaveProjectResponseObject); ok {
+		if err := validResponse.VisitLeaveProjectResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

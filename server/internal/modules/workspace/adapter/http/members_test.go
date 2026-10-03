@@ -131,7 +131,8 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 	// The project module's ErrSoleAdmin, which this module does not import:
 	// its kind, code and detail.
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
-		"Ending the membership would leave a project that has other members without an admin; make another of its members an admin first.")
+		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
+			"other active members. Give the project another admin first, or delete it.")
 	tests := []struct {
 		err    error
 		status int
@@ -143,8 +144,9 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 		{domain.ErrOwnMembership, http.StatusConflict,
 			`{"status":409,"code":"workspace.own_membership","title":"Conflict","detail":"You cannot change your own membership."}`},
 		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
-			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"Ending the membership would leave a project that has ` +
-				`other members without an admin; make another of its members an admin first."}`},
+			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The project would be left without an admin: its only ` +
+				`active admin cannot leave it, nor can his membership end while it has other active members. Give the project another admin ` +
+				`first, or delete it."}`},
 		{errors.New("the database is gone"), http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	}
@@ -187,7 +189,8 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 	// The project module's ErrSoleAdmin, which this module does not import:
 	// its kind, code and detail.
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
-		"Ending the membership would leave a project that has other members without an admin; make another of its members an admin first.")
+		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
+			"other active members. Give the project another admin first, or delete it.")
 	tests := []struct {
 		err    error
 		status int
@@ -198,8 +201,9 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 		{domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"workspace.sole_admin","title":"Conflict",` +
 			`"detail":"The workspace would be left without an admin; make another member an admin first."}`},
 		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
-			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"Ending the membership would leave a project that has ` +
-				`other members without an admin; make another of its members an admin first."}`},
+			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The project would be left without an admin: its only ` +
+				`active admin cannot leave it, nor can his membership end while it has other active members. Give the project another admin ` +
+				`first, or delete it."}`},
 		{errors.New("the database is gone"), http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	}
