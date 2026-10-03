@@ -52,13 +52,14 @@ func written(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
 	return fmt.Sprintf("role %d, active %v, at %s by %s", role, active, at.UTC().Format(time.RFC3339Nano), by)
 }
 
-// madeByAnother makes every membership stored so far created by an account
-// that is none of their members, nor the writer of any write: seedMember
-// and seedDeleted write the member as the creator, so that a query reading
-// created_by_id where it means member_id would answer the same.
+// madeByAnother makes every membership stored so far created and last
+// written by an account that is none of their members, nor the writer of
+// any write of the tests: seedMember and seedDeleted write the member as
+// both, so that a query reading created_by_id or updated_by_id where it
+// means member_id would answer the same.
 func madeByAnother(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	exec(t, pool, "UPDATE project_members SET created_by_id = $1", newAccount(t, pool, "maker@corp.com"))
+	exec(t, pool, "UPDATE project_members SET created_by_id = $1, updated_by_id = $1", newAccount(t, pool, "maker@corp.com"))
 }
 
 // MemberByID reads the undeleted membership the id names, active or ended,
