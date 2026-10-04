@@ -13,7 +13,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	identitydomain "github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -275,33 +274,10 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 	}
 }
 
-// gatedDeactivation takes, after it revokes the sessions, the lock of acme
-// that P6's deactivation takes (M3 design 3.9: the account row, profiles,
-// auth_sessions, then each workspace FOR NO KEY UPDATE), and stops there
-// when it has a gate.
-type gatedDeactivation struct {
-	identityapp.SessionRevoker
-	pool *pgxpool.Pool
-	acme uuid.UUID
-	gate *gate // nil: never stops
-}
-
-func (d gatedDeactivation) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason identitydomain.RevokeReason, now time.Time) (int, error) {
-	revoked, err := d.SessionRevoker.RevokeSessions(ctx, userID, keep, reason, now)
-	if err == nil {
-		_, err = postgres.DB(ctx, d.pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", d.acme)
-	}
-	if err == nil && d.gate != nil {
-		err = d.gate.wait(ctx)
-	}
-	return revoked, err
-}
-
-// deactivateBob is `nerve users deactivate` of bob, over sessions.
-func (r answerRace) deactivateBob(ctx context.Context, sessions identityapp.SessionRevoker) error {
-	store := identitypg.New(r.pool)
-	_, err := identityapp.NewDeactivate(identityapp.DeactivateDeps{Accounts: store, Users: store, Profiles: store, Sessions: sessions, Tx: r.tx(),
-		Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler)}).ExecuteByEmail(ctx, "bob@example.com")
+// deactivateBob is `nerve users deactivate` of bob as bootstrap wires it
+// (deactivating), over memberships.
+func (r answerRace) deactivateBob(ctx context.Context, memberships workspaceapp.AllMembershipsEnder) error {
+	_, err := deactivating(r.pool, identitypg.New(r.pool), memberships).ExecuteByEmail(ctx, "bob@example.com")
 	return err
 }
 
@@ -318,13 +294,20 @@ func (d gatedDecliner) DeclineInvitation(ctx context.Context, id, by uuid.UUID, 
 	return d.Store.DeclineInvitation(ctx, id, by, now)
 }
 
-// Interleaving 19: bob is acme's member and has an invitation to it, as
-// after reactivate-member or a change of address. The decline first holds
-// his account row FOR SHARE, then acme's; the deactivation waits on the
-// account row, then goes on through acme. The deactivation first holds the
-// account row and acme's; the decline waits on the account row, then reads
-// it deactivated under its lock: 401, and the invitation stays pending.
-// Neither deadlocks: both lock the account row first (3.6 convention 1).
+// Interleaving 19 (M3 design 9.3, 3.6 convention 1): bob is acme's member
+// and has an invitation to it, as after reactivate-member or a change of
+// address; the deactivation is `nerve users deactivate` as bootstrap wires
+// it. The decline first holds his account row FOR SHARE, then acme's; the
+// deactivation waits on the account row, then goes on, and deletes the
+// invitation, declined by then. The deactivation first holds the account
+// row, acme's, the invitation, which it has deleted, and his membership,
+// which it has ended; the decline waits on the account row, then reads it
+// deactivated under its lock: 401, the invitation unanswered. Either way the
+// deactivation is the last to write the invitation and the membership, as
+// bob, at one moment, and nothing deadlocks: both lock the account row
+// first. When the decline comes first, it wrote the invitation last as bob
+// too: there the deactivation's write shows in the moment, the
+// invitation's updated_at its deleted_at, his membership's end.
 func TestDecliningAndDeactivating(t *testing.T) {
 	for _, declineFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the decline first", false: "the deactivation first"}[declineFirst]
@@ -334,14 +317,14 @@ func TestDecliningAndDeactivating(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
-			store, users := workspacepg.New(r.pool), identitypg.New(r.pool)
+			store := workspacepg.New(r.pool)
 			var declined, deactivated <-chan error
 			if declineFirst {
 				declined = run(func() error { return r.decline(ctx, gatedDecliner{store, g}) })
 				held(t, ctx, g, declined, "the decline")
-				deactivated = run(func() error { return r.deactivateBob(ctx, gatedDeactivation{users, r.pool, r.acme, nil}) })
+				deactivated = run(func() error { return r.deactivateBob(ctx, store) })
 			} else {
-				deactivated = run(func() error { return r.deactivateBob(ctx, gatedDeactivation{users, r.pool, r.acme, g}) })
+				deactivated = run(func() error { return r.deactivateBob(ctx, endedHoldingAll{store, g}) })
 				held(t, ctx, g, deactivated, "the deactivation")
 				declined = run(func() error { return r.decline(ctx, store) })
 			}
@@ -358,14 +341,19 @@ func TestDecliningAndDeactivating(t *testing.T) {
 			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
 				t.Errorf("the deactivation = %v, want it done", err)
 			}
-			var active bool
-			if err := r.pool.QueryRow(context.Background(), "SELECT is_active FROM users WHERE id = $1", r.bob).Scan(&active); err != nil {
+			var active, member, oneMoment, byBob bool
+			if err := r.pool.QueryRow(soon(t), `SELECT u.is_active, m.is_active,
+				m.updated_at = i.deleted_at AND i.updated_at = i.deleted_at, m.updated_by_id = u.id AND i.updated_by_id = u.id
+				FROM users u, workspace_members m, workspace_member_invites i
+				WHERE u.id = $1 AND m.workspace_id = $2 AND m.member_id = u.id AND i.id = $3`, r.bob, r.acme, r.invitation.id).
+				Scan(&active, &member, &oneMoment, &byBob); err != nil {
 				t.Fatal(err)
 			}
 			acc, responded, deleted := r.answered(t)
-			if active || acc || responded != declineFirst || deleted {
-				t.Errorf("bob active %v; the invitation accepted %v, answered %v, deleted %v; want deactivated, answered %v, undeleted",
-					active, acc, responded, deleted, declineFirst)
+			if active || member || acc || responded != declineFirst || !deleted || !oneMoment || !byBob {
+				t.Errorf("bob active %v, a member %v; the invitation accepted %v, answered %v, deleted %v; the two written at one moment %v, "+
+					"by bob %v; want deactivated, no member, answered %v, deleted with his membership's end, by him", active, member, acc,
+					responded, deleted, oneMoment, byBob, declineFirst)
 			}
 		})
 	}

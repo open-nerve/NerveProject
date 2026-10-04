@@ -23,13 +23,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// Creating a workspace against M2's deactivation of its admin's account, in
-// both orders, on a real database (M3 design 3.6 convention 6; the
-// interleaving 8 of 9.3 without the membership's end, which the
-// deactivation adds with its port). Each side runs its real use case; a
-// gate inside its transaction, after its lock of the account row, holds the
-// transaction open, and pgtest.WaitForLockWait proves that the other side
-// waits on that row before the gate opens. Every wait has a deadline.
+// Interleaving 8 of M3 design 9.3: creating a workspace against the
+// deactivation of its admin's account, in both orders, on a real database
+// (3.6 convention 6), through the API's creation and the command line's
+// (`nerve workspaces create`), against `nerve users deactivate` as
+// bootstrap wires it, its memberships' step included. Each side runs its
+// real use case; a gate inside its transaction, after its lock of the
+// account row, holds the transaction open, and pgtest.WaitForLockWaitOn
+// proves that the other side waits on that row before the gate opens. Every
+// wait has a deadline.
 
 // gate holds a transaction open: the first call of wait signals held and
 // waits until open is closed, the caller's context ends, or 10 seconds
@@ -61,8 +63,8 @@ func (g *gate) wait(ctx context.Context) error {
 }
 
 // gatedSessions stops a use case before it revokes the sessions, holding
-// the account row: a deactivation at its last write, a change of address
-// after its write.
+// the account row: a deactivation before its memberships' step, a change of
+// address after its write.
 type gatedSessions struct {
 	identityapp.SessionRevoker
 	gate *gate
@@ -112,15 +114,6 @@ func newRace(t *testing.T) race {
 	return r
 }
 
-// deactivation is M2's `nerve users deactivate` over sessions.
-func (r race) deactivation(sessions identityapp.SessionRevoker) *identityapp.Deactivate {
-	store := identitypg.New(r.pool)
-	return identityapp.NewDeactivate(identityapp.DeactivateDeps{
-		Accounts: store, Users: store, Profiles: store, Sessions: sessions,
-		Tx: postgres.NewTxManager(r.pool, 2*time.Second), Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler),
-	})
-}
-
 // creation is createWorkspace over workspaces, with identity's Accounts as
 // bootstrap wires it.
 func (r race) creation(workspaces workspaceapp.WorkspaceCreator) *workspaceapp.CreateWorkspace {
@@ -134,16 +127,35 @@ func (r race) creation(workspaces workspaceapp.WorkspaceCreator) *workspaceapp.C
 	})
 }
 
-// state is whether alice's account is active, and how many workspaces and
-// memberships there are.
-func (r race) state(t *testing.T) (active bool, workspaces, members int) {
+// creating is one entry of the creation of acme by alice, and what it
+// answers when it finds her account deactivated under its lock.
+type creating struct {
+	name        string
+	create      func(ctx context.Context, uc *workspaceapp.CreateWorkspace, alice uuid.UUID) error
+	deactivated error
+}
+
+var creatings = []creating{
+	{"createWorkspace", func(ctx context.Context, uc *workspaceapp.CreateWorkspace, alice uuid.UUID) error {
+		_, err := uc.Execute(shared.WithActor(ctx, shared.Actor{UserID: alice}), domain.NewWorkspace{Name: "Acme", Slug: "acme"})
+		return err
+	}, shared.Unauthenticated()},
+	{"nerve workspaces create", func(ctx context.Context, uc *workspaceapp.CreateWorkspace, _ uuid.UUID) error {
+		_, err := uc.ExecuteForAdmin(ctx, "alice@example.com", domain.NewWorkspace{Name: "Acme", Slug: "acme"})
+		return err
+	}, domain.ErrAccountDeactivated},
+}
+
+// state is whether alice's account is active, how many workspaces there
+// are and how many memberships, and how many of those are active.
+func (r race) state(t *testing.T) (active bool, workspaces, members, activeMembers int) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(),
-		"SELECT is_active, (SELECT count(*) FROM workspaces), (SELECT count(*) FROM workspace_members) FROM users WHERE id = $1", r.alice).
-		Scan(&active, &workspaces, &members); err != nil {
+	if err := r.pool.QueryRow(soon(t), `SELECT is_active, (SELECT count(*) FROM workspaces), (SELECT count(*) FROM workspace_members),
+		(SELECT count(*) FROM workspace_members WHERE is_active) FROM users WHERE id = $1`, r.alice).
+		Scan(&active, &workspaces, &members, &activeMembers); err != nil {
 		t.Fatal(err)
 	}
-	return active, workspaces, members
+	return active, workspaces, members, activeMembers
 }
 
 // run starts fn and returns the channel of its result.
@@ -176,69 +188,74 @@ func result(t *testing.T, ctx context.Context, done <-chan error, what string) e
 }
 
 // Deactivation first: it holds the account row; the creation waits on its
-// FOR SHARE, then reads the account deactivated under the lock and answers
-// 401. No workspace.
+// FOR SHARE, then reads the account deactivated under the lock and is
+// refused: the API's 401, the command's workspace.account_deactivated. No
+// workspace.
 func TestDeactivationFirstRefusesTheWorkspace(t *testing.T) {
-	r := newRace(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	g := newGate()
-	deactivated := run(func() error {
-		_, err := r.deactivation(gatedSessions{identitypg.New(r.pool), g}).ExecuteByEmail(ctx, "alice@example.com")
-		return err
-	})
-	held(t, ctx, g, deactivated, "the deactivation")
-	created := run(func() error {
-		_, err := r.creation(workspacepg.New(r.pool)).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}),
-			domain.NewWorkspace{Name: "Acme", Slug: "acme"})
-		return err
-	})
-	pgtest.WaitForLockWait(t, r.pool, 5*time.Second)
-	close(g.open)
+	for _, c := range creatings {
+		t.Run(c.name, func(t *testing.T) {
+			r := newRace(t)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			g := newGate()
+			deactivated := run(func() error {
+				_, err := deactivating(r.pool, gatedSessions{identitypg.New(r.pool), g}, workspacepg.New(r.pool)).
+					ExecuteByEmail(ctx, "alice@example.com")
+				return err
+			})
+			held(t, ctx, g, deactivated, "the deactivation")
+			created := run(func() error { return c.create(ctx, r.creation(workspacepg.New(r.pool)), r.alice) })
+			pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
+			close(g.open)
 
-	if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
-		t.Fatalf("the deactivation: %v", err)
-	}
-	if err := result(t, ctx, created, "the creation"); !errors.Is(err, shared.Unauthenticated()) {
-		t.Errorf("the creation = %v, want 401 unauthorized", err)
-	}
-	if active, workspaces, members := r.state(t); active || workspaces != 0 || members != 0 {
-		t.Errorf("alice active %v, %d workspaces, %d memberships; want deactivated and none", active, workspaces, members)
+			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
+				t.Fatalf("the deactivation: %v", err)
+			}
+			if err := result(t, ctx, created, "the creation"); !errors.Is(err, c.deactivated) {
+				t.Errorf("the creation = %v, want %v", err, c.deactivated)
+			}
+			if active, workspaces, members, _ := r.state(t); active || workspaces != 0 || members != 0 {
+				t.Errorf("alice active %v, %d workspaces, %d memberships; want deactivated and none", active, workspaces, members)
+			}
+		})
 	}
 }
 
 // Creation first: it holds the account row FOR SHARE; the deactivation
 // waits on its FOR NO KEY UPDATE until the workspace is committed, then
-// deactivates the account. Both succeed.
+// deactivates the account and ends its membership of the new workspace,
+// whose only member, and so admin, it is (3.7 rule 2 allows it). Both
+// succeed.
 func TestCreationFirstHoldsOffTheDeactivation(t *testing.T) {
-	r := newRace(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	g := newGate()
-	created := run(func() error {
-		_, err := r.creation(gatedWorkspaces{workspacepg.New(r.pool), g}).Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}),
-			domain.NewWorkspace{Name: "Acme", Slug: "acme"})
-		return err
-	})
-	held(t, ctx, g, created, "the creation")
-	deactivated := run(func() error {
-		_, err := r.deactivation(identitypg.New(r.pool)).ExecuteByEmail(ctx, "alice@example.com")
-		return err
-	})
-	pgtest.WaitForLockWait(t, r.pool, 5*time.Second)
-	if active, workspaces, members := r.state(t); !active || workspaces != 0 || members != 0 {
-		t.Errorf("while the creation holds the row: alice active %v, %d workspaces, %d memberships; want active and none committed",
-			active, workspaces, members)
-	}
-	close(g.open)
+	for _, c := range creatings {
+		t.Run(c.name, func(t *testing.T) {
+			r := newRace(t)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			g := newGate()
+			created := run(func() error { return c.create(ctx, r.creation(gatedWorkspaces{workspacepg.New(r.pool), g}), r.alice) })
+			held(t, ctx, g, created, "the creation")
+			deactivated := run(func() error {
+				_, err := deactivating(r.pool, identitypg.New(r.pool), workspacepg.New(r.pool)).ExecuteByEmail(ctx, "alice@example.com")
+				return err
+			})
+			pgtest.WaitForLockWaitOn(t, r.pool, "users", 5*time.Second)
+			if active, workspaces, members, _ := r.state(t); !active || workspaces != 0 || members != 0 {
+				t.Errorf("while the creation holds the row: alice active %v, %d workspaces, %d memberships; want active and none committed",
+					active, workspaces, members)
+			}
+			close(g.open)
 
-	if err := result(t, ctx, created, "the creation"); err != nil {
-		t.Errorf("the creation = %v, want it done", err)
-	}
-	if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
-		t.Errorf("the deactivation = %v, want it done", err)
-	}
-	if active, workspaces, members := r.state(t); active || workspaces != 1 || members != 1 {
-		t.Errorf("alice active %v, %d workspaces, %d memberships; want deactivated after one workspace and its admin", active, workspaces, members)
+			if err := result(t, ctx, created, "the creation"); err != nil {
+				t.Errorf("the creation = %v, want it done", err)
+			}
+			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
+				t.Errorf("the deactivation = %v, want it done", err)
+			}
+			if active, workspaces, members, activeMembers := r.state(t); active || workspaces != 1 || members != 1 || activeMembers != 0 {
+				t.Errorf("alice active %v, %d workspaces, %d memberships, %d active; want deactivated after one workspace and its admin, "+
+					"her membership ended", active, workspaces, members, activeMembers)
+			}
+		})
 	}
 }

@@ -175,7 +175,7 @@ func (q *Queries) LockAccountByEmail(ctx context.Context, email string) (uuid.UU
 }
 
 const lockUserForCredentials = `-- name: LockUserForCredentials :one
-SELECT password, is_active
+SELECT password, is_active, email
 FROM users
 WHERE id = $1
 FOR NO KEY UPDATE
@@ -184,16 +184,18 @@ FOR NO KEY UPDATE
 type LockUserForCredentialsRow struct {
 	Password string
 	IsActive bool
+	Email    string
 }
 
 // The account row lock of M2 design 3.5. FOR NO KEY UPDATE conflicts with itself and with
 // FOR UPDATE, so the credential transactions of one account run one after another; it does not
 // conflict with the FOR KEY SHARE that foreign-key checks take, so inserting rows that reference
-// the account does not wait.
+// the account does not wait. The address is the one under the lock: the deactivation deletes the
+// invitations to it (M3 design 3.9), and a change of address commits before the lock or after it.
 func (q *Queries) LockUserForCredentials(ctx context.Context, id uuid.UUID) (LockUserForCredentialsRow, error) {
 	row := q.db.QueryRow(ctx, lockUserForCredentials, id)
 	var i LockUserForCredentialsRow
-	err := row.Scan(&i.Password, &i.IsActive)
+	err := row.Scan(&i.Password, &i.IsActive, &i.Email)
 	return i, err
 }
 

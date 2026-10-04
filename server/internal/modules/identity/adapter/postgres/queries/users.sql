@@ -25,8 +25,9 @@ WHERE id = sqlc.arg(id);
 -- The account row lock of M2 design 3.5. FOR NO KEY UPDATE conflicts with itself and with
 -- FOR UPDATE, so the credential transactions of one account run one after another; it does not
 -- conflict with the FOR KEY SHARE that foreign-key checks take, so inserting rows that reference
--- the account does not wait.
-SELECT password, is_active
+-- the account does not wait. The address is the one under the lock: the deactivation deletes the
+-- invitations to it (M3 design 3.9), and a change of address commits before the lock or after it.
+SELECT password, is_active, email
 FROM users
 WHERE id = sqlc.arg(id)
 FOR NO KEY UPDATE;

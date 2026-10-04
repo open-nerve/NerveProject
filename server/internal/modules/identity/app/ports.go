@@ -91,10 +91,12 @@ type PasswordAccountReader interface {
 	PasswordAccount(ctx context.Context, id uuid.UUID) (PasswordAccount, error)
 }
 
-// LockedAccount is an account's row under the credential lock.
+// LockedAccount is an account's row under the credential lock: its address
+// too, as committed before the lock (M3 design 3.9).
 type LockedAccount struct {
 	PasswordHash string
 	Active       bool
+	Email        string
 }
 
 // CredentialLocker takes the account row lock that every transaction
@@ -133,6 +135,18 @@ type UserActivator interface {
 type UserDeactivator interface {
 	// DeactivateUser sets account id inactive at now.
 	DeactivateUser(ctx context.Context, id uuid.UUID, now time.Time) error
+}
+
+// MembershipDeactivator ends a deactivated account's memberships (M3 design
+// 3.9): the workspace module implements it, and bootstrap wires it.
+type MembershipDeactivator interface {
+	// DeactivateMemberships ends every workspace and project membership of
+	// account userID and deletes every invitation to email, its address as
+	// read under its row's lock, in the transaction ctx carries, which
+	// holds that lock. Its refusal, workspace.sole_admin or
+	// project.sole_admin, or its failure comes back as itself, and the
+	// whole deactivation rolls back.
+	DeactivateMemberships(ctx context.Context, userID uuid.UUID, email string) error
 }
 
 // OnboardingResetter starts an account's onboarding over.

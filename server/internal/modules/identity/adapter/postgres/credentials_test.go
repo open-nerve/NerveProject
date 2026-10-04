@@ -102,8 +102,11 @@ func TestRevokeSessions(t *testing.T) {
 	}
 }
 
+// LockForCredentials reads the account's row under its lock: its hash,
+// its state and its address, alice's, not bob's, stored before hers.
 func TestLockForCredentialsReadsTheRow(t *testing.T) {
 	s, pool := newStore(t)
+	mustCreate(t, s, newUser("bob@corp.com"))
 	u := newUser("alice@corp.com")
 	mustCreate(t, s, u)
 	tx := postgres.NewTxManager(pool, 2*time.Second)
@@ -117,7 +120,7 @@ func TestLockForCredentialsReadsTheRow(t *testing.T) {
 		return err
 	})
 
-	if want := (app.LockedAccount{PasswordHash: u.PasswordHash, Active: true}); err != nil || got != want {
+	if want := (app.LockedAccount{PasswordHash: u.PasswordHash, Active: true, Email: "alice@corp.com"}); err != nil || got != want {
 		t.Errorf("LockForCredentials() = %+v, %v; want %+v", got, err, want)
 	}
 	if !errors.Is(unknown, app.ErrNotFound) {
