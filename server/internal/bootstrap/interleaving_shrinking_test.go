@@ -67,14 +67,16 @@ func refusedAsEnded(rec *httptest.ResponseRecorder, field string) bool {
 // account. Once the growth has committed, the deactivation, which finds
 // his projects when its step over them runs, after its end of his
 // membership of acme, finds Web and ends his membership of it, as his, at
-// a moment read once it held acme: after the gate opened (3.3); both
-// endings are his. The
-// deactivation first: it holds acme FOR NO KEY UPDATE and his membership's
-// row after its end; the growth waits for acme's row, then reads his
-// membership ended: alice's adding is 422 at members[0].member_id, his
-// joining 404; his membership of acme is ended as his, and an ended
-// membership of Web stays as alice's removal left it. In either order no
-// transaction holds Web while the second side waits.
+// the moment it ends his membership of acme, read once it held acme: after
+// the gate opened (3.3). The growth reads its time under its locks, after
+// the gate opened too, so it is that one moment of both rows, not the
+// gate, that tells the deactivation's write of Web from the growth's;
+// both endings are his. The deactivation first: it holds acme FOR NO KEY
+// UPDATE and his membership's row after its end; the growth waits for
+// acme's row, then reads his membership ended: alice's adding is 422 at
+// members[0].member_id, his joining 404; his membership of acme is ended
+// as his, and an ended membership of Web stays as alice's removal left it.
+// In either order no transaction holds Web while the second side waits.
 func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, add := range []bool{true, false} {
@@ -131,9 +133,14 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 							"deactivation done, the growth %s, bob %s, %s", deactivation, rec.Code, rec.Body, got, by, map[bool]string{true: "done",
 							false: "refused"}[growthFirst], want, enders)
 					}
-					if made, written := r.membershipTimes(t); growthFirst && (written.Before(made) || written.Before(opened)) {
-						t.Errorf("bob's membership of Web made at %v, ended at %v, the gate opened at %v; want it ended by the deactivation, at "+
-							"a moment read once it held acme", made, written, opened)
+					if growthFirst {
+						made, written := r.membershipTimes(t)
+						acme, web := r.lastWritten(t, "Web")
+						if written.Before(made) || written.Before(opened) || web != acme {
+							t.Errorf("bob's membership of Web made at %v, ended at %v, the gate opened at %v; written %s, his membership of "+
+								"acme %s; want Web's ended at the moment the deactivation ended acme's, read once it held acme", made, written,
+								opened, web, acme)
+						}
 					}
 				})
 			}
@@ -149,7 +156,8 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 // as his, with his membership of acme: alice, its creator, is its admin
 // too, so he is not its only one (3.7 rule 2). The deactivation first: the
 // creation waits for acme's row, then reads his membership ended, as his:
-// 422 at project_lead_id, and no Ops.
+// 422 at project_lead_id, and no project is named Ops, where the creation
+// first leaves one.
 func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, creationFirst := range []bool{true, false} {
@@ -195,6 +203,11 @@ func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 			}
 			if !creationFirst && !refusedAsEnded(rec, "project_lead_id") {
 				t.Errorf("the creation = %d %s, want 422 at project_lead_id", rec.Code, rec.Body)
+			}
+			var ops int
+			if err := r.pool.QueryRow(soon(t), "SELECT count(*) FROM projects WHERE name = 'Ops'").Scan(&ops); err != nil ||
+				ops != map[bool]int{true: 1, false: 0}[creationFirst] {
+				t.Errorf("%d projects named Ops (%v); want %d", ops, err, map[bool]int{true: 1, false: 0}[creationFirst])
 			}
 		})
 	}
