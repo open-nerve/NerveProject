@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
-	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -27,9 +26,7 @@ import (
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -157,12 +154,9 @@ func (r growthRace) join(t *testing.T) {
 }
 
 // demote is alice's change of bob's role in acme to guest, over members
-// and cascade, on the system's clock: its time is read when it reads it.
+// and cascade (changeRole).
 func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdater, cascade workspaceapp.ProjectCascade) error {
-	_, err := workspaceapp.NewUpdateWorkspaceMember(members, cascade, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
-		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), r.bobIn, shared.RoleGuest)
-	return err
+	return changeRole(ctx, r.pool, r.alice, r.bobIn, shared.RoleGuest, members, cascade)
 }
 
 // standing is bob's role in acme, "ended" when his membership is, then his

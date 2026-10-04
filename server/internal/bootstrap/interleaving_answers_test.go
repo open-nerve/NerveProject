@@ -38,7 +38,8 @@ import (
 
 // answerRace is a database with acme, whose admin is alice, and bob, who is
 // invited to acme at his address, each account with its profile;
-// invitation is the link of bob's invitation, as a member.
+// invitation is the link of bob's invitation, with the role
+// newAnswerRace is given.
 type answerRace struct {
 	pool       *pgxpool.Pool
 	alice, bob uuid.UUID
@@ -47,7 +48,7 @@ type answerRace struct {
 	mac        workspaceapp.InvitationMAC
 }
 
-func newAnswerRace(t *testing.T) answerRace {
+func newAnswerRace(t *testing.T, role shared.Role) answerRace {
 	t.Helper()
 	pool := openPool(t, pgtest.NewDatabase(t))
 	r := answerRace{pool: pool, alice: uuid.NewV7(), bob: uuid.NewV7(), acme: uuid.NewV7(), mac: testInvitationMAC(t)}
@@ -67,7 +68,7 @@ func newAnswerRace(t *testing.T) answerRace {
 	r.join(t, r.alice, shared.RoleAdmin)
 	id := uuid.NewV7()
 	if _, err := store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
-		{ID: id, WorkspaceID: r.acme, Email: "bob@example.com", Role: shared.RoleMember, CreatedBy: r.alice, Now: now},
+		{ID: id, WorkspaceID: r.acme, Email: "bob@example.com", Role: role, CreatedBy: r.alice, Now: now},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +175,7 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 	for _, acceptFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the acceptance first", false: "the deletion first"}[acceptFirst]
 		t.Run(name, func(t *testing.T) {
-			r := newAnswerRace(t)
+			r := newAnswerRace(t, shared.RoleMember)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
@@ -240,7 +241,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 	for _, acceptFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the acceptance first", false: "the change first"}[acceptFirst]
 		t.Run(name, func(t *testing.T) {
-			r := newAnswerRace(t)
+			r := newAnswerRace(t, shared.RoleMember)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
@@ -278,9 +279,9 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 }
 
 // deactivateBob is `nerve users deactivate` of bob as bootstrap wires it
-// (deactivating), over memberships.
-func (r answerRace) deactivateBob(ctx context.Context, memberships workspaceapp.AllMembershipsEnder) error {
-	_, err := deactivating(r.pool, identitypg.New(r.pool), memberships).ExecuteByEmail(ctx, "bob@example.com")
+// (deactivating), over sessions and memberships.
+func (r answerRace) deactivateBob(ctx context.Context, sessions identityapp.SessionRevoker, memberships workspaceapp.AllMembershipsEnder) error {
+	_, err := deactivating(r.pool, sessions, memberships).ExecuteByEmail(ctx, "bob@example.com")
 	return err
 }
 
@@ -315,7 +316,7 @@ func TestDecliningAndDeactivating(t *testing.T) {
 	for _, declineFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the decline first", false: "the deactivation first"}[declineFirst]
 		t.Run(name, func(t *testing.T) {
-			r := newAnswerRace(t)
+			r := newAnswerRace(t, shared.RoleMember)
 			r.join(t, r.bob, shared.RoleMember)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -325,9 +326,9 @@ func TestDecliningAndDeactivating(t *testing.T) {
 			if declineFirst {
 				declined = run(func() error { return r.decline(ctx, gatedDecliner{store, g}) })
 				held(t, ctx, g, declined, "the decline")
-				deactivated = run(func() error { return r.deactivateBob(ctx, store) })
+				deactivated = run(func() error { return r.deactivateBob(ctx, identitypg.New(r.pool), store) })
 			} else {
-				deactivated = run(func() error { return r.deactivateBob(ctx, endedHoldingAll{store, g}) })
+				deactivated = run(func() error { return r.deactivateBob(ctx, identitypg.New(r.pool), endedHoldingAll{store, g}) })
 				held(t, ctx, g, deactivated, "the deactivation")
 				declined = run(func() error { return r.decline(ctx, store) })
 			}
