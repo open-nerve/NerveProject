@@ -28,10 +28,11 @@ func seedMember(t *testing.T, pool *pgxpool.Pool, workspace, project, user uuid.
 
 // waits reports whether a statement of another transaction on project's
 // row, lock, waits for a lock held on it: NOWAIT answers lock_not_available
-// (55P03) at once instead of waiting.
+// (55P03) at once instead of waiting. Its wait for a connection of the pool
+// ends soon (pgtest.Soon).
 func waits(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, lock string) bool {
 	t.Helper()
-	_, err := pool.Exec(context.Background(), "SELECT 1 FROM projects WHERE id = $1 "+lock+" NOWAIT", project)
+	_, err := pool.Exec(pgtest.Soon(t), "SELECT 1 FROM projects WHERE id = $1 "+lock+" NOWAIT", project)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
 		return true
@@ -151,7 +152,7 @@ func TestLockMemberProjectsLocksInIDOrder(t *testing.T) {
 		exec(t, pool, "INSERT INTO projects (id, workspace_id, name, identifier) VALUES ($1, $2, $3::text, upper($3::text))", p.id, acme, p.name)
 		seedMember(t, pool, acme, p.id, bob, 15, true)
 	}
-	held, err := pool.Begin(context.Background())
+	held, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +199,7 @@ func TestLockMemberProjectsLeavesOutAProjectDeletedWhileItWaited(t *testing.T) {
 	for _, p := range []uuid.UUID{web, ops} {
 		seedMember(t, pool, acme, p, bob, 15, true)
 	}
-	deletion, err := pool.Begin(context.Background())
+	deletion, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}

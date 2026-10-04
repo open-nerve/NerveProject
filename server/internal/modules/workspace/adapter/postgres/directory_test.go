@@ -121,7 +121,7 @@ func TestShareMembersLocksTheRowsAskedFor(t *testing.T) {
 		{"bob's in beta", beta.ID, bob, false},
 	} {
 		var updated int64
-		err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+		err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 			tag, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE workspace_id = $1 AND member_id = $2",
 				tt.workspace, tt.user)
 			updated = tag.RowsAffected()
@@ -176,7 +176,7 @@ func TestShareMembersLocksInIDOrder(t *testing.T) {
 		{"dave's row (after carol's by id)", daves, false},
 	} {
 		var updated int64
-		err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+		err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 			tag, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE id = $1", tt.id)
 			updated = tag.RowsAffected()
 			return err
@@ -217,7 +217,7 @@ func TestShareMembersLockIsForShare(t *testing.T) {
 	})
 
 	var got map[uuid.UUID]shared.Role
-	err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+	err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 		var err error
 		got, err = d.ShareMembers(ctx, acme.ID, []uuid.UUID{alice, bob})
 		return err
@@ -227,7 +227,7 @@ func TestShareMembersLockIsForShare(t *testing.T) {
 		t.Errorf("ShareMembers() while another holds the rows = %v, %v; want %v without a wait", got, err, want)
 	}
 
-	err = withLockTimeout(tx, pool, func(ctx context.Context) error {
+	err = withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 		_, err := postgres.DB(ctx, pool).Exec(ctx, "UPDATE workspace_members SET role = role WHERE workspace_id = $1 AND member_id = $2",
 			acme.ID, bob)
 		return err
@@ -258,7 +258,7 @@ func TestTheDirectorysReadTakesNoLock(t *testing.T) {
 
 	var got app.DirectoryEntry
 	var found bool
-	err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+	err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 		var err error
 		got, found, err = d.WorkspaceBySlug(ctx, "acme")
 		return err

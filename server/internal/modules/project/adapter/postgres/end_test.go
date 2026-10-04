@@ -231,7 +231,7 @@ func TestLockActiveMemberProjectsLocksInIDOrder(t *testing.T) {
 			p.name)
 		seedMember(t, pool, p.workspace, p.id, bob, 15, true)
 	}
-	held, err := pool.Begin(context.Background())
+	held, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +279,7 @@ func TestLockActiveMemberProjectsLeavesOutAProjectDeletedWhileItWaited(t *testin
 	for _, p := range []uuid.UUID{web, ops} {
 		seedMember(t, pool, acme, p, bob, 15, true)
 	}
-	deletion, err := pool.Begin(context.Background())
+	deletion, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}

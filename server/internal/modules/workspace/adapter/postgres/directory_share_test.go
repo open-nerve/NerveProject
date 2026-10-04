@@ -120,7 +120,7 @@ func TestTheDirectorysLockIsForShare(t *testing.T) {
 					})
 
 					var got uuid.UUID
-					err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+					err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 						var err error
 						got, err = locks[tt.then].take(ctx, s, named{tt.slug, ids[tt.slug]})
 						return err

@@ -24,7 +24,7 @@ import (
 func waitsFor(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, mode string) bool {
 	t.Helper()
 	var locked int64
-	err := withLockTimeout(postgres.NewTxManager(pool, 2*time.Second), pool, func(ctx context.Context) error {
+	err := withLockTimeout(t, postgres.NewTxManager(pool, 2*time.Second), pool, func(ctx context.Context) error {
 		tag, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM "+table+" WHERE id = $1 "+mode, id)
 		locked = tag.RowsAffected()
 		return err
@@ -247,6 +247,8 @@ func TestSoleAdminOfAWorkspace(t *testing.T) {
 		{"a member, beside the only admin and another member", []uuid.UUID{workspace(false, member{bob, shared.RoleMember, true},
 			member{alice, shared.RoleAdmin, true}, member{carol, shared.RoleMember, true})}, false},
 		{"a member, beside another member and no admin", []uuid.UUID{workspace(false, member{bob, shared.RoleMember, true},
+			member{carol, shared.RoleMember, true})}, false},
+		{"a guest, beside another member and no admin", []uuid.UUID{workspace(false, member{bob, shared.RoleGuest, true},
 			member{carol, shared.RoleMember, true})}, false},
 		{"an admin whose membership ended", []uuid.UUID{workspace(false, member{bob, shared.RoleAdmin, false},
 			member{carol, shared.RoleMember, true})}, false},
