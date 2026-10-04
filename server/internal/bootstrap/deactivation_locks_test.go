@@ -239,8 +239,10 @@ func TestAnInterruptedDeactivationChangesNothing(t *testing.T) {
 // (M3 design 3.6 convention 2, 3.9): identity's, the Deactivator's and the
 // cascade's. The command's composition runs on a pool of one connection: a
 // statement sent through the pool rather than the transaction would wait
-// for a second connection until the command's context ends, after 5
-// seconds, and the command fail.
+// for a second connection. On the command's context it waits until that
+// context ends, after 5 seconds, and the command fails; on a context that
+// never ends it waits for good, and the test fails at its 10-second wait
+// for the command's end, that goroutine left until the test binary ends.
 func TestTheDeactivationRunsOnItsTransactionsConnection(t *testing.T) {
 	w := newDeactivationWorld(t)
 	w.clears(t, w.ops, w.lab)
