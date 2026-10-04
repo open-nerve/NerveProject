@@ -38,17 +38,18 @@ import (
 // deadline.
 
 // s1Race is answerRace with bob invited to acme as its admin, and Web,
-// acme's public project, of which alice is the admin; when former, bob has
-// a membership of acme, as a member, which alice's removal ended before she
-// invited him again (3.8).
+// acme's public project, of which alice is the admin; aliceIn and aliceWeb
+// are her memberships of acme and of Web. When former, bob has a membership
+// of acme, as a member, which alice's removal ended before she invited him
+// again (3.8).
 type s1Race struct {
 	answerRace
-	web, aliceIn uuid.UUID
+	web, aliceIn, aliceWeb uuid.UUID
 }
 
 func newS1Race(t *testing.T, former bool) s1Race {
 	t.Helper()
-	r := s1Race{answerRace: newAnswerRace(t, shared.RoleAdmin), web: uuid.NewV7()}
+	r := s1Race{answerRace: newAnswerRace(t, shared.RoleAdmin), web: uuid.NewV7(), aliceWeb: uuid.NewV7()}
 	ctx, before := soon(t), time.Now().Add(-time.Hour)
 	r.aliceIn = queryIDs(t, r.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", r.acme, r.alice)[0]
 	projects := projectpg.New(r.pool)
@@ -56,7 +57,7 @@ func newS1Race(t *testing.T, former bool) s1Race {
 		Network: projectdomain.NetworkPublic, Timezone: "UTC", CreatedBy: r.alice, Now: before}); err != nil {
 		t.Fatal(err)
 	}
-	if err := projects.CreateMember(ctx, projectapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: r.acme, ProjectID: r.web, MemberID: r.alice,
+	if err := projects.CreateMember(ctx, projectapp.MemberRow{ID: r.aliceWeb, WorkspaceID: r.acme, ProjectID: r.web, MemberID: r.alice,
 		Role: shared.RoleAdmin, CreatedBy: r.alice, Now: before}); err != nil {
 		t.Fatal(err)
 	}
@@ -74,24 +75,33 @@ func newS1Race(t *testing.T, former bool) s1Race {
 }
 
 // standing is bob's account, active or deactivated; each of his
-// memberships of acme, in the order they were made, and of Web, with its
-// role, and its ender when it has ended; the invitation, accepted or
-// unanswered, and who deleted it when it is deleted; and alice's role in
-// acme.
+// memberships of acme, in the order they were made, then of Web; the
+// invitation, accepted or unanswered, and who deleted it when it is
+// deleted; and alice's memberships of acme and of Web. A membership is its
+// place and its role, then "active", or "ended by" its ender when it has
+// ended.
 func (r s1Race) standing(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(soon(t), `SELECT concat_ws('; ', CASE WHEN u.is_active THEN 'bob active' ELSE 'bob deactivated' END,
-		(SELECT string_agg('acme ' || m.role || CASE WHEN m.is_active THEN ' active' ELSE ' ended by ' || split_part(e.email, '@', 1) END,
-			', ' ORDER BY m.created_at) FROM workspace_members m JOIN users e ON e.id = m.updated_by_id
-			WHERE m.workspace_id = $2 AND m.member_id = u.id),
-		(SELECT 'Web ' || m.role || CASE WHEN m.is_active THEN ' active' ELSE ' ended by ' || split_part(e.email, '@', 1) END
-			FROM project_members m JOIN users e ON e.id = m.updated_by_id WHERE m.project_id = $3 AND m.member_id = u.id),
-		(SELECT 'invitation ' || CASE WHEN i.accepted THEN 'accepted' ELSE 'unanswered' END ||
-			CASE WHEN i.deleted_at IS NULL THEN '' ELSE ' deleted by ' || split_part(e.email, '@', 1) END
-			FROM workspace_member_invites i LEFT JOIN users e ON e.id = i.updated_by_id WHERE i.id = $4),
-		(SELECT 'alice ' || m.role FROM workspace_members m WHERE m.id = $5))
-		FROM users u WHERE u.id = $1`, r.bob, r.acme, r.web, r.invitation.id, r.aliceIn).Scan(&s); err != nil {
+	if err := r.pool.QueryRow(soon(t), `WITH membership AS (
+			SELECT 1 AS ord, 'acme' AS place, m.id, m.member_id, m.created_at, m.role, m.is_active, m.updated_by_id
+			FROM workspace_members m WHERE m.workspace_id = $2
+			UNION ALL
+			SELECT 2, 'Web', m.id, m.member_id, m.created_at, m.role, m.is_active, m.updated_by_id
+			FROM project_members m WHERE m.project_id = $3),
+		state AS (
+			SELECT m.ord, m.id, m.member_id, m.created_at,
+				m.place || ' ' || m.role || CASE WHEN m.is_active THEN ' active' ELSE ' ended by ' || split_part(e.email, '@', 1) END AS text
+			FROM membership m JOIN users e ON e.id = m.updated_by_id)
+		SELECT concat_ws('; ', CASE WHEN u.is_active THEN 'bob active' ELSE 'bob deactivated' END,
+			(SELECT string_agg(s.text, ', ' ORDER BY s.created_at) FROM state s WHERE s.member_id = u.id AND s.ord = 1),
+			(SELECT string_agg(s.text, ', ' ORDER BY s.created_at) FROM state s WHERE s.member_id = u.id AND s.ord = 2),
+			(SELECT 'invitation ' || CASE WHEN i.accepted THEN 'accepted' ELSE 'unanswered' END ||
+				CASE WHEN i.deleted_at IS NULL THEN '' ELSE ' deleted by ' || split_part(e.email, '@', 1) END
+				FROM workspace_member_invites i LEFT JOIN users e ON e.id = i.updated_by_id WHERE i.id = $4),
+			(SELECT 'alice ' || string_agg(s.text, ', ' ORDER BY s.ord) FROM state s
+				WHERE (s.ord = 1 AND s.id = $5) OR (s.ord = 2 AND s.id = $6)))
+		FROM users u WHERE u.id = $1`, r.bob, r.acme, r.web, r.invitation.id, r.aliceIn, r.aliceWeb).Scan(&s); err != nil {
 		t.Fatal(err)
 	}
 	return s
@@ -125,17 +135,19 @@ func changeRole(ctx context.Context, pool *pgxpool.Pool, by, id uuid.UUID, role 
 //     an insertion does: (a) ends the restored row, his only one; (d) leaves
 //     it as alice's removal did.
 //
-// The probe sees the one wait on users that either order has.
+// In each, alice keeps her memberships of acme and of Web, active, as their
+// admin. The probe sees the one wait on users that either order has.
 func TestAcceptingAndDeactivating(t *testing.T) {
 	for _, tt := range []struct {
 		former, acceptFirst bool
 		accept              error
 		want                string
 	}{
-		{false, true, nil, "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice 20"},
-		{false, false, shared.Unauthenticated(), "bob deactivated; invitation unanswered deleted by bob; alice 20"},
-		{true, true, nil, "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice 20"},
-		{true, false, shared.Unauthenticated(), "bob deactivated; acme 15 ended by alice; invitation unanswered deleted by bob; alice 20"},
+		{false, true, nil, "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice acme 20 active, Web 20 active"},
+		{false, false, shared.Unauthenticated(), "bob deactivated; invitation unanswered deleted by bob; alice acme 20 active, Web 20 active"},
+		{true, true, nil, "bob deactivated; acme 20 ended by bob; invitation accepted deleted by bob; alice acme 20 active, Web 20 active"},
+		{true, false, shared.Unauthenticated(),
+			"bob deactivated; acme 15 ended by alice; invitation unanswered deleted by bob; alice acme 20 active, Web 20 active"},
 	} {
 		t.Run(fmt.Sprintf("former %v, the acceptance first %v", tt.former, tt.acceptFirst), func(t *testing.T) {
 			r := newS1Race(t, tt.former)
@@ -186,7 +198,7 @@ func TestAcceptingAndDeactivating(t *testing.T) {
 //     were then but alice's membership, which the change wrote;
 //   - (c) the deactivation finds his membership of Web, made after its lock
 //     of his account, and ends it with his membership of acme, as his;
-//     acme keeps alice, its admin.
+//     acme and Web keep alice, their admin, her memberships active.
 func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
@@ -199,7 +211,7 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			return run(func() error {
 				return changeRole(ctx, r.pool, r.bob, r.aliceIn, shared.RoleMember, gatedMembers{workspacepg.New(r.pool), g}, cascade)
 			})
-		}, workspacedomain.ErrSoleAdmin, "bob active; acme 20 active; invitation accepted deleted by bob; alice 15"},
+		}, workspacedomain.ErrSoleAdmin, "bob active; acme 20 active; invitation accepted deleted by bob; alice acme 15 active, Web 20 active"},
 		{"(c) he joins Web", func(r s1Race, t *testing.T, ctx context.Context, g *gate) <-chan error {
 			route := newProjectRoute(t, r.pool, authorizerOn(r.pool), gatedShares{workspace.Provide(r.pool).WorkspaceMembers, g})
 			return run(func() error {
@@ -208,7 +220,7 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 				}
 				return nil
 			})
-		}, nil, "bob deactivated; acme 20 ended by bob; Web 20 ended by bob; invitation accepted deleted by bob; alice 20"},
+		}, nil, "bob deactivated; acme 20 ended by bob; Web 20 ended by bob; invitation accepted deleted by bob; alice acme 20 active, Web 20 active"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := newS1Race(t, false)
