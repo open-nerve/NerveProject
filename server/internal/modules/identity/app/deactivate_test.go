@@ -124,10 +124,10 @@ var membershipsErrors = []error{
 
 // A failed write fails the deactivation, which is then not logged; so does
 // the memberships' refusal or failure, which comes back as itself, the
-// first problem in its chain the one it was, out of the one transaction,
-// after every write before it: the calls are the deactivation's up to the
-// failing one, which a failing fake does not log, or up to the
-// memberships' one call; none after it, none tried again.
+// first problem in its chain the one it was, out of the one transaction:
+// what its function returned, which it rolls back on. The calls are the
+// deactivation's up to the failing one, which a failing fake does not log,
+// or up to the memberships' one call; none after it, none tried again.
 func TestDeactivateWhenAWriteFails(t *testing.T) {
 	boom := errors.New("connection reset")
 	type failing struct {
@@ -158,6 +158,9 @@ func TestDeactivateWhenAWriteFails(t *testing.T) {
 			}
 			if first := firstProblem(err); first != firstProblem(tt.want) {
 				t.Errorf("Execute() = %v, answered as %v; want %v", err, first, firstProblem(tt.want))
+			}
+			if f.tx.returned != err {
+				t.Errorf("Execute() = %v, its transaction's function returned %v; want the same: the error it rolled back on", err, f.tx.returned)
 			}
 			if want := deactivateCalls("session " + sessionID.String())[:tt.calls]; !slices.Equal(f.log.calls, want) {
 				t.Errorf("calls %q, want %q: nothing after the failing step, none tried again", f.log.calls, want)
@@ -225,26 +228,28 @@ func TestDeactivateByEmailOfAnUnknownAccount(t *testing.T) {
 }
 
 // A failed write fails the administrator's deactivation too, which is then
-// not logged; so does the memberships' refusal or failure, as itself: the
-// command prints its detail. The calls are the command's up to the failing
-// one, none after it, none tried again.
+// not logged; so does the memberships' refusal or failure, as itself, out
+// of the one transaction, as Execute's: the command prints its detail. The
+// calls are the command's up to the failing one, none after it, none tried
+// again.
 func TestDeactivateByEmailWhenAWriteFails(t *testing.T) {
 	boom := errors.New("connection reset")
 	f := newAdminFixture()
 	f.store.revokeErr = boom
 
 	if _, err := f.deactivate(&fakeMemberships{log: f.log}).ExecuteByEmail(context.Background(), "alice@corp.com"); !errors.Is(err, boom) ||
-		f.logs.Len() != 0 || !slices.Equal(f.log.calls, deactivateByEmailCalls[:3]) {
-		t.Errorf("ExecuteByEmail() = %v, calls %q, logs %s; want %v after %q and nothing logged", err, f.log.calls, f.logs.String(), boom,
-			deactivateByEmailCalls[:3])
+		f.tx.returned != err || f.logs.Len() != 0 || !slices.Equal(f.log.calls, deactivateByEmailCalls[:3]) {
+		t.Errorf("ExecuteByEmail() = %v, its transaction's function returned %v, calls %q, logs %s; want %v, the same, after %q and "+
+			"nothing logged", err, f.tx.returned, f.log.calls, f.logs.String(), boom, deactivateByEmailCalls[:3])
 	}
 	for _, want := range membershipsErrors {
 		f := newAdminFixture()
 		_, err := f.deactivate(&fakeMemberships{log: f.log, err: want}).ExecuteByEmail(context.Background(), "alice@corp.com")
-		if !errors.Is(err, want) || firstProblem(err) != firstProblem(want) || f.logs.Len() != 0 ||
+		if !errors.Is(err, want) || firstProblem(err) != firstProblem(want) || f.tx.returned != err || f.logs.Len() != 0 ||
 			!slices.Equal(f.log.calls, deactivateByEmailCalls) {
-			t.Errorf("ExecuteByEmail() with the memberships failing = %v, calls %q, logs %s; want %v as itself after %q, and nothing logged",
-				err, f.log.calls, f.logs.String(), want, deactivateByEmailCalls)
+			t.Errorf("ExecuteByEmail() with the memberships failing = %v, its transaction's function returned %v, calls %q, logs %s; "+
+				"want %v as itself, the same, after %q, and nothing logged", err, f.tx.returned, f.log.calls, f.logs.String(), want,
+				deactivateByEmailCalls)
 		}
 	}
 }
