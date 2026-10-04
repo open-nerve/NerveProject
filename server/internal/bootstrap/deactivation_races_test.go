@@ -41,6 +41,23 @@ func (w deactivationWorld) endings(t *testing.T) string {
 	return got
 }
 
+// lastWrittenBy stamps every row endings reads as last written by name,
+// each other column kept, and checks there are want of them: so that each
+// "by" endings prints after an act is a write of that act, not the row's
+// earlier writer, bob's, alice's or carol's, which a write that kept the
+// writer would leave.
+func (w deactivationWorld) lastWrittenBy(t *testing.T, name string, want int64) {
+	t.Helper()
+	tag, err := w.pool.Exec(pgtest.Soon(t), `WITH m AS (UPDATE workspace_members SET updated_by_id = $2 WHERE member_id = $1 RETURNING 1),
+		p AS (UPDATE project_members SET updated_by_id = $2 WHERE member_id = $1 RETURNING 1),
+		i AS (UPDATE workspace_member_invites SET updated_by_id = $2
+			WHERE email IN ('bob@example.com', 'robert@example.com') AND NOT accepted RETURNING 1)
+		SELECT 1 FROM m UNION ALL SELECT 1 FROM p UNION ALL SELECT 1 FROM i`, w.ids["bob"], w.ids[name])
+	if err != nil || tag.RowsAffected() != want {
+		t.Fatalf("bob's memberships and invitations last written by %s: %v, %v; want %d rows", name, tag, err, want)
+	}
+}
+
 // bobsStanding is endings once alice has joined Ops and Lab, before any
 // ending.
 const bobsStanding = "Docs active; Lab active; Ops active; Solo active; Web active; acme active; beta active; " +
@@ -50,11 +67,15 @@ const bobsStanding = "Docs active; Lab active; Ops active; Solo active; Web acti
 // A deactivation that waits for a workspace's row reads, once it has it,
 // what alice's write committed meanwhile, and goes through; each row she
 // wrote stays hers (3.9; review spike 15). Once she has joined Ops and Lab,
-// her write, through the API, holds acme's row or beta's and waits for a
-// row another transaction holds FOR SHARE; bob's deactivation waits for
-// that workspace's row: neither writes a row of workspaces before then, so
-// only that lock's wait satisfies the probe. Then the holder lets go, her
-// write is done, and so is the deactivation.
+// and the test has stamped every row endings reads as last written by
+// dave, her write, through the API, holds acme's row or beta's and waits
+// for a row another transaction holds FOR SHARE; bob's deactivation waits
+// for that workspace's row. Only that wait satisfies the probe on
+// workspaces: her write waits on another table, and holds no tuple lock of
+// workspaces, which a statement keeps only while it waits (acme's deletion
+// updates acme's row before it waits, without waiting for it). Then the
+// holder lets go, her write is done, and so is the deactivation; each
+// ending is by the one of the two who wrote it.
 //   - acme deleted: its deletion holds acme FOR NO KEY UPDATE and waits for
 //     the invitation to bob's address in acme. The deactivation leaves acme
 //     out, as deleted while its lock waited, no 404 and no failure, and
@@ -98,6 +119,7 @@ func TestADeactivationFindsWhatChangedMeanwhile(t *testing.T) {
 				if got := w.endings(t); got != bobsStanding {
 					t.Fatalf("bob's memberships and invitations before: %s; want %s", got, bobsStanding)
 				}
+				w.lastWrittenBy(t, "dave", 2+5+3)
 				path, row := tt.write(w, t)
 				holder := holding(t, w.pool, "SELECT 1 FROM "+tt.waitsOn+" WHERE id = $1 FOR SHARE", row)
 				req := newRequest(t, http.MethodDelete, w.base+path, w.tokens["alice"], nil)
@@ -135,7 +157,8 @@ func TestADeactivationFindsWhatChangedMeanwhile(t *testing.T) {
 // holds his account row, its address written, at its gate, before it
 // revokes his sessions; the deactivation waits for that row, and the
 // change commits. alice has invited robert@example.com to acme and beta,
-// and joined Ops and Lab.
+// and joined Ops and Lab; the test has stamped every row endings reads as
+// last written by dave, so that "by robert" is the deactivation's write.
 //   - deactivateMe, with his personal access token, which the change
 //     leaves: it reads his new address under the lock and deletes the
 //     invitations to it; those to bob@example.com, an address no account
@@ -163,6 +186,7 @@ func TestADeactivationReadsTheAddressUnderItsLock(t *testing.T) {
 			for _, slug := range []string{"acme", "beta"} {
 				invite(t, w.contract, w.base, w.tokens["alice"], slug, "robert@example.com")
 			}
+			w.lastWrittenBy(t, "dave", 2+5+3+2)
 			w.tokens["bob"] = createPAT(t, w.contract, w.base, w.tokens["bob"]).Token
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
