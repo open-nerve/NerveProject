@@ -75,11 +75,13 @@ func newDeactivationWorld(t *testing.T) deactivationWorld {
 // preconditions checks the rows of deactivationWorld that decide what a
 // deactivation does, each read by what makes it the one it is: dave, an
 // admin of acme whose membership ended, and a member of gamma whose
-// membership ended; bob, a member of acme and beta's admin; Solo archived;
-// the invitation to gamma bob declined. Were one missing, a deactivation
-// that counted an ended admin as another, or an ended member as another,
-// wrote a role, left an archived project out, or deleted pending
-// invitations alone, would pass.
+// membership ended; bob, a member of acme and beta's admin, a member of
+// Docs and the admin of his four other projects; Solo archived; the
+// invitation to gamma bob declined. Docs is his only project membership as
+// a member: the one row where a project role written over as an admin's
+// shows. Were one missing, a deactivation that counted an ended admin as
+// another, or an ended member as another, wrote a role, left an archived
+// project out, or deleted pending invitations alone, would pass.
 func (w deactivationWorld) preconditions(t *testing.T) {
 	t.Helper()
 	var got string
@@ -87,12 +89,15 @@ func (w deactivationWorld) preconditions(t *testing.T) {
 		(SELECT string_agg(s.slug || ' ' || split_part(u.email, '@', 1) || ' ' || m.role || CASE WHEN m.is_active THEN '' ELSE ' ended' END, ', '
 			ORDER BY s.slug COLLATE "C", u.email COLLATE "C") FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
 			JOIN users u ON u.id = m.member_id WHERE u.email IN ('bob@example.com', 'dave@example.com')),
+		(SELECT string_agg(p.name || ' ' || m.role || CASE WHEN m.is_active THEN '' ELSE ' ended' END, ', ' ORDER BY p.name COLLATE "C")
+			FROM project_members m JOIN projects p ON p.id = m.project_id WHERE m.member_id = $3),
 		(SELECT 'Solo archived' FROM projects WHERE id = $1 AND archived_at IS NOT NULL),
 		(SELECT 'gamma declined' FROM workspace_member_invites WHERE id = $2 AND responded_at IS NOT NULL AND NOT accepted AND deleted_at IS NULL))`,
-		w.solo, w.bobsDeclined).Scan(&got); err != nil {
+		w.solo, w.bobsDeclined, w.ids["bob"]).Scan(&got); err != nil {
 		t.Fatal(err)
 	}
-	if want := "acme bob 15, acme dave 20 ended, beta bob 20, gamma dave 15 ended; Solo archived; gamma declined"; got != want {
+	if want := "acme bob 15, acme dave 20 ended, beta bob 20, gamma dave 15 ended; Docs 15, Lab 20, Ops 20, Solo 20, Web 20; Solo archived; " +
+		"gamma declined"; got != want {
 		t.Fatalf("the rows a deactivation decides on: %s; want %s", got, want)
 	}
 }
@@ -170,8 +175,9 @@ var (
 			var se *shared.Error
 			switch {
 			case run.err == nil:
-				if line := regexp.MustCompile("^deactivated " + name + "@example.com: revoked [0-9]+ sessions and ended its memberships; to " +
-					"bring it back, run nerve users activate, then nerve workspaces reactivate-member in each workspace\n$"); !line.MatchString(run.out) {
+				if line := regexp.MustCompile("^" + regexp.QuoteMeta("deactivated "+name+"@example.com: revoked ") + "[0-9]+" +
+					regexp.QuoteMeta(" sessions and ended its memberships; to bring it back, run nerve users activate, then nerve workspaces "+
+						"reactivate-member in each workspace\n") + "$"); !line.MatchString(run.out) {
 					t.Errorf("nerve users deactivate printed %q, want %s", run.out, line)
 				}
 				return ""
