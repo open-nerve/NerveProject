@@ -226,6 +226,15 @@ type AllMembershipsEnder interface {
 	// SoleAdmin reports whether userID is the only active admin of one of
 	// the workspaces that has another active member (M3 design 3.7 rule 2).
 	SoleAdmin(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID) (bool, error)
+	// LockInvitationsToDelete locks FOR NO KEY UPDATE in id order, until
+	// the transaction ends, every invitation that DeleteInvitationsTo(email)
+	// and DeleteInvitationsOfWorkspacesLeftEmpty(workspaceIDs, userID)
+	// would delete now: call it before either. The invitations to his
+	// address lie mostly in workspaces he does not lock, where another
+	// deactivation may hold them; every deactivation takes the invitation
+	// rows it finds here in id order, so that two do not wait for each
+	// other in a cycle over them (M3 design 3.6's global order, 3.9).
+	LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID, email string) error
 	// DeleteInvitationsTo soft-deletes every undeleted invitation to email,
 	// pending or declined, of every workspace, by the account by at now.
 	DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error

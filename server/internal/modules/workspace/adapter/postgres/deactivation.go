@@ -36,6 +36,18 @@ func (s *Store) SoleAdmin(ctx context.Context, workspaceIDs []uuid.UUID, userID 
 	return sole, nil
 }
 
+// LockInvitationsToDelete locks FOR NO KEY UPDATE in id order, until the
+// transaction ends, every invitation that DeleteInvitationsTo(email) and
+// DeleteInvitationsOfWorkspacesLeftEmpty(workspaceIDs, userID) would
+// delete now. One deleted while the lock waited is left out.
+func (s *Store) LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID, email string) error {
+	err := s.queries(ctx).LockInvitationsToDelete(ctx, gen.LockInvitationsToDeleteParams{Email: email, WorkspaceIds: workspaceIDs, MemberID: userID})
+	if err != nil {
+		return fmt.Errorf("lock the invitations to delete: %w", err)
+	}
+	return nil
+}
+
 // DeleteInvitationsTo soft-deletes every undeleted invitation to email,
 // pending or declined, of every workspace, by the account by at now.
 func (s *Store) DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error {

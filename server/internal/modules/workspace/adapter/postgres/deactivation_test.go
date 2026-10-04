@@ -17,15 +17,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// waitsFor reports whether the lock mode of the workspace id, taken in a
-// transaction of its own, waits for another transaction's lock: it ends
+// waitsFor reports whether the lock mode of the row id of table, taken in
+// a transaction of its own, waits for another transaction's lock: it ends
 // with lock_not_available under withLockTimeout's 300ms. A lock that does
 // not wait must find the row.
-func waitsFor(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, mode string) bool {
+func waitsFor(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, mode string) bool {
 	t.Helper()
 	var locked int64
 	err := withLockTimeout(postgres.NewTxManager(pool, 2*time.Second), pool, func(ctx context.Context) error {
-		tag, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 "+mode, id)
+		tag, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM "+table+" WHERE id = $1 "+mode, id)
 		locked = tag.RowsAffected()
 		return err
 	})
@@ -34,7 +34,7 @@ func waitsFor(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, mode string) bool 
 		return true
 	}
 	if err != nil || locked != 1 {
-		t.Fatalf("%s of %s: %d rows, %v; want its row", mode, id, locked, err)
+		t.Fatalf("%s of %s in %s: %d rows, %v; want its row", mode, id, table, locked, err)
 	}
 	return false
 }
@@ -72,7 +72,8 @@ func TestLockMemberWorkspaces(t *testing.T) {
 	}
 	for name, id := range ws {
 		held := name == "acme" || name == "gamma"
-		if share, keyShare := waitsFor(t, pool, id, "FOR SHARE"), waitsFor(t, pool, id, "FOR KEY SHARE"); share != held || keyShare {
+		if share, keyShare := waitsFor(t, pool, "workspaces", id, "FOR SHARE"), waitsFor(t, pool, "workspaces", id, "FOR KEY SHARE"); share != held ||
+			keyShare {
 			t.Errorf("%s while locked: a FOR SHARE waits %v, a FOR KEY SHARE waits %v; want %v, false", name, share, keyShare, held)
 		}
 	}
@@ -114,7 +115,7 @@ func TestLockMemberWorkspacesLocksInIDOrder(t *testing.T) {
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "workspaces", 10*time.Second)
 
-	if !waitsFor(t, pool, web, "FOR SHARE") {
+	if !waitsFor(t, pool, "workspaces", web, "FOR SHARE") {
 		t.Error("a FOR SHARE of web while LockMemberWorkspaces waits for alpha does not wait; want web locked first")
 	}
 	if err := release(); err != nil {

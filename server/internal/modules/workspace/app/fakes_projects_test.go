@@ -5,7 +5,16 @@ import (
 	"fmt"
 	"time"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
+
+// projectSoleAdmin is the project module's ErrSoleAdmin, which this module
+// does not import: its kind, code and detail, the cascade's refusal of the
+// only active admin of a project with other active members.
+var projectSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
+	"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
+		"other active members. It must first be given another admin, or be deleted.")
 
 // fakeProjects is the project module's cascade (app.ProjectCascade): it
 // logs each call with its arguments, and fails a method with the error set

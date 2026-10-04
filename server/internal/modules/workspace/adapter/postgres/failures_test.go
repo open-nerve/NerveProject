@@ -66,8 +66,9 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 }
 
 // A write that fails answers its error, never nil, which a use case would
-// take for done, and never a row. Each write runs on a cancelled context
-// against a workspace alice administers.
+// take for done, and never a row; so does a lock that answers nothing but
+// its error (LockInvitationsToDelete), nil being "locked". Each runs on a
+// cancelled context against a workspace alice administers.
 func TestAFailedWriteIsAnError(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -104,6 +105,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	}
 	if err := s.DeletePendingInvitations(cancelled, w.ID, "carol@corp.com", alice, now); !failed(err) {
 		t.Errorf("DeletePendingInvitations() = %v; want context.Canceled", err)
+	}
+	if err := s.LockInvitationsToDelete(cancelled, []uuid.UUID{w.ID}, bob.MemberID, "carol@corp.com"); !failed(err) {
+		t.Errorf("LockInvitationsToDelete() = %v; want context.Canceled, not locked", err)
 	}
 	if err := s.DeleteInvitationsTo(cancelled, "carol@corp.com", alice, now); !failed(err) {
 		t.Errorf("DeleteInvitationsTo() = %v; want context.Canceled", err)

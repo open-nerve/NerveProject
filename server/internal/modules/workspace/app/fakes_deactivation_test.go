@@ -48,6 +48,16 @@ func (f *fakeWorkspaces) SoleAdmin(ctx context.Context, workspaceIDs []uuid.UUID
 	}), nil
 }
 
+// LockInvitationsToDelete logs its call: the fake holds no invitation of
+// the deactivation's, and the deletes after it only log theirs.
+func (f *fakeWorkspaces) LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID, email string) error {
+	f.log.add(ctx, "LockInvitationsToDelete %v %s %s", workspaceIDs, userID, email)
+	if err := f.endErrs["LockInvitationsToDelete"]; err != nil {
+		return fmt.Errorf("lock the invitations to delete: %w", err)
+	}
+	return nil
+}
+
 func (f *fakeWorkspaces) DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error {
 	f.log.add(ctx, "DeleteInvitationsTo %s by %s at %s", email, by, now.Format(time.RFC3339Nano))
 	if err := f.endErrs["DeleteInvitationsTo"]; err != nil {

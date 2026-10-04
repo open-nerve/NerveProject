@@ -22,8 +22,8 @@ import (
 // projects' step, and a removal and a leaving for each step of the ending.
 // reactivate-member, which checks no permission, reads it after the
 // workspace's lock and the membership's read; the deactivation's
-// memberships, after every workspace's lock and the check of the only
-// admin.
+// memberships, after every workspace's lock, the check of the only admin
+// and the lock of the invitations it deletes.
 // The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
