@@ -91,7 +91,7 @@ func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid
 // as bootstrap wires them. It takes no test, so it runs on any goroutine.
 func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(w.pool).PublicProfiles},
-		project.New(project.Deps{Pool: w.pool}).Cascade(), authorizerOn(w.pool), postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
+		project.NewCascade(project.CascadeDeps{Pool: w.pool}), authorizerOn(w.pool), postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[by]}), id)
 }
 

@@ -94,7 +94,7 @@ func (r answerRace) accounts() workspaceapp.Accounts {
 
 // projects is project's cascade as bootstrap wires it.
 func (r answerRace) projects() workspaceapp.ProjectCascade {
-	return project.New(project.Deps{Pool: r.pool}).Cascade()
+	return project.NewCascade(project.CascadeDeps{Pool: r.pool})
 }
 
 // accept is bob's acceptance of his invitation, over invitations.

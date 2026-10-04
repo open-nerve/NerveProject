@@ -133,7 +133,7 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 // wires them.
 func (r adminRace) removeAlice(ctx context.Context, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.New(project.Deps{Pool: r.pool}).Cascade(), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		project.NewCascade(project.CascadeDeps{Pool: r.pool}), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.bob}), r.aliceIn)
 }
 

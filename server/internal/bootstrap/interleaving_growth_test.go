@@ -254,7 +254,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 					}
 					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancel()
-					g, cascade := newGate(), project.New(project.Deps{Pool: r.pool}).Cascade()
+					g, cascade := newGate(), project.NewCascade(project.CascadeDeps{Pool: r.pool})
 					var req *http.Request
 					var rec *httptest.ResponseRecorder
 					var grew, demoted <-chan error

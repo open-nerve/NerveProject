@@ -86,7 +86,7 @@ func newAdminRace(t *testing.T) adminRace {
 // change is updateWorkspaceMember over members, with project's cascade,
 // identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.UpdateWorkspaceMember {
-	return workspaceapp.NewUpdateWorkspaceMember(members, project.New(project.Deps{Pool: r.pool}).Cascade(),
+	return workspaceapp.NewUpdateWorkspaceMember(members, project.NewCascade(project.CascadeDeps{Pool: r.pool}),
 		workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
 		authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now()))
 }

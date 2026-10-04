@@ -37,10 +37,25 @@ type Cascade interface {
 	// he has a membership of, ended ones too.
 	DemoteToGuest(ctx context.Context, workspaceID, userID, by uuid.UUID, now time.Time) error
 	// EndMemberships ends userID's active memberships of the workspaces'
-	// projects, found when it is called; project.sole_admin, and nothing
-	// ended, when he is the only active admin of one that has other active
-	// members.
+	// projects, found when it is called and locked in the projects' id
+	// order across the workspaces; project.sole_admin, and nothing ended,
+	// when he is the only active admin of one that has other active members.
 	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+}
+
+// CascadeDeps are what a composition that wants the cascade alone gives
+// it (M3 design 6.3, 6.6).
+type CascadeDeps struct {
+	Pool *pgxpool.Pool
+}
+
+// NewCascade builds the module's Cascade alone, on the pool: for the
+// command line, whose `nerve users deactivate` ends memberships through it
+// and builds no HTTP side (M3 design 6.3, 6.6). New builds its own through
+// it.
+func NewCascade(d CascadeDeps) Cascade {
+	store := postgresadapter.New(d.Pool)
+	return app.NewCascade(store, store, store)
 }
 
 // ProjectAccess reads a project for the access module's decision (M3
@@ -96,7 +111,7 @@ type Deps struct {
 
 // Module is the wired project module.
 type Module struct {
-	cascade *app.Cascade
+	cascade Cascade
 	uc      httpadapter.UseCases
 }
 
@@ -106,7 +121,7 @@ type Module struct {
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
 	locks := app.NewLocks(store, d.Workspaces, d.Members, d.Authorizer)
-	return &Module{cascade: app.NewCascade(store, store, store), uc: httpadapter.UseCases{
+	return &Module{cascade: NewCascade(CascadeDeps{Pool: d.Pool}), uc: httpadapter.UseCases{
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),
