@@ -282,8 +282,11 @@ func endersOf(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
 }
 
 // Interleaving 16 (M3 design 9.3, 3.6 convention 6, 3.11): bob's
-// reactivation in acme and his deactivation, each through its command's
-// composition, serialize on his account's row, in both orders.
+// reactivation in acme, through its command's composition, and his
+// deactivation serialize on his account's row, in both orders. The
+// deactivation that waits is the command, `nerve users deactivate`; the
+// one that goes first is deactivating, users.go's wiring mirrored with a
+// gate, as interleavings 8 and 19 run it, not the command itself.
 //   - The reactivation first: another transaction holds acme's row FOR NO
 //     KEY UPDATE; the reactivation waits for it, holding his account FOR
 //     SHARE; the deactivation waits for his account's row. The holder lets
