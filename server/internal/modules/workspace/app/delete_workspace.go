@@ -27,9 +27,10 @@ func NewDeleteWorkspace(workspaces WorkspaceDeleter, projects ProjectCascade, au
 }
 
 // cascade is what deleting a workspace soft-deletes, in the order of M3
-// design 3.6: the workspace row, then the rows under it, each step one
-// statement at the same moment, and last the projects and the rows under
-// them, through ProjectCascade (M3 design 3.3).
+// design 3.6: the workspace row, then the rows under it, each step at the
+// same moment (the invitations locked in id order first, convention 5's
+// exception), and last the projects and the rows under them, through
+// ProjectCascade (M3 design 3.3).
 func (u *DeleteWorkspace) cascade() []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
 	return []func(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error{
 		u.workspaces.DeleteWorkspace,
