@@ -21,7 +21,9 @@ import (
 // every step, a change to guest or a restoring as a guest for the
 // projects' step, and a removal and a leaving for each step of the ending.
 // reactivate-member, which checks no permission, reads it after the
-// workspace's lock and the membership's read.
+// workspace's lock and the membership's read; the deactivation's
+// memberships, after every workspace's lock and the check of the only
+// admin.
 // The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	at := clockNow.Format(time.RFC3339Nano)
@@ -77,6 +79,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			return f.log.calls, err
 		}, append(reactivationCalls(carol, acme), "Now", "ReactivateMember "+acme.ID.String()+" "+carol.ID.String()+" at "+at,
 			"CountInactive "+acme.ID.String()+" "+carol.ID.String())},
+		{"the deactivation's memberships", func() ([]string, error) {
+			f := newMembers()
+			err := deactivating(f, &fakeTx{}, bob)
+			return f.log.calls, err
+		}, deactivationCalls(bob, acme.ID, beta.ID)},
 		{"updateWorkspaceInvitation", func() ([]string, error) {
 			f := newInvitations()
 			_, err := app.NewUpdateWorkspaceInvitation(f.invitations, f.auth, f.tx, clockAt{clockNow, f.log}, f.mac).

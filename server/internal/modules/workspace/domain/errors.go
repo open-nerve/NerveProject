@@ -22,9 +22,14 @@ var (
 	// design 3.4, 5.3): nobody changes his own role.
 	ErrOwnMembership = shared.NewError(shared.KindConflict, "workspace.own_membership", "You cannot change your own membership.")
 	// ErrSoleAdmin answers the leaving of a workspace's only active admin,
-	// also when he is its only member (M3 design 3.7 rule 1).
+	// also when he is its only member (M3 design 3.7 rule 1), and the
+	// deactivation of an account that is the only active admin of a
+	// workspace with other active members (rule 2, 3.9). Its detail says
+	// what must happen, not who does it: it is true for every caller, the
+	// server's administrator who runs `nerve users deactivate` too.
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "workspace.sole_admin",
-		"The workspace would be left without an admin; make another member an admin first.")
+		"The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it "+
+			"has other active members. It must first be given another admin, or be deleted.")
 	// ErrInvitationNotFound answers an invitation that does not exist or is
 	// deleted, as an accepted one is, or whose workspace the caller cannot
 	// see; for the invitee, also a token that is not the invitation's: the

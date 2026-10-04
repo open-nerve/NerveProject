@@ -132,7 +132,7 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 	// its kind, code and detail.
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
 		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. Give the project another admin first, or delete it.")
+			"other active members. It must first be given another admin, or be deleted.")
 	tests := []struct {
 		err    error
 		status int
@@ -145,8 +145,8 @@ func TestRemoveWorkspaceMemberRefusals(t *testing.T) {
 			`{"status":409,"code":"workspace.own_membership","title":"Conflict","detail":"You cannot change your own membership."}`},
 		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
 			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The project would be left without an admin: its only ` +
-				`active admin cannot leave it, nor can his membership end while it has other active members. Give the project another admin ` +
-				`first, or delete it."}`},
+				`active admin cannot leave it, nor can his membership end while it has other active members. It must first be given ` +
+				`another admin, or be deleted."}`},
 		{errors.New("the database is gone"), http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	}
@@ -190,7 +190,7 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 	// its kind, code and detail.
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
 		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. Give the project another admin first, or delete it.")
+			"other active members. It must first be given another admin, or be deleted.")
 	tests := []struct {
 		err    error
 		status int
@@ -199,11 +199,12 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 		{domain.ErrNotFound, http.StatusNotFound,
 			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
 		{domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"workspace.sole_admin","title":"Conflict",` +
-			`"detail":"The workspace would be left without an admin; make another member an admin first."}`},
+			`"detail":"The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end ` +
+			`while it has other active members. It must first be given another admin, or be deleted."}`},
 		{fmt.Errorf("end the member's project memberships: %w", soleAdmin), http.StatusConflict,
 			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The project would be left without an admin: its only ` +
-				`active admin cannot leave it, nor can his membership end while it has other active members. Give the project another admin ` +
-				`first, or delete it."}`},
+				`active admin cannot leave it, nor can his membership end while it has other active members. It must first be given ` +
+				`another admin, or be deleted."}`},
 		{errors.New("the database is gone"), http.StatusInternalServerError,
 			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
 	}

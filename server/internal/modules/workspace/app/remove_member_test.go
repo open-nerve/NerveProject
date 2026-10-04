@@ -67,7 +67,7 @@ func endingFailures(calls []string, decided int) []endingFailure {
 	// its kind, code and detail.
 	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
 		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. Give the project another admin first, or delete it.")
+			"other active members. It must first be given another admin, or be deleted.")
 	return []endingFailure{
 		{"the address", func(f *membersFixture, _ *fakeTx) { f.profiles.err = failure }, failure, calls[:decided+1]},
 		{"a member without an account", func(f *membersFixture, _ *fakeTx) { f.profiles.profiles = profiles[:2] }, nil, calls[:decided+1]},

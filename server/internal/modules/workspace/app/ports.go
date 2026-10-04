@@ -259,10 +259,11 @@ type ProjectCascade interface {
 	// EndMemberships ends userID's active memberships of the workspaces'
 	// projects, which it finds when it is called, at the moment and by the
 	// account of the ending of his membership of those workspaces: an
-	// admin's removal of him (removeWorkspaceMember), or his own leaving
-	// (leaveWorkspace). It refuses with project.sole_admin, and ends none,
-	// when he is the only active admin of one of them that has other active
-	// members (M3 design 3.7 rule 2).
+	// admin's removal of him (removeWorkspaceMember), his own leaving
+	// (leaveWorkspace), or his account's deactivation (Deactivator), which
+	// calls it once across every workspace of his. It refuses with
+	// project.sole_admin, and ends none, when he is the only active admin
+	// of one of them that has other active members (M3 design 3.7 rule 2).
 	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 
