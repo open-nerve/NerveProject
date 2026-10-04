@@ -15,6 +15,7 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock/clocktest"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -55,6 +56,20 @@ func (d deletion) deletedAtBy(when time.Time, by uuid.UUID) bool {
 	return d.deletedAt != nil && d.deletedAt.Equal(when) && d.updatedAt.Equal(when) && d.updatedBy != nil && *d.updatedBy == by
 }
 
+// deleteRows runs the store's four steps of a workspace's deletion, of the
+// workspace's own rows, in the cascade's order (M3 design 3.6), on the
+// workspace id, by the account by at now; the first that fails stops it.
+func deleteRows(ctx context.Context, s *postgresadapter.Store, id, by uuid.UUID, now time.Time) error {
+	for _, step := range []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
+		s.DeleteWorkspace, s.DeleteWorkspaceInvitations, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
+	} {
+		if err := step(ctx, id, by, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // The four steps, in one transaction, soft-delete the workspace, every
 // invitation to it, pending or declined, every membership of it, active or
 // not, and every member's settings in it, at the same moment and by the
@@ -93,26 +108,16 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	exec(t, pool, "INSERT INTO profiles (id, user_id, last_workspace_id) VALUES ($1, $2, $3), ($4, $5, $3)",
 		uuid.NewV7(), alice, acme.ID, uuid.NewV7(), bob)
 
-	steps := []func(ctx context.Context, id, by uuid.UUID, now time.Time) error{
-		s.DeleteWorkspace, s.DeleteWorkspaceInvitations, s.DeleteWorkspaceMembers, s.DeleteWorkspacePreferences,
-	}
-	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
-		for _, step := range steps {
-			if err := step(ctx, acme.ID, bob, later); err != nil {
-				return err
-			}
-		}
-		return nil
+	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(pgtest.Soon(t), func(ctx context.Context) error {
+		return deleteRows(ctx, s, acme.ID, bob, later)
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Once more, by alice an hour later: nothing is left undeleted, so every
 	// row keeps bob's deletion.
-	for _, step := range steps {
-		if err := step(context.Background(), acme.ID, alice, later.Add(time.Hour)); err != nil {
-			t.Fatal(err)
-		}
+	if err := deleteRows(pgtest.Soon(t), s, acme.ID, alice, later.Add(time.Hour)); err != nil {
+		t.Fatal(err)
 	}
 
 	for what, rows := range map[string]map[uuid.UUID]deletion{
@@ -176,6 +181,45 @@ func TestDeletingAWorkspaceSoftDeletesItsRows(t *testing.T) {
 	newWorkspace(t, s, "Acme again", "acme", bob)
 }
 
+// Every step of a workspace's deletion runs on its transaction's
+// connection (M3 design 3.6 convention 2), the invitations' lock and delete
+// among them (ruling G-1). On a pool of one connection, which the
+// transaction holds, a statement sent through the pool would wait for a
+// second connection until the context's 5-second deadline, and the
+// deletion would fail. The four steps complete, and acme, alice's
+// membership and settings, and the invitations to carol and dave are
+// deleted at the deletion's moment, by its account.
+func TestADeletionsStepsRunOnTheTransactionsConnection(t *testing.T) {
+	s, pool := newStoreWithConns(t, 1)
+	alice := newAccount(t, pool, "alice@corp.com")
+	acme := newWorkspace(t, s, "Acme", "acme", alice)
+	upsert(t, s, app.PreferencesRow{ID: uuid.NewV7(), WorkspaceID: acme.ID, UserID: alice, Now: now})
+	invite(t, s, acme.ID, "carol@corp.com", shared.RoleGuest, alice)
+	invite(t, s, acme.ID, "dave@corp.com", shared.RoleMember, alice)
+	later := now.Add(time.Hour)
+
+	err := postgres.NewTxManager(pool, 2*time.Second).WithinTx(pgtest.Soon(t), func(ctx context.Context) error {
+		return deleteRows(ctx, s, acme.ID, alice, later)
+	})
+
+	if err != nil {
+		t.Fatalf("the deletion's steps on a pool of one connection = %v; want them done on the transaction's connection", err)
+	}
+	rows := deletions(t, pool, `
+		SELECT id, deleted_at, updated_at, updated_by_id FROM workspaces WHERE id = $1
+		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_members WHERE workspace_id = $1
+		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_user_properties WHERE workspace_id = $1
+		UNION ALL SELECT id, deleted_at, updated_at, updated_by_id FROM workspace_member_invites WHERE workspace_id = $1`, acme.ID)
+	if len(rows) != 5 {
+		t.Errorf("acme's rows: %d, want 5: the workspace, alice's membership and settings, the two invitations", len(rows))
+	}
+	for id, d := range rows {
+		if !d.deletedAtBy(later, alice) {
+			t.Errorf("acme's row %s: %+v, want deleted at %v by alice", id, d, later)
+		}
+	}
+}
+
 // failingSettings is the store with its last deletion step failing.
 type failingSettings struct {
 	*postgresadapter.Store
@@ -222,7 +266,7 @@ func TestAFailedDeletionLeavesTheWorkspace(t *testing.T) {
 	uc := app.NewDeleteWorkspace(failingSettings{s}, noProjects{}, allowAll{}, postgres.NewTxManager(pool, 2*time.Second), clocktest.At(now),
 		slog.New(slog.DiscardHandler))
 
-	err := uc.Execute(shared.WithActor(context.Background(), shared.Actor{UserID: alice}), "acme")
+	err := uc.Execute(shared.WithActor(pgtest.Soon(t), shared.Actor{UserID: alice}), "acme")
 
 	if !errors.Is(err, errDiskFull) {
 		t.Fatalf("Execute() = %v, want %v", err, errDiskFull)

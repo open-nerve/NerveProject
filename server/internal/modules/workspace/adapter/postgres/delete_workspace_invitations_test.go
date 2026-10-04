@@ -50,16 +50,16 @@ func connOf(ctx context.Context, pool *pgxpool.Pool) (*pgconn.PgConn, error) {
 // in id order, whatever order the rows lie in, FOR NO KEY UPDATE, before it
 // deletes them, and takes no other row (M3 design 3.6 convention 5; ruling
 // G-1). acme's undeleted invitations, to zoe, yan and xia, have ids in that
-// order, but lie the other way round, in the table as in each of its
-// indexes: xia's was inserted first, zoe's last, and the addresses sort the
-// other way. beta's invitation and acme's deleted one, to wes, have the
-// smallest ids. Three transactions hold zoe's, yan's and xia's FOR SHARE,
-// one each, and let go one at a time, each step's probe naming the holder
-// the deletion then waits behind: zoe's first, holding no row; then yan's,
-// holding zoe's; then xia's, holding zoe's and yan's. In the table's
-// order, or an index's, it would wait behind xia's first. Once xia's lets
-// go it deletes the three, at its moment and by its account; wes's keeps
-// its deletion, and beta's is not deleted.
+// order, but lie the other way round, in the table as in each index but the
+// primary key's: xia's was inserted first, zoe's last, and the addresses
+// sort the other way. beta's invitation and acme's deleted one, to wes, have
+// the smallest ids. Three transactions hold zoe's, yan's and xia's FOR
+// SHARE, one each, and let go one at a time, each step's probe naming the
+// holder the deletion then waits behind: zoe's first, holding no row; then
+// yan's, holding zoe's; then xia's, holding zoe's and yan's. In the table's
+// order, or that of an index other than the primary key's, it would wait
+// behind xia's first. Once xia's lets go it deletes the three, at its moment
+// and by its account; wes's keeps its deletion, and beta's is not deleted.
 func TestDeleteWorkspaceInvitationsLocksInIDOrder(t *testing.T) {
 	s, pool := newStoreWithConns(t, 8)
 	alice := newAccount(t, pool, "alice@corp.com")
