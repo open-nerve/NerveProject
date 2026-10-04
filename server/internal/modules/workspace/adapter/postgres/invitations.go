@@ -104,10 +104,16 @@ func (s *Store) DeleteInvitation(ctx context.Context, id, by uuid.UUID, now time
 }
 
 // DeleteWorkspaceInvitations soft-deletes the undeleted invitations of the
-// workspace, pending or declined, by the account by at now.
+// workspace, pending or declined, by the account by at now. It locks them
+// FOR NO KEY UPDATE in id order, then deletes exactly those, in the
+// caller's transaction (M3 design 3.6 convention 5; ruling G-1).
 func (s *Store) DeleteWorkspaceInvitations(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error {
-	err := s.queries(ctx).DeleteWorkspaceInvitations(ctx, gen.DeleteWorkspaceInvitationsParams{WorkspaceID: workspaceID, DeletedBy: by, Now: now})
+	q := s.queries(ctx)
+	ids, err := q.LockWorkspaceInvitations(ctx, workspaceID)
 	if err != nil {
+		return fmt.Errorf("lock workspace invitations: %w", err)
+	}
+	if err := q.DeleteInvitations(ctx, gen.DeleteInvitationsParams{Ids: ids, DeletedBy: by, Now: now}); err != nil {
 		return fmt.Errorf("delete workspace invitations: %w", err)
 	}
 	return nil

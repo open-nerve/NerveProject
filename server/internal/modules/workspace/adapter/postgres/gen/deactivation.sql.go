@@ -27,7 +27,8 @@ type DeleteInvitationsParams struct {
 // The fourth step (M3 design 3.9; ruling F-1): the invitations the third step locked, by their ids, soft-deleted at the
 // moment and by the account given, before the memberships' rows (the global order). It writes no other: one to his
 // address created after the lock, in a workspace he does not lock, stays, as one created after the deactivation does
-// (P6 spec section 3 item 8 (a)). A deleted one keeps its moment.
+// (P6 spec section 3 item 8 (a)). A deleted one keeps its moment. deleteWorkspace's cascade deletes with it the
+// invitations LockWorkspaceInvitations locked (ruling G-1).
 func (q *Queries) DeleteInvitations(ctx context.Context, arg DeleteInvitationsParams) error {
 	_, err := q.db.Exec(ctx, deleteInvitations, arg.Now, arg.DeletedBy, arg.Ids)
 	return err

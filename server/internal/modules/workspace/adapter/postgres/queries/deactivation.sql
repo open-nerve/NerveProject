@@ -56,7 +56,8 @@ FOR NO KEY UPDATE;
 -- The fourth step (M3 design 3.9; ruling F-1): the invitations the third step locked, by their ids, soft-deleted at the
 -- moment and by the account given, before the memberships' rows (the global order). It writes no other: one to his
 -- address created after the lock, in a workspace he does not lock, stays, as one created after the deactivation does
--- (P6 spec section 3 item 8 (a)). A deleted one keeps its moment.
+-- (P6 spec section 3 item 8 (a)). A deleted one keeps its moment. deleteWorkspace's cascade deletes with it the
+-- invitations LockWorkspaceInvitations locked (ruling G-1).
 UPDATE workspace_member_invites
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE id = ANY (sqlc.arg(ids)::uuid[]) AND deleted_at IS NULL;

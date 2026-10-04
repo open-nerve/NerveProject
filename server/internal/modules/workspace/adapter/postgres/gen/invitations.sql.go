@@ -141,25 +141,6 @@ func (q *Queries) DeletePendingInvitations(ctx context.Context, arg DeletePendin
 	return err
 }
 
-const deleteWorkspaceInvitations = `-- name: DeleteWorkspaceInvitations :exec
-UPDATE workspace_member_invites
-SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE workspace_id = $3 AND deleted_at IS NULL
-`
-
-type DeleteWorkspaceInvitationsParams struct {
-	Now         time.Time
-	DeletedBy   uuid.UUID
-	WorkspaceID uuid.UUID
-}
-
-// deleteWorkspace's cascade: every undeleted invitation of the workspace, pending or declined, one statement in scan
-// order under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.
-func (q *Queries) DeleteWorkspaceInvitations(ctx context.Context, arg DeleteWorkspaceInvitationsParams) error {
-	_, err := q.db.Exec(ctx, deleteWorkspaceInvitations, arg.Now, arg.DeletedBy, arg.WorkspaceID)
-	return err
-}
-
 const invitationByID = `-- name: InvitationByID :one
 SELECT id, workspace_id, email, role, accepted, responded_at, created_by_id, updated_by_id, created_at, updated_at, deleted_at
 FROM workspace_member_invites
@@ -283,6 +264,41 @@ func (q *Queries) LockInvitation(ctx context.Context, id uuid.UUID) (WorkspaceMe
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const lockWorkspaceInvitations = `-- name: LockWorkspaceInvitations :many
+SELECT id
+FROM workspace_member_invites
+WHERE workspace_id = $1 AND deleted_at IS NULL
+ORDER BY id
+FOR NO KEY UPDATE
+`
+
+// deleteWorkspace's cascade, under the workspace's FOR NO KEY UPDATE: every undeleted invitation of the workspace,
+// pending or declined, FOR NO KEY UPDATE in id order, which the store then deletes by these ids (DeleteInvitations).
+// A deactivation deletes the invitation to its own address without the workspace's lock, in id order across
+// workspaces, so the cascade takes them in id order too (M3 design 3.6 convention 5): a scan-order UPDATE could hold
+// a higher id while it waits for a lower one and close a cycle with two deactivations. After a wait, Postgres
+// evaluates deleted_at IS NULL again on the row's newest version, so a row deleted meanwhile is left out and keeps its
+// time.
+func (q *Queries) LockWorkspaceInvitations(ctx context.Context, workspaceID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, lockWorkspaceInvitations, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateInvitationRole = `-- name: UpdateInvitationRole :one

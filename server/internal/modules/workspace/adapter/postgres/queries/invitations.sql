@@ -66,12 +66,19 @@ UPDATE workspace_member_invites
 SET responded_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(declined_by)::uuid
 WHERE id = sqlc.arg(id);
 
--- name: DeleteWorkspaceInvitations :exec
--- deleteWorkspace's cascade: every undeleted invitation of the workspace, pending or declined, one statement in scan
--- order under the workspace's FOR NO KEY UPDATE (M3 design 3.6 convention 5). A row deleted before keeps its time.
-UPDATE workspace_member_invites
-SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
-WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL;
+-- name: LockWorkspaceInvitations :many
+-- deleteWorkspace's cascade, under the workspace's FOR NO KEY UPDATE: every undeleted invitation of the workspace,
+-- pending or declined, FOR NO KEY UPDATE in id order, which the store then deletes by these ids (DeleteInvitations).
+-- A deactivation deletes the invitation to its own address without the workspace's lock, in id order across
+-- workspaces, so the cascade takes them in id order too (M3 design 3.6 convention 5): a scan-order UPDATE could hold
+-- a higher id while it waits for a lower one and close a cycle with two deactivations. After a wait, Postgres
+-- evaluates deleted_at IS NULL again on the row's newest version, so a row deleted meanwhile is left out and keeps its
+-- time.
+SELECT id
+FROM workspace_member_invites
+WHERE workspace_id = sqlc.arg(workspace_id) AND deleted_at IS NULL
+ORDER BY id
+FOR NO KEY UPDATE;
 
 -- name: DeletePendingInvitations :exec
 -- An ended membership leaves no invitation (M3 design 3.8): removeWorkspaceMember and leaveWorkspace, under the
