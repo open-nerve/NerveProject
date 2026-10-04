@@ -92,7 +92,14 @@ func TestAnInvitationCreatedAfterADeactivationsLockIsNotItsToDelete(t *testing.T
 			t.Fatalf("%s deactivation did not end within 10s", name)
 		}
 	}
-	if carolsIDs := <-carolsLock; !slices.Equal(bobsIDs, []uuid.UUID{x}) || !slices.Equal(carolsIDs, []uuid.UUID{z}) {
+	// Both have ended: carol's lock has sent its ids by now, or never will
+	// (her deactivation failed in it).
+	var carolsIDs []uuid.UUID
+	select {
+	case carolsIDs = <-carolsLock:
+	default:
+	}
+	if !slices.Equal(bobsIDs, []uuid.UUID{x}) || !slices.Equal(carolsIDs, []uuid.UUID{z}) {
 		t.Errorf("the locks returned %v to bob's deactivation, %v to carol's; want x %s, then z %s", bobsIDs, carolsIDs, x, z)
 	}
 	for _, tt := range []struct {
