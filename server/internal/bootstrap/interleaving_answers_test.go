@@ -310,7 +310,8 @@ func (d gatedDecliner) DeclineInvitation(ctx context.Context, id, by uuid.UUID, 
 // Interleaving 19 (M3 design 9.3, 3.6 convention 1): bob is acme's member
 // and has an invitation to it, as after reactivate-member or a change of
 // address, his membership stamped as last written by alice; the
-// deactivation is `nerve users deactivate` as bootstrap wires it. The decline first holds his account row FOR SHARE, then acme's; the
+// deactivation is `nerve users deactivate` as bootstrap wires it. The
+// decline first holds his account row FOR SHARE, then acme's; the
 // deactivation waits on the account row, then goes on, and deletes the
 // invitation, declined by then. The deactivation first holds the account
 // row, acme's, the invitation, which it has deleted, and his membership,

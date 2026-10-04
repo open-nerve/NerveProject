@@ -48,9 +48,10 @@ func deactivationCalls(user app.AccountState, workspaces ...uuid.UUID) []string 
 // order; the invitations to his address and his project memberships with
 // them, by him at the clock's one time, read after the workspaces' locks,
 // the check of the only admin and the invitations' lock (M3 design 3.3,
-// 3.6 convention 6, 3.9), all in the transaction it runs in. carol, whose membership of acme
-// ended, has none: her workspaces are none, and the calls come all the
-// same, over none, so that the invitations to her address go too.
+// 3.6 convention 6, 3.9), all in the transaction it runs in. carol, whose
+// membership of acme ended, has none: her workspaces are none, and the
+// calls come all the same, over none, so that the invitations to her
+// address go too.
 func TestDeactivateMembershipsEndsEveryMembership(t *testing.T) {
 	for _, tt := range []struct {
 		user       app.AccountState
