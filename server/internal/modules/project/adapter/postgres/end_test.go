@@ -208,13 +208,16 @@ func TestSoleAdmin(t *testing.T) {
 // the workspaces asked about, whatever order the rows lie in, and whatever
 // workspace each is of (M3 design 3.6 convention 6: the deactivation locks
 // every project at once, not a workspace's after another's). Web, acme's,
-// has the smallest id, then Alpha, beta's, then Zed, acme's; they lie in
-// the table and in the indexes on the name and on the identifier as Alpha,
-// Zed, Web. Alpha's row is held. LockActiveMemberProjects waits for it
-// holding Web's, which a FOR SHARE then waits for, and not Zed's, which it
-// does not; in the rows' order it would reach Alpha first and wait holding
-// nothing; a workspace's projects after another's, acme's first, it would
-// hold Zed too.
+// has the smallest id, then Alpha, beta's, then Zed, acme's; acme's id is
+// the smaller. They lie in the table as Alpha, Zed, Web, and in the indexes
+// on the workspace and the name or the identifier as Web, Zed, Alpha.
+// Alpha's row is held. LockActiveMemberProjects waits for it holding Web's,
+// which a FOR SHARE then waits for, and not Zed's, which it does not: of
+// the six orders, only the ids' does so. In the table's order it would
+// reach Alpha first and wait holding nothing; in the indexes' order, which
+// Postgres follows here when the query has no ORDER BY (it reads the rows
+// through the index on the workspace and the name), or a workspace's
+// projects after another's, acme's first, it would hold Zed too.
 func TestLockActiveMemberProjectsLocksInIDOrder(t *testing.T) {
 	s, pool := newStore(t)
 	bob := newAccount(t, pool, "bob@corp.com")
