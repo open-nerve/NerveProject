@@ -28,28 +28,26 @@ import (
 // beta's, able, made after both, comes first by slug, and Lab's row and
 // memberships lie after Docs's: the order is the ids', not the rows' or the
 // slugs' (a statement without its ORDER BY reaches beta or able, and Docs,
-// first). kappa's invitation, of the workspace he leaves with no active
-// member, has the smaller id but lies after delta's, to his address: one
-// statement takes both, in id order, before either delete, though
-// DeleteInvitationsTo, which writes delta's, runs before the fifth
-// statement, which writes kappa's (the final review's I1). Other
-// transactions hold, FOR SHARE, his account, beta, kappa's invitation,
-// delta's invitation, his membership of beta, Lab and his membership of
-// Docs, which the deactivation's statements wait for in turn; they let go
-// one at a time, each step's probe naming the holder it waits behind, and
-// lockOn reads each row's strongest lock then. The deactivation waits for
-// his account, holding nothing; then for beta, holding his account and
-// acme, the first workspace by id, and not able nor kappa, the last, nor
-// any invitation; then for kappa's invitation, holding beta, able and kappa
-// too, and gamma's, the invitation he declined, whose id is smaller; then
-// for delta's, holding kappa's; then for his membership, holding delta's;
-// then for Lab, holding his membership, Web, Ops and Solo, of acme, before
-// Lab, of beta, by id, and not Docs, of acme, after it; then for his
-// membership of Docs, holding Lab and Docs; each FOR NO KEY UPDATE, no
-// stronger, no weaker; never gamma, where he is no member, nor delta, where
-// his membership ended. Then it is done, at a moment no earlier than the
-// release of delta's invitation, its last lock before the clock, nor of
-// beta, his last workspace's (3.3).
+// first). kappa's invitation, of the workspace he leaves with no active member,
+// has the smaller id but lies after delta's, to his address, as in the
+// address's index: one statement takes both, in id order, before the delete
+// writes them, by the ids it returned (the final review's I1, ruling F-1).
+// Other transactions hold, FOR SHARE, his account, beta, kappa's invitation,
+// delta's invitation, his membership of beta, Lab and his membership of Docs,
+// which the deactivation's statements wait for in turn; they let go one at a
+// time, each step's probe naming the holder it waits behind, and lockOn reads
+// each row's strongest lock then. The deactivation waits for his account,
+// holding nothing; then for beta, holding his account and acme, the first
+// workspace by id, and not able nor kappa, the last, nor any invitation; then
+// for kappa's invitation, holding beta, able and kappa too, and gamma's, the
+// invitation he declined, whose id is smaller; then for delta's, holding
+// kappa's; then for his membership, holding delta's; then for Lab, holding his
+// membership, Web, Ops and Solo, of acme, before Lab, of beta, by id, and not
+// Docs, of acme, after it; then for his membership of Docs, holding Lab and
+// Docs; each FOR NO KEY UPDATE, no stronger, no weaker; never gamma, where he
+// is no member, nor delta, where his membership ended. Then it is done, at a
+// moment no earlier than the release of delta's invitation, its last lock
+// before the clock, nor of beta, his last workspace's (3.3).
 func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 	for _, p := range deactivationPaths {
 		t.Run(p.name, func(t *testing.T) {

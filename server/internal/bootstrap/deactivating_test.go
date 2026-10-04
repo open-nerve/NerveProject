@@ -32,18 +32,35 @@ func deactivating(pool *pgxpool.Pool, sessions identityapp.SessionRevoker, membe
 	})
 }
 
-// deletedInvitationsTo stops a deactivation once it has deleted the
-// invitations to the account's address, before those of the workspaces it
-// leaves with no active member: it holds the account row, every workspace
-// of his FOR NO KEY UPDATE, and every invitation the two deletes write,
-// locked before either.
-type deletedInvitationsTo struct {
+// lockedInvitations stops a deactivation once it has locked the
+// invitations it deletes, before it deletes them: it holds the account
+// row, every workspace of his FOR NO KEY UPDATE, and those invitations.
+type lockedInvitations struct {
 	*workspacepg.Store
 	gate *gate
 }
 
-func (m deletedInvitationsTo) DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error {
-	if err := m.Store.DeleteInvitationsTo(ctx, email, by, now); err != nil {
+func (m lockedInvitations) LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID,
+	email string) ([]uuid.UUID, error) {
+	ids, err := m.Store.LockInvitationsToDelete(ctx, workspaceIDs, userID, email)
+	if err != nil {
+		return nil, err
+	}
+	return ids, m.gate.wait(ctx)
+}
+
+// deletedInvitations stops a deactivation once it has deleted the
+// invitations to the account's address and the pending ones of the
+// workspaces it leaves with no active member, before his memberships: it
+// holds the account row, every workspace of his FOR NO KEY UPDATE, and
+// those invitations, locked before they were deleted.
+type deletedInvitations struct {
+	*workspacepg.Store
+	gate *gate
+}
+
+func (m deletedInvitations) DeleteInvitations(ctx context.Context, ids []uuid.UUID, by uuid.UUID, now time.Time) error {
+	if err := m.Store.DeleteInvitations(ctx, ids, by, now); err != nil {
 		return err
 	}
 	return m.gate.wait(ctx)

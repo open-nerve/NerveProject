@@ -13,22 +13,29 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
 )
 
+// invitationsLocked are the ids the fake's LockInvitationsToDelete returns
+// to the Deactivator in these tests, in that order: drawn here, no other
+// step could make them up, so a DeleteInvitations given them was given the
+// lock's answer.
+var invitationsLocked = []uuid.UUID{uuid.NewV7(), uuid.NewV7()}
+
 // deactivating runs the Deactivator over f's fakes, with the clock logging
 // its reads among the calls, in tx, as identity's deactivation does: it is
 // the last step of that transaction (M3 design 3.9). user is the account
-// deactivated, at his address.
+// deactivated, at his address; the invitations' lock finds
+// invitationsLocked.
 func deactivating(f *membersFixture, tx *fakeTx, user app.AccountState) error {
+	f.workspaces.invitations = invitationsLocked
 	d := app.NewDeactivator(f.workspaces, f.projects, clockAt{clockNow, f.log})
 	return tx.WithinTx(context.Background(), func(ctx context.Context) error { return d.DeactivateMemberships(ctx, user.ID, user.Email) })
 }
 
 // deactivationCalls are the calls of the ending of user's memberships of
 // workspaces, in id order: those workspaces locked, the only admin asked,
-// the invitations the two deletes write locked, the clock read, every
-// invitation to his address deleted, the pending ones of those he leaves
-// with no active member, his memberships of the workspaces ended, then the
-// project cascade's step, called once across them; each write by him at
-// the clock's one time.
+// the invitations it deletes locked, the clock read, those invitations
+// deleted by the ids the lock returned (invitationsLocked), his
+// memberships of the workspaces ended, then the project cascade's step,
+// called once across them; each write by him at the clock's one time.
 func deactivationCalls(user app.AccountState, workspaces ...uuid.UUID) []string {
 	at := clockNow.Format(time.RFC3339Nano)
 	return []string{
@@ -36,8 +43,7 @@ func deactivationCalls(user app.AccountState, workspaces ...uuid.UUID) []string 
 		fmt.Sprintf("SoleAdmin %v %s", workspaces, user.ID),
 		fmt.Sprintf("LockInvitationsToDelete %v %s %s", workspaces, user.ID, user.Email),
 		"Now",
-		fmt.Sprintf("DeleteInvitationsTo %s by %s at %s", user.Email, user.ID, at),
-		fmt.Sprintf("DeleteInvitationsOfWorkspacesLeftEmpty %v %s by %s at %s", workspaces, user.ID, user.ID, at),
+		fmt.Sprintf("DeleteInvitations %v by %s at %s", invitationsLocked, user.ID, at),
 		fmt.Sprintf("EndWorkspaceMemberships %v %s by %s at %s", workspaces, user.ID, user.ID, at),
 		fmt.Sprintf("EndMemberships %v %s by %s at %s", workspaces, user.ID, user.ID, at),
 	}
@@ -45,7 +51,7 @@ func deactivationCalls(user app.AccountState, workspaces ...uuid.UUID) []string 
 
 // The Deactivator ends bob's memberships of acme, a member's, and of beta,
 // a guest's, the two workspaces whose active member he is, in their id
-// order; the invitations to his address and his project memberships with
+// order; the invitations its lock found and his project memberships with
 // them, by him at the clock's one time, read after the workspaces' locks,
 // the check of the only admin and the invitations' lock (M3 design 3.3,
 // 3.6 convention 6, 3.9), all in the transaction it runs in. carol, whose
@@ -110,13 +116,10 @@ func TestDeactivateMembershipsFailsAtEachStep(t *testing.T) {
 		{"the check", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"SoleAdmin": failure} }, failure, calls[:2]},
 		{"the invitations' lock", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"LockInvitationsToDelete": failure} },
 			failure, calls[:3]},
-		{"the invitations", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"DeleteInvitationsTo": failure} }, failure,
+		{"the invitations", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"DeleteInvitations": failure} }, failure,
 			calls[:5]},
-		{"the invitations of the workspaces left empty", func(f *membersFixture) {
-			f.workspaces.endErrs = map[string]error{"DeleteInvitationsOfWorkspacesLeftEmpty": failure}
-		}, failure, calls[:6]},
 		{"the memberships", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"EndWorkspaceMemberships": failure} }, failure,
-			calls[:7]},
+			calls[:6]},
 		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"EndMemberships": failure} }, failure, calls},
 		{"the only admin of a project", func(f *membersFixture) { f.projects.errs = map[string]error{"EndMemberships": projectSoleAdmin} },
 			projectSoleAdmin, calls},

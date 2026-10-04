@@ -8,7 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
@@ -42,40 +41,43 @@ func invitationNames(t *testing.T, pool *pgxpool.Pool) map[uuid.UUID]string {
 	return names
 }
 
-// namedSet is the names of ids, sorted: a set of invitations as text.
-func namedSet(names map[uuid.UUID]string, ids []uuid.UUID) string {
-	set := make([]string, len(ids))
+// inOrder is the names of ids, in their order.
+func inOrder(names map[uuid.UUID]string, ids []uuid.UUID) string {
+	list := make([]string, len(ids))
 	for i, id := range ids {
-		set[i] = names[id]
+		list[i] = names[id]
 	}
-	slices.Sort(set)
-	return strings.Join(set, "; ")
+	return strings.Join(list, "; ")
 }
 
-// LockInvitationsToDelete locks exactly the invitations that the two
-// deletes then write, FOR NO KEY UPDATE, in the transaction it runs in,
-// until that transaction ends: a FOR SHARE of each waits, a foreign key's
-// FOR KEY SHARE does not; no other invitation is locked. The world is both
-// deletes' (leftEmpty, and invitationsToBob in omega, sigma and tau, alice's
-// workspaces), where each of the statement's predicates is decided by a row
-// of its own: the deleted ones to his address, and frank's (the
-// invitation's deleted_at); carol's and rebob's (the address); zeta's (the
-// workspaces asked about); erin's, declined (pending); beta's, where carol
-// is an active guest (another member, of that workspace, other than him);
-// acme's, where he is alone (other than him); gamma's, where her membership
-// ended (active); delta's, where it is deleted (undeleted). Then, once it
-// has committed, DeleteInvitationsTo and DeleteInvitationsOfWorkspacesLeftEmpty
-// delete those it locked, and no other.
-func TestLockInvitationsToDeleteLocksWhatTheDeletesWrite(t *testing.T) {
+// LockInvitationsToDelete returns the invitations a deactivation deletes,
+// in id order, and holds exactly those FOR NO KEY UPDATE in the
+// transaction it runs in, until that transaction ends: a FOR SHARE of each
+// waits, a foreign key's FOR KEY SHARE does not; no other invitation is
+// locked. The world is leftEmpty, and invitationsToBob in omega, sigma and
+// tau, alice's workspaces, where each of the statement's predicates is
+// decided by a row of its own: the deleted ones to his address, and
+// frank's (the invitation's deleted_at); carol's and rebob's (the
+// address); zeta's (the workspaces asked about); erin's, declined
+// (pending); beta's, where carol is an active guest (another member, of
+// that workspace, other than him); acme's, where he is alone (other than
+// him); gamma's, where her membership ended (active); delta's, where it is
+// deleted (undeleted).
+func TestLockInvitationsToDeleteLocksWhatItReturns(t *testing.T) {
 	s, pool := newStore(t)
 	w := newLeftEmpty(t, s, pool)
-	toBob := invitationsToBob(t, s, pool, w.alice, [3]string{"omega", "sigma", "tau"})
+	want := slices.Concat(w.found, invitationsToBob(t, s, pool, w.alice, [3]string{"omega", "sigma", "tau"}))
+	slices.SortFunc(want, uuid.UUID.Compare)
 	names := invitationNames(t, pool)
-	want := namedSet(names, slices.Concat(w.deleted, toBob))
-	end := hold(t, postgres.NewTxManager(pool, 2*time.Second), func(ctx context.Context) error {
-		return s.LockInvitationsToDelete(ctx, w.asked, w.bob, "bob@corp.com")
+	var got []uuid.UUID
+	end := hold(t, postgres.NewTxManager(pool, 2*time.Second), func(ctx context.Context) (err error) {
+		got, err = s.LockInvitationsToDelete(ctx, w.asked, w.bob, "bob@corp.com")
+		return err
 	})
 
+	if !slices.Equal(got, want) {
+		t.Errorf("LockInvitationsToDelete() =\n%s\nwant, in id order,\n%s", inOrder(names, got), inOrder(names, want))
+	}
 	var locked, stronger []uuid.UUID
 	for id := range names {
 		if waitsFor(t, pool, "workspace_member_invites", id, "FOR SHARE") {
@@ -85,41 +87,24 @@ func TestLockInvitationsToDeleteLocksWhatTheDeletesWrite(t *testing.T) {
 			stronger = append(stronger, id)
 		}
 	}
-	if got := namedSet(names, locked); got != want || len(stronger) > 0 {
+	slices.SortFunc(locked, uuid.UUID.Compare)
+	if !slices.Equal(locked, want) || len(stronger) > 0 {
 		t.Errorf("LockInvitationsToDelete() holds\n%s\nFOR NO KEY UPDATE or stronger, and these FOR UPDATE: %s;\nwant\n%s\nFOR NO KEY UPDATE",
-			got, namedSet(names, stronger), want)
+			inOrder(names, locked), inOrder(names, stronger), inOrder(names, want))
 	}
 	if err := end(); err != nil {
 		t.Fatal(err)
 	}
-	later := now.Add(time.Hour)
-	if err := s.DeleteInvitationsTo(context.Background(), "bob@corp.com", w.bob, later); err != nil {
-		t.Fatal(err)
-	}
-	if err := s.DeleteInvitationsOfWorkspacesLeftEmpty(context.Background(), w.asked, w.bob, w.bob, later); err != nil {
-		t.Fatal(err)
-	}
-	rows, err := pool.Query(pgtest.Soon(t), "SELECT id FROM workspace_member_invites WHERE deleted_at = $1", later)
-	if err != nil {
-		t.Fatal(err)
-	}
-	deleted, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := namedSet(names, deleted); got != namedSet(names, locked) {
-		t.Errorf("the deletes wrote\n%s\nwant the invitations locked:\n%s", got, namedSet(names, locked))
-	}
 }
 
 // LockInvitationsToDelete takes its locks in the invitations' id order,
-// across both deletes' invitations and whatever order the rows lie in:
-// dave's pending one to acme, where bob is alone, has the smaller id, but
-// lies after the one to bob's address in omega, alice's, in the table, as
-// in the address's index. omega's row is held. LockInvitationsToDelete
-// waits for it holding acme's, which a FOR SHARE then waits for; in the
-// table's order, or the one of DeleteInvitationsTo's rows first, it would
-// reach omega's first and wait holding nothing.
+// whatever order the rows lie in, and returns them in that order: dave's
+// pending one to acme, where bob is alone, has the smaller id, but lies
+// after the one to bob's address in omega, alice's, in the table, as in
+// the address's index. omega's row is held. LockInvitationsToDelete waits
+// for it holding acme's, which a FOR SHARE then waits for; in the table's
+// order, or the address's first, it would reach omega's first and wait
+// holding nothing.
 func TestLockInvitationsToDeleteLocksInIDOrder(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -139,10 +124,12 @@ func TestLockInvitationsToDeleteLocksInIDOrder(t *testing.T) {
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	var got []uuid.UUID
 	done := make(chan error, 1)
 	go func() {
-		done <- tx.WithinTx(ctx, func(ctx context.Context) error {
-			return s.LockInvitationsToDelete(ctx, []uuid.UUID{acme}, bob, "bob@corp.com")
+		done <- tx.WithinTx(ctx, func(ctx context.Context) (err error) {
+			got, err = s.LockInvitationsToDelete(ctx, []uuid.UUID{acme}, bob, "bob@corp.com")
+			return err
 		})
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "workspace_member_invites", 10*time.Second)
@@ -155,8 +142,8 @@ func TestLockInvitationsToDeleteLocksInIDOrder(t *testing.T) {
 	}
 	select {
 	case err := <-done:
-		if err != nil {
-			t.Errorf("LockInvitationsToDelete() = %v", err)
+		if want := []uuid.UUID{toAcme, toBob}; err != nil || !slices.Equal(got, want) {
+			t.Errorf("LockInvitationsToDelete() = %v, %v; want %v, acme's then omega's", got, err, want)
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("LockInvitationsToDelete() did not end within 10s")
@@ -167,8 +154,9 @@ func TestLockInvitationsToDeleteLocksInIDOrder(t *testing.T) {
 // left out, not an error: another transaction holds bob's invitation to
 // omega FOR UPDATE, as deleteWorkspaceInvitation does, and deletes it;
 // LockInvitationsToDelete, which found it undeleted, waits for it; once
-// the deletion commits, it goes on, and the deletes after it leave that
-// invitation as its deletion left it, deleting his other one, to sigma.
+// the deletion commits, it goes on and returns his other one, to sigma,
+// alone, which DeleteInvitations then deletes; omega's stays as its
+// deletion left it.
 func TestLockInvitationsToDeleteLeavesOutAnInvitationDeletedWhileItWaited(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -184,13 +172,14 @@ func TestLockInvitationsToDeleteLeavesOutAnInvitationDeletedWhileItWaited(t *tes
 	later := now.Add(time.Hour)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	var got []uuid.UUID
 	done := make(chan error, 1)
 	go func() {
-		done <- tx.WithinTx(ctx, func(ctx context.Context) error {
-			if err := s.LockInvitationsToDelete(ctx, nil, bob, "bob@corp.com"); err != nil {
+		done <- tx.WithinTx(ctx, func(ctx context.Context) (err error) {
+			if got, err = s.LockInvitationsToDelete(ctx, nil, bob, "bob@corp.com"); err != nil {
 				return err
 			}
-			return s.DeleteInvitationsTo(ctx, "bob@corp.com", bob, later)
+			return s.DeleteInvitations(ctx, got, bob, later)
 		})
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "workspace_member_invites", 10*time.Second)
@@ -199,8 +188,8 @@ func TestLockInvitationsToDeleteLeavesOutAnInvitationDeletedWhileItWaited(t *tes
 	}
 	select {
 	case err := <-done:
-		if err != nil {
-			t.Errorf("LockInvitationsToDelete(), then DeleteInvitationsTo() = %v; want omega's left out", err)
+		if want := []uuid.UUID{toSigma}; err != nil || !slices.Equal(got, want) {
+			t.Errorf("LockInvitationsToDelete(), then DeleteInvitations() = %v, %v; want %v, omega's left out", got, err, want)
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("LockInvitationsToDelete() did not end within 10s")

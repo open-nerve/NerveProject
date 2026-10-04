@@ -12,57 +12,24 @@ import (
 	"uuid"
 )
 
-const deleteInvitationsOfWorkspacesLeftEmpty = `-- name: DeleteInvitationsOfWorkspacesLeftEmpty :exec
-UPDATE workspace_member_invites i
-SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE i.workspace_id = ANY ($3::uuid[]) AND i.responded_at IS NULL AND i.deleted_at IS NULL
-  AND NOT EXISTS (SELECT 1 FROM workspace_members o
-                  WHERE o.workspace_id = i.workspace_id AND o.member_id <> $4 AND o.is_active
-                    AND o.deleted_at IS NULL)
-`
-
-type DeleteInvitationsOfWorkspacesLeftEmptyParams struct {
-	Now          time.Time
-	DeletedBy    uuid.UUID
-	WorkspaceIds []uuid.UUID
-	MemberID     uuid.UUID
-}
-
-// The fifth step, under the workspaces' locks (M3 design 3.7, 3.9; the P6 pre-flight's M1): the pending invitations of
-// each of the workspaces where the account has no other active member, soft-deleted at the moment and by the account
-// given, before the memberships' rows (the global order). Run before his memberships end, "other" leaves him out. A
-// workspace he was alone in then has no active member, and no invitation lets anyone into it: one accepted would make
-// a member of a workspace with no admin. A declined one stays, which cannot be accepted; a deleted one keeps its
-// moment. Creating an invitation holds the workspace FOR SHARE, accepting one FOR NO KEY UPDATE: neither commits while
-// the deactivation holds it, so the third step locked every row this one writes.
-func (q *Queries) DeleteInvitationsOfWorkspacesLeftEmpty(ctx context.Context, arg DeleteInvitationsOfWorkspacesLeftEmptyParams) error {
-	_, err := q.db.Exec(ctx, deleteInvitationsOfWorkspacesLeftEmpty,
-		arg.Now,
-		arg.DeletedBy,
-		arg.WorkspaceIds,
-		arg.MemberID,
-	)
-	return err
-}
-
-const deleteInvitationsTo = `-- name: DeleteInvitationsTo :exec
+const deleteInvitations = `-- name: DeleteInvitations :exec
 UPDATE workspace_member_invites
 SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
-WHERE email = $3 AND deleted_at IS NULL
+WHERE id = ANY ($3::uuid[]) AND deleted_at IS NULL
 `
 
-type DeleteInvitationsToParams struct {
+type DeleteInvitationsParams struct {
 	Now       time.Time
 	DeletedBy uuid.UUID
-	Email     string
+	Ids       []uuid.UUID
 }
 
-// The fourth step (M3 design 3.8, 3.9; Plane views/user/base.py:313): every undeleted invitation to the address, of
-// every workspace, pending or declined, soft-deleted at the moment and by the account given, before the memberships'
-// rows (the global order). The third step locked those it found; one created since, in a workspace he does not lock,
-// is deleted too. A deleted one keeps its moment.
-func (q *Queries) DeleteInvitationsTo(ctx context.Context, arg DeleteInvitationsToParams) error {
-	_, err := q.db.Exec(ctx, deleteInvitationsTo, arg.Now, arg.DeletedBy, arg.Email)
+// The fourth step (M3 design 3.9; ruling F-1): the invitations the third step locked, by their ids, soft-deleted at the
+// moment and by the account given, before the memberships' rows (the global order). It writes no other: one to his
+// address created after the lock, in a workspace he does not lock, stays, as one created after the deactivation does
+// (P6 spec section 3 item 8 (a)). A deleted one keeps its moment.
+func (q *Queries) DeleteInvitations(ctx context.Context, arg DeleteInvitationsParams) error {
+	_, err := q.db.Exec(ctx, deleteInvitations, arg.Now, arg.DeletedBy, arg.Ids)
 	return err
 }
 
@@ -80,7 +47,7 @@ type EndWorkspaceMembershipsParams struct {
 	MemberID     uuid.UUID
 }
 
-// The sixth step, one statement under the workspaces' locks (convention 5): the account's active memberships of the
+// The fifth step, one statement under the workspaces' locks (convention 5): the account's active memberships of the
 // workspaces end, at the moment and by the account given; the rows stay, each with its role, and an ended or deleted one
 // keeps its columns.
 func (q *Queries) EndWorkspaceMemberships(ctx context.Context, arg EndWorkspaceMembershipsParams) error {
@@ -93,7 +60,7 @@ func (q *Queries) EndWorkspaceMemberships(ctx context.Context, arg EndWorkspaceM
 	return err
 }
 
-const lockInvitationsToDelete = `-- name: LockInvitationsToDelete :exec
+const lockInvitationsToDelete = `-- name: LockInvitationsToDelete :many
 SELECT i.id
 FROM workspace_member_invites i
 WHERE i.deleted_at IS NULL
@@ -112,18 +79,37 @@ type LockInvitationsToDeleteParams struct {
 	MemberID     uuid.UUID
 }
 
-// The third step, under the workspaces' locks (M3 design 3.6's global order, 3.9; the P6 final review's I1): every
-// invitation the next two steps delete, locked FOR NO KEY UPDATE in id order before either writes one. The predicate is
-// the union of theirs: the undeleted invitations to the address, of any workspace, pending or declined; and the pending
-// ones of each of the workspaces where the account has no other active member. Those to his address lie mostly in
-// workspaces he does not lock, and another deactivation may hold them: the one leaving such a workspace with no active
-// member deletes its pending invitations, to any address. Every deactivation takes the invitation rows it finds here in
-// id order, before it writes one, so two do not wait for each other in a cycle over them. The lock is taken as the
-// sorted rows come; after a wait, Postgres evaluates the predicate again on the row's newest version: an invitation
-// deleted meanwhile is left out.
-func (q *Queries) LockInvitationsToDelete(ctx context.Context, arg LockInvitationsToDeleteParams) error {
-	_, err := q.db.Exec(ctx, lockInvitationsToDelete, arg.Email, arg.WorkspaceIds, arg.MemberID)
-	return err
+// The third step, under the workspaces' locks (M3 design 3.6's global order, 3.7, 3.8, 3.9; the P6 final review's I1,
+// ruling F-1): the invitations the deactivation deletes, locked FOR NO KEY UPDATE in id order, their ids returned in
+// that order; the fourth step deletes those and no other. They are the undeleted invitations to the address, of any
+// workspace, pending or declined (Plane views/user/base.py:313); and the pending ones of each of the workspaces where
+// the account has no other active member (the P6 pre-flight's M1): run before his memberships end, "other" leaves him
+// out. A workspace he was alone in then has no active member, and no invitation lets anyone into it: one accepted
+// would make a member of a workspace with no admin. A declined one stays, which cannot be accepted. Creating an
+// invitation holds the workspace FOR SHARE, accepting one FOR NO KEY UPDATE: neither commits in those workspaces while
+// the deactivation holds them. Those to his address lie mostly in workspaces he does not lock, and another deactivation
+// may hold them: the one leaving such a workspace with no active member deletes its pending invitations, to any
+// address. Every deactivation takes the invitation rows it finds here in id order, and writes no other invitation, so
+// two do not wait for each other in a cycle over them. The lock is taken as the sorted rows come; after a wait,
+// Postgres evaluates the predicate again on the row's newest version: an invitation deleted meanwhile is left out.
+func (q *Queries) LockInvitationsToDelete(ctx context.Context, arg LockInvitationsToDeleteParams) ([]uuid.UUID, error) {
+	rows, err := q.db.Query(ctx, lockInvitationsToDelete, arg.Email, arg.WorkspaceIds, arg.MemberID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const lockMemberWorkspaces = `-- name: LockMemberWorkspaces :many

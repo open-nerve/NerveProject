@@ -81,18 +81,18 @@ func (w deactivationWorld) crossed(t *testing.T) string {
 // which it does not lock, and the pending one of its own, which it leaves
 // with no active member, its ended member not counted: the two rows the
 // other deletes too. The first, bob's or carol's, `nerve users deactivate`
-// as bootstrap wires it, stops at a gate once it has deleted the
-// invitations to its address (deletedInvitationsTo); the second, on each
-// path, waits for an invitation the first holds. Every deactivation locks
-// both rows in id order before it deletes either. Had each deleted the
-// invitation to its address first, and its own workspace's then, the
-// second would hold the one to its address, of the first's workspace, and
-// wait for its own workspace's, to the first's address, which the first
-// deleted; the first, past its gate, would wait for the second's: 40P01,
-// one of them rolled back. Once the gate opens both are done: both
-// accounts deactivated, their memberships ended, no invitation left; and
-// the second's moment is no earlier than the gate's opening: it read the
-// clock after the invitations' lock it waited for (3.3).
+// as bootstrap wires it, stops at a gate once it has deleted its
+// invitations (deletedInvitations); the second, on each path, waits for an
+// invitation the first holds. Every deactivation locks both rows in id
+// order before it deletes either. Had each deleted the invitation to its
+// address first, and its own workspace's then, the second would hold the
+// one to its address, of the first's workspace, and wait for its own
+// workspace's, to the first's address, which the first deleted; the first,
+// stopped between its two deletes, would wait for the second's: 40P01, one
+// of them rolled back. Once the gate opens both are done: both accounts
+// deactivated, their memberships ended, no invitation left; and the
+// second's moment is no earlier than the gate's opening: it read the clock
+// after the invitations' lock it waited for (3.3).
 func TestTwoDeactivationsWithCrossedInvitationsBothGoThrough(t *testing.T) {
 	for _, first := range []string{"bob", "carol"} {
 		second := map[string]string{"bob": "carol", "carol": "bob"}[first]
@@ -102,7 +102,7 @@ func TestTwoDeactivationsWithCrossedInvitationsBothGoThrough(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				g := newGate()
-				gated := deactivating(w.pool, identitypg.New(w.pool), deletedInvitationsTo{workspacepg.New(w.pool), g})
+				gated := deactivating(w.pool, identitypg.New(w.pool), deletedInvitations{workspacepg.New(w.pool), g})
 				done := run(func() error {
 					_, err := gated.ExecuteByEmail(ctx, first+"@example.com")
 					return err
@@ -130,5 +130,75 @@ func TestTwoDeactivationsWithCrossedInvitationsBothGoThrough(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// An invitation to bob's address created after his deactivation locked its
+// invitations is not his deactivation's to delete, and carol's, which
+// deletes it, does not wait for his in a cycle (ruling F-1; P6 spec section
+// 3 item 20). In a crossed world where carol has withdrawn her invitation
+// of bob to gamma, bob's deactivation, `nerve users deactivate` as
+// bootstrap wires it, stops at a gate once it has locked acme's invitation
+// to carol, x, the one it finds (lockedInvitations). Then z, a new
+// invitation of carol's to his address in gamma, is committed; its id is
+// smaller than x's, drawn before x's was, as a request draws it before its
+// transaction waits. carol's deactivation, on each path, locks z, then
+// waits for x. bob's deletes x, the invitation its lock returned, and
+// commits; had it deleted every invitation to his address, it would have
+// waited for z, which carol's holds: 40P01, one of them rolled back.
+// carol's then leaves x out, deleted meanwhile, and deletes z. Both are
+// done, and each invitation was deleted at the end of its deleter's
+// membership: z by carol, x by bob.
+func TestAnInvitationCreatedAfterADeactivationsLockIsLeftToTheOther(t *testing.T) {
+	for _, p := range deactivationPaths {
+		t.Run("carol by "+p.name, func(t *testing.T) {
+			z := uuid.NewV7()
+			w := newCrossedWorld(t)
+			x := queryIDs(t, w.pool, "SELECT id FROM workspace_member_invites WHERE email = 'carol@example.com'")[0]
+			y := queryIDs(t, w.pool, "SELECT id FROM workspace_member_invites WHERE email = 'bob@example.com'")[0]
+			if status, body := call(t, w.contract, http.MethodDelete, w.base+"/api/v0/workspace-invitations/"+y.String(), w.tokens["carol"],
+				""); status != http.StatusNoContent || z.Compare(x) >= 0 {
+				t.Fatalf("carol's withdrawal of her invitation to bob = %d %s; z %s, x %s: want it done, and z's id the smaller", status, body,
+					z, x)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			g := newGate()
+			gated := deactivating(w.pool, identitypg.New(w.pool), lockedInvitations{workspacepg.New(w.pool), g})
+			done := run(func() error {
+				_, err := gated.ExecuteByEmail(ctx, "bob@example.com")
+				return err
+			})
+			held(t, ctx, g, done, "bob's deactivation")
+			if _, err := w.pool.Exec(pgtest.Soon(t), `INSERT INTO workspace_member_invites (id, workspace_id, email, role, created_by_id,
+				updated_by_id) VALUES ($1, $2, 'bob@example.com', 15, $3, $3)`, z, w.workspace(t, "gamma"), w.ids["carol"]); err != nil {
+				t.Fatal(err)
+			}
+			answer := p.sent(w, t, "carol")
+			pgtest.WaitForLockWaitOn(t, w.pool, "workspace_member_invites", 5*time.Second)
+			close(g.open)
+
+			if err := result(t, ctx, done, "bob's deactivation"); err != nil {
+				t.Errorf("bob's deactivation = %v; want it done", err)
+			}
+			if got := answer(); got != "" {
+				t.Errorf("carol's deactivation = %q; want it done", got)
+			}
+			if got, want := w.crossed(t), "bob deactivated, carol deactivated, dave active, erin active; acme bob 20 ended, acme dave 15 ended, "+
+				"gamma carol 20 ended, gamma erin 15 ended; no invitation"; got != want {
+				t.Errorf("after both: %s; want %s", got, want)
+			}
+			var deleters string
+			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT string_agg(s.slug || ' ' || i.email || ' by ' || split_part(u.email, '@', 1) ||
+				CASE WHEN i.deleted_at = m.updated_at AND i.updated_at = m.updated_at THEN ' at the end of the membership' ELSE ' at '
+				|| i.deleted_at::text END, ', ' ORDER BY i.id)
+				FROM workspace_member_invites i JOIN workspaces s ON s.id = i.workspace_id JOIN users u ON u.id = i.updated_by_id
+				JOIN workspace_members m ON m.member_id = i.updated_by_id WHERE i.id = ANY ($1)`, []uuid.UUID{z, x}).Scan(&deleters); err != nil {
+				t.Fatal(err)
+			}
+			if want := "gamma bob@example.com by carol at the end of the membership, acme carol@example.com by bob at the end of the membership"; deleters != want {
+				t.Errorf("z and x by their deleters: %s; want %s", deleters, want)
+			}
+		})
 	}
 }

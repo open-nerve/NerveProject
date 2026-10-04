@@ -37,36 +37,25 @@ func (s *Store) SoleAdmin(ctx context.Context, workspaceIDs []uuid.UUID, userID 
 }
 
 // LockInvitationsToDelete locks FOR NO KEY UPDATE in id order, until the
-// transaction ends, every invitation that DeleteInvitationsTo(email) and
-// DeleteInvitationsOfWorkspacesLeftEmpty(workspaceIDs, userID) would
-// delete now. One deleted while the lock waited is left out.
-func (s *Store) LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID, email string) error {
-	err := s.queries(ctx).LockInvitationsToDelete(ctx, gen.LockInvitationsToDeleteParams{Email: email, WorkspaceIds: workspaceIDs, MemberID: userID})
+// transaction ends, the undeleted invitations to email, pending or
+// declined, of every workspace, and the pending ones of each of the
+// workspaces where userID has no other active member, and returns their
+// ids in that order. One deleted while the lock waited is left out.
+func (s *Store) LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID, email string) ([]uuid.UUID,
+	error) {
+	ids, err := s.queries(ctx).LockInvitationsToDelete(ctx, gen.LockInvitationsToDeleteParams{Email: email, WorkspaceIds: workspaceIDs,
+		MemberID: userID})
 	if err != nil {
-		return fmt.Errorf("lock the invitations to delete: %w", err)
+		return nil, fmt.Errorf("lock the invitations to delete: %w", err)
 	}
-	return nil
+	return ids, nil
 }
 
-// DeleteInvitationsTo soft-deletes every undeleted invitation to email,
-// pending or declined, of every workspace, by the account by at now.
-func (s *Store) DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error {
-	if err := s.queries(ctx).DeleteInvitationsTo(ctx, gen.DeleteInvitationsToParams{Email: email, DeletedBy: by, Now: now}); err != nil {
-		return fmt.Errorf("delete the invitations to the address: %w", err)
-	}
-	return nil
-}
-
-// DeleteInvitationsOfWorkspacesLeftEmpty soft-deletes the pending
-// invitations of each of the workspaces where userID has no other active
-// member, by the account by at now. Call it before his memberships end.
-func (s *Store) DeleteInvitationsOfWorkspacesLeftEmpty(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID,
-	now time.Time) error {
-	err := s.queries(ctx).DeleteInvitationsOfWorkspacesLeftEmpty(ctx, gen.DeleteInvitationsOfWorkspacesLeftEmptyParams{
-		WorkspaceIds: workspaceIDs, MemberID: userID, DeletedBy: by, Now: now,
-	})
-	if err != nil {
-		return fmt.Errorf("delete the invitations of the workspaces left empty: %w", err)
+// DeleteInvitations soft-deletes the undeleted invitations of ids, by the
+// account by at now, and no other.
+func (s *Store) DeleteInvitations(ctx context.Context, ids []uuid.UUID, by uuid.UUID, now time.Time) error {
+	if err := s.queries(ctx).DeleteInvitations(ctx, gen.DeleteInvitationsParams{Ids: ids, DeletedBy: by, Now: now}); err != nil {
+		return fmt.Errorf("delete the invitations: %w", err)
 	}
 	return nil
 }
