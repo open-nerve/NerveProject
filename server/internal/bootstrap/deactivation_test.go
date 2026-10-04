@@ -138,10 +138,7 @@ func TestADeactivationEndsEveryMembership(t *testing.T) {
 			}
 			rowsBefore := make([]map[string]any, len(written))
 			for i, id := range written {
-				if tag, err := w.pool.Exec(pgtest.Soon(t), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id, w.ids["dave"]); err != nil ||
-					tag.RowsAffected() != 1 {
-					t.Fatalf("%s %s last written by dave: %v, %v", tables[i], id, tag, err)
-				}
+				stampWriter(t, w.pool, w.ids["dave"], 1, tables[i], "id = $2", id)
 				rowsBefore[i] = rowJSON(t, w.pool, tables[i], id)
 			}
 			own := slices.Concat([]uuid.UUID{bob}, queryIDs(t, w.pool, "SELECT id FROM profiles WHERE user_id = $1", bob),
@@ -248,10 +245,7 @@ func TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties(t *testing.T) {
 				w.tokens["carol"], ""); status != http.StatusNoContent {
 				t.Fatalf("carol's deletion of her invitation of frank to gamma = %d %s", status, body)
 			}
-			if tag, err := w.pool.Exec(pgtest.Soon(t), "UPDATE workspace_member_invites SET updated_by_id = $2 WHERE id = ANY($1)", invited,
-				w.ids["alice"]); err != nil || tag.RowsAffected() != 2 {
-				t.Fatalf("the two invitations last written by alice: %v, %v", tag, err)
-			}
+			stampWriter(t, w.pool, w.ids["alice"], 2, "workspace_member_invites", "id = ANY ($2::uuid[])", invited)
 			var admins, members int
 			if err := w.pool.QueryRow(pgtest.Soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 1 || members != 1 {
 				t.Fatalf("gamma: %d active admins of %d active members (%v); want carol alone", admins, members, err)

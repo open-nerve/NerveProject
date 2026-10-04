@@ -211,8 +211,9 @@ func TestAcceptingAndDeactivating(t *testing.T) {
 //     were then but alice's membership, which the change wrote;
 //   - (c) the deactivation finds his membership of Web, made after its lock
 //     of his account, and ends it at the moment it ends his membership of
-//     acme, as his; acme and Web keep alice, their admin, her memberships
-//     active.
+//     acme: only the moment shows the deactivation's write there, his
+//     joining having written it as his; acme and Web keep alice, their
+//     admin, her memberships active.
 func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 	for _, tt := range []struct {
 		name  string

@@ -166,10 +166,7 @@ func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
 			tables := []string{"workspace_members", "workspace_member_invites", "project_members", "project_members", "project_members"}
 			rowsBefore := make([]map[string]any, len(written))
 			for i, id := range written {
-				if tag, err := w.pool.Exec(pgtest.Soon(t), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id,
-					w.ids["dave"]); err != nil || tag.RowsAffected() != 1 {
-					t.Fatalf("%s %s last written by dave: %v, %v", tables[i], id, tag, err)
-				}
+				stampWriter(t, w.pool, w.ids["dave"], 1, tables[i], "id = $2", id)
 				rowsBefore[i] = rowJSON(t, w.pool, tables[i], id)
 			}
 			others := rowsBut(t, w.pool, written)

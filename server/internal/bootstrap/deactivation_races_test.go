@@ -41,21 +41,19 @@ func (w deactivationWorld) endings(t *testing.T) string {
 	return got
 }
 
-// lastWrittenBy stamps every row endings reads as last written by name,
-// each other column kept, and checks there are want of them: so that each
-// "by" endings prints after an act is a write of that act, not the row's
+// lastWrittenBy stamps every row endings reads as last written by name
+// (stampWriter), each other column kept, and checks how many of each it
+// stamped: bob's memberships of workspaces, his memberships of projects,
+// and the unaccepted invitations to his two addresses. So each "by"
+// endings prints after an act is a write of that act, not the row's
 // earlier writer, bob's, alice's or carol's, which a write that kept the
 // writer would leave.
-func (w deactivationWorld) lastWrittenBy(t *testing.T, name string, want int64) {
+func (w deactivationWorld) lastWrittenBy(t *testing.T, name string, memberships, projects, invitations int64) {
 	t.Helper()
-	tag, err := w.pool.Exec(pgtest.Soon(t), `WITH m AS (UPDATE workspace_members SET updated_by_id = $2 WHERE member_id = $1 RETURNING 1),
-		p AS (UPDATE project_members SET updated_by_id = $2 WHERE member_id = $1 RETURNING 1),
-		i AS (UPDATE workspace_member_invites SET updated_by_id = $2
-			WHERE email IN ('bob@example.com', 'robert@example.com') AND NOT accepted RETURNING 1)
-		SELECT 1 FROM m UNION ALL SELECT 1 FROM p UNION ALL SELECT 1 FROM i`, w.ids["bob"], w.ids[name])
-	if err != nil || tag.RowsAffected() != want {
-		t.Fatalf("bob's memberships and invitations last written by %s: %v, %v; want %d rows", name, tag, err, want)
-	}
+	by, bob := w.ids[name], w.ids["bob"]
+	stampWriter(t, w.pool, by, memberships, "workspace_members", "member_id = $2", bob)
+	stampWriter(t, w.pool, by, projects, "project_members", "member_id = $2", bob)
+	stampWriter(t, w.pool, by, invitations, "workspace_member_invites", "email IN ('bob@example.com', 'robert@example.com') AND NOT accepted")
 }
 
 // bobsStanding is endings once alice has joined Ops and Lab, before any
@@ -119,7 +117,7 @@ func TestADeactivationFindsWhatChangedMeanwhile(t *testing.T) {
 				if got := w.endings(t); got != bobsStanding {
 					t.Fatalf("bob's memberships and invitations before: %s; want %s", got, bobsStanding)
 				}
-				w.lastWrittenBy(t, "dave", 2+5+3)
+				w.lastWrittenBy(t, "dave", 2, 5, 3)
 				path, row := tt.write(w, t)
 				holder := holding(t, w.pool, "SELECT 1 FROM "+tt.waitsOn+" WHERE id = $1 FOR SHARE", row)
 				req := newRequest(t, http.MethodDelete, w.base+path, w.tokens["alice"], nil)
@@ -186,7 +184,7 @@ func TestADeactivationReadsTheAddressUnderItsLock(t *testing.T) {
 			for _, slug := range []string{"acme", "beta"} {
 				invite(t, w.contract, w.base, w.tokens["alice"], slug, "robert@example.com")
 			}
-			w.lastWrittenBy(t, "dave", 2+5+3+2)
+			w.lastWrittenBy(t, "dave", 2, 5, 3+2)
 			w.tokens["bob"] = createPAT(t, w.contract, w.base, w.tokens["bob"]).Token
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()

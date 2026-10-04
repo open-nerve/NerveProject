@@ -237,21 +237,21 @@ const (
 		"Ops: alice 20, bob 15, carol 20; Web: alice 20, bob 20, carol 15, dave 20, erin 5"
 )
 
-// Rule 2 under two deactivations at once (M3 design 3.7, 3.6 convention
-// 6): acme's two admins, alice and gina, deactivated at once; bob, carol,
-// dave and erin are its other active members. The first holds her account
-// and acme FOR NO KEY UPDATE and waits at her gate: between her check of
-// rule 2 and her writes; or once her membership has ended. The second
-// waits for acme's row. Once the first has committed, the second finds
-// herself acme's only active admin, with other active members:
-// workspace.sole_admin, and her account is active still. acme keeps an
-// admin; each membership of the first ended, of acme and of its projects,
-// is hers: the test stamped both admins' memberships as last written by
-// dave first, alice's creations of acme, Web and Ops having written hers
-// as hers. Held between her check and her writes, the first shows that the
-// check holds the lock her writes do: a deactivation that let acme go
-// between the two would leave the second nothing to wait for, and both
-// would end.
+// Rule 2 under two deactivations at once (M3 design 3.7, 3.6 convention 6):
+// acme's two admins, alice and gina, deactivated at once; bob, carol, dave and
+// erin are its other active members. The first holds her account and acme FOR
+// NO KEY UPDATE and waits at her gate: between her check of rule 2 and her
+// writes; or once her membership has ended. The second waits for acme's row.
+// Once the first has committed, the second finds herself acme's only active
+// admin, with other active members: workspace.sole_admin, and her account is
+// active still. acme keeps an admin; each membership of the first ended, of
+// acme and of its projects, is hers: alice's creations of acme, Web and Ops
+// having written hers as hers, the test stamped first each admin's membership
+// of acme as written by the other, alice's of Ops by carol, its other admin,
+// and both of Web by dave, its admin too, writers the rules let write them.
+// Held between her check and her writes, the first shows that the check holds
+// the lock her writes do: a deactivation that let acme go between the two would
+// leave the second nothing to wait for, and both would end.
 func TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin(t *testing.T) {
 	for _, at := range []struct {
 		name    string
@@ -267,9 +267,11 @@ func TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin(t *testing.T) {
 		for _, aliceFirst := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s, alice first %v", at.name, aliceFirst), func(t *testing.T) {
 				w := newMemberWorld(t)
-				admins := []uuid.UUID{w.ids["alice"], w.ids["gina"]}
-				stampWriter(t, w.pool, w.ids["dave"], 2, "workspace_members", "member_id = ANY ($2::uuid[])", admins)
-				stampWriter(t, w.pool, w.ids["dave"], 3, "project_members", "member_id = ANY ($2::uuid[])", admins)
+				stampWriter(t, w.pool, w.ids["gina"], 1, "workspace_members", "member_id = $2", w.ids["alice"])
+				stampWriter(t, w.pool, w.ids["alice"], 1, "workspace_members", "member_id = $2", w.ids["gina"])
+				stampWriter(t, w.pool, w.ids["carol"], 1, "project_members", "member_id = $2 AND project_id = $3", w.ids["alice"], w.ops)
+				stampWriter(t, w.pool, w.ids["dave"], 2, "project_members", "member_id = ANY ($2::uuid[]) AND project_id = $3",
+					[]uuid.UUID{w.ids["alice"], w.ids["gina"]}, w.web)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				first, second, want := "alice", "gina", aliceDeactivated
