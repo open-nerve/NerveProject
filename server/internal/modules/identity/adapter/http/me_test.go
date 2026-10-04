@@ -158,8 +158,12 @@ func TestDeactivateMe(t *testing.T) {
 // them (M3 design 3.9, 9.4): a credential revoked since authentication,
 // 401; the workspace module's workspace.sole_admin and the project module's
 // project.sole_admin, which identity does not import (stand-ins with their
-// kind, code and detail), each a 409 of deactivateMe as it comes, wrapped
-// as the ending wraps it; a failure, 500, never another problem.
+// kind, code and detail), each a 409 of deactivateMe; a failure, 500,
+// never another problem. The project module's cascade returns
+// project.sole_admin unwrapped, and the workspace module's Deactivator and
+// identity's deactivation pass it on as itself; its row is wrapped all the
+// same, because the answer is the first *shared.Error in the chain however
+// the refusal comes.
 func TestDeactivateMeProblems(t *testing.T) {
 	workspaceSoleAdmin := shared.NewError(shared.KindConflict, "workspace.sole_admin",
 		"The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it "+
