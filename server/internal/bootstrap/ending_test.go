@@ -55,6 +55,18 @@ func rowsBut(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID) map[string]strin
 	return all
 }
 
+// stampWriter stamps the rows of table that where selects, its arguments
+// from $2 on, as last written by the account by, each other column kept,
+// and fails the test unless it stamped want of them: so that a later
+// write's writer shows, the rows' earlier writer being by, not it.
+func stampWriter(t *testing.T, pool *pgxpool.Pool, by uuid.UUID, want int64, table, where string, args ...any) {
+	t.Helper()
+	tag, err := pool.Exec(pgtest.Soon(t), "UPDATE "+table+" SET updated_by_id = $1 WHERE "+where, append([]any{by}, args...)...)
+	if err != nil || tag.RowsAffected() != want {
+		t.Fatalf("%s WHERE %s last written by %s: %v, %v; want %d rows", table, where, by, tag, err, want)
+	}
+}
+
 // uuidTexts are ids as text.
 func uuidTexts(ids []uuid.UUID) []string {
 	out := make([]string, len(ids))

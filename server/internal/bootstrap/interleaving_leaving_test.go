@@ -244,11 +244,14 @@ type serialized struct {
 }
 
 // sameOutcome is whether err is want: nil for nil, else an error whose
-// first problem in its chain, the one the API would answer, is want.
+// first problem in its chain, the one the API would answer, is want's: of
+// its kind, with its code and its detail, so that a problem made anew by
+// each call, as shared.Unauthenticated() is, compares too.
 func sameOutcome(err, want error) bool {
 	if want == nil {
 		return err == nil
 	}
-	var first *shared.Error
-	return errors.As(err, &first) && error(first) == want
+	var first, problem *shared.Error
+	return errors.As(err, &first) && errors.As(want, &problem) && first.Kind == problem.Kind && first.Code == problem.Code &&
+		first.Detail == problem.Detail
 }

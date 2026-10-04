@@ -76,14 +76,23 @@ func newAnswerRace(t *testing.T, role shared.Role) answerRace {
 	return r
 }
 
-// join makes user a member of acme with role.
+// join makes user a member of acme with role, as his own acceptance of an
+// invitation would.
 func (r answerRace) join(t *testing.T, user uuid.UUID, role shared.Role) {
 	t.Helper()
 	if err := workspacepg.New(r.pool).CreateMember(context.Background(), workspaceapp.MemberRow{
-		ID: uuid.NewV7(), WorkspaceID: r.acme, MemberID: user, Role: role, CreatedBy: r.alice, Now: time.Now(),
+		ID: uuid.NewV7(), WorkspaceID: r.acme, MemberID: user, Role: role, CreatedBy: user, Now: time.Now(),
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// bobsLastWrittenByAlice stamps bob's active membership of acme as last
+// written by alice, as her change of his role would leave it, each other
+// column kept: so that a write of it as bob afterwards shows.
+func (r answerRace) bobsLastWrittenByAlice(t *testing.T) {
+	t.Helper()
+	stampWriter(t, r.pool, r.alice, 1, "workspace_members", "workspace_id = $2 AND member_id = $3 AND is_active", r.acme, r.bob)
 }
 
 func (r answerRace) tx() *postgres.TxManager { return postgres.NewTxManager(r.pool, 2*time.Second) }
@@ -197,7 +206,7 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 			if !acceptFirst {
 				wantAccept = workspacedomain.ErrInvitationNotFound
 			}
-			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) {
+			if err := result(t, ctx, accepted, "the acceptance"); !sameOutcome(err, wantAccept) {
 				t.Errorf("the acceptance = %v, want %v", err, wantAccept)
 			}
 			if err := result(t, ctx, deleted, "the deletion"); err != nil {
@@ -263,7 +272,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 			if !acceptFirst {
 				wantAccept = workspacedomain.ErrInvitationEmailMismatch
 			}
-			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) {
+			if err := result(t, ctx, accepted, "the acceptance"); !sameOutcome(err, wantAccept) {
 				t.Errorf("the acceptance = %v, want %v", err, wantAccept)
 			}
 			if err := result(t, ctx, changed, "the change"); err != nil {
@@ -300,8 +309,8 @@ func (d gatedDecliner) DeclineInvitation(ctx context.Context, id, by uuid.UUID, 
 
 // Interleaving 19 (M3 design 9.3, 3.6 convention 1): bob is acme's member
 // and has an invitation to it, as after reactivate-member or a change of
-// address; the deactivation is `nerve users deactivate` as bootstrap wires
-// it. The decline first holds his account row FOR SHARE, then acme's; the
+// address, his membership stamped as last written by alice; the
+// deactivation is `nerve users deactivate` as bootstrap wires it. The decline first holds his account row FOR SHARE, then acme's; the
 // deactivation waits on the account row, then goes on, and deletes the
 // invitation, declined by then. The deactivation first holds the account
 // row, acme's, the invitation, which it has deleted, and his membership,
@@ -318,6 +327,7 @@ func TestDecliningAndDeactivating(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			r := newAnswerRace(t, shared.RoleMember)
 			r.join(t, r.bob, shared.RoleMember)
+			r.bobsLastWrittenByAlice(t)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
@@ -339,7 +349,7 @@ func TestDecliningAndDeactivating(t *testing.T) {
 			if !declineFirst {
 				wantDecline = shared.Unauthenticated()
 			}
-			if err := result(t, ctx, declined, "the decline"); !errors.Is(err, wantDecline) {
+			if err := result(t, ctx, declined, "the decline"); !sameOutcome(err, wantDecline) {
 				t.Errorf("the decline = %v, want %v", err, wantDecline)
 			}
 			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {

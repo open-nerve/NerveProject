@@ -22,7 +22,8 @@ import (
 // endedMembers prepares the database at url: through the command line,
 // the accounts of alice, bob, carol and dave, and acme and gone, alice the
 // admin of each; through the stores, bob acme's admin and carol its guest,
-// bob the admin of Web and Ops, carol Web's guest; then bob's and carol's
+// each membership its member's own, as an acceptance makes it, bob the
+// admin of Web and Ops, carol Web's guest; then bob's and carol's
 // memberships of acme and of its projects ended by alice at one moment, as
 // a removal ends them (M3 design 3.6, 3.7); alice's invitation of bob to
 // acme, sent then, which he declined; gone deleted; carol's account
@@ -63,7 +64,7 @@ func endedMembers(t *testing.T, url string) *pgxpool.Pool {
 		projects []uuid.UUID
 	}{{"bob", shared.RoleAdmin, acmes}, {"carol", shared.RoleGuest, acmes[:1]}} {
 		if err := workspaces.CreateMember(ctx, workspaceapp.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, MemberID: ids[m.name], Role: m.role,
-			CreatedBy: ids["alice"], Now: now}); err != nil {
+			CreatedBy: ids[m.name], Now: now}); err != nil {
 			t.Fatal(err)
 		}
 		for _, p := range m.projects {
