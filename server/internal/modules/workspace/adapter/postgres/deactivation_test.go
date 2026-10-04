@@ -266,14 +266,16 @@ func TestSoleAdminOfAWorkspace(t *testing.T) {
 // EndWorkspaceMemberships ends bob's active, undeleted memberships of the
 // workspaces asked about, acme's as a member and gamma's as an admin, each
 // keeping its role, by the account and at the time given, though alice
-// wrote them last, and changes
-// nothing else (M3 design 3.6 convention 6): his membership of beta,
-// asked about but ended by alice before, keeps its ender and moment; his
-// deleted membership of acme, carol's of acme and his of delta, not asked
-// about, every column.
+// wrote them last. The account given is dave, not bob, so that the member
+// and the writer cannot be taken for each other. It changes nothing else
+// (M3 design 3.6 convention 6): his membership of beta, asked about but
+// ended by alice before, keeps its ender and moment; his deleted
+// membership of acme, carol's of acme and his of delta, not asked about,
+// every column.
 func TestEndWorkspaceMemberships(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	dave := newAccount(t, pool, "dave@corp.com")
 	acme, beta := newWorkspace(t, s, "Acme", "acme", alice).ID, newWorkspace(t, s, "Beta", "beta", alice).ID
 	gamma, delta := newWorkspace(t, s, "Gamma", "gamma", alice).ID, newWorkspace(t, s, "Delta", "delta", alice).ID
 	exec(t, pool, `INSERT INTO workspace_members (id, workspace_id, member_id, role, created_by_id, updated_by_id, created_at, updated_at,
@@ -287,12 +289,12 @@ func TestEndWorkspaceMemberships(t *testing.T) {
 	before := tableRows(t, pool, "workspace_members", ended, "is_active", "updated_at", "updated_by_id")
 	later := now.Add(time.Hour)
 
-	if err := s.EndWorkspaceMemberships(context.Background(), []uuid.UUID{acme, beta, gamma}, bob, bob, later); err != nil {
+	if err := s.EndWorkspaceMemberships(context.Background(), []uuid.UUID{acme, beta, gamma}, bob, dave, later); err != nil {
 		t.Fatal(err)
 	}
 
 	for i, id := range ended {
-		if got, want := stamp(t, pool, "workspace_members", id), fmt.Sprintf("ended at %s by %s", at(t, pool, later), bob); got != want {
+		if got, want := stamp(t, pool, "workspace_members", id), fmt.Sprintf("ended at %s by %s", at(t, pool, later), dave); got != want {
 			t.Errorf("bob's membership %d: %s, want %s", i, got, want)
 		}
 	}

@@ -211,12 +211,12 @@ type WorkspaceDeleter interface {
 	DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 }
 
-// AllMembershipsEnder ends every membership of a deactivated account and
-// deletes every invitation to its address, and the pending ones of a
-// workspace it leaves with no active member (M3 design 3.6 convention 6,
-// 3.7, 3.9): the Deactivator's repository. It runs in the transaction ctx
-// carries, which identity's deactivation began and holds the account row's
-// FOR NO KEY UPDATE in.
+// AllMembershipsEnder ends every workspace membership of a deactivated
+// account and deletes every invitation to its address, and the pending
+// ones of a workspace it leaves with no active member (M3 design 3.6
+// convention 6, 3.7, 3.9): the Deactivator's repository. It runs in the
+// transaction ctx carries, which identity's deactivation began and holds
+// the account row's FOR NO KEY UPDATE in.
 type AllMembershipsEnder interface {
 	// LockMemberWorkspaces locks the undeleted workspaces of which userID is
 	// an active member FOR NO KEY UPDATE in id order, until the transaction

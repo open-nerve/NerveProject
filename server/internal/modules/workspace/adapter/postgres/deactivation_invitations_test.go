@@ -56,16 +56,19 @@ func TestDeleteInvitationsTo(t *testing.T) {
 // DeleteInvitationsOfWorkspacesLeftEmpty soft-deletes the pending
 // invitations of each workspace asked about where bob has no other active
 // member, by the account and at the time given, and changes nothing else
-// (M3 design 3.7, 3.9; the P6 pre-flight's M1). Asked about at once: acme,
-// where he is alone; beta, where carol is an active member; gamma, where
-// her membership ended; delta, where it is deleted. Each has a pending
-// invitation of alice's, to dave: acme's, gamma's and delta's are deleted,
-// though alice wrote them; beta's stays. acme's declined one, to erin, and
-// its one deleted while pending, to frank, keep every column; so does
-// zeta's pending one, a workspace not asked about with no active member.
+// (M3 design 3.7, 3.9; the P6 pre-flight's M1). The account given is
+// grace, not bob, so that the member and the writer cannot be taken for
+// each other. Asked about at once: acme, where he is alone; beta, where
+// carol is an active member; gamma, where her membership ended; delta,
+// where it is deleted. Each has a pending invitation of alice's, to dave:
+// acme's, gamma's and delta's are deleted, though alice wrote them; beta's
+// stays. acme's declined one, to erin, and its one deleted while pending,
+// to frank, keep every column; so does zeta's pending one, a workspace not
+// asked about with no active member.
 func TestDeleteInvitationsOfWorkspacesLeftEmpty(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	grace := newAccount(t, pool, "grace@corp.com")
 	ws := map[string]uuid.UUID{"zeta": newWorkspace(t, s, "zeta", "zeta", alice).ID}
 	exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1", ws["zeta"])
 	for _, name := range []string{"acme", "beta", "gamma", "delta"} {
@@ -91,13 +94,13 @@ func TestDeleteInvitationsOfWorkspacesLeftEmpty(t *testing.T) {
 	later := now.Add(time.Hour)
 
 	if err := s.DeleteInvitationsOfWorkspacesLeftEmpty(context.Background(), []uuid.UUID{ws["acme"], ws["beta"], ws["gamma"], ws["delta"]},
-		bob, bob, later); err != nil {
+		bob, grace, later); err != nil {
 		t.Fatal(err)
 	}
 
 	for i, id := range deleted {
 		if got, want := stamp(t, pool, "workspace_member_invites", id), fmt.Sprintf("deleted at %[1]s at %[1]s by %[2]s", at(t, pool, later),
-			bob); got != want {
+			grace); got != want {
 			t.Errorf("the invitation to dave of the workspace %d left empty: %s, want %s", i, got, want)
 		}
 	}
