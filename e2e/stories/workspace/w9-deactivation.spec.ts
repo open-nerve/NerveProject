@@ -105,20 +105,6 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   expect(joined.response.status, "A joins Lab").toBe(200);
   const account = await accountOf(db, bEmail);
   const tokensBefore = await tokensOf(db, account.id);
-  const others = async () => ({
-    users: await db.query("SELECT * FROM users WHERE id <> $1 ORDER BY id", [account.id]),
-    profiles: await db.query("SELECT * FROM profiles WHERE user_id <> $1 ORDER BY id", [account.id]),
-    sessions: await db.query("SELECT * FROM auth_sessions WHERE user_id <> $1 ORDER BY id", [account.id]),
-    workspaces: await db.query("SELECT * FROM workspace_members WHERE member_id <> $1 ORDER BY id", [account.id]),
-    projects: await db.query("SELECT * FROM project_members WHERE member_id <> $1 ORDER BY id", [account.id]),
-    invitations: await db.query("SELECT * FROM workspace_member_invites WHERE email <> $1 AND id <> $2 ORDER BY id", [
-      bEmail,
-      toEpsilon.id,
-    ]),
-  });
-  const othersBefore = await others();
-  expect(await deactivate(), "deactivateMe").toEqual([204, undefined, undefined]);
-  await expectDeactivated(db, account, tokensBefore);
   // Each of his rows: where, whether it stands, who wrote it last; and how many moments they were written at.
   const ended = async () =>
     db.query(
@@ -134,6 +120,63 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
        SELECT place, active, by, (SELECT count(DISTINCT written) FROM r) AS moments FROM r ORDER BY place COLLATE "C"`,
       [account.id, bEmail]
     );
+  // A, an admin of acme (B made him one), of beta (he made it) and of Lab (he joined it as its admin), gives B each role
+  // he has there, as it is: A wrote those three rows last, so that "by him" below can fail on them. C wrote delta's
+  // invitation last, which shows the invitations' writer; B gamma's, which he declined. Epsilon's rows, his membership
+  // and his invitation of C, only B can write, alone there: that the deactivation writes them by him is held by the Go
+  // composed tests (TestADeactivationEndsEveryMembership, TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties).
+  const [inLab] = await db.query<{ id: string }>(
+    "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2",
+    [lab.id, account.id]
+  );
+  const rewritten = [
+    await api.PATCH("/api/v0/workspace-members/{workspace_member_id}", {
+      params: { path: { workspace_member_id: await membershipOf(api, a, acme, account.id) } },
+      body: { role: 20 },
+      headers: bearer(a),
+    }),
+    await api.PATCH("/api/v0/workspace-members/{workspace_member_id}", {
+      params: { path: { workspace_member_id: await membershipOf(api, a, beta, account.id) } },
+      body: { role: 15 },
+      headers: bearer(a),
+    }),
+    await api.PATCH("/api/v0/project-members/{project_member_id}", {
+      params: { path: { project_member_id: inLab?.id ?? "" } },
+      body: { role: 20 },
+      headers: bearer(a),
+    }),
+  ];
+  expect(
+    rewritten.map((r) => r.response.status),
+    "A gives B his roles in acme, beta and Lab"
+  ).toEqual([200, 200, 200]);
+  expect(
+    (await ended()).map(({ place, by }) => ({ place, by })),
+    "who wrote B's rows last, before"
+  ).toEqual(
+    [
+      { place: "LAB", by: aEmail },
+      { place: acme, by: aEmail },
+      { place: beta, by: aEmail },
+      { place: epsilon, by: bEmail },
+      { place: `invitation to ${delta}`, by: cEmail },
+      { place: `invitation to ${gamma}`, by: bEmail },
+    ].toSorted((x, y) => (x.place < y.place ? -1 : 1))
+  );
+  const others = async () => ({
+    users: await db.query("SELECT * FROM users WHERE id <> $1 ORDER BY id", [account.id]),
+    profiles: await db.query("SELECT * FROM profiles WHERE user_id <> $1 ORDER BY id", [account.id]),
+    sessions: await db.query("SELECT * FROM auth_sessions WHERE user_id <> $1 ORDER BY id", [account.id]),
+    workspaces: await db.query("SELECT * FROM workspace_members WHERE member_id <> $1 ORDER BY id", [account.id]),
+    projects: await db.query("SELECT * FROM project_members WHERE member_id <> $1 ORDER BY id", [account.id]),
+    invitations: await db.query("SELECT * FROM workspace_member_invites WHERE email <> $1 AND id <> $2 ORDER BY id", [
+      bEmail,
+      toEpsilon.id,
+    ]),
+  });
+  const othersBefore = await others();
+  expect(await deactivate(), "deactivateMe").toEqual([204, undefined, undefined]);
+  await expectDeactivated(db, account, tokensBefore);
   const row = (place: string, active: boolean) => ({ place, active, by: bEmail, moments: "1" });
   expect(await ended(), "B's memberships and the invitations to him").toEqual(
     [
