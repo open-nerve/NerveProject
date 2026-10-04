@@ -2,9 +2,11 @@ package pgtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -45,6 +47,22 @@ func WaitForLockWaitOn(t testing.TB, pool *pgxpool.Pool, table string, limit tim
 		SELECT count(DISTINCT a.pid) FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
 		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock'
 			AND l.locktype = 'tuple' AND l.relation = $1`)
+}
+
+// WaitForLockWaitBehind returns once a backend connected to pool's
+// database waits for a lock that holder's backend holds, and fails the
+// test when none has within limit: pg_blocking_pids of the waiter names
+// holder. A test that holds each row in a transaction of its own names the
+// row waited for this way: a wait for another transaction's row does not
+// count, nor does a wait that ended when its holder let go, though the
+// waiter still waits on that table.
+func WaitForLockWaitBehind(t testing.TB, pool *pgxpool.Pool, holder *pgconn.PgConn, limit time.Duration) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), limit)
+	defer cancel()
+	waitFor(ctx, t, pool, limit, fmt.Sprintf("a lock of backend %d", holder.PID()), `
+		SELECT count(*) FROM pg_stat_activity
+		WHERE datname = current_database() AND wait_event_type = 'Lock' AND $1::int = ANY (pg_blocking_pids(pid))`, int64(holder.PID()))
 }
 
 // WaitForKeyWaitOn returns once a backend connected to pool's database that

@@ -172,6 +172,10 @@ func TestTheProbesFailAtTheirDeadlineOnAnExhaustedPool(t *testing.T) {
 			"no statement waited for a row lock of workspaces within 300ms"},
 		{"WaitForKeyWaitOn", func(tb testing.TB) { pgtest.WaitForKeyWaitOn(tb, pool, "workspaces", 300*time.Millisecond) },
 			"no statement waited for a key of workspaces within 300ms"},
+		{"WaitForLockWaitBehind", func(tb testing.TB) {
+			pgtest.WaitForLockWaitBehind(tb, pool, held.Conn().PgConn(), 300*time.Millisecond)
+		},
+			fmt.Sprintf("no statement waited for a lock of backend %d within 300ms", held.Conn().PgConn().PID())},
 	} {
 		failed := make(chan string, 1)
 		go func() { failed <- fatalOf(tt.probe) }()

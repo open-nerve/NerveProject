@@ -32,10 +32,27 @@ func deactivating(pool *pgxpool.Pool, sessions identityapp.SessionRevoker, membe
 	})
 }
 
+// deletedInvitationsTo stops a deactivation once it has deleted the
+// invitations to the account's address, before those of the workspaces it
+// leaves with no active member: it holds the account row, every workspace
+// of his FOR NO KEY UPDATE, and every invitation the two deletes write,
+// locked before either.
+type deletedInvitationsTo struct {
+	*workspacepg.Store
+	gate *gate
+}
+
+func (m deletedInvitationsTo) DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error {
+	if err := m.Store.DeleteInvitationsTo(ctx, email, by, now); err != nil {
+		return err
+	}
+	return m.gate.wait(ctx)
+}
+
 // endedHoldingAll stops a deactivation once it has ended the account's
 // workspace memberships, before the projects' step: it holds the account
-// row, every workspace of his FOR NO KEY UPDATE, the invitations to his
-// address and his memberships' rows.
+// row, every workspace of his FOR NO KEY UPDATE, every invitation it
+// deletes and his memberships' rows.
 type endedHoldingAll struct {
 	*workspacepg.Store
 	gate *gate
