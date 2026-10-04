@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 停用账户（`deactivateMe` 和 `nerve users deactivate` 两条路）在同一个事务里结束他的全部成员关系、删除发给他邮箱的全部邀请（待接受的和已忽略的）；他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时拒绝（409 `workspace.sole_admin`、`project.sole_admin`），每张表不变。停用在 `identity` 已持有的账户行之下：按 id 锁住他有效成员关系所在的全部工作区（上锁时已删除的跳过），查规则 2，在最后一把工作区锁之后读一次时钟，删除邀请，结束工作区成员关系，再调用一次 `EndMemberships`（跨这些工作区按项目 id 锁住、查规则 2 的项目一侧、结束）。邮箱取自锁下的账户行；`project.NewCascade` 随 `nerve users deactivate` 加入；约定六的每一条增长路径（交错 7、8、13–16、19）两种顺序都与停用串行；故事 W9 的接口版本通过。
+**Goal:** 停用账户（`deactivateMe` 和 `nerve users deactivate` 两条路）在同一个事务里结束他的全部成员关系、删除发给他邮箱的全部邀请（待接受的和已忽略的），以及他是唯一有效成员的工作区的待接受邀请（第五条语句，负责人对预检 M1 的裁定）；他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时拒绝（409 `workspace.sole_admin`、`project.sole_admin`），每张表不变。停用在 `identity` 已持有的账户行之下：按 id 锁住他有效成员关系所在的全部工作区（上锁时已删除的跳过），查规则 2，在最后一把工作区锁之后读一次时钟，删除发给他邮箱的邀请和他留下的空工作区的待接受邀请，结束工作区成员关系，再调用一次 `EndMemberships`（跨这些工作区按项目 id 锁住、查规则 2 的项目一侧、结束）。邮箱取自锁下的账户行；`project.NewCascade` 随 `nerve users deactivate` 加入；约定六的每一条增长路径（交错 7、8、13–16、19）两种顺序都与停用串行；故事 W9 的接口版本通过。
 
-**Architecture:** `identity`：端口 `MembershipDeactivator`（`app/ports.go`），`LockedAccount.Email`，`deactivate` 最后调用它；`deactivateMe` 声明两个码。`workspace`：存储的四条语句（`queries/deactivation.sql`）和端口 `AllMembershipsEnder`，用例 `app.Deactivator`，导出的 `workspace.Deactivator`、`NewDeactivator`、`Module.Deactivator()`；两个模块的 `sole_admin` 说明改为对每个调用者都成立。`project`：`NewCascade`、`CascadeDeps`（`New` 经它建）。`bootstrap`：服务把 `ws.Deactivator()` 交给 `identity.New`，`nerve users` 把 `workspace.NewDeactivator` 和 `project.NewCascade` 交给 `identity.NewAdmin`；组合测试、竞争、交错。不加迁移、表、Go 模块、npm 包；跨模块的端口只有 3.9 的这一个（签名见 spec 第 3 节第 1 条）。
+**Architecture:** `identity`：端口 `MembershipDeactivator`（`app/ports.go`），`LockedAccount.Email`，`deactivate` 最后调用它；`deactivateMe` 声明两个码。`workspace`：存储的五条语句（`queries/deactivation.sql`）和端口 `AllMembershipsEnder`，用例 `app.Deactivator`，导出的 `workspace.Deactivator`、`NewDeactivator`、`Module.Deactivator()`；两个模块的 `sole_admin` 说明改为对每个调用者都成立。`project`：`NewCascade`、`CascadeDeps`（`New` 经它建）。`bootstrap`：服务把 `ws.Deactivator()` 交给 `identity.New`，`nerve users` 把 `workspace.NewDeactivator` 和 `project.NewCascade` 交给 `identity.NewAdmin`；组合测试、竞争、交错。不加迁移、表、Go 模块、npm 包；跨模块的端口只有 3.9 的这一个（`DeactivateMemberships(ctx, userID, email) error`，不带 `now`：负责人 2026-10-04 的裁定，设计 3.9 已随 `e9289a4d` 改）。
 
 **Tech Stack:** Go 1.27.1、pgx v5.11.0、sqlc v1.31.1（`CGO_ENABLED=0`）、oapi-codegen v2.8.0、goose v3.28.0、River v0.47.0、golangci-lint 2.13.2、PostgreSQL 18.6（testcontainers）；Node 24、pnpm 11.10.0、Playwright 1.63.0。
 
@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断（`role = 20` 只出现在"管理员"这一个集合的查询里），不按大小比较；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/identity.yaml`（657 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内（最终原型上量的）：最长的是 `bootstrap/interleaving_growth_test.go`（398 行）、`identity/app/ports.go`（379 行）、`bootstrap/reactivation_races_test.go`（363 行）、`bootstrap/interleaving_answers_test.go`（361 行）、`workspace/adapter/postgres/deactivation_test.go`（341 行）、`workspace/app/ports.go`（317 行）、`project/adapter/postgres/end_test.go`（316 行）、`bootstrap/app.go`（303 行）；`bootstrap/interleaving_growth_test.go` 在 P5b 结束时是 404 行，本 plan 把它的一段改角色提成 `changeRole`、放到交错 7 的文件里。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断（`role = 20` 只出现在"管理员"这一个集合的查询里），不按大小比较；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/identity.yaml`（661 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内（最终原型上量的）：最长的是 `bootstrap/interleaving_growth_test.go`（398 行）、`identity/app/ports.go`（379 行）、`bootstrap/interleaving_answers_test.go`（364 行）、`bootstrap/reactivation_races_test.go`（363 行）、`bootstrap/deactivation_test.go`（324 行）、`workspace/app/ports.go`（323 行）、`project/adapter/postgres/end_test.go`（316 行）、`bootstrap/app.go`（303 行）、`workspace/adapter/postgres/deactivation_test.go`（302 行）；`bootstrap/interleaving_growth_test.go` 在 P5b 结束时是 404 行，本 plan 把它的一段改角色提成 `changeRole`、放到交错 7 的文件里。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -29,8 +29,8 @@
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `6dcc0794` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
 - **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改（`workspace/app/ports.go`、`bootstrap/users.go`、`bootstrap/interleaving_answers_test.go`、`bootstrap/interleaving_growth_test.go`、`bootstrap/reactivation_races_test.go`）。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app、命令或模块，`cmd/nerve`；端到端：单独运行的故事 W9、A12）。它们在最终的原型上逐个跑过（`$M3TMP/p6tools/mutants_p6.py`，由 `mutlevels.py` 在它写的每一层各跑一次；清扫之后加强的测试由 `mutants_p6_rerun.py` 在受影响的层重跑；`archtest` 从磁盘读源文件，它的两个由 `archmut.py` 写进副本再跑；spec 附录 A：119 个，119 个被发现）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有，或才改成最终的样子（P6 改写的已有测试，如交错 8、19）：这一行的变异最迟从那个 Task 起被它发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
-- **评审敏感**（M3 设计 12 节约束 3）：停用跨越他所在的每一个工作区、有接口和命令两条路、改动 `identity`、与约定六的每一条增长路径串行。停用是安全操作：停用之后他没有有效的成员关系、没有发给他邮箱的邀请，回来只经 `nerve users activate` 加 `reactivate-member`。改动这些测试、锁、规则之前，先照"变异"表确认它在所说的性质去掉之后失败。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app、命令或模块，`cmd/nerve`；端到端：单独运行的故事 W9、A12）。它们在最终的原型上逐个跑过（`$M3TMP/p6tools/mutants_p6.py`，由 `mutlevels.py` 在它写的每一层各跑一次；清扫之后加强的测试由 `mutants_p6_rerun.py` 在受影响的层重跑；裁定和预检之后，杀死它的测试改过的变异由 `mutants_p6_amend.py` 在它写的每一层重跑，第五条语句和预检 L1、L2、L7 的变异在那里加跑；`archtest` 从磁盘读源文件，它的两个由 `archmut.py` 写进副本再跑；spec 附录 A：141 个，141 个被发现）；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有，或才改成最终的样子（P6 改写的已有测试，如交错 8、19）：这一行的变异最迟从那个 Task 起被它发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外写在 spec 第 3 节。
+- **评审敏感**（M3 设计 12 节约束 3）：停用跨越他所在的每一个工作区、有接口和命令两条路、改动 `identity`、与约定六的每一条增长路径串行。停用是安全操作：停用之后他没有有效的成员关系、没有发给他邮箱的邀请；他是唯一有效成员的工作区也没有待接受的邀请（第五条语句），所以没有人能经邀请进入一个没有管理员的工作区。服务器管理员一侧，回来只经 `nerve users activate` 加 `reactivate-member`；工作区管理员的新邀请（`activate` 之后接受）是第三条路；`reactivate-member` 不看工作区有没有有效的管理员，恢复一个以前的非管理员成员到停用清空的工作区，工作区就有成员而没有管理员（spec 第 3 节第 8 条 (a)、(b)：负责人裁定的已知限制）。改动这些测试、锁、规则之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
 
@@ -40,9 +40,9 @@
 
 | 文件 | 职责 | Task |
 |---|---|---|
-| `server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql` | `LockMemberWorkspaces`、`SoleAdmin`、`DeleteInvitationsTo`、`EndWorkspaceMemberships` | 1 |
+| `server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql` | `LockMemberWorkspaces`、`SoleAdmin`、`DeleteInvitationsTo`、`DeleteInvitationsOfWorkspacesLeftEmpty`、`EndWorkspaceMemberships` | 1 |
 | `server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go`（生成） | | 1 |
-| `server/internal/modules/workspace/adapter/postgres/deactivation.go`、`server/internal/modules/workspace/adapter/postgres/deactivation_test.go`；`server/internal/modules/workspace/adapter/postgres/failures_test.go`（修改） | 四个存储方法和它们的测试（锁和它的强度、id 顺序、等锁时删除的工作区；规则 2 的十六个情形；别的地址、别人的行每一列不动）；每个方法的失败原样返回 | 1 |
+| `server/internal/modules/workspace/adapter/postgres/deactivation.go`、`server/internal/modules/workspace/adapter/postgres/deactivation_test.go`、`server/internal/modules/workspace/adapter/postgres/deactivation_invitations_test.go`；`server/internal/modules/workspace/adapter/postgres/failures_test.go`（修改） | 五个存储方法和它们的测试（锁和它的强度、id 顺序、等锁时删除的工作区；规则 2 的十六个情形；两条删邀请的语句，别的地址、别的工作区、别人的行每一列不动）；每个方法的失败原样返回 | 1 |
 | `server/internal/modules/workspace/app/ports.go`（修改） | 端口 `AllMembershipsEnder`；`ProjectCascade.EndMemberships` 的说明（Task 3） | 1、3 |
 | `server/internal/modules/project/module.go`（修改） | `CascadeDeps`、`NewCascade`；`New` 经它建出 `Cascade` | 2 |
 | `server/internal/modules/project/adapter/postgres/end_test.go`（修改） | `TestLockActiveMemberProjectsLocksInIDOrder` 跨两个工作区 | 2 |
@@ -65,7 +65,7 @@
 | `server/internal/archtest/composition_test.go`（修改） | 每个命令组合建什么、不建什么 | 4 |
 | `server/internal/bootstrap/deactivating_test.go` | `deactivating`（`nerve users deactivate` 照 `users.go` 的接法）、`endedHoldingAll` | 4 |
 | `server/internal/bootstrap/interleaving_test.go`（修改） | 交错 8 换成真实的停用 | 4 |
-| `server/internal/bootstrap/deactivation_world_test.go`、`server/internal/bootstrap/deactivation_test.go` | `deactivationWorld`、两条路；拒绝每张表不变、提交被拒每张表不变、成功的每一行 | 5 |
+| `server/internal/bootstrap/deactivation_world_test.go`、`server/internal/bootstrap/deactivation_test.go` | `deactivationWorld`、两条路；拒绝每张表不变、提交被拒每张表不变、成功的每一行、两个时刻的先后；清空工作区的停用删除那里的待接受邀请 | 5 |
 | `server/internal/bootstrap/users_test.go`、`server/internal/bootstrap/reactivation_races_test.go`（修改） | 停用的一行；`commandInBackground`；交错 16（Task 7） | 5、7（`reactivation_races_test.go`） |
 | `server/cmd/nerve/users.go`、`server/cmd/nerve/users_test.go`（修改） | 两个命令的说明；拒绝时打印说明、退出码 1 | 5 |
 | `server/internal/bootstrap/deactivation_locks_test.go`、`server/internal/bootstrap/deactivation_races_test.go` | 每把锁的顺序和强度、事务的连接、命令的中断；等锁期间的删除和移出、锁下的邮箱 | 6 |
@@ -76,33 +76,36 @@
 
 ---
 
-### Task 1: 停用的四条语句：锁他的工作区、工作区的唯一管理员、按邮箱删除邀请、结束工作区成员关系
+### Task 1: 停用的五条语句：锁他的工作区、工作区的唯一管理员、按邮箱删除邀请、删除他留下的空工作区的邀请、结束工作区成员关系
 
 **Files:**
-- Create: `server/internal/modules/workspace/adapter/postgres/deactivation.go`、`server/internal/modules/workspace/adapter/postgres/deactivation_test.go`、`server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql`
+- Create: `server/internal/modules/workspace/adapter/postgres/deactivation.go`、`server/internal/modules/workspace/adapter/postgres/deactivation_invitations_test.go`、`server/internal/modules/workspace/adapter/postgres/deactivation_test.go`、`server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql`
 - Modify: `server/internal/modules/workspace/adapter/postgres/failures_test.go`、`server/internal/modules/workspace/app/ports.go`
 - Generate: `server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go`
 
 **Interfaces:**
-- Produces（spec 2.3，M3 设计 3.6 约定六、3.7 规则 2、3.8、3.9）：端口 `workspace/app.AllMembershipsEnder`（`ports.go`），`Deactivator`（Task 3）的存储；`workspace/adapter/postgres.Store` 实现它的四个方法，都在 `ctx` 带着的事务里执行（停用的事务：`identity` 开的，已持有账户行的 `FOR NO KEY UPDATE`）：
+- Produces（spec 2.3，M3 设计 3.6 约定六、3.7 规则 2、3.8、3.9）：端口 `workspace/app.AllMembershipsEnder`（`ports.go`），`Deactivator`（Task 3）的存储；`workspace/adapter/postgres.Store` 实现它的五个方法，都在 `ctx` 带着的事务里执行（停用的事务：`identity` 开的，已持有账户行的 `FOR NO KEY UPDATE`）：
   - `LockMemberWorkspaces(ctx, userID) ([]uuid.UUID, error)`：他是有效、未删除成员的未删除工作区，按 id 升序 `FOR NO KEY UPDATE` 锁住，按这个顺序回答；等锁时被删除的少返回一行，不是错误（复核 spike 15）。
   - `SoleAdmin(ctx, workspaceIDs, userID) (bool, error)`：他是不是其中某个"还有别的有效成员"的工作区唯一的有效管理员（`role = 20`，"管理员"这个集合）。只有他一人的、另有有效管理员的不算。
   - `DeleteInvitationsTo(ctx, email, by, now) error`：发给这个地址的每一份未删除的邀请，每个工作区、待接受的和已忽略的，`deleted_at = updated_at = now`、`updated_by_id = by`。
+  - `DeleteInvitationsOfWorkspacesLeftEmpty(ctx, workspaceIDs, userID, by, now) error`（第五条语句，负责人对预检 M1 的裁定 (a)）：这些工作区中他之外没有有效、未删除成员的那些，它们待接受（未回应、未删除）的邀请 `deleted_at = updated_at = now`、`updated_by_id = by`；在他的成员关系结束之前调用（"之外"不算他自己）。已忽略的不删，已删除的保留时刻。
   - `EndWorkspaceMemberships(ctx, workspaceIDs, userID, by, now) error`：他在这些工作区有效、未删除的成员关系 `is_active = false`，`updated_at = now`、`updated_by_id = by`，行和角色留着；已结束的不再写。
-- 四条查询照原样写进 `queries/deactivation.sql`（spec 2.3 有全文）。
+- 五条查询照原样写进 `queries/deactivation.sql`（spec 2.3 有全文）。
 
-**Tests:**（`adapter/postgres/deactivation_test.go`；`tableRows`、`stamp` 比较被写的行之外的每一行每一列）
+**Tests:**（`adapter/postgres/deactivation_test.go`，两条删邀请的语句在 `deactivation_invitations_test.go`；`tableRows`、`stamp` 比较被写的行之外的每一行每一列）
 - `TestLockMemberWorkspaces`：bob 在 acme、gamma 有效：回答这两个（按 id），`FOR SHARE` 等它们、外键的 `FOR KEY SHARE` 不等；beta（他的成员关系已结束）、delta（已删除）、gone（工作区已删除，他的成员关系未删除）、epsilon（只有 carol）、zeta（他不是成员）都不锁。
 - `TestLockMemberWorkspacesLocksInIDOrder`：web 的 id 较小、在表和 slug 的索引里排在 alpha 之后；alpha 被持有时，`LockMemberWorkspaces` 等它，已持有 web（`FOR SHARE` web 等）：按别的顺序会先碰到 alpha、什么都不持有。
 - `TestLockMemberWorkspacesLeavesOutAWorkspaceDeletedWhileItWaited`：另一个事务持 acme 的 `FOR NO KEY UPDATE`、软删除它和它的成员关系；`LockMemberWorkspaces` 等它，提交之后回答只有 beta。
 - `TestSoleAdminOfAWorkspace`：十六个情形（只有他一人、有有效成员或访客、另一位已结束、已删除、两位有效管理员、他是成员、他已结束、已删除、一次问两个工作区的三种、不问任何工作区）；每个工作区只有情形说的成员（创建者的成员关系删除），各情形的工作区并排存在：问到不该问的工作区、把整个集合当一个工作区的实现答错（清扫 20）。
 - `TestDeleteInvitationsTo`：bob 的三份（acme 待接受、beta 已忽略、gamma 他不是成员的）由 bob、在给的时刻删除；以前已接受、已删除的两份保留时刻；carol 的、`rebob@corp.com` 的每一列不动。
+- `TestDeleteInvitationsOfWorkspacesLeftEmpty`：一次问 acme（只有他）、beta（carol 有效）、gamma（carol 已结束）、delta（carol 的成员关系已删除），每处有一份 alice 发给 dave 的待接受邀请：acme、gamma、delta 的三份由 bob、在给的时刻删除（之前由 alice 写），beta 的不动；acme 已忽略的（erin）、先前已删除的（frank）、不问的 zeta（没有有效成员）的待接受邀请每一列不动。每个谓词各由一行决定：问到的工作区（zeta）、未回应（erin）、未删除（frank）、同一工作区（beta 的 carol 不算 acme 的）、"之外"（他自己不算）、有效（gamma）、未删除的成员关系（delta）；集合形式（问到的任何工作区的成员）在 acme 答错。
 - `TestEndWorkspaceMemberships`：acme（成员）、gamma（管理员）的结束，由 bob（这两行之前由 alice 写）、在给的时刻，角色不变；beta 已由 alice 结束的保留结束者和时刻；他已删除的那一行、carol 的、delta（不问的）每一列不动。
-- `failures_test.go`：`TestAFailedReadIsAnErrorNotAnAnswer` 加 `LockMemberWorkspaces`（不是"没有工作区"）、`SoleAdmin`（不是"不是唯一的管理员"）；`TestAFailedWriteIsAnError` 加 `DeleteInvitationsTo`、`EndWorkspaceMemberships`（清扫 19）。
+- `failures_test.go`：`TestAFailedReadIsAnErrorNotAnAnswer` 加 `LockMemberWorkspaces`（不是"没有工作区"）、`SoleAdmin`（不是"不是唯一的管理员"）；`TestAFailedWriteIsAnError` 加 `DeleteInvitationsTo`、`DeleteInvitationsOfWorkspacesLeftEmpty`、`EndWorkspaceMemberships`（清扫 19）。
+- 两个等锁的测试（`…LocksInIDOrder`、`…LeavesOutAWorkspaceDeletedWhileItWaited`）的 goroutine 在 10 秒期限的 context 上运行（清扫 29）。
 
 - [ ] **Step 1: 查询**
 
-`server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql`（新文件，45 行）：
+`server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql`（新文件，60 行）：
 
 ````file server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql
 -- name: LockMemberWorkspaces :many
@@ -142,8 +145,23 @@ UPDATE workspace_member_invites
 SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
 WHERE email = sqlc.arg(email) AND deleted_at IS NULL;
 
+-- name: DeleteInvitationsOfWorkspacesLeftEmpty :exec
+-- The fourth step, under the workspaces' locks (M3 design 3.7, 3.9; the P6 pre-flight's M1): the pending invitations of
+-- each of the workspaces where the account has no other active member, soft-deleted at the moment and by the account
+-- given, before the memberships' rows (the global order). Run before his memberships end, "other" leaves him out. A
+-- workspace he was alone in then has no active member, and no invitation lets anyone into it: one accepted would make
+-- a member of a workspace with no admin. A declined one stays, which cannot be accepted; a deleted one keeps its
+-- moment. Creating an invitation holds the workspace FOR SHARE, accepting one FOR NO KEY UPDATE: neither commits while
+-- the deactivation holds it.
+UPDATE workspace_member_invites i
+SET deleted_at = sqlc.arg(now)::timestamptz, updated_at = sqlc.arg(now), updated_by_id = sqlc.arg(deleted_by)::uuid
+WHERE i.workspace_id = ANY (sqlc.arg(workspace_ids)::uuid[]) AND i.responded_at IS NULL AND i.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM workspace_members o
+                  WHERE o.workspace_id = i.workspace_id AND o.member_id <> sqlc.arg(member_id) AND o.is_active
+                    AND o.deleted_at IS NULL);
+
 -- name: EndWorkspaceMemberships :exec
--- The fourth step, one statement under the workspaces' locks (convention 5): the account's active memberships of the
+-- The fifth step, one statement under the workspaces' locks (convention 5): the account's active memberships of the
 -- workspaces end, at the moment and by the account given; the rows stay, each with its role, and an ended or deleted one
 -- keeps its columns.
 UPDATE workspace_members
@@ -157,7 +175,7 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `233f91644120c604360fd4a2ce7c8422e42f772a17694a55da7d05dc805143ee` | 123 | `server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go` |
+| `63dc63a5f1b0cf9d3d9b5c5633814c2088fbaf20758d405aa2d0557ccc998389` | 156 | `server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go` |
 
 Run: `shasum -a 256 server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go`
 Expected: 与上表相同。
@@ -175,8 +193,9 @@ Expected: 与上表相同。
 }
 
 // AllMembershipsEnder ends every membership of a deactivated account and
-// deletes every invitation to its address (M3 design 3.6 convention 6,
-// 3.9): the Deactivator's repository. It runs in the transaction ctx
+// deletes every invitation to its address, and the pending ones of a
+// workspace it leaves with no active member (M3 design 3.6 convention 6,
+// 3.7, 3.9): the Deactivator's repository. It runs in the transaction ctx
 // carries, which identity's deactivation began and holds the account row's
 // FOR NO KEY UPDATE in.
 type AllMembershipsEnder interface {
@@ -191,6 +210,11 @@ type AllMembershipsEnder interface {
 	// DeleteInvitationsTo soft-deletes every undeleted invitation to email,
 	// pending or declined, of every workspace, by the account by at now.
 	DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error
+	// DeleteInvitationsOfWorkspacesLeftEmpty soft-deletes the pending
+	// invitations of each of the workspaces where userID has no other
+	// active member, by the account by at now: call it before his
+	// memberships end.
+	DeleteInvitationsOfWorkspacesLeftEmpty(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 	// EndWorkspaceMemberships ends userID's active, undeleted memberships
 	// of the workspaces, by the account by at now; the rows stay.
 	EndWorkspaceMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
@@ -199,7 +223,7 @@ type AllMembershipsEnder interface {
 // ProjectCascade is what the workspace's writes ask of the projects (M3
 ````
 
-`server/internal/modules/workspace/adapter/postgres/deactivation.go`（新文件，60 行）：
+`server/internal/modules/workspace/adapter/postgres/deactivation.go`（新文件，74 行）：
 
 ````file server/internal/modules/workspace/adapter/postgres/deactivation.go
 package postgresadapter
@@ -249,6 +273,20 @@ func (s *Store) DeleteInvitationsTo(ctx context.Context, email string, by uuid.U
 	return nil
 }
 
+// DeleteInvitationsOfWorkspacesLeftEmpty soft-deletes the pending
+// invitations of each of the workspaces where userID has no other active
+// member, by the account by at now. Call it before his memberships end.
+func (s *Store) DeleteInvitationsOfWorkspacesLeftEmpty(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID,
+	now time.Time) error {
+	err := s.queries(ctx).DeleteInvitationsOfWorkspacesLeftEmpty(ctx, gen.DeleteInvitationsOfWorkspacesLeftEmptyParams{
+		WorkspaceIds: workspaceIDs, MemberID: userID, DeletedBy: by, Now: now,
+	})
+	if err != nil {
+		return fmt.Errorf("delete the invitations of the workspaces left empty: %w", err)
+	}
+	return nil
+}
+
 // EndWorkspaceMemberships ends userID's active, undeleted memberships of
 // the workspaces, by the account by at now; the rows stay. A workspace of
 // workspaceIDs where he has none, his membership of it ended while its
@@ -264,7 +302,7 @@ func (s *Store) EndWorkspaceMemberships(ctx context.Context, workspaceIDs []uuid
 }
 ````
 
-`server/internal/modules/workspace/adapter/postgres/deactivation_test.go`（新文件，341 行）：
+`server/internal/modules/workspace/adapter/postgres/deactivation_test.go`（新文件，302 行）：
 
 ````file server/internal/modules/workspace/adapter/postgres/deactivation_test.go
 package postgresadapter_test
@@ -372,9 +410,11 @@ func TestLockMemberWorkspacesLocksInIDOrder(t *testing.T) {
 		_, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", alpha)
 		return err
 	})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	done := make(chan error, 1)
 	go func() {
-		done <- tx.WithinTx(context.Background(), func(ctx context.Context) error {
+		done <- tx.WithinTx(ctx, func(ctx context.Context) error {
 			_, err := s.LockMemberWorkspaces(ctx, bob)
 			return err
 		})
@@ -424,10 +464,12 @@ func TestLockMemberWorkspacesLeavesOutAWorkspaceDeletedWhileItWaited(t *testing.
 		ids []uuid.UUID
 		err error
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	done := make(chan locked, 1)
 	go func() {
 		var l locked
-		l.err = tx.WithinTx(context.Background(), func(ctx context.Context) error {
+		l.err = tx.WithinTx(ctx, func(ctx context.Context) error {
 			var err error
 			l.ids, err = s.LockMemberWorkspaces(ctx, bob)
 			return err
@@ -528,6 +570,60 @@ func TestSoleAdminOfAWorkspace(t *testing.T) {
 	}
 }
 
+// EndWorkspaceMemberships ends bob's active, undeleted memberships of the
+// workspaces asked about, acme's as a member and gamma's as an admin, each
+// keeping its role, by the account and at the time given, though alice
+// wrote them last, and changes
+// nothing else (M3 design 3.6 convention 6): his membership of beta,
+// asked about but ended by alice before, keeps its ender and moment; his
+// deleted membership of acme, carol's of acme and his of delta, not asked
+// about, every column.
+func TestEndWorkspaceMemberships(t *testing.T) {
+	s, pool := newStore(t)
+	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
+	acme, beta := newWorkspace(t, s, "Acme", "acme", alice).ID, newWorkspace(t, s, "Beta", "beta", alice).ID
+	gamma, delta := newWorkspace(t, s, "Gamma", "gamma", alice).ID, newWorkspace(t, s, "Delta", "delta", alice).ID
+	exec(t, pool, `INSERT INTO workspace_members (id, workspace_id, member_id, role, created_by_id, updated_by_id, created_at, updated_at,
+		deleted_at) VALUES ($1, $2, $3, 20, $3, $3, $4, $4, $4)`, uuid.NewV7(), acme, bob, now.Add(-time.Hour))
+	ended := []uuid.UUID{joinAt(t, s, acme, bob, shared.RoleMember, now).ID, joinAt(t, s, gamma, bob, shared.RoleAdmin, now).ID}
+	exec(t, pool, "UPDATE workspace_members SET updated_by_id = $2 WHERE id = ANY($1)", ended, alice)
+	joinAt(t, s, beta, bob, shared.RoleGuest, now)
+	exec(t, pool, "UPDATE workspace_members SET is_active = false, updated_by_id = $3 WHERE workspace_id = $1 AND member_id = $2", beta, bob, alice)
+	joinAt(t, s, acme, carol, shared.RoleMember, now)
+	joinAt(t, s, delta, bob, shared.RoleMember, now)
+	before := tableRows(t, pool, "workspace_members", ended, "is_active", "updated_at", "updated_by_id")
+	later := now.Add(time.Hour)
+
+	if err := s.EndWorkspaceMemberships(context.Background(), []uuid.UUID{acme, beta, gamma}, bob, bob, later); err != nil {
+		t.Fatal(err)
+	}
+
+	for i, id := range ended {
+		if got, want := stamp(t, pool, "workspace_members", id), fmt.Sprintf("ended at %s by %s", at(t, pool, later), bob); got != want {
+			t.Errorf("bob's membership %d: %s, want %s", i, got, want)
+		}
+	}
+	if after := tableRows(t, pool, "workspace_members", ended, "is_active", "updated_at", "updated_by_id"); after != before {
+		t.Errorf("the memberships, bob's two ended without the columns written:\n%s\nwant them as they were:\n%s", after, before)
+	}
+}
+````
+
+`server/internal/modules/workspace/adapter/postgres/deactivation_invitations_test.go`（新文件，107 行）：
+
+````file server/internal/modules/workspace/adapter/postgres/deactivation_invitations_test.go
+package postgresadapter_test
+
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/shared"
+)
+
 // DeleteInvitationsTo soft-deletes every undeleted invitation to the
 // address, of every workspace, pending or declined, by the account and at
 // the time given, and changes nothing else (M3 design 3.8, 3.9): bob's
@@ -571,41 +667,56 @@ func TestDeleteInvitationsTo(t *testing.T) {
 	}
 }
 
-// EndWorkspaceMemberships ends bob's active, undeleted memberships of the
-// workspaces asked about, acme's as a member and gamma's as an admin, each
-// keeping its role, by the account and at the time given, though alice
-// wrote them last, and changes
-// nothing else (M3 design 3.6 convention 6): his membership of beta,
-// asked about but ended by alice before, keeps its ender and moment; his
-// deleted membership of acme, carol's of acme and his of delta, not asked
-// about, every column.
-func TestEndWorkspaceMemberships(t *testing.T) {
+// DeleteInvitationsOfWorkspacesLeftEmpty soft-deletes the pending
+// invitations of each workspace asked about where bob has no other active
+// member, by the account and at the time given, and changes nothing else
+// (M3 design 3.7, 3.9; the P6 pre-flight's M1). Asked about at once: acme,
+// where he is alone; beta, where carol is an active member; gamma, where
+// her membership ended; delta, where it is deleted. Each has a pending
+// invitation of alice's, to dave: acme's, gamma's and delta's are deleted,
+// though alice wrote them; beta's stays. acme's declined one, to erin, and
+// its one deleted while pending, to frank, keep every column; so does
+// zeta's pending one, a workspace not asked about with no active member.
+func TestDeleteInvitationsOfWorkspacesLeftEmpty(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob, carol := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com"), newAccount(t, pool, "carol@corp.com")
-	acme, beta := newWorkspace(t, s, "Acme", "acme", alice).ID, newWorkspace(t, s, "Beta", "beta", alice).ID
-	gamma, delta := newWorkspace(t, s, "Gamma", "gamma", alice).ID, newWorkspace(t, s, "Delta", "delta", alice).ID
-	exec(t, pool, `INSERT INTO workspace_members (id, workspace_id, member_id, role, created_by_id, updated_by_id, created_at, updated_at,
-		deleted_at) VALUES ($1, $2, $3, 20, $3, $3, $4, $4, $4)`, uuid.NewV7(), acme, bob, now.Add(-time.Hour))
-	ended := []uuid.UUID{joinAt(t, s, acme, bob, shared.RoleMember, now).ID, joinAt(t, s, gamma, bob, shared.RoleAdmin, now).ID}
-	exec(t, pool, "UPDATE workspace_members SET updated_by_id = $2 WHERE id = ANY($1)", ended, alice)
-	joinAt(t, s, beta, bob, shared.RoleGuest, now)
-	exec(t, pool, "UPDATE workspace_members SET is_active = false, updated_by_id = $3 WHERE workspace_id = $1 AND member_id = $2", beta, bob, alice)
-	joinAt(t, s, acme, carol, shared.RoleMember, now)
-	joinAt(t, s, delta, bob, shared.RoleMember, now)
-	before := tableRows(t, pool, "workspace_members", ended, "is_active", "updated_at", "updated_by_id")
+	ws := map[string]uuid.UUID{"zeta": newWorkspace(t, s, "zeta", "zeta", alice).ID}
+	exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1", ws["zeta"])
+	for _, name := range []string{"acme", "beta", "gamma", "delta"} {
+		ws[name] = newWorkspace(t, s, name, name, bob).ID
+	}
+	for _, name := range []string{"beta", "gamma", "delta"} {
+		join(t, s, ws[name], carol, shared.RoleMember)
+	}
+	exec(t, pool, "UPDATE workspace_members SET is_active = false WHERE workspace_id = $1 AND member_id = $2", ws["gamma"], carol)
+	exec(t, pool, "UPDATE workspace_members SET deleted_at = $3 WHERE workspace_id = $1 AND member_id = $2", ws["delta"], carol, now)
+	var deleted []uuid.UUID
+	for _, name := range []string{"acme", "beta", "gamma", "delta", "zeta"} {
+		id := invite(t, s, ws[name], "dave@corp.com", shared.RoleMember, alice).ID
+		if name == "acme" || name == "gamma" || name == "delta" {
+			deleted = append(deleted, id)
+		}
+	}
+	declined := invite(t, s, ws["acme"], "erin@corp.com", shared.RoleGuest, alice).ID
+	exec(t, pool, "UPDATE workspace_member_invites SET responded_at = $2 WHERE id = $1", declined, now)
+	exec(t, pool, `INSERT INTO workspace_member_invites (id, workspace_id, email, role, created_by_id, updated_by_id, created_at,
+		updated_at, deleted_at) VALUES ($1, $2, 'frank@corp.com', 15, $3, $3, $4, $4, $4)`, uuid.NewV7(), ws["acme"], alice, now.Add(-time.Hour))
+	before := tableRows(t, pool, "workspace_member_invites", deleted, "deleted_at", "updated_at", "updated_by_id")
 	later := now.Add(time.Hour)
 
-	if err := s.EndWorkspaceMemberships(context.Background(), []uuid.UUID{acme, beta, gamma}, bob, bob, later); err != nil {
+	if err := s.DeleteInvitationsOfWorkspacesLeftEmpty(context.Background(), []uuid.UUID{ws["acme"], ws["beta"], ws["gamma"], ws["delta"]},
+		bob, bob, later); err != nil {
 		t.Fatal(err)
 	}
 
-	for i, id := range ended {
-		if got, want := stamp(t, pool, "workspace_members", id), fmt.Sprintf("ended at %s by %s", at(t, pool, later), bob); got != want {
-			t.Errorf("bob's membership %d: %s, want %s", i, got, want)
+	for i, id := range deleted {
+		if got, want := stamp(t, pool, "workspace_member_invites", id), fmt.Sprintf("deleted at %[1]s at %[1]s by %[2]s", at(t, pool, later),
+			bob); got != want {
+			t.Errorf("the invitation to dave of the workspace %d left empty: %s, want %s", i, got, want)
 		}
 	}
-	if after := tableRows(t, pool, "workspace_members", ended, "is_active", "updated_at", "updated_by_id"); after != before {
-		t.Errorf("the memberships, bob's two ended without the columns written:\n%s\nwant them as they were:\n%s", after, before)
+	if after := tableRows(t, pool, "workspace_member_invites", deleted, "deleted_at", "updated_at", "updated_by_id"); after != before {
+		t.Errorf("the invitations, the three deleted without the columns written:\n%s\nwant them as they were:\n%s", after, before)
 	}
 }
 ````
@@ -637,6 +748,9 @@ func TestEndWorkspaceMemberships(t *testing.T) {
 	if err := s.DeleteInvitationsTo(cancelled, "carol@corp.com", alice, now); !failed(err) {
 		t.Errorf("DeleteInvitationsTo() = %v; want context.Canceled", err)
 	}
+	if err := s.DeleteInvitationsOfWorkspacesLeftEmpty(cancelled, []uuid.UUID{w.ID}, bob.MemberID, bob.MemberID, now); !failed(err) {
+		t.Errorf("DeleteInvitationsOfWorkspacesLeftEmpty() = %v; want context.Canceled", err)
+	}
 	if err := s.EndWorkspaceMemberships(cancelled, []uuid.UUID{w.ID}, bob.MemberID, bob.MemberID, now); !failed(err) {
 		t.Errorf("EndWorkspaceMemberships() = %v; want context.Canceled", err)
 	}
@@ -656,20 +770,23 @@ Expected: 全部 `ok`，没有 `FAIL`。
 - [ ] **Step 4: 提交**
 
 ```bash
-git add server/internal/modules/workspace/adapter/postgres/deactivation.go server/internal/modules/workspace/adapter/postgres/deactivation_test.go server/internal/modules/workspace/adapter/postgres/failures_test.go server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql server/internal/modules/workspace/app/ports.go server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go
+git add server/internal/modules/workspace/adapter/postgres/deactivation.go server/internal/modules/workspace/adapter/postgres/deactivation_invitations_test.go server/internal/modules/workspace/adapter/postgres/deactivation_test.go server/internal/modules/workspace/adapter/postgres/failures_test.go server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql server/internal/modules/workspace/app/ports.go server/internal/modules/workspace/adapter/postgres/gen/deactivation.sql.go
 ```
 ```bash
-git commit -m "feat(M3/P6): the workspace store locks a member's workspaces, asks for their only admin, deletes the invitations to an address and ends his memberships
+git commit -m "feat(M3/P6): the workspace store locks a member's workspaces, asks for their only admin, deletes the invitations to an address and of the workspaces he leaves empty, and ends his memberships
 
 LockMemberWorkspaces locks the undeleted workspaces of which an
 account is an active member FOR NO KEY UPDATE in id order, leaving out
 one deleted while its lock waited; SoleAdmin asks whether he is the
 only active admin of one of them that has another active member;
 DeleteInvitationsTo soft-deletes every invitation to an address,
-pending or declined; EndWorkspaceMemberships ends his active
-memberships of the workspaces, the rows and their roles kept. Each
-store test checks every column of every other row, and each method's
-failure comes back as an error, never a plausible answer.
+pending or declined; DeleteInvitationsOfWorkspacesLeftEmpty
+soft-deletes the pending invitations of each of them where he has no
+other active member, so that none lets anyone into a workspace with no
+admin; EndWorkspaceMemberships ends his active memberships of the
+workspaces, the rows and their roles kept. Each store test checks
+every column of every other row, and each method's failure comes back
+as an error, never a plausible answer.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -677,7 +794,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 Run（提交之后）: `make gen-check`
 Expected: 通过。
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
@@ -694,8 +811,8 @@ Expected: 通过。
 | `s1-lmw-active` | `LockMemberWorkspaces` 去掉 `m.is_active` | `TestLockMemberWorkspaces`、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 存储；组合 |
 | `s1-lmw-mdeleted` | `LockMemberWorkspaces` 去掉 `m.deleted_at IS NULL` | `TestLockMemberWorkspaces` | 存储 |
 | `s1-sole-workspaces` | `SoleAdmin` 去掉问到的工作区 | `TestSoleAdminOfAWorkspace` | 存储 |
-| `s1-sole-member` | `SoleAdmin` 去掉成员 | `TestSoleAdminOfAWorkspace`、`TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起） 等 11 个、W9（Task 9 起） | 存储；组合；端到端 |
-| `s1-sole-role` | `SoleAdmin` 去掉他的 `role = 20` | `TestSoleAdminOfAWorkspace` | 存储 |
+| `s1-sole-member` | `SoleAdmin` 去掉成员 | `TestSoleAdminOfAWorkspace`、`TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起） 等 12 个、W9（Task 9 起） | 存储；组合；端到端 |
+| `s1-sole-role` | `SoleAdmin` 去掉他的 `role = 20` | `TestSoleAdminOfAWorkspace`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
 | `s1-sole-active` | `SoleAdmin` 去掉他的 `is_active` | `TestSoleAdminOfAWorkspace` | 存储 |
 | `s1-sole-mdeleted` | `SoleAdmin` 去掉他的 `deleted_at IS NULL` | `TestSoleAdminOfAWorkspace` | 存储 |
 | `s1-sole-a-correlated` | `SoleAdmin` 的另一位管理员去掉同一工作区 | `TestSoleAdminOfAWorkspace`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起）、W9（Task 9 起） | 存储；组合；端到端 |
@@ -703,23 +820,23 @@ Expected: 通过。
 | `s1-sole-a-role` | `SoleAdmin` 的另一位管理员去掉 `role = 20` | `TestSoleAdminOfAWorkspace`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起）、`TestUsersCommandsFail`（Task 5 起）、W9（Task 9 起） | 存储；组合；端到端 |
 | `s1-sole-a-active` | `SoleAdmin` 的另一位管理员去掉 `is_active` | `TestSoleAdminOfAWorkspace`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起） | 存储；组合 |
 | `s1-sole-a-deleted` | `SoleAdmin` 的另一位管理员去掉 `deleted_at IS NULL` | `TestSoleAdminOfAWorkspace` | 存储 |
-| `s1-sole-o-correlated` | `SoleAdmin` 的别的成员去掉同一工作区 | `TestSoleAdminOfAWorkspace`、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
-| `s1-sole-o-other` | `SoleAdmin` 的别的成员把他自己算进去 | `TestSoleAdminOfAWorkspace`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestCreationFirstHoldsOffTheDeactivation`（Task 4 起） | 存储；组合 |
-| `s1-sole-o-active` | `SoleAdmin` 的别的成员去掉 `is_active` | `TestSoleAdminOfAWorkspace`、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
+| `s1-sole-o-correlated` | `SoleAdmin` 的别的成员去掉同一工作区 | `TestSoleAdminOfAWorkspace`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
+| `s1-sole-o-other` | `SoleAdmin` 的别的成员把他自己算进去 | `TestSoleAdminOfAWorkspace`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestCreationFirstHoldsOffTheDeactivation`（Task 4 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
+| `s1-sole-o-active` | `SoleAdmin` 的别的成员去掉 `is_active` | `TestSoleAdminOfAWorkspace`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
 | `s1-sole-o-deleted` | `SoleAdmin` 的别的成员去掉 `deleted_at IS NULL` | `TestSoleAdminOfAWorkspace` | 存储 |
-| `s1-dit-email` | `DeleteInvitationsTo` 去掉邮箱 | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） | 存储；组合 |
+| `s1-dit-email` | `DeleteInvitationsTo` 去掉邮箱 | `TestDeleteInvitationsTo`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） | 存储；组合 |
 | `s1-dit-deleted` | `DeleteInvitationsTo` 去掉 `deleted_at IS NULL` | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起） | 存储；组合 |
 | `s1-ewm-workspaces` | `EndWorkspaceMemberships` 去掉工作区 | `TestEndWorkspaceMemberships` | 存储 |
-| `s1-ewm-member` | `EndWorkspaceMemberships` 去掉成员 | `TestEndWorkspaceMemberships`、`TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestReactivatingAndDeactivating`（Task 7 起） 等 5 个、W9（Task 9 起） | 存储；组合；端到端 |
+| `s1-ewm-member` | `EndWorkspaceMemberships` 去掉成员 | `TestEndWorkspaceMemberships`、`TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起） 等 6 个、W9（Task 9 起） | 存储；组合；端到端 |
 | `s1-ewm-active` | `EndWorkspaceMemberships` 去掉 `is_active`（等锁时已结束的再写一次） | `TestEndWorkspaceMemberships`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起） | 存储；组合 |
 | `s1-ewm-deleted` | `EndWorkspaceMemberships` 去掉 `deleted_at IS NULL` | `TestEndWorkspaceMemberships` | 存储 |
 | `s3-dit-writes-created` | `DeleteInvitationsTo` 也写 `created_at` | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
 | `s3-dit-answers` | `DeleteInvitationsTo` 把待接受的标成已回答 | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起） | 存储；组合 |
-| `s3-dit-keeps-time` | `DeleteInvitationsTo` 不写 `updated_at` | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
+| `s3-dit-keeps-time` | `DeleteInvitationsTo` 不写 `updated_at` | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起） | 存储；组合 |
 | `s14-dit-keeps-writer` | `DeleteInvitationsTo` 保留原来的写者 | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestAcceptingAndDeactivating`（Task 7 起） 等 5 个、W9（Task 9 起） | 存储；组合；端到端 |
 | `s14-dit-by-inviter` | `DeleteInvitationsTo` 写成邀请人 | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestAcceptingAndDeactivating`（Task 7 起） 等 5 个、W9（Task 9 起） | 存储；组合；端到端 |
-| `s3-ewm-keeps-time` | `EndWorkspaceMemberships` 保留原来的时刻 | `TestEndWorkspaceMemberships`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起）、W9（Task 9 起） | 存储；组合；端到端 |
-| `s14-ewm-keeps-writer` | `EndWorkspaceMemberships` 保留原来的写者 | `TestEndWorkspaceMemberships`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestDecliningAndDeactivating`（Task 7 起） 等 6 个 | 存储；组合 |
+| `s3-ewm-keeps-time` | `EndWorkspaceMemberships` 保留原来的时刻 | `TestEndWorkspaceMemberships`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起）、W9（Task 9 起） | 存储；组合；端到端 |
+| `s14-ewm-keeps-writer` | `EndWorkspaceMemberships` 保留原来的写者 | `TestEndWorkspaceMemberships`、`TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起） 等 8 个 | 存储；组合 |
 | `s3-ewm-writes-created` | `EndWorkspaceMemberships` 也写 `created_at` | `TestEndWorkspaceMemberships`、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
 | `s3-ewm-deletes` | `EndWorkspaceMemberships` 也删除那一行 | `TestEndWorkspaceMemberships`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
 | `s26-ewm-role-20` | `EndWorkspaceMemberships` 把角色写成 20 | `TestEndWorkspaceMemberships`、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、W9（Task 9 起） | 存储；组合；端到端 |
@@ -735,12 +852,27 @@ Expected: 通过。
 | `s19-dit-swallowed` | `DeleteInvitationsTo` 的失败被吞掉 | `TestAFailedWriteIsAnError` | 存储 |
 | `s19-ewm-swallowed` | `EndWorkspaceMemberships` 的失败被吞掉 | `TestAFailedWriteIsAnError` | 存储 |
 | `s20-sole-admin-any` | `SoleAdmin` 的另一位管理员改成"问到的任何工作区的" | `TestSoleAdminOfAWorkspace`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、W9（Task 9 起） | 存储；组合；端到端 |
-| `s20-sole-other-any` | `SoleAdmin` 的别的成员改成"问到的任何工作区的" | `TestSoleAdminOfAWorkspace`、`TestADeactivationEndsEveryMembership`（Task 5 起） | 存储；组合 |
+| `s20-sole-other-any` | `SoleAdmin` 的别的成员改成"问到的任何工作区的" | `TestSoleAdminOfAWorkspace`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
 | `s24-ws-only-ignored` | `SoleAdmin` 不看另一位管理员（"唯一"一半） | `TestSoleAdminOfAWorkspace`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 12 个、W9（Task 9 起） | 存储；组合；端到端 |
-| `s24-ws-alone-refused` | `SoleAdmin` 不看别的成员（只有他一人也拒绝） | `TestSoleAdminOfAWorkspace`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestCreationFirstHoldsOffTheDeactivation`（Task 4 起） | 存储；组合 |
+| `s24-ws-alone-refused` | `SoleAdmin` 不看别的成员（只有他一人也拒绝） | `TestSoleAdminOfAWorkspace`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestCreationFirstHoldsOffTheDeactivation`（Task 4 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
 | `s31-check-before-lock` | 规则 2 在不加锁的列举上检查，写之前才锁工作区（检查和执行分开） | `TestLockMemberWorkspaces`、`TestLockMemberWorkspacesLeavesOutAWorkspaceDeletedWhileItWaited`、`TestLockMemberWorkspacesLocksInIDOrder`、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） 等 5 个 | 存储；组合 |
+| `s1-dil-workspaces` | 第五条语句去掉问到的工作区（任何没有别的有效成员的工作区的邀请） | `TestDeleteInvitationsOfWorkspacesLeftEmpty` | 存储 |
+| `s1-dil-responded` | 第五条语句去掉 `responded_at IS NULL`（已忽略的也删） | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s1-dil-deleted` | 第五条语句去掉邀请的 `deleted_at IS NULL`（已删除的再写一次） | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s1-dil-correlated` | 第五条语句的别的成员去掉同一工作区 | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
+| `s1-dil-other` | 第五条语句的别的成员把他自己算进去（清扫 20） | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
+| `s1-dil-active` | 第五条语句的别的成员去掉 `is_active`（已结束的也算） | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s1-dil-mdeleted` | 第五条语句的别的成员去掉 `deleted_at IS NULL` | `TestDeleteInvitationsOfWorkspacesLeftEmpty` | 存储 |
+| `s20-dil-other-any` | 第五条语句的别的成员改成"问到的任何工作区的" | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 存储；组合；端到端 |
+| `s3-dil-keeps-time` | 第五条语句不写 `updated_at` | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s14-dil-keeps-writer` | 第五条语句保留原来的写者 | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s3-dil-writes-created` | 第五条语句也写 `created_at` | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s3-dil-answers` | 第五条语句把邀请标成已回答 | `TestDeleteInvitationsOfWorkspacesLeftEmpty`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起） | 存储；组合 |
+| `s19-dil-swallowed` | 第五条语句的失败被吞掉 | `TestAFailedWriteIsAnError` | 存储 |
+| `s8-dil-pool` | 第五条语句经连接池执行 | `TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、`TestTheDeactivationRunsOnItsTransactionsConnection`（Task 6 起） | 组合 |
+| `l7-dit-keeps-declined` | `DeleteInvitationsTo` 对已忽略的保留原来的 `updated_at` 和写者（预检 L7） | `TestDeleteInvitationsTo`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起） | 存储；组合 |
 
-**Done when:** 四个方法在 `AllMembershipsEnder` 里、由 `Store` 实现；六个存储测试和两个失败测试通过；`grep -n "role = 20" server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql` 只有 `SoleAdmin` 的两处（"管理员"这个集合）；`make lint-go`、`make test` 通过；生成物与表相同。
+**Done when:** 五个方法在 `AllMembershipsEnder` 里、由 `Store` 实现；七个存储测试和两个失败测试通过；`grep -n "role = 20" server/internal/modules/workspace/adapter/postgres/queries/deactivation.sql` 只有 `SoleAdmin` 的两处（"管理员"这个集合）；`make lint-go`、`make test` 通过；生成物与表相同。
 
 ### Task 2: `project.NewCascade`；跨工作区的项目锁顺序
 
@@ -969,7 +1101,7 @@ its pool alone.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
@@ -978,11 +1110,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `o-prj-share` | `LockActiveMemberProjects` 锁成 `FOR SHARE` | `TestEndingAMembersProjectMemberships`、`TestLockActiveMemberProjectsLocksInIDOrder`、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、`TestEachLockOfAnEndingIsItsStrength` | 存储；组合 |
 | `o-prj-update` | `LockActiveMemberProjects` 锁成 `FOR UPDATE` | `TestEndingAMembersProjectMemberships`、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、`TestEachLockOfAnEndingIsItsStrength` | 存储；组合 |
 | `o-prj-locked-deleted` | `LockActiveMemberProjects` 去掉 `p.deleted_at IS NULL` | `TestEndingAMembersProjectMemberships`、`TestLockActiveMemberProjectsLeavesOutAProjectDeletedWhileItWaited` | 存储 |
-| `s4-newcascade-ends-nothing` | `NewCascade` 建出的连带不结束任何项目成员关系 | `TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起） 等 22 个 | 组合 |
+| `s4-newcascade-ends-nothing` | `NewCascade` 建出的连带不结束任何项目成员关系 | `TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起） 等 23 个 | 组合 |
 | `s20-prj-admin-any` | 项目的 `SoleAdmin`（跨工作区调用）的另一位管理员改成"问到的任何项目的" | `TestSoleAdmin`、`TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation` | 存储；组合 |
 | `s20-prj-other-any` | 项目的 `SoleAdmin` 的别的成员改成"问到的任何项目的" | `TestSoleAdmin`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 9 个 | 存储；组合 |
 | `s24-prj-ended-admin-counts` | 项目的 `SoleAdmin` 把已结束的管理员算作另一位 | `TestSoleAdmin`、`TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnEndingEndsTheMembershipsAndLeavesNoInvitation` | 存储；组合 |
-| `s37-archived-left` | `LockActiveMemberProjects` 去掉已归档的项目 | `TestEndingAMembersProjectMemberships`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） | 存储；组合 |
+| `s37-archived-left` | `LockActiveMemberProjects` 去掉已归档的项目 | `TestEndingAMembersProjectMemberships`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 存储；组合 |
 
 **Done when:** `grep -rn "project.New(project.Deps{Pool: r.pool})\|project.New(project.Deps{Pool: w.pool})" server/internal/bootstrap/` 没有输出；`project.New` 的 `cascade` 来自 `NewCascade`；`TestLockActiveMemberProjectsLocksInIDOrder` 跨两个工作区通过；`make lint-go`、`make test` 通过。
 
@@ -993,16 +1125,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `server/internal/modules/project/adapter/http/member_writes_test.go`、`server/internal/modules/project/domain/errors.go`、`server/internal/modules/workspace/adapter/http/members_test.go`、`server/internal/modules/workspace/app/clock_test.go`、`server/internal/modules/workspace/app/fakes_workspaces_test.go`、`server/internal/modules/workspace/app/ports.go`、`server/internal/modules/workspace/app/remove_member_test.go`、`server/internal/modules/workspace/domain/errors.go`
 
 **Interfaces:**
-- Produces（spec 2.5，M3 设计 3.3、3.6 约定六、3.7 规则 2、3.8、3.9）：`workspace/app.Deactivator`，`NewDeactivator(memberships AllMembershipsEnder, projects ProjectCascade, clock Clock) *Deactivator`，`DeactivateMemberships(ctx, userID, email) error`：在调用者的事务里依次 `LockMemberWorkspaces` → `SoleAdmin`（为真时 `domain.ErrSoleAdmin`）→ `clock.Now()` 一次 → `DeleteInvitationsTo(email, userID, now)` → `EndWorkspaceMemberships(workspaces, userID, userID, now)` → `projects.EndMemberships(workspaces, userID, userID, now)`；每一步的失败、项目一侧的 `project.sole_admin` 原样返回，之后什么都不运行。它是 `identity` 的 `MembershipDeactivator`（Task 4 接上）。
+- Produces（spec 2.5，M3 设计 3.3、3.6 约定六、3.7 规则 2、3.8、3.9）：`workspace/app.Deactivator`，`NewDeactivator(memberships AllMembershipsEnder, projects ProjectCascade, clock Clock) *Deactivator`，`DeactivateMemberships(ctx, userID, email) error`：在调用者的事务里依次 `LockMemberWorkspaces` → `SoleAdmin`（为真时 `domain.ErrSoleAdmin`）→ `clock.Now()` 一次 → `DeleteInvitationsTo(email, userID, now)` → `DeleteInvitationsOfWorkspacesLeftEmpty(workspaces, userID, userID, now)` → `EndWorkspaceMemberships(workspaces, userID, userID, now)` → `projects.EndMemberships(workspaces, userID, userID, now)`；每一步的失败、项目一侧的 `project.sole_admin` 原样返回，之后什么都不运行。它是 `identity` 的 `MembershipDeactivator`（Task 4 接上）。
 - `workspace.sole_admin`、`project.sole_admin` 的说明改为不说"谁去做"："The workspace (project) would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. It must first be given another admin, or be deleted."（spec 2.5 的表；对执行 `nerve users deactivate` 的服务器管理员同样成立，清扫 30）。照它改的测试：`workspace/adapter/http/members_test.go`、`project/adapter/http/member_writes_test.go`、`workspace/app/remove_member_test.go`（`project.sole_admin` 的替身照抄新的文字）。
 - `ProjectCascade.EndMemberships` 的说明补上停用（`ports.go`）。
 
 **Tests:**（`app/deactivate_memberships_test.go`；`deactivating(f, tx, user)` 在 `fakeTx` 里运行它，`deactivationCalls(user, workspaces...)` 是整个调用记录）
-- `TestDeactivateMembershipsEndsEveryMembership`：bob 在 acme 是成员、在 beta 是访客：调用记录是锁 → 问唯一管理员 → 读时钟 → 删除他的地址的邀请 → 结束两个工作区（按 id）→ 项目一步，每个写由 bob、在同一个时刻；他在两处的成员关系结束。carol 已没有有效成员关系：调用照样到达，工作区是空的。
+- `TestDeactivateMembershipsEndsEveryMembership`：bob 在 acme 是成员、在 beta 是访客：调用记录是锁 → 问唯一管理员 → 读时钟 → 删除他的地址的邀请 → 删除两个工作区（按 id）中他留下的空工作区的邀请 → 结束两个工作区 → 项目一步，每个写由 bob、在同一个时刻；他在两处的成员关系结束。carol 已没有有效成员关系：调用照样到达，工作区是空的。
 - `TestDeactivateMembershipsRefusesTheOnlyAdmin`：alice 是 acme 唯一的管理员、bob 是成员：`workspace.sole_admin` 本身（`answeredAs`），事务的函数返回的正是它，调用记录停在问唯一管理员，时钟没有读，她的成员关系仍有效。
-- `TestDeactivateMembershipsFailsAtEachStep`：锁、问、删除邀请、结束成员关系、项目一步各失败一次，项目一步另答 `project.sole_admin`（`project` 模块的码的替身）：回答的第一个 `*shared.Error` 就是注入的那个（或没有，500），调用记录停在那一步，没有重试。
+- `TestDeactivateMembershipsFailsAtEachStep`：锁、问、删除邀请、删除空工作区的邀请、结束成员关系、项目一步各失败一次，项目一步另答 `project.sole_admin`（`project` 模块的码的替身）：回答的第一个 `*shared.Error` 就是注入的那个（或没有，500），调用记录停在那一步，没有重试。
 - `clock_test.go`：`TestEachWriteReadsTheClockUnderItsLock` 加"the deactivation's memberships"一行：时钟在锁和唯一管理员的问之后读一次。
-- `fakes_deactivation_test.go`：`fakeWorkspaces` 的四个方法，各记调用、照存储的包装返回 `endErrs` 给的失败；`LockMemberWorkspaces` 按 id 回答他有效的工作区。
+- `fakes_deactivation_test.go`：`fakeWorkspaces` 的五个方法，各记调用、照存储的包装返回 `endErrs` 给的失败；`LockMemberWorkspaces` 按 id 回答他有效的工作区。
 
 - [ ] **Step 1: 两个说明**
 
@@ -1176,7 +1308,7 @@ func TestLeaveWorkspaceRefusals(t *testing.T) {
 	// of one of them that has other active members (M3 design 3.7 rule 2).
 ````
 
-`server/internal/modules/workspace/app/deactivate_memberships.go`（新文件，60 行）：
+`server/internal/modules/workspace/app/deactivate_memberships.go`（新文件，66 行）：
 
 ````file server/internal/modules/workspace/app/deactivate_memberships.go
 package app
@@ -1213,8 +1345,11 @@ func NewDeactivator(memberships AllMembershipsEnder, projects ProjectCascade, cl
 // member, domain.ErrSoleAdmin, nothing written (3.7 rule 2). Else it reads
 // the clock, once, after the last of those locks (3.3), and, at that
 // moment and by him: every invitation to email, of any workspace, pending
-// or declined, deleted (3.8); his memberships of those workspaces ended;
-// then the project cascade's EndMemberships, called once across them,
+// or declined, deleted (3.8); the pending invitations of each of those
+// workspaces where he is the only active member deleted, so that none lets
+// anyone into a workspace left with no member (3.7); his memberships of
+// those workspaces ended; then the project cascade's EndMemberships,
+// called once across them,
 // which locks his projects in id order and may refuse with
 // project.sole_admin. A refusal or failure comes back as itself, and
 // identity rolls the whole deactivation back.
@@ -1234,6 +1369,9 @@ func (d *Deactivator) DeactivateMemberships(ctx context.Context, userID uuid.UUI
 	if err := d.memberships.DeleteInvitationsTo(ctx, email, userID, now); err != nil {
 		return err
 	}
+	if err := d.memberships.DeleteInvitationsOfWorkspacesLeftEmpty(ctx, workspaces, userID, userID, now); err != nil {
+		return err
+	}
 	if err := d.memberships.EndWorkspaceMemberships(ctx, workspaces, userID, userID, now); err != nil {
 		return err
 	}
@@ -1250,7 +1388,7 @@ func (d *Deactivator) DeactivateMemberships(ctx context.Context, userID uuid.UUI
 	endErrs     map[string]error                  // by method, for the endings' and the deactivation's statements
 ````
 
-`server/internal/modules/workspace/app/fakes_deactivation_test.go`（新文件，74 行）：
+`server/internal/modules/workspace/app/fakes_deactivation_test.go`（新文件，83 行）：
 
 ````file server/internal/modules/workspace/app/fakes_deactivation_test.go
 package app_test
@@ -1311,6 +1449,15 @@ func (f *fakeWorkspaces) DeleteInvitationsTo(ctx context.Context, email string, 
 	return nil
 }
 
+func (f *fakeWorkspaces) DeleteInvitationsOfWorkspacesLeftEmpty(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID,
+	now time.Time) error {
+	f.log.add(ctx, "DeleteInvitationsOfWorkspacesLeftEmpty %v %s by %s at %s", workspaceIDs, userID, by, now.Format(time.RFC3339Nano))
+	if err := f.endErrs["DeleteInvitationsOfWorkspacesLeftEmpty"]; err != nil {
+		return fmt.Errorf("delete the invitations of the workspaces left empty: %w", err)
+	}
+	return nil
+}
+
 // EndWorkspaceMemberships also ends the memberships the fake holds, as the
 // store ends the rows.
 func (f *fakeWorkspaces) EndWorkspaceMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error {
@@ -1329,7 +1476,7 @@ func (f *fakeWorkspaces) EndWorkspaceMemberships(ctx context.Context, workspaceI
 }
 ````
 
-`server/internal/modules/workspace/app/deactivate_memberships_test.go`（新文件，134 行）：
+`server/internal/modules/workspace/app/deactivate_memberships_test.go`（新文件，139 行）：
 
 ````file server/internal/modules/workspace/app/deactivate_memberships_test.go
 package app_test
@@ -1359,9 +1506,10 @@ func deactivating(f *membersFixture, tx *fakeTx, user app.AccountState) error {
 
 // deactivationCalls are the calls of the ending of user's memberships of
 // workspaces, in id order: those workspaces locked, the only admin asked,
-// the clock read, every invitation to his address deleted, his memberships
-// of the workspaces ended, then the project cascade's step, called once
-// across them; each write by him at the clock's one time.
+// the clock read, every invitation to his address deleted, the pending ones
+// of those he leaves with no active member, his memberships of the
+// workspaces ended, then the project cascade's step, called once across
+// them; each write by him at the clock's one time.
 func deactivationCalls(user app.AccountState, workspaces ...uuid.UUID) []string {
 	at := clockNow.Format(time.RFC3339Nano)
 	return []string{
@@ -1369,6 +1517,7 @@ func deactivationCalls(user app.AccountState, workspaces ...uuid.UUID) []string 
 		fmt.Sprintf("SoleAdmin %v %s", workspaces, user.ID),
 		"Now",
 		fmt.Sprintf("DeleteInvitationsTo %s by %s at %s", user.Email, user.ID, at),
+		fmt.Sprintf("DeleteInvitationsOfWorkspacesLeftEmpty %v %s by %s at %s", workspaces, user.ID, user.ID, at),
 		fmt.Sprintf("EndWorkspaceMemberships %v %s by %s at %s", workspaces, user.ID, user.ID, at),
 		fmt.Sprintf("EndMemberships %v %s by %s at %s", workspaces, user.ID, user.ID, at),
 	}
@@ -1445,8 +1594,11 @@ func TestDeactivateMembershipsFailsAtEachStep(t *testing.T) {
 		{"the check", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"SoleAdmin": failure} }, failure, calls[:2]},
 		{"the invitations", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"DeleteInvitationsTo": failure} }, failure,
 			calls[:4]},
+		{"the invitations of the workspaces left empty", func(f *membersFixture) {
+			f.workspaces.endErrs = map[string]error{"DeleteInvitationsOfWorkspacesLeftEmpty": failure}
+		}, failure, calls[:5]},
 		{"the memberships", func(f *membersFixture) { f.workspaces.endErrs = map[string]error{"EndWorkspaceMemberships": failure} }, failure,
-			calls[:5]},
+			calls[:6]},
 		{"the projects' step", func(f *membersFixture) { f.projects.errs = map[string]error{"EndMemberships": failure} }, failure, calls},
 		{"the only admin of a project", func(f *membersFixture) { f.projects.errs = map[string]error{"EndMemberships": soleAdmin} }, soleAdmin,
 			calls},
@@ -1513,16 +1665,17 @@ git commit -m "feat(M3/P6): the workspace module's Deactivator ends every member
 Under the account's row lock, it locks his workspaces in id order,
 refuses with workspace.sole_admin when he is the only active admin of
 one with other active members, reads the clock once after those
-locks, deletes every invitation to his address, ends his workspace
-memberships and calls the project cascade's EndMemberships once across
-the workspaces, each write by him at that moment. The two sole_admin
+locks, deletes every invitation to his address and the pending ones
+of the workspaces he leaves empty, ends his workspace memberships and
+calls the project cascade's EndMemberships once across the workspaces,
+each write by him at that moment. The two sole_admin
 details now say what must happen, not who does it, so that they hold
 for the server's administrator who runs nerve users deactivate too.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
@@ -1537,7 +1690,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `s2-projects-retried` | 项目一步失败之后再试一次 | `TestDeactivateMembershipsFailsAtEachStep` | 单元 |
 | `s6-ws-detail` | `workspace.sole_admin` 的说明叫调用者去做（"Make another member an admin first."） | `TestLeaveWorkspaceRefusals`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestUsersCommandsFail`（Task 5 起）、W9（Task 9 起） | 单元；组合；端到端 |
 | `s6-prj-detail` | `project.sole_admin` 的说明叫调用者去做（P5b 的原句） | `TestLeaveProject`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、W9（Task 9 起） | 单元；组合；端到端 |
-| `s6-two-moments` | 工作区成员关系的结束另读一次时钟 | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起）、W9（Task 9 起） | 单元；组合；端到端 |
+| `s6-two-moments` | 工作区成员关系的结束另读一次时钟 | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestDecliningAndDeactivating`（Task 7 起）、W9（Task 9 起） | 单元；组合；端到端 |
 | `s9-end-before-invitations` | 先结束工作区成员关系、再删除邀请（全局顺序反了） | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 单元；组合 |
 | `s9-check-after-end` | 规则 2 在结束工作区成员关系之后检查 | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestDeactivateMembershipsRefusesTheOnlyAdmin`、`TestEachWriteReadsTheClockUnderItsLock`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起）、`TestUsersCommandsFail`（Task 5 起）、W9（Task 9 起） | 单元；组合；端到端 |
 | `s11-refusal-after-invitations` | 规则 2 的拒绝在删除邀请之后 | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestDeactivateMembershipsRefusesTheOnlyAdmin`、`TestEachWriteReadsTheClockUnderItsLock` | 单元 |
@@ -1545,6 +1698,9 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | `s21-ws-joined-404` | 工作区的拒绝与 `workspace.not_found` 一起 `errors.Join` | `TestDeactivateMembershipsRefusesTheOnlyAdmin`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起）、`TestUsersCommandsFail`（Task 5 起） | 单元；组合 |
 | `s24-projects-first-workspace` | 项目一步只传他的第一个工作区 | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestARefusedDeactivationChangesNothing`（Task 5 起） 等 6 个、W9（Task 9 起） | 单元；组合；端到端 |
 | `s24-check-first-workspace` | 规则 2 只查他的第一个工作区 | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestARefusedDeactivationChangesNothing`（Task 5 起） | 单元；组合 |
+| `s2-dil-swallowed` | 删除空工作区的邀请的失败被吞掉 | `TestDeactivateMembershipsFailsAtEachStep` | 单元 |
+| `m1-dropped` | `Deactivator` 不调第五条语句（预检 M1：他留下的空工作区的待接受邀请留着） | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起）、W9（Task 9 起） | 单元；组合；端到端 |
+| `m1-after-members` | 第五条语句挪到结束工作区成员关系之后（邀请行在成员行之后加锁） | `TestDeactivateMembershipsEndsEveryMembership`、`TestDeactivateMembershipsFailsAtEachStep`、`TestEachWriteReadsTheClockUnderItsLock`、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 单元；组合 |
 
 **Done when:** `Deactivator` 的调用记录、拒绝、每一步的失败由单元测试钉住；`TestEachWriteReadsTheClockUnderItsLock` 有停用一行；`grep -rn "make another member an admin first\|Give the project another admin first" server/` 没有输出；`make lint-go`、`make test` 通过。
 
@@ -1560,19 +1716,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Produces（spec 2.6，M3 设计 3.9、6.2、6.6、9.4）：
   - `identity/app.LockedAccount.Email`（锁下的地址；`LockUserForCredentials` 多读 `email`）；端口 `identity/app.MembershipDeactivator`（`DeactivateMemberships(ctx, userID, email) error`，不带 `now`：spec 第 3 节第 1 条）；`DeactivateDeps.Memberships`、`identity.Deps.Memberships`、`identity.AdminDeps.Memberships`。
   - `deactivate(ctx, id, email, now)`：账户、新手引导、会话之后调用 `Memberships.DeactivateMemberships(ctx, id, email)`；它的拒绝或失败原样返回，整个停用回滚，不记日志。`Execute` 传 `Lock` 回答的 `account.Email`；`ExecuteByEmail` 传它锁住那一行用的规范化地址。
-  - `deactivateMe`：`x-problem-codes: [workspace.sole_admin, project.sole_admin]`，描述写明删除全部邀请、结束全部成员关系、两个拒绝什么都不改、回来的两步。
+  - `deactivateMe`：`x-problem-codes: [workspace.sole_admin, project.sole_admin]`，描述写明删除发给他地址的全部邀请和他是唯一有效成员的工作区的待接受邀请、结束全部成员关系（邀请和成员关系在一个时刻）、两个拒绝什么都不改，以及成员关系怎样回来：服务器管理员的 `reactivate-member` 逐个工作区，或接受工作区管理员的新链接；项目成员关系随加入、添加回来。描述里 `project` 之后不再出现 `invit…`：`schema.gen.ts` 把它写成一行，关键词守卫的 `project-invitations` 规则按行匹配（M1 设计 2.2）。
   - `workspace.Deactivator`（接口）、`workspace.DeactivatorDeps{Pool, Clock, Projects}`、`workspace.NewDeactivator(DeactivatorDeps) Deactivator`（`workspace/deactivator.go`）；`workspace.New` 经它建出自己的，`Module.Deactivator()` 交出（spec 第 3 节第 2 条）。
   - 组合：`bootstrap/app.go` 给 `identity.New` 的 `Memberships: ws.Deactivator()`；`bootstrap/users.go` 给 `identity.NewAdmin` 的 `Memberships: workspace.NewDeactivator(…{Pool: pool, Clock: clock.System{}, Projects: project.NewCascade(project.CascadeDeps{Pool: pool})})`。
   - `bootstrap/deactivating_test.go`：`deactivating(pool, sessions, memberships)`，`nerve users deactivate` 照 `users.go` 的接法，会话和成员关系两处可以换成被 gate 停住的；`endedHoldingAll`（停在结束工作区成员关系之后、项目一步之前）。
 - Consumes：Task 1–3。
 
 **Tests:**
-- `identity/app/deactivate_test.go`（完整内容）：`fakeMemberships` 记下账户和地址；`TestDeactivate` 的调用记录在会话之后以锁下的地址 `alice@locked.example`（别处得不到的地址）调用成员关系一步；`TestDeactivateWhenAWriteFails`、`TestDeactivateByEmailWhenAWriteFails` 加 `membershipsErrors`（两个 409 的替身和一个失败）：原样返回、第一个 `*shared.Error` 不变、一个事务、不记日志；`TestDeactivateByEmail` 以规范化的地址调用。
+- `identity/app/deactivate_test.go`（完整内容）：`fakeMemberships` 记下账户和地址；`TestDeactivate` 的调用记录在会话之后以锁下的地址 `alice@locked.example`（别处得不到的地址）调用成员关系一步；`TestDeactivateWhenAWriteFails`、`TestDeactivateByEmailWhenAWriteFails` 加 `membershipsErrors`（两个 409 的替身和一个失败）：原样返回、第一个 `*shared.Error` 不变、一个事务、不记日志，调用记录是 `deactivateCalls`、`deactivateByEmailCalls` 到失败那一步为止（失败的假实现不记它自己；成员关系一步记一次），之后什么都没有、没有重试（预检 L1）；`TestDeactivateByEmail` 以规范化的地址调用。
 - `identity/adapter/http/me_test.go`：`TestDeactivateMeProblems`：401、`workspace.sole_admin`、包装过的 `project.sole_admin`（两个替身带它们的类别、码、说明）、失败 500，回答逐字；`identity` 的 `apitest.Main` 两个方向通过（9.4）。
 - `identity/adapter/postgres/credentials_test.go`：`TestLockForCredentialsReadsTheRow` 读出 alice 的地址，先存的 bob 的不是。
 - `archtest/composition_test.go`：`TestCommandsComposeNoServerAndNoJobs`：`Users` 到达 `identity.NewAdmin`、`workspace.NewDeactivator`、`project.NewCascade`，到达不了 `workspace.NewAdmin`；`Workspaces` 到达 `workspace.NewAdmin`，到达不了 `NewDeactivator`、`NewCascade`。
 - 交错 8（`bootstrap/interleaving_test.go` 的 `TestDeactivationFirstRefusesTheWorkspace`、`TestCreationFirstHoldsOffTheDeactivation`）：停用一方是 `deactivating`；创建在先时停用之后结束新工作区的成员关系（他是唯一的成员，规则 2 不拒绝，P1 review 第 6 节"成员关系一半"）。
-- 交错 19（`interleaving_answers_test.go` 的 `TestDecliningAndDeactivating`）：P3 的 `gatedDeactivation` 删除，停用一方是 `deactivating`（停在 `endedHoldingAll`）；两种顺序都由停用最后写邀请和他的成员关系，由他、在一个时刻；没有 40P01。
+- 交错 19（`interleaving_answers_test.go` 的 `TestDecliningAndDeactivating`）：P3 的 `gatedDeactivation` 删除，停用一方是 `deactivating`（停在 `endedHoldingAll`）；两种顺序都由停用最后写邀请和他的成员关系，由他、在一个时刻；忽略在先时邀请最后一次之前也由 bob 写，"由停用写"由时刻看出：邀请的 `updated_at` 等于它的 `deleted_at`，即他的成员关系结束的时刻（预检 L7）；没有 40P01。
 
 - [ ] **Step 1: 生成的输入：锁下的邮箱、`deactivateMe` 的描述和两个码**
 
@@ -1595,9 +1751,11 @@ SELECT password, is_active, email
 ````
 ````new api/modules/identity.yaml
         Every invitation to the account's address, pending or declined, is
-        deleted, and every membership of the account ends, of a workspace
-        or of a project, each row and its role kept: all at one moment, in
-        the same transaction. Were the account the only active admin of a
+        deleted, and so is every pending invitation of a workspace of which
+        the account was the only active member; every membership of the
+        account ends, of a workspace or of a project, each row and its role
+        kept. These deletions and endings happen at one moment, all in the
+        same transaction. Were the account the only active admin of a
         workspace that has other active members, workspace.sole_admin; of
         such a project, project.sole_admin; and nothing changes. The
         password and the personal access tokens stay, but nothing
@@ -1611,8 +1769,10 @@ SELECT password, is_active, email
 ````
 ````new api/modules/identity.yaml
         personal access tokens authenticate again. Its memberships stay
-        ended: the administrator's `nerve workspaces reactivate-member`
-        restores one workspace's at a time.
+        ended until the administrator's `nerve workspaces reactivate-member`
+        restores its membership of one workspace, or the account accepts a
+        new link from a workspace's admin; its project memberships come back
+        as it joins or is added again.
       security: [{bearer: []}]
       x-problem-codes: [workspace.sole_admin, project.sole_admin]
       responses:
@@ -1623,9 +1783,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `7532d8c602d87ba6777d144ed3738a943404aaf88d51b5a163d32d88bd14f0eb` | 2500 | `api/dist/openapi.yaml` |
+| `cb64c32477b30eea69ba9fa573e9ca3714e72b0c04bb64573e56d969345be61a` | 2500 | `api/dist/openapi.yaml` |
 | `83ed69349dac0b56e835bd4d215ff97e62c46b2b4529375aa956aca05e4801ed` | 366 | `server/internal/modules/identity/adapter/postgres/gen/users.sql.go` |
-| `209743a7cd55af0dd6b274360bad10a811a59d4d54479d21e98259d94d907676` | 2752 | `web/packages/api-client/src/schema.gen.ts` |
+| `67b5e68204abd16c9a3da1d1a160adea821c37ea8df46067bacd5b81051a03d4` | 2752 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 server/internal/modules/identity/adapter/postgres/gen/users.sql.go api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts`
 Expected: 与上表相同。
@@ -1806,7 +1966,7 @@ func (u *Deactivate) deactivate(ctx context.Context, id uuid.UUID, email string,
 	return revoked, u.d.Memberships.DeactivateMemberships(ctx, id, email)
 ````
 
-`server/internal/modules/identity/app/deactivate_test.go`（完整内容，232 行）：
+`server/internal/modules/identity/app/deactivate_test.go`（完整内容，250 行）：
 
 ````whole server/internal/modules/identity/app/deactivate_test.go
 package app_test
@@ -1860,6 +2020,18 @@ func (f *adminFixture) deactivate(memberships *fakeMemberships) *app.Deactivate 
 	})
 }
 
+// deactivateCalls are a deactivation's calls by the caller with credential,
+// in order: the lock, the credential checked again, the account, its
+// onboarding, its sessions, and last its memberships, of the account at the
+// address read under the lock.
+func deactivateCalls(credential string) []string {
+	return []string{
+		"lock " + userID.String(), credential, "deactivate " + userID.String(), "reset onboarding of " + userID.String(),
+		"revoke deactivated sessions of " + userID.String() + " but " + uuid.Nil().String(),
+		"deactivate the memberships of " + userID.String() + " at " + lockedEmail,
+	}
+}
+
 // One transaction takes the lock and checks the caller's credential again,
 // then writes in the global lock order: the account, the profile, the
 // sessions, all of them, whatever the credential (M2 design 3.5, 6.4); and
@@ -1880,11 +2052,7 @@ func TestDeactivate(t *testing.T) {
 
 			err := f.deactivate(&fakeMemberships{log: f.log}).Execute(shared.WithActor(context.Background(), tt.actor))
 
-			want := []string{
-				"lock " + userID.String(), tt.credential, "deactivate " + userID.String(), "reset onboarding of " + userID.String(),
-				"revoke deactivated sessions of " + userID.String() + " but " + uuid.Nil().String(),
-				"deactivate the memberships of " + userID.String() + " at " + lockedEmail,
-			}
+			want := deactivateCalls(tt.credential)
 			if err != nil || !slices.Equal(f.log.calls, want) || f.tx.calls != 1 || !slices.Equal(f.creds.writtenAt, []time.Time{now, now, now}) {
 				t.Errorf("Execute() = %v, calls %q in %d transactions at %v; want %q in one at %v", err, f.log.calls, f.tx.calls, f.creds.writtenAt, want, now)
 			}
@@ -1928,24 +2096,24 @@ var membershipsErrors = []error{
 // A failed write fails the deactivation, which is then not logged; so does
 // the memberships' refusal or failure, which comes back as itself, the
 // first problem in its chain the one it was, out of the one transaction,
-// after every write before it.
+// after every write before it: the calls are the deactivation's up to the
+// failing one, which a failing fake does not log, or up to the
+// memberships' one call; none after it, none tried again.
 func TestDeactivateWhenAWriteFails(t *testing.T) {
 	boom := errors.New("connection reset")
-	tests := []struct {
-		name string
-		fail func(*fakeCredentials, *fakeMemberships)
-		want error
-	}{
-		{"the account", func(c *fakeCredentials, _ *fakeMemberships) { c.deactivateErr = boom }, boom},
-		{"the onboarding", func(c *fakeCredentials, _ *fakeMemberships) { c.resetErr = boom }, boom},
-		{"the sessions", func(c *fakeCredentials, _ *fakeMemberships) { c.revokeErr = boom }, boom},
+	type failing struct {
+		name  string
+		fail  func(*fakeCredentials, *fakeMemberships)
+		want  error
+		calls int
+	}
+	tests := []failing{
+		{"the account", func(c *fakeCredentials, _ *fakeMemberships) { c.deactivateErr = boom }, boom, 2},
+		{"the onboarding", func(c *fakeCredentials, _ *fakeMemberships) { c.resetErr = boom }, boom, 3},
+		{"the sessions", func(c *fakeCredentials, _ *fakeMemberships) { c.revokeErr = boom }, boom, 4},
 	}
 	for _, err := range membershipsErrors {
-		tests = append(tests, struct {
-			name string
-			fail func(*fakeCredentials, *fakeMemberships)
-			want error
-		}{"the memberships: " + err.Error(), func(_ *fakeCredentials, m *fakeMemberships) { m.err = err }, err})
+		tests = append(tests, failing{"the memberships: " + err.Error(), func(_ *fakeCredentials, m *fakeMemberships) { m.err = err }, err, 6})
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1961,6 +2129,9 @@ func TestDeactivateWhenAWriteFails(t *testing.T) {
 			}
 			if first := firstProblem(err); first != firstProblem(tt.want) {
 				t.Errorf("Execute() = %v, answered as %v; want %v", err, first, firstProblem(tt.want))
+			}
+			if want := deactivateCalls("session " + sessionID.String())[:tt.calls]; !slices.Equal(f.log.calls, want) {
+				t.Errorf("calls %q, want %q: nothing after the failing step, none tried again", f.log.calls, want)
 			}
 		})
 	}
@@ -1985,6 +2156,15 @@ func TestDeactivateWithoutAnActor(t *testing.T) {
 	}
 }
 
+// deactivateByEmailCalls are the calls of `nerve users deactivate` of
+// alice@corp.com, in order: the lock by the address, the account, its
+// onboarding, its sessions, and last its memberships, at that address.
+var deactivateByEmailCalls = []string{
+	"lock alice@corp.com", "deactivate " + userID.String(), "reset onboarding of " + userID.String(),
+	"revoke deactivated sessions of " + userID.String() + " but " + uuid.Nil().String(),
+	"deactivate the memberships of " + userID.String() + " at alice@corp.com",
+}
+
 // `nerve users deactivate` locks the account by its normalized address and
 // writes what the self-service deactivation writes, in the same order, the
 // memberships of the account at that address, the one it locked (M2
@@ -1997,12 +2177,7 @@ func TestDeactivateByEmail(t *testing.T) {
 	if want := (app.DeactivateResult{Email: "alice@corp.com", Sessions: 1}); err != nil || got != want {
 		t.Fatalf("ExecuteByEmail() = %+v, %v; want %+v", got, err, want)
 	}
-	want := []string{
-		"lock alice@corp.com", "deactivate " + userID.String(), "reset onboarding of " + userID.String(),
-		"revoke deactivated sessions of " + userID.String() + " but " + uuid.Nil().String(),
-		"deactivate the memberships of " + userID.String() + " at alice@corp.com",
-	}
-	if !slices.Equal(f.log.calls, want) || f.tx.calls != 1 || !slices.Equal(f.store.writtenAt, []time.Time{now, now, now}) {
+	if want := deactivateByEmailCalls; !slices.Equal(f.log.calls, want) || f.tx.calls != 1 || !slices.Equal(f.store.writtenAt, []time.Time{now, now, now}) {
 		t.Errorf("calls %q in %d transactions at %v; want %q in one at %v", f.log.calls, f.tx.calls, f.store.writtenAt, want, now)
 	}
 	if logs := f.logs.String(); !strings.Contains(logs, `"msg":"account deactivated","user_id":"`+userID.String()+`","revoked_sessions":1,"by":"cli"`) {
@@ -2022,22 +2197,25 @@ func TestDeactivateByEmailOfAnUnknownAccount(t *testing.T) {
 
 // A failed write fails the administrator's deactivation too, which is then
 // not logged; so does the memberships' refusal or failure, as itself: the
-// command prints its detail.
+// command prints its detail. The calls are the command's up to the failing
+// one, none after it, none tried again.
 func TestDeactivateByEmailWhenAWriteFails(t *testing.T) {
 	boom := errors.New("connection reset")
 	f := newAdminFixture()
 	f.store.revokeErr = boom
 
 	if _, err := f.deactivate(&fakeMemberships{log: f.log}).ExecuteByEmail(context.Background(), "alice@corp.com"); !errors.Is(err, boom) ||
-		f.logs.Len() != 0 {
-		t.Errorf("ExecuteByEmail() = %v, logs %s; want %v and nothing logged", err, f.logs.String(), boom)
+		f.logs.Len() != 0 || !slices.Equal(f.log.calls, deactivateByEmailCalls[:3]) {
+		t.Errorf("ExecuteByEmail() = %v, calls %q, logs %s; want %v after %q and nothing logged", err, f.log.calls, f.logs.String(), boom,
+			deactivateByEmailCalls[:3])
 	}
 	for _, want := range membershipsErrors {
 		f := newAdminFixture()
 		_, err := f.deactivate(&fakeMemberships{log: f.log, err: want}).ExecuteByEmail(context.Background(), "alice@corp.com")
-		if !errors.Is(err, want) || firstProblem(err) != firstProblem(want) || f.logs.Len() != 0 {
-			t.Errorf("ExecuteByEmail() with the memberships failing = %v, logs %s; want %v as itself and nothing logged", err, f.logs.String(),
-				want)
+		if !errors.Is(err, want) || firstProblem(err) != firstProblem(want) || f.logs.Len() != 0 ||
+			!slices.Equal(f.log.calls, deactivateByEmailCalls) {
+			t.Errorf("ExecuteByEmail() with the memberships failing = %v, calls %q, logs %s; want %v as itself after %q, and nothing logged",
+				err, f.log.calls, f.logs.String(), want, deactivateByEmailCalls)
 		}
 	}
 }
@@ -2166,7 +2344,7 @@ func TestDeactivateMeProblems(t *testing.T) {
 
 - [ ] **Step 4: `workspace.NewDeactivator` 和两处组合**
 
-`server/internal/modules/workspace/deactivator.go`（新文件，41 行）：
+`server/internal/modules/workspace/deactivator.go`（新文件，42 行）：
 
 ````file server/internal/modules/workspace/deactivator.go
 package workspace
@@ -2187,7 +2365,8 @@ import (
 // transaction, which ctx carries, under the account row's lock.
 type Deactivator interface {
 	// DeactivateMemberships ends every workspace and project membership of
-	// account userID and deletes every invitation to email; its refusal,
+	// account userID and deletes every invitation to email, and the pending
+	// ones of a workspace he leaves with no active member; its refusal,
 	// workspace.sole_admin or project.sole_admin, or its failure comes back
 	// as itself.
 	DeactivateMemberships(ctx context.Context, userID uuid.UUID, email string) error
@@ -2728,7 +2907,9 @@ func (r answerRace) deactivateBob(ctx context.Context, memberships workspaceapp.
 // deactivated under its lock: 401, the invitation unanswered. Either way the
 // deactivation is the last to write the invitation and the membership, as
 // bob, at one moment, and nothing deadlocks: both lock the account row
-// first.
+// first. When the decline comes first, it wrote the invitation last as bob
+// too: there the deactivation's write shows in the moment, the
+// invitation's updated_at its deleted_at, his membership's end.
 ````
 
 ````old server/internal/bootstrap/interleaving_answers_test.go
@@ -2762,8 +2943,9 @@ func (r answerRace) deactivateBob(ctx context.Context, memberships workspaceapp.
 ````
 ````new server/internal/bootstrap/interleaving_answers_test.go
 			var active, member, oneMoment, byBob bool
-			if err := r.pool.QueryRow(soon(t), `SELECT u.is_active, m.is_active, m.updated_at = i.deleted_at,
-				m.updated_by_id = u.id AND i.updated_by_id = u.id FROM users u, workspace_members m, workspace_member_invites i
+			if err := r.pool.QueryRow(soon(t), `SELECT u.is_active, m.is_active,
+				m.updated_at = i.deleted_at AND i.updated_at = i.deleted_at, m.updated_by_id = u.id AND i.updated_by_id = u.id
+				FROM users u, workspace_members m, workspace_member_invites i
 				WHERE u.id = $1 AND m.workspace_id = $2 AND m.member_id = u.id AND i.id = $3`, r.bob, r.acme, r.invitation.id).
 				Scan(&active, &member, &oneMoment, &byBob); err != nil {
 ````
@@ -2828,29 +3010,33 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 Run（提交之后）: `make gen-check`
 Expected: 通过。
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
 | `o-email-before-lock` | 邮箱在账户行锁之前读 | `TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） | 组合 |
 | `o-account-share` | 账户行锁成 `FOR SHARE` | `TestAShareThatFailsReturnsTheError`、`TestLockAccountIsTheAccountRowLock`、`TestTheCredentialLockBlocksLocksNotInserts`、`TestTheShareLockBlocksDeactivationNotAnotherShare`、`TestAcceptingAndChangingTheAddress`（Task 7 起）、`TestAcceptingAndDeactivating`（Task 7 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestCreationFirstHoldsOffTheDeactivation` 等 8 个 | 存储；组合 |
 | `o-account-update` | 账户行锁成 `FOR UPDATE` | `TestLockAccountIsTheAccountRowLock`、`TestTheCredentialLockBlocksLocksNotInserts`、`TestADeactivationAndACreationHeLeadsSerialize`（Task 8 起）、`TestADeactivationAndTheProjectSidesGrowthSerialize`（Task 8 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 存储；组合 |
-| `s2-id-memberships-swallowed` | `identity` 不管成员关系一步的回答照样提交 | `TestDeactivateByEmailWhenAWriteFails`、`TestDeactivateWhenAWriteFails`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起）、`TestUsersCommandsFail`（Task 5 起）、W9（Task 9 起） | 单元；组合；端到端 |
-| `s4-app-skips-memberships` | 服务把一个什么都不结束的成员关系一步交给 `identity.New` | `TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 6 个、W9（Task 9 起） | 组合；端到端 |
-| `s4-users-skips-memberships` | `nerve users` 把一个什么都不结束的成员关系一步交给 `identity.NewAdmin` | `TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起）、`TestARefusedDeactivationChangesNothing`（Task 5 起） 等 8 个、W9（Task 9 起） | 组合；端到端 |
+| `s2-id-memberships-swallowed` | `identity` 不管成员关系一步的回答照样提交 | `TestDeactivateByEmailWhenAWriteFails`、`TestDeactivateWhenAWriteFails`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestARestoredMembershipGivesNoMoreThanItHad`、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起） 等 5 个、W9（Task 9 起） | 单元；组合；端到端 |
+| `s4-app-skips-memberships` | 服务把一个什么都不结束的成员关系一步交给 `identity.New` | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 7 个、W9（Task 9 起） | 组合；端到端 |
+| `s4-users-skips-memberships` | `nerve users` 把一个什么都不结束的成员关系一步交给 `identity.NewAdmin` | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（Task 5 起）、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 9 个、W9（Task 9 起） | 组合；端到端 |
 | `s4-users-no-project-end` | `nerve users` 的 `Deactivator` 接一个不结束项目成员关系的连带 | `TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起）、`TestARefusedDeactivationChangesNothing`（Task 5 起） 等 6 个 | 组合 |
 | `s4-users-frozen-clock` | `nerve users` 的 `Deactivator` 接 2001 年的时钟 | `TestADeactivationEndsEveryMembership`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 组合 |
 | `s4-server-no-project-end` | `workspace.New` 的 `Deactivator` 接一个不结束项目成员关系的连带 | `TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 6 个、W9（Task 9 起） | 组合；端到端 |
 | `s4-server-frozen-clock` | `workspace.New` 的 `Deactivator` 接 2001 年的时钟 | `TestADeactivationEndsEveryMembership`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 组合 |
 | `s4-users-builds-workspace-admin` | `nerve users` 另建 `workspace.NewAdmin` | `TestCommandsComposeNoServerAndNoJobs` | 单元 |
 | `s4-workspaces-builds-cascade` | `nerve workspaces` 另建 `project.NewCascade` | `TestCommandsComposeNoServerAndNoJobs` | 单元 |
-| `s9-memberships-first` | `identity` 先结束成员关系、再写自己的行 | `TestDeactivate`、`TestDeactivateByEmail`、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起） | 单元；组合 |
+| `s9-memberships-first` | `identity` 先结束成员关系、再写自己的行 | `TestDeactivate`、`TestDeactivateByEmail`、`TestDeactivateByEmailWhenAWriteFails`、`TestDeactivateWhenAWriteFails`、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起） | 单元；组合 |
 | `s18-undeclared-workspace` | `deactivateMe` 不声明 `workspace.sole_admin` | `TestDeactivateMeProblems`、`TestARefusedDeactivationChangesNothing`（Task 5 起） | 单元；组合 |
 | `s18-undeclared-project` | `deactivateMe` 不声明 `project.sole_admin` | `TestDeactivateMeProblems`、`TestARefusedDeactivationChangesNothing`（Task 5 起） | 单元；组合 |
 | `s18-extra-code-module` | `deactivateMe` 在 `api/modules/identity.yaml` 里多声明 `workspace.not_found` | （见 spec 第 3 节） | 单元 |
 | `s21-id-wrapped-404` | `identity` 把成员关系的拒绝与 `identity.account_not_found` 一起 `errors.Join` | `TestDeactivateByEmailWhenAWriteFails`、`TestDeactivateWhenAWriteFails`、`TestARefusedDeactivationChangesNothing`（Task 5 起）、`TestAnAdmittedAdminsWriteAndHisDeactivation`（Task 7 起）、`TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin`（Task 8 起）、`TestUsersCommandsFail`（Task 5 起） | 单元；组合 |
-| `s22-api-no-address` | `deactivateMe` 传空的地址 | `TestDeactivate`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 5 个 | 单元；组合 |
+| `s22-api-no-address` | `deactivateMe` 传空的地址 | `TestDeactivate`、`TestDeactivateWhenAWriteFails`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起） 等 5 个 | 单元；组合 |
 | `s22-cli-raw-address` | 命令传原样输入的地址，不传规范化的 | `TestDeactivateByEmail`、`TestADeactivationEndsEveryMembership`（Task 5 起）、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing`（Task 5 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） | 单元；组合 |
+| `pf-id-runs-after-failure` | `identity` 撤销会话失败之后仍调成员关系一步，再答会话的失败（预检 L1） | `TestDeactivateByEmailWhenAWriteFails`、`TestDeactivateWhenAWriteFails` | 单元 |
+| `pf-id-retries-memberships` | `identity` 在成员关系一步失败之后再试一次（预检 L1） | `TestDeactivateByEmailWhenAWriteFails`、`TestDeactivateWhenAWriteFails`、`TestARefusedDeactivationChangesNothing`（Task 5 起） | 单元；组合 |
+| `l2-cli-identity-ahead` | `nerve users` 的 `identity` 接快一秒的时钟：账户的时刻晚于成员关系的（预检 L2） | `TestADeactivationEndsEveryMembership`（Task 5 起） | 组合 |
+| `l2-api-identity-ahead` | 服务的 `identity` 接快一秒的时钟（预检 L2） | `TestADeactivationEndsEveryMembership`（Task 5 起） | 组合 |
 
 **Done when:** `grep -rn "gatedDeactivation" server/` 没有输出；`deactivateMe` 的两个码由 `identity` 的 HTTP 测试返回，`apitest.Main` 两个方向通过；`TestCommandsComposeNoServerAndNoJobs` 通过；交错 8、19 在 `-count=5 -race` 下通过、没有 40P01；`make lint-go`、`make test`、`make lint-web`、`make knip`、`make test-web` 通过；生成物与表相同。
 
@@ -2861,13 +3047,14 @@ Expected: 通过。
 - Modify: `server/cmd/nerve/users.go`、`server/cmd/nerve/users_test.go`、`server/internal/bootstrap/reactivation_races_test.go`、`server/internal/bootstrap/users.go`、`server/internal/bootstrap/users_test.go`
 
 **Interfaces:**
-- Produces（spec 2.7，M3 设计 3.9、8.7、9.3）：`DeactivateUser` 的一行 `deactivated <邮箱>: revoked <n> sessions and ended its memberships; to bring it back, run nerve users activate, then nerve workspaces reactivate-member in each workspace`；`nerve users deactivate`、`activate` 的说明（`cmd/nerve/users.go`）。拒绝时命令打印问题的说明、退出码 1（M2 的 `commandError`，不改）。
+- Produces（spec 2.7，M3 设计 3.9、8.7、9.3）：`DeactivateUser` 的一行 `deactivated <邮箱>: revoked <n> sessions and ended its memberships; to bring it back, run nerve users activate, then nerve workspaces reactivate-member in each workspace`；`nerve users deactivate`、`activate` 的说明（`cmd/nerve/users.go`；`activate` 的一句照代码写回来的路：`reactivate-member` 逐个工作区，接受新的邀请同样恢复，预检 L3.1）。拒绝时命令打印问题的说明、退出码 1（M2 的 `commandError`，不改）。
 - 测试的共用：`deactivationWorld`、`preconditions`、`clears`；`deactivationPath` 和 `byAPI`、`byCommand`、`deactivationPaths`；`deactivatingUser`；`refusedWorkspaceSoleAdmin`、`refusedProjectSoleAdmin`；`queryIDs`；`commandInBackground`（`reactivation_races_test.go`，P5a 的 `reactivatingBobWith` 改用它）。
 
 **Tests:**（`bootstrap/deactivation_test.go`；两条路各跑一遍）
 - `TestARefusedDeactivationChangesNothing`：五个情形各一个世界：alice（acme 唯一的有效管理员，dave 已结束的管理员不算）`workspace.sole_admin`；bob（Ops、Lab 唯一的管理员）`project.sole_admin`；alice 加入 Lab 之后照样（Ops 里 erin 已结束的管理员不算）；她改为加入 Ops 之后照样（Lab 属 beta）；alice 离开 beta 之后，bob 是 beta 唯一的管理员：`workspace.sole_admin`（beta 不是他按 id 的第一个工作区）。每次每张表每一行不变（`tableRows(riversOwn)`）。
 - `TestADeactivationRefusedAtItsCommitChangesNothing`：停用写的六张表各让提交失败一次：回答是失败（不是契约的问题），每张表不变。
-- `TestADeactivationEndsEveryMembership`：bob 的 2 + 5 + 3 行（Solo 已归档也在），先由测试盖上 dave 的写者戳；停用之后每一行恰好变了三列，时刻相同、不早于请求，写者是 bob，角色不变；账户无效；别人的每一行不变；再停用一次：接口 401、命令完成，都不再写这些行；之后 carol（gamma 唯一的有效管理员，也是唯一的有效成员）的停用完成。
+- `TestADeactivationEndsEveryMembership`：bob 的 2 + 5 + 3 行（Solo 已归档也在），先由测试盖上 dave 的写者戳；停用之后每一行恰好变了三列，时刻相同、不早于请求，写者是 bob，角色不变；账户的 `updated_at`（`identity` 在事务之前读的时刻）不晚于这个时刻（预检 L2）；账户无效；别人的每一行不变；再停用一次：接口 401、命令完成，都不再写这些行；之后 carol（gamma 唯一的有效管理员，也是唯一的有效成员）的停用完成。
+- `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`（预检 M1 的反例，第五条语句关闭它）：carol 是 gamma 唯一的有效成员（dave、erin 已被她移出），她再邀请 dave、erin，又邀请 frank 并删除那一份；她的停用之后，两份邀请在她的成员关系结束的时刻由她删除（之前由测试盖上 alice 的写者戳），其余每一列不变；她之外的每一行不变（bob 已忽略的、frank 已删除的、acme 和 beta 的邀请都在内）；dave、erin 的接受答 404 `workspace.invitation_not_found`，gamma 没有有效成员。之后服务器管理员 `reactivate-member` 两人：gamma 有两位成员、没有管理员（已知的限制，spec 第 3 节第 8 条 (b)），dave 的停用照样完成（规则 2 只数管理员；`s1-sole-role` 在这里失败）。
 - `bootstrap/users_test.go`：`TestUsersCommands` 的停用一行；`cmd/nerve/users_test.go`：成功的一行，`TestUsersCommandsFail` 加 nia（acme 唯一的管理员，oto 是成员，由 SQL 在 5 秒的期限内写入）：打印 `workspace.sole_admin` 的说明，退出码 1。
 
 - [ ] **Step 1: 命令**
@@ -2904,7 +3091,8 @@ Expected: 通过。
 ````
 ````new server/cmd/nerve/users.go
 		userCommand(load, stdin, "activate", "Activate an account; its unexpired API tokens work again, so run reset-password too if it may be "+
-			"compromised; its memberships stay ended until nerve workspaces reactivate-member",
+			"compromised; its memberships stay ended: nerve workspaces reactivate-member restores one workspace's, as does accepting a new "+
+			"invitation to it",
 ````
 
 `server/internal/bootstrap/users_test.go`（修改，1 处）：
@@ -3227,7 +3415,7 @@ const (
 )
 ````
 
-`server/internal/bootstrap/deactivation_test.go`（新文件，216 行）：
+`server/internal/bootstrap/deactivation_test.go`（新文件，324 行）：
 
 ````file server/internal/bootstrap/deactivation_test.go
 package bootstrap
@@ -3236,6 +3424,7 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -3382,8 +3571,15 @@ func TestADeactivationEndsEveryMembership(t *testing.T) {
 			}
 
 			moment, _ := rowJSON(t, w.pool, "workspace_member_invites", w.bobsDeclined)["deleted_at"].(string)
-			if at, err := time.Parse(time.RFC3339Nano, moment); err != nil || at.Before(started.Truncate(time.Microsecond)) {
+			at, err := time.Parse(time.RFC3339Nano, moment)
+			if err != nil || at.Before(started.Truncate(time.Microsecond)) {
 				t.Errorf("the declined invitation deleted at %q (%v); want a moment no earlier than the request, %v", moment, err, started)
+			}
+			// identity's moment, its account's, read before its transaction,
+			// is no later than the Deactivator's, read after its last
+			// workspace lock (3.3, 3.9): two moments, in that order.
+			if account, err := time.Parse(time.RFC3339Nano, rowJSON(t, w.pool, "users", bob)["updated_at"].(string)); err != nil || account.After(at) {
+				t.Errorf("bob's account deactivated at %v (%v), after his memberships ended at %v; want identity's moment no later", account, err, at)
 			}
 			for i, id := range written {
 				want := maps.Clone(rowsBefore[i])
@@ -3420,6 +3616,106 @@ func TestADeactivationEndsEveryMembership(t *testing.T) {
 			}
 			if left := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE member_id = $1 AND is_active", w.ids["carol"]); len(left) != 0 {
 				t.Errorf("carol's active memberships after her deactivation: %v; want none, gamma's ended too", left)
+			}
+		})
+	}
+}
+
+// A deactivation that leaves a workspace with no active member deletes its
+// pending invitations too, whoever sent them, on both paths (M3 design 3.7,
+// 3.9; the P6 pre-flight's M1): carol is gamma's admin and its only active
+// member, dave's and erin's memberships of it having ended by her removal
+// of them; she invites the two again, and is deactivated, which rule 2
+// allows. The two invitations are deleted at her memberships' moment, as
+// hers, though the test stamped them as last written by alice, each other
+// column kept; every other row of every table but hers is as it was: bob's
+// invitation to gamma, which he declined and no one can accept, her
+// invitation of frank to it, which she deleted before, and the invitations
+// to acme and beta, which keep their members, among them.
+// dave's and erin's acceptances answer workspace.invitation_not_found, the
+// code of a deleted invitation, and gamma keeps no active member: no
+// invitation lets anyone into a workspace with no admin. The server's
+// administrator still can (a known limit, 3.11): reactivate-member of the
+// two makes gamma's active members two members and no admin, and dave's
+// deactivation goes through, rule 2 counting admins alone.
+func TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties(t *testing.T) {
+	for _, p := range deactivationPaths {
+		t.Run(p.name, func(t *testing.T) {
+			w := newDeactivationWorld(t)
+			carol, gammaRows := w.ids["carol"], `SELECT count(*) FILTER (WHERE m.role = 20), count(*) FROM workspace_members m
+				WHERE m.workspace_id = $1 AND m.is_active AND m.deleted_at IS NULL`
+			answerInvitation(t, w.contract, w.base, w.tokens["erin"], "accept", invite(t, w.contract, w.base, w.tokens["carol"], "gamma",
+				"erin@example.com"), http.StatusOK)
+			erinIn := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.gamma, w.ids["erin"])[0]
+			if status, body := call(t, w.contract, http.MethodDelete, w.base+"/api/v0/workspace-members/"+erinIn.String(), w.tokens["carol"],
+				""); status != http.StatusNoContent {
+				t.Fatalf("carol's removal of erin from gamma = %d %s", status, body)
+			}
+			names := []string{"dave", "erin"}
+			links, invited := map[string]invitationLink{}, []uuid.UUID{}
+			for _, name := range names {
+				links[name] = invite(t, w.contract, w.base, w.tokens["carol"], "gamma", name+"@example.com")
+				invited = append(invited, links[name].id)
+			}
+			toFrank := invite(t, w.contract, w.base, w.tokens["carol"], "gamma", "frank@example.com")
+			if status, body := call(t, w.contract, http.MethodDelete, w.base+"/api/v0/workspace-invitations/"+toFrank.id.String(),
+				w.tokens["carol"], ""); status != http.StatusNoContent {
+				t.Fatalf("carol's deletion of her invitation of frank to gamma = %d %s", status, body)
+			}
+			if tag, err := w.pool.Exec(soon(t), "UPDATE workspace_member_invites SET updated_by_id = $2 WHERE id = ANY($1)", invited,
+				w.ids["alice"]); err != nil || tag.RowsAffected() != 2 {
+				t.Fatalf("the two invitations last written by alice: %v, %v", tag, err)
+			}
+			var admins, members int
+			if err := w.pool.QueryRow(soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 1 || members != 1 {
+				t.Fatalf("gamma: %d active admins of %d active members (%v); want carol alone", admins, members, err)
+			}
+			rowsBefore := []map[string]any{rowJSON(t, w.pool, "workspace_member_invites", invited[0]),
+				rowJSON(t, w.pool, "workspace_member_invites", invited[1])}
+			own := slices.Concat([]uuid.UUID{carol}, invited, queryIDs(t, w.pool, `SELECT id FROM profiles WHERE user_id = $1
+				UNION ALL SELECT id FROM auth_sessions WHERE user_id = $1 UNION ALL SELECT id FROM workspace_members WHERE member_id = $1
+				UNION ALL SELECT id FROM project_members WHERE member_id = $1
+				UNION ALL SELECT id FROM workspace_member_invites WHERE email = 'carol@example.com'`, carol))
+			others := rowsBut(t, w.pool, own)
+
+			if got := p.deactivate(w, t, "carol"); got != "" {
+				t.Fatalf("deactivating carol, gamma's only active member = %q, want it done", got)
+			}
+
+			inGamma := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", w.gamma, carol)[0]
+			moment, _ := rowJSON(t, w.pool, "workspace_members", inGamma)["updated_at"].(string)
+			for i, id := range invited {
+				want := maps.Clone(rowsBefore[i])
+				want["deleted_at"], want["updated_at"], want["updated_by_id"] = moment, moment, carol.String()
+				if after := rowJSON(t, w.pool, "workspace_member_invites", id); !maps.Equal(after, want) {
+					t.Errorf("the invitation of %s to gamma after carol's deactivation:\n%v\nwant\n%v", names[i], after, want)
+				}
+			}
+			if after := rowsBut(t, w.pool, own); !maps.Equal(after, others) {
+				t.Errorf("every other row after carol's deactivation:\n%v\nwant them as they were:\n%v", after, others)
+			}
+			for _, name := range names {
+				if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspace-invitations/"+links[name].id.String()+"/accept",
+					w.tokens[name], `{"token":"`+links[name].token+`"}`); status != http.StatusNotFound ||
+					!strings.Contains(body, `"code":"workspace.invitation_not_found"`) {
+					t.Errorf("%s's acceptance of carol's invitation to gamma = %d %s; want 404 workspace.invitation_not_found", name, status, body)
+				}
+			}
+			if err := w.pool.QueryRow(soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || members != 0 {
+				t.Errorf("gamma after the acceptances: %d active members (%v); want none", members, err)
+			}
+
+			for _, name := range names {
+				if out, _, err := runWorkspaces(t, w.url, ReactivateMember("gamma", name+"@example.com")); err != nil ||
+					!strings.HasPrefix(out, "reactivated "+name+"@example.com in gamma as member;") {
+					t.Fatalf("reactivate-member of %s in gamma = %q, %v", name, out, err)
+				}
+			}
+			if err := w.pool.QueryRow(soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 0 || members != 2 {
+				t.Fatalf("gamma after the two reactivations: %d active admins of %d active members (%v); want none of two", admins, members, err)
+			}
+			if got := p.deactivate(w, t, "dave"); got != "" {
+				t.Errorf("deactivating dave, a member of gamma beside erin and no admin = %q, want it done", got)
 			}
 		})
 	}
@@ -3473,25 +3769,27 @@ invitation and admins whose memberships ended. Through deactivateMe
 and through nerve users deactivate, each refusal leaves every row of
 every table, a commit refused for any table it writes changes nothing,
 and a deactivation ends every membership and deletes every invitation
-to his address, by him at one moment, and nothing of anyone else. The
-command's line says what it ended and the way back.
+to his address, by him at one moment no earlier than his account's,
+and nothing of anyone else. A deactivation that empties a workspace
+deletes its pending invitations, so that no acceptance lets anyone into
+it. The command's line says what it ended and the way back.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
-| `s6-cli-line` | 命令的一行少了回来的第二步的"在每个工作区" | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestAnInterruptedDeactivationChangesNothing`（Task 6 起）、`TestEachLockOfADeactivationIsItsStrength`（Task 6 起） 等 8 个、W9（Task 9 起） | 组合；端到端 |
-| `s10-dave-member` | 世界里 dave 没有被改为 acme 的管理员 | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing` 等 8 个 | 组合 |
-| `s10-dave-stays` | 世界里 dave 没有被移出 acme | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing` 等 8 个 | 组合 |
-| `s10-bob-member-of-beta` | 世界里 bob 在 beta 仍是成员（改角色写 15） | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing` 等 8 个 | 组合 |
-| `s10-gamma-dave-stays` | 世界里 dave 在 gamma 的成员关系没有结束（改为访客） | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing` 等 8 个 | 组合 |
-| `s10-solo-standing` | 世界里 Solo 没有归档 | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing` 等 8 个 | 组合 |
-| `s10-gamma-pending` | 世界里 bob 没有忽略 gamma 的邀请 | `TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起）、`TestADeactivationRefusedAtItsCommitChangesNothing` 等 8 个 | 组合 |
+| `s6-cli-line` | 命令的一行少了回来的第二步的"在每个工作区" | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestAnInterruptedDeactivationChangesNothing`（Task 6 起） 等 9 个、W9（Task 9 起） | 组合；端到端 |
+| `s10-dave-member` | 世界里 dave 没有被改为 acme 的管理员 | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 9 个 | 组合 |
+| `s10-dave-stays` | 世界里 dave 没有被移出 acme | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 9 个 | 组合 |
+| `s10-bob-member-of-beta` | 世界里 bob 在 beta 仍是成员（改角色写 15） | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 9 个 | 组合 |
+| `s10-gamma-dave-stays` | 世界里 dave 在 gamma 的成员关系没有结束（改为访客） | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 9 个 | 组合 |
+| `s10-solo-standing` | 世界里 Solo 没有归档 | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 9 个 | 组合 |
+| `s10-gamma-pending` | 世界里 bob 没有忽略 gamma 的邀请 | `TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile`（Task 6 起）、`TestADeactivationReadsTheAddressUnderItsLock`（Task 6 起） 等 9 个 | 组合 |
 
-**Done when:** 三个组合测试在两条路上通过；`deactivationWorld.preconditions` 核对世界；命令的一行在 `bootstrap`、`cmd/nerve` 的测试里逐字；`make lint-go`、`make test` 通过。
+**Done when:** 四个组合测试在两条路上通过；`deactivationWorld.preconditions` 核对世界；命令的一行在 `bootstrap`、`cmd/nerve` 的测试里逐字；`make lint-go`、`make test` 通过。
 
 ### Task 6: 每把锁的顺序和强度、事务的连接、命令的中断；等锁期间的变化；锁下的邮箱
 
@@ -3503,7 +3801,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - 没有产品代码。测试的共用：`setBobsEmail(ctx, pool, sessions)`（`interleaving_answers_test.go`：`nerve users set-email` 把 bob 的地址改为 `robert@example.com`，会话一步可以换成被 gate 停住的；P3 的交错 12 同用）；`deactivationWorld.endings`（bob 的每一个成员关系和发给他新旧地址的每一份邀请，按字节排序，每行写明最后写它的人，清扫 39、40）、`bobsStanding`。
 
 **Tests:**（两条路各跑一遍，除非另说）
-- `TestEachLockOfADeactivationIsItsStrength`（`deactivation_locks_test.go`）：alice 加入 Ops、Lab，carol 建 able（bob 加入，id 最后、slug 最前）和 delta（bob 加入后被她移出，`carolsWithBob`）之后，六个事务 `FOR SHARE` 持有他的账户、beta、gamma 的邀请、他在 beta 的成员关系、Lab、他在 Docs 的成员关系；acme 的行、Lab 的行和成员行先重写一遍，排到 beta、Docs 之后（不带 `ORDER BY` 的语句按表的顺序先碰到 beta、Docs，按 slug 的索引先碰到 able；原型上的计划是 slug 的索引）。逐个放开：停用依次等在 `users`、`workspaces`、`workspace_member_invites`、`workspace_members`、`projects`、`project_members` 上（`pgtest.WaitForLockWaitOn`），每一步 `lockOn` 读出十一行最强的锁：账户、acme、beta、able、邀请、他的成员关系、Web、Lab、Docs 各是 `FOR NO KEY UPDATE`（不更强、不更弱），gamma、delta 从不加锁（他已结束的成员关系不算）；等 beta 时已持有 acme、还没有 able；等 Lab 时已持有 Web、Ops、Solo，还没有 Docs。完成的时刻不早于 beta 放开的时刻（3.3）。
+- `TestEachLockOfADeactivationIsItsStrength`（`deactivation_locks_test.go`）：alice 加入 Ops、Lab，carol 建 able（bob 加入，在 acme、beta 之后建、slug 最前）和 delta（bob 加入后被她移出，`carolsWithBob`），bob 建 kappa（只有他）并邀请 erin（`bobsAlone`）之后，七个事务 `FOR SHARE` 持有他的账户、beta、gamma 的邀请、kappa 的邀请、他在 beta 的成员关系、Lab、他在 Docs 的成员关系；acme 的行、Lab 的行和成员行先重写一遍，排到 beta、Docs 之后（不带 `ORDER BY` 的语句按表的顺序先碰到 beta、Docs，按 slug 的索引先碰到 able；原型上的计划是 slug 的索引）。逐个放开：停用依次等在 `users`、`workspaces`、`workspace_member_invites`（他忽略的那一份）、`workspace_member_invites`（kappa 的，第五条语句）、`workspace_members`、`projects`、`project_members` 上（`pgtest.WaitForLockWaitOn`），每一步 `lockOn` 读出十五行最强的锁，与 `state(took, shared)` 比较：停用已取的是 `FOR NO KEY UPDATE`（不更强、不更弱），持有者还持着的是 `FOR SHARE`，其余没有锁；gamma、delta 从不加锁（他已结束的成员关系不算）；等 beta 时已持有 acme、还没有 able、kappa；等 kappa 的邀请时已持有他忽略的那一份、还没有他的成员关系（邀请在成员行之前，全局顺序）；等 Lab 时已持有 Web、Ops、Solo（都属 acme、id 在 Lab 之前），还没有 Docs（预检 L3.5）。完成的时刻不早于 beta 放开的时刻（3.3）。
 - `TestAnInterruptedDeactivationChangesNothing`（命令）：他在 Lab 的成员行被持有，配置给服务的请求期限 200 毫秒；过了两倍期限命令仍在等；中断之后失败、没有输出，每张表不变；放开之后再执行，完成。
 - `TestTheDeactivationRunsOnItsTransactionsConnection`（命令）：连接池只有一个连接，5 秒的期限之内完成，输出逐字（走池的语句会等第二个连接到期限）。
 - `TestADeactivationFindsWhatChangedMeanwhile`（`deactivation_races_test.go`，三个情形 × 两条路）：alice 的写（删除 acme、删除 Docs、移出 bob）持有一个工作区的锁、等一个被 `FOR SHARE` 持有的行，停用等那个工作区的行（两方都不写 `workspaces`，探针只由那一把锁的等待满足）；放开之后写 204、停用完成，`endings` 逐行核对：acme 跳过（不 404、不失败，复核 spike 15），它的行照删除留下；Docs 照删除留下；移出留下的结束和删除仍是 alice 的。
@@ -3511,7 +3809,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 锁的顺序和强度、连接、中断**
 
-`server/internal/bootstrap/deactivation_locks_test.go`（新文件，227 行）：
+`server/internal/bootstrap/deactivation_locks_test.go`（新文件，257 行）：
 
 ````file server/internal/bootstrap/deactivation_locks_test.go
 package bootstrap
@@ -3520,6 +3818,7 @@ import (
 	"context"
 	"maps"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -3533,35 +3832,39 @@ import (
 // Each lock of a deactivation is taken in the lock table's order, at its
 // strength, on both paths (M3 design 3.6's lock table, convention 1,
 // convention 6, the global order): his account first, then every workspace
-// of his in id order, then the invitations to his address and his
+// of his in id order, then the invitations to his address, the pending
+// ones of a workspace he leaves with no active member, and his
 // memberships, then every project of his in id order across the
 // workspaces, then his memberships of them. alice has joined Ops and Lab;
 // carol has made able, which bob joined, and delta, which he joined and
-// she removed him from; acme and Lab have been written again. So acme's
-// row lies after beta's, able, made last, comes first by slug, and Lab's
-// row and memberships lie after Docs's: the order is the ids', not the
-// rows' or the slugs' (a statement without its ORDER BY reaches beta or
-// able, and Docs, first). Other transactions hold, FOR SHARE, his account,
-// beta, the invitation to gamma he declined, his membership of beta, Lab
-// and his membership of Docs, which the deactivation's statements wait for
-// in turn; they let go one at a time, and lockOn reads each row's
-// strongest lock then. The deactivation waits for his account, holding
-// nothing; then for beta, holding his account and acme, the first
-// workspace by id, and not able, the last; then for the invitation,
-// holding beta and able too; then for his membership, holding the
-// invitation; then for Lab, holding his membership, Web, Ops and Solo, of
-// acme, before Lab, of beta, by id, and not Docs, of acme, after it; then
-// for his membership of Docs, holding Lab and Docs; each FOR NO KEY
-// UPDATE, no stronger, no weaker; never gamma, where he is no member, nor
-// delta, where his membership ended. Then it is done, at a moment no
-// earlier than beta's release: it read the clock under its last
-// workspace's lock (3.3).
+// she removed him from; bob has made kappa, where he is alone, and invited
+// erin to it; acme and Lab have been written again. So acme's row lies
+// after beta's, able, made after both, comes first by slug, and Lab's row
+// and memberships lie after Docs's: the order is the ids', not the rows' or
+// the slugs' (a statement without its ORDER BY reaches beta or able, and
+// Docs, first). Other transactions hold, FOR SHARE, his account, beta, the
+// invitation to gamma he declined, kappa's invitation, his membership of
+// beta, Lab and his membership of Docs, which the deactivation's
+// statements wait for in turn; they let go one at a time, and lockOn reads
+// each row's strongest lock then. The deactivation waits for his account,
+// holding nothing; then for beta, holding his account and acme, the first
+// workspace by id, and not able nor kappa, the last; then for the
+// invitation he declined, holding beta, able and kappa too; then for
+// kappa's invitation, holding the one he declined; then for his
+// membership, holding kappa's invitation; then for Lab, holding his
+// membership, Web, Ops and Solo, of acme, before Lab, of beta, by id, and
+// not Docs, of acme, after it; then for his membership of Docs, holding
+// Lab and Docs; each FOR NO KEY UPDATE, no stronger, no weaker; never
+// gamma, where he is no member, nor delta, where his membership ended.
+// Then it is done, at a moment no earlier than beta's release: it read the
+// clock under its last workspace's lock (3.3).
 func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 	for _, p := range deactivationPaths {
 		t.Run(p.name, func(t *testing.T) {
 			w := newDeactivationWorld(t)
 			w.clears(t, w.ops, w.lab)
 			able, delta := w.carolsWithBob(t, "able", false), w.carolsWithBob(t, "delta", true)
+			kappa, toKappa := w.bobsAlone(t, "kappa")
 			bob, acme, beta := w.ids["bob"], w.workspace(t, "acme"), w.workspace(t, "beta")
 			inBeta := queryIDs(t, w.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", beta, bob)[0]
 			inDocs := projectMemberships(t, w.pool, bob, w.docs)[0]
@@ -3582,9 +3885,10 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 				id         uuid.UUID
 			}{
 				{"his account", "users", bob}, {"acme", "workspaces", acme}, {"beta", "workspaces", beta}, {"able", "workspaces", able},
-				{"gamma", "workspaces", w.gamma}, {"delta", "workspaces", delta}, {"the invitation", "workspace_member_invites", w.bobsDeclined},
-				{"his membership", "workspace_members", inBeta}, {"Web", "projects", w.web}, {"Lab", "projects", w.lab},
-				{"Docs", "projects", w.docs},
+				{"kappa", "workspaces", kappa}, {"gamma", "workspaces", w.gamma}, {"delta", "workspaces", delta},
+				{"the invitation", "workspace_member_invites", w.bobsDeclined}, {"kappa's invitation", "workspace_member_invites", toKappa},
+				{"his membership", "workspace_members", inBeta}, {"Web", "projects", w.web}, {"Ops", "projects", w.ops},
+				{"Solo", "projects", w.solo}, {"Lab", "projects", w.lab}, {"Docs", "projects", w.docs},
 			}
 			locks := func() string {
 				t.Helper()
@@ -3594,42 +3898,53 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 				}
 				return strings.Join(held, ", ")
 			}
+			// state is the locks of rows once the deactivation has taken
+			// took, FOR NO KEY UPDATE, while the holders of shared still hold
+			// theirs, FOR SHARE: no lock on any other.
+			state := func(took, shared []string) string {
+				held := make([]string, len(rows))
+				for i, r := range rows {
+					switch {
+					case slices.Contains(took, r.name):
+						held[i] = r.name + " FOR NO KEY UPDATE"
+					case slices.Contains(shared, r.name):
+						held[i] = r.name + " FOR SHARE"
+					default:
+						held[i] = r.name + " no lock"
+					}
+				}
+				return strings.Join(held, ", ")
+			}
 			holdsDocs := holding(t, w.pool, "SELECT 1 FROM project_members WHERE id = $1 FOR SHARE", inDocs)
 			holdsLab := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR SHARE", w.lab)
 			holdsMembership := holding(t, w.pool, "SELECT 1 FROM workspace_members WHERE id = $1 FOR SHARE", inBeta)
+			holdsKappas := holding(t, w.pool, "SELECT 1 FROM workspace_member_invites WHERE id = $1 FOR SHARE", toKappa)
 			holdsInvitation := holding(t, w.pool, "SELECT 1 FROM workspace_member_invites WHERE id = $1 FOR SHARE", w.bobsDeclined)
 			holdsBeta := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR SHARE", beta)
 			holdsAccount := holding(t, w.pool, "SELECT 1 FROM users WHERE id = $1 FOR SHARE", bob)
+			shared := []string{"his account", "beta", "the invitation", "kappa's invitation", "his membership", "Lab"}
 			answer := p.sent(w, t, "bob")
 			var released time.Time
-			// Each step lets go of one holder and names the table the
-			// deactivation then waits on, and its locks; the FOR SHARE ones
-			// are the holders'. A lock it took on a row held FOR SHARE before
+			var took []string
+			// Each step lets go of one holder, of the row frees, and names
+			// the table the deactivation then waits on, and the rows it has
+			// taken by then. A lock it took on a row held FOR SHARE before
 			// its turn would hide behind the holder's, and show only as the
 			// probe of the step that waits on that row's table timing out
 			// (pgtest.WaitForLockWaitOn).
-			const never = "gamma no lock, delta no lock"
 			for _, step := range []struct {
 				release pgx.Tx
+				frees   string
 				waitsOn string
-				want    string
+				takes   []string
 			}{
-				{nil, "users", "his account FOR SHARE, acme no lock, beta FOR SHARE, able no lock, " + never + ", the invitation FOR SHARE, " +
-					"his membership FOR SHARE, Web no lock, Lab FOR SHARE, Docs no lock"},
-				{holdsAccount, "workspaces", "his account FOR NO KEY UPDATE, acme FOR NO KEY UPDATE, beta FOR SHARE, able no lock, " + never +
-					", the invitation FOR SHARE, his membership FOR SHARE, Web no lock, Lab FOR SHARE, Docs no lock"},
-				{holdsBeta, "workspace_member_invites", "his account FOR NO KEY UPDATE, acme FOR NO KEY UPDATE, beta FOR NO KEY UPDATE, " +
-					"able FOR NO KEY UPDATE, " + never + ", the invitation FOR SHARE, his membership FOR SHARE, Web no lock, Lab FOR SHARE, " +
-					"Docs no lock"},
-				{holdsInvitation, "workspace_members", "his account FOR NO KEY UPDATE, acme FOR NO KEY UPDATE, beta FOR NO KEY UPDATE, " +
-					"able FOR NO KEY UPDATE, " + never + ", the invitation FOR NO KEY UPDATE, his membership FOR SHARE, Web no lock, " +
-					"Lab FOR SHARE, Docs no lock"},
-				{holdsMembership, "projects", "his account FOR NO KEY UPDATE, acme FOR NO KEY UPDATE, beta FOR NO KEY UPDATE, " +
-					"able FOR NO KEY UPDATE, " + never + ", the invitation FOR NO KEY UPDATE, his membership FOR NO KEY UPDATE, " +
-					"Web FOR NO KEY UPDATE, Lab FOR SHARE, Docs no lock"},
-				{holdsLab, "project_members", "his account FOR NO KEY UPDATE, acme FOR NO KEY UPDATE, beta FOR NO KEY UPDATE, " +
-					"able FOR NO KEY UPDATE, " + never + ", the invitation FOR NO KEY UPDATE, his membership FOR NO KEY UPDATE, " +
-					"Web FOR NO KEY UPDATE, Lab FOR NO KEY UPDATE, Docs FOR NO KEY UPDATE"},
+				{nil, "", "users", nil},
+				{holdsAccount, "his account", "workspaces", []string{"his account", "acme"}},
+				{holdsBeta, "beta", "workspace_member_invites", []string{"beta", "able", "kappa"}},
+				{holdsInvitation, "the invitation", "workspace_member_invites", []string{"the invitation"}},
+				{holdsKappas, "kappa's invitation", "workspace_members", []string{"kappa's invitation"}},
+				{holdsMembership, "his membership", "projects", []string{"his membership", "Web", "Ops", "Solo"}},
+				{holdsLab, "Lab", "project_members", []string{"Lab", "Docs"}},
 			} {
 				if step.release != nil {
 					if step.release == holdsBeta {
@@ -3638,10 +3953,12 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 					if err := step.release.Rollback(context.Background()); err != nil {
 						t.Fatal(err)
 					}
+					shared = slices.DeleteFunc(shared, func(name string) bool { return name == step.frees })
 				}
+				took = append(took, step.takes...)
 				pgtest.WaitForLockWaitOn(t, w.pool, step.waitsOn, 5*time.Second)
-				if got := locks(); got != step.want {
-					t.Errorf("the deactivation waiting on %s:\n%s\nwant\n%s", step.waitsOn, got, step.want)
+				if got, want := locks(), state(took, shared); got != want {
+					t.Errorf("the deactivation waiting on %s:\n%s\nwant\n%s", step.waitsOn, got, want)
 				}
 			}
 			if err := holdsDocs.Rollback(context.Background()); err != nil {
@@ -3657,6 +3974,17 @@ func TestEachLockOfADeactivationIsItsStrength(t *testing.T) {
 			}
 		})
 	}
+}
+
+// bobsAlone is bob's new workspace slug, where he is the only member, and
+// his pending invitation of erin to it: their ids.
+func (w deactivationWorld) bobsAlone(t *testing.T, slug string) (workspace, invitation uuid.UUID) {
+	t.Helper()
+	if status, body := call(t, w.contract, http.MethodPost, w.base+"/api/v0/workspaces", w.tokens["bob"],
+		`{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
+		t.Fatalf("creating %s = %d %s", slug, status, body)
+	}
+	return w.workspace(t, slug), invite(t, w.contract, w.base, w.tokens["bob"], slug, "erin@example.com").id
 }
 
 // carolsWithBob is carol's new workspace slug, which bob joined by
@@ -3991,10 +4319,10 @@ git add server/internal/bootstrap/deactivation_locks_test.go server/internal/boo
 git commit -m "test(M3/P6): each lock of a deactivation in its order and at its strength, its connection, its interruption, and what changes while it waits
 
 On both paths, a deactivation waits on his account, his workspaces in
-id order, the invitations to his address, his memberships, his
-projects in id order across the workspaces and his project
-memberships, each FOR NO KEY UPDATE, reading the clock after the last
-workspace's lock. The command has no deadline of its own and an
+id order, the invitations to his address, the pending ones of a
+workspace he leaves empty, his memberships, his projects in id order
+across the workspaces and his project memberships, each FOR NO KEY
+UPDATE, reading the clock after the last workspace's lock. The command has no deadline of its own and an
 interruption changes nothing; every statement runs on the
 transaction's connection. A workspace deleted while it waits is left
 out, a removal's endings stay the remover's, and a change of address
@@ -4003,7 +4331,7 @@ committed first has the invitations to the new address deleted.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
@@ -4024,9 +4352,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Tests:**
 - `TestAcceptingAndDeactivating`（交错 7 的 (a)、(d)、(e)，四个子测试）：接受先持他的账户 `FOR SHARE` 和 acme 的 N 停在 gate，停用等账户行；提交之后停用列举到 acme，结束他的成员关系（由他；alice 仍是管理员）。停用先持账户行停在 gate，接受等它，之后读到停用：401，没有成员关系，邀请由停用删除。以前的成员行：接受恢复那一行，(a) 结束它，(d) 照 alice 的移出留下。探针认 `users`。
-- `TestAnAdmittedAdminsWriteAndHisDeactivation`（7 的 (b)、(c)）：接受先提交；停用停在账户行之后自己的 gate；bob 另一个事务：(b) 把 alice 改为成员（持 acme 的 N 停在 gate），(c) 加入 Web（持 acme 的 S 和他的成员关系停在 gate）；停用继续、等 acme 的行，两方都不写 `workspaces`。之后 (b) `workspace.sole_admin`，每张表照接受和改角色留下的；(c) 停用列举到 Web，和 acme 的一起结束（由他），acme 仍有 alice。
+- `TestAnAdmittedAdminsWriteAndHisDeactivation`（7 的 (b)、(c)）：接受先提交；停用停在账户行之后自己的 gate；bob 另一个事务：(b) 把 alice 改为成员（持 acme 的 N 停在 gate），(c) 加入 Web（持 acme 的 S 和他的成员关系停在 gate）；停用继续、等 acme 的行，两方都不写 `workspaces`。之后 (b) `workspace.sole_admin`：两方都停在 gate、都还没有提交写的时候读的每张表（`workspace_members` 除了 alice 那一行，改角色写它），拒绝之后不变（预检 L4）；(c) 停用列举到 Web，和 acme 的一起结束（由他），acme 仍有 alice。
 - `TestReactivatingAndDeactivating`（交错 16，`reactivation_races_test.go`）：恢复先：acme 被持有，恢复持他的账户 `FOR SHARE` 等它，停用等账户行；放开之后恢复完成，停用列举到 acme、再结束它，Web、Ops 仍结束。停用先：停用持账户行停在 gate，恢复等它；停用提交之后恢复照样进行（3.11 的例外），输出提示 `nerve users activate`。`endersOf`：恢复先是 `Ops alice, Web alice, acme bob`，停用先是 `Ops alice, Web alice`。
 - `interleaving_invite_test.go`：P3 的交错测试照新的 `newAnswerRace(t, shared.RoleMember)`。
+- `newS1Race` 的四条种子语句在 `soon(t)` 的期限之内运行（清扫 29）。
 
 - [ ] **Step 1: 共用的竞争**
 
@@ -4165,7 +4494,7 @@ func (r answerRace) deactivateBob(ctx context.Context, sessions identityapp.Sess
 
 - [ ] **Step 2: 交错 7**
 
-`server/internal/bootstrap/interleaving_accepting_test.go`（新文件，248 行）：
+`server/internal/bootstrap/interleaving_accepting_test.go`（新文件，266 行）：
 
 ````file server/internal/bootstrap/interleaving_accepting_test.go
 package bootstrap
@@ -4219,7 +4548,7 @@ type s1Race struct {
 func newS1Race(t *testing.T, former bool) s1Race {
 	t.Helper()
 	r := s1Race{answerRace: newAnswerRace(t, shared.RoleAdmin), web: uuid.NewV7()}
-	ctx, before := context.Background(), time.Now().Add(-time.Hour)
+	ctx, before := soon(t), time.Now().Add(-time.Hour)
 	r.aliceIn = queryIDs(t, r.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", r.acme, r.alice)[0]
 	projects := projectpg.New(r.pool)
 	if err := projects.CreateProject(ctx, projectapp.ProjectRow{ID: r.web, WorkspaceID: r.acme, Name: "Web", Identifier: "WEB",
@@ -4348,11 +4677,12 @@ func TestAcceptingAndDeactivating(t *testing.T) {
 // write; (c) his joining Web, holding acme FOR SHARE and his membership of
 // it (3.6 convention 2, option E). The deactivation goes on and waits for
 // acme's row: nothing else waits then, and neither side writes a row of
-// workspaces, so only that wait satisfies the probe. Once bob's write
-// commits:
+// workspaces, so only that wait satisfies the probe. The tables are read
+// while both stand at their gates, neither having committed a write. Once
+// bob's write commits:
 //   - (b) bob is acme's only active admin, alice its member:
-//     workspace.sole_admin, and no row of any table changes from what the
-//     acceptance and the change left;
+//     workspace.sole_admin, and no row of any table changes from what they
+//     were then but alice's membership, which the change wrote;
 //   - (c) the deactivation finds his membership of Web, made after its lock
 //     of his account, and ends it with his membership of acme, as his;
 //     acme keeps alice, its admin.
@@ -4396,6 +4726,20 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			held(t, ctx, stopped, deactivated, "the deactivation")
 			written := tt.write(r, t, ctx, writing)
 			held(t, ctx, writing, written, "bob's write")
+			// Every table but River's and workspace_members, and every
+			// membership but alice's, which bob's change writes, as row_to_json
+			// writes it, in id order.
+			notMemberships := func(table string) bool { return riversOwn(table) || table == "public.workspace_members" }
+			membershipsButAlices := func() string {
+				t.Helper()
+				var s string
+				if err := r.pool.QueryRow(soon(t), `SELECT coalesce(string_agg(row_to_json(m)::text, E'\n' ORDER BY m.id), '')
+					FROM workspace_members m WHERE m.id <> $1`, r.aliceIn).Scan(&s); err != nil {
+					t.Fatal(err)
+				}
+				return s
+			}
+			before, memberships := tableRows(t, r.pool, notMemberships), membershipsButAlices()
 			close(stopped.open)
 			pgtest.WaitForLockWaitOn(t, r.pool, "workspaces", 5*time.Second)
 			close(writing.open)
@@ -4403,12 +4747,15 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			if err := result(t, ctx, written, "bob's write"); err != nil {
 				t.Fatalf("bob's write = %v, want it done", err)
 			}
-			before := tableRows(t, r.pool, riversOwn)
 			if err := result(t, ctx, deactivated, "the deactivation"); !sameOutcome(err, tt.err) {
 				t.Errorf("the deactivation = %v, want %v", err, tt.err)
 			}
-			if after := tableRows(t, r.pool, riversOwn); tt.err != nil && !maps.Equal(after, before) {
-				t.Errorf("the tables after the refused deactivation changed:\n%v\nwant them as bob's write left them:\n%v", after, before)
+			if after := tableRows(t, r.pool, notMemberships); tt.err != nil && !maps.Equal(after, before) {
+				t.Errorf("the tables after the refused deactivation changed:\n%v\nwant them as they were at the gates:\n%v", after, before)
+			}
+			if after := membershipsButAlices(); tt.err != nil && after != memberships {
+				t.Errorf("the memberships but alice's after the refused deactivation:\n%s\nwant them as they were at the gates:\n%s", after,
+					memberships)
 			}
 			if got := r.standing(t); got != tt.want {
 				t.Errorf("after all: %s; want %s", got, tt.want)
@@ -4928,7 +5275,7 @@ workspace's row behind the first's check, is refused.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
@@ -4945,15 +5292,15 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Interfaces:**
 - 没有产品代码。W9 用 e2e 已有的夹具（`createWorkspace`、`inviteAndAccept`、`invite`、`createProject`、`addProjectMembers`、`membershipOf`、`accountOf`、`tokensOf`、`expectDeactivated`、`expectMembership`、`nerveUsers`、`nerveUsersFails`、`nerveWorkspaces`）。
-- 文档：README 部署一节的 `deactivate`、`activate`、"恢复被移出的成员"（8.7）；差异清单第四节"停用账户"（3.20）；总体设计 4.2 的"停用一段"（3.20 的 P2 一行）；M2 收尾交接第 6 节的处理结果（关闭；M4 交接第 1 节不提前）。
+- 文档：README 部署一节的 `deactivate`（第五条语句；拒绝时的补救由那里的管理员做，服务器管理员没有对应的命令，预检 L3.3）、`activate`、"恢复被移出的成员"（8.7；它不看工作区有没有管理员，已知的限制）；差异清单第四节"停用账户"（3.20）；总体设计 4.2 的"停用一段"（3.20 的 P2 一行）；M2 收尾交接第 6 节的处理结果（关闭；M4 交接第 1 节不提前）。
 
 **Tests:**
-- `e2e/stories/workspace/w9-deactivation.spec.ts`（spec 2.11）：两个拒绝各经接口、命令，每次之前读、之后核对六张表；A 加入 Lab 之后接口停用 B：A12 的断言，他的五行由他在一个时刻结束或删除（按 `COLLATE "C"` 排序），别人的每一行不变；`activate` 只恢复账户，`reactivate-member` 恢复 acme（B 读得到 acme、读不到 beta）；命令再停用一次，别人的不变。
+- `e2e/stories/workspace/w9-deactivation.spec.ts`（spec 2.11）：两个拒绝各经接口、命令，每次之前读、之后核对六张表；A 加入 Lab 之后接口停用 B：A12 的断言，他的六行由他在一个时刻结束或删除（按 `COLLATE "C"` 排序），他在只有他的 epsilon 发给 C 的邀请在同一时刻由他删除，C 接受它答 404 `workspace.invitation_not_found`（第五条语句），别人的每一行不变；`activate` 只恢复账户，`reactivate-member` 恢复 acme（B 读得到 acme、读不到 beta）；命令再停用一次，别人的不变。
 - `a12-deactivate.spec.ts`：命令的新一行。
 
 - [ ] **Step 1: 故事**
 
-`e2e/stories/workspace/w9-deactivation.spec.ts`（新文件，166 行）：
+`e2e/stories/workspace/w9-deactivation.spec.ts`（新文件，192 行）：
 
 ````file e2e/stories/workspace/w9-deactivation.spec.ts
 import {
@@ -4981,7 +5328,7 @@ const workspaceRefusal =
 const projectRefusal =
   "The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active members. It must first be given another admin, or be deleted.";
 
-test("W9: a deactivation is refused while the account is the only admin of a workspace or a project with other members, by the API and by the command, and changes nothing; once each has another admin, it ends every membership and deletes every invitation to the address; nerve users activate, then reactivate-member, bring the account back a workspace at a time", async ({
+test("W9: a deactivation is refused while the account is the only admin of a workspace or a project with other members, by the API and by the command, and changes nothing; once each has another admin, it ends every membership and deletes every invitation to the address and the pending ones of the workspace it leaves empty; nerve users activate, then reactivate-member, bring the account back a workspace at a time", async ({
   api,
   db,
 }, testInfo) => {
@@ -4995,8 +5342,9 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   const beta = slugFor(testInfo, "beta");
   const gamma = slugFor(testInfo, "gamma");
   const delta = slugFor(testInfo, "delta");
+  const epsilon = slugFor(testInfo, "epsilon");
   // B makes acme, A its member; A makes beta, B and C its members; B makes Lab there and adds C as its member. C
-  // invites B to gamma, which he declines, and to delta.
+  // invites B to gamma, which he declines, and to delta. B makes epsilon, where he is alone, and invites C to it.
   await createWorkspace(api, b, { name: "Acme", slug: acme });
   await inviteAndAccept(api, b, acme, { email: aEmail, token: a }, 15);
   await createWorkspace(api, a, { name: "Beta", slug: beta });
@@ -5008,8 +5356,10 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   await createWorkspace(api, c, { name: "Delta", slug: delta });
   const [toGamma] = await invite(api, c, gamma, [{ email: bEmail, role: 15 }]);
   await invite(api, c, delta, [{ email: bEmail, role: 15 }]);
-  if (!toGamma) {
-    throw new Error("the invitation to B in gamma was not created");
+  await createWorkspace(api, b, { name: "Epsilon", slug: epsilon });
+  const [toEpsilon] = await invite(api, b, epsilon, [{ email: cEmail, role: 15 }]);
+  if (!toGamma || !toEpsilon) {
+    throw new Error("the invitations to B in gamma and to C in epsilon were not both created");
   }
   const declined = await api.POST("/api/v0/workspace-invitations/{invitation_id}/decline", {
     params: { path: { invitation_id: toGamma.id } },
@@ -5051,8 +5401,8 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   await refusedBoth("project.sole_admin", projectRefusal);
 
   // A, beta's admin, joins Lab, as its admin (M3 design 3.5). The API deactivates B: as A12, and every membership of
-  // his ends, every invitation to his address is deleted, the declined one too, at one moment, by him; every row of
-  // anyone else is as it was.
+  // his ends, every invitation to his address is deleted, the declined one too, and his invitation of C to epsilon,
+  // where he was alone (M3 design 3.7), at one moment, by him; every row of anyone else is as it was.
   const joined = await api.POST("/api/v0/projects/{project_id}/join", {
     params: { path: { project_id: lab.id } },
     headers: bearer(a),
@@ -5066,7 +5416,10 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
     sessions: await db.query("SELECT * FROM auth_sessions WHERE user_id <> $1 ORDER BY id", [account.id]),
     workspaces: await db.query("SELECT * FROM workspace_members WHERE member_id <> $1 ORDER BY id", [account.id]),
     projects: await db.query("SELECT * FROM project_members WHERE member_id <> $1 ORDER BY id", [account.id]),
-    invitations: await db.query("SELECT * FROM workspace_member_invites WHERE email <> $1 ORDER BY id", [bEmail]),
+    invitations: await db.query("SELECT * FROM workspace_member_invites WHERE email <> $1 AND id <> $2 ORDER BY id", [
+      bEmail,
+      toEpsilon.id,
+    ]),
   });
   const othersBefore = await others();
   expect(await deactivate(), "deactivateMe").toEqual([204, undefined, undefined]);
@@ -5092,11 +5445,31 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
       row("LAB", false),
       row(acme, false),
       row(beta, false),
+      row(epsilon, false),
       row(`invitation to ${delta}`, false),
       row(`invitation to ${gamma}`, false),
     ].toSorted((x, y) => (x.place < y.place ? -1 : 1))
   );
   expect(await others(), "every row of anyone else").toEqual(othersBefore);
+  expect(
+    await db.query(
+      `SELECT i.deleted_at = m.updated_at AS with_his_membership, b.email AS by
+         FROM workspace_member_invites i JOIN users b ON b.id = i.updated_by_id,
+              workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+        WHERE i.id = $1 AND w.slug = $2 AND m.member_id = $3`,
+      [toEpsilon.id, epsilon, account.id]
+    ),
+    "his invitation of C to epsilon"
+  ).toEqual([{ with_his_membership: true, by: bEmail }]);
+  const toEmpty = await api.POST("/api/v0/workspace-invitations/{invitation_id}/accept", {
+    params: { path: { invitation_id: toEpsilon.id } },
+    body: { token: toEpsilon.token },
+    headers: bearer(c),
+  });
+  expect([toEmpty.response.status, toEmpty.error?.code], "C accepts it").toEqual([
+    404,
+    "workspace.invitation_not_found",
+  ]);
 
   // The way back: nerve users activate brings the account back alone; reactivate-member, his membership of one
   // workspace, as it was, his project memberships still ended.
@@ -5144,7 +5517,7 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   - `activate --email <邮箱>`：恢复账户，没有过期的 PAT **重新可用**，输出它们的个数。
 ````
 ````new README.md
-  - `deactivate --email <邮箱>`：停用账户，与用户自己停用相同：结束全部会话，重置新手引导，不改密码；PAT 保留，但停用期间认证失败。同一个事务里结束他在全部工作区和项目的成员关系（行保留，角色不变），删除发给他邮箱的全部邀请（待接受的和已忽略的）；输出提示回来的两步。他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时，退出码为 1，打印一行说明（与接口的 409 相同），数据库不变：先在那里指定另一位管理员，或删除它。命令没有请求期限：它取账户行和他的每个工作区、项目的锁，与这些工作区里的写连续重叠时一直等待；中断（SIGINT、SIGTERM）之后什么都不改，可以重试。
+  - `deactivate --email <邮箱>`：停用账户，与用户自己停用相同：结束全部会话，重置新手引导，不改密码；PAT 保留，但停用期间认证失败。同一个事务里结束他在全部工作区和项目的成员关系（行保留，角色不变），删除发给他邮箱的全部邀请（待接受的和已忽略的），以及他是唯一有效成员的工作区里的待接受邀请（没有人能经它进入一个没有管理员的工作区）；输出提示回来的两步。他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时，退出码为 1，打印一行说明（与接口的 409 相同），数据库不变：要先由那里的管理员指定另一位管理员，或删除它（服务器管理员没有对应的命令）。命令没有请求期限：它取账户行和他的每个工作区、项目的锁，与这些工作区里的写连续重叠时一直等待；中断（SIGINT、SIGTERM）之后什么都不改，可以重试。
   - `activate --email <邮箱>`：恢复账户，没有过期的 PAT **重新可用**，输出它们的个数。**不恢复成员关系**：停用结束的成员关系按工作区用 `nerve workspaces reactivate-member` 恢复（下面"恢复被移出的成员"一条）。
 ````
 
@@ -5152,7 +5525,7 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
 - **恢复被移出的成员**：`nerve workspaces reactivate-member --slug <slug> --email <邮箱>` 把这个账户在这个工作区已结束的成员关系（被移出或自己离开）恢复为有效，角色不变。他在这个工作区的项目成员关系仍无效，命令输出这样的项目成员关系还有几个：每一个在他经接口加入那个项目时恢复，角色取原来的项目角色与他的工作区角色中较低的一个（工作区管理员能加入任何项目，成员只能加入公开的项目，访客不能加入；M3 设计 3.5），或在有权添加项目成员的人（项目管理员，或同时是工作区管理员的项目成员，M3 设计 3.4）重新添加他时恢复，角色取添加时给出的。账户已停用时照样恢复，输出另外提示下一步执行 `nerve users activate --email <邮箱>`：`nerve users activate` 只恢复账户，不恢复成员关系。它与 `nerve workspaces create` 一样直接连数据库，服务不用停；邮箱按注册时的规则规范化。已是有效成员时输出说明，退出码为 0，什么都不改；工作区不存在、邮箱没有账户、账户从来不是这个工作区的成员时，退出码为 1，打印一行说明，数据库不变。它取工作区的锁：同一工作区里项目级的写连续重叠时一直等待（命令没有请求期限）；中断（SIGINT、SIGTERM）之后什么都不改，可以重试。
 ````
 ````new README.md
-- **恢复被移出的成员**：`nerve workspaces reactivate-member --slug <slug> --email <邮箱>` 把这个账户在这个工作区已结束的成员关系（被移出、自己离开或账户停用）恢复为有效，角色不变。他在这个工作区的项目成员关系仍无效，命令输出这样的项目成员关系还有几个：每一个在他经接口加入那个项目时恢复，角色取原来的项目角色与他的工作区角色中较低的一个（工作区管理员能加入任何项目，成员只能加入公开的项目，访客不能加入；M3 设计 3.5），或在有权添加项目成员的人（项目管理员，或同时是工作区管理员的项目成员，M3 设计 3.4）重新添加他时恢复，角色取添加时给出的。账户已停用时照样恢复，输出另外提示下一步执行 `nerve users activate --email <邮箱>`：`nerve users activate` 只恢复账户，不恢复成员关系。停用过的账户回来是两步：`nerve users activate`，再在要回去的每个工作区执行一次这个命令。它与 `nerve workspaces create` 一样直接连数据库，服务不用停；邮箱按注册时的规则规范化。已是有效成员时输出说明，退出码为 0，什么都不改；工作区不存在、邮箱没有账户、账户从来不是这个工作区的成员时，退出码为 1，打印一行说明，数据库不变。它取工作区的锁：同一工作区里项目级的写连续重叠时一直等待（命令没有请求期限）；中断（SIGINT、SIGTERM）之后什么都不改，可以重试。
+- **恢复被移出的成员**：`nerve workspaces reactivate-member --slug <slug> --email <邮箱>` 把这个账户在这个工作区已结束的成员关系（被移出、自己离开或账户停用）恢复为有效，角色不变。他在这个工作区的项目成员关系仍无效，命令输出这样的项目成员关系还有几个：每一个在他经接口加入那个项目时恢复，角色取原来的项目角色与他的工作区角色中较低的一个（工作区管理员能加入任何项目，成员只能加入公开的项目，访客不能加入；M3 设计 3.5），或在有权添加项目成员的人（项目管理员，或同时是工作区管理员的项目成员，M3 设计 3.4）重新添加他时恢复，角色取添加时给出的。账户已停用时照样恢复，输出另外提示下一步执行 `nerve users activate --email <邮箱>`：`nerve users activate` 只恢复账户，不恢复成员关系。停用过的账户回来是两步：`nerve users activate`，再在要回去的每个工作区执行一次这个命令。它不看工作区有没有有效的管理员：一个工作区唯一的成员被停用之后，在那里恢复一个以前不是管理员的成员，工作区就有成员而没有管理员，没有人能邀请、移出、改角色；要让它有人管理，先恢复以前的管理员。它与 `nerve workspaces create` 一样直接连数据库，服务不用停；邮箱按注册时的规则规范化。已是有效成员时输出说明，退出码为 0，什么都不改；工作区不存在、邮箱没有账户、账户从来不是这个工作区的成员时，退出码为 1，打印一行说明，数据库不变。它取工作区的锁：同一工作区里项目级的写连续重叠时一直等待（命令没有请求期限）；中断（SIGINT、SIGTERM）之后什么都不改，可以重试。
 ````
 
 `docs/v0/plane-diff.md`（修改，1 处）：
@@ -5161,7 +5534,7 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
 | 停用账户 | 自助停用：撤销会话、重置新手引导、把密码改成随机值、发邮件；"唯一管理员"的检查从不拒绝；只有命令 `activate_user` 能恢复 | 自助停用 `POST /api/v0/me/deactivate`：撤销全部会话，重置新手引导，不改密码，PAT 不删除但停用期间认证失败；服务器管理员的 `nerve users deactivate` 与自助停用相同，`nerve users activate` 恢复账户，恢复后没有过期的 PAT 重新可用；"唯一管理员"的检查由 M3 在同一个事务里实现（M2 设计决策点 3） |
 ````
 ````new docs/v0/plane-diff.md
-| 停用账户 | 自助停用：撤销会话、重置新手引导、把密码改成随机值、发邮件；"唯一管理员"的检查从不拒绝；只有命令 `activate_user` 能恢复 | 自助停用 `POST /api/v0/me/deactivate`：撤销全部会话，重置新手引导，不改密码，PAT 不删除但停用期间认证失败；服务器管理员的 `nerve users deactivate` 与自助停用相同，`nerve users activate` 恢复账户，恢复后没有过期的 PAT 重新可用；停用在同一个事务里结束他在全部工作区和项目的成员关系（行保留），软删除发给他邮箱的全部邀请（待接受的和已忽略的，与 Plane 相同）；他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时拒绝（409 `workspace.sole_admin`、`project.sole_admin`，命令退出码 1），什么都不改；`nerve users activate` 只恢复账户，成员关系按工作区用 `nerve workspaces reactivate-member` 恢复（M2 设计决策点 3，M3 设计 3.9） |
+| 停用账户 | 自助停用：撤销会话、重置新手引导、把密码改成随机值、发邮件；"唯一管理员"的检查从不拒绝；只有命令 `activate_user` 能恢复 | 自助停用 `POST /api/v0/me/deactivate`：撤销全部会话，重置新手引导，不改密码，PAT 不删除但停用期间认证失败；服务器管理员的 `nerve users deactivate` 与自助停用相同，`nerve users activate` 恢复账户，恢复后没有过期的 PAT 重新可用；停用在同一个事务里结束他在全部工作区和项目的成员关系（行保留），软删除发给他邮箱的全部邀请（待接受的和已忽略的，与 Plane 相同），以及他是唯一有效成员的工作区里的待接受邀请（Plane 不删：接受之后工作区有成员而没有管理员）；他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时拒绝（409 `workspace.sole_admin`、`project.sole_admin`，命令退出码 1），什么都不改；`nerve users activate` 只恢复账户，成员关系按工作区用 `nerve workspaces reactivate-member` 恢复（M2 设计决策点 3，M3 设计 3.9） |
 ````
 
 `docs/v0/v0-design.md`（修改，1 处）：
@@ -5170,7 +5543,7 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   "先锁父行，再判定"从 M3/P2 起落地（修改、删除工作区，改成员的角色，修改显示设置）：两位管理员互相降级时，先拿到工作区锁的一方成功，后到的一方判定时已是成员而被拒绝。约定六的接受邀请一段从 M3/P3 起落地：接受、忽略邀请最先以 `FOR SHARE` 锁住调用者的账户行，在锁下重读 `is_active` 和邮箱，再锁工作区（接受 `FOR NO KEY UPDATE`，忽略 `FOR SHARE`）和邀请行（`FOR UPDATE`）；接受比较的是在账户行锁下读到的邮箱，与改邮箱在账户行上串行：改邮箱先持有这一行时，接受等它提交，比较的是改后的邮箱；接受先持有时，比较的是原来的邮箱，改邮箱等接受结束（M3 设计 9.3 交错 12）。停用一段在 M3/P6 随实现核对。
 ````
 ````new docs/v0/v0-design.md
-  "先锁父行，再判定"从 M3/P2 起落地（修改、删除工作区，改成员的角色，修改显示设置）：两位管理员互相降级时，先拿到工作区锁的一方成功，后到的一方判定时已是成员而被拒绝。约定六的接受邀请一段从 M3/P3 起落地：接受、忽略邀请最先以 `FOR SHARE` 锁住调用者的账户行，在锁下重读 `is_active` 和邮箱，再锁工作区（接受 `FOR NO KEY UPDATE`，忽略 `FOR SHARE`）和邀请行（`FOR UPDATE`）；接受比较的是在账户行锁下读到的邮箱，与改邮箱在账户行上串行：改邮箱先持有这一行时，接受等它提交，比较的是改后的邮箱；接受先持有时，比较的是原来的邮箱，改邮箱等接受结束（M3 设计 9.3 交错 12）。约定六的停用一段从 M3/P6 起落地：停用（自助的和服务器管理员的命令）最先以 `FOR NO KEY UPDATE` 锁住账户行，在锁下读邮箱，写完账户、新手引导和会话之后，按 `id` 锁住他有效成员关系所在的全部工作区（`FOR NO KEY UPDATE`，上锁时已删除的跳过），在最后一把工作区锁之后读时刻，删除发给这个邮箱的全部邀请，结束他的工作区成员行，再列举他的项目成员关系、按 `id` 一次锁住那些项目并结束它们；工作区一侧的增长在账户行上、项目一侧的增长在工作区行上与它串行（M3 设计 3.9，9.3 交错 7、8、13–16、19）。
+  "先锁父行，再判定"从 M3/P2 起落地（修改、删除工作区，改成员的角色，修改显示设置）：两位管理员互相降级时，先拿到工作区锁的一方成功，后到的一方判定时已是成员而被拒绝。约定六的接受邀请一段从 M3/P3 起落地：接受、忽略邀请最先以 `FOR SHARE` 锁住调用者的账户行，在锁下重读 `is_active` 和邮箱，再锁工作区（接受 `FOR NO KEY UPDATE`，忽略 `FOR SHARE`）和邀请行（`FOR UPDATE`）；接受比较的是在账户行锁下读到的邮箱，与改邮箱在账户行上串行：改邮箱先持有这一行时，接受等它提交，比较的是改后的邮箱；接受先持有时，比较的是原来的邮箱，改邮箱等接受结束（M3 设计 9.3 交错 12）。约定六的停用一段从 M3/P6 起落地：停用（自助的和服务器管理员的命令）最先以 `FOR NO KEY UPDATE` 锁住账户行，在锁下读邮箱，写完账户、新手引导和会话之后，按 `id` 锁住他有效成员关系所在的全部工作区（`FOR NO KEY UPDATE`，上锁时已删除的跳过），在最后一把工作区锁之后读时刻，删除发给这个邮箱的全部邀请和他是唯一有效成员的工作区的待接受邀请，结束他的工作区成员行，再列举他的项目成员关系、按 `id` 一次锁住那些项目并结束它们；工作区一侧的增长在账户行上、项目一侧的增长在工作区行上与它串行（M3 设计 3.9，9.3 交错 7、8、13–16、19）。
 ````
 
 `docs/v0/M3-workspace-project/handoffs/M2-closeout.md`（修改，1 处）：
@@ -5184,7 +5557,7 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
 
 ## 处理结果（M3/P6）
 
-- **第 6 节 停用的端口**（完成）：`identity/app` 声明 `MembershipDeactivator`（`DeactivateMemberships(ctx, userID, email)`），`deactivate`（`server/internal/modules/identity/app/deactivate.go`）在撤销会话之后调用它，自助停用（`Execute`）和 `nerve users deactivate`（`ExecuteByEmail`）都经过这里，邮箱取自锁下的账户行。它由 `workspace` 的 `Deactivator` 实现（`server/internal/modules/workspace/app/deactivate_memberships.go`），`bootstrap` 接上：服务用 `workspace.New` 的 `Deactivator()`，命令行用 `workspace.NewDeactivator` 和 `project.NewCascade`（`server/internal/bootstrap/users.go`）。三件事在停用的事务里：按 id 锁住他所在的全部工作区之后，他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时拒绝（409 `workspace.sole_admin`、`project.sole_admin`，数据库不变）；删除发给他邮箱的全部邀请（待接受的和已忽略的）；结束他在全部工作区和项目的成员关系，行和角色留着。`deactivateMe` 声明这两个码，`identity` 自己的 HTTP 测试返回过它们，`apitest` 两个方向的核对通过；接口和命令两条路各有组合测试（`server/internal/bootstrap/deactivation_test.go`、`deactivation_locks_test.go`、`deactivation_races_test.go`）和故事 W9；差异清单第四节"停用账户"一行已更新；这些写入在全局加锁顺序中的位置写在 M3 设计 3.6（账户行、工作区、邀请、工作区成员、项目、项目成员）。
+- **第 6 节 停用的端口**（完成）：`identity/app` 声明 `MembershipDeactivator`（`DeactivateMemberships(ctx, userID, email)`），`deactivate`（`server/internal/modules/identity/app/deactivate.go`）在撤销会话之后调用它，自助停用（`Execute`）和 `nerve users deactivate`（`ExecuteByEmail`）都经过这里，邮箱取自锁下的账户行。它由 `workspace` 的 `Deactivator` 实现（`server/internal/modules/workspace/app/deactivate_memberships.go`），`bootstrap` 接上：服务用 `workspace.New` 的 `Deactivator()`，命令行用 `workspace.NewDeactivator` 和 `project.NewCascade`（`server/internal/bootstrap/users.go`）。三件事在停用的事务里：按 id 锁住他所在的全部工作区之后，他是某个工作区或项目唯一的有效管理员、那里还有别的有效成员时拒绝（409 `workspace.sole_admin`、`project.sole_admin`，数据库不变）；删除发给他邮箱的全部邀请（待接受的和已忽略的），和他是唯一有效成员的工作区的待接受邀请；结束他在全部工作区和项目的成员关系，行和角色留着。`deactivateMe` 声明这两个码，`identity` 自己的 HTTP 测试返回过它们，`apitest` 两个方向的核对通过；接口和命令两条路各有组合测试（`server/internal/bootstrap/deactivation_test.go`、`deactivation_locks_test.go`、`deactivation_races_test.go`）和故事 W9；差异清单第四节"停用账户"一行已更新；这些写入在全局加锁顺序中的位置写在 M3 设计 3.6（账户行、工作区、邀请、工作区成员、项目、项目成员）。
 - **第 6 节的"注意"**（M4 交接第 1 节的"只投递"River 客户端）：停用的端口不投递任务，命令行的组合仍没有 River 客户端，这一项不提前到 M3，照原计划留在 M4（M3 设计 3.9、13.1）。
 
 仍未处理，状态保持 `open`：第 1 节的页面一侧（P9）；第 2、3 节，第 7 节的其余部分，第 10、11、13、14 节，随 M3 设计 13.1 中各自的 Phase；第 12 节等 M3 的收尾。
@@ -5225,8 +5598,8 @@ W9 refuses a deactivation through the API and the command while the
 account is a workspace's or a project's only admin, each refusal
 checked against every table read before it; once each has another
 admin, deactivateMe ends every membership and deletes every invitation
-to the address, by the account at one moment, and nothing of anyone
-else changes; nerve users activate, then reactivate-member, bring it
+to the address and the pending one of the workspace it leaves empty,
+by the account at one moment, and nothing of anyone else changes; nerve users activate, then reactivate-member, bring it
 back a workspace at a time. The README, the Plane difference list, the
 v0 design's convention 6 and the M2 handoff say what a deactivation
 now does.
@@ -5234,7 +5607,7 @@ now does.
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-**变异**（spec 附录 A；`mutants_p6.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
+**变异**（spec 附录 A；`mutants_p6.py`、`mutants_p6_amend.py` 的编号，"层"是它被发现的每一层；端到端是单独运行的故事）：
 
 | 变异 | 改坏 | 必须失败的测试 | 层 |
 |---|---|---|---|
