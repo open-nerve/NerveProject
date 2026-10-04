@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"io"
 	"maps"
 	"strings"
 	"testing"
@@ -28,6 +29,19 @@ type commandRun struct {
 	err error
 }
 
+// commandInBackground runs a command, run, which writes its logs and its
+// line, in the background, and hands over its line and error. It takes no
+// test, so nothing on its goroutine fails one.
+func commandInBackground(run func(logs, out io.Writer) error) <-chan commandRun {
+	done := make(chan commandRun, 1)
+	go func() {
+		var out, logs bytes.Buffer
+		err := run(&logs, &out)
+		done <- commandRun{out.String(), err}
+	}()
+	return done
+}
+
 // bobReactivated is the line of bob's reactivation in acme.
 const bobReactivated = "reactivated bob@corp.com in acme as admin; project memberships still ended: 2, each restored when the member " +
 	"joins or is added to its project\n"
@@ -45,13 +59,9 @@ func reactivatingBob(ctx context.Context, t *testing.T, url string, maxConns int
 
 // reactivatingBobWith is reactivatingBob on the configuration cfg.
 func reactivatingBobWith(ctx context.Context, cfg config.Config) <-chan commandRun {
-	done := make(chan commandRun, 1)
-	go func() {
-		var out, logs bytes.Buffer
-		err := Workspaces(ctx, cfg, &logs, &out, ReactivateMember("acme", "bob@corp.com"))
-		done <- commandRun{out.String(), err}
-	}()
-	return done
+	return commandInBackground(func(logs, out io.Writer) error {
+		return Workspaces(ctx, cfg, logs, out, ReactivateMember("acme", "bob@corp.com"))
+	})
 }
 
 // endedIDs are the ids of acme, of bob's account and of his membership of

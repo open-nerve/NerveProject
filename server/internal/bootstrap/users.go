@@ -75,11 +75,13 @@ func SetEmail(email, newEmail string) UserCommand {
 	}
 }
 
-// DeactivateUser is `nerve users deactivate` (M2 decision 3).
+// DeactivateUser is `nerve users deactivate` (M2 decision 3): its line says
+// what it ended and the way back, the two commands of M3 design 3.9, 8.7.
 func DeactivateUser(email string) UserCommand {
 	return func(ctx context.Context, admin *identity.Admin) (string, error) {
 		r, err := admin.Deactivate.ExecuteByEmail(ctx, email)
-		return fmt.Sprintf("deactivated %s: revoked %d sessions", r.Email, r.Sessions), err
+		return fmt.Sprintf("deactivated %s: revoked %d sessions and ended its memberships; to bring it back, run nerve users activate, "+
+			"then nerve workspaces reactivate-member in each workspace", r.Email, r.Sessions), err
 	}
 }
 

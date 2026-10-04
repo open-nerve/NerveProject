@@ -96,7 +96,8 @@ func TestUsersCommandsWithoutAPassword(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"users", "deactivate", "--email", "lee@corp.com"}, "deactivated lee@corp.com: revoked 0 sessions\n"},
+		{[]string{"users", "deactivate", "--email", "lee@corp.com"}, "deactivated lee@corp.com: revoked 0 sessions and ended its memberships; " +
+			"to bring it back, run nerve users activate, then nerve workspaces reactivate-member in each workspace\n"},
 		{[]string{"users", "activate", "--email", "lee@corp.com"}, "activated lee@corp.com: 0 API tokens are usable again\n"},
 		{[]string{"users", "set-email", "--email", "lee@corp.com", "--new-email", "lee@new.example"},
 			"email changed from lee@corp.com to lee@new.example: revoked 0 sessions\n"},
@@ -108,10 +109,24 @@ func TestUsersCommandsWithoutAPassword(t *testing.T) {
 }
 
 // A refused command exits 1 with one line on stderr and nothing on stdout.
+// nia is acme's only admin and oto its member, so that her deactivation is
+// refused (M3 design 3.7 rule 2).
 func TestUsersCommandsFail(t *testing.T) {
-	environ, _ := usersDatabase(t)
-	if code, _, stderr := executeWithInput(context.Background(), environ, "Tr0ub4dor&3\n", "users", "create", "--email", "nia@corp.com"); code != 0 {
-		t.Fatalf("create = %d: %s", code, stderr)
+	environ, pool := usersDatabase(t)
+	for _, email := range []string{"nia@corp.com", "oto@corp.com"} {
+		if code, _, stderr := executeWithInput(context.Background(), environ, "Tr0ub4dor&3\n", "users", "create", "--email", email); code != 0 {
+			t.Fatalf("create %s = %d: %s", email, code, stderr)
+		}
+	}
+	if code, _, stderr := execute(context.Background(), environ,
+		"workspaces", "create", "--slug", "acme", "--name", "Acme", "--admin-email", "nia@corp.com"); code != 0 {
+		t.Fatalf("create acme = %d: %s", code, stderr)
+	}
+	seeding, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := pool.Exec(seeding, `INSERT INTO workspace_members (id, workspace_id, member_id, role, is_active)
+		SELECT gen_random_uuid(), w.id, u.id, 15, true FROM workspaces w, users u WHERE w.slug = 'acme' AND u.email = 'oto@corp.com'`); err != nil {
+		t.Fatal(err)
 	}
 	tests := []struct {
 		name  string
@@ -127,6 +142,9 @@ func TestUsersCommandsFail(t *testing.T) {
 		{"the same address", "", []string{"users", "set-email", "--email", "nia@corp.com", "--new-email", "NIA@corp.com"},
 			"nerve: The new e-mail address is the account's current one.\n"},
 		{"an unknown account", "", []string{"users", "activate", "--email", "may@corp.com"}, "nerve: No account has this e-mail address.\n"},
+		{"a workspace's only admin", "", []string{"users", "deactivate", "--email", "nia@corp.com"},
+			"nerve: The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while " +
+				"it has other active members. It must first be given another admin, or be deleted.\n"},
 		{"an unknown command", "", []string{"users", "delete"}, "nerve: unknown command \"delete\" for \"nerve users\"\n"},
 	}
 	for _, tt := range tests {
