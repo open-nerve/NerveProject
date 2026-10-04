@@ -211,6 +211,34 @@ type WorkspaceDeleter interface {
 	DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 }
 
+// AllMembershipsEnder ends every membership of a deactivated account and
+// deletes every invitation to its address, and the pending ones of a
+// workspace it leaves with no active member (M3 design 3.6 convention 6,
+// 3.7, 3.9): the Deactivator's repository. It runs in the transaction ctx
+// carries, which identity's deactivation began and holds the account row's
+// FOR NO KEY UPDATE in.
+type AllMembershipsEnder interface {
+	// LockMemberWorkspaces locks the undeleted workspaces of which userID is
+	// an active member FOR NO KEY UPDATE in id order, until the transaction
+	// ends, and returns their ids in that order. One deleted while the lock
+	// waited is left out.
+	LockMemberWorkspaces(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+	// SoleAdmin reports whether userID is the only active admin of one of
+	// the workspaces that has another active member (M3 design 3.7 rule 2).
+	SoleAdmin(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID) (bool, error)
+	// DeleteInvitationsTo soft-deletes every undeleted invitation to email,
+	// pending or declined, of every workspace, by the account by at now.
+	DeleteInvitationsTo(ctx context.Context, email string, by uuid.UUID, now time.Time) error
+	// DeleteInvitationsOfWorkspacesLeftEmpty soft-deletes the pending
+	// invitations of each of the workspaces where userID has no other
+	// active member, by the account by at now: call it before his
+	// memberships end.
+	DeleteInvitationsOfWorkspacesLeftEmpty(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+	// EndWorkspaceMemberships ends userID's active, undeleted memberships
+	// of the workspaces, by the account by at now; the rows stay.
+	EndWorkspaceMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+}
+
 // ProjectCascade is what the workspace's writes ask of the projects (M3
 // design 3.3): the project module implements it (project.New's Cascade).
 // Each method runs in the transaction ctx carries, writes by and now into

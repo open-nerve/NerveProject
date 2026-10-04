@@ -53,6 +53,12 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if other, err := s.HasOtherAdmin(cancelled, w.ID, bob.MemberID); !failed(err) || other {
 		t.Errorf("HasOtherAdmin() = %v, %v; want context.Canceled, not another admin", other, err)
 	}
+	if ids, err := s.LockMemberWorkspaces(cancelled, alice); !failed(err) || ids != nil {
+		t.Errorf("LockMemberWorkspaces() = %v, %v; want context.Canceled, no workspace", ids, err)
+	}
+	if sole, err := s.SoleAdmin(cancelled, []uuid.UUID{w.ID}, alice); !failed(err) || sole {
+		t.Errorf("SoleAdmin() = %v, %v; want context.Canceled, not the only admin", sole, err)
+	}
 	invite(t, s, w.ID, "carol@corp.com", shared.RoleGuest, alice)
 	if list, err := s.ListInvitations(cancelled, w.ID); !failed(err) || list != nil {
 		t.Errorf("ListInvitations() = %v, %v; want context.Canceled, no list", list, err)
@@ -98,6 +104,15 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	}
 	if err := s.DeletePendingInvitations(cancelled, w.ID, "carol@corp.com", alice, now); !failed(err) {
 		t.Errorf("DeletePendingInvitations() = %v; want context.Canceled", err)
+	}
+	if err := s.DeleteInvitationsTo(cancelled, "carol@corp.com", alice, now); !failed(err) {
+		t.Errorf("DeleteInvitationsTo() = %v; want context.Canceled", err)
+	}
+	if err := s.DeleteInvitationsOfWorkspacesLeftEmpty(cancelled, []uuid.UUID{w.ID}, bob.MemberID, bob.MemberID, now); !failed(err) {
+		t.Errorf("DeleteInvitationsOfWorkspacesLeftEmpty() = %v; want context.Canceled", err)
+	}
+	if err := s.EndWorkspaceMemberships(cancelled, []uuid.UUID{w.ID}, bob.MemberID, bob.MemberID, now); !failed(err) {
+		t.Errorf("EndWorkspaceMemberships() = %v; want context.Canceled", err)
 	}
 	var dup *app.DuplicateInvitation
 	if got, err := s.CreateInvitations(cancelled, []app.InvitationRow{
