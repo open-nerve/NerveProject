@@ -43,7 +43,7 @@ type inviteRace struct {
 
 func newInviteRace(t *testing.T) inviteRace {
 	t.Helper()
-	r := inviteRace{answerRace: newAnswerRace(t), carol: uuid.NewV7(), aliceSession: uuid.NewV7(), carolSession: uuid.NewV7()}
+	r := inviteRace{answerRace: newAnswerRace(t, shared.RoleMember), carol: uuid.NewV7(), aliceSession: uuid.NewV7(), carolSession: uuid.NewV7()}
 	now := time.Now()
 	users := identitypg.New(r.pool)
 	if err := errors.Join(

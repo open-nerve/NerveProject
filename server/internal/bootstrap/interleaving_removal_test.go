@@ -86,10 +86,7 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 			if creationFirst {
 				created = run(create(g))
 				held(t, ctx, g, created, "the creation")
-				if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
-					"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
-					t.Errorf("the creation at its gate holds %s; want %s", got, want)
-				}
+				r.sharesAcme(t, "the creation")
 				removed = run(func() error { return r.remove(ctx, workspacepg.New(r.pool)) })
 			} else {
 				removed = run(func() error { return r.remove(ctx, endedHolding{workspacepg.New(r.pool), g}) })
@@ -133,7 +130,7 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 // wires them.
 func (r adminRace) removeAlice(ctx context.Context, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		project.New(project.Deps{Pool: r.pool}).Cascade(), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
+		project.NewCascade(project.CascadeDeps{Pool: r.pool}), authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.bob}), r.aliceIn)
 }
 
@@ -142,7 +139,7 @@ func (r adminRace) removeAlice(ctx context.Context, members workspaceapp.MemberR
 func (r adminRace) acmeAndAlice(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(soon(t), `SELECT CASE WHEN w.deleted_at IS NULL THEN 'acme' ELSE 'acme deleted' END || ', alice ' ||
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT CASE WHEN w.deleted_at IS NULL THEN 'acme' ELSE 'acme deleted' END || ', alice ' ||
 		CASE WHEN m.deleted_at IS NOT NULL THEN 'deleted' WHEN m.is_active THEN 'active' ELSE 'ended' END
 		FROM workspaces w JOIN workspace_members m ON m.workspace_id = w.id WHERE m.id = $1`, r.aliceIn).Scan(&s); err != nil {
 		t.Fatal(err)
@@ -156,7 +153,7 @@ func (r adminRace) acmeAndAlice(t *testing.T) string {
 func (r adminRace) waitsAtAWrite(t *testing.T) bool {
 	t.Helper()
 	var written bool
-	if err := r.pool.QueryRow(soon(t), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
 		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock' AND l.locktype = 'relation'
 			AND l.relation = 'workspaces'::regclass AND l.mode = 'RowExclusiveLock' AND l.granted)`).Scan(&written); err != nil {
 		t.Fatal(err)

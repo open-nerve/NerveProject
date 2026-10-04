@@ -127,6 +127,7 @@ func newApp(ctx context.Context, cfg config.Config, logger *slog.Logger, migrati
 		Clock:           clock.System{},
 		Logger:          logger,
 		SignupPolicy:    signupPolicy{enabled: cfg.Auth.SignupEnabled, invitations: ws.SignupInvitations()},
+		Memberships:     ws.Deactivator(),
 		Keys:            keys,
 		AccessTokenTTL:  cfg.Auth.AccessTokenTTL,
 		SessionTTL:      cfg.Auth.SessionTTL,

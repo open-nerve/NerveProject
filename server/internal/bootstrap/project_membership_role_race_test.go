@@ -49,7 +49,7 @@ func TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks(t *testing.T
 			id := w.membership(t, w.web, tt.member)
 			others := rowsBut(t, w.pool, []uuid.UUID{id})
 			other := holding(t, w.pool, "SELECT 1 FROM projects WHERE id = $1 FOR NO KEY UPDATE", w.web)
-			if tag, err := other.Exec(soon(t), tt.sql, id); err != nil || tag.RowsAffected() != 1 {
+			if tag, err := other.Exec(pgtest.Soon(t), tt.sql, id); err != nil || tag.RowsAffected() != 1 {
 				t.Fatalf("%s: %v, %v; want one row changed", tt.sql, tag, err)
 			}
 			changed := rowJSON(t, other, "project_members", id)
@@ -61,7 +61,7 @@ func TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks(t *testing.T
 			w.contract.CheckRequest(t, req)
 			answered := sendInBackground(req)
 			pgtest.WaitForLockWaitOn(t, w.pool, "projects", 5*time.Second)
-			if err := other.Commit(soon(t)); err != nil {
+			if err := other.Commit(pgtest.Soon(t)); err != nil {
 				t.Fatal(err)
 			}
 			a := receiveWithin(t, answered, 10*time.Second, "the answer to "+tt.name)
@@ -97,7 +97,7 @@ func TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks(t *testing.T
 func TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks(t *testing.T) {
 	w := newMemberWorld(t)
 	var acme uuid.UUID
-	if err := w.pool.QueryRow(soon(t), "SELECT id FROM workspaces WHERE slug = 'acme'").Scan(&acme); err != nil {
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT id FROM workspaces WHERE slug = 'acme'").Scan(&acme); err != nil {
 		t.Fatal(err)
 	}
 	inProjects := projectMemberships(t, w.pool, w.ids["carol"], w.web, w.ops)
@@ -113,7 +113,7 @@ func TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks(t *testing.T) {
 	other := holding(t, w.pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", acme)
 	left := make([]map[string]any, len(demoted))
 	for i, d := range demoted {
-		if tag, err := other.Exec(soon(t), "UPDATE "+d.table+" SET role = 5 WHERE id = $1", d.id); err != nil || tag.RowsAffected() != 1 {
+		if tag, err := other.Exec(pgtest.Soon(t), "UPDATE "+d.table+" SET role = 5 WHERE id = $1", d.id); err != nil || tag.RowsAffected() != 1 {
 			t.Fatalf("carol made a guest in %s %s: %v, %v; want one row changed", d.table, d.id, tag, err)
 		}
 		left[i] = rowJSON(t, other, d.table, d.id)
@@ -122,7 +122,7 @@ func TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks(t *testing.T) {
 	w.contract.CheckRequest(t, req)
 	answered := sendInBackground(req)
 	pgtest.WaitForLockWaitOn(t, w.pool, "workspaces", 5*time.Second)
-	if err := other.Commit(soon(t)); err != nil {
+	if err := other.Commit(pgtest.Soon(t)); err != nil {
 		t.Fatal(err)
 	}
 

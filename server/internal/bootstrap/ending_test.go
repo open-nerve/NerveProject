@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -27,7 +28,7 @@ type querier interface {
 func rowJSON(t *testing.T, q querier, table string, id uuid.UUID) map[string]any {
 	t.Helper()
 	var text []byte
-	if err := q.QueryRow(soon(t), "SELECT coalesce((SELECT row_to_json(r) FROM "+table+" r WHERE r.id = $1)::text, 'null')", id).
+	if err := q.QueryRow(pgtest.Soon(t), "SELECT coalesce((SELECT row_to_json(r) FROM "+table+" r WHERE r.id = $1)::text, 'null')", id).
 		Scan(&text); err != nil {
 		t.Fatal(err)
 	}
@@ -45,13 +46,25 @@ func rowsBut(t *testing.T, pool *pgxpool.Pool, ids []uuid.UUID) map[string]strin
 	all := map[string]string{}
 	for table := range tableRows(t, pool, riversOwn) {
 		var text string
-		if err := pool.QueryRow(soon(t), `SELECT coalesce(string_agg(t, E'\n' ORDER BY t), '') FROM (SELECT row_to_json(r)::text AS t
+		if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(t, E'\n' ORDER BY t), '') FROM (SELECT row_to_json(r)::text AS t
 			FROM `+table+` r WHERE NOT to_jsonb(r) ? 'id' OR (to_jsonb(r)->>'id') <> ALL ($1::text[])) s`, uuidTexts(ids)).Scan(&text); err != nil {
 			t.Fatalf("%s: %v", table, err)
 		}
 		all[table] = text
 	}
 	return all
+}
+
+// stampWriter stamps the rows of table that where selects, its arguments
+// from $2 on, as last written by the account by, each other column kept,
+// and fails the test unless it stamped want of them: so that a later
+// write's writer shows, the rows' earlier writer being by, not it.
+func stampWriter(t *testing.T, pool *pgxpool.Pool, by uuid.UUID, want int64, table, where string, args ...any) {
+	t.Helper()
+	tag, err := pool.Exec(pgtest.Soon(t), "UPDATE "+table+" SET updated_by_id = $1 WHERE "+where, append([]any{by}, args...)...)
+	if err != nil || tag.RowsAffected() != want {
+		t.Fatalf("%s WHERE %s last written by %s: %v, %v; want %d rows", table, where, by, tag, err, want)
+	}
 }
 
 // uuidTexts are ids as text.
@@ -69,7 +82,7 @@ func projectMemberships(t *testing.T, pool *pgxpool.Pool, user uuid.UUID, projec
 	t.Helper()
 	ids := make([]uuid.UUID, len(projects))
 	for i, p := range projects {
-		if err := pool.QueryRow(soon(t), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
 			p, user).Scan(&ids[i]); err != nil {
 			t.Fatal(err)
 		}
@@ -153,10 +166,7 @@ func TestAnEndingEndsTheMembershipsAndLeavesNoInvitation(t *testing.T) {
 			tables := []string{"workspace_members", "workspace_member_invites", "project_members", "project_members", "project_members"}
 			rowsBefore := make([]map[string]any, len(written))
 			for i, id := range written {
-				if tag, err := w.pool.Exec(soon(t), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id,
-					w.ids["dave"]); err != nil || tag.RowsAffected() != 1 {
-					t.Fatalf("%s %s last written by dave: %v, %v", tables[i], id, tag, err)
-				}
+				stampWriter(t, w.pool, w.ids["dave"], 1, tables[i], "id = $2", id)
 				rowsBefore[i] = rowJSON(t, w.pool, tables[i], id)
 			}
 			others := rowsBut(t, w.pool, written)
@@ -221,7 +231,7 @@ func TestTheOnlyAdminCannotLeave(t *testing.T) {
 	// rule 1 that counted an ended admin as another would pass.
 	var role int
 	var active bool
-	if err := w.pool.QueryRow(soon(t), `SELECT m.role, m.is_active FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT m.role, m.is_active FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
 		WHERE w.slug = 'acme' AND m.member_id = $1 AND m.deleted_at IS NULL`, w.ids["dave"]).Scan(&role, &active); err != nil ||
 		role != int(shared.RoleAdmin) || active {
 		t.Fatalf("dave's membership of acme: role %d, active %v, %v; want an admin's, ended", role, active, err)

@@ -137,24 +137,13 @@ func TestWritesOnAProjectAreEachShape(t *testing.T) {
 	}
 }
 
-// soon is a context that ends 5 s from now, or with the test: for a read
-// that runs while transactions the test holds are open, whose wait for a
-// connection of the pool, were the holders to take them all, would have no
-// end otherwise. Past it, the read fails the test at its deadline.
-func soon(t *testing.T) context.Context {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-	t.Cleanup(cancel)
-	return ctx
-}
-
 // holding begins a transaction on pool that takes the one row lock sql
 // states, with args, NOWAIT, and keeps it open until the test rolls it
 // back, or ends. A lock another transaction left fails the test at once,
-// and so does a pool the holders before it took (soon).
+// and so does a pool the holders before it took (pgtest.Soon).
 func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
 	t.Helper()
-	tx, err := pool.Begin(soon(t))
+	tx, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +160,7 @@ func holding(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) pgx.Tx {
 func heldBy(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) bool {
 	t.Helper()
 	sql += " NOWAIT"
-	tag, err := pool.Exec(soon(t), sql, args...)
+	tag, err := pool.Exec(pgtest.Soon(t), sql, args...)
 	var pgErr *pgconn.PgError
 	switch {
 	case errors.As(err, &pgErr) && pgErr.Code == "55P03":
@@ -284,7 +273,7 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 				// by a path of one.
 				var row uuid.UUID
 				if member != "" {
-					if err := pool.QueryRow(soon(t), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
+					if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
 						project, ids[member]).Scan(&row); err != nil {
 						t.Fatalf("%s's membership of %s: %v", member, on, err)
 					}

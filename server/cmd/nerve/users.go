@@ -31,9 +31,11 @@ func newUsersCommand(load configLoader, stdin io.Reader) *cobra.Command {
 		userCommand(load, stdin, "reset-password", "Set an account's password and revoke all its sessions and API tokens",
 			true, bootstrap.ResetPassword),
 		setEmailCommand(load),
-		userCommand(load, stdin, "deactivate", "Deactivate an account and revoke its sessions; its API tokens stay",
+		userCommand(load, stdin, "deactivate", "Deactivate an account, revoke its sessions and end its memberships; its API tokens stay",
 			false, func(email, _ string) bootstrap.UserCommand { return bootstrap.DeactivateUser(email) }),
-		userCommand(load, stdin, "activate", "Activate an account; its unexpired API tokens work again, so run reset-password too if it may be compromised",
+		userCommand(load, stdin, "activate", "Activate an account; its unexpired API tokens work again, so run reset-password too if it may be "+
+			"compromised; its memberships stay ended: nerve workspaces reactivate-member restores one workspace's, as does accepting a new "+
+			"invitation to it",
 			false, func(email, _ string) bootstrap.UserCommand { return bootstrap.ActivateUser(email) }),
 	)
 	return users

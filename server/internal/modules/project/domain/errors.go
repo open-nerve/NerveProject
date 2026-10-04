@@ -41,12 +41,14 @@ var (
 	// also when he is its only member (M3 design 3.7 rule 1), and an ending
 	// of an account's project memberships that would leave a project with
 	// other active members without an active admin: he is its only one
-	// (rule 2). The workspace's removal and leaving declare it too (M3
-	// design 5.1). Each who gets it can have the project given another
-	// admin, through a workspace admin if no one else, or delete it.
+	// (rule 2). The workspace's removal and leaving and identity's
+	// deactivateMe declare it too (M3 design 5.1, 3.9). Its detail says
+	// what must happen, not who does it: it is true for every caller, the
+	// server's administrator who runs `nerve users deactivate` too, who can
+	// do neither himself.
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
 		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. Give the project another admin first, or delete it.")
+			"other active members. It must first be given another admin, or be deleted.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member

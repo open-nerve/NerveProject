@@ -21,8 +21,15 @@ import (
 // inviter at now, and returns it as stored.
 func invite(t *testing.T, s *postgresadapter.Store, workspace uuid.UUID, email string, role shared.Role, inviter uuid.UUID) domain.Invitation {
 	t.Helper()
+	return inviteWithID(t, s, uuid.NewV7(), workspace, email, role, inviter)
+}
+
+// inviteWithID is invite with the invitation's id given.
+func inviteWithID(t *testing.T, s *postgresadapter.Store, id, workspace uuid.UUID, email string, role shared.Role,
+	inviter uuid.UUID) domain.Invitation {
+	t.Helper()
 	got, err := s.CreateInvitations(context.Background(), []app.InvitationRow{
-		{ID: uuid.NewV7(), WorkspaceID: workspace, Email: email, Role: role, CreatedBy: inviter, Now: now},
+		{ID: id, WorkspaceID: workspace, Email: email, Role: role, CreatedBy: inviter, Now: now},
 	})
 	if err != nil {
 		t.Fatal(err)

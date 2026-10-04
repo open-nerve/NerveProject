@@ -104,9 +104,11 @@ func hold(t *testing.T, tx *postgres.TxManager, fn func(ctx context.Context) err
 }
 
 // withLockTimeout runs fn in a transaction whose lock waits end after
-// 300ms with lock_not_available (55P03).
-func withLockTimeout(tx *postgres.TxManager, pool *pgxpool.Pool, fn func(ctx context.Context) error) error {
-	return tx.WithinTx(context.Background(), func(ctx context.Context) error {
+// 300ms with lock_not_available (55P03). Its wait for a connection of the
+// pool and its BEGIN end soon (pgtest.Soon), as do its statements.
+func withLockTimeout(t *testing.T, tx *postgres.TxManager, pool *pgxpool.Pool, fn func(ctx context.Context) error) error {
+	t.Helper()
+	return tx.WithinTx(pgtest.Soon(t), func(ctx context.Context) error {
 		if _, err := postgres.DB(ctx, pool).Exec(ctx, "SET LOCAL lock_timeout = '300ms'"); err != nil {
 			return err
 		}
@@ -156,7 +158,7 @@ func TestTheWorkspaceLocksConflictAsConvention2Says(t *testing.T) {
 			})
 
 			var got uuid.UUID
-			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+			err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 				var err error
 				got, err = tt.then.take(ctx, s, named{tt.slug, ids[tt.slug]})
 				return err
@@ -189,7 +191,7 @@ func TestAForeignKeyCheckDoesNotWaitForTheWorkspaceLocks(t *testing.T) {
 				return err
 			})
 			var locked int64
-			err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+			err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 				tag, err := postgres.DB(ctx, pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR KEY SHARE", acme.ID)
 				locked = tag.RowsAffected()
 				return err

@@ -186,7 +186,9 @@ test("A12 (API): a token deactivates the account; nerve users activate brings it
   // The administrator's deactivate leaves the database as the API did.
   await onboard(api, pat.token);
   const again = await accountOf(db, email);
-  expect(await nerveUsers(db, ["deactivate", "--email", email])).toBe(`deactivated ${email}: revoked 1 sessions\n`);
+  expect(await nerveUsers(db, ["deactivate", "--email", email])).toBe(
+    `deactivated ${email}: revoked 1 sessions and ended its memberships; to bring it back, run nerve users activate, then nerve workspaces reactivate-member in each workspace\n`
+  );
   await expectDeactivated(db, again, tokensBefore);
   expect(await accountStateOf(db, other), "the other account").toEqual(otherBefore);
 });

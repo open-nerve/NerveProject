@@ -12,15 +12,19 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// AdminDeps are what the server administrator's commands need: the pool and
-// the password hashing, and no signing key, rate limit or sign-up policy
-// (M2 design 3.17).
+// AdminDeps are what the server administrator's commands need: the pool,
+// the password hashing and the deactivation's MembershipDeactivator, and
+// no signing key, rate limit or sign-up policy (M2 design 3.17, M3 design
+// 6.6).
 type AdminDeps struct {
 	Pool     *pgxpool.Pool
 	Tx       shared.TxManager
 	Clock    app.Clock
 	Logger   *slog.Logger
 	Password PasswordHashing
+	// Memberships is workspace's Deactivator, which `nerve users
+	// deactivate` ends the account's memberships through (M3 design 3.9).
+	Memberships app.MembershipDeactivator
 }
 
 // Admin is the server administrator's use cases, behind `nerve users`
@@ -53,7 +57,8 @@ func NewAdmin(d AdminDeps) *Admin {
 			Accounts: store, Users: store, Sessions: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
 		}),
 		Deactivate: app.NewDeactivate(app.DeactivateDeps{
-			Accounts: store, Users: store, Profiles: store, Sessions: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+			Accounts: store, Users: store, Profiles: store, Sessions: store, Memberships: d.Memberships, Tx: d.Tx, Clock: d.Clock,
+			Logger: d.Logger,
 		}),
 		Activate: app.NewActivate(app.ActivateDeps{
 			Accounts: store, Users: store, APITokens: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,

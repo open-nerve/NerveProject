@@ -26,7 +26,13 @@ var now = clocktest.At(time.Date(2026, 9, 29, 10, 0, 0, 123456789, time.UTC)).No
 
 func newStore(t *testing.T) (*postgresadapter.Store, *pgxpool.Pool) {
 	t.Helper()
-	pool, err := postgres.NewPool(context.Background(), config.DatabaseConfig{URL: pgtest.NewDatabase(t), MaxConns: 4})
+	return newStoreWithConns(t, 4)
+}
+
+// newStoreWithConns is newStore on a pool of conns connections.
+func newStoreWithConns(t *testing.T, conns int32) (*postgresadapter.Store, *pgxpool.Pool) {
+	t.Helper()
+	pool, err := postgres.NewPool(context.Background(), config.DatabaseConfig{URL: pgtest.NewDatabase(t), MaxConns: conns})
 	if err != nil {
 		t.Fatal(err)
 	}

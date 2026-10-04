@@ -6,6 +6,8 @@ import (
 	"io"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
+	"github.com/open-nerve/NerveProject/server/internal/modules/project"
+	"github.com/open-nerve/NerveProject/server/internal/modules/workspace"
 	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/logging"
@@ -17,7 +19,9 @@ import (
 type UserCommand func(ctx context.Context, admin *identity.Admin) (string, error)
 
 // Users runs cmd on the minimal composition of M2 design 3.17: a pool and
-// identity's administrator use cases; no HTTP server, no jobs client. The
+// identity's administrator use cases, the deactivation's with workspace's
+// Deactivator over project's cascade, each built on the pool alone (M3
+// design 6.6); no HTTP server, no Authorizer, no jobs client. The
 // command's line goes to out, the logs to logOut. An error is one line for
 // the administrator, and the database is unchanged.
 func Users(ctx context.Context, cfg config.Config, logOut, out io.Writer, cmd UserCommand) error {
@@ -36,6 +40,9 @@ func Users(ctx context.Context, cfg config.Config, logOut, out io.Writer, cmd Us
 		Clock:    clock.System{},
 		Logger:   logger,
 		Password: passwordHashing(cfg.Auth.Password),
+		Memberships: workspace.NewDeactivator(workspace.DeactivatorDeps{
+			Pool: pool, Clock: clock.System{}, Projects: project.NewCascade(project.CascadeDeps{Pool: pool}),
+		}),
 	})
 	line, err := cmd(ctx, admin)
 	if err != nil {
@@ -68,11 +75,13 @@ func SetEmail(email, newEmail string) UserCommand {
 	}
 }
 
-// DeactivateUser is `nerve users deactivate` (M2 decision 3).
+// DeactivateUser is `nerve users deactivate` (M2 decision 3): its line says
+// what it ended and the way back, the two commands of M3 design 3.9, 8.7.
 func DeactivateUser(email string) UserCommand {
 	return func(ctx context.Context, admin *identity.Admin) (string, error) {
 		r, err := admin.Deactivate.ExecuteByEmail(ctx, email)
-		return fmt.Sprintf("deactivated %s: revoked %d sessions", r.Email, r.Sessions), err
+		return fmt.Sprintf("deactivated %s: revoked %d sessions and ended its memberships; to bring it back, run nerve users activate, "+
+			"then nerve workspaces reactivate-member in each workspace", r.Email, r.Sessions), err
 	}
 }
 

@@ -13,7 +13,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
-	identitydomain "github.com/open-nerve/NerveProject/server/internal/modules/identity/domain"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
@@ -39,7 +38,8 @@ import (
 
 // answerRace is a database with acme, whose admin is alice, and bob, who is
 // invited to acme at his address, each account with its profile;
-// invitation is the link of bob's invitation, as a member.
+// invitation is the link of bob's invitation, with the role
+// newAnswerRace is given.
 type answerRace struct {
 	pool       *pgxpool.Pool
 	alice, bob uuid.UUID
@@ -48,7 +48,7 @@ type answerRace struct {
 	mac        workspaceapp.InvitationMAC
 }
 
-func newAnswerRace(t *testing.T) answerRace {
+func newAnswerRace(t *testing.T, role shared.Role) answerRace {
 	t.Helper()
 	pool := openPool(t, pgtest.NewDatabase(t))
 	r := answerRace{pool: pool, alice: uuid.NewV7(), bob: uuid.NewV7(), acme: uuid.NewV7(), mac: testInvitationMAC(t)}
@@ -68,7 +68,7 @@ func newAnswerRace(t *testing.T) answerRace {
 	r.join(t, r.alice, shared.RoleAdmin)
 	id := uuid.NewV7()
 	if _, err := store.CreateInvitations(context.Background(), []workspaceapp.InvitationRow{
-		{ID: id, WorkspaceID: r.acme, Email: "bob@example.com", Role: shared.RoleMember, CreatedBy: r.alice, Now: now},
+		{ID: id, WorkspaceID: r.acme, Email: "bob@example.com", Role: role, CreatedBy: r.alice, Now: now},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -76,14 +76,23 @@ func newAnswerRace(t *testing.T) answerRace {
 	return r
 }
 
-// join makes user a member of acme with role.
+// join makes user a member of acme with role, as his own acceptance of an
+// invitation would.
 func (r answerRace) join(t *testing.T, user uuid.UUID, role shared.Role) {
 	t.Helper()
 	if err := workspacepg.New(r.pool).CreateMember(context.Background(), workspaceapp.MemberRow{
-		ID: uuid.NewV7(), WorkspaceID: r.acme, MemberID: user, Role: role, CreatedBy: r.alice, Now: time.Now(),
+		ID: uuid.NewV7(), WorkspaceID: r.acme, MemberID: user, Role: role, CreatedBy: user, Now: time.Now(),
 	}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// bobsLastWrittenByAlice stamps bob's active membership of acme as last
+// written by alice, as her change of his role would leave it, each other
+// column kept: so that a write of it as bob afterwards shows.
+func (r answerRace) bobsLastWrittenByAlice(t *testing.T) {
+	t.Helper()
+	stampWriter(t, r.pool, r.alice, 1, "workspace_members", "workspace_id = $2 AND member_id = $3 AND is_active", r.acme, r.bob)
 }
 
 func (r answerRace) tx() *postgres.TxManager { return postgres.NewTxManager(r.pool, 2*time.Second) }
@@ -94,7 +103,7 @@ func (r answerRace) accounts() workspaceapp.Accounts {
 
 // projects is project's cascade as bootstrap wires it.
 func (r answerRace) projects() workspaceapp.ProjectCascade {
-	return project.New(project.Deps{Pool: r.pool}).Cascade()
+	return project.NewCascade(project.CascadeDeps{Pool: r.pool})
 }
 
 // accept is bob's acceptance of his invitation, over invitations.
@@ -132,7 +141,7 @@ func (r answerRace) bobIn(t *testing.T) (member, acmeDeleted bool) {
 // answered is the invitation's state: accepted, answered, deleted.
 func (r answerRace) answered(t *testing.T) (accepted, responded, deleted bool) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), `SELECT accepted, responded_at IS NOT NULL, deleted_at IS NOT NULL
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT accepted, responded_at IS NOT NULL, deleted_at IS NOT NULL
 		FROM workspace_member_invites WHERE id = $1`, r.invitation.id).Scan(&accepted, &responded, &deleted); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +184,7 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 	for _, acceptFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the acceptance first", false: "the deletion first"}[acceptFirst]
 		t.Run(name, func(t *testing.T) {
-			r := newAnswerRace(t)
+			r := newAnswerRace(t, shared.RoleMember)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
@@ -197,7 +206,7 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 			if !acceptFirst {
 				wantAccept = workspacedomain.ErrInvitationNotFound
 			}
-			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) {
+			if err := result(t, ctx, accepted, "the acceptance"); !sameOutcome(err, wantAccept) {
 				t.Errorf("the acceptance = %v, want %v", err, wantAccept)
 			}
 			if err := result(t, ctx, deleted, "the deletion"); err != nil {
@@ -220,11 +229,14 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 	}
 }
 
-// setBobsEmail is `nerve users set-email` of bob's address, over sessions.
-func (r answerRace) setBobsEmail(ctx context.Context, sessions identityapp.SessionRevoker) error {
-	store := identitypg.New(r.pool)
-	_, err := identityapp.NewSetEmail(identityapp.SetEmailDeps{Accounts: store, Users: store, Sessions: sessions, Tx: r.tx(),
-		Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler)}).Execute(ctx, "bob@example.com", "robert@example.com")
+// setBobsEmail is `nerve users set-email` of bob's address,
+// bob@example.com to robert@example.com, on pool, over sessions. It takes
+// no test, so it runs on any goroutine.
+func setBobsEmail(ctx context.Context, pool *pgxpool.Pool, sessions identityapp.SessionRevoker) error {
+	store := identitypg.New(pool)
+	_, err := identityapp.NewSetEmail(identityapp.SetEmailDeps{Accounts: store, Users: store, Sessions: sessions,
+		Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler)}).
+		Execute(ctx, "bob@example.com", "robert@example.com")
 	return err
 }
 
@@ -238,7 +250,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 	for _, acceptFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the acceptance first", false: "the change first"}[acceptFirst]
 		t.Run(name, func(t *testing.T) {
-			r := newAnswerRace(t)
+			r := newAnswerRace(t, shared.RoleMember)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
@@ -247,9 +259,9 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 			if acceptFirst {
 				accepted = run(func() error { return r.accept(ctx, gatedAccepter{store, g}) })
 				held(t, ctx, g, accepted, "the acceptance")
-				changed = run(func() error { return r.setBobsEmail(ctx, users) })
+				changed = run(func() error { return setBobsEmail(ctx, r.pool, users) })
 			} else {
-				changed = run(func() error { return r.setBobsEmail(ctx, gatedSessions{users, g}) })
+				changed = run(func() error { return setBobsEmail(ctx, r.pool, gatedSessions{users, g}) })
 				held(t, ctx, g, changed, "the change")
 				accepted = run(func() error { return r.accept(ctx, store) })
 			}
@@ -260,7 +272,7 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 			if !acceptFirst {
 				wantAccept = workspacedomain.ErrInvitationEmailMismatch
 			}
-			if err := result(t, ctx, accepted, "the acceptance"); !errors.Is(err, wantAccept) {
+			if err := result(t, ctx, accepted, "the acceptance"); !sameOutcome(err, wantAccept) {
 				t.Errorf("the acceptance = %v, want %v", err, wantAccept)
 			}
 			if err := result(t, ctx, changed, "the change"); err != nil {
@@ -275,33 +287,10 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 	}
 }
 
-// gatedDeactivation takes, after it revokes the sessions, the lock of acme
-// that P6's deactivation takes (M3 design 3.9: the account row, profiles,
-// auth_sessions, then each workspace FOR NO KEY UPDATE), and stops there
-// when it has a gate.
-type gatedDeactivation struct {
-	identityapp.SessionRevoker
-	pool *pgxpool.Pool
-	acme uuid.UUID
-	gate *gate // nil: never stops
-}
-
-func (d gatedDeactivation) RevokeSessions(ctx context.Context, userID, keep uuid.UUID, reason identitydomain.RevokeReason, now time.Time) (int, error) {
-	revoked, err := d.SessionRevoker.RevokeSessions(ctx, userID, keep, reason, now)
-	if err == nil {
-		_, err = postgres.DB(ctx, d.pool).Exec(ctx, "SELECT id FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", d.acme)
-	}
-	if err == nil && d.gate != nil {
-		err = d.gate.wait(ctx)
-	}
-	return revoked, err
-}
-
-// deactivateBob is `nerve users deactivate` of bob, over sessions.
-func (r answerRace) deactivateBob(ctx context.Context, sessions identityapp.SessionRevoker) error {
-	store := identitypg.New(r.pool)
-	_, err := identityapp.NewDeactivate(identityapp.DeactivateDeps{Accounts: store, Users: store, Profiles: store, Sessions: sessions, Tx: r.tx(),
-		Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler)}).ExecuteByEmail(ctx, "bob@example.com")
+// deactivateBob is `nerve users deactivate` of bob as bootstrap wires it
+// (deactivating), over sessions and memberships.
+func (r answerRace) deactivateBob(ctx context.Context, sessions identityapp.SessionRevoker, memberships workspaceapp.AllMembershipsEnder) error {
+	_, err := deactivating(r.pool, sessions, memberships).ExecuteByEmail(ctx, "bob@example.com")
 	return err
 }
 
@@ -318,30 +307,39 @@ func (d gatedDecliner) DeclineInvitation(ctx context.Context, id, by uuid.UUID, 
 	return d.Store.DeclineInvitation(ctx, id, by, now)
 }
 
-// Interleaving 19: bob is acme's member and has an invitation to it, as
-// after reactivate-member or a change of address. The decline first holds
-// his account row FOR SHARE, then acme's; the deactivation waits on the
-// account row, then goes on through acme. The deactivation first holds the
-// account row and acme's; the decline waits on the account row, then reads
-// it deactivated under its lock: 401, and the invitation stays pending.
-// Neither deadlocks: both lock the account row first (3.6 convention 1).
+// Interleaving 19 (M3 design 9.3, 3.6 convention 1): bob is acme's member
+// and has an invitation to it, as after reactivate-member or a change of
+// address, his membership stamped as last written by alice; the
+// deactivation is `nerve users deactivate` as bootstrap wires it. The
+// decline first holds his account row FOR SHARE, then acme's; the
+// deactivation waits on the account row, then goes on, and deletes the
+// invitation, declined by then. The deactivation first holds the account
+// row, acme's, the invitation, which it has deleted, and his membership,
+// which it has ended; the decline waits on the account row, then reads it
+// deactivated under its lock: 401, the invitation unanswered. Either way the
+// deactivation is the last to write the invitation and the membership, as
+// bob, at one moment, and nothing deadlocks: both lock the account row
+// first. When the decline comes first, it wrote the invitation last as bob
+// too: there the deactivation's write shows in the moment, the
+// invitation's updated_at its deleted_at, his membership's end.
 func TestDecliningAndDeactivating(t *testing.T) {
 	for _, declineFirst := range []bool{true, false} {
 		name := map[bool]string{true: "the decline first", false: "the deactivation first"}[declineFirst]
 		t.Run(name, func(t *testing.T) {
-			r := newAnswerRace(t)
+			r := newAnswerRace(t, shared.RoleMember)
 			r.join(t, r.bob, shared.RoleMember)
+			r.bobsLastWrittenByAlice(t)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
-			store, users := workspacepg.New(r.pool), identitypg.New(r.pool)
+			store := workspacepg.New(r.pool)
 			var declined, deactivated <-chan error
 			if declineFirst {
 				declined = run(func() error { return r.decline(ctx, gatedDecliner{store, g}) })
 				held(t, ctx, g, declined, "the decline")
-				deactivated = run(func() error { return r.deactivateBob(ctx, gatedDeactivation{users, r.pool, r.acme, nil}) })
+				deactivated = run(func() error { return r.deactivateBob(ctx, identitypg.New(r.pool), store) })
 			} else {
-				deactivated = run(func() error { return r.deactivateBob(ctx, gatedDeactivation{users, r.pool, r.acme, g}) })
+				deactivated = run(func() error { return r.deactivateBob(ctx, identitypg.New(r.pool), endedHoldingAll{store, g}) })
 				held(t, ctx, g, deactivated, "the deactivation")
 				declined = run(func() error { return r.decline(ctx, store) })
 			}
@@ -352,20 +350,25 @@ func TestDecliningAndDeactivating(t *testing.T) {
 			if !declineFirst {
 				wantDecline = shared.Unauthenticated()
 			}
-			if err := result(t, ctx, declined, "the decline"); !errors.Is(err, wantDecline) {
+			if err := result(t, ctx, declined, "the decline"); !sameOutcome(err, wantDecline) {
 				t.Errorf("the decline = %v, want %v", err, wantDecline)
 			}
 			if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
 				t.Errorf("the deactivation = %v, want it done", err)
 			}
-			var active bool
-			if err := r.pool.QueryRow(context.Background(), "SELECT is_active FROM users WHERE id = $1", r.bob).Scan(&active); err != nil {
+			var active, member, oneMoment, byBob bool
+			if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT u.is_active, m.is_active,
+				coalesce(m.updated_at = i.deleted_at AND i.updated_at = i.deleted_at, false), m.updated_by_id = u.id AND i.updated_by_id = u.id
+				FROM users u, workspace_members m, workspace_member_invites i
+				WHERE u.id = $1 AND m.workspace_id = $2 AND m.member_id = u.id AND i.id = $3`, r.bob, r.acme, r.invitation.id).
+				Scan(&active, &member, &oneMoment, &byBob); err != nil {
 				t.Fatal(err)
 			}
 			acc, responded, deleted := r.answered(t)
-			if active || acc || responded != declineFirst || deleted {
-				t.Errorf("bob active %v; the invitation accepted %v, answered %v, deleted %v; want deactivated, answered %v, undeleted",
-					active, acc, responded, deleted, declineFirst)
+			if active || member || acc || responded != declineFirst || !deleted || !oneMoment || !byBob {
+				t.Errorf("bob active %v, a member %v; the invitation accepted %v, answered %v, deleted %v; the two written at one moment %v, "+
+					"by bob %v; want deactivated, no member, answered %v, deleted with his membership's end, by him", active, member, acc,
+					responded, deleted, oneMoment, byBob, declineFirst)
 			}
 		})
 	}

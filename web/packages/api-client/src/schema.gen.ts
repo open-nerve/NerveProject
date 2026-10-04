@@ -116,7 +116,7 @@ export interface paths {
         put?: never;
         /**
          * Deactivate the caller's account
-         * @description Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again with `nerve users activate`; then its unexpired personal access tokens authenticate again.
+         * @description Any credential may, a personal access token too; no password is asked for. Every session is signed out and onboarding starts over. Every invitation to the account's address, pending or declined, is deleted, and so is every pending invitation of a workspace of which the account was the only active member; every membership of the account ends, of a workspace or of a project, each row and its role kept. These deletions and endings happen at one moment, all in the same transaction. Were the account the only active admin of a workspace that has other active members, workspace.sole_admin; of such a project, project.sole_admin; and nothing changes. The password and the personal access tokens stay, but nothing authenticates as the account until the server's administrator activates it again with `nerve users activate`; then its unexpired personal access tokens authenticate again. Its memberships stay ended until the administrator's `nerve workspaces reactivate-member` restores its membership of one workspace, or the account accepts a new link from a workspace's admin; its project memberships come back as it joins or is added again.
          */
         post: operations["deactivateMe"];
         delete?: never;

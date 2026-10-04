@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/access"
-	"github.com/open-nerve/NerveProject/server/internal/modules/identity"
 	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
 	identityapp "github.com/open-nerve/NerveProject/server/internal/modules/identity/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project"
@@ -27,9 +25,7 @@ import (
 	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	workspaceapp "github.com/open-nerve/NerveProject/server/internal/modules/workspace/app"
 	workspacedomain "github.com/open-nerve/NerveProject/server/internal/modules/workspace/domain"
-	"github.com/open-nerve/NerveProject/server/internal/platform/clock"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver/apitest"
-	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -45,9 +41,11 @@ import (
 // meets first. Every wait has a deadline.
 
 // growthRace is a database with acme, whose admin is alice and whose
-// member is bob, and alice's public project Web, of which bob has an ended
-// membership as a member when ended is set: alice's removal of him ended
-// it, through the project store's statement (EndMember).
+// member is bob, each membership its member's own, as the workspace's
+// creation and an acceptance make them, and alice's public project Web, of
+// which bob has an ended membership as a member when ended is set: alice's
+// removal of him ended it, through the project store's statement
+// (EndMember).
 type growthRace struct {
 	race
 	bob, bobIn, web uuid.UUID
@@ -74,7 +72,7 @@ func newGrowthRace(t *testing.T, ended bool) growthRace {
 		user uuid.UUID
 		role shared.Role
 	}{uuid.NewV7(): {r.alice, shared.RoleAdmin}, r.bobIn: {r.bob, shared.RoleMember}} {
-		if err := workspaces.CreateMember(ctx, workspaceapp.MemberRow{ID: id, WorkspaceID: w.ID, MemberID: m.user, Role: m.role, CreatedBy: r.alice,
+		if err := workspaces.CreateMember(ctx, workspaceapp.MemberRow{ID: id, WorkspaceID: w.ID, MemberID: m.user, Role: m.role, CreatedBy: m.user,
 			Now: now}); err != nil {
 			t.Fatal(err)
 		}
@@ -157,12 +155,9 @@ func (r growthRace) join(t *testing.T) {
 }
 
 // demote is alice's change of bob's role in acme to guest, over members
-// and cascade, on the system's clock: its time is read when it reads it.
+// and cascade (changeRole).
 func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdater, cascade workspaceapp.ProjectCascade) error {
-	_, err := workspaceapp.NewUpdateWorkspaceMember(members, cascade, workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
-		r.authorizer(), postgres.NewTxManager(r.pool, 2*time.Second), clock.System{}).
-		Execute(shared.WithActor(ctx, shared.Actor{UserID: r.alice}), r.bobIn, shared.RoleGuest)
-	return err
+	return changeRole(ctx, r.pool, r.alice, r.bobIn, shared.RoleGuest, members, cascade)
 }
 
 // standing is bob's role in acme, "ended" when his membership is, then his
@@ -171,7 +166,7 @@ func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdat
 func (r growthRace) standing(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT (SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END
 		FROM workspace_members WHERE id = $1) || ', Web ' ||
 		coalesce((SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END || CASE WHEN deleted_at IS NULL THEN '' ELSE ' deleted' END
 		          FROM project_members WHERE project_id = $2 AND member_id = $3), 'none')`, r.bobIn, r.web, r.bob).Scan(&s); err != nil {
@@ -185,7 +180,7 @@ func (r growthRace) standing(t *testing.T) string {
 // Its wait for a connection of the pool ends soon.
 func (r growthRace) webFree(t *testing.T) bool {
 	t.Helper()
-	_, err := r.pool.Exec(soon(t), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
+	_, err := r.pool.Exec(pgtest.Soon(t), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
 		return false
@@ -254,7 +249,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 					}
 					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancel()
-					g, cascade := newGate(), project.New(project.Deps{Pool: r.pool}).Cascade()
+					g, cascade := newGate(), project.NewCascade(project.CascadeDeps{Pool: r.pool})
 					var req *http.Request
 					var rec *httptest.ResponseRecorder
 					var grew, demoted <-chan error
@@ -262,10 +257,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						grow := r.growth(t, add, g)
 						grew = run(func() error { req, rec = grow(); return nil })
 						held(t, ctx, g, grew, "the growth")
-						if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
-							"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
-							t.Errorf("the growth at its gate holds %s; want %s", got, want)
-						}
+						r.sharesAcme(t, "the growth")
 						demoted = run(func() error { return r.demote(ctx, workspacepg.New(r.pool), cascade) })
 					} else {
 						demoted = run(func() error { return r.demote(ctx, demotedHolding{workspacepg.New(r.pool), g}, cascade) })
@@ -306,7 +298,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 // membershipTimes are bob's membership of Web's created_at and updated_at.
 func (r growthRace) membershipTimes(t *testing.T) (made, written time.Time) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), "SELECT created_at, updated_at FROM project_members WHERE project_id = $1 AND member_id = $2",
+	if err := r.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at FROM project_members WHERE project_id = $1 AND member_id = $2",
 		r.web, r.bob).Scan(&made, &written); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatal(err)
 	}
@@ -317,21 +309,7 @@ func (r growthRace) membershipTimes(t *testing.T) (made, written time.Time) {
 // acme's guest: his joining, 404 project.not_found; alice's adding him as a
 // member, 422 members[0].role not_allowed alone.
 func refusedAsAGuest(rec *httptest.ResponseRecorder, add bool) bool {
-	var problem struct {
-		Code   string `json:"code"`
-		Errors []struct {
-			Field string `json:"field"`
-			Code  string `json:"code"`
-		} `json:"errors"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
-		return false
-	}
-	if !add {
-		return rec.Code == http.StatusNotFound && problem.Code == "project.not_found"
-	}
-	return rec.Code == http.StatusUnprocessableEntity && problem.Code == "validation_failed" && len(problem.Errors) == 1 &&
-		problem.Errors[0].Field == "members[0].role" && problem.Errors[0].Code == "not_allowed"
+	return refusedAt(rec, map[bool]string{true: "members[0].role"}[add])
 }
 
 // gatedDemoter stops the demotion's step over the projects after it has

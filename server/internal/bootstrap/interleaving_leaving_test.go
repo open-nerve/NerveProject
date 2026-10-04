@@ -91,7 +91,7 @@ func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid
 // as bootstrap wires them. It takes no test, so it runs on any goroutine.
 func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(w.pool).PublicProfiles},
-		project.New(project.Deps{Pool: w.pool}).Cascade(), authorizerOn(w.pool), postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
+		project.NewCascade(project.CascadeDeps{Pool: w.pool}), authorizerOn(w.pool), postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[by]}), id)
 }
 
@@ -100,7 +100,7 @@ func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID
 func (w memberWorld) endedBy(t *testing.T, project uuid.UUID, name string) string {
 	t.Helper()
 	var by string
-	if err := w.pool.QueryRow(soon(t), `SELECT CASE WHEN m.is_active THEN 'active' ELSE split_part(u.email, '@', 1) END
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT CASE WHEN m.is_active THEN 'active' ELSE split_part(u.email, '@', 1) END
 		FROM project_members m JOIN users u ON u.id = m.updated_by_id WHERE m.project_id = $1 AND m.member_id = $2`, project, w.ids[name]).
 		Scan(&by); err != nil {
 		t.Fatal(err)
@@ -244,11 +244,14 @@ type serialized struct {
 }
 
 // sameOutcome is whether err is want: nil for nil, else an error whose
-// first problem in its chain, the one the API would answer, is want.
+// first problem in its chain, the one the API would answer, is want's: of
+// its kind, with its code and its detail, so that a problem made anew by
+// each call, as shared.Unauthenticated() is, compares too.
 func sameOutcome(err, want error) bool {
 	if want == nil {
 		return err == nil
 	}
-	var first *shared.Error
-	return errors.As(err, &first) && error(first) == want
+	var first, problem *shared.Error
+	return errors.As(err, &first) && errors.As(want, &problem) && first.Kind == problem.Kind && first.Code == problem.Code &&
+		first.Detail == problem.Detail
 }

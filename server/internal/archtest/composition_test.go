@@ -16,10 +16,14 @@ import (
 // are a pool and the modules' administrator use cases (M2 design 3.17, M3
 // design 6.6): nothing they call builds a module's HTTP side or the
 // Authorizer (a module's New), the HTTP server, a rate limiter or a jobs
-// client. The rule follows the static calls from each; the commands are
-// func values it calls dynamically, so they are not followed: they only
-// receive the composition. Reaching the module's NewAdmin shows the walk
-// sees the composition at all.
+// client. Each builds only what its commands use: Users, identity's
+// NewAdmin and, for `nerve users deactivate`, workspace's NewDeactivator
+// and project's NewCascade, never workspace's NewAdmin; Workspaces,
+// workspace's NewAdmin, never the deactivation's two, whose cascade no
+// command of it calls. The rule follows the static calls from each; the
+// commands are func values it calls dynamically, so they are not followed:
+// they only receive the composition. Reaching what each builds shows the
+// walk sees the composition at all.
 func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 	registerSources(t)
 	cfg := &packages.Config{
@@ -37,24 +41,33 @@ func TestCommandsComposeNoServerAndNoJobs(t *testing.T) {
 	prog, built := ssautil.AllPackages(pkgs, 0)
 	prog.Build()
 	graph := static.CallGraph(prog)
-	for _, c := range []struct{ root, admin string }{
-		{"Users", m("internal/modules/identity") + ".NewAdmin"},
-		{"Workspaces", m("internal/modules/workspace") + ".NewAdmin"},
+	identity, workspace, project := m("internal/modules/identity"), m("internal/modules/workspace"), m("internal/modules/project")
+	for _, c := range []struct {
+		root            string
+		builds, unbuilt []string
+	}{
+		{"Users", []string{identity + ".NewAdmin", workspace + ".NewDeactivator", project + ".NewCascade"}, []string{workspace + ".NewAdmin"}},
+		{"Workspaces", []string{workspace + ".NewAdmin"}, []string{workspace + ".NewDeactivator", project + ".NewCascade"}},
 	} {
 		root := built[0].Func(c.root)
 		if root == nil {
 			t.Fatalf("bootstrap.%s not found: the rule checks nothing", c.root)
 		}
 		reached, banned := walkCalls(graph, root, composesMore)
-		if !slices.ContainsFunc(reached, func(chain []*ssa.Function) bool {
-			return chain[len(chain)-1].String() == c.admin
-		}) {
-			var names []string
-			for _, chain := range reached {
-				names = append(names, funcName(chain[len(chain)-1]))
+		var names []string
+		for _, chain := range reached {
+			names = append(names, chain[len(chain)-1].String())
+		}
+		for _, f := range c.builds {
+			if !slices.Contains(names, f) {
+				t.Errorf("bootstrap.%s does not reach %s, so the rule checks nothing; it reaches:\n%s",
+					c.root, f, strings.ReplaceAll(strings.Join(names, "\n"), modulePath+"/", ""))
 			}
-			t.Errorf("bootstrap.%s does not reach %s, so the rule checks nothing; it reaches:\n%s",
-				c.root, c.admin, strings.Join(names, "\n"))
+		}
+		for _, f := range c.unbuilt {
+			if slices.Contains(names, f) {
+				t.Errorf("bootstrap.%s reaches %s, which none of its commands uses (M3 design 6.6)", c.root, f)
+			}
 		}
 		for _, chain := range banned {
 			names := make([]string, len(chain))

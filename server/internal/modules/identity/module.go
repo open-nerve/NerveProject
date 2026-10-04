@@ -42,6 +42,9 @@ type Deps struct {
 	// off, the check of the invitation a registration names (M3 design
 	// 3.8).
 	SignupPolicy app.SignupPolicy
+	// Memberships is workspace's Deactivator: deactivateMe ends the
+	// account's memberships through it (M3 design 3.9, 6.6 step 6).
+	Memberships app.MembershipDeactivator
 	// Keys are the signing key, as LoadKeys loaded it.
 	Keys            *Keys
 	AccessTokenTTL  time.Duration
@@ -123,7 +126,8 @@ func New(d Deps) (*Module, error) {
 				Rules: rules, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
 			}),
 			Deactivate: app.NewDeactivate(app.DeactivateDeps{
-				Lock: lock, Users: store, Profiles: store, Sessions: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger,
+				Lock: lock, Users: store, Profiles: store, Sessions: store, Memberships: d.Memberships, Tx: d.Tx, Clock: d.Clock,
+				Logger: d.Logger,
 			}),
 			GetProfile:    app.NewGetProfile(store),
 			UpdateProfile: app.NewUpdateProfile(store, d.Clock),

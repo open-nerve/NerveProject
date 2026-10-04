@@ -2,8 +2,9 @@
 // workspaces, their members and their invitations. It brings creating,
 // listing, reading, changing, deleting and leaving workspaces, checking a
 // slug, listing the members, changing their roles and removing them, each
-// member's display settings, and the invitations, and offers the other
-// modules its reads through ports.
+// member's display settings, and the invitations, ends a deactivated
+// account's memberships for identity, and offers the other modules its
+// reads through ports.
 package workspace
 
 import (
@@ -111,8 +112,9 @@ type Deps struct {
 
 // Module is the wired workspace module.
 type Module struct {
-	uc     httpadapter.UseCases
-	signup *app.SignupInvitations
+	uc          httpadapter.UseCases
+	signup      *app.SignupInvitations
+	deactivator Deactivator
 }
 
 // SignupInvitations checks the invitation a registration names while
@@ -127,7 +129,8 @@ type SignupInvitations interface {
 // registered or injected after it (M3 design 6.6).
 func New(d Deps) *Module {
 	store := postgresadapter.New(d.Pool)
-	return &Module{signup: app.NewSignupInvitations(store, d.InvitationMAC), uc: httpadapter.UseCases{
+	deactivator := NewDeactivator(DeactivatorDeps{Pool: d.Pool, Clock: d.Clock, Projects: d.Projects})
+	return &Module{signup: app.NewSignupInvitations(store, d.InvitationMAC), deactivator: deactivator, uc: httpadapter.UseCases{
 		ListWorkspaces: app.NewListWorkspaces(store),
 		CreateWorkspace: app.NewCreateWorkspace(app.CreateWorkspaceDeps{
 			Accounts: d.Accounts, Workspaces: store, Tx: d.Tx, Clock: d.Clock, Logger: d.Logger, Enabled: d.CreationEnabled,
@@ -170,6 +173,12 @@ func (m *Module) PublicOperations() []string {
 // identity's SignupPolicy (M3 design 6.6 step 6).
 func (m *Module) SignupInvitations() SignupInvitations {
 	return m.signup
+}
+
+// Deactivator is the ending of a deactivated account's memberships, for
+// identity's MembershipDeactivator (M3 design 3.9, 6.6 step 6).
+func (m *Module) Deactivator() Deactivator {
+	return m.deactivator
 }
 
 // Actions lists the module's actions: bootstrap's test holds the union of

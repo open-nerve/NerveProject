@@ -103,12 +103,12 @@ func TestLockInvitationLocksTheRowForUpdate(t *testing.T) {
 			return err
 		},
 	} {
-		if err := withLockTimeout(tx, pool, take); !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
+		if err := withLockTimeout(t, tx, pool, take); !errors.As(err, &pgErr) || pgErr.Code != "55P03" {
 			t.Errorf("%s of carol's while it is locked: %v; want lock_not_available after waiting", name, err)
 		}
 	}
 	var got domain.Invitation
-	err := withLockTimeout(tx, pool, func(ctx context.Context) error {
+	err := withLockTimeout(t, tx, pool, func(ctx context.Context) error {
 		var err error
 		got, err = s.LockInvitation(ctx, dave.ID)
 		return err

@@ -86,7 +86,7 @@ func newAdminRace(t *testing.T) adminRace {
 // change is updateWorkspaceMember over members, with project's cascade,
 // identity's profiles and the Authorizer as bootstrap wires them.
 func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.UpdateWorkspaceMember {
-	return workspaceapp.NewUpdateWorkspaceMember(members, project.New(project.Deps{Pool: r.pool}).Cascade(),
+	return workspaceapp.NewUpdateWorkspaceMember(members, project.NewCascade(project.CascadeDeps{Pool: r.pool}),
 		workspaceProfiles{profiles: identity.Provide(r.pool).PublicProfiles},
 		authorizerOn(r.pool), postgres.NewTxManager(r.pool, 2*time.Second), clocktest.At(time.Now()))
 }
@@ -94,7 +94,7 @@ func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.Upda
 // roles are alice's and bob's roles in acme.
 func (r adminRace) roles(t *testing.T) (alice, bob shared.Role) {
 	t.Helper()
-	if err := r.pool.QueryRow(soon(t),
+	if err := r.pool.QueryRow(pgtest.Soon(t),
 		"SELECT (SELECT role FROM workspace_members WHERE id = $1), (SELECT role FROM workspace_members WHERE id = $2)", r.aliceIn, r.bobIn).
 		Scan(&alice, &bob); err != nil {
 		t.Fatal(err)

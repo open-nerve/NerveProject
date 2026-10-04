@@ -169,7 +169,7 @@ func TestLeaveProject(t *testing.T) {
 		{"not its member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"its only admin", domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"project.sole_admin","title":"Conflict",` +
 			`"detail":"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while ` +
-			`it has other active members. Give the project another admin first, or delete it."}`},
+			`it has other active members. It must first be given another admin, or be deleted."}`},
 		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
 	} {
 		h := newServer(t, fakes{leave: &fakeDelete{err: tt.err}})

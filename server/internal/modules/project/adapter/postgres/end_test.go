@@ -204,25 +204,34 @@ func TestSoleAdmin(t *testing.T) {
 	}
 }
 
-// LockActiveMemberProjects takes its locks in the projects' id order,
-// whatever order the rows lie in: Web has the smaller id, but lies after
-// Alpha in the table and in the indexes on the name and on the identifier.
-// Alpha's row is held. LockActiveMemberProjects waits for it holding
-// Web's, which a FOR SHARE then waits for; in any other order it would
-// reach Alpha first and wait holding nothing.
+// LockActiveMemberProjects takes its locks in the projects' id order, across
+// the workspaces asked about, whatever order the rows lie in, and whatever
+// workspace each is of (M3 design 3.6 convention 6: the deactivation locks
+// every project at once, not a workspace's after another's). Web, acme's,
+// has the smallest id, then Alpha, beta's, then Zed, acme's; acme's id is
+// the smaller. They lie in the table as Alpha, Zed, Web, and in the indexes
+// on the workspace and the name or the identifier as Web, Zed, Alpha.
+// Alpha's row is held. LockActiveMemberProjects waits for it holding Web's,
+// which a FOR SHARE then waits for, and not Zed's, which it does not: of
+// the six orders, only the ids' does so. In the table's order it would
+// reach Alpha first and wait holding nothing; in the indexes' order, which
+// Postgres follows here when the query has no ORDER BY (it reads the rows
+// through the index on the workspace and the name), or a workspace's
+// projects after another's, acme's first, it would hold Zed too.
 func TestLockActiveMemberProjectsLocksInIDOrder(t *testing.T) {
 	s, pool := newStore(t)
 	bob := newAccount(t, pool, "bob@corp.com")
-	acme := newWorkspace(t, pool, "acme")
-	web, alpha := uuid.NewV7(), uuid.NewV7() // web drawn first: the smaller id
+	acme, beta := newWorkspace(t, pool, "acme"), newWorkspace(t, pool, "beta")
+	web, alpha, zed := uuid.NewV7(), uuid.NewV7(), uuid.NewV7() // drawn in this order: ascending ids
 	for _, p := range []struct {
-		id   uuid.UUID
-		name string
-	}{{alpha, "Alpha"}, {web, "Web"}} {
-		exec(t, pool, "INSERT INTO projects (id, workspace_id, name, identifier) VALUES ($1, $2, $3::text, upper($3::text))", p.id, acme, p.name)
-		seedMember(t, pool, acme, p.id, bob, 15, true)
+		id, workspace uuid.UUID
+		name          string
+	}{{alpha, beta, "Alpha"}, {zed, acme, "Zed"}, {web, acme, "Web"}} {
+		exec(t, pool, "INSERT INTO projects (id, workspace_id, name, identifier) VALUES ($1, $2, $3::text, upper($3::text))", p.id, p.workspace,
+			p.name)
+		seedMember(t, pool, p.workspace, p.id, bob, 15, true)
 	}
-	held, err := pool.Begin(context.Background())
+	held, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,14 +242,15 @@ func TestLockActiveMemberProjectsLocksInIDOrder(t *testing.T) {
 	done := make(chan error, 1)
 	go func() {
 		done <- postgres.NewTxManager(pool, 10*time.Second).WithinTx(context.Background(), func(ctx context.Context) error {
-			_, err := s.LockActiveMemberProjects(ctx, []uuid.UUID{acme}, bob)
+			_, err := s.LockActiveMemberProjects(ctx, []uuid.UUID{acme, beta}, bob)
 			return err
 		})
 	}()
 	pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
 
-	if !waits(t, pool, web, "FOR SHARE") {
-		t.Error("a FOR SHARE of Web while LockActiveMemberProjects waits for Alpha does not wait; want Web locked first")
+	if web, zed := waits(t, pool, web, "FOR SHARE"), waits(t, pool, zed, "FOR SHARE"); !web || zed {
+		t.Errorf("while LockActiveMemberProjects waits for Alpha, a FOR SHARE of Web waits %v, of Zed %v; want Web locked first, Zed not yet",
+			web, zed)
 	}
 	if err := held.Commit(context.Background()); err != nil {
 		t.Fatal(err)
@@ -269,7 +279,7 @@ func TestLockActiveMemberProjectsLeavesOutAProjectDeletedWhileItWaited(t *testin
 	for _, p := range []uuid.UUID{web, ops} {
 		seedMember(t, pool, acme, p, bob, 15, true)
 	}
-	deletion, err := pool.Begin(context.Background())
+	deletion, err := pool.Begin(pgtest.Soon(t))
 	if err != nil {
 		t.Fatal(err)
 	}

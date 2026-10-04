@@ -33,7 +33,8 @@ type fakeWorkspaces struct {
 	membersErr  error                             // for ListMembers, MemberByID and MemberOf
 	roleErr     error                             // for UpdateMemberRole
 	restoreErr  error                             // for ReactivateMember
-	endErrs     map[string]error                  // by method, for HasOtherAdmin, DeletePendingInvitations and EndMember
+	endErrs     map[string]error                  // by method, for the endings' and the deactivation's statements
+	invitations []uuid.UUID                       // what LockInvitationsToDelete returns: the ids it locked
 	onLock      func()                            // run by LockWorkspace once it has locked: what changed while it waited
 	prefs       map[prefsKey]domain.Preferences
 	prefIDs     map[prefsKey]uuid.UUID // the id each row UpsertPreferences inserted took

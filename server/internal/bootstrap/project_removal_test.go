@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 	"uuid"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // remove is by's removal of name's membership of project: its status and
@@ -36,7 +38,7 @@ func (e memberEnding) check(t *testing.T, w memberWorld) {
 	id := w.membership(t, e.project, e.name)
 	target, others := rowJSON(t, w.pool, "project_members", id), rowsBut(t, w.pool, []uuid.UUID{id})
 	var settings int
-	if err := w.pool.QueryRow(soon(t), "SELECT count(*) FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND "+
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND "+
 		"deleted_at IS NULL", e.project, w.ids[e.name]).Scan(&settings); err != nil || settings != 1 {
 		t.Fatalf("%s: %s's display settings in the project: %d, %v; want his one", e.step, e.name, settings, err)
 	}

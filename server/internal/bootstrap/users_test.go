@@ -89,7 +89,8 @@ func TestUsersCommands(t *testing.T) {
 			"email changed from carol@corp.com to carol@new.example: revoked 1 sessions\n",
 			accountState{"carol@new.example", "email_changed,password_reset,password_reset", "revoked,revoked,revoked", true}},
 		{"deactivate", DeactivateUser("carol@new.example"),
-			"deactivated carol@new.example: revoked 1 sessions\n",
+			"deactivated carol@new.example: revoked 1 sessions and ended its memberships; to bring it back, run nerve users activate, " +
+				"then nerve workspaces reactivate-member in each workspace\n",
 			accountState{"carol@new.example", "deactivated,email_changed,password_reset,password_reset", "revoked,revoked,revoked", false}},
 		{"activate", ActivateUser("carol@new.example"),
 			"activated carol@new.example: 0 API tokens are usable again\n",

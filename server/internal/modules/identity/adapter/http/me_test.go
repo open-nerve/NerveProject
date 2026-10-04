@@ -3,6 +3,8 @@ package httpadapter_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -152,15 +154,48 @@ func TestDeactivateMe(t *testing.T) {
 	}
 }
 
-// A credential revoked since authentication: the use case's 401 is the
-// answer, not 204.
-func TestDeactivateMeProblem(t *testing.T) {
-	req := withToken(httptest.NewRequest(http.MethodPost, "/api/v0/me/deactivate", nil))
+// The use case's refusals are the answer, not 204, as the contract declares
+// them (M3 design 3.9, 9.4): a credential revoked since authentication,
+// 401; the workspace module's workspace.sole_admin and the project module's
+// project.sole_admin, which identity does not import (stand-ins with their
+// kind, code and detail), each a 409 of deactivateMe; a failure, 500,
+// never another problem. The project module's cascade returns
+// project.sole_admin unwrapped, and the workspace module's Deactivator and
+// identity's deactivation pass it on as itself; its row is wrapped all the
+// same, because the answer is the first *shared.Error in the chain however
+// the refusal comes.
+func TestDeactivateMeProblems(t *testing.T) {
+	workspaceSoleAdmin := shared.NewError(shared.KindConflict, "workspace.sole_admin",
+		"The workspace would be left without an admin: its only active admin cannot leave it, nor can his membership end while it "+
+			"has other active members. It must first be given another admin, or be deleted.")
+	projectSoleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
+		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
+			"other active members. It must first be given another admin, or be deleted.")
+	tests := []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{shared.Unauthenticated(), http.StatusUnauthorized, `{"status":401,"code":"unauthorized","title":"Unauthorized",` +
+			`"detail":"Authentication is required."}`},
+		{workspaceSoleAdmin, http.StatusConflict, `{"status":409,"code":"workspace.sole_admin","title":"Conflict","detail":"The workspace ` +
+			`would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has other active ` +
+			`members. It must first be given another admin, or be deleted."}`},
+		{fmt.Errorf("end the member's project memberships: %w", projectSoleAdmin), http.StatusConflict,
+			`{"status":409,"code":"project.sole_admin","title":"Conflict","detail":"The project would be left without an admin: its only ` +
+				`active admin cannot leave it, nor can his membership end while it has other active members. It must first be given ` +
+				`another admin, or be deleted."}`},
+		{errors.New("the database is gone"), http.StatusInternalServerError,
+			`{"status":500,"code":"internal_error","title":"Internal Server Error"}`},
+	}
+	for _, tt := range tests {
+		req := withToken(httptest.NewRequest(http.MethodPost, "/api/v0/me/deactivate", nil))
 
-	res, body := do(t, newServer(t, fakes{deactivate: &fakeDeactivate{err: shared.Unauthenticated()}}), req)
+		res, body := do(t, newServer(t, fakes{deactivate: &fakeDeactivate{err: tt.err}}), req)
 
-	if res.StatusCode != http.StatusUnauthorized || !strings.Contains(body, `"code":"unauthorized"`) {
-		t.Errorf("POST /me/deactivate = %d %s, want 401 unauthorized", res.StatusCode, body)
+		if res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("POST /me/deactivate refused with %v = %d %s, want %d %s", tt.err, res.StatusCode, body, tt.status, tt.want)
+		}
 	}
 }
 

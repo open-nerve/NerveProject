@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"io"
 	"maps"
 	"strings"
 	"testing"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	identitypg "github.com/open-nerve/NerveProject/server/internal/modules/identity/adapter/postgres"
+	workspacepg "github.com/open-nerve/NerveProject/server/internal/modules/workspace/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
@@ -26,6 +29,19 @@ import (
 type commandRun struct {
 	out string
 	err error
+}
+
+// commandInBackground runs a command, run, which writes its logs and its
+// line, in the background, and hands over its line and error. It takes no
+// test, so nothing on its goroutine fails one.
+func commandInBackground(run func(logs, out io.Writer) error) <-chan commandRun {
+	done := make(chan commandRun, 1)
+	go func() {
+		var out, logs bytes.Buffer
+		err := run(&logs, &out)
+		done <- commandRun{out.String(), err}
+	}()
+	return done
 }
 
 // bobReactivated is the line of bob's reactivation in acme.
@@ -45,13 +61,9 @@ func reactivatingBob(ctx context.Context, t *testing.T, url string, maxConns int
 
 // reactivatingBobWith is reactivatingBob on the configuration cfg.
 func reactivatingBobWith(ctx context.Context, cfg config.Config) <-chan commandRun {
-	done := make(chan commandRun, 1)
-	go func() {
-		var out, logs bytes.Buffer
-		err := Workspaces(ctx, cfg, &logs, &out, ReactivateMember("acme", "bob@corp.com"))
-		done <- commandRun{out.String(), err}
-	}()
-	return done
+	return commandInBackground(func(logs, out io.Writer) error {
+		return Workspaces(ctx, cfg, logs, out, ReactivateMember("acme", "bob@corp.com"))
+	})
 }
 
 // endedIDs are the ids of acme, of bob's account and of his membership of
@@ -248,4 +260,109 @@ func TestTheReactivationRunsOnItsTransactionsConnection(t *testing.T) {
 	if run := receiveWithin(t, reactivatingBob(ctx, t, url, 1), 10*time.Second, "reactivate-member's end"); run.out != bobReactivated || run.err != nil {
 		t.Errorf("reactivate-member on a pool of one connection = %q, %v; want %q", run.out, run.err, bobReactivated)
 	}
+}
+
+// endersOf is each ended membership of the account id, of a workspace by
+// its slug, of a project by its name, with the name of who last wrote it,
+// "nobody" when no account did, in byte order of the names, a workspace's
+// before a project's of the same name, then in id order; "none" when none
+// has ended.
+func endersOf(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
+	t.Helper()
+	var s string
+	if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(e.name || ' ' || coalesce(split_part(u.email, '@', 1), 'nobody'), ', '
+			ORDER BY e.name COLLATE "C", e.kind, e.id), 'none')
+		FROM (SELECT w.slug AS name, 1 AS kind, m.id, m.updated_by_id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+		      WHERE m.member_id = $1 AND NOT m.is_active
+		      UNION ALL
+		      SELECT p.name, 2, m.id, m.updated_by_id FROM project_members m JOIN projects p ON p.id = m.project_id
+		      WHERE m.member_id = $1 AND NOT m.is_active) e
+		LEFT JOIN users u ON u.id = e.updated_by_id`, id).Scan(&s); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// Interleaving 16 (M3 design 9.3, 3.6 convention 6, 3.11): bob's
+// reactivation in acme, through its command's composition, and his
+// deactivation serialize on his account's row, in both orders. The
+// deactivation that waits is the command, `nerve users deactivate`; the
+// one that goes first is deactivating, users.go's wiring mirrored with a
+// gate, as interleavings 8 and 19 run it, not the command itself.
+//   - The reactivation first: another transaction holds acme's row FOR NO
+//     KEY UPDATE; the reactivation waits for it, holding his account FOR
+//     SHARE; the deactivation waits for his account's row. The holder lets
+//     go: the reactivation makes his membership of acme active again, and
+//     the deactivation, which finds his workspaces once it holds his
+//     account, finds acme among them and ends his membership again, as
+//     his, his memberships of Web and Ops ended still, as alice's.
+//   - The deactivation first holds his account row at its gate, before its
+//     memberships' step; the reactivation waits for it. Once the
+//     deactivation has committed, the reactivation reactivates him all the
+//     same, 3.11's exception for a deactivated account, and its line says
+//     what is next: nerve users activate; Web's and Ops's stay alice's.
+//
+// Each probe sees the one wait on its table that its order has.
+func TestReactivatingAndDeactivating(t *testing.T) {
+	t.Run("the reactivation first", func(t *testing.T) {
+		url := pgtest.NewDatabase(t)
+		pool := endedMembers(t, url)
+		ids := idsOf(t, pool)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		holdsAcme := holding(t, pool, "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", ids.acme)
+		reactivated := reactivatingBob(ctx, t, url, 4)
+		pgtest.WaitForLockWaitOn(t, pool, "workspaces", 5*time.Second)
+		deactivated := deactivatingUser(ctx, testConfig(t, url, false), "bob@corp.com")
+		pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
+		if err := holdsAcme.Rollback(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+
+		if run := receiveWithin(t, reactivated, 10*time.Second, "reactivate-member's end"); run.out != bobReactivated || run.err != nil {
+			t.Errorf("reactivate-member = %q, %v; want %q", run.out, run.err, bobReactivated)
+		}
+		want := "deactivated bob@corp.com: revoked 0 sessions and ended its memberships; to bring it back, run nerve users activate, then " +
+			"nerve workspaces reactivate-member in each workspace\n"
+		if run := receiveWithin(t, deactivated, 10*time.Second, "the end of nerve users deactivate"); run.out != want || run.err != nil {
+			t.Errorf("nerve users deactivate = %q, %v; want %q", run.out, run.err, want)
+		}
+		if got, want := memberStates(t, pool), strings.Join([]string{"alice@corp.com acme 20 true", "bob@corp.com Ops 20 false",
+			"bob@corp.com Web 20 false", "bob@corp.com acme 20 false", "carol@corp.com Web 5 false", "carol@corp.com acme 5 false"}, "\n"); got != want {
+			t.Errorf("the memberships after both:\n%s\nwant\n%s", got, want)
+		}
+		if got, want := endersOf(t, pool, ids.bob), "Ops alice, Web alice, acme bob"; got != want {
+			t.Errorf("bob's ended memberships by their last writers: %s; want %s, his deactivation having ended acme's", got, want)
+		}
+	})
+	t.Run("the deactivation first", func(t *testing.T) {
+		url := pgtest.NewDatabase(t)
+		pool := endedMembers(t, url)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		g := newGate()
+		deactivated := run(func() error {
+			_, err := deactivating(pool, gatedSessions{identitypg.New(pool), g}, workspacepg.New(pool)).ExecuteByEmail(ctx, "bob@corp.com")
+			return err
+		})
+		held(t, ctx, g, deactivated, "the deactivation")
+		reactivated := reactivatingBob(ctx, t, url, 4)
+		pgtest.WaitForLockWaitOn(t, pool, "users", 5*time.Second)
+		close(g.open)
+
+		if err := result(t, ctx, deactivated, "the deactivation"); err != nil {
+			t.Errorf("the deactivation = %v, want it done", err)
+		}
+		want := strings.TrimSuffix(bobReactivated, "\n") + "; the account is deactivated: run nerve users activate --email bob@corp.com next\n"
+		if run := receiveWithin(t, reactivated, 10*time.Second, "reactivate-member's end"); run.out != want || run.err != nil {
+			t.Errorf("reactivate-member = %q, %v; want %q", run.out, run.err, want)
+		}
+		if got, want := memberStates(t, pool), strings.Join([]string{"alice@corp.com acme 20 true", "bob@corp.com Ops 20 false",
+			"bob@corp.com Web 20 false", "bob@corp.com acme 20 true", "carol@corp.com Web 5 false", "carol@corp.com acme 5 false"}, "\n"); got != want {
+			t.Errorf("the memberships after both:\n%s\nwant\n%s", got, want)
+		}
+		if got, want := endersOf(t, pool, idsOf(t, pool).bob), "Ops alice, Web alice"; got != want {
+			t.Errorf("bob's ended memberships by their last writers: %s; want %s", got, want)
+		}
+	})
 }

@@ -110,7 +110,7 @@ func (w memberWorld) added(namesAndRoles ...any) string {
 func (w memberWorld) standing(t *testing.T) string {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT string_agg(place || ': ' || members, '; ' ORDER BY kind, place COLLATE "C") FROM (
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT string_agg(place || ': ' || members, '; ' ORDER BY kind, place COLLATE "C") FROM (
 		SELECT kind, place, string_agg(name || ' ' || role, ', ' ORDER BY name COLLATE "C") AS members FROM (
 			SELECT 0 AS kind, s.slug AS place, split_part(u.email, '@', 1) AS name, m.role FROM workspace_members m
 				JOIN workspaces s ON s.id = m.workspace_id JOIN users u ON u.id = m.member_id WHERE m.is_active AND m.deleted_at IS NULL
@@ -133,7 +133,7 @@ func (w memberWorld) membership(t *testing.T, project uuid.UUID, name string) uu
 func (w memberWorld) acmeMembership(t *testing.T, name string) uuid.UUID {
 	t.Helper()
 	var id uuid.UUID
-	if err := w.pool.QueryRow(soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
 		WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids[name]).Scan(&id); err != nil {
 		t.Fatal(err)
 	}

@@ -211,6 +211,42 @@ type WorkspaceDeleter interface {
 	DeleteWorkspacePreferences(ctx context.Context, workspaceID, by uuid.UUID, now time.Time) error
 }
 
+// AllMembershipsEnder ends every workspace membership of a deactivated
+// account and deletes every invitation to its address, and the pending
+// ones of a workspace it leaves with no active member (M3 design 3.6
+// convention 6, 3.7, 3.9): the Deactivator's repository. It runs in the
+// transaction ctx carries, which identity's deactivation began and holds
+// the account row's FOR NO KEY UPDATE in.
+type AllMembershipsEnder interface {
+	// LockMemberWorkspaces locks the undeleted workspaces of which userID is
+	// an active member FOR NO KEY UPDATE in id order, until the transaction
+	// ends, and returns their ids in that order. One deleted while the lock
+	// waited is left out.
+	LockMemberWorkspaces(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error)
+	// SoleAdmin reports whether userID is the only active admin of one of
+	// the workspaces that has another active member (M3 design 3.7 rule 2).
+	SoleAdmin(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID) (bool, error)
+	// LockInvitationsToDelete locks FOR NO KEY UPDATE in id order, until
+	// the transaction ends, the invitations a deactivation deletes, and
+	// returns their ids in that order: the undeleted invitations to email,
+	// pending or declined, of every workspace (M3 design 3.8), and the
+	// pending ones of each of the workspaces where userID has no other
+	// active member (3.7), so call it before his memberships end. The
+	// invitations to his address lie mostly in workspaces he does not lock,
+	// where another deactivation may hold them; every deactivation takes the
+	// invitation rows it finds here in id order, and writes no other, so
+	// that two do not wait for each other in a cycle over them (3.6's global
+	// order, 3.9).
+	LockInvitationsToDelete(ctx context.Context, workspaceIDs []uuid.UUID, userID uuid.UUID, email string) ([]uuid.UUID, error)
+	// DeleteInvitations soft-deletes the undeleted invitations of ids, by
+	// the account by at now, and no other: those LockInvitationsToDelete
+	// returned.
+	DeleteInvitations(ctx context.Context, ids []uuid.UUID, by uuid.UUID, now time.Time) error
+	// EndWorkspaceMemberships ends userID's active, undeleted memberships
+	// of the workspaces, by the account by at now; the rows stay.
+	EndWorkspaceMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
+}
+
 // ProjectCascade is what the workspace's writes ask of the projects (M3
 // design 3.3): the project module implements it (project.New's Cascade).
 // Each method runs in the transaction ctx carries, writes by and now into
@@ -231,10 +267,11 @@ type ProjectCascade interface {
 	// EndMemberships ends userID's active memberships of the workspaces'
 	// projects, which it finds when it is called, at the moment and by the
 	// account of the ending of his membership of those workspaces: an
-	// admin's removal of him (removeWorkspaceMember), or his own leaving
-	// (leaveWorkspace). It refuses with project.sole_admin, and ends none,
-	// when he is the only active admin of one of them that has other active
-	// members (M3 design 3.7 rule 2).
+	// admin's removal of him (removeWorkspaceMember), his own leaving
+	// (leaveWorkspace), or his account's deactivation (Deactivator), which
+	// calls it once across every workspace of his. It refuses with
+	// project.sole_admin, and ends none, when he is the only active admin
+	// of one of them that has other active members (M3 design 3.7 rule 2).
 	EndMemberships(ctx context.Context, workspaceIDs []uuid.UUID, userID, by uuid.UUID, now time.Time) error
 }
 

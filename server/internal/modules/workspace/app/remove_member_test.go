@@ -63,11 +63,6 @@ type endingFailure struct {
 // commit.
 func endingFailures(calls []string, decided int) []endingFailure {
 	failure := errors.New("connection reset")
-	// The project module's ErrSoleAdmin, which this module does not import:
-	// its kind, code and detail.
-	soleAdmin := shared.NewError(shared.KindConflict, "project.sole_admin",
-		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
-			"other active members. Give the project another admin first, or delete it.")
 	return []endingFailure{
 		{"the address", func(f *membersFixture, _ *fakeTx) { f.profiles.err = failure }, failure, calls[:decided+1]},
 		{"a member without an account", func(f *membersFixture, _ *fakeTx) { f.profiles.profiles = profiles[:2] }, nil, calls[:decided+1]},
@@ -81,8 +76,9 @@ func endingFailures(calls []string, decided int) []endingFailure {
 			calls[:decided+3]},
 		{"the projects' step", func(f *membersFixture, _ *fakeTx) { f.projects.errs = map[string]error{"EndMemberships": failure} }, failure,
 			calls},
-		{"the only admin of a project", func(f *membersFixture, _ *fakeTx) { f.projects.errs = map[string]error{"EndMemberships": soleAdmin} },
-			soleAdmin, calls},
+		{"the only admin of a project", func(f *membersFixture, _ *fakeTx) {
+			f.projects.errs = map[string]error{"EndMemberships": projectSoleAdmin}
+		}, projectSoleAdmin, calls},
 		{"the commit", func(_ *membersFixture, tx *fakeTx) { tx.commitErr = failure }, failure, calls},
 	}
 }

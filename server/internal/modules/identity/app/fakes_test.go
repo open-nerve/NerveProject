@@ -11,14 +11,19 @@ import (
 )
 
 // fakeTx runs fn in a context marked as inside the transaction; fakeStore
-// records whether each write happened there.
-type fakeTx struct{ calls int }
+// records whether each write happened there. returned is what fn returned:
+// the error the transaction rolls back on, nil when it commits.
+type fakeTx struct {
+	calls    int
+	returned error
+}
 
 type inTxKey struct{}
 
 func (f *fakeTx) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	f.calls++
-	return fn(context.WithValue(ctx, inTxKey{}, true))
+	f.returned = fn(context.WithValue(ctx, inTxKey{}, true))
+	return f.returned
 }
 
 func inTx(ctx context.Context) bool { return ctx.Value(inTxKey{}) == true }
