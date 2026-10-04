@@ -219,11 +219,14 @@ func TestAcceptingAndDeletingTheWorkspace(t *testing.T) {
 	}
 }
 
-// setBobsEmail is `nerve users set-email` of bob's address, over sessions.
-func (r answerRace) setBobsEmail(ctx context.Context, sessions identityapp.SessionRevoker) error {
-	store := identitypg.New(r.pool)
-	_, err := identityapp.NewSetEmail(identityapp.SetEmailDeps{Accounts: store, Users: store, Sessions: sessions, Tx: r.tx(),
-		Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler)}).Execute(ctx, "bob@example.com", "robert@example.com")
+// setBobsEmail is `nerve users set-email` of bob's address,
+// bob@example.com to robert@example.com, on pool, over sessions. It takes
+// no test, so it runs on any goroutine.
+func setBobsEmail(ctx context.Context, pool *pgxpool.Pool, sessions identityapp.SessionRevoker) error {
+	store := identitypg.New(pool)
+	_, err := identityapp.NewSetEmail(identityapp.SetEmailDeps{Accounts: store, Users: store, Sessions: sessions,
+		Tx: postgres.NewTxManager(pool, 2*time.Second), Clock: clocktest.At(time.Now()), Logger: slog.New(slog.DiscardHandler)}).
+		Execute(ctx, "bob@example.com", "robert@example.com")
 	return err
 }
 
@@ -246,9 +249,9 @@ func TestAcceptingAndChangingTheAddress(t *testing.T) {
 			if acceptFirst {
 				accepted = run(func() error { return r.accept(ctx, gatedAccepter{store, g}) })
 				held(t, ctx, g, accepted, "the acceptance")
-				changed = run(func() error { return r.setBobsEmail(ctx, users) })
+				changed = run(func() error { return setBobsEmail(ctx, r.pool, users) })
 			} else {
-				changed = run(func() error { return r.setBobsEmail(ctx, gatedSessions{users, g}) })
+				changed = run(func() error { return setBobsEmail(ctx, r.pool, gatedSessions{users, g}) })
 				held(t, ctx, g, changed, "the change")
 				accepted = run(func() error { return r.accept(ctx, store) })
 			}
