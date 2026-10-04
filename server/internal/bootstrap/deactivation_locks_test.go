@@ -188,12 +188,12 @@ func (w deactivationWorld) writtenAgain(t *testing.T, acme, beta, toKappa, toDel
 		{"UPDATE project_members SET updated_at = updated_at WHERE project_id = $1", w.lab, 3},
 		{"UPDATE workspace_member_invites SET updated_at = updated_at WHERE id = $1", toKappa, 1},
 	} {
-		if tag, err := w.pool.Exec(soon(t), again.sql, again.id); err != nil || tag.RowsAffected() != again.rows {
+		if tag, err := w.pool.Exec(pgtest.Soon(t), again.sql, again.id); err != nil || tag.RowsAffected() != again.rows {
 			t.Fatalf("%s: %v, %v; want %d rows", again.sql, tag, err, again.rows)
 		}
 	}
 	var heap string
-	if err := w.pool.QueryRow(soon(t), `SELECT concat_ws('; ',
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT concat_ws('; ',
 		(SELECT string_agg(slug, ' ' ORDER BY ctid) FROM workspaces WHERE id = ANY ($1)),
 		(SELECT string_agg(name, ' ' ORDER BY ctid) FROM projects WHERE id = ANY ($2)),
 		(SELECT string_agg(p.name, ' ' ORDER BY m.ctid) FROM project_members m JOIN projects p ON p.id = m.project_id

@@ -94,7 +94,7 @@ func (r adminRace) change(members workspaceapp.MemberUpdater) *workspaceapp.Upda
 // roles are alice's and bob's roles in acme.
 func (r adminRace) roles(t *testing.T) (alice, bob shared.Role) {
 	t.Helper()
-	if err := r.pool.QueryRow(soon(t),
+	if err := r.pool.QueryRow(pgtest.Soon(t),
 		"SELECT (SELECT role FROM workspace_members WHERE id = $1), (SELECT role FROM workspace_members WHERE id = $2)", r.aliceIn, r.bobIn).
 		Scan(&alice, &bob); err != nil {
 		t.Fatal(err)

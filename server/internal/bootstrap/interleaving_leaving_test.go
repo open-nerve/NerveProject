@@ -100,7 +100,7 @@ func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID
 func (w memberWorld) endedBy(t *testing.T, project uuid.UUID, name string) string {
 	t.Helper()
 	var by string
-	if err := w.pool.QueryRow(soon(t), `SELECT CASE WHEN m.is_active THEN 'active' ELSE split_part(u.email, '@', 1) END
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT CASE WHEN m.is_active THEN 'active' ELSE split_part(u.email, '@', 1) END
 		FROM project_members m JOIN users u ON u.id = m.updated_by_id WHERE m.project_id = $1 AND m.member_id = $2`, project, w.ids[name]).
 		Scan(&by); err != nil {
 		t.Fatal(err)

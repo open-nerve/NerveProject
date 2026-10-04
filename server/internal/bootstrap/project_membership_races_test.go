@@ -102,7 +102,7 @@ func TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile(t *testing.T) {
 	web := func(w memberWorld, _ *testing.T, _ membershipWrite) uuid.UUID { return w.web }
 	acme := func(w memberWorld, t *testing.T, _ membershipWrite) uuid.UUID {
 		var id uuid.UUID
-		if err := w.pool.QueryRow(soon(t), "SELECT id FROM workspaces WHERE slug = 'acme'").Scan(&id); err != nil {
+		if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT id FROM workspaces WHERE slug = 'acme'").Scan(&id); err != nil {
 			t.Fatal(err)
 		}
 		return id
@@ -134,13 +134,13 @@ func TestAWriteOnAProjectMembershipFindsWhatChangedMeanwhile(t *testing.T) {
 					first, firstID = "SELECT 1 FROM workspaces WHERE id = $1 FOR NO KEY UPDATE", acme(w, t, m)
 				}
 				other := holding(t, w.pool, first, firstID)
-				if tag, err := other.Exec(soon(t), c.sql, id); err != nil || tag.RowsAffected() != 1 {
+				if tag, err := other.Exec(pgtest.Soon(t), c.sql, id); err != nil || tag.RowsAffected() != 1 {
 					t.Fatalf("%s: %v, %v; want one row changed", c.sql, tag, err)
 				}
 				changed := rowJSON(t, other, c.table, id)
 				req, answered := m.sent(t, w)
 				pgtest.WaitForLockWaitOn(t, w.pool, c.holds, 5*time.Second)
-				if err := other.Commit(soon(t)); err != nil {
+				if err := other.Commit(pgtest.Soon(t)); err != nil {
 					t.Fatal(err)
 				}
 
@@ -191,7 +191,7 @@ func TestEachLockOfAWriteOnAProjectMembershipIsItsStrength(t *testing.T) {
 		t.Run(m.op, func(t *testing.T) {
 			w := newMemberWorld(t)
 			var acme, inAcme uuid.UUID
-			if err := w.pool.QueryRow(soon(t), `SELECT s.id, m.id FROM workspaces s JOIN workspace_members m ON m.workspace_id = s.id
+			if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT s.id, m.id FROM workspaces s JOIN workspace_members m ON m.workspace_id = s.id
 				WHERE s.slug = 'acme' AND m.member_id = $1`, w.ids[m.member]).Scan(&acme, &inAcme); err != nil {
 				t.Fatal(err)
 			}

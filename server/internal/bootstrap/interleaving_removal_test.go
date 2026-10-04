@@ -142,7 +142,7 @@ func (r adminRace) removeAlice(ctx context.Context, members workspaceapp.MemberR
 func (r adminRace) acmeAndAlice(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(soon(t), `SELECT CASE WHEN w.deleted_at IS NULL THEN 'acme' ELSE 'acme deleted' END || ', alice ' ||
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT CASE WHEN w.deleted_at IS NULL THEN 'acme' ELSE 'acme deleted' END || ', alice ' ||
 		CASE WHEN m.deleted_at IS NOT NULL THEN 'deleted' WHEN m.is_active THEN 'active' ELSE 'ended' END
 		FROM workspaces w JOIN workspace_members m ON m.workspace_id = w.id WHERE m.id = $1`, r.aliceIn).Scan(&s); err != nil {
 		t.Fatal(err)
@@ -156,7 +156,7 @@ func (r adminRace) acmeAndAlice(t *testing.T) string {
 func (r adminRace) waitsAtAWrite(t *testing.T) bool {
 	t.Helper()
 	var written bool
-	if err := r.pool.QueryRow(soon(t), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a JOIN pg_locks l ON l.pid = a.pid
 		WHERE a.datname = current_database() AND a.wait_event_type = 'Lock' AND l.locktype = 'relation'
 			AND l.relation = 'workspaces'::regclass AND l.mode = 'RowExclusiveLock' AND l.granted)`).Scan(&written); err != nil {
 		t.Fatal(err)

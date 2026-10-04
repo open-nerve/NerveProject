@@ -24,7 +24,7 @@ import (
 func (w deactivationWorld) endings(t *testing.T) string {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT string_agg(place || ' ' || CASE WHEN deleted THEN 'deleted by ' || by
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT string_agg(place || ' ' || CASE WHEN deleted THEN 'deleted by ' || by
 			WHEN active THEN standing ELSE 'ended by ' || by END, '; ' ORDER BY place COLLATE "C") FROM (
 		SELECT s.slug AS place, m.deleted_at IS NOT NULL AS deleted, m.is_active AS active, 'active' AS standing, m.updated_by_id AS writer
 			FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id WHERE m.member_id = $1

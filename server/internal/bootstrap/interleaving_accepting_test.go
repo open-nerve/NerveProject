@@ -50,7 +50,7 @@ type s1Race struct {
 func newS1Race(t *testing.T, former bool) s1Race {
 	t.Helper()
 	r := s1Race{answerRace: newAnswerRace(t, shared.RoleAdmin), web: uuid.NewV7(), aliceWeb: uuid.NewV7()}
-	ctx, before := soon(t), time.Now().Add(-time.Hour)
+	ctx, before := pgtest.Soon(t), time.Now().Add(-time.Hour)
 	r.aliceIn = queryIDs(t, r.pool, "SELECT id FROM workspace_members WHERE workspace_id = $1 AND member_id = $2", r.acme, r.alice)[0]
 	projects := projectpg.New(r.pool)
 	if err := projects.CreateProject(ctx, projectapp.ProjectRow{ID: r.web, WorkspaceID: r.acme, Name: "Web", Identifier: "WEB",
@@ -83,7 +83,7 @@ func newS1Race(t *testing.T, former bool) s1Race {
 func (r s1Race) standing(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(soon(t), `WITH membership AS (
+	if err := r.pool.QueryRow(pgtest.Soon(t), `WITH membership AS (
 			SELECT 1 AS ord, 'acme' AS place, m.id, m.member_id, m.created_at, m.role, m.is_active, m.updated_by_id
 			FROM workspace_members m WHERE m.workspace_id = $2
 			UNION ALL
@@ -246,7 +246,7 @@ func TestAnAdmittedAdminsWriteAndHisDeactivation(t *testing.T) {
 			membershipsButAlices := func() string {
 				t.Helper()
 				var s string
-				if err := r.pool.QueryRow(soon(t), `SELECT coalesce(string_agg(row_to_json(m)::text, E'\n' ORDER BY m.id), '')
+				if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(row_to_json(m)::text, E'\n' ORDER BY m.id), '')
 					FROM workspace_members m WHERE m.id <> $1`, r.aliceIn).Scan(&s); err != nil {
 					t.Fatal(err)
 				}

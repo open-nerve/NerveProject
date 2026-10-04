@@ -268,7 +268,7 @@ func TestTheReactivationRunsOnItsTransactionsConnection(t *testing.T) {
 func endersOf(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
 	t.Helper()
 	var s string
-	if err := pool.QueryRow(soon(t), `SELECT coalesce(string_agg(e.name || ' ' || coalesce(split_part(u.email, '@', 1), 'nobody'), ', '
+	if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(e.name || ' ' || coalesce(split_part(u.email, '@', 1), 'nobody'), ', '
 			ORDER BY e.name COLLATE "C"), 'none')
 		FROM (SELECT w.slug AS name, m.updated_by_id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
 		      WHERE m.member_id = $1 AND NOT m.is_active

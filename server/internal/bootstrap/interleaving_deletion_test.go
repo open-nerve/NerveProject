@@ -173,7 +173,7 @@ func answeredOrWaiting(t *testing.T, pool *pgxpool.Pool, n int, done <-chan erro
 		default:
 		}
 		var waiting int
-		if err := pool.QueryRow(soon(t),
+		if err := pool.QueryRow(pgtest.Soon(t),
 			"SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'").Scan(&waiting); err != nil {
 			t.Fatal(err)
 		}

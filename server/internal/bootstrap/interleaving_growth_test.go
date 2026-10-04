@@ -179,7 +179,7 @@ func (r growthRace) standing(t *testing.T) string {
 // Its wait for a connection of the pool ends soon.
 func (r growthRace) webFree(t *testing.T) bool {
 	t.Helper()
-	_, err := r.pool.Exec(soon(t), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
+	_, err := r.pool.Exec(pgtest.Soon(t), "SELECT 1 FROM projects WHERE id = $1 FOR UPDATE NOWAIT", r.web)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
 		return false

@@ -61,7 +61,7 @@ func newCrossedWorld(t *testing.T) deactivationWorld {
 func (w deactivationWorld) crossed(t *testing.T) string {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT concat_ws('; ',
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT concat_ws('; ',
 		(SELECT string_agg(split_part(email, '@', 1) || CASE WHEN is_active THEN ' active' ELSE ' deactivated' END, ', '
 			ORDER BY email COLLATE "C") FROM users),
 		(SELECT string_agg(s.slug || ' ' || split_part(u.email, '@', 1) || ' ' || m.role || CASE WHEN m.is_active THEN ' active' ELSE ' ended' END,

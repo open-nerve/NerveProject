@@ -10,6 +10,8 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 )
 
 // A deactivation refused leaves every row of every table as it was, on both
@@ -105,9 +107,10 @@ func TestADeactivationRefusedAtItsCommitChangesNothing(t *testing.T) {
 // invitations to their addresses among them, is as it was. Deactivated, he
 // is deactivated again: deactivateMe, his session revoked, is 401; the
 // command goes through; neither writes a row of his the first one ended
-// or deleted. Then carol's deactivation goes through: gamma's only active
-// admin, she is its only active member too, dave's membership having ended
-// (3.7 rule 2), and its membership ends with her others.
+// or deleted, nor any row of anyone else (the deactivation's statements
+// write none on a repeat). Then carol's deactivation goes through: gamma's
+// only active admin, she is its only active member too, dave's membership
+// having ended (3.7 rule 2), and its membership ends with her others.
 func TestADeactivationEndsEveryMembership(t *testing.T) {
 	for _, p := range deactivationPaths {
 		t.Run(p.name, func(t *testing.T) {
@@ -135,7 +138,7 @@ func TestADeactivationEndsEveryMembership(t *testing.T) {
 			}
 			rowsBefore := make([]map[string]any, len(written))
 			for i, id := range written {
-				if tag, err := w.pool.Exec(soon(t), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id, w.ids["dave"]); err != nil ||
+				if tag, err := w.pool.Exec(pgtest.Soon(t), "UPDATE "+tables[i]+" SET updated_by_id = $2 WHERE id = $1", id, w.ids["dave"]); err != nil ||
 					tag.RowsAffected() != 1 {
 					t.Fatalf("%s %s last written by dave: %v, %v", tables[i], id, tag, err)
 				}
@@ -191,6 +194,9 @@ func TestADeactivationEndsEveryMembership(t *testing.T) {
 					t.Errorf("%s %s after deactivating bob again:\n%v\nwant it as his deactivation left it:\n%v", tables[i], id, after, ended[i])
 				}
 			}
+			if after := rowsBut(t, w.pool, slices.Concat(written, own)); !maps.Equal(after, others) {
+				t.Errorf("every other row after deactivating bob again:\n%v\nwant them as they were:\n%v", after, others)
+			}
 			if got := p.deactivate(w, t, "carol"); got != "" {
 				t.Fatalf("deactivating carol, gamma's only active member = %q, want it done", got)
 			}
@@ -242,12 +248,12 @@ func TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties(t *testing.T) {
 				w.tokens["carol"], ""); status != http.StatusNoContent {
 				t.Fatalf("carol's deletion of her invitation of frank to gamma = %d %s", status, body)
 			}
-			if tag, err := w.pool.Exec(soon(t), "UPDATE workspace_member_invites SET updated_by_id = $2 WHERE id = ANY($1)", invited,
+			if tag, err := w.pool.Exec(pgtest.Soon(t), "UPDATE workspace_member_invites SET updated_by_id = $2 WHERE id = ANY($1)", invited,
 				w.ids["alice"]); err != nil || tag.RowsAffected() != 2 {
 				t.Fatalf("the two invitations last written by alice: %v, %v", tag, err)
 			}
 			var admins, members int
-			if err := w.pool.QueryRow(soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 1 || members != 1 {
+			if err := w.pool.QueryRow(pgtest.Soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 1 || members != 1 {
 				t.Fatalf("gamma: %d active admins of %d active members (%v); want carol alone", admins, members, err)
 			}
 			rowsBefore := []map[string]any{rowJSON(t, w.pool, "workspace_member_invites", invited[0]),
@@ -281,7 +287,7 @@ func TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties(t *testing.T) {
 					t.Errorf("%s's acceptance of carol's invitation to gamma = %d %s; want 404 workspace.invitation_not_found", name, status, body)
 				}
 			}
-			if err := w.pool.QueryRow(soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || members != 0 {
+			if err := w.pool.QueryRow(pgtest.Soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || members != 0 {
 				t.Errorf("gamma after the acceptances: %d active members (%v); want none", members, err)
 			}
 
@@ -291,7 +297,7 @@ func TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties(t *testing.T) {
 					t.Fatalf("reactivate-member of %s in gamma = %q, %v", name, out, err)
 				}
 			}
-			if err := w.pool.QueryRow(soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 0 || members != 2 {
+			if err := w.pool.QueryRow(pgtest.Soon(t), gammaRows, w.gamma).Scan(&admins, &members); err != nil || admins != 0 || members != 2 {
 				t.Fatalf("gamma after the two reactivations: %d active admins of %d active members (%v); want none of two", admins, members, err)
 			}
 			if got := p.deactivate(w, t, "dave"); got != "" {
@@ -304,7 +310,7 @@ func TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties(t *testing.T) {
 // queryIDs is the ids sql reads on pool, in its order.
 func queryIDs(t *testing.T, pool *pgxpool.Pool, sql string, args ...any) []uuid.UUID {
 	t.Helper()
-	rows, err := pool.Query(soon(t), sql, args...)
+	rows, err := pool.Query(pgtest.Soon(t), sql, args...)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -150,7 +150,7 @@ var creatings = []creating{
 // are and how many memberships, and how many of those are active.
 func (r race) state(t *testing.T) (active bool, workspaces, members, activeMembers int) {
 	t.Helper()
-	if err := r.pool.QueryRow(soon(t), `SELECT is_active, (SELECT count(*) FROM workspaces), (SELECT count(*) FROM workspace_members),
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT is_active, (SELECT count(*) FROM workspaces), (SELECT count(*) FROM workspace_members),
 		(SELECT count(*) FROM workspace_members WHERE is_active) FROM users WHERE id = $1`, r.alice).
 		Scan(&active, &workspaces, &members, &activeMembers); err != nil {
 		t.Fatal(err)

@@ -14,6 +14,7 @@ import (
 
 	"github.com/open-nerve/NerveProject/server/internal/platform/config"
 	"github.com/open-nerve/NerveProject/server/internal/platform/httpserver"
+	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
@@ -85,7 +86,7 @@ func newDeactivationWorld(t *testing.T) deactivationWorld {
 func (w deactivationWorld) preconditions(t *testing.T) {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT concat_ws('; ',
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT concat_ws('; ',
 		(SELECT string_agg(s.slug || ' ' || split_part(u.email, '@', 1) || ' ' || m.role || CASE WHEN m.is_active THEN '' ELSE ' ended' END, ', '
 			ORDER BY s.slug COLLATE "C", u.email COLLATE "C") FROM workspace_members m JOIN workspaces s ON s.id = m.workspace_id
 			JOIN users u ON u.id = m.member_id WHERE u.email IN ('bob@example.com', 'dave@example.com')),

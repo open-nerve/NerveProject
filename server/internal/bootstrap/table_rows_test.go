@@ -22,7 +22,7 @@ import (
 // module owns, is in it. skip, when set, leaves out the tables it reports.
 func tableRows(t *testing.T, pool *pgxpool.Pool, skip func(table string) bool) map[string]string {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), `SELECT format('%I.%I', schemaname, tablename) FROM pg_tables
+	rows, err := pool.Query(pgtest.Soon(t), `SELECT format('%I.%I', schemaname, tablename) FROM pg_tables
 		WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY 1`)
 	if err != nil {
 		t.Fatal(err)
@@ -37,7 +37,7 @@ func tableRows(t *testing.T, pool *pgxpool.Pool, skip func(table string) bool) m
 			continue
 		}
 		var text string
-		if err := pool.QueryRow(context.Background(), `SELECT coalesce(string_agg(t, E'\n' ORDER BY t), '')
+		if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(t, E'\n' ORDER BY t), '')
 			FROM (SELECT row_to_json(r)::text AS t FROM `+table+` r) s`).Scan(&text); err != nil {
 			t.Fatalf("%s: %v", table, err)
 		}

@@ -122,7 +122,7 @@ func newEndingWorld(t *testing.T) endingWorld {
 func (w endingWorld) bystanders(t *testing.T) {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT concat_ws(', ',
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT concat_ws(', ',
 		(SELECT 'bob in beta' FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
 			WHERE w.slug = 'beta' AND m.member_id = $1 AND m.is_active AND m.deleted_at IS NULL),
 		(SELECT string_agg(w.slug || ' ' || i.email || CASE WHEN i.responded_at IS NULL THEN ' pending' WHEN i.accepted THEN ' accepted'
@@ -148,7 +148,7 @@ func (w endingWorld) bystanders(t *testing.T) {
 func (w endingWorld) soleAdmins(t *testing.T) {
 	t.Helper()
 	var got string
-	if err := w.pool.QueryRow(soon(t), `SELECT string_agg(p.name || ' ' || u.email || ' ' || m.role::text ||
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT string_agg(p.name || ' ' || u.email || ' ' || m.role::text ||
 		CASE WHEN m.is_active THEN ' active' ELSE ' ended' END, ', ' ORDER BY p.name, u.email)
 		FROM project_members m JOIN projects p ON p.id = m.project_id JOIN users u ON u.id = m.member_id
 		WHERE m.project_id IN ($1, $2, $3) AND m.deleted_at IS NULL`, w.ops, w.solo, w.lab).Scan(&got); err != nil {
@@ -165,7 +165,7 @@ func (w endingWorld) soleAdmins(t *testing.T) {
 func (w endingWorld) workspace(t *testing.T, slug string) uuid.UUID {
 	t.Helper()
 	var id uuid.UUID
-	if err := w.pool.QueryRow(soon(t), "SELECT id FROM workspaces WHERE slug = $1 AND deleted_at IS NULL", slug).Scan(&id); err != nil {
+	if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT id FROM workspaces WHERE slug = $1 AND deleted_at IS NULL", slug).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -177,7 +177,7 @@ func (w endingWorld) workspace(t *testing.T, slug string) uuid.UUID {
 func (w endingWorld) membership(t *testing.T, name string) uuid.UUID {
 	t.Helper()
 	var id uuid.UUID
-	if err := w.pool.QueryRow(soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+	if err := w.pool.QueryRow(pgtest.Soon(t), `SELECT m.id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
 		WHERE w.slug = 'acme' AND m.member_id = $1 AND m.deleted_at IS NULL`, w.ids[name]).Scan(&id); err != nil {
 		t.Fatal(err)
 	}

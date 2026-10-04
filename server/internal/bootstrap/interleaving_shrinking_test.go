@@ -205,7 +205,7 @@ func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 				t.Errorf("the creation = %d %s, want 422 at project_lead_id", rec.Code, rec.Body)
 			}
 			var ops int
-			if err := r.pool.QueryRow(soon(t), "SELECT count(*) FROM projects WHERE name = 'Ops'").Scan(&ops); err != nil ||
+			if err := r.pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM projects WHERE name = 'Ops'").Scan(&ops); err != nil ||
 				ops != map[bool]int{true: 1, false: 0}[creationFirst] {
 				t.Errorf("%d projects named Ops (%v); want %d", ops, err, map[bool]int{true: 1, false: 0}[creationFirst])
 			}
@@ -296,7 +296,7 @@ func TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin(t *testing.T) {
 					t.Errorf("the second deactivation = %v, want workspace.sole_admin", err)
 				}
 				var active bool
-				if err := w.pool.QueryRow(soon(t), "SELECT is_active FROM users WHERE id = $1", w.ids[second]).Scan(&active); err != nil || !active {
+				if err := w.pool.QueryRow(pgtest.Soon(t), "SELECT is_active FROM users WHERE id = $1", w.ids[second]).Scan(&active); err != nil || !active {
 					t.Errorf("%s's account active %v (%v); want it active still", second, active, err)
 				}
 				enders := map[string]string{"alice": "Ops alice, Web alice, acme alice", "gina": "Web gina, acme gina"}[first]

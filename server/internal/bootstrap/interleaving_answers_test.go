@@ -132,7 +132,7 @@ func (r answerRace) bobIn(t *testing.T) (member, acmeDeleted bool) {
 // answered is the invitation's state: accepted, answered, deleted.
 func (r answerRace) answered(t *testing.T) (accepted, responded, deleted bool) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), `SELECT accepted, responded_at IS NOT NULL, deleted_at IS NOT NULL
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT accepted, responded_at IS NOT NULL, deleted_at IS NOT NULL
 		FROM workspace_member_invites WHERE id = $1`, r.invitation.id).Scan(&accepted, &responded, &deleted); err != nil {
 		t.Fatal(err)
 	}
@@ -346,8 +346,8 @@ func TestDecliningAndDeactivating(t *testing.T) {
 				t.Errorf("the deactivation = %v, want it done", err)
 			}
 			var active, member, oneMoment, byBob bool
-			if err := r.pool.QueryRow(soon(t), `SELECT u.is_active, m.is_active,
-				m.updated_at = i.deleted_at AND i.updated_at = i.deleted_at, m.updated_by_id = u.id AND i.updated_by_id = u.id
+			if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT u.is_active, m.is_active,
+				coalesce(m.updated_at = i.deleted_at AND i.updated_at = i.deleted_at, false), m.updated_by_id = u.id AND i.updated_by_id = u.id
 				FROM users u, workspace_members m, workspace_member_invites i
 				WHERE u.id = $1 AND m.workspace_id = $2 AND m.member_id = u.id AND i.id = $3`, r.bob, r.acme, r.invitation.id).
 				Scan(&active, &member, &oneMoment, &byBob); err != nil {
