@@ -39,7 +39,9 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   const delta = slugFor(testInfo, "delta");
   const epsilon = slugFor(testInfo, "epsilon");
   // B makes acme, A its member; A makes beta, B and C its members; B makes Lab there and adds C as its member. C
-  // invites B to gamma, which he declines, and to delta. B makes epsilon, where he is alone, and invites C to it.
+  // invites B to gamma, which he declines, and to delta. B makes epsilon, where he is alone, and invites C to it. A
+  // invites D, who has no account, to beta, which B leaves with members, and C invites D to gamma, which B is not in:
+  // two pending invitations of another address that no deactivation of B's may touch.
   await createWorkspace(api, b, { name: "Acme", slug: acme });
   await inviteAndAccept(api, b, acme, { email: aEmail, token: a }, 15);
   await createWorkspace(api, a, { name: "Beta", slug: beta });
@@ -53,6 +55,9 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   await invite(api, c, delta, [{ email: bEmail, role: 15 }]);
   await createWorkspace(api, b, { name: "Epsilon", slug: epsilon });
   const [toEpsilon] = await invite(api, b, epsilon, [{ email: cEmail, role: 15 }]);
+  const dEmail = emailFor(testInfo, "d");
+  await invite(api, a, beta, [{ email: dEmail, role: 15 }]);
+  await invite(api, c, gamma, [{ email: dEmail, role: 15 }]);
   if (!toGamma || !toEpsilon) {
     throw new Error("the invitations to B in gamma and to C in epsilon were not both created");
   }
@@ -122,9 +127,9 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
     );
   // A, an admin of acme (B made him one), of beta (he made it) and of Lab (he joined it as its admin), gives B each role
   // he has there, as it is: A wrote those three rows last, so that "by him" below can fail on them. C wrote delta's
-  // invitation last, which shows the invitations' writer; B gamma's, which he declined. Epsilon's rows, his membership
-  // and his invitation of C, only B can write, alone there: that the deactivation writes them by him is held by the Go
-  // composed tests (TestADeactivationEndsEveryMembership, TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties).
+  // invitation last, which shows the invitations' writer; B gamma's, which he declined. His invitation of C to epsilon
+  // only B can have written, alone there: that the fifth statement deletes it by him is held by the Go composed test
+  // (TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties).
   const [inLab] = await db.query<{ id: string }>(
     "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2",
     [lab.id, account.id]
@@ -163,17 +168,32 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
       { place: `invitation to ${gamma}`, by: bEmail },
     ].toSorted((x, y) => (x.place < y.place ? -1 : 1))
   );
+  // Every row of anyone else, D's two pending invitations among them, and B's invitation to beta, which he accepted: a
+  // deleted row, which no deactivation writes again.
   const others = async () => ({
     users: await db.query("SELECT * FROM users WHERE id <> $1 ORDER BY id", [account.id]),
     profiles: await db.query("SELECT * FROM profiles WHERE user_id <> $1 ORDER BY id", [account.id]),
     sessions: await db.query("SELECT * FROM auth_sessions WHERE user_id <> $1 ORDER BY id", [account.id]),
     workspaces: await db.query("SELECT * FROM workspace_members WHERE member_id <> $1 ORDER BY id", [account.id]),
     projects: await db.query("SELECT * FROM project_members WHERE member_id <> $1 ORDER BY id", [account.id]),
-    invitations: await db.query("SELECT * FROM workspace_member_invites WHERE email <> $1 AND id <> $2 ORDER BY id", [
-      bEmail,
-      toEpsilon.id,
-    ]),
+    invitations: await db.query(
+      "SELECT * FROM workspace_member_invites WHERE (email <> $1 OR accepted) AND id <> $2 ORDER BY id",
+      [bEmail, toEpsilon.id]
+    ),
   });
+  expect(
+    await db.query(
+      `SELECT i.email, w.slug, i.accepted, i.deleted_at IS NOT NULL AS deleted
+         FROM workspace_member_invites i JOIN workspaces w ON w.id = i.workspace_id
+        WHERE (i.email = $1 AND i.accepted) OR i.email = $2 ORDER BY i.id`,
+      [bEmail, dEmail]
+    ),
+    "his accepted invitation and D's two, before"
+  ).toEqual([
+    { email: bEmail, slug: beta, accepted: true, deleted: true },
+    { email: dEmail, slug: beta, accepted: false, deleted: false },
+    { email: dEmail, slug: gamma, accepted: false, deleted: false },
+  ]);
   const othersBefore = await others();
   expect(await deactivate(), "deactivateMe").toEqual([204, undefined, undefined]);
   await expectDeactivated(db, account, tokensBefore);
@@ -210,7 +230,7 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   ]);
 
   // The way back: nerve users activate brings the account back alone; reactivate-member, his membership of one
-  // workspace, as it was, his project memberships still ended.
+  // workspace, as it was, his project memberships still ended, Lab's among them.
   expect(await nerveUsers(db, ["activate", "--email", bEmail])).toBe(
     `activated ${bEmail}: 1 API tokens are usable again\n`
   );
@@ -220,6 +240,13 @@ test("W9: a deactivation is refused while the account is the only admin of a wor
   );
   await expectMembership(db, acme, bEmail, { role: 20, is_active: true });
   await expectMembership(db, beta, bEmail, { role: 15, is_active: false });
+  expect(
+    await db.query("SELECT role, is_active FROM project_members WHERE project_id = $1 AND member_id = $2", [
+      lab.id,
+      account.id,
+    ]),
+    "his membership of Lab after the reactivation"
+  ).toEqual([{ role: 20, is_active: false }]);
   const sees = async (slug: string) =>
     (await api.GET("/api/v0/workspaces/{slug}", { params: { path: { slug } }, headers: bearer(b) })).response.status;
   expect([await sees(acme), await sees(beta)], "B reads acme, not beta").toEqual([200, 404]);
