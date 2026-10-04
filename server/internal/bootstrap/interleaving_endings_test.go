@@ -147,11 +147,11 @@ func (r growthRace) remove(ctx context.Context, members workspaceapp.MemberRemov
 
 // lastWritten is when, and by whom, bob's membership of acme and his
 // membership of the project named project were last written, each as
-// "<updated_at> by <account>": the same when one statement of the removal's
-// transaction wrote each, at its one moment, as alice.
+// "<updated_at> by <account id>": the two are the same when one
+// transaction wrote both, at its one moment, as one account.
 func (r growthRace) lastWritten(t *testing.T, project string) (acme, of string) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT updated_at::text || ' by ' || updated_by_id FROM workspace_members WHERE id = $1),
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT (SELECT updated_at::text || ' by ' || updated_by_id FROM workspace_members WHERE id = $1),
 		(SELECT m.updated_at::text || ' by ' || m.updated_by_id FROM project_members m JOIN projects p ON p.id = m.project_id
 		 WHERE p.name = $2 AND m.member_id = $3)`, r.bobIn, project, r.bob).Scan(&acme, &of); err != nil {
 		t.Fatal(err)
@@ -202,10 +202,7 @@ func TestARemovalAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						grow := r.growth(t, add, g)
 						grew = run(func() error { req, rec = grow(); return nil })
 						held(t, ctx, g, grew, "the growth")
-						if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
-							"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
-							t.Errorf("the growth at its gate holds %s; want %s", got, want)
-						}
+						r.sharesAcme(t, "the growth")
 						removed = run(func() error { return r.remove(ctx, workspacepg.New(r.pool)) })
 					} else {
 						removed = run(func() error { return r.remove(ctx, endedHolding{workspacepg.New(r.pool), g}) })
@@ -252,9 +249,13 @@ func TestARemovalAndTheProjectSidesGrowthSerialize(t *testing.T) {
 // no active member of acme: alice's adding him, 422 members[0].member_id
 // not_allowed alone; his joining, 404 project.not_found.
 func refusedAsNoMember(rec *httptest.ResponseRecorder, add bool) bool {
-	if !add {
-		return refusedAsAGuest(rec, false)
-	}
+	return refusedAt(rec, map[bool]string{true: "members[0].member_id"}[add])
+}
+
+// refusedAt reports whether rec is the project side's refusal of bob: with
+// field empty, 404 project.not_found, the answer to one who does not see
+// the project; else 422 validation_failed, not_allowed at field alone.
+func refusedAt(rec *httptest.ResponseRecorder, field string) bool {
 	var problem struct {
 		Code   string `json:"code"`
 		Errors []struct {
@@ -265,6 +266,20 @@ func refusedAsNoMember(rec *httptest.ResponseRecorder, add bool) bool {
 	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
 		return false
 	}
+	if field == "" {
+		return rec.Code == http.StatusNotFound && problem.Code == "project.not_found"
+	}
 	return rec.Code == http.StatusUnprocessableEntity && problem.Code == "validation_failed" && len(problem.Errors) == 1 &&
-		problem.Errors[0].Field == "members[0].member_id" && problem.Errors[0].Code == "not_allowed"
+		problem.Errors[0].Field == field && problem.Errors[0].Code == "not_allowed"
+}
+
+// sharesAcme checks that side, at its gate, holds acme's row and bob's
+// membership of acme FOR SHARE, no stronger (lockOn; M3 design 3.6
+// conventions 2 and 3).
+func (r growthRace) sharesAcme(t *testing.T, side string) {
+	t.Helper()
+	if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
+		"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
+		t.Errorf("%s at its gate holds %s; want %s", side, got, want)
+	}
 }

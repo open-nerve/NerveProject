@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -42,9 +41,11 @@ import (
 // meets first. Every wait has a deadline.
 
 // growthRace is a database with acme, whose admin is alice and whose
-// member is bob, and alice's public project Web, of which bob has an ended
-// membership as a member when ended is set: alice's removal of him ended
-// it, through the project store's statement (EndMember).
+// member is bob, each membership its member's own, as the workspace's
+// creation and an acceptance make them, and alice's public project Web, of
+// which bob has an ended membership as a member when ended is set: alice's
+// removal of him ended it, through the project store's statement
+// (EndMember).
 type growthRace struct {
 	race
 	bob, bobIn, web uuid.UUID
@@ -71,7 +72,7 @@ func newGrowthRace(t *testing.T, ended bool) growthRace {
 		user uuid.UUID
 		role shared.Role
 	}{uuid.NewV7(): {r.alice, shared.RoleAdmin}, r.bobIn: {r.bob, shared.RoleMember}} {
-		if err := workspaces.CreateMember(ctx, workspaceapp.MemberRow{ID: id, WorkspaceID: w.ID, MemberID: m.user, Role: m.role, CreatedBy: r.alice,
+		if err := workspaces.CreateMember(ctx, workspaceapp.MemberRow{ID: id, WorkspaceID: w.ID, MemberID: m.user, Role: m.role, CreatedBy: m.user,
 			Now: now}); err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +166,7 @@ func (r growthRace) demote(ctx context.Context, members workspaceapp.MemberUpdat
 func (r growthRace) standing(t *testing.T) string {
 	t.Helper()
 	var s string
-	if err := r.pool.QueryRow(context.Background(), `SELECT (SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END
+	if err := r.pool.QueryRow(pgtest.Soon(t), `SELECT (SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END
 		FROM workspace_members WHERE id = $1) || ', Web ' ||
 		coalesce((SELECT role || CASE WHEN is_active THEN '' ELSE ' ended' END || CASE WHEN deleted_at IS NULL THEN '' ELSE ' deleted' END
 		          FROM project_members WHERE project_id = $2 AND member_id = $3), 'none')`, r.bobIn, r.web, r.bob).Scan(&s); err != nil {
@@ -256,10 +257,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						grow := r.growth(t, add, g)
 						grew = run(func() error { req, rec = grow(); return nil })
 						held(t, ctx, g, grew, "the growth")
-						if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
-							"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
-							t.Errorf("the growth at its gate holds %s; want %s", got, want)
-						}
+						r.sharesAcme(t, "the growth")
 						demoted = run(func() error { return r.demote(ctx, workspacepg.New(r.pool), cascade) })
 					} else {
 						demoted = run(func() error { return r.demote(ctx, demotedHolding{workspacepg.New(r.pool), g}, cascade) })
@@ -300,7 +298,7 @@ func TestADemotionAndTheProjectSidesGrowthSerialize(t *testing.T) {
 // membershipTimes are bob's membership of Web's created_at and updated_at.
 func (r growthRace) membershipTimes(t *testing.T) (made, written time.Time) {
 	t.Helper()
-	if err := r.pool.QueryRow(context.Background(), "SELECT created_at, updated_at FROM project_members WHERE project_id = $1 AND member_id = $2",
+	if err := r.pool.QueryRow(pgtest.Soon(t), "SELECT created_at, updated_at FROM project_members WHERE project_id = $1 AND member_id = $2",
 		r.web, r.bob).Scan(&made, &written); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		t.Fatal(err)
 	}
@@ -311,21 +309,7 @@ func (r growthRace) membershipTimes(t *testing.T) (made, written time.Time) {
 // acme's guest: his joining, 404 project.not_found; alice's adding him as a
 // member, 422 members[0].role not_allowed alone.
 func refusedAsAGuest(rec *httptest.ResponseRecorder, add bool) bool {
-	var problem struct {
-		Code   string `json:"code"`
-		Errors []struct {
-			Field string `json:"field"`
-			Code  string `json:"code"`
-		} `json:"errors"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
-		return false
-	}
-	if !add {
-		return rec.Code == http.StatusNotFound && problem.Code == "project.not_found"
-	}
-	return rec.Code == http.StatusUnprocessableEntity && problem.Code == "validation_failed" && len(problem.Errors) == 1 &&
-		problem.Errors[0].Field == "members[0].role" && problem.Errors[0].Code == "not_allowed"
+	return refusedAt(rec, map[bool]string{true: "members[0].role"}[add])
 }
 
 // gatedDemoter stops the demotion's step over the projects after it has

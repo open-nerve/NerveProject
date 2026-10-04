@@ -264,16 +264,18 @@ func TestTheReactivationRunsOnItsTransactionsConnection(t *testing.T) {
 
 // endersOf is each ended membership of the account id, of a workspace by
 // its slug, of a project by its name, with the name of who last wrote it,
-// "nobody" when no account did, in byte order; "none" when none has ended.
+// "nobody" when no account did, in byte order of the names, a workspace's
+// before a project's of the same name, then in id order; "none" when none
+// has ended.
 func endersOf(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) string {
 	t.Helper()
 	var s string
 	if err := pool.QueryRow(pgtest.Soon(t), `SELECT coalesce(string_agg(e.name || ' ' || coalesce(split_part(u.email, '@', 1), 'nobody'), ', '
-			ORDER BY e.name COLLATE "C"), 'none')
-		FROM (SELECT w.slug AS name, m.updated_by_id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+			ORDER BY e.name COLLATE "C", e.kind, e.id), 'none')
+		FROM (SELECT w.slug AS name, 1 AS kind, m.id, m.updated_by_id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
 		      WHERE m.member_id = $1 AND NOT m.is_active
 		      UNION ALL
-		      SELECT p.name, m.updated_by_id FROM project_members m JOIN projects p ON p.id = m.project_id
+		      SELECT p.name, 2, m.id, m.updated_by_id FROM project_members m JOIN projects p ON p.id = m.project_id
 		      WHERE m.member_id = $1 AND NOT m.is_active) e
 		LEFT JOIN users u ON u.id = e.updated_by_id`, id).Scan(&s); err != nil {
 		t.Fatal(err)

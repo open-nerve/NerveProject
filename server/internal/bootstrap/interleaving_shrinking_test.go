@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -36,47 +35,37 @@ func (r growthRace) deactivateBob(ctx context.Context, memberships workspaceapp.
 	return err
 }
 
-// refusedAsEnded reports whether rec is the project side's refusal of bob,
-// his membership of acme ended: his joining Web, 404 project.not_found;
-// alice's adding him to it, 422 at members[0].member_id; her creation of a
-// project he leads, 422 at project_lead_id; each not_allowed, alone.
-func refusedAsEnded(rec *httptest.ResponseRecorder, field string) bool {
-	var problem struct {
-		Code   string `json:"code"`
-		Errors []struct {
-			Field string `json:"field"`
-			Code  string `json:"code"`
-		} `json:"errors"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil {
-		return false
-	}
-	if field == "" {
-		return rec.Code == http.StatusNotFound && problem.Code == "project.not_found"
-	}
-	return rec.Code == http.StatusUnprocessableEntity && problem.Code == "validation_failed" && len(problem.Errors) == 1 &&
-		problem.Errors[0].Field == field && problem.Errors[0].Code == "not_allowed"
+// lastWrittenByAlice stamps bob's membership of acme, his own, as last
+// written by alice, as her change of his role would leave it: so that its
+// ending as his shows the deactivation's write.
+func (r growthRace) lastWrittenByAlice(t *testing.T) {
+	t.Helper()
+	stampWriter(t, r.pool, r.alice, 1, "workspace_members", "id = $2", r.bobIn)
 }
 
 // Interleavings 13 and 14: bob's deactivation and the project side's
 // growth, alice's adding him to Web or his joining it, serialize on acme's
 // row, in both orders, for a new membership of Web and for his ended one,
-// which the growth restores (3.6 conventions 2 and 6). The growth first: it
-// holds acme and his membership of acme FOR SHARE and waits at its gate,
-// before it locks Web; the deactivation waits for acme's row, holding his
-// account. Once the growth has committed, the deactivation, which finds
-// his projects when its step over them runs, after its end of his
-// membership of acme, finds Web and ends his membership of it, as his, at
-// the moment it ends his membership of acme, read once it held acme: after
-// the gate opened (3.3). The growth reads its time under its locks, after
-// the gate opened too, so it is that one moment of both rows, not the
-// gate, that tells the deactivation's write of Web from the growth's;
-// both endings are his. The deactivation first: it holds acme FOR NO KEY
-// UPDATE and his membership's row after its end; the growth waits for
-// acme's row, then reads his membership ended: alice's adding is 422 at
+// which the growth restores (3.6 conventions 2 and 6). The test stamps his
+// membership of acme as last written by alice first. The growth first: it
+// holds acme and his membership of acme FOR SHARE, no stronger (lockOn),
+// and waits at its gate, before it locks Web; the deactivation waits for
+// acme's row, holding his account. Once the growth has committed, the
+// deactivation, which finds his projects when its step over them runs,
+// after its end of his membership of acme, finds Web and ends his
+// membership of it, as his, at the moment it ends his membership of acme,
+// read once it held acme: after the gate opened (3.3). The growth reads its
+// time under its locks, after the gate opened too, so it is that one
+// moment of both rows, not the gate, that tells the deactivation's write of
+// Web from the growth's; both endings are his, though where he joins, his
+// join wrote Web as his too, and only the moment shows the deactivation's
+// write of it. The deactivation first: it holds acme FOR NO KEY UPDATE and
+// his membership's row after its end; the growth waits for acme's row,
+// then reads his membership ended: alice's adding is 422 at
 // members[0].member_id, his joining 404; his membership of acme is ended
 // as his, and an ended membership of Web stays as alice's removal left it.
-// In either order no transaction holds Web while the second side waits.
+// In either order no transaction holds Web while the second side waits,
+// and no membership of alice's ends.
 func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, add := range []bool{true, false} {
@@ -91,6 +80,7 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 					if got := r.standing(t); got != before {
 						t.Fatalf("before: %s, want %s", got, before)
 					}
+					r.lastWrittenByAlice(t)
 					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 					defer cancel()
 					g := newGate()
@@ -101,6 +91,7 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						grow := r.growth(t, add, g)
 						grew = run(func() error { req, rec = grow(); return nil })
 						held(t, ctx, g, grew, "the growth")
+						r.sharesAcme(t, "the growth")
 						deactivated = run(func() error { return r.deactivateBob(ctx, workspacepg.New(r.pool)) })
 					} else {
 						deactivated = run(func() error { return r.deactivateBob(ctx, endedHoldingAll{workspacepg.New(r.pool), g}) })
@@ -125,13 +116,13 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 						enders = "Web bob, acme bob"
 					} else {
 						want = map[bool]string{false: "15 ended, Web none", true: "15 ended, Web 15 ended"}[ended]
-						grown = refusedAsEnded(rec, map[bool]string{true: "members[0].member_id"}[add])
+						grown = refusedAsNoMember(rec, add)
 					}
-					got, by := r.standing(t), endersOf(t, r.pool, r.bob)
-					if deactivation != nil || !grown || got != want || by != enders {
-						t.Errorf("the deactivation = %v, the growth = %d %s, bob %s, his ended memberships by their last writers %s; want the "+
-							"deactivation done, the growth %s, bob %s, %s", deactivation, rec.Code, rec.Body, got, by, map[bool]string{true: "done",
-							false: "refused"}[growthFirst], want, enders)
+					got, by, alices := r.standing(t), endersOf(t, r.pool, r.bob), endersOf(t, r.pool, r.alice)
+					if deactivation != nil || !grown || got != want || by != enders || alices != "none" {
+						t.Errorf("the deactivation = %v, the growth = %d %s, bob %s, his ended memberships by their last writers %s, alice's %s; "+
+							"want the deactivation done, the growth %s, bob %s, %s, none of alice's", deactivation, rec.Code, rec.Body, got, by, alices,
+							map[bool]string{true: "done", false: "refused"}[growthFirst], want, enders)
 					}
 					if growthFirst {
 						made, written := r.membershipTimes(t)
@@ -149,20 +140,26 @@ func TestADeactivationAndTheProjectSidesGrowthSerialize(t *testing.T) {
 }
 
 // Interleaving 15: bob's deactivation and alice's creation of Ops with him
-// as its lead serialize on acme's row, in both orders. The creation first:
-// it holds acme and his membership of acme FOR SHARE at its gate; the
-// deactivation waits for acme's row. Once the creation has committed, the
-// deactivation finds Ops among his projects and ends his membership of it,
-// as his, with his membership of acme: alice, its creator, is its admin
-// too, so he is not its only one (3.7 rule 2). The deactivation first: the
-// creation waits for acme's row, then reads his membership ended, as his:
-// 422 at project_lead_id, and no project is named Ops, where the creation
-// first leaves one.
+// as its lead serialize on acme's row, in both orders, once the test has
+// read him acme's member with no membership of Web, and stamped his
+// membership of acme as last written by alice. The creation first: it
+// holds acme and his membership of acme FOR SHARE, no stronger (lockOn),
+// at its gate; the deactivation waits for acme's row. Once the creation
+// has committed, the deactivation finds Ops among his projects and ends his
+// membership of it, which alice's creation wrote, as his, with his
+// membership of acme. The deactivation first: the creation waits for
+// acme's row, then reads his membership ended, as his: 422 at
+// project_lead_id, and no project is named Ops, where the creation first
+// leaves one. In either order no membership of alice's ends.
 func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 	contract := apitest.Load(t)
 	for _, creationFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("creation first %v", creationFirst), func(t *testing.T) {
 			r := newGrowthRace(t, false)
+			if got := r.standing(t); got != "15, Web none" {
+				t.Fatalf("before: %s, want 15, Web none", got)
+			}
+			r.lastWrittenByAlice(t)
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			g := newGate()
@@ -180,6 +177,7 @@ func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 			if creationFirst {
 				created = run(create(g))
 				held(t, ctx, g, created, "the creation")
+				r.sharesAcme(t, "the creation")
 				deactivated = run(func() error { return r.deactivateBob(ctx, workspacepg.New(r.pool)) })
 			} else {
 				deactivated = run(func() error { return r.deactivateBob(ctx, endedHoldingAll{workspacepg.New(r.pool), g}) })
@@ -194,14 +192,14 @@ func TestADeactivationAndACreationHeLeadsSerialize(t *testing.T) {
 				t.Fatal(err)
 			}
 			contract.CheckResponse(t, req, rec.Result())
-			done, by := rec.Code == http.StatusCreated, endersOf(t, r.pool, r.bob)
+			done, by, alices := rec.Code == http.StatusCreated, endersOf(t, r.pool, r.bob), endersOf(t, r.pool, r.alice)
 			if want := map[bool]string{true: "Ops bob, acme bob", false: "acme bob"}[creationFirst]; creationFirst != done || deactivation != nil ||
-				by != want {
-				t.Errorf("the deactivation = %v, the creation = %d %s, bob's ended memberships by their last writers %s; want the deactivation "+
-					"done, the creation %s, %s", deactivation, rec.Code, rec.Body, by, map[bool]string{true: "done",
+				by != want || alices != "none" {
+				t.Errorf("the deactivation = %v, the creation = %d %s, bob's ended memberships by their last writers %s, alice's %s; want the "+
+					"deactivation done, the creation %s, %s, none of alice's", deactivation, rec.Code, rec.Body, by, alices, map[bool]string{true: "done",
 					false: "refused at project_lead_id, and no Ops"}[creationFirst], want)
 			}
-			if !creationFirst && !refusedAsEnded(rec, "project_lead_id") {
+			if !creationFirst && !refusedAt(rec, "project_lead_id") {
 				t.Errorf("the creation = %d %s, want 422 at project_lead_id", rec.Code, rec.Body)
 			}
 			var ops int
@@ -248,7 +246,9 @@ const (
 // herself acme's only active admin, with other active members:
 // workspace.sole_admin, and her account is active still. acme keeps an
 // admin; each membership of the first ended, of acme and of its projects,
-// is hers. Held between her check and her writes, the first shows that the
+// is hers: the test stamped both admins' memberships as last written by
+// dave first, alice's creations of acme, Web and Ops having written hers
+// as hers. Held between her check and her writes, the first shows that the
 // check holds the lock her writes do: a deactivation that let acme go
 // between the two would leave the second nothing to wait for, and both
 // would end.
@@ -267,6 +267,9 @@ func TestTwoAdminsDeactivatedAtOnceLeaveAnAdmin(t *testing.T) {
 		for _, aliceFirst := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s, alice first %v", at.name, aliceFirst), func(t *testing.T) {
 				w := newMemberWorld(t)
+				admins := []uuid.UUID{w.ids["alice"], w.ids["gina"]}
+				stampWriter(t, w.pool, w.ids["dave"], 2, "workspace_members", "member_id = ANY ($2::uuid[])", admins)
+				stampWriter(t, w.pool, w.ids["dave"], 3, "project_members", "member_id = ANY ($2::uuid[])", admins)
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
 				first, second, want := "alice", "gina", aliceDeactivated

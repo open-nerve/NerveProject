@@ -86,10 +86,7 @@ func TestARemovalAndTheRemovedMembersProjectSerialize(t *testing.T) {
 			if creationFirst {
 				created = run(create(g))
 				held(t, ctx, g, created, "the creation")
-				if got, want := "acme "+lockOn(t, r.pool, "workspaces WHERE slug = 'acme'")+", his membership "+lockOn(t, r.pool,
-					"workspace_members WHERE id = $1", r.bobIn), "acme FOR SHARE, his membership FOR SHARE"; got != want {
-					t.Errorf("the creation at its gate holds %s; want %s", got, want)
-				}
+				r.sharesAcme(t, "the creation")
 				removed = run(func() error { return r.remove(ctx, workspacepg.New(r.pool)) })
 			} else {
 				removed = run(func() error { return r.remove(ctx, endedHolding{workspacepg.New(r.pool), g}) })
