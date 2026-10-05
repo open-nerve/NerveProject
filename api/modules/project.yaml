@@ -474,6 +474,46 @@ paths:
                 $ref: '#/components/schemas/State'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/states/{state_id}:
+    parameters:
+      - $ref: '#/components/parameters/StateID'
+    patch:
+      operationId: updateState
+      tags: [project]
+      summary: Change a state
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's states change as any other's. The
+        fields given change and the others stay; the values follow
+        createState's rules, and the sequence is any number
+        (validation_failed), checked before the state is looked at. A state
+        that does not exist or is deleted, the intake's triage state, and a
+        state whose project the caller does not see answer
+        project.state_not_found; a caller who sees the project but may not
+        change its states, forbidden, whether or not the state is the
+        default or the last of its group. Moving the only state of its group
+        to another group is refused (project.state_last_in_group): every
+        group keeps a state. Its name may not be another undeleted state's
+        of the project, the intake's triage state's too
+        (project.state_name_taken). The role is decided after the workspace
+        and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.state_not_found, forbidden, project.state_name_taken, project.state_last_in_group]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateUpdate'
+      responses:
+        '200':
+          description: The state as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/State'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -549,6 +589,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    StateID:
+      name: state_id
+      in: path
+      required: true
+      description: A state's id (State.id).
       schema:
         type: string
         format: uuid
@@ -962,3 +1010,21 @@ components:
           $ref: '#/components/schemas/StateGroup'
         description:
           type: string
+    StateUpdate:
+      description: Changes the fields it names; a field left out keeps its value.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted state of the project may not have it.
+          type: string
+        color:
+          description: 1–255 characters, not blank.
+          type: string
+        group:
+          $ref: '#/components/schemas/StateGroup'
+        description:
+          type: string
+        sequence:
+          description: The state's place among the project's states, the lowest first.
+          type: number

@@ -7,10 +7,40 @@ import (
 )
 
 // The rows of the permission matrix of a project's states (M3 design 9.2):
-// creating them, under the project of each column, its seeded states those
-// of matrixStates.
+// creating them, under the project of each column, and the writes on one,
+// naming it by its id (/states/{state_id}) among its column's project's
+// seeded states, those of matrixStates.
 
-var cellStateNameTaken = cell{http.StatusConflict, "project.state_name_taken"}
+var (
+	cellStateNameTaken   = cell{http.StatusConflict, "project.state_name_taken"}
+	cellStateNotFound    = cell{http.StatusNotFound, "project.state_not_found"}
+	cellStateLastInGroup = cell{http.StatusConflict, "project.state_last_in_group"}
+)
+
+// ofState are the cells of a row of a write on a state: the answers of PA,
+// PM, PG, PM+WA, WA- and WM-公, and project.state_not_found for the
+// columns that do not see their project: WM-私, WG-, P-前 and X, whose
+// state in gone's project is deleted with it.
+func ofState(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
+		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: cellStateNotFound, callerGuestOnly: cellStateNotFound,
+		callerBefore: cellStateNotFound, callerNever: cellStateNotFound, callerRemoved: cellStateNotFound, callerDeleted: cellStateNotFound}
+}
+
+// ofArchivedState are the cells of a row of a write on a state of the
+// archived project: the answers of PA and of the workspace's member, who
+// sees the project, and project.state_not_found for X, who does not.
+func ofArchivedState(pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: cellStateNotFound}
+}
+
+// toState is the request of a row whose callers each send method, with
+// body, to the state name of their column's project, after its id.
+func toState(method, after, name, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/states/" + s.state(projectOf(c), name).String() + after, body
+	}
+}
 
 // newState is the body of the state the rows create: QA, of the completed
 // group, a name no seeded state has.
@@ -32,6 +62,23 @@ func stateMatrixRows() []matrixRow {
 		// 3.19).
 		{op: "createState", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/states", newState),
 			cells: ofArchived(cellCreated, cellForbidden), check: createsTheState},
+		// As createState: Todo renamed.
+		{op: "updateState", write: true, columns: projectColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
+			cells: ofState(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheState},
+		// Todo, the only state of its group, moved to another: the 409 comes
+		// after the decision (M3 design 6.7).
+		{op: "updateState", variant: "the last of its group moved", write: true, columns: projectColumns,
+			request: toState(http.MethodPatch, "", "Todo", `{"group":"backlog"}`),
+			cells:   ofState(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
+		{op: "updateState", variant: "a name taken", write: true, columns: projectColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Done"}`),
+			cells: ofState(cellStateNameTaken, cellForbidden, cellForbidden, cellStateNameTaken, cellForbidden, cellForbidden)},
+		// The intake's triage state is none of the states (M3 design 3.17):
+		// every column's 404, its project's admins' too.
+		{op: "updateState", variant: "the triage state", write: true, columns: projectColumns,
+			request: toState(http.MethodPatch, "", "Triage", `{"name":"Next"}`), cells: ofState(cellStateNotFound, cellStateNotFound,
+				cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound)},
+		{op: "updateState", variant: "archived", write: true, columns: archivedColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
+			cells: ofArchivedState(cellOK, cellForbidden), check: renamesTheState},
 	}
 }
 
@@ -49,5 +96,19 @@ func createsTheState(t *testing.T, c caller, s seeded, answer string) {
 	decodeAnswer(t, answer, &st)
 	if st.ProjectID != s.project(projectOf(c)) || st.Name != "QA" || st.Group != "completed" || st.Default || st.Sequence != 70000 {
 		t.Errorf("%s creates %s; want QA in %s, completed, at 70000, not the default", c, answer, projectOf(c))
+	}
+}
+
+// renamesTheState: the column's project's Todo, renamed Next, as stored.
+func renamesTheState(t *testing.T, c caller, s seeded, answer string) {
+	var st struct {
+		ID        uuid.UUID `json:"id"`
+		ProjectID uuid.UUID `json:"project_id"`
+		Name      string    `json:"name"`
+		Group     string    `json:"group"`
+	}
+	decodeAnswer(t, answer, &st)
+	if st.ID != s.state(projectOf(c), "Todo") || st.ProjectID != s.project(projectOf(c)) || st.Name != "Next" || st.Group != "unstarted" {
+		t.Errorf("%s renames %s; want %s's Todo, unstarted, named Next", c, answer, projectOf(c))
 	}
 }

@@ -58,6 +58,8 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.role_too_high": "auth.errors.project_role_too_high",
   "project.sole_admin": "auth.errors.project_sole_admin",
   "project.state_name_taken": "auth.errors.project_state_name_taken",
+  "project.state_not_found": "auth.errors.project_state_not_found",
+  "project.state_last_in_group": "auth.errors.project_state_last_in_group",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

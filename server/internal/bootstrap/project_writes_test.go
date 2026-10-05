@@ -27,10 +27,10 @@ import (
 // Web, one write after another; the statement of each reads the rows it
 // wrote, by $1 Web's id and $2 alice's, and finds each one the write
 // writes. Bob and carol, whom she adds, are acme's members; she makes bob
-// an admin of Web, removes carol, creates a state, and leaves Web. Each row
-// the write writes again is first made bob's, as last written by him, and
-// checked so: a write that kept its row's writer would pass for alice's
-// otherwise, she having made it.
+// an admin of Web, removes carol, creates a state and renames it, and
+// leaves Web. Each row the write writes again is first made bob's, as last
+// written by him, and checked so: a write that kept its row's writer would
+// pass for alice's otherwise, she having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -52,9 +52,15 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	bobs := func(table, where string) string {
 		return "UPDATE " + table + " SET updated_by_id = $3 WHERE " + where + " AND updated_by_id = $2"
 	}
+	// membership is the id of user's membership of Web; state, of Web's
+	// state name.
+	membership := func(user uuid.UUID) func() uuid.UUID {
+		return func() uuid.UUID { return projectMemberships(t, pool, user, web)[0] }
+	}
+	state := func(name string) func() uuid.UUID { return func() uuid.UUID { return stateID(t, pool, web, name) } }
 	for _, w := range []struct {
 		name, method, path, body string
-		of                       uuid.UUID // the account whose membership of Web the path names by its id, as %s
+		named                    func() uuid.UUID // the row under Web the path names by its id, as %s; nil when it names Web
 		status                   int
 		// seed, when set, writes the rows the write writes again, by $1 Web's
 		// id, $2 alice's and $3 bob's: one row, none of alice's writing.
@@ -63,25 +69,25 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		seeded int    // how many rows stamps reads before the write: none of them alice's
 		rows   int    // how many rows stamps reads after it: each one the write writes
 	}{
-		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, uuid.UUID{}, http.StatusOK,
+		{"updateProject", http.MethodPatch, "/api/v0/projects/" + web.String(), `{"name":"Site"}`, nil, http.StatusOK,
 			bobs("projects", "id = $1"),
 			"SELECT updated_at, updated_by_id = $2 FROM projects WHERE id = $1", 1, 1},
-		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", uuid.UUID{}, http.StatusOK,
+		{"archiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", nil, http.StatusOK,
 			bobs("projects", "id = $1"),
 			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1, 1},
 		// Archived again, it takes the new time.
-		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", uuid.UUID{}, http.StatusOK,
+		{"archiveProject again", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", nil, http.StatusOK,
 			bobs("projects", "id = $1"),
 			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1, 1},
-		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", uuid.UUID{}, http.StatusOK,
+		{"unarchiveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", nil, http.StatusOK,
 			bobs("projects", "id = $1"),
 			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1, 1},
-		{"updateProjectPreferences", http.MethodPatch, "/api/v0/me/projects/" + web.String() + "/preferences", `{"sort_order":5}`, uuid.UUID{}, http.StatusOK,
+		{"updateProjectPreferences", http.MethodPatch, "/api/v0/me/projects/" + web.String() + "/preferences", `{"sort_order":5}`, nil, http.StatusOK,
 			bobs("project_user_properties", "project_id = $1 AND user_id = $2 AND deleted_at IS NULL"),
 			"SELECT updated_at, updated_by_id = $2 FROM project_user_properties WHERE project_id = $1 AND user_id = $2 AND deleted_at IS NULL", 1, 1},
 		// Bob's membership and his display settings, made: two rows.
 		{"addProjectMembers", http.MethodPost, "/api/v0/projects/" + web.String() + "/members",
-			`{"members":[{"member_id":"` + bobID.String() + `","role":15}]}`, uuid.UUID{}, http.StatusCreated, "",
+			`{"members":[{"member_id":"` + bobID.String() + `","role":15}]}`, nil, http.StatusCreated, "",
 			"SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at FROM project_members " +
 				"WHERE project_id = $1 AND member_id <> $2 UNION ALL SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND " +
 				"updated_at = created_at FROM project_user_properties WHERE project_id = $1 AND user_id <> $2", 0, 2},
@@ -90,7 +96,7 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		// removal keeps them; SQL makes it), restored, and her display
 		// settings made: two rows.
 		{"addProjectMembers, a membership restored", http.MethodPost, "/api/v0/projects/" + web.String() + "/members",
-			`{"members":[{"member_id":"` + carol + `","role":15}]}`, uuid.UUID{}, http.StatusCreated,
+			`{"members":[{"member_id":"` + carol + `","role":15}]}`, nil, http.StatusCreated,
 			"INSERT INTO project_members (id, workspace_id, project_id, member_id, role, is_active, created_by_id, updated_by_id, created_at, " +
 				"updated_at) SELECT '" + uuid.NewV7().String() + "', workspace_id, id, '" + carol + "', 15, false, $3, $3, " +
 				"now() - interval '1 hour', now() - interval '1 hour' FROM projects WHERE id = $1 AND created_by_id = $2",
@@ -98,22 +104,26 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 				carol + "' UNION ALL SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at " +
 				"FROM project_user_properties WHERE project_id = $1 AND user_id = '" + carol + "'", 1, 2},
 		// Bob's membership, a member's, made an admin's.
-		{"updateProjectMember", http.MethodPatch, "/api/v0/project-members/%s", `{"role":20}`, bobID, http.StatusOK,
+		{"updateProjectMember", http.MethodPatch, "/api/v0/project-members/%s", `{"role":20}`, membership(bobID), http.StatusOK,
 			bobs("project_members", "project_id = $1 AND member_id = '"+bobID.String()+"'"),
 			"SELECT updated_at, updated_by_id = $2 AND role = 20 FROM project_members WHERE project_id = $1 AND member_id = '" + bobID.String() + "'",
 			1, 1},
 		// Carol's membership, ended.
-		{"removeProjectMember", http.MethodDelete, "/api/v0/project-members/%s", "", carolID, http.StatusNoContent,
+		{"removeProjectMember", http.MethodDelete, "/api/v0/project-members/%s", "", membership(carolID), http.StatusNoContent,
 			bobs("project_members", "project_id = $1 AND member_id = '"+carol+"'"),
 			"SELECT updated_at, updated_by_id = $2 AND NOT is_active FROM project_members WHERE project_id = $1 AND member_id = '" + carol + "'",
 			1, 1},
 		// QA, made.
 		{"createState", http.MethodPost, "/api/v0/projects/" + web.String() + "/states", `{"name":"QA","color":"#0EA5E9","group":"completed"}`,
-			uuid.UUID{}, http.StatusCreated, "",
+			nil, http.StatusCreated, "",
 			"SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at FROM states WHERE project_id = $1 AND name = 'QA'",
 			0, 1},
+		// QA, renamed Checked.
+		{"updateState", http.MethodPatch, "/api/v0/states/%s", `{"name":"Checked"}`, state("QA"), http.StatusOK,
+			bobs("states", "project_id = $1 AND name = 'QA'"),
+			"SELECT updated_at, updated_by_id = $2 AND name = 'Checked' FROM states WHERE project_id = $1 AND name IN ('QA', 'Checked')", 1, 1},
 		// Her own membership, ended: bob is Web's other admin.
-		{"leaveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/leave", "", uuid.UUID{}, http.StatusNoContent,
+		{"leaveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/leave", "", nil, http.StatusNoContent,
 			bobs("project_members", "project_id = $1 AND member_id = $2"),
 			"SELECT updated_at, updated_by_id = $2 AND NOT is_active FROM project_members WHERE project_id = $1 AND member_id = $2", 1, 1},
 	} {
@@ -126,8 +136,8 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 			t.Fatalf("%s's rows before it: %v; want %d, none of alice's writing", w.name, seeded, w.seeded)
 		}
 		path := w.path
-		if w.of != (uuid.UUID{}) {
-			path = fmt.Sprintf(path, projectMemberships(t, pool, w.of, web)[0])
+		if w.named != nil {
+			path = fmt.Sprintf(path, w.named())
 		}
 		before := time.Now().Truncate(time.Microsecond)
 		status, body := call(t, contract, w.method, base+path, alice, w.body)
@@ -196,6 +206,17 @@ func createdProject(t *testing.T, contract *apitest.Contract, base, token, slug,
 	}
 	decodeAnswer(t, body, &p)
 	return p.ID
+}
+
+// stateID is the id of project's undeleted state name.
+func stateID(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM states WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL", project,
+		name).Scan(&id); err != nil {
+		t.Fatalf("the state %s of %s: %v", name, project, err)
+	}
+	return id
 }
 
 // inWorkspaceOf makes user a member of the workspace of project with role,

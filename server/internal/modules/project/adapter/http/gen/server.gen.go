@@ -397,6 +397,22 @@ type StateCreate struct {
 // StateGroup The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
 type StateGroup string
 
+// StateUpdate Changes the fields it names; a field left out keeps its value.
+type StateUpdate struct {
+	// Color 1–255 characters, not blank.
+	Color       *string `json:"color,omitempty"`
+	Description *string `json:"description,omitempty"`
+
+	// Group The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+	Group *StateGroup `json:"group,omitempty"`
+
+	// Name 1–255 characters, not blank; another undeleted state of the project may not have it.
+	Name *string `json:"name,omitempty"`
+
+	// Sequence The state's place among the project's states, the lowest first.
+	Sequence *float64 `json:"sequence,omitempty"`
+}
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -405,6 +421,9 @@ type ProjectMemberID = uuid.UUID
 
 // Slug defines model for Slug.
 type Slug = string
+
+// StateID defines model for StateID.
+type StateID = uuid.UUID
 
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
@@ -429,6 +448,9 @@ type AddProjectMembersJSONRequestBody = ProjectMembersAdd
 
 // CreateStateJSONRequestBody defines body for CreateState for application/json ContentType.
 type CreateStateJSONRequestBody = StateCreate
+
+// UpdateStateJSONRequestBody defines body for UpdateState for application/json ContentType.
+type UpdateStateJSONRequestBody = StateUpdate
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
@@ -477,6 +499,9 @@ type ServerInterface interface {
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// UpdateState Change a state
+	// (PATCH /api/v0/states/{state_id})
+	UpdateState(w http.ResponseWriter, r *http.Request, stateID StateID)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string)
@@ -861,6 +886,32 @@ func (siw *ServerInterfaceWrapper) UnarchiveProject(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// UpdateState operation middleware
+func (siw *ServerInterfaceWrapper) UpdateState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "state_id" -------------
+	var stateID StateID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "state_id", r.PathValue("state_id"), &stateID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateState(w, r, stateID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CheckProjectIdentifier operation middleware
 func (siw *ServerInterfaceWrapper) CheckProjectIdentifier(w http.ResponseWriter, r *http.Request) {
 
@@ -1099,6 +1150,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.UpdateProjectMember)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.CreateState)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1746,6 +1798,53 @@ func (response UnarchiveProjectdefaultApplicationProblemPlusJSONResponse) VisitU
 	return err
 }
 
+type UpdateStateRequestObject struct {
+	StateID StateID `json:"state_id"`
+	Body    *UpdateStateJSONRequestBody
+}
+
+type UpdateStateResponseObject interface {
+	VisitUpdateStateResponse(w http.ResponseWriter) error
+}
+
+type UpdateState200JSONResponse State
+
+func (response UpdateState200JSONResponse) VisitUpdateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateStatedefaultApplicationProblemPlusJSONResponse) VisitUpdateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CheckProjectIdentifierRequestObject struct {
 	Slug       Slug   `json:"slug"`
 	Identifier string `json:"identifier"`
@@ -1931,6 +2030,9 @@ type StrictServerInterface interface {
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(ctx context.Context, request UnarchiveProjectRequestObject) (UnarchiveProjectResponseObject, error)
+	// UpdateState Change a state
+	// (PATCH /api/v0/states/{state_id})
+	UpdateState(ctx context.Context, request UpdateStateRequestObject) (UpdateStateResponseObject, error)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(ctx context.Context, request CheckProjectIdentifierRequestObject) (CheckProjectIdentifierResponseObject, error)
@@ -2373,6 +2475,39 @@ func (sh *strictHandler) UnarchiveProject(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnarchiveProjectResponseObject); ok {
 		if err := validResponse.VisitUnarchiveProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateState operation middleware
+func (sh *strictHandler) UpdateState(w http.ResponseWriter, r *http.Request, stateID StateID) {
+	var request UpdateStateRequestObject
+
+	request.StateID = stateID
+
+	var body UpdateStateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateState(ctx, request.(UpdateStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateStateResponseObject); ok {
+		if err := validResponse.VisitUpdateStateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

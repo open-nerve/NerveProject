@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"path"
 	"slices"
 	"testing"
 	"uuid"
@@ -143,8 +144,9 @@ func TestEachMatrixTableIsOfOneLevel(t *testing.T) {
 
 // Each check of the project level's columns and of the not-target
 // parameters fails on its counterexample: a project row's columns are
-// projectColumns, each cell aims at its column's project, and a parameter
-// listed as not a target leaves the path's others checked.
+// projectColumns, each cell aims at its column's project, or at a row
+// seeded under it (a membership, a state), and a parameter listed as not a
+// target leaves the path's others checked.
 func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 	s := newSeeded().in(t)
 	getProject := apitest.Operation{ID: "getProject", Tags: []string{"project"}, Method: http.MethodGet, Path: "/api/v0/projects/{project_id}"}
@@ -263,47 +265,63 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
 		}
 	}
-	// A membership a path names by its id ({project_member_id}) is one
-	// seeded in the column's project, from a column of a project table.
-	membership := apitest.Operation{ID: "updateProjectMember", Tags: []string{"project"}, Method: http.MethodPatch,
-		Path: "/api/v0/project-members/{project_member_id}"}
-	changes := matrixRow{op: membership.ID, write: true, columns: projectColumns, cells: cells,
-		request: toProjectMembership(http.MethodPatch, `{"role":5}`, projectMemberOf)}
-	// privateNames is changes, but WM-私's cell names id.
-	privateNames := func(id uuid.UUID) matrixRow {
-		r := changes
-		r.request = func(c caller, s seeded) (string, string, string) {
-			if c == callerMemberPrivate {
-				return http.MethodPatch, "/api/v0/project-members/" + id.String(), `{"role":5}`
-			}
-			return changes.request(c, s)
-		}
-		return r
-	}
-	inWorkspaceRow := changes
-	inWorkspaceRow.columns, inWorkspaceRow.cells = nil, every(cellOK)
-	var noTable []string
-	for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
-		noTable = append(noTable, fmt.Sprintf("row updateProjectMember, %s: {project_member_id} from a column of no project table (projectTables): "+
-			"a project's row names its columns", c))
-	}
-	publicPM := s.projectMember("acme/public", callerProjectMember)
-	for _, tt := range []struct {
-		name string
-		row  matrixRow
-		want []string
+	// A row under a project that a path names by its id (underProject: a
+	// membership, a state) is one seeded in the column's project, from a
+	// column of a project table.
+	for _, under := range []struct {
+		op      apitest.Operation
+		what    string
+		named   func(c caller, s seeded) uuid.UUID // the row each column's cell names
+		another uuid.UUID                          // a row of acme's public project, which WM-私's is not
 	}{
-		{"memberships of their columns' projects", changes, nil},
-		{"a membership of another column's project", privateNames(publicPM), []string{fmt.Sprintf(
-			"row updateProjectMember, %s: {project_member_id} %s is no membership seeded in its column's project acme/private", callerMemberPrivate,
-			publicPM)}},
-		{"an id no seeded membership has", privateNames(uuid.Nil()), []string{fmt.Sprintf(
-			"row updateProjectMember, %s: {project_member_id} %s is no membership seeded in its column's project acme/private", callerMemberPrivate,
-			uuid.Nil())}},
-		{"a membership in a workspace-level row", inWorkspaceRow, noTable},
+		{apitest.Operation{ID: "updateProjectMember", Tags: []string{"project"}, Method: http.MethodPatch,
+			Path: "/api/v0/project-members/{project_member_id}"}, "membership", func(c caller, s seeded) uuid.UUID {
+			key, member := projectMemberOf(c)
+			return s.projectMember(key, member)
+		}, s.projectMember("acme/public", callerProjectMember)},
+		{apitest.Operation{ID: "updateState", Tags: []string{"project"}, Method: http.MethodPatch, Path: "/api/v0/states/{state_id}"}, "state",
+			func(c caller, s seeded) uuid.UUID { return s.state(projectOf(c), "Todo") }, s.state("acme/public", "Todo")},
 	} {
-		if got := matrixViolations(append(ops, membership), listed, []matrixRow{row, checks, tt.row}, s, nil); !slices.Equal(got, tt.want) {
-			t.Errorf("%s: %q, want %q", tt.name, got, tt.want)
+		prefix, param := path.Split(under.op.Path)
+		changes := matrixRow{op: under.op.ID, write: true, columns: projectColumns, cells: cells,
+			request: func(c caller, s seeded) (string, string, string) {
+				return under.op.Method, prefix + under.named(c, s).String(), ""
+			}}
+		// privateNames is changes, but WM-私's cell names id.
+		privateNames := func(id uuid.UUID) matrixRow {
+			r := changes
+			r.request = func(c caller, s seeded) (string, string, string) {
+				if c == callerMemberPrivate {
+					return under.op.Method, prefix + id.String(), ""
+				}
+				return changes.request(c, s)
+			}
+			return r
+		}
+		inWorkspaceRow := changes
+		inWorkspaceRow.columns, inWorkspaceRow.cells = nil, every(cellOK)
+		var noTable []string
+		for _, c := range []caller{callerAdmin, callerMember, callerGuest} {
+			noTable = append(noTable, fmt.Sprintf("row %s, %s: %s from a column of no project table (projectTables): "+
+				"a project's row names its columns", under.op.ID, c, param))
+		}
+		elsewhere := func(id uuid.UUID) []string {
+			return []string{fmt.Sprintf("row %s, %s: %s %s is no %s seeded in its column's project acme/private", under.op.ID, callerMemberPrivate,
+				param, id, under.what)}
+		}
+		for _, tt := range []struct {
+			name string
+			row  matrixRow
+			want []string
+		}{
+			{"rows of their columns' projects", changes, nil},
+			{"a row of another column's project", privateNames(under.another), elsewhere(under.another)},
+			{"an id no seeded row has", privateNames(uuid.Nil()), elsewhere(uuid.Nil())},
+			{"a row in a workspace-level row", inWorkspaceRow, noTable},
+		} {
+			if got := matrixViolations(append(ops, under.op), listed, []matrixRow{row, checks, tt.row}, s, nil); !slices.Equal(got, tt.want) {
+				t.Errorf("%s, %s: %q, want %q", under.what, tt.name, got, tt.want)
+			}
 		}
 	}
 	// A parameter passed over before another leaves that one checked too.

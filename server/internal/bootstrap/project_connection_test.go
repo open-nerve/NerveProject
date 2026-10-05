@@ -149,8 +149,8 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // deadline. alice, acme's admin, creates Ops, changes Web, archives and
 // unarchives it, changes her display settings in it and adds bob, whose
 // ended membership she restores; carol joins it anew; alice makes carol an
-// admin of Web and removes bob, and creates a state in it; carol, an
-// admin, leaves it; alice deletes both projects.
+// admin of Web and removes bob, and creates a state in it and renames it;
+// carol, an admin, leaves it; alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -190,7 +190,11 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	send(http.MethodPatch, "/api/v0/project-members/"+projectMemberships(t, r.pool, carol, r.web)[0].String(), r.alice, `{"role":20}`,
 		http.StatusOK)
 	send(http.MethodDelete, "/api/v0/project-members/"+projectMemberships(t, r.pool, r.bob, r.web)[0].String(), r.alice, "", http.StatusNoContent)
-	send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated)
+	var qa struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
+	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

@@ -243,10 +243,10 @@ func (s seeded) state(key, name string) uuid.UUID {
 	return id
 }
 
-// projectOfMember is the key of the project of the seeded project
-// membership id, false for an id no seeded project membership has.
-func (s seeded) projectOfMember(id uuid.UUID) (string, bool) {
-	for key, seededID := range s.projectMembers {
+// projectOfRow is the key of the project of id, a row of rows, which are
+// keyed by the project's key, then "|": false for an id none of rows has.
+func projectOfRow(rows map[string]uuid.UUID, id uuid.UUID) (string, bool) {
+	for key, seededID := range rows {
 		if seededID == id {
 			project, _, _ := strings.Cut(key, "|")
 			return project, true

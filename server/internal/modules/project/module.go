@@ -3,11 +3,11 @@
 // brings listing, creating, reading, changing, archiving and deleting
 // projects, checking an identifier, listing, adding and joining the
 // members, changing a member's role, removing a member and leaving, each
-// member's display settings, creating a project's states, carries out the
-// workspace module's cascades on the projects (ProjectCascade), and offers
-// the access module its reads of a project (ProjectAccess) and the
-// workspace module its count of an account's ended project memberships
-// (ProjectMembershipCounts).
+// member's display settings, creating and changing a project's states,
+// carries out the workspace module's cascades on the projects
+// (ProjectCascade), and offers the access module its reads of a project
+// (ProjectAccess) and the workspace module its count of an account's ended
+// project memberships (ProjectMembershipCounts).
 package project
 
 import (
@@ -142,6 +142,7 @@ func New(d Deps) *Module {
 		RemoveMember:      app.NewRemoveProjectMember(locks, store, d.Tx, d.Clock),
 		LeaveProject:      app.NewLeaveProject(locks, store, d.Tx, d.Clock),
 		CreateState:       app.NewCreateState(locks, store, d.Tx, d.Clock),
+		UpdateState:       app.NewUpdateState(locks, store, d.Tx, d.Clock),
 	}}
 }
 

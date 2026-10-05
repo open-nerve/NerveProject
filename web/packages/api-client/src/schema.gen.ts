@@ -786,6 +786,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/states/{state_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a state
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states change as any other's. The fields given change and the others stay; the values follow createState's rules, and the sequence is any number (validation_failed), checked before the state is looked at. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. Moving the only state of its group to another group is refused (project.state_last_in_group): every group keeps a state. Its name may not be another undeleted state's of the project, the intake's triage state's too (project.state_name_taken). The role is decided after the workspace and project rows are locked.
+         */
+        patch: operations["updateState"];
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1451,6 +1474,17 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. */
+        StateUpdate: {
+            /** @description 1–255 characters, not blank; another undeleted state of the project may not have it. */
+            name?: string;
+            /** @description 1–255 characters, not blank. */
+            color?: string;
+            group?: components["schemas"]["StateGroup"];
+            description?: string;
+            /** @description The state's place among the project's states, the lowest first. */
+            sequence?: number;
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1502,6 +1536,8 @@ export interface components {
         ProjectID: string;
         /** @description A project membership's id (ProjectMember.id), not the member's account id. */
         ProjectMemberID: string;
+        /** @description A state's id (State.id). */
+        StateID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1573,6 +1609,7 @@ export type ProjectMemberUpdate = components['schemas']['ProjectMemberUpdate'];
 export type StateGroup = components['schemas']['StateGroup'];
 export type StateCreate = components['schemas']['StateCreate'];
 export type State = components['schemas']['State'];
+export type StateUpdate = components['schemas']['StateUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -1584,6 +1621,7 @@ export type ParameterSlug = components['parameters']['Slug'];
 export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
+export type ParameterStateId = components['parameters']['StateID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -2776,6 +2814,34 @@ export interface operations {
         responses: {
             /** @description The new state. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["State"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StateUpdate"];
+            };
+        };
+        responses: {
+            /** @description The state as changed. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
