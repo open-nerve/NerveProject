@@ -41,7 +41,7 @@ type MemberFinder interface {
 }
 
 // MemberRoleChanger is updateProjectMember's repository. It runs in the
-// transaction ctx carries, under the project's FOR NO KEY UPDATE.
+// transaction ctx carries.
 type MemberRoleChanger interface {
 	MemberFinder
 	// UpdateMemberRole gives the active membership id role, by the account

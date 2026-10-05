@@ -159,7 +159,7 @@ func (rw rowWrite[R]) read(ctx context.Context) (R, error) {
 		return none, rw.notFound
 	}
 	if id, _, _ := r.Place(); id != rw.id {
-		return none, fmt.Errorf("row %s read as %s", rw.id, id)
+		return none, fmt.Errorf("%s: row %s read as %s", rw.action, rw.id, id)
 	}
 	return r, nil
 }
