@@ -68,7 +68,7 @@ func stateMatrixRows() []matrixRow {
 		// Todo, the only state of its group, moved to another: the 409 comes
 		// after the decision (M3 design 6.7).
 		{op: "updateState", variant: "the last of its group moved", write: true, columns: projectColumns,
-			request: toState(http.MethodPatch, "", "Todo", `{"group":"backlog"}`),
+			request: toState(http.MethodPatch, "", "Todo", `{"group":"started"}`),
 			cells:   ofState(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
 		{op: "updateState", variant: "a name taken", write: true, columns: projectColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Done"}`),
 			cells: ofState(cellStateNameTaken, cellForbidden, cellForbidden, cellStateNameTaken, cellForbidden, cellForbidden)},
@@ -77,6 +77,16 @@ func stateMatrixRows() []matrixRow {
 		{op: "updateState", variant: "the triage state", write: true, columns: projectColumns,
 			request: toState(http.MethodPatch, "", "Triage", `{"name":"Next"}`), cells: ofState(cellStateNotFound, cellStateNotFound,
 				cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound)},
+		// A value refused before the state is looked at (M3 design 6.7): the
+		// same 422 in every column, on the triage state too.
+		{op: "updateState", variant: "a value refused", write: true, columns: projectColumns,
+			request: toState(http.MethodPatch, "", "Triage", `{"name":""}`), cells: func() map[caller]cell {
+				cells := map[caller]cell{}
+				for _, c := range projectColumns {
+					cells[c] = cellValidationFailed
+				}
+				return cells
+			}(), refusal: "name too_short"},
 		{op: "updateState", variant: "archived", write: true, columns: archivedColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
 			cells: ofArchivedState(cellOK, cellForbidden), check: renamesTheState},
 	}

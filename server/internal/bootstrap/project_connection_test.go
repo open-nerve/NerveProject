@@ -194,6 +194,7 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		ID uuid.UUID `json:"id"`
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
+	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
 	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
