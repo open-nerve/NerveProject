@@ -209,7 +209,7 @@ export async function expectMembership(
 }
 
 /** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7b adds the labels. */
-const workspaceTables = [
+export const workspaceTables = [
   "workspace_members",
   "workspace_member_invites",
   "workspace_user_properties",

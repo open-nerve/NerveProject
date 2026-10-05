@@ -73,7 +73,7 @@ function changed(rows: StateRow[], name: string, to: Partial<StateRow>): StateRo
   return rows.map((s) => (s.name === name ? { ...s, ...to } : s));
 }
 
-test("P6 (API): an admin of a project creates Review in the started group at 70000, after its states but the triage state; another admin changes its color and moves it before In Progress, and the first makes it the default, Backlog the default no longer; deleting the default, deleting the only state of a group or moving it to another, a triage state and a member's change are refused, each changing nothing; In Progress is deleted, Review left in its group, and neither it nor the triage state is found any more; a member lists the states but the triage state, an archived project lists none, and the workspace's list leaves out the triage states and the archived project's", async ({
+test("P6 (API): an admin of a project creates Review in the started group at 70000, after its states but the triage state; another admin changes its color and moves it before In Progress, and the first makes it the default, Backlog the default no longer; deleting the default, deleting the only state of a group or moving it to another, a triage state and a member's change are refused, each changing nothing; In Progress is deleted, Review left in its group; In Progress is found no more, and the triage state is not found; a member lists the states but the triage state, an archived project lists none, and the workspace's list leaves out the triage states and the archived project's", async ({
   api,
   db,
 }, testInfo) => {

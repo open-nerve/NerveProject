@@ -8,6 +8,7 @@ import {
   listMembers,
   slugFor,
 } from "../../fixtures/api";
+import { workspaceTables } from "../../fixtures/assert/workspace";
 import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
@@ -34,14 +35,16 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   await addProjectMembers(api, admin.token, web.id, [{ member_id: gus.id, role: 5 }]);
   const secret = await createProject(api, admin.token, slug, { name: "Secret", identifier: "SECRET", network: 0 });
   await invite(api, admin.token, slug, [{ email: emailFor(testInfo, "olga"), role: 15 }]);
-  // The tables of the workspace's rows, whole: none of gus's calls writes one.
-  const tables = async () => ({
-    members: await db.query("SELECT * FROM workspace_members ORDER BY id"),
-    invitations: await db.query("SELECT * FROM workspace_member_invites ORDER BY id"),
-    projects: await db.query("SELECT * FROM projects ORDER BY id"),
-    projectMembers: await db.query("SELECT * FROM project_members ORDER BY id"),
-    states: await db.query("SELECT * FROM states ORDER BY id"),
-  });
+  // The workspaces and every table whose rows belong to a workspace, whole: none of gus's calls writes a row of them.
+  const tables = async () =>
+    Object.fromEntries(
+      await Promise.all(
+        ["workspaces", ...workspaceTables].map(async (table) => [
+          table,
+          await db.query(`SELECT * FROM ${table} ORDER BY id`),
+        ])
+      )
+    );
   const before = await tables();
 
   const invitations = await api.GET("/api/v0/workspaces/{slug}/invitations", {
