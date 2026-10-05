@@ -28,10 +28,8 @@ func TestJoinProject(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"not seen", domain.ErrNotFound, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-		{"a workspace guest", shared.Forbidden(), http.StatusForbidden,
-			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"not seen", domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
+		{"a workspace guest", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 	} {
 		h := newServer(t, fakes{join: &fakeOnProject{err: tt.err}})
 		if res, body := do(t, h, request(http.MethodPost, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {

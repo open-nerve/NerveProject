@@ -27,9 +27,10 @@ import (
 // database by each kind of caller, its status and problem code asserted cell
 // by cell, and where a row says so, what the answer holds. The data is
 // prepared once: the accounts through the API, the workspaces and
-// memberships through the workspace store, the projects and their
-// memberships through the project store, the deleted workspace through the
-// API, and the states no store makes alone through SQL (prepareMatrix).
+// memberships through the workspace store, the projects, their memberships
+// and their states through the project store, the deleted workspace
+// through the API, and the membership states no store makes alone through
+// SQL (prepareMatrix).
 // The cells that only read share one copy of it, and each cell that writes
 // gets a copy of its own (pgtest.NewDatabaseFrom), so no cell sees
 // another's writes. Each module's rows are in a file of their own
@@ -209,7 +210,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
-	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows())
+	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -246,16 +247,17 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // with the ids newSeeded named, and acme's admin's display settings;
 // other's admin and removed member are there so that a role read in the
 // wrong workspace lets either into acme. Through the project store, the
-// projects and project memberships of matrixProjects and
-// matrixProjectMembers, and acme's archived project archived. Through both
-// stores, the removed member's removal; then, through the workspace store,
-// the invitations of matrixInvitations. Through the project store, the
-// memberships P5b's writes end (endings); through SQL, the states no store
-// makes alone (partingStates). Through the API, gone deleted by
-// its admin, which soft-deletes its memberships and its project with it;
-// then the checks that the rows the cells rest on are there
-// (preconditions). Everything that connected to the database is closed
-// when it returns, so that it can be copied. A -run that leaves out
+// projects, project memberships and states of matrixProjects,
+// matrixProjectMembers and matrixStates, and acme's archived project
+// archived. Through both stores, the removed member's removal; then,
+// through the workspace store, the invitations of matrixInvitations.
+// Through the project store, the memberships P5b's writes end (endings);
+// through SQL, the membership states no store makes alone (partingStates).
+// Through the API, gone deleted by its admin, which soft-deletes its
+// memberships and its project, with its states, with it; then the checks
+// that the rows the cells rest on are there (preconditions), the states
+// among them (seededStates). Everything that connected to the database is
+// closed when it returns, so that it can be copied. A -run that leaves out
 // prepare fails here, not with a 401 in every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
@@ -291,6 +293,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		for _, pm := range matrixProjectMembers {
 			projects.join(s.projectMember(pm.key, pm.c), pm.key, pm.c, pm.role)
 		}
+		projects.states(s)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -307,6 +310,7 @@ func prepareMatrix(t *testing.T) matrixData {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}
 		projects.preconditions(s)
+		projects.seededStates(pool)
 	})
 	if !prepared {
 		t.FailNow()

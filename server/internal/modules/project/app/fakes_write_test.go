@@ -74,11 +74,13 @@ func (f *writeFixture) locks() app.Locks {
 }
 
 // fakeWorkspaces is the workspace module's lock of a workspace's row by its
-// id: it logs each call, finds acme unless gone, and fails with err.
+// id: it logs each call, finds acme unless gone, and fails with err;
+// answersAs, when set, is the workspace it answers for acme.
 type fakeWorkspaces struct {
-	log  *callLog
-	gone bool
-	err  error
+	log       *callLog
+	gone      bool
+	err       error
+	answersAs uuid.UUID
 }
 
 func (f *fakeWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (app.Workspace, bool, error) {
@@ -88,6 +90,9 @@ func (f *fakeWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (
 	}
 	if f.gone || id != acme.ID {
 		return app.Workspace{}, false, nil
+	}
+	if f.answersAs != (uuid.UUID{}) {
+		return app.Workspace{ID: f.answersAs, Timezone: acme.Timezone}, true, nil
 	}
 	return acme, true, nil
 }
@@ -125,14 +130,31 @@ type fakeStore struct {
 	lowest   map[uuid.UUID]*float64
 	moved    uuid.UUID
 	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
-	// The reads of a membership by its id (fakes_member_test.go): how many
+	// The reads of a row under a project by its id, a membership's
+	// (fakes_member_test.go) or a state's (fakes_state_test.go): how many
 	// ran, how the second one answers, and answersAs, when set, the id each
-	// answers for the one asked; changedAs, when set, is the id
-	// UpdateMemberRole answers for the one it changed.
-	memberReadCount int
-	reread          memberReads
-	answersAs       uuid.UUID
-	changedAs       uuid.UUID
+	// answers for the one asked; changedAs, when set, is the id the write of
+	// the row answers for the one it wrote (UpdateMemberRole, CreateState,
+	// UpdateState).
+	rowReadCount int
+	reread       rowReads
+	answersAs    uuid.UUID
+	changedAs    uuid.UUID
+}
+
+// rowReads is how a row under a project read again under the locks
+// answers: err fails it, gone finds none, as if it was deleted meanwhile,
+// and project, when set, is the project it is found in, as if it had moved
+// there. A membership's has three more: id, when set, is the id it answers
+// for the one asked; role, when set, its role, as if it had been changed
+// meanwhile; and ended finds it ended, as if it had been ended meanwhile.
+type rowReads struct {
+	err     error
+	gone    bool
+	project uuid.UUID
+	id      uuid.UUID
+	role    shared.Role
+	ended   bool
 }
 
 func (f *fakeStore) fail(name string) error {

@@ -12,11 +12,53 @@ import (
 	"uuid"
 )
 
-const createState = `-- name: CreateState :exec
-INSERT INTO states (id, workspace_id, project_id, name, color, sequence, "group", "default", created_by_id, updated_by_id,
-                    created_at, updated_at)
+const clearDefaultState = `-- name: ClearDefaultState :exec
+UPDATE states
+SET "default" = false, updated_at = $1, updated_by_id = $2::uuid
+WHERE project_id = $3 AND "default" AND deleted_at IS NULL
+`
+
+type ClearDefaultStateParams struct {
+	Now       time.Time
+	UpdatedBy uuid.UUID
+	ProjectID uuid.UUID
+}
+
+// markDefaultState's first statement, under the project's FOR NO KEY UPDATE (M3 design 3.17): the project's undeleted
+// default state the default no longer, at the moment and by the account given. states_project_id_default_key holds at
+// most one.
+func (q *Queries) ClearDefaultState(ctx context.Context, arg ClearDefaultStateParams) error {
+	_, err := q.db.Exec(ctx, clearDefaultState, arg.Now, arg.UpdatedBy, arg.ProjectID)
+	return err
+}
+
+const countGroupStates = `-- name: CountGroupStates :one
+SELECT count(*)
+FROM states
+WHERE project_id = $1 AND "group" = $2 AND deleted_at IS NULL
+`
+
+type CountGroupStatesParams struct {
+	ProjectID  uuid.UUID
+	StateGroup string
+}
+
+// updateState and deleteState, under the project's FOR NO KEY UPDATE (M3 design 3.17): how many undeleted states the
+// project's group has.
+func (q *Queries) CountGroupStates(ctx context.Context, arg CountGroupStatesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countGroupStates, arg.ProjectID, arg.StateGroup)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createState = `-- name: CreateState :one
+INSERT INTO states (id, workspace_id, project_id, name, description, color, sequence, "group", "default", created_by_id,
+                    updated_by_id, created_at, updated_at)
 VALUES ($1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $9, $10, $10)
+        $7, $8, $9, $10, $10, $11,
+        $11)
+RETURNING id, workspace_id, project_id, name, description, color, "group", "default", sequence, created_at, updated_at
 `
 
 type CreateStateParams struct {
@@ -24,6 +66,7 @@ type CreateStateParams struct {
 	WorkspaceID uuid.UUID
 	ProjectID   uuid.UUID
 	Name        string
+	Description string
 	Color       string
 	Sequence    float64
 	StateGroup  string
@@ -32,12 +75,28 @@ type CreateStateParams struct {
 	Now         time.Time
 }
 
-func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) error {
-	_, err := q.db.Exec(ctx, createState,
+type CreateStateRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	Color       string
+	Group       string
+	Default     bool
+	Sequence    float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// createProject's six states and createState's one (M3 design 3.17): the row as stored.
+func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (CreateStateRow, error) {
+	row := q.db.QueryRow(ctx, createState,
 		arg.ID,
 		arg.WorkspaceID,
 		arg.ProjectID,
 		arg.Name,
+		arg.Description,
 		arg.Color,
 		arg.Sequence,
 		arg.StateGroup,
@@ -45,5 +104,319 @@ func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) error 
 		arg.CreatedBy,
 		arg.Now,
 	)
-	return err
+	var i CreateStateRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.Color,
+		&i.Group,
+		&i.Default,
+		&i.Sequence,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteState = `-- name: DeleteState :execrows
+UPDATE states
+SET deleted_at = $1::timestamptz, updated_at = $1, updated_by_id = $2::uuid
+WHERE id = $3 AND NOT "default" AND "group" <> 'triage' AND deleted_at IS NULL
+`
+
+type DeleteStateParams struct {
+	Now       time.Time
+	DeletedBy uuid.UUID
+	ID        uuid.UUID
+}
+
+// deleteState, under the project's FOR NO KEY UPDATE (M3 design 3.17): a guarded write. The undeleted state, unless it
+// is the project's default or its triage state, deleted at the moment and by the account given; no row otherwise.
+func (q *Queries) DeleteState(ctx context.Context, arg DeleteStateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteState, arg.Now, arg.DeletedBy, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const greatestSequence = `-- name: GreatestSequence :one
+SELECT sequence
+FROM states
+WHERE project_id = $1 AND "group" <> 'triage' AND deleted_at IS NULL
+ORDER BY sequence DESC
+LIMIT 1
+`
+
+// createState, under the project's FOR NO KEY UPDATE (M3 design 3.17): the greatest sequence of the project's undeleted
+// states but its triage state, which Plane's State.objects leaves out (db/models/state.py:65-68); no row when it has
+// none.
+func (q *Queries) GreatestSequence(ctx context.Context, projectID uuid.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, greatestSequence, projectID)
+	var sequence float64
+	err := row.Scan(&sequence)
+	return sequence, err
+}
+
+const listStates = `-- name: ListStates :many
+SELECT s.id, s.workspace_id, s.project_id, s.name, s.description, s.color, s."group", s."default", s.sequence, s.created_at,
+       s.updated_at
+FROM states s
+         JOIN projects p ON p.id = s.project_id
+WHERE s.project_id = $1 AND s."group" <> 'triage' AND s.deleted_at IS NULL AND p.archived_at IS NULL
+ORDER BY s.sequence, s.id
+`
+
+type ListStatesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	Color       string
+	Group       string
+	Default     bool
+	Sequence    float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// listStates (M3 design 3.12, 3.17): the project's undeleted states but its triage state, by sequence, then id; none
+// while the project is archived (Plane's views/state/base.py:37).
+func (q *Queries) ListStates(ctx context.Context, projectID uuid.UUID) ([]ListStatesRow, error) {
+	rows, err := q.db.Query(ctx, listStates, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListStatesRow
+	for rows.Next() {
+		var i ListStatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.Color,
+			&i.Group,
+			&i.Default,
+			&i.Sequence,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkspaceStates = `-- name: ListWorkspaceStates :many
+SELECT s.id, s.workspace_id, s.project_id, s.name, s.description, s.color, s."group", s."default", s.sequence, s.created_at,
+       s.updated_at
+FROM states s
+         JOIN projects p ON p.id = s.project_id
+         JOIN project_members m ON m.project_id = p.id
+WHERE p.workspace_id = $1 AND p.deleted_at IS NULL AND p.archived_at IS NULL
+  AND m.member_id = $2 AND m.is_active AND m.deleted_at IS NULL
+  AND s."group" <> 'triage' AND s.deleted_at IS NULL
+ORDER BY s.project_id, s.sequence, s.id
+`
+
+type ListWorkspaceStatesParams struct {
+	WorkspaceID uuid.UUID
+	UserID      uuid.UUID
+}
+
+type ListWorkspaceStatesRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	Color       string
+	Group       string
+	Default     bool
+	Sequence    float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// listWorkspaceStates (M3 design 3.12, 3.17, 5.1): the undeleted states but the triage states of the workspace's
+// undeleted, unarchived projects the account is an active member of, by project id, then sequence, then id.
+func (q *Queries) ListWorkspaceStates(ctx context.Context, arg ListWorkspaceStatesParams) ([]ListWorkspaceStatesRow, error) {
+	rows, err := q.db.Query(ctx, listWorkspaceStates, arg.WorkspaceID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListWorkspaceStatesRow
+	for rows.Next() {
+		var i ListWorkspaceStatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.ProjectID,
+			&i.Name,
+			&i.Description,
+			&i.Color,
+			&i.Group,
+			&i.Default,
+			&i.Sequence,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setDefaultState = `-- name: SetDefaultState :execrows
+UPDATE states
+SET "default" = true, updated_at = $1, updated_by_id = $2::uuid
+WHERE id = $3 AND project_id = $4 AND "group" <> 'triage' AND deleted_at IS NULL
+`
+
+type SetDefaultStateParams struct {
+	Now       time.Time
+	UpdatedBy uuid.UUID
+	ID        uuid.UUID
+	ProjectID uuid.UUID
+}
+
+// markDefaultState's second statement: the project's undeleted state the default, unless it is the triage state, at the
+// moment and by the account given; no row otherwise, and the caller rolls the first statement back.
+func (q *Queries) SetDefaultState(ctx context.Context, arg SetDefaultStateParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setDefaultState,
+		arg.Now,
+		arg.UpdatedBy,
+		arg.ID,
+		arg.ProjectID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const stateByID = `-- name: StateByID :one
+SELECT id, workspace_id, project_id, name, description, color, "group", "default", sequence, created_at, updated_at
+FROM states
+WHERE id = $1 AND "group" <> 'triage' AND deleted_at IS NULL
+`
+
+type StateByIDRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	Color       string
+	Group       string
+	Default     bool
+	Sequence    float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// A write on a state named by its id (M3 design 3.6 convention 2, 6.7): the undeleted state, read first without a lock
+// for its project and the project's workspace, then again under their locks. The triage state is none (3.17).
+func (q *Queries) StateByID(ctx context.Context, id uuid.UUID) (StateByIDRow, error) {
+	row := q.db.QueryRow(ctx, stateByID, id)
+	var i StateByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.Color,
+		&i.Group,
+		&i.Default,
+		&i.Sequence,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateState = `-- name: UpdateState :one
+UPDATE states s
+SET name          = coalesce($1::text, s.name),
+    description   = coalesce($2::text, s.description),
+    color         = coalesce($3::text, s.color),
+    "group"       = coalesce($4::text, s."group"),
+    sequence      = coalesce($5::double precision, s.sequence),
+    updated_by_id = $6::uuid,
+    updated_at    = $7
+WHERE s.id = $8 AND s."group" <> 'triage' AND s.deleted_at IS NULL
+RETURNING s.id, s.workspace_id, s.project_id, s.name, s.description, s.color, s."group", s."default", s.sequence, s.created_at,
+    s.updated_at
+`
+
+type UpdateStateParams struct {
+	Name        *string
+	Description *string
+	Color       *string
+	StateGroup  *string
+	Sequence    *float64
+	UpdatedBy   uuid.UUID
+	Now         time.Time
+	ID          uuid.UUID
+}
+
+type UpdateStateRow struct {
+	ID          uuid.UUID
+	WorkspaceID uuid.UUID
+	ProjectID   uuid.UUID
+	Name        string
+	Description string
+	Color       string
+	Group       string
+	Default     bool
+	Sequence    float64
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// updateState, under the project's FOR NO KEY UPDATE (M3 design 3.17, 6.7): a field left out, null here, keeps its
+// value. A deleted state and the triage state are not written.
+func (q *Queries) UpdateState(ctx context.Context, arg UpdateStateParams) (UpdateStateRow, error) {
+	row := q.db.QueryRow(ctx, updateState,
+		arg.Name,
+		arg.Description,
+		arg.Color,
+		arg.StateGroup,
+		arg.Sequence,
+		arg.UpdatedBy,
+		arg.Now,
+		arg.ID,
+	)
+	var i UpdateStateRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ProjectID,
+		&i.Name,
+		&i.Description,
+		&i.Color,
+		&i.Group,
+		&i.Default,
+		&i.Sequence,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

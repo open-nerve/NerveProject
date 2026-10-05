@@ -33,9 +33,8 @@ func TestArchiveAndUnarchiveProject(t *testing.T) {
 			status int
 			want   string
 		}{
-			{domain.ErrNotFound, http.StatusNotFound,
-				`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-			{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+			{domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
+			{shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		} {
 			refusing := &fakeOnProject{err: tt.err}
 			h := newServer(t, fakes{archive: refusing, unarchive: refusing})

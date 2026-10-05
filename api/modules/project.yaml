@@ -434,6 +434,186 @@ paths:
           description: The membership has ended.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/states:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listStates
+      tags: [project]
+      summary: List a project's states
+      description: >-
+        For the project's active members: its states, by sequence, the
+        lowest first, then by id. The intake's triage state is none of
+        them. An archived project lists none. A project that does not exist,
+        is deleted, or that the caller does not see answers
+        project.not_found; one he sees but is not a member of, forbidden.
+        The whole collection at once: collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      responses:
+        '200':
+          description: The project's states.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateList'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createState
+      tags: [project]
+      summary: Create a state in a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's states are created as any other's.
+        The name and the color have 1–255 characters, not blank, without
+        NUL; the group is one of the five, and triage is refused
+        (group not_allowed): the intake's state is not made here; the
+        description has no NUL (validation_failed). The values are checked
+        before the project is looked at. The new state comes after the
+        project's others: its sequence is the greatest of theirs, the
+        intake's triage state's left out, plus 15000, or 65535 when the
+        project has none. It is not the default. Its name may not be another
+        undeleted state's of the project, the intake's triage state's too,
+        compared as written (project.state_name_taken). A project that does
+        not exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but may not change, forbidden. The
+        role is decided after the workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.state_name_taken]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateCreate'
+      responses:
+        '201':
+          description: The new state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/State'
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/states/{state_id}:
+    parameters:
+      - $ref: '#/components/parameters/StateID'
+    patch:
+      operationId: updateState
+      tags: [project]
+      summary: Change a state
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's states change as any other's. The
+        fields given change and the others stay; the values follow
+        createState's rules, and the sequence is any number
+        (validation_failed), checked before the state is looked at. A state
+        that does not exist or is deleted, the intake's triage state, and a
+        state whose project the caller does not see answer
+        project.state_not_found; a caller who sees the project but may not
+        change its states, forbidden, whether or not the state is the
+        default or the last of its group. Moving the only state of its group
+        to another group is refused (project.state_last_in_group): every
+        group keeps a state. Its name may not be another undeleted state's
+        of the project, the intake's triage state's too
+        (project.state_name_taken). The role is decided after the workspace
+        and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.state_not_found, forbidden, project.state_name_taken, project.state_last_in_group]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateUpdate'
+      responses:
+        '200':
+          description: The state as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/State'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteState
+      tags: [project]
+      summary: Delete a state
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's states are deleted as any other's. A
+        state that does not exist or is deleted, the intake's triage state,
+        and a state whose project the caller does not see answer
+        project.state_not_found; a caller who sees the project but may not
+        change its states, forbidden, whether or not the state is the
+        default or the last of its group. The project's default state is not
+        deleted (project.state_default): make another state the default
+        first. Nor is the only state of its group
+        (project.state_last_in_group): every group keeps a state. A state
+        that is both is project.state_default. The state is deleted at the
+        moment of the request, by the caller, and its name is free again in
+        the project. The role is decided after the workspace and project
+        rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.state_not_found, forbidden, project.state_default, project.state_last_in_group]
+      responses:
+        '204':
+          description: The state is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/states/{state_id}/mark-default:
+    parameters:
+      - $ref: '#/components/parameters/StateID'
+    post:
+      operationId: markDefaultState
+      tags: [project]
+      summary: Make a state its project's default
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's default changes as any other's. The
+        state becomes the project's default, and the state that was the
+        default is no longer: a project has exactly one. Making the default
+        state the default again leaves it so. A state that does not exist
+        or is deleted, the intake's triage state, and a state whose project
+        the caller does not see answer project.state_not_found; a caller
+        who sees the project but may not change its states, forbidden,
+        whether or not the state is the default. The role is decided after
+        the workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.state_not_found, forbidden]
+      responses:
+        '204':
+          description: The state is the project's default.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/workspaces/{slug}/states:
+    parameters:
+      - $ref: '#/components/parameters/Slug'
+    get:
+      operationId: listWorkspaceStates
+      tags: [project]
+      summary: List the states of the projects the caller is a member of
+      description: >-
+        For the workspace's active members: the states of its projects that
+        the caller is an active member of, the archived ones left out, by
+        project id, then by sequence, the lowest first, then by id; each
+        project's as listStates lists them, the intake's triage state none of
+        them. A project the caller sees but is not a member of adds none. A
+        workspace that does not exist, is deleted, or of which the caller is
+        not an active member answers workspace.not_found. The whole
+        collection at once: collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [workspace.not_found]
+      responses:
+        '200':
+          description: The states.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateList'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -509,6 +689,14 @@ components:
       in: path
       required: true
       description: A project's id (Project.id).
+      schema:
+        type: string
+        format: uuid
+    StateID:
+      name: state_id
+      in: path
+      required: true
+      description: A state's id (State.id).
       schema:
         type: string
         format: uuid
@@ -865,3 +1053,87 @@ components:
       properties:
         role:
           $ref: '#/components/schemas/ProjectRole'
+    StateGroup:
+      description: >-
+        The group a state is in: backlog, unstarted, started, completed or
+        cancelled. Every group of a project keeps a state.
+      type: string
+      enum: [backlog, unstarted, started, completed, cancelled]
+    State:
+      description: A state of a project, in one of the groups of StateGroup.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, name, description, color, group, default, sequence, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        color:
+          description: As the web app's color picker gives it, e.g. "#F59E0B".
+          type: string
+        group:
+          $ref: '#/components/schemas/StateGroup'
+        default:
+          description: Whether the state is its project's default state; a project has exactly one.
+          type: boolean
+        sequence:
+          description: The state's place among the project's states, the lowest first.
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    StateList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/State'
+    StateCreate:
+      type: object
+      additionalProperties: false
+      required: [name, color, group]
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted state of the project may not have it.
+          type: string
+        color:
+          description: 1–255 characters, not blank.
+          type: string
+        group:
+          $ref: '#/components/schemas/StateGroup'
+        description:
+          type: string
+    StateUpdate:
+      description: Changes the fields it names; a field left out keeps its value.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted state of the project may not have it.
+          type: string
+        color:
+          description: 1–255 characters, not blank.
+          type: string
+        group:
+          $ref: '#/components/schemas/StateGroup'
+        description:
+          type: string
+        sequence:
+          description: The state's place among the project's states, the lowest first.
+          type: number

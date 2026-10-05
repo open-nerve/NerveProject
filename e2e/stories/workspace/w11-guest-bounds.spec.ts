@@ -1,0 +1,87 @@
+import {
+  addProjectMembers,
+  answer,
+  createProject,
+  createWorkspace,
+  invite,
+  inviteAndAccept,
+  listMembers,
+  slugFor,
+} from "../../fixtures/api";
+import { workspaceTables } from "../../fixtures/assert/workspace";
+import { bearer, emailFor, newAccount } from "../../fixtures/auth";
+import { expect, test } from "../../fixtures/test";
+
+// W11, a guest's bounds (M3 design 2, 9.2): the permission matrix's backend
+// test holds every cell; this story samples four of them through the API.
+// The page version is P11's.
+
+test("W11 (API): a guest of a workspace may not list its invitations nor create a state in the project he is a guest of, does not see a private project he is not a member of, and reads no member's address, his own neither; none of it changes a row of the workspace's", async ({
+  api,
+  db,
+}, testInfo) => {
+  const admin = await newAccount(api, testInfo, "admin");
+  const slug = slugFor(testInfo);
+  await createWorkspace(api, admin.token, { name: "Acme", slug });
+  const gus = await newAccount(api, testInfo, "gus");
+  await inviteAndAccept(api, admin.token, slug, gus, 5);
+  // Web, public, gus its guest; Secret, private, the admin's alone; an invitation to olga, pending.
+  const web = await createProject(api, admin.token, slug, { name: "Web", identifier: "WEB" });
+  await addProjectMembers(api, admin.token, web.id, [{ member_id: gus.id, role: 5 }]);
+  const secret = await createProject(api, admin.token, slug, { name: "Secret", identifier: "SECRET", network: 0 });
+  await invite(api, admin.token, slug, [{ email: emailFor(testInfo, "olga"), role: 15 }]);
+  // The workspaces and every table whose rows belong to a workspace, whole: none of gus's calls writes a row of them.
+  const tables = async () =>
+    Object.fromEntries(
+      await Promise.all(
+        ["workspaces", ...workspaceTables].map(async (table) => [
+          table,
+          await db.query(`SELECT * FROM ${table} ORDER BY id`),
+        ])
+      )
+    );
+  const before = await tables();
+
+  const invitations = await api.GET("/api/v0/workspaces/{slug}/invitations", {
+    params: { path: { slug } },
+    headers: bearer(gus.token),
+  });
+  const created = await api.POST("/api/v0/projects/{project_id}/states", {
+    params: { path: { project_id: web.id } },
+    body: { name: "Review", color: "#8B5CF6", group: "started" },
+    headers: bearer(gus.token),
+  });
+  const read = await api.GET("/api/v0/projects/{project_id}", {
+    params: { path: { project_id: secret.id } },
+    headers: bearer(gus.token),
+  });
+  expect(
+    [
+      answer(invitations.response, invitations.error),
+      answer(created.response, created.error),
+      answer(read.response, read.error),
+    ],
+    "gus's listing of acme's invitations, his creation of a state in Web, his reading of Secret"
+  ).toEqual([
+    { status: 403, code: "forbidden" },
+    { status: 403, code: "forbidden" },
+    { status: 404, code: "project.not_found" },
+  ]);
+
+  // acme's members as gus lists them: no address, his own neither; the admin reads both.
+  const addresses = async (token: string) =>
+    (await listMembers(api, token, slug)).map((m) => [m.member.id, m.member.email]).toSorted();
+  expect(await addresses(gus.token), "acme's members as gus lists them").toEqual(
+    [
+      [admin.id, null],
+      [gus.id, null],
+    ].toSorted()
+  );
+  expect(await addresses(admin.token), "acme's members as the admin lists them").toEqual(
+    [
+      [admin.id, admin.email],
+      [gus.id, gus.email],
+    ].toSorted()
+  );
+  expect(await tables(), "the tables after gus's calls").toEqual(before);
+});

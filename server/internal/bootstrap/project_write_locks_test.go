@@ -23,11 +23,11 @@ import (
 
 // projectWrite is a write on a project as
 // TestEachWriteOnAProjectSharesItsWorkspaceFirst sends it, by its
-// operationId: the request on the project, or on a membership of it, by
-// alice unless by names another sender.
+// operationId: the request on the project, or on a row under it, by alice
+// unless by names another sender.
 type projectWrite struct {
-	// path: %s the project's id, or the membership's for a path of one
-	// (/api/v0/project-members/); body: %s the target's id.
+	// path: %s the project's id, or the row's for a path of one
+	// (rowPaths); body: %s the target's id.
 	op, method, path, body string
 	want                   int
 	// targets are the accounts, one a phase, whose membership of the
@@ -37,17 +37,39 @@ type projectWrite struct {
 	// by are the accounts, one a phase, that send the write: alice when
 	// empty.
 	by [2]string
-	// member are the accounts, one a phase, whose membership of the project
-	// the write changes: a path of a membership names it, and its row is
-	// probed as the project's is.
-	member [2]string
+	// row is the row under the project the write changes, one a phase: a
+	// path of one names it, and it is probed as the project's row is.
+	row underRow
 }
 
-// param is the parameter w's path names: a membership's id for a path of
-// one, else the project's.
+// underRow is a row under a project, one a phase: in table, the row whose
+// column by is the phase's key, an account's name for a membership
+// (member_id), a state's name for a state (name).
+type underRow struct {
+	table, by string
+	keys      [2]string
+}
+
+// membershipsOf is the membership of a's account in the first phase's
+// project and b's in the second's.
+func membershipsOf(a, b string) underRow {
+	return underRow{"project_members", "member_id", [2]string{a, b}}
+}
+
+// stateNamed is the state name of each phase's project.
+func stateNamed(name string) underRow { return underRow{"states", "name", [2]string{name, name}} }
+
+// rowPaths are the paths that name a row under a project by its id, by
+// their beginning, and the parameter each names it by.
+var rowPaths = map[string]string{"/api/v0/project-members/": "{project_member_id}", "/api/v0/states/": "{state_id}"}
+
+// param is the parameter w's path names: a row's id for a path of one
+// (rowPaths), else the project's.
 func (w projectWrite) param() string {
-	if strings.HasPrefix(w.path, "/api/v0/project-members/") {
-		return "{project_member_id}"
+	for prefix, param := range rowPaths {
+		if strings.HasPrefix(w.path, prefix) {
+			return param
+		}
 	}
 	return "{project_id}"
 }
@@ -67,13 +89,20 @@ var projectWrites = []projectWrite{
 		by: [2]string{"dave", "erin"}},
 	// The members added before, bob in Web and carol in Ops, made guests.
 	{op: "updateProjectMember", method: http.MethodPatch, path: "/api/v0/project-members/%s", body: `{"role":5}`, want: http.StatusOK,
-		targets: [2]string{"bob", "carol"}, member: [2]string{"bob", "carol"}},
+		targets: [2]string{"bob", "carol"}, row: membershipsOf("bob", "carol")},
 	// The joiners before, dave in Web and erin in Ops, removed.
 	{op: "removeProjectMember", method: http.MethodDelete, path: "/api/v0/project-members/%s", want: http.StatusNoContent,
-		member: [2]string{"dave", "erin"}},
+		row: membershipsOf("dave", "erin")},
 	// bob and carol, guests now, leave.
 	{op: "leaveProject", method: http.MethodPost, path: "/api/v0/projects/%s/leave", want: http.StatusNoContent, by: [2]string{"bob", "carol"},
-		member: [2]string{"bob", "carol"}},
+		row: membershipsOf("bob", "carol")},
+	{op: "createState", method: http.MethodPost, path: "/api/v0/projects/%s/states", body: `{"name":"QA","color":"#0EA5E9","group":"completed"}`,
+		want: http.StatusCreated},
+	// The state made before, renamed.
+	{op: "updateState", method: http.MethodPatch, path: "/api/v0/states/%s", body: `{"name":"Checked"}`, want: http.StatusOK, row: stateNamed("QA")},
+	// The state renamed before, deleted.
+	{op: "deleteState", method: http.MethodDelete, path: "/api/v0/states/%s", want: http.StatusNoContent, row: stateNamed("Checked")},
+	{op: "markDefaultState", method: http.MethodPost, path: "/api/v0/states/%s/mark-default", want: http.StatusNoContent, row: stateNamed("Done")},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
@@ -83,7 +112,7 @@ var projectWrites = []projectWrite{
 // ({project_id}), or that has a row among rows with a column of the project
 // level (a column of a project table, projectTables, that is no column of
 // the workspace level). The second takes in a write on a project addressed
-// by a row under it (P5b's /project-members/{project_member_id}, P7's
+// by a row under it (P5b's /project-members/{project_member_id}, P7a's
 // /states/{state_id}) whose row names a project table's columns; a column
 // set of a row's own counts only once it is listed in projectTables, so a
 // new table of the project level goes there, one of the workspace level in
@@ -201,15 +230,15 @@ func lockOn(t *testing.T, pool *pgxpool.Pool, from string, args ...any) string {
 //   - The workspace first: another transaction holds acme's row FOR NO KEY
 //     UPDATE, as every cascade over its projects does (3.3). The write on
 //     Web waits for that row, and meanwhile holds neither Web's row, nor
-//     its target's membership of acme, nor the membership of Web it
-//     changes: a FOR UPDATE NOWAIT of each succeeds.
+//     its target's membership of acme, nor the row under Web it changes, a
+//     membership or a state: a FOR UPDATE NOWAIT of each succeeds.
 //   - In its transaction, FOR SHARE, before its target and its project:
 //     another transaction holds Ops's row FOR NO KEY UPDATE. The write on
 //     Ops waits for it, and meanwhile holds acme's row at FOR SHARE, no
 //     stronger, which another write on a project of acme shares (lockOn),
 //     and its target's membership of acme (a FOR UPDATE NOWAIT fails,
-//     55P03), but not the membership of Ops it changes, which comes after
-//     the project.
+//     55P03), but not the row under Ops it changes, which comes after the
+//     project.
 //
 // Once the other transaction ends, each write answers as it would alone.
 // Each row sends its own operation's request, its method and path as the
@@ -248,7 +277,11 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 		createdProject(t, contract, base, alice, "acme", "Ops", "OPS")}
 	tokens, ids, aliceID := map[string]string{}, map[string]uuid.UUID{}, accountID(t, contract, base, alice)
 	for _, w := range projectWrites {
-		for _, name := range slices.Concat(w.targets[:], w.by[:], w.member[:]) {
+		accounts := slices.Concat(w.targets[:], w.by[:])
+		if w.row.table == "project_members" {
+			accounts = append(accounts, w.row.keys[:]...)
+		}
+		for _, name := range accounts {
 			if _, registered := tokens[name]; name != "" && !registered {
 				tokens[name] = registerAccount(t, contract, base, name+"@example.com").AccessToken
 				ids[name] = accountID(t, contract, base, tokens[name])
@@ -257,27 +290,31 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 		}
 	}
 	membership := "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND member_id = $2 AND deleted_at IS NULL FOR UPDATE"
-	memberRow := "SELECT 1 FROM project_members WHERE id = $1 FOR UPDATE"
 	for _, w := range projectWrites {
 		for phase, project := range projects {
 			on := []string{"Web", "Ops"}[phase]
 			if !t.Run(w.op+" on "+on, func(t *testing.T) {
-				target, member, token, body, named := w.targets[phase], w.member[phase], alice, w.body, project
+				target, key, token, body, named := w.targets[phase], w.row.keys[phase], alice, w.body, project
 				if strings.Contains(body, "%s") {
 					body = fmt.Sprintf(body, ids[target])
 				}
 				if by := w.by[phase]; by != "" {
 					token = tokens[by]
 				}
-				// The membership the write changes, its row probed, and named
-				// by a path of one.
+				// The row under the project the write changes, probed, and
+				// named by a path of one.
 				var row uuid.UUID
-				if member != "" {
-					if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM project_members WHERE project_id = $1 AND member_id = $2 AND deleted_at IS NULL",
-						project, ids[member]).Scan(&row); err != nil {
-						t.Fatalf("%s's membership of %s: %v", member, on, err)
+				rowLock := "SELECT 1 FROM " + w.row.table + " WHERE id = $1 FOR UPDATE"
+				if key != "" {
+					var by any = key
+					if w.row.by == "member_id" {
+						by = ids[key]
 					}
-					if w.param() == "{project_member_id}" {
+					if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM "+w.row.table+" WHERE project_id = $1 AND "+w.row.by+
+						" = $2 AND deleted_at IS NULL", project, by).Scan(&row); err != nil {
+						t.Fatalf("the row of %s %s in %s: %v", w.row.table, key, on, err)
+					}
+					if w.param() != "{project_id}" {
 						named = row
 					}
 				}
@@ -298,8 +335,8 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 					if target != "" && heldBy(t, pool, membership, acme.ID, ids[target]) {
 						t.Errorf("%s holds %s's membership of acme while it waits for its workspace", w.op, target)
 					}
-					if member != "" && heldBy(t, pool, memberRow, row) {
-						t.Errorf("%s holds %s's membership of %s while it waits for its workspace", w.op, member, on)
+					if key != "" && heldBy(t, pool, rowLock, row) {
+						t.Errorf("%s holds the row of %s %s in %s while it waits for its workspace", w.op, w.row.table, key, on)
 					}
 				} else {
 					pgtest.WaitForLockWaitOn(t, pool, "projects", 10*time.Second)
@@ -313,8 +350,8 @@ func TestEachWriteOnAProjectSharesItsWorkspaceFirst(t *testing.T) {
 					if target != "" && !heldBy(t, pool, membership, acme.ID, ids[target]) {
 						t.Errorf("%s does not hold %s's membership of acme while it waits for its project", w.op, target)
 					}
-					if member != "" && heldBy(t, pool, memberRow, row) {
-						t.Errorf("%s holds %s's membership of %s before its project", w.op, member, on)
+					if key != "" && heldBy(t, pool, rowLock, row) {
+						t.Errorf("%s holds the row of %s %s in %s before its project", w.op, w.row.table, key, on)
 					}
 				}
 				if err := other.Rollback(context.Background()); err != nil {

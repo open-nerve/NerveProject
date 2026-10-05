@@ -56,12 +56,12 @@ func TestRemoveProjectMember(t *testing.T) {
 // membership, 404, before any other check, and so when it ended while the
 // locks waited, an admin's to the workspace's admin; his own, 409, the
 // workspace's admin's too; a higher role, 403 project.role_too_high, from
-// the workspace's admin too. A membership answered for another id is the
-// write's own error. The row of his own membership ended while the locks
-// waited pins only the order of the two checks, ended before own: on the
-// wired app it cannot occur, as a caller who passes the decision has an
+// the workspace's admin too. The row of his own membership ended while the
+// locks waited pins only the order of the two checks, ended before own: on
+// the wired app it cannot occur, as a caller who passes the decision has an
 // active membership of the project, which the Authorizer reads under the
-// same locks.
+// same locks. An answer of the lock path for another key than it asked for
+// is the path's to refuse (TestLocksCheckEachAnswerAgainstItsKey).
 func TestRemoveProjectMemberRefuses(t *testing.T) {
 	locked := func(f *writeFixture, caller, user uuid.UUID) []string {
 		return memberLocked(f.memberOf(webID, user), user, webID, caller, domain.ActionMemberRemove, false)
@@ -99,7 +99,6 @@ func TestRemoveProjectMemberRefuses(t *testing.T) {
 		{"an admin, by the workspace's admin who is a project member", gina, bob, nil, domain.ErrRoleTooHigh, locked},
 		{"a member made an admin while the locks waited, by the workspace's admin", gina, alice,
 			func(f *writeFixture) { f.store.reread.role = shared.RoleAdmin }, domain.ErrRoleTooHigh, locked},
-		{"a membership answered for another id", bob, alice, func(f *writeFixture) { f.store.answersAs = uuid.NewV7() }, nil, upTo(2)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newRemoveMember()

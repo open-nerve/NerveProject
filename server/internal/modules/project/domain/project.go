@@ -147,12 +147,10 @@ func invalid(found ...*shared.FieldError) error {
 
 func checkName(name string) *shared.FieldError {
 	field := "name"
-	switch {
-	case strings.TrimSpace(name) == "":
-		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
-	case utf8.RuneCountInString(name) > maxNameLength:
-		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", maxNameLength)}
-	case strings.ContainsAny(name, forbiddenNameCharacters):
+	if f := checkLength(field, name, maxNameLength); f != nil {
+		return f
+	}
+	if strings.ContainsAny(name, forbiddenNameCharacters) {
 		return &shared.FieldError{Field: field, Code: shared.FieldNotAllowed,
 			Message: "must not contain any of " + strings.Join(strings.Split(forbiddenNameCharacters, ""), " ")}
 	}
@@ -169,6 +167,18 @@ func checkIdentifier(id string) *shared.FieldError {
 			Message: fmt.Sprintf("must be at most %d characters", maxIdentifierLength)}
 	case !identifierPattern.MatchString(id):
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "may hold only A-Z, 0-9 and ÇŞĞİÖÜ"}
+	}
+	return nil
+}
+
+// checkLength refuses the text of field, a column of varchar(limit), when
+// it is blank, or longer than limit characters: blank first.
+func checkLength(field, s string, limit int) *shared.FieldError {
+	switch {
+	case strings.TrimSpace(s) == "":
+		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
+	case utf8.RuneCountInString(s) > limit:
+		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", limit)}
 	}
 	return nil
 }

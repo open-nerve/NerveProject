@@ -62,6 +62,8 @@ func TestCheckNewProjectReportsEveryField(t *testing.T) {
 		{"empty name", name(""), field("name", "too_short", "must not be empty")},
 		{"blank name", name(" \t\n"), field("name", "too_short", "must not be empty")},
 		{"name of 256 characters", name(strings.Repeat("项", 256)), field("name", "too_long", "must be at most 255 characters")},
+		{"name of 256 characters with a .: its length first", name(strings.Repeat("项", 255) + "."),
+			field("name", "too_long", "must be at most 255 characters")},
 		{"name with NUL", name("W\x00eb"), field("name", "invalid_format", nul)},
 		{"empty identifier", identifier(""), field("identifier", "too_short", "must not be empty")},
 		{"identifier of 11 characters", identifier("abcdefghijk"), field("identifier", "too_long", "must be at most 10 characters")},

@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 	"uuid"
@@ -65,11 +64,7 @@ func (u *CreateProject) Execute(ctx context.Context, slug string, in domain.NewP
 		case !found:
 			return domain.ErrWorkspaceNotFound
 		}
-		_, err = u.d.Auth.Authorize(ctx, actor, domain.ActionCreate, shared.Target{WorkspaceID: ws.ID})
-		switch {
-		case errors.Is(err, shared.ErrNotVisible):
-			return domain.ErrWorkspaceNotFound
-		case err != nil:
+		if _, err = decide(ctx, u.d.Auth, actor, domain.ActionCreate, ws.ID, uuid.UUID{}, domain.ErrWorkspaceNotFound); err != nil {
 			return err
 		}
 		admins := []uuid.UUID{actor.UserID}

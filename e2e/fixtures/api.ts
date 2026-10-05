@@ -22,10 +22,34 @@ export type ProjectMember = components["schemas"]["ProjectMember"];
 export type ProjectMemberNew = components["schemas"]["ProjectMemberNew"];
 export type ProjectPreferences = components["schemas"]["ProjectPreferences"];
 export type ProjectPreferencesUpdate = components["schemas"]["ProjectPreferencesUpdate"];
+export type State = components["schemas"]["State"];
+export type StateCreate = components["schemas"]["StateCreate"];
+export type StateUpdate = components["schemas"]["StateUpdate"];
 
 /** Returns a client for the nerve at baseURL. */
 export function createApi(baseURL: string): Api {
   return createClient({ baseUrl: baseURL });
+}
+
+/** A call's answer: its status, and the problem's code and fields for a refusal. */
+interface Answer {
+  status: number;
+  code?: string;
+  errors?: { field: string; code: string }[];
+}
+
+/** The answer of a call whose response is response, and whose problem is error when it is refused. */
+export function answer(
+  response: Response,
+  error?: { code: string; errors?: { field: string; code: string }[] | null } | null
+): Answer {
+  return error
+    ? {
+        status: response.status,
+        code: error.code,
+        errors: error.errors?.map((e) => ({ field: e.field, code: e.code })),
+      }
+    : { status: response.status };
 }
 
 /**
@@ -158,6 +182,20 @@ export async function addProjectMembers(
     throw new Error(`addProjectMembers to ${projectId} answered 201 without the members`);
   }
   return data.data;
+}
+
+/** Creates a state in the project of projectId with the bearer token given, an admin's of the project, and returns it. */
+export async function createState(api: Api, token: string, projectId: string, body: StateCreate): Promise<State> {
+  const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/states", {
+    params: { path: { project_id: projectId } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `create the state ${body.name} in ${projectId}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) {
+    throw new Error(`createState ${body.name} answered 201 without the state`);
+  }
+  return data;
 }
 
 /**

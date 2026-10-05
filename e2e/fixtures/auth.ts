@@ -131,6 +131,17 @@ export async function createPAT(
   return data;
 }
 
+/** Signs up the account of label in this run of the test, and returns its address, a personal access token of it and its id. */
+export async function newAccount(
+  api: Api,
+  testInfo: TestInfo,
+  label: string
+): Promise<{ email: string; token: string; id: string }> {
+  const email = emailFor(testInfo, label);
+  const token = (await createPAT(api, (await register(api, email)).access_token)).token;
+  return { email, token, id: await accountId(api, token) };
+}
+
 /** Exchanges refreshToken for the session's next tokens. */
 export async function refresh(api: Api, refreshToken: string): Promise<AuthTokens> {
   const { data, error, response } = await api.POST("/api/v0/auth/refresh", { body: { refresh_token: refreshToken } });

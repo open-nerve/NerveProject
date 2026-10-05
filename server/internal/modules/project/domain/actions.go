@@ -43,6 +43,20 @@ const (
 	ActionMemberRemove shared.Action = "project_member.remove"
 	// ActionLeave is leaving a project: leaveProject.
 	ActionLeave shared.Action = "project.leave"
+	// ActionStateList is listing a project's states: listStates.
+	ActionStateList shared.Action = "state.list"
+	// ActionStateCreate is creating a state in a project: createState.
+	ActionStateCreate shared.Action = "state.create"
+	// ActionStateUpdate is changing a state: updateState.
+	ActionStateUpdate shared.Action = "state.update"
+	// ActionStateDelete is deleting a state: deleteState.
+	ActionStateDelete shared.Action = "state.delete"
+	// ActionStateMarkDefault is making a state its project's default:
+	// markDefaultState.
+	ActionStateMarkDefault shared.Action = "state.mark_default"
+	// ActionWorkspaceStateList is listing the states of a workspace's
+	// projects that the caller is a member of: listWorkspaceStates.
+	ActionWorkspaceStateList shared.Action = "workspace_state.list"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -51,5 +65,6 @@ const (
 func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
-		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave}
+		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave,
+		ActionStateList, ActionStateCreate, ActionStateUpdate, ActionStateDelete, ActionStateMarkDefault, ActionWorkspaceStateList}
 }

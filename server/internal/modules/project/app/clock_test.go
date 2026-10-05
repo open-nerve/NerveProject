@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -40,8 +41,11 @@ func TestCreatingAProjectReadsTheClockBeforeItsTransaction(t *testing.T) {
 // transaction, after its locks (its workspace's FOR SHARE first, then its
 // project's), its decision and its checks, just before it writes (P2 spec
 // 2.6, M3 design 3.3): a write that queued behind another on either lock
-// never stamps an earlier time than the one it waited for. The clock logs
-// its read among the fakes' calls.
+// never stamps an earlier time than the one it waited for. So does
+// createState, which only inserts, after it reads the project's states
+// under its lock. deleteState counts the states its group keeps after it
+// deletes the state, the clock read before. The clock logs its read among
+// the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	tests := []struct {
 		name string
@@ -101,6 +105,26 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := uc.Execute(as(bob), webID)
 			return f.log.calls, err
 		}, left(bob, webID, true)},
+		{"createState", func() ([]string, error) {
+			uc, f, _ := newCreateState()
+			_, err := uc.Execute(as(bob), webID, review)
+			return f.log.calls, err
+		}, stateCreated(bob, webID, review, 70000)},
+		{"updateState", func() ([]string, error) {
+			uc, f, _ := newUpdateState()
+			_, err := uc.Execute(as(bob), webReview, domain.StatePatch{Group: ptr(domain.GroupBacklog)})
+			return f.log.calls, err
+		}, stateUpdated(bob, webReview, domain.StatePatch{Group: ptr(domain.GroupBacklog)}, domain.GroupStarted)},
+		{"deleteState", func() ([]string, error) {
+			uc, f, _ := newDeleteState()
+			err := uc.Execute(as(bob), webReview)
+			return f.log.calls, err
+		}, append(stateDeleted(bob, webReview, webID), fmt.Sprintf("CountGroupStates %s %s", webID, domain.GroupStarted))},
+		{"markDefaultState", func() ([]string, error) {
+			uc, f, _ := newMarkDefaultState()
+			err := uc.Execute(as(bob), webTodo)
+			return f.log.calls, err
+		}, defaultMarked(bob, webTodo, webID)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

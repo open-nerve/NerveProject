@@ -69,13 +69,15 @@ func (probeArgs) Kind() string { return "jobs_test.probe" }
 // probeWorker runs work for every probe job.
 type probeWorker struct {
 	river.WorkerDefaults[probeArgs]
-	work func(ctx context.Context) error
+	work func(ctx context.Context, job *river.Job[probeArgs]) error
 }
 
-func (w *probeWorker) Work(ctx context.Context, _ *river.Job[probeArgs]) error { return w.work(ctx) }
+func (w *probeWorker) Work(ctx context.Context, job *river.Job[probeArgs]) error {
+	return w.work(ctx, job)
+}
 
 // probeJob is a periodic job every interval, the first at once.
-func probeJob(interval time.Duration, work func(ctx context.Context) error) Job {
+func probeJob(interval time.Duration, work func(ctx context.Context, job *river.Job[probeArgs]) error) Job {
 	return Job{
 		Add: func(w *river.Workers) error { return river.AddWorkerSafely(w, &probeWorker{work: work}) },
 		Periodic: river.NewPeriodicJob(river.PeriodicInterval(interval),
@@ -119,13 +121,17 @@ func stop(t *testing.T, r *Runner, ctx context.Context, limit time.Duration) err
 
 // The periodic job runs at once, then every interval, until Stop; Stop
 // returns once the client has stopped, and nothing runs after it. River's
-// own lines go to the runner's logger.
+// own lines go to the runner's logger. Each run is known by the time River
+// scheduled it for: River schedules the runs the interval apart, but each
+// works only after waits of its own, to be inserted and fetched (River
+// polls every second), so two runs may work less than the interval apart,
+// or at once and in either order.
 func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 	t.Parallel()
 	runs := make(chan time.Time, 100)
 	var logs logBuffer
 	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: 5 * time.Second, Logger: newLogger(&logs)},
-		[]Job{probeJob(time.Second, func(context.Context) error { runs <- time.Now(); return nil })})
+		[]Job{probeJob(time.Second, func(_ context.Context, job *river.Job[probeArgs]) error { runs <- job.ScheduledAt; return nil })})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,8 +139,11 @@ func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 
 	first := receive(t, runs, 15*time.Second, "first run")
 	second := receive(t, runs, 10*time.Second, "second run")
-	if gap := second.Sub(first); gap < 500*time.Millisecond {
-		t.Errorf("runs %s apart, want about the 1s interval", gap)
+	if second.Before(first) {
+		first, second = second, first
+	}
+	if gap := second.Sub(first); gap != time.Second {
+		t.Errorf("runs scheduled at %v and %v, %s apart; want the 1s interval", first, second, gap)
 	}
 	if err := stop(t, r, context.Background(), 5*time.Second+cancelGrace+2*time.Second); err != nil {
 		t.Fatalf("Stop() = %v", err)
@@ -144,7 +153,7 @@ func TestRunnerWorksAPeriodicJobUntilStopped(t *testing.T) {
 	}
 	select {
 	case at := <-runs:
-		t.Errorf("a run at %v after Stop returned", at)
+		t.Errorf("a run scheduled at %v worked after Stop returned", at)
 	case <-time.After(1500 * time.Millisecond):
 	}
 	out := logs.String()
@@ -168,7 +177,7 @@ func TestStopCancelsARunningJobAfterTheShutdownTimeout(t *testing.T) {
 			running, cancelled := make(chan struct{}, 1), make(chan time.Time, 1)
 			var logs logBuffer
 			r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: timeout, Logger: newLogger(&logs)},
-				[]Job{probeJob(time.Hour, func(ctx context.Context) error {
+				[]Job{probeJob(time.Hour, func(ctx context.Context, _ *river.Job[probeArgs]) error {
 					running <- struct{}{}
 					select {
 					case <-ctx.Done():
@@ -206,7 +215,7 @@ func TestStopGivesUpOnAJobThatIgnoresCancellation(t *testing.T) {
 	running, release := make(chan struct{}, 1), make(chan struct{})
 	var logs logBuffer
 	r, err := New(newPool(t, pgtest.NewDatabase(t)), Config{ShutdownTimeout: time.Second, Logger: newLogger(&logs)},
-		[]Job{probeJob(time.Hour, func(context.Context) error {
+		[]Job{probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error {
 			running <- struct{}{}
 			<-release
 			return nil
@@ -233,7 +242,7 @@ func TestStopGivesUpOnAJobThatIgnoresCancellation(t *testing.T) {
 func TestStartWithoutADatabase(t *testing.T) {
 	var logs logBuffer
 	r, err := New(newPool(t, "postgres://nobody@127.0.0.1:1/nowhere"), Config{ShutdownTimeout: 5 * time.Second, Logger: newLogger(&logs)},
-		[]Job{probeJob(time.Hour, func(context.Context) error { return nil })})
+		[]Job{probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error { return nil })})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +262,7 @@ func TestStartWithoutADatabase(t *testing.T) {
 }
 
 func TestNewRejectsTwoWorkersOfOneKind(t *testing.T) {
-	job := probeJob(time.Hour, func(context.Context) error { return nil })
+	job := probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error { return nil })
 	_, err := New(newPool(t, "postgres://nobody@127.0.0.1:1/nowhere"), Config{ShutdownTimeout: time.Second, Logger: slog.New(slog.DiscardHandler)},
 		[]Job{job, {Add: job.Add}})
 	if err == nil || !strings.Contains(err.Error(), "register a job") {
@@ -265,7 +274,7 @@ func TestNewRejectsTwoWorkersOfOneKind(t *testing.T) {
 func TestRunnerWorksTwoJobsAtOnce(t *testing.T) {
 	t.Parallel()
 	running, release := make(chan struct{}, 3), make(chan struct{})
-	job := probeJob(time.Hour, func(context.Context) error {
+	job := probeJob(time.Hour, func(context.Context, *river.Job[probeArgs]) error {
 		running <- struct{}{}
 		<-release
 		return nil

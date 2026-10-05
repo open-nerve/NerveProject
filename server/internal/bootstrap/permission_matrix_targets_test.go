@@ -37,14 +37,25 @@ func ofAProjectTable(c caller) bool {
 	return slices.ContainsFunc(projectTables, func(table []caller) bool { return slices.Contains(table, c) })
 }
 
+// underProject are the rows under a project that a path names by their
+// id, by their parameter: what each is called, and the seeded rows among
+// which it must be, keyed by their project's key.
+var underProject = map[string]struct {
+	what string
+	rows func(s seeded) map[string]uuid.UUID
+}{
+	"{project_member_id}": {"membership", func(s seeded) map[string]uuid.UUID { return s.projectMembers }},
+	"{state_id}":          {"state", func(s seeded) map[string]uuid.UUID { return s.states }},
+}
+
 // targetViolation is what is wrong with where path, a path of pattern that
 // a cell of the column c sends, points; "" when nothing. A workspace named
 // by its slug ({slug} right after workspaces) must be workspaceOf(c). A
-// project named by its id ({project_id}) must be projectOf(c)'s, and a
-// project membership ({project_member_id}) one seeded in projectOf(c),
-// each from a column of a project table (projectTables): a project's
-// operation in a workspace-level row, or the only admin's, would leave the
-// project level's own columns unasked.
+// project named by its id ({project_id}) must be projectOf(c)'s, and a row
+// under a project (underProject: a project membership, a state) one seeded
+// in projectOf(c), each from a column of a project table (projectTables):
+// a project's operation in a workspace-level row, or the only admin's,
+// would leave the project level's own columns unasked.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and
@@ -66,13 +77,13 @@ func targetViolation(pattern, path string, c caller, s seeded, passOver func(par
 			if id := s.project(projectOf(c)).String(); got[i] != id {
 				return fmt.Sprintf("{project_id} %s is not its column's project %s, %s", got[i], projectOf(c), id)
 			}
-		case segment == "{project_member_id}":
+		case underProject[segment].rows != nil:
 			if !ofAProjectTable(c) {
-				return "{project_member_id} from a column of no project table (projectTables): a project's row names its columns"
+				return segment + " from a column of no project table (projectTables): a project's row names its columns"
 			}
 			id, err := uuid.Parse(got[i])
-			if key, isMember := s.projectOfMember(id); err != nil || !isMember || key != projectOf(c) {
-				return fmt.Sprintf("{project_member_id} %s is no membership seeded in its column's project %s", got[i], projectOf(c))
+			if key, isRow := projectOfRow(underProject[segment].rows(s), id); err != nil || !isRow || key != projectOf(c) {
+				return fmt.Sprintf("%s %s is no %s seeded in its column's project %s", segment, got[i], underProject[segment].what, projectOf(c))
 			}
 		case segment == "{slug}" && i > 0 && want[i-1] == "workspaces":
 			if got[i] != workspaceOf(c) {

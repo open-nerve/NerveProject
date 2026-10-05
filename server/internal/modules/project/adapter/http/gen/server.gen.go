@@ -104,6 +104,33 @@ func (e ProjectTab) Valid() bool {
 	}
 }
 
+// Defines values for StateGroup.
+const (
+	StateGroupBacklog   StateGroup = "backlog"
+	StateGroupCancelled StateGroup = "cancelled"
+	StateGroupCompleted StateGroup = "completed"
+	StateGroupStarted   StateGroup = "started"
+	StateGroupUnstarted StateGroup = "unstarted"
+)
+
+// Valid indicates whether the value is a known member of the StateGroup enum.
+func (e StateGroup) Valid() bool {
+	switch e {
+	case StateGroupBacklog:
+		return true
+	case StateGroupCancelled:
+		return true
+	case StateGroupCompleted:
+		return true
+	case StateGroupStarted:
+		return true
+	case StateGroupUnstarted:
+		return true
+	default:
+		return false
+	}
+}
+
 // IdentifierAvailability defines model for IdentifierAvailability.
 type IdentifierAvailability struct {
 	Available bool `json:"available"`
@@ -332,6 +359,65 @@ type ProjectUpdate struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
+// State A state of a project, in one of the groups of StateGroup.
+type State struct {
+	// Color As the web app's color picker gives it, e.g. "#F59E0B".
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Default Whether the state is its project's default state; a project has exactly one.
+	Default     bool   `json:"default"`
+	Description string `json:"description"`
+
+	// Group The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+	Group     StateGroup `json:"group"`
+	ID        uuid.UUID  `json:"id"`
+	Name      string     `json:"name"`
+	ProjectID uuid.UUID  `json:"project_id"`
+
+	// Sequence The state's place among the project's states, the lowest first.
+	Sequence    float64   `json:"sequence"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+}
+
+// StateCreate defines model for StateCreate.
+type StateCreate struct {
+	// Color 1–255 characters, not blank.
+	Color       string  `json:"color"`
+	Description *string `json:"description,omitempty"`
+
+	// Group The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+	Group StateGroup `json:"group"`
+
+	// Name 1–255 characters, not blank; another undeleted state of the project may not have it.
+	Name string `json:"name"`
+}
+
+// StateGroup The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+type StateGroup string
+
+// StateList defines model for StateList.
+type StateList struct {
+	Data []State `json:"data"`
+}
+
+// StateUpdate Changes the fields it names; a field left out keeps its value.
+type StateUpdate struct {
+	// Color 1–255 characters, not blank.
+	Color       *string `json:"color,omitempty"`
+	Description *string `json:"description,omitempty"`
+
+	// Group The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+	Group *StateGroup `json:"group,omitempty"`
+
+	// Name 1–255 characters, not blank; another undeleted state of the project may not have it.
+	Name *string `json:"name,omitempty"`
+
+	// Sequence The state's place among the project's states, the lowest first.
+	Sequence *float64 `json:"sequence,omitempty"`
+}
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -340,6 +426,9 @@ type ProjectMemberID = uuid.UUID
 
 // Slug defines model for Slug.
 type Slug = string
+
+// StateID defines model for StateID.
+type StateID = uuid.UUID
 
 // Problem RFC 9457 problem details (v0 design 3.5). `title` is the HTTP status phrase, `detail` explains this occurrence, and clients branch on `code`. Must match httpserver.Problem; the platform's contract test checks it.
 type Problem = externalRef0.Problem
@@ -361,6 +450,12 @@ type UpdateProjectJSONRequestBody = ProjectUpdate
 
 // AddProjectMembersJSONRequestBody defines body for AddProjectMembers for application/json ContentType.
 type AddProjectMembersJSONRequestBody = ProjectMembersAdd
+
+// CreateStateJSONRequestBody defines body for CreateState for application/json ContentType.
+type CreateStateJSONRequestBody = StateCreate
+
+// UpdateStateJSONRequestBody defines body for UpdateState for application/json ContentType.
+type UpdateStateJSONRequestBody = StateUpdate
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
@@ -403,9 +498,24 @@ type ServerInterface interface {
 	// AddProjectMembers Add workspace members to a project
 	// (POST /api/v0/projects/{project_id}/members)
 	AddProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListStates List a project's states
+	// (GET /api/v0/projects/{project_id}/states)
+	ListStates(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// CreateState Create a state in a project
+	// (POST /api/v0/projects/{project_id}/states)
+	CreateState(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// DeleteState Delete a state
+	// (DELETE /api/v0/states/{state_id})
+	DeleteState(w http.ResponseWriter, r *http.Request, stateID StateID)
+	// UpdateState Change a state
+	// (PATCH /api/v0/states/{state_id})
+	UpdateState(w http.ResponseWriter, r *http.Request, stateID StateID)
+	// MarkDefaultState Make a state its project's default
+	// (POST /api/v0/states/{state_id}/mark-default)
+	MarkDefaultState(w http.ResponseWriter, r *http.Request, stateID StateID)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string)
@@ -415,6 +525,9 @@ type ServerInterface interface {
 	// CreateProject Create a project in a workspace
 	// (POST /api/v0/workspaces/{slug}/projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, slug Slug)
+	// ListWorkspaceStates List the states of the projects the caller is a member of
+	// (GET /api/v0/workspaces/{slug}/states)
+	ListWorkspaceStates(w http.ResponseWriter, r *http.Request, slug Slug)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -738,6 +851,58 @@ func (siw *ServerInterfaceWrapper) AddProjectMembers(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListStates operation middleware
+func (siw *ServerInterfaceWrapper) ListStates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStates(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateState operation middleware
+func (siw *ServerInterfaceWrapper) CreateState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateState(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnarchiveProject operation middleware
 func (siw *ServerInterfaceWrapper) UnarchiveProject(w http.ResponseWriter, r *http.Request) {
 
@@ -755,6 +920,84 @@ func (siw *ServerInterfaceWrapper) UnarchiveProject(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UnarchiveProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteState operation middleware
+func (siw *ServerInterfaceWrapper) DeleteState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "state_id" -------------
+	var stateID StateID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "state_id", r.PathValue("state_id"), &stateID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteState(w, r, stateID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateState operation middleware
+func (siw *ServerInterfaceWrapper) UpdateState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "state_id" -------------
+	var stateID StateID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "state_id", r.PathValue("state_id"), &stateID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateState(w, r, stateID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkDefaultState operation middleware
+func (siw *ServerInterfaceWrapper) MarkDefaultState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "state_id" -------------
+	var stateID StateID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "state_id", r.PathValue("state_id"), &stateID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkDefaultState(w, r, stateID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -858,6 +1101,32 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateProject(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListWorkspaceStates operation middleware
+func (siw *ServerInterfaceWrapper) ListWorkspaceStates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWorkspaceStates(w, r, slug)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1001,6 +1270,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.UpdateProjectMember)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.ListStates)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.CreateState)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.DeleteState)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1555,6 +1830,99 @@ func (response AddProjectMembersdefaultApplicationProblemPlusJSONResponse) Visit
 	return err
 }
 
+type ListStatesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type ListStatesResponseObject interface {
+	VisitListStatesResponse(w http.ResponseWriter) error
+}
+
+type ListStates200JSONResponse StateList
+
+func (response ListStates200JSONResponse) VisitListStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStatesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListStatesdefaultApplicationProblemPlusJSONResponse) VisitListStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateStateRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *CreateStateJSONRequestBody
+}
+
+type CreateStateResponseObject interface {
+	VisitCreateStateResponse(w http.ResponseWriter) error
+}
+
+type CreateState201JSONResponse State
+
+func (response CreateState201JSONResponse) VisitCreateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateStatedefaultApplicationProblemPlusJSONResponse) VisitCreateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveProjectRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 }
@@ -1584,6 +1952,133 @@ type UnarchiveProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UnarchiveProjectdefaultApplicationProblemPlusJSONResponse) VisitUnarchiveProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type DeleteStateRequestObject struct {
+	StateID StateID `json:"state_id"`
+}
+
+type DeleteStateResponseObject interface {
+	VisitDeleteStateResponse(w http.ResponseWriter) error
+}
+
+type DeleteState204Response struct {
+}
+
+func (response DeleteState204Response) VisitDeleteStateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteStatedefaultApplicationProblemPlusJSONResponse) VisitDeleteStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateStateRequestObject struct {
+	StateID StateID `json:"state_id"`
+	Body    *UpdateStateJSONRequestBody
+}
+
+type UpdateStateResponseObject interface {
+	VisitUpdateStateResponse(w http.ResponseWriter) error
+}
+
+type UpdateState200JSONResponse State
+
+func (response UpdateState200JSONResponse) VisitUpdateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateStatedefaultApplicationProblemPlusJSONResponse) VisitUpdateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkDefaultStateRequestObject struct {
+	StateID StateID `json:"state_id"`
+}
+
+type MarkDefaultStateResponseObject interface {
+	VisitMarkDefaultStateResponse(w http.ResponseWriter) error
+}
+
+type MarkDefaultState204Response struct {
+}
+
+func (response MarkDefaultState204Response) VisitMarkDefaultStateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type MarkDefaultStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response MarkDefaultStatedefaultApplicationProblemPlusJSONResponse) VisitMarkDefaultStateResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -1742,6 +2237,52 @@ func (response CreateProjectdefaultApplicationProblemPlusJSONResponse) VisitCrea
 	return err
 }
 
+type ListWorkspaceStatesRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type ListWorkspaceStatesResponseObject interface {
+	VisitListWorkspaceStatesResponse(w http.ResponseWriter) error
+}
+
+type ListWorkspaceStates200JSONResponse StateList
+
+func (response ListWorkspaceStates200JSONResponse) VisitListWorkspaceStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWorkspaceStatesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListWorkspaceStatesdefaultApplicationProblemPlusJSONResponse) VisitListWorkspaceStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetProjectPreferences Read the caller's display settings in a project
@@ -1780,9 +2321,24 @@ type StrictServerInterface interface {
 	// AddProjectMembers Add workspace members to a project
 	// (POST /api/v0/projects/{project_id}/members)
 	AddProjectMembers(ctx context.Context, request AddProjectMembersRequestObject) (AddProjectMembersResponseObject, error)
+	// ListStates List a project's states
+	// (GET /api/v0/projects/{project_id}/states)
+	ListStates(ctx context.Context, request ListStatesRequestObject) (ListStatesResponseObject, error)
+	// CreateState Create a state in a project
+	// (POST /api/v0/projects/{project_id}/states)
+	CreateState(ctx context.Context, request CreateStateRequestObject) (CreateStateResponseObject, error)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(ctx context.Context, request UnarchiveProjectRequestObject) (UnarchiveProjectResponseObject, error)
+	// DeleteState Delete a state
+	// (DELETE /api/v0/states/{state_id})
+	DeleteState(ctx context.Context, request DeleteStateRequestObject) (DeleteStateResponseObject, error)
+	// UpdateState Change a state
+	// (PATCH /api/v0/states/{state_id})
+	UpdateState(ctx context.Context, request UpdateStateRequestObject) (UpdateStateResponseObject, error)
+	// MarkDefaultState Make a state its project's default
+	// (POST /api/v0/states/{state_id}/mark-default)
+	MarkDefaultState(ctx context.Context, request MarkDefaultStateRequestObject) (MarkDefaultStateResponseObject, error)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(ctx context.Context, request CheckProjectIdentifierRequestObject) (CheckProjectIdentifierResponseObject, error)
@@ -1792,6 +2348,9 @@ type StrictServerInterface interface {
 	// CreateProject Create a project in a workspace
 	// (POST /api/v0/workspaces/{slug}/projects)
 	CreateProject(ctx context.Context, request CreateProjectRequestObject) (CreateProjectResponseObject, error)
+	// ListWorkspaceStates List the states of the projects the caller is a member of
+	// (GET /api/v0/workspaces/{slug}/states)
+	ListWorkspaceStates(ctx context.Context, request ListWorkspaceStatesRequestObject) (ListWorkspaceStatesResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -2173,6 +2732,65 @@ func (sh *strictHandler) AddProjectMembers(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// ListStates operation middleware
+func (sh *strictHandler) ListStates(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request ListStatesRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStates(ctx, request.(ListStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStatesResponseObject); ok {
+		if err := validResponse.VisitListStatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateState operation middleware
+func (sh *strictHandler) CreateState(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request CreateStateRequestObject
+
+	request.ProjectID = projectID
+
+	var body CreateStateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateState(ctx, request.(CreateStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateStateResponseObject); ok {
+		if err := validResponse.VisitCreateStateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UnarchiveProject operation middleware
 func (sh *strictHandler) UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
 	var request UnarchiveProjectRequestObject
@@ -2192,6 +2810,91 @@ func (sh *strictHandler) UnarchiveProject(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UnarchiveProjectResponseObject); ok {
 		if err := validResponse.VisitUnarchiveProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteState operation middleware
+func (sh *strictHandler) DeleteState(w http.ResponseWriter, r *http.Request, stateID StateID) {
+	var request DeleteStateRequestObject
+
+	request.StateID = stateID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteState(ctx, request.(DeleteStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteStateResponseObject); ok {
+		if err := validResponse.VisitDeleteStateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateState operation middleware
+func (sh *strictHandler) UpdateState(w http.ResponseWriter, r *http.Request, stateID StateID) {
+	var request UpdateStateRequestObject
+
+	request.StateID = stateID
+
+	var body UpdateStateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateState(ctx, request.(UpdateStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateStateResponseObject); ok {
+		if err := validResponse.VisitUpdateStateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MarkDefaultState operation middleware
+func (sh *strictHandler) MarkDefaultState(w http.ResponseWriter, r *http.Request, stateID StateID) {
+	var request MarkDefaultStateRequestObject
+
+	request.StateID = stateID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkDefaultState(ctx, request.(MarkDefaultStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkDefaultState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkDefaultStateResponseObject); ok {
+		if err := validResponse.VisitMarkDefaultStateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2279,6 +2982,32 @@ func (sh *strictHandler) CreateProject(w http.ResponseWriter, r *http.Request, s
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProjectResponseObject); ok {
 		if err := validResponse.VisitCreateProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListWorkspaceStates operation middleware
+func (sh *strictHandler) ListWorkspaceStates(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request ListWorkspaceStatesRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWorkspaceStates(ctx, request.(ListWorkspaceStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWorkspaceStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWorkspaceStatesResponseObject); ok {
+		if err := validResponse.VisitListWorkspaceStatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

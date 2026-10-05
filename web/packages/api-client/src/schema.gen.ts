@@ -763,6 +763,106 @@ export interface paths {
         patch: operations["updateProjectMember"];
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List a project's states
+         * @description For the project's active members: its states, by sequence, the lowest first, then by id. The intake's triage state is none of them. An archived project lists none. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listStates"];
+        put?: never;
+        /**
+         * Create a state in a project
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are created as any other's. The name and the color have 1–255 characters, not blank, without NUL; the group is one of the five, and triage is refused (group not_allowed): the intake's state is not made here; the description has no NUL (validation_failed). The values are checked before the project is looked at. The new state comes after the project's others: its sequence is the greatest of theirs, the intake's triage state's left out, plus 15000, or 65535 when the project has none. It is not the default. Its name may not be another undeleted state's of the project, the intake's triage state's too, compared as written (project.state_name_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the workspace and project rows are locked.
+         */
+        post: operations["createState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/states/{state_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a state
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are deleted as any other's. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project's default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.
+         */
+        delete: operations["deleteState"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a state
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states change as any other's. The fields given change and the others stay; the values follow createState's rules, and the sequence is any number (validation_failed), checked before the state is looked at. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. Moving the only state of its group to another group is refused (project.state_last_in_group): every group keeps a state. Its name may not be another undeleted state's of the project, the intake's triage state's too (project.state_name_taken). The role is decided after the workspace and project rows are locked.
+         */
+        patch: operations["updateState"];
+        trace?: never;
+    };
+    "/api/v0/states/{state_id}/mark-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a state its project's default
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's default changes as any other's. The state becomes the project's default, and the state that was the default is no longer: a project has exactly one. Making the default state the default again leaves it so. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default. The role is decided after the workspace and project rows are locked.
+         */
+        post: operations["markDefaultState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the states of the projects the caller is a member of
+         * @description For the workspace's active members: the states of its projects that the caller is an active member of, the archived ones left out, by project id, then by sequence, the lowest first, then by id; each project's as listStates lists them, the intake's triage state none of them. A project the caller sees but is not a member of adds none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaceStates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1394,6 +1494,55 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
         };
         /**
+         * @description The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+         * @enum {string}
+         */
+        StateGroup: "backlog" | "unstarted" | "started" | "completed" | "cancelled";
+        /** @description A state of a project, in one of the groups of StateGroup. */
+        State: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            description: string;
+            /** @description As the web app's color picker gives it, e.g. "#F59E0B". */
+            color: string;
+            group: components["schemas"]["StateGroup"];
+            /** @description Whether the state is its project's default state; a project has exactly one. */
+            default: boolean;
+            /** @description The state's place among the project's states, the lowest first. */
+            sequence: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        StateList: {
+            data: components["schemas"]["State"][];
+        };
+        StateCreate: {
+            /** @description 1–255 characters, not blank; another undeleted state of the project may not have it. */
+            name: string;
+            /** @description 1–255 characters, not blank. */
+            color: string;
+            group: components["schemas"]["StateGroup"];
+            description?: string;
+        };
+        /** @description Changes the fields it names; a field left out keeps its value. */
+        StateUpdate: {
+            /** @description 1–255 characters, not blank; another undeleted state of the project may not have it. */
+            name?: string;
+            /** @description 1–255 characters, not blank. */
+            color?: string;
+            group?: components["schemas"]["StateGroup"];
+            description?: string;
+            /** @description The state's place among the project's states, the lowest first. */
+            sequence?: number;
+        };
+        /**
          * @description A tab of a project's header.
          * @enum {string}
          */
@@ -1444,6 +1593,8 @@ export interface components {
         ProjectID: string;
         /** @description A project membership's id (ProjectMember.id), not the member's account id. */
         ProjectMemberID: string;
+        /** @description A state's id (State.id). */
+        StateID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1512,6 +1663,11 @@ export type ProjectMemberList = components['schemas']['ProjectMemberList'];
 export type ProjectMemberNew = components['schemas']['ProjectMemberNew'];
 export type ProjectMembersAdd = components['schemas']['ProjectMembersAdd'];
 export type ProjectMemberUpdate = components['schemas']['ProjectMemberUpdate'];
+export type StateGroup = components['schemas']['StateGroup'];
+export type State = components['schemas']['State'];
+export type StateList = components['schemas']['StateList'];
+export type StateCreate = components['schemas']['StateCreate'];
+export type StateUpdate = components['schemas']['StateUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -1523,6 +1679,7 @@ export type ParameterSlug = components['parameters']['Slug'];
 export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
+export type ParameterStateId = components['parameters']['StateID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -2692,6 +2849,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectMember"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listStates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's states. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StateList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StateCreate"];
+            };
+        };
+        responses: {
+            /** @description The new state. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["State"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The state is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StateUpdate"];
+            };
+        };
+        responses: {
+            /** @description The state as changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["State"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markDefaultState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The state is the project's default. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceStates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The states. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StateList"];
                 };
             };
             default: components["responses"]["Problem"];

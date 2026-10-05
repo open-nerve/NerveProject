@@ -34,25 +34,10 @@ func (f *fakeStore) membership(id uuid.UUID) (project, user uuid.UUID, m app.Mem
 	return uuid.UUID{}, uuid.UUID{}, app.Membership{}, false
 }
 
-// memberReads is how a membership read again under the locks answers: err
-// fails it, gone finds none, as if it was deleted meanwhile, project,
-// when set, is the project it is found in, as if it had moved there,
-// role, when set, its role, as if it had been changed meanwhile, ended
-// finds it ended, as if it had been ended meanwhile, and id, when set, is
-// the id it answers for the one asked.
-type memberReads struct {
-	err     error
-	gone    bool
-	project uuid.UUID
-	role    shared.Role
-	ended   bool
-	id      uuid.UUID
-}
-
 func (f *fakeStore) MemberByID(ctx context.Context, id uuid.UUID) (app.ProjectMembership, bool, error) {
 	f.log.add(ctx, "MemberByID %s", id)
-	f.memberReadCount++
-	again := f.memberReadCount > 1
+	f.rowReadCount++
+	again := f.rowReadCount > 1
 	if err := f.fail("MemberByID"); err != nil {
 		return app.ProjectMembership{}, false, err
 	}

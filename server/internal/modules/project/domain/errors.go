@@ -49,6 +49,22 @@ var (
 	ErrSoleAdmin = shared.NewError(shared.KindConflict, "project.sole_admin",
 		"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while it has "+
 			"other active members. It must first be given another admin, or be deleted.")
+	// ErrStateNotFound answers a state that does not exist, is deleted, is
+	// the triage state, or whose project the caller does not see: the same
+	// 404 for all (M3 design 3.17, 5.3, 8.2).
+	ErrStateNotFound = shared.NewError(shared.KindNotFound, "project.state_not_found",
+		"The state does not exist, cannot be changed through this API, or you cannot see its project.")
+	// ErrStateNameTaken answers a name another undeleted state of the
+	// project has, compared as written.
+	ErrStateNameTaken = shared.NewError(shared.KindConflict, "project.state_name_taken", "A state of the project has this name.")
+	// ErrStateDefault answers the deletion of the project's default state
+	// (M3 design 3.17).
+	ErrStateDefault = shared.NewError(shared.KindConflict, "project.state_default",
+		"The default state cannot be deleted; make another state the default first.")
+	// ErrStateLastInGroup answers the deletion of a group's only state, and
+	// its move to another group: every group keeps a state (M3 design 3.17).
+	ErrStateLastInGroup = shared.NewError(shared.KindConflict, "project.state_last_in_group",
+		"The state is the only one of its group, and every group keeps one; add another to the group first.")
 )
 
 // LeadNotAllowed is the 422 of a lead who is not an active admin or member

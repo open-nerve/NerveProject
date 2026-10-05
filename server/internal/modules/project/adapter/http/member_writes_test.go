@@ -164,8 +164,7 @@ func TestLeaveProject(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"no project", domain.ErrNotFound, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
+		{"no project", domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
 		{"not its member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"its only admin", domain.ErrSoleAdmin, http.StatusConflict, `{"status":409,"code":"project.sole_admin","title":"Conflict",` +
 			`"detail":"The project would be left without an admin: its only active admin cannot leave it, nor can his membership end while ` +

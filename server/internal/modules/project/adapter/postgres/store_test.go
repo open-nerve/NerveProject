@@ -2,6 +2,7 @@ package postgresadapter_test
 
 import (
 	"context"
+	"maps"
 	"testing"
 	"time"
 	"uuid"
@@ -70,14 +71,65 @@ func newProject(t *testing.T, s *postgresadapter.Store, workspace uuid.UUID, nam
 	return id
 }
 
-// tableRows is every row of table as text but the row id, in order: what
-// an insert of the row id must leave as it was.
-func tableRows(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) string {
+// tableRows is every row of table as text but the rows ids, in order:
+// what a write of the rows ids must leave as it was.
+func tableRows(t *testing.T, pool *pgxpool.Pool, table string, ids ...uuid.UUID) string {
 	t.Helper()
 	var s string
 	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+table+
-		" r WHERE r.id <> $1", id).Scan(&s); err != nil {
+		" r WHERE r.id <> ALL (coalesce($1::uuid[], '{}'))", ids).Scan(&s); err != nil {
 		t.Fatal(err)
 	}
 	return s
+}
+
+// rowsBut is every row of table as text, by id: the one id without the
+// columns cols, which a write of it writes.
+func rowsBut(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, cols ...string) string {
+	t.Helper()
+	var rows string
+	if err := pool.QueryRow(context.Background(), `SELECT coalesce(string_agg(CASE WHEN r.id = $1 THEN (to_jsonb(r) - $2::text[])::text
+		ELSE r::text END, E'\n' ORDER BY r.id), '') FROM `+table+` r`, id, cols).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	return rows
+}
+
+// columns are the row id of table, each column's value as JSON text.
+func columns(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) map[string]string {
+	t.Helper()
+	rows, err := pool.Query(context.Background(), "SELECT key, value::text FROM "+table+" r, jsonb_each(to_jsonb(r)) WHERE r.id = $1", id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := map[string]string{}
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			t.Fatal(err)
+		}
+		out[k] = v
+	}
+	if err := rows.Err(); err != nil || len(out) == 0 {
+		t.Fatalf("the row %s of %s: %v, %d columns", id, table, err, len(out))
+	}
+	return out
+}
+
+// changed is before with the columns of change changed, as JSON text.
+func changed(before map[string]string, change map[string]string) map[string]string {
+	out := maps.Clone(before)
+	maps.Copy(out, change)
+	return out
+}
+
+// jsonTime is at as columns reads a timestamptz: JSON text, in UTC.
+func jsonTime(at time.Time) string {
+	return `"` + at.UTC().Format("2006-01-02T15:04:05.999999") + `+00:00"`
+}
+
+// audit is the audit columns a write by by at at leaves, as columns reads
+// them.
+func audit(by uuid.UUID, at time.Time) map[string]string {
+	return map[string]string{"updated_by_id": `"` + by.String() + `"`, "updated_at": jsonTime(at)}
 }

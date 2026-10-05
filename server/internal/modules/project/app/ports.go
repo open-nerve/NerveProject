@@ -138,13 +138,12 @@ type ProjectFinder interface {
 }
 
 // ProjectLocks is the project store's side of the locks of a write on a
-// project (Locks): the project's workspace, read first without a lock, the
-// project's own lock, and the membership a write on one names.
+// project (Locks): the project's workspace, read first without a lock, and
+// the project's own lock.
 type ProjectLocks interface {
 	ProjectFinder
 	ProjectLocker
 	ProjectSharer
-	MemberFinder
 }
 
 // MemberLister is listProjectMembers' repository.

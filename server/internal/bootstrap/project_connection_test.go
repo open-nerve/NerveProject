@@ -149,8 +149,12 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // deadline. alice, acme's admin, creates Ops, changes Web, archives and
 // unarchives it, changes her display settings in it and adds bob, whose
 // ended membership she restores; carol joins it anew; alice makes carol an
-// admin of Web and removes bob; carol, an admin, leaves it; alice deletes
-// both projects.
+// admin of Web and removes bob; she creates QA in it, alone in the
+// completed group, and moves it to the started group, which the count of
+// its group refuses (409 project.state_last_in_group); she renames it
+// Checked, creates Done in the completed group, deletes Checked, which
+// counts the group again, and makes Done Web's default; carol, an admin,
+// leaves it; alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -190,6 +194,16 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	send(http.MethodPatch, "/api/v0/project-members/"+projectMemberships(t, r.pool, carol, r.web)[0].String(), r.alice, `{"role":20}`,
 		http.StatusOK)
 	send(http.MethodDelete, "/api/v0/project-members/"+projectMemberships(t, r.pool, r.bob, r.web)[0].String(), r.alice, "", http.StatusNoContent)
+	var qa, done struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
+	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
+	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
+	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"Done","color":"#46A758","group":"completed"}`, http.StatusCreated),
+		&done)
+	send(http.MethodDelete, "/api/v0/states/"+qa.ID.String(), r.alice, "", http.StatusNoContent)
+	send(http.MethodPost, "/api/v0/states/"+done.ID.String()+"/mark-default", r.alice, "", http.StatusNoContent)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

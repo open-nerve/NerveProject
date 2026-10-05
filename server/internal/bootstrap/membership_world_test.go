@@ -23,7 +23,11 @@ import (
 // is a workspace admin (PM+WA). Ops, alice's: carol its admin, bob its
 // member, by her adding. Lab, beta's, bob's: carol its member by his
 // adding. bob and carol are each an admin somewhere and a member elsewhere,
-// and bob is a workspace admin in beta alone.
+// and bob is a workspace admin in beta alone. Each project has the states
+// it is made with; Web has QA too, of the completed group beside Done,
+// alice's (newState), and Retired, deleted, which alice created after QA,
+// at 85000; Ops's Cancelled is at 100000, after every state of Web, moved
+// there by alice.
 type memberWorld struct {
 	contract      *apitest.Contract
 	base          string
@@ -77,6 +81,37 @@ func newMemberWorld(t *testing.T) memberWorld {
 			add.members); status != http.StatusCreated {
 			t.Fatalf("%s's adding %s = %d %s", add.by, add.members, status, body)
 		}
+	}
+	if status, body := call(t, contract, http.MethodPost, w.base+"/api/v0/projects/"+w.web.String()+"/states", w.tokens["alice"],
+		newState); status != http.StatusCreated {
+		t.Fatalf("alice's creating Web's QA = %d %s", status, body)
+	}
+	status, body := call(t, contract, http.MethodPost, w.base+"/api/v0/projects/"+w.web.String()+"/states", w.tokens["alice"],
+		`{"name":"Retired","color":"#000000","group":"completed"}`)
+	var retired struct {
+		ID       uuid.UUID `json:"id"`
+		Sequence float64   `json:"sequence"`
+	}
+	if status != http.StatusCreated {
+		t.Fatalf("alice's creating Web's Retired = %d %s", status, body)
+	}
+	if decodeAnswer(t, body, &retired); retired.Sequence != 85000 {
+		t.Fatalf("Web's Retired at %v; want 85000, after QA", retired.Sequence)
+	}
+	if status, body := call(t, contract, http.MethodDelete, w.base+"/api/v0/states/"+retired.ID.String(), w.tokens["alice"],
+		""); status != http.StatusNoContent {
+		t.Fatalf("alice's deleting Web's Retired = %d %s", status, body)
+	}
+	status, body = call(t, contract, http.MethodPatch, w.base+"/api/v0/states/"+stateID(t, w.pool, w.ops, "Cancelled").String(),
+		w.tokens["alice"], `{"sequence":100000}`)
+	var cancelled struct {
+		Sequence float64 `json:"sequence"`
+	}
+	if status != http.StatusOK {
+		t.Fatalf("alice's moving Ops's Cancelled = %d %s", status, body)
+	}
+	if decodeAnswer(t, body, &cancelled); cancelled.Sequence != 100000 {
+		t.Fatalf("Ops's Cancelled at %v; want 100000, after every state of Web", cancelled.Sequence)
 	}
 	gina := w.acmeMembership(t, "gina")
 	if status, body := call(t, contract, http.MethodPatch, w.base+"/api/v0/workspace-members/"+gina.String(), w.tokens["alice"],

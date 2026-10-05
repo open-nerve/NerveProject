@@ -90,24 +90,60 @@ type LeaveProjectUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID) error
 }
 
+// ListStatesUseCase is app.ListStates.
+type ListStatesUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID) ([]domain.State, error)
+}
+
+// CreateStateUseCase is app.CreateState.
+type CreateStateUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, in domain.StateCreate) (domain.State, error)
+}
+
+// UpdateStateUseCase is app.UpdateState.
+type UpdateStateUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, p domain.StatePatch) (domain.State, error)
+}
+
+// DeleteStateUseCase is app.DeleteState.
+type DeleteStateUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// MarkDefaultStateUseCase is app.MarkDefaultState.
+type MarkDefaultStateUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// ListWorkspaceStatesUseCase is app.ListWorkspaceStates.
+type ListWorkspaceStatesUseCase interface {
+	Execute(ctx context.Context, slug string) ([]domain.State, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
-	ListProjects      ListProjectsUseCase
-	CreateProject     CreateProjectUseCase
-	GetProject        GetProjectUseCase
-	CheckIdentifier   CheckIdentifierUseCase
-	UpdateProject     UpdateProjectUseCase
-	ArchiveProject    ArchiveProjectUseCase
-	UnarchiveProject  ArchiveProjectUseCase
-	DeleteProject     DeleteProjectUseCase
-	GetPreferences    GetPreferencesUseCase
-	UpdatePreferences UpdatePreferencesUseCase
-	ListMembers       ListMembersUseCase
-	AddMembers        AddMembersUseCase
-	JoinProject       JoinProjectUseCase
-	UpdateMember      UpdateMemberUseCase
-	RemoveMember      RemoveMemberUseCase
-	LeaveProject      LeaveProjectUseCase
+	ListProjects        ListProjectsUseCase
+	CreateProject       CreateProjectUseCase
+	GetProject          GetProjectUseCase
+	CheckIdentifier     CheckIdentifierUseCase
+	UpdateProject       UpdateProjectUseCase
+	ArchiveProject      ArchiveProjectUseCase
+	UnarchiveProject    ArchiveProjectUseCase
+	DeleteProject       DeleteProjectUseCase
+	GetPreferences      GetPreferencesUseCase
+	UpdatePreferences   UpdatePreferencesUseCase
+	ListMembers         ListMembersUseCase
+	AddMembers          AddMembersUseCase
+	JoinProject         JoinProjectUseCase
+	UpdateMember        UpdateMemberUseCase
+	RemoveMember        RemoveMemberUseCase
+	LeaveProject        LeaveProjectUseCase
+	ListStates          ListStatesUseCase
+	CreateState         CreateStateUseCase
+	UpdateState         UpdateStateUseCase
+	DeleteState         DeleteStateUseCase
+	MarkDefaultState    MarkDefaultStateUseCase
+	ListWorkspaceStates ListWorkspaceStatesUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

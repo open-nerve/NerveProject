@@ -75,10 +75,8 @@ func TestUpdateProjectRefusals(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"no project", domain.ErrNotFound, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-		{"a project member", shared.Forbidden(), http.StatusForbidden,
-			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"no project", domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
+		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"archived", domain.ErrArchived, http.StatusConflict,
 			`{"status":409,"code":"project.archived","title":"Conflict","detail":"The project is archived; unarchive it to change it."}`},
 		{"a lead and a default assignee who may not be", shared.Invalid(domain.Unassignable("project_lead_id"),
