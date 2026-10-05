@@ -22,9 +22,9 @@ func newCreateState() (*app.CreateState, *writeFixture, *fakeStates) {
 // description, a name no state of web or ops has.
 var review = domain.StateCreate{Name: "QA", Color: "#0EA5E9", Group: domain.GroupCompleted, Description: "Checked by QA"}
 
-// stateCreated are the calls of user's creation of in in project after
-// greatest: its locks and decision, the greatest sequence, the clock, the
-// insert of the state after it, never the default, by user at that time.
+// stateCreated are the calls of user's creation of in in project at
+// sequence: its locks and decision, the greatest sequence, the clock, the
+// insert of the state at sequence, never the default, by user at that time.
 func stateCreated(user, project uuid.UUID, in domain.StateCreate, sequence float64) []string {
 	return append(lockedDecision(user, project, domain.ActionStateCreate), "GreatestSequence "+project.String(), "Now",
 		"CreateState "+stateRow(app.StateRow{WorkspaceID: acme.ID, ProjectID: project, CreatedBy: user, Now: clockNow,
@@ -36,7 +36,9 @@ func stateCreated(user, project uuid.UUID, in domain.StateCreate, sequence float
 // clock, then inserts the state 15000 after it, by the caller at that time;
 // it answers the state as stored, the time to the microsecond: web's after
 // its Cancelled, 70000; archived ops's, as any other's (3.19), after its
-// Backlog, 30000; and ops's, its states gone, at 65535.
+// Backlog, 30000; and ops's, its states gone, at 65535. The use case makes
+// each state's id: a second state's differs from the first's, and neither
+// is the nil id, the project's, or a state's the fixture had.
 func TestCreateState(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
@@ -53,6 +55,7 @@ func TestCreateState(t *testing.T) {
 			if tt.set != nil {
 				tt.set(s)
 			}
+			before := maps.Clone(s.states)
 			got, err := uc.Execute(as(bob), tt.project, review)
 			stored := s.states[got.ID]
 			want := domain.State{ID: got.ID, WorkspaceID: acme.ID, ProjectID: tt.project, Name: "QA", Description: "Checked by QA", Color: "#0EA5E9",
@@ -62,6 +65,17 @@ func TestCreateState(t *testing.T) {
 			}
 			if want := stateCreated(bob, tt.project, review, tt.sequence); !slices.Equal(f.log.calls, want) {
 				t.Errorf("calls\n%q\nwant\n%q", f.log.calls, want)
+			}
+			second := review
+			second.Name = "QA again"
+			again, err := uc.Execute(as(bob), tt.project, second)
+			if err != nil || again.ID == got.ID {
+				t.Errorf("a second state = %s, %v; want another id than the first's, %s", again.ID, err, got.ID)
+			}
+			for _, id := range []uuid.UUID{got.ID, again.ID} {
+				if _, had := before[id]; had || id == uuid.Nil() || id == tt.project {
+					t.Errorf("a state created as %s; want a new id: not the nil id, the project's or a state's the fixture had", id)
+				}
 			}
 		})
 	}

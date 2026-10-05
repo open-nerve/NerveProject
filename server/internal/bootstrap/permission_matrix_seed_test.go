@@ -22,12 +22,13 @@ import (
 
 // The writers of prepareMatrix's rows (permission_matrix_seeded_test.go):
 // the workspace store's and the project store's, the SQL that makes the
-// states no store makes alone, and the checks that the rows the cells rest
-// on are there.
+// membership states no store makes alone, and the checks that the rows the
+// cells rest on are there.
 
 // matrixSeed writes the prepared workspaces, memberships and settings
 // through the workspace store, and keeps the workspaces' ids by slug; exec
-// runs the SQL that makes the states no store makes alone (partingStates).
+// runs the SQL that makes the membership states no store makes alone
+// (partingStates).
 type matrixSeed struct {
 	t          *testing.T
 	store      *workspacepg.Store
