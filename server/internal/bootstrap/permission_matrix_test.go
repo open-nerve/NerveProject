@@ -209,7 +209,7 @@ func decodeAnswer(t *testing.T, answer string, v any) {
 
 // matrixRows are the rows, each module's from its file.
 func matrixRows() []matrixRow {
-	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows())
+	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows(), stateMatrixRows())
 }
 
 // matrixApps is how many cells may run an app of their own at once: each
@@ -246,17 +246,18 @@ func (d matrixData) config(t *testing.T, url string, change func(*config.Config)
 // with the ids newSeeded named, and acme's admin's display settings;
 // other's admin and removed member are there so that a role read in the
 // wrong workspace lets either into acme. Through the project store, the
-// projects and project memberships of matrixProjects and
-// matrixProjectMembers, and acme's archived project archived. Through both
-// stores, the removed member's removal; then, through the workspace store,
-// the invitations of matrixInvitations. Through the project store, the
-// memberships P5b's writes end (endings); through SQL, the states no store
-// makes alone (partingStates). Through the API, gone deleted by
-// its admin, which soft-deletes its memberships and its project with it;
-// then the checks that the rows the cells rest on are there
-// (preconditions). Everything that connected to the database is closed
-// when it returns, so that it can be copied. A -run that leaves out
-// prepare fails here, not with a 401 in every cell.
+// projects, project memberships and states of matrixProjects,
+// matrixProjectMembers and matrixStates, and acme's archived project
+// archived. Through both stores, the removed member's removal; then,
+// through the workspace store, the invitations of matrixInvitations.
+// Through the project store, the memberships P5b's writes end (endings);
+// through SQL, the states no store makes alone (partingStates). Through
+// the API, gone deleted by its admin, which soft-deletes its memberships
+// and its project, with its states, with it; then the checks that the rows
+// the cells rest on are there (preconditions), the states among them
+// (seededStates). Everything that connected to the database is closed when
+// it returns, so that it can be copied. A -run that leaves out prepare
+// fails here, not with a 401 in every cell.
 func prepareMatrix(t *testing.T) matrixData {
 	t.Helper()
 	d := matrixData{url: pgtest.NewDatabase(t), keyFile: writeFile(t, testKeyPEM), tokens: map[caller]string{}, seeded: newSeeded()}
@@ -291,6 +292,7 @@ func prepareMatrix(t *testing.T) matrixData {
 		for _, pm := range matrixProjectMembers {
 			projects.join(s.projectMember(pm.key, pm.c), pm.key, pm.c, pm.role)
 		}
+		projects.states(s)
 		projects.archive("acme/archived")
 		projects.removal(s)
 		for _, i := range matrixInvitations {
@@ -307,6 +309,7 @@ func prepareMatrix(t *testing.T) matrixData {
 			t.Fatalf("deleting gone = %d %s", status, body)
 		}
 		projects.preconditions(s)
+		projects.seededStates(pool)
 	})
 	if !prepared {
 		t.FailNow()

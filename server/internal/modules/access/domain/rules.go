@@ -105,6 +105,9 @@ var rules = map[shared.Action]Rule{
 	// One's own membership: every active member of the project; the only
 	// admin's 409 is the use case's (M3 design 3.7 rule 1, 9.2).
 	"project.leave": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// The project's admins, and its members who are the workspace's admins
+	// (M3 design 3.4: not its guests, whom Plane lets change states; 9.2).
+	"state.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

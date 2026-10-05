@@ -74,6 +74,8 @@ var projectWrites = []projectWrite{
 	// bob and carol, guests now, leave.
 	{op: "leaveProject", method: http.MethodPost, path: "/api/v0/projects/%s/leave", want: http.StatusNoContent, by: [2]string{"bob", "carol"},
 		member: [2]string{"bob", "carol"}},
+	{op: "createState", method: http.MethodPost, path: "/api/v0/projects/%s/states", body: `{"name":"QA","color":"#0EA5E9","group":"completed"}`,
+		want: http.StatusCreated},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }

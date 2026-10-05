@@ -132,8 +132,8 @@ type fakeStore struct {
 	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
 	// The reads of a membership by its id (fakes_member_test.go): how many
 	// ran, how the second one answers, and answersAs, when set, the id each
-	// answers for the one asked; changedAs, when set, is the id
-	// UpdateMemberRole answers for the one it changed.
+	// answers for the one asked; changedAs, when set, is the id the write of
+	// the row answers for the one it wrote (UpdateMemberRole, CreateState).
 	memberReadCount int
 	reread          memberReads
 	answersAs       uuid.UUID

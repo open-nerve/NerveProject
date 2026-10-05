@@ -95,6 +95,14 @@ var matrixProjectMembers = []struct {
 	{"other/project", callerNever, shared.RoleAdmin},
 }
 
+// matrixStates are the states prepareMatrix seeds in each project of
+// matrixProjects through the project store, by the workspace's admin, as
+// createProject would make them: the six of domain.DefaultStates, Backlog
+// the default and Triage the triage state, and Review, a second state of
+// the started group, after In Progress. gone's are deleted with it.
+var matrixStates = append(projectdomain.DefaultStates(),
+	projectdomain.NewState{Name: "Review", Color: "#F59E0B", Sequence: 40000, Group: projectdomain.GroupStarted})
+
 // ownInvitation is the workspace of the invitation to c's own address: one
 // he is not an active member of, so accepting it makes him one. acme's
 // admin, member and guest are invited to other; the others to acme, where
@@ -119,9 +127,9 @@ func emailOf(c caller) string {
 // check can name: each workspace, by its slug; each membership, by the
 // workspace's slug and the column; each invitation, by the workspace's
 // slug and the address; each project, by its key; each project membership,
-// by the project's key and the column; and each account, by its name in
-// matrixAccounts, which prepareMatrix registers. t is the test that asks
-// for them (in).
+// by the project's key and the column; each state, by the project's key
+// and its name; and each account, by its name in matrixAccounts, which
+// prepareMatrix registers. t is the test that asks for them (in).
 type seeded struct {
 	t              testing.TB
 	workspaces     map[string]uuid.UUID
@@ -129,17 +137,18 @@ type seeded struct {
 	invitations    map[string]uuid.UUID
 	projects       map[string]uuid.UUID
 	projectMembers map[string]uuid.UUID
+	states         map[string]uuid.UUID
 	accounts       map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
-// matrixMemberships, each of matrixInvitations, each of matrixProjects and
-// each of matrixProjectMembers before prepareMatrix writes them, so that
-// matrixViolations, without a database, sees the keys and the targets the
-// cells will.
+// matrixMemberships, each of matrixInvitations, each of matrixProjects, each
+// of matrixProjectMembers and each of matrixStates in each project before
+// prepareMatrix writes them, so that matrixViolations, without a database,
+// sees the keys and the targets the cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
-		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
+		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -151,6 +160,9 @@ func newSeeded() seeded {
 	}
 	for _, p := range matrixProjects {
 		s.projects[p.key] = uuid.NewV7()
+		for _, st := range matrixStates {
+			s.states[p.key+"|"+st.Name] = uuid.NewV7()
+		}
 	}
 	for _, pm := range matrixProjectMembers {
 		s.projectMembers[pm.key+"|"+string(pm.c)] = uuid.NewV7()
@@ -216,6 +228,17 @@ func (s seeded) projectMember(key string, c caller) uuid.UUID {
 	if !ok {
 		s.t.Helper()
 		s.t.Fatalf("no membership of %s by %s is seeded", key, c)
+	}
+	return id
+}
+
+// state is the id of the state name of the project key; one never seeded
+// fails the test at once, as membership's does.
+func (s seeded) state(key, name string) uuid.UUID {
+	id, ok := s.states[key+"|"+name]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no state %s of %s is seeded", name, key)
 	}
 	return id
 }

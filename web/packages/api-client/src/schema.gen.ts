@@ -763,6 +763,29 @@ export interface paths {
         patch: operations["updateProjectMember"];
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a state in a project
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are created as any other's. The name and the color have 1–255 characters, not blank, without NUL; the group is one of the five, and triage is refused (group not_allowed): the intake's state is not made here; the description has no NUL (validation_failed). The values are checked before the project is looked at. The new state comes after the project's others: its sequence is the greatest of theirs, the intake's triage state's left out, plus 15000, or 65535 when the project has none. It is not the default. Its name may not be another undeleted state's of the project, the intake's triage state's too, compared as written (project.state_name_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the workspace and project rows are locked.
+         */
+        post: operations["createState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1394,6 +1417,41 @@ export interface components {
             role: components["schemas"]["ProjectRole"];
         };
         /**
+         * @description The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+         * @enum {string}
+         */
+        StateGroup: "backlog" | "unstarted" | "started" | "completed" | "cancelled";
+        StateCreate: {
+            /** @description 1–255 characters, not blank; another undeleted state of the project may not have it. */
+            name: string;
+            /** @description 1–255 characters, not blank. */
+            color: string;
+            group: components["schemas"]["StateGroup"];
+            description?: string;
+        };
+        /** @description A state of a project, in one of the groups of StateGroup. */
+        State: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            name: string;
+            description: string;
+            /** @description As the web app's color picker gives it, e.g. "#F59E0B". */
+            color: string;
+            group: components["schemas"]["StateGroup"];
+            /** @description Whether the state is its project's default state; a project has exactly one. */
+            default: boolean;
+            /** @description The state's place among the project's states, the lowest first. */
+            sequence: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /**
          * @description A tab of a project's header.
          * @enum {string}
          */
@@ -1512,6 +1570,9 @@ export type ProjectMemberList = components['schemas']['ProjectMemberList'];
 export type ProjectMemberNew = components['schemas']['ProjectMemberNew'];
 export type ProjectMembersAdd = components['schemas']['ProjectMembersAdd'];
 export type ProjectMemberUpdate = components['schemas']['ProjectMemberUpdate'];
+export type StateGroup = components['schemas']['StateGroup'];
+export type StateCreate = components['schemas']['StateCreate'];
+export type State = components['schemas']['State'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -2692,6 +2753,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectMember"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StateCreate"];
+            };
+        };
+        responses: {
+            /** @description The new state. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["State"];
                 };
             };
             default: components["responses"]["Problem"];

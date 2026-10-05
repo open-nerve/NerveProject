@@ -2,11 +2,13 @@ package bootstrap
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 	"uuid"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	projectpg "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
@@ -126,6 +128,71 @@ func (s projectSeed) join(id uuid.UUID, key string, c caller, role shared.Role) 
 		Now: s.now,
 	}); err != nil {
 		s.t.Fatal(err)
+	}
+}
+
+// states stores each project's matrixStates, as createProject makes its
+// own, with the ids sd names, by its workspace's admin.
+func (s projectSeed) states(sd seeded) {
+	s.t.Helper()
+	for _, p := range matrixProjects {
+		slug, _, _ := strings.Cut(p.key, "/")
+		var rows []projectapp.StateRow
+		for _, st := range matrixStates {
+			rows = append(rows, projectapp.StateRow{ID: sd.state(p.key, st.Name), WorkspaceID: s.workspaces[slug], ProjectID: s.projects[p.key],
+				State: st, CreatedBy: s.ids[matrixAdmins[slug]], Now: s.now})
+		}
+		if err := s.store.CreateStates(context.Background(), rows); err != nil {
+			s.t.Fatal(err)
+		}
+	}
+}
+
+// seededState is a state of a matrix project as seededStates reads it.
+type seededState struct {
+	Name, Group string
+	Default     bool
+	Sequence    float64
+	Deleted     bool
+}
+
+// seededStates checks the states the cells of each matrix project rest on,
+// read back by name: those of matrixStates exactly, each in its group, at
+// its sequence, Backlog the only default and Triage the only state of the
+// triage group; undeleted, but gone's, deleted with gone. A state missing
+// or seeded otherwise would let a cell answer as it wants for another
+// reason.
+func (s projectSeed) seededStates(pool *pgxpool.Pool) {
+	s.t.Helper()
+	for _, p := range matrixProjects {
+		gone := strings.HasPrefix(p.key, "gone/")
+		var want []seededState
+		for _, st := range matrixStates {
+			want = append(want, seededState{Name: st.Name, Group: string(st.Group), Default: st.Default, Sequence: st.Sequence, Deleted: gone})
+		}
+		slices.SortFunc(want, func(a, b seededState) int { return strings.Compare(a.Name, b.Name) })
+		rows, err := pool.Query(context.Background(), `SELECT name, "group", "default", sequence, deleted_at IS NOT NULL FROM states
+			WHERE project_id = $1 ORDER BY name COLLATE "C"`, s.projects[p.key])
+		if err != nil {
+			s.t.Fatal(err)
+		}
+		got, err := pgx.CollectRows(rows, pgx.RowToStructByPos[seededState])
+		if err != nil {
+			s.t.Fatal(err)
+		}
+		var defaults, triage []string
+		for _, st := range got {
+			if st.Default {
+				defaults = append(defaults, st.Name)
+			}
+			if st.Group == string(projectdomain.GroupTriage) {
+				triage = append(triage, st.Name)
+			}
+		}
+		if !slices.Equal(got, want) || !slices.Equal(defaults, []string{"Backlog"}) || !slices.Equal(triage, []string{"Triage"}) {
+			s.t.Fatalf("%s's states by name = %+v, default %q, triage %q; want %+v, Backlog the default, Triage the triage state",
+				p.key, got, defaults, triage, want)
+		}
 	}
 }
 

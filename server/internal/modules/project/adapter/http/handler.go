@@ -90,6 +90,11 @@ type LeaveProjectUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID) error
 }
 
+// CreateStateUseCase is app.CreateState.
+type CreateStateUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, in domain.StateCreate) (domain.State, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects      ListProjectsUseCase
@@ -108,6 +113,7 @@ type UseCases struct {
 	UpdateMember      UpdateMemberUseCase
 	RemoveMember      RemoveMemberUseCase
 	LeaveProject      LeaveProjectUseCase
+	CreateState       CreateStateUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

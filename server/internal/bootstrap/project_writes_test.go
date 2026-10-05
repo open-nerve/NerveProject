@@ -27,10 +27,10 @@ import (
 // Web, one write after another; the statement of each reads the rows it
 // wrote, by $1 Web's id and $2 alice's, and finds each one the write
 // writes. Bob and carol, whom she adds, are acme's members; she makes bob
-// an admin of Web, removes carol, and leaves Web. Each row the write writes
-// again is first made bob's, as last written by him, and checked so: a
-// write that kept its row's writer would pass for alice's otherwise, she
-// having made it.
+// an admin of Web, removes carol, creates a state, and leaves Web. Each row
+// the write writes again is first made bob's, as last written by him, and
+// checked so: a write that kept its row's writer would pass for alice's
+// otherwise, she having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -107,6 +107,11 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 			bobs("project_members", "project_id = $1 AND member_id = '"+carol+"'"),
 			"SELECT updated_at, updated_by_id = $2 AND NOT is_active FROM project_members WHERE project_id = $1 AND member_id = '" + carol + "'",
 			1, 1},
+		// QA, made.
+		{"createState", http.MethodPost, "/api/v0/projects/" + web.String() + "/states", `{"name":"QA","color":"#0EA5E9","group":"completed"}`,
+			uuid.UUID{}, http.StatusCreated, "",
+			"SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at FROM states WHERE project_id = $1 AND name = 'QA'",
+			0, 1},
 		// Her own membership, ended: bob is Web's other admin.
 		{"leaveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/leave", "", uuid.UUID{}, http.StatusNoContent,
 			bobs("project_members", "project_id = $1 AND member_id = $2"),

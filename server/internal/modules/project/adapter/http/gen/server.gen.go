@@ -104,6 +104,33 @@ func (e ProjectTab) Valid() bool {
 	}
 }
 
+// Defines values for StateGroup.
+const (
+	StateGroupBacklog   StateGroup = "backlog"
+	StateGroupCancelled StateGroup = "cancelled"
+	StateGroupCompleted StateGroup = "completed"
+	StateGroupStarted   StateGroup = "started"
+	StateGroupUnstarted StateGroup = "unstarted"
+)
+
+// Valid indicates whether the value is a known member of the StateGroup enum.
+func (e StateGroup) Valid() bool {
+	switch e {
+	case StateGroupBacklog:
+		return true
+	case StateGroupCancelled:
+		return true
+	case StateGroupCompleted:
+		return true
+	case StateGroupStarted:
+		return true
+	case StateGroupUnstarted:
+		return true
+	default:
+		return false
+	}
+}
+
 // IdentifierAvailability defines model for IdentifierAvailability.
 type IdentifierAvailability struct {
 	Available bool `json:"available"`
@@ -332,6 +359,44 @@ type ProjectUpdate struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
+// State A state of a project, in one of the groups of StateGroup.
+type State struct {
+	// Color As the web app's color picker gives it, e.g. "#F59E0B".
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Default Whether the state is its project's default state; a project has exactly one.
+	Default     bool   `json:"default"`
+	Description string `json:"description"`
+
+	// Group The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+	Group     StateGroup `json:"group"`
+	ID        uuid.UUID  `json:"id"`
+	Name      string     `json:"name"`
+	ProjectID uuid.UUID  `json:"project_id"`
+
+	// Sequence The state's place among the project's states, the lowest first.
+	Sequence    float64   `json:"sequence"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+}
+
+// StateCreate defines model for StateCreate.
+type StateCreate struct {
+	// Color 1–255 characters, not blank.
+	Color       string  `json:"color"`
+	Description *string `json:"description,omitempty"`
+
+	// Group The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+	Group StateGroup `json:"group"`
+
+	// Name 1–255 characters, not blank; another undeleted state of the project may not have it.
+	Name string `json:"name"`
+}
+
+// StateGroup The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
+type StateGroup string
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -361,6 +426,9 @@ type UpdateProjectJSONRequestBody = ProjectUpdate
 
 // AddProjectMembersJSONRequestBody defines body for AddProjectMembers for application/json ContentType.
 type AddProjectMembersJSONRequestBody = ProjectMembersAdd
+
+// CreateStateJSONRequestBody defines body for CreateState for application/json ContentType.
+type CreateStateJSONRequestBody = StateCreate
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = ProjectCreate
@@ -403,6 +471,9 @@ type ServerInterface interface {
 	// AddProjectMembers Add workspace members to a project
 	// (POST /api/v0/projects/{project_id}/members)
 	AddProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// CreateState Create a state in a project
+	// (POST /api/v0/projects/{project_id}/states)
+	CreateState(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -738,6 +809,32 @@ func (siw *ServerInterfaceWrapper) AddProjectMembers(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// CreateState operation middleware
+func (siw *ServerInterfaceWrapper) CreateState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateState(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UnarchiveProject operation middleware
 func (siw *ServerInterfaceWrapper) UnarchiveProject(w http.ResponseWriter, r *http.Request) {
 
@@ -1001,6 +1098,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.UpdateProjectMember)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.CreateState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1555,6 +1653,53 @@ func (response AddProjectMembersdefaultApplicationProblemPlusJSONResponse) Visit
 	return err
 }
 
+type CreateStateRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *CreateStateJSONRequestBody
+}
+
+type CreateStateResponseObject interface {
+	VisitCreateStateResponse(w http.ResponseWriter) error
+}
+
+type CreateState201JSONResponse State
+
+func (response CreateState201JSONResponse) VisitCreateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateStatedefaultApplicationProblemPlusJSONResponse) VisitCreateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UnarchiveProjectRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 }
@@ -1780,6 +1925,9 @@ type StrictServerInterface interface {
 	// AddProjectMembers Add workspace members to a project
 	// (POST /api/v0/projects/{project_id}/members)
 	AddProjectMembers(ctx context.Context, request AddProjectMembersRequestObject) (AddProjectMembersResponseObject, error)
+	// CreateState Create a state in a project
+	// (POST /api/v0/projects/{project_id}/states)
+	CreateState(ctx context.Context, request CreateStateRequestObject) (CreateStateResponseObject, error)
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(ctx context.Context, request UnarchiveProjectRequestObject) (UnarchiveProjectResponseObject, error)
@@ -2166,6 +2314,39 @@ func (sh *strictHandler) AddProjectMembers(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(AddProjectMembersResponseObject); ok {
 		if err := validResponse.VisitAddProjectMembersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateState operation middleware
+func (sh *strictHandler) CreateState(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request CreateStateRequestObject
+
+	request.ProjectID = projectID
+
+	var body CreateStateJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateState(ctx, request.(CreateStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateStateResponseObject); ok {
+		if err := validResponse.VisitCreateStateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -40,8 +40,9 @@ func TestCreatingAProjectReadsTheClockBeforeItsTransaction(t *testing.T) {
 // transaction, after its locks (its workspace's FOR SHARE first, then its
 // project's), its decision and its checks, just before it writes (P2 spec
 // 2.6, M3 design 3.3): a write that queued behind another on either lock
-// never stamps an earlier time than the one it waited for. The clock logs
-// its read among the fakes' calls.
+// never stamps an earlier time than the one it waited for. So does
+// createState, which only inserts, after it reads the project's states
+// under its lock. The clock logs its read among the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	tests := []struct {
 		name string
@@ -101,6 +102,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			err := uc.Execute(as(bob), webID)
 			return f.log.calls, err
 		}, left(bob, webID, true)},
+		{"createState", func() ([]string, error) {
+			uc, f, _ := newCreateState()
+			_, err := uc.Execute(as(bob), webID, review)
+			return f.log.calls, err
+		}, stateCreated(bob, webID, review, 70000)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

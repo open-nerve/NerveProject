@@ -434,6 +434,46 @@ paths:
           description: The membership has ended.
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/states:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: createState
+      tags: [project]
+      summary: Create a state in a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's states are created as any other's.
+        The name and the color have 1–255 characters, not blank, without
+        NUL; the group is one of the five, and triage is refused
+        (group not_allowed): the intake's state is not made here; the
+        description has no NUL (validation_failed). The values are checked
+        before the project is looked at. The new state comes after the
+        project's others: its sequence is the greatest of theirs, the
+        intake's triage state's left out, plus 15000, or 65535 when the
+        project has none. It is not the default. Its name may not be another
+        undeleted state's of the project, the intake's triage state's too,
+        compared as written (project.state_name_taken). A project that does
+        not exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but may not change, forbidden. The
+        role is decided after the workspace and project rows are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.state_name_taken]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateCreate'
+      responses:
+        '201':
+          description: The new state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/State'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -865,3 +905,60 @@ components:
       properties:
         role:
           $ref: '#/components/schemas/ProjectRole'
+    StateGroup:
+      description: >-
+        The group a state is in: backlog, unstarted, started, completed or
+        cancelled. Every group of a project keeps a state.
+      type: string
+      enum: [backlog, unstarted, started, completed, cancelled]
+    State:
+      description: A state of a project, in one of the groups of StateGroup.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, name, description, color, group, default, sequence, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        color:
+          description: As the web app's color picker gives it, e.g. "#F59E0B".
+          type: string
+        group:
+          $ref: '#/components/schemas/StateGroup'
+        default:
+          description: Whether the state is its project's default state; a project has exactly one.
+          type: boolean
+        sequence:
+          description: The state's place among the project's states, the lowest first.
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    StateCreate:
+      type: object
+      additionalProperties: false
+      required: [name, color, group]
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted state of the project may not have it.
+          type: string
+        color:
+          description: 1–255 characters, not blank.
+          type: string
+        group:
+          $ref: '#/components/schemas/StateGroup'
+        description:
+          type: string
