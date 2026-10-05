@@ -19,7 +19,7 @@
 - **容器**：`make test` 和 `make e2e` 用自己的 testcontainers；机器忙时偶尔起不来，等 Docker 空闲之后重跑一次再当作失败。容器测试一次只跑一套。开发库 `nerve-dev-db-1` 可以用，但不要停止或重建它，不要执行 `make dev-db-down`、`make dev-db-reset`。不要碰其他项目的容器（`agentforge-*`、`plane-app-*`、`opennerve-*`、`nervewiki-*`）。
 - **git**：每次 Bash 调用只执行一个 git 命令，不用 `;`、`&&`、`|` 串联 git；不用 `git -C`、`stash`、`clean`、`reset --hard`。`cd` 不与别的命令组合，只读的命令也不行。不碰 `plane/`、`refer/`。
 - **安装**：除了 Docker、Go、Node 不做任何全局安装；不执行 `corepack enable`（pnpm 已在 PATH 上）。
-- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断，不按大小比较；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（1,137 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内（最终原型上量的）：最长的是 `bootstrap/permission_matrix_test.go`（385 行）、`e2e/fixtures/assert/workspace.ts`（378 行，本 plan 只改一句注释）、`bootstrap/project_write_locks_test.go`（373 行）、`bootstrap/permission_matrix_columns_test.go`（353 行）、`project/adapter/postgres/update_test.go`（352 行）、`project/app/ports.go`（351 行）、`bootstrap/project_writes_test.go`（339 行）、`bootstrap/permission_matrix_seed_test.go`（339 行）、`e2e/fixtures/assert/project.ts`（323 行）、`project/adapter/postgres/states_test.go`（321 行）、`bootstrap/permission_matrix_seeded_test.go`（314 行）。
+- **规则**：不写 `init()`，不用全局可变状态，构造函数显式传入依赖；不建 `utils`、`common`、`helpers` 包；一个文件只做一件事，不超过约 400 行；依赖只能向内；模块之间不互相导入，不跨模块的表 JOIN；模块的 SQL 只经 sqlc；角色只按集合判断，不按大小比较；不留没有使用者的代码。**例外**：接口描述按模块一个文件（M0-P3 交接 5），`api/modules/project.yaml`（1,139 行）不受约 400 行的限制。本 plan 的其余文件都在约 400 行以内（最终原型上量的）：最长的是 `bootstrap/permission_matrix_seed_test.go`（389 行）、`bootstrap/permission_matrix_test.go`（386 行）、`e2e/fixtures/assert/workspace.ts`（378 行，本 plan 只改一句注释）、`bootstrap/project_write_locks_test.go`（373 行）、`bootstrap/permission_matrix_columns_test.go`（353 行）、`project/adapter/postgres/update_test.go`（352 行）、`project/app/ports.go`（351 行）、`bootstrap/project_writes_test.go`（339 行）、`e2e/fixtures/assert/project.ts`（323 行）、`project/adapter/postgres/states_test.go`（321 行）、`bootstrap/permission_matrix_seeded_test.go`（314 行）。
 - **注释**：Go、TS 代码、SQL 查询和接口描述用英文；中文文档照本 plan 原样。
 - **代码块**：每个改动都写成四个反引号围起来的块，块的第一行写明种类和路径，照原样使用（原型中逐字节运行过）：
   - ````` ````file <路径> ````` 新文件，块的内容加一个结尾换行就是整个文件；
@@ -29,7 +29,7 @@
 
   一个文件的几个块按出现的顺序依次应用。拼 plan 的脚本已从 `3f87fcd3` 起按顺序核对过全部块：每个 `old` 恰好出现一次（在它之前的块应用之后的文件中），每个新文件原来不存在，逐 Task 应用之后的文件与原型逐字节相同（spec 附录 A）。可以用 `node <planapply.mjs> <本 plan> apply <仓库根> <n>` 写入第 n 个 Task 的块，也可以手工照抄。
 - **过渡版本**：一些文件先在较早的 Task 写成过渡版本，较晚的 Task 再修改：契约 `api/modules/project.yaml`、`api/openapi.yaml`，`project/app/state_ports.go`、`fakes_state_test.go`、`clock_test.go`，`project/adapter/http/handler.go`、`handler_test.go`、`states.go`、`state_writes_test.go`，`project/module.go`、`project/domain/actions.go`，`access/domain/rules.go`、`rules_test.go`，`bootstrap/permission_matrix_states_test.go`、`permission_matrix_seeded_test.go`、`project_write_locks_test.go`、`project_writes_test.go`、`project_connection_test.go`，前端的三个文案文件。每个过渡版本都在逐 Task 复现中运行过。
-- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事 P6、W11）。它们在最终的原型上逐个跑过（`$M3TMP/p7atools/mutants_p7a.py`，由 `mutlevels.py` 在它写的每一层各跑一次；spec 附录 A：135 个变异，135 个被发现；只在单元一层被发现的 20 个，都是按性质的（第 3 节））；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有，或才改成最终的样子：这一行的变异最迟从那个 Task 起被它发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外（"按性质只在单元一层"）写在 spec 第 3 节和附录 A。
+- **变异**：每个 Task 末尾的"变异"表列出：把代码改坏的方式、必须因此失败的测试和它所在的层（单元：假实现；存储：真实数据库；组合：`bootstrap` 组合出的 app；端到端：单独运行的故事 P6、W11）。它们在最终的原型上逐个跑过（`$M3TMP/p7atools/mutants_p7a.py`，由 `mutlevels.py` 在它写的每一层各跑一次；spec 附录 A：137 个变异，137 个被发现；只在单元一层被发现的 20 个，都是按性质的（第 3 节））；实现者可以照表抽查，改坏之后必须恢复。表中"（Task n 起）"标出的测试在较晚的 Task 才有，或才改成最终的样子：这一行的变异最迟从那个 Task 起被它发现。**安全或加锁的性质只由单元一层发现的，算缺口**（brief 的缺陷类别）；表中每一条这类性质都另有存储、组合或端到端一层的测试，例外（"按性质只在单元一层"）写在 spec 第 3 节和附录 A。
 - **评审敏感**（M3 设计 12 节约束 3）：按资源寻址的共用取锁路径从 P5b 的项目成员的写里提出来（改角色、移出两个写改走它，行为不变；离开按项目寻址，照旧经 `lockAndDecide`，spec 第 3 节第 2 条），它的第一批新用户是带守卫的写：删除默认状态由语句的守卫拒绝，设为默认的第二条语句写 0 行时让事务失败，一组最后一个状态在并发下由项目行的 `FOR NO KEY UPDATE` 保证。改动这些锁、守卫、规则或测试之前，先照"变异"表确认它在所说的性质去掉之后失败。
 - **提交**：提交信息用英文，末尾加一行：`Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - 所有命令在仓库根目录下执行，除非步骤中另有说明。
@@ -56,7 +56,7 @@
 | `api/dist/openapi.yaml`、`web/packages/api-client/src/schema.gen.ts`、`server/internal/modules/project/adapter/http/gen/server.gen.go`、`server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`（生成） | | 4、6、7、8（`bodyshape.gen.go`：4、6） |
 | `server/internal/modules/access/domain/rules.go`、`server/internal/modules/access/domain/rules_test.go`（修改） | `state.create`（Task 4）、`state.update`（Task 5）、`state.delete`、`state.mark_default`（Task 7）、`state.list`、`workspace_state.list`（Task 8） | 4、5、7、8 |
 | `server/internal/modules/project/domain/actions.go`（修改） | 六个操作名 | 4、5、7、8 |
-| `server/internal/modules/project/app/state_ports.go` | `StateRow`、`StateCreator`（Task 4），`StateFinder`、`GroupCounter`、`StateUpdater`（Task 5），`StateDeleter`、`DefaultMarker`（Task 7），`StateLister`、`WorkspaceStateLister`（Task 8） | 4、5、7、8 |
+| `server/internal/modules/project/app/state_ports.go` | `StateCreator`（Task 4），`StateFinder`、`GroupCounter`、`StateUpdater`（Task 5），`StateDeleter`、`DefaultMarker`（Task 7），`StateLister`、`WorkspaceStateLister`（Task 8） | 4、5、7、8 |
 | `server/internal/modules/project/app/fakes_state_test.go`；`server/internal/modules/project/app/fakes_member_test.go`（修改） | 状态的假实现（`fakeStates`）；`rowReads` 的说明 | 4、5、7、8（`fakes_member_test.go`：5） |
 | `server/internal/modules/project/app/clock_test.go`（修改） | 每个状态的写在锁之后读时钟的一行 | 4、5、7 |
 | `server/internal/modules/project/app/create_state.go`、`server/internal/modules/project/app/create_state_test.go` | `createState` | 4 |
@@ -677,7 +677,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `CheckStatePatch(StatePatch) error`：只查给了的字段，规则同上；`sequence` 可以是任何数。
   - `SequenceAfter(greatest *float64) float64`：最大值加 15000；`nil`（项目除分诊状态外没有状态）时是列的默认值 65535（Plane `State.save()`，`db/models/state.py:117-128`）。
   - `CheckGroupKept(left int) error`：一个写把状态从它的组拿走（删除或改到别的组）之后，组里还剩 `left` 个；0 时 `ErrStateLastInGroup`。
-- `project/domain/errors.go`：`ErrStateNotFound`（404 `project.state_not_found`）、`ErrStateNameTaken`（409 `project.state_name_taken`）、`ErrStateLastInGroup`（409 `project.state_last_in_group`）、`ErrStateDefault`（409 `project.state_default`）。它们的说明在 Task 4、6、7 随声明它们的操作进入契约。
+- `project/domain/errors.go`：`ErrStateNotFound`（404 `project.state_not_found`，说明"The state does not exist, cannot be changed through this API, or you cannot see its project."：按 id 指向分诊状态的项目管理员看得到项目，也成立）、`ErrStateNameTaken`（409 `project.state_name_taken`）、`ErrStateLastInGroup`（409 `project.state_last_in_group`）、`ErrStateDefault`（409 `project.state_default`）。它们的说明在 Task 4、6、7 随声明它们的操作进入契约。
 
 **Tests:**（`state_test.go`，完整内容）
 - `TestCheckNewStateReportsEveryField`（14 行：名称、颜色各为空、空白、256 个字符、含 NUL；分诊组 `not_allowed`；大写的组、空的组、别的组 `invalid_format`；说明含 NUL；全部一起，一个 422 里每个字段一个问题）、`TestCheckNewStateAcceptsValidStates`（五个组各一个；名称和颜色 1 个、255 个字符；多行的说明）、`TestCheckStatePatch`（空的、只有 `sequence`、每个字段都合法的通过；8 行各报给了的那个字段）。
@@ -889,7 +889,7 @@ func checkGroup(g StateGroup) *shared.FieldError {
 	// the triage state, or whose project the caller does not see: the same
 	// 404 for all (M3 design 3.17, 5.3, 8.2).
 	ErrStateNotFound = shared.NewError(shared.KindNotFound, "project.state_not_found",
-		"The state does not exist, or you cannot see its project.")
+		"The state does not exist, cannot be changed through this API, or you cannot see its project.")
 	// ErrStateNameTaken answers a name another undeleted state of the
 	// project has, compared as written.
 	ErrStateNameTaken = shared.NewError(shared.KindConflict, "project.state_name_taken", "A state of the project has this name.")
@@ -1108,7 +1108,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 |---|---|---|---|
 | `g-group-kept-off` | `CheckGroupKept` 让组变空 | `TestCheckGroupKept`、`TestDeleteStateRefuses`（Task 7 起）、`TestUpdateStateRefuses`（Task 5 起）、`TestPermissionMatrix`、`TestStateWritesOnOneProjectSerialize`（Task 9 起）、P6（Task 10 起） | 单元；组合；端到端 |
 | `t-triage-allowed` | `group = triage` 不再是 422 | `TestCheckNewStateReportsEveryField`、`TestCheckStatePatch`、`TestCreateStateRefuses`（Task 4 起）、`TestUpdateStateRefuses`（Task 5 起）、`TestEachStateWriteChangesItsRowsAlone`（Task 9 起）、P6（Task 10 起） | 单元；组合；端到端 |
-| `q-step` | 新状态在最后一个之后 10000 | `TestCreateState`（Task 4 起）、`TestCreateStateRefuses`（Task 4 起）、`TestCreateStateReturnsEachFailure`（Task 4 起）、`TestEachWriteReadsTheClockUnderItsLock` 等 5 个、`TestPermissionMatrix`、`TestStateWritesOnOneProjectSerialize`（Task 9 起）、P6（Task 10 起） | 单元；组合；端到端 |
+| `q-step` | 新状态在最后一个之后 10000 | `TestCreateState`（Task 4 起）、`TestCreateStateRefuses`（Task 4 起）、`TestCreateStateReturnsEachFailure`（Task 4 起）、`TestEachWriteReadsTheClockUnderItsLock` 等 5 个、`TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`、`TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks`、`TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 9 起） 等 14 个、P6（Task 10 起） | 单元；组合；端到端 |
 | `q-first` | 项目没有非分诊状态时新状态在 0 | `TestCreateState`（Task 4 起）、`TestSequenceAfter` | 单元（按性质只在单元一层：每一组至少留一个状态，项目总有非分诊状态） |
 | `s21-last-wrapped` | 组的拒绝包在 403 之后 | `TestCheckGroupKept`、`TestDeleteStateRefuses`（Task 7 起）、`TestUpdateStateRefuses`（Task 5 起）、`TestPermissionMatrix`、`TestStateWritesOnOneProjectSerialize`（Task 9 起）、P6（Task 10 起） | 单元；组合；端到端 |
 
@@ -1125,7 +1125,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces（spec 2.5；M3 设计 3.6、3.17、6.7）：`queries/states.sql`（完整内容，spec 2.5 有全文）：`CreateState` 改为 `:one`（加 `description`，回答存下的行；`CreateStates` 经它逐行插入）；新加 `StateByID`、`ListStates`、`GreatestSequence`、`UpdateState`、`CountGroupStates`、`DeleteState`（`:execrows`，守卫 `NOT "default"`）、`ClearDefaultState`、`SetDefaultState`（`:execrows`）、`ListWorkspaceStates`。分诊状态只由 `"group" = 'triage'` 识别（3.17）。
 - `postgresadapter.Store` 的方法（`states.go`），都在 `ctx` 带着的事务里执行（写的都在项目的 `FOR NO KEY UPDATE` 之下，Task 4–7）：
-  - `CreateState(ctx, app.StateRow) (domain.State, error)`：同名是 `domain.ErrStateNameTaken`（只认 `states_project_id_name_key`）；别的唯一键、CHECK 是内部错误。`StateRow` 在 `app/state_ports.go`（Task 4），本 Task 先由 `rows.go` 的 `CreateStates` 使用。
+  - `CreateState(ctx, app.StateRow) (domain.State, error)`：同名是 `domain.ErrStateNameTaken`（只认 `states_project_id_name_key`）；别的唯一键、CHECK 是内部错误。`StateRow` 是 P4a 的（`app/ports.go`），`rows.go` 的 `CreateStates` 经它逐行插入。
   - `StateByID(ctx, id) (domain.State, bool, error)`：未删除、不是分诊状态。
   - `ListStates(ctx, projectID) ([]domain.State, error)`：未删除、不是分诊状态，按 `sequence`、再按 `id`；项目已归档时空列表（不是 `nil`）。
   - `GreatestSequence(ctx, projectID) (*float64, error)`：未删除、非分诊状态的最大值；没有时 `nil`。
@@ -2349,9 +2349,9 @@ Expected: 通过。
 | `s1-ds-triage` | `DeleteState` 去掉分诊的排除 | `TestDeleteState`（Task 7 起） | 存储 |
 | `s1-ds-deleted` | `DeleteState` 去掉 `deleted_at IS NULL` | `TestDeleteState`（Task 7 起） | 存储 |
 | `s1-gs-project` | `GreatestSequence` 去掉 `project_id` | `TestGreatestSequence`、`TestStateWritesOnOneProjectSerialize`（Task 9 起） | 存储；组合 |
-| `s1-gs-triage` | `GreatestSequence` 去掉分诊的排除 | `TestGreatestSequence`、`TestPermissionMatrix`、P6（Task 10 起） | 存储；组合；端到端 |
+| `s1-gs-triage` | `GreatestSequence` 去掉分诊的排除 | `TestGreatestSequence`、`TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`、`TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks`、`TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 9 起） 等 14 个、P6（Task 10 起） | 存储；组合；端到端 |
 | `s1-gs-deleted` | `GreatestSequence` 去掉 `deleted_at IS NULL` | `TestGreatestSequence`、`TestStateWritesOnOneProjectSerialize`（Task 9 起） | 存储；组合 |
-| `s1-gs-asc` | `GreatestSequence` 取最小的 | `TestGreatestSequence`、`TestPermissionMatrix`、`TestStateWritesOnOneProjectSerialize`（Task 9 起）、P6（Task 10 起） | 存储；组合；端到端 |
+| `s1-gs-asc` | `GreatestSequence` 取最小的 | `TestGreatestSequence`、`TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`、`TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks`、`TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 9 起） 等 14 个、P6（Task 10 起） | 存储；组合；端到端 |
 | `s1-ls-join` | `ListStates` 的 `JOIN projects` 改成 `ON true` | `TestListStates`（Task 8 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 8 起）、`TestPermissionMatrix`、P6（Task 10 起） | 存储；组合；端到端 |
 | `s1-ls-project` | `ListStates` 去掉 `s.project_id` | `TestListStates`（Task 8 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 8 起）、`TestPermissionMatrix`、P6（Task 10 起） | 存储；组合；端到端 |
 | `s1-ls-triage` | `ListStates` 去掉分诊的排除 | `TestListStates`（Task 8 起）、`TestListingWorkspaceStatesIsListingEachProjects`（Task 8 起）、`TestPermissionMatrix`、P6（Task 10 起） | 存储；组合；端到端 |
@@ -2388,7 +2388,7 @@ Expected: 通过。
 | `s14-sd-keeps-writer` | `SetDefaultState` 保留原来的写者 | `TestMarkDefaultState`（Task 7 起）、`TestTheWritesOnAProjectStampTheirRequest`（Task 7 起）、P6（Task 10 起） | 存储；组合；端到端 |
 | `s26-us-sequence-zero` | `UpdateState` 没给的 `sequence` 写成 0 | `TestUpdateState`（Task 5 起）、`TestStateWritesOnOneProjectSerialize`（Task 9 起）、P6（Task 10 起） | 存储；组合；端到端 |
 | `s26-us-group-backlog` | `UpdateState` 没给的组写成 backlog | `TestUpdateState`（Task 5 起）、`TestPermissionMatrix`、`TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起）、P6（Task 10 起） | 存储；组合；端到端 |
-| `s8-create` | `CreateState` 走池 | `TestADeactivationAndACreationHeLeadsSerialize`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile` 等 46 个 | 组合 |
+| `s8-create` | `CreateState` 走池 | `TestADeactivationAndACreationHeLeadsSerialize`、`TestADeactivationDeletesTheInvitationsOfAWorkspaceItEmpties`、`TestADeactivationEndsEveryMembership`、`TestADeactivationFindsWhatChangedMeanwhile` 等 47 个 | 组合 |
 | `s8-byid` | `StateByID` 走池 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起） | 组合 |
 | `s8-greatest` | `GreatestSequence` 走池 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起） | 组合 |
 | `s8-update` | `UpdateState` 走池 | `TestTheWritesOnAProjectRunOnTheirTransactionsConnection`（Task 7 起） | 组合 |
@@ -2425,12 +2425,12 @@ Expected: 通过。
 - Produces（spec 2.6；M3 设计 3.4、3.6、3.17、3.19、5.1–5.3、9.2）：
   - 契约（`api/modules/project.yaml`）：`POST /api/v0/projects/{project_id}/states`（`createState`，201 `State`；`x-problem-codes: [validation_failed, project.not_found, forbidden, project.state_name_taken]`）；`State`、`StateCreate`、`StateGroup`（五个组，不含 `triage`：`group = triage` 由领域答 422 `not_allowed`，处理函数原样传给用例）。`api/openapi.yaml` 加路径的引用。
   - `access`：`state.create`（项目级，项目管理员；同时是工作区管理员的项目成员由 Authorizer 的通则得到，3.4；不给项目访客：Plane 让访客改状态，9.2）。`project/domain/actions.go`：`ActionStateCreate`。
-  - `project/app/state_ports.go`：`StateRow{ID, WorkspaceID, ProjectID, CreatedBy, Now, State domain.NewState}`；`StateCreator`（`ProjectLocks`、`GreatestSequence`、`CreateState`）。
+  - `project/app/state_ports.go`：`StateCreator`（`GreatestSequence`、`CreateState`；锁经用例的 `Locks`）。它插入的 `StateRow{ID, WorkspaceID, ProjectID, CreatedBy, Now, State domain.NewState}` 是 P4a 的（`ports.go`）。
   - `CreateState`（`create_state.go`）：`NewCreateState(locks Locks, states StateCreator, tx shared.TxManager, clock Clock)`；`Execute(ctx, projectID, domain.StateCreate) (domain.State, error)`：没有调用者、领域拒绝的值，在事务之前；事务里 `lockAndDecide`（工作区 S → 项目 N → 判定 `state.create`）→ `GreatestSequence` → 时钟 → `CreateState`（`SequenceAfter`，不是默认）；回答的 id 不是插入的 id 时是错误。已归档的项目照常建（3.19）。
   - HTTP：`UseCases.CreateState`（`CreateStateUseCase`）、`CreateState` 处理函数、`state(domain.State) gen.State`（`states.go`）。
   - `project.New` 接上 `app.NewCreateState(locks, store, d.Tx, d.Clock)`；包说明照 `moddoc` 改。
   - 前端文案：`project.state_name_taken`（`PROBLEM_MESSAGES`、两份 `auth.json`）。
-- 矩阵：`matrixStates`（`permission_matrix_seeded_test.go`）是每个矩阵项目的六个默认状态加 Review（started，40000）；`prepareMatrix` 经存储建出，`seeded.state(key, name)` 回答它们的 id，前提核对每个项目恰好这些状态、默认的是 Backlog、分诊的是 Triage。`permission_matrix_states_test.go`：`createState` 的三行（成功、名称已占用、已归档项目的小表）。
+- 矩阵：`matrixStates`（`permission_matrix_seeded_test.go`）是每个矩阵项目的六个默认状态加 Review（started，40000）；`prepareMatrix` 经存储建出，`seeded.state(key, name)` 回答它们的 id；`seededStates`（`permission_matrix_seed_test.go`，`prepareMatrix` 在 `preconditions` 之后调用）按名称读回每个矩阵项目的状态，前提核对恰好是这些（组、`sequence`、默认、删除：gone 的随它删除），默认的只有 Backlog、分诊的只有 Triage。契约的 `StateGroup` 只说组的取值和"每一组保留一个状态"。`permission_matrix_states_test.go`：`createState` 的三行（成功、名称已占用、已归档项目的小表）。
 
 **Tests:**
 - `TestCreateState`（`create_state_test.go`，三行：web 在 Cancelled 之后 70000；归档的 ops 照常，在它的 Backlog 之后 30000；ops 的状态都没有了时 65535；调用记录、由调用者、时刻到微秒）、`TestCreateStateRefuses`（10 行：没有调用者、分诊组，在事务之前；没有项目、等锁时 acme 或 web 被删除、web 移到别的工作区、看不到 web 的调用者，各 `project.not_found`；成员 403；与 web 的 Review 同名，存储的 409，在插入之后；回答另一个 id 的状态，写自己的错误）、`TestCreateStateReturnsEachFailure`（七个端口调用的失败各原样返回，之前的调用照旧、之后什么都不运行）；`clock_test.go` 的 `TestEachWriteReadsTheClockUnderItsLock` 加 `createState`（在锁下读了最大的 `sequence` 之后读时钟）。
@@ -2504,9 +2504,8 @@ Expected: 通过。
           $ref: '#/components/schemas/ProjectRole'
     StateGroup:
       description: >-
-        The group a state is in, which orders and colors the project's
-        states: backlog, unstarted, started, completed or cancelled. Every
-        group of a project keeps a state.
+        The group a state is in: backlog, unstarted, started, completed or
+        cancelled. Every group of a project keeps a state.
       type: string
       enum: [backlog, unstarted, started, completed, cancelled]
     State:
@@ -2579,10 +2578,10 @@ Expected: 成功（`server` 的编译要到 Step 4 处理函数写好之后）�
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `ee9d005e1ab66814c774782557c11b63fc44ec26e684389047f9769d500b9203` | 2605 | `api/dist/openapi.yaml` |
+| `1e982b1cb46816ebe228c8c22c90d22b4d9a789581e4359ea271710c40a57a2a` | 2605 | `api/dist/openapi.yaml` |
 | `02c1e07e74a9da6d1692f5fdfec8c99aafaad1f75d93aa189ed27cfe62889d17` | 68 | `server/internal/modules/project/adapter/http/gen/bodyshape.gen.go` |
-| `c41021b4a57df21504dd6fd619cdebf673b8e1a5e93eb571471fa498cddedf07` | 2468 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `29deb64c950b3e6c7325d1f8d860c977c5ad5b7d72616ad1ce84aec2ce2dbc28` | 2841 | `web/packages/api-client/src/schema.gen.ts` |
+| `94f9c6db250279184e1c4ff32e488edfb949348e60bd5450e2c94bde77000656` | 2468 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `d214da7071f47867c4217386b0b8e03611420e7c1ef5a26ea9566159f5b627a8` | 2841 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`
 Expected: 与上表相同。
@@ -3390,7 +3389,25 @@ func (s seeded) state(key, name string) uuid.UUID {
 		s.t.Fatalf("no state %s of %s is seeded", name, key)
 ````
 
-`server/internal/bootstrap/permission_matrix_seed_test.go`（修改，1 处）：
+`server/internal/bootstrap/permission_matrix_seed_test.go`（修改，3 处）：
+
+````old server/internal/bootstrap/permission_matrix_seed_test.go
+	"context"
+````
+````new server/internal/bootstrap/permission_matrix_seed_test.go
+	"context"
+	"slices"
+````
+
+````old server/internal/bootstrap/permission_matrix_seed_test.go
+	"uuid"
+
+````
+````new server/internal/bootstrap/permission_matrix_seed_test.go
+	"uuid"
+
+	"github.com/jackc/pgx/v5"
+````
 
 ````old server/internal/bootstrap/permission_matrix_seed_test.go
 		Now: s.now,
@@ -3420,9 +3437,57 @@ func (s projectSeed) states(sd seeded) {
 			s.t.Fatal(err)
 		}
 	}
+}
+
+// seededState is a state of a matrix project as seededStates reads it.
+type seededState struct {
+	Name, Group string
+	Default     bool
+	Sequence    float64
+	Deleted     bool
+}
+
+// seededStates checks the states the cells of each matrix project rest on,
+// read back by name: those of matrixStates exactly, each in its group, at
+// its sequence, Backlog the only default and Triage the only state of the
+// triage group; undeleted, but gone's, deleted with gone. A state missing
+// or seeded otherwise would let a cell answer as it wants for another
+// reason.
+func (s projectSeed) seededStates(pool *pgxpool.Pool) {
+	s.t.Helper()
+	for _, p := range matrixProjects {
+		gone := strings.HasPrefix(p.key, "gone/")
+		var want []seededState
+		for _, st := range matrixStates {
+			want = append(want, seededState{Name: st.Name, Group: string(st.Group), Default: st.Default, Sequence: st.Sequence, Deleted: gone})
+		}
+		slices.SortFunc(want, func(a, b seededState) int { return strings.Compare(a.Name, b.Name) })
+		rows, err := pool.Query(context.Background(), `SELECT name, "group", "default", sequence, deleted_at IS NOT NULL FROM states
+			WHERE project_id = $1 ORDER BY name COLLATE "C"`, s.projects[p.key])
+		if err != nil {
+			s.t.Fatal(err)
+		}
+		got, err := pgx.CollectRows(rows, pgx.RowToStructByPos[seededState])
+		if err != nil {
+			s.t.Fatal(err)
+		}
+		var defaults, triage []string
+		for _, st := range got {
+			if st.Default {
+				defaults = append(defaults, st.Name)
+			}
+			if st.Group == string(projectdomain.GroupTriage) {
+				triage = append(triage, st.Name)
+			}
+		}
+		if !slices.Equal(got, want) || !slices.Equal(defaults, []string{"Backlog"}) || !slices.Equal(triage, []string{"Triage"}) {
+			s.t.Fatalf("%s's states by name = %+v, default %q, triage %q; want %+v, Backlog the default, Triage the triage state",
+				p.key, got, defaults, triage, want)
+		}
+	}
 ````
 
-`server/internal/bootstrap/permission_matrix_test.go`（修改，3 处）：
+`server/internal/bootstrap/permission_matrix_test.go`（修改，4 处）：
 
 ````old server/internal/bootstrap/permission_matrix_test.go
 	return slices.Concat(workspaceMatrixRows(), projectMatrixRows(), memberMatrixRows(), membershipMatrixRows())
@@ -3441,6 +3506,8 @@ func (s projectSeed) states(sd seeded) {
 // its admin, which soft-deletes its memberships and its project with it;
 // then the checks that the rows the cells rest on are there
 // (preconditions). Everything that connected to the database is closed
+// when it returns, so that it can be copied. A -run that leaves out
+// prepare fails here, not with a 401 in every cell.
 ````
 ````new server/internal/bootstrap/permission_matrix_test.go
 // projects, project memberships and states of matrixProjects,
@@ -3451,8 +3518,10 @@ func (s projectSeed) states(sd seeded) {
 // through SQL, the states no store makes alone (partingStates). Through
 // the API, gone deleted by its admin, which soft-deletes its memberships
 // and its project, with its states, with it; then the checks that the rows
-// the cells rest on are there (preconditions). Everything that connected to
-// the database is closed
+// the cells rest on are there (preconditions), the states among them
+// (seededStates). Everything that connected to the database is closed when
+// it returns, so that it can be copied. A -run that leaves out prepare
+// fails here, not with a 401 in every cell.
 ````
 
 ````old server/internal/bootstrap/permission_matrix_test.go
@@ -3463,6 +3532,14 @@ func (s projectSeed) states(sd seeded) {
 			projects.join(s.projectMember(pm.key, pm.c), pm.key, pm.c, pm.role)
 		}
 		projects.states(s)
+````
+
+````old server/internal/bootstrap/permission_matrix_test.go
+		projects.preconditions(s)
+````
+````new server/internal/bootstrap/permission_matrix_test.go
+		projects.preconditions(s)
+		projects.seededStates(pool)
 ````
 
 `server/internal/bootstrap/permission_matrix_columns_test.go`（修改，1 处）：
@@ -3636,8 +3713,9 @@ after the greatest sequence of the project's states but the triage
 state, not the default, by the caller at the time read under the
 locks; an archived project's states are created as any other's. A
 taken name, the triage state's too, is project.state_name_taken, after
-the decision. The matrix seeds each project's states and holds the
-operation's cells, the archived project's among them.
+the decision. The matrix seeds each project's states, reads them back
+as a precondition, and holds the operation's cells, the archived
+project's among them.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -3654,9 +3732,11 @@ Expected: 通过。
 | `s22-created-id` | `createState` 不核对建出的状态的 id | `TestCreateStateRefuses` | 单元（按性质只在单元一层：真实的存储回答不了别的键） |
 | `p-create-share-project` | `createState` 以 `FOR SHARE` 锁项目 | `TestStateWritesOnOneProjectSerialize`（Task 9 起） | 组合 |
 | `c-create-early` | `createState` 在取锁之前读时钟 | `TestCreateState`、`TestCreateStateRefuses`、`TestCreateStateReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`、`TestStateWritesOnOneProjectSerialize`（Task 9 起） | 单元；组合 |
-| `q-greatest-ignored` | `createState` 不看最大的 `sequence` | `TestCreateState`、`TestCreateStateRefuses`、`TestCreateStateReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`、`TestPermissionMatrix`、`TestStateWritesOnOneProjectSerialize`（Task 9 起）、P6（Task 10 起） | 单元；组合；端到端 |
+| `q-greatest-ignored` | `createState` 不看最大的 `sequence` | `TestCreateState`、`TestCreateStateRefuses`、`TestCreateStateReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`、`TestALeavingAndAnEndingOfAWorkspaceMembershipSerialize`、`TestARoleChangeCapsItsMemberByHisWorkspaceRoleUnderItsLocks`、`TestAWriteOnAProjectMembershipDecidesOnWhatItReadUnderItsLocks`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 9 起） 等 14 个、P6（Task 10 起） | 单元；组合；端到端 |
 | `s4-create-frozen-clock` | `CreateState` 接上停在 2001 年的时钟 | `TestTheWritesOnAProjectStampTheirRequest`（Task 7 起） | 组合 |
 | `s5-create-guests` | 规则表：`state.create` 也给项目访客 | `TestEveryRuleDecidesItsCells`、`TestPermissionMatrix`、W11（Task 10 起） | 单元；组合；端到端 |
+| `pf-create-decide-unlocked` | `createState` 在取锁之前判定，取锁时不再判定（预检的变异，裁定 M1） | `TestCreateState`、`TestCreateStateRefuses`、`TestCreateStateReturnsEachFailure`、`TestEachWriteReadsTheClockUnderItsLock`、`TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`（Task 9 起） | 单元；组合 |
+| `s10-seed-no-default` | 矩阵的状态种子不把 Backlog 设为默认（裁定 L1） | `TestListingProjectsIsReadingEach`、`TestListingWorkspaceStatesIsListingEachProjects`（Task 8 起）、`TestPermissionMatrix`、`TestTheInvitationLinkAnswersEveryCallerAlike` | 组合 |
 
 ---
 
@@ -3668,7 +3748,7 @@ Expected: 通过。
 
 **Interfaces:**
 - Produces（spec 2.7；M3 设计 3.6、3.17、6.7）：
-  - `project/app/state_ports.go`：`StateFinder`（`StateByID`：按行寻址的写的 `rowWrite.find`）、`GroupCounter`（`CountGroupStates`）、`StateUpdater`（`ProjectLocks`、`StateFinder`、`GroupCounter`、`UpdateState`）。
+  - `project/app/state_ports.go`：`StateFinder`（`StateByID`：按行寻址的写的 `rowWrite.find`）、`GroupCounter`（`CountGroupStates`）、`StateUpdater`（`StateFinder`、`GroupCounter`、`UpdateState`；锁经用例的 `Locks`）。
   - `UpdateState`（`update_state.go`）：`NewUpdateState(locks Locks, states StateUpdater, tx shared.TxManager, clock Clock)`；`Execute(ctx, id, domain.StatePatch) (domain.State, error)`：没有调用者、领域拒绝的值，在事务之前；事务里 `lockRowAndDecide(… rowWrite[domain.State]{id, ActionStateUpdate, find: StateByID, notFound: domain.ErrStateNotFound})`；给了组、且与它现在的组不同时，数它现在的组（`CountGroupStates`），`CheckGroupKept(n - 1)`（判定之后、写之前，6.7）；时钟；`UpdateState`；回答的 id 不是这一行的时是错误。已归档项目的状态照常改（3.19）。
   - `access`：`state.update`（同 `state.create`）；`ActionStateUpdate`。接口和组合在 Task 6。
 - 假实现（`fakes_state_test.go`）：`fakeStates.StateByID`（按 id 回答，分诊、已删除的不回答；`answersAs` 回答另一个 id）、`CountGroupStates`、`UpdateState`（`statePatch` 照存储的 `coalesce`）；`fakes_member_test.go` 的 `rowReads` 说明成员关系多三列。
@@ -4338,12 +4418,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
         that does not exist or is deleted, the intake's triage state, and a
         state whose project the caller does not see answer
         project.state_not_found; a caller who sees the project but may not
-        change its states, forbidden, whatever the state. Moving the only
-        state of its group to another group is refused
-        (project.state_last_in_group): every group keeps a state. Its name
-        may not be another undeleted state's of the project, the intake's
-        triage state's too (project.state_name_taken). The role is decided
-        after the workspace and project rows are locked.
+        change its states, forbidden, whether or not the state is the
+        default or the last of its group. Moving the only state of its group
+        to another group is refused (project.state_last_in_group): every
+        group keeps a state. Its name may not be another undeleted state's
+        of the project, the intake's triage state's too
+        (project.state_name_taken). The role is decided after the workspace
+        and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [validation_failed, project.state_not_found, forbidden, project.state_name_taken, project.state_last_in_group]
       requestBody:
@@ -4426,10 +4507,10 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `057bf9c318f8214fc8437e02e1a83ad251db704636bf2607c404315841cbf117` | 2663 | `api/dist/openapi.yaml` |
+| `ed202e706c7aadd11c9ddb77002705cf042dcc22fe64bb768d7e56def2ad3290` | 2663 | `api/dist/openapi.yaml` |
 | `c4236d98c3293a387f6e14f6f77eddd33ad8c7da850bc28afbfaf4b12c07e776` | 74 | `server/internal/modules/project/adapter/http/gen/bodyshape.gen.go` |
-| `1b783a045b378a9f44693e2a88d8c46d91c36ffde9f9d74cdca2bb3268c97270` | 2603 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `d72afa06850b7132deca1124d35dfdc8e205b50f103393177c5c9fe8adb74a4c` | 2907 | `web/packages/api-client/src/schema.gen.ts` |
+| `63af8a46230f273cc825623f764b13d26b2a39d14b391a1f146ad6000b548ae6` | 2603 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `7b3721d19175c8621f7a055f43a3b8ff00820c553e55ce68f801bf22f20d5fd3` | 2907 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts server/internal/modules/project/adapter/http/gen/server.gen.go server/internal/modules/project/adapter/http/gen/bodyshape.gen.go`
 Expected: 与上表相同。
@@ -4555,7 +4636,7 @@ func (f *fakeUpdateState) Execute(ctx context.Context, id uuid.UUID, p domain.St
 // The answers of the writes on a state, as the contract declares them.
 const (
 	stateNotFoundJSON = `{"status":404,"code":"project.state_not_found","title":"Not Found",` +
-		`"detail":"The state does not exist, or you cannot see its project."}`
+		`"detail":"The state does not exist, cannot be changed through this API, or you cannot see its project."}`
 	stateLastInGroupJSON = `{"status":409,"code":"project.state_last_in_group","title":"Conflict",` +
 		`"detail":"The state is the only one of its group, and every group keeps one; add another to the group first."}`
 )
@@ -4676,7 +4757,7 @@ func TestUpdateStateRefusals(t *testing.T) {
 ````
 ````new web/packages/i18n/src/locales/en/auth.json
       "project_state_name_taken": "A state of this project already has this name.",
-      "project_state_not_found": "The state does not exist, or you cannot see its project.",
+      "project_state_not_found": "The state does not exist, cannot be changed through this API, or you cannot see its project.",
       "project_state_last_in_group": "This is the only state of its group, and every group keeps one. Add another state to the group first.",
 ````
 
@@ -4687,7 +4768,7 @@ func TestUpdateStateRefusals(t *testing.T) {
 ````
 ````new web/packages/i18n/src/locales/zh-CN/auth.json
       "project_state_name_taken": "这个项目里已有同名的状态。",
-      "project_state_not_found": "状态不存在，或者你看不到它所在的项目。",
+      "project_state_not_found": "状态不存在、不能经这个接口修改，或者你看不到它所在的项目。",
       "project_state_last_in_group": "这是它所在分组里唯一的状态，每个分组都要保留一个状态。请先给这个分组添加另一个状态。",
 ````
 
@@ -5440,8 +5521,8 @@ Expected: 通过。
 - Produces（spec 2.8；M3 设计 3.6、3.17、3.19、9.3 交错 10）：
   - 契约：`DELETE /api/v0/states/{state_id}`（`deleteState`，204；`[project.state_not_found, forbidden, project.state_default, project.state_last_in_group]`）、`POST /api/v0/states/{state_id}/mark-default`（`markDefaultState`，204；`[project.state_not_found, forbidden]`）。设为默认的描述不说工作项（M4 的事）。
   - `access`：`state.delete`、`state.mark_default`（同 `state.create`）；`ActionStateDelete`、`ActionStateMarkDefault`。
-  - 端口：`StateDeleter`（`ProjectLocks`、`StateFinder`、`GroupCounter`、`DeleteState`）、`DefaultMarker`（`ProjectLocks`、`StateFinder`、`MarkDefaultState`）。
-  - `DeleteState`（`delete_state.go`）：`lockRowAndDecide` → 时钟 → `DeleteState`（守卫的写，不先查默认）；删了 0 行时 `deletedNothing(ctx, rw)`：经 `rw.read` 重读这一行（还在锁下），默认的答 `ErrStateDefault`，没有了的答这一行的 404，既在又不是默认的是错误；删了之后 `CountGroupStates` 数它的组，`CheckGroupKept(left)`：拒绝时事务回滚删除。
+  - 端口：`StateDeleter`（`StateFinder`、`GroupCounter`、`DeleteState`）、`DefaultMarker`（`StateFinder`、`MarkDefaultState`）；锁经用例的 `Locks`。
+  - `DeleteState`（`delete_state.go`）：`lockRowAndDecide` → 时钟 → `DeleteState`（守卫的写，不先查默认）；删了 0 行时 `deletedNothing(ctx, rw)`：经 `rw.read` 重读这一行（还在锁下），默认的答 `ErrStateDefault`，没有了的答这一行的 404，既在又不是默认的是错误；删了之后 `CountGroupStates` 数它的组，`CheckGroupKept(left)`：拒绝时事务回滚删除。既是默认、又是组里唯一的状态答 `project.state_default`：守卫的写在数组之前（spec 第 3 节第 13 条，设计 3.6 的锁表照此改）；契约写明。
   - `MarkDefaultState`（`mark_default_state.go`）：`lockRowAndDecide` → 时钟 → `MarkDefaultState`；第二条语句写 0 行时 `ErrStateNotFound`，事务回滚第一条：项目不会没有默认状态。哪一种交错到得了哪一个守卫，见 spec 第 3 节第 4 条（O4）：`DeleteState` 的守卫在组合一层由"先设为默认、再删除"到达；`SetDefaultState` 写 0 行在组合一层到不了（先删除时重读在锁下先答 404），是纵深防御，钉在单元和存储两层。
   - HTTP、接线；前端文案：`project.state_default`。
   - 矩阵：`deleteState` 五行（删除 Review、默认的 Backlog 409、组里唯一的 Done 409、分诊状态每一列 404、已归档项目的小表）、`markDefaultState` 三行（Todo、分诊状态、已归档项目的小表）；最先锁工作区的测试、盖戳、连接各加两个写；`bobs` 的说明。
@@ -5481,13 +5562,15 @@ Expected: 通过。
         state that does not exist or is deleted, the intake's triage state,
         and a state whose project the caller does not see answer
         project.state_not_found; a caller who sees the project but may not
-        change its states, forbidden, whatever the state. The project's
-        default state is not deleted (project.state_default): make another
-        state the default first. Nor is the only state of its group
-        (project.state_last_in_group): every group keeps a state. The state
-        is deleted at the moment of the request, by the caller, and its name
-        is free again in the project. The role is decided after the
-        workspace and project rows are locked.
+        change its states, forbidden, whether or not the state is the
+        default or the last of its group. The project's default state is not
+        deleted (project.state_default): make another state the default
+        first. Nor is the only state of its group
+        (project.state_last_in_group): every group keeps a state. A state
+        that is both is project.state_default. The state is deleted at the
+        moment of the request, by the caller, and its name is free again in
+        the project. The role is decided after the workspace and project
+        rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.state_not_found, forbidden, project.state_default, project.state_last_in_group]
       responses:
@@ -5511,8 +5594,8 @@ Expected: 通过。
         or is deleted, the intake's triage state, and a state whose project
         the caller does not see answer project.state_not_found; a caller
         who sees the project but may not change its states, forbidden,
-        whatever the state. The role is decided after the workspace and
-        project rows are locked.
+        whether or not the state is the default or the last of its group.
+        The role is decided after the workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.state_not_found, forbidden]
       responses:
@@ -5539,9 +5622,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `0a0a732d1899c07ae8e35b17e88ce0bd088dfecebb59d7a95decd118b87e1e90` | 2700 | `api/dist/openapi.yaml` |
-| `24e4395a24f1317672caebd9b116f9bc3462af3440a904341a8f2982b5e3d2e9` | 2801 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `b105a08c34b368d14f1a6f992a0f05f889577fc418be97e8d094ab52511aa535` | 2978 | `web/packages/api-client/src/schema.gen.ts` |
+| `b316b55bd2e170ae16702ba430aa13058d4d586d6a5376ee0ec9504f974bfcc3` | 2700 | `api/dist/openapi.yaml` |
+| `36630ec12ac2d76df68a3094412e854654e9ea8cca39c5f509f982486b020fc7` | 2801 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `c215f77fc52eff227f86dbe5eb81a5f1155c4cd3873f4a2599c555e44f451589` | 2978 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts server/internal/modules/project/adapter/http/gen/server.gen.go`
 Expected: 与上表相同。
@@ -6669,7 +6752,8 @@ A deletion is a guarded write that passes over the project's default
 state: the state read again under the locks then answers
 project.state_default, or its own 404 when it is gone; the states its
 group keeps are counted after it, and none left is
-project.state_last_in_group, rolled back. Making a state the default
+project.state_last_in_group, rolled back; a state both the default and
+its group's only one is project.state_default. Making a state the default
 clears the old default, then sets the new one; a second statement that
 wrote nothing fails the transaction, so no project is left without a
 default. project.state_default is declared, with its messages.
@@ -6839,9 +6923,9 @@ Expected: 成功：
 
 | SHA-256 | 行数 | 文件 |
 |---|---|---|
-| `9ade87560fc69fc7035e6d7af860f4d1efe44a3a33473ccad5c5c791631f7aa6` | 2752 | `api/dist/openapi.yaml` |
-| `e0eef0eace0b4901bfdba790851f0e51a1b36d2aaa782d43f2e29ca1c7642ace` | 3016 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
-| `9e144d9454853c405c964bc2308f63bdc4fe8571d169a4ecc0894782836c4956` | 3057 | `web/packages/api-client/src/schema.gen.ts` |
+| `36793961b3418a40d650993813bb0db5fea430e82ba3e236de0b3a2043c6c499` | 2752 | `api/dist/openapi.yaml` |
+| `d7c981b40489088756fc1fe8d8b661dfa1cef627092a0cbbd6dbdc625145807e` | 3016 | `server/internal/modules/project/adapter/http/gen/server.gen.go` |
+| `63f6ef50c96cf8b3212b9a7a7fad47be633fbe15dc82a260718b4635b603e54d` | 3057 | `web/packages/api-client/src/schema.gen.ts` |
 
 Run: `shasum -a 256 api/dist/openapi.yaml web/packages/api-client/src/schema.gen.ts server/internal/modules/project/adapter/http/gen/server.gen.go`
 Expected: 与上表相同。
@@ -8111,14 +8195,14 @@ Expected: 通过。
 
 **Interfaces:**
 - 只有测试（spec 2.10；M3 设计 3.6 约定二、三，3.17，9.3 交错 10）：
-  - `project_membership_races_test.go` 改名为 `project_row_races_test.go`，`membershipWrite` 推广为 `rowWrite`（`member`、`state`、`clears`；`row` 回答它改的表和行；`param`）：P5b 的两个测试各加 `updateState`、`deleteState`、`markDefaultState` 三个写（bob 改 Web 的 QA）。竞争的六行：这一行结束（只有成员关系有）、删除、移到 Ops，调用者的成员关系结束，Web 删除，acme 删除，写答 404、什么都不改；锁强度：等 acme 时什么都没持有，等 Web 时持有 acme 的 `FOR SHARE`，等这一行时持有 Web 的 `FOR NO KEY UPDATE`，只有设为默认持有 Web 的默认 Backlog（`FOR NO KEY UPDATE`，它先写了它）。
+  - `project_membership_races_test.go` 改名为 `project_row_races_test.go`，`membershipWrite` 推广为 `rowWrite`（`member`、`state`、`clears`、`creates`；`row` 回答它改的表和行；`param`）：P5b 的两个测试各加状态的四个写：`updateState`、`deleteState`、`markDefaultState`（bob 改 Web 的 QA），和按项目寻址的 `createState`（bob 在 Web 建 Checked，同离开；裁定 M1）。竞争的六行：这一行结束（只有成员关系有）、删除、移到 Ops，调用者的成员关系结束，Web 删除，acme 删除，写答 404、什么都不改（离开和建状态只跑后三行）；锁强度：等 acme 时什么都没持有，等 Web 时持有 acme 的 `FOR SHARE`，等这一行时持有 Web 的 `FOR NO KEY UPDATE`，只有设为默认持有 Web 的默认 Backlog（`FOR NO KEY UPDATE`，它先写了它）；建状态没有自己的行可等，由 `creates` 跳过，它的锁的顺序和强度由最先锁工作区的测试和交错的两个创建钉住。
   - `memberWorld`（`membership_world_test.go`）：Web 多一个 completed 组的 QA，由 alice 经接口建（`newState`）；alice 在 QA 之后建、随即删除的 Retired（85000）；Ops 的 Cancelled 由 alice 经接口移到 100000，在 Web 的每个状态之后（读了别的项目的、已删除的状态的最大 `sequence` 的创建在交错里看得出，清扫 23、24、26）；`interleaving_leaving_test.go` 的 `projectLocks`、`tx` 由离开和状态的写共用。
-  - `interleaving_states_test.go`：两个写在 Web 上串行，两种顺序；第一个持有锁、停在它写之后的门，第二个由探测确认在等 Web 的行。
+  - `interleaving_states_test.go`：两个写在 Web 上串行，两种顺序；第一个持有锁、停在它写之后的门，第二个由探测确认在等 Web 的行（第二个的锁的顺序是最先锁工作区的测试的）。
   - `state_rows_test.go`：每个状态的写只写它的行（`tableRows` 比较其余每张表每一行）。
 
 **Tests:**
 - `TestStateWritesOnOneProjectSerialize`（新）：completed 组的 Done 和 QA 各删除或改走，第二个 409 `project.state_last_in_group`；QA 先设为默认再删除，删除 409 `project.state_default`；先删除再设为默认，404 `project.state_not_found`（交错 10，Web 两种顺序都恰好一个默认）；两个创建，第二个在第一个之后的 `sequence`，时刻不早于门打开的时刻（它在锁下读时钟，3.3）。之后 Web 的状态是第一个留下的样子（第二个成功时加上它的），Ops、beta 的 Lab 不变。
-- `TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（改名、推广；P5b 的两个测试删除）。
+- `TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile`、`TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength`（改名、推广；P5b 的两个测试删除）：前者加 `createState` 的三行（调用者的成员关系结束、Web 删除、acme 删除），各 404 `project.not_found`、不建状态。
 - `TestEachStateWriteChangesItsRowsAlone`（新，七行：bob 建 Shipped、改 QA 的名称、删除它、把 Backlog（backlog 组唯一的状态）改名并给它自己的组（不是改组，不数）、在分诊组建状态和把 Done 改到分诊组（各 422 `group not_allowed`，在写的事务之前，什么都不写；这两个请求体在契约的枚举之外，测试不核对请求、照旧核对回答）、把 Done 设为默认；每个写之后，它写的行之外每张表每一行不变）。
 
 - [ ] **Step 1: 测试的世界**
@@ -8223,7 +8307,7 @@ func (w memberWorld) tx() shared.TxManager {
 ````delete server/internal/bootstrap/project_membership_races_test.go
 ````
 
-`server/internal/bootstrap/project_row_races_test.go`（新文件，296 行）：
+`server/internal/bootstrap/project_row_races_test.go`（新文件，309 行）：
 
 ````file server/internal/bootstrap/project_row_races_test.go
 package bootstrap
@@ -8251,20 +8335,23 @@ import (
 // rowWrite is one of the writes on a row under a project as the races send
 // it on memberWorld: bob, Web's admin and acme's member, changes gina's
 // role in Web to a guest's, or removes her; dave, Web's admin, leaves it;
-// bob renames Web's QA, deletes it, or makes it Web's default. gina is
-// Web's member and acme's admin; alice, Web's other admin, stays; QA is of
-// the completed group, beside Done; nothing else refuses each write.
+// bob renames Web's QA, deletes it, or makes it Web's default; or bob
+// creates a state in Web, a write addressed by its project, as leaving is.
+// gina is Web's member and acme's admin; alice, Web's other admin, stays;
+// QA is of the completed group, beside Done; nothing else refuses each
+// write.
 type rowWrite struct {
 	op, by string
 	// member is whose membership of Web the write changes, the caller's for
-	// a write on a state; state, when set, is the name of Web's state the
-	// write changes instead.
+	// a write on a state or a creation; state, when set, is the name of
+	// Web's state the write changes instead.
 	member, state      string
 	method, path, body string // path: %s the row's id for a path of one (rowPaths), else Web's
 	status             int    // its answer, alone
 	notFound           string // the code of its 404
 	target             bool   // it changes the member's role: it shares his membership of acme (convention 3)
 	clears             bool   // it makes its state Web's default: it writes Web's default, Backlog, before its state
+	creates            bool   // it creates a state of Web: it has no row of its own to wait on
 }
 
 var rowWrites = []rowWrite{
@@ -8280,6 +8367,9 @@ var rowWrites = []rowWrite{
 		status: http.StatusNoContent, notFound: "project.state_not_found"},
 	{op: "markDefaultState", by: "bob", member: "bob", state: "QA", method: http.MethodPost, path: "/api/v0/states/%s/mark-default",
 		status: http.StatusNoContent, notFound: "project.state_not_found", clears: true},
+	{op: "createState", by: "bob", member: "bob", method: http.MethodPost, path: "/api/v0/projects/%s/states",
+		body: `{"name":"Checked","color":"#0EA5E9","group":"completed"}`, status: http.StatusCreated, notFound: "project.not_found",
+		creates: true},
 }
 
 // row is the row of Web that m changes: its table and its id.
@@ -8336,10 +8426,11 @@ func newPrivateWorld(t *testing.T) memberWorld {
 // acme. SQL makes each change inside the other transaction, which must hold
 // its lock open across the probe: a real write cannot without a hook in
 // product code. The write has passed authentication and its read without a
-// lock, of the row it names or, leaving, of Web's workspace, and waits for
-// the row the other holds. Once the other commits, the write is 404; the
-// row the other changed is as it left it, and every other row as it was.
-// Web is private: bob or dave, his membership ended, does not see it.
+// lock, of the row it names or, leaving or creating a state, of Web's
+// workspace, and waits for the row the other holds. Once the other commits,
+// the write is 404; the row the other changed is as it left it, and every
+// other row as it was, no state created among them. Web is private: bob or
+// dave, his membership ended, does not see it.
 func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 	type change struct {
 		name, holds, sql string // holds: the table of the row the other transaction locks first, acme's or Web's; sql: %s the table
@@ -8373,7 +8464,7 @@ func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 	for _, m := range rowWrites {
 		for _, c := range changes {
 			if c.ofRow && m.state == "" && m.member == m.by || c.membership && m.state != "" {
-				continue // leaving: its row is the caller's own membership; a state does not end
+				continue // leaving, creating: no row but the caller's own membership; a state does not end
 			}
 			t.Run(m.op+", "+c.name, func(t *testing.T) {
 				w := newPrivateWorld(t)
@@ -8446,6 +8537,12 @@ func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 // does, not the read of it under the locks either.
 func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 	for _, m := range rowWrites {
+		if m.creates {
+			// A creation has no row of its own to wait on: the order and the
+			// strength of its locks are TestEachWriteOnAProjectSharesItsWorkspaceFirst's
+			// and the two creations' of TestStateWritesOnOneProjectSerialize.
+			continue
+		}
 		t.Run(m.op, func(t *testing.T) {
 			w := newMemberWorld(t)
 			var acme, inAcme uuid.UUID
@@ -8526,7 +8623,7 @@ func TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength(t *testing.T) {
 
 - [ ] **Step 3: 交错 10、一组最后两个状态、每个写只写它的行**
 
-`server/internal/bootstrap/interleaving_states_test.go`（新文件，248 行）：
+`server/internal/bootstrap/interleaving_states_test.go`（新文件，249 行）：
 
 ````file server/internal/bootstrap/interleaving_states_test.go
 package bootstrap
@@ -8700,8 +8797,9 @@ func marksDefault(name string) stateWrite {
 // past its write: a deletion before it counts the group, a move after its
 // count, a creation after its read of the greatest sequence. The second
 // shares acme and waits for Web's row: neither writes a row of projects, so
-// only that lock's wait satisfies the probe. Once the first has committed,
-// the second decides on what it committed:
+// only that lock's wait satisfies the probe (the order of the second's
+// locks is TestEachWriteOnAProjectSharesItsWorkspaceFirst's). Once the
+// first has committed, the second decides on what it committed:
 //   - Done and QA, the completed group's two states: one deleted or moved to
 //     another group, the other's deletion or move is 409
 //     project.state_last_in_group: the group keeps one, whichever goes
@@ -8858,7 +8956,7 @@ func TestEachStateWriteChangesItsRowsAlone(t *testing.T) {
 - [ ] **Step 4: 测试和 lint**
 
 Run: `go -C server test -count=5 -race -run 'TestStateWritesOnOneProjectSerialize$|TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile$|TestEachLockOfAWriteOnARowUnderAProjectIsItsStrength$|TestTwoProjectAdminsLeavingLeaveAnAdmin$|TestTwoAdminsDemotingEachOtherLeaveAnAdmin$' ./internal/bootstrap/`
-Expected: `ok`，输出里没有 `40P01`（原型上 `race5.sh` 跑这五个和另外七个，各 5 次全部通过，147.8 秒，没有数据竞争）。
+Expected: `ok`，输出里没有 `40P01`（原型上 `race5.sh` 跑这五个和另外七个，各 5 次全部通过，155.1 秒，没有数据竞争）。
 
 Run: `go -C server test -count=1 -run 'TestEachStateWriteChangesItsRowsAlone$' ./internal/bootstrap/`
 Expected: `ok`。
@@ -8884,7 +8982,8 @@ keep one, the second write's 409; a state made the default and deleted
 the other, the project keeping one default; two states created take
 their sequences in turn. P5b's races and lock strengths become those of
 any write on a row under a project, the state writes among them, and
-each state write changes its rows alone.
+createState, addressed by its project as leaving is, races the same
+endings and deletions; each state write changes its rows alone.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -9381,7 +9480,7 @@ import { expect, test } from "../../fixtures/test";
 // test holds every cell; this story samples four of them through the API.
 // The page version is P11's.
 
-test("W11 (API): a guest of a workspace may not list its invitations nor create a state in the project he is a guest of, does not see a private project he is not a member of, and reads no member's address, his own neither; none of it changes a row", async ({
+test("W11 (API): a guest of a workspace may not list its invitations nor create a state in the project he is a guest of, does not see a private project he is not a member of, and reads no member's address, his own neither; none of it changes a row of the workspace's", async ({
   api,
   db,
 }, testInfo) => {
@@ -9486,7 +9585,7 @@ Run: `make test-web`
 Expected: 通过。
 
 Run: `make e2e`
-Expected: 69 个故事中 68 个通过，P6、W11 在其中；S3 在不是仓库检出的副本里读不到构建的提交号而失败，与 P7a 无关（P6 的复现同样）。
+Expected: 在仓库的检出里 69 个故事全部通过，P6、W11 在其中（S3 只在不是检出的副本里失败：它读构建的提交号，P4b 的 F4）。
 
 - [ ] **Step 5: 提交**
 

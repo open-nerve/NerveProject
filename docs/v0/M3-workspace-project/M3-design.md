@@ -315,7 +315,8 @@ M2 设计 3.5 的加锁顺序是全局约定。M3 的表接在它后面，另加
   | 离开项目 | 工作区 S → 项目 N → 判定 → 查唯一管理员 → 改 |
   | 修改项目的显示设置 | 工作区 S → 项目 S → 判定 → 改 |
   | 新建状态 | 工作区 S → 项目 N → 判定 → 插入 |
-  | 修改、删除状态，设为默认 | 工作区 S → 项目 N → 重读状态 → 判定 → 检查 → 守卫的写（3.17） |
+  | 修改状态、设为默认 | 工作区 S → 项目 N → 重读状态 → 判定 → 检查 → 守卫的写（3.17） |
+  | 删除状态 | 工作区 S → 项目 N → 重读状态 → 判定 → 守卫的写（守卫就是默认的检查）→ 写之后数它原来的组，组空了时拒绝、事务回滚（3.17） |
   | 新建、修改、删除标签 | 工作区 S → 项目 N →（修改、删除）重读标签 → 判定 → 层级检查 → 写（删除连带子标签，批量） |
 
 - **"设为默认"必须两条语句**：spike 中用一条 `UPDATE … SET "default" = (id = $new)` 翻转默认，一个方向成功，反方向因部分唯一索引逐行检查而失败，取决于行的物理顺序。
@@ -525,7 +526,7 @@ M2 决策点 3 要求停用"按 Plane 的本意"拒绝唯一的管理员。Plane
 - 修改只允许项目管理员（3.4 的表）；`group` 不能改成 `triage`。
 - 删除默认状态 409 `project.state_default`（Plane `views/state/base.py:113` 起）。"状态下还有工作项时不能删"由 M4 加入（13.2）。
 - **锁与守卫的写**：状态的全部写入先以 `FOR NO KEY UPDATE` 锁住项目行（3.6：默认状态、组的非空都是项目范围的不变式）。语句本身另带守卫，不依赖检查与写入之间没有别人：
-  - 删除：`UPDATE states SET deleted_at = $now WHERE id = $1 AND NOT "default" AND deleted_at IS NULL`，改了 0 行时重读这一行，按它的状态答 409 `project.state_default` 或 404；
+  - 删除：`UPDATE states SET deleted_at = $now WHERE id = $1 AND NOT "default" AND deleted_at IS NULL`，改了 0 行时重读这一行，按它的状态答 409 `project.state_default` 或 404；删了之后数它原来的组，组空了时 409 `project.state_last_in_group`、事务回滚。既是默认、又是组里唯一的状态答 `project.state_default`：默认是项目范围的约束，守卫先答；
   - 设为默认：第一条语句清掉原来的默认，第二条 `… SET "default" = true WHERE id = $1 AND deleted_at IS NULL`，改了 0 行时让事务失败（404），不留下没有默认状态的项目。
   - 第二稿 spike：设为默认持锁时，带守卫的删除等到它提交之后删除 0 行，恰好一个默认。
 - **已归档项目的状态不列出**：`listStates` 对已归档的项目返回空列表，工作区的状态列表也不含它们（Plane `views/state/base.py:37`，照搬）。
@@ -1887,7 +1888,7 @@ modules/access/
 - **目标**：状态的全部操作（`listStates`、`createState`、`updateState`、`deleteState`、`markDefaultState`、`listWorkspaceStates`），3.17 的规则（组、分诊、`sequence`、一组至少一个、默认状态）和守卫的写。状态是第二种按资源寻址（`/states/{id}`）的项目级的写：P5b 按资源寻址的一段从项目成员上提出来共用（P5b review 第 6 节），不加锁地读资源行 → 工作区 S → 项目 N → 锁下重读、确认仍属这个项目 → 判定，答资源自己的 404（3.6 约定二和加锁表）；P4b 的按操作的完整性核对接过它们的行。
 - **评审重点**（约束 3）：共用取锁路径的提取（项目成员的三个写行为不变；工作区锁的回答核对它的键）；第一批用它的守卫的写：删除默认状态 409，设为默认的两条语句不留下没有默认状态的项目，两个并发的删除或改组不能都让一组变空，等锁期间状态被删除、移走或项目看不到时答资源的 404 而不是 403。
 - **任务**：
-  1. 按资源寻址的共用取锁路径：从 `lockMemberAndDecide` 提出来，不再经 `MemberFinder`、`ProjectMembership`、`held.member`；项目成员的三个写改走它；`lock` 核对 `ShareWorkspaceByID` 回答的工作区是它要锁的那一个（P5b review 第 6 节）。
+  1. 按资源寻址的共用取锁路径：从 `lockMemberAndDecide` 提出来，不再经 `MemberFinder`、`ProjectMembership`、`held.member`；按行寻址的两个写（改角色、移出）改走它；离开按项目寻址，经同一个 `Locks.lock`；`lock` 核对 `ShareWorkspaceByID` 回答的工作区是它要锁的那一个（P5b review 第 6 节）。
   2. 状态的规则（领域）：组、`group = triage` 的 422、新建的 `sequence`（非分诊状态的最大值加 15000）、一组至少一个（3.17）；四个状态码的错误。
   3. 状态的存储：按 id 读（不含分诊状态）、列出、非分诊状态的最大 `sequence`、修改、组内的个数、带守卫的删除、设为默认的两条语句、工作区的状态列表；存储测试和失败测试。
   4. `createState`：契约、规则行、操作名、用例、HTTP、矩阵为每个项目准备的状态和它的行；`project.state_name_taken`、`project.state_not_found` 和它们的文案。
@@ -1898,7 +1899,7 @@ modules/access/
   9. 按资源寻址的写在等锁期间行被改变的组合测试，从项目成员推广到状态；交错测试 10（两种顺序）；一组最后两个状态的并发删除、改组。
   10. 已归档项目的小表中状态的行（9.2）；端到端：`api.ts` 的建状态、`assert/project.ts` 的状态断言，P6 的接口版本，W11 的四格抽样；3.20 中 P7a 的行；review。
 - **关闭**：没有（13.1 没有落在 P7 的一项）。
-- **完成线**：P6、W11 通过，此前的全部故事仍通过；交错测试 10 和一组最后两个状态的并发写两种顺序 `-count=5 -race` 通过，没有 40P01；项目成员的三个写的竞争和锁的强度测试在共用路径上照旧通过；每个状态的写在每个项目级的写最先锁工作区的测试里有一行（第一步探测它的状态行），少一行时完整性核对失败；`project` 的 `apitest.Main` 两个方向核对通过（含四个状态码和 `listWorkspaceStates` 的 `workspace.not_found`）；整程序测试覆盖本 Phase 的操作；本 Phase 的矩阵格子和已归档项目的小表中状态的行通过。
+- **完成线**：P6、W11 通过，此前的全部故事仍通过；交错测试 10 和一组最后两个状态的并发写两种顺序 `-count=5 -race` 通过，没有 40P01；项目成员的三个写的竞争和锁的强度测试照旧通过（按行寻址的两个写在共用路径上，离开经同一个 `Locks.lock`）；每个状态的写在每个项目级的写最先锁工作区的测试里有一行（第一步探测它的状态行），少一行时完整性核对失败；`project` 的 `apitest.Main` 两个方向核对通过（含四个状态码和 `listWorkspaceStates` 的 `workspace.not_found`）；整程序测试覆盖本 Phase 的操作；本 Phase 的矩阵格子和已归档项目的小表中状态的行通过。
 
 ### P7b `labels`：标签（后端，8 个任务）
 - **拆分**：见 P7a 的同一条；P7b 在 P7a 合并之后开始。
