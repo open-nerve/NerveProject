@@ -397,6 +397,11 @@ type StateCreate struct {
 // StateGroup The group a state is in: backlog, unstarted, started, completed or cancelled. Every group of a project keeps a state.
 type StateGroup string
 
+// StateList defines model for StateList.
+type StateList struct {
+	Data []State `json:"data"`
+}
+
 // StateUpdate Changes the fields it names; a field left out keeps its value.
 type StateUpdate struct {
 	// Color 1–255 characters, not blank.
@@ -493,6 +498,9 @@ type ServerInterface interface {
 	// AddProjectMembers Add workspace members to a project
 	// (POST /api/v0/projects/{project_id}/members)
 	AddProjectMembers(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListStates List a project's states
+	// (GET /api/v0/projects/{project_id}/states)
+	ListStates(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// CreateState Create a state in a project
 	// (POST /api/v0/projects/{project_id}/states)
 	CreateState(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -517,6 +525,9 @@ type ServerInterface interface {
 	// CreateProject Create a project in a workspace
 	// (POST /api/v0/workspaces/{slug}/projects)
 	CreateProject(w http.ResponseWriter, r *http.Request, slug Slug)
+	// ListWorkspaceStates List the states of the projects the caller is a member of
+	// (GET /api/v0/workspaces/{slug}/states)
+	ListWorkspaceStates(w http.ResponseWriter, r *http.Request, slug Slug)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -840,6 +851,32 @@ func (siw *ServerInterfaceWrapper) AddProjectMembers(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ListStates operation middleware
+func (siw *ServerInterfaceWrapper) ListStates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStates(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateState operation middleware
 func (siw *ServerInterfaceWrapper) CreateState(w http.ResponseWriter, r *http.Request) {
 
@@ -1073,6 +1110,32 @@ func (siw *ServerInterfaceWrapper) CreateProject(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListWorkspaceStates operation middleware
+func (siw *ServerInterfaceWrapper) ListWorkspaceStates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "slug" -------------
+	var slug Slug
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", r.PathValue("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "slug", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWorkspaceStates(w, r, slug)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1207,10 +1270,12 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/members", wrapper.AddProjectMembers)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.UpdateProjectMember)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.ListStates)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.CreateState)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.DeleteState)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1765,6 +1830,52 @@ func (response AddProjectMembersdefaultApplicationProblemPlusJSONResponse) Visit
 	return err
 }
 
+type ListStatesRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type ListStatesResponseObject interface {
+	VisitListStatesResponse(w http.ResponseWriter) error
+}
+
+type ListStates200JSONResponse StateList
+
+func (response ListStates200JSONResponse) VisitListStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListStatesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListStatesdefaultApplicationProblemPlusJSONResponse) VisitListStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type CreateStateRequestObject struct {
 	ProjectID ProjectID `json:"project_id"`
 	Body      *CreateStateJSONRequestBody
@@ -2126,6 +2237,52 @@ func (response CreateProjectdefaultApplicationProblemPlusJSONResponse) VisitCrea
 	return err
 }
 
+type ListWorkspaceStatesRequestObject struct {
+	Slug Slug `json:"slug"`
+}
+
+type ListWorkspaceStatesResponseObject interface {
+	VisitListWorkspaceStatesResponse(w http.ResponseWriter) error
+}
+
+type ListWorkspaceStates200JSONResponse StateList
+
+func (response ListWorkspaceStates200JSONResponse) VisitListWorkspaceStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListWorkspaceStatesdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListWorkspaceStatesdefaultApplicationProblemPlusJSONResponse) VisitListWorkspaceStatesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GetProjectPreferences Read the caller's display settings in a project
@@ -2164,6 +2321,9 @@ type StrictServerInterface interface {
 	// AddProjectMembers Add workspace members to a project
 	// (POST /api/v0/projects/{project_id}/members)
 	AddProjectMembers(ctx context.Context, request AddProjectMembersRequestObject) (AddProjectMembersResponseObject, error)
+	// ListStates List a project's states
+	// (GET /api/v0/projects/{project_id}/states)
+	ListStates(ctx context.Context, request ListStatesRequestObject) (ListStatesResponseObject, error)
 	// CreateState Create a state in a project
 	// (POST /api/v0/projects/{project_id}/states)
 	CreateState(ctx context.Context, request CreateStateRequestObject) (CreateStateResponseObject, error)
@@ -2188,6 +2348,9 @@ type StrictServerInterface interface {
 	// CreateProject Create a project in a workspace
 	// (POST /api/v0/workspaces/{slug}/projects)
 	CreateProject(ctx context.Context, request CreateProjectRequestObject) (CreateProjectResponseObject, error)
+	// ListWorkspaceStates List the states of the projects the caller is a member of
+	// (GET /api/v0/workspaces/{slug}/states)
+	ListWorkspaceStates(ctx context.Context, request ListWorkspaceStatesRequestObject) (ListWorkspaceStatesResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -2569,6 +2732,32 @@ func (sh *strictHandler) AddProjectMembers(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// ListStates operation middleware
+func (sh *strictHandler) ListStates(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request ListStatesRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStates(ctx, request.(ListStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStatesResponseObject); ok {
+		if err := validResponse.VisitListStatesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // CreateState operation middleware
 func (sh *strictHandler) CreateState(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
 	var request CreateStateRequestObject
@@ -2793,6 +2982,32 @@ func (sh *strictHandler) CreateProject(w http.ResponseWriter, r *http.Request, s
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateProjectResponseObject); ok {
 		if err := validResponse.VisitCreateProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListWorkspaceStates operation middleware
+func (sh *strictHandler) ListWorkspaceStates(w http.ResponseWriter, r *http.Request, slug Slug) {
+	var request ListWorkspaceStatesRequestObject
+
+	request.Slug = slug
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListWorkspaceStates(ctx, request.(ListWorkspaceStatesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListWorkspaceStates")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListWorkspaceStatesResponseObject); ok {
+		if err := validResponse.VisitListWorkspaceStatesResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

@@ -3,11 +3,12 @@
 // brings listing, creating, reading, changing, archiving and deleting
 // projects, checking an identifier, listing, adding and joining the
 // members, changing a member's role, removing a member and leaving, each
-// member's display settings, creating, changing and deleting a project's
-// states and making one its default, carries out the workspace module's
-// cascades on the projects (ProjectCascade), and offers the access module
-// its reads of a project (ProjectAccess) and the workspace module its
-// count of an account's ended project memberships
+// member's display settings, listing, creating, changing and deleting a
+// project's states and making one its default, listing the states of a
+// workspace's projects one is a member of, carries out the workspace
+// module's cascades on the projects (ProjectCascade), and offers the
+// access module its reads of a project (ProjectAccess) and the workspace
+// module its count of an account's ended project memberships
 // (ProjectMembershipCounts).
 package project
 
@@ -127,25 +128,27 @@ func New(d Deps) *Module {
 		CreateProject: app.NewCreateProject(app.CreateProjectDeps{
 			Workspaces: d.Workspaces, Members: d.Members, Projects: store, Auth: d.Authorizer, Tx: d.Tx, Clock: d.Clock,
 		}),
-		ListProjects:      app.NewListProjects(d.Workspaces, store, d.Authorizer),
-		GetProject:        app.NewGetProject(store, d.Authorizer),
-		CheckIdentifier:   app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
-		UpdateProject:     app.NewUpdateProject(store, locks, d.Tx, d.Clock),
-		ArchiveProject:    app.NewArchiveProject(store, locks, d.Tx, d.Clock),
-		UnarchiveProject:  app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
-		DeleteProject:     app.NewDeleteProject(store, locks, d.Tx, d.Clock),
-		GetPreferences:    app.NewGetProjectPreferences(store, d.Authorizer),
-		UpdatePreferences: app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
-		ListMembers:       app.NewListProjectMembers(store, d.Authorizer),
-		AddMembers:        app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
-		JoinProject:       app.NewJoinProject(locks, store, d.Tx, d.Clock),
-		UpdateMember:      app.NewUpdateProjectMember(locks, store, d.Tx, d.Clock),
-		RemoveMember:      app.NewRemoveProjectMember(locks, store, d.Tx, d.Clock),
-		LeaveProject:      app.NewLeaveProject(locks, store, d.Tx, d.Clock),
-		CreateState:       app.NewCreateState(locks, store, d.Tx, d.Clock),
-		UpdateState:       app.NewUpdateState(locks, store, d.Tx, d.Clock),
-		DeleteState:       app.NewDeleteState(locks, store, d.Tx, d.Clock),
-		MarkDefaultState:  app.NewMarkDefaultState(locks, store, d.Tx, d.Clock),
+		ListProjects:        app.NewListProjects(d.Workspaces, store, d.Authorizer),
+		GetProject:          app.NewGetProject(store, d.Authorizer),
+		CheckIdentifier:     app.NewCheckProjectIdentifier(d.Workspaces, store, d.Authorizer),
+		UpdateProject:       app.NewUpdateProject(store, locks, d.Tx, d.Clock),
+		ArchiveProject:      app.NewArchiveProject(store, locks, d.Tx, d.Clock),
+		UnarchiveProject:    app.NewUnarchiveProject(store, locks, d.Tx, d.Clock),
+		DeleteProject:       app.NewDeleteProject(store, locks, d.Tx, d.Clock),
+		GetPreferences:      app.NewGetProjectPreferences(store, d.Authorizer),
+		UpdatePreferences:   app.NewUpdateProjectPreferences(store, locks, d.Tx, d.Clock),
+		ListMembers:         app.NewListProjectMembers(store, d.Authorizer),
+		AddMembers:          app.NewAddProjectMembers(app.AddMembersDeps{Locks: locks, Projects: store, Tx: d.Tx, Clock: d.Clock}),
+		JoinProject:         app.NewJoinProject(locks, store, d.Tx, d.Clock),
+		UpdateMember:        app.NewUpdateProjectMember(locks, store, d.Tx, d.Clock),
+		RemoveMember:        app.NewRemoveProjectMember(locks, store, d.Tx, d.Clock),
+		LeaveProject:        app.NewLeaveProject(locks, store, d.Tx, d.Clock),
+		ListStates:          app.NewListStates(store, d.Authorizer),
+		CreateState:         app.NewCreateState(locks, store, d.Tx, d.Clock),
+		UpdateState:         app.NewUpdateState(locks, store, d.Tx, d.Clock),
+		DeleteState:         app.NewDeleteState(locks, store, d.Tx, d.Clock),
+		MarkDefaultState:    app.NewMarkDefaultState(locks, store, d.Tx, d.Clock),
+		ListWorkspaceStates: app.NewListWorkspaceStates(d.Workspaces, store, d.Authorizer),
 	}}
 }
 

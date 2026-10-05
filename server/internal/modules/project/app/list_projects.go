@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -32,18 +31,8 @@ func (u *ListProjects) Execute(ctx context.Context, slug string, archived bool) 
 	if err != nil {
 		return nil, err
 	}
-	ws, found, err := u.workspaces.WorkspaceBySlug(ctx, slug)
-	switch {
-	case err != nil:
-		return nil, err
-	case !found:
-		return nil, domain.ErrWorkspaceNotFound
-	}
-	grant, err := u.auth.Authorize(ctx, actor, domain.ActionList, shared.Target{WorkspaceID: ws.ID})
-	switch {
-	case errors.Is(err, shared.ErrNotVisible):
-		return nil, domain.ErrWorkspaceNotFound
-	case err != nil:
+	ws, grant, err := findWorkspaceAndDecide(ctx, u.workspaces, u.auth, actor, slug, domain.ActionList)
+	if err != nil {
 		return nil, err
 	}
 	return u.projects.ListProjects(ctx, ws.ID, actor.UserID, domain.VisibilityOf(grant.WorkspaceRole), archived)

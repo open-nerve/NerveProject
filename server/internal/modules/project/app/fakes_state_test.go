@@ -72,6 +72,14 @@ func (f *fakeStates) of(project uuid.UUID) []domain.State {
 	return out
 }
 
+func (f *fakeStates) ListStates(ctx context.Context, projectID uuid.UUID) ([]domain.State, error) {
+	f.log.add(ctx, "ListStates %s", projectID)
+	if err := f.fail("ListStates"); err != nil {
+		return nil, err
+	}
+	return f.of(projectID), nil
+}
+
 func (f *fakeStates) GreatestSequence(ctx context.Context, projectID uuid.UUID) (*float64, error) {
 	f.log.add(ctx, "GreatestSequence %s", projectID)
 	if err := f.fail("GreatestSequence"); err != nil {

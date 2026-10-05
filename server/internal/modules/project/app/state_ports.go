@@ -11,6 +11,22 @@ import (
 // The project store's states, as the state operations read and write them
 // (M3 design 3.17). The triage state is never one of them.
 
+// StateLister is listStates' repository.
+type StateLister interface {
+	ProjectFinder
+	// ListStates lists projectID's undeleted states but its triage state, by
+	// sequence, then id; none while the project is archived.
+	ListStates(ctx context.Context, projectID uuid.UUID) ([]domain.State, error)
+}
+
+// WorkspaceStateLister is listWorkspaceStates' repository.
+type WorkspaceStateLister interface {
+	// ListWorkspaceStates lists the undeleted states but the triage states
+	// of workspaceID's undeleted, unarchived projects that userID is an
+	// active member of, by project, then sequence, then id.
+	ListWorkspaceStates(ctx context.Context, workspaceID, userID uuid.UUID) ([]domain.State, error)
+}
+
 // StateCreator is createState's repository. Each method runs in the
 // transaction ctx carries, under the project's FOR NO KEY UPDATE.
 type StateCreator interface {

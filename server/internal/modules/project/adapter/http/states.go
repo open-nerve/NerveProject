@@ -7,6 +7,15 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 )
 
+// ListStates serves GET /api/v0/projects/{project_id}/states.
+func (h handler) ListStates(ctx context.Context, req gen.ListStatesRequestObject) (gen.ListStatesResponseObject, error) {
+	list, err := h.uc.ListStates.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListStates200JSONResponse(states(list)), nil
+}
+
 // CreateState serves POST /api/v0/projects/{project_id}/states: the group
 // goes to the use case as given, triage and one outside the five too, which
 // the domain refuses (422).
@@ -51,6 +60,24 @@ func (h handler) MarkDefaultState(ctx context.Context, req gen.MarkDefaultStateR
 		return nil, err
 	}
 	return gen.MarkDefaultState204Response{}, nil
+}
+
+// ListWorkspaceStates serves GET /api/v0/workspaces/{slug}/states.
+func (h handler) ListWorkspaceStates(ctx context.Context, req gen.ListWorkspaceStatesRequestObject) (gen.ListWorkspaceStatesResponseObject, error) {
+	list, err := h.uc.ListWorkspaceStates.Execute(ctx, req.Slug)
+	if err != nil {
+		return nil, err
+	}
+	return gen.ListWorkspaceStates200JSONResponse(states(list)), nil
+}
+
+// states is list as the API shows it: data an array, never null.
+func states(list []domain.State) gen.StateList {
+	out := gen.StateList{Data: make([]gen.State, len(list))}
+	for i, s := range list {
+		out.Data[i] = state(s)
+	}
+	return out
 }
 
 // state is s as the API shows it.

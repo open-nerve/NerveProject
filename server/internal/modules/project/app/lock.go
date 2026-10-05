@@ -218,13 +218,34 @@ func findAndDecide(ctx context.Context, projects ProjectFinder, auth shared.Auth
 	return err
 }
 
+// findWorkspaceAndDecide is the first two steps of a read in a workspace
+// named by its slug (M3 design 6.4), without a transaction: workspaces
+// finds the undeleted workspace, then decide decides action in it, and
+// answers the grant. A workspace that is not there, or not visible to
+// actor, is domain.ErrWorkspaceNotFound.
+func findWorkspaceAndDecide(ctx context.Context, workspaces WorkspaceDirectory, auth shared.Authorizer, actor shared.Actor, slug string,
+	action shared.Action) (Workspace, shared.Grant, error) {
+	ws, found, err := workspaces.WorkspaceBySlug(ctx, slug)
+	switch {
+	case err != nil:
+		return Workspace{}, shared.Grant{}, err
+	case !found:
+		return Workspace{}, shared.Grant{}, domain.ErrWorkspaceNotFound
+	}
+	grant, err := decide(ctx, auth, actor, action, ws.ID, uuid.UUID{}, domain.ErrWorkspaceNotFound)
+	if err != nil {
+		return Workspace{}, shared.Grant{}, err
+	}
+	return ws, grant, nil
+}
+
 // decide asks the Authorizer for action on the project id of the workspace
-// for actor. A write calls it under its locks, so the facts it reads are
-// the ones committed after the locks were granted (M3 design 6.7): a
-// demotion or a removal that committed while the write waited is seen; a
-// read calls it after the read that names the project's workspace. A
-// project not visible to actor is notFound, the 404 of what the caller
-// named.
+// for actor, or in the workspace for a zero id. A write calls it under its
+// locks, so the facts it reads are the ones committed after the locks were
+// granted (M3 design 6.7): a demotion or a removal that committed while the
+// write waited is seen; a read calls it after the read that names the
+// project's workspace. A project, or a workspace, not visible to actor is
+// notFound, the 404 of what the caller named.
 func decide(ctx context.Context, auth shared.Authorizer, actor shared.Actor, action shared.Action, workspaceID, id uuid.UUID,
 	notFound error) (shared.Grant, error) {
 	grant, err := auth.Authorize(ctx, actor, action, shared.Target{WorkspaceID: workspaceID, ProjectID: id})

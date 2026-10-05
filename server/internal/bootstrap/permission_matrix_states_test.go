@@ -2,14 +2,16 @@ package bootstrap
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 	"uuid"
 )
 
 // The rows of the permission matrix of a project's states (M3 design 9.2):
-// creating them, under the project of each column, and the writes on one,
-// naming it by its id (/states/{state_id}) among its column's project's
-// seeded states, those of matrixStates.
+// listing and creating them, under the project of each column, the writes
+// on one, naming it by its id (/states/{state_id}) among its column's
+// project's seeded states, those of matrixStates, and listing a
+// workspace's, under the workspace of each column.
 
 var (
 	cellStateNameTaken   = cell{http.StatusConflict, "project.state_name_taken"}
@@ -47,8 +49,19 @@ func toState(method, after, name, body string) func(caller, seeded) (string, str
 // group, a name no seeded state has.
 const newState = `{"name":"QA","color":"#0EA5E9","group":"completed"}`
 
+// listedStates are the names of each matrix project's states as a list
+// answers them: matrixStates by sequence, the triage state left out.
+var listedStates = []string{"Backlog", "Todo", "In Progress", "Review", "Done", "Cancelled"}
+
 func stateMatrixRows() []matrixRow {
 	return []matrixRow{
+		// Every active member of the project (M3 design 9.2): PM+WA as its
+		// member, and not WA-, who is none.
+		{op: "listStates", columns: projectColumns, request: toProject(http.MethodGet, "/states", ""),
+			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: listsTheStates},
+		// An archived project lists none (M3 design 3.17), to who may list.
+		{op: "listStates", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "/states", ""),
+			cells: ofArchived(cellOK, cellForbidden), check: listsTheStates},
 		// The project's admins, and its members who are the workspace's
 		// admins (M3 design 3.4): not its guests, whom Plane lets change
 		// states.
@@ -114,6 +127,37 @@ func stateMatrixRows() []matrixRow {
 				cellStateNotFound, cellStateNotFound, cellStateNotFound)},
 		{op: "markDefaultState", variant: "archived", write: true, columns: archivedColumns,
 			request: toState(http.MethodPost, "/mark-default", "Todo", ""), cells: ofArchivedState(cellNoContent, cellForbidden)},
+		// Every active member of the workspace (M3 design 9.2), each the
+		// states of the projects he is a member of.
+		{op: "listWorkspaceStates", request: toWorkspace(http.MethodGet, "/states", ""), cells: inWorkspace(cellOK, cellOK, cellOK),
+			check: listsTheWorkspaceStates},
+	}
+}
+
+// listsTheStates: the column's project's states but its triage state, by
+// sequence: Review after In Progress; none of the archived project's.
+func listsTheStates(t *testing.T, c caller, s seeded, answer string) {
+	var list struct {
+		Data []struct {
+			ID        uuid.UUID `json:"id"`
+			ProjectID uuid.UUID `json:"project_id"`
+			Name      string    `json:"name"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &list)
+	var got []string
+	for _, st := range list.Data {
+		if st.ProjectID != s.project(projectOf(c)) || st.ID != s.state(projectOf(c), st.Name) {
+			t.Errorf("%s lists %s, not its project's", c, answer)
+		}
+		got = append(got, st.Name)
+	}
+	want := listedStates
+	if projectOf(c) == "acme/archived" {
+		want = nil
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("%s lists %q, want %q", c, got, want)
 	}
 }
 
@@ -146,4 +190,39 @@ func renamesTheState(t *testing.T, c caller, s seeded, answer string) {
 	if st.ID != s.state(projectOf(c), "Todo") || st.ProjectID != s.project(projectOf(c)) || st.Name != "Next" || st.Group != "unstarted" {
 		t.Errorf("%s renames %s; want %s's Todo, unstarted, named Next", c, answer, projectOf(c))
 	}
+}
+
+// listsTheWorkspaceStates: the states of acme's unarchived projects that
+// the column's account is an active member of, by project, then sequence:
+// none for the admin and the member, members of none of them, and the
+// public and the private project's for the guest, PG's account.
+func listsTheWorkspaceStates(t *testing.T, c caller, s seeded, answer string) {
+	var list struct {
+		Data []struct {
+			ID uuid.UUID `json:"id"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &list)
+	var got, want []uuid.UUID
+	for _, st := range list.Data {
+		got = append(got, st.ID)
+	}
+	if c == callerGuest {
+		for _, key := range byProjectID(s, "acme/public", "acme/private") {
+			for _, name := range listedStates {
+				want = append(want, s.state(key, name))
+			}
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("%s lists %v, want %v", c, got, want)
+	}
+}
+
+// byProjectID are the projects keys names, in the order of their ids.
+func byProjectID(s seeded, keys ...string) []string {
+	return slices.SortedFunc(slices.Values(keys), func(a, b string) int {
+		pa, pb := s.project(a), s.project(b)
+		return slices.Compare(pa[:], pb[:])
+	})
 }

@@ -75,6 +75,9 @@ var rules = map[shared.Action]Rule{
 	"project.read": {Level: LevelVisible},
 	// As project.create (spec §3 item 13).
 	"project_identifier.check": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember}},
+	// Every active member; the list holds the states of the projects he is
+	// an active member of, those state.list lets him list (M3 design 3.4).
+	"workspace_state.list": {Level: LevelWorkspace, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// The project's admins, and its members who are the workspace's admins
 	// (M3 design 3.4: a project-level rule, which Plane's pages hold).
 	"project.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
@@ -105,6 +108,8 @@ var rules = map[shared.Action]Rule{
 	// One's own membership: every active member of the project; the only
 	// admin's 409 is the use case's (M3 design 3.7 rule 1, 9.2).
 	"project.leave": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
+	// Every active member of the project (M3 design 9.2).
+	"state.list": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin, shared.RoleMember, shared.RoleGuest}},
 	// The project's admins, and its members who are the workspace's admins
 	// (M3 design 3.4: not its guests, whom Plane lets change states; 9.2).
 	"state.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},

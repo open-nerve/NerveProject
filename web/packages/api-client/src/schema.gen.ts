@@ -773,7 +773,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a project's states
+         * @description For the project's active members: its states, by sequence, the lowest first, then by id. The intake's triage state is none of them. An archived project lists none. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listStates"];
         put?: never;
         /**
          * Create a state in a project
@@ -830,6 +834,29 @@ export interface paths {
          * @description For the project's admins, and its members who are the workspace's admins; an archived project's default changes as any other's. The state becomes the project's default, and the state that was the default is no longer: a project has exactly one. Making the default state the default again leaves it so. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The role is decided after the workspace and project rows are locked.
          */
         post: operations["markDefaultState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v0/workspaces/{slug}/states": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        /**
+         * List the states of the projects the caller is a member of
+         * @description For the workspace's active members: the states of its projects that the caller is an active member of, the archived ones left out, by project, then by sequence, the lowest first, then by id; each project's as listStates lists them, the intake's triage state none of them. A project the caller sees but is not a member of adds none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listWorkspaceStates"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1471,14 +1498,6 @@ export interface components {
          * @enum {string}
          */
         StateGroup: "backlog" | "unstarted" | "started" | "completed" | "cancelled";
-        StateCreate: {
-            /** @description 1–255 characters, not blank; another undeleted state of the project may not have it. */
-            name: string;
-            /** @description 1–255 characters, not blank. */
-            color: string;
-            group: components["schemas"]["StateGroup"];
-            description?: string;
-        };
         /** @description A state of a project, in one of the groups of StateGroup. */
         State: {
             /** Format: uuid */
@@ -1500,6 +1519,17 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        StateList: {
+            data: components["schemas"]["State"][];
+        };
+        StateCreate: {
+            /** @description 1–255 characters, not blank; another undeleted state of the project may not have it. */
+            name: string;
+            /** @description 1–255 characters, not blank. */
+            color: string;
+            group: components["schemas"]["StateGroup"];
+            description?: string;
         };
         /** @description Changes the fields it names; a field left out keeps its value. */
         StateUpdate: {
@@ -1634,8 +1664,9 @@ export type ProjectMemberNew = components['schemas']['ProjectMemberNew'];
 export type ProjectMembersAdd = components['schemas']['ProjectMembersAdd'];
 export type ProjectMemberUpdate = components['schemas']['ProjectMemberUpdate'];
 export type StateGroup = components['schemas']['StateGroup'];
-export type StateCreate = components['schemas']['StateCreate'];
 export type State = components['schemas']['State'];
+export type StateList = components['schemas']['StateList'];
+export type StateCreate = components['schemas']['StateCreate'];
 export type StateUpdate = components['schemas']['StateUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
@@ -2823,6 +2854,30 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    listStates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's states. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StateList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     createState: {
         parameters: {
             query?: never;
@@ -2919,6 +2974,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listWorkspaceStates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A workspace's slug, as in the web app's address. */
+                slug: components["parameters"]["Slug"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The states. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StateList"];
+                };
             };
             default: components["responses"]["Problem"];
         };

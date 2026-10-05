@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -32,18 +31,8 @@ func (u *CheckProjectIdentifier) Execute(ctx context.Context, slug, identifier s
 	if err != nil {
 		return false, err
 	}
-	ws, found, err := u.workspaces.WorkspaceBySlug(ctx, slug)
-	switch {
-	case err != nil:
-		return false, err
-	case !found:
-		return false, domain.ErrWorkspaceNotFound
-	}
-	_, err = u.auth.Authorize(ctx, actor, domain.ActionCheckIdentifier, shared.Target{WorkspaceID: ws.ID})
-	switch {
-	case errors.Is(err, shared.ErrNotVisible):
-		return false, domain.ErrWorkspaceNotFound
-	case err != nil:
+	ws, _, err := findWorkspaceAndDecide(ctx, u.workspaces, u.auth, actor, slug, domain.ActionCheckIdentifier)
+	if err != nil {
 		return false, err
 	}
 	if !domain.ValidIdentifier(identifier) {
