@@ -14,47 +14,56 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// UpdateState changes exactly the fields the patch gives, and the audit
-// columns to the moment and the account given, and answers the state as
-// stored; every other column keeps its value, and every other state every
-// column. A patch that gives nothing changes the audit columns alone.
+// UpdateState changes exactly the fields the patch gives of Web's default
+// state, Backlog, and the audit columns to the moment and the account
+// given, and answers the state as stored; every other column keeps its
+// value, the default flag too, which the column's default, false, would
+// not show, and every other state every column. A patch that gives
+// nothing changes the audit columns alone: it comes after one that gave
+// every field, so that the group and the sequence it keeps are neither
+// backlog nor 0.
 func TestUpdateState(t *testing.T) {
 	w := newStateWorld(t)
-	todo := w.states[w.web]["Todo"]
-	others := tableRows(t, w.pool, "states", todo)
+	backlog := w.states[w.web]["Backlog"]
+	if cols := columns(t, w.pool, "states", backlog); cols["default"] != "true" {
+		t.Fatalf("Web's Backlog: %v; the test needs it the default", cols)
+	}
+	others := tableRows(t, w.pool, "states", backlog)
 	for _, tt := range []struct {
 		name   string
 		patch  domain.StatePatch
 		change map[string]string
 	}{
-		{"nothing", domain.StatePatch{}, nil},
 		{"every field", domain.StatePatch{Name: ptr("Next"), Description: ptr("Up next"), Color: ptr("#123456"), Group: ptr(domain.GroupStarted),
 			Sequence: ptr(-2.5)}, map[string]string{"name": `"Next"`, "description": `"Up next"`, "color": `"#123456"`, "group": `"started"`,
 			"sequence": "-2.5"}},
+		{"nothing", domain.StatePatch{}, nil},
 		{"the name alone", domain.StatePatch{Name: ptr("Later")}, map[string]string{"name": `"Later"`}},
 		{"the group alone", domain.StatePatch{Group: ptr(domain.GroupCancelled)}, map[string]string{"group": `"cancelled"`}},
 		{"the sequence alone", domain.StatePatch{Sequence: ptr(25000.0)}, map[string]string{"sequence": "25000"}},
 	} {
-		before := columns(t, w.pool, "states", todo)
-		got, err := w.s.UpdateState(context.Background(), todo, tt.patch, w.alice, now)
+		before := columns(t, w.pool, "states", backlog)
+		got, err := w.s.UpdateState(context.Background(), backlog, tt.patch, w.alice, now)
 		want := changed(before, changed(audit(w.alice, now), tt.change))
-		if after := columns(t, w.pool, "states", todo); err != nil || !maps.Equal(after, want) {
+		if after := columns(t, w.pool, "states", backlog); err != nil || !maps.Equal(after, want) {
 			t.Errorf("%s: UpdateState() = %v, the row %v\nwant %v", tt.name, err, after, want)
 		}
-		if stored, _, _ := w.s.StateByID(context.Background(), todo); got != stored || got.UpdatedAt != now {
+		if stored, _, _ := w.s.StateByID(context.Background(), backlog); got != stored {
 			t.Errorf("%s: UpdateState() answered %+v; want the row as stored, %+v", tt.name, got, stored)
 		}
 	}
-	if after := tableRows(t, w.pool, "states", todo); after != others {
+	if after := tableRows(t, w.pool, "states", backlog); after != others {
 		t.Errorf("the other states:\n%s\nwant\n%s", after, others)
 	}
 }
 
 // A name another undeleted state of the project has, its triage state's
-// too, is project.state_name_taken and changes nothing; the same name in
-// another case, a deleted state's and another project's are free.
+// too, is project.state_name_taken, the first problem the API would
+// answer, and changes nothing; the same name in another case, a deleted
+// state's and another project's are free.
 func TestUpdateStateNameTaken(t *testing.T) {
 	w := newStateWorld(t)
 	todo := w.states[w.web]["Todo"]
@@ -62,8 +71,9 @@ func TestUpdateStateNameTaken(t *testing.T) {
 	w.addState(t, w.ops, uuid.NewV7(), domain.NewState{Name: "Review", Color: "#000", Sequence: 1, Group: domain.GroupStarted})
 	before := tableRows(t, w.pool, "states")
 	for _, taken := range []string{"Done", "Triage"} {
-		if _, err := w.s.UpdateState(context.Background(), todo, domain.StatePatch{Name: ptr(taken)}, w.alice, now); !errors.Is(err,
-			domain.ErrStateNameTaken) {
+		var se *shared.Error
+		if _, err := w.s.UpdateState(context.Background(), todo, domain.StatePatch{Name: ptr(taken)}, w.alice, now); !errors.As(err, &se) ||
+			!errors.Is(se, domain.ErrStateNameTaken) {
 			t.Errorf("%s: %v, want project.state_name_taken", taken, err)
 		}
 	}
@@ -78,16 +88,17 @@ func TestUpdateStateNameTaken(t *testing.T) {
 }
 
 // UpdateState writes neither a deleted state nor the triage state: each is
-// an error, not project.state_name_taken, and every state keeps every
-// column.
+// an internal error, no domain error (project.state_name_taken or any
+// other), and every state keeps every column.
 func TestUpdateStateWritesNoDeletedOrTriageState(t *testing.T) {
 	w := newStateWorld(t)
 	exec(t, w.pool, "UPDATE states SET deleted_at = $2 WHERE id = $1", w.states[w.web]["Todo"], earlier)
 	before := tableRows(t, w.pool, "states")
 	for name, id := range map[string]uuid.UUID{"the deleted Todo": w.states[w.web]["Todo"], "the triage state": w.states[w.web]["Triage"]} {
+		var se *shared.Error
 		if got, err := w.s.UpdateState(context.Background(), id, domain.StatePatch{Name: ptr("Other")}, w.alice, now); err == nil ||
-			errors.Is(err, domain.ErrStateNameTaken) || got != (domain.State{}) {
-			t.Errorf("UpdateState() of %s = %+v, %v; want an error", name, got, err)
+			errors.As(err, &se) || got != (domain.State{}) {
+			t.Errorf("UpdateState() of %s = %+v, %v; want an internal error", name, got, err)
 		}
 	}
 	if after := tableRows(t, w.pool, "states"); after != before {

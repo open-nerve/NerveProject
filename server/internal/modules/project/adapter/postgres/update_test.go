@@ -9,7 +9,6 @@ import (
 	"uuid"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -17,45 +16,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
-
-// columns are the row id of table, each column's value as JSON text.
-func columns(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) map[string]string {
-	t.Helper()
-	rows, err := pool.Query(context.Background(), "SELECT key, value::text FROM "+table+" r, jsonb_each(to_jsonb(r)) WHERE r.id = $1", id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	out := map[string]string{}
-	for rows.Next() {
-		var k, v string
-		if err := rows.Scan(&k, &v); err != nil {
-			t.Fatal(err)
-		}
-		out[k] = v
-	}
-	if err := rows.Err(); err != nil || len(out) == 0 {
-		t.Fatalf("the row %s of %s: %v, %d columns", id, table, err, len(out))
-	}
-	return out
-}
-
-// changed is before with the columns of change changed, as JSON text.
-func changed(before map[string]string, change map[string]string) map[string]string {
-	out := maps.Clone(before)
-	maps.Copy(out, change)
-	return out
-}
-
-// jsonTime is at as columns reads a timestamptz: JSON text, in UTC.
-func jsonTime(at time.Time) string {
-	return `"` + at.UTC().Format("2006-01-02T15:04:05.999999") + `+00:00"`
-}
-
-// audit is the audit columns a write by by at at leaves, as columns reads
-// them.
-func audit(by uuid.UUID, at time.Time) map[string]string {
-	return map[string]string{"updated_by_id": `"` + by.String() + `"`, "updated_at": jsonTime(at)}
-}
 
 // LockProject reads the undeleted project's workspace and whether it is
 // archived, and holds it FOR NO KEY UPDATE until the transaction ends: a

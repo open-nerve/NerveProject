@@ -13,9 +13,17 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// A read that fails answers its error, never a plausible answer: not "no
-// such project", which getProject would answer as project.not_found and
-// the Authorizer would take for a project no one sees; not "no display
+// failed reports whether err is a cancelled context's failure as itself:
+// no domain problem, which the API would answer in its place, wraps it.
+func failed(err error) bool {
+	var se *shared.Error
+	return errors.Is(err, context.Canceled) && !errors.As(err, &se)
+}
+
+// A read that fails answers its error as itself (failed), never a
+// plausible answer: not "no such project", which getProject would answer
+// as project.not_found and the Authorizer would take for a project no one
+// sees; not "no display
 // settings", which createProject would take for an empty sidebar; not "no
 // project has the identifier", which checkProjectIdentifier would answer
 // as available; not an empty list, which listProjects would answer as a
@@ -57,7 +65,6 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	todo := seedDefaultStates(t, s, acme, web, alice)["Todo"]
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
-	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
 
 	if p, found, err := s.GetProject(cancelled, web, alice); !failed(err) || found || p.ID != (uuid.UUID{}) {
 		t.Errorf("GetProject() = %+v, %v, %v; want context.Canceled, not no project", p, found, err)
@@ -118,12 +125,12 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	}
 }
 
-// A write that fails answers its error, never nil, which a use case would
-// take for done; a project's or a state's, never a taken name or
-// identifier; a deletion or a marking of a state, never "not written",
-// which the use case would answer as project.state_default or
-// project.state_not_found. Each write runs on a cancelled context, with
-// values the database would take.
+// A write that fails answers its error as itself (failed): never nil,
+// which a use case would take for done; never a domain problem, such as a
+// project's or a state's taken name or identifier; a deletion or a
+// marking of a state, never "not written", which the use case would
+// answer as project.state_default or project.state_not_found. Each write
+// runs on a cancelled context, with values the database would take.
 func TestAFailedWriteIsAnError(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -131,10 +138,9 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	web := newProject(t, s, acme, "Web", "WEB", alice)
 	cancelled, cancel := context.WithCancel(context.Background())
 	cancel()
-	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
 
 	if err := s.CreateProject(cancelled, app.ProjectRow{ID: uuid.NewV7(), WorkspaceID: acme, Name: "Ops", Identifier: "OPS",
-		Timezone: "UTC", CreatedBy: alice, Now: now}); !failed(err) || errors.Is(err, domain.ErrIdentifierTaken) || errors.Is(err, domain.ErrNameTaken) {
+		Timezone: "UTC", CreatedBy: alice, Now: now}); !failed(err) {
 		t.Errorf("CreateProject() = %v; want context.Canceled", err)
 	}
 	if err := s.CreateMember(cancelled, app.MemberRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, MemberID: alice,
@@ -149,8 +155,7 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		State: domain.NewState{Name: "Backlog", Color: "#60646C", Group: "backlog", Default: true}}}); !failed(err) {
 		t.Errorf("CreateStates() = %v; want context.Canceled", err)
 	}
-	if err := s.UpdateProject(cancelled, web, domain.ProjectPatch{Identifier: ptr("WEB")}, alice, now); !failed(err) ||
-		errors.Is(err, domain.ErrIdentifierTaken) || errors.Is(err, domain.ErrNameTaken) {
+	if err := s.UpdateProject(cancelled, web, domain.ProjectPatch{Identifier: ptr("WEB")}, alice, now); !failed(err) {
 		t.Errorf("UpdateProject() = %v; want context.Canceled", err)
 	}
 	if err := s.SetArchived(cancelled, web, true, alice, now); !failed(err) {
@@ -195,12 +200,10 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 	}
 	todo := seedDefaultStates(t, s, acme, web, alice)["Todo"]
 	if st, err := s.CreateState(cancelled, app.StateRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, CreatedBy: alice, Now: now,
-		State: domain.NewState{Name: "Review", Color: "#000", Group: domain.GroupStarted}}); !failed(err) || errors.Is(err, domain.ErrStateNameTaken) ||
-		st != (domain.State{}) {
+		State: domain.NewState{Name: "Review", Color: "#000", Group: domain.GroupStarted}}); !failed(err) || st != (domain.State{}) {
 		t.Errorf("CreateState() = %+v, %v; want context.Canceled", st, err)
 	}
-	if st, err := s.UpdateState(cancelled, todo, domain.StatePatch{Name: ptr("Next")}, alice, now); !failed(err) ||
-		errors.Is(err, domain.ErrStateNameTaken) || st != (domain.State{}) {
+	if st, err := s.UpdateState(cancelled, todo, domain.StatePatch{Name: ptr("Next")}, alice, now); !failed(err) || st != (domain.State{}) {
 		t.Errorf("UpdateState() = %+v, %v; want context.Canceled", st, err)
 	}
 	if deleted, err := s.DeleteState(cancelled, todo, alice, now); !failed(err) || deleted {

@@ -119,9 +119,9 @@ func TestCreateState(t *testing.T) {
 
 // A name is taken by another undeleted state of the same project only,
 // written as it is: In Progress again in Web, and Triage, its triage
-// state's, are each project.state_name_taken and store nothing; in
-// progress, in another case, is free, as are a deleted state's name and a
-// name of another project's state.
+// state's, are each project.state_name_taken, the first problem the API
+// would answer, and store nothing; in progress, in another case, is free,
+// as are a deleted state's name and a name of another project's state.
 func TestCreateStateNameTaken(t *testing.T) {
 	w := newStateWorld(t)
 	exec(t, w.pool, "UPDATE states SET deleted_at = $2 WHERE id = $1", w.states[w.web]["Todo"], earlier)
@@ -133,7 +133,8 @@ func TestCreateStateNameTaken(t *testing.T) {
 	}
 	before := tableRows(t, w.pool, "states")
 	for _, taken := range []string{"In Progress", "Triage"} {
-		if err := create(taken); !errors.Is(err, domain.ErrStateNameTaken) {
+		var se *shared.Error
+		if err := create(taken); !errors.As(err, &se) || !errors.Is(se, domain.ErrStateNameTaken) {
 			t.Errorf("%s again: %v, want project.state_name_taken", taken, err)
 		}
 	}
@@ -227,13 +228,16 @@ func TestListStates(t *testing.T) {
 }
 
 // GreatestSequence is the greatest sequence of the project's undeleted
-// states but its triage state: Web's Cancelled, 55000, not its Triage,
-// 65000, nor a deleted state's 99999, nor Ops's 80000. A project without
-// states, and one with its triage state alone, have none.
+// states but its triage state: Web's Cancelled, 55000, neither the first
+// nor the last of Web's states made, so that a read of whichever row was
+// made first or last misses it; not its Triage, 65000, nor a deleted
+// state's 99999, nor Ops's 80000. A project without states, and one with
+// its triage state alone, have none.
 func TestGreatestSequence(t *testing.T) {
 	w := newStateWorld(t)
 	w.addState(t, w.web, uuid.NewV7(), domain.NewState{Name: "Gone", Color: "#111", Sequence: 99999, Group: domain.GroupStarted})
 	exec(t, w.pool, "UPDATE states SET deleted_at = $1 WHERE name = 'Gone'", earlier)
+	w.addState(t, w.web, uuid.NewV7(), domain.NewState{Name: "Early", Color: "#111", Sequence: 5000, Group: domain.GroupStarted})
 	w.addState(t, w.ops, uuid.NewV7(), domain.NewState{Name: "Late", Color: "#111", Sequence: 80000, Group: domain.GroupStarted})
 	empty := newProject(t, w.s, w.acme, "Empty", "EMPTY", w.maker)
 	triage := newProject(t, w.s, w.acme, "Intake", "INTAKE", w.maker)
@@ -277,7 +281,9 @@ func TestCountGroupStates(t *testing.T) {
 // archived, of Gone, deleted though its rows were left as no deletion
 // leaves them, of Lab, where her only membership is deleted, nor of Team,
 // where bob is a member and she is not; nor of beta's Site. bob, whose
-// only project is Team, lists Team's.
+// only project is Team, lists Team's. Every membership was made and last
+// written by maker, who is no member: a query reading created_by_id or
+// updated_by_id where it means member_id lists nothing.
 func TestListWorkspaceStates(t *testing.T) {
 	w := newStateWorld(t)
 	bob := newAccount(t, w.pool, "bob@corp.com")
@@ -300,12 +306,13 @@ func TestListWorkspaceStates(t *testing.T) {
 	seedMember(t, w.pool, w.acme, more["Docs"], w.alice, 20, false)
 	seedDeleted(t, w.pool, w.acme, more["Lab"], w.alice, 20)
 	seedMember(t, w.pool, w.acme, more["Team"], bob, 15, true)
+	exec(t, w.pool, "UPDATE project_members SET created_by_id = $1, updated_by_id = $1", w.maker)
 	exec(t, w.pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", more["Arch"], now)
 	exec(t, w.pool, "UPDATE projects SET deleted_at = $2 WHERE id = $1", more["Gone"], now)
 
 	got, err := w.s.ListWorkspaceStates(context.Background(), w.acme, w.alice)
 	want := []string{"Backlog", "Review", "In Progress", "Done", "Cancelled", "Backlog", "Todo", "In Progress", "Done", "Cancelled"}
-	if err != nil || !slices.Equal(names(got), want) || len(got) != len(want) || got[0].ProjectID != w.web || got[5].ProjectID != w.ops {
+	if err != nil || !slices.Equal(names(got), want) || got[0].ProjectID != w.web || got[5].ProjectID != w.ops {
 		t.Errorf("ListWorkspaceStates(acme, alice) = %+v, %v; want Web's then Ops's, %q", got, err, want)
 	}
 	got, err = w.s.ListWorkspaceStates(context.Background(), w.acme, bob)
