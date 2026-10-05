@@ -9,7 +9,7 @@ import {
   slugFor,
 } from "../../fixtures/api";
 import { workspaceTables } from "../../fixtures/assert/workspace";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, emailFor, newAccount } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
 // W11, a guest's bounds (M3 design 2, 9.2): the permission matrix's backend
@@ -20,15 +20,10 @@ test("W11 (API): a guest of a workspace may not list its invitations nor create 
   api,
   db,
 }, testInfo) => {
-  const account = async (label: string) => {
-    const email = emailFor(testInfo, label);
-    const token = (await createPAT(api, (await register(api, email)).access_token)).token;
-    return { email, token, id: await accountId(api, token) };
-  };
-  const admin = await account("admin");
+  const admin = await newAccount(api, testInfo, "admin");
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin.token, { name: "Acme", slug });
-  const gus = await account("gus");
+  const gus = await newAccount(api, testInfo, "gus");
   await inviteAndAccept(api, admin.token, slug, gus, 5);
   // Web, public, gus its guest; Secret, private, the admin's alone; an invitation to olga, pending.
   const web = await createProject(api, admin.token, slug, { name: "Web", identifier: "WEB" });

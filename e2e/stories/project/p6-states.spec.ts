@@ -13,7 +13,7 @@ import {
   type StateUpdate,
 } from "../../fixtures/api";
 import { expectStates, statesOfANewProject, type StateRow } from "../../fixtures/assert/project";
-import { accountId, bearer, createPAT, emailFor, register } from "../../fixtures/auth";
+import { bearer, newAccount } from "../../fixtures/auth";
 import { expect, test } from "../../fixtures/test";
 
 // P6, a project's states (M3 design 2, 3.17): creating one, changing it,
@@ -77,16 +77,11 @@ test("P6 (API): an admin of a project creates Review in the started group at 700
   api,
   db,
 }, testInfo) => {
-  const account = async (label: string) => {
-    const email = emailFor(testInfo, label);
-    const token = (await createPAT(api, (await register(api, email)).access_token)).token;
-    return { email, token, id: await accountId(api, token) };
-  };
-  const admin = await account("admin");
+  const admin = await newAccount(api, testInfo, "admin");
   const slug = slugFor(testInfo);
   await createWorkspace(api, admin.token, { name: "Acme", slug });
   // ann and mem, acme's members: ann Web's other admin, mem its member.
-  const [ann, mem] = await Promise.all(["ann", "mem"].map(account));
+  const [ann, mem] = await Promise.all(["ann", "mem"].map((label) => newAccount(api, testInfo, label)));
   if (!ann || !mem) {
     throw new Error("the accounts were not registered");
   }
