@@ -49,35 +49,25 @@ func stateUpdated(user, id uuid.UUID, p domain.StatePatch, from domain.StateGrou
 // other (3.19).
 func TestUpdateState(t *testing.T) {
 	for _, tt := range []struct {
-		name string
-		id   uuid.UUID
-		p    domain.StatePatch
+		name    string
+		id      uuid.UUID
+		p       domain.StatePatch
+		changes func(s *domain.State) // what p changes of the state as it was
 	}{
-		{"Review to the completed group", webReview, domain.StatePatch{Group: ptr(domain.GroupCompleted), Color: ptr("#46A758")}},
-		{"In Progress kept in its group", webStarted, domain.StatePatch{Group: ptr(domain.GroupStarted), Description: ptr("Being done")}},
-		{"Todo renamed and moved down", webTodo, domain.StatePatch{Name: ptr("Next"), Sequence: ptr(60000.0)}},
-		{"archived ops's Backlog", opsBacklog, domain.StatePatch{Name: ptr("Inbox")}},
+		{"Review to the completed group", webReview, domain.StatePatch{Group: ptr(domain.GroupCompleted), Color: ptr("#46A758")},
+			func(s *domain.State) { s.Group, s.Color = domain.GroupCompleted, "#46A758" }},
+		{"In Progress kept in its group", webStarted, domain.StatePatch{Group: ptr(domain.GroupStarted), Description: ptr("Being done")},
+			func(s *domain.State) { s.Description = "Being done" }},
+		{"Todo renamed and moved down", webTodo, domain.StatePatch{Name: ptr("Next"), Sequence: ptr(60000.0)},
+			func(s *domain.State) { s.Name, s.Sequence = "Next", 60000 }},
+		{"archived ops's Backlog", opsBacklog, domain.StatePatch{Name: ptr("Inbox")}, func(s *domain.State) { s.Name = "Inbox" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f, s := newUpdateState()
 			before := s.states[tt.id]
 			got, err := uc.Execute(as(bob), tt.id, tt.p)
 			want := before
-			if tt.p.Name != nil {
-				want.Name = *tt.p.Name
-			}
-			if tt.p.Color != nil {
-				want.Color = *tt.p.Color
-			}
-			if tt.p.Group != nil {
-				want.Group = *tt.p.Group
-			}
-			if tt.p.Description != nil {
-				want.Description = *tt.p.Description
-			}
-			if tt.p.Sequence != nil {
-				want.Sequence = *tt.p.Sequence
-			}
+			tt.changes(&want)
 			want.UpdatedAt = now
 			if err != nil || got != want || s.states[tt.id] != want {
 				t.Errorf("Execute() = %+v, %v, stored %+v; want %+v", got, err, s.states[tt.id], want)

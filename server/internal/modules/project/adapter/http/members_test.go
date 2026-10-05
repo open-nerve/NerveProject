@@ -57,9 +57,8 @@ func TestListProjectMembers(t *testing.T) {
 		status int
 		want   string
 	}{
-		{domain.ErrNotFound, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
+		{shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 	} {
 		h := newServer(t, fakes{members: &fakeMembers{err: tt.err}})
 		if res, body := do(t, h, request(http.MethodGet, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {

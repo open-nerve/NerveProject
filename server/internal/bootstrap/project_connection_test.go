@@ -149,9 +149,12 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // deadline. alice, acme's admin, creates Ops, changes Web, archives and
 // unarchives it, changes her display settings in it and adds bob, whose
 // ended membership she restores; carol joins it anew; alice makes carol an
-// admin of Web and removes bob, creates two states in it, renames the
-// first and deletes it, and makes the second Web's default; carol, an
-// admin, leaves it; alice deletes both projects.
+// admin of Web and removes bob; she creates QA in it, alone in the
+// completed group, and moves it to the started group, which the count of
+// its group refuses (409 project.state_last_in_group); she renames it
+// Checked, creates Done in the completed group, deletes Checked, which
+// counts the group again, and makes Done Web's default; carol, an admin,
+// leaves it; alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()

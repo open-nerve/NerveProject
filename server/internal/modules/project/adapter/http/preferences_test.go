@@ -125,14 +125,10 @@ func TestProjectPreferencesRefusals(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"no project", domain.ErrNotFound, http.MethodGet, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-		{"no member", shared.Forbidden(), http.MethodGet, http.StatusForbidden,
-			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
-		{"no project", domain.ErrNotFound, http.MethodPatch, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-		{"no member", shared.Forbidden(), http.MethodPatch, http.StatusForbidden,
-			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"no project", domain.ErrNotFound, http.MethodGet, http.StatusNotFound, projectNotFoundJSON},
+		{"no member", shared.Forbidden(), http.MethodGet, http.StatusForbidden, forbiddenJSON},
+		{"no project", domain.ErrNotFound, http.MethodPatch, http.StatusNotFound, projectNotFoundJSON},
+		{"no member", shared.Forbidden(), http.MethodPatch, http.StatusForbidden, forbiddenJSON},
 		{"an unknown tab", shared.Invalid(shared.FieldError{Field: "navigation.default_tab", Code: "invalid_format",
 			Message: "is not one of work_items, cycles, modules, views, intake"}), http.MethodPatch, http.StatusUnprocessableEntity,
 			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +

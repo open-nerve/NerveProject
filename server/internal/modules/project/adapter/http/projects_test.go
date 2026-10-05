@@ -140,8 +140,7 @@ func TestCreateProjectRefusals(t *testing.T) {
 		want   string
 	}{
 		{"no workspace", domain.ErrWorkspaceNotFound, http.StatusNotFound, workspaceNotFoundJSON},
-		{"a guest", shared.Forbidden(), http.StatusForbidden,
-			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"a guest", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"a lead who may not lead", domain.LeadNotAllowed(), http.StatusUnprocessableEntity,
 			`{"status":422,"code":"validation_failed","title":"Unprocessable Entity","detail":"The request has invalid values.",` +
 				`"errors":[{"field":"project_lead_id","code":"not_allowed","message":"must be an active admin or member of the workspace"}]}`},
@@ -198,8 +197,7 @@ func TestGetProject(t *testing.T) {
 	}{
 		{"alice", webID.String(), http.StatusOK, webJSON},
 		{"bob", webID.String(), http.StatusOK, bareJSON},
-		{"alice", acmeID.String(), http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
+		{"alice", acmeID.String(), http.StatusNotFound, projectNotFoundJSON},
 	}
 	for _, tt := range tests {
 		res, body := do(t, h, request(http.MethodGet, "/api/v0/projects/"+tt.id, tt.token, ""))
@@ -240,7 +238,7 @@ func TestCheckProjectIdentifier(t *testing.T) {
 		want   string
 	}{
 		{domain.ErrWorkspaceNotFound, http.StatusNotFound, workspaceNotFoundJSON},
-		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 	} {
 		h := newServer(t, fakes{check: &fakeCheck{err: tt.err}})
 		res, body := do(t, h, request(http.MethodGet, "/api/v0/workspaces/acme/project-identifiers/NEW", "bob", ""))

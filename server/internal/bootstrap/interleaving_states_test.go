@@ -183,7 +183,10 @@ func marksDefault(name string) stateWrite {
 //   - two states created: each after the greatest sequence it reads, the
 //     second's after the first's, at a moment no earlier than the gate's
 //     opening: it read the clock under the locks it took once the first
-//     had committed (M3 design 3.3).
+//     had committed (M3 design 3.3);
+//   - QA moved to the started group and to the backlog group: the second's
+//     own state moved while it waited, and both moves succeed, the second
+//     at a moment no earlier than the gate's opening too.
 //
 // Web's states are then as the first left them, and the second's too when
 // it succeeded, each read with its group, sequence and default; Ops's, in
@@ -199,6 +202,10 @@ func TestStateWritesOnOneProjectSerialize(t *testing.T) {
 		{moves("Done", projectdomain.GroupStarted), moves("QA", projectdomain.GroupBacklog), last, last},
 		{marksDefault("QA"), deletes("QA"), projectdomain.ErrStateDefault, projectdomain.ErrStateNotFound},
 		{creates("Checked", projectdomain.GroupCompleted), creates("Shipped", projectdomain.GroupCompleted), nil, nil},
+		// The second counts the group QA is in under the locks (the state
+		// read again), which keeps another state, not the completed group
+		// its first read saw, which Done alone would be left in.
+		{moves("QA", projectdomain.GroupStarted), moves("QA", projectdomain.GroupBacklog), nil, nil},
 	} {
 		for _, aFirst := range []bool{true, false} {
 			first, second, want := tt.a, tt.b, tt.ifAFirst

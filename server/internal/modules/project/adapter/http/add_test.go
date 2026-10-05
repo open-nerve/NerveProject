@@ -71,10 +71,8 @@ func TestAddProjectMembersRefusals(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"no project", domain.ErrNotFound, http.StatusNotFound,
-			`{"status":404,"code":"project.not_found","title":"Not Found","detail":"The project does not exist, or you cannot see it."}`},
-		{"a project member", shared.Forbidden(), http.StatusForbidden,
-			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
+		{"no project", domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
+		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
 		{"the targets", shared.Invalid(shared.FieldError{Field: "members[0].member_id", Code: "not_allowed",
 			Message: "must be an active member of the workspace"}, shared.FieldError{Field: "members[1].role", Code: "not_allowed",
 			Message: "is not one his workspace role allows: a workspace admin is added as an admin, a guest as a guest"}),

@@ -36,6 +36,8 @@ const (
 		`"detail":"The state is the only one of its group, and every group keeps one; add another to the group first."}`
 	stateDefaultJSON = `{"status":409,"code":"project.state_default","title":"Conflict",` +
 		`"detail":"The default state cannot be deleted; make another state the default first."}`
+	stateNameTakenJSON = `{"status":409,"code":"project.state_name_taken","title":"Conflict",` +
+		`"detail":"A state of the project has this name."}`
 )
 
 // PATCH goes to the use case for the caller and the path's state, with the
@@ -97,8 +99,7 @@ func TestUpdateStateRefusals(t *testing.T) {
 				`"detail":"The request has invalid values.","errors":[{"field":"name","code":"too_short","message":"must not be empty"}]}`},
 		{"no state", domain.ErrStateNotFound, http.StatusNotFound, stateNotFoundJSON},
 		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
-		{"a name taken", domain.ErrStateNameTaken, http.StatusConflict,
-			`{"status":409,"code":"project.state_name_taken","title":"Conflict","detail":"A state of the project has this name."}`},
+		{"a name taken", domain.ErrStateNameTaken, http.StatusConflict, stateNameTakenJSON},
 		{"its group's only state moved", domain.ErrStateLastInGroup, http.StatusConflict, stateLastInGroupJSON},
 		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
 	} {

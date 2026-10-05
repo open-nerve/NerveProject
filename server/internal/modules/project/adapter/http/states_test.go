@@ -152,8 +152,7 @@ func TestCreateStateRefusals(t *testing.T) {
 				`"errors":[{"field":"group","code":"not_allowed","message":"must not be triage: the intake's state is not made here"}]}`},
 		{"no project", domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
 		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
-		{"a name taken", domain.ErrStateNameTaken, http.StatusConflict,
-			`{"status":409,"code":"project.state_name_taken","title":"Conflict","detail":"A state of the project has this name."}`},
+		{"a name taken", domain.ErrStateNameTaken, http.StatusConflict, stateNameTakenJSON},
 		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
 	} {
 		h := newServer(t, fakes{createState: &fakeCreateState{err: tt.err}})
