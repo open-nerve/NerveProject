@@ -261,3 +261,63 @@ export async function expectMembers(db: Database, projectId: string, want: Membe
   );
   expect(settings?.count, `the display settings in ${projectId}`).toBe(want.length);
 }
+
+/** A state of a project as expectStates reads it. */
+export interface StateRow {
+  name: string;
+  color: string;
+  group: string;
+  sequence: number;
+  default: boolean;
+  deleted: boolean;
+  /** The address of the account that wrote the state last: created, changed, deleted it, or made it the default or not. */
+  by: string;
+}
+
+/** The states of a new project that the account of creatorEmail created, as its creation made them (newStates). */
+export function statesOfANewProject(creatorEmail: string): StateRow[] {
+  return newStates.map(({ name, color, sequence, group, default: isDefault }) => ({
+    name,
+    color,
+    group,
+    sequence,
+    default: isDefault,
+    deleted: false,
+    by: creatorEmail,
+  }));
+}
+
+/**
+ * P6: the states of the project of projectId, deleted ones too, its triage state among them, are exactly want, by
+ * sequence, then name. Each is a row of the project's workspace, and a deleted one was deleted at the moment of its
+ * last write, by its writer (M3 design 3.17).
+ */
+export async function expectStates(db: Database, projectId: string, want: StateRow[]): Promise<void> {
+  expect(
+    await db.query(
+      `SELECT s.name, s.color, s."group" AS group, s.sequence, s."default" AS default, s.deleted_at IS NOT NULL AS deleted,
+              b.email AS by, s.workspace_id = p.workspace_id AS in_its_workspace,
+              coalesce(s.deleted_at = s.updated_at, true) AS deleted_with_its_last_write
+         FROM states s
+         JOIN projects p ON p.id = s.project_id
+         JOIN users b ON b.id = s.updated_by_id
+        WHERE s.project_id = $1 ORDER BY s.sequence, s.name COLLATE "C"`,
+      [projectId]
+    ),
+    `the states of ${projectId}`
+  ).toEqual(
+    want
+      .toSorted((a, b) => a.sequence - b.sequence || (a.name < b.name ? -1 : 1))
+      .map(({ name, color, group, sequence, default: isDefault, deleted, by }) => ({
+        name,
+        color,
+        group,
+        sequence,
+        default: isDefault,
+        deleted,
+        by,
+        in_its_workspace: true,
+        deleted_with_its_last_write: true,
+      }))
+  );
+}

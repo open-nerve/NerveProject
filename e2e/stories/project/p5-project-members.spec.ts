@@ -1,6 +1,7 @@
 import {
   addProjectMembers,
   amidAnotherWorkspace,
+  answer,
   createProject,
   createWorkspace,
   inviteAndAccept,
@@ -16,26 +17,6 @@ import { expect, test } from "../../fixtures/test";
 // P5, a project's members (M3 design 2, 3.5, 3.7): adding them, changing a
 // role, removing a member, leaving. The page version comes with the
 // project's members page (P10).
-
-/** A write's answer: its status, and the problem's code and fields for a refusal. */
-interface Answer {
-  status: number;
-  code?: string;
-  errors?: { field: string; code: string }[];
-}
-
-function answer(
-  response: Response,
-  error?: { code: string; errors?: { field: string; code: string }[] | null } | null
-): Answer {
-  return error
-    ? {
-        status: response.status,
-        code: error.code,
-        errors: error.errors?.map((e) => ({ field: e.field, code: e.code })),
-      }
-    : { status: response.status };
-}
 
 /** The writes on a project's members, each by the caller of token. */
 function writes(api: Api, projectId: string) {

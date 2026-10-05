@@ -208,7 +208,7 @@ export async function expectMembership(
   expect(rows, `the membership of ${email} in ${slug}`).toEqual(want === null ? [] : [want]);
 }
 
-/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7 adds the labels. */
+/** The tables whose rows belong to a workspace and are deleted with it (M3 design 3.6, 4.12); P7b adds the labels. */
 const workspaceTables = [
   "workspace_members",
   "workspace_member_invites",
