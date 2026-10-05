@@ -7,20 +7,24 @@ import (
 	"uuid"
 )
 
-// Each write on a state, as bootstrap wires it, changes the rows it writes
-// and no other (M3 design 3.17): on memberWorld, whose acme has Web and Ops
-// and whose beta has Lab, each with its states, bob, Web's admin, creates
-// Shipped in Web, renames QA, deletes it, renames Backlog, the only state
-// of its group, giving its own group again, which moves it nowhere, and
-// makes Done Web's default, one write after another; between them, his
-// creation of a state in the triage group and his move of Done to it,
-// bodies the contract's enum leaves out and the server must still answer
-// as the contract says, are each 422 group not_allowed, refused before
-// the write's transaction begins. After each, every row of every table but
-// the rows it writes is as it was before it: Web's other states, its
-// triage state among them, Ops's, in acme too, and Lab's, in beta. The
-// rows each writes are its new state, the state it names, and, for the
-// default, Web's default before it, Backlog; a refused one writes none.
+// Each write on a state, as bootstrap wires it, changes no row but the
+// rows it writes (M3 design 3.17): on memberWorld, whose acme has Web and
+// Ops and whose beta has Lab, each with its states, bob, Web's admin,
+// creates Shipped in Web, renames QA, deletes it, renames Backlog, the
+// only state of its group, giving it its own group again, which is no
+// move (answered 200, it is not refused as its group's last), and makes
+// Done Web's default, one write after another. Between them, his creation
+// of a state in the triage group and his move of Done to it, bodies the
+// contract's enum leaves out and the server must still answer as the
+// contract says, are each 422 group not_allowed and write nothing. That
+// they are refused before the write's transaction begins is the unit
+// tests' to show: TestCreateStateRefuses/the_triage_group and
+// TestUpdateStateRefuses/the_triage_group, whose call logs are empty.
+// After each write, every row of every table but the ones it writes is as
+// it was before it: Web's other states, its triage state among them,
+// Ops's, in acme too, and Lab's, in beta. The rows left out are its new
+// state, the state it names, and, for the default, Web's default before
+// it, Backlog; a refused write leaves none out.
 func TestEachStateWriteChangesItsRowsAlone(t *testing.T) {
 	w := newMemberWorld(t)
 	qa, done, backlog := stateID(t, w.pool, w.web, "QA"), stateID(t, w.pool, w.web, "Done"), stateID(t, w.pool, w.web, "Backlog")

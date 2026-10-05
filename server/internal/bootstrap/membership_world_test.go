@@ -102,9 +102,16 @@ func newMemberWorld(t *testing.T) memberWorld {
 		""); status != http.StatusNoContent {
 		t.Fatalf("alice's deleting Web's Retired = %d %s", status, body)
 	}
-	if status, body := call(t, contract, http.MethodPatch, w.base+"/api/v0/states/"+stateID(t, w.pool, w.ops, "Cancelled").String(),
-		w.tokens["alice"], `{"sequence":100000}`); status != http.StatusOK {
+	status, body = call(t, contract, http.MethodPatch, w.base+"/api/v0/states/"+stateID(t, w.pool, w.ops, "Cancelled").String(),
+		w.tokens["alice"], `{"sequence":100000}`)
+	var cancelled struct {
+		Sequence float64 `json:"sequence"`
+	}
+	if status != http.StatusOK {
 		t.Fatalf("alice's moving Ops's Cancelled = %d %s", status, body)
+	}
+	if decodeAnswer(t, body, &cancelled); cancelled.Sequence != 100000 {
+		t.Fatalf("Ops's Cancelled at %v; want 100000, after every state of Web", cancelled.Sequence)
 	}
 	gina := w.acmeMembership(t, "gina")
 	if status, body := call(t, contract, http.MethodPatch, w.base+"/api/v0/workspace-members/"+gina.String(), w.tokens["alice"],

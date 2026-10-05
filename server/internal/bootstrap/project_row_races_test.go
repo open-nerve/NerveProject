@@ -30,9 +30,12 @@ import (
 // write.
 type rowWrite struct {
 	op, by string
-	// member is whose membership of Web the write changes, the caller's for
-	// a write on a state or a creation; state, when set, is the name of
-	// Web's state the write changes instead.
+	// member is whose membership of Web a write on a membership changes,
+	// the caller's own for leaving. A write on a state changes none: it
+	// carries its caller, whose membership of acme the lock test reads, and
+	// state is the name of Web's state it changes instead. A creation
+	// changes neither and carries neither; the races end its caller's
+	// membership through by, as every write's.
 	member, state      string
 	method, path, body string // path: %s the row's id for a path of one (rowPaths), else Web's
 	status             int    // its answer, alone
@@ -55,14 +58,18 @@ var rowWrites = []rowWrite{
 		status: http.StatusNoContent, notFound: "project.state_not_found"},
 	{op: "markDefaultState", by: "bob", member: "bob", state: "QA", method: http.MethodPost, path: "/api/v0/states/%s/mark-default",
 		status: http.StatusNoContent, notFound: "project.state_not_found", clears: true},
-	{op: "createState", by: "bob", member: "bob", method: http.MethodPost, path: "/api/v0/projects/%s/states",
+	{op: "createState", by: "bob", method: http.MethodPost, path: "/api/v0/projects/%s/states",
 		body: `{"name":"Checked","color":"#0EA5E9","group":"completed"}`, status: http.StatusCreated, notFound: "project.not_found",
 		creates: true},
 }
 
-// row is the row of Web that m changes: its table and its id.
+// row is the row of Web that m changes: its table and its id. A creation
+// has no row of its own: asked for one, it fails the test.
 func (m rowWrite) row(t *testing.T, w memberWorld) (string, uuid.UUID) {
 	t.Helper()
+	if m.creates {
+		t.Fatalf("%s creates a state: it has no row of its own", m.op)
+	}
 	if m.state != "" {
 		return "states", stateID(t, w.pool, w.web, m.state)
 	}
@@ -151,8 +158,13 @@ func TestAWriteOnARowUnderAProjectFindsWhatChangedMeanwhile(t *testing.T) {
 	}
 	for _, m := range rowWrites {
 		for _, c := range changes {
-			if c.ofRow && m.state == "" && m.member == m.by || c.membership && m.state != "" {
-				continue // leaving, creating: no row but the caller's own membership; a state does not end
+			switch {
+			case c.ofRow && m.creates:
+				continue // a creation has no row of its own
+			case c.ofRow && m.state == "" && m.member == m.by:
+				continue // leaving: its row is the caller's own membership, which "the caller's membership ended" ends
+			case c.membership && m.state != "":
+				continue // a state does not end
 			}
 			t.Run(m.op+", "+c.name, func(t *testing.T) {
 				w := newPrivateWorld(t)
