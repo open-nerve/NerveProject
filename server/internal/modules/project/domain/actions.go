@@ -47,6 +47,11 @@ const (
 	ActionStateCreate shared.Action = "state.create"
 	// ActionStateUpdate is changing a state: updateState.
 	ActionStateUpdate shared.Action = "state.update"
+	// ActionStateDelete is deleting a state: deleteState.
+	ActionStateDelete shared.Action = "state.delete"
+	// ActionStateMarkDefault is making a state its project's default:
+	// markDefaultState.
+	ActionStateMarkDefault shared.Action = "state.mark_default"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -56,5 +61,6 @@ func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
 		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave,
-		ActionStateCreate, ActionStateUpdate}
+		ActionStateCreate, ActionStateUpdate, ActionStateDelete,
+		ActionStateMarkDefault}
 }

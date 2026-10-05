@@ -24,10 +24,14 @@ var webBacklog, webTodo, webStarted, webReview, webDone, webCancelled, opsBacklo
 // fakeStates is the project store's states as the state operations' tests
 // hold them, by id, beside fakeStore's projects, whose log, failures,
 // reads of a row by its id and changedAs it shares; the triage states are
-// none of them, as the store reads none.
+// none of them, as the store reads none. passOver makes the guarded
+// writes, DeleteState and MarkDefaultState's second statement, write no
+// row: "kept" leaves the state as it is, "gone" takes it away, as a
+// deletion meanwhile would.
 type fakeStates struct {
 	*fakeStore
-	states map[uuid.UUID]domain.State
+	states   map[uuid.UUID]domain.State
+	passOver string
 }
 
 // newStates is newWrites with web's states, Backlog its default, In
@@ -119,6 +123,9 @@ func (f *fakeStates) StateByID(ctx context.Context, id uuid.UUID) (domain.State,
 	if again && f.reread.project != (uuid.UUID{}) {
 		s.ProjectID = f.reread.project
 	}
+	if f.answersAs != (uuid.UUID{}) {
+		s.ID = f.answersAs
+	}
 	return s, true, nil
 }
 
@@ -173,6 +180,55 @@ func (f *fakeStates) UpdateState(ctx context.Context, id uuid.UUID, p domain.Sta
 		s.ID = f.changedAs
 	}
 	return s, nil
+}
+
+// DeleteState deletes the state id, unless it is its project's default or
+// f.passOver passes over it.
+func (f *fakeStates) DeleteState(ctx context.Context, id, by uuid.UUID, now time.Time) (bool, error) {
+	f.log.add(ctx, "DeleteState %s by %s at %s", id, by, now.Format(timeFormat))
+	if err := f.fail("DeleteState"); err != nil {
+		return false, err
+	}
+	s, ok := f.states[id]
+	if !ok || s.Default || f.passedOver(id) {
+		return false, nil
+	}
+	delete(f.states, id)
+	return true, nil
+}
+
+// MarkDefaultState makes the state id of projectID its default, after the
+// project's default the default no longer, unless f.passOver passes over
+// the second statement: the first stays written, as the store leaves it for
+// the caller to roll back.
+func (f *fakeStates) MarkDefaultState(ctx context.Context, projectID, id, by uuid.UUID, now time.Time) (bool, error) {
+	f.log.add(ctx, "MarkDefaultState %s %s by %s at %s", projectID, id, by, now.Format(timeFormat))
+	if err := f.fail("MarkDefaultState"); err != nil {
+		return false, err
+	}
+	at := now.Truncate(time.Microsecond)
+	for _, s := range f.of(projectID) {
+		if s.Default {
+			s.Default, s.UpdatedAt = false, at
+			f.states[s.ID] = s
+		}
+	}
+	s, ok := f.states[id]
+	if !ok || s.ProjectID != projectID || f.passedOver(id) {
+		return false, nil
+	}
+	s.Default, s.UpdatedAt = true, at
+	f.states[id] = s
+	return true, nil
+}
+
+// passedOver reports whether f.passOver passes over the state id, taking it
+// away for "gone".
+func (f *fakeStates) passedOver(id uuid.UUID) bool {
+	if f.passOver == "gone" {
+		delete(f.states, id)
+	}
+	return f.passOver != ""
 }
 
 // statePatch is p as UpdateState logs it: each field it gives.

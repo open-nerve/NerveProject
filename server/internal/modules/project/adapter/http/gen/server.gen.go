@@ -499,9 +499,15 @@ type ServerInterface interface {
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// DeleteState Delete a state
+	// (DELETE /api/v0/states/{state_id})
+	DeleteState(w http.ResponseWriter, r *http.Request, stateID StateID)
 	// UpdateState Change a state
 	// (PATCH /api/v0/states/{state_id})
 	UpdateState(w http.ResponseWriter, r *http.Request, stateID StateID)
+	// MarkDefaultState Make a state its project's default
+	// (POST /api/v0/states/{state_id}/mark-default)
+	MarkDefaultState(w http.ResponseWriter, r *http.Request, stateID StateID)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(w http.ResponseWriter, r *http.Request, slug Slug, identifier string)
@@ -886,6 +892,32 @@ func (siw *ServerInterfaceWrapper) UnarchiveProject(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteState operation middleware
+func (siw *ServerInterfaceWrapper) DeleteState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "state_id" -------------
+	var stateID StateID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "state_id", r.PathValue("state_id"), &stateID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteState(w, r, stateID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateState operation middleware
 func (siw *ServerInterfaceWrapper) UpdateState(w http.ResponseWriter, r *http.Request) {
 
@@ -903,6 +935,32 @@ func (siw *ServerInterfaceWrapper) UpdateState(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateState(w, r, stateID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MarkDefaultState operation middleware
+func (siw *ServerInterfaceWrapper) MarkDefaultState(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "state_id" -------------
+	var stateID StateID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "state_id", r.PathValue("state_id"), &stateID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkDefaultState(w, r, stateID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1150,7 +1208,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.RemoveProjectMember)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/project-members/{project_member_id}", wrapper.UpdateProjectMember)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/states", wrapper.CreateState)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.DeleteState)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1798,6 +1858,46 @@ func (response UnarchiveProjectdefaultApplicationProblemPlusJSONResponse) VisitU
 	return err
 }
 
+type DeleteStateRequestObject struct {
+	StateID StateID `json:"state_id"`
+}
+
+type DeleteStateResponseObject interface {
+	VisitDeleteStateResponse(w http.ResponseWriter) error
+}
+
+type DeleteState204Response struct {
+}
+
+func (response DeleteState204Response) VisitDeleteStateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response DeleteStatedefaultApplicationProblemPlusJSONResponse) VisitDeleteStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type UpdateStateRequestObject struct {
 	StateID StateID `json:"state_id"`
 	Body    *UpdateStateJSONRequestBody
@@ -1828,6 +1928,46 @@ type UpdateStatedefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response UpdateStatedefaultApplicationProblemPlusJSONResponse) VisitUpdateStateResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type MarkDefaultStateRequestObject struct {
+	StateID StateID `json:"state_id"`
+}
+
+type MarkDefaultStateResponseObject interface {
+	VisitMarkDefaultStateResponse(w http.ResponseWriter) error
+}
+
+type MarkDefaultState204Response struct {
+}
+
+func (response MarkDefaultState204Response) VisitMarkDefaultStateResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type MarkDefaultStatedefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response MarkDefaultStatedefaultApplicationProblemPlusJSONResponse) VisitMarkDefaultStateResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2030,9 +2170,15 @@ type StrictServerInterface interface {
 	// UnarchiveProject Unarchive a project
 	// (POST /api/v0/projects/{project_id}/unarchive)
 	UnarchiveProject(ctx context.Context, request UnarchiveProjectRequestObject) (UnarchiveProjectResponseObject, error)
+	// DeleteState Delete a state
+	// (DELETE /api/v0/states/{state_id})
+	DeleteState(ctx context.Context, request DeleteStateRequestObject) (DeleteStateResponseObject, error)
 	// UpdateState Change a state
 	// (PATCH /api/v0/states/{state_id})
 	UpdateState(ctx context.Context, request UpdateStateRequestObject) (UpdateStateResponseObject, error)
+	// MarkDefaultState Make a state its project's default
+	// (POST /api/v0/states/{state_id}/mark-default)
+	MarkDefaultState(ctx context.Context, request MarkDefaultStateRequestObject) (MarkDefaultStateResponseObject, error)
 	// CheckProjectIdentifier Check whether a project identifier is available in a workspace
 	// (GET /api/v0/workspaces/{slug}/project-identifiers/{identifier})
 	CheckProjectIdentifier(ctx context.Context, request CheckProjectIdentifierRequestObject) (CheckProjectIdentifierResponseObject, error)
@@ -2482,6 +2628,32 @@ func (sh *strictHandler) UnarchiveProject(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// DeleteState operation middleware
+func (sh *strictHandler) DeleteState(w http.ResponseWriter, r *http.Request, stateID StateID) {
+	var request DeleteStateRequestObject
+
+	request.StateID = stateID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteState(ctx, request.(DeleteStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteStateResponseObject); ok {
+		if err := validResponse.VisitDeleteStateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // UpdateState operation middleware
 func (sh *strictHandler) UpdateState(w http.ResponseWriter, r *http.Request, stateID StateID) {
 	var request UpdateStateRequestObject
@@ -2508,6 +2680,32 @@ func (sh *strictHandler) UpdateState(w http.ResponseWriter, r *http.Request, sta
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UpdateStateResponseObject); ok {
 		if err := validResponse.VisitUpdateStateResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// MarkDefaultState operation middleware
+func (sh *strictHandler) MarkDefaultState(w http.ResponseWriter, r *http.Request, stateID StateID) {
+	var request MarkDefaultStateRequestObject
+
+	request.StateID = stateID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.MarkDefaultState(ctx, request.(MarkDefaultStateRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "MarkDefaultState")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(MarkDefaultStateResponseObject); ok {
+		if err := validResponse.VisitMarkDefaultStateResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

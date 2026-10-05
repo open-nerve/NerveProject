@@ -34,6 +34,8 @@ const (
 		`"detail":"The state does not exist, cannot be changed through this API, or you cannot see its project."}`
 	stateLastInGroupJSON = `{"status":409,"code":"project.state_last_in_group","title":"Conflict",` +
 		`"detail":"The state is the only one of its group, and every group keeps one; add another to the group first."}`
+	stateDefaultJSON = `{"status":409,"code":"project.state_default","title":"Conflict",` +
+		`"detail":"The default state cannot be deleted; make another state the default first."}`
 )
 
 // PATCH goes to the use case for the caller and the path's state, with the
@@ -104,6 +106,68 @@ func TestUpdateStateRefusals(t *testing.T) {
 		res, body := do(t, h, request(http.MethodPatch, "/api/v0/states/"+webReview.ID.String(), "alice", `{"name":""}`))
 		if res.StatusCode != tt.status || body != tt.want+"\n" {
 			t.Errorf("%s: PATCH = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
+// DELETE goes to the use case for the caller and the path's state, and
+// answers 204 with no body; the use case's refusals, as the contract
+// declares them, and its failure.
+func TestDeleteState(t *testing.T) {
+	remove := &fakeDelete{}
+	h := newServer(t, fakes{deleteState: remove})
+	path := "/api/v0/states/" + webReview.ID.String()
+	if res, body := do(t, h, request(http.MethodDelete, path, "alice", "")); res.StatusCode != http.StatusNoContent || body != "" {
+		t.Errorf("DELETE = %d %q, want 204 and no body", res.StatusCode, body)
+	}
+	if want := []string{"alice " + webReview.ID.String()}; !slices.Equal(remove.calls, want) {
+		t.Errorf("calls = %q, want %q", remove.calls, want)
+	}
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"no state", domain.ErrStateNotFound, http.StatusNotFound, stateNotFoundJSON},
+		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
+		{"the default", domain.ErrStateDefault, http.StatusConflict, stateDefaultJSON},
+		{"its group's only state", domain.ErrStateLastInGroup, http.StatusConflict, stateLastInGroupJSON},
+		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
+	} {
+		h := newServer(t, fakes{deleteState: &fakeDelete{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodDelete, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: DELETE = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
+
+// POST mark-default goes to the use case for the caller and the path's
+// state, and answers 204 with no body; the use case's refusals, as the
+// contract declares them, and its failure.
+func TestMarkDefaultState(t *testing.T) {
+	mark := &fakeDelete{}
+	h := newServer(t, fakes{markDefault: mark})
+	path := "/api/v0/states/" + webReview.ID.String() + "/mark-default"
+	if res, body := do(t, h, request(http.MethodPost, path, "alice", "")); res.StatusCode != http.StatusNoContent || body != "" {
+		t.Errorf("POST = %d %q, want 204 and no body", res.StatusCode, body)
+	}
+	if want := []string{"alice " + webReview.ID.String()}; !slices.Equal(mark.calls, want) {
+		t.Errorf("calls = %q, want %q", mark.calls, want)
+	}
+	for _, tt := range []struct {
+		name   string
+		err    error
+		status int
+		want   string
+	}{
+		{"no state", domain.ErrStateNotFound, http.StatusNotFound, stateNotFoundJSON},
+		{"a project member", shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
+		{"a failure", errGone, http.StatusInternalServerError, internalErrorJSON},
+	} {
+		h := newServer(t, fakes{markDefault: &fakeDelete{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodPost, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("%s: POST = %d %s, want %d %s", tt.name, res.StatusCode, body, tt.status, tt.want)
 		}
 	}
 }

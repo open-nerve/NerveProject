@@ -1212,6 +1212,43 @@ paths:
                 $ref: '#/components/schemas/State'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteState
+      tags:
+        - project
+      summary: Delete a state
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s states are deleted as any other''s. A state that does not exist or is deleted, the intake''s triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project''s default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.state_not_found
+        - forbidden
+        - project.state_default
+        - project.state_last_in_group
+      responses:
+        '204':
+          description: The state is deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /api/v0/states/{state_id}/mark-default:
+    parameters:
+      - $ref: '#/components/parameters/StateID'
+    post:
+      operationId: markDefaultState
+      tags:
+        - project
+      summary: Make a state its project's default
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s default changes as any other''s. The state becomes the project''s default, and the state that was the default is no longer: a project has exactly one. Making the default state the default again leaves it so. A state that does not exist or is deleted, the intake''s triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The role is decided after the workspace and project rows are locked.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.state_not_found
+        - forbidden
+      responses:
+        '204':
+          description: The state is the project's default.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

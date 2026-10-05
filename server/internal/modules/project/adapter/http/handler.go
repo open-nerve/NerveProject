@@ -100,6 +100,16 @@ type UpdateStateUseCase interface {
 	Execute(ctx context.Context, id uuid.UUID, p domain.StatePatch) (domain.State, error)
 }
 
+// DeleteStateUseCase is app.DeleteState.
+type DeleteStateUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
+// MarkDefaultStateUseCase is app.MarkDefaultState.
+type MarkDefaultStateUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID) error
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects      ListProjectsUseCase
@@ -120,6 +130,8 @@ type UseCases struct {
 	LeaveProject      LeaveProjectUseCase
 	CreateState       CreateStateUseCase
 	UpdateState       UpdateStateUseCase
+	DeleteState       DeleteStateUseCase
+	MarkDefaultState  MarkDefaultStateUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

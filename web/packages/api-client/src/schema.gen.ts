@@ -799,7 +799,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a state
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's states are deleted as any other's. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The project's default state is not deleted (project.state_default): make another state the default first. Nor is the only state of its group (project.state_last_in_group): every group keeps a state. A state that is both is project.state_default. The state is deleted at the moment of the request, by the caller, and its name is free again in the project. The role is decided after the workspace and project rows are locked.
+         */
+        delete: operations["deleteState"];
         options?: never;
         head?: never;
         /**
@@ -807,6 +811,29 @@ export interface paths {
          * @description For the project's admins, and its members who are the workspace's admins; an archived project's states change as any other's. The fields given change and the others stay; the values follow createState's rules, and the sequence is any number (validation_failed), checked before the state is looked at. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. Moving the only state of its group to another group is refused (project.state_last_in_group): every group keeps a state. Its name may not be another undeleted state's of the project, the intake's triage state's too (project.state_name_taken). The role is decided after the workspace and project rows are locked.
          */
         patch: operations["updateState"];
+        trace?: never;
+    };
+    "/api/v0/states/{state_id}/mark-default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a state its project's default
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's default changes as any other's. The state becomes the project's default, and the state that was the default is no longer: a project has exactly one. Making the default state the default again leaves it so. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The role is decided after the workspace and project rows are locked.
+         */
+        post: operations["markDefaultState"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v0/me/projects/{project_id}/preferences": {
@@ -2824,6 +2851,28 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    deleteState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The state is deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     updateState: {
         parameters: {
             query?: never;
@@ -2848,6 +2897,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["State"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    markDefaultState: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A state's id (State.id). */
+                state_id: components["parameters"]["StateID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The state is the project's default. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

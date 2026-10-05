@@ -1,6 +1,7 @@
 package app_test
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -42,7 +43,9 @@ func TestCreatingAProjectReadsTheClockBeforeItsTransaction(t *testing.T) {
 // 2.6, M3 design 3.3): a write that queued behind another on either lock
 // never stamps an earlier time than the one it waited for. So does
 // createState, which only inserts, after it reads the project's states
-// under its lock. The clock logs its read among the fakes' calls.
+// under its lock. deleteState counts the states its group keeps after it
+// deletes the state, the clock read before. The clock logs its read among
+// the fakes' calls.
 func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 	tests := []struct {
 		name string
@@ -112,6 +115,16 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			_, err := uc.Execute(as(bob), webReview, domain.StatePatch{Group: ptr(domain.GroupBacklog)})
 			return f.log.calls, err
 		}, stateUpdated(bob, webReview, domain.StatePatch{Group: ptr(domain.GroupBacklog)}, domain.GroupStarted)},
+		{"deleteState", func() ([]string, error) {
+			uc, f, _ := newDeleteState()
+			err := uc.Execute(as(bob), webReview)
+			return f.log.calls, err
+		}, append(stateDeleted(bob, webReview, webID), fmt.Sprintf("CountGroupStates %s %s", webID, domain.GroupStarted))},
+		{"markDefaultState", func() ([]string, error) {
+			uc, f, _ := newMarkDefaultState()
+			err := uc.Execute(as(bob), webTodo)
+			return f.log.calls, err
+		}, defaultMarked(bob, webTodo, webID)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {

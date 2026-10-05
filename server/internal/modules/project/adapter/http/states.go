@@ -37,6 +37,22 @@ func (h handler) UpdateState(ctx context.Context, req gen.UpdateStateRequestObje
 	return gen.UpdateState200JSONResponse(state(s)), nil
 }
 
+// DeleteState serves DELETE /api/v0/states/{state_id}.
+func (h handler) DeleteState(ctx context.Context, req gen.DeleteStateRequestObject) (gen.DeleteStateResponseObject, error) {
+	if err := h.uc.DeleteState.Execute(ctx, req.StateID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteState204Response{}, nil
+}
+
+// MarkDefaultState serves POST /api/v0/states/{state_id}/mark-default.
+func (h handler) MarkDefaultState(ctx context.Context, req gen.MarkDefaultStateRequestObject) (gen.MarkDefaultStateResponseObject, error) {
+	if err := h.uc.MarkDefaultState.Execute(ctx, req.StateID); err != nil {
+		return nil, err
+	}
+	return gen.MarkDefaultState204Response{}, nil
+}
+
 // state is s as the API shows it.
 func state(s domain.State) gen.State {
 	return gen.State{ID: s.ID, WorkspaceID: s.WorkspaceID, ProjectID: s.ProjectID, Name: s.Name, Description: s.Description, Color: s.Color,

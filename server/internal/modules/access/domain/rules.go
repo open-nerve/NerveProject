@@ -109,7 +109,9 @@ var rules = map[shared.Action]Rule{
 	// (M3 design 3.4: not its guests, whom Plane lets change states; 9.2).
 	"state.create": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 	// As state.create.
-	"state.update": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	"state.update":       {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	"state.delete":       {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
+	"state.mark_default": {Level: LevelProject, Roles: []shared.Role{shared.RoleAdmin}},
 }
 
 // RuleFor returns a copy of the row of action, every field of it and its

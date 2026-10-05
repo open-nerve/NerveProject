@@ -15,6 +15,7 @@ var (
 	cellStateNameTaken   = cell{http.StatusConflict, "project.state_name_taken"}
 	cellStateNotFound    = cell{http.StatusNotFound, "project.state_not_found"}
 	cellStateLastInGroup = cell{http.StatusConflict, "project.state_last_in_group"}
+	cellStateDefault     = cell{http.StatusConflict, "project.state_default"}
 )
 
 // ofState are the cells of a row of a write on a state: the answers of PA,
@@ -89,6 +90,27 @@ func stateMatrixRows() []matrixRow {
 			}(), refusal: "name too_short"},
 		{op: "updateState", variant: "archived", write: true, columns: archivedColumns, request: toState(http.MethodPatch, "", "Todo", `{"name":"Next"}`),
 			cells: ofArchivedState(cellOK, cellForbidden), check: renamesTheState},
+		// As createState: Review deleted, In Progress kept in its group.
+		{op: "deleteState", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Review", ""),
+			cells: ofState(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		// The default, and Done, the only state of its group: each 409 comes
+		// after the decision (M3 design 3.17).
+		{op: "deleteState", variant: "the default", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Backlog", ""),
+			cells: ofState(cellStateDefault, cellForbidden, cellForbidden, cellStateDefault, cellForbidden, cellForbidden)},
+		{op: "deleteState", variant: "the last of its group", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Done", ""),
+			cells: ofState(cellStateLastInGroup, cellForbidden, cellForbidden, cellStateLastInGroup, cellForbidden, cellForbidden)},
+		{op: "deleteState", variant: "the triage state", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Triage", ""),
+			cells: ofState(cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound, cellStateNotFound)},
+		{op: "deleteState", variant: "archived", write: true, columns: archivedColumns, request: toState(http.MethodDelete, "", "Review", ""),
+			cells: ofArchivedState(cellNoContent, cellForbidden)},
+		// As createState: Todo made the default.
+		{op: "markDefaultState", write: true, columns: projectColumns, request: toState(http.MethodPost, "/mark-default", "Todo", ""),
+			cells: ofState(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		{op: "markDefaultState", variant: "the triage state", write: true, columns: projectColumns,
+			request: toState(http.MethodPost, "/mark-default", "Triage", ""), cells: ofState(cellStateNotFound, cellStateNotFound, cellStateNotFound,
+				cellStateNotFound, cellStateNotFound, cellStateNotFound)},
+		{op: "markDefaultState", variant: "archived", write: true, columns: archivedColumns,
+			request: toState(http.MethodPost, "/mark-default", "Todo", ""), cells: ofArchivedState(cellNoContent, cellForbidden)},
 	}
 }
 

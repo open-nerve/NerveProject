@@ -27,10 +27,11 @@ import (
 // Web, one write after another; the statement of each reads the rows it
 // wrote, by $1 Web's id and $2 alice's, and finds each one the write
 // writes. Bob and carol, whom she adds, are acme's members; she makes bob
-// an admin of Web, removes carol, creates a state and renames it, and
-// leaves Web. Each row the write writes again is first made bob's, as last
-// written by him, and checked so: a write that kept its row's writer would
-// pass for alice's otherwise, she having made it.
+// an admin of Web, removes carol, creates a state, renames it and deletes
+// it, makes Done the default, and leaves Web. Each row the write writes
+// again is first made bob's, as last written by him, and checked so: a
+// write that kept its row's writer would pass for alice's otherwise, she
+// having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -47,7 +48,7 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	carolID := accountID(t, contract, base, registerAccount(t, contract, base, "carol@example.com").AccessToken)
 	inWorkspaceOf(t, pool, web, carolID, aliceID, shared.RoleMember)
 	carol := carolID.String()
-	// bobs makes bob, $3, the last writer of the one row of table that where
+	// bobs makes bob, $3, the last writer of the rows of table that where
 	// picks by $1 Web's id and $2 alice's, which alice wrote last.
 	bobs := func(table, where string) string {
 		return "UPDATE " + table + " SET updated_by_id = $3 WHERE " + where + " AND updated_by_id = $2"
@@ -63,7 +64,8 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		named                    func() uuid.UUID // the row under Web the path names by its id, as %s; nil when it names Web
 		status                   int
 		// seed, when set, writes the rows the write writes again, by $1 Web's
-		// id, $2 alice's and $3 bob's: one row, none of alice's writing.
+		// id, $2 alice's and $3 bob's: the seeded rows, none of alice's
+		// writing.
 		seed   string
 		stamps string // the rows written: the time each took, and whether alice wrote it as the write does
 		seeded int    // how many rows stamps reads before the write: none of them alice's
@@ -122,14 +124,23 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		{"updateState", http.MethodPatch, "/api/v0/states/%s", `{"name":"Checked"}`, state("QA"), http.StatusOK,
 			bobs("states", "project_id = $1 AND name = 'QA'"),
 			"SELECT updated_at, updated_by_id = $2 AND name = 'Checked' FROM states WHERE project_id = $1 AND name IN ('QA', 'Checked')", 1, 1},
+		// Checked, deleted.
+		{"deleteState", http.MethodDelete, "/api/v0/states/%s", "", state("Checked"), http.StatusNoContent,
+			bobs("states", "project_id = $1 AND name = 'Checked'"),
+			"SELECT updated_at, updated_by_id = $2 AND deleted_at = updated_at FROM states WHERE project_id = $1 AND name = 'Checked'", 1, 1},
+		// Done made the default, and Backlog the default no longer: two rows.
+		{"markDefaultState", http.MethodPost, "/api/v0/states/%s/mark-default", "", state("Done"), http.StatusNoContent,
+			bobs("states", "project_id = $1 AND name IN ('Backlog', 'Done')"),
+			`SELECT updated_at, updated_by_id = $2 AND "default" = (name = 'Done') FROM states WHERE project_id = $1 AND name IN ('Backlog', 'Done')`,
+			2, 2},
 		// Her own membership, ended: bob is Web's other admin.
 		{"leaveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/leave", "", nil, http.StatusNoContent,
 			bobs("project_members", "project_id = $1 AND member_id = $2"),
 			"SELECT updated_at, updated_by_id = $2 AND NOT is_active FROM project_members WHERE project_id = $1 AND member_id = $2", 1, 1},
 	} {
 		if w.seed != "" {
-			if tag, err := pool.Exec(context.Background(), w.seed, web, aliceID, bobID); err != nil || tag.RowsAffected() != 1 {
-				t.Fatalf("%s's seed: %v, %v; want one row written", w.name, tag, err)
+			if tag, err := pool.Exec(context.Background(), w.seed, web, aliceID, bobID); err != nil || tag.RowsAffected() != int64(w.seeded) {
+				t.Fatalf("%s's seed: %v, %v; want %d rows written", w.name, tag, err, w.seeded)
 			}
 		}
 		if seeded := stampsOf(t, pool, w.stamps, web, aliceID); len(seeded) != w.seeded || slices.ContainsFunc(seeded, func(s stamp) bool { return s.hers }) {

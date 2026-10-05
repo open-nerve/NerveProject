@@ -52,3 +52,26 @@ type StateUpdater interface {
 	// undeleted state of the project has is domain.ErrStateNameTaken.
 	UpdateState(ctx context.Context, id uuid.UUID, p domain.StatePatch, by uuid.UUID, now time.Time) (domain.State, error)
 }
+
+// StateDeleter is deleteState's repository. Its writes run in the
+// transaction ctx carries, under the project's FOR NO KEY UPDATE.
+type StateDeleter interface {
+	StateFinder
+	GroupCounter
+	// DeleteState deletes the undeleted state id, unless it is its project's
+	// default or its triage state, by the account by at now: a guarded
+	// write (M3 design 3.17). deleted is false when it did not.
+	DeleteState(ctx context.Context, id, by uuid.UUID, now time.Time) (deleted bool, err error)
+}
+
+// DefaultMarker is markDefaultState's repository. It runs in the
+// transaction ctx carries, under the project's FOR NO KEY UPDATE.
+type DefaultMarker interface {
+	StateFinder
+	// MarkDefaultState makes the undeleted state id of projectID its
+	// default, by the account by at now, in two statements: the project's
+	// default state the default no longer, then this one the default (M3
+	// design 3.17). marked is false when the second wrote no row, and the
+	// caller rolls the first back.
+	MarkDefaultState(ctx context.Context, projectID, id, by uuid.UUID, now time.Time) (marked bool, err error)
+}
