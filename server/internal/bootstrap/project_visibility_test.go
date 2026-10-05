@@ -136,8 +136,8 @@ func TestListingWorkspaceStatesKeepsToItsWorkspace(t *testing.T) {
 			for _, p := range ws.projects {
 				each = append(each, stateIDs(t, w.contract, w.base+"/api/v0/projects/"+p.String()+"/states", w.tokens[name])...)
 			}
-			if !slices.Equal(listed, each) {
-				t.Errorf("%s: %s's list %v, each project's %v", name, ws.slug, listed, each)
+			if !slices.Equal(listed, each) || slices.Contains(listed, dropped.ID) {
+				t.Errorf("%s: %s's list %v, each project's %v; Dropped, %s, is deleted", name, ws.slug, listed, each, dropped.ID)
 			}
 		}
 	}

@@ -80,7 +80,7 @@ WHERE id = sqlc.arg(id) AND project_id = sqlc.arg(project_id) AND "group" <> 'tr
 
 -- name: ListWorkspaceStates :many
 -- listWorkspaceStates (M3 design 3.12, 3.17, 5.1): the undeleted states but the triage states of the workspace's
--- undeleted, unarchived projects the account is an active member of, by project, then sequence, then id.
+-- undeleted, unarchived projects the account is an active member of, by project id, then sequence, then id.
 SELECT s.id, s.workspace_id, s.project_id, s.name, s.description, s.color, s."group", s."default", s.sequence, s.created_at,
        s.updated_at
 FROM states s

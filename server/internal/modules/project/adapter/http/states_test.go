@@ -202,8 +202,7 @@ func TestListWorkspaceStates(t *testing.T) {
 		status int
 		want   string
 	}{
-		{domain.ErrWorkspaceNotFound, http.StatusNotFound,
-			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{domain.ErrWorkspaceNotFound, http.StatusNotFound, workspaceNotFoundJSON},
 		{errGone, http.StatusInternalServerError, internalErrorJSON},
 	} {
 		h := newServer(t, fakes{listWorkspaceStates: &fakeListWorkspaceStates{err: tt.err}})

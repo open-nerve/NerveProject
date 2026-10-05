@@ -831,7 +831,7 @@ export interface paths {
         put?: never;
         /**
          * Make a state its project's default
-         * @description For the project's admins, and its members who are the workspace's admins; an archived project's default changes as any other's. The state becomes the project's default, and the state that was the default is no longer: a project has exactly one. Making the default state the default again leaves it so. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default or the last of its group. The role is decided after the workspace and project rows are locked.
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's default changes as any other's. The state becomes the project's default, and the state that was the default is no longer: a project has exactly one. Making the default state the default again leaves it so. A state that does not exist or is deleted, the intake's triage state, and a state whose project the caller does not see answer project.state_not_found; a caller who sees the project but may not change its states, forbidden, whether or not the state is the default. The role is decided after the workspace and project rows are locked.
          */
         post: operations["markDefaultState"];
         delete?: never;
@@ -852,7 +852,7 @@ export interface paths {
         };
         /**
          * List the states of the projects the caller is a member of
-         * @description For the workspace's active members: the states of its projects that the caller is an active member of, the archived ones left out, by project, then by sequence, the lowest first, then by id; each project's as listStates lists them, the intake's triage state none of them. A project the caller sees but is not a member of adds none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
+         * @description For the workspace's active members: the states of its projects that the caller is an active member of, the archived ones left out, by project id, then by sequence, the lowest first, then by id; each project's as listStates lists them, the intake's triage state none of them. A project the caller sees but is not a member of adds none. A workspace that does not exist, is deleted, or of which the caller is not an active member answers workspace.not_found. The whole collection at once: collections are not paginated.
          */
         get: operations["listWorkspaceStates"];
         put?: never;

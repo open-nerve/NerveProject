@@ -250,7 +250,7 @@ type ListWorkspaceStatesRow struct {
 }
 
 // listWorkspaceStates (M3 design 3.12, 3.17, 5.1): the undeleted states but the triage states of the workspace's
-// undeleted, unarchived projects the account is an active member of, by project, then sequence, then id.
+// undeleted, unarchived projects the account is an active member of, by project id, then sequence, then id.
 func (q *Queries) ListWorkspaceStates(ctx context.Context, arg ListWorkspaceStatesParams) ([]ListWorkspaceStatesRow, error) {
 	rows, err := q.db.Query(ctx, listWorkspaceStates, arg.WorkspaceID, arg.UserID)
 	if err != nil {

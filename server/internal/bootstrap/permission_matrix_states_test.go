@@ -193,7 +193,7 @@ func renamesTheState(t *testing.T, c caller, s seeded, answer string) {
 }
 
 // listsTheWorkspaceStates: the states of acme's unarchived projects that
-// the column's account is an active member of, by project, then sequence:
+// the column's account is an active member of, by project id, then sequence:
 // none for the admin and the member, members of none of them, and the
 // public and the private project's for the guest, PG's account.
 func listsTheWorkspaceStates(t *testing.T, c caller, s seeded, answer string) {

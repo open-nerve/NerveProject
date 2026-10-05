@@ -23,7 +23,7 @@ type StateLister interface {
 type WorkspaceStateLister interface {
 	// ListWorkspaceStates lists the undeleted states but the triage states
 	// of workspaceID's undeleted, unarchived projects that userID is an
-	// active member of, by project, then sequence, then id.
+	// active member of, by project id, then sequence, then id.
 	ListWorkspaceStates(ctx context.Context, workspaceID, userID uuid.UUID) ([]domain.State, error)
 }
 

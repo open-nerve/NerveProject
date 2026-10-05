@@ -146,7 +146,7 @@ func (s *Store) MarkDefaultState(ctx context.Context, projectID, id, by uuid.UUI
 
 // ListWorkspaceStates lists the undeleted states but the triage states of
 // workspaceID's undeleted, unarchived projects that userID is an active
-// member of, by project, then sequence, then id
+// member of, by project id, then sequence, then id
 // (app.WorkspaceStateLister).
 func (s *Store) ListWorkspaceStates(ctx context.Context, workspaceID, userID uuid.UUID) ([]domain.State, error) {
 	rows, err := s.queries(ctx).ListWorkspaceStates(ctx, gen.ListWorkspaceStatesParams{WorkspaceID: workspaceID, UserID: userID})

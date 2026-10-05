@@ -274,7 +274,7 @@ func TestCountGroupStates(t *testing.T) {
 
 // ListWorkspaceStates lists the states but the triage states of the
 // workspace's undeleted, unarchived projects alice is an active member of,
-// by project, then sequence, then id: Web's and Ops's, Review, added last
+// by project id, then sequence, then id: Web's and Ops's, Review, added last
 // at In Progress's sequence with an id below its, before In Progress in
 // Web, which the order the rows lie in does not give; not the deleted
 // Todo; not the states of Docs, where her membership ended, of Arch,

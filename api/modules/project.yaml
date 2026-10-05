@@ -578,8 +578,8 @@ paths:
         or is deleted, the intake's triage state, and a state whose project
         the caller does not see answer project.state_not_found; a caller
         who sees the project but may not change its states, forbidden,
-        whether or not the state is the default or the last of its group.
-        The role is decided after the workspace and project rows are locked.
+        whether or not the state is the default. The role is decided after
+        the workspace and project rows are locked.
       security: [{bearer: []}]
       x-problem-codes: [project.state_not_found, forbidden]
       responses:
@@ -597,7 +597,7 @@ paths:
       description: >-
         For the workspace's active members: the states of its projects that
         the caller is an active member of, the archived ones left out, by
-        project, then by sequence, the lowest first, then by id; each
+        project id, then by sequence, the lowest first, then by id; each
         project's as listStates lists them, the intake's triage state none of
         them. A project the caller sees but is not a member of adds none. A
         workspace that does not exist, is deleted, or of which the caller is

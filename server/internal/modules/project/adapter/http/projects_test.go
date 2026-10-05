@@ -43,6 +43,10 @@ const (
 		`"identifier":"WEB","intake_view":false,"issue_views_view":false,"logo_props":{},"member_ids":[],"member_role":null,"module_view":false,` +
 		`"name":"Web","network":2,"project_lead_id":null,"sort_order":null,"timezone":"UTC","updated_at":"2026-10-01T10:00:00.123456Z",` +
 		`"workspace_id":"0199a2b4-0000-7000-8000-00000000000a"}`
+	// workspaceNotFoundJSON is the answer for a workspace that is not
+	// there, or of which the caller is not an active member.
+	workspaceNotFoundJSON = `{"status":404,"code":"workspace.not_found","title":"Not Found",` +
+		`"detail":"The workspace does not exist, or you are not a member of it."}`
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -135,8 +139,7 @@ func TestCreateProjectRefusals(t *testing.T) {
 		status int
 		want   string
 	}{
-		{"no workspace", domain.ErrWorkspaceNotFound, http.StatusNotFound,
-			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{"no workspace", domain.ErrWorkspaceNotFound, http.StatusNotFound, workspaceNotFoundJSON},
 		{"a guest", shared.Forbidden(), http.StatusForbidden,
 			`{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
 		{"a lead who may not lead", domain.LeadNotAllowed(), http.StatusUnprocessableEntity,
@@ -236,8 +239,7 @@ func TestCheckProjectIdentifier(t *testing.T) {
 		status int
 		want   string
 	}{
-		{domain.ErrWorkspaceNotFound, http.StatusNotFound,
-			`{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`},
+		{domain.ErrWorkspaceNotFound, http.StatusNotFound, workspaceNotFoundJSON},
 		{shared.Forbidden(), http.StatusForbidden, `{"status":403,"code":"forbidden","title":"Forbidden","detail":"Your role does not allow this."}`},
 	} {
 		h := newServer(t, fakes{check: &fakeCheck{err: tt.err}})
@@ -271,7 +273,7 @@ func TestListProjects(t *testing.T) {
 	}
 	h = newServer(t, fakes{list: &fakeList{err: domain.ErrWorkspaceNotFound}})
 	res, body := do(t, h, request(http.MethodGet, "/api/v0/workspaces/acme/projects", "alice", ""))
-	if want := `{"status":404,"code":"workspace.not_found","title":"Not Found","detail":"The workspace does not exist, or you are not a member of it."}`; res.StatusCode != http.StatusNotFound || body != want+"\n" {
-		t.Errorf("GET = %d %s, want 404 %s", res.StatusCode, body, want)
+	if res.StatusCode != http.StatusNotFound || body != workspaceNotFoundJSON+"\n" {
+		t.Errorf("GET = %d %s, want 404 %s", res.StatusCode, body, workspaceNotFoundJSON)
 	}
 }
