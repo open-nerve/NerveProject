@@ -45,6 +45,8 @@ const (
 	ActionLeave shared.Action = "project.leave"
 	// ActionStateCreate is creating a state in a project: createState.
 	ActionStateCreate shared.Action = "state.create"
+	// ActionStateUpdate is changing a state: updateState.
+	ActionStateUpdate shared.Action = "state.update"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -54,5 +56,5 @@ func Actions() []shared.Action {
 	return []shared.Action{ActionList, ActionCreate, ActionRead, ActionCheckIdentifier, ActionUpdate, ActionArchive,
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
 		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave,
-		ActionStateCreate}
+		ActionStateCreate, ActionStateUpdate}
 }

@@ -69,6 +69,8 @@ var tableCells = map[shared.Action][]outcome{
 	// As project.update: not the project's guests.
 	"state.create": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
 		forbidden, invisible, invisible, invisible, forbidden, forbidden},
+	"state.update": {allowed, forbidden, forbidden, forbidden, allowed, forbidden, forbidden, invisible, invisible, invisible, invisible,
+		forbidden, invisible, invisible, invisible, forbidden, forbidden},
 }
 
 // cells decides rule for each identity of its level.

@@ -22,9 +22,9 @@ var webBacklog, webTodo, webStarted, webReview, webDone, webCancelled, opsBacklo
 	uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 
 // fakeStates is the project store's states as the state operations' tests
-// hold them, by id, beside fakeStore's projects, whose log, failures and
-// changedAs it shares; the triage states are none of them, as the store
-// reads none.
+// hold them, by id, beside fakeStore's projects, whose log, failures,
+// reads of a row by its id and changedAs it shares; the triage states are
+// none of them, as the store reads none.
 type fakeStates struct {
 	*fakeStore
 	states map[uuid.UUID]domain.State
@@ -99,6 +99,105 @@ func (f *fakeStates) CreateState(ctx context.Context, r app.StateRow) (domain.St
 		s.ID = f.changedAs
 	}
 	return s, nil
+}
+
+// StateByID is the state id, read again under the locks as f.reread says.
+func (f *fakeStates) StateByID(ctx context.Context, id uuid.UUID) (domain.State, bool, error) {
+	f.log.add(ctx, "StateByID %s", id)
+	f.rowReadCount++
+	again := f.rowReadCount > 1
+	if err := f.fail("StateByID"); err != nil {
+		return domain.State{}, false, err
+	}
+	if again && f.reread.err != nil {
+		return domain.State{}, false, fmt.Errorf("StateByID: %w", f.reread.err)
+	}
+	s, ok := f.states[id]
+	if !ok || (again && f.reread.gone) {
+		return domain.State{}, false, nil
+	}
+	if again && f.reread.project != (uuid.UUID{}) {
+		s.ProjectID = f.reread.project
+	}
+	return s, true, nil
+}
+
+func (f *fakeStates) CountGroupStates(ctx context.Context, projectID uuid.UUID, group domain.StateGroup) (int, error) {
+	f.log.add(ctx, "CountGroupStates %s %s", projectID, group)
+	if err := f.fail("CountGroupStates"); err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, s := range f.of(projectID) {
+		if s.Group == group {
+			n++
+		}
+	}
+	return n, nil
+}
+
+// UpdateState changes the state id as p gives, stored, unless another state
+// of its project has the name p gives: domain.ErrStateNameTaken.
+func (f *fakeStates) UpdateState(ctx context.Context, id uuid.UUID, p domain.StatePatch, by uuid.UUID, now time.Time) (domain.State, error) {
+	f.log.add(ctx, "UpdateState %s %s by %s at %s", id, statePatch(p), by, now.Format(timeFormat))
+	if err := f.fail("UpdateState"); err != nil {
+		return domain.State{}, err
+	}
+	s, ok := f.states[id]
+	if !ok {
+		return domain.State{}, fmt.Errorf("UpdateState: no state %s", id)
+	}
+	if p.Name != nil {
+		for _, other := range f.of(s.ProjectID) {
+			if other.ID != id && other.Name == *p.Name {
+				return domain.State{}, domain.ErrStateNameTaken
+			}
+		}
+		s.Name = *p.Name
+	}
+	if p.Color != nil {
+		s.Color = *p.Color
+	}
+	if p.Group != nil {
+		s.Group = *p.Group
+	}
+	if p.Description != nil {
+		s.Description = *p.Description
+	}
+	if p.Sequence != nil {
+		s.Sequence = *p.Sequence
+	}
+	s.UpdatedAt = now.Truncate(time.Microsecond)
+	f.states[id] = s
+	if f.changedAs != (uuid.UUID{}) {
+		s.ID = f.changedAs
+	}
+	return s, nil
+}
+
+// statePatch is p as UpdateState logs it: each field it gives.
+func statePatch(p domain.StatePatch) string {
+	out := "{"
+	for _, field := range []struct {
+		name  string
+		value any
+	}{{"name", p.Name}, {"color", p.Color}, {"group", p.Group}, {"description", p.Description}, {"sequence", p.Sequence}} {
+		switch v := field.value.(type) {
+		case *string:
+			if v != nil {
+				out += fmt.Sprintf(" %s %q", field.name, *v)
+			}
+		case *domain.StateGroup:
+			if v != nil {
+				out += fmt.Sprintf(" %s %s", field.name, *v)
+			}
+		case *float64:
+			if v != nil {
+				out += fmt.Sprintf(" %s %v", field.name, *v)
+			}
+		}
+	}
+	return out + " }"
 }
 
 // stateRow is r as CreateState logs it: every field but its id, which the

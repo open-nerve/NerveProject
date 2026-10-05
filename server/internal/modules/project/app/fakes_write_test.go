@@ -130,14 +130,31 @@ type fakeStore struct {
 	lowest   map[uuid.UUID]*float64
 	moved    uuid.UUID
 	deleted  bool // each project's lock finds nothing, as if it was deleted while the lock waited
-	// The reads of a membership by its id (fakes_member_test.go): how many
-	// ran, how the second one answers, and answersAs, when set, the id each
-	// answers for the one asked; changedAs, when set, is the id the write of
-	// the row answers for the one it wrote (UpdateMemberRole, CreateState).
-	memberReadCount int
-	reread          memberReads
-	answersAs       uuid.UUID
-	changedAs       uuid.UUID
+	// The reads of a row under a project by its id, a membership's
+	// (fakes_member_test.go) or a state's (fakes_state_test.go): how many
+	// ran, and how the second one answers; answersAs, when set, is the id
+	// each read of a membership answers for the one asked. changedAs, when
+	// set, is the id the write of the row answers for the one it wrote
+	// (UpdateMemberRole, CreateState, UpdateState).
+	rowReadCount int
+	reread       rowReads
+	answersAs    uuid.UUID
+	changedAs    uuid.UUID
+}
+
+// rowReads is how a row under a project read again under the locks
+// answers: err fails it, gone finds none, as if it was deleted meanwhile,
+// and project, when set, is the project it is found in, as if it had moved
+// there. A membership's has three more: id, when set, is the id it answers
+// for the one asked; role, when set, its role, as if it had been changed
+// meanwhile; and ended finds it ended, as if it had been ended meanwhile.
+type rowReads struct {
+	err     error
+	gone    bool
+	project uuid.UUID
+	id      uuid.UUID
+	role    shared.Role
+	ended   bool
 }
 
 func (f *fakeStore) fail(name string) error {

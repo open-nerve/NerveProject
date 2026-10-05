@@ -107,6 +107,11 @@ func TestEachWriteReadsTheClockUnderItsLock(t *testing.T) {
 			_, err := uc.Execute(as(bob), webID, review)
 			return f.log.calls, err
 		}, stateCreated(bob, webID, review, 70000)},
+		{"updateState", func() ([]string, error) {
+			uc, f, _ := newUpdateState()
+			_, err := uc.Execute(as(bob), webReview, domain.StatePatch{Group: ptr(domain.GroupBacklog)})
+			return f.log.calls, err
+		}, stateUpdated(bob, webReview, domain.StatePatch{Group: ptr(domain.GroupBacklog)}, domain.GroupStarted)},
 	}
 	for _, tt := range tests {
 		if calls, err := tt.run(); err != nil || !slices.Equal(calls, tt.want) {
