@@ -68,7 +68,8 @@ var (
 // CheckNewState reports every field with a problem at once: a name or a
 // color empty, blank, of 256 characters or with NUL; the triage group
 // (not_allowed) and a group of none of the six, its case another or empty
-// (invalid_format); a description with NUL.
+// (invalid_format); a description with NUL. A field with two problems
+// reports its first: blank before too long, too long before NUL.
 func TestCheckNewStateReportsEveryField(t *testing.T) {
 	valid := StateCreate{Name: "Review", Color: "#F59E0B", Group: GroupStarted}
 	with := func(change func(*StateCreate)) StateCreate {
@@ -94,6 +95,9 @@ func TestCheckNewStateReportsEveryField(t *testing.T) {
 		{"an empty group", with(func(s *StateCreate) { s.Group = "" }), []shared.FieldError{groupUnknown}},
 		{"another group", with(func(s *StateCreate) { s.Group = "review" }), []shared.FieldError{groupUnknown}},
 		{"description with NUL", with(func(s *StateCreate) { s.Description = "a\x00" }), []shared.FieldError{descriptionNUL}},
+		{"name of 256 characters ending in NUL", with(func(s *StateCreate) { s.Name = strings.Repeat("状", 255) + "\x00" }),
+			[]shared.FieldError{nameLong}},
+		{"color of 256 blanks", with(func(s *StateCreate) { s.Color = strings.Repeat(" ", 256) }), []shared.FieldError{colorEmpty}},
 		{"all at once", StateCreate{Name: "", Color: "\x00", Group: GroupTriage, Description: "\x00"},
 			[]shared.FieldError{nameEmpty, colorNUL, groupTriage, descriptionNUL}},
 	} {
@@ -105,10 +109,11 @@ func TestCheckNewStateReportsEveryField(t *testing.T) {
 
 // CheckStatePatch checks only the fields given, by CheckNewState's rules:
 // an empty patch, a sequence alone (any number), and every field valid
-// pass; each field given with a problem is reported, all at once.
+// pass, a name with punctuation too, which a project's name may not hold;
+// each field given with a problem is reported, all at once.
 func TestCheckStatePatch(t *testing.T) {
 	for _, p := range []StatePatch{{}, {Sequence: ptr(-1.5)}, {Sequence: ptr(0.0)},
-		{Name: ptr("Review"), Color: ptr("#000"), Group: ptr(GroupCancelled), Description: ptr(""), Sequence: ptr(70000.0)}} {
+		{Name: ptr("Won't do"), Color: ptr("#000"), Group: ptr(GroupCancelled), Description: ptr(""), Sequence: ptr(70000.0)}} {
 		if err := CheckStatePatch(p); err != nil {
 			t.Errorf("CheckStatePatch(%+v) = %v, want nil", p, err)
 		}

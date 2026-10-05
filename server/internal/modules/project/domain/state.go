@@ -1,11 +1,8 @@
 package domain
 
 import (
-	"fmt"
 	"slices"
-	"strings"
 	"time"
-	"unicode/utf8"
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -168,11 +165,8 @@ func CheckGroupKept(left int) error {
 }
 
 func checkStateText(field, s string) *shared.FieldError {
-	switch {
-	case strings.TrimSpace(s) == "":
-		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
-	case utf8.RuneCountInString(s) > maxStateText:
-		return &shared.FieldError{Field: field, Code: shared.FieldTooLong, Message: fmt.Sprintf("must be at most %d characters", maxStateText)}
+	if f := checkLength(field, s, maxStateText); f != nil {
+		return f
 	}
 	return checkText(field, s)
 }
