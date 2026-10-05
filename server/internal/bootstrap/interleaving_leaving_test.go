@@ -75,14 +75,24 @@ var leavings = []leaving{
 	}},
 }
 
-// leaveProject is name's leaving of project, through project's use case
-// over leavers, with Locks over project's store, workspace's directory and
-// members' locks and the Authorizer, as project.New wires them.
-func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid.UUID, leavers projectapp.MemberLeaver) error {
+// projectLocks is project's Locks over its store, workspace's directory
+// and members' locks and the Authorizer, as project.New wires them.
+func (w memberWorld) projectLocks() projectapp.Locks {
 	provided := workspace.Provide(w.pool)
-	locks := projectapp.NewLocks(projectpg.New(w.pool), projectWorkspaces{directory: provided.WorkspaceDirectory}, provided.WorkspaceMembers,
+	return projectapp.NewLocks(projectpg.New(w.pool), projectWorkspaces{directory: provided.WorkspaceDirectory}, provided.WorkspaceMembers,
 		authorizerOn(w.pool))
-	return projectapp.NewLeaveProject(locks, leavers, postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
+}
+
+// tx is a transaction manager on w's pool, as bootstrap gives each module
+// one, with a commit timeout of 2s.
+func (w memberWorld) tx() shared.TxManager {
+	return postgres.NewTxManager(w.pool, 2*time.Second)
+}
+
+// leaveProject is name's leaving of project, through project's use case
+// over leavers, with projectLocks and tx.
+func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid.UUID, leavers projectapp.MemberLeaver) error {
+	return projectapp.NewLeaveProject(w.projectLocks(), leavers, w.tx(), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[name]}), project)
 }
 
@@ -91,7 +101,7 @@ func (w memberWorld) leaveProject(ctx context.Context, name string, project uuid
 // as bootstrap wires them. It takes no test, so it runs on any goroutine.
 func (w memberWorld) removeFromAcme(ctx context.Context, by string, id uuid.UUID, members workspaceapp.MemberRemover) error {
 	return workspaceapp.NewRemoveWorkspaceMember(members, workspaceProfiles{profiles: identity.Provide(w.pool).PublicProfiles},
-		project.NewCascade(project.CascadeDeps{Pool: w.pool}), authorizerOn(w.pool), postgres.NewTxManager(w.pool, 2*time.Second), clock.System{}).
+		project.NewCascade(project.CascadeDeps{Pool: w.pool}), authorizerOn(w.pool), w.tx(), clock.System{}).
 		Execute(shared.WithActor(ctx, shared.Actor{UserID: w.ids[by]}), id)
 }
 
