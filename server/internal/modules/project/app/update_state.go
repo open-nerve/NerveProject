@@ -41,8 +41,7 @@ func (u *UpdateState) Execute(ctx context.Context, id uuid.UUID, p domain.StateP
 	}
 	var updated domain.State
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		_, s, err := lockRowAndDecide(ctx, u.locks, actor, rowWrite[domain.State]{id: id, action: domain.ActionStateUpdate,
-			find: u.states.StateByID, notFound: domain.ErrStateNotFound})
+		_, s, err := lockRowAndDecide(ctx, u.locks, actor, stateWrite(id, domain.ActionStateUpdate, u.states))
 		if err != nil {
 			return err
 		}

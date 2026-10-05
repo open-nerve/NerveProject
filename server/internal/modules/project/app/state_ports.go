@@ -6,6 +6,7 @@ import (
 	"uuid"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
+	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // The project store's states, as the state operations read and write them
@@ -47,6 +48,12 @@ type StateFinder interface {
 	StateByID(ctx context.Context, id uuid.UUID) (s domain.State, found bool, err error)
 }
 
+// stateWrite is the write action on the state id, addressed by its resource
+// (rowWrite): states reads it, and project.state_not_found is its 404.
+func stateWrite(id uuid.UUID, action shared.Action, states StateFinder) rowWrite[domain.State] {
+	return rowWrite[domain.State]{id: id, action: action, find: states.StateByID, notFound: domain.ErrStateNotFound}
+}
+
 // GroupCounter counts the states of a group of a project: a write that
 // takes a state from its group refuses to leave the group without one
 // (domain.CheckGroupKept). It runs in the transaction ctx carries, under
@@ -80,7 +87,7 @@ type StateDeleter interface {
 	DeleteState(ctx context.Context, id, by uuid.UUID, now time.Time) (deleted bool, err error)
 }
 
-// DefaultMarker is markDefaultState's repository. It runs in the
+// DefaultMarker is markDefaultState's repository. Its writes run in the
 // transaction ctx carries, under the project's FOR NO KEY UPDATE.
 type DefaultMarker interface {
 	StateFinder

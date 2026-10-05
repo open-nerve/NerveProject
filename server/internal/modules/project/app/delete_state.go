@@ -38,7 +38,7 @@ func (u *DeleteState) Execute(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		rw := rowWrite[domain.State]{id: id, action: domain.ActionStateDelete, find: u.states.StateByID, notFound: domain.ErrStateNotFound}
+		rw := stateWrite(id, domain.ActionStateDelete, u.states)
 		_, s, err := lockRowAndDecide(ctx, u.locks, actor, rw)
 		if err != nil {
 			return err

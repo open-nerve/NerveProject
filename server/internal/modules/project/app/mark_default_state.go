@@ -36,8 +36,7 @@ func (u *MarkDefaultState) Execute(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		_, s, err := lockRowAndDecide(ctx, u.locks, actor, rowWrite[domain.State]{id: id, action: domain.ActionStateMarkDefault,
-			find: u.states.StateByID, notFound: domain.ErrStateNotFound})
+		_, s, err := lockRowAndDecide(ctx, u.locks, actor, stateWrite(id, domain.ActionStateMarkDefault, u.states))
 		if err != nil {
 			return err
 		}
