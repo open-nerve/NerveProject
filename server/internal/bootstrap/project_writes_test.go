@@ -27,11 +27,11 @@ import (
 // Web, one write after another; the statement of each reads the rows it
 // wrote, by $1 Web's id and $2 alice's, and finds each one the write
 // writes. Bob and carol, whom she adds, are acme's members; she makes bob
-// an admin of Web, removes carol, creates a state, renames it and deletes
-// it, makes Done the default, and leaves Web. Each row the write writes
-// again is first made bob's, as last written by him, and checked so: a
-// write that kept its row's writer would pass for alice's otherwise, she
-// having made it.
+// an admin of Web, removes carol, creates a state and renames it, archives
+// Web, deletes the state and makes Done the default, unarchives Web, and
+// leaves it. Each row the write writes again is first made bob's, as last
+// written by him, and checked so: a write that kept its row's writer would
+// pass for alice's otherwise, she having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -124,6 +124,12 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		{"updateState", http.MethodPatch, "/api/v0/states/%s", `{"name":"Checked"}`, state("QA"), http.StatusOK,
 			bobs("states", "project_id = $1 AND name = 'QA'"),
 			"SELECT updated_at, updated_by_id = $2 AND name = 'Checked' FROM states WHERE project_id = $1 AND name IN ('QA', 'Checked')", 1, 1},
+		// Web archived for the two state writes after it, then unarchived: an
+		// archived project's states are deleted, and its default made, as any
+		// other's (M3 design 3.19), and their rows read the effect back.
+		{"archiveProject, before the state writes", http.MethodPost, "/api/v0/projects/" + web.String() + "/archive", "", nil,
+			http.StatusOK, bobs("projects", "id = $1"),
+			"SELECT archived_at, updated_by_id = $2 AND updated_at = archived_at FROM projects WHERE id = $1", 1, 1},
 		// Checked, deleted.
 		{"deleteState", http.MethodDelete, "/api/v0/states/%s", "", state("Checked"), http.StatusNoContent,
 			bobs("states", "project_id = $1 AND name = 'Checked'"),
@@ -133,6 +139,9 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 			bobs("states", "project_id = $1 AND name IN ('Backlog', 'Done')"),
 			`SELECT updated_at, updated_by_id = $2 AND "default" = (name = 'Done') FROM states WHERE project_id = $1 AND name IN ('Backlog', 'Done')`,
 			2, 2},
+		{"unarchiveProject, after the state writes", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", nil,
+			http.StatusOK, bobs("projects", "id = $1"),
+			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1, 1},
 		// Her own membership, ended: bob is Web's other admin.
 		{"leaveProject", http.MethodPost, "/api/v0/projects/" + web.String() + "/leave", "", nil, http.StatusNoContent,
 			bobs("project_members", "project_id = $1 AND member_id = $2"),

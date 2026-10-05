@@ -67,9 +67,11 @@ func TestDeleteState(t *testing.T) {
 // that is not there, a workspace or project deleted while its lock waited,
 // a state deleted or moved to ops meanwhile, and a caller who does not see
 // web, each project.state_not_found; a member, the Authorizer's 403. Then,
-// past the decision: Backlog, the default, which the deletion passes over
-// and the state read again answers project.state_default; a state the
-// deletion passed over that is gone when read again,
+// past the decision: Backlog, the default and its group's only state,
+// which the deletion passes over and the state read again answers
+// project.state_default, the guarded deletion coming before the group's
+// count (P7a spec 3 item 13); a state the deletion passed over that is
+// gone when read again,
 // project.state_not_found; Todo, the only state of its group, deleted and
 // project.state_last_in_group, which the transaction rolls back. A
 // deletion that passed over a state neither gone nor the default is the
@@ -99,7 +101,7 @@ func TestDeleteStateRefuses(t *testing.T) {
 		{"a caller who does not see web", as(erin), webReview, nil, domain.ErrStateNotFound,
 			stateLocked(webReview, webID, erin, domain.ActionStateDelete)},
 		{"a member", as(alice), webReview, nil, shared.Forbidden(), stateLocked(webReview, webID, alice, domain.ActionStateDelete)},
-		{"Backlog, the default", as(bob), webBacklog, nil, domain.ErrStateDefault, readAgain(webBacklog)},
+		{"Backlog, the default and its group's only state", as(bob), webBacklog, nil, domain.ErrStateDefault, readAgain(webBacklog)},
 		{"a state passed over and gone", as(bob), webReview, func(_ *writeFixture, s *fakeStates) { s.passOver = "gone" },
 			domain.ErrStateNotFound, readAgain(webReview)},
 		{"Todo, its group's only state", as(bob), webTodo, nil, domain.ErrStateLastInGroup,
@@ -115,7 +117,8 @@ func TestDeleteStateRefuses(t *testing.T) {
 			before := maps.Clone(s.states)
 			err := uc.Execute(tt.ctx, tt.id)
 			outcome{tt.name, tt.want, tt.calls}.check(t, err, f)
-			if beforeTheDeletion := len(tt.calls) <= 6; beforeTheDeletion && !maps.Equal(s.states, before) {
+			beforeTheDeletion := len(tt.calls) <= len(stateLocked(tt.id, webID, bob, domain.ActionStateDelete))
+			if beforeTheDeletion && !maps.Equal(s.states, before) {
 				t.Errorf("the states after the refusal: %v; want them as they were, %v", s.states, before)
 			}
 		})

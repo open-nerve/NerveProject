@@ -94,7 +94,10 @@ func stateMatrixRows() []matrixRow {
 		{op: "deleteState", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Review", ""),
 			cells: ofState(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
 		// The default, and Done, the only state of its group: each 409 comes
-		// after the decision (M3 design 3.17).
+		// after the decision (M3 design 3.17). Backlog is both the default and
+		// its group's only state, and answers project.state_default: the
+		// guarded deletion comes before the group's count (P7a spec 3 item
+		// 13).
 		{op: "deleteState", variant: "the default", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Backlog", ""),
 			cells: ofState(cellStateDefault, cellForbidden, cellForbidden, cellStateDefault, cellForbidden, cellForbidden)},
 		{op: "deleteState", variant: "the last of its group", write: true, columns: projectColumns, request: toState(http.MethodDelete, "", "Done", ""),

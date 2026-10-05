@@ -26,8 +26,11 @@ var webBacklog, webTodo, webStarted, webReview, webDone, webCancelled, opsBacklo
 // reads of a row by its id and changedAs it shares; the triage states are
 // none of them, as the store reads none. passOver makes the guarded
 // writes, DeleteState and MarkDefaultState's second statement, write no
-// row: "kept" leaves the state as it is, "gone" takes it away, as a
-// deletion meanwhile would.
+// row for a state the read under the locks found and not the default:
+// "kept" leaves the state as it is, "gone" takes it away. Neither reaches
+// the composed app, where the project's lock lets no other write change
+// the state between that read and the write (P7a spec 3 item 4); the use
+// cases answer them all the same.
 type fakeStates struct {
 	*fakeStore
 	states   map[uuid.UUID]domain.State

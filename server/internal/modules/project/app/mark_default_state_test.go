@@ -105,7 +105,8 @@ func TestMarkDefaultStateRefuses(t *testing.T) {
 			before := maps.Clone(s.states)
 			err := uc.Execute(tt.ctx, tt.id)
 			outcome{tt.name, tt.want, tt.calls}.check(t, err, f)
-			if beforeTheStatements := len(tt.calls) <= 6; beforeTheStatements && !maps.Equal(s.states, before) {
+			beforeTheStatements := len(tt.calls) <= len(stateLocked(tt.id, webID, bob, domain.ActionStateMarkDefault))
+			if beforeTheStatements && !maps.Equal(s.states, before) {
 				t.Errorf("the states after the refusal: %v; want them as they were, %v", s.states, before)
 			}
 		})
