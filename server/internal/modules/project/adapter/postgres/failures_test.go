@@ -25,10 +25,15 @@ import (
 // membership", which reactivate-member would report as none of the
 // member's project memberships still ended, nor "no such membership", which
 // a write on it would answer as project.member_not_found, nor "no other
-// admin", which leaveProject would answer as project.sole_admin. Each read
-// runs on a cancelled context against a project alice is the only admin of,
-// beside bob, a member, and has display settings in, bob's membership of
-// another project ended, so that the right answer is none of the zero
+// admin", which leaveProject would answer as project.sole_admin; not "no
+// such state", which a write on it would answer as project.state_not_found,
+// nor no states, which listStates and listWorkspaceStates would answer as
+// none, nor "no sequence", which createState would take for the first
+// state's, nor an empty group, which a deletion or a move would answer as
+// project.state_last_in_group. Each read runs on a cancelled context
+// against a project alice is the only admin of, beside bob, a member, and
+// has display settings in, with its six default states, bob's membership
+// of another project ended, so that the right answer is none of the zero
 // values.
 func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	s, pool := newStore(t)
@@ -49,6 +54,7 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if n, err := s.CountInactive(ctx, acme, bob); err != nil || n != 1 {
 		t.Fatalf("CountInactive() of bob = %d, %v; want his ended membership of Ops, 1", n, err)
 	}
+	todo := seedDefaultStates(t, s, acme, web, alice)["Todo"]
 	cancelled, cancel := context.WithCancel(ctx)
 	cancel()
 	failed := func(err error) bool { return errors.Is(err, context.Canceled) }
@@ -95,11 +101,29 @@ func TestAFailedReadIsAnErrorNotAnAnswer(t *testing.T) {
 	if other, err := s.HasOtherAdmin(cancelled, web, bob); !failed(err) || other {
 		t.Errorf("HasOtherAdmin() = %v, %v; want context.Canceled, not an answer", other, err)
 	}
+	if st, found, err := s.StateByID(cancelled, todo); !failed(err) || found || st != (domain.State{}) {
+		t.Errorf("StateByID() = %+v, %v, %v; want context.Canceled, not no state", st, found, err)
+	}
+	if list, err := s.ListStates(cancelled, web); !failed(err) || list != nil {
+		t.Errorf("ListStates() = %+v, %v; want context.Canceled, not none", list, err)
+	}
+	if greatest, err := s.GreatestSequence(cancelled, web); !failed(err) || greatest != nil {
+		t.Errorf("GreatestSequence() = %s, %v; want context.Canceled, not none", jsonOf(t, greatest), err)
+	}
+	if n, err := s.CountGroupStates(cancelled, web, domain.GroupUnstarted); !failed(err) || n != 0 {
+		t.Errorf("CountGroupStates() = %d, %v; want context.Canceled, not a count", n, err)
+	}
+	if list, err := s.ListWorkspaceStates(cancelled, acme, alice); !failed(err) || list != nil {
+		t.Errorf("ListWorkspaceStates() = %+v, %v; want context.Canceled, not none", list, err)
+	}
 }
 
 // A write that fails answers its error, never nil, which a use case would
-// take for done; a project's, never a taken identifier or name. Each write
-// runs on a cancelled context, with values the database would take.
+// take for done; a project's or a state's, never a taken name or
+// identifier; a deletion or a marking of a state, never "not written",
+// which the use case would answer as project.state_default or
+// project.state_not_found. Each write runs on a cancelled context, with
+// values the database would take.
 func TestAFailedWriteIsAnError(t *testing.T) {
 	s, pool := newStore(t)
 	alice := newAccount(t, pool, "alice@corp.com")
@@ -168,6 +192,22 @@ func TestAFailedWriteIsAnError(t *testing.T) {
 		if err := step.run(cancelled, app.Deletion{WorkspaceID: acme, ProjectID: &web, By: alice, Now: now}); !failed(err) {
 			t.Errorf("%s() = %v; want context.Canceled", step.name, err)
 		}
+	}
+	todo := seedDefaultStates(t, s, acme, web, alice)["Todo"]
+	if st, err := s.CreateState(cancelled, app.StateRow{ID: uuid.NewV7(), WorkspaceID: acme, ProjectID: web, CreatedBy: alice, Now: now,
+		State: domain.NewState{Name: "Review", Color: "#000", Group: domain.GroupStarted}}); !failed(err) || errors.Is(err, domain.ErrStateNameTaken) ||
+		st != (domain.State{}) {
+		t.Errorf("CreateState() = %+v, %v; want context.Canceled", st, err)
+	}
+	if st, err := s.UpdateState(cancelled, todo, domain.StatePatch{Name: ptr("Next")}, alice, now); !failed(err) ||
+		errors.Is(err, domain.ErrStateNameTaken) || st != (domain.State{}) {
+		t.Errorf("UpdateState() = %+v, %v; want context.Canceled", st, err)
+	}
+	if deleted, err := s.DeleteState(cancelled, todo, alice, now); !failed(err) || deleted {
+		t.Errorf("DeleteState() = %v, %v; want context.Canceled", deleted, err)
+	}
+	if marked, err := s.MarkDefaultState(cancelled, web, todo, alice, now); !failed(err) || marked {
+		t.Errorf("MarkDefaultState() = %v, %v; want context.Canceled", marked, err)
 	}
 }
 

@@ -53,16 +53,12 @@ func (s *Store) LowestSortOrder(ctx context.Context, workspaceID, userID uuid.UU
 	return &lowest, nil
 }
 
-// CreateStates inserts rows in the order given, and stops at the first
-// that fails.
+// CreateStates inserts rows in the order given, each by CreateState, and
+// stops at the first that fails.
 func (s *Store) CreateStates(ctx context.Context, rows []app.StateRow) error {
 	for _, r := range rows {
-		err := s.queries(ctx).CreateState(ctx, gen.CreateStateParams{
-			ID: r.ID, WorkspaceID: r.WorkspaceID, ProjectID: r.ProjectID, Name: r.State.Name, Color: r.State.Color,
-			Sequence: r.State.Sequence, StateGroup: string(r.State.Group), IsDefault: r.State.Default, CreatedBy: &r.CreatedBy, Now: r.Now,
-		})
-		if err != nil {
-			return fmt.Errorf("create state %q: %w", r.State.Name, err)
+		if _, err := s.CreateState(ctx, r); err != nil {
+			return err
 		}
 	}
 	return nil

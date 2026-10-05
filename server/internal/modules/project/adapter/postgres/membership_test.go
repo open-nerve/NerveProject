@@ -14,18 +14,6 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
-// membershipRows is every membership as text, by id: the one id without
-// the columns cols, which a write of it writes.
-func membershipRows(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, cols ...string) string {
-	t.Helper()
-	var rows string
-	if err := pool.QueryRow(context.Background(), `SELECT string_agg(CASE WHEN r.id = $1 THEN (to_jsonb(r) - $2::text[])::text
-		ELSE r::text END, E'\n' ORDER BY r.id) FROM project_members r`, id, cols).Scan(&rows); err != nil {
-		t.Fatal(err)
-	}
-	return rows
-}
-
 // seedDeleted writes user's deleted membership of project, of role,
 // active as a deletion leaves it, beside a live one or none, written by user
 // at now, and returns its id.
@@ -136,7 +124,7 @@ func TestUpdateMemberRole(t *testing.T) {
 			seedMember(t, pool, acme, web, carol, 15, true)
 			ended := seedMember(t, pool, acme, docs, bob, 15, false)
 			madeByAnother(t, pool)
-			before := membershipRows(t, pool, bobs, "role", "updated_at", "updated_by_id")
+			before := rowsBut(t, pool, "project_members", bobs, "role", "updated_at", "updated_by_id")
 			later := now.Add(time.Hour)
 
 			m, err := s.UpdateMemberRole(context.Background(), bobs, to, alice, later)
@@ -146,15 +134,15 @@ func TestUpdateMemberRole(t *testing.T) {
 			if got, want := written(t, pool, bobs), fmt.Sprintf("role %d, active true, at ", to)+later.UTC().Format(time.RFC3339Nano)+" by "+alice.String(); got != want {
 				t.Errorf("bob's membership of Web: %s; want %s", got, want)
 			}
-			if after := membershipRows(t, pool, bobs, "role", "updated_at", "updated_by_id"); after != before {
+			if after := rowsBut(t, pool, "project_members", bobs, "role", "updated_at", "updated_by_id"); after != before {
 				t.Errorf("the memberships, bob's of Web without role, updated_at and updated_by_id:\n%s\nwant them as they were:\n%s", after, before)
 			}
 			for name, id := range map[string]uuid.UUID{"his ended one of Docs": ended, "his deleted one of Web": deleted} {
-				before := membershipRows(t, pool, uuid.UUID{})
+				before := rowsBut(t, pool, "project_members", uuid.UUID{})
 				if m, err := s.UpdateMemberRole(context.Background(), id, shared.RoleMember, alice, later.Add(time.Hour)); err == nil {
 					t.Errorf("UpdateMemberRole() of %s = %+v, nil; want an error", name, m)
 				}
-				if after := membershipRows(t, pool, uuid.UUID{}); after != before {
+				if after := rowsBut(t, pool, "project_members", uuid.UUID{}); after != before {
 					t.Errorf("changing %s wrote:\n%s\nwant the memberships as they were:\n%s", name, after, before)
 				}
 			}
@@ -201,7 +189,7 @@ func TestEndMember(t *testing.T) {
 			seedMember(t, pool, acme, docs, bob, 15, false)
 			deleted(gone)
 			madeByAnother(t, pool)
-			before := membershipRows(t, pool, bobs, "is_active", "updated_at", "updated_by_id")
+			before := rowsBut(t, pool, "project_members", bobs, "is_active", "updated_at", "updated_by_id")
 			later := now.Add(time.Hour)
 
 			if err := s.EndMember(context.Background(), web, bob, alice, later); err != nil {
@@ -210,16 +198,16 @@ func TestEndMember(t *testing.T) {
 			if got, want := written(t, pool, bobs), fmt.Sprintf("role %d, active false, at ", role)+later.UTC().Format(time.RFC3339Nano)+" by "+alice.String(); got != want {
 				t.Errorf("bob's membership of Web: %s; want %s", got, want)
 			}
-			if after := membershipRows(t, pool, bobs, "is_active", "updated_at", "updated_by_id"); after != before {
+			if after := rowsBut(t, pool, "project_members", bobs, "is_active", "updated_at", "updated_by_id"); after != before {
 				t.Errorf("the memberships, bob's of Web without is_active, updated_at and updated_by_id:\n%s\nwant them as they were:\n%s", after,
 					before)
 			}
 			for name, project := range map[string]uuid.UUID{"Web again": web, "Docs": docs, "Gone": gone} {
-				before := membershipRows(t, pool, uuid.UUID{})
+				before := rowsBut(t, pool, "project_members", uuid.UUID{})
 				if err := s.EndMember(context.Background(), project, bob, alice, later.Add(time.Hour)); err == nil {
 					t.Errorf("EndMember() of %s = nil; want an error", name)
 				}
-				if after := membershipRows(t, pool, uuid.UUID{}); after != before {
+				if after := rowsBut(t, pool, "project_members", uuid.UUID{}); after != before {
 					t.Errorf("ending bob's membership of %s wrote:\n%s\nwant the memberships as they were:\n%s", name, after, before)
 				}
 			}

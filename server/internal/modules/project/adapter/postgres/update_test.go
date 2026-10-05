@@ -46,6 +46,17 @@ func changed(before map[string]string, change map[string]string) map[string]stri
 	return out
 }
 
+// jsonTime is at as columns reads a timestamptz: JSON text, in UTC.
+func jsonTime(at time.Time) string {
+	return `"` + at.UTC().Format("2006-01-02T15:04:05.999999") + `+00:00"`
+}
+
+// audit is the audit columns a write by by at at leaves, as columns reads
+// them.
+func audit(by uuid.UUID, at time.Time) map[string]string {
+	return map[string]string{"updated_by_id": `"` + by.String() + `"`, "updated_at": jsonTime(at)}
+}
+
 // LockProject reads the undeleted project's workspace and whether it is
 // archived, and holds it FOR NO KEY UPDATE until the transaction ends: a
 // FOR SHARE of it waits, a foreign key's FOR KEY SHARE does not, and no
@@ -185,9 +196,6 @@ func TestUpdateProject(t *testing.T) {
 		}
 	}
 	others := tableRows(t, pool, "projects", web)
-	audit := func(by uuid.UUID, at time.Time) map[string]string {
-		return map[string]string{"updated_by_id": `"` + by.String() + `"`, "updated_at": `"` + at.Format("2006-01-02T15:04:05.999999") + `+00:00"`}
-	}
 
 	before := columns(t, pool, "projects", web)
 	update(domain.ProjectPatch{}, carol, later)
@@ -320,7 +328,6 @@ func TestSetArchived(t *testing.T) {
 	exec(t, pool, "UPDATE projects SET archived_at = $2 WHERE id = $1", ops, now)
 	newProject(t, s, beta, "Web", "WEB", alice)
 	others := tableRows(t, pool, "projects", web)
-	stamp := func(at time.Time) string { return `"` + at.Format("2006-01-02T15:04:05.999999") + `+00:00"` }
 	for _, step := range []struct {
 		archived bool
 		by       uuid.UUID
@@ -332,9 +339,9 @@ func TestSetArchived(t *testing.T) {
 		}
 		archivedAt := "null"
 		if step.archived {
-			archivedAt = stamp(step.at)
+			archivedAt = jsonTime(step.at)
 		}
-		want := changed(before, map[string]string{"archived_at": archivedAt, "updated_at": stamp(step.at), "updated_by_id": `"` + step.by.String() + `"`})
+		want := changed(before, changed(audit(step.by, step.at), map[string]string{"archived_at": archivedAt}))
 		if got := columns(t, pool, "projects", web); !maps.Equal(got, want) {
 			t.Errorf("archived %v by %s at %v: %v\nwant %v", step.archived, step.by, step.at, got, want)
 		}

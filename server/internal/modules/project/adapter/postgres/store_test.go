@@ -70,14 +70,26 @@ func newProject(t *testing.T, s *postgresadapter.Store, workspace uuid.UUID, nam
 	return id
 }
 
-// tableRows is every row of table as text but the row id, in order: what
-// an insert of the row id must leave as it was.
-func tableRows(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID) string {
+// tableRows is every row of table as text but the rows ids, in order:
+// what a write of the rows ids must leave as it was.
+func tableRows(t *testing.T, pool *pgxpool.Pool, table string, ids ...uuid.UUID) string {
 	t.Helper()
 	var s string
 	if err := pool.QueryRow(context.Background(), "SELECT coalesce(string_agg(r::text, E'\\n' ORDER BY r::text), '') FROM "+table+
-		" r WHERE r.id <> $1", id).Scan(&s); err != nil {
+		" r WHERE r.id <> ALL (coalesce($1::uuid[], '{}'))", ids).Scan(&s); err != nil {
 		t.Fatal(err)
 	}
 	return s
+}
+
+// rowsBut is every row of table as text, by id: the one id without the
+// columns cols, which a write of it writes.
+func rowsBut(t *testing.T, pool *pgxpool.Pool, table string, id uuid.UUID, cols ...string) string {
+	t.Helper()
+	var rows string
+	if err := pool.QueryRow(context.Background(), `SELECT coalesce(string_agg(CASE WHEN r.id = $1 THEN (to_jsonb(r) - $2::text[])::text
+		ELSE r::text END, E'\n' ORDER BY r.id), '') FROM `+table+` r`, id, cols).Scan(&rows); err != nil {
+		t.Fatal(err)
+	}
+	return rows
 }
