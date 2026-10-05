@@ -2090,7 +2090,7 @@ modules/access/
 | P5a `memberships` | 结束与恢复工作区的成员关系（后端，15）；设计中的 P5 由负责人裁定拆出（2026-10-02，第 12 节） | 已完成：[spec](specs/P5a-memberships.md)、[plan](plans/P5a-memberships.md)、[评审](reviews/P5a-memberships-review.md)（执行时 14 个 Task） |
 | P5b `project-memberships` | 项目成员的角色、移出与离开（后端，9）；同上，P5a 合并之后开始 | 已完成：[spec](specs/P5b-project-memberships.md)、[plan](plans/P5b-project-memberships.md)、[评审](reviews/P5b-project-memberships-review.md)（执行时 11 个 Task） |
 | P6 `deactivation` | 停用账户与成员关系（后端，9） | 已完成：[spec](specs/P6-deactivation.md)、[plan](plans/P6-deactivation.md)、[评审](reviews/P6-deactivation-review.md)（执行时 9 个 Task；终审之后负责人裁定"A"和"甲"，邀请的锁按 id 取，3.6 约定五加例外） |
-| P7a `states` | 状态与按资源寻址的共用取锁路径（后端，10）；设计中的 P7 由负责人裁定拆出（2026-10-05，第 12 节） | 未开始 |
+| P7a `states` | 状态与按资源寻址的共用取锁路径（后端，10）；设计中的 P7 由负责人裁定拆出（2026-10-05，第 12 节） | 进行中：[spec](specs/P7a-states.md)、[plan](plans/P7a-states.md) |
 | P7b `labels` | 标签（后端，8）；同上，P7a 合并之后开始 | 未开始 |
 | P8 `web-data-layer` | 前端的数据层（16） | 未开始 |
 | P9 `web-workspace-pages` | 工作区的页面（14） | 未开始 |
