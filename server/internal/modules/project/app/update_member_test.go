@@ -69,9 +69,9 @@ func TestUpdateProjectMember(t *testing.T) {
 // admin's role and a role of admin, from a project admin who is no
 // workspace admin, 403 project.role_too_high; a workspace guest made more
 // than a guest, 422, from anyone. A member who is no active member of the
-// workspace, or whose role is answered for another account, and a
-// membership answered for another id, by either read, are the write's
-// own error.
+// workspace, or whose role is answered for another account, is the
+// write's own error. An answer of the lock path for another key than it
+// asked for is the path's to refuse (TestLocksCheckEachAnswerAgainstItsKey).
 func TestUpdateProjectMemberRefuses(t *testing.T) {
 	guestOnly := shared.Invalid(shared.FieldError{Field: "role", Code: shared.FieldNotAllowed, Message: "must be 5: the member is a guest of the workspace"})
 	locked := func(f *writeFixture, caller, user uuid.UUID) []string {
@@ -126,10 +126,6 @@ func TestUpdateProjectMemberRefuses(t *testing.T) {
 			func(f *writeFixture) { delete(f.members.roles[acme.ID], alice) }, nil, locked},
 		{"his workspace role answered for another account", bob, alice, shared.RoleGuest,
 			func(f *writeFixture) { f.members.answersFor = carol }, nil, locked},
-		{"a membership answered for another id", bob, alice, shared.RoleGuest, func(f *writeFixture) { f.store.answersAs = uuid.NewV7() },
-			nil, upTo(2)},
-		{"the membership read again for another id", bob, alice, shared.RoleGuest, func(f *writeFixture) { f.store.reread.id = uuid.NewV7() },
-			nil, upTo(6)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			uc, f := newUpdateMember()

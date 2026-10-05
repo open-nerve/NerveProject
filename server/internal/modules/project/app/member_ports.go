@@ -25,9 +25,15 @@ type ProjectMembership struct {
 	Active      bool
 }
 
+// Place is the membership's id, its project and the project's workspace:
+// where a write on it takes its locks (lockRowAndDecide).
+func (m ProjectMembership) Place() (id, workspaceID, projectID uuid.UUID) {
+	return m.ID, m.WorkspaceID, m.ProjectID
+}
+
 // MemberFinder reads a project membership by its id: what a write on it
 // reads first, for the workspace and the project it locks, and again under
-// their locks (Locks).
+// their locks (lockRowAndDecide).
 type MemberFinder interface {
 	// MemberByID is the undeleted membership id, active or ended; found is
 	// false when there is none.
@@ -37,19 +43,28 @@ type MemberFinder interface {
 // MemberRoleChanger is updateProjectMember's repository. It runs in the
 // transaction ctx carries, under the project's FOR NO KEY UPDATE.
 type MemberRoleChanger interface {
+	MemberFinder
 	// UpdateMemberRole gives the active membership id role, by the account
 	// by at now, and returns it as stored. An ended or deleted one is an
 	// error, and is not written.
 	UpdateMemberRole(ctx context.Context, id uuid.UUID, role shared.Role, by uuid.UUID, now time.Time) (domain.Member, error)
 }
 
-// MemberEnder is removeProjectMember's repository. It runs in the
-// transaction ctx carries, under the project's FOR NO KEY UPDATE.
+// MemberEnder ends one project membership, for removeProjectMember and
+// leaveProject. It runs in the transaction ctx carries, under the
+// project's FOR NO KEY UPDATE.
 type MemberEnder interface {
 	// EndMember ends userID's active membership of projectID, by the account
 	// by at now; the row stays. Anything but exactly one row ended is an
 	// error.
 	EndMember(ctx context.Context, projectID, userID, by uuid.UUID, now time.Time) error
+}
+
+// MemberRemover is removeProjectMember's repository. It runs in the
+// transaction ctx carries.
+type MemberRemover interface {
+	MemberFinder
+	MemberEnder
 }
 
 // MemberLeaver is leaveProject's repository. It runs in the transaction ctx

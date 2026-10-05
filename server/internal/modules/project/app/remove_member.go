@@ -12,20 +12,20 @@ import (
 // /api/v0/project-members/{project_member_id} (M3 design 3.5).
 type RemoveProjectMember struct {
 	locks   Locks
-	members MemberEnder
+	members MemberRemover
 	tx      shared.TxManager
 	clock   Clock
 }
 
 // NewRemoveProjectMember returns the use case.
-func NewRemoveProjectMember(locks Locks, members MemberEnder, tx shared.TxManager, clock Clock) *RemoveProjectMember {
+func NewRemoveProjectMember(locks Locks, members MemberRemover, tx shared.TxManager, clock Clock) *RemoveProjectMember {
 	return &RemoveProjectMember{locks: locks, members: members, tx: tx, clock: clock}
 }
 
 // Execute, in one transaction, in the order of M3 design 3.6: the
-// membership's locks (Locks.lockMemberAndDecide: the membership read for
-// its project and workspace, the workspace FOR SHARE, the project FOR NO
-// KEY UPDATE, the membership read again) and the decision on
+// membership's locks (lockRowAndDecide: the membership read for its
+// project and workspace, the workspace FOR SHARE, the project FOR NO KEY
+// UPDATE, the membership read again) and the decision on
 // project_member.remove; then the checks that only a caller allowed to
 // remove members gets to see: an ended membership is
 // project.member_not_found; then 3.5's rule (domain.CheckRemoval): his own
@@ -40,11 +40,11 @@ func (u *RemoveProjectMember) Execute(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 	return u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		h, err := u.locks.lockMemberAndDecide(ctx, actor, id, domain.ActionMemberRemove, false)
+		h, m, err := lockRowAndDecide(ctx, u.locks, actor, rowWrite[ProjectMembership]{id: id, action: domain.ActionMemberRemove,
+			find: u.members.MemberByID, notFound: domain.ErrMemberNotFound})
 		if err != nil {
 			return err
 		}
-		m := h.member
 		if !m.Active {
 			return domain.ErrMemberNotFound
 		}

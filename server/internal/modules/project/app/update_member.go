@@ -24,8 +24,8 @@ func NewUpdateProjectMember(locks Locks, members MemberRoleChanger, tx shared.Tx
 }
 
 // Execute checks role, then in one transaction, in the order of M3 design
-// 3.6: the membership's locks (Locks.lockMemberAndDecide: the membership
-// read for its project and workspace, the workspace FOR SHARE, its member's
+// 3.6: the membership's locks (lockRowAndDecide: the membership read for
+// its project and workspace, the workspace FOR SHARE, its member's
 // membership of the workspace FOR SHARE, the project FOR NO KEY UPDATE, the
 // membership read again) and the decision on project_member.update; then
 // the checks that only a caller allowed to change roles gets to see: an
@@ -44,11 +44,11 @@ func (u *UpdateProjectMember) Execute(ctx context.Context, id uuid.UUID, role sh
 	}
 	var updated domain.Member
 	err = u.tx.WithinTx(ctx, func(ctx context.Context) error {
-		h, err := u.locks.lockMemberAndDecide(ctx, actor, id, domain.ActionMemberUpdate, true)
+		h, m, err := lockRowAndDecide(ctx, u.locks, actor, rowWrite[ProjectMembership]{id: id, action: domain.ActionMemberUpdate,
+			find: u.members.MemberByID, targets: memberOf, notFound: domain.ErrMemberNotFound})
 		if err != nil {
 			return err
 		}
-		m := h.member
 		if !m.Active {
 			return domain.ErrMemberNotFound
 		}
@@ -74,4 +74,10 @@ func (u *UpdateProjectMember) Execute(ctx context.Context, id uuid.UUID, role sh
 		return domain.Member{}, err
 	}
 	return updated, nil
+}
+
+// memberOf is the account of m: the target of a change of his role, whose
+// membership of the workspace the change locks (convention 3).
+func memberOf(m ProjectMembership) []uuid.UUID {
+	return []uuid.UUID{m.MemberID}
 }

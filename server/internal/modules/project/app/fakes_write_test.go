@@ -74,11 +74,13 @@ func (f *writeFixture) locks() app.Locks {
 }
 
 // fakeWorkspaces is the workspace module's lock of a workspace's row by its
-// id: it logs each call, finds acme unless gone, and fails with err.
+// id: it logs each call, finds acme unless gone, and fails with err;
+// answersAs, when set, is the workspace it answers for acme.
 type fakeWorkspaces struct {
-	log  *callLog
-	gone bool
-	err  error
+	log       *callLog
+	gone      bool
+	err       error
+	answersAs uuid.UUID
 }
 
 func (f *fakeWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (app.Workspace, bool, error) {
@@ -88,6 +90,9 @@ func (f *fakeWorkspaces) ShareWorkspaceByID(ctx context.Context, id uuid.UUID) (
 	}
 	if f.gone || id != acme.ID {
 		return app.Workspace{}, false, nil
+	}
+	if f.answersAs != (uuid.UUID{}) {
+		return app.Workspace{ID: f.answersAs, Timezone: acme.Timezone}, true, nil
 	}
 	return acme, true, nil
 }
