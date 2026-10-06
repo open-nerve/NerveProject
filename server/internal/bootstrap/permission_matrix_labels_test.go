@@ -34,16 +34,20 @@ var labelRows = rowsByID{path: "labels", notFound: cellLabelNotFound, find: seed
 // matrixLabels are the labels prepareMatrix seeds in each project of
 // matrixProjects, by its workspace's admin, at the sort orders createLabel
 // gives labels created one after another: Bug and Feature at the top, UI
-// under Bug. gone's are deleted with it. Their writer in acme, as for the
-// projects and states the matrix seeds, is its admin, WA-'s account, a
-// member of none of its projects, so no column that may write a label
-// calls as him: nothing reads the labels' writers, and a check that a
-// write made its caller a label's writer cannot pass on the seed's.
+// under Bug, with a color, the others without one (the column's default):
+// a write that lost UI's parent, sort order or color would not give it
+// back by chance (renamesTheLabel). gone's are deleted with it. Their
+// writer in acme, as for the projects and states the matrix seeds, is its
+// admin, WA-'s account, a member of none of its projects, so no column
+// that may write a label calls as him: nothing reads the labels' writers,
+// and a check that a write made its caller a label's writer cannot pass on
+// the seed's.
 var matrixLabels = []struct {
 	name, parent string // parent: the name of the label it is under, "" at the top
+	color        string
 	sortOrder    float64
 }{
-	{"Bug", "", 65535}, {"UI", "Bug", 75535}, {"Feature", "", 85535},
+	{"Bug", "", "", 65535}, {"UI", "Bug", "#3B82F6", 75535}, {"Feature", "", "", 85535},
 }
 
 // newLabel is the body of the label the rows create: QA, at the top, a
@@ -85,8 +89,8 @@ func labelMatrixRows() []matrixRow {
 		// 3.19).
 		{op: "createLabel", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/labels", newLabel),
 			cells: ofArchived(cellCreated, cellForbidden), check: createsTheLabel},
-		// As createLabel: Feature renamed.
-		{op: "updateLabel", write: true, columns: projectColumns, request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"Story"}`),
+		// As createLabel: UI, under Bug, renamed.
+		{op: "updateLabel", write: true, columns: projectColumns, request: labelRows.to(http.MethodPatch, "", "UI", `{"name":"Story"}`),
 			cells: labelRows.of(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheLabel},
 		{op: "updateLabel", variant: "a name taken", write: true, columns: projectColumns,
 			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"bug"}`),
@@ -110,7 +114,7 @@ func labelMatrixRows() []matrixRow {
 				return cells
 			}(), refusal: "name too_short"},
 		{op: "updateLabel", variant: "archived", write: true, columns: archivedColumns,
-			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"Story"}`), cells: labelRows.ofArchived(cellOK, cellForbidden),
+			request: labelRows.to(http.MethodPatch, "", "UI", `{"name":"Story"}`), cells: labelRows.ofArchived(cellOK, cellForbidden),
 			check: renamesTheLabel},
 	}
 }
@@ -131,20 +135,23 @@ func createsTheLabel(t *testing.T, c caller, s seeded, answer string) {
 	}
 }
 
-// renamesTheLabel: the column's project's Feature, at the top, renamed
-// Story, as stored.
+// renamesTheLabel: the column's project's UI renamed Story, as stored, and
+// what the body leaves out kept as seeded: under its project's Bug, at
+// 75535, with its color. None of these is what a write that lost one would
+// give: the top, a column's default, a place after the project's labels.
 func renamesTheLabel(t *testing.T, c caller, s seeded, answer string) {
 	var l struct {
 		ID        uuid.UUID  `json:"id"`
 		ProjectID uuid.UUID  `json:"project_id"`
 		ParentID  *uuid.UUID `json:"parent_id"`
 		Name      string     `json:"name"`
+		Color     string     `json:"color"`
 		SortOrder float64    `json:"sort_order"`
 	}
 	decodeAnswer(t, answer, &l)
-	if l.ID != s.label(projectOf(c), "Feature") || l.ProjectID != s.project(projectOf(c)) || l.ParentID != nil || l.Name != "Story" ||
-		l.SortOrder != 85535 {
-		t.Errorf("%s renames %s; want %s's Feature, at the top, at 85535, named Story", c, answer, projectOf(c))
+	if l.ID != s.label(projectOf(c), "UI") || l.ProjectID != s.project(projectOf(c)) || l.ParentID == nil ||
+		*l.ParentID != s.label(projectOf(c), "Bug") || l.Name != "Story" || l.Color != "#3B82F6" || l.SortOrder != 75535 {
+		t.Errorf("%s renames %s; want %s's UI, under its Bug, at 75535, with #3B82F6, named Story", c, answer, projectOf(c))
 	}
 }
 
@@ -161,8 +168,8 @@ func (s projectSeed) labels(sd seeded) {
 				parent = &id
 			}
 			if _, err := s.store.CreateLabel(context.Background(), projectapp.LabelRow{ID: sd.label(p.key, l.name), WorkspaceID: s.workspaces[slug],
-				ProjectID: s.projects[p.key], ParentID: parent, Name: l.name, SortOrder: l.sortOrder, CreatedBy: s.ids[matrixAdmins[slug]],
-				Now: s.now}); err != nil {
+				ProjectID: s.projects[p.key], ParentID: parent, Name: l.name, Color: l.color, SortOrder: l.sortOrder,
+				CreatedBy: s.ids[matrixAdmins[slug]], Now: s.now}); err != nil {
 				s.t.Fatal(err)
 			}
 		}
@@ -173,7 +180,7 @@ func (s projectSeed) labels(sd seeded) {
 // parent's id, uuid.Nil at the top.
 type seededLabel struct {
 	ID, WorkspaceID, ParentID uuid.UUID
-	Name                      string
+	Name, Color               string
 	SortOrder                 float64
 	Deleted                   bool
 }
@@ -181,11 +188,12 @@ type seededLabel struct {
 // seededLabels checks the labels the cells of each matrix project rest on,
 // read back by name: those of matrixLabels exactly, each with the id sd
 // names for it, in its project's workspace, under the label sd names for
-// its parent in its project, at its sort order; undeleted, but gone's,
-// deleted with gone. A label missing or seeded otherwise would let a cell
-// answer as it wants for another reason: a row names its parent by the id
-// sd names, and a parent that is no label, or another project's, is
-// refused as one under another is (parent_id not_allowed).
+// its parent in its project, with its color, at its sort order; undeleted,
+// but gone's, deleted with gone. A label missing or seeded otherwise would
+// let a cell answer as it wants for another reason: a row names its parent
+// by the id sd names, and a parent that is no label, or another project's,
+// is refused as one under another is (parent_id not_allowed), and a
+// rename shows UI's color kept only if UI was seeded with it.
 func (s projectSeed) seededLabels(pool *pgxpool.Pool, sd seeded) {
 	s.t.Helper()
 	for _, p := range matrixProjects {
@@ -197,11 +205,11 @@ func (s projectSeed) seededLabels(pool *pgxpool.Pool, sd seeded) {
 				parent = sd.label(p.key, l.parent)
 			}
 			want = append(want, seededLabel{ID: sd.label(p.key, l.name), WorkspaceID: sd.workspace(slug), ParentID: parent, Name: l.name,
-				SortOrder: l.sortOrder, Deleted: slug == "gone"})
+				Color: l.color, SortOrder: l.sortOrder, Deleted: slug == "gone"})
 		}
 		slices.SortFunc(want, func(a, b seededLabel) int { return strings.Compare(a.Name, b.Name) })
-		rows, err := pool.Query(context.Background(), `SELECT id, workspace_id, coalesce(parent_id, $2), name, sort_order, deleted_at IS NOT NULL
-			FROM labels WHERE project_id = $1 ORDER BY name COLLATE "C"`, sd.project(p.key), uuid.Nil())
+		rows, err := pool.Query(context.Background(), `SELECT id, workspace_id, coalesce(parent_id, $2), name, color, sort_order,
+			deleted_at IS NOT NULL FROM labels WHERE project_id = $1 ORDER BY name COLLATE "C"`, sd.project(p.key), uuid.Nil())
 		if err != nil {
 			s.t.Fatal(err)
 		}

@@ -242,21 +242,23 @@ func createdProject(t *testing.T, contract *apitest.Contract, base, token, slug,
 // stateID is the id of project's undeleted state name.
 func stateID(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string) uuid.UUID {
 	t.Helper()
-	var id uuid.UUID
-	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM states WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL", project,
-		name).Scan(&id); err != nil {
-		t.Fatalf("the state %s of %s: %v", name, project, err)
-	}
-	return id
+	return namedRowID(t, pool, "states", project, name)
 }
 
 // labelID is the id of project's undeleted label name.
 func labelID(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string) uuid.UUID {
 	t.Helper()
+	return namedRowID(t, pool, "labels", project, name)
+}
+
+// namedRowID is the id of project's undeleted row name in table, a table of
+// rows under a project with a name of their own: states, labels.
+func namedRowID(t *testing.T, pool *pgxpool.Pool, table string, project uuid.UUID, name string) uuid.UUID {
+	t.Helper()
 	var id uuid.UUID
-	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM labels WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL", project,
+	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM "+table+" WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL", project,
 		name).Scan(&id); err != nil {
-		t.Fatalf("the label %s of %s: %v", name, project, err)
+		t.Fatalf("%s: %s of %s: %v", table, name, project, err)
 	}
 	return id
 }

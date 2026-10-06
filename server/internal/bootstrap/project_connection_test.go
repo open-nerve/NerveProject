@@ -233,7 +233,16 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		twoLevels)
 	refusedWith(t, send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
 		twoLevels)
-	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"name":"Widgets","parent_id":null}`, http.StatusOK)
+	// UI, under Bug, renamed and moved to the top by a null parent.
+	var widgets struct {
+		ID       uuid.UUID  `json:"id"`
+		Name     string     `json:"name"`
+		ParentID *uuid.UUID `json:"parent_id"`
+	}
+	answer := send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"name":"Widgets","parent_id":null}`, http.StatusOK)
+	if decodeAnswer(t, answer, &widgets); widgets.ID != ui.ID || widgets.Name != "Widgets" || widgets.ParentID != nil {
+		t.Errorf("UI renamed Widgets at the top = %s; want UI, named Widgets, at the top", answer)
+	}
 	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"parent_id":"`+bug.ID.String()+`"}`, http.StatusOK)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
