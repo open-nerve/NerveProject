@@ -125,6 +125,11 @@ type CreateLabelUseCase interface {
 	Execute(ctx context.Context, projectID uuid.UUID, in domain.LabelCreate) (domain.Label, error)
 }
 
+// UpdateLabelUseCase is app.UpdateLabel.
+type UpdateLabelUseCase interface {
+	Execute(ctx context.Context, id uuid.UUID, p domain.LabelPatch) (domain.Label, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects        ListProjectsUseCase
@@ -150,6 +155,7 @@ type UseCases struct {
 	MarkDefaultState    MarkDefaultStateUseCase
 	ListWorkspaceStates ListWorkspaceStatesUseCase
 	CreateLabel         CreateLabelUseCase
+	UpdateLabel         UpdateLabelUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

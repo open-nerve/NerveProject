@@ -46,16 +46,17 @@ var underProject = map[string]struct {
 }{
 	"{project_member_id}": {"membership", func(s seeded) map[string]uuid.UUID { return s.projectMembers }},
 	"{state_id}":          {"state", func(s seeded) map[string]uuid.UUID { return s.states }},
+	"{label_id}":          {"label", func(s seeded) map[string]uuid.UUID { return s.labels }},
 }
 
 // targetViolation is what is wrong with where path, a path of pattern that
 // a cell of the column c sends, points; "" when nothing. A workspace named
 // by its slug ({slug} right after workspaces) must be workspaceOf(c). A
 // project named by its id ({project_id}) must be projectOf(c)'s, and a row
-// under a project (underProject: a project membership, a state) one seeded
-// in projectOf(c), each from a column of a project table (projectTables):
-// a project's operation in a workspace-level row, or the only admin's,
-// would leave the project level's own columns unasked.
+// under a project (underProject: a project membership, a state, a label)
+// one seeded in projectOf(c), each from a column of a project table
+// (projectTables): a project's operation in a workspace-level row, or the
+// only admin's, would leave the project level's own columns unasked.
 // Any other row named by its id (a parameter ending in _id) must be a row
 // of s under workspaceOf(c): a cell of the deleted workspace's column that
 // named acme would get the 404 of a workspace its caller is not in, and

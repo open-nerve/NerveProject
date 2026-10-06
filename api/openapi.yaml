@@ -99,6 +99,8 @@ paths:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1states'
   /api/v0/projects/{project_id}/labels:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1labels'
+  /api/v0/labels/{label_id}:
+    $ref: 'modules/project.yaml#/paths/~1api~1v0~1labels~1{label_id}'
   /api/v0/me/projects/{project_id}/preferences:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1me~1projects~1{project_id}~1preferences'
 components:

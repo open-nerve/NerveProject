@@ -166,6 +166,21 @@ type LabelCreate struct {
 	ParentID *uuid.UUID `json:"parent_id,omitempty"`
 }
 
+// LabelUpdate Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top.
+type LabelUpdate struct {
+	// Color At most 255 characters; empty for none.
+	Color *string `json:"color,omitempty"`
+
+	// Name 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+	Name *string `json:"name,omitempty"`
+
+	// ParentID A label of the project at the top, not this one, which the label goes under; null for the top.
+	ParentID nullable.Nullable[uuid.UUID] `json:"parent_id,omitempty"`
+
+	// SortOrder The label's place among the project's labels, the lowest first.
+	SortOrder *float64 `json:"sort_order,omitempty"`
+}
+
 // LogoEmoji defines model for LogoEmoji.
 type LogoEmoji struct {
 	// URL The address of a custom emoji.
@@ -448,6 +463,9 @@ type StateUpdate struct {
 	Sequence *float64 `json:"sequence,omitempty"`
 }
 
+// LabelID defines model for LabelID.
+type LabelID = uuid.UUID
+
 // ProjectID defines model for ProjectID.
 type ProjectID = uuid.UUID
 
@@ -468,6 +486,9 @@ type ListProjectsParams struct {
 	// Archived true lists the archived projects alone; false, or no value, the others.
 	Archived *bool `form:"archived,omitempty" json:"archived,omitempty"`
 }
+
+// UpdateLabelJSONRequestBody defines body for UpdateLabel for application/json ContentType.
+type UpdateLabelJSONRequestBody = LabelUpdate
 
 // UpdateProjectPreferencesJSONRequestBody defines body for UpdateProjectPreferences for application/json ContentType.
 type UpdateProjectPreferencesJSONRequestBody = ProjectPreferencesUpdate
@@ -495,6 +516,9 @@ type CreateProjectJSONRequestBody = ProjectCreate
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// UpdateLabel Change a label
+	// (PATCH /api/v0/labels/{label_id})
+	UpdateLabel(w http.ResponseWriter, r *http.Request, labelID LabelID)
 	// GetProjectPreferences Read the caller's display settings in a project
 	// (GET /api/v0/me/projects/{project_id}/preferences)
 	GetProjectPreferences(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -574,6 +598,32 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// UpdateLabel operation middleware
+func (siw *ServerInterfaceWrapper) UpdateLabel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "label_id" -------------
+	var labelID LabelID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "label_id", r.PathValue("label_id"), &labelID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "label_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateLabel(w, r, labelID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetProjectPreferences operation middleware
 func (siw *ServerInterfaceWrapper) GetProjectPreferences(w http.ResponseWriter, r *http.Request) {
@@ -1339,6 +1389,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.CreateLabel)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/labels/{label_id}", wrapper.UpdateLabel)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1353,6 +1404,53 @@ type ProblemApplicationProblemPlusJSONResponse struct {
 	Body externalRef0.Problem
 
 	Headers ProblemResponseHeaders
+}
+
+type UpdateLabelRequestObject struct {
+	LabelID LabelID `json:"label_id"`
+	Body    *UpdateLabelJSONRequestBody
+}
+
+type UpdateLabelResponseObject interface {
+	VisitUpdateLabelResponse(w http.ResponseWriter) error
+}
+
+type UpdateLabel200JSONResponse Label
+
+func (response UpdateLabel200JSONResponse) VisitUpdateLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateLabeldefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response UpdateLabeldefaultApplicationProblemPlusJSONResponse) VisitUpdateLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetProjectPreferencesRequestObject struct {
@@ -2395,6 +2493,9 @@ func (response ListWorkspaceStatesdefaultApplicationProblemPlusJSONResponse) Vis
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// UpdateLabel Change a label
+	// (PATCH /api/v0/labels/{label_id})
+	UpdateLabel(ctx context.Context, request UpdateLabelRequestObject) (UpdateLabelResponseObject, error)
 	// GetProjectPreferences Read the caller's display settings in a project
 	// (GET /api/v0/me/projects/{project_id}/preferences)
 	GetProjectPreferences(ctx context.Context, request GetProjectPreferencesRequestObject) (GetProjectPreferencesResponseObject, error)
@@ -2503,6 +2604,39 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// UpdateLabel operation middleware
+func (sh *strictHandler) UpdateLabel(w http.ResponseWriter, r *http.Request, labelID LabelID) {
+	var request UpdateLabelRequestObject
+
+	request.LabelID = labelID
+
+	var body UpdateLabelJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateLabel(ctx, request.(UpdateLabelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateLabel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateLabelResponseObject); ok {
+		if err := validResponse.VisitUpdateLabelResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // GetProjectPreferences operation middleware

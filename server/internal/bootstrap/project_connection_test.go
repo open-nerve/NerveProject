@@ -167,8 +167,9 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // Checked, creates Done in the completed group, deletes Checked, which
 // counts the group again, and makes Done Web's default; she creates the
 // label Bug in it, UI under Bug, and Icons under UI, which the parent's
-// read refuses (422: labels have two levels); carol, an admin, leaves it;
-// alice deletes both projects.
+// read refuses (422: labels have two levels); she moves Bug under UI,
+// which the same read refuses, renames UI Widgets at the top, and moves it
+// back under Bug; carol, an admin, leaves it; alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -230,6 +231,10 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		Message: "must be a label without a parent: labels have two levels"}}}
 	refusedWith(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
 		twoLevels)
+	refusedWith(t, send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
+		twoLevels)
+	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"name":"Widgets","parent_id":null}`, http.StatusOK)
+	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"parent_id":"`+bug.ID.String()+`"}`, http.StatusOK)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

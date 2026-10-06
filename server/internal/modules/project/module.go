@@ -5,11 +5,11 @@
 // the members, changing a member's role, removing a member and leaving,
 // each member's display settings, listing, creating, changing and deleting
 // a project's states and making one its default, listing the states of a
-// workspace's projects one is a member of, creating a project's labels,
-// carries out the workspace module's cascades on the projects
-// (ProjectCascade), and offers the access module its reads of a project
-// (ProjectAccess) and the workspace module its count of an account's ended
-// project memberships (ProjectMembershipCounts).
+// workspace's projects one is a member of, creating and changing a
+// project's labels, carries out the workspace module's cascades on the
+// projects (ProjectCascade), and offers the access module its reads of a
+// project (ProjectAccess) and the workspace module its count of an
+// account's ended project memberships (ProjectMembershipCounts).
 package project
 
 import (
@@ -150,6 +150,7 @@ func New(d Deps) *Module {
 		MarkDefaultState:    app.NewMarkDefaultState(locks, store, d.Tx, d.Clock),
 		ListWorkspaceStates: app.NewListWorkspaceStates(d.Workspaces, store, d.Authorizer),
 		CreateLabel:         app.NewCreateLabel(locks, store, d.Tx, d.Clock),
+		UpdateLabel:         app.NewUpdateLabel(locks, store, d.Tx, d.Clock),
 	}}
 }
 

@@ -1322,6 +1322,37 @@ paths:
                 $ref: '#/components/schemas/Label'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/labels/{label_id}:
+    parameters:
+      - $ref: '#/components/parameters/LabelID'
+    patch:
+      operationId: updateLabel
+      tags:
+        - project
+      summary: Change a label
+      description: 'For the project''s admins, and its members who are the workspace''s admins; an archived project''s labels change as any other''s. The fields given change and the others stay; the values follow createLabel''s rules, and the sort order is any number (validation_failed), checked before the label is looked at. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. A parent given is a label of the project at the top, not the label itself, and a label with labels under it takes none: labels have two levels (parent_id not_allowed); a null parent moves the label to the top. The name may not be another undeleted label''s of the project, in any case (project.label_name_taken). The role is decided after the workspace and project rows are locked, and the parent is checked after it.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - validation_failed
+        - project.label_not_found
+        - forbidden
+        - project.label_name_taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelUpdate'
+      responses:
+        '200':
+          description: The label as changed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -2718,6 +2749,26 @@ components:
         updated_at:
           type: string
           format: date-time
+    LabelUpdate:
+      description: Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top.
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+          type: string
+        color:
+          description: At most 255 characters; empty for none.
+          type: string
+        parent_id:
+          description: A label of the project at the top, not this one, which the label goes under; null for the top.
+          type:
+            - string
+            - 'null'
+          format: uuid
+        sort_order:
+          description: The label's place among the project's labels, the lowest first.
+          type: number
     ProjectTab:
       description: A tab of a project's header.
       type: string
@@ -2833,6 +2884,14 @@ components:
       in: path
       required: true
       description: A state's id (State.id).
+      schema:
+        type: string
+        format: uuid
+    LabelID:
+      name: label_id
+      in: path
+      required: true
+      description: A label's id (Label.id).
       schema:
         type: string
         format: uuid

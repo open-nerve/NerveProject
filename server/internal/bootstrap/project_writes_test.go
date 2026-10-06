@@ -28,10 +28,11 @@ import (
 // wrote, by $1 Web's id and $2 alice's, and finds each one the write
 // writes. Bob and carol, whom she adds, are acme's members; she makes bob
 // an admin of Web, removes carol, creates a state and renames it, archives
-// Web, deletes the state, makes Done the default and creates a label,
-// unarchives Web, and leaves it. Each row the write writes again is first
-// made bob's, as last written by him, and checked so: a write that kept its
-// row's writer would pass for alice's otherwise, she having made it.
+// Web, deletes the state, makes Done the default, creates a label and
+// renames it, unarchives Web, and leaves it. Each row the write writes
+// again is first made bob's, as last written by him, and checked so: a
+// write that kept its row's writer would pass for alice's otherwise, she
+// having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -53,12 +54,13 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	bobs := func(table, where string) string {
 		return "UPDATE " + table + " SET updated_by_id = $3 WHERE " + where + " AND updated_by_id = $2"
 	}
-	// membership is the id of user's membership of Web; state, of Web's
-	// state name.
+	// membership is the id of user's membership of Web; state and label, of
+	// Web's state or label name.
 	membership := func(user uuid.UUID) func() uuid.UUID {
 		return func() uuid.UUID { return projectMemberships(t, pool, user, web)[0] }
 	}
 	state := func(name string) func() uuid.UUID { return func() uuid.UUID { return stateID(t, pool, web, name) } }
+	label := func(name string) func() uuid.UUID { return func() uuid.UUID { return labelID(t, pool, web, name) } }
 	for _, w := range []struct {
 		name, method, path, body string
 		named                    func() uuid.UUID // the row under Web the path names by its id, as %s; nil when it names Web
@@ -144,6 +146,10 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		{"createLabel", http.MethodPost, "/api/v0/projects/" + web.String() + "/labels", `{"name":"QA"}`, nil, http.StatusCreated, "",
 			"SELECT created_at, created_by_id = $2 AND updated_by_id = $2 AND updated_at = created_at FROM labels WHERE project_id = $1 AND name = 'QA'",
 			0, 1},
+		// The label QA, renamed Checked.
+		{"updateLabel", http.MethodPatch, "/api/v0/labels/%s", `{"name":"Checked"}`, label("QA"), http.StatusOK,
+			bobs("labels", "project_id = $1 AND name = 'QA'"),
+			"SELECT updated_at, updated_by_id = $2 AND name = 'Checked' FROM labels WHERE project_id = $1 AND name IN ('QA', 'Checked')", 1, 1},
 		{"unarchiveProject, after the state and label writes", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", nil,
 			http.StatusOK, bobs("projects", "id = $1"),
 			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1, 1},
@@ -240,6 +246,17 @@ func stateID(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string) u
 	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM states WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL", project,
 		name).Scan(&id); err != nil {
 		t.Fatalf("the state %s of %s: %v", name, project, err)
+	}
+	return id
+}
+
+// labelID is the id of project's undeleted label name.
+func labelID(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := pool.QueryRow(pgtest.Soon(t), "SELECT id FROM labels WHERE project_id = $1 AND name = $2 AND deleted_at IS NULL", project,
+		name).Scan(&id); err != nil {
+		t.Fatalf("the label %s of %s: %v", name, project, err)
 	}
 	return id
 }

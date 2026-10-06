@@ -41,6 +41,41 @@ func toProject(method, path, body string) func(caller, seeded) (string, string, 
 	}
 }
 
+// rowsByID is a kind of row under a project that the writes of the matrix
+// name by its id, /api/v0/<path>/{id}: a state (stateRows), a label
+// (labelRows). notFound answers a caller who does not see the row's
+// project, and find is the seeded row of a project by its name.
+type rowsByID struct {
+	path     string
+	notFound cell
+	find     func(s seeded, project, name string) uuid.UUID
+}
+
+// of are the cells of a row of a write on one: the answers of PA, PM, PG,
+// PM+WA, WA- and WM-公, and notFound for the columns that do not see their
+// project: WM-私, WG-, P-前 and X, whose row in gone's project is deleted
+// with it.
+func (k rowsByID) of(pa, pm, pg, pmwa, wa, wm cell) map[caller]cell {
+	return map[caller]cell{callerProjectAdmin: pa, callerProjectMember: pm, callerProjectGuest: pg, callerMemberAndAdmin: pmwa,
+		callerAdminOnly: wa, callerMemberPublic: wm, callerMemberPrivate: k.notFound, callerGuestOnly: k.notFound,
+		callerBefore: k.notFound, callerNever: k.notFound, callerRemoved: k.notFound, callerDeleted: k.notFound}
+}
+
+// ofArchived are the cells of a row of a write on one of the archived
+// project: the answers of PA and of the workspace's member, who sees the
+// project, and notFound for X, who does not.
+func (k rowsByID) ofArchived(pa, wm cell) map[caller]cell {
+	return map[caller]cell{callerArchivedAdmin: pa, callerArchivedMember: wm, callerArchivedNever: k.notFound}
+}
+
+// to is the request of a row whose callers each send method, with body,
+// to the row name of their column's project, after its id.
+func (k rowsByID) to(method, after, name, body string) func(caller, seeded) (string, string, string) {
+	return func(c caller, s seeded) (string, string, string) {
+		return method, "/api/v0/" + k.path + "/" + k.find(s, projectOf(c), name).String() + after, body
+	}
+}
+
 func projectMatrixRows() []matrixRow {
 	return []matrixRow{
 		{op: "listProjects", request: toWorkspace(http.MethodGet, "/projects", ""), cells: inWorkspace(cellOK, cellOK, cellOK),

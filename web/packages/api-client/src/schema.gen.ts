@@ -886,6 +886,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/labels/{label_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A label's id (Label.id). */
+                label_id: components["parameters"]["LabelID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change a label
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels change as any other's. The fields given change and the others stay; the values follow createLabel's rules, and the sort order is any number (validation_failed), checked before the label is looked at. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. A parent given is a label of the project at the top, not the label itself, and a label with labels under it takes none: labels have two levels (parent_id not_allowed); a null parent moves the label to the top. The name may not be another undeleted label's of the project, in any case (project.label_name_taken). The role is decided after the workspace and project rows are locked, and the parent is checked after it.
+         */
+        patch: operations["updateLabel"];
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1599,6 +1622,20 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top. */
+        LabelUpdate: {
+            /** @description 1–255 characters, not blank; another undeleted label of the project may not have it, in any case. */
+            name?: string;
+            /** @description At most 255 characters; empty for none. */
+            color?: string;
+            /**
+             * Format: uuid
+             * @description A label of the project at the top, not this one, which the label goes under; null for the top.
+             */
+            parent_id?: string | null;
+            /** @description The label's place among the project's labels, the lowest first. */
+            sort_order?: number;
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1652,6 +1689,8 @@ export interface components {
         ProjectMemberID: string;
         /** @description A state's id (State.id). */
         StateID: string;
+        /** @description A label's id (Label.id). */
+        LabelID: string;
     };
     requestBodies: never;
     headers: never;
@@ -1727,6 +1766,7 @@ export type StateCreate = components['schemas']['StateCreate'];
 export type StateUpdate = components['schemas']['StateUpdate'];
 export type LabelCreate = components['schemas']['LabelCreate'];
 export type Label = components['schemas']['Label'];
+export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -1739,6 +1779,7 @@ export type ParameterInvitationId = components['parameters']['InvitationID'];
 export type ParameterProjectId = components['parameters']['ProjectID'];
 export type ParameterProjectMemberId = components['parameters']['ProjectMemberID'];
 export type ParameterStateId = components['parameters']['StateID'];
+export type ParameterLabelId = components['parameters']['LabelID'];
 export type $defs = Record<string, never>;
 export interface operations {
     register: {
@@ -3079,6 +3120,34 @@ export interface operations {
         responses: {
             /** @description The new label. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Label"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    updateLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A label's id (Label.id). */
+                label_id: components["parameters"]["LabelID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelUpdate"];
+            };
+        };
+        responses: {
+            /** @description The label as changed. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

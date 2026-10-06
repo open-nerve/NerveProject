@@ -15,13 +15,21 @@ import (
 )
 
 // The rows of the permission matrix of a project's labels (M3 design 9.2):
-// creating them, under the project of each column; and the labels they
-// rest on, matrixLabels, which prepareMatrix seeds in each project through
-// the project store (labels) and reads back (seededLabels). They are here
-// rather than in permission_matrix_seed_test.go, which has no room for
-// them.
+// creating them, under the project of each column, and the writes on one,
+// naming it by its id (/labels/{label_id}) among its column's project's
+// seeded labels; and the labels they rest on, matrixLabels, which
+// prepareMatrix seeds in each project through the project store (labels)
+// and reads back (seededLabels). They are here rather than in
+// permission_matrix_seed_test.go, which has no room for them.
 
-var cellLabelNameTaken = cell{http.StatusConflict, "project.label_name_taken"}
+var (
+	cellLabelNameTaken = cell{http.StatusConflict, "project.label_name_taken"}
+	cellLabelNotFound  = cell{http.StatusNotFound, "project.label_not_found"}
+)
+
+// labelRows are the labels the writes of the matrix name by id: a column
+// that does not see its project answers project.label_not_found.
+var labelRows = rowsByID{path: "labels", notFound: cellLabelNotFound, find: seeded.label}
 
 // matrixLabels are the labels prepareMatrix seeds in each project of
 // matrixProjects, by its workspace's admin, at the sort orders createLabel
@@ -77,6 +85,33 @@ func labelMatrixRows() []matrixRow {
 		// 3.19).
 		{op: "createLabel", variant: "archived", write: true, columns: archivedColumns, request: toProject(http.MethodPost, "/labels", newLabel),
 			cells: ofArchived(cellCreated, cellForbidden), check: createsTheLabel},
+		// As createLabel: Feature renamed.
+		{op: "updateLabel", write: true, columns: projectColumns, request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"Story"}`),
+			cells: labelRows.of(cellOK, cellForbidden, cellForbidden, cellOK, cellForbidden, cellForbidden), check: renamesTheLabel},
+		{op: "updateLabel", variant: "a name taken", write: true, columns: projectColumns,
+			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"bug"}`),
+			cells:   labelRows.of(cellLabelNameTaken, cellForbidden, cellForbidden, cellLabelNameTaken, cellForbidden, cellForbidden)},
+		// Bug, which has UI under it, under Feature: the parent is checked
+		// after the decision.
+		{op: "updateLabel", variant: "a label with labels under it given a parent", write: true, columns: projectColumns,
+			request: func(c caller, s seeded) (string, string, string) {
+				return labelRows.to(http.MethodPatch, "", "Bug", `{"parent_id":"`+s.label(projectOf(c), "Feature").String()+`"}`)(c, s)
+			},
+			cells:   labelRows.of(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "parent_id not_allowed"},
+		// A value refused before the label is looked at: the same 422 in
+		// every column.
+		{op: "updateLabel", variant: "a value refused", write: true, columns: projectColumns,
+			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":""}`), cells: func() map[caller]cell {
+				cells := map[caller]cell{}
+				for _, c := range projectColumns {
+					cells[c] = cellValidationFailed
+				}
+				return cells
+			}(), refusal: "name too_short"},
+		{op: "updateLabel", variant: "archived", write: true, columns: archivedColumns,
+			request: labelRows.to(http.MethodPatch, "", "Feature", `{"name":"Story"}`), cells: labelRows.ofArchived(cellOK, cellForbidden),
+			check: renamesTheLabel},
 	}
 }
 
@@ -93,6 +128,23 @@ func createsTheLabel(t *testing.T, c caller, s seeded, answer string) {
 	decodeAnswer(t, answer, &l)
 	if l.ProjectID != s.project(projectOf(c)) || l.ParentID != nil || l.Name != "QA" || l.Color != "#0EA5E9" || l.SortOrder != 95535 {
 		t.Errorf("%s creates %s; want QA in %s, at the top, at 95535", c, answer, projectOf(c))
+	}
+}
+
+// renamesTheLabel: the column's project's Feature, at the top, renamed
+// Story, as stored.
+func renamesTheLabel(t *testing.T, c caller, s seeded, answer string) {
+	var l struct {
+		ID        uuid.UUID  `json:"id"`
+		ProjectID uuid.UUID  `json:"project_id"`
+		ParentID  *uuid.UUID `json:"parent_id"`
+		Name      string     `json:"name"`
+		SortOrder float64    `json:"sort_order"`
+	}
+	decodeAnswer(t, answer, &l)
+	if l.ID != s.label(projectOf(c), "Feature") || l.ProjectID != s.project(projectOf(c)) || l.ParentID != nil || l.Name != "Story" ||
+		l.SortOrder != 85535 {
+		t.Errorf("%s renames %s; want %s's Feature, at the top, at 85535, named Story", c, answer, projectOf(c))
 	}
 }
 
