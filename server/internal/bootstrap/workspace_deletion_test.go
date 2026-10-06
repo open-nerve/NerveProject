@@ -141,9 +141,9 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 // membership, which the creation writes; the member's, and an invitation
 // the admin sent, through the workspace store; the admin's display
 // settings, through the API; a project with the member's membership, his
-// display settings in it and a state (seedProject). A phase that adds a
-// table under workspaces seeds a row of it here. It returns the workspace's
-// id.
+// display settings in it, a state and two labels (seedProject). A phase
+// that adds a table under workspaces seeds a row of it here. It returns the
+// workspace's id.
 func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *pgxpool.Pool, token, slug string) uuid.UUID {
 	t.Helper()
 	if status, body := call(t, contract, http.MethodPost, base+"/api/v0/workspaces", token, `{"name":"`+slug+`","slug":"`+slug+`"}`); status != http.StatusCreated {
@@ -174,9 +174,11 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 }
 
 // seedProject writes a project of the workspace id, created by admin,
-// with member's membership, his display settings in it and one state,
-// directly: the seed does not depend on which of the project module's
-// writes exist, nor on what they write besides.
+// with member's membership, his display settings in it, one state, and a
+// label with its child by member (seedLabels), directly: the seed does not
+// depend on which of the project module's writes exist, nor on what they
+// write besides. No row under the project is admin's last, so a deletion
+// by admin that kept a row's writer would show.
 func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) {
 	t.Helper()
 	ctx, project := context.Background(), uuid.NewV7()
@@ -196,12 +198,13 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) 
 			t.Fatal(err)
 		}
 	}
+	seedLabels(t, pool, project, member)
 }
 
 // A failing projects' step fails the whole deletion (M3 design 3.3, 9.3):
 // when it fails on the wired app, deleteWorkspace answers the failure and
 // every row rolls back, under either workspace, the projects' and the
-// workspace's own. The states table, renamed while the request runs, fails
+// workspace's own. The labels table, renamed while the request runs, fails
 // the last statement of the cascade. It does not show that the statements
 // share the deletion's one transaction: the projects' statements in a
 // transaction of their own roll back here too, with the failing one.
@@ -230,11 +233,11 @@ func TestAFailedProjectsStepRollsTheDeletionBack(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	exec("ALTER TABLE states RENAME TO states_away")
+	exec("ALTER TABLE labels RENAME TO labels_away")
 	status, body := call(t, contract, http.MethodDelete, base+"/api/v0/workspaces/deleted", admin, "")
-	exec("ALTER TABLE states_away RENAME TO states")
+	exec("ALTER TABLE labels_away RENAME TO labels")
 	if status != http.StatusInternalServerError {
-		t.Fatalf("deleting the workspace with the states' step failing = %d %s, want 500", status, body)
+		t.Fatalf("deleting the workspace with the labels' step failing = %d %s, want 500", status, body)
 	}
 	if after := rowsOf(); !slices.Equal(after, before) {
 		t.Errorf("the rows after the failed deletion:\n%q\nwant\n%q", after, before)

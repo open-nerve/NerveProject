@@ -57,6 +57,16 @@ func (s *Store) DeleteStates(ctx context.Context, d app.Deletion) error {
 	return nil
 }
 
+// DeleteLabels soft-deletes the projects' labels, parents and children
+// alike.
+func (s *Store) DeleteLabels(ctx context.Context, d app.Deletion) error {
+	err := s.queries(ctx).DeleteLabels(ctx, gen.DeleteLabelsParams{WorkspaceID: d.WorkspaceID, ProjectID: d.ProjectID, DeletedBy: d.By, Now: d.Now})
+	if err != nil {
+		return fmt.Errorf("delete the labels: %w", err)
+	}
+	return nil
+}
+
 // LockMemberProjects locks FOR NO KEY UPDATE, in id order, the workspace's
 // undeleted projects in which userID has an undeleted membership, active or
 // not, and returns their ids (app.MemberDemoter).

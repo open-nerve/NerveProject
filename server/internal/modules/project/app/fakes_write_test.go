@@ -262,6 +262,10 @@ func (f *fakeStore) DeleteStates(ctx context.Context, d app.Deletion) error {
 	return f.deleting(ctx, "DeleteStates", d)
 }
 
+func (f *fakeStore) DeleteLabels(ctx context.Context, d app.Deletion) error {
+	return f.deleting(ctx, "DeleteLabels", d)
+}
+
 func (f *fakeStore) GetProject(ctx context.Context, id, userID uuid.UUID) (domain.Project, bool, error) {
 	f.log.add(ctx, "GetProject %s for %s", id, userID)
 	if err := f.fail("GetProject"); err != nil {

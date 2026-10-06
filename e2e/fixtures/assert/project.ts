@@ -191,9 +191,11 @@ export async function expectProjectDeleted(db: Database, projectId: string, admi
     [projectId]
   );
   expect(project, `the project ${projectId}`).toEqual({ deleted: true, by: adminEmail });
+  // The labels are left out until the stories can write one: P7b's createLabel gives them the way, and P4 and W3 then
+  // write and check them.
   const tables = await db.query<{ name: string }>(
     `SELECT DISTINCT c.conrelid::regclass::text AS name FROM pg_constraint c
-      WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass ORDER BY 1`
+      WHERE c.contype = 'f' AND c.confrelid = 'projects'::regclass AND c.conrelid <> 'labels'::regclass ORDER BY 1`
   );
   expect(tables.length, "the tables under projects").toBeGreaterThan(0);
   // The database compares the moments: a Date holds milliseconds, a timestamptz microseconds.

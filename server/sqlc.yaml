@@ -58,6 +58,7 @@ sql:
       - migrations/sql/00011_project_project_members.sql
       - migrations/sql/00012_project_project_user_properties.sql
       - migrations/sql/00013_project_states.sql
+      - migrations/sql/00014_project_labels.sql
     queries: internal/modules/project/adapter/postgres/queries
     gen:
       go:

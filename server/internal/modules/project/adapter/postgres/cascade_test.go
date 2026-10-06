@@ -57,6 +57,7 @@ var projectTables = []struct {
 	perProject    int
 }{
 	{"projects", "id", 1}, {"project_members", "project_id", 2}, {"project_user_properties", "project_id", 2}, {"states", "project_id", 2},
+	{"labels", "project_id", 2},
 }
 
 // deletions reads the audit columns of the workspace's rows of each project
@@ -87,10 +88,10 @@ func deletions(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID) map[string
 }
 
 // seedProject writes a project of workspace named name, by alice at now,
-// with alice's and bob's memberships and display settings in it, and a
-// backlog state and the triage state, and returns its id. The rows are
-// written directly: the delete statements read no column the inserts of
-// the use cases would set otherwise.
+// with alice's and bob's memberships and display settings in it, a backlog
+// state and the triage state, and a label and its child, and returns its
+// id. The rows are written directly: the delete statements read no column
+// the inserts of the use cases would set otherwise.
 func seedProject(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, name string, alice, bob uuid.UUID) uuid.UUID {
 	t.Helper()
 	id := uuid.NewV7()
@@ -106,6 +107,8 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, name str
 		exec(t, pool, `INSERT INTO states (id, workspace_id, project_id, name, color, "group", created_by_id, updated_by_id, created_at, updated_at)
 			VALUES ($1, $2, $3, $4, '#60646C', $4, $5, $5, $6, $6)`, uuid.NewV7(), workspace, id, group, alice, now)
 	}
+	exec(t, pool, `INSERT INTO labels (id, workspace_id, project_id, parent_id, name, created_by_id, updated_by_id, created_at, updated_at)
+		VALUES ($1, $2, $3, NULL, 'Bug', $4, $4, $5, $5), ($6, $2, $3, $1, 'UI', $4, $4, $5, $5)`, uuid.NewV7(), workspace, id, alice, now, uuid.NewV7())
 	return id
 }
 
@@ -197,12 +200,13 @@ func checkDeletions(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID, want 
 	}
 }
 
-// The four steps, on every project of a workspace, in one transaction,
+// The five steps, on every project of a workspace, in one transaction,
 // soft-delete the workspace's projects, archived ones too, every membership
-// of them, active or not, every member's display settings in them and
-// every state, the triage ones too, at the same moment and by the same
-// account; a row deleted before keeps its time, and another workspace
-// keeps everything. Running the steps again changes nothing.
+// of them, active or not, every member's display settings in them, every
+// state, the triage ones too, and every label, parents and children alike,
+// at the same moment and by the same account; a row deleted before keeps
+// its time, and another workspace keeps everything. Running the steps again
+// changes nothing.
 func TestDeletingAWorkspaceSoftDeletesItsProjects(t *testing.T) {
 	s, pool := newStore(t)
 	alice, bob := newAccount(t, pool, "alice@corp.com"), newAccount(t, pool, "bob@corp.com")
@@ -246,7 +250,7 @@ func unwritten(t *testing.T, pool *pgxpool.Pool, workspace uuid.UUID) string {
 	return all
 }
 
-// The four steps, on one project, soft-delete it and the rows under it
+// The five steps, on one project, soft-delete it and the rows under it
 // alone, archived or not, the first project of its workspace or the last
 // undeleted one, at the same moment and by the same account, writing no
 // other column: the workspace's other project, its project deleted before
@@ -284,7 +288,7 @@ func TestDeletingAProjectSoftDeletesItsRowsAlone(t *testing.T) {
 	}
 }
 
-// The four steps, on a project of another workspace than the deletion's,
+// The five steps, on a project of another workspace than the deletion's,
 // change nothing: the workspace bounds a project's deletion too, so
 // neither workspace loses a row, the named project included.
 func TestDeletingAnotherWorkspacesProjectChangesNothing(t *testing.T) {
