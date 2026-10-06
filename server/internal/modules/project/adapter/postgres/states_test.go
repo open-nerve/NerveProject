@@ -24,7 +24,8 @@ var earlier = now.Add(-time.Hour)
 
 // stateWorld is acme's Web and Ops and beta's Site, each with the six
 // default states, made by maker at earlier: no write of the tests is by
-// maker. alice writes.
+// maker. alice writes. The label tests add their labels the same way
+// (addLabel).
 type stateWorld struct {
 	s              *postgresadapter.Store
 	pool           *pgxpool.Pool
@@ -66,15 +67,20 @@ func seedDefaultStates(t *testing.T, s *postgresadapter.Store, workspace, projec
 	return ids
 }
 
+// workspaceOf is the workspace of w's project: beta's for Site, acme's
+// for the others.
+func (w stateWorld) workspaceOf(project uuid.UUID) uuid.UUID {
+	if project == w.site {
+		return w.beta
+	}
+	return w.acme
+}
+
 // addState stores a state of w's project, made by maker at earlier, with
 // the id given, and returns it as CreateState answers it.
 func (w stateWorld) addState(t *testing.T, project, id uuid.UUID, st domain.NewState) domain.State {
 	t.Helper()
-	workspace := w.acme
-	if project == w.site {
-		workspace = w.beta
-	}
-	got, err := w.s.CreateState(context.Background(), app.StateRow{ID: id, WorkspaceID: workspace, ProjectID: project, State: st,
+	got, err := w.s.CreateState(context.Background(), app.StateRow{ID: id, WorkspaceID: w.workspaceOf(project), ProjectID: project, State: st,
 		CreatedBy: w.maker, Now: earlier})
 	if err != nil {
 		t.Fatal(err)
