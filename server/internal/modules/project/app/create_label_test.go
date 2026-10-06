@@ -44,9 +44,10 @@ func labelCreated(user, project uuid.UUID, in domain.LabelCreate, sortOrder floa
 // time; it answers the label as stored, the time to the microsecond:
 // web's at the top after its Feature, 95535; under its Bug, the same;
 // archived ops's, as any other's (3.19), after its Docs, 75535; and ops's,
-// its labels gone, at 65535. The use case makes each label's id: a second
-// label's differs from the first's, and neither is the nil id, the
-// project's, or a label's the fixture had.
+// its labels gone, at 65535. A second label comes 10000 after the first:
+// each creation reads the greatest sort order again (4.10). The use case
+// makes each label's id: the second label's differs from the first's, and
+// neither is the nil id, the project's, or a label's the fixture had.
 func TestCreateLabel(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
@@ -78,8 +79,9 @@ func TestCreateLabel(t *testing.T) {
 			second := tt.in
 			second.Name = "QA again"
 			again, err := uc.Execute(as(bob), tt.project, second)
-			if err != nil || again.ID == got.ID {
-				t.Errorf("a second label = %s, %v; want another id than the first's, %s", again.ID, err, got.ID)
+			if err != nil || again.ID == got.ID || again.SortOrder != tt.sortOrder+10000 {
+				t.Errorf("a second label = %s at %v, %v; want another id than the first's, %s, at %v", again.ID, again.SortOrder, err, got.ID,
+					tt.sortOrder+10000)
 			}
 			for _, id := range []uuid.UUID{got.ID, again.ID} {
 				if _, had := before[id]; had || id == uuid.Nil() || id == tt.project {

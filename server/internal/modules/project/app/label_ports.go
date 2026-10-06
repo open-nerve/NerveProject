@@ -33,10 +33,11 @@ type LabelFinder interface {
 	LabelByID(ctx context.Context, id uuid.UUID) (l domain.Label, found bool, err error)
 }
 
-// LabelCreator is createLabel's repository. Each method runs in the
-// transaction ctx carries, under the project's FOR NO KEY UPDATE, which
-// every write of its labels takes, so that its labels stay as read (M3
-// design 3.16).
+// LabelCreator is createLabel's repository. GreatestSortOrder and
+// CreateLabel run in the transaction ctx carries, under the project's FOR
+// NO KEY UPDATE, which every write of its labels takes, so that its labels
+// stay as read (M3 design 3.16); createLabel reads by LabelByID only the
+// parent given, under that lock too (checkParent).
 type LabelCreator interface {
 	LabelFinder
 	// GreatestSortOrder is the greatest sort order of projectID's undeleted
