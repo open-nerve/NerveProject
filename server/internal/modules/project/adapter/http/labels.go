@@ -7,6 +7,20 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 )
 
+// ListLabels serves GET /api/v0/projects/{project_id}/labels: data an
+// array, never null.
+func (h handler) ListLabels(ctx context.Context, req gen.ListLabelsRequestObject) (gen.ListLabelsResponseObject, error) {
+	list, err := h.uc.ListLabels.Execute(ctx, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	out := gen.LabelList{Data: make([]gen.Label, len(list))}
+	for i, l := range list {
+		out.Data[i] = label(l)
+	}
+	return gen.ListLabels200JSONResponse(out), nil
+}
+
 // CreateLabel serves POST /api/v0/projects/{project_id}/labels: the color
 // empty and the parent nil when not given.
 func (h handler) CreateLabel(ctx context.Context, req gen.CreateLabelRequestObject) (gen.CreateLabelResponseObject, error) {

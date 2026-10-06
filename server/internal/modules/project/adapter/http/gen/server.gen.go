@@ -166,6 +166,11 @@ type LabelCreate struct {
 	ParentID *uuid.UUID `json:"parent_id,omitempty"`
 }
 
+// LabelList defines model for LabelList.
+type LabelList struct {
+	Data []Label `json:"data"`
+}
+
 // LabelUpdate Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top.
 type LabelUpdate struct {
 	// Color At most 255 characters; empty for none.
@@ -549,6 +554,9 @@ type ServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// ListLabels List a project's labels
+	// (GET /api/v0/projects/{project_id}/labels)
+	ListLabels(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// CreateLabel Create a label in a project
 	// (POST /api/v0/projects/{project_id}/labels)
 	CreateLabel(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -879,6 +887,32 @@ func (siw *ServerInterfaceWrapper) JoinProject(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.JoinProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListLabels operation middleware
+func (siw *ServerInterfaceWrapper) ListLabels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLabels(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1417,6 +1451,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.ListLabels)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.CreateLabel)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/api/v0/labels/{label_id}", wrapper.DeleteLabel)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/labels/{label_id}", wrapper.UpdateLabel)
@@ -1911,6 +1946,52 @@ type JoinProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response JoinProjectdefaultApplicationProblemPlusJSONResponse) VisitJoinProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLabelsRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+}
+
+type ListLabelsResponseObject interface {
+	VisitListLabelsResponse(w http.ResponseWriter) error
+}
+
+type ListLabels200JSONResponse LabelList
+
+func (response ListLabels200JSONResponse) VisitListLabelsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListLabelsdefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response ListLabelsdefaultApplicationProblemPlusJSONResponse) VisitListLabelsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2596,6 +2677,9 @@ type StrictServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(ctx context.Context, request JoinProjectRequestObject) (JoinProjectResponseObject, error)
+	// ListLabels List a project's labels
+	// (GET /api/v0/projects/{project_id}/labels)
+	ListLabels(ctx context.Context, request ListLabelsRequestObject) (ListLabelsResponseObject, error)
 	// CreateLabel Create a label in a project
 	// (POST /api/v0/projects/{project_id}/labels)
 	CreateLabel(ctx context.Context, request CreateLabelRequestObject) (CreateLabelResponseObject, error)
@@ -2986,6 +3070,32 @@ func (sh *strictHandler) JoinProject(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(JoinProjectResponseObject); ok {
 		if err := validResponse.VisitJoinProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListLabels operation middleware
+func (sh *strictHandler) ListLabels(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request ListLabelsRequestObject
+
+	request.ProjectID = projectID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListLabels(ctx, request.(ListLabelsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListLabels")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListLabelsResponseObject); ok {
+		if err := validResponse.VisitListLabelsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

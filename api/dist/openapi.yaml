@@ -1294,6 +1294,26 @@ paths:
   /api/v0/projects/{project_id}/labels:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listLabels
+      tags:
+        - project
+      summary: List a project's labels
+      description: 'For the project''s active members: its labels, those at the top and those under them alike, by sort order, the lowest first, then by id; an archived project''s as any other''s. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.'
+      security:
+        - bearer: []
+      x-problem-codes:
+        - project.not_found
+        - forbidden
+      responses:
+        '200':
+          description: The project's labels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createLabel
       tags:
@@ -2705,22 +2725,6 @@ components:
         sequence:
           description: The state's place among the project's states, the lowest first.
           type: number
-    LabelCreate:
-      type: object
-      additionalProperties: false
-      required:
-        - name
-      properties:
-        name:
-          description: 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
-          type: string
-        color:
-          description: At most 255 characters; empty when left out.
-          type: string
-        parent_id:
-          description: A label of the project at the top, which the new label goes under; left out for a label at the top.
-          type: string
-          format: uuid
     Label:
       description: A label of a project, at the top or under a label at the top.
       type: object
@@ -2765,6 +2769,32 @@ components:
         updated_at:
           type: string
           format: date-time
+    LabelList:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+    LabelCreate:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+          type: string
+        color:
+          description: At most 255 characters; empty when left out.
+          type: string
+        parent_id:
+          description: A label of the project at the top, which the new label goes under; left out for a label at the top.
+          type: string
+          format: uuid
     LabelUpdate:
       description: Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top.
       type: object

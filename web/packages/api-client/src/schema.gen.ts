@@ -873,7 +873,11 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List a project's labels
+         * @description For the project's active members: its labels, those at the top and those under them alike, by sort order, the lowest first, then by id; an archived project's as any other's. A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but is not a member of, forbidden. The whole collection at once: collections are not paginated.
+         */
+        get: operations["listLabels"];
         put?: never;
         /**
          * Create a label in a project
@@ -1592,17 +1596,6 @@ export interface components {
             /** @description The state's place among the project's states, the lowest first. */
             sequence?: number;
         };
-        LabelCreate: {
-            /** @description 1–255 characters, not blank; another undeleted label of the project may not have it, in any case. */
-            name: string;
-            /** @description At most 255 characters; empty when left out. */
-            color?: string;
-            /**
-             * Format: uuid
-             * @description A label of the project at the top, which the new label goes under; left out for a label at the top.
-             */
-            parent_id?: string;
-        };
         /** @description A label of a project, at the top or under a label at the top. */
         Label: {
             /** Format: uuid */
@@ -1625,6 +1618,20 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        LabelList: {
+            data: components["schemas"]["Label"][];
+        };
+        LabelCreate: {
+            /** @description 1–255 characters, not blank; another undeleted label of the project may not have it, in any case. */
+            name: string;
+            /** @description At most 255 characters; empty when left out. */
+            color?: string;
+            /**
+             * Format: uuid
+             * @description A label of the project at the top, which the new label goes under; left out for a label at the top.
+             */
+            parent_id?: string;
         };
         /** @description Changes the fields it names; a field left out keeps its value. Only parent_id can be null, which moves the label to the top. */
         LabelUpdate: {
@@ -1768,8 +1775,9 @@ export type State = components['schemas']['State'];
 export type StateList = components['schemas']['StateList'];
 export type StateCreate = components['schemas']['StateCreate'];
 export type StateUpdate = components['schemas']['StateUpdate'];
-export type LabelCreate = components['schemas']['LabelCreate'];
 export type Label = components['schemas']['Label'];
+export type LabelList = components['schemas']['LabelList'];
+export type LabelCreate = components['schemas']['LabelCreate'];
 export type LabelUpdate = components['schemas']['LabelUpdate'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
@@ -3101,6 +3109,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StateList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listLabels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The project's labels. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelList"];
                 };
             };
             default: components["responses"]["Problem"];

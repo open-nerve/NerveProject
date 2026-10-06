@@ -617,6 +617,28 @@ paths:
   /api/v0/projects/{project_id}/labels:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
+    get:
+      operationId: listLabels
+      tags: [project]
+      summary: List a project's labels
+      description: >-
+        For the project's active members: its labels, those at the top and
+        those under them alike, by sort order, the lowest first, then by id;
+        an archived project's as any other's. A project that does not
+        exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but is not a member of, forbidden.
+        The whole collection at once: collections are not paginated.
+      security: [{bearer: []}]
+      x-problem-codes: [project.not_found, forbidden]
+      responses:
+        '200':
+          description: The project's labels.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabelList'
+        default:
+          $ref: '#/components/responses/Problem'
     post:
       operationId: createLabel
       tags: [project]
@@ -1280,6 +1302,15 @@ components:
         updated_at:
           type: string
           format: date-time
+    LabelList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
     LabelCreate:
       type: object
       additionalProperties: false

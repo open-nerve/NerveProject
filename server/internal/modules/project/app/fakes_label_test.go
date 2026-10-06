@@ -62,6 +62,14 @@ func (f *fakeLabels) of(project uuid.UUID) []domain.Label {
 	return out
 }
 
+func (f *fakeLabels) ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error) {
+	f.log.add(ctx, "ListLabels %s", projectID)
+	if err := f.fail("ListLabels"); err != nil {
+		return nil, err
+	}
+	return f.of(projectID), nil
+}
+
 func (f *fakeLabels) GreatestSortOrder(ctx context.Context, projectID uuid.UUID) (*float64, error) {
 	f.log.add(ctx, "GreatestSortOrder %s", projectID)
 	if err := f.fail("GreatestSortOrder"); err != nil {

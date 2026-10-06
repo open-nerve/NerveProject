@@ -15,12 +15,13 @@ import (
 )
 
 // The rows of the permission matrix of a project's labels (M3 design 9.2):
-// creating them, under the project of each column, and the writes on one,
-// naming it by its id (/labels/{label_id}) among its column's project's
-// seeded labels; and the labels they rest on, matrixLabels, which
-// prepareMatrix seeds in each project through the project store (labels)
-// and reads back (seededLabels). They are here rather than in
-// permission_matrix_seed_test.go, which has no room for them.
+// listing and creating them, under the project of each column, and the
+// writes on one, naming it by its id (/labels/{label_id}) among its
+// column's project's seeded labels; and the labels they rest on,
+// matrixLabels, which prepareMatrix seeds in each project through the
+// project store (labels) and reads back (seededLabels). They are here
+// rather than in permission_matrix_seed_test.go, which has no room for
+// them.
 
 var (
 	cellLabelNameTaken = cell{http.StatusConflict, "project.label_name_taken"}
@@ -64,6 +65,13 @@ func withParent(parent func(c caller, s seeded) uuid.UUID) func(caller, seeded) 
 
 func labelMatrixRows() []matrixRow {
 	return []matrixRow{
+		// Every active member of the project (M3 design 9.2), as listStates.
+		{op: "listLabels", columns: projectColumns, request: toProject(http.MethodGet, "/labels", ""),
+			cells: ofProject(cellOK, cellOK, cellOK, cellOK, cellForbidden, cellForbidden), check: listsTheLabels},
+		// An archived project's labels are listed as any other's (M3 design
+		// 3.19).
+		{op: "listLabels", variant: "archived", columns: archivedColumns, request: toProject(http.MethodGet, "/labels", ""),
+			cells: ofArchived(cellOK, cellForbidden), check: listsTheLabels},
 		// The project's admins, and its members who are the workspace's
 		// admins (M3 design 3.4), as createState.
 		{op: "createLabel", write: true, columns: projectColumns, request: toProject(http.MethodPost, "/labels", newLabel),
@@ -121,6 +129,41 @@ func labelMatrixRows() []matrixRow {
 			cells: labelRows.of(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
 		{op: "deleteLabel", variant: "archived", write: true, columns: archivedColumns, request: labelRows.to(http.MethodDelete, "", "Bug", ""),
 			cells: labelRows.ofArchived(cellNoContent, cellForbidden)},
+	}
+}
+
+// listsTheLabels: the column's project's labels, by sort order, as seeded:
+// UI under Bug, the others at the top; the archived project's too.
+func listsTheLabels(t *testing.T, c caller, s seeded, answer string) {
+	var list struct {
+		Data []struct {
+			ID        uuid.UUID  `json:"id"`
+			ProjectID uuid.UUID  `json:"project_id"`
+			ParentID  *uuid.UUID `json:"parent_id"`
+			Name      string     `json:"name"`
+		} `json:"data"`
+	}
+	decodeAnswer(t, answer, &list)
+	var got, want []string
+	for _, l := range list.Data {
+		if l.ProjectID != s.project(projectOf(c)) {
+			t.Errorf("%s lists %s, not its project's", c, answer)
+		}
+		parent := "the top"
+		if l.ParentID != nil {
+			parent = l.ParentID.String()
+		}
+		got = append(got, l.Name+" "+l.ID.String()+" under "+parent)
+	}
+	for _, l := range matrixLabels {
+		parent := "the top"
+		if l.parent != "" {
+			parent = s.label(projectOf(c), l.parent).String()
+		}
+		want = append(want, l.name+" "+s.label(projectOf(c), l.name).String()+" under "+parent)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("%s lists %q, want %q", c, got, want)
 	}
 }
 

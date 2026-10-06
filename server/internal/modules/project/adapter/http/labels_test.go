@@ -13,6 +13,19 @@ import (
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
+// fakeListLabels is listLabels: each call is recorded as "caller id"; it
+// answers list, or err.
+type fakeListLabels struct {
+	calls []string
+	list  []domain.Label
+	err   error
+}
+
+func (f *fakeListLabels) Execute(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error) {
+	f.calls = append(f.calls, caller(ctx)+" "+projectID.String())
+	return f.list, f.err
+}
+
 // fakeCreateLabel is createLabel: each call is recorded as "caller id",
 // with what it got; it answers answer, or err.
 type fakeCreateLabel struct {
@@ -72,6 +85,41 @@ const (
 // own, as parentRefusedJSON answers it.
 var parentRefused = shared.Invalid(shared.FieldError{Field: "parent_id", Code: shared.FieldNotAllowed,
 	Message: "must be a label without a parent: labels have two levels"})
+
+// GET goes to the use case for the caller and the path's project; the
+// answer is 200 with its list, in its order, every field of each label,
+// and [] for none. Its refusals and its failure, as the contract declares
+// them.
+func TestListLabels(t *testing.T) {
+	path := "/api/v0/projects/" + webID.String() + "/labels"
+	for _, tt := range []struct {
+		list []domain.Label
+		want string
+	}{{[]domain.Label{webUILabel, webBugLabel}, `{"data":[` + webUILabelJSON + `,` + webBugLabelJSON + `]}`}, {nil, `{"data":[]}`}} {
+		list := &fakeListLabels{list: tt.list}
+		h := newServer(t, fakes{listLabels: list})
+		if res, body := do(t, h, request(http.MethodGet, path, "bob", "")); res.StatusCode != http.StatusOK || body != tt.want+"\n" {
+			t.Errorf("GET = %d %s, want 200 %s", res.StatusCode, body, tt.want)
+		}
+		if want := []string{"bob " + webID.String()}; !slices.Equal(list.calls, want) {
+			t.Errorf("calls = %q, want %q", list.calls, want)
+		}
+	}
+	for _, tt := range []struct {
+		err    error
+		status int
+		want   string
+	}{
+		{domain.ErrNotFound, http.StatusNotFound, projectNotFoundJSON},
+		{shared.Forbidden(), http.StatusForbidden, forbiddenJSON},
+		{errGone, http.StatusInternalServerError, internalErrorJSON},
+	} {
+		h := newServer(t, fakes{listLabels: &fakeListLabels{err: tt.err}})
+		if res, body := do(t, h, request(http.MethodGet, path, "alice", "")); res.StatusCode != tt.status || body != tt.want+"\n" {
+			t.Errorf("GET = %d %s, want %d %s", res.StatusCode, body, tt.status, tt.want)
+		}
+	}
+}
 
 // POST goes to the use case for the caller and the path's project, with
 // the body's fields: the color empty and the parent nil when not given;

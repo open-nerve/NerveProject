@@ -12,6 +12,14 @@ import (
 // The project store's labels, as the label operations read and write them
 // (M3 design 3.16).
 
+// LabelLister is listLabels' repository.
+type LabelLister interface {
+	ProjectFinder
+	// ListLabels lists projectID's undeleted labels, parents and children
+	// alike, by sort order, then id; an archived project's too.
+	ListLabels(ctx context.Context, projectID uuid.UUID) ([]domain.Label, error)
+}
+
 // LabelRow is a label to insert: its values as the use case decided them,
 // its parent checked and its sort order given.
 type LabelRow struct {
