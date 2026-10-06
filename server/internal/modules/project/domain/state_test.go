@@ -51,8 +51,9 @@ func TestCheckNewStateAcceptsValidStates(t *testing.T) {
 	}
 }
 
-// The problems CheckNewState and CheckStatePatch report: one per field,
-// each field's first.
+// The problems CheckNewState and CheckStatePatch report, and the label
+// checks (label_test.go) of the fields they share: one per field, each
+// field's first.
 var (
 	nameEmpty      = shared.FieldError{Field: "name", Code: "too_short", Message: "must not be empty"}
 	nameLong       = shared.FieldError{Field: "name", Code: "too_long", Message: "must be at most 255 characters"}

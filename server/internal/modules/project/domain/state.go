@@ -119,7 +119,7 @@ const (
 // validation_failed, with one problem per field. Whether the name is
 // taken is the database's to say.
 func CheckNewState(s StateCreate) error {
-	return invalid(checkStateText("name", s.Name), checkStateText("color", s.Color), checkGroup(s.Group),
+	return invalid(checkRequiredText("name", s.Name, maxStateText), checkRequiredText("color", s.Color, maxStateText), checkGroup(s.Group),
 		checkText("description", s.Description))
 }
 
@@ -128,10 +128,10 @@ func CheckNewState(s StateCreate) error {
 func CheckStatePatch(p StatePatch) error {
 	var found []*shared.FieldError
 	if p.Name != nil {
-		found = append(found, checkStateText("name", *p.Name))
+		found = append(found, checkRequiredText("name", *p.Name, maxStateText))
 	}
 	if p.Color != nil {
-		found = append(found, checkStateText("color", *p.Color))
+		found = append(found, checkRequiredText("color", *p.Color, maxStateText))
 	}
 	if p.Group != nil {
 		found = append(found, checkGroup(*p.Group))
@@ -162,13 +162,6 @@ func CheckGroupKept(left int) error {
 		return ErrStateLastInGroup
 	}
 	return nil
-}
-
-func checkStateText(field, s string) *shared.FieldError {
-	if f := checkLength(field, s, maxStateText); f != nil {
-		return f
-	}
-	return checkText(field, s)
 }
 
 func checkGroup(g StateGroup) *shared.FieldError {
