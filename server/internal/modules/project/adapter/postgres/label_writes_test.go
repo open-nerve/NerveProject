@@ -8,8 +8,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
@@ -104,9 +102,7 @@ func TestUpdateLabelBreakingAnotherConstraintIsInternal(t *testing.T) {
 		{"a parent of none", domain.LabelPatch{SetParent: true, ParentID: &none}, "labels_parent_id_fkey"},
 	} {
 		_, err := w.s.UpdateLabel(context.Background(), ui, tt.patch, w.alice, now)
-		var se *shared.Error
-		var pgErr *pgconn.PgError
-		if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != tt.constraint {
+		if !internalViolation(err, tt.constraint) {
 			t.Errorf("%s: UpdateLabel() = %v; want the violation of %s, not a domain error", tt.name, err, tt.constraint)
 		}
 	}

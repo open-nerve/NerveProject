@@ -6,8 +6,6 @@ import (
 	"testing"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	postgresadapter "github.com/open-nerve/NerveProject/server/internal/modules/project/adapter/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
@@ -275,9 +273,7 @@ func TestCreateProjectBreakingAnotherConstraintIsInternal(t *testing.T) {
 	} {
 		err := s.CreateProject(context.Background(), app.ProjectRow{ID: tt.id, WorkspaceID: acme, Name: "Ops", Identifier: tt.identifier,
 			Timezone: "UTC", CreatedBy: alice, Now: now})
-		var se *shared.Error
-		var pgErr *pgconn.PgError
-		if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != tt.constraint {
+		if !internalViolation(err, tt.constraint) {
 			t.Errorf("%s: CreateProject() = %v; want the violation of %s, not a domain error", tt.name, err, tt.constraint)
 		}
 	}

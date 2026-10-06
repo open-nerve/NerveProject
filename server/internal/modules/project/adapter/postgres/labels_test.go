@@ -7,8 +7,6 @@ import (
 	"testing"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -115,9 +113,7 @@ func TestCreateLabelBreakingAnotherConstraintIsInternal(t *testing.T) {
 	} {
 		tt.row.WorkspaceID, tt.row.ProjectID, tt.row.CreatedBy, tt.row.Now = w.acme, w.web, w.alice, now
 		_, err := w.s.CreateLabel(context.Background(), tt.row)
-		var se *shared.Error
-		var pgErr *pgconn.PgError
-		if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != tt.constraint {
+		if !internalViolation(err, tt.constraint) {
 			t.Errorf("%s: CreateLabel() = %v; want the violation of %s, not a domain error", tt.name, err, tt.constraint)
 		}
 	}
@@ -146,26 +142,27 @@ func TestLabelByID(t *testing.T) {
 }
 
 // ListLabels lists the project's undeleted labels, parents and children
-// alike, by sort order, then id: Feature, added last at UI's sort order
-// with an id below its, comes before it, which the order the rows lie in
-// does not give; not the deleted Old, nor another project's labels. An
-// archived project lists its labels as any other (M3 design 3.19).
+// alike, by sort order, then id: Wiki, added last at UI's sort order with
+// an id below its and a name after its, comes before it, which neither the
+// order the rows lie in nor the names give; not the deleted Old, nor
+// another project's labels. An archived project lists its labels as any
+// other (M3 design 3.19).
 func TestListLabels(t *testing.T) {
 	w := newStateWorld(t)
 	bug := w.addLabel(t, w.web, uuid.NewV7(), "Bug", nil, 3)
 	w.addLabel(t, w.web, uuid.NewV7(), "UI", &bug.ID, 2)
-	w.addLabel(t, w.web, w.early, "Feature", nil, 2)
+	w.addLabel(t, w.web, w.early, "Wiki", nil, 2)
 	old := w.addLabel(t, w.web, uuid.NewV7(), "Old", nil, 1)
 	exec(t, w.pool, "UPDATE labels SET deleted_at = $2 WHERE id = $1", old.ID, earlier)
 	w.addLabel(t, w.ops, uuid.NewV7(), "Docs", nil, 1)
 	var heap []string
 	if err := w.pool.QueryRow(context.Background(), "SELECT array_agg(name ORDER BY ctid) FROM labels WHERE project_id = $1 AND sort_order = 2",
-		w.web).Scan(&heap); err != nil || !slices.Equal(heap, []string{"UI", "Feature"}) {
+		w.web).Scan(&heap); err != nil || !slices.Equal(heap, []string{"UI", "Wiki"}) {
 		t.Fatalf("the rows of sort order 2 lie as %q, %v; the test needs UI first", heap, err)
 	}
 
 	got, err := w.s.ListLabels(context.Background(), w.web)
-	if want := []string{"Feature", "UI", "Bug"}; err != nil || !slices.Equal(labelNames(got), want) {
+	if want := []string{"Wiki", "UI", "Bug"}; err != nil || !slices.Equal(labelNames(got), want) {
 		t.Errorf("ListLabels(Web) = %q, %v; want %q", labelNames(got), err, want)
 	}
 	if len(got) > 1 && (got[1].ParentID == nil || *got[1].ParentID != bug.ID) {

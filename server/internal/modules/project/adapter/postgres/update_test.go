@@ -8,13 +8,10 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/jackc/pgx/v5/pgconn"
-
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/app"
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres"
 	"github.com/open-nerve/NerveProject/server/internal/platform/postgres/pgtest"
-	"github.com/open-nerve/NerveProject/server/internal/shared"
 )
 
 // LockProject reads the undeleted project's workspace and whether it is
@@ -269,9 +266,7 @@ func TestUpdateProjectBreakingAnotherConstraintIsInternal(t *testing.T) {
 	alice := newAccount(t, pool, "alice@corp.com")
 	web := newProject(t, s, newWorkspace(t, pool, "acme"), "Web", "WEB", alice)
 	err := s.UpdateProject(context.Background(), web, domain.ProjectPatch{ArchiveIn: ptr(13)}, alice, now)
-	var se *shared.Error
-	var pgErr *pgconn.PgError
-	if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != "projects_archive_in_check" {
+	if !internalViolation(err, "projects_archive_in_check") {
 		t.Errorf("archive_in 13: UpdateProject() = %v; want the violation of projects_archive_in_check, not a domain error", err)
 	}
 }
