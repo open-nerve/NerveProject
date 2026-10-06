@@ -102,6 +102,20 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	admin := registerAccount(t, contract, base, "admin@example.com").AccessToken
 	registerAccount(t, contract, base, "member@example.com")
 	deleted, kept := seedWorkspace(t, contract, base, pool, admin, "deleted"), seedWorkspace(t, contract, base, pool, admin, "kept")
+	var adminID uuid.UUID
+	if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = 'admin@example.com'").Scan(&adminID); err != nil {
+		t.Fatal(err)
+	}
+	// seedProject's claim, read back: no row under the deleted workspace's
+	// project is admin's last, so the writer's check below would see a row
+	// whose writer the deletion kept.
+	projects := foreignKey{parent: "workspaces", table: "projects", column: "workspace_id"}.undeleted(t, pool, deleted)
+	if len(projects) == 0 {
+		t.Fatal("no project under the deleted workspace: seedProject writes one")
+	}
+	for _, project := range projects {
+		noRowLastWrittenBy(t, pool, project, adminID)
+	}
 	keys := keysTo(t, pool, "workspaces")
 	under, recorded := make([]rowsUnder, len(keys)), make([][]uuid.UUID, len(keys))
 	for i, k := range keys {
@@ -118,10 +132,6 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	}
 	for _, v := range deletionViolations("workspaces", under, survivesItsWorkspace) {
 		t.Error(v)
-	}
-	var adminID uuid.UUID
-	if err := pool.QueryRow(context.Background(), "SELECT id FROM users WHERE email = 'admin@example.com'").Scan(&adminID); err != nil {
-		t.Fatal(err)
 	}
 	for i, k := range keys {
 		if _, survives := survivesItsWorkspace[k.String()]; !survives {
@@ -140,7 +150,7 @@ func TestDeletingAWorkspaceLeavesNoUndeletedRowUnderIt(t *testing.T) {
 // token its admin, and seeds a row of each table under it: the admin's
 // membership, which the creation writes; the member's, and an invitation
 // the admin sent, through the workspace store; the admin's display
-// settings, through the API; a project with the member's membership, his
+// settings, through the API; a project with the member as its admin, his
 // display settings in it, a state and two labels (seedProject). A phase
 // that adds a table under workspaces seeds a row of it here. It returns the
 // workspace's id.
@@ -174,11 +184,14 @@ func seedWorkspace(t *testing.T, contract *apitest.Contract, base string, pool *
 }
 
 // seedProject writes a project of the workspace id, created by admin,
-// with member's membership, his display settings in it, one state, and a
+// with member as its admin, his display settings in it, one state, and a
 // label with its child by member (seedLabels), directly: the seed does not
 // depend on which of the project module's writes exist, nor on what they
-// write besides. No row under the project is admin's last, so a deletion
-// by admin that kept a row's writer would show.
+// write besides. member, a project admin who is a member of the workspace
+// (PA in M3 design 9.2), may write the project's labels. No row under the
+// project is the last writing of admin, the workspace's deleter (the test
+// reads it back), so a deletion by admin that kept a row's writer would
+// show.
 func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) {
 	t.Helper()
 	ctx, project := context.Background(), uuid.NewV7()
@@ -187,7 +200,7 @@ func seedProject(t *testing.T, pool *pgxpool.Pool, id, admin, member uuid.UUID) 
 		args []any
 	}{
 		{"INSERT INTO projects (id, workspace_id, name, identifier, created_by_id) VALUES ($1, $2, 'Web', 'WEB', $3)", []any{project, id, admin}},
-		{"INSERT INTO project_members (id, workspace_id, project_id, member_id, role) VALUES ($1, $2, $3, $4, 15)",
+		{"INSERT INTO project_members (id, workspace_id, project_id, member_id, role) VALUES ($1, $2, $3, $4, 20)",
 			[]any{uuid.NewV7(), id, project, member}},
 		{"INSERT INTO project_user_properties (id, workspace_id, project_id, user_id) VALUES ($1, $2, $3, $4)",
 			[]any{uuid.NewV7(), id, project, member}},

@@ -60,6 +60,21 @@ func seedLabels(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
 	}
 }
 
+// noRowLastWrittenBy fails the test when a row under project, in a table
+// the catalog ties to projects (keysTo), the project row itself included,
+// was last written by by: a deletion by by that kept a row's writer would
+// not show on that row. The deletion tests read it before they delete.
+func noRowLastWrittenBy(t *testing.T, pool *pgxpool.Pool, project, by uuid.UUID) {
+	t.Helper()
+	for _, k := range keysTo(t, pool, "projects") {
+		var n int
+		if err := pool.QueryRow(pgtest.Soon(t), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
+			" = $1 AND updated_by_id = $2", project, by).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("%s: %d rows under the project %s last written by %s, %v; want none", k, n, project, by, err)
+		}
+	}
+}
+
 // Deleting a project through the API soft-deletes every row under it in
 // every table the catalog ties to projects, and the project row, each at
 // the project's deleted_at, a time within the request, and by the account
@@ -85,12 +100,8 @@ func TestDeletingAProjectLeavesNoUndeletedRowUnderIt(t *testing.T) {
 	for i, k := range keys {
 		recorded[i] = k.undeleted(t, pool, web)
 		under[i] = rowsUnder{key: k.String(), deletedBefore: len(recorded[i]), keptBefore: k.rows(t, pool, ops)}
-		var his int
-		if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+k.table+" WHERE "+pgx.Identifier{k.column}.Sanitize()+
-			" = $1 AND updated_by_id = $2", web, daveID).Scan(&his); err != nil || his != 0 {
-			t.Fatalf("%s: %d rows under Web last written by dave, %v; want none", k, his, err)
-		}
 	}
+	noRowLastWrittenBy(t, pool, web, daveID)
 
 	before := time.Now().Truncate(time.Microsecond)
 	if status, body := call(t, contract, http.MethodDelete, base+"/api/v0/projects/"+web.String(), dave, ""); status != http.StatusNoContent {
