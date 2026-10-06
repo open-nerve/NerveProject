@@ -899,7 +899,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete a label and the labels under it
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels are deleted as any other's. A label that does not exist or is deleted, and a label whose project the caller does not see, answer project.label_not_found; a caller who sees the project but may not change its labels, forbidden. The label and the labels under it are deleted at the moment of the request, by the caller, and their names are free again in the project. The role is decided after the workspace and project rows are locked.
+         */
+        delete: operations["deleteLabel"];
         options?: never;
         head?: never;
         /**
@@ -3126,6 +3130,28 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Label"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A label's id (Label.id). */
+                label_id: components["parameters"]["LabelID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The label and the labels under it are deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

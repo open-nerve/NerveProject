@@ -695,6 +695,27 @@ paths:
                 $ref: '#/components/schemas/Label'
         default:
           $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteLabel
+      tags: [project]
+      summary: Delete a label and the labels under it
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's labels are deleted as any other's. A
+        label that does not exist or is deleted, and a label whose project
+        the caller does not see, answer project.label_not_found; a caller
+        who sees the project but may not change its labels, forbidden. The
+        label and the labels under it are deleted at the moment of the
+        request, by the caller, and their names are free again in the
+        project. The role is decided after the workspace and project rows
+        are locked.
+      security: [{bearer: []}]
+      x-problem-codes: [project.label_not_found, forbidden]
+      responses:
+        '204':
+          description: The label and the labels under it are deleted.
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'

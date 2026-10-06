@@ -168,8 +168,9 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // counts the group again, and makes Done Web's default; she creates the
 // label Bug in it, UI under Bug, and Icons under UI, which the parent's
 // read refuses (422: labels have two levels); she moves Bug under UI,
-// which the same read refuses, renames UI Widgets at the top, and moves it
-// back under Bug; carol, an admin, leaves it; alice deletes both projects.
+// which the same read refuses, renames UI Widgets at the top, moves it
+// back under Bug, and deletes Bug, Widgets with it; carol, an admin,
+// leaves Web; alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -244,6 +245,7 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		t.Errorf("UI renamed Widgets at the top = %s; want UI, named Widgets, at the top", answer)
 	}
 	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"parent_id":"`+bug.ID.String()+`"}`, http.StatusOK)
+	send(http.MethodDelete, "/api/v0/labels/"+bug.ID.String(), r.alice, "", http.StatusNoContent)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

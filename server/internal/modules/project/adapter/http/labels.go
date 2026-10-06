@@ -33,6 +33,14 @@ func (h handler) UpdateLabel(ctx context.Context, req gen.UpdateLabelRequestObje
 	return gen.UpdateLabel200JSONResponse(label(l)), nil
 }
 
+// DeleteLabel serves DELETE /api/v0/labels/{label_id}.
+func (h handler) DeleteLabel(ctx context.Context, req gen.DeleteLabelRequestObject) (gen.DeleteLabelResponseObject, error) {
+	if err := h.uc.DeleteLabel.Execute(ctx, req.LabelID); err != nil {
+		return nil, err
+	}
+	return gen.DeleteLabel204Response{}, nil
+}
+
 // label is l as the API shows it: its parent null at the top.
 func label(l domain.Label) gen.Label {
 	return gen.Label{ID: l.ID, WorkspaceID: l.WorkspaceID, ProjectID: l.ProjectID, ParentID: orNull(l.ParentID), Name: l.Name, Color: l.Color,

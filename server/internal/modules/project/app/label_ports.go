@@ -73,3 +73,14 @@ type LabelUpdater interface {
 	// domain.ErrLabelNameTaken.
 	UpdateLabel(ctx context.Context, id uuid.UUID, p domain.LabelPatch, by uuid.UUID, now time.Time) (domain.Label, error)
 }
+
+// LabelDeleter is deleteLabel's repository. Its write runs in the
+// transaction ctx carries, under the project's FOR NO KEY UPDATE, which
+// covers the labels under the label: they are of its project (M3 design
+// 3.16, 3.6 convention 5).
+type LabelDeleter interface {
+	LabelFinder
+	// DeleteLabel deletes the undeleted label id and the undeleted labels
+	// under it, by the account by at now, in one statement.
+	DeleteLabel(ctx context.Context, id, by uuid.UUID, now time.Time) error
+}

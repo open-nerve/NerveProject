@@ -61,6 +61,9 @@ const (
 	ActionLabelCreate shared.Action = "label.create"
 	// ActionLabelUpdate is changing a label: updateLabel.
 	ActionLabelUpdate shared.Action = "label.update"
+	// ActionLabelDelete is deleting a label and the labels under it:
+	// deleteLabel.
+	ActionLabelDelete shared.Action = "label.delete"
 )
 
 // Actions lists the module's actions. bootstrap's test holds the union of
@@ -71,5 +74,5 @@ func Actions() []shared.Action {
 		ActionUnarchive, ActionDelete, ActionPreferencesRead, ActionPreferencesUpdate,
 		ActionMemberList, ActionMemberAdd, ActionJoin, ActionMemberUpdate, ActionMemberRemove, ActionLeave,
 		ActionStateList, ActionStateCreate, ActionStateUpdate, ActionStateDelete, ActionStateMarkDefault, ActionWorkspaceStateList,
-		ActionLabelCreate, ActionLabelUpdate}
+		ActionLabelCreate, ActionLabelUpdate, ActionLabelDelete}
 }

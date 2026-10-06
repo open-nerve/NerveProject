@@ -29,10 +29,10 @@ import (
 // writes. Bob and carol, whom she adds, are acme's members; she makes bob
 // an admin of Web, removes carol, creates a state and renames it, archives
 // Web, deletes the state, makes Done the default, creates a label and
-// renames it, unarchives Web, and leaves it. Each row the write writes
-// again is first made bob's, as last written by him, and checked so: a
-// write that kept its row's writer would pass for alice's otherwise, she
-// having made it.
+// renames it, deletes bob's label Bug and the label under it, unarchives
+// Web, and leaves it. Each row the write writes again is first made bob's,
+// as last written by him, and checked so: a write that kept its row's
+// writer would pass for alice's otherwise, she having made it.
 func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	contract := apitest.Load(t)
 	dbURL := pgtest.NewDatabase(t)
@@ -48,7 +48,7 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 	inWorkspaceOf(t, pool, web, bobID, aliceID, shared.RoleMember)
 	carolID := accountID(t, contract, base, registerAccount(t, contract, base, "carol@example.com").AccessToken)
 	inWorkspaceOf(t, pool, web, carolID, aliceID, shared.RoleMember)
-	carol := carolID.String()
+	carol, bug := carolID.String(), uuid.NewV7().String()
 	// bobs makes bob, $3, the last writer of the rows of table that where
 	// picks by $1 Web's id and $2 alice's, which alice wrote last.
 	bobs := func(table, where string) string {
@@ -150,6 +150,13 @@ func TestTheWritesOnAProjectStampTheirRequest(t *testing.T) {
 		{"updateLabel", http.MethodPatch, "/api/v0/labels/%s", `{"name":"Checked"}`, label("QA"), http.StatusOK,
 			bobs("labels", "project_id = $1 AND name = 'QA'"),
 			"SELECT updated_at, updated_by_id = $2 AND name = 'Checked' FROM labels WHERE project_id = $1 AND name IN ('QA', 'Checked')", 1, 1},
+		// Bug and UI under it, made by bob, deleted together: two rows.
+		{"deleteLabel", http.MethodDelete, "/api/v0/labels/%s", "", label("Bug"), http.StatusNoContent,
+			"INSERT INTO labels (id, workspace_id, project_id, parent_id, name, created_by_id, updated_by_id) SELECT '" + bug + "'::uuid, " +
+				"workspace_id, id, NULL::uuid, 'Bug', $3::uuid, $3::uuid FROM projects WHERE id = $1 AND created_by_id = $2 UNION ALL SELECT '" +
+				uuid.NewV7().String() + "'::uuid, workspace_id, id, '" + bug + "'::uuid, 'UI', $3::uuid, $3::uuid FROM projects WHERE id = $1 " +
+				"AND created_by_id = $2",
+			"SELECT updated_at, updated_by_id = $2 AND deleted_at = updated_at FROM labels WHERE project_id = $1 AND name IN ('Bug', 'UI')", 2, 2},
 		{"unarchiveProject, after the state and label writes", http.MethodPost, "/api/v0/projects/" + web.String() + "/unarchive", "", nil,
 			http.StatusOK, bobs("projects", "id = $1"),
 			"SELECT updated_at, updated_by_id = $2 AND archived_at IS NULL FROM projects WHERE id = $1", 1, 1},

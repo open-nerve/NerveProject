@@ -116,6 +116,11 @@ func labelMatrixRows() []matrixRow {
 		{op: "updateLabel", variant: "archived", write: true, columns: archivedColumns,
 			request: labelRows.to(http.MethodPatch, "", "UI", `{"name":"Story"}`), cells: labelRows.ofArchived(cellOK, cellForbidden),
 			check: renamesTheLabel},
+		// As createLabel: Bug deleted, and UI under it with it.
+		{op: "deleteLabel", write: true, columns: projectColumns, request: labelRows.to(http.MethodDelete, "", "Bug", ""),
+			cells: labelRows.of(cellNoContent, cellForbidden, cellForbidden, cellNoContent, cellForbidden, cellForbidden)},
+		{op: "deleteLabel", variant: "archived", write: true, columns: archivedColumns, request: labelRows.to(http.MethodDelete, "", "Bug", ""),
+			cells: labelRows.ofArchived(cellNoContent, cellForbidden)},
 	}
 }
 

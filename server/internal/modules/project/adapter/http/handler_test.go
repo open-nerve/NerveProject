@@ -83,6 +83,7 @@ type fakes struct {
 	listWorkspaceStates *fakeListWorkspaceStates
 	createLabel         *fakeCreateLabel
 	updateLabel         *fakeUpdateLabel
+	deleteLabel         *fakeDelete
 }
 
 type fakeList struct {
@@ -260,12 +261,16 @@ func newServer(t *testing.T, f fakes) http.Handler {
 	if f.updateLabel == nil {
 		f.updateLabel = &fakeUpdateLabel{}
 	}
+	if f.deleteLabel == nil {
+		f.deleteLabel = &fakeDelete{}
+	}
 	httpadapter.Register(router, api, httpadapter.UseCases{ListProjects: f.list, CreateProject: f.create, GetProject: f.get,
 		CheckIdentifier: f.check, UpdateProject: f.update, ArchiveProject: f.archive, UnarchiveProject: f.unarchive, DeleteProject: f.delete,
 		GetPreferences: f.prefs, UpdatePreferences: fakeUpdatePreferences{f.prefs}, ListMembers: f.members, AddMembers: f.add,
 		JoinProject: f.join, UpdateMember: f.updateMember, RemoveMember: f.removeMember, LeaveProject: f.leave, ListStates: f.listStates,
 		CreateState: f.createState, UpdateState: f.updateState, DeleteState: f.deleteState,
-		MarkDefaultState: f.markDefault, ListWorkspaceStates: f.listWorkspaceStates, CreateLabel: f.createLabel, UpdateLabel: f.updateLabel})
+		MarkDefaultState: f.markDefault, ListWorkspaceStates: f.listWorkspaceStates, CreateLabel: f.createLabel, UpdateLabel: f.updateLabel,
+		DeleteLabel: f.deleteLabel})
 	return router
 }
 

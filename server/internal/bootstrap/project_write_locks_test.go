@@ -110,6 +110,8 @@ var projectWrites = []projectWrite{
 	{op: "createLabel", method: http.MethodPost, path: "/api/v0/projects/%s/labels", body: `{"name":"QA"}`, want: http.StatusCreated},
 	// The label made before, renamed.
 	{op: "updateLabel", method: http.MethodPatch, path: "/api/v0/labels/%s", body: `{"name":"Checked"}`, want: http.StatusOK, row: labelNamed("QA")},
+	// The label renamed before, deleted.
+	{op: "deleteLabel", method: http.MethodDelete, path: "/api/v0/labels/%s", want: http.StatusNoContent, row: labelNamed("Checked")},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }
