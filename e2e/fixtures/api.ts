@@ -25,6 +25,9 @@ export type ProjectPreferencesUpdate = components["schemas"]["ProjectPreferences
 export type State = components["schemas"]["State"];
 export type StateCreate = components["schemas"]["StateCreate"];
 export type StateUpdate = components["schemas"]["StateUpdate"];
+export type Label = components["schemas"]["Label"];
+export type LabelCreate = components["schemas"]["LabelCreate"];
+export type LabelUpdate = components["schemas"]["LabelUpdate"];
 
 /** Returns a client for the nerve at baseURL. */
 export function createApi(baseURL: string): Api {
@@ -194,6 +197,20 @@ export async function createState(api: Api, token: string, projectId: string, bo
   expect(response.status, `create the state ${body.name} in ${projectId}: ${JSON.stringify(error)}`).toBe(201);
   if (!data) {
     throw new Error(`createState ${body.name} answered 201 without the state`);
+  }
+  return data;
+}
+
+/** Creates a label in the project of projectId with the bearer token given, an admin's of the project, and returns it. */
+export async function createLabel(api: Api, token: string, projectId: string, body: LabelCreate): Promise<Label> {
+  const { data, error, response } = await api.POST("/api/v0/projects/{project_id}/labels", {
+    params: { path: { project_id: projectId } },
+    body,
+    headers: bearer(token),
+  });
+  expect(response.status, `create the label ${body.name} in ${projectId}: ${JSON.stringify(error)}`).toBe(201);
+  if (!data) {
+    throw new Error(`createLabel ${body.name} answered 201 without the label`);
   }
   return data;
 }

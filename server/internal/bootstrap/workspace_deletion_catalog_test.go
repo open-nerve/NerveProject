@@ -33,7 +33,10 @@ func rowOf(parent string) string { return strings.TrimSuffix(parent, "s") }
 // to parent in the catalog. A table under parent only through others'
 // foreign keys, followed from parent however far, fails the test, named
 // with the tables it hangs from: no check here would see its rows, nor
-// would a cascade that deletes by the parent's key column.
+// would a cascade that deletes by the parent's key column. A key of a table
+// to itself, as labels.parent_id, is followed as any other: such a table
+// passes on its own key to parent, and its rows under another of its rows
+// are found by that key.
 func keysTo(t testing.TB, pool *pgxpool.Pool, parent string) []foreignKey {
 	t.Helper()
 	rows, err := pool.Query(context.Background(), `

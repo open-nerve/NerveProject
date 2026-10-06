@@ -154,13 +154,17 @@ Plane 共有 96 张业务表（`db` 应用 92 张，`license` 应用 4 张）。
 | `states` | `name`：新加 `CHECK (name <> '')`；`"group"`：新加 `DEFAULT 'backlog'` 和 `CHECK ("group" IN ('backlog', 'unstarted', 'started', 'completed', 'cancelled', 'triage'))`；`description`：新加 `DEFAULT ''`；`sequence`：新加 `DEFAULT 65535`；`"default"`：新加 `DEFAULT false`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局） | 模型的默认值和 `StateGroup` |
 | `states` | 部分唯一索引照搬，改名为 `states_project_id_name_key ON (project_id, name) WHERE deleted_at IS NULL`（Plane 是 `state_unique_name_project_when_deleted_at_null ON (name, project_id)`）；新加 `states_project_id_default_key ON (project_id) WHERE "default" AND deleted_at IS NULL`、`states_project_id_triage_key ON (project_id) WHERE "group" = 'triage' AND deleted_at IS NULL`，不带条件的 `states_workspace_id_idx`、`states_project_id_idx` | 见第四节"默认状态、分诊状态"（M3 设计 3.17）；物理级联要不带条件的索引（M3 设计 4） |
 | `states` | 删除 `slug`、`is_triage` | `slug` 没有读取者；分诊状态只由 `"group" = 'triage'` 识别（M3 设计 3.17） |
+| `labels` | 15 列保留 12 列（M3/P7b，`00014_project_labels.sql`） | M3 设计 4.10 |
+| `labels` | `workspace_id`、`parent_id`：加上 `ON DELETE CASCADE`；`project_id`：改为 `NOT NULL`（Plane 可为空），加上 `ON DELETE CASCADE`；`created_by_id`、`updated_by_id`：加上 `ON DELETE SET NULL` | 二·全局（模型的 `on_delete`）；没有工作区级标签（M3 设计 3.16） |
+| `labels` | `name`：新加 `CHECK (name <> '')`；`color`：新加 `DEFAULT ''`；`sort_order`：新加 `DEFAULT 65535`；`created_at`、`updated_at`：新加 `DEFAULT now()`（兜底，见二·全局）；新加 `labels_not_own_parent_check CHECK (parent_id <> id)` | 模型的默认值；标签不能做自己的父标签（M3 设计 3.16） |
+| `labels` | 两个部分唯一索引（`project_id` 为空时按 `name` 的 `unique_name_when_project_null_and_not_deleted`、不为空时按 `(project_id, name)` 的 `unique_project_name_when_not_deleted`）改为一个 `labels_project_id_name_key ON (project_id, lower(name)) WHERE deleted_at IS NULL`；新加不带条件的 `labels_parent_id_idx`、`labels_workspace_id_idx`、`labels_project_id_idx` | 名称在项目内唯一，不分大小写：Plane 的数据库区分大小写，序列化器不区分；没有工作区级标签（M3 设计 3.16）；删除父标签时按 `parent_id` 找子标签；物理级联要不带条件的索引（M3 设计 4） |
+| `labels` | 删除 `description`、`external_source`、`external_id` | `description` 没有读取者（M3 设计 3.16）；v0 不做导入 |
 | `issues` | 删除 `point`、`is_draft`、`estimate_point_id`、`type_id`、`description_binary` | 遗留列或对应功能已砍掉 |
 | `issues` | `archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | `issues` | **新增**唯一约束 `(project_id, sequence_id)` | Plane 只靠咨询锁保证编号不重复 |
 | `issues` | **新增** `name` 的 pg_trgm 索引（需要 `pg_trgm` 扩展） | 标题模糊搜索（v0-design 6.9）；快照中没有任何扩展，`issues` 上只有外键列的 btree 索引 |
 | `issue_labels` | **新增**部分唯一约束 `(issue_id, label_id)` | Plane 在数据库层没有这个约束 |
 | `issue_comments` | 删除 `description_id` 及其唯一约束 | 它是指向 `descriptions`（不保留，见一 B）的一对一外键 |
-| `labels` | 工作区级标签的名称唯一范围改为 `(workspace_id, name)` | Plane 的约束没有限定在工作区内，是个缺陷 |
 | `cycle_issues` | **新增**部分唯一约束 `(issue_id)`：一个工作项最多属于一个迭代 | Plane 只在代码里检查 |
 | `modules` | 删除旧的 `description_text`、`description_html` | 遗留列 |
 | `*_user_properties`、`issue_views` | 删除旧的 `filters` 列；筛选条件按 Nerve 自己的格式存储（列名与格式在 M3/M4 确定）；`issue_views` 删除 `query` 列 | 筛选格式改变（见接口差异） |
@@ -232,7 +236,7 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 建工作区之后 | 投递 `workspace_seed`：建一个名为 "Plane" 的机器人账户做管理员，再建演示项目、状态、标签和工作项 | 什么都不投递，没有演示数据（M3 设计 3.11） |
 | 关闭创建工作区时 | 实例管理员在管理后台为自己建工作区 | 服务器管理员用 `nerve workspaces create --slug --name --admin-email` 建，不受开关限制，`--admin-email` 的账户是它的管理员（M3 设计 3.11） |
 | 工作区的显示设置 | `GET` 时 `get_or_create`：读取就建行 | `GET` 不写库，没有行时返回默认值（`ACCORDION`、10）；第一次修改时经部分唯一索引 `INSERT … ON CONFLICT` 建行（M3 设计 3.18） |
-| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态，在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用。标签由 M3/P7b 加入这个事务 |
+| 删除工作区 | 清掉别人的 `last_workspace_id`；成员、显示设置等的连带软删除由 Celery 异步完成 | 不清 `last_workspace_id`（登录后的落点规则让它无害，M3 设计 3.14）；工作区、成员、邀请、显示设置，项目和它们的成员关系、成员在项目里的显示设置、状态和标签，在同一个事务里、同一时刻软删除，删除之后 slug 立即可以重用 |
 | 邀请的列出、创建、修改、删除 | 工作区管理员和成员；修改不限制角色，成员能把邀请改成管理员 | 只有工作区管理员（M3 设计决策点 4）；邀请的角色因此不高于邀请人（M3 设计 3.8） |
 | 邀请令牌 | JWT，原文存库；公开的查看不要令牌，返回被邀请的邮箱；关闭注册时，有任何一份未删除的邀请的邮箱就能注册 | 由签名密钥派生的 MAC（`nrv_inv_` 加 22 个字符），不存库，管理员列出时重新算出；公开的查看要令牌、不返回邮箱；关闭注册时要有效的令牌、且注册邮箱与邀请的相同（M3 设计 3.8、决策点 1） |
 | 邀请的链接 | `/workspace-invitations/?invitation_id=…&slug=…&token=…`；另有系统内的接受：`/invitations` 页和新手引导的"加入工作区"一步按账户的邮箱列出发给他的邀请，批量接受 | 只有链接一条路：`/workspace-invitations?invitation_id=…&token=…`；接受要登录，账户的邮箱须与邀请的相同（M3 设计 3.8、决策点 2）（页面：P9；`/invitations` 页和新手引导的一步由 P8–P11 删除） |
@@ -253,5 +257,10 @@ Nerve 不兼容 Plane 的 `/api/`、`/auth/`、`/api/v1/`、`/api/public/`、`/a
 | 加入项目时恢复以前的成员行 | 只改 `is_active`，保留旧的角色：被移出的项目管理员自己加入就拿回管理员 | 角色取原来那一行的角色与他现在的工作区角色中较低的一个：不比新加入给得更多（被移出的项目管理员现在是工作区成员，回来是成员），也不比原来那一行更多（与 Plane 相同，被降为访客的人离开再加入仍是访客）（M3 设计 3.5） |
 | 修改状态 | 项目的访客也能 | 新建、修改、删除状态和设为默认：项目管理员，或同时是工作区管理员的项目成员（M3 设计 3.4） |
 | 默认状态、分诊状态 | 在代码里维持唯一；`is_triage` 可以与 `group` 不一致 | 数据库保证每个项目各至多一个（部分唯一索引）；分诊状态只看 `group`；状态的操作同样按 `group` 认出分诊状态（列表不含它，按 id 修改、删除、设为默认答 404 `project.state_not_found`），设为默认在同一个事务里先清掉原来的默认，项目恰好一个默认状态（M3 设计 3.17） |
+| 标签的名称 | 数据库区分大小写，序列化器不区分（"bug" 与 "Bug" 并发时都能写入） | 数据库不分大小写：`labels_project_id_name_key ON (project_id, lower(name))`，同名答 409 `project.label_name_taken`（M3 设计 3.16） |
+| 标签的层级 | 服务端不检查：接口能建三层、把有子标签的标签放到别的标签下、以别的项目的标签做父标签 | 服务端执行页面的两层规则：父标签须是同一项目、未删除、没有父标签的标签，有子标签的标签不能有父标签，标签不能做自己的父标签，否则 422（`parent_id`，`not_allowed`）；每个标签的写都先锁项目行，并发下规则仍成立（M3 设计 3.16） |
+| 工作区级标签 | 模型允许（`project_id` 可空） | 没有：`project_id` 非空（M3 设计 3.16） |
+| 列出标签 | 任何工作区成员都得到 200，已离开的成员仍能列出 | 项目的有效成员，访客也能；已归档的项目照常列出（M3 设计 3.4、3.19） |
+| 新建标签的顺序 | 请求可以给 `sort_order`：项目还没有标签时用它，否则忽略，一律是最大值加 10000；没给、没有标签时 65535 | 请求不给 `sort_order`（给了答 400，同"请求中的未知字段"）：一律是项目未删除的标签的最大值加 10000，没有标签时 65535（M3 设计 4.10）；位置用 `updateLabel` 改 |
 | 一组中唯一的状态 | 服务端能删除、能改到别的组（页面不让） | 删除它、把它改到别的组：409 `project.state_last_in_group`（它同时是默认状态时，删除先答 409 `project.state_default`，例如新项目的 Backlog），每一组（分诊组除外）至少一个状态（M3 设计 3.17） |
 | 时区 | 只接受 `pytz.common_timezones`；时区列表中负的非整点偏移多算一小时（例如马克萨斯群岛的 −09:30 写成 −10:30） | 接受 Go 的时区数据认得的任何 IANA 名称（`Local` 除外），程序内嵌时区数据；时区列表接口给的仍是同一份常用列表，偏移按请求时刻计算，写法正确（M2 设计 5.3） |

@@ -303,7 +303,7 @@ GET   /api/v0/issues/{issue_id}/comments
 | `issues.archived_at` 由 `date` 改为 `timestamptz` | 和 `cycles`、`modules`、`projects` 的 `archived_at` 保持一致 |
 | 删除遗留列：`issues.point`、`issues.is_draft`、`projects.emoji` 和 `icon_prop`、被新字段取代的旧 URL 列和旧筛选列、账单和移动端字段、`external_source` 和 `external_id` 等 | Plane 代码中已不再使用；v0 也不做导入 |
 | 默认值、非空约束、枚举检查（优先级、状态组、角色等）都放进数据库 | Plane 的默认值全在 Python 代码里 |
-| 补充约束：项目内编号唯一、同一工作项同一标签唯一、**一个工作项最多属于一个迭代**、标签名在工作区内唯一 | Plane 只在代码里检查，或者本身就有缺陷 |
+| 补充约束：项目内编号唯一、同一工作项同一标签唯一、**一个工作项最多属于一个迭代**、标签名在项目内唯一（不分大小写）；没有工作区级标签（M3 设计 3.16） | Plane 只在代码里检查，或者本身就有缺陷 |
 
 ### 5.4 草稿：一张表
 ```
