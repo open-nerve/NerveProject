@@ -87,9 +87,10 @@ func TestSortOrderAfter(t *testing.T) {
 
 // CheckParent takes a label of the project at the top as the parent of a
 // new label, or of a label without children, and refuses, each as one 422
-// parent_id not_allowed: no parent, a label of another project, the label
-// itself, a label that has a parent, and any parent of a label with
-// children (M3 design 3.16).
+// parent_id not_allowed: a parent not there or deleted, a label of another
+// project, the label itself, a label that has a parent, and any parent of
+// a label with children (M3 design 3.16). When two apply, the first of
+// them in that order is the one answered.
 func TestCheckParent(t *testing.T) {
 	web, ops, bug, ui := uuid.NewV7(), uuid.NewV7(), uuid.NewV7(), uuid.NewV7()
 	top := &Label{ID: bug, ProjectID: web}
@@ -106,12 +107,18 @@ func TestCheckParent(t *testing.T) {
 	}{
 		{"a new label under a label at the top", uuid.Nil(), top, false, nil},
 		{"a label without children under a label at the top", uuid.NewV7(), top, false, nil},
-		{"no parent", uuid.Nil(), nil, false, refused("must be a label of the project")},
+		{"a parent not there or deleted", uuid.Nil(), nil, false, refused("must be a label of the project")},
 		{"a label of another project", uuid.Nil(), &Label{ID: uuid.NewV7(), ProjectID: ops}, false, refused("must be a label of the project")},
 		{"the label itself", bug, top, false, refused("must not be the label itself")},
 		{"a label that has a parent", uuid.Nil(), child, false, refused("must be a label without a parent: labels have two levels")},
 		{"a label with children", uuid.NewV7(), top, true,
 			refused("must be null: the label has labels under it, and labels have two levels")},
+		{"the label itself, which has a parent", ui, child, false, refused("must not be the label itself")},
+		{"the label itself, which has children", bug, top, true, refused("must not be the label itself")},
+		{"a label that has a parent, for a label with children", uuid.NewV7(), child, true,
+			refused("must be a label without a parent: labels have two levels")},
+		{"a label of another project that has a parent, for a label with children", uuid.NewV7(),
+			&Label{ID: uuid.NewV7(), ProjectID: ops, ParentID: &bug}, true, refused("must be a label of the project")},
 	} {
 		if got := fieldsOf(t, CheckParent(tt.id, web, tt.parent, tt.hasChildren)); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: CheckParent() fields %+v, want %+v", tt.name, got, tt.want)

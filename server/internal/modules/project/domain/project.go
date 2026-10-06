@@ -159,13 +159,13 @@ func checkName(name string) *shared.FieldError {
 
 func checkIdentifier(id string) *shared.FieldError {
 	field := "identifier"
-	switch {
-	case id == "":
+	if id == "" {
 		return &shared.FieldError{Field: field, Code: shared.FieldTooShort, Message: "must not be empty"}
-	case utf8.RuneCountInString(id) > maxIdentifierLength:
-		return &shared.FieldError{Field: field, Code: shared.FieldTooLong,
-			Message: fmt.Sprintf("must be at most %d characters", maxIdentifierLength)}
-	case !identifierPattern.MatchString(id):
+	}
+	if f := checkMaxLength(field, id, maxIdentifierLength); f != nil {
+		return f
+	}
+	if !identifierPattern.MatchString(id) {
 		return &shared.FieldError{Field: field, Code: shared.FieldInvalidFormat, Message: "may hold only A-Z, 0-9 and ÇŞĞİÖÜ"}
 	}
 	return nil
