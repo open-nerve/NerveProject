@@ -36,9 +36,11 @@ func stateCreated(user, project uuid.UUID, in domain.StateCreate, sequence float
 // clock, then inserts the state 15000 after it, by the caller at that time;
 // it answers the state as stored, the time to the microsecond: web's after
 // its Cancelled, 70000; archived ops's, as any other's (3.19), after its
-// Backlog, 30000; and ops's, its states gone, at 65535. The use case makes
-// each state's id: a second state's differs from the first's, and neither
-// is the nil id, the project's, or a state's the fixture had.
+// Backlog, 30000; and ops's, its states gone, at 65535. A second state
+// comes 15000 after the first: each creation reads the greatest sequence
+// again. The use case makes each state's id: a second state's differs from
+// the first's, and neither is the nil id, the project's, or a state's the
+// fixture had.
 func TestCreateState(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
@@ -69,8 +71,9 @@ func TestCreateState(t *testing.T) {
 			second := review
 			second.Name = "QA again"
 			again, err := uc.Execute(as(bob), tt.project, second)
-			if err != nil || again.ID == got.ID {
-				t.Errorf("a second state = %s, %v; want another id than the first's, %s", again.ID, err, got.ID)
+			if err != nil || again.ID == got.ID || again.Sequence != tt.sequence+15000 {
+				t.Errorf("a second state = %s at %v, %v; want another id than the first's, %s, at %v", again.ID, again.Sequence, err, got.ID,
+					tt.sequence+15000)
 			}
 			for _, id := range []uuid.UUID{got.ID, again.ID} {
 				if _, had := before[id]; had || id == uuid.Nil() || id == tt.project {
