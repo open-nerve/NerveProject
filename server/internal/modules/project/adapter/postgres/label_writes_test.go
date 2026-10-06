@@ -5,7 +5,10 @@ import (
 	"errors"
 	"maps"
 	"testing"
+	"time"
 	"uuid"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/open-nerve/NerveProject/server/internal/modules/project/domain"
 	"github.com/open-nerve/NerveProject/server/internal/shared"
@@ -13,18 +16,21 @@ import (
 
 // UpdateLabel changes exactly the fields the patch gives of Web's UI, and
 // the audit columns to the moment and the account given, and answers the
-// label as stored; every other column keeps its value, and every other
-// label every column. A parent given sets it, a parent given as none
-// clears it, and a parent not given keeps it. A patch that gives nothing
-// changes the audit columns alone: it comes after one that gave every
-// field, so that the parent, the color and the sort order it keeps are
-// neither none nor the columns' defaults.
+// label as stored, made at earlier and written at that moment; every other
+// column keeps its value, and every other label every column. Each change
+// is by another account than the change before it, at a later moment, so
+// that the audit columns it writes are its own. A parent given sets it, a
+// parent given as none clears it, and a parent not given keeps it. A patch
+// that gives nothing changes the audit columns alone: it comes after one
+// that gave every field, so that the parent, the color and the sort order
+// it keeps are neither none nor the columns' defaults.
 func TestUpdateLabel(t *testing.T) {
 	w := newStateWorld(t)
+	bob := newAccount(t, w.pool, "bob@corp.com")
 	bug := w.addLabel(t, w.web, uuid.NewV7(), "Bug", nil, 1)
 	ui := w.addLabel(t, w.web, uuid.NewV7(), "UI", nil, 2).ID
 	others := tableRows(t, w.pool, "labels", ui)
-	for _, tt := range []struct {
+	for i, tt := range []struct {
 		name   string
 		patch  domain.LabelPatch
 		change map[string]string
@@ -37,14 +43,16 @@ func TestUpdateLabel(t *testing.T) {
 		{"the sort order alone", domain.LabelPatch{SortOrder: ptr(5.0)}, map[string]string{"sort_order": "5"}},
 		{"an empty color", domain.LabelPatch{Color: ptr("")}, map[string]string{"color": `""`}},
 	} {
+		by, at := []uuid.UUID{w.alice, bob}[i%2], now.Add(time.Duration(i)*time.Minute)
 		before := columns(t, w.pool, "labels", ui)
-		got, err := w.s.UpdateLabel(context.Background(), ui, tt.patch, w.alice, now)
-		want := changed(before, changed(audit(w.alice, now), tt.change))
+		got, err := w.s.UpdateLabel(context.Background(), ui, tt.patch, by, at)
+		want := changed(before, changed(audit(by, at), tt.change))
 		if after := columns(t, w.pool, "labels", ui); err != nil || !maps.Equal(after, want) {
 			t.Errorf("%s: UpdateLabel() = %v, the row %v\nwant %v", tt.name, err, after, want)
 		}
-		if stored, _, _ := w.s.LabelByID(context.Background(), ui); jsonOf(t, got) != jsonOf(t, stored) {
-			t.Errorf("%s: UpdateLabel() answered %+v; want the row as stored, %+v", tt.name, got, stored)
+		if stored, _, _ := w.s.LabelByID(context.Background(), ui); jsonOf(t, got) != jsonOf(t, stored) || !got.CreatedAt.Equal(earlier) ||
+			!got.UpdatedAt.Equal(at) {
+			t.Errorf("%s: UpdateLabel() answered %+v; want the row as stored, %+v, made at %v and written at %v", tt.name, got, stored, earlier, at)
 		}
 	}
 	if after := tableRows(t, w.pool, "labels", ui); after != others {
@@ -79,6 +87,31 @@ func TestUpdateLabelNameTaken(t *testing.T) {
 	}
 }
 
+// Only the name's unique key is a 409 for a change too: a CHECK the domain
+// should have kept (an empty name, a label its own parent) and a parent of
+// none are each an internal error, never a domain error.
+func TestUpdateLabelBreakingAnotherConstraintIsInternal(t *testing.T) {
+	w := newStateWorld(t)
+	ui := w.addLabel(t, w.web, uuid.NewV7(), "UI", nil, 1).ID
+	none := uuid.NewV7()
+	for _, tt := range []struct {
+		name       string
+		patch      domain.LabelPatch
+		constraint string
+	}{
+		{"an empty name", domain.LabelPatch{Name: ptr("")}, "labels_name_check"},
+		{"its own parent", domain.LabelPatch{SetParent: true, ParentID: &ui}, "labels_not_own_parent_check"},
+		{"a parent of none", domain.LabelPatch{SetParent: true, ParentID: &none}, "labels_parent_id_fkey"},
+	} {
+		_, err := w.s.UpdateLabel(context.Background(), ui, tt.patch, w.alice, now)
+		var se *shared.Error
+		var pgErr *pgconn.PgError
+		if errors.As(err, &se) || !errors.As(err, &pgErr) || pgErr.ConstraintName != tt.constraint {
+			t.Errorf("%s: UpdateLabel() = %v; want the violation of %s, not a domain error", tt.name, err, tt.constraint)
+		}
+	}
+}
+
 // UpdateLabel writes no deleted label: an internal error, no domain error
 // (project.label_name_taken or any other), and every label keeps every
 // column.
@@ -100,8 +133,9 @@ func TestUpdateLabelWritesNoDeletedLabel(t *testing.T) {
 // DeleteLabel deletes Web's Bug and UI under it, at the moment and by the
 // account given, deleted_at and updated_at alike, and touches no other
 // column: Gone, under Bug and deleted before, keeps its moment; Feature,
-// Feature's Docs, and Ops's Bug keep every column. Deleted again, Bug
-// changes nothing. Deleting a child, Docs, deletes it alone.
+// Feature's Docs, and Ops's Bug keep every column. Deleted again, at a
+// later moment, Bug changes nothing. Deleting a child, Docs, deletes it
+// alone.
 func TestDeleteLabel(t *testing.T) {
 	w := newStateWorld(t)
 	bug := w.addLabel(t, w.web, uuid.NewV7(), "Bug", nil, 1)
@@ -127,7 +161,7 @@ func TestDeleteLabel(t *testing.T) {
 		t.Errorf("the other labels:\n%s\nwant\n%s", after, others)
 	}
 	all := tableRows(t, w.pool, "labels")
-	if err := w.s.DeleteLabel(context.Background(), bug.ID, w.alice, now.Add(1)); err != nil {
+	if err := w.s.DeleteLabel(context.Background(), bug.ID, w.alice, now.Add(time.Minute)); err != nil {
 		t.Errorf("DeleteLabel(Bug) again = %v", err)
 	}
 	if after := tableRows(t, w.pool, "labels"); after != all {
