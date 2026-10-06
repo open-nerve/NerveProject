@@ -61,6 +61,7 @@ export const PROBLEM_MESSAGES: Readonly<Record<string, string>> = {
   "project.state_not_found": "auth.errors.project_state_not_found",
   "project.state_last_in_group": "auth.errors.project_state_last_in_group",
   "project.state_default": "auth.errors.project_state_default",
+  "project.label_name_taken": "auth.errors.project_label_name_taken",
 };
 
 /** The message of every FieldError.code, shown under the field it names. */

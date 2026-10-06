@@ -345,9 +345,14 @@ func TestMatrixViolationsCatchesEachColumnGap(t *testing.T) {
 	if want := "no membership of acme/public by never a member is seeded"; failed != want {
 		t.Errorf("a project membership never seeded: failed with %q, want %q", failed, want)
 	}
-	// And a state never seeded.
+	// A state never seeded.
 	failed = fatalOf(func(tb testing.TB) { newSeeded().in(tb).state("acme/public", "Triaged") })
 	if want := "no state Triaged of acme/public is seeded"; failed != want {
 		t.Errorf("a state never seeded: failed with %q, want %q", failed, want)
+	}
+	// And a label never seeded.
+	failed = fatalOf(func(tb testing.TB) { newSeeded().in(tb).label("acme/public", "Bugs") })
+	if want := "no label Bugs of acme/public is seeded"; failed != want {
+		t.Errorf("a label never seeded: failed with %q, want %q", failed, want)
 	}
 }

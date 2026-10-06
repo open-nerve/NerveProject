@@ -127,9 +127,10 @@ func emailOf(c caller) string {
 // check can name: each workspace, by its slug; each membership, by the
 // workspace's slug and the column; each invitation, by the workspace's
 // slug and the address; each project, by its key; each project membership,
-// by the project's key and the column; each state, by the project's key
-// and its name; and each account, by its name in matrixAccounts, which
-// prepareMatrix registers. t is the test that asks for them (in).
+// by the project's key and the column; each state and each label, by the
+// project's key and its name; and each account, by its name in
+// matrixAccounts, which prepareMatrix registers. t is the test that asks
+// for them (in).
 type seeded struct {
 	t              testing.TB
 	workspaces     map[string]uuid.UUID
@@ -138,17 +139,19 @@ type seeded struct {
 	projects       map[string]uuid.UUID
 	projectMembers map[string]uuid.UUID
 	states         map[string]uuid.UUID
+	labels         map[string]uuid.UUID
 	accounts       map[caller]uuid.UUID
 }
 
 // newSeeded names an id for each workspace of matrixMemberships, each of
 // matrixMemberships, each of matrixInvitations, each of matrixProjects, each
-// of matrixProjectMembers and each of matrixStates in each project before
-// prepareMatrix writes them, so that matrixViolations, without a database,
-// sees the keys and the targets the cells will.
+// of matrixProjectMembers and each of matrixStates and matrixLabels in each
+// project before prepareMatrix writes them, so that matrixViolations,
+// without a database, sees the keys and the targets the cells will.
 func newSeeded() seeded {
 	s := seeded{workspaces: map[string]uuid.UUID{}, memberships: map[string]uuid.UUID{}, invitations: map[string]uuid.UUID{},
-		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, accounts: map[caller]uuid.UUID{}}
+		projects: map[string]uuid.UUID{}, projectMembers: map[string]uuid.UUID{}, states: map[string]uuid.UUID{}, labels: map[string]uuid.UUID{},
+		accounts: map[caller]uuid.UUID{}}
 	for _, m := range matrixMemberships {
 		if _, named := s.workspaces[m.slug]; !named {
 			s.workspaces[m.slug] = uuid.NewV7()
@@ -162,6 +165,9 @@ func newSeeded() seeded {
 		s.projects[p.key] = uuid.NewV7()
 		for _, st := range matrixStates {
 			s.states[p.key+"|"+st.Name] = uuid.NewV7()
+		}
+		for _, l := range matrixLabels {
+			s.labels[p.key+"|"+l.name] = uuid.NewV7()
 		}
 	}
 	for _, pm := range matrixProjectMembers {
@@ -239,6 +245,17 @@ func (s seeded) state(key, name string) uuid.UUID {
 	if !ok {
 		s.t.Helper()
 		s.t.Fatalf("no state %s of %s is seeded", name, key)
+	}
+	return id
+}
+
+// label is the id of the label name of the project key; one never seeded
+// fails the test at once, as membership's does.
+func (s seeded) label(key, name string) uuid.UUID {
+	id, ok := s.labels[key+"|"+name]
+	if !ok {
+		s.t.Helper()
+		s.t.Fatalf("no label %s of %s is seeded", name, key)
 	}
 	return id
 }

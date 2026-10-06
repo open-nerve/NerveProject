@@ -153,8 +153,10 @@ func poolOfOne(t *testing.T, url string) *pgxpool.Pool {
 // completed group, and moves it to the started group, which the count of
 // its group refuses (409 project.state_last_in_group); she renames it
 // Checked, creates Done in the completed group, deletes Checked, which
-// counts the group again, and makes Done Web's default; carol, an admin,
-// leaves it; alice deletes both projects.
+// counts the group again, and makes Done Web's default; she creates the
+// label Bug in it, UI under Bug, and Icons under UI, which the parent's
+// read refuses (422: labels have two levels); carol, an admin, leaves it;
+// alice deletes both projects.
 func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	r := newGrowthRace(t, true)
 	carol := uuid.NewV7()
@@ -204,6 +206,12 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		&done)
 	send(http.MethodDelete, "/api/v0/states/"+qa.ID.String(), r.alice, "", http.StatusNoContent)
 	send(http.MethodPost, "/api/v0/states/"+done.ID.String()+"/mark-default", r.alice, "", http.StatusNoContent)
+	var bug, ui struct {
+		ID uuid.UUID `json:"id"`
+	}
+	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Bug"}`, http.StatusCreated), &bug)
+	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"UI","parent_id":"`+bug.ID.String()+`"}`, http.StatusCreated), &ui)
+	send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

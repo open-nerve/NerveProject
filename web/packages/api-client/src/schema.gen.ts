@@ -863,6 +863,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v0/projects/{project_id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a label in a project
+         * @description For the project's admins, and its members who are the workspace's admins; an archived project's labels are created as any other's. The name has 1–255 characters, not blank, without NUL; the color has at most 255, without NUL, and is empty when it is left out (validation_failed). The values are checked before the project is looked at. The parent, when it is given, is a label of the project at the top, not one under another: labels have two levels (parent_id not_allowed). The new label comes after the project's others: its sort order is the greatest of theirs plus 10000, or 65535 when the project has none; updateLabel moves it. The name may not be another undeleted label's of the project, in any case (project.label_name_taken). A project that does not exist, is deleted, or that the caller does not see answers project.not_found; one he sees but may not change, forbidden. The role is decided after the workspace and project rows are locked, and the parent is checked after it.
+         */
+        post: operations["createLabel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v0/me/projects/{project_id}/preferences": {
         parameters: {
             query?: never;
@@ -1542,6 +1565,40 @@ export interface components {
             /** @description The state's place among the project's states, the lowest first. */
             sequence?: number;
         };
+        LabelCreate: {
+            /** @description 1–255 characters, not blank; another undeleted label of the project may not have it, in any case. */
+            name: string;
+            /** @description At most 255 characters; empty when left out. */
+            color?: string;
+            /**
+             * Format: uuid
+             * @description A label of the project at the top, which the new label goes under; left out for a label at the top.
+             */
+            parent_id?: string;
+        };
+        /** @description A label of a project, at the top or under a label at the top. */
+        Label: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            workspace_id: string;
+            /** Format: uuid */
+            project_id: string;
+            /**
+             * Format: uuid
+             * @description The label it is under; null for a label at the top.
+             */
+            parent_id: string | null;
+            name: string;
+            /** @description As the web app's color picker gives it, e.g. "#F59E0B"; empty for none. */
+            color: string;
+            /** @description The label's place among the project's labels, the lowest first. */
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
         /**
          * @description A tab of a project's header.
          * @enum {string}
@@ -1668,6 +1725,8 @@ export type State = components['schemas']['State'];
 export type StateList = components['schemas']['StateList'];
 export type StateCreate = components['schemas']['StateCreate'];
 export type StateUpdate = components['schemas']['StateUpdate'];
+export type LabelCreate = components['schemas']['LabelCreate'];
+export type Label = components['schemas']['Label'];
 export type ProjectTab = components['schemas']['ProjectTab'];
 export type ProjectNavigation = components['schemas']['ProjectNavigation'];
 export type ProjectPreferences = components['schemas']['ProjectPreferences'];
@@ -2997,6 +3056,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StateList"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createLabel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A project's id (Project.id). */
+                project_id: components["parameters"]["ProjectID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelCreate"];
+            };
+        };
+        responses: {
+            /** @description The new label. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Label"];
                 };
             };
             default: components["responses"]["Problem"];

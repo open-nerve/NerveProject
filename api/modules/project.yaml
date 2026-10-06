@@ -614,6 +614,47 @@ paths:
                 $ref: '#/components/schemas/StateList'
         default:
           $ref: '#/components/responses/Problem'
+  /api/v0/projects/{project_id}/labels:
+    parameters:
+      - $ref: '#/components/parameters/ProjectID'
+    post:
+      operationId: createLabel
+      tags: [project]
+      summary: Create a label in a project
+      description: >-
+        For the project's admins, and its members who are the workspace's
+        admins; an archived project's labels are created as any other's.
+        The name has 1–255 characters, not blank, without NUL; the color has
+        at most 255, without NUL, and is empty when it is left out
+        (validation_failed). The values are checked before the project is
+        looked at. The parent, when it is given, is a label of the project
+        at the top, not one under another: labels have two levels
+        (parent_id not_allowed). The new label comes after the project's
+        others: its sort order is the greatest of theirs plus 10000, or
+        65535 when the project has none; updateLabel moves it. The name may
+        not be another undeleted label's of the project, in any case
+        (project.label_name_taken). A project that
+        does not exist, is deleted, or that the caller does not see answers
+        project.not_found; one he sees but may not change, forbidden. The
+        role is decided after the workspace and project rows are locked, and
+        the parent is checked after it.
+      security: [{bearer: []}]
+      x-problem-codes: [validation_failed, project.not_found, forbidden, project.label_name_taken]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabelCreate'
+      responses:
+        '201':
+          description: The new label.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+        default:
+          $ref: '#/components/responses/Problem'
   /api/v0/me/projects/{project_id}/preferences:
     parameters:
       - $ref: '#/components/parameters/ProjectID'
@@ -1137,3 +1178,51 @@ components:
         sequence:
           description: The state's place among the project's states, the lowest first.
           type: number
+    Label:
+      description: A label of a project, at the top or under a label at the top.
+      type: object
+      additionalProperties: false
+      required: [id, workspace_id, project_id, parent_id, name, color, sort_order, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        parent_id:
+          description: The label it is under; null for a label at the top.
+          type: [string, 'null']
+          format: uuid
+        name:
+          type: string
+        color:
+          description: As the web app's color picker gives it, e.g. "#F59E0B"; empty for none.
+          type: string
+        sort_order:
+          description: The label's place among the project's labels, the lowest first.
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    LabelCreate:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          description: 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+          type: string
+        color:
+          description: At most 255 characters; empty when left out.
+          type: string
+        parent_id:
+          description: A label of the project at the top, which the new label goes under; left out for a label at the top.
+          type: string
+          format: uuid

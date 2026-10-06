@@ -103,6 +103,7 @@ var projectWrites = []projectWrite{
 	// The state renamed before, deleted.
 	{op: "deleteState", method: http.MethodDelete, path: "/api/v0/states/%s", want: http.StatusNoContent, row: stateNamed("Checked")},
 	{op: "markDefaultState", method: http.MethodPost, path: "/api/v0/states/%s/mark-default", want: http.StatusNoContent, row: stateNamed("Done")},
+	{op: "createLabel", method: http.MethodPost, path: "/api/v0/projects/%s/labels", body: `{"name":"QA"}`, want: http.StatusCreated},
 	// Last: it deletes the project every write before it needs.
 	{op: "deleteProject", method: http.MethodDelete, path: "/api/v0/projects/%s", want: http.StatusNoContent},
 }

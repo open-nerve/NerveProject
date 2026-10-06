@@ -120,6 +120,11 @@ type ListWorkspaceStatesUseCase interface {
 	Execute(ctx context.Context, slug string) ([]domain.State, error)
 }
 
+// CreateLabelUseCase is app.CreateLabel.
+type CreateLabelUseCase interface {
+	Execute(ctx context.Context, projectID uuid.UUID, in domain.LabelCreate) (domain.Label, error)
+}
+
 // UseCases are the use cases behind the module's operations.
 type UseCases struct {
 	ListProjects        ListProjectsUseCase
@@ -144,6 +149,7 @@ type UseCases struct {
 	DeleteState         DeleteStateUseCase
 	MarkDefaultState    MarkDefaultStateUseCase
 	ListWorkspaceStates ListWorkspaceStatesUseCase
+	CreateLabel         CreateLabelUseCase
 }
 
 // Register mounts the module's routes on router behind api's per-route

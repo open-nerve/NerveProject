@@ -23,7 +23,7 @@ tags:
   - name: workspace
     description: Workspaces and their members.
   - name: project
-    description: Projects, their members and their states.
+    description: Projects, their members, their states and their labels.
 paths:
   /api/v0/auth/register:
     $ref: 'modules/identity.yaml#/paths/~1api~1v0~1auth~1register'
@@ -97,6 +97,8 @@ paths:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1states~1{state_id}~1mark-default'
   /api/v0/workspaces/{slug}/states:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1workspaces~1{slug}~1states'
+  /api/v0/projects/{project_id}/labels:
+    $ref: 'modules/project.yaml#/paths/~1api~1v0~1projects~1{project_id}~1labels'
   /api/v0/me/projects/{project_id}/preferences:
     $ref: 'modules/project.yaml#/paths/~1api~1v0~1me~1projects~1{project_id}~1preferences'
 components:

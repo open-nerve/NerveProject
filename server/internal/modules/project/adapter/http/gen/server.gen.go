@@ -136,6 +136,36 @@ type IdentifierAvailability struct {
 	Available bool `json:"available"`
 }
 
+// Label A label of a project, at the top or under a label at the top.
+type Label struct {
+	// Color As the web app's color picker gives it, e.g. "#F59E0B"; empty for none.
+	Color     string    `json:"color"`
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+
+	// ParentID The label it is under; null for a label at the top.
+	ParentID  nullable.Nullable[uuid.UUID] `json:"parent_id"`
+	ProjectID uuid.UUID                    `json:"project_id"`
+
+	// SortOrder The label's place among the project's labels, the lowest first.
+	SortOrder   float64   `json:"sort_order"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	WorkspaceID uuid.UUID `json:"workspace_id"`
+}
+
+// LabelCreate defines model for LabelCreate.
+type LabelCreate struct {
+	// Color At most 255 characters; empty when left out.
+	Color *string `json:"color,omitempty"`
+
+	// Name 1–255 characters, not blank; another undeleted label of the project may not have it, in any case.
+	Name string `json:"name"`
+
+	// ParentID A label of the project at the top, which the new label goes under; left out for a label at the top.
+	ParentID *uuid.UUID `json:"parent_id,omitempty"`
+}
+
 // LogoEmoji defines model for LogoEmoji.
 type LogoEmoji struct {
 	// URL The address of a custom emoji.
@@ -448,6 +478,9 @@ type UpdateProjectMemberJSONRequestBody = ProjectMemberUpdate
 // UpdateProjectJSONRequestBody defines body for UpdateProject for application/json ContentType.
 type UpdateProjectJSONRequestBody = ProjectUpdate
 
+// CreateLabelJSONRequestBody defines body for CreateLabel for application/json ContentType.
+type CreateLabelJSONRequestBody = LabelCreate
+
 // AddProjectMembersJSONRequestBody defines body for AddProjectMembers for application/json ContentType.
 type AddProjectMembersJSONRequestBody = ProjectMembersAdd
 
@@ -489,6 +522,9 @@ type ServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
+	// CreateLabel Create a label in a project
+	// (POST /api/v0/projects/{project_id}/labels)
+	CreateLabel(w http.ResponseWriter, r *http.Request, projectID ProjectID)
 	// LeaveProject Leave a project
 	// (POST /api/v0/projects/{project_id}/leave)
 	LeaveProject(w http.ResponseWriter, r *http.Request, projectID ProjectID)
@@ -764,6 +800,32 @@ func (siw *ServerInterfaceWrapper) JoinProject(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.JoinProject(w, r, projectID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateLabel operation middleware
+func (siw *ServerInterfaceWrapper) CreateLabel(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "project_id" -------------
+	var projectID ProjectID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "project_id", r.PathValue("project_id"), &projectID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "project_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateLabel(w, r, projectID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1276,6 +1338,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/states/{state_id}", wrapper.UpdateState)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/states/{state_id}/mark-default", wrapper.MarkDefaultState)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/workspaces/{slug}/states", wrapper.ListWorkspaceStates)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/api/v0/projects/{project_id}/labels", wrapper.CreateLabel)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.GetProjectPreferences)
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/api/v0/me/projects/{project_id}/preferences", wrapper.UpdateProjectPreferences)
 
@@ -1680,6 +1743,53 @@ type JoinProjectdefaultApplicationProblemPlusJSONResponse struct {
 }
 
 func (response JoinProjectdefaultApplicationProblemPlusJSONResponse) VisitJoinProjectResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	if response.Headers.RetryAfter != nil {
+		w.Header().Set("Retry-After", fmt.Sprint(*response.Headers.RetryAfter))
+	}
+	if response.Headers.WWWAuthenticate != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprint(*response.Headers.WWWAuthenticate))
+	}
+	w.WriteHeader(response.StatusCode)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateLabelRequestObject struct {
+	ProjectID ProjectID `json:"project_id"`
+	Body      *CreateLabelJSONRequestBody
+}
+
+type CreateLabelResponseObject interface {
+	VisitCreateLabelResponse(w http.ResponseWriter) error
+}
+
+type CreateLabel201JSONResponse Label
+
+func (response CreateLabel201JSONResponse) VisitCreateLabelResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateLabeldefaultApplicationProblemPlusJSONResponse struct {
+	Body       externalRef0.Problem
+	Headers    ProblemResponseHeaders
+	StatusCode int
+}
+
+func (response CreateLabeldefaultApplicationProblemPlusJSONResponse) VisitCreateLabelResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response.Body); err != nil {
@@ -2312,6 +2422,9 @@ type StrictServerInterface interface {
 	// JoinProject Join a project
 	// (POST /api/v0/projects/{project_id}/join)
 	JoinProject(ctx context.Context, request JoinProjectRequestObject) (JoinProjectResponseObject, error)
+	// CreateLabel Create a label in a project
+	// (POST /api/v0/projects/{project_id}/labels)
+	CreateLabel(ctx context.Context, request CreateLabelRequestObject) (CreateLabelResponseObject, error)
 	// LeaveProject Leave a project
 	// (POST /api/v0/projects/{project_id}/leave)
 	LeaveProject(ctx context.Context, request LeaveProjectRequestObject) (LeaveProjectResponseObject, error)
@@ -2640,6 +2753,39 @@ func (sh *strictHandler) JoinProject(w http.ResponseWriter, r *http.Request, pro
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(JoinProjectResponseObject); ok {
 		if err := validResponse.VisitJoinProjectResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateLabel operation middleware
+func (sh *strictHandler) CreateLabel(w http.ResponseWriter, r *http.Request, projectID ProjectID) {
+	var request CreateLabelRequestObject
+
+	request.ProjectID = projectID
+
+	var body CreateLabelJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateLabel(ctx, request.(CreateLabelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateLabel")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateLabelResponseObject); ok {
+		if err := validResponse.VisitCreateLabelResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
