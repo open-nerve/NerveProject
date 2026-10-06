@@ -89,7 +89,9 @@ func TestUpdateLabel(t *testing.T) {
 // project.label_not_found; a member, the Authorizer's 403. Then, after the
 // decision, each a 422 parent_id not_allowed: Feature under itself, under
 // UI, which is under Bug, under ops's Docs, or under a label that is not
-// there; and Bug, which has UI under it, under Feature. Feature renamed to
+// there; Bug, which has UI under it, under Feature; and UI, under Bug,
+// under ops's Docs or under itself: a label that has a parent has the
+// parent it is given checked as one at the top has. Feature renamed to
 // Bug's name in another case is the store's project.label_name_taken. The
 // change answered for another label is the write's own error; the label
 // read for another id is the shared path's, pinned once in lock_test.go.
@@ -130,6 +132,8 @@ func TestUpdateLabelRefuses(t *testing.T) {
 		{"Feature under ops's Docs", as(bob), webFeature, under(opsDocs), nil, parentRefused, parentRead(webFeature, opsDocs)},
 		{"Feature under a label that is not there", as(bob), webFeature, under(none), nil, parentRefused, parentRead(webFeature, none)},
 		{"Bug, with UI under it, under Feature", as(bob), webBug, under(webFeature), nil, parentRefused, parentRead(webBug, webFeature)},
+		{"UI, under Bug, under ops's Docs", as(bob), webUI, under(opsDocs), nil, parentRefused, parentRead(webUI, opsDocs)},
+		{"UI, under Bug, under itself", as(bob), webUI, under(webUI), nil, parentRefused, parentRead(webUI, webUI)},
 		{"Feature renamed to Bug's name in another case", as(bob), webFeature, domain.LabelPatch{Name: ptr("bug")}, nil,
 			domain.ErrLabelNameTaken, labelUpdated(bob, webFeature, webID, domain.LabelPatch{Name: ptr("bug")})},
 		{"the change answered for another label", as(bob), webFeature, rename,

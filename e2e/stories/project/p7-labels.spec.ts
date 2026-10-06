@@ -68,7 +68,7 @@ function changed(rows: LabelRow[], name: string, to: Partial<LabelRow>): LabelRo
 /** The refusal of a parent_id that 3.16's rules do not allow. */
 const parentRefused = { status: 422, code: "validation_failed", errors: [{ field: "parent_id", code: "not_allowed" }] };
 
-test("P7 (API): an admin of a project creates Bug and Feature, each after the labels before it; another admin creates UI, which the first puts under Bug; the other renames it Widgets and moves Feature before Bug; bug, in another case, is taken, and a color too long, a third level, a parent of another project, a label its own parent, a parent for a label with a label under it and a member's writes are refused, each changing nothing; Bug is deleted with Widgets at one moment, after which neither is found, and bug is free again, after Feature, the deleted labels' places no longer counted; a member lists the labels by their order, another project has a Bug of its own, and an archived project's labels are listed, created after its labels, and changed as any other's", async ({
+test("P7 (API): an admin of a project creates Bug and Feature, each after the labels before it; another admin creates UI, which the first puts under Bug; the other renames it Widgets and moves Feature before Bug; bug, in another case, is taken, and a color too long, a third level, a parent of another project for a label at the top or under another, a label its own parent, a parent for a label with a label under it and a member's writes are refused, each changing nothing; Bug is deleted with Widgets at one moment, after which neither is found, and bug is free again, after Feature, the deleted labels' places no longer counted; a member lists the labels by their order, another project has a Bug of its own, and an archived project's labels are listed, created after its labels, and changed as any other's", async ({
   api,
   db,
 }, testInfo) => {
@@ -142,8 +142,9 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
   // Refused, each changing nothing of what was just read: ann's creation of QA with a color of 256 characters, one
   // more than a color has; her creation of bug, Bug in another case, and the admin's renaming of Feature WIDGETS;
   // ann's creation of Icons under Widgets, a third level; her moves of Feature under Ops's Bug, of another project,
-  // and under itself; her move of Bug, which has Widgets under it, under Feature; mem's change of Feature, his
-  // creation of QA and his deletion of Feature, a member's.
+  // and under itself; her move of Widgets, under Bug, under Ops's Bug, its new parent checked as Feature's is; her
+  // move of Bug, which has Widgets under it, under Feature; mem's change of Feature, his creation of QA and his
+  // deletion of Feature, a member's.
   expect(
     [
       await create(ann.token, web.id, { name: "QA", color: "#".repeat(256) }),
@@ -152,16 +153,18 @@ test("P7 (API): an admin of a project creates Bug and Feature, each after the la
       await create(ann.token, web.id, { name: "Icons", parent_id: ui.id }),
       await update(ann.token, feature.id, { parent_id: opsBug.id }),
       await update(ann.token, feature.id, { parent_id: feature.id }),
+      await update(ann.token, ui.id, { parent_id: opsBug.id }),
       await update(ann.token, bug.id, { parent_id: feature.id }),
       await update(mem.token, feature.id, { name: "Story" }),
       await create(mem.token, web.id, { name: "QA" }),
       await remove(mem.token, feature.id),
     ],
-    "a long color, bug, WIDGETS, Icons under Widgets, Feature under Ops's Bug and under itself, Bug under Feature, mem's writes"
+    "a long color, bug, WIDGETS, Icons under Widgets, Feature under Ops's Bug and under itself, Widgets under Ops's Bug, Bug under Feature, mem's writes"
   ).toEqual([
     { status: 422, code: "validation_failed", errors: [{ field: "color", code: "too_long" }] },
     { status: 409, code: "project.label_name_taken" },
     { status: 409, code: "project.label_name_taken" },
+    parentRefused,
     parentRefused,
     parentRefused,
     parentRefused,

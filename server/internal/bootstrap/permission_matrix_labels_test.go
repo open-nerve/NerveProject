@@ -111,6 +111,16 @@ func labelMatrixRows() []matrixRow {
 			},
 			cells:   labelRows.of(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
 			refusal: "parent_id not_allowed"},
+		// UI, under Bug, given the archived project's Bug, a label of another
+		// project, as createLabel's row: a label that has a parent has the
+		// parent it is given checked as one at the top has, after the
+		// decision.
+		{op: "updateLabel", variant: "a label under another given another project's label", write: true, columns: projectColumns,
+			request: func(c caller, s seeded) (string, string, string) {
+				return labelRows.to(http.MethodPatch, "", "UI", `{"parent_id":"`+s.label("acme/archived", "Bug").String()+`"}`)(c, s)
+			},
+			cells:   labelRows.of(cellValidationFailed, cellForbidden, cellForbidden, cellValidationFailed, cellForbidden, cellForbidden),
+			refusal: "parent_id not_allowed"},
 		// A value refused before the label is looked at: the same 422 in
 		// every column.
 		{op: "updateLabel", variant: "a value refused", write: true, columns: projectColumns,
