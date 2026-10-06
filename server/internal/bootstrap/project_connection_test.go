@@ -118,6 +118,17 @@ func (p moduleRoute) answerWithin(t *testing.T, contract *apitest.Contract, meth
 	return a.rec.Body.String()
 }
 
+// refusedWith checks that answer, a problem, is want: its code, and its
+// errors, messages and all.
+func refusedWith(t *testing.T, answer string, want httpserver.Problem) {
+	t.Helper()
+	var p httpserver.Problem
+	decodeAnswer(t, answer, &p)
+	if p.Code != want.Code || !slices.Equal(p.Errors, want.Errors) {
+		t.Errorf("the refusal %s; want %s, errors %+v", answer, want.Code, want.Errors)
+	}
+}
+
 // poolOfOne is a pool of one connection to url's database. A statement on a
 // context without a deadline would wait for its connection for ever, and so
 // would closing the pool: the closing has a deadline of its own.
@@ -177,22 +188,9 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	one := poolOfOne(t, r.pool.Config().ConnString())
 	route := newProjectRoute(t, one, authorizerOn(one), workspace.Provide(one).WorkspaceMembers)
 	contract := apitest.Load(t)
-	// refusal, when set, is the problem the next request is answered with:
-	// its code, and its errors, messages and all. send checks that answer
-	// against it, then clears it, so it names one refusal of the story.
-	var refusal *httpserver.Problem
 	send := func(method, path string, caller uuid.UUID, body string, want int) string {
 		t.Helper()
-		answer := route.answerWithin(t, contract, method, path, caller, body, want)
-		if refusal != nil {
-			var p httpserver.Problem
-			decodeAnswer(t, answer, &p)
-			if p.Code != refusal.Code || !slices.Equal(p.Errors, refusal.Errors) {
-				t.Errorf("%s %s = %s; want %s, errors %+v", method, path, answer, refusal.Code, refusal.Errors)
-			}
-			refusal = nil
-		}
-		return answer
+		return route.answerWithin(t, contract, method, path, caller, body, want)
 	}
 
 	var created struct {
@@ -214,8 +212,8 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 		ID uuid.UUID `json:"id"`
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"QA","color":"#0EA5E9","group":"completed"}`, http.StatusCreated), &qa)
-	refusal = &httpserver.Problem{Code: "project.state_last_in_group"}
-	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict)
+	refusedWith(t, send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"group":"started"}`, http.StatusConflict),
+		httpserver.Problem{Code: "project.state_last_in_group"})
 	send(http.MethodPatch, "/api/v0/states/"+qa.ID.String(), r.alice, `{"name":"Checked"}`, http.StatusOK)
 	decodeAnswer(t, send(http.MethodPost, web+"/states", r.alice, `{"name":"Done","color":"#46A758","group":"completed"}`, http.StatusCreated),
 		&done)
@@ -226,9 +224,12 @@ func TestTheWritesOnAProjectRunOnTheirTransactionsConnection(t *testing.T) {
 	}
 	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Bug"}`, http.StatusCreated), &bug)
 	decodeAnswer(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"UI","parent_id":"`+bug.ID.String()+`"}`, http.StatusCreated), &ui)
-	refusal = &httpserver.Problem{Code: "validation_failed", Errors: []httpserver.FieldError{{Field: "parent_id", Code: "not_allowed",
+	// The parent's refusal of a parent under another label: labels have two
+	// levels.
+	twoLevels := httpserver.Problem{Code: "validation_failed", Errors: []httpserver.FieldError{{Field: "parent_id", Code: "not_allowed",
 		Message: "must be a label without a parent: labels have two levels"}}}
-	send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
+	refusedWith(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
+		twoLevels)
 	send(http.MethodPost, web+"/leave", carol, "", http.StatusNoContent)
 	send(http.MethodDelete, web, r.alice, "", http.StatusNoContent)
 	send(http.MethodDelete, "/api/v0/projects/"+created.ID.String(), r.alice, "", http.StatusNoContent)

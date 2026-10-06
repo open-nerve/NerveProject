@@ -5114,11 +5114,14 @@ func labelID(t *testing.T, pool *pgxpool.Pool, project uuid.UUID, name string) u
 ````
 
 ````old server/internal/bootstrap/project_connection_test.go
-	send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
+	refusedWith(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
+		twoLevels)
 ````
 ````new server/internal/bootstrap/project_connection_test.go
-	send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
-	send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity)
+	refusedWith(t, send(http.MethodPost, web+"/labels", r.alice, `{"name":"Icons","parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
+		twoLevels)
+	refusedWith(t, send(http.MethodPatch, "/api/v0/labels/"+bug.ID.String(), r.alice, `{"parent_id":"`+ui.ID.String()+`"}`, http.StatusUnprocessableEntity),
+		twoLevels)
 	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"name":"Widgets","parent_id":null}`, http.StatusOK)
 	send(http.MethodPatch, "/api/v0/labels/"+ui.ID.String(), r.alice, `{"parent_id":"`+bug.ID.String()+`"}`, http.StatusOK)
 ````
